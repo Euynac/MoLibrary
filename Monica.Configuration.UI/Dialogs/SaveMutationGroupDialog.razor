@@ -22,22 +22,29 @@
                 <MudAlert Severity="Severity.Error">@_error</MudAlert>
             }
 
-            <MudTable T="PendingChange" Items="@Changes" Dense="true" Hover="true" Elevation="0">
-                <HeaderContent>
-                    <MudTh>@L["State:Columns:Definition"]</MudTh>
-                    <MudTh>@L["State:Columns:Path"]</MudTh>
-                    <MudTh>@L["History:Columns:Kind"]</MudTh>
-                    <MudTh>@L["State:Columns:OldValue"]</MudTh>
-                    <MudTh>@L["State:Columns:NewValue"]</MudTh>
-                </HeaderContent>
-                <RowTemplate>
-                    <MudTd DataLabel="@L["State:Columns:Definition"]">@context.DefinitionDisplayName</MudTd>
-                    <MudTd DataLabel="@L["State:Columns:Path"]">@context.LogicalPath.ToCanonicalString()</MudTd>
-                    <MudTd DataLabel="@L["History:Columns:Kind"]">@context.MutationKind</MudTd>
-                    <MudTd DataLabel="@L["State:Columns:OldValue"]">@DisplayValue(context, context.OriginalDisplayValue)</MudTd>
-                    <MudTd DataLabel="@L["State:Columns:NewValue"]">@DisplayValue(context, context.NewDisplayValue)</MudTd>
-                </RowTemplate>
-            </MudTable>
+            <MudTabs Rounded="true" ApplyEffectsToContainer="true" TabPanelsClass="pa-3">
+                <MudTabPanel Text="@L["Dialogs:SaveGroup:Tabs:DefinitionDiff"]" Icon="@Icons.Material.Filled.Difference">
+                    <ConfigurationPendingDefinitionDiffPreview Changes="@Changes" />
+                </MudTabPanel>
+                <MudTabPanel Text="@L["Dialogs:SaveGroup:Tabs:ChangeList"]" Icon="@Icons.Material.Filled.List">
+                    <MudTable T="PendingChange" Items="@Changes" Dense="true" Hover="true" Elevation="0">
+                        <HeaderContent>
+                            <MudTh>@L["State:Columns:Definition"]</MudTh>
+                            <MudTh>@L["State:Columns:Path"]</MudTh>
+                            <MudTh>@L["History:Columns:Kind"]</MudTh>
+                            <MudTh>@L["State:Columns:OldValue"]</MudTh>
+                            <MudTh>@L["State:Columns:NewValue"]</MudTh>
+                        </HeaderContent>
+                        <RowTemplate>
+                            <MudTd DataLabel="@L["State:Columns:Definition"]">@context.DefinitionDisplayName</MudTd>
+                            <MudTd DataLabel="@L["State:Columns:Path"]">@context.LogicalPath.ToCanonicalString()</MudTd>
+                            <MudTd DataLabel="@L["History:Columns:Kind"]">@context.MutationKind</MudTd>
+                            <MudTd DataLabel="@L["State:Columns:OldValue"]">@DisplayValue(context, context.OriginalDisplayValue)</MudTd>
+                            <MudTd DataLabel="@L["State:Columns:NewValue"]">@DisplayValue(context, context.NewDisplayValue)</MudTd>
+                        </RowTemplate>
+                    </MudTable>
+                </MudTabPanel>
+            </MudTabs>
 
             @if (_saving)
             {

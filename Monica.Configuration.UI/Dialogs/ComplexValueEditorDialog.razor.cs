@@ -31,9 +31,6 @@ public partial class ComplexValueEditorDialog
     private string? _selectedEntryKey;
     private string _newEntryKey = string.Empty;
     private string? _newEntryError;
-    private string _jsonText = "{}";
-    private string? _jsonError;
-    private ConfigurationMutationKind _rawMutationKind = ConfigurationMutationKind.Set;
     private long? _valueVersion;
 
     private ConfigurationReloadBehavior EffectiveReloadBehavior =>
@@ -45,8 +42,6 @@ public partial class ComplexValueEditorDialog
         ? Severity.Warning
         : Severity.Info;
 
-    private bool SupportsVisualEditor => _focusNode.NodeKind is ConfigurationNodeKind.Dictionary or ConfigurationNodeKind.List;
-
     private bool RequiresNewEntryKey =>
         _focusNode.NodeKind == ConfigurationNodeKind.Dictionary
         || _focusNode is { NodeKind: ConfigurationNodeKind.List, ListTemplate.SupportsPerItemMutation: true };
@@ -55,14 +50,14 @@ public partial class ComplexValueEditorDialog
     {
         ConfigurationNodeKind.Dictionary => L["Dialogs:ComplexEditor:CollectionKinds:Dictionary"],
         ConfigurationNodeKind.List => L["Dialogs:ComplexEditor:CollectionKinds:List"],
-        _ => L["Dialogs:ComplexEditor:CollectionKinds:Json"]
+        _ => string.Empty
     };
 
     private string AddEntryLabel => _focusNode.NodeKind switch
     {
         ConfigurationNodeKind.Dictionary => L["Dialogs:ComplexEditor:Actions:AddKey"],
         ConfigurationNodeKind.List => L["Dialogs:ComplexEditor:Actions:AddItem"],
-        _ => L["Dialogs:ComplexEditor:Actions:Add"]
+        _ => string.Empty
     };
 
     private string NewEntryKeyLabel => _focusNode.NodeKind == ConfigurationNodeKind.Dictionary
@@ -98,11 +93,9 @@ public partial class ComplexValueEditorDialog
         ? L["Dialogs:ComplexEditor:PendingMutationGroup"]
         : _focusPath.ToCanonicalString();
 
-    private string StageButtonText => _mode == EditorMode.Visual && SupportsVisualEditor
-        ? L["Dialogs:ComplexEditor:Actions:StageCount", _changes.Count]
-        : L["Common:Actions:Stage"];
+    private string StageButtonText => L["Dialogs:ComplexEditor:Actions:StageCount", _changes.Count];
 
-    private bool CanStage => _mode == EditorMode.Json || _changes.Count > 0;
+    private bool CanStage => _changes.Count > 0;
 
     protected override void OnInitialized()
     {
@@ -111,19 +104,12 @@ public partial class ComplexValueEditorDialog
         _focusPath = Node.RelativePath;
         _documentNode = ParseInitialDocument();
         _originalDocumentNode = CloneNode(_documentNode);
-        _jsonText = FormatJson(_documentNode);
-        if (!SupportsVisualEditor)
-        {
-            _mode = EditorMode.Json;
-        }
-
         SelectFirstEntry();
     }
 
     private void SetMode(EditorMode mode)
     {
-        _mode = mode == EditorMode.Visual && !SupportsVisualEditor ? EditorMode.Json : mode;
-        _jsonError = null;
+        _mode = mode;
     }
 
     private Variant ModeVariant(EditorMode mode)
@@ -594,46 +580,12 @@ public partial class ComplexValueEditorDialog
 
     private void Apply()
     {
-        if (_mode == EditorMode.Json || !SupportsVisualEditor)
-        {
-            ApplyRawJson();
-            return;
-        }
-
         if (_changes.Count == 0)
         {
             return;
         }
 
         MudDialog.Close(DialogResult.Ok(_changes.ToArray()));
-    }
-
-    private void ApplyRawJson()
-    {
-        var json = string.IsNullOrWhiteSpace(_jsonText) ? "null" : _jsonText;
-        JsonNode? parsed = null;
-        if (_rawMutationKind != ConfigurationMutationKind.Remove)
-        {
-            try
-            {
-                parsed = JsonNode.Parse(json);
-                _jsonError = null;
-            }
-            catch (JsonException ex)
-            {
-                _jsonError = ex.Message;
-                return;
-            }
-        }
-
-        var change = BuildPendingChange(
-            _rawMutationKind,
-            Node.RelativePath,
-            Node,
-            CloneNode(_originalDocumentNode),
-            parsed);
-
-        MudDialog.Close(DialogResult.Ok(change));
     }
 
     private void Cancel()
@@ -1033,7 +985,6 @@ public partial class ComplexValueEditorDialog
     private enum EditorMode
     {
         Visual,
-        Json,
         Patch
     }
 

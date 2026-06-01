@@ -30,20 +30,11 @@
                 </MudPaper>
 
                 <MudStack Row="true" Wrap="Wrap.Wrap" Spacing="1" Class="configuration-editor-modes">
-                    @if (SupportsVisualEditor)
-                    {
-                        <MudButton Variant="@ModeVariant(EditorMode.Visual)"
-                                   Color="@ModeColor(EditorMode.Visual)"
-                                   StartIcon="@Icons.Material.Filled.AccountTree"
-                                   OnClick="() => SetMode(EditorMode.Visual)">
-                            @L["Dialogs:ComplexEditor:Modes:Visual"]
-                        </MudButton>
-                    }
-                    <MudButton Variant="@ModeVariant(EditorMode.Json)"
-                               Color="@ModeColor(EditorMode.Json)"
-                               StartIcon="@Icons.Material.Filled.Code"
-                               OnClick="() => SetMode(EditorMode.Json)">
-                        @L["Dialogs:ComplexEditor:Modes:Json"]
+                    <MudButton Variant="@ModeVariant(EditorMode.Visual)"
+                               Color="@ModeColor(EditorMode.Visual)"
+                               StartIcon="@Icons.Material.Filled.AccountTree"
+                               OnClick="() => SetMode(EditorMode.Visual)">
+                        @L["Dialogs:ComplexEditor:Modes:Visual"]
                     </MudButton>
                     <MudButton Variant="@ModeVariant(EditorMode.Patch)"
                                Color="@ModeColor(EditorMode.Patch)"
@@ -53,7 +44,7 @@
                     </MudButton>
                 </MudStack>
 
-                @if (_mode == EditorMode.Visual && SupportsVisualEditor)
+                @if (_mode == EditorMode.Visual)
                 {
                     <MudGrid Spacing="2" Class="configuration-collection-grid">
                         <MudItem xs="12" lg="3" Class="configuration-collection-column">
@@ -259,47 +250,12 @@
                         </MudStack>
                     </MudPaper>
                 }
-                else
-                {
-                    <MudPaper Outlined="true" Class="pa-3">
-                        <MudStack Spacing="2">
-                            <MudAlert Severity="Severity.Info" Dense="true">@L["Dialogs:ComplexEditor:JsonHelper"]</MudAlert>
-                            <MudGrid Spacing="2">
-                                <MudItem xs="12" md="4">
-                                    <MudSelect T="ConfigurationMutationKind"
-                                               @bind-Value="_rawMutationKind"
-                                               Label="@L["Mutation:MutationKind"]"
-                                               Variant="Variant.Outlined"
-                                               Margin="Margin.Dense">
-                                        <MudSelectItem T="ConfigurationMutationKind" Value="@ConfigurationMutationKind.Set">@L["Mutation:Kinds:Set"]</MudSelectItem>
-                                        <MudSelectItem T="ConfigurationMutationKind" Value="@ConfigurationMutationKind.Remove">@L["Mutation:Kinds:Remove"]</MudSelectItem>
-                                    </MudSelect>
-                                </MudItem>
-                                <MudItem xs="12" md="4">
-                                    <MudNumericField T="long?"
-                                                     @bind-Value="_valueVersion"
-                                                     Label="@L["Mutation:ExpectedValueVersion"]"
-                                                     Variant="Variant.Outlined"
-                                                     Margin="Margin.Dense" />
-                                </MudItem>
-                            </MudGrid>
-                            <MudTextField T="string"
-                                          @bind-Value="_jsonText"
-                                          Label="@L["Mutation:RawJson"]"
-                                          Variant="Variant.Outlined"
-                                          Lines="18"
-                                          FullWidth="true"
-                                          Error="@(!string.IsNullOrWhiteSpace(_jsonError))"
-                                          ErrorText="@_jsonError" />
-                        </MudStack>
-                    </MudPaper>
-                }
             </MudStack>
         </div>
     </DialogContent>
     <DialogActions>
         <MudButton OnClick="Cancel">@L["Common:Actions:Cancel"]</MudButton>
-        @if (_mode == EditorMode.Visual && SupportsVisualEditor)
+        @if (_mode == EditorMode.Visual)
         {
             <MudButton Color="Color.Default"
                        Variant="Variant.Text"

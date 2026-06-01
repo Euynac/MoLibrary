@@ -64,12 +64,8 @@
   "Mutation": {
     "DefinitionKey": "Definition key",
     "LogicalPath": "Logical path",
-    "MutationKind": "Mutation kind",
     "ReloadBehavior": "Reload behavior",
-    "ExpectedValueVersion": "Expected value version",
-    "RawJson": "Raw JSON",
     "Kinds": {
-      "Set": "Set",
       "Remove": "Remove"
     }
   },
@@ -166,23 +162,24 @@
   },
   "Dialogs": {
     "SaveGroup": {
-      "Title": "Save Configuration Group"
+      "Title": "Save Configuration Group",
+      "Tabs": {
+        "DefinitionDiff": "Definition diff",
+        "ChangeList": "Change list"
+      },
+      "ChangeCount": "{0} changes"
     },
     "ComplexEditor": {
       "Title": "Edit Complex Value",
-      "JsonHelper": "Raw JSON applies one Set or Remove mutation to the selected subtree.",
       "Modes": {
         "Visual": "Collection",
-        "Json": "Raw JSON",
         "Patch": "Patch Preview"
       },
       "CollectionKinds": {
         "Dictionary": "Dictionary keys",
-        "List": "List items",
-        "Json": "JSON value"
+        "List": "List items"
       },
       "Actions": {
-        "Add": "Add",
         "AddKey": "Add key",
         "AddItem": "Add item",
         "MoveUp": "Move up",
@@ -214,7 +211,6 @@
       "Back": "Back",
       "Search": "Search",
       "Cancel": "Cancel",
-      "Stage": "Stage",
       "Close": "Close"
     },
     "States": {

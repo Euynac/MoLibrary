@@ -13,8 +13,7 @@
 }
 
 .configuration-path-rail code,
-.configuration-patch-card code,
-.configuration-patch-values pre {
+.configuration-patch-paths {
     min-width: 0;
     color: var(--mud-palette-primary);
     font-family: var(--mud-typography-default-family);

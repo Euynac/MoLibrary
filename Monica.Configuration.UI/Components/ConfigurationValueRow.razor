@@ -46,7 +46,7 @@
                                            IsModified="@(PendingChange is not null)"
                                            ValueChanged="StageScalar" />
             }
-            else
+            else if (Node.NodeKind is ConfigurationNodeKind.Dictionary or ConfigurationNodeKind.List)
             {
                 <MudButton Variant="Variant.Outlined"
                            StartIcon="@Icons.Material.Filled.DataObject"

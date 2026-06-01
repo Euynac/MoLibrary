@@ -1,0 +1,11 @@
+.configuration-definition-diff-preview {
+    min-height: 0;
+}
+
+.configuration-definition-diff-preview ::deep .mud-expand-panel-content {
+    min-width: 0;
+}
+
+.configuration-definition-diff-preview ::deep .diff-viewer {
+    font-size: 0.8125rem;
+}

@@ -286,7 +286,7 @@
         parameters.Add(dialog => dialog.Changes, changes);
         var dialog = await DialogService.ShowAsync<SaveMutationGroupDialog>(L["Dialogs:SaveGroup:Title"], parameters, new DialogOptions
         {
-            MaxWidth = MaxWidth.Large,
+            MaxWidth = MaxWidth.ExtraLarge,
             FullWidth = true
         });
         var result = await dialog.Result;

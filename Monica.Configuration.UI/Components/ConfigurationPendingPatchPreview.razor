@@ -1,4 +1,7 @@
 @using Monica.Configuration.UI.Localization
+@using System.Text.Json
+@using System.Text.Json.Nodes
+@using Monica.UI.UIDiffHighlight.Models
 @inject IStringLocalizer<ConfigurationUIResource> L
 
 @if (Changes.Count == 0)
@@ -7,31 +10,64 @@
 }
 else
 {
-    <div class="configuration-patch-list">
-        @foreach (var change in Changes.OrderBy(change => change.LogicalPath.ToCanonicalString(), StringComparer.Ordinal))
+    <div class="configuration-patch-diff">
+        <DiffViewer OriginText="@BuildSnapshot(useOriginal: true)"
+                    NewText="@BuildSnapshot(useOriginal: false)"
+                    Options="@DiffOptions"
+                    ViewMode="@(Expanded ? EDiffViewMode.Split : EDiffViewMode.Unified)" />
+        <div class="configuration-patch-paths">
+            @foreach (var change in OrderedChanges)
         {
-            <div class="configuration-patch-card">
-                <div class="configuration-patch-card-header">
-                    <MudChip T="ConfigurationMutationKind" Size="Size.Small" Color="@PatchColor(change.MutationKind)" Variant="Variant.Outlined">
-                        @change.MutationKind
-                    </MudChip>
-                    <code>@change.LogicalPath.ToCanonicalString()</code>
-                </div>
-                @if (Expanded)
-                {
-                    <div class="configuration-patch-values">
-                        <pre>@L["State:Columns:OldValue"]: @change.OriginalDisplayValue</pre>
-                        <pre>@L["State:Columns:NewValue"]: @change.NewDisplayValue</pre>
-                    </div>
-                }
-            </div>
+                <MudChip T="string" Size="Size.Small" Color="@PatchColor(change.MutationKind)" Variant="Variant.Outlined">
+                    @change.MutationKind&nbsp;@change.LogicalPath.ToCanonicalString()
+                </MudChip>
         }
+        </div>
     </div>
 }
 
 @code {
+    private static readonly JsonSerializerOptions SNAPSHOT_JSON_OPTIONS = new()
+    {
+        WriteIndented = true
+    };
+
+    private readonly DiffHighlightOptions DiffOptions = new()
+    {
+        Mode = EDiffHighlightMode.Line,
+        ContextLines = 4,
+        MaxCharacterDiffLength = 5000
+    };
+
     [Parameter] public IReadOnlyList<PendingChange> Changes { get; set; } = [];
     [Parameter] public bool Expanded { get; set; }
+
+    private IEnumerable<PendingChange> OrderedChanges =>
+        Changes.OrderBy(change => change.LogicalPath.ToCanonicalString(), StringComparer.Ordinal);
+
+    private string BuildSnapshot(bool useOriginal)
+    {
+        var snapshot = new JsonObject();
+        foreach (var change in OrderedChanges)
+        {
+            snapshot[change.LogicalPath.ToCanonicalString()] = BuildSnapshotValue(change, useOriginal);
+        }
+
+        return snapshot.ToJsonString(SNAPSHOT_JSON_OPTIONS);
+    }
+
+    private JsonNode? BuildSnapshotValue(PendingChange change, bool useOriginal)
+    {
+        if (change.IsSensitive)
+        {
+            return JsonValue.Create(L["State:Value:Sensitive"].Value);
+        }
+
+        var value = useOriginal ? change.OriginalValue : change.NewValue;
+        return string.IsNullOrWhiteSpace(value?.Json)
+            ? null
+            : JsonNode.Parse(value.Json);
+    }
 
     private static Color PatchColor(ConfigurationMutationKind kind)
     {

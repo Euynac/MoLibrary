@@ -64,12 +64,8 @@
   "Mutation": {
     "DefinitionKey": "定义 Key",
     "LogicalPath": "逻辑路径",
-    "MutationKind": "修改类型",
     "ReloadBehavior": "重载行为",
-    "ExpectedValueVersion": "期望值版本",
-    "RawJson": "原始 JSON",
     "Kinds": {
-      "Set": "设置",
       "Remove": "移除"
     }
   },
@@ -166,23 +162,24 @@
   },
   "Dialogs": {
     "SaveGroup": {
-      "Title": "保存配置修改组"
+      "Title": "保存配置修改组",
+      "Tabs": {
+        "DefinitionDiff": "按配置类 Diff",
+        "ChangeList": "修改列表"
+      },
+      "ChangeCount": "{0} 个修改"
     },
     "ComplexEditor": {
       "Title": "编辑复杂值",
-      "JsonHelper": "原始 JSON 会对选中的子树应用一条设置或移除修改。",
       "Modes": {
         "Visual": "集合编辑",
-        "Json": "原始 JSON",
         "Patch": "修改预览"
       },
       "CollectionKinds": {
         "Dictionary": "字典 Key",
-        "List": "列表项",
-        "Json": "JSON 值"
+        "List": "列表项"
       },
       "Actions": {
-        "Add": "新增",
         "AddKey": "新增 Key",
         "AddItem": "新增项",
         "MoveUp": "上移",
@@ -214,7 +211,6 @@
       "Back": "返回",
       "Search": "搜索",
       "Cancel": "取消",
-      "Stage": "暂存",
       "Close": "关闭"
     },
     "States": {

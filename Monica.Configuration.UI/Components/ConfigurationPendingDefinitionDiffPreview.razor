@@ -1,0 +1,238 @@
+@using System.Text.Json
+@using System.Text.Json.Nodes
+@using Monica.Configuration.Services.Support
+@using Monica.Configuration.UI.Localization
+@using Monica.UI.UIDiffHighlight.Models
+@inject ConfigurationFacade Facade
+@inject IStringLocalizer<ConfigurationUIResource> L
+
+@if (_loading)
+{
+    <MudProgressLinear Indeterminate="true" />
+}
+else if (!string.IsNullOrWhiteSpace(_error))
+{
+    <MudAlert Severity="Severity.Error">@_error</MudAlert>
+}
+else if (_groups.Count == 0)
+{
+    <MudAlert Severity="Severity.Info">@L["Dialogs:ComplexEditor:NoPatch"]</MudAlert>
+}
+else
+{
+    <div class="configuration-definition-diff-preview">
+        <MudExpansionPanels MultiExpansion="true" Elevation="0">
+            @foreach (var group in _groups)
+            {
+                <MudExpansionPanel Text="@group.DisplayName" Expanded="@(_groups.Count == 1)">
+                    <MudStack Spacing="2">
+                        <MudStack Row="true" Wrap="Wrap.Wrap" AlignItems="AlignItems.Center" Spacing="1">
+                            <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">@group.DefinitionKey</MudChip>
+                            <MudChip T="int" Size="Size.Small" Color="Color.Primary" Variant="Variant.Outlined">
+                                @L["Dialogs:SaveGroup:ChangeCount", group.ChangeCount]
+                            </MudChip>
+                        </MudStack>
+                        <DiffViewer OriginText="@group.OriginJson"
+                                    NewText="@group.TargetJson"
+                                    Options="@DiffOptions"
+                                    ViewMode="EDiffViewMode.Split" />
+                    </MudStack>
+                </MudExpansionPanel>
+            }
+        </MudExpansionPanels>
+    </div>
+}
+
+@code {
+    private static readonly JsonSerializerOptions JSON_OPTIONS = new()
+    {
+        WriteIndented = true
+    };
+
+    private readonly ConfigurationEffectiveValuePatchEngine _patchEngine = new();
+    private readonly DiffHighlightOptions DiffOptions = new()
+    {
+        Mode = EDiffHighlightMode.Line,
+        ContextLines = 4,
+        MaxCharacterDiffLength = 8000
+    };
+
+    private IReadOnlyList<DefinitionDiffGroup> _groups = [];
+    private bool _loading;
+    private string? _error;
+
+    [Parameter] public IReadOnlyList<PendingChange> Changes { get; set; } = [];
+
+    protected override async Task OnParametersSetAsync()
+    {
+        _loading = true;
+        _error = null;
+
+        try
+        {
+            _groups = await BuildGroupsAsync();
+        }
+        catch (Exception ex)
+        {
+            _error = ex.Message;
+            _groups = [];
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private async Task<IReadOnlyList<DefinitionDiffGroup>> BuildGroupsAsync()
+    {
+        var groups = new List<DefinitionDiffGroup>();
+        foreach (var changeGroup in Changes
+                     .GroupBy(change => change.DefinitionKey, StringComparer.OrdinalIgnoreCase)
+                     .OrderBy(group => group.First().DefinitionDisplayName, StringComparer.OrdinalIgnoreCase))
+        {
+            var definition = await LoadDefinitionAsync(changeGroup.Key);
+            var originJson = await LoadOriginJsonAsync(changeGroup.Key);
+            var targetJson = ApplyChanges(definition, originJson, changeGroup);
+            groups.Add(new DefinitionDiffGroup(
+                definition.DefinitionKey,
+                definition.DisplayName,
+                changeGroup.Count(),
+                FormatForDisplay(originJson, definition),
+                FormatForDisplay(targetJson, definition)));
+        }
+
+        return groups;
+    }
+
+    private async Task<ConfigurationDefinition> LoadDefinitionAsync(string definitionKey)
+    {
+        var result = await Facade.GetDefinitionAsync(definitionKey);
+        if (result.IsFailed(out var error, out var detail))
+        {
+            throw new InvalidOperationException($"{L["Common:Errors:LoadFailed"]}: {error.Message}");
+        }
+
+        return detail.Definition;
+    }
+
+    private async Task<string> LoadOriginJsonAsync(string definitionKey)
+    {
+        var result = await Facade.GetEffectiveValueAsync(definitionKey, LogicalPath.Root);
+        if (result.IsFailed(out var error, out var value))
+        {
+            throw new InvalidOperationException($"{L["Common:Errors:LoadFailed"]}: {error.Message}");
+        }
+
+        return string.IsNullOrWhiteSpace(value.DisplayValue) ? "{}" : value.DisplayValue!;
+    }
+
+    private string ApplyChanges(
+        ConfigurationDefinition definition,
+        string originJson,
+        IEnumerable<PendingChange> changes)
+    {
+        var targetJson = NormalizeJson(originJson);
+        foreach (var change in changes.OrderBy(change => change.LogicalPath.ToCanonicalString(), StringComparer.Ordinal))
+        {
+            targetJson = change.MutationKind switch
+            {
+                ConfigurationMutationKind.Remove when change.LogicalPath.Depth == 0 => "{}",
+                ConfigurationMutationKind.Remove => _patchEngine.Remove(targetJson, definition, change.LogicalPath),
+                _ when change.LogicalPath.Depth == 0 => change.NewValue.Json,
+                _ => _patchEngine.Patch(targetJson, definition, change.LogicalPath, change.NewValue.Json)
+            };
+        }
+
+        return targetJson;
+    }
+
+    private string FormatForDisplay(string json, ConfigurationDefinition definition)
+    {
+        var root = ParseJson(json);
+        var redacted = RedactSensitive(root, definition.Root);
+        return redacted?.ToJsonString(JSON_OPTIONS) ?? "null";
+    }
+
+    private static string NormalizeJson(string json)
+    {
+        return ParseJson(json)?.ToJsonString() ?? "{}";
+    }
+
+    private static JsonNode? ParseJson(string json)
+    {
+        return JsonNode.Parse(string.IsNullOrWhiteSpace(json) ? "{}" : json) ?? new JsonObject();
+    }
+
+    private JsonNode? RedactSensitive(JsonNode? node, ConfigurationNodeDefinition schema)
+    {
+        if (node is null)
+        {
+            return null;
+        }
+
+        if (schema.IsSensitive)
+        {
+            return JsonValue.Create(L["State:Value:Sensitive"].Value);
+        }
+
+        switch (node)
+        {
+            case JsonObject jsonObject when schema.NodeKind == ConfigurationNodeKind.Object:
+                RedactObject(jsonObject, schema);
+                break;
+            case JsonObject jsonObject when schema.NodeKind == ConfigurationNodeKind.Dictionary && schema.DictionaryTemplate is not null:
+                RedactDictionary(jsonObject, schema.DictionaryTemplate.ValueTemplate);
+                break;
+            case JsonArray jsonArray when schema.NodeKind == ConfigurationNodeKind.List && schema.ListTemplate is not null:
+                RedactList(jsonArray, schema.ListTemplate.ItemTemplate);
+                break;
+        }
+
+        return node;
+    }
+
+    private void RedactObject(JsonObject jsonObject, ConfigurationNodeDefinition schema)
+    {
+        foreach (var child in schema.Children)
+        {
+            var current = jsonObject[child.Name];
+            var redacted = RedactSensitive(current, child);
+            if (!ReferenceEquals(current, redacted))
+            {
+                jsonObject[child.Name] = redacted;
+            }
+        }
+    }
+
+    private void RedactDictionary(JsonObject jsonObject, ConfigurationNodeDefinition valueSchema)
+    {
+        foreach (var pair in jsonObject.ToArray())
+        {
+            var redacted = RedactSensitive(pair.Value, valueSchema);
+            if (!ReferenceEquals(pair.Value, redacted))
+            {
+                jsonObject[pair.Key] = redacted;
+            }
+        }
+    }
+
+    private void RedactList(JsonArray jsonArray, ConfigurationNodeDefinition itemSchema)
+    {
+        for (var index = 0; index < jsonArray.Count; index++)
+        {
+            var current = jsonArray[index];
+            var redacted = RedactSensitive(current, itemSchema);
+            if (!ReferenceEquals(current, redacted))
+            {
+                jsonArray[index] = redacted;
+            }
+        }
+    }
+
+    private sealed record DefinitionDiffGroup(
+        string DefinitionKey,
+        string DisplayName,
+        int ChangeCount,
+        string OriginJson,
+        string TargetJson);
+}
