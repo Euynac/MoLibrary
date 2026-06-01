@@ -7,14 +7,16 @@
 <div class="configuration-scalar-editor @(IsModified ? "modified-input" : null)">
     @if (Node.ValueKind == ConfigurationValueKind.Boolean)
     {
-        <MudSwitch T="bool"
+        <MudSwitch @key="EditorInstanceKey"
+                   T="bool"
                    Value="@_boolValue"
                    ValueChanged="OnBoolChanged"
                    Color="Color.Primary" />
     }
     else if (IsNumeric)
     {
-        <MudNumericField T="decimal?"
+        <MudNumericField @key="EditorInstanceKey"
+                         T="decimal?"
                          Value="@_decimalValue"
                          ValueChanged="OnDecimalChanged"
                          Variant="Variant.Outlined"
@@ -25,7 +27,8 @@
     }
     else if (Node.ValueKind == ConfigurationValueKind.DateTime)
     {
-        <MudDatePicker Date="@_dateValue"
+        <MudDatePicker @key="EditorInstanceKey"
+                       Date="@_dateValue"
                        DateChanged="OnDateChanged"
                        Variant="Variant.Outlined"
                        Margin="Margin.Dense"
@@ -33,7 +36,8 @@
     }
     else if (Node.ValueKind == ConfigurationValueKind.TimeSpan)
     {
-        <MudTimePicker Time="@_timeValue"
+        <MudTimePicker @key="EditorInstanceKey"
+                       Time="@_timeValue"
                        TimeChanged="OnTimeChanged"
                        Variant="Variant.Outlined"
                        Margin="Margin.Dense"
@@ -41,7 +45,8 @@
     }
     else if (EnumValues.Count > 0)
     {
-        <MudSelect T="string"
+        <MudSelect @key="EditorInstanceKey"
+                   T="string"
                    Value="@_textValue"
                    ValueChanged="OnTextChanged"
                    Variant="Variant.Outlined"
@@ -54,7 +59,8 @@
     }
     else
     {
-        <MudTextField T="string"
+        <MudTextField @key="EditorInstanceKey"
+                      T="string"
                       Value="@_textValue"
                       ValueChanged="OnTextChanged"
                       Variant="Variant.Outlined"
@@ -88,6 +94,7 @@
     private string? _lastNodePath;
     private string? _lastEffectiveDisplayValue;
     private bool _lastIsModified;
+    private int _editorResetVersion;
 
     private bool IsNumeric => Node.ValueKind is ConfigurationValueKind.Integer or ConfigurationValueKind.Decimal or ConfigurationValueKind.Floating;
 
@@ -96,6 +103,8 @@
         ?? ExtractRegexEnumValues();
 
     private InputType TextInputType => Node.IsSensitive && !_showSensitive ? InputType.Password : InputType.Text;
+
+    private string EditorInstanceKey => $"{Node.RelativePath.ToCanonicalString()}:{Node.ValueKind}:{_editorResetVersion}";
 
     private string? SensitiveAdornmentIcon => Node.IsSensitive
         ? _showSensitive ? Icons.Material.Filled.VisibilityOff : Icons.Material.Filled.Visibility
@@ -147,6 +156,7 @@
         _timeValue = TimeSpan.TryParse(displayValue, CultureInfo.InvariantCulture, out var parsedTime)
             ? parsedTime
             : null;
+        _editorResetVersion++;
     }
 
     private async Task OnTextChanged(string value)
