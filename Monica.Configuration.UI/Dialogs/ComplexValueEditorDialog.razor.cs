@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Components;
 using MudBlazor;
 using Monica.Configuration.Models;
 using Monica.Configuration.UI.State;
+using Monica.Configuration.UI.Support;
 
 namespace Monica.Configuration.UI.Dialogs;
 
@@ -18,6 +19,7 @@ public partial class ComplexValueEditorDialog
     [Parameter, EditorRequired] public ConfigurationDefinition Definition { get; set; } = null!;
     [Parameter, EditorRequired] public ConfigurationNodeDefinition Node { get; set; } = null!;
     [Parameter] public ConfigurationEffectiveValue? EffectiveValue { get; set; }
+    [Parameter] public IReadOnlyList<PendingChange> PendingChanges { get; set; } = [];
 
     private readonly List<PendingChange> _changes = [];
     private readonly List<FocusFrame> _navigationStack = [];
@@ -32,6 +34,7 @@ public partial class ComplexValueEditorDialog
     private string _newEntryKey = string.Empty;
     private string? _newEntryError;
     private long? _valueVersion;
+    private bool _startedWithScopedPendingChanges;
 
     private ConfigurationReloadBehavior EffectiveReloadBehavior =>
         Node.ReloadBehavior is { } behavior and not ConfigurationReloadBehavior.Inherit
@@ -95,15 +98,24 @@ public partial class ComplexValueEditorDialog
 
     private string StageButtonText => L["Dialogs:ComplexEditor:Actions:StageCount", _changes.Count];
 
-    private bool CanStage => _changes.Count > 0;
+    private bool CanStage => _changes.Count > 0 || _startedWithScopedPendingChanges;
 
     protected override void OnInitialized()
     {
         _valueVersion = EffectiveValue?.Version;
         _focusNode = Node;
         _focusPath = Node.RelativePath;
-        _documentNode = ParseInitialDocument();
-        _originalDocumentNode = CloneNode(_documentNode);
+        _originalDocumentNode = ParseInitialDocument();
+        _documentNode = ConfigurationPendingValueDocumentBuilder.ApplyPendingChanges(
+            Node,
+            Definition.DefinitionKey,
+            Node.RelativePath,
+            CloneNode(_originalDocumentNode) ?? DefaultJsonFor(Node),
+            PendingChanges);
+        _changes.AddRange(PendingChanges
+            .Where(change => ConfigurationPendingValueDocumentBuilder.IsInScope(change, Definition.DefinitionKey, Node.RelativePath))
+            .OrderBy(change => change.LogicalPath.ToCanonicalString(), StringComparer.Ordinal));
+        _startedWithScopedPendingChanges = _changes.Count > 0;
         SelectFirstEntry();
     }
 
@@ -580,7 +592,7 @@ public partial class ComplexValueEditorDialog
 
     private void Apply()
     {
-        if (_changes.Count == 0)
+        if (!CanStage)
         {
             return;
         }

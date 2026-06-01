@@ -1,4 +1,3 @@
-@using System.Text.Json
 @using System.Text.Json.Nodes
 @using Monica.Configuration.Services.Support
 @using Monica.Configuration.UI.Localization
@@ -44,11 +43,6 @@ else
 }
 
 @code {
-    private static readonly JsonSerializerOptions JSON_OPTIONS = new()
-    {
-        WriteIndented = true
-    };
-
     private readonly ConfigurationEffectiveValuePatchEngine _patchEngine = new();
     private readonly DiffHighlightOptions DiffOptions = new()
     {
@@ -148,9 +142,7 @@ else
 
     private string FormatForDisplay(string json, ConfigurationDefinition definition)
     {
-        var root = ParseJson(json);
-        var redacted = RedactSensitive(root, definition.Root);
-        return redacted?.ToJsonString(JSON_OPTIONS) ?? "null";
+        return ConfigurationJsonDisplayFormatter.Format(json, definition.Root, L["State:Value:Sensitive"].Value);
     }
 
     private static string NormalizeJson(string json)
@@ -161,72 +153,6 @@ else
     private static JsonNode? ParseJson(string json)
     {
         return JsonNode.Parse(string.IsNullOrWhiteSpace(json) ? "{}" : json) ?? new JsonObject();
-    }
-
-    private JsonNode? RedactSensitive(JsonNode? node, ConfigurationNodeDefinition schema)
-    {
-        if (node is null)
-        {
-            return null;
-        }
-
-        if (schema.IsSensitive)
-        {
-            return JsonValue.Create(L["State:Value:Sensitive"].Value);
-        }
-
-        switch (node)
-        {
-            case JsonObject jsonObject when schema.NodeKind == ConfigurationNodeKind.Object:
-                RedactObject(jsonObject, schema);
-                break;
-            case JsonObject jsonObject when schema.NodeKind == ConfigurationNodeKind.Dictionary && schema.DictionaryTemplate is not null:
-                RedactDictionary(jsonObject, schema.DictionaryTemplate.ValueTemplate);
-                break;
-            case JsonArray jsonArray when schema.NodeKind == ConfigurationNodeKind.List && schema.ListTemplate is not null:
-                RedactList(jsonArray, schema.ListTemplate.ItemTemplate);
-                break;
-        }
-
-        return node;
-    }
-
-    private void RedactObject(JsonObject jsonObject, ConfigurationNodeDefinition schema)
-    {
-        foreach (var child in schema.Children)
-        {
-            var current = jsonObject[child.Name];
-            var redacted = RedactSensitive(current, child);
-            if (!ReferenceEquals(current, redacted))
-            {
-                jsonObject[child.Name] = redacted;
-            }
-        }
-    }
-
-    private void RedactDictionary(JsonObject jsonObject, ConfigurationNodeDefinition valueSchema)
-    {
-        foreach (var pair in jsonObject.ToArray())
-        {
-            var redacted = RedactSensitive(pair.Value, valueSchema);
-            if (!ReferenceEquals(pair.Value, redacted))
-            {
-                jsonObject[pair.Key] = redacted;
-            }
-        }
-    }
-
-    private void RedactList(JsonArray jsonArray, ConfigurationNodeDefinition itemSchema)
-    {
-        for (var index = 0; index < jsonArray.Count; index++)
-        {
-            var current = jsonArray[index];
-            var redacted = RedactSensitive(current, itemSchema);
-            if (!ReferenceEquals(current, redacted))
-            {
-                jsonArray[index] = redacted;
-            }
-        }
     }
 
     private sealed record DefinitionDiffGroup(

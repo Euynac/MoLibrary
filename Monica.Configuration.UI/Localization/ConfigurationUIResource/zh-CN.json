@@ -33,6 +33,7 @@
       "SaveGroup": "保存修改组",
       "UndoAll": "撤销全部",
       "Undo": "撤销",
+      "PreviewValue": "预览当前值",
       "EditComplex": "编辑复杂值"
     },
     "Columns": {
@@ -168,6 +169,9 @@
         "ChangeList": "修改列表"
       },
       "ChangeCount": "{0} 个修改"
+    },
+    "CurrentValue": {
+      "Title": "当前值"
     },
     "ComplexEditor": {
       "Title": "编辑复杂值",

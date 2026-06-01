@@ -1,0 +1,30 @@
+.configuration-current-value-path {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    min-width: 0;
+    margin-top: 0.75rem;
+    padding-top: 0.75rem;
+    border-top: 1px solid var(--mud-palette-lines-default);
+}
+
+.configuration-current-value-path code {
+    min-width: 0;
+    color: var(--mud-palette-primary);
+    font-family: var(--mud-typography-default-family);
+    overflow-wrap: anywhere;
+}
+
+.configuration-current-value-json {
+    max-height: min(68vh, 720px);
+    overflow: auto;
+}
+
+.configuration-current-value-json pre {
+    margin: 0;
+    padding: 1rem;
+    color: var(--mud-palette-text-primary);
+    font-family: var(--mud-typography-default-family);
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+}

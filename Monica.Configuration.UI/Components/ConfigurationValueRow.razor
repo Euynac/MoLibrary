@@ -48,11 +48,18 @@
             }
             else if (Node.NodeKind is ConfigurationNodeKind.Dictionary or ConfigurationNodeKind.List)
             {
-                <MudButton Variant="Variant.Outlined"
-                           StartIcon="@Icons.Material.Filled.DataObject"
-                           OnClick="EditComplexValue">
-                    @L["State:Actions:EditComplex"]
-                </MudButton>
+                <MudStack Row="true" Wrap="Wrap.Wrap" AlignItems="AlignItems.Center" Spacing="1">
+                    <MudButton Variant="Variant.Outlined"
+                               StartIcon="@Icons.Material.Filled.Visibility"
+                               OnClick="PreviewComplexValue">
+                        @L["State:Actions:PreviewValue"]
+                    </MudButton>
+                    <MudButton Variant="Variant.Outlined"
+                               StartIcon="@Icons.Material.Filled.DataObject"
+                               OnClick="EditComplexValue">
+                        @L["State:Actions:EditComplex"]
+                    </MudButton>
+                </MudStack>
             }
         </MudItem>
 
@@ -118,23 +125,17 @@
 
     private async Task EditComplexValue()
     {
-        var effectiveValue = EffectiveValue;
-        if (Node.NodeKind != ConfigurationNodeKind.Scalar)
+        var effectiveValue = await LoadComplexEffectiveValueAsync();
+        if (effectiveValue is null)
         {
-            var effectiveValueResult = await Facade.GetEffectiveValueAsync(Definition.DefinitionKey, Node.RelativePath);
-            if (effectiveValueResult.IsFailed(out var error, out var loadedEffectiveValue))
-            {
-                Snackbar.Add($"{L["Common:Errors:LoadFailed"]}: {error.Message}", Severity.Error);
-                return;
-            }
-
-            effectiveValue = loadedEffectiveValue;
+            return;
         }
 
         var parameters = new DialogParameters<ComplexValueEditorDialog>();
         parameters.Add(dialog => dialog.Definition, Definition);
         parameters.Add(dialog => dialog.Node, Node);
         parameters.Add(dialog => dialog.EffectiveValue, effectiveValue);
+        parameters.Add(dialog => dialog.PendingChanges, StateStore.GetPending());
         var dialog = await DialogService.ShowAsync<ComplexValueEditorDialog>(L["Dialogs:ComplexEditor:Title"], parameters, new DialogOptions
         {
             MaxWidth = MaxWidth.ExtraLarge,
@@ -146,20 +147,43 @@
             return;
         }
 
-        if (result.Data is PendingChange change)
+        if (result.Data is IReadOnlyList<PendingChange> changes)
         {
-            StateStore.Stage(change);
+            StateStore.ReplaceScope(Definition.DefinitionKey, Node.RelativePath, changes);
             await Changed.InvokeAsync();
         }
-        else if (result.Data is IReadOnlyList<PendingChange> changes)
-        {
-            foreach (var pendingChange in changes)
-            {
-                StateStore.Stage(pendingChange);
-            }
+    }
 
-            await Changed.InvokeAsync();
+    private async Task PreviewComplexValue()
+    {
+        var effectiveValue = await LoadComplexEffectiveValueAsync();
+        if (effectiveValue is null)
+        {
+            return;
         }
+
+        var parameters = new DialogParameters<ConfigurationCurrentValuePreviewDialog>();
+        parameters.Add(dialog => dialog.Definition, Definition);
+        parameters.Add(dialog => dialog.Node, Node);
+        parameters.Add(dialog => dialog.EffectiveValue, effectiveValue);
+        parameters.Add(dialog => dialog.PendingChanges, StateStore.GetPending());
+        await DialogService.ShowAsync<ConfigurationCurrentValuePreviewDialog>(L["Dialogs:CurrentValue:Title"], parameters, new DialogOptions
+        {
+            MaxWidth = MaxWidth.Medium,
+            FullWidth = true
+        });
+    }
+
+    private async Task<ConfigurationEffectiveValue?> LoadComplexEffectiveValueAsync()
+    {
+        var effectiveValueResult = await Facade.GetEffectiveValueAsync(Definition.DefinitionKey, Node.RelativePath);
+        if (effectiveValueResult.IsFailed(out var error, out var loadedEffectiveValue))
+        {
+            Snackbar.Add($"{L["Common:Errors:LoadFailed"]}: {error.Message}", Severity.Error);
+            return null;
+        }
+
+        return loadedEffectiveValue;
     }
 
     private async Task OpenHistoryAsync()

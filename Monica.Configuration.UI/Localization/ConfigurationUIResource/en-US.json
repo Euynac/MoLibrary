@@ -33,6 +33,7 @@
       "SaveGroup": "Save group",
       "UndoAll": "Undo all",
       "Undo": "Undo",
+      "PreviewValue": "Preview value",
       "EditComplex": "Edit complex value"
     },
     "Columns": {
@@ -168,6 +169,9 @@
         "ChangeList": "Change list"
       },
       "ChangeCount": "{0} changes"
+    },
+    "CurrentValue": {
+      "Title": "Current Value"
     },
     "ComplexEditor": {
       "Title": "Edit Complex Value",

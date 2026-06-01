@@ -1,0 +1,55 @@
+@using Monica.Configuration.UI.Localization
+@inject IStringLocalizer<ConfigurationUIResource> L
+
+<MudDialog>
+    <DialogContent>
+        <MudStack Spacing="3">
+            <MudPaper Outlined="true" Class="pa-3">
+                <MudStack Row="true" Wrap="Wrap.Wrap" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Spacing="2">
+                    <MudStack Spacing="0">
+                        <MudText Typo="Typo.subtitle2">@Definition.DisplayName</MudText>
+                        <MudText Typo="Typo.caption" Color="Color.Secondary">@L["Mutation:DefinitionKey"]: @Definition.DefinitionKey</MudText>
+                    </MudStack>
+                    <MudChip T="long?" Size="Size.Small" Color="Color.Primary" Variant="Variant.Outlined">v@EffectiveValue?.Version</MudChip>
+                </MudStack>
+                <div class="configuration-current-value-path">
+                    <MudText Typo="Typo.caption" Color="Color.Secondary">@L["Mutation:LogicalPath"]</MudText>
+                    <code>@Node.RelativePath.ToCanonicalString()</code>
+                </div>
+            </MudPaper>
+
+            <MudPaper Outlined="true" Class="configuration-current-value-json">
+                <pre>@DisplayJson</pre>
+            </MudPaper>
+        </MudStack>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Close">@L["Common:Actions:Close"]</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] private IMudDialogInstance MudDialog { get; set; } = null!;
+    [Parameter, EditorRequired] public ConfigurationDefinition Definition { get; set; } = null!;
+    [Parameter, EditorRequired] public ConfigurationNodeDefinition Node { get; set; } = null!;
+    [Parameter] public ConfigurationEffectiveValue? EffectiveValue { get; set; }
+    [Parameter] public IReadOnlyList<PendingChange> PendingChanges { get; set; } = [];
+
+    private string DisplayJson
+    {
+        get
+        {
+            var node = ConfigurationPendingValueDocumentBuilder.Build(
+                Node,
+                Definition.DefinitionKey,
+                EffectiveValue?.DisplayValue,
+                PendingChanges);
+            return ConfigurationJsonDisplayFormatter.Format(node, Node, L["State:Value:Sensitive"]);
+        }
+    }
+
+    private void Close()
+    {
+        MudDialog.Close(DialogResult.Ok(true));
+    }
+}
