@@ -83,8 +83,9 @@
                                                     <div class="configuration-section-list">
                                                         @foreach (var sectionItem in SectionItems)
                                                         {
-                                                            <MudButton Variant="@(IsSelectedNode(sectionItem.Node) ? Variant.Filled : Variant.Text)"
-                                                                       Color="@(IsSelectedNode(sectionItem.Node) ? Color.Primary : Color.Default)"
+                                                            var isSelectedSection = IsSelectedNode(sectionItem.Node);
+                                                            <MudButton Variant="@(isSelectedSection ? Variant.Filled : Variant.Text)"
+                                                                       Color="@(isSelectedSection ? Color.Primary : Color.Default)"
                                                                        StartIcon="@sectionItem.Icon"
                                                                        FullWidth="true"
                                                                        Class="configuration-section-button"
@@ -96,10 +97,10 @@
                                                                         </MudText>
                                                                         <MudChip T="int" Size="Size.Small" Variant="Variant.Outlined">@sectionItem.ScalarCount</MudChip>
                                                                     </MudStack>
-                                                                    <MudText Typo="Typo.caption" Color="Color.Secondary">@sectionItem.PathLabel</MudText>
+                                                                    <MudText Typo="Typo.caption" Color="@(isSelectedSection ? Color.Inherit : Color.Secondary)">@sectionItem.PathLabel</MudText>
                                                                     @if (!string.IsNullOrWhiteSpace(sectionItem.Description))
                                                                     {
-                                                                        <MudText Typo="Typo.caption" Color="Color.Secondary">@sectionItem.Description</MudText>
+                                                                        <MudText Typo="Typo.caption" Color="@(isSelectedSection ? Color.Inherit : Color.Secondary)">@sectionItem.Description</MudText>
                                                                     }
                                                                 </MudStack>
                                                             </MudButton>
@@ -352,9 +353,18 @@
 
     private string GetNodeLabel(ConfigurationNodeDefinition node)
     {
-        return node.RelativePath.Depth == 0
-            ? L["State:Tree:Root"]
-            : string.IsNullOrWhiteSpace(node.DisplayName) ? node.Name : $"{node.DisplayName} ({node.Name})";
+        if (node.RelativePath.Depth == 0)
+        {
+            return L["State:Tree:Root"];
+        }
+
+        if (string.IsNullOrWhiteSpace(node.DisplayName)
+            || string.Equals(node.DisplayName, node.Name, StringComparison.OrdinalIgnoreCase))
+        {
+            return node.Name;
+        }
+
+        return node.DisplayName!;
     }
 
     private static string SectionIcon(ConfigurationNodeDefinition node)
