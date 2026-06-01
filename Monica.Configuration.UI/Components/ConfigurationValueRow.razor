@@ -118,19 +118,46 @@
 
     private async Task EditComplexValue()
     {
+        var effectiveValue = EffectiveValue;
+        if (Node.NodeKind != ConfigurationNodeKind.Scalar)
+        {
+            var effectiveValueResult = await Facade.GetEffectiveValueAsync(Definition.DefinitionKey, Node.RelativePath);
+            if (effectiveValueResult.IsFailed(out var error, out var loadedEffectiveValue))
+            {
+                Snackbar.Add($"{L["Common:Errors:LoadFailed"]}: {error.Message}", Severity.Error);
+                return;
+            }
+
+            effectiveValue = loadedEffectiveValue;
+        }
+
         var parameters = new DialogParameters<ComplexValueEditorDialog>();
         parameters.Add(dialog => dialog.Definition, Definition);
         parameters.Add(dialog => dialog.Node, Node);
-        parameters.Add(dialog => dialog.EffectiveValue, EffectiveValue);
+        parameters.Add(dialog => dialog.EffectiveValue, effectiveValue);
         var dialog = await DialogService.ShowAsync<ComplexValueEditorDialog>(L["Dialogs:ComplexEditor:Title"], parameters, new DialogOptions
         {
-            MaxWidth = MaxWidth.Large,
+            MaxWidth = MaxWidth.ExtraLarge,
             FullWidth = true
         });
         var result = await dialog.Result;
-        if (result is { Canceled: false, Data: PendingChange change })
+        if (result is not { Canceled: false })
+        {
+            return;
+        }
+
+        if (result.Data is PendingChange change)
         {
             StateStore.Stage(change);
+            await Changed.InvokeAsync();
+        }
+        else if (result.Data is IReadOnlyList<PendingChange> changes)
+        {
+            foreach (var pendingChange in changes)
+            {
+                StateStore.Stage(pendingChange);
+            }
+
             await Changed.InvokeAsync();
         }
     }

@@ -1,0 +1,44 @@
+@using Monica.Configuration.UI.Localization
+@inject IStringLocalizer<ConfigurationUIResource> L
+
+@if (Changes.Count == 0)
+{
+    <MudAlert Severity="Severity.Info" Dense="true">@L["Dialogs:ComplexEditor:NoPatch"]</MudAlert>
+}
+else
+{
+    <div class="configuration-patch-list">
+        @foreach (var change in Changes.OrderBy(change => change.LogicalPath.ToCanonicalString(), StringComparer.Ordinal))
+        {
+            <div class="configuration-patch-card">
+                <div class="configuration-patch-card-header">
+                    <MudChip T="ConfigurationMutationKind" Size="Size.Small" Color="@PatchColor(change.MutationKind)" Variant="Variant.Outlined">
+                        @change.MutationKind
+                    </MudChip>
+                    <code>@change.LogicalPath.ToCanonicalString()</code>
+                </div>
+                @if (Expanded)
+                {
+                    <div class="configuration-patch-values">
+                        <pre>@L["State:Columns:OldValue"]: @change.OriginalDisplayValue</pre>
+                        <pre>@L["State:Columns:NewValue"]: @change.NewDisplayValue</pre>
+                    </div>
+                }
+            </div>
+        }
+    </div>
+}
+
+@code {
+    [Parameter] public IReadOnlyList<PendingChange> Changes { get; set; } = [];
+    [Parameter] public bool Expanded { get; set; }
+
+    private static Color PatchColor(ConfigurationMutationKind kind)
+    {
+        return kind switch
+        {
+            ConfigurationMutationKind.Remove => Color.Error,
+            _ => Color.Info
+        };
+    }
+}

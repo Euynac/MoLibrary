@@ -1,141 +1,320 @@
-@using System.Text.Json
+@using System.Globalization
+@using System.Text.Json.Nodes
+@using System.Text.RegularExpressions
 @using Monica.Configuration.UI.Localization
 @inject IStringLocalizer<ConfigurationUIResource> L
 
 <MudDialog>
     <DialogContent>
-        <MudStack Spacing="3">
-            <MudAlert Severity="@ReloadSeverity" Variant="Variant.Outlined">
-                @L["Mutation:ReloadBehavior"]: @EffectiveReloadBehavior
-            </MudAlert>
+        <div class="configuration-complex-editor">
+            <MudStack Spacing="2">
+                <MudAlert Severity="@ReloadSeverity" Variant="Variant.Outlined">
+                    @L["Mutation:ReloadBehavior"]: @EffectiveReloadBehavior
+                </MudAlert>
 
-            <MudGrid>
-                <MudItem xs="12" md="6">
-                    <MudTextField T="string"
-                                  Value="@Definition.DefinitionKey"
-                                  Label="@L["Mutation:DefinitionKey"]"
-                                  Variant="Variant.Outlined"
-                                  Margin="Margin.Dense"
-                                  ReadOnly="true" />
-                </MudItem>
-                <MudItem xs="12" md="6">
-                    <MudTextField T="string"
-                                  Value="@Node.RelativePath.ToCanonicalString()"
-                                  Label="@L["Mutation:LogicalPath"]"
-                                  Variant="Variant.Outlined"
-                                  Margin="Margin.Dense"
-                                  ReadOnly="true" />
-                </MudItem>
-                <MudItem xs="12" md="4">
-                    <MudSelect T="ConfigurationMutationKind"
-                               @bind-Value="_mutationKind"
-                               Label="@L["Mutation:MutationKind"]"
-                               Variant="Variant.Outlined"
-                               Margin="Margin.Dense">
-                        <MudSelectItem T="ConfigurationMutationKind" Value="@ConfigurationMutationKind.Set">@L["Mutation:Kinds:Set"]</MudSelectItem>
-                        <MudSelectItem T="ConfigurationMutationKind" Value="@ConfigurationMutationKind.Remove">@L["Mutation:Kinds:Remove"]</MudSelectItem>
-                        <MudSelectItem T="ConfigurationMutationKind" Value="@ConfigurationMutationKind.Replace">@L["Mutation:Kinds:Replace"]</MudSelectItem>
-                    </MudSelect>
-                </MudItem>
-                <MudItem xs="12" md="4">
-                    <MudNumericField T="long?"
-                                     @bind-Value="_valueVersion"
-                                     Label="@L["Mutation:ExpectedValueVersion"]"
-                                     Variant="Variant.Outlined"
-                                     Margin="Margin.Dense" />
-                </MudItem>
-            </MudGrid>
+                <MudPaper Outlined="true" Class="pa-3">
+                    <MudStack Row="true" Wrap="Wrap.Wrap" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Spacing="2">
+                        <MudStack Spacing="0">
+                            <MudText Typo="Typo.subtitle2">@Definition.DisplayName</MudText>
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">@L["Mutation:DefinitionKey"]: @Definition.DefinitionKey</MudText>
+                        </MudStack>
+                        <MudStack Row="true" Wrap="Wrap.Wrap" Spacing="1">
+                            <MudChip T="int" Size="Size.Small" Color="Color.Primary" Variant="Variant.Outlined">@Definition.SchemaVersion</MudChip>
+                            <MudChip T="ConfigurationNodeKind" Size="Size.Small" Color="Color.Info" Variant="Variant.Outlined">@Node.NodeKind</MudChip>
+                        </MudStack>
+                    </MudStack>
+                    <div class="configuration-path-rail">
+                        <MudText Typo="Typo.caption" Color="Color.Secondary">@L["Mutation:LogicalPath"]</MudText>
+                        <code>@ActivePathLabel</code>
+                    </div>
+                </MudPaper>
 
-            <MudTextField T="string"
-                          @bind-Value="_jsonText"
-                          Label="@L["Mutation:RawJson"]"
-                          Variant="Variant.Outlined"
-                          Lines="20"
-                          FullWidth="true"
-                          Error="@(!string.IsNullOrWhiteSpace(_error))"
-                          ErrorText="@_error"
-                          HelperText="@L["Dialogs:ComplexEditor:JsonHelper"]" />
-        </MudStack>
+                <MudStack Row="true" Wrap="Wrap.Wrap" Spacing="1" Class="configuration-editor-modes">
+                    @if (SupportsVisualEditor)
+                    {
+                        <MudButton Variant="@ModeVariant(EditorMode.Visual)"
+                                   Color="@ModeColor(EditorMode.Visual)"
+                                   StartIcon="@Icons.Material.Filled.AccountTree"
+                                   OnClick="() => SetMode(EditorMode.Visual)">
+                            @L["Dialogs:ComplexEditor:Modes:Visual"]
+                        </MudButton>
+                    }
+                    <MudButton Variant="@ModeVariant(EditorMode.Json)"
+                               Color="@ModeColor(EditorMode.Json)"
+                               StartIcon="@Icons.Material.Filled.Code"
+                               OnClick="() => SetMode(EditorMode.Json)">
+                        @L["Dialogs:ComplexEditor:Modes:Json"]
+                    </MudButton>
+                    <MudButton Variant="@ModeVariant(EditorMode.Patch)"
+                               Color="@ModeColor(EditorMode.Patch)"
+                               StartIcon="@Icons.Material.Filled.Difference"
+                               OnClick="() => SetMode(EditorMode.Patch)">
+                        @L["Dialogs:ComplexEditor:Modes:Patch"]
+                    </MudButton>
+                </MudStack>
+
+                @if (_mode == EditorMode.Visual && SupportsVisualEditor)
+                {
+                    <MudGrid Spacing="2" Class="configuration-collection-grid">
+                        <MudItem xs="12" lg="3" Class="configuration-collection-column">
+                            <MudPaper Outlined="true" Class="pa-3 configuration-collection-panel">
+                                <MudStack Spacing="2">
+                                    <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Spacing="1">
+                                        <MudStack Spacing="0">
+                                            <MudText Typo="Typo.caption" Color="Color.Secondary">@CollectionKindLabel</MudText>
+                                            <MudText Typo="Typo.subtitle2">@DisplayName(_focusNode)</MudText>
+                                        </MudStack>
+                                        @if (_navigationStack.Count > 0)
+                                        {
+                                            <MudTooltip Text="@L["Common:Actions:Back"]">
+                                                <MudIconButton Icon="@Icons.Material.Filled.ArrowBack"
+                                                               Size="Size.Small"
+                                                               OnClick="GoBack" />
+                                            </MudTooltip>
+                                        }
+                                    </MudStack>
+
+                                    @if (RequiresNewEntryKey)
+                                    {
+                                        <MudTextField T="string"
+                                                      @bind-Value="_newEntryKey"
+                                                      Label="@NewEntryKeyLabel"
+                                                      Variant="Variant.Outlined"
+                                                      Margin="Margin.Dense"
+                                                      Error="@(!string.IsNullOrWhiteSpace(_newEntryError))"
+                                                      ErrorText="@_newEntryError" />
+                                    }
+
+                                    <MudButton Variant="Variant.Outlined"
+                                               Color="Color.Primary"
+                                               StartIcon="@Icons.Material.Filled.Add"
+                                               OnClick="AddEntry">
+                                        @AddEntryLabel
+                                    </MudButton>
+
+                                    <div class="configuration-entry-list">
+                                        @if (CurrentEntries.Count == 0)
+                                        {
+                                            <MudAlert Severity="Severity.Info" Dense="true">@L["Dialogs:ComplexEditor:EmptyCollection"]</MudAlert>
+                                        }
+                                        else
+                                        {
+                                            @foreach (var entry in CurrentEntries)
+                                            {
+                                                <MudButton Variant="@(entry.IsSelected ? Variant.Filled : Variant.Outlined)"
+                                                           Color="@(entry.IsSelected ? Color.Primary : Color.Default)"
+                                                           Class="configuration-entry-button"
+                                                           OnClick="() => SelectEntry(entry.SelectionKey)">
+                                                    <MudStack Spacing="0" Class="configuration-entry-text">
+                                                        <MudText Typo="Typo.body2">@entry.Title</MudText>
+                                                        <MudText Typo="Typo.caption">@entry.Subtitle</MudText>
+                                                    </MudStack>
+                                                </MudButton>
+                                            }
+                                        }
+                                    </div>
+                                </MudStack>
+                            </MudPaper>
+                        </MudItem>
+
+                        <MudItem xs="12" lg="6" Class="configuration-collection-column">
+                            <MudPaper Outlined="true" Class="pa-3 configuration-collection-panel">
+                                @if (SelectedEntry is null)
+                                {
+                                    <MudAlert Severity="Severity.Info">@L["Dialogs:ComplexEditor:SelectEntry"]</MudAlert>
+                                }
+                                else
+                                {
+                                    <MudStack Spacing="3">
+                                        <MudStack Row="true" Wrap="Wrap.Wrap" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Spacing="2">
+                                            <MudStack Spacing="0">
+                                                <MudText Typo="Typo.subtitle1">@SelectedEntry.Title</MudText>
+                                                <MudText Typo="Typo.caption" Color="Color.Secondary">@SelectedEntry.Path.ToCanonicalString()</MudText>
+                                            </MudStack>
+                                            <MudStack Row="true" Wrap="Wrap.Wrap" Spacing="1">
+                                                @if (_focusNode.NodeKind == ConfigurationNodeKind.List)
+                                                {
+                                                    <MudTooltip Text="@L["Dialogs:ComplexEditor:Actions:MoveUp"]">
+                                                        <MudIconButton Icon="@Icons.Material.Filled.KeyboardArrowUp"
+                                                                       Size="Size.Small"
+                                                                       OnClick="() => MoveSelectedListEntry(-1)" />
+                                                    </MudTooltip>
+                                                    <MudTooltip Text="@L["Dialogs:ComplexEditor:Actions:MoveDown"]">
+                                                        <MudIconButton Icon="@Icons.Material.Filled.KeyboardArrowDown"
+                                                                       Size="Size.Small"
+                                                                       OnClick="() => MoveSelectedListEntry(1)" />
+                                                    </MudTooltip>
+                                                }
+                                                <MudTooltip Text="@L["Dialogs:ComplexEditor:Actions:Remove"]">
+                                                    <MudIconButton Icon="@Icons.Material.Filled.Delete"
+                                                                   Size="Size.Small"
+                                                                   Color="Color.Error"
+                                                                   OnClick="RemoveSelectedEntry" />
+                                                </MudTooltip>
+                                            </MudStack>
+                                        </MudStack>
+
+                                        <MudGrid Spacing="2">
+                                            @foreach (var field in EditableScalarFields)
+                                            {
+                                                var fieldPath = FieldPath(field);
+                                                <MudItem xs="12" md="6">
+                                                    <MudStack Spacing="1">
+                                                        <MudText Typo="Typo.caption" Color="Color.Secondary">@DisplayName(field)</MudText>
+                                                        @if (!string.IsNullOrWhiteSpace(field.Description))
+                                                        {
+                                                            <MudText Typo="Typo.caption" Color="Color.Secondary">@field.Description</MudText>
+                                                        }
+                                                        @if (field.ValueKind == ConfigurationValueKind.Boolean)
+                                                        {
+                                                            <MudSwitch T="bool"
+                                                                       Value="@ReadBool(field)"
+                                                                       ValueChanged="value => OnBoolFieldChanged(field, value)"
+                                                                       Color="Color.Primary" />
+                                                        }
+                                                        else if (IsNumeric(field))
+                                                        {
+                                                            <MudNumericField T="decimal?"
+                                                                             Value="@ReadDecimal(field)"
+                                                                             ValueChanged="value => OnNumberFieldChanged(field, value)"
+                                                                             Variant="Variant.Outlined"
+                                                                             Margin="Margin.Dense"
+                                                                             Error="@HasError(fieldPath)"
+                                                                             ErrorText="@ErrorFor(fieldPath)" />
+                                                        }
+                                                        else if (EnumValues(field).Count > 0)
+                                                        {
+                                                            <MudSelect T="string"
+                                                                       Value="@ReadText(field)"
+                                                                       ValueChanged="value => OnTextFieldChanged(field, value)"
+                                                                       Variant="Variant.Outlined"
+                                                                       Margin="Margin.Dense"
+                                                                       Error="@HasError(fieldPath)"
+                                                                       ErrorText="@ErrorFor(fieldPath)">
+                                                                @foreach (var value in EnumValues(field))
+                                                                {
+                                                                    <MudSelectItem T="string" Value="@value">@value</MudSelectItem>
+                                                                }
+                                                            </MudSelect>
+                                                        }
+                                                        else
+                                                        {
+                                                            <MudTextField T="string"
+                                                                          Value="@ReadText(field)"
+                                                                          ValueChanged="value => OnTextFieldChanged(field, value)"
+                                                                          Variant="Variant.Outlined"
+                                                                          Margin="Margin.Dense"
+                                                                          Immediate="true"
+                                                                          Placeholder="@Placeholder(field)"
+                                                                          InputType="@(field.IsSensitive ? InputType.Password : InputType.Text)"
+                                                                          Error="@HasError(fieldPath)"
+                                                                          ErrorText="@ErrorFor(fieldPath)" />
+                                                        }
+                                                    </MudStack>
+                                                </MudItem>
+                                            }
+                                        </MudGrid>
+
+                                        @if (NestedCollections.Count > 0)
+                                        {
+                                            <MudDivider />
+                                            <MudStack Spacing="1">
+                                                <MudText Typo="Typo.subtitle2">@L["Dialogs:ComplexEditor:NestedCollections"]</MudText>
+                                                <MudStack Row="true" Wrap="Wrap.Wrap" Spacing="1">
+                                                    @foreach (var child in NestedCollections)
+                                                    {
+                                                        <MudButton Variant="Variant.Outlined"
+                                                                   StartIcon="@NestedCollectionIcon(child)"
+                                                                   OnClick="() => OpenNestedCollection(child)">
+                                                            @DisplayName(child)
+                                                        </MudButton>
+                                                    }
+                                                </MudStack>
+                                            </MudStack>
+                                        }
+                                    </MudStack>
+                                }
+                            </MudPaper>
+                        </MudItem>
+
+                        <MudItem xs="12" lg="3" Class="configuration-collection-column">
+                            <MudPaper Outlined="true" Class="pa-3 configuration-collection-panel">
+                                <MudStack Spacing="2">
+                                    <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween">
+                                        <MudText Typo="Typo.subtitle2">@L["Dialogs:ComplexEditor:PatchPreview"]</MudText>
+                                        <MudChip T="int" Size="Size.Small" Color="Color.Primary" Variant="Variant.Outlined">@_changes.Count</MudChip>
+                                    </MudStack>
+                                    <ConfigurationPendingPatchPreview Changes="@_changes" />
+                                </MudStack>
+                            </MudPaper>
+                        </MudItem>
+                    </MudGrid>
+                }
+                else if (_mode == EditorMode.Patch)
+                {
+                    <MudPaper Outlined="true" Class="pa-3 configuration-patch-panel">
+                        <MudStack Spacing="2">
+                            <MudText Typo="Typo.subtitle2">@L["Dialogs:ComplexEditor:PatchPreview"]</MudText>
+                            <ConfigurationPendingPatchPreview Changes="@_changes" Expanded="true" />
+                        </MudStack>
+                    </MudPaper>
+                }
+                else
+                {
+                    <MudPaper Outlined="true" Class="pa-3">
+                        <MudStack Spacing="2">
+                            <MudAlert Severity="Severity.Info" Dense="true">@L["Dialogs:ComplexEditor:JsonHelper"]</MudAlert>
+                            <MudGrid Spacing="2">
+                                <MudItem xs="12" md="4">
+                                    <MudSelect T="ConfigurationMutationKind"
+                                               @bind-Value="_rawMutationKind"
+                                               Label="@L["Mutation:MutationKind"]"
+                                               Variant="Variant.Outlined"
+                                               Margin="Margin.Dense">
+                                        <MudSelectItem T="ConfigurationMutationKind" Value="@ConfigurationMutationKind.Set">@L["Mutation:Kinds:Set"]</MudSelectItem>
+                                        <MudSelectItem T="ConfigurationMutationKind" Value="@ConfigurationMutationKind.Remove">@L["Mutation:Kinds:Remove"]</MudSelectItem>
+                                    </MudSelect>
+                                </MudItem>
+                                <MudItem xs="12" md="4">
+                                    <MudNumericField T="long?"
+                                                     @bind-Value="_valueVersion"
+                                                     Label="@L["Mutation:ExpectedValueVersion"]"
+                                                     Variant="Variant.Outlined"
+                                                     Margin="Margin.Dense" />
+                                </MudItem>
+                            </MudGrid>
+                            <MudTextField T="string"
+                                          @bind-Value="_jsonText"
+                                          Label="@L["Mutation:RawJson"]"
+                                          Variant="Variant.Outlined"
+                                          Lines="18"
+                                          FullWidth="true"
+                                          Error="@(!string.IsNullOrWhiteSpace(_jsonError))"
+                                          ErrorText="@_jsonError" />
+                        </MudStack>
+                    </MudPaper>
+                }
+            </MudStack>
+        </div>
     </DialogContent>
     <DialogActions>
         <MudButton OnClick="Cancel">@L["Common:Actions:Cancel"]</MudButton>
+        @if (_mode == EditorMode.Visual && SupportsVisualEditor)
+        {
+            <MudButton Color="Color.Default"
+                       Variant="Variant.Text"
+                       StartIcon="@Icons.Material.Filled.Restore"
+                       Disabled="@(_changes.Count == 0)"
+                       OnClick="ResetVisualChanges">
+                @L["Dialogs:ComplexEditor:Actions:Reset"]
+            </MudButton>
+        }
         <MudButton Color="Color.Primary"
                    Variant="Variant.Filled"
                    StartIcon="@Icons.Material.Filled.Save"
+                   Disabled="@(!CanStage)"
                    OnClick="Apply">
-            @L["Common:Actions:Stage"]
+            @StageButtonText
         </MudButton>
     </DialogActions>
 </MudDialog>
-
-@code {
-    [CascadingParameter] private IMudDialogInstance MudDialog { get; set; } = null!;
-    [Parameter, EditorRequired] public ConfigurationDefinition Definition { get; set; } = null!;
-    [Parameter, EditorRequired] public ConfigurationNodeDefinition Node { get; set; } = null!;
-    [Parameter] public ConfigurationEffectiveValue? EffectiveValue { get; set; }
-
-    private string _jsonText = "{}";
-    private ConfigurationMutationKind _mutationKind = ConfigurationMutationKind.Replace;
-    private long? _valueVersion;
-    private string? _error;
-
-    private ConfigurationReloadBehavior EffectiveReloadBehavior =>
-        Node.ReloadBehavior is { } behavior and not ConfigurationReloadBehavior.Inherit
-            ? behavior
-            : Definition.ReloadBehavior;
-
-    private Severity ReloadSeverity => EffectiveReloadBehavior is ConfigurationReloadBehavior.RequiresRestart or ConfigurationReloadBehavior.StaticAfterStartup
-        ? Severity.Warning
-        : Severity.Info;
-
-    protected override void OnInitialized()
-    {
-        _valueVersion = EffectiveValue?.Version;
-        if (!string.IsNullOrWhiteSpace(EffectiveValue?.DisplayValue))
-        {
-            _jsonText = EffectiveValue.DisplayValue!;
-        }
-    }
-
-    private void Apply()
-    {
-        var json = string.IsNullOrWhiteSpace(_jsonText) ? "null" : _jsonText;
-        try
-        {
-            using var _ = JsonDocument.Parse(json);
-            _error = null;
-        }
-        catch (JsonException ex)
-        {
-            _error = ex.Message;
-            return;
-        }
-
-        var change = new PendingChange
-        {
-            DefinitionKey = Definition.DefinitionKey,
-            DefinitionDisplayName = Definition.DisplayName,
-            LogicalPath = Node.RelativePath,
-            NodeDisplayName = string.IsNullOrWhiteSpace(Node.DisplayName) ? Node.Name : Node.DisplayName!,
-            MutationKind = _mutationKind,
-            NewValue = _mutationKind == ConfigurationMutationKind.Remove
-                ? ConfigurationStoredValue.Null
-                : ConfigurationStoredValue.FromJson(json),
-            OriginalDisplayValue = EffectiveValue?.DisplayValue,
-            NewDisplayValue = _mutationKind == ConfigurationMutationKind.Remove ? L["Mutation:Kinds:Remove"] : json,
-            ExpectedSchemaVersion = Definition.SchemaVersion,
-            ExpectedValueVersion = _valueVersion,
-            IsSensitive = Node.IsSensitive,
-            NodeKind = Node.NodeKind,
-            ValueKind = Node.ValueKind,
-            ReloadBehavior = EffectiveReloadBehavior
-        };
-
-        MudDialog.Close(DialogResult.Ok(change));
-    }
-
-    private void Cancel()
-    {
-        MudDialog.Cancel();
-    }
-}

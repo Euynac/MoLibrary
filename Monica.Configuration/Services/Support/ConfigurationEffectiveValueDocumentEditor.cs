@@ -31,11 +31,6 @@ public sealed class ConfigurationEffectiveValueDocumentEditor(
                 definition,
                 request.LogicalPath,
                 RequireJson(request.Value)),
-            ConfigurationMutationKind.Replace => patchEngine.Patch(
-                NormalizeJson(currentJson),
-                definition,
-                request.LogicalPath,
-                RequireJson(request.Value)),
             ConfigurationMutationKind.Remove => patchEngine.Remove(
                 NormalizeJson(currentJson),
                 definition,

@@ -31,7 +31,7 @@ internal sealed class ConfigurationMutationService(
         var targetNode = ResolveTargetNode(definition, request.LogicalPath);
         ValidateEditablePath(definition, request.LogicalPath);
         var configurationPath = pathProjector.Project(definition.SectionPath, request.LogicalPath);
-        var granularity = ResolveGranularity(request, targetNode);
+        var granularity = ResolveGranularity(targetNode);
 
         ConfigurationMutationResult result;
         try
@@ -176,11 +176,9 @@ internal sealed class ConfigurationMutationService(
         };
     }
 
-    private static ConfigurationMutationGranularity ResolveGranularity(
-        ConfigurationMutationRequest request,
-        ConfigurationNodeDefinition targetNode)
+    private static ConfigurationMutationGranularity ResolveGranularity(ConfigurationNodeDefinition targetNode)
     {
-        return request.MutationKind == ConfigurationMutationKind.Replace || targetNode.NodeKind != ConfigurationNodeKind.Scalar
+        return targetNode.NodeKind != ConfigurationNodeKind.Scalar
             ? ConfigurationMutationGranularity.Container
             : ConfigurationMutationGranularity.Scalar;
     }

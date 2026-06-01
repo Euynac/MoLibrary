@@ -116,9 +116,7 @@ internal sealed class ConfigurationRollbackService(
         {
             DefinitionKey = history.DefinitionKey,
             LogicalPath = history.LogicalPath,
-            MutationKind = history.Granularity == ConfigurationMutationGranularity.Container
-                ? ConfigurationMutationKind.Replace
-                : ConfigurationMutationKind.Set,
+            MutationKind = ConfigurationMutationKind.Set,
             Value = history.OldValue!,
             ExpectedSchemaVersion = history.SchemaVersion,
             Context = context

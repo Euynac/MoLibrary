@@ -70,8 +70,7 @@
     "RawJson": "Raw JSON",
     "Kinds": {
       "Set": "Set",
-      "Remove": "Remove",
-      "Replace": "Replace"
+      "Remove": "Remove"
     }
   },
   "History": {
@@ -171,7 +170,42 @@
     },
     "ComplexEditor": {
       "Title": "Edit Complex Value",
-      "JsonHelper": "Phase 1 supports raw JSON editing for object, dictionary, and list nodes."
+      "JsonHelper": "Raw JSON applies one Set or Remove mutation to the selected subtree.",
+      "Modes": {
+        "Visual": "Collection",
+        "Json": "Raw JSON",
+        "Patch": "Patch Preview"
+      },
+      "CollectionKinds": {
+        "Dictionary": "Dictionary keys",
+        "List": "List items",
+        "Json": "JSON value"
+      },
+      "Actions": {
+        "Add": "Add",
+        "AddKey": "Add key",
+        "AddItem": "Add item",
+        "MoveUp": "Move up",
+        "MoveDown": "Move down",
+        "Remove": "Remove",
+        "Reset": "Reset",
+        "StageCount": "Stage {0} changes"
+      },
+      "NewKey": "New key",
+      "NewItemKey": "New item key",
+      "EmptyCollection": "This collection is empty.",
+      "SelectEntry": "Select an entry to edit.",
+      "NestedCollections": "Nested collections",
+      "PatchPreview": "Patch preview",
+      "NoPatch": "Visual edits will appear here as logical-path mutations.",
+      "PendingMutationGroup": "Pending mutation group",
+      "IndexSubtitle": "Index {0}",
+      "Errors": {
+        "KeyRequired": "A key is required.",
+        "InvalidCollection": "The selected collection cannot be edited as structured JSON.",
+        "ColonNotAllowed": "Dictionary keys cannot contain ':'.",
+        "DuplicateKey": "This key already exists."
+      }
     }
   },
   "Common": {

@@ -78,8 +78,7 @@ public enum ConfigurationValueState
 public enum ConfigurationMutationKind
 {
     Set,
-    Remove,
-    Replace
+    Remove
 }
 
 /// <summary>

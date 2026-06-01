@@ -136,7 +136,7 @@
                 L["History:Dialog:GroupSubtitle", Group.MutationCount, Group.DefinitionKeys.Count],
                 Group.CreatedTime,
                 orderedRows,
-                ConfigurationMutationKind.Replace,
+                ConfigurationMutationKind.Set,
                 orderedRows.Max(row => row.Version),
                 Color.Primary,
                 Icons.Material.Filled.Folder));
@@ -207,7 +207,6 @@
         return kind switch
         {
             ConfigurationMutationKind.Remove => Icons.Material.Filled.Delete,
-            ConfigurationMutationKind.Replace => Icons.Material.Filled.FindReplace,
             _ => Icons.Material.Filled.Edit
         };
     }

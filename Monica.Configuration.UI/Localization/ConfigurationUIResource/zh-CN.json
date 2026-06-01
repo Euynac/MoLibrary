@@ -70,8 +70,7 @@
     "RawJson": "原始 JSON",
     "Kinds": {
       "Set": "设置",
-      "Remove": "移除",
-      "Replace": "替换"
+      "Remove": "移除"
     }
   },
   "History": {
@@ -171,7 +170,42 @@
     },
     "ComplexEditor": {
       "Title": "编辑复杂值",
-      "JsonHelper": "Phase 1 对对象、字典和列表节点支持原始 JSON 编辑。"
+      "JsonHelper": "原始 JSON 会对选中的子树应用一条设置或移除修改。",
+      "Modes": {
+        "Visual": "集合编辑",
+        "Json": "原始 JSON",
+        "Patch": "修改预览"
+      },
+      "CollectionKinds": {
+        "Dictionary": "字典 Key",
+        "List": "列表项",
+        "Json": "JSON 值"
+      },
+      "Actions": {
+        "Add": "新增",
+        "AddKey": "新增 Key",
+        "AddItem": "新增项",
+        "MoveUp": "上移",
+        "MoveDown": "下移",
+        "Remove": "移除",
+        "Reset": "重置",
+        "StageCount": "暂存 {0} 个修改"
+      },
+      "NewKey": "新 Key",
+      "NewItemKey": "新项 Key",
+      "EmptyCollection": "当前集合为空。",
+      "SelectEntry": "选择一个条目进行编辑。",
+      "NestedCollections": "嵌套集合",
+      "PatchPreview": "修改预览",
+      "NoPatch": "可视化编辑会在这里显示为逻辑路径修改。",
+      "PendingMutationGroup": "待暂存修改组",
+      "IndexSubtitle": "索引 {0}",
+      "Errors": {
+        "KeyRequired": "必须填写 Key。",
+        "InvalidCollection": "选中的集合无法作为结构化 JSON 编辑。",
+        "ColonNotAllowed": "字典 Key 不能包含 ':'。",
+        "DuplicateKey": "这个 Key 已经存在。"
+      }
     }
   },
   "Common": {

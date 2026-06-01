@@ -1,0 +1,45 @@
+.configuration-patch-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    min-height: 0;
+}
+
+.configuration-patch-card {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    padding: 0.75rem;
+    border: 1px solid var(--mud-palette-lines-default);
+    border-radius: var(--mud-default-borderradius);
+    background: var(--mud-palette-surface);
+}
+
+.configuration-patch-card-header {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    min-width: 0;
+}
+
+.configuration-patch-card code,
+.configuration-patch-values pre {
+    min-width: 0;
+    color: var(--mud-palette-primary);
+    font-family: var(--mud-typography-default-family);
+    overflow-wrap: anywhere;
+}
+
+.configuration-patch-values {
+    display: grid;
+    gap: 0.5rem;
+}
+
+.configuration-patch-values pre {
+    margin: 0;
+    padding: 0.75rem;
+    border: 1px solid var(--mud-palette-lines-default);
+    border-radius: var(--mud-default-borderradius);
+    background: var(--mud-palette-background-gray);
+    white-space: pre-wrap;
+}
