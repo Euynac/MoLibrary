@@ -109,6 +109,13 @@
 
     private async Task StageScalar(ConfigurationScalarEditResult result)
     {
+        if (IsSameAsEffectiveValue(result))
+        {
+            StateStore.Undo(Definition.DefinitionKey, Node.RelativePath);
+            await Changed.InvokeAsync();
+            return;
+        }
+
         StateStore.Stage(new PendingChange
         {
             DefinitionKey = Definition.DefinitionKey,
@@ -127,6 +134,12 @@
             ReloadBehavior = EffectiveReloadBehavior
         });
         await Changed.InvokeAsync();
+    }
+
+    private bool IsSameAsEffectiveValue(ConfigurationScalarEditResult result)
+    {
+        var effectiveDisplayValue = EffectiveValue?.DisplayValue ?? string.Empty;
+        return string.Equals(result.DisplayValue, effectiveDisplayValue, StringComparison.Ordinal);
     }
 
     private async Task EditComplexValue()
