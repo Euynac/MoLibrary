@@ -85,20 +85,32 @@
                 <MudDivider />
 
                 <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Spacing="1">
-                    <MudChip T="int" Size="Size.Small" Color="Color.Warning" Variant="Variant.Outlined">
-                        @PendingCount
-                    </MudChip>
+                    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
+                        <MudTooltip Text="@L["State:Footer:PendingCount"]">
+                            <MudChip T="int" Size="Size.Small" Color="Color.Warning" Variant="Variant.Outlined">
+                                @PendingCount
+                            </MudChip>
+                        </MudTooltip>
+                        @if (ValidationIssueCount > 0)
+                        {
+                            <MudTooltip Text="@L["State:Footer:ValidationIssueCount"]">
+                                <MudChip T="int" Size="Size.Small" Color="Color.Error" Variant="Variant.Outlined">
+                                    @ValidationIssueCount
+                                </MudChip>
+                            </MudTooltip>
+                        }
+                    </MudStack>
                     <MudStack Row="true" Spacing="1">
                         <MudTooltip Text="@L["State:Actions:UndoAll"]">
                             <MudIconButton Icon="@Icons.Material.Filled.Undo"
-                                           Disabled="@(PendingCount == 0)"
+                                           Disabled="@(PendingCount == 0 && ValidationIssueCount == 0)"
                                            OnClick="UndoAll" />
                         </MudTooltip>
                         <MudTooltip Text="@L["State:Actions:SaveGroup"]">
                             <MudIconButton Icon="@Icons.Material.Filled.Save"
                                            Color="Color.Primary"
                                            Variant="Variant.Filled"
-                                           Disabled="@(PendingCount == 0)"
+                                           Disabled="@(PendingCount == 0 && ValidationIssueCount == 0)"
                                            OnClick="SaveGroup" />
                         </MudTooltip>
                     </MudStack>
@@ -120,6 +132,7 @@
     [Parameter] public string SearchText { get; set; } = string.Empty;
     [Parameter] public EventCallback<string> SearchTextChanged { get; set; }
     [Parameter] public int PendingCount { get; set; }
+    [Parameter] public int ValidationIssueCount { get; set; }
     [Parameter] public EventCallback SaveGroup { get; set; }
     [Parameter] public EventCallback UndoAll { get; set; }
 

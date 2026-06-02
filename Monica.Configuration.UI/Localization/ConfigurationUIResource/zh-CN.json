@@ -32,6 +32,10 @@
       "Title": "配置分组",
       "RootDescription": "显示当前配置定义下的所有标量配置项。"
     },
+    "Footer": {
+      "PendingCount": "暂存修改",
+      "ValidationIssueCount": "验证异常"
+    },
     "Actions": {
       "SaveGroup": "保存修改组",
       "UndoAll": "撤销全部",
@@ -171,7 +175,17 @@
         "DefinitionDiff": "按配置类 Diff",
         "ChangeList": "修改列表"
       },
-      "ChangeCount": "{0} 个修改"
+      "ChangeCount": "{0} 个修改",
+      "Validation": {
+        "Title": "验证异常",
+        "BlockedSummary": "需要先修正或撤销 {0} 个验证异常，才能保存。",
+        "IssueCount": "{0} 个异常",
+        "InvalidValue": "异常值",
+        "Reason": "原因",
+        "NoRuleTip": "没有可用的验证规则说明。",
+        "NoSaveableChanges": "当前项没有可保存的修改。",
+        "JumpFailed": "无法跳转到验证异常配置项。"
+      }
     },
     "CurrentValue": {
       "Title": "当前值",
@@ -218,6 +232,7 @@
       "Refresh": "刷新",
       "Back": "返回",
       "Search": "搜索",
+      "Jump": "跳转",
       "Cancel": "取消",
       "Close": "关闭"
     },
@@ -230,5 +245,16 @@
       "LoadFailed": "加载失败",
       "InvalidPath": "逻辑路径无效"
     }
+  },
+  "ValidationRules": {
+    "Required": "必填：值不能为空。",
+    "Range": "范围：值必须在 {0} 到 {1} 之间。",
+    "Regex": "格式：值必须匹配 `{0}`。",
+    "AllowedValues": "允许值：{0}。",
+    "MaxLength": "最大长度：{0}。",
+    "MinLength": "最小长度：{0}。",
+    "NoMinimum": "无下限",
+    "NoMaximum": "无上限",
+    "Unknown": "未知验证规则。"
   }
 }

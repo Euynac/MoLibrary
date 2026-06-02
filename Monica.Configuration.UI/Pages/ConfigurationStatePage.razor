@@ -42,6 +42,7 @@
                                                      SearchText="@_searchText"
                                                      SearchTextChanged="OnSearchChanged"
                                                      PendingCount="@_pendingCount"
+                                                     ValidationIssueCount="@_validationIssueCount"
                                                      SaveGroup="OpenSaveGroupDialog"
                                                      UndoAll="UndoAll" />
                     </MudItem>
@@ -145,6 +146,7 @@
     private bool _loadingDefinitions = true;
     private bool _loadingDefinition;
     private int _pendingCount;
+    private int _validationIssueCount;
 
     private IReadOnlyList<string> SearchTerms => string.IsNullOrWhiteSpace(_searchText)
         ? []
@@ -438,15 +440,28 @@
     private async Task OpenSaveGroupDialog()
     {
         var changes = StateStore.GetPending();
+        var validationIssues = StateStore.GetValidationIssues();
         var parameters = new DialogParameters<SaveMutationGroupDialog>();
         parameters.Add(dialog => dialog.Changes, changes);
+        parameters.Add(dialog => dialog.ValidationIssues, validationIssues);
         var dialog = await DialogService.ShowAsync<SaveMutationGroupDialog>(L["Dialogs:SaveGroup:Title"], parameters, new DialogOptions
         {
             MaxWidth = MaxWidth.ExtraLarge,
             FullWidth = true
         });
         var result = await dialog.Result;
-        if (result is { Canceled: false })
+        if (result is not { Canceled: false })
+        {
+            return;
+        }
+
+        if (result.Data is SaveMutationGroupDialogResult { JumpTarget: { } jumpTarget })
+        {
+            await JumpToValidationIssueAsync(jumpTarget);
+            return;
+        }
+
+        if (result.Data is SaveMutationGroupDialogResult { SavedGroup: not null })
         {
             StateStore.Clear();
             await LoadEffectiveValuesAsync();
@@ -463,13 +478,36 @@
     private Task RefreshPendingCount()
     {
         _pendingCount = StateStore.GetPending().Count;
+        _validationIssueCount = StateStore.GetValidationIssues().Count;
         return Task.CompletedTask;
     }
 
     private void OnStateStoreChanged()
     {
         _pendingCount = StateStore.GetPending().Count;
+        _validationIssueCount = StateStore.GetValidationIssues().Count;
         _ = InvokeAsync(StateHasChanged);
+    }
+
+    private async Task JumpToValidationIssueAsync(ConfigurationValidationIssue issue)
+    {
+        var summary = _definitions.FirstOrDefault(definition =>
+            string.Equals(definition.DefinitionKey, issue.DefinitionKey, StringComparison.OrdinalIgnoreCase));
+        if (summary is null)
+        {
+            Snackbar.Add(L["Dialogs:SaveGroup:Validation:JumpFailed"], Severity.Error);
+            return;
+        }
+
+        await SelectDefinitionAsync(summary);
+        var node = ResolveNodeByPath(_selectedDefinition?.Root, issue.LogicalPath);
+        if (node is null)
+        {
+            Snackbar.Add(L["Dialogs:SaveGroup:Validation:JumpFailed"], Severity.Error);
+            return;
+        }
+
+        _selectedNode = node;
     }
 
     private sealed record ConfigurationSectionItem(

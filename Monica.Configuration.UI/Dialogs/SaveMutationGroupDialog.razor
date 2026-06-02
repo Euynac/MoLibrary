@@ -21,28 +21,54 @@
             {
                 <MudAlert Severity="Severity.Error">@_error</MudAlert>
             }
+            @if (ValidationIssues.Count > 0)
+            {
+                <MudAlert Severity="Severity.Error">
+                    @L["Dialogs:SaveGroup:Validation:BlockedSummary", ValidationIssues.Count]
+                </MudAlert>
+            }
 
             <MudTabs Rounded="true" ApplyEffectsToContainer="true" TabPanelsClass="pa-3">
                 <MudTabPanel Text="@L["Dialogs:SaveGroup:Tabs:DefinitionDiff"]" Icon="@Icons.Material.Filled.Difference">
-                    <ConfigurationPendingDefinitionDiffPreview Changes="@Changes" />
+                    <ConfigurationPendingDefinitionDiffPreview Changes="@Changes"
+                                                               ValidationIssues="@ValidationIssues"
+                                                               JumpRequested="JumpToIssue" />
                 </MudTabPanel>
                 <MudTabPanel Text="@L["Dialogs:SaveGroup:Tabs:ChangeList"]" Icon="@Icons.Material.Filled.List">
-                    <MudTable T="PendingChange" Items="@Changes" Dense="true" Hover="true" Elevation="0">
-                        <HeaderContent>
-                            <MudTh>@L["State:Columns:Definition"]</MudTh>
-                            <MudTh>@L["State:Columns:Path"]</MudTh>
-                            <MudTh>@L["History:Columns:Kind"]</MudTh>
-                            <MudTh>@L["State:Columns:OldValue"]</MudTh>
-                            <MudTh>@L["State:Columns:NewValue"]</MudTh>
-                        </HeaderContent>
-                        <RowTemplate>
-                            <MudTd DataLabel="@L["State:Columns:Definition"]">@context.DefinitionDisplayName</MudTd>
-                            <MudTd DataLabel="@L["State:Columns:Path"]">@context.LogicalPath.ToCanonicalString()</MudTd>
-                            <MudTd DataLabel="@L["History:Columns:Kind"]">@context.MutationKind</MudTd>
-                            <MudTd DataLabel="@L["State:Columns:OldValue"]">@DisplayValue(context, context.OriginalDisplayValue)</MudTd>
-                            <MudTd DataLabel="@L["State:Columns:NewValue"]">@DisplayValue(context, context.NewDisplayValue)</MudTd>
-                        </RowTemplate>
-                    </MudTable>
+                    <MudStack Spacing="3">
+                        @if (ValidationIssues.Count > 0)
+                        {
+                            <MudStack Spacing="1">
+                                <MudText Typo="Typo.subtitle2">@L["Dialogs:SaveGroup:Validation:Title"]</MudText>
+                                <ConfigurationValidationIssueList Issues="@ValidationIssues"
+                                                                  JumpRequested="JumpToIssue" />
+                            </MudStack>
+                        }
+
+                        @if (Changes.Count == 0)
+                        {
+                            <MudAlert Severity="Severity.Info">@L["Dialogs:SaveGroup:Validation:NoSaveableChanges"]</MudAlert>
+                        }
+                        else
+                        {
+                            <MudTable T="PendingChange" Items="@Changes" Dense="true" Hover="true" Elevation="0">
+                                <HeaderContent>
+                                    <MudTh>@L["State:Columns:Definition"]</MudTh>
+                                    <MudTh>@L["State:Columns:Path"]</MudTh>
+                                    <MudTh>@L["History:Columns:Kind"]</MudTh>
+                                    <MudTh>@L["State:Columns:OldValue"]</MudTh>
+                                    <MudTh>@L["State:Columns:NewValue"]</MudTh>
+                                </HeaderContent>
+                                <RowTemplate>
+                                    <MudTd DataLabel="@L["State:Columns:Definition"]">@context.DefinitionDisplayName</MudTd>
+                                    <MudTd DataLabel="@L["State:Columns:Path"]">@context.LogicalPath.ToCanonicalString()</MudTd>
+                                    <MudTd DataLabel="@L["History:Columns:Kind"]">@context.MutationKind</MudTd>
+                                    <MudTd DataLabel="@L["State:Columns:OldValue"]">@DisplayValue(context, context.OriginalDisplayValue)</MudTd>
+                                    <MudTd DataLabel="@L["State:Columns:NewValue"]">@DisplayValue(context, context.NewDisplayValue)</MudTd>
+                                </RowTemplate>
+                            </MudTable>
+                        }
+                    </MudStack>
                 </MudTabPanel>
             </MudTabs>
 
@@ -58,7 +84,7 @@
                    Variant="Variant.Filled"
                    StartIcon="@Icons.Material.Filled.Save"
                    OnClick="SaveAsync"
-                   Disabled="@(_saving || Changes.Count == 0 || string.IsNullOrWhiteSpace(_label))">
+                   Disabled="@(_saving || Changes.Count == 0 || ValidationIssues.Count > 0 || string.IsNullOrWhiteSpace(_label))">
             @L["Group:SaveCount", Changes.Count]
         </MudButton>
     </DialogActions>
@@ -67,6 +93,7 @@
 @code {
     [CascadingParameter] private IMudDialogInstance MudDialog { get; set; } = null!;
     [Parameter] public IReadOnlyList<PendingChange> Changes { get; set; } = [];
+    [Parameter] public IReadOnlyList<ConfigurationValidationIssue> ValidationIssues { get; set; } = [];
 
     private string _label = string.Empty;
     private string? _reason;
@@ -142,7 +169,7 @@
             return;
         }
 
-        MudDialog.Close(DialogResult.Ok(group));
+        MudDialog.Close(DialogResult.Ok(SaveMutationGroupDialogResult.Saved(group)));
     }
 
     private string DisplayValue(PendingChange change, string? value)
@@ -158,5 +185,10 @@
     private void Cancel()
     {
         MudDialog.Cancel();
+    }
+
+    private void JumpToIssue(ConfigurationValidationIssue issue)
+    {
+        MudDialog.Close(DialogResult.Ok(SaveMutationGroupDialogResult.JumpTo(issue)));
     }
 }

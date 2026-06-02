@@ -1,0 +1,88 @@
+@using Monica.Configuration.UI.Localization
+@inject IStringLocalizer<ConfigurationUIResource> L
+
+@if (Issues.Count > 0)
+{
+    <MudStack Spacing="1" Class="configuration-validation-issue-list">
+        @foreach (var issue in OrderedIssues)
+        {
+            <MudPaper Outlined="true" Class="pa-3 configuration-validation-issue-card">
+                <MudStack Spacing="2">
+                    <MudStack Row="true" Wrap="Wrap.Wrap" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Spacing="1">
+                        <MudStack Spacing="0">
+                            <MudText Typo="Typo.subtitle2">@Title(issue)</MudText>
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">@issue.LogicalPath.ToCanonicalString()</MudText>
+                        </MudStack>
+                        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
+                            <MudTooltip Text="@RuleTip(issue)" Placement="Placement.Left">
+                                <MudIconButton Icon="@Icons.Material.Filled.Info"
+                                               Size="Size.Small"
+                                               Color="Color.Info" />
+                            </MudTooltip>
+                            <MudButton Variant="Variant.Outlined"
+                                       Color="Color.Primary"
+                                       Size="Size.Small"
+                                       StartIcon="@Icons.Material.Filled.NearMe"
+                                       OnClick="() => JumpRequested.InvokeAsync(issue)">
+                                @L["Common:Actions:Jump"]
+                            </MudButton>
+                        </MudStack>
+                    </MudStack>
+
+                    <MudGrid Spacing="2">
+                        <MudItem xs="12" md="5">
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">@L["Dialogs:SaveGroup:Validation:InvalidValue"]</MudText>
+                            <MudText Typo="Typo.body2" Class="configuration-validation-issue-value">@DisplayInvalidValue(issue)</MudText>
+                        </MudItem>
+                        <MudItem xs="12" md="7">
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">@L["Dialogs:SaveGroup:Validation:Reason"]</MudText>
+                            <MudText Typo="Typo.body2" Color="Color.Error">@issue.ValidationError</MudText>
+                        </MudItem>
+                    </MudGrid>
+                </MudStack>
+            </MudPaper>
+        }
+    </MudStack>
+}
+
+@code {
+    [Parameter] public IReadOnlyList<ConfigurationValidationIssue> Issues { get; set; } = [];
+    [Parameter] public bool ShowDefinition { get; set; } = true;
+    [Parameter] public EventCallback<ConfigurationValidationIssue> JumpRequested { get; set; }
+
+    private IEnumerable<ConfigurationValidationIssue> OrderedIssues =>
+        Issues
+            .OrderBy(issue => issue.DefinitionDisplayName, StringComparer.OrdinalIgnoreCase)
+            .ThenBy(issue => issue.LogicalPath.ToCanonicalString(), StringComparer.OrdinalIgnoreCase);
+
+    private string Title(ConfigurationValidationIssue issue)
+    {
+        return ShowDefinition
+            ? $"{issue.DefinitionDisplayName} · {issue.NodeDisplayName}"
+            : issue.NodeDisplayName;
+    }
+
+    private string DisplayInvalidValue(ConfigurationValidationIssue issue)
+    {
+        if (issue.IsSensitive)
+        {
+            return L["State:Value:Sensitive"];
+        }
+
+        return string.IsNullOrWhiteSpace(issue.InvalidDisplayValue)
+            ? L["Value:States:Empty"]
+            : issue.InvalidDisplayValue;
+    }
+
+    private string RuleTip(ConfigurationValidationIssue issue)
+    {
+        if (issue.ValidationRules.Count == 0)
+        {
+            return L["Dialogs:SaveGroup:Validation:NoRuleTip"];
+        }
+
+        return string.Join(
+            Environment.NewLine,
+            issue.ValidationRules.Select(rule => ConfigurationValidationRuleFormatter.Format(rule, L)));
+    }
+}

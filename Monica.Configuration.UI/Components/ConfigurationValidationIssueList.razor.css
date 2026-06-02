@@ -1,0 +1,11 @@
+.configuration-validation-issue-list {
+    min-width: 0;
+}
+
+.configuration-validation-issue-card {
+    border-color: var(--mud-palette-error);
+}
+
+.configuration-validation-issue-value {
+    overflow-wrap: anywhere;
+}

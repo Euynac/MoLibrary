@@ -27,14 +27,33 @@ else
                     <MudStack Spacing="2">
                         <MudStack Row="true" Wrap="Wrap.Wrap" AlignItems="AlignItems.Center" Spacing="1">
                             <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">@group.DefinitionKey</MudChip>
-                            <MudChip T="int" Size="Size.Small" Color="Color.Primary" Variant="Variant.Outlined">
-                                @L["Dialogs:SaveGroup:ChangeCount", group.ChangeCount]
-                            </MudChip>
+                            @if (group.ChangeCount > 0)
+                            {
+                                <MudChip T="int" Size="Size.Small" Color="Color.Primary" Variant="Variant.Outlined">
+                                    @L["Dialogs:SaveGroup:ChangeCount", group.ChangeCount]
+                                </MudChip>
+                            }
+                            @if (group.ValidationIssues.Count > 0)
+                            {
+                                <MudChip T="int" Size="Size.Small" Color="Color.Error" Variant="Variant.Outlined">
+                                    @L["Dialogs:SaveGroup:Validation:IssueCount", group.ValidationIssues.Count]
+                                </MudChip>
+                            }
                         </MudStack>
-                        <DiffViewer OriginText="@group.OriginJson"
-                                    NewText="@group.TargetJson"
-                                    Options="@DiffOptions"
-                                    ViewMode="EDiffViewMode.Split" />
+                        <ConfigurationValidationIssueList Issues="@group.ValidationIssues"
+                                                          ShowDefinition="false"
+                                                          JumpRequested="JumpRequested" />
+                        @if (group.ChangeCount > 0)
+                        {
+                            <DiffViewer OriginText="@group.OriginJson"
+                                        NewText="@group.TargetJson"
+                                        Options="@DiffOptions"
+                                        ViewMode="EDiffViewMode.Split" />
+                        }
+                        else
+                        {
+                            <MudAlert Severity="Severity.Warning" Dense="true">@L["Dialogs:SaveGroup:Validation:NoSaveableChanges"]</MudAlert>
+                        }
                     </MudStack>
                 </MudExpansionPanel>
             }
@@ -56,6 +75,8 @@ else
     private string? _error;
 
     [Parameter] public IReadOnlyList<PendingChange> Changes { get; set; } = [];
+    [Parameter] public IReadOnlyList<ConfigurationValidationIssue> ValidationIssues { get; set; } = [];
+    [Parameter] public EventCallback<ConfigurationValidationIssue> JumpRequested { get; set; }
 
     protected override async Task OnParametersSetAsync()
     {
@@ -80,22 +101,48 @@ else
     private async Task<IReadOnlyList<DefinitionDiffGroup>> BuildGroupsAsync()
     {
         var groups = new List<DefinitionDiffGroup>();
-        foreach (var changeGroup in Changes
-                     .GroupBy(change => change.DefinitionKey, StringComparer.OrdinalIgnoreCase)
-                     .OrderBy(group => group.First().DefinitionDisplayName, StringComparer.OrdinalIgnoreCase))
+        var definitionKeys = Changes.Select(change => change.DefinitionKey)
+            .Concat(ValidationIssues.Select(issue => issue.DefinitionKey))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderBy(DisplayNameForDefinition, StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+
+        foreach (var definitionKey in definitionKeys)
         {
-            var definition = await LoadDefinitionAsync(changeGroup.Key);
-            var originJson = await LoadOriginJsonAsync(changeGroup.Key);
-            var targetJson = ApplyChanges(definition, originJson, changeGroup);
+            var changes = Changes
+                .Where(change => string.Equals(change.DefinitionKey, definitionKey, StringComparison.OrdinalIgnoreCase))
+                .ToArray();
+            var issues = ValidationIssues
+                .Where(issue => string.Equals(issue.DefinitionKey, definitionKey, StringComparison.OrdinalIgnoreCase))
+                .ToArray();
+            var originJson = "{}";
+            var targetJson = "{}";
+            if (changes.Length > 0)
+            {
+                var definition = await LoadDefinitionAsync(definitionKey);
+                originJson = await LoadOriginJsonAsync(definitionKey);
+                targetJson = ApplyChanges(definition, originJson, changes);
+                originJson = FormatForDisplay(originJson, definition);
+                targetJson = FormatForDisplay(targetJson, definition);
+            }
+
             groups.Add(new DefinitionDiffGroup(
-                definition.DefinitionKey,
-                definition.DisplayName,
-                changeGroup.Count(),
-                FormatForDisplay(originJson, definition),
-                FormatForDisplay(targetJson, definition)));
+                definitionKey,
+                DisplayNameForDefinition(definitionKey),
+                changes.Length,
+                issues,
+                originJson,
+                targetJson));
         }
 
         return groups;
+    }
+
+    private string DisplayNameForDefinition(string definitionKey)
+    {
+        return Changes.FirstOrDefault(change => string.Equals(change.DefinitionKey, definitionKey, StringComparison.OrdinalIgnoreCase))?.DefinitionDisplayName
+               ?? ValidationIssues.FirstOrDefault(issue => string.Equals(issue.DefinitionKey, definitionKey, StringComparison.OrdinalIgnoreCase))?.DefinitionDisplayName
+               ?? definitionKey;
     }
 
     private async Task<ConfigurationDefinition> LoadDefinitionAsync(string definitionKey)
@@ -159,6 +206,7 @@ else
         string DefinitionKey,
         string DisplayName,
         int ChangeCount,
+        IReadOnlyList<ConfigurationValidationIssue> ValidationIssues,
         string OriginJson,
         string TargetJson);
 }

@@ -32,6 +32,10 @@
       "Title": "Configuration sections",
       "RootDescription": "Shows every scalar option in this configuration definition."
     },
+    "Footer": {
+      "PendingCount": "Staged changes",
+      "ValidationIssueCount": "Validation issues"
+    },
     "Actions": {
       "SaveGroup": "Save group",
       "UndoAll": "Undo all",
@@ -171,7 +175,17 @@
         "DefinitionDiff": "Definition diff",
         "ChangeList": "Change list"
       },
-      "ChangeCount": "{0} changes"
+      "ChangeCount": "{0} changes",
+      "Validation": {
+        "Title": "Validation issues",
+        "BlockedSummary": "{0} validation issues must be fixed or undone before saving.",
+        "IssueCount": "{0} issues",
+        "InvalidValue": "Invalid value",
+        "Reason": "Reason",
+        "NoRuleTip": "No validation rule details are available.",
+        "NoSaveableChanges": "No saveable changes are available for this item.",
+        "JumpFailed": "Failed to jump to the validation issue."
+      }
     },
     "CurrentValue": {
       "Title": "Current Value",
@@ -218,6 +232,7 @@
       "Refresh": "Refresh",
       "Back": "Back",
       "Search": "Search",
+      "Jump": "Jump",
       "Cancel": "Cancel",
       "Close": "Close"
     },
@@ -230,5 +245,16 @@
       "LoadFailed": "Failed to load data",
       "InvalidPath": "Invalid logical path"
     }
+  },
+  "ValidationRules": {
+    "Required": "Required: value must not be empty.",
+    "Range": "Range: value must be between {0} and {1}.",
+    "Regex": "Pattern: value must match `{0}`.",
+    "AllowedValues": "Allowed values: {0}.",
+    "MaxLength": "Maximum length: {0}.",
+    "MinLength": "Minimum length: {0}.",
+    "NoMinimum": "no minimum",
+    "NoMaximum": "no maximum",
+    "Unknown": "Unknown validation rule."
   }
 }

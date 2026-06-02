@@ -45,11 +45,12 @@
                     <ConfigurationScalarEditor Node="@Node"
                                                EffectiveValue="@EffectiveValue"
                                                IsModified="@(PendingChange is not null)"
+                                               ValidationIssue="@ValidationIssue"
                                                ValueChanged="StageScalar" />
-                    @if (!string.IsNullOrWhiteSpace(_scalarValidationError))
+                    @if (ValidationIssue is not null)
                     {
                         <MudText Typo="Typo.caption" Color="Color.Error" Class="configuration-scalar-validation-error">
-                            @_scalarValidationError
+                            @ValidationIssue.ValidationError
                         </MudText>
                     }
                 </MudStack>
@@ -98,15 +99,14 @@
     [Parameter] public ConfigurationEffectiveValue? EffectiveValue { get; set; }
     [Parameter] public EventCallback Changed { get; set; }
 
-    private string? _scalarValidationError;
-    private string? _scalarValidationScopeKey;
-
     private PendingChange? PendingChange => StateStore.Get(Definition.DefinitionKey, Node.RelativePath);
+
+    private ConfigurationValidationIssue? ValidationIssue => StateStore.GetValidationIssue(Definition.DefinitionKey, Node.RelativePath);
 
     private IReadOnlyList<PendingChange> ScopedPendingChanges => StateStore.GetScope(Definition.DefinitionKey, Node.RelativePath);
 
     private bool HasPendingChanges => Node.NodeKind == ConfigurationNodeKind.Scalar
-        ? PendingChange is not null
+        ? PendingChange is not null || ValidationIssue is not null
         : ScopedPendingChanges.Count > 0;
 
     private string DisplayName => string.IsNullOrWhiteSpace(Node.DisplayName) ? Node.Name : Node.DisplayName!;
@@ -118,29 +118,28 @@
             ? behavior
             : Definition.ReloadBehavior;
 
-    protected override void OnParametersSet()
-    {
-        var scopeKey = $"{Definition.DefinitionKey}:{Node.RelativePath.ToCanonicalString()}:{EffectiveValue?.Version}";
-        if (!string.Equals(_scalarValidationScopeKey, scopeKey, StringComparison.Ordinal))
-        {
-            _scalarValidationError = null;
-            _scalarValidationScopeKey = scopeKey;
-        }
-    }
-
     private async Task StageScalar(ConfigurationScalarEditResult result)
     {
         if (!result.IsValid || result.StoredValue is null)
         {
-            _scalarValidationError = result.ValidationError ?? L["State:Editor:InvalidPattern"];
-            await UndoScalarIfPending(clearValidationError: false);
+            StateStore.ReportValidationIssue(new ConfigurationValidationIssue
+            {
+                DefinitionKey = Definition.DefinitionKey,
+                DefinitionDisplayName = Definition.DisplayName,
+                LogicalPath = Node.RelativePath,
+                NodeDisplayName = DisplayName,
+                InvalidDisplayValue = Node.IsSensitive ? L["State:Value:Sensitive"].Value : result.DisplayValue,
+                ValidationError = result.ValidationError ?? L["State:Editor:InvalidPattern"],
+                IsSensitive = Node.IsSensitive,
+                ValidationRules = Node.ValidationRules
+            });
+            await Changed.InvokeAsync();
             return;
         }
 
-        _scalarValidationError = null;
         if (IsSameAsEffectiveValue(result))
         {
-            await UndoScalarIfPending();
+            await UndoScalarState();
             return;
         }
 
@@ -170,16 +169,11 @@
         return string.Equals(result.DisplayValue, effectiveDisplayValue, StringComparison.Ordinal);
     }
 
-    private async Task UndoScalarIfPending(bool clearValidationError = true)
+    private async Task UndoScalarState()
     {
-        if (PendingChange is null)
+        if (PendingChange is null && ValidationIssue is null)
         {
             return;
-        }
-
-        if (clearValidationError)
-        {
-            _scalarValidationError = null;
         }
 
         StateStore.Undo(Definition.DefinitionKey, Node.RelativePath);
@@ -272,8 +266,6 @@
 
     private async Task Undo()
     {
-        _scalarValidationError = null;
-
         if (Node.NodeKind == ConfigurationNodeKind.Scalar)
         {
             StateStore.Undo(Definition.DefinitionKey, Node.RelativePath);

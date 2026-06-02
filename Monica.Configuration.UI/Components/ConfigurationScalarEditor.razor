@@ -83,6 +83,7 @@
     [Parameter, EditorRequired] public ConfigurationNodeDefinition Node { get; set; } = null!;
     [Parameter] public ConfigurationEffectiveValue? EffectiveValue { get; set; }
     [Parameter] public bool IsModified { get; set; }
+    [Parameter] public ConfigurationValidationIssue? ValidationIssue { get; set; }
     [Parameter] public EventCallback<ConfigurationScalarEditResult> ValueChanged { get; set; }
 
     private string _textValue = string.Empty;
@@ -94,6 +95,7 @@
     private string? _error;
     private string? _lastNodePath;
     private string? _lastEffectiveDisplayValue;
+    private string? _lastValidationIssueKey;
     private bool _lastIsModified;
     private bool _hasInvalidLocalEdit;
     private int _editorResetVersion;
@@ -122,23 +124,52 @@
     {
         var displayValue = EffectiveValue?.DisplayValue ?? string.Empty;
         var nodePath = Node.RelativePath.ToCanonicalString();
+        var validationIssueKey = BuildValidationIssueKey();
 
         var pathChanged = !string.Equals(_lastNodePath, nodePath, StringComparison.Ordinal);
         var displayChanged = !string.Equals(_lastEffectiveDisplayValue, displayValue, StringComparison.Ordinal);
+        var validationIssueChanged = !string.Equals(_lastValidationIssueKey, validationIssueKey, StringComparison.Ordinal);
         var modifiedChanged = _lastIsModified != IsModified;
-        if (!pathChanged && !displayChanged && !modifiedChanged)
+        if (!pathChanged && !displayChanged && !validationIssueChanged && !modifiedChanged)
         {
             return;
         }
 
-        if (pathChanged || (!IsModified && !_hasInvalidLocalEdit))
+        if (pathChanged)
         {
-            SyncFromEffectiveValue(displayValue, resetSensitiveVisibility: pathChanged);
+            if (ValidationIssue is not null)
+            {
+                SyncFromValidationIssue(ValidationIssue);
+            }
+            else
+            {
+                SyncFromEffectiveValue(displayValue, resetSensitiveVisibility: true);
+            }
+        }
+        else if (ValidationIssue is not null && validationIssueChanged)
+        {
+            SyncFromValidationIssue(ValidationIssue);
+        }
+        else if (ValidationIssue is null && validationIssueChanged)
+        {
+            SyncFromEffectiveValue(displayValue, resetSensitiveVisibility: false);
+        }
+        else if (!IsModified && !_hasInvalidLocalEdit)
+        {
+            SyncFromEffectiveValue(displayValue, resetSensitiveVisibility: false);
         }
 
         _lastNodePath = nodePath;
         _lastEffectiveDisplayValue = displayValue;
+        _lastValidationIssueKey = validationIssueKey;
         _lastIsModified = IsModified;
+    }
+
+    private string? BuildValidationIssueKey()
+    {
+        return ValidationIssue is null
+            ? null
+            : $"{ValidationIssue.DefinitionKey}:{ValidationIssue.LogicalPath.ToCanonicalString()}:{ValidationIssue.InvalidDisplayValue}:{ValidationIssue.ValidationError}";
     }
 
     private void SyncFromEffectiveValue(string displayValue, bool resetSensitiveVisibility)
@@ -162,6 +193,14 @@
             ? parsedTime
             : null;
         _editorResetVersion++;
+    }
+
+    private void SyncFromValidationIssue(ConfigurationValidationIssue issue)
+    {
+        var displayValue = issue.IsSensitive ? string.Empty : issue.InvalidDisplayValue ?? string.Empty;
+        SyncFromEffectiveValue(displayValue, resetSensitiveVisibility: false);
+        _error = issue.ValidationError;
+        _hasInvalidLocalEdit = true;
     }
 
     private async Task OnTextChanged(string value)

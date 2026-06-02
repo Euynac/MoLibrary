@@ -8,6 +8,7 @@ namespace Monica.Configuration.UI.State;
 public sealed class ConfigurationStateStore
 {
     private readonly Dictionary<(string DefinitionKey, LogicalPath LogicalPath), PendingChange> _pendingChanges = [];
+    private readonly Dictionary<(string DefinitionKey, LogicalPath LogicalPath), ConfigurationValidationIssue> _validationIssues = [];
 
     /// <summary>
     /// Raised whenever staged changes are modified.
@@ -27,6 +28,18 @@ public sealed class ConfigurationStateStore
     }
 
     /// <summary>
+    /// Gets all active validation issues.
+    /// </summary>
+    /// <returns>Validation issues ordered for display.</returns>
+    public IReadOnlyList<ConfigurationValidationIssue> GetValidationIssues()
+    {
+        return _validationIssues.Values
+            .OrderBy(issue => issue.DefinitionDisplayName, StringComparer.OrdinalIgnoreCase)
+            .ThenBy(issue => issue.LogicalPath.ToCanonicalString(), StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+    }
+
+    /// <summary>
     /// Gets a staged change for one path.
     /// </summary>
     /// <param name="definitionKey">The definition key.</param>
@@ -35,6 +48,17 @@ public sealed class ConfigurationStateStore
     public PendingChange? Get(string definitionKey, LogicalPath path)
     {
         return _pendingChanges.GetValueOrDefault(Key(definitionKey, path));
+    }
+
+    /// <summary>
+    /// Gets a validation issue for one path.
+    /// </summary>
+    /// <param name="definitionKey">The definition key.</param>
+    /// <param name="path">The logical path.</param>
+    /// <returns>The validation issue, or null when none exists.</returns>
+    public ConfigurationValidationIssue? GetValidationIssue(string definitionKey, LogicalPath path)
+    {
+        return _validationIssues.GetValueOrDefault(Key(definitionKey, path));
     }
 
     /// <summary>
@@ -58,7 +82,32 @@ public sealed class ConfigurationStateStore
     public void Stage(PendingChange change)
     {
         _pendingChanges[Key(change.DefinitionKey, change.LogicalPath)] = change;
+        _validationIssues.Remove(Key(change.DefinitionKey, change.LogicalPath));
         NotifyChanged();
+    }
+
+    /// <summary>
+    /// Reports one invalid UI edit.
+    /// </summary>
+    /// <param name="issue">The validation issue.</param>
+    public void ReportValidationIssue(ConfigurationValidationIssue issue)
+    {
+        _validationIssues[Key(issue.DefinitionKey, issue.LogicalPath)] = issue;
+        _pendingChanges.Remove(Key(issue.DefinitionKey, issue.LogicalPath));
+        NotifyChanged();
+    }
+
+    /// <summary>
+    /// Clears one validation issue.
+    /// </summary>
+    /// <param name="definitionKey">The definition key.</param>
+    /// <param name="path">The logical path.</param>
+    public void ClearValidationIssue(string definitionKey, LogicalPath path)
+    {
+        if (_validationIssues.Remove(Key(definitionKey, path)))
+        {
+            NotifyChanged();
+        }
     }
 
     /// <summary>
@@ -72,10 +121,18 @@ public sealed class ConfigurationStateStore
         var scopedKeys = _pendingChanges.Keys
             .Where(key => string.Equals(key.DefinitionKey, definitionKey, StringComparison.Ordinal) && IsPrefix(scopePath, key.LogicalPath))
             .ToArray();
+        var scopedIssueKeys = _validationIssues.Keys
+            .Where(key => string.Equals(key.DefinitionKey, definitionKey, StringComparison.Ordinal) && IsPrefix(scopePath, key.LogicalPath))
+            .ToArray();
 
         foreach (var key in scopedKeys)
         {
             _pendingChanges.Remove(key);
+        }
+
+        foreach (var key in scopedIssueKeys)
+        {
+            _validationIssues.Remove(key);
         }
 
         foreach (var change in changes.Where(change =>
@@ -84,7 +141,7 @@ public sealed class ConfigurationStateStore
             _pendingChanges[Key(change.DefinitionKey, change.LogicalPath)] = change;
         }
 
-        if (scopedKeys.Length > 0 || changes.Count > 0)
+        if (scopedKeys.Length > 0 || scopedIssueKeys.Length > 0 || changes.Count > 0)
         {
             NotifyChanged();
         }
@@ -97,7 +154,10 @@ public sealed class ConfigurationStateStore
     /// <param name="path">The logical path.</param>
     public void Undo(string definitionKey, LogicalPath path)
     {
-        if (_pendingChanges.Remove(Key(definitionKey, path)))
+        var key = Key(definitionKey, path);
+        var removedPending = _pendingChanges.Remove(key);
+        var removedIssue = _validationIssues.Remove(key);
+        if (removedPending || removedIssue)
         {
             NotifyChanged();
         }
@@ -113,13 +173,21 @@ public sealed class ConfigurationStateStore
         var scopedKeys = _pendingChanges.Keys
             .Where(key => string.Equals(key.DefinitionKey, definitionKey, StringComparison.Ordinal) && IsPrefix(scopePath, key.LogicalPath))
             .ToArray();
+        var scopedIssueKeys = _validationIssues.Keys
+            .Where(key => string.Equals(key.DefinitionKey, definitionKey, StringComparison.Ordinal) && IsPrefix(scopePath, key.LogicalPath))
+            .ToArray();
 
         foreach (var key in scopedKeys)
         {
             _pendingChanges.Remove(key);
         }
 
-        if (scopedKeys.Length > 0)
+        foreach (var key in scopedIssueKeys)
+        {
+            _validationIssues.Remove(key);
+        }
+
+        if (scopedKeys.Length > 0 || scopedIssueKeys.Length > 0)
         {
             NotifyChanged();
         }
@@ -130,12 +198,13 @@ public sealed class ConfigurationStateStore
     /// </summary>
     public void Clear()
     {
-        if (_pendingChanges.Count == 0)
+        if (_pendingChanges.Count == 0 && _validationIssues.Count == 0)
         {
             return;
         }
 
         _pendingChanges.Clear();
+        _validationIssues.Clear();
         NotifyChanged();
     }
 
