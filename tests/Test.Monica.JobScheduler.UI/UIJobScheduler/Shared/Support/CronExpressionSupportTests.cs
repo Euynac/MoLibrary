@@ -3,8 +3,8 @@ using Microsoft.Extensions.Options;
 using Monica.JobScheduler.UI.Localization;
 using Monica.JobScheduler.UI.UIJobScheduler.Shared.Support;
 using Monica.Modules;
-using Test.Monica.Localization;
-using Test.Monica.Results;
+using Monica.UnitTests.Localization;
+using Monica.UnitTests.Results;
 using Xunit;
 
 namespace Test.Monica.JobScheduler.UI.UIJobScheduler.Shared.Support;

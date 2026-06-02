@@ -27,12 +27,6 @@ public interface IEntity<TKey> : IEntity
     /// <summary>
     /// Unique identifier for this entity.
     /// </summary>
-    TKey Id { get; }
-    /// <summary>
-    /// Set entityId
-    /// </summary>
-    /// <param name="key"></param>
-    public void SetNewId(TKey key);
+    TKey Id { get; set; }
 }
-
 

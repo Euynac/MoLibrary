@@ -1,169 +1,199 @@
 using System.Linq.Expressions;
-using JetBrains.Annotations;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Query;
 using Monica.Repository.Entity.Abstractions;
 using Monica.Repository.Persistence.Abstractions;
-using Monica.Repository.Persistence.Exceptions;
-using Monica.Tool.Extensions;
+using Monica.Repository.Persistence.Models;
 
 namespace Monica.Repository.Persistence.Services;
 
-public abstract class RepositoryBase<TEntity> : IBasicRepository<TEntity>
+/// <summary>
+/// Provides shared repository behavior that is independent of a concrete database provider.
+/// </summary>
+/// <typeparam name="TEntity">The entity type managed by the repository.</typeparam>
+public abstract class RepositoryBase<TEntity> : IRepository<TEntity>
     where TEntity : class, IEntity
 {
-    public abstract Task<TEntity> InsertAsync(TEntity entity, bool autoSave = false, CancellationToken cancellationToken = default);
+    /// <inheritdoc />
+    public abstract IRepositoryRead<TEntity> AsTracking();
 
-    public virtual async Task InsertManyAsync(IEnumerable<TEntity> entities, bool autoSave = false, CancellationToken cancellationToken = default)
-    {
-        foreach (var entity in entities)
-        {
-            await InsertAsync(entity, cancellationToken: cancellationToken);
-        }
+    /// <inheritdoc />
+    public abstract IRepositoryRead<TEntity> AsNoTracking();
 
-        if (autoSave)
-        {
-            await SaveChangesAsync(cancellationToken);
-        }
-    }
+    /// <inheritdoc />
+    public abstract IRepositoryRead<TEntity> Where(Expression<Func<TEntity, bool>> predicate);
 
-    protected abstract Task SaveChangesAsync(CancellationToken cancellationToken);
+    /// <inheritdoc />
+    public abstract IRepositoryRead<TEntity> Include(Expression<Func<TEntity, object?>> selector);
 
-    public abstract Task<TEntity> UpdateAsync(TEntity entity, bool autoSave = false, CancellationToken cancellationToken = default);
+    /// <inheritdoc />
+    public abstract IRepositoryRead<TEntity> Include(string navigationPath);
 
-    public virtual async Task UpdateManyAsync(IEnumerable<TEntity> entities, bool autoSave = false, CancellationToken cancellationToken = default)
-    {
-        foreach (var entity in entities)
-        {
-            await UpdateAsync(entity, cancellationToken: cancellationToken);
-        }
+    /// <inheritdoc />
+    public abstract IRepositoryRead<TEntity> WithDetails();
 
-        if (autoSave)
-        {
-            await SaveChangesAsync(cancellationToken);
-        }
-    }
+    /// <inheritdoc />
+    public abstract IRepositoryRead<TEntity> IgnoreSoftDeleteFilter();
 
-    public abstract Task DeleteAsync(TEntity entity, bool autoSave = false, CancellationToken cancellationToken = default);
+    /// <inheritdoc />
+    public abstract IRepositoryRead<TEntity> IgnoreQueryFilters();
 
-    public virtual async Task DeleteManyAsync(IEnumerable<TEntity> entities, bool autoSave = false, CancellationToken cancellationToken = default)
-    {
-        foreach (var entity in entities)
-        {
-            await DeleteAsync(entity, cancellationToken: cancellationToken);
-        }
+    /// <inheritdoc />
+    public abstract IRepositoryRead<TEntity> OrderBy<TKey>(Expression<Func<TEntity, TKey>> selector);
 
-        if (autoSave)
-        {
-            await SaveChangesAsync(cancellationToken);
-        }
-    }
+    /// <inheritdoc />
+    public abstract IRepositoryRead<TEntity> OrderByDescending<TKey>(Expression<Func<TEntity, TKey>> selector);
 
-    public abstract Task<List<TEntity>> GetListAsync(bool includeDetails = false, CancellationToken cancellationToken = default);
+    /// <inheritdoc />
+    public abstract IRepositoryRead<TEntity> ThenBy<TKey>(Expression<Func<TEntity, TKey>> selector);
 
-    public abstract Task<List<TEntity>> GetListAsync(Expression<Func<TEntity, bool>> predicate, bool includeDetails = false, CancellationToken cancellationToken = default);
+    /// <inheritdoc />
+    public abstract IRepositoryRead<TEntity> ThenByDescending<TKey>(Expression<Func<TEntity, TKey>> selector);
 
-    public abstract Task<long> GetCountAsync(CancellationToken cancellationToken = default);
+    /// <inheritdoc />
+    public abstract IRepositoryRead<TEntity> Skip(int count);
 
+    /// <inheritdoc />
+    public abstract IRepositoryRead<TEntity> Take(int count);
 
-    /// <summary>
-    /// Applies includes by using the default detail function.
-    /// </summary>
-    /// <returns></returns>
-    public virtual Task<IQueryable<TEntity>> WithDetailsAsync()
-    {
-        return GetQueryableAsync();
-    }
-    private static IQueryable<TEntity> IncludeDetails(
-        IQueryable<TEntity> query,
-        Expression<Func<TEntity, object>>[] propertySelectors)
-    {
-        if (!propertySelectors.IsNullOrEmptySet())
-        {
-            foreach (var propertySelector in propertySelectors)
-            {
-                query = query.Include(propertySelector);
-            }
-        }
+    /// <inheritdoc />
+    public abstract Task<List<TEntity>> GetListAsync(CancellationToken cancellationToken = default);
 
-        return query;
-    }
-    /// <summary>
-    /// Configures the default behavior of WithDetails by overriding this method.
-    /// </summary>
-    /// <param name="entities"></param>
-    /// <returns></returns>
-    public virtual IQueryable<TEntity> DefaultDetailFunc(IQueryable<TEntity> entities)
-    {
-        return entities;
-    }
-
-    public virtual async Task<IQueryable<TEntity>> WithDetailsAsync(params Expression<Func<TEntity, object>>[] propertySelectors)
-    {
-        return IncludeDetails(await GetQueryableAsync(), propertySelectors);
-    }
-    public abstract Task<IQueryable<TEntity>> GetQueryableAsync();
-
-    public abstract Task<TEntity?> FindAsync(
+    /// <inheritdoc />
+    public abstract Task<List<TEntity>> GetListAsync(
         Expression<Func<TEntity, bool>> predicate,
-        bool includeDetails = true,
         CancellationToken cancellationToken = default);
 
-    public async Task<TEntity> GetAsync(
+    /// <inheritdoc />
+    public abstract Task<TEntity?> FindAsync(
         Expression<Func<TEntity, bool>> predicate,
-        bool includeDetails = true,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default);
+
+    /// <inheritdoc />
+    public abstract Task<TEntity> GetAsync(
+        Expression<Func<TEntity, bool>> predicate,
+        CancellationToken cancellationToken = default);
+
+    /// <inheritdoc />
+    public abstract Task<TEntity?> FirstOrDefaultAsync(CancellationToken cancellationToken = default);
+
+    /// <inheritdoc />
+    public abstract Task<TEntity?> FirstOrDefaultAsync(
+        Expression<Func<TEntity, bool>> predicate,
+        CancellationToken cancellationToken = default);
+
+    /// <inheritdoc />
+    public abstract Task<TEntity> FirstAsync(CancellationToken cancellationToken = default);
+
+    /// <inheritdoc />
+    public abstract Task<TEntity> FirstAsync(
+        Expression<Func<TEntity, bool>> predicate,
+        CancellationToken cancellationToken = default);
+
+    /// <inheritdoc />
+    public abstract Task<TEntity?> SingleOrDefaultAsync(
+        Expression<Func<TEntity, bool>> predicate,
+        CancellationToken cancellationToken = default);
+
+    /// <inheritdoc />
+    public abstract Task<bool> AnyAsync(CancellationToken cancellationToken = default);
+
+    /// <inheritdoc />
+    public abstract Task<bool> AnyAsync(
+        Expression<Func<TEntity, bool>> predicate,
+        CancellationToken cancellationToken = default);
+
+    /// <inheritdoc />
+    public abstract Task<int> CountAsync(CancellationToken cancellationToken = default);
+
+    /// <inheritdoc />
+    public abstract Task<int> CountAsync(
+        Expression<Func<TEntity, bool>> predicate,
+        CancellationToken cancellationToken = default);
+
+    /// <inheritdoc />
+    public abstract Task<long> LongCountAsync(CancellationToken cancellationToken = default);
+
+    /// <inheritdoc />
+    public abstract Task<long> LongCountAsync(
+        Expression<Func<TEntity, bool>> predicate,
+        CancellationToken cancellationToken = default);
+
+    /// <inheritdoc />
+    public abstract Task<PagedList<TEntity>> GetPagedListAsync(
+        int page,
+        int pageSize,
+        CancellationToken cancellationToken = default);
+
+    /// <inheritdoc />
+    public abstract Task<PagedList<TEntity>> GetPagedListAsync(
+        int page,
+        int pageSize,
+        Expression<Func<TEntity, bool>> predicate,
+        CancellationToken cancellationToken = default);
+
+    /// <inheritdoc />
+    public abstract Task<IQueryable<TEntity>> GetQueryableAsync();
+
+    /// <inheritdoc />
+    public abstract Task<TEntity> InsertAsync(TEntity entity, CancellationToken cancellationToken = default);
+
+    /// <inheritdoc />
+    public virtual async Task InsertManyAsync(IEnumerable<TEntity> entities, CancellationToken cancellationToken = default)
     {
-        var entity = await FindAsync(predicate, includeDetails, cancellationToken);
-
-        if (entity == null)
+        foreach (var entity in entities)
         {
-            throw new EntityNotFoundException(typeof(TEntity));
+            await InsertAsync(entity, cancellationToken);
         }
-
-        return entity;
     }
 
-    public abstract Task DeleteAsync(Expression<Func<TEntity, bool>> predicate, bool autoSave = false, CancellationToken cancellationToken = default);
+    /// <inheritdoc />
+    public abstract Task AttachAsync(TEntity entity, CancellationToken cancellationToken = default);
 
-    public abstract Task DeleteDirectAsync(Expression<Func<TEntity, bool>> predicate, CancellationToken cancellationToken = default);
-    protected virtual CancellationToken GetCancellationToken(CancellationToken preferredValue = default)
+    /// <inheritdoc />
+    public abstract Task UpdateAsync(TEntity entity, CancellationToken cancellationToken = default);
+
+    /// <inheritdoc />
+    public virtual async Task UpdateManyAsync(IEnumerable<TEntity> entities, CancellationToken cancellationToken = default)
     {
-        // TODO: Align this implementation with the ABP approach.
-        return preferredValue;
-    }
-
-}
-
-public abstract class RepositoryBase<TEntity, TKey> : RepositoryBase<TEntity>, IBasicRepository<TEntity, TKey>
-    where TEntity : class, IEntity<TKey>
-{
-    public abstract Task<TEntity> GetAsync(TKey id, bool includeDetails = true, CancellationToken cancellationToken = default);
-
-    public abstract Task<TEntity?> FindAsync(TKey id, bool includeDetails = true, CancellationToken cancellationToken = default);
-
-    public abstract Task<bool> ExistAsync(TKey id);
-
-    public virtual async Task DeleteAsync(TKey id, bool autoSave = false, CancellationToken cancellationToken = default)
-    {
-        var entity = await FindAsync(id, cancellationToken: cancellationToken);
-        if (entity == null)
+        foreach (var entity in entities)
         {
-            return;
-        }
-
-        await DeleteAsync(entity, autoSave, cancellationToken);
-    }
-
-    public async Task DeleteManyAsync([NotNull] IEnumerable<TKey> ids, bool autoSave = false, CancellationToken cancellationToken = default)
-    {
-        foreach (var id in ids)
-        {
-            await DeleteAsync(id, cancellationToken: cancellationToken);
-        }
-
-        if (autoSave)
-        {
-            await SaveChangesAsync(cancellationToken);
+            await UpdateAsync(entity, cancellationToken);
         }
     }
+
+    /// <inheritdoc />
+    public abstract Task DeleteAsync(TEntity entity, CancellationToken cancellationToken = default);
+
+    /// <inheritdoc />
+    public virtual async Task DeleteManyAsync(IEnumerable<TEntity> entities, CancellationToken cancellationToken = default)
+    {
+        foreach (var entity in entities)
+        {
+            await DeleteAsync(entity, cancellationToken);
+        }
+    }
+
+    /// <inheritdoc />
+    public abstract Task DeleteAsync(Expression<Func<TEntity, bool>> predicate, CancellationToken cancellationToken = default);
+
+    /// <inheritdoc />
+    public abstract Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
+
+    /// <inheritdoc />
+    public abstract Task<DbContext> GetDbContextAsync();
+
+    /// <inheritdoc />
+    public abstract Task<DbSet<TEntity>> GetDbSetAsync();
+
+    /// <inheritdoc />
+    public abstract Task<int> ExecuteUpdateAsync(
+        Expression<Func<TEntity, bool>> predicate,
+        Action<UpdateSettersBuilder<TEntity>> setters,
+        CancellationToken cancellationToken = default);
+
+    /// <inheritdoc />
+    public abstract Task<int> ExecuteDeleteAsync(
+        Expression<Func<TEntity, bool>> predicate,
+        CancellationToken cancellationToken = default);
 }

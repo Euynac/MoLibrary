@@ -59,19 +59,20 @@ public class AsyncLocalEventStore(IUnitOfWorkManager uow) : IAsyncLocalEventStor
 
     public AsyncEventBuffer? GetBuffer()
     {
-        if (uow.Current is not { } u) return null;
-        if (u.Items.TryGetValue(nameof(AsyncLocalEventStore), out var buffer) && buffer is AsyncEventBuffer b)
-        {
-            return b;
-        }
-
-        return null;
+        return uow.Current is IUnitOfWorkInternals internals ? internals.GetEventBuffer() : null;
     }
 
     public AsyncEventBuffer GetOrNewBuffer()
     {
-        using var u = uow.Begin();
-        return (u.Items.GetOrAdd(nameof(AsyncLocalEventStore), (key) => new AsyncEventBuffer()) as AsyncEventBuffer)!;
+        var unitOfWork = uow.Current ?? throw new InvalidOperationException(
+            "Entity event buffering requires an active unit of work.");
+        if (unitOfWork is not IUnitOfWorkInternals internals)
+        {
+            throw new InvalidOperationException(
+                $"The active unit of work '{unitOfWork.GetType().FullName}' does not expose an event buffer.");
+        }
+
+        return internals.GetOrCreateEventBuffer();
     }
 }
 

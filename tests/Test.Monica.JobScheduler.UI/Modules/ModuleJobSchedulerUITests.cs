@@ -4,7 +4,7 @@ using Monica.Core.Modularity.Models;
 using Monica.Core.Modularity.Services.Support;
 using Monica.JobScheduler.UI.UIJobScheduler.Shared.Support;
 using Monica.Modules;
-using Test.Monica.Modularity;
+using Monica.UnitTests.Modularity;
 using Xunit;
 
 namespace Test.Monica.JobScheduler.UI.Modules;

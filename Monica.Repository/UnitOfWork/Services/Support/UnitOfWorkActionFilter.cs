@@ -2,7 +2,6 @@ using Microsoft.AspNetCore.Mvc.Controllers;
 using Microsoft.AspNetCore.Mvc.Filters;
 using Microsoft.Extensions.DependencyInjection;
 using Monica.Repository.UnitOfWork.Abstractions;
-using Monica.Repository.UnitOfWork.Models;
 
 namespace Monica.Repository.UnitOfWork.Services.Support;
 
@@ -17,7 +16,7 @@ public class UnitOfWorkActionFilter : IAsyncActionFilter
         }
 
         var unitOfWorkManager = context.HttpContext.RequestServices.GetRequiredService<IUnitOfWorkManager>();
-        using var uow = unitOfWorkManager.Begin(new UnitOfWorkOptions());
+        await using var uow = unitOfWorkManager.BeginScope();
         var result = await next();
         if (Succeed(result))
         {

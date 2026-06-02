@@ -1,40 +1,41 @@
-using Microsoft.EntityFrameworkCore;
-using Monica.DependencyInjection.Abstractions;
-using Monica.Repository.UnitOfWork.Models;
-
 namespace Monica.Repository.UnitOfWork.Abstractions;
 
-public interface IUnitOfWork : IDisposable
+/// <summary>
+/// Represents an application-level persistence boundary.
+/// </summary>
+/// <remarks>
+/// A unit of work coordinates SaveChanges, transactions, and completion callbacks for participating DbContexts.
+/// Dispose the scope asynchronously when possible; an incomplete scope rolls back explicitly during disposal.
+/// </remarks>
+public interface IUnitOfWork : IAsyncDisposable, IDisposable
 {
+    /// <summary>
+    /// Gets the unique identifier of this unit-of-work scope.
+    /// </summary>
     Guid Id { get; }
-    ICachedServiceProvider CachedServiceProvider { get; }
-    public bool IsDisposed { get; }
-
-    Dictionary<string, object?> Items { get; }
-    public bool IsCompleted { get; }
-    public IUnitOfWork? Outer { get; }
-    void Initialize(UnitOfWorkOptions options);
 
     /// <summary>
-    /// If transactions are enabled, this method must be called to commit the transaction.
-    /// If autoSave is not used, calling this method will automatically invoke SaveChanges.
-    /// After Complete, the UnitOfWork can no longer obtain a new DbContext.
-    /// See DbContextProvider.GetCurrentByChecking for details.
+    /// Gets whether the scope has completed successfully.
     /// </summary>
-    /// <param name="cancellationToken"></param>
-    /// <returns></returns>
-    Task CompleteAsync(CancellationToken cancellationToken = default);
-    Task RollbackAsync(CancellationToken cancellationToken = default);
+    bool IsCompleted { get; }
+
+    /// <summary>
+    /// Saves changes for all DbContexts attached to this unit of work without committing the transaction.
+    /// </summary>
     Task SaveChangesAsync(CancellationToken cancellationToken = default);
-    UnitOfWorkOptions Options { get; }
-    void AttachDbContext<TDbContext>(TDbContext dbContext)
-        where TDbContext : DbContext;
 
-    TDbContext? TryGetDbContext<TDbContext>()
-        where TDbContext : DbContext;
+    /// <summary>
+    /// Saves changes, publishes buffered events, commits transactions, and runs completion handlers.
+    /// </summary>
+    Task CompleteAsync(CancellationToken cancellationToken = default);
 
+    /// <summary>
+    /// Rolls back all active transactions attached to this unit of work.
+    /// </summary>
+    Task RollbackAsync(CancellationToken cancellationToken = default);
 
-    void OnDisposed(Action handler);
+    /// <summary>
+    /// Registers a handler that runs after commit succeeds.
+    /// </summary>
     void OnCompleted(Func<Task> handler);
-    void SetOuter(IUnitOfWork? outer);
 }
