@@ -41,10 +41,18 @@
         <MudItem xs="12" md="6">
             @if (Node.NodeKind == ConfigurationNodeKind.Scalar)
             {
-                <ConfigurationScalarEditor Node="@Node"
-                                           EffectiveValue="@EffectiveValue"
-                                           IsModified="@(PendingChange is not null)"
-                                           ValueChanged="StageScalar" />
+                <MudStack Spacing="1" Class="configuration-scalar-cell">
+                    <ConfigurationScalarEditor Node="@Node"
+                                               EffectiveValue="@EffectiveValue"
+                                               IsModified="@(PendingChange is not null)"
+                                               ValueChanged="StageScalar" />
+                    @if (!string.IsNullOrWhiteSpace(_scalarValidationError))
+                    {
+                        <MudText Typo="Typo.caption" Color="Color.Error" Class="configuration-scalar-validation-error">
+                            @_scalarValidationError
+                        </MudText>
+                    }
+                </MudStack>
             }
             else if (Node.NodeKind is ConfigurationNodeKind.Dictionary or ConfigurationNodeKind.List)
             {
@@ -90,6 +98,9 @@
     [Parameter] public ConfigurationEffectiveValue? EffectiveValue { get; set; }
     [Parameter] public EventCallback Changed { get; set; }
 
+    private string? _scalarValidationError;
+    private string? _scalarValidationScopeKey;
+
     private PendingChange? PendingChange => StateStore.Get(Definition.DefinitionKey, Node.RelativePath);
 
     private IReadOnlyList<PendingChange> ScopedPendingChanges => StateStore.GetScope(Definition.DefinitionKey, Node.RelativePath);
@@ -107,14 +118,26 @@
             ? behavior
             : Definition.ReloadBehavior;
 
+    protected override void OnParametersSet()
+    {
+        var scopeKey = $"{Definition.DefinitionKey}:{Node.RelativePath.ToCanonicalString()}:{EffectiveValue?.Version}";
+        if (!string.Equals(_scalarValidationScopeKey, scopeKey, StringComparison.Ordinal))
+        {
+            _scalarValidationError = null;
+            _scalarValidationScopeKey = scopeKey;
+        }
+    }
+
     private async Task StageScalar(ConfigurationScalarEditResult result)
     {
         if (!result.IsValid || result.StoredValue is null)
         {
-            await UndoScalarIfPending();
+            _scalarValidationError = result.ValidationError ?? L["State:Editor:InvalidPattern"];
+            await UndoScalarIfPending(clearValidationError: false);
             return;
         }
 
+        _scalarValidationError = null;
         if (IsSameAsEffectiveValue(result))
         {
             await UndoScalarIfPending();
@@ -147,11 +170,16 @@
         return string.Equals(result.DisplayValue, effectiveDisplayValue, StringComparison.Ordinal);
     }
 
-    private async Task UndoScalarIfPending()
+    private async Task UndoScalarIfPending(bool clearValidationError = true)
     {
         if (PendingChange is null)
         {
             return;
+        }
+
+        if (clearValidationError)
+        {
+            _scalarValidationError = null;
         }
 
         StateStore.Undo(Definition.DefinitionKey, Node.RelativePath);
@@ -244,6 +272,8 @@
 
     private async Task Undo()
     {
+        _scalarValidationError = null;
+
         if (Node.NodeKind == ConfigurationNodeKind.Scalar)
         {
             StateStore.Undo(Definition.DefinitionKey, Node.RelativePath);

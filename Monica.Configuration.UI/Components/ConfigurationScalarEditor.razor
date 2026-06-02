@@ -22,8 +22,7 @@
                          Variant="Variant.Outlined"
                          Margin="Margin.Dense"
                          Immediate="true"
-                         Error="@(!string.IsNullOrWhiteSpace(_error))"
-                         ErrorText="@_error" />
+                         Error="@HasError" />
     }
     else if (Node.ValueKind == ConfigurationValueKind.DateTime)
     {
@@ -32,7 +31,8 @@
                        DateChanged="OnDateChanged"
                        Variant="Variant.Outlined"
                        Margin="Margin.Dense"
-                       Editable="true" />
+                       Editable="true"
+                       Error="@HasError" />
     }
     else if (Node.ValueKind == ConfigurationValueKind.TimeSpan)
     {
@@ -41,7 +41,8 @@
                        TimeChanged="OnTimeChanged"
                        Variant="Variant.Outlined"
                        Margin="Margin.Dense"
-                       Editable="true" />
+                       Editable="true"
+                       Error="@HasError" />
     }
     else if (EnumValues.Count > 0)
     {
@@ -50,7 +51,8 @@
                    Value="@_textValue"
                    ValueChanged="OnTextChanged"
                    Variant="Variant.Outlined"
-                   Margin="Margin.Dense">
+                   Margin="Margin.Dense"
+                   Error="@HasError">
             @foreach (var value in EnumValues)
             {
                 <MudSelectItem T="string" Value="@value">@value</MudSelectItem>
@@ -68,8 +70,7 @@
                       Immediate="true"
                       InputType="@TextInputType"
                       Placeholder="@Placeholder"
-                      Error="@(!string.IsNullOrWhiteSpace(_error))"
-                      ErrorText="@_error"
+                      Error="@HasError"
                       Adornment="@(Node.IsSensitive ? Adornment.End : Adornment.None)"
                       AdornmentIcon="@SensitiveAdornmentIcon"
                       OnAdornmentClick="ToggleSensitiveVisibility"
@@ -104,6 +105,8 @@
         ?? ExtractRegexEnumValues();
 
     private InputType TextInputType => Node.IsSensitive && !_showSensitive ? InputType.Password : InputType.Text;
+
+    private bool HasError => !string.IsNullOrWhiteSpace(_error);
 
     private string EditorInstanceKey => $"{Node.RelativePath.ToCanonicalString()}:{Node.ValueKind}:{_editorResetVersion}";
 
