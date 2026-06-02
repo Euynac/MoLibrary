@@ -109,10 +109,15 @@
 
     private async Task StageScalar(ConfigurationScalarEditResult result)
     {
+        if (!result.IsValid || result.StoredValue is null)
+        {
+            await UndoScalarIfPending();
+            return;
+        }
+
         if (IsSameAsEffectiveValue(result))
         {
-            StateStore.Undo(Definition.DefinitionKey, Node.RelativePath);
-            await Changed.InvokeAsync();
+            await UndoScalarIfPending();
             return;
         }
 
@@ -140,6 +145,17 @@
     {
         var effectiveDisplayValue = EffectiveValue?.DisplayValue ?? string.Empty;
         return string.Equals(result.DisplayValue, effectiveDisplayValue, StringComparison.Ordinal);
+    }
+
+    private async Task UndoScalarIfPending()
+    {
+        if (PendingChange is null)
+        {
+            return;
+        }
+
+        StateStore.Undo(Definition.DefinitionKey, Node.RelativePath);
+        await Changed.InvokeAsync();
     }
 
     private async Task EditComplexValue()

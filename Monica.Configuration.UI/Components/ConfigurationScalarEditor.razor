@@ -94,6 +94,7 @@
     private string? _lastNodePath;
     private string? _lastEffectiveDisplayValue;
     private bool _lastIsModified;
+    private bool _hasInvalidLocalEdit;
     private int _editorResetVersion;
 
     private bool IsNumeric => Node.ValueKind is ConfigurationValueKind.Integer or ConfigurationValueKind.Decimal or ConfigurationValueKind.Floating;
@@ -127,7 +128,7 @@
             return;
         }
 
-        if (pathChanged || !IsModified)
+        if (pathChanged || (!IsModified && !_hasInvalidLocalEdit))
         {
             SyncFromEffectiveValue(displayValue, resetSensitiveVisibility: pathChanged);
         }
@@ -145,6 +146,7 @@
         }
 
         _error = null;
+        _hasInvalidLocalEdit = false;
         _textValue = displayValue;
         _boolValue = bool.TryParse(displayValue, out var parsedBool) && parsedBool;
         _decimalValue = decimal.TryParse(displayValue, NumberStyles.Any, CultureInfo.InvariantCulture, out var parsedDecimal)
@@ -194,12 +196,21 @@
     {
         if (!Validate(displayValue))
         {
+            _hasInvalidLocalEdit = true;
+            await ValueChanged.InvokeAsync(new ConfigurationScalarEditResult
+            {
+                IsValid = false,
+                DisplayValue = displayValue,
+                ValidationError = _error
+            });
             return;
         }
 
+        _hasInvalidLocalEdit = false;
         rawJson ??= JsonSerializer.Serialize(displayValue);
         await ValueChanged.InvokeAsync(new ConfigurationScalarEditResult
         {
+            IsValid = true,
             StoredValue = ConfigurationStoredValue.FromJson(rawJson),
             DisplayValue = displayValue
         });
