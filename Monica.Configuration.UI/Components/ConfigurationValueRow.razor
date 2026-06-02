@@ -47,7 +47,7 @@
                                                IsModified="@(PendingChange is not null)"
                                                ValidationIssue="@ValidationIssue"
                                                ValueChanged="StageScalar" />
-                    @if (ValidationIssue is not null)
+                    @if (ValidationIssue is not null && !ScalarEditorShowsInlineError)
                     {
                         <MudText Typo="Typo.caption" Color="Color.Error" Class="configuration-scalar-validation-error">
                             @ValidationIssue.ValidationError
@@ -108,6 +108,8 @@
     private bool HasPendingChanges => Node.NodeKind == ConfigurationNodeKind.Scalar
         ? PendingChange is not null || ValidationIssue is not null
         : ScopedPendingChanges.Count > 0;
+
+    private bool ScalarEditorShowsInlineError => Node.ValueKind == ConfigurationValueKind.TimeSpan;
 
     private string DisplayName => string.IsNullOrWhiteSpace(Node.DisplayName) ? Node.Name : Node.DisplayName!;
 

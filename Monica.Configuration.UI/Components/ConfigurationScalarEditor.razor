@@ -36,17 +36,19 @@
     }
     else if (Node.ValueKind == ConfigurationValueKind.TimeSpan)
     {
-        <MudTextField @key="EditorInstanceKey"
-                      T="string"
-                      Value="@_textValue"
-                      ValueChanged="OnTimeTextChanged"
-                      Variant="Variant.Outlined"
-                      Margin="Margin.Dense"
-                      Immediate="true"
-                      Placeholder="@L["State:Editor:TimeSpanPlaceholder"]"
-                      Error="@HasError"
-                      Adornment="Adornment.End"
-                      AdornmentIcon="@Icons.Material.Filled.Schedule" />
+        <MudTimePicker @key="EditorInstanceKey"
+                       Time="@_timeValue"
+                       TimeChanged="OnTimePickerChanged"
+                       Text="@_textValue"
+                       TextChanged="OnTimeTextChanged"
+                       TimeFormat="HH:mm"
+                       ImmediateText="true"
+                       Variant="Variant.Outlined"
+                       Margin="Margin.Dense"
+                       Editable="true"
+                       Placeholder="@L["State:Editor:TimeSpanPlaceholder"]"
+                       Error="@HasError"
+                       ErrorText="@_error" />
     }
     else if (EnumValues.Count > 0)
     {
@@ -94,6 +96,7 @@
     private bool _boolValue;
     private decimal? _decimalValue;
     private DateTime? _dateValue;
+    private TimeSpan? _timeValue;
     private bool _showSensitive;
     private string? _error;
     private string? _lastNodePath;
@@ -227,6 +230,9 @@
         _dateValue = DateTime.TryParse(displayValue, CultureInfo.InvariantCulture, DateTimeStyles.AssumeLocal, out var parsedDate)
             ? parsedDate
             : null;
+        _timeValue = ConfigurationScalarTextCodec.TryParseTimeSpan(displayValue, out var parsedTime)
+            ? parsedTime
+            : null;
     }
 
     private async Task OnTextChanged(string value)
@@ -254,8 +260,15 @@
         await EmitAsync(text);
     }
 
-    private async Task OnTimeTextChanged(string value)
+    private Task OnTimePickerChanged(TimeSpan? value)
     {
+        _timeValue = value;
+        return Task.CompletedTask;
+    }
+
+    private async Task OnTimeTextChanged(string? value)
+    {
+        value ??= string.Empty;
         _textValue = value;
         if (!Validate(value))
         {
