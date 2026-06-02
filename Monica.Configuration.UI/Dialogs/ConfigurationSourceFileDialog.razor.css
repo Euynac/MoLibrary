@@ -1,0 +1,11 @@
+.configuration-source-json {
+    max-height: 65vh;
+    overflow: auto;
+    margin: 0;
+    color: var(--mud-palette-text-primary);
+    background: var(--mud-palette-background-gray);
+    border-radius: 4px;
+    padding: 12px;
+    white-space: pre-wrap;
+    word-break: break-word;
+}

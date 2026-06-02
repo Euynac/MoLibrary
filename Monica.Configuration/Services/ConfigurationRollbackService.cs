@@ -9,6 +9,7 @@ namespace Monica.Configuration.Services;
 internal sealed class ConfigurationRollbackService(
     IConfigurationHistoryService historyService,
     IConfigurationMutationService mutationService,
+    IConfigurationSourceMutationService sourceMutationService,
     IConfigurationMutationGroupService groupService)
     : IConfigurationRollbackService
 {
@@ -90,6 +91,13 @@ internal sealed class ConfigurationRollbackService(
         var request = history.OldValue is null
             ? BuildRemoveRequest(history, context)
             : BuildRestoreRequest(history, context);
+
+        if (history.TargetKind == ConfigurationMutationTargetKind.ExternalConfigurationSource)
+        {
+            var sourceRequest = BuildSourceRequest(history, request);
+            return sourceMutationService.MutateAsync(sourceRequest, cancellationToken);
+        }
+
         return mutationService.MutateAsync(request, cancellationToken);
     }
 
@@ -120,6 +128,28 @@ internal sealed class ConfigurationRollbackService(
             Value = history.OldValue!,
             ExpectedSchemaVersion = history.SchemaVersion,
             Context = context
+        };
+    }
+
+    private static ConfigurationSourceMutationRequest BuildSourceRequest(
+        ConfigurationValueHistory history,
+        ConfigurationMutationRequest request)
+    {
+        if (string.IsNullOrWhiteSpace(history.SourceKey))
+        {
+            throw new InvalidOperationException($"Configuration history row '{history.HistoryId}' does not contain a source key.");
+        }
+
+        return new ConfigurationSourceMutationRequest
+        {
+            SourceKey = history.SourceKey,
+            DefinitionKey = request.DefinitionKey,
+            LogicalPath = request.LogicalPath,
+            MutationKind = request.MutationKind,
+            Value = request.Value,
+            ExpectedSchemaVersion = request.ExpectedSchemaVersion,
+            ExpectedSourceRevision = history.TargetRevision,
+            Context = request.Context
         };
     }
 }

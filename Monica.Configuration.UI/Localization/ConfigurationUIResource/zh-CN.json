@@ -98,7 +98,12 @@
     },
     "Columns": {
       "Time": "时间",
-      "Kind": "类型"
+      "Kind": "类型",
+      "Target": "目标"
+    },
+    "Targets": {
+      "Monica": "Monica 有效值存储",
+      "External": "外部来源"
     },
     "Dialog": {
       "Title": "配置历史记录",
@@ -170,6 +175,52 @@
       "NotRegistered": "未注册"
     }
   },
+  "Sources": {
+    "Empty": "未找到配置来源。",
+    "Writable": "可写",
+    "ReadOnly": "只读",
+    "Managed": "纳管",
+    "Effective": "生效中",
+    "Runtime": {
+      "Title": "运行时配置来源",
+      "Subtitle": "配置来源按优先级从高到低显示。最后一个提供 Key 的 Provider 生效。"
+    },
+    "Definition": {
+      "Title": "配置来源",
+      "Subtitle": "{0} 的配置来源汇总。"
+    },
+    "Chain": {
+      "Title": "来源链路",
+      "Empty": "没有配置来源提供该配置值。"
+    },
+    "Columns": {
+      "Priority": "优先级",
+      "Source": "来源",
+      "Kind": "类型",
+      "State": "状态",
+      "Reload": "重载",
+      "Supplied": "提供项",
+      "Effective": "生效项"
+    },
+    "Reload": {
+      "Enabled": "变更重载",
+      "Disabled": "手动",
+      "Unknown": "未知"
+    },
+    "Actions": {
+      "ViewFile": "查看文件",
+      "EditSource": "编辑来源"
+    },
+    "File": {
+      "Title": "配置文件 - {0}",
+      "Redacted": "敏感值已脱敏"
+    },
+    "Edit": {
+      "Title": "编辑来源值",
+      "Saved": "来源值已保存。",
+      "LowerPriorityWarning": "该来源当前不是生效来源。更高优先级的来源可能仍会覆盖运行时值。"
+    }
+  },
   "Dialogs": {
     "SaveGroup": {
       "Title": "保存配置修改组",
@@ -236,7 +287,8 @@
       "Search": "搜索",
       "Jump": "跳转",
       "Cancel": "取消",
-      "Close": "关闭"
+      "Close": "关闭",
+      "Save": "保存"
     },
     "States": {
       "Loading": "加载中...",

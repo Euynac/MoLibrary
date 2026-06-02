@@ -1,0 +1,66 @@
+@using Monica.Configuration.UI.Localization
+@inject ConfigurationFacade Facade
+@inject IStringLocalizer<ConfigurationUIResource> L
+
+<MudDialog>
+    <DialogContent>
+        @if (_loading)
+        {
+            <MudProgressLinear Indeterminate="true" />
+        }
+        else if (_error is not null)
+        {
+            <MudAlert Severity="Severity.Error">@_error</MudAlert>
+        }
+        else if (_fileView is not null)
+        {
+            <MudStack Spacing="2">
+                <MudStack Row="true" Wrap="Wrap.Wrap" AlignItems="AlignItems.Center" Spacing="1">
+                    <MudChip T="string" Color="@(_fileView.Source.IsWritable ? Color.Success : Color.Default)" Variant="Variant.Outlined" Size="Size.Small">
+                        @(_fileView.Source.IsWritable ? L["Sources:Writable"] : L["Sources:ReadOnly"])
+                    </MudChip>
+                    @if (_fileView.HasRedactions)
+                    {
+                        <MudChip T="string" Color="Color.Warning" Variant="Variant.Filled" Size="Size.Small">@L["Sources:File:Redacted"]</MudChip>
+                    }
+                </MudStack>
+                <MudText Typo="Typo.caption" Color="Color.Secondary">@_fileView.Source.PhysicalPath</MudText>
+                <MudPaper Outlined="true" Class="pa-3">
+                    <pre class="configuration-source-json">@_fileView.Content</pre>
+                </MudPaper>
+            </MudStack>
+        }
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Close">@L["Common:Actions:Close"]</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] private IMudDialogInstance MudDialog { get; set; } = null!;
+    [Parameter, EditorRequired] public string SourceKey { get; set; } = "";
+
+    private ConfigurationSourceFileView? _fileView;
+    private string? _error;
+    private bool _loading = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var result = await Facade.GetSourceFileViewAsync(SourceKey);
+        if (result.IsFailed(out var error, out var view))
+        {
+            _error = error.Message;
+        }
+        else
+        {
+            _fileView = view;
+        }
+
+        _loading = false;
+    }
+
+    private void Close()
+    {
+        MudDialog.Close();
+    }
+}

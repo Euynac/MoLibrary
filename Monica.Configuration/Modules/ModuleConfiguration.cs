@@ -1,5 +1,6 @@
 using System.Reflection;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Configuration.Json;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
@@ -115,6 +116,9 @@ public sealed class ModuleConfiguration
         services.TryAddSingleton<ConfigurationEffectiveValuePatchEngine>();
         services.TryAddSingleton<ConfigurationEffectiveValueDocumentEditor>();
         services.TryAddSingleton<ConfigurationEffectiveValueSeedFactory>();
+        services.TryAddSingleton<IConfigurationSourceInspector, ConfigurationSourceInspector>();
+        services.TryAddSingleton<IConfigurationJsonFileSourceWriter, ConfigurationJsonFileSourceWriter>();
+        services.TryAddSingleton<IConfigurationSourceMutationService, ConfigurationSourceMutationService>();
         services.TryAddSingleton(_providerAccessor);
         services.TryAddSingleton<ConfigurationMetricsRecorder>();
         services.AddHostedService<MonicaConfigurationProviderActivationHostedService>();
@@ -209,6 +213,47 @@ public sealed class ModuleConfiguration
 public sealed class ModuleConfigurationGuide
     : ModuleGuide<ModuleConfiguration, ModuleConfigurationOption, ModuleConfigurationGuide>
 {
+    /// <summary>
+    /// Adds a JSON configuration file after Monica's effective-value provider and records source metadata for the UI.
+    /// </summary>
+    /// <param name="path">The JSON file path passed to <see cref="JsonConfigurationExtensions.AddJsonFile(IConfigurationBuilder,string,bool,bool)"/>.</param>
+    /// <param name="optional">Whether the file is optional.</param>
+    /// <param name="reloadOnChange">Whether Microsoft configuration reloads when the file changes.</param>
+    /// <param name="configure">Optional Monica source metadata configuration.</param>
+    /// <returns>The module guide.</returns>
+    public ModuleConfigurationGuide AddManagedJsonFile(
+        string path,
+        bool optional = true,
+        bool reloadOnChange = true,
+        Action<ManagedJsonConfigurationSourceOptions>? configure = null)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(path);
+
+        ConfigureBuilder(context =>
+        {
+            var options = new ManagedJsonConfigurationSourceOptions
+            {
+                DisplayName = Path.GetFileName(path)
+            };
+            configure?.Invoke(options);
+
+            context.HostApplicationBuilder.Configuration.AddJsonFile(path, optional, reloadOnChange);
+            ManagedJsonConfigurationSourceRegistry.Add(
+                context.HostApplicationBuilder.Configuration,
+                new ManagedJsonConfigurationSourceRegistration
+                {
+                    Path = path,
+                    Optional = optional,
+                    ReloadOnChange = reloadOnChange,
+                    DisplayName = string.IsNullOrWhiteSpace(options.DisplayName) ? Path.GetFileName(path) : options.DisplayName,
+                    Description = options.Description,
+                    IsWritable = options.IsWritable
+                });
+        }, ModuleRegistrationOrder.Normal, secondKey: Guid.NewGuid().ToString("N"));
+
+        return this;
+    }
+
     /// <summary>
     /// Uses the file-backed store bundle for effective values, history, and metadata.
     /// </summary>

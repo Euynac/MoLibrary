@@ -1,0 +1,8 @@
+.configuration-source-card {
+    border-color: var(--mud-palette-lines-default);
+}
+
+.configuration-source-card.effective-source {
+    border-color: var(--mud-palette-success);
+    background: color-mix(in srgb, var(--mud-palette-success) 8%, transparent);
+}

@@ -62,6 +62,12 @@
                                             <MudText Typo="Typo.caption" Color="Color.Secondary">@_selectedDefinition.DefinitionKey</MudText>
                                         </MudStack>
                                         <MudStack Row="true" Wrap="Wrap.Wrap" Spacing="1">
+                                            <MudTooltip Text="@L["Sources:Definition:Title"]">
+                                                <MudIconButton Icon="@Icons.Material.Filled.AccountTree"
+                                                               Size="Size.Small"
+                                                               Variant="Variant.Outlined"
+                                                               OnClick="OpenDefinitionSourcesAsync" />
+                                            </MudTooltip>
                                             @if (!string.IsNullOrWhiteSpace(_selectedDefinition.OwnerModule))
                                             {
                                                 <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">@_selectedDefinition.OwnerModule</MudChip>
@@ -473,6 +479,22 @@
     {
         StateStore.Clear();
         return Task.CompletedTask;
+    }
+
+    private async Task OpenDefinitionSourcesAsync()
+    {
+        if (_selectedDefinition is null)
+        {
+            return;
+        }
+
+        var parameters = new DialogParameters<ConfigurationDefinitionSourcesDialog>();
+        parameters.Add(dialog => dialog.Definition, _selectedDefinition);
+        await DialogService.ShowAsync<ConfigurationDefinitionSourcesDialog>(L["Sources:Definition:Title"], parameters, new DialogOptions
+        {
+            MaxWidth = MaxWidth.ExtraLarge,
+            FullWidth = true
+        });
     }
 
     private Task RefreshPendingCount()

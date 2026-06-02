@@ -75,6 +75,7 @@
                             <MudTh>@L["History:Columns:Time"]</MudTh>
                             <MudTh>@L["State:Columns:Definition"]</MudTh>
                             <MudTh>@L["State:Columns:Path"]</MudTh>
+                            <MudTh>@L["History:Columns:Target"]</MudTh>
                             <MudTh>@L["History:Columns:Kind"]</MudTh>
                             <MudTh>@L["Group:Label"]</MudTh>
                             <MudTh />
@@ -83,6 +84,7 @@
                             <MudTd DataLabel="@L["History:Columns:Time"]">@context.ModifiedTime.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss")</MudTd>
                             <MudTd DataLabel="@L["State:Columns:Definition"]">@DefinitionDisplay(context.DefinitionKey)</MudTd>
                             <MudTd DataLabel="@L["State:Columns:Path"]">@context.LogicalPath.ToCanonicalString()</MudTd>
+                            <MudTd DataLabel="@L["History:Columns:Target"]">@HistoryTarget(context)</MudTd>
                             <MudTd DataLabel="@L["History:Columns:Kind"]">@context.MutationKind</MudTd>
                             <MudTd DataLabel="@L["Group:Label"]">@GroupLabel(context.MutationGroupId)</MudTd>
                             <MudTd>
@@ -371,5 +373,12 @@
     private string StatusText(ConfigurationMutationGroupStatus status)
     {
         return L[$"Group:StatusValues:{status}"];
+    }
+
+    private string HistoryTarget(ConfigurationValueHistory history)
+    {
+        return history.TargetKind == ConfigurationMutationTargetKind.ExternalConfigurationSource
+            ? history.SourceDisplayName ?? history.SourceKey ?? L["History:Targets:External"]
+            : L["History:Targets:Monica"];
     }
 }

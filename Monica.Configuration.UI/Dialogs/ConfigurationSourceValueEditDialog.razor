@@ -1,0 +1,111 @@
+@using Monica.Configuration.UI.Localization
+@inject ConfigurationFacade Facade
+@inject IStringLocalizer<ConfigurationUIResource> L
+
+<MudDialog>
+    <DialogContent>
+        <MudStack Spacing="3">
+            @if (!SourceValue.IsEffective)
+            {
+                <MudAlert Severity="Severity.Warning">@L["Sources:Edit:LowerPriorityWarning"]</MudAlert>
+            }
+            <MudStack Spacing="0">
+                <MudText Typo="Typo.subtitle2">@NodeLabel</MudText>
+                <MudText Typo="Typo.caption" Color="Color.Secondary">@SourceValue.Source.DisplayName</MudText>
+            </MudStack>
+            <ConfigurationScalarEditor Node="@Node"
+                                       EffectiveValue="@EditorValue"
+                                       IsModified="@(_editResult is { IsValid: true })"
+                                       ValueChanged="OnValueChanged" />
+            @if (_editResult is { IsValid: false })
+            {
+                <MudText Typo="Typo.caption" Color="Color.Error">@_editResult.ValidationError</MudText>
+            }
+            <MudTextField T="string"
+                          @bind-Value="_reason"
+                          Label="@L["Group:Reason"]"
+                          Variant="Variant.Outlined"
+                          Margin="Margin.Dense"
+                          Lines="2" />
+        </MudStack>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel">@L["Common:Actions:Cancel"]</MudButton>
+        <MudButton Color="Color.Primary"
+                   Variant="Variant.Filled"
+                   Disabled="@(!CanSave)"
+                   OnClick="SaveAsync">
+            @L["Common:Actions:Save"]
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] private IMudDialogInstance MudDialog { get; set; } = null!;
+    [Parameter, EditorRequired] public ConfigurationDefinition Definition { get; set; } = null!;
+    [Parameter, EditorRequired] public ConfigurationNodeDefinition Node { get; set; } = null!;
+    [Parameter, EditorRequired] public ConfigurationSourceValue SourceValue { get; set; } = null!;
+
+    private ConfigurationScalarEditResult? _editResult;
+    private string? _reason;
+    private bool _saving;
+
+    private ConfigurationEffectiveValue EditorValue => new()
+    {
+        DefinitionKey = Definition.DefinitionKey,
+        LogicalPath = Node.RelativePath,
+        ConfigurationPath = SourceValue.Source.SourcePath,
+        DisplayValue = SourceValue.DisplayValue,
+        IsSensitive = SourceValue.IsSensitive
+    };
+
+    private string NodeLabel => string.IsNullOrWhiteSpace(Node.DisplayName) ? Node.Name : Node.DisplayName!;
+
+    private bool CanSave => !_saving && _editResult is { IsValid: true, StoredValue: not null };
+
+    private Task OnValueChanged(ConfigurationScalarEditResult result)
+    {
+        _editResult = result;
+        return Task.CompletedTask;
+    }
+
+    private async Task SaveAsync()
+    {
+        if (_editResult is not { IsValid: true, StoredValue: { } storedValue })
+        {
+            return;
+        }
+
+        _saving = true;
+        var revisionResult = await Facade.GetSourceRevisionAsync(SourceValue.Source.SourceKey);
+        var expectedRevision = revisionResult.IsFailed(out _, out var revision) ? null : revision;
+        var result = await Facade.MutateSourceAsync(new ConfigurationSourceMutationRequest
+        {
+            SourceKey = SourceValue.Source.SourceKey,
+            DefinitionKey = Definition.DefinitionKey,
+            LogicalPath = Node.RelativePath,
+            MutationKind = ConfigurationMutationKind.Set,
+            Value = storedValue,
+            ExpectedSchemaVersion = Definition.SchemaVersion,
+            ExpectedSourceRevision = expectedRevision,
+            Context = new ConfigurationMutationContext
+            {
+                Reason = _reason
+            }
+        });
+        _saving = false;
+
+        if (result.IsFailed(out var error, out _))
+        {
+            _editResult = _editResult with { ValidationError = error.Message };
+            return;
+        }
+
+        MudDialog.Close(DialogResult.Ok(true));
+    }
+
+    private void Cancel()
+    {
+        MudDialog.Cancel();
+    }
+}

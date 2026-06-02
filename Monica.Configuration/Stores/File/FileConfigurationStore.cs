@@ -451,6 +451,18 @@ public sealed class FileConfigurationStore(IOptions<ConfigurationFileStoreOption
 
         public string? ConfigurationPath { get; init; }
 
+        public string TargetKind { get; init; } = "";
+
+        public string? SourceKey { get; init; }
+
+        public string? SourceProviderType { get; init; }
+
+        public string? SourceDisplayName { get; init; }
+
+        public string? SourcePhysicalPath { get; init; }
+
+        public string? SourceConfigurationPath { get; init; }
+
         public string MutationKind { get; init; } = "";
 
         public string Granularity { get; init; } = "";
@@ -462,6 +474,16 @@ public sealed class FileConfigurationStore(IOptions<ConfigurationFileStoreOption
         public ConfigurationStoredValue NewValue { get; init; } = ConfigurationStoredValue.Null;
 
         public long Version { get; init; }
+
+        public string? TargetRevision { get; init; }
+
+        public string? PreviousTargetRevision { get; init; }
+
+        public ConfigurationStoredValue? EffectiveOldValue { get; init; }
+
+        public ConfigurationStoredValue? EffectiveNewValue { get; init; }
+
+        public bool EffectiveValueChanged { get; init; } = true;
 
         public int SchemaVersion { get; init; }
 
@@ -483,12 +505,23 @@ public sealed class FileConfigurationStore(IOptions<ConfigurationFileStoreOption
                 DefinitionKey = history.DefinitionKey,
                 LogicalPath = history.LogicalPath.ToCanonicalString(),
                 ConfigurationPath = history.ConfigurationPath,
+                TargetKind = history.TargetKind.ToString(),
+                SourceKey = history.SourceKey,
+                SourceProviderType = history.SourceProviderType,
+                SourceDisplayName = history.SourceDisplayName,
+                SourcePhysicalPath = history.SourcePhysicalPath,
+                SourceConfigurationPath = history.SourceConfigurationPath,
                 MutationKind = history.MutationKind.ToString(),
                 Granularity = history.Granularity.ToString(),
                 State = history.State.ToString(),
                 OldValue = history.OldValue,
                 NewValue = history.NewValue,
                 Version = history.Version,
+                TargetRevision = history.TargetRevision,
+                PreviousTargetRevision = history.PreviousTargetRevision,
+                EffectiveOldValue = history.EffectiveOldValue,
+                EffectiveNewValue = history.EffectiveNewValue,
+                EffectiveValueChanged = history.EffectiveValueChanged,
                 SchemaVersion = history.SchemaVersion,
                 ModifiedTime = history.ModifiedTime,
                 ModifierId = history.ModifierId,
@@ -506,12 +539,25 @@ public sealed class FileConfigurationStore(IOptions<ConfigurationFileStoreOption
                 DefinitionKey = DefinitionKey,
                 LogicalPath = string.IsNullOrWhiteSpace(LogicalPath) ? Models.LogicalPath.Root : Models.LogicalPath.Parse(LogicalPath),
                 ConfigurationPath = ConfigurationPath,
+                TargetKind = string.IsNullOrWhiteSpace(TargetKind)
+                    ? ConfigurationMutationTargetKind.MonicaEffectiveStore
+                    : Enum.Parse<ConfigurationMutationTargetKind>(TargetKind),
+                SourceKey = SourceKey,
+                SourceProviderType = SourceProviderType,
+                SourceDisplayName = SourceDisplayName,
+                SourcePhysicalPath = SourcePhysicalPath,
+                SourceConfigurationPath = SourceConfigurationPath,
                 MutationKind = Enum.Parse<ConfigurationMutationKind>(MutationKind),
                 Granularity = Enum.Parse<ConfigurationMutationGranularity>(Granularity),
                 State = Enum.Parse<ConfigurationValueState>(State),
                 OldValue = OldValue,
                 NewValue = NewValue,
                 Version = Version,
+                TargetRevision = TargetRevision,
+                PreviousTargetRevision = PreviousTargetRevision,
+                EffectiveOldValue = EffectiveOldValue,
+                EffectiveNewValue = EffectiveNewValue,
+                EffectiveValueChanged = EffectiveValueChanged,
                 SchemaVersion = SchemaVersion,
                 ModifiedTime = ModifiedTime,
                 ModifierId = ModifierId,

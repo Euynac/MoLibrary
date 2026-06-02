@@ -2,6 +2,7 @@ using Microsoft.Extensions.Configuration;
 using Monica.Configuration.Exceptions;
 using Monica.Configuration.Abstractions;
 using Monica.Configuration.Models;
+using Monica.Configuration.Services;
 using Monica.Configuration.Services.Support;
 using Monica.Core.Extensions;
 using Monica.Core.Results;
@@ -15,6 +16,7 @@ namespace Monica.Configuration.Facades;
 public sealed class ConfigurationFacade(
     IConfigurationDefinitionRegistry definitionRegistry,
     IConfigurationMutationService mutationService,
+    IConfigurationSourceMutationService sourceMutationService,
     IConfigurationHistoryService historyService,
     IConfigurationMutationGroupService mutationGroupService,
     IConfigurationRollbackService rollbackService,
@@ -25,6 +27,8 @@ public sealed class ConfigurationFacade(
     IConfigurationStoreStateTracker storeStateTracker,
     ConfigurationEffectiveValueDocumentEditor documentEditor,
     ConfigurationStoredValueCodec codec,
+    IConfigurationSourceInspector sourceInspector,
+    IConfigurationJsonFileSourceWriter sourceWriter,
     IConfiguration configuration)
 {
     /// <summary>
@@ -146,6 +150,79 @@ public sealed class ConfigurationFacade(
     }
 
     /// <summary>
+    /// Gets all runtime Microsoft configuration sources.
+    /// </summary>
+    /// <returns>Configuration source descriptors ordered by runtime priority index.</returns>
+    public Task<Res<IReadOnlyList<ConfigurationSourceDescriptor>>> GetConfigurationSourcesAsync()
+    {
+        try
+        {
+            return Task.FromResult(Res.Ok(sourceInspector.GetSources()));
+        }
+        catch (Exception ex)
+        {
+            return Task.FromResult<Res<IReadOnlyList<ConfigurationSourceDescriptor>>>(
+                Res.Fail($"Failed to get configuration sources: {ex.GetMessageRecursively()}"));
+        }
+    }
+
+    /// <summary>
+    /// Gets source contribution counts for one definition.
+    /// </summary>
+    /// <param name="definitionKey">The definition key.</param>
+    /// <returns>Source contribution rows.</returns>
+    public Task<Res<IReadOnlyList<ConfigurationDefinitionSourceContribution>>> GetDefinitionSourceContributionsAsync(string definitionKey)
+    {
+        try
+        {
+            var definition = definitionRegistry.GetRequired(definitionKey);
+            return Task.FromResult(Res.Ok(sourceInspector.GetDefinitionContributions(definition)));
+        }
+        catch (Exception ex)
+        {
+            return Task.FromResult<Res<IReadOnlyList<ConfigurationDefinitionSourceContribution>>>(
+                Res.Fail($"Failed to get configuration source contributions: {ex.GetMessageRecursively()}"));
+        }
+    }
+
+    /// <summary>
+    /// Gets the source chain for one configuration path.
+    /// </summary>
+    /// <param name="definitionKey">The definition key.</param>
+    /// <param name="logicalPath">The logical path.</param>
+    /// <returns>The source chain.</returns>
+    public Task<Res<ConfigurationSourceChain>> GetSourceChainAsync(string definitionKey, LogicalPath logicalPath)
+    {
+        try
+        {
+            var definition = definitionRegistry.GetRequired(definitionKey);
+            return Task.FromResult(Res.Ok(sourceInspector.GetSourceChain(definition, logicalPath)));
+        }
+        catch (Exception ex)
+        {
+            return Task.FromResult<Res<ConfigurationSourceChain>>(
+                Res.Fail($"Failed to get configuration source chain: {ex.GetMessageRecursively()}"));
+        }
+    }
+
+    /// <summary>
+    /// Gets a display-safe JSON file view for one source.
+    /// </summary>
+    /// <param name="sourceKey">The source key.</param>
+    /// <returns>The source file view.</returns>
+    public async Task<Res<ConfigurationSourceFileView>> GetSourceFileViewAsync(string sourceKey)
+    {
+        try
+        {
+            return Res.Ok(await sourceInspector.GetSourceFileViewAsync(sourceKey, CancellationToken.None));
+        }
+        catch (Exception ex)
+        {
+            return Res.Fail($"Failed to get configuration source file: {ex.GetMessageRecursively()}");
+        }
+    }
+
+    /// <summary>
     /// Gets the current Microsoft configuration debug view.
     /// </summary>
     /// <returns>The debug view text.</returns>
@@ -181,6 +258,41 @@ public sealed class ConfigurationFacade(
         catch (Exception ex)
         {
             return Res.Fail($"Failed to mutate configuration value: {ex.GetMessageRecursively()}");
+        }
+    }
+
+    /// <summary>
+    /// Mutates one external runtime configuration source.
+    /// </summary>
+    /// <param name="request">The source mutation request.</param>
+    /// <returns>The mutation result.</returns>
+    public async Task<Res<ConfigurationMutationResult>> MutateSourceAsync(ConfigurationSourceMutationRequest request)
+    {
+        try
+        {
+            return await sourceMutationService.MutateAsync(request, CancellationToken.None);
+        }
+        catch (Exception ex)
+        {
+            return Res.Fail($"Failed to mutate configuration source value: {ex.GetMessageRecursively()}");
+        }
+    }
+
+    /// <summary>
+    /// Gets the current source revision hash for optimistic source mutation.
+    /// </summary>
+    /// <param name="sourceKey">The source key.</param>
+    /// <returns>The current source revision, or null when no revision is available.</returns>
+    public async Task<Res<string?>> GetSourceRevisionAsync(string sourceKey)
+    {
+        try
+        {
+            var source = sourceInspector.GetRequiredSource(sourceKey);
+            return Res.Ok<string?>(await sourceWriter.GetRevisionAsync(source, CancellationToken.None));
+        }
+        catch (Exception ex)
+        {
+            return Res.Fail($"Failed to get configuration source revision: {ex.GetMessageRecursively()}");
         }
     }
 

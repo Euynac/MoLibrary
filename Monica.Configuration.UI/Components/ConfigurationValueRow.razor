@@ -74,6 +74,11 @@
 
         <MudItem xs="12" md="2">
             <MudStack Row="true" Justify="Justify.FlexEnd" Spacing="1">
+                <MudTooltip Text="@L["Sources:Chain:Title"]">
+                    <MudIconButton Icon="@Icons.Material.Filled.AccountTree"
+                                   Size="Size.Small"
+                                   OnClick="OpenSourceChainAsync" />
+                </MudTooltip>
                 <MudTooltip Text="@L["History:Title"]">
                     <MudIconButton Icon="@Icons.Material.Filled.History"
                                    Size="Size.Small"
@@ -267,6 +272,18 @@
         await DialogService.ShowAsync<ConfigurationHistoryDiffDialog>(L["History:Dialog:Title"], parameters, new DialogOptions
         {
             MaxWidth = MaxWidth.ExtraLarge,
+            FullWidth = true
+        });
+    }
+
+    private async Task OpenSourceChainAsync()
+    {
+        var parameters = new DialogParameters<ConfigurationSourceChainDialog>();
+        parameters.Add(dialog => dialog.Definition, Definition);
+        parameters.Add(dialog => dialog.Node, Node);
+        await DialogService.ShowAsync<ConfigurationSourceChainDialog>(L["Sources:Chain:Title"], parameters, new DialogOptions
+        {
+            MaxWidth = MaxWidth.Large,
             FullWidth = true
         });
     }

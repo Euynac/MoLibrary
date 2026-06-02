@@ -1,0 +1,111 @@
+@using Monica.Configuration.UI.Localization
+@inject ConfigurationFacade Facade
+@inject IDialogService DialogService
+@inject IStringLocalizer<ConfigurationUIResource> L
+
+<MudDialog>
+    <DialogContent>
+        @if (_loading)
+        {
+            <MudProgressLinear Indeterminate="true" />
+        }
+        else if (_error is not null)
+        {
+            <MudAlert Severity="Severity.Error">@_error</MudAlert>
+        }
+        else if (_contributions.Count == 0)
+        {
+            <MudAlert Severity="Severity.Info">@L["Sources:Empty"]</MudAlert>
+        }
+        else
+        {
+            <MudStack Spacing="2">
+                <MudText Typo="Typo.body2" Color="Color.Secondary">@L["Sources:Definition:Subtitle", Definition.DisplayName]</MudText>
+                <MudTable T="ConfigurationDefinitionSourceContribution" Items="@_contributions" Dense="true" Hover="true" Elevation="0">
+                    <HeaderContent>
+                        <MudTh>@L["Sources:Columns:Source"]</MudTh>
+                        <MudTh>@L["Sources:Columns:Priority"]</MudTh>
+                        <MudTh>@L["Sources:Columns:Supplied"]</MudTh>
+                        <MudTh>@L["Sources:Columns:Effective"]</MudTh>
+                        <MudTh>@L["Sources:Columns:State"]</MudTh>
+                        <MudTh></MudTh>
+                    </HeaderContent>
+                    <RowTemplate>
+                        <MudTd DataLabel="@L["Sources:Columns:Source"]">
+                            <MudStack Spacing="0">
+                                <MudText Typo="Typo.body2">@context.Source.DisplayName</MudText>
+                                <MudText Typo="Typo.caption" Color="Color.Secondary">@SourcePath(context.Source)</MudText>
+                            </MudStack>
+                        </MudTd>
+                        <MudTd DataLabel="@L["Sources:Columns:Priority"]">@context.Source.PriorityIndex</MudTd>
+                        <MudTd DataLabel="@L["Sources:Columns:Supplied"]">@context.SuppliedValueCount</MudTd>
+                        <MudTd DataLabel="@L["Sources:Columns:Effective"]">@context.EffectiveValueCount</MudTd>
+                        <MudTd DataLabel="@L["Sources:Columns:State"]">
+                            <MudChip T="string" Size="Size.Small" Color="@(context.Source.IsWritable ? Color.Success : Color.Default)" Variant="Variant.Outlined">
+                                @(context.Source.IsWritable ? L["Sources:Writable"] : L["Sources:ReadOnly"])
+                            </MudChip>
+                        </MudTd>
+                        <MudTd>
+                            @if (context.Source.Kind == ConfigurationSourceKind.JsonFile)
+                            {
+                                <MudTooltip Text="@L["Sources:Actions:ViewFile"]">
+                                    <MudIconButton Icon="@Icons.Material.Filled.Article"
+                                                   Size="Size.Small"
+                                                   OnClick="() => ViewFileAsync(context.Source)" />
+                                </MudTooltip>
+                            }
+                        </MudTd>
+                    </RowTemplate>
+                </MudTable>
+            </MudStack>
+        }
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Close">@L["Common:Actions:Close"]</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] private IMudDialogInstance MudDialog { get; set; } = null!;
+    [Parameter, EditorRequired] public ConfigurationDefinition Definition { get; set; } = null!;
+
+    private readonly List<ConfigurationDefinitionSourceContribution> _contributions = [];
+    private string? _error;
+    private bool _loading = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var result = await Facade.GetDefinitionSourceContributionsAsync(Definition.DefinitionKey);
+        if (result.IsFailed(out var error, out var contributions))
+        {
+            _error = error.Message;
+        }
+        else
+        {
+            _contributions.AddRange(contributions);
+        }
+
+        _loading = false;
+    }
+
+    private async Task ViewFileAsync(ConfigurationSourceDescriptor source)
+    {
+        var parameters = new DialogParameters<ConfigurationSourceFileDialog>();
+        parameters.Add(dialog => dialog.SourceKey, source.SourceKey);
+        await DialogService.ShowAsync<ConfigurationSourceFileDialog>(L["Sources:File:Title", source.DisplayName], parameters, new DialogOptions
+        {
+            MaxWidth = MaxWidth.ExtraLarge,
+            FullWidth = true
+        });
+    }
+
+    private string SourcePath(ConfigurationSourceDescriptor source)
+    {
+        return source.PhysicalPath ?? source.SourcePath ?? source.ProviderType;
+    }
+
+    private void Close()
+    {
+        MudDialog.Close();
+    }
+}

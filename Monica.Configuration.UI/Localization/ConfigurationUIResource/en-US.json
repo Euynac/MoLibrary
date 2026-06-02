@@ -98,7 +98,12 @@
     },
     "Columns": {
       "Time": "Time",
-      "Kind": "Kind"
+      "Kind": "Kind",
+      "Target": "Target"
+    },
+    "Targets": {
+      "Monica": "Monica effective store",
+      "External": "External source"
     },
     "Dialog": {
       "Title": "Configuration History",
@@ -170,6 +175,52 @@
       "NotRegistered": "Not registered"
     }
   },
+  "Sources": {
+    "Empty": "No configuration sources were found.",
+    "Writable": "Writable",
+    "ReadOnly": "Read-only",
+    "Managed": "Managed",
+    "Effective": "Effective",
+    "Runtime": {
+      "Title": "Runtime configuration sources",
+      "Subtitle": "Providers are shown from highest priority to lowest priority. The last provider that supplies a key wins."
+    },
+    "Definition": {
+      "Title": "Configuration sources",
+      "Subtitle": "Source contribution summary for {0}."
+    },
+    "Chain": {
+      "Title": "Source chain",
+      "Empty": "No source supplies this configuration value."
+    },
+    "Columns": {
+      "Priority": "Priority",
+      "Source": "Source",
+      "Kind": "Kind",
+      "State": "State",
+      "Reload": "Reload",
+      "Supplied": "Supplied",
+      "Effective": "Effective"
+    },
+    "Reload": {
+      "Enabled": "On change",
+      "Disabled": "Manual",
+      "Unknown": "Unknown"
+    },
+    "Actions": {
+      "ViewFile": "View file",
+      "EditSource": "Edit source"
+    },
+    "File": {
+      "Title": "Configuration file - {0}",
+      "Redacted": "Sensitive values redacted"
+    },
+    "Edit": {
+      "Title": "Edit Source Value",
+      "Saved": "Source value saved.",
+      "LowerPriorityWarning": "This source is not currently effective. A higher-priority source may continue to override the runtime value."
+    }
+  },
   "Dialogs": {
     "SaveGroup": {
       "Title": "Save Configuration Group",
@@ -236,7 +287,8 @@
       "Search": "Search",
       "Jump": "Jump",
       "Cancel": "Cancel",
-      "Close": "Close"
+      "Close": "Close",
+      "Save": "Save"
     },
     "States": {
       "Loading": "Loading...",

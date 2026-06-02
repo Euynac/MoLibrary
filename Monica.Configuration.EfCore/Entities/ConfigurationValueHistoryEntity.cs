@@ -15,6 +15,18 @@ public sealed class ConfigurationValueHistoryEntity
 
     public string? ConfigurationPath { get; set; }
 
+    public string TargetKind { get; set; } = "";
+
+    public string? SourceKey { get; set; }
+
+    public string? SourceProviderType { get; set; }
+
+    public string? SourceDisplayName { get; set; }
+
+    public string? SourcePhysicalPath { get; set; }
+
+    public string? SourceConfigurationPath { get; set; }
+
     public string MutationKind { get; set; } = "";
 
     public string Granularity { get; set; } = "";
@@ -26,6 +38,16 @@ public sealed class ConfigurationValueHistoryEntity
     public string? NewValueJson { get; set; }
 
     public long Version { get; set; }
+
+    public string? TargetRevision { get; set; }
+
+    public string? PreviousTargetRevision { get; set; }
+
+    public string? EffectiveOldValueJson { get; set; }
+
+    public string? EffectiveNewValueJson { get; set; }
+
+    public bool EffectiveValueChanged { get; set; } = true;
 
     public int SchemaVersion { get; set; }
 

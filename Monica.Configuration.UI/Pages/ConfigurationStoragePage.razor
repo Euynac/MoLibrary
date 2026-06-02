@@ -1,5 +1,6 @@
 @attribute [Route(PAGE_URL)]
 @inject ConfigurationFacade Facade
+@inject IDialogService DialogService
 @inject ISnackbar Snackbar
 @inject IStringLocalizer<ConfigurationUIResource> L
 
@@ -27,6 +28,67 @@
         }
         else
         {
+            <MudPaper Outlined="true" Class="pa-3">
+                <MudStack Spacing="2">
+                    <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Spacing="2">
+                        <MudStack Spacing="0">
+                            <MudText Typo="Typo.subtitle2">@L["Sources:Runtime:Title"]</MudText>
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">@L["Sources:Runtime:Subtitle"]</MudText>
+                        </MudStack>
+                        <MudChip T="int" Color="Color.Primary" Variant="Variant.Filled" Size="Size.Small">@_sources.Count</MudChip>
+                    </MudStack>
+                    @if (_sources.Count == 0)
+                    {
+                        <MudAlert Severity="Severity.Info">@L["Sources:Empty"]</MudAlert>
+                    }
+                    else
+                    {
+                        <MudTable T="ConfigurationSourceDescriptor" Items="@_sources.OrderByDescending(source => source.PriorityIndex)" Dense="true" Hover="true" Elevation="0">
+                            <HeaderContent>
+                                <MudTh>@L["Sources:Columns:Priority"]</MudTh>
+                                <MudTh>@L["Sources:Columns:Source"]</MudTh>
+                                <MudTh>@L["Sources:Columns:Kind"]</MudTh>
+                                <MudTh>@L["Sources:Columns:State"]</MudTh>
+                                <MudTh>@L["Sources:Columns:Reload"]</MudTh>
+                                <MudTh></MudTh>
+                            </HeaderContent>
+                            <RowTemplate>
+                                <MudTd DataLabel="@L["Sources:Columns:Priority"]">@context.PriorityIndex</MudTd>
+                                <MudTd DataLabel="@L["Sources:Columns:Source"]">
+                                    <MudStack Spacing="0">
+                                        <MudText Typo="Typo.body2">@context.DisplayName</MudText>
+                                        <MudText Typo="Typo.caption" Color="Color.Secondary">@SourcePath(context)</MudText>
+                                    </MudStack>
+                                </MudTd>
+                                <MudTd DataLabel="@L["Sources:Columns:Kind"]">@context.Kind</MudTd>
+                                <MudTd DataLabel="@L["Sources:Columns:State"]">
+                                    <MudStack Row="true" Wrap="Wrap.Wrap" Spacing="1">
+                                        <MudChip T="string" Size="Size.Small" Color="@(context.IsWritable ? Color.Success : Color.Default)" Variant="Variant.Outlined">
+                                            @(context.IsWritable ? L["Sources:Writable"] : L["Sources:ReadOnly"])
+                                        </MudChip>
+                                        @if (context.IsManagedByMonica)
+                                        {
+                                            <MudChip T="string" Size="Size.Small" Color="Color.Info" Variant="Variant.Filled">@L["Sources:Managed"]</MudChip>
+                                        }
+                                    </MudStack>
+                                </MudTd>
+                                <MudTd DataLabel="@L["Sources:Columns:Reload"]">@ReloadText(context)</MudTd>
+                                <MudTd>
+                                    @if (context.Kind == ConfigurationSourceKind.JsonFile)
+                                    {
+                                        <MudTooltip Text="@L["Sources:Actions:ViewFile"]">
+                                            <MudIconButton Icon="@Icons.Material.Filled.Article"
+                                                           Size="Size.Small"
+                                                           OnClick="() => ViewFileAsync(context)" />
+                                        </MudTooltip>
+                                    }
+                                </MudTd>
+                            </RowTemplate>
+                        </MudTable>
+                    }
+                </MudStack>
+            </MudPaper>
+
             <MudGrid Spacing="2">
                 <MudItem xs="12" md="4">
                     @StoreCard(L["Storage:Roles:EffectiveValues"], _overview.EffectiveValueStore)
@@ -60,6 +122,7 @@
     public const string PAGE_URL = ConfigurationUiRoutes.STORAGE_ROUTE;
 
     private readonly List<ConfigurationStoreState> _states = [];
+    private readonly List<ConfigurationSourceDescriptor> _sources = [];
     private ConfigurationStorageOverview? _overview;
     private bool _loading = true;
 
@@ -89,7 +152,37 @@
             _states.AddRange(states);
         }
 
+        var sourceResult = await Facade.GetConfigurationSourcesAsync();
+        if (!sourceResult.IsFailed(out _, out var sources))
+        {
+            _sources.Clear();
+            _sources.AddRange(sources);
+        }
+
         _loading = false;
+    }
+
+    private async Task ViewFileAsync(ConfigurationSourceDescriptor source)
+    {
+        var parameters = new DialogParameters<ConfigurationSourceFileDialog>();
+        parameters.Add(dialog => dialog.SourceKey, source.SourceKey);
+        await DialogService.ShowAsync<ConfigurationSourceFileDialog>(L["Sources:File:Title", source.DisplayName], parameters, new DialogOptions
+        {
+            MaxWidth = MaxWidth.ExtraLarge,
+            FullWidth = true
+        });
+    }
+
+    private string SourcePath(ConfigurationSourceDescriptor source)
+    {
+        return source.PhysicalPath ?? source.SourcePath ?? source.ProviderType;
+    }
+
+    private string ReloadText(ConfigurationSourceDescriptor source)
+    {
+        return source.ReloadOnChange is null
+            ? L["Sources:Reload:Unknown"]
+            : source.ReloadOnChange.Value ? L["Sources:Reload:Enabled"] : L["Sources:Reload:Disabled"];
     }
 
     private RenderFragment StoreCard(string role, ConfigurationStoreDescriptor store) => builder =>

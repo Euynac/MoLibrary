@@ -1,0 +1,140 @@
+@using Monica.Configuration.UI.Localization
+@inject ConfigurationFacade Facade
+@inject IDialogService DialogService
+@inject ISnackbar Snackbar
+@inject IStringLocalizer<ConfigurationUIResource> L
+
+<MudDialog>
+    <DialogContent>
+        @if (_loading)
+        {
+            <MudProgressLinear Indeterminate="true" />
+        }
+        else if (_error is not null)
+        {
+            <MudAlert Severity="Severity.Error">@_error</MudAlert>
+        }
+        else if (_chain is null || _chain.Values.Count == 0)
+        {
+            <MudAlert Severity="Severity.Info">@L["Sources:Chain:Empty"]</MudAlert>
+        }
+        else
+        {
+            <MudStack Spacing="2">
+                <MudText Typo="Typo.caption" Color="Color.Secondary">@_chain.ConfigurationPath</MudText>
+                @foreach (var value in _chain.Values)
+                {
+                    <MudPaper Outlined="true" Class="@SourceCardClass(value)">
+                        <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Spacing="2">
+                            <MudStack Spacing="0">
+                                <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
+                                    <MudText Typo="Typo.subtitle2">@value.Source.DisplayName</MudText>
+                                    @if (value.IsEffective)
+                                    {
+                                        <MudChip T="string" Size="Size.Small" Color="Color.Success" Variant="Variant.Filled">@L["Sources:Effective"]</MudChip>
+                                    }
+                                    <MudChip T="int" Size="Size.Small" Variant="Variant.Outlined">@value.Source.PriorityIndex</MudChip>
+                                </MudStack>
+                                <MudText Typo="Typo.caption" Color="Color.Secondary">@SourcePath(value.Source)</MudText>
+                            </MudStack>
+                            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
+                                <MudChip T="string" Size="Size.Small" Color="@(value.Source.IsWritable ? Color.Success : Color.Default)" Variant="Variant.Outlined">
+                                    @(value.Source.IsWritable ? L["Sources:Writable"] : L["Sources:ReadOnly"])
+                                </MudChip>
+                                @if (value.Source.IsWritable && value.Source.Kind == ConfigurationSourceKind.JsonFile)
+                                {
+                                    <MudTooltip Text="@L["Sources:Actions:EditSource"]">
+                                        <MudIconButton Icon="@Icons.Material.Filled.Edit"
+                                                       Size="Size.Small"
+                                                       Color="Color.Primary"
+                                                       OnClick="() => EditSourceAsync(value)" />
+                                    </MudTooltip>
+                                }
+                            </MudStack>
+                        </MudStack>
+                        <MudDivider Class="my-2" />
+                        <MudText Typo="Typo.body2">@DisplayValue(value)</MudText>
+                        @if (!value.Source.IsWritable && !string.IsNullOrWhiteSpace(value.Source.ReadOnlyReason))
+                        {
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">@value.Source.ReadOnlyReason</MudText>
+                        }
+                    </MudPaper>
+                }
+            </MudStack>
+        }
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Close">@L["Common:Actions:Close"]</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] private IMudDialogInstance MudDialog { get; set; } = null!;
+    [Parameter, EditorRequired] public ConfigurationDefinition Definition { get; set; } = null!;
+    [Parameter, EditorRequired] public ConfigurationNodeDefinition Node { get; set; } = null!;
+
+    private ConfigurationSourceChain? _chain;
+    private string? _error;
+    private bool _loading = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        _loading = true;
+        var result = await Facade.GetSourceChainAsync(Definition.DefinitionKey, Node.RelativePath);
+        if (result.IsFailed(out var error, out var chain))
+        {
+            _error = error.Message;
+        }
+        else
+        {
+            _chain = chain;
+            _error = null;
+        }
+
+        _loading = false;
+    }
+
+    private async Task EditSourceAsync(ConfigurationSourceValue value)
+    {
+        var parameters = new DialogParameters<ConfigurationSourceValueEditDialog>();
+        parameters.Add(dialog => dialog.Definition, Definition);
+        parameters.Add(dialog => dialog.Node, Node);
+        parameters.Add(dialog => dialog.SourceValue, value);
+        var dialog = await DialogService.ShowAsync<ConfigurationSourceValueEditDialog>(L["Sources:Edit:Title"], parameters, new DialogOptions
+        {
+            MaxWidth = MaxWidth.Medium,
+            FullWidth = true
+        });
+        var result = await dialog.Result;
+        if (result is { Canceled: false })
+        {
+            Snackbar.Add(L["Sources:Edit:Saved"], Severity.Success);
+            await LoadAsync();
+        }
+    }
+
+    private string SourcePath(ConfigurationSourceDescriptor source)
+    {
+        return source.PhysicalPath ?? source.SourcePath ?? source.ProviderType;
+    }
+
+    private string DisplayValue(ConfigurationSourceValue value)
+    {
+        return value.IsSensitive ? L["State:Value:Sensitive"] : value.DisplayValue ?? L["Value:States:Empty"];
+    }
+
+    private static string SourceCardClass(ConfigurationSourceValue value)
+    {
+        return value.IsEffective ? "pa-3 configuration-source-card effective-source" : "pa-3 configuration-source-card";
+    }
+
+    private void Close()
+    {
+        MudDialog.Close();
+    }
+}
