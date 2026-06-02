@@ -36,13 +36,17 @@
     }
     else if (Node.ValueKind == ConfigurationValueKind.TimeSpan)
     {
-        <MudTimePicker @key="EditorInstanceKey"
-                       Time="@_timeValue"
-                       TimeChanged="OnTimeChanged"
-                       Variant="Variant.Outlined"
-                       Margin="Margin.Dense"
-                       Editable="true"
-                       Error="@HasError" />
+        <MudTextField @key="EditorInstanceKey"
+                      T="string"
+                      Value="@_textValue"
+                      ValueChanged="OnTimeTextChanged"
+                      Variant="Variant.Outlined"
+                      Margin="Margin.Dense"
+                      Immediate="true"
+                      Placeholder="@L["State:Editor:TimeSpanPlaceholder"]"
+                      Error="@HasError"
+                      Adornment="Adornment.End"
+                      AdornmentIcon="@Icons.Material.Filled.Schedule" />
     }
     else if (EnumValues.Count > 0)
     {
@@ -90,7 +94,6 @@
     private bool _boolValue;
     private decimal? _decimalValue;
     private DateTime? _dateValue;
-    private TimeSpan? _timeValue;
     private bool _showSensitive;
     private string? _error;
     private string? _lastNodePath;
@@ -181,16 +184,15 @@
 
         _error = null;
         _hasInvalidLocalEdit = false;
-        _textValue = displayValue;
+        _textValue = Node.ValueKind == ConfigurationValueKind.TimeSpan
+            ? ConfigurationScalarTextCodec.NormalizeTimeSpanDisplay(displayValue)
+            : displayValue;
         _boolValue = bool.TryParse(displayValue, out var parsedBool) && parsedBool;
         _decimalValue = decimal.TryParse(displayValue, NumberStyles.Any, CultureInfo.InvariantCulture, out var parsedDecimal)
             ? parsedDecimal
             : null;
         _dateValue = DateTime.TryParse(displayValue, CultureInfo.InvariantCulture, DateTimeStyles.AssumeLocal, out var parsedDate)
             ? parsedDate
-            : null;
-        _timeValue = TimeSpan.TryParse(displayValue, CultureInfo.InvariantCulture, out var parsedTime)
-            ? parsedTime
             : null;
         _editorResetVersion++;
     }
@@ -228,23 +230,38 @@
         await EmitAsync(text);
     }
 
-    private async Task OnTimeChanged(TimeSpan? value)
+    private async Task OnTimeTextChanged(string value)
     {
-        _timeValue = value;
-        await EmitAsync(value?.ToString("c", CultureInfo.InvariantCulture) ?? string.Empty);
+        _textValue = value;
+        if (!Validate(value))
+        {
+            await EmitInvalidAsync(value);
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            await EmitAsync(value);
+            return;
+        }
+
+        if (!ConfigurationScalarTextCodec.TryParseTimeSpan(value, out var parsedValue))
+        {
+            _error = L["State:Editor:InvalidTimeSpan"];
+            await EmitInvalidAsync(value);
+            return;
+        }
+
+        await EmitAsync(
+            ConfigurationScalarTextCodec.FormatTimeSpan(parsedValue),
+            ConfigurationScalarTextCodec.ToTimeSpanJson(parsedValue));
     }
 
     private async Task EmitAsync(string displayValue, string? rawJson = null)
     {
         if (!Validate(displayValue))
         {
-            _hasInvalidLocalEdit = true;
-            await ValueChanged.InvokeAsync(new ConfigurationScalarEditResult
-            {
-                IsValid = false,
-                DisplayValue = displayValue,
-                ValidationError = _error
-            });
+            await EmitInvalidAsync(displayValue);
             return;
         }
 
@@ -255,6 +272,17 @@
             IsValid = true,
             StoredValue = ConfigurationStoredValue.FromJson(rawJson),
             DisplayValue = displayValue
+        });
+    }
+
+    private async Task EmitInvalidAsync(string displayValue)
+    {
+        _hasInvalidLocalEdit = true;
+        await ValueChanged.InvokeAsync(new ConfigurationScalarEditResult
+        {
+            IsValid = false,
+            DisplayValue = displayValue,
+            ValidationError = _error
         });
     }
 

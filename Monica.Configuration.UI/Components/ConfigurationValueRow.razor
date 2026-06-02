@@ -166,6 +166,11 @@
     private bool IsSameAsEffectiveValue(ConfigurationScalarEditResult result)
     {
         var effectiveDisplayValue = EffectiveValue?.DisplayValue ?? string.Empty;
+        if (Node.ValueKind == ConfigurationValueKind.TimeSpan)
+        {
+            return ConfigurationScalarTextCodec.TimeSpanEquals(result.DisplayValue, effectiveDisplayValue);
+        }
+
         return string.Equals(result.DisplayValue, effectiveDisplayValue, StringComparison.Ordinal);
     }
 

@@ -58,7 +58,9 @@
       "SensitivePlaceholder": "Configured. Leave empty to avoid changing the secret.",
       "Required": "Value is required.",
       "InvalidPattern": "Value does not match the required pattern.",
+      "InvalidTimeSpan": "Value must be a valid time value, for example 00:15 or 00:15:00.",
       "OutOfRange": "Value is outside the allowed range.",
+      "TimeSpanPlaceholder": "00:15 or 00:15:00",
       "TooLong": "Value is too long.",
       "TooShort": "Value is too short."
     }
