@@ -4,7 +4,7 @@
 @using Monica.Configuration.UI.Localization
 @inject IStringLocalizer<ConfigurationUIResource> L
 
-<div class="configuration-scalar-editor @(IsModified ? "modified-input" : null)">
+<div class="@EditorClass">
     @if (Node.ValueKind == ConfigurationValueKind.Boolean)
     {
         <MudSwitch @key="EditorInstanceKey"
@@ -113,6 +113,13 @@
     private InputType TextInputType => Node.IsSensitive && !_showSensitive ? InputType.Password : InputType.Text;
 
     private bool HasError => !string.IsNullOrWhiteSpace(_error);
+
+    private string EditorClass => string.Join(' ', new[]
+    {
+        "configuration-scalar-editor",
+        IsModified ? "modified-input" : null,
+        HasError ? "invalid-input" : null
+    }.Where(static value => !string.IsNullOrWhiteSpace(value)));
 
     private string EditorInstanceKey => $"{Node.RelativePath.ToCanonicalString()}:{Node.ValueKind}:{_editorResetVersion}";
 
