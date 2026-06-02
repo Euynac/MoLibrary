@@ -101,6 +101,7 @@
     private string? _lastValidationIssueKey;
     private bool _lastIsModified;
     private bool _hasInvalidLocalEdit;
+    private bool _preserveCurrentValueOnValidationClear;
     private int _editorResetVersion;
 
     private bool IsNumeric => Node.ValueKind is ConfigurationValueKind.Integer or ConfigurationValueKind.Decimal or ConfigurationValueKind.Floating;
@@ -155,7 +156,16 @@
         }
         else if (ValidationIssue is null && validationIssueChanged)
         {
-            SyncFromEffectiveValue(displayValue, resetSensitiveVisibility: false);
+            if (_preserveCurrentValueOnValidationClear)
+            {
+                _error = null;
+                _hasInvalidLocalEdit = false;
+                _preserveCurrentValueOnValidationClear = false;
+            }
+            else
+            {
+                SyncFromEffectiveValue(displayValue, resetSensitiveVisibility: false);
+            }
         }
         else if (!IsModified && !_hasInvalidLocalEdit)
         {
@@ -184,6 +194,22 @@
 
         _error = null;
         _hasInvalidLocalEdit = false;
+        _preserveCurrentValueOnValidationClear = false;
+        SyncScalarFields(displayValue);
+        _editorResetVersion++;
+    }
+
+    private void SyncFromValidationIssue(ConfigurationValidationIssue issue)
+    {
+        var displayValue = issue.IsSensitive ? string.Empty : issue.InvalidDisplayValue ?? string.Empty;
+        SyncScalarFields(displayValue);
+        _error = issue.ValidationError;
+        _hasInvalidLocalEdit = true;
+        _preserveCurrentValueOnValidationClear = false;
+    }
+
+    private void SyncScalarFields(string displayValue)
+    {
         _textValue = Node.ValueKind == ConfigurationValueKind.TimeSpan
             ? ConfigurationScalarTextCodec.NormalizeTimeSpanDisplay(displayValue)
             : displayValue;
@@ -194,15 +220,6 @@
         _dateValue = DateTime.TryParse(displayValue, CultureInfo.InvariantCulture, DateTimeStyles.AssumeLocal, out var parsedDate)
             ? parsedDate
             : null;
-        _editorResetVersion++;
-    }
-
-    private void SyncFromValidationIssue(ConfigurationValidationIssue issue)
-    {
-        var displayValue = issue.IsSensitive ? string.Empty : issue.InvalidDisplayValue ?? string.Empty;
-        SyncFromEffectiveValue(displayValue, resetSensitiveVisibility: false);
-        _error = issue.ValidationError;
-        _hasInvalidLocalEdit = true;
     }
 
     private async Task OnTextChanged(string value)
@@ -266,6 +283,7 @@
         }
 
         _hasInvalidLocalEdit = false;
+        _preserveCurrentValueOnValidationClear = true;
         rawJson ??= JsonSerializer.Serialize(displayValue);
         await ValueChanged.InvokeAsync(new ConfigurationScalarEditResult
         {
@@ -278,6 +296,7 @@
     private async Task EmitInvalidAsync(string displayValue)
     {
         _hasInvalidLocalEdit = true;
+        _preserveCurrentValueOnValidationClear = false;
         await ValueChanged.InvokeAsync(new ConfigurationScalarEditResult
         {
             IsValid = false,
