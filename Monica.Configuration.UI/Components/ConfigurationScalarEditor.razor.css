@@ -5,3 +5,8 @@
 .configuration-scalar-editor.modified-input {
     background-color: var(--mo-color-state-warning-soft-background);
 }
+
+.configuration-scalar-editor ::deep .mud-input.mud-input-error .mud-input-outlined-border,
+.configuration-scalar-editor ::deep .mud-input.mud-input-error.mud-input-focused .mud-input-outlined-border {
+    border-color: var(--mud-palette-error) !important;
+}
