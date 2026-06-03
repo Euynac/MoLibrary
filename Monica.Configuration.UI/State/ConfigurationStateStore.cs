@@ -118,6 +118,22 @@ public sealed class ConfigurationStateStore
     /// <param name="changes">The replacement staged changes for the scope.</param>
     public void ReplaceScope(string definitionKey, LogicalPath scopePath, IReadOnlyList<PendingChange> changes)
     {
+        ReplaceScope(definitionKey, scopePath, changes, []);
+    }
+
+    /// <summary>
+    /// Replaces all staged changes and validation issues inside one definition path scope.
+    /// </summary>
+    /// <param name="definitionKey">The definition key that owns the scope.</param>
+    /// <param name="scopePath">The root logical path of the scope to replace.</param>
+    /// <param name="changes">The replacement staged changes for the scope.</param>
+    /// <param name="issues">The replacement validation issues for the scope.</param>
+    public void ReplaceScope(
+        string definitionKey,
+        LogicalPath scopePath,
+        IReadOnlyList<PendingChange> changes,
+        IReadOnlyList<ConfigurationValidationIssue> issues)
+    {
         var scopedKeys = _pendingChanges.Keys
             .Where(key => string.Equals(key.DefinitionKey, definitionKey, StringComparison.Ordinal) && IsPrefix(scopePath, key.LogicalPath))
             .ToArray();
@@ -141,7 +157,13 @@ public sealed class ConfigurationStateStore
             _pendingChanges[Key(change.DefinitionKey, change.LogicalPath)] = change;
         }
 
-        if (scopedKeys.Length > 0 || scopedIssueKeys.Length > 0 || changes.Count > 0)
+        foreach (var issue in issues.Where(issue =>
+                     string.Equals(issue.DefinitionKey, definitionKey, StringComparison.Ordinal) && IsPrefix(scopePath, issue.LogicalPath)))
+        {
+            _validationIssues[Key(issue.DefinitionKey, issue.LogicalPath)] = issue;
+        }
+
+        if (scopedKeys.Length > 0 || scopedIssueKeys.Length > 0 || changes.Count > 0 || issues.Count > 0)
         {
             NotifyChanged();
         }

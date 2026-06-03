@@ -46,6 +46,14 @@
         </MudStack>
     </DialogContent>
     <DialogActions>
+        @if (AllowJsonEdit)
+        {
+            <MudButton Variant="Variant.Outlined"
+                       StartIcon="@Icons.Material.Filled.DataObject"
+                       OnClick="EditJson">
+                @L["Common:Actions:EditJson"]
+            </MudButton>
+        }
         <MudButton OnClick="Close">@L["Common:Actions:Close"]</MudButton>
     </DialogActions>
 </MudDialog>
@@ -56,6 +64,7 @@
     [Parameter, EditorRequired] public ConfigurationNodeDefinition Node { get; set; } = null!;
     [Parameter] public ConfigurationEffectiveValue? EffectiveValue { get; set; }
     [Parameter] public IReadOnlyList<PendingChange> PendingChanges { get; set; } = [];
+    [Parameter] public bool AllowJsonEdit { get; set; }
 
     private readonly DiffHighlightOptions DiffOptions = new()
     {
@@ -89,6 +98,11 @@
 
     private void Close()
     {
-        MudDialog.Close(DialogResult.Ok(true));
+        MudDialog.Close(DialogResult.Ok(ConfigurationCurrentValuePreviewResult.Closed));
+    }
+
+    private void EditJson()
+    {
+        MudDialog.Close(DialogResult.Ok(ConfigurationCurrentValuePreviewResult.EditJson));
     }
 }

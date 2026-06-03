@@ -1,0 +1,206 @@
+@using System.Text.Json
+@using System.Text.Json.Serialization
+@using Microsoft.AspNetCore.Components.Forms
+@using Monica.Configuration.UI.Localization
+@inject ConfigurationParameterPackageService PackageService
+@inject IStringLocalizer<ConfigurationUIResource> L
+
+<MudDialog>
+    <DialogContent>
+        <MudStack Spacing="3" Class="configuration-import-dialog">
+            <MudPaper Outlined="true" Class="pa-3">
+                <MudStack Spacing="1">
+                    <MudText Typo="Typo.subtitle2">@L["ImportExport:Import:Title"]</MudText>
+                    <MudText Typo="Typo.caption" Color="Color.Secondary">@L["ImportExport:Import:Subtitle"]</MudText>
+                </MudStack>
+            </MudPaper>
+
+            <MudFileUpload T="IBrowserFile"
+                           Accept=".json,application/json"
+                           FilesChanged="OnFileSelected"
+                           MaximumFileCount="1">
+                <CustomContent Context="upload">
+                    <MudPaper Outlined="true" Class="pa-6 configuration-import-upload" @onclick="upload.OpenFilePickerAsync">
+                        <MudStack AlignItems="AlignItems.Center" Spacing="1">
+                            <MudIcon Icon="@Icons.Material.Filled.UploadFile" Size="Size.Large" Color="Color.Primary" />
+                            <MudText Typo="Typo.body2">@L["ImportExport:Import:Upload"]</MudText>
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">.json</MudText>
+                        </MudStack>
+                    </MudPaper>
+                </CustomContent>
+            </MudFileUpload>
+
+            @if (_loading)
+            {
+                <MudProgressLinear Indeterminate="true" />
+            }
+
+            @if (!string.IsNullOrWhiteSpace(_error))
+            {
+                <MudAlert Severity="Severity.Error">@_error</MudAlert>
+            }
+
+            @if (_report is not null)
+            {
+                <MudGrid Spacing="2">
+                    <MudItem xs="6" md="3">
+                        <MudChip T="int" Color="Color.Primary" Variant="Variant.Outlined">@L["ImportExport:Report:Changes", _report.Changes.Count]</MudChip>
+                    </MudItem>
+                    <MudItem xs="6" md="3">
+                        <MudChip T="int" Color="Color.Error" Variant="Variant.Outlined">@L["ImportExport:Report:Issues", _report.ValidationIssues.Count]</MudChip>
+                    </MudItem>
+                    <MudItem xs="6" md="3">
+                        <MudChip T="int" Color="Color.Warning" Variant="Variant.Outlined">@L["ImportExport:Report:Diagnostics", _report.AllDiagnostics.Count]</MudChip>
+                    </MudItem>
+                    <MudItem xs="6" md="3">
+                        <MudChip T="int" Variant="Variant.Outlined">@L["ImportExport:Report:Definitions", _report.Drafts.Count]</MudChip>
+                    </MudItem>
+                </MudGrid>
+
+                @if (_report.Document is not null)
+                {
+                    <MudText Typo="Typo.caption" Color="Color.Secondary">
+                        @L["ImportExport:Import:PackageMeta", _report.Document.ExportedAt.LocalDateTime, _report.Document.ExportedBy ?? L["Common:States:Empty"], _report.Document.SystemVersion ?? L["Common:States:Empty"]]
+                    </MudText>
+                }
+
+                <MudTabs Rounded="true" ApplyEffectsToContainer="true">
+                    <MudTabPanel Text="@L["Dialogs:SaveGroup:Tabs:DefinitionDiff"]">
+                        <ConfigurationPendingDefinitionDiffPreview Changes="@_report.Changes"
+                                                                   ValidationIssues="@_report.ValidationIssues" />
+                    </MudTabPanel>
+                    <MudTabPanel Text="@L["Dialogs:SaveGroup:Tabs:ChangeList"]">
+                        <MudStack Spacing="2">
+                            @if (_report.AllDiagnostics.Count > 0)
+                            {
+                                <MudPaper Outlined="true" Class="pa-3">
+                                    <MudStack Spacing="1">
+                                        <MudText Typo="Typo.subtitle2">@L["ImportExport:Diagnostics:Title"]</MudText>
+                                        @foreach (var diagnostic in _report.AllDiagnostics)
+                                        {
+                                            <MudAlert Severity="@DiagnosticSeverity(diagnostic)" Dense="true">
+                                                @diagnostic.Message
+                                            </MudAlert>
+                                        }
+                                    </MudStack>
+                                </MudPaper>
+                            }
+
+                            <ConfigurationValidationIssueList Issues="@_report.ValidationIssues" ShowJump="false" />
+
+                            <MudTable Items="@_report.Changes" Dense="true" Hover="true">
+                                <HeaderContent>
+                                    <MudTh>@L["State:Columns:Definition"]</MudTh>
+                                    <MudTh>@L["State:Columns:Path"]</MudTh>
+                                    <MudTh>@L["History:Columns:Target"]</MudTh>
+                                    <MudTh>@L["History:Columns:Kind"]</MudTh>
+                                </HeaderContent>
+                                <RowTemplate>
+                                    <MudTd DataLabel="@L["State:Columns:Definition"]">@context.DefinitionDisplayName</MudTd>
+                                    <MudTd DataLabel="@L["State:Columns:Path"]"><code>@context.LogicalPath.ToCanonicalString()</code></MudTd>
+                                    <MudTd DataLabel="@L["History:Columns:Target"]">@TargetText(context)</MudTd>
+                                    <MudTd DataLabel="@L["History:Columns:Kind"]">@context.MutationKind</MudTd>
+                                </RowTemplate>
+                                <NoRecordsContent>
+                                    <MudAlert Severity="Severity.Info">@L["ImportExport:Report:NoChanges"]</MudAlert>
+                                </NoRecordsContent>
+                            </MudTable>
+                        </MudStack>
+                    </MudTabPanel>
+                </MudTabs>
+            }
+        </MudStack>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel">@L["Common:Actions:Cancel"]</MudButton>
+        <MudButton Color="Color.Primary"
+                   Variant="Variant.Filled"
+                   StartIcon="@Icons.Material.Filled.PlaylistAddCheck"
+                   Disabled="@(_report?.HasState is not true)"
+                   OnClick="Apply">
+            @L["Common:Actions:Apply"]
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    private const long MAX_IMPORT_BYTES = 10 * 1024 * 1024;
+
+    private static readonly JsonSerializerOptions PackageJsonOptions = new(ConfigurationJsonDisplayFormatter.ReadableJsonOptions)
+    {
+        PropertyNameCaseInsensitive = true,
+        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+        DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
+    };
+
+    [CascadingParameter] private IMudDialogInstance MudDialog { get; set; } = null!;
+    [Parameter] public IReadOnlyList<PendingChange> PendingChanges { get; set; } = [];
+
+    private ConfigurationImportReport? _report;
+    private bool _loading;
+    private string? _error;
+
+    private async Task OnFileSelected(IBrowserFile? file)
+    {
+        if (file is null)
+        {
+            return;
+        }
+
+        _loading = true;
+        _error = null;
+        _report = null;
+        try
+        {
+            await using var stream = file.OpenReadStream(MAX_IMPORT_BYTES);
+            var document = await JsonSerializer.DeserializeAsync<ConfigurationExportDocument>(stream, PackageJsonOptions);
+            if (document is null)
+            {
+                _error = L["ImportExport:Import:InvalidPackage"];
+                return;
+            }
+
+            _report = await PackageService.AnalyzeImportAsync(document, PendingChanges, file.Name);
+        }
+        catch (Exception ex)
+        {
+            _error = ex.Message;
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private void Apply()
+    {
+        if (_report?.HasState is not true)
+        {
+            return;
+        }
+
+        MudDialog.Close(DialogResult.Ok(_report));
+    }
+
+    private void Cancel()
+    {
+        MudDialog.Cancel();
+    }
+
+    private string TargetText(PendingChange change)
+    {
+        return change.TargetKind == ConfigurationMutationTargetKind.ExternalConfigurationSource
+            ? change.SourceDisplayName ?? L["History:Targets:ExternalShort"]
+            : L["History:Targets:MonicaShort"];
+    }
+
+    private static Severity DiagnosticSeverity(ConfigurationImportDiagnostic diagnostic)
+    {
+        return diagnostic.Severity switch
+        {
+            ConfigurationImportDiagnosticSeverity.Error => Severity.Error,
+            ConfigurationImportDiagnosticSeverity.Warning => Severity.Warning,
+            _ => Severity.Info
+        };
+    }
+}

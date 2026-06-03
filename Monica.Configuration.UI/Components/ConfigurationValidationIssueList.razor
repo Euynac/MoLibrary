@@ -19,13 +19,16 @@
                                                Size="Size.Small"
                                                Color="Color.Info" />
                             </MudTooltip>
-                            <MudButton Variant="Variant.Outlined"
-                                       Color="Color.Primary"
-                                       Size="Size.Small"
-                                       StartIcon="@Icons.Material.Filled.NearMe"
-                                       OnClick="() => JumpRequested.InvokeAsync(issue)">
-                                @L["Common:Actions:Jump"]
-                            </MudButton>
+                            @if (ShowJump)
+                            {
+                                <MudButton Variant="Variant.Outlined"
+                                           Color="Color.Primary"
+                                           Size="Size.Small"
+                                           StartIcon="@Icons.Material.Filled.NearMe"
+                                           OnClick="() => JumpRequested.InvokeAsync(issue)">
+                                    @L["Common:Actions:Jump"]
+                                </MudButton>
+                            }
                         </MudStack>
                     </MudStack>
 
@@ -48,6 +51,7 @@
 @code {
     [Parameter] public IReadOnlyList<ConfigurationValidationIssue> Issues { get; set; } = [];
     [Parameter] public bool ShowDefinition { get; set; } = true;
+    [Parameter] public bool ShowJump { get; set; } = true;
     [Parameter] public EventCallback<ConfigurationValidationIssue> JumpRequested { get; set; }
 
     private IEnumerable<ConfigurationValidationIssue> OrderedIssues =>

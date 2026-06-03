@@ -1,0 +1,162 @@
+@using Monica.Configuration.UI.Localization
+@inject ConfigurationJsonDraftService DraftService
+@inject IStringLocalizer<ConfigurationUIResource> L
+
+<MudDialog>
+    <DialogContent>
+        <MudStack Spacing="3" Class="configuration-json-edit-dialog">
+            <MudPaper Outlined="true" Class="pa-3">
+                <MudStack Row="true" Wrap="Wrap.Wrap" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Spacing="2">
+                    <MudStack Spacing="0">
+                        <MudText Typo="Typo.subtitle2">@Definition.DisplayName</MudText>
+                        <MudText Typo="Typo.caption" Color="Color.Secondary">@PathTitle</MudText>
+                    </MudStack>
+                    <MudStack Row="true" Wrap="Wrap.Wrap" AlignItems="AlignItems.Center" Spacing="1">
+                        <MudChip T="int" Size="Size.Small" Color="Color.Primary" Variant="Variant.Outlined">@Definition.SchemaVersion</MudChip>
+                        @if (_editorDocument.RedactedPaths.Count > 0)
+                        {
+                            <MudChip T="int" Size="Size.Small" Color="Color.Warning" Variant="Variant.Outlined">
+                                @L["ImportExport:RedactedCount", _editorDocument.RedactedPaths.Count]
+                            </MudChip>
+                        }
+                    </MudStack>
+                </MudStack>
+            </MudPaper>
+
+            <MudTextField T="string"
+                          @bind-Value="_json"
+                          Label="@L["ImportExport:JsonEditor:Json"]"
+                          Variant="Variant.Outlined"
+                          Lines="18"
+                          Immediate="false" />
+
+            @if (_draft is { IsJsonValid: false })
+            {
+                <MudAlert Severity="Severity.Error">@_draft.ParseError</MudAlert>
+            }
+            else if (_draft is not null)
+            {
+                <MudGrid Spacing="2">
+                    <MudItem xs="6" md="3">
+                        <MudChip T="int" Color="Color.Primary" Variant="Variant.Outlined">@L["ImportExport:Report:Changes", _draft.Changes.Count]</MudChip>
+                    </MudItem>
+                    <MudItem xs="6" md="3">
+                        <MudChip T="int" Color="Color.Error" Variant="Variant.Outlined">@L["ImportExport:Report:Issues", _draft.ValidationIssues.Count]</MudChip>
+                    </MudItem>
+                    <MudItem xs="6" md="3">
+                        <MudChip T="int" Variant="Variant.Outlined">@L["ImportExport:Report:Unchanged", _draft.UnchangedCount]</MudChip>
+                    </MudItem>
+                    <MudItem xs="6" md="3">
+                        <MudChip T="int" Color="Color.Warning" Variant="Variant.Outlined">@L["ImportExport:Report:RedactedSkipped", _draft.RedactedSkipCount]</MudChip>
+                    </MudItem>
+                </MudGrid>
+
+                @if (_draft.Diagnostics.Count > 0)
+                {
+                    <MudPaper Outlined="true" Class="pa-3">
+                        <MudStack Spacing="1">
+                            <MudText Typo="Typo.subtitle2">@L["ImportExport:Diagnostics:Title"]</MudText>
+                            @foreach (var diagnostic in _draft.Diagnostics)
+                            {
+                                <MudAlert Severity="@DiagnosticSeverity(diagnostic)" Dense="true">
+                                    @diagnostic.Message
+                                </MudAlert>
+                            }
+                        </MudStack>
+                    </MudPaper>
+                }
+
+                <ConfigurationValidationIssueList Issues="@_draft.ValidationIssues" ShowJump="false" />
+
+                @if (_draft.Changes.Count > 0)
+                {
+                    <ConfigurationPendingDefinitionDiffPreview Changes="@_draft.Changes"
+                                                               ValidationIssues="@_draft.ValidationIssues" />
+                }
+                else if (_draft.ValidationIssues.Count == 0)
+                {
+                    <MudAlert Severity="Severity.Info">@L["ImportExport:JsonEditor:NoState"]</MudAlert>
+                }
+            }
+        </MudStack>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel">@L["Common:Actions:Cancel"]</MudButton>
+        <MudButton Variant="Variant.Outlined"
+                   StartIcon="@Icons.Material.Filled.Rule"
+                   OnClick="Analyze">
+            @L["Common:Actions:Analyze"]
+        </MudButton>
+        <MudButton Color="Color.Primary"
+                   Variant="Variant.Filled"
+                   StartIcon="@Icons.Material.Filled.PlaylistAddCheck"
+                   Disabled="@(!CanApply)"
+                   OnClick="Apply">
+            @L["Common:Actions:Apply"]
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] private IMudDialogInstance MudDialog { get; set; } = null!;
+    [Parameter, EditorRequired] public ConfigurationDefinition Definition { get; set; } = null!;
+    [Parameter, EditorRequired] public ConfigurationNodeDefinition Node { get; set; } = null!;
+    [Parameter, EditorRequired] public ConfigurationEffectiveValue EffectiveValue { get; set; } = null!;
+    [Parameter] public IReadOnlyDictionary<LogicalPath, ConfigurationEffectiveValue> ScalarEffectiveValues { get; set; } =
+        new Dictionary<LogicalPath, ConfigurationEffectiveValue>();
+    [Parameter] public IReadOnlyList<PendingChange> PendingChanges { get; set; } = [];
+
+    private ConfigurationJsonEditorDocument _editorDocument = new("{}", []);
+    private ConfigurationJsonDraftResult? _draft;
+    private string _json = "{}";
+
+    private string PathTitle => Node.RelativePath.Depth == 0
+        ? L["State:Tree:Root"]
+        : Node.RelativePath.ToCanonicalString();
+
+    private bool CanApply => _draft is { IsJsonValid: true, HasState: true };
+
+    protected override void OnInitialized()
+    {
+        _editorDocument = DraftService.BuildEditorDocument(Definition, Node, EffectiveValue, PendingChanges);
+        _json = _editorDocument.Json;
+    }
+
+    private void Analyze()
+    {
+        _draft = DraftService.Analyze(new ConfigurationJsonDraftRequest
+        {
+            Definition = Definition,
+            ScopeNode = Node,
+            EffectiveValue = EffectiveValue,
+            ScalarEffectiveValues = ScalarEffectiveValues,
+            Json = _json,
+            RedactedPaths = _editorDocument.RedactedPaths.ToHashSet(StringComparer.Ordinal)
+        });
+    }
+
+    private void Apply()
+    {
+        if (!CanApply)
+        {
+            return;
+        }
+
+        MudDialog.Close(DialogResult.Ok(_draft));
+    }
+
+    private void Cancel()
+    {
+        MudDialog.Cancel();
+    }
+
+    private static Severity DiagnosticSeverity(ConfigurationImportDiagnostic diagnostic)
+    {
+        return diagnostic.Severity switch
+        {
+            ConfigurationImportDiagnosticSeverity.Error => Severity.Error,
+            ConfigurationImportDiagnosticSeverity.Warning => Severity.Warning,
+            _ => Severity.Info
+        };
+    }
+}

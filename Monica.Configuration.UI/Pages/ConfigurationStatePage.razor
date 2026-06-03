@@ -2,6 +2,7 @@
 @implements IDisposable
 @inject ConfigurationFacade Facade
 @inject ConfigurationStateStore StateStore
+@inject ConfigurationParameterPackageService PackageService
 @inject IDialogService DialogService
 @inject ISnackbar Snackbar
 @inject IStringLocalizer<ConfigurationUIResource> L
@@ -16,11 +17,23 @@
                     <MudText Typo="Typo.h4">@L["Pages:ConfigurationState:Title"]</MudText>
                     <MudText Typo="Typo.body2" Color="Color.Secondary">@L["State:Subtitle"]</MudText>
                 </MudStack>
-                <MudTooltip Text="@L["Common:Actions:Refresh"]">
-                    <MudIconButton Icon="@Icons.Material.Filled.Refresh"
-                                   Variant="Variant.Outlined"
-                                   OnClick="LoadDefinitionsAsync" />
-                </MudTooltip>
+                <MudStack Row="true" Wrap="Wrap.Wrap" AlignItems="AlignItems.Center" Justify="Justify.FlexEnd" Spacing="1">
+                    <MudButton Variant="Variant.Outlined"
+                               StartIcon="@Icons.Material.Filled.UploadFile"
+                               OnClick="OpenImportDialog">
+                        @L["Common:Actions:Import"]
+                    </MudButton>
+                    <MudButton Variant="Variant.Outlined"
+                               StartIcon="@Icons.Material.Filled.Download"
+                               OnClick="() => OpenExportDialog(null, null)">
+                        @L["Common:Actions:Export"]
+                    </MudButton>
+                    <MudTooltip Text="@L["Common:Actions:Refresh"]">
+                        <MudIconButton Icon="@Icons.Material.Filled.Refresh"
+                                       Variant="Variant.Outlined"
+                                       OnClick="LoadDefinitionsAsync" />
+                    </MudTooltip>
+                </MudStack>
             </MudStack>
 
             @if (_loadingDefinitions)
@@ -68,6 +81,18 @@
                                             }
                                             <MudChip T="int" Size="Size.Small" Color="Color.Primary" Variant="Variant.Outlined">@_selectedDefinition.SchemaVersion</MudChip>
                                             <MudChip T="ConfigurationReloadBehavior" Size="Size.Small" Color="Color.Info" Variant="Variant.Outlined">@_selectedDefinition.ReloadBehavior</MudChip>
+                                            <MudTooltip Text="@L["Common:Actions:EditJson"]">
+                                                <MudIconButton Icon="@Icons.Material.Filled.DataObject"
+                                                               Size="Size.Small"
+                                                               Variant="Variant.Outlined"
+                                                               OnClick="OpenSelectedDefinitionJsonEditAsync" />
+                                            </MudTooltip>
+                                            <MudTooltip Text="@L["ImportExport:Export:DefinitionAction"]">
+                                                <MudIconButton Icon="@Icons.Material.Filled.Download"
+                                                               Size="Size.Small"
+                                                               Variant="Variant.Outlined"
+                                                               OnClick="() => OpenExportDialog(_selectedDefinition.DefinitionKey, _selectedDefinition.DisplayName)" />
+                                            </MudTooltip>
                                             <MudTooltip Text="@L["Sources:Definition:Title"]">
                                                 <MudIconButton Icon="@Icons.Material.Filled.AccountTree"
                                                                Size="Size.Small"
@@ -480,6 +505,77 @@
     {
         StateStore.Clear();
         return Task.CompletedTask;
+    }
+
+    private async Task OpenImportDialog()
+    {
+        var parameters = new DialogParameters<ConfigurationImportDialog>();
+        parameters.Add(dialog => dialog.PendingChanges, StateStore.GetPending());
+        var dialog = await DialogService.ShowAsync<ConfigurationImportDialog>(L["ImportExport:Import:Title"], parameters, new DialogOptions
+        {
+            MaxWidth = MaxWidth.ExtraLarge,
+            FullWidth = true
+        });
+        var result = await dialog.Result;
+        if (result is not { Canceled: false, Data: ConfigurationImportReport report })
+        {
+            return;
+        }
+
+        foreach (var draft in report.Drafts.Where(draft => draft.HasState))
+        {
+            StateStore.ReplaceScope(draft.DefinitionKey, draft.ScopePath, draft.Changes, draft.ValidationIssues);
+        }
+
+        await RefreshPendingCount();
+        Snackbar.Add(L["ImportExport:Import:Staged", report.Changes.Count, report.ValidationIssues.Count], Severity.Success);
+    }
+
+    private async Task OpenExportDialog(string? definitionKey, string? definitionDisplayName)
+    {
+        var parameters = new DialogParameters<ConfigurationExportDialog>();
+        parameters.Add(dialog => dialog.DefinitionKey, definitionKey);
+        parameters.Add(dialog => dialog.DefinitionDisplayName, definitionDisplayName);
+        await DialogService.ShowAsync<ConfigurationExportDialog>(L["ImportExport:Export:Title"], parameters, new DialogOptions
+        {
+            MaxWidth = MaxWidth.Medium,
+            FullWidth = true
+        });
+    }
+
+    private async Task OpenSelectedDefinitionJsonEditAsync()
+    {
+        if (_selectedDefinition is null)
+        {
+            return;
+        }
+
+        try
+        {
+            var effectiveValue = await PackageService.LoadEffectiveValueAsync(_selectedDefinition.DefinitionKey, LogicalPath.Root);
+            var scalarValues = await PackageService.LoadScalarEffectiveValuesAsync(_selectedDefinition);
+            var parameters = new DialogParameters<ConfigurationJsonEditDialog>();
+            parameters.Add(dialog => dialog.Definition, _selectedDefinition);
+            parameters.Add(dialog => dialog.Node, _selectedDefinition.Root);
+            parameters.Add(dialog => dialog.EffectiveValue, effectiveValue);
+            parameters.Add(dialog => dialog.ScalarEffectiveValues, scalarValues);
+            parameters.Add(dialog => dialog.PendingChanges, StateStore.GetPending());
+            var dialog = await DialogService.ShowAsync<ConfigurationJsonEditDialog>(L["ImportExport:JsonEditor:Title"], parameters, new DialogOptions
+            {
+                MaxWidth = MaxWidth.ExtraLarge,
+                FullWidth = true
+            });
+            var result = await dialog.Result;
+            if (result is { Canceled: false, Data: ConfigurationJsonDraftResult draft })
+            {
+                StateStore.ReplaceScope(_selectedDefinition.DefinitionKey, LogicalPath.Root, draft.Changes, draft.ValidationIssues);
+                await RefreshPendingCount();
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"{L["Common:Errors:LoadFailed"]}: {ex.Message}", Severity.Error);
+        }
     }
 
     private async Task OpenDefinitionSourcesAsync()

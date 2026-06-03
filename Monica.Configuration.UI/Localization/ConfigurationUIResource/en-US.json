@@ -314,6 +314,63 @@
       }
     }
   },
+  "ImportExport": {
+    "RedactedValue": "***redacted***",
+    "RedactedCount": "{0} redacted",
+    "Export": {
+      "Title": "Export Configuration",
+      "AllTitle": "Export all managed configuration",
+      "DefinitionTitle": "Export {0}",
+      "DefinitionAction": "Export this definition",
+      "Subtitle": "Create a versioned JSON package for backup, delivery, or environment synchronization.",
+      "IncludeSensitive": "Include sensitive values",
+      "ExportedBy": "Exported by",
+      "EnvironmentName": "Environment",
+      "SystemVersion": "System version"
+    },
+    "Import": {
+      "Title": "Import Configuration",
+      "Subtitle": "Upload a Monica configuration package, review the report, then stage the detected changes.",
+      "Upload": "Click to upload a configuration package",
+      "InvalidPackage": "The selected file is not a valid Monica configuration package.",
+      "PackageMeta": "Exported at {0}; by {1}; system version {2}.",
+      "Staged": "Imported {0} changes and {1} validation issues into the staging area."
+    },
+    "JsonEditor": {
+      "Title": "Edit JSON",
+      "Json": "JSON",
+      "NoState": "The JSON does not produce any staged changes or validation issues."
+    },
+    "Report": {
+      "Changes": "{0} changes",
+      "Issues": "{0} issues",
+      "Unchanged": "{0} unchanged",
+      "RedactedSkipped": "{0} redacted skipped",
+      "Diagnostics": "{0} diagnostics",
+      "Definitions": "{0} definitions",
+      "NoChanges": "No saveable changes were detected."
+    },
+    "Diagnostics": {
+      "Title": "Import diagnostics",
+      "InvalidJson": "The JSON is invalid: {0}",
+      "ExpectedObject": "Expected a JSON object.",
+      "ExpectedArray": "Expected a JSON array.",
+      "ExpectedBoolean": "Expected a boolean value.",
+      "ExpectedInteger": "Expected an integer value.",
+      "ExpectedNumber": "Expected a numeric value.",
+      "ExpectedDateTime": "Expected a date/time value.",
+      "ExpectedScalar": "Expected a scalar JSON value.",
+      "UnsupportedSchema": "This schema shape cannot be imported through JSON editing.",
+      "UnknownPath": "Unknown configuration path was skipped: {0}",
+      "MissingListKey": "List item is missing stable key property {0}.",
+      "DuplicateListKey": "Duplicate list item key was skipped: {0}",
+      "ReadOnlySource": "Current effective source {0} is read-only. Reason: {1}",
+      "FormatVersionMismatch": "Package format version {0} is not the current format.",
+      "UnknownDefinition": "Unknown definition was skipped: {0}",
+      "SchemaVersionMismatch": "Schema version differs. Exported {0}, current {1}.",
+      "SchemaHashMismatch": "Schema hash differs from the current definition."
+    }
+  },
   "Common": {
     "Actions": {
       "Refresh": "Refresh",
@@ -322,7 +379,13 @@
       "Jump": "Jump",
       "Cancel": "Cancel",
       "Close": "Close",
-      "Save": "Save"
+      "Save": "Save",
+      "Import": "Import",
+      "Export": "Export",
+      "Download": "Download",
+      "Apply": "Apply",
+      "Analyze": "Analyze",
+      "EditJson": "Edit JSON"
     },
     "States": {
       "Loading": "Loading...",

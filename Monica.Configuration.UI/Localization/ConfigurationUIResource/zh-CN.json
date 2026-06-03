@@ -314,6 +314,63 @@
       }
     }
   },
+  "ImportExport": {
+    "RedactedValue": "***已脱敏***",
+    "RedactedCount": "{0} 个已脱敏",
+    "Export": {
+      "Title": "导出配置",
+      "AllTitle": "导出全部受管配置",
+      "DefinitionTitle": "导出 {0}",
+      "DefinitionAction": "导出当前配置定义",
+      "Subtitle": "生成版本化 JSON 包，用于备份、交付或同步到其他环境。",
+      "IncludeSensitive": "包含敏感值",
+      "ExportedBy": "导出人",
+      "EnvironmentName": "环境",
+      "SystemVersion": "系统版本"
+    },
+    "Import": {
+      "Title": "导入配置",
+      "Subtitle": "上传 Monica 配置包，查看导入报告，然后将检测到的修改暂存。",
+      "Upload": "点击上传配置包",
+      "InvalidPackage": "选择的文件不是有效的 Monica 配置包。",
+      "PackageMeta": "导出时间 {0}；导出人 {1}；系统版本 {2}。",
+      "Staged": "已将 {0} 个修改和 {1} 个验证异常导入暂存区。"
+    },
+    "JsonEditor": {
+      "Title": "编辑 JSON",
+      "Json": "JSON",
+      "NoState": "当前 JSON 不会产生暂存修改或验证异常。"
+    },
+    "Report": {
+      "Changes": "{0} 个修改",
+      "Issues": "{0} 个异常",
+      "Unchanged": "{0} 个未变化",
+      "RedactedSkipped": "{0} 个脱敏值已跳过",
+      "Diagnostics": "{0} 条诊断",
+      "Definitions": "{0} 个配置定义",
+      "NoChanges": "未检测到可保存的修改。"
+    },
+    "Diagnostics": {
+      "Title": "导入诊断",
+      "InvalidJson": "JSON 无效：{0}",
+      "ExpectedObject": "需要 JSON 对象。",
+      "ExpectedArray": "需要 JSON 数组。",
+      "ExpectedBoolean": "需要布尔值。",
+      "ExpectedInteger": "需要整数值。",
+      "ExpectedNumber": "需要数值。",
+      "ExpectedDateTime": "需要日期时间值。",
+      "ExpectedScalar": "需要标量 JSON 值。",
+      "UnsupportedSchema": "该 Schema 形态暂不支持通过 JSON 编辑导入。",
+      "UnknownPath": "已跳过未知配置路径：{0}",
+      "MissingListKey": "列表项缺少稳定 Key 属性 {0}。",
+      "DuplicateListKey": "已跳过重复列表项 Key：{0}",
+      "ReadOnlySource": "当前生效来源 {0} 是只读的。原因：{1}",
+      "FormatVersionMismatch": "配置包格式版本 {0} 不是当前格式。",
+      "UnknownDefinition": "已跳过未知配置定义：{0}",
+      "SchemaVersionMismatch": "Schema 版本不一致。导出版本 {0}，当前版本 {1}。",
+      "SchemaHashMismatch": "Schema Hash 与当前定义不一致。"
+    }
+  },
   "Common": {
     "Actions": {
       "Refresh": "刷新",
@@ -322,7 +379,13 @@
       "Jump": "跳转",
       "Cancel": "取消",
       "Close": "关闭",
-      "Save": "保存"
+      "Save": "保存",
+      "Import": "导入",
+      "Export": "导出",
+      "Download": "下载",
+      "Apply": "应用",
+      "Analyze": "分析",
+      "EditJson": "编辑 JSON"
     },
     "States": {
       "Loading": "加载中...",

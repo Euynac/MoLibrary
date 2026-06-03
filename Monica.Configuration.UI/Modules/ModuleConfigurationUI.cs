@@ -93,6 +93,8 @@ public sealed class ModuleConfigurationUI(ModuleConfigurationUIOption option)
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddScoped<ConfigurationStateStore>();
+        services.AddScoped<ConfigurationJsonDraftService>();
+        services.AddScoped<ConfigurationParameterPackageService>();
     }
 }
 

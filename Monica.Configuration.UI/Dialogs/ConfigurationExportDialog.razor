@@ -1,0 +1,161 @@
+@using System.Reflection
+@using System.Text.Json
+@using System.Text.Json.Serialization
+@using Microsoft.Extensions.Hosting
+@using Microsoft.JSInterop
+@using Monica.Configuration.UI.Localization
+@using Monica.UI.Shell.State
+@implements IAsyncDisposable
+@inject ConfigurationParameterPackageService PackageService
+@inject IJSRuntime JSRuntime
+@inject IHostEnvironment HostEnvironment
+@inject UserContextState UserContext
+@inject IStringLocalizer<ConfigurationUIResource> L
+
+<MudDialog>
+    <DialogContent>
+        <MudStack Spacing="3">
+            <MudPaper Outlined="true" Class="pa-3">
+                <MudStack Spacing="1">
+                    <MudText Typo="Typo.subtitle2">@Title</MudText>
+                    <MudText Typo="Typo.caption" Color="Color.Secondary">@L["ImportExport:Export:Subtitle"]</MudText>
+                </MudStack>
+            </MudPaper>
+
+            <MudSwitch T="bool"
+                       @bind-Value="_includeSensitive"
+                       Color="Color.Warning"
+                       Label="@L["ImportExport:Export:IncludeSensitive"]" />
+
+            <MudGrid Spacing="2">
+                <MudItem xs="12" md="4">
+                    <MudTextField T="string"
+                                  @bind-Value="_exportedBy"
+                                  Label="@L["ImportExport:Export:ExportedBy"]"
+                                  Variant="Variant.Outlined"
+                                  Margin="Margin.Dense" />
+                </MudItem>
+                <MudItem xs="12" md="4">
+                    <MudTextField T="string"
+                                  @bind-Value="_environmentName"
+                                  Label="@L["ImportExport:Export:EnvironmentName"]"
+                                  Variant="Variant.Outlined"
+                                  Margin="Margin.Dense" />
+                </MudItem>
+                <MudItem xs="12" md="4">
+                    <MudTextField T="string"
+                                  @bind-Value="_systemVersion"
+                                  Label="@L["ImportExport:Export:SystemVersion"]"
+                                  Variant="Variant.Outlined"
+                                  Margin="Margin.Dense" />
+                </MudItem>
+            </MudGrid>
+
+            @if (!string.IsNullOrWhiteSpace(_error))
+            {
+                <MudAlert Severity="Severity.Error">@_error</MudAlert>
+            }
+        </MudStack>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel">@L["Common:Actions:Cancel"]</MudButton>
+        <MudButton Color="Color.Primary"
+                   Variant="Variant.Filled"
+                   StartIcon="@Icons.Material.Filled.Download"
+                   Disabled="@_exporting"
+                   OnClick="DownloadAsync">
+            @(_exporting ? L["Common:States:Loading"] : L["Common:Actions:Download"])
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    private const string PACKAGE_CONTENT_TYPE = "application/json;charset=utf-8";
+
+    private static readonly JsonSerializerOptions PackageJsonOptions = new(ConfigurationJsonDisplayFormatter.ReadableJsonOptions)
+    {
+        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+        DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
+    };
+
+    [CascadingParameter] private IMudDialogInstance MudDialog { get; set; } = null!;
+    [Parameter] public string? DefinitionKey { get; set; }
+    [Parameter] public string? DefinitionDisplayName { get; set; }
+
+    private IJSObjectReference? _jsModule;
+    private bool _includeSensitive;
+    private bool _exporting;
+    private string? _error;
+    private string? _exportedBy;
+    private string? _environmentName;
+    private string? _systemVersion;
+
+    private string Title => string.IsNullOrWhiteSpace(DefinitionDisplayName)
+        ? L["ImportExport:Export:AllTitle"]
+        : L["ImportExport:Export:DefinitionTitle", DefinitionDisplayName];
+
+    protected override void OnInitialized()
+    {
+        _exportedBy = UserContext.UserName;
+        _environmentName = HostEnvironment.EnvironmentName;
+        _systemVersion = Assembly.GetEntryAssembly()?.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion
+                         ?? Assembly.GetEntryAssembly()?.GetName().Version?.ToString();
+    }
+
+    private async Task DownloadAsync()
+    {
+        _exporting = true;
+        _error = null;
+        try
+        {
+            var document = await PackageService.CreateExportAsync(new ConfigurationExportRequest
+            {
+                DefinitionKey = DefinitionKey,
+                IncludeSensitive = _includeSensitive,
+                ExportedBy = _exportedBy,
+                EnvironmentName = _environmentName,
+                SystemVersion = _systemVersion
+            });
+            var json = JsonSerializer.Serialize(document, PackageJsonOptions);
+            var module = await GetJsModuleAsync();
+            await module.InvokeVoidAsync("downloadText", BuildFileName(), PACKAGE_CONTENT_TYPE, json);
+            MudDialog.Close(DialogResult.Ok(true));
+        }
+        catch (Exception ex)
+        {
+            _error = ex.Message;
+        }
+        finally
+        {
+            _exporting = false;
+        }
+    }
+
+    private string BuildFileName()
+    {
+        var scope = string.IsNullOrWhiteSpace(DefinitionKey) ? "all" : DefinitionKey;
+        var safeScope = string.Concat(scope.Select(character => char.IsLetterOrDigit(character) ? character : '-'));
+        return $"monica-configuration-{safeScope}-{DateTimeOffset.Now:yyyyMMdd-HHmmss}.json";
+    }
+
+    private async Task<IJSObjectReference> GetJsModuleAsync()
+    {
+        _jsModule ??= await JSRuntime.InvokeAsync<IJSObjectReference>(
+            "import",
+            "./_content/Monica.Configuration.UI/js/configuration-ui.js");
+        return _jsModule;
+    }
+
+    private void Cancel()
+    {
+        MudDialog.Cancel();
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (_jsModule is not null)
+        {
+            await _jsModule.DisposeAsync();
+        }
+    }
+}

@@ -1,6 +1,7 @@
 @using Monica.Configuration.UI.Localization
 @inject ConfigurationFacade Facade
 @inject ConfigurationStateStore StateStore
+@inject ConfigurationParameterPackageService PackageService
 @inject IDialogService DialogService
 @inject ISnackbar Snackbar
 @inject IStringLocalizer<ConfigurationUIResource> L
@@ -268,11 +269,39 @@
         parameters.Add(dialog => dialog.Node, Node);
         parameters.Add(dialog => dialog.EffectiveValue, effectiveValue);
         parameters.Add(dialog => dialog.PendingChanges, StateStore.GetPending());
-        await DialogService.ShowAsync<ConfigurationCurrentValuePreviewDialog>(L["Dialogs:CurrentValue:Title"], parameters, new DialogOptions
+        parameters.Add(dialog => dialog.AllowJsonEdit, true);
+        var dialog = await DialogService.ShowAsync<ConfigurationCurrentValuePreviewDialog>(L["Dialogs:CurrentValue:Title"], parameters, new DialogOptions
         {
             MaxWidth = MaxWidth.ExtraLarge,
             FullWidth = true
         });
+        var result = await dialog.Result;
+        if (result is { Canceled: false, Data: ConfigurationCurrentValuePreviewResult.EditJson })
+        {
+            await OpenJsonEditDialogAsync(effectiveValue);
+        }
+    }
+
+    private async Task OpenJsonEditDialogAsync(ConfigurationEffectiveValue effectiveValue)
+    {
+        var scalarValues = await PackageService.LoadScalarEffectiveValuesAsync(Definition);
+        var parameters = new DialogParameters<ConfigurationJsonEditDialog>();
+        parameters.Add(dialog => dialog.Definition, Definition);
+        parameters.Add(dialog => dialog.Node, Node);
+        parameters.Add(dialog => dialog.EffectiveValue, effectiveValue);
+        parameters.Add(dialog => dialog.ScalarEffectiveValues, scalarValues);
+        parameters.Add(dialog => dialog.PendingChanges, StateStore.GetPending());
+        var dialog = await DialogService.ShowAsync<ConfigurationJsonEditDialog>(L["ImportExport:JsonEditor:Title"], parameters, new DialogOptions
+        {
+            MaxWidth = MaxWidth.ExtraLarge,
+            FullWidth = true
+        });
+        var result = await dialog.Result;
+        if (result is { Canceled: false, Data: ConfigurationJsonDraftResult draft })
+        {
+            StateStore.ReplaceScope(Definition.DefinitionKey, Node.RelativePath, draft.Changes, draft.ValidationIssues);
+            await Changed.InvokeAsync();
+        }
     }
 
     private async Task<ConfigurationEffectiveValue?> LoadComplexEffectiveValueAsync()
