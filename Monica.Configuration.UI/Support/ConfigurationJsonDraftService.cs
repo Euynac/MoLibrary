@@ -252,26 +252,50 @@ internal sealed class ConfigurationJsonDraftService(IStringLocalizer<Configurati
 
         public ConfigurationJsonDraftResult Analyze()
         {
-            JsonNode? incoming;
+            var json = string.IsNullOrWhiteSpace(request.Json) ? "null" : request.Json;
+            JsonDocument document;
             try
             {
-                incoming = JsonNode.Parse(string.IsNullOrWhiteSpace(request.Json) ? "null" : request.Json);
+                document = JsonDocument.Parse(json);
             }
             catch (JsonException ex)
             {
-                return new ConfigurationJsonDraftResult
-                {
-                    DefinitionKey = request.Definition.DefinitionKey,
-                    DefinitionDisplayName = request.Definition.DisplayName,
-                    ScopePath = request.ScopeNode.RelativePath,
-                    IsJsonValid = false,
-                    ParseError = ex.Message,
-                    Diagnostics =
+                return InvalidJsonResult(
+                    ex.Message,
                     [
                         Diagnostic(ConfigurationImportDiagnosticSeverity.Error, request.ScopeNode.RelativePath,
                             localizer["ImportExport:Diagnostics:InvalidJson", ex.Message])
-                    ]
-                };
+                    ]);
+            }
+
+            using (document)
+            {
+                var duplicateProperties = FindDuplicateProperties(document.RootElement);
+                if (duplicateProperties.Count > 0)
+                {
+                    var diagnostics = duplicateProperties
+                        .Select(duplicate => Diagnostic(
+                            ConfigurationImportDiagnosticSeverity.Error,
+                            duplicate.Path,
+                            localizer["ImportExport:Diagnostics:DuplicateProperty", duplicate.Name, duplicate.Path.ToCanonicalString()]))
+                        .ToArray();
+                    return InvalidJsonResult(diagnostics[0].Message, diagnostics);
+                }
+            }
+
+            JsonNode? incoming;
+            try
+            {
+                incoming = JsonNode.Parse(json);
+            }
+            catch (JsonException ex)
+            {
+                return InvalidJsonResult(
+                    ex.Message,
+                    [
+                        Diagnostic(ConfigurationImportDiagnosticSeverity.Error, request.ScopeNode.RelativePath,
+                            localizer["ImportExport:Diagnostics:InvalidJson", ex.Message])
+                    ]);
             }
 
             Visit(request.ScopeNode, request.ScopeNode.RelativePath, _originalNode, incoming, valueMissing: false);
@@ -291,6 +315,147 @@ internal sealed class ConfigurationJsonDraftService(IStringLocalizer<Configurati
                 UnchangedCount = _unchangedCount,
                 RedactedSkipCount = _redactedSkipCount
             };
+        }
+
+        private ConfigurationJsonDraftResult InvalidJsonResult(
+            string message,
+            IReadOnlyList<ConfigurationImportDiagnostic> diagnostics)
+        {
+            return new ConfigurationJsonDraftResult
+            {
+                DefinitionKey = request.Definition.DefinitionKey,
+                DefinitionDisplayName = request.Definition.DisplayName,
+                ScopePath = request.ScopeNode.RelativePath,
+                IsJsonValid = false,
+                ParseError = message,
+                Diagnostics = diagnostics
+            };
+        }
+
+        private IReadOnlyList<DuplicateJsonProperty> FindDuplicateProperties(JsonElement element)
+        {
+            var duplicates = new List<DuplicateJsonProperty>();
+            FindDuplicateProperties(request.ScopeNode, request.ScopeNode.RelativePath, element, duplicates);
+            return duplicates;
+        }
+
+        private void FindDuplicateProperties(
+            ConfigurationNodeDefinition schema,
+            LogicalPath path,
+            JsonElement element,
+            List<DuplicateJsonProperty> duplicates)
+        {
+            switch (element.ValueKind)
+            {
+                case JsonValueKind.Object:
+                    FindDuplicateObjectProperties(schema, path, element, duplicates);
+                    break;
+                case JsonValueKind.Array when schema.ListTemplate is { } listTemplate:
+                    FindDuplicateListItemProperties(path, element, listTemplate, duplicates);
+                    break;
+            }
+        }
+
+        private void FindDuplicateObjectProperties(
+            ConfigurationNodeDefinition schema,
+            LogicalPath path,
+            JsonElement element,
+            List<DuplicateJsonProperty> duplicates)
+        {
+            var propertyNames = new HashSet<string>(StringComparer.Ordinal);
+            foreach (var property in element.EnumerateObject())
+            {
+                var propertyPath = ResolveJsonPropertyPath(schema, path, property.Name);
+                if (!propertyNames.Add(property.Name))
+                {
+                    duplicates.Add(new DuplicateJsonProperty(property.Name, propertyPath));
+                }
+
+                if (ResolveJsonPropertySchema(schema, property.Name) is { } childSchema)
+                {
+                    FindDuplicateProperties(childSchema, propertyPath, property.Value, duplicates);
+                }
+            }
+        }
+
+        private void FindDuplicateListItemProperties(
+            LogicalPath path,
+            JsonElement element,
+            ConfigurationListTemplate listTemplate,
+            List<DuplicateJsonProperty> duplicates)
+        {
+            var index = 0;
+            foreach (var item in element.EnumerateArray())
+            {
+                var itemPath = ResolveJsonListItemPath(path, listTemplate, index, item);
+                FindDuplicateProperties(listTemplate.ItemTemplate, itemPath, item, duplicates);
+                index++;
+            }
+        }
+
+        private static ConfigurationNodeDefinition? ResolveJsonPropertySchema(
+            ConfigurationNodeDefinition schema,
+            string propertyName)
+        {
+            return schema.NodeKind switch
+            {
+                ConfigurationNodeKind.Object => schema.Children.FirstOrDefault(child =>
+                    string.Equals(child.Name, propertyName, StringComparison.Ordinal)),
+                ConfigurationNodeKind.Dictionary => schema.DictionaryTemplate?.ValueTemplate,
+                _ => null
+            };
+        }
+
+        private static LogicalPath ResolveJsonPropertyPath(
+            ConfigurationNodeDefinition schema,
+            LogicalPath path,
+            string propertyName)
+        {
+            return schema.NodeKind == ConfigurationNodeKind.Dictionary
+                ? path.Append(new DictionaryKeySegment(propertyName))
+                : path.Append(new PropertySegment(propertyName));
+        }
+
+        private static LogicalPath ResolveJsonListItemPath(
+            LogicalPath listPath,
+            ConfigurationListTemplate listTemplate,
+            int index,
+            JsonElement item)
+        {
+            if (listTemplate.SupportsPerItemMutation
+                && TryReadObjectScalar(item, listTemplate.ItemKeyPropertyName!) is { Length: > 0 } itemKey)
+            {
+                return listPath.Append(new ListItemKeySegment(itemKey));
+            }
+
+            return listPath.Append(new ListIndexSegment(index));
+        }
+
+        private static string? TryReadObjectScalar(JsonElement item, string propertyName)
+        {
+            if (item.ValueKind != JsonValueKind.Object)
+            {
+                return null;
+            }
+
+            foreach (var property in item.EnumerateObject())
+            {
+                if (!string.Equals(property.Name, propertyName, StringComparison.Ordinal))
+                {
+                    continue;
+                }
+
+                return property.Value.ValueKind switch
+                {
+                    JsonValueKind.String => property.Value.GetString(),
+                    JsonValueKind.Number => property.Value.GetRawText(),
+                    JsonValueKind.True => "true",
+                    JsonValueKind.False => "false",
+                    _ => null
+                };
+            }
+
+            return null;
         }
 
         private void Visit(
@@ -1002,6 +1167,8 @@ internal sealed class ConfigurationJsonDraftService(IStringLocalizer<Configurati
             return new ScalarConversion(false, null, displayValue, error);
         }
     }
+
+    private sealed record DuplicateJsonProperty(string Name, LogicalPath Path);
 }
 
 /// <summary>

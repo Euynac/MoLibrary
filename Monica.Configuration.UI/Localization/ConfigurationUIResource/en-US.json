@@ -364,6 +364,7 @@
       "UnknownPath": "Unknown configuration path was skipped: {0}",
       "MissingListKey": "List item is missing stable key property {0}.",
       "DuplicateListKey": "Duplicate list item key was skipped: {0}",
+      "DuplicateProperty": "JSON object contains duplicate property '{0}' at {1}. Remove the duplicate before applying.",
       "ReadOnlySource": "Current effective source {0} is read-only. Reason: {1}",
       "FormatVersionMismatch": "Package format version {0} is not the current format.",
       "UnknownDefinition": "Unknown definition was skipped: {0}",

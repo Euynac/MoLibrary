@@ -364,6 +364,7 @@
       "UnknownPath": "已跳过未知配置路径：{0}",
       "MissingListKey": "列表项缺少稳定 Key 属性 {0}。",
       "DuplicateListKey": "已跳过重复列表项 Key：{0}",
+      "DuplicateProperty": "JSON 对象在 {1} 存在重复属性“{0}”。请删除重复项后再应用。",
       "ReadOnlySource": "当前生效来源 {0} 是只读的。原因：{1}",
       "FormatVersionMismatch": "配置包格式版本 {0} 不是当前格式。",
       "UnknownDefinition": "已跳过未知配置定义：{0}",
