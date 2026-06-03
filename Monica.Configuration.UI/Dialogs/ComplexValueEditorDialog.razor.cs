@@ -92,6 +92,18 @@ public partial class ComplexValueEditorDialog
                 .Where(child => child.NodeKind is ConfigurationNodeKind.Dictionary or ConfigurationNodeKind.List)
                 .ToArray();
 
+    private IReadOnlyList<ObjectFieldSection> NestedObjectSections =>
+        SelectedEntry is null || SelectedValueSchema.NodeKind == ConfigurationNodeKind.Scalar
+            ? []
+            : SelectedValueSchema.Children
+                .Where(child => child.NodeKind == ConfigurationNodeKind.Object)
+                .Select(child => new ObjectFieldSection(
+                    child,
+                    SelectedEntry.Path.Append(new PropertySegment(child.Name)),
+                    child.Children.Where(grandchild => grandchild.NodeKind == ConfigurationNodeKind.Scalar).ToArray()))
+                .Where(section => section.ScalarFields.Count > 0)
+                .ToArray();
+
     private string ActivePathLabel => (_mode == EditorMode.Patch ? LogicalPath.Root : _focusPath).Depth == 0 && _mode == EditorMode.Patch
         ? L["Dialogs:ComplexEditor:PendingMutationGroup"]
         : _focusPath.ToCanonicalString();
@@ -374,9 +386,17 @@ public partial class ComplexValueEditorDialog
     {
         return SelectedEntry is null
             ? _focusPath
-            : SelectedValueSchema.NodeKind == ConfigurationNodeKind.Scalar
-                ? SelectedEntry.Path
-                : SelectedEntry.Path.Append(new PropertySegment(field.Name));
+            : FieldPath(field, SelectedEntry.Path, SelectedValueSchema);
+    }
+
+    private static LogicalPath FieldPath(
+        ConfigurationNodeDefinition field,
+        LogicalPath ownerPath,
+        ConfigurationNodeDefinition ownerSchema)
+    {
+        return ownerSchema.NodeKind == ConfigurationNodeKind.Scalar
+            ? ownerPath
+            : ownerPath.Append(new PropertySegment(field.Name));
     }
 
     private JsonNode? FieldValue(ConfigurationNodeDefinition field)
@@ -386,19 +406,35 @@ public partial class ComplexValueEditorDialog
             return null;
         }
 
-        var entryValue = ReadNode(SelectedEntry.Path);
-        if (SelectedValueSchema.NodeKind == ConfigurationNodeKind.Scalar)
-        {
-            return entryValue;
-        }
+        return FieldValue(field, SelectedEntry.Path, SelectedValueSchema);
+    }
 
-        return entryValue is JsonObject itemObject ? itemObject[field.Name] : null;
+    private JsonNode? FieldValue(
+        ConfigurationNodeDefinition field,
+        LogicalPath ownerPath,
+        ConfigurationNodeDefinition ownerSchema)
+    {
+        return ReadNode(FieldPath(field, ownerPath, ownerSchema));
     }
 
     private void OnTextFieldChanged(ConfigurationNodeDefinition field, string? value)
     {
+        if (SelectedEntry is null)
+        {
+            return;
+        }
+
+        OnTextFieldChanged(field, SelectedEntry.Path, SelectedValueSchema, value);
+    }
+
+    private void OnTextFieldChanged(
+        ConfigurationNodeDefinition field,
+        LogicalPath ownerPath,
+        ConfigurationNodeDefinition ownerSchema,
+        string? value)
+    {
         value ??= string.Empty;
-        var path = FieldPath(field);
+        var path = FieldPath(field, ownerPath, ownerSchema);
         if (field.IsSensitive && string.IsNullOrWhiteSpace(value))
         {
             _sensitiveDrafts.Remove(path.ToCanonicalString());
@@ -415,50 +451,79 @@ public partial class ComplexValueEditorDialog
             return;
         }
 
-        SetFieldValue(field, JsonValue.Create(value));
+        SetFieldValue(field, ownerPath, ownerSchema, JsonValue.Create(value));
     }
 
     private void OnNumberFieldChanged(ConfigurationNodeDefinition field, decimal? value)
     {
-        var path = FieldPath(field);
+        if (SelectedEntry is null)
+        {
+            return;
+        }
+
+        OnNumberFieldChanged(field, SelectedEntry.Path, SelectedValueSchema, value);
+    }
+
+    private void OnNumberFieldChanged(
+        ConfigurationNodeDefinition field,
+        LogicalPath ownerPath,
+        ConfigurationNodeDefinition ownerSchema,
+        decimal? value)
+    {
+        var path = FieldPath(field, ownerPath, ownerSchema);
         if (!ValidateScalar(field, value?.ToString(CultureInfo.InvariantCulture) ?? string.Empty, path))
         {
             return;
         }
 
-        SetFieldValue(field, value is null ? null : JsonValue.Create(value));
+        SetFieldValue(field, ownerPath, ownerSchema, value is null ? null : JsonValue.Create(value));
     }
 
     private void OnBoolFieldChanged(ConfigurationNodeDefinition field, bool value)
     {
-        SetFieldValue(field, JsonValue.Create(value));
+        if (SelectedEntry is null)
+        {
+            return;
+        }
+
+        OnBoolFieldChanged(field, SelectedEntry.Path, SelectedValueSchema, value);
     }
 
-    private void SetFieldValue(ConfigurationNodeDefinition field, JsonNode? value)
+    private void OnBoolFieldChanged(
+        ConfigurationNodeDefinition field,
+        LogicalPath ownerPath,
+        ConfigurationNodeDefinition ownerSchema,
+        bool value)
     {
-        var path = FieldPath(field);
+        SetFieldValue(field, ownerPath, ownerSchema, JsonValue.Create(value));
+    }
+
+    private void SetFieldValue(
+        ConfigurationNodeDefinition field,
+        LogicalPath ownerPath,
+        ConfigurationNodeDefinition ownerSchema,
+        JsonNode? value)
+    {
+        var path = FieldPath(field, ownerPath, ownerSchema);
         var oldValue = CloneNode(ReadOriginalNode(path));
         var valueForStorage = CloneNode(value);
-        if (SelectedValueSchema.NodeKind == ConfigurationNodeKind.Scalar)
-        {
-            SetEntryValue(path, value);
-        }
-        else if (ReadNode(SelectedEntry!.Path) is JsonObject itemObject)
-        {
-            itemObject[field.Name] = value;
-        }
+        SetNodeValue(path, value);
 
         _sensitiveDrafts.Remove(path.ToCanonicalString());
         StageSet(path, field, oldValue, valueForStorage);
     }
 
-    private void SetEntryValue(LogicalPath path, JsonNode? value)
+    private void SetNodeValue(LogicalPath path, JsonNode? value)
     {
         var parentPath = new LogicalPath(path.Segments.Take(path.Depth - 1).ToArray());
+        EnsureNodeExists(parentPath, ResolveSchemaForPath(parentPath));
         var parent = ReadNode(parentPath);
         var segment = path.Segments[^1];
         switch (parent)
         {
+            case JsonObject jsonObject when segment is PropertySegment property:
+                jsonObject[property.Name] = value;
+                break;
             case JsonObject jsonObject when segment is DictionaryKeySegment dictionaryKey:
                 jsonObject[dictionaryKey.Key] = value;
                 break;
@@ -662,18 +727,44 @@ public partial class ComplexValueEditorDialog
 
     private string ReadText(ConfigurationNodeDefinition field)
     {
-        var path = FieldPath(field).ToCanonicalString();
+        if (SelectedEntry is null)
+        {
+            return string.Empty;
+        }
+
+        return ReadText(field, SelectedEntry.Path, SelectedValueSchema);
+    }
+
+    private string ReadText(
+        ConfigurationNodeDefinition field,
+        LogicalPath ownerPath,
+        ConfigurationNodeDefinition ownerSchema)
+    {
+        var path = FieldPath(field, ownerPath, ownerSchema).ToCanonicalString();
         if (field.IsSensitive)
         {
             return _sensitiveDrafts.GetValueOrDefault(path) ?? string.Empty;
         }
 
-        return ReadScalarAsString(FieldValue(field)) ?? string.Empty;
+        return ReadScalarAsString(FieldValue(field, ownerPath, ownerSchema)) ?? string.Empty;
     }
 
     private bool ReadBool(ConfigurationNodeDefinition field)
     {
-        var value = FieldValue(field);
+        if (SelectedEntry is null)
+        {
+            return false;
+        }
+
+        return ReadBool(field, SelectedEntry.Path, SelectedValueSchema);
+    }
+
+    private bool ReadBool(
+        ConfigurationNodeDefinition field,
+        LogicalPath ownerPath,
+        ConfigurationNodeDefinition ownerSchema)
+    {
+        var value = FieldValue(field, ownerPath, ownerSchema);
         if (value is null)
         {
             return false;
@@ -691,7 +782,20 @@ public partial class ComplexValueEditorDialog
 
     private decimal? ReadDecimal(ConfigurationNodeDefinition field)
     {
-        var text = ReadScalarAsString(FieldValue(field));
+        if (SelectedEntry is null)
+        {
+            return null;
+        }
+
+        return ReadDecimal(field, SelectedEntry.Path, SelectedValueSchema);
+    }
+
+    private decimal? ReadDecimal(
+        ConfigurationNodeDefinition field,
+        LogicalPath ownerPath,
+        ConfigurationNodeDefinition ownerSchema)
+    {
+        var text = ReadScalarAsString(FieldValue(field, ownerPath, ownerSchema));
         return decimal.TryParse(text, NumberStyles.Any, CultureInfo.InvariantCulture, out var parsed) ? parsed : null;
     }
 
@@ -793,15 +897,33 @@ public partial class ComplexValueEditorDialog
 
     private void EnsureCollectionExists(LogicalPath path, ConfigurationNodeDefinition schema)
     {
+        EnsureNodeExists(path, schema);
+    }
+
+    private void EnsureNodeExists(LogicalPath path, ConfigurationNodeDefinition? schema)
+    {
         if (ReadNode(path) is not null)
         {
             return;
         }
 
-        var parentPath = new LogicalPath(path.Segments.Take(path.Depth - 1).ToArray());
-        if (ReadNode(parentPath) is JsonObject parentObject && path.Segments[^1] is PropertySegment property)
+        if (path.Depth <= Node.RelativePath.Depth || schema is null)
         {
-            parentObject[property.Name] = DefaultJsonFor(schema);
+            return;
+        }
+
+        var parentPath = new LogicalPath(path.Segments.Take(path.Depth - 1).ToArray());
+        EnsureNodeExists(parentPath, ResolveSchemaForPath(parentPath));
+
+        var parent = ReadNode(parentPath);
+        switch (parent)
+        {
+            case JsonObject parentObject when path.Segments[^1] is PropertySegment property:
+                parentObject[property.Name] = DefaultJsonFor(schema);
+                break;
+            case JsonObject parentObject when path.Segments[^1] is DictionaryKeySegment dictionaryKey:
+                parentObject[dictionaryKey.Key] = DefaultJsonFor(schema);
+                break;
         }
     }
 
@@ -1006,6 +1128,11 @@ public partial class ComplexValueEditorDialog
         string Subtitle,
         LogicalPath Path,
         bool IsSelected);
+
+    private sealed record ObjectFieldSection(
+        ConfigurationNodeDefinition Node,
+        LogicalPath Path,
+        IReadOnlyList<ConfigurationNodeDefinition> ScalarFields);
 
     private sealed record FocusFrame(
         ConfigurationNodeDefinition Node,

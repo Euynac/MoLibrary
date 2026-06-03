@@ -206,6 +206,83 @@
                                             }
                                         </MudGrid>
 
+                                        @foreach (var objectSection in NestedObjectSections)
+                                        {
+                                            <MudPaper Outlined="true" Class="pa-3">
+                                                <MudStack Spacing="2">
+                                                    <MudStack Spacing="0">
+                                                        <MudText Typo="Typo.subtitle2">@DisplayName(objectSection.Node)</MudText>
+                                                        <MudText Typo="Typo.caption" Color="Color.Secondary">@objectSection.Path.ToCanonicalString()</MudText>
+                                                        @if (!string.IsNullOrWhiteSpace(objectSection.Node.Description))
+                                                        {
+                                                            <MudText Typo="Typo.caption" Color="Color.Secondary">@objectSection.Node.Description</MudText>
+                                                        }
+                                                    </MudStack>
+
+                                                    <MudGrid Spacing="2">
+                                                        @foreach (var field in objectSection.ScalarFields)
+                                                        {
+                                                            var fieldPath = FieldPath(field, objectSection.Path, objectSection.Node);
+                                                            <MudItem xs="12" md="6">
+                                                                <MudStack Spacing="1">
+                                                                    <MudText Typo="Typo.caption" Color="Color.Secondary">@DisplayName(field)</MudText>
+                                                                    @if (!string.IsNullOrWhiteSpace(field.Description))
+                                                                    {
+                                                                        <MudText Typo="Typo.caption" Color="Color.Secondary">@field.Description</MudText>
+                                                                    }
+                                                                    @if (field.ValueKind == ConfigurationValueKind.Boolean)
+                                                                    {
+                                                                        <MudSwitch T="bool"
+                                                                                   Value="@ReadBool(field, objectSection.Path, objectSection.Node)"
+                                                                                   ValueChanged="value => OnBoolFieldChanged(field, objectSection.Path, objectSection.Node, value)"
+                                                                                   Color="Color.Primary" />
+                                                                    }
+                                                                    else if (IsNumeric(field))
+                                                                    {
+                                                                        <MudNumericField T="decimal?"
+                                                                                         Value="@ReadDecimal(field, objectSection.Path, objectSection.Node)"
+                                                                                         ValueChanged="value => OnNumberFieldChanged(field, objectSection.Path, objectSection.Node, value)"
+                                                                                         Variant="Variant.Outlined"
+                                                                                         Margin="Margin.Dense"
+                                                                                         Error="@HasError(fieldPath)"
+                                                                                         ErrorText="@ErrorFor(fieldPath)" />
+                                                                    }
+                                                                    else if (EnumValues(field).Count > 0)
+                                                                    {
+                                                                        <MudSelect T="string"
+                                                                                   Value="@ReadText(field, objectSection.Path, objectSection.Node)"
+                                                                                   ValueChanged="value => OnTextFieldChanged(field, objectSection.Path, objectSection.Node, value)"
+                                                                                   Variant="Variant.Outlined"
+                                                                                   Margin="Margin.Dense"
+                                                                                   Error="@HasError(fieldPath)"
+                                                                                   ErrorText="@ErrorFor(fieldPath)">
+                                                                            @foreach (var value in EnumValues(field))
+                                                                            {
+                                                                                <MudSelectItem T="string" Value="@value">@value</MudSelectItem>
+                                                                            }
+                                                                        </MudSelect>
+                                                                    }
+                                                                    else
+                                                                    {
+                                                                        <MudTextField T="string"
+                                                                                      Value="@ReadText(field, objectSection.Path, objectSection.Node)"
+                                                                                      ValueChanged="value => OnTextFieldChanged(field, objectSection.Path, objectSection.Node, value)"
+                                                                                      Variant="Variant.Outlined"
+                                                                                      Margin="Margin.Dense"
+                                                                                      Immediate="true"
+                                                                                      Placeholder="@Placeholder(field)"
+                                                                                      InputType="@(field.IsSensitive ? InputType.Password : InputType.Text)"
+                                                                                      Error="@HasError(fieldPath)"
+                                                                                      ErrorText="@ErrorFor(fieldPath)" />
+                                                                    }
+                                                                </MudStack>
+                                                            </MudItem>
+                                                        }
+                                                    </MudGrid>
+                                                </MudStack>
+                                            </MudPaper>
+                                        }
+
                                         @if (NestedCollections.Count > 0)
                                         {
                                             <MudDivider />
