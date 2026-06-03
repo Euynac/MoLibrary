@@ -1,4 +1,7 @@
 @using Monica.Configuration.UI.Localization
+@using System.Globalization
+@using System.Text.Json
+@using System.Text.Json.Nodes
 @inject ConfigurationFacade Facade
 @inject ConfigurationStateStore StateStore
 @inject ConfigurationParameterPackageService PackageService
@@ -211,7 +214,51 @@
             return ConfigurationScalarTextCodec.TimeSpanEquals(result.DisplayValue, effectiveDisplayValue);
         }
 
+        var effectiveStoredValue = TryCreateStoredValueFromDisplay(effectiveDisplayValue);
+        if (effectiveStoredValue is not null && result.StoredValue is not null)
+        {
+            return StoredJsonEquals(effectiveStoredValue.Json, result.StoredValue.Json);
+        }
+
         return string.Equals(result.DisplayValue, effectiveDisplayValue, StringComparison.Ordinal);
+    }
+
+    private ConfigurationStoredValue? TryCreateStoredValueFromDisplay(string displayValue)
+    {
+        try
+        {
+            return Node.ValueKind switch
+            {
+                ConfigurationValueKind.Boolean when bool.TryParse(displayValue, out var boolValue) =>
+                    ConfigurationStoredValue.FromJson(boolValue ? "true" : "false"),
+                ConfigurationValueKind.Integer when long.TryParse(displayValue, NumberStyles.Integer, CultureInfo.InvariantCulture, out var integerValue) =>
+                    ConfigurationStoredValue.FromJson(integerValue.ToString(CultureInfo.InvariantCulture)),
+                ConfigurationValueKind.Decimal or ConfigurationValueKind.Floating
+                    when decimal.TryParse(displayValue, NumberStyles.Any, CultureInfo.InvariantCulture, out var decimalValue) =>
+                    ConfigurationStoredValue.FromJson(decimalValue.ToString(CultureInfo.InvariantCulture)),
+                ConfigurationValueKind.DateTime when DateTime.TryParse(displayValue, CultureInfo.InvariantCulture, DateTimeStyles.AssumeLocal, out var dateTimeValue) =>
+                    ConfigurationStoredValue.FromJson(JsonSerializer.Serialize(dateTimeValue.ToString("O", CultureInfo.InvariantCulture))),
+                ConfigurationValueKind.Json when !string.IsNullOrWhiteSpace(displayValue) =>
+                    ConfigurationStoredValue.FromJson(displayValue),
+                _ => ConfigurationStoredValue.FromJson(JsonSerializer.Serialize(displayValue))
+            };
+        }
+        catch (JsonException)
+        {
+            return null;
+        }
+    }
+
+    private static bool StoredJsonEquals(string left, string right)
+    {
+        try
+        {
+            return JsonNode.DeepEquals(JsonNode.Parse(left), JsonNode.Parse(right));
+        }
+        catch (JsonException)
+        {
+            return string.Equals(left, right, StringComparison.Ordinal);
+        }
     }
 
     private async Task UndoScalarState()

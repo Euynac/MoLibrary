@@ -149,28 +149,42 @@ internal sealed class ConfigurationJsonDraftService(IStringLocalizer<Configurati
             case JsonObject jsonObject when schema.NodeKind == ConfigurationNodeKind.Object:
                 foreach (var child in schema.Children)
                 {
-                    jsonObject[child.Name] = RedactConcreteNode(
-                        jsonObject[child.Name],
+                    var current = jsonObject[child.Name];
+                    var redacted = RedactConcreteNode(
+                        current,
                         child,
                         path.Append(new PropertySegment(child.Name)),
                         redactedPaths);
+                    if (!ReferenceEquals(current, redacted))
+                    {
+                        jsonObject[child.Name] = redacted;
+                    }
                 }
                 break;
             case JsonObject jsonObject when schema.NodeKind == ConfigurationNodeKind.Dictionary && schema.DictionaryTemplate is { } dictionaryTemplate:
                 foreach (var pair in jsonObject.ToArray())
                 {
-                    jsonObject[pair.Key] = RedactConcreteNode(
+                    var redacted = RedactConcreteNode(
                         pair.Value,
                         dictionaryTemplate.ValueTemplate,
                         path.Append(new DictionaryKeySegment(pair.Key)),
                         redactedPaths);
+                    if (!ReferenceEquals(pair.Value, redacted))
+                    {
+                        jsonObject[pair.Key] = redacted;
+                    }
                 }
                 break;
             case JsonArray jsonArray when schema.NodeKind == ConfigurationNodeKind.List && schema.ListTemplate is { } listTemplate:
                 for (var index = 0; index < jsonArray.Count; index++)
                 {
-                    var itemPath = ResolveConcreteListItemPath(path, listTemplate, index, jsonArray[index]);
-                    jsonArray[index] = RedactConcreteNode(jsonArray[index], listTemplate.ItemTemplate, itemPath, redactedPaths);
+                    var current = jsonArray[index];
+                    var itemPath = ResolveConcreteListItemPath(path, listTemplate, index, current);
+                    var redacted = RedactConcreteNode(current, listTemplate.ItemTemplate, itemPath, redactedPaths);
+                    if (!ReferenceEquals(current, redacted))
+                    {
+                        jsonArray[index] = redacted;
+                    }
                 }
                 break;
         }
