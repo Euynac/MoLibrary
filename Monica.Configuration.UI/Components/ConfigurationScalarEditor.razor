@@ -11,6 +11,7 @@
                    T="bool"
                    Value="@_boolValue"
                    ValueChanged="OnBoolChanged"
+                   Disabled="@Disabled"
                    Color="Color.Primary" />
     }
     else if (IsNumeric)
@@ -22,7 +23,8 @@
                          Variant="Variant.Outlined"
                          Margin="Margin.Dense"
                          Immediate="true"
-                         Error="@HasError" />
+                         Error="@HasError"
+                         Disabled="@Disabled" />
     }
     else if (Node.ValueKind == ConfigurationValueKind.DateTime)
     {
@@ -32,7 +34,8 @@
                        Variant="Variant.Outlined"
                        Margin="Margin.Dense"
                        Editable="true"
-                       Error="@HasError" />
+                       Error="@HasError"
+                       Disabled="@Disabled" />
     }
     else if (Node.ValueKind == ConfigurationValueKind.TimeSpan)
     {
@@ -48,7 +51,8 @@
                        Editable="true"
                        Placeholder="@L["State:Editor:TimeSpanPlaceholder"]"
                        Error="@HasError"
-                       ErrorText="@_error" />
+                       ErrorText="@_error"
+                       Disabled="@Disabled" />
     }
     else if (EnumValues.Count > 0)
     {
@@ -58,7 +62,8 @@
                    ValueChanged="OnTextChanged"
                    Variant="Variant.Outlined"
                    Margin="Margin.Dense"
-                   Error="@HasError">
+                   Error="@HasError"
+                   Disabled="@Disabled">
             @foreach (var value in EnumValues)
             {
                 <MudSelectItem T="string" Value="@value">@value</MudSelectItem>
@@ -81,7 +86,8 @@
                       AdornmentIcon="@SensitiveAdornmentIcon"
                       OnAdornmentClick="ToggleSensitiveVisibility"
                       oncopy="@(Node.IsSensitive ? "return false" : null)"
-                      oncut="@(Node.IsSensitive ? "return false" : null)" />
+                      oncut="@(Node.IsSensitive ? "return false" : null)"
+                      Disabled="@Disabled" />
     }
 </div>
 
@@ -89,6 +95,7 @@
     [Parameter, EditorRequired] public ConfigurationNodeDefinition Node { get; set; } = null!;
     [Parameter] public ConfigurationEffectiveValue? EffectiveValue { get; set; }
     [Parameter] public bool IsModified { get; set; }
+    [Parameter] public bool Disabled { get; set; }
     [Parameter] public ConfigurationValidationIssue? ValidationIssue { get; set; }
     [Parameter] public EventCallback<ConfigurationScalarEditResult> ValueChanged { get; set; }
 

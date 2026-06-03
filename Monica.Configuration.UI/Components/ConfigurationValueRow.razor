@@ -33,6 +33,14 @@
                     {
                         <MudChip T="string" Size="Size.Small" Color="Color.Warning" Variant="Variant.Filled">@L["State:Value:RestartNeeded"]</MudChip>
                     }
+                    @if (IsExternalEffectiveSource)
+                    {
+                        <MudTooltip Text="@EffectiveSourceTooltip">
+                            <MudIcon Icon="@Icons.Material.Filled.WarningAmber"
+                                     Size="Size.Small"
+                                     Color="@EffectiveSourceIconColor" />
+                        </MudTooltip>
+                    }
                 </MudStack>
                 <MudText Typo="Typo.caption" Color="Color.Secondary">@PathLabel</MudText>
             </MudStack>
@@ -45,6 +53,7 @@
                     <ConfigurationScalarEditor Node="@Node"
                                                EffectiveValue="@EffectiveValue"
                                                IsModified="@(PendingChange is not null)"
+                                               Disabled="@IsCurrentSourceReadOnly"
                                                ValidationIssue="@ValidationIssue"
                                                ValueChanged="StageScalar" />
                     @if (ValidationIssue is not null && !ScalarEditorShowsInlineError)
@@ -65,6 +74,7 @@
                     </MudButton>
                     <MudButton Variant="Variant.Outlined"
                                StartIcon="@Icons.Material.Filled.DataObject"
+                               Disabled="@IsCurrentSourceReadOnly"
                                OnClick="EditComplexValue">
                         @L["State:Actions:EditComplex"]
                     </MudButton>
@@ -120,6 +130,20 @@
 
     private string PathLabel => Node.RelativePath.Depth == 0 ? L["State:Tree:Root"] : Node.RelativePath.ToCanonicalString();
 
+    private ConfigurationSourceDescriptor? EffectiveSource => EffectiveValue?.EffectiveSource;
+
+    private bool IsExternalEffectiveSource => EffectiveSource is { Kind: not ConfigurationSourceKind.MonicaEffectiveStore };
+
+    private bool IsCurrentSourceReadOnly => EffectiveSource is { Kind: not ConfigurationSourceKind.MonicaEffectiveStore, IsWritable: false };
+
+    private Color EffectiveSourceIconColor => IsCurrentSourceReadOnly ? Color.Default : Color.Warning;
+
+    private string EffectiveSourceTooltip => EffectiveSource is not { } source
+        ? string.Empty
+        : source.IsWritable
+            ? L["Sources:EffectiveSource:ExternalWritable", source.DisplayName, SourcePath(source)]
+            : L["Sources:EffectiveSource:ExternalReadOnly", source.DisplayName, source.ReadOnlyReason ?? L["Sources:ReadOnly"]];
+
     private ConfigurationReloadBehavior EffectiveReloadBehavior =>
         Node.ReloadBehavior is { } behavior and not ConfigurationReloadBehavior.Inherit
             ? behavior
@@ -127,6 +151,11 @@
 
     private async Task StageScalar(ConfigurationScalarEditResult result)
     {
+        if (IsCurrentSourceReadOnly)
+        {
+            return;
+        }
+
         if (!result.IsValid || result.StoredValue is null)
         {
             StateStore.ReportValidationIssue(new ConfigurationValidationIssue
@@ -161,12 +190,12 @@
             OriginalDisplayValue = EffectiveValue?.DisplayValue,
             NewDisplayValue = result.DisplayValue,
             ExpectedSchemaVersion = Definition.SchemaVersion,
-            ExpectedValueVersion = EffectiveValue?.Version,
+            ExpectedValueVersion = EffectiveSource?.Kind == ConfigurationSourceKind.MonicaEffectiveStore ? EffectiveValue?.Version : null,
             IsSensitive = Node.IsSensitive,
             NodeKind = Node.NodeKind,
             ValueKind = Node.ValueKind,
             ReloadBehavior = EffectiveReloadBehavior
-        });
+        }.WithTarget(Definition, EffectiveSource));
         await Changed.InvokeAsync();
     }
 
@@ -286,6 +315,11 @@
             MaxWidth = MaxWidth.Large,
             FullWidth = true
         });
+    }
+
+    private static string SourcePath(ConfigurationSourceDescriptor source)
+    {
+        return source.PhysicalPath ?? source.SourcePath ?? source.ProviderType;
     }
 
     private async Task Undo()

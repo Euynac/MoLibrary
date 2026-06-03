@@ -25,8 +25,7 @@ public sealed class ConfigurationFacade(
     IConfigurationMetadataStore metadataStore,
     IEnumerable<IConfigurationChangeNotifier> changeNotifiers,
     IConfigurationStoreStateTracker storeStateTracker,
-    ConfigurationEffectiveValueDocumentEditor documentEditor,
-    ConfigurationStoredValueCodec codec,
+    ConfigurationEffectiveValueSeedFactory seedFactory,
     IConfigurationSourceInspector sourceInspector,
     IConfigurationJsonFileSourceWriter sourceWriter,
     IConfiguration configuration)
@@ -91,14 +90,35 @@ public sealed class ConfigurationFacade(
             var targetNode = ResolveTargetNode(definition, logicalPath);
             var isSensitive = targetNode?.IsSensitive is true;
             var document = await effectiveValueStore.GetAsync(definitionKey, CancellationToken.None);
-            var value = document is null ? null : documentEditor.ReadValue(definition, document.Json, logicalPath);
+            var configurationPath = targetNode?.ConfigurationPath ?? ProjectPath(definition, logicalPath);
+            var runtimeSourceValue = targetNode?.NodeKind == ConfigurationNodeKind.Scalar
+                ? sourceInspector.GetSourceChain(definition, logicalPath).Values.FirstOrDefault(value => value.IsEffective)
+                : null;
+
+            if (runtimeSourceValue is not null)
+            {
+                return new ConfigurationEffectiveValue
+                {
+                    DefinitionKey = definitionKey,
+                    LogicalPath = logicalPath,
+                    ConfigurationPath = configurationPath,
+                    DisplayValue = runtimeSourceValue.DisplayValue,
+                    IsSensitive = runtimeSourceValue.IsSensitive,
+                    Version = runtimeSourceValue.Source.Kind == ConfigurationSourceKind.MonicaEffectiveStore ? document?.Version : null,
+                    EffectiveSource = runtimeSourceValue.Source
+                };
+            }
+
+            var displayValue = targetNode is null || targetNode.NodeKind == ConfigurationNodeKind.Scalar
+                ? configuration[configurationPath]
+                : seedFactory.CreateRuntimeJson(targetNode, configurationPath);
 
             return new ConfigurationEffectiveValue
             {
                 DefinitionKey = definitionKey,
                 LogicalPath = logicalPath,
-                ConfigurationPath = targetNode?.ConfigurationPath,
-                DisplayValue = value is null || isSensitive ? null : codec.ToConfigurationString(value),
+                ConfigurationPath = configurationPath,
+                DisplayValue = isSensitive ? null : displayValue,
                 IsSensitive = isSensitive,
                 Version = document?.Version
             };
@@ -107,6 +127,18 @@ public sealed class ConfigurationFacade(
         {
             return Res.Fail($"Failed to get effective configuration value: {ex.GetMessageRecursively()}");
         }
+    }
+
+    private static string ProjectPath(ConfigurationDefinition definition, LogicalPath logicalPath)
+    {
+        var parts = new List<string>();
+        if (!string.IsNullOrWhiteSpace(definition.SectionPath))
+        {
+            parts.Add(definition.SectionPath);
+        }
+
+        parts.AddRange(logicalPath.Segments.Select(segment => segment.Value));
+        return string.Join(':', parts);
     }
 
     /// <summary>

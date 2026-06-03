@@ -223,6 +223,10 @@
       "Title": "Source chain",
       "Empty": "No source supplies this configuration value."
     },
+    "EffectiveSource": {
+      "ExternalWritable": "The current effective value comes from external source {0}. Saving this edit writes that source: {1}",
+      "ExternalReadOnly": "The current effective value comes from external source {0}, but that source cannot be edited manually. Reason: {1}"
+    },
     "Columns": {
       "Priority": "Priority",
       "Source": "Source",
@@ -257,6 +261,8 @@
         "ChangeList": "Change list"
       },
       "ChangeCount": "{0} changes",
+      "ExternalTargetSummary": "{0} staged changes will write the currently effective external configuration source.",
+      "MissingSourceTarget": "The staged change is missing external source target metadata.",
       "Validation": {
         "Title": "Validation issues",
         "BlockedSummary": "{0} validation issues must be fixed or undone before saving.",

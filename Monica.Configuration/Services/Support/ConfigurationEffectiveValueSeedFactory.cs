@@ -10,7 +10,7 @@ namespace Monica.Configuration.Services.Support;
 /// <summary>
 /// Creates first-run effective value documents from host bootstrap configuration and CLR defaults.
 /// </summary>
-internal sealed class ConfigurationEffectiveValueSeedFactory(IConfiguration configuration)
+public sealed class ConfigurationEffectiveValueSeedFactory(IConfiguration configuration)
 {
     private static readonly JsonSerializerOptions WRITE_OPTIONS = new()
     {
@@ -26,6 +26,18 @@ internal sealed class ConfigurationEffectiveValueSeedFactory(IConfiguration conf
         var hostValues = BuildNodeFromConfiguration(definition.Root, definition.SectionPath);
         var merged = hostValues is null ? defaults : Merge(defaults, hostValues);
         return merged.ToJsonString(WRITE_OPTIONS);
+    }
+
+    /// <summary>
+    /// Creates a JSON snapshot for one schema node from the current effective Microsoft configuration stack.
+    /// </summary>
+    /// <param name="node">The schema node to read.</param>
+    /// <param name="configurationPath">The Microsoft configuration path for the node.</param>
+    /// <returns>The runtime JSON snapshot.</returns>
+    public string CreateRuntimeJson(ConfigurationNodeDefinition node, string configurationPath)
+    {
+        var current = BuildNodeFromConfiguration(node, configurationPath) ?? CreateEmptyNode(node);
+        return current.ToJsonString(WRITE_OPTIONS);
     }
 
     private static JsonNode? CreateDefaultNode(ConfigurationDefinition definition)
@@ -130,6 +142,16 @@ internal sealed class ConfigurationEffectiveValueSeedFactory(IConfiguration conf
         }
 
         return result.Count == 0 ? null : result;
+    }
+
+    private static JsonNode CreateEmptyNode(ConfigurationNodeDefinition node)
+    {
+        return node.NodeKind switch
+        {
+            ConfigurationNodeKind.List => new JsonArray(),
+            ConfigurationNodeKind.Object or ConfigurationNodeKind.Dictionary => new JsonObject(),
+            _ => JsonValue.Create((string?)null) ?? JsonValue.Create(string.Empty)
+        };
     }
 
     private static JsonNode Merge(JsonNode target, JsonNode source)

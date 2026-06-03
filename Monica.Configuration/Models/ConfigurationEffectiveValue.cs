@@ -34,4 +34,13 @@ public sealed record ConfigurationEffectiveValue
     /// Gets the effective document version.
     /// </summary>
     public long? Version { get; init; }
+
+    /// <summary>
+    /// Gets the runtime provider that currently supplies this scalar value.
+    /// </summary>
+    /// <remarks>
+    /// This is null for object, dictionary, list, and root snapshots because those values can be composed from
+    /// multiple providers.
+    /// </remarks>
+    public ConfigurationSourceDescriptor? EffectiveSource { get; init; }
 }

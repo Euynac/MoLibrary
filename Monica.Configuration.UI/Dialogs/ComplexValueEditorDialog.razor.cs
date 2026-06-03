@@ -558,7 +558,7 @@ public partial class ComplexValueEditorDialog
             NodeKind = schema.NodeKind,
             ValueKind = schema.ValueKind,
             ReloadBehavior = EffectiveReloadBehaviorFor(schema)
-        };
+        }.WithTarget(Definition, EffectiveValue?.EffectiveSource);
     }
 
     private void UpsertChange(PendingChange change)

@@ -223,6 +223,10 @@
       "Title": "来源链路",
       "Empty": "没有配置来源提供该配置值。"
     },
+    "EffectiveSource": {
+      "ExternalWritable": "当前生效值来自外部来源 {0}。保存修改时会写入该来源：{1}",
+      "ExternalReadOnly": "当前生效值来自外部来源 {0}，但该来源不支持人工修改。原因：{1}"
+    },
     "Columns": {
       "Priority": "优先级",
       "Source": "来源",
@@ -257,6 +261,8 @@
         "ChangeList": "修改列表"
       },
       "ChangeCount": "{0} 个修改",
+      "ExternalTargetSummary": "{0} 个暂存修改会写入当前生效的外部配置来源。",
+      "MissingSourceTarget": "暂存修改缺少外部配置来源信息。",
       "Validation": {
         "Title": "验证异常",
         "BlockedSummary": "需要先修正或撤销 {0} 个验证异常，才能保存。",

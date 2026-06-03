@@ -27,6 +27,12 @@
                     @L["Dialogs:SaveGroup:Validation:BlockedSummary", ValidationIssues.Count]
                 </MudAlert>
             }
+            @if (ExternalChangeCount > 0)
+            {
+                <MudAlert Severity="Severity.Warning">
+                    @L["Dialogs:SaveGroup:ExternalTargetSummary", ExternalChangeCount]
+                </MudAlert>
+            }
 
             <MudTabs Rounded="true" ApplyEffectsToContainer="true" TabPanelsClass="pa-3">
                 <MudTabPanel Text="@L["Dialogs:SaveGroup:Tabs:DefinitionDiff"]" Icon="@Icons.Material.Filled.Difference">
@@ -55,6 +61,7 @@
                                 <HeaderContent>
                                     <MudTh>@L["State:Columns:Definition"]</MudTh>
                                     <MudTh>@L["State:Columns:Path"]</MudTh>
+                                    <MudTh>@L["History:Columns:Target"]</MudTh>
                                     <MudTh>@L["History:Columns:Kind"]</MudTh>
                                     <MudTh>@L["State:Columns:OldValue"]</MudTh>
                                     <MudTh>@L["State:Columns:NewValue"]</MudTh>
@@ -62,6 +69,7 @@
                                 <RowTemplate>
                                     <MudTd DataLabel="@L["State:Columns:Definition"]">@context.DefinitionDisplayName</MudTd>
                                     <MudTd DataLabel="@L["State:Columns:Path"]">@context.LogicalPath.ToCanonicalString()</MudTd>
+                                    <MudTd DataLabel="@L["History:Columns:Target"]">@TargetChip(context)</MudTd>
                                     <MudTd DataLabel="@L["History:Columns:Kind"]">@context.MutationKind</MudTd>
                                     <MudTd DataLabel="@L["State:Columns:OldValue"]">@DisplayValue(context, context.OriginalDisplayValue)</MudTd>
                                     <MudTd DataLabel="@L["State:Columns:NewValue"]">@DisplayValue(context, context.NewDisplayValue)</MudTd>
@@ -100,6 +108,8 @@
     private string? _error;
     private bool _saving;
 
+    private int ExternalChangeCount => Changes.Count(change => change.TargetKind == ConfigurationMutationTargetKind.ExternalConfigurationSource);
+
     protected override void OnInitialized()
     {
         _label = string.Format(L["Group:DefaultLabel"], DateTimeOffset.Now.ToString("yyyy-MM-dd HH:mm"));
@@ -129,25 +139,10 @@
 
         foreach (var change in Changes)
         {
-            var expectedValueVersion = latestVersionsByDefinition.GetValueOrDefault(
-                change.DefinitionKey,
-                change.ExpectedValueVersion);
-            var request = new ConfigurationMutationRequest
-            {
-                DefinitionKey = change.DefinitionKey,
-                LogicalPath = change.LogicalPath,
-                MutationKind = change.MutationKind,
-                Value = change.NewValue,
-                ExpectedSchemaVersion = change.ExpectedSchemaVersion,
-                ExpectedValueVersion = expectedValueVersion,
-                Context = new ConfigurationMutationContext
-                {
-                    MutationGroupId = group.GroupId,
-                    Reason = _reason
-                }
-            };
+            var result = change.TargetKind == ConfigurationMutationTargetKind.ExternalConfigurationSource
+                ? await ApplyExternalChangeAsync(change, group.GroupId)
+                : await ApplyMonicaChangeAsync(change, group.GroupId, latestVersionsByDefinition);
 
-            var result = await Facade.MutateAsync(request);
             if (result.IsFailed(out var error, out var mutationResult))
             {
                 await Facade.MarkMutationGroupPartialAsync(group.GroupId, successCount, definitionKeys);
@@ -158,7 +153,10 @@
 
             successCount++;
             definitionKeys.Add(change.DefinitionKey);
-            latestVersionsByDefinition[change.DefinitionKey] = mutationResult.NewVersion;
+            if (change.TargetKind == ConfigurationMutationTargetKind.MonicaEffectiveStore)
+            {
+                latestVersionsByDefinition[change.DefinitionKey] = mutationResult.NewVersion;
+            }
         }
 
         var completeResult = await Facade.CompleteMutationGroupAsync(group.GroupId, successCount, definitionKeys);
@@ -172,6 +170,56 @@
         MudDialog.Close(DialogResult.Ok(SaveMutationGroupDialogResult.Saved(group)));
     }
 
+    private async Task<Res<ConfigurationMutationResult>> ApplyMonicaChangeAsync(
+        PendingChange change,
+        string groupId,
+        IReadOnlyDictionary<string, long?> latestVersionsByDefinition)
+    {
+        var expectedValueVersion = latestVersionsByDefinition.GetValueOrDefault(
+            change.DefinitionKey,
+            change.ExpectedValueVersion);
+        return await Facade.MutateAsync(new ConfigurationMutationRequest
+        {
+            DefinitionKey = change.DefinitionKey,
+            LogicalPath = change.LogicalPath,
+            MutationKind = change.MutationKind,
+            Value = change.NewValue,
+            ExpectedSchemaVersion = change.ExpectedSchemaVersion,
+            ExpectedValueVersion = expectedValueVersion,
+            Context = new ConfigurationMutationContext
+            {
+                MutationGroupId = groupId,
+                Reason = _reason
+            }
+        });
+    }
+
+    private async Task<Res<ConfigurationMutationResult>> ApplyExternalChangeAsync(PendingChange change, string groupId)
+    {
+        if (string.IsNullOrWhiteSpace(change.SourceKey))
+        {
+            return L["Dialogs:SaveGroup:MissingSourceTarget"].Value;
+        }
+
+        var revisionResult = await Facade.GetSourceRevisionAsync(change.SourceKey);
+        var expectedRevision = revisionResult.IsFailed(out _, out var revision) ? null : revision;
+        return await Facade.MutateSourceAsync(new ConfigurationSourceMutationRequest
+        {
+            SourceKey = change.SourceKey,
+            DefinitionKey = change.DefinitionKey,
+            LogicalPath = change.LogicalPath,
+            MutationKind = change.MutationKind,
+            Value = change.NewValue,
+            ExpectedSchemaVersion = change.ExpectedSchemaVersion,
+            ExpectedSourceRevision = expectedRevision,
+            Context = new ConfigurationMutationContext
+            {
+                MutationGroupId = groupId,
+                Reason = _reason
+            }
+        });
+    }
+
     private string DisplayValue(PendingChange change, string? value)
     {
         if (change.IsSensitive)
@@ -181,6 +229,36 @@
 
         return string.IsNullOrWhiteSpace(value) ? L["Value:States:Empty"] : value;
     }
+
+    private RenderFragment TargetChip(PendingChange change) => builder =>
+    {
+        if (change.TargetKind == ConfigurationMutationTargetKind.ExternalConfigurationSource)
+        {
+            builder.OpenComponent<MudTooltip>(0);
+            builder.AddAttribute(1, "Text", L["History:Targets:ExternalTooltip",
+                change.SourceDisplayName ?? L["History:Targets:External"],
+                change.SourceConfigurationPath ?? change.LogicalPath.ToCanonicalString(),
+                change.SourcePhysicalPath ?? change.SourceProviderType ?? L["Common:States:Empty"]]);
+            builder.AddAttribute(2, "ChildContent", (RenderFragment)(content =>
+            {
+                content.OpenComponent<MudChip<string>>(3);
+                content.AddAttribute(4, "Size", Size.Small);
+                content.AddAttribute(5, "Color", Color.Warning);
+                content.AddAttribute(6, "Variant", Variant.Outlined);
+                content.AddAttribute(7, "ChildContent", (RenderFragment)(chip => chip.AddContent(8, change.SourceDisplayName ?? L["History:Targets:ExternalShort"])));
+                content.CloseComponent();
+            }));
+            builder.CloseComponent();
+            return;
+        }
+
+        builder.OpenComponent<MudChip<string>>(9);
+        builder.AddAttribute(10, "Size", Size.Small);
+        builder.AddAttribute(11, "Color", Color.Info);
+        builder.AddAttribute(12, "Variant", Variant.Outlined);
+        builder.AddAttribute(13, "ChildContent", (RenderFragment)(content => content.AddContent(14, L["History:Targets:MonicaShort"])));
+        builder.CloseComponent();
+    };
 
     private void Cancel()
     {

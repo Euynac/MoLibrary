@@ -33,6 +33,36 @@ public sealed record PendingChange
     public ConfigurationMutationKind MutationKind { get; init; }
 
     /// <summary>
+    /// Gets the storage target that should receive this staged mutation.
+    /// </summary>
+    public ConfigurationMutationTargetKind TargetKind { get; init; } = ConfigurationMutationTargetKind.MonicaEffectiveStore;
+
+    /// <summary>
+    /// Gets the external source key when <see cref="TargetKind"/> targets a Microsoft configuration provider.
+    /// </summary>
+    public string? SourceKey { get; init; }
+
+    /// <summary>
+    /// Gets the external source display name when applicable.
+    /// </summary>
+    public string? SourceDisplayName { get; init; }
+
+    /// <summary>
+    /// Gets the external source provider type when applicable.
+    /// </summary>
+    public string? SourceProviderType { get; init; }
+
+    /// <summary>
+    /// Gets the physical source path when the staged mutation targets a file-backed source.
+    /// </summary>
+    public string? SourcePhysicalPath { get; init; }
+
+    /// <summary>
+    /// Gets the source configuration path being edited when the staged mutation targets an external provider.
+    /// </summary>
+    public string? SourceConfigurationPath { get; init; }
+
+    /// <summary>
     /// Gets the new stored payload.
     /// </summary>
     public required ConfigurationStoredValue NewValue { get; init; }
