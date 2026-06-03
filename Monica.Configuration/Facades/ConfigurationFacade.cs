@@ -533,6 +533,29 @@ public sealed class ConfigurationFacade(
     }
 
     /// <summary>
+    /// Rolls selected history rows back in reverse history order.
+    /// </summary>
+    /// <param name="historyIds">The history record identities.</param>
+    /// <param name="reason">Optional rollback reason.</param>
+    /// <returns>The rollback mutation results.</returns>
+    public async Task<Res<IReadOnlyList<ConfigurationMutationResult>>> RollbackHistoriesAsync(
+        IReadOnlyList<string> historyIds,
+        string? reason = null)
+    {
+        try
+        {
+            return Res.Ok(await rollbackService.RollbackHistoriesAsync(
+                historyIds,
+                new ConfigurationMutationContext { Reason = reason },
+                CancellationToken.None));
+        }
+        catch (Exception ex)
+        {
+            return Res.Fail($"Failed to roll back selected configuration histories: {ex.GetMessageRecursively()}");
+        }
+    }
+
+    /// <summary>
     /// Rolls one mutation group back in reverse history order.
     /// </summary>
     /// <param name="groupId">The group identity.</param>

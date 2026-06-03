@@ -7,7 +7,7 @@
     <DialogContent>
         <MudStack Spacing="3">
             <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined">
-                @(IsGroupRollback ? L["Rollback:GroupWarning"] : L["Rollback:SingleWarning"])
+                @RollbackWarning
             </MudAlert>
 
             <MudTextField T="string"
@@ -77,6 +77,14 @@
 
     private bool IsGroupRollback => Group is not null;
 
+    private bool IsBatchRollback => Group is null && HistoryRow is null && PreviewRows.Count > 1;
+
+    private string RollbackWarning => IsGroupRollback
+        ? L["Rollback:GroupWarning"]
+        : IsBatchRollback
+            ? L["Rollback:SelectionWarning"]
+            : L["Rollback:SingleWarning"];
+
     private IReadOnlyList<ConfigurationValueHistory> PreviewRows =>
         HistoryRow is not null
             ? [HistoryRow]
@@ -124,8 +132,23 @@
 
         if (HistoryRow is null)
         {
-            _error = L["Common:States:NotFound"];
-            _saving = false;
+            var rows = PreviewRows;
+            if (rows.Count == 0)
+            {
+                _error = L["Common:States:NotFound"];
+                _saving = false;
+                return;
+            }
+
+            var batchResult = await Facade.RollbackHistoriesAsync(rows.Select(row => row.HistoryId).ToArray(), _reason);
+            if (batchResult.IsFailed(out var batchError, out _))
+            {
+                _error = batchError.Message;
+                _saving = false;
+                return;
+            }
+
+            MudDialog.Close(DialogResult.Ok(true));
             return;
         }
 

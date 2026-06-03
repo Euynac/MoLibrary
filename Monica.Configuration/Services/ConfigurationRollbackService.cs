@@ -43,6 +43,55 @@ internal sealed class ConfigurationRollbackService(
     }
 
     /// <inheritdoc />
+    public async Task<IReadOnlyList<ConfigurationMutationResult>> RollbackHistoriesAsync(
+        IReadOnlyList<string> historyIds,
+        ConfigurationMutationContext context,
+        CancellationToken cancellationToken)
+    {
+        if (historyIds.Count == 0)
+        {
+            throw new InvalidOperationException("At least one configuration history row is required for batch rollback.");
+        }
+
+        var rows = new List<ConfigurationValueHistory>();
+        foreach (var historyId in historyIds.Distinct(StringComparer.OrdinalIgnoreCase))
+        {
+            rows.Add(await historyService.GetHistoryByIdAsync(historyId, cancellationToken)
+                     ?? throw new KeyNotFoundException($"Configuration history row '{historyId}' was not found."));
+        }
+
+        var orderedRows = rows
+            .OrderByDescending(row => row.ModifiedTime)
+            .ThenByDescending(row => row.Version)
+            .ToArray();
+        var group = await groupService.BeginAsync(
+            $"Rollback {orderedRows.Length} selected configuration changes",
+            context.Reason,
+            context,
+            cancellationToken);
+        var rollbackContext = context with { MutationGroupId = group.GroupId };
+        var results = new List<ConfigurationMutationResult>();
+        var definitionKeys = new List<string>();
+
+        try
+        {
+            foreach (var history in orderedRows)
+            {
+                results.Add(await RollbackHistoryRowAsync(history, rollbackContext, cancellationToken));
+                definitionKeys.Add(history.DefinitionKey);
+            }
+
+            await groupService.CompleteAsync(group.GroupId, results.Count, definitionKeys, cancellationToken);
+            return results;
+        }
+        catch
+        {
+            await groupService.MarkPartialAsync(group.GroupId, results.Count, definitionKeys, cancellationToken);
+            throw;
+        }
+    }
+
+    /// <inheritdoc />
     public async Task<IReadOnlyList<ConfigurationMutationResult>> RollbackGroupAsync(
         string groupId,
         ConfigurationMutationContext context,

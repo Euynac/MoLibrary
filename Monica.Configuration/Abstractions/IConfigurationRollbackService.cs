@@ -20,6 +20,18 @@ public interface IConfigurationRollbackService
         CancellationToken cancellationToken);
 
     /// <summary>
+    /// Rolls selected history rows back in reverse history order.
+    /// </summary>
+    /// <param name="historyIds">The history record identities to roll back.</param>
+    /// <param name="context">Audit context for the rollback group.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>The rollback mutation results.</returns>
+    Task<IReadOnlyList<ConfigurationMutationResult>> RollbackHistoriesAsync(
+        IReadOnlyList<string> historyIds,
+        ConfigurationMutationContext context,
+        CancellationToken cancellationToken);
+
+    /// <summary>
     /// Rolls every mutation in a group back in reverse history order.
     /// </summary>
     /// <param name="groupId">The group identity.</param>

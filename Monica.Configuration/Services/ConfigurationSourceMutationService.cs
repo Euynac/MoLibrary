@@ -94,19 +94,25 @@ internal sealed class ConfigurationSourceMutationService(
 
     private static ConfigurationNodeDefinition ResolveTargetNode(ConfigurationDefinition definition, LogicalPath logicalPath)
     {
-        return EnumerateNodes(definition.Root).FirstOrDefault(node => node.RelativePath.Equals(logicalPath))
-               ?? throw new InvalidOperationException($"Logical path '{logicalPath}' does not exist in definition '{definition.DefinitionKey}'.");
-    }
-
-    private static IEnumerable<ConfigurationNodeDefinition> EnumerateNodes(ConfigurationNodeDefinition node)
-    {
-        yield return node;
-        foreach (var child in node.Children)
+        var current = definition.Root;
+        foreach (var segment in logicalPath.Segments)
         {
-            foreach (var descendant in EnumerateNodes(child))
+            current = segment switch
             {
-                yield return descendant;
+                PropertySegment property => current.Children.FirstOrDefault(child =>
+                    string.Equals(child.Name, property.Name, StringComparison.OrdinalIgnoreCase)),
+                DictionaryKeySegment => current.DictionaryTemplate?.ValueTemplate,
+                ListItemKeySegment or ListIndexSegment => current.ListTemplate?.ItemTemplate,
+                _ => null
+            };
+
+            if (current is null)
+            {
+                throw new InvalidOperationException(
+                    $"Logical path '{logicalPath}' does not exist in definition '{definition.DefinitionKey}'.");
             }
         }
+
+        return current;
     }
 }

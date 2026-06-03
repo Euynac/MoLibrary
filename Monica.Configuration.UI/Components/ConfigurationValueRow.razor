@@ -5,6 +5,7 @@
 @inject ConfigurationFacade Facade
 @inject ConfigurationStateStore StateStore
 @inject ConfigurationParameterPackageService PackageService
+@inject ConfigurationPendingChangeCompactor ChangeCompactor
 @inject IDialogService DialogService
 @inject ISnackbar Snackbar
 @inject IStringLocalizer<ConfigurationUIResource> L
@@ -298,7 +299,9 @@
 
         if (result.Data is IReadOnlyList<PendingChange> changes)
         {
-            StateStore.ReplaceScope(Definition.DefinitionKey, Node.RelativePath, changes);
+            var scalarValues = await PackageService.LoadScalarEffectiveValuesAsync(Definition);
+            var compactedChanges = ChangeCompactor.Compact(Definition, Node, effectiveValue, changes, scalarValues);
+            StateStore.ReplaceScope(Definition.DefinitionKey, Node.RelativePath, compactedChanges);
             await Changed.InvokeAsync();
         }
     }

@@ -76,13 +76,13 @@
                 {
                     <MudProgressLinear Indeterminate="true" />
                 }
-                else if (_history.Count == 0)
+                else if (FilteredHistory.Count == 0)
                 {
                     <MudAlert Severity="Severity.Info">@L["History:States:Empty"]</MudAlert>
                 }
                 else
                 {
-                    <MudTable T="ConfigurationValueHistory" Items="@FilteredHistory" Dense="true" Hover="true" Elevation="0" Class="configuration-history-table">
+                    <MudTable T="ConfigurationHistoryDisplayRow" Items="@FilteredHistory" Dense="true" Hover="true" Elevation="0" Class="configuration-history-table">
                         <HeaderContent>
                             <MudTh>@L["History:Columns:Time"]</MudTh>
                             <MudTh>@L["State:Columns:Definition"]</MudTh>
@@ -94,21 +94,31 @@
                         </HeaderContent>
                         <RowTemplate>
                             <MudTd DataLabel="@L["History:Columns:Time"]">@context.ModifiedTime.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss")</MudTd>
-                            <MudTd DataLabel="@L["State:Columns:Definition"]">@DefinitionDisplay(context.DefinitionKey)</MudTd>
-                            <MudTd DataLabel="@L["State:Columns:Path"]">@context.LogicalPath.ToCanonicalString()</MudTd>
+                            <MudTd DataLabel="@L["State:Columns:Definition"]">@DefinitionDisplay(context.Representative.DefinitionKey)</MudTd>
+                            <MudTd DataLabel="@L["State:Columns:Path"]">
+                                <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
+                                    <span>@context.DisplayPath.ToCanonicalString()</span>
+                                    @if (context.IsCollapsed)
+                                    {
+                                        <MudChip T="int" Size="Size.Small" Color="Color.Info" Variant="Variant.Outlined">
+                                            @L["History:CollapsedCount", context.Rows.Count]
+                                        </MudChip>
+                                    }
+                                </MudStack>
+                            </MudTd>
                             <MudTd DataLabel="@L["History:Columns:Target"]">
-                                <MudTooltip Text="@HistoryTargetTooltip(context)">
+                                <MudTooltip Text="@HistoryTargetTooltip(context.Rows)">
                                     <MudChip T="string"
                                              Size="Size.Small"
-                                             Color="@HistoryTargetColor(context)"
+                                             Color="@HistoryTargetColor(context.Rows)"
                                              Variant="Variant.Outlined"
-                                             Icon="@HistoryTargetIcon(context)">
-                                        @HistoryTargetLabel(context)
+                                             Icon="@HistoryTargetIcon(context.Rows)">
+                                        @HistoryTargetLabel(context.Rows)
                                     </MudChip>
                                 </MudTooltip>
                             </MudTd>
-                            <MudTd DataLabel="@L["History:Columns:Kind"]">@context.MutationKind</MudTd>
-                            <MudTd DataLabel="@L["Group:Label"]">@GroupLabel(context.MutationGroupId)</MudTd>
+                            <MudTd DataLabel="@L["History:Columns:Kind"]">@context.Representative.MutationKind</MudTd>
+                            <MudTd DataLabel="@L["Group:Label"]">@GroupLabel(context.Representative.MutationGroupId)</MudTd>
                             <MudTd>
                                 <MudStack Row="true" Spacing="1" Justify="Justify.FlexEnd">
                                     <MudTooltip Text="@L["History:Actions:ViewChange"]">
@@ -202,7 +212,8 @@
     private DateTime? _toDate;
     private bool _loading = true;
 
-    private IEnumerable<ConfigurationValueHistory> FilteredHistory => _history.Where(MatchesHistoryFilters);
+    private IReadOnlyList<ConfigurationHistoryDisplayRow> FilteredHistory =>
+        ConfigurationHistoryDisplayGrouper.Collapse(_history.Where(MatchesHistoryFilters).ToArray());
 
     protected override async Task OnInitializedAsync()
     {
@@ -279,12 +290,17 @@
         _loading = false;
     }
 
-    private async Task RollbackHistoryAsync(ConfigurationValueHistory history)
+    private async Task RollbackHistoryAsync(ConfigurationHistoryDisplayRow history)
     {
         var parameters = new DialogParameters<RollbackConfirmationDialog>();
-        parameters.Add(dialog => dialog.HistoryRow, history);
-        parameters.Add(dialog => dialog.GroupRows, new[] { history });
-        var dialog = await DialogService.ShowAsync<RollbackConfirmationDialog>(L["Rollback:SingleTitle"], parameters, new DialogOptions
+        if (history.Rows.Count == 1)
+        {
+            parameters.Add(dialog => dialog.HistoryRow, history.Representative);
+        }
+
+        parameters.Add(dialog => dialog.GroupRows, history.Rows);
+        var title = history.Rows.Count == 1 ? L["Rollback:SingleTitle"] : L["Rollback:SelectionTitle"];
+        var dialog = await DialogService.ShowAsync<RollbackConfirmationDialog>(title, parameters, new DialogOptions
         {
             MaxWidth = MaxWidth.ExtraLarge,
             FullWidth = true
@@ -319,13 +335,13 @@
         }
     }
 
-    private async Task ShowHistoryAsync(ConfigurationValueHistory history)
+    private async Task ShowHistoryAsync(ConfigurationHistoryDisplayRow history)
     {
         var parameters = new DialogParameters<ConfigurationHistoryDiffDialog>();
-        parameters.Add(dialog => dialog.Rows, new[] { history });
+        parameters.Add(dialog => dialog.Rows, history.Rows);
         parameters.Add(dialog => dialog.Definitions, _definitions);
-        parameters.Add(dialog => dialog.FocusPath, history.LogicalPath);
-        parameters.Add(dialog => dialog.Title, L["History:Dialog:MutationTitle", DefinitionDisplay(history.DefinitionKey)]);
+        parameters.Add(dialog => dialog.FocusPath, history.DisplayPath);
+        parameters.Add(dialog => dialog.Title, L["History:Dialog:MutationTitle", DefinitionDisplay(history.Representative.DefinitionKey)]);
         var dialog = await DialogService.ShowAsync<ConfigurationHistoryDiffDialog>(L["History:Dialog:Title"], parameters, new DialogOptions
         {
             MaxWidth = MaxWidth.ExtraLarge,
@@ -440,15 +456,26 @@
         };
     }
 
-    private string HistoryTargetLabel(ConfigurationValueHistory history)
+    private string HistoryTargetLabel(IReadOnlyList<ConfigurationValueHistory> rows)
     {
-        return history.TargetKind == ConfigurationMutationTargetKind.ExternalConfigurationSource
+        if (rows.All(row => row.TargetKind == ConfigurationMutationTargetKind.MonicaEffectiveStore))
+        {
+            return L["History:Targets:MonicaShort"];
+        }
+
+        return rows.All(row => row.TargetKind == ConfigurationMutationTargetKind.ExternalConfigurationSource)
             ? L["History:Targets:ExternalShort"]
-            : L["History:Targets:MonicaShort"];
+            : L["History:Targets:Mixed"];
     }
 
-    private string HistoryTargetTooltip(ConfigurationValueHistory history)
+    private string HistoryTargetTooltip(IReadOnlyList<ConfigurationValueHistory> rows)
     {
+        if (rows.Count != 1)
+        {
+            return HistoryTargetLabel(rows);
+        }
+
+        var history = rows[0];
         if (history.TargetKind != ConfigurationMutationTargetKind.ExternalConfigurationSource)
         {
             return L["History:Targets:Monica"];
@@ -460,16 +487,16 @@
         return L["History:Targets:ExternalTooltip", sourceName, configurationPath, sourcePath];
     }
 
-    private static Color HistoryTargetColor(ConfigurationValueHistory history)
+    private static Color HistoryTargetColor(IReadOnlyList<ConfigurationValueHistory> rows)
     {
-        return history.TargetKind == ConfigurationMutationTargetKind.ExternalConfigurationSource
+        return rows.Any(row => row.TargetKind == ConfigurationMutationTargetKind.ExternalConfigurationSource)
             ? Color.Warning
             : Color.Primary;
     }
 
-    private static string HistoryTargetIcon(ConfigurationValueHistory history)
+    private static string HistoryTargetIcon(IReadOnlyList<ConfigurationValueHistory> rows)
     {
-        return history.TargetKind == ConfigurationMutationTargetKind.ExternalConfigurationSource
+        return rows.Any(row => row.TargetKind == ConfigurationMutationTargetKind.ExternalConfigurationSource)
             ? Icons.Material.Filled.Description
             : Icons.Material.Filled.Storage;
     }

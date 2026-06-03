@@ -82,6 +82,7 @@
   "History": {
     "Title": "History",
     "Subtitle": "Audit individual mutations and persisted mutation groups.",
+    "CollapsedCount": "{0} fields",
     "Actions": {
       "ViewChange": "View change"
     },
@@ -122,6 +123,7 @@
       "GroupSubtitle": "{0} mutations across {1} definitions",
       "TimelineFocusedSubtitle": "{0} · v{1}",
       "TimelineRowSubtitle": "{0} · {1}",
+      "CollapsedTimelineSubtitle": "{0} field changes · {1}",
       "Version": "v{0}",
       "TargetKind": "Target kind",
       "Target": "Target",
@@ -158,8 +160,10 @@
   "Rollback": {
     "SingleTitle": "Roll Back Mutation",
     "GroupTitle": "Roll Back Group",
+    "SelectionTitle": "Roll Back Selected Changes",
     "SingleWarning": "This will apply a new mutation that restores the previous value for this history row.",
     "GroupWarning": "This will apply rollback mutations in reverse group order. If one mutation fails, the rollback group will be partial.",
+    "SelectionWarning": "This will roll back the selected history rows in reverse order as one rollback group. If one mutation fails, the rollback group will be partial.",
     "PreviewTitle": "Change preview",
     "Confirm": "Roll back",
     "Success": "Rollback completed."

@@ -82,6 +82,7 @@
   "History": {
     "Title": "历史记录",
     "Subtitle": "审计单次修改和持久化修改组。",
+    "CollapsedCount": "{0} 个字段",
     "Actions": {
       "ViewChange": "查看变更"
     },
@@ -122,6 +123,7 @@
       "GroupSubtitle": "{0} 个修改，涉及 {1} 个配置定义",
       "TimelineFocusedSubtitle": "{0} · v{1}",
       "TimelineRowSubtitle": "{0} · {1}",
+      "CollapsedTimelineSubtitle": "{0} 个字段变更 · {1}",
       "Version": "v{0}",
       "TargetKind": "目标类型",
       "Target": "修改目标",
@@ -158,8 +160,10 @@
   "Rollback": {
     "SingleTitle": "回滚修改",
     "GroupTitle": "回滚修改组",
+    "SelectionTitle": "回滚选中修改",
     "SingleWarning": "这会应用一条新的修改，将该历史记录恢复到之前的值。",
     "GroupWarning": "这会按修改组的反向顺序应用回滚修改。如果其中一条失败，回滚组会被标记为部分应用。",
+    "SelectionWarning": "这会将选中的历史记录按反向顺序作为一个回滚组回滚。如果其中一条失败，回滚组会被标记为部分应用。",
     "PreviewTitle": "变更预览",
     "Confirm": "回滚",
     "Success": "回滚已完成。"

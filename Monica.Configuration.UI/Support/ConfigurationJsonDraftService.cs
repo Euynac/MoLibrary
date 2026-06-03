@@ -13,7 +13,9 @@ namespace Monica.Configuration.UI.Support;
 /// <summary>
 /// Converts operator-provided JSON snapshots into staged configuration changes and validation issues.
 /// </summary>
-internal sealed class ConfigurationJsonDraftService(IStringLocalizer<ConfigurationUIResource> localizer)
+internal sealed class ConfigurationJsonDraftService(
+    IStringLocalizer<ConfigurationUIResource> localizer,
+    ConfigurationPendingChangeCompactor changeCompactor)
 {
     /// <summary>
     /// Analyzes one JSON snapshot against a definition scope.
@@ -22,7 +24,7 @@ internal sealed class ConfigurationJsonDraftService(IStringLocalizer<Configurati
     /// <returns>The draft result.</returns>
     public ConfigurationJsonDraftResult Analyze(ConfigurationJsonDraftRequest request)
     {
-        var state = new DraftState(request, localizer);
+        var state = new DraftState(request, localizer, changeCompactor);
         return state.Analyze();
     }
 
@@ -241,7 +243,8 @@ internal sealed class ConfigurationJsonDraftService(IStringLocalizer<Configurati
 
     private sealed class DraftState(
         ConfigurationJsonDraftRequest request,
-        IStringLocalizer<ConfigurationUIResource> localizer)
+        IStringLocalizer<ConfigurationUIResource> localizer,
+        ConfigurationPendingChangeCompactor changeCompactor)
     {
         private readonly List<PendingChange> _changes = [];
         private readonly List<ConfigurationValidationIssue> _issues = [];
@@ -300,12 +303,19 @@ internal sealed class ConfigurationJsonDraftService(IStringLocalizer<Configurati
 
             Visit(request.ScopeNode, request.ScopeNode.RelativePath, _originalNode, incoming, valueMissing: false);
 
+            var compactedChanges = changeCompactor.Compact(
+                request.Definition,
+                request.ScopeNode,
+                request.EffectiveValue,
+                _changes,
+                request.ScalarEffectiveValues);
+
             return new ConfigurationJsonDraftResult
             {
                 DefinitionKey = request.Definition.DefinitionKey,
                 DefinitionDisplayName = request.Definition.DisplayName,
                 ScopePath = request.ScopeNode.RelativePath,
-                Changes = _changes
+                Changes = compactedChanges
                     .OrderBy(change => change.LogicalPath.ToCanonicalString(), StringComparer.Ordinal)
                     .ToArray(),
                 ValidationIssues = _issues

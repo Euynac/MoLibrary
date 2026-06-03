@@ -194,9 +194,7 @@
 
     private string? FocusPathText => FocusPath?.ToCanonicalString();
 
-    private bool CanRollbackSelectedEntry =>
-        _selectedEntry is { Rows.Count: 1 }
-        || (_selectedEntry?.Id == GROUP_SUMMARY_ENTRY_ID && Group is not null && _selectedEntry.Rows.Count > 0);
+    private bool CanRollbackSelectedEntry => _selectedEntry is { Rows.Count: > 0 };
 
     protected override void OnParametersSet()
     {
@@ -221,18 +219,18 @@
                 Icons.Material.Filled.Folder));
         }
 
-        foreach (var row in orderedRows)
+        foreach (var displayRow in ConfigurationHistoryDisplayGrouper.Collapse(orderedRows))
         {
             _entries.Add(new HistoryTimelineEntry(
-                row.HistoryId,
-                TimelineTitle(row, focusedSinglePath),
-                TimelineSubtitle(row, focusedSinglePath),
-                row.ModifiedTime,
-                [row],
-                row.MutationKind,
-                row.Version,
-                TargetColor(row),
-                TimelineIcon(row)));
+                displayRow.Id,
+                TimelineTitle(displayRow, focusedSinglePath),
+                TimelineSubtitle(displayRow, focusedSinglePath),
+                displayRow.ModifiedTime,
+                displayRow.Rows,
+                displayRow.Representative.MutationKind,
+                displayRow.Version,
+                TargetColor(displayRow.Rows),
+                TimelineIcon(displayRow)));
         }
 
         _selectedEntry = _entries.FirstOrDefault(entry => _selectedEntry?.Id == entry.Id) ?? _entries.FirstOrDefault();
@@ -266,11 +264,25 @@
         return focusedSinglePath ? TargetDisplay(row) : DefinitionDisplay(row.DefinitionKey);
     }
 
+    private string TimelineTitle(ConfigurationHistoryDisplayRow row, bool focusedSinglePath)
+    {
+        return row.IsCollapsed
+            ? row.DisplayPath.ToCanonicalString()
+            : TimelineTitle(row.Representative, focusedSinglePath);
+    }
+
     private string TimelineSubtitle(ConfigurationValueHistory row, bool focusedSinglePath)
     {
         return focusedSinglePath
             ? L["History:Dialog:TimelineFocusedSubtitle", row.MutationKind, row.Version]
             : L["History:Dialog:TimelineRowSubtitle", row.LogicalPath.ToCanonicalString(), TargetDisplay(row)];
+    }
+
+    private string TimelineSubtitle(ConfigurationHistoryDisplayRow row, bool focusedSinglePath)
+    {
+        return row.IsCollapsed
+            ? L["History:Dialog:CollapsedTimelineSubtitle", row.Rows.Count, TargetKindText(row.Rows)]
+            : TimelineSubtitle(row.Representative, focusedSinglePath);
     }
 
     private string TargetDisplay(ConfigurationValueHistory row)
@@ -313,6 +325,13 @@
         return rows.Any(row => row.TargetKind == ConfigurationMutationTargetKind.ExternalConfigurationSource)
             ? Icons.Material.Filled.Description
             : Icons.Material.Filled.Storage;
+    }
+
+    private static string TimelineIcon(ConfigurationHistoryDisplayRow row)
+    {
+        return row.IsCollapsed
+            ? Icons.Material.Filled.AccountTree
+            : TimelineIcon(row.Representative);
     }
 
     private static string TimelineIcon(ConfigurationValueHistory row)
@@ -387,6 +406,11 @@
             parameters.Add(dialog => dialog.HistoryRow, row);
             parameters.Add(dialog => dialog.GroupRows, new[] { row });
             title = L["Rollback:SingleTitle"];
+        }
+        else if (_selectedEntry.Rows.Count > 1)
+        {
+            parameters.Add(dialog => dialog.GroupRows, _selectedEntry.Rows);
+            title = L["Rollback:SelectionTitle"];
         }
         else
         {
