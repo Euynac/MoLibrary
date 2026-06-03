@@ -93,6 +93,16 @@
     flex-direction: column;
 }
 
+.configuration-definition-meta-actions {
+    align-items: center;
+}
+
+.configuration-definition-meta-actions ::deep .mud-tooltip-root {
+    display: inline-flex;
+    align-items: center;
+    line-height: 0;
+}
+
 .configuration-state-page ::deep .configuration-detail-grid {
     align-items: stretch;
 }

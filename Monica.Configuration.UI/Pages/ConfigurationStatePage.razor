@@ -61,19 +61,19 @@
                                             <MudText Typo="Typo.h5">@_selectedDefinition.DisplayName</MudText>
                                             <MudText Typo="Typo.caption" Color="Color.Secondary">@_selectedDefinition.DefinitionKey</MudText>
                                         </MudStack>
-                                        <MudStack Row="true" Wrap="Wrap.Wrap" Spacing="1">
-                                            <MudTooltip Text="@L["Sources:Definition:Title"]">
-                                                <MudIconButton Icon="@Icons.Material.Filled.AccountTree"
-                                                               Size="Size.Small"
-                                                               Variant="Variant.Outlined"
-                                                               OnClick="OpenDefinitionSourcesAsync" />
-                                            </MudTooltip>
+                                        <MudStack Row="true" Wrap="Wrap.Wrap" AlignItems="AlignItems.Center" Justify="Justify.FlexEnd" Spacing="1" Class="configuration-definition-meta-actions">
                                             @if (!string.IsNullOrWhiteSpace(_selectedDefinition.OwnerModule))
                                             {
                                                 <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">@_selectedDefinition.OwnerModule</MudChip>
                                             }
                                             <MudChip T="int" Size="Size.Small" Color="Color.Primary" Variant="Variant.Outlined">@_selectedDefinition.SchemaVersion</MudChip>
                                             <MudChip T="ConfigurationReloadBehavior" Size="Size.Small" Color="Color.Info" Variant="Variant.Outlined">@_selectedDefinition.ReloadBehavior</MudChip>
+                                            <MudTooltip Text="@L["Sources:Definition:Title"]">
+                                                <MudIconButton Icon="@Icons.Material.Filled.AccountTree"
+                                                               Size="Size.Small"
+                                                               Variant="Variant.Outlined"
+                                                               OnClick="OpenDefinitionSourcesAsync" />
+                                            </MudTooltip>
                                         </MudStack>
                                     </MudStack>
 

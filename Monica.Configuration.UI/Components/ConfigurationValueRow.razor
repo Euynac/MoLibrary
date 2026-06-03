@@ -36,9 +36,11 @@
                     @if (IsExternalEffectiveSource)
                     {
                         <MudTooltip Text="@EffectiveSourceTooltip">
-                            <MudIcon Icon="@Icons.Material.Filled.WarningAmber"
-                                     Size="Size.Small"
-                                     Color="@EffectiveSourceIconColor" />
+                            <span class="configuration-inline-icon">
+                                <MudIcon Icon="@Icons.Material.Filled.WarningAmber"
+                                         Size="Size.Small"
+                                         Color="@EffectiveSourceIconColor" />
+                            </span>
                         </MudTooltip>
                     }
                 </MudStack>

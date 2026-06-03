@@ -5,3 +5,16 @@
 .configuration-description-button {
     flex: 0 0 auto;
 }
+
+.configuration-inline-icon {
+    display: inline-flex;
+    height: 1.5rem;
+    align-items: center;
+    justify-content: center;
+    line-height: 0;
+    vertical-align: middle;
+}
+
+.configuration-inline-icon ::deep .mud-icon-root {
+    display: block;
+}

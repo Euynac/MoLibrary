@@ -100,7 +100,7 @@
                             </MudTooltip>
                         }
                     </MudStack>
-                    <MudStack Row="true" Spacing="1">
+                    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1" Class="configuration-definition-list-footer-actions">
                         <MudTooltip Text="@L["State:Actions:UndoAll"]">
                             <MudIconButton Icon="@Icons.Material.Filled.Undo"
                                            Disabled="@(PendingCount == 0 && ValidationIssueCount == 0)"

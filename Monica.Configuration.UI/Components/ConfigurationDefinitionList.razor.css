@@ -63,6 +63,16 @@
     align-items: center;
 }
 
+.configuration-definition-list-footer-actions {
+    align-items: center;
+}
+
+.configuration-definition-list-footer-actions ::deep .mud-tooltip-root {
+    display: inline-flex;
+    align-items: center;
+    line-height: 0;
+}
+
 .configuration-definition-list-scroll ::deep .mud-list-item {
     align-items: center;
 }
