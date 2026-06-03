@@ -74,7 +74,7 @@ public sealed record ConfigurationDefinitionSourceContribution
 }
 
 /// <summary>
-/// Describes all managed configuration values supplied by one runtime source.
+/// Describes all visible configuration values supplied by one runtime source.
 /// </summary>
 public sealed record ConfigurationSourceInventory
 {
@@ -84,7 +84,7 @@ public sealed record ConfigurationSourceInventory
     public required ConfigurationSourceDescriptor Source { get; init; }
 
     /// <summary>
-    /// Gets the number of managed scalar values supplied by this source.
+    /// Gets the number of visible scalar values supplied by this source.
     /// </summary>
     public int SuppliedValueCount { get; init; }
 
@@ -94,25 +94,40 @@ public sealed record ConfigurationSourceInventory
     public int EffectiveValueCount { get; init; }
 
     /// <summary>
-    /// Gets the supplied managed scalar values.
+    /// Gets the number of Monica-managed scalar values supplied by this source.
+    /// </summary>
+    public int ManagedValueCount { get; init; }
+
+    /// <summary>
+    /// Gets the number of non-Monica runtime scalar values supplied by this source.
+    /// </summary>
+    public int UnmanagedValueCount { get; init; }
+
+    /// <summary>
+    /// Gets the supplied visible scalar values.
     /// </summary>
     public IReadOnlyList<ConfigurationSourceInventoryItem> Items { get; init; } = [];
 }
 
 /// <summary>
-/// Describes one managed configuration value supplied by a runtime source.
+/// Describes one visible configuration value supplied by a runtime source.
 /// </summary>
 public sealed record ConfigurationSourceInventoryItem
 {
     /// <summary>
-    /// Gets the owning definition key.
+    /// Gets whether this value belongs to a Monica-managed configuration definition.
     /// </summary>
-    public required string DefinitionKey { get; init; }
+    public bool IsManagedByMonica { get; init; } = true;
 
     /// <summary>
-    /// Gets the owning definition display name.
+    /// Gets the owning definition key. This is null for unmanaged runtime values.
     /// </summary>
-    public required string DefinitionDisplayName { get; init; }
+    public string? DefinitionKey { get; init; }
+
+    /// <summary>
+    /// Gets the owning definition display name. This is null for unmanaged runtime values.
+    /// </summary>
+    public string? DefinitionDisplayName { get; init; }
 
     /// <summary>
     /// Gets the projected Microsoft configuration path.

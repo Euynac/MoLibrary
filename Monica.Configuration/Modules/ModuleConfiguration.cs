@@ -285,4 +285,16 @@ public sealed class ModuleConfigurationGuide
 /// <summary>
 /// Module options for Monica.Configuration.
 /// </summary>
-public sealed class ModuleConfigurationOption : ModuleOptions<ModuleConfiguration>;
+public sealed class ModuleConfigurationOption : ModuleOptions<ModuleConfiguration>
+{
+    /// <summary>
+    /// Gets or sets whether source inventory includes runtime configuration keys that do not belong to
+    /// Monica-managed configuration definitions.
+    /// </summary>
+    /// <remarks>
+    /// This is enabled by default so operators can inspect bootstrap, host, and custom provider values from
+    /// the configuration storage page. Disable it when a host must hide unmanaged runtime configuration from
+    /// Monica.Configuration UI.
+    /// </remarks>
+    public bool IncludeUnmanagedSourceInventoryItems { get; set; } = true;
+}

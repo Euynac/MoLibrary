@@ -8,9 +8,11 @@ using Microsoft.Extensions.Configuration.CommandLine;
 using Microsoft.Extensions.Configuration.EnvironmentVariables;
 using Microsoft.Extensions.Configuration.Json;
 using Microsoft.Extensions.Configuration.Memory;
+using Microsoft.Extensions.Options;
 using Monica.Configuration.Abstractions;
 using Monica.Configuration.Models;
 using Monica.Configuration.Projection;
+using Monica.Modules;
 
 namespace Monica.Configuration.Services.Support;
 
@@ -20,7 +22,8 @@ namespace Monica.Configuration.Services.Support;
 internal sealed class ConfigurationSourceInspector(
     IConfiguration configuration,
     IConfigurationDefinitionRegistry definitionRegistry,
-    ConfigurationPathProjector pathProjector)
+    ConfigurationPathProjector pathProjector,
+    IOptions<ModuleConfigurationOption> moduleOptions)
     : IConfigurationSourceInspector
 {
     private static readonly JsonSerializerOptions READABLE_JSON_OPTIONS = new()
@@ -110,7 +113,7 @@ internal sealed class ConfigurationSourceInspector(
     }
 
     /// <summary>
-    /// Gets all managed configuration values supplied by each runtime source.
+    /// Gets all visible configuration values supplied by each runtime source.
     /// </summary>
     public IReadOnlyList<ConfigurationSourceInventory> GetSourceInventories()
     {
@@ -128,6 +131,7 @@ internal sealed class ConfigurationSourceInspector(
             StringComparer.OrdinalIgnoreCase);
         var entries = new List<SourceInventoryEntry>();
         var effectivePriorityByPath = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+        var includeUnmanaged = moduleOptions.Value.IncludeUnmanagedSourceInventoryItems;
 
         foreach (var (provider, index) in root.Providers.Select((provider, index) => (provider, index)))
         {
@@ -166,6 +170,35 @@ internal sealed class ConfigurationSourceInspector(
                     {
                         effectivePriorityByPath[configurationPath] = index;
                     }
+                }
+            }
+
+            if (!includeUnmanaged)
+            {
+                continue;
+            }
+
+            foreach (var (configurationPath, value) in EnumerateProviderValues(provider, null))
+            {
+                if (!suppliedPaths.Add(configurationPath))
+                {
+                    continue;
+                }
+
+                entries.Add(new SourceInventoryEntry(
+                    source.SourceKey,
+                    index,
+                    new ConfigurationSourceInventoryItem
+                    {
+                        IsManagedByMonica = false,
+                        ConfigurationPath = configurationPath,
+                        RelativeConfigurationPath = configurationPath,
+                        DisplayValue = value
+                    }));
+
+                if (!effectivePriorityByPath.TryGetValue(configurationPath, out var currentPriority) || index > currentPriority)
+                {
+                    effectivePriorityByPath[configurationPath] = index;
                 }
             }
         }
@@ -443,7 +476,7 @@ internal sealed class ConfigurationSourceInspector(
 
     private static IEnumerable<(string ConfigurationPath, string? Value)> EnumerateProviderValues(
         IConfigurationProvider provider,
-        string parentPath)
+        string? parentPath)
     {
         var childKeys = provider.GetChildKeys([], parentPath)
             .Distinct(StringComparer.OrdinalIgnoreCase)
@@ -564,8 +597,11 @@ internal sealed class ConfigurationSourceInspector(
                 Source = Source,
                 SuppliedValueCount = _items.Count,
                 EffectiveValueCount = _items.Count(item => item.IsEffective),
+                ManagedValueCount = _items.Count(item => item.IsManagedByMonica),
+                UnmanagedValueCount = _items.Count(item => !item.IsManagedByMonica),
                 Items = _items
-                    .OrderBy(item => item.DefinitionDisplayName, StringComparer.OrdinalIgnoreCase)
+                    .OrderBy(item => item.IsManagedByMonica ? 0 : 1)
+                    .ThenBy(item => item.DefinitionDisplayName, StringComparer.OrdinalIgnoreCase)
                     .ThenBy(item => item.RelativeConfigurationPath, StringComparer.OrdinalIgnoreCase)
                     .ToArray()
             };

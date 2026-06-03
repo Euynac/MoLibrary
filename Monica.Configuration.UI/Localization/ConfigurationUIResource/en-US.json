@@ -199,6 +199,7 @@
     "Writable": "Writable",
     "ReadOnly": "Read-only",
     "Managed": "Managed",
+    "Unmanaged": "Unmanaged",
     "Effective": "Effective",
     "Runtime": {
       "Title": "Runtime configuration sources",
@@ -207,7 +208,12 @@
     "Inventory": {
       "SuppliedCount": "Supplies {0}",
       "EffectiveCount": "Effective {0}",
-      "NoItems": "This source does not supply managed configuration items."
+      "ManagedCount": "Managed {0}",
+      "UnmanagedCount": "Unmanaged {0}",
+      "UnmanagedDefinition": "Unmanaged configuration",
+      "UnknownDefinition": "Unknown definition",
+      "RuntimeKey": "Runtime configuration key",
+      "NoItems": "This source does not supply visible configuration items."
     },
     "Definition": {
       "Title": "Configuration sources",

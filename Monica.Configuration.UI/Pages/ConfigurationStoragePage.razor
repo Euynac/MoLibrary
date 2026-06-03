@@ -68,6 +68,18 @@
                                                     <MudChip T="string" Size="Size.Small" Color="Color.Success" Variant="Variant.Outlined">
                                                         @L["Sources:Inventory:EffectiveCount", inventory.EffectiveValueCount]
                                                     </MudChip>
+                                                    @if (inventory.ManagedValueCount > 0)
+                                                    {
+                                                        <MudChip T="string" Size="Size.Small" Color="Color.Info" Variant="Variant.Outlined">
+                                                            @L["Sources:Inventory:ManagedCount", inventory.ManagedValueCount]
+                                                        </MudChip>
+                                                    }
+                                                    @if (inventory.UnmanagedValueCount > 0)
+                                                    {
+                                                        <MudChip T="string" Size="Size.Small" Color="Color.Warning" Variant="Variant.Outlined">
+                                                            @L["Sources:Inventory:UnmanagedCount", inventory.UnmanagedValueCount]
+                                                        </MudChip>
+                                                    }
                                                     <MudChip T="string" Size="Size.Small" Color="@(inventory.Source.IsWritable ? Color.Success : Color.Default)" Variant="Variant.Outlined">
                                                         @(inventory.Source.IsWritable ? L["Sources:Writable"] : L["Sources:ReadOnly"])
                                                     </MudChip>
@@ -104,7 +116,13 @@
                                                                 <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Spacing="2">
                                                                     <MudStack Spacing="0">
                                                                         <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
-                                                                            <MudText Typo="Typo.subtitle2">@item.DefinitionDisplayName</MudText>
+                                                                            <MudText Typo="Typo.subtitle2">@SourceItemTitle(item)</MudText>
+                                                                            @if (!item.IsManagedByMonica)
+                                                                            {
+                                                                                <MudChip T="string" Size="Size.Small" Color="Color.Warning" Variant="Variant.Outlined">
+                                                                                    @L["Sources:Unmanaged"]
+                                                                                </MudChip>
+                                                                            }
                                                                             @if (item.IsEffective)
                                                                             {
                                                                                 <MudChip T="string" Size="Size.Small" Color="Color.Success" Variant="Variant.Filled">@L["Sources:Effective"]</MudChip>
@@ -227,9 +245,23 @@
 
     private string ItemLabel(ConfigurationSourceInventoryItem item)
     {
+        if (!item.IsManagedByMonica)
+        {
+            return string.IsNullOrWhiteSpace(item.RelativeConfigurationPath)
+                ? L["Sources:Inventory:RuntimeKey"]
+                : item.RelativeConfigurationPath;
+        }
+
         return string.IsNullOrWhiteSpace(item.NodeLabel)
             ? item.RelativeConfigurationPath
             : $"{item.NodeLabel} · {item.RelativeConfigurationPath}";
+    }
+
+    private string SourceItemTitle(ConfigurationSourceInventoryItem item)
+    {
+        return item.IsManagedByMonica
+            ? item.DefinitionDisplayName ?? L["Sources:Inventory:UnknownDefinition"]
+            : L["Sources:Inventory:UnmanagedDefinition"];
     }
 
     private string DisplayValue(ConfigurationSourceInventoryItem item)

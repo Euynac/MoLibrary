@@ -199,6 +199,7 @@
     "Writable": "可写",
     "ReadOnly": "只读",
     "Managed": "纳管",
+    "Unmanaged": "非受管",
     "Effective": "生效中",
     "Runtime": {
       "Title": "运行时配置来源",
@@ -207,7 +208,12 @@
     "Inventory": {
       "SuppliedCount": "提供 {0}",
       "EffectiveCount": "生效 {0}",
-      "NoItems": "该来源没有提供受管配置项。"
+      "ManagedCount": "受管 {0}",
+      "UnmanagedCount": "非受管 {0}",
+      "UnmanagedDefinition": "非受管配置",
+      "UnknownDefinition": "未知配置定义",
+      "RuntimeKey": "运行时配置 Key",
+      "NoItems": "该来源没有提供可见配置项。"
     },
     "Definition": {
       "Title": "配置来源",
