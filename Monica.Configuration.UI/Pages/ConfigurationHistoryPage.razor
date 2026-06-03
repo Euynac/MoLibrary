@@ -326,11 +326,16 @@
         parameters.Add(dialog => dialog.Definitions, _definitions);
         parameters.Add(dialog => dialog.FocusPath, history.LogicalPath);
         parameters.Add(dialog => dialog.Title, L["History:Dialog:MutationTitle", DefinitionDisplay(history.DefinitionKey)]);
-        await DialogService.ShowAsync<ConfigurationHistoryDiffDialog>(L["History:Dialog:Title"], parameters, new DialogOptions
+        var dialog = await DialogService.ShowAsync<ConfigurationHistoryDiffDialog>(L["History:Dialog:Title"], parameters, new DialogOptions
         {
             MaxWidth = MaxWidth.ExtraLarge,
             FullWidth = true
         });
+        if (await WasRollbackConfirmedAsync(dialog))
+        {
+            Snackbar.Add(L["Rollback:Success"], Severity.Success);
+            await LoadAsync();
+        }
     }
 
     private async Task ShowGroupHistoryAsync(ConfigurationMutationGroup group)
@@ -346,11 +351,16 @@
         parameters.Add(dialog => dialog.Rows, rows);
         parameters.Add(dialog => dialog.Definitions, _definitions);
         parameters.Add(dialog => dialog.Title, L["History:Dialog:GroupTitle", group.Label]);
-        await DialogService.ShowAsync<ConfigurationHistoryDiffDialog>(L["History:Dialog:GroupTitle", group.Label], parameters, new DialogOptions
+        var dialog = await DialogService.ShowAsync<ConfigurationHistoryDiffDialog>(L["History:Dialog:GroupTitle", group.Label], parameters, new DialogOptions
         {
             MaxWidth = MaxWidth.ExtraLarge,
             FullWidth = true
         });
+        if (await WasRollbackConfirmedAsync(dialog))
+        {
+            Snackbar.Add(L["Rollback:Success"], Severity.Success);
+            await LoadAsync();
+        }
     }
 
     private async Task<IReadOnlyList<ConfigurationValueHistory>?> GetGroupRowsAsync(ConfigurationMutationGroup group)
@@ -375,6 +385,12 @@
     {
         var result = await dialog.Result;
         return result is { Canceled: false };
+    }
+
+    private static async Task<bool> WasRollbackConfirmedAsync(IDialogReference dialog)
+    {
+        var result = await dialog.Result;
+        return result is { Canceled: false, Data: true };
     }
 
     private string DefinitionDisplay(string definitionKey)

@@ -113,6 +113,7 @@
     [Parameter, EditorRequired] public ConfigurationNodeDefinition Node { get; set; } = null!;
     [Parameter] public ConfigurationEffectiveValue? EffectiveValue { get; set; }
     [Parameter] public EventCallback Changed { get; set; }
+    [Parameter] public EventCallback CommittedChanged { get; set; }
 
     private PendingChange? PendingChange => StateStore.Get(Definition.DefinitionKey, Node.RelativePath);
 
@@ -298,11 +299,18 @@
         parameters.Add(dialog => dialog.Definition, Definition);
         parameters.Add(dialog => dialog.FocusPath, Node.RelativePath);
         parameters.Add(dialog => dialog.Title, L["History:Dialog:MutationTitle", Definition.DisplayName]);
-        await DialogService.ShowAsync<ConfigurationHistoryDiffDialog>(L["History:Dialog:Title"], parameters, new DialogOptions
+        var dialog = await DialogService.ShowAsync<ConfigurationHistoryDiffDialog>(L["History:Dialog:Title"], parameters, new DialogOptions
         {
             MaxWidth = MaxWidth.ExtraLarge,
             FullWidth = true
         });
+        var dialogResult = await dialog.Result;
+        if (dialogResult is { Canceled: false, Data: true })
+        {
+            Snackbar.Add(L["Rollback:Success"], Severity.Success);
+            await CommittedChanged.InvokeAsync();
+            await Changed.InvokeAsync();
+        }
     }
 
     private async Task OpenSourceChainAsync()

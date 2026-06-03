@@ -123,7 +123,8 @@
                                                         <ConfigurationValueRow Definition="@_selectedDefinition"
                                                                                Node="@node"
                                                                                EffectiveValue="@GetEffectiveValue(node)"
-                                                                               Changed="RefreshPendingCount" />
+                                                                               Changed="RefreshPendingCount"
+                                                                               CommittedChanged="LoadEffectiveValuesAsync" />
                                                     }
                                                 </MudStack>
                                             </MudItem>

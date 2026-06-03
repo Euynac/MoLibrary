@@ -1,5 +1,6 @@
 @using Monica.Configuration.UI.Localization
 @using Monica.UI.UIDiffHighlight.Models
+@inject IDialogService DialogService
 @inject IStringLocalizer<ConfigurationUIResource> L
 
 <MudDialog Class="configuration-history-diff-dialog">
@@ -73,7 +74,7 @@
                                                 <MudText Typo="Typo.caption" Color="Color.Secondary">@_selectedEntry.Subtitle</MudText>
                                             }
                                         </MudStack>
-                                        <MudStack Row="true" Wrap="Wrap.Wrap" Spacing="1">
+                                        <MudStack Row="true" Wrap="Wrap.Wrap" AlignItems="AlignItems.Center" Spacing="1">
                                             <MudChip T="string"
                                                      Size="Size.Small"
                                                      Color="@TargetColor(_selectedEntry.Rows)"
@@ -83,6 +84,16 @@
                                             </MudChip>
                                             <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">@L["History:Dialog:Version", _selectedEntry.Version]</MudChip>
                                             <MudChip T="ConfigurationMutationKind" Size="Size.Small" Color="Color.Info" Variant="Variant.Outlined">@_selectedEntry.MutationKind</MudChip>
+                                            @if (CanRollbackSelectedEntry)
+                                            {
+                                                <MudButton Size="Size.Small"
+                                                           Color="Color.Warning"
+                                                           Variant="Variant.Outlined"
+                                                           StartIcon="@Icons.Material.Filled.Restore"
+                                                           OnClick="RollbackSelectedEntryAsync">
+                                                    @L["Rollback:Confirm"]
+                                                </MudButton>
+                                            }
                                         </MudStack>
                                     </MudStack>
 
@@ -161,6 +172,8 @@
 </MudDialog>
 
 @code {
+    private const string GROUP_SUMMARY_ENTRY_ID = "group";
+
     [CascadingParameter] private IMudDialogInstance MudDialog { get; set; } = null!;
 
     [Parameter] public IReadOnlyList<ConfigurationValueHistory> Rows { get; set; } = [];
@@ -181,6 +194,10 @@
 
     private string? FocusPathText => FocusPath?.ToCanonicalString();
 
+    private bool CanRollbackSelectedEntry =>
+        _selectedEntry is { Rows.Count: 1 }
+        || (_selectedEntry?.Id == GROUP_SUMMARY_ENTRY_ID && Group is not null && _selectedEntry.Rows.Count > 0);
+
     protected override void OnParametersSet()
     {
         _entries.Clear();
@@ -193,7 +210,7 @@
         if (Group is not null && orderedRows.Length > 1)
         {
             _entries.Add(new HistoryTimelineEntry(
-                "group",
+                GROUP_SUMMARY_ENTRY_ID,
                 L["History:Dialog:GroupSummary"],
                 L["History:Dialog:GroupSubtitle", Group.MutationCount, Group.DefinitionKeys.Count],
                 Group.CreatedTime,
@@ -349,9 +366,48 @@
         };
     }
 
+    private async Task RollbackSelectedEntryAsync()
+    {
+        if (_selectedEntry is null)
+        {
+            return;
+        }
+
+        var parameters = new DialogParameters<RollbackConfirmationDialog>();
+        string title;
+        if (_selectedEntry.Id == GROUP_SUMMARY_ENTRY_ID && Group is not null)
+        {
+            parameters.Add(dialog => dialog.Group, Group);
+            parameters.Add(dialog => dialog.GroupRows, _selectedEntry.Rows);
+            title = L["Rollback:GroupTitle"];
+        }
+        else if (_selectedEntry.Rows.Count == 1)
+        {
+            var row = _selectedEntry.Rows[0];
+            parameters.Add(dialog => dialog.HistoryRow, row);
+            parameters.Add(dialog => dialog.GroupRows, new[] { row });
+            title = L["Rollback:SingleTitle"];
+        }
+        else
+        {
+            return;
+        }
+
+        var dialog = await DialogService.ShowAsync<RollbackConfirmationDialog>(title, parameters, new DialogOptions
+        {
+            MaxWidth = MaxWidth.ExtraLarge,
+            FullWidth = true
+        });
+        var result = await dialog.Result;
+        if (result is { Canceled: false })
+        {
+            MudDialog.Close(DialogResult.Ok(true));
+        }
+    }
+
     private void Close()
     {
-        MudDialog.Close(DialogResult.Ok(true));
+        MudDialog.Close(DialogResult.Ok(false));
     }
 
     private sealed record HistoryTimelineEntry(
