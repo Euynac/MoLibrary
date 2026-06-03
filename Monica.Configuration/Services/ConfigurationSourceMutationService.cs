@@ -1,4 +1,3 @@
-using Microsoft.Extensions.Configuration;
 using Monica.Configuration.Abstractions;
 using Monica.Configuration.Abstractions.Internal;
 using Monica.Configuration.Models;
@@ -10,7 +9,6 @@ namespace Monica.Configuration.Services;
 /// Applies mutations to external Microsoft configuration sources supported by Monica.
 /// </summary>
 internal sealed class ConfigurationSourceMutationService(
-    IConfiguration configuration,
     IConfigurationDefinitionRegistry definitionRegistry,
     IConfigurationHistoryStore historyStore,
     IConfigurationSourceInspector sourceInspector,
@@ -40,7 +38,6 @@ internal sealed class ConfigurationSourceMutationService(
 
         var source = sourceInspector.GetRequiredSource(request.SourceKey);
         var configurationPath = pathProjector.Project(definition.SectionPath, request.LogicalPath);
-        var effectiveOldValue = ReadEffectiveValue(configurationPath);
         var write = await sourceWriter.WriteAsync(
             source,
             configurationPath,
@@ -50,8 +47,6 @@ internal sealed class ConfigurationSourceMutationService(
             cancellationToken);
 
         await reloadCoordinator.ReloadAsync(cancellationToken);
-        var effectiveNewValue = ReadEffectiveValue(configurationPath);
-        var effectiveChanged = !string.Equals(effectiveOldValue?.Json, effectiveNewValue?.Json, StringComparison.Ordinal);
 
         var targetNode = ResolveTargetNode(definition, request.LogicalPath);
         await historyStore.AppendHistoryAsync(new ConfigurationValueHistory
@@ -61,7 +56,6 @@ internal sealed class ConfigurationSourceMutationService(
             LogicalPath = request.LogicalPath,
             ConfigurationPath = configurationPath,
             TargetKind = ConfigurationMutationTargetKind.ExternalConfigurationSource,
-            SourceKey = source.SourceKey,
             SourceProviderType = source.ProviderType,
             SourceDisplayName = source.DisplayName,
             SourcePhysicalPath = source.PhysicalPath,
@@ -76,11 +70,8 @@ internal sealed class ConfigurationSourceMutationService(
             OldValue = write.OldValue,
             NewValue = write.NewValue,
             Version = 0,
-            TargetRevision = write.NewRevision,
-            PreviousTargetRevision = write.OldRevision,
-            EffectiveOldValue = effectiveOldValue,
-            EffectiveNewValue = effectiveNewValue,
-            EffectiveValueChanged = effectiveChanged,
+            SourceRevisionBefore = write.OldRevision,
+            SourceRevisionAfter = write.NewRevision,
             SchemaVersion = definition.SchemaVersion,
             ModifiedTime = write.ModifiedTime,
             ModifierId = request.Context.ModifierId,
@@ -99,12 +90,6 @@ internal sealed class ConfigurationSourceMutationService(
             RequiresRestart = targetNode.ReloadBehavior is ConfigurationReloadBehavior.RequiresRestart or ConfigurationReloadBehavior.StaticAfterStartup
                               || definition.ReloadBehavior is ConfigurationReloadBehavior.RequiresRestart or ConfigurationReloadBehavior.StaticAfterStartup
         };
-    }
-
-    private ConfigurationStoredValue? ReadEffectiveValue(string configurationPath)
-    {
-        var value = configuration[configurationPath];
-        return value is null ? null : ConfigurationStoredValue.FromJson(System.Text.Json.JsonSerializer.Serialize(value));
     }
 
     private static ConfigurationNodeDefinition ResolveTargetNode(ConfigurationDefinition definition, LogicalPath logicalPath)

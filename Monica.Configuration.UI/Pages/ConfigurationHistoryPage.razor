@@ -21,7 +21,7 @@
 
         <MudPaper Outlined="true" Class="pa-3">
             <MudGrid Spacing="2">
-                <MudItem xs="12" md="3">
+                <MudItem xs="12" md="3" lg="2">
                     <MudSelect T="string"
                                @bind-Value="_definitionKey"
                                Label="@L["State:Columns:Definition"]"
@@ -34,21 +34,33 @@
                         }
                     </MudSelect>
                 </MudItem>
-                <MudItem xs="12" md="3">
+                <MudItem xs="12" md="3" lg="3">
                     <MudTextField T="string"
                                   @bind-Value="_pathText"
                                   Label="@L["Value:Path"]"
                                   Variant="Variant.Outlined"
                                   Margin="Margin.Dense" />
                 </MudItem>
-                <MudItem xs="12" md="3">
+                <MudItem xs="12" md="2">
+                    <MudSelect T="string"
+                               @bind-Value="_targetFilter"
+                               ToStringFunc="TargetFilterText"
+                               Label="@L["History:Filters:Target"]"
+                               Variant="Variant.Outlined"
+                               Margin="Margin.Dense">
+                        <MudSelectItem T="string" Value="@TARGET_FILTER_ALL">@L["History:Filters:TargetAll"]</MudSelectItem>
+                        <MudSelectItem T="string" Value="@TARGET_FILTER_MONICA">@L["History:Filters:TargetMonica"]</MudSelectItem>
+                        <MudSelectItem T="string" Value="@TARGET_FILTER_EXTERNAL">@L["History:Filters:TargetExternal"]</MudSelectItem>
+                    </MudSelect>
+                </MudItem>
+                <MudItem xs="12" md="2">
                     <MudDatePicker @bind-Date="_fromDate"
                                    Label="@L["History:Filters:From"]"
                                    Variant="Variant.Outlined"
                                    Margin="Margin.Dense"
                                    Editable="true" />
                 </MudItem>
-                <MudItem xs="12" md="3">
+                <MudItem xs="12" md="2">
                     <MudDatePicker @bind-Date="_toDate"
                                    Label="@L["History:Filters:To"]"
                                    Variant="Variant.Outlined"
@@ -70,7 +82,7 @@
                 }
                 else
                 {
-                    <MudTable T="ConfigurationValueHistory" Items="@FilteredHistory" Dense="true" Hover="true" Elevation="0">
+                    <MudTable T="ConfigurationValueHistory" Items="@FilteredHistory" Dense="true" Hover="true" Elevation="0" Class="configuration-history-table">
                         <HeaderContent>
                             <MudTh>@L["History:Columns:Time"]</MudTh>
                             <MudTh>@L["State:Columns:Definition"]</MudTh>
@@ -84,7 +96,17 @@
                             <MudTd DataLabel="@L["History:Columns:Time"]">@context.ModifiedTime.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss")</MudTd>
                             <MudTd DataLabel="@L["State:Columns:Definition"]">@DefinitionDisplay(context.DefinitionKey)</MudTd>
                             <MudTd DataLabel="@L["State:Columns:Path"]">@context.LogicalPath.ToCanonicalString()</MudTd>
-                            <MudTd DataLabel="@L["History:Columns:Target"]">@HistoryTarget(context)</MudTd>
+                            <MudTd DataLabel="@L["History:Columns:Target"]">
+                                <MudTooltip Text="@HistoryTargetTooltip(context)">
+                                    <MudChip T="string"
+                                             Size="Size.Small"
+                                             Color="@HistoryTargetColor(context)"
+                                             Variant="Variant.Outlined"
+                                             Icon="@HistoryTargetIcon(context)">
+                                        @HistoryTargetLabel(context)
+                                    </MudChip>
+                                </MudTooltip>
+                            </MudTd>
                             <MudTd DataLabel="@L["History:Columns:Kind"]">@context.MutationKind</MudTd>
                             <MudTd DataLabel="@L["Group:Label"]">@GroupLabel(context.MutationGroupId)</MudTd>
                             <MudTd>
@@ -166,20 +188,21 @@
 
 @code {
     public const string PAGE_URL = ConfigurationUiRoutes.HISTORY_ROUTE;
+    private const string TARGET_FILTER_ALL = "all";
+    private const string TARGET_FILTER_MONICA = "monica";
+    private const string TARGET_FILTER_EXTERNAL = "external";
 
     private readonly List<ConfigurationDefinitionSummary> _definitions = [];
     private readonly List<ConfigurationValueHistory> _history = [];
     private readonly List<ConfigurationMutationGroup> _groups = [];
     private string? _definitionKey;
     private string _pathText = string.Empty;
+    private string _targetFilter = TARGET_FILTER_ALL;
     private DateTime? _fromDate;
     private DateTime? _toDate;
     private bool _loading = true;
 
-    private IEnumerable<ConfigurationValueHistory> FilteredHistory =>
-        string.IsNullOrWhiteSpace(_pathText)
-            ? _history
-            : _history.Where(history => history.LogicalPath.ToCanonicalString().Contains(_pathText, StringComparison.OrdinalIgnoreCase));
+    private IEnumerable<ConfigurationValueHistory> FilteredHistory => _history.Where(MatchesHistoryFilters);
 
     protected override async Task OnInitializedAsync()
     {
@@ -375,10 +398,63 @@
         return L[$"Group:StatusValues:{status}"];
     }
 
-    private string HistoryTarget(ConfigurationValueHistory history)
+    private string TargetFilterText(string? value)
+    {
+        return value switch
+        {
+            TARGET_FILTER_MONICA => L["History:Filters:TargetMonica"],
+            TARGET_FILTER_EXTERNAL => L["History:Filters:TargetExternal"],
+            _ => L["History:Filters:TargetAll"]
+        };
+    }
+
+    private bool MatchesHistoryFilters(ConfigurationValueHistory history)
+    {
+        if (!string.IsNullOrWhiteSpace(_pathText)
+            && !history.LogicalPath.ToCanonicalString().Contains(_pathText, StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        return _targetFilter switch
+        {
+            TARGET_FILTER_MONICA => history.TargetKind == ConfigurationMutationTargetKind.MonicaEffectiveStore,
+            TARGET_FILTER_EXTERNAL => history.TargetKind == ConfigurationMutationTargetKind.ExternalConfigurationSource,
+            _ => true
+        };
+    }
+
+    private string HistoryTargetLabel(ConfigurationValueHistory history)
     {
         return history.TargetKind == ConfigurationMutationTargetKind.ExternalConfigurationSource
-            ? history.SourceDisplayName ?? history.SourceKey ?? L["History:Targets:External"]
-            : L["History:Targets:Monica"];
+            ? L["History:Targets:ExternalShort"]
+            : L["History:Targets:MonicaShort"];
+    }
+
+    private string HistoryTargetTooltip(ConfigurationValueHistory history)
+    {
+        if (history.TargetKind != ConfigurationMutationTargetKind.ExternalConfigurationSource)
+        {
+            return L["History:Targets:Monica"];
+        }
+
+        var sourceName = history.SourceDisplayName ?? L["History:Targets:External"];
+        var sourcePath = history.SourcePhysicalPath ?? L["Common:States:Empty"];
+        var configurationPath = history.SourceConfigurationPath ?? history.ConfigurationPath ?? L["Common:States:Empty"];
+        return L["History:Targets:ExternalTooltip", sourceName, configurationPath, sourcePath];
+    }
+
+    private static Color HistoryTargetColor(ConfigurationValueHistory history)
+    {
+        return history.TargetKind == ConfigurationMutationTargetKind.ExternalConfigurationSource
+            ? Color.Warning
+            : Color.Primary;
+    }
+
+    private static string HistoryTargetIcon(ConfigurationValueHistory history)
+    {
+        return history.TargetKind == ConfigurationMutationTargetKind.ExternalConfigurationSource
+            ? Icons.Material.Filled.Description
+            : Icons.Material.Filled.Storage;
     }
 }

@@ -45,7 +45,10 @@
                                                            OnClick="() => SelectEntry(entry)">
                                                     <MudStack Spacing="1" AlignItems="AlignItems.Start">
                                                         <MudText Typo="Typo.subtitle2">@entry.Title</MudText>
-                                                        <MudText Typo="Typo.caption" Color="Color.Secondary">@entry.Subtitle</MudText>
+                                                        @if (!string.IsNullOrWhiteSpace(entry.Subtitle))
+                                                        {
+                                                            <MudText Typo="Typo.caption" Color="Color.Secondary">@entry.Subtitle</MudText>
+                                                        }
                                                         <MudText Typo="Typo.caption" Color="Color.Secondary">@entry.Time.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss")</MudText>
                                                     </MudStack>
                                                 </MudButton>
@@ -65,13 +68,71 @@
                                     <MudStack Row="true" Wrap="Wrap.Wrap" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Spacing="2">
                                         <MudStack Spacing="0">
                                             <MudText Typo="Typo.subtitle1">@_selectedEntry.Title</MudText>
-                                            <MudText Typo="Typo.caption" Color="Color.Secondary">@_selectedEntry.Subtitle</MudText>
+                                            @if (!string.IsNullOrWhiteSpace(_selectedEntry.Subtitle))
+                                            {
+                                                <MudText Typo="Typo.caption" Color="Color.Secondary">@_selectedEntry.Subtitle</MudText>
+                                            }
                                         </MudStack>
                                         <MudStack Row="true" Wrap="Wrap.Wrap" Spacing="1">
+                                            <MudChip T="string"
+                                                     Size="Size.Small"
+                                                     Color="@TargetColor(_selectedEntry.Rows)"
+                                                     Variant="Variant.Outlined"
+                                                     Icon="@TargetIcon(_selectedEntry.Rows)">
+                                                @TargetKindText(_selectedEntry.Rows)
+                                            </MudChip>
                                             <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">@L["History:Dialog:Version", _selectedEntry.Version]</MudChip>
                                             <MudChip T="ConfigurationMutationKind" Size="Size.Small" Color="Color.Info" Variant="Variant.Outlined">@_selectedEntry.MutationKind</MudChip>
                                         </MudStack>
                                     </MudStack>
+
+                                    @if (_selectedEntry.Rows.Count == 1)
+                                    {
+                                        <MudGrid Spacing="2" Class="configuration-history-target-details">
+                                            <MudItem xs="12" sm="6">
+                                                <MudText Typo="Typo.caption" Color="Color.Secondary">@L["History:Dialog:TargetKind"]</MudText>
+                                                <MudText Typo="Typo.body2">@TargetKindText(_selectedEntry.Rows)</MudText>
+                                            </MudItem>
+                                            <MudItem xs="12" sm="6">
+                                                <MudText Typo="Typo.caption" Color="Color.Secondary">@L["History:Dialog:Target"]</MudText>
+                                                <MudText Typo="Typo.body2">@TargetDisplay(_selectedEntry.Rows[0])</MudText>
+                                            </MudItem>
+                                            @if (_selectedEntry.Rows[0].TargetKind == ConfigurationMutationTargetKind.ExternalConfigurationSource)
+                                            {
+                                                <MudItem xs="12" sm="6">
+                                                    <MudText Typo="Typo.caption" Color="Color.Secondary">@L["History:Dialog:SourceProvider"]</MudText>
+                                                    <MudText Typo="Typo.body2">@ValueOrEmpty(_selectedEntry.Rows[0].SourceProviderType)</MudText>
+                                                </MudItem>
+                                                <MudItem xs="12" sm="6">
+                                                    <MudText Typo="Typo.caption" Color="Color.Secondary">@L["History:Dialog:SourceConfigurationPath"]</MudText>
+                                                    <MudText Typo="Typo.body2">@ValueOrEmpty(_selectedEntry.Rows[0].SourceConfigurationPath ?? _selectedEntry.Rows[0].ConfigurationPath)</MudText>
+                                                </MudItem>
+                                                <MudItem xs="12">
+                                                    <MudText Typo="Typo.caption" Color="Color.Secondary">@L["History:Dialog:SourcePhysicalPath"]</MudText>
+                                                    <MudText Typo="Typo.body2" Class="configuration-history-source-path">@ValueOrEmpty(_selectedEntry.Rows[0].SourcePhysicalPath)</MudText>
+                                                </MudItem>
+                                                <MudItem xs="12" sm="6">
+                                                    <MudText Typo="Typo.caption" Color="Color.Secondary">@L["History:Dialog:SourceRevisionBefore"]</MudText>
+                                                    <MudText Typo="Typo.body2">@ShortRevision(_selectedEntry.Rows[0].SourceRevisionBefore)</MudText>
+                                                </MudItem>
+                                                <MudItem xs="12" sm="6">
+                                                    <MudText Typo="Typo.caption" Color="Color.Secondary">@L["History:Dialog:SourceRevisionAfter"]</MudText>
+                                                    <MudText Typo="Typo.body2">@ShortRevision(_selectedEntry.Rows[0].SourceRevisionAfter)</MudText>
+                                                </MudItem>
+                                            }
+                                        </MudGrid>
+                                    }
+                                    else
+                                    {
+                                        <MudStack Row="true" Wrap="Wrap.Wrap" Spacing="1">
+                                            <MudChip T="string" Size="Size.Small" Color="Color.Primary" Variant="Variant.Outlined" Icon="@Icons.Material.Filled.Storage">
+                                                @L["History:Dialog:MonicaTargetCount", _selectedEntry.Rows.Count(row => row.TargetKind == ConfigurationMutationTargetKind.MonicaEffectiveStore)]
+                                            </MudChip>
+                                            <MudChip T="string" Size="Size.Small" Color="Color.Warning" Variant="Variant.Outlined" Icon="@Icons.Material.Filled.Description">
+                                                @L["History:Dialog:ExternalTargetCount", _selectedEntry.Rows.Count(row => row.TargetKind == ConfigurationMutationTargetKind.ExternalConfigurationSource)]
+                                            </MudChip>
+                                        </MudStack>
+                                    }
 
                                     <ConfigurationHistoryDiffPreview Rows="@_selectedEntry.Rows"
                                                                      ViewMode="EDiffViewMode.Unified" />
@@ -127,6 +188,7 @@
             .OrderByDescending(row => row.ModifiedTime)
             .ThenByDescending(row => row.Version)
             .ToArray();
+        var focusedSinglePath = Group is null && FocusPath is not null;
 
         if (Group is not null && orderedRows.Length > 1)
         {
@@ -146,14 +208,14 @@
         {
             _entries.Add(new HistoryTimelineEntry(
                 row.HistoryId,
-                DefinitionDisplay(row.DefinitionKey),
-                row.LogicalPath.ToCanonicalString(),
+                TimelineTitle(row, focusedSinglePath),
+                TimelineSubtitle(row, focusedSinglePath),
                 row.ModifiedTime,
                 [row],
                 row.MutationKind,
                 row.Version,
-                Color.Info,
-                MutationIcon(row.MutationKind)));
+                TargetColor(row),
+                TimelineIcon(row)));
         }
 
         _selectedEntry = _entries.FirstOrDefault(entry => _selectedEntry?.Id == entry.Id) ?? _entries.FirstOrDefault();
@@ -180,6 +242,82 @@
 
         return Definitions.FirstOrDefault(definition =>
             string.Equals(definition.DefinitionKey, definitionKey, StringComparison.OrdinalIgnoreCase))?.DisplayName ?? definitionKey;
+    }
+
+    private string TimelineTitle(ConfigurationValueHistory row, bool focusedSinglePath)
+    {
+        return focusedSinglePath ? TargetDisplay(row) : DefinitionDisplay(row.DefinitionKey);
+    }
+
+    private string TimelineSubtitle(ConfigurationValueHistory row, bool focusedSinglePath)
+    {
+        return focusedSinglePath
+            ? L["History:Dialog:TimelineFocusedSubtitle", row.MutationKind, row.Version]
+            : L["History:Dialog:TimelineRowSubtitle", row.LogicalPath.ToCanonicalString(), TargetDisplay(row)];
+    }
+
+    private string TargetDisplay(ConfigurationValueHistory row)
+    {
+        return row.TargetKind == ConfigurationMutationTargetKind.ExternalConfigurationSource
+            ? row.SourceDisplayName ?? L["History:Targets:External"]
+            : L["History:Targets:Monica"];
+    }
+
+    private string TargetKindText(IReadOnlyList<ConfigurationValueHistory> rows)
+    {
+        if (rows.Count == 1)
+        {
+            return rows[0].TargetKind == ConfigurationMutationTargetKind.ExternalConfigurationSource
+                ? L["History:Targets:External"]
+                : L["History:Targets:Monica"];
+        }
+
+        return rows.Any(row => row.TargetKind == ConfigurationMutationTargetKind.ExternalConfigurationSource)
+            ? L["History:Targets:Mixed"]
+            : L["History:Targets:Monica"];
+    }
+
+    private static Color TargetColor(IReadOnlyList<ConfigurationValueHistory> rows)
+    {
+        return rows.Any(row => row.TargetKind == ConfigurationMutationTargetKind.ExternalConfigurationSource)
+            ? Color.Warning
+            : Color.Primary;
+    }
+
+    private static Color TargetColor(ConfigurationValueHistory row)
+    {
+        return row.TargetKind == ConfigurationMutationTargetKind.ExternalConfigurationSource
+            ? Color.Warning
+            : Color.Info;
+    }
+
+    private static string TargetIcon(IReadOnlyList<ConfigurationValueHistory> rows)
+    {
+        return rows.Any(row => row.TargetKind == ConfigurationMutationTargetKind.ExternalConfigurationSource)
+            ? Icons.Material.Filled.Description
+            : Icons.Material.Filled.Storage;
+    }
+
+    private static string TimelineIcon(ConfigurationValueHistory row)
+    {
+        return row.TargetKind == ConfigurationMutationTargetKind.ExternalConfigurationSource
+            ? Icons.Material.Filled.Description
+            : MutationIcon(row.MutationKind);
+    }
+
+    private string ValueOrEmpty(string? value)
+    {
+        return string.IsNullOrWhiteSpace(value) ? L["Common:States:Empty"] : value;
+    }
+
+    private string ShortRevision(string? revision)
+    {
+        if (string.IsNullOrWhiteSpace(revision))
+        {
+            return L["Common:States:Empty"];
+        }
+
+        return revision.Length <= 12 ? revision : revision[..12];
     }
 
     private string StatusText(ConfigurationMutationGroupStatus status)

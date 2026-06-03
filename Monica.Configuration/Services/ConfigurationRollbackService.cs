@@ -10,6 +10,7 @@ internal sealed class ConfigurationRollbackService(
     IConfigurationHistoryService historyService,
     IConfigurationMutationService mutationService,
     IConfigurationSourceMutationService sourceMutationService,
+    IConfigurationSourceInspector sourceInspector,
     IConfigurationMutationGroupService groupService)
     : IConfigurationRollbackService
 {
@@ -94,7 +95,7 @@ internal sealed class ConfigurationRollbackService(
 
         if (history.TargetKind == ConfigurationMutationTargetKind.ExternalConfigurationSource)
         {
-            var sourceRequest = BuildSourceRequest(history, request);
+            var sourceRequest = BuildSourceRequest(history, request, ResolveSourceKey(history));
             return sourceMutationService.MutateAsync(sourceRequest, cancellationToken);
         }
 
@@ -133,23 +134,39 @@ internal sealed class ConfigurationRollbackService(
 
     private static ConfigurationSourceMutationRequest BuildSourceRequest(
         ConfigurationValueHistory history,
-        ConfigurationMutationRequest request)
+        ConfigurationMutationRequest request,
+        string sourceKey)
     {
-        if (string.IsNullOrWhiteSpace(history.SourceKey))
-        {
-            throw new InvalidOperationException($"Configuration history row '{history.HistoryId}' does not contain a source key.");
-        }
-
         return new ConfigurationSourceMutationRequest
         {
-            SourceKey = history.SourceKey,
+            SourceKey = sourceKey,
             DefinitionKey = request.DefinitionKey,
             LogicalPath = request.LogicalPath,
             MutationKind = request.MutationKind,
             Value = request.Value,
             ExpectedSchemaVersion = request.ExpectedSchemaVersion,
-            ExpectedSourceRevision = history.TargetRevision,
+            ExpectedSourceRevision = history.SourceRevisionAfter,
             Context = request.Context
         };
+    }
+
+    private string ResolveSourceKey(ConfigurationValueHistory history)
+    {
+        if (string.IsNullOrWhiteSpace(history.SourcePhysicalPath))
+        {
+            throw new InvalidOperationException($"Configuration history row '{history.HistoryId}' does not contain a physical source path.");
+        }
+
+        var source = sourceInspector.GetSources().FirstOrDefault(candidate =>
+            candidate.Kind == ConfigurationSourceKind.JsonFile
+            && !string.IsNullOrWhiteSpace(candidate.PhysicalPath)
+            && string.Equals(
+                Path.GetFullPath(candidate.PhysicalPath),
+                Path.GetFullPath(history.SourcePhysicalPath),
+                StringComparison.OrdinalIgnoreCase));
+
+        return source?.SourceKey
+               ?? throw new InvalidOperationException(
+                   $"Configuration source '{history.SourcePhysicalPath}' is no longer registered and cannot be rolled back.");
     }
 }

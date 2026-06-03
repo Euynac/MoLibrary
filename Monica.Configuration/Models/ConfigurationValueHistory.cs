@@ -31,11 +31,6 @@ public sealed record ConfigurationValueHistory
     public ConfigurationMutationTargetKind TargetKind { get; init; } = ConfigurationMutationTargetKind.MonicaEffectiveStore;
 
     /// <summary>
-    /// Gets the external source key when <see cref="TargetKind"/> is <see cref="ConfigurationMutationTargetKind.ExternalConfigurationSource"/>.
-    /// </summary>
-    public string? SourceKey { get; init; }
-
-    /// <summary>
     /// Gets the source provider type when this row targets an external source.
     /// </summary>
     public string? SourceProviderType { get; init; }
@@ -86,29 +81,14 @@ public sealed record ConfigurationValueHistory
     public long Version { get; init; }
 
     /// <summary>
-    /// Gets the target source revision after the write.
+    /// Gets the external source revision before the write.
     /// </summary>
-    public string? TargetRevision { get; init; }
+    public string? SourceRevisionBefore { get; init; }
 
     /// <summary>
-    /// Gets the target source revision before the write.
+    /// Gets the external source revision after the write.
     /// </summary>
-    public string? PreviousTargetRevision { get; init; }
-
-    /// <summary>
-    /// Gets the effective runtime value before the write, when captured.
-    /// </summary>
-    public ConfigurationStoredValue? EffectiveOldValue { get; init; }
-
-    /// <summary>
-    /// Gets the effective runtime value after the write, when captured.
-    /// </summary>
-    public ConfigurationStoredValue? EffectiveNewValue { get; init; }
-
-    /// <summary>
-    /// Gets whether the final runtime effective value changed after the write.
-    /// </summary>
-    public bool EffectiveValueChanged { get; init; } = true;
+    public string? SourceRevisionAfter { get; init; }
 
     /// <summary>
     /// Gets the schema version used for validation.

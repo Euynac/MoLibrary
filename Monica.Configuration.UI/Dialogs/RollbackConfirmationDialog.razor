@@ -25,6 +25,14 @@
                 <MudPaper Outlined="true" Class="pa-3">
                     <MudStack Spacing="2">
                         <MudText Typo="Typo.subtitle2">@L["Rollback:PreviewTitle"]</MudText>
+                        <MudStack Row="true" Wrap="Wrap.Wrap" Spacing="1">
+                            <MudChip T="string" Size="Size.Small" Color="Color.Primary" Variant="Variant.Outlined" Icon="@Icons.Material.Filled.Storage">
+                                @L["History:Dialog:MonicaTargetCount", PreviewRows.Count(row => row.TargetKind == ConfigurationMutationTargetKind.MonicaEffectiveStore)]
+                            </MudChip>
+                            <MudChip T="string" Size="Size.Small" Color="Color.Warning" Variant="Variant.Outlined" Icon="@Icons.Material.Filled.Description">
+                                @L["History:Dialog:ExternalTargetCount", PreviewRows.Count(row => row.TargetKind == ConfigurationMutationTargetKind.ExternalConfigurationSource)]
+                            </MudChip>
+                        </MudStack>
                         <ConfigurationHistoryDiffPreview Rows="@PreviewRows"
                                                          IsRollbackPreview="true"
                                                          ViewMode="EDiffViewMode.Split" />

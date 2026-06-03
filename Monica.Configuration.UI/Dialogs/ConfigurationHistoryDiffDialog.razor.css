@@ -45,6 +45,14 @@
     overflow-y: auto;
 }
 
+.configuration-history-target-details {
+    padding: 8px 0;
+}
+
+.configuration-history-source-path {
+    overflow-wrap: anywhere;
+}
+
 @media (max-width: 960px) {
     .configuration-history-diff-dialog-content,
     .configuration-history-diff-layout {

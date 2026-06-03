@@ -91,7 +91,11 @@
     },
     "Filters": {
       "From": "开始",
-      "To": "结束"
+      "To": "结束",
+      "Target": "目标",
+      "TargetAll": "全部目标",
+      "TargetMonica": "Monica 存储",
+      "TargetExternal": "外部来源"
     },
     "States": {
       "Empty": "未找到历史记录。"
@@ -103,7 +107,11 @@
     },
     "Targets": {
       "Monica": "Monica 有效值存储",
-      "External": "外部来源"
+      "MonicaShort": "Monica",
+      "External": "外部来源",
+      "ExternalShort": "外部",
+      "Mixed": "混合目标",
+      "ExternalTooltip": "来源: {0}\n配置路径: {1}\n文件: {2}"
     },
     "Dialog": {
       "Title": "配置历史记录",
@@ -112,7 +120,18 @@
       "Timeline": "时间线",
       "GroupSummary": "修改组汇总",
       "GroupSubtitle": "{0} 个修改，涉及 {1} 个配置定义",
+      "TimelineFocusedSubtitle": "{0} · v{1}",
+      "TimelineRowSubtitle": "{0} · {1}",
       "Version": "v{0}",
+      "TargetKind": "目标类型",
+      "Target": "修改目标",
+      "SourceProvider": "来源 Provider",
+      "SourceConfigurationPath": "来源配置路径",
+      "SourcePhysicalPath": "来源文件",
+      "SourceRevisionBefore": "修改前修订",
+      "SourceRevisionAfter": "修改后修订",
+      "MonicaTargetCount": "Monica {0}",
+      "ExternalTargetCount": "外部 {0}",
       "Operator": "操作人",
       "DiffDirection": "旧值 -> 新值",
       "RollbackDirection": "当前修改值 -> 回滚目标值",

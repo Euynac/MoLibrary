@@ -91,7 +91,11 @@
     },
     "Filters": {
       "From": "From",
-      "To": "To"
+      "To": "To",
+      "Target": "Target",
+      "TargetAll": "All targets",
+      "TargetMonica": "Monica store",
+      "TargetExternal": "External sources"
     },
     "States": {
       "Empty": "No history records were found."
@@ -103,7 +107,11 @@
     },
     "Targets": {
       "Monica": "Monica effective store",
-      "External": "External source"
+      "MonicaShort": "Monica",
+      "External": "External source",
+      "ExternalShort": "External",
+      "Mixed": "Mixed targets",
+      "ExternalTooltip": "Source: {0}\nConfiguration path: {1}\nFile: {2}"
     },
     "Dialog": {
       "Title": "Configuration History",
@@ -112,7 +120,18 @@
       "Timeline": "Timeline",
       "GroupSummary": "Group summary",
       "GroupSubtitle": "{0} mutations across {1} definitions",
+      "TimelineFocusedSubtitle": "{0} · v{1}",
+      "TimelineRowSubtitle": "{0} · {1}",
       "Version": "v{0}",
+      "TargetKind": "Target kind",
+      "Target": "Target",
+      "SourceProvider": "Source provider",
+      "SourceConfigurationPath": "Source configuration path",
+      "SourcePhysicalPath": "Source file",
+      "SourceRevisionBefore": "Revision before",
+      "SourceRevisionAfter": "Revision after",
+      "MonicaTargetCount": "Monica {0}",
+      "ExternalTargetCount": "External {0}",
       "Operator": "Operator",
       "DiffDirection": "Old value -> new value",
       "RollbackDirection": "Current mutation value -> rollback target",
