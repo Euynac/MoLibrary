@@ -213,6 +213,8 @@ public sealed class ModuleConfiguration
 public sealed class ModuleConfigurationGuide
     : ModuleGuide<ModuleConfiguration, ModuleConfigurationOption, ModuleConfigurationGuide>
 {
+    private const int MANAGED_JSON_FILE_BUILDER_ORDER = -2;
+
     /// <summary>
     /// Adds a JSON configuration file after Monica's effective-value provider and records source metadata for the UI.
     /// </summary>
@@ -249,7 +251,9 @@ public sealed class ModuleConfigurationGuide
                     Description = options.Description,
                     IsWritable = options.IsWritable
                 });
-        }, ModuleRegistrationOrder.Normal, secondKey: Guid.NewGuid().ToString("N"));
+        // The module registry reverses sorted requests during de-duplication; using an order below
+        // the module-owned -1 builder request appends this provider after Monica's effective store.
+        }, MANAGED_JSON_FILE_BUILDER_ORDER, secondKey: Guid.NewGuid().ToString("N"));
 
         return this;
     }

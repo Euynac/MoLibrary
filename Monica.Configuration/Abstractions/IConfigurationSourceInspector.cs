@@ -36,6 +36,12 @@ public interface IConfigurationSourceInspector
     IReadOnlyList<ConfigurationDefinitionSourceContribution> GetDefinitionContributions(ConfigurationDefinition definition);
 
     /// <summary>
+    /// Gets all managed configuration values supplied by each runtime source.
+    /// </summary>
+    /// <returns>Source inventories ordered by provider priority from highest to lowest.</returns>
+    IReadOnlyList<ConfigurationSourceInventory> GetSourceInventories();
+
+    /// <summary>
     /// Gets a display-safe JSON file view for one source.
     /// </summary>
     /// <param name="sourceKey">The source key.</param>

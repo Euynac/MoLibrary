@@ -110,6 +110,80 @@ internal sealed class ConfigurationSourceInspector(
     }
 
     /// <summary>
+    /// Gets all managed configuration values supplied by each runtime source.
+    /// </summary>
+    public IReadOnlyList<ConfigurationSourceInventory> GetSourceInventories()
+    {
+        if (configuration is not IConfigurationRoot root)
+        {
+            return [];
+        }
+
+        var definitions = definitionRegistry.GetAll().ToArray();
+        var sources = GetSources();
+        var sourcesByPriority = sources.ToDictionary(source => source.PriorityIndex);
+        var builders = sources.ToDictionary(
+            source => source.SourceKey,
+            source => new SourceInventoryBuilder(source),
+            StringComparer.OrdinalIgnoreCase);
+        var entries = new List<SourceInventoryEntry>();
+        var effectivePriorityByPath = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var (provider, index) in root.Providers.Select((provider, index) => (provider, index)))
+        {
+            if (!sourcesByPriority.TryGetValue(index, out var source))
+            {
+                continue;
+            }
+
+            var suppliedPaths = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            foreach (var definition in definitions)
+            {
+                foreach (var (configurationPath, value) in EnumerateProviderValues(provider, definition.SectionPath))
+                {
+                    if (!suppliedPaths.Add(configurationPath))
+                    {
+                        continue;
+                    }
+
+                    var node = ResolveNodeFromConfigurationPath(definition, configurationPath);
+                    var isSensitive = node?.IsSensitive is true;
+                    entries.Add(new SourceInventoryEntry(
+                        source.SourceKey,
+                        index,
+                        new ConfigurationSourceInventoryItem
+                        {
+                            DefinitionKey = definition.DefinitionKey,
+                            DefinitionDisplayName = definition.DisplayName,
+                            ConfigurationPath = configurationPath,
+                            RelativeConfigurationPath = RelativeConfigurationPath(definition.SectionPath, configurationPath),
+                            NodeLabel = node?.DisplayName ?? node?.Name,
+                            DisplayValue = isSensitive ? null : value,
+                            IsSensitive = isSensitive
+                        }));
+
+                    if (!effectivePriorityByPath.TryGetValue(configurationPath, out var currentPriority) || index > currentPriority)
+                    {
+                        effectivePriorityByPath[configurationPath] = index;
+                    }
+                }
+            }
+        }
+
+        foreach (var entry in entries)
+        {
+            var isEffective = effectivePriorityByPath.TryGetValue(entry.Item.ConfigurationPath, out var priority)
+                              && priority == entry.PriorityIndex;
+            builders[entry.SourceKey].Add(entry.Item with { IsEffective = isEffective });
+        }
+
+        return builders.Values
+            .OrderByDescending(builder => builder.Source.PriorityIndex)
+            .Select(builder => builder.Build())
+            .ToArray();
+    }
+
+    /// <summary>
     /// Gets a display-safe JSON file view.
     /// </summary>
     public async Task<ConfigurationSourceFileView> GetSourceFileViewAsync(string sourceKey, CancellationToken cancellationToken)
@@ -367,6 +441,96 @@ internal sealed class ConfigurationSourceInspector(
         }
     }
 
+    private static IEnumerable<(string ConfigurationPath, string? Value)> EnumerateProviderValues(
+        IConfigurationProvider provider,
+        string parentPath)
+    {
+        var childKeys = provider.GetChildKeys([], parentPath)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderBy(key => key, StringComparer.OrdinalIgnoreCase);
+        foreach (var childKey in childKeys)
+        {
+            var configurationPath = string.IsNullOrWhiteSpace(parentPath)
+                ? childKey
+                : $"{parentPath}:{childKey}";
+
+            if (provider.TryGet(configurationPath, out var value))
+            {
+                yield return (configurationPath, value);
+            }
+
+            foreach (var descendant in EnumerateProviderValues(provider, configurationPath))
+            {
+                yield return descendant;
+            }
+        }
+    }
+
+    private static string RelativeConfigurationPath(string sectionPath, string configurationPath)
+    {
+        if (string.IsNullOrWhiteSpace(sectionPath))
+        {
+            return configurationPath;
+        }
+
+        return configurationPath.Length <= sectionPath.Length
+            ? string.Empty
+            : configurationPath[(sectionPath.Length + 1)..];
+    }
+
+    private static ConfigurationNodeDefinition? ResolveNodeFromConfigurationPath(
+        ConfigurationDefinition definition,
+        string configurationPath)
+    {
+        var sectionSegments = SplitConfigurationPath(definition.SectionPath);
+        var pathSegments = SplitConfigurationPath(configurationPath);
+        if (pathSegments.Length < sectionSegments.Length || !HasPrefix(pathSegments, sectionSegments))
+        {
+            return null;
+        }
+
+        var current = definition.Root;
+        for (var index = sectionSegments.Length; index < pathSegments.Length; index++)
+        {
+            var segment = pathSegments[index];
+            current = current.NodeKind switch
+            {
+                ConfigurationNodeKind.Object => current.Children.FirstOrDefault(child =>
+                    string.Equals(child.Name, segment, StringComparison.OrdinalIgnoreCase)),
+                ConfigurationNodeKind.Dictionary => current.DictionaryTemplate?.ValueTemplate,
+                ConfigurationNodeKind.List => current.ListTemplate?.ItemTemplate,
+                _ => null
+            };
+
+            if (current is null)
+            {
+                return null;
+            }
+        }
+
+        return current;
+    }
+
+    private static string[] SplitConfigurationPath(string path)
+    {
+        return string.IsNullOrWhiteSpace(path)
+            ? []
+            : path.Split(':', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+    }
+
+    private static bool HasPrefix(IReadOnlyList<string> pathSegments, IReadOnlyList<string> prefixSegments)
+    {
+        for (var index = 0; index < prefixSegments.Count; index++)
+        {
+            if (!string.Equals(pathSegments[index], prefixSegments[index], StringComparison.OrdinalIgnoreCase))
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
     internal static string Hash(string value)
     {
         var bytes = SHA256.HashData(Encoding.UTF8.GetBytes(value.ToUpperInvariant()));
@@ -381,4 +545,35 @@ internal sealed class ConfigurationSourceInspector(
 
         public int EffectiveValueCount { get; set; }
     }
+
+    private sealed class SourceInventoryBuilder(ConfigurationSourceDescriptor source)
+    {
+        private readonly List<ConfigurationSourceInventoryItem> _items = [];
+
+        public ConfigurationSourceDescriptor Source { get; } = source;
+
+        public void Add(ConfigurationSourceInventoryItem item)
+        {
+            _items.Add(item);
+        }
+
+        public ConfigurationSourceInventory Build()
+        {
+            return new ConfigurationSourceInventory
+            {
+                Source = Source,
+                SuppliedValueCount = _items.Count,
+                EffectiveValueCount = _items.Count(item => item.IsEffective),
+                Items = _items
+                    .OrderBy(item => item.DefinitionDisplayName, StringComparer.OrdinalIgnoreCase)
+                    .ThenBy(item => item.RelativeConfigurationPath, StringComparer.OrdinalIgnoreCase)
+                    .ToArray()
+            };
+        }
+    }
+
+    private sealed record SourceInventoryEntry(
+        string SourceKey,
+        int PriorityIndex,
+        ConfigurationSourceInventoryItem Item);
 }

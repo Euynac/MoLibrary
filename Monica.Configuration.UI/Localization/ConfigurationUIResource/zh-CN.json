@@ -204,6 +204,11 @@
       "Title": "运行时配置来源",
       "Subtitle": "配置来源按优先级从高到低显示。最后一个提供 Key 的 Provider 生效。"
     },
+    "Inventory": {
+      "SuppliedCount": "提供 {0}",
+      "EffectiveCount": "生效 {0}",
+      "NoItems": "该来源没有提供受管配置项。"
+    },
     "Definition": {
       "Title": "配置来源",
       "Subtitle": "{0} 的配置来源汇总。"
@@ -215,9 +220,7 @@
     "Columns": {
       "Priority": "优先级",
       "Source": "来源",
-      "Kind": "类型",
       "State": "状态",
-      "Reload": "重载",
       "Supplied": "提供项",
       "Effective": "生效项"
     },

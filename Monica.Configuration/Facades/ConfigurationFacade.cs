@@ -167,6 +167,23 @@ public sealed class ConfigurationFacade(
     }
 
     /// <summary>
+    /// Gets managed configuration values supplied by each runtime Microsoft configuration source.
+    /// </summary>
+    /// <returns>Source inventories ordered from highest priority to lowest priority.</returns>
+    public Task<Res<IReadOnlyList<ConfigurationSourceInventory>>> GetConfigurationSourceInventoriesAsync()
+    {
+        try
+        {
+            return Task.FromResult(Res.Ok(sourceInspector.GetSourceInventories()));
+        }
+        catch (Exception ex)
+        {
+            return Task.FromResult<Res<IReadOnlyList<ConfigurationSourceInventory>>>(
+                Res.Fail($"Failed to get configuration source inventory: {ex.GetMessageRecursively()}"));
+        }
+    }
+
+    /// <summary>
     /// Gets source contribution counts for one definition.
     /// </summary>
     /// <param name="definitionKey">The definition key.</param>

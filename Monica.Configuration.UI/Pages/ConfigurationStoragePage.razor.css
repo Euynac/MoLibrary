@@ -6,3 +6,49 @@
 .storage-card {
     height: 100%;
 }
+
+.configuration-source-title {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) minmax(18rem, auto);
+    gap: 0.75rem;
+    align-items: center;
+    width: 100%;
+}
+
+.configuration-source-title-main {
+    min-width: 0;
+}
+
+.configuration-source-title-main ::deep .mud-typography {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.configuration-source-title-actions {
+    min-width: 0;
+}
+
+.configuration-source-items {
+    display: grid;
+    gap: 0.5rem;
+}
+
+.configuration-source-item ::deep .configuration-source-item-card {
+    border-color: var(--mud-palette-lines-default);
+}
+
+.configuration-source-item.effective-source ::deep .configuration-source-item-card {
+    border-color: var(--mud-palette-success);
+    background: color-mix(in srgb, var(--mud-palette-success) 8%, transparent);
+}
+
+@media (max-width: 960px) {
+    .configuration-source-title {
+        grid-template-columns: auto minmax(0, 1fr);
+    }
+
+    .configuration-source-title-actions {
+        grid-column: 1 / -1;
+    }
+}

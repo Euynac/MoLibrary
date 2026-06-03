@@ -74,6 +74,78 @@ public sealed record ConfigurationDefinitionSourceContribution
 }
 
 /// <summary>
+/// Describes all managed configuration values supplied by one runtime source.
+/// </summary>
+public sealed record ConfigurationSourceInventory
+{
+    /// <summary>
+    /// Gets the inspected runtime source.
+    /// </summary>
+    public required ConfigurationSourceDescriptor Source { get; init; }
+
+    /// <summary>
+    /// Gets the number of managed scalar values supplied by this source.
+    /// </summary>
+    public int SuppliedValueCount { get; init; }
+
+    /// <summary>
+    /// Gets the number of supplied scalar values where this source currently wins.
+    /// </summary>
+    public int EffectiveValueCount { get; init; }
+
+    /// <summary>
+    /// Gets the supplied managed scalar values.
+    /// </summary>
+    public IReadOnlyList<ConfigurationSourceInventoryItem> Items { get; init; } = [];
+}
+
+/// <summary>
+/// Describes one managed configuration value supplied by a runtime source.
+/// </summary>
+public sealed record ConfigurationSourceInventoryItem
+{
+    /// <summary>
+    /// Gets the owning definition key.
+    /// </summary>
+    public required string DefinitionKey { get; init; }
+
+    /// <summary>
+    /// Gets the owning definition display name.
+    /// </summary>
+    public required string DefinitionDisplayName { get; init; }
+
+    /// <summary>
+    /// Gets the projected Microsoft configuration path.
+    /// </summary>
+    public required string ConfigurationPath { get; init; }
+
+    /// <summary>
+    /// Gets the path relative to the owning definition section.
+    /// </summary>
+    public required string RelativeConfigurationPath { get; init; }
+
+    /// <summary>
+    /// Gets the schema node display name when the path can be resolved.
+    /// </summary>
+    public string? NodeLabel { get; init; }
+
+    /// <summary>
+    /// Gets the display-safe source value. Sensitive values are null.
+    /// </summary>
+    public string? DisplayValue { get; init; }
+
+    /// <summary>
+    /// Gets whether the source value was redacted.
+    /// </summary>
+    public bool IsSensitive { get; init; }
+
+    /// <summary>
+    /// Gets whether this source currently wins for the path.
+    /// </summary>
+    public bool IsEffective { get; init; }
+}
+
+/// <summary>
 /// Describes a display-safe configuration file payload.
 /// </summary>
 public sealed record ConfigurationSourceFileView

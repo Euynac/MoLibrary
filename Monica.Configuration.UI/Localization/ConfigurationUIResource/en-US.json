@@ -204,6 +204,11 @@
       "Title": "Runtime configuration sources",
       "Subtitle": "Providers are shown from highest priority to lowest priority. The last provider that supplies a key wins."
     },
+    "Inventory": {
+      "SuppliedCount": "Supplies {0}",
+      "EffectiveCount": "Effective {0}",
+      "NoItems": "This source does not supply managed configuration items."
+    },
     "Definition": {
       "Title": "Configuration sources",
       "Subtitle": "Source contribution summary for {0}."
@@ -215,9 +220,7 @@
     "Columns": {
       "Priority": "Priority",
       "Source": "Source",
-      "Kind": "Kind",
       "State": "State",
-      "Reload": "Reload",
       "Supplied": "Supplied",
       "Effective": "Effective"
     },

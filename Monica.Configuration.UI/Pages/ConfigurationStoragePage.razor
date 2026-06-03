@@ -35,56 +35,96 @@
                             <MudText Typo="Typo.subtitle2">@L["Sources:Runtime:Title"]</MudText>
                             <MudText Typo="Typo.caption" Color="Color.Secondary">@L["Sources:Runtime:Subtitle"]</MudText>
                         </MudStack>
-                        <MudChip T="int" Color="Color.Primary" Variant="Variant.Filled" Size="Size.Small">@_sources.Count</MudChip>
+                        <MudChip T="int" Color="Color.Primary" Variant="Variant.Filled" Size="Size.Small">@_sourceInventories.Count</MudChip>
                     </MudStack>
-                    @if (_sources.Count == 0)
+                    @if (_sourceInventories.Count == 0)
                     {
                         <MudAlert Severity="Severity.Info">@L["Sources:Empty"]</MudAlert>
                     }
                     else
                     {
-                        <MudTable T="ConfigurationSourceDescriptor" Items="@_sources.OrderByDescending(source => source.PriorityIndex)" Dense="true" Hover="true" Elevation="0">
-                            <HeaderContent>
-                                <MudTh>@L["Sources:Columns:Priority"]</MudTh>
-                                <MudTh>@L["Sources:Columns:Source"]</MudTh>
-                                <MudTh>@L["Sources:Columns:Kind"]</MudTh>
-                                <MudTh>@L["Sources:Columns:State"]</MudTh>
-                                <MudTh>@L["Sources:Columns:Reload"]</MudTh>
-                                <MudTh></MudTh>
-                            </HeaderContent>
-                            <RowTemplate>
-                                <MudTd DataLabel="@L["Sources:Columns:Priority"]">@context.PriorityIndex</MudTd>
-                                <MudTd DataLabel="@L["Sources:Columns:Source"]">
-                                    <MudStack Spacing="0">
-                                        <MudText Typo="Typo.body2">@context.DisplayName</MudText>
-                                        <MudText Typo="Typo.caption" Color="Color.Secondary">@SourcePath(context)</MudText>
-                                    </MudStack>
-                                </MudTd>
-                                <MudTd DataLabel="@L["Sources:Columns:Kind"]">@context.Kind</MudTd>
-                                <MudTd DataLabel="@L["Sources:Columns:State"]">
-                                    <MudStack Row="true" Wrap="Wrap.Wrap" Spacing="1">
-                                        <MudChip T="string" Size="Size.Small" Color="@(context.IsWritable ? Color.Success : Color.Default)" Variant="Variant.Outlined">
-                                            @(context.IsWritable ? L["Sources:Writable"] : L["Sources:ReadOnly"])
-                                        </MudChip>
-                                        @if (context.IsManagedByMonica)
+                        <MudExpansionPanels MultiExpansion="true" Elevation="0" Dense="true" Class="configuration-source-panels">
+                            @foreach (var inventory in _sourceInventories)
+                            {
+                                <MudExpansionPanel Class="configuration-source-panel">
+                                    <TitleContent>
+                                        <div class="configuration-source-title">
+                                            <MudChip T="int"
+                                                     Size="Size.Small"
+                                                     Color="Color.Default"
+                                                     Variant="Variant.Outlined">
+                                                @inventory.Source.PriorityIndex
+                                            </MudChip>
+                                            <div class="configuration-source-title-main">
+                                                <MudText Typo="Typo.body2">@inventory.Source.DisplayName</MudText>
+                                                <MudText Typo="Typo.caption" Color="Color.Secondary">@SourcePath(inventory.Source)</MudText>
+                                            </div>
+                                            <div class="configuration-source-title-actions">
+                                                <MudStack Row="true" Wrap="Wrap.Wrap" AlignItems="AlignItems.Center" Justify="Justify.FlexEnd" Spacing="1">
+                                                    <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">@inventory.Source.Kind</MudChip>
+                                                    <MudChip T="string" Size="Size.Small" Color="Color.Info" Variant="Variant.Outlined">
+                                                        @L["Sources:Inventory:SuppliedCount", inventory.SuppliedValueCount]
+                                                    </MudChip>
+                                                    <MudChip T="string" Size="Size.Small" Color="Color.Success" Variant="Variant.Outlined">
+                                                        @L["Sources:Inventory:EffectiveCount", inventory.EffectiveValueCount]
+                                                    </MudChip>
+                                                    <MudChip T="string" Size="Size.Small" Color="@(inventory.Source.IsWritable ? Color.Success : Color.Default)" Variant="Variant.Outlined">
+                                                        @(inventory.Source.IsWritable ? L["Sources:Writable"] : L["Sources:ReadOnly"])
+                                                    </MudChip>
+                                                    @if (inventory.Source.IsManagedByMonica)
+                                                    {
+                                                        <MudChip T="string" Size="Size.Small" Color="Color.Info" Variant="Variant.Filled">@L["Sources:Managed"]</MudChip>
+                                                    }
+                                                    <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">@ReloadText(inventory.Source)</MudChip>
+                                                    @if (inventory.Source.Kind == ConfigurationSourceKind.JsonFile)
+                                                    {
+                                                        <MudTooltip Text="@L["Sources:Actions:ViewFile"]">
+                                                            <MudIconButton Icon="@Icons.Material.Filled.Article"
+                                                                           Size="Size.Small"
+                                                                           OnClick="() => ViewFileAsync(inventory.Source)" />
+                                                        </MudTooltip>
+                                                    }
+                                                </MudStack>
+                                            </div>
+                                        </div>
+                                    </TitleContent>
+                                    <ChildContent>
+                                        @if (inventory.Items.Count == 0)
                                         {
-                                            <MudChip T="string" Size="Size.Small" Color="Color.Info" Variant="Variant.Filled">@L["Sources:Managed"]</MudChip>
+                                            <MudAlert Severity="Severity.Info">@L["Sources:Inventory:NoItems"]</MudAlert>
                                         }
-                                    </MudStack>
-                                </MudTd>
-                                <MudTd DataLabel="@L["Sources:Columns:Reload"]">@ReloadText(context)</MudTd>
-                                <MudTd>
-                                    @if (context.Kind == ConfigurationSourceKind.JsonFile)
-                                    {
-                                        <MudTooltip Text="@L["Sources:Actions:ViewFile"]">
-                                            <MudIconButton Icon="@Icons.Material.Filled.Article"
-                                                           Size="Size.Small"
-                                                           OnClick="() => ViewFileAsync(context)" />
-                                        </MudTooltip>
-                                    }
-                                </MudTd>
-                            </RowTemplate>
-                        </MudTable>
+                                        else
+                                        {
+                                            <div class="configuration-source-items">
+                                                @foreach (var item in inventory.Items)
+                                                {
+                                                    <div class="@SourceItemWrapperClass(item)">
+                                                        <MudPaper Outlined="true" Class="pa-3 configuration-source-item-card">
+                                                            <MudStack Spacing="1">
+                                                                <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Spacing="2">
+                                                                    <MudStack Spacing="0">
+                                                                        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
+                                                                            <MudText Typo="Typo.subtitle2">@item.DefinitionDisplayName</MudText>
+                                                                            @if (item.IsEffective)
+                                                                            {
+                                                                                <MudChip T="string" Size="Size.Small" Color="Color.Success" Variant="Variant.Filled">@L["Sources:Effective"]</MudChip>
+                                                                            }
+                                                                        </MudStack>
+                                                                        <MudText Typo="Typo.caption" Color="Color.Secondary">@ItemLabel(item)</MudText>
+                                                                    </MudStack>
+                                                                    <MudText Typo="Typo.caption" Color="Color.Secondary">@item.ConfigurationPath</MudText>
+                                                                </MudStack>
+                                                                <MudText Typo="Typo.body2">@DisplayValue(item)</MudText>
+                                                            </MudStack>
+                                                        </MudPaper>
+                                                    </div>
+                                                }
+                                            </div>
+                                        }
+                                    </ChildContent>
+                                </MudExpansionPanel>
+                            }
+                        </MudExpansionPanels>
                     }
                 </MudStack>
             </MudPaper>
@@ -122,7 +162,7 @@
     public const string PAGE_URL = ConfigurationUiRoutes.STORAGE_ROUTE;
 
     private readonly List<ConfigurationStoreState> _states = [];
-    private readonly List<ConfigurationSourceDescriptor> _sources = [];
+    private readonly List<ConfigurationSourceInventory> _sourceInventories = [];
     private ConfigurationStorageOverview? _overview;
     private bool _loading = true;
 
@@ -152,11 +192,11 @@
             _states.AddRange(states);
         }
 
-        var sourceResult = await Facade.GetConfigurationSourcesAsync();
-        if (!sourceResult.IsFailed(out _, out var sources))
+        var sourceResult = await Facade.GetConfigurationSourceInventoriesAsync();
+        if (!sourceResult.IsFailed(out _, out var sourceInventories))
         {
-            _sources.Clear();
-            _sources.AddRange(sources);
+            _sourceInventories.Clear();
+            _sourceInventories.AddRange(sourceInventories);
         }
 
         _loading = false;
@@ -183,6 +223,23 @@
         return source.ReloadOnChange is null
             ? L["Sources:Reload:Unknown"]
             : source.ReloadOnChange.Value ? L["Sources:Reload:Enabled"] : L["Sources:Reload:Disabled"];
+    }
+
+    private string ItemLabel(ConfigurationSourceInventoryItem item)
+    {
+        return string.IsNullOrWhiteSpace(item.NodeLabel)
+            ? item.RelativeConfigurationPath
+            : $"{item.NodeLabel} · {item.RelativeConfigurationPath}";
+    }
+
+    private string DisplayValue(ConfigurationSourceInventoryItem item)
+    {
+        return item.IsSensitive ? L["State:Value:Sensitive"] : item.DisplayValue ?? L["Value:States:Empty"];
+    }
+
+    private static string SourceItemWrapperClass(ConfigurationSourceInventoryItem item)
+    {
+        return item.IsEffective ? "configuration-source-item effective-source" : "configuration-source-item";
     }
 
     private RenderFragment StoreCard(string role, ConfigurationStoreDescriptor store) => builder =>
