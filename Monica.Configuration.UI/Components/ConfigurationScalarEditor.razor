@@ -41,46 +41,53 @@
     else if (Node.ValueKind == ConfigurationValueKind.TimeSpan)
     {
         <div class="configuration-time-span-editor">
-            <MudTextField @key="EditorInstanceKey"
-                          @ref="_timeTextField"
-                          T="string"
-                          @bind-Value:get="@_textValue"
-                          @bind-Value:set="OnTimeTextChanged"
-                          OnBlur="OnTimeTextBlurred"
-                          Variant="Variant.Outlined"
-                          Margin="Margin.Dense"
-                          Immediate="true"
-                          Placeholder="@L["State:Editor:TimeSpanPlaceholder"]"
-                          Error="@HasError"
-                          ErrorText="@_error"
-                          Disabled="@Disabled" />
-            <MudMenu @ref="_timePickerMenu"
-                     Icon="@Icons.Material.Filled.Schedule"
-                     Size="Size.Small"
-                     Variant="Variant.Outlined"
-                     Color="Color.Default"
-                     Disabled="@Disabled"
-                     AnchorOrigin="Origin.BottomRight"
-                     TransformOrigin="Origin.TopRight"
-                     OpenChanged="OnTimePickerMenuOpenChanged"
-                     PopoverClass="configuration-time-picker-popover"
-                     ListClass="configuration-time-picker-list">
-                <MudStack Spacing="2" Class="configuration-time-picker-menu">
-                    <MudTimePicker PickerVariant="PickerVariant.Static"
-                                   Time="@_pickerDraftTime"
-                                   TimeChanged="OnTimePickerDraftChanged"
-                                   TimeFormat="HH:mm"
-                                   AmPm="false" />
-                    <MudStack Row="true" Justify="Justify.FlexEnd">
-                        <MudButton Size="Size.Small"
-                                   Color="Color.Primary"
-                                   Variant="Variant.Filled"
-                                   OnClick="ApplyTimePickerDraft">
-                            @L["Common:Actions:Apply"]
-                        </MudButton>
+            <div class="configuration-time-span-input">
+                <MudTextField @key="EditorInstanceKey"
+                              T="string"
+                              @bind-Value:get="@_textValue"
+                              @bind-Value:set="OnTimeTextChanged"
+                              OnBlur="OnTimeTextBlurred"
+                              Variant="Variant.Outlined"
+                              Margin="Margin.Dense"
+                              Immediate="true"
+                              Placeholder="@L["State:Editor:TimeSpanPlaceholder"]"
+                              Error="@HasError"
+                              Adornment="Adornment.End"
+                              AdornmentIcon="@Icons.Material.Filled.Schedule"
+                              OnAdornmentClick="OpenTimePicker"
+                              Disabled="@Disabled" />
+                <MudPopover Open="@_timePickerOpen"
+                            AnchorOrigin="Origin.BottomRight"
+                            TransformOrigin="Origin.TopRight"
+                            Class="configuration-time-picker-popover">
+                    <MudStack Spacing="2" Class="configuration-time-picker-menu">
+                        <MudTimePicker PickerVariant="PickerVariant.Static"
+                                       Time="@_pickerDraftTime"
+                                       TimeChanged="OnTimePickerDraftChanged"
+                                       TimeFormat="HH:mm"
+                                       AmPm="false" />
+                        <MudStack Row="true" Justify="Justify.FlexEnd">
+                            <MudButton Size="Size.Small"
+                                       Color="Color.Primary"
+                                       Variant="Variant.Filled"
+                                       OnClick="ApplyTimePickerDraft">
+                                @L["Common:Actions:Apply"]
+                            </MudButton>
+                        </MudStack>
                     </MudStack>
-                </MudStack>
-            </MudMenu>
+                </MudPopover>
+                <MudOverlay Visible="@_timePickerOpen"
+                            AutoClose="true"
+                            OnClosed="CloseTimePicker"
+                            LockScroll="false"
+                            Modal="false" />
+                @if (HasError)
+                {
+                    <MudText Typo="Typo.caption" Color="Color.Error" Class="configuration-time-span-error">
+                        @ActiveError
+                    </MudText>
+                }
+            </div>
         </div>
     }
     else if (EnumValues.Count > 0)
@@ -134,8 +141,7 @@
     private DateTime? _dateValue;
     private TimeSpan? _timeValue;
     private TimeSpan? _pickerDraftTime;
-    private MudTextField<string>? _timeTextField;
-    private MudMenu? _timePickerMenu;
+    private bool _timePickerOpen;
     private bool _showSensitive;
     private string? _error;
     private string? _lastNodePath;
@@ -154,7 +160,9 @@
 
     private InputType TextInputType => Node.IsSensitive && !_showSensitive ? InputType.Password : InputType.Text;
 
-    private bool HasError => !string.IsNullOrWhiteSpace(_error);
+    private string? ActiveError => _error ?? ValidationIssue?.ValidationError;
+
+    private bool HasError => !string.IsNullOrWhiteSpace(ActiveError);
 
     private string EditorClass => string.Join(' ', new[]
     {
@@ -299,14 +307,20 @@
         await EmitAsync(text);
     }
 
-    private Task OnTimePickerMenuOpenChanged(bool open)
+    private void OpenTimePicker()
     {
-        if (open)
+        if (Disabled)
         {
-            _pickerDraftTime = _timeValue;
+            return;
         }
 
-        return Task.CompletedTask;
+        _pickerDraftTime = _timeValue;
+        _timePickerOpen = true;
+    }
+
+    private void CloseTimePicker()
+    {
+        _timePickerOpen = false;
     }
 
     private Task OnTimePickerDraftChanged(TimeSpan? value)
@@ -330,10 +344,7 @@
             await EmitAsync(displayValue, ConfigurationScalarTextCodec.ToTimeSpanJson(_timeValue.Value));
         }
 
-        if (_timePickerMenu is not null)
-        {
-            await _timePickerMenu.CloseMenuAsync();
-        }
+        _timePickerOpen = false;
     }
 
     private async Task OnTimeTextChanged(string? value)
@@ -366,7 +377,7 @@
 
     private Task OnTimeTextBlurred(FocusEventArgs _)
     {
-        return OnTimeTextChanged(_timeTextField?.GetState(field => field.Text) ?? _textValue);
+        return OnTimeTextChanged(_textValue);
     }
 
     private async Task EmitAsync(string displayValue, string? rawJson = null)

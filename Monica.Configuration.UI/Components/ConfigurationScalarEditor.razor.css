@@ -13,15 +13,22 @@
 }
 
 .configuration-time-span-editor {
-    display: flex;
-    align-items: flex-start;
-    gap: 0.5rem;
     width: 100%;
 }
 
-.configuration-time-span-editor ::deep .mud-input-control {
+.configuration-time-span-input {
     flex: 1 1 auto;
     min-width: 0;
+}
+
+.configuration-time-span-input ::deep .mud-input-control {
+    margin-bottom: 0;
+}
+
+.configuration-time-span-error {
+    display: block;
+    margin-top: 0.25rem;
+    padding-inline-start: 0.75rem;
 }
 
 .configuration-time-picker-menu {
