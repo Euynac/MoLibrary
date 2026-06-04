@@ -451,7 +451,7 @@ public partial class ComplexValueEditorDialog
             return;
         }
 
-        SetFieldValue(field, ownerPath, ownerSchema, JsonValue.Create(value));
+        SetFieldValue(field, ownerPath, ownerSchema, CreateTextValueNode(field, value));
     }
 
     private void OnNumberFieldChanged(ConfigurationNodeDefinition field, decimal? value)
@@ -679,10 +679,19 @@ public partial class ComplexValueEditorDialog
             return false;
         }
 
+        if (!ValidateScalarValueKind(field, value, path))
+        {
+            return false;
+        }
+
         foreach (var rule in field.ValidationRules)
         {
             switch (rule)
             {
+                case AllowedValuesRule allowedValuesRule when !string.IsNullOrWhiteSpace(value)
+                                                              && !allowedValuesRule.Values.Contains(value, StringComparer.OrdinalIgnoreCase):
+                    SetError(path, rule.ErrorMessage ?? L["State:Editor:InvalidPattern"]);
+                    return false;
                 case RegexRule regexRule when !string.IsNullOrWhiteSpace(value) && !Regex.IsMatch(value, regexRule.Pattern):
                     SetError(path, rule.ErrorMessage ?? L["State:Editor:InvalidPattern"]);
                     return false;
@@ -700,6 +709,44 @@ public partial class ComplexValueEditorDialog
                     SetError(path, rule.ErrorMessage ?? L["State:Editor:TooShort"]);
                     return false;
             }
+        }
+
+        return true;
+    }
+
+    private bool ValidateScalarValueKind(
+        ConfigurationNodeDefinition field,
+        string value,
+        LogicalPath path)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            if (field.ValueKind is ConfigurationValueKind.TimeSpan or ConfigurationValueKind.DateTime
+                    or ConfigurationValueKind.Integer or ConfigurationValueKind.Decimal or ConfigurationValueKind.Floating
+                && !field.IsNullable)
+            {
+                SetError(path, L["State:Editor:Required"]);
+                return false;
+            }
+
+            return true;
+        }
+
+        switch (field.ValueKind)
+        {
+            case ConfigurationValueKind.TimeSpan when !ConfigurationScalarTextCodec.TryParseTimeSpan(value, out _):
+                SetError(path, L["State:Editor:InvalidTimeSpan"]);
+                return false;
+            case ConfigurationValueKind.DateTime when !DateTime.TryParse(value, CultureInfo.InvariantCulture, DateTimeStyles.AssumeLocal, out _):
+                SetError(path, L["ImportExport:Diagnostics:ExpectedDateTime"]);
+                return false;
+            case ConfigurationValueKind.Integer when !long.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out _):
+                SetError(path, L["ImportExport:Diagnostics:ExpectedInteger"]);
+                return false;
+            case ConfigurationValueKind.Decimal or ConfigurationValueKind.Floating
+                when !decimal.TryParse(value, NumberStyles.Any, CultureInfo.InvariantCulture, out _):
+                SetError(path, L["ImportExport:Diagnostics:ExpectedNumber"]);
+                return false;
         }
 
         return true;
@@ -797,6 +844,17 @@ public partial class ComplexValueEditorDialog
     {
         var text = ReadScalarAsString(FieldValue(field, ownerPath, ownerSchema));
         return decimal.TryParse(text, NumberStyles.Any, CultureInfo.InvariantCulture, out var parsed) ? parsed : null;
+    }
+
+    private static JsonNode? CreateTextValueNode(ConfigurationNodeDefinition field, string value)
+    {
+        if (field.ValueKind == ConfigurationValueKind.TimeSpan
+            && ConfigurationScalarTextCodec.TryParseTimeSpan(value, out var timeSpan))
+        {
+            return JsonValue.Create(timeSpan.ToString("c", CultureInfo.InvariantCulture));
+        }
+
+        return JsonValue.Create(value);
     }
 
     private string? Placeholder(ConfigurationNodeDefinition field)

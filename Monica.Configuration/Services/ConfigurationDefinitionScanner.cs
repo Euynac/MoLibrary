@@ -75,7 +75,7 @@ internal sealed class ConfigurationDefinitionScanner(ConfigurationSchemaHasher h
                 ? BuildListTemplate(type, path, configurationPath, inheritedReloadBehavior)
                 : null,
             Children = children,
-            ValidationRules = GetValidationRules(type.GetCustomAttributes<ValidationAttribute>())
+            ValidationRules = GetValidationRules(type, type.GetCustomAttributes<ValidationAttribute>())
         };
     }
 
@@ -136,7 +136,7 @@ internal sealed class ConfigurationDefinitionScanner(ConfigurationSchemaHasher h
                 ? BuildListTemplate(propertyType, path, configurationPath, inheritedReloadBehavior)
                 : null,
             Children = children,
-            ValidationRules = GetValidationRules(property.GetCustomAttributes<ValidationAttribute>())
+            ValidationRules = GetValidationRules(propertyType, property.GetCustomAttributes<ValidationAttribute>())
         };
     }
 
@@ -349,9 +349,11 @@ internal sealed class ConfigurationDefinitionScanner(ConfigurationSchemaHasher h
         return IsNullable(property.PropertyType);
     }
 
-    private static IReadOnlyList<ConfigurationValidationRule> GetValidationRules(IEnumerable<ValidationAttribute> attributes)
+    private static IReadOnlyList<ConfigurationValidationRule> GetValidationRules(
+        Type nodeType,
+        IEnumerable<ValidationAttribute> attributes)
     {
-        return attributes.Select<ValidationAttribute, ConfigurationValidationRule?>(attribute => attribute switch
+        var rules = attributes.Select<ValidationAttribute, ConfigurationValidationRule?>(attribute => attribute switch
             {
                 RequiredAttribute required => new RequiredRule { ErrorMessage = required.ErrorMessage },
                 RangeAttribute range => new RangeRule(ToDecimal(range.Minimum), ToDecimal(range.Maximum)) { ErrorMessage = range.ErrorMessage },
@@ -363,7 +365,15 @@ internal sealed class ConfigurationDefinitionScanner(ConfigurationSchemaHasher h
             })
             .Where(rule => rule is not null)
             .Cast<ConfigurationValidationRule>()
-            .ToArray();
+            .ToList();
+
+        var actual = Nullable.GetUnderlyingType(nodeType) ?? nodeType;
+        if (actual.IsEnum && !rules.OfType<AllowedValuesRule>().Any())
+        {
+            rules.Add(new AllowedValuesRule(Enum.GetNames(actual)));
+        }
+
+        return rules;
     }
 
     private static decimal? ToDecimal(object? value)
