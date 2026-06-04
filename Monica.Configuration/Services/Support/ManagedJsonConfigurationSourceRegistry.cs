@@ -9,6 +9,9 @@ namespace Monica.Configuration.Services.Support;
 internal static class ManagedJsonConfigurationSourceRegistry
 {
     private const string PROPERTY_KEY = "Monica.Configuration.ManagedJsonSources";
+    private static readonly object SYNC = new();
+    private static readonly Dictionary<IConfiguration, List<ManagedJsonConfigurationSourceRegistration>> RUNTIME_REGISTRATIONS =
+        new(ReferenceEqualityComparer.Instance);
 
     /// <summary>
     /// Adds a Monica-managed JSON source registration.
@@ -16,6 +19,21 @@ internal static class ManagedJsonConfigurationSourceRegistry
     public static void Add(IConfigurationBuilder builder, ManagedJsonConfigurationSourceRegistration registration)
     {
         GetOrCreate(builder).Add(registration);
+        if (builder is not IConfiguration configuration)
+        {
+            return;
+        }
+
+        lock (SYNC)
+        {
+            if (!RUNTIME_REGISTRATIONS.TryGetValue(configuration, out var registrations))
+            {
+                registrations = [];
+                RUNTIME_REGISTRATIONS[configuration] = registrations;
+            }
+
+            registrations.Add(registration);
+        }
     }
 
     /// <summary>
@@ -23,9 +41,12 @@ internal static class ManagedJsonConfigurationSourceRegistry
     /// </summary>
     public static IReadOnlyList<ManagedJsonConfigurationSourceRegistration> Get(IConfiguration configuration)
     {
-        return configuration is IConfigurationBuilder builder
-            ? GetOrCreate(builder).ToArray()
-            : [];
+        lock (SYNC)
+        {
+            return RUNTIME_REGISTRATIONS.TryGetValue(configuration, out var registrations)
+                ? registrations.ToArray()
+                : [];
+        }
     }
 
     private static List<ManagedJsonConfigurationSourceRegistration> GetOrCreate(IConfigurationBuilder builder)

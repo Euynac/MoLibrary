@@ -259,6 +259,13 @@ internal sealed class ConfigurationSourceInspector(
         var hits = new List<ConfigurationSourceValue>();
         foreach (var (provider, index) in root.Providers.Select((provider, index) => (provider, index)))
         {
+            // Chained providers are aliases over another IConfiguration, not leaf sources.
+            // Querying them as direct value sources can re-enter the active root and block source-chain reads.
+            if (provider is ChainedConfigurationProvider)
+            {
+                continue;
+            }
+
             if (!provider.TryGet(configurationPath, out var value))
             {
                 continue;

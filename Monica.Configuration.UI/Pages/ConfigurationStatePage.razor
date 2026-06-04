@@ -257,20 +257,31 @@
         _selectedSummary = summary;
         _loadingDefinition = true;
         _effectiveValues.Clear();
-        var result = await LoadDefinitionDetailAsync(summary.DefinitionKey);
-        if (result.IsFailed(out var error, out var detail))
+        try
         {
-            Snackbar.Add($"{L["Common:Errors:LoadFailed"]}: {error.Message}", Severity.Error);
+            var result = await LoadDefinitionDetailAsync(summary.DefinitionKey);
+            if (result.IsFailed(out var error, out var detail))
+            {
+                Snackbar.Add($"{L["Common:Errors:LoadFailed"]}: {error.Message}", Severity.Error);
+                _selectedDefinition = null;
+                _selectedNode = null;
+                return;
+            }
+
+            _selectedDefinition = detail.Definition;
+            _selectedNode = _selectedDefinition.Root;
+            await LoadEffectiveValuesAsync();
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"{L["Common:Errors:LoadFailed"]}: {ex.Message}", Severity.Error);
             _selectedDefinition = null;
             _selectedNode = null;
-            _loadingDefinition = false;
-            return;
         }
-
-        _selectedDefinition = detail.Definition;
-        _selectedNode = _selectedDefinition.Root;
-        await LoadEffectiveValuesAsync();
-        _loadingDefinition = false;
+        finally
+        {
+            _loadingDefinition = false;
+        }
     }
 
     private async Task LoadEffectiveValuesAsync()
