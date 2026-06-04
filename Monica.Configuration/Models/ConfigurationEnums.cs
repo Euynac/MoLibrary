@@ -1,3 +1,5 @@
+using Monica.Configuration.Annotations;
+
 namespace Monica.Configuration.Models;
 
 /// <summary>
@@ -52,6 +54,39 @@ public enum ConfigurationReloadBehavior
     /// The value is intentionally fixed after startup and should not be treated as hot-reloadable.
     /// </summary>
     StaticAfterStartup
+}
+
+/// <summary>
+/// Defines how Monica derives a Microsoft configuration section path when
+/// <see cref="ConfigurationAttribute.SectionPath"/> is not set explicitly.
+/// </summary>
+public enum ConfigurationSectionPathConvention
+{
+    /// <summary>
+    /// Uses the short CLR type name, for example <c>K8SOptions</c>.
+    /// </summary>
+    ShortTypeName,
+
+    /// <summary>
+    /// Uses the CLR full type name with dots converted to configuration separators.
+    /// </summary>
+    ClrFullName
+}
+
+/// <summary>
+/// Defines how Monica reacts when two managed configuration definitions resolve to the same section path.
+/// </summary>
+public enum ConfigurationDuplicateSectionPathBehavior
+{
+    /// <summary>
+    /// Throws during module startup so ambiguous configuration binding is fixed before the host runs.
+    /// </summary>
+    FailFast,
+
+    /// <summary>
+    /// Logs a warning and allows both definitions to be registered.
+    /// </summary>
+    Warning
 }
 
 /// <summary>

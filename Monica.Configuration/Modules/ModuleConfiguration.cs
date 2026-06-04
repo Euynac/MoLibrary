@@ -4,6 +4,7 @@ using Microsoft.Extensions.Configuration.Json;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Monica.Configuration.Annotations;
 using Monica.Configuration.Abstractions;
@@ -85,7 +86,7 @@ public sealed class ModuleConfiguration
         : base(option)
     {
         _schemaHasher = schemaHasher;
-        _definitionScanner = new ConfigurationDefinitionScanner(_schemaHasher);
+        _definitionScanner = new ConfigurationDefinitionScanner(_schemaHasher, Option.DefaultSectionPathConvention);
     }
 
     /// <inheritdoc />
@@ -131,20 +132,51 @@ public sealed class ModuleConfiguration
         foreach (var type in types)
         {
             if (type is { IsClass: true, IsAbstract: false }
-                && type.GetCustomAttribute<ConfigurationAttribute>(inherit: false) is { } attribute)
+                && type.GetCustomAttribute<ConfigurationAttribute>(inherit: false) is not null)
             {
-                RegisterConfigurationType(type, attribute);
+                RegisterConfigurationType(type);
             }
 
             yield return type;
         }
     }
 
-    private void RegisterConfigurationType(Type optionsType, ConfigurationAttribute attribute)
+    private void RegisterConfigurationType(Type optionsType)
     {
         var definition = _definitionScanner.Scan(optionsType);
+        ValidateSectionPathIsUnique(definition);
         _definitionRegistry.Register(definition);
         RegisterOptionsBinding(optionsType, definition.SectionPath);
+    }
+
+    private void ValidateSectionPathIsUnique(ConfigurationDefinition definition)
+    {
+        var duplicate = _definitionRegistry.GetAll()
+            .FirstOrDefault(existing =>
+                !string.Equals(existing.DefinitionKey, definition.DefinitionKey, StringComparison.OrdinalIgnoreCase)
+                && string.Equals(existing.SectionPath, definition.SectionPath, StringComparison.OrdinalIgnoreCase));
+
+        if (duplicate is null)
+        {
+            return;
+        }
+
+        var message =
+            $"Configuration section path '{definition.SectionPath}' is used by both '{duplicate.DefinitionKey}' and '{definition.DefinitionKey}'. " +
+            $"Set an explicit {nameof(ConfigurationAttribute.SectionPath)}, change {nameof(ModuleConfigurationOption.DefaultSectionPathConvention)}, " +
+            $"or set {nameof(ModuleConfigurationOption.DuplicateSectionPathBehavior)} to {nameof(ConfigurationDuplicateSectionPathBehavior.Warning)}.";
+
+        if (Option.DuplicateSectionPathBehavior == ConfigurationDuplicateSectionPathBehavior.Warning)
+        {
+            Logger.LogWarning(
+                "Duplicate Monica configuration section path '{SectionPath}' is used by definitions '{ExistingDefinitionKey}' and '{NewDefinitionKey}'.",
+                definition.SectionPath,
+                duplicate.DefinitionKey,
+                definition.DefinitionKey);
+            return;
+        }
+
+        throw new InvalidOperationException(message);
     }
 
     private void RegisterOptionsBinding(Type optionsType, string sectionPath)
@@ -287,6 +319,30 @@ public sealed class ModuleConfigurationGuide
 /// </summary>
 public sealed class ModuleConfigurationOption : ModuleOptions<ModuleConfiguration>
 {
+    /// <summary>
+    /// Gets or sets how Monica derives section paths for configuration types that do not set
+    /// <see cref="ConfigurationAttribute.SectionPath"/> explicitly.
+    /// </summary>
+    /// <remarks>
+    /// The default is <see cref="ConfigurationSectionPathConvention.ShortTypeName"/>, which binds an options type such as
+    /// <c>K8SOptions</c> to the root section <c>K8SOptions</c>. Use
+    /// <see cref="ConfigurationSectionPathConvention.ClrFullName"/> when a host intentionally wants namespace-qualified
+    /// roots such as <c>Company:Product:K8SOptions</c>.
+    /// </remarks>
+    public ConfigurationSectionPathConvention DefaultSectionPathConvention { get; set; } =
+        ConfigurationSectionPathConvention.ShortTypeName;
+
+    /// <summary>
+    /// Gets or sets how Monica handles duplicate resolved section paths across managed configuration definitions.
+    /// </summary>
+    /// <remarks>
+    /// The default is <see cref="ConfigurationDuplicateSectionPathBehavior.FailFast"/> because two definitions bound to the
+    /// same section make source inspection, mutation, and bootstrap behavior ambiguous. Use
+    /// <see cref="ConfigurationDuplicateSectionPathBehavior.Warning"/> only when a host intentionally accepts the overlap.
+    /// </remarks>
+    public ConfigurationDuplicateSectionPathBehavior DuplicateSectionPathBehavior { get; set; } =
+        ConfigurationDuplicateSectionPathBehavior.FailFast;
+
     /// <summary>
     /// Gets or sets whether source inventory includes runtime configuration keys that do not belong to
     /// Monica-managed configuration definitions.

@@ -11,7 +11,9 @@ namespace Monica.Configuration.Services;
 /// <summary>
 /// Reflection scanner that converts CLR options types into schema definitions.
 /// </summary>
-internal sealed class ConfigurationDefinitionScanner(ConfigurationSchemaHasher hasher)
+internal sealed class ConfigurationDefinitionScanner(
+    ConfigurationSchemaHasher hasher,
+    ConfigurationSectionPathConvention sectionPathConvention = ConfigurationSectionPathConvention.ShortTypeName)
 {
     /// <summary>
     /// Creates the persisted schema definition for a registered configuration options type.
@@ -24,7 +26,7 @@ internal sealed class ConfigurationDefinitionScanner(ConfigurationSchemaHasher h
             ?? throw new InvalidOperationException($"Type '{optionsType.FullName}' is not marked with {nameof(ConfigurationAttribute)}.");
 
         var definitionKey = attribute.DefinitionKey ?? optionsType.FullName ?? optionsType.Name;
-        var sectionPath = attribute.SectionPath ?? definitionKey.Replace('.', ':');
+        var sectionPath = ConfigurationSectionPathResolver.Resolve(optionsType, attribute, sectionPathConvention);
         var root = ScanNode(optionsType, optionsType.Name, LogicalPath.Root, sectionPath, attribute.ReloadBehavior);
 
         return new ConfigurationDefinition

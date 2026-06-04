@@ -3,6 +3,8 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Configuration.Json;
 using Microsoft.Extensions.Logging;
 using Monica.Configuration.Annotations;
+using Monica.Configuration.Models;
+using Monica.Configuration.Services.Support;
 using Monica.Core.Logging;
 
 namespace Monica.Configuration.Bootstrap;
@@ -20,11 +22,6 @@ public static class MonicaConfigurationBootstrapExtensions
     /// </summary>
     /// <typeparam name="TOptions">The options type marked with <see cref="ConfigurationAttribute"/>.</typeparam>
     /// <param name="configuration">The host configuration available during application builder setup.</param>
-    /// <param name="useMonicaSectionPath">
-    /// When <see langword="true"/>, uses Monica's definition-key section convention, for example
-    /// <c>My.Namespace.Options</c> becomes <c>My:Namespace:Options</c>. When <see langword="false"/>,
-    /// the default section is the short CLR type name, which matches common JSON file roots such as <c>K8SOptions</c>.
-    /// </param>
     /// <param name="debugging">Whether to log provider and file-source diagnostics for the resolved section.</param>
     /// <returns>
     /// The bound options object, or a CLR default instance when the section is unavailable or cannot be bound.
@@ -32,17 +29,18 @@ public static class MonicaConfigurationBootstrapExtensions
     /// <remarks>
     /// This helper is intended for bootstrap settings such as database connectivity that must be available before
     /// Monica-managed configuration is loaded. Runtime-managed settings should still flow through Monica.Configuration.
+    /// Bootstrap binding honors an explicit <see cref="ConfigurationAttribute.SectionPath"/>. When the attribute omits
+    /// the path, bootstrap uses the short CLR type name because module options are not available during bootstrap.
     /// </remarks>
     public static TOptions GetMonicaBootstrapConfiguration<TOptions>(
         this IConfiguration configuration,
-        bool useMonicaSectionPath = false,
         bool debugging = false)
         where TOptions : class, new()
     {
         ArgumentNullException.ThrowIfNull(configuration);
 
         var optionsType = typeof(TOptions);
-        var sectionPath = ResolveSectionPath(optionsType, useMonicaSectionPath);
+        var sectionPath = ResolveSectionPath(optionsType);
         if (sectionPath is null)
         {
             return new TOptions();
@@ -56,7 +54,7 @@ public static class MonicaConfigurationBootstrapExtensions
         return BindConfiguration<TOptions>(configuration, sectionPath);
     }
 
-    private static string? ResolveSectionPath(Type optionsType, bool useMonicaSectionPath)
+    private static string? ResolveSectionPath(Type optionsType)
     {
         var attribute = optionsType.GetCustomAttribute<ConfigurationAttribute>(inherit: false);
         if (attribute is null)
@@ -69,18 +67,10 @@ public static class MonicaConfigurationBootstrapExtensions
             return null;
         }
 
-        if (!string.IsNullOrWhiteSpace(attribute.SectionPath))
-        {
-            return attribute.SectionPath;
-        }
-
-        if (!useMonicaSectionPath)
-        {
-            return optionsType.Name;
-        }
-
-        var definitionKey = attribute.DefinitionKey ?? optionsType.FullName ?? optionsType.Name;
-        return definitionKey.Replace('.', ':');
+        return ConfigurationSectionPathResolver.Resolve(
+            optionsType,
+            attribute,
+            ConfigurationSectionPathConvention.ShortTypeName);
     }
 
     private static TOptions BindConfiguration<TOptions>(IConfiguration configuration, string sectionPath)
