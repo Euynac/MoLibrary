@@ -1,6 +1,3 @@
-@using System.Globalization
-@using System.Text.Json.Nodes
-@using System.Text.RegularExpressions
 @using Monica.Configuration.UI.Localization
 @inject IStringLocalizer<ConfigurationUIResource> L
 
@@ -149,57 +146,24 @@
                                             @foreach (var field in EditableScalarFields)
                                             {
                                                 var fieldPath = FieldPath(field);
+                                                var validationIssue = ValidationIssueFor(field, fieldPath);
                                                 <MudItem xs="12" md="6">
-                                                    <MudStack Spacing="1">
+                                                    <MudStack Spacing="1" @key="fieldPath.ToCanonicalString()">
                                                         <MudText Typo="Typo.caption" Color="Color.Secondary">@DisplayName(field)</MudText>
                                                         @if (!string.IsNullOrWhiteSpace(field.Description))
                                                         {
                                                             <MudText Typo="Typo.caption" Color="Color.Secondary">@field.Description</MudText>
                                                         }
-                                                        @if (field.ValueKind == ConfigurationValueKind.Boolean)
+                                                        <ConfigurationScalarEditor Node="@ScalarEditorNode(field, fieldPath)"
+                                                                                   EffectiveValue="@ScalarEditorEffectiveValue(field, fieldPath)"
+                                                                                   IsModified="@IsFieldModified(fieldPath)"
+                                                                                   ValidationIssue="@validationIssue"
+                                                                                   ValueChanged="result => OnScalarFieldChanged(field, SelectedEntry.Path, SelectedValueSchema, result)" />
+                                                        @if (validationIssue is not null && !ScalarEditorShowsInlineError(field))
                                                         {
-                                                            <MudSwitch T="bool"
-                                                                       Value="@ReadBool(field)"
-                                                                       ValueChanged="value => OnBoolFieldChanged(field, value)"
-                                                                       Color="Color.Primary" />
-                                                        }
-                                                        else if (IsNumeric(field))
-                                                        {
-                                                            <MudNumericField T="decimal?"
-                                                                             Value="@ReadDecimal(field)"
-                                                                             ValueChanged="value => OnNumberFieldChanged(field, value)"
-                                                                             Variant="Variant.Outlined"
-                                                                             Margin="Margin.Dense"
-                                                                             Error="@HasError(fieldPath)"
-                                                                             ErrorText="@ErrorFor(fieldPath)" />
-                                                        }
-                                                        else if (EnumValues(field).Count > 0)
-                                                        {
-                                                            <MudSelect T="string"
-                                                                       Value="@ReadText(field)"
-                                                                       ValueChanged="value => OnTextFieldChanged(field, value)"
-                                                                       Variant="Variant.Outlined"
-                                                                       Margin="Margin.Dense"
-                                                                       Error="@HasError(fieldPath)"
-                                                                       ErrorText="@ErrorFor(fieldPath)">
-                                                                @foreach (var value in EnumValues(field))
-                                                                {
-                                                                    <MudSelectItem T="string" Value="@value">@value</MudSelectItem>
-                                                                }
-                                                            </MudSelect>
-                                                        }
-                                                        else
-                                                        {
-                                                            <MudTextField T="string"
-                                                                          Value="@ReadText(field)"
-                                                                          ValueChanged="value => OnTextFieldChanged(field, value)"
-                                                                          Variant="Variant.Outlined"
-                                                                          Margin="Margin.Dense"
-                                                                          Immediate="true"
-                                                                          Placeholder="@Placeholder(field)"
-                                                                          InputType="@(field.IsSensitive ? InputType.Password : InputType.Text)"
-                                                                          Error="@HasError(fieldPath)"
-                                                                          ErrorText="@ErrorFor(fieldPath)" />
+                                                            <MudText Typo="Typo.caption" Color="Color.Error">
+                                                                @validationIssue.ValidationError
+                                                            </MudText>
                                                         }
                                                     </MudStack>
                                                 </MudItem>
@@ -223,57 +187,24 @@
                                                         @foreach (var field in objectSection.ScalarFields)
                                                         {
                                                             var fieldPath = FieldPath(field, objectSection.Path, objectSection.Node);
+                                                            var validationIssue = ValidationIssueFor(field, fieldPath);
                                                             <MudItem xs="12" md="6">
-                                                                <MudStack Spacing="1">
+                                                                <MudStack Spacing="1" @key="fieldPath.ToCanonicalString()">
                                                                     <MudText Typo="Typo.caption" Color="Color.Secondary">@DisplayName(field)</MudText>
                                                                     @if (!string.IsNullOrWhiteSpace(field.Description))
                                                                     {
                                                                         <MudText Typo="Typo.caption" Color="Color.Secondary">@field.Description</MudText>
                                                                     }
-                                                                    @if (field.ValueKind == ConfigurationValueKind.Boolean)
+                                                                    <ConfigurationScalarEditor Node="@ScalarEditorNode(field, fieldPath)"
+                                                                                               EffectiveValue="@ScalarEditorEffectiveValue(field, fieldPath)"
+                                                                                               IsModified="@IsFieldModified(fieldPath)"
+                                                                                               ValidationIssue="@validationIssue"
+                                                                                               ValueChanged="result => OnScalarFieldChanged(field, objectSection.Path, objectSection.Node, result)" />
+                                                                    @if (validationIssue is not null && !ScalarEditorShowsInlineError(field))
                                                                     {
-                                                                        <MudSwitch T="bool"
-                                                                                   Value="@ReadBool(field, objectSection.Path, objectSection.Node)"
-                                                                                   ValueChanged="value => OnBoolFieldChanged(field, objectSection.Path, objectSection.Node, value)"
-                                                                                   Color="Color.Primary" />
-                                                                    }
-                                                                    else if (IsNumeric(field))
-                                                                    {
-                                                                        <MudNumericField T="decimal?"
-                                                                                         Value="@ReadDecimal(field, objectSection.Path, objectSection.Node)"
-                                                                                         ValueChanged="value => OnNumberFieldChanged(field, objectSection.Path, objectSection.Node, value)"
-                                                                                         Variant="Variant.Outlined"
-                                                                                         Margin="Margin.Dense"
-                                                                                         Error="@HasError(fieldPath)"
-                                                                                         ErrorText="@ErrorFor(fieldPath)" />
-                                                                    }
-                                                                    else if (EnumValues(field).Count > 0)
-                                                                    {
-                                                                        <MudSelect T="string"
-                                                                                   Value="@ReadText(field, objectSection.Path, objectSection.Node)"
-                                                                                   ValueChanged="value => OnTextFieldChanged(field, objectSection.Path, objectSection.Node, value)"
-                                                                                   Variant="Variant.Outlined"
-                                                                                   Margin="Margin.Dense"
-                                                                                   Error="@HasError(fieldPath)"
-                                                                                   ErrorText="@ErrorFor(fieldPath)">
-                                                                            @foreach (var value in EnumValues(field))
-                                                                            {
-                                                                                <MudSelectItem T="string" Value="@value">@value</MudSelectItem>
-                                                                            }
-                                                                        </MudSelect>
-                                                                    }
-                                                                    else
-                                                                    {
-                                                                        <MudTextField T="string"
-                                                                                      Value="@ReadText(field, objectSection.Path, objectSection.Node)"
-                                                                                      ValueChanged="value => OnTextFieldChanged(field, objectSection.Path, objectSection.Node, value)"
-                                                                                      Variant="Variant.Outlined"
-                                                                                      Margin="Margin.Dense"
-                                                                                      Immediate="true"
-                                                                                      Placeholder="@Placeholder(field)"
-                                                                                      InputType="@(field.IsSensitive ? InputType.Password : InputType.Text)"
-                                                                                      Error="@HasError(fieldPath)"
-                                                                                      ErrorText="@ErrorFor(fieldPath)" />
+                                                                        <MudText Typo="Typo.caption" Color="Color.Error">
+                                                                            @validationIssue.ValidationError
+                                                                        </MudText>
                                                                     }
                                                                 </MudStack>
                                                             </MudItem>

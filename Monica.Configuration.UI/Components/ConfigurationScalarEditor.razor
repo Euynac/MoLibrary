@@ -1,6 +1,7 @@
 @using System.Globalization
 @using System.Text.Json
 @using System.Text.RegularExpressions
+@using MudBlazor.Extensions
 @using Monica.Configuration.UI.Localization
 @inject IStringLocalizer<ConfigurationUIResource> L
 
@@ -39,20 +40,48 @@
     }
     else if (Node.ValueKind == ConfigurationValueKind.TimeSpan)
     {
-        <MudTimePicker @key="EditorInstanceKey"
-                       Time="@_timeValue"
-                       TimeChanged="OnTimePickerChanged"
-                       Text="@_textValue"
-                       TextChanged="OnTimeTextChanged"
-                       TimeFormat="HH:mm"
-                       ImmediateText="true"
-                       Variant="Variant.Outlined"
-                       Margin="Margin.Dense"
-                       Editable="true"
-                       Placeholder="@L["State:Editor:TimeSpanPlaceholder"]"
-                       Error="@HasError"
-                       ErrorText="@_error"
-                       Disabled="@Disabled" />
+        <div class="configuration-time-span-editor">
+            <MudTextField @key="EditorInstanceKey"
+                          @ref="_timeTextField"
+                          T="string"
+                          @bind-Value:get="@_textValue"
+                          @bind-Value:set="OnTimeTextChanged"
+                          OnBlur="OnTimeTextBlurred"
+                          Variant="Variant.Outlined"
+                          Margin="Margin.Dense"
+                          Immediate="true"
+                          Placeholder="@L["State:Editor:TimeSpanPlaceholder"]"
+                          Error="@HasError"
+                          ErrorText="@_error"
+                          Disabled="@Disabled" />
+            <MudMenu @ref="_timePickerMenu"
+                     Icon="@Icons.Material.Filled.Schedule"
+                     Size="Size.Small"
+                     Variant="Variant.Outlined"
+                     Color="Color.Default"
+                     Disabled="@Disabled"
+                     AnchorOrigin="Origin.BottomRight"
+                     TransformOrigin="Origin.TopRight"
+                     OpenChanged="OnTimePickerMenuOpenChanged"
+                     PopoverClass="configuration-time-picker-popover"
+                     ListClass="configuration-time-picker-list">
+                <MudStack Spacing="2" Class="configuration-time-picker-menu">
+                    <MudTimePicker PickerVariant="PickerVariant.Static"
+                                   Time="@_pickerDraftTime"
+                                   TimeChanged="OnTimePickerDraftChanged"
+                                   TimeFormat="HH:mm"
+                                   AmPm="false" />
+                    <MudStack Row="true" Justify="Justify.FlexEnd">
+                        <MudButton Size="Size.Small"
+                                   Color="Color.Primary"
+                                   Variant="Variant.Filled"
+                                   OnClick="ApplyTimePickerDraft">
+                            @L["Common:Actions:Apply"]
+                        </MudButton>
+                    </MudStack>
+                </MudStack>
+            </MudMenu>
+        </div>
     }
     else if (EnumValues.Count > 0)
     {
@@ -104,6 +133,9 @@
     private decimal? _decimalValue;
     private DateTime? _dateValue;
     private TimeSpan? _timeValue;
+    private TimeSpan? _pickerDraftTime;
+    private MudTextField<string>? _timeTextField;
+    private MudMenu? _timePickerMenu;
     private bool _showSensitive;
     private string? _error;
     private string? _lastNodePath;
@@ -267,10 +299,41 @@
         await EmitAsync(text);
     }
 
-    private Task OnTimePickerChanged(TimeSpan? value)
+    private Task OnTimePickerMenuOpenChanged(bool open)
     {
-        _timeValue = value;
+        if (open)
+        {
+            _pickerDraftTime = _timeValue;
+        }
+
         return Task.CompletedTask;
+    }
+
+    private Task OnTimePickerDraftChanged(TimeSpan? value)
+    {
+        _pickerDraftTime = value;
+        return Task.CompletedTask;
+    }
+
+    private async Task ApplyTimePickerDraft()
+    {
+        _timeValue = _pickerDraftTime;
+        if (_timeValue is null)
+        {
+            _textValue = string.Empty;
+            await EmitAsync(string.Empty);
+        }
+        else
+        {
+            var displayValue = ConfigurationScalarTextCodec.FormatTimeSpan(_timeValue.Value);
+            _textValue = displayValue;
+            await EmitAsync(displayValue, ConfigurationScalarTextCodec.ToTimeSpanJson(_timeValue.Value));
+        }
+
+        if (_timePickerMenu is not null)
+        {
+            await _timePickerMenu.CloseMenuAsync();
+        }
     }
 
     private async Task OnTimeTextChanged(string? value)
@@ -299,6 +362,11 @@
         await EmitAsync(
             ConfigurationScalarTextCodec.FormatTimeSpan(parsedValue),
             ConfigurationScalarTextCodec.ToTimeSpanJson(parsedValue));
+    }
+
+    private Task OnTimeTextBlurred(FocusEventArgs _)
+    {
+        return OnTimeTextChanged(_timeTextField?.GetState(field => field.Text) ?? _textValue);
     }
 
     private async Task EmitAsync(string displayValue, string? rawJson = null)
@@ -336,9 +404,19 @@
     {
         _error = null;
 
-        if (Node.ValidationRules.OfType<RequiredRule>().Any() && string.IsNullOrWhiteSpace(value))
+        if (string.IsNullOrWhiteSpace(value))
         {
-            _error = L["State:Editor:Required"];
+            if (Node.ValidationRules.OfType<RequiredRule>().Any() || RequiresNonEmptyScalarValue)
+            {
+                _error = L["State:Editor:Required"];
+                return false;
+            }
+
+            return true;
+        }
+
+        if (!ValidateScalarValueKind(value))
+        {
             return false;
         }
 
@@ -370,6 +448,36 @@
         }
 
         return true;
+    }
+
+    private bool RequiresNonEmptyScalarValue =>
+        !Node.IsNullable
+        && Node.ValueKind is ConfigurationValueKind.TimeSpan
+            or ConfigurationValueKind.DateTime
+            or ConfigurationValueKind.Integer
+            or ConfigurationValueKind.Decimal
+            or ConfigurationValueKind.Floating;
+
+    private bool ValidateScalarValueKind(string value)
+    {
+        switch (Node.ValueKind)
+        {
+            case ConfigurationValueKind.TimeSpan when !ConfigurationScalarTextCodec.TryParseTimeSpan(value, out _):
+                _error = L["State:Editor:InvalidTimeSpan"];
+                return false;
+            case ConfigurationValueKind.DateTime when !DateTime.TryParse(value, CultureInfo.InvariantCulture, DateTimeStyles.AssumeLocal, out _):
+                _error = L["ImportExport:Diagnostics:ExpectedDateTime"];
+                return false;
+            case ConfigurationValueKind.Integer when !long.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out _):
+                _error = L["ImportExport:Diagnostics:ExpectedInteger"];
+                return false;
+            case ConfigurationValueKind.Decimal or ConfigurationValueKind.Floating
+                when !decimal.TryParse(value, NumberStyles.Any, CultureInfo.InvariantCulture, out _):
+                _error = L["ImportExport:Diagnostics:ExpectedNumber"];
+                return false;
+            default:
+                return true;
+        }
     }
 
     private IReadOnlyList<string> ExtractRegexEnumValues()

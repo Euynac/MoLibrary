@@ -1,10 +1,10 @@
 using System.Globalization;
 using System.Text.Json;
 using System.Text.Json.Nodes;
-using System.Text.RegularExpressions;
 using Microsoft.AspNetCore.Components;
 using MudBlazor;
 using Monica.Configuration.Models;
+using Monica.Configuration.UI.Models;
 using Monica.Configuration.UI.State;
 using Monica.Configuration.UI.Support;
 
@@ -23,8 +23,7 @@ public partial class ComplexValueEditorDialog
 
     private readonly List<PendingChange> _changes = [];
     private readonly List<FocusFrame> _navigationStack = [];
-    private readonly Dictionary<string, string> _validationErrors = new(StringComparer.Ordinal);
-    private readonly Dictionary<string, string> _sensitiveDrafts = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, ScalarValidationError> _validationErrors = new(StringComparer.Ordinal);
     private JsonNode? _documentNode;
     private JsonNode? _originalDocumentNode;
     private ConfigurationNodeDefinition _focusNode = null!;
@@ -110,7 +109,7 @@ public partial class ComplexValueEditorDialog
 
     private string StageButtonText => L["Dialogs:ComplexEditor:Actions:StageCount", _changes.Count];
 
-    private bool CanStage => _changes.Count > 0 || _startedWithScopedPendingChanges;
+    private bool CanStage => (_changes.Count > 0 || _startedWithScopedPendingChanges) && _validationErrors.Count == 0;
 
     protected override void OnInitialized()
     {
@@ -399,103 +398,31 @@ public partial class ComplexValueEditorDialog
             : ownerPath.Append(new PropertySegment(field.Name));
     }
 
-    private JsonNode? FieldValue(ConfigurationNodeDefinition field)
-    {
-        if (SelectedEntry is null)
-        {
-            return null;
-        }
-
-        return FieldValue(field, SelectedEntry.Path, SelectedValueSchema);
-    }
-
-    private JsonNode? FieldValue(
-        ConfigurationNodeDefinition field,
-        LogicalPath ownerPath,
-        ConfigurationNodeDefinition ownerSchema)
-    {
-        return ReadNode(FieldPath(field, ownerPath, ownerSchema));
-    }
-
-    private void OnTextFieldChanged(ConfigurationNodeDefinition field, string? value)
-    {
-        if (SelectedEntry is null)
-        {
-            return;
-        }
-
-        OnTextFieldChanged(field, SelectedEntry.Path, SelectedValueSchema, value);
-    }
-
-    private void OnTextFieldChanged(
+    private Task OnScalarFieldChanged(
         ConfigurationNodeDefinition field,
         LogicalPath ownerPath,
         ConfigurationNodeDefinition ownerSchema,
-        string? value)
+        ConfigurationScalarEditResult result)
     {
-        value ??= string.Empty;
         var path = FieldPath(field, ownerPath, ownerSchema);
-        if (field.IsSensitive && string.IsNullOrWhiteSpace(value))
+        var displayValue = result.DisplayValue ?? string.Empty;
+        if (field.IsSensitive && string.IsNullOrWhiteSpace(displayValue))
         {
-            _sensitiveDrafts.Remove(path.ToCanonicalString());
             ClearError(path);
-            return;
+            return Task.CompletedTask;
         }
 
-        if (!ValidateScalar(field, value, path))
+        if (!result.IsValid || result.StoredValue is null)
         {
-            if (field.IsSensitive)
-            {
-                _sensitiveDrafts[path.ToCanonicalString()] = value;
-            }
-            return;
+            SetError(path, new ScalarValidationError(
+                field.IsSensitive ? L["State:Value:Sensitive"].Value : displayValue,
+                result.ValidationError ?? L["State:Editor:InvalidPattern"]));
+            return Task.CompletedTask;
         }
 
-        SetFieldValue(field, ownerPath, ownerSchema, CreateTextValueNode(field, value));
-    }
-
-    private void OnNumberFieldChanged(ConfigurationNodeDefinition field, decimal? value)
-    {
-        if (SelectedEntry is null)
-        {
-            return;
-        }
-
-        OnNumberFieldChanged(field, SelectedEntry.Path, SelectedValueSchema, value);
-    }
-
-    private void OnNumberFieldChanged(
-        ConfigurationNodeDefinition field,
-        LogicalPath ownerPath,
-        ConfigurationNodeDefinition ownerSchema,
-        decimal? value)
-    {
-        var path = FieldPath(field, ownerPath, ownerSchema);
-        if (!ValidateScalar(field, value?.ToString(CultureInfo.InvariantCulture) ?? string.Empty, path))
-        {
-            return;
-        }
-
-        SetFieldValue(field, ownerPath, ownerSchema, value is null ? null : JsonValue.Create(value));
-    }
-
-    private void OnBoolFieldChanged(ConfigurationNodeDefinition field, bool value)
-    {
-        if (SelectedEntry is null)
-        {
-            return;
-        }
-
-        OnBoolFieldChanged(field, SelectedEntry.Path, SelectedValueSchema, value);
-    }
-
-    private void OnBoolFieldChanged(
-        ConfigurationNodeDefinition field,
-        LogicalPath ownerPath,
-        ConfigurationNodeDefinition ownerSchema,
-        bool value)
-    {
-        SetFieldValue(field, ownerPath, ownerSchema, JsonValue.Create(value));
+        ClearError(path);
+        SetFieldValue(field, ownerPath, ownerSchema, JsonNode.Parse(result.StoredValue.Json));
+        return Task.CompletedTask;
     }
 
     private void SetFieldValue(
@@ -509,7 +436,6 @@ public partial class ComplexValueEditorDialog
         var valueForStorage = CloneNode(value);
         SetNodeValue(path, value);
 
-        _sensitiveDrafts.Remove(path.ToCanonicalString());
         StageSet(path, field, oldValue, valueForStorage);
     }
 
@@ -648,7 +574,6 @@ public partial class ComplexValueEditorDialog
         _documentNode = CloneNode(_originalDocumentNode);
         _changes.Clear();
         _validationErrors.Clear();
-        _sensitiveDrafts.Clear();
         _navigationStack.Clear();
         _focusNode = Node;
         _focusPath = Node.RelativePath;
@@ -670,99 +595,61 @@ public partial class ComplexValueEditorDialog
         MudDialog.Cancel();
     }
 
-    private bool ValidateScalar(ConfigurationNodeDefinition field, string value, LogicalPath path)
+    private ConfigurationValidationIssue? ValidationIssueFor(ConfigurationNodeDefinition field, LogicalPath path)
     {
-        ClearError(path);
-        if (field.ValidationRules.OfType<RequiredRule>().Any() && string.IsNullOrWhiteSpace(value))
-        {
-            SetError(path, L["State:Editor:Required"]);
-            return false;
-        }
-
-        if (!ValidateScalarValueKind(field, value, path))
-        {
-            return false;
-        }
-
-        foreach (var rule in field.ValidationRules)
-        {
-            switch (rule)
+        return _validationErrors.TryGetValue(path.ToCanonicalString(), out var error)
+            ? new ConfigurationValidationIssue
             {
-                case AllowedValuesRule allowedValuesRule when !string.IsNullOrWhiteSpace(value)
-                                                              && !allowedValuesRule.Values.Contains(value, StringComparer.OrdinalIgnoreCase):
-                    SetError(path, rule.ErrorMessage ?? L["State:Editor:InvalidPattern"]);
-                    return false;
-                case RegexRule regexRule when !string.IsNullOrWhiteSpace(value) && !Regex.IsMatch(value, regexRule.Pattern):
-                    SetError(path, rule.ErrorMessage ?? L["State:Editor:InvalidPattern"]);
-                    return false;
-                case RangeRule rangeRule when decimal.TryParse(value, NumberStyles.Any, CultureInfo.InvariantCulture, out var decimalValue):
-                    if (rangeRule.Min is not null && decimalValue < rangeRule.Min || rangeRule.Max is not null && decimalValue > rangeRule.Max)
-                    {
-                        SetError(path, rule.ErrorMessage ?? L["State:Editor:OutOfRange"]);
-                        return false;
-                    }
-                    break;
-                case MaxLengthRule maxLengthRule when value.Length > maxLengthRule.Max:
-                    SetError(path, rule.ErrorMessage ?? L["State:Editor:TooLong"]);
-                    return false;
-                case MinLengthRule minLengthRule when value.Length < minLengthRule.Min:
-                    SetError(path, rule.ErrorMessage ?? L["State:Editor:TooShort"]);
-                    return false;
+                DefinitionKey = Definition.DefinitionKey,
+                DefinitionDisplayName = Definition.DisplayName,
+                LogicalPath = path,
+                NodeDisplayName = DisplayName(field),
+                InvalidDisplayValue = error.DisplayValue,
+                ValidationError = error.Message,
+                IsSensitive = field.IsSensitive,
+                ValidationRules = field.ValidationRules
             }
-        }
-
-        return true;
+            : null;
     }
 
-    private bool ValidateScalarValueKind(
-        ConfigurationNodeDefinition field,
-        string value,
-        LogicalPath path)
+    private static bool ScalarEditorShowsInlineError(ConfigurationNodeDefinition field)
     {
-        if (string.IsNullOrWhiteSpace(value))
-        {
-            if (field.ValueKind is ConfigurationValueKind.TimeSpan or ConfigurationValueKind.DateTime
-                    or ConfigurationValueKind.Integer or ConfigurationValueKind.Decimal or ConfigurationValueKind.Floating
-                && !field.IsNullable)
+        return field.ValueKind == ConfigurationValueKind.TimeSpan;
+    }
+
+    private bool IsFieldModified(LogicalPath path)
+    {
+        return _changes.Any(change =>
+            change.LogicalPath.Equals(path)
+            || IsStrictAncestor(change.LogicalPath, path));
+    }
+
+    private ConfigurationNodeDefinition ScalarEditorNode(ConfigurationNodeDefinition field, LogicalPath path)
+    {
+        return field.RelativePath.Equals(path)
+            ? field
+            : field with
             {
-                SetError(path, L["State:Editor:Required"]);
-                return false;
-            }
+                RelativePath = path,
+                ConfigurationPath = null
+            };
+    }
 
-            return true;
-        }
-
-        switch (field.ValueKind)
+    private ConfigurationEffectiveValue ScalarEditorEffectiveValue(ConfigurationNodeDefinition field, LogicalPath path)
+    {
+        return new ConfigurationEffectiveValue
         {
-            case ConfigurationValueKind.TimeSpan when !ConfigurationScalarTextCodec.TryParseTimeSpan(value, out _):
-                SetError(path, L["State:Editor:InvalidTimeSpan"]);
-                return false;
-            case ConfigurationValueKind.DateTime when !DateTime.TryParse(value, CultureInfo.InvariantCulture, DateTimeStyles.AssumeLocal, out _):
-                SetError(path, L["ImportExport:Diagnostics:ExpectedDateTime"]);
-                return false;
-            case ConfigurationValueKind.Integer when !long.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out _):
-                SetError(path, L["ImportExport:Diagnostics:ExpectedInteger"]);
-                return false;
-            case ConfigurationValueKind.Decimal or ConfigurationValueKind.Floating
-                when !decimal.TryParse(value, NumberStyles.Any, CultureInfo.InvariantCulture, out _):
-                SetError(path, L["ImportExport:Diagnostics:ExpectedNumber"]);
-                return false;
-        }
-
-        return true;
+            DefinitionKey = Definition.DefinitionKey,
+            LogicalPath = path,
+            ConfigurationPath = field.ConfigurationPath,
+            DisplayValue = field.IsSensitive ? null : ReadScalarAsString(ReadNode(path)),
+            IsSensitive = field.IsSensitive,
+            Version = _valueVersion,
+            EffectiveSource = EffectiveValue?.EffectiveSource
+        };
     }
 
-    private bool HasError(LogicalPath path)
-    {
-        return _validationErrors.ContainsKey(path.ToCanonicalString());
-    }
-
-    private string? ErrorFor(LogicalPath path)
-    {
-        return _validationErrors.GetValueOrDefault(path.ToCanonicalString());
-    }
-
-    private void SetError(LogicalPath path, string error)
+    private void SetError(LogicalPath path, ScalarValidationError error)
     {
         _validationErrors[path.ToCanonicalString()] = error;
     }
@@ -770,118 +657,6 @@ public partial class ComplexValueEditorDialog
     private void ClearError(LogicalPath path)
     {
         _validationErrors.Remove(path.ToCanonicalString());
-    }
-
-    private string ReadText(ConfigurationNodeDefinition field)
-    {
-        if (SelectedEntry is null)
-        {
-            return string.Empty;
-        }
-
-        return ReadText(field, SelectedEntry.Path, SelectedValueSchema);
-    }
-
-    private string ReadText(
-        ConfigurationNodeDefinition field,
-        LogicalPath ownerPath,
-        ConfigurationNodeDefinition ownerSchema)
-    {
-        var path = FieldPath(field, ownerPath, ownerSchema).ToCanonicalString();
-        if (field.IsSensitive)
-        {
-            return _sensitiveDrafts.GetValueOrDefault(path) ?? string.Empty;
-        }
-
-        return ReadScalarAsString(FieldValue(field, ownerPath, ownerSchema)) ?? string.Empty;
-    }
-
-    private bool ReadBool(ConfigurationNodeDefinition field)
-    {
-        if (SelectedEntry is null)
-        {
-            return false;
-        }
-
-        return ReadBool(field, SelectedEntry.Path, SelectedValueSchema);
-    }
-
-    private bool ReadBool(
-        ConfigurationNodeDefinition field,
-        LogicalPath ownerPath,
-        ConfigurationNodeDefinition ownerSchema)
-    {
-        var value = FieldValue(field, ownerPath, ownerSchema);
-        if (value is null)
-        {
-            return false;
-        }
-
-        using var document = JsonDocument.Parse(value.ToJsonString());
-        return document.RootElement.ValueKind switch
-        {
-            JsonValueKind.True => true,
-            JsonValueKind.False => false,
-            JsonValueKind.String => bool.TryParse(document.RootElement.GetString(), out var parsed) && parsed,
-            _ => false
-        };
-    }
-
-    private decimal? ReadDecimal(ConfigurationNodeDefinition field)
-    {
-        if (SelectedEntry is null)
-        {
-            return null;
-        }
-
-        return ReadDecimal(field, SelectedEntry.Path, SelectedValueSchema);
-    }
-
-    private decimal? ReadDecimal(
-        ConfigurationNodeDefinition field,
-        LogicalPath ownerPath,
-        ConfigurationNodeDefinition ownerSchema)
-    {
-        var text = ReadScalarAsString(FieldValue(field, ownerPath, ownerSchema));
-        return decimal.TryParse(text, NumberStyles.Any, CultureInfo.InvariantCulture, out var parsed) ? parsed : null;
-    }
-
-    private static JsonNode? CreateTextValueNode(ConfigurationNodeDefinition field, string value)
-    {
-        if (field.ValueKind == ConfigurationValueKind.TimeSpan
-            && ConfigurationScalarTextCodec.TryParseTimeSpan(value, out var timeSpan))
-        {
-            return JsonValue.Create(timeSpan.ToString("c", CultureInfo.InvariantCulture));
-        }
-
-        return JsonValue.Create(value);
-    }
-
-    private string? Placeholder(ConfigurationNodeDefinition field)
-    {
-        return field.IsSensitive ? L["State:Editor:SensitivePlaceholder"].Value : null;
-    }
-
-    private static bool IsNumeric(ConfigurationNodeDefinition field)
-    {
-        return field.ValueKind is ConfigurationValueKind.Integer or ConfigurationValueKind.Decimal or ConfigurationValueKind.Floating;
-    }
-
-    private IReadOnlyList<string> EnumValues(ConfigurationNodeDefinition field)
-    {
-        return field.ValidationRules.OfType<AllowedValuesRule>().FirstOrDefault()?.Values
-               ?? ExtractRegexEnumValues(field);
-    }
-
-    private static IReadOnlyList<string> ExtractRegexEnumValues(ConfigurationNodeDefinition field)
-    {
-        var pattern = field.ValidationRules.OfType<RegexRule>().FirstOrDefault()?.Pattern;
-        if (string.IsNullOrWhiteSpace(pattern) || !pattern.StartsWith("^(", StringComparison.Ordinal) || !pattern.EndsWith(")$", StringComparison.Ordinal))
-        {
-            return [];
-        }
-
-        return pattern[2..^2].Split('|', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
     }
 
     private JsonNode? ReadNode(LogicalPath path)
@@ -1196,4 +971,6 @@ public partial class ComplexValueEditorDialog
         ConfigurationNodeDefinition Node,
         LogicalPath Path,
         string? SelectedEntryKey);
+
+    private sealed record ScalarValidationError(string DisplayValue, string Message);
 }
