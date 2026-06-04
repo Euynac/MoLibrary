@@ -213,6 +213,15 @@
                 return [_selectedNode];
             }
 
+            if (_selectedNode.RelativePath.Depth == 0)
+            {
+                var rootItems = EnumerateNodes(_selectedNode)
+                    .Where(node => node.RelativePath.Depth > 0
+                                   && (node.NodeKind == ConfigurationNodeKind.Scalar || IsComplexNodeItem(node)))
+                    .ToArray();
+                return rootItems.Length == 0 ? [_selectedNode] : rootItems;
+            }
+
             var leaves = EnumerateNodes(_selectedNode).Where(node => node.NodeKind == ConfigurationNodeKind.Scalar).ToArray();
             return leaves.Length == 0 ? [_selectedNode] : leaves;
         }
@@ -421,6 +430,11 @@
             _ when node.RelativePath.Depth == 0 => Icons.Material.Filled.Home,
             _ => Icons.Material.Filled.Folder
         };
+    }
+
+    private static bool IsComplexNodeItem(ConfigurationNodeDefinition node)
+    {
+        return node.NodeKind is ConfigurationNodeKind.Object or ConfigurationNodeKind.Dictionary or ConfigurationNodeKind.List;
     }
 
     private bool IsSelectedNode(ConfigurationNodeDefinition node)

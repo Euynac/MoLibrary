@@ -71,7 +71,7 @@
                     }
                 </MudStack>
             }
-            else if (Node.NodeKind is ConfigurationNodeKind.Dictionary or ConfigurationNodeKind.List)
+            else
             {
                 <MudStack Row="true" Wrap="Wrap.Wrap" AlignItems="AlignItems.Center" Spacing="1">
                     <MudButton Variant="Variant.Outlined"
@@ -79,12 +79,24 @@
                                OnClick="PreviewComplexValue">
                         @L["State:Actions:PreviewValue"]
                     </MudButton>
-                    <MudButton Variant="Variant.Outlined"
-                               StartIcon="@Icons.Material.Filled.DataObject"
-                               Disabled="@IsCurrentSourceReadOnly"
-                               OnClick="EditComplexValue">
-                        @L["State:Actions:EditComplex"]
-                    </MudButton>
+                    @if (Node.NodeKind is ConfigurationNodeKind.Dictionary or ConfigurationNodeKind.List)
+                    {
+                        <MudButton Variant="Variant.Outlined"
+                                   StartIcon="@Icons.Material.Filled.DataObject"
+                                   Disabled="@IsCurrentSourceReadOnly"
+                                   OnClick="EditComplexValue">
+                            @L["State:Actions:EditComplex"]
+                        </MudButton>
+                    }
+                    else
+                    {
+                        <MudButton Variant="Variant.Outlined"
+                                   StartIcon="@Icons.Material.Filled.DataObject"
+                                   Disabled="@IsCurrentSourceReadOnly"
+                                   OnClick="EditComplexJsonAsync">
+                            @L["Common:Actions:EditJson"]
+                        </MudButton>
+                    }
                 </MudStack>
             }
         </MudItem>
@@ -330,6 +342,17 @@
         {
             await OpenJsonEditDialogAsync(effectiveValue);
         }
+    }
+
+    private async Task EditComplexJsonAsync()
+    {
+        var effectiveValue = await LoadComplexEffectiveValueAsync();
+        if (effectiveValue is null)
+        {
+            return;
+        }
+
+        await OpenJsonEditDialogAsync(effectiveValue);
     }
 
     private async Task OpenJsonEditDialogAsync(ConfigurationEffectiveValue effectiveValue)

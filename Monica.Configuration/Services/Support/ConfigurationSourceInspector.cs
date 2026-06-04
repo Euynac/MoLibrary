@@ -77,27 +77,49 @@ internal sealed class ConfigurationSourceInspector(
     /// </summary>
     public IReadOnlyList<ConfigurationDefinitionSourceContribution> GetDefinitionContributions(ConfigurationDefinition definition)
     {
-        var scalarNodes = EnumerateNodes(definition.Root)
-            .Where(node => node.NodeKind == ConfigurationNodeKind.Scalar)
-            .ToArray();
-
-        var counters = new Dictionary<string, ContributionCounter>(StringComparer.OrdinalIgnoreCase);
-        foreach (var node in scalarNodes)
+        if (configuration is not IConfigurationRoot root)
         {
-            var chain = GetSourceChain(definition, node.RelativePath);
-            foreach (var value in chain.Values)
+            return [];
+        }
+
+        var sources = GetSources().ToDictionary(source => source.PriorityIndex);
+        var counters = new Dictionary<string, ContributionCounter>(StringComparer.OrdinalIgnoreCase);
+        var effectivePriorityByPath = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+        var entries = new List<SourceContributionEntry>();
+
+        foreach (var (provider, index) in root.Providers.Select((provider, index) => (provider, index)))
+        {
+            if (!sources.TryGetValue(index, out var source))
             {
-                if (!counters.TryGetValue(value.Source.SourceKey, out var counter))
+                continue;
+            }
+
+            var suppliedPaths = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            foreach (var (configurationPath, _) in EnumerateProviderValues(provider, definition.SectionPath))
+            {
+                if (!suppliedPaths.Add(configurationPath) || ResolveNodeFromConfigurationPath(definition, configurationPath) is null)
                 {
-                    counter = new ContributionCounter(value.Source);
-                    counters[value.Source.SourceKey] = counter;
+                    continue;
                 }
 
+                var counter = GetOrCreateCounter(counters, source);
                 counter.SuppliedValueCount++;
-                if (value.IsEffective)
+                entries.Add(new SourceContributionEntry(source.SourceKey, index, configurationPath));
+
+                if (!effectivePriorityByPath.TryGetValue(configurationPath, out var currentPriority) || index > currentPriority)
                 {
-                    counter.EffectiveValueCount++;
+                    effectivePriorityByPath[configurationPath] = index;
                 }
+            }
+        }
+
+        foreach (var entry in entries)
+        {
+            if (effectivePriorityByPath.TryGetValue(entry.ConfigurationPath, out var priority)
+                && priority == entry.PriorityIndex
+                && counters.TryGetValue(entry.SourceKey, out var counter))
+            {
+                counter.EffectiveValueCount++;
             }
         }
 
@@ -266,17 +288,13 @@ internal sealed class ConfigurationSourceInspector(
                 continue;
             }
 
-            if (!provider.TryGet(configurationPath, out var value))
+            var value = BuildSourceValue(provider, descriptors[index], targetNode, configurationPath, isSensitive);
+            if (value is null)
             {
                 continue;
             }
 
-            hits.Add(new ConfigurationSourceValue
-            {
-                Source = descriptors[index],
-                DisplayValue = isSensitive ? null : value,
-                IsSensitive = isSensitive
-            });
+            hits.Add(value);
         }
 
         var effectiveIndex = hits.Count == 0 ? -1 : hits.Max(hit => hit.Source.PriorityIndex);
@@ -290,6 +308,157 @@ internal sealed class ConfigurationSourceInspector(
                 .OrderByDescending(hit => hit.Source.PriorityIndex)
                 .ToArray()
         };
+    }
+
+    private static ConfigurationSourceValue? BuildSourceValue(
+        IConfigurationProvider provider,
+        ConfigurationSourceDescriptor source,
+        ConfigurationNodeDefinition? targetNode,
+        string configurationPath,
+        bool isSensitive)
+    {
+        if (targetNode?.NodeKind == ConfigurationNodeKind.Scalar || targetNode is null)
+        {
+            return provider.TryGet(configurationPath, out var value)
+                ? new ConfigurationSourceValue
+                {
+                    Source = source,
+                    DisplayValue = isSensitive ? null : value,
+                    IsSensitive = isSensitive
+                }
+                : null;
+        }
+
+        var node = BuildProviderJsonNode(provider, targetNode, configurationPath);
+        if (node is null)
+        {
+            return null;
+        }
+
+        return new ConfigurationSourceValue
+        {
+            Source = source,
+            DisplayValue = node.ToJsonString(READABLE_JSON_OPTIONS),
+            IsSensitive = isSensitive
+        };
+    }
+
+    private static JsonNode? BuildProviderJsonNode(
+        IConfigurationProvider provider,
+        ConfigurationNodeDefinition schema,
+        string configurationPath)
+    {
+        return schema.NodeKind switch
+        {
+            ConfigurationNodeKind.Scalar => BuildProviderScalarNode(provider, schema, configurationPath),
+            ConfigurationNodeKind.Object => BuildProviderObjectNode(provider, schema, configurationPath),
+            ConfigurationNodeKind.Dictionary => BuildProviderDictionaryNode(provider, schema, configurationPath),
+            ConfigurationNodeKind.List => BuildProviderListNode(provider, schema, configurationPath),
+            _ => null
+        };
+    }
+
+    private static JsonNode? BuildProviderScalarNode(
+        IConfigurationProvider provider,
+        ConfigurationNodeDefinition schema,
+        string configurationPath)
+    {
+        if (!provider.TryGet(configurationPath, out var value))
+        {
+            return null;
+        }
+
+        if (schema.IsSensitive)
+        {
+            return JsonValue.Create("***");
+        }
+
+        return schema.ValueKind switch
+        {
+            ConfigurationValueKind.Boolean when bool.TryParse(value, out var parsed) => JsonValue.Create(parsed),
+            ConfigurationValueKind.Integer when long.TryParse(value, out var parsed) => JsonValue.Create(parsed),
+            ConfigurationValueKind.Decimal when decimal.TryParse(value, out var parsed) => JsonValue.Create(parsed),
+            ConfigurationValueKind.Floating when double.TryParse(value, out var parsed) => JsonValue.Create(parsed),
+            _ => JsonValue.Create(value)
+        };
+    }
+
+    private static JsonNode? BuildProviderObjectNode(
+        IConfigurationProvider provider,
+        ConfigurationNodeDefinition schema,
+        string configurationPath)
+    {
+        var result = new JsonObject();
+        foreach (var child in schema.Children)
+        {
+            var childPath = string.IsNullOrWhiteSpace(configurationPath)
+                ? child.Name
+                : $"{configurationPath}:{child.Name}";
+            var childNode = BuildProviderJsonNode(provider, child, childPath);
+            if (childNode is not null)
+            {
+                result[child.Name] = childNode;
+            }
+        }
+
+        return result.Count == 0 ? null : result;
+    }
+
+    private static JsonNode? BuildProviderDictionaryNode(
+        IConfigurationProvider provider,
+        ConfigurationNodeDefinition schema,
+        string configurationPath)
+    {
+        if (schema.DictionaryTemplate is null)
+        {
+            return null;
+        }
+
+        var result = new JsonObject();
+        foreach (var childKey in GetOrderedProviderChildKeys(provider, configurationPath))
+        {
+            var childPath = $"{configurationPath}:{childKey}";
+            var childNode = BuildProviderJsonNode(provider, schema.DictionaryTemplate.ValueTemplate, childPath);
+            if (childNode is not null)
+            {
+                result[childKey] = childNode;
+            }
+        }
+
+        return result.Count == 0 ? null : result;
+    }
+
+    private static JsonNode? BuildProviderListNode(
+        IConfigurationProvider provider,
+        ConfigurationNodeDefinition schema,
+        string configurationPath)
+    {
+        if (schema.ListTemplate is null)
+        {
+            return null;
+        }
+
+        var result = new JsonArray();
+        foreach (var childKey in GetOrderedProviderChildKeys(provider, configurationPath))
+        {
+            var childPath = $"{configurationPath}:{childKey}";
+            var childNode = BuildProviderJsonNode(provider, schema.ListTemplate.ItemTemplate, childPath);
+            if (childNode is not null)
+            {
+                result.Add(childNode);
+            }
+        }
+
+        return result.Count == 0 ? null : result;
+    }
+
+    private static IReadOnlyList<string> GetOrderedProviderChildKeys(IConfigurationProvider provider, string configurationPath)
+    {
+        return provider.GetChildKeys([], configurationPath)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderBy(key => int.TryParse(key, out var index) ? index : int.MaxValue)
+            .ThenBy(key => key, StringComparer.OrdinalIgnoreCase)
+            .ToArray();
     }
 
     private static ConfigurationSourceDescriptor BuildDescriptor(
@@ -585,6 +754,25 @@ internal sealed class ConfigurationSourceInspector(
 
         public int EffectiveValueCount { get; set; }
     }
+
+    private static ContributionCounter GetOrCreateCounter(
+        Dictionary<string, ContributionCounter> counters,
+        ConfigurationSourceDescriptor source)
+    {
+        if (counters.TryGetValue(source.SourceKey, out var counter))
+        {
+            return counter;
+        }
+
+        counter = new ContributionCounter(source);
+        counters[source.SourceKey] = counter;
+        return counter;
+    }
+
+    private sealed record SourceContributionEntry(
+        string SourceKey,
+        int PriorityIndex,
+        string ConfigurationPath);
 
     private sealed class SourceInventoryBuilder(ConfigurationSourceDescriptor source)
     {
