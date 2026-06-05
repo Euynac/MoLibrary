@@ -90,4 +90,16 @@ public sealed class ModuleConfigurationEfCoreGuide
 /// <summary>
 /// Module options for EF Core configuration persistence.
 /// </summary>
-public sealed class ModuleConfigurationEfCoreOption : ModuleOptions<ModuleConfigurationEfCore>;
+public sealed class ModuleConfigurationEfCoreOption : ModuleOptions<ModuleConfigurationEfCore>
+{
+    /// <summary>
+    /// Gets or sets whether the EF Core store creates Monica.Configuration tables when they are missing.
+    /// </summary>
+    /// <remarks>
+    /// This is enabled by default because Monica.Configuration.EfCore is often added to an existing application database
+    /// without a host-owned migration. The initializer only creates the tables owned by <see cref="ConfigurationDbContext"/>
+    /// when the Monica.Configuration table set is absent; it does not run data migrations.
+    /// Disable this when the host manages schema creation through explicit migrations.
+    /// </remarks>
+    public bool AutoCreateSchema { get; set; } = true;
+}

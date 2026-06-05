@@ -1,10 +1,15 @@
+using System.Data.Common;
 using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Storage;
+using Microsoft.Extensions.Options;
 using Monica.Configuration.Abstractions;
 using Monica.Configuration.EfCore.DbContext;
 using Monica.Configuration.EfCore.Entities;
 using Monica.Configuration.Exceptions;
 using Monica.Configuration.Models;
+using Monica.Modules;
 using Monica.Repository.Persistence.Abstractions;
 
 namespace Monica.Configuration.EfCore.Stores;
@@ -12,9 +17,14 @@ namespace Monica.Configuration.EfCore.Stores;
 /// <summary>
 /// EF Core-backed store bundle for distributed Monica.Configuration deployments.
 /// </summary>
-public sealed class DatabaseConfigurationStore(IDbContextOperation<ConfigurationDbContext> dbContextOperation)
+public sealed class DatabaseConfigurationStore(
+    IDbContextOperation<ConfigurationDbContext> dbContextOperation,
+    IOptions<ModuleConfigurationEfCoreOption> options)
     : IConfigurationEffectiveValueStore, IConfigurationHistoryStore, IConfigurationMetadataStore
 {
+    private readonly SemaphoreSlim _schemaInitializationLock = new(1, 1);
+    private bool _schemaInitialized;
+
     /// <inheritdoc />
     public ConfigurationStoreDescriptor Descriptor { get; } = new()
     {
@@ -32,7 +42,7 @@ public sealed class DatabaseConfigurationStore(IDbContextOperation<Configuration
         string seedJson,
         CancellationToken cancellationToken)
     {
-        return await dbContextOperation.ExecuteAsync(async (dbContext, token) =>
+        return await ExecuteAsync(async (dbContext, token) =>
         {
             var entity = await dbContext.ConfigurationEffectiveValues
                 .FirstOrDefaultAsync(value => value.DefinitionKey == definition.DefinitionKey, token);
@@ -58,7 +68,7 @@ public sealed class DatabaseConfigurationStore(IDbContextOperation<Configuration
     /// <inheritdoc />
     public async Task<ConfigurationEffectiveValueDocument?> GetAsync(string definitionKey, CancellationToken cancellationToken)
     {
-        return await dbContextOperation.ExecuteAsync(async (dbContext, token) =>
+        return await ExecuteAsync(async (dbContext, token) =>
         {
             var entity = await dbContext.ConfigurationEffectiveValues
                 .AsNoTracking()
@@ -72,7 +82,7 @@ public sealed class DatabaseConfigurationStore(IDbContextOperation<Configuration
         ConfigurationEffectiveValueSaveRequest request,
         CancellationToken cancellationToken)
     {
-        return await dbContextOperation.ExecuteAsync(async (dbContext, token) =>
+        return await ExecuteAsync(async (dbContext, token) =>
         {
             var entity = await dbContext.ConfigurationEffectiveValues
                 .FirstOrDefaultAsync(value => value.DefinitionKey == request.Definition.DefinitionKey, token);
@@ -103,7 +113,7 @@ public sealed class DatabaseConfigurationStore(IDbContextOperation<Configuration
     /// <inheritdoc />
     public async Task AppendHistoryAsync(ConfigurationValueHistory history, CancellationToken cancellationToken)
     {
-        await dbContextOperation.ExecuteAsync(async (dbContext, token) =>
+        await ExecuteAsync(async (dbContext, token) =>
         {
             dbContext.ConfigurationValueHistories.Add(ToEntity(history));
             await dbContext.SaveChangesAsync(token);
@@ -119,7 +129,7 @@ public sealed class DatabaseConfigurationStore(IDbContextOperation<Configuration
         string? mutationGroupId,
         CancellationToken cancellationToken)
     {
-        return await dbContextOperation.ExecuteAsync(async (dbContext, token) =>
+        return await ExecuteAsync(async (dbContext, token) =>
         {
             var query = dbContext.ConfigurationValueHistories.AsNoTracking();
 
@@ -160,7 +170,7 @@ public sealed class DatabaseConfigurationStore(IDbContextOperation<Configuration
     /// <inheritdoc />
     public async Task<ConfigurationValueHistory?> GetHistoryByIdAsync(string historyId, CancellationToken cancellationToken)
     {
-        return await dbContextOperation.ExecuteAsync(async (dbContext, token) =>
+        return await ExecuteAsync(async (dbContext, token) =>
         {
             var entity = await dbContext.ConfigurationValueHistories
                 .AsNoTracking()
@@ -172,7 +182,7 @@ public sealed class DatabaseConfigurationStore(IDbContextOperation<Configuration
     /// <inheritdoc />
     public async Task UpsertGroupAsync(ConfigurationMutationGroup group, CancellationToken cancellationToken)
     {
-        await dbContextOperation.ExecuteAsync(async (dbContext, token) =>
+        await ExecuteAsync(async (dbContext, token) =>
         {
             var entity = await dbContext.ConfigurationMutationGroups
                 .FirstOrDefaultAsync(candidate => candidate.GroupId == group.GroupId, token);
@@ -203,7 +213,7 @@ public sealed class DatabaseConfigurationStore(IDbContextOperation<Configuration
         string? definitionKey,
         CancellationToken cancellationToken)
     {
-        return await dbContextOperation.ExecuteAsync(async (dbContext, token) =>
+        return await ExecuteAsync(async (dbContext, token) =>
         {
             var query = dbContext.ConfigurationMutationGroups.AsNoTracking();
             if (from is not null)
@@ -231,7 +241,7 @@ public sealed class DatabaseConfigurationStore(IDbContextOperation<Configuration
     /// <inheritdoc />
     public async Task<ConfigurationMutationGroup?> GetGroupAsync(string groupId, CancellationToken cancellationToken)
     {
-        return await dbContextOperation.ExecuteAsync(async (dbContext, token) =>
+        return await ExecuteAsync(async (dbContext, token) =>
         {
             var entity = await dbContext.ConfigurationMutationGroups
                 .AsNoTracking()
@@ -243,7 +253,7 @@ public sealed class DatabaseConfigurationStore(IDbContextOperation<Configuration
     /// <inheritdoc />
     public async Task PublishAsync(IReadOnlyList<ConfigurationDefinition> definitions, CancellationToken cancellationToken)
     {
-        await dbContextOperation.ExecuteAsync(async (dbContext, token) =>
+        await ExecuteAsync(async (dbContext, token) =>
         {
             foreach (var definition in definitions)
             {
@@ -270,6 +280,108 @@ public sealed class DatabaseConfigurationStore(IDbContextOperation<Configuration
 
             await dbContext.SaveChangesAsync(token);
         }, cancellationToken);
+    }
+
+    private async Task<TResult> ExecuteAsync<TResult>(
+        Func<ConfigurationDbContext, CancellationToken, Task<TResult>> operation,
+        CancellationToken cancellationToken)
+    {
+        await EnsureSchemaAsync(cancellationToken);
+        return await dbContextOperation.ExecuteAsync(operation, cancellationToken);
+    }
+
+    private async Task ExecuteAsync(
+        Func<ConfigurationDbContext, CancellationToken, Task> operation,
+        CancellationToken cancellationToken)
+    {
+        await EnsureSchemaAsync(cancellationToken);
+        await dbContextOperation.ExecuteAsync(operation, cancellationToken);
+    }
+
+    private async Task EnsureSchemaAsync(CancellationToken cancellationToken)
+    {
+        if (!options.Value.AutoCreateSchema || _schemaInitialized)
+        {
+            return;
+        }
+
+        await _schemaInitializationLock.WaitAsync(cancellationToken);
+        try
+        {
+            if (_schemaInitialized)
+            {
+                return;
+            }
+
+            await dbContextOperation.ExecuteAsync(async (dbContext, token) =>
+            {
+                if (!await ConfigurationTablesExistAsync(dbContext, token))
+                {
+                    var creator = dbContext.Database.GetService<IRelationalDatabaseCreator>();
+                    if (!await creator.ExistsAsync(token))
+                    {
+                        await creator.CreateAsync(token);
+                    }
+
+                    await creator.CreateTablesAsync(token);
+                }
+            }, cancellationToken);
+
+            _schemaInitialized = true;
+        }
+        finally
+        {
+            _schemaInitializationLock.Release();
+        }
+    }
+
+    private static async Task<bool> ConfigurationTablesExistAsync(
+        ConfigurationDbContext dbContext,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            _ = await dbContext.ConfigurationDefinitions
+                .AsNoTracking()
+                .Take(1)
+                .AnyAsync(cancellationToken);
+            return true;
+        }
+        catch (Exception ex) when (IsMissingTableException(ex))
+        {
+            return false;
+        }
+    }
+
+    private static bool IsMissingTableException(Exception exception)
+    {
+        for (var current = exception; current is not null; current = current.InnerException)
+        {
+            if (current is DbException dbException && IsMissingTableException(dbException))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private static bool IsMissingTableException(DbException exception)
+    {
+        return GetStringProperty(exception, "SqlState") is "42P01"
+            || GetIntProperty(exception, "Number") is 208 or 1146
+            || GetIntProperty(exception, "SqliteErrorCode") is 1
+                && exception.Message.Contains("no such table", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static string? GetStringProperty(object instance, string propertyName)
+    {
+        return instance.GetType().GetProperty(propertyName)?.GetValue(instance) as string;
+    }
+
+    private static int? GetIntProperty(object instance, string propertyName)
+    {
+        return instance.GetType().GetProperty(propertyName)?.GetValue(instance) as int?;
     }
 
     private static ConfigurationEffectiveValueDocument ToDocument(ConfigurationEffectiveValueEntity entity)
