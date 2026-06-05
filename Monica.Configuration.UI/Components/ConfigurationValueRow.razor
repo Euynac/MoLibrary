@@ -103,11 +103,14 @@
 
         <MudItem xs="12" md="2">
             <MudStack Row="true" Justify="Justify.FlexEnd" Spacing="1">
-                <MudTooltip Text="@L["Sources:Chain:Title"]">
-                    <MudIconButton Icon="@Icons.Material.Filled.AccountTree"
-                                   Size="Size.Small"
-                                   OnClick="OpenSourceChainAsync" />
-                </MudTooltip>
+                @if (CanInspectSourceChain)
+                {
+                    <MudTooltip Text="@L["Sources:Chain:Title"]">
+                        <MudIconButton Icon="@Icons.Material.Filled.AccountTree"
+                                       Size="Size.Small"
+                                       OnClick="OpenSourceChainAsync" />
+                    </MudTooltip>
+                }
                 <MudTooltip Text="@L["History:Title"]">
                     <MudIconButton Icon="@Icons.Material.Filled.History"
                                    Size="Size.Small"
@@ -155,6 +158,8 @@
     private bool IsExternalEffectiveSource => EffectiveSource is { Kind: not ConfigurationSourceKind.MonicaEffectiveStore };
 
     private bool IsCurrentSourceReadOnly => EffectiveSource is { Kind: not ConfigurationSourceKind.MonicaEffectiveStore, IsWritable: false };
+
+    private bool CanInspectSourceChain => Definition.Origin == ConfigurationDefinitionOrigin.LocalScan;
 
     private Color EffectiveSourceIconColor => IsCurrentSourceReadOnly ? Color.Default : Color.Warning;
 

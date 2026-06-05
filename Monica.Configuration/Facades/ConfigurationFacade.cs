@@ -1,7 +1,9 @@
 using Microsoft.Extensions.Configuration;
+using System.Text.Json;
 using Monica.Configuration.Exceptions;
 using Monica.Configuration.Abstractions;
 using Monica.Configuration.Models;
+using Monica.Configuration.Serialization;
 using Monica.Configuration.Services;
 using Monica.Configuration.Services.Support;
 using Monica.Core.Extensions;
@@ -14,7 +16,7 @@ namespace Monica.Configuration.Facades;
 /// Host-facing entry point for configuration management APIs and UI consumers.
 /// </summary>
 public sealed class ConfigurationFacade(
-    IConfigurationDefinitionRegistry definitionRegistry,
+    ConfigurationDefinitionResolver definitionResolver,
     IConfigurationMutationService mutationService,
     IConfigurationSourceMutationService sourceMutationService,
     IConfigurationHistoryService historyService,
@@ -26,6 +28,7 @@ public sealed class ConfigurationFacade(
     IEnumerable<IConfigurationChangeNotifier> changeNotifiers,
     IConfigurationStoreStateTracker storeStateTracker,
     ConfigurationEffectiveValueSeedFactory seedFactory,
+    ConfigurationEffectiveValueDocumentEditor documentEditor,
     IConfigurationSourceInspector sourceInspector,
     IConfigurationJsonFileSourceWriter sourceWriter,
     IConfiguration configuration)
@@ -34,21 +37,20 @@ public sealed class ConfigurationFacade(
     /// Gets all configuration definition summaries.
     /// </summary>
     /// <returns>Definition summaries.</returns>
-    public Task<Res<IReadOnlyList<ConfigurationDefinitionSummary>>> GetDefinitionsAsync()
+    public async Task<Res<IReadOnlyList<ConfigurationDefinitionSummary>>> GetDefinitionsAsync()
     {
-        IReadOnlyList<ConfigurationDefinitionSummary> summaries = definitionRegistry.GetAll()
-            .Select(definition => new ConfigurationDefinitionSummary
-            {
-                DefinitionKey = definition.DefinitionKey,
-                SectionPath = definition.SectionPath,
-                DisplayName = definition.DisplayName,
-                ClrTypeName = definition.ClrTypeName,
-                OwnerModule = definition.OwnerModule,
-                SchemaVersion = definition.SchemaVersion
-            })
-            .ToArray();
+        try
+        {
+            IReadOnlyList<ConfigurationDefinitionSummary> summaries = (await definitionResolver.GetMergedDefinitionsAsync(CancellationToken.None))
+                .Select(ToSummary)
+                .ToArray();
 
-        return Task.FromResult(Res.Ok(summaries));
+            return Res.Ok(summaries);
+        }
+        catch (Exception ex)
+        {
+            return Res.Fail($"Failed to get configuration definitions: {ex.GetMessageRecursively()}");
+        }
     }
 
     /// <summary>
@@ -56,23 +58,23 @@ public sealed class ConfigurationFacade(
     /// </summary>
     /// <param name="definitionKey">The definition key.</param>
     /// <returns>The definition detail.</returns>
-    public Task<Res<ConfigurationDefinitionDetail>> GetDefinitionAsync(string definitionKey)
+    public async Task<Res<ConfigurationDefinitionDetail>> GetDefinitionAsync(string definitionKey)
     {
         try
         {
             var detail = new ConfigurationDefinitionDetail
             {
-                Definition = definitionRegistry.GetRequired(definitionKey)
+                Definition = await definitionResolver.GetRequiredAsync(definitionKey, CancellationToken.None)
             };
-            return Task.FromResult<Res<ConfigurationDefinitionDetail>>(detail);
+            return detail;
         }
         catch (ConfigurationDefinitionNotFoundException ex)
         {
-            return Task.FromResult<Res<ConfigurationDefinitionDetail>>(Res.Fail(ex.Message));
+            return Res.Fail(ex.Message);
         }
         catch (Exception ex)
         {
-            return Task.FromResult<Res<ConfigurationDefinitionDetail>>(Res.Fail($"Failed to get configuration definition: {ex.GetMessageRecursively()}"));
+            return Res.Fail($"Failed to get configuration definition: {ex.GetMessageRecursively()}");
         }
     }
 
@@ -86,12 +88,13 @@ public sealed class ConfigurationFacade(
     {
         try
         {
-            var definition = definitionRegistry.GetRequired(definitionKey);
+            var definition = await definitionResolver.GetRequiredAsync(definitionKey, CancellationToken.None);
             var targetNode = ResolveTargetNode(definition, logicalPath);
             var isSensitive = targetNode?.IsSensitive is true;
             var document = await effectiveValueStore.GetAsync(definitionKey, CancellationToken.None);
             var configurationPath = targetNode?.ConfigurationPath ?? ProjectPath(definition, logicalPath);
-            var runtimeSourceValue = targetNode?.NodeKind == ConfigurationNodeKind.Scalar
+            var runtimeSourceValue = definition.Origin == ConfigurationDefinitionOrigin.LocalScan
+                                     && targetNode?.NodeKind == ConfigurationNodeKind.Scalar
                 ? sourceInspector.GetSourceChain(definition, logicalPath).Values.FirstOrDefault(value => value.IsEffective)
                 : null;
 
@@ -106,6 +109,22 @@ public sealed class ConfigurationFacade(
                     IsSensitive = runtimeSourceValue.IsSensitive,
                     Version = runtimeSourceValue.Source.Kind == ConfigurationSourceKind.MonicaEffectiveStore ? document?.Version : null,
                     EffectiveSource = runtimeSourceValue.Source
+                };
+            }
+
+            if (definition.Origin == ConfigurationDefinitionOrigin.PublishedMetadata)
+            {
+                var valueJson = document?.Json ?? seedFactory.CreateSeedJson(definition);
+                var storedValue = documentEditor.ReadValue(definition, valueJson, logicalPath);
+                return new ConfigurationEffectiveValue
+                {
+                    DefinitionKey = definitionKey,
+                    LogicalPath = logicalPath,
+                    ConfigurationPath = configurationPath,
+                    DisplayValue = isSensitive ? null : ToDisplayValue(storedValue, targetNode),
+                    IsSensitive = isSensitive,
+                    Version = document?.Version,
+                    EffectiveSource = targetNode?.NodeKind == ConfigurationNodeKind.Scalar ? BuildEffectiveStoreSource() : null
                 };
             }
 
@@ -139,6 +158,63 @@ public sealed class ConfigurationFacade(
 
         parts.AddRange(logicalPath.Segments.Select(segment => segment.Value));
         return string.Join(':', parts);
+    }
+
+    private ConfigurationSourceDescriptor BuildEffectiveStoreSource()
+    {
+        return new ConfigurationSourceDescriptor
+        {
+            SourceKey = effectiveValueStore.Descriptor.StoreKey,
+            DisplayName = effectiveValueStore.Descriptor.DisplayName,
+            ProviderType = effectiveValueStore.Descriptor.Kind.ToString(),
+            Kind = ConfigurationSourceKind.MonicaEffectiveStore,
+            IsManagedByMonica = true,
+            IsWritable = effectiveValueStore.Descriptor.IsWritable
+        };
+    }
+
+    private static ConfigurationDefinitionSummary ToSummary(ConfigurationDefinition definition)
+    {
+        return new ConfigurationDefinitionSummary
+        {
+            DefinitionKey = definition.DefinitionKey,
+            SectionPath = definition.SectionPath,
+            DisplayName = definition.DisplayName,
+            ClrTypeName = definition.ClrTypeName,
+            OwnerModule = definition.OwnerModule,
+            SchemaVersion = definition.SchemaVersion,
+            Origin = definition.Origin
+        };
+    }
+
+    private static string? ToDisplayValue(ConfigurationStoredValue? storedValue, ConfigurationNodeDefinition? node)
+    {
+        if (storedValue is null)
+        {
+            return null;
+        }
+
+        try
+        {
+            using var document = JsonDocument.Parse(storedValue.Json);
+            if (document.RootElement.ValueKind is JsonValueKind.Null or JsonValueKind.Undefined)
+            {
+                return null;
+            }
+
+            if (node?.NodeKind == ConfigurationNodeKind.Scalar)
+            {
+                return document.RootElement.ValueKind == JsonValueKind.String
+                    ? document.RootElement.GetString()
+                    : document.RootElement.GetRawText();
+            }
+
+            return JsonSerializer.Serialize(document.RootElement, ConfigurationPersistedJsonOptions.ReadableValue);
+        }
+        catch (JsonException)
+        {
+            return storedValue.Json;
+        }
     }
 
     /// <summary>
@@ -224,7 +300,12 @@ public sealed class ConfigurationFacade(
     {
         try
         {
-            var definition = definitionRegistry.GetRequired(definitionKey);
+            if (!definitionResolver.TryGetLocal(definitionKey, out var definition))
+            {
+                return Task.FromResult<Res<IReadOnlyList<ConfigurationDefinitionSourceContribution>>>(
+                    Res.Fail("Configuration source-chain inspection is only available for definitions scanned by the current process."));
+            }
+
             return Task.FromResult(Res.Ok(sourceInspector.GetDefinitionContributions(definition)));
         }
         catch (Exception ex)
@@ -244,7 +325,12 @@ public sealed class ConfigurationFacade(
     {
         try
         {
-            var definition = definitionRegistry.GetRequired(definitionKey);
+            if (!definitionResolver.TryGetLocal(definitionKey, out var definition))
+            {
+                return Task.FromResult<Res<ConfigurationSourceChain>>(
+                    Res.Fail("Configuration source-chain inspection is only available for definitions scanned by the current process."));
+            }
+
             return Task.FromResult(Res.Ok(sourceInspector.GetSourceChain(definition, logicalPath)));
         }
         catch (Exception ex)

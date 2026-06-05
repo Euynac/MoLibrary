@@ -12,7 +12,7 @@ public class FileConfigurationStoreTests : IDisposable
     private readonly string _rootDirectory = Path.Combine(Path.GetTempPath(), $"monica-config-tests-{Guid.NewGuid():N}");
 
     [Fact]
-    public async Task EnsureCreatedAsync_WhenDocumentIsMissing_ShouldCreateDefinitionJson()
+    public async Task EnsureCreatedAsync_WhenDocumentIsMissing_ShouldCreateEffectiveValueJson()
     {
         var store = CreateStore();
         var definition = TestConfigurationFactory.Definition();

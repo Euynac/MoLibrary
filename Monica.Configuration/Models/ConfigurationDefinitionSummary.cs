@@ -21,7 +21,7 @@ public sealed record ConfigurationDefinitionSummary
     public required string DisplayName { get; init; }
 
     /// <summary>
-    /// Gets the assembly-qualified CLR type name of the owning options type.
+    /// Gets the compact owning options type identity used for display and search.
     /// </summary>
     public required string ClrTypeName { get; init; }
 
@@ -34,4 +34,9 @@ public sealed record ConfigurationDefinitionSummary
     /// Gets the schema version.
     /// </summary>
     public int SchemaVersion { get; init; }
+
+    /// <summary>
+    /// Gets where this definition was resolved from for the current process.
+    /// </summary>
+    public ConfigurationDefinitionOrigin Origin { get; init; } = ConfigurationDefinitionOrigin.LocalScan;
 }

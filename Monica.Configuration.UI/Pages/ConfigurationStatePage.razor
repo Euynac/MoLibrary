@@ -79,6 +79,14 @@
                                             {
                                                 <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">@_selectedDefinition.OwnerModule</MudChip>
                                             }
+                                            @if (_selectedDefinition.Origin == ConfigurationDefinitionOrigin.PublishedMetadata)
+                                            {
+                                                <MudTooltip Text="@L["State:Definitions:PublishedMetadataTooltip"]">
+                                                    <MudChip T="string" Size="Size.Small" Color="Color.Info" Variant="Variant.Outlined">
+                                                        @L["State:Definitions:PublishedMetadata"]
+                                                    </MudChip>
+                                                </MudTooltip>
+                                            }
                                             <MudChip T="int" Size="Size.Small" Color="Color.Primary" Variant="Variant.Outlined">@_selectedDefinition.SchemaVersion</MudChip>
                                             <MudChip T="ConfigurationReloadBehavior" Size="Size.Small" Color="Color.Info" Variant="Variant.Outlined">@_selectedDefinition.ReloadBehavior</MudChip>
                                             <MudTooltip Text="@L["Common:Actions:EditJson"]">
@@ -93,12 +101,15 @@
                                                                Variant="Variant.Outlined"
                                                                OnClick="() => OpenExportDialog(_selectedDefinition.DefinitionKey, _selectedDefinition.DisplayName)" />
                                             </MudTooltip>
-                                            <MudTooltip Text="@L["Sources:Definition:Title"]">
-                                                <MudIconButton Icon="@Icons.Material.Filled.AccountTree"
-                                                               Size="Size.Small"
-                                                               Variant="Variant.Outlined"
-                                                               OnClick="OpenDefinitionSourcesAsync" />
-                                            </MudTooltip>
+                                            @if (CanInspectSelectedDefinitionSources)
+                                            {
+                                                <MudTooltip Text="@L["Sources:Definition:Title"]">
+                                                    <MudIconButton Icon="@Icons.Material.Filled.AccountTree"
+                                                                   Size="Size.Small"
+                                                                   Variant="Variant.Outlined"
+                                                                   OnClick="OpenDefinitionSourcesAsync" />
+                                                </MudTooltip>
+                                            }
                                         </MudStack>
                                     </MudStack>
 
@@ -179,6 +190,9 @@
     private bool _loadingDefinition;
     private int _pendingCount;
     private int _validationIssueCount;
+
+    private bool CanInspectSelectedDefinitionSources =>
+        _selectedDefinition?.Origin == ConfigurationDefinitionOrigin.LocalScan;
 
     private IReadOnlyList<string> SearchTerms => string.IsNullOrWhiteSpace(_searchText)
         ? []

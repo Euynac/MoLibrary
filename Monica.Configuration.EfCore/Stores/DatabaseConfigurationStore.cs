@@ -2,6 +2,7 @@ using System.Data.Common;
 using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Metadata;
 using Microsoft.EntityFrameworkCore.Storage;
 using Microsoft.Extensions.Options;
 using Monica.Configuration.Abstractions;
@@ -9,6 +10,7 @@ using Monica.Configuration.EfCore.DbContext;
 using Monica.Configuration.EfCore.Entities;
 using Monica.Configuration.Exceptions;
 using Monica.Configuration.Models;
+using Monica.Configuration.Serialization;
 using Monica.Modules;
 using Monica.Repository.Persistence.Abstractions;
 
@@ -24,6 +26,13 @@ public sealed class DatabaseConfigurationStore(
 {
     private readonly SemaphoreSlim _schemaInitializationLock = new(1, 1);
     private bool _schemaInitialized;
+
+    private enum ConfigurationSchemaState
+    {
+        Missing,
+        Mismatch,
+        Ready
+    }
 
     /// <inheritdoc />
     public ConfigurationStoreDescriptor Descriptor { get; } = new()
@@ -194,7 +203,7 @@ public sealed class DatabaseConfigurationStore(
 
             entity.Label = group.Label;
             entity.Reason = group.Reason;
-            entity.DefinitionKeysJson = JsonSerializer.Serialize(group.DefinitionKeys);
+            entity.DefinitionKeysJson = JsonSerializer.Serialize(group.DefinitionKeys, ConfigurationPersistedJsonOptions.CompactValue);
             entity.MutationCount = group.MutationCount;
             entity.CreatedTime = group.CreatedTime;
             entity.ModifierId = group.ModifierId;
@@ -268,17 +277,43 @@ public sealed class DatabaseConfigurationStore(
 
                 entity.SectionPath = definition.SectionPath;
                 entity.DisplayName = definition.DisplayName;
-                entity.ClrTypeName = definition.ClrTypeName;
+                entity.ClrTypeName = ConfigurationDefinitionSchemaCodec.ToCompactClrTypeName(definition.ClrTypeName);
                 entity.OwnerModule = definition.OwnerModule;
                 entity.Category = definition.Category;
                 entity.SchemaVersion = definition.SchemaVersion;
                 entity.SchemaHash = definition.SchemaHash;
                 entity.ReloadBehavior = definition.ReloadBehavior.ToString();
-                entity.DefinitionJson = JsonSerializer.Serialize(definition);
+                entity.SchemaJson = ConfigurationDefinitionSchemaCodec.SerializeSchema(definition);
                 entity.LastSeenTime = DateTimeOffset.UtcNow;
             }
 
             await dbContext.SaveChangesAsync(token);
+        }, cancellationToken);
+    }
+
+    /// <inheritdoc />
+    public async Task<IReadOnlyList<ConfigurationDefinition>> ListPublishedDefinitionsAsync(CancellationToken cancellationToken)
+    {
+        return await ExecuteAsync(async (dbContext, token) =>
+        {
+            var entities = await dbContext.ConfigurationDefinitions
+                .AsNoTracking()
+                .OrderBy(definition => definition.DisplayName)
+                .ThenBy(definition => definition.DefinitionKey)
+                .ToArrayAsync(token);
+            return entities.Select(ToDefinition).ToArray();
+        }, cancellationToken);
+    }
+
+    /// <inheritdoc />
+    public async Task<ConfigurationDefinition?> GetPublishedDefinitionAsync(string definitionKey, CancellationToken cancellationToken)
+    {
+        return await ExecuteAsync(async (dbContext, token) =>
+        {
+            var entity = await dbContext.ConfigurationDefinitions
+                .AsNoTracking()
+                .FirstOrDefaultAsync(definition => definition.DefinitionKey == definitionKey, token);
+            return entity is null ? null : ToDefinition(entity);
         }, cancellationToken);
     }
 
@@ -315,14 +350,24 @@ public sealed class DatabaseConfigurationStore(
 
             await dbContextOperation.ExecuteAsync(async (dbContext, token) =>
             {
-                if (!await ConfigurationTablesExistAsync(dbContext, token))
+                var creator = dbContext.Database.GetService<IRelationalDatabaseCreator>();
+                if (!await creator.ExistsAsync(token))
                 {
-                    var creator = dbContext.Database.GetService<IRelationalDatabaseCreator>();
-                    if (!await creator.ExistsAsync(token))
-                    {
-                        await creator.CreateAsync(token);
-                    }
+                    await creator.CreateAsync(token);
+                    await creator.CreateTablesAsync(token);
+                    return;
+                }
 
+                var schemaState = await GetConfigurationSchemaStateAsync(dbContext, token);
+                if (schemaState == ConfigurationSchemaState.Missing)
+                {
+                    await creator.CreateTablesAsync(token);
+                    return;
+                }
+
+                if (schemaState == ConfigurationSchemaState.Mismatch)
+                {
+                    await DropConfigurationTablesAsync(dbContext, token);
                     await creator.CreateTablesAsync(token);
                 }
             }, cancellationToken);
@@ -335,7 +380,7 @@ public sealed class DatabaseConfigurationStore(
         }
     }
 
-    private static async Task<bool> ConfigurationTablesExistAsync(
+    private static async Task<ConfigurationSchemaState> GetConfigurationSchemaStateAsync(
         ConfigurationDbContext dbContext,
         CancellationToken cancellationToken)
     {
@@ -343,13 +388,41 @@ public sealed class DatabaseConfigurationStore(
         {
             _ = await dbContext.ConfigurationDefinitions
                 .AsNoTracking()
-                .Take(1)
-                .AnyAsync(cancellationToken);
-            return true;
+                .Select(definition => definition.SchemaJson)
+                .FirstOrDefaultAsync(cancellationToken);
+            return ConfigurationSchemaState.Ready;
         }
         catch (Exception ex) when (IsMissingTableException(ex))
         {
-            return false;
+            return ConfigurationSchemaState.Missing;
+        }
+        catch (Exception ex) when (IsMissingColumnException(ex))
+        {
+            return ConfigurationSchemaState.Mismatch;
+        }
+    }
+
+    private static async Task DropConfigurationTablesAsync(
+        ConfigurationDbContext dbContext,
+        CancellationToken cancellationToken)
+    {
+        var entityTypes = new[]
+        {
+            typeof(ConfigurationValueHistoryEntity),
+            typeof(ConfigurationMutationGroupEntity),
+            typeof(ConfigurationEffectiveValueEntity),
+            typeof(ConfigurationDefinitionEntity)
+        };
+
+        foreach (var entityType in entityTypes)
+        {
+            var entity = dbContext.Model.FindEntityType(entityType)
+                ?? throw new InvalidOperationException($"EF entity '{entityType.Name}' is not part of {nameof(ConfigurationDbContext)}.");
+            var tableName = entity.GetTableName()
+                ?? throw new InvalidOperationException($"EF entity '{entityType.Name}' does not have a table name.");
+            var tableSql = FormatTableName(dbContext.Database.ProviderName, entity.GetSchema(), tableName);
+            var commandText = "DROP TABLE IF EXISTS " + tableSql;
+            await dbContext.Database.ExecuteSqlRawAsync(commandText, cancellationToken);
         }
     }
 
@@ -366,12 +439,69 @@ public sealed class DatabaseConfigurationStore(
         return false;
     }
 
+    private static bool IsMissingColumnException(Exception exception)
+    {
+        for (var current = exception; current is not null; current = current.InnerException)
+        {
+            if (current is DbException dbException && IsMissingColumnException(dbException))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     private static bool IsMissingTableException(DbException exception)
     {
         return GetStringProperty(exception, "SqlState") is "42P01"
             || GetIntProperty(exception, "Number") is 208 or 1146
             || GetIntProperty(exception, "SqliteErrorCode") is 1
                 && exception.Message.Contains("no such table", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool IsMissingColumnException(DbException exception)
+    {
+        return GetStringProperty(exception, "SqlState") is "42703"
+            || GetIntProperty(exception, "Number") is 207 or 1054
+            || GetIntProperty(exception, "SqliteErrorCode") is 1
+                && exception.Message.Contains("no such column", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static string FormatTableName(string? providerName, string? schema, string tableName)
+    {
+        if (providerName?.Contains("SqlServer", StringComparison.OrdinalIgnoreCase) is true)
+        {
+            return string.IsNullOrWhiteSpace(schema)
+                ? QuoteSqlServer(tableName)
+                : $"{QuoteSqlServer(schema)}.{QuoteSqlServer(tableName)}";
+        }
+
+        if (providerName?.Contains("MySql", StringComparison.OrdinalIgnoreCase) is true)
+        {
+            return string.IsNullOrWhiteSpace(schema)
+                ? QuoteMySql(tableName)
+                : $"{QuoteMySql(schema)}.{QuoteMySql(tableName)}";
+        }
+
+        return string.IsNullOrWhiteSpace(schema)
+            ? QuoteAnsi(tableName)
+            : $"{QuoteAnsi(schema)}.{QuoteAnsi(tableName)}";
+    }
+
+    private static string QuoteSqlServer(string identifier)
+    {
+        return $"[{identifier.Replace("]", "]]", StringComparison.Ordinal)}]";
+    }
+
+    private static string QuoteMySql(string identifier)
+    {
+        return $"`{identifier.Replace("`", "``", StringComparison.Ordinal)}`";
+    }
+
+    private static string QuoteAnsi(string identifier)
+    {
+        return $"\"{identifier.Replace("\"", "\"\"", StringComparison.Ordinal)}\"";
     }
 
     private static string? GetStringProperty(object instance, string propertyName)
@@ -398,6 +528,22 @@ public sealed class DatabaseConfigurationStore(
         };
     }
 
+    private static ConfigurationDefinition ToDefinition(ConfigurationDefinitionEntity entity)
+    {
+        return ConfigurationDefinitionSchemaCodec.DeserializeDefinition(
+            entity.DefinitionKey,
+            entity.SectionPath,
+            entity.DisplayName,
+            entity.ClrTypeName,
+            entity.OwnerModule,
+            entity.Category,
+            entity.SchemaVersion,
+            entity.SchemaHash,
+            Enum.Parse<ConfigurationReloadBehavior>(entity.ReloadBehavior),
+            entity.SchemaJson,
+            ConfigurationDefinitionOrigin.PublishedMetadata);
+    }
+
     private ConfigurationValueHistoryEntity ToEntity(ConfigurationValueHistory history)
     {
         return new ConfigurationValueHistoryEntity
@@ -415,8 +561,8 @@ public sealed class DatabaseConfigurationStore(
             MutationKind = history.MutationKind.ToString(),
             Granularity = history.Granularity.ToString(),
             State = history.State.ToString(),
-            OldValueJson = history.OldValue is null ? null : JsonSerializer.Serialize(history.OldValue),
-            NewValueJson = JsonSerializer.Serialize(history.NewValue),
+            OldValueJson = history.OldValue is null ? null : JsonSerializer.Serialize(history.OldValue, ConfigurationPersistedJsonOptions.CompactValue),
+            NewValueJson = JsonSerializer.Serialize(history.NewValue, ConfigurationPersistedJsonOptions.CompactValue),
             Version = history.Version,
             SourceRevisionBefore = history.SourceRevisionBefore,
             SourceRevisionAfter = history.SourceRevisionAfter,
@@ -468,7 +614,9 @@ public sealed class DatabaseConfigurationStore(
             GroupId = entity.GroupId,
             Label = entity.Label,
             Reason = entity.Reason,
-            DefinitionKeys = JsonSerializer.Deserialize<IReadOnlyList<string>>(entity.DefinitionKeysJson) ?? [],
+            DefinitionKeys = JsonSerializer.Deserialize<IReadOnlyList<string>>(
+                entity.DefinitionKeysJson,
+                ConfigurationPersistedJsonOptions.CompactValue) ?? [],
             MutationCount = entity.MutationCount,
             CreatedTime = entity.CreatedTime,
             ModifierId = entity.ModifierId,
@@ -483,12 +631,12 @@ public sealed class DatabaseConfigurationStore(
     {
         return string.IsNullOrWhiteSpace(json)
             ? null
-            : JsonSerializer.Deserialize<ConfigurationStoredValue>(json);
+            : JsonSerializer.Deserialize<ConfigurationStoredValue>(json, ConfigurationPersistedJsonOptions.CompactValue);
     }
 
     private static string NormalizeJson(string json)
     {
         using var document = JsonDocument.Parse(string.IsNullOrWhiteSpace(json) ? "{}" : json);
-        return document.RootElement.GetRawText();
+        return JsonSerializer.Serialize(document.RootElement, ConfigurationPersistedJsonOptions.CompactValue);
     }
 }

@@ -23,7 +23,7 @@ public sealed class ConfigurationDefinitionEntity
 
     public string ReloadBehavior { get; set; } = "";
 
-    public string DefinitionJson { get; set; } = "";
+    public string SchemaJson { get; set; } = "";
 
     public DateTimeOffset LastSeenTime { get; set; }
 }

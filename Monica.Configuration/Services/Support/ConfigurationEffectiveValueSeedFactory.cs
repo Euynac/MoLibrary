@@ -4,6 +4,7 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using Microsoft.Extensions.Configuration;
 using Monica.Configuration.Models;
+using Monica.Configuration.Serialization;
 
 namespace Monica.Configuration.Services.Support;
 
@@ -12,10 +13,7 @@ namespace Monica.Configuration.Services.Support;
 /// </summary>
 public sealed class ConfigurationEffectiveValueSeedFactory(IConfiguration configuration)
 {
-    private static readonly JsonSerializerOptions WRITE_OPTIONS = new()
-    {
-        WriteIndented = true
-    };
+    private static readonly JsonSerializerOptions WRITE_OPTIONS = ConfigurationPersistedJsonOptions.ReadableValue;
 
     /// <summary>
     /// Creates a seed JSON document for a configuration definition.

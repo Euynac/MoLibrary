@@ -5,7 +5,6 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\Test.Monica\Test.Monica.csproj" />
     <ProjectReference Include="..\..\Monica.Configuration\Monica.Configuration.csproj" />
   </ItemGroup>
 

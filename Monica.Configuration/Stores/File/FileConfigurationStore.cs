@@ -4,6 +4,7 @@ using IoFile = System.IO.File;
 using Monica.Configuration.Abstractions;
 using Monica.Configuration.Exceptions;
 using Monica.Configuration.Models;
+using Monica.Configuration.Serialization;
 using Monica.Configuration.Utils;
 using Microsoft.Extensions.Options;
 
@@ -17,10 +18,11 @@ public sealed class FileConfigurationStore(IOptions<ConfigurationFileStoreOption
 {
     private static readonly JsonSerializerOptions JSON_OPTIONS = new()
     {
+        Encoder = ConfigurationPersistedJsonOptions.ReadableValue.Encoder,
         WriteIndented = true
     };
 
-    private static readonly JsonSerializerOptions JSON_LINE_OPTIONS = new();
+    private static readonly JsonSerializerOptions JSON_LINE_OPTIONS = ConfigurationPersistedJsonOptions.CompactValue;
 
     private readonly SemaphoreSlim _lock = new(1, 1);
     private readonly ConfigurationFileStoreOptions _options = options.Value;
@@ -277,8 +279,45 @@ public sealed class FileConfigurationStore(IOptions<ConfigurationFileStoreOption
             foreach (var definition in definitions)
             {
                 var path = GetDefinitionPath(definition.DefinitionKey);
-                await IoFile.WriteAllTextAsync(path, JsonSerializer.Serialize(definition, JSON_OPTIONS), cancellationToken);
+                var published = PublishedDefinitionDto.FromDefinition(definition);
+                await IoFile.WriteAllTextAsync(path, JsonSerializer.Serialize(published, JSON_OPTIONS), cancellationToken);
             }
+        }
+        finally
+        {
+            _lock.Release();
+        }
+    }
+
+    /// <inheritdoc />
+    public async Task<IReadOnlyList<ConfigurationDefinition>> ListPublishedDefinitionsAsync(CancellationToken cancellationToken)
+    {
+        await _lock.WaitAsync(cancellationToken);
+        try
+        {
+            EnsureDirectories();
+            return IoDirectory.EnumerateFiles(GetDefinitionsDirectory(), "*.json")
+                .Select(path => ReadPublishedDefinition(path))
+                .OfType<ConfigurationDefinition>()
+                .OrderBy(definition => definition.DisplayName, StringComparer.OrdinalIgnoreCase)
+                .ThenBy(definition => definition.DefinitionKey, StringComparer.OrdinalIgnoreCase)
+                .ToArray();
+        }
+        finally
+        {
+            _lock.Release();
+        }
+    }
+
+    /// <inheritdoc />
+    public async Task<ConfigurationDefinition?> GetPublishedDefinitionAsync(string definitionKey, CancellationToken cancellationToken)
+    {
+        await _lock.WaitAsync(cancellationToken);
+        try
+        {
+            EnsureDirectories();
+            var path = GetDefinitionPath(definitionKey);
+            return IoFile.Exists(path) ? ReadPublishedDefinition(path) : null;
         }
         finally
         {
@@ -420,6 +459,12 @@ public sealed class FileConfigurationStore(IOptions<ConfigurationFileStoreOption
         return JsonSerializer.Serialize(document.RootElement, JSON_OPTIONS);
     }
 
+    private static ConfigurationDefinition? ReadPublishedDefinition(string path)
+    {
+        var dto = JsonSerializer.Deserialize<PublishedDefinitionDto>(IoFile.ReadAllText(path), JSON_OPTIONS);
+        return dto?.ToDefinition();
+    }
+
     private static IReadOnlyList<ConfigurationValueHistory> SortHistory(IEnumerable<ConfigurationValueHistory> histories)
     {
         return histories
@@ -439,6 +484,65 @@ public sealed class FileConfigurationStore(IOptions<ConfigurationFileStoreOption
         public string? LastModifierId { get; init; }
 
         public string? LastModifierName { get; init; }
+    }
+
+    private sealed record PublishedDefinitionDto
+    {
+        public string DefinitionKey { get; init; } = "";
+
+        public string SectionPath { get; init; } = "";
+
+        public string DisplayName { get; init; } = "";
+
+        public string ClrTypeName { get; init; } = "";
+
+        public string? OwnerModule { get; init; }
+
+        public string? Category { get; init; }
+
+        public int SchemaVersion { get; init; }
+
+        public string SchemaHash { get; init; } = "";
+
+        public string ReloadBehavior { get; init; } = "";
+
+        public string SchemaJson { get; init; } = "";
+
+        public DateTimeOffset LastSeenTime { get; init; }
+
+        public static PublishedDefinitionDto FromDefinition(ConfigurationDefinition definition)
+        {
+            return new PublishedDefinitionDto
+            {
+                DefinitionKey = definition.DefinitionKey,
+                SectionPath = definition.SectionPath,
+                DisplayName = definition.DisplayName,
+                ClrTypeName = ConfigurationDefinitionSchemaCodec.ToCompactClrTypeName(definition.ClrTypeName),
+                OwnerModule = definition.OwnerModule,
+                Category = definition.Category,
+                SchemaVersion = definition.SchemaVersion,
+                SchemaHash = definition.SchemaHash,
+                ReloadBehavior = definition.ReloadBehavior.ToString(),
+                SchemaJson = ConfigurationDefinitionSchemaCodec.SerializeSchema(definition),
+                LastSeenTime = DateTimeOffset.UtcNow
+            };
+        }
+
+        public ConfigurationDefinition ToDefinition()
+        {
+            return ConfigurationDefinitionSchemaCodec.DeserializeDefinition(
+                DefinitionKey,
+                SectionPath,
+                DisplayName,
+                ClrTypeName,
+                OwnerModule,
+                Category,
+                SchemaVersion,
+                SchemaHash,
+                Enum.Parse<ConfigurationReloadBehavior>(ReloadBehavior),
+                SchemaJson,
+                ConfigurationDefinitionOrigin.PublishedMetadata);
+        }
     }
 
     private sealed record HistoryDto

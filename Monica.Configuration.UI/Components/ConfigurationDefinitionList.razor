@@ -39,9 +39,22 @@
                                              Class="@(IsSelected(definition) ? "selected-definition" : null)"
                                              OnClick="() => SelectedDefinitionChanged.InvokeAsync(definition)">
                                     <MudStack Spacing="0">
-                                        <MudText Typo="Typo.body2">
-                                            <MudHighlighter Text="@definition.DisplayName" HighlightedTexts="@SearchTerms" />
-                                        </MudText>
+                                        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1" Class="configuration-definition-title">
+                                            <MudText Typo="Typo.body2">
+                                                <MudHighlighter Text="@definition.DisplayName" HighlightedTexts="@SearchTerms" />
+                                            </MudText>
+                                            @if (definition.Origin == ConfigurationDefinitionOrigin.PublishedMetadata)
+                                            {
+                                                <MudTooltip Text="@L["State:Definitions:PublishedMetadataTooltip"]">
+                                                    <MudChip T="string"
+                                                             Size="Size.Small"
+                                                             Color="Color.Info"
+                                                             Variant="Variant.Outlined">
+                                                        @L["State:Definitions:PublishedMetadata"]
+                                                    </MudChip>
+                                                </MudTooltip>
+                                            }
+                                        </MudStack>
                                         <MudText Typo="Typo.caption" Color="Color.Secondary">
                                             <MudHighlighter Text="@GetOptionsTypeName(definition)" HighlightedTexts="@SearchTerms" />
                                         </MudText>

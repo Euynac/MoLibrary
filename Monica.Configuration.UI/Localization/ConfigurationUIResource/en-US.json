@@ -23,7 +23,9 @@
       "Empty": "No configuration definitions were found.",
       "NoMatches": "No definitions match the current search.",
       "SelectPrompt": "Select a configuration definition.",
-      "Ungrouped": "Ungrouped"
+      "Ungrouped": "Ungrouped",
+      "PublishedMetadata": "DB",
+      "PublishedMetadataTooltip": "This definition was loaded from published database metadata. Monica database values can be edited here, but runtime source-chain inspection is available only in the service that scanned the CLR type."
     },
     "Tree": {
       "Root": "Root"

@@ -99,6 +99,14 @@
     background-color: var(--mud-palette-action-default-hover);
 }
 
+.configuration-definition-title {
+    min-width: 0;
+}
+
+.configuration-definition-title ::deep .mud-typography {
+    min-width: 0;
+}
+
 .configuration-node-match-list {
     display: flex;
     flex-direction: column;

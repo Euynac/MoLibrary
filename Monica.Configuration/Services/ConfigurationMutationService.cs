@@ -11,7 +11,7 @@ namespace Monica.Configuration.Services;
 /// Default mutation service that validates, routes, writes, and reloads configuration values.
 /// </summary>
 internal sealed class ConfigurationMutationService(
-    IConfigurationDefinitionRegistry definitionRegistry,
+    ConfigurationDefinitionResolver definitionResolver,
     IConfigurationEffectiveValueStore effectiveValueStore,
     IConfigurationHistoryStore historyStore,
     ConfigurationEffectiveValueSeedFactory seedFactory,
@@ -26,7 +26,7 @@ internal sealed class ConfigurationMutationService(
     /// <inheritdoc />
     public async Task<ConfigurationMutationResult> MutateAsync(ConfigurationMutationRequest request, CancellationToken cancellationToken)
     {
-        var definition = definitionRegistry.GetRequired(request.DefinitionKey);
+        var definition = await definitionResolver.GetRequiredAsync(request.DefinitionKey, cancellationToken);
         validationCoordinator.Validate(definition, request);
         var targetNode = ResolveTargetNode(definition, request.LogicalPath);
         ValidateEditablePath(definition, request.LogicalPath);

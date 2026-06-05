@@ -90,6 +90,22 @@ public enum ConfigurationDuplicateSectionPathBehavior
 }
 
 /// <summary>
+/// Describes where a configuration definition was resolved from for the current process.
+/// </summary>
+public enum ConfigurationDefinitionOrigin
+{
+    /// <summary>
+    /// The definition was scanned from a local CLR options type in this process.
+    /// </summary>
+    LocalScan,
+
+    /// <summary>
+    /// The definition was loaded from published metadata in the configured metadata store.
+    /// </summary>
+    PublishedMetadata
+}
+
+/// <summary>
 /// Identifies the backing technology of a configuration store.
 /// </summary>
 public enum ConfigurationStoreKind

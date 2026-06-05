@@ -21,7 +21,9 @@ public sealed record ConfigurationDefinition
     public required string DisplayName { get; init; }
 
     /// <summary>
-    /// Gets the assembly-qualified CLR type name of the owning options type.
+    /// Gets the owning options type identity.
+    /// Local scanned definitions keep the assembly-qualified name so defaults can be constructed.
+    /// Published metadata definitions keep a compact display/search identity because remote services cannot instantiate the type.
     /// </summary>
     public required string ClrTypeName { get; init; }
 
@@ -54,4 +56,9 @@ public sealed record ConfigurationDefinition
     /// Gets the root node of the configuration schema tree.
     /// </summary>
     public required ConfigurationNodeDefinition Root { get; init; }
+
+    /// <summary>
+    /// Gets where this definition was resolved from for the current process.
+    /// </summary>
+    public ConfigurationDefinitionOrigin Origin { get; init; } = ConfigurationDefinitionOrigin.LocalScan;
 }
