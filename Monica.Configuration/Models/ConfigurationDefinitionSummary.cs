@@ -26,9 +26,14 @@ public sealed record ConfigurationDefinitionSummary
     public required string ClrTypeName { get; init; }
 
     /// <summary>
-    /// Gets the owning module.
+    /// Gets the assembly name of the project that published this definition.
     /// </summary>
-    public string? OwnerModule { get; init; }
+    public required string FromProject { get; init; }
+
+    /// <summary>
+    /// Gets a developer-defined category for grouping.
+    /// </summary>
+    public string? Category { get; init; }
 
     /// <summary>
     /// Gets the schema version.

@@ -27,6 +27,17 @@ public sealed class ConfigurationDbContext(
 
         modelBuilder.Entity<ConfigurationDefinitionEntity>().HasKey(x => x.DefinitionKey);
         modelBuilder.Entity<ConfigurationDefinitionEntity>()
+            .HasIndex(x => x.FromProject);
+        modelBuilder.Entity<ConfigurationDefinitionEntity>()
+            .HasIndex(x => x.Category);
+        modelBuilder.Entity<ConfigurationDefinitionEntity>()
+            .Property(x => x.FromProject)
+            .IsRequired()
+            .HasMaxLength(200);
+        modelBuilder.Entity<ConfigurationDefinitionEntity>()
+            .Property(x => x.Category)
+            .HasMaxLength(200);
+        modelBuilder.Entity<ConfigurationDefinitionEntity>()
             .Property(x => x.LastSeenTime)
             .HasConversion(value => ToUtcTicks(value), value => FromUtcTicks(value));
         modelBuilder.Entity<ConfigurationEffectiveValueEntity>().HasKey(x => x.DefinitionKey);

@@ -46,7 +46,7 @@ internal sealed class ConfigurationSourceMutationService(
             request.ExpectedSourceRevision,
             cancellationToken);
 
-        await reloadCoordinator.ReloadAsync(cancellationToken);
+        await reloadCoordinator.ReloadRuntimeConfigurationAsync(cancellationToken);
 
         var targetNode = ResolveTargetNode(definition, request.LogicalPath);
         await historyStore.AppendHistoryAsync(new ConfigurationValueHistory

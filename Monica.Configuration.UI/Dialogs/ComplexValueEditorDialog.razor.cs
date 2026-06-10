@@ -1,7 +1,9 @@
 using System.Globalization;
+using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using Microsoft.AspNetCore.Components;
+using Microsoft.JSInterop;
 using MudBlazor;
 using Monica.Configuration.Models;
 using Monica.Configuration.UI.Models;
@@ -13,9 +15,10 @@ namespace Monica.Configuration.UI.Dialogs;
 /// <summary>
 /// Dialog backing logic for structured object, dictionary, and list configuration editing.
 /// </summary>
-public partial class ComplexValueEditorDialog
+public partial class ComplexValueEditorDialog : IAsyncDisposable
 {
     [CascadingParameter] private IMudDialogInstance MudDialog { get; set; } = null!;
+    [Inject] private IJSRuntime JSRuntime { get; set; } = null!;
     [Parameter, EditorRequired] public ConfigurationDefinition Definition { get; set; } = null!;
     [Parameter, EditorRequired] public ConfigurationNodeDefinition Node { get; set; } = null!;
     [Parameter] public ConfigurationEffectiveValue? EffectiveValue { get; set; }
@@ -32,6 +35,8 @@ public partial class ComplexValueEditorDialog
     private string? _selectedEntryKey;
     private string _newEntryKey = string.Empty;
     private string? _newEntryError;
+    private string? _pendingScrollEntryKey;
+    private IJSObjectReference? _jsModule;
     private long? _valueVersion;
     private bool _startedWithScopedPendingChanges;
 
@@ -70,39 +75,6 @@ public partial class ComplexValueEditorDialog
 
     private CollectionEntry? SelectedEntry => CurrentEntries.FirstOrDefault(entry => entry.SelectionKey == _selectedEntryKey);
 
-    private ConfigurationNodeDefinition SelectedValueSchema => _focusNode.NodeKind switch
-    {
-        ConfigurationNodeKind.Dictionary => _focusNode.DictionaryTemplate!.ValueTemplate,
-        ConfigurationNodeKind.List => _focusNode.ListTemplate!.ItemTemplate,
-        _ => _focusNode
-    };
-
-    private IReadOnlyList<ConfigurationNodeDefinition> EditableScalarFields =>
-        SelectedEntry is null
-            ? []
-            : SelectedValueSchema.NodeKind == ConfigurationNodeKind.Scalar
-                ? [SelectedValueSchema]
-                : SelectedValueSchema.Children.Where(child => child.NodeKind == ConfigurationNodeKind.Scalar).ToArray();
-
-    private IReadOnlyList<ConfigurationNodeDefinition> NestedCollections =>
-        SelectedEntry is null || SelectedValueSchema.NodeKind == ConfigurationNodeKind.Scalar
-            ? []
-            : SelectedValueSchema.Children
-                .Where(child => child.NodeKind is ConfigurationNodeKind.Dictionary or ConfigurationNodeKind.List)
-                .ToArray();
-
-    private IReadOnlyList<ObjectFieldSection> NestedObjectSections =>
-        SelectedEntry is null || SelectedValueSchema.NodeKind == ConfigurationNodeKind.Scalar
-            ? []
-            : SelectedValueSchema.Children
-                .Where(child => child.NodeKind == ConfigurationNodeKind.Object)
-                .Select(child => new ObjectFieldSection(
-                    child,
-                    SelectedEntry.Path.Append(new PropertySegment(child.Name)),
-                    child.Children.Where(grandchild => grandchild.NodeKind == ConfigurationNodeKind.Scalar).ToArray()))
-                .Where(section => section.ScalarFields.Count > 0)
-                .ToArray();
-
     private string ActivePathLabel => (_mode == EditorMode.Patch ? LogicalPath.Root : _focusPath).Depth == 0 && _mode == EditorMode.Patch
         ? L["Dialogs:ComplexEditor:PendingMutationGroup"]
         : _focusPath.ToCanonicalString();
@@ -130,9 +102,40 @@ public partial class ComplexValueEditorDialog
         SelectFirstEntry();
     }
 
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (_mode != EditorMode.Visual || string.IsNullOrWhiteSpace(_pendingScrollEntryKey))
+        {
+            return;
+        }
+
+        var entryKey = _pendingScrollEntryKey;
+        _pendingScrollEntryKey = null;
+
+        try
+        {
+            var module = await GetJsModuleAsync();
+            await module.InvokeVoidAsync("scrollElementIntoView", EntryElementId(entryKey));
+        }
+        catch (JSDisconnectedException)
+        {
+        }
+        catch (InvalidOperationException)
+        {
+        }
+    }
+
     private void SetMode(EditorMode mode)
     {
         _mode = mode;
+    }
+
+    private async Task<IJSObjectReference> GetJsModuleAsync()
+    {
+        _jsModule ??= await JSRuntime.InvokeAsync<IJSObjectReference>(
+            "import",
+            "./_content/Monica.Configuration.UI/js/configuration-ui.js");
+        return _jsModule;
     }
 
     private Variant ModeVariant(EditorMode mode)
@@ -143,6 +146,77 @@ public partial class ComplexValueEditorDialog
     private Color ModeColor(EditorMode mode)
     {
         return _mode == mode ? Color.Primary : Color.Default;
+    }
+
+    private ConfigurationNodeDefinition ValueSchemaFor(CollectionEntry? entry)
+    {
+        return _focusNode.NodeKind switch
+        {
+            ConfigurationNodeKind.Dictionary => _focusNode.DictionaryTemplate!.ValueTemplate,
+            ConfigurationNodeKind.List => _focusNode.ListTemplate!.ItemTemplate,
+            _ => _focusNode
+        };
+    }
+
+    private IReadOnlyList<ConfigurationNodeDefinition> EditableScalarFieldsFor(CollectionEntry? entry)
+    {
+        if (entry is null)
+        {
+            return [];
+        }
+
+        var valueSchema = ValueSchemaFor(entry);
+        return valueSchema.NodeKind == ConfigurationNodeKind.Scalar
+            ? [valueSchema]
+            : valueSchema.Children.Where(child => child.NodeKind == ConfigurationNodeKind.Scalar).ToArray();
+    }
+
+    private IReadOnlyList<ConfigurationNodeDefinition> NestedCollectionsFor(CollectionEntry? entry)
+    {
+        if (entry is null)
+        {
+            return [];
+        }
+
+        var valueSchema = ValueSchemaFor(entry);
+        return valueSchema.NodeKind == ConfigurationNodeKind.Scalar
+            ? []
+            : valueSchema.Children
+                .Where(child => child.NodeKind is ConfigurationNodeKind.Dictionary or ConfigurationNodeKind.List)
+                .ToArray();
+    }
+
+    private IReadOnlyList<ObjectFieldSection> NestedObjectSectionsFor(CollectionEntry? entry)
+    {
+        if (entry is null)
+        {
+            return [];
+        }
+
+        var valueSchema = ValueSchemaFor(entry);
+        return valueSchema.NodeKind == ConfigurationNodeKind.Scalar
+            ? []
+            : valueSchema.Children
+                .Where(child => child.NodeKind == ConfigurationNodeKind.Object)
+                .Select(child => new ObjectFieldSection(
+                    child,
+                    entry.Path.Append(new PropertySegment(child.Name)),
+                    child.Children.Where(grandchild => grandchild.NodeKind == ConfigurationNodeKind.Scalar).ToArray()))
+                .Where(section => section.ScalarFields.Count > 0)
+                .ToArray();
+    }
+
+    private string EntryEditorClass(CollectionEntry entry)
+    {
+        return entry.IsSelected
+            ? "configuration-entry-editor-card configuration-entry-editor-card-selected"
+            : "configuration-entry-editor-card";
+    }
+
+    private string EntryElementId(string selectionKey)
+    {
+        var identity = $"{_focusPath.ToCanonicalString()}::{selectionKey}";
+        return $"configuration-entry-editor-{Convert.ToHexString(Encoding.UTF8.GetBytes(identity))}";
     }
 
     private JsonNode ParseInitialDocument()
@@ -205,12 +279,13 @@ public partial class ComplexValueEditorDialog
     private void SelectEntry(string key)
     {
         _selectedEntryKey = key;
-        _validationErrors.Clear();
+        _pendingScrollEntryKey = key;
     }
 
     private void SelectFirstEntry()
     {
         _selectedEntryKey = CurrentEntries.FirstOrDefault()?.SelectionKey;
+        _pendingScrollEntryKey = _selectedEntryKey;
         _newEntryKey = string.Empty;
         _newEntryError = null;
         _validationErrors.Clear();
@@ -264,6 +339,7 @@ public partial class ComplexValueEditorDialog
         dictionary[key] = value;
         var path = _focusPath.Append(new DictionaryKeySegment(key));
         _selectedEntryKey = key;
+        _pendingScrollEntryKey = key;
         _newEntryKey = string.Empty;
         StageContainerSet(path, valueSchema, value);
     }
@@ -301,18 +377,13 @@ public partial class ComplexValueEditorDialog
 
         list.Add(item);
         _selectedEntryKey = selectionKey;
+        _pendingScrollEntryKey = selectionKey;
         _newEntryKey = string.Empty;
         StageContainerSet(path, itemSchema, item);
     }
 
-    private void RemoveSelectedEntry()
+    private void RemoveEntry(CollectionEntry entry)
     {
-        var entry = SelectedEntry;
-        if (entry is null)
-        {
-            return;
-        }
-
         var oldValue = CloneNode(ReadNode(entry.Path));
         if (_focusNode.NodeKind == ConfigurationNodeKind.Dictionary && ReadNode(_focusPath) is JsonObject dictionary)
         {
@@ -327,18 +398,22 @@ public partial class ComplexValueEditorDialog
             }
         }
 
-        StageRemove(entry.Path, SelectedValueSchema, oldValue);
-        SelectFirstEntry();
+        RemoveErrorsInScope(entry.Path);
+        StageRemove(entry.Path, ValueSchemaFor(entry), oldValue);
+        if (string.Equals(_selectedEntryKey, entry.SelectionKey, StringComparison.Ordinal) || SelectedEntry is null)
+        {
+            SelectFirstEntry();
+        }
     }
 
-    private void MoveSelectedListEntry(int direction)
+    private void MoveListEntry(CollectionEntry entry, int direction)
     {
-        if (_focusNode.NodeKind != ConfigurationNodeKind.List || SelectedEntry is null || ReadNode(_focusPath) is not JsonArray list)
+        if (_focusNode.NodeKind != ConfigurationNodeKind.List || ReadNode(_focusPath) is not JsonArray list)
         {
             return;
         }
 
-        var index = FindListEntryIndex(list, SelectedEntry.SelectionKey);
+        var index = FindListEntryIndex(list, entry.SelectionKey);
         var next = index + direction;
         if (index < 0 || next < 0 || next >= list.Count)
         {
@@ -348,17 +423,15 @@ public partial class ComplexValueEditorDialog
         var item = list[index];
         list.RemoveAt(index);
         list.Insert(next, item);
+        _selectedEntryKey = _focusNode.ListTemplate?.SupportsPerItemMutation is true
+            ? entry.SelectionKey
+            : next.ToString(CultureInfo.InvariantCulture);
+        _pendingScrollEntryKey = _selectedEntryKey;
         StageSet(_focusPath, _focusNode, CloneNode(ReadOriginalNode(_focusPath)), CloneNode(list));
     }
 
-    private void OpenNestedCollection(ConfigurationNodeDefinition child)
+    private void OpenNestedCollection(CollectionEntry entry, ConfigurationNodeDefinition child)
     {
-        var entry = SelectedEntry;
-        if (entry is null)
-        {
-            return;
-        }
-
         _navigationStack.Add(new FocusFrame(_focusNode, _focusPath, _selectedEntryKey));
         _focusNode = child;
         _focusPath = entry.Path.Append(new PropertySegment(child.Name));
@@ -379,13 +452,6 @@ public partial class ComplexValueEditorDialog
         _focusPath = frame.Path;
         _selectedEntryKey = frame.SelectedEntryKey;
         _validationErrors.Clear();
-    }
-
-    private LogicalPath FieldPath(ConfigurationNodeDefinition field)
-    {
-        return SelectedEntry is null
-            ? _focusPath
-            : FieldPath(field, SelectedEntry.Path, SelectedValueSchema);
     }
 
     private static LogicalPath FieldPath(
@@ -595,6 +661,14 @@ public partial class ComplexValueEditorDialog
         MudDialog.Cancel();
     }
 
+    public async ValueTask DisposeAsync()
+    {
+        if (_jsModule is not null)
+        {
+            await _jsModule.DisposeAsync();
+        }
+    }
+
     private ConfigurationValidationIssue? ValidationIssueFor(ConfigurationNodeDefinition field, LogicalPath path)
     {
         return _validationErrors.TryGetValue(path.ToCanonicalString(), out var error)
@@ -657,6 +731,17 @@ public partial class ComplexValueEditorDialog
     private void ClearError(LogicalPath path)
     {
         _validationErrors.Remove(path.ToCanonicalString());
+    }
+
+    private void RemoveErrorsInScope(LogicalPath path)
+    {
+        var keys = _validationErrors.Keys
+            .Where(key => IsPrefix(path, LogicalPath.Parse(key)))
+            .ToArray();
+        foreach (var key in keys)
+        {
+            _validationErrors.Remove(key);
+        }
     }
 
     private JsonNode? ReadNode(LogicalPath path)

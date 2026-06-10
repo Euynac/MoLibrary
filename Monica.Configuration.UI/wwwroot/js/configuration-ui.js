@@ -11,3 +11,17 @@ export function downloadText(fileName, contentType, content) {
     anchor.remove();
     URL.revokeObjectURL(url);
 }
+
+export function scrollElementIntoView(elementId) {
+    const element = document.getElementById(elementId);
+    if (!element) {
+        return;
+    }
+
+    const prefersReducedMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches ?? false;
+    element.scrollIntoView({
+        behavior: prefersReducedMotion ? "auto" : "smooth",
+        block: "center",
+        inline: "nearest"
+    });
+}

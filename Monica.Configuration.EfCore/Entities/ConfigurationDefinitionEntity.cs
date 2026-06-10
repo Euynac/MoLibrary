@@ -13,7 +13,7 @@ public sealed class ConfigurationDefinitionEntity
 
     public string ClrTypeName { get; set; } = "";
 
-    public string? OwnerModule { get; set; }
+    public string FromProject { get; set; } = "";
 
     public string? Category { get; set; }
 

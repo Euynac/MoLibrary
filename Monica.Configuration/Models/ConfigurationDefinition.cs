@@ -28,9 +28,9 @@ public sealed record ConfigurationDefinition
     public required string ClrTypeName { get; init; }
 
     /// <summary>
-    /// Gets the owning module or application component.
+    /// Gets the assembly name of the project that published this definition.
     /// </summary>
-    public string? OwnerModule { get; init; }
+    public required string FromProject { get; init; }
 
     /// <summary>
     /// Gets a developer-defined category for grouping.

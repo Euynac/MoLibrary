@@ -12,20 +12,54 @@ internal sealed class ConfigurationProviderReloadCoordinator(
     MonicaConfigurationProviderAccessor accessor)
     : IConfigurationReloadCoordinator
 {
+    private readonly SemaphoreSlim _reloadLock = new(1, 1);
+
     /// <inheritdoc />
-    public async Task ReloadAsync(CancellationToken cancellationToken)
+    public async Task ReloadMonicaProjectionAsync(CancellationToken cancellationToken)
     {
-        if (configuration is IConfigurationRoot root)
-        {
-            root.Reload();
-            return;
-        }
-
-        if (accessor.Provider is null)
+        if (accessor.Provider is not { } provider)
         {
             return;
         }
 
-        await accessor.Provider.ReloadAsync(cancellationToken);
+        await _reloadLock.WaitAsync(cancellationToken);
+        try
+        {
+            await provider.ReloadAsync(cancellationToken);
+        }
+        finally
+        {
+            _reloadLock.Release();
+        }
+    }
+
+    /// <inheritdoc />
+    public async Task ReloadRuntimeConfigurationAsync(CancellationToken cancellationToken)
+    {
+        await _reloadLock.WaitAsync(cancellationToken);
+        try
+        {
+            if (configuration is IConfigurationRoot root)
+            {
+                foreach (var provider in root.Providers)
+                {
+                    if (ReferenceEquals(provider, accessor.Provider))
+                    {
+                        continue;
+                    }
+
+                    provider.Load();
+                }
+            }
+
+            if (accessor.Provider is { } monicaProvider)
+            {
+                await monicaProvider.ReloadAsync(cancellationToken);
+            }
+        }
+        finally
+        {
+            _reloadLock.Release();
+        }
     }
 }

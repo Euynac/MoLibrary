@@ -89,7 +89,7 @@ internal sealed class ConfigurationMutationService(
             throw;
         }
 
-        await reloadCoordinator.ReloadAsync(cancellationToken);
+        await reloadCoordinator.ReloadMonicaProjectionAsync(cancellationToken);
 
         var notification = new ConfigurationChangeNotification
         {

@@ -56,11 +56,6 @@ public sealed class ConfigurationAttribute : Attribute
     public string? Description { get; set; }
 
     /// <summary>
-    /// Gets or sets the owning Monica module or application component.
-    /// </summary>
-    public string? OwnerModule { get; set; }
-
-    /// <summary>
     /// Gets or sets a developer-defined category used for grouping configuration definitions.
     /// </summary>
     public string? Category { get; set; }

@@ -278,7 +278,7 @@ public sealed class DatabaseConfigurationStore(
                 entity.SectionPath = definition.SectionPath;
                 entity.DisplayName = definition.DisplayName;
                 entity.ClrTypeName = ConfigurationDefinitionSchemaCodec.ToCompactClrTypeName(definition.ClrTypeName);
-                entity.OwnerModule = definition.OwnerModule;
+                entity.FromProject = definition.FromProject;
                 entity.Category = definition.Category;
                 entity.SchemaVersion = definition.SchemaVersion;
                 entity.SchemaHash = definition.SchemaHash;
@@ -388,7 +388,7 @@ public sealed class DatabaseConfigurationStore(
         {
             _ = await dbContext.ConfigurationDefinitions
                 .AsNoTracking()
-                .Select(definition => definition.SchemaJson)
+                .Select(definition => new { definition.SchemaJson, definition.FromProject, definition.Category })
                 .FirstOrDefaultAsync(cancellationToken);
             return ConfigurationSchemaState.Ready;
         }
@@ -535,7 +535,7 @@ public sealed class DatabaseConfigurationStore(
             entity.SectionPath,
             entity.DisplayName,
             entity.ClrTypeName,
-            entity.OwnerModule,
+            entity.FromProject,
             entity.Category,
             entity.SchemaVersion,
             entity.SchemaHash,

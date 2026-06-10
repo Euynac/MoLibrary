@@ -43,9 +43,11 @@
 
                 @if (_mode == EditorMode.Visual)
                 {
-                    <MudGrid Spacing="2" Class="configuration-collection-grid">
-                        <MudItem xs="12" lg="3" Class="configuration-collection-column">
-                            <MudPaper Outlined="true" Class="pa-3 configuration-collection-panel">
+                    <div class="configuration-collection-grid-shell">
+                        <MudGrid Spacing="2" Class="configuration-collection-grid">
+                            <MudItem xs="12" lg="3" Class="configuration-collection-column">
+                                <div class="configuration-collection-panel-shell">
+                                    <MudPaper Outlined="true" Class="pa-3 configuration-collection-panel">
                                 <MudStack Spacing="2">
                                     <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Spacing="1">
                                         <MudStack Spacing="0">
@@ -102,91 +104,59 @@
                                         }
                                     </div>
                                 </MudStack>
-                            </MudPaper>
-                        </MudItem>
+                                    </MudPaper>
+                                </div>
+                            </MudItem>
 
-                        <MudItem xs="12" lg="6" Class="configuration-collection-column">
-                            <MudPaper Outlined="true" Class="pa-3 configuration-collection-panel">
-                                @if (SelectedEntry is null)
+                            <MudItem xs="12" lg="6" Class="configuration-collection-column">
+                                <div class="configuration-collection-panel-shell">
+                                    <MudPaper Outlined="true" Class="pa-3 configuration-collection-panel">
+                                @if (CurrentEntries.Count == 0)
                                 {
                                     <MudAlert Severity="Severity.Info">@L["Dialogs:ComplexEditor:SelectEntry"]</MudAlert>
                                 }
                                 else
                                 {
-                                    <MudStack Spacing="3">
-                                        <MudStack Row="true" Wrap="Wrap.Wrap" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Spacing="2">
-                                            <MudStack Spacing="0">
-                                                <MudText Typo="Typo.subtitle1">@SelectedEntry.Title</MudText>
-                                                <MudText Typo="Typo.caption" Color="Color.Secondary">@SelectedEntry.Path.ToCanonicalString()</MudText>
-                                            </MudStack>
-                                            <MudStack Row="true" Wrap="Wrap.Wrap" Spacing="1">
-                                                @if (_focusNode.NodeKind == ConfigurationNodeKind.List)
-                                                {
-                                                    <MudTooltip Text="@L["Dialogs:ComplexEditor:Actions:MoveUp"]">
-                                                        <MudIconButton Icon="@Icons.Material.Filled.KeyboardArrowUp"
-                                                                       Size="Size.Small"
-                                                                       OnClick="() => MoveSelectedListEntry(-1)" />
-                                                    </MudTooltip>
-                                                    <MudTooltip Text="@L["Dialogs:ComplexEditor:Actions:MoveDown"]">
-                                                        <MudIconButton Icon="@Icons.Material.Filled.KeyboardArrowDown"
-                                                                       Size="Size.Small"
-                                                                       OnClick="() => MoveSelectedListEntry(1)" />
-                                                    </MudTooltip>
-                                                }
-                                                <MudTooltip Text="@L["Dialogs:ComplexEditor:Actions:Remove"]">
-                                                    <MudIconButton Icon="@Icons.Material.Filled.Delete"
-                                                                   Size="Size.Small"
-                                                                   Color="Color.Error"
-                                                                   OnClick="RemoveSelectedEntry" />
-                                                </MudTooltip>
-                                            </MudStack>
-                                        </MudStack>
-
-                                        <MudGrid Spacing="2">
-                                            @foreach (var field in EditableScalarFields)
-                                            {
-                                                var fieldPath = FieldPath(field);
-                                                var validationIssue = ValidationIssueFor(field, fieldPath);
-                                                <MudItem xs="12" md="6">
-                                                    <MudStack Spacing="1" @key="fieldPath.ToCanonicalString()">
-                                                        <MudText Typo="Typo.caption" Color="Color.Secondary">@DisplayName(field)</MudText>
-                                                        @if (!string.IsNullOrWhiteSpace(field.Description))
-                                                        {
-                                                            <MudText Typo="Typo.caption" Color="Color.Secondary">@field.Description</MudText>
-                                                        }
-                                                        <ConfigurationScalarEditor Node="@ScalarEditorNode(field, fieldPath)"
-                                                                                   EffectiveValue="@ScalarEditorEffectiveValue(field, fieldPath)"
-                                                                                   IsModified="@IsFieldModified(fieldPath)"
-                                                                                   ValidationIssue="@validationIssue"
-                                                                                   ValueChanged="result => OnScalarFieldChanged(field, SelectedEntry.Path, SelectedValueSchema, result)" />
-                                                        @if (validationIssue is not null && !ScalarEditorShowsInlineError(field))
-                                                        {
-                                                            <MudText Typo="Typo.caption" Color="Color.Error">
-                                                                @validationIssue.ValidationError
-                                                            </MudText>
-                                                        }
-                                                    </MudStack>
-                                                </MudItem>
-                                            }
-                                        </MudGrid>
-
-                                        @foreach (var objectSection in NestedObjectSections)
+                                    <div class="configuration-entry-editor-scroll">
+                                        @foreach (var entry in CurrentEntries)
                                         {
-                                            <MudPaper Outlined="true" Class="pa-3">
-                                                <MudStack Spacing="2">
-                                                    <MudStack Spacing="0">
-                                                        <MudText Typo="Typo.subtitle2">@DisplayName(objectSection.Node)</MudText>
-                                                        <MudText Typo="Typo.caption" Color="Color.Secondary">@objectSection.Path.ToCanonicalString()</MudText>
-                                                        @if (!string.IsNullOrWhiteSpace(objectSection.Node.Description))
-                                                        {
-                                                            <MudText Typo="Typo.caption" Color="Color.Secondary">@objectSection.Node.Description</MudText>
-                                                        }
+                                            var valueSchema = ValueSchemaFor(entry);
+                                            <div id="@EntryElementId(entry.SelectionKey)"
+                                                 class="@EntryEditorClass(entry)"
+                                                 @key="entry.SelectionKey">
+                                                <MudStack Spacing="3">
+                                                    <MudStack Row="true" Wrap="Wrap.Wrap" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Spacing="2">
+                                                        <MudStack Spacing="0">
+                                                            <MudText Typo="Typo.subtitle1">@entry.Title</MudText>
+                                                            <MudText Typo="Typo.caption" Color="Color.Secondary">@entry.Path.ToCanonicalString()</MudText>
+                                                        </MudStack>
+                                                        <MudStack Row="true" Wrap="Wrap.Wrap" Spacing="1">
+                                                            @if (_focusNode.NodeKind == ConfigurationNodeKind.List)
+                                                            {
+                                                                <MudTooltip Text="@L["Dialogs:ComplexEditor:Actions:MoveUp"]">
+                                                                    <MudIconButton Icon="@Icons.Material.Filled.KeyboardArrowUp"
+                                                                                   Size="Size.Small"
+                                                                                   OnClick="() => MoveListEntry(entry, -1)" />
+                                                                </MudTooltip>
+                                                                <MudTooltip Text="@L["Dialogs:ComplexEditor:Actions:MoveDown"]">
+                                                                    <MudIconButton Icon="@Icons.Material.Filled.KeyboardArrowDown"
+                                                                                   Size="Size.Small"
+                                                                                   OnClick="() => MoveListEntry(entry, 1)" />
+                                                                </MudTooltip>
+                                                            }
+                                                            <MudTooltip Text="@L["Dialogs:ComplexEditor:Actions:Remove"]">
+                                                                <MudIconButton Icon="@Icons.Material.Filled.Delete"
+                                                                               Size="Size.Small"
+                                                                               Color="Color.Error"
+                                                                               OnClick="() => RemoveEntry(entry)" />
+                                                            </MudTooltip>
+                                                        </MudStack>
                                                     </MudStack>
 
                                                     <MudGrid Spacing="2">
-                                                        @foreach (var field in objectSection.ScalarFields)
+                                                        @foreach (var field in EditableScalarFieldsFor(entry))
                                                         {
-                                                            var fieldPath = FieldPath(field, objectSection.Path, objectSection.Node);
+                                                            var fieldPath = FieldPath(field, entry.Path, valueSchema);
                                                             var validationIssue = ValidationIssueFor(field, fieldPath);
                                                             <MudItem xs="12" md="6">
                                                                 <MudStack Spacing="1" @key="fieldPath.ToCanonicalString()">
@@ -199,7 +169,7 @@
                                                                                                EffectiveValue="@ScalarEditorEffectiveValue(field, fieldPath)"
                                                                                                IsModified="@IsFieldModified(fieldPath)"
                                                                                                ValidationIssue="@validationIssue"
-                                                                                               ValueChanged="result => OnScalarFieldChanged(field, objectSection.Path, objectSection.Node, result)" />
+                                                                                               ValueChanged="result => OnScalarFieldChanged(field, entry.Path, valueSchema, result)" />
                                                                     @if (validationIssue is not null && !ScalarEditorShowsInlineError(field))
                                                                     {
                                                                         <MudText Typo="Typo.caption" Color="Color.Error">
@@ -210,34 +180,80 @@
                                                             </MudItem>
                                                         }
                                                     </MudGrid>
-                                                </MudStack>
-                                            </MudPaper>
-                                        }
 
-                                        @if (NestedCollections.Count > 0)
-                                        {
-                                            <MudDivider />
-                                            <MudStack Spacing="1">
-                                                <MudText Typo="Typo.subtitle2">@L["Dialogs:ComplexEditor:NestedCollections"]</MudText>
-                                                <MudStack Row="true" Wrap="Wrap.Wrap" Spacing="1">
-                                                    @foreach (var child in NestedCollections)
+                                                    @foreach (var objectSection in NestedObjectSectionsFor(entry))
                                                     {
-                                                        <MudButton Variant="Variant.Outlined"
-                                                                   StartIcon="@NestedCollectionIcon(child)"
-                                                                   OnClick="() => OpenNestedCollection(child)">
-                                                            @DisplayName(child)
-                                                        </MudButton>
+                                                        <div class="configuration-object-section">
+                                                            <MudStack Spacing="2">
+                                                                <MudStack Spacing="0">
+                                                                    <MudText Typo="Typo.subtitle2">@DisplayName(objectSection.Node)</MudText>
+                                                                    <MudText Typo="Typo.caption" Color="Color.Secondary">@objectSection.Path.ToCanonicalString()</MudText>
+                                                                    @if (!string.IsNullOrWhiteSpace(objectSection.Node.Description))
+                                                                    {
+                                                                        <MudText Typo="Typo.caption" Color="Color.Secondary">@objectSection.Node.Description</MudText>
+                                                                    }
+                                                                </MudStack>
+
+                                                                <MudGrid Spacing="2">
+                                                                    @foreach (var field in objectSection.ScalarFields)
+                                                                    {
+                                                                        var fieldPath = FieldPath(field, objectSection.Path, objectSection.Node);
+                                                                        var validationIssue = ValidationIssueFor(field, fieldPath);
+                                                                        <MudItem xs="12" md="6">
+                                                                            <MudStack Spacing="1" @key="fieldPath.ToCanonicalString()">
+                                                                                <MudText Typo="Typo.caption" Color="Color.Secondary">@DisplayName(field)</MudText>
+                                                                                @if (!string.IsNullOrWhiteSpace(field.Description))
+                                                                                {
+                                                                                    <MudText Typo="Typo.caption" Color="Color.Secondary">@field.Description</MudText>
+                                                                                }
+                                                                                <ConfigurationScalarEditor Node="@ScalarEditorNode(field, fieldPath)"
+                                                                                                           EffectiveValue="@ScalarEditorEffectiveValue(field, fieldPath)"
+                                                                                                           IsModified="@IsFieldModified(fieldPath)"
+                                                                                                           ValidationIssue="@validationIssue"
+                                                                                                           ValueChanged="result => OnScalarFieldChanged(field, objectSection.Path, objectSection.Node, result)" />
+                                                                                @if (validationIssue is not null && !ScalarEditorShowsInlineError(field))
+                                                                                {
+                                                                                    <MudText Typo="Typo.caption" Color="Color.Error">
+                                                                                        @validationIssue.ValidationError
+                                                                                    </MudText>
+                                                                                }
+                                                                            </MudStack>
+                                                                        </MudItem>
+                                                                    }
+                                                                </MudGrid>
+                                                            </MudStack>
+                                                        </div>
+                                                    }
+
+                                                    @if (NestedCollectionsFor(entry).Count > 0)
+                                                    {
+                                                        <MudDivider />
+                                                        <MudStack Spacing="1">
+                                                            <MudText Typo="Typo.subtitle2">@L["Dialogs:ComplexEditor:NestedCollections"]</MudText>
+                                                            <MudStack Row="true" Wrap="Wrap.Wrap" Spacing="1">
+                                                                @foreach (var child in NestedCollectionsFor(entry))
+                                                                {
+                                                                    <MudButton Variant="Variant.Outlined"
+                                                                               StartIcon="@NestedCollectionIcon(child)"
+                                                                               OnClick="() => OpenNestedCollection(entry, child)">
+                                                                        @DisplayName(child)
+                                                                    </MudButton>
+                                                                }
+                                                            </MudStack>
+                                                        </MudStack>
                                                     }
                                                 </MudStack>
-                                            </MudStack>
+                                            </div>
                                         }
-                                    </MudStack>
+                                    </div>
                                 }
-                            </MudPaper>
-                        </MudItem>
+                                    </MudPaper>
+                                </div>
+                            </MudItem>
 
-                        <MudItem xs="12" lg="3" Class="configuration-collection-column">
-                            <MudPaper Outlined="true" Class="pa-3 configuration-collection-panel">
+                            <MudItem xs="12" lg="3" Class="configuration-collection-column">
+                                <div class="configuration-collection-panel-shell">
+                                    <MudPaper Outlined="true" Class="pa-3 configuration-collection-panel">
                                 <MudStack Spacing="2">
                                     <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween">
                                         <MudText Typo="Typo.subtitle2">@L["Dialogs:ComplexEditor:PatchPreview"]</MudText>
@@ -245,9 +261,11 @@
                                     </MudStack>
                                     <ConfigurationPendingPatchPreview Changes="@_changes" />
                                 </MudStack>
-                            </MudPaper>
-                        </MudItem>
-                    </MudGrid>
+                                    </MudPaper>
+                                </div>
+                            </MudItem>
+                        </MudGrid>
+                    </div>
                 }
                 else if (_mode == EditorMode.Patch)
                 {

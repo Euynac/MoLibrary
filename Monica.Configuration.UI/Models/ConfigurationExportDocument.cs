@@ -59,9 +59,9 @@ public sealed record ConfigurationExportDefinition
     public required string DisplayName { get; init; }
 
     /// <summary>
-    /// Gets the owning module or component captured when the export was created.
+    /// Gets the publishing project assembly name captured when the export was created.
     /// </summary>
-    public string? OwnerModule { get; init; }
+    public required string FromProject { get; init; }
 
     /// <summary>
     /// Gets the developer-defined category captured when the export was created.

@@ -75,9 +75,13 @@
                                             <MudText Typo="Typo.caption" Color="Color.Secondary">@_selectedDefinition.DefinitionKey</MudText>
                                         </MudStack>
                                         <MudStack Row="true" Wrap="Wrap.Wrap" AlignItems="AlignItems.Center" Justify="Justify.FlexEnd" Spacing="1" Class="configuration-definition-meta-actions">
-                                            @if (!string.IsNullOrWhiteSpace(_selectedDefinition.OwnerModule))
+                                            @if (!string.IsNullOrWhiteSpace(_selectedDefinition.Category))
                                             {
-                                                <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">@_selectedDefinition.OwnerModule</MudChip>
+                                                <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">@_selectedDefinition.Category</MudChip>
+                                            }
+                                            @if (!string.IsNullOrWhiteSpace(_selectedDefinition.FromProject))
+                                            {
+                                                <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">@_selectedDefinition.FromProject</MudChip>
                                             }
                                             @if (_selectedDefinition.Origin == ConfigurationDefinitionOrigin.PublishedMetadata)
                                             {

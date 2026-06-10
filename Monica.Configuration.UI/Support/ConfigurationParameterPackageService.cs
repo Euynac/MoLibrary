@@ -194,7 +194,7 @@ internal sealed class ConfigurationParameterPackageService(
         {
             DefinitionKey = definition.DefinitionKey,
             DisplayName = definition.DisplayName,
-            OwnerModule = definition.OwnerModule,
+            FromProject = definition.FromProject,
             Category = definition.Category,
             ClrTypeName = definition.ClrTypeName,
             SchemaVersion = definition.SchemaVersion,

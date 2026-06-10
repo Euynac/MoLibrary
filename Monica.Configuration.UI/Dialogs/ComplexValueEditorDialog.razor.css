@@ -24,19 +24,65 @@
     align-items: center;
 }
 
-.configuration-collection-grid {
+.configuration-collection-grid-shell {
     height: min(66vh, 760px);
     min-height: 460px;
 }
 
-.configuration-collection-column {
+.configuration-collection-grid-shell ::deep .configuration-collection-grid {
+    height: 100%;
     min-height: 0;
 }
 
-.configuration-collection-panel {
+.configuration-collection-grid-shell ::deep .configuration-collection-column {
+    height: 100%;
+    min-height: 0;
+}
+
+.configuration-collection-panel-shell {
+    height: 100%;
+    min-height: 0;
+}
+
+.configuration-collection-panel-shell ::deep .configuration-collection-panel {
+    display: flex;
+    flex-direction: column;
     height: 100%;
     min-height: 0;
     overflow: auto;
+}
+
+.configuration-entry-editor-scroll {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    height: 100%;
+    min-height: 0;
+    overflow: auto;
+    overscroll-behavior: contain;
+    padding-right: 0.25rem;
+    scroll-behavior: smooth;
+}
+
+.configuration-entry-editor-card,
+.configuration-object-section {
+    border: 1px solid var(--mud-palette-lines-default);
+    border-radius: 8px;
+    background: var(--mud-palette-surface);
+}
+
+.configuration-entry-editor-card {
+    padding: 1rem;
+    scroll-margin: 1rem;
+}
+
+.configuration-entry-editor-card-selected {
+    border-color: var(--mud-palette-primary);
+    background: var(--mud-palette-background-gray);
+}
+
+.configuration-object-section {
+    padding: 0.75rem;
 }
 
 .configuration-entry-list {
@@ -65,12 +111,16 @@
 }
 
 @media (max-width: 1279.98px) {
-    .configuration-collection-grid {
+    .configuration-collection-grid-shell {
         height: auto;
         min-height: 0;
     }
 
-    .configuration-collection-panel {
+    .configuration-collection-panel-shell {
+        max-height: 420px;
+    }
+
+    .configuration-entry-editor-scroll {
         max-height: 420px;
     }
 }

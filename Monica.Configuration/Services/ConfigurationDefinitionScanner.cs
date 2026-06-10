@@ -35,12 +35,19 @@ internal sealed class ConfigurationDefinitionScanner(
             SectionPath = sectionPath,
             DisplayName = attribute.DisplayName ?? optionsType.Name,
             ClrTypeName = optionsType.AssemblyQualifiedName ?? optionsType.FullName ?? optionsType.Name,
-            OwnerModule = attribute.OwnerModule,
+            FromProject = ResolveFromProject(optionsType),
             Category = attribute.Category,
             ReloadBehavior = attribute.ReloadBehavior,
             Root = root,
             SchemaHash = hasher.ComputeHash(definitionKey, sectionPath, root)
         };
+    }
+
+    private static string ResolveFromProject(Type optionsType)
+    {
+        return optionsType.Assembly.GetName().Name
+               ?? optionsType.Namespace
+               ?? optionsType.Name;
     }
 
     private static ConfigurationNodeDefinition ScanNode(

@@ -496,7 +496,7 @@ public sealed class FileConfigurationStore(IOptions<ConfigurationFileStoreOption
 
         public string ClrTypeName { get; init; } = "";
 
-        public string? OwnerModule { get; init; }
+        public string FromProject { get; init; } = "";
 
         public string? Category { get; init; }
 
@@ -518,7 +518,7 @@ public sealed class FileConfigurationStore(IOptions<ConfigurationFileStoreOption
                 SectionPath = definition.SectionPath,
                 DisplayName = definition.DisplayName,
                 ClrTypeName = ConfigurationDefinitionSchemaCodec.ToCompactClrTypeName(definition.ClrTypeName),
-                OwnerModule = definition.OwnerModule,
+                FromProject = definition.FromProject,
                 Category = definition.Category,
                 SchemaVersion = definition.SchemaVersion,
                 SchemaHash = definition.SchemaHash,
@@ -535,7 +535,7 @@ public sealed class FileConfigurationStore(IOptions<ConfigurationFileStoreOption
                 SectionPath,
                 DisplayName,
                 ClrTypeName,
-                OwnerModule,
+                FromProject,
                 Category,
                 SchemaVersion,
                 SchemaHash,

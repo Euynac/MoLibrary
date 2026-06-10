@@ -181,7 +181,8 @@ public sealed class ConfigurationFacade(
             SectionPath = definition.SectionPath,
             DisplayName = definition.DisplayName,
             ClrTypeName = definition.ClrTypeName,
-            OwnerModule = definition.OwnerModule,
+            FromProject = definition.FromProject,
+            Category = definition.Category,
             SchemaVersion = definition.SchemaVersion,
             Origin = definition.Origin
         };

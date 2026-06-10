@@ -26,7 +26,7 @@
                 else
                 {
                     <MudList T="ConfigurationDefinitionSummary" Dense="true">
-                        @foreach (var group in FilteredDefinitions.GroupBy(x => string.IsNullOrWhiteSpace(x.OwnerModule) ? L["State:Definitions:Ungrouped"].Value : x.OwnerModule!)
+                        @foreach (var group in FilteredDefinitions.GroupBy(GetGroupName)
                                      .OrderBy(x => x.Key, StringComparer.OrdinalIgnoreCase))
                         {
                             <MudListSubheader>@group.Key</MudListSubheader>
@@ -181,7 +181,20 @@
                || ContainsAny(definition.DisplayName)
                || ContainsAny(definition.ClrTypeName)
                || ContainsAny(definition.SectionPath)
-               || ContainsAny(definition.OwnerModule);
+               || ContainsAny(definition.FromProject)
+               || ContainsAny(definition.Category);
+    }
+
+    private string GetGroupName(ConfigurationDefinitionSummary definition)
+    {
+        if (!string.IsNullOrWhiteSpace(definition.Category))
+        {
+            return definition.Category;
+        }
+
+        return string.IsNullOrWhiteSpace(definition.FromProject)
+            ? L["State:Definitions:Ungrouped"].Value
+            : definition.FromProject;
     }
 
     private bool ContainsAny(string? value)

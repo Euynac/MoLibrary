@@ -32,7 +32,7 @@ internal sealed class MonicaConfigurationProviderActivationHostedService(
             throw;
         }
 
-        await reloadCoordinator.ReloadAsync(cancellationToken);
+        await reloadCoordinator.ReloadMonicaProjectionAsync(cancellationToken);
     }
 
     /// <inheritdoc />

@@ -43,7 +43,7 @@ public static class ConfigurationDefinitionSchemaCodec
     /// <param name="sectionPath">The Microsoft configuration section path used by the owner.</param>
     /// <param name="displayName">The operator-facing definition display name.</param>
     /// <param name="clrTypeName">The compact root type identity stored for display and search.</param>
-    /// <param name="ownerModule">The optional owner module or service name.</param>
+    /// <param name="fromProject">The assembly name of the project that published the definition.</param>
     /// <param name="category">The optional operator-facing category.</param>
     /// <param name="schemaVersion">The published schema version.</param>
     /// <param name="schemaHash">The published schema hash used for drift detection.</param>
@@ -56,7 +56,7 @@ public static class ConfigurationDefinitionSchemaCodec
         string sectionPath,
         string displayName,
         string clrTypeName,
-        string? ownerModule,
+        string fromProject,
         string? category,
         int schemaVersion,
         string schemaHash,
@@ -73,7 +73,7 @@ public static class ConfigurationDefinitionSchemaCodec
             SectionPath = sectionPath,
             DisplayName = displayName,
             ClrTypeName = clrTypeName,
-            OwnerModule = ownerModule,
+            FromProject = fromProject,
             Category = category,
             SchemaVersion = schemaVersion,
             SchemaHash = schemaHash,
