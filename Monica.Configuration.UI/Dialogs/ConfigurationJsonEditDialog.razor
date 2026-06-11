@@ -107,6 +107,7 @@
     [Parameter] public IReadOnlyDictionary<LogicalPath, ConfigurationEffectiveValue> ScalarEffectiveValues { get; set; } =
         new Dictionary<LogicalPath, ConfigurationEffectiveValue>();
     [Parameter] public IReadOnlyList<PendingChange> PendingChanges { get; set; } = [];
+    [Parameter] public bool CompactChanges { get; set; } = true;
 
     private ConfigurationJsonEditorDocument _editorDocument = new("{}", []);
     private ConfigurationJsonDraftResult? _draft;
@@ -133,7 +134,8 @@
             EffectiveValue = EffectiveValue,
             ScalarEffectiveValues = ScalarEffectiveValues,
             Json = _json,
-            RedactedPaths = _editorDocument.RedactedPaths.ToHashSet(StringComparer.Ordinal)
+            RedactedPaths = _editorDocument.RedactedPaths.ToHashSet(StringComparer.Ordinal),
+            CompactChanges = CompactChanges
         });
     }
 

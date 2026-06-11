@@ -8,136 +8,138 @@
 @inject ISnackbar Snackbar
 @inject IStringLocalizer<ConfigurationUIResource> L
 
-<MudPaper Outlined="true" Class="pa-3 configuration-value-row">
-    <MudGrid Spacing="2">
-        <MudItem xs="12" md="4">
-            <MudStack Spacing="1">
-                <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
-                    <MudText Typo="Typo.subtitle2">@DisplayName</MudText>
-                    @if (!string.IsNullOrWhiteSpace(Node.Description))
+<div class="@RowShellClass">
+    <MudPaper Outlined="true" Class="pa-3 configuration-value-row">
+        <MudGrid Spacing="2">
+            <MudItem xs="12" md="4">
+                <MudStack Spacing="1">
+                    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
+                        <MudText Typo="Typo.subtitle2">@DisplayName</MudText>
+                        @if (!string.IsNullOrWhiteSpace(Node.Description))
+                        {
+                            <MudTooltip Text="@Node.Description">
+                                <MudIconButton Icon="@Icons.Material.Filled.Info"
+                                               Size="Size.Small"
+                                               Color="Color.Info"
+                                               Variant="Variant.Text"
+                                               Class="configuration-description-button" />
+                            </MudTooltip>
+                        }
+                        @if (Node.IsSensitive)
+                        {
+                            <MudChip T="string" Size="Size.Small" Color="Color.Warning" Variant="Variant.Outlined">@L["State:Value:Sensitive"]</MudChip>
+                        }
+                        @if (Node.ValidationRules.OfType<RequiredRule>().Any())
+                        {
+                            <MudChip T="string" Size="Size.Small" Color="Color.Error" Variant="Variant.Outlined">@L["State:Value:Required"]</MudChip>
+                        }
+                        @if (EffectiveReloadBehavior is ConfigurationReloadBehavior.RequiresRestart or ConfigurationReloadBehavior.StaticAfterStartup)
+                        {
+                            <MudChip T="string" Size="Size.Small" Color="Color.Warning" Variant="Variant.Filled">@L["State:Value:RestartNeeded"]</MudChip>
+                        }
+                        @if (IsExternalEffectiveSource)
+                        {
+                            <MudTooltip Text="@EffectiveSourceTooltip">
+                                <span class="configuration-inline-icon">
+                                    <MudIcon Icon="@Icons.Material.Filled.WarningAmber"
+                                             Size="Size.Small"
+                                             Color="@EffectiveSourceIconColor" />
+                                </span>
+                            </MudTooltip>
+                        }
+                    </MudStack>
+                    <MudText Typo="Typo.caption" Color="Color.Secondary">@PathLabel</MudText>
+                </MudStack>
+            </MudItem>
+
+            <MudItem xs="12" md="6">
+                @if (Node.NodeKind == ConfigurationNodeKind.Scalar)
+                {
+                    <MudStack Spacing="1" Class="configuration-scalar-cell">
+                        <ConfigurationScalarEditor Node="@Node"
+                                                   EffectiveValue="@EffectiveValue"
+                                                   IsModified="@(PendingChange is not null)"
+                                                   Disabled="@IsCurrentSourceReadOnly"
+                                                   ValidationIssue="@ValidationIssue"
+                                                   ValueChanged="StageScalar" />
+                        @if (ValidationIssue is not null && !ScalarEditorShowsInlineError)
+                        {
+                            <MudText Typo="Typo.caption" Color="Color.Error" Class="configuration-scalar-validation-error">
+                                @ValidationIssue.ValidationError
+                            </MudText>
+                        }
+                    </MudStack>
+                }
+                else if (Node.IsScalarCollection())
+                {
+                    <MudStack Spacing="1" Class="configuration-scalar-cell">
+                        <ConfigurationScalarCollectionEditor Node="@Node"
+                                                             EffectiveValue="@EffectiveValue"
+                                                             PendingChange="@PendingChange"
+                                                             Disabled="@IsCurrentSourceReadOnly"
+                                                             ValidationIssue="@ValidationIssue"
+                                                             ValueChanged="StageScalarCollection" />
+                    </MudStack>
+                }
+                else
+                {
+                    <MudStack Row="true" Wrap="Wrap.Wrap" AlignItems="AlignItems.Center" Spacing="1">
+                        <MudButton Variant="Variant.Outlined"
+                                   StartIcon="@Icons.Material.Filled.Visibility"
+                                   OnClick="PreviewComplexValue">
+                            @L["State:Actions:PreviewValue"]
+                        </MudButton>
+                        @if (Node.NodeKind is ConfigurationNodeKind.Dictionary or ConfigurationNodeKind.List)
+                        {
+                            <MudButton Variant="Variant.Outlined"
+                                       StartIcon="@Icons.Material.Filled.DataObject"
+                                       Disabled="@IsCurrentSourceReadOnly"
+                                       OnClick="EditComplexValue">
+                                @L["State:Actions:EditComplex"]
+                            </MudButton>
+                        }
+                        else
+                        {
+                            <MudButton Variant="Variant.Outlined"
+                                       StartIcon="@Icons.Material.Filled.DataObject"
+                                       Disabled="@IsCurrentSourceReadOnly"
+                                       OnClick="EditComplexJsonAsync">
+                                @L["Common:Actions:EditJson"]
+                            </MudButton>
+                        }
+                    </MudStack>
+                }
+            </MudItem>
+
+            <MudItem xs="12" md="2">
+                <MudStack Row="true" Justify="Justify.FlexEnd" Spacing="1">
+                    @if (CanInspectSourceChain)
                     {
-                        <MudTooltip Text="@Node.Description">
-                            <MudIconButton Icon="@Icons.Material.Filled.Info"
+                        <MudTooltip Text="@L["Sources:Chain:Title"]">
+                            <MudIconButton Icon="@Icons.Material.Filled.AccountTree"
                                            Size="Size.Small"
-                                           Color="Color.Info"
-                                           Variant="Variant.Text"
-                                           Class="configuration-description-button" />
+                                           OnClick="OpenSourceChainAsync" />
                         </MudTooltip>
                     }
-                    @if (Node.IsSensitive)
+                    <MudTooltip Text="@L["History:Title"]">
+                        <MudIconButton Icon="@Icons.Material.Filled.History"
+                                       Size="Size.Small"
+                                       OnClick="OpenHistoryAsync" />
+                    </MudTooltip>
+                    @if (HasPendingChanges)
                     {
-                        <MudChip T="string" Size="Size.Small" Color="Color.Warning" Variant="Variant.Outlined">@L["State:Value:Sensitive"]</MudChip>
-                    }
-                    @if (Node.ValidationRules.OfType<RequiredRule>().Any())
-                    {
-                        <MudChip T="string" Size="Size.Small" Color="Color.Error" Variant="Variant.Outlined">@L["State:Value:Required"]</MudChip>
-                    }
-                    @if (EffectiveReloadBehavior is ConfigurationReloadBehavior.RequiresRestart or ConfigurationReloadBehavior.StaticAfterStartup)
-                    {
-                        <MudChip T="string" Size="Size.Small" Color="Color.Warning" Variant="Variant.Filled">@L["State:Value:RestartNeeded"]</MudChip>
-                    }
-                    @if (IsExternalEffectiveSource)
-                    {
-                        <MudTooltip Text="@EffectiveSourceTooltip">
-                            <span class="configuration-inline-icon">
-                                <MudIcon Icon="@Icons.Material.Filled.WarningAmber"
-                                         Size="Size.Small"
-                                         Color="@EffectiveSourceIconColor" />
-                            </span>
+                        <MudTooltip Text="@L["State:Actions:Undo"]">
+                            <MudIconButton Icon="@Icons.Material.Filled.Undo"
+                                           Size="Size.Small"
+                                           Color="Color.Warning"
+                                           OnClick="Undo" />
                         </MudTooltip>
                     }
                 </MudStack>
-                <MudText Typo="Typo.caption" Color="Color.Secondary">@PathLabel</MudText>
-            </MudStack>
-        </MudItem>
-
-        <MudItem xs="12" md="6">
-            @if (Node.NodeKind == ConfigurationNodeKind.Scalar)
-            {
-                <MudStack Spacing="1" Class="configuration-scalar-cell">
-                    <ConfigurationScalarEditor Node="@Node"
-                                               EffectiveValue="@EffectiveValue"
-                                               IsModified="@(PendingChange is not null)"
-                                               Disabled="@IsCurrentSourceReadOnly"
-                                               ValidationIssue="@ValidationIssue"
-                                               ValueChanged="StageScalar" />
-                    @if (ValidationIssue is not null && !ScalarEditorShowsInlineError)
-                    {
-                        <MudText Typo="Typo.caption" Color="Color.Error" Class="configuration-scalar-validation-error">
-                            @ValidationIssue.ValidationError
-                        </MudText>
-                    }
-                </MudStack>
-            }
-            else if (Node.IsScalarCollection())
-            {
-                <MudStack Spacing="1" Class="configuration-scalar-cell">
-                    <ConfigurationScalarCollectionEditor Node="@Node"
-                                                         EffectiveValue="@EffectiveValue"
-                                                         PendingChange="@PendingChange"
-                                                         Disabled="@IsCurrentSourceReadOnly"
-                                                         ValidationIssue="@ValidationIssue"
-                                                         ValueChanged="StageScalarCollection" />
-                </MudStack>
-            }
-            else
-            {
-                <MudStack Row="true" Wrap="Wrap.Wrap" AlignItems="AlignItems.Center" Spacing="1">
-                    <MudButton Variant="Variant.Outlined"
-                               StartIcon="@Icons.Material.Filled.Visibility"
-                               OnClick="PreviewComplexValue">
-                        @L["State:Actions:PreviewValue"]
-                    </MudButton>
-                    @if (Node.NodeKind is ConfigurationNodeKind.Dictionary or ConfigurationNodeKind.List)
-                    {
-                        <MudButton Variant="Variant.Outlined"
-                                   StartIcon="@Icons.Material.Filled.DataObject"
-                                   Disabled="@IsCurrentSourceReadOnly"
-                                   OnClick="EditComplexValue">
-                            @L["State:Actions:EditComplex"]
-                        </MudButton>
-                    }
-                    else
-                    {
-                        <MudButton Variant="Variant.Outlined"
-                                   StartIcon="@Icons.Material.Filled.DataObject"
-                                   Disabled="@IsCurrentSourceReadOnly"
-                                   OnClick="EditComplexJsonAsync">
-                            @L["Common:Actions:EditJson"]
-                        </MudButton>
-                    }
-                </MudStack>
-            }
-        </MudItem>
-
-        <MudItem xs="12" md="2">
-            <MudStack Row="true" Justify="Justify.FlexEnd" Spacing="1">
-                @if (CanInspectSourceChain)
-                {
-                    <MudTooltip Text="@L["Sources:Chain:Title"]">
-                        <MudIconButton Icon="@Icons.Material.Filled.AccountTree"
-                                       Size="Size.Small"
-                                       OnClick="OpenSourceChainAsync" />
-                    </MudTooltip>
-                }
-                <MudTooltip Text="@L["History:Title"]">
-                    <MudIconButton Icon="@Icons.Material.Filled.History"
-                                   Size="Size.Small"
-                                   OnClick="OpenHistoryAsync" />
-                </MudTooltip>
-                @if (HasPendingChanges)
-                {
-                    <MudTooltip Text="@L["State:Actions:Undo"]">
-                        <MudIconButton Icon="@Icons.Material.Filled.Undo"
-                                       Size="Size.Small"
-                                       Color="Color.Warning"
-                                       OnClick="Undo" />
-                    </MudTooltip>
-                }
-            </MudStack>
-        </MudItem>
-    </MudGrid>
-</MudPaper>
+            </MudItem>
+        </MudGrid>
+    </MudPaper>
+</div>
 
 @code {
     [Parameter, EditorRequired] public ConfigurationDefinition Definition { get; set; } = null!;
@@ -155,6 +157,14 @@
     private bool HasPendingChanges => Node.NodeKind == ConfigurationNodeKind.Scalar || Node.IsScalarCollection()
         ? PendingChange is not null || ValidationIssue is not null
         : ScopedPendingChanges.Count > 0;
+
+    private bool IsComplexNode => Node.NodeKind != ConfigurationNodeKind.Scalar && !Node.IsScalarCollection();
+
+    private string RowShellClass => string.Join(' ', new[]
+    {
+        "configuration-value-row-shell",
+        IsComplexNode && HasPendingChanges ? "modified-input" : null
+    }.Where(static value => !string.IsNullOrWhiteSpace(value)));
 
     private bool ScalarEditorShowsInlineError => Node.ValueKind == ConfigurationValueKind.TimeSpan;
 
@@ -454,6 +464,7 @@
         parameters.Add(dialog => dialog.EffectiveValue, effectiveValue);
         parameters.Add(dialog => dialog.ScalarEffectiveValues, scalarValues);
         parameters.Add(dialog => dialog.PendingChanges, StateStore.GetPending());
+        parameters.Add(dialog => dialog.CompactChanges, false);
         var dialog = await DialogService.ShowAsync<ConfigurationJsonEditDialog>(L["ImportExport:JsonEditor:Title"], parameters, new DialogOptions
         {
             MaxWidth = MaxWidth.ExtraLarge,

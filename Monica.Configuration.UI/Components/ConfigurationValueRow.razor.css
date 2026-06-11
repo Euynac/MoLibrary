@@ -1,3 +1,14 @@
+.configuration-value-row-shell {
+    width: 100%;
+    border-radius: var(--mud-default-borderradius);
+    box-sizing: border-box;
+}
+
+.configuration-value-row-shell.modified-input {
+    border-inline-start: 2px solid var(--mo-color-state-warning-soft-border);
+    padding-inline-start: 0.5rem;
+}
+
 .configuration-value-row {
     width: 100%;
 }

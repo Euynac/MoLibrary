@@ -303,19 +303,21 @@ internal sealed class ConfigurationJsonDraftService(
 
             Visit(request.ScopeNode, request.ScopeNode.RelativePath, _originalNode, incoming, valueMissing: false);
 
-            var compactedChanges = changeCompactor.Compact(
-                request.Definition,
-                request.ScopeNode,
-                request.EffectiveValue,
-                _changes,
-                request.ScalarEffectiveValues);
+            var outputChanges = request.CompactChanges
+                ? changeCompactor.Compact(
+                    request.Definition,
+                    request.ScopeNode,
+                    request.EffectiveValue,
+                    _changes,
+                    request.ScalarEffectiveValues)
+                : _changes;
 
             return new ConfigurationJsonDraftResult
             {
                 DefinitionKey = request.Definition.DefinitionKey,
                 DefinitionDisplayName = request.Definition.DisplayName,
                 ScopePath = request.ScopeNode.RelativePath,
-                Changes = compactedChanges
+                Changes = outputChanges
                     .OrderBy(change => change.LogicalPath.ToCanonicalString(), StringComparer.Ordinal)
                     .ToArray(),
                 ValidationIssues = _issues

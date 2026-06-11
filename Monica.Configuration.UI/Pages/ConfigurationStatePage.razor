@@ -611,6 +611,7 @@
             parameters.Add(dialog => dialog.EffectiveValue, effectiveValue);
             parameters.Add(dialog => dialog.ScalarEffectiveValues, scalarValues);
             parameters.Add(dialog => dialog.PendingChanges, StateStore.GetPending());
+            parameters.Add(dialog => dialog.CompactChanges, false);
             var dialog = await DialogService.ShowAsync<ConfigurationJsonEditDialog>(L["ImportExport:JsonEditor:Title"], parameters, new DialogOptions
             {
                 MaxWidth = MaxWidth.ExtraLarge,

@@ -38,6 +38,11 @@ public sealed record ConfigurationJsonDraftRequest
     /// Gets canonical logical paths that should be ignored because the exported value was redacted.
     /// </summary>
     public IReadOnlySet<string> RedactedPaths { get; init; } = new HashSet<string>(StringComparer.Ordinal);
+
+    /// <summary>
+    /// Gets whether detailed changes should be compacted into safe container writes.
+    /// </summary>
+    public bool CompactChanges { get; init; } = true;
 }
 
 /// <summary>
