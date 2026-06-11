@@ -12,7 +12,9 @@
                         <MudText Typo="Typo.caption" Color="Color.Secondary">@PathTitle</MudText>
                     </MudStack>
                     <MudStack Row="true" Wrap="Wrap.Wrap" AlignItems="AlignItems.Center" Spacing="1">
-                        <MudChip T="int" Size="Size.Small" Color="Color.Primary" Variant="Variant.Outlined">@Definition.SchemaVersion</MudChip>
+                        <ConfigurationSchemaMetadataChip SchemaVersion="@Definition.SchemaVersion"
+                                                         SchemaHash="@Definition.SchemaHash"
+                                                         LastSeenTime="@Definition.LastSeenTime" />
                         @if (_editorDocument.RedactedPaths.Count > 0)
                         {
                             <MudChip T="int" Size="Size.Small" Color="Color.Warning" Variant="Variant.Outlined">

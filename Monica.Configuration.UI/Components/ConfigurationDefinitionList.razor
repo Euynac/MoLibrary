@@ -54,6 +54,10 @@
                                                     </MudChip>
                                                 </MudTooltip>
                                             }
+                                            <ConfigurationSchemaMetadataChip SchemaVersion="@definition.SchemaVersion"
+                                                                             SchemaHash="@definition.SchemaHash"
+                                                                             LastSeenTime="@definition.LastSeenTime"
+                                                                             Placement="Placement.Right" />
                                         </MudStack>
                                         <MudText Typo="Typo.caption" Color="Color.Secondary">
                                             <MudHighlighter Text="@GetOptionsTypeName(definition)" HighlightedTexts="@SearchTerms" />
@@ -181,6 +185,7 @@
                || ContainsAny(definition.DisplayName)
                || ContainsAny(definition.ClrTypeName)
                || ContainsAny(definition.SectionPath)
+               || ContainsAny(definition.SchemaHash)
                || ContainsAny(definition.FromProject)
                || ContainsAny(definition.Category);
     }

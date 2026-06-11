@@ -16,6 +16,11 @@ public sealed record ConfigurationListTemplate
     public string? ItemKeyPropertyName { get; init; }
 
     /// <summary>
+    /// Gets whether scalar item lists may contain repeated values.
+    /// </summary>
+    public bool AllowDuplicateItems { get; init; }
+
+    /// <summary>
     /// Gets whether the list supports per-item mutation.
     /// </summary>
     public bool SupportsPerItemMutation => !string.IsNullOrWhiteSpace(ItemKeyPropertyName);

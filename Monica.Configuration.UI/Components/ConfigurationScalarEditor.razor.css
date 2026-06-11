@@ -1,9 +1,12 @@
 .configuration-scalar-editor {
+    width: 100%;
     border-radius: var(--mud-default-borderradius);
+    box-sizing: border-box;
 }
 
 .configuration-scalar-editor.modified-input {
-    background-color: var(--mo-color-state-warning-soft-background);
+    border-inline-start: 2px solid var(--mo-color-state-warning-soft-border);
+    padding-inline-start: 0.5rem;
 }
 
 .configuration-scalar-editor.invalid-input ::deep .mud-input .mud-input-outlined-border,

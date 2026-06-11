@@ -41,6 +41,16 @@ public sealed record ConfigurationDefinitionSummary
     public int SchemaVersion { get; init; }
 
     /// <summary>
+    /// Gets the schema hash used to detect drift across services.
+    /// </summary>
+    public required string SchemaHash { get; init; }
+
+    /// <summary>
+    /// Gets the last time the metadata store saw this definition.
+    /// </summary>
+    public DateTimeOffset? LastSeenTime { get; init; }
+
+    /// <summary>
     /// Gets where this definition was resolved from for the current process.
     /// </summary>
     public ConfigurationDefinitionOrigin Origin { get; init; } = ConfigurationDefinitionOrigin.LocalScan;

@@ -5,6 +5,7 @@ namespace Test.Monica.Configuration;
 internal static class TestConfigurationFactory
 {
     public const string DefinitionKey = "Test.AppOptions";
+    public const string FromProject = "Test.Project";
 
     public static ConfigurationDefinition Definition()
     {
@@ -14,6 +15,7 @@ internal static class TestConfigurationFactory
             SectionPath = "Test:App",
             DisplayName = "Test App",
             ClrTypeName = typeof(TestConfigurationFactory).AssemblyQualifiedName!,
+            FromProject = FromProject,
             SchemaHash = "sha256:test",
             Root = RootNode()
         };

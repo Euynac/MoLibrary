@@ -25,7 +25,14 @@
       "SelectPrompt": "请选择一个配置定义。",
       "Ungrouped": "未分组",
       "PublishedMetadata": "DB",
-      "PublishedMetadataTooltip": "该配置定义来自数据库中发布的元数据。这里可以编辑 Monica 数据库有效值，但运行时来源链路只能在扫描到该 CLR 类型的服务中查看。"
+      "PublishedMetadataTooltip": "该配置定义来自数据库中发布的元数据。这里可以编辑 Monica 数据库有效值，但运行时来源链路只能在扫描到该 CLR 类型的服务中查看。",
+      "SchemaVersionChip": "v{0}",
+      "SchemaMetadataTitle": "Schema 元数据",
+      "SchemaVersionDetail": "版本：{0}",
+      "SchemaLastSeenDetail": "上次发现：{0}",
+      "SchemaLastSeenMissing": "尚未发布",
+      "SchemaHashDetail": "Hash",
+      "SchemaHashMissing": "暂无 Hash"
     },
     "Tree": {
       "Root": "根节点"
@@ -65,6 +72,25 @@
       "TimeSpanPlaceholder": "00:15 或 00:15:00",
       "TooLong": "值过长。",
       "TooShort": "值过短。"
+    },
+    "Collections": {
+      "EmptyList": "暂无项。",
+      "EmptyDictionary": "暂无条目。",
+      "AddItem": "添加项",
+      "AddEntry": "添加条目",
+      "AddItemPlaceholder": "新项",
+      "EditItemPlaceholder": "编辑项",
+      "Key": "Key",
+      "Value": "值",
+      "ItemRequired": "项值不能为空。",
+      "KeyRequired": "Key 不能为空。",
+      "DuplicateItem": "不允许重复项。",
+      "DuplicateKey": "不允许重复 Key。",
+      "ItemError": "{0}: {1}",
+      "EntryError": "{0}: {1}",
+      "ItemActions": "项操作",
+      "MoveUp": "上移",
+      "MoveDown": "下移"
     }
   },
   "Value": {
@@ -391,6 +417,7 @@
       "Export": "导出",
       "Download": "下载",
       "Apply": "应用",
+      "Delete": "删除",
       "Analyze": "分析",
       "EditJson": "编辑 JSON"
     },

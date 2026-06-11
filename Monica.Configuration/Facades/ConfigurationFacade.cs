@@ -184,6 +184,8 @@ public sealed class ConfigurationFacade(
             FromProject = definition.FromProject,
             Category = definition.Category,
             SchemaVersion = definition.SchemaVersion,
+            SchemaHash = definition.SchemaHash,
+            LastSeenTime = definition.LastSeenTime,
             Origin = definition.Origin
         };
     }

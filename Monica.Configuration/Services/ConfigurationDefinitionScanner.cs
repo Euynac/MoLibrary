@@ -81,7 +81,7 @@ internal sealed class ConfigurationDefinitionScanner(
                 ? BuildDictionaryTemplate(type, path, configurationPath, inheritedReloadBehavior)
                 : null,
             ListTemplate = nodeKind == ConfigurationNodeKind.List
-                ? BuildListTemplate(type, path, configurationPath, inheritedReloadBehavior)
+                ? BuildListTemplate(type, path, configurationPath, inheritedReloadBehavior, option)
                 : null,
             Children = children,
             ValidationRules = GetValidationRules(type, type.GetCustomAttributes<ValidationAttribute>())
@@ -142,7 +142,7 @@ internal sealed class ConfigurationDefinitionScanner(
                 ? BuildDictionaryTemplate(propertyType, path, configurationPath, inheritedReloadBehavior)
                 : null,
             ListTemplate = nodeKind == ConfigurationNodeKind.List
-                ? BuildListTemplate(propertyType, path, configurationPath, inheritedReloadBehavior)
+                ? BuildListTemplate(propertyType, path, configurationPath, inheritedReloadBehavior, option)
                 : null,
             Children = children,
             ValidationRules = GetValidationRules(propertyType, property.GetCustomAttributes<ValidationAttribute>())
@@ -182,11 +182,13 @@ internal sealed class ConfigurationDefinitionScanner(
         Type listType,
         LogicalPath listPath,
         string configurationPath,
-        ConfigurationReloadBehavior inheritedReloadBehavior)
+        ConfigurationReloadBehavior inheritedReloadBehavior,
+        OptionSettingAttribute? option)
     {
         var itemType = GetEnumerableItemType(listType) ?? typeof(object);
         return new ConfigurationListTemplate
         {
+            AllowDuplicateItems = option?.AllowDuplicateListItems is true,
             ItemKeyPropertyName = ResolveListItemKeyPropertyName(itemType),
             ItemTemplate = ScanNode(
                 itemType,

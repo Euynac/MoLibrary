@@ -54,4 +54,11 @@ public sealed class OptionSettingAttribute : Attribute
     /// Exactly one property on a list item type may set this value to <see langword="true"/>.
     /// </summary>
     public bool IsListItemKey { get; set; }
+
+    /// <summary>
+    /// Gets or sets whether a scalar list or array property may contain duplicate item values.
+    /// The default is <see langword="false"/>, so Monica UI prevents accidental duplicate scalar
+    /// collection entries unless the option explicitly models duplicates as meaningful data.
+    /// </summary>
+    public bool AllowDuplicateListItems { get; set; }
 }

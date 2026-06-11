@@ -279,7 +279,8 @@ public sealed class FileConfigurationStore(IOptions<ConfigurationFileStoreOption
             foreach (var definition in definitions)
             {
                 var path = GetDefinitionPath(definition.DefinitionKey);
-                var published = PublishedDefinitionDto.FromDefinition(definition);
+                var existing = IoFile.Exists(path) ? ReadPublishedDefinitionDto(path) : null;
+                var published = PublishedDefinitionDto.FromDefinition(definition, existing);
                 await IoFile.WriteAllTextAsync(path, JsonSerializer.Serialize(published, JSON_OPTIONS), cancellationToken);
             }
         }
@@ -461,8 +462,12 @@ public sealed class FileConfigurationStore(IOptions<ConfigurationFileStoreOption
 
     private static ConfigurationDefinition? ReadPublishedDefinition(string path)
     {
-        var dto = JsonSerializer.Deserialize<PublishedDefinitionDto>(IoFile.ReadAllText(path), JSON_OPTIONS);
-        return dto?.ToDefinition();
+        return ReadPublishedDefinitionDto(path)?.ToDefinition();
+    }
+
+    private static PublishedDefinitionDto? ReadPublishedDefinitionDto(string path)
+    {
+        return JsonSerializer.Deserialize<PublishedDefinitionDto>(IoFile.ReadAllText(path), JSON_OPTIONS);
     }
 
     private static IReadOnlyList<ConfigurationValueHistory> SortHistory(IEnumerable<ConfigurationValueHistory> histories)
@@ -510,7 +515,9 @@ public sealed class FileConfigurationStore(IOptions<ConfigurationFileStoreOption
 
         public DateTimeOffset LastSeenTime { get; init; }
 
-        public static PublishedDefinitionDto FromDefinition(ConfigurationDefinition definition)
+        public static PublishedDefinitionDto FromDefinition(
+            ConfigurationDefinition definition,
+            PublishedDefinitionDto? existing)
         {
             return new PublishedDefinitionDto
             {
@@ -520,12 +527,27 @@ public sealed class FileConfigurationStore(IOptions<ConfigurationFileStoreOption
                 ClrTypeName = ConfigurationDefinitionSchemaCodec.ToCompactClrTypeName(definition.ClrTypeName),
                 FromProject = definition.FromProject,
                 Category = definition.Category,
-                SchemaVersion = definition.SchemaVersion,
+                SchemaVersion = ResolvePublishedSchemaVersion(definition, existing),
                 SchemaHash = definition.SchemaHash,
                 ReloadBehavior = definition.ReloadBehavior.ToString(),
                 SchemaJson = ConfigurationDefinitionSchemaCodec.SerializeSchema(definition),
                 LastSeenTime = DateTimeOffset.UtcNow
             };
+        }
+
+        private static int ResolvePublishedSchemaVersion(
+            ConfigurationDefinition definition,
+            PublishedDefinitionDto? existing)
+        {
+            if (existing is null)
+            {
+                return Math.Max(definition.SchemaVersion, 1);
+            }
+
+            var currentVersion = Math.Max(Math.Max(existing.SchemaVersion, definition.SchemaVersion), 1);
+            return string.Equals(existing.SchemaHash, definition.SchemaHash, StringComparison.Ordinal)
+                ? currentVersion
+                : currentVersion + 1;
         }
 
         public ConfigurationDefinition ToDefinition()
@@ -539,6 +561,7 @@ public sealed class FileConfigurationStore(IOptions<ConfigurationFileStoreOption
                 Category,
                 SchemaVersion,
                 SchemaHash,
+                LastSeenTime,
                 Enum.Parse<ConfigurationReloadBehavior>(ReloadBehavior),
                 SchemaJson,
                 ConfigurationDefinitionOrigin.PublishedMetadata);

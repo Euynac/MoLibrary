@@ -91,7 +91,9 @@
                                                     </MudChip>
                                                 </MudTooltip>
                                             }
-                                            <MudChip T="int" Size="Size.Small" Color="Color.Primary" Variant="Variant.Outlined">@_selectedDefinition.SchemaVersion</MudChip>
+                                            <ConfigurationSchemaMetadataChip SchemaVersion="@_selectedDefinition.SchemaVersion"
+                                                                             SchemaHash="@_selectedDefinition.SchemaHash"
+                                                                             LastSeenTime="@_selectedDefinition.LastSeenTime" />
                                             <MudChip T="ConfigurationReloadBehavior" Size="Size.Small" Color="Color.Info" Variant="Variant.Outlined">@_selectedDefinition.ReloadBehavior</MudChip>
                                             <MudTooltip Text="@L["Common:Actions:EditJson"]">
                                                 <MudIconButton Icon="@Icons.Material.Filled.DataObject"
@@ -226,7 +228,7 @@
                 return [];
             }
 
-            if (_selectedNode.NodeKind == ConfigurationNodeKind.Scalar)
+            if (IsSimpleEditableNode(_selectedNode))
             {
                 return [_selectedNode];
             }
@@ -235,12 +237,12 @@
             {
                 var rootItems = EnumerateNodes(_selectedNode)
                     .Where(node => node.RelativePath.Depth > 0
-                                   && (node.NodeKind == ConfigurationNodeKind.Scalar || IsComplexNodeItem(node)))
+                                   && (IsSimpleEditableNode(node) || IsComplexNodeItem(node)))
                     .ToArray();
                 return rootItems.Length == 0 ? [_selectedNode] : rootItems;
             }
 
-            var leaves = EnumerateNodes(_selectedNode).Where(node => node.NodeKind == ConfigurationNodeKind.Scalar).ToArray();
+            var leaves = EnumerateNodes(_selectedNode).Where(IsSimpleEditableNode).ToArray();
             return leaves.Length == 0 ? [_selectedNode] : leaves;
         }
     }
@@ -318,7 +320,7 @@
             return;
         }
 
-        foreach (var node in EnumerateNodes(_selectedDefinition.Root).Where(node => node.NodeKind == ConfigurationNodeKind.Scalar))
+        foreach (var node in EnumerateNodes(_selectedDefinition.Root).Where(IsSimpleEditableNode))
         {
             var result = await Facade.GetEffectiveValueAsync(_selectedDefinition.DefinitionKey, node.RelativePath);
             if (!result.IsFailed(out _, out var effectiveValue))
@@ -404,7 +406,7 @@
     private IEnumerable<ConfigurationNodeDefinition> EnumerateSectionNodes(ConfigurationNodeDefinition root)
     {
         yield return root;
-        foreach (var node in EnumerateNodes(root).Where(node => node.RelativePath.Depth > 0 && node.NodeKind != ConfigurationNodeKind.Scalar))
+        foreach (var node in EnumerateNodes(root).Where(node => node.RelativePath.Depth > 0 && !IsSimpleEditableNode(node)))
         {
             yield return node;
         }
@@ -413,7 +415,7 @@
     private ConfigurationSectionItem BuildSectionItem(ConfigurationNodeDefinition node)
     {
         var isRoot = node.RelativePath.Depth == 0;
-        var scalarCount = EnumerateNodes(node).Count(candidate => candidate.NodeKind == ConfigurationNodeKind.Scalar);
+        var scalarCount = EnumerateNodes(node).Count(IsSimpleEditableNode);
         return new ConfigurationSectionItem(
             node,
             GetNodeLabel(node),
@@ -452,7 +454,13 @@
 
     private static bool IsComplexNodeItem(ConfigurationNodeDefinition node)
     {
-        return node.NodeKind is ConfigurationNodeKind.Object or ConfigurationNodeKind.Dictionary or ConfigurationNodeKind.List;
+        return !node.IsScalarCollection()
+               && node.NodeKind is (ConfigurationNodeKind.Object or ConfigurationNodeKind.Dictionary or ConfigurationNodeKind.List);
+    }
+
+    private static bool IsSimpleEditableNode(ConfigurationNodeDefinition node)
+    {
+        return node.NodeKind == ConfigurationNodeKind.Scalar || node.IsScalarCollection();
     }
 
     private bool IsSelectedNode(ConfigurationNodeDefinition node)

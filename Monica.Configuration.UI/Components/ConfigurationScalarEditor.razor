@@ -1,7 +1,4 @@
 @using System.Globalization
-@using System.Text.Json
-@using System.Text.RegularExpressions
-@using MudBlazor.Extensions
 @using Monica.Configuration.UI.Localization
 @inject IStringLocalizer<ConfigurationUIResource> L
 
@@ -155,8 +152,7 @@
     private bool IsNumeric => Node.ValueKind is ConfigurationValueKind.Integer or ConfigurationValueKind.Decimal or ConfigurationValueKind.Floating;
 
     private IReadOnlyList<string> EnumValues =>
-        Node.ValidationRules.OfType<AllowedValuesRule>().FirstOrDefault()?.Values
-        ?? ExtractRegexEnumValues();
+        ConfigurationScalarValueCodec.GetAllowedValues(Node);
 
     private InputType TextInputType => Node.IsSensitive && !_showSensitive ? InputType.Password : InputType.Text;
 
@@ -382,25 +378,26 @@
 
     private async Task EmitAsync(string displayValue, string? rawJson = null)
     {
-        if (!Validate(displayValue))
+        var conversion = ConfigurationScalarValueCodec.ConvertDisplayValue(Node, displayValue, L, rawJson);
+        if (!conversion.IsValid || conversion.StoredValue is null)
         {
-            await EmitInvalidAsync(displayValue);
+            await EmitInvalidAsync(conversion.DisplayValue, conversion.ValidationError);
             return;
         }
 
         _hasInvalidLocalEdit = false;
         _preserveCurrentValueOnValidationClear = true;
-        rawJson ??= JsonSerializer.Serialize(displayValue);
         await ValueChanged.InvokeAsync(new ConfigurationScalarEditResult
         {
             IsValid = true,
-            StoredValue = ConfigurationStoredValue.FromJson(rawJson),
-            DisplayValue = displayValue
+            StoredValue = conversion.StoredValue,
+            DisplayValue = conversion.DisplayValue
         });
     }
 
-    private async Task EmitInvalidAsync(string displayValue)
+    private async Task EmitInvalidAsync(string displayValue, string? validationError = null)
     {
+        _error = validationError ?? _error;
         _hasInvalidLocalEdit = true;
         _preserveCurrentValueOnValidationClear = false;
         await ValueChanged.InvokeAsync(new ConfigurationScalarEditResult
@@ -413,93 +410,8 @@
 
     private bool Validate(string value)
     {
-        _error = null;
-
-        if (string.IsNullOrWhiteSpace(value))
-        {
-            if (Node.ValidationRules.OfType<RequiredRule>().Any() || RequiresNonEmptyScalarValue)
-            {
-                _error = L["State:Editor:Required"];
-                return false;
-            }
-
-            return true;
-        }
-
-        if (!ValidateScalarValueKind(value))
-        {
-            return false;
-        }
-
-        foreach (var rule in Node.ValidationRules)
-        {
-            switch (rule)
-            {
-                case AllowedValuesRule allowedValuesRule when !string.IsNullOrWhiteSpace(value)
-                                                              && !allowedValuesRule.Values.Contains(value, StringComparer.OrdinalIgnoreCase):
-                    _error = rule.ErrorMessage ?? L["State:Editor:InvalidPattern"];
-                    return false;
-                case RegexRule regexRule when !string.IsNullOrWhiteSpace(value) && !Regex.IsMatch(value, regexRule.Pattern):
-                    _error = rule.ErrorMessage ?? L["State:Editor:InvalidPattern"];
-                    return false;
-                case RangeRule rangeRule when decimal.TryParse(value, NumberStyles.Any, CultureInfo.InvariantCulture, out var decimalValue):
-                    if (rangeRule.Min is not null && decimalValue < rangeRule.Min || rangeRule.Max is not null && decimalValue > rangeRule.Max)
-                    {
-                        _error = rule.ErrorMessage ?? L["State:Editor:OutOfRange"];
-                        return false;
-                    }
-                    break;
-                case MaxLengthRule maxLengthRule when value.Length > maxLengthRule.Max:
-                    _error = rule.ErrorMessage ?? L["State:Editor:TooLong"];
-                    return false;
-                case MinLengthRule minLengthRule when value.Length < minLengthRule.Min:
-                    _error = rule.ErrorMessage ?? L["State:Editor:TooShort"];
-                    return false;
-            }
-        }
-
-        return true;
-    }
-
-    private bool RequiresNonEmptyScalarValue =>
-        !Node.IsNullable
-        && Node.ValueKind is ConfigurationValueKind.TimeSpan
-            or ConfigurationValueKind.DateTime
-            or ConfigurationValueKind.Integer
-            or ConfigurationValueKind.Decimal
-            or ConfigurationValueKind.Floating;
-
-    private bool ValidateScalarValueKind(string value)
-    {
-        switch (Node.ValueKind)
-        {
-            case ConfigurationValueKind.TimeSpan when !ConfigurationScalarTextCodec.TryParseTimeSpan(value, out _):
-                _error = L["State:Editor:InvalidTimeSpan"];
-                return false;
-            case ConfigurationValueKind.DateTime when !DateTime.TryParse(value, CultureInfo.InvariantCulture, DateTimeStyles.AssumeLocal, out _):
-                _error = L["ImportExport:Diagnostics:ExpectedDateTime"];
-                return false;
-            case ConfigurationValueKind.Integer when !long.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out _):
-                _error = L["ImportExport:Diagnostics:ExpectedInteger"];
-                return false;
-            case ConfigurationValueKind.Decimal or ConfigurationValueKind.Floating
-                when !decimal.TryParse(value, NumberStyles.Any, CultureInfo.InvariantCulture, out _):
-                _error = L["ImportExport:Diagnostics:ExpectedNumber"];
-                return false;
-            default:
-                return true;
-        }
-    }
-
-    private IReadOnlyList<string> ExtractRegexEnumValues()
-    {
-        var pattern = Node.ValidationRules.OfType<RegexRule>().FirstOrDefault()?.Pattern;
-        if (string.IsNullOrWhiteSpace(pattern) || !pattern.StartsWith("^(", StringComparison.Ordinal) || !pattern.EndsWith(")$", StringComparison.Ordinal))
-        {
-            return [];
-        }
-
-        return pattern[2..^2].Split('|', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        _error = ConfigurationScalarValueCodec.ValidateDisplayValue(Node, value, L);
+        return string.IsNullOrWhiteSpace(_error);
     }
 
     private void ToggleSensitiveVisibility()

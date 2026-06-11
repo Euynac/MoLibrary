@@ -1,0 +1,778 @@
+@using System.Text.Json.Nodes
+@using System.Text.RegularExpressions
+@using Monica.Configuration.UI.Localization
+@inject IStringLocalizer<ConfigurationUIResource> L
+
+<div class="@EditorClass">
+    @if (Node.IsScalarList())
+    {
+        <MudStack Spacing="1">
+            @if (_listItems.Count == 0)
+            {
+                <MudText Typo="Typo.caption" Color="Color.Secondary">@L["State:Collections:EmptyList"]</MudText>
+            }
+            else
+            {
+                <div class="configuration-scalar-list-items">
+                    @foreach (var item in _listItems)
+                    {
+                        var itemId = item.Id;
+                        var itemIndex = _listItems.IndexOf(item);
+                        <div class="@ListItemClass(item)" @key="item.Id">
+                            <MudChip T="int"
+                                     Value="@item.Id"
+                                     Color="@ListChipColor(item)"
+                                     Variant="@(itemId == _editingListItemId ? Variant.Filled : Variant.Outlined)"
+                                     Size="Size.Small"
+                                     Class="configuration-scalar-list-chip"
+                                     OnClick="@(() => BeginEditListItem(itemId))">
+                                @DisplayListItem(item)
+                            </MudChip>
+                            <div class="configuration-scalar-list-actions">
+                                <MudMenu Icon="@Icons.Material.Filled.MoreHoriz"
+                                         Size="Size.Small"
+                                         Color="Color.Default"
+                                         Disabled="@Disabled"
+                                         AnchorOrigin="Origin.BottomRight"
+                                         TransformOrigin="Origin.TopRight"
+                                         title="@L["State:Collections:ItemActions"]">
+                                    <MudMenuItem Icon="@Icons.Material.Filled.KeyboardArrowUp"
+                                                 Disabled="@(itemIndex == 0)"
+                                                 OnClick="@(() => MoveListItem(itemId, -1))">
+                                        @L["State:Collections:MoveUp"]
+                                    </MudMenuItem>
+                                    <MudMenuItem Icon="@Icons.Material.Filled.KeyboardArrowDown"
+                                                 Disabled="@(itemIndex == _listItems.Count - 1)"
+                                                 OnClick="@(() => MoveListItem(itemId, 1))">
+                                        @L["State:Collections:MoveDown"]
+                                    </MudMenuItem>
+                                    <MudMenuItem Icon="@Icons.Material.Filled.Delete"
+                                                 OnClick="@(() => RemoveListItem(itemId))">
+                                        @L["Common:Actions:Delete"]
+                                    </MudMenuItem>
+                                </MudMenu>
+                            </div>
+                        </div>
+                    }
+                </div>
+            }
+
+            <div class="configuration-scalar-collection-draft">
+                @if (ListChoices.Count > 0)
+                {
+                    <MudSelect T="string"
+                               Value="@_listDraftValue"
+                               ValueChanged="OnListDraftChanged"
+                               Variant="Variant.Outlined"
+                               Margin="Margin.Dense"
+                               Dense="true"
+                               Error="@(!string.IsNullOrWhiteSpace(_listDraftError))"
+                               Disabled="@Disabled">
+                        @foreach (var value in ListChoices)
+                        {
+                            <MudSelectItem T="string" Value="@value">@value</MudSelectItem>
+                        }
+                    </MudSelect>
+                }
+                else
+                {
+                    <MudTextField T="string"
+                                  Value="@_listDraftValue"
+                                  ValueChanged="OnListDraftChanged"
+                                  Variant="Variant.Outlined"
+                                  Margin="Margin.Dense"
+                                  Immediate="true"
+                                  Placeholder="@ListDraftPlaceholder"
+                                  Error="@(!string.IsNullOrWhiteSpace(_listDraftError))"
+                                  Disabled="@Disabled" />
+                }
+                <MudButton Variant="Variant.Outlined"
+                           Color="Color.Primary"
+                           Size="Size.Small"
+                           Class="configuration-scalar-collection-action"
+                           StartIcon="@(_editingListItemId is null ? Icons.Material.Filled.Add : Icons.Material.Filled.Check)"
+                           Disabled="@Disabled"
+                           OnClick="ApplyListDraftAsync">
+                    @(_editingListItemId is null ? L["State:Collections:AddItem"] : L["Common:Actions:Apply"])
+                </MudButton>
+                @if (_editingListItemId is not null)
+                {
+                    <MudButton Variant="Variant.Text"
+                               Size="Size.Small"
+                               Class="configuration-scalar-collection-action"
+                               Disabled="@Disabled"
+                               OnClick="CancelListEdit">
+                        @L["Common:Actions:Cancel"]
+                    </MudButton>
+                }
+            </div>
+
+            @if (!string.IsNullOrWhiteSpace(_listDraftError))
+            {
+                <MudText Typo="Typo.caption" Color="Color.Error">@_listDraftError</MudText>
+            }
+            @if (ActiveIssue is not null)
+            {
+                <MudText Typo="Typo.caption" Color="Color.Error">@ActiveIssue.ValidationError</MudText>
+            }
+        </MudStack>
+    }
+    else if (Node.IsScalarDictionary())
+    {
+        <MudStack Spacing="1">
+            @if (_dictionaryItems.Count == 0)
+            {
+                <MudText Typo="Typo.caption" Color="Color.Secondary">@L["State:Collections:EmptyDictionary"]</MudText>
+            }
+            else
+            {
+                <div class="configuration-scalar-dictionary-items">
+                    @foreach (var item in _dictionaryItems)
+                    {
+                        var itemId = item.Id;
+                        <div class="configuration-scalar-dictionary-row" @key="item.Id">
+                            <MudTextField T="string"
+                                          Value="@item.Key"
+                                          ValueChanged="@((string? value) => OnDictionaryKeyChanged(itemId, value))"
+                                          Variant="Variant.Outlined"
+                                          Margin="Margin.Dense"
+                                          Immediate="true"
+                                          Placeholder="@L["State:Collections:Key"]"
+                                          Error="@(!string.IsNullOrWhiteSpace(item.KeyError))"
+                                          Disabled="@Disabled" />
+                            @if (DictionaryValueChoices.Count > 0)
+                            {
+                                <MudSelect T="string"
+                                           Value="@item.Value"
+                                           ValueChanged="@((string? value) => OnDictionaryValueChanged(itemId, value))"
+                                           Variant="Variant.Outlined"
+                                           Margin="Margin.Dense"
+                                           Dense="true"
+                                           Error="@(!string.IsNullOrWhiteSpace(item.ValueError))"
+                                           Disabled="@Disabled">
+                                    @foreach (var value in DictionaryValueChoices)
+                                    {
+                                        <MudSelectItem T="string" Value="@value">@value</MudSelectItem>
+                                    }
+                                </MudSelect>
+                            }
+                            else
+                            {
+                                <MudTextField T="string"
+                                              Value="@item.Value"
+                                              ValueChanged="@((string? value) => OnDictionaryValueChanged(itemId, value))"
+                                              Variant="Variant.Outlined"
+                                              Margin="Margin.Dense"
+                                              Immediate="true"
+                                              Placeholder="@L["State:Collections:Value"]"
+                                              Error="@(!string.IsNullOrWhiteSpace(item.ValueError))"
+                                              Disabled="@Disabled" />
+                            }
+                            <MudTooltip Text="@L["Common:Actions:Delete"]">
+                                <MudIconButton Icon="@Icons.Material.Filled.Delete"
+                                               Size="Size.Small"
+                                               Color="Color.Error"
+                                               Class="configuration-scalar-dictionary-delete"
+                                               Disabled="@Disabled"
+                                               OnClick="@(() => RemoveDictionaryItem(itemId))" />
+                            </MudTooltip>
+                        </div>
+                        @if (!string.IsNullOrWhiteSpace(item.KeyError) || !string.IsNullOrWhiteSpace(item.ValueError))
+                        {
+                            <MudText Typo="Typo.caption" Color="Color.Error" Class="configuration-scalar-dictionary-error">
+                                @(item.KeyError ?? item.ValueError)
+                            </MudText>
+                        }
+                    }
+                </div>
+            }
+
+            <div class="configuration-scalar-dictionary-add-row">
+                <MudTextField T="string"
+                              Value="@_newDictionaryKey"
+                              ValueChanged="@((string? value) => _newDictionaryKey = value ?? string.Empty)"
+                              Variant="Variant.Outlined"
+                              Margin="Margin.Dense"
+                              Immediate="true"
+                              Placeholder="@L["State:Collections:Key"]"
+                              Error="@(!string.IsNullOrWhiteSpace(_newDictionaryKeyError))"
+                              Disabled="@Disabled" />
+                @if (DictionaryValueChoices.Count > 0)
+                {
+                    <MudSelect T="string"
+                               Value="@_newDictionaryValue"
+                               ValueChanged="@((string? value) => _newDictionaryValue = value ?? string.Empty)"
+                               Variant="Variant.Outlined"
+                               Margin="Margin.Dense"
+                               Dense="true"
+                               Error="@(!string.IsNullOrWhiteSpace(_newDictionaryValueError))"
+                               Disabled="@Disabled">
+                        @foreach (var value in DictionaryValueChoices)
+                        {
+                            <MudSelectItem T="string" Value="@value">@value</MudSelectItem>
+                        }
+                    </MudSelect>
+                }
+                else
+                {
+                    <MudTextField T="string"
+                                  Value="@_newDictionaryValue"
+                                  ValueChanged="@((string? value) => _newDictionaryValue = value ?? string.Empty)"
+                                  Variant="Variant.Outlined"
+                                  Margin="Margin.Dense"
+                                  Immediate="true"
+                                  Placeholder="@L["State:Collections:Value"]"
+                                  Error="@(!string.IsNullOrWhiteSpace(_newDictionaryValueError))"
+                                  Disabled="@Disabled" />
+                }
+                <MudButton Variant="Variant.Outlined"
+                           Color="Color.Primary"
+                           Size="Size.Small"
+                           Class="configuration-scalar-collection-action"
+                           StartIcon="@Icons.Material.Filled.Add"
+                           Disabled="@Disabled"
+                           OnClick="AddDictionaryItemAsync">
+                    @L["State:Collections:AddEntry"]
+                </MudButton>
+            </div>
+
+            @if (!string.IsNullOrWhiteSpace(_newDictionaryKeyError) || !string.IsNullOrWhiteSpace(_newDictionaryValueError))
+            {
+                <MudText Typo="Typo.caption" Color="Color.Error">@(_newDictionaryKeyError ?? _newDictionaryValueError)</MudText>
+            }
+            @if (ActiveIssue is not null)
+            {
+                <MudText Typo="Typo.caption" Color="Color.Error">@ActiveIssue.ValidationError</MudText>
+            }
+        </MudStack>
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired] public ConfigurationNodeDefinition Node { get; set; } = null!;
+    [Parameter] public ConfigurationEffectiveValue? EffectiveValue { get; set; }
+    [Parameter] public PendingChange? PendingChange { get; set; }
+    [Parameter] public bool Disabled { get; set; }
+    [Parameter] public ConfigurationValidationIssue? ValidationIssue { get; set; }
+    [Parameter] public EventCallback<ConfigurationScalarCollectionEditResult> ValueChanged { get; set; }
+
+    private readonly List<ScalarListItem> _listItems = [];
+    private readonly List<ScalarDictionaryItem> _dictionaryItems = [];
+    private int _nextItemId = 1;
+    private int? _editingListItemId;
+    private string _listDraftValue = string.Empty;
+    private string? _listDraftError;
+    private string _newDictionaryKey = string.Empty;
+    private string _newDictionaryValue = string.Empty;
+    private string? _newDictionaryKeyError;
+    private string? _newDictionaryValueError;
+    private string? _lastNodePath;
+    private string? _lastEffectiveJson;
+    private string? _lastPendingJson;
+    private string? _lastValidationIssueKey;
+    private bool _hasLocalState;
+
+    private ConfigurationNodeDefinition ListItemNode => Node.ListTemplate?.ItemTemplate ?? Node;
+
+    private ConfigurationNodeDefinition DictionaryValueNode => Node.DictionaryTemplate?.ValueTemplate ?? Node;
+
+    private IReadOnlyList<string> ListChoices => ChoicesFor(ListItemNode);
+
+    private IReadOnlyList<string> DictionaryValueChoices => ChoicesFor(DictionaryValueNode);
+
+    private ConfigurationValidationIssue? ActiveIssue => ValidationIssue;
+
+    private bool IsModified => PendingChange is not null;
+
+    private string EditorClass => string.Join(' ', new[]
+    {
+        "configuration-scalar-collection-editor",
+        IsModified ? "modified-input" : null,
+        ActiveIssue is not null ? "invalid-input" : null
+    }.Where(static value => !string.IsNullOrWhiteSpace(value)));
+
+    private string ListDraftPlaceholder => _editingListItemId is null
+        ? L["State:Collections:AddItemPlaceholder"].Value
+        : L["State:Collections:EditItemPlaceholder"].Value;
+
+    private string ListItemClass(ScalarListItem item)
+    {
+        return string.Join(' ', new[]
+        {
+            "configuration-scalar-list-item",
+            item.Id == _editingListItemId ? "editing" : null,
+            !string.IsNullOrWhiteSpace(item.Error) ? "invalid" : null
+        }.Where(static value => !string.IsNullOrWhiteSpace(value)));
+    }
+
+    protected override void OnParametersSet()
+    {
+        var nodePath = Node.RelativePath.ToCanonicalString();
+        var effectiveJson = EffectiveValue?.DisplayValue;
+        var pendingJson = PendingChange?.NewValue.Json;
+        var validationIssueKey = BuildValidationIssueKey();
+        var pathChanged = !string.Equals(_lastNodePath, nodePath, StringComparison.Ordinal);
+        var effectiveChanged = !string.Equals(_lastEffectiveJson, effectiveJson, StringComparison.Ordinal);
+        var pendingChanged = !string.Equals(_lastPendingJson, pendingJson, StringComparison.Ordinal);
+        var issueChanged = !string.Equals(_lastValidationIssueKey, validationIssueKey, StringComparison.Ordinal);
+
+        if (pathChanged || !_hasLocalState && (pendingChanged || issueChanged) || PendingChange is null && ValidationIssue is null && (pendingChanged || issueChanged || effectiveChanged))
+        {
+            SyncFromParameters();
+        }
+
+        _lastNodePath = nodePath;
+        _lastEffectiveJson = effectiveJson;
+        _lastPendingJson = pendingJson;
+        _lastValidationIssueKey = validationIssueKey;
+    }
+
+    private void SyncFromParameters()
+    {
+        var json = PendingChange?.NewValue.Json
+                   ?? (ValidationIssue?.IsSensitive is true ? null : ValidationIssue?.InvalidDisplayValue)
+                   ?? EffectiveValue?.DisplayValue;
+
+        if (Node.IsScalarList())
+        {
+            SyncList(json);
+        }
+        else if (Node.IsScalarDictionary())
+        {
+            SyncDictionary(json);
+        }
+
+        _editingListItemId = null;
+        _listDraftValue = string.Empty;
+        _listDraftError = null;
+        _newDictionaryKey = string.Empty;
+        _newDictionaryValue = string.Empty;
+        _newDictionaryKeyError = null;
+        _newDictionaryValueError = null;
+        _hasLocalState = PendingChange is not null || ValidationIssue is not null;
+    }
+
+    private void SyncList(string? json)
+    {
+        _listItems.Clear();
+        _nextItemId = 1;
+        if (ParseJson(json) is not JsonArray array)
+        {
+            return;
+        }
+
+        foreach (var item in array)
+        {
+            _listItems.Add(new ScalarListItem(_nextItemId++, ReadScalarDisplayValue(item, ListItemNode)));
+        }
+    }
+
+    private void SyncDictionary(string? json)
+    {
+        _dictionaryItems.Clear();
+        _nextItemId = 1;
+        if (ParseJson(json) is not JsonObject jsonObject)
+        {
+            return;
+        }
+
+        foreach (var pair in jsonObject)
+        {
+            _dictionaryItems.Add(new ScalarDictionaryItem(
+                _nextItemId++,
+                pair.Key,
+                ReadScalarDisplayValue(pair.Value, DictionaryValueNode)));
+        }
+    }
+
+    private string? BuildValidationIssueKey()
+    {
+        return ValidationIssue is null
+            ? null
+            : $"{ValidationIssue.LogicalPath.ToCanonicalString()}:{ValidationIssue.InvalidDisplayValue}:{ValidationIssue.ValidationError}";
+    }
+
+    private static JsonNode? ParseJson(string? json)
+    {
+        if (string.IsNullOrWhiteSpace(json))
+        {
+            return null;
+        }
+
+        try
+        {
+            return JsonNode.Parse(json);
+        }
+        catch (JsonException)
+        {
+            return null;
+        }
+    }
+
+    private static string ReadScalarDisplayValue(JsonNode? node, ConfigurationNodeDefinition schema)
+    {
+        if (node is null)
+        {
+            return string.Empty;
+        }
+
+        using var document = JsonDocument.Parse(node.ToJsonString());
+        var value = document.RootElement.ValueKind switch
+        {
+            JsonValueKind.String => document.RootElement.GetString() ?? string.Empty,
+            JsonValueKind.Number => document.RootElement.GetRawText(),
+            JsonValueKind.True => "true",
+            JsonValueKind.False => "false",
+            JsonValueKind.Null => string.Empty,
+            _ => document.RootElement.GetRawText()
+        };
+        return ConfigurationScalarValueCodec.NormalizeDisplayValue(schema, value);
+    }
+
+    private IReadOnlyList<string> ChoicesFor(ConfigurationNodeDefinition node)
+    {
+        var allowedValues = ConfigurationScalarValueCodec.GetAllowedValues(node);
+        if (allowedValues.Count > 0)
+        {
+            return allowedValues;
+        }
+
+        return node.ValueKind == ConfigurationValueKind.Boolean
+            ? ["true", "false"]
+            : [];
+    }
+
+    private Color ListChipColor(ScalarListItem item)
+    {
+        if (!string.IsNullOrWhiteSpace(item.Error))
+        {
+            return Color.Error;
+        }
+
+        return item.Id == _editingListItemId ? Color.Primary : Color.Default;
+    }
+
+    private string DisplayListItem(ScalarListItem item)
+    {
+        return string.IsNullOrEmpty(item.Value)
+            ? L["Common:States:Empty"].Value
+            : item.Value;
+    }
+
+    private Task OnListDraftChanged(string? value)
+    {
+        _listDraftValue = value ?? string.Empty;
+        _listDraftError = ValidateListDraft(_listDraftValue);
+        return Task.CompletedTask;
+    }
+
+    private void BeginEditListItem(int itemId)
+    {
+        if (_listItems.FirstOrDefault(item => item.Id == itemId) is not { } item)
+        {
+            return;
+        }
+
+        _editingListItemId = item.Id;
+        _listDraftValue = item.Value;
+        _listDraftError = null;
+    }
+
+    private void CancelListEdit()
+    {
+        _editingListItemId = null;
+        _listDraftValue = string.Empty;
+        _listDraftError = null;
+    }
+
+    private async Task ApplyListDraftAsync()
+    {
+        _listDraftError = ValidateListDraft(_listDraftValue);
+        if (!string.IsNullOrWhiteSpace(_listDraftError))
+        {
+            return;
+        }
+
+        var normalizedValue = ConfigurationScalarValueCodec.NormalizeDisplayValue(ListItemNode, _listDraftValue);
+        if (_editingListItemId is { } editingId)
+        {
+            var item = _listItems.FirstOrDefault(candidate => candidate.Id == editingId);
+            if (item is not null)
+            {
+                item.Value = normalizedValue;
+            }
+        }
+        else
+        {
+            _listItems.Add(new ScalarListItem(_nextItemId++, normalizedValue));
+        }
+
+        CancelListEdit();
+        await EmitListAsync();
+    }
+
+    private string? ValidateListDraft(string value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return L["State:Collections:ItemRequired"];
+        }
+
+        var conversion = ConfigurationScalarValueCodec.ConvertDisplayValue(ListItemNode, value, L);
+        if (!conversion.IsValid)
+        {
+            return conversion.ValidationError;
+        }
+
+        if (Node.ListTemplate?.AllowDuplicateItems is true)
+        {
+            return null;
+        }
+
+        var currentStoredJson = conversion.StoredValue?.Json;
+        var duplicates = _listItems.Where(item => _editingListItemId != item.Id)
+            .Select(item => ConfigurationScalarValueCodec.ConvertDisplayValue(ListItemNode, item.Value, L).StoredValue?.Json)
+            .Where(storedJson => storedJson is not null);
+        return duplicates.Contains(currentStoredJson, StringComparer.Ordinal)
+            ? L["State:Collections:DuplicateItem"].Value
+            : null;
+    }
+
+    private async Task RemoveListItem(int itemId)
+    {
+        var index = _listItems.FindIndex(item => item.Id == itemId);
+        if (index < 0)
+        {
+            return;
+        }
+
+        _listItems.RemoveAt(index);
+        if (_editingListItemId == itemId)
+        {
+            CancelListEdit();
+        }
+
+        await EmitListAsync();
+    }
+
+    private async Task MoveListItem(int itemId, int direction)
+    {
+        var index = _listItems.FindIndex(item => item.Id == itemId);
+        var targetIndex = index + direction;
+        if (index < 0 || targetIndex < 0 || targetIndex >= _listItems.Count)
+        {
+            return;
+        }
+
+        var item = _listItems[index];
+        _listItems.RemoveAt(index);
+        _listItems.Insert(targetIndex, item);
+        await EmitListAsync();
+    }
+
+    private async Task EmitListAsync()
+    {
+        _hasLocalState = true;
+        var array = new JsonArray();
+        var seenValues = new Dictionary<string, int>(StringComparer.Ordinal);
+        foreach (var item in _listItems)
+        {
+            item.Error = null;
+            var conversion = ConfigurationScalarValueCodec.ConvertDisplayValue(ListItemNode, item.Value, L);
+            if (!conversion.IsValid || conversion.StoredValue is null)
+            {
+                item.Error = conversion.ValidationError;
+                await EmitInvalidAsync(ItemErrorLabel(item.Value, conversion.ValidationError));
+                return;
+            }
+
+            if (Node.ListTemplate?.AllowDuplicateItems is not true)
+            {
+                if (seenValues.ContainsKey(conversion.StoredValue.Json))
+                {
+                    item.Error = L["State:Collections:DuplicateItem"];
+                    await EmitInvalidAsync(ItemErrorLabel(item.Value, item.Error));
+                    return;
+                }
+
+                seenValues[conversion.StoredValue.Json] = item.Id;
+            }
+
+            array.Add(ParseJson(conversion.StoredValue.Json));
+        }
+
+        await EmitValidAsync(array);
+    }
+
+    private Task OnDictionaryKeyChanged(int itemId, string? value)
+    {
+        if (_dictionaryItems.FirstOrDefault(item => item.Id == itemId) is { } item)
+        {
+            item.Key = value ?? string.Empty;
+        }
+
+        return EmitDictionaryAsync();
+    }
+
+    private Task OnDictionaryValueChanged(int itemId, string? value)
+    {
+        if (_dictionaryItems.FirstOrDefault(item => item.Id == itemId) is { } item)
+        {
+            item.Value = value ?? string.Empty;
+        }
+
+        return EmitDictionaryAsync();
+    }
+
+    private async Task AddDictionaryItemAsync()
+    {
+        _newDictionaryKeyError = ValidateDictionaryKey(_newDictionaryKey, null);
+        _newDictionaryValueError = ValidateDictionaryValue(_newDictionaryValue);
+        if (!string.IsNullOrWhiteSpace(_newDictionaryKeyError) || !string.IsNullOrWhiteSpace(_newDictionaryValueError))
+        {
+            return;
+        }
+
+        var normalizedValue = ConfigurationScalarValueCodec.NormalizeDisplayValue(DictionaryValueNode, _newDictionaryValue);
+        _dictionaryItems.Add(new ScalarDictionaryItem(_nextItemId++, _newDictionaryKey, normalizedValue));
+        _newDictionaryKey = string.Empty;
+        _newDictionaryValue = string.Empty;
+        _newDictionaryKeyError = null;
+        _newDictionaryValueError = null;
+        await EmitDictionaryAsync();
+    }
+
+    private async Task RemoveDictionaryItem(int itemId)
+    {
+        _dictionaryItems.RemoveAll(item => item.Id == itemId);
+        await EmitDictionaryAsync();
+    }
+
+    private async Task EmitDictionaryAsync()
+    {
+        _hasLocalState = true;
+        var jsonObject = new JsonObject();
+        foreach (var item in _dictionaryItems)
+        {
+            item.KeyError = ValidateDictionaryKey(item.Key, item.Id);
+            item.ValueError = ValidateDictionaryValue(item.Value);
+            if (!string.IsNullOrWhiteSpace(item.KeyError) || !string.IsNullOrWhiteSpace(item.ValueError))
+            {
+                await EmitInvalidAsync(DictionaryErrorLabel(item));
+                return;
+            }
+
+            var conversion = ConfigurationScalarValueCodec.ConvertDisplayValue(DictionaryValueNode, item.Value, L);
+            jsonObject[item.Key] = ParseJson(conversion.StoredValue!.Json);
+        }
+
+        await EmitValidAsync(jsonObject);
+    }
+
+    private string? ValidateDictionaryKey(string key, int? currentItemId)
+    {
+        if (string.IsNullOrWhiteSpace(key))
+        {
+            return L["State:Collections:KeyRequired"];
+        }
+
+        if (Node.DictionaryTemplate is { DisallowColonInKey: true } && key.Contains(':', StringComparison.Ordinal))
+        {
+            return L["Dialogs:ComplexEditor:Errors:ColonNotAllowed"];
+        }
+
+        if (Node.DictionaryTemplate is { KeyRegexPattern: { Length: > 0 } pattern } && !Regex.IsMatch(key, pattern))
+        {
+            return L["State:Editor:InvalidPattern"];
+        }
+
+        return _dictionaryItems.Any(item => item.Id != currentItemId && string.Equals(item.Key, key, StringComparison.Ordinal))
+            ? L["State:Collections:DuplicateKey"].Value
+            : null;
+    }
+
+    private string? ValidateDictionaryValue(string value)
+    {
+        return ConfigurationScalarValueCodec.ConvertDisplayValue(DictionaryValueNode, value, L) switch
+        {
+            { IsValid: true } => null,
+            var result => result.ValidationError
+        };
+    }
+
+    private async Task EmitValidAsync(JsonNode value)
+    {
+        var displayValue = ConfigurationJsonDisplayFormatter.Format(value, Node, L["State:Value:Sensitive"]);
+        await ValueChanged.InvokeAsync(new ConfigurationScalarCollectionEditResult
+        {
+            IsValid = true,
+            StoredValue = ConfigurationStoredValue.FromJson(value.ToJsonString()),
+            DisplayValue = displayValue
+        });
+    }
+
+    private async Task EmitInvalidAsync(string? error)
+    {
+        await ValueChanged.InvokeAsync(new ConfigurationScalarCollectionEditResult
+        {
+            IsValid = false,
+            DisplayValue = BuildInvalidDisplayJson(),
+            InvalidDisplayValue = BuildInvalidDisplayJson(),
+            ValidationError = error ?? L["State:Editor:InvalidPattern"]
+        });
+    }
+
+    private string BuildInvalidDisplayJson()
+    {
+        if (Node.IsScalarList())
+        {
+            var array = new JsonArray();
+            foreach (var item in _listItems)
+            {
+                array.Add(item.Value);
+            }
+
+            return array.ToJsonString(ConfigurationJsonDisplayFormatter.ReadableJsonOptions);
+        }
+
+        var jsonObject = new JsonObject();
+        foreach (var item in _dictionaryItems.Where(item => !string.IsNullOrWhiteSpace(item.Key)))
+        {
+            jsonObject[item.Key] = item.Value;
+        }
+
+        return jsonObject.ToJsonString(ConfigurationJsonDisplayFormatter.ReadableJsonOptions);
+    }
+
+    private string ItemErrorLabel(string value, string? error)
+    {
+        return L["State:Collections:ItemError", string.IsNullOrEmpty(value) ? L["Common:States:Empty"].Value : value, error ?? L["State:Editor:InvalidPattern"].Value];
+    }
+
+    private string DictionaryErrorLabel(ScalarDictionaryItem item)
+    {
+        return L["State:Collections:EntryError", item.Key, item.KeyError ?? item.ValueError ?? L["State:Editor:InvalidPattern"].Value];
+    }
+
+    private sealed class ScalarListItem(int id, string value)
+    {
+        public int Id { get; } = id;
+
+        public string Value { get; set; } = value;
+
+        public string? Error { get; set; }
+    }
+
+    private sealed class ScalarDictionaryItem(int id, string key, string value)
+    {
+        public int Id { get; } = id;
+
+        public string Key { get; set; } = key;
+
+        public string Value { get; set; } = value;
+
+        public string? KeyError { get; set; }
+
+        public string? ValueError { get; set; }
+    }
+}

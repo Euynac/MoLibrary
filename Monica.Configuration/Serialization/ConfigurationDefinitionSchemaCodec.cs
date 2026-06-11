@@ -47,6 +47,7 @@ public static class ConfigurationDefinitionSchemaCodec
     /// <param name="category">The optional operator-facing category.</param>
     /// <param name="schemaVersion">The published schema version.</param>
     /// <param name="schemaHash">The published schema hash used for drift detection.</param>
+    /// <param name="lastSeenTime">The last time the metadata store saw this definition.</param>
     /// <param name="reloadBehavior">The definition-level reload behavior.</param>
     /// <param name="schemaJson">The compact schema JSON.</param>
     /// <param name="origin">The origin marker to attach to the rebuilt definition.</param>
@@ -60,6 +61,7 @@ public static class ConfigurationDefinitionSchemaCodec
         string? category,
         int schemaVersion,
         string schemaHash,
+        DateTimeOffset? lastSeenTime,
         ConfigurationReloadBehavior reloadBehavior,
         string schemaJson,
         ConfigurationDefinitionOrigin origin)
@@ -77,6 +79,7 @@ public static class ConfigurationDefinitionSchemaCodec
             Category = category,
             SchemaVersion = schemaVersion,
             SchemaHash = schemaHash,
+            LastSeenTime = lastSeenTime,
             ReloadBehavior = reloadBehavior,
             Root = FromNodeDto(rootDto, LogicalPath.Root, sectionPath, clrTypeName),
             Origin = origin
@@ -141,6 +144,7 @@ public static class ConfigurationDefinitionSchemaCodec
     {
         return new ListTemplateDto
         {
+            AllowDuplicateItems = template.AllowDuplicateItems,
             ItemKeyPropertyName = NullIfWhiteSpace(template.ItemKeyPropertyName),
             ItemTemplate = ToNodeDto(template.ItemTemplate)
         };
@@ -260,6 +264,7 @@ public static class ConfigurationDefinitionSchemaCodec
     {
         return new ConfigurationListTemplate
         {
+            AllowDuplicateItems = dto.AllowDuplicateItems,
             ItemKeyPropertyName = dto.ItemKeyPropertyName,
             ItemTemplate = FromNodeDto(
                 dto.ItemTemplate,
@@ -383,6 +388,8 @@ public static class ConfigurationDefinitionSchemaCodec
 
     private sealed record ListTemplateDto
     {
+        public bool AllowDuplicateItems { get; init; }
+
         public required NodeDto ItemTemplate { get; init; }
 
         public string? ItemKeyPropertyName { get; init; }

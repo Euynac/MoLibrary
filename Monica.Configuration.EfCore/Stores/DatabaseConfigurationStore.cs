@@ -273,6 +273,11 @@ public sealed class DatabaseConfigurationStore(
                 {
                     entity = new ConfigurationDefinitionEntity { DefinitionKey = definition.DefinitionKey };
                     dbContext.ConfigurationDefinitions.Add(entity);
+                    entity.SchemaVersion = Math.Max(definition.SchemaVersion, 1);
+                }
+                else
+                {
+                    entity.SchemaVersion = ResolvePublishedSchemaVersion(entity, definition);
                 }
 
                 entity.SectionPath = definition.SectionPath;
@@ -280,7 +285,6 @@ public sealed class DatabaseConfigurationStore(
                 entity.ClrTypeName = ConfigurationDefinitionSchemaCodec.ToCompactClrTypeName(definition.ClrTypeName);
                 entity.FromProject = definition.FromProject;
                 entity.Category = definition.Category;
-                entity.SchemaVersion = definition.SchemaVersion;
                 entity.SchemaHash = definition.SchemaHash;
                 entity.ReloadBehavior = definition.ReloadBehavior.ToString();
                 entity.SchemaJson = ConfigurationDefinitionSchemaCodec.SerializeSchema(definition);
@@ -289,6 +293,16 @@ public sealed class DatabaseConfigurationStore(
 
             await dbContext.SaveChangesAsync(token);
         }, cancellationToken);
+    }
+
+    private static int ResolvePublishedSchemaVersion(
+        ConfigurationDefinitionEntity entity,
+        ConfigurationDefinition definition)
+    {
+        var currentVersion = Math.Max(Math.Max(entity.SchemaVersion, definition.SchemaVersion), 1);
+        return string.Equals(entity.SchemaHash, definition.SchemaHash, StringComparison.Ordinal)
+            ? currentVersion
+            : currentVersion + 1;
     }
 
     /// <inheritdoc />
@@ -539,6 +553,7 @@ public sealed class DatabaseConfigurationStore(
             entity.Category,
             entity.SchemaVersion,
             entity.SchemaHash,
+            entity.LastSeenTime,
             Enum.Parse<ConfigurationReloadBehavior>(entity.ReloadBehavior),
             entity.SchemaJson,
             ConfigurationDefinitionOrigin.PublishedMetadata);

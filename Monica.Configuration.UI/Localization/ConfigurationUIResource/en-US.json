@@ -25,7 +25,14 @@
       "SelectPrompt": "Select a configuration definition.",
       "Ungrouped": "Ungrouped",
       "PublishedMetadata": "DB",
-      "PublishedMetadataTooltip": "This definition was loaded from published database metadata. Monica database values can be edited here, but runtime source-chain inspection is available only in the service that scanned the CLR type."
+      "PublishedMetadataTooltip": "This definition was loaded from published database metadata. Monica database values can be edited here, but runtime source-chain inspection is available only in the service that scanned the CLR type.",
+      "SchemaVersionChip": "v{0}",
+      "SchemaMetadataTitle": "Schema metadata",
+      "SchemaVersionDetail": "Version: {0}",
+      "SchemaLastSeenDetail": "Last seen: {0}",
+      "SchemaLastSeenMissing": "Not published yet",
+      "SchemaHashDetail": "Hash",
+      "SchemaHashMissing": "No hash available"
     },
     "Tree": {
       "Root": "Root"
@@ -65,6 +72,25 @@
       "TimeSpanPlaceholder": "00:15 or 00:15:00",
       "TooLong": "Value is too long.",
       "TooShort": "Value is too short."
+    },
+    "Collections": {
+      "EmptyList": "No items.",
+      "EmptyDictionary": "No entries.",
+      "AddItem": "Add item",
+      "AddEntry": "Add entry",
+      "AddItemPlaceholder": "New item",
+      "EditItemPlaceholder": "Edit item",
+      "Key": "Key",
+      "Value": "Value",
+      "ItemRequired": "Item value is required.",
+      "KeyRequired": "Key is required.",
+      "DuplicateItem": "Duplicate items are not allowed.",
+      "DuplicateKey": "Duplicate keys are not allowed.",
+      "ItemError": "{0}: {1}",
+      "EntryError": "{0}: {1}",
+      "ItemActions": "Item actions",
+      "MoveUp": "Move up",
+      "MoveDown": "Move down"
     }
   },
   "Value": {
@@ -391,6 +417,7 @@
       "Export": "Export",
       "Download": "Download",
       "Apply": "Apply",
+      "Delete": "Delete",
       "Analyze": "Analyze",
       "EditJson": "Edit JSON"
     },
