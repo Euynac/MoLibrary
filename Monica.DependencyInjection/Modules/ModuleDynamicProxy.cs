@@ -78,14 +78,27 @@ public class
             secondKey: typeof(TServiceType).FullName);
         return this;
     }
-}
 
+}
 public class ModuleDynamicProxyOption : ModuleOptions<ModuleDynamicProxy>
 {
     /// <summary>
     /// Configured proxy kinds for specific types.
     /// </summary>
     public Dictionary<Type, EDynamicProxyKind> ConfiguredProxyKinds { get; internal set; } = new();
+
+    /// <summary>
+    /// Gets or sets a value indicating whether to log a warning when a service registered as a factory or instance
+    /// is proxied with a class proxy.
+    /// </summary>
+    /// <remarks>
+    /// Class-proxy-with-target keeps separate field state on the proxy and the target instance, which can diverge for
+    /// services that hold mutable instance state. This warning is a generic caution: it also fires for the common
+    /// Monica pattern where services implement <c>ICachedServiceProviderAccessor</c> and are therefore registered as a
+    /// factory by convention, even though those services are stateless and safe. Disabled by default to avoid startup
+    /// noise; enable it when diagnosing a class proxy on a genuinely stateful service.
+    /// </remarks>
+    public bool EnableClassProxyTargetStateWarning { get; set; }
 
     internal List<DynamicProxyInterceptorRegistration> InterceptorRegistrations { get; } = [];
 
