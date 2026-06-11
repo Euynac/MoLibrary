@@ -34,6 +34,33 @@
     flex: 0 0 auto;
 }
 
+.configuration-definition-list-toolbar {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.5rem;
+    min-width: 0;
+}
+
+.configuration-definition-list-search {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.configuration-definition-list-group-toggle {
+    flex: 0 0 auto;
+    display: inline-flex;
+    padding-top: 0.25rem;
+}
+
+.configuration-definition-list-group-toggle ::deep .mud-tooltip-root {
+    display: inline-flex;
+}
+
+.configuration-definition-list-group-toggle ::deep .mud-button-root {
+    min-width: 0;
+    white-space: nowrap;
+}
+
 .configuration-definition-list-scroll {
     flex: 1 1 auto;
     min-height: 0;

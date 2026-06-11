@@ -4,15 +4,29 @@
 <div class="configuration-definition-list-shell">
     <MudPaper Outlined="true" Class="pa-3 configuration-definition-list">
         <div class="configuration-definition-list-content">
-            <MudTextField T="string"
-                          Value="@SearchText"
-                          ValueChanged="OnSearchChanged"
-                          Placeholder="@L["State:SearchPlaceholder"]"
-                          Variant="Variant.Outlined"
-                          Margin="Margin.Dense"
-                          Immediate="true"
-                          Adornment="Adornment.Start"
-                          AdornmentIcon="@Icons.Material.Filled.Search" />
+            <div class="configuration-definition-list-toolbar">
+                <div class="configuration-definition-list-search">
+                    <MudTextField T="string"
+                                  Value="@SearchText"
+                                  ValueChanged="OnSearchChanged"
+                                  Placeholder="@L["State:SearchPlaceholder"]"
+                                  Variant="Variant.Outlined"
+                                  Margin="Margin.Dense"
+                                  Immediate="true"
+                                  Adornment="Adornment.Start"
+                                  AdornmentIcon="@Icons.Material.Filled.Search" />
+                </div>
+                <div class="configuration-definition-list-group-toggle">
+                    <MudTooltip Text="@GroupModeTooltip">
+                        <MudButton Variant="Variant.Outlined"
+                                   Size="Size.Small"
+                                   StartIcon="@GroupModeIcon"
+                                   OnClick="ToggleGroupMode">
+                            @GroupModeLabel
+                        </MudButton>
+                    </MudTooltip>
+                </div>
+            </div>
 
             <div class="configuration-definition-list-scroll">
                 @if (Definitions.Count == 0)
@@ -26,8 +40,7 @@
                 else
                 {
                     <MudList T="ConfigurationDefinitionSummary" Dense="true">
-                        @foreach (var group in FilteredDefinitions.GroupBy(GetGroupName)
-                                     .OrderBy(x => x.Key, StringComparer.OrdinalIgnoreCase))
+                        @foreach (var group in GroupedDefinitions)
                         {
                             <MudListSubheader>@group.Key</MudListSubheader>
                             @foreach (var definition in group.OrderBy(x => x.DisplayName, StringComparer.OrdinalIgnoreCase))
@@ -140,6 +153,8 @@
 @code {
     private const int MAX_VISIBLE_NODE_MATCHES = 4;
 
+    private ConfigurationDefinitionGroupMode _groupMode = ConfigurationDefinitionGroupMode.FromProject;
+
     [Parameter] public IReadOnlyList<ConfigurationDefinitionSummary> Definitions { get; set; } = [];
     [Parameter] public ConfigurationDefinitionSummary? SelectedDefinition { get; set; }
     [Parameter] public EventCallback<ConfigurationDefinitionSummary> SelectedDefinitionChanged { get; set; }
@@ -160,12 +175,38 @@
                 IsDefinitionMatch(definition)
                 || GetNodeMatches(definition).Count > 0);
 
+    private IEnumerable<IGrouping<string, ConfigurationDefinitionSummary>> GroupedDefinitions =>
+        FilteredDefinitions
+            .GroupBy(GetGroupName)
+            .OrderBy(group => group.Key, StringComparer.OrdinalIgnoreCase);
+
     private IReadOnlyList<string> SearchTerms => string.IsNullOrWhiteSpace(SearchText)
         ? []
         : SearchText
             .Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .ToArray();
+
+    private string GroupModeLabel => _groupMode switch
+    {
+        ConfigurationDefinitionGroupMode.FromProject => L["State:Definitions:GroupModeProject"].Value,
+        ConfigurationDefinitionGroupMode.Category => L["State:Definitions:GroupModeCategory"].Value,
+        _ => L["State:Definitions:GroupModeProject"].Value
+    };
+
+    private string GroupModeTooltip => _groupMode switch
+    {
+        ConfigurationDefinitionGroupMode.FromProject => L["State:Definitions:GroupModeProjectTooltip"].Value,
+        ConfigurationDefinitionGroupMode.Category => L["State:Definitions:GroupModeCategoryTooltip"].Value,
+        _ => L["State:Definitions:GroupModeProjectTooltip"].Value
+    };
+
+    private string GroupModeIcon => _groupMode switch
+    {
+        ConfigurationDefinitionGroupMode.FromProject => Icons.Material.Filled.Folder,
+        ConfigurationDefinitionGroupMode.Category => Icons.Material.Filled.Category,
+        _ => Icons.Material.Filled.Folder
+    };
 
     private bool IsSelected(ConfigurationDefinitionSummary definition)
     {
@@ -176,6 +217,13 @@
     {
         SearchText = value;
         return SearchTextChanged.InvokeAsync(value);
+    }
+
+    private void ToggleGroupMode()
+    {
+        _groupMode = _groupMode == ConfigurationDefinitionGroupMode.FromProject
+            ? ConfigurationDefinitionGroupMode.Category
+            : ConfigurationDefinitionGroupMode.FromProject;
     }
 
     private bool IsDefinitionMatch(ConfigurationDefinitionSummary definition)
@@ -192,14 +240,13 @@
 
     private string GetGroupName(ConfigurationDefinitionSummary definition)
     {
-        if (!string.IsNullOrWhiteSpace(definition.Category))
-        {
-            return definition.Category;
-        }
-
-        return string.IsNullOrWhiteSpace(definition.FromProject)
-            ? L["State:Definitions:Ungrouped"].Value
+        var groupName = _groupMode == ConfigurationDefinitionGroupMode.Category
+            ? definition.Category
             : definition.FromProject;
+
+        return string.IsNullOrWhiteSpace(groupName)
+            ? L["State:Definitions:Ungrouped"].Value
+            : groupName;
     }
 
     private bool ContainsAny(string? value)
@@ -218,5 +265,11 @@
         var typeName = definition.ClrTypeName.Split(',', 2)[0];
         var lastSeparator = Math.Max(typeName.LastIndexOf('.'), typeName.LastIndexOf('+'));
         return lastSeparator >= 0 ? typeName[(lastSeparator + 1)..] : typeName;
+    }
+
+    private enum ConfigurationDefinitionGroupMode
+    {
+        FromProject,
+        Category
     }
 }
