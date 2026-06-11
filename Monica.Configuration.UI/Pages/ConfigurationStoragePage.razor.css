@@ -90,6 +90,11 @@
     justify-self: end;
 }
 
+.configuration-source-overridden-state {
+    color: var(--mud-palette-text-secondary);
+    cursor: help;
+}
+
 @media (max-width: 960px) {
     .configuration-source-title {
         grid-template-columns: auto minmax(0, 1fr);

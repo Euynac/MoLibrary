@@ -250,7 +250,9 @@
       "FieldColumn": "字段",
       "ValueColumn": "值",
       "StateColumn": "状态",
-      "Overridden": "被覆盖"
+      "Overridden": "被覆盖",
+      "OverriddenTooltip": "被 {0}（优先级 {1}）覆盖。来源：{2}",
+      "OverriddenUnknownTooltip": "被更高优先级 Provider 覆盖。"
     },
     "Definition": {
       "Title": "配置来源",

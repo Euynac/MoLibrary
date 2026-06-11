@@ -156,6 +156,7 @@
                                                                     </div>
                                                                     @foreach (var item in group.Items)
                                                                     {
+                                                                        var overridingSource = OverridingSourceFor(item, inventory.Source);
                                                                         <div class="@SourceItemRowClass(item)" role="row">
                                                                             <div class="configuration-source-value-field" role="cell">
                                                                                 <MudText Typo="Typo.body2">@FieldLabel(item)</MudText>
@@ -175,7 +176,11 @@
                                                                                 }
                                                                                 else
                                                                                 {
-                                                                                    <MudText Typo="Typo.caption" Color="Color.Secondary">@L["Sources:Inventory:Overridden"]</MudText>
+                                                                                    <MudTooltip Text="@OverriddenTooltip(overridingSource)">
+                                                                                        <span class="configuration-source-overridden-state">
+                                                                                            @L["Sources:Inventory:Overridden"]
+                                                                                        </span>
+                                                                                    </MudTooltip>
                                                                                 }
                                                                             </div>
                                                                         </div>
@@ -346,6 +351,37 @@
     private string DisplayValue(ConfigurationSourceInventoryItem item)
     {
         return item.IsSensitive ? L["State:Value:Sensitive"] : item.DisplayValue ?? L["Value:States:Empty"];
+    }
+
+    private ConfigurationSourceDescriptor? OverridingSourceFor(
+        ConfigurationSourceInventoryItem item,
+        ConfigurationSourceDescriptor currentSource)
+    {
+        if (item.IsEffective)
+        {
+            return null;
+        }
+
+        return _sourceInventories
+            .OrderByDescending(static inventory => inventory.Source.PriorityIndex)
+            .FirstOrDefault(inventory =>
+                !string.Equals(inventory.Source.SourceKey, currentSource.SourceKey, StringComparison.Ordinal)
+                && inventory.Items.Any(candidate => candidate.IsEffective && HasSameConfigurationPath(candidate, item)))
+            ?.Source;
+    }
+
+    private string OverriddenTooltip(ConfigurationSourceDescriptor? source)
+    {
+        return source is null
+            ? L["Sources:Inventory:OverriddenUnknownTooltip"]
+            : L["Sources:Inventory:OverriddenTooltip", source.DisplayName, source.PriorityIndex, SourcePath(source)];
+    }
+
+    private static bool HasSameConfigurationPath(
+        ConfigurationSourceInventoryItem left,
+        ConfigurationSourceInventoryItem right)
+    {
+        return string.Equals(left.ConfigurationPath, right.ConfigurationPath, StringComparison.OrdinalIgnoreCase);
     }
 
     private static string SourceGroupClass(SourceInventoryGroup group)

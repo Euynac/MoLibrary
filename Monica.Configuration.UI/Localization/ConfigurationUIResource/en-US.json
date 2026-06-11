@@ -250,7 +250,9 @@
       "FieldColumn": "Field",
       "ValueColumn": "Value",
       "StateColumn": "State",
-      "Overridden": "Overridden"
+      "Overridden": "Overridden",
+      "OverriddenTooltip": "Overridden by {0} (priority {1}). Source: {2}",
+      "OverriddenUnknownTooltip": "Overridden by a higher-priority provider."
     },
     "Definition": {
       "Title": "Configuration sources",
