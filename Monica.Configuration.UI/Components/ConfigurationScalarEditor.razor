@@ -128,6 +128,7 @@
     [Parameter, EditorRequired] public ConfigurationNodeDefinition Node { get; set; } = null!;
     [Parameter] public ConfigurationEffectiveValue? EffectiveValue { get; set; }
     [Parameter] public bool IsModified { get; set; }
+    [Parameter] public PendingChange? PendingChange { get; set; }
     [Parameter] public bool Disabled { get; set; }
     [Parameter] public ConfigurationValidationIssue? ValidationIssue { get; set; }
     [Parameter] public EventCallback<ConfigurationScalarEditResult> ValueChanged { get; set; }
@@ -143,6 +144,8 @@
     private string? _error;
     private string? _lastNodePath;
     private string? _lastEffectiveDisplayValue;
+    private string? _lastPendingChangeKey;
+    private string? _lastLocalPendingChangeKey;
     private string? _lastValidationIssueKey;
     private bool _lastIsModified;
     private bool _hasInvalidLocalEdit;
@@ -179,15 +182,17 @@
 
     protected override void OnParametersSet()
     {
-        var displayValue = EffectiveValue?.DisplayValue ?? string.Empty;
+        var displayValue = PendingChange?.NewDisplayValue ?? EffectiveValue?.DisplayValue ?? string.Empty;
         var nodePath = Node.RelativePath.ToCanonicalString();
+        var pendingChangeKey = BuildPendingChangeKey(PendingChange);
         var validationIssueKey = BuildValidationIssueKey();
 
         var pathChanged = !string.Equals(_lastNodePath, nodePath, StringComparison.Ordinal);
         var displayChanged = !string.Equals(_lastEffectiveDisplayValue, displayValue, StringComparison.Ordinal);
+        var pendingChanged = !string.Equals(_lastPendingChangeKey, pendingChangeKey, StringComparison.Ordinal);
         var validationIssueChanged = !string.Equals(_lastValidationIssueKey, validationIssueKey, StringComparison.Ordinal);
         var modifiedChanged = _lastIsModified != IsModified;
-        if (!pathChanged && !displayChanged && !validationIssueChanged && !modifiedChanged)
+        if (!pathChanged && !displayChanged && !pendingChanged && !validationIssueChanged && !modifiedChanged)
         {
             return;
         }
@@ -202,6 +207,10 @@
             {
                 SyncFromEffectiveValue(displayValue, resetSensitiveVisibility: true);
             }
+        }
+        else if (PendingChange is not null && pendingChanged && !IsLocalPendingChange(pendingChangeKey))
+        {
+            SyncFromEffectiveValue(displayValue, resetSensitiveVisibility: false);
         }
         else if (ValidationIssue is not null && validationIssueChanged)
         {
@@ -227,8 +236,27 @@
 
         _lastNodePath = nodePath;
         _lastEffectiveDisplayValue = displayValue;
+        _lastPendingChangeKey = pendingChangeKey;
+        if (PendingChange is null)
+        {
+            _lastLocalPendingChangeKey = null;
+        }
+
         _lastValidationIssueKey = validationIssueKey;
         _lastIsModified = IsModified;
+    }
+
+    private bool IsLocalPendingChange(string? pendingChangeKey)
+    {
+        return pendingChangeKey is not null
+               && string.Equals(pendingChangeKey, _lastLocalPendingChangeKey, StringComparison.Ordinal);
+    }
+
+    private static string? BuildPendingChangeKey(PendingChange? change)
+    {
+        return change is null
+            ? null
+            : $"{change.LogicalPath.ToCanonicalString()}:{change.MutationKind}:{change.NewValue.Json}:{change.NewDisplayValue}";
     }
 
     private string? BuildValidationIssueKey()
@@ -387,6 +415,7 @@
 
         _hasInvalidLocalEdit = false;
         _preserveCurrentValueOnValidationClear = true;
+        _lastLocalPendingChangeKey = BuildLocalPendingChangeKey(conversion.StoredValue, conversion.DisplayValue);
         await ValueChanged.InvokeAsync(new ConfigurationScalarEditResult
         {
             IsValid = true,
@@ -406,6 +435,11 @@
             DisplayValue = displayValue,
             ValidationError = _error
         });
+    }
+
+    private string BuildLocalPendingChangeKey(ConfigurationStoredValue storedValue, string? displayValue)
+    {
+        return $"{Node.RelativePath.ToCanonicalString()}:{ConfigurationMutationKind.Set}:{storedValue.Json}:{displayValue}";
     }
 
     private bool Validate(string value)

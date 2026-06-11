@@ -59,6 +59,7 @@
                         <ConfigurationScalarEditor Node="@Node"
                                                    EffectiveValue="@EffectiveValue"
                                                    IsModified="@(PendingChange is not null)"
+                                                   PendingChange="@PendingChange"
                                                    Disabled="@IsCurrentSourceReadOnly"
                                                    ValidationIssue="@ValidationIssue"
                                                    ValueChanged="StageScalar" />
