@@ -286,7 +286,8 @@ public partial class ComplexValueEditorDialog : IAsyncDisposable
     {
         var path = _focusPath.Append(new DictionaryKeySegment(key));
         var title = ReadPreferredTitle(value, key);
-        return new CollectionEntry(key, title, key, path, string.Equals(_selectedEntryKey, key, StringComparison.Ordinal));
+        var subtitle = string.Equals(title, key, StringComparison.Ordinal) ? string.Empty : key;
+        return new CollectionEntry(key, title, subtitle, path, string.Equals(_selectedEntryKey, key, StringComparison.Ordinal));
     }
 
     private CollectionEntry BuildListEntry(int index, JsonNode? value)
@@ -753,9 +754,12 @@ public partial class ComplexValueEditorDialog : IAsyncDisposable
 
     private bool IsFieldModified(LogicalPath path)
     {
-        return _changes.Any(change =>
-            change.LogicalPath.Equals(path)
-            || IsStrictAncestor(change.LogicalPath, path));
+        return _changes.Any(change => change.LogicalPath.Equals(path)) || IsValueModified(path);
+    }
+
+    private bool IsValueModified(LogicalPath path)
+    {
+        return !JsonNode.DeepEquals(ReadOriginalNode(path), ReadNode(path));
     }
 
     private ConfigurationNodeDefinition ScalarEditorNode(ConfigurationNodeDefinition field, LogicalPath path)

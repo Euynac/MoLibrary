@@ -24,6 +24,10 @@
     align-items: center;
 }
 
+.configuration-description-button {
+    flex: 0 0 auto;
+}
+
 .configuration-collection-grid-shell {
     height: min(66vh, 760px);
     min-height: 460px;

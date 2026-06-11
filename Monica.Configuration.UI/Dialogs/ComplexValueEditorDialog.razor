@@ -99,7 +99,10 @@
                                                            OnClick="() => SelectEntry(entry.SelectionKey)">
                                                     <MudStack Spacing="0" Class="configuration-entry-text">
                                                         <MudText Typo="Typo.body2">@entry.Title</MudText>
-                                                        <MudText Typo="Typo.caption">@entry.Subtitle</MudText>
+                                                        @if (!string.IsNullOrWhiteSpace(entry.Subtitle))
+                                                        {
+                                                            <MudText Typo="Typo.caption">@entry.Subtitle</MudText>
+                                                        }
                                                     </MudStack>
                                                 </MudButton>
                                             }
@@ -162,11 +165,19 @@
                                                             var validationIssue = ValidationIssueFor(field, fieldPath);
                                                             <MudItem xs="12" md="6">
                                                                 <MudStack Spacing="1" @key="fieldPath.ToCanonicalString()">
-                                                                    <MudText Typo="Typo.caption" Color="Color.Secondary">@DisplayName(field)</MudText>
-                                                                    @if (!string.IsNullOrWhiteSpace(field.Description))
-                                                                    {
-                                                                        <MudText Typo="Typo.caption" Color="Color.Secondary">@field.Description</MudText>
-                                                                    }
+                                                                    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
+                                                                        <MudText Typo="Typo.caption" Color="Color.Secondary">@DisplayName(field)</MudText>
+                                                                        @if (!string.IsNullOrWhiteSpace(field.Description))
+                                                                        {
+                                                                            <MudTooltip Text="@field.Description">
+                                                                                <MudIconButton Icon="@Icons.Material.Filled.Info"
+                                                                                               Size="Size.Small"
+                                                                                               Color="Color.Info"
+                                                                                               Variant="Variant.Text"
+                                                                                               Class="configuration-description-button" />
+                                                                            </MudTooltip>
+                                                                        }
+                                                                    </MudStack>
                                                                     <ConfigurationScalarEditor Node="@ScalarEditorNode(field, fieldPath)"
                                                                                                EffectiveValue="@ScalarEditorEffectiveValue(field, fieldPath)"
                                                                                                IsModified="@IsFieldModified(fieldPath)"
@@ -190,12 +201,20 @@
                                                         <div class="configuration-inline-collection-section" @key="collectionPath.ToCanonicalString()">
                                                             <MudStack Spacing="1">
                                                                 <MudStack Spacing="0">
-                                                                    <MudText Typo="Typo.caption" Color="Color.Secondary">@DisplayName(collectionSection.Node)</MudText>
+                                                                    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
+                                                                        <MudText Typo="Typo.caption" Color="Color.Secondary">@DisplayName(collectionSection.Node)</MudText>
+                                                                        @if (!string.IsNullOrWhiteSpace(collectionSection.Node.Description))
+                                                                        {
+                                                                            <MudTooltip Text="@collectionSection.Node.Description">
+                                                                                <MudIconButton Icon="@Icons.Material.Filled.Info"
+                                                                                               Size="Size.Small"
+                                                                                               Color="Color.Info"
+                                                                                               Variant="Variant.Text"
+                                                                                               Class="configuration-description-button" />
+                                                                            </MudTooltip>
+                                                                        }
+                                                                    </MudStack>
                                                                     <MudText Typo="Typo.caption" Color="Color.Secondary">@collectionPath.ToCanonicalString()</MudText>
-                                                                    @if (!string.IsNullOrWhiteSpace(collectionSection.Node.Description))
-                                                                    {
-                                                                        <MudText Typo="Typo.caption" Color="Color.Secondary">@collectionSection.Node.Description</MudText>
-                                                                    }
                                                                 </MudStack>
                                                                 <ConfigurationScalarCollectionEditor Node="@ScalarCollectionEditorNode(collectionSection.Node, collectionPath)"
                                                                                                      EffectiveValue="@ScalarCollectionEffectiveValue(collectionSection.Node, collectionPath)"
@@ -211,12 +230,20 @@
                                                         <div class="configuration-object-section">
                                                             <MudStack Spacing="2">
                                                                 <MudStack Spacing="0">
-                                                                    <MudText Typo="Typo.subtitle2">@DisplayName(objectSection.Node)</MudText>
+                                                                    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
+                                                                        <MudText Typo="Typo.subtitle2">@DisplayName(objectSection.Node)</MudText>
+                                                                        @if (!string.IsNullOrWhiteSpace(objectSection.Node.Description))
+                                                                        {
+                                                                            <MudTooltip Text="@objectSection.Node.Description">
+                                                                                <MudIconButton Icon="@Icons.Material.Filled.Info"
+                                                                                               Size="Size.Small"
+                                                                                               Color="Color.Info"
+                                                                                               Variant="Variant.Text"
+                                                                                               Class="configuration-description-button" />
+                                                                            </MudTooltip>
+                                                                        }
+                                                                    </MudStack>
                                                                     <MudText Typo="Typo.caption" Color="Color.Secondary">@objectSection.Path.ToCanonicalString()</MudText>
-                                                                    @if (!string.IsNullOrWhiteSpace(objectSection.Node.Description))
-                                                                    {
-                                                                        <MudText Typo="Typo.caption" Color="Color.Secondary">@objectSection.Node.Description</MudText>
-                                                                    }
                                                                 </MudStack>
 
                                                                 @if (objectSection.ScalarFields.Count > 0)
@@ -228,11 +255,19 @@
                                                                             var validationIssue = ValidationIssueFor(field, fieldPath);
                                                                             <MudItem xs="12" md="6">
                                                                                 <MudStack Spacing="1" @key="fieldPath.ToCanonicalString()">
-                                                                                    <MudText Typo="Typo.caption" Color="Color.Secondary">@DisplayName(field)</MudText>
-                                                                                    @if (!string.IsNullOrWhiteSpace(field.Description))
-                                                                                    {
-                                                                                        <MudText Typo="Typo.caption" Color="Color.Secondary">@field.Description</MudText>
-                                                                                    }
+                                                                                    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
+                                                                                        <MudText Typo="Typo.caption" Color="Color.Secondary">@DisplayName(field)</MudText>
+                                                                                        @if (!string.IsNullOrWhiteSpace(field.Description))
+                                                                                        {
+                                                                                            <MudTooltip Text="@field.Description">
+                                                                                                <MudIconButton Icon="@Icons.Material.Filled.Info"
+                                                                                                               Size="Size.Small"
+                                                                                                               Color="Color.Info"
+                                                                                                               Variant="Variant.Text"
+                                                                                                               Class="configuration-description-button" />
+                                                                                            </MudTooltip>
+                                                                                        }
+                                                                                    </MudStack>
                                                                                     <ConfigurationScalarEditor Node="@ScalarEditorNode(field, fieldPath)"
                                                                                                                EffectiveValue="@ScalarEditorEffectiveValue(field, fieldPath)"
                                                                                                                IsModified="@IsFieldModified(fieldPath)"
@@ -257,12 +292,20 @@
                                                                     <div class="configuration-inline-collection-section" @key="collectionPath.ToCanonicalString()">
                                                                         <MudStack Spacing="1">
                                                                             <MudStack Spacing="0">
-                                                                                <MudText Typo="Typo.caption" Color="Color.Secondary">@DisplayName(collectionSection.Node)</MudText>
+                                                                                <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
+                                                                                    <MudText Typo="Typo.caption" Color="Color.Secondary">@DisplayName(collectionSection.Node)</MudText>
+                                                                                    @if (!string.IsNullOrWhiteSpace(collectionSection.Node.Description))
+                                                                                    {
+                                                                                        <MudTooltip Text="@collectionSection.Node.Description">
+                                                                                            <MudIconButton Icon="@Icons.Material.Filled.Info"
+                                                                                                           Size="Size.Small"
+                                                                                                           Color="Color.Info"
+                                                                                                           Variant="Variant.Text"
+                                                                                                           Class="configuration-description-button" />
+                                                                                        </MudTooltip>
+                                                                                    }
+                                                                                </MudStack>
                                                                                 <MudText Typo="Typo.caption" Color="Color.Secondary">@collectionPath.ToCanonicalString()</MudText>
-                                                                                @if (!string.IsNullOrWhiteSpace(collectionSection.Node.Description))
-                                                                                {
-                                                                                    <MudText Typo="Typo.caption" Color="Color.Secondary">@collectionSection.Node.Description</MudText>
-                                                                                }
                                                                             </MudStack>
                                                                             <ConfigurationScalarCollectionEditor Node="@ScalarCollectionEditorNode(collectionSection.Node, collectionPath)"
                                                                                                                  EffectiveValue="@ScalarCollectionEffectiveValue(collectionSection.Node, collectionPath)"
