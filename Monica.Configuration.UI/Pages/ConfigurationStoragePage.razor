@@ -176,10 +176,17 @@
                                                                                 }
                                                                                 else
                                                                                 {
-                                                                                    <MudTooltip Text="@OverriddenTooltip(overridingSource)">
-                                                                                        <span class="configuration-source-overridden-state">
-                                                                                            @L["Sources:Inventory:Overridden"]
-                                                                                        </span>
+                                                                                    <MudTooltip Placement="Placement.Left" Arrow="true">
+                                                                                        <ChildContent>
+                                                                                            <span class="configuration-source-overridden-state">
+                                                                                                @L["Sources:Inventory:Overridden"]
+                                                                                            </span>
+                                                                                        </ChildContent>
+                                                                                        <TooltipContent>
+                                                                                            <div class="configuration-source-overridden-tooltip">
+                                                                                                @OverriddenTooltip(overridingSource)
+                                                                                            </div>
+                                                                                        </TooltipContent>
                                                                                     </MudTooltip>
                                                                                 }
                                                                             </div>

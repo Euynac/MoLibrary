@@ -95,6 +95,12 @@
     cursor: help;
 }
 
+.configuration-source-overridden-tooltip {
+    max-width: min(28rem, calc(100vw - 2rem));
+    white-space: normal;
+    overflow-wrap: anywhere;
+}
+
 @media (max-width: 960px) {
     .configuration-source-title {
         grid-template-columns: auto minmax(0, 1fr);
