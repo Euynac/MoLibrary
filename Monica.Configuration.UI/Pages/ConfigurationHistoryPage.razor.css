@@ -1,4 +1,6 @@
 .configuration-history-page {
+    display: flex;
+    flex-direction: column;
     height: 100%;
     min-height: 0;
 }
@@ -9,4 +11,41 @@
 
 .configuration-history-table ::deep .mud-table-cell {
     vertical-align: middle;
+}
+
+.configuration-history-page ::deep .configuration-history-definition-link {
+    min-width: 0;
+    padding-inline: 0;
+    text-align: left;
+    text-transform: none;
+}
+
+.configuration-history-page ::deep .configuration-history-definition-chip {
+    text-transform: none;
+}
+
+.configuration-history-path-cell {
+    min-width: 0;
+    cursor: help;
+}
+
+.configuration-history-path-cell ::deep .mud-stack {
+    min-width: 0;
+}
+
+.configuration-history-path-cell span {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.configuration-history-tooltip-lines {
+    max-width: 32rem;
+    white-space: normal;
+    overflow-wrap: anywhere;
+    text-align: left;
+}
+
+.configuration-history-tooltip-lines > div + div {
+    margin-top: 0.25rem;
 }

@@ -116,7 +116,8 @@
     "Subtitle": "审计单次修改和持久化修改组。",
     "CollapsedCount": "{0} 个字段",
     "Actions": {
-      "ViewChange": "查看变更"
+      "ViewChange": "查看变更",
+      "ViewDefinitionHistory": "查看配置定义历史"
     },
     "Tabs": {
       "Mutations": "按修改",
@@ -145,6 +146,24 @@
       "ExternalShort": "外部",
       "Mixed": "混合目标",
       "ExternalTooltip": "来源: {0}\n配置路径: {1}\n文件: {2}"
+    },
+    "DefinitionTooltip": {
+      "DisplayName": "配置定义: {0}",
+      "DefinitionKey": "定义 Key: {0}",
+      "SectionPath": "配置节: {0}",
+      "ClrType": "CLR 类型: {0}",
+      "Project": "项目: {0}"
+    },
+    "PathTooltip": {
+      "LogicalPath": "逻辑路径: {0}",
+      "ConfigurationPath": "配置 Key: {0}",
+      "Node": "节点: {0}",
+      "DefinitionKey": "定义 Key: {0}",
+      "ClrType": "CLR 类型: {0}",
+      "NodeKind": "节点类型: {0}",
+      "ReloadBehavior": "重载行为: {0}",
+      "Description": "说明: {0}",
+      "CollapsedRows": "折叠字段数: {0}"
     },
     "Dialog": {
       "Title": "配置历史记录",

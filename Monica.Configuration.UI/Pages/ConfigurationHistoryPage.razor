@@ -7,7 +7,8 @@
 
 <PageTitle>@L["Pages:ConfigurationHistory:Title"]</PageTitle>
 
-<MudContainer MaxWidth="MaxWidth.False" Class="configuration-history-page">
+<div class="configuration-history-page">
+<MudContainer MaxWidth="MaxWidth.False">
     <MudStack Spacing="3">
         <MudStack Row="true" Wrap="Wrap.Wrap" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Spacing="2">
             <MudStack Spacing="0">
@@ -94,17 +95,51 @@
                         </HeaderContent>
                         <RowTemplate>
                             <MudTd DataLabel="@L["History:Columns:Time"]">@context.ModifiedTime.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss")</MudTd>
-                            <MudTd DataLabel="@L["State:Columns:Definition"]">@DefinitionDisplay(context.Representative.DefinitionKey)</MudTd>
+                            <MudTd DataLabel="@L["State:Columns:Definition"]">
+                                <MudTooltip>
+                                    <ChildContent>
+                                        <MudButton Variant="Variant.Text"
+                                                   Size="Size.Small"
+                                                   Color="Color.Primary"
+                                                   Class="configuration-history-definition-link"
+                                                   OnClick="() => NavigateToDefinition(context.Representative.DefinitionKey, context.DisplayPath)">
+                                            @DefinitionDisplay(context.Representative.DefinitionKey)
+                                        </MudButton>
+                                    </ChildContent>
+                                    <TooltipContent>
+                                        <div class="configuration-history-tooltip-lines">
+                                            @foreach (var line in DefinitionMetadataLines(context.Representative.DefinitionKey))
+                                            {
+                                                <div>@line</div>
+                                            }
+                                        </div>
+                                    </TooltipContent>
+                                </MudTooltip>
+                            </MudTd>
                             <MudTd DataLabel="@L["State:Columns:Path"]">
-                                <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
-                                    <span>@context.DisplayPath.ToCanonicalString()</span>
-                                    @if (context.IsCollapsed)
-                                    {
-                                        <MudChip T="int" Size="Size.Small" Color="Color.Info" Variant="Variant.Outlined">
-                                            @L["History:CollapsedCount", context.Rows.Count]
-                                        </MudChip>
-                                    }
-                                </MudStack>
+                                <MudTooltip>
+                                    <ChildContent>
+                                        <div class="configuration-history-path-cell">
+                                            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
+                                                <span>@context.DisplayPath.ToCanonicalString()</span>
+                                                @if (context.IsCollapsed)
+                                                {
+                                                    <MudChip T="int" Size="Size.Small" Color="Color.Info" Variant="Variant.Outlined">
+                                                        @L["History:CollapsedCount", context.Rows.Count]
+                                                    </MudChip>
+                                                }
+                                            </MudStack>
+                                        </div>
+                                    </ChildContent>
+                                    <TooltipContent>
+                                        <div class="configuration-history-tooltip-lines">
+                                            @foreach (var line in PathMetadataLines(context))
+                                            {
+                                                <div>@line</div>
+                                            }
+                                        </div>
+                                    </TooltipContent>
+                                </MudTooltip>
                             </MudTd>
                             <MudTd DataLabel="@L["History:Columns:Target"]">
                                 <MudTooltip Text="@HistoryTargetTooltip(context.Rows)">
@@ -167,7 +202,24 @@
                                 <MudStack Row="true" Wrap="Wrap.Wrap" Spacing="1">
                                     @foreach (var definitionKey in context.DefinitionKeys)
                                     {
-                                        <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">@DefinitionDisplay(definitionKey)</MudChip>
+                                        <MudTooltip>
+                                            <ChildContent>
+                                                <MudButton Variant="Variant.Outlined"
+                                                           Size="Size.Small"
+                                                           Class="configuration-history-definition-chip"
+                                                           OnClick="() => NavigateToDefinition(definitionKey, null)">
+                                                    @DefinitionDisplay(definitionKey)
+                                                </MudButton>
+                                            </ChildContent>
+                                            <TooltipContent>
+                                                <div class="configuration-history-tooltip-lines">
+                                                    @foreach (var line in DefinitionMetadataLines(definitionKey))
+                                                    {
+                                                        <div>@line</div>
+                                                    }
+                                                </div>
+                                            </TooltipContent>
+                                        </MudTooltip>
                                     }
                                 </MudStack>
                             </MudTd>
@@ -195,6 +247,7 @@
         </MudTabs>
     </MudStack>
 </MudContainer>
+</div>
 
 @code {
     public const string PAGE_URL = ConfigurationUiRoutes.HISTORY_ROUTE;
@@ -203,6 +256,7 @@
     private const string TARGET_FILTER_EXTERNAL = "external";
 
     private readonly List<ConfigurationDefinitionSummary> _definitions = [];
+    private readonly Dictionary<string, ConfigurationDefinition> _definitionDetails = new(StringComparer.OrdinalIgnoreCase);
     private readonly List<ConfigurationValueHistory> _history = [];
     private readonly List<ConfigurationMutationGroup> _groups = [];
     private string? _definitionKey;
@@ -217,16 +271,16 @@
 
     protected override async Task OnInitializedAsync()
     {
-        var uri = new Uri(NavigationManager.Uri, UriKind.Absolute);
-        var query = QueryHelpers.ParseQuery(uri.Query);
-        if (query.TryGetValue("definitionKey", out var definitionValues))
-        {
-            _definitionKey = definitionValues.FirstOrDefault();
-        }
+        _definitionKey = ConfigurationUiRoutes.ReadDefinitionKey(NavigationManager.Uri);
 
-        if (query.TryGetValue("path", out var pathValues))
+        try
         {
-            _pathText = pathValues.FirstOrDefault() ?? string.Empty;
+            var path = ConfigurationUiRoutes.ReadPath(NavigationManager.Uri);
+            _pathText = path.Depth == 0 ? string.Empty : path.ToCanonicalString();
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"{L["Common:Errors:InvalidPath"]}: {ex.Message}", Severity.Error);
         }
 
         await LoadDefinitionsAsync();
@@ -273,6 +327,7 @@
         {
             _history.Clear();
             _history.AddRange(history);
+            await EnsureDefinitionDetailsAsync(history.Select(row => row.DefinitionKey));
         }
 
         var groupResult = await Facade.GetMutationGroupsAsync(from, to, _definitionKey);
@@ -285,6 +340,7 @@
         {
             _groups.Clear();
             _groups.AddRange(groups);
+            await EnsureDefinitionDetailsAsync(groups.SelectMany(group => group.DefinitionKeys));
         }
 
         _loading = false;
@@ -413,6 +469,159 @@
     {
         return _definitions.FirstOrDefault(definition =>
             string.Equals(definition.DefinitionKey, definitionKey, StringComparison.OrdinalIgnoreCase))?.DisplayName ?? definitionKey;
+    }
+
+    private void NavigateToDefinition(string definitionKey, LogicalPath? path)
+    {
+        NavigationManager.NavigateTo(ConfigurationUiRoutes.State(definitionKey, path));
+    }
+
+    private async Task EnsureDefinitionDetailsAsync(IEnumerable<string> definitionKeys)
+    {
+        foreach (var definitionKey in definitionKeys
+                     .Where(static key => !string.IsNullOrWhiteSpace(key))
+                     .Distinct(StringComparer.OrdinalIgnoreCase))
+        {
+            if (_definitionDetails.ContainsKey(definitionKey))
+            {
+                continue;
+            }
+
+            var result = await Facade.GetDefinitionAsync(definitionKey);
+            if (!result.IsFailed(out _, out var detail))
+            {
+                _definitionDetails[definitionKey] = detail.Definition;
+            }
+        }
+    }
+
+    private IReadOnlyList<string> DefinitionMetadataLines(string definitionKey)
+    {
+        var lines = new List<string>();
+        var definition = ResolveDefinition(definitionKey);
+        var summary = ResolveDefinitionSummary(definitionKey);
+        lines.Add(L["History:DefinitionTooltip:DisplayName", definition?.DisplayName ?? summary?.DisplayName ?? definitionKey]);
+        lines.Add(L["History:DefinitionTooltip:DefinitionKey", definitionKey]);
+
+        var sectionPath = definition?.SectionPath ?? summary?.SectionPath;
+        if (!string.IsNullOrWhiteSpace(sectionPath))
+        {
+            lines.Add(L["History:DefinitionTooltip:SectionPath", sectionPath]);
+        }
+
+        var clrTypeName = definition?.ClrTypeName ?? summary?.ClrTypeName;
+        if (!string.IsNullOrWhiteSpace(clrTypeName))
+        {
+            lines.Add(L["History:DefinitionTooltip:ClrType", clrTypeName]);
+        }
+
+        var project = definition?.FromProject ?? summary?.FromProject;
+        if (!string.IsNullOrWhiteSpace(project))
+        {
+            lines.Add(L["History:DefinitionTooltip:Project", project]);
+        }
+
+        return lines;
+    }
+
+    private IReadOnlyList<string> PathMetadataLines(ConfigurationHistoryDisplayRow row)
+    {
+        var representative = row.Representative;
+        var definition = ResolveDefinition(representative.DefinitionKey);
+        var node = definition is null ? null : ResolveNodeByPath(definition.Root, row.DisplayPath);
+        var configurationPath = node?.ConfigurationPath
+                                ?? representative.SourceConfigurationPath
+                                ?? representative.ConfigurationPath;
+
+        var lines = new List<string>
+        {
+            L["History:PathTooltip:LogicalPath", row.DisplayPath.ToCanonicalString()]
+        };
+
+        if (!string.IsNullOrWhiteSpace(configurationPath))
+        {
+            lines.Add(L["History:PathTooltip:ConfigurationPath", configurationPath]);
+        }
+
+        if (node is not null)
+        {
+            lines.Add(L["History:PathTooltip:Node", NodeDisplay(node)]);
+            lines.Add(L["History:PathTooltip:ClrType", node.ClrTypeName]);
+            lines.Add(L["History:PathTooltip:NodeKind", node.NodeKind]);
+            if (definition is not null)
+            {
+                lines.Add(L["History:PathTooltip:ReloadBehavior", EffectiveReloadBehavior(definition, node)]);
+            }
+
+            if (!string.IsNullOrWhiteSpace(node.Description))
+            {
+                lines.Add(L["History:PathTooltip:Description", node.Description]);
+            }
+        }
+        else if (definition is not null)
+        {
+            lines.Add(L["History:PathTooltip:DefinitionKey", definition.DefinitionKey]);
+            lines.Add(L["History:PathTooltip:ClrType", definition.ClrTypeName]);
+        }
+
+        if (row.IsCollapsed)
+        {
+            lines.Add(L["History:PathTooltip:CollapsedRows", row.Rows.Count]);
+        }
+
+        return lines;
+    }
+
+    private ConfigurationDefinition? ResolveDefinition(string definitionKey)
+    {
+        return _definitionDetails.GetValueOrDefault(definitionKey);
+    }
+
+    private ConfigurationDefinitionSummary? ResolveDefinitionSummary(string definitionKey)
+    {
+        return _definitions.FirstOrDefault(definition =>
+            string.Equals(definition.DefinitionKey, definitionKey, StringComparison.OrdinalIgnoreCase));
+    }
+
+    private static ConfigurationNodeDefinition? ResolveNodeByPath(ConfigurationNodeDefinition root, LogicalPath path)
+    {
+        ConfigurationNodeDefinition? current = root;
+        foreach (var segment in path.Segments)
+        {
+            current = ResolveChildNode(current, segment);
+            if (current is null)
+            {
+                return null;
+            }
+        }
+
+        return current;
+    }
+
+    private static ConfigurationNodeDefinition? ResolveChildNode(ConfigurationNodeDefinition current, ConfigurationPathSegment segment)
+    {
+        return segment switch
+        {
+            PropertySegment property => current.Children.FirstOrDefault(child =>
+                string.Equals(child.Name, property.Name, StringComparison.OrdinalIgnoreCase)),
+            DictionaryKeySegment => current.DictionaryTemplate?.ValueTemplate,
+            ListItemKeySegment or ListIndexSegment => current.ListTemplate?.ItemTemplate,
+            _ => null
+        };
+    }
+
+    private string NodeDisplay(ConfigurationNodeDefinition node)
+    {
+        return string.IsNullOrWhiteSpace(node.DisplayName) ? node.Name : node.DisplayName!;
+    }
+
+    private static ConfigurationReloadBehavior EffectiveReloadBehavior(
+        ConfigurationDefinition definition,
+        ConfigurationNodeDefinition node)
+    {
+        return node.ReloadBehavior is { } behavior and not ConfigurationReloadBehavior.Inherit
+            ? behavior
+            : definition.ReloadBehavior;
     }
 
     private string GroupLabel(string? groupId)

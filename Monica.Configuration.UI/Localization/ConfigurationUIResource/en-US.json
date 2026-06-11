@@ -116,7 +116,8 @@
     "Subtitle": "Audit individual mutations and persisted mutation groups.",
     "CollapsedCount": "{0} fields",
     "Actions": {
-      "ViewChange": "View change"
+      "ViewChange": "View change",
+      "ViewDefinitionHistory": "View definition history"
     },
     "Tabs": {
       "Mutations": "By mutation",
@@ -145,6 +146,24 @@
       "ExternalShort": "External",
       "Mixed": "Mixed targets",
       "ExternalTooltip": "Source: {0}\nConfiguration path: {1}\nFile: {2}"
+    },
+    "DefinitionTooltip": {
+      "DisplayName": "Definition: {0}",
+      "DefinitionKey": "Definition key: {0}",
+      "SectionPath": "Configuration section: {0}",
+      "ClrType": "CLR type: {0}",
+      "Project": "Project: {0}"
+    },
+    "PathTooltip": {
+      "LogicalPath": "Logical path: {0}",
+      "ConfigurationPath": "Configuration key: {0}",
+      "Node": "Node: {0}",
+      "DefinitionKey": "Definition key: {0}",
+      "ClrType": "CLR type: {0}",
+      "NodeKind": "Node kind: {0}",
+      "ReloadBehavior": "Reload behavior: {0}",
+      "Description": "Description: {0}",
+      "CollapsedRows": "Collapsed fields: {0}"
     },
     "Dialog": {
       "Title": "Configuration History",

@@ -8,6 +8,7 @@ namespace Monica.Configuration.UI.Support;
 /// </summary>
 internal static class ConfigurationUiRoutes
 {
+    private const string DEFINITION_KEY_QUERY_KEY = "definitionKey";
     private const string PATH_QUERY_KEY = "path";
 
     /// <summary>
@@ -31,6 +32,17 @@ internal static class ConfigurationUiRoutes
     public const string STORAGE_ROUTE = "/configuration/storage";
 
     /// <summary>
+    /// Builds the state route for an optional target.
+    /// </summary>
+    /// <param name="definitionKey">Definition key target.</param>
+    /// <param name="logicalPath">Logical path target.</param>
+    /// <returns>The state route.</returns>
+    public static string State(string? definitionKey = null, LogicalPath? logicalPath = null)
+    {
+        return WithPath(WithDefinitionKey(STATE_ROUTE, definitionKey), logicalPath);
+    }
+
+    /// <summary>
     /// Builds the history route for an optional target.
     /// </summary>
     /// <param name="definitionKey">Definition key filter.</param>
@@ -38,13 +50,23 @@ internal static class ConfigurationUiRoutes
     /// <returns>The history route.</returns>
     public static string History(string? definitionKey = null, LogicalPath? logicalPath = null)
     {
-        var route = HISTORY_ROUTE;
-        if (!string.IsNullOrWhiteSpace(definitionKey))
+        return WithPath(WithDefinitionKey(HISTORY_ROUTE, definitionKey), logicalPath);
+    }
+
+    /// <summary>
+    /// Reads the definition key query parameter from the current URI.
+    /// </summary>
+    public static string? ReadDefinitionKey(string absoluteUri)
+    {
+        var uri = new Uri(absoluteUri, UriKind.Absolute);
+        var query = QueryHelpers.ParseQuery(uri.Query);
+        if (!query.TryGetValue(DEFINITION_KEY_QUERY_KEY, out var values) || values.Count == 0)
         {
-            route = QueryHelpers.AddQueryString(route, "definitionKey", definitionKey);
+            return null;
         }
 
-        return WithPath(route, logicalPath);
+        var definitionKey = values[0];
+        return string.IsNullOrWhiteSpace(definitionKey) ? null : definitionKey;
     }
 
     /// <summary>
@@ -73,5 +95,12 @@ internal static class ConfigurationUiRoutes
         }
 
         return QueryHelpers.AddQueryString(route, PATH_QUERY_KEY, logicalPath.ToCanonicalString());
+    }
+
+    private static string WithDefinitionKey(string route, string? definitionKey)
+    {
+        return string.IsNullOrWhiteSpace(definitionKey)
+            ? route
+            : QueryHelpers.AddQueryString(route, DEFINITION_KEY_QUERY_KEY, definitionKey);
     }
 }
