@@ -2,89 +2,95 @@
 @inject ConfigurationFacade Facade
 @inject IStringLocalizer<ConfigurationUIResource> L
 
-<MudDialog>
+<MudDialog Class="configuration-save-group-dialog">
     <DialogContent>
-        <MudStack Spacing="3">
-            <MudTextField T="string"
-                          @bind-Value="_label"
-                          Label="@L["Group:Label"]"
-                          Variant="Variant.Outlined"
-                          Margin="Margin.Dense"
-                          Required="true" />
-            <MudTextField T="string"
-                          @bind-Value="_reason"
-                          Label="@L["Group:Reason"]"
-                          Variant="Variant.Outlined"
-                          Lines="2" />
+        <div class="configuration-save-group-dialog-body">
+            <div class="configuration-save-group-form">
+                <MudStack Spacing="3">
+                    <MudTextField T="string"
+                                  @bind-Value="_label"
+                                  Label="@L["Group:Label"]"
+                                  Variant="Variant.Outlined"
+                                  Margin="Margin.Dense"
+                                  Required="true" />
+                    <MudTextField T="string"
+                                  @bind-Value="_reason"
+                                  Label="@L["Group:Reason"]"
+                                  Variant="Variant.Outlined"
+                                  Lines="2" />
 
-            @if (!string.IsNullOrWhiteSpace(_error))
-            {
-                <MudAlert Severity="Severity.Error">@_error</MudAlert>
-            }
-            @if (ValidationIssues.Count > 0)
-            {
-                <MudAlert Severity="Severity.Error">
-                    @L["Dialogs:SaveGroup:Validation:BlockedSummary", ValidationIssues.Count]
-                </MudAlert>
-            }
-            @if (ExternalChangeCount > 0)
-            {
-                <MudAlert Severity="Severity.Warning">
-                    @L["Dialogs:SaveGroup:ExternalTargetSummary", ExternalChangeCount]
-                </MudAlert>
-            }
+                    @if (!string.IsNullOrWhiteSpace(_error))
+                    {
+                        <MudAlert Severity="Severity.Error">@_error</MudAlert>
+                    }
+                    @if (ValidationIssues.Count > 0)
+                    {
+                        <MudAlert Severity="Severity.Error">
+                            @L["Dialogs:SaveGroup:Validation:BlockedSummary", ValidationIssues.Count]
+                        </MudAlert>
+                    }
+                    @if (ExternalChangeCount > 0)
+                    {
+                        <MudAlert Severity="Severity.Warning">
+                            @L["Dialogs:SaveGroup:ExternalTargetSummary", ExternalChangeCount]
+                        </MudAlert>
+                    }
+                </MudStack>
+            </div>
 
-            <MudTabs Rounded="true" ApplyEffectsToContainer="true" TabPanelsClass="pa-3">
-                <MudTabPanel Text="@L["Dialogs:SaveGroup:Tabs:DefinitionDiff"]" Icon="@Icons.Material.Filled.Difference">
-                    <ConfigurationPendingDefinitionDiffPreview Changes="@Changes"
-                                                               ValidationIssues="@ValidationIssues"
-                                                               JumpRequested="JumpToIssue" />
-                </MudTabPanel>
-                <MudTabPanel Text="@L["Dialogs:SaveGroup:Tabs:ChangeList"]" Icon="@Icons.Material.Filled.List">
-                    <MudStack Spacing="3">
-                        @if (ValidationIssues.Count > 0)
-                        {
-                            <MudStack Spacing="1">
-                                <MudText Typo="Typo.subtitle2">@L["Dialogs:SaveGroup:Validation:Title"]</MudText>
-                                <ConfigurationValidationIssueList Issues="@ValidationIssues"
-                                                                  JumpRequested="JumpToIssue" />
-                            </MudStack>
-                        }
+            <div class="configuration-save-group-preview">
+                <MudTabs Rounded="true" ApplyEffectsToContainer="true" TabPanelsClass="pa-3">
+                    <MudTabPanel Text="@L["Dialogs:SaveGroup:Tabs:DefinitionDiff"]" Icon="@Icons.Material.Filled.Difference">
+                        <ConfigurationPendingDefinitionDiffPreview Changes="@Changes"
+                                                                   ValidationIssues="@ValidationIssues"
+                                                                   JumpRequested="JumpToIssue" />
+                    </MudTabPanel>
+                    <MudTabPanel Text="@L["Dialogs:SaveGroup:Tabs:ChangeList"]" Icon="@Icons.Material.Filled.List">
+                        <MudStack Spacing="3">
+                            @if (ValidationIssues.Count > 0)
+                            {
+                                <MudStack Spacing="1">
+                                    <MudText Typo="Typo.subtitle2">@L["Dialogs:SaveGroup:Validation:Title"]</MudText>
+                                    <ConfigurationValidationIssueList Issues="@ValidationIssues"
+                                                                      JumpRequested="JumpToIssue" />
+                                </MudStack>
+                            }
 
-                        @if (Changes.Count == 0)
-                        {
-                            <MudAlert Severity="Severity.Info">@L["Dialogs:SaveGroup:Validation:NoSaveableChanges"]</MudAlert>
-                        }
-                        else
-                        {
-                            <MudTable T="PendingChange" Items="@Changes" Dense="true" Hover="true" Elevation="0">
-                                <HeaderContent>
-                                    <MudTh>@L["State:Columns:Definition"]</MudTh>
-                                    <MudTh>@L["State:Columns:Path"]</MudTh>
-                                    <MudTh>@L["History:Columns:Target"]</MudTh>
-                                    <MudTh>@L["History:Columns:Kind"]</MudTh>
-                                    <MudTh>@L["State:Columns:OldValue"]</MudTh>
-                                    <MudTh>@L["State:Columns:NewValue"]</MudTh>
-                                </HeaderContent>
-                                <RowTemplate>
-                                    <MudTd DataLabel="@L["State:Columns:Definition"]">@context.DefinitionDisplayName</MudTd>
-                                    <MudTd DataLabel="@L["State:Columns:Path"]">@context.LogicalPath.ToCanonicalString()</MudTd>
-                                    <MudTd DataLabel="@L["History:Columns:Target"]">@TargetChip(context)</MudTd>
-                                    <MudTd DataLabel="@L["History:Columns:Kind"]">@context.MutationKind</MudTd>
-                                    <MudTd DataLabel="@L["State:Columns:OldValue"]">@DisplayValue(context, context.OriginalDisplayValue)</MudTd>
-                                    <MudTd DataLabel="@L["State:Columns:NewValue"]">@DisplayValue(context, context.NewDisplayValue)</MudTd>
-                                </RowTemplate>
-                            </MudTable>
-                        }
-                    </MudStack>
-                </MudTabPanel>
-            </MudTabs>
+                            @if (Changes.Count == 0)
+                            {
+                                <MudAlert Severity="Severity.Info">@L["Dialogs:SaveGroup:Validation:NoSaveableChanges"]</MudAlert>
+                            }
+                            else
+                            {
+                                <MudTable T="PendingChange" Items="@Changes" Dense="true" Hover="true" Elevation="0">
+                                    <HeaderContent>
+                                        <MudTh>@L["State:Columns:Definition"]</MudTh>
+                                        <MudTh>@L["State:Columns:Path"]</MudTh>
+                                        <MudTh>@L["History:Columns:Target"]</MudTh>
+                                        <MudTh>@L["History:Columns:Kind"]</MudTh>
+                                        <MudTh>@L["State:Columns:OldValue"]</MudTh>
+                                        <MudTh>@L["State:Columns:NewValue"]</MudTh>
+                                    </HeaderContent>
+                                    <RowTemplate>
+                                        <MudTd DataLabel="@L["State:Columns:Definition"]">@context.DefinitionDisplayName</MudTd>
+                                        <MudTd DataLabel="@L["State:Columns:Path"]">@context.LogicalPath.ToCanonicalString()</MudTd>
+                                        <MudTd DataLabel="@L["History:Columns:Target"]">@TargetChip(context)</MudTd>
+                                        <MudTd DataLabel="@L["History:Columns:Kind"]">@context.MutationKind</MudTd>
+                                        <MudTd DataLabel="@L["State:Columns:OldValue"]">@DisplayValue(context, context.OriginalDisplayValue)</MudTd>
+                                        <MudTd DataLabel="@L["State:Columns:NewValue"]">@DisplayValue(context, context.NewDisplayValue)</MudTd>
+                                    </RowTemplate>
+                                </MudTable>
+                            }
+                        </MudStack>
+                    </MudTabPanel>
+                </MudTabs>
+            </div>
 
             @if (_saving)
             {
                 <MudProgressLinear Indeterminate="true" />
             }
-        </MudStack>
+        </div>
     </DialogContent>
     <DialogActions>
         <MudButton OnClick="Cancel" Disabled="_saving">@L["Common:Actions:Cancel"]</MudButton>

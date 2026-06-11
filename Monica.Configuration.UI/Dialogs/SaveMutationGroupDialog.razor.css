@@ -1,3 +1,68 @@
-.mud-table-cell {
+.configuration-save-group-dialog-body {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    min-height: 0;
+    height: min(76dvh, 760px);
+    max-height: calc(100dvh - 10rem);
+    overflow: hidden;
+}
+
+.configuration-save-group-form {
+    flex: 0 0 auto;
+    min-width: 0;
+}
+
+.configuration-save-group-preview {
+    display: flex;
+    flex: 1 1 auto;
+    min-height: 0;
+    min-width: 0;
+    overflow: hidden;
+}
+
+.configuration-save-group-preview ::deep .mud-tabs {
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+    min-height: 0;
+    min-width: 0;
+    width: 100%;
+}
+
+.configuration-save-group-preview ::deep .mud-tabs-panels {
+    flex: 1 1 auto;
+    min-height: 0;
+    min-width: 0;
+    overflow: hidden;
+}
+
+.configuration-save-group-preview ::deep .mud-tab-panel,
+.configuration-save-group-preview ::deep .mud-tabs-panel {
+    height: 100%;
+    min-height: 0;
+    overflow: auto;
+}
+
+.configuration-save-group-preview ::deep .diff-viewer {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    max-height: 100%;
+}
+
+.configuration-save-group-preview ::deep .diff-content {
+    flex: 1 1 auto;
+    min-height: 0;
+    max-height: none;
+}
+
+.configuration-save-group-preview ::deep .mud-table-cell {
     overflow-wrap: anywhere;
+}
+
+@media (max-height: 720px) {
+    .configuration-save-group-dialog-body {
+        max-height: calc(100dvh - 7rem);
+    }
 }
