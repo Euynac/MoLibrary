@@ -109,6 +109,20 @@ public class ModuleDependencyInjectionGuide : ModuleGuide<ModuleDependencyInject
         ConfigureModuleOption(option => option.EnableAutoRegistrationDiagnostics = enabled);
         return this;
     }
+
+    /// <summary>
+    /// Enables or disables the per-type automatic-registration startup logs.
+    /// </summary>
+    /// <param name="enabled">
+    /// <see langword="true"/> to emit a log entry for every auto-registered type during startup;
+    /// otherwise, <see langword="false"/>. Disabled by default to keep startup output quiet.
+    /// </param>
+    /// <returns>The current guide instance.</returns>
+    public ModuleDependencyInjectionGuide EnableAutoRegistrationLogging(bool enabled = true)
+    {
+        ConfigureModuleOption(option => option.EnableAutoRegistrationLogging = enabled);
+        return this;
+    }
 }
 
 /// <summary>
@@ -125,4 +139,14 @@ public class ModuleDependencyInjectionOption : ModuleOptions<ModuleDependencyInj
     /// Leave this disabled when diagnostics are not needed so startup registration avoids the extra tracking overhead.
     /// </remarks>
     public bool EnableAutoRegistrationDiagnostics { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether Monica writes a startup log entry for each auto-registered type.
+    /// </summary>
+    /// <remarks>
+    /// This only controls the per-type startup logs (concrete-only warnings, registration info, and failures).
+    /// It is independent of <see cref="EnableAutoRegistrationDiagnostics"/>, which captures the snapshot consumed by
+    /// the dependency-injection UI module. Disabled by default to keep startup output quiet even when the UI page is on.
+    /// </remarks>
+    public bool EnableAutoRegistrationLogging { get; set; }
 }
