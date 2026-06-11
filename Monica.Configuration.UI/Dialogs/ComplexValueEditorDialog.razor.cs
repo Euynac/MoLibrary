@@ -183,7 +183,33 @@ public partial class ComplexValueEditorDialog : IAsyncDisposable
             ? []
             : valueSchema.Children
                 .Where(child => child.NodeKind is ConfigurationNodeKind.Dictionary or ConfigurationNodeKind.List)
+                .Where(child => !child.IsScalarCollection())
                 .ToArray();
+    }
+
+    private IReadOnlyList<ScalarCollectionSection> ScalarCollectionSectionsFor(CollectionEntry? entry)
+    {
+        if (entry is null)
+        {
+            return [];
+        }
+
+        var valueSchema = ValueSchemaFor(entry);
+        return valueSchema.NodeKind == ConfigurationNodeKind.Scalar
+            ? []
+            : ScalarCollectionSectionsFor(valueSchema.Children, entry.Path);
+    }
+
+    private static IReadOnlyList<ScalarCollectionSection> ScalarCollectionSectionsFor(
+        IReadOnlyList<ConfigurationNodeDefinition> children,
+        LogicalPath ownerPath)
+    {
+        return children
+            .Where(child => child.IsScalarCollection())
+            .Select(child => new ScalarCollectionSection(
+                child,
+                ownerPath.Append(new PropertySegment(child.Name))))
+            .ToArray();
     }
 
     private IReadOnlyList<ObjectFieldSection> NestedObjectSectionsFor(CollectionEntry? entry)
@@ -198,11 +224,16 @@ public partial class ComplexValueEditorDialog : IAsyncDisposable
             ? []
             : valueSchema.Children
                 .Where(child => child.NodeKind == ConfigurationNodeKind.Object)
-                .Select(child => new ObjectFieldSection(
-                    child,
-                    entry.Path.Append(new PropertySegment(child.Name)),
-                    child.Children.Where(grandchild => grandchild.NodeKind == ConfigurationNodeKind.Scalar).ToArray()))
-                .Where(section => section.ScalarFields.Count > 0)
+                .Select(child =>
+                {
+                    var objectPath = entry.Path.Append(new PropertySegment(child.Name));
+                    return new ObjectFieldSection(
+                        child,
+                        objectPath,
+                        child.Children.Where(grandchild => grandchild.NodeKind == ConfigurationNodeKind.Scalar).ToArray(),
+                        ScalarCollectionSectionsFor(child.Children, objectPath));
+                })
+                .Where(section => section.ScalarFields.Count > 0 || section.ScalarCollections.Count > 0)
                 .ToArray();
     }
 
@@ -491,6 +522,26 @@ public partial class ComplexValueEditorDialog : IAsyncDisposable
         return Task.CompletedTask;
     }
 
+    private Task OnScalarCollectionChanged(
+        ConfigurationNodeDefinition collection,
+        LogicalPath path,
+        ConfigurationScalarCollectionEditResult result)
+    {
+        if (!result.IsValid || result.StoredValue is null)
+        {
+            SetError(path, new ScalarValidationError(
+                IsSensitiveNode(collection)
+                    ? L["State:Value:Sensitive"].Value
+                    : result.InvalidDisplayValue ?? result.DisplayValue ?? string.Empty,
+                result.ValidationError ?? L["State:Editor:InvalidPattern"]));
+            return Task.CompletedTask;
+        }
+
+        ClearError(path);
+        SetCollectionValue(collection, path, JsonNode.Parse(result.StoredValue.Json));
+        return Task.CompletedTask;
+    }
+
     private void SetFieldValue(
         ConfigurationNodeDefinition field,
         LogicalPath ownerPath,
@@ -503,6 +554,15 @@ public partial class ComplexValueEditorDialog : IAsyncDisposable
         SetNodeValue(path, value);
 
         StageSet(path, field, oldValue, valueForStorage);
+    }
+
+    private void SetCollectionValue(ConfigurationNodeDefinition collection, LogicalPath path, JsonNode? value)
+    {
+        var oldValue = CloneNode(ReadOriginalNode(path));
+        var valueForStorage = CloneNode(value);
+        SetNodeValue(path, value);
+
+        StageSet(path, collection, oldValue, valueForStorage);
     }
 
     private void SetNodeValue(LogicalPath path, JsonNode? value)
@@ -611,7 +671,7 @@ public partial class ComplexValueEditorDialog : IAsyncDisposable
             NewDisplayValue = kind == ConfigurationMutationKind.Remove ? L["Mutation:Kinds:Remove"] : DisplayJson(newValue, schema),
             ExpectedSchemaVersion = Definition.SchemaVersion,
             ExpectedValueVersion = _valueVersion,
-            IsSensitive = schema.IsSensitive,
+            IsSensitive = IsSensitiveNode(schema),
             NodeKind = schema.NodeKind,
             ValueKind = schema.ValueKind,
             ReloadBehavior = EffectiveReloadBehaviorFor(schema)
@@ -680,8 +740,8 @@ public partial class ComplexValueEditorDialog : IAsyncDisposable
                 NodeDisplayName = DisplayName(field),
                 InvalidDisplayValue = error.DisplayValue,
                 ValidationError = error.Message,
-                IsSensitive = field.IsSensitive,
-                ValidationRules = field.ValidationRules
+                IsSensitive = IsSensitiveNode(field),
+                ValidationRules = ValidationRulesFor(field)
             }
             : null;
     }
@@ -721,6 +781,53 @@ public partial class ComplexValueEditorDialog : IAsyncDisposable
             Version = _valueVersion,
             EffectiveSource = EffectiveValue?.EffectiveSource
         };
+    }
+
+    private ConfigurationNodeDefinition ScalarCollectionEditorNode(ConfigurationNodeDefinition collection, LogicalPath path)
+    {
+        return collection.RelativePath.Equals(path)
+            ? collection
+            : collection with
+            {
+                RelativePath = path,
+                ConfigurationPath = null
+            };
+    }
+
+    private ConfigurationEffectiveValue ScalarCollectionEffectiveValue(ConfigurationNodeDefinition collection, LogicalPath path)
+    {
+        var value = ReadNode(path) ?? DefaultJsonFor(collection);
+        return new ConfigurationEffectiveValue
+        {
+            DefinitionKey = Definition.DefinitionKey,
+            LogicalPath = path,
+            ConfigurationPath = collection.ConfigurationPath,
+            DisplayValue = IsSensitiveNode(collection) ? null : value.ToJsonString(),
+            IsSensitive = IsSensitiveNode(collection),
+            Version = _valueVersion,
+            EffectiveSource = EffectiveValue?.EffectiveSource
+        };
+    }
+
+    private PendingChange? ScalarCollectionPendingChange(ConfigurationNodeDefinition collection, LogicalPath path)
+    {
+        var exactChange = _changes.FirstOrDefault(change => change.LogicalPath.Equals(path));
+        if (exactChange is not null)
+        {
+            return exactChange;
+        }
+
+        if (!IsFieldModified(path))
+        {
+            return null;
+        }
+
+        return BuildPendingChange(
+            ConfigurationMutationKind.Set,
+            path,
+            collection,
+            CloneNode(ReadOriginalNode(path)),
+            CloneNode(ReadNode(path)) ?? DefaultJsonFor(collection));
     }
 
     private void SetError(LogicalPath path, ScalarValidationError error)
@@ -976,7 +1083,7 @@ public partial class ComplexValueEditorDialog : IAsyncDisposable
             return L["Value:States:Empty"];
         }
 
-        if (schema.IsSensitive)
+        if (IsSensitiveNode(schema))
         {
             return L["State:Value:Sensitive"];
         }
@@ -1002,6 +1109,20 @@ public partial class ComplexValueEditorDialog : IAsyncDisposable
     private string DisplayName(ConfigurationNodeDefinition schema)
     {
         return string.IsNullOrWhiteSpace(schema.DisplayName) ? schema.Name : schema.DisplayName!;
+    }
+
+    private static bool IsSensitiveNode(ConfigurationNodeDefinition schema)
+    {
+        return schema.IsSensitive
+               || schema.ListTemplate?.ItemTemplate.IsSensitive is true
+               || schema.DictionaryTemplate?.ValueTemplate.IsSensitive is true;
+    }
+
+    private static IReadOnlyList<ConfigurationValidationRule> ValidationRulesFor(ConfigurationNodeDefinition schema)
+    {
+        return schema.ListTemplate?.ItemTemplate.ValidationRules
+               ?? schema.DictionaryTemplate?.ValueTemplate.ValidationRules
+               ?? schema.ValidationRules;
     }
 
     private static bool IsStrictAncestor(LogicalPath ancestor, LogicalPath path)
@@ -1050,7 +1171,12 @@ public partial class ComplexValueEditorDialog : IAsyncDisposable
     private sealed record ObjectFieldSection(
         ConfigurationNodeDefinition Node,
         LogicalPath Path,
-        IReadOnlyList<ConfigurationNodeDefinition> ScalarFields);
+        IReadOnlyList<ConfigurationNodeDefinition> ScalarFields,
+        IReadOnlyList<ScalarCollectionSection> ScalarCollections);
+
+    private sealed record ScalarCollectionSection(
+        ConfigurationNodeDefinition Node,
+        LogicalPath Path);
 
     private sealed record FocusFrame(
         ConfigurationNodeDefinition Node,

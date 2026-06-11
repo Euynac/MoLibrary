@@ -85,6 +85,16 @@
     padding: 0.75rem;
 }
 
+.configuration-inline-collection-section {
+    padding-block: 0.25rem 0.5rem;
+    border-top: 1px solid var(--mud-palette-lines-default);
+}
+
+.configuration-object-section .configuration-inline-collection-section:first-of-type {
+    border-top: 0;
+    padding-top: 0;
+}
+
 .configuration-entry-list {
     display: flex;
     flex-direction: column;

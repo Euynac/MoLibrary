@@ -183,6 +183,29 @@
                                                         }
                                                     </MudGrid>
 
+                                                    @foreach (var collectionSection in ScalarCollectionSectionsFor(entry))
+                                                    {
+                                                        var collectionPath = collectionSection.Path;
+                                                        var validationIssue = ValidationIssueFor(collectionSection.Node, collectionPath);
+                                                        <div class="configuration-inline-collection-section" @key="collectionPath.ToCanonicalString()">
+                                                            <MudStack Spacing="1">
+                                                                <MudStack Spacing="0">
+                                                                    <MudText Typo="Typo.caption" Color="Color.Secondary">@DisplayName(collectionSection.Node)</MudText>
+                                                                    <MudText Typo="Typo.caption" Color="Color.Secondary">@collectionPath.ToCanonicalString()</MudText>
+                                                                    @if (!string.IsNullOrWhiteSpace(collectionSection.Node.Description))
+                                                                    {
+                                                                        <MudText Typo="Typo.caption" Color="Color.Secondary">@collectionSection.Node.Description</MudText>
+                                                                    }
+                                                                </MudStack>
+                                                                <ConfigurationScalarCollectionEditor Node="@ScalarCollectionEditorNode(collectionSection.Node, collectionPath)"
+                                                                                                     EffectiveValue="@ScalarCollectionEffectiveValue(collectionSection.Node, collectionPath)"
+                                                                                                     PendingChange="@ScalarCollectionPendingChange(collectionSection.Node, collectionPath)"
+                                                                                                     ValidationIssue="@validationIssue"
+                                                                                                     ValueChanged="result => OnScalarCollectionChanged(collectionSection.Node, collectionPath, result)" />
+                                                            </MudStack>
+                                                        </div>
+                                                    }
+
                                                     @foreach (var objectSection in NestedObjectSectionsFor(entry))
                                                     {
                                                         <div class="configuration-object-section">
@@ -196,33 +219,59 @@
                                                                     }
                                                                 </MudStack>
 
-                                                                <MudGrid Spacing="2">
-                                                                    @foreach (var field in objectSection.ScalarFields)
-                                                                    {
-                                                                        var fieldPath = FieldPath(field, objectSection.Path, objectSection.Node);
-                                                                        var validationIssue = ValidationIssueFor(field, fieldPath);
-                                                                        <MudItem xs="12" md="6">
-                                                                            <MudStack Spacing="1" @key="fieldPath.ToCanonicalString()">
-                                                                                <MudText Typo="Typo.caption" Color="Color.Secondary">@DisplayName(field)</MudText>
-                                                                                @if (!string.IsNullOrWhiteSpace(field.Description))
+                                                                @if (objectSection.ScalarFields.Count > 0)
+                                                                {
+                                                                    <MudGrid Spacing="2">
+                                                                        @foreach (var field in objectSection.ScalarFields)
+                                                                        {
+                                                                            var fieldPath = FieldPath(field, objectSection.Path, objectSection.Node);
+                                                                            var validationIssue = ValidationIssueFor(field, fieldPath);
+                                                                            <MudItem xs="12" md="6">
+                                                                                <MudStack Spacing="1" @key="fieldPath.ToCanonicalString()">
+                                                                                    <MudText Typo="Typo.caption" Color="Color.Secondary">@DisplayName(field)</MudText>
+                                                                                    @if (!string.IsNullOrWhiteSpace(field.Description))
+                                                                                    {
+                                                                                        <MudText Typo="Typo.caption" Color="Color.Secondary">@field.Description</MudText>
+                                                                                    }
+                                                                                    <ConfigurationScalarEditor Node="@ScalarEditorNode(field, fieldPath)"
+                                                                                                               EffectiveValue="@ScalarEditorEffectiveValue(field, fieldPath)"
+                                                                                                               IsModified="@IsFieldModified(fieldPath)"
+                                                                                                               ValidationIssue="@validationIssue"
+                                                                                                               ValueChanged="result => OnScalarFieldChanged(field, objectSection.Path, objectSection.Node, result)" />
+                                                                                    @if (validationIssue is not null && !ScalarEditorShowsInlineError(field))
+                                                                                    {
+                                                                                        <MudText Typo="Typo.caption" Color="Color.Error">
+                                                                                            @validationIssue.ValidationError
+                                                                                        </MudText>
+                                                                                    }
+                                                                                </MudStack>
+                                                                            </MudItem>
+                                                                        }
+                                                                    </MudGrid>
+                                                                }
+
+                                                                @foreach (var collectionSection in objectSection.ScalarCollections)
+                                                                {
+                                                                    var collectionPath = collectionSection.Path;
+                                                                    var validationIssue = ValidationIssueFor(collectionSection.Node, collectionPath);
+                                                                    <div class="configuration-inline-collection-section" @key="collectionPath.ToCanonicalString()">
+                                                                        <MudStack Spacing="1">
+                                                                            <MudStack Spacing="0">
+                                                                                <MudText Typo="Typo.caption" Color="Color.Secondary">@DisplayName(collectionSection.Node)</MudText>
+                                                                                <MudText Typo="Typo.caption" Color="Color.Secondary">@collectionPath.ToCanonicalString()</MudText>
+                                                                                @if (!string.IsNullOrWhiteSpace(collectionSection.Node.Description))
                                                                                 {
-                                                                                    <MudText Typo="Typo.caption" Color="Color.Secondary">@field.Description</MudText>
-                                                                                }
-                                                                                <ConfigurationScalarEditor Node="@ScalarEditorNode(field, fieldPath)"
-                                                                                                           EffectiveValue="@ScalarEditorEffectiveValue(field, fieldPath)"
-                                                                                                           IsModified="@IsFieldModified(fieldPath)"
-                                                                                                           ValidationIssue="@validationIssue"
-                                                                                                           ValueChanged="result => OnScalarFieldChanged(field, objectSection.Path, objectSection.Node, result)" />
-                                                                                @if (validationIssue is not null && !ScalarEditorShowsInlineError(field))
-                                                                                {
-                                                                                    <MudText Typo="Typo.caption" Color="Color.Error">
-                                                                                        @validationIssue.ValidationError
-                                                                                    </MudText>
+                                                                                    <MudText Typo="Typo.caption" Color="Color.Secondary">@collectionSection.Node.Description</MudText>
                                                                                 }
                                                                             </MudStack>
-                                                                        </MudItem>
-                                                                    }
-                                                                </MudGrid>
+                                                                            <ConfigurationScalarCollectionEditor Node="@ScalarCollectionEditorNode(collectionSection.Node, collectionPath)"
+                                                                                                                 EffectiveValue="@ScalarCollectionEffectiveValue(collectionSection.Node, collectionPath)"
+                                                                                                                 PendingChange="@ScalarCollectionPendingChange(collectionSection.Node, collectionPath)"
+                                                                                                                 ValidationIssue="@validationIssue"
+                                                                                                                 ValueChanged="result => OnScalarCollectionChanged(collectionSection.Node, collectionPath, result)" />
+                                                                        </MudStack>
+                                                                    </div>
+                                                                }
                                                             </MudStack>
                                                         </div>
                                                     }
