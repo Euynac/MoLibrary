@@ -107,32 +107,80 @@
                                         }
                                         else
                                         {
-                                            <div class="configuration-source-items">
-                                                @foreach (var item in inventory.Items)
+                                            <div class="configuration-source-groups">
+                                                @foreach (var group in SourceInventoryGroups(inventory))
                                                 {
-                                                    <div class="@SourceItemWrapperClass(item)">
-                                                        <MudPaper Outlined="true" Class="pa-3 configuration-source-item-card">
-                                                            <MudStack Spacing="1">
-                                                                <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Spacing="2">
+                                                    <div class="@SourceGroupClass(group)">
+                                                        <MudPaper Outlined="true" Class="pa-3 configuration-source-group-card">
+                                                            <MudStack Spacing="2">
+                                                                <MudStack Row="true" Wrap="Wrap.Wrap" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Spacing="2">
                                                                     <MudStack Spacing="0">
                                                                         <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
-                                                                            <MudText Typo="Typo.subtitle2">@SourceItemTitle(item)</MudText>
-                                                                            @if (!item.IsManagedByMonica)
+                                                                            <MudText Typo="Typo.subtitle2">@group.Title</MudText>
+                                                                            @if (group.UnmanagedCount > 0)
                                                                             {
                                                                                 <MudChip T="string" Size="Size.Small" Color="Color.Warning" Variant="Variant.Outlined">
                                                                                     @L["Sources:Unmanaged"]
                                                                                 </MudChip>
                                                                             }
-                                                                            @if (item.IsEffective)
+                                                                            @if (group.EffectiveCount == group.Items.Count)
                                                                             {
-                                                                                <MudChip T="string" Size="Size.Small" Color="Color.Success" Variant="Variant.Filled">@L["Sources:Effective"]</MudChip>
+                                                                                <MudChip T="string" Size="Size.Small" Color="Color.Success" Variant="Variant.Filled">
+                                                                                    @L["Sources:Effective"]
+                                                                                </MudChip>
                                                                             }
                                                                         </MudStack>
-                                                                        <MudText Typo="Typo.caption" Color="Color.Secondary">@ItemLabel(item)</MudText>
+                                                                        @if (!string.IsNullOrWhiteSpace(group.Subtitle))
+                                                                        {
+                                                                            <MudText Typo="Typo.caption" Color="Color.Secondary">@group.Subtitle</MudText>
+                                                                        }
                                                                     </MudStack>
-                                                                    <MudText Typo="Typo.caption" Color="Color.Secondary">@item.ConfigurationPath</MudText>
+                                                                    <MudStack Row="true" Wrap="Wrap.Wrap" AlignItems="AlignItems.Center" Justify="Justify.FlexEnd" Spacing="1">
+                                                                        <MudChip T="int" Size="Size.Small" Color="Color.Info" Variant="Variant.Outlined">
+                                                                            @L["Sources:Inventory:ItemCount", group.Items.Count]
+                                                                        </MudChip>
+                                                                        @if (group.EffectiveCount > 0 && group.EffectiveCount != group.Items.Count)
+                                                                        {
+                                                                            <MudChip T="int" Size="Size.Small" Color="Color.Success" Variant="Variant.Outlined">
+                                                                                @L["Sources:Inventory:EffectiveCount", group.EffectiveCount]
+                                                                            </MudChip>
+                                                                        }
+                                                                    </MudStack>
                                                                 </MudStack>
-                                                                <MudText Typo="Typo.body2">@DisplayValue(item)</MudText>
+
+                                                                <div class="configuration-source-value-grid" role="table">
+                                                                    <div class="configuration-source-value-header" role="row">
+                                                                        <MudText Typo="Typo.caption" Color="Color.Secondary">@L["Sources:Inventory:FieldColumn"]</MudText>
+                                                                        <MudText Typo="Typo.caption" Color="Color.Secondary">@L["Sources:Inventory:ValueColumn"]</MudText>
+                                                                        <MudText Typo="Typo.caption" Color="Color.Secondary">@L["Sources:Inventory:StateColumn"]</MudText>
+                                                                    </div>
+                                                                    @foreach (var item in group.Items)
+                                                                    {
+                                                                        <div class="@SourceItemRowClass(item)" role="row">
+                                                                            <div class="configuration-source-value-field" role="cell">
+                                                                                <MudText Typo="Typo.body2">@FieldLabel(item)</MudText>
+                                                                                <MudTooltip Text="@item.ConfigurationPath">
+                                                                                    <MudText Typo="Typo.caption" Color="Color.Secondary" Class="configuration-source-value-path">
+                                                                                        @item.RelativeConfigurationPath
+                                                                                    </MudText>
+                                                                                </MudTooltip>
+                                                                            </div>
+                                                                            <MudText Typo="Typo.body2" Class="configuration-source-value-content" role="cell">@DisplayValue(item)</MudText>
+                                                                            <div class="configuration-source-value-state" role="cell">
+                                                                                @if (item.IsEffective)
+                                                                                {
+                                                                                    <MudChip T="string" Size="Size.Small" Color="Color.Success" Variant="Variant.Filled">
+                                                                                        @L["Sources:Effective"]
+                                                                                    </MudChip>
+                                                                                }
+                                                                                else
+                                                                                {
+                                                                                    <MudText Typo="Typo.caption" Color="Color.Secondary">@L["Sources:Inventory:Overridden"]</MudText>
+                                                                                }
+                                                                            </div>
+                                                                        </div>
+                                                                    }
+                                                                </div>
                                                             </MudStack>
                                                         </MudPaper>
                                                     </div>
@@ -243,25 +291,56 @@
             : source.ReloadOnChange.Value ? L["Sources:Reload:Enabled"] : L["Sources:Reload:Disabled"];
     }
 
-    private string ItemLabel(ConfigurationSourceInventoryItem item)
+    private IReadOnlyList<SourceInventoryGroup> SourceInventoryGroups(ConfigurationSourceInventory inventory)
     {
-        if (!item.IsManagedByMonica)
-        {
-            return string.IsNullOrWhiteSpace(item.RelativeConfigurationPath)
-                ? L["Sources:Inventory:RuntimeKey"]
-                : item.RelativeConfigurationPath;
-        }
-
-        return string.IsNullOrWhiteSpace(item.NodeLabel)
-            ? item.RelativeConfigurationPath
-            : $"{item.NodeLabel} · {item.RelativeConfigurationPath}";
+        return inventory.Items
+            .GroupBy(SourceInventoryGroupKey)
+            .Select(group =>
+            {
+                var items = group
+                    .OrderBy(static item => item.RelativeConfigurationPath, StringComparer.OrdinalIgnoreCase)
+                    .ToArray();
+                return new SourceInventoryGroup(
+                    GroupTitle(items[0]),
+                    GroupSubtitle(items[0]),
+                    items,
+                    items.Count(static item => item.IsEffective),
+                    items.Count(static item => !item.IsManagedByMonica));
+            })
+            .OrderBy(group => group.UnmanagedCount > 0 ? 1 : 0)
+            .ThenBy(group => group.Title, StringComparer.OrdinalIgnoreCase)
+            .ToArray();
     }
 
-    private string SourceItemTitle(ConfigurationSourceInventoryItem item)
+    private string SourceInventoryGroupKey(ConfigurationSourceInventoryItem item)
+    {
+        return item.IsManagedByMonica
+            ? item.DefinitionKey ?? item.DefinitionDisplayName ?? item.ConfigurationPath
+            : L["Sources:Inventory:UnmanagedDefinition"].Value;
+    }
+
+    private string GroupTitle(ConfigurationSourceInventoryItem item)
     {
         return item.IsManagedByMonica
             ? item.DefinitionDisplayName ?? L["Sources:Inventory:UnknownDefinition"]
             : L["Sources:Inventory:UnmanagedDefinition"];
+    }
+
+    private string GroupSubtitle(ConfigurationSourceInventoryItem item)
+    {
+        if (!item.IsManagedByMonica)
+        {
+            return L["Sources:Inventory:RuntimeKey"];
+        }
+
+        return item.DefinitionKey ?? string.Empty;
+    }
+
+    private string FieldLabel(ConfigurationSourceInventoryItem item)
+    {
+        return string.IsNullOrWhiteSpace(item.NodeLabel)
+            ? item.RelativeConfigurationPath
+            : item.NodeLabel!;
     }
 
     private string DisplayValue(ConfigurationSourceInventoryItem item)
@@ -269,10 +348,24 @@
         return item.IsSensitive ? L["State:Value:Sensitive"] : item.DisplayValue ?? L["Value:States:Empty"];
     }
 
-    private static string SourceItemWrapperClass(ConfigurationSourceInventoryItem item)
+    private static string SourceGroupClass(SourceInventoryGroup group)
     {
-        return item.IsEffective ? "configuration-source-item effective-source" : "configuration-source-item";
+        return group.EffectiveCount == group.Items.Count
+            ? "configuration-source-group effective-source"
+            : "configuration-source-group";
     }
+
+    private static string SourceItemRowClass(ConfigurationSourceInventoryItem item)
+    {
+        return item.IsEffective ? "configuration-source-value-row effective-source" : "configuration-source-value-row";
+    }
+
+    private sealed record SourceInventoryGroup(
+        string Title,
+        string Subtitle,
+        IReadOnlyList<ConfigurationSourceInventoryItem> Items,
+        int EffectiveCount,
+        int UnmanagedCount);
 
     private RenderFragment StoreCard(string role, ConfigurationStoreDescriptor store) => builder =>
     {

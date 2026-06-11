@@ -245,7 +245,12 @@
       "UnmanagedDefinition": "Unmanaged configuration",
       "UnknownDefinition": "Unknown definition",
       "RuntimeKey": "Runtime configuration key",
-      "NoItems": "This source does not supply visible configuration items."
+      "NoItems": "This source does not supply visible configuration items.",
+      "ItemCount": "{0} items",
+      "FieldColumn": "Field",
+      "ValueColumn": "Value",
+      "StateColumn": "State",
+      "Overridden": "Overridden"
     },
     "Definition": {
       "Title": "Configuration sources",

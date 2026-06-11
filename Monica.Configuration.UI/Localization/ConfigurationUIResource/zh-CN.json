@@ -245,7 +245,12 @@
       "UnmanagedDefinition": "非受管配置",
       "UnknownDefinition": "未知配置定义",
       "RuntimeKey": "运行时配置 Key",
-      "NoItems": "该来源没有提供可见配置项。"
+      "NoItems": "该来源没有提供可见配置项。",
+      "ItemCount": "{0} 项",
+      "FieldColumn": "字段",
+      "ValueColumn": "值",
+      "StateColumn": "状态",
+      "Overridden": "被覆盖"
     },
     "Definition": {
       "Title": "配置来源",
