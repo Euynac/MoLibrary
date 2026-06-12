@@ -10,6 +10,7 @@ public static class ProjectUnitVisualizationConfig
         return unitType switch
         {
             EProjectUnitType.ApplicationService => Color.Primary,
+            EProjectUnitType.CrudApplicationService => Color.Primary,
             EProjectUnitType.DomainService => Color.Success,
             EProjectUnitType.Repository => Color.Warning,
             EProjectUnitType.DomainEvent => Color.Secondary,
@@ -33,6 +34,7 @@ public static class ProjectUnitVisualizationConfig
     public static bool IsComplexUnitType(EProjectUnitType unitType)
     {
         return unitType is EProjectUnitType.ApplicationService
+            or EProjectUnitType.CrudApplicationService
             or EProjectUnitType.DomainService
             or EProjectUnitType.RecurringJob
             or EProjectUnitType.TriggeredJob
@@ -45,6 +47,7 @@ public static class ProjectUnitVisualizationConfig
         return unitType switch
         {
             EProjectUnitType.ApplicationService => "primary",
+            EProjectUnitType.CrudApplicationService => "primary",
             EProjectUnitType.DomainService => "success",
             EProjectUnitType.Repository => "warning",
             EProjectUnitType.DomainEvent => "secondary",
@@ -70,6 +73,7 @@ public static class ProjectUnitVisualizationConfig
         return unitType switch
         {
             EProjectUnitType.ApplicationService => Icons.Material.Filled.BusinessCenter,
+            EProjectUnitType.CrudApplicationService => Icons.Material.Filled.EditNote,
             EProjectUnitType.DomainService => Icons.Material.Filled.Domain,
             EProjectUnitType.Repository => Icons.Material.Filled.Storage,
             EProjectUnitType.DomainEvent => Icons.Material.Filled.Event,

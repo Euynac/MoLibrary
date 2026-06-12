@@ -36,6 +36,7 @@ public static class ProjectUnitsLocalizationExtensions
         return unitType switch
         {
             EProjectUnitType.ApplicationService => localizer["Shared:ProjectUnitTypes:ApplicationService"].Value,
+            EProjectUnitType.CrudApplicationService => localizer["Shared:ProjectUnitTypes:CrudApplicationService"].Value,
             EProjectUnitType.DomainService => localizer["Shared:ProjectUnitTypes:DomainService"].Value,
             EProjectUnitType.Repository => localizer["Shared:ProjectUnitTypes:Repository"].Value,
             EProjectUnitType.DomainEvent => localizer["Shared:ProjectUnitTypes:DomainEvent"].Value,
