@@ -9,8 +9,8 @@ public interface IDaprBindingInputDispatcher
 {
     /// <summary>
     /// Attempts to dispatch the incoming input-binding payload.
-    /// Return <see langword="true"/> when the dispatcher has accepted responsibility for the message and the
-    /// Dapr HTTP handler can complete immediately. Return <see langword="false"/> to let the normal pipeline run.
+    /// Return <see langword="true"/> when the dispatcher has handled the message or has accepted responsibility for it.
+    /// Return <see langword="false"/> to let the normal pipeline run.
     /// </summary>
     /// <param name="context">The incoming channel data context.</param>
     /// <param name="next">The existing pipeline continuation.</param>
