@@ -44,29 +44,59 @@ public sealed class FileConfigurationStore(IOptions<ConfigurationFileStoreOption
         string seedJson,
         CancellationToken cancellationToken)
     {
+        var documents = await EnsureCreatedAsync(
+            [new ConfigurationEffectiveValueSeed { Definition = definition, SeedJson = seedJson }],
+            cancellationToken);
+        return documents[0];
+    }
+
+    /// <inheritdoc />
+    public async Task<IReadOnlyList<ConfigurationEffectiveValueDocument>> EnsureCreatedAsync(
+        IReadOnlyList<ConfigurationEffectiveValueSeed> seeds,
+        CancellationToken cancellationToken)
+    {
+        if (seeds.Count == 0)
+        {
+            return [];
+        }
+
         await _lock.WaitAsync(cancellationToken);
         try
         {
             EnsureDirectories();
-            var path = GetEffectiveValuePath(definition.DefinitionKey);
-            if (IoFile.Exists(path))
+            var documentsByKey = new Dictionary<string, ConfigurationEffectiveValueDocument>(StringComparer.OrdinalIgnoreCase);
+            foreach (var seed in seeds)
             {
-                return await ReadDocumentAsync(definition.DefinitionKey, cancellationToken)
-                       ?? throw new InvalidOperationException($"Configuration document '{path}' could not be read.");
+                if (documentsByKey.ContainsKey(seed.Definition.DefinitionKey))
+                {
+                    continue;
+                }
+
+                var path = GetEffectiveValuePath(seed.Definition.DefinitionKey);
+                if (IoFile.Exists(path))
+                {
+                    documentsByKey[seed.Definition.DefinitionKey] =
+                        await ReadDocumentAsync(seed.Definition.DefinitionKey, cancellationToken)
+                        ?? throw new InvalidOperationException($"Configuration document '{path}' could not be read.");
+                    continue;
+                }
+
+                var document = new ConfigurationEffectiveValueDocument
+                {
+                    DefinitionKey = seed.Definition.DefinitionKey,
+                    Json = FormatJson(seed.SeedJson),
+                    Version = 1,
+                    SchemaVersion = seed.Definition.SchemaVersion,
+                    LastModifiedTime = DateTimeOffset.UtcNow
+                };
+
+                await WriteDocumentAsync(document, cancellationToken);
+                documentsByKey[seed.Definition.DefinitionKey] = document;
             }
 
-            var now = DateTimeOffset.UtcNow;
-            var document = new ConfigurationEffectiveValueDocument
-            {
-                DefinitionKey = definition.DefinitionKey,
-                Json = FormatJson(seedJson),
-                Version = 1,
-                SchemaVersion = definition.SchemaVersion,
-                LastModifiedTime = now
-            };
-
-            await WriteDocumentAsync(document, cancellationToken);
-            return document;
+            return seeds
+                .Select(seed => documentsByKey[seed.Definition.DefinitionKey])
+                .ToArray();
         }
         finally
         {

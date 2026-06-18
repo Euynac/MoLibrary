@@ -26,6 +26,7 @@ public sealed class DatabaseConfigurationStore(
     : IConfigurationEffectiveValueStore, IConfigurationHistoryStore, IConfigurationMetadataStore
 {
     private const int MAX_PUBLISH_RETRY_COUNT = 5;
+    private const int MAX_EFFECTIVE_VALUE_ENSURE_RETRY_COUNT = 5;
 
     private readonly SemaphoreSlim _schemaInitializationLock = new(1, 1);
     private bool _schemaInitialized;
@@ -54,27 +55,76 @@ public sealed class DatabaseConfigurationStore(
         string seedJson,
         CancellationToken cancellationToken)
     {
-        return await ExecuteAsync(async (dbContext, token) =>
-        {
-            var entity = await dbContext.ConfigurationEffectiveValues
-                .FirstOrDefaultAsync(value => value.DefinitionKey == definition.DefinitionKey, token);
-            if (entity is not null)
-            {
-                return ToDocument(entity);
-            }
+        var documents = await EnsureCreatedAsync(
+            [new ConfigurationEffectiveValueSeed { Definition = definition, SeedJson = seedJson }],
+            cancellationToken);
+        return documents[0];
+    }
 
-            entity = new ConfigurationEffectiveValueEntity
+    /// <inheritdoc />
+    public async Task<IReadOnlyList<ConfigurationEffectiveValueDocument>> EnsureCreatedAsync(
+        IReadOnlyList<ConfigurationEffectiveValueSeed> seeds,
+        CancellationToken cancellationToken)
+    {
+        if (seeds.Count == 0)
+        {
+            return [];
+        }
+
+        for (var attempt = 1; attempt <= MAX_EFFECTIVE_VALUE_ENSURE_RETRY_COUNT; attempt++)
+        {
+            try
             {
-                DefinitionKey = definition.DefinitionKey,
-                Json = NormalizeJson(seedJson),
-                Version = 1,
-                SchemaVersion = definition.SchemaVersion,
-                LastModifiedTime = DateTimeOffset.UtcNow
-            };
-            dbContext.ConfigurationEffectiveValues.Add(entity);
-            await dbContext.SaveChangesAsync(token);
-            return ToDocument(entity);
-        }, cancellationToken);
+                return await ExecuteAsync(async (dbContext, token) =>
+                {
+                    var keys = seeds.Select(seed => seed.Definition.DefinitionKey).ToArray();
+                    var existing = await dbContext.ConfigurationEffectiveValues
+                        .Where(value => keys.Contains(value.DefinitionKey))
+                        .ToDictionaryAsync(value => value.DefinitionKey, StringComparer.OrdinalIgnoreCase, token);
+
+                    var documentsByKey = new Dictionary<string, ConfigurationEffectiveValueDocument>(StringComparer.OrdinalIgnoreCase);
+                    foreach (var entity in existing.Values)
+                    {
+                        documentsByKey[entity.DefinitionKey] = ToDocument(entity);
+                    }
+
+                    foreach (var seed in seeds)
+                    {
+                        if (documentsByKey.ContainsKey(seed.Definition.DefinitionKey))
+                        {
+                            continue;
+                        }
+
+                        var entity = new ConfigurationEffectiveValueEntity
+                        {
+                            DefinitionKey = seed.Definition.DefinitionKey,
+                            Json = NormalizeJson(seed.SeedJson),
+                            Version = 1,
+                            SchemaVersion = seed.Definition.SchemaVersion,
+                            LastModifiedTime = DateTimeOffset.UtcNow
+                        };
+                        dbContext.ConfigurationEffectiveValues.Add(entity);
+                        documentsByKey[entity.DefinitionKey] = ToDocument(entity);
+                    }
+
+                    if (dbContext.ChangeTracker.HasChanges())
+                    {
+                        await dbContext.SaveChangesAsync(token);
+                    }
+
+                    return seeds
+                        .Select(seed => documentsByKey[seed.Definition.DefinitionKey])
+                        .ToArray();
+                }, cancellationToken);
+            }
+            catch (DbUpdateException) when (attempt < MAX_EFFECTIVE_VALUE_ENSURE_RETRY_COUNT)
+            {
+                // Another instance may have inserted missing seed documents first.
+            }
+        }
+
+        throw new InvalidOperationException(
+            $"Failed to ensure {seeds.Count} configuration effective value documents after {MAX_EFFECTIVE_VALUE_ENSURE_RETRY_COUNT} attempts.");
     }
 
     /// <inheritdoc />

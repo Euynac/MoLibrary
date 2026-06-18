@@ -25,6 +25,16 @@ public interface IConfigurationEffectiveValueStore
         CancellationToken cancellationToken);
 
     /// <summary>
+    /// Ensures that multiple definitions have effective value documents.
+    /// </summary>
+    /// <param name="seeds">Definitions and their seed JSON documents.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>Effective value documents in the same order as the input seeds.</returns>
+    Task<IReadOnlyList<ConfigurationEffectiveValueDocument>> EnsureCreatedAsync(
+        IReadOnlyList<ConfigurationEffectiveValueSeed> seeds,
+        CancellationToken cancellationToken);
+
+    /// <summary>
     /// Gets one effective value document.
     /// </summary>
     /// <param name="definitionKey">The definition key.</param>

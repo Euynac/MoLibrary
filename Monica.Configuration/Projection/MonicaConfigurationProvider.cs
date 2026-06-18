@@ -3,6 +3,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Monica.Configuration.Abstractions;
 using Monica.Configuration.Abstractions.Internal;
 using Monica.Configuration.Metrics;
+using Monica.Configuration.Models;
 using Monica.Configuration.Services.Support;
 
 namespace Monica.Configuration.Projection;
@@ -41,10 +42,18 @@ internal sealed class MonicaConfigurationProvider(MonicaConfigurationProviderAcc
         try
         {
             var projected = new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase);
-            foreach (var definition in definitionRegistry.GetAll())
+            var definitions = definitionRegistry.GetAll();
+            var seeds = definitions
+                .Select(definition => new ConfigurationEffectiveValueSeed
+                {
+                    Definition = definition,
+                    SeedJson = seedFactory.CreateSeedJson(definition)
+                })
+                .ToArray();
+            var documents = await effectiveValueStore.EnsureCreatedAsync(seeds, cancellationToken);
+
+            foreach (var (definition, document) in definitions.Zip(documents))
             {
-                var seedJson = seedFactory.CreateSeedJson(definition);
-                var document = await effectiveValueStore.EnsureCreatedAsync(definition, seedJson, cancellationToken);
                 foreach (var (key, value) in documentEditor.Project(definition, document.Json))
                 {
                     projected[key] = value;
