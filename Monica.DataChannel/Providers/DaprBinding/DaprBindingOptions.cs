@@ -17,6 +17,21 @@ public class DaprBindingOptions : CommunicationOptions<DaprBindingEndpoint>
     /// </summary>
     public string? OutputBindingName { get; set; }
 
+    /// <summary>
+    /// Gets or sets whether input binding messages should be offered to <see cref="Monica.DataChannel.Abstractions.Partitioning.IDaprBindingInputDispatcher"/>.
+    /// The default is <see langword="false"/>, which preserves the existing synchronous pipeline behavior.
+    /// Enable this only when the dispatcher preserves Dapr ACK semantics by either completing processing before returning
+    /// or durably accepting the message before returning success.
+    /// </summary>
+    public bool EnableInputDispatcher { get; set; }
+
+    /// <summary>
+    /// Gets or sets whether output binding calls should include partition metadata when a
+    /// <see cref="Monica.DataChannel.Abstractions.Partitioning.IDataChannelPartitionKeyResolver"/> returns a key.
+    /// The default is <see langword="true"/>; without a registered resolver no metadata is emitted.
+    /// </summary>
+    public bool EnableOutputPartitionMetadata { get; set; } = true;
+
     public override void EnrichOrValidate()
     {
         switch (DaprBindingType)
