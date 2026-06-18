@@ -25,5 +25,5 @@ public sealed class ConfigurationDefinitionEntity
 
     public string SchemaJson { get; set; } = "";
 
-    public DateTimeOffset LastSeenTime { get; set; }
+    public int PublishRevision { get; set; }
 }

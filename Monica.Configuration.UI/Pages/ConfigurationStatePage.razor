@@ -94,7 +94,7 @@
                                             }
                                             <ConfigurationSchemaMetadataChip SchemaVersion="@_selectedDefinition.SchemaVersion"
                                                                              SchemaHash="@_selectedDefinition.SchemaHash"
-                                                                             LastSeenTime="@_selectedDefinition.LastSeenTime" />
+                                                                             OnClick="OpenSelectedDefinitionPublishHistoryAsync" />
                                             <MudChip T="ConfigurationReloadBehavior" Size="Size.Small" Color="Color.Info" Variant="Variant.Outlined">@_selectedDefinition.ReloadBehavior</MudChip>
                                             <MudTooltip Text="@L["Common:Actions:EditJson"]">
                                                 <MudIconButton Icon="@Icons.Material.Filled.DataObject"
@@ -706,6 +706,33 @@
             await LoadEffectiveValuesAsync();
             await RefreshPendingCount();
         }
+    }
+
+    private async Task OpenSelectedDefinitionPublishHistoryAsync()
+    {
+        if (_selectedDefinition is null)
+        {
+            return;
+        }
+
+        var result = await Facade.GetDefinitionPublishHistoriesAsync(_selectedDefinition.DefinitionKey, 50);
+        if (result.IsFailed(out var error, out var histories))
+        {
+            Snackbar.Add($"{L["Common:Errors:LoadFailed"]}: {error.Message}", Severity.Error);
+            return;
+        }
+
+        var parameters = new DialogParameters<ConfigurationDefinitionPublishHistoryDialog>();
+        parameters.Add(dialog => dialog.Definition, _selectedDefinition);
+        parameters.Add(dialog => dialog.Histories, histories);
+        await DialogService.ShowAsync<ConfigurationDefinitionPublishHistoryDialog>(
+            L["History:SchemaPublish:Title", _selectedDefinition.DisplayName],
+            parameters,
+            new DialogOptions
+            {
+                MaxWidth = MaxWidth.ExtraLarge,
+                FullWidth = true
+            });
     }
 
     private async Task OpenDefinitionSourcesAsync()

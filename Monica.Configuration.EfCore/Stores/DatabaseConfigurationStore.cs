@@ -1,4 +1,5 @@
 using System.Data.Common;
+using System.Reflection;
 using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
@@ -24,6 +25,8 @@ public sealed class DatabaseConfigurationStore(
     IOptions<ModuleConfigurationEfCoreOption> options)
     : IConfigurationEffectiveValueStore, IConfigurationHistoryStore, IConfigurationMetadataStore
 {
+    private const int MAX_PUBLISH_RETRY_COUNT = 5;
+
     private readonly SemaphoreSlim _schemaInitializationLock = new(1, 1);
     private bool _schemaInitialized;
 
@@ -262,47 +265,88 @@ public sealed class DatabaseConfigurationStore(
     /// <inheritdoc />
     public async Task PublishAsync(IReadOnlyList<ConfigurationDefinition> definitions, CancellationToken cancellationToken)
     {
-        await ExecuteAsync(async (dbContext, token) =>
+        var candidates = definitions.Select(PublishedDefinitionCandidate.FromDefinition).ToArray();
+        var changedCandidates = await GetChangedPublishCandidatesAsync(candidates, cancellationToken);
+        foreach (var candidate in changedCandidates)
         {
-            foreach (var definition in definitions)
-            {
-                var entity = await dbContext.ConfigurationDefinitions
-                    .FirstOrDefaultAsync(x => x.DefinitionKey == definition.DefinitionKey, token);
+            await PublishCandidateWithRetryAsync(candidate, cancellationToken);
+        }
+    }
 
-                if (entity is null)
-                {
-                    entity = new ConfigurationDefinitionEntity { DefinitionKey = definition.DefinitionKey };
-                    dbContext.ConfigurationDefinitions.Add(entity);
-                    entity.SchemaVersion = Math.Max(definition.SchemaVersion, 1);
-                }
-                else
-                {
-                    entity.SchemaVersion = ResolvePublishedSchemaVersion(entity, definition);
-                }
+    private async Task<IReadOnlyList<PublishedDefinitionCandidate>> GetChangedPublishCandidatesAsync(
+        IReadOnlyList<PublishedDefinitionCandidate> candidates,
+        CancellationToken cancellationToken)
+    {
+        if (candidates.Count == 0)
+        {
+            return [];
+        }
 
-                entity.SectionPath = definition.SectionPath;
-                entity.DisplayName = definition.DisplayName;
-                entity.ClrTypeName = ConfigurationDefinitionSchemaCodec.ToCompactClrTypeName(definition.ClrTypeName);
-                entity.FromProject = definition.FromProject;
-                entity.Category = definition.Category;
-                entity.SchemaHash = definition.SchemaHash;
-                entity.ReloadBehavior = definition.ReloadBehavior.ToString();
-                entity.SchemaJson = ConfigurationDefinitionSchemaCodec.SerializeSchema(definition);
-                entity.LastSeenTime = DateTimeOffset.UtcNow;
-            }
+        return await ExecuteAsync(async (dbContext, token) =>
+        {
+            var keys = candidates.Select(candidate => candidate.DefinitionKey).ToArray();
+            var existing = await dbContext.ConfigurationDefinitions
+                .AsNoTracking()
+                .Where(definition => keys.Contains(definition.DefinitionKey))
+                .ToDictionaryAsync(definition => definition.DefinitionKey, StringComparer.OrdinalIgnoreCase, token);
 
-            await dbContext.SaveChangesAsync(token);
+            return candidates
+                .Where(candidate => !existing.TryGetValue(candidate.DefinitionKey, out var current)
+                                    || !candidate.Matches(current))
+                .ToArray();
         }, cancellationToken);
     }
 
-    private static int ResolvePublishedSchemaVersion(
-        ConfigurationDefinitionEntity entity,
-        ConfigurationDefinition definition)
+    private async Task PublishCandidateWithRetryAsync(
+        PublishedDefinitionCandidate candidate,
+        CancellationToken cancellationToken)
     {
-        var currentVersion = Math.Max(Math.Max(entity.SchemaVersion, definition.SchemaVersion), 1);
-        return string.Equals(entity.SchemaHash, definition.SchemaHash, StringComparison.Ordinal)
-            ? currentVersion
-            : currentVersion + 1;
+        for (var attempt = 1; attempt <= MAX_PUBLISH_RETRY_COUNT; attempt++)
+        {
+            try
+            {
+                await ExecuteAsync(async (dbContext, token) =>
+                {
+                    var current = await dbContext.ConfigurationDefinitions
+                        .FirstOrDefaultAsync(definition => definition.DefinitionKey == candidate.DefinitionKey, token);
+
+                    if (current is null)
+                    {
+                        var created = candidate.CreateEntity();
+                        dbContext.ConfigurationDefinitions.Add(created);
+                        dbContext.ConfigurationDefinitionPublishHistories.Add(
+                            candidate.CreateHistory(null, ConfigurationDefinitionPublishChangeKind.Created));
+                        await dbContext.SaveChangesAsync(token);
+                        return;
+                    }
+
+                    if (candidate.Matches(current))
+                    {
+                        return;
+                    }
+
+                    var changeKind = candidate.HasSameSchema(current)
+                        ? ConfigurationDefinitionPublishChangeKind.MetadataChanged
+                        : ConfigurationDefinitionPublishChangeKind.SchemaChanged;
+                    var history = candidate.CreateHistory(current, changeKind);
+                    candidate.ApplyTo(current, history.NewSchemaVersion);
+                    dbContext.ConfigurationDefinitionPublishHistories.Add(history);
+                    await dbContext.SaveChangesAsync(token);
+                }, cancellationToken);
+                return;
+            }
+            catch (DbUpdateConcurrencyException) when (attempt < MAX_PUBLISH_RETRY_COUNT)
+            {
+                // Another instance published this definition first. Reload and compare against the new current row.
+            }
+            catch (DbUpdateException) when (attempt < MAX_PUBLISH_RETRY_COUNT)
+            {
+                // Most commonly the first-publish insert race. Retrying turns it into a normal compare/update pass.
+            }
+        }
+
+        throw new InvalidOperationException(
+            $"Failed to publish configuration definition '{candidate.DefinitionKey}' after {MAX_PUBLISH_RETRY_COUNT} attempts.");
     }
 
     /// <inheritdoc />
@@ -328,6 +372,27 @@ public sealed class DatabaseConfigurationStore(
                 .AsNoTracking()
                 .FirstOrDefaultAsync(definition => definition.DefinitionKey == definitionKey, token);
             return entity is null ? null : ToDefinition(entity);
+        }, cancellationToken);
+    }
+
+    /// <inheritdoc />
+    public async Task<IReadOnlyList<ConfigurationDefinitionPublishHistory>> ListDefinitionPublishHistoriesAsync(
+        string definitionKey,
+        int limit,
+        CancellationToken cancellationToken)
+    {
+        return await ExecuteAsync(async (dbContext, token) =>
+        {
+            var normalizedLimit = Math.Clamp(limit, 1, 200);
+            var histories = await dbContext.ConfigurationDefinitionPublishHistories
+                .AsNoTracking()
+                .Where(history => history.DefinitionKey == definitionKey)
+                .OrderByDescending(history => history.PublishedTime)
+                .ThenByDescending(history => history.HistoryId)
+                .Take(normalizedLimit)
+                .ToArrayAsync(token);
+
+            return histories.Select(ToPublishHistory).ToArray();
         }, cancellationToken);
     }
 
@@ -402,15 +467,27 @@ public sealed class DatabaseConfigurationStore(
         {
             _ = await dbContext.ConfigurationDefinitions
                 .AsNoTracking()
-                .Select(definition => new { definition.SchemaJson, definition.FromProject, definition.Category })
+                .Select(definition => new { definition.SchemaJson, definition.FromProject, definition.Category, definition.PublishRevision })
                 .FirstOrDefaultAsync(cancellationToken);
-            return ConfigurationSchemaState.Ready;
         }
         catch (Exception ex) when (IsMissingTableException(ex))
         {
             return ConfigurationSchemaState.Missing;
         }
         catch (Exception ex) when (IsMissingColumnException(ex))
+        {
+            return ConfigurationSchemaState.Mismatch;
+        }
+
+        try
+        {
+            _ = await dbContext.ConfigurationDefinitionPublishHistories
+                .AsNoTracking()
+                .Select(history => new { history.HistoryId, history.DefinitionKey, history.PublishedTime })
+                .FirstOrDefaultAsync(cancellationToken);
+            return ConfigurationSchemaState.Ready;
+        }
+        catch (Exception ex) when (IsMissingTableException(ex) || IsMissingColumnException(ex))
         {
             return ConfigurationSchemaState.Mismatch;
         }
@@ -425,6 +502,7 @@ public sealed class DatabaseConfigurationStore(
             typeof(ConfigurationValueHistoryEntity),
             typeof(ConfigurationMutationGroupEntity),
             typeof(ConfigurationEffectiveValueEntity),
+            typeof(ConfigurationDefinitionPublishHistoryEntity),
             typeof(ConfigurationDefinitionEntity)
         };
 
@@ -528,6 +606,214 @@ public sealed class DatabaseConfigurationStore(
         return instance.GetType().GetProperty(propertyName)?.GetValue(instance) as int?;
     }
 
+    private sealed record PublishedDefinitionCandidate
+    {
+        public required string DefinitionKey { get; init; }
+
+        public required string SectionPath { get; init; }
+
+        public required string DisplayName { get; init; }
+
+        public required string ClrTypeName { get; init; }
+
+        public required string FromProject { get; init; }
+
+        public string? Category { get; init; }
+
+        public int SourceSchemaVersion { get; init; }
+
+        public required string SchemaHash { get; init; }
+
+        public required string ReloadBehavior { get; init; }
+
+        public required string SchemaJson { get; init; }
+
+        public static PublishedDefinitionCandidate FromDefinition(ConfigurationDefinition definition)
+        {
+            return new PublishedDefinitionCandidate
+            {
+                DefinitionKey = definition.DefinitionKey,
+                SectionPath = definition.SectionPath,
+                DisplayName = definition.DisplayName,
+                ClrTypeName = ConfigurationDefinitionSchemaCodec.ToCompactClrTypeName(definition.ClrTypeName),
+                FromProject = definition.FromProject,
+                Category = NullIfWhiteSpace(definition.Category),
+                SourceSchemaVersion = Math.Max(definition.SchemaVersion, 1),
+                SchemaHash = definition.SchemaHash,
+                ReloadBehavior = definition.ReloadBehavior.ToString(),
+                SchemaJson = ConfigurationDefinitionSchemaCodec.SerializeSchema(definition)
+            };
+        }
+
+        public bool Matches(ConfigurationDefinitionEntity current)
+        {
+            return HasSameSchema(current)
+                   && string.Equals(SectionPath, current.SectionPath, StringComparison.Ordinal)
+                   && string.Equals(DisplayName, current.DisplayName, StringComparison.Ordinal)
+                   && string.Equals(ClrTypeName, current.ClrTypeName, StringComparison.Ordinal)
+                   && string.Equals(FromProject, current.FromProject, StringComparison.Ordinal)
+                   && string.Equals(Category, NullIfWhiteSpace(current.Category), StringComparison.Ordinal)
+                   && string.Equals(ReloadBehavior, current.ReloadBehavior, StringComparison.Ordinal);
+        }
+
+        public bool HasSameSchema(ConfigurationDefinitionEntity current)
+        {
+            return string.Equals(SchemaHash, current.SchemaHash, StringComparison.Ordinal);
+        }
+
+        public ConfigurationDefinitionEntity CreateEntity()
+        {
+            var entity = new ConfigurationDefinitionEntity
+            {
+                DefinitionKey = DefinitionKey,
+                SchemaVersion = SourceSchemaVersion,
+                PublishRevision = 1
+            };
+            ApplySnapshot(entity, SourceSchemaVersion);
+            return entity;
+        }
+
+        public void ApplyTo(ConfigurationDefinitionEntity entity, int schemaVersion)
+        {
+            ApplySnapshot(entity, schemaVersion);
+            entity.PublishRevision = Math.Max(entity.PublishRevision, 0) + 1;
+        }
+
+        public ConfigurationDefinitionPublishHistoryEntity CreateHistory(
+            ConfigurationDefinitionEntity? current,
+            ConfigurationDefinitionPublishChangeKind changeKind)
+        {
+            var publisher = PublishActor.Capture();
+            var newSchemaVersion = ResolveNewSchemaVersion(current, changeKind);
+            return new ConfigurationDefinitionPublishHistoryEntity
+            {
+                HistoryId = Guid.NewGuid().ToString("N"),
+                DefinitionKey = DefinitionKey,
+                SectionPath = SectionPath,
+                DisplayName = DisplayName,
+                FromProject = FromProject,
+                Category = Category,
+                ChangeKind = changeKind.ToString(),
+                PreviousSchemaVersion = current?.SchemaVersion,
+                NewSchemaVersion = newSchemaVersion,
+                PreviousSchemaHash = current?.SchemaHash,
+                NewSchemaHash = SchemaHash,
+                PreviousSchemaJson = current?.SchemaJson,
+                NewSchemaJson = SchemaJson,
+                ChangeSummaryJson = CreateChangeSummaryJson(current, changeKind),
+                PublisherId = publisher.PublisherId,
+                PublisherName = publisher.PublisherName,
+                PublisherVersion = publisher.PublisherVersion,
+                PublishedTime = DateTimeOffset.UtcNow
+            };
+        }
+
+        private void ApplySnapshot(ConfigurationDefinitionEntity entity, int schemaVersion)
+        {
+            entity.SectionPath = SectionPath;
+            entity.DisplayName = DisplayName;
+            entity.ClrTypeName = ClrTypeName;
+            entity.FromProject = FromProject;
+            entity.Category = NullIfWhiteSpace(Category);
+            entity.SchemaVersion = schemaVersion;
+            entity.SchemaHash = SchemaHash;
+            entity.ReloadBehavior = ReloadBehavior;
+            entity.SchemaJson = SchemaJson;
+        }
+
+        private int ResolveNewSchemaVersion(
+            ConfigurationDefinitionEntity? current,
+            ConfigurationDefinitionPublishChangeKind changeKind)
+        {
+            if (current is null)
+            {
+                return SourceSchemaVersion;
+            }
+
+            var currentVersion = Math.Max(Math.Max(current.SchemaVersion, SourceSchemaVersion), 1);
+            return changeKind == ConfigurationDefinitionPublishChangeKind.SchemaChanged
+                ? currentVersion + 1
+                : currentVersion;
+        }
+
+        private string CreateChangeSummaryJson(
+            ConfigurationDefinitionEntity? current,
+            ConfigurationDefinitionPublishChangeKind changeKind)
+        {
+            var changes = new List<SchemaPublishChangeDto>();
+            if (current is null)
+            {
+                changes.Add(new SchemaPublishChangeDto("Definition", null, DefinitionKey));
+            }
+            else
+            {
+                AddChange(changes, nameof(SectionPath), current.SectionPath, SectionPath);
+                AddChange(changes, nameof(DisplayName), current.DisplayName, DisplayName);
+                AddChange(changes, nameof(ClrTypeName), current.ClrTypeName, ClrTypeName);
+                AddChange(changes, nameof(FromProject), current.FromProject, FromProject);
+                AddChange(changes, nameof(Category), NullIfWhiteSpace(current.Category), Category);
+                AddChange(changes, nameof(ReloadBehavior), current.ReloadBehavior, ReloadBehavior);
+                AddChange(changes, nameof(SchemaHash), current.SchemaHash, SchemaHash);
+            }
+
+            var summary = new SchemaPublishChangeSummaryDto(changeKind.ToString(), changes);
+            return JsonSerializer.Serialize(summary, ConfigurationPersistedJsonOptions.CompactSchema);
+        }
+
+        private static void AddChange(
+            List<SchemaPublishChangeDto> changes,
+            string field,
+            string? previousValue,
+            string? newValue)
+        {
+            if (!string.Equals(previousValue, newValue, StringComparison.Ordinal))
+            {
+                changes.Add(new SchemaPublishChangeDto(field, previousValue, newValue));
+            }
+        }
+
+        private static string? NullIfWhiteSpace(string? value)
+        {
+            return string.IsNullOrWhiteSpace(value) ? null : value;
+        }
+    }
+
+    private sealed record PublishActor(string PublisherId, string PublisherName, string? PublisherVersion)
+    {
+        public static PublishActor Capture()
+        {
+            var publisherName = FirstNonEmpty(
+                Environment.GetEnvironmentVariable("MONICA_CONFIGURATION_INSTANCE_NAME"),
+                Environment.GetEnvironmentVariable("HOSTNAME"),
+                Environment.MachineName);
+            var publisherId = FirstNonEmpty(
+                Environment.GetEnvironmentVariable("MONICA_CONFIGURATION_INSTANCE_ID"),
+                $"{publisherName}:{Environment.ProcessId}");
+            return new PublishActor(publisherId, publisherName, GetEntryAssemblyVersion());
+        }
+
+        private static string FirstNonEmpty(params string?[] values)
+        {
+            return values.FirstOrDefault(value => !string.IsNullOrWhiteSpace(value)) ?? "unknown";
+        }
+
+        private static string? GetEntryAssemblyVersion()
+        {
+            var assembly = Assembly.GetEntryAssembly();
+            return assembly?.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion
+                   ?? assembly?.GetName().Version?.ToString();
+        }
+    }
+
+    private sealed record SchemaPublishChangeSummaryDto(
+        string ChangeKind,
+        IReadOnlyList<SchemaPublishChangeDto> Changes);
+
+    private sealed record SchemaPublishChangeDto(
+        string Field,
+        string? PreviousValue,
+        string? NewValue);
+
     private static ConfigurationEffectiveValueDocument ToDocument(ConfigurationEffectiveValueEntity entity)
     {
         return new ConfigurationEffectiveValueDocument
@@ -553,10 +839,35 @@ public sealed class DatabaseConfigurationStore(
             entity.Category,
             entity.SchemaVersion,
             entity.SchemaHash,
-            entity.LastSeenTime,
             Enum.Parse<ConfigurationReloadBehavior>(entity.ReloadBehavior),
             entity.SchemaJson,
             ConfigurationDefinitionOrigin.PublishedMetadata);
+    }
+
+    private static ConfigurationDefinitionPublishHistory ToPublishHistory(
+        ConfigurationDefinitionPublishHistoryEntity entity)
+    {
+        return new ConfigurationDefinitionPublishHistory
+        {
+            HistoryId = entity.HistoryId,
+            DefinitionKey = entity.DefinitionKey,
+            SectionPath = entity.SectionPath,
+            DisplayName = entity.DisplayName,
+            FromProject = entity.FromProject,
+            Category = entity.Category,
+            ChangeKind = Enum.Parse<ConfigurationDefinitionPublishChangeKind>(entity.ChangeKind),
+            PreviousSchemaVersion = entity.PreviousSchemaVersion,
+            NewSchemaVersion = entity.NewSchemaVersion,
+            PreviousSchemaHash = entity.PreviousSchemaHash,
+            NewSchemaHash = entity.NewSchemaHash,
+            PreviousSchemaJson = entity.PreviousSchemaJson,
+            NewSchemaJson = entity.NewSchemaJson,
+            ChangeSummaryJson = entity.ChangeSummaryJson,
+            PublisherId = entity.PublisherId,
+            PublisherName = entity.PublisherName,
+            PublisherVersion = entity.PublisherVersion,
+            PublishedTime = entity.PublishedTime
+        };
     }
 
     private ConfigurationValueHistoryEntity ToEntity(ConfigurationValueHistory history)

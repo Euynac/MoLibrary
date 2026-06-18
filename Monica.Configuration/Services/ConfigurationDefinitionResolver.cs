@@ -111,11 +111,9 @@ public sealed class ConfigurationDefinitionResolver(
             return localDefinition with { SchemaVersion = Math.Max(localDefinition.SchemaVersion, 1) };
         }
 
-        var schemasMatch = HasSameSchemaHash(localDefinition, publishedDefinition);
         return localDefinition with
         {
-            SchemaVersion = ResolveLocalSchemaVersion(localDefinition, publishedDefinition),
-            LastSeenTime = schemasMatch ? publishedDefinition.LastSeenTime : null
+            SchemaVersion = ResolveLocalSchemaVersion(localDefinition, publishedDefinition)
         };
     }
 

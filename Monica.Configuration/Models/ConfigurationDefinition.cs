@@ -48,12 +48,6 @@ public sealed record ConfigurationDefinition
     public required string SchemaHash { get; init; }
 
     /// <summary>
-    /// Gets the last time the metadata store saw this definition.
-    /// Local scanned definitions are null until persisted metadata is merged back in.
-    /// </summary>
-    public DateTimeOffset? LastSeenTime { get; init; }
-
-    /// <summary>
     /// Gets the default reload behavior for the definition.
     /// </summary>
     public ConfigurationReloadBehavior ReloadBehavior { get; init; } = ConfigurationReloadBehavior.OnlineReloadable;

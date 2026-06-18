@@ -33,4 +33,16 @@ public interface IConfigurationMetadataStore
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>The published definition, or null when no metadata exists.</returns>
     Task<ConfigurationDefinition?> GetPublishedDefinitionAsync(string definitionKey, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Lists persisted schema publish history entries for one definition.
+    /// </summary>
+    /// <param name="definitionKey">The definition key to inspect.</param>
+    /// <param name="limit">Maximum number of newest history entries to return.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>Newest schema publish history entries first.</returns>
+    Task<IReadOnlyList<ConfigurationDefinitionPublishHistory>> ListDefinitionPublishHistoriesAsync(
+        string definitionKey,
+        int limit,
+        CancellationToken cancellationToken);
 }

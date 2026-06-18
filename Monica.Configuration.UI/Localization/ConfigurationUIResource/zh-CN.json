@@ -33,8 +33,6 @@
       "SchemaVersionChip": "v{0}",
       "SchemaMetadataTitle": "Schema 元数据",
       "SchemaVersionDetail": "版本：{0}",
-      "SchemaLastSeenDetail": "上次发现：{0}",
-      "SchemaLastSeenMissing": "尚未发布",
       "SchemaHashDetail": "Hash",
       "SchemaHashMissing": "暂无 Hash"
     },
@@ -164,6 +162,30 @@
       "ReloadBehavior": "重载行为: {0}",
       "Description": "说明: {0}",
       "CollapsedRows": "折叠字段数: {0}"
+    },
+    "SchemaPublish": {
+      "Title": "Schema 发布历史 - {0}",
+      "Count": "{0} 条发布记录",
+      "Empty": "未找到 Schema 发布历史。",
+      "Publisher": "发布实例",
+      "PublisherVersion": "发布版本",
+      "SectionPath": "配置节",
+      "FromProject": "项目",
+      "PreviousHash": "旧 Hash",
+      "NewHash": "新 Hash",
+      "ChangeSummary": "变更摘要",
+      "NoSummary": "没有结构化变更摘要。",
+      "Field": "字段",
+      "PreviousValue": "旧值",
+      "NewValue": "新值",
+      "SchemaDiff": "Schema Diff",
+      "VersionCreated": "v{0}",
+      "VersionChanged": "v{0} -> v{1}",
+      "Kinds": {
+        "Created": "首次发布",
+        "SchemaChanged": "Schema 变化",
+        "MetadataChanged": "元数据变化"
+      }
     },
     "Dialog": {
       "Title": "配置历史记录",

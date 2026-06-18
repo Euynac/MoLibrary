@@ -281,6 +281,11 @@ public sealed class FileConfigurationStore(IOptions<ConfigurationFileStoreOption
                 var path = GetDefinitionPath(definition.DefinitionKey);
                 var existing = IoFile.Exists(path) ? ReadPublishedDefinitionDto(path) : null;
                 var published = PublishedDefinitionDto.FromDefinition(definition, existing);
+                if (existing is not null && published.Matches(existing))
+                {
+                    continue;
+                }
+
                 await IoFile.WriteAllTextAsync(path, JsonSerializer.Serialize(published, JSON_OPTIONS), cancellationToken);
             }
         }
@@ -288,6 +293,15 @@ public sealed class FileConfigurationStore(IOptions<ConfigurationFileStoreOption
         {
             _lock.Release();
         }
+    }
+
+    /// <inheritdoc />
+    public Task<IReadOnlyList<ConfigurationDefinitionPublishHistory>> ListDefinitionPublishHistoriesAsync(
+        string definitionKey,
+        int limit,
+        CancellationToken cancellationToken)
+    {
+        return Task.FromResult<IReadOnlyList<ConfigurationDefinitionPublishHistory>>([]);
     }
 
     /// <inheritdoc />
@@ -513,8 +527,6 @@ public sealed class FileConfigurationStore(IOptions<ConfigurationFileStoreOption
 
         public string SchemaJson { get; init; } = "";
 
-        public DateTimeOffset LastSeenTime { get; init; }
-
         public static PublishedDefinitionDto FromDefinition(
             ConfigurationDefinition definition,
             PublishedDefinitionDto? existing)
@@ -526,13 +538,29 @@ public sealed class FileConfigurationStore(IOptions<ConfigurationFileStoreOption
                 DisplayName = definition.DisplayName,
                 ClrTypeName = ConfigurationDefinitionSchemaCodec.ToCompactClrTypeName(definition.ClrTypeName),
                 FromProject = definition.FromProject,
-                Category = definition.Category,
+                Category = NullIfWhiteSpace(definition.Category),
                 SchemaVersion = ResolvePublishedSchemaVersion(definition, existing),
                 SchemaHash = definition.SchemaHash,
                 ReloadBehavior = definition.ReloadBehavior.ToString(),
-                SchemaJson = ConfigurationDefinitionSchemaCodec.SerializeSchema(definition),
-                LastSeenTime = DateTimeOffset.UtcNow
+                SchemaJson = ConfigurationDefinitionSchemaCodec.SerializeSchema(definition)
             };
+        }
+
+        public bool Matches(PublishedDefinitionDto existing)
+        {
+            return string.Equals(DefinitionKey, existing.DefinitionKey, StringComparison.Ordinal)
+                   && string.Equals(SectionPath, existing.SectionPath, StringComparison.Ordinal)
+                   && string.Equals(DisplayName, existing.DisplayName, StringComparison.Ordinal)
+                   && string.Equals(ClrTypeName, existing.ClrTypeName, StringComparison.Ordinal)
+                   && string.Equals(FromProject, existing.FromProject, StringComparison.Ordinal)
+                   && string.Equals(Category, NullIfWhiteSpace(existing.Category), StringComparison.Ordinal)
+                   && string.Equals(SchemaHash, existing.SchemaHash, StringComparison.Ordinal)
+                   && string.Equals(ReloadBehavior, existing.ReloadBehavior, StringComparison.Ordinal);
+        }
+
+        private static string? NullIfWhiteSpace(string? value)
+        {
+            return string.IsNullOrWhiteSpace(value) ? null : value;
         }
 
         private static int ResolvePublishedSchemaVersion(
@@ -561,7 +589,6 @@ public sealed class FileConfigurationStore(IOptions<ConfigurationFileStoreOption
                 Category,
                 SchemaVersion,
                 SchemaHash,
-                LastSeenTime,
                 Enum.Parse<ConfigurationReloadBehavior>(ReloadBehavior),
                 SchemaJson,
                 ConfigurationDefinitionOrigin.PublishedMetadata);

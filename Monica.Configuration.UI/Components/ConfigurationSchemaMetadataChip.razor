@@ -3,12 +3,25 @@
 
 <MudTooltip Delay="300" Arrow="true" Placement="@Placement">
     <ChildContent>
-        <MudChip T="string"
-                 Size="@Size"
-                 Color="@Color"
-                 Variant="@Variant">
-            @L["State:Definitions:SchemaVersionChip", SchemaVersion]
-        </MudChip>
+        @if (OnClick.HasDelegate)
+        {
+            <MudChip T="string"
+                     Size="@Size"
+                     Color="@Color"
+                     Variant="@Variant"
+                     OnClick="HandleClick">
+                @L["State:Definitions:SchemaVersionChip", SchemaVersion]
+            </MudChip>
+        }
+        else
+        {
+            <MudChip T="string"
+                     Size="@Size"
+                     Color="@Color"
+                     Variant="@Variant">
+                @L["State:Definitions:SchemaVersionChip", SchemaVersion]
+            </MudChip>
+        }
     </ChildContent>
     <TooltipContent>
         <MudStack Spacing="1" Class="configuration-schema-metadata-tooltip">
@@ -17,9 +30,6 @@
             </MudText>
             <MudText Typo="Typo.caption">
                 @L["State:Definitions:SchemaVersionDetail", SchemaVersion]
-            </MudText>
-            <MudText Typo="Typo.caption">
-                @L["State:Definitions:SchemaLastSeenDetail", FormatLastSeen()]
             </MudText>
             <MudText Typo="Typo.caption">@L["State:Definitions:SchemaHashDetail"]</MudText>
             <MudText Typo="Typo.caption" Class="configuration-schema-hash-short">
@@ -35,11 +45,11 @@
 @code {
     [Parameter] public int SchemaVersion { get; set; }
     [Parameter] public string? SchemaHash { get; set; }
-    [Parameter] public DateTimeOffset? LastSeenTime { get; set; }
     [Parameter] public Size Size { get; set; } = Size.Small;
     [Parameter] public Color Color { get; set; } = Color.Primary;
     [Parameter] public Variant Variant { get; set; } = Variant.Outlined;
     [Parameter] public Placement Placement { get; set; } = Placement.Bottom;
+    [Parameter] public EventCallback OnClick { get; set; }
 
     private string DisplayHash =>
         string.IsNullOrWhiteSpace(SchemaHash)
@@ -65,10 +75,11 @@
         }
     }
 
-    private string FormatLastSeen()
+    private async Task HandleClick()
     {
-        return LastSeenTime is null
-            ? L["State:Definitions:SchemaLastSeenMissing"].Value
-            : LastSeenTime.Value.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss zzz");
+        if (OnClick.HasDelegate)
+        {
+            await OnClick.InvokeAsync();
+        }
     }
 }

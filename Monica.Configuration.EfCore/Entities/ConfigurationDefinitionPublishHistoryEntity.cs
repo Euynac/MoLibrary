@@ -1,0 +1,43 @@
+namespace Monica.Configuration.EfCore.Entities;
+
+/// <summary>
+/// Persisted audit row for configuration schema publication.
+/// </summary>
+public sealed class ConfigurationDefinitionPublishHistoryEntity
+{
+    public string HistoryId { get; set; } = "";
+
+    public string DefinitionKey { get; set; } = "";
+
+    public string SectionPath { get; set; } = "";
+
+    public string DisplayName { get; set; } = "";
+
+    public string FromProject { get; set; } = "";
+
+    public string? Category { get; set; }
+
+    public string ChangeKind { get; set; } = "";
+
+    public int? PreviousSchemaVersion { get; set; }
+
+    public int NewSchemaVersion { get; set; }
+
+    public string? PreviousSchemaHash { get; set; }
+
+    public string NewSchemaHash { get; set; } = "";
+
+    public string? PreviousSchemaJson { get; set; }
+
+    public string NewSchemaJson { get; set; } = "";
+
+    public string ChangeSummaryJson { get; set; } = "";
+
+    public string PublisherId { get; set; } = "";
+
+    public string PublisherName { get; set; } = "";
+
+    public string? PublisherVersion { get; set; }
+
+    public DateTimeOffset PublishedTime { get; set; }
+}

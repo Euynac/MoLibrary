@@ -33,8 +33,6 @@
       "SchemaVersionChip": "v{0}",
       "SchemaMetadataTitle": "Schema metadata",
       "SchemaVersionDetail": "Version: {0}",
-      "SchemaLastSeenDetail": "Last seen: {0}",
-      "SchemaLastSeenMissing": "Not published yet",
       "SchemaHashDetail": "Hash",
       "SchemaHashMissing": "No hash available"
     },
@@ -164,6 +162,30 @@
       "ReloadBehavior": "Reload behavior: {0}",
       "Description": "Description: {0}",
       "CollapsedRows": "Collapsed fields: {0}"
+    },
+    "SchemaPublish": {
+      "Title": "Schema Publish History - {0}",
+      "Count": "{0} publish records",
+      "Empty": "No schema publish history was found.",
+      "Publisher": "Publisher",
+      "PublisherVersion": "Publisher version",
+      "SectionPath": "Configuration section",
+      "FromProject": "Project",
+      "PreviousHash": "Previous hash",
+      "NewHash": "New hash",
+      "ChangeSummary": "Change summary",
+      "NoSummary": "No structured change summary is available.",
+      "Field": "Field",
+      "PreviousValue": "Previous value",
+      "NewValue": "New value",
+      "SchemaDiff": "Schema diff",
+      "VersionCreated": "v{0}",
+      "VersionChanged": "v{0} -> v{1}",
+      "Kinds": {
+        "Created": "First publish",
+        "SchemaChanged": "Schema changed",
+        "MetadataChanged": "Metadata changed"
+      }
     },
     "Dialog": {
       "Title": "Configuration History",

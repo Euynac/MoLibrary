@@ -15,6 +15,9 @@ public sealed class ConfigurationDbContext(
 {
     public DbSet<ConfigurationDefinitionEntity> ConfigurationDefinitions => Set<ConfigurationDefinitionEntity>();
 
+    public DbSet<ConfigurationDefinitionPublishHistoryEntity> ConfigurationDefinitionPublishHistories =>
+        Set<ConfigurationDefinitionPublishHistoryEntity>();
+
     public DbSet<ConfigurationEffectiveValueEntity> ConfigurationEffectiveValues => Set<ConfigurationEffectiveValueEntity>();
 
     public DbSet<ConfigurationValueHistoryEntity> ConfigurationValueHistories => Set<ConfigurationValueHistoryEntity>();
@@ -38,7 +41,20 @@ public sealed class ConfigurationDbContext(
             .Property(x => x.Category)
             .HasMaxLength(200);
         modelBuilder.Entity<ConfigurationDefinitionEntity>()
-            .Property(x => x.LastSeenTime)
+            .Property(x => x.PublishRevision)
+            .IsConcurrencyToken();
+        modelBuilder.Entity<ConfigurationDefinitionPublishHistoryEntity>().HasKey(x => x.HistoryId);
+        modelBuilder.Entity<ConfigurationDefinitionPublishHistoryEntity>()
+            .HasIndex(x => new { x.DefinitionKey, x.PublishedTime });
+        modelBuilder.Entity<ConfigurationDefinitionPublishHistoryEntity>()
+            .Property(x => x.FromProject)
+            .IsRequired()
+            .HasMaxLength(200);
+        modelBuilder.Entity<ConfigurationDefinitionPublishHistoryEntity>()
+            .Property(x => x.Category)
+            .HasMaxLength(200);
+        modelBuilder.Entity<ConfigurationDefinitionPublishHistoryEntity>()
+            .Property(x => x.PublishedTime)
             .HasConversion(value => ToUtcTicks(value), value => FromUtcTicks(value));
         modelBuilder.Entity<ConfigurationEffectiveValueEntity>().HasKey(x => x.DefinitionKey);
         modelBuilder.Entity<ConfigurationEffectiveValueEntity>()

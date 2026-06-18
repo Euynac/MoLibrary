@@ -185,7 +185,6 @@ public sealed class ConfigurationFacade(
             Category = definition.Category,
             SchemaVersion = definition.SchemaVersion,
             SchemaHash = definition.SchemaHash,
-            LastSeenTime = definition.LastSeenTime,
             Origin = definition.Origin
         };
     }
@@ -240,6 +239,29 @@ public sealed class ConfigurationFacade(
         {
             return Task.FromResult<Res<ConfigurationStorageOverview>>(
                 Res.Fail($"Failed to get configuration storage overview: {ex.GetMessageRecursively()}"));
+        }
+    }
+
+    /// <summary>
+    /// Gets schema publish history entries for one configuration definition.
+    /// </summary>
+    /// <param name="definitionKey">The definition key.</param>
+    /// <param name="limit">Maximum number of newest entries to return.</param>
+    /// <returns>Newest schema publish history entries first.</returns>
+    public async Task<Res<IReadOnlyList<ConfigurationDefinitionPublishHistory>>> GetDefinitionPublishHistoriesAsync(
+        string definitionKey,
+        int limit = 20)
+    {
+        try
+        {
+            return Res.Ok(await metadataStore.ListDefinitionPublishHistoriesAsync(
+                definitionKey,
+                limit,
+                CancellationToken.None));
+        }
+        catch (Exception ex)
+        {
+            return Res.Fail($"Failed to get configuration definition publish histories: {ex.GetMessageRecursively()}");
         }
     }
 
