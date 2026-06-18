@@ -1,5 +1,6 @@
 using System.Collections;
 using System.ComponentModel.DataAnnotations;
+using System.Globalization;
 using System.Reflection;
 using Microsoft.Extensions.Configuration;
 using Monica.Configuration.Annotations;
@@ -84,7 +85,8 @@ internal sealed class ConfigurationDefinitionScanner(
                 ? BuildListTemplate(type, path, configurationPath, inheritedReloadBehavior, option)
                 : null,
             Children = children,
-            ValidationRules = GetValidationRules(type, type.GetCustomAttributes<ValidationAttribute>())
+            ValidationRules = GetValidationRules(type, type.GetCustomAttributes<ValidationAttribute>()),
+            EnumValues = GetEnumValues(type)
         };
     }
 
@@ -385,6 +387,30 @@ internal sealed class ConfigurationDefinitionScanner(
         }
 
         return rules;
+    }
+
+    private static IReadOnlyList<ConfigurationEnumValue> GetEnumValues(Type nodeType)
+    {
+        var actual = Nullable.GetUnderlyingType(nodeType) ?? nodeType;
+        if (!actual.IsEnum)
+        {
+            return [];
+        }
+
+        return Enum.GetNames(actual)
+            .Select(name => new ConfigurationEnumValue
+            {
+                Name = name,
+                Value = ToInvariantEnumNumber(Enum.Parse(actual, name))
+            })
+            .ToArray();
+    }
+
+    private static string ToInvariantEnumNumber(object enumValue)
+    {
+        var underlyingType = Enum.GetUnderlyingType(enumValue.GetType());
+        var numericValue = Convert.ChangeType(enumValue, underlyingType, CultureInfo.InvariantCulture);
+        return Convert.ToString(numericValue, CultureInfo.InvariantCulture) ?? string.Empty;
     }
 
     private static decimal? ToDecimal(object? value)

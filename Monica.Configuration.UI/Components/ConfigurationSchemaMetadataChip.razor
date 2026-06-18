@@ -22,7 +22,12 @@
                 @L["State:Definitions:SchemaLastSeenDetail", FormatLastSeen()]
             </MudText>
             <MudText Typo="Typo.caption">@L["State:Definitions:SchemaHashDetail"]</MudText>
-            <code>@DisplayHash</code>
+            <MudText Typo="Typo.caption" Class="configuration-schema-hash-short">
+                @ShortHash
+            </MudText>
+            <MudText Typo="Typo.caption" Class="configuration-schema-hash-value">
+                @DisplayHash
+            </MudText>
         </MudStack>
     </TooltipContent>
 </MudTooltip>
@@ -40,6 +45,25 @@
         string.IsNullOrWhiteSpace(SchemaHash)
             ? L["State:Definitions:SchemaHashMissing"].Value
             : SchemaHash;
+
+    private string ShortHash
+    {
+        get
+        {
+            if (string.IsNullOrWhiteSpace(SchemaHash))
+            {
+                return L["State:Definitions:SchemaHashMissing"].Value;
+            }
+
+            var hash = SchemaHash;
+            if (hash.StartsWith("sha256:", StringComparison.OrdinalIgnoreCase) && hash.Length > 22)
+            {
+                return $"{hash[..14]}...{hash[^8..]}";
+            }
+
+            return hash.Length > 24 ? $"{hash[..12]}...{hash[^8..]}" : hash;
+        }
+    }
 
     private string FormatLastSeen()
     {

@@ -1,15 +1,21 @@
 .configuration-schema-metadata-tooltip {
     max-width: min(28rem, 80vw);
+    color: inherit;
 }
 
 .configuration-schema-metadata-title {
     font-weight: 600;
 }
 
-.configuration-schema-metadata-tooltip code {
+.configuration-schema-hash-short,
+.configuration-schema-hash-value {
     display: block;
     max-width: 100%;
     overflow-wrap: anywhere;
     word-break: break-word;
-    color: var(--mud-palette-text-primary);
+    color: inherit;
+}
+
+.configuration-schema-hash-short {
+    font-weight: 600;
 }

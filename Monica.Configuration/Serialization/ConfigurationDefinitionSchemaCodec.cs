@@ -125,7 +125,17 @@ public static class ConfigurationDefinitionSchemaCodec
             DictionaryTemplate = node.DictionaryTemplate is null ? null : ToDictionaryDto(node.DictionaryTemplate),
             ListTemplate = node.ListTemplate is null ? null : ToListDto(node.ListTemplate),
             Children = node.Children.Count == 0 ? null : node.Children.Select(ToNodeDto).ToArray(),
-            ValidationRules = node.ValidationRules.Count == 0 ? null : node.ValidationRules.Select(ToRuleDto).ToArray()
+            ValidationRules = node.ValidationRules.Count == 0 ? null : node.ValidationRules.Select(ToRuleDto).ToArray(),
+            EnumValues = node.EnumValues.Count == 0 ? null : node.EnumValues.Select(ToEnumValueDto).ToArray()
+        };
+    }
+
+    private static EnumValueDto ToEnumValueDto(ConfigurationEnumValue value)
+    {
+        return new EnumValueDto
+        {
+            Name = value.Name,
+            Value = value.Value
         };
     }
 
@@ -231,7 +241,17 @@ public static class ConfigurationDefinitionSchemaCodec
                 ? null
                 : FromListDto(dto.ListTemplate, path, sectionPath, rootClrTypeName),
             Children = children,
-            ValidationRules = (dto.ValidationRules ?? []).Select(FromRuleDto).ToArray()
+            ValidationRules = (dto.ValidationRules ?? []).Select(FromRuleDto).ToArray(),
+            EnumValues = (dto.EnumValues ?? []).Select(FromEnumValueDto).ToArray()
+        };
+    }
+
+    private static ConfigurationEnumValue FromEnumValueDto(EnumValueDto dto)
+    {
+        return new ConfigurationEnumValue
+        {
+            Name = dto.Name,
+            Value = dto.Value
         };
     }
 
@@ -373,6 +393,15 @@ public static class ConfigurationDefinitionSchemaCodec
         public IReadOnlyList<NodeDto>? Children { get; init; }
 
         public IReadOnlyList<RuleDto>? ValidationRules { get; init; }
+
+        public IReadOnlyList<EnumValueDto>? EnumValues { get; init; }
+    }
+
+    private sealed record EnumValueDto
+    {
+        public string Name { get; init; } = "";
+
+        public string Value { get; init; } = "";
     }
 
     private sealed record DictionaryTemplateDto

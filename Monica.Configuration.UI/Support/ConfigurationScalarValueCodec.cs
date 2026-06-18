@@ -17,13 +17,13 @@ internal static class ConfigurationScalarValueCodec
     {
         displayValue ??= string.Empty;
 
-        var validationError = ValidateDisplayValue(node, displayValue, localizer);
+        var normalizedDisplayValue = NormalizeDisplayValue(node, displayValue);
+        var validationError = ValidateDisplayValue(node, normalizedDisplayValue, localizer);
         if (!string.IsNullOrWhiteSpace(validationError))
         {
             return ConfigurationScalarValueResult.Invalid(displayValue, validationError);
         }
 
-        var normalizedDisplayValue = NormalizeDisplayValue(node, displayValue);
         var storedJson = rawJson ?? CreateDefaultStoredJson(node, normalizedDisplayValue);
         return ConfigurationScalarValueResult.Valid(
             ConfigurationStoredValue.FromJson(storedJson),
@@ -36,6 +36,7 @@ internal static class ConfigurationScalarValueCodec
         IStringLocalizer<ConfigurationUIResource> localizer)
     {
         value ??= string.Empty;
+        value = NormalizeDisplayValue(node, value);
 
         if (string.IsNullOrWhiteSpace(value))
         {
@@ -83,6 +84,12 @@ internal static class ConfigurationScalarValueCodec
 
     public static string NormalizeDisplayValue(ConfigurationNodeDefinition node, string displayValue)
     {
+        if (node.ValueKind == ConfigurationValueKind.Enum
+            && node.TryNormalizeEnumDisplayValue(displayValue, out var enumDisplayValue))
+        {
+            return enumDisplayValue;
+        }
+
         return node.ValueKind == ConfigurationValueKind.TimeSpan && ConfigurationScalarTextCodec.TryParseTimeSpan(displayValue, out var value)
             ? ConfigurationScalarTextCodec.FormatTimeSpan(value)
             : displayValue;
@@ -103,6 +110,8 @@ internal static class ConfigurationScalarValueCodec
                 JsonSerializer.Serialize(dateTimeValue.ToString("O", CultureInfo.InvariantCulture)),
             ConfigurationValueKind.TimeSpan when ConfigurationScalarTextCodec.TryParseTimeSpan(displayValue, out var timeSpanValue) =>
                 ConfigurationScalarTextCodec.ToTimeSpanJson(timeSpanValue),
+            ConfigurationValueKind.Enum =>
+                JsonSerializer.Serialize(displayValue),
             ConfigurationValueKind.Json when !string.IsNullOrWhiteSpace(displayValue) =>
                 displayValue,
             _ => JsonSerializer.Serialize(displayValue)

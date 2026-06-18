@@ -301,7 +301,10 @@ internal sealed class ConfigurationJsonDraftService(
                     ]);
             }
 
-            Visit(request.ScopeNode, request.ScopeNode.RelativePath, _originalNode, incoming, valueMissing: false);
+            var normalizedOriginal = NormalizeJsonNode(request.ScopeNode, _originalNode);
+            var normalizedIncoming = NormalizeJsonNode(request.ScopeNode, incoming);
+
+            Visit(request.ScopeNode, request.ScopeNode.RelativePath, normalizedOriginal, normalizedIncoming, valueMissing: false);
 
             var outputChanges = request.CompactChanges
                 ? changeCompactor.Compact(
@@ -887,6 +890,7 @@ internal sealed class ConfigurationJsonDraftService(
                 ConfigurationValueKind.Decimal or ConfigurationValueKind.Floating => ConvertDecimal(element),
                 ConfigurationValueKind.DateTime => ConvertDateTime(element),
                 ConfigurationValueKind.TimeSpan => ConvertTimeSpan(element),
+                ConfigurationValueKind.Enum => ConvertEnum(schema, element),
                 ConfigurationValueKind.Json => ScalarConversion.Valid(ConfigurationStoredValue.FromJson(value.ToJsonString()), DisplayJson(value, schema)),
                 _ => ConvertStringLike(element)
             };
@@ -975,12 +979,103 @@ internal sealed class ConfigurationJsonDraftService(
             return ScalarConversion.Invalid(localizer["State:Editor:InvalidTimeSpan"], text ?? element.GetRawText());
         }
 
+        private ScalarConversion ConvertEnum(ConfigurationNodeDefinition schema, JsonElement element)
+        {
+            var text = ReadStringLike(element);
+            if (text is null)
+            {
+                return ScalarConversion.Invalid(localizer["ImportExport:Diagnostics:ExpectedScalar"], element.GetRawText());
+            }
+
+            var result = ConfigurationScalarValueCodec.ConvertDisplayValue(schema, text, localizer);
+            return result is { IsValid: true, StoredValue: not null }
+                ? ScalarConversion.Valid(result.StoredValue, result.DisplayValue)
+                : ScalarConversion.Invalid(result.ValidationError ?? localizer["State:Editor:InvalidPattern"], text);
+        }
+
         private ScalarConversion ConvertStringLike(JsonElement element)
         {
             var text = ReadStringLike(element);
             return text is null
                 ? ScalarConversion.Invalid(localizer["ImportExport:Diagnostics:ExpectedScalar"], element.GetRawText())
                 : ScalarConversion.Valid(ConfigurationStoredValue.FromJson(JsonSerializer.Serialize(text)), text);
+        }
+
+        private JsonNode? NormalizeJsonNode(ConfigurationNodeDefinition schema, JsonNode? node)
+        {
+            if (node is null)
+            {
+                return null;
+            }
+
+            return schema.NodeKind switch
+            {
+                ConfigurationNodeKind.Scalar => NormalizeScalarNode(schema, node),
+                ConfigurationNodeKind.Object => NormalizeObjectNode(schema, node),
+                ConfigurationNodeKind.Dictionary => NormalizeDictionaryNode(schema, node),
+                ConfigurationNodeKind.List => NormalizeListNode(schema, node),
+                _ => CloneNode(node)
+            };
+        }
+
+        private JsonNode? NormalizeScalarNode(ConfigurationNodeDefinition schema, JsonNode node)
+        {
+            var conversion = TryConvertScalar(schema, node);
+            return conversion is { IsValid: true, StoredValue: not null }
+                ? JsonNode.Parse(conversion.StoredValue.Json)
+                : CloneNode(node);
+        }
+
+        private JsonNode? NormalizeObjectNode(ConfigurationNodeDefinition schema, JsonNode node)
+        {
+            if (node is not JsonObject source)
+            {
+                return CloneNode(node);
+            }
+
+            var normalized = new JsonObject();
+            foreach (var property in source)
+            {
+                var childSchema = schema.Children.FirstOrDefault(child =>
+                    string.Equals(child.Name, property.Key, StringComparison.Ordinal));
+                normalized[property.Key] = childSchema is null
+                    ? CloneNode(property.Value)
+                    : NormalizeJsonNode(childSchema, property.Value);
+            }
+
+            return normalized;
+        }
+
+        private JsonNode? NormalizeDictionaryNode(ConfigurationNodeDefinition schema, JsonNode node)
+        {
+            if (node is not JsonObject source || schema.DictionaryTemplate?.ValueTemplate is not { } valueSchema)
+            {
+                return CloneNode(node);
+            }
+
+            var normalized = new JsonObject();
+            foreach (var property in source)
+            {
+                normalized[property.Key] = NormalizeJsonNode(valueSchema, property.Value);
+            }
+
+            return normalized;
+        }
+
+        private JsonNode? NormalizeListNode(ConfigurationNodeDefinition schema, JsonNode node)
+        {
+            if (node is not JsonArray source || schema.ListTemplate?.ItemTemplate is not { } itemSchema)
+            {
+                return CloneNode(node);
+            }
+
+            var normalized = new JsonArray();
+            foreach (var item in source)
+            {
+                normalized.Add(NormalizeJsonNode(itemSchema, item));
+            }
+
+            return normalized;
         }
 
         private static string? ReadStringLike(JsonElement element)

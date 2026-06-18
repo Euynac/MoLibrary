@@ -175,6 +175,7 @@ internal sealed class ConfigurationValidationCoordinator
             ConfigurationValueKind.Floating => ConvertFloating(path, value),
             ConfigurationValueKind.DateTime => ConvertDateTime(path, value),
             ConfigurationValueKind.TimeSpan => ConvertTimeSpan(path, value),
+            ConfigurationValueKind.Enum => ConvertEnum(schema, path, value),
             ConfigurationValueKind.Uri => ConvertUri(path, value),
             ConfigurationValueKind.Json => value.GetRawText(),
             _ => ConvertStringLike(path, value)
@@ -268,6 +269,17 @@ internal sealed class ConfigurationValidationCoordinator
         }
 
         throw ValidationFailed(path, "Expected a valid time span value.");
+    }
+
+    private static string ConvertEnum(
+        ConfigurationNodeDefinition schema,
+        LogicalPath path,
+        JsonElement value)
+    {
+        var text = ConvertStringLike(path, value);
+        return schema.TryNormalizeEnumDisplayValue(text, out var normalized)
+            ? normalized
+            : text;
     }
 
     private static string ConvertUri(LogicalPath path, JsonElement value)

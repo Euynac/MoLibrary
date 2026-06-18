@@ -1,3 +1,5 @@
+using System.Globalization;
+
 namespace Monica.Configuration.Models;
 
 /// <summary>
@@ -84,4 +86,79 @@ public sealed record ConfigurationNodeDefinition
     /// Gets validation rules discovered from standard .NET validation metadata.
     /// </summary>
     public IReadOnlyList<ConfigurationValidationRule> ValidationRules { get; init; } = [];
+
+    /// <summary>
+    /// Gets portable enum members when this scalar node represents an enum.
+    /// </summary>
+    public IReadOnlyList<ConfigurationEnumValue> EnumValues { get; init; } = [];
+
+    /// <summary>
+    /// Attempts to normalize an enum display value from either a name or numeric literal to the canonical enum name.
+    /// </summary>
+    /// <param name="value">The operator-provided enum value.</param>
+    /// <param name="normalized">The canonical enum member name when normalization succeeds.</param>
+    /// <returns>True when the value matches a known enum member.</returns>
+    public bool TryNormalizeEnumDisplayValue(string? value, out string normalized)
+    {
+        normalized = value ?? string.Empty;
+        if (ValueKind != ConfigurationValueKind.Enum || string.IsNullOrWhiteSpace(value))
+        {
+            return false;
+        }
+
+        if (TryNormalizeFromPortableEnumValues(value, out normalized)
+            || TryNormalizeFromRuntimeEnumType(value, out normalized))
+        {
+            return true;
+        }
+
+        normalized = value;
+        return false;
+    }
+
+    private bool TryNormalizeFromPortableEnumValues(string value, out string normalized)
+    {
+        foreach (var enumValue in EnumValues)
+        {
+            if (string.Equals(enumValue.Name, value, StringComparison.OrdinalIgnoreCase)
+                || string.Equals(enumValue.Value, value, StringComparison.OrdinalIgnoreCase))
+            {
+                normalized = enumValue.Name;
+                return true;
+            }
+        }
+
+        normalized = value;
+        return false;
+    }
+
+    private bool TryNormalizeFromRuntimeEnumType(string value, out string normalized)
+    {
+        var enumType = Type.GetType(ClrTypeName, throwOnError: false);
+        if (enumType?.IsEnum is not true)
+        {
+            normalized = value;
+            return false;
+        }
+
+        foreach (var name in Enum.GetNames(enumType))
+        {
+            if (string.Equals(name, value, StringComparison.OrdinalIgnoreCase)
+                || string.Equals(ToInvariantEnumNumber(Enum.Parse(enumType, name)), value, StringComparison.OrdinalIgnoreCase))
+            {
+                normalized = name;
+                return true;
+            }
+        }
+
+        normalized = value;
+        return false;
+    }
+
+    private static string ToInvariantEnumNumber(object enumValue)
+    {
+        var underlyingType = Enum.GetUnderlyingType(enumValue.GetType());
+        var numericValue = Convert.ChangeType(enumValue, underlyingType, CultureInfo.InvariantCulture);
+        return Convert.ToString(numericValue, CultureInfo.InvariantCulture) ?? string.Empty;
+    }
 }

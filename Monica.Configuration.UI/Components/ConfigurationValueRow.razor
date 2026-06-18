@@ -242,7 +242,7 @@
             NodeDisplayName = DisplayName,
             MutationKind = ConfigurationMutationKind.Set,
             NewValue = result.StoredValue,
-            OriginalDisplayValue = EffectiveValue?.DisplayValue,
+            OriginalDisplayValue = NormalizeEffectiveDisplayValue(),
             NewDisplayValue = result.DisplayValue,
             ExpectedSchemaVersion = Definition.SchemaVersion,
             ExpectedValueVersion = EffectiveSource?.Kind == ConfigurationSourceKind.MonicaEffectiveStore ? EffectiveValue?.Version : null,
@@ -321,6 +321,13 @@
         }
 
         return string.Equals(result.DisplayValue, effectiveDisplayValue, StringComparison.Ordinal);
+    }
+
+    private string? NormalizeEffectiveDisplayValue()
+    {
+        return EffectiveValue?.DisplayValue is null
+            ? null
+            : ConfigurationScalarValueCodec.NormalizeDisplayValue(Node, EffectiveValue.DisplayValue);
     }
 
     private ConfigurationStoredValue? TryCreateStoredValueFromDisplay(string displayValue)

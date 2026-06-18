@@ -291,6 +291,7 @@
 
     private void SyncScalarFields(string displayValue)
     {
+        displayValue = ConfigurationScalarValueCodec.NormalizeDisplayValue(Node, displayValue);
         _textValue = Node.ValueKind == ConfigurationValueKind.TimeSpan
             ? ConfigurationScalarTextCodec.NormalizeTimeSpanDisplay(displayValue)
             : displayValue;
