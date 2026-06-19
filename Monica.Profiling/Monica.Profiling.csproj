@@ -6,9 +6,9 @@
 
 	<ItemGroup>
 		<!-- For ETW/EventPipe allocation tracking -->
-		<PackageReference Include="Microsoft.Diagnostics.Tracing.TraceEvent" Version="3.1.28" />
+		<PackageReference Include="Microsoft.Diagnostics.Tracing.TraceEvent" Version="3.2.2" />
 		<!-- For heap snapshot analysis -->
-		<PackageReference Include="Microsoft.Diagnostics.Runtime" Version="3.1.512801"/>
+		<PackageReference Include="Microsoft.Diagnostics.Runtime" Version="4.0.726301"/>
 	</ItemGroup>
 
 	<ItemGroup>

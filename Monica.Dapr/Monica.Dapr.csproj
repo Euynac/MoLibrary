@@ -5,12 +5,12 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Dapr.AspNetCore" Version="1.16.1" />
-    <PackageReference Include="Dapr.Client" Version="1.16.1" />
-    <PackageReference Include="Dapr.DistributedLock" Version="1.16.1" />
-    <PackageReference Include="Dapr.Messaging" Version="1.16.1" />
-	<PackageReference Include="Dapr.Actors.AspNetCore" Version="1.16.1" />
-	<PackageReference Include="Dapr.Actors" Version="1.16.1" />
+    <PackageReference Include="Dapr.AspNetCore" Version="1.17.9" />
+    <PackageReference Include="Dapr.Client" Version="1.17.9" />
+    <PackageReference Include="Dapr.DistributedLock" Version="1.17.9" />
+    <PackageReference Include="Dapr.Messaging" Version="1.17.9" />
+	<PackageReference Include="Dapr.Actors.AspNetCore" Version="1.17.9" />
+	<PackageReference Include="Dapr.Actors" Version="1.17.9" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Monica.Core\Monica.Core.csproj" />
