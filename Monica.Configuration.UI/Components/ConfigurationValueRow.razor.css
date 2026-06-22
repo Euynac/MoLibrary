@@ -9,6 +9,16 @@
     padding-inline-start: 0.5rem;
 }
 
+.configuration-value-row-shell.jump-highlight {
+    outline: 2px solid var(--mud-palette-primary);
+    outline-offset: 2px;
+    border-radius: var(--mud-default-borderradius);
+}
+
+.configuration-value-row-shell.jump-highlight .configuration-value-row {
+    background-color: var(--mud-palette-primary-hover);
+}
+
 .configuration-value-row {
     width: 100%;
 }

@@ -172,6 +172,7 @@
                                                         <ConfigurationValueRow Definition="@_selectedDefinition"
                                                                                Node="@node"
                                                                                EffectiveValue="@GetEffectiveValue(node)"
+                                                                               HighlightedPath="@_highlightedPath"
                                                                                Changed="RefreshPendingCount"
                                                                                CommittedChanged="LoadEffectiveValuesAsync" />
                                                     }
@@ -205,6 +206,7 @@
     private int _validationIssueCount;
     private string? _requestedDefinitionKey;
     private LogicalPath? _requestedPath;
+    private LogicalPath? _highlightedPath;
 
     private bool CanInspectSelectedDefinitionSources =>
         _selectedDefinition?.Origin == ConfigurationDefinitionOrigin.LocalScan;
@@ -319,7 +321,7 @@
     {
         if (_requestedPath is not null)
         {
-            _selectedNode = ResolveNodeByPath(_selectedDefinition?.Root, _requestedPath) ?? _selectedDefinition?.Root;
+            JumpToCurrentDefinitionPath(_requestedPath);
         }
 
         _requestedPath = null;
@@ -344,6 +346,7 @@
 
             _selectedDefinition = detail.Definition;
             _selectedNode = _selectedDefinition.Root;
+            _highlightedPath = null;
             await LoadEffectiveValuesAsync();
         }
         catch (Exception ex)
@@ -516,6 +519,7 @@
     private Task OnSelectedNodeChanged(ConfigurationNodeDefinition? node)
     {
         _selectedNode = node;
+        _highlightedPath = null;
         return Task.CompletedTask;
     }
 
@@ -547,15 +551,7 @@
 
     private async Task SelectSearchMatchAsync(ConfigurationNodeSearchMatch match)
     {
-        var summary = _definitions.FirstOrDefault(definition =>
-            string.Equals(definition.DefinitionKey, match.DefinitionKey, StringComparison.OrdinalIgnoreCase));
-        if (summary is null)
-        {
-            return;
-        }
-
-        await SelectDefinitionAsync(summary);
-        _selectedNode = ResolveNodeByPath(_selectedDefinition?.Root, match.Node.RelativePath) ?? _selectedDefinition?.Root;
+        await JumpToConfigurationPathAsync(match.DefinitionKey, match.Node.RelativePath, null);
     }
 
     private static ConfigurationNodeDefinition? ResolveNodeByPath(ConfigurationNodeDefinition? root, LogicalPath path)
@@ -794,25 +790,62 @@
             L["Dialogs:SaveGroup:Validation:JumpFailed"].Value);
     }
 
-    private async Task JumpToConfigurationPathAsync(string definitionKey, LogicalPath path, string failureMessage)
+    private async Task JumpToConfigurationPathAsync(string definitionKey, LogicalPath path, string? failureMessage)
     {
         var summary = _definitions.FirstOrDefault(definition =>
             string.Equals(definition.DefinitionKey, definitionKey, StringComparison.OrdinalIgnoreCase));
         if (summary is null)
         {
-            Snackbar.Add(failureMessage, Severity.Error);
+            ShowJumpFailure(failureMessage);
             return;
         }
 
         await SelectDefinitionAsync(summary);
-        var node = ResolveNodeByPathOrNearestAncestor(_selectedDefinition?.Root, path);
-        if (node is null)
+        if (!JumpToCurrentDefinitionPath(path))
         {
-            Snackbar.Add(failureMessage, Severity.Error);
-            return;
+            ShowJumpFailure(failureMessage);
+        }
+    }
+
+    private bool JumpToCurrentDefinitionPath(LogicalPath path)
+    {
+        var root = _selectedDefinition?.Root;
+        if (root is null)
+        {
+            return false;
         }
 
-        _selectedNode = node;
+        var target = ResolveNodeByPathOrNearestAncestor(root, path);
+        if (target is null)
+        {
+            return false;
+        }
+
+        _selectedNode = ResolveDisplaySectionForTarget(root, target) ?? root;
+        _highlightedPath = target.RelativePath;
+        return true;
+    }
+
+    private static ConfigurationNodeDefinition? ResolveDisplaySectionForTarget(
+        ConfigurationNodeDefinition root,
+        ConfigurationNodeDefinition target)
+    {
+        if (target.RelativePath.Depth == 0 || !IsSimpleEditableNode(target))
+        {
+            return target;
+        }
+
+        for (var depth = target.RelativePath.Depth - 1; depth >= 0; depth--)
+        {
+            var candidatePath = new LogicalPath(target.RelativePath.Segments.Take(depth).ToArray());
+            var candidate = ResolveNodeByPath(root, candidatePath);
+            if (candidate is not null && !IsSimpleEditableNode(candidate))
+            {
+                return candidate;
+            }
+        }
+
+        return root;
     }
 
     private static ConfigurationNodeDefinition? ResolveNodeByPathOrNearestAncestor(ConfigurationNodeDefinition? root, LogicalPath path)
@@ -833,6 +866,14 @@
         }
 
         return root;
+    }
+
+    private void ShowJumpFailure(string? failureMessage)
+    {
+        if (!string.IsNullOrWhiteSpace(failureMessage))
+        {
+            Snackbar.Add(failureMessage, Severity.Error);
+        }
     }
 
     private sealed record ConfigurationSectionItem(
