@@ -347,8 +347,14 @@
         "ChangeList": "修改列表"
       },
       "ChangeCount": "{0} 个修改",
+      "ChangeListActions": "操作",
       "ExternalTargetSummary": "{0} 个暂存修改会写入当前生效的外部配置来源。",
       "MissingSourceTarget": "暂存修改缺少外部配置来源信息。",
+      "Actions": {
+        "JumpToChange": "跳转到配置项",
+        "UndoChange": "撤销修改",
+        "JumpFailed": "无法跳转到暂存修改配置项。"
+      },
       "Validation": {
         "Title": "验证异常",
         "BlockedSummary": "需要先修正或撤销 {0} 个验证异常，才能保存。",

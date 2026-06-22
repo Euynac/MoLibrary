@@ -572,6 +572,7 @@
         var parameters = new DialogParameters<SaveMutationGroupDialog>();
         parameters.Add(dialog => dialog.Changes, changes);
         parameters.Add(dialog => dialog.ValidationIssues, validationIssues);
+        parameters.Add(dialog => dialog.UndoRequested, EventCallback.Factory.Create<PendingChange>(this, UndoPendingChangeAsync));
         var dialog = await DialogService.ShowAsync<SaveMutationGroupDialog>(L["Dialogs:SaveGroup:Title"], parameters, new DialogOptions
         {
             MaxWidth = MaxWidth.ExtraLarge,
@@ -580,6 +581,12 @@
         var result = await dialog.Result;
         if (result is not { Canceled: false })
         {
+            return;
+        }
+
+        if (result.Data is SaveMutationGroupDialogResult { JumpChangeTarget: { } jumpChangeTarget })
+        {
+            await JumpToPendingChangeAsync(jumpChangeTarget);
             return;
         }
 
@@ -601,6 +608,12 @@
     {
         StateStore.Clear();
         return Task.CompletedTask;
+    }
+
+    private Task UndoPendingChangeAsync(PendingChange change)
+    {
+        StateStore.Undo(change.DefinitionKey, change.LogicalPath);
+        return RefreshPendingCount();
     }
 
     private async Task OpenImportDialog()
@@ -765,25 +778,61 @@
         _ = InvokeAsync(StateHasChanged);
     }
 
-    private async Task JumpToValidationIssueAsync(ConfigurationValidationIssue issue)
+    private Task JumpToPendingChangeAsync(PendingChange change)
+    {
+        return JumpToConfigurationPathAsync(
+            change.DefinitionKey,
+            change.LogicalPath,
+            L["Dialogs:SaveGroup:Actions:JumpFailed"].Value);
+    }
+
+    private Task JumpToValidationIssueAsync(ConfigurationValidationIssue issue)
+    {
+        return JumpToConfigurationPathAsync(
+            issue.DefinitionKey,
+            issue.LogicalPath,
+            L["Dialogs:SaveGroup:Validation:JumpFailed"].Value);
+    }
+
+    private async Task JumpToConfigurationPathAsync(string definitionKey, LogicalPath path, string failureMessage)
     {
         var summary = _definitions.FirstOrDefault(definition =>
-            string.Equals(definition.DefinitionKey, issue.DefinitionKey, StringComparison.OrdinalIgnoreCase));
+            string.Equals(definition.DefinitionKey, definitionKey, StringComparison.OrdinalIgnoreCase));
         if (summary is null)
         {
-            Snackbar.Add(L["Dialogs:SaveGroup:Validation:JumpFailed"], Severity.Error);
+            Snackbar.Add(failureMessage, Severity.Error);
             return;
         }
 
         await SelectDefinitionAsync(summary);
-        var node = ResolveNodeByPath(_selectedDefinition?.Root, issue.LogicalPath);
+        var node = ResolveNodeByPathOrNearestAncestor(_selectedDefinition?.Root, path);
         if (node is null)
         {
-            Snackbar.Add(L["Dialogs:SaveGroup:Validation:JumpFailed"], Severity.Error);
+            Snackbar.Add(failureMessage, Severity.Error);
             return;
         }
 
         _selectedNode = node;
+    }
+
+    private static ConfigurationNodeDefinition? ResolveNodeByPathOrNearestAncestor(ConfigurationNodeDefinition? root, LogicalPath path)
+    {
+        if (root is null)
+        {
+            return null;
+        }
+
+        for (var depth = path.Depth; depth >= 0; depth--)
+        {
+            var candidatePath = new LogicalPath(path.Segments.Take(depth).ToArray());
+            var candidate = ResolveNodeByPath(root, candidatePath);
+            if (candidate is not null)
+            {
+                return candidate;
+            }
+        }
+
+        return root;
     }
 
     private sealed record ConfigurationSectionItem(

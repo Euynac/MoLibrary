@@ -347,8 +347,14 @@
         "ChangeList": "Change list"
       },
       "ChangeCount": "{0} changes",
+      "ChangeListActions": "Actions",
       "ExternalTargetSummary": "{0} staged changes will write the currently effective external configuration source.",
       "MissingSourceTarget": "The staged change is missing external source target metadata.",
+      "Actions": {
+        "JumpToChange": "Jump to configuration item",
+        "UndoChange": "Undo change",
+        "JumpFailed": "Failed to jump to the staged change."
+      },
       "Validation": {
         "Title": "Validation issues",
         "BlockedSummary": "{0} validation issues must be fixed or undone before saving.",

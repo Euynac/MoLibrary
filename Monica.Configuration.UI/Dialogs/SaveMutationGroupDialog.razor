@@ -56,13 +56,13 @@
                                 </MudStack>
                             }
 
-                            @if (Changes.Count == 0)
+                            @if (_changes.Count == 0)
                             {
                                 <MudAlert Severity="Severity.Info">@L["Dialogs:SaveGroup:Validation:NoSaveableChanges"]</MudAlert>
                             }
                             else
                             {
-                                <MudTable T="PendingChange" Items="@Changes" Dense="true" Hover="true" Elevation="0">
+                                <MudTable T="PendingChange" Items="@_changes" Dense="true" Hover="true" Elevation="0">
                                     <HeaderContent>
                                         <MudTh>@L["State:Columns:Definition"]</MudTh>
                                         <MudTh>@L["State:Columns:Path"]</MudTh>
@@ -70,6 +70,7 @@
                                         <MudTh>@L["History:Columns:Kind"]</MudTh>
                                         <MudTh>@L["State:Columns:OldValue"]</MudTh>
                                         <MudTh>@L["State:Columns:NewValue"]</MudTh>
+                                        <MudTh Class="configuration-change-actions-column">@L["Dialogs:SaveGroup:ChangeListActions"]</MudTh>
                                     </HeaderContent>
                                     <RowTemplate>
                                         <MudTd DataLabel="@L["State:Columns:Definition"]">@context.DefinitionDisplayName</MudTd>
@@ -78,6 +79,24 @@
                                         <MudTd DataLabel="@L["History:Columns:Kind"]">@context.MutationKind</MudTd>
                                         <MudTd DataLabel="@L["State:Columns:OldValue"]">@DisplayValue(context, context.OriginalDisplayValue)</MudTd>
                                         <MudTd DataLabel="@L["State:Columns:NewValue"]">@DisplayValue(context, context.NewDisplayValue)</MudTd>
+                                        <MudTd DataLabel="@L["Dialogs:SaveGroup:ChangeListActions"]" Class="configuration-change-actions-cell">
+                                            <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.FlexEnd" Spacing="1">
+                                                <MudTooltip Text="@L["Dialogs:SaveGroup:Actions:JumpToChange"]">
+                                                    <MudIconButton Icon="@Icons.Material.Filled.NearMe"
+                                                                   Size="Size.Small"
+                                                                   Color="Color.Primary"
+                                                                   Disabled="_saving"
+                                                                   OnClick="@(() => JumpToChange(context))" />
+                                                </MudTooltip>
+                                                <MudTooltip Text="@L["Dialogs:SaveGroup:Actions:UndoChange"]">
+                                                    <MudIconButton Icon="@Icons.Material.Filled.Undo"
+                                                                   Size="Size.Small"
+                                                                   Color="Color.Warning"
+                                                                   Disabled="_saving"
+                                                                   OnClick="@(() => UndoChangeAsync(context))" />
+                                                </MudTooltip>
+                                            </MudStack>
+                                        </MudTd>
                                     </RowTemplate>
                                 </MudTable>
                             }
@@ -98,8 +117,8 @@
                    Variant="Variant.Filled"
                    StartIcon="@Icons.Material.Filled.Save"
                    OnClick="SaveAsync"
-                   Disabled="@(_saving || Changes.Count == 0 || ValidationIssues.Count > 0 || string.IsNullOrWhiteSpace(_label))">
-            @L["Group:SaveCount", Changes.Count]
+                   Disabled="@(_saving || _changes.Count == 0 || ValidationIssues.Count > 0 || string.IsNullOrWhiteSpace(_label))">
+            @L["Group:SaveCount", _changes.Count]
         </MudButton>
     </DialogActions>
 </MudDialog>
@@ -108,13 +127,27 @@
     [CascadingParameter] private IMudDialogInstance MudDialog { get; set; } = null!;
     [Parameter] public IReadOnlyList<PendingChange> Changes { get; set; } = [];
     [Parameter] public IReadOnlyList<ConfigurationValidationIssue> ValidationIssues { get; set; } = [];
+    [Parameter] public EventCallback<PendingChange> UndoRequested { get; set; }
 
     private string _label = string.Empty;
     private string? _reason;
     private string? _error;
     private bool _saving;
+    private bool _changesInitialized;
+    private List<PendingChange> _changes = [];
 
-    private int ExternalChangeCount => Changes.Count(change => change.TargetKind == ConfigurationMutationTargetKind.ExternalConfigurationSource);
+    private int ExternalChangeCount => _changes.Count(change => change.TargetKind == ConfigurationMutationTargetKind.ExternalConfigurationSource);
+
+    protected override void OnParametersSet()
+    {
+        if (_changesInitialized)
+        {
+            return;
+        }
+
+        _changes.AddRange(Changes);
+        _changesInitialized = true;
+    }
 
     protected override void OnInitialized()
     {
@@ -123,11 +156,12 @@
 
     private async Task SaveAsync()
     {
-        if (Changes.Count == 0)
+        if (_changes.Count == 0)
         {
             return;
         }
 
+        var changes = _changes.ToArray();
         _saving = true;
         _error = null;
 
@@ -143,7 +177,7 @@
         var definitionKeys = new List<string>();
         var latestVersionsByDefinition = new Dictionary<string, long?>(StringComparer.OrdinalIgnoreCase);
 
-        foreach (var change in Changes)
+        foreach (var change in changes)
         {
             var result = change.TargetKind == ConfigurationMutationTargetKind.ExternalConfigurationSource
                 ? await ApplyExternalChangeAsync(change, group.GroupId)
@@ -274,5 +308,28 @@
     private void JumpToIssue(ConfigurationValidationIssue issue)
     {
         MudDialog.Close(DialogResult.Ok(SaveMutationGroupDialogResult.JumpTo(issue)));
+    }
+
+    private void JumpToChange(PendingChange change)
+    {
+        MudDialog.Close(DialogResult.Ok(SaveMutationGroupDialogResult.JumpTo(change)));
+    }
+
+    private async Task UndoChangeAsync(PendingChange change)
+    {
+        var index = _changes.FindIndex(candidate => IsSameChange(candidate, change));
+        if (index < 0)
+        {
+            return;
+        }
+
+        _changes.RemoveAt(index);
+        await UndoRequested.InvokeAsync(change);
+    }
+
+    private static bool IsSameChange(PendingChange left, PendingChange right)
+    {
+        return string.Equals(left.DefinitionKey, right.DefinitionKey, StringComparison.Ordinal)
+               && left.LogicalPath.Equals(right.LogicalPath);
     }
 }

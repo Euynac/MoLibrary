@@ -19,6 +19,11 @@ public sealed record SaveMutationGroupDialogResult
     public ConfigurationValidationIssue? JumpTarget { get; init; }
 
     /// <summary>
+    /// Gets the staged change the operator wants to edit.
+    /// </summary>
+    public PendingChange? JumpChangeTarget { get; init; }
+
+    /// <summary>
     /// Creates a saved-group result.
     /// </summary>
     /// <param name="group">The persisted mutation group.</param>
@@ -41,6 +46,19 @@ public sealed record SaveMutationGroupDialogResult
         return new SaveMutationGroupDialogResult
         {
             JumpTarget = issue
+        };
+    }
+
+    /// <summary>
+    /// Creates a jump-to-staged-change result.
+    /// </summary>
+    /// <param name="change">The staged change to jump to.</param>
+    /// <returns>The dialog result.</returns>
+    public static SaveMutationGroupDialogResult JumpTo(PendingChange change)
+    {
+        return new SaveMutationGroupDialogResult
+        {
+            JumpChangeTarget = change
         };
     }
 }
