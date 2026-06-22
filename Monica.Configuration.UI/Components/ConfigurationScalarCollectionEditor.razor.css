@@ -32,6 +32,28 @@
     border-radius: var(--mud-default-borderradius);
 }
 
+.configuration-scalar-list-item.collection-item-added ::deep .configuration-scalar-list-chip {
+    border-color: var(--mo-color-state-success-soft-border);
+    background-color: var(--mo-color-state-success-soft-background);
+    color: var(--mo-color-state-success-soft-text);
+}
+
+.configuration-scalar-list-item.collection-item-modified ::deep .configuration-scalar-list-chip {
+    border-color: var(--mo-color-state-warning-soft-border);
+    background-color: var(--mo-color-state-warning-soft-background);
+    color: var(--mo-color-state-warning-soft-text);
+}
+
+.configuration-scalar-list-item.collection-item-deleted ::deep .configuration-scalar-list-chip {
+    border-color: var(--mo-color-state-error-soft-border);
+    background-color: var(--mo-color-state-error-soft-background);
+    color: var(--mo-color-state-error-soft-text);
+}
+
+.configuration-scalar-list-item.collection-item-deleted ::deep .configuration-scalar-list-chip .mud-chip-content {
+    text-decoration: line-through;
+}
+
 .configuration-scalar-list-item ::deep .configuration-scalar-list-chip {
     max-width: 16rem;
 }
@@ -75,6 +97,32 @@
 .configuration-scalar-dictionary-row,
 .configuration-scalar-dictionary-add-row {
     grid-template-columns: minmax(7rem, 0.8fr) minmax(9rem, 1.2fr) max-content;
+}
+
+.configuration-scalar-dictionary-row {
+    padding: 0.25rem;
+    border-inline-start: 2px solid transparent;
+    border-radius: var(--mud-default-borderradius);
+}
+
+.configuration-scalar-dictionary-row.collection-item-added {
+    border-inline-start-color: var(--mo-color-state-success-soft-border);
+    background-color: var(--mo-color-state-success-soft-background);
+}
+
+.configuration-scalar-dictionary-row.collection-item-modified {
+    border-inline-start-color: var(--mo-color-state-warning-soft-border);
+    background-color: var(--mo-color-state-warning-soft-background);
+}
+
+.configuration-scalar-dictionary-row.collection-item-deleted {
+    border-inline-start-color: var(--mo-color-state-error-soft-border);
+    background-color: var(--mo-color-state-error-soft-background);
+}
+
+.configuration-scalar-dictionary-row.collection-item-deleted ::deep input {
+    color: var(--mo-color-state-error-soft-text);
+    text-decoration: line-through;
 }
 
 .configuration-scalar-dictionary-items {

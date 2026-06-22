@@ -91,6 +91,8 @@
       "ItemError": "{0}: {1}",
       "EntryError": "{0}: {1}",
       "ItemActions": "Item actions",
+      "RestoreItem": "Restore item",
+      "RestoreEntry": "Restore entry",
       "MoveUp": "Move up",
       "MoveDown": "Move down"
     }

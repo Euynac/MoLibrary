@@ -77,6 +77,7 @@
                         <ConfigurationScalarCollectionEditor Node="@Node"
                                                              EffectiveValue="@EffectiveValue"
                                                              PendingChange="@PendingChange"
+                                                             ScopedPendingChanges="@ScopedPendingChanges"
                                                              Disabled="@IsCurrentSourceReadOnly"
                                                              ValidationIssue="@ValidationIssue"
                                                              ValueChanged="StageScalarCollection" />
@@ -155,8 +156,10 @@
 
     private IReadOnlyList<PendingChange> ScopedPendingChanges => StateStore.GetScope(Definition.DefinitionKey, Node.RelativePath);
 
-    private bool HasPendingChanges => Node.NodeKind == ConfigurationNodeKind.Scalar || Node.IsScalarCollection()
+    private bool HasPendingChanges => Node.NodeKind == ConfigurationNodeKind.Scalar
         ? PendingChange is not null || ValidationIssue is not null
+        : Node.IsScalarCollection()
+            ? PendingChange is not null || ScopedPendingChanges.Count > 0 || ValidationIssue is not null
         : ScopedPendingChanges.Count > 0;
 
     private bool IsComplexNode => Node.NodeKind != ConfigurationNodeKind.Scalar && !Node.IsScalarCollection();
@@ -545,7 +548,11 @@
 
     private async Task Undo()
     {
-        if (Node.NodeKind == ConfigurationNodeKind.Scalar || Node.IsScalarCollection())
+        if (Node.IsScalarCollection())
+        {
+            StateStore.UndoScope(Definition.DefinitionKey, Node.RelativePath);
+        }
+        else if (Node.NodeKind == ConfigurationNodeKind.Scalar)
         {
             StateStore.Undo(Definition.DefinitionKey, Node.RelativePath);
         }

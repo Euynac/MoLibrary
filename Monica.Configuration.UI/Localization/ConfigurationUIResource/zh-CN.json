@@ -91,6 +91,8 @@
       "ItemError": "{0}: {1}",
       "EntryError": "{0}: {1}",
       "ItemActions": "项操作",
+      "RestoreItem": "恢复项",
+      "RestoreEntry": "恢复条目",
       "MoveUp": "上移",
       "MoveDown": "下移"
     }

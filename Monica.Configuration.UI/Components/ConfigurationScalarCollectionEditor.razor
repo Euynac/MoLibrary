@@ -37,19 +37,29 @@
                                          TransformOrigin="Origin.TopRight"
                                          title="@L["State:Collections:ItemActions"]">
                                     <MudMenuItem Icon="@Icons.Material.Filled.KeyboardArrowUp"
-                                                 Disabled="@(itemIndex == 0)"
+                                                 Disabled="@(item.IsDeleted || itemIndex == 0)"
                                                  OnClick="@(() => MoveListItem(itemId, -1))">
                                         @L["State:Collections:MoveUp"]
                                     </MudMenuItem>
                                     <MudMenuItem Icon="@Icons.Material.Filled.KeyboardArrowDown"
-                                                 Disabled="@(itemIndex == _listItems.Count - 1)"
+                                                 Disabled="@(item.IsDeleted || itemIndex == _listItems.Count - 1)"
                                                  OnClick="@(() => MoveListItem(itemId, 1))">
                                         @L["State:Collections:MoveDown"]
                                     </MudMenuItem>
-                                    <MudMenuItem Icon="@Icons.Material.Filled.Delete"
-                                                 OnClick="@(() => RemoveListItem(itemId))">
-                                        @L["Common:Actions:Delete"]
-                                    </MudMenuItem>
+                                    @if (item.IsDeleted)
+                                    {
+                                        <MudMenuItem Icon="@Icons.Material.Filled.Restore"
+                                                     OnClick="@(() => RestoreListItem(itemId))">
+                                            @L["State:Collections:RestoreItem"]
+                                        </MudMenuItem>
+                                    }
+                                    else
+                                    {
+                                        <MudMenuItem Icon="@Icons.Material.Filled.Delete"
+                                                     OnClick="@(() => RemoveListItem(itemId))">
+                                            @L["Common:Actions:Delete"]
+                                        </MudMenuItem>
+                                    }
                                 </MudMenu>
                             </div>
                         </div>
@@ -130,7 +140,7 @@
                     @foreach (var item in _dictionaryItems)
                     {
                         var itemId = item.Id;
-                        <div class="configuration-scalar-dictionary-row" @key="item.Id">
+                        <div class="@DictionaryRowClass(item)" @key="item.Id">
                             <MudTextField T="string"
                                           Value="@item.Key"
                                           ValueChanged="@((string? value) => OnDictionaryKeyChanged(itemId, value))"
@@ -139,7 +149,7 @@
                                           Immediate="true"
                                           Placeholder="@L["State:Collections:Key"]"
                                           Error="@(!string.IsNullOrWhiteSpace(item.KeyError))"
-                                          Disabled="@Disabled" />
+                                          Disabled="@(Disabled || item.IsDeleted)" />
                             @if (DictionaryValueChoices.Count > 0)
                             {
                                 <MudSelect T="string"
@@ -149,7 +159,7 @@
                                            Margin="Margin.Dense"
                                            Dense="true"
                                            Error="@(!string.IsNullOrWhiteSpace(item.ValueError))"
-                                           Disabled="@Disabled">
+                                           Disabled="@(Disabled || item.IsDeleted)">
                                     @foreach (var value in DictionaryValueChoices)
                                     {
                                         <MudSelectItem T="string" Value="@value">@value</MudSelectItem>
@@ -166,18 +176,18 @@
                                               Immediate="true"
                                               Placeholder="@L["State:Collections:Value"]"
                                               Error="@(!string.IsNullOrWhiteSpace(item.ValueError))"
-                                              Disabled="@Disabled" />
+                                              Disabled="@(Disabled || item.IsDeleted)" />
                             }
-                            <MudTooltip Text="@L["Common:Actions:Delete"]">
-                                <MudIconButton Icon="@Icons.Material.Filled.Delete"
+                            <MudTooltip Text="@(item.IsDeleted ? L["State:Collections:RestoreEntry"] : L["Common:Actions:Delete"])">
+                                <MudIconButton Icon="@(item.IsDeleted ? Icons.Material.Filled.Restore : Icons.Material.Filled.Delete)"
                                                Size="Size.Small"
-                                               Color="Color.Error"
+                                               Color="@(item.IsDeleted ? Color.Success : Color.Error)"
                                                Class="configuration-scalar-dictionary-delete"
                                                Disabled="@Disabled"
-                                               OnClick="@(() => RemoveDictionaryItem(itemId))" />
+                                               OnClick="@(() => ToggleDictionaryItemDeletedAsync(itemId))" />
                             </MudTooltip>
                         </div>
-                        @if (!string.IsNullOrWhiteSpace(item.KeyError) || !string.IsNullOrWhiteSpace(item.ValueError))
+                        @if (!item.IsDeleted && (!string.IsNullOrWhiteSpace(item.KeyError) || !string.IsNullOrWhiteSpace(item.ValueError)))
                         {
                             <MudText Typo="Typo.caption" Color="Color.Error" Class="configuration-scalar-dictionary-error">
                                 @(item.KeyError ?? item.ValueError)
@@ -252,6 +262,7 @@
     [Parameter, EditorRequired] public ConfigurationNodeDefinition Node { get; set; } = null!;
     [Parameter] public ConfigurationEffectiveValue? EffectiveValue { get; set; }
     [Parameter] public PendingChange? PendingChange { get; set; }
+    [Parameter] public IReadOnlyList<PendingChange> ScopedPendingChanges { get; set; } = [];
     [Parameter] public bool Disabled { get; set; }
     [Parameter] public ConfigurationValidationIssue? ValidationIssue { get; set; }
     [Parameter] public EventCallback<ConfigurationScalarCollectionEditResult> ValueChanged { get; set; }
@@ -268,7 +279,9 @@
     private string? _newDictionaryValueError;
     private string? _lastNodePath;
     private string? _lastEffectiveJson;
-    private string? _lastPendingJson;
+    private string? _lastPendingChangeKey;
+    private string? _lastScopedPendingChangeKey;
+    private string? _lastLocalPendingChangeKey;
     private string? _lastValidationIssueKey;
     private bool _hasLocalState;
 
@@ -282,7 +295,11 @@
 
     private ConfigurationValidationIssue? ActiveIssue => ValidationIssue;
 
-    private bool IsModified => PendingChange is not null;
+    private IReadOnlyList<PendingChange> ScopedPendingChangesForDisplay => PendingChange is null
+        ? ScopedPendingChanges
+        : [];
+
+    private bool IsModified => PendingChange is not null || ScopedPendingChangesForDisplay.Count > 0;
 
     private string EditorClass => string.Join(' ', new[]
     {
@@ -300,8 +317,18 @@
         return string.Join(' ', new[]
         {
             "configuration-scalar-list-item",
+            ChangeStateClass(GetListItemChangeState(item)),
             item.Id == _editingListItemId ? "editing" : null,
             !string.IsNullOrWhiteSpace(item.Error) ? "invalid" : null
+        }.Where(static value => !string.IsNullOrWhiteSpace(value)));
+    }
+
+    private string DictionaryRowClass(ScalarDictionaryItem item)
+    {
+        return string.Join(' ', new[]
+        {
+            "configuration-scalar-dictionary-row",
+            ChangeStateClass(GetDictionaryItemChangeState(item))
         }.Where(static value => !string.IsNullOrWhiteSpace(value)));
     }
 
@@ -309,21 +336,36 @@
     {
         var nodePath = Node.RelativePath.ToCanonicalString();
         var effectiveJson = EffectiveValue?.DisplayValue;
-        var pendingJson = PendingChange?.NewValue.Json;
+        var pendingChangeKey = BuildPendingChangeKey(PendingChange);
+        var scopedPendingChangeKey = BuildScopedPendingChangeKey();
         var validationIssueKey = BuildValidationIssueKey();
         var pathChanged = !string.Equals(_lastNodePath, nodePath, StringComparison.Ordinal);
         var effectiveChanged = !string.Equals(_lastEffectiveJson, effectiveJson, StringComparison.Ordinal);
-        var pendingChanged = !string.Equals(_lastPendingJson, pendingJson, StringComparison.Ordinal);
+        var pendingChanged = !string.Equals(_lastPendingChangeKey, pendingChangeKey, StringComparison.Ordinal);
+        var scopedPendingChanged = !string.Equals(_lastScopedPendingChangeKey, scopedPendingChangeKey, StringComparison.Ordinal);
         var issueChanged = !string.Equals(_lastValidationIssueKey, validationIssueKey, StringComparison.Ordinal);
 
-        if (pathChanged || !_hasLocalState && (pendingChanged || issueChanged) || PendingChange is null && ValidationIssue is null && (pendingChanged || issueChanged || effectiveChanged))
+        if (pathChanged
+            || pendingChanged && !IsLocalPendingChange(pendingChangeKey)
+            || scopedPendingChanged && ScopedPendingChangesForDisplay.Count > 0
+            || !_hasLocalState && (pendingChanged || scopedPendingChanged || issueChanged)
+            || PendingChange is null
+            && ScopedPendingChangesForDisplay.Count == 0
+            && ValidationIssue is null
+            && (pendingChanged || scopedPendingChanged || issueChanged || effectiveChanged))
         {
             SyncFromParameters();
         }
 
         _lastNodePath = nodePath;
         _lastEffectiveJson = effectiveJson;
-        _lastPendingJson = pendingJson;
+        _lastPendingChangeKey = pendingChangeKey;
+        _lastScopedPendingChangeKey = scopedPendingChangeKey;
+        if (PendingChange is null)
+        {
+            _lastLocalPendingChangeKey = null;
+        }
+
         _lastValidationIssueKey = validationIssueKey;
     }
 
@@ -331,6 +373,7 @@
     {
         var json = PendingChange?.NewValue.Json
                    ?? (ValidationIssue?.IsSensitive is true ? null : ValidationIssue?.InvalidDisplayValue)
+                   ?? BuildScopedPendingJson()
                    ?? EffectiveValue?.DisplayValue;
 
         if (Node.IsScalarList())
@@ -349,21 +392,21 @@
         _newDictionaryValue = string.Empty;
         _newDictionaryKeyError = null;
         _newDictionaryValueError = null;
-        _hasLocalState = PendingChange is not null || ValidationIssue is not null;
+        _hasLocalState = IsModified || ValidationIssue is not null;
     }
 
     private void SyncList(string? json)
     {
         _listItems.Clear();
         _nextItemId = 1;
-        if (ParseJson(json) is not JsonArray array)
+        var snapshots = ConfigurationScalarCollectionDiff.BuildListItems(json, EffectiveValue?.DisplayValue, ListItemNode, L);
+        foreach (var snapshot in snapshots)
         {
-            return;
-        }
-
-        foreach (var item in array)
-        {
-            _listItems.Add(new ScalarListItem(_nextItemId++, ReadScalarDisplayValue(item, ListItemNode)));
+            _listItems.Add(new ScalarListItem(_nextItemId++, snapshot.DisplayValue)
+            {
+                OriginalStoredJson = snapshot.OriginalStoredJson,
+                IsDeleted = snapshot.IsDeleted
+            });
         }
     }
 
@@ -371,17 +414,15 @@
     {
         _dictionaryItems.Clear();
         _nextItemId = 1;
-        if (ParseJson(json) is not JsonObject jsonObject)
+        var snapshots = ConfigurationScalarCollectionDiff.BuildDictionaryItems(json, EffectiveValue?.DisplayValue, DictionaryValueNode, L);
+        foreach (var snapshot in snapshots)
         {
-            return;
-        }
-
-        foreach (var pair in jsonObject)
-        {
-            _dictionaryItems.Add(new ScalarDictionaryItem(
-                _nextItemId++,
-                pair.Key,
-                ReadScalarDisplayValue(pair.Value, DictionaryValueNode)));
+            _dictionaryItems.Add(new ScalarDictionaryItem(_nextItemId++, snapshot.Key, snapshot.DisplayValue)
+            {
+                OriginalKey = snapshot.OriginalKey,
+                OriginalStoredJson = snapshot.OriginalStoredJson,
+                IsDeleted = snapshot.IsDeleted
+            });
         }
     }
 
@@ -390,6 +431,46 @@
         return ValidationIssue is null
             ? null
             : $"{ValidationIssue.LogicalPath.ToCanonicalString()}:{ValidationIssue.InvalidDisplayValue}:{ValidationIssue.ValidationError}";
+    }
+
+    private bool IsLocalPendingChange(string? pendingChangeKey)
+    {
+        return pendingChangeKey is not null
+               && string.Equals(pendingChangeKey, _lastLocalPendingChangeKey, StringComparison.Ordinal);
+    }
+
+    private static string? BuildPendingChangeKey(PendingChange? change)
+    {
+        return change is null
+            ? null
+            : $"{change.LogicalPath.ToCanonicalString()}:{change.MutationKind}:{change.NewValue.Json}:{change.NewDisplayValue}";
+    }
+
+    private string? BuildScopedPendingChangeKey()
+    {
+        return ScopedPendingChangesForDisplay.Count == 0
+            ? null
+            : string.Join(
+                '|',
+                ScopedPendingChangesForDisplay
+                    .OrderBy(static change => change.LogicalPath.ToCanonicalString(), StringComparer.Ordinal)
+                    .Select(static change => $"{change.LogicalPath.ToCanonicalString()}:{change.MutationKind}:{change.NewValue.Json}:{change.NewDisplayValue}"));
+    }
+
+    private string? BuildScopedPendingJson()
+    {
+        if (ScopedPendingChangesForDisplay.Count == 0)
+        {
+            return null;
+        }
+
+        var definitionKey = ScopedPendingChangesForDisplay[0].DefinitionKey;
+        var node = ConfigurationPendingValueDocumentBuilder.Build(
+            Node,
+            definitionKey,
+            EffectiveValue?.DisplayValue,
+            ScopedPendingChangesForDisplay);
+        return node.ToJsonString();
     }
 
     private static JsonNode? ParseJson(string? json)
@@ -407,26 +488,6 @@
         {
             return null;
         }
-    }
-
-    private static string ReadScalarDisplayValue(JsonNode? node, ConfigurationNodeDefinition schema)
-    {
-        if (node is null)
-        {
-            return string.Empty;
-        }
-
-        using var document = JsonDocument.Parse(node.ToJsonString());
-        var value = document.RootElement.ValueKind switch
-        {
-            JsonValueKind.String => document.RootElement.GetString() ?? string.Empty,
-            JsonValueKind.Number => document.RootElement.GetRawText(),
-            JsonValueKind.True => "true",
-            JsonValueKind.False => "false",
-            JsonValueKind.Null => string.Empty,
-            _ => document.RootElement.GetRawText()
-        };
-        return ConfigurationScalarValueCodec.NormalizeDisplayValue(schema, value);
     }
 
     private IReadOnlyList<string> ChoicesFor(ConfigurationNodeDefinition node)
@@ -449,7 +510,18 @@
             return Color.Error;
         }
 
-        return item.Id == _editingListItemId ? Color.Primary : Color.Default;
+        if (item.Id == _editingListItemId)
+        {
+            return Color.Primary;
+        }
+
+        return GetListItemChangeState(item) switch
+        {
+            CollectionItemChangeState.Added => Color.Success,
+            CollectionItemChangeState.Modified => Color.Warning,
+            CollectionItemChangeState.Deleted => Color.Error,
+            _ => Color.Default
+        };
     }
 
     private string DisplayListItem(ScalarListItem item)
@@ -469,6 +541,11 @@
     private void BeginEditListItem(int itemId)
     {
         if (_listItems.FirstOrDefault(item => item.Id == itemId) is not { } item)
+        {
+            return;
+        }
+
+        if (item.IsDeleted)
         {
             return;
         }
@@ -530,7 +607,7 @@
         }
 
         var currentStoredJson = conversion.StoredValue?.Json;
-        var duplicates = _listItems.Where(item => _editingListItemId != item.Id)
+        var duplicates = _listItems.Where(item => !item.IsDeleted && _editingListItemId != item.Id)
             .Select(item => ConfigurationScalarValueCodec.ConvertDisplayValue(ListItemNode, item.Value, L).StoredValue?.Json)
             .Where(storedJson => storedJson is not null);
         return duplicates.Contains(currentStoredJson, StringComparer.Ordinal)
@@ -546,12 +623,32 @@
             return;
         }
 
-        _listItems.RemoveAt(index);
+        var item = _listItems[index];
+        if (item.OriginalStoredJson is null)
+        {
+            _listItems.RemoveAt(index);
+        }
+        else
+        {
+            item.IsDeleted = true;
+        }
+
         if (_editingListItemId == itemId)
         {
             CancelListEdit();
         }
 
+        await EmitListAsync();
+    }
+
+    private async Task RestoreListItem(int itemId)
+    {
+        if (_listItems.FirstOrDefault(item => item.Id == itemId) is not { } item)
+        {
+            return;
+        }
+
+        item.IsDeleted = false;
         await EmitListAsync();
     }
 
@@ -578,6 +675,11 @@
         foreach (var item in _listItems)
         {
             item.Error = null;
+            if (item.IsDeleted)
+            {
+                continue;
+            }
+
             var conversion = ConfigurationScalarValueCodec.ConvertDisplayValue(ListItemNode, item.Value, L);
             if (!conversion.IsValid || conversion.StoredValue is null)
             {
@@ -642,9 +744,26 @@
         await EmitDictionaryAsync();
     }
 
-    private async Task RemoveDictionaryItem(int itemId)
+    private async Task ToggleDictionaryItemDeletedAsync(int itemId)
     {
-        _dictionaryItems.RemoveAll(item => item.Id == itemId);
+        if (_dictionaryItems.FirstOrDefault(item => item.Id == itemId) is not { } item)
+        {
+            return;
+        }
+
+        if (item.IsDeleted)
+        {
+            item.IsDeleted = false;
+        }
+        else if (item.OriginalKey is null)
+        {
+            _dictionaryItems.Remove(item);
+        }
+        else
+        {
+            item.IsDeleted = true;
+        }
+
         await EmitDictionaryAsync();
     }
 
@@ -654,6 +773,13 @@
         var jsonObject = new JsonObject();
         foreach (var item in _dictionaryItems)
         {
+            item.KeyError = null;
+            item.ValueError = null;
+            if (item.IsDeleted)
+            {
+                continue;
+            }
+
             item.KeyError = ValidateDictionaryKey(item.Key, item.Id);
             item.ValueError = ValidateDictionaryValue(item.Value);
             if (!string.IsNullOrWhiteSpace(item.KeyError) || !string.IsNullOrWhiteSpace(item.ValueError))
@@ -686,7 +812,7 @@
             return L["State:Editor:InvalidPattern"];
         }
 
-        return _dictionaryItems.Any(item => item.Id != currentItemId && string.Equals(item.Key, key, StringComparison.Ordinal))
+        return _dictionaryItems.Any(item => !item.IsDeleted && item.Id != currentItemId && string.Equals(item.Key, key, StringComparison.Ordinal))
             ? L["State:Collections:DuplicateKey"].Value
             : null;
     }
@@ -703,10 +829,12 @@
     private async Task EmitValidAsync(JsonNode value)
     {
         var displayValue = ConfigurationJsonDisplayFormatter.Format(value, Node, L["State:Value:Sensitive"]);
+        var storedValue = ConfigurationStoredValue.FromJson(value.ToJsonString());
+        _lastLocalPendingChangeKey = BuildLocalPendingChangeKey(storedValue, displayValue);
         await ValueChanged.InvokeAsync(new ConfigurationScalarCollectionEditResult
         {
             IsValid = true,
-            StoredValue = ConfigurationStoredValue.FromJson(value.ToJsonString()),
+            StoredValue = storedValue,
             DisplayValue = displayValue
         });
     }
@@ -722,12 +850,17 @@
         });
     }
 
+    private string BuildLocalPendingChangeKey(ConfigurationStoredValue storedValue, string? displayValue)
+    {
+        return $"{Node.RelativePath.ToCanonicalString()}:{ConfigurationMutationKind.Set}:{storedValue.Json}:{displayValue}";
+    }
+
     private string BuildInvalidDisplayJson()
     {
         if (Node.IsScalarList())
         {
             var array = new JsonArray();
-            foreach (var item in _listItems)
+            foreach (var item in _listItems.Where(static item => !item.IsDeleted))
             {
                 array.Add(item.Value);
             }
@@ -736,7 +869,7 @@
         }
 
         var jsonObject = new JsonObject();
-        foreach (var item in _dictionaryItems.Where(item => !string.IsNullOrWhiteSpace(item.Key)))
+        foreach (var item in _dictionaryItems.Where(item => !item.IsDeleted && !string.IsNullOrWhiteSpace(item.Key)))
         {
             jsonObject[item.Key] = item.Value;
         }
@@ -754,6 +887,68 @@
         return L["State:Collections:EntryError", item.Key, item.KeyError ?? item.ValueError ?? L["State:Editor:InvalidPattern"].Value];
     }
 
+    private CollectionItemChangeState GetListItemChangeState(ScalarListItem item)
+    {
+        if (item.IsDeleted)
+        {
+            return CollectionItemChangeState.Deleted;
+        }
+
+        if (item.OriginalStoredJson is null)
+        {
+            return CollectionItemChangeState.Added;
+        }
+
+        var currentStoredJson = ConfigurationScalarCollectionDiff.TryConvertDisplayValue(ListItemNode, item.Value, L);
+        return currentStoredJson is not null && !ConfigurationScalarCollectionDiff.StoredJsonEquals(item.OriginalStoredJson, currentStoredJson)
+            ? CollectionItemChangeState.Modified
+            : CollectionItemChangeState.Unchanged;
+    }
+
+    private CollectionItemChangeState GetDictionaryItemChangeState(ScalarDictionaryItem item)
+    {
+        if (item.IsDeleted)
+        {
+            return CollectionItemChangeState.Deleted;
+        }
+
+        if (item.OriginalKey is null)
+        {
+            return CollectionItemChangeState.Added;
+        }
+
+        if (!string.Equals(item.OriginalKey, item.Key, StringComparison.Ordinal))
+        {
+            return CollectionItemChangeState.Modified;
+        }
+
+        var currentStoredJson = ConfigurationScalarCollectionDiff.TryConvertDisplayValue(DictionaryValueNode, item.Value, L);
+        return item.OriginalStoredJson is not null
+               && currentStoredJson is not null
+               && !ConfigurationScalarCollectionDiff.StoredJsonEquals(item.OriginalStoredJson, currentStoredJson)
+            ? CollectionItemChangeState.Modified
+            : CollectionItemChangeState.Unchanged;
+    }
+
+    private string ChangeStateClass(CollectionItemChangeState state)
+    {
+        return state switch
+        {
+            CollectionItemChangeState.Added => "collection-item-added",
+            CollectionItemChangeState.Modified => "collection-item-modified",
+            CollectionItemChangeState.Deleted => "collection-item-deleted",
+            _ => string.Empty
+        };
+    }
+
+    private enum CollectionItemChangeState
+    {
+        Unchanged,
+        Added,
+        Modified,
+        Deleted
+    }
+
     private sealed class ScalarListItem(int id, string value)
     {
         public int Id { get; } = id;
@@ -761,6 +956,10 @@
         public string Value { get; set; } = value;
 
         public string? Error { get; set; }
+
+        public string? OriginalStoredJson { get; set; }
+
+        public bool IsDeleted { get; set; }
     }
 
     private sealed class ScalarDictionaryItem(int id, string key, string value)
@@ -774,5 +973,11 @@
         public string? KeyError { get; set; }
 
         public string? ValueError { get; set; }
+
+        public string? OriginalKey { get; set; }
+
+        public string? OriginalStoredJson { get; set; }
+
+        public bool IsDeleted { get; set; }
     }
 }
