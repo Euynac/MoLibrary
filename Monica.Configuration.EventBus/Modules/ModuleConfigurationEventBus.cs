@@ -6,6 +6,7 @@ using Monica.Core.Modularity;
 using Monica.Core.Modularity.Abstractions;
 using Monica.Core.Modularity.Annotations;
 using Monica.Core.Modularity.Models;
+using Monica.EventBus.Abstractions;
 using Monica.Modules;
 
 namespace Monica.Configuration.EventBus.Modules;
@@ -51,4 +52,14 @@ public sealed class ModuleConfigurationEventBusOption : ModuleOptions<ModuleConf
     /// All participating services must use the same topic name.
     /// </remarks>
     public string TopicName { get; set; } = "monica.configuration.reload";
+
+    /// <summary>
+    /// Gets or sets the keyed distributed EventBus service key used by the bridge.
+    /// </summary>
+    /// <remarks>
+    /// Leave this value <see langword="null"/> to use the default <see cref="IDistributedEventBus"/>.
+    /// Set it when the host registers multiple distributed EventBus providers and configuration reload
+    /// signals should travel through a dedicated provider.
+    /// </remarks>
+    public string? DistributedEventBusServiceKey { get; set; }
 }

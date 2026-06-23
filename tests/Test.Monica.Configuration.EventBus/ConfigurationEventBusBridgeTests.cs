@@ -37,6 +37,32 @@ public sealed class ConfigurationEventBusBridgeTests
     }
 
     [Fact]
+    public async Task NotifyAsync_WhenServiceKeyIsConfigured_ShouldUseKeyedDistributedEventBus()
+    {
+        var defaultEventBus = new RecordingDistributedEventBus();
+        var keyedEventBus = new RecordingDistributedEventBus();
+        var services = new ServiceCollection()
+            .AddSingleton<IDistributedEventBus>(defaultEventBus)
+            .AddKeyedSingleton<IDistributedEventBus>("configuration-reload", keyedEventBus)
+            .BuildServiceProvider();
+        var notifier = new ConfigurationEventBusChangeNotifier(
+            services,
+            Options.Create(new ModuleConfigurationEventBusOption
+            {
+                DistributedEventBusServiceKey = "configuration-reload",
+                TopicName = "custom.configuration.reload"
+            }));
+        var notification = CreateNotification();
+
+        await notifier.NotifyAsync(notification, TestContext.Current.CancellationToken);
+
+        defaultEventBus.PublishedEvents.Should().BeEmpty();
+        keyedEventBus.PublishedEvents.Should().ContainSingle();
+        keyedEventBus.PublishedEvents[0].TopicName.Should().Be("custom.configuration.reload");
+        keyedEventBus.PublishedEvents[0].EventData.Should().Be(notification);
+    }
+
+    [Fact]
     public async Task StartAsync_ShouldSubscribeAndForwardNotificationsToReceiver()
     {
         var eventBus = new RecordingDistributedEventBus();
@@ -55,6 +81,33 @@ public sealed class ConfigurationEventBusBridgeTests
 
         await hostedService.StartAsync(TestContext.Current.CancellationToken);
         await eventBus.PublishAsync(notification, "custom.configuration.reload", TestContext.Current.CancellationToken);
+
+        receiver.ReceivedNotifications.Should().ContainSingle().Which.Should().Be(notification);
+    }
+
+    [Fact]
+    public async Task StartAsync_WhenServiceKeyIsConfigured_ShouldSubscribeToKeyedDistributedEventBus()
+    {
+        var defaultEventBus = new RecordingDistributedEventBus();
+        var keyedEventBus = new RecordingDistributedEventBus();
+        var receiver = new RecordingReloadSignalReceiver();
+        var services = new ServiceCollection()
+            .AddSingleton<IDistributedEventBus>(defaultEventBus)
+            .AddKeyedSingleton<IDistributedEventBus>("configuration-reload", keyedEventBus)
+            .BuildServiceProvider();
+        var hostedService = new ConfigurationEventBusSubscriptionHostedService(
+            services,
+            Options.Create(new ModuleConfigurationEventBusOption
+            {
+                DistributedEventBusServiceKey = "configuration-reload",
+                TopicName = "custom.configuration.reload"
+            }),
+            receiver);
+        var notification = CreateNotification();
+
+        await hostedService.StartAsync(TestContext.Current.CancellationToken);
+        await defaultEventBus.PublishAsync(notification, "custom.configuration.reload", TestContext.Current.CancellationToken);
+        await keyedEventBus.PublishAsync(notification, "custom.configuration.reload", TestContext.Current.CancellationToken);
 
         receiver.ReceivedNotifications.Should().ContainSingle().Which.Should().Be(notification);
     }

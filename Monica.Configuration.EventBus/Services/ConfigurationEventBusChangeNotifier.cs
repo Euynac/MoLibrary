@@ -19,15 +19,33 @@ public sealed class ConfigurationEventBusChangeNotifier(
     /// <inheritdoc />
     public Task NotifyAsync(ConfigurationChangeNotification notification, CancellationToken cancellationToken)
     {
-        return ResolveDistributedEventBus(serviceProvider)
-            .PublishAsync(notification, options.Value.TopicName, cancellationToken);
+        var currentOptions = options.Value;
+        return ResolveDistributedEventBus(serviceProvider, currentOptions)
+            .PublishAsync(notification, currentOptions.TopicName, cancellationToken);
     }
 
-    internal static IDistributedEventBus ResolveDistributedEventBus(IServiceProvider serviceProvider)
+    internal static IDistributedEventBus ResolveDistributedEventBus(
+        IServiceProvider serviceProvider,
+        ModuleConfigurationEventBusOption options)
     {
-        return serviceProvider.GetService<IDistributedEventBus>()
-            ?? throw new InvalidOperationException(
-                $"{nameof(ModuleConfigurationEventBus)} requires an {nameof(IDistributedEventBus)}. " +
-                $"Configure a distributed EventBus provider, for example with {nameof(ModuleEventBusGuide.UseDistributedEventBus)}.");
+        if (string.IsNullOrWhiteSpace(options.DistributedEventBusServiceKey))
+        {
+            return serviceProvider.GetService<IDistributedEventBus>()
+                ?? throw MissingDistributedEventBus(options);
+        }
+
+        return serviceProvider.GetKeyedService<IDistributedEventBus>(options.DistributedEventBusServiceKey)
+            ?? throw MissingDistributedEventBus(options);
+    }
+
+    private static InvalidOperationException MissingDistributedEventBus(ModuleConfigurationEventBusOption options)
+    {
+        var serviceKeyHint = string.IsNullOrWhiteSpace(options.DistributedEventBusServiceKey)
+            ? "the default service key"
+            : $"service key '{options.DistributedEventBusServiceKey}'";
+
+        return new InvalidOperationException(
+            $"{nameof(ModuleConfigurationEventBus)} requires an {nameof(IDistributedEventBus)} for {serviceKeyHint}. " +
+            $"Configure a distributed EventBus provider, for example with {nameof(ModuleEventBusGuide.UseDistributedEventBus)}.");
     }
 }
