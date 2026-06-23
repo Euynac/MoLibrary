@@ -39,6 +39,7 @@ internal class ConventionalRegistrar(ModuleDependencyInjectionOption option, Dep
         var typeName = type.Name;
         var lifetimeSource = ResolveLifetimeSource(type, dependencyAttribute);
         var registrationMode = ResolveRegistrationMode(dependencyAttribute);
+        var shouldLog = option.EnableAutoRegistrationLogging;
         var shouldEmitDiagnostics = option.EnableAutoRegistrationDiagnostics;
         var shouldCaptureDiagnostics = shouldEmitDiagnostics && diagnosticsRegistry != null;
 
@@ -46,11 +47,11 @@ internal class ConventionalRegistrar(ModuleDependencyInjectionOption option, Dep
             .Concat(GetExposedServiceTypes(type).Select(t => new ServiceIdentifier(t)))
             .ToList();
         var exposedServicesByKey = exposedServiceAndKeyedServiceTypes.ToLookup(item => item.ServiceKey);
-        var autoRegistrationIssues = shouldEmitDiagnostics
+        var autoRegistrationIssues = shouldLog || shouldEmitDiagnostics
             ? CreateAutoRegistrationIssues(type, lifeTime.Value, lifetimeSource, exposedServiceAndKeyedServiceTypes)
             : [];
 
-        if (shouldEmitDiagnostics)
+        if (shouldLog)
         {
             if (exposedServiceAndKeyedServiceTypes.Count == 0)
             {

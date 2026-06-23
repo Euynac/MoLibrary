@@ -4,6 +4,7 @@ using Monica.Framework.ProjectUnits.Services.Support;
 using Monica.Modules;
 using Monica.Tool.Extensions;
 using Monica.WebApi.Abstractions;
+using Monica.WebApi.AutoControllers.Abstractions;
 
 namespace Monica.Framework.ProjectUnits.Models;
 
@@ -39,7 +40,11 @@ public class UnitApplicationService(Type type) : ProjectUnit(type, EProjectUnitT
 
     protected override bool VerifyTypeConstrain()
     {
-        return Type.IsClass && Type.IsSubclassOf(typeof(ApplicationService));
+        // CRUD application services are claimed by UnitCrudApplicationService, even though they also derive from
+        // ApplicationService. Exclude them here so each type maps to exactly one project unit.
+        return Type.IsClass
+               && Type.IsSubclassOf(typeof(ApplicationService))
+               && !Type.IsImplementInterface<ICrudApplicationService>();
     }
 
     protected override ProjectUnitNamingRule? DefaultConventionOption()

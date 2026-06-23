@@ -94,7 +94,8 @@ internal static class DynamicProxyServiceRegistrar
                 throw new InvalidOperationException(
                     $"ServiceType '{ServiceType.FullName}' must be an interface for InterfaceProxy.");
 
-            if (Kind == EDynamicProxyKind.ClassProxy && Way is ERegisterWays.Factory or ERegisterWays.Instance)
+            if (Kind == EDynamicProxyKind.ClassProxy && Way is ERegisterWays.Factory or ERegisterWays.Instance
+                && Option.EnableClassProxyTargetStateWarning)
                 Option.Logger.LogWarning(
                     $"ServiceType '{ServiceType.FullName}' registered as {Way} when using dynamic proxy may contain hidden trouble when using ClassProxy, because when using class proxy with target, fields state can not be saved and it will give inconsistent state");
         }

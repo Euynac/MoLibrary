@@ -8,6 +8,10 @@ public enum EProjectUnitType
     /// </summary>
     ApplicationService,
     /// <summary>
+    /// CRUD application services that participate in automatic controller generation
+    /// </summary>
+    CrudApplicationService,
+    /// <summary>
     /// Domain services
     /// </summary>
     DomainService,

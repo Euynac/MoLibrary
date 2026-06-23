@@ -31,6 +31,7 @@
     },
     "ProjectUnitTypes": {
       "ApplicationService": "应用服务",
+      "CrudApplicationService": "CRUD应用服务",
       "DomainService": "领域服务",
       "Repository": "仓储",
       "DomainEvent": "领域事件",

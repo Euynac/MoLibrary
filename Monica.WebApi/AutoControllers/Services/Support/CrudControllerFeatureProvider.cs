@@ -11,32 +11,37 @@ namespace Monica.WebApi.AutoControllers.Services.Support;
 /// <summary>
 /// Determines which application services should be exposed as generated CRUD controllers.
 /// </summary>
-/// <param name="logger">Logger used to report controller registration decisions.</param>
+/// <remarks>
+/// CRUD participation is decided solely by the <see cref="ICrudApplicationService"/> marker interface. The
+/// <see cref="CrudControllerOption.CrudControllerPostfix"/> is not a registration filter; it is used only to derive the
+/// route name. As a diagnostic aid this provider logs an error when a registered CRUD service does not end with that
+/// suffix (its route name would then be left unstripped), but it still registers the controller. Successful matches are
+/// not logged to keep startup output quiet. Naming-convention enforcement itself lives in the project-unit system
+/// (Monica.Framework).
+/// </remarks>
+/// <param name="logger">Logger used to report controllers whose name does not match the route suffix.</param>
 /// <param name="options">CRUD controller options.</param>
-public class CrudControllerFeatureProvider(ILogger<CrudControllerFeatureProvider> logger, IOptions<CrudControllerOption> options) : ControllerFeatureProvider
+public class CrudControllerFeatureProvider(
+    ILogger<CrudControllerFeatureProvider> logger,
+    IOptions<CrudControllerOption> options) : ControllerFeatureProvider
 {
-    //private static int SearchTimes = 0;
     protected override bool IsController(TypeInfo typeInfo)
     {
-        //SearchTimes++;
-        //logger.LogInformation(SearchTimes.ToString());
-
-        if (typeInfo is {IsClass: true, IsGenericType: false} && typeInfo.AsType().IsImplementInterface<ICrudApplicationService>())
+        if (typeInfo is not { IsClass: true, IsGenericType: false } ||
+            !typeInfo.AsType().IsImplementInterface<ICrudApplicationService>())
         {
-            if (typeInfo.Name.EndsWith(options.Value.CrudControllerPostfix))
-            {
-                logger.LogInformation("Automatically registered CRUD controller: {ControllerName}",
-                    typeInfo.Name);
-            }
-            else
-            {
-                logger.LogError(
-                    "Failed to auto-register CRUD controller '{ControllerName}' because it does not match the required suffix '{RequiredSuffix}'.",
-                    typeInfo.Name,
-                    options.Value.CrudControllerPostfix);
-            }
-            return true;
+            return false;
         }
-        return false;
+
+        var postfix = options.Value.CrudControllerPostfix;
+        if (!string.IsNullOrEmpty(postfix) && !typeInfo.Name.EndsWith(postfix))
+        {
+            logger.LogError(
+                "CRUD controller '{ControllerName}' does not end with the configured route suffix '{RequiredSuffix}', so its route name will not be stripped.",
+                typeInfo.Name,
+                postfix);
+        }
+
+        return true;
     }
 }

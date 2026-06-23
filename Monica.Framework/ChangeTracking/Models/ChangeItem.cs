@@ -223,6 +223,11 @@ public class ChangeItem<TTargetEntity, TChangeItemData, TEnumAlterSource> : ICha
 
                 if (oldValue is Enum oriEnum && newValue is Enum newEnum)
                 {
+                    if (Equals(oriEnum, newEnum))
+                    {
+                        return null;
+                    }
+
                     return new ChangeRecord()
                     {
                         DisplayName = displayName,

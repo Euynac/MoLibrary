@@ -1,3 +1,4 @@
+using System.IO.Compression;
 using System.Text.Json;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -108,7 +109,8 @@ public static class ResultEnvelopeProvider
         try
         {
             responseStream = await httpResponse.Content.ReadAsStreamAsync();
-            captureStream = new ResultEnvelopeContentCaptureStream(responseStream, MaxDiagnosticBodyBytes);
+            var decodedResponseStream = CreateDecodedResponseStream(responseStream, httpResponse.Content.Headers.ContentEncoding);
+            captureStream = new ResultEnvelopeContentCaptureStream(decodedResponseStream, MaxDiagnosticBodyBytes);
             parsedResponse = await DeserializeResponseAsync<TResponse>(captureStream);
 
             if (parsedResponse.IsRemoteResultHealthy())
@@ -151,6 +153,32 @@ public static class ResultEnvelopeProvider
         AppendExchangeMetadata(errorResponse, exchangeInfo);
         LogRemoteResponseError(logger ?? Logger, exchangeInfo, httpResponse, errorResponse, exception);
         return errorResponse;
+    }
+
+    private static Stream CreateDecodedResponseStream(Stream responseStream, ICollection<string>? contentEncodings)
+    {
+        ArgumentNullException.ThrowIfNull(responseStream);
+
+        if (contentEncodings is null || contentEncodings.Count == 0)
+        {
+            return responseStream;
+        }
+
+        var decodedStream = responseStream;
+        foreach (var encoding in contentEncodings.Reverse())
+        {
+            decodedStream = encoding.Trim().ToLowerInvariant() switch
+            {
+                "gzip" => new GZipStream(decodedStream, CompressionMode.Decompress),
+                "deflate" => new DeflateStream(decodedStream, CompressionMode.Decompress),
+                "br" => new BrotliStream(decodedStream, CompressionMode.Decompress),
+                "identity" => decodedStream,
+                "" => decodedStream,
+                _ => throw new NotSupportedException($"Remote response content encoding '{encoding}' is not supported.")
+            };
+        }
+
+        return decodedStream;
     }
 
     private static void AppendExchangeMetadata(

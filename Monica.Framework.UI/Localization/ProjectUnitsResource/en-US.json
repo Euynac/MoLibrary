@@ -31,6 +31,7 @@
     },
     "ProjectUnitTypes": {
       "ApplicationService": "Application Service",
+      "CrudApplicationService": "CRUD Application Service",
       "DomainService": "Domain Service",
       "Repository": "Repository",
       "DomainEvent": "Domain Event",

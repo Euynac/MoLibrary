@@ -8,12 +8,14 @@ using Monica.Core.Modularity;
 using Monica.Core.Modularity.Abstractions;
 using Monica.Core.Modularity.Annotations;
 using Monica.Core.Modularity.Models;
+using Monica.Core.Modularity.Services;
 using Monica.Framework.ProjectUnits.Facades;
 using Monica.Framework.ProjectUnits.Models;
 using Monica.Framework.ProjectUnits.Providers.AspNetCore;
 using Monica.Framework.ProjectUnits.Services;
 using Monica.Framework.ProjectUnits.Services.Support;
 using Monica.Tool.Extensions;
+using Monica.WebApi.AutoControllers.Models;
 
 // ReSharper disable once CheckNamespace
 namespace Monica.Modules;
@@ -61,11 +63,45 @@ public class ModuleProjectUnits(ModuleProjectUnitsOption option)
     {
         _services = services;
         InitProjectUnitFactories();
-     
+
+        DeriveCrudNamingRuleFromAutoControllers();
         ProjectUnit.Option = option;
-        
+
         services.AddScoped<ProjectUnitCatalogService>();
         services.AddScoped<ProjectUnitsFacade>();
+    }
+
+    /// <summary>
+    /// Derives the <see cref="EProjectUnitType.CrudApplicationService"/> naming rule from the AutoControllers module's
+    /// configured <c>CrudControllerOption.CrudControllerPostfix</c>, so the suffix is configured in a single place.
+    /// </summary>
+    /// <remarks>
+    /// CRUD application services strip <c>CrudControllerPostfix</c> to derive their route name, so that suffix is the
+    /// natural single source of truth for their naming convention. This module reads the finalized option (available
+    /// because option materialization runs before <see cref="ConfigureServices"/>) and only fills in the rule when the
+    /// host has not configured one explicitly and the postfix is non-empty. When the AutoControllers module is absent,
+    /// nothing is derived.
+    /// </remarks>
+    private void DeriveCrudNamingRuleFromAutoControllers()
+    {
+        if (option.ConventionOptions.Dict.ContainsKey(EProjectUnitType.CrudApplicationService))
+        {
+            // Respect an explicit host-provided rule.
+            return;
+        }
+
+        if (!ModuleRegistry.TryGetModuleRequestInfo(typeof(ModuleAutoControllers), out var autoControllersInfo) ||
+            !autoControllersInfo.FinalConfigures.TryGetValue(typeof(CrudControllerOption), out var configured) ||
+            configured is not CrudControllerOption crudOption ||
+            string.IsNullOrEmpty(crudOption.CrudControllerPostfix))
+        {
+            return;
+        }
+
+        option.ConventionOptions.Dict[EProjectUnitType.CrudApplicationService] = new ProjectUnitNamingRule
+        {
+            Postfix = crudOption.CrudControllerPostfix
+        };
     }
 
     public IEnumerable<Type> IterateBusinessTypes(IEnumerable<Type> types)
