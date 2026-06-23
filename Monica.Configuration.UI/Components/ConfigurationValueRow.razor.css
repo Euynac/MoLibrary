@@ -11,11 +11,11 @@
 
 .configuration-value-row-shell.jump-highlight {
     outline: 2px solid var(--mud-palette-primary);
-    outline-offset: 2px;
+    outline-offset: -2px;
     border-radius: var(--mud-default-borderradius);
 }
 
-.configuration-value-row-shell.jump-highlight .configuration-value-row {
+.configuration-value-row-shell.jump-highlight ::deep .configuration-value-row {
     background-color: var(--mud-palette-primary-hover);
 }
 

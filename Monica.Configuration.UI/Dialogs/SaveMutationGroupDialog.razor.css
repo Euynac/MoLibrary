@@ -27,58 +27,13 @@
     flex-direction: column;
     min-height: 0;
     min-width: 0;
+    overflow: hidden;
     width: 100%;
 }
 
 .configuration-save-group-preview ::deep .mud-tabs-tabbar {
     flex: 0 0 auto;
-    min-height: 48px;
-    max-height: 48px;
     overflow: hidden;
-}
-
-.configuration-save-group-preview ::deep .mud-tabs-tabbar-inner {
-    align-items: stretch;
-    min-height: 48px;
-    max-height: 48px;
-    overflow: hidden;
-}
-
-.configuration-save-group-preview ::deep .mud-tabs-tabbar-content {
-    min-width: 0;
-    overflow: hidden;
-}
-
-.configuration-save-group-preview ::deep .mud-tabs-tabbar-wrapper {
-    height: 48px;
-    overflow: hidden;
-}
-
-.configuration-save-group-preview ::deep .mud-tooltip-root {
-    display: inline-flex;
-    height: 48px;
-    min-height: 0;
-}
-
-.configuration-save-group-preview ::deep .mud-tab {
-    height: 48px;
-    margin: 0;
-    min-height: 48px;
-    max-height: 48px;
-    overflow: hidden;
-    white-space: nowrap;
-}
-
-.configuration-save-group-preview ::deep .mud-tabs-scroll-button {
-    flex: 0 0 auto;
-    height: 48px;
-    overflow: hidden;
-}
-
-.configuration-save-group-preview ::deep .mud-tabs-scroll-button .mud-button-root {
-    height: 48px;
-    min-height: 48px;
-    border-radius: 0;
 }
 
 .configuration-save-group-preview ::deep .mud-tabs-panels {
@@ -110,16 +65,32 @@
 
 .configuration-save-group-preview ::deep .mud-table-cell {
     overflow-wrap: anywhere;
+    vertical-align: middle;
+}
+
+.configuration-save-group-preview ::deep .mud-table .mud-tooltip-root {
+    display: inline-flex;
+    align-items: center;
+    height: auto;
+    min-height: 0;
+    vertical-align: middle;
 }
 
 .configuration-save-group-preview ::deep .configuration-change-actions-column,
 .configuration-save-group-preview ::deep .configuration-change-actions-cell {
-    width: 6rem;
+    min-width: 7.5rem;
+    width: 7.5rem;
     white-space: nowrap;
 }
 
+.configuration-save-group-preview ::deep .configuration-change-actions-column,
 .configuration-save-group-preview ::deep .configuration-change-actions-cell {
-    text-align: right;
+    text-align: center;
+}
+
+.configuration-save-group-preview ::deep .configuration-change-actions {
+    justify-content: center;
+    width: 100%;
 }
 
 @media (max-height: 720px) {
