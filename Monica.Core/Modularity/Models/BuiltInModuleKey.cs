@@ -14,6 +14,10 @@ public enum BuiltInModuleKey
     AutoModel,
     WebApi,
     Configuration,
+    /// <summary>
+    /// Optional EventBus bridge module for distributed configuration reload notifications.
+    /// </summary>
+    ConfigurationEventBus,
     Authentication,
     ConfigurationCenter,
     ServiceDiscovery,

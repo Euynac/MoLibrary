@@ -34,6 +34,31 @@ internal sealed class ConfigurationProviderReloadCoordinator(
     }
 
     /// <inheritdoc />
+    public async Task ReloadMonicaProjectionAsync(string definitionKey, long? minimumVersion, CancellationToken cancellationToken)
+    {
+        if (accessor.Provider is not { } provider)
+        {
+            return;
+        }
+
+        await _reloadLock.WaitAsync(cancellationToken);
+        try
+        {
+            await provider.ReloadDefinitionAsync(definitionKey, minimumVersion, cancellationToken);
+        }
+        finally
+        {
+            _reloadLock.Release();
+        }
+    }
+
+    /// <inheritdoc />
+    public long? GetLoadedMonicaProjectionVersion(string definitionKey)
+    {
+        return accessor.Provider?.GetLoadedVersion(definitionKey);
+    }
+
+    /// <inheritdoc />
     public async Task ReloadRuntimeConfigurationAsync(CancellationToken cancellationToken)
     {
         await _reloadLock.WaitAsync(cancellationToken);

@@ -11,6 +11,21 @@ public sealed record ConfigurationChangeNotification
     public required string NotificationId { get; init; }
 
     /// <summary>
+    /// Gets the service instance that created the notification.
+    /// </summary>
+    public required string OriginInstanceId { get; init; }
+
+    /// <summary>
+    /// Gets the backing store or runtime source key that produced the change.
+    /// </summary>
+    public required string StoreKey { get; init; }
+
+    /// <summary>
+    /// Gets the reload target represented by this notification.
+    /// </summary>
+    public ConfigurationReloadScope Scope { get; init; } = ConfigurationReloadScope.MonicaProjection;
+
+    /// <summary>
     /// Gets the definition key affected by the change.
     /// </summary>
     public required string DefinitionKey { get; init; }

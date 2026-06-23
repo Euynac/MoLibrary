@@ -8,6 +8,7 @@
     <Project Path="examples/JobSchedulerMinimal/JobSchedulerMinimal.csproj" />
   </Folder>
   <Folder Name="/tests/">
+    <Project Path="tests/Test.Monica.Configuration.EventBus/Test.Monica.Configuration.EventBus.csproj" />
     <Project Path="tests/Test.Monica.Configuration/Test.Monica.Configuration.csproj" />
     <Project Path="tests/Test.Monica.Core/Test.Monica.Core.csproj" />
     <Project Path="tests/Test.Monica.JobScheduler.UI/Test.Monica.JobScheduler.UI.csproj" />
@@ -21,6 +22,7 @@
   <Project Path="Monica.Authority/Monica.Authority.csproj" />
   <Project Path="Monica.AutoModel/Monica.AutoModel.csproj" />
   <Project Path="Monica.Configuration.EfCore/Monica.Configuration.EfCore.csproj" />
+  <Project Path="Monica.Configuration.EventBus/Monica.Configuration.EventBus.csproj" />
   <Project Path="Monica.Configuration.UI/Monica.Configuration.UI.csproj" />
   <Project Path="Monica.Configuration/Monica.Configuration.csproj" />
   <Project Path="Monica.Core/Monica.Core.csproj" />

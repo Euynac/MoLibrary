@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <PackageDescription>Optional EventBus bridge for Monica.Configuration distributed reload notifications.</PackageDescription>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Monica.Configuration\Monica.Configuration.csproj" />
+    <ProjectReference Include="..\Monica.Core\Monica.Core.csproj" />
+    <ProjectReference Include="..\Monica.EventBus\Monica.EventBus.csproj" />
+  </ItemGroup>
+</Project>

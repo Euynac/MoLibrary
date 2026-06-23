@@ -4,6 +4,8 @@ using Monica.Configuration.Metrics;
 using Monica.Configuration.Models;
 using Monica.Configuration.Services.Support;
 using Monica.Configuration.Utils;
+using Microsoft.Extensions.Options;
+using Monica.Modules;
 
 namespace Monica.Configuration.Services;
 
@@ -20,6 +22,7 @@ internal sealed class ConfigurationMutationService(
     ConfigurationPathProjector pathProjector,
     IConfigurationReloadCoordinator reloadCoordinator,
     IEnumerable<IConfigurationChangeNotifier> changeNotifiers,
+    IOptions<ModuleConfigurationOption> moduleOptions,
     ConfigurationMetricsRecorder metricsRecorder)
     : IConfigurationMutationService
 {
@@ -89,11 +92,14 @@ internal sealed class ConfigurationMutationService(
             throw;
         }
 
-        await reloadCoordinator.ReloadMonicaProjectionAsync(cancellationToken);
+        await reloadCoordinator.ReloadMonicaProjectionAsync(result.DefinitionKey, result.NewVersion, cancellationToken);
 
         var notification = new ConfigurationChangeNotification
         {
             NotificationId = Guid.NewGuid().ToString("N"),
+            OriginInstanceId = moduleOptions.Value.InstanceId,
+            StoreKey = effectiveValueStore.Descriptor.StoreKey,
+            Scope = ConfigurationReloadScope.MonicaProjection,
             DefinitionKey = result.DefinitionKey,
             LogicalPath = result.LogicalPath,
             Version = result.NewVersion,

@@ -2,6 +2,8 @@ using Monica.Configuration.Abstractions;
 using Monica.Configuration.Abstractions.Internal;
 using Monica.Configuration.Models;
 using Monica.Configuration.Services.Support;
+using Microsoft.Extensions.Options;
+using Monica.Modules;
 
 namespace Monica.Configuration.Services;
 
@@ -15,7 +17,9 @@ internal sealed class ConfigurationSourceMutationService(
     IConfigurationJsonFileSourceWriter sourceWriter,
     ConfigurationValidationCoordinator validationCoordinator,
     ConfigurationPathProjector pathProjector,
-    IConfigurationReloadCoordinator reloadCoordinator)
+    IConfigurationReloadCoordinator reloadCoordinator,
+    IEnumerable<IConfigurationChangeNotifier> changeNotifiers,
+    IOptions<ModuleConfigurationOption> moduleOptions)
     : IConfigurationSourceMutationService
 {
     /// <summary>
@@ -80,7 +84,7 @@ internal sealed class ConfigurationSourceMutationService(
             MutationGroupId = request.Context.MutationGroupId
         }, cancellationToken);
 
-        return new ConfigurationMutationResult
+        var result = new ConfigurationMutationResult
         {
             DefinitionKey = definition.DefinitionKey,
             LogicalPath = request.LogicalPath,
@@ -90,6 +94,25 @@ internal sealed class ConfigurationSourceMutationService(
             RequiresRestart = targetNode.ReloadBehavior is ConfigurationReloadBehavior.RequiresRestart or ConfigurationReloadBehavior.StaticAfterStartup
                               || definition.ReloadBehavior is ConfigurationReloadBehavior.RequiresRestart or ConfigurationReloadBehavior.StaticAfterStartup
         };
+
+        var notification = new ConfigurationChangeNotification
+        {
+            NotificationId = Guid.NewGuid().ToString("N"),
+            OriginInstanceId = moduleOptions.Value.InstanceId,
+            StoreKey = source.SourceKey,
+            Scope = ConfigurationReloadScope.RuntimeConfiguration,
+            DefinitionKey = result.DefinitionKey,
+            LogicalPath = result.LogicalPath,
+            Version = result.NewVersion,
+            ChangedTime = result.ModifiedTime
+        };
+
+        foreach (var notifier in changeNotifiers)
+        {
+            await notifier.NotifyAsync(notification, cancellationToken);
+        }
+
+        return result;
     }
 
     private static ConfigurationNodeDefinition ResolveTargetNode(ConfigurationDefinition definition, LogicalPath logicalPath)

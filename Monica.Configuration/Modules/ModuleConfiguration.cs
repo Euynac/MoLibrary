@@ -111,6 +111,7 @@ public sealed class ModuleConfiguration
         services.TryAddSingleton<IConfigurationMutationGroupService, ConfigurationMutationGroupService>();
         services.TryAddSingleton<IConfigurationRollbackService, ConfigurationRollbackService>();
         services.TryAddSingleton<IConfigurationReloadCoordinator, ConfigurationProviderReloadCoordinator>();
+        services.TryAddSingleton<IConfigurationReloadSignalReceiver, ConfigurationReloadSignalReceiver>();
         services.TryAddSingleton(_schemaHasher);
         services.TryAddSingleton<ConfigurationStoredValueCodec>();
         services.TryAddSingleton<ConfigurationValidationCoordinator>();
@@ -354,4 +355,39 @@ public sealed class ModuleConfigurationOption : ModuleOptions<ModuleConfiguratio
     /// Monica.Configuration UI.
     /// </remarks>
     public bool IncludeUnmanagedSourceInventoryItems { get; set; } = true;
+
+    /// <summary>
+    /// Gets or sets the stable identity used to ignore reload notifications produced by this process.
+    /// </summary>
+    /// <remarks>
+    /// The default is generated once when the module option instance is created. Set this explicitly when
+    /// host infrastructure already provides a better per-process instance id.
+    /// </remarks>
+    public string InstanceId { get; set; } = Guid.NewGuid().ToString("N");
+
+    /// <summary>
+    /// Gets or sets how long remote Monica projection reload requests are batched before they are applied.
+    /// </summary>
+    /// <remarks>
+    /// The default is 500 milliseconds so multiple mutations in the same burst coalesce into one reload.
+    /// </remarks>
+    public TimeSpan RemoteReloadDebounceDelay { get; set; } = TimeSpan.FromMilliseconds(500);
+
+    /// <summary>
+    /// Gets or sets the maximum additional random delay before a remote Monica projection reload is applied.
+    /// </summary>
+    /// <remarks>
+    /// The default is two seconds to reduce thundering-herd pressure when many service instances receive
+    /// the same distributed notification.
+    /// </remarks>
+    public TimeSpan RemoteReloadMaxJitterDelay { get; set; } = TimeSpan.FromSeconds(2);
+
+    /// <summary>
+    /// Gets or sets how long received notification ids are retained for duplicate suppression.
+    /// </summary>
+    /// <remarks>
+    /// The default is five minutes, covering common at-least-once delivery retry windows without retaining
+    /// unbounded notification state.
+    /// </remarks>
+    public TimeSpan RemoteReloadDedupeWindow { get; set; } = TimeSpan.FromMinutes(5);
 }

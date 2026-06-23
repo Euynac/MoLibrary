@@ -57,6 +57,22 @@ public enum ConfigurationReloadBehavior
 }
 
 /// <summary>
+/// Identifies the runtime projection that a configuration reload signal targets.
+/// </summary>
+public enum ConfigurationReloadScope
+{
+    /// <summary>
+    /// Reloads Monica's effective-value projection provider.
+    /// </summary>
+    MonicaProjection,
+
+    /// <summary>
+    /// Reloads external Microsoft configuration providers. This scope is reserved for the current version.
+    /// </summary>
+    RuntimeConfiguration
+}
+
+/// <summary>
 /// Defines how Monica derives a Microsoft configuration section path when
 /// <see cref="ConfigurationAttribute.SectionPath"/> is not set explicitly.
 /// </summary>
