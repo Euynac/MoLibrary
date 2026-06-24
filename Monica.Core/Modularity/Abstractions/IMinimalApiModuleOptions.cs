@@ -10,9 +10,10 @@ public interface IMinimalApiModuleOptions
     /// </summary>
     /// <returns></returns>
     public string GetApiGroupName();
+
     /// <summary>
-    /// Gets a value indicating whether controllers are disabled for the module.
+    /// Gets a value indicating whether Minimal API endpoints are enabled for the module.
     /// </summary>
-    /// <returns><c>true</c> if controllers are disabled; otherwise, <c>false</c>.</returns>
-    public bool GetIsMinimalApiDisabled();
+    /// <returns><c>true</c> if Minimal API endpoints are enabled; otherwise, <c>false</c>.</returns>
+    public bool GetIsMinimalApiEnabled();
 }

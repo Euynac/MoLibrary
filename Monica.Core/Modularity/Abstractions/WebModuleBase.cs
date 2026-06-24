@@ -116,7 +116,7 @@ public abstract class WebModuleBase<TModuleSelf, TModuleOption, TModuleGuide>(TM
     /// <param name="configure">Endpoint configuration callback.</param>
     protected void UseEndpoints(IApplicationBuilder builder, Action<IEndpointRouteBuilder> configure)
     {
-        if (Option is IMinimalApiModuleOptions option && option.GetIsMinimalApiDisabled())
+        if (Option is IMinimalApiModuleOptions option && !option.GetIsMinimalApiEnabled())
         {
             return;
         }

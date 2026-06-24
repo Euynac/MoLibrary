@@ -7,7 +7,14 @@ public class MinimalApiModuleOptions<TModule> : ModuleOptions<TModule>, IMinimal
     /// Keep it distinct from the Swagger tag because Swagger displays the tag by default unless a filter rewrites it.
     /// </summary>
     public string? ApiGroup { get; set; }
-    public bool? IsMinimalApiDisabled { get; set; }
+
+    /// <summary>
+    /// Gets or sets whether this module exposes its Minimal API endpoints.
+    /// When unset, the module follows <see cref="IMonicaModuleSystemOptions.EnableMinimalApiByDefault"/>.
+    /// </summary>
+    public bool? EnableMinimalApi { get; set; }
+
     public string GetApiGroupName() => ApiGroup ?? Mo.ModuleSystem.DefaultApiGroupName ?? typeof(TModule).Name;
-    public bool GetIsMinimalApiDisabled() => IsMinimalApiDisabled ?? Mo.ModuleSystem.DefaultMinimalApiDisabled ?? false;
+
+    public bool GetIsMinimalApiEnabled() => EnableMinimalApi ?? Mo.ModuleSystem.EnableMinimalApiByDefault;
 }

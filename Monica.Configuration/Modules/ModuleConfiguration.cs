@@ -270,28 +270,6 @@ public sealed class ModuleConfigurationGuide
     private const int MANAGED_JSON_FILE_BUILDER_ORDER = -2;
 
     /// <summary>
-    /// Enables the external Monica.Configuration Minimal API surface.
-    /// </summary>
-    /// <param name="apiGroup">Optional Swagger/API group name. When omitted, the module option default is used.</param>
-    /// <returns>The module guide.</returns>
-    /// <remarks>
-    /// The API is disabled by default. Call this method, or set
-    /// <see cref="MinimalApiModuleOptions{TModule}.IsMinimalApiDisabled"/> to <see langword="false"/>, to expose it.
-    /// </remarks>
-    public ModuleConfigurationGuide EnableMinimalApis(string? apiGroup = null)
-    {
-        ConfigureModuleOption(option =>
-        {
-            option.IsMinimalApiDisabled = false;
-            if (!string.IsNullOrWhiteSpace(apiGroup))
-            {
-                option.ApiGroup = apiGroup;
-            }
-        });
-        return this;
-    }
-
-    /// <summary>
     /// Adds a JSON configuration file after Monica's effective-value provider and records source metadata for the UI.
     /// </summary>
     /// <param name="path">The JSON file path passed to <see cref="JsonConfigurationExtensions.AddJsonFile(IConfigurationBuilder,string,bool,bool)"/>.</param>
@@ -369,7 +347,7 @@ public sealed class ModuleConfigurationOption : MinimalApiModuleOptions<ModuleCo
     public ModuleConfigurationOption()
     {
         ApiGroup = "Configuration";
-        IsMinimalApiDisabled = true;
+        EnableMinimalApi = false;
     }
 
     /// <summary>

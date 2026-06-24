@@ -28,9 +28,9 @@ public interface IMonicaModuleSystemOptions
     string? DefaultApiGroupName { get; }
 
     /// <summary>
-    /// Gets the default Minimal API disabled state for modules.
+    /// Gets whether Minimal API endpoints are enabled for modules by default.
     /// </summary>
-    bool? DefaultMinimalApiDisabled { get; }
+    bool EnableMinimalApiByDefault { get; }
 
     /// <summary>
     /// Gets the local port that Monica-owned web endpoints must use.
@@ -85,10 +85,11 @@ public sealed class MonicaModuleSystemOptions : IMonicaModuleSystemOptions
     public string? DefaultApiGroupName { get; set; }
 
     /// <summary>
-    /// Gets or sets the default Minimal API disabled state for modules.
-    /// When this value is <see langword="null"/>, modules use their own defaults.
+    /// Gets or sets whether Minimal API endpoints are enabled for modules by default.
+    /// Individual module options can still override this value.
+    /// Defaults to <see langword="false"/>.
     /// </summary>
-    public bool? DefaultMinimalApiDisabled { get; set; }
+    public bool EnableMinimalApiByDefault { get; set; }
 
     /// <summary>
     /// Gets or sets the local port that Monica-owned web endpoints must use.
