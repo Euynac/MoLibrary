@@ -1,4 +1,5 @@
 using System.Reflection;
+using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Configuration.Json;
 using Microsoft.Extensions.DependencyInjection;
@@ -9,6 +10,7 @@ using Microsoft.Extensions.Options;
 using Monica.Configuration.Annotations;
 using Monica.Configuration.Abstractions;
 using Monica.Configuration.Abstractions.Internal;
+using Monica.Configuration.Api;
 using Monica.Configuration.Facades;
 using Monica.Configuration.Metrics;
 using Monica.Configuration.Models;
@@ -49,7 +51,7 @@ public static class ModuleConfigurationBuilderExtensions
 /// </summary>
 [ModuleKey(BuiltInModuleKey.Configuration)]
 public sealed class ModuleConfiguration
-    : ModuleBase<ModuleConfiguration, ModuleConfigurationOption, ModuleConfigurationGuide>, IBusinessTypeIterator
+    : WebModuleBase<ModuleConfiguration, ModuleConfigurationOption, ModuleConfigurationGuide>, IBusinessTypeIterator
 {
     private static readonly MethodInfo ADD_OPTIONS_METHOD = GetRequiredGenericMethod(
         typeof(OptionsServiceCollectionExtensions),
@@ -90,6 +92,12 @@ public sealed class ModuleConfiguration
     }
 
     /// <inheritdoc />
+    public override bool CanDowngradeToNonWebModule()
+    {
+        return true;
+    }
+
+    /// <inheritdoc />
     public override void ConfigureBuilder(IHostApplicationBuilder builder)
     {
         _configuration = builder.Configuration;
@@ -126,6 +134,18 @@ public sealed class ModuleConfiguration
         services.TryAddSingleton<ConfigurationMetricsRecorder>();
         services.AddHostedService<MonicaConfigurationProviderActivationHostedService>();
         services.TryAddSingleton<ConfigurationFacade>();
+        services.TryAddSingleton<ConfigurationApiService>();
+        services.TryAddSingleton<ConfigurationApiFacade>();
+    }
+
+    /// <inheritdoc />
+    public override void ConfigureEndpoints(IApplicationBuilder app)
+    {
+        UseEndpoints(app, endpoints =>
+        {
+            var group = endpoints.MapGroup("/api/configuration");
+            ConfigurationApiEndpointMapper.Map(group, Option.GetApiGroupName());
+        });
     }
 
     /// <inheritdoc />
@@ -245,9 +265,31 @@ public sealed class ModuleConfiguration
 /// Fluent guide for Monica.Configuration.
 /// </summary>
 public sealed class ModuleConfigurationGuide
-    : ModuleGuide<ModuleConfiguration, ModuleConfigurationOption, ModuleConfigurationGuide>
+    : WebModuleGuide<ModuleConfiguration, ModuleConfigurationOption, ModuleConfigurationGuide>
 {
     private const int MANAGED_JSON_FILE_BUILDER_ORDER = -2;
+
+    /// <summary>
+    /// Enables the external Monica.Configuration Minimal API surface.
+    /// </summary>
+    /// <param name="apiGroup">Optional Swagger/API group name. When omitted, the module option default is used.</param>
+    /// <returns>The module guide.</returns>
+    /// <remarks>
+    /// The API is disabled by default. Call this method, or set
+    /// <see cref="MinimalApiModuleOptions{TModule}.IsMinimalApiDisabled"/> to <see langword="false"/>, to expose it.
+    /// </remarks>
+    public ModuleConfigurationGuide EnableMinimalApis(string? apiGroup = null)
+    {
+        ConfigureModuleOption(option =>
+        {
+            option.IsMinimalApiDisabled = false;
+            if (!string.IsNullOrWhiteSpace(apiGroup))
+            {
+                option.ApiGroup = apiGroup;
+            }
+        });
+        return this;
+    }
 
     /// <summary>
     /// Adds a JSON configuration file after Monica's effective-value provider and records source metadata for the UI.
@@ -319,8 +361,17 @@ public sealed class ModuleConfigurationGuide
 /// <summary>
 /// Module options for Monica.Configuration.
 /// </summary>
-public sealed class ModuleConfigurationOption : ModuleOptions<ModuleConfiguration>
+public sealed class ModuleConfigurationOption : MinimalApiModuleOptions<ModuleConfiguration>
 {
+    /// <summary>
+    /// Creates default Monica.Configuration options.
+    /// </summary>
+    public ModuleConfigurationOption()
+    {
+        ApiGroup = "Configuration";
+        IsMinimalApiDisabled = true;
+    }
+
     /// <summary>
     /// Gets or sets how Monica derives section paths for configuration types that do not set
     /// <see cref="ConfigurationAttribute.SectionPath"/> explicitly.
