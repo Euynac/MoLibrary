@@ -1,5 +1,6 @@
 using System.Text.Json;
 using Monica.Configuration.Models;
+using Monica.Tool.Extensions;
 
 namespace Monica.Configuration.Serialization;
 
@@ -98,7 +99,7 @@ public static class ConfigurationDefinitionSchemaCodec
         var type = Type.GetType(clrTypeName, throwOnError: false);
         if (type is not null)
         {
-            return type.FullName ?? type.Name;
+            return type.GetCleanFullName();
         }
 
         var assemblySeparator = clrTypeName.IndexOf(',', StringComparison.Ordinal);

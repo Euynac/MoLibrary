@@ -1,5 +1,4 @@
 using System.Reflection;
-using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Configuration.Json;
 using Microsoft.Extensions.DependencyInjection;
@@ -10,7 +9,6 @@ using Microsoft.Extensions.Options;
 using Monica.Configuration.Annotations;
 using Monica.Configuration.Abstractions;
 using Monica.Configuration.Abstractions.Internal;
-using Monica.Configuration.Api;
 using Monica.Configuration.Facades;
 using Monica.Configuration.Metrics;
 using Monica.Configuration.Models;
@@ -134,18 +132,6 @@ public sealed class ModuleConfiguration
         services.TryAddSingleton<ConfigurationMetricsRecorder>();
         services.AddHostedService<MonicaConfigurationProviderActivationHostedService>();
         services.TryAddSingleton<ConfigurationFacade>();
-        services.TryAddSingleton<ConfigurationApiService>();
-        services.TryAddSingleton<ConfigurationApiFacade>();
-    }
-
-    /// <inheritdoc />
-    public override void ConfigureEndpoints(IApplicationBuilder app)
-    {
-        UseEndpoints(app, endpoints =>
-        {
-            var group = endpoints.MapGroup("/api/configuration");
-            ConfigurationApiEndpointMapper.Map(group, Option.GetApiGroupName());
-        });
     }
 
     /// <inheritdoc />
@@ -339,17 +325,8 @@ public sealed class ModuleConfigurationGuide
 /// <summary>
 /// Module options for Monica.Configuration.
 /// </summary>
-public sealed class ModuleConfigurationOption : MinimalApiModuleOptions<ModuleConfiguration>
+public sealed class ModuleConfigurationOption : ModuleOptions<ModuleConfiguration>
 {
-    /// <summary>
-    /// Creates default Monica.Configuration options.
-    /// </summary>
-    public ModuleConfigurationOption()
-    {
-        ApiGroup = "Configuration";
-        EnableMinimalApi = false;
-    }
-
     /// <summary>
     /// Gets or sets how Monica derives section paths for configuration types that do not set
     /// <see cref="ConfigurationAttribute.SectionPath"/> explicitly.
