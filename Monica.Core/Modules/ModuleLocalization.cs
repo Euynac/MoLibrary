@@ -45,6 +45,16 @@ public class ModuleLocalization(ModuleLocalizationOption option)
         return true;
     }
 
+    public override void ConfigureApplicationBuilder(IApplicationBuilder app)
+    {
+        app.UseRequestLocalization();
+    }
+
+    protected override int GetConfigureApplicationBuilderOrder()
+    {
+        return (int)ModuleApplicationMiddlewareOrder.BeforeUseRouting;
+    }
+
 
     public override void ConfigureServices(IServiceCollection services)
     {
@@ -108,15 +118,6 @@ public class ModuleLocalization(ModuleLocalizationOption option)
 
 public class ModuleLocalizationGuide : WebModuleGuide<ModuleLocalization, ModuleLocalizationOption, ModuleLocalizationGuide>
 {
-    public ModuleLocalizationGuide()
-    {
-        // Register middleware (before routing)
-        ConfigureApplicationBuilder(ctx =>
-        {
-            ctx.ApplicationBuilder.UseRequestLocalization();
-        }, ModuleApplicationMiddlewareOrder.BeforeUseRouting);
-    }
-
     /// <summary>
     /// Manually registers a localization resource marker type for Monica modules and other reusable libraries.
     /// Use this method when a resource type should not depend on the host application's business-type scan.
