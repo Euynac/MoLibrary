@@ -112,6 +112,7 @@ public class ModuleProjectUnits(ModuleProjectUnitsOption option)
     public override void PostConfigureServices(IServiceCollection services)
     {
         ProjectUnitRegistry.ProjectUnitsByFullName.Values.Do(p => p.DoingConnect());
+        ProjectUnitConfigurationReloadBehaviorEnricher.Enrich(services, Logger);
         if (option.EnableRequestFilter)
         {
             services.AddRequestFilter();

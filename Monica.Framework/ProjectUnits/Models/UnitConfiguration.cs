@@ -1,6 +1,7 @@
 using System.Reflection;
 using Microsoft.Extensions.Options;
 using Monica.Configuration.Annotations;
+using Monica.Configuration.Models;
 using Monica.Framework.ProjectUnits.Abstractions;
 using Monica.Framework.ProjectUnits.Services.Support;
 using Monica.Modules;
@@ -38,6 +39,11 @@ public enum EConfigurationUsageType
 public class UnitConfiguration(Type type) : ProjectUnit(type, EProjectUnitType.Configuration), IHasProjectUnitFactory
 {
     /// <summary>
+    /// Gets the Monica.Configuration definition key that corresponds to this options type.
+    /// </summary>
+    public string DefinitionKey { get; private set; } = type.FullName ?? type.Name;
+
+    /// <summary>
     /// Configuration dependency details: record which project units use this configuration and how they use it
     /// </summary>
     public Dictionary<ProjectUnit, EConfigurationUsageType> ConfigurationDependencies { get; private set; } = new();
@@ -48,6 +54,16 @@ public class UnitConfiguration(Type type) : ProjectUnit(type, EProjectUnitType.C
     public bool? IsOffline => ConfigurationDependencies.Values.Any(v => v == EConfigurationUsageType.Offline) ? true : 
                               ConfigurationDependencies.Values.All(v => v is EConfigurationUsageType.OnlineSnapshot or EConfigurationUsageType.OnlineMonitor) && ConfigurationDependencies.Any() ? false : 
                               null;
+
+    /// <summary>
+    /// Gets the reload behavior inferred from discovered options access patterns.
+    /// </summary>
+    public ConfigurationReloadBehavior? InferredReloadBehavior => IsOffline switch
+    {
+        true => ConfigurationReloadBehavior.RequiresRestart,
+        false => ConfigurationReloadBehavior.OnlineReloadable,
+        _ => null
+    };
     static UnitConfiguration()
     {
         AddUnitRegisterFactory(Factory);
@@ -108,6 +124,7 @@ public class UnitConfiguration(Type type) : ProjectUnit(type, EProjectUnitType.C
         {
             if (context.Type.GetCustomAttribute<ConfigurationAttribute>() is {} info)
             {
+                unit.DefinitionKey = info.DefinitionKey ?? context.Type.FullName ?? context.Type.Name;
                 unit.Title = info.DisplayName ?? unit.Title;
                 unit.Description = info.Description ?? unit.Description;
             }

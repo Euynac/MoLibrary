@@ -38,6 +38,8 @@ public class UnitApplicationService(Type type) : ProjectUnit(type, EProjectUnitT
     public Type? RequestType { get; set; }
     public Type? ResponseType { get; set; }
 
+    protected override bool ShouldAnalyzeConstructorDependencies => true;
+
     protected override bool VerifyTypeConstrain()
     {
         // CRUD application services are claimed by UnitCrudApplicationService, even though they also derive from
@@ -103,7 +105,6 @@ public class UnitApplicationService(Type type) : ProjectUnit(type, EProjectUnitT
             }
         }
 
-        // Detecting unit-of-work dependencies in constructors
-        DetectConstructorUnitDependencies();
+        base.DoingConnect();
     }
 }

@@ -1178,9 +1178,7 @@ internal sealed class ConfigurationJsonDraftService(
 
         private ConfigurationReloadBehavior EffectiveReloadBehaviorFor(ConfigurationNodeDefinition schema)
         {
-            return schema.ReloadBehavior is { } behavior and not ConfigurationReloadBehavior.Inherit
-                ? behavior
-                : request.Definition.ReloadBehavior;
+            return schema.ResolveEffectiveReloadBehavior(request.Definition);
         }
 
         private static JsonNode? ParseOriginal(string? json, ConfigurationNodeDefinition schema)

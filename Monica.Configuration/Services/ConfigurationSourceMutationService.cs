@@ -53,6 +53,7 @@ internal sealed class ConfigurationSourceMutationService(
         await reloadCoordinator.ReloadRuntimeConfigurationAsync(cancellationToken);
 
         var targetNode = ResolveTargetNode(definition, request.LogicalPath);
+        var reloadBehavior = targetNode.ResolveEffectiveReloadBehavior(definition);
         await historyStore.AppendHistoryAsync(new ConfigurationValueHistory
         {
             HistoryId = Guid.NewGuid().ToString("N"),
@@ -91,8 +92,7 @@ internal sealed class ConfigurationSourceMutationService(
             NewVersion = 0,
             SchemaVersion = definition.SchemaVersion,
             ModifiedTime = write.ModifiedTime,
-            RequiresRestart = targetNode.ReloadBehavior is ConfigurationReloadBehavior.RequiresRestart or ConfigurationReloadBehavior.StaticAfterStartup
-                              || definition.ReloadBehavior is ConfigurationReloadBehavior.RequiresRestart or ConfigurationReloadBehavior.StaticAfterStartup
+            RequiresRestart = reloadBehavior.RequiresProcessRestart()
         };
 
         var notification = new ConfigurationChangeNotification

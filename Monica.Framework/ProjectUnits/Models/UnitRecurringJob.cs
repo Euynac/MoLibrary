@@ -10,6 +10,8 @@ namespace Monica.Framework.ProjectUnits.Models;
 /// <param name="type"></param>
 public class UnitRecurringJob(Type type) : ProjectUnit(type, EProjectUnitType.RecurringJob), IHasProjectUnitFactory
 {
+    protected override bool ShouldAnalyzeConstructorDependencies => true;
+
     static UnitRecurringJob()
     {
         AddUnitRegisterFactory(Factory);

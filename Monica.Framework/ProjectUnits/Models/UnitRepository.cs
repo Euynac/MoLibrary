@@ -14,6 +14,8 @@ namespace Monica.Framework.ProjectUnits.Models;
 /// <param name="type"></param>
 public class UnitRepository(Type type) : ProjectUnit(type, EProjectUnitType.Repository), IHasProjectUnitFactory
 {
+    protected override bool ShouldAnalyzeConstructorDependencies => true;
+
     static UnitRepository()
     {
         AddUnitRegisterFactory(Factory);
@@ -65,10 +67,12 @@ public class UnitRepository(Type type) : ProjectUnit(type, EProjectUnitType.Repo
                 Source = "EntityTypeAssociation"
             });
             Logger.LogWarning(alertMessage);
+            base.DoingConnect();
             return;
         }
 
         DeclareRelevance(entityUnit, true);
         entityUnit.DeclareRelevance(this);
+        base.DoingConnect();
     }
 }

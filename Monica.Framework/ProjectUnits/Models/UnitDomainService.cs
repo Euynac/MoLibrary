@@ -10,6 +10,8 @@ namespace Monica.Framework.ProjectUnits.Models;
 /// <param name="type"></param>
 public class UnitDomainService(Type type) : ProjectUnit(type, EProjectUnitType.DomainService), IHasProjectUnitFactory
 {
+    protected override bool ShouldAnalyzeConstructorDependencies => true;
+
     static UnitDomainService()
     {
         AddUnitRegisterFactory(Factory);

@@ -20,6 +20,8 @@ namespace Monica.Framework.ProjectUnits.Models;
 public class UnitCrudApplicationService(Type type)
     : ProjectUnit(type, EProjectUnitType.CrudApplicationService), IHasProjectUnitFactory
 {
+    protected override bool ShouldAnalyzeConstructorDependencies => true;
+
     static UnitCrudApplicationService()
     {
         AddUnitRegisterFactory(Factory);
@@ -38,11 +40,5 @@ public class UnitCrudApplicationService(Type type)
         unit = unit.VerifyType() ? unit : null;
         unit?.InitializeMethods<ApplicationService>();
         return unit;
-    }
-
-    public override void DoingConnect()
-    {
-        // Detecting unit dependencies in constructors (e.g. repositories).
-        DetectConstructorUnitDependencies();
     }
 }

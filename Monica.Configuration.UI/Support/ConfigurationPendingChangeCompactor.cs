@@ -379,9 +379,7 @@ internal sealed class ConfigurationPendingChangeCompactor(IStringLocalizer<Confi
         ConfigurationDefinition definition,
         ConfigurationNodeDefinition schema)
     {
-        return schema.ReloadBehavior is { } behavior and not ConfigurationReloadBehavior.Inherit
-            ? behavior
-            : definition.ReloadBehavior;
+        return schema.ResolveEffectiveReloadBehavior(definition);
     }
 
     private static string ProjectPath(ConfigurationDefinition definition, LogicalPath logicalPath)

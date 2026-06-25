@@ -170,8 +170,15 @@ public abstract class ProjectUnit(Type type, EProjectUnitType unitType)
     /// </summary>
     public virtual void DoingConnect()
     {
-
+        DetectConstructorDependenciesWhenEnabled();
     }
+
+    /// <summary>
+    /// Gets whether this project unit represents a dependency-injection-created runtime component whose constructor
+    /// dependencies should participate in project-unit analysis.
+    /// </summary>
+    protected virtual bool ShouldAnalyzeConstructorDependencies => false;
+
     /// <summary>
     /// Add unit constructor dependency resolution factory
     /// </summary>
@@ -329,6 +336,17 @@ public abstract class ProjectUnit(Type type, EProjectUnitType unitType)
     }
 
     #region 检测依赖
+
+    /// <summary>
+    /// Runs constructor dependency analysis when the concrete unit type opts in.
+    /// </summary>
+    private void DetectConstructorDependenciesWhenEnabled()
+    {
+        if (ShouldAnalyzeConstructorDependencies)
+        {
+            DetectConstructorUnitDependencies();
+        }
+    }
 
     /// <summary>
     /// Detect project unit dependencies in constructor

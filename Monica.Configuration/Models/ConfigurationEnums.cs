@@ -41,6 +41,11 @@ public enum ConfigurationReloadBehavior
     Inherit,
 
     /// <summary>
+    /// Monica cannot prove whether the value is observed dynamically by the running process.
+    /// </summary>
+    Unknown,
+
+    /// <summary>
     /// The value can be applied by reloading configuration in the running process.
     /// </summary>
     OnlineReloadable,

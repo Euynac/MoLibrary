@@ -33,7 +33,7 @@
                         {
                             <MudChip T="string" Size="Size.Small" Color="Color.Error" Variant="Variant.Outlined">@L["State:Value:Required"]</MudChip>
                         }
-                        @if (EffectiveReloadBehavior is ConfigurationReloadBehavior.RequiresRestart or ConfigurationReloadBehavior.StaticAfterStartup)
+                        @if (EffectiveReloadBehavior.RequiresProcessRestart())
                         {
                             <MudChip T="string" Size="Size.Small" Color="Color.Warning" Variant="Variant.Filled">@L["State:Value:RestartNeeded"]</MudChip>
                         }
@@ -199,10 +199,7 @@
             ? L["Sources:EffectiveSource:ExternalWritable", source.DisplayName, SourcePath(source)]
             : L["Sources:EffectiveSource:ExternalReadOnly", source.DisplayName, source.ReadOnlyReason ?? L["Sources:ReadOnly"]];
 
-    private ConfigurationReloadBehavior EffectiveReloadBehavior =>
-        Node.ReloadBehavior is { } behavior and not ConfigurationReloadBehavior.Inherit
-            ? behavior
-            : Definition.ReloadBehavior;
+    private ConfigurationReloadBehavior EffectiveReloadBehavior => Node.ResolveEffectiveReloadBehavior(Definition);
 
     private static bool IsPathPrefix(LogicalPath ancestor, LogicalPath path)
     {

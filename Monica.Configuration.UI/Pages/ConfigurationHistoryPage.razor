@@ -619,9 +619,7 @@
         ConfigurationDefinition definition,
         ConfigurationNodeDefinition node)
     {
-        return node.ReloadBehavior is { } behavior and not ConfigurationReloadBehavior.Inherit
-            ? behavior
-            : definition.ReloadBehavior;
+        return node.ResolveEffectiveReloadBehavior(definition);
     }
 
     private string GroupLabel(string? groupId)

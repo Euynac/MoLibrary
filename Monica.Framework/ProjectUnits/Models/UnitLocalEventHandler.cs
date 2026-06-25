@@ -11,6 +11,8 @@ namespace Monica.Framework.ProjectUnits.Models;
 /// <param name="type"></param>
 public class UnitLocalEventHandler(Type type) : ProjectUnit(type, EProjectUnitType.LocalEventHandler), IHasProjectUnitFactory
 {
+    protected override bool ShouldAnalyzeConstructorDependencies => true;
+
     static UnitLocalEventHandler()
     {
         AddUnitRegisterFactory(Factory);

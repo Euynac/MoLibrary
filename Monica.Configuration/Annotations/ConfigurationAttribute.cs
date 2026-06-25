@@ -63,6 +63,6 @@ public sealed class ConfigurationAttribute : Attribute
     /// <summary>
     /// Gets or sets the default reload behavior for nodes under this definition.
     /// </summary>
-    public ConfigurationReloadBehavior ReloadBehavior { get; set; } = ConfigurationReloadBehavior.OnlineReloadable;
+    public ConfigurationReloadBehavior ReloadBehavior { get; set; } = ConfigurationReloadBehavior.Unknown;
 
 }

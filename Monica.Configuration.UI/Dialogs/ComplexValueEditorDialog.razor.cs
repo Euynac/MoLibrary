@@ -40,12 +40,9 @@ public partial class ComplexValueEditorDialog : IAsyncDisposable
     private long? _valueVersion;
     private bool _startedWithScopedPendingChanges;
 
-    private ConfigurationReloadBehavior EffectiveReloadBehavior =>
-        Node.ReloadBehavior is { } behavior and not ConfigurationReloadBehavior.Inherit
-            ? behavior
-            : Definition.ReloadBehavior;
+    private ConfigurationReloadBehavior EffectiveReloadBehavior => Node.ResolveEffectiveReloadBehavior(Definition);
 
-    private Severity ReloadSeverity => EffectiveReloadBehavior is ConfigurationReloadBehavior.RequiresRestart or ConfigurationReloadBehavior.StaticAfterStartup
+    private Severity ReloadSeverity => EffectiveReloadBehavior.RequiresProcessRestart()
         ? Severity.Warning
         : Severity.Info;
 
@@ -1105,9 +1102,7 @@ public partial class ComplexValueEditorDialog : IAsyncDisposable
 
     private ConfigurationReloadBehavior EffectiveReloadBehaviorFor(ConfigurationNodeDefinition schema)
     {
-        return schema.ReloadBehavior is { } behavior and not ConfigurationReloadBehavior.Inherit
-            ? behavior
-            : Definition.ReloadBehavior;
+        return schema.ResolveEffectiveReloadBehavior(Definition);
     }
 
     private string DisplayName(ConfigurationNodeDefinition schema)

@@ -14,6 +14,8 @@ namespace Monica.Framework.ProjectUnits.Models;
 /// <param name="type"></param>
 public class UnitDomainEventHandler(Type type) : ProjectUnit(type, EProjectUnitType.DomainEventHandler), IHasProjectUnitFactory
 {
+    protected override bool ShouldAnalyzeConstructorDependencies => true;
+
     static UnitDomainEventHandler()
     {
         AddUnitRegisterFactory(Factory);
@@ -56,10 +58,12 @@ public class UnitDomainEventHandler(Type type) : ProjectUnit(type, EProjectUnitT
                 Source = "EventTypeAssociation"
             });
             Logger.LogWarning(alertMessage);
+            base.DoingConnect();
             return;
         }
 
         DeclareRelevance(eventUnit, true);
         eventUnit.DeclareRelevance(this);
+        base.DoingConnect();
     }
 }

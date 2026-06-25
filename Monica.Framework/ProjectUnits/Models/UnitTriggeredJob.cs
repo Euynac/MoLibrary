@@ -11,6 +11,8 @@ namespace Monica.Framework.ProjectUnits.Models;
 /// <param name="type"></param>
 public class UnitTriggeredJob(Type type) : ProjectUnit(type, EProjectUnitType.TriggeredJob), IHasProjectUnitFactory
 {
+    protected override bool ShouldAnalyzeConstructorDependencies => true;
+
     public Type? JobArgsType { get; set; }
 
     static UnitTriggeredJob()
