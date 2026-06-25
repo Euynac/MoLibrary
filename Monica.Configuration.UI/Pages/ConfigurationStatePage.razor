@@ -95,7 +95,14 @@
                                             <ConfigurationSchemaMetadataChip SchemaVersion="@_selectedDefinition.SchemaVersion"
                                                                              SchemaHash="@_selectedDefinition.SchemaHash"
                                                                              OnClick="OpenSelectedDefinitionPublishHistoryAsync" />
-                                            <MudChip T="ConfigurationReloadBehavior" Size="Size.Small" Color="Color.Info" Variant="Variant.Outlined">@_selectedDefinition.ReloadBehavior</MudChip>
+                                            <MudTooltip Text="@ReloadBehaviorDescription(_selectedDefinition.ReloadBehavior)">
+                                                <MudChip T="string"
+                                                         Size="Size.Small"
+                                                         Color="@ReloadBehaviorColor(_selectedDefinition.ReloadBehavior)"
+                                                         Variant="Variant.Outlined">
+                                                    @ReloadBehaviorLabel(_selectedDefinition.ReloadBehavior)
+                                                </MudChip>
+                                            </MudTooltip>
                                             <MudTooltip Text="@L["Common:Actions:EditJson"]">
                                                 <MudIconButton Icon="@Icons.Material.Filled.DataObject"
                                                                Size="Size.Small"
@@ -210,6 +217,21 @@
 
     private bool CanInspectSelectedDefinitionSources =>
         _selectedDefinition?.Origin == ConfigurationDefinitionOrigin.LocalScan;
+
+    private string ReloadBehaviorLabel(ConfigurationReloadBehavior behavior)
+    {
+        return ConfigurationReloadBehaviorFormatter.Label(behavior, L);
+    }
+
+    private string ReloadBehaviorDescription(ConfigurationReloadBehavior behavior)
+    {
+        return ConfigurationReloadBehaviorFormatter.Description(behavior, L);
+    }
+
+    private static Color ReloadBehaviorColor(ConfigurationReloadBehavior behavior)
+    {
+        return behavior.RequiresProcessRestart() ? Color.Warning : Color.Info;
+    }
 
     private IReadOnlyList<string> SearchTerms => string.IsNullOrWhiteSpace(_searchText)
         ? []

@@ -550,7 +550,9 @@
             lines.Add(L["History:PathTooltip:NodeKind", node.NodeKind]);
             if (definition is not null)
             {
-                lines.Add(L["History:PathTooltip:ReloadBehavior", EffectiveReloadBehavior(definition, node)]);
+                lines.Add(L[
+                    "History:PathTooltip:ReloadBehavior",
+                    ConfigurationReloadBehaviorFormatter.Label(EffectiveReloadBehavior(definition, node), L)]);
             }
 
             if (!string.IsNullOrWhiteSpace(node.Description))

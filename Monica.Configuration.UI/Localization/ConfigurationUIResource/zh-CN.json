@@ -106,9 +106,24 @@
   "Mutation": {
     "DefinitionKey": "定义 Key",
     "LogicalPath": "逻辑路径",
-    "ReloadBehavior": "重载行为",
     "Kinds": {
       "Remove": "移除"
+    }
+  },
+  "ReloadBehaviors": {
+    "Labels": {
+      "Inherit": "继承设置",
+      "Unknown": "生效方式待确认",
+      "OnlineReloadable": "可在线生效",
+      "RequiresRestart": "需要重启",
+      "StaticAfterStartup": "启动后固定"
+    },
+    "Descriptions": {
+      "Inherit": "该配置项沿用上级配置的生效方式。",
+      "Unknown": "系统无法确认该配置是否会被运行中的服务在线读取，保存后可能需要重启服务。",
+      "OnlineReloadable": "保存后运行中的服务可以在线读取新配置。",
+      "RequiresRestart": "保存后需要重启服务才能安全生效。",
+      "StaticAfterStartup": "该配置在服务启动时读取，保存后需要重启服务。"
     }
   },
   "History": {

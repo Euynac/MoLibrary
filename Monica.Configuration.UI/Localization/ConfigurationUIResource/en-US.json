@@ -106,9 +106,24 @@
   "Mutation": {
     "DefinitionKey": "Definition key",
     "LogicalPath": "Logical path",
-    "ReloadBehavior": "Reload behavior",
     "Kinds": {
       "Remove": "Remove"
+    }
+  },
+  "ReloadBehaviors": {
+    "Labels": {
+      "Inherit": "Inherited reload mode",
+      "Unknown": "Reload mode pending review",
+      "OnlineReloadable": "Online reloadable",
+      "RequiresRestart": "Restart required",
+      "StaticAfterStartup": "Fixed after startup"
+    },
+    "Descriptions": {
+      "Inherit": "This option inherits the reload behavior from its parent configuration metadata.",
+      "Unknown": "Monica cannot confirm whether this configuration is read by the running service online. Saving may require a service restart.",
+      "OnlineReloadable": "The running service can read the new value online after it is saved.",
+      "RequiresRestart": "Restart the service after saving before relying on the new value.",
+      "StaticAfterStartup": "This configuration is read during service startup, so saving requires a service restart."
     }
   },
   "History": {

@@ -46,6 +46,9 @@ public partial class ComplexValueEditorDialog : IAsyncDisposable
         ? Severity.Warning
         : Severity.Info;
 
+    private string ReloadBehaviorMessage =>
+        ConfigurationReloadBehaviorFormatter.Description(EffectiveReloadBehavior, L);
+
     private bool RequiresNewEntryKey =>
         _focusNode.NodeKind == ConfigurationNodeKind.Dictionary
         || _focusNode is { NodeKind: ConfigurationNodeKind.List, ListTemplate.SupportsPerItemMutation: true };
