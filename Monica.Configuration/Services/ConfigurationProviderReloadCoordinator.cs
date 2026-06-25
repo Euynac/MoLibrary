@@ -1,6 +1,6 @@
 using Monica.Configuration.Abstractions.Internal;
 using Monica.Configuration.Projection;
-using Microsoft.Extensions.Configuration;
+using Monica.Configuration.Services.Support;
 
 namespace Monica.Configuration.Services;
 
@@ -8,7 +8,7 @@ namespace Monica.Configuration.Services;
 /// Coordinates reloads for the active Microsoft configuration root and Monica projection provider.
 /// </summary>
 internal sealed class ConfigurationProviderReloadCoordinator(
-    IConfiguration configuration,
+    ConfigurationRuntimeContext runtimeContext,
     MonicaConfigurationProviderAccessor accessor)
     : IConfigurationReloadCoordinator
 {
@@ -64,7 +64,7 @@ internal sealed class ConfigurationProviderReloadCoordinator(
         await _reloadLock.WaitAsync(cancellationToken);
         try
         {
-            if (configuration is IConfigurationRoot root)
+            if (runtimeContext.Root is { } root)
             {
                 foreach (var provider in root.Providers)
                 {

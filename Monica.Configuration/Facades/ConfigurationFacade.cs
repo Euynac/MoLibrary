@@ -31,7 +31,7 @@ public sealed class ConfigurationFacade(
     ConfigurationEffectiveValueDocumentEditor documentEditor,
     IConfigurationSourceInspector sourceInspector,
     IConfigurationJsonFileSourceWriter sourceWriter,
-    IConfiguration configuration)
+    ConfigurationRuntimeContext runtimeContext)
 {
     /// <summary>
     /// Gets all configuration definition summaries.
@@ -129,7 +129,7 @@ public sealed class ConfigurationFacade(
             }
 
             var displayValue = targetNode is null || targetNode.NodeKind == ConfigurationNodeKind.Scalar
-                ? configuration[configurationPath]
+                ? runtimeContext.Configuration[configurationPath]
                 : seedFactory.CreateRuntimeJson(targetNode, configurationPath);
 
             return new ConfigurationEffectiveValue
@@ -390,9 +390,9 @@ public sealed class ConfigurationFacade(
     {
         try
         {
-            var debugView = configuration is IConfigurationRoot root
+            var debugView = runtimeContext.Root is { } root
                 ? root.GetDebugView()
-                : configuration.AsEnumerable().OrderBy(pair => pair.Key, StringComparer.OrdinalIgnoreCase)
+                : runtimeContext.Configuration.AsEnumerable().OrderBy(pair => pair.Key, StringComparer.OrdinalIgnoreCase)
                     .Select(pair => $"{pair.Key}={pair.Value}")
                     .JoinAsString(Environment.NewLine);
 

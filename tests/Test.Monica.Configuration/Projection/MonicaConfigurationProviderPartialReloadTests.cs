@@ -63,9 +63,13 @@ public sealed class MonicaConfigurationProviderPartialReloadTests : IDisposable
             registry.Register(definition);
         }
 
+        var configuration = new ConfigurationBuilder().Build();
+        var runtimeContext = new ConfigurationRuntimeContext();
+        runtimeContext.Capture(configuration);
+
         var services = new ServiceCollection();
         services.AddMetrics();
-        services.AddSingleton<IConfiguration>(new ConfigurationBuilder().Build());
+        services.AddSingleton(runtimeContext);
         services.AddSingleton<IConfigurationDefinitionRegistry>(registry);
         services.AddSingleton(store);
         services.AddSingleton<IConfigurationEffectiveValueStore>(store);

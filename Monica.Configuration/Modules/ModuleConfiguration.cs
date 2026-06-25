@@ -67,10 +67,10 @@ public sealed class ModuleConfiguration
         [typeof(OptionsBuilder<>)]);
 
     private readonly ConfigurationDefinitionRegistry _definitionRegistry = new();
+    private readonly ConfigurationRuntimeContext _runtimeContext = new();
     private readonly ConfigurationSchemaHasher _schemaHasher;
     private readonly ConfigurationDefinitionScanner _definitionScanner;
     private readonly MonicaConfigurationProviderAccessor _providerAccessor = new();
-    private IConfiguration? _configuration;
     private IServiceCollection? _services;
 
     /// <summary>
@@ -98,7 +98,7 @@ public sealed class ModuleConfiguration
     /// <inheritdoc />
     public override void ConfigureBuilder(IHostApplicationBuilder builder)
     {
-        _configuration = builder.Configuration;
+        _runtimeContext.Capture(builder.Configuration);
         // This appends Monica's effective-value projection after the host's bootstrap providers.
         // If callers add more Microsoft configuration providers later, their ordering relative to Monica
         // should become an explicit module option or guide method instead of relying on call order.
@@ -128,6 +128,7 @@ public sealed class ModuleConfiguration
         services.TryAddSingleton<IConfigurationSourceInspector, ConfigurationSourceInspector>();
         services.TryAddSingleton<IConfigurationJsonFileSourceWriter, ConfigurationJsonFileSourceWriter>();
         services.TryAddSingleton<IConfigurationSourceMutationService, ConfigurationSourceMutationService>();
+        services.TryAddSingleton(_runtimeContext);
         services.TryAddSingleton(_providerAccessor);
         services.TryAddSingleton<ConfigurationMetricsRecorder>();
         services.AddHostedService<MonicaConfigurationProviderActivationHostedService>();
@@ -194,16 +195,10 @@ public sealed class ModuleConfiguration
             throw new InvalidOperationException($"{nameof(ModuleConfiguration)} services have not been configured.");
         }
 
-        if (_configuration is null)
-        {
-            throw new InvalidOperationException(
-                $"{nameof(ModuleConfiguration)} requires an {nameof(IHostApplicationBuilder)} configuration instance. Call builder.UseMonica() after registering modules.");
-        }
-
         var optionsBuilder = ADD_OPTIONS_METHOD.MakeGenericMethod(optionsType).Invoke(null, [_services])
             ?? throw new InvalidOperationException($"Failed to create OptionsBuilder for '{optionsType.FullName}'.");
 
-        var configurationSection = _configuration.GetSection(sectionPath);
+        var configurationSection = _runtimeContext.Configuration.GetSection(sectionPath);
         BIND_METHOD.MakeGenericMethod(optionsType).Invoke(null, [optionsBuilder, configurationSection]);
         VALIDATE_DATA_ANNOTATIONS_METHOD.MakeGenericMethod(optionsType).Invoke(null, [optionsBuilder]);
     }
