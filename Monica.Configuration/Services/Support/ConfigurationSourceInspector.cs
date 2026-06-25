@@ -20,7 +20,7 @@ namespace Monica.Configuration.Services.Support;
 /// Inspects the active Microsoft configuration root and resolves source chains for Monica definitions.
 /// </summary>
 internal sealed class ConfigurationSourceInspector(
-    IConfiguration configuration,
+    ConfigurationRuntimeContext runtimeContext,
     IConfigurationDefinitionRegistry definitionRegistry,
     ConfigurationPathProjector pathProjector,
     IOptions<ModuleConfigurationOption> moduleOptions)
@@ -43,12 +43,12 @@ internal sealed class ConfigurationSourceInspector(
     /// </summary>
     public IReadOnlyList<ConfigurationSourceDescriptor> GetSources()
     {
-        if (configuration is not IConfigurationRoot root)
+        if (runtimeContext.Root is not { } root)
         {
             return [];
         }
 
-        var managedSources = ManagedJsonConfigurationSourceRegistry.Get(configuration);
+        var managedSources = ManagedJsonConfigurationSourceRegistry.Get(runtimeContext.Configuration);
         return root.Providers
             .Select((provider, index) => BuildDescriptor(provider, index, managedSources))
             .ToArray();
@@ -77,7 +77,7 @@ internal sealed class ConfigurationSourceInspector(
     /// </summary>
     public IReadOnlyList<ConfigurationDefinitionSourceContribution> GetDefinitionContributions(ConfigurationDefinition definition)
     {
-        if (configuration is not IConfigurationRoot root)
+        if (runtimeContext.Root is not { } root)
         {
             return [];
         }
@@ -139,7 +139,7 @@ internal sealed class ConfigurationSourceInspector(
     /// </summary>
     public IReadOnlyList<ConfigurationSourceInventory> GetSourceInventories()
     {
-        if (configuration is not IConfigurationRoot root)
+        if (runtimeContext.Root is not { } root)
         {
             return [];
         }
@@ -264,7 +264,7 @@ internal sealed class ConfigurationSourceInspector(
 
     private ConfigurationSourceChain GetSourceChain(ConfigurationDefinition definition, LogicalPath logicalPath, string configurationPath)
     {
-        if (configuration is not IConfigurationRoot root)
+        if (runtimeContext.Root is not { } root)
         {
             return new ConfigurationSourceChain
             {

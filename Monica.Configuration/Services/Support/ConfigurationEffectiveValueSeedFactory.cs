@@ -2,7 +2,6 @@ using System.Globalization;
 using System.Reflection;
 using System.Text.Json;
 using System.Text.Json.Nodes;
-using Microsoft.Extensions.Configuration;
 using Monica.Configuration.Models;
 using Monica.Configuration.Serialization;
 
@@ -11,7 +10,7 @@ namespace Monica.Configuration.Services.Support;
 /// <summary>
 /// Creates first-run effective value documents from host bootstrap configuration and CLR defaults.
 /// </summary>
-public sealed class ConfigurationEffectiveValueSeedFactory(IConfiguration configuration)
+public sealed class ConfigurationEffectiveValueSeedFactory(ConfigurationRuntimeContext runtimeContext)
 {
     private static readonly JsonSerializerOptions WRITE_OPTIONS = ConfigurationPersistedJsonOptions.ReadableValue;
 
@@ -71,7 +70,7 @@ public sealed class ConfigurationEffectiveValueSeedFactory(IConfiguration config
 
     private JsonNode? BuildScalarNode(ConfigurationNodeDefinition node, string configurationPath)
     {
-        var value = configuration[configurationPath];
+        var value = runtimeContext.Configuration[configurationPath];
         if (value is null)
         {
             return null;
@@ -113,7 +112,7 @@ public sealed class ConfigurationEffectiveValueSeedFactory(IConfiguration config
         }
 
         var result = new JsonObject();
-        foreach (var child in configuration.GetSection(configurationPath).GetChildren())
+        foreach (var child in runtimeContext.Configuration.GetSection(configurationPath).GetChildren())
         {
             var childNode = BuildNodeFromConfiguration(node.DictionaryTemplate.ValueTemplate, child.Path);
             if (childNode is not null)
@@ -133,7 +132,7 @@ public sealed class ConfigurationEffectiveValueSeedFactory(IConfiguration config
         }
 
         var result = new JsonArray();
-        foreach (var child in configuration.GetSection(configurationPath).GetChildren())
+        foreach (var child in runtimeContext.Configuration.GetSection(configurationPath).GetChildren())
         {
             var childNode = BuildNodeFromConfiguration(node.ListTemplate.ItemTemplate, child.Path);
             result.Add(childNode);
