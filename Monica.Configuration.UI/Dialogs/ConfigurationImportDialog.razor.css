@@ -1,0 +1,26 @@
+.configuration-import-dialog-content {
+    max-height: min(78vh, 860px);
+    min-height: 0;
+    overflow-x: hidden;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding-right: 0.25rem;
+    scrollbar-gutter: stable;
+}
+
+.configuration-import-dialog-content ::deep .mud-tabs {
+    min-height: 0;
+}
+
+.configuration-import-dialog-content ::deep .mud-tabs-panels {
+    min-width: 0;
+}
+
+.configuration-import-dialog-content ::deep .mud-table-container {
+    max-height: min(52vh, 560px);
+    overflow-y: auto;
+}
+
+.configuration-import-dialog-content ::deep .configuration-definition-diff-preview {
+    min-width: 0;
+}

@@ -23,7 +23,10 @@ else
         <MudExpansionPanels MultiExpansion="true" Elevation="0">
             @foreach (var group in _groups)
             {
-                <MudExpansionPanel Text="@group.DisplayName" Expanded="@(_groups.Count == 1)">
+                <MudExpansionPanel Text="@group.DisplayName"
+                                   Expanded="@group.IsExpanded"
+                                   ExpandedChanged="expanded => OnGroupExpandedChanged(group, expanded)"
+                                   KeepContentAlive="false">
                     <MudStack Spacing="2">
                         <MudStack Row="true" Wrap="Wrap.Wrap" AlignItems="AlignItems.Center" Spacing="1">
                             <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">@group.DefinitionKey</MudChip>
@@ -45,10 +48,21 @@ else
                                                           JumpRequested="JumpRequested" />
                         @if (group.ChangeCount > 0)
                         {
-                            <DiffViewer OriginText="@group.OriginJson"
-                                        NewText="@group.TargetJson"
-                                        Options="@DiffOptions"
-                                        ViewMode="EDiffViewMode.Split" />
+                            @if (group.IsPreviewLoading)
+                            {
+                                <MudProgressLinear Indeterminate="true" />
+                            }
+                            else if (!string.IsNullOrWhiteSpace(group.PreviewError))
+                            {
+                                <MudAlert Severity="Severity.Error" Dense="true">@group.PreviewError</MudAlert>
+                            }
+                            else if (group.HasPreview)
+                            {
+                                <DiffViewer OriginText="@group.OriginJson"
+                                            NewText="@group.TargetJson"
+                                            Options="@DiffOptions"
+                                            ViewMode="EDiffViewMode.Split" />
+                            }
                         }
                         else
                         {
@@ -85,7 +99,14 @@ else
 
         try
         {
-            _groups = await BuildGroupsAsync();
+            _groups = BuildGroups();
+
+            if (_groups.Count == 1)
+            {
+                var group = _groups[0];
+                group.IsExpanded = true;
+                await EnsureGroupPreviewAsync(group);
+            }
         }
         catch (Exception ex)
         {
@@ -98,7 +119,7 @@ else
         }
     }
 
-    private async Task<IReadOnlyList<DefinitionDiffGroup>> BuildGroupsAsync()
+    private IReadOnlyList<DefinitionDiffGroup> BuildGroups()
     {
         var groups = new List<DefinitionDiffGroup>();
         var definitionKeys = Changes.Select(change => change.DefinitionKey)
@@ -115,27 +136,58 @@ else
             var issues = ValidationIssues
                 .Where(issue => string.Equals(issue.DefinitionKey, definitionKey, StringComparison.OrdinalIgnoreCase))
                 .ToArray();
-            var originJson = "{}";
-            var targetJson = "{}";
-            if (changes.Length > 0)
-            {
-                var definition = await LoadDefinitionAsync(definitionKey);
-                originJson = await LoadOriginJsonAsync(definitionKey);
-                targetJson = ApplyChanges(definition, originJson, changes);
-                originJson = FormatForDisplay(originJson, definition);
-                targetJson = FormatForDisplay(targetJson, definition);
-            }
 
             groups.Add(new DefinitionDiffGroup(
                 definitionKey,
                 DisplayNameForDefinition(definitionKey),
                 changes.Length,
-                issues,
-                originJson,
-                targetJson));
+                changes,
+                issues));
         }
 
         return groups;
+    }
+
+    private async Task OnGroupExpandedChanged(DefinitionDiffGroup group, bool expanded)
+    {
+        group.IsExpanded = expanded;
+
+        if (expanded)
+        {
+            await EnsureGroupPreviewAsync(group);
+        }
+    }
+
+    private async Task EnsureGroupPreviewAsync(DefinitionDiffGroup group)
+    {
+        if (group.ChangeCount == 0 || group.HasPreview || group.IsPreviewLoading)
+        {
+            return;
+        }
+
+        group.IsPreviewLoading = true;
+        group.PreviewError = null;
+        await InvokeAsync(StateHasChanged);
+
+        try
+        {
+            var definition = await LoadDefinitionAsync(group.DefinitionKey);
+            var originJson = await LoadOriginJsonAsync(group.DefinitionKey);
+            var targetJson = ApplyChanges(definition, originJson, group.Changes);
+
+            group.OriginJson = FormatForDisplay(originJson, definition);
+            group.TargetJson = FormatForDisplay(targetJson, definition);
+            group.HasPreview = true;
+        }
+        catch (Exception ex)
+        {
+            group.PreviewError = ex.Message;
+        }
+        finally
+        {
+            group.IsPreviewLoading = false;
+            await InvokeAsync(StateHasChanged);
+        }
     }
 
     private string DisplayNameForDefinition(string definitionKey)
@@ -206,7 +258,14 @@ else
         string DefinitionKey,
         string DisplayName,
         int ChangeCount,
-        IReadOnlyList<ConfigurationValidationIssue> ValidationIssues,
-        string OriginJson,
-        string TargetJson);
+        IReadOnlyList<PendingChange> Changes,
+        IReadOnlyList<ConfigurationValidationIssue> ValidationIssues)
+    {
+        public bool IsExpanded { get; set; }
+        public bool IsPreviewLoading { get; set; }
+        public bool HasPreview { get; set; }
+        public string? PreviewError { get; set; }
+        public string OriginJson { get; set; } = "{}";
+        public string TargetJson { get; set; } = "{}";
+    }
 }

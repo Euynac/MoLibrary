@@ -79,13 +79,23 @@
     private EDiffDisplayMode DisplayMode { get; set; } = EDiffDisplayMode.Compare;
 
     private bool _isRefreshing = false;
+    private string? _lastAutoRefreshKey;
 
     protected override async Task OnParametersSetAsync()
     {
-        if (AutoRefresh)
+        if (!AutoRefresh)
         {
-            await RefreshDiffInternalAsync();
+            return;
         }
+
+        var refreshKey = CreateAutoRefreshKey();
+        if (string.Equals(refreshKey, _lastAutoRefreshKey, StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        _lastAutoRefreshKey = refreshKey;
+        await RefreshDiffInternalAsync();
     }
 
     private void ToggleViewMode()
@@ -148,7 +158,32 @@
 
     public async Task RefreshDiffAsync()
     {
+        _lastAutoRefreshKey = CreateAutoRefreshKey();
         await RefreshDiffInternalAsync();
+    }
+
+    private string CreateAutoRefreshKey()
+    {
+        var style = Options?.Style;
+
+        return string.Join('\u001F',
+            OriginText,
+            NewText,
+            Options?.Mode,
+            Options?.OutputFormat,
+            Options?.IgnoreWhitespace,
+            Options?.IgnoreCase,
+            Options?.ContextLines,
+            Options?.MaxCharacterDiffLength,
+            style?.AddedLineStyle,
+            style?.DeletedLineStyle,
+            style?.ModifiedLineStyle,
+            style?.UnchangedLineStyle,
+            style?.AddedCharacterStyle,
+            style?.DeletedCharacterStyle,
+            style?.LineNumberStyle,
+            style?.ContainerStyle,
+            style?.IncludeDefaultCss);
     }
 
     private async Task RefreshDiffInternalAsync()
