@@ -37,7 +37,11 @@
                         </MudStack>
                         <MudChip T="int" Color="Color.Primary" Variant="Variant.Filled" Size="Size.Small">@_sourceInventories.Count</MudChip>
                     </MudStack>
-                    @if (_sourceInventories.Count == 0)
+                    @if (!string.IsNullOrWhiteSpace(_sourceInventoryLoadError))
+                    {
+                        <MudAlert Severity="Severity.Error">@($"{L["Common:Errors:LoadFailed"]}: {_sourceInventoryLoadError}")</MudAlert>
+                    }
+                    else if (_sourceInventories.Count == 0)
                     {
                         <MudAlert Severity="Severity.Info">@L["Sources:Empty"]</MudAlert>
                     }
@@ -242,6 +246,7 @@
     private readonly List<ConfigurationStoreState> _states = [];
     private readonly List<ConfigurationSourceInventory> _sourceInventories = [];
     private ConfigurationStorageOverview? _overview;
+    private string? _sourceInventoryLoadError;
     private bool _loading = true;
 
     protected override async Task OnInitializedAsync()
@@ -271,9 +276,15 @@
         }
 
         var sourceResult = await Facade.GetConfigurationSourceInventoriesAsync();
-        if (!sourceResult.IsFailed(out _, out var sourceInventories))
+        _sourceInventories.Clear();
+        if (sourceResult.IsFailed(out var sourceError, out var sourceInventories))
         {
-            _sourceInventories.Clear();
+            _sourceInventoryLoadError = sourceError.Message;
+            Snackbar.Add($"{L["Common:Errors:LoadFailed"]}: {sourceError.Message}", Severity.Error);
+        }
+        else
+        {
+            _sourceInventoryLoadError = null;
             _sourceInventories.AddRange(sourceInventories);
         }
 
