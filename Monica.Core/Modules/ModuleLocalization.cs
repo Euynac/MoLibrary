@@ -132,7 +132,8 @@ public class ModuleLocalizationGuide : WebModuleGuide<ModuleLocalization, Module
             {
                 option.ResourceMarkerTypes.Add(resourceType);
             }
-        }, secondKey: typeof(TResource).FullName);
+        }, secondKey: typeof(TResource).FullName,
+            duplicateBehavior: ModuleConfigurationDuplicateBehavior.SilentIdempotent);
 
         return this;
     }

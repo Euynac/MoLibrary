@@ -2,6 +2,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Monica.Core.Logging;
 using Monica.Core.Modularity.Abstractions;
+using Monica.Core.Modularity.Models;
 using Monica.Core.Modularity.Services.Support;
 using Monica.Tool.Extensions;
 
@@ -175,8 +176,14 @@ public class ModuleRegistrationState(Type moduleType)
     /// <param name="guideFrom">The source module for this configuration. `null` means direct developer configuration.</param>
     /// <param name="key">The primary configuration method key.</param>
     /// <param name="secondKey">The optional secondary key.</param>
-    public void AddConfigureAction<TOption>(int order, Action<TOption> optionAction, ModuleKey? guideFrom,
-        string? secondKey, string key) where TOption : class, IModuleOptionsBase, new()
+    /// <param name="duplicateBehavior">How duplicate option configuration requests with the same execution identity should be handled.</param>
+    public void AddConfigureAction<TOption>(
+        int order,
+        Action<TOption> optionAction,
+        ModuleKey? guideFrom,
+        string? secondKey,
+        string key,
+        ModuleConfigurationDuplicateBehavior duplicateBehavior) where TOption : class, IModuleOptionsBase, new()
     {
         RegisterRequests.Add(
             new ModuleConfigurationRequest($"{key}{secondKey?.BeAfter("_")}")
@@ -188,6 +195,8 @@ public class ModuleRegistrationState(Type moduleType)
                 RequestMethod = ModulePhase.ConfigureServices,
                 Order = guideFrom != null ? order - 1 : order, // Cascaded module option configuration always runs just before the user-specified order.
                 RequestFrom = guideFrom,
+                Slot = ModuleConfigurationRequestSlot.Option,
+                DuplicateBehavior = duplicateBehavior,
                 SourceDesc = $"ConfigOption<{typeof(TOption).Name}>"
             });
 
@@ -229,10 +238,10 @@ public class ModuleRegistrationState(Type moduleType)
 
     /// <summary>
     /// Filters register requests to execute only unique configurations.
-    /// Configurations with the same Key are executed only once (first occurrence wins).
+    /// Duplicate requests use the request's execution key and duplicate behavior.
     /// </summary>
     /// <param name="requests">All register requests to deduplicate</param>
-    /// <returns>Deduplicated requests maintaining original order</returns>
+    /// <returns>Deduplicated requests using the existing last-in registration precedence.</returns>
     public IEnumerable<ModuleConfigurationRequest> DeduplicateRequests(
         IEnumerable<ModuleConfigurationRequest> requests)
     {
@@ -241,17 +250,15 @@ public class ModuleRegistrationState(Type moduleType)
 
         foreach (var request in requests.Reverse())
         {
-            // Deduplicate by key
-            if (seenKeys.Add(request.Key))
+            if (seenKeys.Add(request.ExecutionKey))
             {
                 yield return request;
             }
-            else
+            else if (request.DuplicateBehavior == ModuleConfigurationDuplicateBehavior.Warn)
             {
-                // Log skipped duplicate for debugging
                 logger.LogWarning(
-                    "Skipping duplicate configuration: {Key} (OwningModule: {OwningModule}, RequestFrom: {RequestFrom}, RequestMethod: {Method}, Order: {Order}, SourceDesc: {SourceDesc})",
-                    request.Key, ModuleType.Name, request.RequestFrom?.ToString() ?? "N/A", request.RequestMethod, request.Order, request.SourceDesc ?? "N/A");
+                    "Skipping duplicate configuration: {Key} (Slot: {Slot}, OwningModule: {OwningModule}, RequestFrom: {RequestFrom}, RequestMethod: {Method}, Order: {Order}, SourceDesc: {SourceDesc})",
+                    request.Key, request.Slot, ModuleType.Name, request.RequestFrom?.ToString() ?? "N/A", request.RequestMethod, request.Order, request.SourceDesc ?? "N/A");
             }
         }
     }

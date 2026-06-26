@@ -52,12 +52,14 @@ public class ModuleServiceInvocationGuide : ModuleGuide<ModuleServiceInvocation,
     /// </summary>
     public ModuleServiceInvocationGuide UseStandaloneProvider()
     {
-        ConfigureEmpty(SET_PROVIDER);
-        ConfigureModuleOption(o => o.UseDistributedProvider = false);
+        ConfigureModuleOption(o => o.UseDistributedProvider = false,
+            key: SET_PROVIDER,
+            duplicateBehavior: ModuleConfigurationDuplicateBehavior.ExclusiveLastWins);
         ConfigureServices(context =>
         {
             context.Services.TryAddSingleton<IServiceInvocationConnector, StandaloneServiceInvocationProvider>();
-        });
+        }, key: SET_PROVIDER,
+            duplicateBehavior: ModuleConfigurationDuplicateBehavior.ExclusiveLastWins);
         return this;
     }
 
@@ -68,12 +70,14 @@ public class ModuleServiceInvocationGuide : ModuleGuide<ModuleServiceInvocation,
     public ModuleServiceInvocationGuide UseDistributedProvider<TProvider>()
         where TProvider : class, IServiceInvocationConnector
     {
-        ConfigureEmpty(SET_PROVIDER);
-        ConfigureModuleOption(o => o.UseDistributedProvider = true);
+        ConfigureModuleOption(o => o.UseDistributedProvider = true,
+            key: SET_PROVIDER,
+            duplicateBehavior: ModuleConfigurationDuplicateBehavior.ExclusiveLastWins);
         ConfigureServices(context =>
         {
             context.Services.TryAddSingleton<IServiceInvocationConnector, TProvider>();
-        });
+        }, key: SET_PROVIDER,
+            duplicateBehavior: ModuleConfigurationDuplicateBehavior.ExclusiveLastWins);
         return this;
     }
 }

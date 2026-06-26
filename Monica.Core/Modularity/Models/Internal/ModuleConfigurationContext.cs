@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Monica.Core.Modularity.Abstractions;
+using Monica.Core.Modularity.Models;
 
 namespace Monica.Core.Modularity.Models.Internal;
 
@@ -105,15 +106,32 @@ public class ModuleBuilderConfigurationContext<TModuleOption>(ModuleConfiguratio
     public IHostApplicationBuilder HostApplicationBuilder => Context.HostApplicationBuilder!;
 }
 
-
-
 public class ModuleConfigurationRequest(string key)
 {
     public Action<ModuleConfigurationContext>? ConfigureContext { get; set; }
+
     /// <summary>
-    /// Configuration key. Configurations with the same Key are executed only once during the execution phase (first occurrence wins).
+    /// Logical configuration method key. Required-configuration validation uses this value.
     /// </summary>
     public string Key { get; set; } = key;
+
+    /// <summary>
+    /// Execution slot used when deduplicating requests.
+    /// Requests with the same logical key but different slots can both execute.
+    /// </summary>
+    public ModuleConfigurationRequestSlot Slot { get; set; } = ModuleConfigurationRequestSlot.Execution;
+
+    /// <summary>
+    /// Duplicate handling behavior for requests with the same execution identity.
+    /// </summary>
+    public ModuleConfigurationDuplicateBehavior DuplicateBehavior { get; set; } =
+        ModuleConfigurationDuplicateBehavior.Warn;
+
+    /// <summary>
+    /// Effective key used by execution-phase deduplication.
+    /// </summary>
+    public string ExecutionKey => $"{Slot}:{Key}";
+
     /// <summary>
     /// Source module that issued the request. `null` means direct developer configuration.
     /// </summary>

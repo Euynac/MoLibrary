@@ -175,15 +175,21 @@ public class ModuleGuide<TModule, TModuleOption, TModuleGuideSelf> : ModuleGuide
     /// <param name="context">The module registration context action.</param>
     /// <param name="order">The execution order.</param>
     /// <param name="requestMethod">The configuration method being requested.</param>
+    /// <param name="duplicateBehavior">How duplicate requests with the same execution identity should be handled.</param>
+    /// <param name="slot">The execution slot used for deduplication.</param>
     protected internal void ConfigureModule(string key, string? secondKey, Action<ModuleConfigurationContext> context, int order,
-        ModulePhase requestMethod)
+        ModulePhase requestMethod,
+        ModuleConfigurationDuplicateBehavior duplicateBehavior = ModuleConfigurationDuplicateBehavior.Warn,
+        ModuleConfigurationRequestSlot slot = ModuleConfigurationRequestSlot.Execution)
     {
         var request = new ModuleConfigurationRequest($"{key}{secondKey?.BeAfter("_")}")
         {
             Order = order,
             RequestFrom = GuideFrom,
             RequestMethod = requestMethod,
-            ConfigureContext = context
+            ConfigureContext = context,
+            DuplicateBehavior = duplicateBehavior,
+            Slot = slot
         };
         RegisterModule(request);
     }
@@ -207,26 +213,34 @@ public class ModuleGuide<TModule, TModuleOption, TModuleGuideSelf> : ModuleGuide
     /// <param name="order">The concrete execution order value.</param>
     /// <param name="secondKey">A secondary key for methods that may be invoked multiple times. Use <see cref="Guid.NewGuid()"/> when repeated calls are valid.</param>
     /// <param name="key">The unique configuration method key.</param>
+    /// <param name="duplicateBehavior">How duplicate service registration requests with the same execution identity should be handled.</param>
     protected internal void ConfigureServices(Action<ModuleServiceConfigurationContext<TModuleOption>> context,
-        int order, string? secondKey = null, [CallerMemberName] string key = "")
+        int order,
+        string? secondKey = null,
+        [CallerMemberName] string key = "",
+        ModuleConfigurationDuplicateBehavior duplicateBehavior = ModuleConfigurationDuplicateBehavior.Warn)
     {
         ConfigureModule(key, secondKey, registerContext =>
         {
             context.Invoke(new ModuleServiceConfigurationContext<TModuleOption>(registerContext));
-        }, order, ModulePhase.ConfigureServices);
+        }, order, ModulePhase.ConfigureServices, duplicateBehavior);
     }
 
     /// <summary>
-    /// <inheritdoc cref="ConfigureServices(System.Action{ModuleServiceConfigurationContext{TModuleOption}},int,string?,string)"/>
+    /// Configures the module service registrations.
     /// </summary>
     /// <param name="context">The service configuration context action.</param>
     /// <param name="order">The execution order enum value.</param>
     /// <param name="secondKey">A secondary key for methods that may be invoked multiple times. Use <see cref="Guid.NewGuid()"/> when repeated calls are valid.</param>
     /// <param name="key">The unique configuration method key.</param>
+    /// <param name="duplicateBehavior">How duplicate service registration requests with the same execution identity should be handled.</param>
     protected internal void ConfigureServices(Action<ModuleServiceConfigurationContext<TModuleOption>> context,
-        ModuleRegistrationOrder order = ModuleRegistrationOrder.Normal, string? secondKey = null, [CallerMemberName] string key = "")
+        ModuleRegistrationOrder order = ModuleRegistrationOrder.Normal,
+        string? secondKey = null,
+        [CallerMemberName] string key = "",
+        ModuleConfigurationDuplicateBehavior duplicateBehavior = ModuleConfigurationDuplicateBehavior.Warn)
     {
-        ConfigureServices(context, (int)order, secondKey, key);
+        ConfigureServices(context, (int)order, secondKey, key, duplicateBehavior);
     }
 
     /// <summary>
@@ -236,28 +250,36 @@ public class ModuleGuide<TModule, TModuleOption, TModuleGuideSelf> : ModuleGuide
     /// <param name="order">The concrete execution order value.</param>
     /// <param name="secondKey">A secondary key for methods that may be invoked multiple times. Use <see cref="Guid.NewGuid()"/> when repeated calls are valid.</param>
     /// <param name="key">The unique configuration method key.</param>
+    /// <param name="duplicateBehavior">How duplicate post-service requests with the same execution identity should be handled.</param>
     protected internal void PostConfigureServices(
         Action<ModuleServiceConfigurationContext<TModuleOption>> context,
-        int order, string? secondKey = null, [CallerMemberName] string key = "")
+        int order,
+        string? secondKey = null,
+        [CallerMemberName] string key = "",
+        ModuleConfigurationDuplicateBehavior duplicateBehavior = ModuleConfigurationDuplicateBehavior.Warn)
     {
         ConfigureModule(key, secondKey, registerContext =>
         {
             context.Invoke(new ModuleServiceConfigurationContext<TModuleOption>(registerContext));
-        }, order, ModulePhase.PostConfigureServices);
+        }, order, ModulePhase.PostConfigureServices, duplicateBehavior);
     }
 
     /// <summary>
-    /// <inheritdoc cref="PostConfigureServices(System.Action{ModuleServiceConfigurationContext{TModuleOption}},int,string?,string)"/>
+    /// Configures post-service registration actions for the module.
     /// </summary>
     /// <param name="context">The post-service configuration context action.</param>
     /// <param name="order">The execution order enum value.</param>
     /// <param name="secondKey">A secondary key for methods that may be invoked multiple times. Use <see cref="Guid.NewGuid()"/> when repeated calls are valid.</param>
     /// <param name="key">The unique configuration method key.</param>
+    /// <param name="duplicateBehavior">How duplicate post-service requests with the same execution identity should be handled.</param>
     protected internal void PostConfigureServices(
         Action<ModuleServiceConfigurationContext<TModuleOption>> context,
-        ModuleRegistrationOrder order = ModuleRegistrationOrder.Normal, string? secondKey = null, [CallerMemberName] string key = "")
+        ModuleRegistrationOrder order = ModuleRegistrationOrder.Normal,
+        string? secondKey = null,
+        [CallerMemberName] string key = "",
+        ModuleConfigurationDuplicateBehavior duplicateBehavior = ModuleConfigurationDuplicateBehavior.Warn)
     {
-        PostConfigureServices(context, (int)order, secondKey, key);
+        PostConfigureServices(context, (int)order, secondKey, key, duplicateBehavior);
     }
 
     /// <summary>
@@ -267,26 +289,34 @@ public class ModuleGuide<TModule, TModuleOption, TModuleGuideSelf> : ModuleGuide
     /// <param name="order">The concrete execution order value.</param>
     /// <param name="secondKey">A secondary key for methods that may be invoked multiple times. Use <see cref="Guid.NewGuid()"/> when repeated calls are valid.</param>
     /// <param name="key">The unique configuration method key.</param>
+    /// <param name="duplicateBehavior">How duplicate host-builder requests with the same execution identity should be handled.</param>
     protected internal void ConfigureBuilder(Action<ModuleBuilderConfigurationContext<TModuleOption>> context,
-        int order, string? secondKey = null, [CallerMemberName] string key = "")
+        int order,
+        string? secondKey = null,
+        [CallerMemberName] string key = "",
+        ModuleConfigurationDuplicateBehavior duplicateBehavior = ModuleConfigurationDuplicateBehavior.Warn)
     {
         ConfigureModule(key, secondKey, registerContext =>
         {
             context.Invoke(new ModuleBuilderConfigurationContext<TModuleOption>(registerContext));
-        }, order, ModulePhase.ConfigureBuilder);
+        }, order, ModulePhase.ConfigureBuilder, duplicateBehavior);
     }
 
     /// <summary>
-    /// <inheritdoc cref="ConfigureBuilder(System.Action{ModuleBuilderConfigurationContext{TModuleOption}},int,string?,string)"/>
+    /// Configures the <see cref="Microsoft.Extensions.Hosting.IHostApplicationBuilder"/> for the module.
     /// </summary>
     /// <param name="context">The builder configuration context action.</param>
     /// <param name="order">The execution order enum value.</param>
     /// <param name="secondKey">A secondary key for methods that may be invoked multiple times. Use <see cref="Guid.NewGuid()"/> when repeated calls are valid.</param>
     /// <param name="key">The unique configuration method key.</param>
+    /// <param name="duplicateBehavior">How duplicate host-builder requests with the same execution identity should be handled.</param>
     protected internal void ConfigureBuilder(Action<ModuleBuilderConfigurationContext<TModuleOption>> context,
-        ModuleRegistrationOrder order = ModuleRegistrationOrder.Normal, string? secondKey = null, [CallerMemberName] string key = "")
+        ModuleRegistrationOrder order = ModuleRegistrationOrder.Normal,
+        string? secondKey = null,
+        [CallerMemberName] string key = "",
+        ModuleConfigurationDuplicateBehavior duplicateBehavior = ModuleConfigurationDuplicateBehavior.Warn)
     {
-        ConfigureBuilder(context, (int)order, secondKey, key);
+        ConfigureBuilder(context, (int)order, secondKey, key, duplicateBehavior);
     }
 
     #endregion
@@ -300,10 +330,14 @@ public class ModuleGuide<TModule, TModuleOption, TModuleGuideSelf> : ModuleGuide
     /// <param name="order">The execution order enum value.</param>
     /// <param name="secondKey">A secondary key for methods that may be invoked multiple times. Use <see cref="Guid.NewGuid()"/> when repeated calls are valid.</param>
     /// <param name="key">The unique configuration method key.</param>
+    /// <param name="duplicateBehavior">How duplicate option configuration requests with the same execution identity should be handled.</param>
     public TModuleGuideSelf ConfigureModuleOption(Action<TModuleOption>? optionAction,
-        ModuleRegistrationOrder order = ModuleRegistrationOrder.Normal, string? secondKey = null, [CallerMemberName] string key = "")
+        ModuleRegistrationOrder order = ModuleRegistrationOrder.Normal,
+        string? secondKey = null,
+        [CallerMemberName] string key = "",
+        ModuleConfigurationDuplicateBehavior duplicateBehavior = ModuleConfigurationDuplicateBehavior.Warn)
     {
-        return ConfigureOption(optionAction, (int) order, secondKey, key);
+        return ConfigureOption(optionAction, (int) order, secondKey, key, duplicateBehavior);
     }
 
     /// <summary>
@@ -313,8 +347,13 @@ public class ModuleGuide<TModule, TModuleOption, TModuleGuideSelf> : ModuleGuide
     /// <param name="order">The execution order value.</param>
     /// <param name="secondKey">The optional secondary configuration key.</param>
     /// <param name="key">The unique configuration method key.</param>
-    private TModuleGuideSelf ConfigureOption<TOption>(Action<TOption>? optionAction, int order, string? secondKey,
-        string key) where TOption : class, IModuleOptionsBase, new()
+    /// <param name="duplicateBehavior">How duplicate option configuration requests with the same execution identity should be handled.</param>
+    private TModuleGuideSelf ConfigureOption<TOption>(
+        Action<TOption>? optionAction,
+        int order,
+        string? secondKey,
+        string key,
+        ModuleConfigurationDuplicateBehavior duplicateBehavior) where TOption : class, IModuleOptionsBase, new()
     {
         if(optionAction == null) return (TModuleGuideSelf) this;
 
@@ -322,7 +361,7 @@ public class ModuleGuide<TModule, TModuleOption, TModuleGuideSelf> : ModuleGuide
         secondKey ??= GuideFrom?.ToString();
 
         var requestInfo = RegisterModule();
-        requestInfo.AddConfigureAction(order, optionAction, GuideFrom, secondKey, key);
+        requestInfo.AddConfigureAction(order, optionAction, GuideFrom, secondKey, key, duplicateBehavior);
         return (TModuleGuideSelf) this;
     }
 
@@ -333,10 +372,14 @@ public class ModuleGuide<TModule, TModuleOption, TModuleGuideSelf> : ModuleGuide
     /// <param name="order">The execution order enum value.</param>
     /// <param name="secondKey">The optional secondary configuration key.</param>
     /// <param name="key">The unique configuration method key.</param>
+    /// <param name="duplicateBehavior">How duplicate extra-option configuration requests with the same execution identity should be handled.</param>
     public TModuleGuideSelf ConfigureExtraOption<TOption>(Action<TOption>? optionAction,
-        ModuleRegistrationOrder order = ModuleRegistrationOrder.Normal, string? secondKey = null, [CallerMemberName] string key = "") where TOption : class, IModuleExtraOptions<TModule>, new()
+        ModuleRegistrationOrder order = ModuleRegistrationOrder.Normal,
+        string? secondKey = null,
+        [CallerMemberName] string key = "",
+        ModuleConfigurationDuplicateBehavior duplicateBehavior = ModuleConfigurationDuplicateBehavior.Warn) where TOption : class, IModuleExtraOptions<TModule>, new()
     {
-        return ConfigureOption(optionAction, (int) order, secondKey, key);
+        return ConfigureOption(optionAction, (int) order, secondKey, key, duplicateBehavior);
     }
 
     #endregion

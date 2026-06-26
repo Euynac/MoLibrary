@@ -221,7 +221,8 @@ public class ModuleRAGGuide
                 ProviderKind = "InMemory",
                 ProviderDisplayName = "In-Memory"
             });
-        }, key: CONFIG_VECTOR_STORE);
+        }, key: CONFIG_VECTOR_STORE,
+            duplicateBehavior: ModuleConfigurationDuplicateBehavior.ExclusiveLastWins);
         return this;
     }
 
@@ -236,7 +237,8 @@ public class ModuleRAGGuide
                 ProviderKind = "Custom",
                 ProviderDisplayName = typeof(TVectorStore).Name
             });
-        }, key: CONFIG_VECTOR_STORE);
+        }, key: CONFIG_VECTOR_STORE,
+            duplicateBehavior: ModuleConfigurationDuplicateBehavior.ExclusiveLastWins);
         return this;
     }
 
@@ -257,7 +259,8 @@ public class ModuleRAGGuide
                 option.ApiKey ?? string.Empty,
                 new QdrantVectorStoreOptions());
             ctx.Services.AddSingleton(CreateQdrantVectorStoreRegistrationInfo(option));
-        }, key: CONFIG_VECTOR_STORE);
+        }, key: CONFIG_VECTOR_STORE,
+            duplicateBehavior: ModuleConfigurationDuplicateBehavior.ExclusiveLastWins);
 
         return this;
     }

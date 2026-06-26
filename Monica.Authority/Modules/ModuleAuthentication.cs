@@ -147,11 +147,27 @@ public class ModuleAuthentication(ModuleAuthenticationOption option) : WebModule
 
 public class ModuleAuthenticationGuide : WebModuleGuide<ModuleAuthentication, ModuleAuthenticationOption, ModuleAuthenticationGuide>
 {
+    private const string CONFIG_SYSTEM_USER = nameof(CONFIG_SYSTEM_USER);
+
     protected override string[] GetRequestedConfigMethodKeys()
     {
-        return [nameof(ConfigSystemUser)];
+        return [CONFIG_SYSTEM_USER];
     }
+
     public ModuleAuthenticationGuide ConfigSystemUser<T>(T curSystemEnum, Action<SystemUserOptions>? action = null) where T : struct, Enum
+    {
+        return ConfigSystemUserCore(curSystemEnum, ModuleRegistrationOrder.Normal, action);
+    }
+
+    public ModuleAuthenticationGuide ConfigDefaultSystemUser(Action<SystemUserOptions>? action = null)
+    {
+        return ConfigSystemUserCore(EDefaultSystemUser.System, ModuleRegistrationOrder.PreConfig, action);
+    }
+
+    private ModuleAuthenticationGuide ConfigSystemUserCore<T>(
+        T curSystemEnum,
+        ModuleRegistrationOrder order,
+        Action<SystemUserOptions>? action = null) where T : struct, Enum
     {
         ConfigureServices(context =>
         {
@@ -161,14 +177,10 @@ public class ModuleAuthenticationGuide : WebModuleGuide<ModuleAuthentication, Mo
                 action?.Invoke(o);
             });
             context.Services.AddSingleton<ISystemUserManager, SystemUserManager>();
-        });
+        }, order,
+            key: CONFIG_SYSTEM_USER,
+            duplicateBehavior: ModuleConfigurationDuplicateBehavior.ExclusiveLastWins);
         return this;
-        
-    }
-
-    public ModuleAuthenticationGuide ConfigDefaultSystemUser(Action<SystemUserOptions>? action = null)
-    {
-        return ConfigSystemUser(EDefaultSystemUser.System, action);
     }
 }
 
