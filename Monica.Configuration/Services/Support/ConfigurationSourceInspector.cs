@@ -524,7 +524,7 @@ internal sealed class ConfigurationSourceInspector(
 
         return new ConfigurationSourceDescriptor
         {
-            SourceKey = normalizedPhysicalPath is null ? $"json:{index}" : $"json:{Hash(normalizedPhysicalPath)}",
+            SourceKey = normalizedPhysicalPath is null ? $"json:{index}" : $"json:{index}:{Hash(normalizedPhysicalPath)}",
             PriorityIndex = index,
             DisplayName = managed?.DisplayName ?? Path.GetFileName(sourcePath),
             ProviderType = provider.GetType().FullName ?? provider.GetType().Name,
