@@ -43,7 +43,7 @@ public sealed class ConfigurationValueHistoryEntity
 
     public int SchemaVersion { get; set; }
 
-    public DateTimeOffset ModifiedTime { get; set; }
+    public DateTime ModifiedTime { get; set; }
 
     public string? ModifierId { get; set; }
 

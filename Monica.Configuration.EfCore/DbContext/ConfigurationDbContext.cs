@@ -13,6 +13,9 @@ public sealed class ConfigurationDbContext(
     ICachedServiceProvider serviceProvider)
     : RepositoryDbContext<ConfigurationDbContext>(options, serviceProvider)
 {
+    private const string TIMESTAMP_WITH_TIME_ZONE_COLUMN_TYPE = "timestamp with time zone";
+    private const string TIMESTAMP_COLUMN_TYPE = "timestamp";
+
     public DbSet<ConfigurationDefinitionEntity> ConfigurationDefinitions => Set<ConfigurationDefinitionEntity>();
 
     public DbSet<ConfigurationDefinitionPublishHistoryEntity> ConfigurationDefinitionPublishHistories =>
@@ -24,10 +27,26 @@ public sealed class ConfigurationDbContext(
 
     public DbSet<ConfigurationMutationGroupEntity> ConfigurationMutationGroups => Set<ConfigurationMutationGroupEntity>();
 
+    internal DbSet<ConfigurationSchemaMarkerEntity> ConfigurationSchemaMarkers => Set<ConfigurationSchemaMarkerEntity>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
 
+        var timeColumnType = UsesTimestampWithTimeZone(Database.ProviderName)
+            ? TIMESTAMP_WITH_TIME_ZONE_COLUMN_TYPE
+            : TIMESTAMP_COLUMN_TYPE;
+
+        modelBuilder.Entity<ConfigurationSchemaMarkerEntity>()
+            .ToTable("ConfigurationSchemaMarkers")
+            .HasKey(x => x.MarkerKey);
+        modelBuilder.Entity<ConfigurationSchemaMarkerEntity>()
+            .Property(x => x.MarkerKey)
+            .IsRequired()
+            .HasMaxLength(100);
+        modelBuilder.Entity<ConfigurationSchemaMarkerEntity>()
+            .Property(x => x.SchemaVersion)
+            .IsRequired();
         modelBuilder.Entity<ConfigurationDefinitionEntity>().HasKey(x => x.DefinitionKey);
         modelBuilder.Entity<ConfigurationDefinitionEntity>()
             .HasIndex(x => x.FromProject);
@@ -55,15 +74,18 @@ public sealed class ConfigurationDbContext(
             .HasMaxLength(200);
         modelBuilder.Entity<ConfigurationDefinitionPublishHistoryEntity>()
             .Property(x => x.PublishedTime)
-            .HasConversion(value => ToUtcTicks(value), value => FromUtcTicks(value));
+            .HasPrecision(6)
+            .HasColumnType(timeColumnType);
         modelBuilder.Entity<ConfigurationEffectiveValueEntity>().HasKey(x => x.DefinitionKey);
         modelBuilder.Entity<ConfigurationEffectiveValueEntity>()
             .Property(x => x.LastModifiedTime)
-            .HasConversion(value => ToUtcTicks(value), value => FromUtcTicks(value));
+            .HasPrecision(6)
+            .HasColumnType(timeColumnType);
         modelBuilder.Entity<ConfigurationValueHistoryEntity>().HasKey(x => x.HistoryId);
         modelBuilder.Entity<ConfigurationValueHistoryEntity>()
             .Property(x => x.ModifiedTime)
-            .HasConversion(value => ToUtcTicks(value), value => FromUtcTicks(value));
+            .HasPrecision(6)
+            .HasColumnType(timeColumnType);
         modelBuilder.Entity<ConfigurationValueHistoryEntity>()
             .HasIndex(x => new { x.DefinitionKey, x.PathDepth, x.ModifiedTime });
         modelBuilder.Entity<ConfigurationValueHistoryEntity>()
@@ -71,31 +93,20 @@ public sealed class ConfigurationDbContext(
         modelBuilder.Entity<ConfigurationMutationGroupEntity>().HasKey(x => x.GroupId);
         modelBuilder.Entity<ConfigurationMutationGroupEntity>()
             .Property(x => x.CreatedTime)
-            .HasConversion(value => ToUtcTicks(value), value => FromUtcTicks(value));
+            .HasPrecision(6)
+            .HasColumnType(timeColumnType);
         modelBuilder.Entity<ConfigurationMutationGroupEntity>()
             .Property(x => x.RolledBackTime)
-            .HasConversion(value => ToNullableUtcTicks(value), value => FromNullableUtcTicks(value));
+            .HasPrecision(6)
+            .HasColumnType(timeColumnType);
         modelBuilder.Entity<ConfigurationMutationGroupEntity>()
             .HasIndex(x => x.CreatedTime);
     }
 
-    private static long ToUtcTicks(DateTimeOffset value)
+    private static bool UsesTimestampWithTimeZone(string? providerName)
     {
-        return value.UtcDateTime.Ticks;
-    }
-
-    private static DateTimeOffset FromUtcTicks(long ticks)
-    {
-        return new DateTimeOffset(new DateTime(ticks, DateTimeKind.Utc));
-    }
-
-    private static long? ToNullableUtcTicks(DateTimeOffset? value)
-    {
-        return value?.UtcDateTime.Ticks;
-    }
-
-    private static DateTimeOffset? FromNullableUtcTicks(long? ticks)
-    {
-        return ticks is null ? null : FromUtcTicks(ticks.Value);
+        return providerName is not null
+               && (providerName.Contains("Npgsql", StringComparison.OrdinalIgnoreCase)
+                   || providerName.Contains("GaussDB", StringComparison.OrdinalIgnoreCase));
     }
 }

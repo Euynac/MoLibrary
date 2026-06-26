@@ -15,13 +15,13 @@ public sealed class ConfigurationMutationGroupEntity
 
     public int MutationCount { get; set; }
 
-    public DateTimeOffset CreatedTime { get; set; }
+    public DateTime CreatedTime { get; set; }
 
     public string? ModifierId { get; set; }
 
     public string? ModifierName { get; set; }
 
-    public DateTimeOffset? RolledBackTime { get; set; }
+    public DateTime? RolledBackTime { get; set; }
 
     public string? RolledBackGroupId { get; set; }
 

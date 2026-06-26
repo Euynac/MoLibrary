@@ -28,7 +28,7 @@ public sealed class ConfigurationEffectiveValueEntity
     /// <summary>
     /// Gets or sets the last modification time.
     /// </summary>
-    public DateTimeOffset LastModifiedTime { get; set; }
+    public DateTime LastModifiedTime { get; set; }
 
     /// <summary>
     /// Gets or sets the last modifier identity.

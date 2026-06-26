@@ -39,5 +39,5 @@ public sealed class ConfigurationDefinitionPublishHistoryEntity
 
     public string? PublisherVersion { get; set; }
 
-    public DateTimeOffset PublishedTime { get; set; }
+    public DateTime PublishedTime { get; set; }
 }

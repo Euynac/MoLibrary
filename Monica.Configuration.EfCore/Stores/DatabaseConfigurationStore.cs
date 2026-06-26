@@ -101,7 +101,7 @@ public sealed class DatabaseConfigurationStore(
                             Json = NormalizeJson(seed.SeedJson),
                             Version = 1,
                             SchemaVersion = seed.Definition.SchemaVersion,
-                            LastModifiedTime = DateTimeOffset.UtcNow
+                            LastModifiedTime = DateTime.UtcNow
                         };
                         dbContext.ConfigurationEffectiveValues.Add(entity);
                         documentsByKey[entity.DefinitionKey] = ToDocument(entity);
@@ -163,7 +163,7 @@ public sealed class DatabaseConfigurationStore(
             entity.Json = NormalizeJson(request.Json);
             entity.Version++;
             entity.SchemaVersion = request.Definition.SchemaVersion;
-            entity.LastModifiedTime = DateTimeOffset.UtcNow;
+            entity.LastModifiedTime = DateTime.UtcNow;
             entity.LastModifierId = request.Context.ModifierId;
             entity.LastModifierName = request.Context.ModifierName;
 
@@ -197,12 +197,14 @@ public sealed class DatabaseConfigurationStore(
 
             if (from is not null)
             {
-                query = query.Where(history => history.ModifiedTime >= from);
+                var fromUtc = NormalizeUtcDateTime(from.Value);
+                query = query.Where(history => history.ModifiedTime >= fromUtc);
             }
 
             if (to is not null)
             {
-                query = query.Where(history => history.ModifiedTime <= to);
+                var toUtc = NormalizeUtcDateTime(to.Value);
+                query = query.Where(history => history.ModifiedTime <= toUtc);
             }
 
             if (!string.IsNullOrWhiteSpace(definitionKey))
@@ -258,10 +260,10 @@ public sealed class DatabaseConfigurationStore(
             entity.Reason = group.Reason;
             entity.DefinitionKeysJson = JsonSerializer.Serialize(group.DefinitionKeys, ConfigurationPersistedJsonOptions.CompactValue);
             entity.MutationCount = group.MutationCount;
-            entity.CreatedTime = group.CreatedTime;
+            entity.CreatedTime = NormalizeUtcDateTime(group.CreatedTime);
             entity.ModifierId = group.ModifierId;
             entity.ModifierName = group.ModifierName;
-            entity.RolledBackTime = group.RolledBackTime;
+            entity.RolledBackTime = NormalizeNullableUtcDateTime(group.RolledBackTime);
             entity.RolledBackGroupId = group.RolledBackGroupId;
             entity.Status = group.Status.ToString();
             await dbContext.SaveChangesAsync(token);
@@ -280,12 +282,14 @@ public sealed class DatabaseConfigurationStore(
             var query = dbContext.ConfigurationMutationGroups.AsNoTracking();
             if (from is not null)
             {
-                query = query.Where(group => group.CreatedTime >= from);
+                var fromUtc = NormalizeUtcDateTime(from.Value);
+                query = query.Where(group => group.CreatedTime >= fromUtc);
             }
 
             if (to is not null)
             {
-                query = query.Where(group => group.CreatedTime <= to);
+                var toUtc = NormalizeUtcDateTime(to.Value);
+                query = query.Where(group => group.CreatedTime <= toUtc);
             }
 
             var groups = (await query
@@ -484,13 +488,16 @@ public sealed class DatabaseConfigurationStore(
                 {
                     await creator.CreateAsync(token);
                     await creator.CreateTablesAsync(token);
+                    await EnsureConfigurationSchemaMarkerAsync(dbContext, token);
                     return;
                 }
 
                 var schemaState = await GetConfigurationSchemaStateAsync(dbContext, token);
                 if (schemaState == ConfigurationSchemaState.Missing)
                 {
+                    await DropConfigurationTablesAsync(dbContext, token);
                     await creator.CreateTablesAsync(token);
+                    await EnsureConfigurationSchemaMarkerAsync(dbContext, token);
                     return;
                 }
 
@@ -498,6 +505,7 @@ public sealed class DatabaseConfigurationStore(
                 {
                     await DropConfigurationTablesAsync(dbContext, token);
                     await creator.CreateTablesAsync(token);
+                    await EnsureConfigurationSchemaMarkerAsync(dbContext, token);
                 }
             }, cancellationToken);
 
@@ -531,6 +539,16 @@ public sealed class DatabaseConfigurationStore(
 
         try
         {
+            var marker = await dbContext.ConfigurationSchemaMarkers
+                .AsNoTracking()
+                .Where(candidate => candidate.MarkerKey == ConfigurationSchemaMarkerEntity.CurrentMarkerKey)
+                .Select(candidate => new { candidate.SchemaVersion })
+                .SingleOrDefaultAsync(cancellationToken);
+            if (marker?.SchemaVersion != ConfigurationSchemaMarkerEntity.CurrentSchemaVersion)
+            {
+                return ConfigurationSchemaState.Mismatch;
+            }
+
             _ = await dbContext.ConfigurationDefinitionPublishHistories
                 .AsNoTracking()
                 .Select(history => new { history.HistoryId, history.DefinitionKey, history.PublishedTime })
@@ -543,12 +561,34 @@ public sealed class DatabaseConfigurationStore(
         }
     }
 
+    private static async Task EnsureConfigurationSchemaMarkerAsync(
+        ConfigurationDbContext dbContext,
+        CancellationToken cancellationToken)
+    {
+        var marker = await dbContext.ConfigurationSchemaMarkers
+            .FirstOrDefaultAsync(candidate => candidate.MarkerKey == ConfigurationSchemaMarkerEntity.CurrentMarkerKey, cancellationToken);
+        if (marker is null)
+        {
+            dbContext.ConfigurationSchemaMarkers.Add(new ConfigurationSchemaMarkerEntity());
+        }
+        else if (marker.SchemaVersion != ConfigurationSchemaMarkerEntity.CurrentSchemaVersion)
+        {
+            marker.SchemaVersion = ConfigurationSchemaMarkerEntity.CurrentSchemaVersion;
+        }
+
+        if (dbContext.ChangeTracker.HasChanges())
+        {
+            await dbContext.SaveChangesAsync(cancellationToken);
+        }
+    }
+
     private static async Task DropConfigurationTablesAsync(
         ConfigurationDbContext dbContext,
         CancellationToken cancellationToken)
     {
         var entityTypes = new[]
         {
+            typeof(ConfigurationSchemaMarkerEntity),
             typeof(ConfigurationValueHistoryEntity),
             typeof(ConfigurationMutationGroupEntity),
             typeof(ConfigurationEffectiveValueEntity),
@@ -754,7 +794,7 @@ public sealed class DatabaseConfigurationStore(
                 PublisherId = publisher.PublisherId,
                 PublisherName = publisher.PublisherName,
                 PublisherVersion = publisher.PublisherVersion,
-                PublishedTime = DateTimeOffset.UtcNow
+                PublishedTime = DateTime.UtcNow
             };
         }
 
@@ -872,7 +912,7 @@ public sealed class DatabaseConfigurationStore(
             Json = entity.Json,
             Version = entity.Version,
             SchemaVersion = entity.SchemaVersion,
-            LastModifiedTime = entity.LastModifiedTime,
+            LastModifiedTime = ToUtcOffset(entity.LastModifiedTime),
             LastModifierId = entity.LastModifierId,
             LastModifierName = entity.LastModifierName
         };
@@ -916,7 +956,7 @@ public sealed class DatabaseConfigurationStore(
             PublisherId = entity.PublisherId,
             PublisherName = entity.PublisherName,
             PublisherVersion = entity.PublisherVersion,
-            PublishedTime = entity.PublishedTime
+            PublishedTime = ToUtcOffset(entity.PublishedTime)
         };
     }
 
@@ -943,7 +983,7 @@ public sealed class DatabaseConfigurationStore(
             SourceRevisionBefore = history.SourceRevisionBefore,
             SourceRevisionAfter = history.SourceRevisionAfter,
             SchemaVersion = history.SchemaVersion,
-            ModifiedTime = history.ModifiedTime,
+            ModifiedTime = NormalizeUtcDateTime(history.ModifiedTime),
             ModifierId = history.ModifierId,
             ModifierName = history.ModifierName,
             Reason = history.Reason,
@@ -975,7 +1015,7 @@ public sealed class DatabaseConfigurationStore(
             SourceRevisionBefore = entity.SourceRevisionBefore,
             SourceRevisionAfter = entity.SourceRevisionAfter,
             SchemaVersion = entity.SchemaVersion,
-            ModifiedTime = entity.ModifiedTime,
+            ModifiedTime = ToUtcOffset(entity.ModifiedTime),
             ModifierId = entity.ModifierId,
             ModifierName = entity.ModifierName,
             Reason = entity.Reason,
@@ -994,13 +1034,40 @@ public sealed class DatabaseConfigurationStore(
                 entity.DefinitionKeysJson,
                 ConfigurationPersistedJsonOptions.CompactValue) ?? [],
             MutationCount = entity.MutationCount,
-            CreatedTime = entity.CreatedTime,
+            CreatedTime = ToUtcOffset(entity.CreatedTime),
             ModifierId = entity.ModifierId,
             ModifierName = entity.ModifierName,
-            RolledBackTime = entity.RolledBackTime,
+            RolledBackTime = ToNullableUtcOffset(entity.RolledBackTime),
             RolledBackGroupId = entity.RolledBackGroupId,
             Status = Enum.Parse<ConfigurationMutationGroupStatus>(entity.Status)
         };
+    }
+
+    private static DateTime NormalizeUtcDateTime(DateTimeOffset value)
+    {
+        return value.UtcDateTime;
+    }
+
+    private static DateTime? NormalizeNullableUtcDateTime(DateTimeOffset? value)
+    {
+        return value?.UtcDateTime;
+    }
+
+    private static DateTimeOffset ToUtcOffset(DateTime value)
+    {
+        return new DateTimeOffset(NormalizeUtcDateTime(value));
+    }
+
+    private static DateTimeOffset? ToNullableUtcOffset(DateTime? value)
+    {
+        return value is null ? null : ToUtcOffset(value.Value);
+    }
+
+    private static DateTime NormalizeUtcDateTime(DateTime value)
+    {
+        return value.Kind == DateTimeKind.Utc
+            ? value
+            : DateTime.SpecifyKind(value, DateTimeKind.Utc);
     }
 
     private static ConfigurationStoredValue? JsonToStoredValue(string? json)
