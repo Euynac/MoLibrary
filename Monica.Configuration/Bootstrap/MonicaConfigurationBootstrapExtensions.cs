@@ -3,6 +3,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Configuration.Json;
 using Microsoft.Extensions.Logging;
 using Monica.Configuration.Annotations;
+using Monica.Configuration.Binding;
 using Monica.Configuration.Models;
 using Monica.Configuration.Services.Support;
 using Monica.Core.Logging;
@@ -89,16 +90,7 @@ public static class MonicaConfigurationBootstrapExtensions
 
         try
         {
-            var value = section.Get<TOptions>();
-            if (value is not null)
-            {
-                return value;
-            }
-
-            Logger.LogWarning(
-                "Configuration section '{SectionPath}' for Monica bootstrap options '{OptionsType}' did not produce a value. CLR defaults are used.",
-                sectionPath,
-                typeof(TOptions).FullName ?? typeof(TOptions).Name);
+            return MonicaConfigurationBinder.Get<TOptions>(section);
         }
         catch (Exception ex)
         {

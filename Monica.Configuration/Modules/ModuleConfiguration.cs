@@ -9,6 +9,7 @@ using Microsoft.Extensions.Options;
 using Monica.Configuration.Annotations;
 using Monica.Configuration.Abstractions;
 using Monica.Configuration.Abstractions.Internal;
+using Monica.Configuration.Binding;
 using Monica.Configuration.Facades;
 using Monica.Configuration.Metrics;
 using Monica.Configuration.Models;
@@ -56,9 +57,9 @@ public sealed class ModuleConfiguration
         nameof(OptionsServiceCollectionExtensions.AddOptions),
         [typeof(IServiceCollection)]);
 
-    private static readonly MethodInfo BIND_METHOD = GetRequiredGenericMethod(
-        typeof(OptionsBuilderConfigurationExtensions),
-        nameof(OptionsBuilderConfigurationExtensions.Bind),
+    private static readonly MethodInfo BIND_OPTIONS_METHOD = GetRequiredGenericMethod(
+        typeof(MonicaConfigurationBinder),
+        nameof(MonicaConfigurationBinder.BindOptions),
         [typeof(OptionsBuilder<>), typeof(IConfiguration)]);
 
     private static readonly MethodInfo VALIDATE_DATA_ANNOTATIONS_METHOD = GetRequiredGenericMethod(
@@ -199,7 +200,7 @@ public sealed class ModuleConfiguration
             ?? throw new InvalidOperationException($"Failed to create OptionsBuilder for '{optionsType.FullName}'.");
 
         var configurationSection = _runtimeContext.Configuration.GetSection(sectionPath);
-        BIND_METHOD.MakeGenericMethod(optionsType).Invoke(null, [optionsBuilder, configurationSection]);
+        BIND_OPTIONS_METHOD.MakeGenericMethod(optionsType).Invoke(null, [optionsBuilder, configurationSection]);
         VALIDATE_DATA_ANNOTATIONS_METHOD.MakeGenericMethod(optionsType).Invoke(null, [optionsBuilder]);
     }
 
