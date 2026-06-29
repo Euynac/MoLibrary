@@ -27,6 +27,11 @@ public class FileOpsMessageLocalizer(IStringLocalizer<FileOpsResource> localizer
         return localizer["Messages:EntryDeleted", LocalizeEntryKind(result.EntryKind), Path.GetFileName(result.Path)].Value;
     }
 
+    public string GetEntriesDeletedMessage(FileOpsBatchDeleteResult result)
+    {
+        return localizer["Messages:EntriesDeleted", result.DeletedEntries.Count].Value;
+    }
+
     public string GetFilesUploadedMessage(FileOpsUploadResult result)
     {
         return localizer["Messages:FilesUploaded", result.UploadedEntries.Count, result.DirectoryPath].Value;
@@ -63,6 +68,7 @@ public class FileOpsMessageLocalizer(IStringLocalizer<FileOpsResource> localizer
             FileOpsMessageCode.CannotDeleteRoot => localizer["GeneratedMessages:CannotDeleteRoot", arguments[0]].Value,
             FileOpsMessageCode.UploadFilesRequired => localizer["GeneratedMessages:UploadFilesRequired"].Value,
             FileOpsMessageCode.EditableExtensionRequired => localizer["GeneratedMessages:EditableExtensionRequired", arguments[0]].Value,
+            FileOpsMessageCode.SelectionRequired => localizer["GeneratedMessages:SelectionRequired"].Value,
             _ => throw new ArgumentOutOfRangeException(nameof(messageCode), messageCode, null)
         };
     }

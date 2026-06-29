@@ -117,6 +117,20 @@ public class FileOpsDeleteRequest
     public bool Recursive { get; set; }
 }
 
+public class FileOpsBatchDeleteRequest
+{
+    public List<string> Paths { get; set; } = [];
+
+    public bool Recursive { get; set; } = true;
+}
+
+public class FileOpsArchiveDownloadRequest
+{
+    public List<string> Paths { get; set; } = [];
+
+    public string ArchiveName { get; set; } = string.Empty;
+}
+
 public sealed record FileOpsUploadPayload(string FileName, long Length, Stream Content);
 
 public class FileOpsUploadResult
@@ -133,6 +147,11 @@ public class FileOpsDeleteResult
     public string Path { get; set; } = string.Empty;
 
     public FileOpsEntryKind EntryKind { get; set; }
+}
+
+public class FileOpsBatchDeleteResult
+{
+    public List<FileOpsDeleteResult> DeletedEntries { get; set; } = [];
 }
 
 public class FileOpsDownloadDescriptor

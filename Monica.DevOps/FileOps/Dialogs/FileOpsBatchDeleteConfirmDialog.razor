@@ -1,0 +1,56 @@
+@using Monica.DevOps.FileOps.Models
+@using Monica.DevOps.Localization
+@inject IStringLocalizer<FileOpsResource> L
+
+<MudDialog>
+    <DialogContent>
+        <MudStack Spacing="2">
+            <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined">
+                @L["BatchDeleteDialog:Summary", Entries.Count]
+            </MudAlert>
+
+            @if (DirectoryCount > 0)
+            {
+                <MudAlert Severity="Severity.Info" Variant="Variant.Outlined">
+                    @L["BatchDeleteDialog:DirectoryWarning", DirectoryCount]
+                </MudAlert>
+
+                <MudSwitch T="bool" @bind-Value="_recursive" Color="Color.Warning">
+                    @L["BatchDeleteDialog:Recursive"]
+                </MudSwitch>
+            }
+        </MudStack>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel" Variant="Variant.Text">
+            @L["Common:Cancel"]
+        </MudButton>
+        <MudButton OnClick="Confirm" Variant="Variant.Filled" Color="Color.Error" StartIcon="@Icons.Material.Filled.DeleteSweep">
+            @L["BatchDeleteDialog:Confirm"]
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] private IMudDialogInstance? MudDialog { get; set; }
+
+    [Parameter] public IReadOnlyList<FileOpsEntrySummary> Entries { get; set; } = [];
+
+    private bool _recursive = true;
+
+    private int DirectoryCount => Entries.Count(static entry => entry.IsDirectory);
+
+    private void Cancel()
+    {
+        MudDialog?.Cancel();
+    }
+
+    private void Confirm()
+    {
+        MudDialog?.Close(DialogResult.Ok(new FileOpsBatchDeleteRequest
+        {
+            Paths = Entries.Select(static entry => entry.FullPath).ToList(),
+            Recursive = DirectoryCount > 0 && _recursive
+        }));
+    }
+}

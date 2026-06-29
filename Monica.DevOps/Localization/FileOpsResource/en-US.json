@@ -14,7 +14,10 @@
     "Download": "Download",
     "Delete": "Delete",
     "Save": "Save",
-    "CreateDirectory": "Create Directory"
+    "CreateDirectory": "Create Directory",
+    "DownloadSelected": "Download selected",
+    "DeleteSelected": "Delete selected",
+    "ClearSelection": "Clear selection"
   },
   "Labels": {
     "CurrentRoot": "Current root",
@@ -58,6 +61,10 @@
     "Modified": "Modified",
     "Actions": "Actions"
   },
+  "Batch": {
+    "SelectAll": "Select all",
+    "SelectedCount": "{0} selected"
+  },
   "RuntimeConfigDialog": {
     "Title": "FileOps Runtime Configuration",
     "Intro": "Keep the scope narrow. This module is designed for emergency access in constrained runtimes, not as a general-purpose file manager.",
@@ -92,12 +99,22 @@
     "Recursive": "Delete recursively",
     "Confirm": "Delete now"
   },
+  "BatchDeleteDialog": {
+    "Title": "Delete selected entries",
+    "Summary": "Delete {0} selected entries?",
+    "DirectoryWarning": "{0} selected directories will be deleted recursively when this option is enabled.",
+    "Recursive": "Delete selected directories recursively",
+    "Confirm": "Delete selected"
+  },
   "Messages": {
     "RuntimeConfigSaved": "Runtime configuration saved. {0} allowed root location(s) are now active.",
     "TextFileSaved": "Saved {0}.",
     "DirectoryCreated": "Created directory {0}.",
     "EntryDeleted": "Deleted {0} {1}.",
-    "FilesUploaded": "Uploaded {0} file(s) into {1}."
+    "EntriesDeleted": "Deleted {0} selected entries.",
+    "FilesUploaded": "Uploaded {0} file(s) into {1}.",
+    "ArchiveDownloadStarted": "Preparing ZIP archive for {0} selected entries.",
+    "ArchiveDownloadFailed": "Failed to download selected entries: {0}"
   },
   "ServiceMessages": {
     "LoadRuntimeConfigFailed": "Failed to load FileOps runtime configuration: {0}",
@@ -107,8 +124,10 @@
     "SaveTextFailed": "Failed to save file \"{0}\": {1}",
     "CreateDirectoryFailed": "Failed to create a directory under \"{0}\": {1}",
     "DeleteEntryFailed": "Failed to delete entry \"{0}\": {1}",
+    "BatchDeleteFailed": "Failed to delete selected entries: {0}",
     "UploadFailed": "Failed to upload files into \"{0}\": {1}",
-    "DownloadFailed": "Failed to download file \"{0}\": {1}"
+    "DownloadFailed": "Failed to download file \"{0}\": {1}",
+    "ArchiveDownloadFailed": "Failed to download selected entries: {0}"
   },
   "GeneratedMessages": {
     "PathRequired": "A file system path is required.",
@@ -130,7 +149,8 @@
     "DownloadTooLarge": "File \"{0}\" exceeds the download limit of {1}.",
     "CannotDeleteRoot": "Root path \"{0}\" cannot be deleted.",
     "UploadFilesRequired": "At least one file is required for upload.",
-    "EditableExtensionRequired": "File \"{0}\" cannot be edited with the current extension policy."
+    "EditableExtensionRequired": "File \"{0}\" cannot be edited with the current extension policy.",
+    "SelectionRequired": "Select at least one file system entry."
   },
   "Common:Cancel": "Cancel",
   "Common:Empty": "-"

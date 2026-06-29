@@ -14,7 +14,10 @@
     "Download": "下载",
     "Delete": "删除",
     "Save": "保存",
-    "CreateDirectory": "新建目录"
+    "CreateDirectory": "新建目录",
+    "DownloadSelected": "下载选中项",
+    "DeleteSelected": "删除选中项",
+    "ClearSelection": "清空选择"
   },
   "Labels": {
     "CurrentRoot": "当前根目录",
@@ -58,6 +61,10 @@
     "Modified": "修改时间",
     "Actions": "操作"
   },
+  "Batch": {
+    "SelectAll": "全选",
+    "SelectedCount": "已选择 {0} 项"
+  },
   "RuntimeConfigDialog": {
     "Title": "文件运维运行时配置",
     "Intro": "请把范围收紧。这个模块定位是受限环境下的应急入口，不是通用文件管理器。",
@@ -92,12 +99,22 @@
     "Recursive": "递归删除",
     "Confirm": "立即删除"
   },
+  "BatchDeleteDialog": {
+    "Title": "删除选中条目",
+    "Summary": "确认删除选中的 {0} 个条目？",
+    "DirectoryWarning": "当前选择中包含 {0} 个目录。启用此选项时会递归删除这些目录。",
+    "Recursive": "递归删除选中目录",
+    "Confirm": "删除选中项"
+  },
   "Messages": {
     "RuntimeConfigSaved": "运行时配置已保存，当前生效的允许根目录共 {0} 个。",
     "TextFileSaved": "已保存 {0}。",
     "DirectoryCreated": "已创建目录 {0}。",
     "EntryDeleted": "已删除{0}“{1}”。",
-    "FilesUploaded": "已向 {1} 上传 {0} 个文件。"
+    "EntriesDeleted": "已删除 {0} 个选中条目。",
+    "FilesUploaded": "已向 {1} 上传 {0} 个文件。",
+    "ArchiveDownloadStarted": "正在为 {0} 个选中条目准备 ZIP 压缩包。",
+    "ArchiveDownloadFailed": "下载选中条目失败：{0}"
   },
   "ServiceMessages": {
     "LoadRuntimeConfigFailed": "加载文件运维运行时配置失败：{0}",
@@ -107,8 +124,10 @@
     "SaveTextFailed": "保存文件“{0}”失败：{1}",
     "CreateDirectoryFailed": "在“{0}”下创建目录失败：{1}",
     "DeleteEntryFailed": "删除条目“{0}”失败：{1}",
+    "BatchDeleteFailed": "删除选中条目失败：{0}",
     "UploadFailed": "向“{0}”上传文件失败：{1}",
-    "DownloadFailed": "下载文件“{0}”失败：{1}"
+    "DownloadFailed": "下载文件“{0}”失败：{1}",
+    "ArchiveDownloadFailed": "下载选中条目失败：{0}"
   },
   "GeneratedMessages": {
     "PathRequired": "必须提供文件系统路径。",
@@ -130,7 +149,8 @@
     "DownloadTooLarge": "文件“{0}”超过下载上限 {1}。",
     "CannotDeleteRoot": "根目录“{0}”不能被删除。",
     "UploadFilesRequired": "上传时至少需要一个文件。",
-    "EditableExtensionRequired": "文件“{0}”不在当前可编辑扩展名策略中。"
+    "EditableExtensionRequired": "文件“{0}”不在当前可编辑扩展名策略中。",
+    "SelectionRequired": "请至少选择一个文件系统条目。"
   },
   "Common:Cancel": "取消",
   "Common:Empty": "-"

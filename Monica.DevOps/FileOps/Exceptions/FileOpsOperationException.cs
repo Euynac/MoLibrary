@@ -21,7 +21,8 @@ public enum FileOpsMessageCode
     DownloadTooLarge,
     CannotDeleteRoot,
     UploadFilesRequired,
-    EditableExtensionRequired
+    EditableExtensionRequired,
+    SelectionRequired
 }
 
 public sealed class FileOpsOperationException : Exception
@@ -81,6 +82,8 @@ public sealed class FileOpsOperationException : Exception
 
     public static FileOpsOperationException EditableExtensionRequired(string path) => Create(FileOpsMessageCode.EditableExtensionRequired, path);
 
+    public static FileOpsOperationException SelectionRequired() => Create(FileOpsMessageCode.SelectionRequired);
+
     private static FileOpsOperationException Create(FileOpsMessageCode messageCode, params string[] messageArguments)
     {
         return new FileOpsOperationException(messageCode, BuildMessage(messageCode, messageArguments), messageArguments);
@@ -110,6 +113,7 @@ public sealed class FileOpsOperationException : Exception
             FileOpsMessageCode.CannotDeleteRoot => $"Root path '{arguments[0]}' cannot be deleted.",
             FileOpsMessageCode.UploadFilesRequired => "At least one file is required for upload.",
             FileOpsMessageCode.EditableExtensionRequired => $"File '{arguments[0]}' cannot be edited with the current extension policy.",
+            FileOpsMessageCode.SelectionRequired => "At least one file system entry must be selected.",
             _ => throw new ArgumentOutOfRangeException(nameof(messageCode), messageCode, null)
         };
     }

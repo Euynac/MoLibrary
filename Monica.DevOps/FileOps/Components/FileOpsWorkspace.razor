@@ -1,13 +1,16 @@
 @using Microsoft.AspNetCore.Components.Forms
+@using Microsoft.JSInterop
 @using Monica.DevOps.FileOps.Dialogs
 @using Monica.DevOps.FileOps.Facades
 @using Monica.DevOps.Localization
 @using Monica.DevOps.FileOps.Models
 @using Monica.Tool.Text
+@implements IAsyncDisposable
 @inject FileOpsFacade FileOpsFacade
 @inject ISnackbar Snackbar
 @inject IDialogService DialogService
 @inject IStringLocalizer<FileOpsResource> L
+@inject IJSRuntime JSRuntime
 
 <div class="workspace-root">
     @if (!string.IsNullOrWhiteSpace(_statusMessage))
@@ -147,6 +150,43 @@
                         @if (_browseResult is { Entries.Count: > 0 })
                         {
                             <div class="entry-table">
+                                <div class="entry-table__batch-toolbar">
+                                    <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Wrap="Wrap.Wrap" Spacing="1">
+                                        <MudStack Row="true" AlignItems="AlignItems.Center" Wrap="Wrap.Wrap" Spacing="1">
+                                            <MudCheckBox T="bool"
+                                                         Value="@AreAllVisibleEntriesSelected"
+                                                         ValueChanged="ToggleAllVisibleEntries"
+                                                         Color="Color.Primary"
+                                                         Disabled="@_isBusy"
+                                                         Label="@L["Batch:SelectAll"]" />
+                                            <MudText Typo="Typo.body2" Color="Color.Secondary">
+                                                @L["Batch:SelectedCount", SelectedEntryCount]
+                                            </MudText>
+                                        </MudStack>
+
+                                        <MudStack Row="true" AlignItems="AlignItems.Center" Wrap="Wrap.Wrap" Spacing="1">
+                                            <MudButton Variant="Variant.Outlined"
+                                                       StartIcon="@Icons.Material.Filled.Archive"
+                                                       Disabled="@(!CanDownloadSelectedArchive)"
+                                                       OnClick="DownloadSelectedArchiveAsync">
+                                                @L["Actions:DownloadSelected"]
+                                            </MudButton>
+                                            <MudButton Variant="Variant.Outlined"
+                                                       Color="Color.Error"
+                                                       StartIcon="@Icons.Material.Filled.DeleteSweep"
+                                                       Disabled="@(!CanDeleteSelectedEntries)"
+                                                       OnClick="OpenBatchDeleteDialogAsync">
+                                                @L["Actions:DeleteSelected"]
+                                            </MudButton>
+                                            <MudButton Variant="Variant.Text"
+                                                       Disabled="@(_isBusy || SelectedEntryCount == 0)"
+                                                       OnClick="ClearSelectedEntries">
+                                                @L["Actions:ClearSelection"]
+                                            </MudButton>
+                                        </MudStack>
+                                    </MudStack>
+                                </div>
+
                                 <div class="entry-table__sort-toolbar">
                                     @foreach (var sortField in _sortableFields)
                                     {
@@ -160,6 +200,13 @@
                                 </div>
 
                                 <div class="entry-table__header">
+                                    <span class="entry-table__select-cell">
+                                        <MudCheckBox T="bool"
+                                                     Value="@AreAllVisibleEntriesSelected"
+                                                     ValueChanged="ToggleAllVisibleEntries"
+                                                     Color="Color.Primary"
+                                                     Disabled="@_isBusy" />
+                                    </span>
                                     @foreach (var sortField in _sortableFields)
                                     {
                                         <button type="button"
@@ -175,6 +222,13 @@
                                 @foreach (var entry in _sortedEntries)
                                 {
                                     <div class="@GetEntryRowClass(entry)">
+                                        <span class="entry-row__select">
+                                            <MudCheckBox T="bool"
+                                                         Value="@IsEntrySelected(entry)"
+                                                         ValueChanged="@((bool selected) => ToggleEntrySelection(entry, selected))"
+                                                         Color="Color.Primary"
+                                                         Disabled="@_isBusy" />
+                                        </span>
                                         <button type="button" class="entry-row__main" @onclick="() => OpenEntryAsync(entry)">
                                             <span class="entry-row__name">
                                                 <MudIcon Icon="@(entry.IsDirectory ? Icons.Material.Filled.Folder : Icons.Material.Filled.Description)"
@@ -326,9 +380,27 @@
     private string _editorContent = string.Empty;
     private string _pathInput = string.Empty;
     private IReadOnlyList<FileOpsEntrySummary> _sortedEntries = [];
+    private readonly HashSet<string> _selectedEntryPaths = new(GetPathComparer());
+    private IJSObjectReference? _jsModule;
     private FileOpsEntrySortField _sortField = FileOpsEntrySortField.Name;
     private bool _sortDescending;
     private static readonly FileOpsEntrySortField[] _sortableFields = Enum.GetValues<FileOpsEntrySortField>();
+
+    private int SelectedEntryCount => _selectedEntryPaths.Count;
+
+    private bool AreAllVisibleEntriesSelected => _sortedEntries.Count > 0 &&
+                                                 _sortedEntries.All(entry => _selectedEntryPaths.Contains(entry.FullPath));
+
+    private bool CanDownloadSelectedArchive => !_isBusy && GetSelectedEntries().Any(CanArchiveEntry);
+
+    private bool CanDeleteSelectedEntries
+    {
+        get
+        {
+            var selectedEntries = GetSelectedEntries();
+            return !_isBusy && selectedEntries.Count > 0 && selectedEntries.All(static entry => entry.CanDelete);
+        }
+    }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -381,6 +453,45 @@
         }
 
         await ExecuteBusyAsync(async () => await LoadBrowseResultAsync(_browseResult.ParentPath));
+    }
+
+    private Task ToggleAllVisibleEntries(bool selected)
+    {
+        if (selected)
+        {
+            foreach (var entry in _sortedEntries)
+            {
+                _selectedEntryPaths.Add(entry.FullPath);
+            }
+        }
+        else
+        {
+            foreach (var entry in _sortedEntries)
+            {
+                _selectedEntryPaths.Remove(entry.FullPath);
+            }
+        }
+
+        return Task.CompletedTask;
+    }
+
+    private Task ToggleEntrySelection(FileOpsEntrySummary entry, bool selected)
+    {
+        if (selected)
+        {
+            _selectedEntryPaths.Add(entry.FullPath);
+        }
+        else
+        {
+            _selectedEntryPaths.Remove(entry.FullPath);
+        }
+
+        return Task.CompletedTask;
+    }
+
+    private void ClearSelectedEntries()
+    {
+        _selectedEntryPaths.Clear();
     }
 
     private async Task OpenEntryAsync(FileOpsEntrySummary entry)
@@ -454,6 +565,7 @@
             _selectedEntry = null;
             _selectedFileContent = null;
             _editorContent = string.Empty;
+            ClearSelectedEntries();
             await LoadBrowseResultAsync(_runtimeConfig.StartupPath);
         });
     }
@@ -519,6 +631,81 @@
             var deletedMessage = L["Messages:EntryDeleted", entry.IsDirectory ? L["Labels:Directory"].Value : L["Labels:File"].Value, entry.Name].Value;
             Snackbar.Add(deletedMessage, Severity.Success);
             SetStatus(deletedMessage, Severity.Success);
+            _selectedEntry = null;
+            _selectedFileContent = null;
+            _editorContent = string.Empty;
+            await LoadBrowseResultAsync(_browseResult?.CurrentPath ?? _runtimeConfig.StartupPath);
+        });
+    }
+
+    private async Task DownloadSelectedArchiveAsync()
+    {
+        var selectedEntries = GetSelectedEntries()
+            .Where(CanArchiveEntry)
+            .ToList();
+        if (selectedEntries.Count == 0)
+        {
+            return;
+        }
+
+        await ExecuteBusyAsync(async () =>
+        {
+            try
+            {
+                var archiveName = BuildArchiveName();
+                var module = await GetJsModuleAsync();
+                await module.InvokeVoidAsync(
+                    "downloadArchive",
+                    "/file-ops/download/archive",
+                    archiveName,
+                    selectedEntries.Select(static entry => entry.FullPath).ToArray());
+
+                var successMessage = L["Messages:ArchiveDownloadStarted", selectedEntries.Count].Value;
+                Snackbar.Add(successMessage, Severity.Success);
+                SetStatus(successMessage, Severity.Success);
+            }
+            catch (JSException ex)
+            {
+                var errorMessage = L["Messages:ArchiveDownloadFailed", ex.Message].Value;
+                SetStatus(errorMessage, Severity.Error);
+                Snackbar.Add(errorMessage, Severity.Error);
+            }
+        });
+    }
+
+    private async Task OpenBatchDeleteDialogAsync()
+    {
+        var selectedEntries = GetSelectedEntries();
+        if (selectedEntries.Count == 0 || selectedEntries.Any(static entry => !entry.CanDelete))
+        {
+            return;
+        }
+
+        var parameters = new DialogParameters<FileOpsBatchDeleteConfirmDialog>
+        {
+            { dialog => dialog.Entries, selectedEntries }
+        };
+
+        var dialog = await DialogService.ShowAsync<FileOpsBatchDeleteConfirmDialog>(L["BatchDeleteDialog:Title"], parameters);
+        var result = await dialog.Result;
+        if (result is not { Canceled: false } || result.Data is not FileOpsBatchDeleteRequest request)
+        {
+            return;
+        }
+
+        await ExecuteBusyAsync(async () =>
+        {
+            if ((await FileOpsFacade.DeleteEntriesAsync(request)).IsFailed(out var error, out var deleteResult))
+            {
+                SetStatus(error, Severity.Error);
+                Snackbar.Add(error, Severity.Error);
+                return;
+            }
+
+            var deletedMessage = L["Messages:EntriesDeleted", deleteResult.DeletedEntries.Count].Value;
+            Snackbar.Add(deletedMessage, Severity.Success);
+            SetStatus(deletedMessage, Severity.Success);
+            ClearSelectedEntries();
             _selectedEntry = null;
             _selectedFileContent = null;
             _editorContent = string.Empty;
@@ -608,6 +795,7 @@
             _browseResult = browseResult;
             _pathInput = browseResult.CurrentPath;
             UpdateSortedEntries();
+            PruneSelectedEntries();
             ClearStatus();
         }
         finally
@@ -620,6 +808,19 @@
     private string BuildDownloadUrl(string path)
     {
         return $"/file-ops/download?path={Uri.EscapeDataString(path)}";
+    }
+
+    private static string BuildArchiveName()
+    {
+        return $"file-ops-selection-{DateTimeOffset.Now:yyyyMMdd-HHmmss}.zip";
+    }
+
+    private async Task<IJSObjectReference> GetJsModuleAsync()
+    {
+        _jsModule ??= await JSRuntime.InvokeAsync<IJSObjectReference>(
+            "import",
+            "./_content/Monica.DevOps/FileOps/Components/FileOpsWorkspace.razor.js");
+        return _jsModule;
     }
 
     private string GetLocationName(string? path)
@@ -641,7 +842,46 @@
 
     private string GetEntryRowClass(FileOpsEntrySummary entry)
     {
-        return _selectedEntry?.FullPath == entry.FullPath ? "entry-row entry-row--selected" : "entry-row";
+        var classes = new List<string> { "entry-row" };
+        if (_selectedEntry?.FullPath == entry.FullPath)
+        {
+            classes.Add("entry-row--selected");
+        }
+
+        if (IsEntrySelected(entry))
+        {
+            classes.Add("entry-row--checked");
+        }
+
+        return string.Join(" ", classes);
+    }
+
+    private bool IsEntrySelected(FileOpsEntrySummary entry)
+    {
+        return _selectedEntryPaths.Contains(entry.FullPath);
+    }
+
+    private List<FileOpsEntrySummary> GetSelectedEntries()
+    {
+        return _selectedEntryPaths.Count == 0
+            ? []
+            : _sortedEntries.Where(IsEntrySelected).ToList();
+    }
+
+    private void PruneSelectedEntries()
+    {
+        if (_selectedEntryPaths.Count == 0)
+        {
+            return;
+        }
+
+        var visiblePaths = _sortedEntries.Select(static entry => entry.FullPath).ToHashSet(GetPathComparer());
+        _selectedEntryPaths.RemoveWhere(path => !visiblePaths.Contains(path));
+    }
+
+    private static bool CanArchiveEntry(FileOpsEntrySummary entry)
+    {
+        return entry.IsDirectory || entry.CanDownload;
     }
 
     private void ChangeSort(FileOpsEntrySortField sortField)
@@ -767,6 +1007,14 @@
     {
         _statusMessage = string.Empty;
         _statusSeverity = Severity.Info;
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (_jsModule is not null)
+        {
+            await _jsModule.DisposeAsync();
+        }
     }
 
     private enum FileOpsEntrySortField

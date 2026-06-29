@@ -153,6 +153,14 @@ public class ModuleFileOps(ModuleFileOpsOption option)
                 .WithTags(tagName)
                 .WithSummary("Downloads a file")
                 .WithDescription("Streams a file from an allowed root when the current runtime policy permits the requested download size.");
+
+            endpoints.MapPost("/file-ops/download/archive",
+                    DownloadArchiveAsync)
+                .DisableAntiforgery()
+                .WithName("DownloadFileOpsArchive")
+                .WithTags(tagName)
+                .WithSummary("Downloads selected entries as a ZIP archive")
+                .WithDescription("Streams a ZIP archive for selected files and directories while enforcing the current FileOps runtime policy.");
         });
     }
 
@@ -178,6 +186,33 @@ public class ModuleFileOps(ModuleFileOpsOption option)
             logger.LogError(ex, "Failed to download FileOps file {Path}.", path);
             var response = Res.Fail(
                 localizer["ServiceMessages:DownloadFailed", path, messageLocalizer.TranslateExceptionMessage(ex)].Value,
+                GetResultStatus(ex));
+            return response.GetResponse();
+        }
+    }
+
+    private static async Task<IResult> DownloadArchiveAsync(
+        [FromBody] FileOpsArchiveDownloadRequest request,
+        [FromServices] FileOpsTransferService transferService,
+        [FromServices] FileOpsMessageLocalizer messageLocalizer,
+        [FromServices] IStringLocalizer<FileOpsResource> localizer,
+        [FromServices] ILogger<ModuleFileOps> logger,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            var descriptor = await transferService.OpenArchiveDownloadAsync(request, cancellationToken);
+            return Results.File(
+                descriptor.ContentStream,
+                descriptor.ContentType,
+                descriptor.FileName,
+                lastModified: descriptor.LastModifiedAt);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Failed to download FileOps archive with {PathCount} selected path(s).", request.Paths?.Count ?? 0);
+            var response = Res.Fail(
+                localizer["ServiceMessages:ArchiveDownloadFailed", messageLocalizer.TranslateExceptionMessage(ex)].Value,
                 GetResultStatus(ex));
             return response.GetResponse();
         }

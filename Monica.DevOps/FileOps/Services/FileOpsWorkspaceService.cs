@@ -188,12 +188,48 @@ public class FileOpsWorkspaceService(
         cancellationToken.ThrowIfCancellationRequested();
 
         var runtimeConfig = runtimeConfigStore.GetCurrent();
-        var entry = pathPolicy.ResolveExistingEntry(runtimeConfig, request.Path);
+        return Task.FromResult(DeleteEntry(runtimeConfig, request.Path, request.Recursive));
+    }
+
+    public Task<FileOpsBatchDeleteResult> DeleteEntriesAsync(FileOpsBatchDeleteRequest request, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+        cancellationToken.ThrowIfCancellationRequested();
+
+        var paths = GetDistinctPaths(request.Paths);
+        if (paths.Count == 0)
+        {
+            throw FileOpsOperationException.SelectionRequired();
+        }
+
+        var runtimeConfig = runtimeConfigStore.GetCurrent();
+        var deletedEntries = new List<FileOpsDeleteResult>(paths.Count);
+        foreach (var path in paths)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            deletedEntries.Add(DeleteEntry(runtimeConfig, path, request.Recursive));
+        }
+
+        logger.LogInformation("Batch deleted {DeletedCount} FileOps entries.", deletedEntries.Count);
+        return Task.FromResult(new FileOpsBatchDeleteResult
+        {
+            DeletedEntries = deletedEntries
+        });
+    }
+
+    private static StringComparer GetPathComparer()
+    {
+        return OperatingSystem.IsWindows() ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal;
+    }
+
+    private FileOpsDeleteResult DeleteEntry(FileOpsRuntimeConfig runtimeConfig, string path, bool recursive)
+    {
+        var entry = pathPolicy.ResolveExistingEntry(runtimeConfig, path);
         pathPolicy.EnsureEntryDeletable(runtimeConfig, entry);
 
         if (entry.IsDirectory)
         {
-            Directory.Delete(entry.FullPath, request.Recursive);
+            Directory.Delete(entry.FullPath, recursive);
         }
         else
         {
@@ -201,15 +237,19 @@ public class FileOpsWorkspaceService(
         }
 
         logger.LogInformation("Deleted FileOps entry: {Path}", entry.FullPath);
-        return Task.FromResult(new FileOpsDeleteResult
+        return new FileOpsDeleteResult
         {
             Path = entry.FullPath,
             EntryKind = entry.IsDirectory ? FileOpsEntryKind.Directory : FileOpsEntryKind.File
-        });
+        };
     }
 
-    private static StringComparer GetPathComparer()
+    private static List<string> GetDistinctPaths(IEnumerable<string>? paths)
     {
-        return OperatingSystem.IsWindows() ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal;
+        return (paths ?? [])
+            .Where(path => !string.IsNullOrWhiteSpace(path))
+            .Select(static path => path.Trim())
+            .Distinct(GetPathComparer())
+            .ToList();
     }
 }

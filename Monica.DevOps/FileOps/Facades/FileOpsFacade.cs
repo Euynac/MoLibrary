@@ -83,6 +83,16 @@ public class FileOpsFacade(
             $"Failed to delete FileOps entry {request.Path}.");
     }
 
+    public Task<Res<FileOpsBatchDeleteResult>> DeleteEntriesAsync(
+        FileOpsBatchDeleteRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        return ExecuteAsync(
+            () => workspaceService.DeleteEntriesAsync(request, cancellationToken),
+            ex => localizer["ServiceMessages:BatchDeleteFailed", messageLocalizer.TranslateExceptionMessage(ex)].Value,
+            $"Failed to batch delete {request.Paths.Count} FileOps entries.");
+    }
+
     public Task<Res<FileOpsUploadResult>> UploadAsync(
         string directoryPath,
         IReadOnlyCollection<FileOpsUploadPayload> files,
