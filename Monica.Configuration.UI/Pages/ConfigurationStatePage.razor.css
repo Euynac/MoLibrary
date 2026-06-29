@@ -100,8 +100,15 @@
 .configuration-description-icon {
     display: inline-flex;
     flex: 0 0 auto;
+    height: 1.5rem;
     align-items: center;
+    justify-content: center;
     line-height: 0;
+    vertical-align: middle;
+}
+
+.configuration-description-icon ::deep .mud-icon-root {
+    display: block;
 }
 
 .configuration-definition-meta-actions ::deep .mud-tooltip-root {
