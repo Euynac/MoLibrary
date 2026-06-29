@@ -83,6 +83,24 @@ public class FileOpsFacade(
             $"Failed to delete FileOps entry {request.Path}.");
     }
 
+    public Task<Res<FileOpsDownloadDescriptor>> OpenDownloadAsync(string path, CancellationToken cancellationToken = default)
+    {
+        return ExecuteAsync(
+            () => transferService.OpenDownloadAsync(path, cancellationToken),
+            ex => localizer["ServiceMessages:DownloadFailed", path, messageLocalizer.TranslateExceptionMessage(ex)].Value,
+            $"Failed to open FileOps download stream for {path}.");
+    }
+
+    public Task<Res<FileOpsDownloadDescriptor>> OpenArchiveDownloadAsync(
+        FileOpsArchiveDownloadRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        return ExecuteAsync(
+            () => transferService.OpenArchiveDownloadAsync(request, cancellationToken),
+            ex => localizer["ServiceMessages:ArchiveDownloadFailed", messageLocalizer.TranslateExceptionMessage(ex)].Value,
+            $"Failed to open FileOps archive download stream for {request.Paths?.Count ?? 0} entries.");
+    }
+
     public Task<Res<FileOpsBatchDeleteResult>> DeleteEntriesAsync(
         FileOpsBatchDeleteRequest request,
         CancellationToken cancellationToken = default)

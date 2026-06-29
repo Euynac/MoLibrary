@@ -113,8 +113,7 @@
     "EntryDeleted": "Deleted {0} {1}.",
     "EntriesDeleted": "Deleted {0} selected entries.",
     "FilesUploaded": "Uploaded {0} file(s) into {1}.",
-    "ArchiveDownloadStarted": "Preparing ZIP archive for {0} selected entries.",
-    "ArchiveDownloadFailed": "Failed to download selected entries: {0}"
+    "ArchiveDownloadStarted": "Preparing ZIP archive for {0} selected entries."
   },
   "ServiceMessages": {
     "LoadRuntimeConfigFailed": "Failed to load FileOps runtime configuration: {0}",

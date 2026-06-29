@@ -113,8 +113,7 @@
     "EntryDeleted": "已删除{0}“{1}”。",
     "EntriesDeleted": "已删除 {0} 个选中条目。",
     "FilesUploaded": "已向 {1} 上传 {0} 个文件。",
-    "ArchiveDownloadStarted": "正在为 {0} 个选中条目准备 ZIP 压缩包。",
-    "ArchiveDownloadFailed": "下载选中条目失败：{0}"
+    "ArchiveDownloadStarted": "正在为 {0} 个选中条目准备 ZIP 压缩包。"
   },
   "ServiceMessages": {
     "LoadRuntimeConfigFailed": "加载文件运维运行时配置失败：{0}",

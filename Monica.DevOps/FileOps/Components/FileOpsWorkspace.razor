@@ -252,8 +252,8 @@
                                                 <MudButton Variant="Variant.Text"
                                                            Size="Size.Small"
                                                            StartIcon="@Icons.Material.Filled.Download"
-                                                           Href="@BuildDownloadUrl(entry.FullPath)"
-                                                           Target="_blank">
+                                                           Disabled="@_isBusy"
+                                                           OnClick="@(() => DownloadEntryAsync(entry.FullPath))">
                                                     @L["Actions:Download"]
                                                 </MudButton>
                                             }
@@ -316,8 +316,8 @@
                                         {
                                             <MudButton Variant="Variant.Outlined"
                                                        StartIcon="@Icons.Material.Filled.Download"
-                                                       Href="@BuildDownloadUrl(_selectedFileContent.FullPath)"
-                                                       Target="_blank">
+                                                       Disabled="@_isBusy"
+                                                       OnClick="@(() => DownloadEntryAsync(_selectedFileContent.FullPath))">
                                                 @L["Actions:Download"]
                                             </MudButton>
                                         }
@@ -650,26 +650,39 @@
 
         await ExecuteBusyAsync(async () =>
         {
-            try
+            var archiveName = BuildArchiveName();
+            var request = new FileOpsArchiveDownloadRequest
             {
-                var archiveName = BuildArchiveName();
-                var module = await GetJsModuleAsync();
-                await module.InvokeVoidAsync(
-                    "downloadArchive",
-                    "/file-ops/download/archive",
-                    archiveName,
-                    selectedEntries.Select(static entry => entry.FullPath).ToArray());
+                ArchiveName = archiveName,
+                Paths = selectedEntries.Select(static entry => entry.FullPath).ToList()
+            };
 
-                var successMessage = L["Messages:ArchiveDownloadStarted", selectedEntries.Count].Value;
-                Snackbar.Add(successMessage, Severity.Success);
-                SetStatus(successMessage, Severity.Success);
-            }
-            catch (JSException ex)
+            if ((await FileOpsFacade.OpenArchiveDownloadAsync(request)).IsFailed(out var error, out var descriptor))
             {
-                var errorMessage = L["Messages:ArchiveDownloadFailed", ex.Message].Value;
-                SetStatus(errorMessage, Severity.Error);
-                Snackbar.Add(errorMessage, Severity.Error);
+                SetStatus(error, Severity.Error);
+                Snackbar.Add(error, Severity.Error);
+                return;
             }
+
+            await DownloadDescriptorAsync(descriptor);
+            var successMessage = L["Messages:ArchiveDownloadStarted", selectedEntries.Count].Value;
+            Snackbar.Add(successMessage, Severity.Success);
+            SetStatus(successMessage, Severity.Success);
+        });
+    }
+
+    private async Task DownloadEntryAsync(string path)
+    {
+        await ExecuteBusyAsync(async () =>
+        {
+            if ((await FileOpsFacade.OpenDownloadAsync(path)).IsFailed(out var error, out var descriptor))
+            {
+                SetStatus(error, Severity.Error);
+                Snackbar.Add(error, Severity.Error);
+                return;
+            }
+
+            await DownloadDescriptorAsync(descriptor);
         });
     }
 
@@ -805,14 +818,20 @@
         }
     }
 
-    private string BuildDownloadUrl(string path)
-    {
-        return $"/file-ops/download?path={Uri.EscapeDataString(path)}";
-    }
-
     private static string BuildArchiveName()
     {
         return $"file-ops-selection-{DateTimeOffset.Now:yyyyMMdd-HHmmss}.zip";
+    }
+
+    private async Task DownloadDescriptorAsync(FileOpsDownloadDescriptor descriptor)
+    {
+        var module = await GetJsModuleAsync();
+        using var streamReference = new DotNetStreamReference(descriptor.ContentStream);
+        await module.InvokeVoidAsync(
+            "downloadStream",
+            descriptor.FileName,
+            descriptor.ContentType,
+            streamReference);
     }
 
     private async Task<IJSObjectReference> GetJsModuleAsync()
