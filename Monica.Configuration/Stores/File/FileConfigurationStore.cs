@@ -543,6 +543,8 @@ public sealed class FileConfigurationStore(IOptions<ConfigurationFileStoreOption
 
         public string DisplayName { get; init; } = "";
 
+        public string? Description { get; init; }
+
         public string ClrTypeName { get; init; } = "";
 
         public string FromProject { get; init; } = "";
@@ -566,6 +568,7 @@ public sealed class FileConfigurationStore(IOptions<ConfigurationFileStoreOption
                 DefinitionKey = definition.DefinitionKey,
                 SectionPath = definition.SectionPath,
                 DisplayName = definition.DisplayName,
+                Description = NullIfWhiteSpace(definition.Description),
                 ClrTypeName = ConfigurationDefinitionSchemaCodec.ToCompactClrTypeName(definition.ClrTypeName),
                 FromProject = definition.FromProject,
                 Category = NullIfWhiteSpace(definition.Category),
@@ -581,6 +584,7 @@ public sealed class FileConfigurationStore(IOptions<ConfigurationFileStoreOption
             return string.Equals(DefinitionKey, existing.DefinitionKey, StringComparison.Ordinal)
                    && string.Equals(SectionPath, existing.SectionPath, StringComparison.Ordinal)
                    && string.Equals(DisplayName, existing.DisplayName, StringComparison.Ordinal)
+                   && string.Equals(Description, NullIfWhiteSpace(existing.Description), StringComparison.Ordinal)
                    && string.Equals(ClrTypeName, existing.ClrTypeName, StringComparison.Ordinal)
                    && string.Equals(FromProject, existing.FromProject, StringComparison.Ordinal)
                    && string.Equals(Category, NullIfWhiteSpace(existing.Category), StringComparison.Ordinal)
@@ -614,6 +618,7 @@ public sealed class FileConfigurationStore(IOptions<ConfigurationFileStoreOption
                 DefinitionKey,
                 SectionPath,
                 DisplayName,
+                Description,
                 ClrTypeName,
                 FromProject,
                 Category,

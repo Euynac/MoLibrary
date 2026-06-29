@@ -2,6 +2,13 @@
     min-height: 0;
 }
 
+.configuration-description-icon {
+    display: inline-flex;
+    flex: 0 0 auto;
+    align-items: center;
+    line-height: 0;
+}
+
 .configuration-definition-publish-history-layout {
     min-height: 0;
 }

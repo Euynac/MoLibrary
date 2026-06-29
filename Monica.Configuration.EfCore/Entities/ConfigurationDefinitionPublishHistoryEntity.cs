@@ -13,6 +13,8 @@ public sealed class ConfigurationDefinitionPublishHistoryEntity
 
     public string DisplayName { get; set; } = "";
 
+    public string? Description { get; set; }
+
     public string FromProject { get; set; } = "";
 
     public string? Category { get; set; }

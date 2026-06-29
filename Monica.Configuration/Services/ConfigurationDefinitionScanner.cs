@@ -35,6 +35,7 @@ internal sealed class ConfigurationDefinitionScanner(
             DefinitionKey = definitionKey,
             SectionPath = sectionPath,
             DisplayName = attribute.DisplayName ?? optionsType.Name,
+            Description = attribute.Description,
             ClrTypeName = optionsType.AssemblyQualifiedName ?? optionsType.FullName ?? optionsType.Name,
             FromProject = ResolveFromProject(optionsType),
             Category = attribute.Category,
@@ -147,7 +148,8 @@ internal sealed class ConfigurationDefinitionScanner(
                 ? BuildListTemplate(propertyType, path, configurationPath, inheritedReloadBehavior, option)
                 : null,
             Children = children,
-            ValidationRules = GetValidationRules(propertyType, property.GetCustomAttributes<ValidationAttribute>())
+            ValidationRules = GetValidationRules(propertyType, property.GetCustomAttributes<ValidationAttribute>()),
+            EnumValues = GetEnumValues(propertyType)
         };
     }
 

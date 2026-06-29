@@ -165,6 +165,7 @@
     "DefinitionTooltip": {
       "DisplayName": "Definition: {0}",
       "DefinitionKey": "Definition key: {0}",
+      "Description": "Description: {0}",
       "SectionPath": "Configuration section: {0}",
       "ClrType": "CLR type: {0}",
       "Project": "Project: {0}"

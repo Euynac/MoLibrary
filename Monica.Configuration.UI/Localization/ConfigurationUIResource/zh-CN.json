@@ -165,6 +165,7 @@
     "DefinitionTooltip": {
       "DisplayName": "配置定义: {0}",
       "DefinitionKey": "定义 Key: {0}",
+      "Description": "说明: {0}",
       "SectionPath": "配置节: {0}",
       "ClrType": "CLR 类型: {0}",
       "Project": "项目: {0}"

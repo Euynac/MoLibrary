@@ -525,7 +525,14 @@ public sealed class DatabaseConfigurationStore(
         {
             _ = await dbContext.ConfigurationDefinitions
                 .AsNoTracking()
-                .Select(definition => new { definition.SchemaJson, definition.FromProject, definition.Category, definition.PublishRevision })
+                .Select(definition => new
+                {
+                    definition.SchemaJson,
+                    definition.FromProject,
+                    definition.Category,
+                    definition.Description,
+                    definition.PublishRevision
+                })
                 .FirstOrDefaultAsync(cancellationToken);
         }
         catch (Exception ex) when (IsMissingTableException(ex))
@@ -551,7 +558,13 @@ public sealed class DatabaseConfigurationStore(
 
             _ = await dbContext.ConfigurationDefinitionPublishHistories
                 .AsNoTracking()
-                .Select(history => new { history.HistoryId, history.DefinitionKey, history.PublishedTime })
+                .Select(history => new
+                {
+                    history.HistoryId,
+                    history.DefinitionKey,
+                    history.Description,
+                    history.PublishedTime
+                })
                 .FirstOrDefaultAsync(cancellationToken);
             return ConfigurationSchemaState.Ready;
         }
@@ -704,6 +717,8 @@ public sealed class DatabaseConfigurationStore(
 
         public required string DisplayName { get; init; }
 
+        public string? Description { get; init; }
+
         public required string ClrTypeName { get; init; }
 
         public required string FromProject { get; init; }
@@ -725,6 +740,7 @@ public sealed class DatabaseConfigurationStore(
                 DefinitionKey = definition.DefinitionKey,
                 SectionPath = definition.SectionPath,
                 DisplayName = definition.DisplayName,
+                Description = NullIfWhiteSpace(definition.Description),
                 ClrTypeName = ConfigurationDefinitionSchemaCodec.ToCompactClrTypeName(definition.ClrTypeName),
                 FromProject = definition.FromProject,
                 Category = NullIfWhiteSpace(definition.Category),
@@ -740,6 +756,7 @@ public sealed class DatabaseConfigurationStore(
             return HasSameSchema(current)
                    && string.Equals(SectionPath, current.SectionPath, StringComparison.Ordinal)
                    && string.Equals(DisplayName, current.DisplayName, StringComparison.Ordinal)
+                   && string.Equals(Description, NullIfWhiteSpace(current.Description), StringComparison.Ordinal)
                    && string.Equals(ClrTypeName, current.ClrTypeName, StringComparison.Ordinal)
                    && string.Equals(FromProject, current.FromProject, StringComparison.Ordinal)
                    && string.Equals(Category, NullIfWhiteSpace(current.Category), StringComparison.Ordinal)
@@ -781,6 +798,7 @@ public sealed class DatabaseConfigurationStore(
                 DefinitionKey = DefinitionKey,
                 SectionPath = SectionPath,
                 DisplayName = DisplayName,
+                Description = Description,
                 FromProject = FromProject,
                 Category = Category,
                 ChangeKind = changeKind.ToString(),
@@ -802,6 +820,7 @@ public sealed class DatabaseConfigurationStore(
         {
             entity.SectionPath = SectionPath;
             entity.DisplayName = DisplayName;
+            entity.Description = Description;
             entity.ClrTypeName = ClrTypeName;
             entity.FromProject = FromProject;
             entity.Category = NullIfWhiteSpace(Category);
@@ -839,6 +858,7 @@ public sealed class DatabaseConfigurationStore(
             {
                 AddChange(changes, nameof(SectionPath), current.SectionPath, SectionPath);
                 AddChange(changes, nameof(DisplayName), current.DisplayName, DisplayName);
+                AddChange(changes, nameof(Description), NullIfWhiteSpace(current.Description), Description);
                 AddChange(changes, nameof(ClrTypeName), current.ClrTypeName, ClrTypeName);
                 AddChange(changes, nameof(FromProject), current.FromProject, FromProject);
                 AddChange(changes, nameof(Category), NullIfWhiteSpace(current.Category), Category);
@@ -924,6 +944,7 @@ public sealed class DatabaseConfigurationStore(
             entity.DefinitionKey,
             entity.SectionPath,
             entity.DisplayName,
+            entity.Description,
             entity.ClrTypeName,
             entity.FromProject,
             entity.Category,
@@ -943,6 +964,7 @@ public sealed class DatabaseConfigurationStore(
             DefinitionKey = entity.DefinitionKey,
             SectionPath = entity.SectionPath,
             DisplayName = entity.DisplayName,
+            Description = entity.Description,
             FromProject = entity.FromProject,
             Category = entity.Category,
             ChangeKind = Enum.Parse<ConfigurationDefinitionPublishChangeKind>(entity.ChangeKind),

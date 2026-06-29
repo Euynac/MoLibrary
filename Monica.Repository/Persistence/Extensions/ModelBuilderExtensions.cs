@@ -28,24 +28,34 @@ public static class ModelBuilderExtensions
         foreach (var assembly in modelBuilder.Model.GetEntityTypes().Select(p => Assembly.GetAssembly(p.ClrType))
                      .DistinctBy(a => a!.FullName).ToList())
         {
-            modelBuilder.ApplyConfigurationsFromAssembly(assembly!, t =>
+            var configurationTypes = GetEntityConfigurationTypes(assembly!, entityTypes);
+            if (configurationTypes.Count == 0)
             {
-                if (t.FullName is null) return false;
-                foreach (var type in t.GetInterfaces())
-                {
-                    if (type.IsGenericType && type.GetGenericTypeDefinition() == typeof(IEntityTypeConfiguration<>)
-                                           && type.GenericTypeArguments.FirstOrDefault() is { FullName: not null } entity
-                                           && entityTypes.Contains(entity.FullName))
-                    {
-                        return true;
-                    }
-                }
+                continue;
+            }
 
-                return false;
-            });
+            modelBuilder.ApplyConfigurationsFromAssembly(assembly!, configurationTypes.Contains);
         }
 
         return modelBuilder;
+    }
+
+    private static IReadOnlySet<Type> GetEntityConfigurationTypes(Assembly assembly, ISet<string> entityTypes)
+    {
+        return assembly.GetTypes()
+            .Where(type => type is { IsAbstract: false, ContainsGenericParameters: false }
+                           && type.GetConstructor(Type.EmptyTypes) is not null
+                           && ConfiguresKnownEntity(type, entityTypes))
+            .ToHashSet();
+    }
+
+    private static bool ConfiguresKnownEntity(Type type, ISet<string> entityTypes)
+    {
+        return type.GetInterfaces()
+            .Any(candidate => candidate.IsGenericType
+                              && candidate.GetGenericTypeDefinition() == typeof(IEntityTypeConfiguration<>)
+                              && candidate.GenericTypeArguments.FirstOrDefault() is { FullName: not null } entity
+                              && entityTypes.Contains(entity.FullName));
     }
 
     /// <summary>
@@ -156,4 +166,4 @@ public static class ModelBuilderExtensions
 
         return modelBuilder;
     }
-} 
+}

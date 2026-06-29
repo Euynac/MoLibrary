@@ -26,6 +26,11 @@ public sealed record ConfigurationDefinitionPublishHistory
     public required string DisplayName { get; init; }
 
     /// <summary>
+    /// Gets the developer-facing description captured at publish time.
+    /// </summary>
+    public string? Description { get; init; }
+
+    /// <summary>
     /// Gets the assembly name of the project that published this definition.
     /// </summary>
     public required string FromProject { get; init; }

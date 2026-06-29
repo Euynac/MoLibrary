@@ -56,6 +56,16 @@
                                             <MudText Typo="Typo.body2">
                                                 <MudHighlighter Text="@definition.DisplayName" HighlightedTexts="@SearchTerms" />
                                             </MudText>
+                                            @if (!string.IsNullOrWhiteSpace(definition.Description))
+                                            {
+                                                <MudTooltip Text="@definition.Description">
+                                                    <span class="configuration-description-icon" @onclick:stopPropagation="true">
+                                                        <MudIcon Icon="@Icons.Material.Filled.Info"
+                                                                 Size="Size.Small"
+                                                                 Color="Color.Info" />
+                                                    </span>
+                                                </MudTooltip>
+                                            }
                                             @if (definition.Origin == ConfigurationDefinitionOrigin.PublishedMetadata)
                                             {
                                                 <MudTooltip Text="@L["State:Definitions:PublishedMetadataTooltip"]">
@@ -230,6 +240,7 @@
         return SearchTerms.Count == 0
                || ContainsAny(definition.DefinitionKey)
                || ContainsAny(definition.DisplayName)
+               || ContainsAny(definition.Description)
                || ContainsAny(definition.ClrTypeName)
                || ContainsAny(definition.SectionPath)
                || ContainsAny(definition.SchemaHash)

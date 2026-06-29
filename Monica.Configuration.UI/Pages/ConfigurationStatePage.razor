@@ -72,7 +72,19 @@
                                 <MudStack Spacing="3" Class="configuration-definition-content">
                                     <MudStack Row="true" Wrap="Wrap.Wrap" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Spacing="2">
                                         <MudStack Spacing="0">
-                                            <MudText Typo="Typo.h5">@_selectedDefinition.DisplayName</MudText>
+                                            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
+                                                <MudText Typo="Typo.h5">@_selectedDefinition.DisplayName</MudText>
+                                                @if (!string.IsNullOrWhiteSpace(_selectedDefinition.Description))
+                                                {
+                                                    <MudTooltip Text="@_selectedDefinition.Description">
+                                                        <span class="configuration-description-icon">
+                                                            <MudIcon Icon="@Icons.Material.Filled.Info"
+                                                                     Size="Size.Small"
+                                                                     Color="Color.Info" />
+                                                        </span>
+                                                    </MudTooltip>
+                                                }
+                                            </MudStack>
                                             <MudText Typo="Typo.caption" Color="Color.Secondary">@_selectedDefinition.DefinitionKey</MudText>
                                         </MudStack>
                                         <MudStack Row="true" Wrap="Wrap.Wrap" AlignItems="AlignItems.Center" Justify="Justify.FlexEnd" Spacing="1" Class="configuration-definition-meta-actions">

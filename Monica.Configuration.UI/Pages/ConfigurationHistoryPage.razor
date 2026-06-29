@@ -503,6 +503,12 @@
         lines.Add(L["History:DefinitionTooltip:DisplayName", definition?.DisplayName ?? summary?.DisplayName ?? definitionKey]);
         lines.Add(L["History:DefinitionTooltip:DefinitionKey", definitionKey]);
 
+        var description = definition?.Description ?? summary?.Description;
+        if (!string.IsNullOrWhiteSpace(description))
+        {
+            lines.Add(L["History:DefinitionTooltip:Description", description]);
+        }
+
         var sectionPath = definition?.SectionPath ?? summary?.SectionPath;
         if (!string.IsNullOrWhiteSpace(sectionPath))
         {

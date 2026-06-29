@@ -79,7 +79,7 @@ public abstract class RepositoryDbContext<TDbContext>(DbContextOptions<TDbContex
                     builder.Entity(entityType.ClrType).Property(property.Name).ValueGeneratedNever();
                 }
 
-                if (property.ClrType == typeof(string))
+                if (property.ClrType == typeof(string) && !IsKeyProperty(entityType, property))
                 {
                     property.SetDefaultValue("");
                 }
@@ -115,6 +115,11 @@ public abstract class RepositoryDbContext<TDbContext>(DbContextOptions<TDbContex
                 //}
             }
         }
+    }
+
+    private static bool IsKeyProperty(IMutableEntityType entityType, IMutableProperty property)
+    {
+        return entityType.GetKeys().Any(key => key.Properties.Contains(property));
     }
 
 

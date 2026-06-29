@@ -43,6 +43,7 @@ public static class ConfigurationDefinitionSchemaCodec
     /// <param name="definitionKey">The stable published definition key.</param>
     /// <param name="sectionPath">The Microsoft configuration section path used by the owner.</param>
     /// <param name="displayName">The operator-facing definition display name.</param>
+    /// <param name="description">The optional operator-facing definition description.</param>
     /// <param name="clrTypeName">The compact root type identity stored for display and search.</param>
     /// <param name="fromProject">The assembly name of the project that published the definition.</param>
     /// <param name="category">The optional operator-facing category.</param>
@@ -56,6 +57,7 @@ public static class ConfigurationDefinitionSchemaCodec
         string definitionKey,
         string sectionPath,
         string displayName,
+        string? description,
         string clrTypeName,
         string fromProject,
         string? category,
@@ -73,6 +75,7 @@ public static class ConfigurationDefinitionSchemaCodec
             DefinitionKey = definitionKey,
             SectionPath = sectionPath,
             DisplayName = displayName,
+            Description = description,
             ClrTypeName = clrTypeName,
             FromProject = fromProject,
             Category = category,

@@ -21,6 +21,11 @@ public sealed record ConfigurationDefinition
     public required string DisplayName { get; init; }
 
     /// <summary>
+    /// Gets the developer-facing description shown in management tools and generated documentation.
+    /// </summary>
+    public string? Description { get; init; }
+
+    /// <summary>
     /// Gets the owning options type identity.
     /// Local scanned definitions keep the assembly-qualified name so defaults can be constructed.
     /// Published metadata definitions keep a compact display/search identity because remote services cannot instantiate the type.

@@ -8,7 +8,19 @@
         <MudStack Spacing="3" Class="configuration-definition-publish-history-content">
             <MudStack Row="true" Wrap="Wrap.Wrap" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Spacing="2">
                 <MudStack Spacing="0">
-                    <MudText Typo="Typo.subtitle1">@Definition?.DisplayName</MudText>
+                    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
+                        <MudText Typo="Typo.subtitle1">@Definition?.DisplayName</MudText>
+                        @if (!string.IsNullOrWhiteSpace(Definition?.Description))
+                        {
+                            <MudTooltip Text="@Definition.Description">
+                                <span class="configuration-description-icon">
+                                    <MudIcon Icon="@Icons.Material.Filled.Info"
+                                             Size="Size.Small"
+                                             Color="Color.Info" />
+                                </span>
+                            </MudTooltip>
+                        }
+                    </MudStack>
                     <MudText Typo="Typo.caption" Color="Color.Secondary">@Definition?.DefinitionKey</MudText>
                 </MudStack>
                 <MudChip T="string" Size="Size.Small" Color="Color.Primary" Variant="Variant.Outlined">

@@ -11,6 +11,8 @@ public sealed class ConfigurationDefinitionEntity
 
     public string DisplayName { get; set; } = "";
 
+    public string? Description { get; set; }
+
     public string ClrTypeName { get; set; } = "";
 
     public string FromProject { get; set; } = "";

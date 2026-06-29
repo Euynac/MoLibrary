@@ -97,6 +97,13 @@
     align-items: center;
 }
 
+.configuration-description-icon {
+    display: inline-flex;
+    flex: 0 0 auto;
+    align-items: center;
+    line-height: 0;
+}
+
 .configuration-definition-meta-actions ::deep .mud-tooltip-root {
     display: inline-flex;
     align-items: center;

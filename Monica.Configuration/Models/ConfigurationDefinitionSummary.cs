@@ -21,6 +21,11 @@ public sealed record ConfigurationDefinitionSummary
     public required string DisplayName { get; init; }
 
     /// <summary>
+    /// Gets the developer-facing description shown in management tools and generated documentation.
+    /// </summary>
+    public string? Description { get; init; }
+
+    /// <summary>
     /// Gets the compact owning options type identity used for display and search.
     /// </summary>
     public required string ClrTypeName { get; init; }

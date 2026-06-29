@@ -7,7 +7,7 @@ internal sealed class ConfigurationSchemaMarkerEntity
 {
     internal const string CurrentMarkerKey = "Configuration.EfCore";
 
-    internal const int CurrentSchemaVersion = 2;
+    internal const int CurrentSchemaVersion = 3;
 
     public string MarkerKey { get; set; } = CurrentMarkerKey;
 

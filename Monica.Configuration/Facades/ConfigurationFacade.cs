@@ -180,6 +180,7 @@ public sealed class ConfigurationFacade(
             DefinitionKey = definition.DefinitionKey,
             SectionPath = definition.SectionPath,
             DisplayName = definition.DisplayName,
+            Description = definition.Description,
             ClrTypeName = definition.ClrTypeName,
             FromProject = definition.FromProject,
             Category = definition.Category,
