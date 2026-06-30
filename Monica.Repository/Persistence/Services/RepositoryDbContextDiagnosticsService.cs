@@ -55,26 +55,29 @@ internal sealed class RepositoryDbContextDiagnosticsService(
         CancellationToken cancellationToken = default)
     {
         var registration = registry.GetRequiredRegistration(contextId);
+        string? providerName = null;
+        RepositoryActivityProviderGuide? providerGuide = null;
 
         try
         {
             await using var scope = scopeFactory.CreateAsyncScope();
             var dbContext = ResolveDbContext(scope.ServiceProvider, registration);
-            var providerName = dbContext.Database.ProviderName;
-            var activityProvider = ResolveActivityProvider(providerName);
+            providerName = dbContext.Database.ProviderName;
+            providerGuide = RepositoryActivityProviderGuideCatalog.Resolve(providerName);
 
-            if (activityProvider == RepositoryActivityProvider.Unsupported)
+            if (!providerGuide.IsSupported)
             {
                 return new RepositoryActivityResult
                 {
                     Registration = registration,
                     ProviderName = providerName,
+                    ProviderGuide = providerGuide,
                     Support = RepositoryActivitySupport.UnsupportedProvider,
                     Message = $"Activity diagnostics are not supported for provider '{providerName ?? "Unknown"}'."
                 };
             }
 
-            var rows = activityProvider == RepositoryActivityProvider.OpenGauss
+            var rows = providerGuide.ProviderKind == RepositoryActivityProviderKind.OpenGauss
                 ? await QueryOpenGaussActivityAsync(dbContext, cancellationToken)
                 : await QueryPostgreSqlActivityAsync(dbContext, cancellationToken);
 
@@ -82,6 +85,7 @@ internal sealed class RepositoryDbContextDiagnosticsService(
             {
                 Registration = registration,
                 ProviderName = providerName,
+                ProviderGuide = providerGuide,
                 Support = RepositoryActivitySupport.Supported,
                 Rows = rows
             };
@@ -92,6 +96,8 @@ internal sealed class RepositoryDbContextDiagnosticsService(
             return new RepositoryActivityResult
             {
                 Registration = registration,
+                ProviderName = providerName,
+                ProviderGuide = providerGuide ?? RepositoryActivityProviderGuideCatalog.Resolve(providerName),
                 Support = RepositoryActivitySupport.Failed,
                 Message = ex.GetMessageRecursively()
             };
@@ -489,28 +495,6 @@ internal sealed class RepositoryDbContextDiagnosticsService(
         }
     }
 
-    private static RepositoryActivityProvider ResolveActivityProvider(string? providerName)
-    {
-        if (string.IsNullOrWhiteSpace(providerName))
-        {
-            return RepositoryActivityProvider.Unsupported;
-        }
-
-        if (providerName.Contains("OpenGauss", StringComparison.OrdinalIgnoreCase)
-            || providerName.Contains("Gauss", StringComparison.OrdinalIgnoreCase))
-        {
-            return RepositoryActivityProvider.OpenGauss;
-        }
-
-        if (providerName.Contains("Npgsql", StringComparison.OrdinalIgnoreCase)
-            || providerName.Contains("Postgre", StringComparison.OrdinalIgnoreCase))
-        {
-            return RepositoryActivityProvider.PostgreSql;
-        }
-
-        return RepositoryActivityProvider.Unsupported;
-    }
-
     private static string FormatOptionValue(object? value)
     {
         return value switch
@@ -525,13 +509,6 @@ internal sealed class RepositoryDbContextDiagnosticsService(
             IEnumerable enumerable and not string => string.Join(", ", enumerable.Cast<object?>().Take(8).Select(FormatOptionValue)),
             _ => value.ToString() ?? string.Empty
         };
-    }
-
-    private enum RepositoryActivityProvider
-    {
-        Unsupported,
-        PostgreSql,
-        OpenGauss
     }
 
     private sealed class ActivityRowReader

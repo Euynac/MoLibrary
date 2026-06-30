@@ -104,7 +104,9 @@
                                                    OnToggleReveal="ToggleConnectionRevealAsync" />
                     </MudTabPanel>
                     <MudTabPanel Text="@L["Dashboard:Tabs:Activity"]" Icon="@Icons.Material.Filled.Troubleshoot">
-                        <RepositoryActivityTable Activity="PageState.Activity" IsLoading="PageState.IsLoadingDetails" />
+                        <RepositoryActivityTable Activity="PageState.Activity"
+                                                 ProviderName="@PageState.SelectedContext.ProviderName"
+                                                 IsLoading="PageState.IsLoadingDetails" />
                     </MudTabPanel>
                     <MudTabPanel Text="@L["Dashboard:Tabs:Migrations"]" Icon="@Icons.Material.Filled.Schema">
                         <RepositoryMigrationPanel Status="PageState.MigrationStatus"

@@ -1,0 +1,78 @@
+.activity-guide-root {
+    min-width: min(860px, 82vw);
+    max-width: min(980px, 88vw);
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.activity-guide-header,
+.guide-section__heading {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.activity-guide-header__copy,
+.guide-section {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.sql-shell {
+    max-height: min(44vh, 420px);
+    overflow: auto;
+    border: 1px solid var(--mud-palette-lines-default);
+    border-radius: 8px;
+    background: var(--mud-palette-background-gray);
+}
+
+.sql-code {
+    margin: 0;
+    padding: 12px;
+    min-width: 720px;
+    font-family: "Consolas", "Monaco", "Courier New", monospace;
+    font-size: 0.8125rem;
+    line-height: 1.55;
+    white-space: pre;
+    color: var(--mud-palette-text-primary);
+}
+
+.guide-columns {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 8px;
+}
+
+.guide-column {
+    min-width: 0;
+    padding: 10px;
+    border: 1px solid var(--mud-palette-lines-default);
+    border-radius: 8px;
+    background: var(--mud-palette-surface);
+}
+
+.guide-column__name {
+    font-family: "Consolas", "Monaco", "Courier New", monospace;
+    overflow-wrap: anywhere;
+}
+
+@media (max-width: 720px) {
+    .activity-guide-root {
+        min-width: 0;
+        max-width: none;
+    }
+
+    .activity-guide-header,
+    .guide-section__heading {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .sql-code {
+        min-width: 560px;
+    }
+}

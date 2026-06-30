@@ -1,0 +1,159 @@
+@inject IStringLocalizer<RepositoryUIResource> L
+@inject IJSRuntime JsRuntime
+@inject ISnackbar Snackbar
+
+<MudDialog>
+    <DialogContent>
+        <div class="activity-guide-root">
+            <div class="activity-guide-header">
+                <div class="activity-guide-header__copy">
+                    <MudText Typo="Typo.h6">@L["Activity:Guide:Title"]</MudText>
+                    <MudText Typo="Typo.body2" Color="Color.Secondary">@ProviderLine</MudText>
+                </div>
+                <MudChip T="string"
+                         Variant="Variant.Outlined"
+                         Color="@(Guide.IsSupported ? Color.Success : Color.Warning)"
+                         Icon="@(Guide.IsSupported ? Icons.Material.Filled.CheckCircle : Icons.Material.Filled.HelpOutline)">
+                    @(Guide.IsSupported ? L["Activity:Guide:Supported"] : L["Activity:Guide:Unsupported"])
+                </MudChip>
+            </div>
+
+            <MudAlert Severity="@(Guide.IsSupported ? Severity.Info : Severity.Warning)" Variant="Variant.Outlined">
+                @ProviderDescription
+            </MudAlert>
+
+            @if (Guide.IsSupported)
+            {
+                <section class="guide-section">
+                    <MudText Typo="Typo.subtitle2">@L["Activity:Guide:UsageTitle"]</MudText>
+                    <MudText Typo="Typo.body2" Color="Color.Secondary">
+                        @L["Activity:Guide:UsageDescription"]
+                    </MudText>
+                </section>
+
+                <section class="guide-section">
+                    <MudText Typo="Typo.subtitle2">@L["Activity:Guide:SourceTitle"]</MudText>
+                    <MudText Typo="Typo.body2" Color="Color.Secondary">
+                        @L["Activity:Guide:SourceDescription", Guide.SourceObject ?? L["Common:Values:Unavailable"]]
+                    </MudText>
+                </section>
+
+                <section class="guide-section">
+                    <div class="guide-section__heading">
+                        <div>
+                            <MudText Typo="Typo.subtitle2">@L["Activity:Guide:SqlTitle"]</MudText>
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">@SourceDescription</MudText>
+                        </div>
+                        <MudButton Variant="Variant.Outlined"
+                                   Size="Size.Small"
+                                   StartIcon="@Icons.Material.Filled.ContentCopy"
+                                   OnClick="CopySqlAsync">
+                            @L["Common:Actions:Copy"]
+                        </MudButton>
+                    </div>
+                    <div class="sql-shell">
+                        <pre class="sql-code">@SqlText</pre>
+                    </div>
+                </section>
+
+                <section class="guide-section">
+                    <MudText Typo="Typo.subtitle2">@L["Activity:Guide:ColumnsTitle"]</MudText>
+                    <div class="guide-columns">
+                        @foreach (var column in Guide.SelectedColumns)
+                        {
+                            <div class="guide-column">
+                                <MudText Typo="Typo.body2" Class="guide-column__name">@column</MudText>
+                                <MudText Typo="Typo.caption" Color="Color.Secondary">@GetColumnDescription(column)</MudText>
+                            </div>
+                        }
+                    </div>
+                </section>
+            }
+        </div>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Close">@L["Common:Actions:Close"]</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] private IMudDialogInstance MudDialog { get; set; } = null!;
+
+    [Parameter, EditorRequired] public RepositoryActivityProviderGuide Guide { get; set; } = null!;
+
+    private string ProviderDisplayName => string.IsNullOrWhiteSpace(Guide.DisplayName)
+        ? L["Common:Values:Unavailable"]
+        : Guide.DisplayName;
+
+    private string ProviderLine => string.IsNullOrWhiteSpace(Guide.ProviderName)
+                                   || string.Equals(Guide.ProviderName, Guide.DisplayName, StringComparison.OrdinalIgnoreCase)
+        ? ProviderDisplayName
+        : $"{ProviderDisplayName} - {Guide.ProviderName}";
+
+    private string SqlText => Guide.Sql ?? string.Empty;
+
+    private string ProviderDescription => Guide.ProviderKind switch
+    {
+        RepositoryActivityProviderKind.PostgreSql => L["Activity:Guide:Providers:PostgreSql:Description"],
+        RepositoryActivityProviderKind.OpenGauss => L["Activity:Guide:Providers:OpenGauss:Description"],
+        _ => L["Activity:Guide:UnsupportedDescription"]
+    };
+
+    private string SourceDescription => Guide.ProviderKind switch
+    {
+        RepositoryActivityProviderKind.PostgreSql => L["Activity:Guide:Providers:PostgreSql:Source"],
+        RepositoryActivityProviderKind.OpenGauss => L["Activity:Guide:Providers:OpenGauss:Source"],
+        _ => string.Empty
+    };
+
+    private async Task CopySqlAsync()
+    {
+        if (string.IsNullOrWhiteSpace(Guide.Sql))
+        {
+            return;
+        }
+
+        try
+        {
+            await JsRuntime.InvokeVoidAsync("navigator.clipboard.writeText", Guide.Sql);
+            Snackbar.Add(L["Activity:Guide:Copied"], Severity.Success);
+        }
+        catch
+        {
+            Snackbar.Add(L["Activity:Guide:CopyFailed"], Severity.Warning);
+        }
+    }
+
+    private string GetColumnDescription(string column)
+    {
+        return column switch
+        {
+            "Runtime" => L["Activity:Guide:Columns:Runtime"],
+            "Datname" => L["Activity:Guide:Columns:Datname"],
+            "Usename" => L["Activity:Guide:Columns:Usename"],
+            "ApplicationName" => L["Activity:Guide:Columns:ApplicationName"],
+            "ClientAddr" => L["Activity:Guide:Columns:ClientAddr"],
+            "ClientPort" => L["Activity:Guide:Columns:ClientPort"],
+            "Waiting" => L["Activity:Guide:Columns:Waiting"],
+            "State" => L["Activity:Guide:Columns:State"],
+            "Query" => L["Activity:Guide:Columns:Query"],
+            "Sessionid" => L["Activity:Guide:Columns:Sessionid"],
+            "ResourcePool" => L["Activity:Guide:Columns:ResourcePool"],
+            "QueryId" => L["Activity:Guide:Columns:QueryId"],
+            "ConnectionInfo" => L["Activity:Guide:Columns:ConnectionInfo"],
+            "UniqueSqlId" => L["Activity:Guide:Columns:UniqueSqlId"],
+            "TraceId" => L["Activity:Guide:Columns:TraceId"],
+            "Pid" => L["Activity:Guide:Columns:Pid"],
+            "BackendStart" => L["Activity:Guide:Columns:BackendStart"],
+            "XactStart" => L["Activity:Guide:Columns:XactStart"],
+            "QueryStart" => L["Activity:Guide:Columns:QueryStart"],
+            "StateChange" => L["Activity:Guide:Columns:StateChange"],
+            _ => L["Activity:Guide:Columns:ProviderSpecific"]
+        };
+    }
+
+    private void Close()
+    {
+        MudDialog.Close();
+    }
+}

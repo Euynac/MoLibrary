@@ -28,6 +28,8 @@
   "Common": {
     "Actions": {
       "Cancel": "Cancel",
+      "Close": "Close",
+      "Copy": "Copy",
       "Refresh": "Refresh"
     },
     "Values": {
@@ -125,6 +127,55 @@
       "Application": "Application",
       "Client": "Client",
       "Query": "Query"
+    },
+    "Guide": {
+      "Button": "Troubleshooting Guide",
+      "DialogTitle": "Activity Troubleshooting Guide",
+      "Title": "Manual Activity Query",
+      "Supported": "SQL available",
+      "Unsupported": "Unsupported provider",
+      "UnsupportedDescription": "Repository does not have a built-in activity SQL template for this EF Core provider yet. Use the provider's own session, process, or activity catalog views.",
+      "UsageTitle": "How to use it",
+      "UsageDescription": "Run this read-only SQL against the same database used by the selected DbContext when you want to inspect activity outside the dashboard.",
+      "SourceTitle": "Activity source",
+      "SourceDescription": "Repository reads provider activity from {0} and normalizes the rows for the dashboard.",
+      "SqlTitle": "SQL template",
+      "ColumnsTitle": "Selected columns",
+      "Copied": "Activity SQL copied.",
+      "CopyFailed": "Clipboard copy failed. Select the SQL text manually.",
+      "Providers": {
+        "PostgreSql": {
+          "Description": "PostgreSQL activity diagnostics read pg_stat_activity, including session runtime, state, client, application, user, lock waiting state, and current query text.",
+          "Source": "The Waiting value is derived from PostgreSQL lock wait event metadata."
+        },
+        "OpenGauss": {
+          "Description": "openGauss-compatible activity diagnostics read pg_stat_activity, including session runtime, state, client, application, user, waiting state, resource pool, query id, and trace fields when exposed by the provider.",
+          "Source": "The query uses openGauss-compatible pg_stat_activity columns and also works for compatible providers that expose the same activity catalog."
+        }
+      },
+      "Columns": {
+        "Runtime": "Elapsed time since the current query started.",
+        "Datname": "Database name for the session.",
+        "Usename": "Database user name.",
+        "ApplicationName": "Application name reported by the client connection.",
+        "ClientAddr": "Client network address.",
+        "ClientPort": "Client network port.",
+        "Waiting": "Whether the session is waiting for a resource or lock.",
+        "State": "Provider-reported session state.",
+        "Query": "Current or most recent SQL text.",
+        "Sessionid": "openGauss session identifier.",
+        "ResourcePool": "openGauss resource pool name.",
+        "QueryId": "openGauss query identifier.",
+        "ConnectionInfo": "Provider-specific connection details.",
+        "UniqueSqlId": "openGauss unique SQL identifier.",
+        "TraceId": "Provider trace identifier.",
+        "Pid": "PostgreSQL backend process identifier.",
+        "BackendStart": "Time when the backend process started.",
+        "XactStart": "Time when the current transaction started.",
+        "QueryStart": "Time when the current query started.",
+        "StateChange": "Time when the session state last changed.",
+        "ProviderSpecific": "Provider-specific activity value."
+      }
     }
   },
   "Migrations": {

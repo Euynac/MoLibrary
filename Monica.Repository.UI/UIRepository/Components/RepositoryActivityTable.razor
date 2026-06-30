@@ -1,5 +1,7 @@
 @inject IStringLocalizer<RepositoryUIResource> L
+@inject IDialogService DialogService
 @using System.Globalization
+@using Monica.Repository.Persistence.Services.Support
 
 @if (IsLoading)
 {
@@ -10,132 +12,140 @@
 }
 else if (Activity is null)
 {
-    <MudAlert Severity="Severity.Info">@L["Activity:Empty"]</MudAlert>
-}
-else if (Activity.Support == RepositoryActivitySupport.UnsupportedProvider)
-{
-    <MudAlert Severity="Severity.Warning">@Activity.Message</MudAlert>
-}
-else if (Activity.Support == RepositoryActivitySupport.Failed)
-{
-    <MudAlert Severity="Severity.Error">@Activity.Message</MudAlert>
-}
-else if (Rows.Count == 0)
-{
-    <MudAlert Severity="Severity.Info">@L["Activity:NoRows"]</MudAlert>
+    <div class="activity-explorer">
+        @ActivityGuideToolbar()
+        <MudAlert Severity="Severity.Info">@L["Activity:Empty"]</MudAlert>
+    </div>
 }
 else
 {
     <div class="activity-explorer">
-        <div class="activity-stats">
-            <MudChip T="string" Variant="Variant.Outlined" Icon="@Icons.Material.Filled.Storage">
-                @L["Activity:Stats:Total", Rows.Count]
-            </MudChip>
-            <MudChip T="string" Variant="Variant.Outlined" Color="Color.Success" Icon="@Icons.Material.Filled.PlayCircle">
-                @L["Activity:Stats:Active", ActiveCount]
-            </MudChip>
-            <MudChip T="string" Variant="Variant.Outlined" Color="Color.Info" Icon="@Icons.Material.Filled.PauseCircle">
-                @L["Activity:Stats:Idle", IdleCount]
-            </MudChip>
-            <MudChip T="string" Variant="Variant.Outlined" Color="@(WaitingCount > 0 ? Color.Warning : Color.Default)" Icon="@Icons.Material.Filled.HourglassTop">
-                @L["Activity:Stats:Waiting", WaitingCount]
-            </MudChip>
-            <MudChip T="string" Variant="Variant.Outlined" Icon="@Icons.Material.Filled.Devices">
-                @L["Activity:Stats:Clients", ClientCount]
-            </MudChip>
-            @if (FilteredRows.Count != Rows.Count)
-            {
-                <MudChip T="string" Variant="Variant.Outlined" Color="Color.Primary" Icon="@Icons.Material.Filled.FilterAlt">
-                    @L["Activity:Stats:Filtered", FilteredRows.Count]
-                </MudChip>
-            }
-        </div>
+        @ActivityGuideToolbar()
 
-        <div class="activity-controls">
-            <MudTextField T="string"
-                          @bind-Value="SearchText"
-                          Immediate="true"
-                          DebounceInterval="150"
-                          Placeholder="@L["Activity:Controls:SearchPlaceholder"]"
-                          Adornment="Adornment.Start"
-                          AdornmentIcon="@Icons.Material.Filled.Search"
-                          Variant="Variant.Outlined"
-                          Margin="Margin.Dense" />
-
-            <MudSelect T="ActivitySortKey"
-                       @bind-Value="SortKey"
-                       Label="@L["Activity:Controls:SortBy"]"
-                       Variant="Variant.Outlined"
-                       Margin="Margin.Dense">
-                <MudSelectItem T="ActivitySortKey" Value="@ActivitySortKey.Runtime">@L["Activity:Sort:Runtime"]</MudSelectItem>
-                <MudSelectItem T="ActivitySortKey" Value="@ActivitySortKey.State">@L["Activity:Sort:State"]</MudSelectItem>
-                <MudSelectItem T="ActivitySortKey" Value="@ActivitySortKey.User">@L["Activity:Sort:User"]</MudSelectItem>
-                <MudSelectItem T="ActivitySortKey" Value="@ActivitySortKey.Application">@L["Activity:Sort:Application"]</MudSelectItem>
-                <MudSelectItem T="ActivitySortKey" Value="@ActivitySortKey.Client">@L["Activity:Sort:Client"]</MudSelectItem>
-                <MudSelectItem T="ActivitySortKey" Value="@ActivitySortKey.Query">@L["Activity:Sort:Query"]</MudSelectItem>
-            </MudSelect>
-
-            <MudSelect T="ActivityGroupMode"
-                       @bind-Value="GroupMode"
-                       Label="@L["Activity:Controls:GroupBy"]"
-                       Variant="Variant.Outlined"
-                       Margin="Margin.Dense">
-                <MudSelectItem T="ActivityGroupMode" Value="@ActivityGroupMode.None">@L["Activity:Group:None"]</MudSelectItem>
-                <MudSelectItem T="ActivityGroupMode" Value="@ActivityGroupMode.State">@L["Activity:Group:State"]</MudSelectItem>
-                <MudSelectItem T="ActivityGroupMode" Value="@ActivityGroupMode.Client">@L["Activity:Group:Client"]</MudSelectItem>
-                <MudSelectItem T="ActivityGroupMode" Value="@ActivityGroupMode.User">@L["Activity:Group:User"]</MudSelectItem>
-                <MudSelectItem T="ActivityGroupMode" Value="@ActivityGroupMode.Application">@L["Activity:Group:Application"]</MudSelectItem>
-            </MudSelect>
-
-            <MudTooltip Text="@(SortDescending ? L["Activity:Controls:Descending"] : L["Activity:Controls:Ascending"])">
-                <MudIconButton Icon="@SortDirectionIcon"
-                               Variant="Variant.Outlined"
-                               Color="Color.Primary"
-                               OnClick="ToggleSortDirection" />
-            </MudTooltip>
-        </div>
-
-        @if (FilteredRows.Count == 0)
+        @if (Activity.Support == RepositoryActivitySupport.UnsupportedProvider)
         {
-            <MudAlert Severity="Severity.Info">@L["Activity:NoMatches"]</MudAlert>
+            <MudAlert Severity="Severity.Warning">@Activity.Message</MudAlert>
+        }
+        else if (Activity.Support == RepositoryActivitySupport.Failed)
+        {
+            <MudAlert Severity="Severity.Error">@Activity.Message</MudAlert>
+        }
+        else if (Rows.Count == 0)
+        {
+            <MudAlert Severity="Severity.Info">@L["Activity:NoRows"]</MudAlert>
         }
         else
         {
-            <div class="activity-table-scroll">
-                @if (GroupMode == ActivityGroupMode.None)
+            <div class="activity-stats">
+                <MudChip T="string" Variant="Variant.Outlined" Icon="@Icons.Material.Filled.Storage">
+                    @L["Activity:Stats:Total", Rows.Count]
+                </MudChip>
+                <MudChip T="string" Variant="Variant.Outlined" Color="Color.Success" Icon="@Icons.Material.Filled.PlayCircle">
+                    @L["Activity:Stats:Active", ActiveCount]
+                </MudChip>
+                <MudChip T="string" Variant="Variant.Outlined" Color="Color.Info" Icon="@Icons.Material.Filled.PauseCircle">
+                    @L["Activity:Stats:Idle", IdleCount]
+                </MudChip>
+                <MudChip T="string" Variant="Variant.Outlined" Color="@(WaitingCount > 0 ? Color.Warning : Color.Default)" Icon="@Icons.Material.Filled.HourglassTop">
+                    @L["Activity:Stats:Waiting", WaitingCount]
+                </MudChip>
+                <MudChip T="string" Variant="Variant.Outlined" Icon="@Icons.Material.Filled.Devices">
+                    @L["Activity:Stats:Clients", ClientCount]
+                </MudChip>
+                @if (FilteredRows.Count != Rows.Count)
                 {
-                    <ActivityRowsTable Rows="FilteredRows"
-                                       RuntimeLabel="@L["Activity:Columns:Runtime"]"
-                                       StateLabel="@L["Activity:Columns:State"]"
-                                       UserLabel="@L["Activity:Columns:User"]"
-                                       ApplicationLabel="@L["Activity:Columns:Application"]"
-                                       ClientLabel="@L["Activity:Columns:Client"]"
-                                       QueryLabel="@L["Activity:Columns:Query"]"
-                                       UnavailableLabel="@L["Common:Values:Unavailable"]" />
-                }
-                else
-                {
-                    <div class="activity-groups">
-                        @foreach (var group in GroupedRows)
-                        {
-                            <section class="activity-group">
-                                <div class="activity-group__header">
-                                    <MudText Typo="Typo.subtitle2">@group.Key</MudText>
-                                    <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">@L["Activity:Group:Count", group.Rows.Count]</MudChip>
-                                </div>
-                                <ActivityRowsTable Rows="group.Rows"
-                                                   RuntimeLabel="@L["Activity:Columns:Runtime"]"
-                                                   StateLabel="@L["Activity:Columns:State"]"
-                                                   UserLabel="@L["Activity:Columns:User"]"
-                                                   ApplicationLabel="@L["Activity:Columns:Application"]"
-                                                   ClientLabel="@L["Activity:Columns:Client"]"
-                                                   QueryLabel="@L["Activity:Columns:Query"]"
-                                                   UnavailableLabel="@L["Common:Values:Unavailable"]" />
-                            </section>
-                        }
-                    </div>
+                    <MudChip T="string" Variant="Variant.Outlined" Color="Color.Primary" Icon="@Icons.Material.Filled.FilterAlt">
+                        @L["Activity:Stats:Filtered", FilteredRows.Count]
+                    </MudChip>
                 }
             </div>
+
+            <div class="activity-controls">
+                <MudTextField T="string"
+                              @bind-Value="SearchText"
+                              Immediate="true"
+                              DebounceInterval="150"
+                              Placeholder="@L["Activity:Controls:SearchPlaceholder"]"
+                              Adornment="Adornment.Start"
+                              AdornmentIcon="@Icons.Material.Filled.Search"
+                              Variant="Variant.Outlined"
+                              Margin="Margin.Dense" />
+
+                <MudSelect T="ActivitySortKey"
+                           @bind-Value="SortKey"
+                           Label="@L["Activity:Controls:SortBy"]"
+                           Variant="Variant.Outlined"
+                           Margin="Margin.Dense">
+                    <MudSelectItem T="ActivitySortKey" Value="@ActivitySortKey.Runtime">@L["Activity:Sort:Runtime"]</MudSelectItem>
+                    <MudSelectItem T="ActivitySortKey" Value="@ActivitySortKey.State">@L["Activity:Sort:State"]</MudSelectItem>
+                    <MudSelectItem T="ActivitySortKey" Value="@ActivitySortKey.User">@L["Activity:Sort:User"]</MudSelectItem>
+                    <MudSelectItem T="ActivitySortKey" Value="@ActivitySortKey.Application">@L["Activity:Sort:Application"]</MudSelectItem>
+                    <MudSelectItem T="ActivitySortKey" Value="@ActivitySortKey.Client">@L["Activity:Sort:Client"]</MudSelectItem>
+                    <MudSelectItem T="ActivitySortKey" Value="@ActivitySortKey.Query">@L["Activity:Sort:Query"]</MudSelectItem>
+                </MudSelect>
+
+                <MudSelect T="ActivityGroupMode"
+                           @bind-Value="GroupMode"
+                           Label="@L["Activity:Controls:GroupBy"]"
+                           Variant="Variant.Outlined"
+                           Margin="Margin.Dense">
+                    <MudSelectItem T="ActivityGroupMode" Value="@ActivityGroupMode.None">@L["Activity:Group:None"]</MudSelectItem>
+                    <MudSelectItem T="ActivityGroupMode" Value="@ActivityGroupMode.State">@L["Activity:Group:State"]</MudSelectItem>
+                    <MudSelectItem T="ActivityGroupMode" Value="@ActivityGroupMode.Client">@L["Activity:Group:Client"]</MudSelectItem>
+                    <MudSelectItem T="ActivityGroupMode" Value="@ActivityGroupMode.User">@L["Activity:Group:User"]</MudSelectItem>
+                    <MudSelectItem T="ActivityGroupMode" Value="@ActivityGroupMode.Application">@L["Activity:Group:Application"]</MudSelectItem>
+                </MudSelect>
+
+                <MudTooltip Text="@(SortDescending ? L["Activity:Controls:Descending"] : L["Activity:Controls:Ascending"])">
+                    <MudIconButton Icon="@SortDirectionIcon"
+                                   Variant="Variant.Outlined"
+                                   Color="Color.Primary"
+                                   OnClick="ToggleSortDirection" />
+                </MudTooltip>
+            </div>
+
+            @if (FilteredRows.Count == 0)
+            {
+                <MudAlert Severity="Severity.Info">@L["Activity:NoMatches"]</MudAlert>
+            }
+            else
+            {
+                <div class="activity-table-scroll">
+                    @if (GroupMode == ActivityGroupMode.None)
+                    {
+                        <ActivityRowsTable Rows="FilteredRows"
+                                           RuntimeLabel="@L["Activity:Columns:Runtime"]"
+                                           StateLabel="@L["Activity:Columns:State"]"
+                                           UserLabel="@L["Activity:Columns:User"]"
+                                           ApplicationLabel="@L["Activity:Columns:Application"]"
+                                           ClientLabel="@L["Activity:Columns:Client"]"
+                                           QueryLabel="@L["Activity:Columns:Query"]"
+                                           UnavailableLabel="@L["Common:Values:Unavailable"]" />
+                    }
+                    else
+                    {
+                        <div class="activity-groups">
+                            @foreach (var group in GroupedRows)
+                            {
+                                <section class="activity-group">
+                                    <div class="activity-group__header">
+                                        <MudText Typo="Typo.subtitle2">@group.Key</MudText>
+                                        <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">@L["Activity:Group:Count", group.Rows.Count]</MudChip>
+                                    </div>
+                                    <ActivityRowsTable Rows="group.Rows"
+                                                       RuntimeLabel="@L["Activity:Columns:Runtime"]"
+                                                       StateLabel="@L["Activity:Columns:State"]"
+                                                       UserLabel="@L["Activity:Columns:User"]"
+                                                       ApplicationLabel="@L["Activity:Columns:Application"]"
+                                                       ClientLabel="@L["Activity:Columns:Client"]"
+                                                       QueryLabel="@L["Activity:Columns:Query"]"
+                                                       UnavailableLabel="@L["Common:Values:Unavailable"]" />
+                                </section>
+                            }
+                        </div>
+                    }
+                </div>
+            }
         }
     </div>
 }
@@ -143,9 +153,23 @@ else
 @code {
     [Parameter] public RepositoryActivityResult? Activity { get; set; }
 
+    [Parameter] public string? ProviderName { get; set; }
+
     [Parameter] public bool IsLoading { get; set; }
 
     private IReadOnlyList<RepositoryActivityRow> Rows => Activity?.Rows ?? [];
+
+    private RepositoryActivityProviderGuide ProviderGuide =>
+        Activity?.ProviderGuide ?? RepositoryActivityProviderGuideCatalog.Resolve(Activity?.ProviderName ?? ProviderName);
+
+    private string ProviderDisplayName => string.IsNullOrWhiteSpace(ProviderGuide.DisplayName)
+        ? L["Common:Values:Unavailable"]
+        : ProviderGuide.DisplayName;
+
+    private string ProviderChipText => string.IsNullOrWhiteSpace(ProviderGuide.ProviderName)
+                                       || string.Equals(ProviderGuide.ProviderName, ProviderGuide.DisplayName, StringComparison.OrdinalIgnoreCase)
+        ? ProviderDisplayName
+        : $"{ProviderDisplayName} - {ProviderGuide.ProviderName}";
 
     private string? SearchText { get; set; }
 
@@ -178,6 +202,24 @@ else
         .OrderByDescending(group => group.Rows.Count)
         .ThenBy(group => group.Key, StringComparer.OrdinalIgnoreCase)
         .ToList();
+
+    private async Task ShowProviderGuideAsync()
+    {
+        var parameters = new DialogParameters<ActivityProviderGuideDialog>
+        {
+            { dialog => dialog.Guide, ProviderGuide }
+        };
+
+        await DialogService.ShowAsync<ActivityProviderGuideDialog>(
+            L["Activity:Guide:DialogTitle"],
+            parameters,
+            new DialogOptions
+            {
+                MaxWidth = MaxWidth.Large,
+                FullWidth = true,
+                CloseButton = true
+            });
+    }
 
     private void ToggleSortDirection()
     {
@@ -271,6 +313,27 @@ else
         return !string.IsNullOrWhiteSpace(value)
                && value.Contains(search, StringComparison.OrdinalIgnoreCase);
     }
+
+    private RenderFragment ActivityGuideToolbar() => @<div class="activity-topbar">
+        <div class="activity-provider">
+            <MudChip T="string" Variant="Variant.Outlined" Icon="@Icons.Material.Filled.Dataset">
+                @ProviderChipText
+            </MudChip>
+            <MudChip T="string"
+                     Variant="Variant.Outlined"
+                     Color="@(ProviderGuide.IsSupported ? Color.Success : Color.Warning)"
+                     Icon="@(ProviderGuide.IsSupported ? Icons.Material.Filled.CheckCircle : Icons.Material.Filled.HelpOutline)">
+                @(ProviderGuide.IsSupported ? L["Activity:Guide:Supported"] : L["Activity:Guide:Unsupported"])
+            </MudChip>
+        </div>
+
+        <MudButton Variant="Variant.Outlined"
+                   Color="Color.Primary"
+                   StartIcon="@Icons.Material.Filled.Article"
+                   OnClick="ShowProviderGuideAsync">
+            @L["Activity:Guide:Button"]
+        </MudButton>
+    </div>;
 
     private enum ActivitySortKey
     {

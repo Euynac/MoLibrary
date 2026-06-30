@@ -28,6 +28,8 @@
   "Common": {
     "Actions": {
       "Cancel": "取消",
+      "Close": "关闭",
+      "Copy": "复制",
       "Refresh": "刷新"
     },
     "Values": {
@@ -125,6 +127,55 @@
       "Application": "应用",
       "Client": "客户端",
       "Query": "查询"
+    },
+    "Guide": {
+      "Button": "排查指引",
+      "DialogTitle": "活动排查指引",
+      "Title": "手动活动查询",
+      "Supported": "可查看 SQL",
+      "Unsupported": "Provider 不支持",
+      "UnsupportedDescription": "Repository 暂未内置该 EF Core Provider 的活动 SQL 模板。可以使用该数据库自己的会话、进程或活动系统视图排查。",
+      "UsageTitle": "如何使用",
+      "UsageDescription": "当你想在仪表盘之外自行排查活动信息时，可以在当前 DbContext 连接的同一个数据库上执行这段只读 SQL。",
+      "SourceTitle": "活动来源",
+      "SourceDescription": "Repository 从 {0} 读取 Provider 活动信息，并归一化为仪表盘行数据。",
+      "SqlTitle": "SQL 模板",
+      "ColumnsTitle": "选取字段",
+      "Copied": "活动 SQL 已复制。",
+      "CopyFailed": "剪贴板复制失败。请手动选中 SQL 文本复制。",
+      "Providers": {
+        "PostgreSql": {
+          "Description": "PostgreSQL 活动诊断读取 pg_stat_activity，包括会话运行时间、状态、客户端、应用、用户、锁等待状态和当前查询文本。",
+          "Source": "Waiting 值会根据 PostgreSQL 的锁等待事件元数据计算。"
+        },
+        "OpenGauss": {
+          "Description": "openGauss 兼容活动诊断读取 pg_stat_activity，包括会话运行时间、状态、客户端、应用、用户、等待状态、资源池、查询 ID 和 Provider 暴露的跟踪字段。",
+          "Source": "该查询使用 openGauss 兼容的 pg_stat_activity 字段，也适用于暴露相同活动系统视图的兼容 Provider。"
+        }
+      },
+      "Columns": {
+        "Runtime": "当前查询已经运行的时间。",
+        "Datname": "会话所在数据库名称。",
+        "Usename": "数据库用户名。",
+        "ApplicationName": "客户端连接上报的应用名称。",
+        "ClientAddr": "客户端网络地址。",
+        "ClientPort": "客户端网络端口。",
+        "Waiting": "会话是否正在等待资源或锁。",
+        "State": "Provider 上报的会话状态。",
+        "Query": "当前或最近一次 SQL 文本。",
+        "Sessionid": "openGauss 会话标识。",
+        "ResourcePool": "openGauss 资源池名称。",
+        "QueryId": "openGauss 查询标识。",
+        "ConnectionInfo": "Provider 特定连接详情。",
+        "UniqueSqlId": "openGauss 唯一 SQL 标识。",
+        "TraceId": "Provider 跟踪标识。",
+        "Pid": "PostgreSQL 后端进程标识。",
+        "BackendStart": "后端进程启动时间。",
+        "XactStart": "当前事务开始时间。",
+        "QueryStart": "当前查询开始时间。",
+        "StateChange": "会话状态最近一次变化时间。",
+        "ProviderSpecific": "Provider 特定活动值。"
+      }
     }
   },
   "Migrations": {

@@ -190,6 +190,11 @@ public sealed record RepositoryActivityResult
     public string? ProviderName { get; init; }
 
     /// <summary>
+    /// Provider-specific guide that explains how the activity result can be queried manually.
+    /// </summary>
+    public RepositoryActivityProviderGuide? ProviderGuide { get; init; }
+
+    /// <summary>
     /// Activity rows ordered by runtime descending.
     /// </summary>
     public IReadOnlyList<RepositoryActivityRow> Rows { get; init; } = [];
@@ -224,6 +229,69 @@ public enum RepositoryActivitySupport
     /// The activity query failed.
     /// </summary>
     Failed
+}
+
+/// <summary>
+/// Normalized provider kind used by Repository database activity diagnostics.
+/// </summary>
+public enum RepositoryActivityProviderKind
+{
+    /// <summary>
+    /// The provider is not recognized by the Repository activity query catalog.
+    /// </summary>
+    Unsupported,
+
+    /// <summary>
+    /// PostgreSQL-compatible activity diagnostics.
+    /// </summary>
+    PostgreSql,
+
+    /// <summary>
+    /// openGauss-compatible activity diagnostics.
+    /// </summary>
+    OpenGauss
+}
+
+/// <summary>
+/// Provider-specific manual query guide for Repository database activity diagnostics.
+/// </summary>
+public sealed record RepositoryActivityProviderGuide
+{
+    /// <summary>
+    /// Provider kind resolved from the EF Core provider name.
+    /// </summary>
+    public RepositoryActivityProviderKind ProviderKind { get; init; }
+
+    /// <summary>
+    /// EF Core provider name reported by the selected DbContext.
+    /// </summary>
+    public string? ProviderName { get; init; }
+
+    /// <summary>
+    /// Short provider display name suitable for diagnostics UI.
+    /// </summary>
+    public required string DisplayName { get; init; }
+
+    /// <summary>
+    /// Provider catalog object queried by the Repository activity diagnostic SQL.
+    /// </summary>
+    public string? SourceObject { get; init; }
+
+    /// <summary>
+    /// Read-only SQL statement that can be executed manually against the selected database.
+    /// </summary>
+    public string? Sql { get; init; }
+
+    /// <summary>
+    /// Column aliases selected by <see cref="Sql"/> and normalized by Repository diagnostics.
+    /// </summary>
+    public IReadOnlyList<string> SelectedColumns { get; init; } = [];
+
+    /// <summary>
+    /// Whether Repository has a manual activity SQL template for this provider.
+    /// </summary>
+    public bool IsSupported => ProviderKind != RepositoryActivityProviderKind.Unsupported
+                               && !string.IsNullOrWhiteSpace(Sql);
 }
 
 /// <summary>
