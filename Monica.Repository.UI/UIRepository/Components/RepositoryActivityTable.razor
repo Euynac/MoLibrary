@@ -1,0 +1,78 @@
+@inject IStringLocalizer<RepositoryUIResource> L
+
+@if (IsLoading)
+{
+    <div class="activity-state">
+        <MudProgressCircular Color="Color.Primary" Size="Size.Small" Indeterminate="true" />
+        <MudText Typo="Typo.body2" Color="Color.Secondary">@L["Activity:Loading"]</MudText>
+    </div>
+}
+else if (Activity is null)
+{
+    <MudAlert Severity="Severity.Info">@L["Activity:Empty"]</MudAlert>
+}
+else if (Activity.Support == RepositoryActivitySupport.UnsupportedProvider)
+{
+    <MudAlert Severity="Severity.Warning">@Activity.Message</MudAlert>
+}
+else if (Activity.Support == RepositoryActivitySupport.Failed)
+{
+    <MudAlert Severity="Severity.Error">@Activity.Message</MudAlert>
+}
+else if (Rows.Count == 0)
+{
+    <MudAlert Severity="Severity.Info">@L["Activity:NoRows"]</MudAlert>
+}
+else
+{
+    <MudTable T="RepositoryActivityRow" Items="Rows" Dense="true" Hover="true" Breakpoint="Breakpoint.Sm">
+        <HeaderContent>
+            <MudTh>@L["Activity:Columns:Runtime"]</MudTh>
+            <MudTh>@L["Activity:Columns:State"]</MudTh>
+            <MudTh>@L["Activity:Columns:User"]</MudTh>
+            <MudTh>@L["Activity:Columns:Application"]</MudTh>
+            <MudTh>@L["Activity:Columns:Client"]</MudTh>
+            <MudTh>@L["Activity:Columns:Query"]</MudTh>
+        </HeaderContent>
+        <RowTemplate>
+            <MudTd DataLabel="@L["Activity:Columns:Runtime"]">@FormatRuntime(context.Runtime)</MudTd>
+            <MudTd DataLabel="@L["Activity:Columns:State"]">@DisplayValue(context.State)</MudTd>
+            <MudTd DataLabel="@L["Activity:Columns:User"]">@DisplayValue(context.UserName)</MudTd>
+            <MudTd DataLabel="@L["Activity:Columns:Application"]">@DisplayValue(context.ApplicationName)</MudTd>
+            <MudTd DataLabel="@L["Activity:Columns:Client"]">@FormatClient(context)</MudTd>
+            <MudTd DataLabel="@L["Activity:Columns:Query"]">
+                <span class="query-cell">@DisplayValue(context.Query)</span>
+            </MudTd>
+        </RowTemplate>
+    </MudTable>
+}
+
+@code {
+    [Parameter] public RepositoryActivityResult? Activity { get; set; }
+
+    [Parameter] public bool IsLoading { get; set; }
+
+    private IReadOnlyList<RepositoryActivityRow> Rows => Activity?.Rows ?? [];
+
+    private string FormatRuntime(TimeSpan? runtime)
+    {
+        return runtime?.ToString(@"hh\:mm\:ss") ?? L["Common:Values:Unavailable"];
+    }
+
+    private string FormatClient(RepositoryActivityRow row)
+    {
+        if (string.IsNullOrWhiteSpace(row.ClientAddress))
+        {
+            return L["Common:Values:Unavailable"];
+        }
+
+        return row.ClientPort is null
+            ? row.ClientAddress
+            : $"{row.ClientAddress}:{row.ClientPort}";
+    }
+
+    private string DisplayValue(string? value)
+    {
+        return string.IsNullOrWhiteSpace(value) ? L["Common:Values:Unavailable"] : value;
+    }
+}

@@ -1,0 +1,25 @@
+@inject IStringLocalizer<RepositoryUIResource> L
+
+@if (Options.Count == 0)
+{
+    <MudAlert Severity="Severity.Info">@L["Options:Empty"]</MudAlert>
+}
+else
+{
+    <MudTable T="RepositoryOptionEntry" Items="Options" Dense="true" Hover="true" Breakpoint="Breakpoint.Sm">
+        <HeaderContent>
+            <MudTh>@L["Options:Columns:Name"]</MudTh>
+            <MudTh>@L["Options:Columns:Path"]</MudTh>
+            <MudTh>@L["Options:Columns:Value"]</MudTh>
+        </HeaderContent>
+        <RowTemplate>
+            <MudTd DataLabel="@L["Options:Columns:Name"]">@context.Label</MudTd>
+            <MudTd DataLabel="@L["Options:Columns:Path"]">@context.Path</MudTd>
+            <MudTd DataLabel="@L["Options:Columns:Value"]">@context.Value</MudTd>
+        </RowTemplate>
+    </MudTable>
+}
+
+@code {
+    [Parameter] public IReadOnlyList<RepositoryOptionEntry> Options { get; set; } = [];
+}

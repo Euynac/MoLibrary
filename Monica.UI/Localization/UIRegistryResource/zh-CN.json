@@ -89,6 +89,9 @@
     "StateStoreManage": {
       "Title": "状态存储管理"
     },
+    "RepositoryDashboard": {
+      "Title": "Repository 诊断"
+    },
     "DiffHighlight": {
       "Title": "文本差异对比"
     },

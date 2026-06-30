@@ -1,0 +1,166 @@
+@inject IStringLocalizer<RepositoryUIResource> L
+
+<div class="migration-panel">
+    <div class="migration-actions">
+        <div>
+            <MudText Typo="Typo.subtitle1">@L["Migrations:Title"]</MudText>
+            <MudText Typo="Typo.body2" Color="Color.Secondary">
+                @(MigrationUpdatesEnabled ? L["Migrations:Subtitle"] : L["Migrations:DisabledInProduction"])
+            </MudText>
+        </div>
+        <div class="migration-actions__buttons">
+            <MudButton Variant="Variant.Outlined"
+                       Color="Color.Primary"
+                       StartIcon="@Icons.Material.Filled.SystemUpdateAlt"
+                       Disabled="@(!CanUpdateSelected)"
+                       OnClick="OnUpdateSelected">
+                @L["Migrations:Actions:UpdateSelected"]
+            </MudButton>
+            <MudButton Variant="Variant.Outlined"
+                       Color="Color.Primary"
+                       StartIcon="@Icons.Material.Filled.DoneAll"
+                       Disabled="@(!CanUpdateAll)"
+                       OnClick="OnUpdateAll">
+                @L["Migrations:Actions:UpdateAll"]
+            </MudButton>
+        </div>
+    </div>
+
+    @if (IsUpdating)
+    {
+        <MudProgressLinear Indeterminate="true" Color="Color.Primary" />
+    }
+
+    @if (Status is null)
+    {
+        <MudAlert Severity="Severity.Info">@L["Migrations:Empty"]</MudAlert>
+    }
+    else if (Status.HasError)
+    {
+        <MudAlert Severity="Severity.Error">@Status.ErrorMessage</MudAlert>
+    }
+    else
+    {
+        <div class="migration-summary">
+            <MudChip T="string" Variant="Variant.Outlined" Icon="@Icons.Material.Filled.AccountTree">
+                @L["Migrations:Summary:CurrentAssembly", Status.AllMigrations.Count]
+            </MudChip>
+            <MudChip T="string" Variant="Variant.Outlined" Color="Color.Success" Icon="@Icons.Material.Filled.CheckCircle">
+                @L["Migrations:Summary:AppliedCurrent", Status.AppliedCurrentAssemblyMigrations.Count]
+            </MudChip>
+            <MudChip T="string" Variant="Variant.Outlined" Color="@(Status.HasPendingMigrations ? Color.Warning : Color.Success)">
+                @L["Migrations:Summary:PendingCurrent", Status.PendingMigrations.Count]
+            </MudChip>
+            <MudChip T="string" Variant="Variant.Outlined" Color="@(Status.HasExternalAppliedMigrations ? Color.Info : Color.Default)">
+                @L["Migrations:Summary:ExternalApplied", Status.ExternalAppliedMigrations.Count]
+            </MudChip>
+            <MudChip T="string" Variant="Variant.Outlined">
+                @L["Migrations:Summary:HistoryRows", Status.AppliedMigrations.Count]
+            </MudChip>
+        </div>
+
+        <div class="migration-context-note">
+            <MudIcon Icon="@Icons.Material.Filled.Info" Size="Size.Small" Color="Color.Info" />
+            <MudText Typo="Typo.body2" Color="Color.Secondary">
+                @L["Migrations:ContextNote", DisplayValue(Status.MigrationAssembly)]
+            </MudText>
+        </div>
+
+        <div class="@GetMigrationInventoryClass(Status)">
+            <MigrationAssemblyList Title="@L["Migrations:Lists:CurrentAssembly"]"
+                                   Subtitle="@L["Migrations:Lists:CurrentAssemblyDescription"]"
+                                   Items="Status.CurrentAssemblyMigrations"
+                                   EmptyText="@L["Migrations:Lists:NoMigrations"]" />
+
+            @if (Status.HasExternalAppliedMigrations)
+            {
+                <MigrationList Title="@L["Migrations:Lists:ExternalApplied"]"
+                               Subtitle="@L["Migrations:Lists:ExternalAppliedDescription"]"
+                               CountText="@L["Migrations:Lists:Count", Status.ExternalAppliedMigrations.Count]"
+                               Items="Status.ExternalAppliedMigrations"
+                               EmptyText="@L["Migrations:Lists:NoExternalApplied"]" />
+            }
+        </div>
+    }
+
+    @if (UpdateResults.Count > 0)
+    {
+        <div class="update-results">
+            <MudText Typo="Typo.subtitle1">@L["Migrations:Results:Title"]</MudText>
+            <MudTable T="RepositoryMigrationUpdateResult" Items="UpdateResults" Dense="true" Hover="true" Breakpoint="Breakpoint.Sm">
+                <HeaderContent>
+                    <MudTh>@L["Migrations:Results:Columns:Context"]</MudTh>
+                    <MudTh>@L["Migrations:Results:Columns:Status"]</MudTh>
+                    <MudTh>@L["Migrations:Results:Columns:Attempted"]</MudTh>
+                    <MudTh>@L["Migrations:Results:Columns:Duration"]</MudTh>
+                    <MudTh>@L["Migrations:Results:Columns:Message"]</MudTh>
+                </HeaderContent>
+                <RowTemplate>
+                    <MudTd DataLabel="@L["Migrations:Results:Columns:Context"]">@context.Registration.DbContextName</MudTd>
+                    <MudTd DataLabel="@L["Migrations:Results:Columns:Status"]">
+                        <MudChip T="string" Size="Size.Small" Color="@GetResultColor(context)" Variant="Variant.Outlined">
+                            @GetResultText(context)
+                        </MudChip>
+                    </MudTd>
+                    <MudTd DataLabel="@L["Migrations:Results:Columns:Attempted"]">@context.AttemptedMigrations.Count</MudTd>
+                    <MudTd DataLabel="@L["Migrations:Results:Columns:Duration"]">@context.Duration.ToString(@"hh\:mm\:ss")</MudTd>
+                    <MudTd DataLabel="@L["Migrations:Results:Columns:Message"]">@DisplayValue(context.ErrorMessage ?? context.Message)</MudTd>
+                </RowTemplate>
+            </MudTable>
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter] public RepositoryMigrationStatus? Status { get; set; }
+
+    [Parameter] public IReadOnlyList<RepositoryMigrationUpdateResult> UpdateResults { get; set; } = [];
+
+    [Parameter] public bool MigrationUpdatesEnabled { get; set; }
+
+    [Parameter] public bool HasAnyPendingMigration { get; set; }
+
+    [Parameter] public bool IsUpdating { get; set; }
+
+    [Parameter] public EventCallback OnUpdateSelected { get; set; }
+
+    [Parameter] public EventCallback OnUpdateAll { get; set; }
+
+    private bool CanUpdateSelected => MigrationUpdatesEnabled && Status?.HasPendingMigrations == true && !IsUpdating;
+
+    private bool CanUpdateAll => MigrationUpdatesEnabled && HasAnyPendingMigration && !IsUpdating;
+
+    private Color GetResultColor(RepositoryMigrationUpdateResult result)
+    {
+        if (!result.Succeeded)
+        {
+            return Color.Error;
+        }
+
+        return result.Skipped ? Color.Info : Color.Success;
+    }
+
+    private string GetResultText(RepositoryMigrationUpdateResult result)
+    {
+        if (!result.Succeeded)
+        {
+            return L["Migrations:Results:Status:Failed"];
+        }
+
+        return result.Skipped
+            ? L["Migrations:Results:Status:Skipped"]
+            : L["Migrations:Results:Status:Succeeded"];
+    }
+
+    private static string GetMigrationInventoryClass(RepositoryMigrationStatus status)
+    {
+        return status.HasExternalAppliedMigrations
+            ? "migration-inventory has-external"
+            : "migration-inventory";
+    }
+
+    private string DisplayValue(string? value)
+    {
+        return string.IsNullOrWhiteSpace(value) ? L["Common:Values:Unavailable"] : value;
+    }
+}

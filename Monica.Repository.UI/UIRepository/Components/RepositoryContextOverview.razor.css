@@ -1,0 +1,86 @@
+.overview-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 12px;
+    margin-bottom: 14px;
+}
+
+.metric-card,
+.overview-section {
+    min-width: 0;
+    border: 1px solid var(--mud-palette-lines-default);
+    border-radius: 8px;
+    background: var(--mud-palette-surface);
+}
+
+.metric-card {
+    padding: 14px;
+}
+
+.metric-card ::deep .mud-typography {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.overview-sections {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 14px;
+    margin-bottom: 14px;
+}
+
+.overview-section {
+    padding: 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.section-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+}
+
+.property-grid {
+    display: grid;
+    grid-template-columns: minmax(9rem, auto) minmax(0, 1fr);
+    gap: 8px 12px;
+    align-items: start;
+}
+
+.property-grid > :nth-child(odd) {
+    color: var(--mud-palette-text-secondary);
+}
+
+.property-grid > :nth-child(even),
+.property-grid code {
+    min-width: 0;
+    overflow-wrap: anywhere;
+}
+
+.property-grid code {
+    display: block;
+    padding: 8px;
+    border-radius: 6px;
+    border: 1px solid var(--mud-palette-lines-default);
+    background: var(--mud-palette-background-gray);
+    color: var(--mud-palette-text-primary);
+}
+
+@media (max-width: 1080px) {
+    .overview-grid,
+    .overview-sections {
+        grid-template-columns: 1fr 1fr;
+    }
+}
+
+@media (max-width: 720px) {
+    .overview-grid,
+    .overview-sections,
+    .property-grid {
+        grid-template-columns: 1fr;
+    }
+}

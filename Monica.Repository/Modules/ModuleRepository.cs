@@ -10,11 +10,13 @@ using Monica.Core.Modularity.Models;
 using Monica.Repository;
 using Monica.Repository.Entity.Abstractions;
 using Monica.Repository.Entity.Services;
+using Monica.Repository.Facades;
 using Monica.Repository.GuidGeneration.Abstractions;
 using Monica.Repository.GuidGeneration.Models;
 using Monica.Repository.GuidGeneration.Services;
 using Monica.Repository.Persistence.Abstractions;
 using Monica.Repository.Persistence.Metrics;
+using Monica.Repository.Persistence.Models;
 using Monica.Repository.Persistence.Services;
 using Monica.Repository.Persistence.Services.Support;
 
@@ -43,6 +45,9 @@ public class ModuleRepository(ModuleRepositoryOption option)
     {
         services.AddOptions<SequentialGuidGeneratorOptions>();
         services.TryAddTransient<IGuidGenerator, SequentialGuidGenerator>();
+        services.TryAddSingleton<IRepositoryDbContextRegistry, RepositoryDbContextRegistry>();
+        services.TryAddScoped<IRepositoryDbContextDiagnosticsService, RepositoryDbContextDiagnosticsService>();
+        services.TryAddScoped<RepositoryDiagnosticsFacade>();
 
         if (option.EnableEfCoreConnectionMetrics)
         {
@@ -59,6 +64,7 @@ public class ModuleRepository(ModuleRepositoryOption option)
 
 public class ModuleRepositoryGuide : ModuleGuide<ModuleRepository, ModuleRepositoryOption, ModuleRepositoryGuide>
 {
+    private static int _dbContextRegistrationOrder;
 
     /// <summary>
     /// Registers a repository DbContext and the scoped access services used by repositories and long-lived workers.
@@ -90,6 +96,10 @@ public class ModuleRepositoryGuide : ModuleGuide<ModuleRepository, ModuleReposit
             }
             
             context.Services.TryAddTransient<IAuditPropertySetter, AuditPropertySetter>();
+            context.Services.AddSingleton(new RepositoryDbContextRegistration(
+                typeof(TDbContext),
+                dbContextProviderType,
+                System.Threading.Interlocked.Increment(ref _dbContextRegistrationOrder)));
             context.Services.TryAddSingleton(
                 typeof(IDbContextOperation<TDbContext>),
                 typeof(ScopedDbContextOperation<TDbContext>));
@@ -112,7 +122,7 @@ public class ModuleRepositoryGuide : ModuleGuide<ModuleRepository, ModuleReposit
 
             context.Services
                 .AddTransient<IDbContextDatabaseManager<TDbContext>, DbContextDatabaseManager<TDbContext>>();
-        }, secondKey: typeof(TDbContext).Name);
+        }, secondKey: typeof(TDbContext).FullName ?? typeof(TDbContext).Name);
         return this;
     }
 

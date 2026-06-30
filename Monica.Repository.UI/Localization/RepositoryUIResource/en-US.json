@@ -1,0 +1,158 @@
+{
+  "Dashboard": {
+    "PageTitle": "Repository Diagnostics",
+    "Eyebrow": "Repository",
+    "Title": "Repository Diagnostics",
+    "Subtitle": "Inspect registered DbContexts, connection health, database activity, and EF Core migrations.",
+    "Summary": {
+      "RegisteredContexts": "{0} contexts registered",
+      "ConnectedContexts": "{0} connected",
+      "PendingMigrations": "{0} pending migrations"
+    },
+    "Messages": {
+      "LoadingContexts": "Loading registered DbContexts...",
+      "LoadingContextsDescription": "Reading Repository registrations, connection status, and migration metadata.",
+      "NoContexts": "No Repository DbContexts registered",
+      "NoContextsDescription": "Register a Repository DbContext to unlock database diagnostics."
+    },
+    "Detail": {
+      "SelectedContext": "Selected Context"
+    },
+    "Tabs": {
+      "Overview": "Overview",
+      "Activity": "Activity",
+      "Migrations": "Migrations",
+      "Options": "Options"
+    }
+  },
+  "Common": {
+    "Actions": {
+      "Cancel": "Cancel",
+      "Refresh": "Refresh"
+    },
+    "Values": {
+      "Unavailable": "Unavailable"
+    }
+  },
+  "ContextRail": {
+    "Eyebrow": "Sources",
+    "Title": "DbContexts",
+    "Subtitle": "{0} registered",
+    "Loading": "Loading contexts",
+    "Empty": "No contexts found",
+    "Status": {
+      "Connected": "Connected",
+      "Disconnected": "Disconnected",
+      "Pending": "{0} pending"
+    }
+  },
+  "Overview": {
+    "Empty": "Select a DbContext to inspect its runtime details.",
+    "Metrics": {
+      "Connection": "Connection",
+      "Pending": "Pending",
+      "ProviderType": "Provider Type",
+      "MigrationAssembly": "Migration Assembly"
+    },
+    "Values": {
+      "Connected": "Connected",
+      "Disconnected": "Disconnected",
+      "Unknown": "Unknown"
+    },
+    "Connection": {
+      "Title": "Connection",
+      "Hide": "Hide",
+      "Reveal": "Reveal",
+      "DataSource": "Data Source",
+      "Database": "Database",
+      "ConnectionString": "Connection String"
+    },
+    "Provider": {
+      "Title": "Provider",
+      "ProviderName": "Provider Name",
+      "ContextType": "Context Type",
+      "Assembly": "Assembly"
+    }
+  },
+  "Options": {
+    "Empty": "No displayable Repository options were found for this DbContext.",
+    "Columns": {
+      "Name": "Name",
+      "Path": "Path",
+      "Value": "Value"
+    }
+  },
+  "Activity": {
+    "Loading": "Loading activity",
+    "Empty": "No activity result loaded.",
+    "NoRows": "No active sessions were returned by the provider.",
+    "Columns": {
+      "Runtime": "Runtime",
+      "State": "State",
+      "User": "User",
+      "Application": "Application",
+      "Client": "Client",
+      "Query": "Query"
+    }
+  },
+  "Migrations": {
+    "Title": "Migration Management",
+    "Subtitle": "Review migration inventory and apply pending migrations for selected or all contexts.",
+    "DisabledInProduction": "Migration updates are disabled in Production unless explicitly enabled in module options.",
+    "Actions": {
+      "UpdateSelected": "Update Selected",
+      "UpdateAll": "Update All Pending"
+    },
+    "Empty": "No migration status loaded.",
+    "Summary": {
+      "CurrentAssembly": "Current assembly {0}",
+      "AppliedCurrent": "Applied here {0}",
+      "PendingCurrent": "Pending here {0}",
+      "ExternalApplied": "External history {0}",
+      "HistoryRows": "History rows {0}"
+    },
+    "ContextNote": "Counts are scoped to migration assembly {0}. External history rows are already recorded in the database but are not part of this DbContext's current migration assembly.",
+    "States": {
+      "Applied": "Applied",
+      "Pending": "Pending",
+      "Unknown": "Unknown"
+    },
+    "Lists": {
+      "CurrentAssembly": "Current Assembly",
+      "CurrentAssemblyDescription": "Every migration known by the selected DbContext, marked by its database state.",
+      "ExternalApplied": "External Applied History",
+      "ExternalAppliedDescription": "Rows found in the database history table but not in the selected migration assembly.",
+      "Count": "{0} rows",
+      "NoMigrations": "No migrations discovered",
+      "NoExternalApplied": "No external history rows"
+    },
+    "Results": {
+      "Title": "Update Results",
+      "Columns": {
+        "Context": "Context",
+        "Status": "Status",
+        "Attempted": "Attempted",
+        "Duration": "Duration",
+        "Message": "Message"
+      },
+      "Status": {
+        "Failed": "Failed",
+        "Skipped": "Skipped",
+        "Succeeded": "Succeeded"
+      }
+    },
+    "Confirm": {
+      "SelectedTitle": "Update selected DbContext?",
+      "SelectedMessage": "Apply pending migrations for {0}.",
+      "AllTitle": "Update all pending migrations?",
+      "AllMessage": "Apply {0} pending migrations across all registered DbContexts."
+    },
+    "Messages": {
+      "BulkUpdateSucceeded": "Migration update completed for {0} contexts.",
+      "BulkUpdateCompletedWithFailures": "Migration update completed with {0} failures.",
+      "NoPending": "No pending migrations.",
+      "UpdateSucceeded": "Migration update completed for {0}.",
+      "UpdateFailed": "Migration update failed."
+    }
+  }
+}

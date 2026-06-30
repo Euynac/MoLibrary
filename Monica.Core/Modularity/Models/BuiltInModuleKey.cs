@@ -203,6 +203,10 @@ public enum BuiltInModuleKey
     /// </summary>
     GitUI,
     /// <summary>
+    /// Repository diagnostics UI module.
+    /// </summary>
+    RepositoryUI,
+    /// <summary>
     /// K8S operations module.
     /// </summary>
     K8S,

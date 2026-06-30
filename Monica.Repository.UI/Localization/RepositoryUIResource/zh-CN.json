@@ -1,0 +1,158 @@
+{
+  "Dashboard": {
+    "PageTitle": "Repository 诊断",
+    "Eyebrow": "Repository",
+    "Title": "Repository 诊断",
+    "Subtitle": "检查已注册的 DbContext、连接状态、数据库活动和 EF Core 迁移。",
+    "Summary": {
+      "RegisteredContexts": "已注册 {0} 个上下文",
+      "ConnectedContexts": "{0} 个已连接",
+      "PendingMigrations": "{0} 个待应用迁移"
+    },
+    "Messages": {
+      "LoadingContexts": "正在加载已注册的 DbContext...",
+      "LoadingContextsDescription": "正在读取 Repository 注册、连接状态和迁移元数据。",
+      "NoContexts": "未注册 Repository DbContext",
+      "NoContextsDescription": "注册 Repository DbContext 后即可使用数据库诊断。"
+    },
+    "Detail": {
+      "SelectedContext": "当前上下文"
+    },
+    "Tabs": {
+      "Overview": "概览",
+      "Activity": "活动",
+      "Migrations": "迁移",
+      "Options": "选项"
+    }
+  },
+  "Common": {
+    "Actions": {
+      "Cancel": "取消",
+      "Refresh": "刷新"
+    },
+    "Values": {
+      "Unavailable": "不可用"
+    }
+  },
+  "ContextRail": {
+    "Eyebrow": "数据源",
+    "Title": "DbContexts",
+    "Subtitle": "已注册 {0} 个",
+    "Loading": "正在加载上下文",
+    "Empty": "未找到上下文",
+    "Status": {
+      "Connected": "已连接",
+      "Disconnected": "未连接",
+      "Pending": "{0} 待迁移"
+    }
+  },
+  "Overview": {
+    "Empty": "选择一个 DbContext 以查看运行时详情。",
+    "Metrics": {
+      "Connection": "连接",
+      "Pending": "待迁移",
+      "ProviderType": "Provider 类型",
+      "MigrationAssembly": "迁移程序集"
+    },
+    "Values": {
+      "Connected": "已连接",
+      "Disconnected": "未连接",
+      "Unknown": "未知"
+    },
+    "Connection": {
+      "Title": "连接",
+      "Hide": "隐藏",
+      "Reveal": "显示",
+      "DataSource": "数据源",
+      "Database": "数据库",
+      "ConnectionString": "连接字符串"
+    },
+    "Provider": {
+      "Title": "Provider",
+      "ProviderName": "Provider 名称",
+      "ContextType": "上下文类型",
+      "Assembly": "程序集"
+    }
+  },
+  "Options": {
+    "Empty": "当前 DbContext 没有可展示的 Repository 选项。",
+    "Columns": {
+      "Name": "名称",
+      "Path": "路径",
+      "Value": "值"
+    }
+  },
+  "Activity": {
+    "Loading": "正在加载活动",
+    "Empty": "尚未加载活动结果。",
+    "NoRows": "Provider 未返回活动会话。",
+    "Columns": {
+      "Runtime": "运行时间",
+      "State": "状态",
+      "User": "用户",
+      "Application": "应用",
+      "Client": "客户端",
+      "Query": "查询"
+    }
+  },
+  "Migrations": {
+    "Title": "迁移管理",
+    "Subtitle": "查看迁移清单，并为当前或全部上下文应用待迁移项。",
+    "DisabledInProduction": "Production 环境默认禁用迁移更新，除非在模块选项中显式启用。",
+    "Actions": {
+      "UpdateSelected": "更新当前",
+      "UpdateAll": "更新全部待迁移"
+    },
+    "Empty": "尚未加载迁移状态。",
+    "Summary": {
+      "CurrentAssembly": "当前程序集 {0}",
+      "AppliedCurrent": "当前已应用 {0}",
+      "PendingCurrent": "当前待应用 {0}",
+      "ExternalApplied": "外部历史 {0}",
+      "HistoryRows": "历史记录 {0}"
+    },
+    "ContextNote": "统计以迁移程序集 {0} 为范围。外部历史记录已存在于数据库迁移历史表中，但不属于当前 DbContext 的迁移程序集。",
+    "States": {
+      "Applied": "已应用",
+      "Pending": "待应用",
+      "Unknown": "未知"
+    },
+    "Lists": {
+      "CurrentAssembly": "当前程序集",
+      "CurrentAssemblyDescription": "当前 DbContext 已知的全部迁移，并标记其数据库状态。",
+      "ExternalApplied": "外部已应用历史",
+      "ExternalAppliedDescription": "数据库迁移历史表中存在，但不属于当前迁移程序集的记录。",
+      "Count": "{0} 条",
+      "NoMigrations": "未发现迁移",
+      "NoExternalApplied": "没有外部历史记录"
+    },
+    "Results": {
+      "Title": "更新结果",
+      "Columns": {
+        "Context": "上下文",
+        "Status": "状态",
+        "Attempted": "尝试项",
+        "Duration": "耗时",
+        "Message": "消息"
+      },
+      "Status": {
+        "Failed": "失败",
+        "Skipped": "跳过",
+        "Succeeded": "成功"
+      }
+    },
+    "Confirm": {
+      "SelectedTitle": "更新当前 DbContext?",
+      "SelectedMessage": "为 {0} 应用待迁移项。",
+      "AllTitle": "更新全部待迁移项?",
+      "AllMessage": "为所有已注册 DbContext 应用 {0} 个待迁移项。"
+    },
+    "Messages": {
+      "BulkUpdateSucceeded": "已完成 {0} 个上下文的迁移更新。",
+      "BulkUpdateCompletedWithFailures": "迁移更新完成，但有 {0} 个失败。",
+      "NoPending": "没有待应用迁移。",
+      "UpdateSucceeded": "{0} 的迁移更新已完成。",
+      "UpdateFailed": "迁移更新失败。"
+    }
+  }
+}

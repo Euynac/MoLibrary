@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk.Razor">
+
+  <PropertyGroup>
+    <GenerateStaticWebAssetsManifest>true</GenerateStaticWebAssetsManifest>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <PackageDescription>Repository diagnostics UI for Monica framework, providing DbContext status, activity, and migration management dashboards.</PackageDescription>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Monica.Repository\Monica.Repository.csproj" />
+    <ProjectReference Include="..\Monica.UI\Monica.UI.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="Localization\**\*.json" />
+  </ItemGroup>
+
+</Project>

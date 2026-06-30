@@ -89,6 +89,9 @@
     "StateStoreManage": {
       "Title": "State Store Management"
     },
+    "RepositoryDashboard": {
+      "Title": "Repository Diagnostics"
+    },
     "DiffHighlight": {
       "Title": "Text Diff Comparison"
     },

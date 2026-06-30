@@ -1,0 +1,92 @@
+@inject IStringLocalizer<RepositoryUIResource> L
+
+@if (Snapshot is null)
+{
+    <MudAlert Severity="Severity.Info">@L["Overview:Empty"]</MudAlert>
+}
+else if (ShowOptionsOnly)
+{
+    <OptionsTable Options="Snapshot.Options" />
+}
+else
+{
+    <div class="overview-grid">
+        <div class="metric-card">
+            <MudText Typo="Typo.caption" Color="Color.Secondary">@L["Overview:Metrics:Connection"]</MudText>
+            <MudText Typo="Typo.h6">@(Snapshot.CanConnect ? L["Overview:Values:Connected"] : L["Overview:Values:Disconnected"])</MudText>
+        </div>
+        <div class="metric-card">
+            <MudText Typo="Typo.caption" Color="Color.Secondary">@L["Overview:Metrics:Pending"]</MudText>
+            <MudText Typo="Typo.h6">@(Snapshot.PendingMigrationCount?.ToString() ?? L["Overview:Values:Unknown"])</MudText>
+        </div>
+        <div class="metric-card">
+            <MudText Typo="Typo.caption" Color="Color.Secondary">@L["Overview:Metrics:ProviderType"]</MudText>
+            <MudText Typo="Typo.h6">@Snapshot.Registration.ProviderType</MudText>
+        </div>
+        <div class="metric-card">
+            <MudText Typo="Typo.caption" Color="Color.Secondary">@L["Overview:Metrics:MigrationAssembly"]</MudText>
+            <MudText Typo="Typo.h6">@DisplayValue(Snapshot.MigrationAssembly)</MudText>
+        </div>
+    </div>
+
+    <div class="overview-sections">
+        <div class="overview-section">
+            <div class="section-header">
+                <MudText Typo="Typo.subtitle1">@L["Overview:Connection:Title"]</MudText>
+                <MudButton Variant="Variant.Text"
+                           Size="Size.Small"
+                           StartIcon="@(RevealConnectionStrings ? Icons.Material.Filled.VisibilityOff : Icons.Material.Filled.Visibility)"
+                           OnClick="OnToggleReveal">
+                    @(RevealConnectionStrings ? L["Overview:Connection:Hide"] : L["Overview:Connection:Reveal"])
+                </MudButton>
+            </div>
+            <div class="property-grid">
+                <div>@L["Overview:Connection:DataSource"]</div>
+                <div>@DisplayValue(Snapshot.Connection?.DataSource)</div>
+                <div>@L["Overview:Connection:Database"]</div>
+                <div>@DisplayValue(Snapshot.Connection?.Database)</div>
+                <div>@L["Overview:Connection:ConnectionString"]</div>
+                <code>@ConnectionStringText</code>
+            </div>
+        </div>
+
+        <div class="overview-section">
+            <MudText Typo="Typo.subtitle1">@L["Overview:Provider:Title"]</MudText>
+            <div class="property-grid">
+                <div>@L["Overview:Provider:ProviderName"]</div>
+                <div>@DisplayValue(Snapshot.ProviderName)</div>
+                <div>@L["Overview:Provider:ContextType"]</div>
+                <div>@Snapshot.Registration.FullName</div>
+                <div>@L["Overview:Provider:Assembly"]</div>
+                <div>@Snapshot.Registration.AssemblyName</div>
+            </div>
+        </div>
+    </div>
+
+    @if (Snapshot.HasError)
+    {
+        <MudAlert Severity="Severity.Error" Variant="Variant.Outlined">@Snapshot.ErrorMessage</MudAlert>
+    }
+}
+
+@code {
+    [Parameter] public RepositoryDbContextSnapshot? Snapshot { get; set; }
+
+    [Parameter] public RepositoryMigrationStatus? MigrationStatus { get; set; }
+
+    [Parameter] public bool RevealConnectionStrings { get; set; }
+
+    [Parameter] public bool ShowOptionsOnly { get; set; }
+
+    [Parameter] public EventCallback OnToggleReveal { get; set; }
+
+    private string ConnectionStringText =>
+        RevealConnectionStrings
+            ? DisplayValue(Snapshot?.Connection?.RevealedConnectionString ?? Snapshot?.Connection?.MaskedConnectionString)
+            : DisplayValue(Snapshot?.Connection?.MaskedConnectionString);
+
+    private string DisplayValue(string? value)
+    {
+        return string.IsNullOrWhiteSpace(value) ? L["Common:Values:Unavailable"] : value;
+    }
+}

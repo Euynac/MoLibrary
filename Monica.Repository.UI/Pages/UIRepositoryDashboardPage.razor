@@ -1,0 +1,245 @@
+@attribute [Route(PAGE_URL)]
+@using Monica.Repository.UI.UIRepository.Components
+@using Monica.Repository.UI.UIRepository.State
+@inject RepositoryDashboardState PageState
+@inject IDialogService DialogService
+@inject ISnackbar Snackbar
+@inject IStringLocalizer<RepositoryUIResource> L
+
+<PageTitle>@L["Dashboard:PageTitle"]</PageTitle>
+
+<div class="repository-dashboard-page">
+    <div class="dashboard-banner">
+        <div class="dashboard-banner__copy">
+            <MudText Typo="Typo.overline" Class="dashboard-eyebrow">@L["Dashboard:Eyebrow"]</MudText>
+            <MudText Typo="Typo.h5">@L["Dashboard:Title"]</MudText>
+            <MudText Typo="Typo.body2" Color="Color.Secondary">@L["Dashboard:Subtitle"]</MudText>
+        </div>
+
+        <div class="dashboard-banner__metrics">
+            <MudChip T="string" Variant="Variant.Outlined" Icon="@Icons.Material.Filled.Storage">
+                @L["Dashboard:Summary:RegisteredContexts", PageState.Contexts.Count]
+            </MudChip>
+            <MudChip T="string" Variant="Variant.Outlined" Icon="@Icons.Material.Filled.CloudDone">
+                @L["Dashboard:Summary:ConnectedContexts", ConnectedContextCount]
+            </MudChip>
+            <MudChip T="string" Variant="Variant.Outlined" Icon="@Icons.Material.Filled.SystemUpdateAlt">
+                @L["Dashboard:Summary:PendingMigrations", PendingMigrationCount]
+            </MudChip>
+        </div>
+    </div>
+
+    @if (!string.IsNullOrWhiteSpace(PageState.ErrorMessage))
+    {
+        <MudAlert Severity="Severity.Error" Variant="Variant.Outlined">
+            @PageState.ErrorMessage
+        </MudAlert>
+    }
+
+    <div class="dashboard-workspace">
+        <RepositoryContextRail Contexts="PageState.Contexts"
+                               SelectedContextId="@PageState.SelectedContext?.Registration.ContextId"
+                               IsLoading="PageState.IsLoadingContexts"
+                               OnRefresh="RefreshAsync"
+                               OnSelected="SelectContextAsync" />
+
+        <div class="dashboard-detail">
+            @if (PageState.IsLoadingContexts && PageState.Contexts.Count == 0)
+            {
+                <div class="dashboard-state">
+                    <MudProgressCircular Color="Color.Primary" Indeterminate="true" />
+                    <MudText Typo="Typo.h6">@L["Dashboard:Messages:LoadingContexts"]</MudText>
+                    <MudText Typo="Typo.body2" Color="Color.Secondary">@L["Dashboard:Messages:LoadingContextsDescription"]</MudText>
+                </div>
+            }
+            else if (PageState.Contexts.Count == 0)
+            {
+                <div class="dashboard-state">
+                    <MudIcon Icon="@Icons.Material.Filled.Storage" Size="Size.Large" Color="Color.Secondary" />
+                    <MudText Typo="Typo.h6">@L["Dashboard:Messages:NoContexts"]</MudText>
+                    <MudText Typo="Typo.body2" Color="Color.Secondary">@L["Dashboard:Messages:NoContextsDescription"]</MudText>
+                </div>
+            }
+            else if (PageState.SelectedContext is not null)
+            {
+                <div class="detail-header">
+                    <div class="detail-header__copy">
+                        <MudText Typo="Typo.overline" Class="dashboard-eyebrow">@L["Dashboard:Detail:SelectedContext"]</MudText>
+                        <MudText Typo="Typo.h5">@PageState.SelectedContext.Registration.DbContextName</MudText>
+                        <MudText Typo="Typo.body2" Color="Color.Secondary">@PageState.SelectedContext.Registration.FullName</MudText>
+                    </div>
+
+                    <div class="detail-header__actions">
+                        <MudTooltip Text="@L["Common:Actions:Refresh"]">
+                            <MudIconButton Icon="@Icons.Material.Filled.Refresh"
+                                           Variant="Variant.Outlined"
+                                           OnClick="RefreshAsync"
+                                           Disabled="PageState.IsLoadingContexts || PageState.IsLoadingDetails" />
+                        </MudTooltip>
+                        <MudButton Variant="Variant.Outlined"
+                                   Color="Color.Primary"
+                                   StartIcon="@Icons.Material.Filled.SystemUpdateAlt"
+                                   Disabled="@(!CanRunSelectedMigration)"
+                                   OnClick="UpdateSelectedMigrationAsync">
+                            @L["Migrations:Actions:UpdateSelected"]
+                        </MudButton>
+                        <MudButton Variant="Variant.Outlined"
+                                   Color="Color.Primary"
+                                   StartIcon="@Icons.Material.Filled.DoneAll"
+                                   Disabled="@(!CanRunAnyMigration)"
+                                   OnClick="UpdateAllMigrationsAsync">
+                            @L["Migrations:Actions:UpdateAll"]
+                        </MudButton>
+                    </div>
+                </div>
+
+                <MudTabs Rounded="true"
+                         Outlined="true"
+                         ApplyEffectsToContainer="true"
+                         TabPanelsClass="repository-tab-panels">
+                    <MudTabPanel Text="@L["Dashboard:Tabs:Overview"]" Icon="@Icons.Material.Filled.Info">
+                        <RepositoryContextOverview Snapshot="PageState.SelectedContext"
+                                                   MigrationStatus="PageState.MigrationStatus"
+                                                   RevealConnectionStrings="PageState.RevealConnectionStrings"
+                                                   OnToggleReveal="ToggleConnectionRevealAsync" />
+                    </MudTabPanel>
+                    <MudTabPanel Text="@L["Dashboard:Tabs:Activity"]" Icon="@Icons.Material.Filled.Troubleshoot">
+                        <RepositoryActivityTable Activity="PageState.Activity" IsLoading="PageState.IsLoadingDetails" />
+                    </MudTabPanel>
+                    <MudTabPanel Text="@L["Dashboard:Tabs:Migrations"]" Icon="@Icons.Material.Filled.Schema">
+                        <RepositoryMigrationPanel Status="PageState.MigrationStatus"
+                                                  UpdateResults="PageState.UpdateResults"
+                                                  MigrationUpdatesEnabled="PageState.MigrationUpdatesEnabled"
+                                                  HasAnyPendingMigration="PendingMigrationCount > 0"
+                                                  IsUpdating="PageState.IsUpdatingMigrations"
+                                                  OnUpdateSelected="UpdateSelectedMigrationAsync"
+                                                  OnUpdateAll="UpdateAllMigrationsAsync" />
+                    </MudTabPanel>
+                    <MudTabPanel Text="@L["Dashboard:Tabs:Options"]" Icon="@Icons.Material.Filled.Settings">
+                        <RepositoryContextOverview Snapshot="PageState.SelectedContext"
+                                                   MigrationStatus="PageState.MigrationStatus"
+                                                   RevealConnectionStrings="PageState.RevealConnectionStrings"
+                                                   ShowOptionsOnly="true"
+                                                   OnToggleReveal="ToggleConnectionRevealAsync" />
+                    </MudTabPanel>
+                </MudTabs>
+            }
+        </div>
+    </div>
+</div>
+
+@code {
+    public const string PAGE_URL = "/repository-dashboard";
+
+    private int ConnectedContextCount => PageState.Contexts.Count(context => context.CanConnect);
+
+    private int PendingMigrationCount => PageState.Contexts.Sum(context => context.PendingMigrationCount ?? 0);
+
+    private bool CanRunSelectedMigration =>
+        PageState.MigrationUpdatesEnabled
+        && PageState.SelectedContext is not null
+        && PageState.MigrationStatus?.HasPendingMigrations == true
+        && !PageState.IsUpdatingMigrations;
+
+    private bool CanRunAnyMigration =>
+        PageState.MigrationUpdatesEnabled
+        && PendingMigrationCount > 0
+        && !PageState.IsUpdatingMigrations;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender)
+        {
+            return;
+        }
+
+        await PageState.InitializeAsync();
+        StateHasChanged();
+    }
+
+    private async Task RefreshAsync()
+    {
+        await PageState.RefreshContextsAsync();
+        StateHasChanged();
+    }
+
+    private async Task SelectContextAsync(string contextId)
+    {
+        await PageState.SelectContextAsync(contextId);
+        StateHasChanged();
+    }
+
+    private async Task ToggleConnectionRevealAsync()
+    {
+        await PageState.ToggleConnectionStringRevealAsync();
+        StateHasChanged();
+    }
+
+    private async Task UpdateSelectedMigrationAsync()
+    {
+        if (PageState.SelectedContext is null)
+        {
+            return;
+        }
+
+        var confirmed = await DialogService.ShowMessageBoxAsync(
+            L["Migrations:Confirm:SelectedTitle"],
+            L["Migrations:Confirm:SelectedMessage", PageState.SelectedContext.Registration.DbContextName],
+            yesText: L["Migrations:Actions:UpdateSelected"],
+            cancelText: L["Common:Actions:Cancel"]);
+
+        if (confirmed != true)
+        {
+            return;
+        }
+
+        var result = await PageState.UpdateSelectedMigrationAsync();
+        ShowUpdateResult(result);
+        StateHasChanged();
+    }
+
+    private async Task UpdateAllMigrationsAsync()
+    {
+        var confirmed = await DialogService.ShowMessageBoxAsync(
+            L["Migrations:Confirm:AllTitle"],
+            L["Migrations:Confirm:AllMessage", PendingMigrationCount],
+            yesText: L["Migrations:Actions:UpdateAll"],
+            cancelText: L["Common:Actions:Cancel"]);
+
+        if (confirmed != true)
+        {
+            return;
+        }
+
+        var results = await PageState.UpdateAllPendingMigrationsAsync();
+        var failures = results.Count(result => !result.Succeeded);
+        Snackbar.Add(
+            failures == 0
+                ? L["Migrations:Messages:BulkUpdateSucceeded", results.Count]
+                : L["Migrations:Messages:BulkUpdateCompletedWithFailures", failures],
+            failures == 0 ? Severity.Success : Severity.Warning);
+        StateHasChanged();
+    }
+
+    private void ShowUpdateResult(RepositoryMigrationUpdateResult? result)
+    {
+        if (result is null)
+        {
+            return;
+        }
+
+        if (result.Succeeded && result.Skipped)
+        {
+            Snackbar.Add(L["Migrations:Messages:NoPending"], Severity.Info);
+            return;
+        }
+
+        if (result.Succeeded)
+        {
+            Snackbar.Add(L["Migrations:Messages:UpdateSucceeded", result.Registration.DbContextName], Severity.Success);
+            return;
+        }
+
+        Snackbar.Add(result.ErrorMessage ?? L["Migrations:Messages:UpdateFailed"], Severity.Error);
+    }
+}

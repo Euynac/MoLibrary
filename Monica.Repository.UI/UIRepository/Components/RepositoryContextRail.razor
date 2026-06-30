@@ -1,0 +1,81 @@
+@inject IStringLocalizer<RepositoryUIResource> L
+
+<div class="repository-context-rail">
+    <div class="rail-header">
+        <div>
+            <MudText Typo="Typo.overline" Class="rail-eyebrow">@L["ContextRail:Eyebrow"]</MudText>
+            <MudText Typo="Typo.h6">@L["ContextRail:Title"]</MudText>
+            <MudText Typo="Typo.caption" Color="Color.Secondary">@L["ContextRail:Subtitle", Contexts.Count]</MudText>
+        </div>
+        <MudTooltip Text="@L["Common:Actions:Refresh"]">
+            <MudIconButton Icon="@Icons.Material.Filled.Refresh"
+                           Variant="Variant.Outlined"
+                           Size="Size.Small"
+                           Disabled="IsLoading"
+                           OnClick="OnRefresh" />
+        </MudTooltip>
+    </div>
+
+    @if (IsLoading && Contexts.Count == 0)
+    {
+        <div class="rail-state">
+            <MudProgressCircular Color="Color.Primary" Size="Size.Small" Indeterminate="true" />
+            <MudText Typo="Typo.body2" Color="Color.Secondary">@L["ContextRail:Loading"]</MudText>
+        </div>
+    }
+    else if (Contexts.Count == 0)
+    {
+        <div class="rail-state">
+            <MudIcon Icon="@Icons.Material.Filled.Inbox" Color="Color.Secondary" />
+            <MudText Typo="Typo.body2" Color="Color.Secondary">@L["ContextRail:Empty"]</MudText>
+        </div>
+    }
+    else
+    {
+        <div class="context-list">
+            @foreach (var context in Contexts)
+            {
+                <button type="button"
+                        class="@GetContextButtonClass(context)"
+                        @onclick="() => OnSelected.InvokeAsync(context.Registration.ContextId)">
+                    <span class="context-item__main">
+                        <span class="context-item__title">@context.Registration.DbContextName</span>
+                        <span class="context-item__subtitle">@context.ProviderName</span>
+                    </span>
+                    <span class="context-item__badges">
+                        <MudChip T="string"
+                                 Size="Size.Small"
+                                 Color="@(context.CanConnect ? Color.Success : Color.Error)"
+                                 Variant="Variant.Outlined">
+                            @(context.CanConnect ? L["ContextRail:Status:Connected"] : L["ContextRail:Status:Disconnected"])
+                        </MudChip>
+                        @if ((context.PendingMigrationCount ?? 0) > 0)
+                        {
+                            <MudChip T="string" Size="Size.Small" Color="Color.Warning" Variant="Variant.Filled">
+                                @L["ContextRail:Status:Pending", context.PendingMigrationCount ?? 0]
+                            </MudChip>
+                        }
+                    </span>
+                </button>
+            }
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter] public IReadOnlyList<RepositoryDbContextSnapshot> Contexts { get; set; } = [];
+
+    [Parameter] public string? SelectedContextId { get; set; }
+
+    [Parameter] public bool IsLoading { get; set; }
+
+    [Parameter] public EventCallback OnRefresh { get; set; }
+
+    [Parameter] public EventCallback<string> OnSelected { get; set; }
+
+    private string GetContextButtonClass(RepositoryDbContextSnapshot context)
+    {
+        var isSelected = string.Equals(context.Registration.ContextId, SelectedContextId, StringComparison.Ordinal);
+        return isSelected ? "context-item selected" : "context-item";
+    }
+}
