@@ -10,6 +10,7 @@ using Monica.Configuration.Annotations;
 using Monica.Configuration.Abstractions;
 using Monica.Configuration.Abstractions.Internal;
 using Monica.Configuration.Binding;
+using Monica.Configuration.Bootstrap;
 using Monica.Configuration.Facades;
 using Monica.Configuration.Metrics;
 using Monica.Configuration.Models;
@@ -250,6 +251,49 @@ public sealed class ModuleConfigurationGuide
     : WebModuleGuide<ModuleConfiguration, ModuleConfigurationOption, ModuleConfigurationGuide>
 {
     private const int MANAGED_JSON_FILE_BUILDER_ORDER = -2;
+    private readonly MonicaEffectiveOptionsReaderConfiguration _effectiveOptionsReaderConfiguration = new();
+
+    /// <summary>
+    /// Creates a startup options reader that uses this guide's store and managed JSON source configuration.
+    /// </summary>
+    /// <param name="builder">The host builder whose environment and configuration roots define startup context.</param>
+    /// <param name="bootstrapConfiguration">
+    /// Optional bootstrap configuration used as the lowest-priority input. When omitted, <paramref name="builder"/> configuration is used.
+    /// </param>
+    /// <param name="configure">Optional reader configuration.</param>
+    /// <returns>The effective options reader. The caller owns and must dispose the reader.</returns>
+    /// <remarks>
+    /// The reader is intended for module-registration code that runs before the application service provider exists.
+    /// It binds values using the same priority shape as the runtime provider chain: bootstrap configuration, Monica
+    /// effective values, and then JSON files registered through <see cref="AddManagedJsonFile"/>.
+    /// </remarks>
+    public IMonicaEffectiveOptionsReader CreateEffectiveOptionsReader(
+        IHostApplicationBuilder builder,
+        IConfiguration? bootstrapConfiguration = null,
+        Action<MonicaEffectiveOptionsReaderOptions>? configure = null)
+    {
+        ArgumentNullException.ThrowIfNull(builder);
+
+        return _effectiveOptionsReaderConfiguration.CreateReader(
+            builder,
+            bootstrapConfiguration ?? builder.Configuration,
+            configure);
+    }
+
+    /// <summary>
+    /// Uses an effective-value store factory for readers created before the application service provider exists.
+    /// </summary>
+    /// <param name="factory">The store factory. The reader owns the returned store instance and disposes it when possible.</param>
+    /// <returns>The module guide.</returns>
+    /// <remarks>
+    /// Built-in store guide methods call this automatically. Custom store providers should call it when they need
+    /// <see cref="CreateEffectiveOptionsReader"/> to work before dependency injection is built.
+    /// </remarks>
+    public ModuleConfigurationGuide UseStartupEffectiveValueStore(Func<IConfigurationEffectiveValueStore> factory)
+    {
+        _effectiveOptionsReaderConfiguration.UseEffectiveValueStore(factory);
+        return this;
+    }
 
     /// <summary>
     /// Adds a JSON configuration file after Monica's effective-value provider and records source metadata for the UI.
@@ -267,26 +311,31 @@ public sealed class ModuleConfigurationGuide
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(path);
 
+        var options = new ManagedJsonConfigurationSourceOptions
+        {
+            DisplayName = Path.GetFileName(path)
+        };
+        configure?.Invoke(options);
+        var registration = new ManagedJsonConfigurationSourceRegistration
+        {
+            Path = path,
+            Optional = optional,
+            ReloadOnChange = reloadOnChange,
+            DisplayName = string.IsNullOrWhiteSpace(options.DisplayName) ? Path.GetFileName(path) : options.DisplayName,
+            Description = options.Description,
+            IsWritable = options.IsWritable
+        };
+        _effectiveOptionsReaderConfiguration.AddManagedJsonSource(registration);
+
         ConfigureBuilder(context =>
         {
-            var options = new ManagedJsonConfigurationSourceOptions
-            {
-                DisplayName = Path.GetFileName(path)
-            };
-            configure?.Invoke(options);
-
-            context.HostApplicationBuilder.Configuration.AddJsonFile(path, optional, reloadOnChange);
+            context.HostApplicationBuilder.Configuration.AddJsonFile(
+                registration.Path,
+                registration.Optional,
+                registration.ReloadOnChange);
             ManagedJsonConfigurationSourceRegistry.Add(
                 context.HostApplicationBuilder.Configuration,
-                new ManagedJsonConfigurationSourceRegistration
-                {
-                    Path = path,
-                    Optional = optional,
-                    ReloadOnChange = reloadOnChange,
-                    DisplayName = string.IsNullOrWhiteSpace(options.DisplayName) ? Path.GetFileName(path) : options.DisplayName,
-                    Description = options.Description,
-                    IsWritable = options.IsWritable
-                });
+                registration);
         // The module registry reverses sorted requests during de-duplication; using an order below
         // the module-owned -1 builder request appends this provider after Monica's effective store.
         }, MANAGED_JSON_FILE_BUILDER_ORDER, secondKey: Guid.NewGuid().ToString("N"));
@@ -301,13 +350,17 @@ public sealed class ModuleConfigurationGuide
     /// <returns>The module guide.</returns>
     public ModuleConfigurationGuide UseFileConfigurationStore(Action<ConfigurationFileStoreOptions>? configure = null)
     {
+        var startupOptions = new ConfigurationFileStoreOptions();
+        configure?.Invoke(startupOptions);
+        UseStartupEffectiveValueStore(() => new FileConfigurationStore(Options.Create(startupOptions)));
+
         ConfigureServices(context =>
         {
             context.Services.AddOptions<ConfigurationFileStoreOptions>();
-            if (configure is not null)
+            context.Services.Configure<ConfigurationFileStoreOptions>(options =>
             {
-                context.Services.Configure(configure);
-            }
+                options.RootDirectory = startupOptions.RootDirectory;
+            });
 
             context.Services.TryAddSingleton<FileConfigurationStore>();
             context.Services.TryAddSingleton<IConfigurationEffectiveValueStore>(provider => provider.GetRequiredService<FileConfigurationStore>());

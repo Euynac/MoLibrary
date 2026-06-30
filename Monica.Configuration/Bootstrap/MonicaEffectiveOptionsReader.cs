@@ -1,5 +1,6 @@
 using System.Reflection;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Monica.Configuration.Abstractions;
 using Monica.Configuration.Annotations;
@@ -16,6 +17,10 @@ internal sealed class MonicaEffectiveOptionsReader : IMonicaEffectiveOptionsRead
     private static readonly ILogger Logger = LogManager.For(typeof(MonicaEffectiveOptionsReader));
 
     private readonly IConfigurationEffectiveValueStore _store;
+    private readonly IConfiguration _bootstrapConfiguration;
+    private readonly string _contentRootPath;
+    private readonly IReadOnlyList<ManagedJsonConfigurationSourceRegistration> _managedJsonSources;
+    private readonly IConfigurationRoot _seedConfiguration;
     private readonly MonicaEffectiveOptionsReaderOptions _options;
     private readonly ConfigurationDefinitionScanner _definitionScanner;
     private readonly ConfigurationEffectiveValueSeedFactory _seedFactory;
@@ -25,22 +30,30 @@ internal sealed class MonicaEffectiveOptionsReader : IMonicaEffectiveOptionsRead
     private bool _disposed;
 
     public MonicaEffectiveOptionsReader(
+        IHostApplicationBuilder hostBuilder,
         IConfiguration bootstrapConfiguration,
         MonicaEffectiveOptionsReaderOptions options,
-        IConfigurationEffectiveValueStore store)
+        IConfigurationEffectiveValueStore store,
+        IReadOnlyList<ManagedJsonConfigurationSourceRegistration> managedJsonSources)
     {
+        ArgumentNullException.ThrowIfNull(hostBuilder);
         ArgumentNullException.ThrowIfNull(bootstrapConfiguration);
         ArgumentNullException.ThrowIfNull(options);
         ArgumentNullException.ThrowIfNull(store);
+        ArgumentNullException.ThrowIfNull(managedJsonSources);
 
         _store = store;
+        _bootstrapConfiguration = bootstrapConfiguration;
+        _contentRootPath = hostBuilder.Environment.ContentRootPath;
+        _managedJsonSources = managedJsonSources.ToArray();
         _options = options;
         _definitionScanner = new ConfigurationDefinitionScanner(
             new ConfigurationSchemaHasher(),
             options.SectionPathConvention);
 
+        _seedConfiguration = BuildConfiguration(monicaValues: null);
         var runtimeContext = new ConfigurationRuntimeContext();
-        runtimeContext.Capture(bootstrapConfiguration);
+        runtimeContext.Capture(_seedConfiguration);
         _seedFactory = new ConfigurationEffectiveValueSeedFactory(runtimeContext);
         _documentEditor = new ConfigurationEffectiveValueDocumentEditor(
             new ConfigurationEffectiveValuePatchEngine(),
@@ -89,6 +102,7 @@ internal sealed class MonicaEffectiveOptionsReader : IMonicaEffectiveOptionsRead
         }
 
         _disposed = true;
+        (_seedConfiguration as IDisposable)?.Dispose();
         if (_store is IDisposable disposable)
         {
             disposable.Dispose();
@@ -103,6 +117,7 @@ internal sealed class MonicaEffectiveOptionsReader : IMonicaEffectiveOptionsRead
         }
 
         _disposed = true;
+        (_seedConfiguration as IDisposable)?.Dispose();
         if (_store is IAsyncDisposable asyncDisposable)
         {
             await asyncDisposable.DisposeAsync();
@@ -172,18 +187,27 @@ internal sealed class MonicaEffectiveOptionsReader : IMonicaEffectiveOptionsRead
                 $"The Monica effective-value store returned {documents.Count} documents for {definitions.Length} requested definitions.");
         }
 
-        var loaded = new Dictionary<Type, object>();
-        for (var i = 0; i < definitions.Length; i++)
+        var monicaValues = ProjectDocuments(definitions, documents);
+        var effectiveConfiguration = BuildConfiguration(monicaValues);
+        try
         {
-            loaded[missingTypes[i]] = BindOptions(missingTypes[i], definitions[i], documents[i]);
-        }
-
-        lock (_cacheLock)
-        {
-            foreach (var (optionsType, options) in loaded)
+            var loaded = new Dictionary<Type, object>();
+            for (var i = 0; i < definitions.Length; i++)
             {
-                _loadedOptions.TryAdd(optionsType, options);
+                loaded[missingTypes[i]] = BindOptions(missingTypes[i], definitions[i], effectiveConfiguration);
             }
+
+            lock (_cacheLock)
+            {
+                foreach (var (optionsType, options) in loaded)
+                {
+                    _loadedOptions.TryAdd(optionsType, options);
+                }
+            }
+        }
+        finally
+        {
+            (effectiveConfiguration as IDisposable)?.Dispose();
         }
     }
 
@@ -207,24 +231,68 @@ internal sealed class MonicaEffectiveOptionsReader : IMonicaEffectiveOptionsRead
         }
     }
 
+    private Dictionary<string, string?> ProjectDocuments(
+        IReadOnlyList<ConfigurationDefinition> definitions,
+        IReadOnlyList<ConfigurationEffectiveValueDocument> documents)
+    {
+        var values = new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase);
+        for (var i = 0; i < definitions.Count; i++)
+        {
+            var definition = definitions[i];
+            var document = documents[i];
+            if (!string.Equals(definition.DefinitionKey, document.DefinitionKey, StringComparison.OrdinalIgnoreCase))
+            {
+                throw new InvalidOperationException(
+                    $"The Monica effective-value store returned document '{document.DefinitionKey}' for requested definition '{definition.DefinitionKey}'.");
+            }
+
+            try
+            {
+                foreach (var (key, value) in _documentEditor.Project(definition, document.Json))
+                {
+                    values[key] = value;
+                }
+            }
+            catch (Exception ex)
+            {
+                throw new InvalidOperationException(
+                    $"Failed to project Monica effective JSON document for definition '{definition.DefinitionKey}'.",
+                    ex);
+            }
+        }
+
+        return values;
+    }
+
+    private IConfigurationRoot BuildConfiguration(IReadOnlyDictionary<string, string?>? monicaValues)
+    {
+        var builder = new ConfigurationBuilder();
+        if (!string.IsNullOrWhiteSpace(_contentRootPath))
+        {
+            builder.SetBasePath(_contentRootPath);
+        }
+
+        builder.AddConfiguration(_bootstrapConfiguration);
+        if (monicaValues is not null)
+        {
+            builder.AddInMemoryCollection(monicaValues);
+        }
+
+        foreach (var source in _managedJsonSources)
+        {
+            builder.AddJsonFile(source.Path, source.Optional, source.ReloadOnChange);
+        }
+
+        return builder.Build();
+    }
+
     private object BindOptions(
         Type optionsType,
         ConfigurationDefinition definition,
-        ConfigurationEffectiveValueDocument document)
+        IConfiguration configuration)
     {
-        if (!string.Equals(definition.DefinitionKey, document.DefinitionKey, StringComparison.OrdinalIgnoreCase))
-        {
-            throw new InvalidOperationException(
-                $"The Monica effective-value store returned document '{document.DefinitionKey}' for requested definition '{definition.DefinitionKey}'.");
-        }
-
         try
         {
-            var values = _documentEditor.Project(definition, document.Json);
-            var configuration = new ConfigurationBuilder()
-                .AddInMemoryCollection(values)
-                .Build();
-
             var instance = Activator.CreateInstance(optionsType, nonPublic: true)
                 ?? throw new InvalidOperationException(
                     $"Failed to create Monica effective options type '{optionsType.FullName ?? optionsType.Name}'. A parameterless constructor is required.");
