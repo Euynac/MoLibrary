@@ -86,6 +86,38 @@
     "Loading": "Loading activity",
     "Empty": "No activity result loaded.",
     "NoRows": "No active sessions were returned by the provider.",
+    "NoMatches": "No sessions match the current filters.",
+    "Stats": {
+      "Total": "{0} sessions",
+      "Active": "{0} active",
+      "Idle": "{0} idle",
+      "Waiting": "{0} waiting",
+      "Clients": "{0} clients",
+      "Filtered": "{0} shown"
+    },
+    "Controls": {
+      "SearchPlaceholder": "Search user, client, application, state, or query",
+      "SortBy": "Sort by",
+      "GroupBy": "Group by",
+      "Ascending": "Ascending",
+      "Descending": "Descending"
+    },
+    "Sort": {
+      "Runtime": "Runtime",
+      "State": "State",
+      "User": "User",
+      "Application": "Application",
+      "Client": "Client",
+      "Query": "Query"
+    },
+    "Group": {
+      "None": "No grouping",
+      "State": "State",
+      "Client": "Client",
+      "User": "User",
+      "Application": "Application",
+      "Count": "{0} rows"
+    },
     "Columns": {
       "Runtime": "Runtime",
       "State": "State",

@@ -1,0 +1,70 @@
+@using System.Globalization
+
+<div class="activity-rows-table">
+    <MudTable T="RepositoryActivityRow"
+              Items="Rows"
+              Dense="true"
+              Hover="true"
+              Elevation="0"
+              Breakpoint="Breakpoint.Sm"
+              Class="activity-table">
+        <HeaderContent>
+            <MudTh>@RuntimeLabel</MudTh>
+            <MudTh>@StateLabel</MudTh>
+            <MudTh>@UserLabel</MudTh>
+            <MudTh>@ApplicationLabel</MudTh>
+            <MudTh>@ClientLabel</MudTh>
+            <MudTh>@QueryLabel</MudTh>
+        </HeaderContent>
+        <RowTemplate>
+            <MudTd DataLabel="@RuntimeLabel">@FormatRuntime(context.Runtime)</MudTd>
+            <MudTd DataLabel="@StateLabel">@DisplayValue(context.State)</MudTd>
+            <MudTd DataLabel="@UserLabel">@DisplayValue(context.UserName)</MudTd>
+            <MudTd DataLabel="@ApplicationLabel">@DisplayValue(context.ApplicationName)</MudTd>
+            <MudTd DataLabel="@ClientLabel">@FormatClient(context)</MudTd>
+            <MudTd DataLabel="@QueryLabel">
+                <span class="query-cell" title="@DisplayValue(context.Query)">@DisplayValue(context.Query)</span>
+            </MudTd>
+        </RowTemplate>
+    </MudTable>
+</div>
+
+@code {
+    [Parameter] public IReadOnlyList<RepositoryActivityRow> Rows { get; set; } = [];
+
+    [Parameter] public string RuntimeLabel { get; set; } = string.Empty;
+
+    [Parameter] public string StateLabel { get; set; } = string.Empty;
+
+    [Parameter] public string UserLabel { get; set; } = string.Empty;
+
+    [Parameter] public string ApplicationLabel { get; set; } = string.Empty;
+
+    [Parameter] public string ClientLabel { get; set; } = string.Empty;
+
+    [Parameter] public string QueryLabel { get; set; } = string.Empty;
+
+    [Parameter] public string UnavailableLabel { get; set; } = string.Empty;
+
+    private string FormatRuntime(TimeSpan? runtime)
+    {
+        return runtime?.ToString(@"hh\:mm\:ss", CultureInfo.InvariantCulture) ?? UnavailableLabel;
+    }
+
+    private string FormatClient(RepositoryActivityRow row)
+    {
+        if (string.IsNullOrWhiteSpace(row.ClientAddress))
+        {
+            return UnavailableLabel;
+        }
+
+        return row.ClientPort is null
+            ? row.ClientAddress
+            : $"{row.ClientAddress}:{row.ClientPort.Value.ToString(CultureInfo.InvariantCulture)}";
+    }
+
+    private string DisplayValue(string? value)
+    {
+        return string.IsNullOrWhiteSpace(value) ? UnavailableLabel : value;
+    }
+}

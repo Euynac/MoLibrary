@@ -1,0 +1,40 @@
+.activity-rows-table {
+    min-width: 0;
+}
+
+.activity-rows-table ::deep .mud-table {
+    background: var(--mud-palette-surface);
+}
+
+.activity-rows-table ::deep .mud-table-root {
+    min-width: 960px;
+}
+
+.activity-rows-table ::deep thead th {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    background: var(--mud-palette-surface);
+    border-bottom: 1px solid var(--mud-palette-lines-default);
+}
+
+.query-cell {
+    display: inline-block;
+    max-width: min(34rem, 52vw);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    vertical-align: bottom;
+}
+
+@media (max-width: 720px) {
+    .activity-rows-table ::deep .mud-table-root {
+        min-width: 0;
+    }
+
+    .query-cell {
+        max-width: 100%;
+        white-space: normal;
+        overflow-wrap: anywhere;
+    }
+}
