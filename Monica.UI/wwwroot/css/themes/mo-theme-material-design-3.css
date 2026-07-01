@@ -247,6 +247,23 @@
     overflow: hidden;
 }
 
+.mo-theme-material-design-3-light .dropdown-menu.more-menu.more-menu-scrollable,
+.mo-theme-material-design-3-dark .dropdown-menu.more-menu.more-menu-scrollable {
+    overflow-x: hidden;
+    overflow-y: auto;
+}
+
+.mo-theme-material-design-3-light .dropdown-menu.more-menu:not(.more-menu-scrollable),
+.mo-theme-material-design-3-dark .dropdown-menu.more-menu:not(.more-menu-scrollable) {
+    overflow: visible;
+}
+
+.mo-theme-material-design-3-light .dropdown-menu.more-menu .flyout-menu,
+.mo-theme-material-design-3-dark .dropdown-menu.more-menu .flyout-menu {
+    overflow-x: hidden;
+    overflow-y: auto;
+}
+
 .mo-theme-material-design-3-light :is(.more-menu-header, .flyout-menu-header),
 .mo-theme-material-design-3-dark :is(.more-menu-header, .flyout-menu-header) {
     border-bottom-color: var(--mo-m3-outline-variant);
