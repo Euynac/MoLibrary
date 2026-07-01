@@ -477,7 +477,7 @@
       "FormatVersionMismatch": "配置包格式版本 {0} 不是当前格式。",
       "UnknownDefinition": "已跳过未知配置定义：{0}",
       "SchemaVersionMismatch": "Schema 版本不一致。导出版本 {0}，当前版本 {1}。",
-      "SchemaHashMismatch": "Schema Hash 与当前定义不一致。"
+      "SchemaHashMismatch": "{0}（{1}）的 Schema Hash 与当前定义不一致：导入包 {2}，当前 {3}。请核对该配置类的结构变化后再应用。"
     }
   },
   "Common": {

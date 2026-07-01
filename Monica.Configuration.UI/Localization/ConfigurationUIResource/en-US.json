@@ -477,7 +477,7 @@
       "FormatVersionMismatch": "Package format version {0} is not the current format.",
       "UnknownDefinition": "Unknown definition was skipped: {0}",
       "SchemaVersionMismatch": "Schema version differs. Exported {0}, current {1}.",
-      "SchemaHashMismatch": "Schema hash differs from the current definition."
+      "SchemaHashMismatch": "{0} ({1}) has a schema hash mismatch: imported package {2}, current definition {3}. Review this definition's schema changes before applying."
     }
   },
   "Common": {

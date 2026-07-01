@@ -107,7 +107,11 @@ internal sealed class ConfigurationParameterPackageService(
                 {
                     Severity = ConfigurationImportDiagnosticSeverity.Warning,
                     DefinitionKey = definition.DefinitionKey,
-                    Message = localizer["ImportExport:Diagnostics:SchemaHashMismatch"]
+                    Message = localizer["ImportExport:Diagnostics:SchemaHashMismatch",
+                        definition.DisplayName,
+                        definition.DefinitionKey,
+                        HashForDisplay(exportedDefinition.SchemaHash),
+                        HashForDisplay(definition.SchemaHash)]
                 });
             }
 
@@ -177,6 +181,20 @@ internal sealed class ConfigurationParameterPackageService(
         }
 
         return definitions;
+    }
+
+    private string HashForDisplay(string? schemaHash)
+    {
+        if (string.IsNullOrWhiteSpace(schemaHash))
+        {
+            return localizer["Common:States:Empty"].Value;
+        }
+
+        const int PREFIX_LENGTH = 19;
+        const int SUFFIX_LENGTH = 8;
+        return schemaHash.Length <= PREFIX_LENGTH + SUFFIX_LENGTH + 3
+            ? schemaHash
+            : $"{schemaHash[..PREFIX_LENGTH]}...{schemaHash[^SUFFIX_LENGTH..]}";
     }
 
     private async Task<ConfigurationExportDefinition> CreateExportDefinitionAsync(
