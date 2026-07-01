@@ -9,6 +9,9 @@
     "ConfigurationHistory": {
       "Title": "配置历史"
     },
+    "ConfigurationVersions": {
+      "Title": "配置版本"
+    },
     "ConfigurationDebug": {
       "Title": "配置调试"
     },
@@ -258,6 +261,53 @@
     "PreviewTitle": "变更预览",
     "Confirm": "回滚",
     "Success": "回滚已完成。"
+  },
+  "Versions": {
+    "Subtitle": "对比完整受管配置定义快照，并恢复到指定版本。",
+    "Empty": "未找到统一配置版本。",
+    "Compare": {
+      "Origin": "源版本",
+      "Target": "目标版本",
+      "SelectVersion": "选择版本",
+      "Action": "对比"
+    },
+    "Columns": {
+      "Version": "版本",
+      "Definitions": "配置定义"
+    },
+    "Definitions": {
+      "Empty": "未捕获配置定义。"
+    },
+    "Actions": {
+      "ComparePrevious": "与上一版本对比"
+    },
+    "Diff": {
+      "DialogTitle": "版本对比",
+      "Title": "{0} -> {1}",
+      "ChangedDefinitions": "{0} 个配置定义变化",
+      "NoChanges": "这两个版本之间没有配置定义值变化。",
+      "Kinds": {
+        "Added": "新增",
+        "Removed": "移除",
+        "Modified": "修改"
+      }
+    },
+    "Rollback": {
+      "Title": "回滚 {0}",
+      "Ready": "该版本可以恢复。应用前请确认写入目标。",
+      "Blocked": "存在被阻止的配置定义，无法完整恢复该版本。",
+      "TargetSource": "目标来源",
+      "Diagnostic": "诊断",
+      "NoTarget": "没有可写目标",
+      "Apply": "回滚版本",
+      "Statuses": {
+        "Ready": "可恢复",
+        "MissingDefinition": "缺少配置定义",
+        "SchemaMismatch": "Schema 不匹配",
+        "ReadOnlyOverride": "只读来源覆盖",
+        "UnsupportedSource": "不支持的来源"
+      }
+    }
   },
   "Debug": {
     "Subtitle": "查看当前 Microsoft configuration debug 输出。",

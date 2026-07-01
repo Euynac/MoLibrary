@@ -1,4 +1,5 @@
 using Monica.Configuration.Abstractions;
+using Monica.Configuration.Abstractions.Internal;
 using Monica.Configuration.Models;
 
 namespace Monica.Configuration.Services;
@@ -8,7 +9,8 @@ namespace Monica.Configuration.Services;
 /// </summary>
 internal sealed class ConfigurationMutationGroupService(
     IConfigurationHistoryStore historyStore,
-    IConfigurationHistoryService historyService)
+    IConfigurationHistoryService historyService,
+    IConfigurationUnifiedVersionCoordinator unifiedVersionCoordinator)
     : IConfigurationMutationGroupService
 {
     /// <inheritdoc />
@@ -35,18 +37,28 @@ internal sealed class ConfigurationMutationGroupService(
     }
 
     /// <inheritdoc />
-    public Task CompleteAsync(
+    public async Task CompleteAsync(
         string groupId,
         int mutationCount,
         IReadOnlyList<string> definitionKeys,
         CancellationToken cancellationToken)
     {
-        return UpdateAsync(groupId, group => group with
+        ConfigurationMutationGroup? completedGroup = null;
+        await UpdateAsync(groupId, group =>
         {
-            MutationCount = mutationCount,
-            DefinitionKeys = NormalizeDefinitionKeys(definitionKeys),
-            Status = ConfigurationMutationGroupStatus.Applied
+            completedGroup = group with
+            {
+                MutationCount = mutationCount,
+                DefinitionKeys = NormalizeDefinitionKeys(definitionKeys),
+                Status = ConfigurationMutationGroupStatus.Applied
+            };
+            return completedGroup;
         }, cancellationToken);
+
+        if (completedGroup is not null)
+        {
+            await unifiedVersionCoordinator.CaptureMutationGroupAsync(completedGroup, cancellationToken);
+        }
     }
 
     /// <inheritdoc />

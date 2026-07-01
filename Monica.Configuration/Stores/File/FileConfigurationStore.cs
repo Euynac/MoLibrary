@@ -14,7 +14,7 @@ namespace Monica.Configuration.Stores.File;
 /// File-backed store bundle for monolith and local Monica.Configuration deployments.
 /// </summary>
 public sealed class FileConfigurationStore(IOptions<ConfigurationFileStoreOptions> options)
-    : IConfigurationEffectiveValueStore, IConfigurationHistoryStore, IConfigurationMetadataStore
+    : IConfigurationEffectiveValueStore, IConfigurationHistoryStore, IConfigurationMetadataStore, IConfigurationUnifiedVersionStore
 {
     private static readonly JsonSerializerOptions JSON_OPTIONS = new()
     {
@@ -300,6 +300,132 @@ public sealed class FileConfigurationStore(IOptions<ConfigurationFileStoreOption
     }
 
     /// <inheritdoc />
+    public async Task<ConfigurationUnifiedVersionSnapshot> AppendVersionAsync(
+        ConfigurationUnifiedVersionCreateRequest request,
+        CancellationToken cancellationToken)
+    {
+        await _lock.WaitAsync(cancellationToken);
+        try
+        {
+            EnsureDirectories();
+            var summaries = await ReadUnifiedVersionIndexAsync(cancellationToken);
+            var version = summaries.Count == 0 ? 1 : summaries.Max(static summary => summary.Version) + 1;
+            var summary = new ConfigurationUnifiedVersionSummary
+            {
+                Version = version,
+                MutationGroupId = request.MutationGroupId,
+                TriggerDefinitionKeys = NormalizeKeys(request.TriggerDefinitionKeys),
+                DefinitionKeys = NormalizeKeys(request.Definitions.Select(static definition => definition.DefinitionKey)),
+                DefinitionCount = request.Definitions.Count,
+                CreatedTime = request.CreatedTime,
+                ModifierId = request.ModifierId,
+                ModifierName = request.ModifierName,
+                Reason = request.Reason
+            };
+            var snapshot = new ConfigurationUnifiedVersionSnapshot
+            {
+                Summary = summary,
+                Definitions = request.Definitions
+            };
+
+            await IoFile.WriteAllTextAsync(
+                GetUnifiedVersionSnapshotPath(version),
+                JsonSerializer.Serialize(snapshot, JSON_OPTIONS),
+                cancellationToken);
+            summaries.Add(summary);
+            summaries = summaries
+                .OrderByDescending(static item => item.Version)
+                .ToList();
+            await IoFile.WriteAllTextAsync(
+                GetUnifiedVersionIndexPath(),
+                JsonSerializer.Serialize(summaries, JSON_OPTIONS),
+                cancellationToken);
+            return snapshot;
+        }
+        finally
+        {
+            _lock.Release();
+        }
+    }
+
+    /// <inheritdoc />
+    public async Task<IReadOnlyList<ConfigurationUnifiedVersionSummary>> ListVersionsAsync(
+        DateTimeOffset? from,
+        DateTimeOffset? to,
+        string? definitionKey,
+        int limit,
+        CancellationToken cancellationToken)
+    {
+        await _lock.WaitAsync(cancellationToken);
+        try
+        {
+            var normalizedLimit = Math.Clamp(limit, 1, 500);
+            return (await ReadUnifiedVersionIndexAsync(cancellationToken))
+                .Where(summary =>
+                    (from is null || summary.CreatedTime >= from)
+                    && (to is null || summary.CreatedTime <= to)
+                    && (string.IsNullOrWhiteSpace(definitionKey)
+                        || summary.DefinitionKeys.Contains(definitionKey, StringComparer.OrdinalIgnoreCase)))
+                .OrderByDescending(static summary => summary.Version)
+                .Take(normalizedLimit)
+                .ToArray();
+        }
+        finally
+        {
+            _lock.Release();
+        }
+    }
+
+    /// <inheritdoc />
+    public async Task<ConfigurationUnifiedVersionSnapshot?> GetVersionAsync(
+        long version,
+        CancellationToken cancellationToken)
+    {
+        await _lock.WaitAsync(cancellationToken);
+        try
+        {
+            var path = GetUnifiedVersionSnapshotPath(version);
+            return IoFile.Exists(path)
+                ? JsonSerializer.Deserialize<ConfigurationUnifiedVersionSnapshot>(
+                    await IoFile.ReadAllTextAsync(path, cancellationToken),
+                    JSON_OPTIONS)
+                : null;
+        }
+        finally
+        {
+            _lock.Release();
+        }
+    }
+
+    /// <inheritdoc />
+    public async Task<ConfigurationUnifiedVersionSnapshot?> GetVersionByMutationGroupAsync(
+        string mutationGroupId,
+        CancellationToken cancellationToken)
+    {
+        await _lock.WaitAsync(cancellationToken);
+        try
+        {
+            var summary = (await ReadUnifiedVersionIndexAsync(cancellationToken))
+                .FirstOrDefault(candidate => string.Equals(candidate.MutationGroupId, mutationGroupId, StringComparison.OrdinalIgnoreCase));
+            if (summary is null)
+            {
+                return null;
+            }
+
+            var path = GetUnifiedVersionSnapshotPath(summary.Version);
+            return IoFile.Exists(path)
+                ? JsonSerializer.Deserialize<ConfigurationUnifiedVersionSnapshot>(
+                    await IoFile.ReadAllTextAsync(path, cancellationToken),
+                    JSON_OPTIONS)
+                : null;
+        }
+        finally
+        {
+            _lock.Release();
+        }
+    }
+
+    /// <inheritdoc />
     public async Task PublishAsync(IReadOnlyList<ConfigurationDefinition> definitions, CancellationToken cancellationToken)
     {
         await _lock.WaitAsync(cancellationToken);
@@ -431,11 +557,26 @@ public sealed class FileConfigurationStore(IOptions<ConfigurationFileStoreOption
         return JsonSerializer.Deserialize<List<GroupDto>>(await IoFile.ReadAllTextAsync(path, cancellationToken)) ?? [];
     }
 
+    private async Task<List<ConfigurationUnifiedVersionSummary>> ReadUnifiedVersionIndexAsync(
+        CancellationToken cancellationToken)
+    {
+        var path = GetUnifiedVersionIndexPath();
+        if (!IoFile.Exists(path))
+        {
+            return [];
+        }
+
+        return JsonSerializer.Deserialize<List<ConfigurationUnifiedVersionSummary>>(
+            await IoFile.ReadAllTextAsync(path, cancellationToken),
+            JSON_OPTIONS) ?? [];
+    }
+
     private void EnsureDirectories()
     {
         IoDirectory.CreateDirectory(GetEffectiveDirectory());
         IoDirectory.CreateDirectory(GetEffectiveMetadataDirectory());
         IoDirectory.CreateDirectory(GetHistoryDirectory());
+        IoDirectory.CreateDirectory(GetUnifiedVersionDirectory());
         IoDirectory.CreateDirectory(GetDefinitionsDirectory());
     }
 
@@ -484,6 +625,21 @@ public sealed class FileConfigurationStore(IOptions<ConfigurationFileStoreOption
         return Path.Combine(GetHistoryDirectory(), "groups.json");
     }
 
+    private string GetUnifiedVersionDirectory()
+    {
+        return Path.Combine(GetHistoryDirectory(), "unified-versions");
+    }
+
+    private string GetUnifiedVersionIndexPath()
+    {
+        return Path.Combine(GetUnifiedVersionDirectory(), "index.json");
+    }
+
+    private string GetUnifiedVersionSnapshotPath(long version)
+    {
+        return Path.Combine(GetUnifiedVersionDirectory(), $"v{version}.json");
+    }
+
     private static string GetSafeFileName(string definitionKey)
     {
         if (string.IsNullOrWhiteSpace(definitionKey)
@@ -502,6 +658,15 @@ public sealed class FileConfigurationStore(IOptions<ConfigurationFileStoreOption
     {
         using var document = JsonDocument.Parse(string.IsNullOrWhiteSpace(json) ? "{}" : json);
         return JsonSerializer.Serialize(document.RootElement, JSON_OPTIONS);
+    }
+
+    private static IReadOnlyList<string> NormalizeKeys(IEnumerable<string> keys)
+    {
+        return keys
+            .Where(static key => !string.IsNullOrWhiteSpace(key))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderBy(static key => key, StringComparer.OrdinalIgnoreCase)
+            .ToArray();
     }
 
     private static ConfigurationDefinition? ReadPublishedDefinition(string path)

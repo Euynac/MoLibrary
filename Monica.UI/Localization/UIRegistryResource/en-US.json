@@ -44,6 +44,9 @@
     "ConfigurationHistory": {
       "Title": "Configuration History"
     },
+    "ConfigurationVersions": {
+      "Title": "Configuration Versions"
+    },
     "ConfigurationDebug": {
       "Title": "Configuration Debug"
     },

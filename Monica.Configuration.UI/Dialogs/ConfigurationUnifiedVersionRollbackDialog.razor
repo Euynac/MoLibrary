@@ -1,0 +1,132 @@
+@using Monica.Configuration.UI.Localization
+@inject ConfigurationFacade Facade
+@inject IStringLocalizer<ConfigurationUIResource> L
+
+<MudDialog Class="configuration-unified-version-rollback-dialog">
+    <DialogContent>
+        <MudStack Spacing="3">
+            <MudTextField T="string"
+                          @bind-Value="_reason"
+                          Label="@L["Group:Reason"]"
+                          Variant="Variant.Outlined"
+                          Lines="2" />
+
+            @if (_loading)
+            {
+                <MudProgressLinear Indeterminate="true" />
+            }
+            else if (!string.IsNullOrWhiteSpace(_error))
+            {
+                <MudAlert Severity="Severity.Error">@_error</MudAlert>
+            }
+            else if (_preview is not null)
+            {
+                <MudAlert Severity="@(_preview.CanApply ? Severity.Info : Severity.Warning)">
+                    @(_preview.CanApply ? L["Versions:Rollback:Ready"] : L["Versions:Rollback:Blocked"])
+                </MudAlert>
+                <MudTable T="ConfigurationUnifiedVersionApplyTarget" Items="@_preview.Targets" Dense="true" Hover="true" Elevation="0">
+                    <HeaderContent>
+                        <MudTh>@L["State:Columns:Definition"]</MudTh>
+                        <MudTh>@L["Versions:Rollback:TargetSource"]</MudTh>
+                        <MudTh>@L["Group:Status"]</MudTh>
+                        <MudTh>@L["Versions:Rollback:Diagnostic"]</MudTh>
+                    </HeaderContent>
+                    <RowTemplate>
+                        <MudTd DataLabel="@L["State:Columns:Definition"]">@context.DisplayName</MudTd>
+                        <MudTd DataLabel="@L["Versions:Rollback:TargetSource"]">@TargetText(context)</MudTd>
+                        <MudTd DataLabel="@L["Group:Status"]">
+                            <MudChip T="string" Size="Size.Small" Color="@StatusColor(context.Status)" Variant="Variant.Outlined">
+                                @StatusText(context.Status)
+                            </MudChip>
+                        </MudTd>
+                        <MudTd DataLabel="@L["Versions:Rollback:Diagnostic"]">@context.Diagnostic</MudTd>
+                    </RowTemplate>
+                </MudTable>
+            }
+        </MudStack>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel" Disabled="_saving">@L["Common:Actions:Cancel"]</MudButton>
+        <MudButton Color="Color.Warning"
+                   Variant="Variant.Filled"
+                   StartIcon="@Icons.Material.Filled.Restore"
+                   OnClick="ApplyAsync"
+                   Disabled="@(_saving || _preview is not { CanApply: true })">
+            @L["Versions:Rollback:Apply"]
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] private IMudDialogInstance MudDialog { get; set; } = null!;
+    [Parameter] public long Version { get; set; }
+
+    private ConfigurationUnifiedVersionApplyPreview? _preview;
+    private string? _reason;
+    private string? _error;
+    private bool _loading = true;
+    private bool _saving;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var result = await Facade.PreviewUnifiedVersionRollbackAsync(Version);
+        if (result.IsFailed(out var error, out var preview))
+        {
+            _error = error.Message;
+        }
+        else
+        {
+            _preview = preview;
+        }
+
+        _loading = false;
+    }
+
+    private async Task ApplyAsync()
+    {
+        if (_preview is not { CanApply: true })
+        {
+            return;
+        }
+
+        _saving = true;
+        var result = await Facade.RollbackUnifiedVersionAsync(Version, _reason);
+        _saving = false;
+        if (result.IsFailed(out var error, out var rollback))
+        {
+            _error = error.Message;
+            return;
+        }
+
+        MudDialog.Close(DialogResult.Ok(rollback));
+    }
+
+    private string TargetText(ConfigurationUnifiedVersionApplyTarget target)
+    {
+        return string.IsNullOrWhiteSpace(target.SourceDisplayName)
+            ? L["Versions:Rollback:NoTarget"]
+            : target.SourceDisplayName!;
+    }
+
+    private string StatusText(ConfigurationUnifiedVersionApplyTargetStatus status)
+    {
+        return status switch
+        {
+            ConfigurationUnifiedVersionApplyTargetStatus.Ready => L["Versions:Rollback:Statuses:Ready"],
+            ConfigurationUnifiedVersionApplyTargetStatus.MissingDefinition => L["Versions:Rollback:Statuses:MissingDefinition"],
+            ConfigurationUnifiedVersionApplyTargetStatus.SchemaMismatch => L["Versions:Rollback:Statuses:SchemaMismatch"],
+            ConfigurationUnifiedVersionApplyTargetStatus.ReadOnlyOverride => L["Versions:Rollback:Statuses:ReadOnlyOverride"],
+            _ => L["Versions:Rollback:Statuses:UnsupportedSource"]
+        };
+    }
+
+    private static Color StatusColor(ConfigurationUnifiedVersionApplyTargetStatus status)
+    {
+        return status == ConfigurationUnifiedVersionApplyTargetStatus.Ready ? Color.Success : Color.Warning;
+    }
+
+    private void Cancel()
+    {
+        MudDialog.Cancel();
+    }
+}

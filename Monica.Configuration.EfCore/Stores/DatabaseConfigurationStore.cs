@@ -23,10 +23,11 @@ namespace Monica.Configuration.EfCore.Stores;
 public sealed class DatabaseConfigurationStore(
     IDbContextOperation<ConfigurationDbContext> dbContextOperation,
     IOptions<ModuleConfigurationEfCoreOption> options)
-    : IConfigurationEffectiveValueStore, IConfigurationHistoryStore, IConfigurationMetadataStore
+    : IConfigurationEffectiveValueStore, IConfigurationHistoryStore, IConfigurationMetadataStore, IConfigurationUnifiedVersionStore
 {
     private const int MAX_PUBLISH_RETRY_COUNT = 5;
     private const int MAX_EFFECTIVE_VALUE_ENSURE_RETRY_COUNT = 5;
+    private const int MAX_UNIFIED_VERSION_APPEND_RETRY_COUNT = 5;
 
     private readonly SemaphoreSlim _schemaInitializationLock = new(1, 1);
     private bool _schemaInitialized;
@@ -317,6 +318,148 @@ public sealed class DatabaseConfigurationStore(
     }
 
     /// <inheritdoc />
+    public async Task<ConfigurationUnifiedVersionSnapshot> AppendVersionAsync(
+        ConfigurationUnifiedVersionCreateRequest request,
+        CancellationToken cancellationToken)
+    {
+        for (var attempt = 1; attempt <= MAX_UNIFIED_VERSION_APPEND_RETRY_COUNT; attempt++)
+        {
+            try
+            {
+                return await ExecuteAsync(async (dbContext, token) =>
+                {
+                    var version = (await dbContext.ConfigurationUnifiedVersions
+                        .Select(candidate => (long?)candidate.Version)
+                        .MaxAsync(token) ?? 0) + 1;
+                    var summary = new ConfigurationUnifiedVersionSummary
+                    {
+                        Version = version,
+                        MutationGroupId = request.MutationGroupId,
+                        TriggerDefinitionKeys = NormalizeKeys(request.TriggerDefinitionKeys),
+                        DefinitionKeys = NormalizeKeys(request.Definitions.Select(static definition => definition.DefinitionKey)),
+                        DefinitionCount = request.Definitions.Count,
+                        CreatedTime = request.CreatedTime,
+                        ModifierId = request.ModifierId,
+                        ModifierName = request.ModifierName,
+                        Reason = request.Reason
+                    };
+
+                    dbContext.ConfigurationUnifiedVersions.Add(ToEntity(summary));
+                    dbContext.ConfigurationUnifiedVersionDocuments.AddRange(
+                        request.Definitions.Select(definition => ToEntity(version, definition)));
+                    await dbContext.SaveChangesAsync(token);
+                    return new ConfigurationUnifiedVersionSnapshot
+                    {
+                        Summary = summary,
+                        Definitions = request.Definitions
+                    };
+                }, cancellationToken);
+            }
+            catch (DbUpdateException) when (attempt < MAX_UNIFIED_VERSION_APPEND_RETRY_COUNT)
+            {
+                // Another instance may have assigned the same next version first.
+            }
+        }
+
+        throw new InvalidOperationException(
+            $"Failed to append a unified configuration version after {MAX_UNIFIED_VERSION_APPEND_RETRY_COUNT} attempts.");
+    }
+
+    /// <inheritdoc />
+    public async Task<IReadOnlyList<ConfigurationUnifiedVersionSummary>> ListVersionsAsync(
+        DateTimeOffset? from,
+        DateTimeOffset? to,
+        string? definitionKey,
+        int limit,
+        CancellationToken cancellationToken)
+    {
+        return await ExecuteAsync(async (dbContext, token) =>
+        {
+            var normalizedLimit = Math.Clamp(limit, 1, 500);
+            var query = dbContext.ConfigurationUnifiedVersions.AsNoTracking();
+            if (from is not null)
+            {
+                var fromUtc = NormalizeUtcDateTime(from.Value);
+                query = query.Where(version => version.CreatedTime >= fromUtc);
+            }
+
+            if (to is not null)
+            {
+                var toUtc = NormalizeUtcDateTime(to.Value);
+                query = query.Where(version => version.CreatedTime <= toUtc);
+            }
+
+            var summaries = (await query
+                    .OrderByDescending(version => version.Version)
+                    .ToArrayAsync(token))
+                .Select(ToSummary)
+                .ToArray();
+            var filtered = string.IsNullOrWhiteSpace(definitionKey)
+                ? summaries
+                : summaries.Where(summary => summary.DefinitionKeys.Contains(definitionKey, StringComparer.OrdinalIgnoreCase));
+            return filtered.Take(normalizedLimit).ToArray();
+        }, cancellationToken);
+    }
+
+    /// <inheritdoc />
+    public async Task<ConfigurationUnifiedVersionSnapshot?> GetVersionAsync(
+        long version,
+        CancellationToken cancellationToken)
+    {
+        return await ExecuteAsync(async (dbContext, token) =>
+        {
+            var summaryEntity = await dbContext.ConfigurationUnifiedVersions
+                .AsNoTracking()
+                .FirstOrDefaultAsync(candidate => candidate.Version == version, token);
+            if (summaryEntity is null)
+            {
+                return null;
+            }
+
+            var documents = await dbContext.ConfigurationUnifiedVersionDocuments
+                .AsNoTracking()
+                .Where(document => document.Version == version)
+                .OrderBy(document => document.DisplayName)
+                .ThenBy(document => document.DefinitionKey)
+                .ToArrayAsync(token);
+            return new ConfigurationUnifiedVersionSnapshot
+            {
+                Summary = ToSummary(summaryEntity),
+                Definitions = documents.Select(ToDefinitionSnapshot).ToArray()
+            };
+        }, cancellationToken);
+    }
+
+    /// <inheritdoc />
+    public async Task<ConfigurationUnifiedVersionSnapshot?> GetVersionByMutationGroupAsync(
+        string mutationGroupId,
+        CancellationToken cancellationToken)
+    {
+        return await ExecuteAsync(async (dbContext, token) =>
+        {
+            var summaryEntity = await dbContext.ConfigurationUnifiedVersions
+                .AsNoTracking()
+                .FirstOrDefaultAsync(candidate => candidate.MutationGroupId == mutationGroupId, token);
+            if (summaryEntity is null)
+            {
+                return null;
+            }
+
+            var documents = await dbContext.ConfigurationUnifiedVersionDocuments
+                .AsNoTracking()
+                .Where(document => document.Version == summaryEntity.Version)
+                .OrderBy(document => document.DisplayName)
+                .ThenBy(document => document.DefinitionKey)
+                .ToArrayAsync(token);
+            return new ConfigurationUnifiedVersionSnapshot
+            {
+                Summary = ToSummary(summaryEntity),
+                Definitions = documents.Select(ToDefinitionSnapshot).ToArray()
+            };
+        }, cancellationToken);
+    }
+
+    /// <inheritdoc />
     public async Task PublishAsync(IReadOnlyList<ConfigurationDefinition> definitions, CancellationToken cancellationToken)
     {
         var candidates = definitions.Select(PublishedDefinitionCandidate.FromDefinition).ToArray();
@@ -566,6 +709,24 @@ public sealed class DatabaseConfigurationStore(
                     history.PublishedTime
                 })
                 .FirstOrDefaultAsync(cancellationToken);
+            _ = await dbContext.ConfigurationUnifiedVersions
+                .AsNoTracking()
+                .Select(version => new
+                {
+                    version.Version,
+                    version.DefinitionCount,
+                    version.CreatedTime
+                })
+                .FirstOrDefaultAsync(cancellationToken);
+            _ = await dbContext.ConfigurationUnifiedVersionDocuments
+                .AsNoTracking()
+                .Select(document => new
+                {
+                    document.Version,
+                    document.DefinitionKey,
+                    document.SchemaHash
+                })
+                .FirstOrDefaultAsync(cancellationToken);
             return ConfigurationSchemaState.Ready;
         }
         catch (Exception ex) when (IsMissingTableException(ex) || IsMissingColumnException(ex))
@@ -602,6 +763,8 @@ public sealed class DatabaseConfigurationStore(
         var entityTypes = new[]
         {
             typeof(ConfigurationSchemaMarkerEntity),
+            typeof(ConfigurationUnifiedVersionDocumentEntity),
+            typeof(ConfigurationUnifiedVersionEntity),
             typeof(ConfigurationValueHistoryEntity),
             typeof(ConfigurationMutationGroupEntity),
             typeof(ConfigurationEffectiveValueEntity),
@@ -1063,6 +1226,91 @@ public sealed class DatabaseConfigurationStore(
             RolledBackGroupId = entity.RolledBackGroupId,
             Status = Enum.Parse<ConfigurationMutationGroupStatus>(entity.Status)
         };
+    }
+
+    private static ConfigurationUnifiedVersionEntity ToEntity(ConfigurationUnifiedVersionSummary summary)
+    {
+        return new ConfigurationUnifiedVersionEntity
+        {
+            Version = summary.Version,
+            MutationGroupId = summary.MutationGroupId,
+            TriggerDefinitionKeysJson = JsonSerializer.Serialize(summary.TriggerDefinitionKeys, ConfigurationPersistedJsonOptions.CompactValue),
+            DefinitionKeysJson = JsonSerializer.Serialize(summary.DefinitionKeys, ConfigurationPersistedJsonOptions.CompactValue),
+            DefinitionCount = summary.DefinitionCount,
+            CreatedTime = NormalizeUtcDateTime(summary.CreatedTime),
+            ModifierId = summary.ModifierId,
+            ModifierName = summary.ModifierName,
+            Reason = summary.Reason
+        };
+    }
+
+    private static ConfigurationUnifiedVersionSummary ToSummary(ConfigurationUnifiedVersionEntity entity)
+    {
+        return new ConfigurationUnifiedVersionSummary
+        {
+            Version = entity.Version,
+            MutationGroupId = entity.MutationGroupId,
+            TriggerDefinitionKeys = JsonSerializer.Deserialize<IReadOnlyList<string>>(
+                entity.TriggerDefinitionKeysJson,
+                ConfigurationPersistedJsonOptions.CompactValue) ?? [],
+            DefinitionKeys = JsonSerializer.Deserialize<IReadOnlyList<string>>(
+                entity.DefinitionKeysJson,
+                ConfigurationPersistedJsonOptions.CompactValue) ?? [],
+            DefinitionCount = entity.DefinitionCount,
+            CreatedTime = ToUtcOffset(entity.CreatedTime),
+            ModifierId = entity.ModifierId,
+            ModifierName = entity.ModifierName,
+            Reason = entity.Reason
+        };
+    }
+
+    private static ConfigurationUnifiedVersionDocumentEntity ToEntity(
+        long version,
+        ConfigurationUnifiedVersionDefinitionSnapshot definition)
+    {
+        return new ConfigurationUnifiedVersionDocumentEntity
+        {
+            Version = version,
+            DefinitionKey = definition.DefinitionKey,
+            DisplayName = definition.DisplayName,
+            Category = definition.Category,
+            FromProject = definition.FromProject,
+            SchemaVersion = definition.SchemaVersion,
+            SchemaHash = definition.SchemaHash,
+            EffectiveValueVersion = definition.EffectiveValueVersion,
+            Json = NormalizeJson(definition.Json),
+            SourceContributionsJson = JsonSerializer.Serialize(
+                definition.SourceContributions,
+                ConfigurationPersistedJsonOptions.CompactValue)
+        };
+    }
+
+    private static ConfigurationUnifiedVersionDefinitionSnapshot ToDefinitionSnapshot(
+        ConfigurationUnifiedVersionDocumentEntity entity)
+    {
+        return new ConfigurationUnifiedVersionDefinitionSnapshot
+        {
+            DefinitionKey = entity.DefinitionKey,
+            DisplayName = entity.DisplayName,
+            Category = entity.Category,
+            FromProject = entity.FromProject,
+            SchemaVersion = entity.SchemaVersion,
+            SchemaHash = entity.SchemaHash,
+            EffectiveValueVersion = entity.EffectiveValueVersion,
+            Json = entity.Json,
+            SourceContributions = JsonSerializer.Deserialize<IReadOnlyList<ConfigurationUnifiedVersionSourceContribution>>(
+                entity.SourceContributionsJson,
+                ConfigurationPersistedJsonOptions.CompactValue) ?? []
+        };
+    }
+
+    private static IReadOnlyList<string> NormalizeKeys(IEnumerable<string> keys)
+    {
+        return keys
+            .Where(static key => !string.IsNullOrWhiteSpace(key))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderBy(static key => key, StringComparer.OrdinalIgnoreCase)
+            .ToArray();
     }
 
     private static DateTime NormalizeUtcDateTime(DateTimeOffset value)

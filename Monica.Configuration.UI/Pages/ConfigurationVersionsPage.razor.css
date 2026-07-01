@@ -1,0 +1,14 @@
+.configuration-versions-page {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    min-height: 0;
+}
+
+.configuration-version-select {
+    min-width: 16rem;
+}
+
+.configuration-versions-table ::deep .mud-table-cell {
+    vertical-align: middle;
+}

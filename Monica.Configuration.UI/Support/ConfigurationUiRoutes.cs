@@ -22,6 +22,11 @@ internal static class ConfigurationUiRoutes
     public const string HISTORY_ROUTE = "/configuration/history";
 
     /// <summary>
+    /// Gets the configuration unified versions route.
+    /// </summary>
+    public const string VERSIONS_ROUTE = "/configuration/versions";
+
+    /// <summary>
     /// Gets the configuration debug route.
     /// </summary>
     public const string DEBUG_ROUTE = "/configuration/debug";

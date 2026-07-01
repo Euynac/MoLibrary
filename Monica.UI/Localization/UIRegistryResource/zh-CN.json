@@ -44,6 +44,9 @@
     "ConfigurationHistory": {
       "Title": "配置历史"
     },
+    "ConfigurationVersions": {
+      "Title": "配置版本"
+    },
     "ConfigurationDebug": {
       "Title": "配置调试"
     },

@@ -18,6 +18,7 @@ internal sealed class ConfigurationSourceMutationService(
     ConfigurationValidationCoordinator validationCoordinator,
     ConfigurationPathProjector pathProjector,
     IConfigurationReloadCoordinator reloadCoordinator,
+    IConfigurationUnifiedVersionCoordinator unifiedVersionCoordinator,
     IEnumerable<IConfigurationChangeNotifier> changeNotifiers,
     IOptions<ModuleConfigurationOption> moduleOptions)
     : IConfigurationSourceMutationService
@@ -54,7 +55,7 @@ internal sealed class ConfigurationSourceMutationService(
 
         var targetNode = ResolveTargetNode(definition, request.LogicalPath);
         var reloadBehavior = targetNode.ResolveEffectiveReloadBehavior(definition);
-        await historyStore.AppendHistoryAsync(new ConfigurationValueHistory
+        var history = new ConfigurationValueHistory
         {
             HistoryId = Guid.NewGuid().ToString("N"),
             DefinitionKey = definition.DefinitionKey,
@@ -83,7 +84,12 @@ internal sealed class ConfigurationSourceMutationService(
             ModifierName = request.Context.ModifierName,
             Reason = request.Context.Reason,
             MutationGroupId = request.Context.MutationGroupId
-        }, cancellationToken);
+        };
+        await historyStore.AppendHistoryAsync(history, cancellationToken);
+        if (string.IsNullOrWhiteSpace(request.Context.MutationGroupId))
+        {
+            await unifiedVersionCoordinator.CaptureStandaloneMutationAsync(history, cancellationToken);
+        }
 
         var result = new ConfigurationMutationResult
         {

@@ -71,6 +71,14 @@ public sealed class ModuleConfigurationUI(ModuleConfigurationUIOption option)
                     addToNav: true,
                     navOrder: 20);
 
+                registry.RegisterLocalizedComponent<ConfigurationVersionsPage>(
+                    ConfigurationUiRoutes.VERSIONS_ROUTE,
+                    "Pages:ConfigurationVersions:Title",
+                    Icons.Material.Filled.SettingsBackupRestore,
+                    "Categories:Configuration",
+                    addToNav: true,
+                    navOrder: 25);
+
                 registry.RegisterLocalizedComponent<ConfigurationDebugPage>(
                     ConfigurationUiRoutes.DEBUG_ROUTE,
                     "Pages:ConfigurationDebug:Title",

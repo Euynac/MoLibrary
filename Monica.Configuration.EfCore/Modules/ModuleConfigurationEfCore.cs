@@ -165,6 +165,8 @@ public sealed class ModuleConfigurationEfCore(ModuleConfigurationEfCoreOption op
             serviceProvider => serviceProvider.GetRequiredService<DatabaseConfigurationStore>()));
         services.Replace(ServiceDescriptor.Singleton<IConfigurationMetadataStore>(
             serviceProvider => serviceProvider.GetRequiredService<DatabaseConfigurationStore>()));
+        services.Replace(ServiceDescriptor.Singleton<IConfigurationUnifiedVersionStore>(
+            serviceProvider => serviceProvider.GetRequiredService<DatabaseConfigurationStore>()));
     }
 }
 

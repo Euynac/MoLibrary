@@ -1,0 +1,152 @@
+@using Monica.Configuration.UI.Localization
+@using Monica.UI.UIDiffHighlight.Models
+@inject ConfigurationFacade Facade
+@inject IStringLocalizer<ConfigurationUIResource> L
+
+<MudDialog Class="configuration-unified-version-diff-dialog">
+    <DialogContent>
+        <MudStack Spacing="3" Class="configuration-unified-version-diff-content">
+            <MudStack Row="true" Wrap="Wrap.Wrap" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Spacing="2">
+                <MudStack Spacing="0">
+                    <MudText Typo="Typo.subtitle1">
+                        @L["Versions:Diff:Title", ConfigurationUnifiedVersionJsonFormatter.VersionLabel(Comparison.Origin.Summary.Version), ConfigurationUnifiedVersionJsonFormatter.VersionLabel(Comparison.Target.Summary.Version)]
+                    </MudText>
+                    <MudText Typo="Typo.caption" Color="Color.Secondary">@L["Versions:Diff:ChangedDefinitions", Comparison.Changes.Count]</MudText>
+                </MudStack>
+                @if (Comparison.Changes.Count > 0)
+                {
+                    <MudSelect T="string"
+                               Value="@_selectedDefinitionKey"
+                               ValueChanged="SelectDefinition"
+                               Variant="Variant.Outlined"
+                               Margin="Margin.Dense"
+                               Dense="true">
+                        @foreach (var change in Comparison.Changes)
+                        {
+                            <MudSelectItem T="string" Value="@change.DefinitionKey">@change.DisplayName</MudSelectItem>
+                        }
+                    </MudSelect>
+                }
+            </MudStack>
+
+            @if (Comparison.Changes.Count == 0)
+            {
+                <MudAlert Severity="Severity.Info">@L["Versions:Diff:NoChanges"]</MudAlert>
+            }
+            else if (_selectedChange is not null)
+            {
+                <MudPaper Outlined="true" Class="pa-3 configuration-unified-version-diff-panel">
+                    <MudStack Spacing="2">
+                        <MudStack Row="true" Wrap="Wrap.Wrap" AlignItems="AlignItems.Center" Spacing="1">
+                            <MudChip T="string" Size="Size.Small" Color="@ChangeColor(_selectedChange.ChangeKind)" Variant="Variant.Outlined">
+                                @ChangeKindText(_selectedChange.ChangeKind)
+                            </MudChip>
+                            <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">@_selectedChange.DefinitionKey</MudChip>
+                        </MudStack>
+                        <DiffViewer OriginText="@OriginText"
+                                    NewText="@TargetText"
+                                    Options="@_diffOptions"
+                                    ViewMode="EDiffViewMode.Unified" />
+                    </MudStack>
+                </MudPaper>
+            }
+        </MudStack>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Close">@L["Common:Actions:Close"]</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    private readonly DiffHighlightOptions _diffOptions = new()
+    {
+        Mode = EDiffHighlightMode.Line,
+        ContextLines = 4,
+        MaxCharacterDiffLength = 8000
+    };
+
+    private readonly Dictionary<string, ConfigurationDefinition> _definitions = new(StringComparer.OrdinalIgnoreCase);
+    private string? _selectedDefinitionKey;
+    private ConfigurationUnifiedVersionDefinitionChange? _selectedChange;
+
+    [CascadingParameter] private IMudDialogInstance MudDialog { get; set; } = null!;
+    [Parameter, EditorRequired] public ConfigurationUnifiedVersionComparison Comparison { get; set; } = null!;
+
+    private string OriginText => ConfigurationUnifiedVersionJsonFormatter.FormatForDisplay(
+        _selectedChange?.OriginJson,
+        CurrentDefinition,
+        L["State:Value:Sensitive"]);
+
+    private string TargetText => ConfigurationUnifiedVersionJsonFormatter.FormatForDisplay(
+        _selectedChange?.TargetJson,
+        CurrentDefinition,
+        L["State:Value:Sensitive"]);
+
+    private ConfigurationDefinition? CurrentDefinition =>
+        _selectedDefinitionKey is not null && _definitions.TryGetValue(_selectedDefinitionKey, out var definition)
+            ? definition
+            : null;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        _selectedDefinitionKey ??= Comparison.Changes.FirstOrDefault()?.DefinitionKey;
+        _selectedChange = ResolveSelectedChange();
+        await EnsureDefinitionsAsync();
+    }
+
+    private async Task EnsureDefinitionsAsync()
+    {
+        foreach (var definitionKey in Comparison.Changes.Select(static change => change.DefinitionKey))
+        {
+            if (_definitions.ContainsKey(definitionKey))
+            {
+                continue;
+            }
+
+            var result = await Facade.GetDefinitionAsync(definitionKey);
+            if (!result.IsFailed(out _, out var detail))
+            {
+                _definitions[definitionKey] = detail.Definition;
+            }
+        }
+    }
+
+    private void SelectDefinition(string definitionKey)
+    {
+        _selectedDefinitionKey = definitionKey;
+        _selectedChange = ResolveSelectedChange();
+    }
+
+    private ConfigurationUnifiedVersionDefinitionChange? ResolveSelectedChange()
+    {
+        return string.IsNullOrWhiteSpace(_selectedDefinitionKey)
+            ? Comparison.Changes.FirstOrDefault()
+            : Comparison.Changes.FirstOrDefault(change =>
+                string.Equals(change.DefinitionKey, _selectedDefinitionKey, StringComparison.OrdinalIgnoreCase));
+    }
+
+    private string ChangeKindText(ConfigurationUnifiedVersionDefinitionChangeKind kind)
+    {
+        return kind switch
+        {
+            ConfigurationUnifiedVersionDefinitionChangeKind.Added => L["Versions:Diff:Kinds:Added"],
+            ConfigurationUnifiedVersionDefinitionChangeKind.Removed => L["Versions:Diff:Kinds:Removed"],
+            _ => L["Versions:Diff:Kinds:Modified"]
+        };
+    }
+
+    private static Color ChangeColor(ConfigurationUnifiedVersionDefinitionChangeKind kind)
+    {
+        return kind switch
+        {
+            ConfigurationUnifiedVersionDefinitionChangeKind.Added => Color.Success,
+            ConfigurationUnifiedVersionDefinitionChangeKind.Removed => Color.Warning,
+            _ => Color.Info
+        };
+    }
+
+    private void Close()
+    {
+        MudDialog.Close();
+    }
+}

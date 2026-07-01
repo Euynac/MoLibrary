@@ -118,6 +118,9 @@ public sealed class ModuleConfiguration
         services.TryAddSingleton<IConfigurationMutationService, ConfigurationMutationService>();
         services.TryAddSingleton<IConfigurationMutationGroupService, ConfigurationMutationGroupService>();
         services.TryAddSingleton<IConfigurationRollbackService, ConfigurationRollbackService>();
+        services.TryAddSingleton<IConfigurationUnifiedVersionService, ConfigurationUnifiedVersionService>();
+        services.TryAddSingleton<IConfigurationUnifiedVersionCoordinator, ConfigurationUnifiedVersionCoordinator>();
+        services.TryAddSingleton<ConfigurationUnifiedVersionSnapshotFactory>();
         services.TryAddSingleton<IConfigurationReloadCoordinator, ConfigurationProviderReloadCoordinator>();
         services.TryAddSingleton<IConfigurationReloadSignalReceiver, ConfigurationReloadSignalReceiver>();
         services.TryAddSingleton(_schemaHasher);
@@ -296,6 +299,93 @@ public sealed class ModuleConfigurationGuide
     }
 
     /// <summary>
+    /// Enables unified configuration version control.
+    /// </summary>
+    /// <returns>The module guide.</returns>
+    /// <remarks>
+    /// Unified version control is disabled by default. After enabling it, register at least one inclusion
+    /// filter through <see cref="IncludeUnifiedVersionCategories"/>, <see cref="IncludeUnifiedVersionDefinitions(string[])"/>,
+    /// <see cref="IncludeUnifiedVersionDefinitions(Func{ConfigurationDefinition, bool})"/>, or
+    /// <see cref="UseUnifiedVersionFilter{TFilter}"/>. The module fails fast if enabled without filters.
+    /// </remarks>
+    public ModuleConfigurationGuide UseUnifiedVersionControl()
+    {
+        ConfigureModuleOption(options =>
+        {
+            options.UnifiedVersionControl.Enabled = true;
+        });
+        return this;
+    }
+
+    /// <summary>
+    /// Includes configuration definitions with one of the specified categories in unified versions.
+    /// </summary>
+    /// <param name="categories">The categories to include.</param>
+    /// <returns>The module guide.</returns>
+    public ModuleConfigurationGuide IncludeUnifiedVersionCategories(params string[] categories)
+    {
+        var normalizedCategories = NormalizeFilterValues(categories, nameof(categories));
+        UseUnifiedVersionControl();
+        ConfigureServices(context =>
+        {
+            context.Services.AddSingleton<IConfigurationUnifiedVersionFilter>(
+                new ConfigurationUnifiedVersionCategoryFilter(normalizedCategories));
+        }, secondKey: string.Join('|', normalizedCategories));
+        return this;
+    }
+
+    /// <summary>
+    /// Includes configuration definitions with one of the specified definition keys in unified versions.
+    /// </summary>
+    /// <param name="definitionKeys">The definition keys to include.</param>
+    /// <returns>The module guide.</returns>
+    public ModuleConfigurationGuide IncludeUnifiedVersionDefinitions(params string[] definitionKeys)
+    {
+        var normalizedDefinitionKeys = NormalizeFilterValues(definitionKeys, nameof(definitionKeys));
+        UseUnifiedVersionControl();
+        ConfigureServices(context =>
+        {
+            context.Services.AddSingleton<IConfigurationUnifiedVersionFilter>(
+                new ConfigurationUnifiedVersionDefinitionKeyFilter(normalizedDefinitionKeys));
+        }, secondKey: string.Join('|', normalizedDefinitionKeys));
+        return this;
+    }
+
+    /// <summary>
+    /// Includes configuration definitions accepted by a predicate in unified versions.
+    /// </summary>
+    /// <param name="predicate">The inclusion predicate.</param>
+    /// <returns>The module guide.</returns>
+    public ModuleConfigurationGuide IncludeUnifiedVersionDefinitions(Func<ConfigurationDefinition, bool> predicate)
+    {
+        ArgumentNullException.ThrowIfNull(predicate);
+
+        UseUnifiedVersionControl();
+        ConfigureServices(context =>
+        {
+            context.Services.AddSingleton<IConfigurationUnifiedVersionFilter>(
+                new ConfigurationUnifiedVersionPredicateFilter(predicate));
+        }, secondKey: Guid.NewGuid().ToString("N"));
+        return this;
+    }
+
+    /// <summary>
+    /// Registers a custom unified version inclusion filter.
+    /// </summary>
+    /// <typeparam name="TFilter">The filter implementation type.</typeparam>
+    /// <returns>The module guide.</returns>
+    public ModuleConfigurationGuide UseUnifiedVersionFilter<TFilter>()
+        where TFilter : class, IConfigurationUnifiedVersionFilter
+    {
+        UseUnifiedVersionControl();
+        ConfigureServices(context =>
+        {
+            context.Services.AddSingleton<IConfigurationUnifiedVersionFilter, TFilter>();
+        }, secondKey: typeof(TFilter).FullName);
+        return this;
+    }
+
+    /// <summary>
     /// Adds a JSON configuration file after Monica's effective-value provider and records source metadata for the UI.
     /// </summary>
     /// <param name="path">The JSON file path passed to <see cref="JsonConfigurationExtensions.AddJsonFile(IConfigurationBuilder,string,bool,bool)"/>.</param>
@@ -366,8 +456,26 @@ public sealed class ModuleConfigurationGuide
             context.Services.TryAddSingleton<IConfigurationEffectiveValueStore>(provider => provider.GetRequiredService<FileConfigurationStore>());
             context.Services.TryAddSingleton<IConfigurationHistoryStore>(provider => provider.GetRequiredService<FileConfigurationStore>());
             context.Services.TryAddSingleton<IConfigurationMetadataStore>(provider => provider.GetRequiredService<FileConfigurationStore>());
+            context.Services.TryAddSingleton<IConfigurationUnifiedVersionStore>(provider => provider.GetRequiredService<FileConfigurationStore>());
         });
         return this;
+    }
+
+    private static IReadOnlySet<string> NormalizeFilterValues(IReadOnlyList<string> values, string parameterName)
+    {
+        ArgumentNullException.ThrowIfNull(values);
+
+        var normalized = values
+            .Where(static value => !string.IsNullOrWhiteSpace(value))
+            .Select(static value => value.Trim())
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+        if (normalized.Length == 0)
+        {
+            throw new ArgumentException("At least one non-empty value is required.", parameterName);
+        }
+
+        return normalized.ToHashSet(StringComparer.OrdinalIgnoreCase);
     }
 }
 
@@ -399,6 +507,15 @@ public sealed class ModuleConfigurationOption : ModuleOptions<ModuleConfiguratio
     /// </remarks>
     public ConfigurationDuplicateSectionPathBehavior DuplicateSectionPathBehavior { get; set; } =
         ConfigurationDuplicateSectionPathBehavior.FailFast;
+
+    /// <summary>
+    /// Gets unified configuration version control options.
+    /// </summary>
+    /// <remarks>
+    /// Unified versioning is disabled by default. Use guide methods to enable it and register explicit
+    /// inclusion filters for the definitions that should be captured and restorable as unified versions.
+    /// </remarks>
+    public ConfigurationUnifiedVersionControlOptions UnifiedVersionControl { get; } = new();
 
     /// <summary>
     /// Gets or sets whether source inventory includes runtime configuration keys that do not belong to

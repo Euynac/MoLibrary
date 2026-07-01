@@ -1,0 +1,246 @@
+@attribute [Route(PAGE_URL)]
+@inject ConfigurationFacade Facade
+@inject IDialogService DialogService
+@inject ISnackbar Snackbar
+@inject IStringLocalizer<ConfigurationUIResource> L
+
+<PageTitle>@L["Pages:ConfigurationVersions:Title"]</PageTitle>
+
+<div class="configuration-versions-page">
+    <MudContainer MaxWidth="MaxWidth.False">
+        <MudStack Spacing="3">
+            <MudStack Row="true" Wrap="Wrap.Wrap" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Spacing="2">
+                <MudStack Spacing="0">
+                    <MudText Typo="Typo.h4">@L["Pages:ConfigurationVersions:Title"]</MudText>
+                    <MudText Typo="Typo.body2" Color="Color.Secondary">@L["Versions:Subtitle"]</MudText>
+                </MudStack>
+                <MudTooltip Text="@L["Common:Actions:Refresh"]">
+                    <MudIconButton Icon="@Icons.Material.Filled.Refresh" Variant="Variant.Outlined" OnClick="LoadAsync" />
+                </MudTooltip>
+            </MudStack>
+
+            <MudPaper Outlined="true" Class="pa-3">
+                <MudStack Row="true" Wrap="Wrap.Wrap" AlignItems="AlignItems.Center" Spacing="2">
+                    <MudSelect T="long"
+                               @bind-Value="_originVersion"
+                               Label="@L["Versions:Compare:Origin"]"
+                               Variant="Variant.Outlined"
+                               Margin="Margin.Dense"
+                               Dense="true"
+                               Class="configuration-version-select">
+                        <MudSelectItem T="long" Value="0">@L["Versions:Compare:SelectVersion"]</MudSelectItem>
+                        @foreach (var version in _versions)
+                        {
+                            <MudSelectItem T="long" Value="@version.Version">@VersionText(version)</MudSelectItem>
+                        }
+                    </MudSelect>
+                    <MudSelect T="long"
+                               @bind-Value="_targetVersion"
+                               Label="@L["Versions:Compare:Target"]"
+                               Variant="Variant.Outlined"
+                               Margin="Margin.Dense"
+                               Dense="true"
+                               Class="configuration-version-select">
+                        <MudSelectItem T="long" Value="0">@L["Versions:Compare:SelectVersion"]</MudSelectItem>
+                        @foreach (var version in _versions)
+                        {
+                            <MudSelectItem T="long" Value="@version.Version">@VersionText(version)</MudSelectItem>
+                        }
+                    </MudSelect>
+                    <MudButton Variant="Variant.Filled"
+                               Color="Color.Primary"
+                               StartIcon="@Icons.Material.Filled.CompareArrows"
+                               Disabled="@(!CanCompare)"
+                               OnClick="CompareSelectedAsync">
+                        @L["Versions:Compare:Action"]
+                    </MudButton>
+                </MudStack>
+            </MudPaper>
+
+            @if (_loading)
+            {
+                <MudProgressLinear Indeterminate="true" />
+            }
+            else if (_versions.Count == 0)
+            {
+                <MudAlert Severity="Severity.Info">@L["Versions:Empty"]</MudAlert>
+            }
+            else
+            {
+                <MudTable T="ConfigurationUnifiedVersionSummary" Items="@_versions" Dense="true" Hover="true" Elevation="0" Class="configuration-versions-table">
+                    <HeaderContent>
+                        <MudTh>@L["Versions:Columns:Version"]</MudTh>
+                        <MudTh>@L["History:Columns:Time"]</MudTh>
+                        <MudTh>@L["Versions:Columns:Definitions"]</MudTh>
+                        <MudTh>@L["Group:Label"]</MudTh>
+                        <MudTh>@L["History:Dialog:Operator"]</MudTh>
+                        <MudTh>@L["Group:Reason"]</MudTh>
+                        <MudTh />
+                    </HeaderContent>
+                    <RowTemplate>
+                        <MudTd DataLabel="@L["Versions:Columns:Version"]">
+                            <MudChip T="long" Size="Size.Small" Color="Color.Primary" Variant="Variant.Outlined">@context.Version</MudChip>
+                        </MudTd>
+                        <MudTd DataLabel="@L["History:Columns:Time"]">@context.CreatedTime.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss")</MudTd>
+                        <MudTd DataLabel="@L["Versions:Columns:Definitions"]">
+                            <MudTooltip Text="@DefinitionTooltip(context)">
+                                <MudChip T="int" Size="Size.Small" Variant="Variant.Outlined">@context.DefinitionCount</MudChip>
+                            </MudTooltip>
+                        </MudTd>
+                        <MudTd DataLabel="@L["Group:Label"]">@ValueOrEmpty(context.MutationGroupId)</MudTd>
+                        <MudTd DataLabel="@L["History:Dialog:Operator"]">@OperatorText(context)</MudTd>
+                        <MudTd DataLabel="@L["Group:Reason"]">@ValueOrEmpty(context.Reason)</MudTd>
+                        <MudTd>
+                            <MudStack Row="true" Justify="Justify.FlexEnd" Spacing="1">
+                                <MudTooltip Text="@L["Versions:Actions:ComparePrevious"]">
+                                    <MudIconButton Icon="@Icons.Material.Filled.CompareArrows"
+                                                   Size="Size.Small"
+                                                   Disabled="@(PreviousVersion(context) is null)"
+                                                   OnClick="() => CompareWithPreviousAsync(context)" />
+                                </MudTooltip>
+                                <MudTooltip Text="@L["Rollback:Confirm"]">
+                                    <MudIconButton Icon="@Icons.Material.Filled.Restore"
+                                                   Size="Size.Small"
+                                                   Color="Color.Warning"
+                                                   OnClick="() => RollbackAsync(context)" />
+                                </MudTooltip>
+                            </MudStack>
+                        </MudTd>
+                    </RowTemplate>
+                </MudTable>
+            }
+        </MudStack>
+    </MudContainer>
+</div>
+
+@code {
+    public const string PAGE_URL = ConfigurationUiRoutes.VERSIONS_ROUTE;
+
+    private readonly List<ConfigurationUnifiedVersionSummary> _versions = [];
+    private long _originVersion;
+    private long _targetVersion;
+    private bool _loading = true;
+
+    private bool CanCompare => _originVersion > 0 && _targetVersion > 0 && _originVersion != _targetVersion;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        _loading = true;
+        var result = await Facade.GetUnifiedVersionsAsync(limit: 200);
+        if (result.IsFailed(out var error, out var versions))
+        {
+            Snackbar.Add($"{L["Common:Errors:LoadFailed"]}: {error.Message}", Severity.Error);
+            _versions.Clear();
+        }
+        else
+        {
+            _versions.Clear();
+            _versions.AddRange(versions);
+            if (_versions.Count > 0 && _targetVersion == 0)
+            {
+                _targetVersion = _versions[0].Version;
+            }
+
+            if (_versions.Count > 1 && _originVersion == 0)
+            {
+                _originVersion = _versions[1].Version;
+            }
+        }
+
+        _loading = false;
+    }
+
+    private async Task CompareSelectedAsync()
+    {
+        await ShowComparisonAsync(_originVersion, _targetVersion);
+    }
+
+    private async Task CompareWithPreviousAsync(ConfigurationUnifiedVersionSummary version)
+    {
+        var previous = PreviousVersion(version);
+        if (previous is null)
+        {
+            return;
+        }
+
+        await ShowComparisonAsync(previous.Version, version.Version);
+    }
+
+    private async Task ShowComparisonAsync(long originVersion, long targetVersion)
+    {
+        var result = await Facade.CompareUnifiedVersionsAsync(originVersion, targetVersion);
+        if (result.IsFailed(out var error, out var comparison))
+        {
+            Snackbar.Add($"{L["Common:Errors:LoadFailed"]}: {error.Message}", Severity.Error);
+            return;
+        }
+
+        var parameters = new DialogParameters<ConfigurationUnifiedVersionDiffDialog>();
+        parameters.Add(dialog => dialog.Comparison, comparison);
+        await DialogService.ShowAsync<ConfigurationUnifiedVersionDiffDialog>(
+            L["Versions:Diff:DialogTitle"],
+            parameters,
+            new DialogOptions
+            {
+                MaxWidth = MaxWidth.ExtraLarge,
+                FullWidth = true
+            });
+    }
+
+    private async Task RollbackAsync(ConfigurationUnifiedVersionSummary version)
+    {
+        var parameters = new DialogParameters<ConfigurationUnifiedVersionRollbackDialog>();
+        parameters.Add(dialog => dialog.Version, version.Version);
+        var dialog = await DialogService.ShowAsync<ConfigurationUnifiedVersionRollbackDialog>(
+            L["Versions:Rollback:Title", ConfigurationUnifiedVersionJsonFormatter.VersionLabel(version.Version)],
+            parameters,
+            new DialogOptions
+            {
+                MaxWidth = MaxWidth.Large,
+                FullWidth = true
+            });
+        var result = await dialog.Result;
+        if (result is { Canceled: false, Data: ConfigurationUnifiedVersionRollbackResult })
+        {
+            Snackbar.Add(L["Rollback:Success"], Severity.Success);
+            await LoadAsync();
+        }
+    }
+
+    private ConfigurationUnifiedVersionSummary? PreviousVersion(ConfigurationUnifiedVersionSummary version)
+    {
+        var index = _versions.FindIndex(candidate => candidate.Version == version.Version);
+        return index >= 0 && index + 1 < _versions.Count ? _versions[index + 1] : null;
+    }
+
+    private string VersionText(ConfigurationUnifiedVersionSummary version)
+    {
+        return $"{ConfigurationUnifiedVersionJsonFormatter.VersionLabel(version.Version)} · {version.CreatedTime.ToLocalTime():yyyy-MM-dd HH:mm:ss}";
+    }
+
+    private string DefinitionTooltip(ConfigurationUnifiedVersionSummary version)
+    {
+        return version.DefinitionKeys.Count == 0
+            ? L["Versions:Definitions:Empty"]
+            : string.Join(Environment.NewLine, version.DefinitionKeys);
+    }
+
+    private string OperatorText(ConfigurationUnifiedVersionSummary version)
+    {
+        return !string.IsNullOrWhiteSpace(version.ModifierName)
+            ? version.ModifierName!
+            : !string.IsNullOrWhiteSpace(version.ModifierId)
+                ? version.ModifierId!
+                : L["Common:States:Empty"];
+    }
+
+    private string ValueOrEmpty(string? value)
+    {
+        return string.IsNullOrWhiteSpace(value) ? L["Common:States:Empty"] : value;
+    }
+}

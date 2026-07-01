@@ -27,6 +27,11 @@ public sealed class ConfigurationDbContext(
 
     public DbSet<ConfigurationMutationGroupEntity> ConfigurationMutationGroups => Set<ConfigurationMutationGroupEntity>();
 
+    public DbSet<ConfigurationUnifiedVersionEntity> ConfigurationUnifiedVersions => Set<ConfigurationUnifiedVersionEntity>();
+
+    public DbSet<ConfigurationUnifiedVersionDocumentEntity> ConfigurationUnifiedVersionDocuments =>
+        Set<ConfigurationUnifiedVersionDocumentEntity>();
+
     internal DbSet<ConfigurationSchemaMarkerEntity> ConfigurationSchemaMarkers => Set<ConfigurationSchemaMarkerEntity>();
 
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
@@ -106,6 +111,19 @@ public sealed class ConfigurationDbContext(
             .HasColumnType(timeColumnType);
         modelBuilder.Entity<ConfigurationMutationGroupEntity>()
             .HasIndex(x => x.CreatedTime);
+        modelBuilder.Entity<ConfigurationUnifiedVersionEntity>().HasKey(x => x.Version);
+        modelBuilder.Entity<ConfigurationUnifiedVersionEntity>()
+            .Property(x => x.CreatedTime)
+            .HasPrecision(6)
+            .HasColumnType(timeColumnType);
+        modelBuilder.Entity<ConfigurationUnifiedVersionEntity>()
+            .HasIndex(x => x.CreatedTime);
+        modelBuilder.Entity<ConfigurationUnifiedVersionEntity>()
+            .HasIndex(x => x.MutationGroupId);
+        modelBuilder.Entity<ConfigurationUnifiedVersionDocumentEntity>()
+            .HasKey(x => new { x.Version, x.DefinitionKey });
+        modelBuilder.Entity<ConfigurationUnifiedVersionDocumentEntity>()
+            .HasIndex(x => x.DefinitionKey);
     }
 
     private static bool UsesTimestampWithTimeZone(string? providerName)

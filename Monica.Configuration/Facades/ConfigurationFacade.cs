@@ -22,6 +22,7 @@ public sealed class ConfigurationFacade(
     IConfigurationHistoryService historyService,
     IConfigurationMutationGroupService mutationGroupService,
     IConfigurationRollbackService rollbackService,
+    IConfigurationUnifiedVersionService unifiedVersionService,
     IConfigurationEffectiveValueStore effectiveValueStore,
     IConfigurationHistoryStore historyStore,
     IConfigurationMetadataStore metadataStore,
@@ -499,6 +500,118 @@ public sealed class ConfigurationFacade(
         catch (Exception ex)
         {
             return Res.Fail($"Failed to query configuration value history: {ex.GetMessageRecursively()}");
+        }
+    }
+
+    /// <summary>
+    /// Lists unified configuration versions.
+    /// </summary>
+    /// <param name="from">Earliest creation time to include.</param>
+    /// <param name="to">Latest creation time to include.</param>
+    /// <param name="definitionKey">Definition key filter.</param>
+    /// <param name="limit">Maximum number of versions to return.</param>
+    /// <returns>The matching unified version summaries.</returns>
+    public async Task<Res<IReadOnlyList<ConfigurationUnifiedVersionSummary>>> GetUnifiedVersionsAsync(
+        DateTimeOffset? from = null,
+        DateTimeOffset? to = null,
+        string? definitionKey = null,
+        int limit = 100)
+    {
+        try
+        {
+            return Res.Ok(await unifiedVersionService.ListVersionsAsync(
+                from,
+                to,
+                definitionKey,
+                limit,
+                CancellationToken.None));
+        }
+        catch (Exception ex)
+        {
+            return Res.Fail($"Failed to get unified configuration versions: {ex.GetMessageRecursively()}");
+        }
+    }
+
+    /// <summary>
+    /// Gets one unified configuration version snapshot.
+    /// </summary>
+    /// <param name="version">The version number.</param>
+    /// <returns>The version snapshot.</returns>
+    public async Task<Res<ConfigurationUnifiedVersionSnapshot>> GetUnifiedVersionAsync(long version)
+    {
+        try
+        {
+            var snapshot = await unifiedVersionService.GetVersionAsync(version, CancellationToken.None);
+            return snapshot is null
+                ? Res.Fail($"Unified configuration version '{version}' was not found.")
+                : Res.Ok(snapshot);
+        }
+        catch (Exception ex)
+        {
+            return Res.Fail($"Failed to get unified configuration version: {ex.GetMessageRecursively()}");
+        }
+    }
+
+    /// <summary>
+    /// Compares two unified configuration versions.
+    /// </summary>
+    /// <param name="originVersion">The origin version number.</param>
+    /// <param name="targetVersion">The target version number.</param>
+    /// <returns>The version comparison.</returns>
+    public async Task<Res<ConfigurationUnifiedVersionComparison>> CompareUnifiedVersionsAsync(
+        long originVersion,
+        long targetVersion)
+    {
+        try
+        {
+            return Res.Ok(await unifiedVersionService.CompareVersionsAsync(
+                originVersion,
+                targetVersion,
+                CancellationToken.None));
+        }
+        catch (Exception ex)
+        {
+            return Res.Fail($"Failed to compare unified configuration versions: {ex.GetMessageRecursively()}");
+        }
+    }
+
+    /// <summary>
+    /// Previews applying one unified configuration version to current sources.
+    /// </summary>
+    /// <param name="version">The version number.</param>
+    /// <returns>The apply preview.</returns>
+    public async Task<Res<ConfigurationUnifiedVersionApplyPreview>> PreviewUnifiedVersionRollbackAsync(long version)
+    {
+        try
+        {
+            return Res.Ok(await unifiedVersionService.PreviewRollbackAsync(version, CancellationToken.None));
+        }
+        catch (Exception ex)
+        {
+            return Res.Fail($"Failed to preview unified configuration version rollback: {ex.GetMessageRecursively()}");
+        }
+    }
+
+    /// <summary>
+    /// Applies the captured definition values from one unified configuration version.
+    /// </summary>
+    /// <param name="version">The version number.</param>
+    /// <param name="reason">Optional rollback reason.</param>
+    /// <returns>The rollback result.</returns>
+    public async Task<Res<ConfigurationUnifiedVersionRollbackResult>> RollbackUnifiedVersionAsync(
+        long version,
+        string? reason = null)
+    {
+        try
+        {
+            return Res.Ok(await unifiedVersionService.RollbackToVersionAsync(
+                version,
+                reason,
+                CancellationToken.None));
+        }
+        catch (Exception ex)
+        {
+            return Res.Fail($"Failed to roll back unified configuration version: {ex.GetMessageRecursively()}");
         }
     }
 

@@ -9,6 +9,9 @@
     "ConfigurationHistory": {
       "Title": "Configuration History"
     },
+    "ConfigurationVersions": {
+      "Title": "Configuration Versions"
+    },
     "ConfigurationDebug": {
       "Title": "Configuration Debug"
     },
@@ -258,6 +261,53 @@
     "PreviewTitle": "Change preview",
     "Confirm": "Roll back",
     "Success": "Rollback completed."
+  },
+  "Versions": {
+    "Subtitle": "Compare complete managed definition snapshots and restore a selected version.",
+    "Empty": "No unified configuration versions were found.",
+    "Compare": {
+      "Origin": "Origin version",
+      "Target": "Target version",
+      "SelectVersion": "Select version",
+      "Action": "Compare"
+    },
+    "Columns": {
+      "Version": "Version",
+      "Definitions": "Definitions"
+    },
+    "Definitions": {
+      "Empty": "No definitions were captured."
+    },
+    "Actions": {
+      "ComparePrevious": "Compare with previous version"
+    },
+    "Diff": {
+      "DialogTitle": "Version Comparison",
+      "Title": "{0} -> {1}",
+      "ChangedDefinitions": "{0} changed definitions",
+      "NoChanges": "No definition values changed between these versions.",
+      "Kinds": {
+        "Added": "Added",
+        "Removed": "Removed",
+        "Modified": "Modified"
+      }
+    },
+    "Rollback": {
+      "Title": "Roll Back {0}",
+      "Ready": "This version can be restored. Review the writable targets before applying.",
+      "Blocked": "This version cannot be fully restored because one or more definitions are blocked.",
+      "TargetSource": "Target source",
+      "Diagnostic": "Diagnostic",
+      "NoTarget": "No writable target",
+      "Apply": "Roll back version",
+      "Statuses": {
+        "Ready": "Ready",
+        "MissingDefinition": "Missing definition",
+        "SchemaMismatch": "Schema mismatch",
+        "ReadOnlyOverride": "Read-only override",
+        "UnsupportedSource": "Unsupported source"
+      }
+    }
   },
   "Debug": {
     "Subtitle": "View the current Microsoft configuration debug output.",
