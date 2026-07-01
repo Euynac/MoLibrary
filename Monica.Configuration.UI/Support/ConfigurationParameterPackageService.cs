@@ -56,11 +56,13 @@ internal sealed class ConfigurationParameterPackageService(
     /// <param name="document">The import document.</param>
     /// <param name="pendingChanges">Existing pending changes that should remain outside analyzed scopes.</param>
     /// <param name="fileName">The uploaded file name.</param>
+    /// <param name="progress">Optional progress sink for reporting import analysis stages and discovered counts.</param>
     /// <returns>The import report.</returns>
     public async Task<ConfigurationImportReport> AnalyzeImportAsync(
         ConfigurationExportDocument document,
         IReadOnlyList<PendingChange> pendingChanges,
-        string? fileName)
+        string? fileName,
+        IProgress<ConfigurationImportProgress>? progress = null)
     {
         var diagnostics = new List<ConfigurationImportDiagnostic>();
         if (document.FormatVersion != 1)
@@ -72,9 +74,14 @@ internal sealed class ConfigurationParameterPackageService(
             });
         }
 
-        var definitions = await LoadDefinitionsAsync();
+        var totalPackageDefinitions = document.Definitions.Count;
+        var definitions = await LoadDefinitionsAsync(progress, totalPackageDefinitions);
         var definitionsByKey = definitions.ToDictionary(definition => definition.DefinitionKey, StringComparer.OrdinalIgnoreCase);
         var drafts = new List<ConfigurationJsonDraftResult>();
+        var processedPackageDefinitions = 0;
+        var changeCount = 0;
+        var validationIssueCount = 0;
+        var diagnosticCount = diagnostics.Count;
 
         foreach (var exportedDefinition in document.Definitions)
         {
@@ -86,8 +93,31 @@ internal sealed class ConfigurationParameterPackageService(
                     DefinitionKey = exportedDefinition.DefinitionKey,
                     Message = localizer["ImportExport:Diagnostics:UnknownDefinition", exportedDefinition.DefinitionKey]
                 });
+                diagnosticCount++;
+                processedPackageDefinitions++;
+                ReportAnalyzeProgress(
+                    progress,
+                    definitions.Count,
+                    totalPackageDefinitions,
+                    processedPackageDefinitions,
+                    exportedDefinition.DisplayName,
+                    exportedDefinition.DefinitionKey,
+                    changeCount,
+                    validationIssueCount,
+                    diagnosticCount);
                 continue;
             }
+
+            ReportAnalyzeProgress(
+                progress,
+                definitions.Count,
+                totalPackageDefinitions,
+                processedPackageDefinitions,
+                definition.DisplayName,
+                definition.DefinitionKey,
+                changeCount,
+                validationIssueCount,
+                diagnosticCount);
 
             var definitionDiagnostics = new List<ConfigurationImportDiagnostic>();
             if (exportedDefinition.SchemaVersion != definition.SchemaVersion)
@@ -134,6 +164,20 @@ internal sealed class ConfigurationParameterPackageService(
             {
                 Diagnostics = definitionDiagnostics.Concat(draft.Diagnostics).ToArray()
             });
+            changeCount += draft.Changes.Count;
+            validationIssueCount += draft.ValidationIssues.Count;
+            diagnosticCount += definitionDiagnostics.Count + draft.Diagnostics.Count;
+            processedPackageDefinitions++;
+            ReportAnalyzeProgress(
+                progress,
+                definitions.Count,
+                totalPackageDefinitions,
+                processedPackageDefinitions,
+                definition.DisplayName,
+                definition.DefinitionKey,
+                changeCount,
+                validationIssueCount,
+                diagnosticCount);
         }
 
         return new ConfigurationImportReport
@@ -165,8 +209,12 @@ internal sealed class ConfigurationParameterPackageService(
     /// <summary>
     /// Loads all managed configuration definitions.
     /// </summary>
+    /// <param name="progress">Optional progress sink for reporting definition loading progress.</param>
+    /// <param name="totalPackageDefinitionCount">The imported package definition count that will be analyzed after loading completes.</param>
     /// <returns>Definitions ordered by display name.</returns>
-    public async Task<IReadOnlyList<ConfigurationDefinition>> LoadDefinitionsAsync()
+    public async Task<IReadOnlyList<ConfigurationDefinition>> LoadDefinitionsAsync(
+        IProgress<ConfigurationImportProgress>? progress = null,
+        int totalPackageDefinitionCount = 0)
     {
         var summariesResult = await facade.GetDefinitionsAsync();
         if (summariesResult.IsFailed(out var summaryError, out var summaries))
@@ -175,12 +223,69 @@ internal sealed class ConfigurationParameterPackageService(
         }
 
         var definitions = new List<ConfigurationDefinition>();
-        foreach (var summary in summaries.OrderBy(summary => summary.DisplayName, StringComparer.OrdinalIgnoreCase))
+        var orderedSummaries = summaries
+            .OrderBy(summary => summary.DisplayName, StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+        ReportLoadDefinitionsProgress(progress, 0, orderedSummaries.Length, totalPackageDefinitionCount);
+
+        foreach (var summary in orderedSummaries)
         {
             definitions.Add(await LoadDefinitionAsync(summary.DefinitionKey));
+            ReportLoadDefinitionsProgress(
+                progress,
+                definitions.Count,
+                orderedSummaries.Length,
+                totalPackageDefinitionCount,
+                summary.DisplayName,
+                summary.DefinitionKey);
         }
 
         return definitions;
+    }
+
+    private static void ReportLoadDefinitionsProgress(
+        IProgress<ConfigurationImportProgress>? progress,
+        int loadedDefinitionCount,
+        int totalDefinitionCount,
+        int totalPackageDefinitionCount,
+        string? currentDefinitionDisplayName = null,
+        string? currentDefinitionKey = null)
+    {
+        progress?.Report(new ConfigurationImportProgress
+        {
+            Stage = ConfigurationImportProgressStage.LoadingDefinitions,
+            LoadedDefinitionCount = loadedDefinitionCount,
+            TotalDefinitionCount = totalDefinitionCount,
+            TotalPackageDefinitionCount = totalPackageDefinitionCount,
+            CurrentDefinitionDisplayName = currentDefinitionDisplayName,
+            CurrentDefinitionKey = currentDefinitionKey
+        });
+    }
+
+    private static void ReportAnalyzeProgress(
+        IProgress<ConfigurationImportProgress>? progress,
+        int totalLoadedDefinitions,
+        int totalPackageDefinitions,
+        int processedPackageDefinitions,
+        string? currentDefinitionDisplayName,
+        string? currentDefinitionKey,
+        int changeCount,
+        int validationIssueCount,
+        int diagnosticCount)
+    {
+        progress?.Report(new ConfigurationImportProgress
+        {
+            Stage = ConfigurationImportProgressStage.AnalyzingDefinitions,
+            LoadedDefinitionCount = totalLoadedDefinitions,
+            TotalDefinitionCount = totalLoadedDefinitions,
+            ProcessedPackageDefinitionCount = processedPackageDefinitions,
+            TotalPackageDefinitionCount = totalPackageDefinitions,
+            CurrentDefinitionDisplayName = currentDefinitionDisplayName,
+            CurrentDefinitionKey = currentDefinitionKey,
+            ChangeCount = changeCount,
+            ValidationIssueCount = validationIssueCount,
+            DiagnosticCount = diagnosticCount
+        });
     }
 
     private string HashForDisplay(string? schemaHash)

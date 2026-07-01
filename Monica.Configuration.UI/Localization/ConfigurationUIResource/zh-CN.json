@@ -442,7 +442,13 @@
       "Upload": "点击上传配置包",
       "InvalidPackage": "选择的文件不是有效的 Monica 配置包。",
       "PackageMeta": "导出时间 {0}；导出人 {1}；系统版本 {2}。",
-      "Staged": "已将 {0} 个修改和 {1} 个验证异常导入暂存区。"
+      "Staged": "已将 {0} 个修改和 {1} 个验证异常导入暂存区。",
+      "ProgressReadingPackage": "正在读取配置包...",
+      "ProgressLoadingDefinitions": "正在加载当前配置定义...",
+      "ProgressAnalyzingDefinitions": "正在分析导入配置定义...",
+      "ProgressPercent": "{0}%",
+      "ProgressDefinitions": "已加载当前定义 {0}/{1}；已分析导入定义 {2}/{3}",
+      "ProgressCurrentDefinition": "当前：{0}（{1}）"
     },
     "JsonEditor": {
       "Title": "编辑 JSON",

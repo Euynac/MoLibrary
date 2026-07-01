@@ -442,7 +442,13 @@
       "Upload": "Click to upload a configuration package",
       "InvalidPackage": "The selected file is not a valid Monica configuration package.",
       "PackageMeta": "Exported at {0}; by {1}; system version {2}.",
-      "Staged": "Imported {0} changes and {1} validation issues into the staging area."
+      "Staged": "Imported {0} changes and {1} validation issues into the staging area.",
+      "ProgressReadingPackage": "Reading package...",
+      "ProgressLoadingDefinitions": "Loading current configuration definitions...",
+      "ProgressAnalyzingDefinitions": "Analyzing imported definitions...",
+      "ProgressPercent": "{0}%",
+      "ProgressDefinitions": "Loaded {0}/{1} current definitions; analyzed {2}/{3} imported definitions",
+      "ProgressCurrentDefinition": "Current: {0} ({1})"
     },
     "JsonEditor": {
       "Title": "Edit JSON",

@@ -32,7 +32,7 @@
 
             @if (_loading)
             {
-                <MudProgressLinear Indeterminate="true" />
+                <ConfigurationImportProgressPanel Progress="@_progress" />
             }
 
             @if (!string.IsNullOrWhiteSpace(_error))
@@ -147,6 +147,7 @@
     [Parameter] public IReadOnlyList<PendingChange> PendingChanges { get; set; } = [];
 
     private ConfigurationImportReport? _report;
+    private ConfigurationImportProgress _progress = new() { Stage = ConfigurationImportProgressStage.ReadingPackage };
     private bool _loading;
     private string? _error;
 
@@ -160,6 +161,7 @@
         _loading = true;
         _error = null;
         _report = null;
+        ReportProgress(new ConfigurationImportProgress { Stage = ConfigurationImportProgressStage.ReadingPackage });
         try
         {
             await using var stream = file.OpenReadStream(MAX_IMPORT_BYTES);
@@ -170,7 +172,8 @@
                 return;
             }
 
-            _report = await PackageService.AnalyzeImportAsync(document, PendingChanges, file.Name);
+            var progress = new Progress<ConfigurationImportProgress>(ReportProgress);
+            _report = await PackageService.AnalyzeImportAsync(document, PendingChanges, file.Name, progress);
         }
         catch (Exception ex)
         {
@@ -180,6 +183,12 @@
         {
             _loading = false;
         }
+    }
+
+    private void ReportProgress(ConfigurationImportProgress progress)
+    {
+        _progress = progress;
+        _ = InvokeAsync(StateHasChanged);
     }
 
     private void Apply()
