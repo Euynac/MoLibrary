@@ -1,5 +1,4 @@
 .configuration-import-dialog-content {
-    max-height: min(78vh, 860px);
     min-height: 0;
     overflow-x: hidden;
     overflow-y: auto;
@@ -17,7 +16,6 @@
 }
 
 .configuration-import-dialog-content ::deep .mud-table-container {
-    max-height: min(52vh, 560px);
     overflow-y: auto;
 }
 

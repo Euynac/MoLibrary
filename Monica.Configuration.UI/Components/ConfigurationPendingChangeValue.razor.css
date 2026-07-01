@@ -1,0 +1,20 @@
+.configuration-pending-change-value {
+    display: inline-block;
+    max-width: 100%;
+    padding: 0.25rem 0.5rem;
+    border-radius: 0;
+    font-family: ui-monospace, SFMono-Regular, Consolas, "Liberation Mono", monospace;
+    line-height: 1.45;
+    overflow-wrap: anywhere;
+    white-space: pre-wrap;
+}
+
+.configuration-pending-change-value-old {
+    background-color: var(--mud-palette-background-gray);
+    color: var(--mud-palette-text-secondary);
+}
+
+.configuration-pending-change-value-new {
+    background-color: var(--mo-color-state-warning-soft-background);
+    color: var(--mud-palette-text-primary);
+}

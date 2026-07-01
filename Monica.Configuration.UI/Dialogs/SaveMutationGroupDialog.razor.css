@@ -3,8 +3,6 @@
     flex-direction: column;
     gap: 1rem;
     min-height: 0;
-    height: min(76dvh, 760px);
-    max-height: calc(100dvh - 10rem);
     overflow: hidden;
 }
 
@@ -91,10 +89,4 @@
 .configuration-save-group-preview ::deep .configuration-change-actions {
     justify-content: center;
     width: 100%;
-}
-
-@media (max-height: 720px) {
-    .configuration-save-group-dialog-body {
-        max-height: calc(100dvh - 7rem);
-    }
 }

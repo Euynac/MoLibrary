@@ -1,0 +1,26 @@
+@using Monica.Configuration.UI.Localization
+@inject IStringLocalizer<ConfigurationUIResource> L
+
+@if (Change.TargetKind == ConfigurationMutationTargetKind.ExternalConfigurationSource)
+{
+    <MudTooltip Text="@ExternalTooltip">
+        <MudChip T="string" Size="Size.Small" Color="Color.Warning" Variant="Variant.Outlined">
+            @(Change.SourceDisplayName ?? L["History:Targets:ExternalShort"])
+        </MudChip>
+    </MudTooltip>
+}
+else
+{
+    <MudChip T="string" Size="Size.Small" Color="Color.Info" Variant="Variant.Outlined">
+        @L["History:Targets:MonicaShort"]
+    </MudChip>
+}
+
+@code {
+    [Parameter, EditorRequired] public PendingChange Change { get; set; } = null!;
+
+    private string ExternalTooltip => L["History:Targets:ExternalTooltip",
+        Change.SourceDisplayName ?? L["History:Targets:External"],
+        Change.SourceConfigurationPath ?? Change.LogicalPath.ToCanonicalString(),
+        Change.SourcePhysicalPath ?? Change.SourceProviderType ?? L["Common:States:Empty"]];
+}

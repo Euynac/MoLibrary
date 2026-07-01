@@ -46,6 +46,7 @@
                             @foreach (var definition in group.OrderBy(x => x.DisplayName, StringComparer.OrdinalIgnoreCase))
                             {
                                 var matches = GetNodeMatches(definition);
+                                var pendingCount = GetPendingCount(definition);
                                 <MudListItem T="ConfigurationDefinitionSummary"
                                              Value="@definition"
                                              Icon="@Icons.Material.Filled.Settings"
@@ -80,6 +81,18 @@
                                             <ConfigurationSchemaMetadataChip SchemaVersion="@definition.SchemaVersion"
                                                                              SchemaHash="@definition.SchemaHash"
                                                                              Placement="Placement.Right" />
+                                            @if (pendingCount > 0)
+                                            {
+                                                <MudTooltip Text="@L["State:Footer:PendingCount"]">
+                                                    <MudChip T="int"
+                                                             Size="Size.Small"
+                                                             Color="Color.Warning"
+                                                             Variant="Variant.Filled"
+                                                             Class="configuration-definition-pending-count">
+                                                        @pendingCount
+                                                    </MudChip>
+                                                </MudTooltip>
+                                            }
                                         </MudStack>
                                         <MudText Typo="Typo.caption" Color="Color.Secondary">
                                             <MudHighlighter Text="@GetOptionsTypeName(definition)" HighlightedTexts="@SearchTerms" />
@@ -172,6 +185,8 @@
     [Parameter] public EventCallback<ConfigurationNodeSearchMatch> NodeSearchMatchSelected { get; set; }
     [Parameter] public string SearchText { get; set; } = string.Empty;
     [Parameter] public EventCallback<string> SearchTextChanged { get; set; }
+    [Parameter] public IReadOnlyDictionary<string, int> PendingCountsByDefinition { get; set; } =
+        new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
     [Parameter] public int PendingCount { get; set; }
     [Parameter] public int ValidationIssueCount { get; set; }
     [Parameter] public EventCallback SaveGroup { get; set; }
@@ -268,6 +283,11 @@
     private IReadOnlyList<ConfigurationNodeSearchMatch> GetNodeMatches(ConfigurationDefinitionSummary definition)
     {
         return NodeSearchMatches.TryGetValue(definition.DefinitionKey, out var matches) ? matches : [];
+    }
+
+    private int GetPendingCount(ConfigurationDefinitionSummary definition)
+    {
+        return PendingCountsByDefinition.TryGetValue(definition.DefinitionKey, out var count) ? count : 0;
     }
 
     private static string GetOptionsTypeName(ConfigurationDefinitionSummary definition)

@@ -1,0 +1,27 @@
+@using Monica.Configuration.UI.Localization
+@inject IStringLocalizer<ConfigurationUIResource> L
+
+<span class="@CssClass">@DisplayValue</span>
+
+@code {
+    [Parameter, EditorRequired] public PendingChange Change { get; set; } = null!;
+    [Parameter] public string? Value { get; set; }
+    [Parameter] public bool IsNewValue { get; set; }
+
+    private string CssClass => IsNewValue
+        ? "configuration-pending-change-value configuration-pending-change-value-new"
+        : "configuration-pending-change-value configuration-pending-change-value-old";
+
+    private string DisplayValue
+    {
+        get
+        {
+            if (Change.IsSensitive)
+            {
+                return L["State:Value:Sensitive"];
+            }
+
+            return string.IsNullOrWhiteSpace(Value) ? L["Value:States:Empty"].Value : Value;
+        }
+    }
+}

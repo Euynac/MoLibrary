@@ -130,6 +130,10 @@
     min-width: 0;
 }
 
+.configuration-definition-pending-count {
+    flex: 0 0 auto;
+}
+
 .configuration-description-icon {
     display: inline-flex;
     flex: 0 0 auto;

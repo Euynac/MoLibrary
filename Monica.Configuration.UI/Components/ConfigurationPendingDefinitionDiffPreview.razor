@@ -43,6 +43,44 @@ else
                                 </MudChip>
                             }
                         </MudStack>
+                        @if (ShowChangeActions && group.Changes.Count > 0)
+                        {
+                            <MudStack Spacing="1" Class="configuration-definition-diff-change-actions">
+                                @foreach (var change in group.Changes)
+                                {
+                                    <MudPaper Outlined="true" Class="pa-2 configuration-definition-diff-change-action">
+                                        <MudStack Row="true" Wrap="Wrap.Wrap" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Spacing="1">
+                                            <MudStack Row="true" Wrap="Wrap.Wrap" AlignItems="AlignItems.Center" Spacing="1" Class="configuration-definition-diff-change-summary">
+                                                <MudChip T="string" Size="Size.Small" Color="@PatchColor(change.MutationKind)" Variant="Variant.Outlined">
+                                                    @change.MutationKind
+                                                </MudChip>
+                                                <MudText Typo="Typo.caption"><code>@change.LogicalPath.ToCanonicalString()</code></MudText>
+                                            </MudStack>
+                                            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1" Class="configuration-definition-diff-change-action-buttons">
+                                                @if (JumpChangeRequested.HasDelegate)
+                                                {
+                                                    <MudTooltip Text="@L["Dialogs:SaveGroup:Actions:JumpToChange"]">
+                                                        <MudIconButton Icon="@Icons.Material.Filled.NearMe"
+                                                                       Size="Size.Small"
+                                                                       Color="Color.Primary"
+                                                                       OnClick="@(() => JumpChangeRequested.InvokeAsync(change))" />
+                                                    </MudTooltip>
+                                                }
+                                                @if (UndoRequested.HasDelegate)
+                                                {
+                                                    <MudTooltip Text="@L["Dialogs:SaveGroup:Actions:UndoChange"]">
+                                                        <MudIconButton Icon="@Icons.Material.Filled.Undo"
+                                                                       Size="Size.Small"
+                                                                       Color="Color.Warning"
+                                                                       OnClick="@(() => UndoRequested.InvokeAsync(change))" />
+                                                    </MudTooltip>
+                                                }
+                                            </MudStack>
+                                        </MudStack>
+                                    </MudPaper>
+                                }
+                            </MudStack>
+                        }
                         <ConfigurationValidationIssueList Issues="@group.ValidationIssues"
                                                           ShowDefinition="false"
                                                           JumpRequested="JumpRequested" />
@@ -91,6 +129,10 @@ else
     [Parameter] public IReadOnlyList<PendingChange> Changes { get; set; } = [];
     [Parameter] public IReadOnlyList<ConfigurationValidationIssue> ValidationIssues { get; set; } = [];
     [Parameter] public EventCallback<ConfigurationValidationIssue> JumpRequested { get; set; }
+    [Parameter] public EventCallback<PendingChange> JumpChangeRequested { get; set; }
+    [Parameter] public EventCallback<PendingChange> UndoRequested { get; set; }
+
+    private bool ShowChangeActions => JumpChangeRequested.HasDelegate || UndoRequested.HasDelegate;
 
     protected override async Task OnParametersSetAsync()
     {
@@ -242,6 +284,15 @@ else
     private string FormatForDisplay(string json, ConfigurationDefinition definition)
     {
         return ConfigurationJsonDisplayFormatter.Format(json, definition.Root, L["State:Value:Sensitive"].Value);
+    }
+
+    private static Color PatchColor(ConfigurationMutationKind kind)
+    {
+        return kind switch
+        {
+            ConfigurationMutationKind.Remove => Color.Error,
+            _ => Color.Info
+        };
     }
 
     private static string NormalizeJson(string json)

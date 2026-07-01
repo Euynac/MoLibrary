@@ -121,7 +121,9 @@ internal sealed class ConfigurationParameterPackageService(
                 EffectiveValue = effectiveValue,
                 ScalarEffectiveValues = scalarValues,
                 Json = json,
-                RedactedPaths = exportedDefinition.RedactedPaths.ToHashSet(StringComparer.Ordinal)
+                RedactedPaths = exportedDefinition.RedactedPaths.ToHashSet(StringComparer.Ordinal),
+                // Keep imported state at field granularity so the state page editors can reflect staged values.
+                CompactChanges = false
             });
 
             drafts.Add(draft with

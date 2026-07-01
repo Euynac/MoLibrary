@@ -88,18 +88,28 @@
 
                             <ConfigurationValidationIssueList Issues="@_report.ValidationIssues" ShowJump="false" />
 
-                            <MudTable Items="@_report.Changes" Dense="true" Hover="true">
+                            <MudTable T="PendingChange" Items="@_report.Changes" Dense="true" Hover="true">
                                 <HeaderContent>
                                     <MudTh>@L["State:Columns:Definition"]</MudTh>
                                     <MudTh>@L["State:Columns:Path"]</MudTh>
                                     <MudTh>@L["History:Columns:Target"]</MudTh>
                                     <MudTh>@L["History:Columns:Kind"]</MudTh>
+                                    <MudTh>@L["State:Columns:OldValue"]</MudTh>
+                                    <MudTh>@L["State:Columns:NewValue"]</MudTh>
                                 </HeaderContent>
                                 <RowTemplate>
                                     <MudTd DataLabel="@L["State:Columns:Definition"]">@context.DefinitionDisplayName</MudTd>
                                     <MudTd DataLabel="@L["State:Columns:Path"]"><code>@context.LogicalPath.ToCanonicalString()</code></MudTd>
-                                    <MudTd DataLabel="@L["History:Columns:Target"]">@TargetText(context)</MudTd>
+                                    <MudTd DataLabel="@L["History:Columns:Target"]">
+                                        <ConfigurationPendingChangeTargetChip Change="@context" />
+                                    </MudTd>
                                     <MudTd DataLabel="@L["History:Columns:Kind"]">@context.MutationKind</MudTd>
+                                    <MudTd DataLabel="@L["State:Columns:OldValue"]">
+                                        <ConfigurationPendingChangeValue Change="@context" Value="@context.OriginalDisplayValue" />
+                                    </MudTd>
+                                    <MudTd DataLabel="@L["State:Columns:NewValue"]">
+                                        <ConfigurationPendingChangeValue Change="@context" Value="@context.NewDisplayValue" IsNewValue="true" />
+                                    </MudTd>
                                 </RowTemplate>
                                 <NoRecordsContent>
                                     <MudAlert Severity="Severity.Info">@L["ImportExport:Report:NoChanges"]</MudAlert>
@@ -185,13 +195,6 @@
     private void Cancel()
     {
         MudDialog.Cancel();
-    }
-
-    private string TargetText(PendingChange change)
-    {
-        return change.TargetKind == ConfigurationMutationTargetKind.ExternalConfigurationSource
-            ? change.SourceDisplayName ?? L["History:Targets:ExternalShort"]
-            : L["History:Targets:MonicaShort"];
     }
 
     private static Severity DiagnosticSeverity(ConfigurationImportDiagnostic diagnostic)

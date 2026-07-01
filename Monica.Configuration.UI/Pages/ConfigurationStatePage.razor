@@ -55,6 +55,7 @@
                                                      NodeSearchMatchSelected="SelectSearchMatchAsync"
                                                      SearchText="@_searchText"
                                                      SearchTextChanged="OnSearchChanged"
+                                                     PendingCountsByDefinition="@PendingCountsByDefinition"
                                                      PendingCount="@_pendingCount"
                                                      ValidationIssueCount="@_validationIssueCount"
                                                      SaveGroup="OpenSaveGroupDialog"
@@ -256,6 +257,11 @@
         string.IsNullOrWhiteSpace(_searchText)
             ? new Dictionary<string, IReadOnlyList<ConfigurationNodeSearchMatch>>(StringComparer.OrdinalIgnoreCase)
             : BuildNodeSearchMatches();
+
+    private IReadOnlyDictionary<string, int> PendingCountsByDefinition =>
+        StateStore.GetPending()
+            .GroupBy(change => change.DefinitionKey, StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(group => group.Key, group => group.Count(), StringComparer.OrdinalIgnoreCase);
 
     private IReadOnlyList<ConfigurationSectionItem> SectionItems =>
         _selectedDefinition is null
@@ -605,7 +611,7 @@
         parameters.Add(dialog => dialog.UndoRequested, EventCallback.Factory.Create<PendingChange>(this, UndoPendingChangeAsync));
         var dialog = await DialogService.ShowAsync<SaveMutationGroupDialog>(L["Dialogs:SaveGroup:Title"], parameters, new DialogOptions
         {
-            MaxWidth = MaxWidth.ExtraLarge,
+            MaxWidth = MaxWidth.False,
             FullWidth = true
         });
         var result = await dialog.Result;
@@ -652,7 +658,7 @@
         parameters.Add(dialog => dialog.PendingChanges, StateStore.GetPending());
         var dialog = await DialogService.ShowAsync<ConfigurationImportDialog>(L["ImportExport:Import:Title"], parameters, new DialogOptions
         {
-            MaxWidth = MaxWidth.ExtraLarge,
+            MaxWidth = MaxWidth.False,
             FullWidth = true
         });
         var result = await dialog.Result;

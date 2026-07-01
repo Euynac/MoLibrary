@@ -9,3 +9,23 @@
 .configuration-definition-diff-preview ::deep .diff-viewer {
     font-size: 0.8125rem;
 }
+
+.configuration-definition-diff-change-actions {
+    min-width: 0;
+}
+
+.configuration-definition-diff-change-action {
+    min-width: 0;
+}
+
+.configuration-definition-diff-change-summary {
+    min-width: 0;
+}
+
+.configuration-definition-diff-change-summary code {
+    overflow-wrap: anywhere;
+}
+
+.configuration-definition-diff-change-action-buttons {
+    flex: 0 0 auto;
+}

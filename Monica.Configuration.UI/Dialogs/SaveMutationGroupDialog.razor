@@ -41,9 +41,11 @@
             <div class="configuration-save-group-preview">
                 <MudTabs Rounded="true" ApplyEffectsToContainer="true" TabPanelsClass="pa-3">
                     <MudTabPanel Text="@L["Dialogs:SaveGroup:Tabs:DefinitionDiff"]" Icon="@Icons.Material.Filled.Difference">
-                        <ConfigurationPendingDefinitionDiffPreview Changes="@Changes"
+                        <ConfigurationPendingDefinitionDiffPreview Changes="@_changes"
                                                                    ValidationIssues="@ValidationIssues"
-                                                                   JumpRequested="JumpToIssue" />
+                                                                   JumpRequested="JumpToIssue"
+                                                                   JumpChangeRequested="JumpToChange"
+                                                                   UndoRequested="UndoChangeAsync" />
                     </MudTabPanel>
                     <MudTabPanel Text="@L["Dialogs:SaveGroup:Tabs:ChangeList"]" Icon="@Icons.Material.Filled.List">
                         <MudStack Spacing="3">
@@ -75,10 +77,16 @@
                                     <RowTemplate>
                                         <MudTd DataLabel="@L["State:Columns:Definition"]">@context.DefinitionDisplayName</MudTd>
                                         <MudTd DataLabel="@L["State:Columns:Path"]">@context.LogicalPath.ToCanonicalString()</MudTd>
-                                        <MudTd DataLabel="@L["History:Columns:Target"]">@TargetChip(context)</MudTd>
+                                        <MudTd DataLabel="@L["History:Columns:Target"]">
+                                            <ConfigurationPendingChangeTargetChip Change="@context" />
+                                        </MudTd>
                                         <MudTd DataLabel="@L["History:Columns:Kind"]">@context.MutationKind</MudTd>
-                                        <MudTd DataLabel="@L["State:Columns:OldValue"]">@DisplayValue(context, context.OriginalDisplayValue)</MudTd>
-                                        <MudTd DataLabel="@L["State:Columns:NewValue"]">@DisplayValue(context, context.NewDisplayValue)</MudTd>
+                                        <MudTd DataLabel="@L["State:Columns:OldValue"]">
+                                            <ConfigurationPendingChangeValue Change="@context" Value="@context.OriginalDisplayValue" />
+                                        </MudTd>
+                                        <MudTd DataLabel="@L["State:Columns:NewValue"]">
+                                            <ConfigurationPendingChangeValue Change="@context" Value="@context.NewDisplayValue" IsNewValue="true" />
+                                        </MudTd>
                                         <MudTd DataLabel="@L["Dialogs:SaveGroup:ChangeListActions"]" Class="configuration-change-actions-cell">
                                             <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.Center" Spacing="1" Class="configuration-change-actions">
                                                 <MudTooltip Text="@L["Dialogs:SaveGroup:Actions:JumpToChange"]">
@@ -259,46 +267,6 @@
             }
         });
     }
-
-    private string DisplayValue(PendingChange change, string? value)
-    {
-        if (change.IsSensitive)
-        {
-            return L["State:Value:Sensitive"];
-        }
-
-        return string.IsNullOrWhiteSpace(value) ? L["Value:States:Empty"] : value;
-    }
-
-    private RenderFragment TargetChip(PendingChange change) => builder =>
-    {
-        if (change.TargetKind == ConfigurationMutationTargetKind.ExternalConfigurationSource)
-        {
-            builder.OpenComponent<MudTooltip>(0);
-            builder.AddAttribute(1, "Text", L["History:Targets:ExternalTooltip",
-                change.SourceDisplayName ?? L["History:Targets:External"],
-                change.SourceConfigurationPath ?? change.LogicalPath.ToCanonicalString(),
-                change.SourcePhysicalPath ?? change.SourceProviderType ?? L["Common:States:Empty"]]);
-            builder.AddAttribute(2, "ChildContent", (RenderFragment)(content =>
-            {
-                content.OpenComponent<MudChip<string>>(3);
-                content.AddAttribute(4, "Size", Size.Small);
-                content.AddAttribute(5, "Color", Color.Warning);
-                content.AddAttribute(6, "Variant", Variant.Outlined);
-                content.AddAttribute(7, "ChildContent", (RenderFragment)(chip => chip.AddContent(8, change.SourceDisplayName ?? L["History:Targets:ExternalShort"])));
-                content.CloseComponent();
-            }));
-            builder.CloseComponent();
-            return;
-        }
-
-        builder.OpenComponent<MudChip<string>>(9);
-        builder.AddAttribute(10, "Size", Size.Small);
-        builder.AddAttribute(11, "Color", Color.Info);
-        builder.AddAttribute(12, "Variant", Variant.Outlined);
-        builder.AddAttribute(13, "ChildContent", (RenderFragment)(content => content.AddContent(14, L["History:Targets:MonicaShort"])));
-        builder.CloseComponent();
-    };
 
     private void Cancel()
     {
