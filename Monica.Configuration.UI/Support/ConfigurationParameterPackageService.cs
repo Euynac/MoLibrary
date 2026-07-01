@@ -22,21 +22,41 @@ internal sealed class ConfigurationParameterPackageService(
     /// Creates a versioned export document from current runtime effective values.
     /// </summary>
     /// <param name="request">The export request.</param>
+    /// <param name="progress">Optional progress sink for reporting export packaging stages and discovered counts.</param>
     /// <returns>The export document.</returns>
-    public async Task<ConfigurationExportDocument> CreateExportAsync(ConfigurationExportRequest request)
+    public async Task<ConfigurationExportDocument> CreateExportAsync(
+        ConfigurationExportRequest request,
+        IProgress<ConfigurationPackageProgress>? progress = null)
     {
-        var definitions = await LoadDefinitionsAsync();
-        if (!string.IsNullOrWhiteSpace(request.DefinitionKey))
-        {
-            definitions = definitions
-                .Where(definition => string.Equals(definition.DefinitionKey, request.DefinitionKey, StringComparison.OrdinalIgnoreCase))
-                .ToArray();
-        }
+        var definitions = await LoadExportDefinitionsAsync(request, progress);
 
         var exportedDefinitions = new List<ConfigurationExportDefinition>();
+        var exportedDefinitionCount = 0;
+        var redactedPathCount = 0;
+        ReportExportProgress(progress, definitions.Count, definitions.Count, exportedDefinitionCount, redactedPathCount);
+
         foreach (var definition in definitions)
         {
-            exportedDefinitions.Add(await CreateExportDefinitionAsync(definition, request.IncludeSensitive));
+            ReportExportProgress(
+                progress,
+                definitions.Count,
+                definitions.Count,
+                exportedDefinitionCount,
+                redactedPathCount,
+                definition.DisplayName,
+                definition.DefinitionKey);
+            var exportedDefinition = await CreateExportDefinitionAsync(definition, request.IncludeSensitive);
+            exportedDefinitions.Add(exportedDefinition);
+            exportedDefinitionCount++;
+            redactedPathCount += exportedDefinition.RedactedPaths.Count;
+            ReportExportProgress(
+                progress,
+                definitions.Count,
+                definitions.Count,
+                exportedDefinitionCount,
+                redactedPathCount,
+                definition.DisplayName,
+                definition.DefinitionKey);
         }
 
         return new ConfigurationExportDocument
@@ -62,7 +82,7 @@ internal sealed class ConfigurationParameterPackageService(
         ConfigurationExportDocument document,
         IReadOnlyList<PendingChange> pendingChanges,
         string? fileName,
-        IProgress<ConfigurationImportProgress>? progress = null)
+        IProgress<ConfigurationPackageProgress>? progress = null)
     {
         var diagnostics = new List<ConfigurationImportDiagnostic>();
         if (document.FormatVersion != 1)
@@ -75,7 +95,10 @@ internal sealed class ConfigurationParameterPackageService(
         }
 
         var totalPackageDefinitions = document.Definitions.Count;
-        var definitions = await LoadDefinitionsAsync(progress, totalPackageDefinitions);
+        var definitions = await LoadDefinitionsAsync(
+            progress,
+            ConfigurationPackageProgressOperation.Import,
+            totalPackageDefinitions);
         var definitionsByKey = definitions.ToDictionary(definition => definition.DefinitionKey, StringComparer.OrdinalIgnoreCase);
         var drafts = new List<ConfigurationJsonDraftResult>();
         var processedPackageDefinitions = 0;
@@ -210,11 +233,13 @@ internal sealed class ConfigurationParameterPackageService(
     /// Loads all managed configuration definitions.
     /// </summary>
     /// <param name="progress">Optional progress sink for reporting definition loading progress.</param>
-    /// <param name="totalPackageDefinitionCount">The imported package definition count that will be analyzed after loading completes.</param>
+    /// <param name="operation">The package operation that owns the definition loading work.</param>
+    /// <param name="totalProcessDefinitionCount">The total number of definitions that will be processed after loading completes.</param>
     /// <returns>Definitions ordered by display name.</returns>
     public async Task<IReadOnlyList<ConfigurationDefinition>> LoadDefinitionsAsync(
-        IProgress<ConfigurationImportProgress>? progress = null,
-        int totalPackageDefinitionCount = 0)
+        IProgress<ConfigurationPackageProgress>? progress = null,
+        ConfigurationPackageProgressOperation operation = ConfigurationPackageProgressOperation.Import,
+        int? totalProcessDefinitionCount = null)
     {
         var summariesResult = await facade.GetDefinitionsAsync();
         if (summariesResult.IsFailed(out var summaryError, out var summaries))
@@ -226,16 +251,23 @@ internal sealed class ConfigurationParameterPackageService(
         var orderedSummaries = summaries
             .OrderBy(summary => summary.DisplayName, StringComparer.OrdinalIgnoreCase)
             .ToArray();
-        ReportLoadDefinitionsProgress(progress, 0, orderedSummaries.Length, totalPackageDefinitionCount);
+        var resolvedTotalProcessDefinitionCount = totalProcessDefinitionCount ?? orderedSummaries.Length;
+        ReportLoadDefinitionsProgress(
+            progress,
+            operation,
+            0,
+            orderedSummaries.Length,
+            resolvedTotalProcessDefinitionCount);
 
         foreach (var summary in orderedSummaries)
         {
             definitions.Add(await LoadDefinitionAsync(summary.DefinitionKey));
             ReportLoadDefinitionsProgress(
                 progress,
+                operation,
                 definitions.Count,
                 orderedSummaries.Length,
-                totalPackageDefinitionCount,
+                resolvedTotalProcessDefinitionCount,
                 summary.DisplayName,
                 summary.DefinitionKey);
         }
@@ -243,27 +275,56 @@ internal sealed class ConfigurationParameterPackageService(
         return definitions;
     }
 
+    private async Task<IReadOnlyList<ConfigurationDefinition>> LoadExportDefinitionsAsync(
+        ConfigurationExportRequest request,
+        IProgress<ConfigurationPackageProgress>? progress)
+    {
+        if (string.IsNullOrWhiteSpace(request.DefinitionKey))
+        {
+            return await LoadDefinitionsAsync(progress, ConfigurationPackageProgressOperation.Export);
+        }
+
+        ReportLoadDefinitionsProgress(
+            progress,
+            ConfigurationPackageProgressOperation.Export,
+            0,
+            1,
+            1);
+        var definition = await LoadDefinitionAsync(request.DefinitionKey);
+        ReportLoadDefinitionsProgress(
+            progress,
+            ConfigurationPackageProgressOperation.Export,
+            1,
+            1,
+            1,
+            definition.DisplayName,
+            definition.DefinitionKey);
+        return [definition];
+    }
+
     private static void ReportLoadDefinitionsProgress(
-        IProgress<ConfigurationImportProgress>? progress,
+        IProgress<ConfigurationPackageProgress>? progress,
+        ConfigurationPackageProgressOperation operation,
         int loadedDefinitionCount,
         int totalDefinitionCount,
-        int totalPackageDefinitionCount,
+        int totalProcessDefinitionCount,
         string? currentDefinitionDisplayName = null,
         string? currentDefinitionKey = null)
     {
-        progress?.Report(new ConfigurationImportProgress
+        progress?.Report(new ConfigurationPackageProgress
         {
-            Stage = ConfigurationImportProgressStage.LoadingDefinitions,
+            Operation = operation,
+            Stage = ConfigurationPackageProgressStage.LoadingDefinitions,
             LoadedDefinitionCount = loadedDefinitionCount,
             TotalDefinitionCount = totalDefinitionCount,
-            TotalPackageDefinitionCount = totalPackageDefinitionCount,
+            TotalProcessDefinitionCount = totalProcessDefinitionCount,
             CurrentDefinitionDisplayName = currentDefinitionDisplayName,
             CurrentDefinitionKey = currentDefinitionKey
         });
     }
 
     private static void ReportAnalyzeProgress(
-        IProgress<ConfigurationImportProgress>? progress,
+        IProgress<ConfigurationPackageProgress>? progress,
         int totalLoadedDefinitions,
         int totalPackageDefinitions,
         int processedPackageDefinitions,
@@ -273,18 +334,42 @@ internal sealed class ConfigurationParameterPackageService(
         int validationIssueCount,
         int diagnosticCount)
     {
-        progress?.Report(new ConfigurationImportProgress
+        progress?.Report(new ConfigurationPackageProgress
         {
-            Stage = ConfigurationImportProgressStage.AnalyzingDefinitions,
+            Operation = ConfigurationPackageProgressOperation.Import,
+            Stage = ConfigurationPackageProgressStage.AnalyzingDefinitions,
             LoadedDefinitionCount = totalLoadedDefinitions,
             TotalDefinitionCount = totalLoadedDefinitions,
-            ProcessedPackageDefinitionCount = processedPackageDefinitions,
-            TotalPackageDefinitionCount = totalPackageDefinitions,
+            ProcessedDefinitionCount = processedPackageDefinitions,
+            TotalProcessDefinitionCount = totalPackageDefinitions,
             CurrentDefinitionDisplayName = currentDefinitionDisplayName,
             CurrentDefinitionKey = currentDefinitionKey,
             ChangeCount = changeCount,
             ValidationIssueCount = validationIssueCount,
             DiagnosticCount = diagnosticCount
+        });
+    }
+
+    private static void ReportExportProgress(
+        IProgress<ConfigurationPackageProgress>? progress,
+        int totalLoadedDefinitions,
+        int totalExportDefinitions,
+        int exportedDefinitionCount,
+        int redactedPathCount,
+        string? currentDefinitionDisplayName = null,
+        string? currentDefinitionKey = null)
+    {
+        progress?.Report(new ConfigurationPackageProgress
+        {
+            Operation = ConfigurationPackageProgressOperation.Export,
+            Stage = ConfigurationPackageProgressStage.ExportingDefinitions,
+            LoadedDefinitionCount = totalLoadedDefinitions,
+            TotalDefinitionCount = totalLoadedDefinitions,
+            ProcessedDefinitionCount = exportedDefinitionCount,
+            TotalProcessDefinitionCount = totalExportDefinitions,
+            CurrentDefinitionDisplayName = currentDefinitionDisplayName,
+            CurrentDefinitionKey = currentDefinitionKey,
+            RedactedPathCount = redactedPathCount
         });
     }
 

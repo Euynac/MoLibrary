@@ -32,7 +32,7 @@
 
             @if (_loading)
             {
-                <ConfigurationImportProgressPanel Progress="@_progress" />
+                <ConfigurationPackageProgressPanel Progress="@_progress" />
             }
 
             @if (!string.IsNullOrWhiteSpace(_error))
@@ -147,7 +147,11 @@
     [Parameter] public IReadOnlyList<PendingChange> PendingChanges { get; set; } = [];
 
     private ConfigurationImportReport? _report;
-    private ConfigurationImportProgress _progress = new() { Stage = ConfigurationImportProgressStage.ReadingPackage };
+    private ConfigurationPackageProgress _progress = new()
+    {
+        Operation = ConfigurationPackageProgressOperation.Import,
+        Stage = ConfigurationPackageProgressStage.ReadingPackage
+    };
     private bool _loading;
     private string? _error;
 
@@ -161,7 +165,11 @@
         _loading = true;
         _error = null;
         _report = null;
-        ReportProgress(new ConfigurationImportProgress { Stage = ConfigurationImportProgressStage.ReadingPackage });
+        ReportProgress(new ConfigurationPackageProgress
+        {
+            Operation = ConfigurationPackageProgressOperation.Import,
+            Stage = ConfigurationPackageProgressStage.ReadingPackage
+        });
         try
         {
             await using var stream = file.OpenReadStream(MAX_IMPORT_BYTES);
@@ -172,7 +180,7 @@
                 return;
             }
 
-            var progress = new Progress<ConfigurationImportProgress>(ReportProgress);
+            var progress = new Progress<ConfigurationPackageProgress>(ReportProgress);
             _report = await PackageService.AnalyzeImportAsync(document, PendingChanges, file.Name, progress);
         }
         catch (Exception ex)
@@ -185,7 +193,7 @@
         }
     }
 
-    private void ReportProgress(ConfigurationImportProgress progress)
+    private void ReportProgress(ConfigurationPackageProgress progress)
     {
         _progress = progress;
         _ = InvokeAsync(StateHasChanged);

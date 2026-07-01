@@ -434,7 +434,10 @@
       "IncludeSensitive": "Include sensitive values",
       "ExportedBy": "Exported by",
       "EnvironmentName": "Environment",
-      "SystemVersion": "System version"
+      "SystemVersion": "System version",
+      "ProgressExportingDefinitions": "Creating export package...",
+      "ProgressDefinitions": "Loaded {0}/{1} current definitions; exported {2}/{3} definitions",
+      "ProgressRedacted": "{0} redacted values"
     },
     "Import": {
       "Title": "Import Configuration",
@@ -444,11 +447,13 @@
       "PackageMeta": "Exported at {0}; by {1}; system version {2}.",
       "Staged": "Imported {0} changes and {1} validation issues into the staging area.",
       "ProgressReadingPackage": "Reading package...",
-      "ProgressLoadingDefinitions": "Loading current configuration definitions...",
       "ProgressAnalyzingDefinitions": "Analyzing imported definitions...",
-      "ProgressPercent": "{0}%",
-      "ProgressDefinitions": "Loaded {0}/{1} current definitions; analyzed {2}/{3} imported definitions",
-      "ProgressCurrentDefinition": "Current: {0} ({1})"
+      "ProgressDefinitions": "Loaded {0}/{1} current definitions; analyzed {2}/{3} imported definitions"
+    },
+    "Progress": {
+      "LoadingDefinitions": "Loading current configuration definitions...",
+      "Percent": "{0}%",
+      "CurrentDefinition": "Current: {0} ({1})"
     },
     "JsonEditor": {
       "Title": "Edit JSON",

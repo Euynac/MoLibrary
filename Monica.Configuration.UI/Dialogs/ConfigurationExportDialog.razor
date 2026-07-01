@@ -55,6 +55,11 @@
             {
                 <MudAlert Severity="Severity.Error">@_error</MudAlert>
             }
+
+            @if (_exporting)
+            {
+                <ConfigurationPackageProgressPanel Progress="@_progress" />
+            }
         </MudStack>
     </DialogContent>
     <DialogActions>
@@ -89,6 +94,11 @@
     private string? _exportedBy;
     private string? _environmentName;
     private string? _systemVersion;
+    private ConfigurationPackageProgress _progress = new()
+    {
+        Operation = ConfigurationPackageProgressOperation.Export,
+        Stage = ConfigurationPackageProgressStage.LoadingDefinitions
+    };
 
     private string Title => string.IsNullOrWhiteSpace(DefinitionDisplayName)
         ? L["ImportExport:Export:AllTitle"]
@@ -106,8 +116,14 @@
     {
         _exporting = true;
         _error = null;
+        ReportProgress(new ConfigurationPackageProgress
+        {
+            Operation = ConfigurationPackageProgressOperation.Export,
+            Stage = ConfigurationPackageProgressStage.LoadingDefinitions
+        });
         try
         {
+            var progress = new Progress<ConfigurationPackageProgress>(ReportProgress);
             var document = await PackageService.CreateExportAsync(new ConfigurationExportRequest
             {
                 DefinitionKey = DefinitionKey,
@@ -115,7 +131,7 @@
                 ExportedBy = _exportedBy,
                 EnvironmentName = _environmentName,
                 SystemVersion = _systemVersion
-            });
+            }, progress);
             var json = JsonSerializer.Serialize(document, PackageJsonOptions);
             var module = await GetJsModuleAsync();
             await module.InvokeVoidAsync("downloadText", BuildFileName(), PACKAGE_CONTENT_TYPE, json);
@@ -129,6 +145,12 @@
         {
             _exporting = false;
         }
+    }
+
+    private void ReportProgress(ConfigurationPackageProgress progress)
+    {
+        _progress = progress;
+        _ = InvokeAsync(StateHasChanged);
     }
 
     private string BuildFileName()

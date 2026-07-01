@@ -1,12 +1,28 @@
 namespace Monica.Configuration.UI.Models;
 
 /// <summary>
-/// Describes the current phase of a configuration package import.
+/// Describes which configuration package operation is reporting progress.
 /// </summary>
-public enum ConfigurationImportProgressStage
+public enum ConfigurationPackageProgressOperation
 {
     /// <summary>
-    /// The uploaded package is being read and parsed.
+    /// A configuration package is being imported.
+    /// </summary>
+    Import,
+
+    /// <summary>
+    /// A configuration package is being exported.
+    /// </summary>
+    Export
+}
+
+/// <summary>
+/// Describes the current phase of a configuration package operation.
+/// </summary>
+public enum ConfigurationPackageProgressStage
+{
+    /// <summary>
+    /// The uploaded import package is being read and parsed.
     /// </summary>
     ReadingPackage,
 
@@ -18,18 +34,28 @@ public enum ConfigurationImportProgressStage
     /// <summary>
     /// Imported definitions are being compared with current state.
     /// </summary>
-    AnalyzingDefinitions
+    AnalyzingDefinitions,
+
+    /// <summary>
+    /// Current runtime configuration definitions are being written into an export package.
+    /// </summary>
+    ExportingDefinitions
 }
 
 /// <summary>
-/// Carries observable progress for a configuration package import.
+/// Carries observable progress for a configuration package import or export.
 /// </summary>
-public sealed record ConfigurationImportProgress
+public sealed record ConfigurationPackageProgress
 {
+    /// <summary>
+    /// Gets the operation that is reporting progress.
+    /// </summary>
+    public ConfigurationPackageProgressOperation Operation { get; init; }
+
     /// <summary>
     /// Gets the current import stage.
     /// </summary>
-    public ConfigurationImportProgressStage Stage { get; init; }
+    public ConfigurationPackageProgressStage Stage { get; init; }
 
     /// <summary>
     /// Gets the number of current runtime definitions already loaded.
@@ -42,14 +68,14 @@ public sealed record ConfigurationImportProgress
     public int TotalDefinitionCount { get; init; }
 
     /// <summary>
-    /// Gets the number of imported package definitions already analyzed.
+    /// Gets the number of operation definitions already processed.
     /// </summary>
-    public int ProcessedPackageDefinitionCount { get; init; }
+    public int ProcessedDefinitionCount { get; init; }
 
     /// <summary>
-    /// Gets the total number of imported package definitions to analyze.
+    /// Gets the total number of operation definitions to process.
     /// </summary>
-    public int TotalPackageDefinitionCount { get; init; }
+    public int TotalProcessDefinitionCount { get; init; }
 
     /// <summary>
     /// Gets the display name of the definition currently being processed, when known.
@@ -77,19 +103,24 @@ public sealed record ConfigurationImportProgress
     public int DiagnosticCount { get; init; }
 
     /// <summary>
+    /// Gets the number of sensitive value paths redacted during export.
+    /// </summary>
+    public int RedactedPathCount { get; init; }
+
+    /// <summary>
     /// Gets a percentage based on definition loading plus package analysis, or <c>null</c> before totals are known.
     /// </summary>
     public double? Percent
     {
         get
         {
-            var total = TotalDefinitionCount + TotalPackageDefinitionCount;
+            var total = TotalDefinitionCount + TotalProcessDefinitionCount;
             if (total <= 0)
             {
                 return null;
             }
 
-            var completed = LoadedDefinitionCount + ProcessedPackageDefinitionCount;
+            var completed = LoadedDefinitionCount + ProcessedDefinitionCount;
             return Math.Clamp(completed * 100d / total, 0d, 100d);
         }
     }
