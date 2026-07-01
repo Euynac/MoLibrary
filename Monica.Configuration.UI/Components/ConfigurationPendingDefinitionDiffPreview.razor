@@ -1,4 +1,5 @@
 @using System.Text.Json.Nodes
+@using System.Text
 @using Monica.Configuration.Services.Support
 @using Monica.Configuration.UI.Localization
 @using Monica.UI.UIDiffHighlight.Models
@@ -123,6 +124,7 @@ else
     };
 
     private IReadOnlyList<DefinitionDiffGroup> _groups = [];
+    private string? _preparedInputSignature;
     private bool _loading;
     private string? _error;
 
@@ -136,6 +138,13 @@ else
 
     protected override async Task OnParametersSetAsync()
     {
+        var inputSignature = BuildInputSignature();
+        if (string.Equals(_preparedInputSignature, inputSignature, StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        _preparedInputSignature = inputSignature;
         _loading = true;
         _error = null;
 
@@ -152,6 +161,7 @@ else
         }
         catch (Exception ex)
         {
+            _preparedInputSignature = null;
             _error = ex.Message;
             _groups = [];
         }
@@ -188,6 +198,37 @@ else
         }
 
         return groups;
+    }
+
+    private string BuildInputSignature()
+    {
+        var builder = new StringBuilder();
+        foreach (var change in Changes
+                     .OrderBy(change => change.DefinitionKey, StringComparer.Ordinal)
+                     .ThenBy(change => change.LogicalPath.ToCanonicalString(), StringComparer.Ordinal)
+                     .ThenBy(change => change.TargetKind)
+                     .ThenBy(change => change.MutationKind))
+        {
+            builder.Append("C|")
+                .Append(change.DefinitionKey).Append('|')
+                .Append(change.LogicalPath.ToCanonicalString()).Append('|')
+                .Append(change.TargetKind).Append('|')
+                .Append(change.MutationKind).Append('|')
+                .Append(change.NewValue.Json).AppendLine();
+        }
+
+        foreach (var issue in ValidationIssues
+                     .OrderBy(issue => issue.DefinitionKey, StringComparer.Ordinal)
+                     .ThenBy(issue => issue.LogicalPath.ToCanonicalString(), StringComparer.Ordinal)
+                     .ThenBy(issue => issue.ValidationError, StringComparer.Ordinal))
+        {
+            builder.Append("I|")
+                .Append(issue.DefinitionKey).Append('|')
+                .Append(issue.LogicalPath.ToCanonicalString()).Append('|')
+                .Append(issue.ValidationError).AppendLine();
+        }
+
+        return builder.ToString();
     }
 
     private async Task OnGroupExpandedChanged(DefinitionDiffGroup group, bool expanded)
