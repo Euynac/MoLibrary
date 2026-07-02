@@ -58,6 +58,17 @@
     overflow: visible;
 }
 
+.configuration-runtime-validation-anchor ::deep .mud-badge-wrapper.mud-badge-top.right,
+.configuration-runtime-validation-anchor ::deep .mud-badge-wrapper.mud-badge-center.right {
+    align-items: flex-start;
+    justify-content: flex-end;
+}
+
+.configuration-runtime-validation-anchor ::deep .mud-badge.mud-badge-top.right,
+.configuration-runtime-validation-anchor ::deep .mud-badge.mud-badge-center.right {
+    inset: auto auto calc(100% - 12px) calc(100% - 12px);
+}
+
 .configuration-runtime-validation-popover-content {
     width: min(44rem, calc(100vw - 2rem));
     max-height: min(34rem, calc(100vh - 8rem));
