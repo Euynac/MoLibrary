@@ -93,6 +93,8 @@
                                             Modal="false" />
                             </span>
                         }
+                        <ConfigurationReloadStatusButton @ref="_reloadStatusButton"
+                                                         Reloaded="OnRuntimeConfigurationReloadedAsync" />
                     </MudStack>
                     <MudText Typo="Typo.body2" Color="Color.Secondary">@L["State:Subtitle"]</MudText>
                 </MudStack>
@@ -309,6 +311,7 @@
     private LogicalPath? _highlightedPath;
     private ConfigurationValidationReport? _runtimeValidationReport;
     private bool _runtimeValidationPopoverOpen;
+    private ConfigurationReloadStatusButton? _reloadStatusButton;
 
     private bool CanInspectSelectedDefinitionSources =>
         _selectedDefinition?.Origin == ConfigurationDefinitionOrigin.LocalScan;
@@ -580,6 +583,16 @@
     }
 
     private async Task ReloadSelectedEffectiveValuesAndValidationAsync()
+    {
+        await LoadEffectiveValuesAsync();
+        await LoadRuntimeValidationReportAsync();
+        if (_reloadStatusButton is not null)
+        {
+            await _reloadStatusButton.RefreshAsync();
+        }
+    }
+
+    private async Task OnRuntimeConfigurationReloadedAsync()
     {
         await LoadEffectiveValuesAsync();
         await LoadRuntimeValidationReportAsync();

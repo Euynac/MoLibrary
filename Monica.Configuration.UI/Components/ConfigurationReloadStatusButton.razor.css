@@ -1,0 +1,50 @@
+.configuration-reload-status-anchor {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    flex: 0 0 auto;
+    line-height: 0;
+}
+
+.configuration-reload-status-anchor ::deep .mud-badge-root {
+    display: inline-flex;
+    align-items: center;
+}
+
+.configuration-reload-status-popover-content {
+    width: min(46rem, calc(100vw - 2rem));
+    max-height: min(36rem, calc(100vh - 8rem));
+    overflow: auto;
+}
+
+.configuration-reload-version-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.configuration-reload-version-row {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    padding: 0.75rem;
+    border: 1px solid var(--mud-palette-lines-default);
+    border-radius: var(--mud-default-borderradius);
+}
+
+.configuration-reload-definition-copy {
+    min-width: 0;
+}
+
+.configuration-reload-definition-copy ::deep .mud-typography {
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+@media (max-width: 599.98px) {
+    .configuration-reload-status-popover-content {
+        width: calc(100vw - 1rem);
+        max-height: calc(100vh - 6rem);
+    }
+}

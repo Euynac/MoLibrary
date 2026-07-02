@@ -130,6 +130,7 @@ public sealed class ModuleConfiguration
         services.TryAddSingleton<ConfigurationEffectiveValueSeedFactory>();
         services.TryAddSingleton<IConfigurationSourceInspector, ConfigurationSourceInspector>();
         services.TryAddSingleton<IConfigurationRuntimeValidationService, ConfigurationRuntimeValidationService>();
+        services.TryAddSingleton<IConfigurationRuntimeReloadService, ConfigurationRuntimeReloadService>();
         services.TryAddSingleton<IConfigurationJsonFileSourceWriter, ConfigurationJsonFileSourceWriter>();
         services.TryAddSingleton<IConfigurationSourceMutationService, ConfigurationSourceMutationService>();
         services.TryAddSingleton(_runtimeContext);

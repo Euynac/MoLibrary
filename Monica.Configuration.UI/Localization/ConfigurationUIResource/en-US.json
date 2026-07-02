@@ -71,6 +71,41 @@
         "SourceChain": "View source chain"
       }
     },
+    "ReloadStatus": {
+      "Title": "Reload status",
+      "OpenDetails": "View reload status",
+      "Unavailable": "Reload status is unavailable.",
+      "ProviderInactive": "The Monica runtime configuration provider is not active.",
+      "CurrentSummary": "Runtime configuration versions match the effective value store.",
+      "DriftSummary": "{0} configuration definitions differ from the effective value store.",
+      "ReloadCount": "Reload count",
+      "LastReloadedAt": "Last reload",
+      "LastReloadDuration": "Duration",
+      "EffectiveStore": "Effective store",
+      "RuntimeVersion": "Runtime version",
+      "StoreVersion": "Store version",
+      "StoreModifiedAt": "Store modified",
+      "DefinitionsCurrent": "Every runtime configuration version in this service matches the effective value store.",
+      "DriftDefinitions": "{0} configuration definitions need reload before matching the effective value store.",
+      "LastFailure": "Last failure: {0}, {1}",
+      "ManualReload": "Reload now",
+      "Reloading": "Reloading",
+      "RefreshStatus": "Refresh status",
+      "ReloadSuccess": "Runtime configuration reloaded.",
+      "ReloadFailed": "Failed to reload runtime configuration",
+      "Never": "Never",
+      "UnknownValue": "-",
+      "VersionValue": "v{0}",
+      "DurationMs": "{0} ms",
+      "Statuses": {
+        "Unknown": "Unknown",
+        "NotLoaded": "Not loaded",
+        "MissingEffectiveValue": "Missing store value",
+        "Current": "Current",
+        "Stale": "Runtime stale",
+        "Ahead": "Runtime ahead"
+      }
+    },
     "Actions": {
       "SaveGroup": "Save group",
       "UndoAll": "Undo all",

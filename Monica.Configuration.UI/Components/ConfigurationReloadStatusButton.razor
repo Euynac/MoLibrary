@@ -1,0 +1,292 @@
+@inject ConfigurationFacade Facade
+@inject ISnackbar Snackbar
+@inject IStringLocalizer<ConfigurationUIResource> L
+
+<span class="configuration-reload-status-anchor">
+    <MudTooltip Text="@StatusTooltip">
+        <MudBadge Content="@DriftCount"
+                  Color="@StatusColor"
+                  Visible="@(DriftCount > 0)"
+                  Overlap="true">
+            <MudIconButton Icon="@StatusIcon"
+                           Color="@StatusColor"
+                           Size="Size.Small"
+                           Disabled="@_loading"
+                           OnClick="TogglePopover"
+                           aria-label="@L["State:ReloadStatus:OpenDetails"]" />
+        </MudBadge>
+    </MudTooltip>
+
+    <MudPopover Open="@_popoverOpen"
+                AnchorOrigin="Origin.BottomLeft"
+                TransformOrigin="Origin.TopLeft"
+                Class="configuration-reload-status-popover"
+                Paper="false">
+        <MudPaper Elevation="6" Class="pa-3 configuration-reload-status-popover-content">
+            <MudStack Spacing="2">
+                <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Spacing="2">
+                    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
+                        <MudIcon Icon="@StatusIcon" Color="@StatusColor" />
+                        <MudStack Spacing="0">
+                            <MudText Typo="Typo.subtitle1">@L["State:ReloadStatus:Title"]</MudText>
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">@StatusSummary</MudText>
+                        </MudStack>
+                    </MudStack>
+                    <MudTooltip Text="@L["Common:Actions:Close"]">
+                        <MudIconButton Icon="@Icons.Material.Filled.Close"
+                                       Size="Size.Small"
+                                       OnClick="ClosePopover"
+                                       aria-label="@L["Common:Actions:Close"]" />
+                    </MudTooltip>
+                </MudStack>
+
+                @if (_loading && _report is null)
+                {
+                    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
+                        <MudProgressCircular Indeterminate="true" Size="Size.Small" />
+                        <MudText Typo="Typo.body2">@L["Common:States:Loading"]</MudText>
+                    </MudStack>
+                }
+                else if (_report is null)
+                {
+                    <MudAlert Severity="Severity.Warning">@L["State:ReloadStatus:Unavailable"]</MudAlert>
+                }
+                else
+                {
+                    <MudGrid Spacing="2">
+                        <MudItem xs="6" sm="3">
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">@L["State:ReloadStatus:ReloadCount"]</MudText>
+                            <MudText Typo="Typo.body2">@_report.Runtime.ReloadCount</MudText>
+                        </MudItem>
+                        <MudItem xs="6" sm="3">
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">@L["State:ReloadStatus:LastReloadedAt"]</MudText>
+                            <MudText Typo="Typo.body2">@FormatTime(_report.Runtime.LastReloadedAt)</MudText>
+                        </MudItem>
+                        <MudItem xs="6" sm="3">
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">@L["State:ReloadStatus:LastReloadDuration"]</MudText>
+                            <MudText Typo="Typo.body2">@FormatDuration(_report.Runtime.LastReloadDuration)</MudText>
+                        </MudItem>
+                        <MudItem xs="6" sm="3">
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">@L["State:ReloadStatus:EffectiveStore"]</MudText>
+                            <MudText Typo="Typo.body2">@_report.EffectiveValueStore.DisplayName</MudText>
+                        </MudItem>
+                    </MudGrid>
+
+                    @if (!_report.Runtime.IsProviderActive)
+                    {
+                        <MudAlert Severity="Severity.Warning">@L["State:ReloadStatus:ProviderInactive"]</MudAlert>
+                    }
+                    else if (_report.IsCurrent)
+                    {
+                        <MudAlert Severity="Severity.Success">@L["State:ReloadStatus:DefinitionsCurrent"]</MudAlert>
+                    }
+                    else
+                    {
+                        <MudAlert Severity="Severity.Error">@L["State:ReloadStatus:DriftDefinitions", DriftCount]</MudAlert>
+                        <div class="configuration-reload-version-list">
+                            @foreach (var item in DriftDefinitions)
+                            {
+                                <div class="configuration-reload-version-row">
+                                    <MudStack Row="true" Wrap="Wrap.Wrap" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Spacing="1">
+                                        <MudStack Spacing="0" Class="configuration-reload-definition-copy">
+                                            <MudText Typo="Typo.subtitle2">@item.DisplayName</MudText>
+                                            <MudText Typo="Typo.caption" Color="Color.Secondary">@item.DefinitionKey</MudText>
+                                        </MudStack>
+                                        <MudChip T="string"
+                                                 Size="Size.Small"
+                                                 Color="@VersionStatusColor(item.Status)"
+                                                 Variant="Variant.Outlined">
+                                            @VersionStatusLabel(item.Status)
+                                        </MudChip>
+                                    </MudStack>
+                                    <MudGrid Spacing="2">
+                                        <MudItem xs="4">
+                                            <MudText Typo="Typo.caption" Color="Color.Secondary">@L["State:ReloadStatus:RuntimeVersion"]</MudText>
+                                            <MudText Typo="Typo.body2">@FormatVersion(item.RuntimeLoadedVersion)</MudText>
+                                        </MudItem>
+                                        <MudItem xs="4">
+                                            <MudText Typo="Typo.caption" Color="Color.Secondary">@L["State:ReloadStatus:StoreVersion"]</MudText>
+                                            <MudText Typo="Typo.body2">@FormatVersion(item.EffectiveStoreVersion)</MudText>
+                                        </MudItem>
+                                        <MudItem xs="4">
+                                            <MudText Typo="Typo.caption" Color="Color.Secondary">@L["State:ReloadStatus:StoreModifiedAt"]</MudText>
+                                            <MudText Typo="Typo.body2">@FormatTime(item.EffectiveLastModifiedAt)</MudText>
+                                        </MudItem>
+                                    </MudGrid>
+                                </div>
+                            }
+                        </div>
+                    }
+
+                    @if (!string.IsNullOrWhiteSpace(_report.Runtime.LastFailureMessage))
+                    {
+                        <MudAlert Severity="Severity.Warning">
+                            @L["State:ReloadStatus:LastFailure", FormatTime(_report.Runtime.LastFailedAt), _report.Runtime.LastFailureMessage]
+                        </MudAlert>
+                    }
+                }
+
+                <MudStack Row="true" Wrap="Wrap.Wrap" AlignItems="AlignItems.Center" Justify="Justify.FlexEnd" Spacing="1">
+                    <MudButton Variant="Variant.Text"
+                               Size="Size.Small"
+                               StartIcon="@Icons.Material.Filled.Refresh"
+                               Disabled="@(_loading || _reloading)"
+                               OnClick="RefreshAsync">
+                        @L["State:ReloadStatus:RefreshStatus"]
+                    </MudButton>
+                    <MudButton Variant="Variant.Filled"
+                               Color="Color.Primary"
+                               Size="Size.Small"
+                               StartIcon="@Icons.Material.Filled.Sync"
+                               Disabled="@(_loading || _reloading)"
+                               OnClick="ReloadAsync">
+                        @(_reloading ? L["State:ReloadStatus:Reloading"] : L["State:ReloadStatus:ManualReload"])
+                    </MudButton>
+                </MudStack>
+            </MudStack>
+        </MudPaper>
+    </MudPopover>
+    <MudOverlay Visible="@_popoverOpen"
+                AutoClose="true"
+                OnClosed="ClosePopover"
+                LockScroll="false"
+                Modal="false" />
+</span>
+
+@code {
+    [Parameter] public EventCallback Reloaded { get; set; }
+
+    private ConfigurationReloadStatusReport? _report;
+    private bool _loading;
+    private bool _reloading;
+    private bool _popoverOpen;
+
+    private int DriftCount => _report?.DriftCount ?? 0;
+
+    private IEnumerable<ConfigurationDefinitionReloadStatus> DriftDefinitions =>
+        (_report?.Definitions ?? [])
+        .Where(static definition => definition.HasVersionDrift)
+        .OrderBy(static definition => definition.DisplayName, StringComparer.OrdinalIgnoreCase);
+
+    private Color StatusColor =>
+        _report is null
+            ? Color.Warning
+            : !_report.Runtime.IsProviderActive
+                ? Color.Warning
+                : _report.IsCurrent
+                    ? Color.Success
+                    : Color.Error;
+
+    private string StatusIcon =>
+        _report is null
+            ? Icons.Material.Filled.Help
+            : !_report.Runtime.IsProviderActive
+                ? Icons.Material.Filled.Warning
+                : _report.IsCurrent
+                    ? Icons.Material.Filled.Sync
+                    : Icons.Material.Filled.SyncProblem;
+
+    private string StatusSummary =>
+        _report is null
+            ? L["State:ReloadStatus:Unavailable"].Value
+            : !_report.Runtime.IsProviderActive
+                ? L["State:ReloadStatus:ProviderInactive"].Value
+                : _report.IsCurrent
+                    ? L["State:ReloadStatus:CurrentSummary"].Value
+                    : L["State:ReloadStatus:DriftSummary", DriftCount].Value;
+
+    private string StatusTooltip => $"{L["State:ReloadStatus:Title"]}: {StatusSummary}";
+
+    protected override async Task OnInitializedAsync()
+    {
+        await RefreshAsync();
+    }
+
+    public async Task RefreshAsync()
+    {
+        _loading = true;
+        try
+        {
+            var result = await Facade.GetRuntimeReloadStatusAsync();
+            if (result.IsFailed(out var error, out var report))
+            {
+                Snackbar.Add($"{L["Common:Errors:LoadFailed"]}: {error.Message}", Severity.Error);
+                _report = null;
+                return;
+            }
+
+            _report = report;
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private async Task ReloadAsync()
+    {
+        _reloading = true;
+        try
+        {
+            var result = await Facade.ReloadRuntimeConfigurationAsync();
+            if (result.IsFailed(out var error, out var report))
+            {
+                Snackbar.Add($"{L["State:ReloadStatus:ReloadFailed"]}: {error.Message}", Severity.Error);
+                return;
+            }
+
+            _report = report;
+            Snackbar.Add(L["State:ReloadStatus:ReloadSuccess"], Severity.Success);
+            await Reloaded.InvokeAsync();
+        }
+        finally
+        {
+            _reloading = false;
+        }
+    }
+
+    private void TogglePopover()
+    {
+        _popoverOpen = !_popoverOpen;
+    }
+
+    private void ClosePopover()
+    {
+        _popoverOpen = false;
+    }
+
+    private string FormatVersion(long? version)
+    {
+        return version is null ? L["State:ReloadStatus:UnknownValue"].Value : L["State:ReloadStatus:VersionValue", version.Value].Value;
+    }
+
+    private string FormatTime(DateTimeOffset? time)
+    {
+        return time is null ? L["State:ReloadStatus:Never"].Value : time.Value.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss");
+    }
+
+    private string FormatDuration(TimeSpan? duration)
+    {
+        return duration is null
+            ? L["State:ReloadStatus:Never"].Value
+            : L["State:ReloadStatus:DurationMs", Math.Round(duration.Value.TotalMilliseconds, 1)].Value;
+    }
+
+    private string VersionStatusLabel(ConfigurationReloadVersionStatus status)
+    {
+        return L[$"State:ReloadStatus:Statuses:{status}"];
+    }
+
+    private static Color VersionStatusColor(ConfigurationReloadVersionStatus status)
+    {
+        return status switch
+        {
+            ConfigurationReloadVersionStatus.Current => Color.Success,
+            ConfigurationReloadVersionStatus.Stale => Color.Error,
+            ConfigurationReloadVersionStatus.Ahead => Color.Warning,
+            ConfigurationReloadVersionStatus.NotLoaded => Color.Warning,
+            ConfigurationReloadVersionStatus.MissingEffectiveValue => Color.Warning,
+            _ => Color.Default
+        };
+    }
+}

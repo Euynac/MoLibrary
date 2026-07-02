@@ -33,7 +33,8 @@ public sealed class ConfigurationFacade(
     IConfigurationSourceInspector sourceInspector,
     IConfigurationJsonFileSourceWriter sourceWriter,
     ConfigurationRuntimeContext runtimeContext,
-    IConfigurationRuntimeValidationService runtimeValidationService)
+    IConfigurationRuntimeValidationService runtimeValidationService,
+    IConfigurationRuntimeReloadService runtimeReloadService)
 {
     /// <summary>
     /// Gets all configuration definition summaries.
@@ -94,6 +95,38 @@ public sealed class ConfigurationFacade(
         {
             return Task.FromResult<Res<ConfigurationValidationReport>>(
                 Res.Fail($"Failed to get runtime configuration validation report: {ex.GetMessageRecursively()}"));
+        }
+    }
+
+    /// <summary>
+    /// Gets runtime reload status for Monica-managed configuration definitions.
+    /// </summary>
+    /// <returns>The runtime reload status report.</returns>
+    public async Task<Res<ConfigurationReloadStatusReport>> GetRuntimeReloadStatusAsync()
+    {
+        try
+        {
+            return Res.Ok(await runtimeReloadService.GetStatusAsync(CancellationToken.None));
+        }
+        catch (Exception ex)
+        {
+            return Res.Fail($"Failed to get runtime configuration reload status: {ex.GetMessageRecursively()}");
+        }
+    }
+
+    /// <summary>
+    /// Reloads runtime configuration providers and returns the refreshed reload status report.
+    /// </summary>
+    /// <returns>The refreshed runtime reload status report.</returns>
+    public async Task<Res<ConfigurationReloadStatusReport>> ReloadRuntimeConfigurationAsync()
+    {
+        try
+        {
+            return Res.Ok(await runtimeReloadService.ReloadAsync(CancellationToken.None));
+        }
+        catch (Exception ex)
+        {
+            return Res.Fail($"Failed to reload runtime configuration: {ex.GetMessageRecursively()}");
         }
     }
 

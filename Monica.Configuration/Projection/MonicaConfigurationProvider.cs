@@ -16,6 +16,12 @@ internal sealed class MonicaConfigurationProvider(MonicaConfigurationProviderAcc
     private readonly Lock _projectionLock = new();
     private readonly Dictionary<string, IReadOnlyCollection<string>> _projectedKeysByDefinitionKey = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<string, long?> _loadedVersionsByDefinitionKey = new(StringComparer.OrdinalIgnoreCase);
+    private long _reloadCount;
+    private long _failedReloadCount;
+    private DateTimeOffset? _lastReloadedAt;
+    private DateTimeOffset? _lastFailedAt;
+    private TimeSpan? _lastReloadDuration;
+    private string? _lastFailureMessage;
 
     /// <inheritdoc />
     public override void Load()
@@ -88,11 +94,14 @@ internal sealed class MonicaConfigurationProvider(MonicaConfigurationProviderAcc
             }
 
             stateTracker.RecordSuccess(effectiveValueStore.Descriptor.StoreKey);
-            metricsRecorder.RecordReloadLatency(TimeProvider.System.GetElapsedTime(started));
+            var elapsed = TimeProvider.System.GetElapsedTime(started);
+            RecordReloadSuccess(elapsed);
+            metricsRecorder.RecordReloadLatency(elapsed);
             OnReload();
         }
         catch (Exception ex)
         {
+            RecordReloadFailure(ex);
             stateTracker.RecordFailure(effectiveValueStore.Descriptor.StoreKey, ex);
             throw;
         }
@@ -163,11 +172,14 @@ internal sealed class MonicaConfigurationProvider(MonicaConfigurationProviderAcc
             }
 
             stateTracker.RecordSuccess(effectiveValueStore.Descriptor.StoreKey);
-            metricsRecorder.RecordReloadLatency(TimeProvider.System.GetElapsedTime(started));
+            var elapsed = TimeProvider.System.GetElapsedTime(started);
+            RecordReloadSuccess(elapsed);
+            metricsRecorder.RecordReloadLatency(elapsed);
             OnReload();
         }
         catch (Exception ex)
         {
+            RecordReloadFailure(ex);
             stateTracker.RecordFailure(effectiveValueStore.Descriptor.StoreKey, ex);
             throw;
         }
@@ -183,6 +195,48 @@ internal sealed class MonicaConfigurationProvider(MonicaConfigurationProviderAcc
         lock (_projectionLock)
         {
             return _loadedVersionsByDefinitionKey.GetValueOrDefault(definitionKey);
+        }
+    }
+
+    /// <summary>
+    /// Gets the current reload state for this provider.
+    /// </summary>
+    /// <returns>The reload state.</returns>
+    public ConfigurationRuntimeReloadState GetReloadState()
+    {
+        lock (_projectionLock)
+        {
+            return new ConfigurationRuntimeReloadState
+            {
+                IsProviderActive = accessor.ServiceProvider is not null,
+                ReloadCount = _reloadCount,
+                LastReloadedAt = _lastReloadedAt,
+                LastReloadDuration = _lastReloadDuration,
+                FailedReloadCount = _failedReloadCount,
+                LastFailedAt = _lastFailedAt,
+                LastFailureMessage = _lastFailureMessage
+            };
+        }
+    }
+
+    private void RecordReloadSuccess(TimeSpan elapsed)
+    {
+        lock (_projectionLock)
+        {
+            _reloadCount++;
+            _lastReloadedAt = DateTimeOffset.UtcNow;
+            _lastReloadDuration = elapsed;
+            _lastFailureMessage = null;
+        }
+    }
+
+    private void RecordReloadFailure(Exception exception)
+    {
+        lock (_projectionLock)
+        {
+            _failedReloadCount++;
+            _lastFailedAt = DateTimeOffset.UtcNow;
+            _lastFailureMessage = exception.Message;
         }
     }
 }

@@ -71,6 +71,41 @@
         "SourceChain": "查看来源链路"
       }
     },
+    "ReloadStatus": {
+      "Title": "Reload 状态",
+      "OpenDetails": "查看 Reload 状态",
+      "Unavailable": "Reload 状态不可用。",
+      "ProviderInactive": "Monica 运行时配置 Provider 尚未激活。",
+      "CurrentSummary": "运行时配置版本与有效值存储一致。",
+      "DriftSummary": "发现 {0} 个配置定义的运行时版本与有效值存储不一致。",
+      "ReloadCount": "Reload 次数",
+      "LastReloadedAt": "上次 Reload",
+      "LastReloadDuration": "耗时",
+      "EffectiveStore": "有效值存储",
+      "RuntimeVersion": "运行时版本",
+      "StoreVersion": "存储版本",
+      "StoreModifiedAt": "存储修改时间",
+      "DefinitionsCurrent": "所有本服务运行时配置版本均与有效值存储一致。",
+      "DriftDefinitions": "{0} 个配置定义需要 Reload 后才能与有效值存储一致。",
+      "LastFailure": "上次失败：{0}，{1}",
+      "ManualReload": "手动 Reload",
+      "Reloading": "Reload 中",
+      "RefreshStatus": "刷新状态",
+      "ReloadSuccess": "运行时配置已 Reload。",
+      "ReloadFailed": "Reload 运行时配置失败",
+      "Never": "从未",
+      "UnknownValue": "-",
+      "VersionValue": "v{0}",
+      "DurationMs": "{0} ms",
+      "Statuses": {
+        "Unknown": "未知",
+        "NotLoaded": "未加载",
+        "MissingEffectiveValue": "存储缺失",
+        "Current": "一致",
+        "Stale": "运行时滞后",
+        "Ahead": "运行时超前"
+      }
+    },
     "Actions": {
       "SaveGroup": "保存修改组",
       "UndoAll": "撤销全部",
