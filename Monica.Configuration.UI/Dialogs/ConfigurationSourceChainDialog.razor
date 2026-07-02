@@ -41,7 +41,7 @@
                                 <MudChip T="string" Size="Size.Small" Color="@(value.Source.IsWritable ? Color.Success : Color.Default)" Variant="Variant.Outlined">
                                     @(value.Source.IsWritable ? L["Sources:Writable"] : L["Sources:ReadOnly"])
                                 </MudChip>
-                                @if (value.Source.IsWritable && value.Source.Kind == ConfigurationSourceKind.JsonFile)
+                                @if (AllowSourceEdit && value.Source.IsWritable && value.Source.Kind == ConfigurationSourceKind.JsonFile)
                                 {
                                     <MudTooltip Text="@L["Sources:Actions:EditSource"]">
                                         <MudIconButton Icon="@Icons.Material.Filled.Edit"
@@ -72,6 +72,8 @@
     [CascadingParameter] private IMudDialogInstance MudDialog { get; set; } = null!;
     [Parameter, EditorRequired] public ConfigurationDefinition Definition { get; set; } = null!;
     [Parameter, EditorRequired] public ConfigurationNodeDefinition Node { get; set; } = null!;
+    [Parameter] public LogicalPath? LogicalPath { get; set; }
+    [Parameter] public bool AllowSourceEdit { get; set; } = true;
 
     private ConfigurationSourceChain? _chain;
     private string? _error;
@@ -85,7 +87,7 @@
     private async Task LoadAsync()
     {
         _loading = true;
-        var result = await Facade.GetSourceChainAsync(Definition.DefinitionKey, Node.RelativePath);
+        var result = await Facade.GetSourceChainAsync(Definition.DefinitionKey, LogicalPath ?? Node.RelativePath);
         if (result.IsFailed(out var error, out var chain))
         {
             _error = error.Message;

@@ -32,7 +32,8 @@ public sealed class ConfigurationFacade(
     ConfigurationEffectiveValueDocumentEditor documentEditor,
     IConfigurationSourceInspector sourceInspector,
     IConfigurationJsonFileSourceWriter sourceWriter,
-    ConfigurationRuntimeContext runtimeContext)
+    ConfigurationRuntimeContext runtimeContext,
+    IConfigurationRuntimeValidationService runtimeValidationService)
 {
     /// <summary>
     /// Gets all configuration definition summaries.
@@ -76,6 +77,23 @@ public sealed class ConfigurationFacade(
         catch (Exception ex)
         {
             return Res.Fail($"Failed to get configuration definition: {ex.GetMessageRecursively()}");
+        }
+    }
+
+    /// <summary>
+    /// Gets source-aware runtime validation diagnostics for the current process.
+    /// </summary>
+    /// <returns>The runtime validation report.</returns>
+    public Task<Res<ConfigurationValidationReport>> GetRuntimeValidationReportAsync()
+    {
+        try
+        {
+            return Task.FromResult(Res.Ok(runtimeValidationService.GetReport()));
+        }
+        catch (Exception ex)
+        {
+            return Task.FromResult<Res<ConfigurationValidationReport>>(
+                Res.Fail($"Failed to get runtime configuration validation report: {ex.GetMessageRecursively()}"));
         }
     }
 

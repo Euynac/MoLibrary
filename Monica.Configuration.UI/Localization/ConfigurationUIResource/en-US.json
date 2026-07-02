@@ -50,6 +50,26 @@
       "PendingCount": "Staged changes",
       "ValidationIssueCount": "Validation issues"
     },
+    "RuntimeValidation": {
+      "Title": "Runtime validation",
+      "Valid": "Runtime configuration is valid.",
+      "ValidSummary": "No runtime validation issues were found.",
+      "InvalidSummary": "{0} runtime validation issues across {1} definitions.",
+      "Unavailable": "Runtime validation diagnostics are unavailable.",
+      "IssueCount": "Runtime validation issues",
+      "DefinitionIssueCount": "Runtime validation issues for this definition",
+      "CurrentValue": "Current value",
+      "Problem": "Problem",
+      "ConfigurationPath": "Configuration key",
+      "EffectiveSource": "Effective source",
+      "NoEffectiveSource": "None",
+      "MissingValue": "<missing>",
+      "SourceChainUnavailable": "Source-chain diagnostics are unavailable for this issue.",
+      "JumpFailed": "Failed to jump to the runtime validation issue.",
+      "Actions": {
+        "SourceChain": "View source chain"
+      }
+    },
     "Actions": {
       "SaveGroup": "Save group",
       "UndoAll": "Undo all",

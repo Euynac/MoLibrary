@@ -47,6 +47,7 @@
                             {
                                 var matches = GetNodeMatches(definition);
                                 var pendingCount = GetPendingCount(definition);
+                                var runtimeIssueCount = GetRuntimeValidationCount(definition);
                                 <MudListItem T="ConfigurationDefinitionSummary"
                                              Value="@definition"
                                              Icon="@Icons.Material.Filled.Settings"
@@ -90,6 +91,18 @@
                                                              Variant="Variant.Filled"
                                                              Class="configuration-definition-pending-count">
                                                         @pendingCount
+                                                    </MudChip>
+                                                </MudTooltip>
+                                            }
+                                            @if (runtimeIssueCount > 0)
+                                            {
+                                                <MudTooltip Text="@L["State:RuntimeValidation:DefinitionIssueCount"]">
+                                                    <MudChip T="int"
+                                                             Size="Size.Small"
+                                                             Color="Color.Error"
+                                                             Variant="Variant.Filled"
+                                                             Class="configuration-definition-validation-count">
+                                                        @runtimeIssueCount
                                                     </MudChip>
                                                 </MudTooltip>
                                             }
@@ -151,6 +164,14 @@
                                 </MudChip>
                             </MudTooltip>
                         }
+                        @if (RuntimeValidationIssueCount > 0)
+                        {
+                            <MudTooltip Text="@L["State:RuntimeValidation:IssueCount"]">
+                                <MudChip T="int" Size="Size.Small" Color="Color.Error" Variant="Variant.Filled">
+                                    @RuntimeValidationIssueCount
+                                </MudChip>
+                            </MudTooltip>
+                        }
                     </MudStack>
                     <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1" Class="configuration-definition-list-footer-actions">
                         <MudTooltip Text="@L["State:Actions:UndoAll"]">
@@ -187,8 +208,11 @@
     [Parameter] public EventCallback<string> SearchTextChanged { get; set; }
     [Parameter] public IReadOnlyDictionary<string, int> PendingCountsByDefinition { get; set; } =
         new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+    [Parameter] public IReadOnlyDictionary<string, int> RuntimeValidationCountsByDefinition { get; set; } =
+        new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
     [Parameter] public int PendingCount { get; set; }
     [Parameter] public int ValidationIssueCount { get; set; }
+    [Parameter] public int RuntimeValidationIssueCount { get; set; }
     [Parameter] public EventCallback SaveGroup { get; set; }
     [Parameter] public EventCallback UndoAll { get; set; }
 
@@ -288,6 +312,11 @@
     private int GetPendingCount(ConfigurationDefinitionSummary definition)
     {
         return PendingCountsByDefinition.TryGetValue(definition.DefinitionKey, out var count) ? count : 0;
+    }
+
+    private int GetRuntimeValidationCount(ConfigurationDefinitionSummary definition)
+    {
+        return RuntimeValidationCountsByDefinition.TryGetValue(definition.DefinitionKey, out var count) ? count : 0;
     }
 
     private static string GetOptionsTypeName(ConfigurationDefinitionSummary definition)

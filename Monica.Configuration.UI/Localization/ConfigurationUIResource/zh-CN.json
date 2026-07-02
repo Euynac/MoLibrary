@@ -50,6 +50,26 @@
       "PendingCount": "暂存修改",
       "ValidationIssueCount": "验证异常"
     },
+    "RuntimeValidation": {
+      "Title": "运行时验证",
+      "Valid": "运行时配置验证通过。",
+      "ValidSummary": "未发现运行时验证异常。",
+      "InvalidSummary": "发现 {0} 个运行时验证异常，涉及 {1} 个配置定义。",
+      "Unavailable": "运行时验证诊断不可用。",
+      "IssueCount": "运行时验证异常",
+      "DefinitionIssueCount": "该配置定义的运行时验证异常",
+      "CurrentValue": "当前值",
+      "Problem": "问题",
+      "ConfigurationPath": "配置 Key",
+      "EffectiveSource": "生效来源",
+      "NoEffectiveSource": "无",
+      "MissingValue": "<缺失>",
+      "SourceChainUnavailable": "该异常无法查看来源链路诊断。",
+      "JumpFailed": "无法跳转到运行时验证异常配置项。",
+      "Actions": {
+        "SourceChain": "查看来源链路"
+      }
+    },
     "Actions": {
       "SaveGroup": "保存修改组",
       "UndoAll": "撤销全部",

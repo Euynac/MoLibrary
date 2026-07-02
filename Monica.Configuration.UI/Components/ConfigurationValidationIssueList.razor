@@ -12,6 +12,12 @@
                         <MudStack Spacing="0">
                             <MudText Typo="Typo.subtitle2">@Title(issue)</MudText>
                             <MudText Typo="Typo.caption" Color="Color.Secondary">@issue.LogicalPath.ToCanonicalString()</MudText>
+                            @if (ShowRuntimeMetadata && !string.IsNullOrWhiteSpace(issue.ConfigurationPath))
+                            {
+                                <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                    @L["State:RuntimeValidation:ConfigurationPath"]: @issue.ConfigurationPath
+                                </MudText>
+                            }
                         </MudStack>
                         <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
                             <MudTooltip Text="@RuleTip(issue)" Placement="Placement.Left">
@@ -19,6 +25,16 @@
                                                Size="Size.Small"
                                                Color="Color.Info" />
                             </MudTooltip>
+                            @if (ShowSourceChain && !string.IsNullOrWhiteSpace(issue.ConfigurationPath))
+                            {
+                                <MudTooltip Text="@L["State:RuntimeValidation:Actions:SourceChain"]">
+                                    <MudIconButton Icon="@Icons.Material.Filled.AccountTree"
+                                                   Size="Size.Small"
+                                                   Color="Color.Primary"
+                                                   Variant="Variant.Outlined"
+                                                   OnClick="() => SourceChainRequested.InvokeAsync(issue)" />
+                                </MudTooltip>
+                            }
                             @if (ShowJump)
                             {
                                 <MudButton Variant="Variant.Outlined"
@@ -33,14 +49,21 @@
                     </MudStack>
 
                     <MudGrid Spacing="2">
-                        <MudItem xs="12" md="5">
-                            <MudText Typo="Typo.caption" Color="Color.Secondary">@L["Dialogs:SaveGroup:Validation:InvalidValue"]</MudText>
+                        <MudItem xs="12" md="@(ShowRuntimeMetadata ? 4 : 5)">
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">@ValueLabelText</MudText>
                             <MudText Typo="Typo.body2" Class="configuration-validation-issue-value">@DisplayInvalidValue(issue)</MudText>
                         </MudItem>
-                        <MudItem xs="12" md="7">
-                            <MudText Typo="Typo.caption" Color="Color.Secondary">@L["Dialogs:SaveGroup:Validation:Reason"]</MudText>
+                        <MudItem xs="12" md="@(ShowRuntimeMetadata ? 4 : 7)">
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">@ReasonLabelText</MudText>
                             <MudText Typo="Typo.body2" Color="Color.Error">@issue.ValidationError</MudText>
                         </MudItem>
+                        @if (ShowRuntimeMetadata)
+                        {
+                            <MudItem xs="12" md="4">
+                                <MudText Typo="Typo.caption" Color="Color.Secondary">@L["State:RuntimeValidation:EffectiveSource"]</MudText>
+                                <MudText Typo="Typo.body2">@DisplayEffectiveSource(issue)</MudText>
+                            </MudItem>
+                        }
                     </MudGrid>
                 </MudStack>
             </MudPaper>
@@ -52,7 +75,16 @@
     [Parameter] public IReadOnlyList<ConfigurationValidationIssue> Issues { get; set; } = [];
     [Parameter] public bool ShowDefinition { get; set; } = true;
     [Parameter] public bool ShowJump { get; set; } = true;
+    [Parameter] public bool ShowRuntimeMetadata { get; set; }
+    [Parameter] public bool ShowSourceChain { get; set; }
+    [Parameter] public string? ValueLabel { get; set; }
+    [Parameter] public string? ReasonLabel { get; set; }
     [Parameter] public EventCallback<ConfigurationValidationIssue> JumpRequested { get; set; }
+    [Parameter] public EventCallback<ConfigurationValidationIssue> SourceChainRequested { get; set; }
+
+    private string ValueLabelText => ValueLabel ?? L["Dialogs:SaveGroup:Validation:InvalidValue"].Value;
+
+    private string ReasonLabelText => ReasonLabel ?? L["Dialogs:SaveGroup:Validation:Reason"].Value;
 
     private IEnumerable<ConfigurationValidationIssue> OrderedIssues =>
         Issues
@@ -68,21 +100,33 @@
 
     private string DisplayInvalidValue(ConfigurationValidationIssue issue)
     {
+        if (issue.IsMissing)
+        {
+            return L["State:RuntimeValidation:MissingValue"].Value;
+        }
+
         if (issue.IsSensitive)
         {
-            return L["State:Value:Sensitive"];
+            return L["State:Value:Sensitive"].Value;
         }
 
         return string.IsNullOrWhiteSpace(issue.InvalidDisplayValue)
-            ? L["Value:States:Empty"]
+            ? L["Value:States:Empty"].Value
             : issue.InvalidDisplayValue;
+    }
+
+    private string DisplayEffectiveSource(ConfigurationValidationIssue issue)
+    {
+        return issue.EffectiveSource is null
+            ? L["State:RuntimeValidation:NoEffectiveSource"].Value
+            : issue.EffectiveSource.DisplayName;
     }
 
     private string RuleTip(ConfigurationValidationIssue issue)
     {
         if (issue.ValidationRules.Count == 0)
         {
-            return L["Dialogs:SaveGroup:Validation:NoRuleTip"];
+            return L["Dialogs:SaveGroup:Validation:NoRuleTip"].Value;
         }
 
         return string.Join(

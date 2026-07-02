@@ -33,9 +33,24 @@ public sealed record ConfigurationValidationIssue
     public string? InvalidDisplayValue { get; init; }
 
     /// <summary>
+    /// Gets the projected Microsoft configuration key when this issue comes from runtime validation.
+    /// </summary>
+    public string? ConfigurationPath { get; init; }
+
+    /// <summary>
     /// Gets the validation error shown to the operator.
     /// </summary>
     public required string ValidationError { get; init; }
+
+    /// <summary>
+    /// Gets the source that currently supplies the effective value, when available.
+    /// </summary>
+    public ConfigurationSourceDescriptor? EffectiveSource { get; init; }
+
+    /// <summary>
+    /// Gets whether the effective value is missing.
+    /// </summary>
+    public bool IsMissing { get; init; }
 
     /// <summary>
     /// Gets whether the node contains sensitive data.

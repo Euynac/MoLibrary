@@ -28,6 +28,12 @@
     flex: 0 0 auto;
 }
 
+.configuration-runtime-validation-panel {
+    flex: 0 0 auto;
+    max-height: 18rem;
+    overflow: auto;
+}
+
 .configuration-state-page ::deep .configuration-state-grid {
     align-items: stretch;
     flex: 1 1 auto;
@@ -198,6 +204,10 @@
         max-height: none;
         min-height: 0;
         overflow: visible;
+    }
+
+    .configuration-runtime-validation-panel {
+        max-height: none;
     }
 
     .configuration-state-page ::deep .configuration-state-left,
