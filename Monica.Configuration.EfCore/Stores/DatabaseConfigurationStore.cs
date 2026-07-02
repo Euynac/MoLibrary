@@ -35,7 +35,7 @@ public sealed class DatabaseConfigurationStore(
     private enum ConfigurationSchemaState
     {
         Missing,
-        Mismatch,
+        RequiresUpgrade,
         Ready
     }
 
@@ -638,16 +638,14 @@ public sealed class DatabaseConfigurationStore(
                 var schemaState = await GetConfigurationSchemaStateAsync(dbContext, token);
                 if (schemaState == ConfigurationSchemaState.Missing)
                 {
-                    await DropConfigurationTablesAsync(dbContext, token);
                     await creator.CreateTablesAsync(token);
                     await EnsureConfigurationSchemaMarkerAsync(dbContext, token);
                     return;
                 }
 
-                if (schemaState == ConfigurationSchemaState.Mismatch)
+                if (schemaState == ConfigurationSchemaState.RequiresUpgrade)
                 {
-                    await DropConfigurationTablesAsync(dbContext, token);
-                    await creator.CreateTablesAsync(token);
+                    await EnsureAdditiveSchemaAsync(dbContext, token);
                     await EnsureConfigurationSchemaMarkerAsync(dbContext, token);
                 }
             }, cancellationToken);
@@ -684,7 +682,7 @@ public sealed class DatabaseConfigurationStore(
         }
         catch (Exception ex) when (IsMissingColumnException(ex))
         {
-            return ConfigurationSchemaState.Mismatch;
+            return ConfigurationSchemaState.RequiresUpgrade;
         }
 
         try
@@ -694,9 +692,21 @@ public sealed class DatabaseConfigurationStore(
                 .Where(candidate => candidate.MarkerKey == ConfigurationSchemaMarkerEntity.CurrentMarkerKey)
                 .Select(candidate => new { candidate.SchemaVersion })
                 .SingleOrDefaultAsync(cancellationToken);
-            if (marker?.SchemaVersion != ConfigurationSchemaMarkerEntity.CurrentSchemaVersion)
+            if (marker is null)
             {
-                return ConfigurationSchemaState.Mismatch;
+                return ConfigurationSchemaState.RequiresUpgrade;
+            }
+
+            if (marker.SchemaVersion > ConfigurationSchemaMarkerEntity.CurrentSchemaVersion)
+            {
+                throw new InvalidOperationException(
+                    $"The Monica.Configuration database schema is version {marker.SchemaVersion}, but this runtime supports version {ConfigurationSchemaMarkerEntity.CurrentSchemaVersion}. " +
+                    "Deploy a newer Monica.Configuration runtime instead of letting an older binary migrate or rewrite the schema.");
+            }
+
+            if (marker.SchemaVersion < ConfigurationSchemaMarkerEntity.CurrentSchemaVersion)
+            {
+                return ConfigurationSchemaState.RequiresUpgrade;
             }
 
             _ = await dbContext.ConfigurationDefinitionPublishHistories
@@ -731,8 +741,16 @@ public sealed class DatabaseConfigurationStore(
         }
         catch (Exception ex) when (IsMissingTableException(ex) || IsMissingColumnException(ex))
         {
-            return ConfigurationSchemaState.Mismatch;
+            return ConfigurationSchemaState.RequiresUpgrade;
         }
+    }
+
+    private static async Task EnsureAdditiveSchemaAsync(
+        ConfigurationDbContext dbContext,
+        CancellationToken cancellationToken)
+    {
+        await EnsureConfigurationSchemaMarkerTableAsync(dbContext, cancellationToken);
+        await EnsureUnifiedVersionTablesAsync(dbContext, cancellationToken);
     }
 
     private static async Task EnsureConfigurationSchemaMarkerAsync(
@@ -745,7 +763,12 @@ public sealed class DatabaseConfigurationStore(
         {
             dbContext.ConfigurationSchemaMarkers.Add(new ConfigurationSchemaMarkerEntity());
         }
-        else if (marker.SchemaVersion != ConfigurationSchemaMarkerEntity.CurrentSchemaVersion)
+        else if (marker.SchemaVersion > ConfigurationSchemaMarkerEntity.CurrentSchemaVersion)
+        {
+            throw new InvalidOperationException(
+                $"The Monica.Configuration database schema is version {marker.SchemaVersion}, but this runtime supports version {ConfigurationSchemaMarkerEntity.CurrentSchemaVersion}.");
+        }
+        else if (marker.SchemaVersion < ConfigurationSchemaMarkerEntity.CurrentSchemaVersion)
         {
             marker.SchemaVersion = ConfigurationSchemaMarkerEntity.CurrentSchemaVersion;
         }
@@ -756,32 +779,108 @@ public sealed class DatabaseConfigurationStore(
         }
     }
 
-    private static async Task DropConfigurationTablesAsync(
+    private static async Task EnsureConfigurationSchemaMarkerTableAsync(
         ConfigurationDbContext dbContext,
         CancellationToken cancellationToken)
     {
-        var entityTypes = new[]
-        {
-            typeof(ConfigurationSchemaMarkerEntity),
-            typeof(ConfigurationUnifiedVersionDocumentEntity),
-            typeof(ConfigurationUnifiedVersionEntity),
-            typeof(ConfigurationValueHistoryEntity),
-            typeof(ConfigurationMutationGroupEntity),
-            typeof(ConfigurationEffectiveValueEntity),
-            typeof(ConfigurationDefinitionPublishHistoryEntity),
-            typeof(ConfigurationDefinitionEntity)
-        };
+        var tableSql = FormatTableName(dbContext.Database.ProviderName, null, "ConfigurationSchemaMarkers");
+        var sql = BuildCreateTableIfMissingSql(
+            dbContext.Database.ProviderName,
+            "ConfigurationSchemaMarkers",
+            tableSql,
+            BuildSchemaMarkerColumnsSql(dbContext.Database.ProviderName));
+        await dbContext.Database.ExecuteSqlRawAsync(sql, cancellationToken);
+    }
 
-        foreach (var entityType in entityTypes)
+    private static async Task EnsureUnifiedVersionTablesAsync(
+        ConfigurationDbContext dbContext,
+        CancellationToken cancellationToken)
+    {
+        var providerName = dbContext.Database.ProviderName;
+        var versionsTableSql = FormatTableName(providerName, null, "ConfigurationUnifiedVersions");
+        var documentsTableSql = FormatTableName(providerName, null, "ConfigurationUnifiedVersionDocuments");
+
+        await dbContext.Database.ExecuteSqlRawAsync(
+            BuildCreateTableIfMissingSql(
+                providerName,
+                "ConfigurationUnifiedVersions",
+                versionsTableSql,
+                BuildUnifiedVersionsColumnsSql(providerName)),
+            cancellationToken);
+
+        await dbContext.Database.ExecuteSqlRawAsync(
+            BuildCreateTableIfMissingSql(
+                providerName,
+                "ConfigurationUnifiedVersionDocuments",
+                documentsTableSql,
+                BuildUnifiedVersionDocumentsColumnsSql(providerName)),
+            cancellationToken);
+    }
+
+    private static string BuildCreateTableIfMissingSql(
+        string? providerName,
+        string tableName,
+        string tableSql,
+        string columnsSql)
+    {
+        if (providerName?.Contains("SqlServer", StringComparison.OrdinalIgnoreCase) is true)
         {
-            var entity = dbContext.Model.FindEntityType(entityType)
-                ?? throw new InvalidOperationException($"EF entity '{entityType.Name}' is not part of {nameof(ConfigurationDbContext)}.");
-            var tableName = entity.GetTableName()
-                ?? throw new InvalidOperationException($"EF entity '{entityType.Name}' does not have a table name.");
-            var tableSql = FormatTableName(dbContext.Database.ProviderName, entity.GetSchema(), tableName);
-            var commandText = "DROP TABLE IF EXISTS " + tableSql;
-            await dbContext.Database.ExecuteSqlRawAsync(commandText, cancellationToken);
+            return $"""
+                    IF OBJECT_ID(N'{tableName.Replace("'", "''", StringComparison.Ordinal)}', N'U') IS NULL
+                    BEGIN
+                        CREATE TABLE {tableSql} (
+                            {columnsSql}
+                        );
+                    END
+                    """;
         }
+
+        return $"""
+                CREATE TABLE IF NOT EXISTS {tableSql} (
+                    {columnsSql}
+                );
+                """;
+    }
+
+    private static string BuildSchemaMarkerColumnsSql(string? providerName)
+    {
+        return providerName switch
+        {
+            var name when name?.Contains("SqlServer", StringComparison.OrdinalIgnoreCase) is true =>
+                "[MarkerKey] nvarchar(100) NOT NULL, [SchemaVersion] int NOT NULL, CONSTRAINT [PK_ConfigurationSchemaMarkers] PRIMARY KEY ([MarkerKey])",
+            var name when name?.Contains("MySql", StringComparison.OrdinalIgnoreCase) is true =>
+                "`MarkerKey` varchar(100) NOT NULL, `SchemaVersion` int NOT NULL, PRIMARY KEY (`MarkerKey`)",
+            _ =>
+                "\"MarkerKey\" varchar(100) NOT NULL, \"SchemaVersion\" integer NOT NULL, PRIMARY KEY (\"MarkerKey\")"
+        };
+    }
+
+    private static string BuildUnifiedVersionsColumnsSql(string? providerName)
+    {
+        return providerName switch
+        {
+            var name when name?.Contains("SqlServer", StringComparison.OrdinalIgnoreCase) is true =>
+                "[Version] bigint NOT NULL, [MutationGroupId] nvarchar(450) NULL, [TriggerDefinitionKeysJson] nvarchar(max) NOT NULL, [DefinitionKeysJson] nvarchar(max) NOT NULL, [DefinitionCount] int NOT NULL, [CreatedTime] datetime2(6) NOT NULL, [ModifierId] nvarchar(max) NULL, [ModifierName] nvarchar(max) NULL, [Reason] nvarchar(max) NULL, CONSTRAINT [PK_ConfigurationUnifiedVersions] PRIMARY KEY ([Version])",
+            var name when name?.Contains("MySql", StringComparison.OrdinalIgnoreCase) is true =>
+                "`Version` bigint NOT NULL, `MutationGroupId` varchar(191) NULL, `TriggerDefinitionKeysJson` longtext NOT NULL, `DefinitionKeysJson` longtext NOT NULL, `DefinitionCount` int NOT NULL, `CreatedTime` datetime(6) NOT NULL, `ModifierId` longtext NULL, `ModifierName` longtext NULL, `Reason` longtext NULL, PRIMARY KEY (`Version`)",
+            var name when name?.Contains("Npgsql", StringComparison.OrdinalIgnoreCase) is true || name?.Contains("GaussDB", StringComparison.OrdinalIgnoreCase) is true =>
+                "\"Version\" bigint NOT NULL, \"MutationGroupId\" text NULL, \"TriggerDefinitionKeysJson\" text NOT NULL, \"DefinitionKeysJson\" text NOT NULL, \"DefinitionCount\" integer NOT NULL, \"CreatedTime\" timestamp with time zone NOT NULL, \"ModifierId\" text NULL, \"ModifierName\" text NULL, \"Reason\" text NULL, PRIMARY KEY (\"Version\")",
+            _ =>
+                "\"Version\" integer NOT NULL, \"MutationGroupId\" text NULL, \"TriggerDefinitionKeysJson\" text NOT NULL, \"DefinitionKeysJson\" text NOT NULL, \"DefinitionCount\" integer NOT NULL, \"CreatedTime\" timestamp NOT NULL, \"ModifierId\" text NULL, \"ModifierName\" text NULL, \"Reason\" text NULL, PRIMARY KEY (\"Version\")"
+        };
+    }
+
+    private static string BuildUnifiedVersionDocumentsColumnsSql(string? providerName)
+    {
+        return providerName switch
+        {
+            var name when name?.Contains("SqlServer", StringComparison.OrdinalIgnoreCase) is true =>
+                "[Version] bigint NOT NULL, [DefinitionKey] nvarchar(450) NOT NULL, [DisplayName] nvarchar(max) NOT NULL, [Category] nvarchar(max) NULL, [FromProject] nvarchar(max) NOT NULL, [SchemaVersion] int NOT NULL, [SchemaHash] nvarchar(max) NOT NULL, [EffectiveValueVersion] bigint NULL, [Json] nvarchar(max) NOT NULL, [SourceContributionsJson] nvarchar(max) NOT NULL, CONSTRAINT [PK_ConfigurationUnifiedVersionDocuments] PRIMARY KEY ([Version], [DefinitionKey])",
+            var name when name?.Contains("MySql", StringComparison.OrdinalIgnoreCase) is true =>
+                "`Version` bigint NOT NULL, `DefinitionKey` varchar(191) NOT NULL, `DisplayName` longtext NOT NULL, `Category` longtext NULL, `FromProject` longtext NOT NULL, `SchemaVersion` int NOT NULL, `SchemaHash` longtext NOT NULL, `EffectiveValueVersion` bigint NULL, `Json` longtext NOT NULL, `SourceContributionsJson` longtext NOT NULL, PRIMARY KEY (`Version`, `DefinitionKey`)",
+            _ =>
+                "\"Version\" bigint NOT NULL, \"DefinitionKey\" text NOT NULL, \"DisplayName\" text NOT NULL, \"Category\" text NULL, \"FromProject\" text NOT NULL, \"SchemaVersion\" integer NOT NULL, \"SchemaHash\" text NOT NULL, \"EffectiveValueVersion\" bigint NULL, \"Json\" text NOT NULL, \"SourceContributionsJson\" text NOT NULL, PRIMARY KEY (\"Version\", \"DefinitionKey\")"
+        };
     }
 
     private static bool IsMissingTableException(Exception exception)
