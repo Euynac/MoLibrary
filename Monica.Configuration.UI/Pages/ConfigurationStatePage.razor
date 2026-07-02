@@ -3,7 +3,6 @@
 @inject ConfigurationFacade Facade
 @inject ConfigurationStateStore StateStore
 @inject ConfigurationParameterPackageService PackageService
-@inject ConfigurationPendingChangeBaselineService PendingChangeBaselines
 @inject NavigationManager NavigationManager
 @inject IDialogService DialogService
 @inject ISnackbar Snackbar
@@ -587,7 +586,6 @@
     private async Task ReloadSelectedEffectiveValuesAndValidationAsync()
     {
         await LoadEffectiveValuesAsync();
-        await RefreshPendingChangeBaselinesAsync();
         await LoadRuntimeValidationReportAsync();
         if (_reloadStatusButton is not null)
         {
@@ -810,8 +808,12 @@
 
     private async Task OpenSaveGroupDialog()
     {
-        await RefreshPendingChangeBaselinesAsync();
         var changes = StateStore.GetPending();
+        if (await ShouldBlockSaveForRuntimeVersionDriftAsync(changes))
+        {
+            return;
+        }
+
         var validationIssues = StateStore.GetValidationIssues();
         var parameters = new DialogParameters<SaveMutationGroupDialog>();
         parameters.Add(dialog => dialog.Changes, changes);
@@ -1053,9 +1055,91 @@
             return;
         }
 
-        var refreshedChanges = await PendingChangeBaselines.RefreshAsync(pendingChanges);
+        var refreshedChanges = new List<PendingChange>(pendingChanges.Count);
+        foreach (var change in pendingChanges)
+        {
+            var result = await LoadDefinitionDetailAsync(change.DefinitionKey);
+            if (result.IsFailed(out _, out var detail))
+            {
+                refreshedChanges.Add(change);
+                continue;
+            }
+
+            var schema = ResolveSchemaNodeByPath(detail.Definition.Root, change.LogicalPath);
+            if (schema is null)
+            {
+                refreshedChanges.Add(change);
+                continue;
+            }
+
+            var effectiveValueResult = await Facade.GetEffectiveValueAsync(change.DefinitionKey, change.LogicalPath);
+            if (effectiveValueResult.IsFailed(out _, out var effectiveValue))
+            {
+                refreshedChanges.Add(change);
+                continue;
+            }
+
+            var refreshedChange = change.RebaseBaseline(detail.Definition, schema, effectiveValue, L);
+            if (!refreshedChange.HasSameOriginalAndNewValue())
+            {
+                refreshedChanges.Add(refreshedChange);
+            }
+        }
+
         StateStore.ReplacePending(refreshedChanges);
         await RefreshPendingCount();
+    }
+
+    private async Task<bool> ShouldBlockSaveForRuntimeVersionDriftAsync(IReadOnlyList<PendingChange> changes)
+    {
+        var monicaDefinitionKeys = changes
+            .Where(static change => change.TargetKind == ConfigurationMutationTargetKind.MonicaEffectiveStore)
+            .Select(static change => change.DefinitionKey)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+        if (monicaDefinitionKeys.Count == 0)
+        {
+            return false;
+        }
+
+        var statusResult = await Facade.GetRuntimeReloadStatusAsync();
+        if (statusResult.IsFailed(out var error, out var report))
+        {
+            Snackbar.Add($"{L["Common:Errors:LoadFailed"]}: {error.Message}", Severity.Error);
+            return true;
+        }
+
+        var driftedDefinitions = report.Definitions
+            .Where(definition =>
+                monicaDefinitionKeys.Contains(definition.DefinitionKey)
+                && definition.RuntimeLoadedVersion != definition.EffectiveStoreVersion)
+            .OrderBy(static definition => definition.DisplayName, StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+        if (driftedDefinitions.Length == 0)
+        {
+            return false;
+        }
+
+        var details = string.Join("; ", driftedDefinitions.Select(FormatSaveBlockedReloadDefinition));
+        Snackbar.Add(L["State:ReloadStatus:SaveBlockedPendingDefinitions", details], Severity.Warning);
+        if (_reloadStatusButton is not null)
+        {
+            await _reloadStatusButton.OpenAsync(report);
+        }
+
+        return true;
+    }
+
+    private string FormatSaveBlockedReloadDefinition(ConfigurationDefinitionReloadStatus definition)
+    {
+        return L["State:ReloadStatus:SaveBlockedDefinitionVersion",
+            definition.DisplayName,
+            FormatReloadVersion(definition.RuntimeLoadedVersion),
+            FormatReloadVersion(definition.EffectiveStoreVersion)].Value;
+    }
+
+    private string FormatReloadVersion(long? version)
+    {
+        return version is null ? L["State:ReloadStatus:UnknownValue"].Value : L["State:ReloadStatus:VersionValue", version.Value].Value;
     }
 
     private void OnStateStoreChanged()

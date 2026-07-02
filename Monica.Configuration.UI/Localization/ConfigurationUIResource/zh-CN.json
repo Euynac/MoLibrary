@@ -87,6 +87,8 @@
       "StoreModifiedAt": "存储修改时间",
       "DefinitionsCurrent": "所有本服务运行时配置版本均与有效值存储一致。",
       "DriftDefinitions": "{0} 个配置定义需要 Reload 后才能与有效值存储一致。",
+      "SaveBlockedPendingDefinitions": "保存已阻止：以下暂存配置的运行时版本与有效值存储不一致：{0}。请先手动 Reload，然后检查暂存修改后再保存。",
+      "SaveBlockedDefinitionVersion": "{0}（运行时 {1}，存储 {2}）",
       "LastFailure": "上次失败：{0}，{1}",
       "ManualReload": "手动 Reload",
       "Reloading": "Reload 中",

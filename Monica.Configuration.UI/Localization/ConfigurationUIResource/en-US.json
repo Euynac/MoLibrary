@@ -87,6 +87,8 @@
       "StoreModifiedAt": "Store modified",
       "DefinitionsCurrent": "Every runtime configuration version in this service matches the effective value store.",
       "DriftDefinitions": "{0} configuration definitions need reload before matching the effective value store.",
+      "SaveBlockedPendingDefinitions": "Save blocked because pending changes depend on definitions whose runtime version differs from the effective value store: {0}. Reload now, then review the pending changes before saving.",
+      "SaveBlockedDefinitionVersion": "{0} (runtime {1}, store {2})",
       "LastFailure": "Last failure: {0}, {1}",
       "ManualReload": "Reload now",
       "Reloading": "Reloading",

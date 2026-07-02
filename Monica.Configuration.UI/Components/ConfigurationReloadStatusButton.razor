@@ -224,6 +224,13 @@
         }
     }
 
+    public async Task OpenAsync(ConfigurationReloadStatusReport report)
+    {
+        _report = report;
+        _popoverOpen = true;
+        await InvokeAsync(StateHasChanged);
+    }
+
     private async Task ReloadAsync()
     {
         _reloading = true;
