@@ -3,6 +3,7 @@
 @inject ConfigurationFacade Facade
 @inject ConfigurationStateStore StateStore
 @inject ConfigurationParameterPackageService PackageService
+@inject ConfigurationPendingChangeBaselineService PendingChangeBaselines
 @inject NavigationManager NavigationManager
 @inject IDialogService DialogService
 @inject ISnackbar Snackbar
@@ -24,6 +25,7 @@
                                     <MudBadge Content="@RuntimeValidationIssueCount"
                                               Color="@RuntimeValidationStatusColor"
                                               Visible="@(RuntimeValidationIssueCount > 0)"
+                                              Origin="Origin.CenterRight"
                                               Overlap="true">
                                         <MudIconButton Icon="@RuntimeValidationStatusIcon"
                                                        Color="@RuntimeValidationStatusColor"
@@ -585,6 +587,7 @@
     private async Task ReloadSelectedEffectiveValuesAndValidationAsync()
     {
         await LoadEffectiveValuesAsync();
+        await RefreshPendingChangeBaselinesAsync();
         await LoadRuntimeValidationReportAsync();
         if (_reloadStatusButton is not null)
         {
@@ -595,6 +598,7 @@
     private async Task OnRuntimeConfigurationReloadedAsync()
     {
         await LoadEffectiveValuesAsync();
+        await RefreshPendingChangeBaselinesAsync();
         await LoadRuntimeValidationReportAsync();
     }
 
@@ -806,6 +810,7 @@
 
     private async Task OpenSaveGroupDialog()
     {
+        await RefreshPendingChangeBaselinesAsync();
         var changes = StateStore.GetPending();
         var validationIssues = StateStore.GetValidationIssues();
         var parameters = new DialogParameters<SaveMutationGroupDialog>();
@@ -1038,6 +1043,19 @@
         _pendingCount = StateStore.GetPending().Count;
         _validationIssueCount = StateStore.GetValidationIssues().Count;
         return Task.CompletedTask;
+    }
+
+    private async Task RefreshPendingChangeBaselinesAsync()
+    {
+        var pendingChanges = StateStore.GetPending();
+        if (pendingChanges.Count == 0)
+        {
+            return;
+        }
+
+        var refreshedChanges = await PendingChangeBaselines.RefreshAsync(pendingChanges);
+        StateStore.ReplacePending(refreshedChanges);
+        await RefreshPendingCount();
     }
 
     private void OnStateStoreChanged()

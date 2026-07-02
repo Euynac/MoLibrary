@@ -170,6 +170,21 @@ public sealed class ConfigurationStateStore
     }
 
     /// <summary>
+    /// Replaces the complete pending-change set while preserving validation issues.
+    /// </summary>
+    /// <param name="changes">The refreshed pending changes.</param>
+    public void ReplacePending(IReadOnlyList<PendingChange> changes)
+    {
+        _pendingChanges.Clear();
+        foreach (var change in changes)
+        {
+            _pendingChanges[Key(change.DefinitionKey, change.LogicalPath)] = change;
+        }
+
+        NotifyChanged();
+    }
+
+    /// <summary>
     /// Removes one pending change.
     /// </summary>
     /// <param name="definitionKey">The definition key.</param>

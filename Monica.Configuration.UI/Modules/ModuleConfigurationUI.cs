@@ -102,6 +102,7 @@ public sealed class ModuleConfigurationUI(ModuleConfigurationUIOption option)
     {
         services.AddScoped<ConfigurationStateStore>();
         services.AddScoped<ConfigurationPendingChangeCompactor>();
+        services.AddScoped<ConfigurationPendingChangeBaselineService>();
         services.AddScoped<ConfigurationJsonDraftService>();
         services.AddScoped<ConfigurationParameterPackageService>();
     }
