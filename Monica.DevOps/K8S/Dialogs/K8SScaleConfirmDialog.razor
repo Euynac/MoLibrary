@@ -1,0 +1,178 @@
+@using Monica.DevOps.Localization
+@using Monica.DevOps.K8S.Models
+@inject IStringLocalizer<K8SResource> L
+
+<MudDialog Class="k8s-scale-dialog">
+    <DialogContent>
+        <MudStack Spacing="3">
+            <MudAlert Severity="@(Preview.Workloads.Count > 0 ? Severity.Warning : Severity.Info)" Variant="Variant.Outlined">
+                <MudText Typo="Typo.body1">
+                    @if (Preview.Workloads.Count > 0)
+                    {
+                        <text>@L[GetSummaryKey(), Preview.Workloads.Count, Preview.EligibleTargets.Count]</text>
+                    }
+                    else
+                    {
+                        <text>@L["ScaleDialog:SummaryWithoutWorkloads"]</text>
+                    }
+                </MudText>
+            </MudAlert>
+
+            @if (Preview.RestrictionKeywords.Count > 0)
+            {
+                <MudAlert Severity="Severity.Info" Variant="Variant.Outlined">
+                    @L["ScaleDialog:SensitiveRestrictionsActive", string.Join(", ", Preview.RestrictionKeywords)]
+                </MudAlert>
+            }
+
+            @if (Preview.ResourceType == K8SResourceType.Service)
+            {
+                <MudAlert Severity="Severity.Info" Variant="Variant.Outlined">
+                    @L["ScaleDialog:ServiceExplanation"]
+                </MudAlert>
+            }
+
+            <MudGrid Spacing="2">
+                <MudItem xs="12" md="6">
+                    <MudPaper Class="pa-4 list-panel" Outlined="true">
+                        <MudText Typo="Typo.subtitle2">@L["ScaleDialog:EligibleTargets"]</MudText>
+                        @if (Preview.EligibleTargets.Count == 0)
+                        {
+                            <MudText Typo="Typo.body2" Color="Color.Secondary">@L["ScaleDialog:NoEligibleTargets"]</MudText>
+                        }
+                        else
+                        {
+                            <MudList T="string" Dense="true">
+                                @foreach (var target in Preview.EligibleTargets)
+                                {
+                                    <MudListItem T="string">
+                                        <MudText Typo="Typo.body2">@GetTargetDisplayName(target)</MudText>
+                                    </MudListItem>
+                                }
+                            </MudList>
+                        }
+                    </MudPaper>
+                </MudItem>
+                <MudItem xs="12" md="6">
+                    <MudPaper Class="pa-4 list-panel" Outlined="true">
+                        <MudText Typo="Typo.subtitle2">@L["ScaleDialog:IgnoredTargets"]</MudText>
+                        @if (Preview.IgnoredTargets.Count == 0)
+                        {
+                            <MudText Typo="Typo.body2" Color="Color.Secondary">@L["ScaleDialog:NoIgnoredTargets"]</MudText>
+                        }
+                        else
+                        {
+                            <MudList T="string" Dense="true">
+                                @foreach (var target in Preview.IgnoredTargets)
+                                {
+                                    <MudListItem T="string">
+                                        <MudStack Spacing="0">
+                                            <MudText Typo="Typo.body2">@GetTargetDisplayName(target)</MudText>
+                                            <MudText Typo="Typo.caption" Color="Color.Secondary">@target.Reason</MudText>
+                                        </MudStack>
+                                    </MudListItem>
+                                }
+                            </MudList>
+                        }
+                    </MudPaper>
+                </MudItem>
+            </MudGrid>
+
+            <MudPaper Class="pa-4 list-panel" Outlined="true">
+                <MudText Typo="Typo.subtitle2">@L["ScaleDialog:WorkloadsToScale"]</MudText>
+                @if (Preview.Workloads.Count == 0)
+                {
+                    <MudText Typo="Typo.body2" Color="Color.Secondary">@L["ScaleDialog:NoWorkloads"]</MudText>
+                }
+                else
+                {
+                    <MudList T="string" Dense="true">
+                        @foreach (var workload in Preview.Workloads)
+                        {
+                            <MudListItem T="string">
+                                <MudText Typo="Typo.body2">@L["ScaleDialog:WorkloadEntry", GetWorkloadDisplayName(workload), workload.CurrentReplicas, workload.TargetReplicas, GetPreviousReplicasDisplay(workload)]</MudText>
+                            </MudListItem>
+                        }
+                    </MudList>
+                }
+            </MudPaper>
+
+            <MudPaper Class="command-output" Outlined="true">
+                <pre>@string.Join(Environment.NewLine, Preview.CommandPreview)</pre>
+            </MudPaper>
+        </MudStack>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel" Variant="Variant.Text">
+            @L["Common:Cancel"]
+        </MudButton>
+        @if (Preview.Workloads.Count > 0)
+        {
+            <MudButton OnClick="Confirm"
+                       Variant="Variant.Filled"
+                       Color="Color.Error"
+                       StartIcon="@GetConfirmIcon()">
+                @ConfirmButtonText
+            </MudButton>
+        }
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] private IMudDialogInstance? MudDialog { get; set; }
+
+    [Parameter] public K8SScalePreview Preview { get; set; } = new();
+
+    [Parameter] public string ConfirmButtonText { get; set; } = string.Empty;
+
+    private void Cancel()
+    {
+        MudDialog?.Cancel();
+    }
+
+    private void Confirm()
+    {
+        MudDialog?.Close(DialogResult.Ok(true));
+    }
+
+    private string GetSummaryKey()
+    {
+        return Preview.Operation == K8SScaleOperation.ScaleDown
+            ? "ScaleDialog:SummaryScaleDownWithWorkloads"
+            : "ScaleDialog:SummaryScaleUpWithWorkloads";
+    }
+
+    private string GetConfirmIcon()
+    {
+        return Preview.Operation == K8SScaleOperation.ScaleDown
+            ? Icons.Material.Filled.KeyboardArrowDown
+            : Icons.Material.Filled.KeyboardArrowUp;
+    }
+
+    private string GetTargetDisplayName(K8SScaleTarget target)
+    {
+        return $"{GetLocalizedKind(target.Kind)}/{target.Name}";
+    }
+
+    private string GetWorkloadDisplayName(K8SScaleWorkloadPlan workload)
+    {
+        return $"{GetLocalizedKind(workload.Kind)}/{workload.Name}";
+    }
+
+    private string GetPreviousReplicasDisplay(K8SScaleWorkloadPlan workload)
+    {
+        return workload.PreviousReplicas?.ToString() ?? L["Common:Empty"];
+    }
+
+    private string GetLocalizedKind(string kind)
+    {
+        return kind switch
+        {
+            "Service" => L["ResourceTypes:Service"].Value,
+            "Deployment" => L["ResourceTypes:Deployment"].Value,
+            "StatefulSet" => L["ResourceTypes:StatefulSet"].Value,
+            "DaemonSet" => L["ResourceTypes:DaemonSet"].Value,
+            _ => kind
+        };
+    }
+}

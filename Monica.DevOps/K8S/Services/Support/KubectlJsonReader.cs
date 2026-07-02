@@ -57,6 +57,7 @@ internal static class KubectlJsonReader
                     DesiredReplicas = ReadDesiredReplicas(kind, spec, status),
                     ReadyReplicas = ReadReadyReplicas(kind, status),
                     LastRestartedAtUtc = ReadLastRestartedAt(spec, metadata),
+                    PreviousReplicas = ReadPreviousReplicas(metadata),
                     Labels = ReadTemplateLabels(spec, metadata),
                     Images = ReadTemplateImages(spec)
                 };
@@ -470,6 +471,19 @@ internal static class KubectlJsonReader
                 values.Add(value);
             }
         }
+    }
+
+    private static int? ReadPreviousReplicas(JsonElement metadata)
+    {
+        var annotations = ReadStringMap(metadata, "annotations");
+        if (!annotations.TryGetValue(KubectlCommandBuilder.PREVIOUS_REPLICAS_ANNOTATION, out var rawValue))
+        {
+            return null;
+        }
+
+        return int.TryParse(rawValue, out var value) && value > 0
+            ? value
+            : null;
     }
 
     private static DateTimeOffset? ParseDateTimeOffsetOrNull(string? value)

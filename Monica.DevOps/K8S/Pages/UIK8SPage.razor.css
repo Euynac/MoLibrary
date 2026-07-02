@@ -6,6 +6,17 @@
     min-width: 260px;
 }
 
+.filter-action-slot {
+    height: 100%;
+    display: flex;
+    align-items: flex-start;
+    padding-top: 8px;
+}
+
+.filter-action-button {
+    min-height: 40px;
+}
+
 .actions-cell {
     white-space: nowrap;
 }
@@ -16,4 +27,10 @@
 
 .page-root ::deep .resource-grid .mud-table-cell {
     vertical-align: top;
+}
+
+@media (max-width: 960px) {
+    .filter-action-slot {
+        padding-top: 0;
+    }
 }

@@ -16,6 +16,10 @@ public enum K8SMessageCode
     RemoteKubectlCommandFailed,
     NoRestartableTargetsRemain,
     NoRestartableTargetsFound,
+    NoScalableTargetsRemain,
+    NoScalableTargetsFound,
+    WorkloadNotScalable,
+    ScaleTargetAlreadySatisfied,
     ServiceSelectorMissing,
     ServiceBackingWorkloadsMissing,
     KubectlJsonParseFailed,
@@ -100,6 +104,26 @@ public sealed class K8SOperationException : Exception
         return Create(K8SMessageCode.NoRestartableTargetsFound);
     }
 
+    public static K8SOperationException NoScalableTargetsRemain()
+    {
+        return Create(K8SMessageCode.NoScalableTargetsRemain);
+    }
+
+    public static K8SOperationException NoScalableTargetsFound()
+    {
+        return Create(K8SMessageCode.NoScalableTargetsFound);
+    }
+
+    public static K8SOperationException WorkloadNotScalable(string workloadKind, string workloadName)
+    {
+        return Create(K8SMessageCode.WorkloadNotScalable, workloadKind, workloadName);
+    }
+
+    public static K8SOperationException ScaleTargetAlreadySatisfied(string workloadKind, string workloadName, int targetReplicas)
+    {
+        return Create(K8SMessageCode.ScaleTargetAlreadySatisfied, workloadKind, workloadName, targetReplicas.ToString());
+    }
+
     public static K8SOperationException ServiceSelectorMissing(string serviceName)
     {
         return Create(K8SMessageCode.ServiceSelectorMissing, serviceName);
@@ -156,6 +180,10 @@ public sealed class K8SOperationException : Exception
             K8SMessageCode.RemoteKubectlCommandFailed => $"Remote kubectl command failed ({messageArguments[0]}): {messageArguments[1]}",
             K8SMessageCode.NoRestartableTargetsRemain => "No restartable targets remain.",
             K8SMessageCode.NoRestartableTargetsFound => "No restartable targets were found.",
+            K8SMessageCode.NoScalableTargetsRemain => "No scalable targets remain.",
+            K8SMessageCode.NoScalableTargetsFound => "No scalable targets were found.",
+            K8SMessageCode.WorkloadNotScalable => $"{messageArguments[0]} '{messageArguments[1]}' cannot be scaled through replicas.",
+            K8SMessageCode.ScaleTargetAlreadySatisfied => $"{messageArguments[0]} '{messageArguments[1]}' already satisfies target replica count {messageArguments[2]}.",
             K8SMessageCode.ServiceSelectorMissing => $"Service '{messageArguments[0]}' has no selector and cannot be mapped to workloads.",
             K8SMessageCode.ServiceBackingWorkloadsMissing => $"No backing workloads were found for service '{messageArguments[0]}'.",
             K8SMessageCode.KubectlJsonParseFailed => "Failed to parse kubectl JSON output.",

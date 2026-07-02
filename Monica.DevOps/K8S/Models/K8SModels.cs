@@ -16,6 +16,22 @@ public enum K8SResourceType
     DaemonSet
 }
 
+/// <summary>
+/// Describes a supported workload replica scaling operation.
+/// </summary>
+public enum K8SScaleOperation
+{
+    /// <summary>
+    /// Records the current desired replica count and scales the workload to zero replicas.
+    /// </summary>
+    ScaleDown,
+
+    /// <summary>
+    /// Restores the recorded desired replica count, or one replica when no valid record exists.
+    /// </summary>
+    ScaleUp
+}
+
 public static class K8SResourceTypeExtensions
 {
     public static bool TryParse(string? value, out K8SResourceType resourceType)
@@ -356,6 +372,11 @@ public class K8SWorkloadReference
 
     public DateTimeOffset? LastRestartedAtUtc { get; init; }
 
+    /// <summary>
+    /// Gets the replica count recorded by Monica before a previous scale-down operation, when present.
+    /// </summary>
+    public int? PreviousReplicas { get; init; }
+
     public Dictionary<string, string> Labels { get; init; } = new(StringComparer.OrdinalIgnoreCase);
 
     public List<string> Images { get; init; } = [];
@@ -381,6 +402,7 @@ public class K8SWorkloadReference
             DesiredReplicas = DesiredReplicas,
             ReadyReplicas = ReadyReplicas,
             LastRestartedAtUtc = podStartTime,
+            PreviousReplicas = PreviousReplicas,
             Labels = Labels,
             Images = Images
         };
@@ -613,6 +635,275 @@ public class K8SRestartResult
     public DateTimeOffset CompletedAtUtc { get; init; }
 
     public K8SRestartResult LocalizeIgnoredTargets(Func<K8SRestartIgnoredTarget, string> reasonFactory)
+    {
+        ArgumentNullException.ThrowIfNull(reasonFactory);
+
+        foreach (var ignoredTarget in IgnoredTargets)
+        {
+            ignoredTarget.ApplyLocalizedReason(reasonFactory(ignoredTarget));
+        }
+
+        return this;
+    }
+}
+
+/// <summary>
+/// Represents a requested K8S resource target in a scale operation.
+/// </summary>
+public class K8SScaleTarget
+{
+    /// <summary>
+    /// Gets the resource type that the operator requested.
+    /// </summary>
+    public K8SResourceType ResourceType { get; init; }
+
+    /// <summary>
+    /// Gets the Kubernetes kind displayed to operators.
+    /// </summary>
+    public string Kind { get; init; } = string.Empty;
+
+    /// <summary>
+    /// Gets the requested resource name.
+    /// </summary>
+    public string Name { get; init; } = string.Empty;
+
+    /// <summary>
+    /// Gets the namespace that contains the requested resource.
+    /// </summary>
+    public string Namespace { get; init; } = string.Empty;
+
+    /// <summary>
+    /// Gets a compact kind/name display value for dialogs and result summaries.
+    /// </summary>
+    public string DisplayName => $"{Kind}/{Name}";
+}
+
+/// <summary>
+/// Represents a requested target that was intentionally excluded from a scale operation.
+/// </summary>
+public class K8SScaleIgnoredTarget : K8SScaleTarget
+{
+    /// <summary>
+    /// Gets the stable reason code used for localization, when the reason came from a known K8S operation failure.
+    /// </summary>
+    public K8SMessageCode? ReasonCode { get; init; }
+
+    /// <summary>
+    /// Gets the localization arguments for <see cref="ReasonCode"/>.
+    /// </summary>
+    public List<string> ReasonArguments { get; init; } = [];
+
+    /// <summary>
+    /// Gets the current human-readable reason text.
+    /// </summary>
+    public string Reason { get; internal set; } = string.Empty;
+
+    /// <summary>
+    /// Gets a compact target and reason display value.
+    /// </summary>
+    public string DisplayText => $"{DisplayName}: {Reason}";
+
+    /// <summary>
+    /// Replaces the reason with localized text for UI and API consumers.
+    /// </summary>
+    public void ApplyLocalizedReason(string reason)
+    {
+        ArgumentNullException.ThrowIfNull(reason);
+        Reason = reason;
+    }
+}
+
+/// <summary>
+/// Describes the concrete workload replica change and kubectl commands for one scalable workload.
+/// </summary>
+public class K8SScaleWorkloadPlan
+{
+    /// <summary>
+    /// Gets the scale operation this workload plan will execute.
+    /// </summary>
+    public K8SScaleOperation Operation { get; init; }
+
+    /// <summary>
+    /// Gets the scalable workload kind.
+    /// </summary>
+    public string Kind { get; init; } = string.Empty;
+
+    /// <summary>
+    /// Gets the scalable workload name.
+    /// </summary>
+    public string Name { get; init; } = string.Empty;
+
+    /// <summary>
+    /// Gets the namespace that contains the workload.
+    /// </summary>
+    public string Namespace { get; init; } = string.Empty;
+
+    /// <summary>
+    /// Gets the desired replica count observed while building the preview.
+    /// </summary>
+    public int CurrentReplicas { get; init; }
+
+    /// <summary>
+    /// Gets the desired replica count that will be applied.
+    /// </summary>
+    public int TargetReplicas { get; init; }
+
+    /// <summary>
+    /// Gets the previously recorded replica count used by scale-up, when present.
+    /// </summary>
+    public int? PreviousReplicas { get; init; }
+
+    /// <summary>
+    /// Gets the exact kubectl commands that will be executed for this workload.
+    /// </summary>
+    public List<string> CommandPreview { get; init; } = [];
+
+    /// <summary>
+    /// Gets a compact kind/name display value.
+    /// </summary>
+    public string DisplayName => $"{Kind}/{Name}";
+
+    /// <summary>
+    /// Gets a compact current-to-target replica transition display value.
+    /// </summary>
+    public string ReplicaChangeDisplay => $"{CurrentReplicas}->{TargetReplicas}";
+}
+
+/// <summary>
+/// Shows the full planned effect of a guarded K8S scale operation before execution.
+/// </summary>
+public class K8SScalePreview
+{
+    /// <summary>
+    /// Gets the namespace where the operation would run.
+    /// </summary>
+    public string Namespace { get; init; } = string.Empty;
+
+    /// <summary>
+    /// Gets the human-readable scope name used in dialogs and result summaries.
+    /// </summary>
+    public string ScopeName { get; init; } = string.Empty;
+
+    /// <summary>
+    /// Gets the requested resource type, when the preview targets one list type.
+    /// </summary>
+    public K8SResourceType? ResourceType { get; init; }
+
+    /// <summary>
+    /// Gets the planned scale operation.
+    /// </summary>
+    public K8SScaleOperation Operation { get; init; }
+
+    /// <summary>
+    /// Gets when the preview was generated.
+    /// </summary>
+    public DateTimeOffset GeneratedAtUtc { get; init; }
+
+    /// <summary>
+    /// Gets active sensitive-operation keywords that constrained the preview.
+    /// </summary>
+    public List<string> RestrictionKeywords { get; init; } = [];
+
+    /// <summary>
+    /// Gets all requested resource targets.
+    /// </summary>
+    public List<K8SScaleTarget> RequestedTargets { get; init; } = [];
+
+    /// <summary>
+    /// Gets requested targets that produced at least one workload plan.
+    /// </summary>
+    public List<K8SScaleTarget> EligibleTargets { get; init; } = [];
+
+    /// <summary>
+    /// Gets requested targets that were excluded before execution.
+    /// </summary>
+    public List<K8SScaleIgnoredTarget> IgnoredTargets { get; init; } = [];
+
+    /// <summary>
+    /// Gets the concrete workload plans that would be executed.
+    /// </summary>
+    public List<K8SScaleWorkloadPlan> Workloads { get; init; } = [];
+
+    /// <summary>
+    /// Gets the flattened kubectl command preview for all workload plans.
+    /// </summary>
+    public List<string> CommandPreview { get; init; } = [];
+
+    /// <summary>
+    /// Gets whether this preview has at least one executable workload plan.
+    /// </summary>
+    public bool HasScalableTargets => Workloads.Count > 0;
+
+    /// <summary>
+    /// Localizes ignored target reasons in place and returns this preview.
+    /// </summary>
+    public K8SScalePreview LocalizeIgnoredTargets(Func<K8SScaleIgnoredTarget, string> reasonFactory)
+    {
+        ArgumentNullException.ThrowIfNull(reasonFactory);
+
+        foreach (var ignoredTarget in IgnoredTargets)
+        {
+            ignoredTarget.ApplyLocalizedReason(reasonFactory(ignoredTarget));
+        }
+
+        return this;
+    }
+}
+
+/// <summary>
+/// Describes the completed effect of a guarded K8S scale operation.
+/// </summary>
+public class K8SScaleResult
+{
+    /// <summary>
+    /// Gets the namespace where the operation ran.
+    /// </summary>
+    public string Namespace { get; init; } = string.Empty;
+
+    /// <summary>
+    /// Gets the human-readable scope name used in dialogs and result summaries.
+    /// </summary>
+    public string ScopeName { get; init; } = string.Empty;
+
+    /// <summary>
+    /// Gets the requested resource type, when the operation targeted one list type.
+    /// </summary>
+    public K8SResourceType? ResourceType { get; init; }
+
+    /// <summary>
+    /// Gets the completed scale operation.
+    /// </summary>
+    public K8SScaleOperation Operation { get; init; }
+
+    /// <summary>
+    /// Gets the requested target names that produced executable workload plans.
+    /// </summary>
+    public List<string> AffectedTargets { get; init; } = [];
+
+    /// <summary>
+    /// Gets the workload plans that were executed.
+    /// </summary>
+    public List<K8SScaleWorkloadPlan> Workloads { get; init; } = [];
+
+    /// <summary>
+    /// Gets the kubectl commands that were executed.
+    /// </summary>
+    public List<string> ExecutedCommands { get; init; } = [];
+
+    /// <summary>
+    /// Gets requested targets that were excluded before execution.
+    /// </summary>
+    public List<K8SScaleIgnoredTarget> IgnoredTargets { get; init; } = [];
+
+    /// <summary>
+    /// Gets when the operation completed.
+    /// </summary>
+    public DateTimeOffset CompletedAtUtc { get; init; }
+
+    /// <summary>
+    /// Localizes ignored target reasons in place and returns this result.
+    /// </summary>
+    public K8SScaleResult LocalizeIgnoredTargets(Func<K8SScaleIgnoredTarget, string> reasonFactory)
     {
         ArgumentNullException.ThrowIfNull(reasonFactory);
 

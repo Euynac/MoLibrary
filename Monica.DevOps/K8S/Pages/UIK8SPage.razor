@@ -34,20 +34,67 @@
                                    OnClick="RefreshEverythingAsync">
                             @L["Actions:Refresh"]
                         </MudButton>
-                        <MudButton Variant="Variant.Filled"
-                                   Color="Color.Warning"
-                                   StartIcon="@Icons.Material.Filled.RestartAlt"
-                                   Disabled="@(!CanRestartSelected)"
-                                   OnClick="RestartSelectedResourcesAsync">
-                            @L["Actions:RestartSelectedWorkloads"]
-                        </MudButton>
-                        <MudButton Variant="Variant.Filled"
-                                   Color="Color.Warning"
-                                   StartIcon="@Icons.Material.Filled.RestartAlt"
-                                   Disabled="@(!CanRestartNamespace)"
-                                   OnClick="RestartNamespaceAsync">
-                            @L["Actions:RestartNamespaceWorkloads"]
-                        </MudButton>
+                        <MudMenu AnchorOrigin="Origin.BottomRight"
+                                 TransformOrigin="Origin.TopRight"
+                                 Disabled="@(!CanRestartNamespace)">
+                            <ActivatorContent Context="menu">
+                                <MudButton Variant="Variant.Filled"
+                                           Color="Color.Warning"
+                                           StartIcon="@Icons.Material.Filled.RestartAlt"
+                                           Disabled="@(!CanRestartNamespace)"
+                                           OnClick="@(() => menu.ToggleAsync())">
+                                    @L["Actions:RestartMenu"]
+                                </MudButton>
+                            </ActivatorContent>
+                            <ChildContent>
+                                <MudMenuItem Icon="@Icons.Material.Filled.Checklist"
+                                             Disabled="@(!CanRestartSelected)"
+                                             OnClick="RestartSelectedResourcesAsync">
+                                    @L["Actions:RestartSelectedWorkloads"]
+                                </MudMenuItem>
+                                <MudMenuItem Icon="@Icons.Material.Filled.Dns"
+                                             Disabled="@(!CanRestartNamespace)"
+                                             OnClick="RestartNamespaceAsync">
+                                    @L["Actions:RestartNamespaceWorkloads"]
+                                </MudMenuItem>
+                            </ChildContent>
+                        </MudMenu>
+                        <MudMenu AnchorOrigin="Origin.BottomRight"
+                                 TransformOrigin="Origin.TopRight"
+                                 Disabled="@(!CanScaleNamespace)">
+                            <ActivatorContent Context="menu">
+                                <MudButton Variant="Variant.Filled"
+                                           Color="Color.Error"
+                                           StartIcon="@Icons.Material.Filled.CompareArrows"
+                                           Disabled="@(!CanScaleNamespace)"
+                                           OnClick="@(() => menu.ToggleAsync())">
+                                    @L["Actions:ScaleMenu"]
+                                </MudButton>
+                            </ActivatorContent>
+                            <ChildContent>
+                                <MudMenuItem Icon="@Icons.Material.Filled.KeyboardArrowDown"
+                                             Disabled="@(!CanScaleSelected)"
+                                             OnClick="@(() => ScaleSelectedResourcesAsync(K8SScaleOperation.ScaleDown))">
+                                    @L["Actions:ScaleDownSelectedWorkloads"]
+                                </MudMenuItem>
+                                <MudMenuItem Icon="@Icons.Material.Filled.KeyboardArrowUp"
+                                             Disabled="@(!CanScaleSelected)"
+                                             OnClick="@(() => ScaleSelectedResourcesAsync(K8SScaleOperation.ScaleUp))">
+                                    @L["Actions:ScaleUpSelectedWorkloads"]
+                                </MudMenuItem>
+                                <MudDivider />
+                                <MudMenuItem Icon="@Icons.Material.Filled.KeyboardDoubleArrowDown"
+                                             Disabled="@(!CanScaleNamespace)"
+                                             OnClick="@(() => ScaleNamespaceAsync(K8SScaleOperation.ScaleDown))">
+                                    @L["Actions:ScaleDownNamespaceWorkloads"]
+                                </MudMenuItem>
+                                <MudMenuItem Icon="@Icons.Material.Filled.KeyboardDoubleArrowUp"
+                                             Disabled="@(!CanScaleNamespace)"
+                                             OnClick="@(() => ScaleNamespaceAsync(K8SScaleOperation.ScaleUp))">
+                                    @L["Actions:ScaleUpNamespaceWorkloads"]
+                                </MudMenuItem>
+                            </ChildContent>
+                        </MudMenu>
                     </MudStack>
                 </MudStack>
 
@@ -111,13 +158,16 @@
                                   HelperText="@L["Page:SearchHelper"]" />
                 </MudItem>
                 <MudItem xs="12" md="3">
-                    <MudButton Variant="Variant.Outlined"
-                               StartIcon="@Icons.Material.Filled.AccountTree"
-                               Disabled="@(_busy || string.IsNullOrWhiteSpace(_selectedNamespace))"
-                               FullWidth="true"
-                               OnClick="RefreshCurrentResourceListAsync">
-                        @L["Actions:RefreshCurrentList"]
-                    </MudButton>
+                    <div class="filter-action-slot">
+                        <MudButton Variant="Variant.Outlined"
+                                   StartIcon="@Icons.Material.Filled.AccountTree"
+                                   Disabled="@(_busy || string.IsNullOrWhiteSpace(_selectedNamespace))"
+                                   FullWidth="true"
+                                   Class="filter-action-button"
+                                   OnClick="RefreshCurrentResourceListAsync">
+                            @L["Actions:RefreshCurrentList"]
+                        </MudButton>
+                    </div>
                 </MudItem>
                 <MudItem xs="12">
                     <MudStack Row="true" Spacing="1" Wrap="Wrap.Wrap">
@@ -244,6 +294,10 @@
     private bool CanRestartNamespace => !_busy && !_loadingResources && !string.IsNullOrWhiteSpace(_selectedNamespace);
 
     private bool CanRestartSelected => CanRestartNamespace && _selectedResources.Count > 0;
+
+    private bool CanScaleNamespace => CanRestartNamespace;
+
+    private bool CanScaleSelected => CanScaleNamespace && _selectedResources.Count > 0;
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -636,6 +690,113 @@
         await LoadResourceListAsync(_selectedNamespace, _currentResourceType);
     }
 
+    private async Task ScaleSelectedResourcesAsync(K8SScaleOperation operation)
+    {
+        var selectedNames = _selectedResources
+            .Select(resource => resource.Name)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+        if (selectedNames.Count == 0)
+        {
+            return;
+        }
+
+        var previewResponse = await ExecuteBusyAsync(() => K8SFacade.GetBatchScalePreviewAsync(_selectedNamespace, _currentResourceType, selectedNames, operation));
+        if (previewResponse == null)
+        {
+            return;
+        }
+
+        if (previewResponse.IsFailed(out var error, out var preview))
+        {
+            var errorMessage = error?.Message ?? L["Messages:FailedBuildScalePreview", GetResourceTypeLabel(_currentResourceType)].Value;
+            Snackbar.Add(errorMessage, Severity.Error);
+            SetStatus(errorMessage, Severity.Error);
+            return;
+        }
+
+        var confirmed = await ShowScalePreviewDialogAsync(
+            preview,
+            GetBatchScaleDialogTitle(operation, _currentResourceType),
+            GetBatchScaleConfirmButtonText(operation));
+
+        if (!confirmed)
+        {
+            return;
+        }
+
+        var resultResponse = await ExecuteBusyAsync(() => K8SFacade.ScaleResourcesAsync(_selectedNamespace, _currentResourceType, selectedNames, operation));
+        if (resultResponse == null)
+        {
+            return;
+        }
+
+        if (resultResponse.IsFailed(out var scaleError, out var scaleResult))
+        {
+            var errorMessage = scaleError?.Message ?? L["Messages:FailedScaleSelectedResources", GetResourceTypeLabel(_currentResourceType)].Value;
+            Snackbar.Add(errorMessage, Severity.Error);
+            SetStatus(errorMessage, Severity.Error);
+            return;
+        }
+
+        var successMessage = BuildScaleResultMessage(scaleResult);
+        Snackbar.Add(successMessage, Severity.Success);
+        SetStatus(successMessage, Severity.Success);
+        await LoadResourceListAsync(_selectedNamespace, _currentResourceType);
+    }
+
+    private async Task ScaleNamespaceAsync(K8SScaleOperation operation)
+    {
+        if (string.IsNullOrWhiteSpace(_selectedNamespace))
+        {
+            return;
+        }
+
+        var previewResponse = await ExecuteBusyAsync(() => K8SFacade.GetNamespaceScalePreviewAsync(_selectedNamespace, operation));
+        if (previewResponse == null)
+        {
+            return;
+        }
+
+        if (previewResponse.IsFailed(out var error, out var preview))
+        {
+            var errorMessage = error?.Message ?? L["Messages:FailedNamespaceScalePreview", _selectedNamespace].Value;
+            Snackbar.Add(errorMessage, Severity.Error);
+            SetStatus(errorMessage, Severity.Error);
+            return;
+        }
+
+        var confirmed = await ShowScalePreviewDialogAsync(
+            preview,
+            GetNamespaceScaleDialogTitle(operation, _selectedNamespace),
+            GetNamespaceScaleConfirmButtonText(operation));
+
+        if (!confirmed)
+        {
+            return;
+        }
+
+        var resultResponse = await ExecuteBusyAsync(() => K8SFacade.ScaleNamespaceAsync(_selectedNamespace, operation));
+        if (resultResponse == null)
+        {
+            return;
+        }
+
+        if (resultResponse.IsFailed(out var scaleError, out var scaleResult))
+        {
+            var errorMessage = scaleError?.Message ?? L["Messages:FailedNamespaceScale", _selectedNamespace].Value;
+            Snackbar.Add(errorMessage, Severity.Error);
+            SetStatus(errorMessage, Severity.Error);
+            return;
+        }
+
+        var successMessage = BuildScaleResultMessage(scaleResult);
+        Snackbar.Add(successMessage, Severity.Success);
+        SetStatus(successMessage, Severity.Success);
+        await LoadResourceListAsync(_selectedNamespace, _currentResourceType);
+    }
+
     private async Task<bool> ShowRestartPreviewDialogAsync(K8SRestartPreview preview, string title, string confirmButtonText)
     {
         var parameters = new DialogParameters<K8SRestartConfirmDialog>
@@ -653,6 +814,27 @@
         };
 
         var dialog = await DialogService.ShowAsync<K8SRestartConfirmDialog>(title, parameters, options);
+        var result = await dialog.Result;
+        return result is { Canceled: false };
+    }
+
+    private async Task<bool> ShowScalePreviewDialogAsync(K8SScalePreview preview, string title, string confirmButtonText)
+    {
+        var parameters = new DialogParameters<K8SScaleConfirmDialog>
+        {
+            { dialog => dialog.Preview, preview },
+            { dialog => dialog.ConfirmButtonText, confirmButtonText }
+        };
+
+        var options = new DialogOptions
+        {
+            MaxWidth = MaxWidth.ExtraLarge,
+            FullWidth = true,
+            CloseButton = true,
+            BackdropClick = false
+        };
+
+        var dialog = await DialogService.ShowAsync<K8SScaleConfirmDialog>(title, parameters, options);
         var result = await dialog.Result;
         return result is { Canceled: false };
     }
@@ -793,6 +975,20 @@
         return message;
     }
 
+    private string BuildScaleResultMessage(K8SScaleResult result)
+    {
+        var message = result.Operation == K8SScaleOperation.ScaleDown
+            ? L["Messages:ScaleDownResult", result.Workloads.Count, result.AffectedTargets.Count].Value
+            : L["Messages:ScaleUpResult", result.Workloads.Count, result.AffectedTargets.Count].Value;
+
+        if (result.IgnoredTargets.Count > 0)
+        {
+            message += " " + L["Messages:ScaleIgnored", string.Join("; ", result.IgnoredTargets.Select(target => $"{GetResourceDisplayName(target.Kind, target.Name)}: {target.Reason}"))].Value;
+        }
+
+        return message;
+    }
+
     private string GetRestartActionText(K8SResourceSummary resource)
     {
         return resource.ResourceType == K8SResourceType.Service
@@ -819,6 +1015,41 @@
         return resourceType == K8SResourceType.Service
             ? L["DialogTitles:BatchServiceRestart"]
             : L["DialogTitles:BatchResourceRestart", GetResourceTypeLabel(resourceType)];
+    }
+
+    private string GetBatchScaleDialogTitle(K8SScaleOperation operation, K8SResourceType resourceType)
+    {
+        if (resourceType == K8SResourceType.Service)
+        {
+            return operation == K8SScaleOperation.ScaleDown
+                ? L["DialogTitles:BatchServiceScaleDown"]
+                : L["DialogTitles:BatchServiceScaleUp"];
+        }
+
+        return operation == K8SScaleOperation.ScaleDown
+            ? L["DialogTitles:BatchResourceScaleDown", GetResourceTypeLabel(resourceType)]
+            : L["DialogTitles:BatchResourceScaleUp", GetResourceTypeLabel(resourceType)];
+    }
+
+    private string GetBatchScaleConfirmButtonText(K8SScaleOperation operation)
+    {
+        return operation == K8SScaleOperation.ScaleDown
+            ? L["Actions:ScaleDownSelectedWorkloads"]
+            : L["Actions:ScaleUpSelectedWorkloads"];
+    }
+
+    private string GetNamespaceScaleDialogTitle(K8SScaleOperation operation, string namespaceName)
+    {
+        return operation == K8SScaleOperation.ScaleDown
+            ? L["DialogTitles:NamespaceScaleDown", namespaceName]
+            : L["DialogTitles:NamespaceScaleUp", namespaceName];
+    }
+
+    private string GetNamespaceScaleConfirmButtonText(K8SScaleOperation operation)
+    {
+        return operation == K8SScaleOperation.ScaleDown
+            ? L["Actions:ScaleDownNamespaceWorkloads"]
+            : L["Actions:ScaleUpNamespaceWorkloads"];
     }
 
     private string GetResourceDisplayName(string kind, string name)

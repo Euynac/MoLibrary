@@ -12,6 +12,7 @@ namespace Monica.DevOps.K8S.Facades;
 public class K8SFacade(
     K8SClusterService clusterService,
     K8SRestartService restartService,
+    K8SScaleService scaleService,
     K8SMessageLocalizer messageLocalizer,
     IStringLocalizer<K8SResource> localizer,
     ILogger<K8SFacade> logger)
@@ -244,6 +245,126 @@ public class K8SFacade(
             ex => localizer["ServiceMessages:RestartNamespaceFailed", namespaceName, messageLocalizer.TranslateExceptionMessage(ex)].Value,
             $"Failed to restart all K8S services in namespace {namespaceName}.",
             messageLocalizer.LocalizeRestartResult);
+    }
+
+    public Task<Res<K8SScalePreview>> GetResourceScalePreviewAsync(
+        string namespaceName,
+        K8SResourceType resourceType,
+        string resourceName,
+        K8SScaleOperation operation,
+        CancellationToken cancellationToken = default)
+    {
+        return ExecuteAsync(
+            () => scaleService.GetResourceScalePreviewAsync(namespaceName, resourceType, resourceName, operation, cancellationToken),
+            ex => localizer["ServiceMessages:BuildScalePreviewFailed", resourceName, namespaceName, messageLocalizer.TranslateExceptionMessage(ex)].Value,
+            $"Failed to build {operation} preview for K8S resource {resourceType}/{resourceName} in namespace {namespaceName}.",
+            messageLocalizer.LocalizeScalePreview);
+    }
+
+    public Task<Res<K8SScalePreview>> GetResourceScalePreviewAsync(
+        string namespaceName,
+        string resourceType,
+        string resourceName,
+        K8SScaleOperation operation,
+        CancellationToken cancellationToken = default)
+    {
+        return TryMapResourceType(resourceType, parsedResourceType => GetResourceScalePreviewAsync(namespaceName, parsedResourceType, resourceName, operation, cancellationToken));
+    }
+
+    public Task<Res<K8SScalePreview>> GetBatchScalePreviewAsync(
+        string namespaceName,
+        K8SResourceType resourceType,
+        IReadOnlyCollection<string> resourceNames,
+        K8SScaleOperation operation,
+        CancellationToken cancellationToken = default)
+    {
+        return ExecuteAsync(
+            () => scaleService.GetBatchScalePreviewAsync(namespaceName, resourceType, resourceNames, operation, cancellationToken),
+            ex => localizer["ServiceMessages:BuildBatchScalePreviewFailed", namespaceName, messageLocalizer.TranslateExceptionMessage(ex)].Value,
+            $"Failed to build batch {operation} preview for K8S resource type {resourceType} in namespace {namespaceName}.",
+            messageLocalizer.LocalizeScalePreview);
+    }
+
+    public Task<Res<K8SScalePreview>> GetBatchScalePreviewAsync(
+        string namespaceName,
+        string resourceType,
+        IReadOnlyCollection<string> resourceNames,
+        K8SScaleOperation operation,
+        CancellationToken cancellationToken = default)
+    {
+        return TryMapResourceType(resourceType, parsedResourceType => GetBatchScalePreviewAsync(namespaceName, parsedResourceType, resourceNames, operation, cancellationToken));
+    }
+
+    public Task<Res<K8SScalePreview>> GetNamespaceScalePreviewAsync(
+        string namespaceName,
+        K8SScaleOperation operation,
+        CancellationToken cancellationToken = default)
+    {
+        return ExecuteAsync(
+            () => scaleService.GetNamespaceScalePreviewAsync(namespaceName, operation, cancellationToken),
+            ex => localizer["ServiceMessages:BuildNamespaceScalePreviewFailed", namespaceName, messageLocalizer.TranslateExceptionMessage(ex)].Value,
+            $"Failed to build namespace {operation} preview for namespace {namespaceName}.",
+            messageLocalizer.LocalizeScalePreview);
+    }
+
+    public Task<Res<K8SScaleResult>> ScaleResourceAsync(
+        string namespaceName,
+        K8SResourceType resourceType,
+        string resourceName,
+        K8SScaleOperation operation,
+        CancellationToken cancellationToken = default)
+    {
+        return ExecuteAsync(
+            () => scaleService.ScaleResourcesAsync(namespaceName, resourceType, [resourceName], operation, cancellationToken),
+            ex => localizer["ServiceMessages:ScaleResourceFailed", resourceName, namespaceName, messageLocalizer.TranslateExceptionMessage(ex)].Value,
+            $"Failed to execute {operation} for K8S resource {resourceType}/{resourceName} in namespace {namespaceName}.",
+            messageLocalizer.LocalizeScaleResult);
+    }
+
+    public Task<Res<K8SScaleResult>> ScaleResourceAsync(
+        string namespaceName,
+        string resourceType,
+        string resourceName,
+        K8SScaleOperation operation,
+        CancellationToken cancellationToken = default)
+    {
+        return TryMapResourceType(resourceType, parsedResourceType => ScaleResourceAsync(namespaceName, parsedResourceType, resourceName, operation, cancellationToken));
+    }
+
+    public Task<Res<K8SScaleResult>> ScaleResourcesAsync(
+        string namespaceName,
+        K8SResourceType resourceType,
+        IReadOnlyCollection<string> resourceNames,
+        K8SScaleOperation operation,
+        CancellationToken cancellationToken = default)
+    {
+        return ExecuteAsync(
+            () => scaleService.ScaleResourcesAsync(namespaceName, resourceType, resourceNames, operation, cancellationToken),
+            ex => localizer["ServiceMessages:ScaleResourcesFailed", namespaceName, messageLocalizer.TranslateExceptionMessage(ex)].Value,
+            $"Failed to execute {operation} for K8S resources of type {resourceType} in namespace {namespaceName}.",
+            messageLocalizer.LocalizeScaleResult);
+    }
+
+    public Task<Res<K8SScaleResult>> ScaleResourcesAsync(
+        string namespaceName,
+        string resourceType,
+        IReadOnlyCollection<string> resourceNames,
+        K8SScaleOperation operation,
+        CancellationToken cancellationToken = default)
+    {
+        return TryMapResourceType(resourceType, parsedResourceType => ScaleResourcesAsync(namespaceName, parsedResourceType, resourceNames, operation, cancellationToken));
+    }
+
+    public Task<Res<K8SScaleResult>> ScaleNamespaceAsync(
+        string namespaceName,
+        K8SScaleOperation operation,
+        CancellationToken cancellationToken = default)
+    {
+        return ExecuteAsync(
+            () => scaleService.ScaleNamespaceAsync(namespaceName, operation, cancellationToken),
+            ex => localizer["ServiceMessages:ScaleNamespaceFailed", namespaceName, messageLocalizer.TranslateExceptionMessage(ex)].Value,
+            $"Failed to execute namespace {operation} for namespace {namespaceName}.",
+            messageLocalizer.LocalizeScaleResult);
     }
 
     private async Task<Res<T>> TryMapResourceType<T>(

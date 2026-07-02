@@ -37,6 +37,7 @@ public class ModuleK8S(ModuleK8SOption option)
         services.AddScoped<K8SResourceDiscoveryService>();
         services.AddScoped<K8SClusterService>();
         services.AddScoped<K8SRestartService>();
+        services.AddScoped<K8SScaleService>();
         services.AddScoped<K8SFacade>();
     }
 
@@ -160,6 +161,50 @@ public class ModuleK8S(ModuleK8SOption option)
                 .WithSummary("Builds a namespace restart preview")
                 .WithDescription("Shows which workloads would be restarted across services in the selected namespace.");
 
+            endpoints.MapPost("/k8s/namespaces/{namespaceName}/resources/{resourceType}/scale-down-preview",
+                    async ([FromRoute] string namespaceName,
+                        [FromRoute] string resourceType,
+                        [FromBody] K8SResourceSelectionRequest request,
+                        [FromServices] K8SFacade facade,
+                        CancellationToken cancellationToken) =>
+                        (await facade.GetBatchScalePreviewAsync(namespaceName, resourceType, request.ResourceNames, K8SScaleOperation.ScaleDown, cancellationToken)).GetResponse())
+                .WithName("PreviewK8SResourceScaleDownBatch")
+                .WithTags(tagName)
+                .WithSummary("Builds a batch scale-down preview")
+                .WithDescription("Builds a scale-down preview for selected services or workload resources.");
+
+            endpoints.MapPost("/k8s/namespaces/{namespaceName}/resources/{resourceType}/scale-up-preview",
+                    async ([FromRoute] string namespaceName,
+                        [FromRoute] string resourceType,
+                        [FromBody] K8SResourceSelectionRequest request,
+                        [FromServices] K8SFacade facade,
+                        CancellationToken cancellationToken) =>
+                        (await facade.GetBatchScalePreviewAsync(namespaceName, resourceType, request.ResourceNames, K8SScaleOperation.ScaleUp, cancellationToken)).GetResponse())
+                .WithName("PreviewK8SResourceScaleUpBatch")
+                .WithTags(tagName)
+                .WithSummary("Builds a batch scale-up preview")
+                .WithDescription("Builds a scale-up preview for selected services or workload resources.");
+
+            endpoints.MapGet("/k8s/namespaces/{namespaceName}/scale-down-preview",
+                    async ([FromRoute] string namespaceName,
+                        [FromServices] K8SFacade facade,
+                        CancellationToken cancellationToken) =>
+                        (await facade.GetNamespaceScalePreviewAsync(namespaceName, K8SScaleOperation.ScaleDown, cancellationToken)).GetResponse())
+                .WithName("PreviewK8SNamespaceScaleDown")
+                .WithTags(tagName)
+                .WithSummary("Builds a namespace scale-down preview")
+                .WithDescription("Builds a scale-down preview for service-backed workloads in the selected namespace.");
+
+            endpoints.MapGet("/k8s/namespaces/{namespaceName}/scale-up-preview",
+                    async ([FromRoute] string namespaceName,
+                        [FromServices] K8SFacade facade,
+                        CancellationToken cancellationToken) =>
+                        (await facade.GetNamespaceScalePreviewAsync(namespaceName, K8SScaleOperation.ScaleUp, cancellationToken)).GetResponse())
+                .WithName("PreviewK8SNamespaceScaleUp")
+                .WithTags(tagName)
+                .WithSummary("Builds a namespace scale-up preview")
+                .WithDescription("Builds a scale-up preview for service-backed workloads in the selected namespace.");
+
             endpoints.MapPost("/k8s/namespaces/{namespaceName}/services/{serviceName}/restart",
                     async ([FromRoute] string namespaceName,
                         [FromRoute] string serviceName,
@@ -192,6 +237,50 @@ public class ModuleK8S(ModuleK8SOption option)
                 .WithTags(tagName)
                 .WithSummary("Restarts services in a namespace")
                 .WithDescription("Restarts every restartable workload resolved from services inside the selected namespace.");
+
+            endpoints.MapPost("/k8s/namespaces/{namespaceName}/resources/{resourceType}/scale-down",
+                    async ([FromRoute] string namespaceName,
+                        [FromRoute] string resourceType,
+                        [FromBody] K8SResourceSelectionRequest request,
+                        [FromServices] K8SFacade facade,
+                        CancellationToken cancellationToken) =>
+                        (await facade.ScaleResourcesAsync(namespaceName, resourceType, request.ResourceNames, K8SScaleOperation.ScaleDown, cancellationToken)).GetResponse())
+                .WithName("ScaleDownK8SResourceBatch")
+                .WithTags(tagName)
+                .WithSummary("Scales down selected resources")
+                .WithDescription("Records previous replica counts and scales selected service-backed or workload resources down to zero replicas.");
+
+            endpoints.MapPost("/k8s/namespaces/{namespaceName}/resources/{resourceType}/scale-up",
+                    async ([FromRoute] string namespaceName,
+                        [FromRoute] string resourceType,
+                        [FromBody] K8SResourceSelectionRequest request,
+                        [FromServices] K8SFacade facade,
+                        CancellationToken cancellationToken) =>
+                        (await facade.ScaleResourcesAsync(namespaceName, resourceType, request.ResourceNames, K8SScaleOperation.ScaleUp, cancellationToken)).GetResponse())
+                .WithName("ScaleUpK8SResourceBatch")
+                .WithTags(tagName)
+                .WithSummary("Scales up selected resources")
+                .WithDescription("Restores selected service-backed or workload resources to their recorded replica counts, falling back to one replica when no record exists.");
+
+            endpoints.MapPost("/k8s/namespaces/{namespaceName}/scale-down",
+                    async ([FromRoute] string namespaceName,
+                        [FromServices] K8SFacade facade,
+                        CancellationToken cancellationToken) =>
+                        (await facade.ScaleNamespaceAsync(namespaceName, K8SScaleOperation.ScaleDown, cancellationToken)).GetResponse())
+                .WithName("ScaleDownK8SNamespace")
+                .WithTags(tagName)
+                .WithSummary("Scales down services in a namespace")
+                .WithDescription("Records previous replica counts and scales every service-backed scalable workload in the selected namespace down to zero replicas.");
+
+            endpoints.MapPost("/k8s/namespaces/{namespaceName}/scale-up",
+                    async ([FromRoute] string namespaceName,
+                        [FromServices] K8SFacade facade,
+                        CancellationToken cancellationToken) =>
+                        (await facade.ScaleNamespaceAsync(namespaceName, K8SScaleOperation.ScaleUp, cancellationToken)).GetResponse())
+                .WithName("ScaleUpK8SNamespace")
+                .WithTags(tagName)
+                .WithSummary("Scales up services in a namespace")
+                .WithDescription("Restores every service-backed scalable workload in the selected namespace to its recorded replica count, falling back to one replica when no record exists.");
         });
     }
 }

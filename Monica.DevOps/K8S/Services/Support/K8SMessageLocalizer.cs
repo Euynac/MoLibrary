@@ -42,6 +42,10 @@ public class K8SMessageLocalizer(IStringLocalizer<K8SResource> localizer)
             K8SMessageCode.RemoteKubectlCommandFailed => localizer["GeneratedMessages:RemoteKubectlCommandFailed", arguments[0], GetRemoteKubectlCommandDetail(arguments[1])].Value,
             K8SMessageCode.NoRestartableTargetsRemain => localizer["GeneratedMessages:NoRestartableTargetsRemain"].Value,
             K8SMessageCode.NoRestartableTargetsFound => localizer["GeneratedMessages:NoRestartableTargetsFound"].Value,
+            K8SMessageCode.NoScalableTargetsRemain => localizer["GeneratedMessages:NoScalableTargetsRemain"].Value,
+            K8SMessageCode.NoScalableTargetsFound => localizer["GeneratedMessages:NoScalableTargetsFound"].Value,
+            K8SMessageCode.WorkloadNotScalable => localizer["GeneratedMessages:WorkloadNotScalable", LocalizeResourceType(arguments[0]), arguments[1]].Value,
+            K8SMessageCode.ScaleTargetAlreadySatisfied => localizer["GeneratedMessages:ScaleTargetAlreadySatisfied", LocalizeResourceType(arguments[0]), arguments[1], arguments[2]].Value,
             K8SMessageCode.ServiceSelectorMissing => localizer["GeneratedMessages:ServiceSelectorMissing", arguments[0]].Value,
             K8SMessageCode.ServiceBackingWorkloadsMissing => localizer["GeneratedMessages:ServiceBackingWorkloadsMissing", arguments[0]].Value,
             K8SMessageCode.KubectlJsonParseFailed => localizer["GeneratedMessages:KubectlJsonParseFailed"].Value,
@@ -74,7 +78,26 @@ public class K8SMessageLocalizer(IStringLocalizer<K8SResource> localizer)
         return result.LocalizeIgnoredTargets(LocalizeIgnoredTargetReason);
     }
 
+    public K8SScalePreview LocalizeScalePreview(K8SScalePreview preview)
+    {
+        ArgumentNullException.ThrowIfNull(preview);
+        return preview.LocalizeIgnoredTargets(LocalizeIgnoredTargetReason);
+    }
+
+    public K8SScaleResult LocalizeScaleResult(K8SScaleResult result)
+    {
+        ArgumentNullException.ThrowIfNull(result);
+        return result.LocalizeIgnoredTargets(LocalizeIgnoredTargetReason);
+    }
+
     private string LocalizeIgnoredTargetReason(K8SRestartIgnoredTarget target)
+    {
+        return target.ReasonCode is { } messageCode
+            ? LocalizeGeneratedMessage(messageCode, target.ReasonArguments)
+            : target.Reason;
+    }
+
+    private string LocalizeIgnoredTargetReason(K8SScaleIgnoredTarget target)
     {
         return target.ReasonCode is { } messageCode
             ? LocalizeGeneratedMessage(messageCode, target.ReasonArguments)
