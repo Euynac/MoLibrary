@@ -51,6 +51,7 @@ public class DaprBindingEndpoint(
             {
                 app.UseEndpoints(endpoints =>
                 {
+                    //接收不是由我们项目代码串行化的；整体是“可并发接收”。更准确地说：单条 Dapr Binding 回调内部是同步 await 到处理完成；同一个 Kafka partition 内通常按顺序一条条处理；但多个 partition、多个副本/sidecar、或 Dapr 并发回调时，这里接收会并发进入。
                     endpoints.MapPost($"{metadata.InputListenerRoute}", async ([FromBody] JsonElement body, HttpResponse response, HttpContext context) =>
                     {
                         var dataContext = new ChannelDataContext(ChannelSide.Outer, body);
