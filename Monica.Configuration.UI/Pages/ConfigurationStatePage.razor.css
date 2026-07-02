@@ -30,19 +30,32 @@
 
 .configuration-state-title-row {
     min-width: 0;
+    overflow: visible;
+    padding-block: 0.25rem;
 }
 
 .configuration-runtime-validation-anchor {
     position: relative;
     display: inline-flex;
     align-items: center;
+    justify-content: center;
     flex: 0 0 auto;
-    line-height: 0;
+    width: 2rem;
+    height: 2rem;
+    overflow: visible;
+    line-height: 1;
 }
 
+.configuration-runtime-validation-anchor ::deep .mud-tooltip-root,
 .configuration-runtime-validation-anchor ::deep .mud-badge-root {
     display: inline-flex;
     align-items: center;
+    justify-content: center;
+    overflow: visible;
+}
+
+.configuration-runtime-validation-anchor ::deep .mud-badge-wrapper {
+    overflow: visible;
 }
 
 .configuration-runtime-validation-popover-content {

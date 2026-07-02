@@ -2,13 +2,24 @@
     position: relative;
     display: inline-flex;
     align-items: center;
+    justify-content: center;
     flex: 0 0 auto;
-    line-height: 0;
+    width: 2rem;
+    height: 2rem;
+    overflow: visible;
+    line-height: 1;
 }
 
+.configuration-reload-status-anchor ::deep .mud-tooltip-root,
 .configuration-reload-status-anchor ::deep .mud-badge-root {
     display: inline-flex;
     align-items: center;
+    justify-content: center;
+    overflow: visible;
+}
+
+.configuration-reload-status-anchor ::deep .mud-badge-wrapper {
+    overflow: visible;
 }
 
 .configuration-reload-status-popover-content {
