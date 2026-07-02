@@ -66,6 +66,7 @@
       "MissingValue": "<缺失>",
       "SourceChainUnavailable": "该异常无法查看来源链路诊断。",
       "JumpFailed": "无法跳转到运行时验证异常配置项。",
+      "OpenDetails": "查看运行时验证状态",
       "Actions": {
         "SourceChain": "查看来源链路"
       }

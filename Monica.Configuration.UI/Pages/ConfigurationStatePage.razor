@@ -15,7 +15,85 @@
         <MudStack Spacing="3" Class="configuration-state-layout">
             <MudStack Row="true" Wrap="Wrap.Wrap" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Spacing="2" Class="configuration-state-header">
                 <MudStack Spacing="0">
-                    <MudText Typo="Typo.h4">@L["Pages:ConfigurationState:Title"]</MudText>
+                    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1" Class="configuration-state-title-row">
+                        <MudText Typo="Typo.h4">@L["Pages:ConfigurationState:Title"]</MudText>
+                        @if (!_loadingDefinitions)
+                        {
+                            <span class="configuration-runtime-validation-anchor">
+                                <MudTooltip Text="@RuntimeValidationStatusTooltip">
+                                    <MudBadge Content="@RuntimeValidationIssueCount"
+                                              Color="@RuntimeValidationStatusColor"
+                                              Visible="@(RuntimeValidationIssueCount > 0)"
+                                              Overlap="true">
+                                        <MudIconButton Icon="@RuntimeValidationStatusIcon"
+                                                       Color="@RuntimeValidationStatusColor"
+                                                       Size="Size.Small"
+                                                       OnClick="ToggleRuntimeValidationPopover"
+                                                       aria-label="@L["State:RuntimeValidation:OpenDetails"]" />
+                                    </MudBadge>
+                                </MudTooltip>
+
+                                <MudPopover Open="@_runtimeValidationPopoverOpen"
+                                            AnchorOrigin="Origin.BottomLeft"
+                                            TransformOrigin="Origin.TopLeft"
+                                            Class="configuration-runtime-validation-popover"
+                                            Paper="false">
+                                    <MudPaper Elevation="6" Class="pa-3 configuration-runtime-validation-popover-content">
+                                        <MudStack Spacing="2">
+                                            <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Spacing="2">
+                                                <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
+                                                    <MudIcon Icon="@RuntimeValidationStatusIcon"
+                                                             Color="@RuntimeValidationStatusColor" />
+                                                    <MudStack Spacing="0">
+                                                        <MudText Typo="Typo.subtitle1">@L["State:RuntimeValidation:Title"]</MudText>
+                                                        <MudText Typo="Typo.caption" Color="Color.Secondary">@RuntimeValidationSummary</MudText>
+                                                    </MudStack>
+                                                </MudStack>
+                                                <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
+                                                    <MudChip T="int"
+                                                             Size="Size.Small"
+                                                             Color="@RuntimeValidationStatusColor"
+                                                             Variant="Variant.Outlined">
+                                                        @RuntimeValidationIssueCount
+                                                    </MudChip>
+                                                    <MudTooltip Text="@L["Common:Actions:Close"]">
+                                                        <MudIconButton Icon="@Icons.Material.Filled.Close"
+                                                                       Size="Size.Small"
+                                                                       OnClick="CloseRuntimeValidationPopover"
+                                                                       aria-label="@L["Common:Actions:Close"]" />
+                                                    </MudTooltip>
+                                                </MudStack>
+                                            </MudStack>
+
+                                            @if (_runtimeValidationReport is null)
+                                            {
+                                                <MudAlert Severity="Severity.Warning">@L["State:RuntimeValidation:Unavailable"]</MudAlert>
+                                            }
+                                            else if (_runtimeValidationReport.IsValid)
+                                            {
+                                                <MudAlert Severity="Severity.Success">@L["State:RuntimeValidation:Valid"]</MudAlert>
+                                            }
+                                            else
+                                            {
+                                                <ConfigurationValidationIssueList Issues="@RuntimeValidationIssues"
+                                                                                  ShowRuntimeMetadata="true"
+                                                                                  ShowSourceChain="true"
+                                                                                  ValueLabel="@L["State:RuntimeValidation:CurrentValue"].Value"
+                                                                                  ReasonLabel="@L["State:RuntimeValidation:Problem"].Value"
+                                                                                  JumpRequested="JumpToRuntimeValidationIssueAsync"
+                                                                                  SourceChainRequested="OpenRuntimeIssueSourceChainAsync" />
+                                            }
+                                        </MudStack>
+                                    </MudPaper>
+                                </MudPopover>
+                                <MudOverlay Visible="@_runtimeValidationPopoverOpen"
+                                            AutoClose="true"
+                                            OnClosed="CloseRuntimeValidationPopover"
+                                            LockScroll="false"
+                                            Modal="false" />
+                            </span>
+                        }
+                    </MudStack>
                     <MudText Typo="Typo.body2" Color="Color.Secondary">@L["State:Subtitle"]</MudText>
                 </MudStack>
                 <MudStack Row="true" Wrap="Wrap.Wrap" AlignItems="AlignItems.Center" Justify="Justify.FlexEnd" Spacing="1">
@@ -36,51 +114,6 @@
                     </MudTooltip>
                 </MudStack>
             </MudStack>
-
-            @if (!_loadingDefinitions)
-            {
-                <MudPaper Outlined="true" Class="pa-3 configuration-runtime-validation-panel">
-                    <MudStack Spacing="2">
-                        <MudStack Row="true" Wrap="Wrap.Wrap" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Spacing="2">
-                            <MudStack Spacing="0">
-                                <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
-                                    <MudIcon Icon="@(RuntimeValidationIssueCount == 0 ? Icons.Material.Filled.CheckCircle : Icons.Material.Filled.Error)"
-                                             Color="@(RuntimeValidationIssueCount == 0 ? Color.Success : Color.Error)" />
-                                    <MudText Typo="Typo.subtitle1">@L["State:RuntimeValidation:Title"]</MudText>
-                                </MudStack>
-                                <MudText Typo="Typo.caption" Color="Color.Secondary">@RuntimeValidationSummary</MudText>
-                            </MudStack>
-                            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
-                                <MudChip T="int"
-                                         Size="Size.Small"
-                                         Color="@(RuntimeValidationIssueCount == 0 ? Color.Success : Color.Error)"
-                                         Variant="Variant.Outlined">
-                                    @RuntimeValidationIssueCount
-                                </MudChip>
-                            </MudStack>
-                        </MudStack>
-
-                        @if (_runtimeValidationReport is null)
-                        {
-                            <MudAlert Severity="Severity.Warning">@L["State:RuntimeValidation:Unavailable"]</MudAlert>
-                        }
-                        else if (_runtimeValidationReport.IsValid)
-                        {
-                            <MudAlert Severity="Severity.Success">@L["State:RuntimeValidation:Valid"]</MudAlert>
-                        }
-                        else
-                        {
-                            <ConfigurationValidationIssueList Issues="@RuntimeValidationIssues"
-                                                              ShowRuntimeMetadata="true"
-                                                              ShowSourceChain="true"
-                                                              ValueLabel="@L["State:RuntimeValidation:CurrentValue"].Value"
-                                                              ReasonLabel="@L["State:RuntimeValidation:Problem"].Value"
-                                                              JumpRequested="JumpToRuntimeValidationIssueAsync"
-                                                              SourceChainRequested="OpenRuntimeIssueSourceChainAsync" />
-                        }
-                    </MudStack>
-                </MudPaper>
-            }
 
             @if (_loadingDefinitions)
             {
@@ -275,6 +308,7 @@
     private LogicalPath? _requestedPath;
     private LogicalPath? _highlightedPath;
     private ConfigurationValidationReport? _runtimeValidationReport;
+    private bool _runtimeValidationPopoverOpen;
 
     private bool CanInspectSelectedDefinitionSources =>
         _selectedDefinition?.Origin == ConfigurationDefinitionOrigin.LocalScan;
@@ -318,6 +352,23 @@
         ?? new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
 
     private int RuntimeValidationIssueCount => _runtimeValidationReport?.IssueCount ?? 0;
+
+    private Color RuntimeValidationStatusColor =>
+        _runtimeValidationReport is null
+            ? Color.Warning
+            : RuntimeValidationIssueCount == 0
+                ? Color.Success
+                : Color.Error;
+
+    private string RuntimeValidationStatusIcon =>
+        _runtimeValidationReport is null
+            ? Icons.Material.Filled.Help
+            : RuntimeValidationIssueCount == 0
+                ? Icons.Material.Filled.CheckCircle
+                : Icons.Material.Filled.Error;
+
+    private string RuntimeValidationStatusTooltip =>
+        $"{L["State:RuntimeValidation:Title"]}: {RuntimeValidationSummary}";
 
     private string RuntimeValidationSummary =>
         _runtimeValidationReport is null
@@ -410,10 +461,21 @@
         {
             Snackbar.Add($"{L["Common:Errors:LoadFailed"]}: {error.Message}", Severity.Error);
             _runtimeValidationReport = null;
+            CloseRuntimeValidationPopover();
             return;
         }
 
         _runtimeValidationReport = report;
+    }
+
+    private void ToggleRuntimeValidationPopover()
+    {
+        _runtimeValidationPopoverOpen = !_runtimeValidationPopoverOpen;
+    }
+
+    private void CloseRuntimeValidationPopover()
+    {
+        _runtimeValidationPopoverOpen = false;
     }
 
     private static ConfigurationValidationIssue ToUiValidationIssue(ConfigurationRuntimeValidationIssue issue)
@@ -930,6 +992,7 @@
 
     private async Task OpenRuntimeIssueSourceChainAsync(ConfigurationValidationIssue issue)
     {
+        CloseRuntimeValidationPopover();
         var result = await LoadDefinitionDetailAsync(issue.DefinitionKey);
         if (result.IsFailed(out var error, out var detail))
         {
@@ -989,6 +1052,7 @@
 
     private Task JumpToRuntimeValidationIssueAsync(ConfigurationValidationIssue issue)
     {
+        CloseRuntimeValidationPopover();
         return JumpToConfigurationPathAsync(
             issue.DefinitionKey,
             issue.LogicalPath,

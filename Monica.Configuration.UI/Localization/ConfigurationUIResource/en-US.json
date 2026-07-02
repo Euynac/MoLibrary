@@ -66,6 +66,7 @@
       "MissingValue": "<missing>",
       "SourceChainUnavailable": "Source-chain diagnostics are unavailable for this issue.",
       "JumpFailed": "Failed to jump to the runtime validation issue.",
+      "OpenDetails": "View runtime validation status",
       "Actions": {
         "SourceChain": "View source chain"
       }

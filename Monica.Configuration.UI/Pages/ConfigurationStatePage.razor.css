@@ -28,9 +28,26 @@
     flex: 0 0 auto;
 }
 
-.configuration-runtime-validation-panel {
+.configuration-state-title-row {
+    min-width: 0;
+}
+
+.configuration-runtime-validation-anchor {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
     flex: 0 0 auto;
-    max-height: 18rem;
+    line-height: 0;
+}
+
+.configuration-runtime-validation-anchor ::deep .mud-badge-root {
+    display: inline-flex;
+    align-items: center;
+}
+
+.configuration-runtime-validation-popover-content {
+    width: min(44rem, calc(100vw - 2rem));
+    max-height: min(34rem, calc(100vh - 8rem));
     overflow: auto;
 }
 
@@ -206,8 +223,9 @@
         overflow: visible;
     }
 
-    .configuration-runtime-validation-panel {
-        max-height: none;
+    .configuration-runtime-validation-popover-content {
+        width: calc(100vw - 1rem);
+        max-height: calc(100vh - 6rem);
     }
 
     .configuration-state-page ::deep .configuration-state-left,
