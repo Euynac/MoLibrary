@@ -40,33 +40,8 @@
     align-items: center;
     justify-content: center;
     flex: 0 0 auto;
-    width: 2rem;
-    height: 2rem;
     overflow: visible;
     line-height: 1;
-}
-
-.configuration-runtime-validation-anchor ::deep .mud-tooltip-root,
-.configuration-runtime-validation-anchor ::deep .mud-badge-root {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    overflow: visible;
-}
-
-.configuration-runtime-validation-anchor ::deep .mud-badge-wrapper {
-    overflow: visible;
-}
-
-.configuration-runtime-validation-anchor ::deep .mud-badge-wrapper.mud-badge-top.right,
-.configuration-runtime-validation-anchor ::deep .mud-badge-wrapper.mud-badge-center.right {
-    align-items: flex-start;
-    justify-content: flex-end;
-}
-
-.configuration-runtime-validation-anchor ::deep .mud-badge.mud-badge-top.right,
-.configuration-runtime-validation-anchor ::deep .mud-badge.mud-badge-center.right {
-    inset: auto auto calc(100% - 16px) calc(100% - 12px);
 }
 
 .configuration-runtime-validation-popover-content {

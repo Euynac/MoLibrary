@@ -20,19 +20,13 @@
                         @if (!_loadingDefinitions)
                         {
                             <span class="configuration-runtime-validation-anchor">
-                                <MudTooltip Text="@RuntimeValidationStatusTooltip">
-                                    <MudBadge Content="@RuntimeValidationIssueCount"
-                                              Color="@RuntimeValidationStatusColor"
-                                              Visible="@(RuntimeValidationIssueCount > 0)"
-                                              Origin="Origin.TopRight"
-                                              Overlap="true">
-                                        <MudIconButton Icon="@RuntimeValidationStatusIcon"
-                                                       Color="@RuntimeValidationStatusColor"
-                                                       Size="Size.Small"
-                                                       OnClick="ToggleRuntimeValidationPopover"
-                                                       aria-label="@L["State:RuntimeValidation:OpenDetails"]" />
-                                    </MudBadge>
-                                </MudTooltip>
+                                <ConfigurationStatusIconButton Icon="@RuntimeValidationStatusIcon"
+                                                               Color="@RuntimeValidationStatusColor"
+                                                               Count="@RuntimeValidationIssueCount"
+                                                               ShowCount="@(RuntimeValidationIssueCount > 0)"
+                                                               Tooltip="@RuntimeValidationStatusTooltip"
+                                                               AriaLabel="@L["State:RuntimeValidation:OpenDetails"].Value"
+                                                               OnClick="ToggleRuntimeValidationPopover" />
 
                                 <MudPopover Open="@_runtimeValidationPopoverOpen"
                                             AnchorOrigin="Origin.BottomLeft"
