@@ -3,20 +3,14 @@
 @inject IStringLocalizer<ConfigurationUIResource> L
 
 <span class="configuration-reload-status-anchor">
-    <MudTooltip Text="@StatusTooltip">
-        <MudBadge Content="@DriftCount"
-                  Color="@StatusColor"
-                  Visible="@(DriftCount > 0)"
-                  Origin="Origin.TopRight"
-                  Overlap="true">
-            <MudIconButton Icon="@StatusIcon"
-                           Color="@StatusColor"
-                           Size="Size.Small"
-                           Disabled="@_loading"
-                           OnClick="TogglePopover"
-                           aria-label="@L["State:ReloadStatus:OpenDetails"]" />
-        </MudBadge>
-    </MudTooltip>
+    <ConfigurationStatusIconButton Icon="@StatusIcon"
+                                   Color="@StatusColor"
+                                   Count="@DriftCount"
+                                   ShowCount="@(DriftCount > 0)"
+                                   Disabled="@_loading"
+                                   Tooltip="@StatusTooltip"
+                                   AriaLabel="@L["State:ReloadStatus:OpenDetails"].Value"
+                                   OnClick="TogglePopover" />
 
     <MudPopover Open="@_popoverOpen"
                 AnchorOrigin="Origin.BottomLeft"
