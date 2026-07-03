@@ -66,7 +66,7 @@
 
 .configuration-runtime-validation-anchor ::deep .mud-badge.mud-badge-top.right,
 .configuration-runtime-validation-anchor ::deep .mud-badge.mud-badge-center.right {
-    inset: auto auto calc(100% - 12px) calc(100% - 12px);
+    inset: auto auto calc(100% - 16px) calc(100% - 12px);
 }
 
 .configuration-runtime-validation-popover-content {
