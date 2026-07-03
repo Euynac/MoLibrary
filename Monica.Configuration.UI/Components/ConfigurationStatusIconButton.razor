@@ -8,9 +8,9 @@
                        Disabled="@Disabled"
                        OnClick="@OnClick"
                        aria-label="@AriaLabel" />
-        @if (BadgeVisible)
+        @if (CounterVisible)
         {
-            <span class="configuration-status-icon-badge" aria-hidden="true">@BadgeText</span>
+            <span class="configuration-status-icon-counter" aria-hidden="true">@CounterText</span>
         }
     </span>
 </MudTooltip>
@@ -34,9 +34,9 @@
 
     [Parameter] public EventCallback<MouseEventArgs> OnClick { get; set; }
 
-    private bool BadgeVisible => ShowCount && Count > 0;
+    private bool CounterVisible => ShowCount && Count > 0;
 
-    private string BadgeText =>
+    private string CounterText =>
         Count > MAX_BADGE_COUNT
             ? $"{MAX_BADGE_COUNT.ToString(CultureInfo.InvariantCulture)}+"
             : Count.ToString(CultureInfo.InvariantCulture);

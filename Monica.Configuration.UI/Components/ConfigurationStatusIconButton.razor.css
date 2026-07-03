@@ -4,17 +4,18 @@
     align-items: center;
     justify-content: center;
     flex: 0 0 auto;
-    width: 2.25rem;
-    min-width: 2.25rem;
+    width: 2.5rem;
+    min-width: 2.5rem;
     height: 2.25rem;
     overflow: visible;
     line-height: 1;
 }
 
-.configuration-status-icon-badge {
+.configuration-status-icon-counter {
     position: absolute;
-    top: 0.125rem;
+    top: 50%;
     right: 0.125rem;
+    transform: translateY(-50%);
     z-index: 1;
     box-sizing: border-box;
     display: inline-flex;
