@@ -1,0 +1,43 @@
+@using System.Globalization
+
+<MudTooltip Text="@Tooltip">
+    <span class="configuration-status-icon-slot">
+        <MudIconButton Icon="@Icon"
+                       Color="@Color"
+                       Size="Size.Small"
+                       Disabled="@Disabled"
+                       OnClick="@OnClick"
+                       aria-label="@AriaLabel" />
+        @if (BadgeVisible)
+        {
+            <span class="configuration-status-icon-badge" aria-hidden="true">@BadgeText</span>
+        }
+    </span>
+</MudTooltip>
+
+@code {
+    private const int MAX_BADGE_COUNT = 99;
+
+    [Parameter, EditorRequired] public string Icon { get; set; } = string.Empty;
+
+    [Parameter] public Color Color { get; set; } = Color.Default;
+
+    [Parameter] public int Count { get; set; }
+
+    [Parameter] public bool ShowCount { get; set; }
+
+    [Parameter] public bool Disabled { get; set; }
+
+    [Parameter] public string? Tooltip { get; set; }
+
+    [Parameter, EditorRequired] public string AriaLabel { get; set; } = string.Empty;
+
+    [Parameter] public EventCallback<MouseEventArgs> OnClick { get; set; }
+
+    private bool BadgeVisible => ShowCount && Count > 0;
+
+    private string BadgeText =>
+        Count > MAX_BADGE_COUNT
+            ? $"{MAX_BADGE_COUNT.ToString(CultureInfo.InvariantCulture)}+"
+            : Count.ToString(CultureInfo.InvariantCulture);
+}
