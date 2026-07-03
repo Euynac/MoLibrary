@@ -44,6 +44,10 @@
     line-height: 1;
 }
 
+.configuration-runtime-validation-anchor ::deep .configuration-status-icon-slot > button {
+    transform: translateX(0.25rem);
+}
+
 .configuration-runtime-validation-popover-content {
     width: min(44rem, calc(100vw - 2rem));
     max-height: min(34rem, calc(100vh - 8rem));
