@@ -297,7 +297,7 @@ public static class ConfigurationDefinitionSchemaCodec
 
     private static ConfigurationValidationRule FromRuleDto(RuleDto dto)
     {
-        return dto.Kind switch
+        return (dto.Kind ?? RuleKind.Required) switch
         {
             RuleKind.Required => new RequiredRule { ErrorMessage = dto.ErrorMessage },
             RuleKind.Range => new RangeRule(dto.Min, dto.Max) { ErrorMessage = dto.ErrorMessage },
@@ -427,7 +427,7 @@ public static class ConfigurationDefinitionSchemaCodec
 
     private sealed record RuleDto
     {
-        public RuleKind Kind { get; init; }
+        public RuleKind? Kind { get; init; }
 
         public string? ErrorMessage { get; init; }
 
