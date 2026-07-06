@@ -1,0 +1,55 @@
+@using Monica.EventBus.Kafka.UIEventBusKafka.State
+@inject IStringLocalizer<EventBusKafkaResource> L
+
+<MudStack Spacing="3">
+    <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Spacing="2">
+        <MudText Typo="Typo.h6">@L["ConsumerGroups:Title"]</MudText>
+        <MudButton Variant="Variant.Outlined"
+                   StartIcon="@Icons.Material.Filled.Refresh"
+                   Disabled="@State.IsBusy"
+                   OnClick="OnRefresh">
+            @L["Common:Actions:Refresh"]
+        </MudButton>
+    </MudStack>
+
+    @if (!State.CanAdminSelectedCluster)
+    {
+        <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined">
+            @L["ConsumerGroups:Unavailable"]
+        </MudAlert>
+    }
+    else if (State.ConsumerGroups.Count == 0)
+    {
+        <MudAlert Severity="Severity.Info" Variant="Variant.Outlined">
+            @L["ConsumerGroups:Empty"]
+        </MudAlert>
+    }
+    else
+    {
+        <MudTable T="KafkaConsumerGroupSummary" Items="@State.ConsumerGroups" Dense="true" Hover="true">
+            <HeaderContent>
+                <MudTh>@L["ConsumerGroups:Columns:GroupId"]</MudTh>
+                <MudTh>@L["ConsumerGroups:Columns:State"]</MudTh>
+                <MudTh>@L["ConsumerGroups:Columns:Members"]</MudTh>
+                <MudTh>@L["ConsumerGroups:Columns:Lag"]</MudTh>
+            </HeaderContent>
+            <RowTemplate>
+                <MudTd DataLabel="@L["ConsumerGroups:Columns:GroupId"]">@context.GroupId</MudTd>
+                <MudTd DataLabel="@L["ConsumerGroups:Columns:State"]">@context.State</MudTd>
+                <MudTd DataLabel="@L["ConsumerGroups:Columns:Members"]">@context.MemberCount</MudTd>
+                <MudTd DataLabel="@L["ConsumerGroups:Columns:Lag"]">@FormatLag(context.TotalLag)</MudTd>
+            </RowTemplate>
+        </MudTable>
+    }
+</MudStack>
+
+@code {
+    [Parameter, EditorRequired] public EventBusKafkaPageState State { get; set; } = default!;
+
+    [Parameter] public EventCallback OnRefresh { get; set; }
+
+    private string FormatLag(long? lag)
+    {
+        return lag?.ToString() ?? L["ConsumerGroups:Values:LagUnknown"];
+    }
+}

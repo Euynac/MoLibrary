@@ -1,0 +1,273 @@
+{
+  "Api": {
+    "Integration": {
+      "Get": {
+        "Summary": "Gets Kafka EventBus integration state",
+        "Description": "Returns the active EventBus provider and Kafka integration visibility state."
+      }
+    },
+    "Clusters": {
+      "List": {
+        "Summary": "Lists Kafka clusters",
+        "Description": "Lists Kafka clusters configured through module options or the console."
+      },
+      "Upsert": {
+        "Summary": "Creates or updates a Kafka cluster",
+        "Description": "Saves a Kafka cluster configuration for console visibility and admin operations."
+      },
+      "Delete": {
+        "Summary": "Deletes a Kafka cluster",
+        "Description": "Deletes a console-managed Kafka cluster and its sampled snapshots."
+      },
+      "Test": {
+        "Summary": "Tests Kafka cluster connectivity",
+        "Description": "Runs a direct broker metadata probe for a Kafka cluster."
+      }
+    },
+    "Dashboard": {
+      "Get": {
+        "Summary": "Gets Kafka dashboard data",
+        "Description": "Returns the selected Kafka cluster dashboard aggregate."
+      }
+    },
+    "Topics": {
+      "List": {
+        "Summary": "Lists Kafka topics",
+        "Description": "Lists topics for a Kafka cluster."
+      },
+      "Create": {
+        "Summary": "Creates a Kafka topic",
+        "Description": "Creates a topic through direct Kafka admin access."
+      },
+      "Delete": {
+        "Summary": "Deletes a Kafka topic",
+        "Description": "Deletes a topic through direct Kafka admin access."
+      },
+      "Partitions": {
+        "Summary": "Increases Kafka topic partitions",
+        "Description": "Increases a topic's partition count."
+      },
+      "Retention": {
+        "Summary": "Updates Kafka topic retention",
+        "Description": "Updates a topic's retention.ms configuration."
+      }
+    },
+    "ConsumerGroups": {
+      "List": {
+        "Summary": "Lists Kafka consumer groups",
+        "Description": "Lists consumer groups visible to direct Kafka admin access."
+      }
+    },
+    "Performance": {
+      "History": {
+        "Summary": "Gets Kafka performance history",
+        "Description": "Returns recent Kafka performance snapshots for a cluster."
+      },
+      "Capture": {
+        "Summary": "Captures Kafka performance",
+        "Description": "Captures a broker, topic, and consumer group snapshot."
+      }
+    }
+  },
+  "Common": {
+    "Actions": {
+      "Cancel": "Cancel",
+      "Delete": "Delete",
+      "Edit": "Edit",
+      "Refresh": "Refresh",
+      "Save": "Save",
+      "Select": "Select"
+    }
+  },
+  "Page": {
+    "PageTitle": "Kafka EventBus",
+    "Eyebrow": "EventBus integration",
+    "Title": "Kafka EventBus Console",
+    "Subtitle": "Inspect Kafka-backed EventBus integrations, clusters, topics, consumer groups, and performance snapshots.",
+    "States": {
+      "Loading": "Loading Kafka console",
+      "LoadingDescription": "Resolving EventBus provider state and configured Kafka clusters."
+    },
+    "Messages": {
+      "OperationFailed": "Operation failed.",
+      "RefreshSucceeded": "Kafka console refreshed."
+    }
+  },
+  "Tabs": {
+    "Dashboard": "Dashboard",
+    "Clusters": "Clusters",
+    "Topics": "Topics",
+    "ConsumerGroups": "Consumer Groups",
+    "Performance": "Performance"
+  },
+  "Dashboard": {
+    "Cards": {
+      "Provider": "Active provider",
+      "Brokers": "Brokers",
+      "BrokersHint": "From latest direct metadata or snapshot",
+      "Topics": "Topics",
+      "TopicsHint": "Visible through Kafka metadata",
+      "ConsumerGroups": "Consumer groups",
+      "ConsumerGroupsHint": "Described from Kafka admin APIs"
+    },
+    "Modes": {
+      "DirectKafka": "Direct Kafka",
+      "DaprKafka": "Dapr-backed Kafka",
+      "DaprNonKafka": "Dapr without Kafka metadata",
+      "NotConfigured": "Not configured",
+      "Unknown": "Unknown"
+    },
+    "SelectedCluster": {
+      "None": "No cluster selected",
+      "NoneDescription": "Create or configure a Kafka cluster to enable console views.",
+      "ExternalCredentials": "Kafka credentials are managed outside Monica."
+    }
+  },
+  "Clusters": {
+    "Title": "Kafka clusters",
+    "Empty": "No Kafka clusters are visible. Create a cluster or declare one through module configuration.",
+    "Actions": {
+      "New": "New cluster",
+      "Test": "Test connection"
+    },
+    "Columns": {
+      "Name": "Name",
+      "Bootstrap": "Bootstrap",
+      "Mode": "Mode",
+      "Status": "Status",
+      "Actions": "Actions"
+    },
+    "Values": {
+      "ExternalBootstrap": "Managed externally"
+    },
+    "Modes": {
+      "DaprBacked": "Dapr-backed",
+      "Direct": "Direct"
+    },
+    "Status": {
+      "Reachable": "Reachable",
+      "Unknown": "Not tested",
+      "Limited": "Limited"
+    },
+    "Dialog": {
+      "CreateTitle": "New Kafka cluster",
+      "EditTitle": "Edit Kafka cluster"
+    },
+    "Confirm": {
+      "DeleteTitle": "Delete Kafka cluster",
+      "DeleteMessage": "Delete cluster {0} and its sampled snapshots?"
+    },
+    "Messages": {
+      "Saved": "Kafka cluster saved.",
+      "Deleted": "Kafka cluster deleted.",
+      "TestSucceeded": "Kafka cluster is reachable."
+    },
+    "Fields": {
+      "DisplayName": "Display name",
+      "ClusterId": "Cluster id",
+      "BootstrapServers": "Bootstrap servers",
+      "ClientId": "Client id",
+      "JmxEndpoint": "JMX endpoint",
+      "SecurityProtocol": "Security protocol",
+      "SaslMechanism": "SASL mechanism",
+      "SaslUsername": "SASL username",
+      "SaslPassword": "SASL password",
+      "SslCaLocation": "SSL CA location",
+      "IsDaprBacked": "Backs Dapr pub/sub",
+      "CredentialsManagedExternally": "Credentials managed externally",
+      "DaprPubSubName": "Dapr pub/sub name"
+    },
+    "Validation": {
+      "DisplayNameRequired": "Display name is required.",
+      "BootstrapRequired": "Bootstrap servers are required when credentials are managed by Monica."
+    }
+  },
+  "Topics": {
+    "Title": "Topics",
+    "Unavailable": "Topic management requires direct Kafka broker access.",
+    "Empty": "No topics were returned for the selected cluster.",
+    "Actions": {
+      "Create": "Create topic",
+      "Partitions": "Increase partitions",
+      "Retention": "Set retention"
+    },
+    "Columns": {
+      "Name": "Name",
+      "Partitions": "Partitions",
+      "Replication": "Replication",
+      "Retention": "Retention",
+      "Actions": "Actions"
+    },
+    "Values": {
+      "Internal": "Internal topic",
+      "RetentionUnknown": "Unknown",
+      "RetentionMs": "{0} ms"
+    },
+    "Dialog": {
+      "CreateTitle": "Create Kafka topic",
+      "PartitionsTitle": "Increase partitions",
+      "RetentionTitle": "Set retention",
+      "PartitionsMessage": "Topic {0} currently has {1} partitions. Kafka only allows increasing this value.",
+      "RetentionMessage": "Set retention.ms for topic {0}."
+    },
+    "Confirm": {
+      "DeleteTitle": "Delete Kafka topic",
+      "DeleteMessage": "Delete topic {0}?"
+    },
+    "Messages": {
+      "Created": "Kafka topic created.",
+      "Deleted": "Kafka topic deleted.",
+      "PartitionsUpdated": "Kafka topic partitions updated.",
+      "RetentionUpdated": "Kafka topic retention updated."
+    },
+    "Fields": {
+      "TopicName": "Topic name",
+      "Partitions": "Partitions",
+      "ReplicationFactor": "Replication factor",
+      "RetentionMs": "Retention ms",
+      "IncreaseTo": "Increase to"
+    },
+    "Validation": {
+      "NameRequired": "Topic name is required.",
+      "PartitionIncreaseRequired": "The new partition count must be greater than the current partition count.",
+      "RetentionRequired": "Retention must be greater than zero."
+    }
+  },
+  "ConsumerGroups": {
+    "Title": "Consumer groups",
+    "Unavailable": "Consumer group inspection requires direct Kafka broker access.",
+    "Empty": "No consumer groups were returned for the selected cluster.",
+    "Columns": {
+      "GroupId": "Group id",
+      "State": "State",
+      "Members": "Members",
+      "Lag": "Lag"
+    },
+    "Values": {
+      "LagUnknown": "Unknown"
+    }
+  },
+  "Performance": {
+    "Title": "Performance snapshots",
+    "Unavailable": "Performance sampling requires direct Kafka broker access.",
+    "Empty": "No performance snapshots have been captured.",
+    "Actions": {
+      "Capture": "Capture"
+    },
+    "Columns": {
+      "CapturedAt": "Captured at",
+      "Brokers": "Brokers",
+      "Topics": "Topics",
+      "Groups": "Groups",
+      "Lag": "Lag",
+      "Message": "Message"
+    },
+    "Values": {
+      "LagUnknown": "Unknown",
+      "NoMessage": "OK"
+    },
+    "Messages": {
+      "Captured": "Kafka performance snapshot captured."
+    }
+  }
+}

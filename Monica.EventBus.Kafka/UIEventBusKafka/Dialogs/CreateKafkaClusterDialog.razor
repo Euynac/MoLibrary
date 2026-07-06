@@ -1,0 +1,111 @@
+@inject IStringLocalizer<EventBusKafkaResource> L
+
+<MudDialog>
+    <DialogContent>
+        <MudStack Spacing="3">
+            @if (!string.IsNullOrWhiteSpace(_errorMessage))
+            {
+                <MudAlert Severity="Severity.Error" Variant="Variant.Outlined">
+                    @_errorMessage
+                </MudAlert>
+            }
+
+            <MudGrid Spacing="3">
+                <MudItem xs="12" md="6">
+                    <MudTextField T="string" @bind-Value="_model.DisplayName" Label="@L["Clusters:Fields:DisplayName"]" Required="true" />
+                </MudItem>
+                <MudItem xs="12" md="6">
+                    <MudTextField T="string" @bind-Value="_model.ClusterId" Label="@L["Clusters:Fields:ClusterId"]" />
+                </MudItem>
+                <MudItem xs="12">
+                    <MudTextField T="string" @bind-Value="_model.BootstrapServers" Label="@L["Clusters:Fields:BootstrapServers"]" />
+                </MudItem>
+                <MudItem xs="12" md="6">
+                    <MudTextField T="string" @bind-Value="_model.ClientId" Label="@L["Clusters:Fields:ClientId"]" />
+                </MudItem>
+                <MudItem xs="12" md="6">
+                    <MudTextField T="string" @bind-Value="_model.JmxEndpoint" Label="@L["Clusters:Fields:JmxEndpoint"]" />
+                </MudItem>
+                <MudItem xs="12" md="6">
+                    <MudTextField T="string" @bind-Value="_model.SecurityProtocol" Label="@L["Clusters:Fields:SecurityProtocol"]" />
+                </MudItem>
+                <MudItem xs="12" md="6">
+                    <MudTextField T="string" @bind-Value="_model.SaslMechanism" Label="@L["Clusters:Fields:SaslMechanism"]" />
+                </MudItem>
+                <MudItem xs="12" md="6">
+                    <MudTextField T="string" @bind-Value="_model.SaslUsername" Label="@L["Clusters:Fields:SaslUsername"]" />
+                </MudItem>
+                <MudItem xs="12" md="6">
+                    <MudTextField T="string"
+                                  @bind-Value="_model.SaslPassword"
+                                  Label="@L["Clusters:Fields:SaslPassword"]"
+                                  InputType="InputType.Password" />
+                </MudItem>
+                <MudItem xs="12">
+                    <MudTextField T="string" @bind-Value="_model.SslCaLocation" Label="@L["Clusters:Fields:SslCaLocation"]" />
+                </MudItem>
+                <MudItem xs="12" md="6">
+                    <MudSwitch T="bool" @bind-Value="_model.IsDaprBacked" Color="Color.Primary">
+                        @L["Clusters:Fields:IsDaprBacked"]
+                    </MudSwitch>
+                </MudItem>
+                <MudItem xs="12" md="6">
+                    <MudSwitch T="bool" @bind-Value="_model.CredentialsManagedExternally" Color="Color.Primary">
+                        @L["Clusters:Fields:CredentialsManagedExternally"]
+                    </MudSwitch>
+                </MudItem>
+                @if (_model.IsDaprBacked)
+                {
+                    <MudItem xs="12">
+                        <MudTextField T="string" @bind-Value="_model.DaprPubSubName" Label="@L["Clusters:Fields:DaprPubSubName"]" />
+                    </MudItem>
+                }
+            </MudGrid>
+        </MudStack>
+    </DialogContent>
+    <DialogActions>
+        <MudButton Variant="Variant.Text" OnClick="Cancel">@L["Common:Actions:Cancel"]</MudButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="Save">@L["Common:Actions:Save"]</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] private IMudDialogInstance? MudDialog { get; set; }
+
+    [Parameter] public KafkaClusterConfig? Cluster { get; set; }
+
+    private KafkaClusterConfig _model = new();
+
+    private string? _errorMessage;
+
+    protected override void OnInitialized()
+    {
+        _model = Cluster?.Clone() ?? new KafkaClusterConfig
+        {
+            CredentialsManagedExternally = false
+        };
+    }
+
+    private void Save()
+    {
+        _errorMessage = null;
+        if (string.IsNullOrWhiteSpace(_model.DisplayName))
+        {
+            _errorMessage = L["Clusters:Validation:DisplayNameRequired"];
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(_model.BootstrapServers) && !_model.CredentialsManagedExternally)
+        {
+            _errorMessage = L["Clusters:Validation:BootstrapRequired"];
+            return;
+        }
+
+        MudDialog?.Close(DialogResult.Ok(_model.Clone().Normalize()));
+    }
+
+    private void Cancel()
+    {
+        MudDialog?.Cancel();
+    }
+}

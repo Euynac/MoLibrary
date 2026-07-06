@@ -1,0 +1,222 @@
+using Monica.EventBus.Kafka.Models;
+
+namespace Monica.EventBus.Kafka.Providers.EfCore;
+
+/// <summary>
+/// Persisted Kafka cluster entity.
+/// </summary>
+public sealed class KafkaClusterEntity
+{
+    /// <summary>
+    /// Cluster identifier.
+    /// </summary>
+    public string ClusterId { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Display name.
+    /// </summary>
+    public string DisplayName { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Bootstrap server list.
+    /// </summary>
+    public string BootstrapServers { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Optional client id.
+    /// </summary>
+    public string? ClientId { get; set; }
+
+    /// <summary>
+    /// Optional security protocol.
+    /// </summary>
+    public string? SecurityProtocol { get; set; }
+
+    /// <summary>
+    /// Optional SASL mechanism.
+    /// </summary>
+    public string? SaslMechanism { get; set; }
+
+    /// <summary>
+    /// Optional SASL user name.
+    /// </summary>
+    public string? SaslUsername { get; set; }
+
+    /// <summary>
+    /// Optional SASL password.
+    /// </summary>
+    public string? SaslPassword { get; set; }
+
+    /// <summary>
+    /// Optional SSL CA location.
+    /// </summary>
+    public string? SslCaLocation { get; set; }
+
+    /// <summary>
+    /// Optional JMX endpoint.
+    /// </summary>
+    public string? JmxEndpoint { get; set; }
+
+    /// <summary>
+    /// Optional Dapr pub/sub name.
+    /// </summary>
+    public string? DaprPubSubName { get; set; }
+
+    /// <summary>
+    /// Whether the cluster backs Dapr pub/sub.
+    /// </summary>
+    public bool IsDaprBacked { get; set; }
+
+    /// <summary>
+    /// Whether credentials are stored outside Monica.
+    /// </summary>
+    public bool CredentialsManagedExternally { get; set; }
+
+    /// <summary>
+    /// UTC creation time.
+    /// </summary>
+    public DateTimeOffset CreatedAt { get; set; }
+
+    /// <summary>
+    /// UTC update time.
+    /// </summary>
+    public DateTimeOffset UpdatedAt { get; set; }
+
+    /// <summary>
+    /// Converts the entity to a public model.
+    /// </summary>
+    public KafkaClusterConfig ToModel()
+    {
+        return new KafkaClusterConfig
+        {
+            ClusterId = ClusterId,
+            DisplayName = DisplayName,
+            BootstrapServers = BootstrapServers,
+            ClientId = ClientId,
+            SecurityProtocol = SecurityProtocol,
+            SaslMechanism = SaslMechanism,
+            SaslUsername = SaslUsername,
+            SaslPassword = SaslPassword,
+            SslCaLocation = SslCaLocation,
+            JmxEndpoint = JmxEndpoint,
+            DaprPubSubName = DaprPubSubName,
+            IsDaprBacked = IsDaprBacked,
+            CredentialsManagedExternally = CredentialsManagedExternally,
+            CreatedAt = CreatedAt,
+            UpdatedAt = UpdatedAt
+        };
+    }
+
+    /// <summary>
+    /// Converts a public model to an entity.
+    /// </summary>
+    public static KafkaClusterEntity FromModel(KafkaClusterConfig model)
+    {
+        var normalized = model.Clone().Normalize();
+        return new KafkaClusterEntity
+        {
+            ClusterId = normalized.ClusterId,
+            DisplayName = normalized.DisplayName,
+            BootstrapServers = normalized.BootstrapServers,
+            ClientId = normalized.ClientId,
+            SecurityProtocol = normalized.SecurityProtocol,
+            SaslMechanism = normalized.SaslMechanism,
+            SaslUsername = normalized.SaslUsername,
+            SaslPassword = normalized.SaslPassword,
+            SslCaLocation = normalized.SslCaLocation,
+            JmxEndpoint = normalized.JmxEndpoint,
+            DaprPubSubName = normalized.DaprPubSubName,
+            IsDaprBacked = normalized.IsDaprBacked,
+            CredentialsManagedExternally = normalized.CredentialsManagedExternally,
+            CreatedAt = normalized.CreatedAt,
+            UpdatedAt = normalized.UpdatedAt
+        };
+    }
+}
+
+/// <summary>
+/// Persisted Kafka performance snapshot entity.
+/// </summary>
+public sealed class KafkaPerformanceSnapshotEntity
+{
+    /// <summary>
+    /// Entity id.
+    /// </summary>
+    public Guid Id { get; set; } = Guid.NewGuid();
+
+    /// <summary>
+    /// Cluster identifier.
+    /// </summary>
+    public string ClusterId { get; set; } = string.Empty;
+
+    /// <summary>
+    /// UTC capture time.
+    /// </summary>
+    public DateTimeOffset CapturedAt { get; set; }
+
+    /// <summary>
+    /// Broker count.
+    /// </summary>
+    public int BrokerCount { get; set; }
+
+    /// <summary>
+    /// Topic count.
+    /// </summary>
+    public int TopicCount { get; set; }
+
+    /// <summary>
+    /// Consumer group count.
+    /// </summary>
+    public int ConsumerGroupCount { get; set; }
+
+    /// <summary>
+    /// Total lag when available.
+    /// </summary>
+    public long? TotalLag { get; set; }
+
+    /// <summary>
+    /// Whether JMX metrics were included.
+    /// </summary>
+    public bool IncludesJmxMetrics { get; set; }
+
+    /// <summary>
+    /// Optional sampling message.
+    /// </summary>
+    public string? Message { get; set; }
+
+    /// <summary>
+    /// Converts the entity to a public model.
+    /// </summary>
+    public KafkaPerformanceSnapshot ToModel()
+    {
+        return new KafkaPerformanceSnapshot
+        {
+            ClusterId = ClusterId,
+            CapturedAt = CapturedAt,
+            BrokerCount = BrokerCount,
+            TopicCount = TopicCount,
+            ConsumerGroupCount = ConsumerGroupCount,
+            TotalLag = TotalLag,
+            IncludesJmxMetrics = IncludesJmxMetrics,
+            Message = Message
+        };
+    }
+
+    /// <summary>
+    /// Converts a public model to an entity.
+    /// </summary>
+    public static KafkaPerformanceSnapshotEntity FromModel(KafkaPerformanceSnapshot model)
+    {
+        return new KafkaPerformanceSnapshotEntity
+        {
+            ClusterId = model.ClusterId,
+            CapturedAt = model.CapturedAt,
+            BrokerCount = model.BrokerCount,
+            TopicCount = model.TopicCount,
+            ConsumerGroupCount = model.ConsumerGroupCount,
+            TotalLag = model.TotalLag,
+            IncludesJmxMetrics = model.IncludesJmxMetrics,
+            Message = model.Message
+        };
+    }
+}

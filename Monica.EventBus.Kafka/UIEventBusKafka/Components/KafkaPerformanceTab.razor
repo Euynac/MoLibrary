@@ -1,0 +1,75 @@
+@using Monica.EventBus.Kafka.UIEventBusKafka.State
+@inject IStringLocalizer<EventBusKafkaResource> L
+
+<MudStack Spacing="3">
+    <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Spacing="2">
+        <MudText Typo="Typo.h6">@L["Performance:Title"]</MudText>
+        <MudStack Row="true" Spacing="1">
+            <MudButton Variant="Variant.Outlined"
+                       StartIcon="@Icons.Material.Filled.Refresh"
+                       Disabled="@State.IsBusy"
+                       OnClick="OnRefresh">
+                @L["Common:Actions:Refresh"]
+            </MudButton>
+            <MudButton Variant="Variant.Filled"
+                       Color="Color.Primary"
+                       StartIcon="@Icons.Material.Filled.MonitorHeart"
+                       Disabled="@(State.IsBusy || !State.CanAdminSelectedCluster)"
+                       OnClick="OnCapture">
+                @L["Performance:Actions:Capture"]
+            </MudButton>
+        </MudStack>
+    </MudStack>
+
+    @if (!State.CanAdminSelectedCluster)
+    {
+        <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined">
+            @L["Performance:Unavailable"]
+        </MudAlert>
+    }
+    else if (State.PerformanceSnapshots.Count == 0)
+    {
+        <MudAlert Severity="Severity.Info" Variant="Variant.Outlined">
+            @L["Performance:Empty"]
+        </MudAlert>
+    }
+    else
+    {
+        <MudTable T="KafkaPerformanceSnapshot" Items="@State.PerformanceSnapshots.OrderByDescending(snapshot => snapshot.CapturedAt)" Dense="true" Hover="true">
+            <HeaderContent>
+                <MudTh>@L["Performance:Columns:CapturedAt"]</MudTh>
+                <MudTh>@L["Performance:Columns:Brokers"]</MudTh>
+                <MudTh>@L["Performance:Columns:Topics"]</MudTh>
+                <MudTh>@L["Performance:Columns:Groups"]</MudTh>
+                <MudTh>@L["Performance:Columns:Lag"]</MudTh>
+                <MudTh>@L["Performance:Columns:Message"]</MudTh>
+            </HeaderContent>
+            <RowTemplate>
+                <MudTd DataLabel="@L["Performance:Columns:CapturedAt"]">@context.CapturedAt.LocalDateTime.ToString("yyyy-MM-dd HH:mm:ss")</MudTd>
+                <MudTd DataLabel="@L["Performance:Columns:Brokers"]">@context.BrokerCount</MudTd>
+                <MudTd DataLabel="@L["Performance:Columns:Topics"]">@context.TopicCount</MudTd>
+                <MudTd DataLabel="@L["Performance:Columns:Groups"]">@context.ConsumerGroupCount</MudTd>
+                <MudTd DataLabel="@L["Performance:Columns:Lag"]">@FormatLag(context.TotalLag)</MudTd>
+                <MudTd DataLabel="@L["Performance:Columns:Message"]">@FormatMessage(context.Message)</MudTd>
+            </RowTemplate>
+        </MudTable>
+    }
+</MudStack>
+
+@code {
+    [Parameter, EditorRequired] public EventBusKafkaPageState State { get; set; } = default!;
+
+    [Parameter] public EventCallback OnRefresh { get; set; }
+
+    [Parameter] public EventCallback OnCapture { get; set; }
+
+    private string FormatLag(long? lag)
+    {
+        return lag?.ToString() ?? L["Performance:Values:LagUnknown"];
+    }
+
+    private string FormatMessage(string? message)
+    {
+        return string.IsNullOrWhiteSpace(message) ? L["Performance:Values:NoMessage"] : message;
+    }
+}

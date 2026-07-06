@@ -32,6 +32,7 @@
   <Project Path="Monica.DependencyInjection/Monica.DependencyInjection.csproj" />
   <Project Path="Monica.Experimental/Monica.Experimental.csproj" />
   <Project Path="Monica.WebApi/Monica.WebApi.csproj" />
+  <Project Path="Monica.EventBus.Kafka/Monica.EventBus.Kafka.csproj" />
   <Project Path="Monica.EventBus/Monica.EventBus.csproj" />
   <Project Path="Monica.Framework.Generators/Monica.Framework.Generators.csproj" />
   <Project Path="Monica.Framework.UI/Monica.Framework.UI.csproj" />

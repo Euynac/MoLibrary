@@ -1,0 +1,338 @@
+@attribute [Route(PAGE_URL)]
+@using Monica.EventBus.Kafka.UIEventBusKafka.Components
+@using Monica.EventBus.Kafka.UIEventBusKafka.Dialogs
+@using Monica.EventBus.Kafka.UIEventBusKafka.State
+@inject EventBusKafkaPageState PageState
+@inject IDialogService DialogService
+@inject ISnackbar Snackbar
+@inject IStringLocalizer<EventBusKafkaResource> L
+
+<PageTitle>@L["Page:PageTitle"]</PageTitle>
+
+<div class="eventbus-kafka-page">
+    <div class="page-banner">
+        <div class="page-banner__copy">
+            <MudText Typo="Typo.overline" Class="page-eyebrow">@L["Page:Eyebrow"]</MudText>
+            <MudText Typo="Typo.h5">@L["Page:Title"]</MudText>
+            <MudText Typo="Typo.body2" Color="Color.Secondary">@L["Page:Subtitle"]</MudText>
+        </div>
+
+        <div class="page-banner__actions">
+            <MudTooltip Text="@L["Common:Actions:Refresh"]">
+                <MudIconButton Icon="@Icons.Material.Filled.Refresh"
+                               Variant="Variant.Outlined"
+                               Disabled="@PageState.IsBusy"
+                               OnClick="RefreshAsync" />
+            </MudTooltip>
+            <MudButton Variant="Variant.Filled"
+                       Color="Color.Primary"
+                       StartIcon="@Icons.Material.Filled.Add"
+                       Disabled="@PageState.IsBusy"
+                       OnClick="OpenCreateClusterDialogAsync">
+                @L["Clusters:Actions:New"]
+            </MudButton>
+        </div>
+    </div>
+
+    @if (!string.IsNullOrWhiteSpace(PageState.ErrorMessage))
+    {
+        <MudAlert Severity="Severity.Error" Variant="Variant.Outlined">
+            @PageState.ErrorMessage
+        </MudAlert>
+    }
+
+    @if (PageState.IsLoading)
+    {
+        <div class="page-state">
+            <MudProgressCircular Color="Color.Primary" Indeterminate="true" />
+            <MudText Typo="Typo.h6">@L["Page:States:Loading"]</MudText>
+            <MudText Typo="Typo.body2" Color="Color.Secondary">@L["Page:States:LoadingDescription"]</MudText>
+        </div>
+    }
+    else
+    {
+        <MudTabs Rounded="true"
+                 Outlined="true"
+                 ApplyEffectsToContainer="true"
+                 TabPanelsClass="eventbus-kafka-tab-panels">
+            <MudTabPanel Text="@L["Tabs:Dashboard"]" Icon="@Icons.Material.Filled.Dashboard">
+                <KafkaDashboardTab State="PageState" OnRefresh="RefreshAsync" />
+            </MudTabPanel>
+            <MudTabPanel Text="@L["Tabs:Clusters"]" Icon="@Icons.Material.Filled.Storage">
+                <KafkaClustersTab State="PageState"
+                                  OnCreate="OpenCreateClusterDialogAsync"
+                                  OnRefresh="RefreshAsync"
+                                  OnSelect="SelectClusterAsync"
+                                  OnEdit="OpenEditClusterDialogAsync"
+                                  OnDelete="DeleteClusterAsync"
+                                  OnTest="TestClusterAsync" />
+            </MudTabPanel>
+            <MudTabPanel Text="@L["Tabs:Topics"]" Icon="@Icons.Material.Filled.Topic">
+                <KafkaTopicsTab State="PageState"
+                                OnCreate="OpenCreateTopicDialogAsync"
+                                OnRefresh="RefreshAsync"
+                                OnDelete="DeleteTopicAsync"
+                                OnIncreasePartitions="OpenIncreasePartitionsDialogAsync"
+                                OnUpdateRetention="OpenRetentionDialogAsync" />
+            </MudTabPanel>
+            <MudTabPanel Text="@L["Tabs:ConsumerGroups"]" Icon="@Icons.Material.Filled.Group">
+                <KafkaConsumerGroupsTab State="PageState" OnRefresh="RefreshAsync" />
+            </MudTabPanel>
+            <MudTabPanel Text="@L["Tabs:Performance"]" Icon="@Icons.Material.Filled.MonitorHeart">
+                <KafkaPerformanceTab State="PageState"
+                                     OnRefresh="RefreshAsync"
+                                     OnCapture="CapturePerformanceAsync" />
+            </MudTabPanel>
+        </MudTabs>
+    }
+</div>
+
+@code {
+    public const string PAGE_URL = "/eventbus-kafka";
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender)
+        {
+            return;
+        }
+
+        await PageState.InitializeAsync();
+        StateHasChanged();
+    }
+
+    private async Task RefreshAsync()
+    {
+        await PageState.RefreshAsync();
+        Snackbar.Add(L["Page:Messages:RefreshSucceeded"], Severity.Success);
+        StateHasChanged();
+    }
+
+    private async Task SelectClusterAsync(KafkaClusterSummary cluster)
+    {
+        await PageState.SelectClusterAsync(cluster.Config.ClusterId);
+        StateHasChanged();
+    }
+
+    private async Task OpenCreateClusterDialogAsync()
+    {
+        await OpenClusterDialogAsync(null);
+    }
+
+    private async Task OpenEditClusterDialogAsync(KafkaClusterSummary cluster)
+    {
+        await OpenClusterDialogAsync(cluster.Config);
+    }
+
+    private async Task OpenClusterDialogAsync(KafkaClusterConfig? cluster)
+    {
+        var parameters = new DialogParameters<CreateKafkaClusterDialog>
+        {
+            { dialog => dialog.Cluster, cluster?.Clone() }
+        };
+
+        var dialog = await DialogService.ShowAsync<CreateKafkaClusterDialog>(
+            cluster is null ? L["Clusters:Dialog:CreateTitle"] : L["Clusters:Dialog:EditTitle"],
+            parameters,
+            DefaultDialogOptions);
+
+        var result = await dialog.Result;
+        if (result is null || result.Canceled || result.Data is not KafkaClusterConfig savedCluster)
+        {
+            return;
+        }
+
+        if (await PageState.UpsertClusterAsync(savedCluster))
+        {
+            Snackbar.Add(L["Clusters:Messages:Saved"], Severity.Success);
+        }
+        else
+        {
+            ShowStateError();
+        }
+
+        StateHasChanged();
+    }
+
+    private async Task DeleteClusterAsync(KafkaClusterSummary cluster)
+    {
+        var confirmed = await DialogService.ShowMessageBoxAsync(
+            L["Clusters:Confirm:DeleteTitle"],
+            L["Clusters:Confirm:DeleteMessage", cluster.Config.DisplayName],
+            yesText: L["Common:Actions:Delete"],
+            cancelText: L["Common:Actions:Cancel"]);
+
+        if (confirmed != true)
+        {
+            return;
+        }
+
+        if (await PageState.DeleteClusterAsync(cluster.Config.ClusterId))
+        {
+            Snackbar.Add(L["Clusters:Messages:Deleted"], Severity.Success);
+        }
+        else
+        {
+            ShowStateError();
+        }
+
+        StateHasChanged();
+    }
+
+    private async Task TestClusterAsync(KafkaClusterSummary cluster)
+    {
+        if (await PageState.TestClusterAsync(cluster.Config.ClusterId))
+        {
+            Snackbar.Add(L["Clusters:Messages:TestSucceeded"], Severity.Success);
+        }
+        else
+        {
+            ShowStateError();
+        }
+
+        StateHasChanged();
+    }
+
+    private async Task OpenCreateTopicDialogAsync()
+    {
+        if (PageState.SelectedClusterId is null)
+        {
+            return;
+        }
+
+        var parameters = new DialogParameters<CreateKafkaTopicDialog>
+        {
+            { dialog => dialog.ClusterId, PageState.SelectedClusterId }
+        };
+        var dialog = await DialogService.ShowAsync<CreateKafkaTopicDialog>(
+            L["Topics:Dialog:CreateTitle"],
+            parameters,
+            DefaultDialogOptions);
+
+        var result = await dialog.Result;
+        if (result is null || result.Canceled || result.Data is not KafkaTopicCreateRequest request)
+        {
+            return;
+        }
+
+        if (await PageState.CreateTopicAsync(request))
+        {
+            Snackbar.Add(L["Topics:Messages:Created"], Severity.Success);
+        }
+        else
+        {
+            ShowStateError();
+        }
+
+        StateHasChanged();
+    }
+
+    private async Task DeleteTopicAsync(KafkaTopicSummary topic)
+    {
+        var confirmed = await DialogService.ShowMessageBoxAsync(
+            L["Topics:Confirm:DeleteTitle"],
+            L["Topics:Confirm:DeleteMessage", topic.TopicName],
+            yesText: L["Common:Actions:Delete"],
+            cancelText: L["Common:Actions:Cancel"]);
+
+        if (confirmed != true)
+        {
+            return;
+        }
+
+        if (await PageState.DeleteTopicAsync(topic.TopicName))
+        {
+            Snackbar.Add(L["Topics:Messages:Deleted"], Severity.Success);
+        }
+        else
+        {
+            ShowStateError();
+        }
+
+        StateHasChanged();
+    }
+
+    private async Task OpenIncreasePartitionsDialogAsync(KafkaTopicSummary topic)
+    {
+        var parameters = new DialogParameters<KafkaPartitionDialog>
+        {
+            { dialog => dialog.Topic, topic }
+        };
+        var dialog = await DialogService.ShowAsync<KafkaPartitionDialog>(
+            L["Topics:Dialog:PartitionsTitle"],
+            parameters,
+            DefaultDialogOptions);
+
+        var result = await dialog.Result;
+        if (result is null || result.Canceled || result.Data is not int increaseTo)
+        {
+            return;
+        }
+
+        if (await PageState.IncreasePartitionsAsync(topic.TopicName, increaseTo))
+        {
+            Snackbar.Add(L["Topics:Messages:PartitionsUpdated"], Severity.Success);
+        }
+        else
+        {
+            ShowStateError();
+        }
+
+        StateHasChanged();
+    }
+
+    private async Task OpenRetentionDialogAsync(KafkaTopicSummary topic)
+    {
+        var parameters = new DialogParameters<KafkaRetentionDialog>
+        {
+            { dialog => dialog.Topic, topic }
+        };
+        var dialog = await DialogService.ShowAsync<KafkaRetentionDialog>(
+            L["Topics:Dialog:RetentionTitle"],
+            parameters,
+            DefaultDialogOptions);
+
+        var result = await dialog.Result;
+        if (result is null || result.Canceled || result.Data is not long retentionMs)
+        {
+            return;
+        }
+
+        if (await PageState.UpdateRetentionAsync(topic.TopicName, retentionMs))
+        {
+            Snackbar.Add(L["Topics:Messages:RetentionUpdated"], Severity.Success);
+        }
+        else
+        {
+            ShowStateError();
+        }
+
+        StateHasChanged();
+    }
+
+    private async Task CapturePerformanceAsync()
+    {
+        if (await PageState.CapturePerformanceAsync())
+        {
+            Snackbar.Add(L["Performance:Messages:Captured"], Severity.Success);
+        }
+        else
+        {
+            ShowStateError();
+        }
+
+        StateHasChanged();
+    }
+
+    private void ShowStateError()
+    {
+        Snackbar.Add(PageState.ErrorMessage ?? L["Page:Messages:OperationFailed"], Severity.Error);
+    }
+
+    private static DialogOptions DefaultDialogOptions => new()
+    {
+        CloseOnEscapeKey = true,
+        MaxWidth = MaxWidth.Medium,
+        FullWidth = true
+    };
+}
