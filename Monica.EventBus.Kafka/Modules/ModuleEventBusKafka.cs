@@ -88,6 +88,7 @@ public sealed class ModuleEventBusKafka(ModuleEventBusKafkaOption option)
         services.TryAddSingleton<IKafkaClusterConfigProvider, KafkaClusterConfigProvider>();
         services.TryAddScoped<IKafkaAdminProvider, ConfluentKafkaAdminProvider>();
         services.TryAddScoped<IKafkaMessageReader, ConfluentKafkaMessageReader>();
+        services.TryAddScoped<IKafkaPerformanceMetricsProvider, ConfluentKafkaPerformanceMetricsProvider>();
         services.TryAddScoped<KafkaIntegrationService>();
         services.TryAddScoped<KafkaClusterService>();
         services.TryAddScoped<KafkaTopicService>();

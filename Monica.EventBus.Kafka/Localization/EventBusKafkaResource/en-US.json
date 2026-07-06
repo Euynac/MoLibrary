@@ -113,7 +113,11 @@
       "Topics": "Topics",
       "TopicsHint": "Visible through Kafka metadata",
       "ConsumerGroups": "Consumer groups",
-      "ConsumerGroupsHint": "Described from Kafka admin APIs"
+      "ConsumerGroupsHint": "Described from Kafka admin APIs",
+      "WriteRate": "Write rate",
+      "WriteRateHint": "Latest offset growth",
+      "ConsumeRate": "Consume rate",
+      "ConsumeRateHint": "Latest committed offset growth"
     },
     "Modes": {
       "DirectKafka": "Direct Kafka",
@@ -281,11 +285,15 @@
       "Brokers": "Brokers",
       "Topics": "Topics",
       "Groups": "Groups",
+      "WriteRate": "Write rate",
+      "ConsumeRate": "Consume rate",
       "Lag": "Lag",
       "Message": "Message"
     },
     "Values": {
       "LagUnknown": "Unknown",
+      "RateUnknown": "Unknown",
+      "RatePerSecond": "{0} msg/s",
       "NoMessage": "OK"
     },
     "Messages": {

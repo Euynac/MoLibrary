@@ -11,6 +11,7 @@ namespace Monica.EventBus.Kafka.Services;
 public sealed class KafkaPerformanceService(
     KafkaClusterService clusterService,
     IKafkaAdminProvider adminProvider,
+    IKafkaPerformanceMetricsProvider metricsProvider,
     IKafkaConsoleRepository repository,
     IOptions<ModuleEventBusKafkaOption> options)
 {
@@ -35,6 +36,7 @@ public sealed class KafkaPerformanceService(
     public async Task<KafkaPerformanceSnapshot> CaptureAsync(string clusterId, CancellationToken cancellationToken = default)
     {
         var cluster = await clusterService.GetRequiredClusterAsync(clusterId, cancellationToken);
+        var previous = await repository.GetLatestPerformanceSnapshotAsync(cluster.ClusterId, cancellationToken);
         var snapshot = new KafkaPerformanceSnapshot
         {
             ClusterId = cluster.ClusterId,
@@ -58,9 +60,12 @@ public sealed class KafkaPerformanceService(
             snapshot.BrokerCount = brokers.Count;
             snapshot.TopicCount = topics.Count;
             snapshot.ConsumerGroupCount = groups.Count;
-            snapshot.TotalLag = groups.Any(group => group.TotalLag.HasValue)
-                ? groups.Sum(group => group.TotalLag.GetValueOrDefault())
-                : null;
+
+            var offsetTotals = await metricsProvider.CaptureOffsetTotalsAsync(cluster, topics, groups, cancellationToken);
+            snapshot.TotalLag = offsetTotals.TotalLag;
+            snapshot.TotalLogEndOffset = offsetTotals.TotalLogEndOffset;
+            snapshot.TotalConsumerCommittedOffset = offsetTotals.TotalConsumerCommittedOffset;
+            ApplyRates(snapshot, previous);
         }
         catch (Exception ex)
         {
@@ -69,6 +74,39 @@ public sealed class KafkaPerformanceService(
 
         await SaveSnapshotAsync(snapshot, cancellationToken);
         return snapshot;
+    }
+
+    private static void ApplyRates(KafkaPerformanceSnapshot current, KafkaPerformanceSnapshot? previous)
+    {
+        if (previous is null)
+        {
+            return;
+        }
+
+        var elapsedSeconds = (current.CapturedAt - previous.CapturedAt).TotalSeconds;
+        if (elapsedSeconds <= 0)
+        {
+            return;
+        }
+
+        current.MessageWriteRatePerSecond = CalculateRate(
+            previous.TotalLogEndOffset,
+            current.TotalLogEndOffset,
+            elapsedSeconds);
+        current.MessageConsumeRatePerSecond = CalculateRate(
+            previous.TotalConsumerCommittedOffset,
+            current.TotalConsumerCommittedOffset,
+            elapsedSeconds);
+    }
+
+    private static double? CalculateRate(long? previous, long? current, double elapsedSeconds)
+    {
+        if (!previous.HasValue || !current.HasValue || current.Value < previous.Value)
+        {
+            return null;
+        }
+
+        return (current.Value - previous.Value) / elapsedSeconds;
     }
 
     private async Task SaveSnapshotAsync(KafkaPerformanceSnapshot snapshot, CancellationToken cancellationToken)

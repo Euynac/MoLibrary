@@ -113,7 +113,11 @@
       "Topics": "主题",
       "TopicsHint": "通过 Kafka 元数据可见",
       "ConsumerGroups": "消费者组",
-      "ConsumerGroupsHint": "来自 Kafka 管理 API 描述"
+      "ConsumerGroupsHint": "来自 Kafka 管理 API 描述",
+      "WriteRate": "写入速率",
+      "WriteRateHint": "来自最新 offset 增长",
+      "ConsumeRate": "消费速率",
+      "ConsumeRateHint": "来自最新提交 offset 增长"
     },
     "Modes": {
       "DirectKafka": "直接 Kafka",
@@ -281,11 +285,15 @@
       "Brokers": "Broker",
       "Topics": "主题",
       "Groups": "消费者组",
+      "WriteRate": "写入速率",
+      "ConsumeRate": "消费速率",
       "Lag": "Lag",
       "Message": "消息"
     },
     "Values": {
       "LagUnknown": "未知",
+      "RateUnknown": "未知",
+      "RatePerSecond": "{0} msg/s",
       "NoMessage": "正常"
     },
     "Messages": {

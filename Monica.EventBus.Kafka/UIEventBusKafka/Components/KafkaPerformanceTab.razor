@@ -41,6 +41,8 @@
                 <MudTh>@L["Performance:Columns:Brokers"]</MudTh>
                 <MudTh>@L["Performance:Columns:Topics"]</MudTh>
                 <MudTh>@L["Performance:Columns:Groups"]</MudTh>
+                <MudTh>@L["Performance:Columns:WriteRate"]</MudTh>
+                <MudTh>@L["Performance:Columns:ConsumeRate"]</MudTh>
                 <MudTh>@L["Performance:Columns:Lag"]</MudTh>
                 <MudTh>@L["Performance:Columns:Message"]</MudTh>
             </HeaderContent>
@@ -49,6 +51,8 @@
                 <MudTd DataLabel="@L["Performance:Columns:Brokers"]">@context.BrokerCount</MudTd>
                 <MudTd DataLabel="@L["Performance:Columns:Topics"]">@context.TopicCount</MudTd>
                 <MudTd DataLabel="@L["Performance:Columns:Groups"]">@context.ConsumerGroupCount</MudTd>
+                <MudTd DataLabel="@L["Performance:Columns:WriteRate"]">@FormatRate(context.MessageWriteRatePerSecond)</MudTd>
+                <MudTd DataLabel="@L["Performance:Columns:ConsumeRate"]">@FormatRate(context.MessageConsumeRatePerSecond)</MudTd>
                 <MudTd DataLabel="@L["Performance:Columns:Lag"]">@FormatLag(context.TotalLag)</MudTd>
                 <MudTd DataLabel="@L["Performance:Columns:Message"]">@FormatMessage(context.Message)</MudTd>
             </RowTemplate>
@@ -66,6 +70,13 @@
     private string FormatLag(long? lag)
     {
         return lag?.ToString() ?? L["Performance:Values:LagUnknown"];
+    }
+
+    private string FormatRate(double? rate)
+    {
+        return rate.HasValue
+            ? L["Performance:Values:RatePerSecond", rate.Value.ToString("0.##")]
+            : L["Performance:Values:RateUnknown"];
     }
 
     private string FormatMessage(string? message)

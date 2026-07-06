@@ -122,6 +122,10 @@ internal sealed class InMemoryKafkaConsoleRepository : IKafkaConsoleRepository
             TopicCount = snapshot.TopicCount,
             ConsumerGroupCount = snapshot.ConsumerGroupCount,
             TotalLag = snapshot.TotalLag,
+            TotalLogEndOffset = snapshot.TotalLogEndOffset,
+            TotalConsumerCommittedOffset = snapshot.TotalConsumerCommittedOffset,
+            MessageWriteRatePerSecond = snapshot.MessageWriteRatePerSecond,
+            MessageConsumeRatePerSecond = snapshot.MessageConsumeRatePerSecond,
             IncludesJmxMetrics = snapshot.IncludesJmxMetrics,
             Message = snapshot.Message
         };

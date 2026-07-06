@@ -3,7 +3,7 @@
 
 <MudStack Spacing="3">
     <MudGrid Spacing="3">
-        <MudItem xs="12" md="6" lg="3">
+        <MudItem xs="12" md="6" lg="2">
             <MudPaper Class="pa-4" Outlined="true">
                 <MudStack Spacing="1">
                     <MudText Typo="Typo.overline">@L["Dashboard:Cards:Provider"]</MudText>
@@ -14,7 +14,7 @@
                 </MudStack>
             </MudPaper>
         </MudItem>
-        <MudItem xs="12" md="6" lg="3">
+        <MudItem xs="12" md="6" lg="2">
             <MudPaper Class="pa-4" Outlined="true">
                 <MudStack Spacing="1">
                     <MudText Typo="Typo.overline">@L["Dashboard:Cards:Brokers"]</MudText>
@@ -23,7 +23,7 @@
                 </MudStack>
             </MudPaper>
         </MudItem>
-        <MudItem xs="12" md="6" lg="3">
+        <MudItem xs="12" md="6" lg="2">
             <MudPaper Class="pa-4" Outlined="true">
                 <MudStack Spacing="1">
                     <MudText Typo="Typo.overline">@L["Dashboard:Cards:Topics"]</MudText>
@@ -32,12 +32,30 @@
                 </MudStack>
             </MudPaper>
         </MudItem>
-        <MudItem xs="12" md="6" lg="3">
+        <MudItem xs="12" md="6" lg="2">
             <MudPaper Class="pa-4" Outlined="true">
                 <MudStack Spacing="1">
                     <MudText Typo="Typo.overline">@L["Dashboard:Cards:ConsumerGroups"]</MudText>
                     <MudText Typo="Typo.h5">@State.Dashboard.ConsumerGroupCount</MudText>
                     <MudText Typo="Typo.caption" Color="Color.Secondary">@L["Dashboard:Cards:ConsumerGroupsHint"]</MudText>
+                </MudStack>
+            </MudPaper>
+        </MudItem>
+        <MudItem xs="12" md="6" lg="2">
+            <MudPaper Class="pa-4" Outlined="true">
+                <MudStack Spacing="1">
+                    <MudText Typo="Typo.overline">@L["Dashboard:Cards:WriteRate"]</MudText>
+                    <MudText Typo="Typo.h5">@FormatRate(State.Dashboard.LatestPerformance?.MessageWriteRatePerSecond)</MudText>
+                    <MudText Typo="Typo.caption" Color="Color.Secondary">@L["Dashboard:Cards:WriteRateHint"]</MudText>
+                </MudStack>
+            </MudPaper>
+        </MudItem>
+        <MudItem xs="12" md="6" lg="2">
+            <MudPaper Class="pa-4" Outlined="true">
+                <MudStack Spacing="1">
+                    <MudText Typo="Typo.overline">@L["Dashboard:Cards:ConsumeRate"]</MudText>
+                    <MudText Typo="Typo.h5">@FormatRate(State.Dashboard.LatestPerformance?.MessageConsumeRatePerSecond)</MudText>
+                    <MudText Typo="Typo.caption" Color="Color.Secondary">@L["Dashboard:Cards:ConsumeRateHint"]</MudText>
                 </MudStack>
             </MudPaper>
         </MudItem>
@@ -102,4 +120,11 @@
             : State.SelectedCluster.Config.HasDirectKafkaAccess
                 ? State.SelectedCluster.Config.BootstrapServers
                 : L["Dashboard:SelectedCluster:ExternalCredentials"];
+
+    private string FormatRate(double? rate)
+    {
+        return rate.HasValue
+            ? L["Performance:Values:RatePerSecond", rate.Value.ToString("0.##")]
+            : L["Performance:Values:RateUnknown"];
+    }
 }

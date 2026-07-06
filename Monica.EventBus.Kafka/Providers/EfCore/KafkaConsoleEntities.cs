@@ -175,6 +175,26 @@ public sealed class KafkaPerformanceSnapshotEntity
     public long? TotalLag { get; set; }
 
     /// <summary>
+    /// Sum of latest offsets across sampled non-internal topic partitions.
+    /// </summary>
+    public long? TotalLogEndOffset { get; set; }
+
+    /// <summary>
+    /// Sum of committed offsets across sampled consumer groups and non-internal topic partitions.
+    /// </summary>
+    public long? TotalConsumerCommittedOffset { get; set; }
+
+    /// <summary>
+    /// Estimated topic write rate in messages per second.
+    /// </summary>
+    public double? MessageWriteRatePerSecond { get; set; }
+
+    /// <summary>
+    /// Estimated consumer processing rate in messages per second.
+    /// </summary>
+    public double? MessageConsumeRatePerSecond { get; set; }
+
+    /// <summary>
     /// Whether JMX metrics were included.
     /// </summary>
     public bool IncludesJmxMetrics { get; set; }
@@ -197,6 +217,10 @@ public sealed class KafkaPerformanceSnapshotEntity
             TopicCount = TopicCount,
             ConsumerGroupCount = ConsumerGroupCount,
             TotalLag = TotalLag,
+            TotalLogEndOffset = TotalLogEndOffset,
+            TotalConsumerCommittedOffset = TotalConsumerCommittedOffset,
+            MessageWriteRatePerSecond = MessageWriteRatePerSecond,
+            MessageConsumeRatePerSecond = MessageConsumeRatePerSecond,
             IncludesJmxMetrics = IncludesJmxMetrics,
             Message = Message
         };
@@ -215,6 +239,10 @@ public sealed class KafkaPerformanceSnapshotEntity
             TopicCount = model.TopicCount,
             ConsumerGroupCount = model.ConsumerGroupCount,
             TotalLag = model.TotalLag,
+            TotalLogEndOffset = model.TotalLogEndOffset,
+            TotalConsumerCommittedOffset = model.TotalConsumerCommittedOffset,
+            MessageWriteRatePerSecond = model.MessageWriteRatePerSecond,
+            MessageConsumeRatePerSecond = model.MessageConsumeRatePerSecond,
             IncludesJmxMetrics = model.IncludesJmxMetrics,
             Message = model.Message
         };

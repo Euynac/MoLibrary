@@ -377,6 +377,26 @@ public sealed class KafkaPerformanceSnapshot
     public long? TotalLag { get; set; }
 
     /// <summary>
+    /// Sum of latest offsets across sampled non-internal topic partitions.
+    /// </summary>
+    public long? TotalLogEndOffset { get; set; }
+
+    /// <summary>
+    /// Sum of committed offsets across sampled consumer groups and non-internal topic partitions.
+    /// </summary>
+    public long? TotalConsumerCommittedOffset { get; set; }
+
+    /// <summary>
+    /// Estimated topic write rate in messages per second, calculated from latest offset growth.
+    /// </summary>
+    public double? MessageWriteRatePerSecond { get; set; }
+
+    /// <summary>
+    /// Estimated consumer processing rate in messages per second, calculated from committed offset growth.
+    /// </summary>
+    public double? MessageConsumeRatePerSecond { get; set; }
+
+    /// <summary>
     /// Whether JMX metrics were included in this snapshot.
     /// </summary>
     public bool IncludesJmxMetrics { get; set; }
@@ -385,6 +405,27 @@ public sealed class KafkaPerformanceSnapshot
     /// Optional diagnostic message recorded during sampling.
     /// </summary>
     public string? Message { get; set; }
+}
+
+/// <summary>
+/// Kafka offset totals used to calculate performance rates.
+/// </summary>
+public sealed class KafkaPerformanceOffsetTotals
+{
+    /// <summary>
+    /// Sum of latest offsets across sampled non-internal topic partitions.
+    /// </summary>
+    public long TotalLogEndOffset { get; set; }
+
+    /// <summary>
+    /// Sum of committed offsets across sampled consumer groups and non-internal topic partitions.
+    /// </summary>
+    public long? TotalConsumerCommittedOffset { get; set; }
+
+    /// <summary>
+    /// Total lag calculated from latest offsets and committed offsets when consumer offsets are available.
+    /// </summary>
+    public long? TotalLag { get; set; }
 }
 
 /// <summary>
