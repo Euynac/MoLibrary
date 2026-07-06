@@ -8,7 +8,8 @@ namespace Monica.EventBus.Kafka.Services;
 /// </summary>
 public sealed class KafkaTopicService(
     KafkaClusterService clusterService,
-    IKafkaAdminProvider adminProvider)
+    IKafkaAdminProvider adminProvider,
+    IKafkaMessageReader messageReader)
 {
     public async Task<IReadOnlyList<KafkaTopicSummary>> ListTopicsAsync(string clusterId, CancellationToken cancellationToken = default)
     {
@@ -38,6 +39,12 @@ public sealed class KafkaTopicService(
     {
         var cluster = await GetAdminClusterAsync(request.ClusterId, cancellationToken);
         await adminProvider.UpdateRetentionAsync(cluster, request, cancellationToken);
+    }
+
+    public async Task<KafkaTopicMessageBatch> ReadMessagesAsync(KafkaTopicMessagesRequest request, CancellationToken cancellationToken = default)
+    {
+        var cluster = await GetAdminClusterAsync(request.ClusterId, cancellationToken);
+        return await messageReader.ReadMessagesAsync(cluster, request, cancellationToken);
     }
 
     private async Task<KafkaClusterConfig> GetAdminClusterAsync(string clusterId, CancellationToken cancellationToken)

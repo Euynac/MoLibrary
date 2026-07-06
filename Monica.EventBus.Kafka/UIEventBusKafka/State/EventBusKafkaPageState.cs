@@ -290,6 +290,38 @@ public sealed class EventBusKafkaPageState(KafkaConsoleFacade facade)
     }
 
     /// <summary>
+    /// Reads a bounded sample of recent messages from a selected cluster topic.
+    /// </summary>
+    public async Task<KafkaTopicMessageBatch?> ReadTopicMessagesAsync(
+        string topicName,
+        int maxMessages,
+        CancellationToken cancellationToken = default)
+    {
+        if (SelectedClusterId is null)
+        {
+            return null;
+        }
+
+        KafkaTopicMessageBatch? batch = null;
+        await RunAsync(async () =>
+        {
+            var request = new KafkaTopicMessagesRequest
+            {
+                ClusterId = SelectedClusterId,
+                TopicName = topicName,
+                MaxMessages = maxMessages
+            };
+
+            if (TryRead(await facade.ReadTopicMessagesAsync(request, cancellationToken), out var loadedBatch))
+            {
+                batch = loadedBatch;
+            }
+        });
+
+        return batch;
+    }
+
+    /// <summary>
     /// Captures and stores a fresh performance snapshot.
     /// </summary>
     public async Task<bool> CapturePerformanceAsync(CancellationToken cancellationToken = default)

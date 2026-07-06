@@ -87,6 +87,7 @@ public sealed class ModuleEventBusKafka(ModuleEventBusKafkaOption option)
         services.TryAddSingleton<IKafkaConsoleRepository, InMemoryKafkaConsoleRepository>();
         services.TryAddSingleton<IKafkaClusterConfigProvider, KafkaClusterConfigProvider>();
         services.TryAddScoped<IKafkaAdminProvider, ConfluentKafkaAdminProvider>();
+        services.TryAddScoped<IKafkaMessageReader, ConfluentKafkaMessageReader>();
         services.TryAddScoped<KafkaIntegrationService>();
         services.TryAddScoped<KafkaClusterService>();
         services.TryAddScoped<KafkaTopicService>();
@@ -209,6 +210,16 @@ public sealed class ModuleEventBusKafka(ModuleEventBusKafkaOption option)
                 .WithTags(tagName)
                 .WithSummary(LocalizationManager.Get<EventBusKafkaResource>("Api:Topics:Retention:Summary"))
                 .WithDescription(LocalizationManager.Get<EventBusKafkaResource>("Api:Topics:Retention:Description"));
+
+            endpoints.MapPost("/eventbus-kafka/topics/messages",
+                    async ([FromBody] KafkaTopicMessagesRequest request,
+                        [FromServices] KafkaConsoleFacade facade,
+                        CancellationToken cancellationToken) =>
+                        (await facade.ReadTopicMessagesAsync(request, cancellationToken)).GetResponse())
+                .WithName("ReadEventBusKafkaTopicMessages")
+                .WithTags(tagName)
+                .WithSummary(LocalizationManager.Get<EventBusKafkaResource>("Api:Topics:Messages:Summary"))
+                .WithDescription(LocalizationManager.Get<EventBusKafkaResource>("Api:Topics:Messages:Description"));
 
             endpoints.MapGet("/eventbus-kafka/clusters/{clusterId}/consumer-groups",
                     async ([FromRoute] string clusterId,
@@ -432,6 +443,33 @@ public sealed class ModuleEventBusKafkaOption : MinimalApiModuleOptions<ModuleEv
     /// Gets or sets the maximum number of consumer groups described by one console request.
     /// </summary>
     public int MaxConsumerGroupsToDescribe { get; set; } = 100;
+
+    /// <summary>
+    /// Gets or sets the maximum number of topic messages a console preview request can return.
+    /// </summary>
+    /// <remarks>
+    /// The UI can request a smaller value, but larger values are clamped to this limit to keep
+    /// diagnostic reads bounded and avoid loading too many payloads into memory.
+    /// </remarks>
+    public int MessagePreviewMaxMessages { get; set; } = 50;
+
+    /// <summary>
+    /// Gets or sets the maximum time spent polling Kafka for one topic message preview.
+    /// </summary>
+    /// <remarks>
+    /// Preview reads use a temporary read-only consumer and stop when this timeout is reached even
+    /// if fewer than the requested number of messages were found.
+    /// </remarks>
+    public TimeSpan MessagePreviewTimeout { get; set; } = TimeSpan.FromSeconds(5);
+
+    /// <summary>
+    /// Gets or sets the maximum number of value bytes decoded for each previewed message.
+    /// </summary>
+    /// <remarks>
+    /// Larger values are truncated before UTF-8 or base64 conversion so the console can inspect
+    /// large topics without rendering unbounded payloads.
+    /// </remarks>
+    public int MessagePreviewMaxValueBytes { get; set; } = 64 * 1024;
 
     /// <summary>
     /// Gets or sets the default number of performance snapshots returned to the UI.

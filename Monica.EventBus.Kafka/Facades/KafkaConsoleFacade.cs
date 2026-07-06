@@ -105,6 +105,14 @@ public sealed class KafkaConsoleFacade(
     }
 
     /// <summary>
+    /// Reads a bounded sample of recent messages from a topic.
+    /// </summary>
+    public Task<Res<KafkaTopicMessageBatch>> ReadTopicMessagesAsync(KafkaTopicMessagesRequest request, CancellationToken cancellationToken = default)
+    {
+        return ExecuteAsync(() => topicService.ReadMessagesAsync(request, cancellationToken), "Failed to read Kafka topic messages");
+    }
+
+    /// <summary>
     /// Lists consumer groups.
     /// </summary>
     public Task<Res<IReadOnlyList<KafkaConsumerGroupSummary>>> ListConsumerGroupsAsync(string clusterId, CancellationToken cancellationToken = default)

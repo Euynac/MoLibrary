@@ -50,6 +50,10 @@
       "Retention": {
         "Summary": "Updates Kafka topic retention",
         "Description": "Updates a topic's retention.ms configuration."
+      },
+      "Messages": {
+        "Summary": "Reads Kafka topic messages",
+        "Description": "Reads a bounded recent message preview without committing consumer offsets."
       }
     },
     "ConsumerGroups": {
@@ -72,6 +76,7 @@
   "Common": {
     "Actions": {
       "Cancel": "Cancel",
+      "Close": "Close",
       "Delete": "Delete",
       "Edit": "Edit",
       "Refresh": "Refresh",
@@ -188,6 +193,7 @@
     "Empty": "No topics were returned for the selected cluster.",
     "Actions": {
       "Create": "Create topic",
+      "Messages": "View messages",
       "Partitions": "Increase partitions",
       "Retention": "Set retention"
     },
@@ -200,15 +206,31 @@
     },
     "Values": {
       "Internal": "Internal topic",
+      "NoKey": "No key",
+      "EmptyValue": "Empty value",
+      "Tombstone": "Tombstone message",
+      "TombstoneEncoding": "Null value",
+      "TimestampUnknown": "Timestamp unavailable",
       "RetentionUnknown": "Unknown",
       "RetentionMs": "{0} ms"
     },
     "Dialog": {
       "CreateTitle": "Create Kafka topic",
+      "MessagesTitle": "Messages in {0}",
       "PartitionsTitle": "Increase partitions",
       "RetentionTitle": "Set retention",
       "PartitionsMessage": "Topic {0} currently has {1} partitions. Kafka only allows increasing this value.",
       "RetentionMessage": "Set retention.ms for topic {0}."
+    },
+    "MessagesDialog": {
+      "ReadHint": "Showing up to {0} recent messages sampled at {1}. This preview does not commit consumer offsets.",
+      "Empty": "No messages were found near the end of this topic.",
+      "OffsetFormat": "Partition {0}, offset {1}",
+      "Key": "Key",
+      "Encoding": "Encoding",
+      "Size": "Size",
+      "SizeBytes": "{0} bytes",
+      "Truncated": "The payload was truncated for display."
     },
     "Confirm": {
       "DeleteTitle": "Delete Kafka topic",

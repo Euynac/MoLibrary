@@ -203,6 +203,119 @@ public sealed class KafkaTopicRetentionRequest
 }
 
 /// <summary>
+/// Request for reading a bounded sample of topic messages without committing consumer offsets.
+/// </summary>
+public sealed class KafkaTopicMessagesRequest
+{
+    /// <summary>
+    /// Target cluster id.
+    /// </summary>
+    public string ClusterId { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Topic name.
+    /// </summary>
+    public string TopicName { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Maximum number of messages to return. The module clamps this to its configured preview limit.
+    /// </summary>
+    public int MaxMessages { get; set; } = 20;
+}
+
+/// <summary>
+/// Bounded topic message sample returned to the Kafka console.
+/// </summary>
+public sealed class KafkaTopicMessageBatch
+{
+    /// <summary>
+    /// Target cluster id.
+    /// </summary>
+    public string ClusterId { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Topic name.
+    /// </summary>
+    public string TopicName { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Whether the preview started from each partition's latest offsets.
+    /// </summary>
+    public bool ReadFromEnd { get; set; } = true;
+
+    /// <summary>
+    /// Maximum number of messages requested after module-level clamping.
+    /// </summary>
+    public int MaxMessages { get; set; }
+
+    /// <summary>
+    /// Time when the sample was captured.
+    /// </summary>
+    public DateTimeOffset CapturedAt { get; set; } = DateTimeOffset.UtcNow;
+
+    /// <summary>
+    /// Sampled messages ordered from newest to oldest.
+    /// </summary>
+    public IReadOnlyList<KafkaTopicMessageSample> Messages { get; set; } = [];
+}
+
+/// <summary>
+/// Kafka message metadata and decoded content shown in the console.
+/// </summary>
+public sealed class KafkaTopicMessageSample
+{
+    /// <summary>
+    /// Topic name.
+    /// </summary>
+    public string TopicName { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Partition that contains the message.
+    /// </summary>
+    public int Partition { get; set; }
+
+    /// <summary>
+    /// Kafka offset within the partition.
+    /// </summary>
+    public long Offset { get; set; }
+
+    /// <summary>
+    /// Producer timestamp when Kafka exposes it.
+    /// </summary>
+    public DateTimeOffset? Timestamp { get; set; }
+
+    /// <summary>
+    /// Decoded message key, if present.
+    /// </summary>
+    public string? Key { get; set; }
+
+    /// <summary>
+    /// Decoded message value, base64 payload, or null for tombstone messages.
+    /// </summary>
+    public string? Value { get; set; }
+
+    /// <summary>
+    /// Encoding used for <see cref="Value"/>.
+    /// </summary>
+    public string ValueEncoding { get; set; } = "utf-8";
+
+    /// <summary>
+    /// Original value payload length in bytes.
+    /// </summary>
+    public int ValueSizeBytes { get; set; }
+
+    /// <summary>
+    /// Whether the value was truncated before display.
+    /// </summary>
+    public bool IsTruncated { get; set; }
+
+    /// <summary>
+    /// Whether the Kafka value is null, which represents a compacted-topic tombstone.
+    /// </summary>
+    public bool IsTombstone { get; set; }
+}
+
+/// <summary>
 /// Consumer group summary displayed in the console.
 /// </summary>
 public sealed class KafkaConsumerGroupSummary

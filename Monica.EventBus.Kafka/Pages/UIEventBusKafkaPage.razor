@@ -72,6 +72,7 @@
                                 OnCreate="OpenCreateTopicDialogAsync"
                                 OnRefresh="RefreshAsync"
                                 OnDelete="DeleteTopicAsync"
+                                OnViewMessages="OpenMessagesDialogAsync"
                                 OnIncreasePartitions="OpenIncreasePartitionsDialogAsync"
                                 OnUpdateRetention="OpenRetentionDialogAsync" />
             </MudTabPanel>
@@ -310,6 +311,30 @@
         StateHasChanged();
     }
 
+    private async Task OpenMessagesDialogAsync(KafkaTopicSummary topic)
+    {
+        var batch = await PageState.ReadTopicMessagesAsync(topic.TopicName, 20);
+        if (batch is null)
+        {
+            ShowStateError();
+            StateHasChanged();
+            return;
+        }
+
+        var parameters = new DialogParameters<KafkaMessagesDialog>
+        {
+            { dialog => dialog.Batch, batch }
+        };
+
+        var dialog = await DialogService.ShowAsync<KafkaMessagesDialog>(
+            L["Topics:Dialog:MessagesTitle", topic.TopicName],
+            parameters,
+            MessageDialogOptions);
+
+        await dialog.Result;
+        StateHasChanged();
+    }
+
     private async Task CapturePerformanceAsync()
     {
         if (await PageState.CapturePerformanceAsync())
@@ -333,6 +358,13 @@
     {
         CloseOnEscapeKey = true,
         MaxWidth = MaxWidth.Medium,
+        FullWidth = true
+    };
+
+    private static DialogOptions MessageDialogOptions => new()
+    {
+        CloseOnEscapeKey = true,
+        MaxWidth = MaxWidth.Large,
         FullWidth = true
     };
 }

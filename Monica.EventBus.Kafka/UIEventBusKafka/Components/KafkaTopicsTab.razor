@@ -61,6 +61,9 @@
                              Size="Size.Small"
                              Dense="true"
                              Disabled="@State.IsBusy">
+                        <MudMenuItem Icon="@Icons.Material.Filled.Visibility" OnClick="@(() => OnViewMessages.InvokeAsync(context))">
+                            @L["Topics:Actions:Messages"]
+                        </MudMenuItem>
                         <MudMenuItem Icon="@Icons.Material.Filled.CallSplit" OnClick="@(() => OnIncreasePartitions.InvokeAsync(context))">
                             @L["Topics:Actions:Partitions"]
                         </MudMenuItem>
@@ -85,6 +88,8 @@
     [Parameter] public EventCallback OnRefresh { get; set; }
 
     [Parameter] public EventCallback<KafkaTopicSummary> OnDelete { get; set; }
+
+    [Parameter] public EventCallback<KafkaTopicSummary> OnViewMessages { get; set; }
 
     [Parameter] public EventCallback<KafkaTopicSummary> OnIncreasePartitions { get; set; }
 

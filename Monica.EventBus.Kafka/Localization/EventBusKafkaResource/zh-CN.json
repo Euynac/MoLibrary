@@ -50,6 +50,10 @@
       "Retention": {
         "Summary": "更新 Kafka 主题保留时间",
         "Description": "更新主题的 retention.ms 配置。"
+      },
+      "Messages": {
+        "Summary": "读取 Kafka 主题消息",
+        "Description": "读取有限数量的最近消息预览，不提交消费者 offset。"
       }
     },
     "ConsumerGroups": {
@@ -72,6 +76,7 @@
   "Common": {
     "Actions": {
       "Cancel": "取消",
+      "Close": "关闭",
       "Delete": "删除",
       "Edit": "编辑",
       "Refresh": "刷新",
@@ -188,6 +193,7 @@
     "Empty": "选中集群未返回主题。",
     "Actions": {
       "Create": "创建主题",
+      "Messages": "查看消息",
       "Partitions": "增加分区",
       "Retention": "设置保留时间"
     },
@@ -200,15 +206,31 @@
     },
     "Values": {
       "Internal": "内部主题",
+      "NoKey": "无 Key",
+      "EmptyValue": "空值",
+      "Tombstone": "Tombstone 消息",
+      "TombstoneEncoding": "Null 值",
+      "TimestampUnknown": "时间戳不可用",
       "RetentionUnknown": "未知",
       "RetentionMs": "{0} ms"
     },
     "Dialog": {
       "CreateTitle": "创建 Kafka 主题",
+      "MessagesTitle": "{0} 的消息",
       "PartitionsTitle": "增加分区",
       "RetentionTitle": "设置保留时间",
       "PartitionsMessage": "主题 {0} 当前有 {1} 个分区。Kafka 只允许增加分区数量。",
       "RetentionMessage": "设置主题 {0} 的 retention.ms。"
+    },
+    "MessagesDialog": {
+      "ReadHint": "显示最多 {0} 条最近消息，采样时间 {1}。此预览不会提交消费者 offset。",
+      "Empty": "在该主题末尾附近未找到消息。",
+      "OffsetFormat": "分区 {0}，offset {1}",
+      "Key": "Key",
+      "Encoding": "编码",
+      "Size": "大小",
+      "SizeBytes": "{0} bytes",
+      "Truncated": "负载已截断后显示。"
     },
     "Confirm": {
       "DeleteTitle": "删除 Kafka 主题",

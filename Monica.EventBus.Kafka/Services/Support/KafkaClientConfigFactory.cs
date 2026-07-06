@@ -38,6 +38,20 @@ internal static class KafkaClientConfigFactory
         return config;
     }
 
+    public static ConsumerConfig BuildReadOnlyConsumerConfig(KafkaClusterConfig cluster, ModuleEventBusKafkaOption option, string serviceKey)
+    {
+        var config = new ConsumerConfig
+        {
+            GroupId = $"{BuildConsumerGroupId(option, serviceKey)}-{Guid.NewGuid():N}",
+            AutoOffsetReset = AutoOffsetReset.Latest,
+            EnableAutoCommit = false,
+            EnableAutoOffsetStore = false,
+            AllowAutoCreateTopics = false
+        };
+        ApplyCommon(config, cluster, option);
+        return config;
+    }
+
     private static void ApplyCommon(ClientConfig config, KafkaClusterConfig cluster, ModuleEventBusKafkaOption option)
     {
         var normalized = cluster.Clone().Normalize();
