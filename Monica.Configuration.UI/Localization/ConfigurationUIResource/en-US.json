@@ -338,7 +338,9 @@
       "SelectVersion": "Select version",
       "Action": "Compare",
       "AgainstCurrent": "{0} -> current {1}",
+      "AgainstPrevious": "{0} -> {1}",
       "CurrentOnly": "Every comparison in the history list uses the current version as the target.",
+      "PreviousPair": "This comparison comes from the history item's previous-version action.",
       "NoSelection": "Select a history version",
       "Unavailable": "Unable to load the difference between this version and the current version."
     },

@@ -78,6 +78,7 @@
                                         <div class="configuration-version-history-list">
                                             @foreach (var version in HistoryVersions)
                                             {
+                                                var previousVersion = PreviousVersion(version);
                                                 <div class="@HistoryItemClass(version)" @onclick="() => SelectVersionAsync(version.Version)">
                                                     <MudStack Spacing="1">
                                                         <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Spacing="1">
@@ -88,11 +89,12 @@
                                                                 </MudText>
                                                             </MudStack>
                                                             <div class="configuration-version-history-actions" @onclick:stopPropagation="true">
-                                                                <MudTooltip Text="@L["Versions:Actions:CompareCurrent"]">
+                                                                <MudTooltip Text="@L["Versions:Actions:ComparePrevious"]">
                                                                     <MudIconButton Icon="@Icons.Material.Filled.CompareArrows"
                                                                                    Size="Size.Small"
-                                                                                   Color="@(IsSelected(version) ? Color.Primary : Color.Default)"
-                                                                                   OnClick="() => SelectVersionAsync(version.Version)" />
+                                                                                   Color="@(IsPreviousComparisonSelected(version) ? Color.Primary : Color.Default)"
+                                                                                   Disabled="@(previousVersion is null)"
+                                                                                   OnClick="() => CompareWithPreviousAsync(version)" />
                                                                 </MudTooltip>
                                                                 <MudTooltip Text="@L["Rollback:Confirm"]">
                                                                     <MudIconButton Icon="@Icons.Material.Filled.Restore"
@@ -132,7 +134,7 @@
                                 <MudStack Row="true" Wrap="Wrap.Wrap" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Spacing="2">
                                     <MudStack Spacing="0">
                                         <MudText Typo="Typo.subtitle1">@ComparisonTitle</MudText>
-                                        <MudText Typo="Typo.caption" Color="Color.Secondary">@L["Versions:Compare:CurrentOnly"]</MudText>
+                                        <MudText Typo="Typo.caption" Color="Color.Secondary">@ComparisonSubtitle</MudText>
                                     </MudStack>
                                     @if (_selectedComparison is not null)
                                     {
@@ -171,10 +173,13 @@
     public const string PAGE_URL = ConfigurationUiRoutes.VERSIONS_ROUTE;
 
     private readonly List<ConfigurationUnifiedVersionSummary> _versions = [];
-    private readonly Dictionary<long, ConfigurationUnifiedVersionComparison> _comparisonCache = new();
+    private readonly Dictionary<VersionComparisonCacheKey, ConfigurationUnifiedVersionComparison> _comparisonCache = new();
     private ConfigurationUnifiedVersionComparison? _selectedComparison;
     private long? _selectedHistoryVersion;
+    private long? _selectedOriginVersion;
+    private long? _selectedTargetVersion;
     private long _comparisonRequestId;
+    private ConfigurationVersionComparisonMode _comparisonMode = ConfigurationVersionComparisonMode.Current;
     private bool _loading = true;
     private bool _comparisonLoading;
 
@@ -193,9 +198,15 @@
         : L["Common:States:Empty"];
 
     private string ComparisonTitle =>
-        CurrentVersion is { } current && SelectedHistoryVersion is { } selected
-            ? L["Versions:Compare:AgainstCurrent", VersionText(selected), VersionText(current)]
+        _selectedOriginVersion is { } originVersion && _selectedTargetVersion is { } targetVersion
+            ? _comparisonMode == ConfigurationVersionComparisonMode.Previous
+                ? L["Versions:Compare:AgainstPrevious", VersionText(originVersion), VersionText(targetVersion)]
+                : L["Versions:Compare:AgainstCurrent", VersionText(originVersion), VersionText(targetVersion)]
             : L["Versions:Compare:NoSelection"];
+
+    private string ComparisonSubtitle => _comparisonMode == ConfigurationVersionComparisonMode.Previous
+        ? L["Versions:Compare:PreviousPair"]
+        : L["Versions:Compare:CurrentOnly"];
 
     protected override async Task OnInitializedAsync()
     {
@@ -215,6 +226,8 @@
             Snackbar.Add($"{L["Common:Errors:LoadFailed"]}: {error.Message}", Severity.Error);
             _versions.Clear();
             _selectedHistoryVersion = null;
+            _selectedOriginVersion = null;
+            _selectedTargetVersion = null;
         }
         else
         {
@@ -225,9 +238,22 @@
 
         _loading = false;
 
-        if (_selectedHistoryVersion is { } selectedVersion)
+        if (_selectedHistoryVersion is { } selectedVersion
+            && _versions.FirstOrDefault(version => version.Version == selectedVersion) is { } selectedSummary)
         {
-            await LoadComparisonAsync(selectedVersion);
+            if (_comparisonMode == ConfigurationVersionComparisonMode.Previous
+                && PreviousVersion(selectedSummary) is { } previousVersion)
+            {
+                await LoadComparisonAsync(
+                    previousVersion.Version,
+                    selectedSummary.Version,
+                    selectedSummary.Version,
+                    ConfigurationVersionComparisonMode.Previous);
+            }
+            else
+            {
+                await LoadCurrentComparisonAsync(selectedVersion);
+            }
         }
     }
 
@@ -248,26 +274,61 @@
         }
 
         _selectedHistoryVersion = HistoryVersions.FirstOrDefault()?.Version;
+        _comparisonMode = ConfigurationVersionComparisonMode.Current;
     }
 
     private async Task SelectVersionAsync(long version)
     {
-        await LoadComparisonAsync(version);
+        await LoadCurrentComparisonAsync(version);
     }
 
-    private async Task LoadComparisonAsync(long historyVersion)
+    private async Task LoadCurrentComparisonAsync(long historyVersion)
     {
         var current = CurrentVersion;
         if (current is null || historyVersion == current.Version)
         {
             _selectedHistoryVersion = null;
+            _selectedOriginVersion = null;
+            _selectedTargetVersion = null;
             _selectedComparison = null;
             return;
         }
 
-        _selectedHistoryVersion = historyVersion;
-        if (_comparisonCache.TryGetValue(historyVersion, out var cached)
-            && cached.Target.Summary.Version == current.Version)
+        await LoadComparisonAsync(
+            historyVersion,
+            current.Version,
+            historyVersion,
+            ConfigurationVersionComparisonMode.Current);
+    }
+
+    private async Task CompareWithPreviousAsync(ConfigurationUnifiedVersionSummary version)
+    {
+        var previous = PreviousVersion(version);
+        if (previous is null)
+        {
+            return;
+        }
+
+        await LoadComparisonAsync(
+            previous.Version,
+            version.Version,
+            version.Version,
+            ConfigurationVersionComparisonMode.Previous);
+    }
+
+    private async Task LoadComparisonAsync(
+        long originVersion,
+        long targetVersion,
+        long selectedHistoryVersion,
+        ConfigurationVersionComparisonMode mode)
+    {
+        _selectedHistoryVersion = selectedHistoryVersion;
+        _selectedOriginVersion = originVersion;
+        _selectedTargetVersion = targetVersion;
+        _comparisonMode = mode;
+
+        var key = new VersionComparisonCacheKey(originVersion, targetVersion);
+        if (_comparisonCache.TryGetValue(key, out var cached))
         {
             _selectedComparison = cached;
             _comparisonLoading = false;
@@ -280,7 +341,7 @@
 
         try
         {
-            var result = await Facade.CompareUnifiedVersionsAsync(historyVersion, current.Version);
+            var result = await Facade.CompareUnifiedVersionsAsync(originVersion, targetVersion);
             if (requestId != _comparisonRequestId)
             {
                 return;
@@ -292,7 +353,7 @@
                 return;
             }
 
-            _comparisonCache[historyVersion] = comparison;
+            _comparisonCache[key] = comparison;
             _selectedComparison = comparison;
         }
         finally
@@ -329,6 +390,12 @@
         return _selectedHistoryVersion == version.Version;
     }
 
+    private bool IsPreviousComparisonSelected(ConfigurationUnifiedVersionSummary version)
+    {
+        return _comparisonMode == ConfigurationVersionComparisonMode.Previous
+               && _selectedHistoryVersion == version.Version;
+    }
+
     private string HistoryItemClass(ConfigurationUnifiedVersionSummary version)
     {
         return IsSelected(version)
@@ -339,6 +406,20 @@
     private string VersionText(ConfigurationUnifiedVersionSummary version)
     {
         return $"{ConfigurationUnifiedVersionJsonFormatter.VersionLabel(version.Version)} · {version.CreatedTime.ToLocalTime():yyyy-MM-dd HH:mm:ss}";
+    }
+
+    private string VersionText(long version)
+    {
+        var summary = _versions.FirstOrDefault(candidate => candidate.Version == version);
+        return summary is null
+            ? ConfigurationUnifiedVersionJsonFormatter.VersionLabel(version)
+            : VersionText(summary);
+    }
+
+    private ConfigurationUnifiedVersionSummary? PreviousVersion(ConfigurationUnifiedVersionSummary version)
+    {
+        var index = _versions.FindIndex(candidate => candidate.Version == version.Version);
+        return index >= 0 && index + 1 < _versions.Count ? _versions[index + 1] : null;
     }
 
     private string DefinitionTooltip(ConfigurationUnifiedVersionSummary version)
@@ -361,4 +442,12 @@
     {
         return string.IsNullOrWhiteSpace(value) ? L["Common:States:Empty"] : value;
     }
+
+    private enum ConfigurationVersionComparisonMode
+    {
+        Current,
+        Previous
+    }
+
+    private readonly record struct VersionComparisonCacheKey(long OriginVersion, long TargetVersion);
 }
