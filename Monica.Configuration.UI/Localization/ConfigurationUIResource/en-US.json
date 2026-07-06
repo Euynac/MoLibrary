@@ -321,13 +321,26 @@
     "Success": "Rollback completed."
   },
   "Versions": {
-    "Subtitle": "Compare complete managed definition snapshots and restore a selected version.",
+    "Subtitle": "Review the current unified configuration version, compare history against it, and restore when needed.",
     "Empty": "No unified configuration versions were found.",
+    "Current": {
+      "Title": "Current Version",
+      "DefinitionCount": "{0} definitions"
+    },
+    "List": {
+      "Title": "History Versions",
+      "Empty": "No history versions are available for comparison with the current version.",
+      "ComparedToCurrent": "Compared to current {0}"
+    },
     "Compare": {
       "Origin": "Origin version",
       "Target": "Target version",
       "SelectVersion": "Select version",
-      "Action": "Compare"
+      "Action": "Compare",
+      "AgainstCurrent": "{0} -> current {1}",
+      "CurrentOnly": "Every comparison in the history list uses the current version as the target.",
+      "NoSelection": "Select a history version",
+      "Unavailable": "Unable to load the difference between this version and the current version."
     },
     "Columns": {
       "Version": "Version",
@@ -337,13 +350,16 @@
       "Empty": "No definitions were captured."
     },
     "Actions": {
-      "ComparePrevious": "Compare with previous version"
+      "ComparePrevious": "Compare with previous version",
+      "CompareCurrent": "Compare with current version"
     },
     "Diff": {
       "DialogTitle": "Version Comparison",
       "Title": "{0} -> {1}",
       "ChangedDefinitions": "{0} changed definitions",
       "NoChanges": "No definition values changed between these versions.",
+      "UnifiedView": "All definitions",
+      "Direction": "{0} -> {1}",
       "Kinds": {
         "Added": "Added",
         "Removed": "Removed",

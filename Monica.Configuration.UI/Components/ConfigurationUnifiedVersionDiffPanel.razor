@@ -1,0 +1,162 @@
+@using Monica.Configuration.UI.Localization
+@inject ConfigurationFacade Facade
+@inject IStringLocalizer<ConfigurationUIResource> L
+
+<div class="configuration-unified-version-diff-panel">
+    @if (_loading)
+    {
+        <MudProgressLinear Indeterminate="true" />
+    }
+    else if (_rows.Count == 0)
+    {
+        <MudAlert Severity="Severity.Info">@L["Versions:Diff:NoChanges"]</MudAlert>
+    }
+    else
+    {
+        <MudStack Spacing="2">
+            @if (ShowSummaryHeader)
+            {
+                <MudStack Row="true" Wrap="Wrap.Wrap" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Spacing="2">
+                    <MudStack Spacing="0">
+                        <MudText Typo="Typo.subtitle1">
+                            @L["Versions:Diff:Title", VersionLabel(Comparison.Origin.Summary.Version), VersionLabel(Comparison.Target.Summary.Version)]
+                        </MudText>
+                        <MudText Typo="Typo.caption" Color="Color.Secondary">@L["Versions:Diff:ChangedDefinitions", _rows.Count]</MudText>
+                    </MudStack>
+                    <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Color="Color.Primary">
+                        @L["Versions:Diff:UnifiedView"]
+                    </MudChip>
+                </MudStack>
+            }
+
+            @foreach (var row in _rows)
+            {
+                <section class="configuration-unified-version-diff-definition">
+                    <MudStack Spacing="2">
+                        <MudStack Row="true" Wrap="Wrap.Wrap" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Spacing="2">
+                            <MudStack Row="true" Wrap="Wrap.Wrap" AlignItems="AlignItems.Center" Spacing="1">
+                                <MudChip T="string" Size="Size.Small" Color="@ChangeColor(row.ChangeKind)" Variant="Variant.Outlined">
+                                    @row.ChangeKindText
+                                </MudChip>
+                                <MudText Typo="Typo.subtitle2">@row.DisplayName</MudText>
+                                <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">@row.DefinitionKey</MudChip>
+                            </MudStack>
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                @L["Versions:Diff:Direction", VersionLabel(Comparison.Origin.Summary.Version), VersionLabel(Comparison.Target.Summary.Version)]
+                            </MudText>
+                        </MudStack>
+
+                        <DiffViewer OriginText="@row.OriginText"
+                                    NewText="@row.TargetText"
+                                    Options="@_diffOptions"
+                                    ViewMode="EDiffViewMode.Unified" />
+                    </MudStack>
+                </section>
+            }
+        </MudStack>
+    }
+</div>
+
+@code {
+    private readonly DiffHighlightOptions _diffOptions = new()
+    {
+        Mode = EDiffHighlightMode.Line,
+        ContextLines = 4,
+        MaxCharacterDiffLength = 20000
+    };
+
+    private readonly Dictionary<string, ConfigurationDefinition> _definitions = new(StringComparer.OrdinalIgnoreCase);
+    private readonly List<UnifiedVersionDiffRow> _rows = [];
+    private bool _loading;
+    private string? _comparisonKey;
+
+    [Parameter, EditorRequired] public ConfigurationUnifiedVersionComparison Comparison { get; set; } = null!;
+    [Parameter] public bool ShowSummaryHeader { get; set; } = true;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        var comparisonKey = $"{Comparison.Origin.Summary.Version}:{Comparison.Target.Summary.Version}:{Comparison.Changes.Count}";
+        if (string.Equals(_comparisonKey, comparisonKey, StringComparison.Ordinal)
+            && _rows.Count == Comparison.Changes.Count)
+        {
+            return;
+        }
+
+        _loading = true;
+        await EnsureDefinitionsAsync();
+
+        _rows.Clear();
+        _rows.AddRange(Comparison.Changes.Select(CreateRow));
+        _comparisonKey = comparisonKey;
+        _loading = false;
+    }
+
+    private async Task EnsureDefinitionsAsync()
+    {
+        foreach (var definitionKey in Comparison.Changes.Select(static change => change.DefinitionKey)
+                     .Distinct(StringComparer.OrdinalIgnoreCase))
+        {
+            if (_definitions.ContainsKey(definitionKey))
+            {
+                continue;
+            }
+
+            var result = await Facade.GetDefinitionAsync(definitionKey);
+            if (!result.IsFailed(out _, out var detail))
+            {
+                _definitions[definitionKey] = detail.Definition;
+            }
+        }
+    }
+
+    private UnifiedVersionDiffRow CreateRow(ConfigurationUnifiedVersionDefinitionChange change)
+    {
+        _definitions.TryGetValue(change.DefinitionKey, out var definition);
+        return new UnifiedVersionDiffRow(
+            change.DefinitionKey,
+            string.IsNullOrWhiteSpace(change.DisplayName) ? change.DefinitionKey : change.DisplayName,
+            ChangeKindText(change.ChangeKind),
+            change.ChangeKind,
+            ConfigurationUnifiedVersionJsonFormatter.FormatForDisplay(
+                change.OriginJson,
+                definition,
+                L["State:Value:Sensitive"]),
+            ConfigurationUnifiedVersionJsonFormatter.FormatForDisplay(
+                change.TargetJson,
+                definition,
+                L["State:Value:Sensitive"]));
+    }
+
+    private string ChangeKindText(ConfigurationUnifiedVersionDefinitionChangeKind kind)
+    {
+        return kind switch
+        {
+            ConfigurationUnifiedVersionDefinitionChangeKind.Added => L["Versions:Diff:Kinds:Added"],
+            ConfigurationUnifiedVersionDefinitionChangeKind.Removed => L["Versions:Diff:Kinds:Removed"],
+            _ => L["Versions:Diff:Kinds:Modified"]
+        };
+    }
+
+    private static Color ChangeColor(ConfigurationUnifiedVersionDefinitionChangeKind kind)
+    {
+        return kind switch
+        {
+            ConfigurationUnifiedVersionDefinitionChangeKind.Added => Color.Success,
+            ConfigurationUnifiedVersionDefinitionChangeKind.Removed => Color.Warning,
+            _ => Color.Info
+        };
+    }
+
+    private static string VersionLabel(long version)
+    {
+        return ConfigurationUnifiedVersionJsonFormatter.VersionLabel(version);
+    }
+
+    private sealed record UnifiedVersionDiffRow(
+        string DefinitionKey,
+        string DisplayName,
+        string ChangeKindText,
+        ConfigurationUnifiedVersionDefinitionChangeKind ChangeKind,
+        string OriginText,
+        string TargetText);
+}
