@@ -1,0 +1,114 @@
+@inject IStringLocalizer<EventBusKafkaResource> L
+
+<MudDialog>
+    <DialogContent>
+        <div class="message-dialog">
+            <MudStack Spacing="3">
+                <MudAlert Severity="Severity.Info" Variant="Variant.Outlined">
+                    @L["Topics:MessagesDialog:ReadHint", Batch.MaxMessages, FormatCapturedAt()]
+                </MudAlert>
+
+                @if (Batch.Messages.Count == 0)
+                {
+                    <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined">
+                        @L["Topics:MessagesDialog:Empty"]
+                    </MudAlert>
+                }
+                else
+                {
+                    @foreach (var message in Batch.Messages)
+                    {
+                        <section class="message-item">
+                            <div class="message-item__header">
+                                <MudText Typo="Typo.subtitle2">
+                                    @L["Topics:MessagesDialog:OffsetFormat", message.Partition, message.Offset]
+                                </MudText>
+                                <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                    @FormatTimestamp(message)
+                                </MudText>
+                            </div>
+
+                            <dl class="message-meta">
+                                <div>
+                                    <dt>@L["Topics:MessagesDialog:Key"]</dt>
+                                    <dd>@FormatKey(message)</dd>
+                                </div>
+                                <div>
+                                    <dt>@L["Topics:MessagesDialog:Encoding"]</dt>
+                                    <dd>@FormatEncoding(message)</dd>
+                                </div>
+                                <div>
+                                    <dt>@L["Topics:MessagesDialog:Size"]</dt>
+                                    <dd>@L["Topics:MessagesDialog:SizeBytes", message.ValueSizeBytes]</dd>
+                                </div>
+                            </dl>
+
+                            @if (message.IsTruncated)
+                            {
+                                <MudAlert Severity="Severity.Warning" Variant="Variant.Text" Dense="true">
+                                    @L["Topics:MessagesDialog:Truncated"]
+                                </MudAlert>
+                            }
+
+                            <pre class="message-body">@FormatValue(message)</pre>
+                        </section>
+                    }
+                }
+            </MudStack>
+        </div>
+    </DialogContent>
+    <DialogActions>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="Close">
+            @L["Common:Actions:Close"]
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] private IMudDialogInstance? MudDialog { get; set; }
+
+    [Parameter, EditorRequired] public KafkaTopicMessageBatch Batch { get; set; } = new();
+
+    private string FormatCapturedAt()
+    {
+        return Batch.CapturedAt.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss zzz");
+    }
+
+    private string FormatTimestamp(KafkaTopicMessageSample message)
+    {
+        return message.Timestamp is null
+            ? L["Topics:Values:TimestampUnknown"]
+            : message.Timestamp.Value.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss.fff zzz");
+    }
+
+    private string FormatKey(KafkaTopicMessageSample message)
+    {
+        return string.IsNullOrEmpty(message.Key)
+            ? L["Topics:Values:NoKey"]
+            : message.Key;
+    }
+
+    private string FormatEncoding(KafkaTopicMessageSample message)
+    {
+        return message.IsTombstone
+            ? L["Topics:Values:TombstoneEncoding"]
+            : message.ValueEncoding;
+    }
+
+    private string FormatValue(KafkaTopicMessageSample message)
+    {
+        if (message.IsTombstone)
+        {
+            return L["Topics:Values:Tombstone"];
+        }
+
+        return string.IsNullOrEmpty(message.Value)
+            ? L["Topics:Values:EmptyValue"]
+            : message.Value;
+    }
+
+    private void Close()
+    {
+        MudDialog?.Close();
+    }
+}

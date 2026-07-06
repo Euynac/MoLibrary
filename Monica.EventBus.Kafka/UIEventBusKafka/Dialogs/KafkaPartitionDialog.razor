@@ -1,0 +1,57 @@
+@inject IStringLocalizer<EventBusKafkaResource> L
+
+<MudDialog>
+    <DialogContent>
+        <MudStack Spacing="3">
+            @if (!string.IsNullOrWhiteSpace(_errorMessage))
+            {
+                <MudAlert Severity="Severity.Error" Variant="Variant.Outlined">
+                    @_errorMessage
+                </MudAlert>
+            }
+
+            <MudText Typo="Typo.body2" Color="Color.Secondary">
+                @L["Topics:Dialog:PartitionsMessage", Topic.TopicName, Topic.Partitions]
+            </MudText>
+            <MudNumericField T="int" @bind-Value="_increaseTo" Label="@L["Topics:Fields:IncreaseTo"]" Min="@MinimumValue" />
+        </MudStack>
+    </DialogContent>
+    <DialogActions>
+        <MudButton Variant="Variant.Text" OnClick="Cancel">@L["Common:Actions:Cancel"]</MudButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="Save">@L["Common:Actions:Save"]</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] private IMudDialogInstance? MudDialog { get; set; }
+
+    [Parameter, EditorRequired] public KafkaTopicSummary Topic { get; set; } = new();
+
+    private int _increaseTo;
+
+    private string? _errorMessage;
+
+    private int MinimumValue => Math.Max(Topic.Partitions + 1, 1);
+
+    protected override void OnInitialized()
+    {
+        _increaseTo = MinimumValue;
+    }
+
+    private void Save()
+    {
+        _errorMessage = null;
+        if (_increaseTo <= Topic.Partitions)
+        {
+            _errorMessage = L["Topics:Validation:PartitionIncreaseRequired"];
+            return;
+        }
+
+        MudDialog?.Close(DialogResult.Ok(_increaseTo));
+    }
+
+    private void Cancel()
+    {
+        MudDialog?.Cancel();
+    }
+}

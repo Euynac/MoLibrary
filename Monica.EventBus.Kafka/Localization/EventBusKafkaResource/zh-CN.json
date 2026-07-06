@@ -1,0 +1,303 @@
+{
+  "Api": {
+    "Integration": {
+      "Get": {
+        "Summary": "获取 Kafka EventBus 集成状态",
+        "Description": "返回当前 EventBus Provider 以及 Kafka 集成可视状态。"
+      }
+    },
+    "Clusters": {
+      "List": {
+        "Summary": "列出 Kafka 集群",
+        "Description": "列出通过模块配置或控制台配置的 Kafka 集群。"
+      },
+      "Upsert": {
+        "Summary": "新建或更新 Kafka 集群",
+        "Description": "保存 Kafka 集群配置，用于控制台展示和管理操作。"
+      },
+      "Delete": {
+        "Summary": "删除 Kafka 集群",
+        "Description": "删除控制台管理的 Kafka 集群及其采样快照。"
+      },
+      "Test": {
+        "Summary": "测试 Kafka 集群连接",
+        "Description": "对 Kafka 集群执行直接 Broker 元数据探测。"
+      }
+    },
+    "Dashboard": {
+      "Get": {
+        "Summary": "获取 Kafka 仪表盘数据",
+        "Description": "返回选中 Kafka 集群的仪表盘聚合数据。"
+      }
+    },
+    "Topics": {
+      "List": {
+        "Summary": "列出 Kafka 主题",
+        "Description": "列出 Kafka 集群中的主题。"
+      },
+      "Create": {
+        "Summary": "创建 Kafka 主题",
+        "Description": "通过直接 Kafka 管理访问创建主题。"
+      },
+      "Delete": {
+        "Summary": "删除 Kafka 主题",
+        "Description": "通过直接 Kafka 管理访问删除主题。"
+      },
+      "Partitions": {
+        "Summary": "增加 Kafka 主题分区",
+        "Description": "增加主题的分区数量。"
+      },
+      "Retention": {
+        "Summary": "更新 Kafka 主题保留时间",
+        "Description": "更新主题的 retention.ms 配置。"
+      },
+      "Messages": {
+        "Summary": "读取 Kafka 主题消息",
+        "Description": "读取有限数量的最近消息预览，不提交消费者 offset。"
+      }
+    },
+    "ConsumerGroups": {
+      "List": {
+        "Summary": "列出 Kafka 消费者组",
+        "Description": "列出直接 Kafka 管理访问可见的消费者组。"
+      }
+    },
+    "Performance": {
+      "History": {
+        "Summary": "获取 Kafka 性能历史",
+        "Description": "返回集群最近的 Kafka 性能快照。"
+      },
+      "Capture": {
+        "Summary": "采集 Kafka 性能",
+        "Description": "采集 Broker、主题和消费者组快照。"
+      }
+    }
+  },
+  "Common": {
+    "Actions": {
+      "Cancel": "取消",
+      "Close": "关闭",
+      "Delete": "删除",
+      "Edit": "编辑",
+      "Refresh": "刷新",
+      "Save": "保存",
+      "Select": "选择"
+    }
+  },
+  "Page": {
+    "PageTitle": "Kafka EventBus",
+    "Eyebrow": "EventBus 集成",
+    "Title": "Kafka EventBus 控制台",
+    "Subtitle": "查看 Kafka 支撑的 EventBus 集成、集群、主题、消费者组和性能快照。",
+    "States": {
+      "Loading": "正在加载 Kafka 控制台",
+      "LoadingDescription": "正在解析 EventBus Provider 状态和已配置的 Kafka 集群。"
+    },
+    "Messages": {
+      "OperationFailed": "操作失败。",
+      "RefreshSucceeded": "Kafka 控制台已刷新。"
+    }
+  },
+  "Tabs": {
+    "Dashboard": "仪表盘",
+    "Clusters": "集群",
+    "Topics": "主题",
+    "ConsumerGroups": "消费者组",
+    "Performance": "性能"
+  },
+  "Dashboard": {
+    "Cards": {
+      "Provider": "当前 Provider",
+      "Brokers": "Broker",
+      "BrokersHint": "来自最新直接元数据或快照",
+      "Topics": "主题",
+      "TopicsHint": "通过 Kafka 元数据可见",
+      "ConsumerGroups": "消费者组",
+      "ConsumerGroupsHint": "来自 Kafka 管理 API 描述",
+      "WriteRate": "写入速率",
+      "WriteRateHint": "来自最新 offset 增长",
+      "ConsumeRate": "消费速率",
+      "ConsumeRateHint": "来自最新提交 offset 增长"
+    },
+    "Modes": {
+      "DirectKafka": "直接 Kafka",
+      "DaprKafka": "Dapr-backed Kafka",
+      "DaprNonKafka": "Dapr 未声明 Kafka",
+      "NotConfigured": "未配置",
+      "Unknown": "未知"
+    },
+    "SelectedCluster": {
+      "None": "未选择集群",
+      "NoneDescription": "新建或配置 Kafka 集群后可启用控制台视图。",
+      "ExternalCredentials": "Kafka 凭据由 Monica 外部管理。"
+    }
+  },
+  "Clusters": {
+    "Title": "Kafka 集群",
+    "Empty": "当前没有可见 Kafka 集群。请新建集群或通过模块配置声明集群。",
+    "Actions": {
+      "New": "新建集群",
+      "Test": "测试连接"
+    },
+    "Columns": {
+      "Name": "名称",
+      "Bootstrap": "Bootstrap",
+      "Mode": "模式",
+      "Status": "状态",
+      "Actions": "操作"
+    },
+    "Values": {
+      "ExternalBootstrap": "外部管理"
+    },
+    "Modes": {
+      "DaprBacked": "Dapr 支撑",
+      "Direct": "直接"
+    },
+    "Status": {
+      "Reachable": "可连接",
+      "Unknown": "未测试",
+      "Limited": "受限"
+    },
+    "Dialog": {
+      "CreateTitle": "新建 Kafka 集群",
+      "EditTitle": "编辑 Kafka 集群"
+    },
+    "Confirm": {
+      "DeleteTitle": "删除 Kafka 集群",
+      "DeleteMessage": "删除集群 {0} 及其采样快照？"
+    },
+    "Messages": {
+      "Saved": "Kafka 集群已保存。",
+      "Deleted": "Kafka 集群已删除。",
+      "TestSucceeded": "Kafka 集群可连接。"
+    },
+    "Fields": {
+      "DisplayName": "显示名称",
+      "ClusterId": "集群 ID",
+      "BootstrapServers": "Bootstrap Servers",
+      "ClientId": "Client ID",
+      "JmxEndpoint": "JMX 端点",
+      "SecurityProtocol": "安全协议",
+      "SaslMechanism": "SASL 机制",
+      "SaslUsername": "SASL 用户名",
+      "SaslPassword": "SASL 密码",
+      "SslCaLocation": "SSL CA 路径",
+      "IsDaprBacked": "支撑 Dapr pub/sub",
+      "CredentialsManagedExternally": "凭据由外部管理",
+      "DaprPubSubName": "Dapr pub/sub 名称"
+    },
+    "Validation": {
+      "DisplayNameRequired": "显示名称必填。",
+      "BootstrapRequired": "当凭据由 Monica 管理时，Bootstrap Servers 必填。"
+    }
+  },
+  "Topics": {
+    "Title": "主题",
+    "Unavailable": "主题管理需要直接 Kafka Broker 访问。",
+    "Empty": "选中集群未返回主题。",
+    "Actions": {
+      "Create": "创建主题",
+      "Messages": "查看消息",
+      "Partitions": "增加分区",
+      "Retention": "设置保留时间"
+    },
+    "Columns": {
+      "Name": "名称",
+      "Partitions": "分区",
+      "Replication": "副本",
+      "Retention": "保留时间",
+      "Actions": "操作"
+    },
+    "Values": {
+      "Internal": "内部主题",
+      "NoKey": "无 Key",
+      "EmptyValue": "空值",
+      "Tombstone": "Tombstone 消息",
+      "TombstoneEncoding": "Null 值",
+      "TimestampUnknown": "时间戳不可用",
+      "RetentionUnknown": "未知",
+      "RetentionMs": "{0} ms"
+    },
+    "Dialog": {
+      "CreateTitle": "创建 Kafka 主题",
+      "MessagesTitle": "{0} 的消息",
+      "PartitionsTitle": "增加分区",
+      "RetentionTitle": "设置保留时间",
+      "PartitionsMessage": "主题 {0} 当前有 {1} 个分区。Kafka 只允许增加分区数量。",
+      "RetentionMessage": "设置主题 {0} 的 retention.ms。"
+    },
+    "MessagesDialog": {
+      "ReadHint": "显示最多 {0} 条最近消息，采样时间 {1}。此预览不会提交消费者 offset。",
+      "Empty": "在该主题末尾附近未找到消息。",
+      "OffsetFormat": "分区 {0}，offset {1}",
+      "Key": "Key",
+      "Encoding": "编码",
+      "Size": "大小",
+      "SizeBytes": "{0} bytes",
+      "Truncated": "负载已截断后显示。"
+    },
+    "Confirm": {
+      "DeleteTitle": "删除 Kafka 主题",
+      "DeleteMessage": "删除主题 {0}？"
+    },
+    "Messages": {
+      "Created": "Kafka 主题已创建。",
+      "Deleted": "Kafka 主题已删除。",
+      "PartitionsUpdated": "Kafka 主题分区已更新。",
+      "RetentionUpdated": "Kafka 主题保留时间已更新。"
+    },
+    "Fields": {
+      "TopicName": "主题名称",
+      "Partitions": "分区数",
+      "ReplicationFactor": "副本因子",
+      "RetentionMs": "Retention ms",
+      "IncreaseTo": "增加到"
+    },
+    "Validation": {
+      "NameRequired": "主题名称必填。",
+      "PartitionIncreaseRequired": "新的分区数量必须大于当前分区数量。",
+      "RetentionRequired": "保留时间必须大于 0。"
+    }
+  },
+  "ConsumerGroups": {
+    "Title": "消费者组",
+    "Unavailable": "消费者组查看需要直接 Kafka Broker 访问。",
+    "Empty": "选中集群未返回消费者组。",
+    "Columns": {
+      "GroupId": "Group ID",
+      "State": "状态",
+      "Members": "成员",
+      "Lag": "Lag"
+    },
+    "Values": {
+      "LagUnknown": "未知"
+    }
+  },
+  "Performance": {
+    "Title": "性能快照",
+    "Unavailable": "性能采样需要直接 Kafka Broker 访问。",
+    "Empty": "尚未采集性能快照。",
+    "Actions": {
+      "Capture": "采集"
+    },
+    "Columns": {
+      "CapturedAt": "采集时间",
+      "Brokers": "Broker",
+      "Topics": "主题",
+      "Groups": "消费者组",
+      "WriteRate": "写入速率",
+      "ConsumeRate": "消费速率",
+      "Lag": "Lag",
+      "Message": "消息"
+    },
+    "Values": {
+      "LagUnknown": "未知",
+      "RateUnknown": "未知",
+      "RatePerSecond": "{0} msg/s",
+      "NoMessage": "正常"
+    },
+    "Messages": {
+      "Captured": "Kafka 性能快照已采集。"
+    }
+  }
+}

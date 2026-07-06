@@ -1,0 +1,65 @@
+@inject IStringLocalizer<EventBusKafkaResource> L
+
+<MudDialog>
+    <DialogContent>
+        <MudStack Spacing="3">
+            @if (!string.IsNullOrWhiteSpace(_errorMessage))
+            {
+                <MudAlert Severity="Severity.Error" Variant="Variant.Outlined">
+                    @_errorMessage
+                </MudAlert>
+            }
+
+            <MudTextField T="string" @bind-Value="_topicName" Label="@L["Topics:Fields:TopicName"]" Required="true" />
+            <MudNumericField T="int" @bind-Value="_partitions" Label="@L["Topics:Fields:Partitions"]" Min="1" />
+            <MudNumericField T="int" @bind-Value="_replicationFactor" Label="@L["Topics:Fields:ReplicationFactor"]" Min="1" />
+            <MudNumericField T="long?" @bind-Value="_retentionMs" Label="@L["Topics:Fields:RetentionMs"]" Min="1" />
+        </MudStack>
+    </DialogContent>
+    <DialogActions>
+        <MudButton Variant="Variant.Text" OnClick="Cancel">@L["Common:Actions:Cancel"]</MudButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="Save">@L["Topics:Actions:Create"]</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] private IMudDialogInstance? MudDialog { get; set; }
+
+    [Parameter, EditorRequired] public string ClusterId { get; set; } = string.Empty;
+
+    private string _topicName = string.Empty;
+
+    private int _partitions = 1;
+
+    private int _replicationFactor = 1;
+
+    private long? _retentionMs;
+
+    private string? _errorMessage;
+
+    private void Save()
+    {
+        _errorMessage = null;
+        if (string.IsNullOrWhiteSpace(_topicName))
+        {
+            _errorMessage = L["Topics:Validation:NameRequired"];
+            return;
+        }
+
+        var request = new KafkaTopicCreateRequest
+        {
+            ClusterId = ClusterId,
+            TopicName = _topicName.Trim(),
+            Partitions = Math.Max(1, _partitions),
+            ReplicationFactor = (short)Math.Max(1, _replicationFactor),
+            RetentionMs = _retentionMs
+        };
+
+        MudDialog?.Close(DialogResult.Ok(request));
+    }
+
+    private void Cancel()
+    {
+        MudDialog?.Cancel();
+    }
+}

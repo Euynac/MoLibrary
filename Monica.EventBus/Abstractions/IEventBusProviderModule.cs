@@ -18,6 +18,11 @@ public enum EventBusProviderKind
     Dapr,
 
     /// <summary>
+    /// Apache Kafka event bus
+    /// </summary>
+    Kafka,
+
+    /// <summary>
     /// Unknown provider type
     /// </summary>
     Unknown
