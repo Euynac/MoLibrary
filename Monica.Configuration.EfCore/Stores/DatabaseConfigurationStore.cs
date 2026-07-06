@@ -28,6 +28,8 @@ public sealed class DatabaseConfigurationStore(
     private const int MAX_PUBLISH_RETRY_COUNT = 5;
     private const int MAX_EFFECTIVE_VALUE_ENSURE_RETRY_COUNT = 5;
     private const int MAX_UNIFIED_VERSION_APPEND_RETRY_COUNT = 5;
+    private const string PUBLISH_DEFINITIONS_LOCK_MARKER_KEY = "Configuration.EfCore.PublishDefinitionsLock";
+    private const int PUBLISH_RETRY_BASE_DELAY_MS = 25;
 
     private readonly SemaphoreSlim _schemaInitializationLock = new(1, 1);
     private bool _schemaInitialized;
@@ -464,10 +466,40 @@ public sealed class DatabaseConfigurationStore(
     {
         var candidates = definitions.Select(PublishedDefinitionCandidate.FromDefinition).ToArray();
         var changedCandidates = await GetChangedPublishCandidatesAsync(candidates, cancellationToken);
-        foreach (var candidate in changedCandidates)
+        if (changedCandidates.Count == 0)
         {
-            await PublishCandidateWithRetryAsync(candidate, cancellationToken);
+            return;
         }
+
+        Exception? lastException = null;
+        for (var attempt = 1; attempt <= MAX_PUBLISH_RETRY_COUNT; attempt++)
+        {
+            try
+            {
+                await PublishCandidatesWithLockAsync(changedCandidates, cancellationToken);
+                return;
+            }
+            catch (Exception ex) when (IsPublishRetryableException(ex))
+            {
+                lastException = ex;
+                if (attempt == MAX_PUBLISH_RETRY_COUNT)
+                {
+                    break;
+                }
+
+                await DelayPublishRetryAsync(attempt, cancellationToken);
+                changedCandidates = await GetChangedPublishCandidatesAsync(candidates, cancellationToken);
+                if (changedCandidates.Count == 0)
+                {
+                    return;
+                }
+            }
+        }
+
+        var diagnostics = await BuildPublishFailureDiagnosticsAsync(changedCandidates, cancellationToken);
+        throw new InvalidOperationException(
+            $"Failed to publish {changedCandidates.Count} configuration definition(s) after {MAX_PUBLISH_RETRY_COUNT} attempts. {diagnostics}",
+            lastException);
     }
 
     private async Task<IReadOnlyList<PublishedDefinitionCandidate>> GetChangedPublishCandidatesAsync(
@@ -494,56 +526,115 @@ public sealed class DatabaseConfigurationStore(
         }, cancellationToken);
     }
 
-    private async Task PublishCandidateWithRetryAsync(
-        PublishedDefinitionCandidate candidate,
+    private async Task PublishCandidatesWithLockAsync(
+        IReadOnlyList<PublishedDefinitionCandidate> candidates,
         CancellationToken cancellationToken)
     {
-        for (var attempt = 1; attempt <= MAX_PUBLISH_RETRY_COUNT; attempt++)
+        await EnsureSchemaAsync(cancellationToken);
+        await dbContextOperation.ExecuteAsync(async (dbContext, token) =>
         {
-            try
+            var executionStrategy = dbContext.Database.CreateExecutionStrategy();
+            await executionStrategy.ExecuteAsync(async () =>
             {
-                await ExecuteAsync(async (dbContext, token) =>
+                await using var transaction = await dbContext.Database.BeginTransactionAsync(token);
+                await EnsurePublishLockHeldAsync(dbContext, token);
+                await PublishCandidatesAsync(dbContext, candidates, token);
+                if (dbContext.ChangeTracker.HasChanges())
                 {
-                    var current = await dbContext.ConfigurationDefinitions
-                        .FirstOrDefaultAsync(definition => definition.DefinitionKey == candidate.DefinitionKey, token);
-
-                    if (current is null)
-                    {
-                        var created = candidate.CreateEntity();
-                        dbContext.ConfigurationDefinitions.Add(created);
-                        dbContext.ConfigurationDefinitionPublishHistories.Add(
-                            candidate.CreateHistory(null, ConfigurationDefinitionPublishChangeKind.Created));
-                        await dbContext.SaveChangesAsync(token);
-                        return;
-                    }
-
-                    if (candidate.Matches(current))
-                    {
-                        return;
-                    }
-
-                    var changeKind = candidate.HasSameSchema(current)
-                        ? ConfigurationDefinitionPublishChangeKind.MetadataChanged
-                        : ConfigurationDefinitionPublishChangeKind.SchemaChanged;
-                    var history = candidate.CreateHistory(current, changeKind);
-                    candidate.ApplyTo(current, history.NewSchemaVersion);
-                    dbContext.ConfigurationDefinitionPublishHistories.Add(history);
                     await dbContext.SaveChangesAsync(token);
-                }, cancellationToken);
-                return;
-            }
-            catch (DbUpdateConcurrencyException) when (attempt < MAX_PUBLISH_RETRY_COUNT)
-            {
-                // Another instance published this definition first. Reload and compare against the new current row.
-            }
-            catch (DbUpdateException) when (attempt < MAX_PUBLISH_RETRY_COUNT)
-            {
-                // Most commonly the first-publish insert race. Retrying turns it into a normal compare/update pass.
-            }
+                }
+
+                await transaction.CommitAsync(token);
+            });
+        }, cancellationToken);
+    }
+
+    private static async Task EnsurePublishLockHeldAsync(
+        ConfigurationDbContext dbContext,
+        CancellationToken cancellationToken)
+    {
+        await EnsurePublishLockMarkerExistsAsync(dbContext, cancellationToken);
+
+        await dbContext.Database.ExecuteSqlRawAsync(
+            BuildPublishLockUpdateSql(dbContext.Database.ProviderName),
+            [PUBLISH_DEFINITIONS_LOCK_MARKER_KEY],
+            cancellationToken);
+    }
+
+    private static async Task EnsurePublishLockMarkerExistsAsync(
+        ConfigurationDbContext dbContext,
+        CancellationToken cancellationToken)
+    {
+        var lockMarker = await dbContext.ConfigurationSchemaMarkers
+            .FirstOrDefaultAsync(candidate => candidate.MarkerKey == PUBLISH_DEFINITIONS_LOCK_MARKER_KEY, cancellationToken);
+        if (lockMarker is not null)
+        {
+            return;
         }
 
-        throw new InvalidOperationException(
-            $"Failed to publish configuration definition '{candidate.DefinitionKey}' after {MAX_PUBLISH_RETRY_COUNT} attempts.");
+        dbContext.ConfigurationSchemaMarkers.Add(new ConfigurationSchemaMarkerEntity
+        {
+            MarkerKey = PUBLISH_DEFINITIONS_LOCK_MARKER_KEY,
+            SchemaVersion = ConfigurationSchemaMarkerEntity.CurrentSchemaVersion
+        });
+
+        try
+        {
+            await dbContext.SaveChangesAsync(cancellationToken);
+        }
+        catch (DbUpdateException)
+        {
+            dbContext.ChangeTracker.Clear();
+            var markerCreatedByAnotherPublisher = await dbContext.ConfigurationSchemaMarkers
+                .AnyAsync(candidate => candidate.MarkerKey == PUBLISH_DEFINITIONS_LOCK_MARKER_KEY, cancellationToken);
+            if (markerCreatedByAnotherPublisher)
+            {
+                return;
+            }
+
+            throw;
+        }
+    }
+
+    private static async Task PublishCandidatesAsync(
+        ConfigurationDbContext dbContext,
+        IReadOnlyList<PublishedDefinitionCandidate> candidates,
+        CancellationToken cancellationToken)
+    {
+        if (candidates.Count == 0)
+        {
+            return;
+        }
+
+        var keys = candidates.Select(candidate => candidate.DefinitionKey).ToArray();
+        var existing = await dbContext.ConfigurationDefinitions
+            .Where(definition => keys.Contains(definition.DefinitionKey))
+            .ToDictionaryAsync(definition => definition.DefinitionKey, StringComparer.OrdinalIgnoreCase, cancellationToken);
+
+        foreach (var candidate in candidates)
+        {
+            if (!existing.TryGetValue(candidate.DefinitionKey, out var current))
+            {
+                var created = candidate.CreateEntity();
+                dbContext.ConfigurationDefinitions.Add(created);
+                dbContext.ConfigurationDefinitionPublishHistories.Add(
+                    candidate.CreateHistory(null, ConfigurationDefinitionPublishChangeKind.Created));
+                existing[created.DefinitionKey] = created;
+                continue;
+            }
+
+            if (candidate.Matches(current))
+            {
+                continue;
+            }
+
+            var changeKind = candidate.HasSameSchema(current)
+                ? ConfigurationDefinitionPublishChangeKind.MetadataChanged
+                : ConfigurationDefinitionPublishChangeKind.SchemaChanged;
+            var history = candidate.CreateHistory(current, changeKind);
+            candidate.ApplyTo(current, history.NewSchemaVersion);
+            dbContext.ConfigurationDefinitionPublishHistories.Add(history);
+        }
     }
 
     /// <inheritdoc />
@@ -842,6 +933,14 @@ public sealed class DatabaseConfigurationStore(
                 """;
     }
 
+    private static string BuildPublishLockUpdateSql(string? providerName)
+    {
+        var tableSql = FormatTableName(providerName, null, "ConfigurationSchemaMarkers");
+        var markerKeySql = QuoteIdentifier(providerName, "MarkerKey");
+        var schemaVersionSql = QuoteIdentifier(providerName, "SchemaVersion");
+        return $"UPDATE {tableSql} SET {schemaVersionSql} = {schemaVersionSql} WHERE {markerKeySql} = {{0}}";
+    }
+
     private static string BuildSchemaMarkerColumnsSql(string? providerName)
     {
         return providerName switch
@@ -944,6 +1043,79 @@ public sealed class DatabaseConfigurationStore(
         return string.IsNullOrWhiteSpace(schema)
             ? QuoteAnsi(tableName)
             : $"{QuoteAnsi(schema)}.{QuoteAnsi(tableName)}";
+    }
+
+    private static string QuoteIdentifier(string? providerName, string identifier)
+    {
+        if (providerName?.Contains("SqlServer", StringComparison.OrdinalIgnoreCase) is true)
+        {
+            return QuoteSqlServer(identifier);
+        }
+
+        if (providerName?.Contains("MySql", StringComparison.OrdinalIgnoreCase) is true)
+        {
+            return QuoteMySql(identifier);
+        }
+
+        return QuoteAnsi(identifier);
+    }
+
+    private static bool IsPublishRetryableException(Exception exception)
+    {
+        return ContainsException<DbUpdateException>(exception)
+               || ContainsException<DbUpdateConcurrencyException>(exception);
+    }
+
+    private static bool ContainsException<TException>(Exception exception)
+        where TException : Exception
+    {
+        for (var current = exception; current is not null; current = current.InnerException)
+        {
+            if (current is TException)
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private static Task DelayPublishRetryAsync(int attempt, CancellationToken cancellationToken)
+    {
+        var delay = TimeSpan.FromMilliseconds(PUBLISH_RETRY_BASE_DELAY_MS * attempt + Random.Shared.Next(0, PUBLISH_RETRY_BASE_DELAY_MS));
+        return Task.Delay(delay, cancellationToken);
+    }
+
+    private async Task<string> BuildPublishFailureDiagnosticsAsync(
+        IReadOnlyList<PublishedDefinitionCandidate> candidates,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            return await ExecuteAsync(async (dbContext, token) =>
+            {
+                var keys = candidates.Select(candidate => candidate.DefinitionKey).ToArray();
+                var currentByKey = await dbContext.ConfigurationDefinitions
+                    .AsNoTracking()
+                    .Where(definition => keys.Contains(definition.DefinitionKey))
+                    .ToDictionaryAsync(definition => definition.DefinitionKey, StringComparer.OrdinalIgnoreCase, token);
+                var diagnostics = candidates
+                    .Take(5)
+                    .Select(candidate =>
+                    {
+                        currentByKey.TryGetValue(candidate.DefinitionKey, out var current);
+                        var currentSchemaHash = current?.SchemaHash ?? "<missing>";
+                        var currentFromProject = current?.FromProject ?? "<missing>";
+                        var currentCategory = current?.Category ?? "<missing>";
+                        return $"Definition='{candidate.DefinitionKey}', CurrentSchemaHash='{currentSchemaHash}', CandidateSchemaHash='{candidate.SchemaHash}', CurrentFromProject='{currentFromProject}', CandidateFromProject='{candidate.FromProject}', CurrentCategory='{currentCategory}', CandidateCategory='{candidate.Category ?? "<null>"}'";
+                    });
+                return string.Join("; ", diagnostics);
+            }, cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            return $"Failed to collect publish diagnostics: {ex.Message}";
+        }
     }
 
     private static string QuoteSqlServer(string identifier)
