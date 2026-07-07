@@ -49,13 +49,6 @@ public sealed class KafkaTopicService(
 
     private async Task<KafkaClusterConfig> GetAdminClusterAsync(string clusterId, CancellationToken cancellationToken)
     {
-        var cluster = await clusterService.GetRequiredClusterAsync(clusterId, cancellationToken);
-        if (!cluster.HasDirectKafkaAccess)
-        {
-            throw new InvalidOperationException(
-                $"Kafka cluster '{cluster.ClusterId}' is visible but direct admin access is not configured.");
-        }
-
-        return cluster;
+        return await clusterService.GetRequiredDirectAdminClusterAsync(clusterId, cancellationToken);
     }
 }

@@ -16,7 +16,8 @@ public interface IKafkaAdminProvider
     /// </summary>
     /// <param name="cluster">Cluster configuration.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
-    Task TestConnectionAsync(KafkaClusterConfig cluster, CancellationToken cancellationToken = default);
+    /// <returns>Connection metadata collected during the probe.</returns>
+    Task<KafkaConnectionTestResult> TestConnectionAsync(KafkaClusterConfig cluster, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Lists brokers known by the target cluster metadata.

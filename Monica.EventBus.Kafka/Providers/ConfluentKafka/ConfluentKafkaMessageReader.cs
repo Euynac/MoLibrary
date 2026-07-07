@@ -19,31 +19,35 @@ internal sealed class ConfluentKafkaMessageReader(IOptions<ModuleEventBusKafkaOp
 
     private ModuleEventBusKafkaOption Option => options.Value;
 
-    public Task<KafkaTopicMessageBatch> ReadMessagesAsync(
+    public async Task<KafkaTopicMessageBatch> ReadMessagesAsync(
         KafkaClusterConfig cluster,
         KafkaTopicMessagesRequest request,
         CancellationToken cancellationToken = default)
     {
+        ArgumentNullException.ThrowIfNull(request);
         ArgumentException.ThrowIfNullOrWhiteSpace(request.TopicName);
 
         var maxMessages = Math.Clamp(request.MaxMessages, 1, Math.Max(1, Option.MessagePreviewMaxMessages));
         using var admin = CreateAdminClient(cluster);
-        using var consumer = CreateConsumer(cluster);
         var topicName = request.TopicName.Trim();
         var partitions = ResolvePartitions(admin, topicName);
-        var assignments = BuildAssignments(consumer, partitions, maxMessages);
-        var messages = assignments.Count == 0
-            ? []
-            : ConsumePreview(consumer, assignments, maxMessages, cancellationToken);
+        var watermarks = await ReadWatermarksAsync(admin, partitions, cancellationToken);
+        var assignments = BuildAssignments(watermarks, maxMessages);
+        IReadOnlyList<KafkaTopicMessageSample> messages = [];
+        if (assignments.Count > 0)
+        {
+            using var consumer = CreateConsumer(cluster);
+            messages = ConsumePreview(consumer, assignments, watermarks, maxMessages, cancellationToken);
+        }
 
-        return Task.FromResult(new KafkaTopicMessageBatch
+        return new KafkaTopicMessageBatch
         {
             ClusterId = cluster.ClusterId,
             TopicName = topicName,
             MaxMessages = maxMessages,
             CapturedAt = DateTimeOffset.UtcNow,
             Messages = messages
-        });
+        };
     }
 
     private IConsumer<byte[], byte[]> CreateConsumer(KafkaClusterConfig cluster)
@@ -88,17 +92,59 @@ internal sealed class ConfluentKafkaMessageReader(IOptions<ModuleEventBusKafkaOp
             .ToList();
     }
 
-    private IReadOnlyList<TopicPartitionOffset> BuildAssignments(
-        IConsumer<byte[], byte[]> consumer,
+    private async Task<Dictionary<TopicPartition, PartitionWatermark>> ReadWatermarksAsync(
+        IAdminClient admin,
         IReadOnlyList<TopicPartition> partitions,
+        CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+
+        var lowOffsets = await ReadOffsetsAsync(admin, partitions, OffsetSpec.Earliest());
+        cancellationToken.ThrowIfCancellationRequested();
+
+        var highOffsets = await ReadOffsetsAsync(admin, partitions, OffsetSpec.Latest());
+        cancellationToken.ThrowIfCancellationRequested();
+
+        return partitions
+            .Where(partition => lowOffsets.ContainsKey(partition) && highOffsets.ContainsKey(partition))
+            .ToDictionary(
+                partition => partition,
+                partition => new PartitionWatermark(lowOffsets[partition], highOffsets[partition]));
+    }
+
+    private async Task<Dictionary<TopicPartition, long>> ReadOffsetsAsync(
+        IAdminClient admin,
+        IReadOnlyList<TopicPartition> partitions,
+        OffsetSpec offsetSpec)
+    {
+        var specs = partitions.Select(partition => new TopicPartitionOffsetSpec
+        {
+            TopicPartition = partition,
+            OffsetSpec = offsetSpec
+        });
+
+        var result = await admin.ListOffsetsAsync(specs, new ListOffsetsOptions
+        {
+            RequestTimeout = Option.AdminRequestTimeout
+        });
+
+        return result.ResultInfos
+            .Where(info => info.TopicPartitionOffsetError.Error.Code == ErrorCode.NoError &&
+                           info.TopicPartitionOffsetError.Offset.Value >= 0)
+            .ToDictionary(
+                info => info.TopicPartitionOffsetError.TopicPartition,
+                info => info.TopicPartitionOffsetError.Offset.Value);
+    }
+
+    private static IReadOnlyList<TopicPartitionOffset> BuildAssignments(
+        IReadOnlyDictionary<TopicPartition, PartitionWatermark> watermarks,
         int maxMessages)
     {
-        var assignments = new List<TopicPartitionOffset>(partitions.Count);
-        foreach (var partition in partitions)
+        var assignments = new List<TopicPartitionOffset>(watermarks.Count);
+        foreach (var (partition, watermark) in watermarks)
         {
-            var watermark = consumer.QueryWatermarkOffsets(partition, Option.AdminRequestTimeout);
-            var low = watermark.Low.Value;
-            var high = watermark.High.Value;
+            var low = watermark.Low;
+            var high = watermark.High;
             if (high <= low)
             {
                 continue;
@@ -115,6 +161,7 @@ internal sealed class ConfluentKafkaMessageReader(IOptions<ModuleEventBusKafkaOp
     private IReadOnlyList<KafkaTopicMessageSample> ConsumePreview(
         IConsumer<byte[], byte[]> consumer,
         IReadOnlyList<TopicPartitionOffset> assignments,
+        IReadOnlyDictionary<TopicPartition, PartitionWatermark> watermarks,
         int maxMessages,
         CancellationToken cancellationToken)
     {
@@ -123,7 +170,7 @@ internal sealed class ConfluentKafkaMessageReader(IOptions<ModuleEventBusKafkaOp
         var results = new List<KafkaTopicMessageSample>(maxMessages);
         var highWatermarks = assignments.ToDictionary(
             assignment => assignment.TopicPartition,
-            assignment => consumer.QueryWatermarkOffsets(assignment.TopicPartition, Option.AdminRequestTimeout).High.Value);
+            assignment => watermarks[assignment.TopicPartition].High);
         var deadline = DateTimeOffset.UtcNow.Add(Option.MessagePreviewTimeout);
 
         while (results.Count < maxMessages &&
@@ -223,4 +270,6 @@ internal sealed class ConfluentKafkaMessageReader(IOptions<ModuleEventBusKafkaOp
     }
 
     private sealed record DecodedPayload(string? Text, string Encoding, bool IsTruncated);
+
+    private sealed record PartitionWatermark(long Low, long High);
 }

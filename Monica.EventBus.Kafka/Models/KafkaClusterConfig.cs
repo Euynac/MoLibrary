@@ -95,7 +95,7 @@ public sealed class KafkaClusterConfig
             ? BuildClusterId(DisplayName, BootstrapServers)
             : ClusterId.Trim();
         DisplayName = string.IsNullOrWhiteSpace(DisplayName) ? ClusterId : DisplayName.Trim();
-        BootstrapServers = BootstrapServers.Trim();
+        BootstrapServers = NormalizeRequired(BootstrapServers);
         ClientId = NormalizeOptional(ClientId);
         SecurityProtocol = NormalizeOptional(SecurityProtocol);
         SaslMechanism = NormalizeOptional(SaslMechanism);
@@ -135,7 +135,7 @@ public sealed class KafkaClusterConfig
     private static string BuildClusterId(string displayName, string bootstrapServers)
     {
         var source = !string.IsNullOrWhiteSpace(displayName) ? displayName : bootstrapServers;
-        var normalized = new string(source.Trim()
+        var normalized = new string(NormalizeRequired(source)
             .Select(ch => char.IsLetterOrDigit(ch) ? char.ToLowerInvariant(ch) : '-')
             .ToArray())
             .Trim('-');
@@ -145,6 +145,11 @@ public sealed class KafkaClusterConfig
     private static string? NormalizeOptional(string? value)
     {
         return string.IsNullOrWhiteSpace(value) ? null : value.Trim();
+    }
+
+    private static string NormalizeRequired(string? value)
+    {
+        return string.IsNullOrWhiteSpace(value) ? string.Empty : value.Trim();
     }
 }
 

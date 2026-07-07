@@ -79,50 +79,54 @@ internal sealed class ConfluentKafkaPerformanceMetricsProvider(IOptions<ModuleEv
         IReadOnlyList<KafkaConsumerGroupSummary> consumerGroups,
         CancellationToken cancellationToken)
     {
+        var partitionList = partitions.ToList();
+        var requests = consumerGroups
+            .Where(group => !string.IsNullOrWhiteSpace(group.GroupId))
+            .Select(group => new ConsumerGroupTopicPartitions(group.GroupId, partitionList))
+            .ToList();
+        if (requests.Count == 0)
+        {
+            return new ConsumerOffsetTotals(null, null);
+        }
+
+        cancellationToken.ThrowIfCancellationRequested();
+
+        try
+        {
+            var results = await admin.ListConsumerGroupOffsetsAsync(
+                requests,
+                new ListConsumerGroupOffsetsOptions
+                {
+                    RequestTimeout = Option.AdminRequestTimeout,
+                    RequireStableOffsets = false
+                });
+
+            return CalculateConsumerOffsetTotals(results.SelectMany(result => result.Partitions), latestOffsets);
+        }
+        catch (ListConsumerGroupOffsetsException ex)
+        {
+            return CalculateConsumerOffsetTotals(ex.Results.SelectMany(result => result.Partitions), latestOffsets);
+        }
+    }
+
+    private static ConsumerOffsetTotals CalculateConsumerOffsetTotals(
+        IEnumerable<TopicPartitionOffsetError> partitions,
+        IReadOnlyDictionary<TopicPartition, long> latestOffsets)
+    {
         long committedTotal = 0;
         long lagTotal = 0;
         var hasConsumerOffsets = false;
 
-        foreach (var group in consumerGroups.Where(group => !string.IsNullOrWhiteSpace(group.GroupId)))
+        foreach (var partition in partitions)
         {
-            cancellationToken.ThrowIfCancellationRequested();
-
-            try
+            if (partition.Error.Code != ErrorCode.NoError || partition.Offset.Value < 0)
             {
-                var results = await admin.ListConsumerGroupOffsetsAsync(
-                    [new ConsumerGroupTopicPartitions(group.GroupId, partitions.ToList())],
-                    new ListConsumerGroupOffsetsOptions
-                    {
-                        RequestTimeout = Option.AdminRequestTimeout,
-                        RequireStableOffsets = false
-                    });
-
-                foreach (var partition in results.SelectMany(result => result.Partitions))
-                {
-                    if (partition.Error.Code != ErrorCode.NoError || partition.Offset.Value < 0)
-                    {
-                        continue;
-                    }
-
-                    hasConsumerOffsets = true;
-                    committedTotal += partition.Offset.Value;
-                    lagTotal += CalculateLag(partition, latestOffsets);
-                }
+                continue;
             }
-            catch (ListConsumerGroupOffsetsException ex)
-            {
-                foreach (var partition in ex.Results.SelectMany(result => result.Partitions))
-                {
-                    if (partition.Error.Code != ErrorCode.NoError || partition.Offset.Value < 0)
-                    {
-                        continue;
-                    }
 
-                    hasConsumerOffsets = true;
-                    committedTotal += partition.Offset.Value;
-                    lagTotal += CalculateLag(partition, latestOffsets);
-                }
-            }
+            hasConsumerOffsets = true;
+            committedTotal += partition.Offset.Value;
+            lagTotal += CalculateLag(partition, latestOffsets);
         }
 
         if (!hasConsumerOffsets)

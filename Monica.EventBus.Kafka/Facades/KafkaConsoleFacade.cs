@@ -37,7 +37,11 @@ public sealed class KafkaConsoleFacade(
     /// </summary>
     public Task<Res<KafkaClusterSummary>> UpsertClusterAsync(KafkaClusterUpsertRequest request, CancellationToken cancellationToken = default)
     {
-        return ExecuteAsync(() => clusterService.UpsertClusterAsync(request.Cluster, cancellationToken), "Failed to save Kafka cluster");
+        return ExecuteAsync(() =>
+        {
+            ArgumentNullException.ThrowIfNull(request);
+            return clusterService.UpsertClusterAsync(request.Cluster, cancellationToken);
+        }, "Failed to save Kafka cluster");
     }
 
     /// <summary>
@@ -77,7 +81,11 @@ public sealed class KafkaConsoleFacade(
     /// </summary>
     public Task<Res> CreateTopicAsync(KafkaTopicCreateRequest request, CancellationToken cancellationToken = default)
     {
-        return ExecuteAsync(() => topicService.CreateTopicAsync(request, cancellationToken), "Kafka topic created", "Failed to create Kafka topic");
+        return ExecuteAsync(() =>
+        {
+            ArgumentNullException.ThrowIfNull(request);
+            return topicService.CreateTopicAsync(request, cancellationToken);
+        }, "Kafka topic created", "Failed to create Kafka topic");
     }
 
     /// <summary>
@@ -93,7 +101,11 @@ public sealed class KafkaConsoleFacade(
     /// </summary>
     public Task<Res> IncreasePartitionsAsync(KafkaTopicPartitionRequest request, CancellationToken cancellationToken = default)
     {
-        return ExecuteAsync(() => topicService.IncreasePartitionsAsync(request, cancellationToken), "Kafka topic partitions updated", "Failed to update Kafka partitions");
+        return ExecuteAsync(() =>
+        {
+            ArgumentNullException.ThrowIfNull(request);
+            return topicService.IncreasePartitionsAsync(request, cancellationToken);
+        }, "Kafka topic partitions updated", "Failed to update Kafka partitions");
     }
 
     /// <summary>
@@ -101,7 +113,11 @@ public sealed class KafkaConsoleFacade(
     /// </summary>
     public Task<Res> UpdateRetentionAsync(KafkaTopicRetentionRequest request, CancellationToken cancellationToken = default)
     {
-        return ExecuteAsync(() => topicService.UpdateRetentionAsync(request, cancellationToken), "Kafka topic retention updated", "Failed to update Kafka retention");
+        return ExecuteAsync(() =>
+        {
+            ArgumentNullException.ThrowIfNull(request);
+            return topicService.UpdateRetentionAsync(request, cancellationToken);
+        }, "Kafka topic retention updated", "Failed to update Kafka retention");
     }
 
     /// <summary>
@@ -109,7 +125,11 @@ public sealed class KafkaConsoleFacade(
     /// </summary>
     public Task<Res<KafkaTopicMessageBatch>> ReadTopicMessagesAsync(KafkaTopicMessagesRequest request, CancellationToken cancellationToken = default)
     {
-        return ExecuteAsync(() => topicService.ReadMessagesAsync(request, cancellationToken), "Failed to read Kafka topic messages");
+        return ExecuteAsync(() =>
+        {
+            ArgumentNullException.ThrowIfNull(request);
+            return topicService.ReadMessagesAsync(request, cancellationToken);
+        }, "Failed to read Kafka topic messages");
     }
 
     /// <summary>

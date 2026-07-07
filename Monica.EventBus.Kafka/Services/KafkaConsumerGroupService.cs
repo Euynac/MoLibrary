@@ -14,13 +14,7 @@ public sealed class KafkaConsumerGroupService(
         string clusterId,
         CancellationToken cancellationToken = default)
     {
-        var cluster = await clusterService.GetRequiredClusterAsync(clusterId, cancellationToken);
-        if (!cluster.HasDirectKafkaAccess)
-        {
-            throw new InvalidOperationException(
-                $"Kafka cluster '{cluster.ClusterId}' is visible but direct consumer group access is not configured.");
-        }
-
+        var cluster = await clusterService.GetRequiredDirectAdminClusterAsync(clusterId, cancellationToken);
         return await adminProvider.ListConsumerGroupsAsync(cluster, cancellationToken);
     }
 }

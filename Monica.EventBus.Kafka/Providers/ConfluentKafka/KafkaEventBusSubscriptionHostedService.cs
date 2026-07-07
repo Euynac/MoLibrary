@@ -49,7 +49,11 @@ internal sealed class KafkaEventBusSubscriptionHostedService(
             return Task.CompletedTask;
         }
 
-        consumer.Task = Task.Run(() => ConsumeAsync(consumer), CancellationToken.None);
+        consumer.Task = Task.Factory.StartNew(
+            () => ConsumeAsync(consumer),
+            CancellationToken.None,
+            TaskCreationOptions.LongRunning,
+            TaskScheduler.Default).Unwrap();
         RecordState($"Started Kafka consumer for topic {topicName}", HostedServiceState.Running);
         return Task.CompletedTask;
     }
@@ -97,9 +101,24 @@ internal sealed class KafkaEventBusSubscriptionHostedService(
 
     private async Task ConsumeAsync(TopicConsumer topicConsumer)
     {
+        try
+        {
+            await ConsumeTopicAsync(topicConsumer);
+        }
+        catch (OperationCanceledException)
+        {
+            // Expected during unsubscribe and shutdown.
+        }
+        catch (Exception ex)
+        {
+            RecordState($"Kafka consumer stopped for topic {topicConsumer.TopicName}", HostedServiceState.Degraded, ex);
+        }
+    }
+
+    private async Task ConsumeTopicAsync(TopicConsumer topicConsumer)
+    {
         var cluster = clusterConfigProvider.GetDirectEventBusCluster();
         var consumerConfig = KafkaClientConfigFactory.BuildConsumerConfig(cluster, options.Value, ServiceKey);
-
         using var consumer = new ConsumerBuilder<string, string>(consumerConfig).Build();
         consumer.Subscribe(topicConsumer.TopicName);
 
@@ -135,7 +154,14 @@ internal sealed class KafkaEventBusSubscriptionHostedService(
             catch (Exception ex)
             {
                 RecordState($"Kafka consumer failed for topic {topicConsumer.TopicName}", HostedServiceState.Degraded, ex);
-                await Task.Delay(options.Value.ConsumerErrorBackoff, topicConsumer.CancellationTokenSource.Token);
+                try
+                {
+                    await Task.Delay(options.Value.ConsumerErrorBackoff, topicConsumer.CancellationTokenSource.Token);
+                }
+                catch (OperationCanceledException)
+                {
+                    break;
+                }
             }
         }
 

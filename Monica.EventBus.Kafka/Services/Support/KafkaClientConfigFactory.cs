@@ -64,12 +64,12 @@ internal static class KafkaClientConfigFactory
         config.ClientId = normalized.ClientId ?? option.ClientId;
         config.SocketTimeoutMs = (int)option.AdminRequestTimeout.TotalMilliseconds;
 
-        if (TryParseEnum<SecurityProtocol>(normalized.SecurityProtocol, out var securityProtocol))
+        if (TryParseEnum(normalized.SecurityProtocol, nameof(KafkaClusterConfig.SecurityProtocol), out SecurityProtocol securityProtocol))
         {
             config.SecurityProtocol = securityProtocol;
         }
 
-        if (TryParseEnum<SaslMechanism>(normalized.SaslMechanism, out var saslMechanism))
+        if (TryParseEnum(normalized.SaslMechanism, nameof(KafkaClusterConfig.SaslMechanism), out SaslMechanism saslMechanism))
         {
             config.SaslMechanism = saslMechanism;
         }
@@ -97,7 +97,7 @@ internal static class KafkaClientConfigFactory
             : $"{option.ConsumerGroupId}-{serviceKey}";
     }
 
-    private static bool TryParseEnum<TEnum>(string? value, out TEnum result) where TEnum : struct
+    private static bool TryParseEnum<TEnum>(string? value, string propertyName, out TEnum result) where TEnum : struct, Enum
     {
         if (string.IsNullOrWhiteSpace(value))
         {
@@ -105,6 +105,12 @@ internal static class KafkaClientConfigFactory
             return false;
         }
 
-        return Enum.TryParse(value, ignoreCase: true, out result);
+        if (Enum.TryParse(value, ignoreCase: true, out result))
+        {
+            return true;
+        }
+
+        throw new InvalidOperationException(
+            $"Kafka cluster {propertyName} value '{value}' is invalid. Supported values are: {string.Join(", ", Enum.GetNames<TEnum>())}.");
     }
 }

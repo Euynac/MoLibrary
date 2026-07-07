@@ -1,3 +1,4 @@
+using Monica.Core.Extensions;
 using Monica.Core.Results;
 using Monica.EventBus.Kafka.Facades;
 using Monica.EventBus.Kafka.Models;
@@ -68,7 +69,7 @@ public sealed class EventBusKafkaPageState(KafkaConsoleFacade facade)
     /// <summary>
     /// Whether the selected cluster supports direct Kafka admin operations.
     /// </summary>
-    public bool CanAdminSelectedCluster => SelectedCluster?.Config.HasDirectKafkaAccess == true;
+    public bool CanAdminSelectedCluster => SelectedCluster?.IsReachable == true;
 
     /// <summary>
     /// Initializes all page data.
@@ -182,13 +183,24 @@ public sealed class EventBusKafkaPageState(KafkaConsoleFacade facade)
     {
         return await RunAsync(async () =>
         {
-            if (!TryRead(await facade.TestClusterAsync(clusterId, cancellationToken), out _))
+            if (!TryRead(await facade.TestClusterAsync(clusterId, cancellationToken), out var summary))
             {
                 return false;
             }
 
-            await RefreshAsync(cancellationToken);
-            return true;
+            ApplyClusterSummary(summary);
+            if (summary.IsReachable)
+            {
+                await RefreshSelectedClusterDetailsIfSelectedAsync(
+                    summary.Config.ClusterId,
+                    cancellationToken,
+                    suppressErrors: true);
+                return true;
+            }
+
+            ClearSelectedClusterDetailsIfSelected(summary.Config.ClusterId);
+            ErrorMessage = summary.ErrorMessage ?? $"Kafka cluster '{summary.Config.DisplayName}' is not reachable.";
+            return false;
         });
     }
 
@@ -343,22 +355,79 @@ public sealed class EventBusKafkaPageState(KafkaConsoleFacade facade)
         });
     }
 
-    private async Task RefreshSelectedClusterDetailsAsync(CancellationToken cancellationToken)
+    private async Task RefreshSelectedClusterDetailsAsync(CancellationToken cancellationToken, bool suppressErrors = false)
     {
-        if (SelectedClusterId is null || !CanAdminSelectedCluster)
+        if (SelectedClusterId is null || !ShouldLoadSelectedClusterDetails)
         {
-            Topics = [];
-            ConsumerGroups = [];
-            PerformanceSnapshots = [];
+            ClearSelectedClusterDetails();
             return;
         }
 
-        await RefreshTopicsAsync(cancellationToken);
-        await RefreshConsumerGroupsAsync(cancellationToken);
-        await RefreshPerformanceAsync(cancellationToken);
+        await RefreshTopicsAsync(cancellationToken, suppressErrors);
+        await RefreshConsumerGroupsAsync(cancellationToken, suppressErrors);
+        await RefreshPerformanceAsync(cancellationToken, suppressErrors);
     }
 
-    private async Task RefreshTopicsAsync(CancellationToken cancellationToken)
+    private async Task RefreshSelectedClusterDetailsIfSelectedAsync(
+        string clusterId,
+        CancellationToken cancellationToken,
+        bool suppressErrors = false)
+    {
+        if (!string.Equals(SelectedClusterId, clusterId, StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        await RefreshSelectedClusterDetailsAsync(cancellationToken, suppressErrors);
+    }
+
+    private bool ShouldLoadSelectedClusterDetails =>
+        SelectedCluster?.Config.HasDirectKafkaAccess == true &&
+        SelectedCluster.IsReachable;
+
+    private void ClearSelectedClusterDetailsIfSelected(string clusterId)
+    {
+        if (string.Equals(SelectedClusterId, clusterId, StringComparison.Ordinal))
+        {
+            ClearSelectedClusterDetails();
+        }
+    }
+
+    private void ClearSelectedClusterDetails()
+    {
+        Topics = [];
+        ConsumerGroups = [];
+        PerformanceSnapshots = [];
+    }
+
+    private void ApplyClusterSummary(KafkaClusterSummary summary)
+    {
+        var index = Clusters.FindIndex(cluster =>
+            string.Equals(cluster.Config.ClusterId, summary.Config.ClusterId, StringComparison.Ordinal));
+        if (index >= 0)
+        {
+            Clusters[index] = summary;
+        }
+        else
+        {
+            Clusters.Add(summary);
+            Clusters = Clusters
+                .OrderBy(cluster => cluster.Config.DisplayName, StringComparer.OrdinalIgnoreCase)
+                .ToList();
+        }
+
+        if (!string.Equals(SelectedClusterId, summary.Config.ClusterId, StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        Dashboard.SelectedCluster = summary;
+        Dashboard.BrokerCount = summary.BrokerCount;
+        Dashboard.TopicCount = summary.TopicCount;
+        Dashboard.ConsumerGroupCount = summary.ConsumerGroupCount;
+    }
+
+    private async Task RefreshTopicsAsync(CancellationToken cancellationToken, bool suppressErrors = false)
     {
         if (SelectedClusterId is null)
         {
@@ -366,13 +435,17 @@ public sealed class EventBusKafkaPageState(KafkaConsoleFacade facade)
             return;
         }
 
-        if (TryRead(await facade.ListTopicsAsync(SelectedClusterId, cancellationToken), out var topics))
+        Topics = [];
+        var result = await facade.ListTopicsAsync(SelectedClusterId, cancellationToken);
+        if (suppressErrors
+                ? TryReadSilently(result, out var topics)
+                : TryRead(result, out topics))
         {
             Topics = topics.ToList();
         }
     }
 
-    private async Task RefreshConsumerGroupsAsync(CancellationToken cancellationToken)
+    private async Task RefreshConsumerGroupsAsync(CancellationToken cancellationToken, bool suppressErrors = false)
     {
         if (SelectedClusterId is null)
         {
@@ -380,13 +453,17 @@ public sealed class EventBusKafkaPageState(KafkaConsoleFacade facade)
             return;
         }
 
-        if (TryRead(await facade.ListConsumerGroupsAsync(SelectedClusterId, cancellationToken), out var groups))
+        ConsumerGroups = [];
+        var result = await facade.ListConsumerGroupsAsync(SelectedClusterId, cancellationToken);
+        if (suppressErrors
+                ? TryReadSilently(result, out var groups)
+                : TryRead(result, out groups))
         {
             ConsumerGroups = groups.ToList();
         }
     }
 
-    private async Task RefreshPerformanceAsync(CancellationToken cancellationToken)
+    private async Task RefreshPerformanceAsync(CancellationToken cancellationToken, bool suppressErrors = false)
     {
         if (SelectedClusterId is null)
         {
@@ -394,7 +471,11 @@ public sealed class EventBusKafkaPageState(KafkaConsoleFacade facade)
             return;
         }
 
-        if (TryRead(await facade.GetPerformanceHistoryAsync(SelectedClusterId, cancellationToken: cancellationToken), out var snapshots))
+        PerformanceSnapshots = [];
+        var result = await facade.GetPerformanceHistoryAsync(SelectedClusterId, cancellationToken: cancellationToken);
+        if (suppressErrors
+                ? TryReadSilently(result, out var snapshots)
+                : TryRead(result, out snapshots))
         {
             PerformanceSnapshots = snapshots.ToList();
         }
@@ -425,6 +506,10 @@ public sealed class EventBusKafkaPageState(KafkaConsoleFacade facade)
         {
             await action();
         }
+        catch (Exception ex)
+        {
+            ErrorMessage = ex.GetMessageRecursively();
+        }
         finally
         {
             IsBusy = false;
@@ -438,6 +523,11 @@ public sealed class EventBusKafkaPageState(KafkaConsoleFacade facade)
         try
         {
             return await action();
+        }
+        catch (Exception ex)
+        {
+            ErrorMessage = ex.GetMessageRecursively();
+            return false;
         }
         finally
         {
@@ -466,6 +556,18 @@ public sealed class EventBusKafkaPageState(KafkaConsoleFacade facade)
 
         data = default!;
         ErrorMessage = error.Message;
+        return false;
+    }
+
+    private static bool TryReadSilently<T>(Res<T> result, out T data)
+    {
+        if (!result.IsFailed(out _))
+        {
+            data = result.Data!;
+            return true;
+        }
+
+        data = default!;
         return false;
     }
 }

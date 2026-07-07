@@ -15,31 +15,29 @@ internal sealed class ConfluentKafkaAdminProvider(IOptions<ModuleEventBusKafkaOp
 {
     private ModuleEventBusKafkaOption Option => options.Value;
 
-    public Task TestConnectionAsync(KafkaClusterConfig cluster, CancellationToken cancellationToken = default)
+    public Task<KafkaConnectionTestResult> TestConnectionAsync(
+        KafkaClusterConfig cluster,
+        CancellationToken cancellationToken = default)
     {
         using var admin = CreateAdminClient(cluster);
         var metadata = admin.GetMetadata(Option.AdminRequestTimeout);
-        if (metadata.Brokers.Count == 0)
+        var brokers = MapBrokers(metadata);
+        if (brokers.Count == 0)
         {
             throw new InvalidOperationException($"Kafka cluster '{cluster.ClusterId}' returned no brokers.");
         }
 
-        return Task.CompletedTask;
+        return Task.FromResult(new KafkaConnectionTestResult
+        {
+            Brokers = brokers
+        });
     }
 
     public Task<IReadOnlyList<KafkaBrokerInfo>> ListBrokersAsync(KafkaClusterConfig cluster, CancellationToken cancellationToken = default)
     {
         using var admin = CreateAdminClient(cluster);
         var metadata = admin.GetMetadata(Option.AdminRequestTimeout);
-        var brokers = metadata.Brokers
-            .Select(broker => new KafkaBrokerInfo
-            {
-                BrokerId = broker.BrokerId,
-                Host = broker.Host,
-                Port = broker.Port
-            })
-            .OrderBy(broker => broker.BrokerId)
-            .ToList();
+        var brokers = MapBrokers(metadata);
         return Task.FromResult<IReadOnlyList<KafkaBrokerInfo>>(brokers);
     }
 
@@ -72,6 +70,7 @@ internal sealed class ConfluentKafkaAdminProvider(IOptions<ModuleEventBusKafkaOp
 
     public async Task CreateTopicAsync(KafkaClusterConfig cluster, KafkaTopicCreateRequest request, CancellationToken cancellationToken = default)
     {
+        ArgumentNullException.ThrowIfNull(request);
         ArgumentException.ThrowIfNullOrWhiteSpace(request.TopicName);
         using var admin = CreateAdminClient(cluster);
 
@@ -103,6 +102,7 @@ internal sealed class ConfluentKafkaAdminProvider(IOptions<ModuleEventBusKafkaOp
 
     public async Task IncreasePartitionsAsync(KafkaClusterConfig cluster, KafkaTopicPartitionRequest request, CancellationToken cancellationToken = default)
     {
+        ArgumentNullException.ThrowIfNull(request);
         ArgumentException.ThrowIfNullOrWhiteSpace(request.TopicName);
         if (request.IncreaseTo <= 0)
         {
@@ -126,6 +126,7 @@ internal sealed class ConfluentKafkaAdminProvider(IOptions<ModuleEventBusKafkaOp
 
     public async Task UpdateRetentionAsync(KafkaClusterConfig cluster, KafkaTopicRetentionRequest request, CancellationToken cancellationToken = default)
     {
+        ArgumentNullException.ThrowIfNull(request);
         ArgumentException.ThrowIfNullOrWhiteSpace(request.TopicName);
         if (request.RetentionMs <= 0)
         {
@@ -204,6 +205,19 @@ internal sealed class ConfluentKafkaAdminProvider(IOptions<ModuleEventBusKafkaOp
         }
 
         return new AdminClientBuilder(KafkaClientConfigFactory.BuildAdminConfig(cluster, Option)).Build();
+    }
+
+    private static List<KafkaBrokerInfo> MapBrokers(Metadata metadata)
+    {
+        return metadata.Brokers
+            .Select(broker => new KafkaBrokerInfo
+            {
+                BrokerId = broker.BrokerId,
+                Host = broker.Host,
+                Port = broker.Port
+            })
+            .OrderBy(broker => broker.BrokerId)
+            .ToList();
     }
 
     private async Task<Dictionary<string, long?>> DescribeTopicRetentionsAsync(
