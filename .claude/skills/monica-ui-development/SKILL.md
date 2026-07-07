@@ -1,7 +1,7 @@
 ---
 name: monica-ui-development
 description: This skill should be used when the user asks to create or modify Blazor UI components, build MudBlazor pages, style MudBlazor components, fix CSS isolation, customize themes, migrate to MudBlazor v9, validate MudBlazor CSS variables, or implement browser storage with IBrowserStorage.
-version: 2.12.0
+version: 2.13.0
 ---
 
 # Monica UI Development Guide
@@ -13,6 +13,15 @@ All script paths in this document are relative to the `monica-ui-development` sk
 Project-local temporary state for this skill is stored under:
 
 - `.tmp/monica-ui-development/mudblazor-css-variables.json` - generated machine-readable CSS variable list
+
+## Companion Audit Requirement
+
+When creating or modifying Monica UI components or pages, also use `monica-ui-audit` as a companion guardrail.
+
+- For focused component/page edits, run a targeted P0-P3 audit before changing files and let the findings shape the fix.
+- For broad UI scopes, report the audit findings first, then fix the agreed items in priority order.
+- Treat Rule #9 layout issues as audit-relevant even when there is no P0/P1 violation: missing local spacing, overflow control, centering, or shell structure belongs in the owning component `.razor.css`.
+- Do not move component-specific layout into theme CSS just to make the audit pass; theme files own global MudBlazor visuals, not page-local layout.
 
 ## MudBlazor Source Access (Use Only When Needed)
 
@@ -306,6 +315,7 @@ For `Res/Res<T>` usage, `IResultEnvelope`, and the `IsFailed` pattern in UI serv
 - [ ] Run the source check only for source-dependent work
 - [ ] If source check fails during source-dependent work, stop and register MudBlazor source through `third-party-source-catalog`
 - [ ] Confirm uncertain APIs from MudBlazor source before continuing source-dependent work
+- [ ] Use `monica-ui-audit` as a companion check for Monica UI component/page changes
 - [ ] Use CSS isolation (`.razor.css`) with wrapper + `::deep`
 - [ ] Use MudBlazor v9 async APIs
 - [ ] Use valid MudBlazor CSS variables only
