@@ -71,7 +71,7 @@ internal sealed class InMemoryKafkaConsoleRepository : IKafkaConsoleRepository
 
         lock (list)
         {
-            return Task.FromResult(list.OrderBy(snapshot => snapshot.CapturedAt).LastOrDefault() is { } snapshot
+            return Task.FromResult(list.LastOrDefault() is { } snapshot
                 ? CloneSnapshot(snapshot)
                 : null);
         }

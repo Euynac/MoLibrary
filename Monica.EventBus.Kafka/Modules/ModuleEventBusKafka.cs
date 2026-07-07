@@ -86,6 +86,7 @@ public sealed class ModuleEventBusKafka(ModuleEventBusKafkaOption option)
     {
         services.TryAddSingleton<IKafkaConsoleRepository, InMemoryKafkaConsoleRepository>();
         services.TryAddSingleton<IKafkaClusterConfigProvider, KafkaClusterConfigProvider>();
+        services.TryAddSingleton<KafkaBootstrapEndpointProbe>();
         services.TryAddScoped<IKafkaAdminProvider, ConfluentKafkaAdminProvider>();
         services.TryAddScoped<IKafkaMessageReader, ConfluentKafkaMessageReader>();
         services.TryAddScoped<IKafkaPerformanceMetricsProvider, ConfluentKafkaPerformanceMetricsProvider>();
@@ -429,6 +430,16 @@ public sealed class ModuleEventBusKafkaOption : MinimalApiModuleOptions<ModuleEv
     /// Gets or sets the request timeout used by Kafka admin operations.
     /// </summary>
     public TimeSpan AdminRequestTimeout { get; set; } = TimeSpan.FromSeconds(10);
+
+    /// <summary>
+    /// Gets or sets the managed TCP timeout used before creating native Kafka clients for console probes.
+    /// </summary>
+    /// <remarks>
+    /// The probe is a defensive preflight for user-entered bootstrap servers. When all endpoints
+    /// fail this check, the console reports the cluster as unreachable without constructing a
+    /// native Kafka client.
+    /// </remarks>
+    public TimeSpan BootstrapEndpointProbeTimeout { get; set; } = TimeSpan.FromSeconds(2);
 
     /// <summary>
     /// Gets or sets the maximum time the native Kafka producer waits while flushing on disposal.

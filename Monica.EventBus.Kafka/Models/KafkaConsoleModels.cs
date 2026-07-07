@@ -99,6 +99,17 @@ public sealed class KafkaBrokerInfo
 }
 
 /// <summary>
+/// Result of a direct Kafka connection test.
+/// </summary>
+public sealed class KafkaConnectionTestResult
+{
+    /// <summary>
+    /// Brokers returned by Kafka metadata.
+    /// </summary>
+    public IReadOnlyList<KafkaBrokerInfo> Brokers { get; set; } = [];
+}
+
+/// <summary>
 /// Kafka topic summary displayed in topic management.
 /// </summary>
 public sealed class KafkaTopicSummary

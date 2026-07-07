@@ -53,6 +53,8 @@ public sealed class KafkaPerformanceService(
 
         try
         {
+            await clusterService.EnsureDirectKafkaAccessAsync(cluster, cancellationToken);
+
             var brokers = await adminProvider.ListBrokersAsync(cluster, cancellationToken);
             var topics = await adminProvider.ListTopicsAsync(cluster, cancellationToken);
             var groups = await adminProvider.ListConsumerGroupsAsync(cluster, cancellationToken);
