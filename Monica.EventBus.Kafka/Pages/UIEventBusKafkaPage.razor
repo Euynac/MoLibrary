@@ -73,6 +73,7 @@
                                 OnRefresh="RefreshAsync"
                                 OnDelete="DeleteTopicAsync"
                                 OnViewMessages="OpenMessagesDialogAsync"
+                                OnViewBacklog="OpenTopicBacklogDialogAsync"
                                 OnIncreasePartitions="OpenIncreasePartitionsDialogAsync"
                                 OnUpdateRetention="OpenRetentionDialogAsync" />
             </MudTabPanel>
@@ -328,6 +329,30 @@
 
         var dialog = await DialogService.ShowAsync<KafkaMessagesDialog>(
             L["Topics:Dialog:MessagesTitle", topic.TopicName],
+            parameters,
+            MessageDialogOptions);
+
+        await dialog.Result;
+        StateHasChanged();
+    }
+
+    private async Task OpenTopicBacklogDialogAsync(KafkaTopicSummary topic)
+    {
+        var snapshot = await PageState.GetTopicBacklogAsync(topic.TopicName);
+        if (snapshot is null)
+        {
+            ShowStateError();
+            StateHasChanged();
+            return;
+        }
+
+        var parameters = new DialogParameters<KafkaTopicBacklogDialog>
+        {
+            { dialog => dialog.Snapshot, snapshot }
+        };
+
+        var dialog = await DialogService.ShowAsync<KafkaTopicBacklogDialog>(
+            L["Topics:Dialog:BacklogTitle", topic.TopicName],
             parameters,
             MessageDialogOptions);
 

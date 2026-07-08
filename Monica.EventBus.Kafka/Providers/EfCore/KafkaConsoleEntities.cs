@@ -180,6 +180,11 @@ public sealed class KafkaPerformanceSnapshotEntity
     public long? TotalLogEndOffset { get; set; }
 
     /// <summary>
+    /// Total retained messages across sampled non-internal topic partitions.
+    /// </summary>
+    public long? TotalAvailableMessageCount { get; set; }
+
+    /// <summary>
     /// Sum of committed offsets across sampled consumer groups and non-internal topic partitions.
     /// </summary>
     public long? TotalConsumerCommittedOffset { get; set; }
@@ -218,6 +223,7 @@ public sealed class KafkaPerformanceSnapshotEntity
             ConsumerGroupCount = ConsumerGroupCount,
             TotalLag = TotalLag,
             TotalLogEndOffset = TotalLogEndOffset,
+            TotalAvailableMessageCount = TotalAvailableMessageCount,
             TotalConsumerCommittedOffset = TotalConsumerCommittedOffset,
             MessageWriteRatePerSecond = MessageWriteRatePerSecond,
             MessageConsumeRatePerSecond = MessageConsumeRatePerSecond,
@@ -240,6 +246,7 @@ public sealed class KafkaPerformanceSnapshotEntity
             ConsumerGroupCount = model.ConsumerGroupCount,
             TotalLag = model.TotalLag,
             TotalLogEndOffset = model.TotalLogEndOffset,
+            TotalAvailableMessageCount = model.TotalAvailableMessageCount,
             TotalConsumerCommittedOffset = model.TotalConsumerCommittedOffset,
             MessageWriteRatePerSecond = model.MessageWriteRatePerSecond,
             MessageConsumeRatePerSecond = model.MessageConsumeRatePerSecond,

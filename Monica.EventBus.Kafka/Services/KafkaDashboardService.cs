@@ -26,7 +26,8 @@ public sealed class KafkaDashboardService(
             LatestPerformance = latestPerformance,
             BrokerCount = ResolveCount(selectedCluster?.BrokerCount, latestPerformance?.BrokerCount),
             TopicCount = ResolveCount(selectedCluster?.TopicCount, latestPerformance?.TopicCount),
-            ConsumerGroupCount = ResolveCount(selectedCluster?.ConsumerGroupCount, latestPerformance?.ConsumerGroupCount)
+            ConsumerGroupCount = ResolveCount(selectedCluster?.ConsumerGroupCount, latestPerformance?.ConsumerGroupCount),
+            TotalAvailableMessageCount = latestPerformance?.TotalAvailableMessageCount
         };
     }
 

@@ -35,6 +35,15 @@
         <MudItem xs="12" md="6" lg="2">
             <MudPaper Class="pa-4" Outlined="true">
                 <MudStack Spacing="1">
+                    <MudText Typo="Typo.overline">@L["Dashboard:Cards:AvailableMessages"]</MudText>
+                    <MudText Typo="Typo.h5">@FormatAvailableMessages(State.Dashboard.TotalAvailableMessageCount)</MudText>
+                    <MudText Typo="Typo.caption" Color="Color.Secondary">@L["Dashboard:Cards:AvailableMessagesHint"]</MudText>
+                </MudStack>
+            </MudPaper>
+        </MudItem>
+        <MudItem xs="12" md="6" lg="2">
+            <MudPaper Class="pa-4" Outlined="true">
+                <MudStack Spacing="1">
                     <MudText Typo="Typo.overline">@L["Dashboard:Cards:ConsumerGroups"]</MudText>
                     <MudText Typo="Typo.h5">@State.Dashboard.ConsumerGroupCount</MudText>
                     <MudText Typo="Typo.caption" Color="Color.Secondary">@L["Dashboard:Cards:ConsumerGroupsHint"]</MudText>
@@ -126,5 +135,10 @@
         return rate.HasValue
             ? L["Performance:Values:RatePerSecond", rate.Value.ToString("0.##")]
             : L["Performance:Values:RateUnknown"];
+    }
+
+    private string FormatAvailableMessages(long? availableMessageCount)
+    {
+        return availableMessageCount?.ToString() ?? L["Dashboard:Values:AvailableMessagesUnknown"];
     }
 }

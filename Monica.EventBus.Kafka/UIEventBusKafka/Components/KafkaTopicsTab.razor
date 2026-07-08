@@ -40,6 +40,7 @@
                 <MudTh>@L["Topics:Columns:Name"]</MudTh>
                 <MudTh>@L["Topics:Columns:Partitions"]</MudTh>
                 <MudTh>@L["Topics:Columns:Replication"]</MudTh>
+                <MudTh>@L["Topics:Columns:AvailableMessages"]</MudTh>
                 <MudTh>@L["Topics:Columns:Retention"]</MudTh>
                 <MudTh>@L["Topics:Columns:Actions"]</MudTh>
             </HeaderContent>
@@ -55,6 +56,7 @@
                 </MudTd>
                 <MudTd DataLabel="@L["Topics:Columns:Partitions"]">@context.Partitions</MudTd>
                 <MudTd DataLabel="@L["Topics:Columns:Replication"]">@context.ReplicationFactor</MudTd>
+                <MudTd DataLabel="@L["Topics:Columns:AvailableMessages"]">@FormatAvailableMessages(context.AvailableMessageCount)</MudTd>
                 <MudTd DataLabel="@L["Topics:Columns:Retention"]">@FormatRetention(context.RetentionMs)</MudTd>
                 <MudTd DataLabel="@L["Topics:Columns:Actions"]">
                     <MudMenu Icon="@Icons.Material.Filled.MoreVert"
@@ -63,6 +65,9 @@
                              Disabled="@State.IsBusy">
                         <MudMenuItem Icon="@Icons.Material.Filled.Visibility" OnClick="@(() => OnViewMessages.InvokeAsync(context))">
                             @L["Topics:Actions:Messages"]
+                        </MudMenuItem>
+                        <MudMenuItem Icon="@Icons.Material.Filled.Storage" OnClick="@(() => OnViewBacklog.InvokeAsync(context))">
+                            @L["Topics:Actions:Backlog"]
                         </MudMenuItem>
                         <MudMenuItem Icon="@Icons.Material.Filled.CallSplit" OnClick="@(() => OnIncreasePartitions.InvokeAsync(context))">
                             @L["Topics:Actions:Partitions"]
@@ -91,6 +96,8 @@
 
     [Parameter] public EventCallback<KafkaTopicSummary> OnViewMessages { get; set; }
 
+    [Parameter] public EventCallback<KafkaTopicSummary> OnViewBacklog { get; set; }
+
     [Parameter] public EventCallback<KafkaTopicSummary> OnIncreasePartitions { get; set; }
 
     [Parameter] public EventCallback<KafkaTopicSummary> OnUpdateRetention { get; set; }
@@ -100,5 +107,10 @@
         return retentionMs is null
             ? L["Topics:Values:RetentionUnknown"]
             : L["Topics:Values:RetentionMs", retentionMs.Value];
+    }
+
+    private string FormatAvailableMessages(long? availableMessageCount)
+    {
+        return availableMessageCount?.ToString() ?? L["Topics:Values:AvailableMessagesUnknown"];
     }
 }

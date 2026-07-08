@@ -123,6 +123,7 @@ internal sealed class InMemoryKafkaConsoleRepository : IKafkaConsoleRepository
             ConsumerGroupCount = snapshot.ConsumerGroupCount,
             TotalLag = snapshot.TotalLag,
             TotalLogEndOffset = snapshot.TotalLogEndOffset,
+            TotalAvailableMessageCount = snapshot.TotalAvailableMessageCount,
             TotalConsumerCommittedOffset = snapshot.TotalConsumerCommittedOffset,
             MessageWriteRatePerSecond = snapshot.MessageWriteRatePerSecond,
             MessageConsumeRatePerSecond = snapshot.MessageConsumeRatePerSecond,

@@ -334,6 +334,30 @@ public sealed class EventBusKafkaPageState(KafkaConsoleFacade facade)
     }
 
     /// <summary>
+    /// Gets partition-level retained-message inventory for a selected cluster topic.
+    /// </summary>
+    public async Task<KafkaTopicBacklogSnapshot?> GetTopicBacklogAsync(
+        string topicName,
+        CancellationToken cancellationToken = default)
+    {
+        if (SelectedClusterId is null)
+        {
+            return null;
+        }
+
+        KafkaTopicBacklogSnapshot? snapshot = null;
+        await RunAsync(async () =>
+        {
+            if (TryRead(await facade.GetTopicBacklogAsync(SelectedClusterId, topicName, cancellationToken), out var loadedSnapshot))
+            {
+                snapshot = loadedSnapshot;
+            }
+        });
+
+        return snapshot;
+    }
+
+    /// <summary>
     /// Captures and stores a fresh performance snapshot.
     /// </summary>
     public async Task<bool> CapturePerformanceAsync(CancellationToken cancellationToken = default)
@@ -398,6 +422,7 @@ public sealed class EventBusKafkaPageState(KafkaConsoleFacade facade)
         Topics = [];
         ConsumerGroups = [];
         PerformanceSnapshots = [];
+        Dashboard.TotalAvailableMessageCount = null;
     }
 
     private void ApplyClusterSummary(KafkaClusterSummary summary)
@@ -442,7 +467,17 @@ public sealed class EventBusKafkaPageState(KafkaConsoleFacade facade)
                 : TryRead(result, out topics))
         {
             Topics = topics.ToList();
+            ApplyTopicBacklogSummary();
         }
+    }
+
+    private void ApplyTopicBacklogSummary()
+    {
+        Dashboard.TotalAvailableMessageCount = Topics.Count == 0
+            ? 0
+            : Topics.All(topic => topic.AvailableMessageCount.HasValue)
+                ? Topics.Sum(topic => topic.AvailableMessageCount!.Value)
+                : Dashboard.LatestPerformance?.TotalAvailableMessageCount;
     }
 
     private async Task RefreshConsumerGroupsAsync(CancellationToken cancellationToken, bool suppressErrors = false)

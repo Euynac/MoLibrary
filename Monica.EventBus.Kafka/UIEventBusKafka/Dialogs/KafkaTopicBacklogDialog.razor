@@ -1,0 +1,56 @@
+@inject IStringLocalizer<EventBusKafkaResource> L
+
+<MudDialog>
+    <DialogContent>
+        <MudStack Spacing="3">
+            <MudAlert Severity="Severity.Info" Variant="Variant.Outlined">
+                @L["Topics:BacklogDialog:Summary", Snapshot.TotalAvailableMessageCount, FormatCapturedAt()]
+            </MudAlert>
+
+            @if (Snapshot.Partitions.Count == 0)
+            {
+                <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined">
+                    @L["Topics:BacklogDialog:Empty"]
+                </MudAlert>
+            }
+            else
+            {
+                <MudTable T="KafkaTopicPartitionBacklog" Items="Snapshot.Partitions" Dense="true" Hover="true">
+                    <HeaderContent>
+                        <MudTh>@L["Topics:BacklogDialog:Columns:Partition"]</MudTh>
+                        <MudTh>@L["Topics:BacklogDialog:Columns:EarliestOffset"]</MudTh>
+                        <MudTh>@L["Topics:BacklogDialog:Columns:LatestOffset"]</MudTh>
+                        <MudTh>@L["Topics:BacklogDialog:Columns:AvailableMessages"]</MudTh>
+                    </HeaderContent>
+                    <RowTemplate>
+                        <MudTd DataLabel="@L["Topics:BacklogDialog:Columns:Partition"]">@context.Partition</MudTd>
+                        <MudTd DataLabel="@L["Topics:BacklogDialog:Columns:EarliestOffset"]">@context.EarliestOffset</MudTd>
+                        <MudTd DataLabel="@L["Topics:BacklogDialog:Columns:LatestOffset"]">@context.LatestOffset</MudTd>
+                        <MudTd DataLabel="@L["Topics:BacklogDialog:Columns:AvailableMessages"]">@context.AvailableMessageCount</MudTd>
+                    </RowTemplate>
+                </MudTable>
+            }
+        </MudStack>
+    </DialogContent>
+    <DialogActions>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="Close">
+            @L["Common:Actions:Close"]
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] private IMudDialogInstance? MudDialog { get; set; }
+
+    [Parameter, EditorRequired] public KafkaTopicBacklogSnapshot Snapshot { get; set; } = new();
+
+    private string FormatCapturedAt()
+    {
+        return Snapshot.CapturedAt.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss zzz");
+    }
+
+    private void Close()
+    {
+        MudDialog?.Close();
+    }
+}
