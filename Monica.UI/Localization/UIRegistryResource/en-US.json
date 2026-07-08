@@ -89,6 +89,9 @@
     "EventBusMonitor": {
       "Title": "Event Bus Monitor"
     },
+    "EventBusKafka": {
+      "Title": "Kafka EventBus"
+    },
     "StateStoreManage": {
       "Title": "State Store Management"
     },

@@ -89,6 +89,9 @@
     "EventBusMonitor": {
       "Title": "事件总线监控"
     },
+    "EventBusKafka": {
+      "Title": "Kafka EventBus"
+    },
     "StateStoreManage": {
       "Title": "状态存储管理"
     },

@@ -18,6 +18,18 @@ public enum BuiltInModuleKey
     /// Optional EventBus bridge module for distributed configuration reload notifications.
     /// </summary>
     ConfigurationEventBus,
+    /// <summary>
+    /// Kafka provider and management console module for EventBus integrations.
+    /// </summary>
+    EventBusKafka,
+    /// <summary>
+    /// Kafka provider management console UI module for EventBus integrations.
+    /// </summary>
+    EventBusKafkaUI,
+    /// <summary>
+    /// Kafka management console EF Core persistence module.
+    /// </summary>
+    EventBusKafkaEfCore,
     Authentication,
     ConfigurationCenter,
     ServiceDiscovery,

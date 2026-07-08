@@ -1,0 +1,104 @@
+@using Monica.EventBus.Kafka.UIEventBusKafka.State
+@inject IStringLocalizer<EventBusKafkaResource> L
+
+<MudStack Spacing="3">
+    <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Spacing="2">
+        <MudText Typo="Typo.h6">@L["Topics:Title"]</MudText>
+        <MudStack Row="true" Spacing="1">
+            <MudButton Variant="Variant.Outlined"
+                       StartIcon="@Icons.Material.Filled.Refresh"
+                       Disabled="@State.IsBusy"
+                       OnClick="OnRefresh">
+                @L["Common:Actions:Refresh"]
+            </MudButton>
+            <MudButton Variant="Variant.Filled"
+                       Color="Color.Primary"
+                       StartIcon="@Icons.Material.Filled.Add"
+                       Disabled="@(State.IsBusy || !State.CanAdminSelectedCluster)"
+                       OnClick="OnCreate">
+                @L["Topics:Actions:Create"]
+            </MudButton>
+        </MudStack>
+    </MudStack>
+
+    @if (!State.CanAdminSelectedCluster)
+    {
+        <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined">
+            @L["Topics:Unavailable"]
+        </MudAlert>
+    }
+    else if (State.Topics.Count == 0)
+    {
+        <MudAlert Severity="Severity.Info" Variant="Variant.Outlined">
+            @L["Topics:Empty"]
+        </MudAlert>
+    }
+    else
+    {
+        <MudTable T="KafkaTopicSummary" Items="@State.Topics" Dense="true" Hover="true">
+            <HeaderContent>
+                <MudTh>@L["Topics:Columns:Name"]</MudTh>
+                <MudTh>@L["Topics:Columns:Partitions"]</MudTh>
+                <MudTh>@L["Topics:Columns:Replication"]</MudTh>
+                <MudTh>@L["Topics:Columns:Retention"]</MudTh>
+                <MudTh>@L["Topics:Columns:Actions"]</MudTh>
+            </HeaderContent>
+            <RowTemplate>
+                <MudTd DataLabel="@L["Topics:Columns:Name"]">
+                    <MudStack Spacing="0">
+                        <MudText Typo="Typo.body2">@context.TopicName</MudText>
+                        @if (context.IsInternal)
+                        {
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">@L["Topics:Values:Internal"]</MudText>
+                        }
+                    </MudStack>
+                </MudTd>
+                <MudTd DataLabel="@L["Topics:Columns:Partitions"]">@context.Partitions</MudTd>
+                <MudTd DataLabel="@L["Topics:Columns:Replication"]">@context.ReplicationFactor</MudTd>
+                <MudTd DataLabel="@L["Topics:Columns:Retention"]">@FormatRetention(context.RetentionMs)</MudTd>
+                <MudTd DataLabel="@L["Topics:Columns:Actions"]">
+                    <MudMenu Icon="@Icons.Material.Filled.MoreVert"
+                             Size="Size.Small"
+                             Dense="true"
+                             Disabled="@State.IsBusy">
+                        <MudMenuItem Icon="@Icons.Material.Filled.Visibility" OnClick="@(() => OnViewMessages.InvokeAsync(context))">
+                            @L["Topics:Actions:Messages"]
+                        </MudMenuItem>
+                        <MudMenuItem Icon="@Icons.Material.Filled.CallSplit" OnClick="@(() => OnIncreasePartitions.InvokeAsync(context))">
+                            @L["Topics:Actions:Partitions"]
+                        </MudMenuItem>
+                        <MudMenuItem Icon="@Icons.Material.Filled.Schedule" OnClick="@(() => OnUpdateRetention.InvokeAsync(context))">
+                            @L["Topics:Actions:Retention"]
+                        </MudMenuItem>
+                        <MudMenuItem Icon="@Icons.Material.Filled.Delete" OnClick="@(() => OnDelete.InvokeAsync(context))">
+                            @L["Common:Actions:Delete"]
+                        </MudMenuItem>
+                    </MudMenu>
+                </MudTd>
+            </RowTemplate>
+        </MudTable>
+    }
+</MudStack>
+
+@code {
+    [Parameter, EditorRequired] public EventBusKafkaPageState State { get; set; } = default!;
+
+    [Parameter] public EventCallback OnCreate { get; set; }
+
+    [Parameter] public EventCallback OnRefresh { get; set; }
+
+    [Parameter] public EventCallback<KafkaTopicSummary> OnDelete { get; set; }
+
+    [Parameter] public EventCallback<KafkaTopicSummary> OnViewMessages { get; set; }
+
+    [Parameter] public EventCallback<KafkaTopicSummary> OnIncreasePartitions { get; set; }
+
+    [Parameter] public EventCallback<KafkaTopicSummary> OnUpdateRetention { get; set; }
+
+    private string FormatRetention(long? retentionMs)
+    {
+        return retentionMs is null
+            ? L["Topics:Values:RetentionUnknown"]
+            : L["Topics:Values:RetentionMs", retentionMs.Value];
+    }
+}

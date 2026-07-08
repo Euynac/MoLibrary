@@ -1,0 +1,55 @@
+@inject IStringLocalizer<EventBusKafkaResource> L
+
+<MudDialog>
+    <DialogContent>
+        <MudStack Spacing="3">
+            @if (!string.IsNullOrWhiteSpace(_errorMessage))
+            {
+                <MudAlert Severity="Severity.Error" Variant="Variant.Outlined">
+                    @_errorMessage
+                </MudAlert>
+            }
+
+            <MudText Typo="Typo.body2" Color="Color.Secondary">
+                @L["Topics:Dialog:RetentionMessage", Topic.TopicName]
+            </MudText>
+            <MudNumericField T="long" @bind-Value="_retentionMs" Label="@L["Topics:Fields:RetentionMs"]" Min="1" />
+        </MudStack>
+    </DialogContent>
+    <DialogActions>
+        <MudButton Variant="Variant.Text" OnClick="Cancel">@L["Common:Actions:Cancel"]</MudButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="Save">@L["Common:Actions:Save"]</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] private IMudDialogInstance? MudDialog { get; set; }
+
+    [Parameter, EditorRequired] public KafkaTopicSummary Topic { get; set; } = new();
+
+    private long _retentionMs;
+
+    private string? _errorMessage;
+
+    protected override void OnInitialized()
+    {
+        _retentionMs = Topic.RetentionMs.GetValueOrDefault(604800000);
+    }
+
+    private void Save()
+    {
+        _errorMessage = null;
+        if (_retentionMs <= 0)
+        {
+            _errorMessage = L["Topics:Validation:RetentionRequired"];
+            return;
+        }
+
+        MudDialog?.Close(DialogResult.Ok(_retentionMs));
+    }
+
+    private void Cancel()
+    {
+        MudDialog?.Cancel();
+    }
+}

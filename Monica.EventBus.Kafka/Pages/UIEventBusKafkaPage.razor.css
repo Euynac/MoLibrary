@@ -1,0 +1,75 @@
+.eventbus-kafka-page {
+    height: 100%;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    width: 100%;
+    padding: 20px;
+}
+
+.page-banner {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 18px;
+    border-radius: 8px;
+    border: 1px solid var(--mud-palette-lines-default);
+    background: var(--mud-palette-surface);
+}
+
+.page-banner__copy {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    min-width: 0;
+}
+
+.page-banner__actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
+    justify-content: flex-end;
+}
+
+::deep .page-eyebrow {
+    letter-spacing: 0;
+    text-transform: uppercase;
+    color: var(--mud-palette-text-secondary);
+}
+
+.page-state {
+    flex: 1 1 auto;
+    min-height: 320px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 28px;
+    border-radius: 8px;
+    border: 1px dashed var(--mud-palette-lines-default);
+    background: color-mix(in srgb, var(--mud-palette-background-gray) 36%, var(--mud-palette-surface));
+}
+
+::deep .eventbus-kafka-tab-panels {
+    padding: 16px;
+}
+
+@media (max-width: 720px) {
+    .eventbus-kafka-page {
+        padding: 14px;
+        gap: 14px;
+    }
+
+    .page-banner {
+        flex-direction: column;
+    }
+
+    .page-banner__actions {
+        justify-content: flex-start;
+    }
+}
