@@ -37,3 +37,64 @@
 .configuration-time-picker-menu {
     padding: 0.75rem;
 }
+
+.configuration-regex-hint {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.5rem;
+    margin-top: 0.25rem;
+    min-width: 0;
+}
+
+.configuration-regex-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    min-height: 1.5rem;
+    color: var(--mud-palette-info);
+    font-size: 0.75rem;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.configuration-regex-badge ::deep .mud-icon-root {
+    display: block;
+}
+
+.configuration-regex-preview {
+    flex: 1 1 auto;
+    min-width: 0;
+    padding: 0.25rem 0.5rem;
+    border: 1px solid var(--mud-palette-lines-default);
+    border-radius: var(--mud-default-borderradius);
+    background: var(--mud-palette-background-gray);
+    color: var(--mud-palette-text-primary);
+    font-size: 0.75rem;
+    line-height: 1.35;
+    overflow-wrap: anywhere;
+    white-space: pre-wrap;
+}
+
+.configuration-regex-token-escape {
+    color: var(--mud-palette-info);
+    font-weight: 600;
+}
+
+.configuration-regex-token-invalid {
+    color: var(--mud-palette-error);
+    font-weight: 600;
+    text-decoration-line: underline;
+    text-decoration-style: wavy;
+    text-decoration-color: var(--mud-palette-error);
+}
+
+@media (max-width: 600px) {
+    .configuration-regex-hint {
+        flex-direction: column;
+        gap: 0.25rem;
+    }
+
+    .configuration-regex-preview {
+        width: 100%;
+    }
+}

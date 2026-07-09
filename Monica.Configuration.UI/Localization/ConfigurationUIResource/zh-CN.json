@@ -130,9 +130,13 @@
       "SensitivePlaceholder": "已配置。留空表示不修改密钥。",
       "Required": "值不能为空。",
       "InvalidPattern": "值不符合要求的格式。",
+      "InvalidRegexPattern": "正则表达式无效：{0}",
       "InvalidTimeSpan": "值必须是有效的时间值，例如 00:15 或 00:15:00。",
       "OutOfRange": "值超出允许范围。",
       "TimeSpanPlaceholder": "00:15 或 00:15:00",
+      "RegexPattern": "正则",
+      "RegexPatternTooltip": "该值会按正则表达式处理。Unicode 字符会保持为正则兼容的 \\uXXXX 转义形式。",
+      "RegexPreview": "正则转义预览",
       "TooLong": "值过长。",
       "TooShort": "值过短。"
     },

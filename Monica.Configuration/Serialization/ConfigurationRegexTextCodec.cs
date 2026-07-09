@@ -1,6 +1,7 @@
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using System.Text.RegularExpressions;
 using Monica.Configuration.Models;
 using Monica.Tool.Text;
 
@@ -11,6 +12,8 @@ namespace Monica.Configuration.Serialization;
 /// </summary>
 public static class ConfigurationRegexTextCodec
 {
+    private const int REGEX_VALIDATION_TIMEOUT_MILLISECONDS = 1000;
+
     /// <summary>
     /// Normalizes a regular expression pattern so non-ASCII UTF-16 code units use uppercase <c>\uXXXX</c> escapes.
     /// Existing ASCII regex syntax is left unchanged.
@@ -126,6 +129,33 @@ public static class ConfigurationRegexTextCodec
         }
 
         return result.ToString();
+    }
+
+    /// <summary>
+    /// Checks whether the supplied pattern can be parsed by the .NET regular expression engine.
+    /// </summary>
+    /// <param name="pattern">The regex pattern to validate.</param>
+    /// <param name="errorMessage">The parser error message when validation fails.</param>
+    /// <returns><see langword="true"/> when the pattern is empty or valid; otherwise <see langword="false"/>.</returns>
+    public static bool TryValidatePattern(string? pattern, out string? errorMessage)
+    {
+        if (string.IsNullOrEmpty(pattern))
+        {
+            errorMessage = null;
+            return true;
+        }
+
+        try
+        {
+            _ = new Regex(pattern, RegexOptions.None, TimeSpan.FromMilliseconds(REGEX_VALIDATION_TIMEOUT_MILLISECONDS));
+            errorMessage = null;
+            return true;
+        }
+        catch (ArgumentException ex)
+        {
+            errorMessage = ex.Message;
+            return false;
+        }
     }
 
     private static void NormalizeObject(JsonObject jsonObject, ConfigurationNodeDefinition schema)

@@ -121,6 +121,26 @@
                       oncopy="@(Node.IsSensitive ? "return false" : null)"
                       oncut="@(Node.IsSensitive ? "return false" : null)"
                       Disabled="@Disabled" />
+        @if (Node.IsRegexPatternText)
+        {
+            <div class="configuration-regex-hint">
+                <MudTooltip Text="@L["State:Editor:RegexPatternTooltip"]">
+                    <span class="configuration-regex-badge">
+                        <MudIcon Icon="@Icons.Material.Filled.Functions" Size="Size.Small" />
+                        <span>@L["State:Editor:RegexPattern"]</span>
+                    </span>
+                </MudTooltip>
+                @if (CanShowRegexPreview && RegexPreviewTokens.Count > 0)
+                {
+                    <code class="configuration-regex-preview" aria-label="@L["State:Editor:RegexPreview"]">
+                        @foreach (var token in RegexPreviewTokens)
+                        {
+                            <span class="@token.CssClass">@token.Text</span>
+                        }
+                    </code>
+                }
+            </div>
+        }
     }
 </div>
 
@@ -162,6 +182,11 @@
     private string? ActiveError => _error ?? ValidationIssue?.ValidationError;
 
     private bool HasError => !string.IsNullOrWhiteSpace(ActiveError);
+
+    private bool CanShowRegexPreview => !Node.IsSensitive || _showSensitive;
+
+    private IReadOnlyList<ConfigurationRegexPatternToken> RegexPreviewTokens =>
+        ConfigurationRegexPatternHighlighter.Tokenize(_textValue);
 
     private string EditorClass => string.Join(' ', new[]
     {

@@ -129,6 +129,11 @@ internal static class ConfigurationScalarValueCodec
         string value,
         IStringLocalizer<ConfigurationUIResource> localizer)
     {
+        if (node.IsRegexPatternText && !ConfigurationRegexTextCodec.TryValidatePattern(value, out var regexError))
+        {
+            return localizer["State:Editor:InvalidRegexPattern", regexError ?? localizer["State:Editor:InvalidPattern"].Value].Value;
+        }
+
         return node.ValueKind switch
         {
             ConfigurationValueKind.TimeSpan when !ConfigurationScalarTextCodec.TryParseTimeSpan(value, out _) =>
