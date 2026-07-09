@@ -180,7 +180,7 @@ public sealed class KafkaPerformanceSnapshotEntity
     public long? TotalLogEndOffset { get; set; }
 
     /// <summary>
-    /// Total retained messages across sampled non-internal topic partitions.
+    /// Total retained messages across all sampled topic partitions.
     /// </summary>
     public long? TotalAvailableMessageCount { get; set; }
 

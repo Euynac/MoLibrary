@@ -65,18 +65,24 @@ internal sealed class ConfluentKafkaOffsetMetricsProvider(IOptions<ModuleEventBu
         IReadOnlyList<KafkaConsumerGroupSummary> consumerGroups,
         CancellationToken cancellationToken = default)
     {
-        var partitions = BuildTopicPartitions(topics.Where(topic => !topic.IsInternal));
-        if (partitions.Count == 0)
+        var allPartitions = BuildTopicPartitions(topics);
+        if (allPartitions.Count == 0)
         {
             return new KafkaPerformanceOffsetTotals();
         }
 
         using var admin = CreateAdminClient(cluster);
-        var watermarks = await ReadWatermarksAsync(admin, partitions, cancellationToken);
-        var latestOffsets = watermarks.ToDictionary(
+        var watermarks = await ReadWatermarksAsync(admin, allPartitions, cancellationToken);
+        var applicationPartitions = BuildTopicPartitions(topics.Where(topic => !topic.IsInternal));
+        var applicationWatermarks = applicationPartitions
+            .Where(watermarks.ContainsKey)
+            .ToDictionary(partition => partition, partition => watermarks[partition]);
+        var latestOffsets = applicationWatermarks.ToDictionary(
             item => item.Key,
             item => item.Value.LatestOffset);
-        var consumerOffsets = await ReadConsumerOffsetsAsync(admin, partitions, latestOffsets, consumerGroups, cancellationToken);
+        var consumerOffsets = latestOffsets.Count == 0
+            ? new ConsumerOffsetTotals(null, null)
+            : await ReadConsumerOffsetsAsync(admin, applicationPartitions, latestOffsets, consumerGroups, cancellationToken);
 
         return new KafkaPerformanceOffsetTotals
         {

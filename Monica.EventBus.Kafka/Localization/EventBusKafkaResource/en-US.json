@@ -119,7 +119,7 @@
       "ConsumerGroups": "Consumer groups",
       "ConsumerGroupsHint": "Described from Kafka admin APIs",
       "AvailableMessages": "Available messages",
-      "AvailableMessagesHint": "Retained messages readable by new consumers",
+      "AvailableMessagesHint": "Sum of available messages across all topics",
       "WriteRate": "Write rate",
       "WriteRateHint": "Latest offset growth",
       "ConsumeRate": "Consume rate",

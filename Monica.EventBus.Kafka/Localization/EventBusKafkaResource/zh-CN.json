@@ -119,7 +119,7 @@
       "ConsumerGroups": "消费者组",
       "ConsumerGroupsHint": "来自 Kafka 管理 API 描述",
       "AvailableMessages": "可消费消息",
-      "AvailableMessagesHint": "新消费者可读取的保留消息",
+      "AvailableMessagesHint": "所有主题可消费消息总和",
       "WriteRate": "写入速率",
       "WriteRateHint": "来自最新 offset 增长",
       "ConsumeRate": "消费速率",

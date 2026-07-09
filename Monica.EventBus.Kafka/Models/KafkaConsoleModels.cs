@@ -463,7 +463,7 @@ public sealed class KafkaPerformanceSnapshot
     public long? TotalLogEndOffset { get; set; }
 
     /// <summary>
-    /// Total retained messages across sampled non-internal topic partitions.
+    /// Total retained messages across all sampled topic partitions.
     /// </summary>
     /// <remarks>
     /// This is independent of consumer groups and can be calculated when no consumer group exists.
@@ -517,7 +517,7 @@ public sealed class KafkaPerformanceOffsetTotals
     public long? TotalLag { get; set; }
 
     /// <summary>
-    /// Total retained messages across sampled non-internal topic partitions.
+    /// Total retained messages across all sampled topic partitions.
     /// </summary>
     public long? TotalAvailableMessageCount { get; set; }
 }
