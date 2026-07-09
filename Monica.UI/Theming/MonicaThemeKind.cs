@@ -53,5 +53,10 @@ public enum MonicaThemeKind
     /// <summary>
     /// A minimalist ink painting theme.
     /// </summary>
-    ZenInk = 9
+    ZenInk = 9,
+
+    /// <summary>
+    /// An inked comic theme with bold print-paper surfaces.
+    /// </summary>
+    ComicBurst = 10
 }

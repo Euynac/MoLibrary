@@ -49,6 +49,10 @@
       "ZenInk": {
         "Name": "Zen Sumi-e",
         "Description": "Minimalist Chinese ink wash painting style with ample white space"
+      },
+      "ComicBurst": {
+        "Name": "Comic Burst",
+        "Description": "Inked comic panels with paper texture, hard shadows, and saturated red-yellow accents"
       }
     }
   },

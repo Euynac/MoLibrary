@@ -29,6 +29,7 @@ public static class ThemeCatalog
         RegisterTheme(new MacaronSweetheartTheme());
         RegisterTheme(new InkLandscapeTheme());
         RegisterTheme(new ZenInkTheme());
+        RegisterTheme(new ComicBurstTheme());
     }
 
     /// <summary>

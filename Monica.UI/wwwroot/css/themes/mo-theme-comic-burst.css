@@ -1,0 +1,550 @@
+/* Monica Comic Burst Theme - inked comic panels inspired by Komi Store */
+
+@font-face {
+    font-family: 'Komi Manga Display';
+    src: url('../../fonts/Komi-Anton-Regular.woff2') format('woff2');
+    font-weight: 400;
+    font-style: normal;
+    font-display: swap;
+    unicode-range: U+0000-024F, U+1E00-1EFF;
+}
+
+@font-face {
+    font-family: 'Komi Manga Display';
+    src: url('../../fonts/Komi-ZCOOL-QingKe-HuangYou.woff2') format('woff2');
+    font-weight: 400;
+    font-style: normal;
+    font-display: swap;
+    unicode-range: U+2E80-2EFF, U+3000-303F, U+31C0-31EF, U+3400-4DBF, U+4E00-9FFF, U+F900-FAFF, U+FF00-FFEF;
+}
+
+@font-face {
+    font-family: 'Komi Manga Display';
+    src: url('../../fonts/Komi-ZCOOL-QingKe-HuangYou.woff2') format('woff2');
+    font-weight: 500;
+    font-style: normal;
+    font-display: swap;
+    unicode-range: U+2E80-2EFF, U+3000-303F, U+31C0-31EF, U+3400-4DBF, U+4E00-9FFF, U+F900-FAFF, U+FF00-FFEF;
+}
+
+@font-face {
+    font-family: 'Komi Manga Display';
+    src: url('../../fonts/Komi-ZCOOL-QingKe-HuangYou.woff2') format('woff2');
+    font-weight: 700;
+    font-style: normal;
+    font-display: swap;
+    unicode-range: U+2E80-2EFF, U+3000-303F, U+31C0-31EF, U+3400-4DBF, U+4E00-9FFF, U+F900-FAFF, U+FF00-FFEF;
+}
+
+@font-face {
+    font-family: 'Komi Manga Display';
+    src: url('../../fonts/Komi-ZCOOL-QingKe-HuangYou.woff2') format('woff2');
+    font-weight: 900;
+    font-style: normal;
+    font-display: swap;
+    unicode-range: U+2E80-2EFF, U+3000-303F, U+31C0-31EF, U+3400-4DBF, U+4E00-9FFF, U+F900-FAFF, U+FF00-FFEF;
+}
+
+@font-face {
+    font-family: 'Komi Manga Mono';
+    src: url('../../fonts/Komi-JetBrainsMono.woff2') format('woff2');
+    font-weight: 100 800;
+    font-style: normal;
+    font-display: swap;
+}
+
+:root[data-theme="comic-burst-light"],
+:root[data-theme="comic-burst-dark"],
+.mo-theme-comic-burst-light,
+.mo-theme-comic-burst-dark {
+    --mo-comic-font-display: 'Komi Manga Display', 'Anton', 'ZCOOL QingKe HuangYou', 'Microsoft YaHei UI', 'PingFang SC', 'Hiragino Sans GB', 'Source Han Sans SC', 'WenQuanYi Micro Hei', sans-serif;
+    --mo-comic-font-body: 'Microsoft YaHei UI', 'PingFang SC', 'Hiragino Sans GB', 'Source Han Sans SC', 'WenQuanYi Micro Hei', system-ui, sans-serif;
+    --mo-comic-font-mono: 'Komi Manga Mono', 'JetBrains Mono', 'Geist Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+    --mo-comic-border-panel: 3px solid var(--mo-comic-ink);
+    --mo-comic-border-control: 2px solid var(--mo-comic-ink);
+    --mo-comic-shadow-panel: 6px 6px 0 var(--mo-comic-shadow);
+    --mo-comic-shadow-control: 4px 4px 0 var(--mo-comic-shadow);
+    --mo-comic-shadow-subtle: 3px 3px 0 var(--mo-comic-shadow);
+    --mo-comic-shadow-selected: 8px 8px 0 var(--mo-comic-accent), 8px 8px 0 3px var(--mo-comic-ink);
+    --mo-comic-transition: 120ms cubic-bezier(0.2, 0, 0, 1);
+    --mo-card-border-radius: 0px;
+    --mo-dialog-border-radius: 0px;
+    --mo-input-border-radius: 0px;
+    --mo-button-border-radius: 0px;
+    --mo-nav-menu-border-radius: 0px;
+    --mo-appbar-backdrop-filter: none;
+    --mo-appbar-border-bottom: var(--mo-comic-border-panel);
+    --mo-appbar-box-shadow: none;
+    --mo-appbar-gap: 20px;
+    --mo-appbar-menu-item-border-radius: 0px;
+    --mo-appbar-menu-item-border: 2px solid transparent;
+    --mo-appbar-menu-item-hover-border: var(--mo-comic-border-control);
+    --mo-appbar-menu-item-active-border: var(--mo-comic-border-control);
+    --mo-appbar-menu-item-font-family: var(--mo-comic-font-body);
+    --mo-appbar-menu-item-font-size: 0.78rem;
+    --mo-appbar-menu-item-font-weight: 700;
+    --mo-appbar-menu-item-letter-spacing: 0.04em;
+    --mo-appbar-menu-item-text-transform: uppercase;
+    --mo-appbar-menu-item-active-font-weight: 700;
+    --mo-appbar-menu-item-hover-shadow: var(--mo-comic-shadow-subtle);
+    --mo-appbar-menu-item-hover-transform: translate(-1px, -1px);
+    --mo-appbar-menu-item-active-shadow: var(--mo-comic-shadow-subtle);
+    --mo-appbar-menu-item-active-transform: translate(-1px, -1px);
+    --mo-appbar-menu-item-transition:
+        background-color var(--mo-comic-transition),
+        border-color var(--mo-comic-transition),
+        box-shadow var(--mo-comic-transition),
+        color var(--mo-comic-transition),
+        transform var(--mo-comic-transition);
+}
+
+:root[data-theme="comic-burst-light"],
+.mo-theme-comic-burst-light {
+    --mo-comic-page: #f1eadc;
+    --mo-comic-surface: #faf5ea;
+    --mo-comic-surface-strong: #fff6e3;
+    --mo-comic-surface-variant: #e7dec9;
+    --mo-comic-ink: #1b150d;
+    --mo-comic-ink-soft: #695f50;
+    --mo-comic-shadow: #1b150d;
+    --mo-comic-accent: #d8202a;
+    --mo-comic-on-accent: #ffffff;
+    --mo-comic-warn: #f5a300;
+    --mo-comic-on-warn: #1b150d;
+    --mo-comic-tone: rgba(27, 21, 13, 0.16);
+    --mo-comic-speedline: rgba(27, 21, 13, 0.9);
+    --mo-comic-hatch: rgba(27, 21, 13, 0.10);
+    --mo-comic-hover: rgba(27, 21, 13, 0.07);
+    --mo-comic-selected: rgba(216, 32, 42, 0.16);
+    --mo-appbar-background: var(--mo-comic-surface);
+    --mo-appbar-dark-background: var(--mo-appbar-background);
+    --mo-appbar-menu-item-text: var(--mo-comic-ink);
+    --mo-appbar-menu-item-icon: var(--mo-comic-ink-soft);
+    --mo-appbar-menu-item-hover-background: var(--mo-comic-surface-variant);
+    --mo-appbar-menu-item-hover-text: var(--mo-comic-ink);
+    --mo-appbar-menu-item-hover-icon: var(--mo-comic-ink);
+    --mo-appbar-menu-item-active-background: var(--mo-comic-selected);
+    --mo-appbar-menu-item-active-text: var(--mo-comic-ink);
+    --mo-appbar-menu-item-active-icon: var(--mo-comic-accent);
+}
+
+:root[data-theme="comic-burst-dark"],
+.mo-theme-comic-burst-dark {
+    --mo-comic-page: #0c0a07;
+    --mo-comic-surface: #16120c;
+    --mo-comic-surface-strong: #211b12;
+    --mo-comic-surface-variant: #2a2318;
+    --mo-comic-ink: #f0e9da;
+    --mo-comic-ink-soft: #b9ad98;
+    --mo-comic-shadow: #000000;
+    --mo-comic-accent: #ff4a54;
+    --mo-comic-on-accent: #ffffff;
+    --mo-comic-warn: #ffc247;
+    --mo-comic-on-warn: #1b150d;
+    --mo-comic-tone: rgba(240, 233, 218, 0.14);
+    --mo-comic-speedline: rgba(240, 233, 218, 0.85);
+    --mo-comic-hatch: rgba(240, 233, 218, 0.08);
+    --mo-comic-hover: rgba(240, 233, 218, 0.08);
+    --mo-comic-selected: rgba(255, 74, 84, 0.20);
+    --mo-appbar-background: var(--mo-comic-surface);
+    --mo-appbar-dark-background: var(--mo-appbar-background);
+    --mo-appbar-menu-item-text: var(--mo-comic-ink);
+    --mo-appbar-menu-item-icon: var(--mo-comic-ink-soft);
+    --mo-appbar-menu-item-hover-background: var(--mo-comic-surface-variant);
+    --mo-appbar-menu-item-hover-text: var(--mo-comic-ink);
+    --mo-appbar-menu-item-hover-icon: var(--mo-comic-ink);
+    --mo-appbar-menu-item-active-background: var(--mo-comic-selected);
+    --mo-appbar-menu-item-active-text: var(--mo-comic-ink);
+    --mo-appbar-menu-item-active-icon: var(--mo-comic-accent);
+}
+
+.mo-theme-comic-burst-light,
+.mo-theme-comic-burst-dark {
+    position: relative;
+    isolation: isolate;
+    background: var(--mo-comic-page);
+    color: var(--mud-palette-text-primary);
+    font-family: var(--mo-comic-font-body);
+}
+
+.mo-theme-comic-burst-light::before,
+.mo-theme-comic-burst-dark::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    z-index: -2;
+    pointer-events: none;
+    background:
+        radial-gradient(var(--mo-comic-tone) 1.4px, transparent 1.7px) 0 0 / 6px 6px,
+        repeating-conic-gradient(from 0deg at 88% 4%, var(--mo-comic-speedline) 0deg 0.45deg, transparent 0.45deg 4deg);
+    opacity: 0.12;
+    mask-image:
+        radial-gradient(ellipse 360px 280px at 0% 100%, #000 24%, transparent 72%),
+        radial-gradient(circle at 88% 4%, #000 0%, transparent 52%);
+}
+
+.mo-theme-comic-burst-light::after,
+.mo-theme-comic-burst-dark::after {
+    content: '';
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    opacity: 0.035;
+    background-image:
+        url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='paper'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23paper)' opacity='0.65'/%3E%3C/svg%3E");
+    background-size: 220px 220px;
+    mix-blend-mode: multiply;
+}
+
+.mo-theme-comic-burst-dark::after {
+    opacity: 0.06;
+    mix-blend-mode: screen;
+}
+
+.mo-theme-comic-burst-light ::selection,
+.mo-theme-comic-burst-dark ::selection {
+    background: var(--mo-comic-warn);
+    color: var(--mo-comic-on-warn);
+}
+
+.mo-theme-comic-burst-light .mo-layout,
+.mo-theme-comic-burst-dark .mo-layout,
+.mo-theme-comic-burst-light .mo-main-content,
+.mo-theme-comic-burst-dark .mo-main-content,
+.mo-theme-comic-burst-light .mo-body-content,
+.mo-theme-comic-burst-dark .mo-body-content {
+    background: transparent;
+}
+
+.mo-theme-comic-burst-light :is(.mud-typography, .mud-button, .mud-chip, .mud-alert, .mud-table, .mud-data-grid, .mud-input, .mud-select),
+.mo-theme-comic-burst-dark :is(.mud-typography, .mud-button, .mud-chip, .mud-alert, .mud-table, .mud-data-grid, .mud-input, .mud-select),
+.mo-theme-comic-burst-light :is(.navbar-link, .navbar-measure-link, .more-menu-item-title, .flyout-menu-item-title),
+.mo-theme-comic-burst-dark :is(.navbar-link, .navbar-measure-link, .more-menu-item-title, .flyout-menu-item-title) {
+    font-family: var(--mo-comic-font-body);
+    letter-spacing: 0;
+}
+
+.mo-theme-comic-burst-light :is(h1, h2, h3, h4, h5, h6, .mud-typography-h1, .mud-typography-h2, .mud-typography-h3, .mud-typography-h4, .mud-typography-h5, .mud-typography-h6, .mud-button),
+.mo-theme-comic-burst-dark :is(h1, h2, h3, h4, h5, h6, .mud-typography-h1, .mud-typography-h2, .mud-typography-h3, .mud-typography-h4, .mud-typography-h5, .mud-typography-h6, .mud-button) {
+    font-family: var(--mo-comic-font-display);
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+}
+
+.mo-theme-comic-burst-light :is(code, pre, kbd),
+.mo-theme-comic-burst-dark :is(code, pre, kbd) {
+    font-family: var(--mo-comic-font-mono);
+}
+
+.mo-theme-comic-burst-light .mud-appbar,
+.mo-theme-comic-burst-dark .mud-appbar {
+    background: var(--mo-comic-surface);
+    border-bottom: var(--mo-comic-border-panel);
+    box-shadow: none;
+}
+
+.mo-theme-comic-burst-light .navbar-link,
+.mo-theme-comic-burst-dark .navbar-link,
+.mo-theme-comic-burst-light .navbar-measure-link,
+.mo-theme-comic-burst-dark .navbar-measure-link {
+    border: 2px solid transparent;
+    border-radius: 0;
+    color: var(--mo-comic-ink);
+    font-size: 0.78rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    transition:
+        background-color var(--mo-comic-transition),
+        border-color var(--mo-comic-transition),
+        box-shadow var(--mo-comic-transition),
+        transform var(--mo-comic-transition);
+}
+
+.mo-theme-comic-burst-light .navbar-link:hover,
+.mo-theme-comic-burst-dark .navbar-link:hover,
+.mo-theme-comic-burst-light .navbar-link.active,
+.mo-theme-comic-burst-dark .navbar-link.active {
+    background: var(--mo-comic-surface-variant);
+    border-color: var(--mo-comic-ink);
+    color: var(--mo-comic-ink);
+    box-shadow: var(--mo-comic-shadow-subtle);
+    transform: translate(-1px, -1px);
+}
+
+.mo-theme-comic-burst-light .navbar-link::before,
+.mo-theme-comic-burst-dark .navbar-link::before {
+    height: 0;
+}
+
+.mo-theme-comic-burst-light :where(.mud-card:not(.mo-self-painted), .mud-paper[class*="mud-elevation-"]:not(.mo-self-painted):not(.mud-popover):not(.mud-tooltip):not(.mud-snackbar), .mud-table-container, .mud-data-grid, .mud-dialog, .mud-drawer, .theme-card, .mud-tabs),
+.mo-theme-comic-burst-dark :where(.mud-card:not(.mo-self-painted), .mud-paper[class*="mud-elevation-"]:not(.mo-self-painted):not(.mud-popover):not(.mud-tooltip):not(.mud-snackbar), .mud-table-container, .mud-data-grid, .mud-dialog, .mud-drawer, .theme-card, .mud-tabs) {
+    background: var(--mo-comic-surface);
+    border: var(--mo-comic-border-panel);
+    border-radius: 0;
+    box-shadow: var(--mo-comic-shadow-panel);
+}
+
+.mo-theme-comic-burst-light :where(.mud-card:not(.mo-self-painted), .mud-paper[class*="mud-elevation-"]:not(.mo-self-painted):not(.mud-popover):not(.mud-tooltip):not(.mud-snackbar), .theme-card),
+.mo-theme-comic-burst-dark :where(.mud-card:not(.mo-self-painted), .mud-paper[class*="mud-elevation-"]:not(.mo-self-painted):not(.mud-popover):not(.mud-tooltip):not(.mud-snackbar), .theme-card) {
+    transition:
+        background-color var(--mo-comic-transition),
+        box-shadow var(--mo-comic-transition),
+        transform var(--mo-comic-transition);
+}
+
+.mo-theme-comic-burst-light :where(.mud-card:not(.mo-self-painted):hover, .mud-paper[class*="mud-elevation-"]:not(.mo-self-painted):not(.mud-popover):not(.mud-tooltip):not(.mud-snackbar):hover, .theme-card:hover),
+.mo-theme-comic-burst-dark :where(.mud-card:not(.mo-self-painted):hover, .mud-paper[class*="mud-elevation-"]:not(.mo-self-painted):not(.mud-popover):not(.mud-tooltip):not(.mud-snackbar):hover, .theme-card:hover) {
+    box-shadow: 9px 9px 0 var(--mo-comic-shadow);
+    transform: translate(-2px, -2px);
+}
+
+:root[data-theme="comic-burst-light"] .mud-popover:not(.mud-tooltip),
+:root[data-theme="comic-burst-dark"] .mud-popover:not(.mud-tooltip),
+.mo-theme-comic-burst-light .mud-popover:not(.mud-tooltip),
+.mo-theme-comic-burst-dark .mud-popover:not(.mud-tooltip) {
+    background: var(--mo-comic-surface);
+    border: var(--mo-comic-border-panel);
+    border-radius: 0;
+    box-shadow: var(--mo-comic-shadow-panel);
+    position: absolute;
+    width: fit-content;
+    max-width: min(28rem, calc(100vw - 32px));
+}
+
+.mo-theme-comic-burst-light :is(.mud-tabs.mud-tabs-rounded, .mud-tabs.mud-paper-outlined, .mud-tabs[class*="mud-elevation-"]),
+.mo-theme-comic-burst-dark :is(.mud-tabs.mud-tabs-rounded, .mud-tabs.mud-paper-outlined, .mud-tabs[class*="mud-elevation-"]) {
+    overflow: hidden;
+}
+
+.mo-theme-comic-burst-light :is(.mud-tabs.mud-tabs-rounded, .mud-tabs.mud-paper-outlined, .mud-tabs[class*="mud-elevation-"]) > .mud-tabs-tabbar,
+.mo-theme-comic-burst-dark :is(.mud-tabs.mud-tabs-rounded, .mud-tabs.mud-paper-outlined, .mud-tabs[class*="mud-elevation-"]) > .mud-tabs-tabbar {
+    background: var(--mo-comic-surface-variant);
+    border-bottom: var(--mo-comic-border-control);
+}
+
+.mo-theme-comic-burst-light :is(.mud-tabs.mud-tabs-rounded, .mud-tabs.mud-paper-outlined, .mud-tabs[class*="mud-elevation-"]) > .mud-tabs-panels,
+.mo-theme-comic-burst-dark :is(.mud-tabs.mud-tabs-rounded, .mud-tabs.mud-paper-outlined, .mud-tabs[class*="mud-elevation-"]) > .mud-tabs-panels {
+    background: var(--mo-comic-surface);
+}
+
+.mo-theme-comic-burst-light .mud-button,
+.mo-theme-comic-burst-dark .mud-button {
+    border-radius: 0;
+    box-shadow: var(--mo-comic-shadow-control);
+    font-family: var(--mo-comic-font-display);
+    font-weight: 400;
+    letter-spacing: 0.03em;
+    min-height: 40px;
+    text-transform: uppercase;
+    transition:
+        background-color var(--mo-comic-transition),
+        border-color var(--mo-comic-transition),
+        box-shadow var(--mo-comic-transition),
+        color var(--mo-comic-transition),
+        transform var(--mo-comic-transition);
+}
+
+.mo-theme-comic-burst-light .mud-button:not(.mud-button-disabled):hover,
+.mo-theme-comic-burst-dark .mud-button:not(.mud-button-disabled):hover {
+    box-shadow: 7px 7px 0 var(--mo-comic-shadow);
+    transform: translate(-2px, -2px);
+}
+
+.mo-theme-comic-burst-light .mud-button:not(.mud-button-disabled):active,
+.mo-theme-comic-burst-dark .mud-button:not(.mud-button-disabled):active {
+    box-shadow: 0 0 0 var(--mo-comic-shadow);
+    transform: translate(2px, 2px);
+}
+
+.mo-theme-comic-burst-light :is(.mud-button-filled, .mud-button-outlined),
+.mo-theme-comic-burst-dark :is(.mud-button-filled, .mud-button-outlined) {
+    border: var(--mo-comic-border-control);
+}
+
+.mo-theme-comic-burst-light .mud-button-filled-primary,
+.mo-theme-comic-burst-dark .mud-button-filled-primary {
+    background: var(--mo-comic-accent);
+    border-color: var(--mo-comic-ink);
+    color: var(--mo-comic-on-accent);
+}
+
+.mo-theme-comic-burst-light .mud-button-filled-secondary,
+.mo-theme-comic-burst-dark .mud-button-filled-secondary {
+    background: var(--mo-comic-warn);
+    border-color: var(--mo-comic-ink);
+    color: var(--mo-comic-on-warn);
+}
+
+.mo-theme-comic-burst-light :is(.mud-button-text, .mud-button-outlined),
+.mo-theme-comic-burst-dark :is(.mud-button-text, .mud-button-outlined) {
+    background: var(--mo-comic-surface);
+    color: var(--mo-comic-ink);
+}
+
+.mo-theme-comic-burst-light :is(.mud-icon-button, .mud-fab),
+.mo-theme-comic-burst-dark :is(.mud-icon-button, .mud-fab) {
+    border-radius: 0;
+}
+
+.mo-theme-comic-burst-light .mud-fab,
+.mo-theme-comic-burst-dark .mud-fab {
+    border: var(--mo-comic-border-control);
+    box-shadow: var(--mo-comic-shadow-control);
+}
+
+.mo-theme-comic-burst-light :is(.mud-input-outlined, .mud-select),
+.mo-theme-comic-burst-dark :is(.mud-input-outlined, .mud-select) {
+    border-radius: 0;
+}
+
+.mo-theme-comic-burst-light .mud-input-outlined .mud-input-outlined-border,
+.mo-theme-comic-burst-dark .mud-input-outlined .mud-input-outlined-border {
+    border-color: var(--mo-comic-ink);
+    border-radius: 0;
+    border-width: 2px;
+}
+
+.mo-theme-comic-burst-light :is(.mud-input-outlined:hover .mud-input-outlined-border, .mud-input-outlined.mud-input-focused .mud-input-outlined-border, .mud-input-outlined:focus-within .mud-input-outlined-border),
+.mo-theme-comic-burst-dark :is(.mud-input-outlined:hover .mud-input-outlined-border, .mud-input-outlined.mud-input-focused .mud-input-outlined-border, .mud-input-outlined:focus-within .mud-input-outlined-border) {
+    border-color: var(--mo-comic-accent);
+    box-shadow: var(--mo-comic-shadow-subtle);
+}
+
+.mo-theme-comic-burst-light :is(.mud-chip, .mud-alert, .mud-snackbar .mud-snackbar-message),
+.mo-theme-comic-burst-dark :is(.mud-chip, .mud-alert, .mud-snackbar .mud-snackbar-message) {
+    border-radius: 0;
+}
+
+.mo-theme-comic-burst-light .mud-chip:not(.mud-chip-filled),
+.mo-theme-comic-burst-dark .mud-chip:not(.mud-chip-filled) {
+    border: var(--mo-comic-border-control);
+}
+
+.mo-theme-comic-burst-light :is(.mud-chip, .mud-alert-message, .mud-badge, .mud-snackbar .mud-snackbar-message),
+.mo-theme-comic-burst-dark :is(.mud-chip, .mud-alert-message, .mud-badge, .mud-snackbar .mud-snackbar-message) {
+    font-family: var(--mo-comic-font-body);
+    font-weight: 700;
+}
+
+.mo-theme-comic-burst-light .mud-table,
+.mo-theme-comic-burst-dark .mud-table,
+.mo-theme-comic-burst-light .mud-data-grid,
+.mo-theme-comic-burst-dark .mud-data-grid {
+    background: var(--mo-comic-surface);
+}
+
+.mo-theme-comic-burst-light .mud-table-head th,
+.mo-theme-comic-burst-dark .mud-table-head th,
+.mo-theme-comic-burst-light .mud-data-grid-header-cell,
+.mo-theme-comic-burst-dark .mud-data-grid-header-cell {
+    background: var(--mo-comic-surface-variant);
+    border-bottom: var(--mo-comic-border-control);
+    color: var(--mo-comic-ink);
+    font-family: var(--mo-comic-font-body);
+    font-weight: 700;
+}
+
+.mo-theme-comic-burst-light :is(.mud-table-cell, .mud-data-grid-cell),
+.mo-theme-comic-burst-dark :is(.mud-table-cell, .mud-data-grid-cell) {
+    border-color: var(--mud-palette-table-lines);
+}
+
+.mo-theme-comic-burst-light .mud-data-grid .column-header .column-options .sort-direction-icon,
+.mo-theme-comic-burst-dark .mud-data-grid .column-header .column-options .sort-direction-icon,
+.mo-theme-comic-burst-light .mud-data-grid .column-header .column-options .column-options-icon,
+.mo-theme-comic-burst-dark .mud-data-grid .column-header .column-options .column-options-icon,
+.mo-theme-comic-burst-light .mud-data-grid .column-header .column-options .drag-icon-options,
+.mo-theme-comic-burst-dark .mud-data-grid .column-header .column-options .drag-icon-options,
+.mo-theme-comic-burst-light .mud-data-grid .column-header .column-options .mud-menu .mud-icon-button-label,
+.mo-theme-comic-burst-dark .mud-data-grid .column-header .column-options .mud-menu .mud-icon-button-label {
+    color: var(--mo-comic-ink-soft);
+    opacity: 0.72;
+}
+
+.mo-theme-comic-burst-light .mud-data-grid .column-header:hover .column-options :is(.sort-direction-icon, .column-options-icon, .drag-icon-options, .mud-icon-button-label),
+.mo-theme-comic-burst-dark .mud-data-grid .column-header:hover .column-options :is(.sort-direction-icon, .column-options-icon, .drag-icon-options, .mud-icon-button-label) {
+    color: var(--mo-comic-accent);
+    opacity: 1;
+}
+
+.mo-theme-comic-burst-light .mud-divider,
+.mo-theme-comic-burst-dark .mud-divider {
+    border-color: var(--mo-comic-ink);
+    opacity: 0.32;
+}
+
+:root[data-theme="comic-burst-light"] .mud-tooltip,
+:root[data-theme="comic-burst-dark"] .mud-tooltip,
+.mo-theme-comic-burst-light .mud-tooltip,
+.mo-theme-comic-burst-dark .mud-tooltip {
+    background: var(--mo-comic-ink);
+    border: var(--mo-comic-border-control);
+    border-color: var(--mo-comic-ink);
+    border-radius: 0;
+    box-shadow: var(--mo-comic-shadow-control);
+    color: var(--mo-comic-page);
+    font-family: var(--mo-comic-font-body);
+    font-weight: 700;
+    letter-spacing: 0;
+    line-height: 1.45;
+    max-width: min(28rem, calc(100vw - 32px));
+    text-align: start;
+    white-space: normal;
+}
+
+:root[data-theme="comic-burst-light"] .mud-tooltip.mud-tooltip-arrow::after,
+:root[data-theme="comic-burst-dark"] .mud-tooltip.mud-tooltip-arrow::after,
+.mo-theme-comic-burst-light .mud-tooltip.mud-tooltip-arrow::after,
+.mo-theme-comic-burst-dark .mud-tooltip.mud-tooltip-arrow::after {
+    border-top-color: var(--mo-comic-ink);
+}
+
+:root[data-theme="comic-burst-light"] .mud-snackbar,
+:root[data-theme="comic-burst-dark"] .mud-snackbar,
+.mo-theme-comic-burst-light .mud-snackbar,
+.mo-theme-comic-burst-dark .mud-snackbar {
+    background: var(--mo-comic-surface);
+    border: var(--mo-comic-border-panel);
+    border-radius: 0;
+    box-shadow: var(--mo-comic-shadow-panel);
+    color: var(--mo-comic-ink);
+}
+
+:root[data-theme="comic-burst-light"] .theme-card,
+:root[data-theme="comic-burst-dark"] .theme-card,
+.mo-theme-comic-burst-light .theme-card,
+.mo-theme-comic-burst-dark .theme-card {
+    cursor: pointer;
+}
+
+:root[data-theme="comic-burst-light"] .theme-card.selected,
+:root[data-theme="comic-burst-dark"] .theme-card.selected,
+.mo-theme-comic-burst-light .theme-card.selected,
+.mo-theme-comic-burst-dark .theme-card.selected {
+    background:
+        linear-gradient(135deg, var(--mo-comic-selected), transparent 54%),
+        var(--mo-comic-surface);
+    box-shadow: var(--mo-comic-shadow-selected);
+}
+
+.mo-theme-comic-burst-light .mo-body-content::-webkit-scrollbar-thumb,
+.mo-theme-comic-burst-dark .mo-body-content::-webkit-scrollbar-thumb {
+    background: var(--mo-comic-ink-soft);
+    border: 1px solid var(--mo-comic-ink);
+    border-radius: 0;
+}
+
+.mo-theme-comic-burst-light .mo-body-content::-webkit-scrollbar-thumb:hover,
+.mo-theme-comic-burst-dark .mo-body-content::-webkit-scrollbar-thumb:hover {
+    background: var(--mo-comic-accent);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .mo-theme-comic-burst-light *,
+    .mo-theme-comic-burst-dark * {
+        transition-duration: 1ms !important;
+        animation-duration: 1ms !important;
+    }
+}

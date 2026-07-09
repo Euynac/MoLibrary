@@ -3,13 +3,27 @@ from __future__ import annotations
 
 import re
 import sys
+from collections.abc import Iterator
+from os import walk
 from pathlib import Path
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 
 UI_EXTENSIONS = {".css", ".razor", ".js"}
-EXCLUDED_DIR_NAMES = {"bin", "obj", ".git", ".pending"}
+EXCLUDED_DIR_NAMES = {
+    ".git",
+    ".gitnexus",
+    ".idea",
+    ".pending",
+    ".playwright",
+    ".playwright-cli",
+    ".tmp",
+    ".ui-design",
+    ".vs",
+    "bin",
+    "obj",
+}
 THEME_DEFINITION_DIRS = {
     REPO_ROOT / "Monica.UI" / "wwwroot" / "css" / "themes",
     REPO_ROOT / "Monica.UI" / "wwwroot" / "css" / "markdown",
@@ -42,7 +56,7 @@ ALLOWED_SEMANTIC_TOKENS = {
     "--mo-color-state-error-soft-border",
 }
 
-PRIVATE_THEME_PATTERN = re.compile(r"--mo-(?:m3|ink|hermes|fresh|vibe|zen)-[\w-]+|--mo-system-info-hero-[\w-]+")
+PRIVATE_THEME_PATTERN = re.compile(r"--mo-(?:m3|ink|hermes|fresh|vibe|zen|comic)-[\w-]+|--mo-system-info-hero-[\w-]+")
 SEMANTIC_TOKEN_PATTERN = re.compile(r"--mo-color-[\w-]+")
 HEX_COLOR_PATTERN = re.compile(r"#(?:[0-9a-fA-F]{3,8})\b", re.IGNORECASE)
 FUNCTION_COLOR_PATTERN = re.compile(
@@ -77,6 +91,17 @@ def should_scan(path: Path) -> bool:
     if "wwwroot" in path.parts and "lib" in path.parts:
         return False
     return "Monica." in path.name or any(part.startswith("Monica.") for part in path.parts)
+
+
+def iter_scan_files(root: Path) -> Iterator[Path]:
+    for directory_name, dirnames, filenames in walk(root):
+        dirnames[:] = [name for name in dirnames if name not in EXCLUDED_DIR_NAMES]
+        directory = Path(directory_name)
+
+        for filename in filenames:
+            path = directory / filename
+            if should_scan(path):
+                yield path
 
 
 def line_allowed_for_raw_colors(path: Path, line: str) -> bool:
@@ -130,9 +155,7 @@ def scan_file(path: Path) -> list[str]:
 def main() -> int:
     issues: list[str] = []
 
-    for path in REPO_ROOT.rglob("*"):
-        if path.is_dir() or not should_scan(path):
-            continue
+    for path in iter_scan_files(REPO_ROOT):
         issues.extend(scan_file(path))
 
     if issues:

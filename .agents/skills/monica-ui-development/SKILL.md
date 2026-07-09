@@ -1,6 +1,6 @@
 ---
 name: monica-ui-development
-description: This skill should be used when the user asks to create or modify Blazor UI components, build MudBlazor pages, style MudBlazor components, fix CSS isolation, customize themes, migrate to MudBlazor v9, validate MudBlazor CSS variables, or implement browser storage with IBrowserStorage.
+description: This skill should be used when the user asks to create or modify Blazor UI components, build MudBlazor pages, style MudBlazor components, fix CSS isolation, customize themes, add offline WOFF2 font assets, migrate to MudBlazor v9, validate MudBlazor CSS variables, or implement browser storage with IBrowserStorage.
 version: 2.13.0
 ---
 
@@ -159,7 +159,11 @@ Always specify `T` for generic MudBlazor components:
 ### 7. Offline/Intranet Requirements
 
 - No online font/CDN dependencies for runtime UI assets.
-- Keep static resources local (`wwwroot/fonts`, local CSS/JS assets).
+- Runtime font assets must be local WOFF2 files under `wwwroot/fonts`; never keep source TTF/OTF files under Monica UI package projects.
+- Keep source TTF/OTF files in ignored tooling/cache paths such as `.tmp/monica-ui-font-sources/`, or pass them explicitly to tooling with `--source-font`.
+- When mirroring a third-party theme, vendor the exact source font when possible, generate WOFF2 runtime files, and reference them through local `@font-face` rules.
+- For CJK or other large display fonts, prefer checked WOFF2 subsets generated from localization resources over full-font runtime bundles.
+- Keep all other static resources local (`wwwroot/fonts`, local CSS/JS assets).
 
 ### 8. Layout-Owned AppBar and Viewport Height
 
@@ -308,7 +312,8 @@ For `Res/Res<T>` usage, `IResultEnvelope`, and the `IsFailed` pattern in UI serv
 - `scripts/check_mudblazor_source.py` - Resolve MudBlazor source through `third-party-source-catalog` and verify that the required source marker exists.
 - `scripts/sync_mud_css_variables.py` - Initialize/update real MudBlazor CSS variable JSON into `.tmp/monica-ui-development/mudblazor-css-variables.json`.
 - `scripts/validate_mud_css_variables.py` - Validate MudBlazor variable usage in CSS/Razor files and apply safe auto-fixes using the generated `.tmp` variable list by default.
-- `scripts/font_downloader.py` - Download fonts for offline usage.
+- `scripts/font_downloader.py` - Download fonts for offline WOFF2 usage.
+- `scripts/subset_ui_font.py` - Generate or check localization-driven WOFF2 subsets from source fonts stored outside Monica UI packages.
 
 ## Quick Checklist
 
@@ -320,6 +325,8 @@ For `Res/Res<T>` usage, `IResultEnvelope`, and the `IsFailed` pattern in UI serv
 - [ ] Use MudBlazor v9 async APIs
 - [ ] Use valid MudBlazor CSS variables only
 - [ ] Run CSS variable validation when styling changes
+- [ ] Keep runtime fonts local, WOFF2-only, and referenced through local `@font-face`
+- [ ] Keep source TTF/OTF files outside package projects and regenerate/check subsets after localization text changes
 - [ ] Use `IBrowserStorage` for browser persistence
 - [ ] Keep AppBar height and viewport compensation in the shell layout, not in page CSS
 - [ ] Use `$monica-ui-localization` for any user-facing text or i18n resource changes

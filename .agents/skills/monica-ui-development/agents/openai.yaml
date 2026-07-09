@@ -1,4 +1,4 @@
 interface:
   display_name: "Monica UI Development"
   short_description: "Monica Blazor and MudBlazor implementation rules"
-  default_prompt: "Use $monica-ui-development to build or modify Monica Blazor UI components, themes, CSS isolation, page auto-refresh, or browser storage. Pair with $monica-ui-audit for Monica UI component/page changes. Add $monica-ui-localization for i18n work."
+  default_prompt: "Use $monica-ui-development to build or modify Monica Blazor UI components, themes, CSS isolation, offline WOFF2 font assets/subsets, page auto-refresh, or browser storage. Pair with $monica-ui-audit for Monica UI component/page changes. Add $monica-ui-localization for i18n work."
