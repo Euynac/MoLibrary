@@ -1,5 +1,6 @@
 using Microsoft.Extensions.Localization;
 using Monica.Configuration.Models;
+using Monica.Configuration.Serialization;
 using Monica.Configuration.UI.Localization;
 
 namespace Monica.Configuration.UI.Support;
@@ -21,7 +22,7 @@ public static class ConfigurationValidationRuleFormatter
         {
             RequiredRule => localizer["ValidationRules:Required"],
             RangeRule rangeRule => localizer["ValidationRules:Range", DisplayBound(rangeRule.Min, localizer["ValidationRules:NoMinimum"]), DisplayBound(rangeRule.Max, localizer["ValidationRules:NoMaximum"])],
-            RegexRule regexRule => localizer["ValidationRules:Regex", regexRule.Pattern],
+            RegexRule regexRule => localizer["ValidationRules:Regex", ConfigurationRegexTextCodec.NormalizePattern(regexRule.Pattern)],
             AllowedValuesRule allowedValuesRule => localizer["ValidationRules:AllowedValues", string.Join(", ", allowedValuesRule.Values)],
             MaxLengthRule maxLengthRule => localizer["ValidationRules:MaxLength", maxLengthRule.Max],
             MinLengthRule minLengthRule => localizer["ValidationRules:MinLength", minLengthRule.Min],

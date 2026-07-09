@@ -22,7 +22,8 @@ public sealed class ConfigurationEffectiveValueSeedFactory(ConfigurationRuntimeC
         var defaults = CreateDefaultNode(definition) ?? new JsonObject();
         var hostValues = BuildNodeFromConfiguration(definition.Root, definition.SectionPath);
         var merged = hostValues is null ? defaults : Merge(defaults, hostValues);
-        return merged.ToJsonString(WRITE_OPTIONS);
+        var normalized = ConfigurationRegexTextCodec.NormalizeJsonNode(definition.Root, merged) ?? merged;
+        return normalized.ToJsonString(WRITE_OPTIONS);
     }
 
     /// <summary>
@@ -34,7 +35,8 @@ public sealed class ConfigurationEffectiveValueSeedFactory(ConfigurationRuntimeC
     public string CreateRuntimeJson(ConfigurationNodeDefinition node, string configurationPath)
     {
         var current = BuildNodeFromConfiguration(node, configurationPath) ?? CreateEmptyNode(node);
-        return current.ToJsonString(WRITE_OPTIONS);
+        var normalized = ConfigurationRegexTextCodec.NormalizeJsonNode(node, current) ?? current;
+        return normalized.ToJsonString(WRITE_OPTIONS);
     }
 
     private static JsonNode? CreateDefaultNode(ConfigurationDefinition definition)
@@ -82,7 +84,7 @@ public sealed class ConfigurationEffectiveValueSeedFactory(ConfigurationRuntimeC
             ConfigurationValueKind.Integer when long.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out var parsed) => JsonValue.Create(parsed),
             ConfigurationValueKind.Decimal when decimal.TryParse(value, NumberStyles.Number, CultureInfo.InvariantCulture, out var parsed) => JsonValue.Create(parsed),
             ConfigurationValueKind.Floating when double.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out var parsed) => JsonValue.Create(parsed),
-            _ => JsonValue.Create(value)
+            _ => JsonValue.Create(ConfigurationRegexTextCodec.NormalizeDisplayValue(node, value))
         };
     }
 

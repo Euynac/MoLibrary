@@ -2,6 +2,7 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using Microsoft.Extensions.Localization;
 using Monica.Configuration.Models;
+using Monica.Configuration.Serialization;
 using Monica.Configuration.UI.Localization;
 using Monica.Configuration.UI.State;
 
@@ -141,16 +142,18 @@ internal sealed class ConfigurationPendingChangeCompactor(IStringLocalizer<Confi
         }
 
         var representative = changes[0];
-        var storedValue = ConfigurationStoredValue.FromJson(updated.ToJsonString());
+        var normalizedOriginal = ConfigurationRegexTextCodec.NormalizeJsonNode(scopeSchema, original) ?? original;
+        var normalizedUpdated = ConfigurationRegexTextCodec.NormalizeJsonNode(scopeSchema, updated) ?? updated;
+        var storedValue = ConfigurationStoredValue.FromJson(normalizedUpdated.ToJsonString());
         return representative with
         {
             LogicalPath = scopePath,
             NodeDisplayName = DisplayName(definition, scopeSchema, scopePath),
             MutationKind = ConfigurationMutationKind.Set,
             NewValue = storedValue,
-            OriginalValue = ConfigurationStoredValue.FromJson(original.ToJsonString()),
-            OriginalDisplayValue = DisplayJson(original, scopeSchema),
-            NewDisplayValue = DisplayJson(updated, scopeSchema),
+            OriginalValue = ConfigurationStoredValue.FromJson(normalizedOriginal.ToJsonString()),
+            OriginalDisplayValue = DisplayJson(normalizedOriginal, scopeSchema),
+            NewDisplayValue = DisplayJson(normalizedUpdated, scopeSchema),
             IsSensitive = scopeSchema.IsSensitive,
             NodeKind = scopeSchema.NodeKind,
             ValueKind = scopeSchema.ValueKind,

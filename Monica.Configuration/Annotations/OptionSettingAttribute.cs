@@ -45,6 +45,13 @@ public sealed class OptionSettingAttribute : Attribute
     public bool IsSensitive { get; set; }
 
     /// <summary>
+    /// Gets or sets specialized text semantics for scalar string values.
+    /// Use <see cref="ConfigurationTextSemantic.RegexPattern"/> only when the value itself is a regular expression
+    /// pattern and management tools should preserve regex-style Unicode escape notation.
+    /// </summary>
+    public ConfigurationTextSemantic TextSemantic { get; set; } = ConfigurationTextSemantic.PlainText;
+
+    /// <summary>
     /// Gets or sets an optional reload behavior override for this node.
     /// </summary>
     public ConfigurationReloadBehavior ReloadBehavior { get; set; } = ConfigurationReloadBehavior.Inherit;

@@ -2,6 +2,7 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using Monica.Configuration.Exceptions;
 using Monica.Configuration.Models;
+using Monica.Configuration.Serialization;
 
 namespace Monica.Configuration.Services.Support;
 
@@ -74,7 +75,10 @@ public sealed class ConfigurationEffectiveValueDocumentEditor(
     /// </summary>
     public IReadOnlyDictionary<string, string?> Project(ConfigurationDefinition definition, string json)
     {
-        return codec.ToConfigurationValues(definition.SectionPath, ConfigurationStoredValue.FromJson(NormalizeJson(json)));
+        var value = ConfigurationStoredValue.FromJson(NormalizeJson(json));
+        return codec.ToConfigurationValues(
+            definition.SectionPath,
+            ConfigurationRegexTextCodec.NormalizeStoredValue(definition.Root, value));
     }
 
     private static string RequireJson(ConfigurationStoredValue value)

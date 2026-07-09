@@ -2,6 +2,7 @@ using Monica.Configuration.Abstractions;
 using Monica.Configuration.Abstractions.Internal;
 using Monica.Configuration.Metrics;
 using Monica.Configuration.Models;
+using Monica.Configuration.Serialization;
 using Monica.Configuration.Services.Support;
 using Monica.Configuration.Utils;
 using Microsoft.Extensions.Options;
@@ -31,8 +32,9 @@ internal sealed class ConfigurationMutationService(
     public async Task<ConfigurationMutationResult> MutateAsync(ConfigurationMutationRequest request, CancellationToken cancellationToken)
     {
         var definition = await definitionResolver.GetRequiredAsync(request.DefinitionKey, cancellationToken);
-        validationCoordinator.Validate(definition, request);
         var targetNode = ResolveTargetNode(definition, request.LogicalPath);
+        request = NormalizeRequest(targetNode, request);
+        validationCoordinator.Validate(definition, request);
         ValidateEditablePath(definition, request.LogicalPath);
         var configurationPath = pathProjector.Project(definition.SectionPath, request.LogicalPath);
         var granularity = ResolveGranularity(targetNode);
@@ -131,6 +133,15 @@ internal sealed class ConfigurationMutationService(
         }
 
         return current;
+    }
+
+    private static ConfigurationMutationRequest NormalizeRequest(
+        ConfigurationNodeDefinition targetNode,
+        ConfigurationMutationRequest request)
+    {
+        return request.MutationKind == ConfigurationMutationKind.Set
+            ? request with { Value = ConfigurationRegexTextCodec.NormalizeStoredValue(targetNode, request.Value) }
+            : request;
     }
 
     private static void ValidateEditablePath(ConfigurationDefinition definition, LogicalPath logicalPath)

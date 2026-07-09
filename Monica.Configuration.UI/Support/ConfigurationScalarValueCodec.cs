@@ -3,6 +3,7 @@ using System.Text.Json;
 using System.Text.RegularExpressions;
 using Microsoft.Extensions.Localization;
 using Monica.Configuration.Models;
+using Monica.Configuration.Serialization;
 using Monica.Configuration.UI.Localization;
 
 namespace Monica.Configuration.UI.Support;
@@ -90,6 +91,11 @@ internal static class ConfigurationScalarValueCodec
             return enumDisplayValue;
         }
 
+        if (node.IsRegexPatternText)
+        {
+            return ConfigurationRegexTextCodec.NormalizePattern(displayValue);
+        }
+
         return node.ValueKind == ConfigurationValueKind.TimeSpan && ConfigurationScalarTextCodec.TryParseTimeSpan(displayValue, out var value)
             ? ConfigurationScalarTextCodec.FormatTimeSpan(value)
             : displayValue;
@@ -157,7 +163,10 @@ internal static class ConfigurationScalarValueCodec
             return [];
         }
 
-        return pattern[2..^2].Split('|', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        return pattern[2..^2]
+            .Split('|', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Select(ConfigurationRegexTextCodec.DecodeRegexUnicodeEscapes)
+            .ToArray();
     }
 }
 

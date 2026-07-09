@@ -31,6 +31,23 @@ public enum ConfigurationValueKind
 }
 
 /// <summary>
+/// Describes specialized text semantics for scalar string configuration nodes.
+/// </summary>
+public enum ConfigurationTextSemantic
+{
+    /// <summary>
+    /// Treats the string as ordinary operator-facing text.
+    /// </summary>
+    PlainText,
+
+    /// <summary>
+    /// Treats the string as a regular expression pattern whose non-ASCII characters should be displayed and
+    /// persisted with regex-compatible Unicode escapes.
+    /// </summary>
+    RegexPattern
+}
+
+/// <summary>
 /// Describes when a configuration value can be applied by a running process.
 /// </summary>
 public enum ConfigurationReloadBehavior

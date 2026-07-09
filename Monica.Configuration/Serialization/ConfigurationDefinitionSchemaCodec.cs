@@ -122,6 +122,7 @@ public static class ConfigurationDefinitionSchemaCodec
             ValueKind = node.NodeKind == ConfigurationNodeKind.Scalar ? node.ValueKind : null,
             IsNullable = node.IsNullable,
             IsSensitive = node.IsSensitive,
+            TextSemantic = node.IsRegexPatternText ? node.TextSemantic : null,
             ReloadBehavior = node.ReloadBehavior,
             DictionaryTemplate = node.DictionaryTemplate is null ? null : ToDictionaryDto(node.DictionaryTemplate),
             ListTemplate = node.ListTemplate is null ? null : ToListDto(node.ListTemplate),
@@ -145,7 +146,7 @@ public static class ConfigurationDefinitionSchemaCodec
         return new DictionaryTemplateDto
         {
             KeyKind = template.KeyKind,
-            KeyRegexPattern = NullIfWhiteSpace(template.KeyRegexPattern),
+            KeyRegexPattern = NormalizeRegexPatternOrNull(template.KeyRegexPattern),
             DisallowColonInKey = template.DisallowColonInKey ? null : false,
             ValueTemplate = ToNodeDto(template.ValueTemplate)
         };
@@ -181,7 +182,7 @@ public static class ConfigurationDefinitionSchemaCodec
             {
                 Kind = RuleKind.Regex,
                 ErrorMessage = NullIfWhiteSpace(regex.ErrorMessage),
-                Pattern = regex.Pattern
+                Pattern = ConfigurationRegexTextCodec.NormalizePattern(regex.Pattern)
             },
             AllowedValuesRule allowed => new RuleDto
             {
@@ -234,6 +235,9 @@ public static class ConfigurationDefinitionSchemaCodec
             ValueKind = nodeKind == ConfigurationNodeKind.Scalar ? dto.ValueKind ?? ConfigurationValueKind.String : null,
             IsNullable = dto.IsNullable,
             IsSensitive = dto.IsSensitive,
+            TextSemantic = nodeKind == ConfigurationNodeKind.Scalar
+                ? dto.TextSemantic ?? ConfigurationTextSemantic.PlainText
+                : ConfigurationTextSemantic.PlainText,
             ReloadBehavior = dto.ReloadBehavior,
             DictionaryTemplate = dto.DictionaryTemplate is null
                 ? null
@@ -267,7 +271,7 @@ public static class ConfigurationDefinitionSchemaCodec
         {
             KeyClrTypeName = ClrTypeNameForValueKind(keyKind),
             KeyKind = keyKind,
-            KeyRegexPattern = dto.KeyRegexPattern,
+            KeyRegexPattern = NormalizeRegexPatternOrNull(dto.KeyRegexPattern),
             ValueTemplate = FromNodeDto(
                 dto.ValueTemplate,
                 dictionaryPath.Append(new DictionaryKeySegment("*")),
@@ -301,7 +305,7 @@ public static class ConfigurationDefinitionSchemaCodec
         {
             RuleKind.Required => new RequiredRule { ErrorMessage = dto.ErrorMessage },
             RuleKind.Range => new RangeRule(dto.Min, dto.Max) { ErrorMessage = dto.ErrorMessage },
-            RuleKind.Regex => new RegexRule(dto.Pattern ?? "") { ErrorMessage = dto.ErrorMessage },
+            RuleKind.Regex => new RegexRule(ConfigurationRegexTextCodec.NormalizePattern(dto.Pattern)) { ErrorMessage = dto.ErrorMessage },
             RuleKind.AllowedValues => new AllowedValuesRule(dto.Values ?? []) { ErrorMessage = dto.ErrorMessage },
             RuleKind.MaxLength => new MaxLengthRule(dto.Length) { ErrorMessage = dto.ErrorMessage },
             RuleKind.MinLength => new MinLengthRule(dto.Length) { ErrorMessage = dto.ErrorMessage },
@@ -358,6 +362,11 @@ public static class ConfigurationDefinitionSchemaCodec
         return string.IsNullOrWhiteSpace(value) ? null : value;
     }
 
+    private static string? NormalizeRegexPatternOrNull(string? value)
+    {
+        return string.IsNullOrWhiteSpace(value) ? null : ConfigurationRegexTextCodec.NormalizePattern(value);
+    }
+
     private sealed record SchemaHashInputDto
     {
         public required string DefinitionKey { get; init; }
@@ -384,6 +393,8 @@ public static class ConfigurationDefinitionSchemaCodec
         public bool IsNullable { get; init; }
 
         public bool IsSensitive { get; init; }
+
+        public ConfigurationTextSemantic? TextSemantic { get; init; }
 
         public ConfigurationReloadBehavior? ReloadBehavior { get; init; }
 

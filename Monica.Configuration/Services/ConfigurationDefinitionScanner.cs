@@ -5,6 +5,7 @@ using System.Reflection;
 using Microsoft.Extensions.Configuration;
 using Monica.Configuration.Annotations;
 using Monica.Configuration.Models;
+using Monica.Configuration.Serialization;
 using Monica.Configuration.Services.Support;
 
 namespace Monica.Configuration.Services;
@@ -61,9 +62,11 @@ internal sealed class ConfigurationDefinitionScanner(
     {
         var option = type.GetCustomAttribute<OptionSettingAttribute>();
         var nodeKind = GetNodeKind(type);
+        var valueKind = nodeKind == ConfigurationNodeKind.Scalar ? GetValueKind(type) : (ConfigurationValueKind?)null;
         var children = nodeKind == ConfigurationNodeKind.Object
             ? ScanObjectChildren(type, path, configurationPath, inheritedReloadBehavior)
             : [];
+        var textSemantic = ResolveTextSemantic(option, nodeKind, valueKind, type.FullName ?? type.Name);
 
         return new ConfigurationNodeDefinition
         {
@@ -75,9 +78,10 @@ internal sealed class ConfigurationDefinitionScanner(
             ConfigurationPath = configurationPath,
             ClrTypeName = type.AssemblyQualifiedName ?? type.FullName ?? type.Name,
             NodeKind = nodeKind,
-            ValueKind = nodeKind == ConfigurationNodeKind.Scalar ? GetValueKind(type) : null,
+            ValueKind = valueKind,
             IsNullable = IsNullable(type),
             IsSensitive = option?.IsSensitive is true,
+            TextSemantic = textSemantic,
             ReloadBehavior = ResolveReloadBehavior(option),
             DictionaryTemplate = nodeKind == ConfigurationNodeKind.Dictionary
                 ? BuildDictionaryTemplate(type, path, configurationPath, inheritedReloadBehavior)
@@ -123,9 +127,15 @@ internal sealed class ConfigurationDefinitionScanner(
         ConfigurationReloadBehavior inheritedReloadBehavior)
     {
         var nodeKind = GetNodeKind(propertyType);
+        var valueKind = nodeKind == ConfigurationNodeKind.Scalar ? GetValueKind(propertyType) : (ConfigurationValueKind?)null;
         var children = nodeKind == ConfigurationNodeKind.Object
             ? ScanObjectChildren(propertyType, path, configurationPath, inheritedReloadBehavior)
             : [];
+        var textSemantic = ResolveTextSemantic(
+            option,
+            nodeKind,
+            valueKind,
+            $"{property.DeclaringType?.FullName ?? property.DeclaringType?.Name}.{property.Name}");
 
         return new ConfigurationNodeDefinition
         {
@@ -137,9 +147,10 @@ internal sealed class ConfigurationDefinitionScanner(
             ConfigurationPath = configurationPath,
             ClrTypeName = propertyType.AssemblyQualifiedName ?? propertyType.FullName ?? propertyType.Name,
             NodeKind = nodeKind,
-            ValueKind = nodeKind == ConfigurationNodeKind.Scalar ? GetValueKind(propertyType) : null,
+            ValueKind = valueKind,
             IsNullable = IsNullable(property),
             IsSensitive = option?.IsSensitive is true,
+            TextSemantic = textSemantic,
             ReloadBehavior = ResolveReloadBehavior(option),
             DictionaryTemplate = nodeKind == ConfigurationNodeKind.Dictionary
                 ? BuildDictionaryTemplate(propertyType, path, configurationPath, inheritedReloadBehavior)
@@ -372,7 +383,7 @@ internal sealed class ConfigurationDefinitionScanner(
             {
                 RequiredAttribute required => new RequiredRule { ErrorMessage = required.ErrorMessage },
                 RangeAttribute range => new RangeRule(ToDecimal(range.Minimum), ToDecimal(range.Maximum)) { ErrorMessage = range.ErrorMessage },
-                RegularExpressionAttribute regex => new RegexRule(regex.Pattern) { ErrorMessage = regex.ErrorMessage },
+                RegularExpressionAttribute regex => new RegexRule(ConfigurationRegexTextCodec.NormalizePattern(regex.Pattern)) { ErrorMessage = regex.ErrorMessage },
                 MaxLengthAttribute max => new MaxLengthRule(max.Length) { ErrorMessage = max.ErrorMessage },
                 MinLengthAttribute min => new MinLengthRule(min.Length) { ErrorMessage = min.ErrorMessage },
                 StringLengthAttribute length => new MaxLengthRule(length.MaximumLength) { ErrorMessage = length.ErrorMessage },
@@ -425,5 +436,28 @@ internal sealed class ConfigurationDefinitionScanner(
         return option is null || option.ReloadBehavior == ConfigurationReloadBehavior.Inherit
             ? null
             : option.ReloadBehavior;
+    }
+
+    private static ConfigurationTextSemantic ResolveTextSemantic(
+        OptionSettingAttribute? option,
+        ConfigurationNodeKind nodeKind,
+        ConfigurationValueKind? valueKind,
+        string nodeLabel)
+    {
+        var textSemantic = option?.TextSemantic ?? ConfigurationTextSemantic.PlainText;
+        if (textSemantic == ConfigurationTextSemantic.PlainText)
+        {
+            return ConfigurationTextSemantic.PlainText;
+        }
+
+        if (textSemantic == ConfigurationTextSemantic.RegexPattern
+            && nodeKind == ConfigurationNodeKind.Scalar
+            && valueKind == ConfigurationValueKind.String)
+        {
+            return textSemantic;
+        }
+
+        throw new InvalidOperationException(
+            $"{nameof(OptionSettingAttribute.TextSemantic)}.{textSemantic} can only be used on scalar string configuration nodes. Node '{nodeLabel}' is {nodeKind}/{valueKind?.ToString() ?? "None"}.");
     }
 }

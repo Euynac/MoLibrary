@@ -12,6 +12,7 @@ using Microsoft.Extensions.Options;
 using Monica.Configuration.Abstractions;
 using Monica.Configuration.Models;
 using Monica.Configuration.Projection;
+using Monica.Configuration.Serialization;
 using Monica.Modules;
 
 namespace Monica.Configuration.Services.Support;
@@ -252,7 +253,7 @@ internal sealed class ConfigurationSourceInspector(
         var text = File.Exists(source.PhysicalPath)
             ? await File.ReadAllTextAsync(source.PhysicalPath, cancellationToken)
             : "{}";
-        var root = JsonNode.Parse(text, documentOptions: JSON_DOCUMENT_OPTIONS) ?? new JsonObject();
+        var root = NormalizeKnownRegexPatternPaths(JsonNode.Parse(text, documentOptions: JSON_DOCUMENT_OPTIONS) ?? new JsonObject());
         var redacted = RedactKnownSensitivePaths(root);
         return new ConfigurationSourceFileView
         {
@@ -323,7 +324,7 @@ internal sealed class ConfigurationSourceInspector(
                 ? new ConfigurationSourceValue
                 {
                     Source = source,
-                    DisplayValue = isSensitive ? null : value,
+                    DisplayValue = isSensitive ? null : DisplayScalarValue(targetNode, value),
                     IsSensitive = isSensitive
                 }
                 : null;
@@ -379,7 +380,7 @@ internal sealed class ConfigurationSourceInspector(
             ConfigurationValueKind.Integer when long.TryParse(value, out var parsed) => JsonValue.Create(parsed),
             ConfigurationValueKind.Decimal when decimal.TryParse(value, out var parsed) => JsonValue.Create(parsed),
             ConfigurationValueKind.Floating when double.TryParse(value, out var parsed) => JsonValue.Create(parsed),
-            _ => JsonValue.Create(value)
+            _ => JsonValue.Create(ConfigurationRegexTextCodec.NormalizeDisplayValue(schema, value))
         };
     }
 
@@ -589,6 +590,69 @@ internal sealed class ConfigurationSourceInspector(
         }
 
         return redacted;
+    }
+
+    private JsonNode NormalizeKnownRegexPatternPaths(JsonNode root)
+    {
+        var normalized = root;
+        foreach (var definition in definitionRegistry.GetAll())
+        {
+            normalized = NormalizePath(
+                normalized,
+                definition.SectionPath.Split(':', StringSplitOptions.RemoveEmptyEntries),
+                definition.Root);
+        }
+
+        return normalized;
+    }
+
+    private static JsonNode NormalizePath(
+        JsonNode root,
+        IReadOnlyList<string> segments,
+        ConfigurationNodeDefinition schema)
+    {
+        if (segments.Count == 0)
+        {
+            return ConfigurationRegexTextCodec.NormalizeJsonNode(schema, root) ?? root;
+        }
+
+        var current = root;
+        for (var index = 0; index < segments.Count - 1; index++)
+        {
+            current = current switch
+            {
+                JsonObject jsonObject => jsonObject[segments[index]],
+                JsonArray jsonArray when int.TryParse(segments[index], out var arrayIndex)
+                                      && arrayIndex >= 0
+                                      && arrayIndex < jsonArray.Count => jsonArray[arrayIndex],
+                _ => null
+            };
+
+            if (current is null)
+            {
+                return root;
+            }
+        }
+
+        var last = segments[^1];
+        if (current is JsonObject currentObject && currentObject[last] is { } objectValue)
+        {
+            currentObject[last] = ConfigurationRegexTextCodec.NormalizeJsonNode(schema, objectValue);
+        }
+        else if (current is JsonArray currentArray
+                 && int.TryParse(last, out var lastIndex)
+                 && lastIndex >= 0
+                 && lastIndex < currentArray.Count)
+        {
+            currentArray[lastIndex] = ConfigurationRegexTextCodec.NormalizeJsonNode(schema, currentArray[lastIndex]);
+        }
+
+        return root;
+    }
+
+    private static string? DisplayScalarValue(ConfigurationNodeDefinition? schema, string? value)
+    {
+        return value is null || schema is null ? value : ConfigurationRegexTextCodec.NormalizeDisplayValue(schema, value);
     }
 
     private static bool RedactPath(JsonNode root, IReadOnlyList<string> segments)

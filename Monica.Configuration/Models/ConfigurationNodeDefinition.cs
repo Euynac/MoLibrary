@@ -63,6 +63,19 @@ public sealed record ConfigurationNodeDefinition
     public bool IsSensitive { get; init; }
 
     /// <summary>
+    /// Gets specialized text semantics for scalar string values.
+    /// </summary>
+    public ConfigurationTextSemantic TextSemantic { get; init; } = ConfigurationTextSemantic.PlainText;
+
+    /// <summary>
+    /// Gets whether this node stores a regular expression pattern as text.
+    /// </summary>
+    public bool IsRegexPatternText =>
+        NodeKind == ConfigurationNodeKind.Scalar
+        && ValueKind == ConfigurationValueKind.String
+        && TextSemantic == ConfigurationTextSemantic.RegexPattern;
+
+    /// <summary>
     /// Gets a reload behavior override for this node.
     /// </summary>
     public ConfigurationReloadBehavior? ReloadBehavior { get; init; }

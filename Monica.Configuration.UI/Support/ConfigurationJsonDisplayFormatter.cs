@@ -2,6 +2,7 @@ using System.Text.Encodings.Web;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using Monica.Configuration.Models;
+using Monica.Configuration.Serialization;
 
 namespace Monica.Configuration.UI.Support;
 
@@ -15,7 +16,7 @@ internal static class ConfigurationJsonDisplayFormatter
 
     public static string Format(JsonNode? node, ConfigurationNodeDefinition schema, string redactedLabel)
     {
-        var redacted = RedactSensitive(CloneNode(node), schema, redactedLabel);
+        var redacted = RedactSensitive(ConfigurationRegexTextCodec.NormalizeJsonNode(schema, node), schema, redactedLabel);
         return redacted?.ToJsonString(ReadableJsonOptions) ?? "null";
     }
 
@@ -88,11 +89,6 @@ internal static class ConfigurationJsonDisplayFormatter
                 jsonArray[index] = redacted;
             }
         }
-    }
-
-    private static JsonNode? CloneNode(JsonNode? node)
-    {
-        return node is null ? null : JsonNode.Parse(node.ToJsonString());
     }
 
     private static JsonNode? ParseJson(string? json)

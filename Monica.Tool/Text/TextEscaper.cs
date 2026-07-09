@@ -1,4 +1,5 @@
 ﻿using System.Text;
+using System.Globalization;
 using System.Text.RegularExpressions;
 
 namespace Monica.Tool.Text;
@@ -14,6 +15,36 @@ public static class TextEscaper
     /// <param name="pattern"></param>
     /// <returns></returns>
     public static string ToRegexEscaped(this string pattern) => Regex.Escape(pattern);
+
+    /// <summary>
+    /// Converts non-ASCII UTF-16 code units to uppercase <c>\uXXXX</c> escape sequences while leaving ASCII regex
+    /// syntax unchanged.
+    /// </summary>
+    /// <param name="pattern">The regular expression pattern to normalize.</param>
+    /// <returns>The normalized regular expression pattern.</returns>
+    public static string ToRegexUnicodeEscaped(this string pattern)
+    {
+        if (string.IsNullOrEmpty(pattern))
+        {
+            return pattern;
+        }
+
+        var result = new StringBuilder(pattern.Length);
+        foreach (var character in pattern)
+        {
+            if (character <= 0x7F)
+            {
+                result.Append(character);
+                continue;
+            }
+
+            result.Append(@"\u");
+            result.Append(((int)character).ToString("X4", CultureInfo.InvariantCulture));
+        }
+
+        return result.ToString();
+    }
+
     /// <summary>
     /// Doing Regex.Escape and also escape ])}.
     /// <para></para>

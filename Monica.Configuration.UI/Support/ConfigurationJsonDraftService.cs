@@ -4,6 +4,7 @@ using System.Text.Json.Nodes;
 using System.Text.RegularExpressions;
 using Microsoft.Extensions.Localization;
 using Monica.Configuration.Models;
+using Monica.Configuration.Serialization;
 using Monica.Configuration.UI.Localization;
 using Monica.Configuration.UI.Models;
 using Monica.Configuration.UI.State;
@@ -65,7 +66,7 @@ internal sealed class ConfigurationJsonDraftService(
         out IReadOnlyList<string> redactedPaths)
     {
         var paths = new List<string>();
-        var clone = CloneNode(node);
+        var clone = ConfigurationRegexTextCodec.NormalizeJsonNode(schema, node);
         var redacted = RedactConcreteNode(clone, schema, schema.RelativePath, paths);
         redactedPaths = paths;
         return redacted;

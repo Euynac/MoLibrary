@@ -2,6 +2,7 @@
 using System.Text;
 using System.Text.RegularExpressions;
 using JetBrains.Annotations;
+using Monica.Tool.Text;
 
 namespace Monica.Tool.Extensions;
 
@@ -49,7 +50,7 @@ public static class RegexExtensions
         if (regexs.HasFlag(UnicodeRegexs.UpperLetter)) sb.Append("A-Z");
         if (regexs.HasFlag(UnicodeRegexs.LowerLetter)) sb.Append("a-z");
         if (regexs.HasFlag(UnicodeRegexs.Digit)) sb.Append("0-9");
-        if(regexs.HasFlag(UnicodeRegexs.Chinese)) sb.Append("\u4e00-\u9fa5");
+        if(regexs.HasFlag(UnicodeRegexs.Chinese)) sb.Append("\u4e00-\u9fa5".ToRegexUnicodeEscaped());
         if(regexs.HasFlag(UnicodeRegexs.ChineseCommonPunctuationMarks)) sb.Append("，。！？：");
         if(regexs.HasFlag(UnicodeRegexs.EnglishCommonPunctuationMarks)) sb.Append(",.?!:");
         return sb.ToString();

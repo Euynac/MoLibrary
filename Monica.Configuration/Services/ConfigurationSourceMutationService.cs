@@ -1,6 +1,7 @@
 using Monica.Configuration.Abstractions;
 using Monica.Configuration.Abstractions.Internal;
 using Monica.Configuration.Models;
+using Monica.Configuration.Serialization;
 using Monica.Configuration.Services.Support;
 using Microsoft.Extensions.Options;
 using Monica.Modules;
@@ -31,6 +32,8 @@ internal sealed class ConfigurationSourceMutationService(
         CancellationToken cancellationToken)
     {
         var definition = definitionRegistry.GetRequired(request.DefinitionKey);
+        var targetNode = ResolveTargetNode(definition, request.LogicalPath);
+        request = NormalizeRequest(targetNode, request);
         validationCoordinator.Validate(definition, new ConfigurationMutationRequest
         {
             DefinitionKey = request.DefinitionKey,
@@ -53,7 +56,6 @@ internal sealed class ConfigurationSourceMutationService(
 
         await reloadCoordinator.ReloadRuntimeConfigurationAsync(cancellationToken);
 
-        var targetNode = ResolveTargetNode(definition, request.LogicalPath);
         var reloadBehavior = targetNode.ResolveEffectiveReloadBehavior(definition);
         var history = new ConfigurationValueHistory
         {
@@ -143,5 +145,14 @@ internal sealed class ConfigurationSourceMutationService(
         }
 
         return current;
+    }
+
+    private static ConfigurationSourceMutationRequest NormalizeRequest(
+        ConfigurationNodeDefinition targetNode,
+        ConfigurationSourceMutationRequest request)
+    {
+        return request.MutationKind == ConfigurationMutationKind.Set
+            ? request with { Value = ConfigurationRegexTextCodec.NormalizeStoredValue(targetNode, request.Value) }
+            : request;
     }
 }

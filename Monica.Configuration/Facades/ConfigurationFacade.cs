@@ -1,5 +1,6 @@
 using Microsoft.Extensions.Configuration;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using Monica.Configuration.Exceptions;
 using Monica.Configuration.Abstractions;
 using Monica.Configuration.Models;
@@ -189,7 +190,11 @@ public sealed class ConfigurationFacade(
                 DefinitionKey = definitionKey,
                 LogicalPath = logicalPath,
                 ConfigurationPath = configurationPath,
-                DisplayValue = isSensitive ? null : displayValue,
+                DisplayValue = isSensitive || displayValue is null
+                    ? null
+                    : targetNode is null
+                        ? displayValue
+                        : ConfigurationRegexTextCodec.NormalizeDisplayValue(targetNode, displayValue),
                 IsSensitive = isSensitive,
                 Version = document?.Version
             };
@@ -259,9 +264,19 @@ public sealed class ConfigurationFacade(
 
             if (node?.NodeKind == ConfigurationNodeKind.Scalar)
             {
-                return document.RootElement.ValueKind == JsonValueKind.String
+                var displayValue = document.RootElement.ValueKind == JsonValueKind.String
                     ? document.RootElement.GetString()
                     : document.RootElement.GetRawText();
+                return node.IsRegexPatternText
+                    ? ConfigurationRegexTextCodec.NormalizePattern(displayValue)
+                    : displayValue;
+            }
+
+            if (node is not null)
+            {
+                var normalized = ConfigurationRegexTextCodec.NormalizeJsonNode(node, JsonNode.Parse(document.RootElement.GetRawText()));
+                return normalized?.ToJsonString(ConfigurationPersistedJsonOptions.ReadableValue)
+                       ?? JsonSerializer.Serialize(document.RootElement, ConfigurationPersistedJsonOptions.ReadableValue);
             }
 
             return JsonSerializer.Serialize(document.RootElement, ConfigurationPersistedJsonOptions.ReadableValue);

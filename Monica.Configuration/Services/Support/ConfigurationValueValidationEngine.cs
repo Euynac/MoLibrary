@@ -2,6 +2,7 @@ using System.Globalization;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using Monica.Configuration.Models;
+using Monica.Configuration.Serialization;
 
 namespace Monica.Configuration.Services.Support;
 
@@ -546,16 +547,17 @@ internal sealed class ConfigurationValueValidationEngine
             LogicalPath = path,
             Node = schema,
             Message = message,
-            DisplayValue = DisplayValue(value),
+            DisplayValue = DisplayValue(schema, value),
             ValidationRules = schema.ValidationRules
         });
     }
 
-    private static string DisplayValue(JsonElement value)
+    private static string DisplayValue(ConfigurationNodeDefinition schema, JsonElement value)
     {
-        return value.ValueKind == JsonValueKind.String
+        var displayValue = value.ValueKind == JsonValueKind.String
             ? value.GetString() ?? string.Empty
             : value.GetRawText();
+        return ConfigurationRegexTextCodec.NormalizeDisplayValue(schema, displayValue);
     }
 
     private static ConfigurationValueConversionException ConversionFailed(string message)

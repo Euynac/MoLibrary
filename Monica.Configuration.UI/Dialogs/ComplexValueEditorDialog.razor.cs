@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Components;
 using Microsoft.JSInterop;
 using MudBlazor;
 using Monica.Configuration.Models;
+using Monica.Configuration.Serialization;
 using Monica.Configuration.UI.Models;
 using Monica.Configuration.UI.State;
 using Monica.Configuration.UI.Support;
@@ -638,7 +639,7 @@ public partial class ComplexValueEditorDialog : IAsyncDisposable
             var coveringValue = CloneNode(ReadNode(covering.LogicalPath));
             _changes[coveringIndex] = covering with
             {
-                NewValue = ToStoredValue(coveringValue),
+                NewValue = ToStoredValue(coveringValue, coveringSchema),
                 NewDisplayValue = DisplayJson(coveringValue, coveringSchema)
             };
             return;
@@ -666,8 +667,8 @@ public partial class ComplexValueEditorDialog : IAsyncDisposable
             LogicalPath = path,
             NodeDisplayName = DisplayName(schema),
             MutationKind = kind,
-            NewValue = kind == ConfigurationMutationKind.Remove ? ConfigurationStoredValue.Null : ToStoredValue(newValue),
-            OriginalValue = oldValue is null ? null : ToStoredValue(oldValue),
+            NewValue = kind == ConfigurationMutationKind.Remove ? ConfigurationStoredValue.Null : ToStoredValue(newValue, schema),
+            OriginalValue = oldValue is null ? null : ToStoredValue(oldValue, schema),
             OriginalDisplayValue = DisplayJson(oldValue, schema),
             NewDisplayValue = kind == ConfigurationMutationKind.Remove ? L["Mutation:Kinds:Remove"] : DisplayJson(newValue, schema),
             ExpectedSchemaVersion = Definition.SchemaVersion,
@@ -780,7 +781,7 @@ public partial class ComplexValueEditorDialog : IAsyncDisposable
             DefinitionKey = Definition.DefinitionKey,
             LogicalPath = path,
             ConfigurationPath = field.ConfigurationPath,
-            DisplayValue = field.IsSensitive ? null : ReadScalarAsString(ReadNode(path)),
+            DisplayValue = field.IsSensitive ? null : ReadScalarDisplayValue(ReadNode(path), field),
             IsSensitive = field.IsSensitive,
             Version = _valueVersion,
             EffectiveSource = EffectiveValue?.EffectiveSource
@@ -1075,9 +1076,10 @@ public partial class ComplexValueEditorDialog : IAsyncDisposable
         return node is null ? null : JsonNode.Parse(node.ToJsonString());
     }
 
-    private static ConfigurationStoredValue ToStoredValue(JsonNode? node)
+    private static ConfigurationStoredValue ToStoredValue(JsonNode? node, ConfigurationNodeDefinition schema)
     {
-        return ConfigurationStoredValue.FromJson(node?.ToJsonString() ?? "null");
+        var normalized = ConfigurationRegexTextCodec.NormalizeJsonNode(schema, node);
+        return ConfigurationStoredValue.FromJson(normalized?.ToJsonString() ?? "null");
     }
 
     private string DisplayJson(JsonNode? node, ConfigurationNodeDefinition schema)
@@ -1093,14 +1095,14 @@ public partial class ComplexValueEditorDialog : IAsyncDisposable
         }
 
         return schema.NodeKind == ConfigurationNodeKind.Scalar
-            ? ReadScalarAsString(node) ?? L["Value:States:Empty"]
-            : FormatJson(node);
+            ? ReadScalarDisplayValue(node, schema) ?? L["Value:States:Empty"]
+            : ConfigurationJsonDisplayFormatter.Format(node, schema, L["State:Value:Sensitive"]);
     }
 
-    private static string FormatJson(JsonNode? node)
+    private static string? ReadScalarDisplayValue(JsonNode? node, ConfigurationNodeDefinition schema)
     {
-        using var document = JsonDocument.Parse(node?.ToJsonString() ?? "null");
-        return JsonSerializer.Serialize(document.RootElement, ConfigurationJsonDisplayFormatter.ReadableJsonOptions);
+        var value = ReadScalarAsString(node);
+        return value is null ? null : ConfigurationRegexTextCodec.NormalizeDisplayValue(schema, value);
     }
 
     private ConfigurationReloadBehavior EffectiveReloadBehaviorFor(ConfigurationNodeDefinition schema)
