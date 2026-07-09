@@ -11,7 +11,7 @@ namespace Monica.EventBus.Kafka.Services;
 public sealed class KafkaPerformanceService(
     KafkaClusterService clusterService,
     IKafkaAdminProvider adminProvider,
-    IKafkaPerformanceMetricsProvider metricsProvider,
+    IKafkaOffsetMetricsProvider offsetMetricsProvider,
     IKafkaConsoleRepository repository,
     IOptions<ModuleEventBusKafkaOption> options)
 {
@@ -63,9 +63,10 @@ public sealed class KafkaPerformanceService(
             snapshot.TopicCount = topics.Count;
             snapshot.ConsumerGroupCount = groups.Count;
 
-            var offsetTotals = await metricsProvider.CaptureOffsetTotalsAsync(cluster, topics, groups, cancellationToken);
+            var offsetTotals = await offsetMetricsProvider.CapturePerformanceOffsetTotalsAsync(cluster, topics, groups, cancellationToken);
             snapshot.TotalLag = offsetTotals.TotalLag;
             snapshot.TotalLogEndOffset = offsetTotals.TotalLogEndOffset;
+            snapshot.TotalAvailableMessageCount = offsetTotals.TotalAvailableMessageCount;
             snapshot.TotalConsumerCommittedOffset = offsetTotals.TotalConsumerCommittedOffset;
             ApplyRates(snapshot, previous);
         }

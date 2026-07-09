@@ -138,6 +138,76 @@ public sealed class KafkaTopicSummary
     /// Optional retention time in milliseconds.
     /// </summary>
     public long? RetentionMs { get; set; }
+
+    /// <summary>
+    /// Current number of retained messages that a new consumer can read from this topic.
+    /// </summary>
+    /// <remarks>
+    /// This value is calculated from each partition's latest offset minus earliest offset. It is
+    /// independent of consumer groups and can be available even when no consumer group exists.
+    /// </remarks>
+    public long? AvailableMessageCount { get; set; }
+}
+
+/// <summary>
+/// Current retained-message inventory for one Kafka topic.
+/// </summary>
+public sealed class KafkaTopicBacklogSnapshot
+{
+    /// <summary>
+    /// Target cluster id.
+    /// </summary>
+    public string ClusterId { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Topic name.
+    /// </summary>
+    public string TopicName { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Total retained messages across all readable partitions.
+    /// </summary>
+    /// <remarks>
+    /// Kafka offset ranges can contain holes on compacted topics, so this is a lightweight
+    /// offset-range inventory rather than a full message scan.
+    /// </remarks>
+    public long TotalAvailableMessageCount { get; set; }
+
+    /// <summary>
+    /// Time when the snapshot was captured.
+    /// </summary>
+    public DateTimeOffset CapturedAt { get; set; } = DateTimeOffset.UtcNow;
+
+    /// <summary>
+    /// Partition-level offset ranges.
+    /// </summary>
+    public IReadOnlyList<KafkaTopicPartitionBacklog> Partitions { get; set; } = [];
+}
+
+/// <summary>
+/// Current retained-message inventory for one Kafka topic partition.
+/// </summary>
+public sealed class KafkaTopicPartitionBacklog
+{
+    /// <summary>
+    /// Partition id.
+    /// </summary>
+    public int Partition { get; set; }
+
+    /// <summary>
+    /// Earliest retained offset currently readable from this partition.
+    /// </summary>
+    public long EarliestOffset { get; set; }
+
+    /// <summary>
+    /// Latest offset, represented as the next offset Kafka will assign in this partition.
+    /// </summary>
+    public long LatestOffset { get; set; }
+
+    /// <summary>
+    /// Number of retained messages estimated from <see cref="LatestOffset"/> minus <see cref="EarliestOffset"/>.
+    /// </summary>
+    public long AvailableMessageCount { get; set; }
 }
 
 /// <summary>
@@ -393,6 +463,14 @@ public sealed class KafkaPerformanceSnapshot
     public long? TotalLogEndOffset { get; set; }
 
     /// <summary>
+    /// Total retained messages across all sampled topic partitions.
+    /// </summary>
+    /// <remarks>
+    /// This is independent of consumer groups and can be calculated when no consumer group exists.
+    /// </remarks>
+    public long? TotalAvailableMessageCount { get; set; }
+
+    /// <summary>
     /// Sum of committed offsets across sampled consumer groups and non-internal topic partitions.
     /// </summary>
     public long? TotalConsumerCommittedOffset { get; set; }
@@ -437,6 +515,11 @@ public sealed class KafkaPerformanceOffsetTotals
     /// Total lag calculated from latest offsets and committed offsets when consumer offsets are available.
     /// </summary>
     public long? TotalLag { get; set; }
+
+    /// <summary>
+    /// Total retained messages across all sampled topic partitions.
+    /// </summary>
+    public long? TotalAvailableMessageCount { get; set; }
 }
 
 /// <summary>
@@ -473,4 +556,9 @@ public sealed class KafkaDashboardSnapshot
     /// Broker count shown by the dashboard.
     /// </summary>
     public int BrokerCount { get; set; }
+
+    /// <summary>
+    /// Total retained messages shown by the dashboard for the selected cluster.
+    /// </summary>
+    public long? TotalAvailableMessageCount { get; set; }
 }

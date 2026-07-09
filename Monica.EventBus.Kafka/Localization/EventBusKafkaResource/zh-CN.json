@@ -54,6 +54,10 @@
       "Messages": {
         "Summary": "读取 Kafka 主题消息",
         "Description": "读取有限数量的最近消息预览，不提交消费者 offset。"
+      },
+      "Backlog": {
+        "Summary": "获取 Kafka 主题积压",
+        "Description": "返回基于 Kafka earliest 和 latest offset 计算的分区级保留消息数量。"
       }
     },
     "ConsumerGroups": {
@@ -114,10 +118,15 @@
       "TopicsHint": "通过 Kafka 元数据可见",
       "ConsumerGroups": "消费者组",
       "ConsumerGroupsHint": "来自 Kafka 管理 API 描述",
+      "AvailableMessages": "可消费消息",
+      "AvailableMessagesHint": "所有主题可消费消息总和",
       "WriteRate": "写入速率",
       "WriteRateHint": "来自最新 offset 增长",
       "ConsumeRate": "消费速率",
       "ConsumeRateHint": "来自最新提交 offset 增长"
+    },
+    "Values": {
+      "AvailableMessagesUnknown": "未知"
     },
     "Modes": {
       "DirectKafka": "直接 Kafka",
@@ -198,6 +207,7 @@
     "Actions": {
       "Create": "创建主题",
       "Messages": "查看消息",
+      "Backlog": "分区积压",
       "Partitions": "增加分区",
       "Retention": "设置保留时间"
     },
@@ -205,6 +215,7 @@
       "Name": "名称",
       "Partitions": "分区",
       "Replication": "副本",
+      "AvailableMessages": "可消费消息",
       "Retention": "保留时间",
       "Actions": "操作"
     },
@@ -216,15 +227,27 @@
       "TombstoneEncoding": "Null 值",
       "TimestampUnknown": "时间戳不可用",
       "RetentionUnknown": "未知",
+      "AvailableMessagesUnknown": "未知",
       "RetentionMs": "{0} ms"
     },
     "Dialog": {
       "CreateTitle": "创建 Kafka 主题",
       "MessagesTitle": "{0} 的消息",
+      "BacklogTitle": "{0} 的分区积压",
       "PartitionsTitle": "增加分区",
       "RetentionTitle": "设置保留时间",
       "PartitionsMessage": "主题 {0} 当前有 {1} 个分区。Kafka 只允许增加分区数量。",
       "RetentionMessage": "设置主题 {0} 的 retention.ms。"
+    },
+    "BacklogDialog": {
+      "Summary": "采样时间 {1}，共 {0} 条保留消息。该数量基于每个分区 latest offset 减 earliest offset 计算，不需要消费者组。",
+      "Empty": "该主题未返回可读取分区。",
+      "Columns": {
+        "Partition": "分区",
+        "EarliestOffset": "Earliest offset",
+        "LatestOffset": "Latest offset",
+        "AvailableMessages": "可消费消息"
+      }
     },
     "MessagesDialog": {
       "ReadHint": "显示最多 {0} 条最近消息，采样时间 {1}。此预览不会提交消费者 offset。",
@@ -285,6 +308,7 @@
       "Brokers": "Broker",
       "Topics": "主题",
       "Groups": "消费者组",
+      "AvailableMessages": "可消费消息",
       "WriteRate": "写入速率",
       "ConsumeRate": "消费速率",
       "Lag": "Lag",
@@ -292,6 +316,7 @@
     },
     "Values": {
       "LagUnknown": "未知",
+      "AvailableMessagesUnknown": "未知",
       "RateUnknown": "未知",
       "RatePerSecond": "{0} msg/s",
       "NoMessage": "正常"

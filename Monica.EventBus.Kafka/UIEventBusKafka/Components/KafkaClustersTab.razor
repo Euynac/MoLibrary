@@ -60,7 +60,7 @@
                         <MudTooltip Text="@L["Common:Actions:Select"]">
                             <MudIconButton Icon="@Icons.Material.Filled.CheckCircle"
                                            Size="Size.Small"
-                                           Disabled="@State.IsBusy"
+                                           Disabled="@(State.IsBusy || !context.IsReachable)"
                                            OnClick="@(() => OnSelect.InvokeAsync(context))" />
                         </MudTooltip>
                         <MudTooltip Text="@L["Common:Actions:Edit"]">

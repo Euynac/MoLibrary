@@ -15,30 +15,29 @@ internal sealed class ConfluentKafkaAdminProvider(IOptions<ModuleEventBusKafkaOp
 {
     private ModuleEventBusKafkaOption Option => options.Value;
 
-    public Task<KafkaConnectionTestResult> TestConnectionAsync(
+    public async Task<KafkaConnectionTestResult> TestConnectionAsync(
         KafkaClusterConfig cluster,
         CancellationToken cancellationToken = default)
     {
         using var admin = CreateAdminClient(cluster);
-        var metadata = admin.GetMetadata(Option.AdminRequestTimeout);
-        var brokers = MapBrokers(metadata);
+        var result = await admin.DescribeClusterAsync(BuildDescribeClusterOptions()).WaitAsync(cancellationToken);
+        var brokers = MapNodes(result.Nodes);
         if (brokers.Count == 0)
         {
             throw new InvalidOperationException($"Kafka cluster '{cluster.ClusterId}' returned no brokers.");
         }
 
-        return Task.FromResult(new KafkaConnectionTestResult
+        return new KafkaConnectionTestResult
         {
             Brokers = brokers
-        });
+        };
     }
 
-    public Task<IReadOnlyList<KafkaBrokerInfo>> ListBrokersAsync(KafkaClusterConfig cluster, CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyList<KafkaBrokerInfo>> ListBrokersAsync(KafkaClusterConfig cluster, CancellationToken cancellationToken = default)
     {
         using var admin = CreateAdminClient(cluster);
-        var metadata = admin.GetMetadata(Option.AdminRequestTimeout);
-        var brokers = MapBrokers(metadata);
-        return Task.FromResult<IReadOnlyList<KafkaBrokerInfo>>(brokers);
+        var result = await admin.DescribeClusterAsync(BuildDescribeClusterOptions()).WaitAsync(cancellationToken);
+        return MapNodes(result.Nodes);
     }
 
     public async Task<IReadOnlyList<KafkaTopicSummary>> ListTopicsAsync(KafkaClusterConfig cluster, CancellationToken cancellationToken = default)
@@ -205,6 +204,27 @@ internal sealed class ConfluentKafkaAdminProvider(IOptions<ModuleEventBusKafkaOp
         }
 
         return new AdminClientBuilder(KafkaClientConfigFactory.BuildAdminConfig(cluster, Option)).Build();
+    }
+
+    private DescribeClusterOptions BuildDescribeClusterOptions()
+    {
+        return new DescribeClusterOptions
+        {
+            RequestTimeout = Option.AdminRequestTimeout
+        };
+    }
+
+    private static List<KafkaBrokerInfo> MapNodes(IReadOnlyList<Node> nodes)
+    {
+        return nodes
+            .Select(node => new KafkaBrokerInfo
+            {
+                BrokerId = node.Id,
+                Host = node.Host,
+                Port = node.Port
+            })
+            .OrderBy(broker => broker.BrokerId)
+            .ToList();
     }
 
     private static List<KafkaBrokerInfo> MapBrokers(Metadata metadata)

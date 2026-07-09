@@ -9,12 +9,27 @@ namespace Monica.EventBus.Kafka.Services;
 public sealed class KafkaTopicService(
     KafkaClusterService clusterService,
     IKafkaAdminProvider adminProvider,
+    IKafkaOffsetMetricsProvider offsetMetricsProvider,
     IKafkaMessageReader messageReader)
 {
     public async Task<IReadOnlyList<KafkaTopicSummary>> ListTopicsAsync(string clusterId, CancellationToken cancellationToken = default)
     {
         var cluster = await GetAdminClusterAsync(clusterId, cancellationToken);
-        return await adminProvider.ListTopicsAsync(cluster, cancellationToken);
+        var topics = (await adminProvider.ListTopicsAsync(cluster, cancellationToken)).ToList();
+        var backlogs = await offsetMetricsProvider.CaptureTopicBacklogsAsync(cluster, topics, cancellationToken);
+        var backlogsByTopic = backlogs.ToDictionary(
+            backlog => backlog.TopicName,
+            StringComparer.Ordinal);
+
+        foreach (var topic in topics)
+        {
+            if (backlogsByTopic.TryGetValue(topic.TopicName, out var backlog))
+            {
+                topic.AvailableMessageCount = backlog.TotalAvailableMessageCount;
+            }
+        }
+
+        return topics;
     }
 
     public async Task CreateTopicAsync(KafkaTopicCreateRequest request, CancellationToken cancellationToken = default)
@@ -45,6 +60,15 @@ public sealed class KafkaTopicService(
     {
         var cluster = await GetAdminClusterAsync(request.ClusterId, cancellationToken);
         return await messageReader.ReadMessagesAsync(cluster, request, cancellationToken);
+    }
+
+    public async Task<KafkaTopicBacklogSnapshot> GetTopicBacklogAsync(
+        string clusterId,
+        string topicName,
+        CancellationToken cancellationToken = default)
+    {
+        var cluster = await GetAdminClusterAsync(clusterId, cancellationToken);
+        return await offsetMetricsProvider.CaptureTopicBacklogAsync(cluster, topicName, cancellationToken);
     }
 
     private async Task<KafkaClusterConfig> GetAdminClusterAsync(string clusterId, CancellationToken cancellationToken)

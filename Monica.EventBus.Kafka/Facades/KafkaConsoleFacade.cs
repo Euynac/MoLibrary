@@ -133,6 +133,19 @@ public sealed class KafkaConsoleFacade(
     }
 
     /// <summary>
+    /// Gets partition-level retained-message inventory for a topic.
+    /// </summary>
+    public Task<Res<KafkaTopicBacklogSnapshot>> GetTopicBacklogAsync(
+        string clusterId,
+        string topicName,
+        CancellationToken cancellationToken = default)
+    {
+        return ExecuteAsync(
+            () => topicService.GetTopicBacklogAsync(clusterId, topicName, cancellationToken),
+            "Failed to load Kafka topic backlog");
+    }
+
+    /// <summary>
     /// Lists consumer groups.
     /// </summary>
     public Task<Res<IReadOnlyList<KafkaConsumerGroupSummary>>> ListConsumerGroupsAsync(string clusterId, CancellationToken cancellationToken = default)

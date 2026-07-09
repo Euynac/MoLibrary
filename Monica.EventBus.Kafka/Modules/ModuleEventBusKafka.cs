@@ -89,7 +89,7 @@ public sealed class ModuleEventBusKafka(ModuleEventBusKafkaOption option)
         services.TryAddSingleton<KafkaBootstrapEndpointProbe>();
         services.TryAddScoped<IKafkaAdminProvider, ConfluentKafkaAdminProvider>();
         services.TryAddScoped<IKafkaMessageReader, ConfluentKafkaMessageReader>();
-        services.TryAddScoped<IKafkaPerformanceMetricsProvider, ConfluentKafkaPerformanceMetricsProvider>();
+        services.TryAddScoped<IKafkaOffsetMetricsProvider, ConfluentKafkaOffsetMetricsProvider>();
         services.TryAddScoped<KafkaIntegrationService>();
         services.TryAddScoped<KafkaClusterService>();
         services.TryAddScoped<KafkaTopicService>();
@@ -222,6 +222,17 @@ public sealed class ModuleEventBusKafka(ModuleEventBusKafkaOption option)
                 .WithTags(tagName)
                 .WithSummary(LocalizationManager.Get<EventBusKafkaResource>("Api:Topics:Messages:Summary"))
                 .WithDescription(LocalizationManager.Get<EventBusKafkaResource>("Api:Topics:Messages:Description"));
+
+            endpoints.MapGet("/eventbus-kafka/clusters/{clusterId}/topics/{topicName}/backlog",
+                    async ([FromRoute] string clusterId,
+                        [FromRoute] string topicName,
+                        [FromServices] KafkaConsoleFacade facade,
+                        CancellationToken cancellationToken) =>
+                        (await facade.GetTopicBacklogAsync(clusterId, topicName, cancellationToken)).GetResponse())
+                .WithName("GetEventBusKafkaTopicBacklog")
+                .WithTags(tagName)
+                .WithSummary(LocalizationManager.Get<EventBusKafkaResource>("Api:Topics:Backlog:Summary"))
+                .WithDescription(LocalizationManager.Get<EventBusKafkaResource>("Api:Topics:Backlog:Description"));
 
             endpoints.MapGet("/eventbus-kafka/clusters/{clusterId}/consumer-groups",
                     async ([FromRoute] string clusterId,

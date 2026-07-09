@@ -54,6 +54,10 @@
       "Messages": {
         "Summary": "Reads Kafka topic messages",
         "Description": "Reads a bounded recent message preview without committing consumer offsets."
+      },
+      "Backlog": {
+        "Summary": "Gets Kafka topic backlog",
+        "Description": "Returns partition-level retained-message counts calculated from Kafka earliest and latest offsets."
       }
     },
     "ConsumerGroups": {
@@ -114,10 +118,15 @@
       "TopicsHint": "Visible through Kafka metadata",
       "ConsumerGroups": "Consumer groups",
       "ConsumerGroupsHint": "Described from Kafka admin APIs",
+      "AvailableMessages": "Available messages",
+      "AvailableMessagesHint": "Sum of available messages across all topics",
       "WriteRate": "Write rate",
       "WriteRateHint": "Latest offset growth",
       "ConsumeRate": "Consume rate",
       "ConsumeRateHint": "Latest committed offset growth"
+    },
+    "Values": {
+      "AvailableMessagesUnknown": "Unknown"
     },
     "Modes": {
       "DirectKafka": "Direct Kafka",
@@ -198,6 +207,7 @@
     "Actions": {
       "Create": "Create topic",
       "Messages": "View messages",
+      "Backlog": "Partition backlog",
       "Partitions": "Increase partitions",
       "Retention": "Set retention"
     },
@@ -205,6 +215,7 @@
       "Name": "Name",
       "Partitions": "Partitions",
       "Replication": "Replication",
+      "AvailableMessages": "Available messages",
       "Retention": "Retention",
       "Actions": "Actions"
     },
@@ -216,15 +227,27 @@
       "TombstoneEncoding": "Null value",
       "TimestampUnknown": "Timestamp unavailable",
       "RetentionUnknown": "Unknown",
+      "AvailableMessagesUnknown": "Unknown",
       "RetentionMs": "{0} ms"
     },
     "Dialog": {
       "CreateTitle": "Create Kafka topic",
       "MessagesTitle": "Messages in {0}",
+      "BacklogTitle": "Partition backlog for {0}",
       "PartitionsTitle": "Increase partitions",
       "RetentionTitle": "Set retention",
       "PartitionsMessage": "Topic {0} currently has {1} partitions. Kafka only allows increasing this value.",
       "RetentionMessage": "Set retention.ms for topic {0}."
+    },
+    "BacklogDialog": {
+      "Summary": "{0} retained messages sampled at {1}. This count is based on each partition's latest offset minus earliest offset and does not require a consumer group.",
+      "Empty": "No readable partitions were returned for this topic.",
+      "Columns": {
+        "Partition": "Partition",
+        "EarliestOffset": "Earliest offset",
+        "LatestOffset": "Latest offset",
+        "AvailableMessages": "Available messages"
+      }
     },
     "MessagesDialog": {
       "ReadHint": "Showing up to {0} recent messages sampled at {1}. This preview does not commit consumer offsets.",
@@ -285,6 +308,7 @@
       "Brokers": "Brokers",
       "Topics": "Topics",
       "Groups": "Groups",
+      "AvailableMessages": "Available messages",
       "WriteRate": "Write rate",
       "ConsumeRate": "Consume rate",
       "Lag": "Lag",
@@ -292,6 +316,7 @@
     },
     "Values": {
       "LagUnknown": "Unknown",
+      "AvailableMessagesUnknown": "Unknown",
       "RateUnknown": "Unknown",
       "RatePerSecond": "{0} msg/s",
       "NoMessage": "OK"
