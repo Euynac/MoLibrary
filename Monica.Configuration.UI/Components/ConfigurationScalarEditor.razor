@@ -132,12 +132,19 @@
                 </MudTooltip>
                 @if (CanShowRegexPreview && RegexPreviewTokens.Count > 0)
                 {
-                    <code class="configuration-regex-preview" aria-label="@L["State:Editor:RegexPreview"]">
-                        @foreach (var token in RegexPreviewTokens)
-                        {
-                            <span class="@token.CssClass">@token.Text</span>
-                        }
-                    </code>
+                    <button type="button"
+                            class="@RegexPreviewClass"
+                            aria-label="@RegexPreviewToggleLabel"
+                            title="@RegexPreviewToggleLabel"
+                            @onclick="ToggleRegexPreviewMode">
+                        <span class="configuration-regex-preview-mode">@RegexPreviewModeLabel</span>
+                        <code class="configuration-regex-preview-code" aria-label="@L["State:Editor:RegexPreview"]">
+                            @foreach (var token in RegexPreviewTokens)
+                            {
+                                <span class="@token.CssClass">@token.Text</span>
+                            }
+                        </code>
+                    </button>
                 }
             </div>
         }
@@ -161,6 +168,7 @@
     private TimeSpan? _pickerDraftTime;
     private bool _timePickerOpen;
     private bool _showSensitive;
+    private bool _showDecodedRegexPreview;
     private string? _error;
     private string? _lastNodePath;
     private string? _lastEffectiveDisplayValue;
@@ -186,7 +194,21 @@
     private bool CanShowRegexPreview => !Node.IsSensitive || _showSensitive;
 
     private IReadOnlyList<ConfigurationRegexPatternToken> RegexPreviewTokens =>
-        ConfigurationRegexPatternHighlighter.Tokenize(_textValue);
+        ConfigurationRegexPatternHighlighter.Tokenize(_textValue, _showDecodedRegexPreview);
+
+    private string RegexPreviewModeLabel => _showDecodedRegexPreview
+        ? L["State:Editor:RegexPreviewDecoded"].Value
+        : L["State:Editor:RegexPreviewEscaped"].Value;
+
+    private string RegexPreviewToggleLabel => _showDecodedRegexPreview
+        ? L["State:Editor:RegexPreviewShowEscaped"].Value
+        : L["State:Editor:RegexPreviewShowDecoded"].Value;
+
+    private string RegexPreviewClass => string.Join(' ', new[]
+    {
+        "configuration-regex-preview",
+        _showDecodedRegexPreview ? "is-decoded" : "is-escaped"
+    });
 
     private string EditorClass => string.Join(' ', new[]
     {
@@ -224,6 +246,7 @@
 
         if (pathChanged)
         {
+            _showDecodedRegexPreview = false;
             if (ValidationIssue is not null)
             {
                 SyncFromValidationIssue(ValidationIssue);
@@ -477,5 +500,10 @@
     private void ToggleSensitiveVisibility()
     {
         _showSensitive = !_showSensitive;
+    }
+
+    private void ToggleRegexPreviewMode()
+    {
+        _showDecodedRegexPreview = !_showDecodedRegexPreview;
     }
 }

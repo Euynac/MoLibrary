@@ -64,25 +64,78 @@
 .configuration-regex-preview {
     flex: 1 1 auto;
     min-width: 0;
+    display: flex;
+    align-items: flex-start;
+    gap: 0.5rem;
     padding: 0.25rem 0.5rem;
     border: 1px solid var(--mud-palette-lines-default);
     border-radius: var(--mud-default-borderradius);
     background: var(--mud-palette-background-gray);
     color: var(--mud-palette-text-primary);
+    cursor: pointer;
+    font: inherit;
     font-size: 0.75rem;
     line-height: 1.35;
+    text-align: start;
+}
+
+.configuration-regex-preview:hover {
+    border-color: var(--mud-palette-info);
+    background: color-mix(in srgb, var(--mud-palette-info) 8%, var(--mud-palette-background-gray));
+}
+
+.configuration-regex-preview:focus-visible {
+    outline: 2px solid var(--mud-palette-primary);
+    outline-offset: 2px;
+}
+
+.configuration-regex-preview.is-decoded {
+    border-color: var(--mud-palette-primary);
+}
+
+.configuration-regex-preview-mode {
+    flex: 0 0 auto;
+    color: var(--mud-palette-info);
+    font-size: 0.6875rem;
+    font-weight: 800;
+    line-height: 1.35;
+}
+
+.configuration-regex-preview.is-decoded .configuration-regex-preview-mode {
+    color: var(--mud-palette-primary);
+}
+
+.configuration-regex-preview-code {
+    flex: 1 1 auto;
+    min-width: 0;
+    background: transparent;
+    color: inherit;
+    font-size: inherit;
+    line-height: inherit;
     overflow-wrap: anywhere;
     white-space: pre-wrap;
 }
 
-.configuration-regex-token-escape {
+.configuration-regex-token-escape,
+.configuration-regex-token-unicode {
     color: var(--mud-palette-info);
-    font-weight: 600;
+    font-weight: 800;
+    background: color-mix(in srgb, var(--mud-palette-info) 16%, transparent);
+    border-radius: calc(var(--mud-default-borderradius) / 2);
+    padding-inline: 0.125rem;
+}
+
+.configuration-regex-token-unicode {
+    color: var(--mud-palette-primary);
+    background: color-mix(in srgb, var(--mud-palette-primary) 16%, transparent);
 }
 
 .configuration-regex-token-invalid {
     color: var(--mud-palette-error);
-    font-weight: 600;
+    font-weight: 800;
+    background: color-mix(in srgb, var(--mud-palette-error) 16%, transparent);
+    border-radius: calc(var(--mud-default-borderradius) / 2);
+    padding-inline: 0.125rem;
     text-decoration-line: underline;
     text-decoration-style: wavy;
     text-decoration-color: var(--mud-palette-error);

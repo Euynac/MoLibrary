@@ -137,6 +137,10 @@
       "RegexPattern": "Regex",
       "RegexPatternTooltip": "This value is treated as a regular expression pattern. Unicode characters are preserved as regex-compatible \\uXXXX escapes.",
       "RegexPreview": "Regular expression escape preview",
+      "RegexPreviewDecoded": "Decoded",
+      "RegexPreviewEscaped": "Escaped",
+      "RegexPreviewShowDecoded": "Show decoded Unicode characters",
+      "RegexPreviewShowEscaped": "Show \\uXXXX escapes",
       "TooLong": "Value is too long.",
       "TooShort": "Value is too short."
     },

@@ -137,6 +137,10 @@
       "RegexPattern": "正则",
       "RegexPatternTooltip": "该值会按正则表达式处理。Unicode 字符会保持为正则兼容的 \\uXXXX 转义形式。",
       "RegexPreview": "正则转义预览",
+      "RegexPreviewDecoded": "中文",
+      "RegexPreviewEscaped": "转义",
+      "RegexPreviewShowDecoded": "点击显示中文等 Unicode 字符",
+      "RegexPreviewShowEscaped": "点击显示 \\uXXXX 转义",
       "TooLong": "值过长。",
       "TooShort": "值过短。"
     },

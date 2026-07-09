@@ -25,7 +25,7 @@ internal static class ConfigurationRegexPatternHighlighter
         'z'
     ];
 
-    public static IReadOnlyList<ConfigurationRegexPatternToken> Tokenize(string? pattern)
+    public static IReadOnlyList<ConfigurationRegexPatternToken> Tokenize(string? pattern, bool decodeUnicodeEscapes = false)
     {
         if (string.IsNullOrEmpty(pattern))
         {
@@ -43,11 +43,15 @@ internal static class ConfigurationRegexPatternHighlighter
 
             AddTextToken(tokens, pattern, textStart, index);
             var escape = ReadEscape(pattern, index);
-            tokens.Add(new ConfigurationRegexPatternToken(
-                escape.Text,
-                escape.IsValid
-                    ? "configuration-regex-token-escape"
-                    : "configuration-regex-token-invalid"));
+            var tokenText = decodeUnicodeEscapes && escape.DecodedText is not null
+                ? escape.DecodedText
+                : escape.Text;
+            var tokenClass = escape.IsValid
+                ? decodeUnicodeEscapes && escape.DecodedText is not null
+                    ? "configuration-regex-token-unicode"
+                    : "configuration-regex-token-escape"
+                : "configuration-regex-token-invalid";
+            AddToken(tokens, tokenText, tokenClass);
 
             index = escape.EndIndex;
             textStart = index + 1;
@@ -88,8 +92,11 @@ internal static class ConfigurationRegexPatternHighlighter
         var text = pattern[start..endExclusive];
         var isValid = pattern.Length >= start + length
                       && IsHexSpan(pattern.AsSpan(start + 2, length - 2));
+        var decodedText = isValid && pattern[start + 1] == 'u'
+            ? DecodeUtf16CodeUnit(pattern.AsSpan(start + 2, length - 2))
+            : null;
 
-        return new ConfigurationRegexEscapeToken(text, endExclusive - 1, isValid);
+        return new ConfigurationRegexEscapeToken(text, endExclusive - 1, isValid, decodedText);
     }
 
     private static ConfigurationRegexEscapeToken ReadBracedEscape(string pattern, int start)
@@ -174,7 +181,7 @@ internal static class ConfigurationRegexPatternHighlighter
     }
 
     private static void AddTextToken(
-        ICollection<ConfigurationRegexPatternToken> tokens,
+        IList<ConfigurationRegexPatternToken> tokens,
         string pattern,
         int start,
         int endExclusive)
@@ -184,12 +191,58 @@ internal static class ConfigurationRegexPatternHighlighter
             return;
         }
 
-        tokens.Add(new ConfigurationRegexPatternToken(
-            pattern[start..endExclusive],
-            "configuration-regex-token-text"));
+        AddToken(tokens, pattern[start..endExclusive], "configuration-regex-token-text");
     }
 
-    private sealed record ConfigurationRegexEscapeToken(string Text, int EndIndex, bool IsValid);
+    private static void AddToken(
+        IList<ConfigurationRegexPatternToken> tokens,
+        string text,
+        string cssClass)
+    {
+        if (text.Length == 0)
+        {
+            return;
+        }
+
+        if (tokens.Count > 0 && tokens[^1].CssClass == cssClass)
+        {
+            tokens[^1] = tokens[^1] with
+            {
+                Text = tokens[^1].Text + text
+            };
+            return;
+        }
+
+        tokens.Add(new ConfigurationRegexPatternToken(text, cssClass));
+    }
+
+    private static string DecodeUtf16CodeUnit(ReadOnlySpan<char> hex)
+    {
+        var value = 0;
+        foreach (var character in hex)
+        {
+            value = (value << 4) + GetHexValue(character);
+        }
+
+        return new string((char)value, 1);
+    }
+
+    private static int GetHexValue(char character)
+    {
+        return character switch
+        {
+            >= '0' and <= '9' => character - '0',
+            >= 'a' and <= 'f' => character - 'a' + 10,
+            >= 'A' and <= 'F' => character - 'A' + 10,
+            _ => 0
+        };
+    }
+
+    private sealed record ConfigurationRegexEscapeToken(
+        string Text,
+        int EndIndex,
+        bool IsValid,
+        string? DecodedText = null);
 }
 
 internal sealed record ConfigurationRegexPatternToken(string Text, string CssClass);
