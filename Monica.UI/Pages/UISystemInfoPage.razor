@@ -69,58 +69,7 @@
 
             <!-- Basic information card -->
             <MudItem xs="12" md="6" lg="4">
-                <MudCard Style="height: 100%; display: flex; flex-direction: column;" Elevation="2">
-                    <MudCardHeader Class="pb-2">
-                        <CardHeaderContent>
-                            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
-                                <MudIcon Icon="@Icons.Material.Filled.Schedule" Color="Color.Primary" />
-                                <MudText Typo="Typo.h6" Style="font-weight: 500;">@L["Page:BasicInfo:Title"]</MudText>
-                            </MudStack>
-                        </CardHeaderContent>
-                    </MudCardHeader>
-                    <MudCardContent Style="flex: 1; padding-top: 8px;">
-                        <MudStack Spacing="3">
-                            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
-                                <MudIcon Icon="@Icons.Material.Filled.Build" Size="Size.Small" Color="Color.Success" />
-                                <MudText><strong>@L["Page:BasicInfo:BuildTime"]:</strong></MudText>
-                            </MudStack>
-                            <MudText Class="ml-6" Style="color: var(--mud-palette-text-secondary);">@FormatDateTime(_systemInfo.BuildTime)</MudText>
-
-                            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
-                                <MudIcon Icon="@Icons.Material.Filled.AccessTime" Size="Size.Small" Color="Color.Info" />
-                                <MudText><strong>@L["Page:BasicInfo:LocalTime"]:</strong></MudText>
-                            </MudStack>
-                            <MudText Class="ml-6" Style="color: var(--mud-palette-text-secondary);">@FormatDateTime(_systemInfo.LocalTime)</MudText>
-
-                            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
-                                <MudIcon Icon="@Icons.Material.Filled.Public" Size="Size.Small" Color="Color.Warning" />
-                                <MudText><strong>@L["Page:BasicInfo:UtcTime"]:</strong></MudText>
-                            </MudStack>
-                            <MudText Class="ml-6" Style="color: var(--mud-palette-text-secondary);">@FormatDateTime(_systemInfo.UtcTime)</MudText>
-
-                            @if (!string.IsNullOrEmpty(_systemInfo.ProductVersion))
-                            {
-                                <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
-                                    <MudIcon Icon="@Icons.Material.Filled.Label" Size="Size.Small" Color="Color.Secondary" />
-                                    <MudText><strong>@L["Page:BasicInfo:ProductVersion"]:</strong></MudText>
-                                </MudStack>
-                                <MudText Class="ml-6" Style="color: var(--mud-palette-text-secondary);">@_systemInfo.ProductVersion</MudText>
-                            }
-
-                            @if (_systemInfo.ProcessStartTime.HasValue)
-                            {
-                                <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
-                                    <MudIcon Icon="@Icons.Material.Filled.PlayArrow" Size="Size.Small" Color="Color.Success" />
-                                    <MudText><strong>@L["Page:BasicInfo:ProcessStartTime"]:</strong></MudText>
-                                </MudStack>
-                                <MudText Class="ml-6" Style="color: var(--mud-palette-text-secondary);">@FormatDateTime(_systemInfo.ProcessStartTime.Value)</MudText>
-                                <MudText Class="ml-6" Style="color: var(--mud-palette-text-disabled); font-size: 0.875rem;">
-                                    @L["Page:BasicInfo:RunningFor", FormatUptime(_systemInfo.ProcessStartTime.Value)]
-                                </MudText>
-                            }
-                        </MudStack>
-                    </MudCardContent>
-                </MudCard>
+                <SystemInfoBasicInfoCard Info="@_systemInfo" />
             </MudItem>
 
             <!-- Environment information card -->
@@ -393,11 +342,6 @@
         }
     }
 
-    private string FormatDateTime(DateTime value)
-    {
-        return value.ToString("G", CultureInfo.CurrentCulture);
-    }
-
     private string FormatBoolean(bool value)
     {
         return L[value ? "Shared:Common:Yes" : "Shared:Common:No"].Value;
@@ -424,51 +368,4 @@
         return $"{bytes.ToString("N0", CultureInfo.CurrentCulture)} {L["Shared:Units:Bytes"].Value}";
     }
 
-    private string FormatUptime(DateTime startTime)
-    {
-        var uptime = DateTime.Now - startTime;
-        if (uptime < TimeSpan.Zero)
-        {
-            uptime = TimeSpan.Zero;
-        }
-
-        List<string> parts = [];
-
-        AppendDurationPart(parts, uptime.Days, "Shared:Duration:DaySingular", "Shared:Duration:DayPlural");
-        AppendDurationPart(parts, uptime.Hours, "Shared:Duration:HourSingular", "Shared:Duration:HourPlural");
-        AppendDurationPart(parts, uptime.Minutes, "Shared:Duration:MinuteSingular", "Shared:Duration:MinutePlural");
-
-        var secondValue = uptime.Milliseconds == 0
-            ? uptime.Seconds
-            : uptime.Seconds + uptime.Milliseconds / 1000d;
-
-        AppendDurationPart(parts, secondValue, "Shared:Duration:SecondSingular", "Shared:Duration:SecondPlural");
-
-        if (parts.Count == 0)
-        {
-            return L["Shared:Duration:ZeroSeconds"].Value;
-        }
-
-        return string.Join(L["Shared:Duration:Separator"].Value, parts);
-    }
-
-    private void AppendDurationPart(List<string> parts, int value, string singularKey, string pluralKey)
-    {
-        if (value <= 0)
-        {
-            return;
-        }
-
-        parts.Add(L[value == 1 ? singularKey : pluralKey, value].Value);
-    }
-
-    private void AppendDurationPart(List<string> parts, double value, string singularKey, string pluralKey)
-    {
-        if (value <= 0)
-        {
-            return;
-        }
-
-        parts.Add(L[Math.Abs(value - 1d) < 0.0001d ? singularKey : pluralKey, value].Value);
-    }
 }

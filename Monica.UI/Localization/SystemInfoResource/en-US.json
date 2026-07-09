@@ -25,7 +25,8 @@
       "UtcTime": "UTC Time",
       "ProductVersion": "Product Version",
       "ProcessStartTime": "Process Start Time",
-      "RunningFor": "Uptime {0}"
+      "RunningFor": "Uptime {0}",
+      "ListeningAddresses": "Listening Addresses"
     },
     "EnvironmentInfo": {
       "Title": "Environment Information",

@@ -33,6 +33,11 @@ public class SystemInfoResponse
     public DateTime? ProcessStartTime { get; set; }
 
     /// <summary>
+    /// Gets or sets the addresses the current ASP.NET Core server is listening on.
+    /// </summary>
+    public IReadOnlyList<string> ListeningAddresses { get; set; } = [];
+
+    /// <summary>
     /// Gets or sets verbose file metadata.
     /// </summary>
     public FileVersionInfo? FileInfo { get; set; }

@@ -333,10 +333,6 @@
       "ComparedToCurrent": "对比当前 {0}"
     },
     "Compare": {
-      "Origin": "源版本",
-      "Target": "目标版本",
-      "SelectVersion": "选择版本",
-      "Action": "对比",
       "AgainstCurrent": "{0} -> 当前 {1}",
       "AgainstPrevious": "{0} -> {1}",
       "CurrentOnly": "历史版本列表中的对比均以当前版本作为目标版本。",
@@ -344,19 +340,13 @@
       "NoSelection": "选择一个历史版本",
       "Unavailable": "无法加载该版本与当前版本的差异。"
     },
-    "Columns": {
-      "Version": "版本",
-      "Definitions": "配置定义"
-    },
     "Definitions": {
       "Empty": "未捕获配置定义。"
     },
     "Actions": {
-      "ComparePrevious": "与上一版本对比",
-      "CompareCurrent": "与当前版本对比"
+      "ComparePrevious": "与上一版本对比"
     },
     "Diff": {
-      "DialogTitle": "版本对比",
       "Title": "{0} -> {1}",
       "ChangedDefinitions": "{0} 个配置定义变化",
       "NoChanges": "这两个版本之间没有配置定义值变化。",

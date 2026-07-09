@@ -1,0 +1,37 @@
+.system-info-basic-card-shell {
+    height: 100%;
+}
+
+.system-info-basic-card-shell ::deep .system-info-basic-card {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+}
+
+.system-info-basic-card-shell ::deep .system-info-basic-card__title {
+    font-weight: 500;
+}
+
+.system-info-basic-card-shell ::deep .system-info-basic-card__content {
+    flex: 1;
+    padding-top: 8px;
+}
+
+.system-info-basic-card-shell ::deep .system-info-basic-card__value,
+.system-info-basic-card-shell ::deep .system-info-basic-card__address {
+    color: var(--mud-palette-text-secondary);
+    overflow-wrap: anywhere;
+    word-break: break-word;
+}
+
+.system-info-basic-card-shell ::deep .system-info-basic-card__uptime {
+    color: var(--mud-palette-text-disabled);
+    font-size: 0.875rem;
+}
+
+.system-info-basic-card__addresses {
+    display: flex;
+    min-width: 0;
+    flex-direction: column;
+    gap: 4px;
+}

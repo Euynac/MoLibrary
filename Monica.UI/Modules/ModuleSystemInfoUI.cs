@@ -1,7 +1,10 @@
 using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Hosting.Server;
+using Microsoft.AspNetCore.Hosting.Server.Features;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Monica.Core;
 using Monica.Core.Localization.Models;
 using Monica.Core.Modularity;
@@ -44,6 +47,12 @@ public class ModuleSystemInfoUI(ModuleSystemInfoUIOption option)
     /// </summary>
     public override void ConfigureServices(IServiceCollection services)
     {
+        services.TryAddSingleton(provider =>
+        {
+            var server = provider.GetService<IServer>();
+            return server?.Features.Get<IServerAddressesFeature>()
+                   ?? new ServerAddressesFeature();
+        });
         services.AddScoped<SystemInfoService>();
     }
 

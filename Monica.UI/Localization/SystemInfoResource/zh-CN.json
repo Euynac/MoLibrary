@@ -25,7 +25,8 @@
       "UtcTime": "UTC时间",
       "ProductVersion": "产品版本",
       "ProcessStartTime": "进程启动时间",
-      "RunningFor": "已运行 {0}"
+      "RunningFor": "已运行 {0}",
+      "ListeningAddresses": "监听地址"
     },
     "EnvironmentInfo": {
       "Title": "环境信息",

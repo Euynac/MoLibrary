@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using System.Reflection;
 using System.Threading;
+using Microsoft.AspNetCore.Hosting.Server.Features;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
@@ -17,11 +18,13 @@ namespace Monica.UI.UISystemInfo.Support;
 /// </summary>
 /// <param name="logger">The logger.</param>
 /// <param name="localizer">The localizer.</param>
+/// <param name="serverAddressesFeature">The server feature that exposes runtime listening addresses.</param>
 /// <param name="applicationLifetime">The host lifetime controller used to request graceful shutdown.</param>
 /// <param name="options">The system information UI options.</param>
 public class SystemInfoService(
     ILogger<SystemInfoService> logger,
     IStringLocalizer<SystemInfoResource> localizer,
+    IServerAddressesFeature serverAddressesFeature,
     IHostApplicationLifetime applicationLifetime,
     IOptions<ModuleSystemInfoUIOption> options)
 {
@@ -59,7 +62,8 @@ public class SystemInfoService(
                 BuildTime = buildTime,
                 LocalTime = DateTime.Now,
                 UtcTime = DateTime.UtcNow,
-                ProcessStartTime = processStartTime
+                ProcessStartTime = processStartTime,
+                ListeningAddresses = GetListeningAddresses()
             };
 
             if (simple is not true)
@@ -109,6 +113,20 @@ public class SystemInfoService(
             logger.LogError(ex, "Failed to retrieve system information.");
             return Res.Fail(localizer["Service:Errors:GetSystemInfoFailed", ex.Message].Value);
         }
+    }
+
+    private IReadOnlyList<string> GetListeningAddresses()
+    {
+        if (serverAddressesFeature.Addresses.Count == 0)
+        {
+            return [];
+        }
+
+        return serverAddressesFeature.Addresses
+            .Where(static address => !string.IsNullOrWhiteSpace(address))
+            .Select(static address => address.Trim())
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToArray();
     }
 
     /// <summary>
