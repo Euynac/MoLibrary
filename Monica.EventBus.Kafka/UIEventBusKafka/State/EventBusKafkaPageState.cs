@@ -10,6 +10,10 @@ namespace Monica.EventBus.Kafka.UIEventBusKafka.State;
 /// </summary>
 public sealed class EventBusKafkaPageState(KafkaConsoleFacade facade)
 {
+    private string? _topicsClusterId;
+    private string? _consumerGroupsClusterId;
+    private string? _performanceClusterId;
+
     /// <summary>
     /// Current integration snapshot.
     /// </summary>
@@ -67,9 +71,9 @@ public sealed class EventBusKafkaPageState(KafkaConsoleFacade facade)
         Clusters.FirstOrDefault(cluster => string.Equals(cluster.Config.ClusterId, SelectedClusterId, StringComparison.Ordinal));
 
     /// <summary>
-    /// Whether the selected cluster has direct Kafka admin configuration.
+    /// Whether the selected cluster supports direct Kafka admin operations.
     /// </summary>
-    public bool CanAdminSelectedCluster => SelectedCluster?.Config.HasDirectKafkaAccess == true;
+    public bool CanAdminSelectedCluster => SelectedCluster?.IsReachable == true;
 
     /// <summary>
     /// Initializes all page data.
@@ -109,7 +113,8 @@ public sealed class EventBusKafkaPageState(KafkaConsoleFacade facade)
             var previousSelectedClusterId = SelectedClusterId;
             Clusters = MergeClusterRuntimeState(clusters);
             SelectedClusterId = ResolveSelectedClusterId();
-            if (!string.Equals(previousSelectedClusterId, SelectedClusterId, StringComparison.Ordinal))
+            var selectedClusterChanged = !string.Equals(previousSelectedClusterId, SelectedClusterId, StringComparison.Ordinal);
+            if (selectedClusterChanged)
             {
                 ClearSelectedClusterDetails();
             }
@@ -121,6 +126,7 @@ public sealed class EventBusKafkaPageState(KafkaConsoleFacade facade)
 
             Dashboard = dashboard;
             ApplySelectedClusterToDashboard();
+            ApplyLoadedDetailsToDashboard();
             await RefreshSelectedClusterDetailsAsync(cancellationToken);
         });
     }
@@ -130,6 +136,13 @@ public sealed class EventBusKafkaPageState(KafkaConsoleFacade facade)
     /// </summary>
     public async Task SelectClusterAsync(string clusterId, CancellationToken cancellationToken = default)
     {
+        var requestedCluster = Clusters.FirstOrDefault(cluster =>
+            string.Equals(cluster.Config.ClusterId, clusterId, StringComparison.Ordinal));
+        if (requestedCluster?.IsReachable != true)
+        {
+            return;
+        }
+
         SelectedClusterId = clusterId;
         ClearSelectedClusterDetails();
         await RunAsync(async () =>
@@ -156,7 +169,6 @@ public sealed class EventBusKafkaPageState(KafkaConsoleFacade facade)
                 return false;
             }
 
-            SelectedClusterId = summary.Config.ClusterId;
             await RefreshAsync(cancellationToken);
             return true;
         });
@@ -196,9 +208,9 @@ public sealed class EventBusKafkaPageState(KafkaConsoleFacade facade)
                 return false;
             }
 
-            ApplyClusterSummary(summary);
             if (summary.IsReachable)
             {
+                ActivateCluster(summary);
                 await RefreshSelectedClusterDetailsIfSelectedAsync(
                     summary.Config.ClusterId,
                     cancellationToken,
@@ -206,6 +218,7 @@ public sealed class EventBusKafkaPageState(KafkaConsoleFacade facade)
                 return true;
             }
 
+            ApplyClusterSummary(summary);
             ClearSelectedClusterDetailsIfSelected(summary.Config.ClusterId);
             ErrorMessage = summary.ErrorMessage ?? $"Kafka cluster '{summary.Config.DisplayName}' is not reachable.";
             return false;
@@ -413,7 +426,7 @@ public sealed class EventBusKafkaPageState(KafkaConsoleFacade facade)
         await RefreshSelectedClusterDetailsAsync(cancellationToken, suppressErrors);
     }
 
-    private bool ShouldLoadSelectedClusterDetails => SelectedCluster?.Config.HasDirectKafkaAccess == true;
+    private bool ShouldLoadSelectedClusterDetails => SelectedCluster?.IsReachable == true;
 
     private void ClearSelectedClusterDetailsIfSelected(string clusterId)
     {
@@ -428,6 +441,9 @@ public sealed class EventBusKafkaPageState(KafkaConsoleFacade facade)
         Topics = [];
         ConsumerGroups = [];
         PerformanceSnapshots = [];
+        _topicsClusterId = null;
+        _consumerGroupsClusterId = null;
+        _performanceClusterId = null;
         Dashboard.TotalAvailableMessageCount = null;
     }
 
@@ -456,6 +472,27 @@ public sealed class EventBusKafkaPageState(KafkaConsoleFacade facade)
         Dashboard.BrokerCount = summary.BrokerCount;
         Dashboard.TopicCount = summary.TopicCount;
         Dashboard.ConsumerGroupCount = summary.ConsumerGroupCount;
+    }
+
+    private void ActivateCluster(KafkaClusterSummary summary)
+    {
+        SelectedClusterId = summary.Config.ClusterId;
+        ClearSelectedClusterDetails();
+        DisconnectClustersExcept(summary.Config.ClusterId);
+        ApplyClusterSummary(summary);
+    }
+
+    private void DisconnectClustersExcept(string connectedClusterId)
+    {
+        foreach (var cluster in Clusters.Where(cluster =>
+                     !string.Equals(cluster.Config.ClusterId, connectedClusterId, StringComparison.Ordinal)))
+        {
+            cluster.IsReachable = false;
+            cluster.BrokerCount = 0;
+            cluster.TopicCount = 0;
+            cluster.ConsumerGroupCount = 0;
+            cluster.ErrorMessage = null;
+        }
     }
 
     private List<KafkaClusterSummary> MergeClusterRuntimeState(IReadOnlyList<KafkaClusterSummary> refreshedClusters)
@@ -492,6 +529,24 @@ public sealed class EventBusKafkaPageState(KafkaConsoleFacade facade)
         Dashboard.ConsumerGroupCount = ResolveCurrentCount(selectedCluster.ConsumerGroupCount, Dashboard.ConsumerGroupCount);
     }
 
+    private void ApplyLoadedDetailsToDashboard()
+    {
+        if (string.Equals(_topicsClusterId, SelectedClusterId, StringComparison.Ordinal))
+        {
+            ApplyTopicBacklogSummary();
+        }
+
+        if (string.Equals(_consumerGroupsClusterId, SelectedClusterId, StringComparison.Ordinal))
+        {
+            Dashboard.ConsumerGroupCount = ConsumerGroups.Count;
+        }
+
+        if (string.Equals(_performanceClusterId, SelectedClusterId, StringComparison.Ordinal))
+        {
+            Dashboard.LatestPerformance = PerformanceSnapshots.LastOrDefault() ?? Dashboard.LatestPerformance;
+        }
+    }
+
     private static int ResolveCurrentCount(int liveCount, int existingCount)
     {
         return liveCount > 0 ? liveCount : existingCount;
@@ -523,6 +578,7 @@ public sealed class EventBusKafkaPageState(KafkaConsoleFacade facade)
         if (SelectedClusterId is null)
         {
             Topics = [];
+            _topicsClusterId = null;
             return;
         }
 
@@ -532,6 +588,7 @@ public sealed class EventBusKafkaPageState(KafkaConsoleFacade facade)
                 : TryRead(result, out topics))
         {
             Topics = topics.ToList();
+            _topicsClusterId = SelectedClusterId;
             ApplyTopicBacklogSummary();
         }
     }
@@ -547,6 +604,7 @@ public sealed class EventBusKafkaPageState(KafkaConsoleFacade facade)
         if (SelectedClusterId is null)
         {
             ConsumerGroups = [];
+            _consumerGroupsClusterId = null;
             return;
         }
 
@@ -556,6 +614,7 @@ public sealed class EventBusKafkaPageState(KafkaConsoleFacade facade)
                 : TryRead(result, out groups))
         {
             ConsumerGroups = groups.ToList();
+            _consumerGroupsClusterId = SelectedClusterId;
             Dashboard.ConsumerGroupCount = ConsumerGroups.Count;
         }
     }
@@ -565,6 +624,7 @@ public sealed class EventBusKafkaPageState(KafkaConsoleFacade facade)
         if (SelectedClusterId is null)
         {
             PerformanceSnapshots = [];
+            _performanceClusterId = null;
             return;
         }
 
@@ -574,16 +634,30 @@ public sealed class EventBusKafkaPageState(KafkaConsoleFacade facade)
                 : TryRead(result, out snapshots))
         {
             PerformanceSnapshots = snapshots.ToList();
+            _performanceClusterId = SelectedClusterId;
             Dashboard.LatestPerformance = PerformanceSnapshots.LastOrDefault() ?? Dashboard.LatestPerformance;
         }
     }
 
     private string? ResolveSelectedClusterId()
     {
-        if (!string.IsNullOrWhiteSpace(SelectedClusterId) &&
-            Clusters.Any(cluster => string.Equals(cluster.Config.ClusterId, SelectedClusterId, StringComparison.Ordinal)))
+        var selectedCluster = string.IsNullOrWhiteSpace(SelectedClusterId)
+            ? null
+            : Clusters.FirstOrDefault(cluster => string.Equals(cluster.Config.ClusterId, SelectedClusterId, StringComparison.Ordinal));
+        if (selectedCluster?.IsReachable == true)
         {
-            return SelectedClusterId;
+            return selectedCluster.Config.ClusterId;
+        }
+
+        var connectedCluster = Clusters.FirstOrDefault(cluster => cluster.IsReachable);
+        if (connectedCluster is not null)
+        {
+            return connectedCluster.Config.ClusterId;
+        }
+
+        if (selectedCluster is not null)
+        {
+            return selectedCluster.Config.ClusterId;
         }
 
         if (!string.IsNullOrWhiteSpace(Integration.PrimaryClusterId) &&
