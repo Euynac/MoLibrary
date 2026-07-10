@@ -14,7 +14,7 @@ public interface IConfigurationReloadSignalReceiver
     /// <summary>
     /// Receives one reload notification.
     /// </summary>
-    /// <param name="notification">The reload notification.</param>
+    /// <param name="signal">The reload signal.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
-    Task ReceiveAsync(ConfigurationChangeNotification notification, CancellationToken cancellationToken);
+    Task ReceiveAsync(ConfigurationReloadSignal signal, CancellationToken cancellationToken);
 }

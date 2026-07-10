@@ -126,27 +126,33 @@ public sealed class ConfigurationEventBusBridgeTests
             .WithMessage("*IDistributedEventBus*");
     }
 
-    private static ConfigurationChangeNotification CreateNotification()
+    private static ConfigurationReloadSignal CreateNotification()
     {
-        return new ConfigurationChangeNotification
+        return new ConfigurationReloadSignal
         {
-            NotificationId = Guid.NewGuid().ToString("N"),
+            SignalId = Guid.NewGuid().ToString("N"),
             OriginInstanceId = "remote",
             StoreKey = "file:default",
-            Scope = ConfigurationReloadScope.MonicaProjection,
-            DefinitionKey = "Demo.Options",
-            Version = 3,
+            Kind = ConfigurationReloadSignalKind.DefinitionsChanged,
+            Definitions =
+            [
+                new ConfigurationReloadDefinitionVersion
+                {
+                    DefinitionKey = "Demo.Options",
+                    Version = 3
+                }
+            ],
             ChangedTime = DateTimeOffset.UtcNow
         };
     }
 
     private sealed class RecordingReloadSignalReceiver : IConfigurationReloadSignalReceiver
     {
-        private readonly List<ConfigurationChangeNotification> _receivedNotifications = [];
+        private readonly List<ConfigurationReloadSignal> _receivedNotifications = [];
 
-        public IReadOnlyList<ConfigurationChangeNotification> ReceivedNotifications => _receivedNotifications;
+        public IReadOnlyList<ConfigurationReloadSignal> ReceivedNotifications => _receivedNotifications;
 
-        public Task ReceiveAsync(ConfigurationChangeNotification notification, CancellationToken cancellationToken)
+        public Task ReceiveAsync(ConfigurationReloadSignal notification, CancellationToken cancellationToken)
         {
             _receivedNotifications.Add(notification);
             return Task.CompletedTask;
@@ -155,7 +161,7 @@ public sealed class ConfigurationEventBusBridgeTests
 
     private sealed class RecordingDistributedEventBus : IDistributedEventBus
     {
-        private Func<ConfigurationChangeNotification, Task>? _notificationHandler;
+        private Func<ConfigurationReloadSignal, Task>? _notificationHandler;
         private string? _subscriptionTopic;
 
         public List<PublishedEvent> PublishedEvents { get; } = [];
@@ -166,7 +172,7 @@ public sealed class ConfigurationEventBusBridgeTests
             where TEvent : class
         {
             PublishedEvents.Add(new PublishedEvent(typeof(TEvent), eventData, topicName));
-            if (eventData is ConfigurationChangeNotification notification
+            if (eventData is ConfigurationReloadSignal notification
                 && string.Equals(topicName, _subscriptionTopic, StringComparison.Ordinal)
                 && _notificationHandler is not null)
             {
@@ -192,7 +198,7 @@ public sealed class ConfigurationEventBusBridgeTests
         public Task<IEventSubscription> SubscribeAsync<TEvent>(Func<TEvent, Task> handler, string? topicName = null)
             where TEvent : class
         {
-            if (typeof(TEvent) != typeof(ConfigurationChangeNotification))
+            if (typeof(TEvent) != typeof(ConfigurationReloadSignal))
             {
                 throw new NotSupportedException();
             }
@@ -222,7 +228,7 @@ public sealed class ConfigurationEventBusBridgeTests
 
         public string? ServiceKey => null;
 
-        public Type EventType => typeof(ConfigurationChangeNotification);
+        public Type EventType => typeof(ConfigurationReloadSignal);
 
         public string TopicName => "custom.configuration.reload";
 

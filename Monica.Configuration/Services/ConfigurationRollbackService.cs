@@ -1,17 +1,20 @@
+using Microsoft.Extensions.Logging;
 using Monica.Configuration.Abstractions;
 using Monica.Configuration.Models;
 
 namespace Monica.Configuration.Services;
 
 /// <summary>
-/// Default rollback service that replays inverse mutations through the standard mutation pipeline.
+/// Default rollback service that translates inverse mutations into one coordinated mutation group.
 /// </summary>
 internal sealed class ConfigurationRollbackService(
     IConfigurationHistoryService historyService,
-    IConfigurationMutationService mutationService,
-    IConfigurationSourceMutationService sourceMutationService,
+    IConfigurationMutationGroupApplyService mutationGroupApplyService,
+    IConfigurationEffectiveValueStore effectiveValueStore,
     IConfigurationSourceInspector sourceInspector,
-    IConfigurationMutationGroupService groupService)
+    IConfigurationJsonFileSourceWriter sourceWriter,
+    IConfigurationMutationGroupService groupService,
+    ILogger<ConfigurationRollbackService> logger)
     : IConfigurationRollbackService
 {
     /// <inheritdoc />
@@ -20,26 +23,15 @@ internal sealed class ConfigurationRollbackService(
         ConfigurationMutationContext context,
         CancellationToken cancellationToken)
     {
-        var history = await historyService.GetHistoryByIdAsync(historyId, cancellationToken)
-            ?? throw new KeyNotFoundException($"Configuration history row '{historyId}' was not found.");
-
-        var group = await groupService.BeginAsync(
+        var history = await GetRequiredHistoryAsync(historyId, cancellationToken);
+        var applyResult = await ApplyRowsAsync(
+            [history],
             $"Rollback {history.ModifiedTime:yyyy-MM-dd HH:mm:ss}",
-            context.Reason,
             context,
             cancellationToken);
 
-        try
-        {
-            var result = await RollbackHistoryRowAsync(history, context with { MutationGroupId = group.GroupId }, cancellationToken);
-            await groupService.CompleteAsync(group.GroupId, 1, [history.DefinitionKey], cancellationToken);
-            return result;
-        }
-        catch
-        {
-            await groupService.MarkPartialAsync(group.GroupId, 0, [], cancellationToken);
-            throw;
-        }
+        return GetAppliedResults(applyResult).SingleOrDefault()
+               ?? throw new InvalidOperationException(DescribeFailedOutcomes(applyResult));
     }
 
     /// <inheritdoc />
@@ -56,39 +48,23 @@ internal sealed class ConfigurationRollbackService(
         var rows = new List<ConfigurationValueHistory>();
         foreach (var historyId in historyIds.Distinct(StringComparer.OrdinalIgnoreCase))
         {
-            rows.Add(await historyService.GetHistoryByIdAsync(historyId, cancellationToken)
-                     ?? throw new KeyNotFoundException($"Configuration history row '{historyId}' was not found."));
+            rows.Add(await GetRequiredHistoryAsync(historyId, cancellationToken));
         }
 
         var orderedRows = rows
-            .OrderByDescending(row => row.ModifiedTime)
-            .ThenByDescending(row => row.Version)
+            .OrderByDescending(static row => row.ModifiedTime)
+            .ThenByDescending(static row => row.Version)
             .ToArray();
-        var group = await groupService.BeginAsync(
+        var applyResult = await ApplyRowsAsync(
+            orderedRows,
             $"Rollback {orderedRows.Length} selected configuration changes",
-            context.Reason,
             context,
             cancellationToken);
-        var rollbackContext = context with { MutationGroupId = group.GroupId };
-        var results = new List<ConfigurationMutationResult>();
-        var definitionKeys = new List<string>();
 
-        try
-        {
-            foreach (var history in orderedRows)
-            {
-                results.Add(await RollbackHistoryRowAsync(history, rollbackContext, cancellationToken));
-                definitionKeys.Add(history.DefinitionKey);
-            }
-
-            await groupService.CompleteAsync(group.GroupId, results.Count, definitionKeys, cancellationToken);
-            return results;
-        }
-        catch
-        {
-            await groupService.MarkPartialAsync(group.GroupId, results.Count, definitionKeys, cancellationToken);
-            throw;
-        }
+        var results = GetAppliedResults(applyResult);
+        return results.Count > 0
+            ? results
+            : throw new InvalidOperationException(DescribeFailedOutcomes(applyResult));
     }
 
     /// <inheritdoc />
@@ -105,98 +81,160 @@ internal sealed class ConfigurationRollbackService(
             throw new InvalidOperationException($"Configuration mutation group '{groupId}' has no history rows to roll back.");
         }
 
-        var rollbackGroup = await groupService.BeginAsync(
+        var orderedRows = rows
+            .OrderByDescending(static row => row.ModifiedTime)
+            .ThenByDescending(static row => row.Version)
+            .ToArray();
+        var applyResult = await ApplyRowsAsync(
+            orderedRows,
             $"Rollback {originalGroup.Label}",
-            context.Reason,
             context,
             cancellationToken);
-        var rollbackContext = context with { MutationGroupId = rollbackGroup.GroupId };
-        var results = new List<ConfigurationMutationResult>();
-        var definitionKeys = new List<string>();
 
-        try
+        if (applyResult.Status == ConfigurationMutationGroupApplyStatus.Applied)
         {
-            foreach (var history in rows.OrderByDescending(row => row.ModifiedTime).ThenByDescending(row => row.Version))
-            {
-                results.Add(await RollbackHistoryRowAsync(history, rollbackContext, cancellationToken));
-                definitionKeys.Add(history.DefinitionKey);
-            }
+            applyResult = await TryMarkOriginalGroupRolledBackAsync(groupId, applyResult, cancellationToken);
+        }
 
-            await groupService.CompleteAsync(rollbackGroup.GroupId, results.Count, definitionKeys, cancellationToken);
-            await groupService.MarkRolledBackAsync(groupId, rollbackGroup.GroupId, DateTimeOffset.UtcNow, cancellationToken);
-            return results;
-        }
-        catch
-        {
-            await groupService.MarkPartialAsync(rollbackGroup.GroupId, results.Count, definitionKeys, cancellationToken);
-            throw;
-        }
+        var results = GetAppliedResults(applyResult);
+        return results.Count > 0
+            ? results
+            : throw new InvalidOperationException(DescribeFailedOutcomes(applyResult));
     }
 
-    private Task<ConfigurationMutationResult> RollbackHistoryRowAsync(
-        ConfigurationValueHistory history,
+    private async Task<ConfigurationMutationGroupApplyResult> ApplyRowsAsync(
+        IReadOnlyList<ConfigurationValueHistory> rows,
+        string label,
         ConfigurationMutationContext context,
         CancellationToken cancellationToken)
     {
-        var request = history.OldValue is null
-            ? BuildRemoveRequest(history, context)
-            : BuildRestoreRequest(history, context);
-
-        if (history.TargetKind == ConfigurationMutationTargetKind.ExternalConfigurationSource)
+        var commands = await BuildCommandsAsync(rows, cancellationToken);
+        return await mutationGroupApplyService.ApplyAsync(new ConfigurationMutationGroupApplyRequest
         {
-            var sourceRequest = BuildSourceRequest(history, request, ResolveSourceKey(history));
-            return sourceMutationService.MutateAsync(sourceRequest, cancellationToken);
+            Label = label,
+            Reason = context.Reason,
+            Context = context with { MutationGroupId = null },
+            Commands = commands
+        }, cancellationToken);
+    }
+
+    private async Task<IReadOnlyList<ConfigurationMutationCommand>> BuildCommandsAsync(
+        IReadOnlyList<ConfigurationValueHistory> rows,
+        CancellationToken cancellationToken)
+    {
+        var effectiveVersions = new Dictionary<string, long?>(StringComparer.OrdinalIgnoreCase);
+        var sourceRevisions = new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase);
+        var commands = new List<ConfigurationMutationCommand>(rows.Count);
+
+        foreach (var history in rows)
+        {
+            ConfigurationMutationTarget target;
+            if (history.TargetKind == ConfigurationMutationTargetKind.ExternalConfigurationSource)
+            {
+                var sourceKey = ResolveSourceKey(history);
+                if (!sourceRevisions.TryGetValue(sourceKey, out var revision))
+                {
+                    var source = sourceInspector.GetRequiredSource(sourceKey);
+                    revision = await sourceWriter.GetRevisionAsync(source, cancellationToken);
+                    sourceRevisions[sourceKey] = revision;
+                }
+
+                target = new ConfigurationExternalSourceMutationTarget
+                {
+                    SourceKey = sourceKey,
+                    ExpectedRevision = revision
+                };
+            }
+            else
+            {
+                if (!effectiveVersions.TryGetValue(history.DefinitionKey, out var version))
+                {
+                    version = (await effectiveValueStore.GetAsync(history.DefinitionKey, cancellationToken))?.Version;
+                    effectiveVersions[history.DefinitionKey] = version;
+                }
+
+                target = new ConfigurationEffectiveStoreMutationTarget { ExpectedVersion = version };
+            }
+
+            commands.Add(new ConfigurationMutationCommand
+            {
+                RequestId = $"rollback:{history.HistoryId}",
+                DefinitionKey = history.DefinitionKey,
+                LogicalPath = history.LogicalPath,
+                MutationKind = history.OldValue is null
+                    ? ConfigurationMutationKind.Remove
+                    : ConfigurationMutationKind.Set,
+                Value = history.OldValue ?? ConfigurationStoredValue.Null,
+                ExpectedSchemaVersion = history.SchemaVersion,
+                Target = target
+            });
         }
 
-        return mutationService.MutateAsync(request, cancellationToken);
+        return commands;
     }
 
-    private static ConfigurationMutationRequest BuildRemoveRequest(
-        ConfigurationValueHistory history,
-        ConfigurationMutationContext context)
+    private async Task<ConfigurationMutationGroupApplyResult> TryMarkOriginalGroupRolledBackAsync(
+        string originalGroupId,
+        ConfigurationMutationGroupApplyResult applyResult,
+        CancellationToken cancellationToken)
     {
-        return new ConfigurationMutationRequest
+        try
         {
-            DefinitionKey = history.DefinitionKey,
-            LogicalPath = history.LogicalPath,
-            MutationKind = ConfigurationMutationKind.Remove,
-            Value = ConfigurationStoredValue.Null,
-            ExpectedSchemaVersion = history.SchemaVersion,
-            Context = context
-        };
+            await groupService.MarkRolledBackAsync(
+                originalGroupId,
+                applyResult.MutationGroup.GroupId,
+                DateTimeOffset.UtcNow,
+                cancellationToken);
+            return applyResult;
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(
+                ex,
+                "Configuration group {OriginalGroupId} was rolled back by {RollbackGroupId}, but the original group audit marker could not be updated.",
+                originalGroupId,
+                applyResult.MutationGroup.GroupId);
+            return applyResult with
+            {
+                PostCommitIssues =
+                [
+                    .. applyResult.PostCommitIssues,
+                    new ConfigurationPostCommitIssue
+                    {
+                        Kind = ConfigurationPostCommitIssueKind.AuditFinalization,
+                        Source = groupService.GetType().Name,
+                        Message = "The rollback was applied, but the original mutation-group audit marker could not be updated.",
+                        Detail = ex.ToString()
+                    }
+                ]
+            };
+        }
     }
 
-    private static ConfigurationMutationRequest BuildRestoreRequest(
-        ConfigurationValueHistory history,
-        ConfigurationMutationContext context)
+    private async Task<ConfigurationValueHistory> GetRequiredHistoryAsync(
+        string historyId,
+        CancellationToken cancellationToken)
     {
-        return new ConfigurationMutationRequest
-        {
-            DefinitionKey = history.DefinitionKey,
-            LogicalPath = history.LogicalPath,
-            MutationKind = ConfigurationMutationKind.Set,
-            Value = history.OldValue!,
-            ExpectedSchemaVersion = history.SchemaVersion,
-            Context = context
-        };
+        return await historyService.GetHistoryByIdAsync(historyId, cancellationToken)
+               ?? throw new KeyNotFoundException($"Configuration history row '{historyId}' was not found.");
     }
 
-    private static ConfigurationSourceMutationRequest BuildSourceRequest(
-        ConfigurationValueHistory history,
-        ConfigurationMutationRequest request,
-        string sourceKey)
+    private static IReadOnlyList<ConfigurationMutationResult> GetAppliedResults(
+        ConfigurationMutationGroupApplyResult applyResult)
     {
-        return new ConfigurationSourceMutationRequest
-        {
-            SourceKey = sourceKey,
-            DefinitionKey = request.DefinitionKey,
-            LogicalPath = request.LogicalPath,
-            MutationKind = request.MutationKind,
-            Value = request.Value,
-            ExpectedSchemaVersion = request.ExpectedSchemaVersion,
-            ExpectedSourceRevision = history.SourceRevisionAfter,
-            Context = request.Context
-        };
+        return applyResult.Outcomes
+            .Where(static outcome => outcome is
+                { Status: ConfigurationMutationOutcomeStatus.Applied, Result: not null })
+            .Select(outcome => outcome.Result! with { PostCommitIssues = applyResult.PostCommitIssues })
+            .ToArray();
+    }
+
+    private static string DescribeFailedOutcomes(ConfigurationMutationGroupApplyResult applyResult)
+    {
+        var diagnostics = applyResult.Outcomes
+            .Where(static outcome => outcome.Status != ConfigurationMutationOutcomeStatus.Applied)
+            .Select(static outcome => $"{outcome.RequestId}: {outcome.ErrorMessage ?? outcome.Status.ToString()}");
+        return $"No rollback mutation was applied. {string.Join("; ", diagnostics)}";
     }
 
     private string ResolveSourceKey(ConfigurationValueHistory history)

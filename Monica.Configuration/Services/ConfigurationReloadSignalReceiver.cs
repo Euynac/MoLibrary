@@ -19,73 +19,98 @@ internal sealed class ConfigurationReloadSignalReceiver(
     private readonly ConcurrentDictionary<string, DateTimeOffset> _seenNotificationIds = new(StringComparer.Ordinal);
     private readonly ConcurrentDictionary<string, long?> _pendingVersionsByDefinition = new(StringComparer.OrdinalIgnoreCase);
     private readonly Lock _scheduleLock = new();
+    private bool _reloadAllPending;
     private Task? _scheduledFlush;
 
     /// <inheritdoc />
-    public Task ReceiveAsync(ConfigurationChangeNotification notification, CancellationToken cancellationToken)
+    public Task ReceiveAsync(ConfigurationReloadSignal signal, CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
-        if (!ShouldReceive(notification))
+        if (!ShouldReceive(signal))
         {
             return Task.CompletedTask;
         }
 
-        if (notification.Scope == ConfigurationReloadScope.RuntimeConfiguration)
+        if (signal.Kind == ConfigurationReloadSignalKind.ReloadAll)
         {
+            lock (_scheduleLock)
+            {
+                _reloadAllPending = true;
+                _pendingVersionsByDefinition.Clear();
+                ScheduleFlushLocked();
+            }
             return Task.CompletedTask;
         }
 
-        _pendingVersionsByDefinition.AddOrUpdate(
-            notification.DefinitionKey,
-            notification.Version,
-            (_, existing) => NewerVersion(existing, notification.Version));
+        foreach (var definition in signal.Definitions)
+        {
+            if (!ShouldReloadDefinition(definition))
+            {
+                continue;
+            }
+
+            _pendingVersionsByDefinition.AddOrUpdate(
+                definition.DefinitionKey,
+                definition.Version,
+                (_, existing) => NewerVersion(existing, definition.Version));
+        }
+
         ScheduleFlush();
         return Task.CompletedTask;
     }
 
-    private bool ShouldReceive(ConfigurationChangeNotification notification)
+    private bool ShouldReceive(ConfigurationReloadSignal signal)
     {
         var currentOptions = options.Value;
         PruneSeenNotifications(currentOptions);
 
-        if (string.IsNullOrWhiteSpace(notification.NotificationId)
-            || !_seenNotificationIds.TryAdd(notification.NotificationId, DateTimeOffset.UtcNow))
+        if (string.IsNullOrWhiteSpace(signal.SignalId)
+            || !_seenNotificationIds.TryAdd(signal.SignalId, DateTimeOffset.UtcNow))
         {
             return false;
         }
 
-        if (string.Equals(notification.OriginInstanceId, currentOptions.InstanceId, StringComparison.Ordinal))
+        if (string.Equals(signal.OriginInstanceId, currentOptions.InstanceId, StringComparison.Ordinal))
         {
             return false;
         }
 
-        if (!definitionRegistry.TryGet(notification.DefinitionKey, out _))
+        return signal.Kind is ConfigurationReloadSignalKind.DefinitionsChanged or ConfigurationReloadSignalKind.ReloadAll;
+    }
+
+    private bool ShouldReloadDefinition(ConfigurationReloadDefinitionVersion definition)
+    {
+        if (!definitionRegistry.TryGet(definition.DefinitionKey, out _))
         {
             return false;
         }
 
-        if (notification.Scope == ConfigurationReloadScope.MonicaProjection
-            && notification.Version is { } version
-            && reloadCoordinator.GetLoadedMonicaProjectionVersion(notification.DefinitionKey) is { } loadedVersion
+        if (definition.Version is { } version
+            && reloadCoordinator.GetLoadedMonicaProjectionVersion(definition.DefinitionKey) is { } loadedVersion
             && loadedVersion >= version)
         {
             return false;
         }
 
-        return notification.Scope is ConfigurationReloadScope.MonicaProjection or ConfigurationReloadScope.RuntimeConfiguration;
+        return true;
     }
 
     private void ScheduleFlush()
     {
         lock (_scheduleLock)
         {
-            if (_scheduledFlush is { IsCompleted: false })
-            {
-                return;
-            }
-
-            _scheduledFlush = FlushAfterDelayAsync();
+            ScheduleFlushLocked();
         }
+    }
+
+    private void ScheduleFlushLocked()
+    {
+        if (_scheduledFlush is { IsCompleted: false })
+        {
+            return;
+        }
+
+        _scheduledFlush = FlushAfterDelayAsync();
     }
 
     private async Task FlushAfterDelayAsync()
@@ -103,16 +128,44 @@ internal sealed class ConfigurationReloadSignalReceiver(
             await Task.Delay(jitterDelay);
         }
 
-        var pending = DrainPendingReloads();
-        foreach (var (definitionKey, version) in pending.OrderBy(item => item.Key, StringComparer.OrdinalIgnoreCase))
+        var (reloadAll, pending) = DrainPendingReloads();
+        try
         {
-            await reloadCoordinator.ReloadMonicaProjectionAsync(definitionKey, version, CancellationToken.None);
+            if (reloadAll)
+            {
+                await reloadCoordinator.ReloadMonicaProjectionAsync(CancellationToken.None);
+            }
+            else
+            {
+                foreach (var (definitionKey, version) in pending.OrderBy(item => item.Key, StringComparer.OrdinalIgnoreCase))
+                {
+                    await reloadCoordinator.ReloadMonicaProjectionAsync(definitionKey, version, CancellationToken.None);
+                }
+            }
+        }
+        finally
+        {
+            lock (_scheduleLock)
+            {
+                _scheduledFlush = null;
+                if (_reloadAllPending || !_pendingVersionsByDefinition.IsEmpty)
+                {
+                    ScheduleFlushLocked();
+                }
+            }
         }
     }
 
-    private Dictionary<string, long?> DrainPendingReloads()
+    private (bool ReloadAll, Dictionary<string, long?> Pending) DrainPendingReloads()
     {
         var pending = new Dictionary<string, long?>(StringComparer.OrdinalIgnoreCase);
+        bool reloadAll;
+        lock (_scheduleLock)
+        {
+            reloadAll = _reloadAllPending;
+            _reloadAllPending = false;
+        }
+
         foreach (var (definitionKey, version) in _pendingVersionsByDefinition)
         {
             if (_pendingVersionsByDefinition.TryRemove(definitionKey, out var removedVersion))
@@ -121,7 +174,7 @@ internal sealed class ConfigurationReloadSignalReceiver(
             }
         }
 
-        return pending;
+        return (reloadAll, pending);
     }
 
     private void PruneSeenNotifications(ModuleConfigurationOption currentOptions)

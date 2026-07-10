@@ -1,0 +1,30 @@
+.configuration-post-commit-issues-dialog-body {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    width: min(48rem, calc(100vw - 3rem));
+}
+
+.configuration-post-commit-issue-detail {
+    max-height: 18rem;
+    overflow: auto;
+    padding: 0.75rem;
+    border: 1px solid var(--mud-palette-lines-default);
+    border-radius: var(--mud-default-borderradius);
+    background: var(--mud-palette-background-gray);
+}
+
+.configuration-post-commit-issue-detail pre {
+    margin: 0;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    font-family: var(--mud-typography-default-family);
+    font-size: var(--mud-typography-caption-size);
+    color: var(--mud-palette-text-primary);
+}
+
+@media (max-width: 599.98px) {
+    .configuration-post-commit-issues-dialog-body {
+        width: calc(100vw - 2rem);
+    }
+}

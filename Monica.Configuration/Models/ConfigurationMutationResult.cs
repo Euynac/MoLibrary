@@ -34,4 +34,9 @@ public sealed record ConfigurationMutationResult
     /// Gets whether the mutation requires process restart before it takes effect.
     /// </summary>
     public bool RequiresRestart { get; init; }
+
+    /// <summary>
+    /// Gets failures that occurred after this value was durably committed.
+    /// </summary>
+    public IReadOnlyList<ConfigurationPostCommitIssue> PostCommitIssues { get; init; } = [];
 }

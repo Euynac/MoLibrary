@@ -79,22 +79,6 @@ public enum ConfigurationReloadBehavior
 }
 
 /// <summary>
-/// Identifies the runtime projection that a configuration reload signal targets.
-/// </summary>
-public enum ConfigurationReloadScope
-{
-    /// <summary>
-    /// Reloads Monica's effective-value projection provider.
-    /// </summary>
-    MonicaProjection,
-
-    /// <summary>
-    /// Reloads external Microsoft configuration providers. This scope is reserved for the current version.
-    /// </summary>
-    RuntimeConfiguration
-}
-
-/// <summary>
 /// Defines how Monica derives a Microsoft configuration section path when
 /// <see cref="ConfigurationAttribute.SectionPath"/> is not set explicitly.
 /// </summary>
@@ -198,4 +182,83 @@ public enum ConfigurationMutationGroupStatus
     /// A later rollback group was applied for this group.
     /// </summary>
     RolledBack
+}
+
+/// <summary>
+/// Describes the final persistence state of a submitted mutation group.
+/// </summary>
+public enum ConfigurationMutationGroupApplyStatus
+{
+    /// <summary>
+    /// Every submitted command was applied.
+    /// </summary>
+    Applied,
+
+    /// <summary>
+    /// At least one command was applied and at least one command failed or was skipped.
+    /// </summary>
+    PartiallyApplied
+}
+
+/// <summary>
+/// Describes the result of one command inside a mutation group.
+/// </summary>
+public enum ConfigurationMutationOutcomeStatus
+{
+    /// <summary>
+    /// The command was durably applied.
+    /// </summary>
+    Applied,
+
+    /// <summary>
+    /// The command failed at its persistence boundary.
+    /// </summary>
+    Failed,
+
+    /// <summary>
+    /// The command was not attempted because an earlier persistence boundary failed.
+    /// </summary>
+    Skipped
+}
+
+/// <summary>
+/// Describes a failure that happened after durable configuration persistence.
+/// </summary>
+public enum ConfigurationPostCommitIssueKind
+{
+    /// <summary>
+    /// The current process could not reload its configuration projection.
+    /// </summary>
+    LocalReload,
+
+    /// <summary>
+    /// A distributed invalidation notifier failed.
+    /// </summary>
+    DistributedNotification,
+
+    /// <summary>
+    /// Mutation-group audit finalization failed after values were applied.
+    /// </summary>
+    AuditFinalization,
+
+    /// <summary>
+    /// Unified-version capture failed after a non-transactional persistence boundary.
+    /// </summary>
+    UnifiedVersionCapture
+}
+
+/// <summary>
+/// Describes the work requested by a distributed reload signal.
+/// </summary>
+public enum ConfigurationReloadSignalKind
+{
+    /// <summary>
+    /// Reloads the supplied changed definitions.
+    /// </summary>
+    DefinitionsChanged,
+
+    /// <summary>
+    /// Reloads every locally known Monica definition.
+    /// </summary>
+    ReloadAll
 }

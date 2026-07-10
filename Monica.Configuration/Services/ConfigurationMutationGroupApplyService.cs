@@ -1,0 +1,307 @@
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
+using Monica.Configuration.Abstractions;
+using Monica.Configuration.Abstractions.Internal;
+using Monica.Configuration.Exceptions;
+using Monica.Configuration.Metrics;
+using Monica.Configuration.Models;
+using Monica.Configuration.Services.Support;
+using Monica.Core.Extensions;
+using Monica.Modules;
+
+namespace Monica.Configuration.Services;
+
+/// <summary>
+/// Coordinates validated mutation groups across the Monica store and writable external sources.
+/// </summary>
+internal sealed partial class ConfigurationMutationGroupApplyService(
+    ConfigurationMutationPlanner mutationPlanner,
+    IConfigurationEffectiveValueStore effectiveValueStore,
+    IConfigurationMutationBatchStore batchStore,
+    IConfigurationHistoryStore historyStore,
+    IConfigurationMutationGroupService mutationGroupService,
+    IConfigurationSourceInspector sourceInspector,
+    IConfigurationJsonFileSourceWriter sourceWriter,
+    ConfigurationEffectiveValueSeedFactory seedFactory,
+    ConfigurationEffectiveValueDocumentEditor documentEditor,
+    ConfigurationUnifiedVersionSnapshotFactory unifiedVersionSnapshotFactory,
+    IConfigurationReloadCoordinator reloadCoordinator,
+    ConfigurationReloadNotificationDispatcher notificationDispatcher,
+    IOptions<ModuleConfigurationOption> moduleOptions,
+    ConfigurationMetricsRecorder metricsRecorder,
+    ILogger<ConfigurationMutationGroupApplyService> logger)
+    : IConfigurationMutationGroupApplyService
+{
+    public async Task<ConfigurationMutationGroupApplyResult> ApplyAsync(
+        ConfigurationMutationGroupApplyRequest request,
+        CancellationToken cancellationToken)
+    {
+        ValidateRequest(request);
+
+        var createdTime = DateTimeOffset.UtcNow;
+        var groupId = Guid.NewGuid().ToString("N");
+        var reason = string.IsNullOrWhiteSpace(request.Reason) ? null : request.Reason.Trim();
+        var context = request.Context with
+        {
+            MutationGroupId = groupId,
+            Reason = reason
+        };
+        var prepared = new List<PreparedConfigurationMutation>(request.Commands.Count);
+        foreach (var command in request.Commands)
+        {
+            prepared.Add(await mutationPlanner.PrepareAsync(command, context, cancellationToken));
+        }
+
+        ValidateExternalTargets(prepared);
+        var monicaMutations = prepared
+            .Where(static mutation => mutation.Command.Target is ConfigurationEffectiveStoreMutationTarget)
+            .ToArray();
+        var externalMutations = prepared
+            .Where(static mutation => mutation.Command.Target is ConfigurationExternalSourceMutationTarget)
+            .ToArray();
+        var outcomeByRequestId = new Dictionary<string, ConfigurationMutationOutcome>(StringComparer.Ordinal);
+        var postCommitIssues = new List<ConfigurationPostCommitIssue>();
+        IReadOnlyDictionary<string, ConfigurationEffectiveValueDocument> committedDocuments =
+            new Dictionary<string, ConfigurationEffectiveValueDocument>(StringComparer.OrdinalIgnoreCase);
+        var monicaPersistenceFailed = false;
+        ConfigurationMutationGroup mutationGroup;
+
+        if (monicaMutations.Length > 0)
+        {
+            var plan = await BuildMonicaCommitPlanAsync(
+                request,
+                context,
+                createdTime,
+                monicaMutations,
+                externalMutations.Length > 0,
+                cancellationToken);
+            var commit = await batchStore.CommitAsync(plan.CommitRequest, cancellationToken);
+            mutationGroup = commit.MutationGroup;
+            committedDocuments = commit.Documents;
+            monicaPersistenceFailed = commit.Failure is not null;
+            postCommitIssues.AddRange(commit.PostCommitIssues);
+            var appliedRequestIds = commit.AppliedRequestIds.ToHashSet(StringComparer.Ordinal);
+            foreach (var planned in plan.PlannedResults)
+            {
+                if (appliedRequestIds.Contains(planned.RequestId))
+                {
+                    outcomeByRequestId[planned.RequestId] = new ConfigurationMutationOutcome
+                    {
+                        RequestId = planned.RequestId,
+                        Status = ConfigurationMutationOutcomeStatus.Applied,
+                        Result = planned.Result
+                    };
+                    metricsRecorder.RecordMutation(effectiveValueStore.Descriptor.StoreKey);
+                }
+                else if (commit.Failure is { } failure
+                         && string.Equals(failure.RequestId, planned.RequestId, StringComparison.Ordinal))
+                {
+                    outcomeByRequestId[planned.RequestId] = new ConfigurationMutationOutcome
+                    {
+                        RequestId = planned.RequestId,
+                        Status = ConfigurationMutationOutcomeStatus.Failed,
+                        ErrorMessage = failure.Message
+                    };
+                }
+                else
+                {
+                    outcomeByRequestId[planned.RequestId] = new ConfigurationMutationOutcome
+                    {
+                        RequestId = planned.RequestId,
+                        Status = ConfigurationMutationOutcomeStatus.Skipped,
+                        ErrorMessage = "Skipped because an earlier effective-store mutation failed."
+                    };
+                }
+            }
+        }
+        else
+        {
+            mutationGroup = await mutationGroupService.BeginAsync(
+                NormalizeLabel(request.Label, createdTime),
+                reason,
+                context,
+                cancellationToken);
+        }
+
+        if (externalMutations.Length > 0)
+        {
+            if (monicaPersistenceFailed)
+            {
+                foreach (var mutation in externalMutations)
+                {
+                    outcomeByRequestId[mutation.Command.RequestId] = new ConfigurationMutationOutcome
+                    {
+                        RequestId = mutation.Command.RequestId,
+                        Status = ConfigurationMutationOutcomeStatus.Skipped,
+                        ErrorMessage = "Skipped because the effective-store persistence segment failed."
+                    };
+                }
+            }
+            else
+            {
+                await ApplyExternalMutationsAsync(
+                    externalMutations,
+                    context,
+                    outcomeByRequestId,
+                    postCommitIssues,
+                    cancellationToken);
+            }
+        }
+
+        var orderedOutcomes = request.Commands
+            .Select(command => outcomeByRequestId.GetValueOrDefault(command.RequestId)
+                ?? new ConfigurationMutationOutcome
+                {
+                    RequestId = command.RequestId,
+                    Status = ConfigurationMutationOutcomeStatus.Skipped,
+                    ErrorMessage = "The mutation was not attempted."
+                })
+            .ToArray();
+        var appliedOutcomes = orderedOutcomes
+            .Where(static outcome => outcome.Status == ConfigurationMutationOutcomeStatus.Applied)
+            .ToArray();
+        var allApplied = appliedOutcomes.Length == orderedOutcomes.Length;
+
+        if (externalMutations.Length > 0)
+        {
+            mutationGroup = await FinalizeMixedOrExternalGroupAsync(
+                mutationGroup,
+                appliedOutcomes,
+                allApplied,
+                postCommitIssues,
+                cancellationToken);
+        }
+
+        if (committedDocuments.Count > 0)
+        {
+            postCommitIssues.AddRange(await ReloadCommittedDefinitionsAsync(committedDocuments, cancellationToken));
+        }
+
+        if (externalMutations.Any(mutation =>
+                outcomeByRequestId.GetValueOrDefault(mutation.Command.RequestId)?.Status
+                == ConfigurationMutationOutcomeStatus.Applied))
+        {
+            try
+            {
+                await reloadCoordinator.ReloadRuntimeConfigurationAsync(cancellationToken);
+            }
+            catch (Exception ex)
+            {
+                logger.LogWarning(
+                    ex,
+                    "External configuration sources were saved, but runtime configuration reload failed for group {GroupId}.",
+                    mutationGroup.GroupId);
+                postCommitIssues.Add(new ConfigurationPostCommitIssue
+                {
+                    Kind = ConfigurationPostCommitIssueKind.LocalReload,
+                    Source = nameof(ConfigurationMutationGroupApplyService),
+                    Message = "External configuration sources were saved, but the current process could not reload them.",
+                    Detail = ex.ToString()
+                });
+            }
+        }
+
+        var monicaRequestIds = monicaMutations
+            .Select(static mutation => mutation.Command.RequestId)
+            .ToHashSet(StringComparer.Ordinal);
+        var committedMonicaOutcomes = appliedOutcomes
+            .Where(outcome => monicaRequestIds.Contains(outcome.RequestId))
+            .ToArray();
+        if (committedMonicaOutcomes.Length > 0)
+        {
+            var committedVersions = committedMonicaOutcomes
+                .Select(static outcome => outcome.Result)
+                .Where(static result => result is not null)
+                .GroupBy(static result => result!.DefinitionKey, StringComparer.OrdinalIgnoreCase)
+                .Select(static group => group.MaxBy(static result => result!.NewVersion)!)
+                .Select(static result => new ConfigurationReloadDefinitionVersion
+                {
+                    DefinitionKey = result.DefinitionKey,
+                    Version = result.NewVersion
+                })
+                .ToArray();
+            var signal = new ConfigurationReloadSignal
+            {
+                SignalId = Guid.NewGuid().ToString("N"),
+                OriginInstanceId = moduleOptions.Value.InstanceId,
+                StoreKey = effectiveValueStore.Descriptor.StoreKey,
+                Kind = ConfigurationReloadSignalKind.DefinitionsChanged,
+                Definitions = committedVersions,
+                ChangedTime = committedMonicaOutcomes.Max(static outcome => outcome.Result!.ModifiedTime)
+            };
+            postCommitIssues.AddRange(await notificationDispatcher.DispatchAsync(
+                signal,
+                "mutation_group",
+                cancellationToken));
+        }
+
+        return new ConfigurationMutationGroupApplyResult
+        {
+            Status = allApplied
+                ? ConfigurationMutationGroupApplyStatus.Applied
+                : ConfigurationMutationGroupApplyStatus.PartiallyApplied,
+            MutationGroup = mutationGroup,
+            Outcomes = orderedOutcomes,
+            PostCommitIssues = postCommitIssues
+        };
+    }
+
+    private async Task<IReadOnlyList<ConfigurationPostCommitIssue>> ReloadCommittedDefinitionsAsync(
+        IReadOnlyDictionary<string, ConfigurationEffectiveValueDocument> documents,
+        CancellationToken cancellationToken)
+    {
+        var issues = new List<ConfigurationPostCommitIssue>();
+        foreach (var document in documents.Values.OrderBy(static document => document.DefinitionKey, StringComparer.OrdinalIgnoreCase))
+        {
+            try
+            {
+                await reloadCoordinator.ReloadMonicaProjectionAsync(
+                    document.DefinitionKey,
+                    document.Version,
+                    cancellationToken);
+            }
+            catch (Exception ex)
+            {
+                logger.LogWarning(
+                    ex,
+                    "Local Monica projection reload failed for definition {DefinitionKey} at version {Version}.",
+                    document.DefinitionKey,
+                    document.Version);
+                issues.Add(new ConfigurationPostCommitIssue
+                {
+                    Kind = ConfigurationPostCommitIssueKind.LocalReload,
+                    Source = nameof(ConfigurationMutationGroupApplyService),
+                    Message = $"Configuration '{document.DefinitionKey}' was saved, but the current process could not reload it.",
+                    Detail = ex.ToString()
+                });
+            }
+        }
+
+        return issues;
+    }
+
+    private static void ValidateRequest(ConfigurationMutationGroupApplyRequest request)
+    {
+        if (request.Commands.Count == 0)
+        {
+            throw new ConfigurationValidationFailedException("At least one configuration mutation command is required.");
+        }
+
+        var duplicateRequestId = request.Commands
+            .GroupBy(static command => command.RequestId, StringComparer.Ordinal)
+            .FirstOrDefault(static group => group.Count() > 1)?.Key;
+        if (duplicateRequestId is not null)
+        {
+            throw new ConfigurationValidationFailedException(
+                $"Mutation request id '{duplicateRequestId}' is duplicated in the group.");
+        }
+    }
+
+    private static string NormalizeLabel(string label, DateTimeOffset createdTime)
+    {
+        return string.IsNullOrWhiteSpace(label)
+            ? $"Changes {createdTime:yyyy-MM-dd HH:mm}"
+            : label.Trim();
+    }
+
+}

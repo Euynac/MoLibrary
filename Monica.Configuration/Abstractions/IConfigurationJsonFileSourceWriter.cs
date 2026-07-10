@@ -26,6 +26,20 @@ public interface IConfigurationJsonFileSourceWriter
         CancellationToken cancellationToken);
 
     /// <summary>
+    /// Applies multiple mutations to one JSON source through one revision check and one atomic file replacement.
+    /// </summary>
+    /// <param name="source">The source descriptor.</param>
+    /// <param name="mutations">Mutations in deterministic application order.</param>
+    /// <param name="expectedRevision">Optional expected source revision.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>The shared revision and per-mutation value outcomes.</returns>
+    Task<ConfigurationJsonFileBatchWriteResult> WriteBatchAsync(
+        ConfigurationSourceDescriptor source,
+        IReadOnlyList<ConfigurationJsonFileMutation> mutations,
+        string? expectedRevision,
+        CancellationToken cancellationToken);
+
+    /// <summary>
     /// Gets the current source revision hash.
     /// </summary>
     /// <param name="source">The source descriptor.</param>

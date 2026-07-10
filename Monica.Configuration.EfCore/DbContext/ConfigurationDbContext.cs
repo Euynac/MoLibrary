@@ -88,6 +88,9 @@ public sealed class ConfigurationDbContext(
             .HasColumnType(timeColumnType);
         modelBuilder.Entity<ConfigurationEffectiveValueEntity>().HasKey(x => x.DefinitionKey);
         modelBuilder.Entity<ConfigurationEffectiveValueEntity>()
+            .Property(x => x.Version)
+            .IsConcurrencyToken();
+        modelBuilder.Entity<ConfigurationEffectiveValueEntity>()
             .Property(x => x.LastModifiedTime)
             .HasPrecision(6)
             .HasColumnType(timeColumnType);

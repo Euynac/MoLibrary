@@ -836,12 +836,58 @@
             return;
         }
 
-        if (result.Data is SaveMutationGroupDialogResult { SavedGroup: not null })
+        if (result.Data is SaveMutationGroupDialogResult { ConcurrencyConflictMessage: { } conflictMessage })
         {
-            StateStore.Clear();
-            await ReloadSelectedEffectiveValuesAndValidationAsync();
-            Snackbar.Add(L["Group:Saved"], Severity.Success);
+            await RefreshPendingChangeBaselinesAsync();
+            Snackbar.Add($"{L["Group:ConcurrencyConflict"]} {conflictMessage}", Severity.Warning);
+            return;
         }
+
+        if (result.Data is SaveMutationGroupDialogResult { ApplyResult: { } applyResult })
+        {
+            var pendingByRequestId = StateStore.GetPending()
+                .ToDictionary(static change => change.RequestId, StringComparer.Ordinal);
+            foreach (var outcome in applyResult.Outcomes.Where(static outcome =>
+                         outcome.Status == ConfigurationMutationOutcomeStatus.Applied))
+            {
+                if (pendingByRequestId.TryGetValue(outcome.RequestId, out var appliedChange))
+                {
+                    StateStore.Undo(appliedChange.DefinitionKey, appliedChange.LogicalPath);
+                }
+            }
+
+            if (applyResult.Status == ConfigurationMutationGroupApplyStatus.PartiallyApplied)
+            {
+                await RefreshPendingChangeBaselinesAsync();
+                Snackbar.Add(L["Group:PartiallyApplied"], Severity.Warning);
+            }
+            else
+            {
+                await RefreshPendingCount();
+                Snackbar.Add(L["Group:Saved"], Severity.Success);
+            }
+
+            await ReloadSelectedEffectiveValuesAndValidationAsync();
+            if (applyResult.PostCommitIssues.Count > 0)
+            {
+                await ShowPostCommitIssuesAsync(applyResult.PostCommitIssues);
+            }
+        }
+    }
+
+    private async Task ShowPostCommitIssuesAsync(IReadOnlyList<ConfigurationPostCommitIssue> issues)
+    {
+        var parameters = new DialogParameters<ConfigurationPostCommitIssuesDialog>();
+        parameters.Add(dialog => dialog.Issues, issues);
+        var dialog = await DialogService.ShowAsync<ConfigurationPostCommitIssuesDialog>(
+            L["Dialogs:PostCommitIssues:Title"],
+            parameters,
+            new DialogOptions
+            {
+                MaxWidth = MaxWidth.Large,
+                FullWidth = true
+            });
+        await dialog.Result;
     }
 
     private Task UndoAll()

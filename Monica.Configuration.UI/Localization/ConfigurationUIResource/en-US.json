@@ -92,6 +92,13 @@
       "LastFailure": "Last failure: {0}, {1}",
       "ManualReload": "Reload now",
       "Reloading": "Reloading",
+      "BroadcastReloadAll": "Broadcast reload to all services",
+      "Broadcasting": "Broadcasting",
+      "BroadcastPublished": "The reload-all signal was published. This broadcast does not confirm that every service reloaded.",
+      "BroadcastWarning": "Reload-all completed with warnings. Review the details before retrying.",
+      "BroadcastWarningTitle": "Reload Broadcast Warnings",
+      "BroadcastIssueSummary": "The local reload and distributed publication are best-effort operations. One or more steps failed; the broadcast does not confirm that every service reloaded.",
+      "BroadcastFailed": "Failed to start the reload-all broadcast",
       "RefreshStatus": "Refresh status",
       "ReloadSuccess": "Runtime configuration reloaded.",
       "ReloadFailed": "Failed to reload runtime configuration",
@@ -306,6 +313,8 @@
     "DefaultLabel": "Changes {0}",
     "SaveCount": "Save {0} changes",
     "Saved": "Configuration group saved.",
+    "PartiallyApplied": "Some configuration changes were saved. Failed or skipped changes remain staged with refreshed baselines.",
+    "ConcurrencyConflict": "Configuration changed after these edits were staged. Baselines were refreshed while preserving desired values; review the changes before retrying.",
     "Empty": "No mutation groups were found.",
     "MutationCount": "Mutations",
     "Definitions": "Definitions",
@@ -480,6 +489,20 @@
     }
   },
   "Dialogs": {
+    "PostCommitIssues": {
+      "Title": "Configuration Saved with Warnings",
+      "DistributedSummary": "Configuration was saved, but distributed reload notification failed.",
+      "GeneralSummary": "Configuration was saved, but one or more post-save actions failed.",
+      "CopyAll": "Copy all details",
+      "CopySuccess": "Exception details copied.",
+      "CopyFailed": "Failed to copy exception details.",
+      "Kinds": {
+        "LocalReload": "Local reload failed",
+        "DistributedNotification": "Distributed notification failed",
+        "AuditFinalization": "Audit finalization failed",
+        "UnifiedVersionCapture": "Unified version capture failed"
+      }
+    },
     "SaveGroup": {
       "Title": "Save Configuration Group",
       "Tabs": {
@@ -628,6 +651,7 @@
       "Export": "Export",
       "Download": "Download",
       "Apply": "Apply",
+      "Copy": "Copy",
       "Delete": "Delete",
       "Analyze": "Analyze",
       "EditJson": "Edit JSON"

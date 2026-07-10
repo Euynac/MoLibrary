@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Encodings.Web;
@@ -14,6 +15,10 @@ namespace Monica.Configuration.Services.Support;
 /// </summary>
 internal sealed class ConfigurationJsonFileSourceWriter : IConfigurationJsonFileSourceWriter
 {
+    private static readonly TimeSpan FILE_LOCK_RETRY_DELAY = TimeSpan.FromMilliseconds(50);
+    private static readonly ConcurrentDictionary<string, SemaphoreSlim> SOURCE_LOCKS =
+        new(StringComparer.OrdinalIgnoreCase);
+
     private static readonly JsonSerializerOptions WRITE_OPTIONS = new()
     {
         WriteIndented = true,
@@ -37,6 +42,41 @@ internal sealed class ConfigurationJsonFileSourceWriter : IConfigurationJsonFile
         string? expectedRevision,
         CancellationToken cancellationToken)
     {
+        var batch = await WriteBatchAsync(
+            source,
+            [
+                new ConfigurationJsonFileMutation
+                {
+                    ConfigurationPath = configurationPath,
+                    MutationKind = mutationKind,
+                    Value = value
+                }
+            ],
+            expectedRevision,
+            cancellationToken);
+        var result = batch.Results[0];
+        return new ConfigurationJsonFileWriteResult
+        {
+            OldValue = result.OldValue,
+            NewValue = result.NewValue,
+            OldRevision = batch.OldRevision,
+            NewRevision = batch.NewRevision,
+            ModifiedTime = batch.ModifiedTime
+        };
+    }
+
+    /// <inheritdoc />
+    public async Task<ConfigurationJsonFileBatchWriteResult> WriteBatchAsync(
+        ConfigurationSourceDescriptor source,
+        IReadOnlyList<ConfigurationJsonFileMutation> mutations,
+        string? expectedRevision,
+        CancellationToken cancellationToken)
+    {
+        if (mutations.Count == 0)
+        {
+            throw new ConfigurationValidationFailedException("At least one JSON source mutation is required.");
+        }
+
         if (source.Kind != ConfigurationSourceKind.JsonFile || string.IsNullOrWhiteSpace(source.PhysicalPath))
         {
             throw new InvalidOperationException($"Configuration source '{source.DisplayName}' is not a writable JSON file.");
@@ -47,8 +87,36 @@ internal sealed class ConfigurationJsonFileSourceWriter : IConfigurationJsonFile
             throw new InvalidOperationException(source.ReadOnlyReason ?? $"Configuration source '{source.DisplayName}' is read-only.");
         }
 
-        var originalText = File.Exists(source.PhysicalPath)
-            ? await File.ReadAllTextAsync(source.PhysicalPath, cancellationToken)
+        var physicalPath = Path.GetFullPath(source.PhysicalPath);
+        var sourceLock = SOURCE_LOCKS.GetOrAdd(physicalPath, static _ => new SemaphoreSlim(1, 1));
+        await sourceLock.WaitAsync(cancellationToken);
+        try
+        {
+            return await WriteBatchLockedAsync(
+                source,
+                physicalPath,
+                mutations,
+                expectedRevision,
+                cancellationToken);
+        }
+        finally
+        {
+            sourceLock.Release();
+        }
+    }
+
+    private static async Task<ConfigurationJsonFileBatchWriteResult> WriteBatchLockedAsync(
+        ConfigurationSourceDescriptor source,
+        string physicalPath,
+        IReadOnlyList<ConfigurationJsonFileMutation> mutations,
+        string? expectedRevision,
+        CancellationToken cancellationToken)
+    {
+        var directory = Path.GetDirectoryName(physicalPath)!;
+        Directory.CreateDirectory(directory);
+        await using var fileLock = await AcquireFileLockAsync(physicalPath, cancellationToken);
+        var originalText = File.Exists(physicalPath)
+            ? await File.ReadAllTextAsync(physicalPath, cancellationToken)
             : "{}";
         var oldRevision = ComputeRevision(originalText);
         if (!string.IsNullOrWhiteSpace(expectedRevision)
@@ -60,31 +128,79 @@ internal sealed class ConfigurationJsonFileSourceWriter : IConfigurationJsonFile
 
         var root = JsonNode.Parse(string.IsNullOrWhiteSpace(originalText) ? "{}" : originalText, documentOptions: DOCUMENT_OPTIONS)
                    ?? new JsonObject();
-        var pathSegments = configurationPath.Split(':', StringSplitOptions.RemoveEmptyEntries);
-        var oldValue = Read(root, pathSegments);
-        if (mutationKind == ConfigurationMutationKind.Remove)
+        var results = new List<ConfigurationJsonFileMutationResult>(mutations.Count);
+        foreach (var mutation in mutations)
         {
-            Remove(root, pathSegments);
-        }
-        else
-        {
-            var newValue = JsonNode.Parse(value.Json, documentOptions: DOCUMENT_OPTIONS);
-            Set(root, pathSegments, newValue);
+            var pathSegments = mutation.ConfigurationPath.Split(':', StringSplitOptions.RemoveEmptyEntries);
+            var oldValue = Read(root, pathSegments);
+            if (mutation.MutationKind == ConfigurationMutationKind.Remove)
+            {
+                Remove(root, pathSegments);
+            }
+            else
+            {
+                var newValue = JsonNode.Parse(mutation.Value.Json, documentOptions: DOCUMENT_OPTIONS);
+                Set(root, pathSegments, newValue);
+            }
+
+            results.Add(new ConfigurationJsonFileMutationResult
+            {
+                OldValue = oldValue,
+                NewValue = mutation.MutationKind == ConfigurationMutationKind.Remove
+                    ? ConfigurationStoredValue.Null
+                    : Read(root, pathSegments) ?? ConfigurationStoredValue.Null
+            });
         }
 
         var updatedText = root.ToJsonString(WRITE_OPTIONS);
-        Directory.CreateDirectory(Path.GetDirectoryName(source.PhysicalPath)!);
-        await File.WriteAllTextAsync(source.PhysicalPath, updatedText, cancellationToken);
-        return new ConfigurationJsonFileWriteResult
+        var temporaryPath = Path.Combine(directory, $".{Path.GetFileName(physicalPath)}.{Guid.NewGuid():N}.tmp");
+        try
         {
-            OldValue = oldValue,
-            NewValue = mutationKind == ConfigurationMutationKind.Remove
-                ? ConfigurationStoredValue.Null
-                : Read(root, pathSegments) ?? ConfigurationStoredValue.Null,
+            await File.WriteAllTextAsync(temporaryPath, updatedText, cancellationToken);
+            File.Move(temporaryPath, physicalPath, overwrite: true);
+        }
+        finally
+        {
+            if (File.Exists(temporaryPath))
+            {
+                File.Delete(temporaryPath);
+            }
+        }
+
+        return new ConfigurationJsonFileBatchWriteResult
+        {
+            Results = results,
             OldRevision = oldRevision,
             NewRevision = ComputeRevision(updatedText),
             ModifiedTime = DateTimeOffset.UtcNow
         };
+    }
+
+    private static async Task<FileStream> AcquireFileLockAsync(
+        string physicalPath,
+        CancellationToken cancellationToken)
+    {
+        var directory = Path.GetDirectoryName(physicalPath)!;
+        // The lock file remains on disk so waiters always contend on the same inode across processes.
+        var lockPath = Path.Combine(directory, $".{Path.GetFileName(physicalPath)}.monica.lock");
+        while (true)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            try
+            {
+                return new FileStream(
+                    lockPath,
+                    FileMode.OpenOrCreate,
+                    FileAccess.ReadWrite,
+                    FileShare.None,
+                    bufferSize: 1,
+                    FileOptions.Asynchronous);
+            }
+            catch (IOException)
+            {
+                await Task.Delay(FILE_LOCK_RETRY_DELAY, cancellationToken);
+            }
+        }
     }
 
     /// <summary>
@@ -92,12 +208,25 @@ internal sealed class ConfigurationJsonFileSourceWriter : IConfigurationJsonFile
     /// </summary>
     public async Task<string?> GetRevisionAsync(ConfigurationSourceDescriptor source, CancellationToken cancellationToken)
     {
-        if (string.IsNullOrWhiteSpace(source.PhysicalPath) || !File.Exists(source.PhysicalPath))
+        if (string.IsNullOrWhiteSpace(source.PhysicalPath))
         {
             return null;
         }
 
-        return ComputeRevision(await File.ReadAllTextAsync(source.PhysicalPath, cancellationToken));
+        var physicalPath = Path.GetFullPath(source.PhysicalPath);
+        var sourceLock = SOURCE_LOCKS.GetOrAdd(physicalPath, static _ => new SemaphoreSlim(1, 1));
+        await sourceLock.WaitAsync(cancellationToken);
+        try
+        {
+            var text = File.Exists(physicalPath)
+                ? await File.ReadAllTextAsync(physicalPath, cancellationToken)
+                : "{}";
+            return ComputeRevision(text);
+        }
+        finally
+        {
+            sourceLock.Release();
+        }
     }
 
     private static ConfigurationStoredValue? Read(JsonNode? root, IReadOnlyList<string> segments)

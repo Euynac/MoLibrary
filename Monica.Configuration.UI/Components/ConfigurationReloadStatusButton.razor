@@ -1,4 +1,5 @@
 @inject ConfigurationFacade Facade
+@inject IDialogService DialogService
 @inject ISnackbar Snackbar
 @inject IStringLocalizer<ConfigurationUIResource> L
 
@@ -17,7 +18,8 @@
                 TransformOrigin="Origin.TopLeft"
                 Class="configuration-reload-status-popover"
                 Paper="false">
-        <MudPaper Elevation="6" Class="pa-3 configuration-reload-status-popover-content">
+        <div class="configuration-reload-status-popover-content">
+        <MudPaper Elevation="6" Class="pa-3">
             <MudStack Spacing="2">
                 <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Spacing="2">
                     <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
@@ -133,13 +135,22 @@
                                Color="Color.Primary"
                                Size="Size.Small"
                                StartIcon="@Icons.Material.Filled.Sync"
-                               Disabled="@(_loading || _reloading)"
+                               Disabled="@(_loading || _reloading || _broadcasting)"
                                OnClick="ReloadAsync">
                         @(_reloading ? L["State:ReloadStatus:Reloading"] : L["State:ReloadStatus:ManualReload"])
+                    </MudButton>
+                    <MudButton Variant="Variant.Filled"
+                               Color="Color.Secondary"
+                               Size="Size.Small"
+                               StartIcon="@Icons.Material.Filled.Campaign"
+                               Disabled="@(_loading || _reloading || _broadcasting)"
+                               OnClick="BroadcastReloadAllAsync">
+                        @(_broadcasting ? L["State:ReloadStatus:Broadcasting"] : L["State:ReloadStatus:BroadcastReloadAll"])
                     </MudButton>
                 </MudStack>
             </MudStack>
         </MudPaper>
+        </div>
     </MudPopover>
     <MudOverlay Visible="@_popoverOpen"
                 AutoClose="true"
@@ -154,6 +165,7 @@
     private ConfigurationReloadStatusReport? _report;
     private bool _loading;
     private bool _reloading;
+    private bool _broadcasting;
     private bool _popoverOpen;
 
     private int DriftCount => _report?.DriftCount ?? 0;
@@ -244,6 +256,42 @@
         finally
         {
             _reloading = false;
+        }
+    }
+
+    private async Task BroadcastReloadAllAsync()
+    {
+        _broadcasting = true;
+        try
+        {
+            var result = await Facade.BroadcastReloadAllAsync();
+            if (result.IsFailed(out var error, out var broadcast))
+            {
+                Snackbar.Add($"{L["State:ReloadStatus:BroadcastFailed"]}: {error.Message}", Severity.Error);
+                return;
+            }
+
+            await RefreshAsync();
+            await Reloaded.InvokeAsync();
+            if (broadcast.PostCommitIssues.Count == 0)
+            {
+                Snackbar.Add(L["State:ReloadStatus:BroadcastPublished"], Severity.Success);
+                return;
+            }
+
+            Snackbar.Add(L["State:ReloadStatus:BroadcastWarning"], Severity.Warning);
+            var parameters = new DialogParameters<ConfigurationPostCommitIssuesDialog>();
+            parameters.Add(dialog => dialog.Issues, broadcast.PostCommitIssues);
+            parameters.Add(dialog => dialog.SummaryText, L["State:ReloadStatus:BroadcastIssueSummary"].Value);
+            var dialog = await DialogService.ShowAsync<ConfigurationPostCommitIssuesDialog>(
+                L["State:ReloadStatus:BroadcastWarningTitle"],
+                parameters,
+                new DialogOptions { MaxWidth = MaxWidth.Large, FullWidth = true });
+            await dialog.Result;
+        }
+        finally
+        {
+            _broadcasting = false;
         }
     }
 

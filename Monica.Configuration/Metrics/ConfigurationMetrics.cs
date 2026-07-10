@@ -24,4 +24,9 @@ public static class ConfigurationMetrics
     /// Gets the mutation failure counter name.
     /// </summary>
     public const string MutationFailureCount = "monica.configuration.mutation.failure.count";
+
+    /// <summary>
+    /// Gets the reload notification failure counter name.
+    /// </summary>
+    public const string ReloadNotificationFailureCount = "monica.configuration.reload.notification.failure.count";
 }

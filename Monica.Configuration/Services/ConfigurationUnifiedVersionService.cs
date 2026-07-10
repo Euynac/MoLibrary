@@ -9,9 +9,7 @@ internal sealed class ConfigurationUnifiedVersionService(
     IConfigurationUnifiedVersionStore versionStore,
     ConfigurationDefinitionResolver definitionResolver,
     IConfigurationEffectiveValueStore effectiveValueStore,
-    IConfigurationMutationService mutationService,
-    IConfigurationSourceMutationService sourceMutationService,
-    IConfigurationMutationGroupService mutationGroupService,
+    IConfigurationMutationGroupApplyService mutationGroupApplyService,
     IConfigurationSourceInspector sourceInspector,
     IConfigurationJsonFileSourceWriter sourceWriter)
     : IConfigurationUnifiedVersionService
@@ -108,43 +106,70 @@ internal sealed class ConfigurationUnifiedVersionService(
             throw new InvalidOperationException(blocked.Diagnostic ?? $"Definition '{blocked.DefinitionKey}' cannot be restored.");
         }
 
-        var group = await mutationGroupService.BeginAsync(
-            $"Apply configuration version v{version}",
-            reason,
-            new ConfigurationMutationContext { Reason = reason },
-            cancellationToken);
-        var results = new List<ConfigurationMutationResult>();
-        var definitionKeys = new List<string>();
-        var context = new ConfigurationMutationContext
+        var commands = new List<ConfigurationMutationCommand>(snapshot.Definitions.Count);
+        var sourceRevisions = new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase);
+        foreach (var document in snapshot.Definitions)
         {
-            MutationGroupId = group.GroupId,
-            Reason = reason
-        };
-
-        try
-        {
-            foreach (var document in snapshot.Definitions)
+            var definition = await definitionResolver.GetRequiredAsync(document.DefinitionKey, cancellationToken);
+            var target = preview.Targets.First(candidate =>
+                string.Equals(candidate.DefinitionKey, document.DefinitionKey, StringComparison.OrdinalIgnoreCase));
+            ConfigurationMutationTarget mutationTarget;
+            if (target.SourceKind == ConfigurationSourceKind.JsonFile && !string.IsNullOrWhiteSpace(target.SourceKey))
             {
-                var target = preview.Targets.First(candidate =>
-                    string.Equals(candidate.DefinitionKey, document.DefinitionKey, StringComparison.OrdinalIgnoreCase));
-                results.Add(await ApplyDefinitionAsync(document, target, context, cancellationToken));
-                definitionKeys.Add(document.DefinitionKey);
+                if (!sourceRevisions.TryGetValue(target.SourceKey, out var revision))
+                {
+                    revision = await sourceWriter.GetRevisionAsync(
+                        sourceInspector.GetRequiredSource(target.SourceKey),
+                        cancellationToken);
+                    sourceRevisions[target.SourceKey] = revision;
+                }
+
+                mutationTarget = new ConfigurationExternalSourceMutationTarget
+                {
+                    SourceKey = target.SourceKey,
+                    ExpectedRevision = revision
+                };
+            }
+            else
+            {
+                mutationTarget = new ConfigurationEffectiveStoreMutationTarget
+                {
+                    ExpectedVersion = (await effectiveValueStore.GetAsync(document.DefinitionKey, cancellationToken))?.Version
+                };
             }
 
-            await mutationGroupService.CompleteAsync(group.GroupId, results.Count, definitionKeys, cancellationToken);
-            var completedGroup = await mutationGroupService.GetAsync(group.GroupId, cancellationToken) ?? group;
-            return new ConfigurationUnifiedVersionRollbackResult
+            commands.Add(new ConfigurationMutationCommand
             {
-                Version = version,
-                MutationGroup = completedGroup,
-                Results = results
-            };
+                RequestId = $"unified-version:{version}:{document.DefinitionKey}",
+                DefinitionKey = document.DefinitionKey,
+                LogicalPath = LogicalPath.Root,
+                MutationKind = ConfigurationMutationKind.Set,
+                Value = ConfigurationStoredValue.FromJson(document.Json),
+                ExpectedSchemaVersion = definition.SchemaVersion,
+                Target = mutationTarget
+            });
         }
-        catch
+
+        var applyResult = await mutationGroupApplyService.ApplyAsync(new ConfigurationMutationGroupApplyRequest
         {
-            await mutationGroupService.MarkPartialAsync(group.GroupId, results.Count, definitionKeys, cancellationToken);
-            throw;
-        }
+            Label = $"Apply configuration version v{version}",
+            Reason = reason,
+            Context = new ConfigurationMutationContext { Reason = reason },
+            Commands = commands
+        }, cancellationToken);
+        var results = applyResult.Outcomes
+            .Where(static outcome => outcome is
+                { Status: ConfigurationMutationOutcomeStatus.Applied, Result: not null })
+            .Select(outcome => outcome.Result! with { PostCommitIssues = applyResult.PostCommitIssues })
+            .ToArray();
+
+        return new ConfigurationUnifiedVersionRollbackResult
+        {
+            Version = version,
+            MutationGroup = applyResult.MutationGroup,
+            Results = results,
+            ApplyResult = applyResult
+        };
     }
 
     private async Task<ConfigurationUnifiedVersionSnapshot> GetRequiredVersionAsync(
@@ -244,43 +269,6 @@ internal sealed class ConfigurationUnifiedVersionService(
         return contributions.FirstOrDefault(contribution =>
             contribution.Source.PriorityIndex > targetSource.PriorityIndex
             && !contribution.Source.IsWritable);
-    }
-
-    private async Task<ConfigurationMutationResult> ApplyDefinitionAsync(
-        ConfigurationUnifiedVersionDefinitionSnapshot document,
-        ConfigurationUnifiedVersionApplyTarget target,
-        ConfigurationMutationContext context,
-        CancellationToken cancellationToken)
-    {
-        var definition = await definitionResolver.GetRequiredAsync(document.DefinitionKey, cancellationToken);
-        if (target.SourceKind == ConfigurationSourceKind.JsonFile && !string.IsNullOrWhiteSpace(target.SourceKey))
-        {
-            var source = sourceInspector.GetRequiredSource(target.SourceKey);
-            var revision = await sourceWriter.GetRevisionAsync(source, cancellationToken);
-            return await sourceMutationService.MutateAsync(new ConfigurationSourceMutationRequest
-            {
-                SourceKey = target.SourceKey,
-                DefinitionKey = document.DefinitionKey,
-                LogicalPath = LogicalPath.Root,
-                MutationKind = ConfigurationMutationKind.Set,
-                Value = ConfigurationStoredValue.FromJson(document.Json),
-                ExpectedSchemaVersion = definition.SchemaVersion,
-                ExpectedSourceRevision = revision,
-                Context = context
-            }, cancellationToken);
-        }
-
-        var currentDocument = await effectiveValueStore.GetAsync(document.DefinitionKey, cancellationToken);
-        return await mutationService.MutateAsync(new ConfigurationMutationRequest
-        {
-            DefinitionKey = document.DefinitionKey,
-            LogicalPath = LogicalPath.Root,
-            MutationKind = ConfigurationMutationKind.Set,
-            Value = ConfigurationStoredValue.FromJson(document.Json),
-            ExpectedSchemaVersion = definition.SchemaVersion,
-            ExpectedValueVersion = currentDocument?.Version,
-            Context = context
-        }, cancellationToken);
     }
 
     private static ConfigurationUnifiedVersionApplyTarget MonicaTarget(

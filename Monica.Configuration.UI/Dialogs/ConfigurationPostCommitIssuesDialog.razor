@@ -1,0 +1,89 @@
+@inject Microsoft.JSInterop.IJSRuntime JSRuntime
+@inject ISnackbar Snackbar
+@inject IStringLocalizer<ConfigurationUIResource> L
+
+<MudDialog Class="configuration-post-commit-issues-dialog">
+    <DialogContent>
+        <div class="configuration-post-commit-issues-dialog-body">
+            <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined">
+                @Summary
+            </MudAlert>
+
+            <MudExpansionPanels MultiExpansion="true" Elevation="0" Dense="true">
+                @foreach (var issue in Issues)
+                {
+                    <MudExpansionPanel Text="@GetIssueTitle(issue)" Icon="@Icons.Material.Filled.WarningAmber">
+                        <MudStack Spacing="2">
+                            <MudText Typo="Typo.body2">@issue.Message</MudText>
+                            <div class="configuration-post-commit-issue-detail">
+                                <pre>@issue.Detail</pre>
+                            </div>
+                            <MudStack Row="true" Justify="Justify.FlexEnd">
+                                <MudButton Variant="Variant.Text"
+                                           Size="Size.Small"
+                                           StartIcon="@Icons.Material.Filled.ContentCopy"
+                                           OnClick="@(() => CopyAsync(issue.Detail))">
+                                    @L["Common:Actions:Copy"]
+                                </MudButton>
+                            </MudStack>
+                        </MudStack>
+                    </MudExpansionPanel>
+                }
+            </MudExpansionPanels>
+        </div>
+    </DialogContent>
+    <DialogActions>
+        <MudButton Variant="Variant.Text"
+                   StartIcon="@Icons.Material.Filled.ContentCopy"
+                   OnClick="CopyAllAsync">
+            @L["Dialogs:PostCommitIssues:CopyAll"]
+        </MudButton>
+        <MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="Close">
+            @L["Common:Actions:Close"]
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] private IMudDialogInstance MudDialog { get; set; } = null!;
+    [Parameter] public IReadOnlyList<ConfigurationPostCommitIssue> Issues { get; set; } = [];
+    [Parameter] public string? SummaryText { get; set; }
+
+    private string Summary => SummaryText ??
+        (Issues.Any(static issue => issue.Kind == ConfigurationPostCommitIssueKind.DistributedNotification)
+            ? L["Dialogs:PostCommitIssues:DistributedSummary"].Value
+            : L["Dialogs:PostCommitIssues:GeneralSummary"].Value);
+
+    private string GetIssueTitle(ConfigurationPostCommitIssue issue)
+    {
+        return $"{L[$"Dialogs:PostCommitIssues:Kinds:{issue.Kind}"]}: {issue.Source}";
+    }
+
+    private Task CopyAllAsync()
+    {
+        var details = string.Join(
+            $"{Environment.NewLine}{Environment.NewLine}",
+            Issues.Select(issue => $"[{GetIssueTitle(issue)}]{Environment.NewLine}{issue.Detail}"));
+        return CopyAsync(details);
+    }
+
+    private async Task CopyAsync(string text)
+    {
+        try
+        {
+            var copied = await JSRuntime.InvokeAsync<bool>("MoClipboard.copyText", new object?[] { text });
+            Snackbar.Add(
+                copied ? L["Dialogs:PostCommitIssues:CopySuccess"] : L["Dialogs:PostCommitIssues:CopyFailed"],
+                copied ? Severity.Success : Severity.Error);
+        }
+        catch
+        {
+            Snackbar.Add(L["Dialogs:PostCommitIssues:CopyFailed"], Severity.Error);
+        }
+    }
+
+    private void Close()
+    {
+        MudDialog.Close();
+    }
+}
