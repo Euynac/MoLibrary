@@ -19,6 +19,11 @@ public class OpenAIProvider : IAIProvider
     /// </summary>
     public const string ApiModeMetadataKey = "OpenAIApiMode";
 
+    /// <summary>
+    /// Metadata key that stores the configured Responses conversation-history strategy.
+    /// </summary>
+    public const string ResponsesHistoryModeMetadataKey = "OpenAIResponsesHistoryMode";
+
     private const EAIProviderType ProviderKind = EAIProviderType.OpenAI;
     private readonly OpenAIProviderOptions _options;
     private readonly OpenAIClient _client;
@@ -89,6 +94,7 @@ public class OpenAIProvider : IAIProvider
 
         var cacheKey = BuildChatClientCacheKey(
             _options.ApiMode,
+            _options.ResponsesHistoryMode,
             resolvedModel,
             _options.PromptCacheKey,
             _options.PromptCacheRetention);
@@ -185,7 +191,8 @@ public class OpenAIProvider : IAIProvider
 
         return new Dictionary<string, string>
         {
-            [ApiModeMetadataKey] = options.ApiMode.ToString()
+            [ApiModeMetadataKey] = options.ApiMode.ToString(),
+            [ResponsesHistoryModeMetadataKey] = options.ResponsesHistoryMode.ToString()
         };
     }
 
@@ -200,22 +207,31 @@ public class OpenAIProvider : IAIProvider
             _ => throw new InvalidOperationException($"Unsupported OpenAI API mode '{_options.ApiMode}'.")
         };
 
-        return string.IsNullOrWhiteSpace(_options.PromptCacheKey)
-            ? chatClient
-            : new OpenAIPromptCacheChatClient(
+        return RequiresRequestOptionsDecorator()
+            ? new OpenAIRequestOptionsChatClient(
                 chatClient,
                 _options.ApiMode,
-                _options.PromptCacheKey.Trim(),
-                _options.PromptCacheRetention);
+                _options.ResponsesHistoryMode,
+                _options.PromptCacheKey,
+                _options.PromptCacheRetention)
+            : chatClient;
+    }
+
+    private bool RequiresRequestOptionsDecorator()
+    {
+        return !string.IsNullOrWhiteSpace(_options.PromptCacheKey)
+               || (_options.ApiMode == OpenAIProviderApiMode.Responses
+                   && _options.ResponsesHistoryMode == OpenAIResponsesHistoryMode.LocalHistory);
     }
 
     private static string BuildChatClientCacheKey(
         OpenAIProviderApiMode apiMode,
+        OpenAIResponsesHistoryMode responsesHistoryMode,
         string model,
         string? promptCacheKey,
         OpenAIPromptCacheRetention? promptCacheRetention)
     {
-        return $"{apiMode}:{model}:{promptCacheKey}:{promptCacheRetention}";
+        return $"{apiMode}:{responsesHistoryMode}:{model}:{promptCacheKey}:{promptCacheRetention}";
     }
 
     public void Dispose()

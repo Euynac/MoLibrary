@@ -5,17 +5,19 @@ using ChatCompletionOptions = OpenAI.Chat.ChatCompletionOptions;
 namespace Monica.AI.Providers.OpenAI;
 
 /// <summary>
-/// Adds OpenAI prompt cache request fields that Microsoft.Extensions.AI does not expose directly.
+/// Applies OpenAI-specific request options that Microsoft.Extensions.AI does not expose directly.
 /// </summary>
-internal sealed class OpenAIPromptCacheChatClient(
+internal sealed class OpenAIRequestOptionsChatClient(
     IChatClient innerClient,
     OpenAIProviderApiMode apiMode,
-    string promptCacheKey,
+    OpenAIResponsesHistoryMode responsesHistoryMode,
+    string? promptCacheKey,
     OpenAIPromptCacheRetention? promptCacheRetention)
     : DelegatingChatClient(innerClient)
 {
     private readonly OpenAIProviderApiMode _apiMode = apiMode;
-    private readonly string _promptCacheKey = promptCacheKey;
+    private readonly OpenAIResponsesHistoryMode _responsesHistoryMode = responsesHistoryMode;
+    private readonly string? _promptCacheKey = NormalizePromptCacheKey(promptCacheKey);
     private readonly string? _promptCacheRetention = ConvertRetention(promptCacheRetention);
 
     /// <inheritdoc />
@@ -45,12 +47,13 @@ internal sealed class OpenAIPromptCacheChatClient(
         {
             var rawOptions = previousFactory?.Invoke(chatClient);
 #pragma warning disable OPENAI001
-            var configuredRawOptions = rawOptions switch
+            object configuredRawOptions = _apiMode switch
             {
-                CreateResponseOptions responseOptions => ConfigureResponseOptions(responseOptions),
-                ChatCompletionOptions chatOptions => ConfigureChatCompletionOptions(chatOptions),
-                null => CreateDefaultRawOptions(),
-                _ => rawOptions
+                OpenAIProviderApiMode.Responses => ConfigureResponseOptions(
+                    rawOptions as CreateResponseOptions ?? new CreateResponseOptions()),
+                OpenAIProviderApiMode.Chat => ConfigureChatCompletionOptions(
+                    rawOptions as ChatCompletionOptions ?? new ChatCompletionOptions()),
+                _ => throw new InvalidOperationException($"Unsupported OpenAI API mode '{_apiMode}'.")
             };
 #pragma warning restore OPENAI001
 
@@ -62,18 +65,13 @@ internal sealed class OpenAIPromptCacheChatClient(
 
 #pragma warning disable OPENAI001
 #pragma warning disable SCME0001
-    private object CreateDefaultRawOptions()
-    {
-        return _apiMode switch
-        {
-            OpenAIProviderApiMode.Responses => ConfigureResponseOptions(new CreateResponseOptions()),
-            OpenAIProviderApiMode.Chat => ConfigureChatCompletionOptions(new ChatCompletionOptions()),
-            _ => throw new InvalidOperationException($"Unsupported OpenAI API mode '{_apiMode}'.")
-        };
-    }
-
     private CreateResponseOptions ConfigureResponseOptions(CreateResponseOptions options)
     {
+        if (_responsesHistoryMode == OpenAIResponsesHistoryMode.LocalHistory)
+        {
+            options.StoredOutputEnabled = false;
+        }
+
         SetPromptCacheFields(options.Patch);
         return options;
     }
@@ -86,6 +84,11 @@ internal sealed class OpenAIPromptCacheChatClient(
 
     private void SetPromptCacheFields(System.ClientModel.Primitives.JsonPatch patch)
     {
+        if (_promptCacheKey is null)
+        {
+            return;
+        }
+
         patch.Set("$.prompt_cache_key"u8, _promptCacheKey);
         if (_promptCacheRetention is not null)
         {
@@ -104,5 +107,10 @@ internal sealed class OpenAIPromptCacheChatClient(
             null => null,
             _ => throw new InvalidOperationException($"Unsupported OpenAI prompt cache retention '{retention}'.")
         };
+    }
+
+    private static string? NormalizePromptCacheKey(string? promptCacheKey)
+    {
+        return string.IsNullOrWhiteSpace(promptCacheKey) ? null : promptCacheKey.Trim();
     }
 }
