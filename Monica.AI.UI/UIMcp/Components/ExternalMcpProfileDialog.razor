@@ -1,10 +1,11 @@
 @using Microsoft.Extensions.Localization
 @using ModelContextProtocol.Client
 @using Monica.AI.Facades
+@using Monica.AI.Mcp.Facades
 @using Monica.AI.Mcp.Models
 @using Monica.AI.UI.Localization
 @using Monica.Core.Results
-@inject AgentCapabilityFacade CapabilityFacade
+@inject McpFacade McpFacade
 @inject ISnackbar Snackbar
 @inject IStringLocalizer<AIResource> L
 
@@ -255,7 +256,7 @@
         _isTesting = true;
         _lastTestResult = null;
 
-        var result = await CapabilityFacade.TestExternalMcpProfileAsync(CreateProfile());
+        var result = await McpFacade.TestExternalProfileAsync(CreateProfile());
         if (result.IsFailed(out var error, out var connectivity))
         {
             AddErrorSnackbar(error.Message);

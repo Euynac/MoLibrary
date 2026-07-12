@@ -1,7 +1,10 @@
 using System.Net.Http;
+using Monica.AI.Chat.Models;
 using Monica.AI.Models;
+using Monica.AI.UI.UIChat.Components;
 using Monica.AI.UI.UIChat.Models;
 using Monica.AI.UI.UIChat.Support;
+using Monica.Core.Results;
 using MudBlazor;
 
 namespace Monica.AI.UI.UIChat.State;
@@ -26,33 +29,23 @@ public sealed partial class ChatPageState
         }
 
         var resolvedSessionId = sessionId!;
-        AddUserMessageAndUpdateTitle(resolvedSessionId, message);
         _sessionStore.UpdateSession(
             resolvedSessionId,
             session =>
             {
-                session.ReasoningEnabled = ReasoningEnabled;
-                session.RuntimeContext = BuildRuntimeContext(SelectedKnowledgeBaseIds);
+                _ = _chatFacade.UpdateSettings(
+                    session,
+                    session.Settings with { ReasoningEnabled = ReasoningEnabled });
+                _ = _chatFacade.UpdateRuntimeContext(
+                    session,
+                    BuildRuntimeContext(SelectedKnowledgeBaseIds));
+                if (session.Messages.Count == 0)
+                {
+                    _ = _chatFacade.Rename(session, ChatProviderResolver.GenerateSessionTitle(message));
+                }
             });
 
         await StartStreamingMessageAsync(resolvedSessionId, message);
-    }
-
-    private void AddUserMessageAndUpdateTitle(string sessionId, string message)
-    {
-        _sessionStore.UpdateSession(sessionId, session =>
-        {
-            session.Messages.Add(new AIChatMessage
-            {
-                Role = AIChatRole.User,
-                Content = message
-            });
-
-            if (session.Messages.Count == 1)
-            {
-                session.Title = ChatProviderResolver.GenerateSessionTitle(message);
-            }
-        });
     }
 
     private async Task StartStreamingMessageAsync(string sessionId, string message)
@@ -70,12 +63,12 @@ public sealed partial class ChatPageState
                 return;
             }
 
-            StreamingContent = _chatFacade.SendMessageStreamingAsync(
-                session,
-                message,
-                CancellationToken);
+            StreamingState = new ChatStreamingState();
             UpdateCurrentSession();
             NotifyStateChanged();
+            await ConsumeStreamAsync(
+                session,
+                _chatFacade.SendMessageStreamingAsync(session, message, CancellationToken));
         }
         catch (OperationCanceledException)
         {
@@ -94,16 +87,16 @@ public sealed partial class ChatPageState
     private void SetStreamError(string error)
     {
         IsSending = false;
-        StreamingContent = null;
+        StreamingState = null;
         SetError(error, canRetry: true);
         _snackbar.Add(error, Severity.Error);
         NotifyStateChanged();
     }
 
-    private void CompleteStream(string content)
+    private void CompleteStream(string _)
     {
         IsSending = false;
-        StreamingContent = null;
+        StreamingState = null;
         CancellationTokenSource?.Dispose();
         CancellationTokenSource = null;
         CancellationToken = CancellationToken.None;
@@ -119,8 +112,6 @@ public sealed partial class ChatPageState
             _snackbar.Add(_localizer["Chat:Status:GenerationStopped"], Severity.Info);
         }
 
-        IsSending = false;
-        StreamingContent = null;
         NotifyStateChanged();
     }
 
@@ -135,7 +126,7 @@ public sealed partial class ChatPageState
         await SendMessageAsync(new ChatSendRequest(LastMessage));
     }
 
-    private void EditMessage((AIChatMessage Message, string NewContent) args)
+    private async Task EditMessage((AIChatMessage Message, string NewContent) args)
     {
         if (string.IsNullOrWhiteSpace(args.NewContent) || IsSending)
         {
@@ -149,7 +140,9 @@ public sealed partial class ChatPageState
 
         _sessionStore.UpdateSession(
             _sessionStore.CurrentSessionId!,
-            session => session.ReasoningEnabled = ReasoningEnabled);
+            session => _ = _chatFacade.UpdateSettings(
+                session,
+                session.Settings with { ReasoningEnabled = ReasoningEnabled }));
         var session = _sessionStore.CurrentSession;
         if (session == null)
         {
@@ -157,17 +150,15 @@ public sealed partial class ChatPageState
             return;
         }
 
-        StreamingContent = _chatFacade.EditMessageAsync(
-            session,
-            args.Message.Id,
-            args.NewContent,
-            CancellationToken);
-
+        StreamingState = new ChatStreamingState();
         UpdateCurrentSession();
         NotifyStateChanged();
+        await ConsumeStreamAsync(
+            session,
+            _chatFacade.EditMessageAsync(session, args.Message.Id, args.NewContent, CancellationToken));
     }
 
-    private void RetryMessage(AIChatMessage message)
+    private async Task RetryMessage(AIChatMessage message)
     {
         if (IsSending)
         {
@@ -180,7 +171,9 @@ public sealed partial class ChatPageState
 
         _sessionStore.UpdateSession(
             _sessionStore.CurrentSessionId!,
-            session => session.ReasoningEnabled = ReasoningEnabled);
+            session => _ = _chatFacade.UpdateSettings(
+                session,
+                session.Settings with { ReasoningEnabled = ReasoningEnabled }));
         var session = _sessionStore.CurrentSession;
         if (session == null)
         {
@@ -188,18 +181,90 @@ public sealed partial class ChatPageState
             return;
         }
 
-        StreamingContent = _chatFacade.RetryMessageAsync(
-            session,
-            message.Id,
-            CancellationToken);
-
+        StreamingState = new ChatStreamingState();
         UpdateCurrentSession();
         NotifyStateChanged();
+        await ConsumeStreamAsync(
+            session,
+            _chatFacade.RetryMessageAsync(session, message.Id, CancellationToken));
     }
 
     private void DismissError()
     {
         ClearError();
         NotifyStateChanged();
+    }
+
+    private async Task ConsumeStreamAsync(
+        ChatSession session,
+        IAsyncEnumerable<Res<ChatStreamEvent>> stream)
+    {
+        ChatApprovalRequestEvent? pendingApproval = null;
+        try
+        {
+            await foreach (var result in stream)
+            {
+                if (result.IsFailed(out var error, out var streamEvent))
+                {
+                    SetStreamError(error.Message ?? _localizer["Error:Generic"]);
+                    return;
+                }
+
+                StreamingState ??= new ChatStreamingState();
+                StreamingState.Apply(streamEvent);
+                pendingApproval = streamEvent as ChatApprovalRequestEvent ?? pendingApproval;
+                UpdateCurrentSession();
+                NotifyStateChanged();
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            // The chat facade normally converts cancellation to a completion event. This guard also
+            // covers cancellation before the first provider update is available.
+        }
+        catch (Exception ex)
+        {
+            SetStreamError($"{_localizer["Error:Generic"]}: {ex.Message}");
+            return;
+        }
+
+        if (pendingApproval is not null)
+        {
+            await ContinueAfterApprovalAsync(session, pendingApproval);
+            return;
+        }
+
+        CompleteStream(StreamingState?.Content ?? string.Empty);
+    }
+
+    private async Task ContinueAfterApprovalAsync(
+        ChatSession session,
+        ChatApprovalRequestEvent approval)
+    {
+        var parameters = new DialogParameters
+        {
+            [nameof(ExternalScriptApprovalDialog.Request)] = approval
+        };
+        var dialog = await _dialogService.ShowAsync<ExternalScriptApprovalDialog>(
+            _localizer["Chat:Approval:Title"],
+            parameters,
+            new DialogOptions { MaxWidth = MaxWidth.Medium, FullWidth = true, CloseOnEscapeKey = false });
+        var result = await dialog.Result;
+        var approved = result is { Canceled: false, Data: true };
+        StreamingState?.ResumeAfterApproval();
+        IsSending = true;
+        NotifyStateChanged();
+
+        var reason = approved
+            ? _localizer["Chat:Approval:ApprovedReason"].Value
+            : _localizer["Chat:Approval:RejectedReason"].Value;
+        await ConsumeStreamAsync(
+            session,
+            _chatFacade.ContinueApprovalAsync(
+                session,
+                approval.ApprovalId,
+                approved,
+                reason,
+                CancellationToken));
     }
 }

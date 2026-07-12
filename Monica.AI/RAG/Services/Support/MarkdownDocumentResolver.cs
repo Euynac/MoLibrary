@@ -6,7 +6,7 @@ namespace Monica.AI.RAG.Services.Support;
 /// <summary>
 /// Resolves markdown documents by relative path.
 /// </summary>
-public sealed class MarkdownDocumentResolver(IMarkdownDocumentCatalog markdownService)
+internal sealed class MarkdownDocumentResolver(IMarkdownDocumentCatalog markdownService)
 {
     public async Task<MarkdownDocument?> FindByPathAsync(string documentPath, CancellationToken ct = default)
     {

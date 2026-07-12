@@ -1,4 +1,3 @@
-using Microsoft.Agents.AI;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
@@ -161,7 +160,7 @@ public sealed partial class ChatPageState : IDisposable
     /// <summary>
     /// Current streaming response sequence, if any.
     /// </summary>
-    public IAsyncEnumerable<AgentResponseUpdate>? StreamingContent { get; private set; }
+    public ChatStreamingState? StreamingState { get; private set; }
 
     /// <summary>
     /// Current cancellation token source for the active request.
@@ -230,7 +229,7 @@ public sealed partial class ChatPageState : IDisposable
         return new ChatContainerParameters
         {
             Messages = CurrentMessages,
-            StreamingContent = StreamingContent,
+            StreamingState = StreamingState,
             IsSending = IsSending,
             ShowRetry = CanRetry,
             ProviderName = CurrentProviderName,
@@ -239,7 +238,6 @@ public sealed partial class ChatPageState : IDisposable
             AvailableModels = CurrentProviderModels,
             LatestRequestUsages = LatestRequestUsages,
             ErrorMessage = ErrorMessage,
-            CancellationToken = CancellationToken,
             EnableMarkdown = _options.EnableMarkdown,
             EnableAutoScroll = _options.EnableAutoScroll,
             SupportsReasoning = SupportsReasoning,
@@ -249,8 +247,6 @@ public sealed partial class ChatPageState : IDisposable
             SelectedKnowledgeBaseIds = SelectedKnowledgeBaseIds,
             CapabilityCandidates = CapabilityCandidates,
             OnSendMessage = EventCallback.Factory.Create<ChatSendRequest>(this, SendMessageAsync),
-            OnStreamComplete = EventCallback.Factory.Create<string>(this, CompleteStream),
-            OnStreamError = EventCallback.Factory.Create<string>(this, SetStreamError),
             OnCancel = EventCallback.Factory.Create(this, CancelAsync),
             OnRetry = EventCallback.Factory.Create(this, RetryLastMessageAsync),
             OnErrorDismissed = EventCallback.Factory.Create(this, DismissError),
@@ -287,7 +283,7 @@ public sealed partial class ChatPageState : IDisposable
         CancellationTokenSource?.Dispose();
         CancellationTokenSource = null;
         CancellationToken = CancellationToken.None;
-        StreamingContent = null;
+        StreamingState = null;
         IsSending = false;
         LastMessage = null;
         CurrentSession = null;
@@ -384,7 +380,7 @@ public sealed partial class ChatPageState : IDisposable
     private void SetPageError(string message, bool canRetry = false, bool showSnackbar = true)
     {
         IsSending = false;
-        StreamingContent = null;
+        StreamingState = null;
         SetError(message, canRetry);
 
         if (showSnackbar)
@@ -406,7 +402,7 @@ public sealed partial class ChatPageState : IDisposable
         CancellationTokenSource?.Dispose();
         CancellationTokenSource = null;
         CancellationToken = CancellationToken.None;
-        StreamingContent = null;
+        StreamingState = null;
         IsSending = false;
 
         if (_isAttached)

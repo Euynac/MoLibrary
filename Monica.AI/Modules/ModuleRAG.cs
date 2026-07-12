@@ -2,6 +2,7 @@ using System.Net;
 using Microsoft.Agents.AI;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.VectorData;
 using Microsoft.SemanticKernel.Connectors.InMemory;
 using Microsoft.SemanticKernel.Connectors.Qdrant;
@@ -12,6 +13,7 @@ using Monica.AI.Providers;
 using Monica.AI.RAG.Abstractions;
 using Monica.AI.RAG.Facades;
 using Monica.AI.RAG.Models;
+using Monica.AI.RAG.Providers;
 using Monica.AI.Services;
 using Monica.AI.RAG.Services;
 using Monica.AI.RAG.Services.Support;
@@ -58,8 +60,14 @@ public class ModuleRAG(ModuleRAGOption option)
     public override void ConfigureServices(IServiceCollection services)
     {
         services.TryAddSingleton<ITokenCountProvider, EstimatedUtf8TokenCountProvider>();
-        services.AddSingleton<RAGService>();
-        services.AddSingleton<KnowledgeToolService>();
+        services.AddSingleton<RAGIndexingActivity>();
+        services.AddSingleton<RAGDocumentService>();
+        services.AddSingleton<RAGDocumentIndexingService>();
+        services.AddSingleton<RAGVectorStoreService>();
+        services.AddSingleton<RAGSearchService>();
+        services.AddSingleton<RAGChunkingService>();
+        services.TryAddEnumerable(
+            ServiceDescriptor.Singleton<IKnowledgeBaseLifecycleHandler, RAGKnowledgeBaseLifecycleHandler>());
         services.AddSingleton<RAGEmbeddingBindingResolver>();
         services.AddSingleton<RAGVectorCollectionCoordinator>();
         services.AddSingleton<RAGIndexStateCoordinator>();
@@ -67,10 +75,23 @@ public class ModuleRAG(ModuleRAGOption option)
         services.TryAddSingleton<IChunkerRoutingStore, FileChunkerRoutingStore>();
         services.AddScoped<MarkdownDocumentResolver>();
         services.AddScoped<ChunkViewCoordinator>();
+        services.AddSingleton<RAGBatchIndexOperationRegistry>();
         services.AddScoped<BatchIndexCoordinator>();
-        services.AddScoped<RAGFacade>();
+        services.AddScoped(sp => new RAGSearchFacade(
+            sp.GetRequiredService<RAGSearchService>(),
+            sp.GetRequiredService<ILogger<RAGSearchFacade>>()));
+        services.AddScoped(sp => new RAGIndexingFacade(
+            sp.GetRequiredService<RAGDocumentService>(),
+            sp.GetRequiredService<BatchIndexCoordinator>(),
+            sp.GetRequiredService<ChunkViewCoordinator>(),
+            sp.GetRequiredService<ILogger<RAGIndexingFacade>>()));
+        services.AddScoped(sp => new RAGVectorStoreFacade(
+            sp.GetRequiredService<RAGVectorStoreService>(),
+            sp.GetRequiredService<ILogger<RAGVectorStoreFacade>>()));
         services.AddScoped<EmbeddingModelFacade>();
-        services.AddScoped<ChunkerFacade>();
+        services.AddScoped(sp => new ChunkerFacade(
+            sp.GetRequiredService<RAGChunkingService>(),
+            sp.GetRequiredService<ILogger<ChunkerFacade>>()));
 
         services.TryAddEnumerable(
             ServiceDescriptor.Singleton<IDocumentChunker, ProductionMarkdownDocumentChunker>());
@@ -84,7 +105,16 @@ public class ModuleRAG(ModuleRAGOption option)
 /// </summary>
 public class ModuleRAGOption : ModuleOptions<ModuleRAG>
 {
+    /// <summary>
+    /// Gets or sets the prefix applied to vector collection names owned by Monica RAG.
+    /// The default is <c>monica_rag_</c>; change it when multiple applications share one store.
+    /// </summary>
     public string CollectionNamePrefix { get; set; } = "monica_rag_";
+
+    /// <summary>
+    /// Gets or sets the default maximum number of semantic matches returned by retrieval.
+    /// The default is <c>5</c> and callers may override it per search.
+    /// </summary>
     public int DefaultTopK { get; set; } = 5;
 
     /// <summary>
@@ -209,7 +239,7 @@ public class ModuleRAGGuide
 
     /// <summary>
     /// Uses the in-memory vector store (for development/testing).
-    /// Embedding model selection is resolved at knowledge-base level in <see cref="RAGService"/>.
+    /// Embedding model selection is resolved per knowledge base by <see cref="RAGEmbeddingBindingResolver"/>.
     /// </summary>
     public ModuleRAGGuide UseVectorStoreInMemoryProvider()
     {

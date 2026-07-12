@@ -12,18 +12,8 @@ namespace Monica.AI.Providers.OpenAI;
 /// <summary>
 /// OpenAI provider implementation.
 /// </summary>
-public class OpenAIProvider : IAIProvider
+internal sealed class OpenAIProvider : IAIProvider
 {
-    /// <summary>
-    /// Metadata key that stores the configured OpenAI chat API surface.
-    /// </summary>
-    public const string ApiModeMetadataKey = "OpenAIApiMode";
-
-    /// <summary>
-    /// Metadata key that stores the configured Responses conversation-history strategy.
-    /// </summary>
-    public const string ResponsesHistoryModeMetadataKey = "OpenAIResponsesHistoryMode";
-
     private const EAIProviderType ProviderKind = EAIProviderType.OpenAI;
     private readonly OpenAIProviderOptions _options;
     private readonly OpenAIClient _client;
@@ -185,14 +175,14 @@ public class OpenAIProvider : IAIProvider
     /// <summary>
     /// Builds OpenAI-specific provider metadata.
     /// </summary>
-    public static IReadOnlyDictionary<string, string> BuildMetadata(OpenAIProviderOptions options)
+    internal static IReadOnlyDictionary<string, string> BuildMetadata(OpenAIProviderOptions options)
     {
         ArgumentNullException.ThrowIfNull(options);
 
         return new Dictionary<string, string>
         {
-            [ApiModeMetadataKey] = options.ApiMode.ToString(),
-            [ResponsesHistoryModeMetadataKey] = options.ResponsesHistoryMode.ToString()
+            [OpenAIProviderMetadataKeys.ApiMode] = options.ApiMode.ToString(),
+            [OpenAIProviderMetadataKeys.ResponsesHistoryMode] = options.ResponsesHistoryMode.ToString()
         };
     }
 
@@ -236,29 +226,24 @@ public class OpenAIProvider : IAIProvider
 
     public void Dispose()
     {
-        Dispose(true);
-        GC.SuppressFinalize(this);
-    }
-
-    protected virtual void Dispose(bool disposing)
-    {
-        if (!_disposed)
+        if (_disposed)
         {
-            if (disposing)
-            {
-                foreach (var chatClient in _chatClients.Values)
-                {
-                    chatClient.Dispose();
-                }
-                _chatClients.Clear();
-
-                foreach (var generator in _embeddingGenerators.Values)
-                {
-                    (generator as IDisposable)?.Dispose();
-                }
-                _embeddingGenerators.Clear();
-            }
-            _disposed = true;
+            return;
         }
+
+        foreach (var chatClient in _chatClients.Values)
+        {
+            chatClient.Dispose();
+        }
+
+        _chatClients.Clear();
+        foreach (var generator in _embeddingGenerators.Values)
+        {
+            (generator as IDisposable)?.Dispose();
+        }
+
+        _embeddingGenerators.Clear();
+        _disposed = true;
+        GC.SuppressFinalize(this);
     }
 }

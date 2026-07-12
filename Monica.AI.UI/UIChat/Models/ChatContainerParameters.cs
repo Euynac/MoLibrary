@@ -1,7 +1,7 @@
-using Microsoft.Agents.AI;
 using Microsoft.AspNetCore.Components;
 using Monica.AI.AgentCapabilities.Models;
 using Monica.AI.Models;
+using Monica.AI.UI.UIChat.State;
 using KnowledgeBaseModel = Monica.AI.KnowledgeBase.Models.KnowledgeBase;
 
 namespace Monica.AI.UI.UIChat.Models;
@@ -14,7 +14,7 @@ public sealed class ChatContainerParameters
 {
     // Message data
     public required IReadOnlyList<AIChatMessage> Messages { get; init; }
-    public IAsyncEnumerable<AgentResponseUpdate>? StreamingContent { get; init; }
+    public ChatStreamingState? StreamingState { get; init; }
 
     // State flags
     public bool IsSending { get; init; }
@@ -29,9 +29,6 @@ public sealed class ChatContainerParameters
 
     // Error handling
     public string? ErrorMessage { get; init; }
-
-    // Cancellation
-    public CancellationToken CancellationToken { get; init; }
 
     // Features
     public bool EnableMarkdown { get; init; } = true;
@@ -49,8 +46,6 @@ public sealed class ChatContainerParameters
 
     // Event callbacks
     public required EventCallback<ChatSendRequest> OnSendMessage { get; init; }
-    public EventCallback<string> OnStreamComplete { get; init; }
-    public EventCallback<string> OnStreamError { get; init; }
     public EventCallback OnCancel { get; init; }
     public EventCallback OnRetry { get; init; }
     public EventCallback OnErrorDismissed { get; init; }

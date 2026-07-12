@@ -4,9 +4,12 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Options;
 using ModelContextProtocol.Client;
 using Monica.AI.Mcp.Abstractions;
+using Monica.AI.Mcp.Facades;
 using Monica.AI.Mcp.Internal;
 using Monica.AI.Mcp.Models;
 using Monica.AI.Mcp.Services;
+using Monica.AI.AgentCapabilities.Abstractions;
+using Monica.AI.Abstractions;
 using Monica.AI.Services.Support.ModuleCatalog;
 using Monica.Core;
 using Monica.Core.Modularity.Abstractions;
@@ -52,7 +55,7 @@ public sealed class ModuleMcp(ModuleMcpOption option)
     public override void ClaimDependencies()
     {
         DependsOnModule<ModuleXmlDocumentationGuide>().Register();
-        DependsOnModule<ModuleSkillSystemGuide>().Register();
+        DependsOnModule<ModuleAIGuide>().Register();
     }
 
     /// <inheritdoc />
@@ -97,6 +100,14 @@ public sealed class ModuleMcp(ModuleMcpOption option)
 
         services.TryAddSingleton<ILoadedModuleCatalog, ModuleRegistryLoadedModuleCatalog>();
         services.TryAddSingleton<MonicaMcpCatalog>();
+        services.TryAddEnumerable(
+            ServiceDescriptor.Singleton<IAgentCapabilitySource, McpAgentCapabilitySource>());
+        services.TryAddEnumerable(
+            ServiceDescriptor.Singleton<IAIChatAgentContributor, McpChatAgentContributor>());
+        services.AddScoped(sp => new McpFacade(
+            sp.GetRequiredService<IExternalMcpClientProfileStore>(),
+            sp.GetRequiredService<MonicaMcpCatalog>(),
+            sp.GetRequiredService<IAgentCapabilityService>()));
         services.TryAddEnumerable(
             ServiceDescriptor.Singleton<IConfigureOptions<ModelContextProtocol.Server.McpServerOptions>, McpServerOptionsConfigurator>());
 

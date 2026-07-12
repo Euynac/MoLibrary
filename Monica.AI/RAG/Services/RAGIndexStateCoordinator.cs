@@ -7,7 +7,7 @@ namespace Monica.AI.RAG.Services;
 /// <summary>
 /// Coordinates document and knowledge-base index state transitions.
 /// </summary>
-public sealed class RAGIndexStateCoordinator(IDocumentIndexStateStore indexStateStore)
+internal sealed class RAGIndexStateCoordinator(IDocumentIndexStateStore indexStateStore)
 {
     private const int MaxInProgressPercentage = 99;
 

@@ -46,7 +46,7 @@ public sealed partial class ChatPageState
             sessionId,
             _sessionStore.CurrentSessionId,
             StringComparison.Ordinal);
-        _sessionStore.RemoveSession(sessionId);
+        await _sessionStore.RemoveSessionAsync(sessionId);
 
         if (deletingCurrentSession)
         {

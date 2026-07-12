@@ -35,6 +35,44 @@
       "Current": "当前",
       "GenerationStopped": "生成已停止"
     },
+    "Approval": {
+      "Title": "外部脚本审批",
+      "Warning": "此 Skill 正在请求运行外部文件或子进程脚本。继续前请检查脚本身份和参数。",
+      "Skill": "Skill",
+      "Script": "脚本",
+      "Source": "来源",
+      "Arguments": "参数",
+      "Approve": "批准",
+      "Reject": "拒绝",
+      "ApprovedReason": "用户已批准。",
+      "RejectedReason": "用户已拒绝。"
+    },
+    "Reasoning": {
+      "Thinking": "思考中...",
+      "Duration": "思考了 {0:F1} 秒"
+    },
+    "Welcome": {
+      "Title": "今天想聊点什么？",
+      "Subtitle": "支持多个 Provider，可直接提问代码、写作或分析任务。",
+      "Cards": {
+        "UI": {
+          "Title": "优化前端交互",
+          "Subtitle": "给出按钮与动效建议"
+        },
+        "Docs": {
+          "Title": "生成接口文档",
+          "Subtitle": "根据 API 设计输出说明"
+        },
+        "Error": {
+          "Title": "分析一段错误",
+          "Subtitle": "定位日志与异常原因"
+        },
+        "Script": {
+          "Title": "写一段脚本",
+          "Subtitle": "自动化常见开发任务"
+        }
+      }
+    },
     "ToolCalls": {
       "EnableDebug": "启用 Tool 调试",
       "DisableDebug": "关闭 Tool 调试",

@@ -95,6 +95,8 @@ public class ModuleAIUI(ModuleAIUIOption option)
 
         if (!Option.DisableAICapabilityPage)
         {
+            DependsOnModule<ModuleSkillSystemGuide>().Register();
+            DependsOnModule<ModuleMcpGuide>().Register();
             DependsOnModule<ModuleShellUIGuide>().Register()
                 .RegisterUIComponents(p =>
                 {

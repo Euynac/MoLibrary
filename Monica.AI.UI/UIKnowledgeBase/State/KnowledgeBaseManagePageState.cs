@@ -16,6 +16,7 @@ namespace Monica.AI.UI.UIKnowledgeBase.State;
 public sealed partial class KnowledgeBaseManagePageState
 {
     private readonly KnowledgeBaseFacade _knowledgeBaseFacade;
+    private readonly KnowledgeDocumentFacade _knowledgeDocumentFacade;
     private readonly IAIProviderFactory _providerFactory;
     private readonly ISnackbar _snackbar;
     private readonly IDialogService _dialogService;
@@ -26,12 +27,14 @@ public sealed partial class KnowledgeBaseManagePageState
     /// </summary>
     public KnowledgeBaseManagePageState(
         KnowledgeBaseFacade knowledgeBaseFacade,
+        KnowledgeDocumentFacade knowledgeDocumentFacade,
         IAIProviderFactory providerFactory,
         ISnackbar snackbar,
         IDialogService dialogService,
         IStringLocalizer<AIResource> localizer)
     {
         _knowledgeBaseFacade = knowledgeBaseFacade;
+        _knowledgeDocumentFacade = knowledgeDocumentFacade;
         _providerFactory = providerFactory;
         _snackbar = snackbar;
         _dialogService = dialogService;
@@ -159,7 +162,7 @@ public sealed partial class KnowledgeBaseManagePageState
 
     private async Task<bool> LoadMarkdownGroupsAsync()
     {
-        if ((await _knowledgeBaseFacade.GetMarkdownGroupsAsync()).IsFailed(out var error, out var groups))
+        if ((await _knowledgeDocumentFacade.GetMarkdownGroupsAsync()).IsFailed(out var error, out var groups))
         {
             _snackbar.Add($"{_localizer["Common:Error"]}: {error.Message}", Severity.Error);
             return false;
@@ -180,7 +183,7 @@ public sealed partial class KnowledgeBaseManagePageState
             return;
         }
 
-        if ((await _knowledgeBaseFacade.GetDocumentInventoryAsync(SelectedKnowledgeBase.Id)).IsFailed(out var error, out var documents))
+        if ((await _knowledgeDocumentFacade.GetDocumentInventoryAsync(SelectedKnowledgeBase.Id)).IsFailed(out var error, out var documents))
         {
             _snackbar.Add($"{_localizer["Common:Error"]}: {error.Message}", Severity.Error);
             DocumentInventory = [];

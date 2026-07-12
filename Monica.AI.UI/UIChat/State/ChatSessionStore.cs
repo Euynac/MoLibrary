@@ -6,7 +6,7 @@ namespace Monica.AI.UI.UIChat.State;
 /// Session storage service for Blazor component state sharing.
 /// Manages ChatSession instances for the UI layer.
 /// </summary>
-public sealed class ChatSessionStore
+public sealed class ChatSessionStore : IAsyncDisposable
 {
     private readonly List<ChatSession> _sessions = [];
     private string? _currentSessionId;
@@ -90,12 +90,13 @@ public sealed class ChatSessionStore
     /// <summary>
     /// Remove session
     /// </summary>
-    public void RemoveSession(string sessionId)
+    public async Task RemoveSessionAsync(string sessionId)
     {
         var session = _sessions.FirstOrDefault(s => s.SessionId == sessionId);
         if (session != null)
         {
             _sessions.Remove(session);
+            await session.DisposeAsync();
             if (_currentSessionId == sessionId)
             {
                 _currentSessionId = _sessions.FirstOrDefault()?.SessionId;
@@ -121,11 +122,24 @@ public sealed class ChatSessionStore
     /// <summary>
     /// Clear all sessions
     /// </summary>
-    public void ClearSessions()
+    public async Task ClearSessionsAsync()
     {
+        var sessions = _sessions.ToList();
         _sessions.Clear();
         _currentSessionId = null;
+        foreach (var session in sessions)
+        {
+            await session.DisposeAsync();
+        }
+
         CurrentSessionChanged?.Invoke();
         SessionsChanged?.Invoke();
+    }
+
+    /// <inheritdoc />
+    public async ValueTask DisposeAsync()
+    {
+        await ClearSessionsAsync();
+        GC.SuppressFinalize(this);
     }
 }

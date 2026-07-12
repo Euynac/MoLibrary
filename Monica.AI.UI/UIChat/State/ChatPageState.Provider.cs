@@ -95,8 +95,13 @@ public sealed partial class ChatPageState
         var currentSession = CurrentSession;
         if (currentSession != null)
         {
-            currentSession.ProviderId = providerId;
-            currentSession.ModelName = resolvedModelName;
+            _ = _chatFacade.UpdateSettings(
+                currentSession,
+                currentSession.Settings with
+                {
+                    ProviderId = providerId,
+                    ModelName = resolvedModelName
+                });
         }
 
         NotifyStateChanged();
@@ -110,7 +115,9 @@ public sealed partial class ChatPageState
         var currentSession = CurrentSession;
         if (currentSession != null)
         {
-            currentSession.ModelName = modelName;
+            _ = _chatFacade.UpdateSettings(
+                currentSession,
+                currentSession.Settings with { ModelName = modelName });
         }
 
         SupportsReasoning = ChatProviderResolver.GetReasoningSupport(
@@ -166,7 +173,9 @@ public sealed partial class ChatPageState
 
         if (session != null && session.Messages.Count == 0)
         {
-            session.SystemPrompt = prompt;
+            _ = _chatFacade.UpdateSettings(
+                session,
+                session.Settings with { SystemPrompt = prompt });
         }
 
         Providers = ChatProviderResolver.GetChatProviders(_chatFacade.GetProviders());
@@ -190,7 +199,7 @@ public sealed partial class ChatPageState
             return;
         }
 
-        currentSession.RuntimeContext = BuildRuntimeContext(selectedIds);
+        _ = _chatFacade.UpdateRuntimeContext(currentSession, BuildRuntimeContext(selectedIds));
         UpdateCurrentSession();
         NotifyStateChanged();
     }

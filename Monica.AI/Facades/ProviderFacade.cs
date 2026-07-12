@@ -9,7 +9,7 @@ namespace Monica.AI.Facades;
 /// <summary>
 /// Host-facing facade for AI provider inspection and connectivity checks.
 /// </summary>
-public class ProviderFacade(IAIProviderFactory providerFactory)
+public sealed class ProviderFacade(IAIProviderFactory providerFactory)
 {
     public IReadOnlyList<AIProviderInfo> GetProviders()
     {

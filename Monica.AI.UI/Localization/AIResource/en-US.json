@@ -35,6 +35,44 @@
       "Current": "Current",
       "GenerationStopped": "Generation stopped"
     },
+    "Approval": {
+      "Title": "External script approval",
+      "Warning": "This skill is requesting permission to run an external file or subprocess script. Review its identity and arguments before continuing.",
+      "Skill": "Skill",
+      "Script": "Script",
+      "Source": "Source",
+      "Arguments": "Arguments",
+      "Approve": "Approve",
+      "Reject": "Reject",
+      "ApprovedReason": "Approved by the user.",
+      "RejectedReason": "Rejected by the user."
+    },
+    "Reasoning": {
+      "Thinking": "Thinking...",
+      "Duration": "Thought for {0:F1} seconds"
+    },
+    "Welcome": {
+      "Title": "What would you like to explore?",
+      "Subtitle": "Ask any configured provider about code, writing, or analysis.",
+      "Cards": {
+        "UI": {
+          "Title": "Improve a UI flow",
+          "Subtitle": "Suggest clearer interactions and motion"
+        },
+        "Docs": {
+          "Title": "Draft API documentation",
+          "Subtitle": "Turn an API design into useful guidance"
+        },
+        "Error": {
+          "Title": "Analyze an error",
+          "Subtitle": "Trace logs and identify the likely cause"
+        },
+        "Script": {
+          "Title": "Write an automation script",
+          "Subtitle": "Automate a common development task"
+        }
+      }
+    },
     "ToolCalls": {
       "EnableDebug": "Enable tool debug",
       "DisableDebug": "Disable tool debug",

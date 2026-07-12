@@ -7,6 +7,7 @@ using Monica.AI.AgentCapabilities.Abstractions;
 using Monica.AI.AgentCapabilities.Models;
 using Monica.AI.Abstractions;
 using Monica.AI.Models;
+using Monica.AI.Models.Internal;
 using Monica.AI.Services.Support;
 using Monica.Modules;
 
@@ -17,15 +18,14 @@ namespace Monica.AI.Services;
 /// Creates and operates on ChatSession instances.
 /// Session persistence and page state are handled outside the service.
 /// </summary>
-public class AIChatService(
+internal sealed class AIChatService(
     IAIProviderFactory providerFactory,
     IOptions<ModuleAIOption> options,
     IAIChatAgentFactory agentFactory,
     IAgentCapabilityStateStore capabilityStateStore,
-    AIChatRuntimeContextAccessor runtimeContextAccessor)
+    AgentStreamingCoordinator streamingCoordinator)
 {
     private readonly ModuleAIOption _options = options.Value;
-    private readonly AIChatRuntimeContextAccessor _runtimeContextAccessor = runtimeContextAccessor;
 
     /// <summary>
     /// Create a new chat session backed by ChatClientAgent.
@@ -52,17 +52,20 @@ public class AIChatService(
         var chatClient = provider.GetChatClient(modelName);
         var capabilityState = await capabilityStateStore.LoadAsync(ct);
 
-        var agent = await CreateAgentAsync(chatClient, resolvedPrompt, capabilityState, ct);
-        var session = await agent.CreateSessionAsync(ct);
+        var runtime = await CreateAgentAsync(chatClient, resolvedPrompt, capabilityState, ct);
+        var session = await runtime.Agent.CreateSessionAsync(ct);
 
-        var state = new ChatSession(agent, session, resolvedProviderId, capabilityState.Revision)
-        {
-            Title = title ?? "New Chat",
-            SystemPrompt = resolvedPrompt,
-            RuntimeContext = runtimeContext ?? AIChatRuntimeContext.Empty,
-            ModelName = modelName,
-            ReasoningEnabled = reasoningEnabled
-        };
+        var state = new ChatSession(
+            runtime,
+            session,
+            new ChatSessionSettings(
+                resolvedProviderId,
+                modelName,
+                resolvedPrompt,
+                reasoningEnabled),
+            capabilityState.Revision,
+            title ?? "New Chat",
+            runtimeContext ?? AIChatRuntimeContext.Empty);
 
         return state;
     }
@@ -83,20 +86,23 @@ public class AIChatService(
 
         var chatClient = provider.GetChatClient(state.ModelName);
         var capabilityState = await capabilityStateStore.LoadAsync(ct);
-        var newAgent = await CreateAgentAsync(chatClient, state.SystemPrompt, capabilityState, ct);
-        var oldHistory = state.ChatHistory;
-        var newSession = await CreateReplacementSessionAsync(
-            state.Agent,
-            state.Session,
-            newAgent,
-            ct);
-        CopyChatHistoryIfNeeded(newAgent, newSession, oldHistory);
-
-        state.Agent = newAgent;
-        state.Session = newSession;
-        state.CapabilityRevision = capabilityState.Revision;
-        state.UpdatedAt = DateTimeOffset.UtcNow;
-        state.ResetRecreationFlag();
+        var newRuntime = await CreateAgentAsync(chatClient, state.SystemPrompt, capabilityState, ct);
+        try
+        {
+            var oldHistory = state.ChatHistory is { } history ? history.ToList() : null;
+            var newSession = await CreateReplacementSessionAsync(
+                state.Agent,
+                state.AgentSession,
+                newRuntime.Agent,
+                ct);
+            CopyChatHistoryIfNeeded(newRuntime.Agent, newSession, oldHistory);
+            await state.ReplaceRuntimeAsync(newRuntime, newSession, capabilityState.Revision);
+        }
+        catch
+        {
+            await newRuntime.DisposeAsync();
+            throw;
+        }
     }
 
     /// <summary>
@@ -107,6 +113,34 @@ public class AIChatService(
         ChatSession state,
         string message,
         [EnumeratorCancellation] CancellationToken ct = default)
+    {
+        await foreach (var update in RunStreamingAsync(
+                           state,
+                           new ChatMessage(ChatRole.User, message),
+                           ct))
+        {
+            yield return update;
+        }
+    }
+
+    internal async IAsyncEnumerable<AgentResponseUpdate> ContinueApprovalStreamingAsync(
+        ChatSession state,
+        ToolApprovalResponseContent response,
+        [EnumeratorCancellation] CancellationToken ct = default)
+    {
+        await foreach (var update in RunStreamingAsync(
+                           state,
+                           new ChatMessage(ChatRole.User, [response]),
+                           ct))
+        {
+            yield return update;
+        }
+    }
+
+    private async IAsyncEnumerable<AgentResponseUpdate> RunStreamingAsync(
+        ChatSession state,
+        ChatMessage input,
+        [EnumeratorCancellation] CancellationToken ct)
     {
         var capabilityState = await capabilityStateStore.LoadAsync(ct);
         if (state.CapabilityRevision != capabilityState.Revision)
@@ -120,15 +154,21 @@ public class AIChatService(
             await RecreateAgentAsync(state, ct);
         }
 
-        var userMessage = new ChatMessage(ChatRole.User, message);
         var updateChannel = new AgentResponseUpdateChannel();
         var runOptions = CreateRunOptions(state, updateChannel);
-        _ = ProduceStreamingUpdatesAsync(state, userMessage, runOptions, updateChannel, ct);
-
-        await foreach (var update in updateChannel.ReadAllAsync(ct))
+        await foreach (var update in streamingCoordinator.RunAsync(
+                           state.Agent,
+                           state.AgentSession,
+                           input,
+                           state.RuntimeContext,
+                           runOptions,
+                           updateChannel,
+                           ct))
         {
             yield return update;
         }
+
+        state.MarkUpdated();
     }
 
     /// <summary>
@@ -186,7 +226,7 @@ public class AIChatService(
     /// <summary>
     /// Creates a ChatClientAgent for the current session configuration.
     /// </summary>
-    private async Task<AIAgent> CreateAgentAsync(
+    private async Task<AIChatAgentRuntime> CreateAgentAsync(
         IChatClient chatClient,
         string? instructions,
         AgentCapabilityState capabilityState,
@@ -223,33 +263,6 @@ public class AIChatService(
         }
 
         return runOptions;
-    }
-
-    private async Task ProduceStreamingUpdatesAsync(
-        ChatSession state,
-        ChatMessage userMessage,
-        ChatClientAgentRunOptions runOptions,
-        AgentResponseUpdateChannel updateChannel,
-        CancellationToken ct)
-    {
-        try
-        {
-            using (AgentResponseUpdateChannelContext.Push(updateChannel))
-            using (_runtimeContextAccessor.Push(state.RuntimeContext))
-            {
-                await foreach (var update in state.Agent.RunStreamingAsync([userMessage], state.Session, runOptions, ct))
-                {
-                    await updateChannel.PublishAsync(update, ct);
-                }
-            }
-
-            state.UpdatedAt = DateTimeOffset.UtcNow;
-            updateChannel.Complete();
-        }
-        catch (Exception ex)
-        {
-            updateChannel.Complete(ex);
-        }
     }
 
     private static async Task<AgentSession> CreateReplacementSessionAsync(

@@ -16,9 +16,11 @@ namespace Monica.AI.UI.UIRAG.State;
 /// </summary>
 public sealed partial class RAGManagePageState : IDisposable
 {
-    private readonly RAGFacade _ragFacade;
+    private readonly RAGIndexingFacade _indexingFacade;
+    private readonly RAGVectorStoreFacade _vectorStoreFacade;
     private readonly EmbeddingModelFacade _embeddingFacade;
     private readonly KnowledgeBaseFacade _knowledgeBaseFacade;
+    private readonly KnowledgeDocumentFacade _knowledgeDocumentFacade;
     private readonly IAIProviderFactory _providerFactory;
     private readonly ISnackbar _snackbar;
     private readonly IDialogService _dialogService;
@@ -36,18 +38,22 @@ public sealed partial class RAGManagePageState : IDisposable
     /// Initializes the page state and its collaborators.
     /// </summary>
     public RAGManagePageState(
-        RAGFacade ragFacade,
+        RAGIndexingFacade indexingFacade,
+        RAGVectorStoreFacade vectorStoreFacade,
         EmbeddingModelFacade embeddingFacade,
         KnowledgeBaseFacade knowledgeBaseFacade,
+        KnowledgeDocumentFacade knowledgeDocumentFacade,
         IAIProviderFactory providerFactory,
         ISnackbar snackbar,
         IDialogService dialogService,
         IStringLocalizer<AIResource> localizer,
         RAGQueuePollingState queuePollingState)
     {
-        _ragFacade = ragFacade;
+        _indexingFacade = indexingFacade;
+        _vectorStoreFacade = vectorStoreFacade;
         _embeddingFacade = embeddingFacade;
         _knowledgeBaseFacade = knowledgeBaseFacade;
+        _knowledgeDocumentFacade = knowledgeDocumentFacade;
         _providerFactory = providerFactory;
         _snackbar = snackbar;
         _dialogService = dialogService;
@@ -261,7 +267,7 @@ public sealed partial class RAGManagePageState : IDisposable
                 return true;
             }
 
-            return _ragFacade.IsBatchIndexingActive(SelectedKnowledgeBase.Id);
+            return _indexingFacade.IsBatchActive(SelectedKnowledgeBase.Id);
         }
     }
 

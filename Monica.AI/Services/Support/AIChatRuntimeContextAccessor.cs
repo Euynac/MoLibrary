@@ -3,7 +3,7 @@ namespace Monica.AI.Services.Support;
 /// <summary>
 /// Async-local implementation of <see cref="IAIChatRuntimeContextAccessor"/>.
 /// </summary>
-public sealed class AIChatRuntimeContextAccessor : IAIChatRuntimeContextAccessor
+internal sealed class AIChatRuntimeContextAccessor : IAIChatRuntimeContextAccessor
 {
     private readonly AsyncLocal<AIChatRuntimeContext?> _current = new();
 

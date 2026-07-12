@@ -10,7 +10,7 @@ namespace Monica.AI.Providers.Fake;
 /// <summary>
 /// Fake AI provider used for embedding-only development and testing.
 /// </summary>
-public class FakeProvider : IAIProvider
+internal sealed class FakeProvider : IAIProvider
 {
     private const EAIProviderType ProviderKind = EAIProviderType.Fake;
     private readonly FakeProviderOptions _options;
@@ -119,25 +119,18 @@ public class FakeProvider : IAIProvider
     /// <inheritdoc />
     public void Dispose()
     {
-        Dispose(true);
-        GC.SuppressFinalize(this);
-    }
-
-    protected virtual void Dispose(bool disposing)
-    {
-        if (!_disposed)
+        if (_disposed)
         {
-            if (disposing)
-            {
-                foreach (var generator in _generators.Values)
-                {
-                    (generator as IDisposable)?.Dispose();
-                }
-
-                _generators.Clear();
-            }
-
-            _disposed = true;
+            return;
         }
+
+        foreach (var generator in _generators.Values)
+        {
+            (generator as IDisposable)?.Dispose();
+        }
+
+        _generators.Clear();
+        _disposed = true;
+        GC.SuppressFinalize(this);
     }
 }

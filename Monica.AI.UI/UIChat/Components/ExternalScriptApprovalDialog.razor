@@ -1,0 +1,43 @@
+@using Monica.AI.Chat.Models
+@using Monica.AI.UI.Localization
+@using Microsoft.Extensions.Localization
+@inject IStringLocalizer<AIResource> L
+
+<MudDialog>
+    <DialogContent>
+        <MudStack Spacing="2">
+            <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined">
+                @L["Chat:Approval:Warning"]
+            </MudAlert>
+            <MudText Typo="Typo.subtitle2">@L["Chat:Approval:Skill"]</MudText>
+            <MudText Typo="Typo.body2">@Request.SkillName</MudText>
+            <MudText Typo="Typo.subtitle2">@L["Chat:Approval:Script"]</MudText>
+            <MudText Typo="Typo.body2">@Request.ScriptName</MudText>
+            <MudText Typo="Typo.subtitle2">@L["Chat:Approval:Source"]</MudText>
+            <MudText Typo="Typo.body2">@Request.Source</MudText>
+            <MudText Typo="Typo.subtitle2">@L["Chat:Approval:Arguments"]</MudText>
+            <MudPaper Class="pa-3 overflow-auto" Elevation="0">
+                <MudText Typo="Typo.body2"><pre class="ma-0">@Request.Arguments</pre></MudText>
+            </MudPaper>
+        </MudStack>
+    </DialogContent>
+    <DialogActions>
+        <MudButton Color="Color.Error" Variant="Variant.Text" OnClick="Reject">
+            @L["Chat:Approval:Reject"]
+        </MudButton>
+        <MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="Approve">
+            @L["Chat:Approval:Approve"]
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] private IMudDialogInstance Dialog { get; set; } = null!;
+
+    [Parameter, EditorRequired]
+    public required ChatApprovalRequestEvent Request { get; set; }
+
+    private void Approve() => Dialog.Close(DialogResult.Ok(true));
+
+    private void Reject() => Dialog.Close(DialogResult.Ok(false));
+}

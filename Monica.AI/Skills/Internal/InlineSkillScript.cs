@@ -39,12 +39,15 @@ internal sealed class InlineSkillScript : AgentSkillScript
     /// <inheritdoc />
     public override async Task<object?> RunAsync(
         AgentSkill skill,
-        AIFunctionArguments arguments,
+        JsonElement? arguments,
+        IServiceProvider? serviceProvider,
         CancellationToken cancellationToken = default)
     {
+        var functionArguments = CreateFunctionArguments(arguments, serviceProvider);
+
         try
         {
-            return await _function.InvokeAsync(arguments, cancellationToken);
+            return await _function.InvokeAsync(functionArguments, cancellationToken);
         }
         catch (OperationCanceledException)
         {
@@ -52,7 +55,29 @@ internal sealed class InlineSkillScript : AgentSkillScript
         }
         catch (Exception ex)
         {
-            return ToolInvocationErrorResult.Create(Name, arguments, ex);
+            return ToolInvocationErrorResult.Create(Name, functionArguments, ex);
         }
+    }
+
+    private static AIFunctionArguments CreateFunctionArguments(
+        JsonElement? arguments,
+        IServiceProvider? serviceProvider)
+    {
+        if (arguments is null
+            || arguments.Value.ValueKind is JsonValueKind.Null or JsonValueKind.Undefined)
+        {
+            return new AIFunctionArguments { Services = serviceProvider };
+        }
+
+        if (arguments.Value.ValueKind != JsonValueKind.Object)
+        {
+            throw new InvalidOperationException(
+                $"Inline skill scripts expect a JSON object but received '{arguments.Value.ValueKind}'.");
+        }
+
+        var values = arguments.Value
+            .EnumerateObject()
+            .ToDictionary(static property => property.Name, static property => (object?)property.Value);
+        return new AIFunctionArguments(values) { Services = serviceProvider };
     }
 }

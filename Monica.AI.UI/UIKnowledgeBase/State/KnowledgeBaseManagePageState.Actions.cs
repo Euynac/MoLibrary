@@ -132,7 +132,7 @@ public sealed partial class KnowledgeBaseManagePageState
             return;
         }
 
-        if ((await _knowledgeBaseFacade.GetMarkdownDocumentsAsync(SelectedMarkdownGroup)).IsFailed(out var error, out var documents))
+        if ((await _knowledgeDocumentFacade.GetMarkdownDocumentsAsync(SelectedMarkdownGroup)).IsFailed(out var error, out var documents))
         {
             _snackbar.Add($"{_localizer["Common:Error"]}: {error.Message}", Severity.Error);
             return;
@@ -159,7 +159,7 @@ public sealed partial class KnowledgeBaseManagePageState
             return;
         }
 
-        if ((await _knowledgeBaseFacade.ImportMarkdownDocumentsAsync(
+        if ((await _knowledgeDocumentFacade.ImportMarkdownDocumentsAsync(
                 SelectedKnowledgeBase.Id,
                 SelectedMarkdownGroup,
                 selectedDocumentIds)).IsFailed(out var addError, out var importResult))
@@ -197,7 +197,7 @@ public sealed partial class KnowledgeBaseManagePageState
             using var reader = new StreamReader(stream);
             var content = await reader.ReadToEndAsync();
 
-            if ((await _knowledgeBaseFacade.UploadDocumentAsync(
+            if ((await _knowledgeDocumentFacade.UploadDocumentAsync(
                     SelectedKnowledgeBase.Id,
                     file.Name,
                     content)).IsFailed(out var error))
@@ -236,7 +236,7 @@ public sealed partial class KnowledgeBaseManagePageState
             return;
         }
 
-        if ((await _knowledgeBaseFacade.RemoveDocumentAsync(SelectedKnowledgeBase.Id, document.Id)).IsFailed(out var error))
+        if ((await _knowledgeDocumentFacade.RemoveDocumentAsync(SelectedKnowledgeBase.Id, document.Id)).IsFailed(out var error))
         {
             _snackbar.Add($"{_localizer["Common:Error"]}: {error.Message}", Severity.Error);
             return;
@@ -257,7 +257,7 @@ public sealed partial class KnowledgeBaseManagePageState
             return;
         }
 
-        var result = await _knowledgeBaseFacade.GetDocumentPreviewAsync(SelectedKnowledgeBase.Id, document.Id);
+        var result = await _knowledgeDocumentFacade.GetDocumentPreviewAsync(SelectedKnowledgeBase.Id, document.Id);
         if (result.IsFailed(out var error, out var preview))
         {
             _snackbar.Add($"{_localizer["Common:Error"]}: {error.Message}", Severity.Error);
@@ -300,7 +300,7 @@ public sealed partial class KnowledgeBaseManagePageState
             return;
         }
 
-        var result = await _knowledgeBaseFacade.ClearDocumentsAsync(SelectedKnowledgeBase.Id);
+        var result = await _knowledgeDocumentFacade.ClearDocumentsAsync(SelectedKnowledgeBase.Id);
         if (result.IsFailed(out var error, out var removedCount))
         {
             _snackbar.Add($"{_localizer["Common:Error"]}: {error.Message}", Severity.Error);

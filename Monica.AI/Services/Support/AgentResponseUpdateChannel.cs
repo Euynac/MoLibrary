@@ -6,7 +6,7 @@ namespace Monica.AI.Services.Support;
 /// <summary>
 /// Coordinates streamed agent updates from the model pipeline and synthetic tool events.
 /// </summary>
-public sealed class AgentResponseUpdateChannel
+internal sealed class AgentResponseUpdateChannel
 {
     private readonly Channel<AgentResponseUpdate> _channel = Channel.CreateUnbounded<AgentResponseUpdate>(
         new UnboundedChannelOptions

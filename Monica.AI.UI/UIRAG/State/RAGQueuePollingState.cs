@@ -7,7 +7,7 @@ namespace Monica.AI.UI.UIRAG.State;
 /// <summary>
 /// Owns document-queue polling and throttled progress refresh for the RAG manage page.
 /// </summary>
-public sealed class RAGQueuePollingState(KnowledgeBaseFacade knowledgeBaseFacade) : IDisposable
+public sealed class RAGQueuePollingState(KnowledgeDocumentFacade knowledgeDocumentFacade) : IDisposable
 {
     private const int QueueRefreshIntervalMs = 700;
     private static readonly TimeSpan ProgressQueueRefreshInterval = TimeSpan.FromSeconds(1);
@@ -151,7 +151,7 @@ public sealed class RAGQueuePollingState(KnowledgeBaseFacade knowledgeBaseFacade
 
     private async Task RefreshQueueAsync(string knowledgeBaseId)
     {
-        var result = await knowledgeBaseFacade.GetDocumentInventoryAsync(knowledgeBaseId);
+        var result = await knowledgeDocumentFacade.GetDocumentInventoryAsync(knowledgeBaseId);
         if (result.IsFailed(out var error, out var queue))
         {
             QueueRefreshFailed?.Invoke(error.Message ?? "Failed to load document queue.");

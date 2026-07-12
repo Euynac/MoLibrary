@@ -1,122 +1,220 @@
 using Microsoft.Agents.AI;
 using Microsoft.Extensions.AI;
+using Monica.AI.Models.Internal;
 using Monica.AI.Services.Support;
 
 namespace Monica.AI.Models;
 
 /// <summary>
-/// Public chat session model shared between infrastructure facades and UI state.
-/// Configuration setters automatically mark the internal agent runtime for recreation.
+/// Immutable configuration used to compose a chat session runtime.
 /// </summary>
-public class ChatSession
+/// <param name="ProviderId">Provider identifier used by the session.</param>
+/// <param name="ModelName">Optional provider model name.</param>
+/// <param name="SystemPrompt">Optional instructions supplied to the agent.</param>
+/// <param name="ReasoningEnabled">Whether reasoning is requested for each turn.</param>
+public sealed record ChatSessionSettings(
+    string ProviderId,
+    string? ModelName,
+    string? SystemPrompt,
+    bool ReasoningEnabled);
+
+/// <summary>
+/// One user request and its optional assistant response.
+/// </summary>
+/// <remarks>
+/// The history checkpoint records the Agent Framework history size before the turn. This keeps
+/// edit and retry behavior correct when one visible turn contains reasoning or multiple tool messages.
+/// </remarks>
+public sealed record ChatTurn
 {
-    private string _providerId;
+    internal ChatTurn(AIChatMessage userMessage, int historyCheckpoint)
+    {
+        UserMessage = userMessage;
+        HistoryCheckpoint = historyCheckpoint;
+    }
+
+    /// <summary>Message submitted by the user.</summary>
+    public AIChatMessage UserMessage { get; }
+
+    /// <summary>Assistant response committed for the turn, when available.</summary>
+    public AIChatMessage? AssistantMessage { get; internal set; }
+
+    /// <summary>Agent history size before this turn started.</summary>
+    internal int HistoryCheckpoint { get; }
+}
+
+/// <summary>
+/// Owns the visible transcript and the private Agent Framework runtime for one conversation.
+/// </summary>
+public sealed class ChatSession : IAsyncDisposable
+{
+    private readonly List<ChatTurn> _turns = [];
+    private readonly Dictionary<string, ToolApprovalRequestContent> _pendingApprovals = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, string> _approvalIdsByRequest = new(StringComparer.Ordinal);
+    private AIChatAgentRuntime _runtime;
+    private AgentSession _agentSession;
     private long _capabilityRevision;
+    private bool _needsRecreation;
+    private bool _disposed;
 
     internal ChatSession(
-        AIAgent agent,
-        AgentSession session,
-        string providerId,
-        long capabilityRevision)
+        AIChatAgentRuntime runtime,
+        AgentSession agentSession,
+        ChatSessionSettings settings,
+        long capabilityRevision,
+        string title,
+        AIChatRuntimeContext runtimeContext)
     {
-        Agent = agent;
-        Session = session;
-        _providerId = providerId;
+        _runtime = runtime;
+        _agentSession = agentSession;
+        Settings = settings;
         _capabilityRevision = capabilityRevision;
+        Title = title;
+        RuntimeContext = runtimeContext;
         SessionId = Guid.NewGuid().ToString("N");
         CreatedAt = DateTimeOffset.UtcNow;
         UpdatedAt = CreatedAt;
     }
 
-    /// <summary>
-    /// Unique session identifier
-    /// </summary>
+    /// <summary>Unique session identifier.</summary>
     public string SessionId { get; }
 
-    /// <summary>
-    /// Session title
-    /// </summary>
-    public string Title { get; set; } = "New Chat";
+    /// <summary>Current display title.</summary>
+    public string Title { get; private set; }
 
-    /// <summary>
-    /// Session creation time
-    /// </summary>
+    /// <summary>Session creation time.</summary>
     public DateTimeOffset CreatedAt { get; }
 
-    /// <summary>
-    /// Last update time
-    /// </summary>
-    public DateTimeOffset UpdatedAt { get; internal set; }
+    /// <summary>Last transcript or settings update time.</summary>
+    public DateTimeOffset UpdatedAt { get; private set; }
 
-    /// <summary>
-    /// Current provider ID.
-    /// Setting this property triggers agent recreation on next message send.
-    /// </summary>
-    public string ProviderId
+    /// <summary>Current read-only session configuration.</summary>
+    public ChatSessionSettings Settings { get; private set; }
+
+    /// <summary>Current provider identifier.</summary>
+    public string ProviderId => Settings.ProviderId;
+
+    /// <summary>Current model name.</summary>
+    public string? ModelName => Settings.ModelName;
+
+    /// <summary>Current system prompt.</summary>
+    public string? SystemPrompt => Settings.SystemPrompt;
+
+    /// <summary>Whether reasoning is enabled for each turn.</summary>
+    public bool ReasoningEnabled => Settings.ReasoningEnabled;
+
+    /// <summary>Runtime context made available to tools during an invocation.</summary>
+    public AIChatRuntimeContext RuntimeContext { get; private set; }
+
+    /// <summary>Owned conversation turns in chronological order.</summary>
+    public IReadOnlyList<ChatTurn> Turns => _turns;
+
+    /// <summary>Flattened read-only transcript for presentation.</summary>
+    public IReadOnlyList<AIChatMessage> Messages
+        => _turns.SelectMany(static turn => turn.AssistantMessage is null
+                ? [turn.UserMessage]
+                : new[] { turn.UserMessage, turn.AssistantMessage })
+            .ToList();
+
+    internal long CapabilityRevision => _capabilityRevision;
+
+    internal bool NeedsRecreation => _needsRecreation;
+
+    internal AIAgent Agent => _runtime.Agent;
+
+    internal AgentSession AgentSession => _agentSession;
+
+    internal IList<ChatMessage>? ChatHistory
+        => Agent.GetService<InMemoryChatHistoryProvider>()?.GetMessages(_agentSession);
+
+    internal int MessageCount => ChatHistory?.Count ?? 0;
+
+    internal void ApplySettings(ChatSessionSettings settings)
     {
-        get => _providerId;
-        set
+        ObjectDisposedException.ThrowIf(_disposed, this);
+        if (Settings == settings)
         {
-            if (_providerId != value)
-            {
-                _providerId = value;
-                NeedsRecreation = true;
-            }
+            return;
         }
+
+        var runtimeChanged = !string.Equals(Settings.ProviderId, settings.ProviderId, StringComparison.Ordinal)
+                             || !string.Equals(Settings.ModelName, settings.ModelName, StringComparison.Ordinal)
+                             || !string.Equals(Settings.SystemPrompt, settings.SystemPrompt, StringComparison.Ordinal);
+        Settings = settings;
+        _needsRecreation |= runtimeChanged;
+        Touch();
     }
 
-    /// <summary>
-    /// Current model name.
-    /// Setting this property triggers agent recreation on next message send.
-    /// </summary>
-    public string? ModelName
+    internal void Rename(string title)
     {
-        get;
-        set
+        ObjectDisposedException.ThrowIf(_disposed, this);
+        Title = title;
+        Touch();
+    }
+
+    internal void SetRuntimeContext(AIChatRuntimeContext runtimeContext)
+    {
+        ObjectDisposedException.ThrowIf(_disposed, this);
+        RuntimeContext = runtimeContext;
+    }
+
+    internal ChatTurn BeginTurn(string content)
+    {
+        ObjectDisposedException.ThrowIf(_disposed, this);
+        var turn = new ChatTurn(
+            new AIChatMessage
+            {
+                Role = AIChatRole.User,
+                Content = content
+            },
+            MessageCount);
+        _turns.Add(turn);
+        Touch();
+        return turn;
+    }
+
+    internal ChatTurn GetOpenTurn()
+        => _turns.LastOrDefault()?.AssistantMessage is null && _turns.Count > 0
+            ? _turns[^1]
+            : throw new InvalidOperationException("The session has no turn awaiting continuation.");
+
+    internal void CompleteTurn(ChatTurn turn, AIChatMessage assistantMessage)
+    {
+        ObjectDisposedException.ThrowIf(_disposed, this);
+        if (!_turns.Contains(turn))
         {
-            if (field != value)
-            {
-                field = value;
-                NeedsRecreation = true;
-            }
+            throw new InvalidOperationException("The chat turn no longer belongs to this session.");
         }
+
+        turn.AssistantMessage = assistantMessage;
+        Touch();
     }
 
-    /// <summary>
-    /// System prompt (passed as instructions on each agent run).
-    /// Setting this property triggers agent recreation on next message send.
-    /// </summary>
-    public string? SystemPrompt
+    internal string RewindForEdit(string messageId, string newContent)
     {
-        get;
-        set
+        var index = _turns.FindIndex(turn => turn.UserMessage.Id == messageId);
+        if (index < 0)
         {
-            if (field != value)
-            {
-                field = value;
-                NeedsRecreation = true;
-            }
+            throw new KeyNotFoundException($"User message '{messageId}' was not found.");
         }
+
+        Rewind(index);
+        return newContent;
     }
 
-    /// <summary>
-    /// Runtime context visible to skills and tools during the next chat invocation.
-    /// </summary>
-    public AIChatRuntimeContext RuntimeContext { get; set; } = AIChatRuntimeContext.Empty;
-
-    /// <summary>
-    /// Runtime capability-state revision used to create the current agent pipeline.
-    /// Setting this property triggers agent recreation on next message send when it changes.
-    /// </summary>
-    public long CapabilityRevision
+    internal string RewindForRetry(string messageId)
     {
-        get => _capabilityRevision;
-        internal set => _capabilityRevision = value;
+        var index = _turns.FindIndex(turn => turn.AssistantMessage?.Id == messageId);
+        if (index < 0)
+        {
+            throw new KeyNotFoundException($"Assistant message '{messageId}' was not found.");
+        }
+
+        var content = _turns[index].UserMessage.Content;
+        Rewind(index);
+        return content;
     }
 
-    /// <summary>
-    /// Marks this session for recreation when the persisted capability-state revision changed.
-    /// </summary>
     internal void MarkCapabilityRevision(long capabilityRevision)
     {
         if (_capabilityRevision == capabilityRevision)
@@ -125,93 +223,87 @@ public class ChatSession
         }
 
         _capabilityRevision = capabilityRevision;
-        NeedsRecreation = true;
+        _needsRecreation = true;
     }
 
-    /// <summary>
-    /// Whether reasoning/thinking mode is enabled for this session.
-    /// This is a per-message option and does NOT require agent recreation.
-    /// </summary>
-    public bool ReasoningEnabled
+    internal async ValueTask ReplaceRuntimeAsync(
+        AIChatAgentRuntime runtime,
+        AgentSession agentSession,
+        long capabilityRevision)
     {
-        get;
-        set => field = value;
+        ObjectDisposedException.ThrowIf(_disposed, this);
+        var previousRuntime = _runtime;
+        _runtime = runtime;
+        _agentSession = agentSession;
+        _capabilityRevision = capabilityRevision;
+        _needsRecreation = false;
+        Touch();
+        await previousRuntime.DisposeAsync();
     }
 
-    /// <summary>
-    /// Indicates whether the agent needs to be recreated due to configuration changes.
-    /// This flag is checked before sending messages and reset after recreation.
-    /// </summary>
-    internal bool NeedsRecreation { get; set; }
-
-    /// <summary>
-    /// Message history for UI display.
-    /// This list is managed by the UI service layer.
-    /// </summary>
-    public List<AIChatMessage> Messages { get; } = [];
-    
-    /// <summary>
-    /// The current agent pipeline instance for this session.
-    /// </summary>
-    internal AIAgent Agent { get; set; }
-
-    /// <summary>
-    /// The agent session holding history and context provider references
-    /// </summary>
-    internal AgentSession Session { get; set; }
-
-    /// <summary>
-    /// Gets the internal agent chat history for this session.
-    /// </summary>
-    internal IList<ChatMessage>? ChatHistory
-    {
-        get
-        {
-            var provider = Agent.GetService<InMemoryChatHistoryProvider>();
-            return provider?.GetMessages(Session);
-        }
-    }
-
-    /// <summary>
-    /// Gets the internal chat-history message count.
-    /// </summary>
-    internal int MessageCount => ChatHistory?.Count ?? 0;
-
-    /// <summary>
-    /// Reset the recreation flag after agent has been recreated.
-    /// This method is called internally by AIChatService after recreation.
-    /// </summary>
-    internal void ResetRecreationFlag()
-    {
-        NeedsRecreation = false;
-    }
-
-    /// <summary>
-    /// Truncate history to keep only the first N messages
-    /// </summary>
-    internal void TruncateHistory(int keepCount)
-    {
-        var history = ChatHistory;
-        if (history == null) return;
-
-        if (keepCount < 0) keepCount = 0;
-        while (history.Count > keepCount)
-        {
-            history.RemoveAt(history.Count - 1);
-        }
-
-        UpdatedAt = DateTimeOffset.UtcNow;
-    }
-
-    /// <summary>
-    /// Clear all history
-    /// </summary>
     internal void ClearHistory()
     {
-        var history = ChatHistory;
-        if (history == null) return;
+        ChatHistory?.Clear();
+        _turns.Clear();
+        Touch();
+    }
 
-        history.Clear();
-        UpdatedAt = DateTimeOffset.UtcNow;
+    internal void MarkUpdated() => Touch();
+
+    internal string StorePendingApproval(ToolApprovalRequestContent request)
+    {
+        if (_approvalIdsByRequest.TryGetValue(request.RequestId, out var existingId))
+        {
+            return existingId;
+        }
+
+        var approvalId = Guid.NewGuid().ToString("N");
+        _pendingApprovals.Add(approvalId, request);
+        _approvalIdsByRequest.Add(request.RequestId, approvalId);
+        return approvalId;
+    }
+
+    internal ToolApprovalRequestContent TakePendingApproval(string approvalId)
+    {
+        if (!_pendingApprovals.Remove(approvalId, out var request))
+        {
+            throw new KeyNotFoundException($"Approval request '{approvalId}' was not found or already resolved.");
+        }
+
+        _approvalIdsByRequest.Remove(request.RequestId);
+        return request;
+    }
+
+    private void Rewind(int turnIndex)
+    {
+        var checkpoint = _turns[turnIndex].HistoryCheckpoint;
+        var history = ChatHistory;
+        if (history is not null)
+        {
+            while (history.Count > checkpoint)
+            {
+                history.RemoveAt(history.Count - 1);
+            }
+        }
+
+        _turns.RemoveRange(turnIndex, _turns.Count - turnIndex);
+        Touch();
+    }
+
+    private void Touch() => UpdatedAt = DateTimeOffset.UtcNow;
+
+    /// <inheritdoc />
+    public async ValueTask DisposeAsync()
+    {
+        if (_disposed)
+        {
+            return;
+        }
+
+        _disposed = true;
+        _pendingApprovals.Clear();
+        _approvalIdsByRequest.Clear();
+        await _runtime.DisposeAsync();
+        GC.SuppressFinalize(this);
     }
 }

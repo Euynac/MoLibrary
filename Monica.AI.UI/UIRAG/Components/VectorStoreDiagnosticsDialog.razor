@@ -3,7 +3,7 @@
 @using Monica.AI.RAG.Models
 @using Monica.AI.UI.Localization
 @using Monica.Core.Results
-@inject RAGFacade RagFacade
+@inject RAGVectorStoreFacade VectorStoreFacade
 @inject IStringLocalizer<AIResource> L
 
 <MudDialog>
@@ -151,9 +151,9 @@
     private bool _isLoading = true;
     private bool _isTesting;
 
-    protected override async Task OnInitializedAsync()
+    protected override void OnInitialized()
     {
-        var result = await RagFacade.GetVectorStoreDiagnosticsAsync();
+        var result = VectorStoreFacade.GetDiagnostics();
         if (result.IsFailed(out var error, out var diagnostics))
         {
             _loadErrorMessage = error.Message ?? L["Common:Error"].Value;
@@ -180,7 +180,7 @@
 
         try
         {
-            var result = await RagFacade.TestVectorStoreConnectionAsync();
+            var result = await VectorStoreFacade.TestConnectionAsync();
             if (result.IsFailed(out var error, out var testResult))
             {
                 testResult = new VectorStoreConnectionTestResult

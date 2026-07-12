@@ -14,7 +14,7 @@ namespace Monica.AI.RAG.Services;
 /// <summary>
 /// Manages vector collection lifecycle and cached collection bindings.
 /// </summary>
-public sealed class RAGVectorCollectionCoordinator(
+internal sealed class RAGVectorCollectionCoordinator(
     VectorStore vectorStore,
     RAGEmbeddingBindingResolver embeddingBindingResolver,
     IEnumerable<RAGVectorStoreRegistrationInfo> vectorStoreRegistrations,

@@ -1,5 +1,6 @@
 using Microsoft.Agents.AI;
 using Microsoft.Extensions.AI;
+using Monica.AI.Models.Internal;
 using Monica.AI.Services.Support;
 
 namespace Monica.AI.Abstractions;
@@ -7,12 +8,12 @@ namespace Monica.AI.Abstractions;
 /// <summary>
 /// Builds chat agents from session configuration and registered tool providers.
 /// </summary>
-public interface IAIChatAgentFactory
+internal interface IAIChatAgentFactory
 {
     /// <summary>
     /// Create a chat agent for the provided chat client and session context.
     /// </summary>
-    Task<AIAgent> CreateAsync(
+    Task<AIChatAgentRuntime> CreateAsync(
         IChatClient chatClient,
         AIChatAgentCreateContext context,
         CancellationToken ct = default);

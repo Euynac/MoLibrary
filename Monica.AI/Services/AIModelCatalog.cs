@@ -5,7 +5,7 @@ namespace Monica.AI.Services;
 /// <summary>
 /// Global AI model information catalog
 /// </summary>
-public class AIModelCatalog
+internal sealed class AIModelCatalog
 {
     private readonly Dictionary<string, AIModelInfo> _models = new(StringComparer.OrdinalIgnoreCase);
 

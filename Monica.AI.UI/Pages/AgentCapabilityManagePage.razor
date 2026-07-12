@@ -5,10 +5,12 @@
 @using Monica.AI.AgentCapabilities.Models
 @using Monica.AI.Facades
 @using Monica.AI.Mcp.Models
+@using Monica.AI.Mcp.Facades
 @using Monica.AI.UI.Localization
 @using Monica.Core.Results
 @rendermode InteractiveServer
 @inject AgentCapabilityFacade CapabilityFacade
+@inject McpFacade McpFacade
 @inject IDialogService DialogService
 @inject ISnackbar Snackbar
 @inject IStringLocalizer<AIResource> L
@@ -660,7 +662,7 @@
             return;
         }
 
-        var result = await CapabilityFacade.SaveExternalMcpProfileAsync(profile);
+        var result = await McpFacade.SaveExternalProfileAsync(profile);
         if (result.IsFailed(out var error, out var management))
         {
             AddErrorSnackbar(error.Message);
@@ -697,7 +699,7 @@
             return;
         }
 
-        var result = await CapabilityFacade.SaveExternalMcpProfileAsync(profile);
+        var result = await McpFacade.SaveExternalProfileAsync(profile);
         if (result.IsFailed(out var error, out var management))
         {
             AddErrorSnackbar(error.Message);
@@ -727,7 +729,7 @@
             return;
         }
 
-        var result = await CapabilityFacade.DeleteExternalMcpProfileAsync(entry.Name);
+        var result = await McpFacade.DeleteExternalProfileAsync(entry.Name);
         if (result.IsFailed(out var error, out var management))
         {
             AddErrorSnackbar(error.Message);
@@ -770,7 +772,7 @@
         _lastConnectivityResult = null;
         StateHasChanged();
 
-        var result = await CapabilityFacade.TestMcpConnectivityAsync(entry.Name);
+        var result = await McpFacade.TestConnectivityAsync(entry.Name);
         if (result.IsFailed(out var error, out var connectivity))
         {
             AddErrorSnackbar(error.Message);

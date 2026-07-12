@@ -8,7 +8,7 @@ namespace Monica.AI.Services.Support;
 /// <summary>
 /// Emits synthetic streaming updates for function calls and results so the UI can observe tool activity.
 /// </summary>
-public sealed class ToolInvocationTrackingAgentDecorator(
+internal sealed class ToolInvocationTrackingAgentDecorator(
     ILogger<ToolInvocationTrackingAgentDecorator> logger)
     : IAIChatAgentDecorator
 {

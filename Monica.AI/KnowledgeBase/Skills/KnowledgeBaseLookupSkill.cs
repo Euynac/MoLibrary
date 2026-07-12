@@ -3,7 +3,6 @@ using System.Text.Json;
 using Microsoft.Extensions.DependencyInjection;
 using Monica.AI.KnowledgeBase.Abstractions;
 using Monica.AI.KnowledgeBase.Models;
-using Monica.AI.KnowledgeBase.Services.Support;
 using Monica.AI.Services.Support;
 using Monica.Core.Modularity.Models;
 using Monica.Core.Skills;
@@ -15,7 +14,7 @@ namespace Monica.AI.KnowledgeBase.Skills;
 /// <summary>
 /// Provides lookup-only scripts for knowledge-base inventory and source documents.
 /// </summary>
-public sealed class KnowledgeBaseLookupSkill(IKnowledgeBaseLookupService lookup)
+internal sealed class KnowledgeBaseLookupSkill(IKnowledgeDocumentQueryService queryService)
     : Skill<KnowledgeBaseLookupSkill>
 {
     private static readonly JsonSerializerOptions _toolJsonOptions = new()
@@ -60,7 +59,7 @@ public sealed class KnowledgeBaseLookupSkill(IKnowledgeBaseLookupService lookup)
         Name = "list-knowledge-bases",
         Description = "List all knowledge bases, including id, display name, description, and document counts.")]
     public async Task<string> ListAsync(CancellationToken ct = default)
-        => JsonSerializer.Serialize(await lookup.ListAsync(ct), _toolJsonOptions);
+        => JsonSerializer.Serialize(await queryService.ListAsync(ct), _toolJsonOptions);
 
     /// <summary>
     /// Lists documents in a knowledge base.
@@ -82,7 +81,7 @@ public sealed class KnowledgeBaseLookupSkill(IKnowledgeBaseLookupService lookup)
         CancellationToken ct = default)
     {
         var resolvedKbId = ResolveKnowledgeBaseId(kbId, services);
-        var result = await lookup.BrowseDocumentsAsync(resolvedKbId, directoryPath, maxResults, ct);
+        var result = await queryService.BrowseDocumentsAsync(resolvedKbId, directoryPath, maxResults, ct);
         return JsonSerializer.Serialize(result, _toolJsonOptions);
     }
 
@@ -113,7 +112,7 @@ public sealed class KnowledgeBaseLookupSkill(IKnowledgeBaseLookupService lookup)
     {
         var resolvedKbId = ResolveKnowledgeBaseId(kbId, services);
         var searchMode = ParseSearchMode(mode);
-        var result = await lookup.SearchDocumentsAsync(
+        var result = await queryService.SearchDocumentsAsync(
             resolvedKbId,
             query,
             searchMode,
@@ -144,7 +143,7 @@ public sealed class KnowledgeBaseLookupSkill(IKnowledgeBaseLookupService lookup)
         CancellationToken ct = default)
     {
         var resolvedKbId = ResolveKnowledgeBaseId(kbId, services);
-        var result = await lookup.GetDocumentTreeAsync(resolvedKbId, directoryPath, maxDepth, ct);
+        var result = await queryService.GetDocumentTreeAsync(resolvedKbId, directoryPath, maxDepth, ct);
         return JsonSerializer.Serialize(result, _toolJsonOptions);
     }
 
@@ -170,7 +169,7 @@ public sealed class KnowledgeBaseLookupSkill(IKnowledgeBaseLookupService lookup)
         CancellationToken ct = default)
     {
         var resolvedKbId = ResolveKnowledgeBaseId(kbId, services);
-        var result = await lookup.GetDocumentContentAsync(
+        var result = await queryService.GetDocumentContentAsync(
             resolvedKbId,
             documentId,
             maxCharacters,

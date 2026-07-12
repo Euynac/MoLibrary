@@ -6,10 +6,12 @@ namespace Monica.AI.Services.Support;
 /// <summary>
 /// Mutable builder used to compose chat agent construction options.
 /// </summary>
-public sealed class AIChatAgentBuilder(string? instructions)
+internal sealed class AIChatAgentBuilder(string? instructions)
 {
     private readonly List<AIContextProvider> _contextProviders = [];
+    private readonly List<IDisposable> _ownedResources = [];
     private readonly List<AITool> _tools = [];
+    private readonly List<Func<FunctionCallContent, ValueTask<bool>>> _toolAutoApprovalRules = [];
     private readonly List<string> _instructions = string.IsNullOrWhiteSpace(instructions)
         ? []
         : [instructions];
@@ -28,6 +30,10 @@ public sealed class AIChatAgentBuilder(string? instructions)
     {
         ArgumentNullException.ThrowIfNull(contextProvider);
         _contextProviders.Add(contextProvider);
+        if (contextProvider is IDisposable disposable)
+        {
+            _ownedResources.Add(disposable);
+        }
     }
 
     /// <summary>
@@ -52,6 +58,13 @@ public sealed class AIChatAgentBuilder(string? instructions)
         _instructions.Add(instructionsText);
     }
 
+    /// <summary>Adds a rule that may automatically approve a trusted tool invocation.</summary>
+    public void AddToolAutoApprovalRule(Func<FunctionCallContent, ValueTask<bool>> rule)
+    {
+        ArgumentNullException.ThrowIfNull(rule);
+        _toolAutoApprovalRules.Add(rule);
+    }
+
     /// <summary>
     /// Build the final agent options.
     /// </summary>
@@ -62,6 +75,7 @@ public sealed class AIChatAgentBuilder(string? instructions)
             // Keep Responses previous_response_id and framework-managed history current after every
             // model call inside the tool loop, not only after the whole agent run completes.
             RequirePerServiceCallChatHistoryPersistence = true,
+            EnableNonApprovalRequiredFunctionBypassing = true,
             ChatOptions = string.IsNullOrWhiteSpace(Instructions) && _tools.Count == 0
                 ? null
                 : new ChatOptions
@@ -72,4 +86,12 @@ public sealed class AIChatAgentBuilder(string? instructions)
             AIContextProviders = _contextProviders.Count > 0 ? [.. _contextProviders] : null
         };
     }
+
+    /// <summary>
+    /// Gets disposable resources whose ownership transfers to the completed agent runtime.
+    /// </summary>
+    internal IReadOnlyList<IDisposable> GetOwnedResources() => _ownedResources;
+
+    internal IReadOnlyList<Func<FunctionCallContent, ValueTask<bool>>> GetToolAutoApprovalRules()
+        => _toolAutoApprovalRules;
 }

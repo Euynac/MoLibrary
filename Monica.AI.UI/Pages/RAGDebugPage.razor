@@ -7,7 +7,8 @@
 @using Monica.Core.Results;
 @using Microsoft.Extensions.Localization
 @using KnowledgeBaseModel = Monica.AI.KnowledgeBase.Models.KnowledgeBase
-@inject RAGFacade RagFacade
+@inject RAGSearchFacade SearchFacade
+@inject RAGIndexingFacade IndexingFacade
 @inject KnowledgeBaseFacade KnowledgeBaseFacade
 @inject EmbeddingModelFacade EmbeddingService
 @inject IAIProviderFactory ProviderFactory
@@ -329,7 +330,7 @@
         _searchErrorMessage = string.Empty;
         StateHasChanged();
 
-        var result = await RagFacade.SearchAsync(
+        var result = await SearchFacade.SearchAsync(
             _searchQuery,
             _selectedKbIds,
             _topK,
@@ -371,7 +372,7 @@
             return;
         }
 
-        var chunksResult = await RagFacade.GetDocumentChunksAsync(kbId, result.DocumentId);
+        var chunksResult = await IndexingFacade.GetDocumentChunksAsync(kbId, result.DocumentId);
         if (chunksResult.IsFailed(out var error, out var view))
         {
             Snackbar.Add(error.Message!, Severity.Error);

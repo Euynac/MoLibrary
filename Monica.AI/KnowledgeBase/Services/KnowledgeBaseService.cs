@@ -5,11 +5,12 @@ using Monica.AI.KnowledgeBase.Models;
 namespace Monica.AI.KnowledgeBase.Services;
 
 /// <summary>
-/// Coordinates knowledge-base metadata and inventory operations.
+/// Owns knowledge-base identity, metadata, aggregate statistics, and deletion orchestration.
 /// </summary>
-public sealed class KnowledgeBaseService(
+internal sealed class KnowledgeBaseService(
     IKnowledgeBaseStore store,
     IKnowledgeDocumentSourceStore sourceStore,
+    IEnumerable<IKnowledgeBaseLifecycleHandler> lifecycleHandlers,
     ILogger<KnowledgeBaseService> logger)
 {
     /// <summary>
@@ -23,8 +24,6 @@ public sealed class KnowledgeBaseService(
         CancellationToken ct = default)
     {
         var normalizedId = NormalizeId(id);
-        var normalizedName = NormalizeName(name);
-
         if (await store.GetKnowledgeBaseAsync(normalizedId, ct) is not null)
         {
             throw new InvalidOperationException($"Knowledge base id '{normalizedId}' already exists.");
@@ -33,7 +32,7 @@ public sealed class KnowledgeBaseService(
         var knowledgeBase = new Models.KnowledgeBase
         {
             Id = normalizedId,
-            Name = normalizedName,
+            Name = NormalizeName(name),
             Description = NormalizeOptionalText(description),
             SearchToolDescription = NormalizeOptionalText(searchToolDescription),
             CreatedAt = DateTimeOffset.UtcNow
@@ -53,8 +52,7 @@ public sealed class KnowledgeBaseService(
         string? description = null,
         CancellationToken ct = default)
     {
-        var normalizedId = NormalizeId(id);
-        var knowledgeBase = await GetRequiredAsync(normalizedId, ct);
+        var knowledgeBase = await GetRequiredAsync(id, ct);
         var updated = knowledgeBase with
         {
             Name = NormalizeName(name),
@@ -62,40 +60,40 @@ public sealed class KnowledgeBaseService(
         };
 
         await store.UpsertKnowledgeBaseAsync(updated, ct);
-        logger.LogInformation("Updated knowledge base '{KnowledgeBaseId}'.", normalizedId);
+        logger.LogInformation("Updated knowledge base '{KnowledgeBaseId}'.", updated.Id);
         return updated;
     }
 
     /// <summary>
-    /// Gets all knowledge bases.
+    /// Returns all knowledge bases with current aggregate counts.
     /// </summary>
     public async Task<IReadOnlyList<Models.KnowledgeBase>> GetAllAsync(CancellationToken ct = default)
     {
         var knowledgeBases = await store.GetKnowledgeBasesAsync(ct);
         foreach (var knowledgeBase in knowledgeBases)
         {
-            await RefreshKnowledgeBaseStatsAsync(knowledgeBase, ct);
+            await RefreshStatisticsAsync(knowledgeBase, ct);
         }
 
         return knowledgeBases;
     }
 
     /// <summary>
-    /// Gets one knowledge base by id.
+    /// Returns one knowledge base with current aggregate counts.
     /// </summary>
     public async Task<Models.KnowledgeBase?> GetByIdAsync(string id, CancellationToken ct = default)
     {
         var knowledgeBase = await store.GetKnowledgeBaseAsync(NormalizeId(id), ct);
         if (knowledgeBase is not null)
         {
-            await RefreshKnowledgeBaseStatsAsync(knowledgeBase, ct);
+            await RefreshStatisticsAsync(knowledgeBase, ct);
         }
 
         return knowledgeBase;
     }
 
     /// <summary>
-    /// Gets one knowledge base or throws when it is missing.
+    /// Returns one knowledge base or throws when it does not exist.
     /// </summary>
     public async Task<Models.KnowledgeBase> GetRequiredAsync(string id, CancellationToken ct = default)
     {
@@ -103,150 +101,32 @@ public sealed class KnowledgeBaseService(
         var knowledgeBase = await store.GetKnowledgeBaseAsync(normalizedId, ct)
                             ?? throw new KeyNotFoundException($"Knowledge base '{normalizedId}' was not found.");
 
-        await RefreshKnowledgeBaseStatsAsync(knowledgeBase, ct);
+        await RefreshStatisticsAsync(knowledgeBase, ct);
         return knowledgeBase;
     }
 
     /// <summary>
-    /// Deletes a knowledge base inventory record.
+    /// Deletes a knowledge base after optional features release their owned resources.
     /// </summary>
     public async Task DeleteAsync(string id, CancellationToken ct = default)
     {
-        await store.DeleteKnowledgeBaseAsync(NormalizeId(id), ct);
-    }
-
-    /// <summary>
-    /// Gets the document inventory for a knowledge base.
-    /// </summary>
-    public async Task<IReadOnlyList<DocumentQueueItem>> GetDocumentInventoryAsync(
-        string knowledgeBaseId,
-        CancellationToken ct = default)
-    {
-        var normalizedId = NormalizeId(knowledgeBaseId);
+        var normalizedId = NormalizeId(id);
         _ = await GetRequiredAsync(normalizedId, ct);
-        return await store.GetDocumentInventoryAsync(normalizedId, ct);
-    }
+        foreach (var handler in lifecycleHandlers)
+        {
+            await handler.OnKnowledgeBaseDeletingAsync(normalizedId, ct);
+        }
 
-    /// <summary>
-    /// Removes one document inventory item.
-    /// </summary>
-    public async Task RemoveDocumentAsync(
-        string knowledgeBaseId,
-        string documentId,
-        CancellationToken ct = default)
-    {
-        var normalizedId = NormalizeId(knowledgeBaseId);
-        var knowledgeBase = await GetRequiredAsync(normalizedId, ct);
-        await store.DeleteDocumentAsync(normalizedId, documentId, ct);
-        await sourceStore.DeleteContentAsync(normalizedId, documentId, ct);
-        await RefreshKnowledgeBaseStatsAsync(knowledgeBase, ct);
-    }
-
-    /// <summary>
-    /// Clears all document inventory items.
-    /// </summary>
-    public async Task<int> ClearDocumentsAsync(string knowledgeBaseId, CancellationToken ct = default)
-    {
-        var normalizedId = NormalizeId(knowledgeBaseId);
-        var knowledgeBase = await GetRequiredAsync(normalizedId, ct);
-        var removedCount = await store.DeleteDocumentsAsync(normalizedId, ct);
         await sourceStore.DeleteKnowledgeBaseAsync(normalizedId, ct);
-
-        knowledgeBase.DocumentCount = 0;
-        knowledgeBase.ChunkCount = 0;
-        await store.UpsertKnowledgeBaseAsync(knowledgeBase, ct);
-        return removedCount;
+        await store.DeleteKnowledgeBaseAsync(normalizedId, ct);
+        logger.LogInformation("Deleted knowledge base '{KnowledgeBaseId}'.", normalizedId);
     }
 
-    /// <summary>
-    /// Imports markdown documents as pending knowledge-base inventory records.
-    /// </summary>
-    public async Task<KnowledgeBaseDocumentImportResult> ImportMarkdownDocumentsAsync(
-        string knowledgeBaseId,
-        string sourceGroupKey,
-        IEnumerable<(string DocumentPath, string DocumentName)> documents,
-        CancellationToken ct = default)
-    {
-        var normalizedId = NormalizeId(knowledgeBaseId);
-        var knowledgeBase = await GetRequiredAsync(normalizedId, ct);
-
-        var normalizedGroupKey = NormalizeRequiredText(sourceGroupKey, nameof(sourceGroupKey));
-        var states = documents
-            .Where(static document => !string.IsNullOrWhiteSpace(document.DocumentPath))
-            .GroupBy(static document => document.DocumentPath.Trim(), StringComparer.OrdinalIgnoreCase)
-            .Select(group =>
-            {
-                var document = group.First();
-                var documentPath = document.DocumentPath.Trim();
-                return CreatePendingDocumentState(
-                    normalizedId,
-                    documentPath,
-                    document.DocumentName,
-                    KnowledgeDocumentSourceKinds.Markdown,
-                    normalizedGroupKey);
-            })
-            .ToList();
-
-        var result = await store.AddPendingDocumentsAsync(normalizedId, states, ct);
-        if (result.AddedCount > 0)
-        {
-            await RefreshKnowledgeBaseStatsAsync(knowledgeBase, ct);
-        }
-
-        return result;
-    }
-
-    /// <summary>
-    /// Uploads one source document as a pending knowledge-base inventory record.
-    /// </summary>
-    public async Task UploadDocumentAsync(
-        string knowledgeBaseId,
-        string fileName,
-        string content,
-        CancellationToken ct = default)
-    {
-        var normalizedId = NormalizeId(knowledgeBaseId);
-        var knowledgeBase = await GetRequiredAsync(normalizedId, ct);
-
-        var normalizedFileName = NormalizeRequiredText(fileName, nameof(fileName));
-        if (string.IsNullOrWhiteSpace(content))
-        {
-            throw new ArgumentException("Uploaded document content cannot be empty.", nameof(content));
-        }
-
-        var result = await store.AddPendingDocumentsAsync(
-            normalizedId,
-            [
-                CreatePendingDocumentState(
-                    normalizedId,
-                    normalizedFileName,
-                    normalizedFileName,
-                    KnowledgeDocumentSourceKinds.Uploaded,
-                    sourceGroupKey: null)
-            ],
-            ct);
-
-        if (result.AddedCount == 0)
-        {
-            throw new InvalidOperationException(
-                $"Document '{normalizedFileName}' already exists in knowledge base '{normalizedId}'.");
-        }
-
-        await sourceStore.SaveContentAsync(normalizedId, normalizedFileName, content, ct);
-        await RefreshKnowledgeBaseStatsAsync(knowledgeBase, ct);
-    }
-
-    /// <summary>
-    /// Refreshes persisted aggregate counts from document inventory state.
-    /// </summary>
-    public async Task RefreshKnowledgeBaseStatsAsync(
-        Models.KnowledgeBase knowledgeBase,
-        CancellationToken ct = default)
+    private async Task RefreshStatisticsAsync(Models.KnowledgeBase knowledgeBase, CancellationToken ct)
     {
         var documents = await store.GetDocumentInventoryAsync(knowledgeBase.Id, ct);
         var documentCount = documents.Count;
         var chunkCount = documents.Sum(static document => Math.Max(0, document.ChunkCount));
-
         if (knowledgeBase.DocumentCount == documentCount && knowledgeBase.ChunkCount == chunkCount)
         {
             return;
@@ -255,35 +135,6 @@ public sealed class KnowledgeBaseService(
         knowledgeBase.DocumentCount = documentCount;
         knowledgeBase.ChunkCount = chunkCount;
         await store.UpsertKnowledgeBaseAsync(knowledgeBase, ct);
-    }
-
-    private static DocumentIndexState CreatePendingDocumentState(
-        string knowledgeBaseId,
-        string documentPath,
-        string? documentName,
-        string sourceKind,
-        string? sourceGroupKey)
-    {
-        var resolvedName = string.IsNullOrWhiteSpace(documentName)
-            ? ResolveDocumentName(documentPath)
-            : documentName.Trim();
-
-        return new DocumentIndexState
-        {
-            KnowledgeBaseId = knowledgeBaseId,
-            DocumentPath = documentPath,
-            DocumentName = resolvedName,
-            Status = DocumentStatus.Pending,
-            SourceKind = sourceKind,
-            SourceGroupKey = sourceGroupKey,
-            UpdatedAt = DateTimeOffset.UtcNow
-        };
-    }
-
-    private static string ResolveDocumentName(string documentPath)
-    {
-        var fileName = Path.GetFileName(documentPath);
-        return string.IsNullOrWhiteSpace(fileName) ? documentPath : fileName;
     }
 
     private static string NormalizeName(string name)
@@ -298,16 +149,6 @@ public sealed class KnowledgeBaseService(
 
     private static string? NormalizeOptionalText(string? value)
         => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
-
-    private static string NormalizeRequiredText(string value, string parameterName)
-    {
-        if (string.IsNullOrWhiteSpace(value))
-        {
-            throw new ArgumentException("Value cannot be empty.", parameterName);
-        }
-
-        return value.Trim();
-    }
 
     private static string NormalizeId(string id)
     {

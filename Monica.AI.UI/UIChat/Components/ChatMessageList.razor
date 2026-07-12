@@ -1,33 +1,36 @@
-@using Microsoft.Agents.AI
+@using Microsoft.Extensions.Localization
+@using Monica.AI.UI.Localization
+@using Monica.AI.UI.UIChat.State
 @implements IAsyncDisposable
+@inject IStringLocalizer<AIResource> L
 
 <div class="message-list" @ref="_messageListRef">
-    @if (Messages.Count == 0 && StreamingContent == null)
+    @if (Messages.Count == 0 && StreamingState == null)
     {
         <div class="welcome-panel">
             <div class="welcome-icon">
                 <MudIcon Icon="@Icons.Material.Filled.AutoAwesome" Size="Size.Large" Color="Color.Primary" />
             </div>
-            <MudText Typo="Typo.h5">今天想聊点什么？</MudText>
+            <MudText Typo="Typo.h5">@L["Chat:Welcome:Title"]</MudText>
             <MudText Typo="Typo.body2" Class="welcome-subtitle">
-                支持多个 Provider，直接提问代码、写作或分析任务。
+                @L["Chat:Welcome:Subtitle"]
             </MudText>
             <div class="welcome-grid">
                 <MudPaper Class="welcome-card" Elevation="0">
-                    <MudText Typo="Typo.subtitle2">优化前端交互</MudText>
-                    <MudText Typo="Typo.caption" Color="Color.Secondary">给出按钮与动效建议</MudText>
+                    <MudText Typo="Typo.subtitle2">@L["Chat:Welcome:Cards:UI:Title"]</MudText>
+                    <MudText Typo="Typo.caption" Color="Color.Secondary">@L["Chat:Welcome:Cards:UI:Subtitle"]</MudText>
                 </MudPaper>
                 <MudPaper Class="welcome-card" Elevation="0">
-                    <MudText Typo="Typo.subtitle2">生成接口文档</MudText>
-                    <MudText Typo="Typo.caption" Color="Color.Secondary">根据 API 设计输出说明</MudText>
+                    <MudText Typo="Typo.subtitle2">@L["Chat:Welcome:Cards:Docs:Title"]</MudText>
+                    <MudText Typo="Typo.caption" Color="Color.Secondary">@L["Chat:Welcome:Cards:Docs:Subtitle"]</MudText>
                 </MudPaper>
                 <MudPaper Class="welcome-card" Elevation="0">
-                    <MudText Typo="Typo.subtitle2">分析一段错误</MudText>
-                    <MudText Typo="Typo.caption" Color="Color.Secondary">定位日志与异常原因</MudText>
+                    <MudText Typo="Typo.subtitle2">@L["Chat:Welcome:Cards:Error:Title"]</MudText>
+                    <MudText Typo="Typo.caption" Color="Color.Secondary">@L["Chat:Welcome:Cards:Error:Subtitle"]</MudText>
                 </MudPaper>
                 <MudPaper Class="welcome-card" Elevation="0">
-                    <MudText Typo="Typo.subtitle2">写一段脚本</MudText>
-                    <MudText Typo="Typo.caption" Color="Color.Secondary">自动化常见开发任务</MudText>
+                    <MudText Typo="Typo.subtitle2">@L["Chat:Welcome:Cards:Script:Title"]</MudText>
+                    <MudText Typo="Typo.caption" Color="Color.Secondary">@L["Chat:Welcome:Cards:Script:Subtitle"]</MudText>
                 </MudPaper>
             </div>
         </div>
@@ -41,16 +44,12 @@
                              OnEdit="@OnEditMessage" OnRetry="@OnRetryMessage" />
         }
 
-        @if (StreamingContent != null)
+        @if (StreamingState != null)
         {
             <StreamingMessageItem
-                @ref="_streamingItemRef"
-                StreamingContent="@StreamingContent"
+                State="@StreamingState"
                 EnableMarkdown="@EnableMarkdown"
-                ToolDebugEnabled="@ToolDebugEnabled"
-                ExternalCancellationToken="@CancellationToken"
-                OnStreamComplete="@HandleStreamComplete"
-                OnStreamError="@HandleStreamError" />
+                ToolDebugEnabled="@ToolDebugEnabled" />
         }
     }
 </div>
@@ -59,18 +58,14 @@
     [Inject] private IJSRuntime JSRuntime { get; set; } = null!;
 
     [Parameter] public IReadOnlyList<AIChatMessage> Messages { get; set; } = [];
-    [Parameter] public IAsyncEnumerable<AgentResponseUpdate>? StreamingContent { get; set; }
+    [Parameter] public ChatStreamingState? StreamingState { get; set; }
     [Parameter] public bool EnableMarkdown { get; set; } = true;
     [Parameter] public bool ToolDebugEnabled { get; set; }
     [Parameter] public bool EnableAutoScroll { get; set; } = true;
-    [Parameter] public CancellationToken CancellationToken { get; set; }
-    [Parameter] public EventCallback<string> OnStreamComplete { get; set; }
-    [Parameter] public EventCallback<string> OnStreamError { get; set; }
     [Parameter] public EventCallback<(AIChatMessage Message, string NewContent)> OnEditMessage { get; set; }
     [Parameter] public EventCallback<AIChatMessage> OnRetryMessage { get; set; }
 
     private ElementReference _messageListRef;
-    private StreamingMessageItem? _streamingItemRef;
     private IJSObjectReference? _jsModule;
     private IJSObjectReference? _autoScrollInstance;
 
@@ -97,27 +92,6 @@
         catch (JSException)
         {
             // JS interop may fail during prerendering, ignore silently
-        }
-    }
-
-    private async Task HandleStreamComplete(string content)
-    {
-        await OnStreamComplete.InvokeAsync(content);
-    }
-
-    private async Task HandleStreamError(string error)
-    {
-        await OnStreamError.InvokeAsync(error);
-    }
-
-    /// <summary>
-    /// Cancel the ongoing stream
-    /// </summary>
-    public async Task CancelStreamAsync()
-    {
-        if (_streamingItemRef != null)
-        {
-            await _streamingItemRef.CancelAsync();
         }
     }
 

@@ -1,5 +1,3 @@
-using Microsoft.AspNetCore.Builder;
-using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Monica.AI.AgentCapabilities.Abstractions;
@@ -19,7 +17,6 @@ using Monica.Core.Modularity.Abstractions;
 using Monica.Core.Modularity.Annotations;
 using Monica.Core.Modularity.Extensions;
 using Monica.Core.Modularity.Models;
-using Monica.Core.Modularity.Models.Internal;
 
 // ReSharper disable once CheckNamespace
 namespace Monica.Modules;
@@ -48,15 +45,8 @@ public static class ModuleAIBuilderExtensions
 /// </summary>
 [ModuleKey(BuiltInModuleKey.AI)]
 public class ModuleAI(ModuleAIOption option)
-    : WebModuleBase<ModuleAI, ModuleAIOption, ModuleAIGuide>(option)
+    : ModuleBase<ModuleAI, ModuleAIOption, ModuleAIGuide>(option)
 {
-    /// <inheritdoc />
-    public override void ClaimDependencies()
-    {
-        DependsOnModule<ModuleSkillSystemGuide>().Register();
-        DependsOnModule<ModuleMcpGuide>().Register();
-    }
-
     /// <inheritdoc />
     public override void ConfigureServices(IServiceCollection services)
     {
@@ -77,9 +67,11 @@ public class ModuleAI(ModuleAIOption option)
         // Register provider manager
         services.TryAddSingleton<ITokenCountProvider, EstimatedUtf8TokenCountProvider>();
         services.TryAddSingleton<IAgentCapabilityStateStore, FileAgentCapabilityStateStore>();
+        services.TryAddSingleton<IAgentCapabilityService, AgentCapabilityService>();
         services.TryAddSingleton<AIChatRuntimeContextAccessor>();
         services.TryAddSingleton<IAIChatRuntimeContextAccessor>(sp =>
             sp.GetRequiredService<AIChatRuntimeContextAccessor>());
+        services.TryAddSingleton<AgentStreamingCoordinator>();
         services.AddSingleton<AIProviderRegistry>();
         services.AddSingleton<IAIProviderFactory>(sp => sp.GetRequiredService<AIProviderRegistry>());
         services.AddSingleton<IAIChatAgentFactory, AIChatAgentFactory>();
@@ -88,7 +80,9 @@ public class ModuleAI(ModuleAIOption option)
 
         // Register chat service
         services.AddSingleton<AIChatService>();
-        services.AddScoped<ChatFacade>();
+        services.AddScoped(sp => new ChatFacade(
+            sp.GetRequiredService<AIChatService>(),
+            sp.GetRequiredService<IAIProviderFactory>()));
         services.AddScoped<ProviderFacade>();
         services.AddScoped<AgentCapabilityFacade>();
     }
@@ -97,7 +91,7 @@ public class ModuleAI(ModuleAIOption option)
 /// <summary>
 /// Builder for AI module configuration.
 /// </summary>
-public class ModuleAIGuide : WebModuleGuide<ModuleAI, ModuleAIOption, ModuleAIGuide>
+public class ModuleAIGuide : ModuleGuide<ModuleAI, ModuleAIOption, ModuleAIGuide>
 {
     /// <summary>
     /// Adds an OpenAI provider.
@@ -113,10 +107,10 @@ public class ModuleAIGuide : WebModuleGuide<ModuleAI, ModuleAIOption, ModuleAIGu
         configure(options);
         options.ProviderId = providerId ?? options.ProviderId ?? nameof(EAIProviderType.OpenAI);
 
-        ConfigureApplicationBuilder(context =>
+        ConfigureServices(context =>
         {
-            RegisterProvider(
-                context,
+            context.Services.AddSingleton<IAIProvider>(serviceProvider => CreateProvider(
+                serviceProvider,
                 options,
                 nameof(EAIProviderType.OpenAI),
                 "OpenAI-compatible chat and embedding provider.",
@@ -126,8 +120,8 @@ public class ModuleAIGuide : WebModuleGuide<ModuleAI, ModuleAIOption, ModuleAIGu
                 {
                     EnsureApiKeyConfigured(options);
                     return new OpenAIProvider(options, modelCatalog);
-                });
-        }, secondKey: options.ProviderId, order: ModuleApplicationMiddlewareOrder.BeforeUseRouting);
+                }));
+        }, secondKey: options.ProviderId);
 
         return this;
     }
@@ -147,10 +141,10 @@ public class ModuleAIGuide : WebModuleGuide<ModuleAI, ModuleAIOption, ModuleAIGu
        
         options.ProviderId = providerId ?? options.ProviderId ?? nameof(EAIProviderType.Anthropic);
 
-        ConfigureApplicationBuilder(context =>
+        ConfigureServices(context =>
         {
-            RegisterProvider(
-                context,
+            context.Services.AddSingleton<IAIProvider>(serviceProvider => CreateProvider(
+                serviceProvider,
                 options,
                 nameof(EAIProviderType.Anthropic),
                 "Anthropic Claude chat provider.",
@@ -160,8 +154,8 @@ public class ModuleAIGuide : WebModuleGuide<ModuleAI, ModuleAIOption, ModuleAIGu
                 {
                     EnsureApiKeyConfigured(options);
                     return new AnthropicProvider(options, modelCatalog);
-                });
-        }, secondKey: options.ProviderId, order: ModuleApplicationMiddlewareOrder.BeforeUseRouting);
+                }));
+        }, secondKey: options.ProviderId);
 
         return this;
     }
@@ -180,13 +174,11 @@ public class ModuleAIGuide : WebModuleGuide<ModuleAI, ModuleAIOption, ModuleAIGu
         configure(options);
         options.ProviderId = providerId ?? options.ProviderId ?? nameof(EAIProviderType.Fake);
 
-        ConfigureApplicationBuilder(context =>
+        ConfigureServices(context =>
         {
-            var manager = context.ApplicationBuilder.ApplicationServices.GetRequiredService<AIProviderRegistry>();
-            var modelCatalog = context.ApplicationBuilder.ApplicationServices.GetRequiredService<AIModelCatalog>();
-            var provider = new FakeProvider(options, modelCatalog);
-            manager.RegisterProvider(provider);
-        }, secondKey: options.ProviderId, order: ModuleApplicationMiddlewareOrder.BeforeUseRouting);
+            context.Services.AddSingleton<IAIProvider>(serviceProvider =>
+                new FakeProvider(options, serviceProvider.GetRequiredService<AIModelCatalog>()));
+        }, secondKey: options.ProviderId);
 
         return this;
     }
@@ -211,18 +203,16 @@ public class ModuleAIGuide : WebModuleGuide<ModuleAI, ModuleAIOption, ModuleAIGu
     public ModuleAIGuide AddProvider<TProvider>(Func<IServiceProvider, TProvider> providerFactory)
         where TProvider : class, IAIProvider
     {
-        ConfigureApplicationBuilder(context =>
+        ConfigureServices(context =>
         {
-            var manager = context.ApplicationBuilder.ApplicationServices.GetRequiredService<AIProviderRegistry>();
-            var provider = providerFactory(context.ApplicationBuilder.ApplicationServices);
-            manager.RegisterProvider(provider);
-        }, secondKey: $"custom-{typeof(TProvider).Name}", order: ModuleApplicationMiddlewareOrder.BeforeUseRouting);
+            context.Services.AddSingleton<IAIProvider>(serviceProvider => providerFactory(serviceProvider));
+        }, secondKey: $"custom-{typeof(TProvider).Name}");
 
         return this;
     }
 
-    private static void RegisterProvider<TOptions>(
-        ModuleApplicationConfigurationContext<ModuleAIOption> context,
+    private static IAIProvider CreateProvider<TOptions>(
+        IServiceProvider serviceProvider,
         TOptions options,
         string providerType,
         string description,
@@ -231,23 +221,22 @@ public class ModuleAIGuide : WebModuleGuide<ModuleAI, ModuleAIOption, ModuleAIGu
         Func<AIModelCatalog, IAIProvider> providerFactory)
         where TOptions : AIProviderOptions
     {
-        var manager = context.ApplicationBuilder.ApplicationServices.GetRequiredService<AIProviderRegistry>();
-        var modelCatalog = context.ApplicationBuilder.ApplicationServices.GetRequiredService<AIModelCatalog>();
+        var modelCatalog = serviceProvider.GetRequiredService<AIModelCatalog>();
 
         try
         {
-            manager.RegisterProvider(providerFactory(modelCatalog));
+            return providerFactory(modelCatalog);
         }
         catch (Exception ex)
         {
-            manager.RegisterProvider(DisabledAIProvider.FromOptions(
+            return DisabledAIProvider.FromOptions(
                 options,
                 modelCatalog,
                 providerType,
                 description,
                 icon,
                 BuildConfigurationErrors(options, ex),
-                supportsRemoteModelListing));
+                supportsRemoteModelListing);
         }
     }
 
@@ -278,30 +267,6 @@ public class ModuleAIGuide : WebModuleGuide<ModuleAI, ModuleAIOption, ModuleAIGu
         return errors;
     }
 
-    /// <summary>
-    /// Maps AI chat endpoints.
-    /// </summary>
-    /// <param name="routePrefix">The route prefix. Defaults to <c>"/ai"</c>.</param>
-    /// <returns>The current builder instance.</returns>
-    public ModuleAIGuide MapAIEndpoints(string routePrefix = "/ai")
-    {
-        ConfigureEndpoints(builder =>
-        {
-            var endpoints = builder.RequireWebApplication();
-            var providerFactory = endpoints.Services.GetRequiredService<IAIProviderFactory>();
-
-            // Get all providers
-            endpoints.MapGet($"{routePrefix}/providers", () =>
-                TypedResults.Ok(providerFactory.GetAllProviderInfos()))
-                .WithMonicaEndpoint();
-
-            // Note: Session management endpoints removed as sessions are now managed by UI layer.
-            // API endpoints should be stateless and not manage sessions.
-            // For stateful chat, use the UI chat coordination layer.
-        });
-
-        return this;
-    }
 }
 
 /// <summary>

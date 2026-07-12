@@ -14,6 +14,7 @@
     <Project Path="tests/Test.Monica.Core/Test.Monica.Core.csproj" />
     <Project Path="tests/Test.Monica.JobScheduler.UI/Test.Monica.JobScheduler.UI.csproj" />
     <Project Path="tests/Test.Monica.JobScheduler/Test.Monica.JobScheduler.csproj" />
+    <Project Path="tests/Test.Monica.AI/Test.Monica.AI.csproj" />
     <Project Path="tests/Test.Monica.Repository/Test.Monica.Repository.csproj" />
     <Project Path="tests/Test.Monica.UI/Test.Monica.UI.csproj" />
   </Folder>

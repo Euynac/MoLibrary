@@ -7,7 +7,7 @@ namespace Monica.AI.Mcp.Services;
 /// <summary>
 /// Creates connected MCP clients from serializable external HTTP client profiles.
 /// </summary>
-public sealed class ExternalMcpClientFactory(ILoggerFactory loggerFactory)
+internal sealed class ExternalMcpClientFactory(ILoggerFactory loggerFactory)
 {
     /// <summary>
     /// Creates and connects an MCP client for the provided external profile.
