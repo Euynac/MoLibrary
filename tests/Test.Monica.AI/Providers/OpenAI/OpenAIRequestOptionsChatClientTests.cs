@@ -35,6 +35,35 @@ public sealed class OpenAIRequestOptionsChatClientTests
 #pragma warning restore OPENAI001
     }
 
+    [Fact]
+    public async Task GetStreamingResponseAsync_WhenCompatibleEndpointHasUnknownTerminalReasoningStatus_ShouldKeepDeltas()
+    {
+        using var innerClient = new UnknownTerminalReasoningStatusChatClient();
+        using var client = new OpenAIRequestOptionsChatClient(
+            innerClient,
+            OpenAIProviderApiMode.Responses,
+            OpenAIResponsesHistoryMode.LocalHistory,
+            promptCacheKey: null,
+            promptCacheRetention: null);
+
+        var updates = new List<ChatResponseUpdate>();
+        await foreach (var update in client.GetStreamingResponseAsync(
+                           [new ChatMessage(ChatRole.User, "reason")],
+                           cancellationToken: TestContext.Current.CancellationToken))
+        {
+            updates.Add(update);
+        }
+
+        updates.SelectMany(static update => update.Contents)
+            .OfType<TextReasoningContent>()
+            .Select(static content => content.Text)
+            .Should().ContainSingle().Which.Should().Be("thinking");
+        updates.SelectMany(static update => update.Contents)
+            .OfType<TextContent>()
+            .Select(static content => content.Text)
+            .Should().ContainSingle().Which.Should().Be("answer");
+    }
+
     private sealed class CapturingChatClient : IChatClient
     {
         internal ChatOptions? CapturedOptions { get; private set; }
@@ -56,6 +85,36 @@ public sealed class OpenAIRequestOptionsChatClientTests
             CapturedOptions = options;
             await Task.CompletedTask;
             yield break;
+        }
+
+        public object? GetService(Type serviceType, object? serviceKey = null)
+            => serviceType == typeof(IChatClient) ? this : null;
+
+        public void Dispose()
+        {
+        }
+    }
+
+    private sealed class UnknownTerminalReasoningStatusChatClient : IChatClient
+    {
+        public Task<ChatResponse> GetResponseAsync(
+            IEnumerable<ChatMessage> messages,
+            ChatOptions? options = null,
+            CancellationToken cancellationToken = default)
+            => throw new NotSupportedException();
+
+        public async IAsyncEnumerable<ChatResponseUpdate> GetStreamingResponseAsync(
+            IEnumerable<ChatMessage> messages,
+            ChatOptions? options = null,
+            [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken cancellationToken = default)
+        {
+            yield return new ChatResponseUpdate(ChatRole.Assistant, [new TextReasoningContent("thinking")]);
+            yield return new ChatResponseUpdate(ChatRole.Assistant, [new TextContent("answer")]);
+            await Task.Yield();
+            throw new ArgumentOutOfRangeException(
+                "value",
+                string.Empty,
+                "Unknown ReasoningStatus value.");
         }
 
         public object? GetService(Type serviceType, object? serviceKey = null)

@@ -27,6 +27,8 @@ public sealed record ChatSessionSettings(
 /// </remarks>
 public sealed record ChatTurn
 {
+    private readonly List<AIChatMessage> _errorMessages = [];
+
     internal ChatTurn(AIChatMessage userMessage, int historyCheckpoint)
     {
         UserMessage = userMessage;
@@ -39,8 +41,44 @@ public sealed record ChatTurn
     /// <summary>Assistant response committed for the turn, when available.</summary>
     public AIChatMessage? AssistantMessage { get; internal set; }
 
+    /// <summary>Generation failures retained after any partial assistant response.</summary>
+    public IReadOnlyList<AIChatMessage> ErrorMessages => _errorMessages;
+
     /// <summary>Agent history size before this turn started.</summary>
     internal int HistoryCheckpoint { get; }
+
+    internal IEnumerable<AIChatMessage> Messages
+    {
+        get
+        {
+            yield return UserMessage;
+            if (AssistantMessage is not null)
+            {
+                yield return AssistantMessage;
+            }
+
+            foreach (var errorMessage in _errorMessages)
+            {
+                yield return errorMessage;
+            }
+        }
+    }
+
+    internal bool AddError(string error)
+    {
+        if (_errorMessages.LastOrDefault()?.Content == error)
+        {
+            return false;
+        }
+
+        _errorMessages.Add(new AIChatMessage
+        {
+            Role = AIChatRole.Assistant,
+            Kind = AIChatMessageKind.Error,
+            Content = error
+        });
+        return true;
+    }
 }
 
 /// <summary>
@@ -111,10 +149,7 @@ public sealed class ChatSession : IAsyncDisposable
 
     /// <summary>Flattened read-only transcript for presentation.</summary>
     public IReadOnlyList<AIChatMessage> Messages
-        => _turns.SelectMany(static turn => turn.AssistantMessage is null
-                ? [turn.UserMessage]
-                : new[] { turn.UserMessage, turn.AssistantMessage })
-            .ToList();
+        => _turns.SelectMany(static turn => turn.Messages).ToList();
 
     internal long CapabilityRevision => _capabilityRevision;
 
@@ -190,6 +225,31 @@ public sealed class ChatSession : IAsyncDisposable
         Touch();
     }
 
+    internal void RecordError(ChatTurn turn, string error)
+    {
+        ObjectDisposedException.ThrowIf(_disposed, this);
+        if (!_turns.Contains(turn))
+        {
+            throw new InvalidOperationException("The chat turn no longer belongs to this session.");
+        }
+
+        if (turn.AddError(error))
+        {
+            Touch();
+        }
+    }
+
+    internal void RecordError(string error)
+    {
+        ObjectDisposedException.ThrowIf(_disposed, this);
+        var turn = _turns.LastOrDefault()
+                   ?? throw new InvalidOperationException("The session has no turn for the error entry.");
+        if (turn.AddError(error))
+        {
+            Touch();
+        }
+    }
+
     internal string RewindForEdit(string messageId, string newContent)
     {
         var index = _turns.FindIndex(turn => turn.UserMessage.Id == messageId);
@@ -204,7 +264,9 @@ public sealed class ChatSession : IAsyncDisposable
 
     internal string RewindForRetry(string messageId)
     {
-        var index = _turns.FindIndex(turn => turn.AssistantMessage?.Id == messageId);
+        var index = _turns.FindIndex(turn =>
+            turn.AssistantMessage?.Id == messageId
+            || turn.ErrorMessages.Any(error => error.Id == messageId));
         if (index < 0)
         {
             throw new KeyNotFoundException($"Assistant message '{messageId}' was not found.");

@@ -1,3 +1,4 @@
+using System.Runtime.CompilerServices;
 using Microsoft.Extensions.AI;
 using OpenAI.Responses;
 using ChatCompletionOptions = OpenAI.Chat.ChatCompletionOptions;
@@ -30,12 +31,66 @@ internal sealed class OpenAIRequestOptionsChatClient(
     }
 
     /// <inheritdoc />
-    public override IAsyncEnumerable<ChatResponseUpdate> GetStreamingResponseAsync(
+    public override async IAsyncEnumerable<ChatResponseUpdate> GetStreamingResponseAsync(
         IEnumerable<ChatMessage> messages,
         ChatOptions? options = null,
-        CancellationToken cancellationToken = default)
+        [EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
-        return base.GetStreamingResponseAsync(messages, ConfigureOptions(options), cancellationToken);
+        var enumerator = base.GetStreamingResponseAsync(
+                messages,
+                ConfigureOptions(options),
+                cancellationToken)
+            .GetAsyncEnumerator(cancellationToken);
+        var hasEmittedContent = false;
+
+        try
+        {
+            while (true)
+            {
+                bool hasNext;
+                try
+                {
+                    hasNext = await enumerator.MoveNextAsync();
+                }
+                catch (ArgumentOutOfRangeException ex) when (CanCompleteAfterUnknownReasoningStatus(
+                    ex,
+                    hasEmittedContent))
+                {
+                    // Some OpenAI-compatible Responses endpoints emit an empty or non-standard
+                    // reasoning status on output_item.done. Text deltas are already complete at
+                    // this point, so treat that malformed terminal metadata as end-of-stream.
+                    yield break;
+                }
+
+                if (!hasNext)
+                {
+                    break;
+                }
+
+                var update = enumerator.Current;
+                hasEmittedContent |= update.Contents.Any(static content => content switch
+                {
+                    TextContent text => !string.IsNullOrEmpty(text.Text),
+                    TextReasoningContent reasoning => !string.IsNullOrEmpty(reasoning.Text),
+                    _ => false
+                });
+                yield return update;
+            }
+        }
+        finally
+        {
+            await enumerator.DisposeAsync();
+        }
+    }
+
+    private bool CanCompleteAfterUnknownReasoningStatus(
+        ArgumentOutOfRangeException exception,
+        bool hasEmittedContent)
+    {
+        return _apiMode == OpenAIProviderApiMode.Responses
+               && hasEmittedContent
+               && string.Equals(exception.ParamName, "value", StringComparison.Ordinal)
+               && exception.Message.Contains("Unknown ReasoningStatus value.", StringComparison.Ordinal);
     }
 
     private ChatOptions ConfigureOptions(ChatOptions? options)

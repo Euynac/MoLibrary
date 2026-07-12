@@ -152,6 +152,7 @@ public sealed class ChatFacade
         Exception? streamFailure = null;
         var wasCancelled = false;
         var awaitingApproval = false;
+        var turnFinalized = false;
         var updates = approvalResponse is null
             ? _chatService.SendMessageStreamingAsync(state, message!, ct)
             : _chatService.ContinueApprovalStreamingAsync(state, approvalResponse, ct);
@@ -180,6 +181,10 @@ public sealed class ChatFacade
 
                 if (streamFailure is not null)
                 {
+                    accumulator.FailRunningToolCalls(streamFailure);
+                    CommitAssistantMessageIfAny(accumulator, state, turn, historyCountBeforeSend);
+                    state.RecordError(turn, streamFailure.GetMessageRecursively());
+                    turnFinalized = true;
                     yield return Res.Fail(streamFailure.GetMessageRecursively());
                     break;
                 }
@@ -198,12 +203,10 @@ public sealed class ChatFacade
         }
         finally
         {
-            if (streamFailure is not null)
+            if (!turnFinalized)
             {
-                accumulator.FailRunningToolCalls(streamFailure);
+                CommitAssistantMessageIfAny(accumulator, state, turn, historyCountBeforeSend);
             }
-
-            CommitAssistantMessageIfAny(accumulator, state, turn, historyCountBeforeSend);
             await enumerator.DisposeAsync();
         }
 
@@ -251,6 +254,24 @@ public sealed class ChatFacade
         catch (KeyNotFoundException)
         {
             return AsyncEnumerableEmpty<Res<ChatStreamEvent>>();
+        }
+    }
+
+    /// <summary>
+    /// Records a UI-side generation failure against the latest turn when stream consumption itself fails.
+    /// </summary>
+    public Res RecordError(ChatSession state, string error)
+    {
+        try
+        {
+            ArgumentNullException.ThrowIfNull(state);
+            ArgumentException.ThrowIfNullOrWhiteSpace(error);
+            state.RecordError(error);
+            return Res.Ok();
+        }
+        catch (Exception ex)
+        {
+            return Res.Fail(ex.GetMessageRecursively());
         }
     }
 

@@ -18,6 +18,11 @@ public class AIChatMessage
     public required AIChatRole Role { get; init; }
 
     /// <summary>
+    /// Presentation kind for this transcript entry.
+    /// </summary>
+    public AIChatMessageKind Kind { get; init; } = AIChatMessageKind.Message;
+
+    /// <summary>
     /// Message content.
     /// </summary>
     public required string Content { get; set; }
@@ -90,6 +95,18 @@ public class AIChatMessage
             ModelName = modelName
         };
     }
+}
+
+/// <summary>
+/// Identifies how a chat transcript entry should be presented.
+/// </summary>
+public enum AIChatMessageKind
+{
+    /// <summary>A normal user, assistant, system, or tool message.</summary>
+    Message,
+
+    /// <summary>A generation failure retained in chronological transcript history.</summary>
+    Error
 }
 
 /// <summary>

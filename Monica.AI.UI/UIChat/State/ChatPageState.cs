@@ -134,7 +134,9 @@ public sealed partial class ChatPageState : IDisposable
     /// Per-request token usage records for the latest assistant message.
     /// </summary>
     public IReadOnlyList<AIChatRequestUsage> LatestRequestUsages
-        => CurrentMessages.LastOrDefault(message => message.Role == AIChatRole.Assistant)?.RequestUsages
+        => CurrentMessages.LastOrDefault(message =>
+               message.Role == AIChatRole.Assistant
+               && message.Kind == AIChatMessageKind.Message)?.RequestUsages
            ?? [];
 
     /// <summary>

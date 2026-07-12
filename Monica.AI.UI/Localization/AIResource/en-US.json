@@ -29,7 +29,19 @@
     "Actions": {
       "EnableDeepThinking": "Enable deep thinking",
       "DisableDeepThinking": "Disable deep thinking",
+      "Copy": "Copy",
+      "Edit": "Edit",
       "Retry": "Retry"
+    },
+    "Clipboard": {
+      "Copied": "Copied to clipboard",
+      "CopyFailed": "Failed to copy"
+    },
+    "Validation": {
+      "MessageRequired": "Message cannot be empty"
+    },
+    "Error": {
+      "Title": "Generation failed"
     },
     "Status": {
       "Current": "Current",
@@ -49,6 +61,7 @@
     },
     "Reasoning": {
       "Thinking": "Thinking...",
+      "Label": "Reasoning",
       "Duration": "Thought for {0:F1} seconds"
     },
     "Welcome": {
@@ -136,6 +149,8 @@
       "Cached": "Cached",
       "NoUsage": "No provider usage has been reported for the latest assistant message yet.",
       "Total": "Total",
+      "Summary": "{0} tokens",
+      "SummaryCached": "{0} tokens · {1} cached",
       "Column": {
         "Request": "Request",
         "Input": "Input",
@@ -188,6 +203,7 @@
     "Actions": {
       "Close": "Close",
       "Save": "Save",
+      "Update": "Update",
       "Cancel": "Cancel",
       "Confirm": "Confirm"
     }

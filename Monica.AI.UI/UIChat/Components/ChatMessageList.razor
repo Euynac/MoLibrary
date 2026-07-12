@@ -39,9 +39,16 @@
     {
         @foreach (var message in Messages)
         {
-            <ChatMessageItem Message="@message" EnableMarkdown="@EnableMarkdown"
-                             ToolDebugEnabled="@ToolDebugEnabled"
-                             OnEdit="@OnEditMessage" OnRetry="@OnRetryMessage" />
+            @if (message.Kind == AIChatMessageKind.Error)
+            {
+                <ChatErrorMessageItem Message="@message" OnRetry="@OnRetryMessage" />
+            }
+            else
+            {
+                <ChatMessageItem Message="@message" EnableMarkdown="@EnableMarkdown"
+                                 ToolDebugEnabled="@ToolDebugEnabled"
+                                 OnEdit="@OnEditMessage" OnRetry="@OnRetryMessage" />
+            }
         }
 
         @if (StreamingState != null)

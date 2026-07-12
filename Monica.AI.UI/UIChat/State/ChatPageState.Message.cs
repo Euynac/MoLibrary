@@ -53,10 +53,11 @@ public sealed partial class ChatPageState
         IsSending = true;
         SetupCancellationToken();
         NotifyStateChanged();
+        ChatSession? session = null;
 
         try
         {
-            var session = _sessionStore.GetSession(sessionId);
+            session = _sessionStore.GetSession(sessionId);
             if (session == null)
             {
                 SetPageError(_localizer["Error:Generic"]);
@@ -72,28 +73,31 @@ public sealed partial class ChatPageState
         }
         catch (OperationCanceledException)
         {
-            SetStreamError(_localizer["Error:RequestCancelled"]);
+            CompleteStream();
         }
         catch (HttpRequestException ex)
         {
-            SetStreamError($"{_localizer["Error:NetworkError"]}: {ex.Message}");
+            RecordStreamError(session, $"{_localizer["Error:NetworkError"]}: {ex.Message}");
         }
         catch (Exception ex)
         {
-            SetStreamError($"{_localizer["Error:Generic"]}: {ex.Message}");
+            RecordStreamError(session, $"{_localizer["Error:Generic"]}: {ex.Message}");
         }
     }
 
-    private void SetStreamError(string error)
+    private void RecordStreamError(ChatSession? session, string error)
     {
-        IsSending = false;
-        StreamingState = null;
-        SetError(error, canRetry: true);
-        _snackbar.Add(error, Severity.Error);
-        NotifyStateChanged();
+        if (session is null)
+        {
+            SetPageError(error);
+            return;
+        }
+
+        _ = _chatFacade.RecordError(session, error);
+        CompleteStream();
     }
 
-    private void CompleteStream(string _)
+    private void CompleteStream()
     {
         IsSending = false;
         StreamingState = null;
@@ -206,7 +210,7 @@ public sealed partial class ChatPageState
             {
                 if (result.IsFailed(out var error, out var streamEvent))
                 {
-                    SetStreamError(error.Message ?? _localizer["Error:Generic"]);
+                    RecordStreamError(session, error.Message ?? _localizer["Error:Generic"]);
                     return;
                 }
 
@@ -224,7 +228,7 @@ public sealed partial class ChatPageState
         }
         catch (Exception ex)
         {
-            SetStreamError($"{_localizer["Error:Generic"]}: {ex.Message}");
+            RecordStreamError(session, $"{_localizer["Error:Generic"]}: {ex.Message}");
             return;
         }
 
@@ -234,7 +238,7 @@ public sealed partial class ChatPageState
             return;
         }
 
-        CompleteStream(StreamingState?.Content ?? string.Empty);
+        CompleteStream();
     }
 
     private async Task ContinueAfterApprovalAsync(

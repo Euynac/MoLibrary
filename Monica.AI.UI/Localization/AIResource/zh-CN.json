@@ -29,7 +29,19 @@
     "Actions": {
       "EnableDeepThinking": "启用深度思考",
       "DisableDeepThinking": "禁用深度思考",
+      "Copy": "复制",
+      "Edit": "编辑",
       "Retry": "重试"
+    },
+    "Clipboard": {
+      "Copied": "已复制到剪贴板",
+      "CopyFailed": "复制失败"
+    },
+    "Validation": {
+      "MessageRequired": "消息不能为空"
+    },
+    "Error": {
+      "Title": "生成失败"
     },
     "Status": {
       "Current": "当前",
@@ -49,6 +61,7 @@
     },
     "Reasoning": {
       "Thinking": "思考中...",
+      "Label": "推理过程",
       "Duration": "思考了 {0:F1} 秒"
     },
     "Welcome": {
@@ -136,6 +149,8 @@
       "Cached": "缓存",
       "NoUsage": "最近一条助手消息尚未上报 Provider 用量。",
       "Total": "合计",
+      "Summary": "{0} 个 Token",
+      "SummaryCached": "{0} 个 Token · {1} 个缓存",
       "Column": {
         "Request": "请求",
         "Input": "输入",
@@ -188,6 +203,7 @@
     "Actions": {
       "Close": "关闭",
       "Save": "保存",
+      "Update": "更新",
       "Cancel": "取消",
       "Confirm": "确认"
     }
