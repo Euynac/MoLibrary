@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
 using Monica.AI.AgentCapabilities.Models;
+using Monica.AI.Chat.Models;
 using Monica.AI.Facades;
 using Monica.AI.KnowledgeBase.Facades;
 using Monica.AI.Models;
@@ -21,7 +22,7 @@ namespace Monica.AI.UI.UIChat.State;
 public sealed partial class ChatPageState : IDisposable
 {
     private readonly ChatFacade _chatFacade;
-    private readonly ChatSessionStore _sessionStore;
+    private readonly ChatSessionWorkspace _workspace;
     private readonly ProviderFacade _providerFacade;
     private readonly AgentCapabilityFacade _capabilityFacade;
     private readonly ModuleAIUIOption _options;
@@ -37,7 +38,7 @@ public sealed partial class ChatPageState : IDisposable
     /// </summary>
     public ChatPageState(
         ChatFacade chatFacade,
-        ChatSessionStore sessionStore,
+        ChatSessionWorkspace workspace,
         ProviderFacade providerFacade,
         AgentCapabilityFacade capabilityFacade,
         IOptions<ModuleAIUIOption> options,
@@ -48,7 +49,7 @@ public sealed partial class ChatPageState : IDisposable
         IBrowserStorage browserStorage)
     {
         _chatFacade = chatFacade;
-        _sessionStore = sessionStore;
+        _workspace = workspace;
         _providerFacade = providerFacade;
         _capabilityFacade = capabilityFacade;
         _options = options.Value;
@@ -77,12 +78,17 @@ public sealed partial class ChatPageState : IDisposable
     /// <summary>
     /// All available chat sessions.
     /// </summary>
-    public IReadOnlyList<ChatSession> Sessions => _sessionStore.Sessions;
+    public IReadOnlyList<ChatSessionSummary> Sessions => _workspace.Sessions;
 
     /// <summary>
     /// Current chat session identifier.
     /// </summary>
-    public string? CurrentSessionId => _sessionStore.CurrentSessionId;
+    public string? CurrentSessionId => _workspace.CurrentSessionId;
+
+    /// <summary>
+    /// Whether durable chat history is being restored from the browser.
+    /// </summary>
+    public bool IsHistoryLoading => _workspace.IsLoading;
 
     /// <summary>
     /// Current provider display name shown by the page.
@@ -216,6 +222,7 @@ public sealed partial class ChatPageState : IDisposable
         InitializeDefaultProvider();
         InitializeKnowledgeBaseSelection();
         await LoadPersistedPreferencesAsync();
+        await _workspace.InitializeAsync();
         await LoadKnowledgeBasesAsync();
         await LoadCapabilityCandidatesAsync();
         await EnsureSessionExistsAsync();
@@ -275,8 +282,8 @@ public sealed partial class ChatPageState : IDisposable
             return;
         }
 
-        _sessionStore.CurrentSessionChanged += OnCurrentSessionChanged;
-        _sessionStore.SessionsChanged += OnSessionsChanged;
+        _workspace.StateChanged += OnWorkspaceStateChanged;
+        _workspace.WarningRaised += OnWorkspaceWarning;
         _isAttached = true;
     }
 
@@ -326,20 +333,31 @@ public sealed partial class ChatPageState : IDisposable
         SelectedKnowledgeBaseIds = new List<string>(_options.DefaultKnowledgeBaseIds);
     }
 
-    private void OnCurrentSessionChanged()
+    private void OnWorkspaceStateChanged()
     {
         UpdateCurrentSession();
         NotifyStateChanged();
     }
 
-    private void OnSessionsChanged()
+    private void OnWorkspaceWarning(ChatHistoryWorkspaceWarning warning)
     {
-        NotifyStateChanged();
+        var message = warning.Kind switch
+        {
+            ChatHistoryWorkspaceWarningKind.LoadFailed => _localizer["Chat:History:Warnings:LoadFailed"],
+            ChatHistoryWorkspaceWarningKind.RevisionConflict => _localizer["Chat:History:Warnings:RevisionConflict"],
+            ChatHistoryWorkspaceWarningKind.QuotaExceeded => _localizer["Chat:History:Warnings:QuotaExceeded"],
+            ChatHistoryWorkspaceWarningKind.StorageUnavailable => _localizer["Chat:History:Warnings:StorageUnavailable"],
+            ChatHistoryWorkspaceWarningKind.SessionsPruned => _localizer["Chat:History:Warnings:SessionsPruned"],
+            ChatHistoryWorkspaceWarningKind.SessionUnavailable => _localizer["Chat:History:Warnings:SessionUnavailable"],
+            ChatHistoryWorkspaceWarningKind.RuntimeFallback => _localizer["Chat:History:Warnings:RuntimeFallback"],
+            _ => _localizer["Error:Generic"]
+        };
+        _snackbar.Add(message, Severity.Warning);
     }
 
     private void UpdateCurrentSession()
     {
-        var currentSession = _sessionStore.CurrentSession;
+        var currentSession = _workspace.CurrentSession;
         CurrentSession = currentSession;
 
         if (currentSession == null)
@@ -352,7 +370,16 @@ public sealed partial class ChatPageState : IDisposable
         {
             CurrentProviderName = provider.DisplayName;
             CurrentProviderModels = ChatProviderResolver.GetChatModels(provider);
+            SupportsReasoning = ChatProviderResolver.GetReasoningSupport(
+                Providers,
+                currentSession.ProviderId,
+                currentSession.ModelName);
+            return;
         }
+
+        CurrentProviderName = currentSession.ProviderId;
+        CurrentProviderModels = [];
+        SupportsReasoning = false;
     }
 
     private void ClearError()
@@ -409,8 +436,8 @@ public sealed partial class ChatPageState : IDisposable
 
         if (_isAttached)
         {
-            _sessionStore.CurrentSessionChanged -= OnCurrentSessionChanged;
-            _sessionStore.SessionsChanged -= OnSessionsChanged;
+            _workspace.StateChanged -= OnWorkspaceStateChanged;
+            _workspace.WarningRaised -= OnWorkspaceWarning;
             _isAttached = false;
         }
     }

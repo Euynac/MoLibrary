@@ -4,8 +4,8 @@
 
 <div class="session-item-wrapper">
     <MudListItem T="string"
-                 Class="@($"session-item {(IsSelected ? "selected" : "")}")"
-                 OnClick="@HandleClick">
+                 Value="@Session.SessionId"
+                 Class="session-item">
         <ChildContent>
             <div class="session-content">
                 <div class="session-info">
@@ -14,26 +14,23 @@
                         @GetTimeDisplay()
                     </MudText>
                 </div>
-                <MudIconButton Icon="@Icons.Material.Filled.Delete"
-                               Size="Size.Small"
-                               Color="Color.Error"
-                               Class="delete-button"
-                               OnClick="@HandleDelete" />
+                <span class="delete-action" @onclick:stopPropagation="true">
+                    <MudTooltip Text="@L["Session:Delete"]">
+                        <MudIconButton Icon="@Icons.Material.Filled.Delete"
+                                       Size="Size.Small"
+                                       Color="Color.Error"
+                                       aria-label="@L["Session:Delete"]"
+                                       OnClick="@HandleDelete" />
+                    </MudTooltip>
+                </span>
             </div>
         </ChildContent>
     </MudListItem>
 </div>
 
 @code {
-    [Parameter] public required ChatSession Session { get; set; }
-    [Parameter] public bool IsSelected { get; set; }
-    [Parameter] public EventCallback OnClick { get; set; }
+    [Parameter] public required ChatSessionSummary Session { get; set; }
     [Parameter] public EventCallback OnDelete { get; set; }
-
-    private async Task HandleClick()
-    {
-        await OnClick.InvokeAsync();
-    }
 
     private async Task HandleDelete(MouseEventArgs e)
     {

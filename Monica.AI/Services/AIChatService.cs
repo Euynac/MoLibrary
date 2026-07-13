@@ -1,11 +1,14 @@
 using System.Runtime.CompilerServices;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using Microsoft.Agents.AI;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Options;
 using Monica.AI.AgentCapabilities.Abstractions;
 using Monica.AI.AgentCapabilities.Models;
 using Monica.AI.Abstractions;
+using Monica.AI.Chat.Models;
+using Monica.AI.Chat.Services;
 using Monica.AI.Models;
 using Monica.AI.Models.Internal;
 using Monica.AI.Services.Support;
@@ -25,6 +28,8 @@ internal sealed class AIChatService(
     IAgentCapabilityStateStore capabilityStateStore,
     AgentStreamingCoordinator streamingCoordinator)
 {
+    private const string TOOL_APPROVAL_STATE_KEY = "toolApprovalState";
+    private const string AUTO_APPROVED_FUNCTION_CALLS_STATE_KEY = "_autoApprovedFunctionCalls";
     private readonly ModuleAIOption _options = options.Value;
 
     /// <summary>
@@ -68,6 +73,119 @@ internal sealed class AIChatService(
             runtimeContext ?? AIChatRuntimeContext.Empty);
 
         return state;
+    }
+
+    /// <summary>Restores the visible transcript without constructing an agent runtime.</summary>
+    public ChatSession RestoreSession(
+        ChatSessionSnapshot snapshot,
+        AIChatRuntimeContext? runtimeContext = null,
+        string? expectedSessionId = null)
+    {
+        ArgumentNullException.ThrowIfNull(snapshot);
+        ChatSessionSnapshotValidator.Validate(snapshot, expectedSessionId);
+
+        return new ChatSession(
+            snapshot.SessionId,
+            snapshot.Title,
+            snapshot.CreatedAt,
+            snapshot.UpdatedAt,
+            snapshot.Settings,
+            snapshot.Turns.Select(ChatSessionSnapshotMapper.FromSnapshot),
+            snapshot.AgentSessionState,
+            snapshot.AgentHistoryMessageCount,
+            snapshot.Revision,
+            runtimeContext ?? AIChatRuntimeContext.Empty);
+    }
+
+    /// <summary>Captures a complete durable snapshot without activating a lazy session.</summary>
+    public async Task<ChatSessionSnapshot> CreateSnapshotAsync(
+        ChatSession state,
+        CancellationToken ct = default)
+    {
+        ArgumentNullException.ThrowIfNull(state);
+
+        JsonElement? serializedAgentSession = state.SerializedAgentSession;
+        if (state.IsRuntimeActive)
+        {
+            serializedAgentSession = await state.Agent.SerializeSessionAsync(
+                state.AgentSession,
+                cancellationToken: ct);
+        }
+
+        return new ChatSessionSnapshot
+        {
+            SessionId = state.SessionId,
+            Title = state.Title,
+            CreatedAt = state.CreatedAt,
+            UpdatedAt = state.UpdatedAt,
+            Settings = state.Settings,
+            Turns = state.Turns.Select(ChatSessionSnapshotMapper.ToSnapshot).ToArray(),
+            AgentSessionState = RemovePendingApprovalState(serializedAgentSession),
+            AgentHistoryMessageCount = state.MessageCount,
+            Revision = state.PersistenceRevision
+        };
+    }
+
+    /// <summary>Constructs and restores the private runtime on first use.</summary>
+    public async Task ActivateSessionAsync(ChatSession state, CancellationToken ct = default)
+    {
+        ArgumentNullException.ThrowIfNull(state);
+        if (state.IsRuntimeActive)
+        {
+            return;
+        }
+
+        var provider = ResolveProvider(state.ProviderId);
+        var capabilityState = await capabilityStateStore.LoadAsync(ct);
+        var runtime = await CreateAgentAsync(
+            provider.GetChatClient(state.ModelName),
+            state.SystemPrompt,
+            capabilityState,
+            ct);
+
+        try
+        {
+            var usedTranscriptFallback = false;
+            var rebuiltFromTranscript = false;
+            AgentSession agentSession;
+            if (!state.NeedsRecreation && state.SerializedAgentSession is { } serializedState)
+            {
+                try
+                {
+                    agentSession = await runtime.Agent.DeserializeSessionAsync(
+                        serializedState,
+                        cancellationToken: ct);
+                }
+                catch (Exception ex) when (IsRecoverableSessionStateFailure(ex))
+                {
+                    agentSession = await CreateTranscriptFallbackSessionAsync(runtime.Agent, state, ct);
+                    usedTranscriptFallback = true;
+                    rebuiltFromTranscript = true;
+                }
+            }
+            else
+            {
+                agentSession = await CreateTranscriptFallbackSessionAsync(runtime.Agent, state, ct);
+                usedTranscriptFallback = state.SerializedAgentSession is null;
+                rebuiltFromTranscript = true;
+            }
+
+            if (rebuiltFromTranscript)
+            {
+                state.RebaseHistoryCheckpointsForTranscript();
+            }
+
+            state.ActivateRuntime(
+                runtime,
+                agentSession,
+                capabilityState.Revision,
+                usedTranscriptFallback);
+        }
+        catch
+        {
+            await runtime.DisposeAsync();
+            throw;
+        }
     }
 
     /// <summary>
@@ -142,6 +260,7 @@ internal sealed class AIChatService(
         ChatMessage input,
         [EnumeratorCancellation] CancellationToken ct)
     {
+        await ActivateSessionAsync(state, ct);
         var capabilityState = await capabilityStateStore.LoadAsync(ct);
         if (state.CapabilityRevision != capabilityState.Revision)
         {
@@ -317,5 +436,54 @@ internal sealed class AIChatService(
         // Preserve local history when the serialized session did not carry it,
         // while keeping a deserialized Responses previous_response_id intact.
         newProvider.SetMessages(newSession, [.. oldHistory]);
+    }
+
+    private static async Task<AgentSession> CreateTranscriptFallbackSessionAsync(
+        AIAgent agent,
+        ChatSession state,
+        CancellationToken ct)
+    {
+        var session = await agent.CreateSessionAsync(ct);
+        var historyProvider = agent.GetService<InMemoryChatHistoryProvider>();
+        if (historyProvider is not null)
+        {
+            historyProvider.SetMessages(
+                session,
+                state.Turns.SelectMany(static turn => GetVisibleHistoryMessages(turn)).ToList());
+        }
+
+        return session;
+    }
+
+    private static IEnumerable<ChatMessage> GetVisibleHistoryMessages(ChatTurn turn)
+    {
+        yield return turn.UserMessage.ToChatMessage();
+        if (turn.AssistantMessage is not null)
+        {
+            yield return turn.AssistantMessage.ToChatMessage();
+        }
+    }
+
+    private static bool IsRecoverableSessionStateFailure(Exception ex)
+        => ex is ArgumentException
+            or InvalidOperationException
+            or JsonException
+            or NotSupportedException;
+
+    private static JsonElement? RemovePendingApprovalState(JsonElement? serializedState)
+    {
+        if (serializedState is not { ValueKind: JsonValueKind.Object } state)
+        {
+            return serializedState?.Clone();
+        }
+
+        var root = JsonNode.Parse(state.GetRawText()) as JsonObject;
+        if (root?["stateBag"] is JsonObject stateBag)
+        {
+            stateBag.Remove(TOOL_APPROVAL_STATE_KEY);
+            stateBag.Remove(AUTO_APPROVED_FUNCTION_CALLS_STATE_KEY);
+        }
+
+        return root is null ? state.Clone() : JsonSerializer.SerializeToElement(root);
     }
 }

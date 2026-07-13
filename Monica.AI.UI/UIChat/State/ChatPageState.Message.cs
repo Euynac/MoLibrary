@@ -29,21 +29,29 @@ public sealed partial class ChatPageState
         }
 
         var resolvedSessionId = sessionId!;
-        _sessionStore.UpdateSession(
-            resolvedSessionId,
-            session =>
-            {
-                _ = _chatFacade.UpdateSettings(
-                    session,
-                    session.Settings with { ReasoningEnabled = ReasoningEnabled });
-                _ = _chatFacade.UpdateRuntimeContext(
-                    session,
-                    BuildRuntimeContext(SelectedKnowledgeBaseIds));
-                if (session.Messages.Count == 0)
-                {
-                    _ = _chatFacade.Rename(session, ChatProviderResolver.GenerateSessionTitle(message));
-                }
-            });
+        var session = _workspace.GetLoadedSession(resolvedSessionId);
+        if (session is null)
+        {
+            SetPageError(_localizer["Error:Generic"]);
+            return;
+        }
+
+        if (!CanContinueSession(session))
+        {
+            _snackbar.Add(_localizer["Chat:History:Warnings:ProviderUnavailable"], Severity.Warning);
+            return;
+        }
+
+        _ = _chatFacade.UpdateSettings(
+            session,
+            session.Settings with { ReasoningEnabled = ReasoningEnabled });
+        _ = _chatFacade.UpdateRuntimeContext(
+            session,
+            BuildRuntimeContext(SelectedKnowledgeBaseIds));
+        if (session.Messages.Count == 0)
+        {
+            _ = _chatFacade.Rename(session, ChatProviderResolver.GenerateSessionTitle(message));
+        }
 
         await StartStreamingMessageAsync(resolvedSessionId, message);
     }
@@ -57,7 +65,7 @@ public sealed partial class ChatPageState
 
         try
         {
-            session = _sessionStore.GetSession(sessionId);
+            session = _workspace.GetLoadedSession(sessionId);
             if (session == null)
             {
                 SetPageError(_localizer["Error:Generic"]);
@@ -73,19 +81,19 @@ public sealed partial class ChatPageState
         }
         catch (OperationCanceledException)
         {
-            CompleteStream();
+            await CompleteStreamAsync(session);
         }
         catch (HttpRequestException ex)
         {
-            RecordStreamError(session, $"{_localizer["Error:NetworkError"]}: {ex.Message}");
+            await RecordStreamErrorAsync(session, $"{_localizer["Error:NetworkError"]}: {ex.Message}");
         }
         catch (Exception ex)
         {
-            RecordStreamError(session, $"{_localizer["Error:Generic"]}: {ex.Message}");
+            await RecordStreamErrorAsync(session, $"{_localizer["Error:Generic"]}: {ex.Message}");
         }
     }
 
-    private void RecordStreamError(ChatSession? session, string error)
+    private async Task RecordStreamErrorAsync(ChatSession? session, string error)
     {
         if (session is null)
         {
@@ -94,10 +102,10 @@ public sealed partial class ChatPageState
         }
 
         _ = _chatFacade.RecordError(session, error);
-        CompleteStream();
+        await CompleteStreamAsync(session);
     }
 
-    private void CompleteStream()
+    private async Task CompleteStreamAsync(ChatSession? session)
     {
         IsSending = false;
         StreamingState = null;
@@ -105,6 +113,15 @@ public sealed partial class ChatPageState
         CancellationTokenSource = null;
         CancellationToken = CancellationToken.None;
         UpdateCurrentSession();
+        if (session is not null)
+        {
+            await _workspace.SaveSessionAsync(session);
+            if (session.RestorationState == ChatSessionRestorationState.TranscriptFallback)
+            {
+                _snackbar.Add(_localizer["Chat:History:Warnings:RuntimeFallback"], Severity.Warning);
+            }
+        }
+
         NotifyStateChanged();
     }
 
@@ -142,17 +159,16 @@ public sealed partial class ChatPageState
         IsSending = true;
         SetupCancellationToken();
 
-        _sessionStore.UpdateSession(
-            _sessionStore.CurrentSessionId!,
-            session => _ = _chatFacade.UpdateSettings(
-                session,
-                session.Settings with { ReasoningEnabled = ReasoningEnabled }));
-        var session = _sessionStore.CurrentSession;
+        var session = _workspace.CurrentSession;
         if (session == null)
         {
             SetPageError(_localizer["Error:Generic"]);
             return;
         }
+
+        _ = _chatFacade.UpdateSettings(
+            session,
+            session.Settings with { ReasoningEnabled = ReasoningEnabled });
 
         StreamingState = new ChatStreamingState();
         UpdateCurrentSession();
@@ -173,17 +189,16 @@ public sealed partial class ChatPageState
         IsSending = true;
         SetupCancellationToken();
 
-        _sessionStore.UpdateSession(
-            _sessionStore.CurrentSessionId!,
-            session => _ = _chatFacade.UpdateSettings(
-                session,
-                session.Settings with { ReasoningEnabled = ReasoningEnabled }));
-        var session = _sessionStore.CurrentSession;
+        var session = _workspace.CurrentSession;
         if (session == null)
         {
             SetPageError(_localizer["Error:Generic"]);
             return;
         }
+
+        _ = _chatFacade.UpdateSettings(
+            session,
+            session.Settings with { ReasoningEnabled = ReasoningEnabled });
 
         StreamingState = new ChatStreamingState();
         UpdateCurrentSession();
@@ -210,7 +225,7 @@ public sealed partial class ChatPageState
             {
                 if (result.IsFailed(out var error, out var streamEvent))
                 {
-                    RecordStreamError(session, error.Message ?? _localizer["Error:Generic"]);
+                    await RecordStreamErrorAsync(session, error.Message ?? _localizer["Error:Generic"]);
                     return;
                 }
 
@@ -228,7 +243,7 @@ public sealed partial class ChatPageState
         }
         catch (Exception ex)
         {
-            RecordStreamError(session, $"{_localizer["Error:Generic"]}: {ex.Message}");
+            await RecordStreamErrorAsync(session, $"{_localizer["Error:Generic"]}: {ex.Message}");
             return;
         }
 
@@ -238,7 +253,7 @@ public sealed partial class ChatPageState
             return;
         }
 
-        CompleteStream();
+        await CompleteStreamAsync(session);
     }
 
     private async Task ContinueAfterApprovalAsync(
@@ -270,5 +285,12 @@ public sealed partial class ChatPageState
                 approved,
                 reason,
                 CancellationToken));
+    }
+
+    private bool CanContinueSession(ChatSession session)
+    {
+        var provider = ChatProviderResolver.FindProvider(Providers, session.ProviderId);
+        return provider is not null
+               && ChatProviderResolver.IsChatModelValid(provider, session.ModelName);
     }
 }

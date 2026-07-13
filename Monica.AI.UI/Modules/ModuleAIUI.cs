@@ -1,6 +1,11 @@
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Options;
+using Monica.AI.Chat.Abstractions;
 using Monica.AI.UI.Localization;
 using Monica.AI.UI.Pages;
+using Monica.AI.UI.UIChat.Models;
+using Monica.AI.UI.UIChat.Providers.Browser;
 using Monica.AI.UI.UIChat.State;
 using Monica.AI.UI.UIChat.Support;
 using Monica.Core;
@@ -43,7 +48,7 @@ public class ModuleAIUI(ModuleAIUIOption option)
     {
         // Register UI services
         services.AddScoped<ChatPageState>();
-        services.AddScoped<ChatSessionStore>();
+        services.AddScoped<ChatSessionWorkspace>();
     }
 
     public override void ClaimDependencies()
@@ -118,6 +123,36 @@ public class ModuleAIUI(ModuleAIUIOption option)
 public class ModuleAIUIGuide
     : ModuleGuide<ModuleAIUI, ModuleAIUIOption, ModuleAIUIGuide>
 {
+    private const string BROWSER_CHAT_HISTORY_KEY = nameof(BROWSER_CHAT_HISTORY_KEY);
+
+    /// <summary>
+    /// Enables durable chat history in the current browser profile.
+    /// </summary>
+    /// <param name="configure">Optional browser retention configuration.</param>
+    /// <returns>The current guide instance.</returns>
+    /// <remarks>
+    /// This is an explicit opt-in because snapshots contain full transcripts and opaque Agent
+    /// Framework state. Data remains local to the browser profile and is not suitable for
+    /// authenticated multi-user or cross-device storage.
+    /// </remarks>
+    public ModuleAIUIGuide UseBrowserChatHistory(Action<BrowserChatHistoryOptions>? configure = null)
+    {
+        var options = new BrowserChatHistoryOptions();
+        configure?.Invoke(options);
+        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(options.MaxSessions);
+
+        ConfigureServices(context =>
+        {
+            context.Services.RemoveAll<IChatHistoryProvider>();
+            context.Services.RemoveAll<IChatHistoryPartitionResolver>();
+            context.Services.AddScoped<IBrowserChatHistoryLock, BrowserChatHistoryWebLock>();
+            context.Services.AddScoped<IChatHistoryProvider, BrowserChatHistoryProvider>();
+            context.Services.AddScoped<IChatHistoryPartitionResolver, BrowserChatHistoryPartitionResolver>();
+            context.Services.AddSingleton<IOptions<BrowserChatHistoryOptions>>(Options.Create(options));
+        }, key: BROWSER_CHAT_HISTORY_KEY);
+
+        return this;
+    }
 }
 
 /// <summary>

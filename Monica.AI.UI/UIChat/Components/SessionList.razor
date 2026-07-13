@@ -8,17 +8,35 @@
                    Color="Color.Primary"
                    StartIcon="@Icons.Material.Filled.Add"
                    Class="new-chat-button"
+                   Disabled="@IsLoading"
                    OnClick="@HandleNewSession">
             @L["Session:NewChat"]
         </MudButton>
     </div>
 
-    <div class="session-subtitle">
+    <div class="session-subtitle-row">
         <MudText Typo="Typo.caption">@L["Session:RecentSessions"]</MudText>
+        @if (!IsLoading && Sessions.Count > 0)
+        {
+            <MudTooltip Text="@L["Chat:History:Clear:Action"]">
+                <MudIconButton Icon="@Icons.Material.Filled.DeleteSweep"
+                               Size="Size.Small"
+                               Color="Color.Error"
+                               aria-label="@L["Chat:History:Clear:Action"]"
+                               OnClick="@HandleClearSessions" />
+            </MudTooltip>
+        }
     </div>
 
-    <div class="session-list-content">
-        @if (Sessions.Count == 0)
+    <div class="session-list-content" aria-busy="@IsLoading.ToString().ToLowerInvariant()">
+        @if (IsLoading)
+        {
+            <div class="session-loading" role="status">
+                <MudProgressCircular Indeterminate="true" Color="Color.Primary" Size="Size.Small" />
+                <MudText Typo="Typo.body2">@L["Chat:History:Loading"]</MudText>
+            </div>
+        }
+        else if (Sessions.Count == 0)
         {
             <div class="empty-sessions">
                 <MudText Typo="Typo.body2" Color="Color.Default">@L["Session:NoConversations"]</MudText>
@@ -26,13 +44,15 @@
         }
         else
         {
-            <MudList T="string" Dense="true" Class="session-list-items">
+            <MudList T="string"
+                     Dense="true"
+                     Class="session-list-items"
+                     SelectedValue="@CurrentSessionId"
+                     SelectedValueChanged="@HandleSelectSession">
                 @foreach (var session in Sessions)
                 {
                     <SessionListItem
                         Session="@session"
-                        IsSelected="@(session.SessionId == CurrentSessionId)"
-                        OnClick="@(() => HandleSelectSession(session.SessionId))"
                         OnDelete="@(() => HandleDeleteSession(session.SessionId))" />
                 }
             </MudList>
@@ -41,24 +61,34 @@
 </div>
 
 @code {
-    [Parameter] public IReadOnlyList<ChatSession> Sessions { get; set; } = [];
+    [Parameter] public IReadOnlyList<ChatSessionSummary> Sessions { get; set; } = [];
     [Parameter] public string? CurrentSessionId { get; set; }
+    [Parameter] public bool IsLoading { get; set; }
     [Parameter] public EventCallback OnNewSession { get; set; }
     [Parameter] public EventCallback<string> OnSelectSession { get; set; }
     [Parameter] public EventCallback<string> OnDeleteSession { get; set; }
+    [Parameter] public EventCallback OnClearSessions { get; set; }
 
     private async Task HandleNewSession()
     {
         await OnNewSession.InvokeAsync();
     }
 
-    private async Task HandleSelectSession(string sessionId)
+    private async Task HandleSelectSession(string? sessionId)
     {
-        await OnSelectSession.InvokeAsync(sessionId);
+        if (!IsLoading && sessionId is not null && sessionId != CurrentSessionId)
+        {
+            await OnSelectSession.InvokeAsync(sessionId);
+        }
     }
 
     private async Task HandleDeleteSession(string sessionId)
     {
         await OnDeleteSession.InvokeAsync(sessionId);
+    }
+
+    private async Task HandleClearSessions()
+    {
+        await OnClearSessions.InvokeAsync();
     }
 }

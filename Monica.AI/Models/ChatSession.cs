@@ -1,3 +1,4 @@
+using System.Text.Json;
 using Microsoft.Agents.AI;
 using Microsoft.Extensions.AI;
 using Monica.AI.Models.Internal;
@@ -45,7 +46,7 @@ public sealed record ChatTurn
     public IReadOnlyList<AIChatMessage> ErrorMessages => _errorMessages;
 
     /// <summary>Agent history size before this turn started.</summary>
-    internal int HistoryCheckpoint { get; }
+    internal int HistoryCheckpoint { get; private set; }
 
     internal IEnumerable<AIChatMessage> Messages
     {
@@ -79,6 +80,32 @@ public sealed record ChatTurn
         });
         return true;
     }
+
+    internal void RestoreErrors(IEnumerable<AIChatMessage> errors)
+    {
+        _errorMessages.AddRange(errors);
+    }
+
+    internal void RebaseHistoryCheckpoint(int historyCheckpoint)
+    {
+        HistoryCheckpoint = historyCheckpoint;
+    }
+}
+
+/// <summary>Describes how a restored session's Agent Framework state was activated.</summary>
+public enum ChatSessionRestorationState
+{
+    /// <summary>The session was created in the current process and did not require restoration.</summary>
+    NotRequired,
+
+    /// <summary>The visible transcript is loaded while runtime restoration remains deferred.</summary>
+    Pending,
+
+    /// <summary>The serialized Agent Framework session was restored successfully.</summary>
+    Restored,
+
+    /// <summary>Serialized state was unavailable or incompatible, so visible history was rebuilt.</summary>
+    TranscriptFallback
 }
 
 /// <summary>
@@ -89,8 +116,10 @@ public sealed class ChatSession : IAsyncDisposable
     private readonly List<ChatTurn> _turns = [];
     private readonly Dictionary<string, ToolApprovalRequestContent> _pendingApprovals = new(StringComparer.Ordinal);
     private readonly Dictionary<string, string> _approvalIdsByRequest = new(StringComparer.Ordinal);
-    private AIChatAgentRuntime _runtime;
-    private AgentSession _agentSession;
+    private AIChatAgentRuntime? _runtime;
+    private AgentSession? _agentSession;
+    private JsonElement? _serializedAgentSession;
+    private int _historyMessageCount;
     private long _capabilityRevision;
     private bool _needsRecreation;
     private bool _disposed;
@@ -112,6 +141,39 @@ public sealed class ChatSession : IAsyncDisposable
         SessionId = Guid.NewGuid().ToString("N");
         CreatedAt = DateTimeOffset.UtcNow;
         UpdatedAt = CreatedAt;
+        RestorationState = ChatSessionRestorationState.NotRequired;
+        _historyMessageCount = ChatHistory?.Count ?? 0;
+    }
+
+    internal ChatSession(
+        string sessionId,
+        string title,
+        DateTimeOffset createdAt,
+        DateTimeOffset updatedAt,
+        ChatSessionSettings settings,
+        IEnumerable<ChatTurn> turns,
+        JsonElement? serializedAgentSession,
+        int historyMessageCount,
+        long persistenceRevision,
+        AIChatRuntimeContext runtimeContext)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(sessionId);
+        ArgumentException.ThrowIfNullOrWhiteSpace(title);
+        ArgumentNullException.ThrowIfNull(settings);
+        ArgumentNullException.ThrowIfNull(turns);
+        ArgumentOutOfRangeException.ThrowIfNegative(historyMessageCount);
+
+        SessionId = sessionId;
+        Title = title;
+        CreatedAt = createdAt;
+        UpdatedAt = updatedAt;
+        Settings = settings;
+        RuntimeContext = runtimeContext;
+        _turns.AddRange(turns);
+        _serializedAgentSession = serializedAgentSession?.Clone();
+        _historyMessageCount = historyMessageCount;
+        PersistenceRevision = persistenceRevision;
+        RestorationState = ChatSessionRestorationState.Pending;
     }
 
     /// <summary>Unique session identifier.</summary>
@@ -125,6 +187,9 @@ public sealed class ChatSession : IAsyncDisposable
 
     /// <summary>Last transcript or settings update time.</summary>
     public DateTimeOffset UpdatedAt { get; private set; }
+
+    /// <summary>Revision assigned by the configured history provider.</summary>
+    public long PersistenceRevision { get; private set; }
 
     /// <summary>Current read-only session configuration.</summary>
     public ChatSessionSettings Settings { get; private set; }
@@ -144,6 +209,12 @@ public sealed class ChatSession : IAsyncDisposable
     /// <summary>Runtime context made available to tools during an invocation.</summary>
     public AIChatRuntimeContext RuntimeContext { get; private set; }
 
+    /// <summary>Current lazy runtime restoration state.</summary>
+    public ChatSessionRestorationState RestorationState { get; private set; }
+
+    /// <summary>Whether the private Agent Framework runtime has been activated.</summary>
+    public bool IsRuntimeActive => _runtime is not null;
+
     /// <summary>Owned conversation turns in chronological order.</summary>
     public IReadOnlyList<ChatTurn> Turns => _turns;
 
@@ -155,14 +226,18 @@ public sealed class ChatSession : IAsyncDisposable
 
     internal bool NeedsRecreation => _needsRecreation;
 
-    internal AIAgent Agent => _runtime.Agent;
+    internal AIAgent Agent => _runtime?.Agent
+        ?? throw new InvalidOperationException("The chat session runtime has not been activated.");
 
-    internal AgentSession AgentSession => _agentSession;
+    internal AgentSession AgentSession => _agentSession
+        ?? throw new InvalidOperationException("The chat session runtime has not been activated.");
+
+    internal JsonElement? SerializedAgentSession => _serializedAgentSession?.Clone();
 
     internal IList<ChatMessage>? ChatHistory
-        => Agent.GetService<InMemoryChatHistoryProvider>()?.GetMessages(_agentSession);
+        => _runtime?.Agent.GetService<InMemoryChatHistoryProvider>()?.GetMessages(_agentSession);
 
-    internal int MessageCount => ChatHistory?.Count ?? 0;
+    internal int MessageCount => ChatHistory?.Count ?? _historyMessageCount;
 
     internal void ApplySettings(ChatSessionSettings settings)
     {
@@ -297,20 +372,74 @@ public sealed class ChatSession : IAsyncDisposable
         var previousRuntime = _runtime;
         _runtime = runtime;
         _agentSession = agentSession;
+        _serializedAgentSession = null;
+        _historyMessageCount = ChatHistory?.Count ?? _historyMessageCount;
         _capabilityRevision = capabilityRevision;
         _needsRecreation = false;
         Touch();
-        await previousRuntime.DisposeAsync();
+        if (previousRuntime is not null)
+        {
+            await previousRuntime.DisposeAsync();
+        }
+    }
+
+    internal void ActivateRuntime(
+        AIChatAgentRuntime runtime,
+        AgentSession agentSession,
+        long capabilityRevision,
+        bool usedTranscriptFallback)
+    {
+        ObjectDisposedException.ThrowIf(_disposed, this);
+        if (_runtime is not null)
+        {
+            throw new InvalidOperationException("The chat session runtime is already active.");
+        }
+
+        _runtime = runtime;
+        _agentSession = agentSession;
+        _serializedAgentSession = null;
+        _capabilityRevision = capabilityRevision;
+        _needsRecreation = false;
+        _historyMessageCount = ChatHistory?.Count ?? _historyMessageCount;
+        RestorationState = usedTranscriptFallback
+            ? ChatSessionRestorationState.TranscriptFallback
+            : ChatSessionRestorationState.Restored;
+    }
+
+    internal void RebaseHistoryCheckpointsForTranscript()
+    {
+        var checkpoint = 0;
+        foreach (var turn in _turns)
+        {
+            turn.RebaseHistoryCheckpoint(checkpoint);
+            checkpoint++;
+            if (turn.AssistantMessage is not null)
+            {
+                checkpoint++;
+            }
+        }
+
+        _historyMessageCount = checkpoint;
     }
 
     internal void ClearHistory()
     {
         ChatHistory?.Clear();
+        _serializedAgentSession = null;
+        _historyMessageCount = 0;
         _turns.Clear();
+        _pendingApprovals.Clear();
+        _approvalIdsByRequest.Clear();
         Touch();
     }
 
     internal void MarkUpdated() => Touch();
+
+    internal void MarkPersisted(long revision)
+    {
+        ArgumentOutOfRangeException.ThrowIfNegative(revision);
+        PersistenceRevision = revision;
+    }
 
     internal string StorePendingApproval(ToolApprovalRequestContent request)
     {
@@ -338,6 +467,11 @@ public sealed class ChatSession : IAsyncDisposable
 
     private void Rewind(int turnIndex)
     {
+        if (_runtime is null)
+        {
+            throw new InvalidOperationException("Activate the chat session runtime before editing history.");
+        }
+
         var checkpoint = _turns[turnIndex].HistoryCheckpoint;
         var history = ChatHistory;
         if (history is not null)
@@ -349,6 +483,7 @@ public sealed class ChatSession : IAsyncDisposable
         }
 
         _turns.RemoveRange(turnIndex, _turns.Count - turnIndex);
+        _historyMessageCount = history?.Count ?? checkpoint;
         Touch();
     }
 
@@ -365,7 +500,10 @@ public sealed class ChatSession : IAsyncDisposable
         _disposed = true;
         _pendingApprovals.Clear();
         _approvalIdsByRequest.Clear();
-        await _runtime.DisposeAsync();
+        if (_runtime is not null)
+        {
+            await _runtime.DisposeAsync();
+        }
         GC.SuppressFinalize(this);
     }
 }

@@ -9,6 +9,29 @@ function getStorage(storageType) {
 }
 
 /**
+ * @param {unknown} error
+ * @returns {boolean}
+ */
+function isQuotaExceeded(error) {
+    return error != null && (
+        error.name === "QuotaExceededError" ||
+        error.name === "NS_ERROR_DOM_QUOTA_REACHED" ||
+        error.code === 22 ||
+        error.code === 1014);
+}
+
+/**
+ * @param {unknown} error
+ * @returns {boolean}
+ */
+function isStorageUnavailable(error) {
+    return error != null && (
+        error.name === "SecurityError" ||
+        error.name === "InvalidStateError" ||
+        error.name === "NotSupportedError");
+}
+
+/**
  * Get an item from browser storage
  * @param {string} storageType - "local" or "session"
  * @param {string} key - Storage key
@@ -30,10 +53,29 @@ export function getItem(storageType, key) {
  * @param {string} value - JSON string value
  */
 export function setItem(storageType, key, value) {
+    trySetItem(storageType, key, value);
+}
+
+/**
+ * Set an item and return a machine-readable failure code when the browser rejects the write.
+ * @param {string} storageType - "local" or "session"
+ * @param {string} key - Storage key
+ * @param {string} value - JSON string value
+ * @returns {string|null} null on success; otherwise a classified failure code
+ */
+export function trySetItem(storageType, key, value) {
     try {
         getStorage(storageType).setItem(key, value);
+        return null;
     } catch (e) {
         console.warn("MoBrowserStorage: setItem failed", e);
+        if (isQuotaExceeded(e)) {
+            return "quota-exceeded";
+        }
+        if (isStorageUnavailable(e)) {
+            return "storage-unavailable";
+        }
+        return "unknown";
     }
 }
 

@@ -3,12 +3,32 @@
     "NewChat": "新对话",
     "RecentSessions": "最近会话",
     "NoConversations": "暂无对话",
+    "Delete": "删除会话",
     "JustNow": "刚刚",
     "MinutesAgo": "{0}分钟前",
     "HoursAgo": "{0}小时前",
     "DaysAgo": "{0}天前"
   },
   "Chat": {
+    "History": {
+      "Loading": "正在加载会话历史...",
+      "Clear": {
+        "Action": "清空会话历史",
+        "Title": "确定清空会话历史？",
+        "Message": "此操作将永久删除当前浏览器配置中保存的全部会话。",
+        "Confirm": "全部清空"
+      },
+      "Warnings": {
+        "LoadFailed": "无法恢复会话历史，你仍可继续使用内存中的会话。",
+        "RevisionConflict": "另一个标签页已更新会话历史，请刷新页面后再保存更改。",
+        "QuotaExceeded": "浏览器存储空间已满，当前会话无法保存。",
+        "StorageUnavailable": "浏览器历史记录暂时不可用，当前会话仍保留在内存中。",
+        "SessionsPruned": "为满足浏览器存储限制，已移除较早的非当前会话。",
+        "SessionUnavailable": "浏览器存储中已无法读取此会话。",
+        "RuntimeFallback": "保存的 Agent 状态不兼容，已使用可见聊天记录继续会话。",
+        "ProviderUnavailable": "此会话使用的供应商或模型不可用，请选择可用项后继续。"
+      }
+    },
     "Input": {
       "Placeholder": "发送消息...",
       "AttachFile": "附加文件",

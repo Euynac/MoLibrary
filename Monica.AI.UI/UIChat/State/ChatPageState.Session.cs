@@ -1,6 +1,7 @@
 using Monica.AI.Models;
 using Monica.AI.UI.UIChat.Support;
 using Monica.Core.Results;
+using MudBlazor;
 
 namespace Monica.AI.UI.UIChat.State;
 
@@ -8,13 +9,16 @@ public sealed partial class ChatPageState
 {
     private async Task EnsureSessionExistsAsync()
     {
-        if (_sessionStore.Sessions.Count == 0)
+        if (_workspace.Sessions.Count == 0)
         {
             _ = await TryCreateSessionAsync();
             return;
         }
 
-        _sessionStore.CurrentSessionId = _sessionStore.Sessions.First().SessionId;
+        if (_workspace.CurrentSession is null)
+        {
+            _ = await _workspace.SelectSessionAsync(_workspace.Sessions.First().SessionId);
+        }
     }
 
     /// <summary>
@@ -31,10 +35,12 @@ public sealed partial class ChatPageState
     /// <summary>
     /// Select the current chat session.
     /// </summary>
-    public void SelectSession(string sessionId)
+    public async Task SelectSessionAsync(string sessionId)
     {
         ClearError();
-        _sessionStore.CurrentSessionId = sessionId;
+        _ = await _workspace.SelectSessionAsync(sessionId);
+        UpdateCurrentSession();
+        NotifyStateChanged();
     }
 
     /// <summary>
@@ -44,19 +50,18 @@ public sealed partial class ChatPageState
     {
         var deletingCurrentSession = string.Equals(
             sessionId,
-            _sessionStore.CurrentSessionId,
+            _workspace.CurrentSessionId,
             StringComparison.Ordinal);
-        await _sessionStore.RemoveSessionAsync(sessionId);
+        if (!await _workspace.RemoveSessionAsync(sessionId))
+        {
+            return;
+        }
 
         if (deletingCurrentSession)
         {
-            if (_sessionStore.Sessions.Count == 0)
+            if (_workspace.Sessions.Count == 0)
             {
                 _ = await TryCreateSessionAsync();
-            }
-            else
-            {
-                _sessionStore.CurrentSessionId = _sessionStore.Sessions.First().SessionId;
             }
         }
 
@@ -64,9 +69,35 @@ public sealed partial class ChatPageState
         NotifyStateChanged();
     }
 
+    /// <summary>
+    /// Confirms and clears every conversation in the current browser partition.
+    /// </summary>
+    public async Task ClearSessionsAsync()
+    {
+        if (_workspace.IsLoading || _workspace.Sessions.Count == 0)
+        {
+            return;
+        }
+
+        var confirmed = await _dialogService.ShowMessageBoxAsync(
+            _localizer["Chat:History:Clear:Title"],
+            _localizer["Chat:History:Clear:Message"],
+            yesText: _localizer["Chat:History:Clear:Confirm"],
+            noText: _localizer["Common:Actions:Cancel"],
+            options: new DialogOptions { MaxWidth = MaxWidth.Small, FullWidth = true });
+        if (confirmed != true || !await _workspace.ClearAsync())
+        {
+            return;
+        }
+
+        _ = await TryCreateSessionAsync();
+        UpdateCurrentSession();
+        NotifyStateChanged();
+    }
+
     private async Task<string?> EnsureCurrentSessionAsync()
     {
-        var sessionId = _sessionStore.CurrentSessionId;
+        var sessionId = _workspace.CurrentSessionId;
         if (string.IsNullOrEmpty(sessionId))
         {
             var session = await TryCreateSessionAsync();
@@ -100,8 +131,7 @@ public sealed partial class ChatPageState
             return null;
         }
 
-        _sessionStore.AddSession(state);
-        _sessionStore.CurrentSessionId = state.SessionId;
+        await _workspace.AddSessionAsync(state);
         ClearError();
         return state;
     }

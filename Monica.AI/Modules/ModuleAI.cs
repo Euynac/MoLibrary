@@ -3,6 +3,9 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 using Monica.AI.AgentCapabilities.Abstractions;
 using Monica.AI.AgentCapabilities.Services;
 using Monica.AI.Abstractions;
+using Monica.AI.Chat.Abstractions;
+using Monica.AI.Chat.Facades;
+using Monica.AI.Chat.Providers;
 using Monica.AI.Facades;
 using Monica.AI.Models;
 using Monica.AI.Providers;
@@ -80,9 +83,15 @@ public class ModuleAI(ModuleAIOption option)
 
         // Register chat service
         services.AddSingleton<AIChatService>();
+        services.TryAddScoped<IChatHistoryProvider, NoOpChatHistoryProvider>();
+        services.TryAddScoped<IChatHistoryPartitionResolver, NoOpChatHistoryPartitionResolver>();
         services.AddScoped(sp => new ChatFacade(
             sp.GetRequiredService<AIChatService>(),
             sp.GetRequiredService<IAIProviderFactory>()));
+        services.AddScoped(sp => new ChatHistoryFacade(
+            sp.GetRequiredService<IChatHistoryProvider>(),
+            sp.GetRequiredService<IChatHistoryPartitionResolver>(),
+            sp.GetRequiredService<AIChatService>()));
         services.AddScoped<ProviderFacade>();
         services.AddScoped<AgentCapabilityFacade>();
     }
@@ -93,6 +102,36 @@ public class ModuleAI(ModuleAIOption option)
 /// </summary>
 public class ModuleAIGuide : ModuleGuide<ModuleAI, ModuleAIOption, ModuleAIGuide>
 {
+    private const string CHAT_HISTORY_PROVIDER_KEY = nameof(CHAT_HISTORY_PROVIDER_KEY);
+
+    /// <summary>
+    /// Replaces the disabled chat-history defaults with a custom persistence provider and partition resolver.
+    /// </summary>
+    /// <typeparam name="TProvider">Scoped provider that owns durable snapshot storage.</typeparam>
+    /// <typeparam name="TPartitionResolver">
+    /// Scoped resolver that derives the current caller's isolated partition.
+    /// </typeparam>
+    /// <returns>The current guide instance.</returns>
+    /// <remarks>
+    /// This method is optional. Without it, chat remains fully functional in memory and history writes
+    /// report <c>NotPersisted</c>. Server implementations should resolve partitions from authenticated
+    /// identity and secure the sensitive Agent Framework state stored in each snapshot.
+    /// </remarks>
+    public ModuleAIGuide UseChatHistoryProvider<TProvider, TPartitionResolver>()
+        where TProvider : class, IChatHistoryProvider
+        where TPartitionResolver : class, IChatHistoryPartitionResolver
+    {
+        ConfigureServices(context =>
+        {
+            context.Services.RemoveAll<IChatHistoryProvider>();
+            context.Services.RemoveAll<IChatHistoryPartitionResolver>();
+            context.Services.AddScoped<IChatHistoryProvider, TProvider>();
+            context.Services.AddScoped<IChatHistoryPartitionResolver, TPartitionResolver>();
+        }, key: CHAT_HISTORY_PROVIDER_KEY);
+
+        return this;
+    }
+
     /// <summary>
     /// Adds an OpenAI provider.
     /// </summary>

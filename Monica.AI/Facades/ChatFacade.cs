@@ -147,7 +147,40 @@ public sealed class ChatFacade
         [EnumeratorCancellation] CancellationToken ct = default)
     {
         var accumulator = new StreamingContentAccumulator();
-        var turn = message is null ? state.GetOpenTurn() : state.BeginTurn(message);
+        ChatTurn? turn = null;
+        string? activationFailure = null;
+        var activationCancelled = false;
+        try
+        {
+            await _chatService.ActivateSessionAsync(state, ct);
+            turn = message is null ? state.GetOpenTurn() : state.BeginTurn(message);
+        }
+        catch (OperationCanceledException)
+        {
+            activationCancelled = true;
+        }
+        catch (Exception ex)
+        {
+            activationFailure = ex.GetMessageRecursively();
+        }
+
+        if (activationCancelled)
+        {
+            yield break;
+        }
+
+        if (activationFailure is not null)
+        {
+            yield return Res.Fail(activationFailure);
+            yield break;
+        }
+
+        if (turn is null)
+        {
+            yield return Res.Fail("Failed to initialize the chat turn.");
+            yield break;
+        }
+
         var historyCountBeforeSend = turn.HistoryCheckpoint;
         Exception? streamFailure = null;
         var wasCancelled = false;
@@ -226,15 +259,7 @@ public sealed class ChatFacade
         CancellationToken ct = default)
     {
         ArgumentNullException.ThrowIfNull(state);
-
-        try
-        {
-            return SendMessageStreamingAsync(state, state.RewindForEdit(messageId, newContent), ct);
-        }
-        catch (KeyNotFoundException)
-        {
-            return AsyncEnumerableEmpty<Res<ChatStreamEvent>>();
-        }
+        return EditActivatedSessionAsync(state, messageId, newContent, ct);
     }
 
     /// <summary>
@@ -246,15 +271,7 @@ public sealed class ChatFacade
         CancellationToken ct = default)
     {
         ArgumentNullException.ThrowIfNull(state);
-
-        try
-        {
-            return SendMessageStreamingAsync(state, state.RewindForRetry(messageId), ct);
-        }
-        catch (KeyNotFoundException)
-        {
-            return AsyncEnumerableEmpty<Res<ChatStreamEvent>>();
-        }
+        return RetryActivatedSessionAsync(state, messageId, ct);
     }
 
     /// <summary>
@@ -298,13 +315,83 @@ public sealed class ChatFacade
         }
     }
 
-    /// <summary>
-    /// Helper to return an empty async enumerable
-    /// </summary>
-    private static async IAsyncEnumerable<T> AsyncEnumerableEmpty<T>()
+    private async IAsyncEnumerable<Res<ChatStreamEvent>> EditActivatedSessionAsync(
+        ChatSession state,
+        string messageId,
+        string newContent,
+        [EnumeratorCancellation] CancellationToken ct)
     {
-        await Task.CompletedTask;
-        yield break;
+        string? content = null;
+        string? failure = null;
+        var cancelled = false;
+        try
+        {
+            await _chatService.ActivateSessionAsync(state, ct);
+            content = state.RewindForEdit(messageId, newContent);
+        }
+        catch (OperationCanceledException)
+        {
+            cancelled = true;
+        }
+        catch (Exception ex)
+        {
+            failure = ex.GetMessageRecursively();
+        }
+
+        if (cancelled)
+        {
+            yield break;
+        }
+
+        if (failure is not null)
+        {
+            yield return Res.Fail(failure);
+            yield break;
+        }
+
+        await foreach (var update in SendMessageStreamingAsync(state, content!, ct))
+        {
+            yield return update;
+        }
+    }
+
+    private async IAsyncEnumerable<Res<ChatStreamEvent>> RetryActivatedSessionAsync(
+        ChatSession state,
+        string messageId,
+        [EnumeratorCancellation] CancellationToken ct)
+    {
+        string? content = null;
+        string? failure = null;
+        var cancelled = false;
+        try
+        {
+            await _chatService.ActivateSessionAsync(state, ct);
+            content = state.RewindForRetry(messageId);
+        }
+        catch (OperationCanceledException)
+        {
+            cancelled = true;
+        }
+        catch (Exception ex)
+        {
+            failure = ex.GetMessageRecursively();
+        }
+
+        if (cancelled)
+        {
+            yield break;
+        }
+
+        if (failure is not null)
+        {
+            yield return Res.Fail(failure);
+            yield break;
+        }
+
+        await foreach (var update in SendMessageStreamingAsync(state, content!, ct))
+        {
+            yield return update;
+        }
     }
 
     private static async IAsyncEnumerable<Res<ChatStreamEvent>> FailedStream(string message)

@@ -102,6 +102,7 @@ public sealed partial class ChatPageState
                     ProviderId = providerId,
                     ModelName = resolvedModelName
                 });
+            await _workspace.SaveSessionAsync(currentSession);
         }
 
         NotifyStateChanged();
@@ -118,6 +119,7 @@ public sealed partial class ChatPageState
             _ = _chatFacade.UpdateSettings(
                 currentSession,
                 currentSession.Settings with { ModelName = modelName });
+            await _workspace.SaveSessionAsync(currentSession);
         }
 
         SupportsReasoning = ChatProviderResolver.GetReasoningSupport(
@@ -176,6 +178,7 @@ public sealed partial class ChatPageState
             _ = _chatFacade.UpdateSettings(
                 session,
                 session.Settings with { SystemPrompt = prompt });
+            await _workspace.SaveSessionAsync(session);
         }
 
         Providers = ChatProviderResolver.GetChatProviders(_chatFacade.GetProviders());
@@ -183,9 +186,17 @@ public sealed partial class ChatPageState
         NotifyStateChanged();
     }
 
-    private void SetReasoningEnabled(bool enabled)
+    private async Task SetReasoningEnabled(bool enabled)
     {
         ReasoningEnabled = enabled;
+        if (CurrentSession is not null)
+        {
+            _ = _chatFacade.UpdateSettings(
+                CurrentSession,
+                CurrentSession.Settings with { ReasoningEnabled = enabled });
+            await _workspace.SaveSessionAsync(CurrentSession);
+        }
+
         NotifyStateChanged();
     }
 
