@@ -38,20 +38,26 @@ Before a source-dependent task, run:
 python scripts/check_mudblazor_source.py
 ```
 
-This check now resolves MudBlazor through the `third-party-source-catalog` skill. It no longer uses a separate `monica-ui-development` source-path config.
+This check invokes the user-level `$inspect-dependency-source` skill with `resolve MudBlazor --json`. The global catalog is shared across projects and agent CLIs; Monica does not read its storage directly or maintain a project-local source-path config.
+
+The resolver CLI is discovered in this order:
+
+1. `INSPECT_DEPENDENCY_SOURCE_CLI`
+2. `$HOME/.agents/skills/inspect-dependency-source/scripts/inspect_dependency_source.py`
+3. `$HOME/.claude/skills/inspect-dependency-source/scripts/inspect_dependency_source.py`
 
 If the current task is source-dependent and the check fails, you must **stop that work immediately**. Do not continue by guessing from memory, migration notes, or outdated examples.
 
 Required recovery flow for source-dependent work:
 
-1. Register MudBlazor source in `third-party-source-catalog`.
-2. Only continue after `python scripts/check_mudblazor_source.py` succeeds.
+1. Install the user-level `$inspect-dependency-source` skill if it is unavailable.
+2. Register MudBlazor source in its shared global catalog.
+3. Only continue after `python scripts/check_mudblazor_source.py` succeeds.
 
 Typical registration commands:
 
 ```bash
-python3 ../third-party-source-catalog/scripts/source_catalog.py local add <mudblazor-source-root>
-python3 ../third-party-source-catalog/scripts/source_catalog.py local scan <source-cache-root> --update-existing
+python3 "${INSPECT_DEPENDENCY_SOURCE_CLI:-$HOME/.agents/skills/inspect-dependency-source/scripts/inspect_dependency_source.py}" repo add-local <mudblazor-source-root> --alias MudBlazor
 ```
 
 If the task is not source-dependent and the existing references are enough, continue without source inspection.
@@ -60,7 +66,7 @@ If the task is not source-dependent and the existing references are enough, cont
 
 1. For any source-dependent UI task, MudBlazor source availability is mandatory.
 2. Treat local MudBlazor source as the source of truth for uncertain APIs or behavior.
-3. If source is unavailable, stop the source-dependent task until MudBlazor is registered in `third-party-source-catalog`.
+3. If source is unavailable, stop the source-dependent task until MudBlazor is registered in the user-level `$inspect-dependency-source` catalog.
 4. Preferred source entry points:
    - `src/MudBlazor/Components/...`
    - `src/MudBlazor/Styles/...`
@@ -238,7 +244,7 @@ Run this when you need to refresh the generated variable list from MudBlazor sou
 python scripts/sync_mud_css_variables.py
 ```
 
-This workflow is source-dependent. If `python scripts/check_mudblazor_source.py` cannot resolve MudBlazor through `third-party-source-catalog`, stop and follow the source recovery flow above.
+This workflow is source-dependent. If `python scripts/check_mudblazor_source.py` cannot resolve MudBlazor through `$inspect-dependency-source`, stop and follow the source recovery flow above.
 
 This script reads:
 
@@ -305,11 +311,11 @@ For `Res/Res<T>` usage, `IResultEnvelope`, and the `IsFailed` pattern in UI serv
 - `references/offline-requirements.md`
 - `.tmp/monica-ui-development/mudblazor-css-variables.json` (real available CSS variable list, generated)
 - `references/mudblazor-css-variables.md` (semantic usage guide, manually maintained)
-- `.tmp/third-party-source-catalog/state/catalog.json` (shared source catalog consumed by the MudBlazor source check)
+- `$inspect-dependency-source` (user-level shared source catalog; access it only through the CLI contract)
 
 ## Scripts
 
-- `scripts/check_mudblazor_source.py` - Resolve MudBlazor source through `third-party-source-catalog` and verify that the required source marker exists.
+- `scripts/check_mudblazor_source.py` - Invoke `inspect-dependency-source resolve MudBlazor --json`, validate the returned path, and verify that the required source marker exists.
 - `scripts/sync_mud_css_variables.py` - Initialize/update real MudBlazor CSS variable JSON into `.tmp/monica-ui-development/mudblazor-css-variables.json`.
 - `scripts/validate_mud_css_variables.py` - Validate MudBlazor variable usage in CSS/Razor files and apply safe auto-fixes using the generated `.tmp` variable list by default.
 - `scripts/font_downloader.py` - Download fonts for offline WOFF2 usage.
@@ -318,7 +324,7 @@ For `Res/Res<T>` usage, `IResultEnvelope`, and the `IsFailed` pattern in UI serv
 ## Quick Checklist
 
 - [ ] Run the source check only for source-dependent work
-- [ ] If source check fails during source-dependent work, stop and register MudBlazor source through `third-party-source-catalog`
+- [ ] If source check fails during source-dependent work, stop and register MudBlazor source through the user-level `$inspect-dependency-source` skill
 - [ ] Confirm uncertain APIs from MudBlazor source before continuing source-dependent work
 - [ ] Use `monica-ui-audit` as a companion check for Monica UI component/page changes
 - [ ] Use CSS isolation (`.razor.css`) with wrapper + `::deep`

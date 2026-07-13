@@ -108,7 +108,8 @@ The repo includes ready-to-use skill packs in `.claude/skills/` and `.agents/ski
 
 - Framework entry points: `monica-framework`, `monica-development`, `monica-architecture`, `monica-ui-development`, `monica-ui-design`, `monica-ui-audit`, `monica-docs-authoring`, `monica-requirement-design`, `monica-unit-testing`, `monica-ui-bridge-debug`
 - Application entry points: `monica-application`, `monica-application-microservice`, `monica-application-modular-monolith`, `monica-application-project-unit-development`
-- Supporting workflows: `code-simplifier`, `playwright-cli`, `subagent-progress-report`, `third-party-source-catalog`
+- Supporting bundled workflows: `code-simplifier`, `playwright-cli`, `subagent-progress-report`
+- User-level companion installed separately: `inspect-dependency-source` (shared dependency source catalog)
 
 ## Module Catalog
 
