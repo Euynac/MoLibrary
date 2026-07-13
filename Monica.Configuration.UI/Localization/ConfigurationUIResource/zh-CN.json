@@ -92,6 +92,13 @@
       "LastFailure": "上次失败：{0}，{1}",
       "ManualReload": "手动 Reload",
       "Reloading": "Reload 中",
+      "BroadcastReloadAll": "广播 Reload 到所有服务",
+      "Broadcasting": "广播中",
+      "BroadcastPublished": "Reload-all 信号已发布。该操作是广播，不代表已确认每个服务都完成 Reload。",
+      "BroadcastWarning": "Reload-all 已完成，但存在警告。请查看详情后再重试。",
+      "BroadcastWarningTitle": "Reload 广播警告",
+      "BroadcastIssueSummary": "本地 Reload 和分布式发布均为尽力而为操作，其中一个或多个步骤失败；该广播不代表已确认每个服务都完成 Reload。",
+      "BroadcastFailed": "启动 Reload-all 广播失败",
       "RefreshStatus": "刷新状态",
       "ReloadSuccess": "运行时配置已 Reload。",
       "ReloadFailed": "Reload 运行时配置失败",
@@ -306,6 +313,8 @@
     "DefaultLabel": "修改 {0}",
     "SaveCount": "保存 {0} 个修改",
     "Saved": "配置修改组已保存。",
+    "PartiallyApplied": "部分配置修改已保存；失败或跳过的修改仍处于暂存状态，并已刷新基线。",
+    "ConcurrencyConflict": "暂存修改后配置已发生变化。系统已保留目标值并刷新基线，请检查修改后再重试。",
     "Empty": "未找到修改组。",
     "MutationCount": "修改数",
     "Definitions": "配置定义",
@@ -480,6 +489,20 @@
     }
   },
   "Dialogs": {
+    "PostCommitIssues": {
+      "Title": "配置已保存，但存在警告",
+      "DistributedSummary": "配置已保存，但分布式 Reload 通知失败。",
+      "GeneralSummary": "配置已保存，但一个或多个保存后操作失败。",
+      "CopyAll": "复制全部详情",
+      "CopySuccess": "异常详情已复制。",
+      "CopyFailed": "复制异常详情失败。",
+      "Kinds": {
+        "LocalReload": "本地 Reload 失败",
+        "DistributedNotification": "分布式通知失败",
+        "AuditFinalization": "审计收尾失败",
+        "UnifiedVersionCapture": "统一版本捕获失败"
+      }
+    },
     "SaveGroup": {
       "Title": "保存配置修改组",
       "Tabs": {
@@ -628,6 +651,7 @@
       "Export": "导出",
       "Download": "下载",
       "Apply": "应用",
+      "Copy": "复制",
       "Delete": "删除",
       "Analyze": "分析",
       "EditJson": "编辑 JSON"

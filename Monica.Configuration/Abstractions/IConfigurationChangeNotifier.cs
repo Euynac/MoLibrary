@@ -3,7 +3,7 @@ using Monica.Configuration.Models;
 namespace Monica.Configuration.Abstractions;
 
 /// <summary>
-/// Notifies other processes that a managed configuration document changed.
+/// Notifies other processes that managed configuration projections should reload.
 /// </summary>
 /// <remarks>
 /// The core module only defines this abstraction in v1. Distributed hot reload requires a concrete
@@ -12,9 +12,9 @@ namespace Monica.Configuration.Abstractions;
 public interface IConfigurationChangeNotifier
 {
     /// <summary>
-    /// Sends a change notification.
+    /// Sends a reload signal.
     /// </summary>
-    /// <param name="notification">The change notification.</param>
+    /// <param name="signal">The reload signal.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
-    Task NotifyAsync(ConfigurationChangeNotification notification, CancellationToken cancellationToken);
+    Task NotifyAsync(ConfigurationReloadSignal signal, CancellationToken cancellationToken);
 }

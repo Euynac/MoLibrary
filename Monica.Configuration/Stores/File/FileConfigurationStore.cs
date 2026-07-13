@@ -128,10 +128,11 @@ public sealed class FileConfigurationStore(IOptions<ConfigurationFileStoreOption
         {
             EnsureDirectories();
             var existing = await ReadDocumentAsync(request.Definition.DefinitionKey, cancellationToken);
-            if (request.ExpectedVersion is not null && existing?.Version != request.ExpectedVersion)
+            var currentVersion = existing?.Version ?? 0;
+            if (request.ExpectedVersion is not null && currentVersion != request.ExpectedVersion)
             {
                 throw new ConfigurationConcurrencyConflictException(
-                    $"Expected version {request.ExpectedVersion} for '{request.Definition.DefinitionKey}', but current version is {existing?.Version.ToString() ?? "<none>"}.");
+                    $"Expected version {request.ExpectedVersion} for '{request.Definition.DefinitionKey}', but current version is {currentVersion}.");
             }
 
             var now = DateTimeOffset.UtcNow;

@@ -23,12 +23,14 @@ namespace Monica.Configuration.EfCore.Stores;
 public sealed class DatabaseConfigurationStore(
     IDbContextOperation<ConfigurationDbContext> dbContextOperation,
     IOptions<ModuleConfigurationEfCoreOption> options)
-    : IConfigurationEffectiveValueStore, IConfigurationHistoryStore, IConfigurationMetadataStore, IConfigurationUnifiedVersionStore
+    : IConfigurationEffectiveValueStore, IConfigurationHistoryStore, IConfigurationMetadataStore,
+        IConfigurationUnifiedVersionStore, IConfigurationMutationBatchStore
 {
     private const int MAX_PUBLISH_RETRY_COUNT = 5;
     private const int MAX_EFFECTIVE_VALUE_ENSURE_RETRY_COUNT = 5;
     private const int MAX_UNIFIED_VERSION_APPEND_RETRY_COUNT = 5;
     private const string PUBLISH_DEFINITIONS_LOCK_MARKER_KEY = "Configuration.EfCore.PublishDefinitionsLock";
+    private const string MUTATION_GROUP_LOCK_MARKER_KEY = "Configuration.EfCore.MutationGroupLock";
     private const int PUBLISH_RETRY_BASE_DELAY_MS = 25;
 
     private readonly SemaphoreSlim _schemaInitializationLock = new(1, 1);
@@ -51,6 +53,226 @@ public sealed class DatabaseConfigurationStore(
         SupportsHistory = true,
         SupportsMetadata = true
     };
+
+    /// <inheritdoc />
+    public async Task<ConfigurationMutationBatchCommitResult> CommitAsync(
+        ConfigurationMutationBatchCommitRequest request,
+        CancellationToken cancellationToken)
+    {
+        await EnsureSchemaAsync(cancellationToken);
+        try
+        {
+            return await dbContextOperation.ExecuteAsync(async (strategyContext, token) =>
+            {
+                var strategy = strategyContext.Database.CreateExecutionStrategy();
+                return await strategy.ExecuteAsync(async () =>
+                    await dbContextOperation.ExecuteAsync(
+                        (dbContext, innerToken) => CommitMutationBatchAttemptAsync(dbContext, request, innerToken),
+                        token));
+            }, cancellationToken);
+        }
+        catch
+        {
+            var committed = await TryGetCommittedMutationBatchAsync(request, cancellationToken);
+            if (committed is not null)
+            {
+                return committed;
+            }
+
+            throw;
+        }
+    }
+
+    private static async Task<ConfigurationMutationBatchCommitResult> CommitMutationBatchAttemptAsync(
+        ConfigurationDbContext dbContext,
+        ConfigurationMutationBatchCommitRequest request,
+        CancellationToken cancellationToken)
+    {
+        var existingGroup = await dbContext.ConfigurationMutationGroups
+            .AsNoTracking()
+            .FirstOrDefaultAsync(group => group.GroupId == request.MutationGroup.GroupId, cancellationToken);
+        if (existingGroup is not null)
+        {
+            return await BuildCommittedMutationBatchResultAsync(dbContext, request, existingGroup, cancellationToken);
+        }
+
+        await EnsureLockMarkerExistsAsync(dbContext, MUTATION_GROUP_LOCK_MARKER_KEY, cancellationToken);
+        await using var transaction = await dbContext.Database.BeginTransactionAsync(cancellationToken);
+        await dbContext.Database.ExecuteSqlRawAsync(
+            BuildStoreLockUpdateSql(dbContext.Database.ProviderName),
+            [MUTATION_GROUP_LOCK_MARKER_KEY],
+            cancellationToken);
+
+        existingGroup = await dbContext.ConfigurationMutationGroups
+            .AsNoTracking()
+            .FirstOrDefaultAsync(group => group.GroupId == request.MutationGroup.GroupId, cancellationToken);
+        if (existingGroup is not null)
+        {
+            await transaction.RollbackAsync(cancellationToken);
+            return await BuildCommittedMutationBatchResultAsync(dbContext, request, existingGroup, cancellationToken);
+        }
+
+        var definitionKeys = request.Items
+            .Select(item => item.SaveRequest.Definition.DefinitionKey)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+        var entities = await dbContext.ConfigurationEffectiveValues
+            .Where(value => definitionKeys.Contains(value.DefinitionKey))
+            .ToDictionaryAsync(value => value.DefinitionKey, StringComparer.OrdinalIgnoreCase, cancellationToken);
+
+        foreach (var item in request.Items)
+        {
+            var save = item.SaveRequest;
+            var definitionKey = save.Definition.DefinitionKey;
+            entities.TryGetValue(definitionKey, out var entity);
+            var currentVersion = entity?.Version ?? 0;
+            if (save.ExpectedVersion is not null && currentVersion != save.ExpectedVersion)
+            {
+                throw new ConfigurationConcurrencyConflictException(
+                    $"Expected version {save.ExpectedVersion} for '{definitionKey}', but current version is {currentVersion}.");
+            }
+
+            if (entity is null)
+            {
+                entity = new ConfigurationEffectiveValueEntity
+                {
+                    DefinitionKey = definitionKey
+                };
+                dbContext.ConfigurationEffectiveValues.Add(entity);
+                entities[definitionKey] = entity;
+            }
+
+            var nextVersion = entity.Version + 1;
+            if (item.History.Version != nextVersion)
+            {
+                throw new InvalidOperationException(
+                    $"Prepared history version {item.History.Version} for '{definitionKey}' does not follow store version {entity.Version}.");
+            }
+
+            entity.Json = NormalizeJson(save.Json);
+            entity.Version = nextVersion;
+            entity.SchemaVersion = save.Definition.SchemaVersion;
+            entity.LastModifiedTime = NormalizeUtcDateTime(item.History.ModifiedTime);
+            entity.LastModifierId = save.Context.ModifierId;
+            entity.LastModifierName = save.Context.ModifierName;
+            dbContext.ConfigurationValueHistories.Add(ToEntity(item.History));
+        }
+
+        var groupEntity = new ConfigurationMutationGroupEntity
+        {
+            GroupId = request.MutationGroup.GroupId
+        };
+        ApplyMutationGroup(request.MutationGroup, groupEntity);
+        dbContext.ConfigurationMutationGroups.Add(groupEntity);
+
+        if (request.UnifiedVersion is not null)
+        {
+            var version = (await dbContext.ConfigurationUnifiedVersions
+                .Select(candidate => (long?)candidate.Version)
+                .MaxAsync(cancellationToken) ?? 0) + 1;
+            var summary = CreateUnifiedVersionSummary(version, request.UnifiedVersion);
+            dbContext.ConfigurationUnifiedVersions.Add(ToEntity(summary));
+            dbContext.ConfigurationUnifiedVersionDocuments.AddRange(
+                request.UnifiedVersion.Definitions.Select(definition => ToEntity(version, definition)));
+        }
+
+        try
+        {
+            await dbContext.SaveChangesAsync(cancellationToken);
+            await transaction.CommitAsync(cancellationToken);
+        }
+        catch (DbUpdateConcurrencyException ex)
+        {
+            throw new ConfigurationConcurrencyConflictException(
+                "A configuration document changed while the mutation group was being committed.",
+                ex);
+        }
+
+        return new ConfigurationMutationBatchCommitResult
+        {
+            MutationGroup = request.MutationGroup,
+            AppliedRequestIds = request.Items.Select(static item => item.RequestId).ToArray(),
+            Documents = entities.ToDictionary(
+                static pair => pair.Key,
+                static pair => ToDocument(pair.Value),
+                StringComparer.OrdinalIgnoreCase)
+        };
+    }
+
+    private async Task<ConfigurationMutationBatchCommitResult?> TryGetCommittedMutationBatchAsync(
+        ConfigurationMutationBatchCommitRequest request,
+        CancellationToken cancellationToken)
+    {
+        return await ExecuteAsync(async (dbContext, token) =>
+        {
+            var groupEntity = await dbContext.ConfigurationMutationGroups
+                .AsNoTracking()
+                .FirstOrDefaultAsync(group => group.GroupId == request.MutationGroup.GroupId, token);
+            return groupEntity is null
+                ? null
+                : await BuildCommittedMutationBatchResultAsync(dbContext, request, groupEntity, token);
+        }, cancellationToken);
+    }
+
+    private static async Task<ConfigurationMutationBatchCommitResult> BuildCommittedMutationBatchResultAsync(
+        ConfigurationDbContext dbContext,
+        ConfigurationMutationBatchCommitRequest request,
+        ConfigurationMutationGroupEntity groupEntity,
+        CancellationToken cancellationToken)
+    {
+        var definitionKeys = request.Items
+            .Select(item => item.SaveRequest.Definition.DefinitionKey)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+        var documents = await dbContext.ConfigurationEffectiveValues
+            .AsNoTracking()
+            .Where(value => definitionKeys.Contains(value.DefinitionKey))
+            .ToDictionaryAsync(
+                value => value.DefinitionKey,
+                value => ToDocument(value),
+                StringComparer.OrdinalIgnoreCase,
+                cancellationToken);
+        return new ConfigurationMutationBatchCommitResult
+        {
+            MutationGroup = ToGroup(groupEntity),
+            AppliedRequestIds = request.Items.Select(static item => item.RequestId).ToArray(),
+            Documents = documents
+        };
+    }
+
+    private static ConfigurationUnifiedVersionSummary CreateUnifiedVersionSummary(
+        long version,
+        ConfigurationUnifiedVersionCreateRequest request)
+    {
+        return new ConfigurationUnifiedVersionSummary
+        {
+            Version = version,
+            MutationGroupId = request.MutationGroupId,
+            TriggerDefinitionKeys = NormalizeKeys(request.TriggerDefinitionKeys),
+            DefinitionKeys = NormalizeKeys(request.Definitions.Select(static definition => definition.DefinitionKey)),
+            DefinitionCount = request.Definitions.Count,
+            CreatedTime = request.CreatedTime,
+            ModifierId = request.ModifierId,
+            ModifierName = request.ModifierName,
+            Reason = request.Reason
+        };
+    }
+
+    private static void ApplyMutationGroup(
+        ConfigurationMutationGroup group,
+        ConfigurationMutationGroupEntity entity)
+    {
+        entity.Label = group.Label;
+        entity.Reason = group.Reason;
+        entity.DefinitionKeysJson = JsonSerializer.Serialize(group.DefinitionKeys, ConfigurationPersistedJsonOptions.CompactValue);
+        entity.MutationCount = group.MutationCount;
+        entity.CreatedTime = NormalizeUtcDateTime(group.CreatedTime);
+        entity.ModifierId = group.ModifierId;
+        entity.ModifierName = group.ModifierName;
+        entity.RolledBackTime = NormalizeNullableUtcDateTime(group.RolledBackTime);
+        entity.RolledBackGroupId = group.RolledBackGroupId;
+        entity.Status = group.Status.ToString();
+    }
 
     /// <inheritdoc />
     public async Task<ConfigurationEffectiveValueDocument> EnsureCreatedAsync(
@@ -259,16 +481,7 @@ public sealed class DatabaseConfigurationStore(
                 dbContext.ConfigurationMutationGroups.Add(entity);
             }
 
-            entity.Label = group.Label;
-            entity.Reason = group.Reason;
-            entity.DefinitionKeysJson = JsonSerializer.Serialize(group.DefinitionKeys, ConfigurationPersistedJsonOptions.CompactValue);
-            entity.MutationCount = group.MutationCount;
-            entity.CreatedTime = NormalizeUtcDateTime(group.CreatedTime);
-            entity.ModifierId = group.ModifierId;
-            entity.ModifierName = group.ModifierName;
-            entity.RolledBackTime = NormalizeNullableUtcDateTime(group.RolledBackTime);
-            entity.RolledBackGroupId = group.RolledBackGroupId;
-            entity.Status = group.Status.ToString();
+            ApplyMutationGroup(group, entity);
             await dbContext.SaveChangesAsync(token);
         }, cancellationToken);
     }
@@ -553,20 +766,21 @@ public sealed class DatabaseConfigurationStore(
         ConfigurationDbContext dbContext,
         CancellationToken cancellationToken)
     {
-        await EnsurePublishLockMarkerExistsAsync(dbContext, cancellationToken);
+        await EnsureLockMarkerExistsAsync(dbContext, PUBLISH_DEFINITIONS_LOCK_MARKER_KEY, cancellationToken);
 
         await dbContext.Database.ExecuteSqlRawAsync(
-            BuildPublishLockUpdateSql(dbContext.Database.ProviderName),
+            BuildStoreLockUpdateSql(dbContext.Database.ProviderName),
             [PUBLISH_DEFINITIONS_LOCK_MARKER_KEY],
             cancellationToken);
     }
 
-    private static async Task EnsurePublishLockMarkerExistsAsync(
+    private static async Task EnsureLockMarkerExistsAsync(
         ConfigurationDbContext dbContext,
+        string markerKey,
         CancellationToken cancellationToken)
     {
         var lockMarker = await dbContext.ConfigurationSchemaMarkers
-            .FirstOrDefaultAsync(candidate => candidate.MarkerKey == PUBLISH_DEFINITIONS_LOCK_MARKER_KEY, cancellationToken);
+            .FirstOrDefaultAsync(candidate => candidate.MarkerKey == markerKey, cancellationToken);
         if (lockMarker is not null)
         {
             return;
@@ -574,7 +788,7 @@ public sealed class DatabaseConfigurationStore(
 
         dbContext.ConfigurationSchemaMarkers.Add(new ConfigurationSchemaMarkerEntity
         {
-            MarkerKey = PUBLISH_DEFINITIONS_LOCK_MARKER_KEY,
+            MarkerKey = markerKey,
             SchemaVersion = ConfigurationSchemaMarkerEntity.CurrentSchemaVersion
         });
 
@@ -585,9 +799,9 @@ public sealed class DatabaseConfigurationStore(
         catch (DbUpdateException)
         {
             dbContext.ChangeTracker.Clear();
-            var markerCreatedByAnotherPublisher = await dbContext.ConfigurationSchemaMarkers
-                .AnyAsync(candidate => candidate.MarkerKey == PUBLISH_DEFINITIONS_LOCK_MARKER_KEY, cancellationToken);
-            if (markerCreatedByAnotherPublisher)
+            var markerCreatedByAnotherProcess = await dbContext.ConfigurationSchemaMarkers
+                .AnyAsync(candidate => candidate.MarkerKey == markerKey, cancellationToken);
+            if (markerCreatedByAnotherProcess)
             {
                 return;
             }
@@ -933,7 +1147,7 @@ public sealed class DatabaseConfigurationStore(
                 """;
     }
 
-    private static string BuildPublishLockUpdateSql(string? providerName)
+    private static string BuildStoreLockUpdateSql(string? providerName)
     {
         var tableSql = FormatTableName(providerName, null, "ConfigurationSchemaMarkers");
         var markerKeySql = QuoteIdentifier(providerName, "MarkerKey");
@@ -1416,7 +1630,7 @@ public sealed class DatabaseConfigurationStore(
         };
     }
 
-    private ConfigurationValueHistoryEntity ToEntity(ConfigurationValueHistory history)
+    private static ConfigurationValueHistoryEntity ToEntity(ConfigurationValueHistory history)
     {
         return new ConfigurationValueHistoryEntity
         {

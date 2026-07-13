@@ -9,9 +9,14 @@ namespace Monica.Configuration.UI.Models;
 public sealed record SaveMutationGroupDialogResult
 {
     /// <summary>
-    /// Gets the saved mutation group when the dialog completed a save.
+    /// Gets the mutation-group application result when persistence was attempted successfully.
     /// </summary>
-    public ConfigurationMutationGroup? SavedGroup { get; init; }
+    public ConfigurationMutationGroupApplyResult? ApplyResult { get; init; }
+
+    /// <summary>
+    /// Gets the concurrency conflict that requires staged baselines to be refreshed.
+    /// </summary>
+    public string? ConcurrencyConflictMessage { get; init; }
 
     /// <summary>
     /// Gets the validation issue the operator wants to edit.
@@ -26,13 +31,26 @@ public sealed record SaveMutationGroupDialogResult
     /// <summary>
     /// Creates a saved-group result.
     /// </summary>
-    /// <param name="group">The persisted mutation group.</param>
+    /// <param name="result">The mutation-group result.</param>
     /// <returns>The dialog result.</returns>
-    public static SaveMutationGroupDialogResult Saved(ConfigurationMutationGroup group)
+    public static SaveMutationGroupDialogResult Saved(ConfigurationMutationGroupApplyResult result)
     {
         return new SaveMutationGroupDialogResult
         {
-            SavedGroup = group
+            ApplyResult = result
+        };
+    }
+
+    /// <summary>
+    /// Creates a result that asks the page to refresh staged concurrency baselines.
+    /// </summary>
+    /// <param name="message">Conflict diagnostic.</param>
+    /// <returns>The dialog result.</returns>
+    public static SaveMutationGroupDialogResult ConcurrencyConflict(string message)
+    {
+        return new SaveMutationGroupDialogResult
+        {
+            ConcurrencyConflictMessage = message
         };
     }
 

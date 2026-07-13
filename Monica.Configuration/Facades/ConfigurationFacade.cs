@@ -18,8 +18,7 @@ namespace Monica.Configuration.Facades;
 /// </summary>
 public sealed class ConfigurationFacade(
     ConfigurationDefinitionResolver definitionResolver,
-    IConfigurationMutationService mutationService,
-    IConfigurationSourceMutationService sourceMutationService,
+    IConfigurationMutationGroupApplyService mutationGroupApplyService,
     IConfigurationHistoryService historyService,
     IConfigurationMutationGroupService mutationGroupService,
     IConfigurationRollbackService rollbackService,
@@ -35,7 +34,8 @@ public sealed class ConfigurationFacade(
     IConfigurationJsonFileSourceWriter sourceWriter,
     ConfigurationRuntimeContext runtimeContext,
     IConfigurationRuntimeValidationService runtimeValidationService,
-    IConfigurationRuntimeReloadService runtimeReloadService)
+    IConfigurationRuntimeReloadService runtimeReloadService,
+    IConfigurationReloadBroadcastService reloadBroadcastService)
 {
     /// <summary>
     /// Gets all configuration definition summaries.
@@ -128,6 +128,22 @@ public sealed class ConfigurationFacade(
         catch (Exception ex)
         {
             return Res.Fail($"Failed to reload runtime configuration: {ex.GetMessageRecursively()}");
+        }
+    }
+
+    /// <summary>
+    /// Reloads the current Monica projection and broadcasts a best-effort reload-all signal to other processes.
+    /// </summary>
+    /// <returns>The local reload and distributed publication outcome.</returns>
+    public async Task<Res<ConfigurationReloadBroadcastResult>> BroadcastReloadAllAsync()
+    {
+        try
+        {
+            return Res.Ok(await reloadBroadcastService.BroadcastAllAsync(CancellationToken.None));
+        }
+        catch (Exception ex)
+        {
+            return Res.Fail($"Failed to broadcast configuration reload: {ex.GetMessageRecursively()}");
         }
     }
 
@@ -473,6 +489,24 @@ public sealed class ConfigurationFacade(
     }
 
     /// <summary>
+    /// Applies a reviewed configuration mutation group through one persistence coordinator.
+    /// </summary>
+    /// <param name="request">The mutation group request.</param>
+    /// <returns>The group outcome, including post-commit reload and notification issues.</returns>
+    public async Task<Res<ConfigurationMutationGroupApplyResult>> ApplyMutationGroupAsync(
+        ConfigurationMutationGroupApplyRequest request)
+    {
+        try
+        {
+            return Res.Ok(await mutationGroupApplyService.ApplyAsync(request, CancellationToken.None));
+        }
+        catch (Exception ex)
+        {
+            return Res.Fail($"Failed to apply configuration mutation group: {ex.GetMessageRecursively()}");
+        }
+    }
+
+    /// <summary>
     /// Mutates a configuration value.
     /// </summary>
     /// <param name="request">The mutation request.</param>
@@ -481,7 +515,29 @@ public sealed class ConfigurationFacade(
     {
         try
         {
-            return await mutationService.MutateAsync(request, CancellationToken.None);
+            var applied = await mutationGroupApplyService.ApplyAsync(new ConfigurationMutationGroupApplyRequest
+            {
+                Label = $"Change {request.DefinitionKey} {request.LogicalPath.ToCanonicalString()}",
+                Reason = request.Context.Reason,
+                Context = request.Context,
+                Commands =
+                [
+                    new ConfigurationMutationCommand
+                    {
+                        RequestId = Guid.NewGuid().ToString("N"),
+                        DefinitionKey = request.DefinitionKey,
+                        LogicalPath = request.LogicalPath,
+                        MutationKind = request.MutationKind,
+                        Value = request.Value,
+                        ExpectedSchemaVersion = request.ExpectedSchemaVersion,
+                        Target = new ConfigurationEffectiveStoreMutationTarget
+                        {
+                            ExpectedVersion = request.ExpectedValueVersion
+                        }
+                    }
+                ]
+            }, CancellationToken.None);
+            return Res.Ok(GetSingleAppliedResult(applied));
         }
         catch (Exception ex)
         {
@@ -498,12 +554,46 @@ public sealed class ConfigurationFacade(
     {
         try
         {
-            return await sourceMutationService.MutateAsync(request, CancellationToken.None);
+            var applied = await mutationGroupApplyService.ApplyAsync(new ConfigurationMutationGroupApplyRequest
+            {
+                Label = $"Change {request.DefinitionKey} {request.LogicalPath.ToCanonicalString()}",
+                Reason = request.Context.Reason,
+                Context = request.Context,
+                Commands =
+                [
+                    new ConfigurationMutationCommand
+                    {
+                        RequestId = Guid.NewGuid().ToString("N"),
+                        DefinitionKey = request.DefinitionKey,
+                        LogicalPath = request.LogicalPath,
+                        MutationKind = request.MutationKind,
+                        Value = request.Value,
+                        ExpectedSchemaVersion = request.ExpectedSchemaVersion,
+                        Target = new ConfigurationExternalSourceMutationTarget
+                        {
+                            SourceKey = request.SourceKey,
+                            ExpectedRevision = request.ExpectedSourceRevision
+                        }
+                    }
+                ]
+            }, CancellationToken.None);
+            return Res.Ok(GetSingleAppliedResult(applied));
         }
         catch (Exception ex)
         {
             return Res.Fail($"Failed to mutate configuration source value: {ex.GetMessageRecursively()}");
         }
+    }
+
+    private static ConfigurationMutationResult GetSingleAppliedResult(ConfigurationMutationGroupApplyResult applied)
+    {
+        var outcome = applied.Outcomes.Single();
+        if (outcome is not { Status: ConfigurationMutationOutcomeStatus.Applied, Result: not null })
+        {
+            throw new InvalidOperationException(outcome.ErrorMessage ?? "The configuration mutation was not applied.");
+        }
+
+        return outcome.Result with { PostCommitIssues = applied.PostCommitIssues };
     }
 
     /// <summary>
@@ -678,68 +768,6 @@ public sealed class ConfigurationFacade(
         catch (Exception ex)
         {
             return Res.Fail($"Failed to roll back unified configuration version: {ex.GetMessageRecursively()}");
-        }
-    }
-
-    /// <summary>
-    /// Creates a persisted mutation group.
-    /// </summary>
-    /// <param name="label">The group label.</param>
-    /// <param name="reason">The optional mutation reason.</param>
-    /// <param name="context">Optional audit context.</param>
-    /// <returns>The created group.</returns>
-    public async Task<Res<ConfigurationMutationGroup>> BeginMutationGroupAsync(
-        string label,
-        string? reason,
-        ConfigurationMutationContext? context = null)
-    {
-        try
-        {
-            return Res.Ok(await mutationGroupService.BeginAsync(label, reason, context ?? new ConfigurationMutationContext(), CancellationToken.None));
-        }
-        catch (Exception ex)
-        {
-            return Res.Fail($"Failed to begin configuration mutation group: {ex.GetMessageRecursively()}");
-        }
-    }
-
-    /// <summary>
-    /// Marks a persisted mutation group as fully applied.
-    /// </summary>
-    /// <param name="groupId">The group identity.</param>
-    /// <param name="mutationCount">The number of applied mutations.</param>
-    /// <param name="definitionKeys">The distinct touched definition keys.</param>
-    /// <returns>Operation result.</returns>
-    public async Task<Res> CompleteMutationGroupAsync(string groupId, int mutationCount, IReadOnlyList<string> definitionKeys)
-    {
-        try
-        {
-            await mutationGroupService.CompleteAsync(groupId, mutationCount, definitionKeys, CancellationToken.None);
-            return Res.Ok();
-        }
-        catch (Exception ex)
-        {
-            return Res.Fail($"Failed to complete configuration mutation group: {ex.GetMessageRecursively()}");
-        }
-    }
-
-    /// <summary>
-    /// Marks a persisted mutation group as partially applied.
-    /// </summary>
-    /// <param name="groupId">The group identity.</param>
-    /// <param name="successfulCount">The number of successful mutations.</param>
-    /// <param name="definitionKeys">The distinct touched definition keys.</param>
-    /// <returns>Operation result.</returns>
-    public async Task<Res> MarkMutationGroupPartialAsync(string groupId, int successfulCount, IReadOnlyList<string> definitionKeys)
-    {
-        try
-        {
-            await mutationGroupService.MarkPartialAsync(groupId, successfulCount, definitionKeys, CancellationToken.None);
-            return Res.Ok();
-        }
-        catch (Exception ex)
-        {
-            return Res.Fail($"Failed to mark configuration mutation group partial: {ex.GetMessageRecursively()}");
         }
     }
 

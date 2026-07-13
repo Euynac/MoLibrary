@@ -173,99 +173,90 @@
         _saving = true;
         _error = null;
 
-        var beginResult = await Facade.BeginMutationGroupAsync(_label, _reason, new ConfigurationMutationContext { Reason = _reason });
-        if (beginResult.IsFailed(out var beginError, out var group))
+        var commandResult = await BuildCommandsAsync(changes);
+        if (commandResult.IsFailed(out var commandError, out var commands))
         {
-            _error = beginError.Message;
+            _error = commandError.Message;
             _saving = false;
             return;
         }
 
-        var successCount = 0;
-        var definitionKeys = new List<string>();
-        var latestVersionsByDefinition = new Dictionary<string, long?>(StringComparer.OrdinalIgnoreCase);
-
-        foreach (var change in changes)
+        var applyResult = await Facade.ApplyMutationGroupAsync(new ConfigurationMutationGroupApplyRequest
         {
-            var result = change.TargetKind == ConfigurationMutationTargetKind.ExternalConfigurationSource
-                ? await ApplyExternalChangeAsync(change, group.GroupId)
-                : await ApplyMonicaChangeAsync(change, group.GroupId, latestVersionsByDefinition);
-
-            if (result.IsFailed(out var error, out var mutationResult))
+            Label = _label,
+            Reason = _reason,
+            Context = new ConfigurationMutationContext { Reason = _reason },
+            Commands = commands
+        });
+        if (applyResult.IsFailed(out var applyError, out var result))
+        {
+            if (applyError.Message?.Contains(nameof(ConfigurationConcurrencyConflictException), StringComparison.Ordinal) is true)
             {
-                await Facade.MarkMutationGroupPartialAsync(group.GroupId, successCount, definitionKeys);
-                _error = error.Message;
-                _saving = false;
+                MudDialog.Close(DialogResult.Ok(SaveMutationGroupDialogResult.ConcurrencyConflict(applyError.Message)));
                 return;
             }
 
-            successCount++;
-            definitionKeys.Add(change.DefinitionKey);
-            if (change.TargetKind == ConfigurationMutationTargetKind.MonicaEffectiveStore)
-            {
-                latestVersionsByDefinition[change.DefinitionKey] = mutationResult.NewVersion;
-            }
-        }
-
-        var completeResult = await Facade.CompleteMutationGroupAsync(group.GroupId, successCount, definitionKeys);
-        if (completeResult.IsFailed(out var completeError))
-        {
-            _error = completeError.Message;
+            _error = applyError.Message;
             _saving = false;
             return;
         }
 
-        MudDialog.Close(DialogResult.Ok(SaveMutationGroupDialogResult.Saved(group)));
+        MudDialog.Close(DialogResult.Ok(SaveMutationGroupDialogResult.Saved(result)));
     }
 
-    private async Task<Res<ConfigurationMutationResult>> ApplyMonicaChangeAsync(
-        PendingChange change,
-        string groupId,
-        IReadOnlyDictionary<string, long?> latestVersionsByDefinition)
+    private async Task<Res<IReadOnlyList<ConfigurationMutationCommand>>> BuildCommandsAsync(
+        IReadOnlyList<PendingChange> changes)
     {
-        var expectedValueVersion = latestVersionsByDefinition.GetValueOrDefault(
-            change.DefinitionKey,
-            change.ExpectedValueVersion);
-        return await Facade.MutateAsync(new ConfigurationMutationRequest
+        var revisions = new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase);
+        var commands = new List<ConfigurationMutationCommand>(changes.Count);
+        foreach (var change in changes)
         {
-            DefinitionKey = change.DefinitionKey,
-            LogicalPath = change.LogicalPath,
-            MutationKind = change.MutationKind,
-            Value = change.NewValue,
-            ExpectedSchemaVersion = change.ExpectedSchemaVersion,
-            ExpectedValueVersion = expectedValueVersion,
-            Context = new ConfigurationMutationContext
+            ConfigurationMutationTarget target;
+            if (change.TargetKind == ConfigurationMutationTargetKind.ExternalConfigurationSource)
             {
-                MutationGroupId = groupId,
-                Reason = _reason
-            }
-        });
-    }
+                if (string.IsNullOrWhiteSpace(change.SourceKey))
+                {
+                    return L["Dialogs:SaveGroup:MissingSourceTarget"].Value;
+                }
 
-    private async Task<Res<ConfigurationMutationResult>> ApplyExternalChangeAsync(PendingChange change, string groupId)
-    {
-        if (string.IsNullOrWhiteSpace(change.SourceKey))
-        {
-            return L["Dialogs:SaveGroup:MissingSourceTarget"].Value;
+                if (!revisions.TryGetValue(change.SourceKey, out var revision))
+                {
+                    var revisionResult = await Facade.GetSourceRevisionAsync(change.SourceKey);
+                    if (revisionResult.IsFailed(out var revisionError, out revision))
+                    {
+                        return revisionError;
+                    }
+
+                    revisions[change.SourceKey] = revision;
+                }
+
+                target = new ConfigurationExternalSourceMutationTarget
+                {
+                    SourceKey = change.SourceKey,
+                    ExpectedRevision = revision
+                };
+            }
+            else
+            {
+                target = new ConfigurationEffectiveStoreMutationTarget
+                {
+                    ExpectedVersion = change.ExpectedValueVersion
+                };
+            }
+
+            commands.Add(new ConfigurationMutationCommand
+            {
+                RequestId = change.RequestId,
+                DefinitionKey = change.DefinitionKey,
+                LogicalPath = change.LogicalPath,
+                MutationKind = change.MutationKind,
+                Value = change.NewValue,
+                ExpectedSchemaVersion = change.ExpectedSchemaVersion,
+                Target = target
+            });
         }
 
-        var revisionResult = await Facade.GetSourceRevisionAsync(change.SourceKey);
-        var expectedRevision = revisionResult.IsFailed(out _, out var revision) ? null : revision;
-        return await Facade.MutateSourceAsync(new ConfigurationSourceMutationRequest
-        {
-            SourceKey = change.SourceKey,
-            DefinitionKey = change.DefinitionKey,
-            LogicalPath = change.LogicalPath,
-            MutationKind = change.MutationKind,
-            Value = change.NewValue,
-            ExpectedSchemaVersion = change.ExpectedSchemaVersion,
-            ExpectedSourceRevision = expectedRevision,
-            Context = new ConfigurationMutationContext
-            {
-                MutationGroupId = groupId,
-                Reason = _reason
-            }
-        });
+        return Res.Ok<IReadOnlyList<ConfigurationMutationCommand>>(commands);
     }
 
     private void Cancel()

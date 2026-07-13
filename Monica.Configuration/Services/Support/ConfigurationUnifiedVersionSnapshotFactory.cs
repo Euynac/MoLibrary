@@ -20,7 +20,8 @@ internal sealed class ConfigurationUnifiedVersionSnapshotFactory(
         string? mutationGroupId,
         ConfigurationMutationContext context,
         DateTimeOffset createdTime,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        IReadOnlyDictionary<string, ConfigurationEffectiveValueDocument>? documentOverrides = null)
     {
         if (!IsEnabled)
         {
@@ -48,7 +49,12 @@ internal sealed class ConfigurationUnifiedVersionSnapshotFactory(
         var snapshots = new List<ConfigurationUnifiedVersionDefinitionSnapshot>();
         foreach (var definition in selectedDefinitions)
         {
-            var document = await effectiveValueStore.GetAsync(definition.DefinitionKey, cancellationToken);
+            ConfigurationEffectiveValueDocument? overriddenDocument = null;
+            var hasOverride = documentOverrides is not null
+                              && documentOverrides.TryGetValue(definition.DefinitionKey, out overriddenDocument);
+            var document = hasOverride
+                ? overriddenDocument
+                : await effectiveValueStore.GetAsync(definition.DefinitionKey, cancellationToken);
             snapshots.Add(new ConfigurationUnifiedVersionDefinitionSnapshot
             {
                 DefinitionKey = definition.DefinitionKey,
@@ -58,7 +64,9 @@ internal sealed class ConfigurationUnifiedVersionSnapshotFactory(
                 SchemaVersion = definition.SchemaVersion,
                 SchemaHash = definition.SchemaHash,
                 EffectiveValueVersion = document?.Version,
-                Json = seedFactory.CreateRuntimeJson(definition.Root, definition.SectionPath),
+                Json = hasOverride && document is not null
+                    ? document.Json
+                    : seedFactory.CreateRuntimeJson(definition.Root, definition.SectionPath),
                 SourceContributions = CaptureSourceContributions(definition)
             });
         }

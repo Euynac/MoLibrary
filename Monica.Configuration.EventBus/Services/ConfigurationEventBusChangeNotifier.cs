@@ -17,11 +17,11 @@ public sealed class ConfigurationEventBusChangeNotifier(
     : IConfigurationChangeNotifier
 {
     /// <inheritdoc />
-    public Task NotifyAsync(ConfigurationChangeNotification notification, CancellationToken cancellationToken)
+    public Task NotifyAsync(ConfigurationReloadSignal signal, CancellationToken cancellationToken)
     {
         var currentOptions = options.Value;
         return ResolveDistributedEventBus(serviceProvider, currentOptions)
-            .PublishAsync(notification, currentOptions.TopicName, cancellationToken);
+            .PublishAsync(signal, currentOptions.TopicName, cancellationToken);
     }
 
     internal static IDistributedEventBus ResolveDistributedEventBus(

@@ -1,0 +1,238 @@
+using Microsoft.Extensions.Logging;
+using Monica.Configuration.Exceptions;
+using Monica.Configuration.Models;
+using Monica.Configuration.Services.Support;
+using Monica.Core.Extensions;
+
+namespace Monica.Configuration.Services;
+
+internal sealed partial class ConfigurationMutationGroupApplyService
+{
+    private async Task ApplyExternalMutationsAsync(
+        IReadOnlyList<PreparedConfigurationMutation> mutations,
+        ConfigurationMutationContext context,
+        IDictionary<string, ConfigurationMutationOutcome> outcomes,
+        ICollection<ConfigurationPostCommitIssue> postCommitIssues,
+        CancellationToken cancellationToken)
+    {
+        var failed = false;
+        foreach (var sourceGroup in mutations.GroupBy(
+                     static mutation => ((ConfigurationExternalSourceMutationTarget)mutation.Command.Target).SourceKey,
+                     StringComparer.OrdinalIgnoreCase))
+        {
+            if (failed)
+            {
+                foreach (var mutation in sourceGroup)
+                {
+                    outcomes[mutation.Command.RequestId] = new ConfigurationMutationOutcome
+                    {
+                        RequestId = mutation.Command.RequestId,
+                        Status = ConfigurationMutationOutcomeStatus.Skipped,
+                        ErrorMessage = "Skipped because an earlier external configuration source mutation failed."
+                    };
+                }
+
+                continue;
+            }
+
+            var sourceMutations = sourceGroup.ToArray();
+            var target = (ConfigurationExternalSourceMutationTarget)sourceMutations[0].Command.Target;
+            var source = sourceInspector.GetRequiredSource(target.SourceKey);
+            try
+            {
+                var write = await sourceWriter.WriteBatchAsync(
+                    source,
+                    sourceMutations.Select(static mutation => new ConfigurationJsonFileMutation
+                    {
+                        ConfigurationPath = mutation.ConfigurationPath,
+                        MutationKind = mutation.Request.MutationKind,
+                        Value = mutation.Request.Value
+                    }).ToArray(),
+                    target.ExpectedRevision,
+                    cancellationToken);
+
+                for (var index = 0; index < sourceMutations.Length; index++)
+                {
+                    var mutation = sourceMutations[index];
+                    var valueResult = write.Results[index];
+                    var reloadBehavior = mutation.TargetNode.ResolveEffectiveReloadBehavior(mutation.Definition);
+                    var result = new ConfigurationMutationResult
+                    {
+                        DefinitionKey = mutation.Definition.DefinitionKey,
+                        LogicalPath = mutation.Command.LogicalPath,
+                        NewVersion = 0,
+                        SchemaVersion = mutation.Definition.SchemaVersion,
+                        ModifiedTime = write.ModifiedTime,
+                        RequiresRestart = reloadBehavior.RequiresProcessRestart()
+                    };
+                    outcomes[mutation.Command.RequestId] = new ConfigurationMutationOutcome
+                    {
+                        RequestId = mutation.Command.RequestId,
+                        Status = ConfigurationMutationOutcomeStatus.Applied,
+                        Result = result
+                    };
+                    metricsRecorder.RecordMutation(source.SourceKey);
+
+                    try
+                    {
+                        await historyStore.AppendHistoryAsync(new ConfigurationValueHistory
+                        {
+                            HistoryId = Guid.NewGuid().ToString("N"),
+                            DefinitionKey = mutation.Definition.DefinitionKey,
+                            LogicalPath = mutation.Command.LogicalPath,
+                            ConfigurationPath = mutation.ConfigurationPath,
+                            TargetKind = ConfigurationMutationTargetKind.ExternalConfigurationSource,
+                            SourceProviderType = source.ProviderType,
+                            SourceDisplayName = source.DisplayName,
+                            SourcePhysicalPath = source.PhysicalPath,
+                            SourceConfigurationPath = mutation.ConfigurationPath,
+                            MutationKind = mutation.Command.MutationKind,
+                            Granularity = mutation.Granularity,
+                            State = mutation.Command.MutationKind == ConfigurationMutationKind.Remove
+                                ? ConfigurationValueState.Removed
+                                : ConfigurationValueState.Active,
+                            OldValue = valueResult.OldValue,
+                            NewValue = valueResult.NewValue,
+                            Version = 0,
+                            SourceRevisionBefore = write.OldRevision,
+                            SourceRevisionAfter = write.NewRevision,
+                            SchemaVersion = mutation.Definition.SchemaVersion,
+                            ModifiedTime = write.ModifiedTime,
+                            ModifierId = context.ModifierId,
+                            ModifierName = context.ModifierName,
+                            Reason = context.Reason,
+                            MutationGroupId = context.MutationGroupId
+                        }, cancellationToken);
+                    }
+                    catch (Exception ex)
+                    {
+                        logger.LogWarning(
+                            ex,
+                            "External configuration history persistence failed for request {RequestId} in group {GroupId}.",
+                            mutation.Command.RequestId,
+                            context.MutationGroupId);
+                        postCommitIssues.Add(new ConfigurationPostCommitIssue
+                        {
+                            Kind = ConfigurationPostCommitIssueKind.AuditFinalization,
+                            Source = historyStore.GetType().Name,
+                            Message = "An external configuration source was saved, but its history row could not be persisted.",
+                            Detail = ex.ToString()
+                        });
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                logger.LogWarning(
+                    ex,
+                    "External configuration source {SourceKey} failed during group {GroupId}; later sources will be skipped.",
+                    target.SourceKey,
+                    context.MutationGroupId);
+                failed = true;
+                foreach (var mutation in sourceMutations)
+                {
+                    outcomes[mutation.Command.RequestId] = new ConfigurationMutationOutcome
+                    {
+                        RequestId = mutation.Command.RequestId,
+                        Status = ConfigurationMutationOutcomeStatus.Failed,
+                        ErrorMessage = ex.GetMessageRecursively()
+                    };
+                }
+            }
+        }
+    }
+
+    private async Task<ConfigurationMutationGroup> FinalizeMixedOrExternalGroupAsync(
+        ConfigurationMutationGroup currentGroup,
+        IReadOnlyList<ConfigurationMutationOutcome> appliedOutcomes,
+        bool allApplied,
+        ICollection<ConfigurationPostCommitIssue> postCommitIssues,
+        CancellationToken cancellationToken)
+    {
+        var definitionKeys = appliedOutcomes
+            .Select(static outcome => outcome.Result!.DefinitionKey)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+        try
+        {
+            if (allApplied)
+            {
+                await mutationGroupService.CompleteAsync(
+                    currentGroup.GroupId,
+                    appliedOutcomes.Count,
+                    definitionKeys,
+                    cancellationToken);
+            }
+            else
+            {
+                await mutationGroupService.MarkPartialAsync(
+                    currentGroup.GroupId,
+                    appliedOutcomes.Count,
+                    definitionKeys,
+                    cancellationToken);
+            }
+
+            return await mutationGroupService.GetAsync(currentGroup.GroupId, cancellationToken)
+                   ?? currentGroup;
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(
+                ex,
+                "Configuration mutation-group finalization failed for {GroupId} after {AppliedCount} values were applied.",
+                currentGroup.GroupId,
+                appliedOutcomes.Count);
+            postCommitIssues.Add(new ConfigurationPostCommitIssue
+            {
+                Kind = allApplied
+                    ? ConfigurationPostCommitIssueKind.UnifiedVersionCapture
+                    : ConfigurationPostCommitIssueKind.AuditFinalization,
+                Source = nameof(ConfigurationMutationGroupService),
+                Message = "Configuration values were applied, but mutation-group finalization failed.",
+                Detail = ex.ToString()
+            });
+            return currentGroup with
+            {
+                MutationCount = appliedOutcomes.Count,
+                DefinitionKeys = definitionKeys,
+                Status = allApplied
+                    ? ConfigurationMutationGroupStatus.Applied
+                    : ConfigurationMutationGroupStatus.PartiallyApplied
+            };
+        }
+    }
+
+    private void ValidateExternalTargets(IReadOnlyList<PreparedConfigurationMutation> mutations)
+    {
+        var expectedRevisions = new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase);
+        foreach (var mutation in mutations)
+        {
+            if (mutation.Command.Target is ConfigurationEffectiveStoreMutationTarget)
+            {
+                continue;
+            }
+
+            if (mutation.Command.Target is not ConfigurationExternalSourceMutationTarget target)
+            {
+                throw new ConfigurationValidationFailedException(
+                    $"Unsupported mutation target '{mutation.Command.Target.GetType().Name}'.");
+            }
+
+            var source = sourceInspector.GetRequiredSource(target.SourceKey);
+            if (!source.IsWritable)
+            {
+                throw new ConfigurationValidationFailedException(
+                    source.ReadOnlyReason ?? $"Configuration source '{source.DisplayName}' is read-only.");
+            }
+
+            if (expectedRevisions.TryGetValue(target.SourceKey, out var expectedRevision)
+                && !string.Equals(expectedRevision, target.ExpectedRevision, StringComparison.OrdinalIgnoreCase))
+            {
+                throw new ConfigurationValidationFailedException(
+                    $"Mutation group contains inconsistent expected revisions for source '{source.DisplayName}'.");
+            }
+
+            expectedRevisions[target.SourceKey] = target.ExpectedRevision;
+        }
+    }
+}

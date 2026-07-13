@@ -8,6 +8,11 @@ namespace Monica.Configuration.UI.State;
 public sealed record PendingChange
 {
     /// <summary>
+    /// Gets the stable mutation request identity used to correlate save outcomes.
+    /// </summary>
+    public string RequestId => $"{DefinitionKey}|{LogicalPath.ToCanonicalString()}";
+
+    /// <summary>
     /// Gets the target definition key.
     /// </summary>
     public required string DefinitionKey { get; init; }

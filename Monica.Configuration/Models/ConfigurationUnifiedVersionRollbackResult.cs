@@ -19,4 +19,9 @@ public sealed record ConfigurationUnifiedVersionRollbackResult
     /// Gets the mutation results produced by applying captured definitions.
     /// </summary>
     public IReadOnlyList<ConfigurationMutationResult> Results { get; init; } = [];
+
+    /// <summary>
+    /// Gets the structured group outcome, including partial external-source outcomes and post-commit issues.
+    /// </summary>
+    public required ConfigurationMutationGroupApplyResult ApplyResult { get; init; }
 }

@@ -18,8 +18,8 @@ public sealed class ConfigurationReloadSignalReceiverTests
         registry.Register(definition);
         var coordinator = new RecordingReloadCoordinator();
         var receiver = CreateReceiver(registry, coordinator);
-        var first = CreateNotification(definition.DefinitionKey, version: 2);
-        var duplicateDefinition = CreateNotification(definition.DefinitionKey, version: 3);
+        var first = CreateSignal(definition.DefinitionKey, version: 2);
+        var duplicateDefinition = CreateSignal(definition.DefinitionKey, version: 3);
 
         await receiver.ReceiveAsync(first, CancellationToken.None);
         await receiver.ReceiveAsync(duplicateDefinition, CancellationToken.None);
@@ -38,15 +38,15 @@ public sealed class ConfigurationReloadSignalReceiverTests
         coordinator.SetLoadedVersion(definition.DefinitionKey, 5);
         var receiver = CreateReceiver(registry, coordinator);
 
-        await receiver.ReceiveAsync(CreateNotification("Unknown.Definition", version: 1), CancellationToken.None);
-        await receiver.ReceiveAsync(CreateNotification(definition.DefinitionKey, version: 4), CancellationToken.None);
-        await receiver.ReceiveAsync(CreateNotification(definition.DefinitionKey, version: 6) with
+        await receiver.ReceiveAsync(CreateSignal("Unknown.Definition", version: 1), CancellationToken.None);
+        await receiver.ReceiveAsync(CreateSignal(definition.DefinitionKey, version: 4), CancellationToken.None);
+        await receiver.ReceiveAsync(CreateSignal(definition.DefinitionKey, version: 6) with
         {
             OriginInstanceId = "local-instance"
         }, CancellationToken.None);
-        await receiver.ReceiveAsync(CreateNotification(definition.DefinitionKey, version: 7) with
+        await receiver.ReceiveAsync(CreateSignal(definition.DefinitionKey, version: 7) with
         {
-            Scope = ConfigurationReloadScope.RuntimeConfiguration
+            Kind = (ConfigurationReloadSignalKind)999
         }, CancellationToken.None);
         await Task.Delay(80, TestContext.Current.CancellationToken);
 
@@ -69,16 +69,22 @@ public sealed class ConfigurationReloadSignalReceiverTests
             }));
     }
 
-    private static ConfigurationChangeNotification CreateNotification(string definitionKey, long version)
+    private static ConfigurationReloadSignal CreateSignal(string definitionKey, long version)
     {
-        return new ConfigurationChangeNotification
+        return new ConfigurationReloadSignal
         {
-            NotificationId = Guid.NewGuid().ToString("N"),
+            SignalId = Guid.NewGuid().ToString("N"),
             OriginInstanceId = "remote-instance",
             StoreKey = "file:default",
-            Scope = ConfigurationReloadScope.MonicaProjection,
-            DefinitionKey = definitionKey,
-            Version = version,
+            Kind = ConfigurationReloadSignalKind.DefinitionsChanged,
+            Definitions =
+            [
+                new ConfigurationReloadDefinitionVersion
+                {
+                    DefinitionKey = definitionKey,
+                    Version = version
+                }
+            ],
             ChangedTime = DateTimeOffset.UtcNow
         };
     }

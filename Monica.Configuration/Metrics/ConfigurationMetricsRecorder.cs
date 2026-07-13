@@ -19,6 +19,10 @@ public sealed class ConfigurationMetricsRecorder(IMeterFactory meterFactory)
         .Create(ConfigurationMetrics.MeterName)
         .CreateHistogram<double>(ConfigurationMetrics.ReloadLatency, "ms");
 
+    private readonly Counter<long> _reloadNotificationFailureCounter = meterFactory
+        .Create(ConfigurationMetrics.MeterName)
+        .CreateCounter<long>(ConfigurationMetrics.ReloadNotificationFailureCount);
+
     /// <summary>
     /// Records one mutation.
     /// </summary>
@@ -48,5 +52,20 @@ public sealed class ConfigurationMetricsRecorder(IMeterFactory meterFactory)
     public void RecordReloadLatency(TimeSpan duration)
     {
         _reloadLatencyHistogram.Record(duration.TotalMilliseconds);
+    }
+
+    /// <summary>
+    /// Records one failed distributed reload notification.
+    /// </summary>
+    /// <param name="notifier">Stable notifier type name.</param>
+    /// <param name="operation">Stable notification operation.</param>
+    /// <param name="exceptionType">Exception type.</param>
+    public void RecordNotificationFailure(string notifier, string operation, string exceptionType)
+    {
+        _reloadNotificationFailureCounter.Add(
+            1,
+            new KeyValuePair<string, object?>("notifier", notifier),
+            new KeyValuePair<string, object?>("operation", operation),
+            new KeyValuePair<string, object?>("exception.type", exceptionType));
     }
 }
