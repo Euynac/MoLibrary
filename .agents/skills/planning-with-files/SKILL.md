@@ -1,236 +1,71 @@
 ---
 name: planning-with-files
-description: Use persistent markdown planning files in `.pending/NNN-description/` folders for multi-step work. Use when the user explicitly asks for file-based planning, wants planning files on disk, or needs `task_plan.md`, `findings.md`, and `progress.md` to persist across a complex task.
+description: Maintain concise, opt-in task memory in a numbered `.pending/NNN-description/` folder. Use only when the user explicitly invokes `$planning-with-files`, asks for planning or working-memory files on disk, or asks to resume an existing `.pending` task. Do not trigger solely because work is complex, multi-step, long-running, or delegated.
 ---
 
 # Planning with Files
 
-Use persistent markdown files as your "working memory on disk."
+Persist only the task context that must survive a pause, handoff, or separate session. Use native runtime planning for ordinary work.
 
-## Resource Paths
+## Activation boundary
 
-Treat `scripts/...`, `templates/...`, `reference.md`, and `examples.md` as paths relative to this skill directory.
+- Start this workflow only after the user explicitly chooses file-based planning.
+- Do not let another skill or task complexity silently enable it.
+- Keep planning artifacts local to the task; do not treat `.pending/` as permanent project documentation.
 
-Use relative paths in the instructions. Only resolve them to absolute paths if a shell or tool explicitly requires that.
+## Start a new task
 
-## FIRST: Setup Requirement Folder
-
-**Before starting work**, set up a requirement folder in `.pending/`:
-
-1. **Extract task description** from the user's initial message:
-   - Identify 2-4 key words describing the task
-   - Convert to kebab-case (lowercase with hyphens)
-   - Examples:
-     - "I want to add a RAG module" -> "rag-module"
-     - "Create localization support" -> "localization-support"
-     - "Fix the authentication bug" -> "auth-bug-fix"
-
-2. **Create the requirement folder**:
+Resolve `<skill-dir>` to the directory containing this `SKILL.md`, then run the cross-platform initializer from the project root:
 
 ```bash
-FOLDER_PATH=$(scripts/setup-requirement-folder.sh "task-description")
+python <skill-dir>/scripts/init_task.py "short task description" \
+  --base-dir "<project-root>" \
+  --goal "Concrete end state" \
+  --phase "Understand the current state" \
+  --phase "Implement the change" \
+  --phase "Verify and deliver"
 ```
 
-```powershell
-$FOLDER_PATH = & "scripts/setup-requirement-folder.ps1" "task-description"
-```
+Add `--with-findings` when the task needs durable research, evidence, URLs, or artifact paths.
 
-3. **Initialize planning files** in the folder:
+The initializer always creates `task_plan.md` in a new `.pending/NNN-description/` folder. It never reuses an older task folder and never reads runtime transcripts. Tailor the generated phases and next action before implementation.
 
-```bash
-scripts/init-session.sh "project-name" "$FOLDER_PATH"
-```
+## Resume an existing task
 
-```powershell
-& "scripts/init-session.ps1" "project-name" "$FOLDER_PATH"
-```
+1. Use the task folder identified by the user. If no folder is named and exactly one clearly matches, use it; otherwise list the candidates and request a choice.
+2. Read `task_plan.md` and any optional planning files that exist.
+3. Inspect the real workspace with `git status --short` and the relevant diff or artifacts.
+4. Reconcile stale planning state before continuing. The workspace and verified external state override old notes.
 
-The folder will be created as `.pending/NNN-description/` where NNN is the next available number (e.g., 010, 011, etc.).
+## Keep one source of truth
 
-## Check for Previous Session (v2.2.0)
+| File | Use | Update |
+|---|---|---|
+| `task_plan.md` | Goal, phases, current state, material decisions, blockers, next action, handoff snapshot | Required; update at durable checkpoints |
+| `findings.md` | Research findings, source links, visual observations, and artifact paths | Optional; update when evidence would otherwise be lost |
 
-**After folder setup**, check for unsynced context from a previous session:
+Do not duplicate the same status, decision, or error across files. Keep phase status, decisions, verification, and the next action authoritative in `task_plan.md`.
 
-```bash
-$(command -v python3 || command -v python) scripts/session-catchup.py "$(pwd)"
-```
+## Update discipline
 
-```powershell
-& (Get-Command python -ErrorAction SilentlyContinue).Source "scripts/session-catchup.py" (Get-Location)
-```
+Update persistent memory when one of these occurs:
 
-If catchup report shows unsynced context:
-1. Run `git diff --stat` to see actual code changes
-2. Read current planning files
-3. Update planning files based on catchup + git diff
-4. Then proceed with task
+- a phase starts or finishes;
+- scope or a material technical decision changes;
+- a blocker or failure changes the approach;
+- durable browser, document, or research evidence would otherwise be lost;
+- work pauses, transfers to another agent or session, or completes.
 
-## Important: Where Files Go
+Do not update after every tool call, every two reads, or every transient error. Do not re-read a file immediately after writing it unless verification is necessary.
 
-- **Templates** are in `templates/`
-- **Your planning files** go in **`.pending/NNN-description/`** folders
+When work completes, set the overall status and every completed phase consistently, clear the next action, record final verification, and remove obsolete blockers. Before handoff, confirm that the planning state agrees with the actual workspace.
 
-| Location | What Goes There |
-|----------|-----------------|
-| Skill directory (`scripts/`, `templates/`, sibling docs) | Templates, scripts, reference docs |
-| `.pending/NNN-description/` | `task_plan.md`, `findings.md`, `progress.md` |
-| Project root | Fallback location if `.pending/` cannot be created |
+## Storage boundary
 
-## Quick Start
+`.pending/` is disposable local working state and is commonly gitignored. Move durable requirements, architecture decisions, and team knowledge into tracked project documentation when they must survive clones or be reviewed with the code.
 
-Before ANY complex task:
+## Resources
 
-1. **Setup requirement folder** - Extract task description from user's message, create `.pending/NNN-description/` folder
-2. **Initialize planning files** - Run init-session script with the folder path
-3. **Create planning files** - `task_plan.md`, `findings.md`, `progress.md` in the requirement folder
-4. **Re-read plan before decisions** - Refreshes goals in attention window
-5. **Update after each phase** - Mark complete, log errors
-
-> **Note:** Planning files go in `.pending/NNN-description/` folders, not the project root.
-
-## The Core Pattern
-
-```
-Context Window = RAM (volatile, limited)
-Filesystem = Disk (persistent, unlimited)
-
--> Anything important gets written to disk.
-```
-
-## File Purposes
-
-| File | Purpose | When to Update |
-|------|---------|----------------|
-| `task_plan.md` | Phases, progress, decisions | After each phase |
-| `findings.md` | Research, discoveries | After ANY discovery |
-| `progress.md` | Session log, test results | Throughout session |
-
-## Critical Rules
-
-### 1. Create Plan First
-Never start a complex task without `task_plan.md`. Non-negotiable.
-
-### 2. The 2-Action Rule
-> "After every 2 view/browser/search operations, IMMEDIATELY save key findings to text files."
-
-This prevents visual/multimodal information from being lost.
-
-### 3. Read Before Decide
-Before major decisions, read the plan file. This keeps goals in your attention window.
-
-### 4. Update After Act
-After completing any phase:
-- Mark phase status: `in_progress` -> `complete`
-- Log any errors encountered
-- Note files created/modified
-
-### 5. Log ALL Errors
-Every error goes in the plan file. This builds knowledge and prevents repetition.
-
-```markdown
-## Errors Encountered
-| Error | Attempt | Resolution |
-|-------|---------|------------|
-| FileNotFoundError | 1 | Created default config |
-| API timeout | 2 | Added retry logic |
-```
-
-### 6. Never Repeat Failures
-```
-if action_failed:
-    next_action != same_action
-```
-Track what you tried. Mutate the approach.
-
-## The 3-Strike Error Protocol
-
-```
-ATTEMPT 1: Diagnose & Fix
-  -> Read error carefully
-  -> Identify root cause
-  -> Apply targeted fix
-
-ATTEMPT 2: Alternative Approach
-  -> Same error? Try different method
-  -> Different tool? Different library?
-  -> NEVER repeat exact same failing action
-
-ATTEMPT 3: Broader Rethink
-  -> Question assumptions
-  -> Search for solutions
-  -> Consider updating the plan
-
-AFTER 3 FAILURES: Escalate to User
-  -> Explain what you tried
-  -> Share the specific error
-  -> Ask for guidance
-```
-
-## Read vs Write Decision Matrix
-
-| Situation | Action | Reason |
-|-----------|--------|--------|
-| Just wrote a file | DON'T read | Content still in context |
-| Viewed image/PDF | Write findings NOW | Multimodal -> text before lost |
-| Browser returned data | Write to file | Screenshots don't persist |
-| Starting new phase | Read plan/findings | Re-orient if context stale |
-| Error occurred | Read relevant file | Need current state to fix |
-| Resuming after gap | Read all planning files | Recover state |
-
-## The 5-Question Reboot Test
-
-If you can answer these, your context management is solid:
-
-| Question | Answer Source |
-|----------|---------------|
-| Where am I? | Current phase in task_plan.md |
-| Where am I going? | Remaining phases |
-| What's the goal? | Goal statement in plan |
-| What have I learned? | findings.md |
-| What have I done? | progress.md |
-
-## When to Use This Pattern
-
-**Use for:**
-- Multi-step tasks (3+ steps)
-- Research tasks
-- Building/creating projects
-- Tasks spanning many tool calls
-- Anything requiring organization
-
-**Skip for:**
-- Simple questions
-- Single-file edits
-- Quick lookups
-
-## Templates
-
-Copy these templates to start:
-
-- [templates/task_plan.md](templates/task_plan.md) - Phase tracking
-- [templates/findings.md](templates/findings.md) - Research storage
-- [templates/progress.md](templates/progress.md) - Session logging
-
-## Scripts
-
-Helper scripts for automation:
-
-- `scripts/init-session.sh` - Initialize all planning files
-- `scripts/session-catchup.py` - Recover context from previous session (v2.2.0)
-
-## Advanced Topics
-
-- **Manus Principles:** See [reference.md](reference.md)
-- **Real Examples:** See [examples.md](examples.md)
-
-## Anti-Patterns
-
-| Don't | Do Instead |
-|-------|------------|
-| Use TodoWrite for persistence | Create task_plan.md file in requirement folder |
-| State goals once and forget | Re-read plan before decisions |
-| Hide errors and retry silently | Log errors to plan file |
-| Stuff everything in context | Store large content in files |
-| Start executing immediately | Setup requirement folder and create plan FIRST |
-| Repeat failed actions | Track attempts, mutate approach |
-| Create files in project root | Create files in `.pending/NNN-description/` folder |
+- `scripts/init_task.py` creates a new numbered task folder and selected planning files.
+- `templates/task_plan.md` is the required concise plan template.
+- `templates/findings.md` is the optional research and evidence template.
