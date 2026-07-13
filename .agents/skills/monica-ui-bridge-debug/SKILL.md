@@ -1,6 +1,6 @@
 ---
 name: monica-ui-bridge-debug
-description: Orchestrate Monica UI inspection, debugging, and refinement through a bridge ASP.NET Core project. Use when Monica has no standalone entry point and Codex must launch a bridge service on a user-provided or discovered URL/port, choose between a simple single-agent bridge workflow and a delegated sub-agent workflow, capture browser artifacts with Playwright, and implement Monica UI fixes under $monica-ui-development. Use simple mode for narrow tasks or when the user requests simple mode. Use $subagent-progress-report for complex work or when the user requests sub-agent mode.
+description: Orchestrate Monica UI inspection, debugging, and refinement through a bridge ASP.NET Core project. Use when Monica has no standalone entry point and Codex must launch a bridge service on a user-provided or discovered URL/port, choose between a simple single-agent bridge workflow and a delegated sub-agent workflow, capture browser artifacts with Playwright, and implement Monica UI fixes under $monica-ui-development. Use simple mode for narrow tasks or when the user requests simple mode. Use $supervise-subagents for complex work or when the user requests sub-agent mode.
 ---
 
 # Monica UI Bridge Debug
@@ -13,7 +13,7 @@ Use this skill when Monica UI work must be verified through a separate runnable 
 - Use `$monica-ui-development` for every Monica Blazor UI implementation or style change.
 - Use `$monica-ui-localization` for any UI text, localization resource, navigation/AppBar key, or i18n validation change.
 - Use `$playwright-cli` for browser inspection, snapshots, and screenshots.
-- Use `$subagent-progress-report` whenever the selected workflow is delegated sub-agent mode.
+- Use `$supervise-subagents` whenever the selected workflow is delegated sub-agent mode.
 
 ## Inputs to collect or resolve
 
@@ -60,10 +60,10 @@ Use delegated sub-agent mode when the task is complex, spans multiple debug or v
 
 Rules:
 
-- Use `$subagent-progress-report` without exception.
+- Use `$supervise-subagents` without exception.
 - Act only as the orchestrator. Collect inputs, decide the workflow, ask the user for design confirmation, initialize coordination folders, supervise sub-agents, and summarize results.
 - Delegate concrete bridge testing, Playwright capture, debugging, implementation, and verification to sub-agents through the runtime's SubAgent features.
-- Keep bridge artifacts in the task folder and sub-agent coordination logs in `.tmp/<timestamp>-agent-session/`.
+- Keep bridge artifacts in the task folder and supervision records in `.tmp/<timestamp>-<random>-agent-session/`.
 - Do not silently downgrade to simple mode when the user asked for sub-agent mode.
 
 ## Mandatory Monica UI rule handoff
@@ -102,10 +102,10 @@ If a meaningful design choice needs user confirmation, ask as soon as the decisi
 
 1. Collect the required inputs and ask for any blocking design decision immediately.
 2. Create the task folder with the `$planning-with-files` setup script.
-3. Initialize one shared session root with `$subagent-progress-report`.
+3. Initialize one shared session root with `$supervise-subagents`.
 4. Spawn sub-agents with explicit ownership for bridge testing, debugging, implementation, or verification.
-5. Bootstrap-check every sub-agent before trusting its progress.
-6. Supervise sub-agent logs and keep the main agent out of direct implementation work.
+5. Register every sub-agent, persist its native lifecycle, and verify its first `in_progress` event before trusting its progress.
+6. Supervise native lifecycle and reported checkpoints through status scans or the dashboard while keeping the main agent out of direct implementation work.
 7. Keep the bridge service running after successful verification unless the user asks otherwise.
 
 ## Workflow
@@ -151,12 +151,12 @@ Switch to delegated sub-agent mode when the task is complex or the user requests
 
 When delegated sub-agent mode is selected:
 
-1. Use `$subagent-progress-report` in Main-Agent mode.
+1. Use `$supervise-subagents` in Main-Agent mode.
 2. Create one shared session root and reuse it for the whole run.
-3. Give each sub-agent a stable ownership boundary and require `$subagent-progress-report` in Sub-Agent mode.
-4. Run the bootstrap check after every delegation before trusting the child.
-5. Read the newest `agent.log` entries first and respond to `blocked` or `needs input` immediately.
-6. Archive closed sub-agents when their work is complete so future scans stay clean.
+3. Give each sub-agent a stable ownership boundary and require `$supervise-subagents` in Sub-Agent mode.
+4. Register each child immediately after spawning it and verify its first `in_progress` event with a bounded wait.
+5. Inspect native lifecycle and reported progress separately, and respond to `blocked` or `needs_input` immediately.
+6. Persist the terminal native lifecycle and close the agent record only after the runtime confirms completion, failure, or interruption.
 
 ### 4. Bridge service startup script
 
@@ -292,7 +292,7 @@ If `open` is unavailable but an existing browser session is already running, pre
 For difficult problems, let the delegated sub-agent add focused debug output and log search markers.
 
 - Use a unique marker string for each investigation attempt, for example `[bridge-marker:<short-id>]`.
-- Write the marker, approximate timestamp, page route, and investigation goal into the sub-agent's `agent.log` before reproducing the issue.
+- Report the marker, approximate timestamp, page route, and investigation goal as a factual progress checkpoint before reproducing the issue.
 - Search `app-run.log` by marker first, then narrow by timestamp if needed.
 - Keep debug logging scoped to the suspected path and remove temporary logs after verification unless the user asks to keep them.
 - Assume service logs can become very large. Use markers to make retrieval practical instead of scanning the whole log repeatedly.
@@ -325,7 +325,7 @@ Otherwise report it as unconfirmed instead of as a verified UI error.
 - [ ] Select simple mode or delegated sub-agent mode before launch
 - [ ] Create a new task folder with `$planning-with-files`
 - [ ] Skip the three planning files in simple mode
-- [ ] Use `$subagent-progress-report` in delegated sub-agent mode
+- [ ] Use `$supervise-subagents` in delegated sub-agent mode
 - [ ] Run `$monica-ui-development` source check before UI edits
 - [ ] Use `bridge_service.py run` instead of ad-hoc launch commands
 - [ ] Use `bridge_service.py wait-ready` before opening Playwright

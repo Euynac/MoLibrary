@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <title>Supervise Subagents</title>
+  <link rel="stylesheet" href="/styles.css">
+  <script src="/app.js" defer></script>
+</head>
+<body>
+  <header class="app-header">
+    <div>
+      <p id="hero-eyebrow" class="eyebrow">Multi-agent supervision</p>
+      <h1 id="page-title">Supervise Subagents</h1>
+    </div>
+    <div class="header-actions">
+      <label class="language-control" for="language-select">
+        <span id="language-label">Language</span>
+        <select id="language-select">
+          <option value="en">English</option>
+          <option value="zh-CN">中文</option>
+        </select>
+      </label>
+      <div class="connection" role="status" aria-live="polite">
+        <span id="connection-dot" class="connection-dot"></span>
+        <span id="connection-text">Connecting…</span>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <section class="session-bar" aria-labelledby="session-heading">
+      <div>
+        <p id="session-heading" class="field-label">Task session</p>
+        <select id="session-select" aria-labelledby="session-heading"></select>
+      </div>
+      <div id="session-meta" class="session-meta"></div>
+    </section>
+
+    <section id="summary" class="summary-grid" aria-label="Agent lifecycle summary"></section>
+
+    <section aria-labelledby="agents-heading">
+      <div class="section-heading">
+        <div>
+          <p id="delegated-eyebrow" class="eyebrow">Delegated work</p>
+          <h2 id="agents-heading">Agents</h2>
+        </div>
+        <p id="refresh-time" class="refresh-time"></p>
+      </div>
+      <div id="agents" class="agent-grid"></div>
+      <div id="empty-state" class="empty-state" hidden>
+        <h3 id="empty-title">No registered agents</h3>
+        <p id="empty-description">Agents will appear after the main agent registers a native child.</p>
+      </div>
+    </section>
+  </main>
+
+  <footer id="privacy-footer">
+    Native lifecycle and child-reported progress are shown separately. This dashboard never exposes private reasoning.
+  </footer>
+</body>
+</html>
