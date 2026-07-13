@@ -9,7 +9,7 @@ namespace Monica.AI.Models;
 /// <summary>
 /// Accumulates streaming agent content into a final assistant chat message.
 /// </summary>
-public class StreamingContentAccumulator
+internal sealed class StreamingContentAccumulator
 {
     /// <summary>
     /// Accumulated text content
@@ -43,7 +43,7 @@ public class StreamingContentAccumulator
     /// <summary>
     /// Process a single AIContent item from the stream
     /// </summary>
-    public void ProcessContent(AIContent content, AgentResponseUpdate? update = null)
+    internal void ProcessContent(AIContent content, AgentResponseUpdate? update = null)
     {
         if (content is TextReasoningContent reasoning && !string.IsNullOrEmpty(reasoning.Text))
         {
@@ -74,7 +74,7 @@ public class StreamingContentAccumulator
     /// <summary>
     /// Create final AIChatMessage from accumulated content
     /// </summary>
-    public AIChatMessage CreateMessage(string providerId, string modelName)
+    internal AIChatMessage CreateMessage(string providerId, string modelName)
     {
         if (ReasoningStopwatch.IsRunning)
             ReasoningStopwatch.Stop();

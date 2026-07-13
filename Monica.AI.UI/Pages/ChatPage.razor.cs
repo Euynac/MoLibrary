@@ -1,4 +1,6 @@
 using Microsoft.AspNetCore.Components;
+using Microsoft.Extensions.Localization;
+using Monica.AI.UI.Localization;
 using Monica.AI.UI.UIChat.State;
 
 namespace Monica.AI.UI.Pages;
@@ -9,6 +11,9 @@ public partial class ChatPage : IDisposable
 
     [Inject]
     public required ChatPageState PageState { get; set; }
+
+    [Inject]
+    public required IStringLocalizer<AIResource> L { get; set; }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {

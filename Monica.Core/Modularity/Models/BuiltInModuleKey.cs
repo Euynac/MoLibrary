@@ -190,6 +190,11 @@ public enum BuiltInModuleKey
     /// AI module that provides a unified AI service abstraction.
     /// </summary>
     AI,
+
+    /// <summary>
+    /// Optional stateless HTTP endpoints for the AI module.
+    /// </summary>
+    AIEndpoints,
     /// <summary>
     /// AI UI module that provides the AI chat experience.
     /// </summary>

@@ -141,7 +141,7 @@ public sealed partial class RAGManagePageState
 
         try
         {
-            var result = await _ragFacade.RemoveKnowledgeBaseRagSupportAsync(selectedKnowledgeBaseId);
+            var result = await _vectorStoreFacade.RemoveSupportAsync(selectedKnowledgeBaseId);
             if (result.IsFailed(out var error, out var removal))
             {
                 if (CanForceRemoveRagSupport(error)
@@ -221,7 +221,7 @@ public sealed partial class RAGManagePageState
         var progress = new Progress<IndexingProgress>(OnBatchIndexingProgress);
         try
         {
-            var result = await _ragFacade.StartBatchIndexingAsync(
+            var result = await _indexingFacade.StartBatchAsync(
                 selectedKnowledgeBaseId,
                 selectedDocuments.Select(static document => document.Id),
                 ParallelCount,
@@ -293,7 +293,7 @@ public sealed partial class RAGManagePageState
         try
         {
             var progress = new Progress<IndexingProgress>(OnBatchIndexingProgress);
-            var result = await _ragFacade.StartDocumentIndexingAsync(
+            var result = await _indexingFacade.IndexDocumentAsync(
                 selectedKnowledgeBaseId,
                 document.Id,
                 progress);
@@ -325,7 +325,7 @@ public sealed partial class RAGManagePageState
             return;
         }
 
-        var cancelResult = await _ragFacade.CancelBatchIndexingAsync(SelectedKnowledgeBase.Id);
+        var cancelResult = await _indexingFacade.CancelBatchAsync(SelectedKnowledgeBase.Id);
         if (cancelResult.IsFailed(out var error))
         {
             _snackbar.Add($"{_localizer["Common:Error"]}: {error.Message}", Severity.Error);
@@ -361,7 +361,7 @@ public sealed partial class RAGManagePageState
             return;
         }
 
-        var result = await _ragFacade.ClearDocumentQueueAsync(SelectedKnowledgeBase.Id);
+        var result = await _indexingFacade.ClearPendingQueueAsync(SelectedKnowledgeBase.Id);
         if (result.IsFailed(out var error, out var removedCount))
         {
             _snackbar.Add($"{_localizer["Common:Error"]}: {error.Message}", Severity.Error);
@@ -383,7 +383,7 @@ public sealed partial class RAGManagePageState
             return;
         }
 
-        var result = await _ragFacade.ReindexKnowledgeBaseAsync(SelectedKnowledgeBase.Id);
+        var result = await _indexingFacade.QueueKnowledgeBaseForReindexAsync(SelectedKnowledgeBase.Id);
         if (result.IsFailed(out var error, out var queuedCount))
         {
             _snackbar.Add($"{_localizer["Common:Error"]}: {error.Message}", Severity.Error);
@@ -418,7 +418,7 @@ public sealed partial class RAGManagePageState
             return true;
         }
 
-        var statusResult = await _ragFacade.GetKnowledgeBaseVectorCollectionStatusAsync(knowledgeBaseId);
+        var statusResult = await _vectorStoreFacade.GetCollectionStatusAsync(knowledgeBaseId);
         if (statusResult.IsFailed(out var statusError, out var status))
         {
             _snackbar.Add($"{_localizer["Common:Error"]}: {statusError.Message}", Severity.Error);
@@ -447,7 +447,7 @@ public sealed partial class RAGManagePageState
             return false;
         }
 
-        var overwriteResult = await _ragFacade.OverwriteKnowledgeBaseVectorCollectionAsync(knowledgeBaseId);
+        var overwriteResult = await _vectorStoreFacade.OverwriteCollectionAsync(knowledgeBaseId);
         if (overwriteResult.IsFailed(out var overwriteError, out var overwrite))
         {
             _snackbar.Add($"{_localizer["Common:Error"]}: {overwriteError.Message}", Severity.Error);
@@ -480,7 +480,7 @@ public sealed partial class RAGManagePageState
 
     private async Task ForceRemoveRagSupportAsync(string knowledgeBaseId)
     {
-        var forcedResult = await _ragFacade.RemoveKnowledgeBaseRagSupportAsync(
+        var forcedResult = await _vectorStoreFacade.RemoveSupportAsync(
             knowledgeBaseId,
             forceLocalMetadataRemoval: true);
         if (forcedResult.IsFailed(out var forceError, out var forcedRemoval))
@@ -517,7 +517,7 @@ public sealed partial class RAGManagePageState
         }
 
         var metadata = (IDictionary<string, object?>)error.Metadata;
-        return metadata.TryGetValue(RAGFacade.CAN_FORCE_REMOVE_RAG_SUPPORT_METADATA_KEY, out var canForce)
+        return metadata.TryGetValue(RAGVectorStoreFacade.CAN_FORCE_REMOVE_RAG_SUPPORT_METADATA_KEY, out var canForce)
                && canForce is true;
     }
 }

@@ -1,5 +1,4 @@
 using Monica.AI.KnowledgeBase.Models;
-using Monica.AI.KnowledgeBase.Services.Support;
 using Monica.AI.Services.Support;
 
 namespace Monica.AI.UI.UIChat.State;

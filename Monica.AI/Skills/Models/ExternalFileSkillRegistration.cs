@@ -13,7 +13,9 @@ namespace Monica.AI.Skills.Models;
 /// Optional runner used when discovered skills contain scripts. Scripts without a runner remain discoverable
 /// but fail when invoked by Agent Framework.
 /// </param>
-/// <param name="Options">Optional Agent Framework discovery options for resources, scripts, and extensions.</param>
+/// <param name="Options">
+/// Optional Agent Framework discovery options for search depth, extension allow-lists, and resource/script filters.
+/// </param>
 /// <param name="UsesSubprocessRunner">Whether this registration uses Monica's built-in subprocess script runner.</param>
 public sealed record ExternalFileSkillRegistration(
     IReadOnlyList<string> SkillPaths,

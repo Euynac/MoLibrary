@@ -8,7 +8,7 @@ namespace Monica.AI.Mcp.Services;
 /// <summary>
 /// Runs Monica's MCP server over stdio only when active MCP catalog entries require stdio transport.
 /// </summary>
-public sealed class MonicaStdioMcpHostedService(
+internal sealed class MonicaStdioMcpHostedService(
     MonicaMcpCatalog catalog,
     IOptions<McpServerOptions> serverOptions,
     ILoggerFactory loggerFactory,

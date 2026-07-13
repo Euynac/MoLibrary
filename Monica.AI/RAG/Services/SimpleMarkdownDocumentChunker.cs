@@ -7,7 +7,7 @@ namespace Monica.AI.RAG.Services;
 /// Lightweight markdown chunker for baseline testing.
 /// Splits by heading sections and then by paragraph windows.
 /// </summary>
-public partial class SimpleMarkdownDocumentChunker : IDocumentChunker
+internal partial class SimpleMarkdownDocumentChunker : IDocumentChunker
 {
     private const int MaxChunkChars = 1500;
 
@@ -261,4 +261,4 @@ public partial class SimpleMarkdownDocumentChunker : IDocumentChunker
 /// Backward-compatible type name for existing registrations.
 /// </summary>
 [Obsolete("Use SimpleMarkdownDocumentChunker or ProductionMarkdownDocumentChunker instead.")]
-public sealed class MarkdownDocumentChunker : SimpleMarkdownDocumentChunker;
+internal sealed class MarkdownDocumentChunker : SimpleMarkdownDocumentChunker;

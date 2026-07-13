@@ -1,6 +1,8 @@
 using Microsoft.Agents.AI;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Monica.AI.Abstractions;
+using Monica.AI.AgentCapabilities.Abstractions;
 using Monica.AI.Skills.Models;
 using Monica.AI.Skills.Services;
 using Monica.AI.Services.Support.ModuleCatalog;
@@ -45,6 +47,7 @@ public sealed class ModuleSkillSystem(ModuleSkillSystemOption option)
     /// <inheritdoc />
     public override void ClaimDependencies()
     {
+        DependsOnModule<ModuleAIGuide>().Register();
         DependsOnModule<ModuleXmlDocumentationGuide>().Register();
     }
 
@@ -81,6 +84,10 @@ public sealed class ModuleSkillSystem(ModuleSkillSystemOption option)
         services.TryAddSingleton<ILoadedModuleCatalog, ModuleRegistryLoadedModuleCatalog>();
         services.TryAddSingleton<MonicaSkillCatalog>();
         services.TryAddSingleton<MonicaAgentSkillsProviderFactory>();
+        services.TryAddEnumerable(
+            ServiceDescriptor.Singleton<IAgentCapabilitySource, SkillAgentCapabilitySource>());
+        services.TryAddEnumerable(
+            ServiceDescriptor.Singleton<IAIChatAgentContributor, SkillChatAgentContributor>());
         services.TryAddSingleton(_ => option.CreateReadOnlyFileAccessOptions());
         services.TryAddSingleton<ReadOnlyFileAccessService>();
 

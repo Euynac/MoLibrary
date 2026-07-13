@@ -9,13 +9,10 @@
     <ChatMessageList
         @ref="_messageListRef"
         Messages="@_params.Messages"
-        StreamingContent="@_params.StreamingContent"
+        StreamingState="@_params.StreamingState"
         EnableMarkdown="@_params.EnableMarkdown"
         ToolDebugEnabled="@_params.ToolDebugEnabled"
         EnableAutoScroll="@_params.EnableAutoScroll"
-        CancellationToken="@_params.CancellationToken"
-        OnStreamComplete="@HandleStreamComplete"
-        OnStreamError="@HandleStreamError"
         OnEditMessage="@_params.OnEditMessage"
         OnRetryMessage="@_params.OnRetryMessage" />
 
@@ -57,22 +54,8 @@
         StateHasChanged();
     }
 
-    private async Task HandleStreamComplete(string content)
-    {
-        await _params.OnStreamComplete.InvokeAsync(content);
-    }
-
-    private async Task HandleStreamError(string error)
-    {
-        await _params.OnStreamError.InvokeAsync(error);
-    }
-
     private async Task HandleCancel()
     {
-        if (_messageListRef != null)
-        {
-            await _messageListRef.CancelStreamAsync();
-        }
         await _params.OnCancel.InvokeAsync();
     }
 
@@ -93,9 +76,6 @@
 
     public async Task CancelStreamAsync()
     {
-        if (_messageListRef != null)
-        {
-            await _messageListRef.CancelStreamAsync();
-        }
+        await _params.OnCancel.InvokeAsync();
     }
 }

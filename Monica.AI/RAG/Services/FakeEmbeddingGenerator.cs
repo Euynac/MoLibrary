@@ -14,7 +14,7 @@ namespace Monica.AI.RAG.Services;
 /// - Prototyping without API costs
 /// - Validating RAG infrastructure without a real embedding model
 /// </remarks>
-public sealed class FakeEmbeddingGenerator(int dimensions = 384)
+internal sealed class FakeEmbeddingGenerator(int dimensions = 384)
     : IEmbeddingGenerator<string, Embedding<float>>
 {
     private readonly EmbeddingGeneratorMetadata _metadata =

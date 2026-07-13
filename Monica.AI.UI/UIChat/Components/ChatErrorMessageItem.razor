@@ -1,0 +1,37 @@
+@using Microsoft.Extensions.Localization
+@using Monica.AI.UI.Localization
+@inject IStringLocalizer<AIResource> L
+
+<div class="message-wrapper error-message">
+    <MudStack Row="true" Spacing="2" Class="message-content-stack">
+        <MudAvatar Size="Size.Small" Color="Color.Error" Class="message-avatar">
+            <MudIcon Icon="@Icons.Material.Outlined.ErrorOutline" />
+        </MudAvatar>
+
+        <div class="error-bubble" role="status">
+            <div class="error-heading">
+                <MudText Typo="Typo.subtitle2">@L["Chat:Error:Title"]</MudText>
+            </div>
+            <MudText Typo="Typo.body2" Class="error-text">@Message.Content</MudText>
+            <div class="error-meta">
+                <MudText Typo="Typo.caption" Class="error-time">
+                    @Message.CreatedAt.ToLocalTime().ToString("HH:mm")
+                </MudText>
+                <MudButton Variant="Variant.Text"
+                           Color="Color.Error"
+                           Size="Size.Small"
+                           StartIcon="@Icons.Material.Filled.Refresh"
+                           OnClick="@HandleRetry">
+                    @L["Chat:Actions:Retry"]
+                </MudButton>
+            </div>
+        </div>
+    </MudStack>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public required AIChatMessage Message { get; set; }
+    [Parameter] public EventCallback<AIChatMessage> OnRetry { get; set; }
+
+    private Task HandleRetry() => OnRetry.InvokeAsync(Message);
+}

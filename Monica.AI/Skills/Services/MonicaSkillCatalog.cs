@@ -3,8 +3,8 @@ using Microsoft.Extensions.Logging;
 using Monica.AI.AgentCapabilities.Models;
 using Monica.AI.AgentCapabilities.Services;
 using Monica.AI.Services.Support.ModuleCatalog;
-using Monica.AI.Skills.Internal.FileSkill;
 using Monica.AI.Skills.Internal;
+using Monica.AI.Skills.Internal.FileSkill;
 using Monica.AI.Skills.Models;
 using Monica.Core.Modularity.Models;
 using Monica.Core.Skills;
@@ -15,7 +15,7 @@ namespace Monica.AI.Skills.Services;
 /// <summary>
 /// Builds the static skill catalog exposed to chat agents.
 /// </summary>
-public sealed class MonicaSkillCatalog(
+internal sealed class MonicaSkillCatalog(
     IEnumerable<Skill> skills,
     IEnumerable<ExternalFileSkillRegistration> externalFileSkillRegistrations,
     ILoadedModuleCatalog loadedModules,
@@ -42,24 +42,45 @@ public sealed class MonicaSkillCatalog(
     });
 
     /// <summary>
-    /// Gets the runtime-enabled skill set adapted for Microsoft Agent Skills.
+    /// Gets all discovered skills that are available to the runtime provider pipeline.
     /// </summary>
-    public IReadOnlyList<AgentSkill> GetActiveSkills(AgentCapabilityState state)
+    internal IReadOnlyList<AgentSkill> GetAvailableSkills()
     {
-        ArgumentNullException.ThrowIfNull(state);
-
         return _snapshot.Value.Entries
-            .Where(entry => entry.IsAvailable
-                            && state.SkillsEnabled
-                            && state.IsEntryEnabled(AgentCapabilityKind.Skill, entry.Definition.Name))
+            .Where(static entry => entry.IsAvailable)
             .Select(entry => entry.AgentSkill)
             .ToList();
     }
 
     /// <summary>
+    /// Determines whether a discovered skill is enabled for the current capability state.
+    /// </summary>
+    internal bool IsEnabled(AgentCapabilityState state, string skillName)
+    {
+        ArgumentNullException.ThrowIfNull(state);
+        ArgumentException.ThrowIfNullOrWhiteSpace(skillName);
+
+        return _snapshot.Value.Entries.Any(entry =>
+            entry.IsAvailable
+            && string.Equals(entry.Definition.Name, skillName, StringComparison.OrdinalIgnoreCase)
+            && state.SkillsEnabled
+            && state.IsEntryEnabled(AgentCapabilityKind.Skill, entry.Definition.Name));
+    }
+
+    /// <summary>Returns whether a skill is code-defined and therefore trusted to run in-process.</summary>
+    internal bool IsTrustedCodeSkill(string skillName)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(skillName);
+        return _snapshot.Value.Entries.Any(entry =>
+            entry.IsAvailable
+            && entry.SourceKind == AgentCapabilitySourceKind.CodeDefined
+            && string.Equals(entry.Definition.Name, skillName, StringComparison.OrdinalIgnoreCase));
+    }
+
+    /// <summary>
     /// Gets management metadata for all discovered skills.
     /// </summary>
-    public IReadOnlyList<AgentCapabilityEntryInfo> GetEntries(AgentCapabilityState state)
+    internal IReadOnlyList<AgentCapabilityEntryInfo> GetEntries(AgentCapabilityState state)
     {
         ArgumentNullException.ThrowIfNull(state);
 
@@ -71,7 +92,7 @@ public sealed class MonicaSkillCatalog(
     /// <summary>
     /// Gets discovery status for registered file-based skill sources.
     /// </summary>
-    public IReadOnlyList<AgentCapabilityFileSkillSourceStatusInfo> GetFileSkillSourceStatuses()
+    internal IReadOnlyList<AgentCapabilityFileSkillSourceStatusInfo> GetFileSkillSourceStatuses()
     {
         return _snapshot.Value.FileSkillSourceStatuses;
     }
@@ -154,22 +175,23 @@ public sealed class MonicaSkillCatalog(
 
         foreach (var registration in registrations)
         {
-            var source = new MonicaFileSkillsSource(
+            var loader = new FileSkillCatalogLoader(
                 registration.SkillPaths,
                 registration.ScriptRunner,
                 registration.Options,
-                loggerFactory.CreateLogger<MonicaFileSkillsSource>());
-            var discovery = source.Discover();
+                loggerFactory);
+            var discovery = loader.Discover();
             sourceStatuses.Add(BuildSourceStatus(registration, discovery));
 
             foreach (var skill in discovery.Skills)
             {
-                var sourcePath = skill is MonicaFileSkill fileSkill ? fileSkill.Path : null;
+                var sourcePath = skill is AgentFileSkill fileSkill ? fileSkill.Path : null;
+                var skillSnapshot = AgentSkillSnapshot.Create(skill);
                 logger.LogDebug("Loaded external file AI skill '{SkillName}' from '{SkillPath}'.", skill.Frontmatter.Name, sourcePath);
                 entries.Add(new SkillEntry(
                     skill.Frontmatter.Name,
                     skill.Frontmatter.Description,
-                    skill.Content,
+                    skillSnapshot.Content,
                     skill.GetType().FullName,
                     [],
                     true,
@@ -242,14 +264,15 @@ public sealed class MonicaSkillCatalog(
         string? SourcePath,
         string? DiscoveryDisabledReason)
     {
+        private readonly Lazy<AgentSkillSnapshot> _snapshot = new(() => AgentSkillSnapshot.Create(AgentSkill));
+
         internal SkillEntryDefinition Definition { get; } = new(Name, Description);
 
         internal bool IsAvailable => DiscoveryDisabledReason is null;
 
         internal AgentCapabilityEntryInfo ToInfo(AgentCapabilityState state)
         {
-            var scripts = AgentSkill.Scripts ?? [];
-            var resources = AgentSkill.Resources ?? [];
+            var snapshot = _snapshot.Value;
             var catalogEnabled = state.SkillsEnabled;
             var entryEnabled = state.IsEntryEnabled(AgentCapabilityKind.Skill, Definition.Name);
             var disabledReason = ResolveDisabledReason(catalogEnabled, entryEnabled);
@@ -267,13 +290,13 @@ public sealed class MonicaSkillCatalog(
                 catalogEnabled,
                 entryEnabled,
                 disabledReason,
-                scripts.Select(script => new AgentCapabilityToolInfo(
+                snapshot.Scripts.Select(script => new AgentCapabilityToolInfo(
                     script.Name,
                     script.Description,
                     IsAvailable && catalogEnabled && entryEnabled,
                     AgentCapabilitySchemaParser.FormatSchema(script.ParametersSchema),
                     AgentCapabilitySchemaParser.ParseParameters(script.ParametersSchema))).ToList(),
-                resources.Select(resource => new AgentCapabilityResourceInfo(
+                snapshot.Resources.Select(resource => new AgentCapabilityResourceInfo(
                     resource.Name,
                     resource.Description)).ToList(),
                 skillMcpServerName: McpServerName,

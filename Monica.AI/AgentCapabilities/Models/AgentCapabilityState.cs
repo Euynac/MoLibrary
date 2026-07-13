@@ -40,7 +40,8 @@ public sealed class AgentCapabilityState
     /// </summary>
     public bool IsEntryEnabled(AgentCapabilityKind kind, string name)
     {
-        var entries = kind == AgentCapabilityKind.Skill ? SkillEntries : McpEntries;
+        ArgumentException.ThrowIfNullOrWhiteSpace(name);
+        var entries = GetEntries(kind);
         return !entries.TryGetValue(name, out var isEnabled) || isEnabled;
     }
 
@@ -49,7 +50,66 @@ public sealed class AgentCapabilityState
     /// </summary>
     public bool IsCatalogEnabled(AgentCapabilityKind kind)
     {
-        return kind == AgentCapabilityKind.Skill ? SkillsEnabled : McpEnabled;
+        return kind switch
+        {
+            AgentCapabilityKind.Skill => SkillsEnabled,
+            AgentCapabilityKind.Mcp => McpEnabled,
+            _ => throw new ArgumentOutOfRangeException(nameof(kind), kind, null)
+        };
+    }
+
+    /// <summary>
+    /// Changes the global runtime switch for one capability catalog.
+    /// </summary>
+    /// <returns><see langword="true"/> when the state changed.</returns>
+    public bool SetCatalogEnabled(AgentCapabilityKind kind, bool isEnabled)
+    {
+        if (IsCatalogEnabled(kind) == isEnabled)
+        {
+            return false;
+        }
+
+        switch (kind)
+        {
+            case AgentCapabilityKind.Skill:
+                SkillsEnabled = isEnabled;
+                break;
+            case AgentCapabilityKind.Mcp:
+                McpEnabled = isEnabled;
+                break;
+            default:
+                throw new ArgumentOutOfRangeException(nameof(kind), kind, null);
+        }
+
+        return true;
+    }
+
+    /// <summary>
+    /// Changes the runtime switch for one capability entry.
+    /// </summary>
+    /// <returns><see langword="true"/> when the state changed.</returns>
+    public bool SetEntryEnabled(AgentCapabilityKind kind, string name, bool isEnabled)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(name);
+        var normalizedName = name.Trim();
+        var entries = GetEntries(kind);
+        if (entries.TryGetValue(normalizedName, out var current) && current == isEnabled)
+        {
+            return false;
+        }
+
+        entries[normalizedName] = isEnabled;
+        return true;
+    }
+
+    /// <summary>
+    /// Removes the persisted runtime override for one capability entry.
+    /// </summary>
+    /// <returns><see langword="true"/> when an override was removed.</returns>
+    public bool RemoveEntryOverride(AgentCapabilityKind kind, string name)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(name);
+        return GetEntries(kind).Remove(name.Trim());
     }
 
     /// <summary>
@@ -62,5 +122,32 @@ public sealed class AgentCapabilityState
         return SkillMcpServers.TryGetValue(skillName, out var isEnabled)
             ? isEnabled
             : enabledByDefault;
+    }
+
+    /// <summary>
+    /// Changes whether one skill is exposed through the MCP server on the next host startup.
+    /// </summary>
+    /// <returns><see langword="true"/> when the state changed.</returns>
+    public bool SetSkillMcpServerEnabled(string skillName, bool isEnabled)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(skillName);
+        var normalizedName = skillName.Trim();
+        if (SkillMcpServers.TryGetValue(normalizedName, out var current) && current == isEnabled)
+        {
+            return false;
+        }
+
+        SkillMcpServers[normalizedName] = isEnabled;
+        return true;
+    }
+
+    private Dictionary<string, bool> GetEntries(AgentCapabilityKind kind)
+    {
+        return kind switch
+        {
+            AgentCapabilityKind.Skill => SkillEntries,
+            AgentCapabilityKind.Mcp => McpEntries,
+            _ => throw new ArgumentOutOfRangeException(nameof(kind), kind, null)
+        };
     }
 }

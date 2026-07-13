@@ -11,7 +11,7 @@ namespace Monica.AI.Providers.Anthropic;
 /// <summary>
 /// Anthropic Provider implementation.
 /// </summary>
-public class AnthropicProvider : IAIProvider
+internal sealed class AnthropicProvider : IAIProvider
 {
     private const EAIProviderType ProviderKind = EAIProviderType.Anthropic;
     private readonly AnthropicProviderOptions _options;
@@ -171,24 +171,18 @@ public class AnthropicProvider : IAIProvider
 
     public void Dispose()
     {
-        Dispose(true);
-        GC.SuppressFinalize(this);
-    }
-
-    protected virtual void Dispose(bool disposing)
-    {
-        if (!_disposed)
+        if (_disposed)
         {
-            if (disposing)
-            {
-                foreach (var chatClient in _chatClients.Values)
-                {
-                    chatClient.Dispose();
-                }
-                _chatClients.Clear();
-            }
-
-            _disposed = true;
+            return;
         }
+
+        foreach (var chatClient in _chatClients.Values)
+        {
+            chatClient.Dispose();
+        }
+
+        _chatClients.Clear();
+        _disposed = true;
+        GC.SuppressFinalize(this);
     }
 }

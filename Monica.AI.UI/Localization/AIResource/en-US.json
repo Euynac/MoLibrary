@@ -3,12 +3,32 @@
     "NewChat": "New Chat",
     "RecentSessions": "Recent Sessions",
     "NoConversations": "No conversations",
+    "Delete": "Delete conversation",
     "JustNow": "Just now",
     "MinutesAgo": "{0} minutes ago",
     "HoursAgo": "{0} hours ago",
     "DaysAgo": "{0} days ago"
   },
   "Chat": {
+    "History": {
+      "Loading": "Loading conversation history...",
+      "Clear": {
+        "Action": "Clear conversation history",
+        "Title": "Clear conversation history?",
+        "Message": "This permanently removes every conversation stored in this browser profile.",
+        "Confirm": "Clear all"
+      },
+      "Warnings": {
+        "LoadFailed": "Conversation history could not be restored. You can continue in memory.",
+        "RevisionConflict": "Conversation history changed in another tab. Refresh this page before saving more changes.",
+        "QuotaExceeded": "This conversation could not be saved because browser storage is full.",
+        "StorageUnavailable": "Browser history is temporarily unavailable. Your current conversation remains in memory.",
+        "SessionsPruned": "Older inactive conversations were removed to keep browser history within its storage limit.",
+        "SessionUnavailable": "This conversation is no longer available in browser storage.",
+        "RuntimeFallback": "The saved agent state was incompatible, so the visible transcript was used to continue the conversation.",
+        "ProviderUnavailable": "This conversation's provider or model is unavailable. Select an available provider and model to continue."
+      }
+    },
     "Input": {
       "Placeholder": "Send a message...",
       "AttachFile": "Attach file",
@@ -29,11 +49,62 @@
     "Actions": {
       "EnableDeepThinking": "Enable deep thinking",
       "DisableDeepThinking": "Disable deep thinking",
+      "Copy": "Copy",
+      "Edit": "Edit",
       "Retry": "Retry"
+    },
+    "Clipboard": {
+      "Copied": "Copied to clipboard",
+      "CopyFailed": "Failed to copy"
+    },
+    "Validation": {
+      "MessageRequired": "Message cannot be empty"
+    },
+    "Error": {
+      "Title": "Generation failed"
     },
     "Status": {
       "Current": "Current",
       "GenerationStopped": "Generation stopped"
+    },
+    "Approval": {
+      "Title": "External script approval",
+      "Warning": "This skill is requesting permission to run an external file or subprocess script. Review its identity and arguments before continuing.",
+      "Skill": "Skill",
+      "Script": "Script",
+      "Source": "Source",
+      "Arguments": "Arguments",
+      "Approve": "Approve",
+      "Reject": "Reject",
+      "ApprovedReason": "Approved by the user.",
+      "RejectedReason": "Rejected by the user."
+    },
+    "Reasoning": {
+      "Thinking": "Thinking...",
+      "Label": "Reasoning",
+      "Duration": "Thought for {0:F1} seconds"
+    },
+    "Welcome": {
+      "Title": "What would you like to explore?",
+      "Subtitle": "Ask any configured provider about code, writing, or analysis.",
+      "Cards": {
+        "UI": {
+          "Title": "Improve a UI flow",
+          "Subtitle": "Suggest clearer interactions and motion"
+        },
+        "Docs": {
+          "Title": "Draft API documentation",
+          "Subtitle": "Turn an API design into useful guidance"
+        },
+        "Error": {
+          "Title": "Analyze an error",
+          "Subtitle": "Trace logs and identify the likely cause"
+        },
+        "Script": {
+          "Title": "Write an automation script",
+          "Subtitle": "Automate a common development task"
+        }
+      }
     },
     "ToolCalls": {
       "EnableDebug": "Enable tool debug",
@@ -98,6 +169,8 @@
       "Cached": "Cached",
       "NoUsage": "No provider usage has been reported for the latest assistant message yet.",
       "Total": "Total",
+      "Summary": "{0} tokens",
+      "SummaryCached": "{0} tokens · {1} cached",
       "Column": {
         "Request": "Request",
         "Input": "Input",
@@ -150,6 +223,7 @@
     "Actions": {
       "Close": "Close",
       "Save": "Save",
+      "Update": "Update",
       "Cancel": "Cancel",
       "Confirm": "Confirm"
     }

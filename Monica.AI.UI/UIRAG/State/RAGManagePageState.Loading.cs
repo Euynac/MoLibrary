@@ -123,7 +123,7 @@ public sealed partial class RAGManagePageState
             return;
         }
 
-        if ((await _knowledgeBaseFacade.GetDocumentInventoryAsync(SelectedKnowledgeBase.Id)).IsFailed(out var error, out var queue))
+        if ((await _knowledgeDocumentFacade.GetDocumentInventoryAsync(SelectedKnowledgeBase.Id)).IsFailed(out var error, out var queue))
         {
             _snackbar.Add($"{_localizer["Common:Error"]}: {error.Message}", Severity.Error);
             DocumentQueue = [];
@@ -186,7 +186,7 @@ public sealed partial class RAGManagePageState
             return;
         }
 
-        var result = await _ragFacade.GetKnowledgeBaseVectorValidationAsync(knowledgeBaseId);
+        var result = await _vectorStoreFacade.ValidateAsync(knowledgeBaseId);
         if (SelectedKnowledgeBase is null
             || !string.Equals(SelectedKnowledgeBase.Id, knowledgeBaseId, StringComparison.OrdinalIgnoreCase))
         {

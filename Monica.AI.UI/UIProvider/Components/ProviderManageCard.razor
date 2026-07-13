@@ -337,7 +337,7 @@
 
         if (!string.Equals(Provider.ProviderType, "OpenAI", StringComparison.Ordinal)
             || Provider.Metadata is not { } metadata
-            || !metadata.TryGetValue(OpenAIProvider.ApiModeMetadataKey, out var rawApiMode))
+            || !metadata.TryGetValue(OpenAIProviderMetadataKeys.ApiMode, out var rawApiMode))
         {
             return false;
         }

@@ -14,16 +14,28 @@ import subprocess
 import sys
 import tarfile
 import textwrap
+import time
 import uuid
 import xml.etree.ElementTree as ET
+from contextlib import contextmanager
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
+from urllib.error import HTTPError, URLError
+from urllib.parse import quote
+from urllib.request import Request, urlopen
 
 import tomllib
 
+if os.name == "nt":
+    import msvcrt
+else:
+    import fcntl
+
 SKILL_NAME = "third-party-source-catalog"
 DEFAULT_TTL_HOURS = 24
+CATALOG_LOCK_TIMEOUT_SECONDS = 30 * 60
+PROGRESS_INTERVAL_SECONDS = 5
 CONFIG_VERSION = 1
 MANIFEST_STUB_NAME = "manifest.stub.json"
 MANIFEST_NAME = "manifest.json"
@@ -68,6 +80,7 @@ class RuntimePaths:
     root_dir: Path
     state_dir: Path
     catalog_path: Path
+    catalog_lock_path: Path
     repos_dir: Path
 
 
@@ -98,21 +111,112 @@ def main() -> int:
         if args.command == "config":
             return handle_config(runtime, args)
 
-        catalog = load_catalog(runtime)
-
-        if args.command == "repo":
-            changed = handle_repo(runtime, catalog, args)
-        elif args.command == "local":
-            changed = handle_local(runtime, catalog, args)
+        if command_modifies_catalog(args):
+            with acquire_catalog_lock(runtime):
+                run_catalog_command(runtime, args)
         else:
-            raise CatalogError(f"Unknown command: {args.command}")
-
-        if changed:
-            save_catalog(runtime, catalog)
+            run_catalog_command(runtime, args)
         return 0
     except CatalogError as exc:
         print(f"[ERROR] {exc}", file=sys.stderr)
         return 1
+
+
+def run_catalog_command(runtime: RuntimePaths, args: argparse.Namespace) -> None:
+    """Load the latest catalog state, execute one command, and persist mutations."""
+    catalog = load_catalog(runtime)
+
+    if args.command == "repo":
+        changed = handle_repo(runtime, catalog, args)
+    elif args.command == "local":
+        changed = handle_local(runtime, catalog, args)
+    else:
+        raise CatalogError(f"Unknown command: {args.command}")
+
+    if changed:
+        save_catalog(runtime, catalog)
+
+
+def command_modifies_catalog(args: argparse.Namespace) -> bool:
+    """Return whether a command must hold the catalog mutation lock."""
+    if args.command == "local":
+        return True
+    if args.command != "repo":
+        return False
+    if args.repo_command == "list":
+        return False
+    if args.repo_command == "tags":
+        return args.refresh
+    return True
+
+
+@contextmanager
+def acquire_catalog_lock(runtime: RuntimePaths):
+    """Serialize catalog mutations so concurrent agents cannot overwrite newer state."""
+    runtime.catalog_lock_path.parent.mkdir(parents=True, exist_ok=True)
+    with runtime.catalog_lock_path.open("a+", encoding="utf-8") as handle:
+        ensure_lock_file_content(handle)
+        started_at = time.monotonic()
+        reported_wait = False
+
+        while True:
+            if try_acquire_file_lock(handle):
+                break
+
+            elapsed = time.monotonic() - started_at
+            if elapsed >= CATALOG_LOCK_TIMEOUT_SECONDS:
+                raise CatalogError(
+                    f"Timed out after {CATALOG_LOCK_TIMEOUT_SECONDS} seconds waiting for the catalog lock."
+                )
+            if not reported_wait:
+                report_progress("Waiting for another catalog mutation to finish...")
+                reported_wait = True
+            time.sleep(0.25)
+
+        handle.seek(0)
+        handle.truncate()
+        json.dump({"pid": os.getpid(), "acquired_at": utc_now()}, handle)
+        handle.flush()
+
+        try:
+            yield
+        finally:
+            release_file_lock(handle)
+
+
+def ensure_lock_file_content(handle) -> None:
+    """Ensure Windows has at least one byte available for byte-range locking."""
+    handle.seek(0, os.SEEK_END)
+    if handle.tell() == 0:
+        handle.write(" ")
+        handle.flush()
+
+
+def try_acquire_file_lock(handle) -> bool:
+    """Try to acquire a non-blocking exclusive lock on the catalog lock file."""
+    if os.name == "nt":
+        handle.seek(0)
+        try:
+            msvcrt.locking(handle.fileno(), msvcrt.LK_NBLCK, 1)
+            return True
+        except OSError:
+            return False
+
+    try:
+        fcntl.flock(handle.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+        return True
+    except BlockingIOError:
+        return False
+
+
+def release_file_lock(handle) -> None:
+    """Release a lock acquired by try_acquire_file_lock."""
+    if os.name == "nt":
+        handle.seek(0)
+        msvcrt.locking(handle.fileno(), msvcrt.LK_UNLCK, 1)
+        return
+
+    fcntl.flock(handle.fileno(), fcntl.LOCK_UN)
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -147,10 +251,25 @@ def build_parser() -> argparse.ArgumentParser:
     repo_list = repo_subparsers.add_parser("list", help="List catalog entries or resolve one entry.")
     repo_list.add_argument("query", nargs="?", help="Optional fuzzy query.")
 
+    repo_tags = repo_subparsers.add_parser("tags", help="List cached tags for one repository.")
+    repo_tags.add_argument("query", help="Fuzzy query resolving to a single record.")
+    repo_tags.add_argument("--match", help="Optional case-insensitive substring filter.")
+    repo_tags.add_argument("--limit", type=int, default=100, help="Maximum tags to print. Defaults to 100.")
+    repo_tags.add_argument("--refresh", action="store_true", help="Refresh GitHub tag metadata first.")
+
     repo_fetch = repo_subparsers.add_parser("fetch", help="Download a tag archive or clone a repository.")
     repo_fetch.add_argument("query", help="Fuzzy query resolving to a single record.")
     repo_fetch.add_argument("--tag", help="Specific tag to fetch before falling back to clone.")
     repo_fetch.add_argument("--force", action="store_true", help="Replace any existing managed download.")
+
+    repo_fetch_nuget = repo_subparsers.add_parser(
+        "fetch-nuget",
+        help="Resolve and fetch the source tag for an exact NuGet package version.",
+    )
+    repo_fetch_nuget.add_argument("package_id", help="NuGet package ID.")
+    repo_fetch_nuget.add_argument("version", help="Exact NuGet package version.")
+    repo_fetch_nuget.add_argument("--alias", action="append", default=[], dest="aliases", help="Additional search alias.")
+    repo_fetch_nuget.add_argument("--force", action="store_true", help="Replace any existing managed download.")
 
     local_parser = subparsers.add_parser("local", help="Register or discover manually added source trees.")
     local_subparsers = local_parser.add_subparsers(dest="local_command", required=True)
@@ -192,6 +311,7 @@ def load_runtime_paths() -> RuntimePaths:
         root_dir=root_dir,
         state_dir=root_dir / "state",
         catalog_path=root_dir / "state" / "catalog.json",
+        catalog_lock_path=root_dir / "state" / "catalog.lock",
         repos_dir=root_dir / "repos",
     )
 
@@ -312,9 +432,34 @@ def handle_repo(runtime: RuntimePaths, catalog: dict, args: argparse.Namespace) 
         print_record_detail(runtime, resolved["record"])
         return False
 
+    if command == "tags":
+        if args.limit <= 0:
+            raise CatalogError("repo tags --limit must be greater than zero.")
+
+        record = resolve_unique_record(runtime, catalog, args.query)
+        if args.refresh:
+            refresh_github_metadata(record)
+            refresh_record_summary(runtime, record)
+            ensure_stub_manifest(runtime, record)
+        print_repository_tags(record, match=args.match, limit=args.limit)
+        return args.refresh
+
     if command == "fetch":
         record = resolve_unique_record(runtime, catalog, args.query)
         fetch_repository(runtime, record, tag=args.tag, force=args.force)
+        ensure_stub_manifest(runtime, record)
+        print_record_detail(runtime, record)
+        return True
+
+    if command == "fetch-nuget":
+        record = fetch_nuget_package_source(
+            runtime,
+            catalog,
+            package_id=args.package_id,
+            version=args.version,
+            aliases=args.aliases,
+            force=args.force,
+        )
         ensure_stub_manifest(runtime, record)
         print_record_detail(runtime, record)
         return True
@@ -440,6 +585,7 @@ def fetch_clone(record: dict, repo_dir: Path, downloads: dict, force: bool) -> N
     if not clone_dir.exists():
         clone_dir.parent.mkdir(parents=True, exist_ok=True)
         url = record.get("git_remote_url") or f"https://github.com/{record['github_full_name']}.git"
+        report_progress(f"Cloning {record['canonical_name']} into {clone_dir}...")
         run_command(
             [
                 "git",
@@ -484,6 +630,141 @@ def refresh_github_metadata(record: dict) -> None:
     record["available_tags"] = tags
     record["tags_refreshed_at"] = utc_now()
     record["git_remote_url"] = record.get("git_remote_url") or f"https://github.com/{full_name}.git"
+
+
+def fetch_nuget_package_source(
+    runtime: RuntimePaths,
+    catalog: dict,
+    package_id: str,
+    version: str,
+    aliases: list[str],
+    force: bool,
+) -> dict:
+    """Resolve NuGet repository metadata and fetch the best source ref for an exact version."""
+    normalized_package_id = package_id.strip()
+    normalized_version = version.strip()
+    if not normalized_package_id or not normalized_version:
+        raise CatalogError("NuGet package ID and version must be non-empty.")
+
+    metadata = load_nuget_package_metadata(normalized_package_id, normalized_version)
+    github_full_name = parse_github_remote(metadata.get("repository_url"))
+    if github_full_name is None:
+        github_full_name = parse_github_remote(metadata.get("project_url"))
+    if github_full_name is None:
+        raise CatalogError(
+            f"NuGet package {normalized_package_id} {normalized_version} does not declare a GitHub repository."
+        )
+
+    record = add_github_repo(
+        runtime,
+        catalog,
+        github_full_name,
+        aliases=[normalized_package_id, *aliases],
+    )
+    report_progress(f"Refreshing tags for {record['canonical_name']}...")
+    refresh_github_metadata(record)
+
+    source_ref = resolve_nuget_source_ref(
+        record.get("available_tags", []),
+        package_id=normalized_package_id,
+        version=normalized_version,
+        repository_commit=metadata.get("repository_commit"),
+    )
+    report_progress(
+        f"Resolved NuGet package {normalized_package_id} {normalized_version} to source ref {source_ref}."
+    )
+    fetch_repository(runtime, record, tag=source_ref, force=force)
+    record["detected_version"] = normalized_version
+    return record
+
+
+def load_nuget_package_metadata(package_id: str, version: str) -> dict[str, str | None]:
+    """Load repository metadata from an exact NuGet package specification."""
+    package_key = package_id.casefold()
+    version_key = version.casefold()
+    url = (
+        "https://api.nuget.org/v3-flatcontainer/"
+        f"{quote(package_key, safe='')}/{quote(version_key, safe='')}/"
+        f"{quote(package_key, safe='')}.nuspec"
+    )
+    report_progress(f"Loading NuGet metadata for {package_id} {version}...")
+
+    request = Request(url, headers={"User-Agent": f"{SKILL_NAME}/{CONFIG_VERSION}"})
+    try:
+        with urlopen(request, timeout=30) as response:
+            document = ET.fromstring(response.read())
+    except HTTPError as exc:
+        raise CatalogError(
+            f"NuGet metadata request failed for {package_id} {version}: HTTP {exc.code}."
+        ) from exc
+    except (URLError, ET.ParseError) as exc:
+        raise CatalogError(f"Unable to load NuGet metadata for {package_id} {version}: {exc}") from exc
+
+    repository_url = None
+    repository_commit = None
+    project_url = None
+    for element in document.iter():
+        name = element.tag.rsplit("}", 1)[-1]
+        if name == "repository":
+            repository_url = element.attrib.get("url") or repository_url
+            repository_commit = element.attrib.get("commit") or repository_commit
+        elif name == "projectUrl" and element.text:
+            project_url = element.text.strip() or project_url
+
+    return {
+        "repository_url": repository_url,
+        "repository_commit": repository_commit,
+        "project_url": project_url,
+    }
+
+
+def resolve_nuget_source_ref(
+    tags: list[str],
+    package_id: str,
+    version: str,
+    repository_commit: str | None,
+) -> str:
+    """Resolve the most likely source tag for a NuGet package version."""
+    raw_version_key = version.casefold()
+    version_key = raw_version_key.removeprefix("v")
+    package_tail = normalize_text(package_id.rsplit(".", 1)[-1]).replace(" ", "")
+    candidates: list[tuple[int, str]] = []
+
+    for tag in tags:
+        tag_key = tag.casefold()
+        score = 0
+        if tag_key == raw_version_key:
+            score = 1100
+        elif tag_key == f"v{version_key}":
+            score = 1000
+        elif any(tag_key.endswith(f"{separator}{version_key}") for separator in ("-", "_", "/")):
+            score = 800
+            prefix = tag_key[: -len(version_key)].rstrip("-_/.")
+            normalized_prefix = normalize_text(prefix).replace(" ", "")
+            if package_tail and package_tail in normalized_prefix:
+                score += 100
+            if "dotnet" in normalized_prefix:
+                score += 50
+
+        if score > 0:
+            candidates.append((score, tag))
+
+    if candidates:
+        candidates.sort(key=lambda item: (-item[0], len(item[1]), item[1].casefold()))
+        best_score = candidates[0][0]
+        best_tags = [tag for score, tag in candidates if score == best_score]
+        if len(best_tags) > 1:
+            raise CatalogError(
+                f"NuGet version {version} matched multiple equally likely tags: {', '.join(best_tags[:10])}."
+            )
+        return candidates[0][1]
+
+    if repository_commit:
+        return repository_commit
+
+    raise CatalogError(
+        f"No source tag matched NuGet package {package_id} {version}, and the package has no repository commit."
+    )
 
 
 def register_local_source(
@@ -756,6 +1037,29 @@ def print_candidates(runtime: RuntimePaths, query: str, matches: list[tuple[int,
         )
 
 
+def print_repository_tags(record: dict, match: str | None, limit: int) -> None:
+    """Print cached tags for a repository with an optional substring filter."""
+    tags = record.get("available_tags", [])
+    if match:
+        match_key = match.casefold()
+        tags = [tag for tag in tags if match_key in tag.casefold()]
+
+    selected = tags[:limit]
+    if not selected:
+        qualifier = f" matching '{match}'" if match else ""
+        print(f"[INFO] No cached tags{qualifier} for {record['canonical_name']}.")
+        if not record.get("tags_refreshed_at"):
+            print("[INFO] Run repo tags with --refresh to load GitHub tag metadata.")
+        return
+
+    for tag in selected:
+        print(tag)
+
+    remaining = len(tags) - len(selected)
+    if remaining > 0:
+        print(f"[INFO] {remaining} additional matching tag(s) omitted by --limit.")
+
+
 def print_record_detail(runtime: RuntimePaths, record: dict) -> None:
     refreshed = refresh_record_summary(runtime, record)
     print(f"repo_id: {refreshed['repo_id']}")
@@ -1004,20 +1308,30 @@ def run_command(args: list[str], cwd: Path | None = None) -> subprocess.Complete
 def download_github_tarball(full_name: str, tag: str, archive_path: Path) -> None:
     archive_path.parent.mkdir(parents=True, exist_ok=True)
     temp_path = archive_path.with_suffix(archive_path.suffix + f".{uuid.uuid4().hex}.tmp")
+    report_progress(f"Downloading {full_name} source ref {tag}...")
 
     with temp_path.open("wb") as handle:
-        result = subprocess.run(
+        process = subprocess.Popen(
             ["gh", "api", f"repos/{full_name}/tarball/{tag}"],
             stdout=handle,
             stderr=subprocess.PIPE,
         )
+        next_progress_at = time.monotonic() + PROGRESS_INTERVAL_SECONDS
+        while process.poll() is None:
+            time.sleep(0.25)
+            if time.monotonic() >= next_progress_at:
+                handle.flush()
+                report_progress(f"Downloaded {format_byte_count(temp_path.stat().st_size)}...")
+                next_progress_at = time.monotonic() + PROGRESS_INTERVAL_SECONDS
+        stderr = process.stderr.read() if process.stderr else b""
 
-    if result.returncode != 0:
+    if process.returncode != 0:
         remove_if_exists(temp_path)
-        stderr = result.stderr.decode("utf-8", errors="replace").strip()
-        raise CatalogError(stderr or f"Unable to download tag {tag} from {full_name}.")
+        error_message = stderr.decode("utf-8", errors="replace").strip()
+        raise CatalogError(error_message or f"Unable to download tag {tag} from {full_name}.")
 
     temp_path.replace(archive_path)
+    report_progress(f"Download complete ({format_byte_count(archive_path.stat().st_size)}).")
 
 
 def extract_tarball(archive_path: Path, destination: Path) -> None:
@@ -1030,10 +1344,18 @@ def extract_tarball(archive_path: Path, destination: Path) -> None:
         with tarfile.open(archive_path, "r:gz") as tar:
             members = tar.getmembers()
             validate_tar_members(members)
-            tar.extractall(temp_root, filter="data")
+            report_progress(f"Extracting {len(members)} archive member(s) to {destination}...")
+            next_progress_percent = 10
+            for index, member in enumerate(members, start=1):
+                tar.extract(member, temp_root, filter="data")
+                progress_percent = index * 100 // max(len(members), 1)
+                if progress_percent >= next_progress_percent:
+                    report_progress(f"Extraction {progress_percent}% complete...")
+                    next_progress_percent += 10
 
         top_level_items = list(temp_root.iterdir())
         destination.mkdir(parents=True, exist_ok=True)
+        report_progress(f"Finalizing extracted source tree at {destination}...")
 
         if len(top_level_items) == 1 and top_level_items[0].is_dir():
             extracted_root = top_level_items[0]
@@ -1042,6 +1364,7 @@ def extract_tarball(archive_path: Path, destination: Path) -> None:
         else:
             for item in top_level_items:
                 shutil.move(str(item), destination / item.name)
+        report_progress("Extraction complete.")
     finally:
         remove_if_exists(temp_root)
 
@@ -1067,9 +1390,9 @@ def parse_github_remote(remote_url: str | None) -> str | None:
         return None
 
     patterns = [
-        r"^https://github\.com/([^/]+)/([^/]+?)(?:\.git)?$",
+        r"^https://github\.com/([^/]+)/([^/]+?)(?:\.git)?/?$",
         r"^git@github\.com:([^/]+)/([^/]+?)(?:\.git)?$",
-        r"^ssh://git@github\.com/([^/]+)/([^/]+?)(?:\.git)?$",
+        r"^ssh://git@github\.com/([^/]+)/([^/]+?)(?:\.git)?/?$",
     ]
     for pattern in patterns:
         match = re.match(pattern, remote_url)
@@ -1220,7 +1543,7 @@ def load_json(path: Path, default):
 
 def write_json(path: Path, payload: dict) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
-    temp_path = path.with_suffix(path.suffix + ".tmp")
+    temp_path = path.with_suffix(path.suffix + f".{uuid.uuid4().hex}.tmp")
     with temp_path.open("w", encoding="utf-8", newline="\n") as handle:
         json.dump(payload, handle, ensure_ascii=True, indent=2, sort_keys=True)
         handle.write("\n")
@@ -1273,6 +1596,21 @@ def normalize_text(value: str | None) -> str:
 
 def utc_now() -> str:
     return datetime.now(timezone.utc).replace(microsecond=0).isoformat()
+
+
+def report_progress(message: str) -> None:
+    """Emit an immediately visible operation progress message."""
+    print(f"[INFO] {message}", flush=True)
+
+
+def format_byte_count(byte_count: int) -> str:
+    """Format a byte count for concise download progress output."""
+    value = float(byte_count)
+    for unit in ("B", "KiB", "MiB", "GiB"):
+        if value < 1024 or unit == "GiB":
+            return f"{value:.1f} {unit}"
+        value /= 1024
+    return f"{value:.1f} GiB"
 
 
 def remove_if_exists(path: Path) -> None:

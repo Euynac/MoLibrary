@@ -8,7 +8,7 @@ namespace Monica.AI.RAG.Services;
 /// <summary>
 /// Production-oriented markdown chunker with configurable chunk size and overlap.
 /// </summary>
-public partial class ProductionMarkdownDocumentChunker(
+internal sealed partial class ProductionMarkdownDocumentChunker(
     IOptions<ModuleRAGOption> options) : IDocumentChunker
 {
     private readonly ModuleRAGOption _options = options.Value;

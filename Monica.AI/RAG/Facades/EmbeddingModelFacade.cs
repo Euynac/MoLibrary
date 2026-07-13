@@ -1,7 +1,7 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Monica.AI.Abstractions;
-using Monica.AI.KnowledgeBase.Services;
+using Monica.AI.KnowledgeBase.Abstractions;
 using Monica.AI.Models;
 using Monica.AI.RAG.Models;
 using Monica.AI.RAG.Services;
@@ -16,7 +16,7 @@ namespace Monica.AI.RAG.Facades;
 public class EmbeddingModelFacade(
     IServiceProvider serviceProvider,
     IAIProviderFactory providerFactory,
-    KnowledgeBaseService knowledgeBaseService,
+    IKnowledgeBaseStore knowledgeBaseStore,
     ILogger<EmbeddingModelFacade> logger)
 {
     public Task<Res<IReadOnlyList<EmbeddingModelOption>>> GetEmbeddingModelsAsync()
@@ -173,7 +173,7 @@ public class EmbeddingModelFacade(
     {
         try
         {
-            var kb = await knowledgeBaseService.GetByIdAsync(kbId);
+            var kb = await knowledgeBaseStore.GetKnowledgeBaseAsync(kbId);
             if (kb is null)
             {
                 return Res.Fail("Knowledge base not found.");
@@ -252,7 +252,7 @@ public class EmbeddingModelFacade(
                     $"Embedding model '{modelName}' is not available on provider '{providerId}'.");
             }
 
-            await GetRagService().SetKnowledgeBaseEmbeddingModelAsync(
+            await GetVectorStoreService().SetEmbeddingModelAsync(
                 kbId,
                 providerId,
                 modelName,
@@ -272,8 +272,8 @@ public class EmbeddingModelFacade(
         }
     }
 
-    // Delay RAG service resolution so the page can load provider metadata
+    // Delay vector pipeline resolution so the page can load provider metadata
     // without constructing the vector-store pipeline on entry.
-    private RAGService GetRagService()
-        => serviceProvider.GetRequiredService<RAGService>();
+    private RAGVectorStoreService GetVectorStoreService()
+        => serviceProvider.GetRequiredService<RAGVectorStoreService>();
 }

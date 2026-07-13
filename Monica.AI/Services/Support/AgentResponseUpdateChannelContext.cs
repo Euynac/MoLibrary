@@ -3,7 +3,7 @@ namespace Monica.AI.Services.Support;
 /// <summary>
 /// Stores the current response update channel for the active async flow.
 /// </summary>
-public static class AgentResponseUpdateChannelContext
+internal static class AgentResponseUpdateChannelContext
 {
     private static readonly AsyncLocal<AgentResponseUpdateChannel?> _current = new();
 

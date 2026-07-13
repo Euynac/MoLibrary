@@ -7,8 +7,8 @@ namespace Monica.AI.RAG.Services.Support;
 /// <summary>
 /// Coordinates chunk view retrieval with markdown fallback.
 /// </summary>
-public sealed class ChunkViewCoordinator(
-    RAGService ragService,
+internal sealed class ChunkViewCoordinator(
+    RAGChunkingService chunkingService,
     IMarkdownDocumentCatalog markdownService,
     MarkdownDocumentResolver markdownDocumentResolver)
 {
@@ -17,7 +17,7 @@ public sealed class ChunkViewCoordinator(
         string documentId,
         CancellationToken ct = default)
     {
-        var indexedView = await ragService.GetDocumentChunkViewAsync(kbId, documentId, ct);
+        var indexedView = await chunkingService.GetDocumentChunkViewAsync(kbId, documentId, ct);
         if (indexedView is not null)
         {
             return await EnrichMarkdownMetadataAsync(indexedView, ct);
@@ -31,7 +31,7 @@ public sealed class ChunkViewCoordinator(
         }
 
         var originalText = await markdownService.GetDocumentContentAsync(markdownDocument);
-        var previewView = await ragService.BuildDocumentChunkPreviewAsync(
+        var previewView = await chunkingService.BuildPreviewAsync(
             kbId,
             markdownDocument.RelativePath,
             markdownDocument.Title,

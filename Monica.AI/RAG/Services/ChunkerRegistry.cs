@@ -7,7 +7,7 @@ namespace Monica.AI.RAG.Services;
 /// <summary>
 /// Resolves chunkers and manages persisted extension routing.
 /// </summary>
-public sealed class ChunkerRegistry(
+internal sealed class ChunkerRegistry(
     IEnumerable<IDocumentChunker> chunkers,
     IChunkerRoutingStore routingStore,
     ILogger<ChunkerRegistry> logger)

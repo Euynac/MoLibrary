@@ -57,7 +57,7 @@
 }
 
 @code {
-    [Parameter] public List<ToolCallInfo> ActiveToolCalls { get; set; } = [];
+    [Parameter] public IReadOnlyList<ToolCallInfo> ActiveToolCalls { get; set; } = [];
     [Parameter] public bool EnableDebugMode { get; set; }
 
     private string GetIndicatorCaption()

@@ -9,15 +9,24 @@ namespace Monica.AI.RAG.Facades;
 /// <summary>
 /// Host-facing facade for chunker management and chunking test operations.
 /// </summary>
-public class ChunkerFacade(
-    RAGService ragService,
-    ILogger<ChunkerFacade> logger)
+public sealed class ChunkerFacade
 {
+    private readonly RAGChunkingService chunkingService;
+    private readonly ILogger<ChunkerFacade> logger;
+
+    internal ChunkerFacade(
+        RAGChunkingService chunkingService,
+        ILogger<ChunkerFacade> logger)
+    {
+        this.chunkingService = chunkingService;
+        this.logger = logger;
+    }
+
     public async Task<Res<ChunkerManagementState>> GetManagementStateAsync()
     {
         try
         {
-            var state = await ragService.GetChunkerManagementStateAsync();
+            var state = await chunkingService.GetManagementStateAsync();
             return Res.Ok(state);
         }
         catch (Exception ex)
@@ -33,7 +42,7 @@ public class ChunkerFacade(
     {
         try
         {
-            var preview = await ragService.PreviewChunkerRoutingChangeAsync(extension, targetChunkerId);
+            var preview = await chunkingService.PreviewRoutingChangeAsync(extension, targetChunkerId);
             return Res.Ok(preview);
         }
         catch (Exception ex)
@@ -53,7 +62,7 @@ public class ChunkerFacade(
     {
         try
         {
-            var result = await ragService.ApplyChunkerRoutingChangeAsync(extension, targetChunkerId);
+            var result = await chunkingService.ApplyRoutingChangeAsync(extension, targetChunkerId);
             return Res.Ok(result);
         }
         catch (Exception ex)
@@ -74,7 +83,7 @@ public class ChunkerFacade(
     {
         try
         {
-            var result = await ragService.TestChunkerAsync(chunkerId, documentName, content);
+            var result = await chunkingService.TestAsync(chunkerId, documentName, content);
             return Res.Ok(result);
         }
         catch (Exception ex)

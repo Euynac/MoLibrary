@@ -26,9 +26,9 @@
                     @* Action buttons outside bubble, top-left *@
                     <div class="user-actions">
                         <MudIconButton Icon="@Icons.Material.Outlined.ContentCopy" Size="Size.Small"
-                                       OnClick="@HandleCopy" Class="user-action-button" title="Copy" />
+                                       OnClick="@HandleCopy" Class="user-action-button" title="@L["Chat:Actions:Copy"]" />
                         <MudIconButton Icon="@Icons.Material.Outlined.Edit" Size="Size.Small"
-                                       OnClick="@HandleStartEdit" Class="user-action-button" title="Edit" />
+                                       OnClick="@HandleStartEdit" Class="user-action-button" title="@L["Chat:Actions:Edit"]" />
                     </div>
 
                     @* The bubble itself *@
@@ -58,11 +58,11 @@
                             <MudText Typo="Typo.body2" Class="reasoning-label">
                                 @if (Message.ReasoningDurationSeconds.HasValue)
                                 {
-                                    @($"Thought for {Message.ReasoningDurationSeconds.Value:F1} seconds")
+                                    @L["Chat:Reasoning:Duration", Message.ReasoningDurationSeconds.Value]
                                 }
                                 else
                                 {
-                                    @("Reasoning")
+                                    @L["Chat:Reasoning:Label"]
                                 }
                             </MudText>
                             <MudIcon Icon="@(_reasoningExpanded ? Icons.Material.Filled.ExpandLess : Icons.Material.Filled.ExpandMore)"
@@ -100,9 +100,9 @@
                     }
                     <div class="message-actions">
                         <MudIconButton Icon="@Icons.Material.Filled.ContentCopy" Size="Size.Small"
-                                       OnClick="@HandleCopy" Class="action-button" title="Copy" />
+                                       OnClick="@HandleCopy" Class="action-button" title="@L["Chat:Actions:Copy"]" />
                         <MudIconButton Icon="@Icons.Material.Filled.Refresh" Size="Size.Small"
-                                       OnClick="@HandleRetry" Class="action-button" title="Retry" />
+                                       OnClick="@HandleRetry" Class="action-button" title="@L["Chat:Actions:Retry"]" />
                     </div>
                 </div>
             </div>
@@ -126,11 +126,11 @@
                           Class="edit-input" />
             <div class="edit-buttons">
                 <MudButton Variant="Variant.Text" OnClick="@HandleCancelEdit">
-                    Cancel
+                    @L["Common:Actions:Cancel"]
                 </MudButton>
                 <MudButton Variant="Variant.Filled" Color="Color.Primary"
                            OnClick="@HandleSaveEdit" Disabled="@string.IsNullOrWhiteSpace(_editContent)">
-                    Update
+                    @L["Common:Actions:Update"]
                 </MudButton>
             </div>
         </div>
@@ -160,7 +160,7 @@
     private async Task HandleCopy()
     {
         var success = await JSRuntime.InvokeAsync<bool>("MoClipboard.copyText", Message.Content);
-        Snackbar.Add(success ? "Copied to clipboard" : "Failed to copy",
+        Snackbar.Add(success ? L["Chat:Clipboard:Copied"] : L["Chat:Clipboard:CopyFailed"],
                      success ? Severity.Success : Severity.Error);
     }
 
@@ -180,7 +180,7 @@
     {
         if (string.IsNullOrWhiteSpace(_editContent))
         {
-            Snackbar.Add("Message cannot be empty", Severity.Warning);
+            Snackbar.Add(L["Chat:Validation:MessageRequired"], Severity.Warning);
             return;
         }
 
@@ -199,11 +199,11 @@
         _reasoningExpanded = !_reasoningExpanded;
     }
 
-    private static string FormatTokenUsage(TokenUsage usage)
+    private string FormatTokenUsage(TokenUsage usage)
     {
         return usage.CachedInputTokens > 0
-            ? $"{usage.EffectiveTotalTokens} tokens · {usage.CachedInputTokens} cached"
-            : $"{usage.EffectiveTotalTokens} tokens";
+            ? L["Chat:Usage:SummaryCached", usage.EffectiveTotalTokens, usage.CachedInputTokens]
+            : L["Chat:Usage:Summary", usage.EffectiveTotalTokens];
     }
 
     private async Task HandleMarkdownLinkClickAsync(object? parameter)

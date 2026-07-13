@@ -10,7 +10,7 @@ namespace Monica.AI.RAG.Services;
 /// <summary>
 /// Resolves and validates embedding binding for knowledge bases.
 /// </summary>
-public sealed class RAGEmbeddingBindingResolver(
+internal sealed class RAGEmbeddingBindingResolver(
     IAIProviderFactory providerFactory,
     ILogger<RAGEmbeddingBindingResolver> logger)
 {

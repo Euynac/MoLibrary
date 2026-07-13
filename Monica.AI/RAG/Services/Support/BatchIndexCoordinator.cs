@@ -1,4 +1,3 @@
-using System.Collections.Concurrent;
 using Microsoft.Extensions.Logging;
 using Monica.AI.KnowledgeBase.Models;
 using Monica.AI.RAG.Models;
@@ -9,17 +8,15 @@ namespace Monica.AI.RAG.Services.Support;
 /// <summary>
 /// Coordinates batch indexing flow for one knowledge base.
 /// </summary>
-public sealed class BatchIndexCoordinator(
-    RAGService ragService,
+internal sealed class BatchIndexCoordinator(
+    RAGDocumentService documentService,
+    RAGDocumentIndexingService indexingService,
+    RAGVectorStoreService vectorStoreService,
+    RAGBatchIndexOperationRegistry operationRegistry,
     IMarkdownDocumentCatalog markdownService,
     MarkdownDocumentResolver markdownDocumentResolver,
     ILogger<BatchIndexCoordinator> logger)
 {
-    private static readonly ConcurrentDictionary<string, int> ActiveBatchCounters =
-        new(StringComparer.OrdinalIgnoreCase);
-    private static readonly ConcurrentDictionary<string, CancellationTokenSource> ActiveBatchCancellationSources =
-        new(StringComparer.OrdinalIgnoreCase);
-
     public bool IsBatchIndexingActive(string kbId)
     {
         if (string.IsNullOrWhiteSpace(kbId))
@@ -27,7 +24,7 @@ public sealed class BatchIndexCoordinator(
             return false;
         }
 
-        return ActiveBatchCounters.TryGetValue(kbId, out var count) && count > 0;
+        return operationRegistry.IsActive(kbId);
     }
 
     public bool TryCancelBatchIndexing(string kbId, out string errorMessage)
@@ -40,20 +37,13 @@ public sealed class BatchIndexCoordinator(
             return false;
         }
 
-        if (!ActiveBatchCancellationSources.TryGetValue(kbId, out var cts))
+        if (!operationRegistry.TryGet(kbId, out var operation) || operation is null)
         {
             errorMessage = "No active indexing task found. Cancellation treated as no-op.";
             return true;
         }
 
-        if (!cts.IsCancellationRequested)
-        {
-            cts.Cancel();
-            errorMessage = "Cancellation requested.";
-            return true;
-        }
-
-        errorMessage = "Cancellation already requested.";
+        errorMessage = operation.RequestCancellation();
         return true;
     }
 
@@ -66,18 +56,12 @@ public sealed class BatchIndexCoordinator(
             throw new ArgumentException("Knowledge base id is required.", nameof(kbId));
         }
 
-        if (ActiveBatchCancellationSources.TryGetValue(kbId, out var cts))
+        if (operationRegistry.TryGet(kbId, out var operation) && operation is not null)
         {
-            if (!cts.IsCancellationRequested)
-            {
-                cts.Cancel();
-                return "Cancellation requested.";
-            }
-
-            return "Cancellation already requested.";
+            return operation.RequestCancellation();
         }
 
-        var recoveredCount = await ragService.ConvergeInactiveIndexingDocumentsAsync(kbId, cancellationToken);
+        var recoveredCount = await documentService.ConvergeInactiveAsync(kbId, cancellationToken);
         return recoveredCount > 0
             ? $"No active indexing task found. Reset {recoveredCount} stale indexing document(s) to pending."
             : "No active indexing task found. Cancellation treated as no-op.";
@@ -90,8 +74,7 @@ public sealed class BatchIndexCoordinator(
         CancellationToken cancellationToken = default,
         IEnumerable<string>? documentIds = null)
     {
-        var markedActive = false;
-        CancellationTokenSource? batchCancellation = null;
+        RAGBatchIndexOperation? operation = null;
         CancellationTokenSource? linkedCancellation = null;
 
         try
@@ -101,20 +84,18 @@ public sealed class BatchIndexCoordinator(
                 kbId,
                 maxConcurrency);
 
-            var requestedCancellation = new CancellationTokenSource();
-            if (!ActiveBatchCancellationSources.TryAdd(kbId, requestedCancellation))
+            if (!operationRegistry.TryStart(kbId, out var requestedOperation))
             {
-                requestedCancellation.Dispose();
                 return RAGBatchIndexExecutionResult.Failed("Batch indexing is already running.");
             }
 
-            batchCancellation = requestedCancellation;
+            operation = requestedOperation;
             linkedCancellation = CancellationTokenSource.CreateLinkedTokenSource(
                 cancellationToken,
-                batchCancellation.Token);
+                operation.CancellationToken);
             var effectiveToken = linkedCancellation.Token;
 
-            var queue = await ragService.GetDocumentQueueAsync(kbId, effectiveToken);
+            var queue = await documentService.GetQueueAsync(kbId, effectiveToken);
             var selectedDocumentIds = documentIds?
                 .Where(static id => !string.IsNullOrWhiteSpace(id))
                 .Select(static id => id.Trim())
@@ -126,13 +107,11 @@ public sealed class BatchIndexCoordinator(
                 .ToList();
             if (pendingDocs.Count == 0)
             {
+                requestedOperation.Complete(RAGBatchIndexOperationState.Failed);
                 return RAGBatchIndexExecutionResult.Failed("No pending documents to index.");
             }
 
-            await ragService.EnsureKnowledgeBaseIndexingReadyAsync(kbId, effectiveToken);
-
-            MarkBatchIndexingStarted(kbId);
-            markedActive = true;
+            await vectorStoreService.EnsureIndexingReadyAsync(kbId, effectiveToken);
 
             var normalizedConcurrency = Math.Clamp(maxConcurrency, 1, 20);
             using var semaphore = new SemaphoreSlim(normalizedConcurrency, normalizedConcurrency);
@@ -142,7 +121,7 @@ public sealed class BatchIndexCoordinator(
                 await semaphore.WaitAsync(effectiveToken);
                 try
                 {
-                    await IndexQueuedDocumentAsync(kbId, doc, progress, effectiveToken);
+                    await IndexQueuedDocumentAsync(kbId, doc, requestedOperation, progress, effectiveToken);
                 }
                 finally
                 {
@@ -151,8 +130,9 @@ public sealed class BatchIndexCoordinator(
             });
 
             await Task.WhenAll(tasks);
+            effectiveToken.ThrowIfCancellationRequested();
 
-            var finalQueue = await ragService.GetDocumentQueueAsync(kbId, CancellationToken.None);
+            var finalQueue = await documentService.GetQueueAsync(kbId, CancellationToken.None);
             var pendingDocIds = pendingDocs
                 .Select(doc => doc.Id)
                 .ToHashSet(StringComparer.OrdinalIgnoreCase);
@@ -170,11 +150,13 @@ public sealed class BatchIndexCoordinator(
                     $"{doc.Name}: {doc.ErrorMessage ?? "Unknown error"}"));
                 var suffix = failedDocs.Count > 3 ? " ..." : string.Empty;
 
+                requestedOperation.Complete(RAGBatchIndexOperationState.Failed);
                 return RAGBatchIndexExecutionResult.Failed(
                     $"Batch indexing completed with errors. Success {processedDocs.Count - failedDocs.Count}/{processedDocs.Count}, " +
                     $"failed {failedDocs.Count}. {details}{suffix}");
             }
 
+            requestedOperation.Complete(RAGBatchIndexOperationState.Succeeded);
             return RAGBatchIndexExecutionResult.Success(
                 $"Batch indexing completed for {processedDocs.Count} documents.");
         }
@@ -183,11 +165,13 @@ public sealed class BatchIndexCoordinator(
             cancellationToken.IsCancellationRequested)
         {
             logger.LogInformation("Batch indexing cancelled for KB '{KbId}'", kbId);
+            operation?.Complete(RAGBatchIndexOperationState.Cancelled);
             return RAGBatchIndexExecutionResult.CancelledResult("Request was cancelled.");
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Failed to start batch indexing for KB '{KbId}'", kbId);
+            operation?.Complete(RAGBatchIndexOperationState.Failed);
             return ex is InvalidOperationException or KeyNotFoundException
                 ? RAGBatchIndexExecutionResult.Failed(ex.Message)
                 : RAGBatchIndexExecutionResult.Failed($"Failed to start batch indexing: {ex.Message}");
@@ -196,21 +180,9 @@ public sealed class BatchIndexCoordinator(
         {
             linkedCancellation?.Dispose();
 
-            if (batchCancellation is not null)
+            if (operation is not null)
             {
-                if (ActiveBatchCancellationSources.TryRemove(kbId, out var removed))
-                {
-                    removed.Dispose();
-                }
-                else
-                {
-                    batchCancellation.Dispose();
-                }
-            }
-
-            if (markedActive)
-            {
-                MarkBatchIndexingCompleted(kbId);
+                operationRegistry.Complete(kbId, operation);
             }
         }
     }
@@ -226,7 +198,7 @@ public sealed class BatchIndexCoordinator(
             throw new InvalidOperationException("Batch indexing is already running.");
         }
 
-        var queue = await ragService.GetDocumentQueueAsync(kbId, cancellationToken);
+        var queue = await documentService.GetQueueAsync(kbId, cancellationToken);
         var queueItem = queue.FirstOrDefault(item =>
             string.Equals(item.Id, documentId, StringComparison.OrdinalIgnoreCase));
 
@@ -247,13 +219,14 @@ public sealed class BatchIndexCoordinator(
             throw new InvalidOperationException($"Document '{documentId}' is already indexing.");
         }
 
-        await ragService.EnsureKnowledgeBaseIndexingReadyAsync(kbId, cancellationToken);
-        await IndexQueuedDocumentAsync(kbId, queueItem, progress, cancellationToken);
+        await vectorStoreService.EnsureIndexingReadyAsync(kbId, cancellationToken);
+        await IndexQueuedDocumentAsync(kbId, queueItem, null, progress, cancellationToken);
     }
 
     private async Task IndexQueuedDocumentAsync(
         string kbId,
         DocumentQueueItem queueItem,
+        RAGBatchIndexOperation? operation,
         IProgress<IndexingProgress>? progress,
         CancellationToken cancellationToken)
     {
@@ -272,7 +245,7 @@ public sealed class BatchIndexCoordinator(
             }
             else
             {
-                content = await ragService.GetDocumentSourceContentAsync(kbId, queueItem.Id, cancellationToken)
+                content = await documentService.GetSourceContentAsync(kbId, queueItem.Id, cancellationToken)
                           ?? throw new FileNotFoundException(
                               $"Document '{queueItem.Id}' source content was not found.");
                 documentTitle = queueItem.Name;
@@ -293,7 +266,7 @@ public sealed class BatchIndexCoordinator(
                         lastPersistedProgress = progressValue;
                         try
                         {
-                            await ragService.UpdateDocumentIndexingProgressAsync(
+                            await indexingService.UpdateProgressAsync(
                                 kbId,
                                 queueItem.Id,
                                 progressValue,
@@ -315,10 +288,11 @@ public sealed class BatchIndexCoordinator(
                     }
                 }
 
+                operation?.ReportProgress(p);
                 progress?.Report(p);
             }
 
-            await ragService.IndexDocumentAsync(
+            await indexingService.IndexAsync(
                 kbId,
                 queueItem.Id,
                 documentTitle,
@@ -340,7 +314,7 @@ public sealed class BatchIndexCoordinator(
 
                 try
                 {
-                    await ragService.MarkDocumentPendingAsync(kbId, queueItem.Id, CancellationToken.None);
+                    await indexingService.MarkPendingAsync(kbId, queueItem.Id, CancellationToken.None);
                 }
                 catch (Exception updateEx)
                 {
@@ -355,27 +329,10 @@ public sealed class BatchIndexCoordinator(
             }
 
             logger.LogError(ex, "Failed to index document '{DocId}' in KB '{KbId}'", queueItem.Id, kbId);
-            await ragService.MarkDocumentFailedAsync(kbId, queueItem.Id, ex.GetBaseException().Message, CancellationToken.None);
+            await indexingService.MarkFailedAsync(kbId, queueItem.Id, ex.GetBaseException().Message, CancellationToken.None);
         }
     }
 
-    private static void MarkBatchIndexingStarted(string kbId)
-    {
-        ActiveBatchCounters.AddOrUpdate(kbId, 1, static (_, count) => count + 1);
-    }
-
-    private static void MarkBatchIndexingCompleted(string kbId)
-    {
-        var updated = ActiveBatchCounters.AddOrUpdate(
-            kbId,
-            0,
-            static (_, count) => count > 1 ? count - 1 : 0);
-
-        if (updated == 0)
-        {
-            ActiveBatchCounters.TryRemove(kbId, out _);
-        }
-    }
 }
 
 /// <summary>

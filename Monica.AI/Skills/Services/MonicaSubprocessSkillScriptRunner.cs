@@ -1,6 +1,6 @@
 using System.Diagnostics;
+using System.Text.Json;
 using Microsoft.Agents.AI;
-using Microsoft.Extensions.AI;
 
 namespace Monica.AI.Skills.Services;
 
@@ -9,12 +9,12 @@ namespace Monica.AI.Skills.Services;
 /// </summary>
 /// <remarks>
 /// This runner is intentionally small and mirrors Agent Framework's sample runner behavior. It maps common
-/// script extensions to local interpreters, passes skill-script arguments as command-line flags, captures
+/// script extensions to local interpreters, passes the Agent Framework string-array arguments unchanged, captures
 /// standard output and standard error, and kills the process tree when the invocation is cancelled.
 /// Hosts that need sandboxing, allow-lists, secrets isolation, or remote execution should provide their own
 /// <see cref="AgentFileSkillScriptRunner"/> instead.
 /// </remarks>
-public static class MonicaSubprocessSkillScriptRunner
+internal static class MonicaSubprocessSkillScriptRunner
 {
     private static readonly IReadOnlyDictionary<string, string> INTERPRETERS =
         new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
@@ -31,16 +31,19 @@ public static class MonicaSubprocessSkillScriptRunner
     /// <param name="skill">Skill that owns the script.</param>
     /// <param name="script">Script to execute.</param>
     /// <param name="arguments">Arguments supplied by the model through Agent Framework.</param>
+    /// <param name="serviceProvider">Optional invocation service provider.</param>
     /// <param name="cancellationToken">Cancellation token for the process invocation.</param>
     /// <returns>Captured script output or an error string suitable for returning to the agent loop.</returns>
-    public static async Task<object?> RunAsync(
+    internal static async Task<object?> RunAsync(
         AgentFileSkill skill,
         AgentFileSkillScript script,
-        AIFunctionArguments arguments,
+        JsonElement? arguments,
+        IServiceProvider? serviceProvider,
         CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(skill);
         ArgumentNullException.ThrowIfNull(script);
+        _ = serviceProvider;
 
         if (!File.Exists(script.FullPath))
         {
@@ -110,32 +113,25 @@ public static class MonicaSubprocessSkillScriptRunner
         return startInfo;
     }
 
-    private static void AddArguments(ProcessStartInfo startInfo, AIFunctionArguments? arguments)
+    private static void AddArguments(ProcessStartInfo startInfo, JsonElement? arguments)
     {
-        if (arguments is null)
+        if (arguments is null
+            || arguments.Value.ValueKind is JsonValueKind.Null or JsonValueKind.Undefined)
         {
             return;
         }
 
-        foreach (var (key, value) in arguments)
+        if (arguments.Value.ValueKind != JsonValueKind.Array)
         {
-            if (value is bool boolValue)
-            {
-                if (boolValue)
-                {
-                    startInfo.ArgumentList.Add(NormalizeKey(key));
-                }
+            throw new InvalidOperationException(
+                $"File skill script arguments must be a JSON string array but received '{arguments.Value.ValueKind}'.");
+        }
 
-                continue;
-            }
-
-            if (value is null)
-            {
-                continue;
-            }
-
-            startInfo.ArgumentList.Add(NormalizeKey(key));
-            startInfo.ArgumentList.Add(value.ToString()!);
+        foreach (var argument in arguments.Value.EnumerateArray())
+        {
+            startInfo.ArgumentList.Add(argument.GetString()
+                                       ?? throw new InvalidOperationException(
+                                           "File skill script arguments must contain only strings."));
         }
     }
 
@@ -153,10 +149,5 @@ public static class MonicaSubprocessSkillScriptRunner
         }
 
         return string.IsNullOrEmpty(result) ? "(no output)" : result.Trim();
-    }
-
-    private static string NormalizeKey(string key)
-    {
-        return "--" + key.TrimStart('-');
     }
 }

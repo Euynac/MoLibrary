@@ -3,12 +3,32 @@
     "NewChat": "新对话",
     "RecentSessions": "最近会话",
     "NoConversations": "暂无对话",
+    "Delete": "删除会话",
     "JustNow": "刚刚",
     "MinutesAgo": "{0}分钟前",
     "HoursAgo": "{0}小时前",
     "DaysAgo": "{0}天前"
   },
   "Chat": {
+    "History": {
+      "Loading": "正在加载会话历史...",
+      "Clear": {
+        "Action": "清空会话历史",
+        "Title": "确定清空会话历史？",
+        "Message": "此操作将永久删除当前浏览器配置中保存的全部会话。",
+        "Confirm": "全部清空"
+      },
+      "Warnings": {
+        "LoadFailed": "无法恢复会话历史，你仍可继续使用内存中的会话。",
+        "RevisionConflict": "另一个标签页已更新会话历史，请刷新页面后再保存更改。",
+        "QuotaExceeded": "浏览器存储空间已满，当前会话无法保存。",
+        "StorageUnavailable": "浏览器历史记录暂时不可用，当前会话仍保留在内存中。",
+        "SessionsPruned": "为满足浏览器存储限制，已移除较早的非当前会话。",
+        "SessionUnavailable": "浏览器存储中已无法读取此会话。",
+        "RuntimeFallback": "保存的 Agent 状态不兼容，已使用可见聊天记录继续会话。",
+        "ProviderUnavailable": "此会话使用的供应商或模型不可用，请选择可用项后继续。"
+      }
+    },
     "Input": {
       "Placeholder": "发送消息...",
       "AttachFile": "附加文件",
@@ -29,11 +49,62 @@
     "Actions": {
       "EnableDeepThinking": "启用深度思考",
       "DisableDeepThinking": "禁用深度思考",
+      "Copy": "复制",
+      "Edit": "编辑",
       "Retry": "重试"
+    },
+    "Clipboard": {
+      "Copied": "已复制到剪贴板",
+      "CopyFailed": "复制失败"
+    },
+    "Validation": {
+      "MessageRequired": "消息不能为空"
+    },
+    "Error": {
+      "Title": "生成失败"
     },
     "Status": {
       "Current": "当前",
       "GenerationStopped": "生成已停止"
+    },
+    "Approval": {
+      "Title": "外部脚本审批",
+      "Warning": "此 Skill 正在请求运行外部文件或子进程脚本。继续前请检查脚本身份和参数。",
+      "Skill": "Skill",
+      "Script": "脚本",
+      "Source": "来源",
+      "Arguments": "参数",
+      "Approve": "批准",
+      "Reject": "拒绝",
+      "ApprovedReason": "用户已批准。",
+      "RejectedReason": "用户已拒绝。"
+    },
+    "Reasoning": {
+      "Thinking": "思考中...",
+      "Label": "推理过程",
+      "Duration": "思考了 {0:F1} 秒"
+    },
+    "Welcome": {
+      "Title": "今天想聊点什么？",
+      "Subtitle": "支持多个 Provider，可直接提问代码、写作或分析任务。",
+      "Cards": {
+        "UI": {
+          "Title": "优化前端交互",
+          "Subtitle": "给出按钮与动效建议"
+        },
+        "Docs": {
+          "Title": "生成接口文档",
+          "Subtitle": "根据 API 设计输出说明"
+        },
+        "Error": {
+          "Title": "分析一段错误",
+          "Subtitle": "定位日志与异常原因"
+        },
+        "Script": {
+          "Title": "写一段脚本",
+          "Subtitle": "自动化常见开发任务"
+        }
+      }
     },
     "ToolCalls": {
       "EnableDebug": "启用 Tool 调试",
@@ -98,6 +169,8 @@
       "Cached": "缓存",
       "NoUsage": "最近一条助手消息尚未上报 Provider 用量。",
       "Total": "合计",
+      "Summary": "{0} 个 Token",
+      "SummaryCached": "{0} 个 Token · {1} 个缓存",
       "Column": {
         "Request": "请求",
         "Input": "输入",
@@ -150,6 +223,7 @@
     "Actions": {
       "Close": "关闭",
       "Save": "保存",
+      "Update": "更新",
       "Cancel": "取消",
       "Confirm": "确认"
     }

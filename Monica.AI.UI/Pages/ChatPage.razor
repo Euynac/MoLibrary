@@ -13,9 +13,11 @@
             <SessionList
                 Sessions="@PageState.Sessions"
                 CurrentSessionId="@PageState.CurrentSessionId"
+                IsLoading="@PageState.IsHistoryLoading"
                 OnNewSession="@PageState.CreateNewSessionAsync"
-                OnSelectSession="@PageState.SelectSession"
-                OnDeleteSession="@PageState.DeleteSessionAsync" />
+                OnSelectSession="@PageState.SelectSessionAsync"
+                OnDeleteSession="@PageState.DeleteSessionAsync"
+                OnClearSessions="@PageState.ClearSessionsAsync" />
         </aside>
     }
 
@@ -43,6 +45,16 @@
             </div>
         </header>
 
-        <ChatContainer Parameters="@PageState.BuildChatContainerParameters()" />
+        @if (PageState.IsHistoryLoading)
+        {
+            <div class="history-loading" role="status" aria-busy="true">
+                <MudProgressCircular Indeterminate="true" Color="Color.Primary" />
+                <MudText Typo="Typo.body1">@L["Chat:History:Loading"]</MudText>
+            </div>
+        }
+        else
+        {
+            <ChatContainer Parameters="@PageState.BuildChatContainerParameters()" />
+        }
     </main>
 </div>

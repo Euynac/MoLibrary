@@ -1,12 +1,15 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Logging;
 using Monica.AI.KnowledgeBase.Abstractions;
 using Monica.AI.KnowledgeBase.Facades;
+using Monica.AI.KnowledgeBase.Providers;
 using Monica.AI.KnowledgeBase.Services;
 using Monica.Core;
 using Monica.Core.Modularity.Abstractions;
 using Monica.Core.Modularity.Annotations;
 using Monica.Core.Modularity.Models;
+using Monica.Markdown.Abstractions;
 
 // ReSharper disable once CheckNamespace
 namespace Monica.Modules;
@@ -51,8 +54,15 @@ public sealed class ModuleKnowledgeBase(ModuleKnowledgeBaseOption option)
         services.TryAddSingleton<IKnowledgeDocumentSourceStore, FileKnowledgeDocumentSourceStore>();
         services.TryAddSingleton<IKnowledgeBaseStore, DocumentIndexStateKnowledgeBaseStore>();
         services.TryAddSingleton<KnowledgeBaseService>();
-        services.TryAddSingleton<IKnowledgeBaseLookupService, KnowledgeBaseLookupService>();
-        services.AddScoped<KnowledgeBaseFacade>();
+        services.TryAddSingleton<KnowledgeDocumentService>();
+        services.TryAddSingleton<IKnowledgeDocumentQueryService, KnowledgeDocumentQueryService>();
+        services.AddScoped(sp => new KnowledgeBaseFacade(
+            sp.GetRequiredService<KnowledgeBaseService>(),
+            sp.GetRequiredService<ILogger<KnowledgeBaseFacade>>()));
+        services.AddScoped(sp => new KnowledgeDocumentFacade(
+            sp.GetRequiredService<KnowledgeDocumentService>(),
+            sp.GetRequiredService<IMarkdownDocumentCatalog>(),
+            sp.GetRequiredService<ILogger<KnowledgeDocumentFacade>>()));
     }
 }
 

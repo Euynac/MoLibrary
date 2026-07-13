@@ -10,8 +10,10 @@ namespace Monica.UI.Shell.Support;
 /// </summary>
 public class BrowserStorage(IJSRuntime jsRuntime, ILogger<BrowserStorage> logger) : IBrowserStorage
 {
-    private const string KeyPrefix = "mo:";
-    private const string ModulePath = "./_content/Monica.UI/js/mo-browser-storage.js";
+    private const string KEY_PREFIX = "mo:";
+    private const string MODULE_PATH = "./_content/Monica.UI/js/mo-browser-storage.js";
+    private const string QUOTA_EXCEEDED_ERROR = "quota-exceeded";
+    private const string STORAGE_UNAVAILABLE_ERROR = "storage-unavailable";
 
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
@@ -23,10 +25,10 @@ public class BrowserStorage(IJSRuntime jsRuntime, ILogger<BrowserStorage> logger
 
     private async ValueTask<IJSObjectReference> GetModuleAsync()
     {
-        return _module ??= await jsRuntime.InvokeAsync<IJSObjectReference>("import", ModulePath);
+        return _module ??= await jsRuntime.InvokeAsync<IJSObjectReference>("import", MODULE_PATH);
     }
 
-    private static string PrefixKey(string key) => $"{KeyPrefix}{key}";
+    private static string PrefixKey(string key) => $"{KEY_PREFIX}{key}";
 
     public async Task<T> GetAsync<T>(string key, T defaultValue, BrowserStorageType storageType = BrowserStorageType.Local)
     {
@@ -53,19 +55,54 @@ public class BrowserStorage(IJSRuntime jsRuntime, ILogger<BrowserStorage> logger
 
     public async Task SetAsync<T>(string key, T value, BrowserStorageType storageType = BrowserStorageType.Local)
     {
+        _ = await TrySetAsync(key, value, storageType);
+    }
+
+    public async Task<BrowserStorageWriteResult> TrySetAsync<T>(
+        string key,
+        T value,
+        BrowserStorageType storageType = BrowserStorageType.Local)
+    {
+        string json;
+
+        try
+        {
+            json = JsonSerializer.Serialize(value, JsonOptions);
+        }
+        catch (Exception ex)
+        {
+            logger.LogDebug(ex, "Failed to serialize browser storage key '{Key}'", key);
+            return new BrowserStorageWriteResult(BrowserStorageWriteFailureKind.SerializationFailed);
+        }
+
         try
         {
             var module = await GetModuleAsync();
-            var json = JsonSerializer.Serialize(value, JsonOptions);
-            await module.InvokeVoidAsync("setItem", GetStorageTypeName(storageType), PrefixKey(key), json);
+            var failureCode = await module.InvokeAsync<string?>(
+                "trySetItem",
+                GetStorageTypeName(storageType),
+                PrefixKey(key),
+                json);
+
+            var result = new BrowserStorageWriteResult(MapWriteFailure(failureCode));
+            if (!result.Succeeded)
+            {
+                logger.LogDebug(
+                    "Failed to set browser storage key '{Key}': {FailureKind}",
+                    key,
+                    result.FailureKind);
+            }
+
+            return result;
         }
         catch (JSDisconnectedException)
         {
-            // Circuit disconnected, silently ignore
+            return new BrowserStorageWriteResult(BrowserStorageWriteFailureKind.StorageUnavailable);
         }
         catch (Exception ex)
         {
             logger.LogDebug(ex, "Failed to set browser storage key '{Key}'", key);
+            return new BrowserStorageWriteResult(BrowserStorageWriteFailureKind.Unknown);
         }
     }
 
@@ -91,7 +128,7 @@ public class BrowserStorage(IJSRuntime jsRuntime, ILogger<BrowserStorage> logger
         try
         {
             var module = await GetModuleAsync();
-            var prefix = $"{KeyPrefix}{category}:";
+            var prefix = $"{KEY_PREFIX}{category}:";
             var keys = await module.InvokeAsync<string[]>("getKeys", GetStorageTypeName(storageType), prefix);
             return keys;
         }
@@ -111,7 +148,7 @@ public class BrowserStorage(IJSRuntime jsRuntime, ILogger<BrowserStorage> logger
         try
         {
             var module = await GetModuleAsync();
-            var prefix = $"{KeyPrefix}{category}:";
+            var prefix = $"{KEY_PREFIX}{category}:";
             return await module.InvokeAsync<int>("clearByPrefix", GetStorageTypeName(storageType), prefix);
         }
         catch (JSDisconnectedException)
@@ -127,6 +164,14 @@ public class BrowserStorage(IJSRuntime jsRuntime, ILogger<BrowserStorage> logger
 
     private static string GetStorageTypeName(BrowserStorageType storageType) =>
         storageType == BrowserStorageType.Session ? "session" : "local";
+
+    private static BrowserStorageWriteFailureKind MapWriteFailure(string? failureCode) => failureCode switch
+    {
+        null => BrowserStorageWriteFailureKind.None,
+        QUOTA_EXCEEDED_ERROR => BrowserStorageWriteFailureKind.QuotaExceeded,
+        STORAGE_UNAVAILABLE_ERROR => BrowserStorageWriteFailureKind.StorageUnavailable,
+        _ => BrowserStorageWriteFailureKind.Unknown
+    };
 
     public async ValueTask DisposeAsync()
     {

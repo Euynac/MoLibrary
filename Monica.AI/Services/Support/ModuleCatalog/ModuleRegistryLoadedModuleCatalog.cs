@@ -6,7 +6,7 @@ namespace Monica.AI.Services.Support.ModuleCatalog;
 /// <summary>
 /// Reads loaded module keys from Monica's module registry snapshot.
 /// </summary>
-public sealed class ModuleRegistryLoadedModuleCatalog : ILoadedModuleCatalog
+internal sealed class ModuleRegistryLoadedModuleCatalog : ILoadedModuleCatalog
 {
     /// <inheritdoc />
     public IReadOnlySet<ModuleKey> GetLoadedModuleKeys()

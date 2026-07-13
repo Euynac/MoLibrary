@@ -1,3 +1,4 @@
+@using Monica.Configuration.Utils
 @attribute [Route(PAGE_URL)]
 @implements IDisposable
 @inject ConfigurationFacade Facade
@@ -269,6 +270,7 @@
                                                         <ConfigurationValueRow Definition="@_selectedDefinition"
                                                                                Node="@node"
                                                                                EffectiveValue="@GetEffectiveValue(node)"
+                                                                               ExternalEffectiveSource="@GetExternalEffectiveSource(node)"
                                                                                HighlightedPath="@_highlightedPath"
                                                                                Changed="RefreshPendingCount"
                                                                                CommittedChanged="ReloadSelectedEffectiveValuesAndValidationAsync" />
@@ -293,6 +295,7 @@
     private readonly List<ConfigurationDefinitionSummary> _definitions = [];
     private readonly Dictionary<string, ConfigurationDefinition> _definitionDetails = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<LogicalPath, ConfigurationEffectiveValue> _effectiveValues = [];
+    private readonly Dictionary<LogicalPath, ConfigurationSourceDescriptor> _externalEffectiveSources = [];
     private ConfigurationDefinitionSummary? _selectedSummary;
     private ConfigurationDefinition? _selectedDefinition;
     private ConfigurationNodeDefinition? _selectedNode;
@@ -532,6 +535,7 @@
         _selectedSummary = summary;
         _loadingDefinition = true;
         _effectiveValues.Clear();
+        _externalEffectiveSources.Clear();
         try
         {
             var result = await LoadDefinitionDetailAsync(summary.DefinitionKey);
@@ -567,6 +571,7 @@
             return;
         }
 
+        _externalEffectiveSources.Clear();
         foreach (var node in EnumerateNodes(_selectedDefinition.Root).Where(IsSimpleEditableNode))
         {
             var result = await Facade.GetEffectiveValueAsync(_selectedDefinition.DefinitionKey, node.RelativePath);
@@ -575,6 +580,56 @@
                 _effectiveValues[node.RelativePath] = effectiveValue;
             }
         }
+
+        await LoadExternalEffectiveSourcesAsync();
+    }
+
+    private async Task LoadExternalEffectiveSourcesAsync()
+    {
+        if (_selectedDefinition?.Origin != ConfigurationDefinitionOrigin.LocalScan)
+        {
+            return;
+        }
+
+        foreach (var node in EnumerateNodes(_selectedDefinition.Root).Where(IsComplexNodeItem))
+        {
+            var result = await Facade.GetSourceChainAsync(_selectedDefinition.DefinitionKey, node.RelativePath);
+            if (result.IsFailed(out _, out var sourceChain))
+            {
+                continue;
+            }
+
+            var externalSource = ResolveExternalEffectiveSource(node, sourceChain);
+            if (externalSource is not null)
+            {
+                _externalEffectiveSources[node.RelativePath] = externalSource;
+            }
+        }
+    }
+
+    private ConfigurationSourceDescriptor? ResolveExternalEffectiveSource(
+        ConfigurationNodeDefinition node,
+        ConfigurationSourceChain sourceChain)
+    {
+        // Complex values can be composed from several providers. Prefer exact external winners from
+        // already loaded scalar descendants, then fall back to the aggregate source chain for dynamic collections.
+        var descendantSource = _effectiveValues
+            .Where(pair => ConfigurationPathTokenizer.StartsWith(pair.Key, node.RelativePath))
+            .Select(pair => pair.Value.EffectiveSource)
+            .Where(IsExternalSource)
+            .OrderByDescending(source => source!.PriorityIndex)
+            .FirstOrDefault();
+
+        return descendantSource
+               ?? sourceChain.Values
+                   .Where(value => value.IsEffective)
+                   .Select(value => value.Source)
+                   .FirstOrDefault(IsExternalSource);
+    }
+
+    private static bool IsExternalSource(ConfigurationSourceDescriptor? source)
+    {
+        return source is { Kind: not ConfigurationSourceKind.MonicaEffectiveStore };
     }
 
     private async Task ReloadSelectedEffectiveValuesAndValidationAsync()
@@ -597,6 +652,11 @@
     private ConfigurationEffectiveValue? GetEffectiveValue(ConfigurationNodeDefinition node)
     {
         return _effectiveValues.GetValueOrDefault(node.RelativePath);
+    }
+
+    private ConfigurationSourceDescriptor? GetExternalEffectiveSource(ConfigurationNodeDefinition node)
+    {
+        return _externalEffectiveSources.GetValueOrDefault(node.RelativePath);
     }
 
     private async Task<Res<ConfigurationDefinitionDetail>> LoadDefinitionDetailAsync(string definitionKey)

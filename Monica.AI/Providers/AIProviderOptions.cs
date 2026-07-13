@@ -17,6 +17,27 @@ public enum OpenAIProviderApiMode
 }
 
 /// <summary>
+/// Conversation-history strategy used with the OpenAI Responses API.
+/// </summary>
+public enum OpenAIResponsesHistoryMode
+{
+    /// <summary>
+    /// Keep history in the agent session and resend it with each request. This mode disables
+    /// stored Responses output so response identifiers are not treated as server-managed history.
+    /// Use this mode for OpenAI-compatible endpoints that do not support durable
+    /// <c>previous_response_id</c> references.
+    /// </summary>
+    LocalHistory,
+
+    /// <summary>
+    /// Use the latest response identifier as <c>previous_response_id</c>. Configure this mode only
+    /// when the provider stores responses and guarantees that returned identifiers remain available
+    /// to subsequent requests made with the same credentials and project context.
+    /// </summary>
+    PreviousResponseId
+}
+
+/// <summary>
 /// OpenAI prompt cache retention policy for eligible prompt prefixes.
 /// </summary>
 public enum OpenAIPromptCacheRetention
@@ -90,6 +111,16 @@ public class OpenAIProviderOptions : AIProviderOptions
     /// prompts and Responses can improve cache utilization for supported workloads.
     /// </summary>
     public OpenAIProviderApiMode ApiMode { get; set; } = OpenAIProviderApiMode.Responses;
+
+    /// <summary>
+    /// Conversation-history strategy for Responses requests. Defaults to
+    /// <see cref="OpenAIResponsesHistoryMode.LocalHistory"/> so custom OpenAI-compatible endpoints
+    /// do not need to implement durable response storage. Set
+    /// <see cref="OpenAIResponsesHistoryMode.PreviousResponseId"/> only for providers that fully
+    /// support response-ID chaining. This setting has no effect in
+    /// <see cref="OpenAIProviderApiMode.Chat"/> mode.
+    /// </summary>
+    public OpenAIResponsesHistoryMode ResponsesHistoryMode { get; set; } = OpenAIResponsesHistoryMode.LocalHistory;
 
     /// <summary>
     /// Stable OpenAI prompt cache routing key for requests that share the same long static prompt prefix.

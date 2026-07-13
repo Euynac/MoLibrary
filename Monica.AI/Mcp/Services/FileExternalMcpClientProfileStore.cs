@@ -12,7 +12,7 @@ namespace Monica.AI.Mcp.Services;
 /// <summary>
 /// File-backed store for runtime-managed external MCP client profiles.
 /// </summary>
-public sealed class FileExternalMcpClientProfileStore(
+internal sealed class FileExternalMcpClientProfileStore(
     IOptions<ModuleMcpOption> options,
     ILogger<FileExternalMcpClientProfileStore> logger) : IExternalMcpClientProfileStore
 {

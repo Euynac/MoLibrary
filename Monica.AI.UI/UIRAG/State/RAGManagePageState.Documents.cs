@@ -18,7 +18,7 @@ public sealed partial class RAGManagePageState
             return;
         }
 
-        var result = await _ragFacade.GetDocumentChunksAsync(SelectedKnowledgeBase.Id, document.Id);
+        var result = await _indexingFacade.GetDocumentChunksAsync(SelectedKnowledgeBase.Id, document.Id);
         if (result.IsFailed(out var error, out var view))
         {
             _snackbar.Add($"{_localizer["Common:Error"]}: {error.Message}", Severity.Error);
@@ -60,7 +60,10 @@ public sealed partial class RAGManagePageState
             return;
         }
 
-        if ((await _ragFacade.ReindexDocumentAsync(SelectedKnowledgeBase.Id, document.Id)).IsFailed(out var error))
+        var result = await _indexingFacade.QueueDocumentForReindexAsync(
+            SelectedKnowledgeBase.Id,
+            document.Id);
+        if (result.IsFailed(out var error))
         {
             _snackbar.Add($"{_localizer["Common:Error"]}: {error.Message}", Severity.Error);
             return;

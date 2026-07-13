@@ -1,18 +1,6 @@
 .session-item-wrapper ::deep .session-item {
-    border-radius: 12px;
     margin: 6px 0;
     padding: 8px 12px;
-    border: 1px solid transparent;
-    transition: background-color 0.2s ease, border-color 0.2s ease;
-}
-
-.session-item-wrapper ::deep .session-item:hover {
-    background-color: var(--mud-palette-action-default-hover);
-}
-
-.session-item-wrapper ::deep .session-item.selected {
-    background-color: var(--mud-palette-surface);
-    border-color: var(--mud-palette-primary);
 }
 
 .session-content {
@@ -39,11 +27,6 @@
     opacity: 0.7;
 }
 
-.session-item-wrapper ::deep .delete-button {
-    opacity: 0;
-    transition: opacity 0.2s ease;
-}
-
-.session-item-wrapper ::deep .session-item:hover .delete-button {
-    opacity: 1;
+.delete-action {
+    flex: 0 0 auto;
 }

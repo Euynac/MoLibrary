@@ -147,6 +147,7 @@
     [Parameter, EditorRequired] public ConfigurationDefinition Definition { get; set; } = null!;
     [Parameter, EditorRequired] public ConfigurationNodeDefinition Node { get; set; } = null!;
     [Parameter] public ConfigurationEffectiveValue? EffectiveValue { get; set; }
+    [Parameter] public ConfigurationSourceDescriptor? ExternalEffectiveSource { get; set; }
     [Parameter] public LogicalPath? HighlightedPath { get; set; }
     [Parameter] public EventCallback Changed { get; set; }
     [Parameter] public EventCallback CommittedChanged { get; set; }
@@ -185,7 +186,9 @@
 
     private ConfigurationSourceDescriptor? EffectiveSource => EffectiveValue?.EffectiveSource;
 
-    private bool IsExternalEffectiveSource => EffectiveSource is { Kind: not ConfigurationSourceKind.MonicaEffectiveStore };
+    private ConfigurationSourceDescriptor? EffectiveSourceForDisplay => EffectiveSource ?? ExternalEffectiveSource;
+
+    private bool IsExternalEffectiveSource => EffectiveSourceForDisplay is { Kind: not ConfigurationSourceKind.MonicaEffectiveStore };
 
     private bool IsCurrentSourceReadOnly => EffectiveSource is { Kind: not ConfigurationSourceKind.MonicaEffectiveStore, IsWritable: false };
 
@@ -193,7 +196,7 @@
 
     private Color EffectiveSourceIconColor => IsCurrentSourceReadOnly ? Color.Default : Color.Warning;
 
-    private string EffectiveSourceTooltip => EffectiveSource is not { } source
+    private string EffectiveSourceTooltip => EffectiveSourceForDisplay is not { } source
         ? string.Empty
         : source.IsWritable
             ? L["Sources:EffectiveSource:ExternalWritable", source.DisplayName, SourcePath(source)]

@@ -1,4 +1,3 @@
-using System.Collections.Concurrent;
 using Monica.AI.Abstractions;
 using Monica.AI.Models;
 
@@ -7,103 +6,81 @@ namespace Monica.AI.Services;
 /// <summary>
 /// AI provider manager implementation.
 /// </summary>
-public class AIProviderRegistry : IAIProviderFactory, IDisposable
+internal sealed class AIProviderRegistry(IEnumerable<IAIProvider> providers) : IAIProviderFactory
 {
-    private readonly ConcurrentDictionary<string, IAIProvider> _providers = new();
-    private string? _defaultProviderId;
-    private bool _disposed;
+    private readonly ProviderSnapshot _snapshot = CreateSnapshot(providers);
 
-    /// <summary>
-    /// Registers a provider.
-    /// </summary>
-    /// <param name="provider">Provider instance</param>
-    public void RegisterProvider(IAIProvider provider)
-    {
-        _providers[provider.ProviderId] = provider;
-
-        if (!provider.Info.IsValid)
-        {
-            return;
-        }
-
-        // If this is the default provider or the first valid registered provider
-        if (provider.Info.IsDefault || _defaultProviderId == null || !HasValidProvider(_defaultProviderId))
-        {
-            _defaultProviderId = provider.ProviderId;
-        }
-    }
-
-    /// <summary>
-    /// Sets the default provider.
-    /// </summary>
-    /// <param name="providerId">Provider ID</param>
-    public void SetDefaultProvider(string providerId)
-    {
-        if (HasValidProvider(providerId))
-        {
-            _defaultProviderId = providerId;
-        }
-    }
+    private IReadOnlyDictionary<string, IAIProvider> Providers => _snapshot.Providers;
 
     /// <inheritdoc />
     public IAIProvider? GetProvider(string providerId)
     {
-        return _providers.GetValueOrDefault(providerId);
+        return Providers.GetValueOrDefault(providerId);
     }
 
     /// <inheritdoc />
     public IReadOnlyList<IAIProvider> GetAllProviders()
     {
-        return _providers.Values.ToList();
+        return Providers.Values.ToList();
     }
 
     /// <inheritdoc />
     public IReadOnlyList<AIProviderInfo> GetAllProviderInfos()
     {
-        return _providers.Values.Select(p => p.Info).ToList();
+        return Providers.Values.Select(static provider => provider.Info).ToList();
     }
 
     /// <inheritdoc />
     public IAIProvider? GetDefaultProvider()
     {
-        if (_defaultProviderId != null && HasValidProvider(_defaultProviderId))
+        if (_snapshot.DefaultProviderId is not null)
         {
-            return _providers.GetValueOrDefault(_defaultProviderId);
+            return Providers.GetValueOrDefault(_snapshot.DefaultProviderId);
         }
 
-        return _providers.Values.FirstOrDefault(provider => provider.Info.IsValid);
+        return null;
     }
 
     /// <inheritdoc />
     public bool HasProvider(string providerId)
     {
-        return _providers.ContainsKey(providerId);
+        return Providers.ContainsKey(providerId);
     }
 
-    public void Dispose()
+    private static ProviderSnapshot CreateSnapshot(IEnumerable<IAIProvider> providers)
     {
-        Dispose(true);
-        GC.SuppressFinalize(this);
-    }
+        ArgumentNullException.ThrowIfNull(providers);
 
-    protected virtual void Dispose(bool disposing)
-    {
-        if (!_disposed)
+        var providerList = providers.ToList();
+        var duplicates = providerList
+            .GroupBy(static provider => provider.ProviderId, StringComparer.OrdinalIgnoreCase)
+            .Where(static group => group.Count() > 1)
+            .Select(static group => group.Key)
+            .OrderBy(static id => id, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+        if (duplicates.Count > 0)
         {
-            if (disposing)
-            {
-                foreach (var provider in _providers.Values)
-                {
-                    provider.Dispose();
-                }
-                _providers.Clear();
-            }
-            _disposed = true;
+            throw new InvalidOperationException(
+                $"Duplicate AI provider identifiers are not allowed: {string.Join(", ", duplicates)}.");
         }
+
+        var providerMap = providerList.ToDictionary(
+            static provider => provider.ProviderId,
+            StringComparer.OrdinalIgnoreCase);
+        var validProviders = providerList.Where(static provider => provider.Info.IsValid).ToList();
+        var explicitDefaults = validProviders.Where(static provider => provider.Info.IsDefault).ToList();
+        if (explicitDefaults.Count > 1)
+        {
+            throw new InvalidOperationException(
+                $"Only one valid AI provider may be configured as the default: {string.Join(", ", explicitDefaults.Select(static provider => provider.ProviderId))}.");
+        }
+
+        var defaultProviderId = explicitDefaults.FirstOrDefault()?.ProviderId ?? validProviders.FirstOrDefault()?.ProviderId;
+        return new ProviderSnapshot(providerMap, defaultProviderId);
     }
 
-    private bool HasValidProvider(string providerId)
-    {
-        return _providers.TryGetValue(providerId, out var provider) && provider.Info.IsValid;
-    }
+    private sealed record ProviderSnapshot(
+        IReadOnlyDictionary<string, IAIProvider> Providers,
+        string? DefaultProviderId);
 }

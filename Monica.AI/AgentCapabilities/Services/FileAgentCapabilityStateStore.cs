@@ -11,7 +11,7 @@ namespace Monica.AI.AgentCapabilities.Services;
 /// <summary>
 /// File-backed runtime state store for agent capability enablement.
 /// </summary>
-public sealed class FileAgentCapabilityStateStore(
+internal sealed class FileAgentCapabilityStateStore(
     IOptions<ModuleAIOption> options,
     ILogger<FileAgentCapabilityStateStore> logger) : IAgentCapabilityStateStore
 {

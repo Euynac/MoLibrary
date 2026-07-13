@@ -6,7 +6,7 @@ namespace Monica.AI.Services;
 /// <summary>
 /// Estimates token counts from UTF-8 byte length and supports budget-aware truncation.
 /// </summary>
-public sealed class EstimatedUtf8TokenCountProvider : ITokenCountProvider
+internal sealed class EstimatedUtf8TokenCountProvider : ITokenCountProvider
 {
     public string ProviderId => "utf8-estimate";
 
