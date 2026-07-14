@@ -1,8 +1,11 @@
+using System.ComponentModel;
 using System.Globalization;
+using System.Numerics;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using Monica.Configuration.Models;
 using Monica.Configuration.Serialization;
+using Monica.Configuration.Utils;
 
 namespace Monica.Configuration.Services.Support;
 
@@ -100,6 +103,14 @@ internal sealed class ConfigurationValueValidationEngine
             return;
         }
 
+        var properties = value.EnumerateObject().ToArray();
+        ValidateDuplicateObjectProperties(schema, path, properties, isDictionary: false, issues);
+
+        if (options.RejectUnknownObjectProperties)
+        {
+            ValidateUnknownObjectProperties(schema, path, properties, issues);
+        }
+
         foreach (var child in schema.Children)
         {
             var childPath = path.Append(new PropertySegment(child.Name));
@@ -110,6 +121,32 @@ internal sealed class ConfigurationValueValidationEngine
             }
 
             ValidateNodeValue(child, childPath, childValue, options, issues);
+        }
+    }
+
+    private static void ValidateUnknownObjectProperties(
+        ConfigurationNodeDefinition schema,
+        LogicalPath path,
+        IReadOnlyList<JsonProperty> properties,
+        List<ConfigurationValueValidationIssue> issues)
+    {
+        var knownProperties = schema.Children
+            .Select(static child => child.Name)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var property in properties)
+        {
+            if (knownProperties.Contains(property.Name))
+            {
+                continue;
+            }
+
+            AddIssue(
+                schema,
+                path.Append(new PropertySegment(property.Name)),
+                $"Property '{property.Name}' is not defined by the current configuration schema.",
+                property.Value,
+                issues);
         }
     }
 
@@ -127,6 +164,7 @@ internal sealed class ConfigurationValueValidationEngine
         }
 
         var properties = value.EnumerateObject().ToArray();
+        ValidateDuplicateObjectProperties(schema, path, properties, isDictionary: true, issues);
         ValidateContainerRules(schema, path, properties.Length, value, issues);
         if (schema.DictionaryTemplate is not { } template)
         {
@@ -135,13 +173,92 @@ internal sealed class ConfigurationValueValidationEngine
 
         foreach (var property in properties)
         {
+            var propertyPath = path.Append(new DictionaryKeySegment(property.Name));
+            if (!ValidateDictionaryKey(template, schema, propertyPath, property, issues))
+            {
+                continue;
+            }
+
             ValidateNodeValue(
                 template.ValueTemplate,
-                path.Append(new DictionaryKeySegment(property.Name)),
+                propertyPath,
                 property.Value,
                 options,
                 issues);
         }
+    }
+
+    private static bool ValidateDictionaryKey(
+        ConfigurationDictionaryTemplate template,
+        ConfigurationNodeDefinition schema,
+        LogicalPath path,
+        JsonProperty property,
+        List<ConfigurationValueValidationIssue> issues)
+    {
+        if (!ConfigurationDictionaryKeyEscaper.TryValidateForProjection(property.Name, out var projectionProblem))
+        {
+            AddIssue(schema, path, projectionProblem!, property.Value, issues);
+            return false;
+        }
+
+        if (!string.IsNullOrWhiteSpace(template.KeyRegexPattern)
+            && !Regex.IsMatch(property.Name, template.KeyRegexPattern))
+        {
+            AddIssue(schema, path, "Dictionary key does not match the required pattern.", property.Value, issues);
+            return false;
+        }
+
+        var keyType = ResolveClrType(template.KeyClrTypeName);
+        if (keyType is null)
+        {
+            AddIssue(
+                schema,
+                path,
+                $"Dictionary key CLR type '{template.KeyClrTypeName}' could not be resolved for validation.",
+                property.Value,
+                issues);
+            return false;
+        }
+
+        if (!IsConfigurationBinderDictionaryKeyType(keyType))
+        {
+            AddIssue(
+                schema,
+                path,
+                $"Dictionary key type '{keyType.FullName ?? keyType.Name}' is not supported by Microsoft "
+                + "ConfigurationBinder. Supported key types are string, enum, and the built-in signed or unsigned "
+                + "integer types.",
+                property.Value,
+                issues);
+            return false;
+        }
+
+        if (!TryConvertInvariantString(keyType, property.Name, allowNull: false))
+        {
+            AddIssue(
+                schema,
+                path,
+                $"Dictionary key cannot be converted to '{template.KeyClrTypeName}'.",
+                property.Value,
+                issues);
+            return false;
+        }
+
+        return true;
+    }
+
+    private static bool IsConfigurationBinderDictionaryKeyType(Type keyType)
+    {
+        return keyType == typeof(string)
+               || keyType.IsEnum
+               || keyType == typeof(sbyte)
+               || keyType == typeof(byte)
+               || keyType == typeof(short)
+               || keyType == typeof(ushort)
+               || keyType == typeof(int)
+               || keyType == typeof(uint)
+               || keyType == typeof(long)
+               || keyType == typeof(ulong);
     }
 
     private static void ValidateList(
@@ -164,12 +281,189 @@ internal sealed class ConfigurationValueValidationEngine
             return;
         }
 
+        ValidateDuplicateListItems(path, template, items, issues);
+        var itemPaths = ResolveListItemPaths(path, template, items, issues);
         for (var index = 0; index < items.Length; index++)
         {
-            var item = items[index];
-            var itemPath = ResolveListItemPath(path, template, index, item);
-            ValidateNodeValue(template.ItemTemplate, itemPath, item, options, issues);
+            ValidateNodeValue(template.ItemTemplate, itemPaths[index], items[index], options, issues);
         }
+    }
+
+    private static void ValidateDuplicateObjectProperties(
+        ConfigurationNodeDefinition schema,
+        LogicalPath path,
+        IReadOnlyList<JsonProperty> properties,
+        bool isDictionary,
+        List<ConfigurationValueValidationIssue> issues)
+    {
+        var propertyNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var property in properties)
+        {
+            if (propertyNames.Add(property.Name))
+            {
+                continue;
+            }
+
+            var propertyPath = isDictionary
+                ? path.Append(new DictionaryKeySegment(property.Name))
+                : path.Append(new PropertySegment(property.Name));
+            var propertySchema = isDictionary
+                ? schema.DictionaryTemplate?.ValueTemplate
+                : schema.Children.FirstOrDefault(child =>
+                    string.Equals(child.Name, property.Name, StringComparison.OrdinalIgnoreCase));
+            AddIssue(
+                propertySchema ?? schema,
+                propertyPath,
+                $"Property '{property.Name}' is duplicated in the same JSON object. Property names are compared case-insensitively.",
+                property.Value,
+                issues);
+        }
+    }
+
+    private static void ValidateDuplicateListItems(
+        LogicalPath path,
+        ConfigurationListTemplate template,
+        IReadOnlyList<JsonElement> items,
+        List<ConfigurationValueValidationIssue> issues)
+    {
+        if (template.AllowDuplicateItems || template.ItemTemplate.NodeKind != ConfigurationNodeKind.Scalar)
+        {
+            return;
+        }
+
+        var firstIndexByValue = new Dictionary<string, int>(StringComparer.Ordinal);
+        for (var index = 0; index < items.Count; index++)
+        {
+            if (!TryBuildScalarListItemIdentity(template.ItemTemplate, items[index], out var identity))
+            {
+                continue;
+            }
+
+            if (firstIndexByValue.TryAdd(identity, index))
+            {
+                continue;
+            }
+
+            AddIssue(
+                template.ItemTemplate,
+                path.Append(new ListIndexSegment(index)),
+                $"List item duplicates the value at index {firstIndexByValue[identity]}. This list does not allow duplicate item values.",
+                items[index],
+                issues);
+        }
+    }
+
+    private static bool TryBuildScalarListItemIdentity(
+        ConfigurationNodeDefinition itemSchema,
+        JsonElement item,
+        out string identity)
+    {
+        if (item.ValueKind is JsonValueKind.Null or JsonValueKind.Undefined)
+        {
+            identity = "null";
+            return true;
+        }
+
+        try
+        {
+            identity = $"value:{ConvertScalar(itemSchema, item)}";
+            return true;
+        }
+        catch (ConfigurationValueConversionException)
+        {
+            identity = string.Empty;
+            return false;
+        }
+    }
+
+    private static IReadOnlyList<LogicalPath> ResolveListItemPaths(
+        LogicalPath listPath,
+        ConfigurationListTemplate template,
+        IReadOnlyList<JsonElement> items,
+        List<ConfigurationValueValidationIssue> issues)
+    {
+        if (!template.SupportsPerItemMutation)
+        {
+            return Enumerable.Range(0, items.Count)
+                .Select(index => listPath.Append(new ListIndexSegment(index)))
+                .ToArray();
+        }
+
+        var keyPropertyName = template.ItemKeyPropertyName!;
+        var keySchema = template.ItemTemplate.Children.FirstOrDefault(child =>
+                            string.Equals(child.Name, keyPropertyName, StringComparison.OrdinalIgnoreCase))
+                        ?? template.ItemTemplate;
+        var firstIndexByItemKey = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+        var paths = new LogicalPath[items.Count];
+        for (var index = 0; index < items.Count; index++)
+        {
+            var item = items[index];
+            var indexPath = listPath.Append(new ListIndexSegment(index));
+            paths[index] = indexPath;
+            if (item.ValueKind != JsonValueKind.Object)
+            {
+                continue;
+            }
+
+            var keyProperties = item.EnumerateObject()
+                .Where(property => string.Equals(property.Name, keyPropertyName, StringComparison.OrdinalIgnoreCase))
+                .ToArray();
+            if (keyProperties.Length == 0)
+            {
+                AddIssue(
+                    keySchema,
+                    indexPath.Append(new PropertySegment(keyPropertyName)),
+                    $"List item key property '{keyPropertyName}' is required because this list supports per-item mutation.",
+                    item,
+                    issues);
+                continue;
+            }
+
+            if (keyProperties.Length > 1)
+            {
+                // Duplicate-property validation reports the ambiguous key. Keep an index path so the item remains identifiable.
+                continue;
+            }
+
+            var keyProperty = keyProperties[0];
+            var itemKey = ReadStringLike(keyProperty.Value);
+            if (string.IsNullOrWhiteSpace(itemKey))
+            {
+                AddIssue(
+                    keySchema,
+                    indexPath.Append(new PropertySegment(keyPropertyName)),
+                    $"List item key property '{keyPropertyName}' must contain a non-empty scalar value because this list supports per-item mutation.",
+                    keyProperty.Value,
+                    issues);
+                continue;
+            }
+
+            if (!ConfigurationDictionaryKeyEscaper.TryValidateForProjection(itemKey, out var projectionProblem))
+            {
+                AddIssue(
+                    keySchema,
+                    indexPath.Append(new PropertySegment(keyPropertyName)),
+                    projectionProblem!,
+                    keyProperty.Value,
+                    issues);
+                continue;
+            }
+
+            if (!firstIndexByItemKey.TryAdd(itemKey, index))
+            {
+                AddIssue(
+                    keySchema,
+                    indexPath.Append(new PropertySegment(keyPropertyName)),
+                    $"List item key duplicates the item at index {firstIndexByItemKey[itemKey]}. Stable item keys must be unique when compared case-insensitively.",
+                    keyProperty.Value,
+                    issues);
+                continue;
+            }
+
+            paths[index] = listPath.Append(new ListItemKeySegment(itemKey));
+        }
+
+        return paths;
     }
 
     private static void ValidateContainerRules(
@@ -220,7 +514,7 @@ internal sealed class ConfigurationValueValidationEngine
         ConfigurationNodeDefinition schema,
         JsonElement value)
     {
-        return schema.ValueKind switch
+        var scalar = schema.ValueKind switch
         {
             ConfigurationValueKind.Boolean => ConvertBoolean(value),
             ConfigurationValueKind.Integer => ConvertInteger(value),
@@ -233,6 +527,109 @@ internal sealed class ConfigurationValueValidationEngine
             ConfigurationValueKind.Json => value.GetRawText(),
             _ => ConvertStringLike(value)
         };
+
+        ValidateExactClrType(schema, value);
+        return scalar;
+    }
+
+    private static void ValidateExactClrType(
+        ConfigurationNodeDefinition schema,
+        JsonElement value)
+    {
+        // JSON nodes are intentionally opaque and have no scalar TypeConverter contract.
+        if (schema.ValueKind == ConfigurationValueKind.Json)
+        {
+            return;
+        }
+
+        var declaredType = ResolveClrType(schema.ClrTypeName);
+        if (declaredType is null)
+        {
+            throw ConversionFailed(
+                $"Configured CLR type '{schema.ClrTypeName}' could not be resolved for validation.");
+        }
+
+        var scalarType = Nullable.GetUnderlyingType(declaredType) ?? declaredType;
+        var sourceText = ReadStringLike(value)
+                         ?? throw ConversionFailed("Expected a scalar value.");
+        if (!TryConvertInvariantString(scalarType, sourceText, schema.IsNullable))
+        {
+            throw ConversionFailed(
+                $"Value cannot be converted to the configured CLR type '{scalarType.FullName ?? scalarType.Name}'.");
+        }
+    }
+
+    private static Type? ResolveClrType(string clrTypeName)
+    {
+        try
+        {
+            return Type.GetType(clrTypeName, throwOnError: false);
+        }
+        catch (Exception ex) when (ex is not OutOfMemoryException)
+        {
+            return null;
+        }
+    }
+
+    private static bool TryConvertInvariantString(Type targetType, string value, bool allowNull)
+    {
+        try
+        {
+            if (!IsFloatingPointValueInRange(targetType, value))
+            {
+                return false;
+            }
+
+            var converter = TypeDescriptor.GetConverter(targetType);
+            if (!converter.CanConvertFrom(typeof(string)))
+            {
+                return false;
+            }
+
+            var converted = converter.ConvertFromInvariantString(value);
+            return converted is null
+                ? allowNull
+                : targetType.IsInstanceOfType(converted);
+        }
+        catch (Exception ex) when (ex is not OutOfMemoryException)
+        {
+            return false;
+        }
+    }
+
+    private static bool IsFloatingPointValueInRange(Type targetType, string value)
+    {
+        // Modern parsers saturate finite overflow to infinity, so distinguish overflow from an explicit infinity value.
+        if (targetType == typeof(float))
+        {
+            return float.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out var parsed)
+                   && (!float.IsInfinity(parsed) || IsExplicitInfinity(value));
+        }
+
+        if (targetType == typeof(double))
+        {
+            return double.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out var parsed)
+                   && (!double.IsInfinity(parsed) || IsExplicitInfinity(value));
+        }
+
+        return true;
+    }
+
+    private static bool IsExplicitInfinity(string value)
+    {
+        var trimmed = value.Trim();
+        return string.Equals(
+                   trimmed,
+                   NumberFormatInfo.InvariantInfo.PositiveInfinitySymbol,
+                   StringComparison.OrdinalIgnoreCase)
+               || string.Equals(
+                   trimmed,
+                   $"+{NumberFormatInfo.InvariantInfo.PositiveInfinitySymbol}",
+                   StringComparison.OrdinalIgnoreCase)
+               || string.Equals(
+                   trimmed,
+                   NumberFormatInfo.InvariantInfo.NegativeInfinitySymbol,
+                   StringComparison.OrdinalIgnoreCase);
     }
 
     private static string ConvertBoolean(JsonElement value)
@@ -253,13 +650,8 @@ internal sealed class ConfigurationValueValidationEngine
 
     private static string ConvertInteger(JsonElement value)
     {
-        if (value.ValueKind == JsonValueKind.Number && value.TryGetInt64(out var number))
-        {
-            return number.ToString(CultureInfo.InvariantCulture);
-        }
-
         var text = ReadStringLike(value);
-        if (long.TryParse(text, NumberStyles.Integer, CultureInfo.InvariantCulture, out var parsed))
+        if (BigInteger.TryParse(text, NumberStyles.Integer, CultureInfo.InvariantCulture, out var parsed))
         {
             return parsed.ToString(CultureInfo.InvariantCulture);
         }
@@ -471,39 +863,6 @@ internal sealed class ConfigurationValueValidationEngine
             : $"value must contain at most {maximum} items.";
     }
 
-    private static LogicalPath ResolveListItemPath(
-        LogicalPath listPath,
-        ConfigurationListTemplate template,
-        int index,
-        JsonElement item)
-    {
-        if (template.SupportsPerItemMutation
-            && TryReadObjectScalar(item, template.ItemKeyPropertyName!) is { Length: > 0 } itemKey)
-        {
-            return listPath.Append(new ListItemKeySegment(itemKey));
-        }
-
-        return listPath.Append(new ListIndexSegment(index));
-    }
-
-    private static string? TryReadObjectScalar(JsonElement item, string propertyName)
-    {
-        if (item.ValueKind != JsonValueKind.Object)
-        {
-            return null;
-        }
-
-        foreach (var property in item.EnumerateObject())
-        {
-            if (string.Equals(property.Name, propertyName, StringComparison.OrdinalIgnoreCase))
-            {
-                return ReadStringLike(property.Value);
-            }
-        }
-
-        return null;
-    }
-
     private static bool TryGetProperty(JsonElement value, string propertyName, out JsonElement propertyValue)
     {
         foreach (var property in value.EnumerateObject())
@@ -547,7 +906,7 @@ internal sealed class ConfigurationValueValidationEngine
             LogicalPath = path,
             Node = schema,
             Message = message,
-            DisplayValue = DisplayValue(schema, value),
+            DisplayValue = schema.IsSensitive ? null : DisplayValue(schema, value),
             ValidationRules = schema.ValidationRules
         });
     }
@@ -577,6 +936,12 @@ internal sealed record ConfigurationValueValidationOptions
     /// Gets whether non-nullable scalar nodes should be treated as required when no explicit rule exists.
     /// </summary>
     public bool TreatNonNullableScalarsAsRequired { get; init; }
+
+    /// <summary>
+    /// Gets whether object values containing properties absent from the schema should be rejected.
+    /// Dictionary keys remain dynamic and are validated against their value template.
+    /// </summary>
+    public bool RejectUnknownObjectProperties { get; init; }
 }
 
 /// <summary>

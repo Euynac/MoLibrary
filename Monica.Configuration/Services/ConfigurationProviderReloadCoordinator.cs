@@ -9,11 +9,10 @@ namespace Monica.Configuration.Services;
 /// </summary>
 internal sealed class ConfigurationProviderReloadCoordinator(
     ConfigurationRuntimeContext runtimeContext,
-    MonicaConfigurationProviderAccessor accessor)
+    MonicaConfigurationProviderAccessor accessor,
+    ConfigurationRuntimeSnapshotLock runtimeSnapshotLock)
     : IConfigurationReloadCoordinator
 {
-    private readonly SemaphoreSlim _reloadLock = new(1, 1);
-
     /// <inheritdoc />
     public async Task ReloadMonicaProjectionAsync(CancellationToken cancellationToken)
     {
@@ -22,15 +21,7 @@ internal sealed class ConfigurationProviderReloadCoordinator(
             return;
         }
 
-        await _reloadLock.WaitAsync(cancellationToken);
-        try
-        {
-            await provider.ReloadAsync(cancellationToken);
-        }
-        finally
-        {
-            _reloadLock.Release();
-        }
+        await runtimeSnapshotLock.ExecuteAsync(provider.ReloadAsync, cancellationToken);
     }
 
     /// <inheritdoc />
@@ -41,15 +32,9 @@ internal sealed class ConfigurationProviderReloadCoordinator(
             return;
         }
 
-        await _reloadLock.WaitAsync(cancellationToken);
-        try
-        {
-            await provider.ReloadDefinitionAsync(definitionKey, minimumVersion, cancellationToken);
-        }
-        finally
-        {
-            _reloadLock.Release();
-        }
+        await runtimeSnapshotLock.ExecuteAsync(
+            token => provider.ReloadDefinitionAsync(definitionKey, minimumVersion, token),
+            cancellationToken);
     }
 
     /// <inheritdoc />
@@ -61,8 +46,7 @@ internal sealed class ConfigurationProviderReloadCoordinator(
     /// <inheritdoc />
     public async Task ReloadRuntimeConfigurationAsync(CancellationToken cancellationToken)
     {
-        await _reloadLock.WaitAsync(cancellationToken);
-        try
+        await runtimeSnapshotLock.ExecuteAsync(async token =>
         {
             if (runtimeContext.Root is { } root)
             {
@@ -79,12 +63,8 @@ internal sealed class ConfigurationProviderReloadCoordinator(
 
             if (accessor.Provider is { } monicaProvider)
             {
-                await monicaProvider.ReloadAsync(cancellationToken);
+                await monicaProvider.ReloadAsync(token);
             }
-        }
-        finally
-        {
-            _reloadLock.Release();
-        }
+        }, cancellationToken);
     }
 }

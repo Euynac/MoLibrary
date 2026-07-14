@@ -40,16 +40,20 @@ internal sealed partial class ConfigurationMutationGroupApplyService
             var source = sourceInspector.GetRequiredSource(target.SourceKey);
             try
             {
-                var write = await sourceWriter.WriteBatchAsync(
-                    source,
-                    sourceMutations.Select(static mutation => new ConfigurationJsonFileMutation
-                    {
-                        ConfigurationPath = mutation.ConfigurationPath,
-                        MutationKind = mutation.Request.MutationKind,
-                        Value = mutation.Request.Value
-                    }).ToArray(),
-                    target.ExpectedRevision,
-                    cancellationToken);
+                var write = await runtimeSnapshotLock.ExecuteAsync(token =>
+                {
+                    ValidateReviewedSourceChains(sourceMutations);
+                    return sourceWriter.WriteBatchAsync(
+                        source,
+                        sourceMutations.Select(static mutation => new ConfigurationJsonFileMutation
+                        {
+                            ConfigurationPath = mutation.ConfigurationPath,
+                            MutationKind = mutation.Request.MutationKind,
+                            Value = mutation.Request.Value
+                        }).ToArray(),
+                        target.ExpectedRevision,
+                        token);
+                }, cancellationToken);
 
                 for (var index = 0; index < sourceMutations.Length; index++)
                 {
@@ -142,7 +146,7 @@ internal sealed partial class ConfigurationMutationGroupApplyService
         }
     }
 
-    private async Task<ConfigurationMutationGroup> FinalizeMixedOrExternalGroupAsync(
+    private async Task<MutationGroupFinalizationResult> FinalizeMixedOrExternalGroupAsync(
         ConfigurationMutationGroup currentGroup,
         IReadOnlyList<ConfigurationMutationOutcome> appliedOutcomes,
         bool allApplied,
@@ -172,8 +176,9 @@ internal sealed partial class ConfigurationMutationGroupApplyService
                     cancellationToken);
             }
 
-            return await mutationGroupService.GetAsync(currentGroup.GroupId, cancellationToken)
-                   ?? currentGroup;
+            return new MutationGroupFinalizationResult(
+                await mutationGroupService.GetAsync(currentGroup.GroupId, cancellationToken) ?? currentGroup,
+                Succeeded: true);
         }
         catch (Exception ex)
         {
@@ -191,16 +196,22 @@ internal sealed partial class ConfigurationMutationGroupApplyService
                 Message = "Configuration values were applied, but mutation-group finalization failed.",
                 Detail = ex.ToString()
             });
-            return currentGroup with
-            {
-                MutationCount = appliedOutcomes.Count,
-                DefinitionKeys = definitionKeys,
-                Status = allApplied
-                    ? ConfigurationMutationGroupStatus.Applied
-                    : ConfigurationMutationGroupStatus.PartiallyApplied
-            };
+            return new MutationGroupFinalizationResult(
+                currentGroup with
+                {
+                    MutationCount = appliedOutcomes.Count,
+                    DefinitionKeys = definitionKeys,
+                    Status = allApplied
+                        ? ConfigurationMutationGroupStatus.Applied
+                        : ConfigurationMutationGroupStatus.PartiallyApplied
+                },
+                Succeeded: false);
         }
     }
+
+    private sealed record MutationGroupFinalizationResult(
+        ConfigurationMutationGroup MutationGroup,
+        bool Succeeded);
 
     private void ValidateExternalTargets(IReadOnlyList<PreparedConfigurationMutation> mutations)
     {

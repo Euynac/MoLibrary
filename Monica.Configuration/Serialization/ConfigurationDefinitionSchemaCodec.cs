@@ -10,7 +10,7 @@ namespace Monica.Configuration.Serialization;
 public static class ConfigurationDefinitionSchemaCodec
 {
     /// <summary>
-    /// Serializes the definition schema without runtime-only path or CLR assembly metadata.
+    /// Serializes the definition schema with exact scalar and dictionary-key CLR identities while omitting runtime-only paths.
     /// </summary>
     /// <param name="definition">The definition to serialize.</param>
     /// <returns>The compact schema JSON.</returns>
@@ -52,7 +52,10 @@ public static class ConfigurationDefinitionSchemaCodec
     /// <param name="reloadBehavior">The definition-level reload behavior.</param>
     /// <param name="schemaJson">The compact schema JSON.</param>
     /// <param name="origin">The origin marker to attach to the rebuilt definition.</param>
-    /// <returns>A runtime definition with reconstructed logical and Microsoft configuration paths.</returns>
+    /// <returns>
+    /// A runtime definition with reconstructed logical and Microsoft configuration paths plus the exact persisted
+    /// scalar and dictionary-key CLR identities required for binding-compatible validation.
+    /// </returns>
     public static ConfigurationDefinition DeserializeDefinition(
         string definitionKey,
         string sectionPath,
@@ -120,6 +123,7 @@ public static class ConfigurationDefinitionSchemaCodec
             Description = NullIfWhiteSpace(node.Description),
             NodeKind = node.NodeKind,
             ValueKind = node.NodeKind == ConfigurationNodeKind.Scalar ? node.ValueKind : null,
+            ClrTypeName = node.NodeKind == ConfigurationNodeKind.Scalar ? node.ClrTypeName : null,
             IsNullable = node.IsNullable,
             IsSensitive = node.IsSensitive,
             TextSemantic = node.IsRegexPatternText ? node.TextSemantic : null,
@@ -146,6 +150,7 @@ public static class ConfigurationDefinitionSchemaCodec
         return new DictionaryTemplateDto
         {
             KeyKind = template.KeyKind,
+            KeyClrTypeName = template.KeyClrTypeName,
             KeyRegexPattern = NormalizeRegexPatternOrNull(template.KeyRegexPattern),
             DisallowColonInKey = template.DisallowColonInKey ? null : false,
             ValueTemplate = ToNodeDto(template.ValueTemplate)
@@ -266,11 +271,13 @@ public static class ConfigurationDefinitionSchemaCodec
         string sectionPath,
         string rootClrTypeName)
     {
-        var keyKind = dto.KeyKind;
         return new ConfigurationDictionaryTemplate
         {
-            KeyClrTypeName = ClrTypeNameForValueKind(keyKind),
-            KeyKind = keyKind,
+            KeyClrTypeName = RequireClrTypeName(
+                dto.KeyClrTypeName,
+                dictionaryPath,
+                "dictionary key"),
+            KeyKind = dto.KeyKind,
             KeyRegexPattern = NormalizeRegexPatternOrNull(dto.KeyRegexPattern),
             ValueTemplate = FromNodeDto(
                 dto.ValueTemplate,
@@ -315,6 +322,11 @@ public static class ConfigurationDefinitionSchemaCodec
 
     private static string ResolveRuntimeClrTypeName(NodeDto dto, LogicalPath path, string rootClrTypeName)
     {
+        if (dto.NodeKind == ConfigurationNodeKind.Scalar)
+        {
+            return RequireClrTypeName(dto.ClrTypeName, path, "scalar node");
+        }
+
         if (path.Depth == 0 && !string.IsNullOrWhiteSpace(rootClrTypeName))
         {
             return rootClrTypeName;
@@ -322,27 +334,25 @@ public static class ConfigurationDefinitionSchemaCodec
 
         return dto.NodeKind switch
         {
-            ConfigurationNodeKind.Scalar => ClrTypeNameForValueKind(dto.ValueKind ?? ConfigurationValueKind.String),
             ConfigurationNodeKind.Dictionary => typeof(Dictionary<string, object>).FullName!,
             ConfigurationNodeKind.List => typeof(List<object>).FullName!,
             _ => typeof(object).FullName!
         };
     }
 
-    private static string ClrTypeNameForValueKind(ConfigurationValueKind kind)
+    private static string RequireClrTypeName(
+        string? clrTypeName,
+        LogicalPath path,
+        string metadataKind)
     {
-        return kind switch
+        if (string.IsNullOrWhiteSpace(clrTypeName))
         {
-            ConfigurationValueKind.Boolean => typeof(bool).FullName!,
-            ConfigurationValueKind.Integer => typeof(long).FullName!,
-            ConfigurationValueKind.Decimal => typeof(decimal).FullName!,
-            ConfigurationValueKind.Floating => typeof(double).FullName!,
-            ConfigurationValueKind.DateTime => typeof(DateTimeOffset).FullName!,
-            ConfigurationValueKind.TimeSpan => typeof(TimeSpan).FullName!,
-            ConfigurationValueKind.Uri => typeof(Uri).FullName!,
-            ConfigurationValueKind.Json => typeof(object).FullName!,
-            _ => typeof(string).FullName!
-        };
+            throw new InvalidOperationException(
+                $"Persisted configuration schema path '{path.ToCanonicalString()}' is missing the exact "
+                + $"{metadataKind} CLR type. Republish the definition metadata before using it.");
+        }
+
+        return clrTypeName;
     }
 
     private static string ProjectConfigurationPath(string sectionPath, LogicalPath path)
@@ -390,6 +400,8 @@ public static class ConfigurationDefinitionSchemaCodec
 
         public ConfigurationValueKind? ValueKind { get; init; }
 
+        public string? ClrTypeName { get; init; }
+
         public bool IsNullable { get; init; }
 
         public bool IsSensitive { get; init; }
@@ -419,6 +431,8 @@ public static class ConfigurationDefinitionSchemaCodec
     private sealed record DictionaryTemplateDto
     {
         public ConfigurationValueKind KeyKind { get; init; }
+
+        public string? KeyClrTypeName { get; init; }
 
         public string? KeyRegexPattern { get; init; }
 

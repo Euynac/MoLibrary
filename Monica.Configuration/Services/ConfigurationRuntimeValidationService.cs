@@ -64,6 +64,9 @@ internal sealed class ConfigurationRuntimeValidationService(
         ConfigurationDefinition definition,
         ConfigurationValueValidationIssue issue)
     {
+        var isSensitive = ConfigurationSchemaNavigator.IsSensitivePath(
+            definition.Root,
+            issue.LogicalPath);
         var sourceChain = sourceInspector.GetSourceChain(definition, issue.LogicalPath);
         var effectiveSource = sourceChain.Values.FirstOrDefault(value => value.IsEffective)?.Source;
         return new ConfigurationRuntimeValidationIssue
@@ -75,9 +78,9 @@ internal sealed class ConfigurationRuntimeValidationService(
             NodeDisplayName = GetNodeLabel(definition, issue.Node),
             ConfigurationPath = sourceChain.ConfigurationPath,
             Problem = issue.Message,
-            EffectiveDisplayValue = issue.Node.IsSensitive ? null : issue.DisplayValue,
+            EffectiveDisplayValue = isSensitive ? null : issue.DisplayValue,
             IsMissing = issue.IsMissing,
-            IsSensitive = issue.Node.IsSensitive,
+            IsSensitive = isSensitive,
             EffectiveSource = effectiveSource,
             SourceChain = sourceChain,
             ValidationRules = issue.ValidationRules

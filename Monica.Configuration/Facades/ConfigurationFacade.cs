@@ -158,8 +158,8 @@ public sealed class ConfigurationFacade(
         try
         {
             var definition = await definitionResolver.GetRequiredAsync(definitionKey, CancellationToken.None);
-            var targetNode = ResolveTargetNode(definition, logicalPath);
-            var isSensitive = targetNode?.IsSensitive is true;
+            var targetNode = ConfigurationSchemaNavigator.ResolveNode(definition.Root, logicalPath);
+            var isSensitive = ConfigurationSchemaNavigator.IsSensitivePath(definition.Root, logicalPath);
             var document = await effectiveValueStore.GetAsync(definitionKey, CancellationToken.None);
             var configurationPath = targetNode?.ConfigurationPath ?? ProjectPath(definition, logicalPath);
             var runtimeSourceValue = definition.Origin == ConfigurationDefinitionOrigin.LocalScan
@@ -387,16 +387,15 @@ public sealed class ConfigurationFacade(
     /// Gets managed configuration values supplied by each runtime Microsoft configuration source.
     /// </summary>
     /// <returns>Source inventories ordered from highest priority to lowest priority.</returns>
-    public Task<Res<IReadOnlyList<ConfigurationSourceInventory>>> GetConfigurationSourceInventoriesAsync()
+    public async Task<Res<IReadOnlyList<ConfigurationSourceInventory>>> GetConfigurationSourceInventoriesAsync()
     {
         try
         {
-            return Task.FromResult(Res.Ok(sourceInspector.GetSourceInventories()));
+            return Res.Ok(await sourceInspector.GetSourceInventoriesAsync(CancellationToken.None));
         }
         catch (Exception ex)
         {
-            return Task.FromResult<Res<IReadOnlyList<ConfigurationSourceInventory>>>(
-                Res.Fail($"Failed to get configuration source inventory: {ex.GetMessageRecursively()}"));
+            return Res.Fail($"Failed to get configuration source inventory: {ex.GetMessageRecursively()}");
         }
     }
 
@@ -749,20 +748,17 @@ public sealed class ConfigurationFacade(
     }
 
     /// <summary>
-    /// Applies the captured definition values from one unified configuration version.
+    /// Applies the changed definition values from a reviewed unified-version rollback preview.
     /// </summary>
-    /// <param name="version">The version number.</param>
-    /// <param name="reason">Optional rollback reason.</param>
+    /// <param name="request">The reviewed rollback request, including its preview fingerprint and acknowledgements.</param>
     /// <returns>The rollback result.</returns>
     public async Task<Res<ConfigurationUnifiedVersionRollbackResult>> RollbackUnifiedVersionAsync(
-        long version,
-        string? reason = null)
+        ConfigurationUnifiedVersionRollbackRequest request)
     {
         try
         {
             return Res.Ok(await unifiedVersionService.RollbackToVersionAsync(
-                version,
-                reason,
+                request,
                 CancellationToken.None));
         }
         catch (Exception ex)
@@ -893,28 +889,5 @@ public sealed class ConfigurationFacade(
         {
             return Res.Fail($"Failed to roll back configuration mutation group: {ex.GetMessageRecursively()}");
         }
-    }
-
-    private static ConfigurationNodeDefinition? ResolveTargetNode(ConfigurationDefinition definition, LogicalPath logicalPath)
-    {
-        var current = definition.Root;
-        foreach (var segment in logicalPath.Segments)
-        {
-            current = segment switch
-            {
-                PropertySegment property => current.Children.FirstOrDefault(child =>
-                    string.Equals(child.Name, property.Name, StringComparison.OrdinalIgnoreCase)),
-                DictionaryKeySegment => current.DictionaryTemplate?.ValueTemplate,
-                ListItemKeySegment or ListIndexSegment => current.ListTemplate?.ItemTemplate,
-                _ => null
-            };
-
-            if (current is null)
-            {
-                return null;
-            }
-        }
-
-        return current;
     }
 }

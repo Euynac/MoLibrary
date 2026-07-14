@@ -130,6 +130,11 @@
     },
     "Value": {
       "Sensitive": "Sensitive",
+      "Hidden": "Hidden",
+      "HiddenBeforeChange": "Hidden value (before change)",
+      "HiddenAfterChange": "Hidden value (after change)",
+      "HiddenChangedNotice": "One or more hidden values changed. Their contents are not shown.",
+      "SchemaDriftHiddenNotice": "Scalar values are hidden because the schemas differ and historical sensitivity metadata is unavailable.",
       "Required": "Required",
       "RestartNeeded": "Restart needed"
     },
@@ -377,17 +382,62 @@
     },
     "Rollback": {
       "Title": "Roll Back {0}",
-      "Ready": "This version can be restored. Review the writable targets before applying.",
-      "Blocked": "This version cannot be fully restored because one or more definitions are blocked.",
-      "TargetSource": "Target source",
-      "Diagnostic": "Diagnostic",
-      "NoTarget": "No writable target",
-      "Apply": "Roll back version",
+      "Messages": {
+        "Ready": "The changed values are compatible with the current configuration definitions and can be restored.",
+        "Blocked": "This version cannot be restored because one or more changed values are incompatible or have no safe writable target.",
+        "NoChanges": "This version already matches the current effective configuration. No values will be changed.",
+        "CompatibleSchemaDrift": "The configuration definition changed after this version. The rollback values still pass the current schema, but you must acknowledge the compatible schema drift before applying them.",
+        "RuntimeOutOfSync": "The loaded runtime value and its physical source disagree. Reload or reconcile the runtime before rolling back so Monica does not plan against stale state.",
+        "PartiallyApplied": "The rollback was only partially applied. Review mutation group {0} before retrying.",
+        "AppliedWithIssues": "The rollback values were saved, but reload, notification, audit, or version-capture follow-up work reported a problem. Review mutation group {0}."
+      },
+      "Summary": {
+        "Changes": "{0} affected definitions",
+        "Writes": "{0} path operations",
+        "Findings": "{0} blocking findings",
+        "Unchanged": "{0} unchanged",
+        "CompatibleSchemaDrift": "{0} compatible schema drift",
+        "Blocked": "{0} blocked"
+      },
+      "Fields": {
+        "PlannedWrites": "Exact persistence plan",
+        "BlockingFindings": "Blocking source findings (no writes will run)",
+        "HiddenPath": "Hidden sensitive path",
+        "DefinitionRoot": "Definition root",
+        "ConfigurationPath": "Physical configuration path: {0}",
+        "BlockingSource": "Controlled by read-only source {0}",
+        "CompositeSourceConflict": "This container also receives values from {0}; replacing it would create unreviewed overrides",
+        "LowerPriorityFallback": "Removal would reveal lower-priority source {0}",
+        "NoWritableTarget": "No writable target",
+        "DiffDirection": "Current effective value -> rollback target"
+      },
+      "MutationKinds": {
+        "Set": "Set",
+        "Remove": "Remove"
+      },
+      "Validation": {
+        "IssueCount": "{0} validation issues",
+        "Incompatible": "The captured value is not valid under the current configuration schema.",
+        "DetailHidden": "Details are hidden because this path may contain sensitive metadata."
+      },
+      "Acknowledgement": {
+        "CompatibleSchemaDrift": "I understand that the definition changed and want to restore these values under the current schema."
+      },
+      "Actions": {
+        "Apply": "Roll back version",
+        "AcknowledgeAndApply": "Acknowledge and roll back",
+        "ReloadAndRefresh": "Reload runtime and refresh"
+      },
       "Statuses": {
+        "Unchanged": "Unchanged",
         "Ready": "Ready",
+        "CompatibleSchemaDrift": "Compatible schema drift",
+        "InvalidValue": "Invalid value",
         "MissingDefinition": "Missing definition",
-        "SchemaMismatch": "Schema mismatch",
+        "RuntimeOutOfSync": "Runtime/source mismatch",
         "ReadOnlyOverride": "Read-only override",
+        "CompositeSourceConflict": "Multiple-source container",
+        "LowerPriorityFallback": "Lower-priority fallback",
         "UnsupportedSource": "Unsupported source"
       }
     }
@@ -500,7 +550,8 @@
         "LocalReload": "Local reload failed",
         "DistributedNotification": "Distributed notification failed",
         "AuditFinalization": "Audit finalization failed",
-        "UnifiedVersionCapture": "Unified version capture failed"
+        "UnifiedVersionCapture": "Unified version capture failed",
+        "EffectiveValueVerification": "Effective value verification failed"
       }
     },
     "SaveGroup": {

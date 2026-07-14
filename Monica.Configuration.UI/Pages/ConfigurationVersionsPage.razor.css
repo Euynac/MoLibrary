@@ -19,7 +19,7 @@
 
 .configuration-version-history-item {
     border: 1px solid var(--mud-palette-lines-default);
-    border-radius: 8px;
+    border-radius: var(--mud-default-borderradius);
     cursor: pointer;
     padding: 0.75rem;
     transition: border-color 120ms ease, background-color 120ms ease;

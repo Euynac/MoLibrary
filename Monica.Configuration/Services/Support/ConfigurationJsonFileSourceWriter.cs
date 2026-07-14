@@ -4,6 +4,7 @@ using System.Text;
 using System.Text.Encodings.Web;
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using Microsoft.Extensions.Configuration;
 using Monica.Configuration.Abstractions;
 using Monica.Configuration.Exceptions;
 using Monica.Configuration.Models;
@@ -30,6 +31,58 @@ internal sealed class ConfigurationJsonFileSourceWriter : IConfigurationJsonFile
         AllowTrailingCommas = true,
         CommentHandling = JsonCommentHandling.Skip
     };
+
+    /// <inheritdoc />
+    public async Task<ConfigurationJsonFileValuesSnapshot> ReadValuesAsync(
+        ConfigurationSourceDescriptor source,
+        ConfigurationDefinition definition,
+        IReadOnlyList<string> configurationPaths,
+        CancellationToken cancellationToken)
+    {
+        if (source.Kind != ConfigurationSourceKind.JsonFile || string.IsNullOrWhiteSpace(source.PhysicalPath))
+        {
+            throw new InvalidOperationException($"Configuration source '{source.DisplayName}' is not a readable JSON file.");
+        }
+
+        var physicalPath = Path.GetFullPath(source.PhysicalPath);
+        var sourceLock = SOURCE_LOCKS.GetOrAdd(physicalPath, static _ => new SemaphoreSlim(1, 1));
+        await sourceLock.WaitAsync(cancellationToken);
+        try
+        {
+            var text = File.Exists(physicalPath)
+                ? await File.ReadAllTextAsync(physicalPath, cancellationToken)
+                : "{}";
+            var normalizedText = NormalizeJsonText(text);
+            ConfigurationJsonStructureValidator.ValidateNoCaseInsensitiveDuplicates(
+                normalizedText,
+                DOCUMENT_OPTIONS,
+                source.DisplayName);
+            var root = JsonNode.Parse(normalizedText, documentOptions: DOCUMENT_OPTIONS)
+                       ?? new JsonObject();
+            using var jsonStream = new MemoryStream(Encoding.UTF8.GetBytes(normalizedText));
+            var isolatedRoot = new ConfigurationBuilder().AddJsonStream(jsonStream).Build();
+            using var isolatedRootLifetime = isolatedRoot as IDisposable;
+            var projectionRevision = ConfigurationProviderProjectionRevision.Compute(
+                isolatedRoot.Providers.Single(),
+                definition);
+            var values = configurationPaths
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToDictionary(
+                    static path => path,
+                    path => Read(root, path.Split(':', StringSplitOptions.RemoveEmptyEntries)),
+                    StringComparer.OrdinalIgnoreCase);
+            return new ConfigurationJsonFileValuesSnapshot
+            {
+                Values = values,
+                Revision = ComputeRevision(text),
+                ProjectionRevision = projectionRevision
+            };
+        }
+        finally
+        {
+            sourceLock.Release();
+        }
+    }
 
     /// <summary>
     /// Applies a source-targeted JSON mutation.
@@ -126,7 +179,12 @@ internal sealed class ConfigurationJsonFileSourceWriter : IConfigurationJsonFile
                 $"Expected source revision {expectedRevision} for '{source.DisplayName}', but current revision is {oldRevision}.");
         }
 
-        var root = JsonNode.Parse(string.IsNullOrWhiteSpace(originalText) ? "{}" : originalText, documentOptions: DOCUMENT_OPTIONS)
+        var normalizedOriginalText = NormalizeJsonText(originalText);
+        ConfigurationJsonStructureValidator.ValidateNoCaseInsensitiveDuplicates(
+            normalizedOriginalText,
+            DOCUMENT_OPTIONS,
+            source.DisplayName);
+        var root = JsonNode.Parse(normalizedOriginalText, documentOptions: DOCUMENT_OPTIONS)
                    ?? new JsonObject();
         var results = new List<ConfigurationJsonFileMutationResult>(mutations.Count);
         foreach (var mutation in mutations)
@@ -139,6 +197,10 @@ internal sealed class ConfigurationJsonFileSourceWriter : IConfigurationJsonFile
             }
             else
             {
+                ConfigurationJsonStructureValidator.ValidateNoCaseInsensitiveDuplicates(
+                    mutation.Value.Json,
+                    DOCUMENT_OPTIONS,
+                    "configuration mutation");
                 var newValue = JsonNode.Parse(mutation.Value.Json, documentOptions: DOCUMENT_OPTIONS);
                 Set(root, pathSegments, newValue);
             }
@@ -157,6 +219,16 @@ internal sealed class ConfigurationJsonFileSourceWriter : IConfigurationJsonFile
         try
         {
             await File.WriteAllTextAsync(temporaryPath, updatedText, cancellationToken);
+            var latestText = File.Exists(physicalPath)
+                ? await File.ReadAllTextAsync(physicalPath, cancellationToken)
+                : "{}";
+            var latestRevision = ComputeRevision(latestText);
+            if (!string.Equals(latestRevision, oldRevision, StringComparison.OrdinalIgnoreCase))
+            {
+                throw new ConfigurationConcurrencyConflictException(
+                    $"Configuration source '{source.DisplayName}' changed while its update was being prepared. Review the latest source before retrying.");
+            }
+
             File.Move(temporaryPath, physicalPath, overwrite: true);
         }
         finally
@@ -232,22 +304,33 @@ internal sealed class ConfigurationJsonFileSourceWriter : IConfigurationJsonFile
     private static ConfigurationStoredValue? Read(JsonNode? root, IReadOnlyList<string> segments)
     {
         var current = root;
-        foreach (var segment in segments)
+        for (var segmentIndex = 0; segmentIndex < segments.Count; segmentIndex++)
         {
-            current = current switch
+            var segment = segments[segmentIndex];
+            var found = current switch
             {
-                JsonObject jsonObject => jsonObject[segment],
-                JsonArray jsonArray when int.TryParse(segment, out var index) && index >= 0 && index < jsonArray.Count => jsonArray[index],
-                _ => null
+                JsonObject jsonObject => TryGetObjectValue(jsonObject, segment, out current),
+                JsonArray jsonArray when int.TryParse(segment, out var index)
+                                         && index >= 0
+                                         && index < jsonArray.Count => Assign(jsonArray[index], out current),
+                _ => false
             };
-
-            if (current is null)
+            if (!found)
             {
                 return null;
             }
+
+            if (current is null)
+            {
+                return segmentIndex == segments.Count - 1
+                    ? ConfigurationStoredValue.Null
+                    : null;
+            }
         }
 
-        return ConfigurationStoredValue.FromJson(current!.ToJsonString());
+        return current is null
+            ? ConfigurationStoredValue.Null
+            : ConfigurationStoredValue.FromJson(current.ToJsonString());
     }
 
     private static void Set(JsonNode root, IReadOnlyList<string> segments, JsonNode? value)
@@ -262,7 +345,7 @@ internal sealed class ConfigurationJsonFileSourceWriter : IConfigurationJsonFile
         switch (parent)
         {
             case JsonObject jsonObject:
-                jsonObject[last] = value?.DeepClone();
+                SetObjectValue(jsonObject, last, value?.DeepClone());
                 break;
             case JsonArray jsonArray when int.TryParse(last, out var index):
                 EnsureArraySize(jsonArray, index);
@@ -290,7 +373,7 @@ internal sealed class ConfigurationJsonFileSourceWriter : IConfigurationJsonFile
         switch (parent)
         {
             case JsonObject jsonObject:
-                jsonObject.Remove(last);
+                RemoveObjectValue(jsonObject, last);
                 break;
             case JsonArray jsonArray when int.TryParse(last, out var index) && index >= 0 && index < jsonArray.Count:
                 jsonArray.RemoveAt(index);
@@ -324,7 +407,7 @@ internal sealed class ConfigurationJsonFileSourceWriter : IConfigurationJsonFile
             var segment = segments[i];
             current = current switch
             {
-                JsonObject jsonObject => jsonObject[segment],
+                JsonObject jsonObject => GetObjectValue(jsonObject, segment),
                 JsonArray jsonArray when int.TryParse(segment, out var index) && index >= 0 && index < jsonArray.Count => jsonArray[index],
                 _ => null
             };
@@ -340,14 +423,65 @@ internal sealed class ConfigurationJsonFileSourceWriter : IConfigurationJsonFile
 
     private static JsonNode GetOrCreateObjectChild(JsonObject jsonObject, string key, bool nextIsArray)
     {
-        if (jsonObject[key] is { } child)
+        if (GetObjectValue(jsonObject, key) is { } child)
         {
             return child;
         }
 
         child = nextIsArray ? new JsonArray() : new JsonObject();
-        jsonObject[key] = child;
+        SetObjectValue(jsonObject, key, child);
         return child;
+    }
+
+    private static JsonNode? GetObjectValue(JsonObject jsonObject, string key)
+    {
+        return TryGetObjectValue(jsonObject, key, out var value) ? value : null;
+    }
+
+    private static bool TryGetObjectValue(JsonObject jsonObject, string key, out JsonNode? value)
+    {
+        if (TryGetObjectPropertyName(jsonObject, key, out var actualName))
+        {
+            value = jsonObject[actualName];
+            return true;
+        }
+
+        value = null;
+        return false;
+    }
+
+    private static bool Assign(JsonNode? candidate, out JsonNode? value)
+    {
+        value = candidate;
+        return true;
+    }
+
+    private static void SetObjectValue(JsonObject jsonObject, string key, JsonNode? value)
+    {
+        jsonObject[TryGetObjectPropertyName(jsonObject, key, out var actualName) ? actualName : key] = value;
+    }
+
+    private static void RemoveObjectValue(JsonObject jsonObject, string key)
+    {
+        if (TryGetObjectPropertyName(jsonObject, key, out var actualName))
+        {
+            jsonObject.Remove(actualName);
+        }
+    }
+
+    private static bool TryGetObjectPropertyName(JsonObject jsonObject, string key, out string actualName)
+    {
+        foreach (var property in jsonObject)
+        {
+            if (string.Equals(property.Key, key, StringComparison.OrdinalIgnoreCase))
+            {
+                actualName = property.Key;
+                return true;
+            }
+        }
+
+        actualName = key;
+        return false;
     }
 
     private static JsonNode GetOrCreateArrayChild(JsonArray jsonArray, int index, bool nextIsArray)
@@ -380,5 +514,10 @@ internal sealed class ConfigurationJsonFileSourceWriter : IConfigurationJsonFile
     {
         var bytes = SHA256.HashData(Encoding.UTF8.GetBytes(content));
         return Convert.ToHexString(bytes).ToLowerInvariant();
+    }
+
+    private static string NormalizeJsonText(string content)
+    {
+        return string.IsNullOrWhiteSpace(content) ? "{}" : content;
     }
 }

@@ -130,6 +130,11 @@
     },
     "Value": {
       "Sensitive": "敏感",
+      "Hidden": "已隐藏",
+      "HiddenBeforeChange": "已隐藏值（变更前）",
+      "HiddenAfterChange": "已隐藏值（变更后）",
+      "HiddenChangedNotice": "一个或多个隐藏值发生变化，具体内容不会显示。",
+      "SchemaDriftHiddenNotice": "由于 Schema 不一致且历史敏感性元数据不可用，所有标量值均已隐藏。",
       "Required": "必填",
       "RestartNeeded": "需要重启"
     },
@@ -377,17 +382,62 @@
     },
     "Rollback": {
       "Title": "回滚 {0}",
-      "Ready": "该版本可以恢复。应用前请确认写入目标。",
-      "Blocked": "存在被阻止的配置定义，无法完整恢复该版本。",
-      "TargetSource": "目标来源",
-      "Diagnostic": "诊断",
-      "NoTarget": "没有可写目标",
-      "Apply": "回滚版本",
+      "Messages": {
+        "Ready": "待修改值与当前配置定义兼容，可以恢复。",
+        "Blocked": "一个或多个待修改值不兼容或没有安全的可写目标，无法恢复该版本。",
+        "NoChanges": "该版本与当前生效配置一致，不会修改任何值。",
+        "CompatibleSchemaDrift": "配置定义自该版本后发生变化。回滚值仍通过当前 Schema 验证，但应用前必须确认接受这一兼容差异。",
+        "RuntimeOutOfSync": "当前运行时值与其物理来源不一致。请先重新加载或协调运行时状态，避免 Monica 基于过期状态制定回滚计划。",
+        "PartiallyApplied": "回滚仅部分应用。重试前请检查修改组 {0}。",
+        "AppliedWithIssues": "回滚值已保存，但重新加载、通知、审计或版本捕获的后续处理出现问题。请检查修改组 {0}。"
+      },
+      "Summary": {
+        "Changes": "{0} 个受影响配置定义",
+        "Writes": "{0} 项路径操作",
+        "Findings": "{0} 项阻断问题",
+        "Unchanged": "{0} 项未变化",
+        "CompatibleSchemaDrift": "{0} 项兼容 Schema 差异",
+        "Blocked": "{0} 项被阻止"
+      },
+      "Fields": {
+        "PlannedWrites": "实际持久化计划",
+        "BlockingFindings": "阻断来源问题（不会执行写入）",
+        "HiddenPath": "已隐藏的敏感路径",
+        "DefinitionRoot": "配置定义根节点",
+        "ConfigurationPath": "物理配置路径：{0}",
+        "BlockingSource": "由只读来源 {0} 控制",
+        "CompositeSourceConflict": "该容器还接收来自 {0} 的值；整体替换会产生未经确认的覆盖值",
+        "LowerPriorityFallback": "移除后将暴露低优先级来源 {0}",
+        "NoWritableTarget": "没有可写目标",
+        "DiffDirection": "当前生效值 -> 回滚目标值"
+      },
+      "MutationKinds": {
+        "Set": "设置",
+        "Remove": "移除"
+      },
+      "Validation": {
+        "IssueCount": "{0} 个验证问题",
+        "Incompatible": "捕获值不符合当前配置 Schema。",
+        "DetailHidden": "该路径可能包含敏感元数据，详细信息已隐藏。"
+      },
+      "Acknowledgement": {
+        "CompatibleSchemaDrift": "我已了解配置定义发生变化，并确认按当前 Schema 恢复这些兼容值。"
+      },
+      "Actions": {
+        "Apply": "回滚版本",
+        "AcknowledgeAndApply": "确认差异并回滚",
+        "ReloadAndRefresh": "重新加载运行时并刷新"
+      },
       "Statuses": {
+        "Unchanged": "未变化",
         "Ready": "可恢复",
+        "CompatibleSchemaDrift": "兼容的 Schema 差异",
+        "InvalidValue": "值无效",
         "MissingDefinition": "缺少配置定义",
-        "SchemaMismatch": "Schema 不匹配",
+        "RuntimeOutOfSync": "运行时与来源不一致",
         "ReadOnlyOverride": "只读来源覆盖",
+        "CompositeSourceConflict": "多来源容器",
+        "LowerPriorityFallback": "低优先级值回退",
         "UnsupportedSource": "不支持的来源"
       }
     }
@@ -500,7 +550,8 @@
         "LocalReload": "本地 Reload 失败",
         "DistributedNotification": "分布式通知失败",
         "AuditFinalization": "审计收尾失败",
-        "UnifiedVersionCapture": "统一版本捕获失败"
+        "UnifiedVersionCapture": "统一版本捕获失败",
+        "EffectiveValueVerification": "生效值验证失败"
       }
     },
     "SaveGroup": {

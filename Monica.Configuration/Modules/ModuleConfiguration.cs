@@ -114,11 +114,14 @@ public sealed class ModuleConfiguration
         services.TryAddSingleton<IConfigurationHistoryService, ConfigurationHistoryService>();
         services.TryAddSingleton<IConfigurationMutationBatchStore, SequentialConfigurationMutationBatchStore>();
         services.TryAddSingleton<IConfigurationMutationGroupService, ConfigurationMutationGroupService>();
+        services.TryAddSingleton<ConfigurationRuntimeSnapshotLock>();
         services.TryAddSingleton<IConfigurationMutationGroupApplyService, ConfigurationMutationGroupApplyService>();
         services.TryAddSingleton<IConfigurationRollbackService, ConfigurationRollbackService>();
         services.TryAddSingleton<IConfigurationUnifiedVersionService, ConfigurationUnifiedVersionService>();
         services.TryAddSingleton<IConfigurationUnifiedVersionCoordinator, ConfigurationUnifiedVersionCoordinator>();
         services.TryAddSingleton<ConfigurationUnifiedVersionSnapshotFactory>();
+        services.TryAddSingleton<ConfigurationUnifiedVersionRollbackPreviewFactory>();
+        services.TryAddSingleton<ConfigurationRollbackPersistencePlanner>();
         services.TryAddSingleton<IConfigurationReloadCoordinator, ConfigurationProviderReloadCoordinator>();
         services.TryAddSingleton<IConfigurationReloadSignalReceiver, ConfigurationReloadSignalReceiver>();
         services.TryAddSingleton<ConfigurationReloadNotificationDispatcher>();

@@ -31,6 +31,11 @@ public sealed record ConfigurationMutationRequest
     public int ExpectedSchemaVersion { get; init; }
 
     /// <summary>
+    /// Gets the optional expected schema fingerprint.
+    /// </summary>
+    public string? ExpectedSchemaHash { get; init; }
+
+    /// <summary>
     /// Gets the expected value version for optimistic concurrency.
     /// </summary>
     public long? ExpectedValueVersion { get; init; }

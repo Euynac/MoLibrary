@@ -1,5 +1,4 @@
 using Monica.Configuration.Abstractions;
-using Monica.Configuration.Abstractions.Internal;
 using Monica.Configuration.Models;
 
 namespace Monica.Configuration.Services;
@@ -9,8 +8,7 @@ namespace Monica.Configuration.Services;
 /// </summary>
 internal sealed class ConfigurationMutationGroupService(
     IConfigurationHistoryStore historyStore,
-    IConfigurationHistoryService historyService,
-    IConfigurationUnifiedVersionCoordinator unifiedVersionCoordinator)
+    IConfigurationHistoryService historyService)
     : IConfigurationMutationGroupService
 {
     /// <inheritdoc />
@@ -23,7 +21,9 @@ internal sealed class ConfigurationMutationGroupService(
         var now = DateTimeOffset.UtcNow;
         var group = new ConfigurationMutationGroup
         {
-            GroupId = Guid.NewGuid().ToString("N"),
+            GroupId = string.IsNullOrWhiteSpace(context.MutationGroupId)
+                ? Guid.NewGuid().ToString("N")
+                : context.MutationGroupId.Trim(),
             Label = string.IsNullOrWhiteSpace(label) ? $"Changes {now:yyyy-MM-dd HH:mm}" : label.Trim(),
             Reason = string.IsNullOrWhiteSpace(reason) ? null : reason.Trim(),
             CreatedTime = now,
@@ -37,28 +37,21 @@ internal sealed class ConfigurationMutationGroupService(
     }
 
     /// <inheritdoc />
-    public async Task CompleteAsync(
+    public Task CompleteAsync(
         string groupId,
         int mutationCount,
         IReadOnlyList<string> definitionKeys,
         CancellationToken cancellationToken)
     {
-        ConfigurationMutationGroup? completedGroup = null;
-        await UpdateAsync(groupId, group =>
-        {
-            completedGroup = group with
+        return UpdateAsync(
+            groupId,
+            group => group with
             {
                 MutationCount = mutationCount,
                 DefinitionKeys = NormalizeDefinitionKeys(definitionKeys),
                 Status = ConfigurationMutationGroupStatus.Applied
-            };
-            return completedGroup;
-        }, cancellationToken);
-
-        if (completedGroup is not null)
-        {
-            await unifiedVersionCoordinator.CaptureMutationGroupAsync(completedGroup, cancellationToken);
-        }
+            },
+            cancellationToken);
     }
 
     /// <inheritdoc />

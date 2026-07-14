@@ -165,17 +165,6 @@ public sealed class DatabaseConfigurationStore(
         ApplyMutationGroup(request.MutationGroup, groupEntity);
         dbContext.ConfigurationMutationGroups.Add(groupEntity);
 
-        if (request.UnifiedVersion is not null)
-        {
-            var version = (await dbContext.ConfigurationUnifiedVersions
-                .Select(candidate => (long?)candidate.Version)
-                .MaxAsync(cancellationToken) ?? 0) + 1;
-            var summary = CreateUnifiedVersionSummary(version, request.UnifiedVersion);
-            dbContext.ConfigurationUnifiedVersions.Add(ToEntity(summary));
-            dbContext.ConfigurationUnifiedVersionDocuments.AddRange(
-                request.UnifiedVersion.Definitions.Select(definition => ToEntity(version, definition)));
-        }
-
         try
         {
             await dbContext.SaveChangesAsync(cancellationToken);
@@ -546,18 +535,7 @@ public sealed class DatabaseConfigurationStore(
                     var version = (await dbContext.ConfigurationUnifiedVersions
                         .Select(candidate => (long?)candidate.Version)
                         .MaxAsync(token) ?? 0) + 1;
-                    var summary = new ConfigurationUnifiedVersionSummary
-                    {
-                        Version = version,
-                        MutationGroupId = request.MutationGroupId,
-                        TriggerDefinitionKeys = NormalizeKeys(request.TriggerDefinitionKeys),
-                        DefinitionKeys = NormalizeKeys(request.Definitions.Select(static definition => definition.DefinitionKey)),
-                        DefinitionCount = request.Definitions.Count,
-                        CreatedTime = request.CreatedTime,
-                        ModifierId = request.ModifierId,
-                        ModifierName = request.ModifierName,
-                        Reason = request.Reason
-                    };
+                    var summary = CreateUnifiedVersionSummary(version, request);
 
                     dbContext.ConfigurationUnifiedVersions.Add(ToEntity(summary));
                     dbContext.ConfigurationUnifiedVersionDocuments.AddRange(

@@ -6,5 +6,8 @@ internal interface IConfigurationUnifiedVersionCoordinator
 {
     Task CaptureStandaloneMutationAsync(ConfigurationValueHistory history, CancellationToken cancellationToken);
 
-    Task CaptureMutationGroupAsync(ConfigurationMutationGroup group, CancellationToken cancellationToken);
+    Task CaptureMutationGroupAsync(
+        ConfigurationMutationGroup group,
+        IReadOnlyList<ConfigurationExpectedEffectiveValue> expectedValues,
+        CancellationToken cancellationToken);
 }

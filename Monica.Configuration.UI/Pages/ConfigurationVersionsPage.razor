@@ -374,13 +374,42 @@
             parameters,
             new DialogOptions
             {
-                MaxWidth = MaxWidth.Large,
+                MaxWidth = MaxWidth.ExtraLarge,
                 FullWidth = true
             });
         var result = await dialog.Result;
-        if (result is { Canceled: false, Data: ConfigurationUnifiedVersionRollbackResult })
+        if (result is { Canceled: false, Data: ConfigurationUnifiedVersionRollbackResult rollback })
         {
-            Snackbar.Add(L["Rollback:Success"], Severity.Success);
+            if (rollback.ApplyResult.Status == ConfigurationMutationGroupApplyStatus.PartiallyApplied)
+            {
+                Snackbar.Add(
+                    L["Versions:Rollback:Messages:PartiallyApplied", rollback.MutationGroup.GroupId],
+                    Severity.Error);
+            }
+            else if (rollback.ApplyResult.PostCommitIssues.Count > 0)
+            {
+                Snackbar.Add(
+                    L["Versions:Rollback:Messages:AppliedWithIssues", rollback.MutationGroup.GroupId],
+                    Severity.Warning);
+            }
+            else
+            {
+                Snackbar.Add(L["Rollback:Success"], Severity.Success);
+            }
+
+            if (rollback.ApplyResult.PostCommitIssues.Count > 0)
+            {
+                var issueParameters = new DialogParameters<ConfigurationPostCommitIssuesDialog>();
+                issueParameters.Add(issueDialog => issueDialog.Issues, rollback.ApplyResult.PostCommitIssues);
+                issueParameters.Add(
+                    issueDialog => issueDialog.SummaryText,
+                    L["Versions:Rollback:Messages:AppliedWithIssues", rollback.MutationGroup.GroupId].Value);
+                var issuesDialog = await DialogService.ShowAsync<ConfigurationPostCommitIssuesDialog>(
+                    L["Dialogs:PostCommitIssues:Title"],
+                    issueParameters);
+                await issuesDialog.Result;
+            }
+
             await LoadAsync();
         }
     }

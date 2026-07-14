@@ -11,7 +11,8 @@ internal sealed class ConfigurationValidationCoordinator(ConfigurationValueValid
 {
     private static readonly ConfigurationValueValidationOptions MUTATION_OPTIONS = new()
     {
-        TreatNonNullableScalarsAsRequired = true
+        TreatNonNullableScalarsAsRequired = true,
+        RejectUnknownObjectProperties = true
     };
 
     /// <summary>
@@ -27,10 +28,17 @@ internal sealed class ConfigurationValidationCoordinator(ConfigurationValueValid
                 $"Expected schema version {request.ExpectedSchemaVersion}, but definition '{definition.DefinitionKey}' is version {definition.SchemaVersion}.");
         }
 
+        if (request.ExpectedSchemaHash is { Length: > 0 } expectedSchemaHash
+            && !string.Equals(expectedSchemaHash, definition.SchemaHash, StringComparison.Ordinal))
+        {
+            throw new ConfigurationSchemaMismatchException(
+                $"The reviewed schema fingerprint for definition '{definition.DefinitionKey}' no longer matches the active schema.");
+        }
+
         var target = ResolveTargetNode(definition, request.LogicalPath);
         var issues = request.MutationKind == ConfigurationMutationKind.Remove
             ? validationEngine.ValidateRemoval(target, request.LogicalPath, MUTATION_OPTIONS)
-            : ValidateValue(target, request);
+            : ValidateValue(target, request.LogicalPath, request.Value.Json);
 
         if (issues.FirstOrDefault() is { } issue)
         {
@@ -38,12 +46,26 @@ internal sealed class ConfigurationValidationCoordinator(ConfigurationValueValid
         }
     }
 
+    /// <summary>
+    /// Validates a complete JSON value against the definition's current schema and returns every issue.
+    /// </summary>
+    /// <param name="definition">The current configuration definition.</param>
+    /// <param name="json">The complete root JSON value.</param>
+    /// <returns>All schema validation issues found in the value.</returns>
+    public IReadOnlyList<ConfigurationValueValidationIssue> ValidateValue(
+        ConfigurationDefinition definition,
+        string json)
+    {
+        return ValidateValue(definition.Root, LogicalPath.Root, json);
+    }
+
     private IReadOnlyList<ConfigurationValueValidationIssue> ValidateValue(
         ConfigurationNodeDefinition target,
-        ConfigurationMutationRequest request)
+        LogicalPath logicalPath,
+        string json)
     {
-        using var document = JsonDocument.Parse(request.Value.Json);
-        return validationEngine.Validate(target, request.LogicalPath, document.RootElement, MUTATION_OPTIONS);
+        using var document = JsonDocument.Parse(json);
+        return validationEngine.Validate(target, logicalPath, document.RootElement, MUTATION_OPTIONS);
     }
 
     private static ConfigurationNodeDefinition ResolveTargetNode(

@@ -12,7 +12,7 @@ public interface IConfigurationMutationGroupService
     /// </summary>
     /// <param name="label">Operator-facing label.</param>
     /// <param name="reason">Optional mutation reason.</param>
-    /// <param name="context">Audit context.</param>
+    /// <param name="context">Audit context. A non-empty mutation-group identity is preserved for history correlation.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>The created mutation group.</returns>
     Task<ConfigurationMutationGroup> BeginAsync(

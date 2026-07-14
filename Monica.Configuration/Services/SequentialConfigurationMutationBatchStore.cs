@@ -11,7 +11,6 @@ namespace Monica.Configuration.Services;
 internal sealed class SequentialConfigurationMutationBatchStore(
     IConfigurationEffectiveValueStore effectiveValueStore,
     IConfigurationHistoryStore historyStore,
-    IConfigurationUnifiedVersionStore unifiedVersionStore,
     ILogger<SequentialConfigurationMutationBatchStore> logger)
     : IConfigurationMutationBatchStore
 {
@@ -77,22 +76,6 @@ internal sealed class SequentialConfigurationMutationBatchStore(
                 historyStore.GetType().Name,
                 "Configuration values were saved, but the mutation-group audit row could not be persisted.",
                 ex));
-        }
-
-        if (failure is null && request.UnifiedVersion is not null)
-        {
-            try
-            {
-                await unifiedVersionStore.AppendVersionAsync(request.UnifiedVersion, cancellationToken);
-            }
-            catch (Exception ex)
-            {
-                issues.Add(CreateIssue(
-                    ConfigurationPostCommitIssueKind.UnifiedVersionCapture,
-                    unifiedVersionStore.GetType().Name,
-                    "Configuration values were saved, but the unified-version snapshot could not be persisted.",
-                    ex));
-            }
         }
 
         return new ConfigurationMutationBatchCommitResult

@@ -1,4 +1,3 @@
-using System.Text.Json;
 using Monica.Configuration.Abstractions;
 using Monica.Configuration.Models;
 using Monica.Configuration.Services.Support;
@@ -7,11 +6,8 @@ namespace Monica.Configuration.Services;
 
 internal sealed class ConfigurationUnifiedVersionService(
     IConfigurationUnifiedVersionStore versionStore,
-    ConfigurationDefinitionResolver definitionResolver,
-    IConfigurationEffectiveValueStore effectiveValueStore,
     IConfigurationMutationGroupApplyService mutationGroupApplyService,
-    IConfigurationSourceInspector sourceInspector,
-    IConfigurationJsonFileSourceWriter sourceWriter)
+    ConfigurationUnifiedVersionRollbackPreviewFactory rollbackPreviewFactory)
     : IConfigurationUnifiedVersionService
 {
     public Task<IReadOnlyList<ConfigurationUnifiedVersionSummary>> ListVersionsAsync(
@@ -36,8 +32,12 @@ internal sealed class ConfigurationUnifiedVersionService(
     {
         var origin = await GetRequiredVersionAsync(originVersion, cancellationToken);
         var target = await GetRequiredVersionAsync(targetVersion, cancellationToken);
-        var originByKey = origin.Definitions.ToDictionary(static definition => definition.DefinitionKey, StringComparer.OrdinalIgnoreCase);
-        var targetByKey = target.Definitions.ToDictionary(static definition => definition.DefinitionKey, StringComparer.OrdinalIgnoreCase);
+        var originByKey = origin.Definitions.ToDictionary(
+            static definition => definition.DefinitionKey,
+            StringComparer.OrdinalIgnoreCase);
+        var targetByKey = target.Definitions.ToDictionary(
+            static definition => definition.DefinitionKey,
+            StringComparer.OrdinalIgnoreCase);
         var keys = originByKey.Keys.Concat(targetByKey.Keys)
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .OrderBy(static key => key, StringComparer.OrdinalIgnoreCase);
@@ -47,8 +47,9 @@ internal sealed class ConfigurationUnifiedVersionService(
         {
             originByKey.TryGetValue(key, out var originDefinition);
             targetByKey.TryGetValue(key, out var targetDefinition);
-            if (originDefinition is not null && targetDefinition is not null
-                && JsonEquals(originDefinition.Json, targetDefinition.Json))
+            if (originDefinition is not null
+                && targetDefinition is not null
+                && ConfigurationJsonSemanticComparer.Equals(originDefinition.Json, targetDefinition.Json))
             {
                 continue;
             }
@@ -80,82 +81,39 @@ internal sealed class ConfigurationUnifiedVersionService(
         CancellationToken cancellationToken)
     {
         var snapshot = await GetRequiredVersionAsync(version, cancellationToken);
-        var targets = new List<ConfigurationUnifiedVersionApplyTarget>();
-        foreach (var document in snapshot.Definitions)
-        {
-            targets.Add(await ResolveApplyTargetAsync(document, cancellationToken));
-        }
-
-        return new ConfigurationUnifiedVersionApplyPreview
-        {
-            Version = version,
-            Targets = targets
-        };
+        return await rollbackPreviewFactory.CreateAsync(snapshot, cancellationToken);
     }
 
     public async Task<ConfigurationUnifiedVersionRollbackResult> RollbackToVersionAsync(
-        long version,
-        string? reason,
+        ConfigurationUnifiedVersionRollbackRequest request,
         CancellationToken cancellationToken)
     {
-        var snapshot = await GetRequiredVersionAsync(version, cancellationToken);
-        var preview = await PreviewRollbackAsync(version, cancellationToken);
-        var blocked = preview.Targets.FirstOrDefault(static target => target.Status != ConfigurationUnifiedVersionApplyTargetStatus.Ready);
-        if (blocked is not null)
+        var snapshot = await GetRequiredVersionAsync(request.Version, cancellationToken);
+        var preview = await rollbackPreviewFactory.CreateAsync(snapshot, cancellationToken);
+        if (!string.Equals(preview.PlanToken, request.PlanToken, StringComparison.Ordinal))
         {
-            throw new InvalidOperationException(blocked.Diagnostic ?? $"Definition '{blocked.DefinitionKey}' cannot be restored.");
+            throw new InvalidOperationException(
+                "The rollback preview is stale because configuration values, schemas, or destinations changed. Review a new preview before applying.");
         }
 
-        var commands = new List<ConfigurationMutationCommand>(snapshot.Definitions.Count);
-        var sourceRevisions = new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase);
-        foreach (var document in snapshot.Definitions)
+        if (!preview.CanApplyWithAcknowledgement(request.AcknowledgeCompatibleSchemaDrift))
         {
-            var definition = await definitionResolver.GetRequiredAsync(document.DefinitionKey, cancellationToken);
-            var target = preview.Targets.First(candidate =>
-                string.Equals(candidate.DefinitionKey, document.DefinitionKey, StringComparison.OrdinalIgnoreCase));
-            ConfigurationMutationTarget mutationTarget;
-            if (target.SourceKind == ConfigurationSourceKind.JsonFile && !string.IsNullOrWhiteSpace(target.SourceKey))
-            {
-                if (!sourceRevisions.TryGetValue(target.SourceKey, out var revision))
-                {
-                    revision = await sourceWriter.GetRevisionAsync(
-                        sourceInspector.GetRequiredSource(target.SourceKey),
-                        cancellationToken);
-                    sourceRevisions[target.SourceKey] = revision;
-                }
-
-                mutationTarget = new ConfigurationExternalSourceMutationTarget
-                {
-                    SourceKey = target.SourceKey,
-                    ExpectedRevision = revision
-                };
-            }
-            else
-            {
-                mutationTarget = new ConfigurationEffectiveStoreMutationTarget
-                {
-                    ExpectedVersion = (await effectiveValueStore.GetAsync(document.DefinitionKey, cancellationToken))?.Version
-                };
-            }
-
-            commands.Add(new ConfigurationMutationCommand
-            {
-                RequestId = $"unified-version:{version}:{document.DefinitionKey}",
-                DefinitionKey = document.DefinitionKey,
-                LogicalPath = LogicalPath.Root,
-                MutationKind = ConfigurationMutationKind.Set,
-                Value = ConfigurationStoredValue.FromJson(document.Json),
-                ExpectedSchemaVersion = definition.SchemaVersion,
-                Target = mutationTarget
-            });
+            throw new InvalidOperationException(BuildApplyBlockMessage(preview, request.AcknowledgeCompatibleSchemaDrift));
         }
 
+        var commands = BuildCommands(request.Version, preview);
         var applyResult = await mutationGroupApplyService.ApplyAsync(new ConfigurationMutationGroupApplyRequest
         {
-            Label = $"Apply configuration version v{version}",
-            Reason = reason,
-            Context = new ConfigurationMutationContext { Reason = reason },
-            Commands = commands
+            Label = $"Apply configuration version v{request.Version}",
+            Reason = request.Reason,
+            Context = new ConfigurationMutationContext { Reason = request.Reason },
+            Commands = commands,
+            ExpectedEffectiveValues = preview.Targets.Select(static target =>
+                new ConfigurationExpectedEffectiveValue
+                {
+                    DefinitionKey = target.DefinitionKey,
+                    Json = target.TargetJson
+                }).ToArray()
         }, cancellationToken);
         var results = applyResult.Outcomes
             .Where(static outcome => outcome is
@@ -165,11 +123,45 @@ internal sealed class ConfigurationUnifiedVersionService(
 
         return new ConfigurationUnifiedVersionRollbackResult
         {
-            Version = version,
+            Version = request.Version,
             MutationGroup = applyResult.MutationGroup,
             Results = results,
             ApplyResult = applyResult
         };
+    }
+
+    private static IReadOnlyList<ConfigurationMutationCommand> BuildCommands(
+        long version,
+        ConfigurationUnifiedVersionApplyPreview preview)
+    {
+        var commands = new List<ConfigurationMutationCommand>(preview.MutationCount);
+        var requestIndex = 0;
+        foreach (var target in preview.ChangedTargets)
+        {
+            foreach (var mutation in target.Mutations)
+            {
+                commands.Add(new ConfigurationMutationCommand
+                {
+                    RequestId = $"unified-version:{version}:{requestIndex++}",
+                    DefinitionKey = target.DefinitionKey,
+                    LogicalPath = LogicalPath.Parse(mutation.LogicalPath),
+                    MutationKind = mutation.MutationKind,
+                    Value = mutation.MutationKind == ConfigurationMutationKind.Set
+                        ? ConfigurationStoredValue.FromJson(mutation.TargetJson
+                            ?? throw new InvalidOperationException(
+                                $"Rollback path '{mutation.LogicalPath}' has no target value."))
+                        : ConfigurationStoredValue.Null,
+                    ExpectedSchemaVersion = target.CurrentSchemaVersion
+                        ?? throw new InvalidOperationException(
+                            $"Definition '{target.DefinitionKey}' has no reviewed schema version."),
+                    ExpectedSchemaHash = target.CurrentSchemaHash,
+                    ExpectedSourceChainRevision = mutation.ExpectedSourceChainRevision,
+                    Target = CreateMutationTarget(target.DefinitionKey, mutation)
+                });
+            }
+        }
+
+        return commands;
     }
 
     private async Task<ConfigurationUnifiedVersionSnapshot> GetRequiredVersionAsync(
@@ -180,128 +172,74 @@ internal sealed class ConfigurationUnifiedVersionService(
                ?? throw new KeyNotFoundException($"Unified configuration version '{version}' was not found.");
     }
 
-    private async Task<ConfigurationUnifiedVersionApplyTarget> ResolveApplyTargetAsync(
-        ConfigurationUnifiedVersionDefinitionSnapshot document,
-        CancellationToken cancellationToken)
+    private static ConfigurationMutationTarget CreateMutationTarget(
+        string definitionKey,
+        ConfigurationUnifiedVersionApplyMutation mutation)
     {
-        ConfigurationDefinition definition;
-        try
+        return mutation.SourceKind switch
         {
-            definition = await definitionResolver.GetRequiredAsync(document.DefinitionKey, cancellationToken);
-        }
-        catch (Exception ex)
-        {
-            return Blocked(
-                document,
-                ConfigurationUnifiedVersionApplyTargetStatus.MissingDefinition,
-                $"Definition '{document.DefinitionKey}' is not known by the current process: {ex.Message}");
-        }
-
-        if (!string.Equals(definition.SchemaHash, document.SchemaHash, StringComparison.Ordinal))
-        {
-            return Blocked(
-                document,
-                ConfigurationUnifiedVersionApplyTargetStatus.SchemaMismatch,
-                $"Definition '{document.DisplayName}' schema changed since version v{document.SchemaVersion}; rollback requires matching schema hash.");
-        }
-
-        var sources = sourceInspector.GetSources();
-        var monicaSource = sources.FirstOrDefault(static source => source.Kind == ConfigurationSourceKind.MonicaEffectiveStore);
-        var contributions = sourceInspector.GetDefinitionContributions(definition)
-            .Where(static contribution => contribution.EffectiveValueCount > 0)
-            .OrderByDescending(static contribution => contribution.Source.PriorityIndex)
-            .ToArray();
-        var writableWinner = contributions.FirstOrDefault(static contribution => contribution.Source.IsWritable);
-        if (writableWinner is null)
-        {
-            var fallbackOverride = FindReadOnlyOverride(contributions, monicaSource);
-            if (fallbackOverride is not null)
+            ConfigurationSourceKind.JsonFile when mutation.SourceKey is { Length: > 0 } sourceKey =>
+                new ConfigurationExternalSourceMutationTarget
+                {
+                    SourceKey = sourceKey,
+                    ExpectedRevision = mutation.ExpectedSourceRevision
+                },
+            ConfigurationSourceKind.MonicaEffectiveStore => new ConfigurationEffectiveStoreMutationTarget
             {
-                return Blocked(
-                    document,
-                    ConfigurationUnifiedVersionApplyTargetStatus.ReadOnlyOverride,
-                    $"Read-only source '{fallbackOverride.Source.DisplayName}' has higher priority than Monica effective store.");
-            }
-
-            return MonicaTarget(document);
-        }
-
-        var readOnlyOverride = FindReadOnlyOverride(contributions, writableWinner.Source);
-        if (readOnlyOverride is not null)
-        {
-            return Blocked(
-                document,
-                ConfigurationUnifiedVersionApplyTargetStatus.ReadOnlyOverride,
-                $"Read-only source '{readOnlyOverride.Source.DisplayName}' has higher priority than writable source '{writableWinner.Source.DisplayName}'.");
-        }
-
-        return writableWinner.Source.Kind switch
-        {
-            ConfigurationSourceKind.MonicaEffectiveStore => MonicaTarget(document),
-            ConfigurationSourceKind.JsonFile when string.IsNullOrWhiteSpace(definition.SectionPath) => Blocked(
-                document,
-                ConfigurationUnifiedVersionApplyTargetStatus.UnsupportedSource,
-                $"Definition '{document.DisplayName}' uses the configuration root and cannot be written to a JSON source by unified version rollback."),
-            ConfigurationSourceKind.JsonFile => new ConfigurationUnifiedVersionApplyTarget
-            {
-                DefinitionKey = document.DefinitionKey,
-                DisplayName = document.DisplayName,
-                SourceKey = writableWinner.Source.SourceKey,
-                SourceDisplayName = writableWinner.Source.DisplayName,
-                SourceKind = writableWinner.Source.Kind
+                ExpectedVersion = mutation.ExpectedValueVersion
             },
-            _ => Blocked(
-                document,
-                ConfigurationUnifiedVersionApplyTargetStatus.UnsupportedSource,
-                $"Source '{writableWinner.Source.DisplayName}' cannot be written by unified version rollback.")
+            _ => throw new InvalidOperationException(
+                $"Definition '{definitionKey}' path '{mutation.LogicalPath}' does not have a supported rollback destination.")
         };
     }
 
-    private static ConfigurationDefinitionSourceContribution? FindReadOnlyOverride(
-        IEnumerable<ConfigurationDefinitionSourceContribution> contributions,
-        ConfigurationSourceDescriptor? targetSource)
+    private static string BuildApplyBlockMessage(
+        ConfigurationUnifiedVersionApplyPreview preview,
+        bool acknowledgedCompatibleSchemaDrift)
     {
-        if (targetSource is null)
+        if (!preview.HasChanges)
         {
-            return contributions.FirstOrDefault(static contribution => !contribution.Source.IsWritable);
+            return $"Configuration version v{preview.Version} already matches the current effective values.";
         }
 
-        return contributions.FirstOrDefault(contribution =>
-            contribution.Source.PriorityIndex > targetSource.PriorityIndex
-            && !contribution.Source.IsWritable);
-    }
-
-    private static ConfigurationUnifiedVersionApplyTarget MonicaTarget(
-        ConfigurationUnifiedVersionDefinitionSnapshot document)
-    {
-        return new ConfigurationUnifiedVersionApplyTarget
+        var target = preview.ChangedTargets.First(candidate =>
+            !candidate.CanApply(acknowledgedCompatibleSchemaDrift));
+        return target.Status switch
         {
-            DefinitionKey = document.DefinitionKey,
-            DisplayName = document.DisplayName,
-            SourceKey = "monica:effective",
-            SourceDisplayName = "Monica Effective Store",
-            SourceKind = ConfigurationSourceKind.MonicaEffectiveStore
+            ConfigurationUnifiedVersionApplyTargetStatus.CompatibleSchemaDrift =>
+                $"Definition '{target.DisplayName}' requires explicit acknowledgement of compatible schema drift.",
+            ConfigurationUnifiedVersionApplyTargetStatus.InvalidValue when
+                target.ValidationIssues.FirstOrDefault(static issue => issue.DetailsHidden) is not null =>
+                $"Definition '{target.DisplayName}' is incompatible with the current schema. Sensitive validation details were withheld.",
+            ConfigurationUnifiedVersionApplyTargetStatus.InvalidValue when
+                target.ValidationIssues.FirstOrDefault() is { } issue =>
+                $"Definition '{target.DisplayName}' is incompatible with the current schema at '{issue.LogicalPath}': {issue.Message}",
+            ConfigurationUnifiedVersionApplyTargetStatus.InvalidValue =>
+                $"Definition '{target.DisplayName}' is incompatible with the current schema.",
+            ConfigurationUnifiedVersionApplyTargetStatus.MissingDefinition =>
+                $"Definition '{target.DefinitionKey}' is not known by the current process.",
+            ConfigurationUnifiedVersionApplyTargetStatus.RuntimeOutOfSync =>
+                $"Definition '{target.DisplayName}' has physical source values that differ from the currently loaded runtime values. Reload or reconcile the runtime before rolling back.",
+            ConfigurationUnifiedVersionApplyTargetStatus.ReadOnlyOverride when
+                target.Mutations.FirstOrDefault(static mutation =>
+                    mutation.Status == ConfigurationUnifiedVersionApplyMutationStatus.ReadOnlyOverride) is { } blocked =>
+                $"Read-only source '{blocked.BlockingSourceDisplayName}' controls path '{DisplayBlockPath(target, blocked.LogicalPath)}' in '{target.DisplayName}'.",
+            ConfigurationUnifiedVersionApplyTargetStatus.CompositeSourceConflict when
+                target.Mutations.FirstOrDefault(static mutation =>
+                    mutation.Status == ConfigurationUnifiedVersionApplyMutationStatus.CompositeSourceConflict) is { } composite =>
+                $"Path '{DisplayBlockPath(target, composite.LogicalPath)}' in '{target.DisplayName}' is composed from multiple sources and cannot be replaced in one source without creating unreviewed overrides.",
+            ConfigurationUnifiedVersionApplyTargetStatus.LowerPriorityFallback when
+                target.Mutations.FirstOrDefault(static mutation =>
+                    mutation.Status == ConfigurationUnifiedVersionApplyMutationStatus.LowerPriorityFallback) is { } fallback =>
+                $"Removing path '{DisplayBlockPath(target, fallback.LogicalPath)}' in '{target.DisplayName}' would reveal a value from lower-priority source '{fallback.BlockingSourceDisplayName}'.",
+            _ => $"Definition '{target.DisplayName}' does not have a supported writable rollback destination."
         };
     }
 
-    private static ConfigurationUnifiedVersionApplyTarget Blocked(
-        ConfigurationUnifiedVersionDefinitionSnapshot document,
-        ConfigurationUnifiedVersionApplyTargetStatus status,
-        string diagnostic)
+    private static string DisplayBlockPath(ConfigurationUnifiedVersionApplyTarget target, string logicalPath)
     {
-        return new ConfigurationUnifiedVersionApplyTarget
-        {
-            DefinitionKey = document.DefinitionKey,
-            DisplayName = document.DisplayName,
-            Status = status,
-            Diagnostic = diagnostic
-        };
-    }
-
-    private static bool JsonEquals(string left, string right)
-    {
-        using var leftDocument = JsonDocument.Parse(left);
-        using var rightDocument = JsonDocument.Parse(right);
-        return JsonSerializer.Serialize(leftDocument.RootElement) == JsonSerializer.Serialize(rightDocument.RootElement);
+        return string.Equals(target.CapturedSchemaHash, target.CurrentSchemaHash, StringComparison.Ordinal)
+            ? logicalPath
+            : "<hidden because schema metadata changed>";
     }
 }

@@ -4,7 +4,7 @@
 
 .configuration-unified-version-diff-definition {
     border: 1px solid var(--mud-palette-lines-default);
-    border-radius: 8px;
+    border-radius: var(--mud-default-borderradius);
     padding: 0.875rem;
     background: var(--mud-palette-surface);
 }

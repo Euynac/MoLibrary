@@ -1,7 +1,8 @@
 namespace Monica.Configuration.Models;
 
 /// <summary>
-/// Describes a completed unified version rollback operation.
+/// Describes the persisted outcome of a unified-version rollback operation.
+/// The contained mutation group can be partially applied when independent persistence boundaries do not all commit.
 /// </summary>
 public sealed record ConfigurationUnifiedVersionRollbackResult
 {
