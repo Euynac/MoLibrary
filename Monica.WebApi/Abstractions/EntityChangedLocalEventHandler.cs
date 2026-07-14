@@ -1,4 +1,3 @@
-using Microsoft.Extensions.Logging;
 using Monica.EventBus.Abstractions.Handlers;
 using Monica.Repository.UnitOfWork.Models;
 
@@ -14,9 +13,8 @@ namespace Monica.WebApi.Abstractions;
 /// Prefer this class over subscribing directly to <see cref="EntityChangedEventData{TEntity}"/>,
 /// because parent event types are not catch-all listeners for derived event types.
 /// </remarks>
-/// <param name="loggerFactory">The host logger factory.</param>
-public abstract class EntityChangedLocalEventHandler<TEntity>(ILoggerFactory loggerFactory) :
-    EventHandlerBase(loggerFactory),
+public abstract class EntityChangedLocalEventHandler<TEntity> :
+    EventHandlerBase,
     ILocalEventHandler<EntityCreatedEventData<TEntity>>,
     ILocalEventHandler<EntityUpdatedEventData<TEntity>>,
     ILocalEventHandler<EntityDeletedEventData<TEntity>>

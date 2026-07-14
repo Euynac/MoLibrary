@@ -48,9 +48,7 @@ public class ModuleLogging(ModuleLoggingOption option) : WebModuleBase<ModuleLog
         builder.Logging.ClearProviders();
         builder.Services.AddSerilog(serilogLogger, dispose: true);
 
-        UseRegistrationLoggerFactory(
-            new SerilogLoggerFactory(serilogLogger, dispose: false),
-            disposeWithApplication: true);
+        UseCompositionLoggerFactory(new SerilogLoggerFactory(serilogLogger, dispose: false));
 
         var level =
             builder.Configuration.GetSectionRecursively("Serilog:MinimumLevel").Select(p => new { p.Key, p.Value }).ToList().ToJsonString();

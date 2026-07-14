@@ -1,44 +1,15 @@
-﻿using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
-using Monica.Core.ObjectMapping.Abstractions;
-using Monica.DependencyInjection.Abstractions;
+﻿using Monica.DependencyInjection.Abstractions;
 using Monica.EventBus.Abstractions.Handlers;
 
 namespace Monica.WebApi.Abstractions;
 
 /// <summary>
-/// Base class for event handlers, providing common properties and methods.
+/// Provides host-bound logging and mapping services to Monica event handlers.
 /// </summary>
-public abstract class EventHandlerBase :
-    ITransientDependency,
-    ICachedServiceProviderAccessor
-{
-    /// <summary>
-    /// Initializes an event handler with logging owned by the current host.
-    /// </summary>
-    /// <param name="loggerFactory">The host logger factory.</param>
-    protected EventHandlerBase(ILoggerFactory loggerFactory)
-    {
-        ArgumentNullException.ThrowIfNull(loggerFactory);
-        Logger = loggerFactory.CreateLogger(GetType());
-    }
-
-    public ICachedServiceProvider CachedServiceProvider
-    {
-        get => field ?? throw CreateNotInitializedException();
-        set => field = value ?? throw new ArgumentNullException(nameof(value));
-    }
-
-    protected ILogger Logger { get; }
-
-    protected IObjectMapper Mapper => CachedServiceProvider.GetRequiredService<IObjectMapper>();
-
-    private InvalidOperationException CreateNotInitializedException()
-    {
-        return new InvalidOperationException(
-            $"Cached service provider is not initialized for {GetType().FullName}. Resolve the service through Monica DI instead of constructing it manually.");
-    }
-}
+/// <remarks>
+/// Event handlers must be resolved through Monica dependency injection so their host service provider is assigned.
+/// </remarks>
+public abstract class EventHandlerBase : ServiceBase, ITransientDependency;
 
 
 /// <summary>
@@ -49,9 +20,8 @@ public abstract class EventHandlerBase :
 /// event type as a catch-all listener for derived events.
 /// </remarks>
 /// <typeparam name="TEvent">The event payload type.</typeparam>
-/// <param name="loggerFactory">The host logger factory.</param>
-public abstract class DomainEventHandler<TEvent>(ILoggerFactory loggerFactory) :
-    EventHandlerBase(loggerFactory),
+public abstract class DomainEventHandler<TEvent> :
+    EventHandlerBase,
     IDistributedEventHandler<TEvent>
 {
     /// <summary>
@@ -69,9 +39,8 @@ public abstract class DomainEventHandler<TEvent>(ILoggerFactory loggerFactory) :
 /// type as a catch-all listener for derived events.
 /// </remarks>
 /// <typeparam name="TEvent">The event payload type.</typeparam>
-/// <param name="loggerFactory">The host logger factory.</param>
-public abstract class LocalEventHandler<TEvent>(ILoggerFactory loggerFactory) :
-    EventHandlerBase(loggerFactory),
+public abstract class LocalEventHandler<TEvent> :
+    EventHandlerBase,
     ILocalEventHandler<TEvent>
 {
     /// <summary>

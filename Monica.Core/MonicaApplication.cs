@@ -19,11 +19,16 @@ namespace Monica.Core;
 /// </remarks>
 public sealed class MonicaApplication : IDisposable
 {
-    private readonly RegistrationLoggerFactory _registrationLoggerFactory = new();
+    private readonly List<ILoggerFactory> _ownedCompositionLoggerFactories = [];
+    private ILoggerFactory _compositionLoggerFactory;
+    private bool _disposed;
+    private TypeFinderOptions _typeFinderOptions = new();
     private ITypeFinder? _typeFinder;
 
     internal MonicaApplication()
     {
+        _compositionLoggerFactory = CreateBootstrapLoggerFactory();
+        _ownedCompositionLoggerFactories.Add(_compositionLoggerFactory);
         Dependencies = new ModuleDependencyAnalyzer(this);
         Profiling = new ModuleInitializationProfiler();
         ModuleStates = new ModuleStateRegistry(this);
@@ -45,7 +50,7 @@ public sealed class MonicaApplication : IDisposable
     /// Gets the business-type finder configured for this host.
     /// </summary>
     public ITypeFinder TypeFinder => _typeFinder ??= new DomainTypeFinder(
-        new TypeFinderOptions(),
+        _typeFinderOptions,
         CreateLogger<DomainTypeFinder>());
 
     /// <summary>
@@ -72,18 +77,21 @@ public sealed class MonicaApplication : IDisposable
     {
         var options = new TypeFinderOptions();
         configure?.Invoke(options);
-        _typeFinder = new DomainTypeFinder(options, CreateLogger<DomainTypeFinder>());
+        _typeFinderOptions = options;
+        _typeFinder = null;
     }
 
     internal ILogger<T> CreateLogger<T>()
     {
-        return _registrationLoggerFactory.CreateLogger<T>();
+        ObjectDisposedException.ThrowIf(_disposed, this);
+        return _compositionLoggerFactory.CreateLogger<T>();
     }
 
     internal ILogger CreateLogger(Type categoryType)
     {
         ArgumentNullException.ThrowIfNull(categoryType);
-        return _registrationLoggerFactory.CreateLogger(categoryType);
+        ObjectDisposedException.ThrowIf(_disposed, this);
+        return _compositionLoggerFactory.CreateLogger(categoryType);
     }
 
     internal ILogger<T> CreateLogger<T>(LogLevel minimumLevel)
@@ -91,9 +99,22 @@ public sealed class MonicaApplication : IDisposable
         return new MinimumLevelLogger<T>(CreateLogger<T>(), minimumLevel);
     }
 
-    internal void ReplaceRegistrationLoggerFactory(ILoggerFactory factory, bool ownsFactory)
+    internal void ReplaceCompositionLoggerFactory(ILoggerFactory factory)
     {
-        _registrationLoggerFactory.Replace(factory, ownsFactory);
+        ArgumentNullException.ThrowIfNull(factory);
+        ObjectDisposedException.ThrowIf(_disposed, this);
+
+        if (ReferenceEquals(_compositionLoggerFactory, factory))
+        {
+            return;
+        }
+
+        _compositionLoggerFactory = factory;
+        if (!_ownedCompositionLoggerFactories.Any(ownedFactory =>
+                ReferenceEquals(ownedFactory, factory)))
+        {
+            _ownedCompositionLoggerFactories.Add(factory);
+        }
     }
 
     internal TGuide CreateGuide<TGuide>(ModuleKey? configuredBy = null)
@@ -115,6 +136,26 @@ public sealed class MonicaApplication : IDisposable
     /// <inheritdoc />
     public void Dispose()
     {
-        _registrationLoggerFactory.Dispose();
+        if (_disposed)
+        {
+            return;
+        }
+
+        _disposed = true;
+        for (var index = _ownedCompositionLoggerFactories.Count - 1; index >= 0; index--)
+        {
+            _ownedCompositionLoggerFactories[index].Dispose();
+        }
+
+        _ownedCompositionLoggerFactories.Clear();
+    }
+
+    private static ILoggerFactory CreateBootstrapLoggerFactory()
+    {
+        return LoggerFactory.Create(builder =>
+        {
+            builder.SetMinimumLevel(LogLevel.Trace);
+            builder.AddConsole();
+        });
     }
 }

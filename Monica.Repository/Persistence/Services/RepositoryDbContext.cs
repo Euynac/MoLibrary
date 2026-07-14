@@ -26,6 +26,8 @@ namespace Monica.Repository.Persistence.Services;
 public abstract class RepositoryDbContext<TDbContext>(DbContextOptions<TDbContext> options, ICachedServiceProvider serviceProvider) : DbContext(options), IUnitOfWorkAwareDbContext
     where TDbContext : DbContext
 {
+    private IServiceScope? _factoryScope;
+
     public ICachedServiceProvider CachedServiceProvider { get; } = serviceProvider;
 
     protected IAuditPropertySetter AuditPropertySetter => CachedServiceProvider.GetRequiredService<IAuditPropertySetter>();
@@ -35,6 +37,58 @@ public abstract class RepositoryDbContext<TDbContext>(DbContextOptions<TDbContex
     protected ModuleRepositoryOption Options => CachedServiceProvider.GetRequiredService<IOptions<ModuleRepositoryOption>>().Value;
 
     public bool HasInit { get; protected set; }
+
+    /// <summary>
+    /// Transfers ownership of the factory-created dependency injection scope to this context.
+    /// </summary>
+    /// <remarks>
+    /// Contexts resolved normally from an application scope never use this path. Factory-created contexts dispose
+    /// the attached scope together with the context so scoped dependencies cannot escape their operation boundary.
+    /// </remarks>
+    internal void OwnFactoryScope(IServiceScope scope)
+    {
+        ArgumentNullException.ThrowIfNull(scope);
+
+        if (Interlocked.CompareExchange(ref _factoryScope, scope, null) is not null)
+        {
+            throw new InvalidOperationException("A repository DbContext can own only one factory scope.");
+        }
+    }
+
+    /// <inheritdoc />
+    public override void Dispose()
+    {
+        var scope = Interlocked.Exchange(ref _factoryScope, null);
+        try
+        {
+            base.Dispose();
+        }
+        finally
+        {
+            scope?.Dispose();
+        }
+    }
+
+    /// <inheritdoc />
+    public override async ValueTask DisposeAsync()
+    {
+        var scope = Interlocked.Exchange(ref _factoryScope, null);
+        try
+        {
+            await base.DisposeAsync().ConfigureAwait(false);
+        }
+        finally
+        {
+            if (scope is IAsyncDisposable asyncDisposable)
+            {
+                await asyncDisposable.DisposeAsync().ConfigureAwait(false);
+            }
+            else
+            {
+                scope?.Dispose();
+            }
+        }
+    }
 
 
 

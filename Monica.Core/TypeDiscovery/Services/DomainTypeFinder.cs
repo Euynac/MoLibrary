@@ -94,7 +94,7 @@ public class DomainTypeFinder(TypeFinderOptions options, ILogger<DomainTypeFinde
                     _assemblyLoadFailures[loadFailure.Name] = loadFailure;
 
                     logger.LogWarning(
-                        "程序集 {AssemblyName} 部分类型加载失败: {Exceptions}",
+                        "Some types from assembly {AssemblyName} could not be loaded: {Exceptions}",
                         loadFailure.Name,
                         loadFailure.ErrorMessage);
                 }

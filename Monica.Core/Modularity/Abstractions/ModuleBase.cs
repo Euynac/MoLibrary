@@ -22,13 +22,16 @@ public abstract class ModuleBase : IModule
             ?? throw new InvalidOperationException($"{GetType().Name} has not been bound to a Monica host.");
 
     /// <summary>
-    /// Replaces the logger factory used by the owning host during Monica composition.
+    /// Replaces the logger factory used to create future Monica composition loggers for the owning host.
     /// </summary>
+    /// <remarks>
+    /// Ownership transfers to the Monica application. Previously issued composition loggers remain valid until the
+    /// application is disposed, even when a later module supplies a replacement factory.
+    /// </remarks>
     /// <param name="factory">The host-specific logger factory.</param>
-    /// <param name="disposeWithApplication">Whether the Monica application should dispose the factory.</param>
-    protected void UseRegistrationLoggerFactory(ILoggerFactory factory, bool disposeWithApplication = false)
+    protected void UseCompositionLoggerFactory(ILoggerFactory factory)
     {
-        Application.ReplaceRegistrationLoggerFactory(factory, disposeWithApplication);
+        Application.ReplaceCompositionLoggerFactory(factory);
     }
 
     /// <summary>

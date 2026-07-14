@@ -71,6 +71,12 @@ public class ModuleRepositoryGuide : ModuleGuide<ModuleRepository, ModuleReposit
     /// <param name="optionsAction">Configures the EF Core provider and options for the DbContext.</param>
     /// <param name="dbContextProviderType">Selects how scoped repositories obtain the current DbContext.</param>
     /// <returns>The repository guide for method chaining.</returns>
+    /// <remarks>
+    /// Registration also exposes an <see cref="IDbContextFactory{TContext}"/> whose contexts own independent
+    /// dependency injection scopes. Factory-created contexts must be disposed by the caller and are safe to create
+    /// from long-lived services. This host-owned factory replaces any earlier factory registration for the same
+    /// context so the ownership guarantee cannot be bypassed accidentally.
+    /// </remarks>
     public ModuleRepositoryGuide AddRepositoryDbContext<TDbContext>(Action<IServiceProvider, DbContextOptionsBuilder> optionsAction, DbContextProviderType dbContextProviderType = DbContextProviderType.Default)
         where TDbContext : RepositoryDbContext<TDbContext>
     {
@@ -102,6 +108,8 @@ public class ModuleRepositoryGuide : ModuleGuide<ModuleRepository, ModuleReposit
                 typeof(ScopedDbContextOperation<TDbContext>));
             context.Services.AddDbContext<TDbContext>(
                 (serviceProvider, builder) => ConfigureDbContextOptions(context.ModuleOption, serviceProvider, builder, optionsAction));
+            context.Services.RemoveAll<IDbContextFactory<TDbContext>>();
+            context.Services.AddSingleton<IDbContextFactory<TDbContext>, OwnedScopeDbContextFactory<TDbContext>>();
 
             //TODO Use Module to optimize automatic registration
             var options = new EfRepositoryRegistrationOptions(typeof(TDbContext), context.Services);

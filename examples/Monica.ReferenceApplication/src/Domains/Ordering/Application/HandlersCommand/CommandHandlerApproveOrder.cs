@@ -1,7 +1,6 @@
 using Domains.Ordering.Interfaces;
 using Domains.Ordering.Utilities;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Logging;
 using Monica.Core.Results;
 using Monica.EventBus.Abstractions;
 using Monica.Repository.UnitOfWork.Abstractions;
@@ -18,9 +17,8 @@ namespace Domains.Ordering.Application.HandlersCommand;
 public sealed class CommandHandlerApproveOrder(
     IRepositoryOrder repository,
     IUnitOfWorkManager unitOfWorkManager,
-    ILocalEventBus localEventBus,
-    ILoggerFactory loggerFactory)
-    : ApplicationService<ApproveOrderRequest, OrderDto>(loggerFactory)
+    ILocalEventBus localEventBus)
+    : ApplicationService<ApproveOrderRequest, OrderDto>
 {
     /// <summary>
     /// Approves the requested draft order.

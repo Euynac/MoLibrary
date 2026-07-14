@@ -5,7 +5,6 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.DynamicLinq;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Monica.AutoModel.Abstractions;
 using Monica.Core.ObjectMapping.Abstractions;
@@ -35,10 +34,8 @@ namespace Monica.WebApi.AutoControllers.Services;
 /// <typeparam name="TCreateInput">The input type for Create operations</typeparam>
 /// <typeparam name="TUpdateInput">The input type for Update operations</typeparam>
 /// <param name="repository">The repository used for persistence operations.</param>
-/// <param name="loggerFactory">The current host's logger factory.</param>
 public abstract class AbstractKeyCrudApplicationService<TEntity, TGetOutputDto, TGetListOutputDto, TKey, TGetListInput, TCreateInput, TUpdateInput>(
-    IRepository<TEntity, TKey> repository,
-    ILoggerFactory loggerFactory) : ApplicationService(loggerFactory)
+    IRepository<TEntity, TKey> repository) : ApplicationService
     where TEntity : class, IEntity<TKey>
 {
     /// <summary>

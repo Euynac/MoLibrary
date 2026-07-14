@@ -7,8 +7,7 @@ namespace Domains.Ordering.Application.HandlersEvent;
 /// <summary>
 /// Records the in-process reaction to a committed order approval.
 /// </summary>
-public sealed class LocalEventHandlerOrderApproved(ILoggerFactory loggerFactory)
-    : LocalEventHandler<EventOrderApproved>(loggerFactory)
+public sealed class LocalEventHandlerOrderApproved : LocalEventHandler<EventOrderApproved>
 {
     /// <inheritdoc />
     public override Task HandleEventAsync(EventOrderApproved eventData)

@@ -2,7 +2,6 @@ using Domains.Ordering.Configurations;
 using Domains.Ordering.Interfaces;
 using Domains.Ordering.Utilities;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Monica.Core.Results;
 using Monica.WebApi.Abstractions;
@@ -16,9 +15,8 @@ namespace Domains.Ordering.Application.HandlersQuery;
 /// </summary>
 public sealed class QueryHandlerGetOrders(
     IRepositoryOrder repository,
-    IOptions<OrderingOptions> options,
-    ILoggerFactory loggerFactory)
-    : ApplicationService<GetOrdersRequest, IReadOnlyList<OrderDto>>(loggerFactory)
+    IOptions<OrderingOptions> options)
+    : ApplicationService<GetOrdersRequest, IReadOnlyList<OrderDto>>
 {
     /// <summary>
     /// Gets all known orders in reverse creation order.

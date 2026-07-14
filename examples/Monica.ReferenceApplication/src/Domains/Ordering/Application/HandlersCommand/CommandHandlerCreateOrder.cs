@@ -2,7 +2,6 @@ using Domains.Ordering.Entities;
 using Domains.Ordering.Interfaces;
 using Domains.Ordering.Utilities;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Logging;
 using Monica.Core.Results;
 using Monica.WebApi.Abstractions;
 using Platform.Protocol.PublishedLanguages.DomainOrdering.Models;
@@ -14,9 +13,8 @@ namespace Domains.Ordering.Application.HandlersCommand;
 /// Creates a validated draft order and returns its public representation.
 /// </summary>
 public sealed class CommandHandlerCreateOrder(
-    IRepositoryOrder repository,
-    ILoggerFactory loggerFactory)
-    : ApplicationService<CreateOrderRequest, OrderDto>(loggerFactory)
+    IRepositoryOrder repository)
+    : ApplicationService<CreateOrderRequest, OrderDto>
 {
     /// <summary>
     /// Creates an order after applying entity and repository invariants.
