@@ -148,7 +148,7 @@ public class ChangeChain<TTargetEntity, TAlterItem, TChangeItemData, TEnumAlterS
     {
         try
         {
-            var status = JsonSerializer.Deserialize<TTargetEntity>(TracingData, IChangeTrackedEntity.TRACING_DATA_JSON_OPTIONS);
+            var status = JsonSerializer.Deserialize<TTargetEntity>(TracingData, ChangeTrackingJsonPolicy.TracingDataOptions);
             if (status == null) throw new Exception();
             return status;
         }

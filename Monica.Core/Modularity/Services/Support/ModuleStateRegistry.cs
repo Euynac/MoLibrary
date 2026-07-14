@@ -1,6 +1,5 @@
 using Microsoft.Extensions.Logging;
-using Monica.Core;
-using Monica.Core.Logging;
+using Monica.Core.Modularity.State;
 using Monica.Core.Modularity.Models;
 using Monica.Core.Modularity.Models.Internal;
 
@@ -9,20 +8,30 @@ namespace Monica.Core.Modularity.Services.Support;
 /// <summary>
 /// Manages module state including enabling and disabling modules.
 /// </summary>
-public static class ModuleStateRegistry
+internal sealed class ModuleStateRegistry(MonicaApplication application)
 {
-    public static ILogger Logger { get; set; } = LogManager.For(typeof(ModuleStateRegistry));
+    private readonly ModuleState _state = new();
+
+    public ILogger Logger => application.CreateLogger(typeof(ModuleStateRegistry));
+
+    /// <summary>
+    /// Clears module enablement state for this host.
+    /// </summary>
+    internal void Clear()
+    {
+        _state.Clear();
+    }
 
     /// <summary>
     /// Gets the list of disabled module types
     /// </summary>
     /// <returns>A list of disabled module types</returns>
-    internal static List<Type> GetDisabledModuleTypes()
+    internal List<Type> GetDisabledModuleTypes()
     {
-        return [.. MonicaApplication.Current.State.DisabledModuleTypes];
+        return [.. _state.DisabledModuleTypes];
     }
 
-    public static bool DisableModule(ModuleRegistrationState moduleInfo)
+    public bool DisableModule(ModuleRegistrationState moduleInfo)
     {
         moduleInfo.SetModulePhase(ModulePhase.Disabled);
         return DisableModule(moduleInfo.ModuleType);
@@ -34,9 +43,9 @@ public static class ModuleStateRegistry
     /// </summary>
     /// <param name="moduleType">The type of module to disable</param>
     /// <returns>True if the module was successfully disabled, false if it was already disabled</returns>
-    private static bool DisableModule(Type moduleType)
+    private bool DisableModule(Type moduleType)
     {
-        if (!MonicaApplication.Current.State.DisabledModuleTypes.Add(moduleType)) return false;
+        if (!_state.DisabledModuleTypes.Add(moduleType)) return false;
         CascadeDisableModulesThatDependOn(moduleType);
         return true;
 
@@ -47,10 +56,10 @@ public static class ModuleStateRegistry
     /// </summary>
     /// <param name="moduleType">The type of module to check</param>
     /// <returns>True if the module is disabled, false otherwise</returns>
-    internal static bool IsModuleDisabled(Type moduleType)
+    internal bool IsModuleDisabled(Type moduleType)
     {
         // Check if the module is in the disabled list
-        if (MonicaApplication.Current.State.DisabledModuleTypes.Contains(moduleType))
+        if (_state.DisabledModuleTypes.Contains(moduleType))
         {
             return true;
         }
@@ -62,14 +71,14 @@ public static class ModuleStateRegistry
     /// Cascade disables modules that depend on the specified module
     /// </summary>
     /// <param name="moduleType">The module type that other modules might depend on</param>
-    internal static void CascadeDisableModulesThatDependOn(Type moduleType)
+    internal void CascadeDisableModulesThatDependOn(Type moduleType)
     {
         // Find the module key for the disabled module
-        var disabledModuleKey = ModuleDependencyAnalyzer.ResolveModuleKey(moduleType);
+        var disabledModuleKey = application.Dependencies.ResolveModuleKey(moduleType);
 
         // Get all modules that depend on this module from the dependency map
         var dependentModuleKeys = new HashSet<ModuleKey>();
-        foreach (var entry in ModuleDependencyAnalyzer.ModuleDependencyMap)
+        foreach (var entry in application.Dependencies.DependenciesByModule)
         {
             if (entry.Value.Contains(disabledModuleKey))
             {
@@ -81,7 +90,7 @@ public static class ModuleStateRegistry
         foreach (var dependentModuleKey in dependentModuleKeys)
         {
             // Skip if not registered in the key-to-type map
-            if (!ModuleDependencyAnalyzer.ModuleKeyToTypeDict.TryGetValue(dependentModuleKey, out var dependentModuleType))
+            if (!application.Dependencies.ModuleTypesByKey.TryGetValue(dependentModuleKey, out var dependentModuleType))
                 continue;
 
             if (DisableModule(dependentModuleType))
@@ -99,10 +108,10 @@ public static class ModuleStateRegistry
     /// <summary>
     /// Initializes the module system by checking for disabled modules and cascading the disable status to dependent modules.
     /// </summary>
-    internal static void Init()
+    internal void Init()
     {
         // Check each registered module to see if it's disabled
-        foreach (var (moduleType, info) in ModuleRegistry.ModuleRegisterContextDict)
+        foreach (var (moduleType, info) in application.Modules.Registrations)
         {
             if (!info.ModuleOption.IsDisabled) continue;
             DisableModule(info);

@@ -6,7 +6,6 @@ using Monica.Configuration.Annotations;
 using Monica.Configuration.Binding;
 using Monica.Configuration.Models;
 using Monica.Configuration.Services.Support;
-using Monica.Core.Logging;
 
 namespace Monica.Configuration.Bootstrap;
 
@@ -16,13 +15,12 @@ namespace Monica.Configuration.Bootstrap;
 /// </summary>
 public static class MonicaConfigurationBootstrapExtensions
 {
-    private static readonly ILogger Logger = LogManager.For(typeof(MonicaConfigurationBootstrapExtensions));
-
     /// <summary>
     /// Binds a Monica configuration options type from the host bootstrap <see cref="IConfiguration"/>.
     /// </summary>
     /// <typeparam name="TOptions">The options type marked with <see cref="ConfigurationAttribute"/>.</typeparam>
     /// <param name="configuration">The host configuration available during application builder setup.</param>
+    /// <param name="logger">The host-owned logger used for bootstrap diagnostics.</param>
     /// <param name="debugging">Whether to log provider and file-source diagnostics for the resolved section.</param>
     /// <returns>
     /// The bound options object, or a CLR default instance when the section is unavailable or cannot be bound.
@@ -35,13 +33,15 @@ public static class MonicaConfigurationBootstrapExtensions
     /// </remarks>
     public static TOptions GetMonicaBootstrapConfiguration<TOptions>(
         this IConfiguration configuration,
+        ILogger logger,
         bool debugging = false)
         where TOptions : class, new()
     {
         ArgumentNullException.ThrowIfNull(configuration);
+        ArgumentNullException.ThrowIfNull(logger);
 
         var optionsType = typeof(TOptions);
-        var sectionPath = ResolveSectionPath(optionsType);
+        var sectionPath = ResolveSectionPath(optionsType, logger);
         if (sectionPath is null)
         {
             return new TOptions();
@@ -49,18 +49,18 @@ public static class MonicaConfigurationBootstrapExtensions
 
         if (debugging)
         {
-            LogProviderDiagnostics(configuration, optionsType, sectionPath);
+            LogProviderDiagnostics(configuration, optionsType, sectionPath, logger);
         }
 
-        return BindConfiguration<TOptions>(configuration, sectionPath);
+        return BindConfiguration<TOptions>(configuration, sectionPath, logger);
     }
 
-    private static string? ResolveSectionPath(Type optionsType)
+    private static string? ResolveSectionPath(Type optionsType, ILogger logger)
     {
         var attribute = optionsType.GetCustomAttribute<ConfigurationAttribute>(inherit: false);
         if (attribute is null)
         {
-            Logger.LogWarning(
+            logger.LogWarning(
                 "Type '{OptionsType}' is not marked with {AttributeType}. Monica bootstrap binding returned CLR defaults.",
                 optionsType.FullName ?? optionsType.Name,
                 nameof(ConfigurationAttribute));
@@ -74,13 +74,16 @@ public static class MonicaConfigurationBootstrapExtensions
             ConfigurationSectionPathConvention.ShortTypeName);
     }
 
-    private static TOptions BindConfiguration<TOptions>(IConfiguration configuration, string sectionPath)
+    private static TOptions BindConfiguration<TOptions>(
+        IConfiguration configuration,
+        string sectionPath,
+        ILogger logger)
         where TOptions : class, new()
     {
         var section = configuration.GetSection(sectionPath);
         if (!section.Exists())
         {
-            Logger.LogWarning(
+            logger.LogWarning(
                 "Configuration section '{SectionPath}' for Monica bootstrap options '{OptionsType}' was not found. CLR defaults are used.",
                 sectionPath,
                 typeof(TOptions).FullName ?? typeof(TOptions).Name);
@@ -94,7 +97,7 @@ public static class MonicaConfigurationBootstrapExtensions
         }
         catch (Exception ex)
         {
-            Logger.LogWarning(
+            logger.LogWarning(
                 ex,
                 "Failed to bind configuration section '{SectionPath}' to Monica bootstrap options '{OptionsType}'. CLR defaults are used.",
                 sectionPath,
@@ -104,16 +107,20 @@ public static class MonicaConfigurationBootstrapExtensions
         return new TOptions();
     }
 
-    private static void LogProviderDiagnostics(IConfiguration configuration, Type optionsType, string sectionPath)
+    private static void LogProviderDiagnostics(
+        IConfiguration configuration,
+        Type optionsType,
+        string sectionPath,
+        ILogger logger)
     {
-        Logger.LogInformation(
+        logger.LogInformation(
             "Reading Monica bootstrap options '{OptionsType}' from section '{SectionPath}'.",
             optionsType.FullName ?? optionsType.Name,
             sectionPath);
 
         if (configuration is not IConfigurationRoot root)
         {
-            Logger.LogInformation(
+            logger.LogInformation(
                 "Configuration root does not expose providers, so provider diagnostics for section '{SectionPath}' are unavailable.",
                 sectionPath);
             return;
@@ -127,7 +134,7 @@ public static class MonicaConfigurationBootstrapExtensions
 
         if (contributors.Length == 0)
         {
-            Logger.LogInformation(
+            logger.LogInformation(
                 "No configuration provider contributes section '{SectionPath}'. Registered provider count: {ProviderCount}.",
                 sectionPath,
                 root.Providers.Count());
@@ -138,7 +145,7 @@ public static class MonicaConfigurationBootstrapExtensions
         foreach (var contributor in contributors)
         {
             var source = DescribeSource(contributor.Provider);
-            Logger.LogInformation(
+            logger.LogInformation(
                 "Bootstrap section '{SectionPath}' contributor #{ProviderIndex}: {ProviderType}. HighestPriority={HighestPriority}. SourcePath={SourcePath}. PhysicalPath={PhysicalPath}.",
                 sectionPath,
                 contributor.PriorityIndex,

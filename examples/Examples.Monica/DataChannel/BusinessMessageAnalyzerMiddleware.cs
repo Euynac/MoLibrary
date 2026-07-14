@@ -1,15 +1,16 @@
-using Monica.DataChannel.Pipeline;
 using System.Text.Json;
 using System.Text.RegularExpressions;
+using Monica.DataChannel.Middlewares;
+using Monica.DataChannel.Pipeline;
 
-namespace Monica.DataChannel.BuildInMiddlewares;
+namespace Examples.Monica.DataChannel;
 
 /// <summary>
 /// Business message analysis middleware example
 /// Inherited from the information display middleware base class, used to analyze and count business message types
 /// Developers can modify this example to suit their business needs
 /// </summary>
-public class BusinessMessageAnalyzerMiddleware : PipeInfoDisplayMiddlewareBase
+public sealed class BusinessMessageAnalyzerMiddleware : PipelineInfoDisplayMiddlewareBase
 {
     /// <summary>
     /// Message type regular expression
@@ -42,7 +43,7 @@ public class BusinessMessageAnalyzerMiddleware : PipeInfoDisplayMiddlewareBase
     /// </summary>
     /// <param name="context">data context</param>
     /// <returns>Processed data context</returns>
-    public override DataContext Pass(DataContext context)
+    public override ChannelDataContext Pass(ChannelDataContext context)
     {
         try
         {
@@ -75,16 +76,16 @@ public class BusinessMessageAnalyzerMiddleware : PipeInfoDisplayMiddlewareBase
     /// </summary>
     /// <param name="context">data context</param>
     /// <returns>Processed data context</returns>
-    public override async Task<DataContext> PassAsync(DataContext context)
+    public override Task<ChannelDataContext> PassAsync(ChannelDataContext context)
     {
-        return await Task.FromResult(Pass(context));
+        return Task.FromResult(Pass(context));
     }
 
     /// <summary>
     /// Analyze message content
     /// </summary>
     /// <param name="context">data context</param>
-    private void AnalyzeMessageContent(DataContext context)
+    private void AnalyzeMessageContent(ChannelDataContext context)
     {
         if (context.Data == null) 
         {
@@ -126,7 +127,7 @@ public class BusinessMessageAnalyzerMiddleware : PipeInfoDisplayMiddlewareBase
     /// Analyze message size
     /// </summary>
     /// <param name="context">data context</param>
-    private void AnalyzeMessageSize(DataContext context)
+    private void AnalyzeMessageSize(ChannelDataContext context)
     {
         if (context.Data == null) return;
 
@@ -240,8 +241,14 @@ public class BusinessMessageAnalyzerMiddleware : PipeInfoDisplayMiddlewareBase
     {
         return element.ValueKind switch
         {
-            JsonValueKind.Object => element.EnumerateObject().Max(p => GetJsonDepth(p.Value)) + 1,
-            JsonValueKind.Array => element.EnumerateArray().Max(GetJsonDepth) + 1,
+            JsonValueKind.Object => element.EnumerateObject()
+                .Select(property => GetJsonDepth(property.Value))
+                .DefaultIfEmpty(0)
+                .Max() + 1,
+            JsonValueKind.Array => element.EnumerateArray()
+                .Select(GetJsonDepth)
+                .DefaultIfEmpty(0)
+                .Max() + 1,
             _ => 1
         };
     }

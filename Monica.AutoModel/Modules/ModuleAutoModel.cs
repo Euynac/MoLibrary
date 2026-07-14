@@ -18,14 +18,14 @@ namespace Monica.Modules;
 
 public static class ModuleAutoModelBuilderExtensions
 {
-    extension(Mo)
+    extension(IMonicaBuilder builder)
     {
         /// <summary>
         /// Adds and configures the AutoModel module.
         /// </summary>
-        public static ModuleAutoModelGuide AddAutoModel(Action<ModuleAutoModelOption>? action = null)
+        public ModuleAutoModelGuide AddAutoModel(Action<ModuleAutoModelOption>? action = null)
         {
-            return new ModuleAutoModelGuide().Register(action);
+            return builder.AddModule<ModuleAutoModel, ModuleAutoModelOption, ModuleAutoModelGuide>(action);
         }
     }
 }
@@ -35,7 +35,9 @@ public class ModuleAutoModel(ModuleAutoModelOption option) : WebModuleBase<Modul
 {
     public override void ConfigureServices(IServiceCollection services)
     {
-        services.AddSingleton<IAutoModelSnapshotFactory, SnapshotFactoryMemoryProvider>();
+        services.AddSingleton<SnapshotFactoryMemoryProvider>();
+        services.AddSingleton<IAutoModelSnapshotFactory>(provider =>
+            provider.GetRequiredService<SnapshotFactoryMemoryProvider>());
         services.AddSingleton(typeof(IAutoModelSnapshot<>), typeof(SnapshotMemoryProvider<>));
         services.AddTransient(typeof(IAutoModelExpressionNormalizer<>), typeof(ExpressionNormalizerDynamicLinqProvider<>));
         services.AddTransient(typeof(IAutoModelDbOperator<>), typeof(DbOperatorDynamicLinqProvider<>));
@@ -60,7 +62,7 @@ public class ModuleAutoModel(ModuleAutoModelOption option) : WebModuleBase<Modul
                 var res = new
                 {
                     count = snapshots.Count,
-                    entites = snapshots.Select(p => p.Table.Name),
+                    entities = snapshots.Select(p => p.Table.Name),
                     snapshots = snapshots.Select(x => new
                     {
                         x.Table,
@@ -69,10 +71,10 @@ public class ModuleAutoModel(ModuleAutoModelOption option) : WebModuleBase<Modul
                 };
                 await response.WriteAsJsonAsync(res);
             })
-            .WithName("获取AutoModel状态信息")
+            .WithName("GetAutoModelStatus")
             .WithTags(tagName)
-            .WithSummary("获取AutoModel状态信息")
-            .WithDescription("获取AutoModel状态信息");
+            .WithSummary("Gets AutoModel status")
+            .WithDescription("Returns the model snapshots owned by this Monica host.");
         });
     }
 
@@ -85,11 +87,17 @@ public class ModuleAutoModel(ModuleAutoModelOption option) : WebModuleBase<Modul
     }
 }
 
+/// <summary>
+/// Provides fluent configuration for the AutoModel module.
+/// </summary>
 public class ModuleAutoModelGuide : WebModuleGuide<ModuleAutoModel, ModuleAutoModelOption, ModuleAutoModelGuide>
 {
 
 }
 
+/// <summary>
+/// Configures AutoModel discovery and expression behavior for one Monica host.
+/// </summary>
 public class ModuleAutoModelOption : MinimalApiModuleOptions<ModuleAutoModel>
 {
     /// <summary>
@@ -111,13 +119,21 @@ public class ModuleAutoModelOption : MinimalApiModuleOptions<ModuleAutoModel>
     /// Enables debugging mode, for example by showing the expression generated from a filter.
     /// </summary>
     public bool EnableDebugging { get; set; }
+
     /// <summary>
     /// Enables using the field display name as an activation name.
     /// </summary>
     [Obsolete("Not implemented yet.")]
     public bool EnableTitleAsActivateName { get; set; }
 
+    /// <summary>
+    /// Includes properties marked with <c>JsonIgnoreAttribute</c> unless another AutoModel rule excludes them.
+    /// </summary>
     public bool DisableAutoIgnorePropertyWithJsonIgnoreAttribute { get; set; }
+
+    /// <summary>
+    /// Includes properties marked with <c>NotMappedAttribute</c> unless another AutoModel rule excludes them.
+    /// </summary>
     public bool DisableAutoIgnorePropertyWithNotMappedAttribute { get; set; }
 
     /// <summary>
@@ -125,5 +141,9 @@ public class ModuleAutoModelOption : MinimalApiModuleOptions<ModuleAutoModel>
     /// </summary>
     public bool EnableErrorForUnsupportedFieldTypes { get; set; }
 
+    /// <summary>
+    /// Prevents AutoModel from adding Monica's exception-handling module as a dependency.
+    /// Configure equivalent host exception handling when this option is enabled.
+    /// </summary>
     public bool DisableExceptionHandling { get; set; }
 }

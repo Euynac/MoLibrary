@@ -24,14 +24,14 @@ namespace Monica.Modules;
 
 public static class ModuleJobSchedulerBuilderExtensions
 {
-    extension(Mo)
+    extension(IMonicaBuilder builder)
     {
         /// <summary>
         /// Configure the JobScheduler module
         /// </summary>
-        public static ModuleJobSchedulerGuide AddJobScheduler(Action<ModuleJobSchedulerOption>? action = null)
+        public ModuleJobSchedulerGuide AddJobScheduler(Action<ModuleJobSchedulerOption>? action = null)
         {
-            return new ModuleJobSchedulerGuide().Register(action);
+            return builder.AddModule<ModuleJobScheduler, ModuleJobSchedulerOption, ModuleJobSchedulerGuide>(action);
         }
     }
 }
@@ -329,6 +329,13 @@ public class ModuleJobSchedulerGuide
 public class ModuleJobSchedulerOption : ModuleOptions<ModuleJobScheduler>
 {
     /// <summary>
+    /// Gets or sets the host-owned timezone used to evaluate recurring cron expressions and calculate upcoming runs.
+    /// The default is <see cref="TimeZoneInfo.Local"/>. Configure this per Monica host when scheduler semantics must use
+    /// a business timezone that differs from the operating system timezone.
+    /// </summary>
+    public TimeZoneInfo CronTimeZone { get; set; } = TimeZoneInfo.Local;
+
+    /// <summary>
     /// The scheduler scope key used to isolate persistence and events across environments.
     /// This value must be explicitly configured through <see cref="ModuleJobSchedulerGuide.UseSchedulerScope"/>.
     /// </summary>
@@ -336,7 +343,7 @@ public class ModuleJobSchedulerOption : ModuleOptions<ModuleJobScheduler>
 
     /// <summary>
     /// The project name used for job reconciliation and identification.
-    /// When not configured, JobScheduler uses the application defaults configured through <see cref="Mo.ConfigApplication"/>.
+    /// When not configured, JobScheduler uses the application defaults configured through <see cref="IMonicaBuilder.ConfigureApplication"/>.
     /// </summary>
     public string? ProjectName { get; set; }
 
@@ -345,7 +352,7 @@ public class ModuleJobSchedulerOption : ModuleOptions<ModuleJobScheduler>
     /// </summary>
     public string GetProjectName()
     {
-        return Mo.Application.ResolveProjectName(
+        return Application.ResolveProjectName(
             ProjectName,
             Assembly.GetEntryAssembly()?.GetName().Name);
     }

@@ -21,7 +21,7 @@ Every module follows a consistent pattern with four components in one `Module{Na
 | `Module{Name}` | Core module implementation inheriting from `ModuleBase` or `WebModuleBase` | `ModuleSignalR` |
 | `Module{Name}Option` | Configuration options for the module | `ModuleSignalROption` |
 | `Module{Name}Guide` | Configuration guide/builder for fluent API | `ModuleSignalRGuide` |
-| `Module{Name}BuilderExtensions` | Extension methods for `Mo` registration entry points | `ModuleSignalRBuilderExtensions` |
+| `Module{Name}BuilderExtensions` | Extensions for the host-bound `IMonicaBuilder` entry point | `ModuleSignalRBuilderExtensions` |
 
 ### ModuleKey Rules
 
@@ -49,7 +49,9 @@ DependsOnModule<ModuleLocalizationGuide>().Register()
 ```
 
 - For Monica project-local resources, keep the marker class and JSON files under the project root `Localization/` folder so resource namespace, embedded resource path, and validation tooling stay aligned.
-- Prefer constructor-injected `IStringLocalizer<TResource>` in modules' DI-created services, support classes, state classes, Razor components, pages, and dialogs. Use `LocalizationManager.Get/For` only when dependency injection is not available, such as static helpers, view-model computed properties created outside DI, or module registration/endpoint metadata that is built outside a service instance.
+- Prefer constructor-injected `IStringLocalizer<TResource>` in modules' DI-created services, support classes, state classes, Razor components, pages, and dialogs.
+- Monica localization must remain host-scoped. Never introduce ambient or static localization access. Static helpers and view models should accept an `IStringLocalizer` parameter or delegate display formatting to a cohesive formatter that receives one.
+- When generic resource lookup is genuinely required, inject `ILocalizationCatalog`. At application-composition boundaries such as endpoint metadata configuration, resolve `IStringLocalizer<TResource>` or `ILocalizationCatalog` from the current host's service provider and keep the resolved service within that host.
 - Preferred layout:
 
 ```text
@@ -71,20 +73,25 @@ Monica.{Project}/
 
 ## Module Registration
 
-Modules use a unified registration pattern:
+Modules use a unified, host-bound registration pattern:
 
 ```csharp
-// Basic registration with options
-Mo.Add{ModuleName}(options =>
-{
-    options.Property1 = value1;
-    options.Property2 = value2;
-});
+var builder = WebApplication.CreateBuilder(args);
 
-// With guide for fluent configuration
-Mo.Add{ModuleName}()
-    .GuideMethod1()
-    .GuideMethod2();
+builder.AddMonica(monica =>
+{
+    // Basic registration with options
+    monica.Add{ModuleName}(options =>
+    {
+        options.Property1 = value1;
+        options.Property2 = value2;
+    });
+
+    // Guide methods extend the same host-bound registration.
+    monica.Add{ModuleName}()
+        .GuideMethod1()
+        .GuideMethod2();
+});
 ```
 
 ### Module Dependencies
@@ -106,9 +113,9 @@ Dependencies are automatically registered when a module is added.
 ### Module State Ownership Rules
 
 - Keep `Module{Name}Option` focused on developer configuration. Do not use options objects as mutable runtime registries for discovered types, generated endpoints, caches, or other cross-phase state.
-- Do not put required shared runtime state in builder-extension local variables or closures inside `Mo.Add{ModuleName}(...)`. A module can be registered directly or transitively through `DependsOnModule(...).Register()`, and both paths must behave identically.
+- Do not put required shared runtime state in builder-extension local variables or closures inside `monica.Add{ModuleName}(...)`. A module can be registered directly or transitively through `DependsOnModule(...).Register()`, and both paths must behave identically.
 - If a module needs mutable state across registration phases such as `ConfigureServices`, `IterateBusinessTypes`, `PostConfigureServices`, MVC configuration, or endpoint mapping, create and own that state inside the module and expose the same instance through a module-owned singleton or internal registry service.
-- Do not hide required default services, middleware, endpoint mapping, or post-configuration in `Mo.Add{ModuleName}()` convenience methods by chaining extra guide calls after `Register(...)`. Direct registration and transitive dependency registration must share the same module-owned baseline behavior.
+- Do not hide required default services, middleware, endpoint mapping, or post-configuration in `monica.Add{ModuleName}()` convenience methods by chaining extra guide calls after `Register(...)`. Direct registration and transitive dependency registration must share the same module-owned baseline behavior.
 - If a module's built-in behavior needs a non-default phase order, model that order as module-owned lifecycle behavior instead of keeping the behavior in builder-entry-only guide methods.
 - When reviewing an existing module, treat builder-entry-only state as a design bug even if the direct registration path currently works.
 - `IBusinessTypeIterator` should almost always preserve the full incoming type stream. Use it for discovery side effects and enrichment, not for accidentally filtering later modules out of the host's business types. Only drop types when the module is explicitly intended to transform the downstream scan set.

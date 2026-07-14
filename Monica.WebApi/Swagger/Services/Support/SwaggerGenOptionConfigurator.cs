@@ -3,6 +3,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.OpenApi;
 using Monica.Modules;
+using Monica.Core.TypeDiscovery.Abstractions;
 using Monica.Tool.Extensions;
 using Monica.WebApi.Swagger.Extensions;
 using Swashbuckle.AspNetCore.SwaggerGen;
@@ -21,7 +22,8 @@ internal static class SwaggerGenOptionConfigurator
         SwaggerGenOptions options,
         ModuleSwaggerOption option,
         ILogger logger,
-        SwaggerDocumentCatalog documentCatalog)
+        SwaggerDocumentCatalog documentCatalog,
+        ITypeFinder typeFinder)
     {
         ConfigureDocuments(options, documentCatalog);
 
@@ -38,7 +40,7 @@ internal static class SwaggerGenOptionConfigurator
         // Best practice is to expose explicit DTO types instead of anonymous results.
         options.CustomSchemaIds(type => type.GetCleanFullName());
 
-        ConfigureXmlDocumentation(options, option, logger);
+        ConfigureXmlDocumentation(options, option, logger, typeFinder);
 
         if (option.UseAuth)
         {
@@ -61,14 +63,15 @@ internal static class SwaggerGenOptionConfigurator
     private static void ConfigureXmlDocumentation(
         SwaggerGenOptions options,
         ModuleSwaggerOption option,
-        ILogger logger)
+        ILogger logger,
+        ITypeFinder typeFinder)
     {
         if (option.DisableXmlDocumentation)
         {
             return;
         }
 
-        var xmlFilePaths = SwaggerXmlDocumentationFileResolver.Resolve(option, logger);
+        var xmlFilePaths = SwaggerXmlDocumentationFileResolver.Resolve(option, logger, typeFinder);
         if (option.DisableInheritDocFilter)
         {
             foreach (var filePath in xmlFilePaths)

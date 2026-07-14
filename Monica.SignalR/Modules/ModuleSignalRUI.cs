@@ -18,16 +18,16 @@ namespace Monica.Modules;
 /// </summary>
 public static class ModuleSignalRUIBuilderExtensions
 {
-    extension(Mo)
+    extension(IMonicaBuilder builder)
     {
         /// <summary>
         /// Registers the SignalR debug UI module and applies optional module configuration.
         /// </summary>
         /// <param name="action">Optional module option configuration delegate.</param>
         /// <returns>Returns the module guide used to continue SignalR UI registration.</returns>
-        public static ModuleSignalRUIGuide AddSignalRUI(Action<ModuleSignalRUIOption>? action = null)
+        public ModuleSignalRUIGuide AddSignalRUI(Action<ModuleSignalRUIOption>? action = null)
         {
-            return new ModuleSignalRUIGuide().Register(action);
+            return builder.AddModule<ModuleSignalRUI, ModuleSignalRUIOption, ModuleSignalRUIGuide>(action);
         }
     }
 }

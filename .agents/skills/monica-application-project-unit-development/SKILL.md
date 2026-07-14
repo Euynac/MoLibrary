@@ -20,13 +20,13 @@ Use this skill for unit-level application development in Monica-based DDD projec
 ## Ground Rules
 
 - Use Monica-native base classes and interfaces only. Do not introduce `Our*` wrappers or FIPS-specific conventions.
-- Follow the naming, placement, and boundary rules in [01-project-unit-naming-and-boundaries.md](references/01-project-unit-naming-and-boundaries.md). These rules are aligned with the current `Monica.Framework/ProjectUnits` discovery behavior.
+- Follow the naming, placement, and boundary rules in [01-project-unit-naming-and-boundaries.md](references/01-project-unit-naming-and-boundaries.md). These rules are aligned with the current `Monica.ProjectUnits` discovery behavior.
 - Keep persistence concerns in repositories and persistence classes, not in request handlers.
 - Keep repository implementations in the owning subdomain or service infrastructure boundary. Do not move a repository or adapter to `Platform` just because it uses an external library; only project-common reusable infrastructure belongs in `Platform`.
 - Keep contracts stable: requests, DTOs, and events are not persistence entities.
 - If a handler returns `Res<string>`, use `Res.Ok<string>(value)` instead of `Res.Ok(value)` to avoid the non-generic string overload.
 - For HTTP-exposed `ApplicationService` handlers, prefer the controller route pattern `api/{version}/{DomainName(PascalCase)}` and keep only the request-specific segment on the handler method, such as `GET api/v1/Documentation/tree`.
-- If host composition must consume a `Configuration` ProjectUnit during registration, register `Mo.AddConfiguration(...)` first and then call `Mo.RegisterInstantly(builder)` before the dependent registration code runs.
+- Register `monica.AddConfiguration()` inside `builder.AddMonica(...)`. Runtime consumers receive configuration ProjectUnits through `IOptions<T>`, `IOptionsSnapshot<T>`, or `IOptionsMonitor<T>`; composition code that needs bootstrap values reads `builder.Configuration` directly and passes explicit values into module options.
 
 ## Reference Navigation
 

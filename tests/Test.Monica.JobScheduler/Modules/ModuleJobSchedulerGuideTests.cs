@@ -1,9 +1,11 @@
 using AwesomeAssertions;
+using Microsoft.AspNetCore.Builder;
+using Microsoft.Extensions.DependencyInjection;
+using Monica.Core;
+using Monica.Core.Modularity.Exceptions;
+using Monica.Core.Modularity.Extensions;
 using Monica.Core.Modularity.Models;
-using Monica.Core.Modularity.Services;
-using Monica.Core.Modularity.Services.Support;
 using Monica.Modules;
-using Monica.UnitTests.Modularity;
 using Xunit;
 
 namespace Test.Monica.JobScheduler.Modules;
@@ -13,44 +15,44 @@ public class ModuleJobSchedulerGuideTests
     [Fact]
     public void Register_WhenRequiredMethodsAreMissing_ShouldReportAllMissingConfigurationKeys()
     {
-        using var scope = ModuleTestScope.Create(
-            typeof(ModuleJobScheduler).Assembly,
-            typeof(ModuleServiceDiscovery).Assembly);
+        var builder = WebApplication.CreateBuilder();
 
-        new ModuleJobSchedulerGuide().Register();
+        var act = () => builder.AddMonica(monica =>
+        {
+            monica.ConfigureTypeDiscovery(options =>
+            {
+                options.ExcludeDefault();
+                options.Add(typeof(ModuleJobScheduler).Assembly, typeof(ModuleServiceDiscovery).Assembly);
+            });
+            monica.AddJobScheduler();
+        });
 
-        ModuleRegistry.TryGetModuleRequestInfo(typeof(ModuleJobScheduler), out var registerState).Should().BeTrue();
-        registerState.Should().NotBeNull();
-        registerState!.GetMissingRequiredConfigMethodKeys().Should().BeEquivalentTo(
-            "CONFIG_PROVIDER",
-            "CONFIG_METADATA_STORE",
-            "CONFIG_SCOPE");
+        act.Should().Throw<ModuleRegistrationException>()
+            .WithMessage("*CONFIG_PROVIDER*CONFIG_METADATA_STORE*CONFIG_SCOPE*");
     }
 
     [Fact]
     public void Register_WhenAllRequiredMethodsAreConfigured_ShouldRecordRequestsAndDependencies()
     {
-        using var scope = ModuleTestScope.Create(
-            typeof(ModuleJobScheduler).Assembly,
-            typeof(ModuleServiceDiscovery).Assembly);
-
-        new ModuleJobSchedulerGuide()
-            .Register()
-            .UseSchedulerScope("job-tests")
-            .UseInMemoryProvider()
-            .UseInMemoryMetadataRepository();
-
-        new ModuleJobScheduler(new ModuleJobSchedulerOption
+        var builder = WebApplication.CreateBuilder();
+        builder.AddMonica(monica =>
         {
-            SchedulerScopeKey = "job-tests",
-            ProjectName = "Test.Project"
-        }).ClaimDependencies();
+            monica.ConfigureTypeDiscovery(options =>
+            {
+                options.ExcludeDefault();
+                options.Add(typeof(ModuleJobScheduler).Assembly, typeof(ModuleServiceDiscovery).Assembly);
+            });
+            monica.AddJobScheduler(options => options.ProjectName = "Test.Project")
+                .UseSchedulerScope("job-tests")
+                .UseInMemoryProvider()
+                .UseInMemoryMetadataRepository();
+        });
 
-        ModuleRegistry.TryGetModuleRequestInfo(typeof(ModuleJobScheduler), out var registerState).Should().BeTrue();
-        registerState.Should().NotBeNull();
-        registerState!.GetMissingRequiredConfigMethodKeys().Should().BeEmpty();
+        var application = (MonicaApplication)builder.Services
+            .Single(descriptor => descriptor.ServiceType == typeof(MonicaApplication))
+            .ImplementationInstance!;
 
-        var dependencies = ModuleDependencyAnalyzer.CalculateModuleDependencies(BuiltInModuleKey.JobScheduler);
+        var dependencies = application.Dependencies.CalculateModuleDependencies(BuiltInModuleKey.JobScheduler);
         dependencies.Should().Contain(BuiltInModuleKey.EventBus);
         dependencies.Should().Contain(BuiltInModuleKey.CancellationManager);
         dependencies.Should().Contain(BuiltInModuleKey.ServiceDiscovery);

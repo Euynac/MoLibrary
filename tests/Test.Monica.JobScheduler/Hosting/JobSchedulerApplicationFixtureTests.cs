@@ -2,6 +2,7 @@ using AwesomeAssertions;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
+using Monica.Core.Modularity.Abstractions;
 using Monica.EventBus.Abstractions;
 using Monica.JobScheduler.Abstractions;
 using Monica.JobScheduler.Facades;
@@ -19,10 +20,9 @@ public sealed class JobSchedulerApplicationFixture : MonicaApplicationFixture<Mo
     public const string SchedulerScope = "job-sociable-tests";
     private const string PROJECT_NAME = "Test.Monica.JobScheduler";
 
-    protected override void ConfigureModule(IHostApplicationBuilder builder)
+    protected override void ConfigureModule(IMonicaBuilder builder)
     {
-        new ModuleJobSchedulerGuide()
-            .Register(options =>
+        builder.AddJobScheduler(options =>
             {
                 options.ProjectName = PROJECT_NAME;
                 options.RecurringJobDebugMode = true;

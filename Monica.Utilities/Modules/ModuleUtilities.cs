@@ -46,16 +46,16 @@ public class ModuleUtilities(ModuleUtilitiesOption option)
 /// </summary>
 public static class ModuleUtilitiesBuilderExtensions
 {
-    extension(Mo)
+    extension(IMonicaBuilder builder)
     {
         /// <summary>
         /// Registers the utilities module that provides connectivity and text-processing services.
         /// </summary>
         /// <param name="action">Optional configuration applied to <see cref="ModuleUtilitiesOption" />.</param>
         /// <returns>The fluent guide used to continue module configuration.</returns>
-        public static ModuleUtilitiesGuide AddUtilities(Action<ModuleUtilitiesOption>? action = null)
+        public ModuleUtilitiesGuide AddUtilities(Action<ModuleUtilitiesOption>? action = null)
         {
-            return new ModuleUtilitiesGuide().Register(action);
+            return builder.AddModule<ModuleUtilities, ModuleUtilitiesOption, ModuleUtilitiesGuide>(action);
         }
     }
 }

@@ -1,6 +1,5 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using Monica.Core.Logging;
 using Monica.EventBus.Abstractions.Handlers;
 using Monica.EventBus.Annotations;
 using Monica.EventBus.Models;
@@ -15,25 +14,32 @@ namespace Monica.EventBus.Abstractions;
 /// </summary>
 public abstract class EventBusBase : IEventBus
 {
-    private readonly Lazy<ILogger> _loggerLazy;
-
+    /// <summary>
+    /// Initializes an event bus with host-owned subscriptions, scopes, and logging.
+    /// </summary>
+    /// <param name="serviceScopeFactory">Creates scopes for event handlers.</param>
+    /// <param name="eventHandlerInvoker">Invokes resolved event handlers.</param>
+    /// <param name="subscriptionManager">Owns this host's subscription catalog.</param>
+    /// <param name="loggerFactory">Creates the logger for the concrete event bus.</param>
+    /// <param name="serviceKey">An optional keyed-provider identifier.</param>
     protected EventBusBase(
         IServiceScopeFactory serviceScopeFactory,
         IEventHandlerInvoker eventHandlerInvoker,
         IEventSubscriptionRegistry subscriptionManager,
+        ILoggerFactory loggerFactory,
         string? serviceKey = null)
     {
         ServiceScopeFactory = serviceScopeFactory;
         EventHandlerInvoker = eventHandlerInvoker;
         SubscriptionManager = subscriptionManager;
         ServiceKey = serviceKey;
-        _loggerLazy = new Lazy<ILogger>(() => LogManager.For(GetType()));
+        Logger = loggerFactory.CreateLogger(GetType());
     }
 
     protected IServiceScopeFactory ServiceScopeFactory { get; }
     protected IEventHandlerInvoker EventHandlerInvoker { get; }
     protected IEventSubscriptionRegistry SubscriptionManager { get; }
-    protected ILogger Logger => _loggerLazy.Value;
+    protected ILogger Logger { get; }
     protected string? ServiceKey { get; }
 
     public IEventSubscriptionRegistry Subscriptions => SubscriptionManager;

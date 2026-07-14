@@ -81,10 +81,10 @@ Derive the module slug from the public module / registration name in kebab-case.
 
 Examples:
 
-- `Mo.AddConfiguration()` → `modules/configuration/`
-- `Mo.AddProjectUnits()` → `modules/project-units/`
-- `Mo.AddRAG()` → `modules/rag/`
-- `Mo.AddRAGUI()` → `modules/rag-ui/`
+- `monica.AddConfiguration()` → `modules/configuration/`
+- `monica.AddProjectUnits()` → `modules/project-units/`
+- `monica.AddRAG()` → `modules/rag/`
+- `monica.AddRAGUI()` → `modules/rag-ui/`
 
 Rules:
 

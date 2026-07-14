@@ -34,16 +34,16 @@
                         <MudText Typo="Typo.body2">@context.TopicName</MudText>
                     </MudTd>
                     <MudTd DataLabel="@L["SubscriptionTable:Columns:Handler"]">
-                        <MudText Typo="Typo.body2">@context.HandlerDisplay</MudText>
+                        <MudText Typo="Typo.body2">@L.GetHandlerDisplayText(context)</MudText>
                     </MudTd>
                     <MudTd DataLabel="@L["SubscriptionTable:Columns:Scope"]">
                         <MudChip T="string" Color="@context.ScopeColor" Size="Size.Small">
-                            @context.ScopeDisplay
+                            @L.GetSubscriptionScopeText(context.Scope)
                         </MudChip>
                     </MudTd>
                     <MudTd DataLabel="@L["SubscriptionTable:Columns:State"]">
                         <MudChip T="string" Color="@context.StateColor" Size="Size.Small">
-                            @context.StateDisplay
+                            @L.GetSubscriptionStateText(context.State)
                         </MudChip>
                     </MudTd>
                 </RowTemplate>

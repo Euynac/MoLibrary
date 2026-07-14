@@ -16,8 +16,8 @@ namespace Monica.WebApi.AutoControllers.Services.Support;
 /// <see cref="CrudControllerOption.CrudControllerPostfix"/> is not a registration filter; it is used only to derive the
 /// route name. As a diagnostic aid this provider logs an error when a registered CRUD service does not end with that
 /// suffix (its route name would then be left unstripped), but it still registers the controller. Successful matches are
-/// not logged to keep startup output quiet. Naming-convention enforcement itself lives in the project-unit system
-/// (Monica.Framework).
+/// not logged to keep startup output quiet. Naming-convention enforcement itself lives in the
+/// <c>Monica.ProjectUnits</c> package.
 /// </remarks>
 /// <param name="logger">Logger used to report controllers whose name does not match the route suffix.</param>
 /// <param name="options">CRUD controller options.</param>

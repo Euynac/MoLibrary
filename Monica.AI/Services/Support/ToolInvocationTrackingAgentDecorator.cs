@@ -9,7 +9,8 @@ namespace Monica.AI.Services.Support;
 /// Emits synthetic streaming updates for function calls and results so the UI can observe tool activity.
 /// </summary>
 internal sealed class ToolInvocationTrackingAgentDecorator(
-    ILogger<ToolInvocationTrackingAgentDecorator> logger)
+    ILogger<ToolInvocationTrackingAgentDecorator> logger,
+    AgentResponseUpdateChannelContext updateChannelContext)
     : IAIChatAgentDecorator
 {
     /// <inheritdoc />
@@ -117,7 +118,7 @@ internal sealed class ToolInvocationTrackingAgentDecorator(
         return new FunctionCallContent(callId, name, arguments);
     }
 
-    private static AgentResponseUpdateChannel? ResolveUpdateChannel(
+    private AgentResponseUpdateChannel? ResolveUpdateChannel(
         AdditionalPropertiesDictionary? additionalProperties)
     {
         if (additionalProperties is not null
@@ -126,6 +127,6 @@ internal sealed class ToolInvocationTrackingAgentDecorator(
             return updateChannel;
         }
 
-        return AgentResponseUpdateChannelContext.Current;
+        return updateChannelContext.Current;
     }
 }

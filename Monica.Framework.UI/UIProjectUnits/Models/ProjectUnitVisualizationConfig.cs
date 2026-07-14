@@ -1,4 +1,4 @@
-using Monica.Framework.ProjectUnits.Models;
+using Monica.ProjectUnits.Models;
 using MudBlazor;
 
 namespace Monica.Framework.UI.UIProjectUnits.Models;

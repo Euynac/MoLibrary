@@ -19,12 +19,15 @@
 ```csharp
 var builder = WebApplication.CreateBuilder(args);
 
-// 配置分布式取消令牌管理器模块
-Mo.AddCancellationManager(options =>
+builder.AddMonica(monica =>
 {
-    options.PollingIntervalMs = 2000; // 设置轮询间隔为2秒
-    options.EnableVerboseLogging = true; // 启用详细日志
-    options.StateTtl = TimeSpan.FromHours(48); // 设置状态TTL为48小时
+    monica.AddCancellationManager(options =>
+    {
+        options.UseDistributed = true;
+        options.PollingIntervalMs = 2000;
+        options.EnableVerboseLogging = true;
+        options.StateTtl = TimeSpan.FromHours(48);
+    });
 });
 
 var app = builder.Build();
@@ -150,4 +153,4 @@ public class CommandHandlerTriggerRPLGen
 2. **及时清理资源**: 任务完成后调用 `DeleteTokenAsync` 清理资源
 3. **异常处理**: 总是处理 `OperationCanceledException`
 4. **日志记录**: 在关键操作点添加适当的日志记录
-5. **性能考虑**: 对于高频操作，考虑使用本地缓存策略 
+5. **性能考虑**: 对于高频操作，考虑使用本地缓存策略

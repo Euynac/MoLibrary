@@ -1,0 +1,48 @@
+using Monica.Core.TypeDiscovery.Models;
+
+namespace Monica.Core.Modularity.Abstractions;
+
+/// <summary>
+/// Composes the Monica module graph for one host application.
+/// </summary>
+/// <remarks>
+/// A builder instance is valid only inside the callback passed to <c>AddMonica</c>.
+/// Module registration and configuration are recorded first, then validated and applied to the owning host.
+/// </remarks>
+public interface IMonicaBuilder
+{
+    /// <summary>
+    /// Configures application identity defaults shared by modules in this host.
+    /// </summary>
+    /// <param name="configure">The application configuration callback.</param>
+    /// <returns>The current Monica builder.</returns>
+    IMonicaBuilder ConfigureApplication(Action<MonicaApplicationOptions> configure);
+
+    /// <summary>
+    /// Configures module-system behavior shared by modules in this host.
+    /// </summary>
+    /// <param name="configure">The module-system configuration callback.</param>
+    /// <returns>The current Monica builder.</returns>
+    IMonicaBuilder ConfigureModuleSystem(Action<MonicaModuleSystemOptions> configure);
+
+    /// <summary>
+    /// Replaces the host's business-type discovery configuration.
+    /// </summary>
+    /// <param name="configure">An optional callback that customizes type discovery.</param>
+    /// <returns>The current Monica builder.</returns>
+    IMonicaBuilder ConfigureTypeDiscovery(Action<TypeFinderOptions>? configure = null);
+
+    /// <summary>
+    /// Registers one module in the current host-bound module graph.
+    /// </summary>
+    /// <typeparam name="TModule">The module implementation type.</typeparam>
+    /// <typeparam name="TModuleOption">The module option type.</typeparam>
+    /// <typeparam name="TModuleGuide">The module guide type.</typeparam>
+    /// <param name="configure">An optional callback that configures the module options.</param>
+    /// <returns>A context-bound guide for additional fluent configuration.</returns>
+    TModuleGuide AddModule<TModule, TModuleOption, TModuleGuide>(
+        Action<TModuleOption>? configure = null)
+        where TModuleOption : ModuleOptions<TModule>, new()
+        where TModuleGuide : ModuleGuide<TModule, TModuleOption, TModuleGuide>, new()
+        where TModule : ModuleBase<TModule, TModuleOption, TModuleGuide>;
+}

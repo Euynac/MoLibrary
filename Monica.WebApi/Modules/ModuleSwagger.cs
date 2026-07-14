@@ -24,7 +24,11 @@ public class ModuleSwagger(ModuleSwaggerOption option) : WebModuleBase<ModuleSwa
         app.UseSwagger();
         app.UseSwaggerUI(swaggerUiOptions =>
         {
-            SwaggerUIOptionConfigurator.Configure(swaggerUiOptions, Option, GetDocumentCatalog());
+            SwaggerUIOptionConfigurator.Configure(
+                swaggerUiOptions,
+                Option,
+                GetDocumentCatalog(),
+                Application.Application);
         });
     }
 
@@ -32,26 +36,31 @@ public class ModuleSwagger(ModuleSwaggerOption option) : WebModuleBase<ModuleSwa
     {
         services.AddSwaggerGen(swaggerGenOptions =>
         {
-            SwaggerGenOptionConfigurator.Configure(swaggerGenOptions, Option, Logger, GetDocumentCatalog());
+            SwaggerGenOptionConfigurator.Configure(
+                swaggerGenOptions,
+                Option,
+                Logger,
+                GetDocumentCatalog(),
+                Application.TypeFinder);
         });
     }
 
     private SwaggerDocumentCatalog GetDocumentCatalog()
     {
-        return _documentCatalog ??= new SwaggerDocumentCatalog(Option, Logger);
+        return _documentCatalog ??= new SwaggerDocumentCatalog(Option, Application.Application, Logger);
     }
 }
 
 public static class ModuleSwaggerBuilderExtensions
 {
-    extension(Mo)
+    extension(IMonicaBuilder builder)
     {
         /// <summary>
         /// Registers and configures the Swagger module.
         /// </summary>
-        public static ModuleSwaggerGuide AddSwagger(Action<ModuleSwaggerOption>? action = null)
+        public ModuleSwaggerGuide AddSwagger(Action<ModuleSwaggerOption>? action = null)
         {
-            return new ModuleSwaggerGuide().Register(action);
+            return builder.AddModule<ModuleSwagger, ModuleSwaggerOption, ModuleSwaggerGuide>(action);
         }
     }
 }
@@ -74,7 +83,7 @@ public class ModuleSwaggerOption : ModuleOptions<ModuleSwagger>
 
     /// <summary>
     /// Application name used by the Swagger UI title and the default business document title.
-    /// When not configured, Swagger uses the application defaults configured through <see cref="Mo.ConfigApplication"/>.
+    /// When not configured, Swagger uses the application defaults configured through <see cref="IMonicaBuilder.ConfigureApplication"/>.
     /// </summary>
     public string? AppName { get; set; }
 

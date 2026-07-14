@@ -1,6 +1,4 @@
-using Monica.Core.Localization.Services;
 using Monica.EventBus.Models;
-using Monica.Framework.UI.Localization;
 using MudBlazor;
 
 namespace Monica.Framework.UI.UIEventBus.Models;
@@ -14,11 +12,6 @@ public class SubscriptionChangeViewModel
     /// Change type
     /// </summary>
     public EventSubscriptionChangeType ChangeType { get; set; }
-
-    /// <summary>
-    /// Change type display text
-    /// </summary>
-    public string ChangeTypeDisplay => LocalizationManager.For<EventBusResource>().GetSubscriptionChangeTypeText(ChangeType);
 
     /// <summary>
     /// The color corresponding to the change type
@@ -64,14 +57,4 @@ public class SubscriptionChangeViewModel
     /// </summary>
     public string FullTimestampDisplay => Timestamp.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss.fff");
 
-    /// <summary>
-    /// Relative time display (eg: "2 minutes ago")
-    /// </summary>
-    public string RelativeTimeDisplay
-    {
-        get
-        {
-            return LocalizationManager.For<EventBusResource>().FormatEventBusRelativeTime(Timestamp);
-        }
-    }
 }

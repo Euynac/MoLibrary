@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <PackageType>Template</PackageType>
+    <PackageDescription>Official dotnet new templates for starting observable Monica applications.</PackageDescription>
+    <PackageTags>monica;dotnet-new;template;aspnetcore;opentelemetry</PackageTags>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <IncludeContentInPack>true</IncludeContentInPack>
+    <IncludeBuildOutput>false</IncludeBuildOutput>
+    <IncludeSymbols>false</IncludeSymbols>
+    <SuppressDependenciesWhenPacking>true</SuppressDependenciesWhenPacking>
+    <ContentTargetFolders>content</ContentTargetFolders>
+    <NoDefaultExcludes>true</NoDefaultExcludes>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Remove="templates/**/*.cs" />
+    <Content Include="templates/**/*" Exclude="templates/**/bin/**;templates/**/obj/**" Pack="true" PackagePath="content" />
+    <None Remove="templates/**/*" />
+    <None Update="README.md" Pack="true" PackagePath="/" />
+  </ItemGroup>
+
+</Project>

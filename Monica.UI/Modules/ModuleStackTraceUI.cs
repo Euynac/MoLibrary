@@ -12,14 +12,14 @@ namespace Monica.Modules;
 
 public static class ModuleStackTraceUIBuilderExtensions
 {
-    extension(Mo)
+    extension(IMonicaBuilder builder)
     {
         /// <summary>
         /// Configures the stack trace UI module.
         /// </summary>
-        public static ModuleStackTraceUIGuide AddStackTraceUI(Action<ModuleStackTraceUIOption>? action = null)
+        public ModuleStackTraceUIGuide AddStackTraceUI(Action<ModuleStackTraceUIOption>? action = null)
         {
-            return new ModuleStackTraceUIGuide().Register(action);
+            return builder.AddModule<ModuleStackTraceUI, ModuleStackTraceUIOption, ModuleStackTraceUIGuide>(action);
         }
     }
 }

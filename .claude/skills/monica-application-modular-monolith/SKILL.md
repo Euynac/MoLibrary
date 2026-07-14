@@ -29,7 +29,7 @@ Use this skill to structure a Monica application solution as a modular monolith 
 - Keep repository implementations and `DbContext`-related files in `Repository/`, and keep pure helper code in `Utilities/` with `Utils*` names.
 - When a domain exposes `ApplicationService` HTTP endpoints through default routing, keep one assembly-level `AutoControllerConfig(DefaultRoutePrefix = "api/v1", DomainName = "{Subdomain}")` file in the domain project root instead of repeating class-level `Route` attributes on every handler.
 - AppHost entry projects are composition-only entry points. Keep them down to the project file and `Program.cs`; do not place business ProjectUnits there.
-- When AppHost composition needs a `Configuration` ProjectUnit during registration, register `Mo.AddConfiguration(...)` first and call `Mo.RegisterInstantly(builder)` before later registrations depend on those options.
+- Register `monica.AddConfiguration()` inside the AppHost's single `builder.AddMonica(...)` callback. Read bootstrap values from `builder.Configuration` during composition; consume Configuration ProjectUnits through typed options injection at runtime.
 - Keep `.slnx` solution folders aligned with the physical layout under `src/AppHost`, `src/Shared`, and `src/Domains`.
 - Treat the modular monolith as one deployment, not as hidden microservices in the same repository.
 

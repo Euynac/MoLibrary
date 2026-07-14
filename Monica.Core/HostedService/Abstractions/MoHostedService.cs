@@ -1,9 +1,7 @@
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-
 using Monica.Core.HostedService.Models;
-using Monica.Core.Logging;
 using Monica.Core.ObservableInstance.Abstractions;
 using Monica.Core.ObservableInstance.Models;
 using Monica.Modules;
@@ -16,21 +14,28 @@ namespace Monica.Core.HostedService.Abstractions;
 /// </summary>
 public abstract class MoHostedService : IHostedService, IMoHostedService
 {
-    private readonly Lazy<ILogger> _loggerLazy;
+    private readonly ILogger _logger;
     private readonly ModuleHostedServiceOption _options;
     private readonly IObservableInstanceRegistry _observableManager;
     private HostedServiceRuntimeInfo? _runtimeInfo;
 
-    public MoHostedService(
+    /// <summary>
+    /// Initializes an observable hosted service with dependencies owned by the current host.
+    /// </summary>
+    /// <param name="observableManager">The registry used to expose service state.</param>
+    /// <param name="options">The shared hosted-service options.</param>
+    /// <param name="logger">The logger for the concrete hosted service.</param>
+    protected MoHostedService(
         IObservableInstanceRegistry observableManager,
-        IOptions<ModuleHostedServiceOption> options)
+        IOptions<ModuleHostedServiceOption> options,
+        ILogger logger)
     {
         _observableManager = observableManager;
         _options = options.Value;
-        _loggerLazy = new Lazy<ILogger>(() => LogManager.For(GetType()));
+        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
-    protected ILogger Logger => _loggerLazy.Value;
+    protected ILogger Logger => _logger;
 
     // IMoHostedService implementation
 

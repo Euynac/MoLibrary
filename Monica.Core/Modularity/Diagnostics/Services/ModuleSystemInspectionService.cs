@@ -12,7 +12,7 @@ namespace Monica.Core.Modularity.Diagnostics.Services;
 /// Default implementation of <see cref="IModuleSystemInspectionService"/>.
 /// Provides status, performance, and dependency information for dashboards and monitoring.
 /// </summary>
-public class ModuleSystemInspectionService : IModuleSystemInspectionService
+public sealed class ModuleSystemInspectionService(MonicaApplication application) : IModuleSystemInspectionService
 {
     /// <summary>
     /// Gets the overall module system status.
@@ -20,24 +20,24 @@ public class ModuleSystemInspectionService : IModuleSystemInspectionService
     /// <returns>The system status.</returns>
     public ModuleSystemStatus GetSystemStatus()
     {
-        var enabledModules = ModuleRegistry.ModuleSnapshots.Count;
-        var disabledModules = ModuleStateRegistry.GetDisabledModuleTypes().Count;
+        var enabledModules = application.Modules.RuntimeSnapshots.Count;
+        var disabledModules = application.ModuleStates.GetDisabledModuleTypes().Count;
         var totalModules = enabledModules + disabledModules;
-        var errorModules = ModuleRegistry.ModuleRegisterErrors.Count;
+        var errorModules = application.Modules.RegistrationErrors.Count;
 
-        var hasCircularDependencies = ModuleDependencyAnalyzer.HasCircularDependencies();
-        var hasRegistrationErrors = ModuleRegistry.ModuleRegisterErrors.Count > 0;
+        var hasCircularDependencies = application.Dependencies.HasCircularDependencies();
+        var hasRegistrationErrors = application.Modules.RegistrationErrors.Count > 0;
 
         var state = DetermineSystemState(enabledModules, errorModules, hasCircularDependencies);
 
         return new ModuleSystemStatus
         {
-            IsInitialized = ModuleRegistry.ModuleSnapshots.Count > 0,
+            IsInitialized = application.Modules.RuntimeSnapshots.Count > 0,
             TotalModules = totalModules,
             EnabledModules = enabledModules,
             DisabledModules = disabledModules,
             ErrorModules = errorModules,
-            TotalInitializationTimeMs = ModuleInitializationProfiler.GetTotalElapsedMilliseconds(),
+            TotalInitializationTimeMs = application.Profiling.GetTotalElapsedMilliseconds(),
             State = state,
             HasCircularDependencies = hasCircularDependencies,
             HasRegistrationErrors = hasRegistrationErrors
@@ -50,7 +50,7 @@ public class ModuleSystemInspectionService : IModuleSystemInspectionService
     /// <returns>The performance snapshot.</returns>
     public ModuleSystemPerformance GetSystemPerformance()
     {
-        var phaseDurations = ModuleInitializationProfiler.GetPhaseDurations();
+        var phaseDurations = application.Profiling.GetPhaseDurations();
         var phasePerformances = new List<PhasePerformanceInfo>();
         
         var order = 0;
@@ -67,9 +67,9 @@ public class ModuleSystemInspectionService : IModuleSystemInspectionService
         var modulePerformances = new List<ModulePerformanceInfo>();
         var slowestModules = new List<ModulePerformanceInfo>();
 
-        foreach (var snapshot in ModuleRegistry.ModuleSnapshots)
+        foreach (var snapshot in application.Modules.RuntimeSnapshots)
         {
-            var profile = ModuleInitializationProfiler.GetModuleProfile(snapshot.ModuleType);
+            var profile = application.Profiling.GetModuleProfile(snapshot.ModuleType);
             if (profile != null)
             {
                 var modulePerf = new ModulePerformanceInfo
@@ -95,7 +95,7 @@ public class ModuleSystemInspectionService : IModuleSystemInspectionService
 
         return new ModuleSystemPerformance
         {
-            TotalSystemInitializationTimeMs = ModuleInitializationProfiler.GetTotalElapsedMilliseconds(),
+            TotalSystemInitializationTimeMs = application.Profiling.GetTotalElapsedMilliseconds(),
             PhasePerformances = phasePerformances,
             ModulePerformances = modulePerformances,
             SlowestModules = slowestModules,
@@ -118,7 +118,7 @@ public class ModuleSystemInspectionService : IModuleSystemInspectionService
         var modulesByOrder = new Dictionary<int, ModuleBasicInfo>();
 
         // Build the enabled-module list from runtime snapshots.
-        foreach (var snapshot in ModuleRegistry.ModuleSnapshots.OrderBy(s => s.RegisterInfo.Order))
+        foreach (var snapshot in application.Modules.RuntimeSnapshots.OrderBy(s => s.RegisterInfo.Order))
         {
             var basicInfo = CreateModuleBasicInfo(snapshot);
             enabledModules.Add(basicInfo);
@@ -126,10 +126,10 @@ public class ModuleSystemInspectionService : IModuleSystemInspectionService
         }
 
         // Build the disabled-module list from the module manager.
-        var disabledModuleTypes = ModuleStateRegistry.GetDisabledModuleTypes();
+        var disabledModuleTypes = application.ModuleStates.GetDisabledModuleTypes();
         foreach (var moduleType in disabledModuleTypes)
         {
-            var moduleKey = ModuleDependencyAnalyzer.ResolveModuleKey(moduleType);
+            var moduleKey = application.Dependencies.ResolveModuleKey(moduleType);
 
             var basicInfo = new ModuleBasicInfo
             {
@@ -138,7 +138,7 @@ public class ModuleSystemInspectionService : IModuleSystemInspectionService
                 ModuleKey = moduleKey,
                 Order = int.MaxValue, // Disabled modules do not participate in registration ordering.
                 Status = ModulePhase.Disabled,
-                Dependencies = ModuleDependencyAnalyzer.ModuleDependencyMap.TryGetValue(moduleKey, out var deps)
+                Dependencies = application.Dependencies.DependenciesByModule.TryGetValue(moduleKey, out var deps)
                     ? [.. deps]
                     : [],
                 InitializationTimeMs = 0,
@@ -182,7 +182,7 @@ public class ModuleSystemInspectionService : IModuleSystemInspectionService
     /// <returns>The module details, or `null` if the module does not exist.</returns>
     public ModuleDetailInfo? GetModuleDetail(Type moduleType)
     {
-        var snapshot = ModuleRegistry.ModuleSnapshots.FirstOrDefault(s => s.ModuleType == moduleType);
+        var snapshot = application.Modules.RuntimeSnapshots.FirstOrDefault(s => s.ModuleType == moduleType);
         if (snapshot == null)
         {
             return null;
@@ -198,7 +198,7 @@ public class ModuleSystemInspectionService : IModuleSystemInspectionService
     /// <returns>The module details, or `null` if the module does not exist.</returns>
     public ModuleDetailInfo? GetModuleDetail(ModuleKey moduleKey)
     {
-        var snapshot = ModuleRegistry.ModuleSnapshots.FirstOrDefault(s => s.ModuleKey == moduleKey);
+        var snapshot = application.Modules.RuntimeSnapshots.FirstOrDefault(s => s.ModuleKey == moduleKey);
         if (snapshot == null)
         {
             return null;
@@ -213,8 +213,8 @@ public class ModuleSystemInspectionService : IModuleSystemInspectionService
     /// <returns>The dependency graph.</returns>
     public ModuleDependencyGraph GetDependencyGraph()
     {
-        var graph = ModuleDependencyAnalyzer.CalculateCompleteModuleDependencyGraph();
-        var moduleSnapshotsByKey = ModuleRegistry.ModuleSnapshots.ToDictionary(snapshot => snapshot.ModuleKey);
+        var graph = application.Dependencies.CalculateCompleteModuleDependencyGraph();
+        var moduleSnapshotsByKey = application.Modules.RuntimeSnapshots.ToDictionary(snapshot => snapshot.ModuleKey);
         var nodes = new List<ModuleDependencyNode>();
         var edges = new List<ModuleDependencyEdge>();
         var edgeKeys = new HashSet<(ModuleKey Source, ModuleKey Target, DependencyType Type)>();
@@ -222,22 +222,22 @@ public class ModuleSystemInspectionService : IModuleSystemInspectionService
         // Create graph nodes.
         foreach (var moduleKey in graph.Nodes)
         {
-            var moduleType = ModuleDependencyAnalyzer.ModuleKeyToTypeDict.GetValueOrDefault(moduleKey);
+            var moduleType = application.Dependencies.ModuleTypesByKey.GetValueOrDefault(moduleKey);
             moduleSnapshotsByKey.TryGetValue(moduleKey, out var snapshot);
 
-            var isEnabled = moduleType != null && !ModuleStateRegistry.IsModuleDisabled(moduleType);
+            var isEnabled = moduleType != null && !application.ModuleStates.IsModuleDisabled(moduleType);
             var status = GetModuleStatus(moduleKey, moduleType);
             var isWebModule = snapshot?.IsWebModule
                 ?? (moduleType != null && typeof(IWebModule).IsAssignableFrom(moduleType));
             var isDowngradedFromWebModule = snapshot?.IsDowngradedFromWebModule ?? false;
 
-            var dependencies = ModuleDependencyAnalyzer.CalculateModuleDependencies(moduleKey);
-            var directDeps = ModuleDependencyAnalyzer.ModuleDependencyMap.TryGetValue(moduleKey, out var directDependencies)
+            var dependencies = application.Dependencies.CalculateModuleDependencies(moduleKey);
+            var directDeps = application.Dependencies.DependenciesByModule.TryGetValue(moduleKey, out var directDependencies)
                 ? directDependencies.Count
                 : 0;
 
-            var dependentCount = ModuleDependencyAnalyzer.ModuleDependencyMap.Values.Count(deps => deps.Contains(moduleKey));
-            var cyclePath = ModuleDependencyAnalyzer.FindCycleInvolvingModule(moduleKey);
+            var dependentCount = application.Dependencies.DependenciesByModule.Values.Count(deps => deps.Contains(moduleKey));
+            var cyclePath = application.Dependencies.FindCycleInvolvingModule(moduleKey);
 
             nodes.Add(new ModuleDependencyNode
             {
@@ -261,7 +261,7 @@ public class ModuleSystemInspectionService : IModuleSystemInspectionService
         // Create graph edges, including transitive dependencies.
         foreach (var source in graph.Nodes)
         {
-            var dependencyInfo = ModuleDependencyAnalyzer.GetModuleDependencyInfo(source);
+            var dependencyInfo = application.Dependencies.GetModuleDependencyInfo(source);
 
             foreach (var target in dependencyInfo.DirectDependencies)
             {
@@ -364,12 +364,12 @@ public class ModuleSystemInspectionService : IModuleSystemInspectionService
     /// </summary>
     public TypeFinderAssemblyAnalysis GetAssemblyAnalysis()
     {
-        return Mo.TypeFinder.GetAssemblyAnalysis();
+        return application.TypeFinder.GetAssemblyAnalysis();
     }
 
     #region Private Helpers
 
-    private static ModuleSystemState DetermineSystemState(int enabledModules, int errorModules, bool hasCircularDependencies)
+    private ModuleSystemState DetermineSystemState(int enabledModules, int errorModules, bool hasCircularDependencies)
     {
         if (errorModules > 0 || hasCircularDependencies)
         {
@@ -384,7 +384,7 @@ public class ModuleSystemInspectionService : IModuleSystemInspectionService
         return ModuleSystemState.Initialized;
     }
 
-    private static List<ConfigMethodStatistics> CalculateConfigMethodStatistics(List<ModulePerformanceInfo> modulePerformances)
+    private List<ConfigMethodStatistics> CalculateConfigMethodStatistics(List<ModulePerformanceInfo> modulePerformances)
     {
         var configMethodStats = new List<ConfigMethodStatistics>();
         var allPhases = Enum.GetValues<ModulePhase>();
@@ -417,14 +417,14 @@ public class ModuleSystemInspectionService : IModuleSystemInspectionService
         return configMethodStats;
     }
 
-    private static ModuleBasicInfo CreateModuleBasicInfo(ModuleRuntimeSnapshot snapshot)
+    private ModuleBasicInfo CreateModuleBasicInfo(ModuleRuntimeSnapshot snapshot)
     {
         var moduleKey = snapshot.ModuleKey;
-        var dependencies = ModuleDependencyAnalyzer.ModuleDependencyMap.TryGetValue(moduleKey, out var deps)
+        var dependencies = application.Dependencies.DependenciesByModule.TryGetValue(moduleKey, out var deps)
             ? deps.ToList()
             : [];
 
-        var hasErrors = ModuleRegistry.ModuleRegisterErrors.Any(e => e.ModuleType == snapshot.ModuleType);
+        var hasErrors = application.Modules.RegistrationErrors.Any(e => e.ModuleType == snapshot.ModuleType);
 
         return new ModuleBasicInfo
         {
@@ -442,11 +442,11 @@ public class ModuleSystemInspectionService : IModuleSystemInspectionService
         };
     }
 
-    private static ModuleDetailInfo CreateModuleDetailInfo(ModuleRuntimeSnapshot snapshot)
+    private ModuleDetailInfo CreateModuleDetailInfo(ModuleRuntimeSnapshot snapshot)
     {
         var basicInfo = CreateModuleBasicInfo(snapshot);
 
-        var profile = ModuleInitializationProfiler.GetModuleProfile(snapshot.ModuleType);
+        var profile = application.Profiling.GetModuleProfile(snapshot.ModuleType);
         var performanceInfo = new ModulePerformanceInfo
         {
             ModuleTypeName = snapshot.ModuleType.Name,
@@ -456,7 +456,7 @@ public class ModuleSystemInspectionService : IModuleSystemInspectionService
         };
 
         var moduleKey = snapshot.ModuleKey;
-        var dependencyInfo = ModuleDependencyAnalyzer.GetModuleDependencyInfo(moduleKey);
+        var dependencyInfo = application.Dependencies.GetModuleDependencyInfo(moduleKey);
 
         var configInfo = new ModuleConfigInfo
         {
@@ -471,7 +471,7 @@ public class ModuleSystemInspectionService : IModuleSystemInspectionService
 
         var executionHistory = new List<ModulePhaseExecution>(); // This may later be populated from concrete execution history.
 
-        var errors = ModuleRegistry.ModuleRegisterErrors
+        var errors = application.Modules.RegistrationErrors
             .Where(e => e.ModuleType == snapshot.ModuleType)
             .Select(e => new ModuleErrorInfo
             {
@@ -493,7 +493,7 @@ public class ModuleSystemInspectionService : IModuleSystemInspectionService
         };
     }
 
-    private static List<ModuleConfiguredOption> CreateConfiguredOptions(ModuleRegistrationState registerInfo)
+    private List<ModuleConfiguredOption> CreateConfiguredOptions(ModuleRegistrationState registerInfo)
     {
         return registerInfo.FinalConfigures
             .Where(static entry => typeof(IModuleOptionsBase).IsAssignableFrom(entry.Key))
@@ -508,31 +508,31 @@ public class ModuleSystemInspectionService : IModuleSystemInspectionService
             .ToList();
     }
 
-    private static ModulePhase GetModuleStatus(ModuleKey moduleKey, Type? moduleType)
+    private ModulePhase GetModuleStatus(ModuleKey moduleKey, Type? moduleType)
     {
-        if (moduleType == null || ModuleStateRegistry.IsModuleDisabled(moduleType))
+        if (moduleType == null || application.ModuleStates.IsModuleDisabled(moduleType))
         {
             return ModulePhase.Disabled;
         }
 
-        var snapshot = ModuleRegistry.ModuleSnapshots.FirstOrDefault(s => s.ModuleKey == moduleKey);
+        var snapshot = application.Modules.RuntimeSnapshots.FirstOrDefault(s => s.ModuleKey == moduleKey);
         return snapshot?.RegisterInfo.ModulePhase ?? ModulePhase.None;
     }
 
-    private static int CalculateModuleLayer(ModuleKey moduleKey)
+    private int CalculateModuleLayer(ModuleKey moduleKey)
     {
         // Use dependency count as the graph layer.
-        var dependencies = ModuleDependencyAnalyzer.CalculateModuleDependencies(moduleKey);
+        var dependencies = application.Dependencies.CalculateModuleDependencies(moduleKey);
         return dependencies.Count;
     }
 
-    private static DependencyType DetermineEdgeType(ModuleKey source, ModuleKey target)
+    private DependencyType DetermineEdgeType(ModuleKey source, ModuleKey target)
     {
         // Check whether the edge is a direct dependency.
-        if (ModuleDependencyAnalyzer.ModuleDependencyMap.TryGetValue(source, out var directDeps) && directDeps.Contains(target))
+        if (application.Dependencies.DependenciesByModule.TryGetValue(source, out var directDeps) && directDeps.Contains(target))
         {
             // Distinguish direct edges that also participate in a cycle.
-            var cyclePath = ModuleDependencyAnalyzer.FindCycleInvolvingModule(source);
+            var cyclePath = application.Dependencies.FindCycleInvolvingModule(source);
             if (cyclePath.Contains(target))
             {
                 return DependencyType.Circular;
@@ -543,27 +543,27 @@ public class ModuleSystemInspectionService : IModuleSystemInspectionService
         return DependencyType.Transitive;
     }
 
-    private static bool IsEdgePartOfCycle(ModuleKey source, ModuleKey target)
+    private bool IsEdgePartOfCycle(ModuleKey source, ModuleKey target)
     {
-        var sourceCycle = ModuleDependencyAnalyzer.FindCycleInvolvingModule(source);
-        var targetCycle = ModuleDependencyAnalyzer.FindCycleInvolvingModule(target);
+        var sourceCycle = application.Dependencies.FindCycleInvolvingModule(source);
+        var targetCycle = application.Dependencies.FindCycleInvolvingModule(target);
         return sourceCycle.Count > 0 && targetCycle.Count > 0 &&
                sourceCycle.Contains(target) && targetCycle.Contains(source);
     }
 
-    private static List<List<ModuleKey>> FindAllCircularPaths()
+    private List<List<ModuleKey>> FindAllCircularPaths()
     {
         var circularPaths = new List<List<ModuleKey>>();
         var processedModules = new HashSet<ModuleKey>();
 
-        foreach (var module in ModuleDependencyAnalyzer.ModuleDependencyMap.Keys)
+        foreach (var module in application.Dependencies.DependenciesByModule.Keys)
         {
             if (processedModules.Contains(module)) continue;
 
-            var cyclePath = ModuleDependencyAnalyzer.FindCycleInvolvingModule(module);
+            var cyclePath = application.Dependencies.FindCycleInvolvingModule(module);
             if (cyclePath.Count > 0)
             {
-                circularPaths.Add(cyclePath);
+                circularPaths.Add([.. cyclePath]);
                 processedModules.UnionWith(cyclePath);
             }
         }
@@ -571,7 +571,7 @@ public class ModuleSystemInspectionService : IModuleSystemInspectionService
         return circularPaths;
     }
 
-    private static Dictionary<int, List<ModuleKey>> CalculateModuleLayers(List<ModuleDependencyNode> nodes)
+    private Dictionary<int, List<ModuleKey>> CalculateModuleLayers(List<ModuleDependencyNode> nodes)
     {
         var layers = new Dictionary<int, List<ModuleKey>>();
 
@@ -587,12 +587,12 @@ public class ModuleSystemInspectionService : IModuleSystemInspectionService
         return layers;
     }
 
-    private static HealthCheckItem CheckSystemInitialization()
+    private HealthCheckItem CheckSystemInitialization()
     {
-        var isInitialized = ModuleRegistry.ModuleSnapshots.Count > 0;
+        var isInitialized = application.Modules.RuntimeSnapshots.Count > 0;
         var status = isInitialized ? HealthStatus.Healthy : HealthStatus.Critical;
         var details = isInitialized 
-            ? $"System initialized with {ModuleRegistry.ModuleSnapshots.Count} modules"
+            ? $"System initialized with {application.Modules.RuntimeSnapshots.Count} modules"
             : "System not initialized";
 
         return new HealthCheckItem
@@ -605,9 +605,9 @@ public class ModuleSystemInspectionService : IModuleSystemInspectionService
         };
     }
 
-    private static HealthCheckItem CheckCircularDependencies(List<HealthIssue> issues)
+    private HealthCheckItem CheckCircularDependencies(List<HealthIssue> issues)
     {
-        var hasCircularDependencies = ModuleDependencyAnalyzer.HasCircularDependencies();
+        var hasCircularDependencies = application.Dependencies.HasCircularDependencies();
         var status = hasCircularDependencies ? HealthStatus.Critical : HealthStatus.Healthy;
         var details = hasCircularDependencies 
             ? "Circular dependencies detected in module system"
@@ -635,9 +635,9 @@ public class ModuleSystemInspectionService : IModuleSystemInspectionService
         };
     }
 
-    private static HealthCheckItem CheckModuleErrors(List<HealthIssue> issues)
+    private HealthCheckItem CheckModuleErrors(List<HealthIssue> issues)
     {
-        var errorCount = ModuleRegistry.ModuleRegisterErrors.Count;
+        var errorCount = application.Modules.RegistrationErrors.Count;
         var status = errorCount == 0 ? HealthStatus.Healthy : HealthStatus.Critical;
         var details = errorCount == 0 
             ? "No module registration errors found"
@@ -645,7 +645,7 @@ public class ModuleSystemInspectionService : IModuleSystemInspectionService
 
         if (errorCount > 0)
         {
-            foreach (var error in ModuleRegistry.ModuleRegisterErrors)
+            foreach (var error in application.Modules.RegistrationErrors)
             {
                 issues.Add(new HealthIssue
                 {
@@ -668,10 +668,10 @@ public class ModuleSystemInspectionService : IModuleSystemInspectionService
         };
     }
 
-    private static HealthCheckItem CheckPerformanceIssues(List<HealthIssue> issues)
+    private HealthCheckItem CheckPerformanceIssues(List<HealthIssue> issues)
     {
-        var totalInitTime = ModuleInitializationProfiler.GetTotalElapsedMilliseconds();
-        var slowModules = ModuleInitializationProfiler.GetModuleProfilesSortedByTotalDuration().Take(3).ToList();
+        var totalInitTime = application.Profiling.GetTotalElapsedMilliseconds();
+        var slowModules = application.Profiling.GetModuleProfilesSortedByTotalDuration().Take(3).ToList();
         
         var status = HealthStatus.Healthy;
         var details = $"Total initialization time: {totalInitTime}ms";
@@ -715,9 +715,9 @@ public class ModuleSystemInspectionService : IModuleSystemInspectionService
         };
     }
 
-    private static HealthCheckItem CheckDisabledModules(List<HealthIssue> issues)
+    private HealthCheckItem CheckDisabledModules(List<HealthIssue> issues)
     {
-        var disabledModules = ModuleStateRegistry.GetDisabledModuleTypes();
+        var disabledModules = application.ModuleStates.GetDisabledModuleTypes();
         var status = disabledModules.Count == 0 ? HealthStatus.Healthy : HealthStatus.Warning;
         var details = disabledModules.Count == 0 
             ? "No disabled modules found"
@@ -745,7 +745,7 @@ public class ModuleSystemInspectionService : IModuleSystemInspectionService
         };
     }
 
-    private static void GenerateRecommendations(List<HealthIssue> issues, List<string> recommendations)
+    private void GenerateRecommendations(List<HealthIssue> issues, List<string> recommendations)
     {
         if (issues.Any(i => i.IssueType == IssueType.Dependency))
         {
@@ -773,7 +773,7 @@ public class ModuleSystemInspectionService : IModuleSystemInspectionService
         }
     }
 
-    private static HealthStatus DetermineOverallHealth(List<HealthCheckItem> healthCheckItems, List<HealthIssue> issues)
+    private HealthStatus DetermineOverallHealth(List<HealthCheckItem> healthCheckItems, List<HealthIssue> issues)
     {
         if (healthCheckItems.Any(item => item.Status == HealthStatus.Critical) || 
             issues.Any(issue => issue.Severity == IssueSeverity.Critical))
@@ -796,7 +796,7 @@ public class ModuleSystemInspectionService : IModuleSystemInspectionService
         return HealthStatus.Healthy;
     }
 
-    private static string GenerateHealthSummary(HealthStatus overallHealth, List<HealthCheckItem> healthCheckItems, List<HealthIssue> issues)
+    private string GenerateHealthSummary(HealthStatus overallHealth, List<HealthCheckItem> healthCheckItems, List<HealthIssue> issues)
     {
         var summary = overallHealth switch
         {
@@ -815,10 +815,10 @@ public class ModuleSystemInspectionService : IModuleSystemInspectionService
         return summary;
     }
 
-    private static HealthPerformanceMetrics CalculateHealthPerformanceMetrics()
+    private HealthPerformanceMetrics CalculateHealthPerformanceMetrics()
     {
-        var moduleProfiles = ModuleInitializationProfiler.GetModuleProfilesSortedByTotalDuration();
-        var totalInitTime = ModuleInitializationProfiler.GetTotalElapsedMilliseconds();
+        var moduleProfiles = application.Profiling.GetModuleProfilesSortedByTotalDuration();
+        var totalInitTime = application.Profiling.GetTotalElapsedMilliseconds();
         
         var averageModuleInitTime = moduleProfiles.Count > 0 
             ? moduleProfiles.Average(p => p.GetTotalDuration()) 
@@ -842,7 +842,7 @@ public class ModuleSystemInspectionService : IModuleSystemInspectionService
         };
     }
 
-    private static int CalculateEfficiencyScore(long totalInitTime, int moduleCount)
+    private int CalculateEfficiencyScore(long totalInitTime, int moduleCount)
     {
         if (moduleCount == 0) return 100;
 

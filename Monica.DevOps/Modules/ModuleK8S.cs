@@ -287,11 +287,11 @@ public class ModuleK8S(ModuleK8SOption option)
 
 public static class ModuleK8SBuilderExtensions
 {
-    extension(Mo)
+    extension(IMonicaBuilder builder)
     {
-        public static ModuleK8SGuide AddK8S(Action<ModuleK8SOption>? action = null)
+        public ModuleK8SGuide AddK8S(Action<ModuleK8SOption>? action = null)
         {
-            return new ModuleK8SGuide().Register(action);
+            return builder.AddModule<ModuleK8S, ModuleK8SOption, ModuleK8SGuide>(action);
         }
     }
 }

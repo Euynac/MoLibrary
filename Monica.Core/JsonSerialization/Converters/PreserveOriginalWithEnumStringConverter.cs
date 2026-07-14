@@ -8,7 +8,8 @@ namespace Monica.Core.JsonSerialization.Converters;
 /// </summary>
 public class PreserveOriginalWithEnumStringConverter : JsonConverter<object>
 {
-    internal static JsonSerializerOptions Options = new() { Converters = { new JsonStringEnumConverter() } };
+    private static readonly JsonSerializerOptions OPTIONS = CreateOptions();
+
     public override object? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
     {
         return JsonDocument.ParseValue(ref reader).RootElement.Clone();
@@ -22,7 +23,17 @@ public class PreserveOriginalWithEnumStringConverter : JsonConverter<object>
         }
         else
         {
-            JsonSerializer.Serialize(writer, value, value.GetType(), Options);
+            JsonSerializer.Serialize(writer, value, value.GetType(), OPTIONS);
         }
+    }
+
+    private static JsonSerializerOptions CreateOptions()
+    {
+        var options = new JsonSerializerOptions
+        {
+            Converters = { new JsonStringEnumConverter() }
+        };
+        options.MakeReadOnly(populateMissingResolver: true);
+        return options;
     }
 }

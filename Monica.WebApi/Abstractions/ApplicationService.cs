@@ -1,6 +1,5 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using Monica.Core.Logging;
 using Monica.Core.Mediator;
 using Monica.Core.ObjectMapping.Abstractions;
 using Monica.Core.Results;
@@ -23,11 +22,14 @@ public abstract class ApplicationService :
     ITransientDependency,
     ICachedServiceProviderAccessor
 {
-    private readonly Lazy<ILogger> _loggerLazy;
-
-    protected ApplicationService()
+    /// <summary>
+    /// Initializes an application service with logging owned by the current host.
+    /// </summary>
+    /// <param name="loggerFactory">The host logger factory.</param>
+    protected ApplicationService(ILoggerFactory loggerFactory)
     {
-        _loggerLazy = new Lazy<ILogger>(() => LogManager.For(GetType()));
+        ArgumentNullException.ThrowIfNull(loggerFactory);
+        Logger = loggerFactory.CreateLogger(GetType());
     }
 
     public ICachedServiceProvider CachedServiceProvider
@@ -36,7 +38,7 @@ public abstract class ApplicationService :
         set => field = value ?? throw new ArgumentNullException(nameof(value));
     }
 
-    protected ILogger Logger => _loggerLazy.Value;
+    protected ILogger Logger { get; }
 
     protected IObjectMapper Mapper => CachedServiceProvider.GetRequiredService<IObjectMapper>();
 
@@ -57,6 +59,14 @@ public abstract class CustomApplicationService<TRequest, TResponse> :
     where TRequest : IRequest<TResponse>
 {
     /// <summary>
+    /// Initializes a request handler with logging owned by the current host.
+    /// </summary>
+    /// <param name="loggerFactory">The host logger factory.</param>
+    protected CustomApplicationService(ILoggerFactory loggerFactory) : base(loggerFactory)
+    {
+    }
+
+    /// <summary>
     /// Handles the specified request.
     /// </summary>
     /// <param name="request">The request.</param>
@@ -70,8 +80,9 @@ public abstract class CustomApplicationService<TRequest, TResponse> :
 /// </summary>
 /// <typeparam name="TRequest">The type of the request.</typeparam>
 /// <typeparam name="TResponse">The type of the response.</typeparam>
-public abstract class ApplicationService<TRequest, TResponse> :
-    CustomApplicationService<TRequest, Res<TResponse>>
+/// <param name="loggerFactory">The host logger factory.</param>
+public abstract class ApplicationService<TRequest, TResponse>(ILoggerFactory loggerFactory) :
+    CustomApplicationService<TRequest, Res<TResponse>>(loggerFactory)
     where TRequest : IResultRequest<TResponse>
 {
 }
@@ -80,8 +91,9 @@ public abstract class ApplicationService<TRequest, TResponse> :
 /// Base class for application services with a specific handler, request, and response wrapped in a <see cref="Res"/>.
 /// </summary>
 /// <typeparam name="TRequest">The type of the request.</typeparam>
-public abstract class ApplicationService<TRequest> :
-    CustomApplicationService<TRequest, Res>
+/// <param name="loggerFactory">The host logger factory.</param>
+public abstract class ApplicationService<TRequest>(ILoggerFactory loggerFactory) :
+    CustomApplicationService<TRequest, Res>(loggerFactory)
     where TRequest : IResultRequest
 {
 }

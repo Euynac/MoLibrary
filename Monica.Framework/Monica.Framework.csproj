@@ -1,53 +1,15 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
-	<PropertyGroup>
-		<PackageDescription>Complete Monica framework bundle integrating all core modules, providing a comprehensive infrastructure solution for .NET applications with gRPC, Minio, and protobuf support.</PackageDescription>
-	</PropertyGroup>
+  <PropertyGroup>
+    <PackageDescription>Host-bound seeding, change tracking, and request-chain tracing for Monica applications.</PackageDescription>
+  </PropertyGroup>
 
-	<ItemGroup>
-	  <Compile Remove="Databases\**" />
-	  <EmbeddedResource Remove="Databases\**" />
-	  <None Remove="Databases\**" />
-	</ItemGroup>
-	<ItemGroup>
-    
+  <ItemGroup>
+    <ProjectReference Include="..\Monica.Core\Monica.Core.csproj" />
+    <ProjectReference Include="..\Monica.DependencyInjection\Monica.DependencyInjection.csproj" />
+    <ProjectReference Include="..\Monica.Repository\Monica.Repository.csproj" />
+    <ProjectReference Include="..\Monica.Tool\Monica.Tool.csproj" />
+    <ProjectReference Include="..\Monica.WebApi\Monica.WebApi.csproj" />
+  </ItemGroup>
 
-    <PackageReference Include="Minio" Version="7.0.0" />
-    <PackageReference Include="Nito.AsyncEx.Coordination" Version="5.1.2" />
-    <PackageReference Include="protobuf-net.BuildTools" Version="3.2.52">
-      <PrivateAssets>all</PrivateAssets>
-      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-    </PackageReference>
-    <PackageReference Include="protobuf-net.Core" Version="3.2.56" />
-    <PackageReference Include="protobuf-net.Grpc.Reflection" Version="1.2.2" />
-   
-	</ItemGroup>
-	<ItemGroup>
-	  <ProjectReference Include="..\Monica.AI\Monica.AI.csproj" />
-	  <ProjectReference Include="..\Monica.Authority\Monica.Authority.csproj" />
-	  <ProjectReference Include="..\Monica.AutoModel\Monica.AutoModel.csproj" />
-	  <ProjectReference Include="..\Monica.Configuration\Monica.Configuration.csproj">
-	    <TreatAsUsed>true</TreatAsUsed>
-	  </ProjectReference>
-	  <ProjectReference Include="..\Monica.Core\Monica.Core.csproj" />
-	  <ProjectReference Include="..\Monica.Dapr\Monica.Dapr.csproj" />
-	  <ProjectReference Include="..\Monica.DataChannel\Monica.DataChannel.csproj" />
-	  <ProjectReference Include="..\Monica.DependencyInjection\Monica.DependencyInjection.csproj" />
-	  <ProjectReference Include="..\Monica.DevOps\Monica.DevOps.csproj" />
-	  <ProjectReference Include="..\Monica.JobScheduler.EfCore\Monica.JobScheduler.EfCore.csproj" />
-	  <ProjectReference Include="..\Monica.Markdown\Monica.Markdown.csproj" />
-	  <ProjectReference Include="..\Monica.Office\Monica.Office.csproj" />
-	  <ProjectReference Include="..\Monica.StateStore.StackExchange\Monica.StateStore.StackExchange.csproj" />
-	  <ProjectReference Include="..\Monica.WebApi\Monica.WebApi.csproj" />
-	  <ProjectReference Include="..\Monica.EventBus\Monica.EventBus.csproj" />
-	  <ProjectReference Include="..\Monica.JobScheduler\Monica.JobScheduler.csproj" />
-	  <ProjectReference Include="..\Monica.Locker\Monica.Locker.csproj" />
-	  <ProjectReference Include="..\Monica.Logging\Monica.Logging.csproj" />
-	  <ProjectReference Include="..\Monica.Profiling\Monica.Profiling.csproj" />
-	  <ProjectReference Include="..\Monica.Repository\Monica.Repository.csproj" />
-	  <ProjectReference Include="..\Monica.SignalR\Monica.SignalR.csproj">
-	    <TreatAsUsed>true</TreatAsUsed>
-	  </ProjectReference>
-	  <ProjectReference Include="..\Monica.StateStore\Monica.StateStore.csproj"/>
-	</ItemGroup>
-	</Project>
+</Project>

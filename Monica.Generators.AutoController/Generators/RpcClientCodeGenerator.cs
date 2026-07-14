@@ -261,7 +261,8 @@ internal static class RpcClientCodeGenerator
         {
             usingDirectives.Add("System.Net.Http");
             usingDirectives.Add("System.Net.Http.Json");
-            usingDirectives.Add("Monica.Framework.Extensions");
+            usingDirectives.Add("Monica.Core.Results.Abstractions");
+            usingDirectives.Add("Monica.WebApi.RpcClient.Extensions");
         }
 
         if (!string.IsNullOrEmpty(baseTypeNamespace))
@@ -341,7 +342,7 @@ internal static class RpcClientCodeGenerator
         return transport switch
         {
             GeneratorConstants.Transports.Http
-                => $"public class {implementationName}(HttpClient httpClient, ICachedServiceProvider serviceProvider) : {baseTypeName}(serviceProvider, httpClient), {interfaceName}",
+                => $"public class {implementationName}(HttpClient httpClient, ICachedServiceProvider serviceProvider, IResultEnvelopeReader resultEnvelopeReader) : {baseTypeName}(serviceProvider, httpClient), {interfaceName}",
             GeneratorConstants.Transports.Local
                 => $"public class {implementationName}(ICachedServiceProvider serviceProvider) : {baseTypeName}(serviceProvider), {interfaceName}",
             _ => throw new InvalidOperationException($"Unsupported RPC client transport '{transport}'.")
@@ -402,19 +403,19 @@ internal static class RpcClientCodeGenerator
                     // No route parameters
                     sb.AppendLine("        return await HttpClient.GetAsync($\"" + route + "{" + paramName + ".ToQueryString()}\", HttpCompletionOption.ResponseHeadersRead)");
                 }
-                sb.AppendLine($"            .GetResponse<{handler.ResponseType}>();");
+                sb.AppendLine($"            .GetResponse<{handler.ResponseType}>(resultEnvelopeReader);");
                 break;
 
             case "POST":
                 sb.AppendLine($"        using var httpRequest = new HttpRequestMessage(HttpMethod.Post, \"{route}\") {{ Content = JsonContent.Create({paramName}) }};");
                 sb.AppendLine("        return await HttpClient.SendAsync(httpRequest, HttpCompletionOption.ResponseHeadersRead)");
-                sb.AppendLine($"            .GetResponse<{handler.ResponseType}>();");
+                sb.AppendLine($"            .GetResponse<{handler.ResponseType}>(resultEnvelopeReader);");
                 break;
 
             case "PUT":
                 sb.AppendLine($"        using var httpRequest = new HttpRequestMessage(HttpMethod.Put, \"{route}\") {{ Content = JsonContent.Create({paramName}) }};");
                 sb.AppendLine("        return await HttpClient.SendAsync(httpRequest, HttpCompletionOption.ResponseHeadersRead)");
-                sb.AppendLine($"            .GetResponse<{handler.ResponseType}>();");
+                sb.AppendLine($"            .GetResponse<{handler.ResponseType}>(resultEnvelopeReader);");
                 break;
 
             case "DELETE":
@@ -429,13 +430,13 @@ internal static class RpcClientCodeGenerator
                     sb.AppendLine("        using var httpRequest = new HttpRequestMessage(HttpMethod.Delete, $\"" + route + "{" + paramName + ".ToQueryString()}\");");
                 }
                 sb.AppendLine("        return await HttpClient.SendAsync(httpRequest, HttpCompletionOption.ResponseHeadersRead)");
-                sb.AppendLine($"            .GetResponse<{handler.ResponseType}>();");
+                sb.AppendLine($"            .GetResponse<{handler.ResponseType}>(resultEnvelopeReader);");
                 break;
 
             default:
                 sb.AppendLine($"        using var httpRequest = new HttpRequestMessage(HttpMethod.Post, \"{route}\") {{ Content = JsonContent.Create({paramName}) }};");
                 sb.AppendLine("        return await HttpClient.SendAsync(httpRequest, HttpCompletionOption.ResponseHeadersRead)");
-                sb.AppendLine($"            .GetResponse<{handler.ResponseType}>();");
+                sb.AppendLine($"            .GetResponse<{handler.ResponseType}>(resultEnvelopeReader);");
                 break;
         }
 

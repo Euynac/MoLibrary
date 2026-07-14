@@ -19,14 +19,14 @@ namespace Monica.Modules;
 
 public static class ModuleRpcClientBuilderExtensions
 {
-    extension(Mo)
+    extension(IMonicaBuilder builder)
     {
         /// <summary>
         /// Registers and configures the RPC client module.
         /// </summary>
-        public static ModuleRpcClientGuide AddRpcClient(Action<ModuleRpcClientOption>? action = null)
+        public ModuleRpcClientGuide AddRpcClient(Action<ModuleRpcClientOption>? action = null)
         {
-            return new ModuleRpcClientGuide().Register(action);
+            return builder.AddModule<ModuleRpcClient, ModuleRpcClientOption, ModuleRpcClientGuide>(action);
         }
     }
 }
@@ -93,6 +93,7 @@ public class ModuleRpcClient(ModuleRpcClientOption option) :
     public override void ClaimDependencies()
     {
         DependsOnModule<ModuleAuthenticationGuide>().Register().ConfigDefaultSystemUser();
+        DependsOnModule<ModuleResultEnvelopeGuide>().Register();
     }
 
     private IRpcClientDomainInfoProvider GetRequiredDomainInfoProvider()

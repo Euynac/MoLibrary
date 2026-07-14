@@ -1,6 +1,4 @@
-using Monica.Core.Localization.Services;
 using Monica.EventBus.Models;
-using Monica.Framework.UI.Localization;
 using MudBlazor;
 
 namespace Monica.Framework.UI.UIEventBus.Models;
@@ -85,17 +83,6 @@ public class SubscriptionViewModel
     /// </summary>
     public bool? ActionIsStatic { get; set; }
 
-    /// <summary>
-    /// Get the full description of the Action handler (used in tooltips)
-    /// </summary>
-    public string ActionHandlerTooltip
-    {
-        get
-        {
-            return LocalizationManager.For<EventBusResource>().BuildActionHandlerTooltip(this);
-        }
-    }
-
     #endregion
 
     #region Scope & State
@@ -106,19 +93,9 @@ public class SubscriptionViewModel
     public EventSubscriptionScope Scope { get; set; }
 
     /// <summary>
-    /// Subscription range display text
-    /// </summary>
-    public string ScopeDisplay => LocalizationManager.For<EventBusResource>().GetSubscriptionScopeText(Scope);
-
-    /// <summary>
     /// Subscription status
     /// </summary>
     public EventSubscriptionState State { get; set; }
-
-    /// <summary>
-    /// Subscription status display text
-    /// </summary>
-    public string StateDisplay => LocalizationManager.For<EventBusResource>().GetSubscriptionStateText(State);
 
     /// <summary>
     /// The color corresponding to the subscription status
@@ -190,54 +167,30 @@ public class SubscriptionViewModel
     public string? DeactivatedAtDisplay => DeactivatedAt?.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss");
 
     /// <summary>
-    /// duration display text
+    /// Calculates the duration represented by the current subscription lifecycle state.
     /// </summary>
-    public string DurationDisplay
+    /// <returns>
+    /// The active or completed duration, or <see langword="null"/> when the lifecycle has not produced a duration yet.
+    /// </returns>
+    public TimeSpan? GetDuration()
     {
-        get
+        if (State == EventSubscriptionState.Active && ActivatedAt.HasValue)
         {
-            if (State == EventSubscriptionState.Active && ActivatedAt.HasValue)
-            {
-                var duration = DateTime.UtcNow - ActivatedAt.Value;
-                return FormatDuration(duration);
-            }
-            else if (State == EventSubscriptionState.Inactive && DeactivatedAt.HasValue && ActivatedAt.HasValue)
-            {
-                var duration = DeactivatedAt.Value - ActivatedAt.Value;
-                return FormatDuration(duration);
-            }
-            else if (State == EventSubscriptionState.Disposed && CreatedAt != default)
-            {
-                var endTime = DeactivatedAt ?? ActivatedAt ?? DateTime.UtcNow;
-                var duration = endTime - CreatedAt;
-                return FormatDuration(duration);
-            }
-            return "-";
+            return DateTime.UtcNow - ActivatedAt.Value;
         }
-    }
 
-    /// <summary>
-    /// Processor displays text
-    /// </summary>
-    public string HandlerDisplay
-    {
-        get
+        if (State == EventSubscriptionState.Inactive && DeactivatedAt.HasValue && ActivatedAt.HasValue)
         {
-            if (IsActionHandler)
-            {
-                return LocalizationManager.For<EventBusResource>().GetHandlerDisplayText(this);
-            }
-            return HandlerTypeShortName ?? LocalizationManager.Get<EventBusResource>("Shared:Labels:Unknown");
+            return DeactivatedAt.Value - ActivatedAt.Value;
         }
-    }
 
-    #endregion
+        if (State == EventSubscriptionState.Disposed && CreatedAt != default)
+        {
+            var endTime = DeactivatedAt ?? ActivatedAt ?? DateTime.UtcNow;
+            return endTime - CreatedAt;
+        }
 
-    #region Helper Methods
-
-    private static string FormatDuration(TimeSpan duration)
-    {
-        return LocalizationManager.For<EventBusResource>().FormatEventBusDuration(duration);
+        return null;
     }
 
     #endregion

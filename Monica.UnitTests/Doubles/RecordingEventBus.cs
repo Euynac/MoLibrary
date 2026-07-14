@@ -1,4 +1,5 @@
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Monica.EventBus.Abstractions;
 using Monica.EventBus.Annotations;
 using Monica.EventBus.Services;
@@ -19,12 +20,14 @@ public sealed class RecordingEventBus : ILocalEventBus, IDistributedEventBus
     /// <param name="serviceScopeFactory">The scope factory used to resolve subscribed handlers.</param>
     /// <param name="eventHandlerInvoker">The event handler invoker used by Monica's local event bus.</param>
     /// <param name="subscriptionRegistry">The shared event subscription registry.</param>
+    /// <param name="loggerFactory">The host-owned logger factory.</param>
     public RecordingEventBus(
         IServiceScopeFactory serviceScopeFactory,
         IEventHandlerInvoker eventHandlerInvoker,
-        IEventSubscriptionRegistry subscriptionRegistry)
+        IEventSubscriptionRegistry subscriptionRegistry,
+        ILoggerFactory loggerFactory)
     {
-        _local = new LocalRecordingEventBus(serviceScopeFactory, eventHandlerInvoker, subscriptionRegistry);
+        _local = new LocalRecordingEventBus(serviceScopeFactory, eventHandlerInvoker, subscriptionRegistry, loggerFactory);
     }
 
     /// <summary>
@@ -95,8 +98,9 @@ public sealed class RecordingEventBus : ILocalEventBus, IDistributedEventBus
     private sealed class LocalRecordingEventBus(
         IServiceScopeFactory serviceScopeFactory,
         IEventHandlerInvoker eventHandlerInvoker,
-        IEventSubscriptionRegistry subscriptionManager)
-        : LocalEventBusBase(serviceScopeFactory, eventHandlerInvoker, subscriptionManager)
+        IEventSubscriptionRegistry subscriptionManager,
+        ILoggerFactory loggerFactory)
+        : LocalEventBusBase(serviceScopeFactory, eventHandlerInvoker, subscriptionManager, loggerFactory)
     {
         private readonly List<RecordedEvent> _events = [];
 

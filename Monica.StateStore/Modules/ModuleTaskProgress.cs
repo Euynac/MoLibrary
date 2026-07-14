@@ -12,14 +12,14 @@ namespace Monica.Modules;
 
 public static class ModuleTaskProgressBuilderExtensions
 {
-    extension(Mo)
+    extension(IMonicaBuilder builder)
     {
         /// <summary>
         /// Configures the task progress module.
         /// </summary>
-        public static ModuleTaskProgressGuide AddTaskProgress(Action<ModuleTaskProgressOption>? action = null)
+        public ModuleTaskProgressGuide AddTaskProgress(Action<ModuleTaskProgressOption>? action = null)
         {
-            return new ModuleTaskProgressGuide().Register(action);
+            return builder.AddModule<ModuleTaskProgress, ModuleTaskProgressOption, ModuleTaskProgressGuide>(action);
         }
     }
 }

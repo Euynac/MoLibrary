@@ -14,14 +14,14 @@ namespace Monica.Modules;
 
 public static class ModuleSwaggerUIBuilderExtensions
 {
-    extension(Mo)
+    extension(IMonicaBuilder builder)
     {
         /// <summary>
         /// Configure the SwaggerUI module
         /// </summary>
-        public static ModuleSwaggerUIGuide AddSwaggerUI(Action<ModuleSwaggerUIOption>? action = null)
+        public ModuleSwaggerUIGuide AddSwaggerUI(Action<ModuleSwaggerUIOption>? action = null)
         {
-            return new ModuleSwaggerUIGuide().Register(action);
+            return builder.AddModule<ModuleSwaggerUI, ModuleSwaggerUIOption, ModuleSwaggerUIGuide>(action);
         }
     }
 }

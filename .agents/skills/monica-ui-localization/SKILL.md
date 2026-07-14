@@ -28,7 +28,8 @@ The strict result must have zero JSON integrity errors, missing keys, invalid UI
 - Prefer nested JSON objects and access them with colon-separated keys such as `Page:Title` or `RuntimeConfigDialog:Intro`.
 - Do not use flat dot-style keys such as `Page.Title` for new Monica UI work.
 - Prefer dependency-injected `IStringLocalizer<TResource>` in Razor components, pages, dialogs, state classes, support services, and any DI-created service.
-- Use `LocalizationManager.Get/For` only where DI is unavailable, such as static helpers, view-model computed properties created outside DI, and module registration or endpoint metadata built outside a service instance.
+- Never use ambient or static localization access. When DI is unavailable inside a helper or view model, accept an `IStringLocalizer` parameter or move the display behavior into a cohesive formatter that receives one.
+- Inject `ILocalizationCatalog` only for scenarios that genuinely need generic resource lookup. At application-composition boundaries such as endpoint metadata configuration, resolve the localizer or catalog from the current host's service provider so localization state never crosses host boundaries.
 - For page content, use the module-local resource marker and JSON files.
 - For `RegisterLocalizedComponent(...)` navigation/AppBar text, `displayNameKey` and `categoryKey` must exist in `Monica.UI/Localization/UIRegistryResource/*.json`, because the UI registry resolves them with `IStringLocalizer<UIRegistryResource>`.
 - When adding a new page to navigation, add the corresponding `Pages:*:Title` key to `UIRegistryResource` in addition to the page module resource when needed.

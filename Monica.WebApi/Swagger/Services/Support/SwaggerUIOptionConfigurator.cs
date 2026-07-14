@@ -13,7 +13,8 @@ internal static class SwaggerUIOptionConfigurator
     public static void Configure(
         SwaggerUIOptions options,
         ModuleSwaggerOption option,
-        SwaggerDocumentCatalog documentCatalog)
+        SwaggerDocumentCatalog documentCatalog,
+        IMonicaApplicationOptions application)
     {
         foreach (var document in documentCatalog.Documents)
         {
@@ -22,7 +23,7 @@ internal static class SwaggerUIOptionConfigurator
                 documentCatalog.GetSwaggerEndpointDisplayName(document));
         }
 
-        options.DocumentTitle = Mo.Application.ResolveAppName(option.AppName, "Swagger UI");
+        options.DocumentTitle = application.ResolveAppName(option.AppName, "Swagger UI");
         options.RoutePrefix = option.RoutePrefix;
 
         option.ExtendSwaggerUIAction?.Invoke(options);

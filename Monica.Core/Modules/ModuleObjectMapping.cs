@@ -6,12 +6,14 @@ using MapsterMapper;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Monica.Core;
 using Monica.Core.Modularity;
 using Monica.Core.Modularity.Abstractions;
 using Monica.Core.Modularity.Annotations;
 using Monica.Core.Modularity.Models;
 using Monica.Core.ObjectMapping.Abstractions;
+using Monica.Core.ObjectMapping.Facades;
 using Monica.Core.ObjectMapping.Providers.Mapster;
 using Monica.Core.ObjectMapping.Services;
 using Monica.Core.Results;
@@ -21,14 +23,14 @@ namespace Monica.Modules;
 
 public static class ModuleObjectMappingBuilderExtensions
 {
-    extension(Mo)
+    extension(IMonicaBuilder builder)
     {
         /// <summary>
         /// Registers the object mapping module.
         /// </summary>
-        public static ModuleObjectMappingGuide AddObjectMapping(Action<ModuleObjectMappingOption>? action = null)
+        public ModuleObjectMappingGuide AddObjectMapping(Action<ModuleObjectMappingOption>? action = null)
         {
-            return new ModuleObjectMappingGuide().Register(action);
+            return builder.AddModule<ModuleObjectMapping, ModuleObjectMappingOption, ModuleObjectMappingGuide>(action);
         }
     }
 }
@@ -41,30 +43,26 @@ public class ModuleObjectMapping(ModuleObjectMappingOption option) : WebModuleBa
 {
     public override void ConfigureServices(IServiceCollection services)
     {
+        var mapsterConfig = new TypeAdapterConfig();
+
         if (option.DebugMapper)
         {
-            //https://github.com/MapsterMapper/Mapster/wiki/Debugging
-            TypeAdapterConfig.GlobalSettings.Compiler = exp => ((LambdaExpression)exp).CompileWithDebugInfo(
+            mapsterConfig.Compiler = expression => ((LambdaExpression)expression).CompileWithDebugInfo(
                 new ExpressionCompilationOptions()
                 {
-                    //ThrowOnFailedCompilation = true,
                     EmitFile = true,
                     References = [Assembly.GetAssembly(typeof(Res))!, Assembly.GetAssembly(typeof(Enumerable))!, .. option.DebuggerRelatedAssemblies ?? []]
                 });
         }
 
-        Task.Factory.StartNew(() =>
-        {
-            TypeAdapterConfig.GlobalSettings.Compile();
-        }).ContinueWith((t) =>
-        {
-            Environment.FailFast($"Mapper编译失败，定义有误，请检查。{t.Exception}");
-        }, TaskContinuationOptions.OnlyOnFaulted);
-
-        services.AddSingleton(TypeAdapterConfig.GlobalSettings);
+        services.AddSingleton(mapsterConfig);
         services.AddScoped<IMapper, ServiceMapper>();
         services.AddTransient<IObjectMapper, MapsterObjectMapper>();
+        services.AddSingleton<MapsterMappingInspector>();
         services.AddScoped<ObjectMappingStatusService>();
+        services.AddScoped<ObjectMappingFacade>(serviceProvider => new ObjectMappingFacade(
+            serviceProvider.GetRequiredService<ObjectMappingStatusService>(),
+            serviceProvider.GetRequiredService<ILogger<ObjectMappingFacade>>()));
     }
 
     public override void ConfigureEndpoints(IApplicationBuilder app)
@@ -73,9 +71,9 @@ public class ModuleObjectMapping(ModuleObjectMappingOption option) : WebModuleBa
         {
             var tagName = option.GetApiGroupName();
 
-            endpoints.MapGet("/mapper/status", async (HttpContext context, ObjectMappingStatusService statusService) =>
+            endpoints.MapGet("/mapper/status", async (HttpContext context, ObjectMappingFacade facade) =>
             {
-                var result = await statusService.GetStatusAsync();
+                var result = await facade.GetStatusAsync();
                 if (result.IsFailed(out var error, out var data))
                 {
                     context.Response.StatusCode = 500;
@@ -95,18 +93,24 @@ public class ModuleObjectMapping(ModuleObjectMappingOption option) : WebModuleBa
                 };
                 await context.Response.WriteAsJsonAsync(res);
             })
-            .WithName("获取Mapper状态信息")
+            .WithName("GetObjectMappingStatus")
             .WithTags(tagName)
-            .WithSummary("获取Mapper状态信息")
-            .WithDescription("获取Mapper状态信息");
+            .WithSummary("Gets object mapping status")
+            .WithDescription("Returns the mapping pairs and generated Mapster expressions owned by this Monica host.");
         });
     }
 }
 
+/// <summary>
+/// Provides fluent configuration for the object mapping module.
+/// </summary>
 public class ModuleObjectMappingGuide : WebModuleGuide<ModuleObjectMapping, ModuleObjectMappingOption, ModuleObjectMappingGuide>
 {
 }
 
+/// <summary>
+/// Configures the Mapster object mapping runtime for one Monica host.
+/// </summary>
 public class ModuleObjectMappingOption : MinimalApiModuleOptions<ModuleObjectMapping>
 {
     /// <summary>

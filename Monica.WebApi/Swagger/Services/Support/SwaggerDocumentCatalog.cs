@@ -19,6 +19,7 @@ internal sealed class SwaggerDocumentCatalog
     private const string DefaultBusinessDocumentTitle = "Business API";
 
     private readonly ModuleSwaggerOption _option;
+    private readonly IMonicaApplicationOptions _application;
     private readonly ILogger? _logger;
     private readonly ConcurrentDictionary<string, byte> _unknownResolverDocumentNames = new(StringComparer.OrdinalIgnoreCase);
     private readonly SwaggerDocumentDefinition _businessDocument;
@@ -27,9 +28,11 @@ internal sealed class SwaggerDocumentCatalog
 
     public SwaggerDocumentCatalog(
         ModuleSwaggerOption option,
+        IMonicaApplicationOptions application,
         ILogger? logger = null)
     {
         _option = option;
+        _application = application;
         _logger = logger;
         (_businessDocument, _documents) = BuildDocuments();
         _documentsByName = _documents.ToDictionary(document => document.Name, StringComparer.OrdinalIgnoreCase);
@@ -130,7 +133,7 @@ internal sealed class SwaggerDocumentCatalog
             return _option.BusinessDocumentTitle.Trim();
         }
 
-        var appName = Mo.Application.ResolveAppName(_option.AppName);
+        var appName = _application.ResolveAppName(_option.AppName);
         return string.IsNullOrWhiteSpace(appName)
             ? DefaultBusinessDocumentTitle
             : $"{appName} API";

@@ -1,414 +1,150 @@
-# Monica.DataChannel 框架结构文档
+# Monica.DataChannel 架构说明
 
-## 1. 框架概述
+> 成熟度：**Labs**。本文描述当前源码中的公开组合模型，不构成 Stable 1.0 兼容性承诺。
 
-Monica.DataChannel 是一个灵活、高度可扩展的数据通道框架，用于处理不同系统和组件之间的数据传输和转换。该框架基于管道模式设计，提供了丰富的抽象和扩展点，使开发人员能够快速构建自定义的数据处理流程。
+## 1. 定位
 
-### 1.1 设计原则
+DataChannel 用一条双向 pipeline 连接应用内侧与外部通信端点，并让 transform / monitor middleware 在数据经过时完成转换、观测或统计。
 
-- **松耦合**: 通过接口分离和依赖注入实现组件间的松耦合
-- **可扩展性**: 提供多个扩展点，支持自定义端点、中间件和转换逻辑
-- **双向通信**: 支持内部到外部和外部到内部的双向数据流
-- **中间件模式**: 采用中间件链式处理模式，灵活配置数据处理流程
-- **统一管理**: 通过中央管理器集中管理和访问所有数据通道
+框架的核心边界是“每个宿主拥有自己的通道状态”：
 
-### 1.2 核心功能
+- setup、pipeline builder 与已实例化 channel 不跨宿主共享；
+- `IDataChannelManager` 只能看到当前 DI 容器拥有的 channel；
+- TCP client、listener、故障切换状态与 Dapr route claim 都绑定当前宿主；
+- 宿主停止时释放 endpoint 资源。
 
-- 建立和管理数据通道
-- 数据的双向传输和转换
-- 通过中间件扩展数据处理逻辑
-- 与ASP.NET Core应用程序的集成
-- 通道生命周期管理和监控
+## 2. 组件关系
 
-## 2. 架构组件
-
-### 2.1 核心组件
-
-```
-+-----------------------+
-|   DataChannelCentral  |
-+-----------------------+
-           |
-           v
-+------------------------+      +------------------------+
-|     DataChannel        |----->|      DataPipeline     |
-+------------------------+      +------------------------+
-                                      /            \
-                                     /              \
-                           +-------------+      +-------------+
-                           |InnerEndpoint|      |OuterEndpoint|
-                           +-------------+      +-------------+
-                                     \              /
-                                      \            /
-                               +-------------------------+
-                               |     Middlewares        |
-                               +-------------------------+
+```text
+builder.AddMonica(...)
+        │
+        ▼
+ModuleDataChannelGuide.UseSetup<TSetup>()
+        │
+        ▼
+IDataChannelSetup.Setup(IDataChannelRegistrar)
+        │  channels.Add(id, configure, groupId)
+        ▼
+ChannelPipelineBuilder
+        │  materialize once
+        ▼
+DataChannelRuntime (host singleton)
+        ├── IDataChannelManager
+        └── DataChannel
+              └── ChannelPipeline
+                    ├── InnerEndpoint
+                    ├── Transform / monitor middleware
+                    └── OuterEndpoint
 ```
 
-#### 2.1.1 DataChannelCentral
+### `IDataChannelSetup`
 
-DataChannelCentral是框架的核心，负责管理和协调所有数据通道:
-
-- 维护所有已注册通道的全局字典
-- 提供通道的注册和访问入口
-- 管理全局配置和设置
-- 处理管道构建和初始化流程
-
-#### 2.1.2 DataChannel
-
-DataChannel封装了管道实例，提供了统一的操作接口:
-
-- 包装底层DataPipeline实例
-- 提供通道ID和重新初始化功能
-- 作为操作通道的统一入口
-
-#### 2.1.3 DataPipeline
-
-DataPipeline是数据流动和处理的核心组件:
-
-- 连接内部和外部端点
-- 维护中间件链
-- 处理数据的流动和转换
-- 管理管道的生命周期（初始化和释放）
-
-#### 2.1.4 端点 (Endpoints)
-
-端点是管道的两端，负责数据的接收和发送:
-
-- 内部端点 (InnerEndpoint): 处理系统内部数据
-- 外部端点 (OuterEndpoint): 与外部系统进行交互
-- 提供数据接收和处理的具体实现
-
-#### 2.1.5 中间件 (Middlewares)
-
-中间件负责在数据流经管道的过程中进行处理和转换:
-
-- 端点中间件: 增强端点的功能
-- 转换中间件: 处理数据的转换和格式变更
-- 监控中间件: 提供对管道的监控和控制
-
-### 2.2 数据模型
-
-#### 2.2.1 DataContext
-
-DataContext是在管道中流动的数据单元:
-
-- 包含原始数据和元数据
-- 记录数据来源和操作类型
-- 支持不同类型的数据传输（字符串、字节数组、POCO对象）
-
-#### 2.2.2 CommunicationMetadata
-
-通信元数据包含配置通信端点所需的信息:
-
-- 地址、端口等连接信息
-- 协议和格式设置
-- 端点特定的配置参数
-
-### 2.3 服务与扩展
-
-#### 2.3.1 IDataChannelManager
-
-数据通道管理服务，提供通道的查询和管理功能:
-
-- 按ID获取通道
-- 按组获取通道集合
-- 列出所有可用通道
-
-#### 2.3.2 DataChannelInitializerService
-
-通道初始化服务，实现IHostedService接口:
-
-- 在应用程序启动时自动初始化所有通道
-- 提供通道初始化状态的日志记录
-- 支持取消和异常处理
-
-#### 2.3.3 ServiceCollectionExtensions
-
-服务集合扩展方法，用于注册和配置数据通道:
-
-- 添加必要的服务和组件到依赖注入容器
-- 配置ASP.NET Core应用程序使用数据通道
-- 提供自定义配置选项
-
-## 3. 接口与抽象
-
-### 3.1 核心接口
-
-#### 3.1.1 IPipeComponent
-
-所有管道组件的基础接口，提供元数据访问功能:
+一个宿主只注册一个 setup 实现。setup 的职责是声明 pipeline，不应保存运行期 channel 状态。
 
 ```csharp
-public interface IPipeComponent
+public sealed class DemoChannelSetup : IDataChannelSetup
 {
-    public dynamic GetMetadata();
-}
-```
-
-#### 3.1.2 IPipeEndpoint
-
-定义管道端点的接口，负责数据的接收和处理:
-
-```csharp
-public interface IPipeEndpoint : IWantAccessPipeline, IPipeComponent
-{
-    public Task ReceiveDataAsync(DataContext data);
-    public EDataSource EntranceType { get; internal set; }
-}
-```
-
-#### 3.1.3 IPipeMiddleware 及派生接口
-
-中间件相关接口，定义数据处理和转换功能:
-
-```csharp
-public interface IPipeMiddleware : IPipeComponent { }
-
-public interface IPipeTransformMiddleware : IPipeMiddleware
-{
-    public Task<DataContext> PassAsync(DataContext context);
-}
-
-public interface IPipeEndpointMiddleware : IPipeMiddleware, IWantAccessPipeline { }
-
-public interface IPipeMonitorMiddleware : IPipeTransformMiddleware, IWantAccessPipeline { }
-```
-
-### 3.2 功能接口
-
-#### 3.2.1 IWantAccessPipeline
-
-允许组件访问所属管道的接口:
-
-```csharp
-public interface IWantAccessPipeline
-{
-    public DataPipeline Pipe { get; set; }
-}
-```
-
-#### 3.2.2 IDynamicConfigApplicationBuilder
-
-支持在ASP.NET Core启动时配置应用的接口:
-
-```csharp
-public interface IDynamicConfigApplicationBuilder
-{
-    public void DoConfigApplication(IApplicationBuilder app);
-}
-```
-
-#### 3.2.3 ISetupPipeline
-
-用于配置和初始化管道的入口接口:
-
-```csharp
-public interface ISetupPipeline
-{
-    void Setup();
-}
-```
-
-## 4. 使用指南
-
-### 4.1 基本使用流程
-
-1. **注册服务**
-
-```csharp
-services.AddDataChannel<MyChannelBuilder>(options => {
-    options.EnableControllers = true;
-    // Other options...
-});
-```
-
-2. **创建管道构建器**
-
-```csharp
-public class MyChannelBuilder : ISetupPipeline
-{
-    public void Setup()
+    public void Setup(IDataChannelRegistrar channels)
     {
-        // Create and configure the pipeline
-        DataPipeline.Create()
-            .SetOuterEndpoint(new MetadataForTcpClient {
-                ClientAddress = new KeyValuePair<string, int>("localhost", 8080),
-                IsClient = true
-            })
-            .SetInnerEndpoint<MyCustomEndpoint>()
-            .AddPipeMiddleware<LoggingMiddleware>()
-            .Register("my-channel-id", "my-channel-group");
+        channels.Add("demo", pipeline =>
+            pipeline.SetOuterEndpoint(new DefaultEndpointOptions()));
     }
 }
 ```
 
-3. **使用数据通道中间件**
+### `IDataChannelRegistrar`
+
+`Add(...)` 接收三个信息：
+
+| 参数 | 含义 |
+|---|---|
+| `id` | 当前宿主内唯一的 channel ID。 |
+| `configure` | 配置 endpoint 与 middleware 的回调。 |
+| `groupId` | 可选分组，用于 `IDataChannelManager.FetchGroup(...)`。 |
+
+以下情况会立即失败：空 ID、重复 ID、缺少 outer endpoint，或在 materialize 完成后继续注册。
+
+### `ChannelPipelineBuilder`
+
+公开配置入口包括：
+
+- `SetInnerEndpoint(...)`
+- `SetOuterEndpoint(...)`
+- `AddPipeMiddleware<TMiddleware>()`
+- `AddPipeMiddleware(params IPipelineMiddleware[])`
+
+outer endpoint 必填；inner endpoint 未设置时使用 `DefaultEndpointOptions`。泛型 middleware 由宿主 DI 创建，直接传入的实例由 setup 明确拥有。
+
+### `IDataChannelManager` 与 `DataChannel`
+
+运行期通过 `IDataChannelManager` 查询 materialized channel：
 
 ```csharp
-app.UseDataChannel();
+var channel = manager.Fetch("demo");
+var group = manager.FetchGroup("imports");
+var all = manager.FetchAll();
 ```
 
-4. **访问数据通道**
+`DataChannel.SendDataFromInnerAsync(...)` 把数据送往 outer endpoint；`SendDataFromOuterAsync(...)` 走相反方向。
 
-```csharp
-public class MyService
-{
-    private readonly IDataChannelManager _channelManager;
-    
-    public MyService(IDataChannelManager channelManager)
-    {
-        _channelManager = channelManager;
-    }
-    
-    public async Task SendDataAsync(string channelId, object data)
-    {
-        var channel = _channelManager.Fetch(channelId);
-        if (channel != null)
-        {
-            // Send data through the channel
-            var context = new DataContext(
-                EDataSource.Inner, 
-                EDataSource.Inner, 
-                EDataOperation.Publish, 
-                data
-            );
-            await channel.Pipe.SendDataAsync(context);
-        }
-    }
-}
+## 3. 数据流
+
+`ChannelDataContext.Source` 决定最终目标：
+
+```text
+Source = Inner
+Inner application → middleware chain → OuterEndpoint
+
+Source = Outer
+External provider → middleware chain → InnerEndpoint
 ```
 
-### 4.2 自定义端点
+transform middleware 按注册顺序执行。任何 middleware 或 endpoint 异常都会写入当前 pipeline 的 `ObservableInstanceTracker`，随后继续向调用者抛出。
 
-创建自定义端点以处理特定业务逻辑:
+## 4. 宿主生命周期
 
-```csharp
-public class MyCustomEndpoint : IPipeEndpoint
-{
-    public DataPipeline Pipe { get; set; }
-    
-    public EDataSource EntranceType { get; internal set; }
-    
-    public dynamic GetMetadata() => new ExpandoObject();
-    
-    public async Task ReceiveDataAsync(DataContext data)
-    {
-        // Handle received data
-        Console.WriteLine($"Received data: {data.Data}");
-        
-        // Additional processing logic...
-        
-        // Optionally forward data to the other end of the pipeline
-        // await Pipe.SendDataAsync(newData);
-    }
-}
-```
+1. `builder.AddMonica(...)` 记录 `AddDataChannel().UseSetup<TSetup>()`。
+2. Monica 验证 required Guide key；缺少 `UseSetup<TSetup>()` 时启动失败。
+3. `app.UseMonica()` 调用 setup，并把注册声明 materialize 为 `DataChannel`。
+4. `app.MapMonica()` 映射 provider 与模块贡献的 endpoint。
+5. `DataChannelInitializerService` 使用 `InitThreadCount` 限制并行度并初始化 endpoint。
+6. graceful shutdown 释放所有 materialized pipeline endpoint。
 
-### 4.3 自定义中间件
+setup 只在第 3 步持有 registrar；运行期代码不得缓存 registrar 并尝试动态新增 channel。
 
-创建转换中间件以处理数据转换:
+## 5. Provider 边界
 
-```csharp
-public class JsonTransformMiddleware : IPipeTransformMiddleware
-{
-    public dynamic GetMetadata() => new ExpandoObject();
-    
-    public async Task<DataContext> PassAsync(DataContext context)
-    {
-        // Perform data transformation here
-        if (context.DataType == EDataType.String && context.Data is string json)
-        {
-            // Example: deserialize JSON string into an object
-            var obj = JsonSerializer.Deserialize<MyDataObject>(json);
-            context.Data = obj;
-            context.DataType = EDataType.Poco;
-            context.SpecifiedType = typeof(MyDataObject);
-        }
-        
-        return context;
-    }
-}
-```
+当前 Labs 包提供 Kafka、ActiveMQ、Dapr Binding、TCP、UDP 与 default endpoint。
 
-## 5. 最佳实践
+Provider 负责：
 
-### 5.1 通道设计原则
+- 校验自己的 `CommunicationOptions`；
+- 建立或释放外部连接；
+- 把外部消息包装成 `ChannelDataContext`；
+- 遵守 pipeline 的完成、取消与异常语义。
 
-- **单一职责**: 每个通道应专注于单一的数据传输任务
-- **合理分组**: 使用GroupId将相关通道归为一组，便于管理
-- **异常处理**: 在端点和中间件中实现适当的异常处理机制
-- **资源管理**: 确保通道资源在不再需要时被正确释放
+DataChannel 不替外部系统提供 durability、broker 配置、secret 管理或跨实例协调。生产部署必须根据所选 provider 单独设计这些能力。
 
-### 5.2 性能优化
+### Dapr route
 
-- **轻量级数据**: 避免在DataContext中传输大量数据，考虑使用引用或标识符
-- **异步处理**: 充分利用异步方法进行IO操作，避免阻塞
-- **批处理**: 对于高频数据，考虑实现批处理机制
-- **缓存策略**: 适当使用缓存减少重复处理和计算
+同一宿主中，一个 input binding route 只能归属于一个 `DaprBindingEndpoint`。route claim 存在当前 `IApplicationBuilder.Properties` 中，不会污染同一进程内的其他宿主。
 
-### 5.3 扩展指南
+### TCP runtime
 
-- **命名规范**: 使用清晰、一致的命名约定
-- **文档注释**: 为所有公共接口和关键方法提供详细的文档注释
-- **单元测试**: 为自定义组件编写单元测试，确保功能正确性
-- **日志集成**: 集成日志框架，记录关键操作和错误信息
+`TcpConnectionRuntime` 是当前宿主的 singleton，拥有 outbound client、listener、accepted connection group 与 failover state。不同宿主即使复用同名 connection key，也不会共享 socket 或角色状态。
 
-## 6. 常见问题
+## 6. 运维与安全
 
-### 6.1 故障排除
+启用 Minimal API 后，模块可公开 channel 状态、异常历史、清理和 reinitialize endpoint。它们属于运维控制面，生产环境必须配置鉴权、网络边界和审计。
 
-- **通道初始化失败**: 检查端点配置和连接参数
-- **数据传输错误**: 验证数据格式和DataContext设置
-- **资源泄露**: 确保正确实现资源释放逻辑
-- **中间件排序**: 注意中间件添加顺序，可能影响处理结果
+`AddDataChannelUI()` 提供可选运维页面。`PipelineInfoDisplayMiddlewareBase` 的统计快照可在该页面展示，但不应存放 secret、大对象或高基数字段。
 
-### 6.2 限制与约束
+## 7. 配置
 
-- 内部和外部端点必须实现IPipeEndpoint接口
-- 必须设置外部端点才能注册管道
-- 端点和中间件应考虑线程安全问题
-- 初始化过程中的异常将标记通道为不可用
+| 属性 | 默认值 | 约束 | 影响 |
+|---|---:|---|---|
+| `RecentExceptionToKeep` | `10` | 大于 `0` | 单个 pipeline 保留的最近异常数量。 |
+| `InitThreadCount` | `10` | 大于 `0` | 启动时并行初始化 channel 的上限。 |
+| `EnableMinimalApi` | 继承模块系统默认值 | 可选 | 是否映射 DataChannel 运维 API。 |
 
-## 7. 版本与扩展计划
-
-### 7.1 当前版本特性
-
-- 基础管道框架
-- 端点和中间件抽象
-- ASP.NET Core集成
-- 多通道管理
-
-### 7.2 未来扩展方向
-
-- 更多内置通信协议支持
-- 通道监控和统计功能
-- 图形化配置界面
-- 分布式通道支持
-- 更多内置中间件组件
-
----
-
-## 附录: 核心类型参考
-
-| 类型 | 命名空间 | 描述 |
-|------|----------|------|
-| `DataChannelCentral` | `Monica.DataChannel` | 数据通道中央管理器 |
-| `DataChannel` | `Monica.DataChannel` | 数据通道封装类 |
-| `DataChannelSetting` | `Monica.DataChannel` | 数据通道配置类 |
-| `DataPipeline` | `Monica.DataChannel.Pipeline` | 数据管道核心类 |
-| `DataPipelineBuilder` | `Monica.DataChannel.Pipeline` | 数据管道构建器 |
-| `DataContext` | `Monica.DataChannel.Pipeline` | 数据上下文类 |
-| `IPipeComponent` | `Monica.DataChannel.Pipeline` | 管道组件基础接口 |
-| `IPipeEndpoint` | `Monica.DataChannel.Pipeline` | 管道端点接口 |
-| `IPipeMiddleware` | `Monica.DataChannel.Pipeline` | 管道中间件基础接口 |
-| `IPipeTransformMiddleware` | `Monica.DataChannel.Pipeline` | 转换中间件接口 |
-| `IPipeEndpointMiddleware` | `Monica.DataChannel.Pipeline` | 端点中间件接口 |
-| `IPipeMonitorMiddleware` | `Monica.DataChannel.Pipeline` | 监控中间件接口 |
-| `IWantAccessPipeline` | `Monica.DataChannel.Interfaces` | 管道访问接口 |
-| `IDynamicConfigApplicationBuilder` | `Monica.DataChannel.Interfaces` | 动态应用配置接口 |
-| `ISetupPipeline` | `Monica.DataChannel.Interfaces` | 管道设置接口 |
-| `IDataChannelManager` | `Monica.DataChannel` | 数据通道管理器接口 |
-| `DataChannelManager` | `Monica.DataChannel` | 数据通道管理器实现 |
-| `DataChannelInitializerService` | `Monica.DataChannel.Services` | 数据通道初始化服务 |
-| `ServiceCollectionExtensions` | `Monica.DataChannel.Extensions` | 服务集合扩展方法 | 
+完整用户文档见 `../Monica.Docs/docs/zh-CN/modules/data-channel/`。

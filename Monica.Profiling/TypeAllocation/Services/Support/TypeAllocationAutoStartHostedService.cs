@@ -17,7 +17,7 @@ internal sealed class TypeAllocationAutoStartHostedService(
     IOptions<ModuleTypeAllocationOption> options,
     ILogger<TypeAllocationAutoStartHostedService> logger,
     IObservableInstanceRegistry observableManager,
-    IOptions<ModuleHostedServiceOption> hostedServiceOptions) : MoHostedService(observableManager, hostedServiceOptions)
+    IOptions<ModuleHostedServiceOption> hostedServiceOptions) : MoHostedService(observableManager, hostedServiceOptions, logger)
 {
     /// <inheritdoc />
     public override string ServiceName => nameof(TypeAllocationAutoStartHostedService);

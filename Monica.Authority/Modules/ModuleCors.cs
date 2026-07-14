@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Cors.Infrastructure;
 using Microsoft.Extensions.DependencyInjection;
 using Monica.Core;
 using Monica.Core.Modularity;
@@ -11,14 +12,14 @@ namespace Monica.Modules;
 
 public static class ModuleCorsBuilderExtensions
 {
-    extension(Mo)
+    extension(IMonicaBuilder builder)
     {
         /// <summary>
         /// Configure the CORS (Cross-Origin Resource Sharing) module
         /// </summary>
-        public static ModuleCorsGuide AddCors()
+        public ModuleCorsGuide AddCors()
         {
-            return new ModuleCorsGuide().Register();
+            return builder.AddModule<ModuleCors, ModuleCorsOption, ModuleCorsGuide>();
         }
     }
 }
@@ -40,6 +41,23 @@ public class ModuleCors(ModuleCorsOption option) : WebModuleBase<ModuleCors, Mod
 public class ModuleCorsGuide : WebModuleGuide<ModuleCors, ModuleCorsOption, ModuleCorsGuide>
 {
     /// <summary>
+    /// Configures the default ASP.NET Core CORS policy used by the Monica pipeline.
+    /// </summary>
+    /// <param name="configure">A callback that defines the complete default policy.</param>
+    /// <returns>The current guide.</returns>
+    public ModuleCorsGuide ConfigureDefaultPolicy(Action<CorsPolicyBuilder> configure)
+    {
+        ArgumentNullException.ThrowIfNull(configure);
+
+        ConfigureServices(context =>
+        {
+            context.Services.AddCors(options => options.AddDefaultPolicy(configure));
+        });
+
+        return this;
+    }
+
+    /// <summary>
     /// Configure a permissive CORS policy (intended for development/testing).
     /// <para>Allows any origin, method, and header while supporting credentials (cookies/authorization headers).</para>
     /// <para>Uses <c>SetIsOriginAllowed(_ => true)</c> instead of <c>AllowAnyOrigin()</c> to enable dynamic
@@ -48,21 +66,12 @@ public class ModuleCorsGuide : WebModuleGuide<ModuleCors, ModuleCorsOption, Modu
     /// </summary>
     public ModuleCorsGuide AllowAll()
     {
-        ConfigureServices(context =>
-        {
-            context.Services.AddCors(options =>
-            {
-                options.AddDefaultPolicy(builder =>
-                {
-                    builder
-                        .SetIsOriginAllowed(_ => true)
-                        .AllowAnyMethod()
-                        .AllowAnyHeader()
-                        .AllowCredentials();
-                });
-            });
-        });
-        return this;
+        return ConfigureDefaultPolicy(policy =>
+            policy
+                .SetIsOriginAllowed(_ => true)
+                .AllowAnyMethod()
+                .AllowAnyHeader()
+                .AllowCredentials());
     }
 }
 

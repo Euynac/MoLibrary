@@ -3,6 +3,9 @@ using Monica.Modules;
 
 namespace Monica.WebApi.AutoControllers.Models;
 
+/// <summary>
+/// Configures generated CRUD controllers and their request conventions for one Monica host.
+/// </summary>
 public class CrudControllerOption : IModuleExtraOptions<ModuleAutoControllers>
 {
     /// <summary>
@@ -16,8 +19,18 @@ public class CrudControllerOption : IModuleExtraOptions<ModuleAutoControllers>
     /// This is purely a route-naming aid: a service such as <c>AircraftAppService</c> becomes the controller
     /// <c>Aircraft</c> and the route segment <c>aircraft</c>. It does not gate controller registration (that is decided
     /// by the <c>ICrudApplicationService</c> marker interface) and is not a naming-convention rule; name-convention
-    /// enforcement lives in the project-unit system (Monica.Framework). If a service name does not end with this
+    /// enforcement lives in the project-unit system (<c>Monica.ProjectUnits</c>). If a service name does not end with this
     /// suffix, the name is simply left unchanged.
     /// </remarks>
     public string CrudControllerPostfix { get; set; } = "CrudService";
+
+    /// <summary>
+    /// Gets the host-specific paging defaults and safety limits applied to generated CRUD requests.
+    /// </summary>
+    public AutoControllerPaginationOption Pagination { get; } = new();
+
+    /// <summary>
+    /// Gets the host-specific rules used to infer HTTP methods from action names.
+    /// </summary>
+    public ConventionalHttpMethodOption HttpMethods { get; } = new();
 }

@@ -20,14 +20,14 @@ namespace Monica.Modules;
 /// </summary>
 public static class ModuleTypeAllocationBuilderExtensions
 {
-    extension(Mo)
+    extension(IMonicaBuilder builder)
     {
         /// <summary>
         /// Configures the type allocation module.
         /// </summary>
-        public static ModuleTypeAllocationGuide AddTypeAllocation(Action<ModuleTypeAllocationOption>? action = null)
+        public ModuleTypeAllocationGuide AddTypeAllocation(Action<ModuleTypeAllocationOption>? action = null)
         {
-            return new ModuleTypeAllocationGuide().Register(action);
+            return builder.AddModule<ModuleTypeAllocation, ModuleTypeAllocationOption, ModuleTypeAllocationGuide>(action);
         }
     }
 }

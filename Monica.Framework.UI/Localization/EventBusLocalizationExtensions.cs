@@ -67,6 +67,14 @@ public static class EventBusLocalizationExtensions
     }
 
     /// <summary>
+    /// Gets the localized display name for an EventBus provider registration.
+    /// </summary>
+    public static string GetProviderDisplayName(this IStringLocalizer localizer, EventBusProviderInfo provider)
+    {
+        return provider.ServiceKey ?? localizer["Services:Common:DefaultProviderName"].Value;
+    }
+
+    /// <summary>
     /// Gets localized display text for a provider bus mode.
     /// </summary>
     public static string GetProviderModeText(this IStringLocalizer localizer, bool isDistributed)
@@ -137,6 +145,17 @@ public static class EventBusLocalizationExtensions
         }
 
         return parts.Count > 0 ? string.Join(Environment.NewLine, parts) : localizer["Shared:Labels:ActionHandler"].Value;
+    }
+
+    /// <summary>
+    /// Formats the duration represented by a subscription lifecycle state.
+    /// </summary>
+    public static string GetSubscriptionDurationText(
+        this IStringLocalizer localizer,
+        SubscriptionViewModel subscription)
+    {
+        var duration = subscription.GetDuration();
+        return duration.HasValue ? localizer.FormatEventBusDuration(duration.Value) : "-";
     }
 
     /// <summary>

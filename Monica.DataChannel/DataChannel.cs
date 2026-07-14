@@ -1,3 +1,4 @@
+using Monica.DataChannel.Abstractions;
 using Monica.DataChannel.Pipeline;
 
 namespace Monica.DataChannel;
@@ -5,7 +6,7 @@ namespace Monica.DataChannel;
 /// <summary>
 /// Represents a data channel.
 /// Wraps a data pipeline and provides a unified access and control surface.
-/// Acts as the managed unit tracked by <see cref="DataChannelCentral"/>.
+/// Acts as the managed unit exposed by the current host's <see cref="IDataChannelManager"/>.
 /// </summary>
 /// <param name="pipeline">The data pipeline instance.</param>
 public class DataChannel(ChannelPipeline pipeline)

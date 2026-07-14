@@ -1,15 +1,52 @@
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
-using Monica.Core.Logging;
 
 namespace Monica.Core.Modularity.Abstractions;
 
-public class ModuleOptions<TModule> : IModuleOptions<TModule> where TModule : IModule
+public class ModuleOptions<TModule> : IModuleOptions<TModule>, IModuleOptionsContext where TModule : IModule
 {
+    private MonicaApplication? _application;
+    private ILogger? _explicitLogger;
+    private LogLevel? _minimumLogLevel;
+
     /// <summary>
     /// Logger used during module registration and initialization.
     /// </summary>
-    public ILogger Logger { get; set; } = LogManager.For<TModule>(Mo.ModuleSystem.DefaultLogLevel);
+    public ILogger Logger
+    {
+        get
+        {
+            if (_explicitLogger is not null)
+            {
+                return _explicitLogger;
+            }
+
+            return _application is null
+                ? NullLogger.Instance
+                : _application.CreateLogger<TModule>(_minimumLogLevel ?? _application.ModuleSystem.DefaultLogLevel);
+        }
+        set
+        {
+            ArgumentNullException.ThrowIfNull(value);
+            _explicitLogger = value;
+        }
+    }
+
+    /// <summary>
+    /// Gets the application identity defaults owned by the current host.
+    /// </summary>
+    /// <exception cref="InvalidOperationException">Thrown before the option is bound to a Monica host.</exception>
+    protected IMonicaApplicationOptions Application =>
+        _application?.Application
+        ?? throw new InvalidOperationException($"{GetType().Name} has not been bound to a Monica host.");
+
+    /// <summary>
+    /// Gets the module-system defaults owned by the current host.
+    /// </summary>
+    /// <exception cref="InvalidOperationException">Thrown before the option is bound to a Monica host.</exception>
+    protected IMonicaModuleSystemOptions ModuleSystem =>
+        _application?.ModuleSystem
+        ?? throw new InvalidOperationException($"{GetType().Name} has not been bound to a Monica host.");
 
     /// <summary>
     /// Disables the module instead of throwing when registration fails.
@@ -42,7 +79,8 @@ public class ModuleOptions<TModule> : IModuleOptions<TModule> where TModule : IM
     /// <param name="logLevel">The minimum log level to set for this module.</param>
     public void SetModuleLogLevel(LogLevel logLevel)
     {
-        Logger = LogManager.For<TModule>(logLevel);
+        _minimumLogLevel = logLevel;
+        _explicitLogger = null;
     }
 
     /// <summary>
@@ -50,6 +88,22 @@ public class ModuleOptions<TModule> : IModuleOptions<TModule> where TModule : IM
     /// </summary>
     public void DisableModuleLog()
     {
-        Logger = NullLogger.Instance;
+        _explicitLogger = NullLogger.Instance;
+    }
+
+    /// <summary>
+    /// Binds host-owned defaults before developer configuration is applied.
+    /// </summary>
+    /// <param name="application">The owning Monica application.</param>
+    void IModuleOptionsContext.Bind(MonicaApplication application)
+    {
+        ArgumentNullException.ThrowIfNull(application);
+
+        if (_application is not null && !ReferenceEquals(_application, application))
+        {
+            throw new InvalidOperationException($"{GetType().Name} is already bound to another Monica host.");
+        }
+
+        _application = application;
     }
 }

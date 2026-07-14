@@ -12,14 +12,14 @@ namespace Monica.Modules;
 
 public static class ModuleMediatorBuilderExtensions
 {
-    extension(Mo)
+    extension(IMonicaBuilder builder)
     {
         /// <summary>
         /// Configures the Mediator module.
         /// </summary>
-        public static ModuleMediatorGuide AddMediator(Action<ModuleMediatorOption>? action = null)
+        public ModuleMediatorGuide AddMediator(Action<ModuleMediatorOption>? action = null)
         {
-            return new ModuleMediatorGuide().Register(action);
+            return builder.AddModule<ModuleMediator, ModuleMediatorOption, ModuleMediatorGuide>(action);
         }
     }
 }

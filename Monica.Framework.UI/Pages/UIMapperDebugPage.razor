@@ -1,9 +1,9 @@
 @using Monica.Core.ObjectMapping.Models
-@using Monica.Core.ObjectMapping.Services
+@using Monica.Core.ObjectMapping.Facades
 @using Monica.Modules
 @using Monica.Core.Results;
 @using Monica.UI.Shared.Components.Markdown
-@inject ObjectMappingStatusService StatusService
+@inject ObjectMappingFacade StatusService
 @inject ISnackbar Snackbar
 
 @attribute [Route(PAGE_URL)]

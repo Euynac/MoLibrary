@@ -23,14 +23,14 @@ namespace Monica.Modules;
 
 public static class ModuleSystemInfoUIBuilderExtensions
 {
-    extension(Mo)
+    extension(IMonicaBuilder builder)
     {
         /// <summary>
         /// Configures the SystemInfoUI module.
         /// </summary>
-        public static ModuleSystemInfoUIGuide AddSystemInfoUI(Action<ModuleSystemInfoUIOption>? action = null)
+        public ModuleSystemInfoUIGuide AddSystemInfoUI(Action<ModuleSystemInfoUIOption>? action = null)
         {
-            return new ModuleSystemInfoUIGuide().Register(action);
+            return builder.AddModule<ModuleSystemInfoUI, ModuleSystemInfoUIOption, ModuleSystemInfoUIGuide>(action);
         }
     }
 }

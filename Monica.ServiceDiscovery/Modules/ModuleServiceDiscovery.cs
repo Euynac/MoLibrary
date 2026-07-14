@@ -270,14 +270,14 @@ public class ModuleServiceDiscoveryGuide : WebModuleGuide<ModuleServiceDiscovery
 }
 public static class ModuleServiceDiscoveryBuilderExtensions
 {
-    extension(Mo)
+    extension(IMonicaBuilder builder)
     {
         /// <summary>
         /// Configures the ServiceDiscovery module.
         /// </summary>
-        public static ModuleServiceDiscoveryGuide AddServiceDiscovery(Action<ModuleServiceDiscoveryOption>? action = null)
+        public ModuleServiceDiscoveryGuide AddServiceDiscovery(Action<ModuleServiceDiscoveryOption>? action = null)
         {
-            return new ModuleServiceDiscoveryGuide().Register(action);
+            return builder.AddModule<ModuleServiceDiscovery, ModuleServiceDiscoveryOption, ModuleServiceDiscoveryGuide>(action);
         }
     }
 }
@@ -310,25 +310,25 @@ public class ModuleServiceDiscoveryOption : MinimalApiModuleOptions<ModuleServic
 
     /// <summary>
     /// Subdomain name (optional).
-    /// When not configured, ServiceDiscovery uses the application defaults configured through <see cref="Mo.ConfigApplication"/>.
+    /// When not configured, ServiceDiscovery uses the application defaults configured through <see cref="IMonicaBuilder.ConfigureApplication"/>.
     /// </summary>
     public string? DomainName { get; set; }
 
     /// <summary>
     /// Unique application identifier.
-    /// When not configured, ServiceDiscovery uses the application defaults configured through <see cref="Mo.ConfigApplication"/>.
+    /// When not configured, ServiceDiscovery uses the application defaults configured through <see cref="IMonicaBuilder.ConfigureApplication"/>.
     /// </summary>
     public string? AppId { get; set; }
 
     /// <summary>
     /// Display name of the application.
-    /// When not configured, ServiceDiscovery uses the application defaults configured through <see cref="Mo.ConfigApplication"/>.
+    /// When not configured, ServiceDiscovery uses the application defaults configured through <see cref="IMonicaBuilder.ConfigureApplication"/>.
     /// </summary>
     public string? AppName { get; set; }
 
     /// <summary>
     /// Project name.
-    /// When not configured, ServiceDiscovery uses the application defaults configured through <see cref="Mo.ConfigApplication"/>.
+    /// When not configured, ServiceDiscovery uses the application defaults configured through <see cref="IMonicaBuilder.ConfigureApplication"/>.
     /// </summary>
     public string? ProjectName { get; set; }
 
@@ -348,7 +348,7 @@ public class ModuleServiceDiscoveryOption : MinimalApiModuleOptions<ModuleServic
 
     /// <summary>
     /// Release version (custom version identifier).
-    /// When not configured, ServiceDiscovery uses the application version configured through <see cref="Mo.ConfigApplication"/>.
+    /// When not configured, ServiceDiscovery uses the application version configured through <see cref="IMonicaBuilder.ConfigureApplication"/>.
     /// </summary>
     public string? ReleaseVersion { get; set; }
 

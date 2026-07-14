@@ -12,14 +12,14 @@ namespace Monica.Modules;
 
 public static class ModuleSnowflakeBuilderExtensions
 {
-    extension(Mo)
+    extension(IMonicaBuilder builder)
     {
         /// <summary>
         /// Registers the Snowflake ID generation module.
         /// </summary>
-        public static ModuleSnowflakeGuide AddSnowflake(Action<ModuleSnowflakeOption>? action = null)
+        public ModuleSnowflakeGuide AddSnowflake(Action<ModuleSnowflakeOption>? action = null)
         {
-            return new ModuleSnowflakeGuide().Register(action);
+            return builder.AddModule<ModuleSnowflake, ModuleSnowflakeOption, ModuleSnowflakeGuide>(action);
         }
     }
 }

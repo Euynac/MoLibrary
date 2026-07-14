@@ -104,7 +104,7 @@ public class ForceSerializeOptions
     /// <summary>
     /// Default options with conservative limits to prevent memory issues.
     /// </summary>
-    public static ForceSerializeOptions Default { get; } = new();
+    public static ForceSerializeOptions Default => new();
 
     /// <summary>
     /// Maximum recursion depth. Default is 10.
@@ -168,15 +168,6 @@ public class ForceSerializeConverterFactory : JsonConverterFactory
 /// <typeparam name="T">The type to serialize.</typeparam>
 public class ForceSerializeConverter<T> : JsonConverter<T>
 {
-    [ThreadStatic]
-    private static int _currentDepth;
-
-    [ThreadStatic]
-    private static HashSet<object>? _visitedObjects;
-
-    [ThreadStatic]
-    private static bool _outputLimitExceeded;
-
     private readonly ForceSerializeOptions _options;
 
     /// <summary>
@@ -197,29 +188,14 @@ public class ForceSerializeConverter<T> : JsonConverter<T>
     /// <inheritdoc />
     public override void Write(Utf8JsonWriter writer, T value, JsonSerializerOptions options)
     {
-        // Initialize thread-static state at the root level
-        var isRoot = _currentDepth == 0;
-        if (isRoot)
-        {
-            _visitedObjects = new HashSet<object>(ReferenceEqualityComparer.Instance);
-            _outputLimitExceeded = false;
-        }
-
-        try
-        {
-            WriteValue(writer, value, options);
-        }
-        finally
-        {
-            if (isRoot)
-            {
-                _visitedObjects?.Clear();
-                _visitedObjects = null;
-            }
-        }
+        WriteValue(writer, value, options, new ForceSerializationContext());
     }
 
-    private void WriteValue(Utf8JsonWriter writer, object? value, JsonSerializerOptions options)
+    private void WriteValue(
+        Utf8JsonWriter writer,
+        object? value,
+        JsonSerializerOptions options,
+        ForceSerializationContext context)
     {
         if (value == null)
         {
@@ -228,14 +204,14 @@ public class ForceSerializeConverter<T> : JsonConverter<T>
         }
 
         // Check output size limit
-        if (CheckOutputLimitExceeded(writer))
+        if (CheckOutputLimitExceeded(writer, context))
         {
             WriteSkippedValue(writer, value.GetType(), "OUTPUT_SIZE_LIMIT_EXCEEDED");
             return;
         }
 
         // Check depth limit
-        if (_currentDepth >= _options.MaxDepth)
+        if (context.CurrentDepth >= _options.MaxDepth)
         {
             WriteSkippedValue(writer, value.GetType(), "MAX_DEPTH_EXCEEDED");
             return;
@@ -251,7 +227,7 @@ public class ForceSerializeConverter<T> : JsonConverter<T>
         }
         
         // Handle special types that need custom serialization
-        if (TryWriteSpecialType(writer, value, type, options))
+        if (TryWriteSpecialType(writer, value, type, options, context))
         {
             return;
         }
@@ -264,7 +240,7 @@ public class ForceSerializeConverter<T> : JsonConverter<T>
         }
 
         // Check for circular reference (only for reference types)
-        if (!type.IsValueType && !TryTrackObject(value))
+        if (!type.IsValueType && !context.TryTrack(value))
         {
             WriteSkippedValue(writer, type, "CIRCULAR_REFERENCE");
             return;
@@ -278,26 +254,20 @@ public class ForceSerializeConverter<T> : JsonConverter<T>
         }
 
         // Fall back to property-by-property serialization
-        WriteObjectProperties(writer, value, type, options);
+        WriteObjectProperties(writer, value, type, options, context);
     }
 
-    private bool CheckOutputLimitExceeded(Utf8JsonWriter writer)
+    private bool CheckOutputLimitExceeded(Utf8JsonWriter writer, ForceSerializationContext context)
     {
-        if (_outputLimitExceeded) return true;
+        if (context.OutputLimitExceeded) return true;
 
         var currentSize = writer.BytesPending + writer.BytesCommitted;
         if (currentSize > _options.MaxOutputSizeBytes)
         {
-            _outputLimitExceeded = true;
+            context.MarkOutputLimitExceeded();
             return true;
         }
         return false;
-    }
-
-    private bool TryTrackObject(object value)
-    {
-        _visitedObjects ??= new HashSet<object>(ReferenceEqualityComparer.Instance);
-        return _visitedObjects.Add(value);
     }
 
     private static bool ShouldSkipType(Type type)
@@ -328,7 +298,12 @@ public class ForceSerializeConverter<T> : JsonConverter<T>
         return false;
     }
 
-    private bool TryWriteSpecialType(Utf8JsonWriter writer, object value, Type type, JsonSerializerOptions options)
+    private bool TryWriteSpecialType(
+        Utf8JsonWriter writer,
+        object value,
+        Type type,
+        JsonSerializerOptions options,
+        ForceSerializationContext context)
     {
         // Handle Type
         if (value is Type typeValue)
@@ -354,7 +329,7 @@ public class ForceSerializeConverter<T> : JsonConverter<T>
         // Handle Exception
         if (value is Exception ex)
         {
-            WriteException(writer, ex, options);
+            WriteException(writer, ex, options, context);
             return true;
         }
 
@@ -442,12 +417,16 @@ public class ForceSerializeConverter<T> : JsonConverter<T>
         writer.WriteEndObject();
     }
 
-    private void WriteException(Utf8JsonWriter writer, Exception ex, JsonSerializerOptions options)
+    private void WriteException(
+        Utf8JsonWriter writer,
+        Exception ex,
+        JsonSerializerOptions options,
+        ForceSerializationContext context)
     {
-        _currentDepth++;
+        context.EnterNestedValue();
         try
         {
-            if (CheckOutputLimitExceeded(writer))
+            if (CheckOutputLimitExceeded(writer, context))
             {
                 WriteSkippedValue(writer, ex.GetType(), "OUTPUT_SIZE_LIMIT_EXCEEDED");
                 return;
@@ -461,10 +440,10 @@ public class ForceSerializeConverter<T> : JsonConverter<T>
             writer.WriteString("Source", ex.Source);
             writer.WriteNumber("HResult", ex.HResult);
 
-            if (ex.InnerException != null && _currentDepth < _options.MaxDepth)
+            if (ex.InnerException != null && context.CurrentDepth < _options.MaxDepth)
             {
                 writer.WritePropertyName("InnerException");
-                WriteException(writer, ex.InnerException, options);
+                WriteException(writer, ex.InnerException, options, context);
             }
 
             // Write Data dictionary if it has entries (limited)
@@ -478,7 +457,7 @@ public class ForceSerializeConverter<T> : JsonConverter<T>
                     if (count++ >= _options.MaxCollectionItems) break;
                     var key = entry.Key?.ToString() ?? "null";
                     writer.WritePropertyName(key);
-                    WriteValue(writer, entry.Value, options);
+                    WriteValue(writer, entry.Value, options, context);
                 }
                 if (ex.Data.Count > _options.MaxCollectionItems)
                 {
@@ -491,7 +470,7 @@ public class ForceSerializeConverter<T> : JsonConverter<T>
         }
         finally
         {
-            _currentDepth--;
+            context.ExitNestedValue();
         }
     }
 
@@ -552,12 +531,17 @@ public class ForceSerializeConverter<T> : JsonConverter<T>
         return false;
     }
 
-    private void WriteObjectProperties(Utf8JsonWriter writer, object value, Type type, JsonSerializerOptions options)
+    private void WriteObjectProperties(
+        Utf8JsonWriter writer,
+        object value,
+        Type type,
+        JsonSerializerOptions options,
+        ForceSerializationContext context)
     {
-        _currentDepth++;
+        context.EnterNestedValue();
         try
         {
-            if (CheckOutputLimitExceeded(writer))
+            if (CheckOutputLimitExceeded(writer, context))
             {
                 WriteSkippedValue(writer, type, "OUTPUT_SIZE_LIMIT_EXCEEDED");
                 return;
@@ -566,14 +550,14 @@ public class ForceSerializeConverter<T> : JsonConverter<T>
             // Check if it's an enumerable (but not string or dictionary)
             if (value is IEnumerable enumerable && value is not string && value is not IDictionary)
             {
-                WriteEnumerable(writer, enumerable, options);
+                WriteEnumerable(writer, enumerable, options, context);
                 return;
             }
 
             // Check if it's a dictionary
             if (value is IDictionary dict)
             {
-                WriteDictionary(writer, dict, options);
+                WriteDictionary(writer, dict, options, context);
                 return;
             }
 
@@ -591,7 +575,7 @@ public class ForceSerializeConverter<T> : JsonConverter<T>
             var propertyCount = 0;
             foreach (var prop in properties.Take(_options.MaxProperties))
             {
-                if (CheckOutputLimitExceeded(writer)) break;
+                if (CheckOutputLimitExceeded(writer, context)) break;
 
                 // Skip properties of problematic types
                 if (ShouldSkipType(prop.PropertyType))
@@ -619,7 +603,7 @@ public class ForceSerializeConverter<T> : JsonConverter<T>
                 }
 
                 writer.WritePropertyName(prop.Name);
-                WriteValue(writer, propValue, options);
+                WriteValue(writer, propValue, options, context);
                 propertyCount++;
             }
 
@@ -632,36 +616,44 @@ public class ForceSerializeConverter<T> : JsonConverter<T>
         }
         finally
         {
-            _currentDepth--;
+            context.ExitNestedValue();
         }
     }
 
-    private void WriteEnumerable(Utf8JsonWriter writer, IEnumerable enumerable, JsonSerializerOptions options)
+    private void WriteEnumerable(
+        Utf8JsonWriter writer,
+        IEnumerable enumerable,
+        JsonSerializerOptions options,
+        ForceSerializationContext context)
     {
         writer.WriteStartArray();
         var count = 0;
         foreach (var item in enumerable)
         {
-            if (CheckOutputLimitExceeded(writer)) break;
+            if (CheckOutputLimitExceeded(writer, context)) break;
 
             if (count >= _options.MaxCollectionItems)
             {
                 writer.WriteStringValue($"...[TRUNCATED, showing first {_options.MaxCollectionItems} items]");
                 break;
             }
-            WriteValue(writer, item, options);
+            WriteValue(writer, item, options, context);
             count++;
         }
         writer.WriteEndArray();
     }
 
-    private void WriteDictionary(Utf8JsonWriter writer, IDictionary dict, JsonSerializerOptions options)
+    private void WriteDictionary(
+        Utf8JsonWriter writer,
+        IDictionary dict,
+        JsonSerializerOptions options,
+        ForceSerializationContext context)
     {
         writer.WriteStartObject();
         var count = 0;
         foreach (DictionaryEntry entry in dict)
         {
-            if (CheckOutputLimitExceeded(writer)) break;
+            if (CheckOutputLimitExceeded(writer, context)) break;
 
             if (count >= _options.MaxCollectionItems)
             {
@@ -670,7 +662,7 @@ public class ForceSerializeConverter<T> : JsonConverter<T>
             }
             var key = entry.Key?.ToString() ?? "null";
             writer.WritePropertyName(key);
-            WriteValue(writer, entry.Value, options);
+            WriteValue(writer, entry.Value, options, context);
             count++;
         }
         writer.WriteEndObject();
@@ -688,6 +680,35 @@ public class ForceSerializeConverter<T> : JsonConverter<T>
     {
         if (value == null || value.Length <= maxLength) return value;
         return value.Substring(0, maxLength) + "...[TRUNCATED]";
+    }
+
+    private sealed class ForceSerializationContext
+    {
+        private readonly HashSet<object> _visitedObjects = new(ReferenceEqualityComparer.Instance);
+
+        public int CurrentDepth { get; private set; }
+
+        public bool OutputLimitExceeded { get; private set; }
+
+        public bool TryTrack(object value)
+        {
+            return _visitedObjects.Add(value);
+        }
+
+        public void EnterNestedValue()
+        {
+            CurrentDepth++;
+        }
+
+        public void ExitNestedValue()
+        {
+            CurrentDepth--;
+        }
+
+        public void MarkOutputLimitExceeded()
+        {
+            OutputLimitExceeded = true;
+        }
     }
 }
 

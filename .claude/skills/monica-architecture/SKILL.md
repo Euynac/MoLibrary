@@ -504,7 +504,7 @@ For a concrete anti-pattern case study, see `references/refactoring-examples.md`
 | Module class | `Module{Name}` | `ModuleRAG` |
 | Options class | `Module{Name}Option` | `ModuleRAGOption` |
 | Guide class | `Module{Name}Guide` | `ModuleRAGGuide` |
-| Builder extension | `Mo.Add{Name}()` | `Mo.AddRAG()` |
+| Builder extension | `monica.Add{Name}()` | `monica.AddRAG()` |
 
 ### Service Naming
 

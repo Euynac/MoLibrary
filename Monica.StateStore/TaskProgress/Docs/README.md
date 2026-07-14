@@ -17,12 +17,13 @@ TaskProgress 模块提供了一个完整的进度条管理系统，支持状态�
 ## 模块注册
 
 ```csharp
-// 在 Program.cs 中注册模块
-Mo.AddTaskProgress(options =>
+builder.AddMonica(monica =>
 {
-    options.UseDistributedStateStore = true; // 使用分布式存储
-})
-.Register(); // 自动注册进度条服务
+    monica.AddTaskProgress(options =>
+    {
+        options.UseDistributedStateStore = true;
+    });
+});
 ```
 
 ## 基本使用
@@ -392,11 +393,13 @@ public class DataMigrationStatus : TaskProgressStatus
 ## 配置选项
 
 ```csharp
-Mo.AddTaskProgress(options =>
+builder.AddMonica(monica =>
 {
-    options.UseDistributedStateStore = true; // 使用分布式存储
-})
-.Register(); // 自动注册服务，无需手动调用RegisterTaskProgressService()
+    monica.AddTaskProgress(options =>
+    {
+        options.UseDistributedStateStore = true;
+    });
+});
 ```
 
 ## 依赖模块

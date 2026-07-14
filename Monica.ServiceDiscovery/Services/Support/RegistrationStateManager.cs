@@ -73,12 +73,12 @@ public class RegistrationStateManager(
                 _cachedRegistrationTime ??= registrationTime;
             }
 
-            logger.LogDebug("心跳成功: {Key}", regKey);
+            logger.LogDebug("Heartbeat succeeded for registration key {RegistrationKey}.", regKey);
             return new RegistrationResult(true, now, null);
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "心跳失败");
+            logger.LogError(ex, "Heartbeat failed.");
             return new RegistrationResult(false, null, ex.Message);
         }
     }
@@ -92,7 +92,7 @@ public class RegistrationStateManager(
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "检查 Leader Key 是否存在失败");
+            logger.LogError(ex, "Failed to determine whether the leader key exists.");
             return false;
         }
     }
@@ -106,7 +106,7 @@ public class RegistrationStateManager(
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "获取 Leader 状态失败");
+            logger.LogError(ex, "Failed to get the leader state.");
             return null;
         }
     }
@@ -137,16 +137,16 @@ public class RegistrationStateManager(
             {
                 // Get ETag
                 var (_, eTag) = await stateStore.GetStateAndETagAsync<LeaderState>(LEADER_PREFIX + leaderKey, ct);
-                logger.LogInformation("成功成为 Leader: {InstanceId}", serviceStatus.InstanceId);
+                logger.LogInformation("Instance {InstanceId} acquired leadership.", serviceStatus.InstanceId);
                 return (true, leaderState, eTag);
             }
 
-            logger.LogDebug("Leader 竞争失败，Key 已存在");
+            logger.LogDebug("Leadership was not acquired because the leader key already exists.");
             return (false, null, null);
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "尝试成为 Leader 失败");
+            logger.LogError(ex, "Failed to acquire leadership.");
             return (false, null, null);
         }
     }
@@ -175,22 +175,28 @@ public class RegistrationStateManager(
 
             if (success)
             {
-                logger.LogDebug("Leader 续约成功: {ETag}", newETag);
+                logger.LogDebug("Leader lease renewed with ETag {ETag}.", newETag);
                 return (true, newETag, null, null);
             }
 
-            
             var (actualState, actualETag) = await stateStore.GetStateAndETagAsync<LeaderState>(LEADER_PREFIX + leaderKey, ct);
-            if(actualState is not null)
-                logger.LogWarning("Leader 续约失败，ETag 不匹配。本地 ETag: {ExpectedETag}, 实际 ETag: {ActualETag}",
-                expectedETag, actualETag);
-            else 
-                logger.LogWarning("Leader 续约失败，未找到 Leader 状态");
+            if (actualState is not null)
+            {
+                logger.LogWarning(
+                    "Leader lease renewal failed because the ETag did not match. Expected ETag: {ExpectedETag}; actual ETag: {ActualETag}.",
+                    expectedETag,
+                    actualETag);
+            }
+            else
+            {
+                logger.LogWarning("Leader lease renewal failed because no leader state was found.");
+            }
+
             return (false, null, actualState, actualETag);
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Leader 续约异常");
+            logger.LogError(ex, "Leader lease renewal failed unexpectedly.");
             return (false, null, null, null);
         }
     }
@@ -201,11 +207,11 @@ public class RegistrationStateManager(
         {
             var leaderKey = GetLeaderKey();
             await stateStore.DeleteStateAsync(LEADER_PREFIX + leaderKey, ct);
-            logger.LogInformation("已删除 Leader Key: {Key}", leaderKey);
+            logger.LogInformation("Deleted leader key {LeaderKey}.", leaderKey);
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "删除 Leader Key 失败");
+            logger.LogError(ex, "Failed to delete the leader key.");
         }
     }
 
@@ -214,11 +220,11 @@ public class RegistrationStateManager(
         try
         {
             await stateStore.DeleteStateAsync(LEADER_PREFIX + appId, ct);
-            logger.LogInformation("已强制删除 Leader Key: {AppId}", appId);
+            logger.LogInformation("Force-deleted the leader key for application {AppId}.", appId);
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "强制删除 Leader Key 失败: {AppId}", appId);
+            logger.LogError(ex, "Failed to force-delete the leader key for application {AppId}.", appId);
             throw;
         }
     }
@@ -232,7 +238,7 @@ public class RegistrationStateManager(
 
             if (instanceKeys.Count == 0)
             {
-                logger.LogDebug("未找到任何实例");
+                logger.LogDebug("No registered service instances were found.");
                 return [];
             }
 
@@ -248,7 +254,7 @@ public class RegistrationStateManager(
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "获取所有实例失败");
+            logger.LogError(ex, "Failed to retrieve registered service instances.");
             return [];
         }
     }
@@ -262,7 +268,7 @@ public class RegistrationStateManager(
 
             if (leaderKeys.Count == 0)
             {
-                logger.LogDebug("未找到任何 Leader");
+                logger.LogDebug("No leader instances were found.");
                 return [];
             }
 
@@ -280,7 +286,7 @@ public class RegistrationStateManager(
 
             if (instanceKeys.Count == 0)
             {
-                logger.LogDebug("未找到有效的 Leader 实例键");
+                logger.LogDebug("No valid leader instance keys were found.");
                 return [];
             }
 
@@ -294,7 +300,7 @@ public class RegistrationStateManager(
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "获取所有 Leader 实例失败");
+            logger.LogError(ex, "Failed to retrieve leader instances.");
             return [];
         }
     }

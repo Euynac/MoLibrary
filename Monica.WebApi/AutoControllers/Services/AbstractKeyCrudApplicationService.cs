@@ -5,6 +5,8 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.DynamicLinq;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using Monica.AutoModel.Abstractions;
 using Monica.Core.ObjectMapping.Abstractions;
 using Monica.Core.Results;
@@ -18,6 +20,7 @@ using Monica.Repository.UnitOfWork.Abstractions;
 using Monica.Tool.Extensions;
 using Monica.WebApi.Abstractions;
 using Monica.WebApi.AutoControllers.Abstractions;
+using Monica.WebApi.AutoControllers.Models;
 
 namespace Monica.WebApi.AutoControllers.Services;
 
@@ -31,8 +34,11 @@ namespace Monica.WebApi.AutoControllers.Services;
 /// <typeparam name="TGetListInput">The input type for GetList operations</typeparam>
 /// <typeparam name="TCreateInput">The input type for Create operations</typeparam>
 /// <typeparam name="TUpdateInput">The input type for Update operations</typeparam>
+/// <param name="repository">The repository used for persistence operations.</param>
+/// <param name="loggerFactory">The current host's logger factory.</param>
 public abstract class AbstractKeyCrudApplicationService<TEntity, TGetOutputDto, TGetListOutputDto, TKey, TGetListInput, TCreateInput, TUpdateInput>(
-    IRepository<TEntity, TKey> repository) : ApplicationService
+    IRepository<TEntity, TKey> repository,
+    ILoggerFactory loggerFactory) : ApplicationService(loggerFactory)
     where TEntity : class, IEntity<TKey>
 {
     /// <summary>
@@ -73,6 +79,8 @@ public abstract class AbstractKeyCrudApplicationService<TEntity, TGetOutputDto, 
     /// <returns>A paged response containing the mapped entity DTOs</returns>
     protected virtual async Task<ListResult> InnerGetListAsync<TCustomDto>(TGetListInput input, IQueryable<TEntity> query)
     {
+        ApplyHostPagingDefaults(input);
+
         int? totalCount = null;
 
         FeatureSetting? featureSetting = null;
@@ -219,6 +227,8 @@ public abstract class AbstractKeyCrudApplicationService<TEntity, TGetOutputDto, 
         IQueryable<TEntity> query, 
         [EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
+        ApplyHostPagingDefaults(input);
+
         // Apply sorting for consistent results in streaming scenarios
         query = ApplySorting(query, input);
 
@@ -246,6 +256,18 @@ public abstract class AbstractKeyCrudApplicationService<TEntity, TGetOutputDto, 
         await foreach (var entity in query.AsAsyncEnumerable().WithCancellation(cancellationToken))
         {
             yield return await MapToGetListOutputDtoStreamAsync<TCustomDto>(entity);
+        }
+    }
+
+    private void ApplyHostPagingDefaults(TGetListInput input)
+    {
+        if (input is LimitedResultRequestDto request)
+        {
+            var pagination = CachedServiceProvider
+                .GetRequiredService<IOptions<CrudControllerOption>>()
+                .Value
+                .Pagination;
+            request.ApplyDefaults(pagination);
         }
     }
 

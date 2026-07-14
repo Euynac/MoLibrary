@@ -1,3 +1,5 @@
+using System.Collections.Frozen;
+using System.Diagnostics.CodeAnalysis;
 using Monica.Core.Modularity.Models;
 
 namespace Monica.Core.Modularity.State;
@@ -7,28 +9,93 @@ namespace Monica.Core.Modularity.State;
 /// </summary>
 internal sealed class ModuleDependencyState
 {
-    /// <summary>
-    /// Gets mappings from module types to declared module keys.
-    /// </summary>
-    public Dictionary<Type, ModuleKey> ModuleTypeToKeyMap { get; } = [];
+    private readonly Dictionary<Type, ModuleKey> _moduleKeysByType = [];
+    private readonly Dictionary<ModuleKey, Type> _moduleTypesByKey = [];
+    private readonly Dictionary<ModuleKey, HashSet<ModuleKey>> _dependenciesByModule = [];
 
-    /// <summary>
-    /// Gets mappings from declared module keys to module types.
-    /// </summary>
-    public Dictionary<ModuleKey, Type> ModuleKeyToTypeDict { get; } = [];
+    internal IEnumerable<ModuleKey> MappedModuleKeys => _moduleTypesByKey.Keys;
 
-    /// <summary>
-    /// Gets the module dependency graph keyed by declaring module.
-    /// </summary>
-    public Dictionary<ModuleKey, HashSet<ModuleKey>> ModuleDependencyMap { get; } = [];
+    internal IEnumerable<(ModuleKey Module, IReadOnlySet<ModuleKey> Dependencies)> DependencyEntries
+    {
+        get
+        {
+            foreach (var (module, dependencies) in _dependenciesByModule)
+            {
+                yield return (module, dependencies);
+            }
+        }
+    }
+
+    internal IReadOnlyDictionary<Type, ModuleKey> CreateModuleKeysByTypeSnapshot()
+    {
+        return _moduleKeysByType.ToFrozenDictionary();
+    }
+
+    internal IReadOnlyDictionary<ModuleKey, Type> CreateModuleTypesByKeySnapshot()
+    {
+        return _moduleTypesByKey.ToFrozenDictionary();
+    }
+
+    internal IReadOnlyDictionary<ModuleKey, IReadOnlySet<ModuleKey>> CreateDependenciesByModuleSnapshot()
+    {
+        return _dependenciesByModule.ToFrozenDictionary(
+            static entry => entry.Key,
+            static entry => (IReadOnlySet<ModuleKey>)entry.Value.ToFrozenSet());
+    }
+
+    internal bool TryGetModuleKey(Type moduleType, out ModuleKey moduleKey)
+    {
+        return _moduleKeysByType.TryGetValue(moduleType, out moduleKey);
+    }
+
+    internal bool TryGetModuleType(ModuleKey moduleKey, [NotNullWhen(true)] out Type? moduleType)
+    {
+        return _moduleTypesByKey.TryGetValue(moduleKey, out moduleType);
+    }
+
+    internal bool TryGetDependencies(
+        ModuleKey moduleKey,
+        [NotNullWhen(true)] out IReadOnlySet<ModuleKey>? dependencies)
+    {
+        if (_dependenciesByModule.TryGetValue(moduleKey, out var storedDependencies))
+        {
+            dependencies = storedDependencies;
+            return true;
+        }
+
+        dependencies = null;
+        return false;
+    }
+
+    internal void RegisterMapping(Type moduleType, ModuleKey moduleKey)
+    {
+        _moduleKeysByType[moduleType] = moduleKey;
+        _moduleTypesByKey[moduleKey] = moduleType;
+    }
+
+    internal void AddDependency(ModuleKey moduleKey, ModuleKey dependencyKey)
+    {
+        if (moduleKey == dependencyKey)
+        {
+            return;
+        }
+
+        if (!_dependenciesByModule.TryGetValue(moduleKey, out var dependencies))
+        {
+            dependencies = [];
+            _dependenciesByModule[moduleKey] = dependencies;
+        }
+
+        dependencies.Add(dependencyKey);
+    }
 
     /// <summary>
     /// Clears dependency graph data.
     /// </summary>
-    public void Clear()
+    internal void Clear()
     {
-        ModuleTypeToKeyMap.Clear();
-        ModuleKeyToTypeDict.Clear();
-        ModuleDependencyMap.Clear();
+        _moduleKeysByType.Clear();
+        _moduleTypesByKey.Clear();
+        _dependenciesByModule.Clear();
     }
 }

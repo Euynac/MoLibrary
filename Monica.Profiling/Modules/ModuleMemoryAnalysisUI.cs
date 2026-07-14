@@ -16,14 +16,14 @@ namespace Monica.Modules;
 /// </summary>
 public static class ModuleMemoryAnalysisUIBuilderExtensions
 {
-    extension(Mo)
+    extension(IMonicaBuilder builder)
     {
         /// <summary>
         /// Configures the memory analysis UI module.
         /// </summary>
-        public static ModuleMemoryAnalysisUIGuide AddMemoryAnalysisUI(Action<ModuleMemoryAnalysisUIOption>? action = null)
+        public ModuleMemoryAnalysisUIGuide AddMemoryAnalysisUI(Action<ModuleMemoryAnalysisUIOption>? action = null)
         {
-            return new ModuleMemoryAnalysisUIGuide().Register(action);
+            return builder.AddModule<ModuleMemoryAnalysisUI, ModuleMemoryAnalysisUIOption, ModuleMemoryAnalysisUIGuide>(action);
         }
     }
 }

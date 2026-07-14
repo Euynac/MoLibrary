@@ -4,27 +4,25 @@ using Monica.Core.JsonSerialization.Abstractions;
 
 namespace Monica.Core.JsonSerialization.Services;
 
-public class JsonSerializerOptionsProvider : IJsonSerializerOptionsProvider
+/// <summary>
+/// Exposes the finalized JSON serializer options owned by one Monica host.
+/// </summary>
+public sealed class JsonSerializerOptionsProvider(
+    JsonSerializerOptions serializerOptions) : IJsonSerializerOptionsProvider
 {
     /// <summary>
-    /// Gets or sets the shared JSON serializer options used by MVC and other global pipelines.
+    /// Gets the accepted inbound date-time formats.
     /// </summary>
-    public static JsonSerializerOptions SharedSerializerOptions { get; set; } = new();
-    ///// <summary>
-    ///// Shared backend JSON settings for scenarios such as domain-event publishing.
-    ///// </summary>
-    //internal static JsonSerializerOptions GlobalBackendJsonSerializerOptions { get; set; } = new()
-    //{
-    //    DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingDefault,
-    //    PropertyNameCaseInsensitive = true,
-    //    Converters = { new DateTimeJsonConverter(), new NullableDateTimeJsonConverter()}
-    //};
     public static readonly string[] DateTimeFormats =
     [
         "yyyy-MM-dd HH:mm:ss",
         "yyyy-MM-dd",
         "yyyy-MM-ddTHH:mm:ss"
     ];
+
+    /// <summary>
+    /// Gets the canonical outbound date-time format.
+    /// </summary>
     public static readonly string OutputDateTimeFormat = "yyyy-MM-dd HH:mm:ss";
 
     /// <summary>
@@ -37,15 +35,6 @@ public class JsonSerializerOptionsProvider : IJsonSerializerOptionsProvider
     public static DateTime NormalizeInTime(DateTime dateTime)
     {
         return dateTime;
-        //switch (dateTime.Kind)
-        //{
-        //    case DateTimeKind.Utc:
-        //        return dateTime;
-        //    case DateTimeKind.Local:
-        //        return dateTime.ToUniversalTime();
-        //}
-
-        //return TimeZoneInfo.ConvertTimeToUtc(dateTime, CurTimeZoneInfo);
     }
 
     /// <summary>
@@ -53,22 +42,15 @@ public class JsonSerializerOptionsProvider : IJsonSerializerOptionsProvider
     /// </summary>
     /// <param name="dateTime">The outbound date-time value.</param>
     /// <returns>The normalized date-time value.</returns>
-    /// <exception cref="Exception">Thrown by the commented-out fallback conversion logic when enabled.</exception>
     public static DateTime NormalizeOutTime(DateTime dateTime)
     {
         return dateTime;
-        //try
-        //{
-        //    return TimeZoneInfo.ConvertTimeFromUtc(dateTime, CurTimeZoneInfo);
-        //}
-        //catch (Exception e)
-        //{
-        //    throw new Exception("Avoid APIs such as DateTime.Now that produce DateTimeKind.Local. The backend standard is UTC.", e);
-        //}
     }
 
-    public JsonSerializerOptions SerializerOptions => SharedSerializerOptions;
+    /// <inheritdoc />
+    public JsonSerializerOptions SerializerOptions { get; } = serializerOptions;
 
+    /// <inheritdoc />
     [return: NotNullIfNotNull("str")]
     public string? UsingJsonNamePolicy(string? str)
     {
@@ -76,6 +58,7 @@ public class JsonSerializerOptionsProvider : IJsonSerializerOptionsProvider
         return SerializerOptions.PropertyNamingPolicy?.ConvertName(str) ?? str;
     }
 
+    /// <inheritdoc />
     [return: NotNullIfNotNull("str")]
     public string? UsingJsonDictionaryKeyPolicy(string? str)
     {

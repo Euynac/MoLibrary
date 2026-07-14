@@ -83,7 +83,7 @@ Create:
 
 - `Configuration`
 - Consumers that inject `IOptions<T>`, `IOptionsSnapshot<T>`, or `IOptionsMonitor<T>`
-- Host-composition wiring that uses `Mo.AddConfiguration(...)` plus `Mo.RegisterInstantly(builder)` when the option must be consumed during registration rather than normal runtime injection
+- Host-composition wiring reads bootstrap values from `builder.Configuration` and passes them into module options; Configuration ProjectUnits themselves are consumed through runtime options injection
 
 Load:
 

@@ -7,18 +7,18 @@ public static class AuthorityClaimTypes
     /// <summary>
     /// Username
     /// </summary>
-    public static string Username { get; set; } = ClaimTypes.Name;
+    public const string Username = ClaimTypes.Name;
 
     /// <summary>
     /// User nickname
     /// </summary>
-    public static string Nickname { get; set; } = "nickname";
+    public const string Nickname = "nickname";
     /// <summary>
     /// User ID
     /// </summary>
-    public static string UserId { get; set; } = "uid";
+    public const string UserId = "uid";
     /// <summary>
     /// Role ID
     /// </summary>
-    public static string RoleId { get; set; } = "rid";
+    public const string RoleId = "rid";
 }

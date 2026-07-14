@@ -16,16 +16,16 @@ namespace Monica.Modules;
 
 public static class ModuleLockerBuilderExtensions
 {
-    extension(Mo)
+    extension(IMonicaBuilder builder)
     {
         /// <summary>
         /// Registers the Locker module and returns its guide for provider configuration.
         /// </summary>
         /// <param name="action">Optional module option configuration.</param>
         /// <returns>The locker guide used to select a concrete lock provider.</returns>
-        public static ModuleLockerGuide AddLocker(Action<ModuleLockerOption>? action = null)
+        public ModuleLockerGuide AddLocker(Action<ModuleLockerOption>? action = null)
         {
-            return new ModuleLockerGuide().Register(action);
+            return builder.AddModule<ModuleLocker, ModuleLockerOption, ModuleLockerGuide>(action);
         }
     }
 }

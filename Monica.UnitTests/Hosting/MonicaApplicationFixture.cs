@@ -59,9 +59,9 @@ public class MonicaApplicationFixture<TStartupModule> : IAsyncLifetime, IAsyncDi
     /// <summary>
     /// Allows derived collection fixtures to register the startup module and its guide options.
     /// </summary>
-    protected virtual void ConfigureModule(IHostApplicationBuilder builder)
+    protected virtual void ConfigureModule(IMonicaBuilder builder)
     {
-        RegisterStartupModule();
+        RegisterStartupModule(builder);
     }
 
     /// <summary>
@@ -81,7 +81,6 @@ public class MonicaApplicationFixture<TStartupModule> : IAsyncLifetime, IAsyncDi
         var replacementProvider = replace is null ? null : CreateReplacementProvider(replace);
         var provider = replacementProvider ?? Services;
         return new TestScope(
-            _application!.Activate(),
             provider.CreateAsyncScope(),
             replacementProvider,
             replacementProvider,
@@ -99,19 +98,17 @@ public class MonicaApplicationFixture<TStartupModule> : IAsyncLifetime, IAsyncDi
     /// <inheritdoc />
     public async ValueTask InitializeAsync()
     {
-        _application = MonicaApplication.CreateScoped();
-        ModuleTestScope.Reset();
-
-        Mo.ConfigTypeDiscovery(options =>
-        {
-            options.ExcludeDefault();
-            options.Add(typeof(TStartupModule).Assembly);
-        });
-
         var builder = WebApplication.CreateBuilder();
         ConfigureDefaults(builder.Services);
-        ConfigureModule(builder);
-        builder.UseMonica();
+        builder.AddMonica(monica =>
+        {
+            monica.ConfigureTypeDiscovery(options =>
+            {
+                options.ExcludeDefault();
+                options.Add(typeof(TStartupModule).Assembly);
+            });
+            ConfigureModule(monica);
+        });
         builder.Services.AddMonicaTestSeams();
         ConfigureOverrides(builder.Services);
         _serviceDescriptors = builder.Services.ToList();
@@ -119,8 +116,9 @@ public class MonicaApplicationFixture<TStartupModule> : IAsyncLifetime, IAsyncDi
         app.UseMonica();
         app.MapMonica();
         _host = app;
+        _application = app.Services.GetRequiredService<MonicaApplication>();
         await _host.StartAsync();
-        _moduleSnapshots = ModuleRegistry.ModuleSnapshots.ToList();
+        _moduleSnapshots = _application.Modules.RuntimeSnapshots.ToList();
     }
 
     /// <inheritdoc />
@@ -132,9 +130,7 @@ public class MonicaApplicationFixture<TStartupModule> : IAsyncLifetime, IAsyncDi
             _host.Dispose();
         }
 
-        _application?.ResetModuleState();
-        _application?.ConfigureTypeDiscovery();
-        _application?.Dispose();
+        _application = null;
     }
 
     private ServiceProvider CreateReplacementProvider(Action<ISeamReplacementBuilder> replace)
@@ -142,6 +138,12 @@ public class MonicaApplicationFixture<TStartupModule> : IAsyncLifetime, IAsyncDi
         IServiceCollection services = new ServiceCollection();
         foreach (var descriptor in _serviceDescriptors)
         {
+            if (descriptor.ServiceType == typeof(MonicaApplication))
+            {
+                services.AddSingleton(_application!);
+                continue;
+            }
+
             services.Add(descriptor);
         }
 
@@ -152,25 +154,28 @@ public class MonicaApplicationFixture<TStartupModule> : IAsyncLifetime, IAsyncDi
         });
     }
 
-    private static void RegisterStartupModule()
+    private static void RegisterStartupModule(IMonicaBuilder builder)
     {
         var guideType = FindGuideType(typeof(TStartupModule))
             ?? throw new InvalidOperationException(
                 $"Unable to find a ModuleGuide for startup module {typeof(TStartupModule).FullName}.");
 
-        if (Activator.CreateInstance(guideType) is not ModuleGuide guide)
-        {
-            throw new InvalidOperationException($"{guideType.FullName} must derive from {typeof(ModuleGuide).FullName}.");
-        }
+        var guideBase = FindGenericGuideBase(guideType)
+            ?? throw new InvalidOperationException($"{guideType.FullName} does not expose Monica module metadata.");
+        var genericArguments = guideBase.GetGenericArguments();
+        var addModuleMethod = typeof(IMonicaBuilder)
+            .GetMethods(BindingFlags.Public | BindingFlags.Instance)
+            .Single(method => method.Name == nameof(IMonicaBuilder.AddModule) && method.IsGenericMethodDefinition)
+            .MakeGenericMethod(genericArguments[0], genericArguments[1], genericArguments[2]);
 
-        var registerMethod = guideType.GetMethods(BindingFlags.Public | BindingFlags.Instance)
-            .FirstOrDefault(static method => method.Name == "Register" && method.GetParameters().Length <= 1);
-        if (registerMethod is null)
+        try
         {
-            throw new InvalidOperationException($"{guideType.FullName} does not expose a Register method.");
+            addModuleMethod.Invoke(builder, [null]);
         }
-
-        registerMethod.Invoke(guide, registerMethod.GetParameters().Length == 0 ? [] : [null]);
+        catch (TargetInvocationException exception) when (exception.InnerException is not null)
+        {
+            throw exception.InnerException;
+        }
     }
 
     private static Type? FindGuideType(Type startupModuleType)
@@ -193,6 +198,11 @@ public class MonicaApplicationFixture<TStartupModule> : IAsyncLifetime, IAsyncDi
 
     private static Type? GetGenericModuleType(Type guideType)
     {
+        return FindGenericGuideBase(guideType)?.GetGenericArguments()[0];
+    }
+
+    private static Type? FindGenericGuideBase(Type guideType)
+    {
         var current = guideType;
         while (current.BaseType is not null)
         {
@@ -206,7 +216,7 @@ public class MonicaApplicationFixture<TStartupModule> : IAsyncLifetime, IAsyncDi
             if (genericDefinition == typeof(ModuleGuide<,,>) ||
                 genericDefinition == typeof(WebModuleGuide<,,>))
             {
-                return current.GetGenericArguments()[0];
+                return current;
             }
         }
 

@@ -1,0 +1,87 @@
+{
+  "schemaVersion": 1,
+  "positioning": "Agent-governed application architecture for observable .NET backends.",
+  "dependencyPolicy": {
+    "stable": ["stable"],
+    "integrations": ["stable", "integrations"],
+    "labs": ["stable", "integrations", "labs"]
+  },
+  "tiers": [
+    {
+      "id": "stable",
+      "name": "Stable",
+      "promise": "The supported Monica 1.0 application path.",
+      "packages": [
+        "Monica.Authority",
+        "Monica.AutoModel",
+        "Monica.Configuration",
+        "Monica.Configuration.UI",
+        "Monica.Core",
+        "Monica.DependencyInjection",
+        "Monica.EventBus",
+        "Monica.Framework",
+        "Monica.Framework.Generators",
+        "Monica.Framework.UI",
+        "Monica.Generators.AutoController",
+        "Monica.JobScheduler",
+        "Monica.JobScheduler.UI",
+        "Monica.Locker",
+        "Monica.Logging",
+        "Monica.Markdown",
+        "Monica.OpenTelemetry",
+        "Monica.OpenTelemetry.UI",
+        "Monica.ProjectUnits",
+        "Monica.Repository",
+        "Monica.Repository.UI",
+        "Monica.ServiceDiscovery",
+        "Monica.StateStore",
+        "Monica.StateStore.UI",
+        "Monica.Templates",
+        "Monica.Tool",
+        "Monica.UI",
+        "Monica.UnitTests",
+        "Monica.Utilities",
+        "Monica.WebApi"
+      ]
+    },
+    {
+      "id": "integrations",
+      "name": "Integrations",
+      "promise": "Versioned adapters around external systems and provider boundaries.",
+      "packages": [
+        "Monica.Configuration.EfCore",
+        "Monica.Configuration.EventBus",
+        "Monica.Dapr",
+        "Monica.EventBus.Kafka",
+        "Monica.JobScheduler.EfCore",
+        "Monica.SignalR",
+        "Monica.StateStore.StackExchange"
+      ]
+    },
+    {
+      "id": "labs",
+      "name": "Labs",
+      "promise": "Deliberately fast-moving capabilities that may change before promotion.",
+      "packages": [
+        "Monica.AI",
+        "Monica.AI.UI",
+        "Monica.DataChannel",
+        "Monica.DevOps",
+        "Monica.Office",
+        "Monica.Profiling"
+      ]
+    }
+  ],
+  "unpublishedProjects": [
+    {
+      "project": "Monica.Experimental",
+      "tier": "labs",
+      "reason": "Experimental source is intentionally not published as a package."
+    },
+    {
+      "project": "Monica.Generators.AutoController.BuildTasks",
+      "tier": "stable",
+      "reason": "Build-task implementation is packaged through its public generator package."
+    }
+  ]
+}

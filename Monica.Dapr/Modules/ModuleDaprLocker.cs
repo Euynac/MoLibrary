@@ -23,7 +23,7 @@ public static class ModuleDaprLockerBuilderExtensions
         Action<ModuleDaprLockerOption>? action = null)
     {
         guide.UseProvider<DaprLockProvider>();
-        return new ModuleDaprLockerGuide().Register(action);
+        return guide.AddModule<ModuleDaprLocker, ModuleDaprLockerOption, ModuleDaprLockerGuide>(action);
     }
 }
 

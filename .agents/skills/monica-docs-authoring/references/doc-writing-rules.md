@@ -70,14 +70,14 @@ Style rules:
 - Put the answer first, then detail
 - Prefer short sections and tables over long prose
 - Keep identifiers, API names, types, namespaces, and code in English
-- Keep narrative language in Chinese unless the user explicitly requests another locale
+- Write natural English under `en-US` and natural Simplified Chinese under `zh-CN`; keep code identifiers unchanged
 - Explain defaults and tradeoffs, not just names
 - Be explicit about required vs optional setup
 
 ## 5. Code sample rules
 
 - Use real current APIs from source code
-- Use `Mo.Add*()` naming, not obsolete registration names
+- Place `monica.Add*()` inside `builder.AddMonica(...)`; never show ambient `Mo`, `builder.UseMonica()`, or `Mo.RegisterInstantly(...)`
 - Prefer the smallest copy-pasteable sample that communicates the concept
 - Use `bash` for installation and `csharp` for Monica code samples
 - If a sample omits unrelated lines, omit them clearly rather than inventing scaffolding

@@ -34,11 +34,11 @@ public class ModuleK8SUI(ModuleK8SUIOption option)
 
 public static class ModuleK8SUIBuilderExtensions
 {
-    extension(Mo)
+    extension(IMonicaBuilder builder)
     {
-        public static ModuleK8SUIGuide AddK8SUI(Action<ModuleK8SUIOption>? action = null)
+        public ModuleK8SUIGuide AddK8SUI(Action<ModuleK8SUIOption>? action = null)
         {
-            return new ModuleK8SUIGuide().Register(action);
+            return builder.AddModule<ModuleK8SUI, ModuleK8SUIOption, ModuleK8SUIGuide>(action);
         }
     }
 }

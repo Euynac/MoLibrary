@@ -43,7 +43,7 @@ public interface IBusinessTypeIterator
 }
 ```
 
-Modules opt in by implementing this interface. Monica's `ModuleRegistry` runs the iteration phase **after `ConfigureServices` and before `PostConfigureServices`**, feeding it the type set produced by `Mo.TypeFinder.GetTypes()`. Each iterator inspects each type, builds its own metadata, and `yield return`s the type so downstream iterators see the same stream.
+Modules opt in by implementing this interface. Monica's `ModuleRegistry` runs the iteration phase **after `ConfigureServices` and before `PostConfigureServices`**, feeding it the type set produced by the current host's `MonicaApplication.TypeFinder`. Each iterator inspects each type, builds its own metadata, and `yield return`s the type so downstream iterators see the same stream.
 
 Canonical consumer: `Monica.JobScheduler/Modules/ModuleJobScheduler.cs` (lines 54–77), which filters for `IRecurringJob` / `ITriggeredJob<T>`, reads `[JobConfig]`, builds `JobDefinition`, registers the type as transient, and forwards definitions to `JobRegistrationHostedService`. Doc 02 reuses this exact shape.
 
@@ -572,7 +572,7 @@ public sealed class ModuleSkillSystemGuide
 
 public static class ModuleSkillSystemBuilderExtensions
 {
-    extension(Mo)
+    extension(IMonicaBuilder builder)
     {
         /// <summary>
         /// Enables Monica's class-based AI skill / tool / MCP discovery and registration.
@@ -581,10 +581,10 @@ public static class ModuleSkillSystemBuilderExtensions
         /// builds a Microsoft.Agents.AI.AgentSkillsProvider, and exposes the
         /// resulting capability set to the chat agent.
         /// </summary>
-        public static ModuleSkillSystemGuide AddAISkillSystem(
+        public ModuleSkillSystemGuide AddAISkillSystem(
             Action<ModuleSkillSystemOption>? action = null)
         {
-            return new ModuleSkillSystemGuide().Register(action);
+            return builder.AddModule<ModuleSkillSystem, ModuleSkillSystemOption, ModuleSkillSystemGuide>(action);
         }
     }
 }

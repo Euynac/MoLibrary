@@ -161,7 +161,6 @@ public enum BuiltInModuleKey
     /// </summary>
     JobSchedulerEfCore,
     LoggingUI,
-    Clock,
     /// <summary>
     /// Event bus UI monitoring module.
     /// </summary>

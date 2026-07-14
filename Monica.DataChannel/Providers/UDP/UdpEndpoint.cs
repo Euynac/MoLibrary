@@ -38,7 +38,7 @@ public class UdpEndpoint(UdpOptions metadata, ILogger<UdpEndpoint> logger) : Com
         }
         catch (Exception e)
         {
-            logger.LogError("UDP Core 初始化失败，错误:{Exception}", e);
+            logger.LogError("UDP endpoint initialization failed. Error: {Exception}", e);
         }
     }
 

@@ -29,6 +29,12 @@ jobs:
             tests/Directory.Packages.props
             **/*.csproj
 
+      - name: Validate template package version
+        run: python3 eng/sync-template-version.py --check
+
+      - name: Validate package maturity catalog
+        run: python3 eng/validate-package-tiers.py
+
       - name: Restore solution
         run: dotnet restore Monica.slnx
 

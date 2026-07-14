@@ -34,16 +34,16 @@ namespace Monica.Modules;
 /// </summary>
 public static class ModuleConfigurationBuilderExtensions
 {
-    extension(Mo)
+    extension(IMonicaBuilder builder)
     {
         /// <summary>
         /// Registers the schema-first Monica configuration module.
         /// </summary>
         /// <param name="action">Optional module option configuration.</param>
         /// <returns>The module guide.</returns>
-        public static ModuleConfigurationGuide AddConfiguration(Action<ModuleConfigurationOption>? action = null)
+        public ModuleConfigurationGuide AddConfiguration(Action<ModuleConfigurationOption>? action = null)
         {
-            return new ModuleConfigurationGuide().Register(action);
+            return builder.AddModule<ModuleConfiguration, ModuleConfigurationOption, ModuleConfigurationGuide>(action);
         }
     }
 }
@@ -316,7 +316,8 @@ public sealed class ModuleConfigurationGuide
         return _effectiveOptionsReaderConfiguration.CreateReader(
             builder,
             bootstrapConfiguration ?? builder.Configuration,
-            configure);
+            configure,
+            Logger);
     }
 
     /// <summary>

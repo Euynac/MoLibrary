@@ -16,14 +16,14 @@ namespace Monica.Modules;
 
 public static class ModuleDynamicProxyBuilderExtensions
 {
-    extension(Mo)
+    extension(IMonicaBuilder builder)
     {
         /// <summary>
         /// Configures the DynamicProxy module.
         /// </summary>
-        public static ModuleDynamicProxyGuide AddDynamicProxy(Action<ModuleDynamicProxyOption>? action = null)
+        public ModuleDynamicProxyGuide AddDynamicProxy(Action<ModuleDynamicProxyOption>? action = null)
         {
-            return new ModuleDynamicProxyGuide().Register(action);
+            return builder.AddModule<ModuleDynamicProxy, ModuleDynamicProxyOption, ModuleDynamicProxyGuide>(action);
         }
     }
 }

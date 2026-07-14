@@ -15,13 +15,14 @@ namespace Monica.ServiceDiscovery.Providers;
 /// </summary>
 public class DefaultServiceDiscoveryClientInfo(
     IOptions<ModuleServiceDiscoveryOption> options,
+    IMonicaApplicationOptions application,
     IServerAddressesFeature? serverAddressesFeature = null) : IServiceDiscoveryClientInfo
 {
     private readonly ModuleServiceDiscoveryOption _options = options.Value;
 
     // Lazy initialization of basic service information (to avoid repeated expensive operations)
     private readonly Lazy<InstanceState> _baseServiceInfo = new(
-        () => BuildBaseServiceInfo(options.Value));
+        () => BuildBaseServiceInfo(options.Value, application));
 
     // Thread-safe local state management (similar to LeaderElectionService pattern)
     private readonly object _stateLock = new();
@@ -87,11 +88,12 @@ public class DefaultServiceDiscoveryClientInfo(
     /// <summary>
     /// Builds the base instance state and normalizes persisted timestamps to UTC.
     /// </summary>
-    private static InstanceState BuildBaseServiceInfo(ModuleServiceDiscoveryOption options)
+    private static InstanceState BuildBaseServiceInfo(
+        ModuleServiceDiscoveryOption options,
+        IMonicaApplicationOptions application)
     {
         var entryAssembly = Assembly.GetEntryAssembly();
         var assemblyName = entryAssembly?.GetName().Name ?? "Unknown";
-        var application = Mo.Application;
 
         return new InstanceState
         {

@@ -3,7 +3,7 @@ using Microsoft.AspNetCore.Server.Kestrel.Core;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Monica.Core;
-using Monica.Core.JsonSerialization.Services;
+using Monica.Core.JsonSerialization.Extensions;
 using Monica.Core.Modularity;
 using Monica.Core.Modularity.Abstractions;
 using Monica.Core.Modularity.Annotations;
@@ -16,14 +16,14 @@ namespace Monica.Modules;
 
 public static class ModuleDaprClientBuilderExtensions
 {
-    extension(Mo)
+    extension(IMonicaBuilder builder)
     {
         /// <summary>
         /// Registers and configures the Dapr client module.
         /// </summary>
-        public static ModuleDaprClientGuide AddDaprClient(Action<ModuleDaprClientOption>? action = null)
+        public ModuleDaprClientGuide AddDaprClient(Action<ModuleDaprClientOption>? action = null)
         {
-            return new ModuleDaprClientGuide().Register(action);
+            return builder.AddModule<ModuleDaprClient, ModuleDaprClientOption, ModuleDaprClientGuide>(action);
         }
     }
 }
@@ -48,7 +48,7 @@ public class ModuleDaprClient(ModuleDaprClientOption option)
             MaxReceiveMessageSize = Option.MaxReceiveMessageSize,
             MaxSendMessageSize = Option.MaxSendMessageSize,
             MaxRetryBufferSize = Option.MaxRetryBufferSize,
-        }).UseJsonSerializationOptions(JsonSerializerOptionsProvider.SharedSerializerOptions));
+        }).UseJsonSerializationOptions(services.GetMonicaJsonSerializerOptions()));
 
         // Register health coordinator (singleton implementing both interface and IHostedService)
         services.AddSingleton<DaprSidecarHealthCoordinator>();
@@ -62,6 +62,7 @@ public class ModuleDaprClient(ModuleDaprClientOption option)
     {
         DependsOnModule<ModuleDaprGuide>().Register();
         DependsOnModule<ModuleHostedServiceGuide>().Register();
+        DependsOnModule<ModuleJsonSerializationGuide>().Register();
     }
 }
 

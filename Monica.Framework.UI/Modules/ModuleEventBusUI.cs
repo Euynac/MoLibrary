@@ -2,8 +2,8 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Localization;
 using Monica.Core;
-using Monica.Core.Localization.Services;
 using Monica.Core.Modularity;
 using Monica.Core.Modularity.Abstractions;
 using Monica.Core.Modularity.Annotations;
@@ -20,14 +20,14 @@ namespace Monica.Modules;
 
 public static class ModuleEventBusUIBuilderExtensions
 {
-    extension(Mo)
+    extension(IMonicaBuilder builder)
     {
         /// <summary>
         /// Configure the EventBusUI module
         /// </summary>
-        public static ModuleEventBusUIGuide AddEventBusUI(Action<ModuleEventBusUIOption>? action = null)
+        public ModuleEventBusUIGuide AddEventBusUI(Action<ModuleEventBusUIOption>? action = null)
         {
-            return new ModuleEventBusUIGuide().Register(action);
+            return builder.AddModule<ModuleEventBusUI, ModuleEventBusUIOption, ModuleEventBusUIGuide>(action);
         }
     }
 }
@@ -76,6 +76,8 @@ public class ModuleEventBusUI(ModuleEventBusUIOption option)
 
     public override void ConfigureEndpoints(IApplicationBuilder app)
     {
+        var localizer = app.ApplicationServices.GetRequiredService<IStringLocalizer<EventBusResource>>();
+
         UseEndpoints(app, endpoints =>
         {
             var tagName = Option.GetApiGroupName();
@@ -87,10 +89,10 @@ public class ModuleEventBusUI(ModuleEventBusUIOption option)
                     var result = await service.GetAllSubscriptionsAsync();
                     return result.GetResponse();
                 })
-                .WithName(LocalizationManager.Get<EventBusResource>("Api:Subscriptions:List:Name"))
+                .WithName(localizer["Api:Subscriptions:List:Name"].Value)
                 .WithTags(tagName)
-                .WithSummary(LocalizationManager.Get<EventBusResource>("Api:Subscriptions:List:Summary"))
-                .WithDescription(LocalizationManager.Get<EventBusResource>("Api:Subscriptions:List:Description"));
+                .WithSummary(localizer["Api:Subscriptions:List:Summary"].Value)
+                .WithDescription(localizer["Api:Subscriptions:List:Description"].Value);
 
             // Get subscription details
             endpoints.MapGet("/eventbus-ui/subscriptions/{id:guid}",
@@ -101,10 +103,10 @@ public class ModuleEventBusUI(ModuleEventBusUIOption option)
                     var result = await service.GetSubscriptionByIdAsync(subscriptionId);
                     return result.GetResponse();
                 })
-                .WithName(LocalizationManager.Get<EventBusResource>("Api:Subscriptions:Detail:Name"))
+                .WithName(localizer["Api:Subscriptions:Detail:Name"].Value)
                 .WithTags(tagName)
-                .WithSummary(LocalizationManager.Get<EventBusResource>("Api:Subscriptions:Detail:Summary"))
-                .WithDescription(LocalizationManager.Get<EventBusResource>("Api:Subscriptions:Detail:Description"));
+                .WithSummary(localizer["Api:Subscriptions:Detail:Summary"].Value)
+                .WithDescription(localizer["Api:Subscriptions:Detail:Description"].Value);
 
             // Get statistics
             endpoints.MapGet("/eventbus-ui/statistics",
@@ -113,10 +115,10 @@ public class ModuleEventBusUI(ModuleEventBusUIOption option)
                     var result = await service.GetStatisticsAsync();
                     return result.GetResponse();
                 })
-                .WithName(LocalizationManager.Get<EventBusResource>("Api:Subscriptions:Statistics:Name"))
+                .WithName(localizer["Api:Subscriptions:Statistics:Name"].Value)
                 .WithTags(tagName)
-                .WithSummary(LocalizationManager.Get<EventBusResource>("Api:Subscriptions:Statistics:Summary"))
-                .WithDescription(LocalizationManager.Get<EventBusResource>("Api:Subscriptions:Statistics:Description"));
+                .WithSummary(localizer["Api:Subscriptions:Statistics:Summary"].Value)
+                .WithDescription(localizer["Api:Subscriptions:Statistics:Description"].Value);
 
             // Activate subscription
             endpoints.MapPost("/eventbus-ui/subscriptions/{id:guid}/activate",
@@ -127,10 +129,10 @@ public class ModuleEventBusUI(ModuleEventBusUIOption option)
                     var result = await service.ActivateSubscriptionAsync(subscriptionId);
                     return result.GetResponse();
                 })
-                .WithName(LocalizationManager.Get<EventBusResource>("Api:Subscriptions:Activate:Name"))
+                .WithName(localizer["Api:Subscriptions:Activate:Name"].Value)
                 .WithTags(tagName)
-                .WithSummary(LocalizationManager.Get<EventBusResource>("Api:Subscriptions:Activate:Summary"))
-                .WithDescription(LocalizationManager.Get<EventBusResource>("Api:Subscriptions:Activate:Description"));
+                .WithSummary(localizer["Api:Subscriptions:Activate:Summary"].Value)
+                .WithDescription(localizer["Api:Subscriptions:Activate:Description"].Value);
 
             // Deactivate subscription
             endpoints.MapPost("/eventbus-ui/subscriptions/{id:guid}/deactivate",
@@ -141,10 +143,10 @@ public class ModuleEventBusUI(ModuleEventBusUIOption option)
                     var result = await service.DeactivateSubscriptionAsync(subscriptionId);
                     return result.GetResponse();
                 })
-                .WithName(LocalizationManager.Get<EventBusResource>("Api:Subscriptions:Deactivate:Name"))
+                .WithName(localizer["Api:Subscriptions:Deactivate:Name"].Value)
                 .WithTags(tagName)
-                .WithSummary(LocalizationManager.Get<EventBusResource>("Api:Subscriptions:Deactivate:Summary"))
-                .WithDescription(LocalizationManager.Get<EventBusResource>("Api:Subscriptions:Deactivate:Description"));
+                .WithSummary(localizer["Api:Subscriptions:Deactivate:Summary"].Value)
+                .WithDescription(localizer["Api:Subscriptions:Deactivate:Description"].Value);
 
             // Remove subscription
             endpoints.MapDelete("/eventbus-ui/subscriptions/{id:guid}",
@@ -155,10 +157,10 @@ public class ModuleEventBusUI(ModuleEventBusUIOption option)
                     var result = await service.UnsubscribeAsync(subscriptionId);
                     return result.GetResponse();
                 })
-                .WithName(LocalizationManager.Get<EventBusResource>("Api:Subscriptions:Remove:Name"))
+                .WithName(localizer["Api:Subscriptions:Remove:Name"].Value)
                 .WithTags(tagName)
-                .WithSummary(LocalizationManager.Get<EventBusResource>("Api:Subscriptions:Remove:Summary"))
-                .WithDescription(LocalizationManager.Get<EventBusResource>("Api:Subscriptions:Remove:Description"));
+                .WithSummary(localizer["Api:Subscriptions:Remove:Summary"].Value)
+                .WithDescription(localizer["Api:Subscriptions:Remove:Description"].Value);
         });
     }
 }

@@ -1,11 +1,11 @@
 using Microsoft.Extensions.DependencyInjection;
 using Monica.Core;
-using Monica.Core.JsonSerialization.Services;
 using Monica.Core.Modularity;
 using Monica.Core.Modularity.Abstractions;
 using Monica.Core.Modularity.Annotations;
 using Monica.Core.Modularity.Models;
 using Monica.Core.Results;
+using Monica.Core.Results.Abstractions;
 using Monica.Core.Results.Services;
 
 // ReSharper disable once CheckNamespace
@@ -13,14 +13,14 @@ namespace Monica.Modules;
 
 public static class ModuleResultEnvelopeBuilderExtensions
 {
-    extension(Mo)
+    extension(IMonicaBuilder builder)
     {
         /// <summary>
         /// Configures the ResultEnvelope module.
         /// </summary>
-        public static ModuleResultEnvelopeGuide AddResultEnvelope(Action<ModuleResultEnvelopeOption>? action = null)
+        public ModuleResultEnvelopeGuide AddResultEnvelope(Action<ModuleResultEnvelopeOption>? action = null)
         {
-            return new ModuleResultEnvelopeGuide().Register(action);
+            return builder.AddModule<ModuleResultEnvelope, ModuleResultEnvelopeOption, ModuleResultEnvelopeGuide>(action);
         }
     }
 }
@@ -36,15 +36,7 @@ public class ModuleResultEnvelope(ModuleResultEnvelopeOption option)
 
     public override void ConfigureServices(IServiceCollection services)
     {
-        ConfigureSharedSerializerOptions();
-        ResultEnvelopeProvider.SerializerOptions = JsonSerializerOptionsProvider.SharedSerializerOptions;
-        ResultEnvelopeProvider.MaxDiagnosticBodyBytes = Option.MaxRemoteDiagnosticBodyBytes;
-    }
-
-    private void ConfigureSharedSerializerOptions()
-    {
-        var serializerOptions = JsonSerializerOptionsProvider.SharedSerializerOptions;
-        Option.FieldNames.ApplyTo(serializerOptions);
+        services.AddSingleton<IResultEnvelopeReader, ResultEnvelopeProvider>();
     }
 }
 

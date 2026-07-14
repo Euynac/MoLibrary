@@ -1,14 +1,25 @@
+using System.Collections.Concurrent;
 using Monica.AutoModel.Abstractions;
 using Monica.AutoModel.Models;
 
 namespace Monica.AutoModel.Providers;
 
-public class SnapshotFactoryMemoryProvider : IAutoModelSnapshotFactory
+internal sealed class SnapshotFactoryMemoryProvider : IAutoModelSnapshotFactory
 {
-    internal static readonly List<AutoModelSnapshot> Snapshots = [];
+    private readonly ConcurrentDictionary<Type, AutoModelSnapshot> _snapshots = [];
+
+    public void Register<TModel>(AutoModelSnapshot snapshot)
+    {
+        if (!_snapshots.TryAdd(typeof(TModel), snapshot))
+        {
+            throw new InvalidOperationException($"An AutoModel snapshot for {typeof(TModel).FullName} is already registered in this host.");
+        }
+    }
 
     public IReadOnlyList<AutoModelSnapshot> GetSnapshots()
     {
-        return Snapshots;
+        return _snapshots.Values
+            .OrderBy(snapshot => snapshot.Table.FullTypeName, StringComparer.Ordinal)
+            .ToArray();
     }
 }

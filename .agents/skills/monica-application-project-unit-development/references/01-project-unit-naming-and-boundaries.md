@@ -4,7 +4,7 @@ Use these rules to keep Monica project-unit discovery, folder layout, code navig
 
 ## Default Naming Rules
 
-These conventions mirror the current `Monica.Framework/ProjectUnits` default discovery rules. If you drift away from them, the framework can still compile, but project-unit discovery and solution scanning become less reliable.
+These conventions mirror the current `Monica.ProjectUnits` default discovery rules. If you drift away from them, the framework can still compile, but project-unit discovery and solution scanning become less reliable.
 
 | Unit | ProjectUnits default convention | Recommended naming |
 | --- | --- | --- |
@@ -22,7 +22,7 @@ These conventions mirror the current `Monica.Framework/ProjectUnits` default dis
 
 ## Additional Support-Type Conventions
 
-These are not part of `Monica.Framework/ProjectUnits` discovery, but they are part of the recommended business-project layout.
+These are not part of `Monica.ProjectUnits` discovery, but they are part of the recommended business-project layout.
 
 | Support type | Recommended naming | Purpose |
 | --- | --- | --- |

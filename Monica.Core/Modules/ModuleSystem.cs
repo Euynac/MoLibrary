@@ -14,14 +14,14 @@ namespace Monica.Modules;
 
 public static class ModuleSystemBuilderExtensions
 {
-    extension(Mo)
+    extension(IMonicaBuilder builder)
     {
         /// <summary>
         /// Configures the module system diagnostics module.
         /// </summary>
-        public static ModuleSystemGuide AddModuleSystem(Action<ModuleSystemOption>? action = null)
+        public ModuleSystemGuide AddModuleSystem(Action<ModuleSystemOption>? action = null)
         {
-            return new ModuleSystemGuide().Register(action);
+            return builder.AddModule<ModuleSystem, ModuleSystemOption, ModuleSystemGuide>(action);
         }
     }
 }

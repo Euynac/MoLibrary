@@ -2,7 +2,6 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Monica.Core.HostedService.Models;
-using Monica.Core.Logging;
 using Monica.Core.ObservableInstance.Abstractions;
 using Monica.Core.ObservableInstance.Models;
 using Monica.Modules;
@@ -17,7 +16,7 @@ namespace Monica.Core.HostedService.Abstractions;
 /// </summary>
 public abstract class MoBackgroundService : BackgroundService, IMoHostedService
 {
-    private readonly Lazy<ILogger> _loggerLazy;
+    private readonly ILogger _logger;
     private readonly ModuleHostedServiceOption _options;
     private readonly IObservableInstanceRegistry _observableManager;
 
@@ -25,16 +24,23 @@ public abstract class MoBackgroundService : BackgroundService, IMoHostedService
     private CancellationTokenSource? _heartbeatCts;
     private Task? _heartbeatTask;
 
+    /// <summary>
+    /// Initializes an observable background service with dependencies owned by the current host.
+    /// </summary>
+    /// <param name="observableManager">The registry used to expose service state.</param>
+    /// <param name="options">The shared hosted-service options.</param>
+    /// <param name="logger">The logger for the concrete background service.</param>
     protected MoBackgroundService(
         IObservableInstanceRegistry observableManager,
-        IOptions<ModuleHostedServiceOption> options)
+        IOptions<ModuleHostedServiceOption> options,
+        ILogger logger)
     {
         _observableManager = observableManager;
         _options = options.Value;
-        _loggerLazy = new Lazy<ILogger>(() => LogManager.For(GetType()));
+        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
-    protected ILogger Logger => _loggerLazy.Value;
+    protected ILogger Logger => _logger;
 
     // IMoHostedService implementation
 

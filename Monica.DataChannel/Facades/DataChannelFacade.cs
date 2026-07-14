@@ -43,8 +43,8 @@ public class DataChannelFacade(IDataChannelManager manager, ILogger<DataChannelF
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "获取DataChannel状态信息失败");
-            return Res.Fail($"获取DataChannel状态信息失败: {ex.GetMessageRecursively()}");
+            logger.LogError(ex, "Failed to retrieve DataChannel status information.");
+            return Res.Fail($"Failed to retrieve DataChannel status information: {ex.GetMessageRecursively()}");
         }
     }
 
@@ -61,16 +61,16 @@ public class DataChannelFacade(IDataChannelManager manager, ILogger<DataChannelF
             var channel = manager.Fetch(id);
             if (channel == null)
             {
-                return Res.Fail("未找到指定的DataChannel");
+                return Res.Fail($"DataChannel '{id}' was not found.");
             }
 
             await channel.ReInitialize(cancellationToken);
-            return Res.Ok("重新初始化成功");
+            return Res.Ok("DataChannel reinitialized successfully.");
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "重新初始化DataChannel失败，ID: {Id}", id);
-            return Res.Fail($"重新初始化DataChannel失败: {ex.GetMessageRecursively()}");
+            logger.LogError(ex, "Failed to reinitialize DataChannel {DataChannelId}.", id);
+            return Res.Fail($"Failed to reinitialize DataChannel '{id}': {ex.GetMessageRecursively()}");
         }
     }
 
@@ -87,7 +87,7 @@ public class DataChannelFacade(IDataChannelManager manager, ILogger<DataChannelF
             var channel = manager.Fetch(id);
             if (channel == null)
             {
-                return Res.Fail("未找到指定的DataChannel");
+                return Res.Fail($"DataChannel '{id}' was not found.");
             }
 
             var exceptions = channel.Pipe.GetRecentExceptions(count);
@@ -116,8 +116,8 @@ public class DataChannelFacade(IDataChannelManager manager, ILogger<DataChannelF
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "获取DataChannel异常信息失败，ID: {Id}", id);
-            return Res.Fail($"获取DataChannel异常信息失败: {ex.GetMessageRecursively()}");
+            logger.LogError(ex, "Failed to retrieve exception information for DataChannel {DataChannelId}.", id);
+            return Res.Fail($"Failed to retrieve exception information for DataChannel '{id}': {ex.GetMessageRecursively()}");
         }
     }
 
@@ -153,8 +153,8 @@ public class DataChannelFacade(IDataChannelManager manager, ILogger<DataChannelF
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "获取DataChannel异常统计信息失败");
-            return Res.Fail($"获取DataChannel异常统计信息失败: {ex.GetMessageRecursively()}");
+            logger.LogError(ex, "Failed to retrieve the DataChannel exception summary.");
+            return Res.Fail($"Failed to retrieve the DataChannel exception summary: {ex.GetMessageRecursively()}");
         }
     }
 
@@ -170,16 +170,16 @@ public class DataChannelFacade(IDataChannelManager manager, ILogger<DataChannelF
             var channel = manager.Fetch(id);
             if (channel == null)
             {
-                return Res.Fail("未找到指定的DataChannel");
+                return Res.Fail($"DataChannel '{id}' was not found.");
             }
 
             channel.Pipe.ObservableTracker.ClearHistory();
-            return await Task.FromResult(Res.Ok("异常信息已清空"));
+            return await Task.FromResult(Res.Ok("DataChannel exception history cleared successfully."));
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "清空DataChannel异常信息失败，ID: {Id}", id);
-            return Res.Fail($"清空DataChannel异常信息失败: {ex.GetMessageRecursively()}");
+            logger.LogError(ex, "Failed to clear exception history for DataChannel {DataChannelId}.", id);
+            return Res.Fail($"Failed to clear exception history for DataChannel '{id}': {ex.GetMessageRecursively()}");
         }
     }
 
@@ -196,7 +196,7 @@ public class DataChannelFacade(IDataChannelManager manager, ILogger<DataChannelF
             var channel = manager.Fetch(channelId);
             if (channel == null)
             {
-                return Res.Fail("未找到指定的DataChannel");
+                return Res.Fail($"DataChannel '{channelId}' was not found.");
             }
 
             var middleware = channel.Pipe.GetMiddlewares()
@@ -204,15 +204,20 @@ public class DataChannelFacade(IDataChannelManager manager, ILogger<DataChannelF
 
             if (middleware == null)
             {
-                return Res.Fail($"未找到名为 {middlewareName} 的中间件");
+                return Res.Fail($"Middleware '{middlewareName}' was not found in DataChannel '{channelId}'.");
             }
 
             return await Task.FromResult(Res.Ok<T?>(middleware));
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "获取中间件实例失败，Channel ID: {ChannelId}, Middleware: {MiddlewareName}", channelId, middlewareName);
-            return Res.Fail($"获取中间件实例失败: {ex.GetMessageRecursively()}");
+            logger.LogError(
+                ex,
+                "Failed to retrieve middleware {MiddlewareName} from DataChannel {DataChannelId}.",
+                middlewareName,
+                channelId);
+            return Res.Fail(
+                $"Failed to retrieve middleware '{middlewareName}' from DataChannel '{channelId}': {ex.GetMessageRecursively()}");
         }
     }
 } 

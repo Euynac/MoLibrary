@@ -30,14 +30,14 @@ namespace Monica.Modules;
 /// </summary>
 public static class ModuleRAGBuilderExtensions
 {
-    extension(Mo)
+    extension(IMonicaBuilder builder)
     {
         /// <summary>
         /// Configures the RAG module.
         /// </summary>
-        public static ModuleRAGGuide AddRAG(Action<ModuleRAGOption>? action = null)
+        public ModuleRAGGuide AddRAG(Action<ModuleRAGOption>? action = null)
         {
-            return new ModuleRAGGuide().Register(action);
+            return builder.AddModule<ModuleRAG, ModuleRAGOption, ModuleRAGGuide>(action);
         }
     }
 }

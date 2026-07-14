@@ -1,15 +1,18 @@
 using Microsoft.Extensions.Options;
 using Monica.Core.Modularity.Abstractions;
-using Monica.Core.Modularity.Services.Support;
 
 namespace Monica.Core.Modularity.Models.Internal;
 
 /// <summary>
 /// Represents a module snapshot, including the module instance, registration info, and state.
 /// </summary>
+/// <param name="application">The owning Monica application.</param>
 /// <param name="moduleInstance">The module instance.</param>
 /// <param name="registerInfo">The registration information.</param>
-public class ModuleRuntimeSnapshot(ModuleBase moduleInstance, ModuleRegistrationState registerInfo)
+public class ModuleRuntimeSnapshot(
+    MonicaApplication application,
+    ModuleBase moduleInstance,
+    ModuleRegistrationState registerInfo)
 {
     /// <summary>
     /// The module instance.
@@ -39,13 +42,13 @@ public class ModuleRuntimeSnapshot(ModuleBase moduleInstance, ModuleRegistration
     /// <summary>
     /// Gets the <see cref="ModuleKey"/> for the module.
     /// </summary>
-    public ModuleKey ModuleKey => ModuleDependencyAnalyzer.ResolveModuleKey(ModuleType);
+    public ModuleKey ModuleKey => application.Dependencies.ResolveModuleKey(ModuleType);
 
     /// <summary>
     /// Gets the total initialization duration for the module, in milliseconds.
     /// </summary>
     public long TotalInitializationDurationMs =>
-        ModuleInitializationProfiler.GetModuleTotalDuration(ModuleType);
+        application.Profiling.GetModuleTotalDuration(ModuleType);
 
 
     public override string ToString()

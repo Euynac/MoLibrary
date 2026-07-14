@@ -7,89 +7,82 @@ using Monica.DataChannel.Providers.TCP.Utils;
 
 namespace Monica.DataChannel.Providers.TCP;
 
-public partial class TcpClientExtends : IDisposable
+internal sealed partial class TcpClientExtends : IDisposable
 {
-    public bool Connected { get; set; }
-    public DateTime? LastSendMsgTime { get; set; }
-    public TcpClient? Client { get; set; }
-    public TcpReceiveEventHander? MsgReceivedEvent { get; set; }
+    private readonly TcpConnectionRuntime _runtime;
 
-    /// <summary>
-    /// Indicates whether the current client is the primary connection.
-    /// </summary>
-    public bool IsMainThread { get; set; }
-    public string? ConnectionName { get; set; }
-
-    public async Task SendMsg(string? msg, ILogger logger, IDataChannelManager? manager)
+    internal TcpClientExtends(TcpConnectionRuntime runtime)
     {
-        if (!Connected)
+        _runtime = runtime;
+    }
+
+    internal bool Connected { get; set; }
+    internal DateTime? LastSendMsgTime { get; set; }
+    internal TcpClient? Client { get; set; }
+    internal TcpReceiveEventHander? MsgReceivedEvent { get; set; }
+    internal bool IsMainThread { get; set; }
+    internal bool IsServerConnection { get; set; }
+    internal string? ConnectionName { get; set; }
+
+    internal async Task SendMsg(string? message, ILogger logger, IDataChannelManager? manager)
+    {
+        if (!Connected || string.IsNullOrEmpty(message))
         {
             return;
         }
 
-        await TcpUtils.DecideClient(this);
-        if (string.IsNullOrEmpty(msg))
-        {
-            return;
-        }
+        _runtime.ApplyFailover(this);
 
         var client = Client ?? throw new InvalidOperationException("TCP client is not initialized.");
-        var rawSendBytes = Encoding.UTF8.GetBytes(msg);
-        var stream = client.GetStream();
+        var bytes = Encoding.UTF8.GetBytes(message);
 
         try
         {
             client.SendBufferSize = 1024;
-            await stream.WriteAsync(rawSendBytes, 0, rawSendBytes.Length);
-            LastSendMsgTime = DateTime.Now;
+            await client.GetStream().WriteAsync(bytes);
+            LastSendMsgTime = DateTime.UtcNow;
             logger.LogInformation(
-                "Send TCP Data [{Length} B] to {ConnectionName}: \r\n{Message}\r\n",
-                rawSendBytes.Length,
+                "Sent {Length} byte(s) to TCP connection {ConnectionName}: {Message}",
+                bytes.Length,
                 ConnectionName,
-                msg);
+                message);
         }
-        catch (SocketException ex)
+        catch (Exception exception) when (exception is SocketException or IOException)
         {
-            logger.LogError(ex, "Connection is lost when writing.");
-            await HandleSendFailureAsync(msg, manager);
-            throw;
-        }
-        catch (Exception ex)
-        {
-            logger.LogError(ex, "Write to tcp server error.");
-            await HandleSendFailureAsync(msg, manager);
+            logger.LogError(exception, "Failed to write to TCP connection {ConnectionName}.", ConnectionName);
+            await HandleSendFailureAsync(message, manager);
             throw;
         }
     }
 
-    public async Task ReSend(string msg, IDataChannelManager? manager)
+    private async Task HandleSendFailureAsync(string message, IDataChannelManager? manager)
     {
+        if (IsServerConnection)
+        {
+            Connected = false;
+            _runtime.HandleServerDisconnect(this);
+            return;
+        }
+
         var connectionName = ConnectionName;
-        if (manager is null || string.IsNullOrEmpty(connectionName))
+        if (manager is not null && !string.IsNullOrEmpty(connectionName))
         {
-            return;
+            var channel = manager.Fetch(connectionName);
+            if (channel is not null)
+            {
+                await Task.Delay(TimeSpan.FromSeconds(2));
+                await channel.Pipe.SendDataAsync(new ChannelDataContext(ChannelSide.Inner, message));
+            }
         }
 
-        var channel = manager.Fetch(connectionName);
-        if (channel is null)
-        {
-            return;
-        }
-
-        await Task.Delay(TimeSpan.FromSeconds(2));
-        await channel.Pipe.SendDataAsync(new ChannelDataContext(ChannelSide.Inner, msg));
-    }
-
-    private async Task HandleSendFailureAsync(string msg, IDataChannelManager? manager)
-    {
-        await ReSend(msg, manager);
         if (IsMainThread)
         {
-            TcpUtils.switchoverFlag = true;
-            await TcpUtils.DecideClient(this);
-            return;
+            _runtime.RequestFailover();
+            _runtime.ApplyFailover(this);
         }
-
-        Connected = false;
+        else
+        {
+            Connected = false;
+        }
     }
 }

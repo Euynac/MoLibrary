@@ -57,9 +57,6 @@ public class BaseTimeInterval(TimeSpan thresholdLeft, TimeSpan thresholdRight, D
 #endregion
 public static class TimeExtensions
 {
-    //After .NET 6, TimeZoneInfo's ID supports cross-platform automatic conversion.
-    public static TimeZoneInfo LocalTimeZoneInfo { get; set; } = TimeZoneInfo.FindSystemTimeZoneById("China Standard Time");
-
     /// <summary>
     /// Combine given date and time to datetime.    
     /// </summary>
@@ -81,35 +78,43 @@ public static class TimeExtensions
         return dateOnly?.ToDateTime(timeOnly);
     }
 
+    /// <summary>
+    /// Converts a wall-clock time from the operating system's local timezone to UTC using its base offset.
+    /// A date-aware conversion should be used when daylight-saving transitions matter.
+    /// </summary>
     public static TimeOnly FromLocalToUtc(this TimeOnly localTimeOnly)
     {
-        var currentOffset = LocalTimeZoneInfo.BaseUtcOffset;
-        var utcTimeOnly = localTimeOnly.AddHours(-currentOffset.Hours);
+        var currentOffset = TimeZoneInfo.Local.BaseUtcOffset;
+        var utcTimeOnly = localTimeOnly.Add(-currentOffset);
         return utcTimeOnly;
     }
 
+    /// <summary>
+    /// Converts a UTC wall-clock time to the operating system's local timezone using its base offset.
+    /// A date-aware conversion should be used when daylight-saving transitions matter.
+    /// </summary>
     public static TimeOnly FromUtcToLocal(this TimeOnly utcTimeOnly)
     {
-        var currentOffset = LocalTimeZoneInfo.BaseUtcOffset;
-        var localTimeOnly = utcTimeOnly.AddHours(currentOffset.Hours);
+        var currentOffset = TimeZoneInfo.Local.BaseUtcOffset;
+        var localTimeOnly = utcTimeOnly.Add(currentOffset);
         return localTimeOnly;
     }
 
     /// <summary>
-    /// Convert given UTC time to local time. (Disregard the kind of given datetime)
+    /// Converts a UTC value to the operating system's local timezone, including daylight-saving rules.
     /// </summary>
     /// <param name="utcDateTime"></param>
     /// <returns></returns>
     public static DateTime FromUtcToLocal(this DateTime utcDateTime)
     {
-        var currentOffset = LocalTimeZoneInfo.BaseUtcOffset;
-        var localTime = utcDateTime.AddHours(currentOffset.Hours);
-        return DateTime.SpecifyKind(localTime, DateTimeKind.Unspecified);
+        return TimeZoneInfo.ConvertTimeFromUtc(
+            DateTime.SpecifyKind(utcDateTime, DateTimeKind.Utc),
+            TimeZoneInfo.Local);
     }
 
 
     /// <summary>
-    /// Convert given UTC time to local time. (Disregard the kind of given datetime)
+    /// Converts a nullable UTC value to the operating system's local timezone, including daylight-saving rules.
     /// </summary>
     /// <param name="utcDateTime"></param>
     /// <returns></returns>
@@ -118,7 +123,7 @@ public static class TimeExtensions
 
 
     /// <summary>
-    /// Convert given local time to UTC time. (Disregard the kind of given datetime)
+    /// Converts a nullable wall-clock value in the operating system's local timezone to UTC.
     /// </summary>
     /// <param name="localDateTime"></param>
     /// <returns></returns>
@@ -126,15 +131,15 @@ public static class TimeExtensions
         localDateTime == null ? null : FromLocalToUtc(localDateTime.Value);
 
     /// <summary>
-    /// Convert given local time to UTC time. (Disregard the kind of given datetime)
+    /// Converts a wall-clock value in the operating system's local timezone to UTC.
     /// </summary>
     /// <param name="localDateTime"></param>
     /// <returns></returns>
     public static DateTime FromLocalToUtc(this DateTime localDateTime)
     {
-        var currentOffset = LocalTimeZoneInfo.BaseUtcOffset;
-        var localTime = localDateTime.AddHours(-currentOffset.Hours);
-        return DateTime.SpecifyKind(localTime, DateTimeKind.Unspecified);
+        return TimeZoneInfo.ConvertTimeToUtc(
+            DateTime.SpecifyKind(localDateTime, DateTimeKind.Unspecified),
+            TimeZoneInfo.Local);
     }
 
 

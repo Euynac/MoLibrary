@@ -1,6 +1,5 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using Monica.Core.Logging;
 using Monica.Core.ObjectMapping.Abstractions;
 using Monica.DependencyInjection.Abstractions;
 
@@ -15,11 +14,14 @@ public interface IDomainService : ITransientDependency
 
 public abstract class DomainService : IDomainService, ICachedServiceProviderAccessor
 {
-    private readonly Lazy<ILogger> _loggerLazy;
-
-    protected DomainService()
+    /// <summary>
+    /// Initializes a domain service with logging owned by the current host.
+    /// </summary>
+    /// <param name="loggerFactory">The host logger factory.</param>
+    protected DomainService(ILoggerFactory loggerFactory)
     {
-        _loggerLazy = new Lazy<ILogger>(() => LogManager.For(GetType()));
+        ArgumentNullException.ThrowIfNull(loggerFactory);
+        Logger = loggerFactory.CreateLogger(GetType());
     }
 
     public ICachedServiceProvider CachedServiceProvider
@@ -28,7 +30,7 @@ public abstract class DomainService : IDomainService, ICachedServiceProviderAcce
         set => field = value ?? throw new ArgumentNullException(nameof(value));
     }
 
-    protected ILogger Logger => _loggerLazy.Value;
+    protected ILogger Logger { get; }
 
     protected IObjectMapper Mapper => CachedServiceProvider.GetRequiredService<IObjectMapper>();
 

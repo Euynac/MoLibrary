@@ -10,13 +10,13 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\Monica.AI.UI\Monica.AI.UI.csproj" />
     <ProjectReference Include="..\Monica.DependencyInjection\Monica.DependencyInjection.csproj" />
     <ProjectReference Include="..\Monica.Framework\Monica.Framework.csproj" />
     <ProjectReference Include="..\Monica.JobScheduler.UI\Monica.JobScheduler.UI.csproj" />
     <ProjectReference Include="..\Monica.StateStore.UI\Monica.StateStore.UI.csproj" />
     <ProjectReference Include="..\Monica.UI\Monica.UI.csproj" />
     <ProjectReference Include="..\Monica.Logging\Monica.Logging.csproj" />
+    <ProjectReference Include="..\Monica.ProjectUnits\Monica.ProjectUnits.csproj" />
   </ItemGroup>
 
   <ItemGroup>

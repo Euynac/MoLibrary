@@ -13,14 +13,14 @@ namespace Monica.Modules;
 
 public static class ModuleExecutionTimingUIBuilderExtensions
 {
-    extension(Mo)
+    extension(IMonicaBuilder builder)
     {
         /// <summary>
         /// Configures the execution-timing UI module.
         /// </summary>
-        public static ModuleExecutionTimingUIGuide AddExecutionTimingUI(Action<ModuleExecutionTimingUIOption>? action = null)
+        public ModuleExecutionTimingUIGuide AddExecutionTimingUI(Action<ModuleExecutionTimingUIOption>? action = null)
         {
-            return new ModuleExecutionTimingUIGuide().Register(action);
+            return builder.AddModule<ModuleExecutionTimingUI, ModuleExecutionTimingUIOption, ModuleExecutionTimingUIGuide>(action);
         }
     }
 }

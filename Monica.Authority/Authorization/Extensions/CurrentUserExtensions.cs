@@ -1,4 +1,4 @@
-using Monica.Authority.Authorization.Services.Support;
+using Monica.Authority.Authorization.Abstractions;
 using Monica.Authority.Identity.Abstractions;
 
 namespace Monica.Authority.Authorization.Extensions;
@@ -12,11 +12,14 @@ public static class CurrentUserExtensions
     /// Determine whether the current user has the specified permission
     /// </summary>
     /// <param name="user"></param>
-    /// <param name="permission"></param>
+    /// <param name="checker">The host-owned checker for the permission enum.</param>
+    /// <param name="permission">The permission to test.</param>
     /// <returns></returns>
-    public static bool IsGranted<TEnum>(this ICurrentUserBase user, TEnum permission) where TEnum : struct, Enum
+    public static bool IsGranted<TEnum>(
+        this ICurrentUserBase user,
+        IPermissionBitChecker<TEnum> checker,
+        TEnum permission) where TEnum : struct, Enum
     {
-        var checker = PermissionBitCheckerManager.Singleton;
         return checker.IsGranted(user.ClaimsPrincipal, permission);
     }
 
@@ -24,21 +27,28 @@ public static class CurrentUserExtensions
     /// Get the permissions granted to the current user
     /// </summary>
     /// <param name="user"></param>
-    /// <returns></returns>
-    public static HashSet<TEnum> GrantedList<TEnum>(this ICurrentUserBase user) where TEnum : struct, Enum
+    /// <param name="checker">The host-owned checker for the permission enum.</param>
+    /// <returns>The permissions granted to the current user.</returns>
+    public static HashSet<TEnum> GrantedList<TEnum>(
+        this ICurrentUserBase user,
+        IPermissionBitChecker<TEnum> checker) where TEnum : struct, Enum
     {
-        var checker = PermissionBitCheckerManager.Singleton;
-        return [.. checker.GrantedList<TEnum>(user.ClaimsPrincipal)];
+        return [.. checker.GrantedList(user.ClaimsPrincipal)];
     }
 
     /// <summary>
     /// Get the granted permissions for the current user within the specified scope
     /// </summary>
-    /// <returns></returns>
-    public static HashSet<TEnum> GrantedList<TEnum>(this ICurrentUserBase user, params TEnum[] permissionScope)
+    /// <param name="user">The current user whose claims are evaluated.</param>
+    /// <param name="checker">The host-owned checker for the permission enum.</param>
+    /// <param name="permissionScope">The permissions to include in the result.</param>
+    /// <returns>The granted permissions within the supplied scope.</returns>
+    public static HashSet<TEnum> GrantedList<TEnum>(
+        this ICurrentUserBase user,
+        IPermissionBitChecker<TEnum> checker,
+        params TEnum[] permissionScope)
         where TEnum : struct, Enum
     {
-        var checker = PermissionBitCheckerManager.Singleton;
         return [.. checker.GrantedList(user.ClaimsPrincipal, permissionScope)];
     }
 }

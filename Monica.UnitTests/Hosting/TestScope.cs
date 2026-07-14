@@ -9,20 +9,17 @@ namespace Monica.UnitTests.Hosting;
 /// </summary>
 public sealed class TestScope : ITestScope
 {
-    private readonly IDisposable _applicationActivation;
     private readonly AsyncServiceScope _scope;
     private readonly IAsyncDisposable? _providerAsyncDisposable;
     private readonly IDisposable? _providerDisposable;
     private bool _disposed;
 
     public TestScope(
-        IDisposable applicationActivation,
         AsyncServiceScope scope,
         IAsyncDisposable? providerAsyncDisposable,
         IDisposable? providerDisposable,
         CancellationToken cancellationToken)
     {
-        _applicationActivation = applicationActivation;
         _scope = scope;
         _providerAsyncDisposable = providerAsyncDisposable;
         _providerDisposable = providerDisposable;
@@ -88,21 +85,14 @@ public sealed class TestScope : ITestScope
         }
 
         _disposed = true;
-        try
+        await _scope.DisposeAsync();
+        if (_providerAsyncDisposable is not null)
         {
-            await _scope.DisposeAsync();
-            if (_providerAsyncDisposable is not null)
-            {
-                await _providerAsyncDisposable.DisposeAsync();
-            }
-            else
-            {
-                _providerDisposable?.Dispose();
-            }
+            await _providerAsyncDisposable.DisposeAsync();
         }
-        finally
+        else
         {
-            _applicationActivation.Dispose();
+            _providerDisposable?.Dispose();
         }
     }
 }

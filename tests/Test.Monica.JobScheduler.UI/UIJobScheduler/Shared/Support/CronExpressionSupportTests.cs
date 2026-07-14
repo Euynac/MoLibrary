@@ -54,6 +54,6 @@ public class CronExpressionSupportTests
     {
         return new CronExpressionSupport(
             new EchoStringLocalizer<JobSchedulerResource>(),
-            Options.Create(new ModuleClockOption()));
+            Options.Create(new ModuleJobSchedulerOption()));
     }
 }

@@ -2,50 +2,67 @@
 namespace Monica.Core.Results;
 
 /// <summary>
-/// Universal return code
+/// Defines the transport-neutral status carried by a Monica result envelope.
 /// </summary>
 public enum ResStatus
 {
-    Unknown = 0,
     /// <summary>
-    /// Request normal
+    /// No result status has been assigned.
+    /// </summary>
+    Unknown = 0,
+
+    /// <summary>
+    /// The request completed successfully.
     /// </summary>
     Ok = 200,
+
     /// <summary>
-    /// Request + create new resource
+    /// The request completed and created a resource.
     /// </summary>
     Created = 201,
+
     /// <summary>
-    /// Request error
+    /// The request is invalid.
     /// </summary>
     BadRequest = 400,
+
     /// <summary>
-    /// Not logged in
+    /// Authentication is required.
     /// </summary>
     Unauthorized = 401,
+
     /// <summary>
-    /// Refresh Token invalid
+    /// The authenticated caller is not allowed to perform the operation.
+    /// </summary>
+    Forbidden = 403,
+
+    /// <summary>
+    /// The requested resource does not exist.
+    /// </summary>
+    NotFound = 404,
+
+    /// <summary>
+    /// Request validation failed.
+    /// </summary>
+    ValidateError = 451,
+
+    /// <summary>
+    /// The refresh token has expired or is invalid.
     /// </summary>
     RefreshTokenExpired = 452,
+
     /// <summary>
-    /// Access Token is invalid
+    /// The access token has expired or is invalid.
     /// </summary>
     AccessTokenExpired = 453,
 
     /// <summary>
-    /// Warning error, generally requires user confirmation
+    /// The operation requires explicit user confirmation before it can continue.
     /// </summary>
     ErrorWarning = 460,
+
     /// <summary>
-    /// Insufficient permissions
-    /// </summary>
-    Forbidden = 403,
-    /// <summary>
-    /// Input validation error
-    /// </summary>
-    ValidateError = 451,
-    /// <summary>
-    /// System exception
+    /// An unexpected server error occurred.
     /// </summary>
     InternalError = 500,
 }

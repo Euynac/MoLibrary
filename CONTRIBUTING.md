@@ -53,9 +53,9 @@ Breaking-change indicators include renamed or removed public APIs, option proper
 Use both forms for clarity when a breaking change exists:
 
 ```text
-feat!: add global Monica configuration defaults
+feat!: introduce host-bound Monica composition
 
-BREAKING CHANGE: replace Mo.Options with root Mo.ConfigApplication, Mo.ConfigModuleSystem, and Mo.ConfigTypeDiscovery APIs; module option identity defaults now resolve through shared Monica application settings.
+BREAKING CHANGE: replace ambient Mo registration with builder.AddMonica(monica => ...); each host now owns its module graph and runtime catalogs.
 ```
 
 ## Coding Standards

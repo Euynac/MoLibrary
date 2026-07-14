@@ -17,8 +17,9 @@ internal sealed class BackgroundExecutionTimingCoordinator(
     ExecutionTimingCollector collector,
     IObservableInstanceRegistry observableManager,
     IOptions<ModuleHostedServiceOption> hostedServiceOptions,
-    IOptions<ModuleExecutionTimingOption> executionTimingOptions)
-    : MoBackgroundService(observableManager, hostedServiceOptions), IExecutionTimingCoordinator
+    IOptions<ModuleExecutionTimingOption> executionTimingOptions,
+    ILogger<BackgroundExecutionTimingCoordinator> logger)
+    : MoBackgroundService(observableManager, hostedServiceOptions, logger), IExecutionTimingCoordinator
 {
     private static readonly TimeSpan _defaultFlushInterval = TimeSpan.FromMilliseconds(250);
 

@@ -72,7 +72,7 @@ Use `monica-application-project-unit-development` to fill the correct ProjectUni
 
 - Register the service in the solution's host or gateway `Program.cs`.
 - Keep the service's default `ApplicationService` route config in `{Subdomain}Service.API/Program.cs`, even if the solution also has a gateway or AppHost.
-- If the host must consume `Configurations/*Options` during registration, register `Mo.AddConfiguration(o => o.AppConfiguration = builder.Configuration)` and then call `Mo.RegisterInstantly(builder)` before later registrations use those options.
+- Register `monica.AddConfiguration()` in the service host's `builder.AddMonica(...)` callback. If later module options need bootstrap values, read them directly from `builder.Configuration`; do not resolve runtime Configuration ProjectUnits during composition.
 - Keep orchestration metadata outside the domain projects.
 - Keep `.slnx` folders aligned with `src/AppHost`, `src/Shared`, `src/Services`, and `src/Migrations`.
 

@@ -18,7 +18,7 @@ public static class ModuleDaprServiceInvocationBuilderExtensions
         this ModuleServiceInvocationGuide guide, Action<ModuleDaprServiceInvocationOption>? action = null)
     {
         guide.UseDistributedProvider<DaprServiceInvocationConnector>();
-        return new ModuleDaprServiceInvocationGuide().Register(action);
+        return guide.AddModule<ModuleDaprServiceInvocation, ModuleDaprServiceInvocationOption, ModuleDaprServiceInvocationGuide>(action);
     }
 }
 

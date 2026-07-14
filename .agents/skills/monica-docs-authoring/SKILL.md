@@ -33,7 +33,7 @@ At minimum, inspect:
 Always extract and verify:
 
 - NuGet package / project name
-- Public `Mo.Add*()` registration entry
+- Public `IMonicaBuilder` registration entry used inside `builder.AddMonica(...)`
 - `ModuleOption` and extra option properties with real default values
 - `ModuleGuide` methods and what each one enables
 - `GetRequestedConfigMethodKeys()` requirements when present
@@ -49,8 +49,8 @@ Use `references/docs-information-architecture.md`.
 Default rules:
 
 - Keep documentation under `../Monica.Docs/docs/`
-- Default all doc authoring work to `../Monica.Docs/docs/zh-CN/`
-- Do **not** create or maintain `en-US` mirrors unless the user explicitly asks for English documentation
+- Treat `../Monica.Docs/docs/en-US/` as the canonical launch language and `../Monica.Docs/docs/zh-CN/` as a first-class localized tree
+- For new public concepts and launch-critical guides, create or update both locales unless the user explicitly narrows the scope
 - Use **module-level slugs** in kebab-case, derived from the public module name / registration name
 - Give each module its own documentation pack instead of mixing multiple modules into one large page
 
@@ -63,7 +63,8 @@ Important defaults:
 - Write for **Monica users**, not internal maintainers
 - Explain the **public contract**, not private implementation details
 - Show the **smallest correct example first**
-- Use current `Mo.Add*()` APIs; do not revive obsolete `AddMoModule*` names
+- Show the complete host boundary: `builder.AddMonica(monica => { ... })`, followed by `app.UseMonica()` and `app.MapMonica()` for web hosts
+- Never publish ambient `Mo.Add*()`, `builder.UseMonica()`, or `Mo.RegisterInstantly(...)`; those APIs no longer exist
 - Keep local asset links relative so Monica.Docs can rewrite them correctly
 
 ### 5. Apply the correct template
@@ -75,13 +76,13 @@ When the user asks for “module docs”, default to the module pack template un
 
 ## Monica-specific documentation rules
 
-- Document **public entry points** first: `Mo.Add*()`, `ModuleGuide`, public Facades, public Abstractions, public Models
+- Document **public entry points** first: `builder.AddMonica(...)`, `monica.Add*()`, `ModuleGuide`, public Facades, public Abstractions, public Models
 - Mention internal Services or Providers only to explain behavior or provider choices exposed through public Guide methods
 - If a module has required Guide configuration keys, add a **Required setup** section that maps each requirement to the methods that satisfy it
 - If a project exposes multiple modules, document them as **separate module packs**
 - If an infra module has a related UI module, cross-link them; do not merge them by default
 - Prefer file-path-based slugs; do not add frontmatter `slug` unless the site explicitly needs an override
-- Write and revise Chinese docs in `zh-CN` only unless the user explicitly expands scope to another locale
+- Keep English and Chinese navigation, code APIs, and factual claims aligned; narrative should read naturally in each locale rather than as literal translation
 
 ## References
 

@@ -17,14 +17,14 @@ namespace Monica.Modules;
 /// </summary>
 public static class ModuleMemoryDiagnosticsBuilderExtensions
 {
-    extension(Mo)
+    extension(IMonicaBuilder builder)
     {
         /// <summary>
         /// Configures the memory diagnostics module.
         /// </summary>
-        public static ModuleMemoryDiagnosticsGuide AddMemoryDiagnostics(Action<ModuleMemoryDiagnosticsOption>? action = null)
+        public ModuleMemoryDiagnosticsGuide AddMemoryDiagnostics(Action<ModuleMemoryDiagnosticsOption>? action = null)
         {
-            return new ModuleMemoryDiagnosticsGuide().Register(action);
+            return builder.AddModule<ModuleMemoryDiagnostics, ModuleMemoryDiagnosticsOption, ModuleMemoryDiagnosticsGuide>(action);
         }
     }
 }

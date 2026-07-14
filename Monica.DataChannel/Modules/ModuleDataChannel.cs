@@ -13,48 +13,57 @@ using Monica.DataChannel;
 using Monica.DataChannel.Abstractions;
 using Monica.DataChannel.Facades;
 using Monica.DataChannel.Metrics;
+using Monica.DataChannel.Providers.TCP.Utils;
 using Monica.DataChannel.Services;
 
 // ReSharper disable once CheckNamespace
 namespace Monica.Modules;
 
+/// <summary>
+/// Registers host-scoped data-channel composition, management, initialization, and endpoints.
+/// </summary>
 [ModuleKey(BuiltInModuleKey.DataChannel)]
 public class ModuleDataChannel(ModuleDataChannelOption option)
     : WebModuleBase<ModuleDataChannel, ModuleDataChannelOption, ModuleDataChannelGuide>(option)
 {
-
     public override void ConfigureServices(IServiceCollection services)
     {
-        DataChannelCentral.Setting = Option;
-        services.AddSingleton<IDataChannelManager, DataChannelManager>();
+        services.AddOptions<ModuleDataChannelOption>()
+            .Validate(
+                static options => options.RecentExceptionToKeep > 0,
+                $"{nameof(ModuleDataChannelOption.RecentExceptionToKeep)} must be greater than zero.")
+            .Validate(
+                static options => options.InitThreadCount > 0,
+                $"{nameof(ModuleDataChannelOption.InitThreadCount)} must be greater than zero.")
+            .ValidateOnStart();
+        services.TryAddSingleton<DataChannelRuntime>();
+        services.TryAddSingleton<IDataChannelRegistrar>(provider => provider.GetRequiredService<DataChannelRuntime>());
+        services.TryAddSingleton<IDataChannelManager>(provider => provider.GetRequiredService<DataChannelRuntime>());
+        services.TryAddSingleton<TcpConnectionRuntime>();
         services.TryAddSingleton<MessageMetrics>();
         services.AddScoped<DataChannelFacade>();
-        // Add the hosted service for channel initialization
         services.AddHostedService<DataChannelInitializerService>();
     }
 
     public override void ConfigureApplicationBuilder(IApplicationBuilder app)
     {
-        // Use the startup hook to register channel builders before the hosted initializer runs.
-        if (app.ApplicationServices.GetService(typeof(IDataChannelSetup)) is IDataChannelSetup setup)
-        {
-            setup.Setup();
-        }
+        var setup = app.ApplicationServices.GetRequiredService<IDataChannelSetup>();
+        var registrar = app.ApplicationServices.GetRequiredService<IDataChannelRegistrar>();
+        var runtime = app.ApplicationServices.GetRequiredService<DataChannelRuntime>();
 
-        DataChannelCentral.StartBuild(app);
-
-        // Channel initialization is now handled by the hosted service
+        setup.Setup(registrar);
+        runtime.Materialize(app);
     }
 
     public override void ConfigureEndpoints(IApplicationBuilder app)
     {
-        DataChannelCentral.ConfigEndpoints(app);
+        app.ApplicationServices.GetRequiredService<DataChannelRuntime>().ConfigureEndpoints(app);
 
         UseEndpoints(app, endpoints =>
         {
             var tagName = Option.GetApiGroupName();
 
-            endpoints.MapGet("/channel/{id}/re-init",
+            endpoints.MapPost("/channel/{id}/reinitialize",
                 async ([FromRoute] string id,
                       [FromServices] DataChannelFacade service,
                       CancellationToken cancellationToken = default) =>
@@ -62,10 +71,10 @@ public class ModuleDataChannel(ModuleDataChannelOption option)
                     var result = await service.ReInitializeChannelAsync(id, cancellationToken);
                     return result.GetResponse();
                 })
-                .WithName("重新初始化DataChannel")
+                .WithName("DataChannel.Reinitialize")
                 .WithTags(tagName)
-                .WithSummary("重新初始化DataChannel")
-                .WithDescription("对给定ID的DataChannel进行重新初始化操作");
+                .WithSummary("Reinitialize a data channel")
+                .WithDescription("Reinitializes the data channel with the specified identifier.");
 
             endpoints.MapGet("/channels",
                 async ([FromServices] DataChannelFacade service) =>
@@ -73,10 +82,10 @@ public class ModuleDataChannel(ModuleDataChannelOption option)
                     var result = await service.GetChannelsStatusAsync();
                     return result.GetResponse();
                 })
-                .WithName("获取DataChannel状态列表")
+                .WithName("DataChannel.List")
                 .WithTags(tagName)
-                .WithSummary("获取DataChannel状态列表")
-                .WithDescription("获取所有DataChannel的状态信息");
+                .WithSummary("List data-channel status")
+                .WithDescription("Returns a status snapshot for every data channel owned by the current host.");
 
             endpoints.MapGet("/channel/{id}/exceptions",
                 async ([FromRoute] string id,
@@ -86,10 +95,10 @@ public class ModuleDataChannel(ModuleDataChannelOption option)
                     var result = await service.GetChannelExceptionsAsync(id, count);
                     return result.GetResponse();
                 })
-                .WithName("获取指定DataChannel的异常信息")
+                .WithName("DataChannel.GetExceptions")
                 .WithTags(tagName)
-                .WithSummary("获取指定DataChannel的异常信息")
-                .WithDescription("获取指定DataChannel的异常信息");
+                .WithSummary("Get data-channel exceptions")
+                .WithDescription("Returns recent exception records for the specified data channel.");
 
             endpoints.MapGet("/channels/exceptions/summary",
                 async ([FromServices] DataChannelFacade service) =>
@@ -97,10 +106,10 @@ public class ModuleDataChannel(ModuleDataChannelOption option)
                     var result = await service.GetExceptionSummaryAsync();
                     return result.GetResponse();
                 })
-                .WithName("获取所有DataChannel的异常统计信息")
+                .WithName("DataChannel.GetExceptionSummary")
                 .WithTags(tagName)
-                .WithSummary("获取所有DataChannel的异常统计信息")
-                .WithDescription("获取所有DataChannel的异常统计信息");
+                .WithSummary("Get the data-channel exception summary")
+                .WithDescription("Returns aggregate exception statistics for data channels owned by the current host.");
 
             endpoints.MapDelete("/channel/{id}/exceptions",
                 async ([FromRoute] string id,
@@ -109,10 +118,10 @@ public class ModuleDataChannel(ModuleDataChannelOption option)
                     var result = await service.ClearChannelExceptionsAsync(id);
                     return result.GetResponse();
                 })
-                .WithName("清空指定DataChannel的异常信息")
+                .WithName("DataChannel.ClearExceptions")
                 .WithTags(tagName)
-                .WithSummary("清空指定DataChannel的异常信息")
-                .WithDescription("清空指定DataChannel的异常信息");
+                .WithSummary("Clear data-channel exceptions")
+                .WithDescription("Clears exception history for the specified data channel.");
         });
     }
 
@@ -124,49 +133,64 @@ public class ModuleDataChannel(ModuleDataChannelOption option)
 
 public static class ModuleDataChannelBuilderExtensions
 {
-    extension(Mo)
+    extension(IMonicaBuilder builder)
     {
         /// <summary>
-        /// Configures the DataChannel module.
+        /// Adds the DataChannel module to the current Monica host.
         /// </summary>
-        public static ModuleDataChannelGuide AddDataChannel(Action<ModuleDataChannelOption>? action = null)
+        /// <param name="action">An optional callback that configures retention, initialization, and Minimal API options.</param>
+        /// <returns>A guide used to register the host's required channel setup.</returns>
+        public ModuleDataChannelGuide AddDataChannel(Action<ModuleDataChannelOption>? action = null)
         {
-            return new ModuleDataChannelGuide().Register(action);
+            return builder.AddModule<ModuleDataChannel, ModuleDataChannelOption, ModuleDataChannelGuide>(action);
         }
     }
 }
 
+/// <summary>
+/// Configures host-specific DataChannel pipeline declarations.
+/// </summary>
 public class ModuleDataChannelGuide : WebModuleGuide<ModuleDataChannel, ModuleDataChannelOption, ModuleDataChannelGuide>
 {
+    private const string CHANNEL_SETUP = nameof(CHANNEL_SETUP);
 
     protected override string[] GetRequestedConfigMethodKeys()
     {
-        return [nameof(SetChannelBuilder)];
+        return [CHANNEL_SETUP];
     }
-    public ModuleDataChannelGuide SetChannelBuilder<TBuilderEntrance>()
+
+    /// <summary>
+    /// Registers the setup that declares all pipelines owned by the current host.
+    /// </summary>
+    /// <typeparam name="TSetup">
+    /// A singleton setup implementation. Its dependencies are resolved from the current host,
+    /// and the framework invokes it once before materializing channel pipelines.
+    /// </typeparam>
+    /// <returns>The current guide.</returns>
+    public ModuleDataChannelGuide UseSetup<TSetup>()
+        where TSetup : class, IDataChannelSetup
     {
         ConfigureServices(context =>
         {
-            context.Services.AddSingleton(typeof(IDataChannelSetup), typeof(TBuilderEntrance));
-        });
+            context.Services.AddSingleton<IDataChannelSetup, TSetup>();
+        }, key: CHANNEL_SETUP);
         return this;
     }
 }
 
 /// <summary>
 /// Configuration options for the DataChannel module.
-/// Defines global settings and module-level behavior for data channels.
+/// Defines host-specific settings and module-level behavior for data channels.
 /// </summary>
 public class ModuleDataChannelOption : MinimalApiModuleOptions<ModuleDataChannel>
 {
     /// <summary>
-    /// Gets or sets how many recent exceptions to retain.
+    /// Gets or sets how many recent exceptions each channel retains. The default is 10 and the value must be positive.
     /// </summary>
     public int RecentExceptionToKeep { get; set; } = 10;
 
     /// <summary>
-    /// Gets or sets the number of initialization threads.
+    /// Gets or sets the maximum number of channels initialized concurrently. The default is 10 and the value must be positive.
     /// </summary>
     public int InitThreadCount { get; set; } = 10;
-
 }

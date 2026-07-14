@@ -120,7 +120,9 @@ public sealed class AIChatServicePersistenceTests
             Options.Create(new ModuleAIOption()),
             agentFactory,
             capabilityStateStore,
-            new AgentStreamingCoordinator(new AIChatRuntimeContextAccessor()));
+            new AgentStreamingCoordinator(
+                new AIChatRuntimeContextAccessor(),
+                new AgentResponseUpdateChannelContext()));
     }
 
     private static ChatSessionSnapshot CreateInvalidStateSnapshot(int historyCheckpoint = 0) => new()

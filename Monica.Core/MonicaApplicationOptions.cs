@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.Reflection;
+using Monica.Core.Modularity.Abstractions;
 
 namespace Monica.Core;
 
@@ -76,7 +77,7 @@ public interface IMonicaApplicationOptions
 
 /// <summary>
 /// Mutable configuration model for shared Monica application identity defaults.
-/// Configure it through <see cref="Mo.ConfigApplication"/>.
+/// Configure it through <see cref="IMonicaBuilder.ConfigureApplication"/>.
 /// </summary>
 public sealed class MonicaApplicationOptions : IMonicaApplicationOptions
 {

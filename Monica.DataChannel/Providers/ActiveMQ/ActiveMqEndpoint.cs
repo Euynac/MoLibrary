@@ -47,13 +47,13 @@ public class ActiveMqEndpoint(ActiveMqOptions metadata, ILogger<ActiveMqEndpoint
                             SendData(text.Text);
                         }
 
-                        logger.LogInformation("ActivateMQ接收到消息：{message}", message);
+                        logger.LogInformation("ActiveMQ received a message: {Message}", message);
                         // If using ClientAcknowledge or IndividualAcknowledge, call Acknowledge() here.
                         //message?.Acknowledge();
                     }
                     catch (Exception e)
                     {
-                        logger.LogError("ActivateMQ接收消息出现异常。{Exception}", e);
+                        logger.LogError("ActiveMQ failed to receive a message. Error: {Exception}", e);
                         throw;
                     }
                 };
@@ -73,13 +73,13 @@ public class ActiveMqEndpoint(ActiveMqOptions metadata, ILogger<ActiveMqEndpoint
                             SendData(text.Text);
                         }
 
-                        logger.LogInformation("ActivateMQ接收到消息：{message}", message);
+                        logger.LogInformation("ActiveMQ received a message: {Message}", message);
                         // If using ClientAcknowledge or IndividualAcknowledge, call Acknowledge() here.
                         //message?.Acknowledge();
                     }
                     catch (Exception e)
                     {
-                        logger.LogError("ActivateMQ接收消息出现异常。{Exception}", e);
+                        logger.LogError("ActiveMQ failed to receive a message. Error: {Exception}", e);
                         throw;
                     }
                 };

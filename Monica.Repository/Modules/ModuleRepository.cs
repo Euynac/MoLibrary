@@ -25,14 +25,14 @@ namespace Monica.Modules;
 
 public static class ModuleRepositoryBuilderExtensions
 {
-    extension(Mo)
+    extension(IMonicaBuilder builder)
     {
         /// <summary>
         /// Configure the Repository module
         /// </summary>
-        public static ModuleRepositoryGuide AddRepository(Action<ModuleRepositoryOption>? action = null)
+        public ModuleRepositoryGuide AddRepository(Action<ModuleRepositoryOption>? action = null)
         {
-            return new ModuleRepositoryGuide().Register(action);
+            return builder.AddModule<ModuleRepository, ModuleRepositoryOption, ModuleRepositoryGuide>(action);
         }
     }
 }
@@ -64,8 +64,6 @@ public class ModuleRepository(ModuleRepositoryOption option)
 
 public class ModuleRepositoryGuide : ModuleGuide<ModuleRepository, ModuleRepositoryOption, ModuleRepositoryGuide>
 {
-    private static int _dbContextRegistrationOrder;
-
     /// <summary>
     /// Registers a repository DbContext and the scoped access services used by repositories and long-lived workers.
     /// </summary>
@@ -98,8 +96,7 @@ public class ModuleRepositoryGuide : ModuleGuide<ModuleRepository, ModuleReposit
             context.Services.TryAddTransient<IAuditPropertySetter, AuditPropertySetter>();
             context.Services.AddSingleton(new RepositoryDbContextRegistration(
                 typeof(TDbContext),
-                dbContextProviderType,
-                System.Threading.Interlocked.Increment(ref _dbContextRegistrationOrder)));
+                dbContextProviderType));
             context.Services.TryAddSingleton(
                 typeof(IDbContextOperation<TDbContext>),
                 typeof(ScopedDbContextOperation<TDbContext>));
@@ -150,8 +147,13 @@ public class ModuleRepositoryOption : ModuleOptions<ModuleRepository>
     public bool UseDbFunction { get; set; }
 
     /// <summary>
-    /// Whether to enable sensitive data logging. The default is null, which means it is enabled when the environment is Development.
+    /// Gets or sets whether EF Core includes parameter values in diagnostic output.
     /// </summary>
+    /// <remarks>
+    /// The default is <see langword="null"/>, which enables sensitive data logging only when the current host's
+    /// <see cref="Microsoft.Extensions.Hosting.IHostEnvironment"/> is Development. Set an explicit value when
+    /// repository diagnostics must not depend on the host environment.
+    /// </remarks>
     public bool? EnableSensitiveDataLogging { get; set; }
 
     /// <summary>
@@ -175,9 +177,9 @@ public class ModuleRepositoryOption : ModuleOptions<ModuleRepository>
     public bool DisableEntitySeparateConfiguration { get; set; }
 
     /// <summary>
-    /// Maximum length of concurrent tokens
+    /// Maximum length used for concurrency-stamp columns configured by Repository conventions.
     /// </summary>
-    public static int ConcurrencyStampMaxLength = 40;
+    public const int ConcurrencyStampMaxLength = 40;
 }
 
 /// <summary>

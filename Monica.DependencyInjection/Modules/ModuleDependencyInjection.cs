@@ -15,14 +15,14 @@ namespace Monica.Modules;
 
 public static class ModuleDependencyInjectionBuilderExtensions
 {
-    extension(Mo)
+    extension(IMonicaBuilder builder)
     {
         /// <summary>
         /// Enables Monica conventional dependency registration and cached service-provider access.
         /// </summary>
-        public static ModuleDependencyInjectionGuide AddDependencyInjection(Action<ModuleDependencyInjectionOption>? action = null)
+        public ModuleDependencyInjectionGuide AddDependencyInjection(Action<ModuleDependencyInjectionOption>? action = null)
         {
-            return new ModuleDependencyInjectionGuide().Register(action);
+            return builder.AddModule<ModuleDependencyInjection, ModuleDependencyInjectionOption, ModuleDependencyInjectionGuide>(action);
         }
     }
 }

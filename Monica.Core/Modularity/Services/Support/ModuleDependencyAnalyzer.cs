@@ -1,6 +1,7 @@
+using System.Collections.Frozen;
 using System.Reflection;
 using System.Text;
-using Monica.Core;
+using Monica.Core.Modularity.State;
 using Monica.Core.Modularity.Annotations;
 using Monica.Core.Modularity.Diagnostics.Models;
 using Monica.Core.Modularity.Models;
@@ -10,32 +11,44 @@ namespace Monica.Core.Modularity.Services.Support;
 /// <summary>
 /// Provides analysis capabilities for ModuleBase dependencies and relationships.
 /// </summary>
-public class ModuleDependencyAnalyzer
+public sealed class ModuleDependencyAnalyzer(MonicaApplication application)
 {
-    /// <summary>
-    /// Dictionary mapping module types to their ModuleKey representations.
-    /// </summary>
-    public static Dictionary<Type, ModuleKey> ModuleTypeToKeyMap => MonicaApplication.Current.Dependencies.ModuleTypeToKeyMap;
+    private readonly ModuleDependencyState _state = new();
 
     /// <summary>
-    /// Dictionary mapping ModuleKey to their type representations.
+    /// Clears the dependency graph owned by this host.
     /// </summary>
-    public static Dictionary<ModuleKey, Type> ModuleKeyToTypeDict => MonicaApplication.Current.Dependencies.ModuleKeyToTypeDict;
+    internal void Clear()
+    {
+        _state.Clear();
+    }
 
     /// <summary>
-    /// Dictionary mapping ModuleKey to their dependencies.
+    /// Gets a point-in-time, read-only snapshot mapping module types to their declared keys.
     /// </summary>
-    public static Dictionary<ModuleKey, HashSet<ModuleKey>> ModuleDependencyMap => MonicaApplication.Current.Dependencies.ModuleDependencyMap;
+    public IReadOnlyDictionary<Type, ModuleKey> ModuleKeysByType =>
+        _state.CreateModuleKeysByTypeSnapshot();
+
+    /// <summary>
+    /// Gets a point-in-time, read-only snapshot mapping module keys to their types.
+    /// </summary>
+    public IReadOnlyDictionary<ModuleKey, Type> ModuleTypesByKey =>
+        _state.CreateModuleTypesByKeySnapshot();
+
+    /// <summary>
+    /// Gets a point-in-time, deeply read-only snapshot of the module dependency graph.
+    /// </summary>
+    public IReadOnlyDictionary<ModuleKey, IReadOnlySet<ModuleKey>> DependenciesByModule =>
+        _state.CreateDependenciesByModuleSnapshot();
 
     /// <summary>
     /// Maps a module key to its type.
     /// </summary>
     /// <param name="moduleType">The module type.</param>
     /// <param name="moduleKey">The module key.</param>
-    public static void RegisterModuleMapping(Type moduleType, ModuleKey moduleKey)
+    internal void RegisterModuleMapping(Type moduleType, ModuleKey moduleKey)
     {
-        ModuleTypeToKeyMap[moduleType] = moduleKey;
-        ModuleKeyToTypeDict[moduleKey] = moduleType;
+        _state.RegisterMapping(moduleType, moduleKey);
     }
 
     /// <summary>
@@ -44,11 +57,11 @@ public class ModuleDependencyAnalyzer
     /// <param name="moduleType">The module type.</param>
     /// <returns>The resolved module key.</returns>
     /// <exception cref="InvalidOperationException">Thrown when the module type has no <see cref="ModuleKeyAttribute"/>.</exception>
-    public static ModuleKey ResolveModuleKey(Type moduleType)
+    internal ModuleKey ResolveModuleKey(Type moduleType)
     {
         ArgumentNullException.ThrowIfNull(moduleType);
 
-        if (ModuleTypeToKeyMap.TryGetValue(moduleType, out var cached))
+        if (_state.TryGetModuleKey(moduleType, out var cached))
         {
             return cached;
         }
@@ -65,27 +78,18 @@ public class ModuleDependencyAnalyzer
     /// </summary>
     /// <param name="moduleKey">The module that depends on another module.</param>
     /// <param name="dependsOnKey">The module being depended upon.</param>
-    public static void AddDependency(ModuleKey moduleKey, ModuleKey dependsOnKey)
+    internal void AddDependency(ModuleKey moduleKey, ModuleKey dependsOnKey)
     {
-        if (!ModuleDependencyMap.ContainsKey(moduleKey))
-        {
-            ModuleDependencyMap[moduleKey] = [];
-        }
-
-        if (moduleKey != dependsOnKey) // Prevent self-dependency
-        {
-            ModuleDependencyMap[moduleKey].Add(dependsOnKey);
-        }
+        _state.AddDependency(moduleKey, dependsOnKey);
     }
 
     /// <summary>
     /// Refreshes module registration order so dependencies are registered first.
     /// </summary>
-    public static void RefreshModuleOrders()
+    private void RefreshModuleOrders()
     {
         // Get modules in topological dependency order.
-        var orderedModules = GetModulesInDependencyOrder();
-        orderedModules.Reverse();
+        var orderedModules = GetModulesInDependencyOrder().Reverse().ToList();
 
         // Assign smaller order values to modules that other modules depend on.
         for (int i = 0; i < orderedModules.Count; i++)
@@ -93,10 +97,10 @@ public class ModuleDependencyAnalyzer
             var moduleKey = orderedModules[i];
 
             // Resolve the module type for this key.
-            if (ModuleKeyToTypeDict.TryGetValue(moduleKey, out var moduleType))
+            if (_state.TryGetModuleType(moduleKey, out var moduleType))
             {
                 // Update the stored registration order.
-                if (ModuleRegistry.TryGetModuleRequestInfo(moduleType, out var requestInfo))
+                if (application.Modules.TryGetModuleRequestInfo(moduleType, out var requestInfo))
                 {
                     // Start at 100 and leave gaps of 10 to make later adjustments easier.
                     requestInfo.Order = 100 + (i * 10);
@@ -109,7 +113,7 @@ public class ModuleDependencyAnalyzer
     /// Manually refreshes registration order for all registered modules.
     /// Call this after dependency discovery completes so modules register in the correct dependency order.
     /// </summary>
-    public static void RefreshAllModuleOrders()
+    internal void RefreshAllModuleOrders()
     {
         //// Check for circular dependencies.
         //if (HasCircularDependencies())
@@ -125,19 +129,19 @@ public class ModuleDependencyAnalyzer
     /// </summary>
     /// <param name="moduleKey">The module to calculate dependencies for.</param>
     /// <returns>A set of all direct and indirect dependencies of the module.</returns>
-    public static HashSet<ModuleKey> CalculateModuleDependencies(ModuleKey moduleKey)
+    public IReadOnlySet<ModuleKey> CalculateModuleDependencies(ModuleKey moduleKey)
     {
         var allDependencies = new HashSet<ModuleKey>();
-        if (!ModuleDependencyMap.ContainsKey(moduleKey))
+        if (!_state.TryGetDependencies(moduleKey, out var directDependencies))
         {
-            return allDependencies;
+            return FrozenSet<ModuleKey>.Empty;
         }
 
         var visited = new HashSet<ModuleKey> { moduleKey };
         var toVisit = new Queue<ModuleKey>();
 
         // Start with direct dependencies
-        foreach (var dependency in ModuleDependencyMap[moduleKey])
+        foreach (var dependency in directDependencies)
         {
             toVisit.Enqueue(dependency);
         }
@@ -154,7 +158,7 @@ public class ModuleDependencyAnalyzer
             allDependencies.Add(current);
 
             // Add dependencies of the current module if any
-            if (ModuleDependencyMap.TryGetValue(current, out var dependencies))
+            if (_state.TryGetDependencies(current, out var dependencies))
             {
                 foreach (var dependency in dependencies.Where(d => !visited.Contains(d)))
                 {
@@ -163,34 +167,33 @@ public class ModuleDependencyAnalyzer
             }
         }
 
-        return allDependencies;
+        return allDependencies.ToFrozenSet();
     }
 
     /// <summary>
     /// Calculates the complete dependency graph for all modules.
     /// </summary>
     /// <returns>A DirectedGraph representation of the module dependencies.</returns>
-    public static DirectedGraph<ModuleKey> CalculateCompleteModuleDependencyGraph()
+    public DirectedGraph<ModuleKey> CalculateCompleteModuleDependencyGraph()
     {
         var graph = new DirectedGraph<ModuleKey>();
 
         // Add all registered modules as nodes, even if they have no dependencies.
-        foreach (var moduleType in ModuleRegistry.ModuleRegisterContextDict.Keys)
+        foreach (var moduleType in application.Modules.Registrations.Keys)
         {
             graph.AddNode(ResolveModuleKey(moduleType));
         }
 
         // Preserve any additional mappings that may have been populated outside normal registration.
-        foreach (var module in ModuleKeyToTypeDict.Keys)
+        foreach (var module in _state.MappedModuleKeys)
         {
             graph.AddNode(module);
         }
 
         // Add all edges (dependencies)
-        foreach (var kvp in ModuleDependencyMap)
+        foreach (var (sourceModule, dependencies) in _state.DependencyEntries)
         {
-            var sourceModule = kvp.Key;
-            foreach (var targetModule in kvp.Value)
+            foreach (var targetModule in dependencies)
             {
                 graph.AddEdge(sourceModule, targetModule);
             }
@@ -203,7 +206,7 @@ public class ModuleDependencyAnalyzer
     /// Detects if there are any circular dependencies in the module dependencies.
     /// </summary>
     /// <returns>True if circular dependencies exist, otherwise false.</returns>
-    public static bool HasCircularDependencies()
+    public bool HasCircularDependencies()
     {
         var graph = CalculateCompleteModuleDependencyGraph();
         return graph.HasCycles();
@@ -213,10 +216,10 @@ public class ModuleDependencyAnalyzer
     /// Gets a topological sort of modules based on their dependencies.
     /// </summary>
     /// <returns>A list of modules in dependency order (if no cycles exist).</returns>
-    public static List<ModuleKey> GetModulesInDependencyOrder()
+    public IReadOnlyList<ModuleKey> GetModulesInDependencyOrder()
     {
         var graph = CalculateCompleteModuleDependencyGraph();
-        return graph.TopologicalSort();
+        return Array.AsReadOnly(graph.TopologicalSort().ToArray());
     }
     
     /// <summary>
@@ -224,7 +227,7 @@ public class ModuleDependencyAnalyzer
     /// </summary>
     /// <param name="moduleKey">The module to analyze.</param>
     /// <returns>Detailed dependency information for the module.</returns>
-    public static ModuleDependencyInfo GetModuleDependencyInfo(ModuleKey moduleKey)
+    public ModuleDependencyInfo GetModuleDependencyInfo(ModuleKey moduleKey)
     {
         var info = new ModuleDependencyInfo
         {
@@ -232,20 +235,20 @@ public class ModuleDependencyAnalyzer
         };
 
         // Get direct dependencies
-        if (ModuleDependencyMap.TryGetValue(moduleKey, out var directDeps))
+        if (_state.TryGetDependencies(moduleKey, out var directDeps))
         {
             info.DirectDependencies = [..directDeps];
         }
 
         // Get all dependencies
-        info.AllDependencies = CalculateModuleDependencies(moduleKey);
+        info.AllDependencies = [.. CalculateModuleDependencies(moduleKey)];
 
         // Get modules that depend on this module
-        foreach (var kvp in ModuleDependencyMap)
+        foreach (var (dependentModule, dependencies) in _state.DependencyEntries)
         {
-            if (kvp.Value.Contains(moduleKey))
+            if (dependencies.Contains(moduleKey))
             {
-                info.DependedByModules.Add(kvp.Key);
+                info.DependedByModules.Add(dependentModule);
             }
         }
 
@@ -254,7 +257,7 @@ public class ModuleDependencyAnalyzer
         if (cyclePath.Count > 0)
         {
             info.IsPartOfCycle = true;
-            info.CyclePath = cyclePath;
+            info.CyclePath = [.. cyclePath];
         }
 
         return info;
@@ -265,11 +268,11 @@ public class ModuleDependencyAnalyzer
     /// </summary>
     /// <param name="moduleKey">The module to check for involvement in a cycle.</param>
     /// <returns>A list representing the cycle path, or an empty list if no cycle exists.</returns>
-    public static List<ModuleKey> FindCycleInvolvingModule(ModuleKey moduleKey)
+    public IReadOnlyList<ModuleKey> FindCycleInvolvingModule(ModuleKey moduleKey)
     {
-        if (!ModuleDependencyMap.ContainsKey(moduleKey))
+        if (!_state.TryGetDependencies(moduleKey, out _))
         {
-            return [];
+            return Array.Empty<ModuleKey>();
         }
 
         var visited = new HashSet<ModuleKey>();
@@ -293,7 +296,7 @@ public class ModuleDependencyAnalyzer
             inPath.Add(current);
             path.Add(current);
 
-            if (ModuleDependencyMap.TryGetValue(current, out var dependencies))
+            if (_state.TryGetDependencies(current, out var dependencies))
             {
                 foreach (var dependency in dependencies)
                 {
@@ -327,48 +330,48 @@ public class ModuleDependencyAnalyzer
             }
         }
 
-        return cyclePath;
+        return Array.AsReadOnly(cyclePath.ToArray());
     }
     
     /// <summary>
     /// Gets dependency information for all registered modules.
     /// </summary>
     /// <returns>A dictionary mapping each module to its dependency information.</returns>
-    public static Dictionary<ModuleKey, ModuleDependencyInfo> GetAllModuleDependencyInfo()
+    public IReadOnlyDictionary<ModuleKey, ModuleDependencyInfo> GetAllModuleDependencyInfo()
     {
         var result = new Dictionary<ModuleKey, ModuleDependencyInfo>();
 
-        foreach (var moduleKey in ModuleKeyToTypeDict.Keys)
+        foreach (var moduleKey in _state.MappedModuleKeys)
         {
             result[moduleKey] = GetModuleDependencyInfo(moduleKey);
         }
 
-        return result;
+        return result.ToFrozenDictionary();
     }
 
     /// <summary>
     /// Gets the current registration order information for all registered modules.
     /// </summary>
     /// <returns>A dictionary containing the module type, module key, and registration order.</returns>
-    public static Dictionary<Type, (ModuleKey ModuleKey, int Order)> GetModuleRegistrationOrder()
+    public IReadOnlyDictionary<Type, (ModuleKey ModuleKey, int Order)> GetModuleRegistrationOrder()
     {
         var result = new Dictionary<Type, (ModuleKey ModuleKey, int Order)>();
 
-        foreach (var kvp in ModuleRegistry.ModuleRegisterContextDict)
+        foreach (var kvp in application.Modules.Registrations)
         {
             var moduleType = kvp.Key;
             var requestInfo = kvp.Value;
             result[moduleType] = (ResolveModuleKey(moduleType), requestInfo.Order);
         }
 
-        return result;
+        return result.ToFrozenDictionary();
     }
 
     /// <summary>
     /// Builds a formatted registration summary string for debugging output.
     /// </summary>
     /// <returns>A formatted string containing registration state, dependencies, disabled modules, and initialization timings.</returns>
-    public static string GetModuleRegistrationSummary()
+    public string GetModuleRegistrationSummary()
     {
         var sb = new StringBuilder();
 
@@ -376,12 +379,12 @@ public class ModuleDependencyAnalyzer
         sb.AppendLine("=====================================");
 
         // Enabled modules come from the runtime snapshots and are already initialized.
-        var moduleInfos = ModuleRegistry.ModuleSnapshots
+        var moduleInfos = application.Modules.RuntimeSnapshots
             .OrderBy(snapshot => snapshot.RegisterInfo.Order)
             .ToList();
 
         // Pull disabled module types from the module manager.
-        var disabledModuleTypes = ModuleStateRegistry.GetDisabledModuleTypes();
+        var disabledModuleTypes = application.ModuleStates.GetDisabledModuleTypes();
 
         // Render enabled modules.
         if (moduleInfos.Count > 0)
@@ -401,7 +404,7 @@ public class ModuleDependencyAnalyzer
                 sb.AppendLine($"Order {order:D4}: {moduleKeyDisplay} ({moduleTypeName})");
 
                 // Dependency information.
-                if (ModuleDependencyMap.TryGetValue(moduleKey, out var dependencies) && dependencies.Count > 0)
+                if (_state.TryGetDependencies(moduleKey, out var dependencies) && dependencies.Count > 0)
                 {
                     sb.AppendLine($"           Dependencies: {string.Join(", ", dependencies)}");
                 }
@@ -431,7 +434,7 @@ public class ModuleDependencyAnalyzer
                 sb.AppendLine($"{moduleKeyDisplay} ({disabledModuleType.Name}) [DISABLED]");
 
                 // Dependency information, if any.
-                if (ModuleDependencyMap.TryGetValue(moduleKey, out var dependencies) && dependencies.Count > 0)
+                if (_state.TryGetDependencies(moduleKey, out var dependencies) && dependencies.Count > 0)
                 {
                     sb.AppendLine($"           Dependencies: {string.Join(", ", dependencies)}");
                 }

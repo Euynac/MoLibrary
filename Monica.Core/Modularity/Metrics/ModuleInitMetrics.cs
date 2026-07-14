@@ -1,6 +1,5 @@
 using System.Diagnostics.Metrics;
 using Monica.Core.Modularity.Models;
-using Monica.Core.Modularity.Services;
 using Monica.Core.Modularity.Services.Support;
 
 namespace Monica.Core.Modularity.Metrics;
@@ -8,34 +7,34 @@ namespace Monica.Core.Modularity.Metrics;
 /// <summary>
 /// Exposes module initialization profiler snapshots through standard .NET observable instruments.
 /// </summary>
-internal sealed class ModuleInitMetrics
+internal sealed class ModuleInitMetrics(IMeterFactory meterFactory, MonicaApplication application)
 {
     private const string PHASE_TAG_NAME = "phase";
+    private Meter Meter { get; } = CreateMeter(meterFactory, application);
 
-    /// <summary>
-    /// Initializes module initialization observable instruments.
-    /// </summary>
-    public ModuleInitMetrics(IMeterFactory meterFactory)
+    private static Meter CreateMeter(IMeterFactory meterFactory, MonicaApplication application)
     {
         var meter = meterFactory.Create(ModuleInitMetricNames.MeterName);
 
         meter.CreateObservableGauge(
             ModuleInitMetricNames.Duration,
-            ObserveModuleInitDurations,
+            () => ObserveModuleInitDurations(application),
             unit: "s",
             description: "Monica module initialization duration by phase.");
 
         meter.CreateObservableGauge(
             ModuleInitMetricNames.Errors,
-            ObserveModuleInitErrors,
+            () => ObserveModuleInitErrors(application),
             unit: "errors",
             description: "Current Monica module initialization errors.");
+
+        return meter;
     }
 
-    private static Measurement<double>[] ObserveModuleInitDurations()
+    private static Measurement<double>[] ObserveModuleInitDurations(MonicaApplication application)
     {
-        return ModuleRegistry.ModuleSnapshots
-            .Select(snapshot => ModuleInitializationProfiler.GetModuleProfile(snapshot.ModuleType))
+        return application.Modules.RuntimeSnapshots
+            .Select(snapshot => application.Profiling.GetModuleProfile(snapshot.ModuleType))
             .OfType<ModuleProfileInfo>()
             .SelectMany(static profile => profile.GetPhaseDurations())
             .Where(static phaseDuration => phaseDuration.Value > 0)
@@ -46,9 +45,9 @@ internal sealed class ModuleInitMetrics
             .ToArray();
     }
 
-    private static Measurement<long>[] ObserveModuleInitErrors()
+    private static Measurement<long>[] ObserveModuleInitErrors(MonicaApplication application)
     {
-        return ModuleRegistry.ModuleRegisterErrors
+        return application.Modules.RegistrationErrors
             .GroupBy(static error => FormatPhase(error.Phase))
             .Select(group => new Measurement<long>(
                 group.Count(),

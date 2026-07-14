@@ -6,13 +6,14 @@ using Monica.Modules;
 
 var builder = WebApplication.CreateBuilder(args);
 
-Mo.AddJobScheduler()
-    .UseInMemoryMetadataRepository()
-    .UseSchedulerScope("job-scheduler-minimal")
-    .UseInMemoryProvider();
-Mo.AddJobSchedulerUI();
-
-builder.UseMonica();
+builder.AddMonica(monica =>
+{
+    monica.AddJobScheduler()
+        .UseInMemoryMetadataRepository()
+        .UseSchedulerScope("job-scheduler-minimal")
+        .UseInMemoryProvider();
+    monica.AddJobSchedulerUI();
+});
 
 var app = builder.Build();
 
@@ -29,7 +30,7 @@ app.Run();
     JobName = "Minimal heartbeat",
     Description = "Writes a log entry every 30 seconds so the dashboard has a recurring job to display.",
     CronSchedule = "*/30 * * * * *")]
-public sealed class MinimalHeartbeatJob(ILogger<MinimalHeartbeatJob> logger) : RecurringJob
+public sealed class MinimalHeartbeatJob(ILogger<MinimalHeartbeatJob> logger) : RecurringJob(logger)
 {
     /// <inheritdoc />
     public override Task ExecuteAsync(CancellationToken cancellationToken)

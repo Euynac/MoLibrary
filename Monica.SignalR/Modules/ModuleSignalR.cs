@@ -7,7 +7,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Monica.Authority.Identity.Abstractions;
 using Monica.Core;
-using Monica.Core.JsonSerialization.Services;
+using Monica.Core.JsonSerialization.Extensions;
 using Monica.Core.JsonSerialization.Services.Support;
 using Monica.Core.Modularity;
 using Monica.Core.Modularity.Abstractions;
@@ -30,16 +30,16 @@ namespace Monica.Modules;
 /// </summary>
 public static class ModuleSignalRBuilderExtensions
 {
-    extension(Mo)
+    extension(IMonicaBuilder builder)
     {
         /// <summary>
         /// Registers the SignalR infrastructure module and applies optional module configuration.
         /// </summary>
         /// <param name="action">Optional module option configuration delegate.</param>
         /// <returns>Returns the module guide used to continue SignalR registration.</returns>
-        public static ModuleSignalRGuide AddSignalR(Action<ModuleSignalROption>? action = null)
+        public ModuleSignalRGuide AddSignalR(Action<ModuleSignalROption>? action = null)
         {
-            return new ModuleSignalRGuide().Register(action);
+            return builder.AddModule<ModuleSignalR, ModuleSignalROption, ModuleSignalRGuide>(action);
         }
     }
 }
@@ -52,6 +52,11 @@ public static class ModuleSignalRBuilderExtensions
 public class ModuleSignalR(ModuleSignalROption option)
     : WebModuleBase<ModuleSignalR, ModuleSignalROption, ModuleSignalRGuide>(option)
 {
+    public override void ClaimDependencies()
+    {
+        DependsOnModule<ModuleJsonSerializationGuide>().Register();
+    }
+
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddScoped<SignalRFacade>();
@@ -142,7 +147,8 @@ public class ModuleSignalRGuide : WebModuleGuide<ModuleSignalR, ModuleSignalROpt
 
             signalRBuilder.AddJsonProtocol(options =>
             {
-                options.PayloadSerializerOptions.CloneFrom(JsonSerializerOptionsProvider.SharedSerializerOptions);
+                options.PayloadSerializerOptions.CloneFrom(
+                    context.Services.GetMonicaJsonSerializerOptions());
                 jsonConfigure?.Invoke(options);
             });
         });

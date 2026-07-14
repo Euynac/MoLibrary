@@ -3,22 +3,22 @@ namespace Monica.AI.Services.Support;
 /// <summary>
 /// Stores the current response update channel for the active async flow.
 /// </summary>
-internal static class AgentResponseUpdateChannelContext
+internal sealed class AgentResponseUpdateChannelContext
 {
-    private static readonly AsyncLocal<AgentResponseUpdateChannel?> _current = new();
+    private readonly AsyncLocal<AgentResponseUpdateChannel?> _current = new();
 
     /// <summary>
     /// Gets the current channel for the active async flow.
     /// </summary>
-    public static AgentResponseUpdateChannel? Current => _current.Value;
+    public AgentResponseUpdateChannel? Current => _current.Value;
 
     /// <summary>
     /// Push a channel into the current async flow and restore the previous value on dispose.
     /// </summary>
-    public static IDisposable Push(AgentResponseUpdateChannel channel)
+    public IDisposable Push(AgentResponseUpdateChannel channel)
     {
         ArgumentNullException.ThrowIfNull(channel);
-        return new Scope(channel);
+        return new Scope(this, channel);
     }
 
     private sealed class Scope : IDisposable
@@ -26,11 +26,14 @@ internal static class AgentResponseUpdateChannelContext
         private readonly AgentResponseUpdateChannel? _previous;
         private bool _disposed;
 
-        public Scope(AgentResponseUpdateChannel channel)
+        public Scope(AgentResponseUpdateChannelContext context, AgentResponseUpdateChannel channel)
         {
-            _previous = _current.Value;
-            _current.Value = channel;
+            Context = context;
+            _previous = context._current.Value;
+            context._current.Value = channel;
         }
+
+        private AgentResponseUpdateChannelContext Context { get; }
 
         public void Dispose()
         {
@@ -39,7 +42,7 @@ internal static class AgentResponseUpdateChannelContext
                 return;
             }
 
-            _current.Value = _previous;
+            Context._current.Value = _previous;
             _disposed = true;
         }
     }

@@ -4,6 +4,7 @@ using System.Reflection;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using Monica.Core;
 using Monica.Core.Extensions;
 using Monica.Core.Modularity;
 using Monica.Core.Modularity.Models;
@@ -22,6 +23,7 @@ namespace Monica.StateStore.UI.Services;
 /// </summary>
 public class StateStoreUIService(
     IServiceProvider serviceProvider,
+    MonicaApplication application,
     IOptions<ModuleStateStoreOption> stateStoreOption,
     IEnumerable<IStateStoreBrowserApi> browserApis,
     ILogger<StateStoreUIService> logger)
@@ -44,10 +46,10 @@ public class StateStoreUIService(
     ];
 
     private readonly IReadOnlyList<IStateStoreBrowserApi> _browserApis = browserApis.ToList();
-    private List<ModuleRuntimeSnapshot>? _providerSnapshots;
+    private IReadOnlyList<ModuleRuntimeSnapshot>? _providerSnapshots;
 
-    private List<ModuleRuntimeSnapshot> ProviderSnapshots =>
-        _providerSnapshots ??= ModuleRegistry.GetModuleProviders(BuiltInModuleKey.StateStore);
+    private IReadOnlyList<ModuleRuntimeSnapshot> ProviderSnapshots =>
+        _providerSnapshots ??= application.Modules.GetModuleProviders(BuiltInModuleKey.StateStore);
 
     #region Provider Discovery
 
@@ -56,7 +58,7 @@ public class StateStoreUIService(
         try
         {
             var providers = new List<StateStoreProviderInfo>();
-            var keyedServiceKeys = ModuleRegistry.GetKeyedServiceKeys(typeof(ModuleStateStore));
+            var keyedServiceKeys = application.Modules.GetKeyedServiceKeys(typeof(ModuleStateStore));
 
             var defaultProvider = serviceProvider.GetService<IStateStore>();
             if (defaultProvider != null)

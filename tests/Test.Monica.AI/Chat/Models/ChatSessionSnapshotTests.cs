@@ -149,7 +149,9 @@ public sealed class ChatSessionSnapshotTests
             Options.Create(new ModuleAIOption()),
             agentFactory,
             capabilityStateStore,
-            new AgentStreamingCoordinator(new AIChatRuntimeContextAccessor()));
+            new AgentStreamingCoordinator(
+                new AIChatRuntimeContextAccessor(),
+                new AgentResponseUpdateChannelContext()));
     }
 
     private static ChatSessionSnapshot CreateSnapshot() => new()

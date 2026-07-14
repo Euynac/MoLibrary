@@ -2,7 +2,7 @@
 
 ## 概述
 
-信息展示中间件 (`PipeInfoDisplayMiddlewareBase`) 是 DataChannel 模块的一个新功能，专门用于在 UI 管理界面展示统计信息和业务指标。开发者可以继承此基类来创建自定义的信息统计中间件。
+信息展示中间件 (`PipelineInfoDisplayMiddlewareBase`) 用于在 DataChannel 运维界面展示统计信息和业务指标。开发者可以继承此基类创建自己的统计中间件。
 
 ## 特性
 
@@ -16,9 +16,12 @@
 ### 1. 创建自定义中间件
 
 ```csharp
-public class MyCustomMiddleware : PipeInfoDisplayMiddlewareBase
+using Monica.DataChannel.Middlewares;
+using Monica.DataChannel.Pipeline;
+
+public sealed class MyCustomMiddleware : PipelineInfoDisplayMiddlewareBase
 {
-    public override DataContext Pass(DataContext context)
+    public override ChannelDataContext Pass(ChannelDataContext context)
     {
         // 统计消息总数
         IncrementCounter("总消息数");
@@ -35,9 +38,9 @@ public class MyCustomMiddleware : PipeInfoDisplayMiddlewareBase
         return context;
     }
 
-    public override async Task<DataContext> PassAsync(DataContext context)
+    public override Task<ChannelDataContext> PassAsync(ChannelDataContext context)
     {
-        return await Task.FromResult(Pass(context));
+        return Task.FromResult(Pass(context));
     }
 }
 ```
@@ -45,17 +48,34 @@ public class MyCustomMiddleware : PipeInfoDisplayMiddlewareBase
 ### 2. 注册中间件
 
 ```csharp
-public class MyChannelBuilder : ISetupPipeline
+using Monica.DataChannel.Abstractions;
+using Monica.DataChannel.Providers.Default;
+
+public sealed class MyChannelSetup : IDataChannelSetup
 {
-    public void Setup()
+    public void Setup(IDataChannelRegistrar channels)
     {
-        DataPipeline.Create()
-            .SetOuterEndpoint(new MetadataForTcp(...))
-            .SetInnerEndpoint<MyCustomEndpoint>()
-            .AddPipeMiddleware<MyCustomMiddleware>() // 添加信息展示中间件
-            .Register("MyChannel", "MyGroup");
+        channels.Add("MyChannel", pipeline =>
+            pipeline
+                .SetOuterEndpoint(new DefaultEndpointOptions())
+                .AddPipeMiddleware<MyCustomMiddleware>(),
+            groupId: "MyGroup");
     }
 }
+```
+
+在当前 Monica 宿主中注册 setup：
+
+```csharp
+builder.AddMonica(monica =>
+{
+    monica.AddDataChannel()
+        .UseSetup<MyChannelSetup>();
+});
+
+var app = builder.Build();
+app.UseMonica();
+app.MapMonica();
 ```
 
 ## 内置方法说明
@@ -124,7 +144,7 @@ public class MyChannelBuilder : ISetupPipeline
 ### 1. 异常处理
 
 ```csharp
-public override DataContext Pass(DataContext context)
+public override ChannelDataContext Pass(ChannelDataContext context)
 {
     try
     {
@@ -145,7 +165,7 @@ public override DataContext Pass(DataContext context)
 ### 2. 性能优化
 
 ```csharp
-public override DataContext Pass(DataContext context)
+public override ChannelDataContext Pass(ChannelDataContext context)
 {
     // 避免频繁的字符串操作
     IncrementCounter("总数");
@@ -183,7 +203,7 @@ IncrementCounter("系统-内存使用");
 
 如需更复杂的统计功能，可以：
 
-1. **继承并扩展**：在 `PipeInfoDisplayMiddlewareBase` 基础上添加更多辅助方法
+1. **继承并扩展**：在 `PipelineInfoDisplayMiddlewareBase` 基础上添加更多辅助方法
 2. **组合使用**：在同一个管道中使用多个信息展示中间件
 3. **定时更新**：配合定时器实现定期统计信息更新
 4. **外部集成**：将统计信息导出到外部监控系统

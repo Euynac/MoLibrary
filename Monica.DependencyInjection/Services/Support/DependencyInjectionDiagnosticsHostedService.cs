@@ -15,7 +15,7 @@ internal sealed class DependencyInjectionDiagnosticsHostedService(
     DependencyInjectionDiagnosticsRegistry registry,
     ILogger<DependencyInjectionDiagnosticsHostedService> logger,
     IObservableInstanceRegistry observableManager,
-    IOptions<ModuleHostedServiceOption> hostedServiceOptions) : MoHostedService(observableManager, hostedServiceOptions)
+    IOptions<ModuleHostedServiceOption> hostedServiceOptions) : MoHostedService(observableManager, hostedServiceOptions, logger)
 {
     /// <inheritdoc />
     public override string ServiceName => nameof(DependencyInjectionDiagnosticsHostedService);

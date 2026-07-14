@@ -13,14 +13,14 @@ namespace Monica.Modules;
 
 public static class ModuleDaprBuilderExtensions
 {
-    extension(Mo)
+    extension(IMonicaBuilder builder)
     {
         /// <summary>
         /// Registers and configures the Dapr module.
         /// </summary>
-        public static ModuleDaprGuide AddDapr(Action<ModuleDaprOption>? action = null)
+        public ModuleDaprGuide AddDapr(Action<ModuleDaprOption>? action = null)
         {
-            return new ModuleDaprGuide().Register(action);
+            return builder.AddModule<ModuleDapr, ModuleDaprOption, ModuleDaprGuide>(action);
         }
     }
 }

@@ -17,16 +17,16 @@ namespace Monica.Modules;
 /// </summary>
 public static class ModuleRepositoryUIBuilderExtensions
 {
-    extension(Mo)
+    extension(IMonicaBuilder builder)
     {
         /// <summary>
         /// Registers the Repository diagnostics UI module.
         /// </summary>
         /// <param name="action">Optional module option configuration.</param>
         /// <returns>The Repository UI guide used for chained configuration.</returns>
-        public static ModuleRepositoryUIGuide AddRepositoryUI(Action<ModuleRepositoryUIOption>? action = null)
+        public ModuleRepositoryUIGuide AddRepositoryUI(Action<ModuleRepositoryUIOption>? action = null)
         {
-            return new ModuleRepositoryUIGuide().Register(action);
+            return builder.AddModule<ModuleRepositoryUI, ModuleRepositoryUIOption, ModuleRepositoryUIGuide>(action);
         }
     }
 }

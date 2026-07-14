@@ -18,14 +18,14 @@ namespace Monica.Modules;
 
 public static class ModuleUnitOfWorkBuilderExtensions
 {
-    extension(Mo)
+    extension(IMonicaBuilder builder)
     {
         /// <summary>
         /// Configuring the UnitOfWork module
         /// </summary>
-        public static ModuleUnitOfWorkGuide AddUnitOfWork(Action<ModuleUnitOfWorkOption>? action = null)
+        public ModuleUnitOfWorkGuide AddUnitOfWork(Action<ModuleUnitOfWorkOption>? action = null)
         {
-            return new ModuleUnitOfWorkGuide().Register(action);
+            return builder.AddModule<ModuleUnitOfWork, ModuleUnitOfWorkOption, ModuleUnitOfWorkGuide>(action);
         }
     }
 }

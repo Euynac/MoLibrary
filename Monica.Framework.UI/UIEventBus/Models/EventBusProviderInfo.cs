@@ -1,6 +1,4 @@
-using Monica.Core.Localization.Services;
 using Monica.EventBus.Abstractions;
-using Monica.Framework.UI.Localization;
 
 namespace Monica.Framework.UI.UIEventBus.Models;
 
@@ -13,11 +11,6 @@ public class EventBusProviderInfo
     /// Service key (null indicates a non-Keyed default Provider)
     /// </summary>
     public string? ServiceKey { get; init; }
-
-    /// <summary>
-    /// display name
-    /// </summary>
-    public string DisplayName => ServiceKey ?? LocalizationManager.Get<EventBusResource>("Services:Common:DefaultProviderName");
 
     /// <summary>
     /// Provider type
@@ -73,11 +66,6 @@ public class EventBusProviderInfo
     /// Check if the Provider supports dead letter queues
     /// </summary>
     public bool SupportsDeadLetterQueue => Capabilities.HasFlag(EventBusProviderCapabilities.DeadLetterQueue);
-
-    /// <summary>
-    /// Get the display name of the Provider type
-    /// </summary>
-    public string ProviderTypeName => LocalizationManager.For<EventBusResource>().GetProviderKindText(ProviderType);
 
     /// <summary>
     /// Get unique identifier (for comparison and selection)

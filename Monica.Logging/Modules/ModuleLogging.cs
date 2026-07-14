@@ -5,12 +5,10 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Monica.Core;
 using Monica.Core.Extensions;
-using Monica.Core.Logging;
 using Monica.Core.Modularity;
 using Monica.Core.Modularity.Abstractions;
 using Monica.Core.Modularity.Annotations;
 using Monica.Core.Modularity.Models;
-using Monica.Core.Modularity.Services;
 using Monica.Logging.Providers.Serilog;
 using Monica.Logging.Services;
 using Monica.Tool.Diagnostics;
@@ -23,14 +21,14 @@ namespace Monica.Modules;
 
 public static class ModuleLoggingBuilderExtensions
 {
-    extension(Mo)
+    extension(IMonicaBuilder builder)
     {
         /// <summary>
         /// Configure Logging module
         /// </summary>
-        public static ModuleLoggingGuide AddLogging(Action<ModuleLoggingOption>? action = null)
+        public ModuleLoggingGuide AddLogging(Action<ModuleLoggingOption>? action = null)
         {
-            return new ModuleLoggingGuide().Register(action);
+            return builder.AddModule<ModuleLogging, ModuleLoggingOption, ModuleLoggingGuide>(action);
         }
     }
 }
@@ -45,17 +43,18 @@ public class ModuleLogging(ModuleLoggingOption option) : WebModuleBase<ModuleLog
 
     public override void ConfigureBuilder(IHostApplicationBuilder builder)
     {
-        Log.Logger = SerilogLoggingBootstrapper.CreateLogger(builder.Configuration, option);
+        var serilogLogger = SerilogLoggingBootstrapper.CreateLogger(builder.Configuration, option);
 
         builder.Logging.ClearProviders();
-        builder.Services.AddSerilog(Log.Logger, dispose: true);
+        builder.Services.AddSerilog(serilogLogger, dispose: true);
 
-        LogManager.UseFactory(new SerilogLoggerFactory(Log.Logger));
-        ModuleRegistry.Logger = LogManager.For(typeof(ModuleRegistry));
+        UseRegistrationLoggerFactory(
+            new SerilogLoggerFactory(serilogLogger, dispose: false),
+            disposeWithApplication: true);
 
         var level =
             builder.Configuration.GetSectionRecursively("Serilog:MinimumLevel").Select(p => new { p.Key, p.Value }).ToList().ToJsonString();
-        Log.Logger.Information("Set logging level: {LoggingLevel}", level);
+        Logger.LogInformation("Set logging level: {LoggingLevel}", level);
     }
 }
 

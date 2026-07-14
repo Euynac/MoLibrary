@@ -41,7 +41,7 @@
                 <MudTooltip Text="@context.InstanceTypeFullName" RootClass="cell-tooltip">
                     <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1" Class="type-cell">
                         <MudIcon Icon="@Icons.Material.Filled.Category" Size="Size.Small" Color="Color.Default" />
-                        <span class="cell-text">@context.InstanceTypeDisplay</span>
+                        <span class="cell-text">@L.GetInstanceTypeText(context)</span>
                     </MudStack>
                 </MudTooltip>
             </MudTd>
@@ -50,14 +50,14 @@
                 {
                     <MudTooltip Text="@context.GroupId" RootClass="cell-tooltip">
                         <MudChip T="string" Color="Color.Tertiary" Size="Size.Small">
-                            @context.GroupIdDisplay
+                            @L.GetGroupIdText(context)
                         </MudChip>
                     </MudTooltip>
                 }
                 else
                 {
                     <MudText Typo="Typo.body2" Color="Color.Secondary" Class="cell-text">
-                        @context.GroupIdDisplay
+                        @L.GetGroupIdText(context)
                     </MudText>
                 }
             </MudTd>

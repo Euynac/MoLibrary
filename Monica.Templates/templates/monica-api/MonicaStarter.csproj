@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <MonicaVersion>1.0.0-rc.2</MonicaVersion>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Monica.Core" Version="$(MonicaVersion)" />
+    <PackageReference Include="Monica.OpenTelemetry" Version="$(MonicaVersion)" />
+  </ItemGroup>
+
+</Project>

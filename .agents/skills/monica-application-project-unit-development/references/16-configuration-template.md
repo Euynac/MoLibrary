@@ -14,7 +14,7 @@ Use `$DomainNamespace$` for the domain project namespace selected by the archite
 - Use `IOptions<T>` for mostly static configuration.
 - Use `IOptionsSnapshot<T>` for per-scope refreshed values.
 - Use `IOptionsMonitor<T>` for long-lived services that react to changes.
-- If registration code must use the option during host composition, the entry project must call `Mo.AddConfiguration(...)` and then `Mo.RegisterInstantly(builder)` before the dependent registration code.
+- Register the Configuration module in the host-bound graph. If composition code needs a bootstrap value, read it from `builder.Configuration` and pass the explicit value into the dependent module option; Configuration ProjectUnits are runtime services, not composition-time service-locator state.
 
 ## Options Class Example
 
@@ -35,14 +35,16 @@ public sealed class OrderProcessingOptions
 ## Consumer Example
 
 ```csharp
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Monica.WebApi.Abstractions;
 
 namespace $DomainNamespace$.DomainServices;
 
 public sealed class DomainOrderApproval(
-    IOptions<OrderProcessingOptions> options)
-    : DomainService
+    IOptions<OrderProcessingOptions> options,
+    ILoggerFactory loggerFactory)
+    : DomainService(loggerFactory)
 {
     private OrderProcessingOptions Options => options.Value;
 
@@ -53,21 +55,24 @@ public sealed class DomainOrderApproval(
 }
 ```
 
-## Registration-Time Host Example
+## Host Composition Example
 
 ```csharp
-Mo.AddConfiguration(setting =>
+var builder = WebApplication.CreateBuilder(args);
+var workerCount = builder.Configuration.GetValue<int?>("Ordering:WorkerCount") ?? 4;
+
+builder.AddMonica(monica =>
 {
-    setting.AppConfiguration = builder.Configuration;
+    monica.AddConfiguration();
+    monica.AddJobScheduler(options => options.MaxWorkerExecutionThreads = workerCount)
+        .UseInMemoryMetadataRepository()
+        .UseSchedulerScope("ordering")
+        .UseInMemoryProvider();
 });
-
-Mo.RegisterInstantly(builder);
-
-// Registrations below this point can now consume Configuration-backed options.
 ```
 
 ## Notes
 
 - Use configuration for environment- or host-specific behavior, not for domain constants that belong in code.
 - Keep option names explicit and developer-facing.
-- Use `Mo.RegisterInstantly(builder)` only when registration-time consumption is required. For normal runtime injection, the default module registration order is simpler.
+- Do not build a temporary service provider or resolve `IOptions<T>` during composition. Runtime code should use normal typed options injection.

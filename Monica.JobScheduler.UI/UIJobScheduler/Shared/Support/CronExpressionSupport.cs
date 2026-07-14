@@ -31,9 +31,9 @@ public enum CronFormat
 /// </summary>
 public class CronExpressionSupport(
     IStringLocalizer<JobSchedulerResource> localizer,
-    IOptions<ModuleClockOption> clockOptions)
+    IOptions<ModuleJobSchedulerOption> options)
 {
-    private readonly TimeZoneInfo _cronTimeZone = clockOptions.Value.ConfiguredTimeZone ?? TimeZoneInfo.Local;
+    private readonly TimeZoneInfo _cronTimeZone = options.Value.CronTimeZone;
 
     /// <summary>
     /// Verify that Cron expression is valid

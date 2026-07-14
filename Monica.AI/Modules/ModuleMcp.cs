@@ -26,16 +26,16 @@ namespace Monica.Modules;
 /// </summary>
 public static class ModuleMcpBuilderExtensions
 {
-    extension(Mo)
+    extension(IMonicaBuilder builder)
     {
         /// <summary>
         /// Enables Monica MCP server discovery, MCP hosting, and external MCP client cataloging.
         /// </summary>
         /// <param name="action">Optional MCP module configuration action.</param>
         /// <returns>The MCP module guide.</returns>
-        public static ModuleMcpGuide AddMcp(Action<ModuleMcpOption>? action = null)
+        public ModuleMcpGuide AddMcp(Action<ModuleMcpOption>? action = null)
         {
-            return new ModuleMcpGuide().Register(action);
+            return builder.AddModule<ModuleMcp, ModuleMcpOption, ModuleMcpGuide>(action);
         }
     }
 }

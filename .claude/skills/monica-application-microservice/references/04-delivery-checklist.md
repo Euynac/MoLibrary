@@ -12,5 +12,5 @@ Use this checklist before finishing a microservice architecture change.
 - `Utilities/` and `Domain/Repository/` are used consistently with the shared ProjectUnit placement rules.
 - Migration ownership is clear for every new persistence change.
 - Cross-service collaboration uses contracts or events instead of direct infrastructure coupling.
-- Any registration-time use of `Configuration` ProjectUnits is preceded by `Mo.AddConfiguration(...)` and `Mo.RegisterInstantly(builder)`.
+- `monica.AddConfiguration()` is part of the host-bound module graph; bootstrap composition reads `builder.Configuration`, and runtime consumers use typed options injection.
 - Unit-level implementation follows `monica-application-project-unit-development`.

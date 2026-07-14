@@ -26,7 +26,7 @@ public sealed class JobSchedulerUiTestContext : BunitContext
         Services.AddMudServices();
         Services.AddSingleton<IStringLocalizer<JobSchedulerResource>, EchoStringLocalizer<JobSchedulerResource>>();
         Services.AddSingleton<IThemeState, TestThemeState>();
-        Services.AddSingleton<IOptions<ModuleClockOption>>(Options.Create(new ModuleClockOption()));
+        Services.AddSingleton<IOptions<ModuleJobSchedulerOption>>(Options.Create(new ModuleJobSchedulerOption()));
         Services.AddSingleton<IOptions<ModuleJobSchedulerUIOption>>(Options.Create(new ModuleJobSchedulerUIOption()));
         Services.AddSingleton<JobStateColorResolver>();
         Services.AddSingleton<JobArgsJsonSchemaSupport>();

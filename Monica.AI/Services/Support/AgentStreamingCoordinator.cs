@@ -7,7 +7,9 @@ namespace Monica.AI.Services.Support;
 /// <summary>
 /// Owns one streaming producer and merges model updates with decorator-published tool updates.
 /// </summary>
-internal sealed class AgentStreamingCoordinator(AIChatRuntimeContextAccessor runtimeContextAccessor)
+internal sealed class AgentStreamingCoordinator(
+    AIChatRuntimeContextAccessor runtimeContextAccessor,
+    AgentResponseUpdateChannelContext updateChannelContext)
 {
     internal async IAsyncEnumerable<AgentResponseUpdate> RunAsync(
         AIAgent agent,
@@ -53,7 +55,7 @@ internal sealed class AgentStreamingCoordinator(AIChatRuntimeContextAccessor run
     {
         try
         {
-            using (AgentResponseUpdateChannelContext.Push(updateChannel))
+            using (updateChannelContext.Push(updateChannel))
             using (runtimeContextAccessor.Push(runtimeContext))
             {
                 await foreach (var update in agent.RunStreamingAsync(

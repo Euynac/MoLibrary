@@ -18,14 +18,14 @@ namespace Monica.Modules;
 
 public static class ModuleAuthorizationBuilderExtensions
 {
-    extension(Mo)
+    extension(IMonicaBuilder builder)
     {
         /// <summary>
         /// Configure the Authorization module
         /// </summary>
-        public static ModuleAuthorizationGuide AddAuthorization<TEnum>(string claimTypeDefinition) where TEnum : struct, Enum
+        public ModuleAuthorizationGuide AddAuthorization<TEnum>(string claimTypeDefinition) where TEnum : struct, Enum
         {
-            return new ModuleAuthorizationGuide().Register()
+            return builder.AddModule<ModuleAuthorization, ModuleAuthorizationOption, ModuleAuthorizationGuide>()
                 .AddDefaultPermissionBit<TEnum>(claimTypeDefinition);
         }
     }
@@ -58,11 +58,6 @@ public class ModuleAuthorization(ModuleAuthorizationOption option) : WebModuleBa
 
         services.AddTransient<IAuthorityAuthorizationPolicyProvider, PolicyEnumAuthorizationProvider>();
 
-        var manager = new PermissionBitCheckerManager();
-        var checker = new PermissionBitChecker(manager);
-        PermissionBitCheckerManager.Singleton = checker;
-        services.AddSingleton(_ => manager);
-        services.AddSingleton<IPermissionBitChecker, PermissionBitChecker>(_ => checker);
     }
 
     public override void ClaimDependencies()
@@ -97,7 +92,6 @@ public class ModuleAuthorizationGuide : WebModuleGuide<ModuleAuthorization, Modu
         ConfigureServices(context =>
         {
             var checker = new PermissionBitChecker<TEnum>(claimTypeDefinition);
-            PermissionBitCheckerManager.AddChecker(checker);
             context.Services.AddSingleton<IPermissionBitChecker<TEnum>, PermissionBitChecker<TEnum>>(_ => checker);
             context.Services.AddSingleton<IPermissionChecker, PermissionChecker<TEnum>>();
         });
@@ -114,7 +108,6 @@ public class ModuleAuthorizationGuide : WebModuleGuide<ModuleAuthorization, Modu
         ConfigureServices(context =>
         {
             var checker = new PermissionBitChecker<TEnum>(claimTypeDefinition);
-            PermissionBitCheckerManager.AddChecker(checker);
             context.Services.AddSingleton<IPermissionBitChecker<TEnum>, PermissionBitChecker<TEnum>>(_ => checker);
         }, secondKey: typeof(TEnum).Name);
         return this;

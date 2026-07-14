@@ -2,6 +2,7 @@ using AwesomeAssertions;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Monica.Configuration.Annotations;
 using Monica.Configuration.Bootstrap;
@@ -20,7 +21,7 @@ public class MonicaConfigurationCollectionBindingTests
             ["Bootstrap:Items:0"] = "configured"
         });
 
-        var options = configuration.GetMonicaBootstrapConfiguration<BootstrapListOptions>();
+        var options = configuration.GetMonicaBootstrapConfiguration<BootstrapListOptions>(NullLogger.Instance);
 
         options.Items.Should().Equal("configured");
     }
@@ -33,7 +34,7 @@ public class MonicaConfigurationCollectionBindingTests
             ["MissingList:Name"] = "configured"
         });
 
-        var options = configuration.GetMonicaBootstrapConfiguration<MissingListOptions>();
+        var options = configuration.GetMonicaBootstrapConfiguration<MissingListOptions>(NullLogger.Instance);
 
         options.Items.Should().Equal("default");
     }
@@ -46,7 +47,7 @@ public class MonicaConfigurationCollectionBindingTests
             ["Nested:Nested:Items:0"] = "configured"
         });
 
-        var options = configuration.GetMonicaBootstrapConfiguration<NestedCollectionOptions>();
+        var options = configuration.GetMonicaBootstrapConfiguration<NestedCollectionOptions>(NullLogger.Instance);
 
         options.Nested.Items.Should().Equal("configured");
     }
@@ -59,7 +60,7 @@ public class MonicaConfigurationCollectionBindingTests
             ["Dictionary:Map:configured"] = "value"
         });
 
-        var options = configuration.GetMonicaBootstrapConfiguration<DictionaryOptions>();
+        var options = configuration.GetMonicaBootstrapConfiguration<DictionaryOptions>(NullLogger.Instance);
 
         options.Map.Should().ContainSingle()
             .Which.Should().Be(new KeyValuePair<string, string>("configured", "value"));
@@ -73,7 +74,7 @@ public class MonicaConfigurationCollectionBindingTests
             ["Alias:ConfiguredItems:0"] = "configured"
         });
 
-        var options = configuration.GetMonicaBootstrapConfiguration<AliasOptions>();
+        var options = configuration.GetMonicaBootstrapConfiguration<AliasOptions>(NullLogger.Instance);
 
         options.Items.Should().Equal("configured");
     }

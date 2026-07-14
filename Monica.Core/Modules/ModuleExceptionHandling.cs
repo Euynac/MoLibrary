@@ -1,8 +1,6 @@
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
-using Monica.Core;
 using Monica.Core.ExceptionHandling.Abstractions;
 using Monica.Core.ExceptionHandling.Services;
 using Monica.Core.Modularity;
@@ -11,21 +9,20 @@ using Monica.Core.Modularity.Annotations;
 using Monica.Core.Modularity.Models;
 using Monica.Tool.Extensions;
 using Monica.Core.Results;
-using Monica.Tool.Diagnostics;
 
 // ReSharper disable once CheckNamespace
 namespace Monica.Modules;
 
 public static class ModuleExceptionHandlingBuilderExtensions
 {
-    extension(Mo)
+    extension(IMonicaBuilder builder)
     {
         /// <summary>
         /// Configures the exception handling module.
         /// </summary>
-        public static ModuleExceptionHandlingGuide AddExceptionHandling(Action<ModuleExceptionHandlingOption>? action = null)
+        public ModuleExceptionHandlingGuide AddExceptionHandling(Action<ModuleExceptionHandlingOption>? action = null)
         {
-            return new ModuleExceptionHandlingGuide().Register(action);
+            return builder.AddModule<ModuleExceptionHandling, ModuleExceptionHandlingOption, ModuleExceptionHandlingGuide>(action);
         }
     }
 }
@@ -53,40 +50,9 @@ public class ModuleExceptionHandling(ModuleExceptionHandlingOption option)
         {
             options.InvalidModelStateResponseFactory = context =>
                 new BadRequestObjectResult(
-                    Res.Fail("接口请求参数校验失败", ResStatus.ValidateError)
+                    Res.Fail("Request validation failed.", ResStatus.ValidateError)
                         .AppendMetadata("error", new SerializableError(context.ModelState)));
         });
-
-        var currentDomain = AppDomain.CurrentDomain;
-        currentDomain.UnhandledException += (sender, eventArgs) =>
-        {
-            Logger.LogError(
-                "Unhandled application exception captured: {Sender} {EventArgs}",
-                sender?.ToJsonStringForce(),
-                eventArgs?.ToJsonStringForce());
-
-            if (eventArgs is { IsTerminating: true })
-            {
-                Logger.LogWarning(
-                    "The process is terminating because of an unhandled exception. Check for async void usage or other unobserved failures.");
-            }
-        };
-
-        TaskScheduler.UnobservedTaskException += (sender, eventArgs) =>
-        {
-            Logger.LogError(
-                "Unobserved task exception captured: {Sender} {EventArgs}",
-                sender?.ToJsonStringForce(),
-                eventArgs?.ToJsonStringForce());
-        };
-
-        currentDomain.ProcessExit += (sender, eventArgs) =>
-        {
-            Logger.LogError(
-                "Process exit captured: {Sender} {EventArgs}",
-                sender?.ToJsonStringForce(),
-                eventArgs?.ToJsonStringForce());
-        };
     }
 }
 
@@ -105,4 +71,10 @@ public class ModuleExceptionHandlingGuide
 
 public class ModuleExceptionHandlingOption : ModuleOptions<ModuleExceptionHandling>
 {
+    /// <summary>
+    /// Gets or sets whether unhandled-exception responses include request snapshots, stack traces, and technical details.
+    /// The default is <see langword="false"/>. Enable this only for trusted development environments because the
+    /// diagnostic payload can contain sensitive application and request data.
+    /// </summary>
+    public bool IncludeExceptionDetails { get; set; }
 }

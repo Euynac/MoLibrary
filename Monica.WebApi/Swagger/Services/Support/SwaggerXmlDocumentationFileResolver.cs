@@ -1,5 +1,6 @@
 using Microsoft.Extensions.Logging;
 using Monica.Core;
+using Monica.Core.TypeDiscovery.Abstractions;
 using Monica.Modules;
 
 namespace Monica.WebApi.Swagger.Services.Support;
@@ -9,13 +10,16 @@ namespace Monica.WebApi.Swagger.Services.Support;
 /// </summary>
 internal static class SwaggerXmlDocumentationFileResolver
 {
-    public static IReadOnlyList<string> Resolve(ModuleSwaggerOption option, ILogger logger)
+    public static IReadOnlyList<string> Resolve(
+        ModuleSwaggerOption option,
+        ILogger logger,
+        ITypeFinder typeFinder)
     {
         // Pitfall: to generate Swagger docs you must enable `<GenerateDocumentationFile>True</GenerateDocumentationFile>` in each project and supply the resulting XML documents.
         var documentAssemblies = (option.DocumentAssemblies ?? []).ToList();
         if (!option.DisableAutoIncludeModuleSystemRelatedAsDocumentAssembly)
         {
-            documentAssemblies.AddRange(Mo.TypeFinder.GetAssemblies().Select(p => p.GetName().Name!));
+            documentAssemblies.AddRange(typeFinder.GetAssemblies().Select(p => p.GetName().Name!));
         }
 
         var xmlFilePaths = new List<string>();

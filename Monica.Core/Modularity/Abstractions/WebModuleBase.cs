@@ -96,7 +96,7 @@ public abstract class WebModuleBase<TModuleSelf, TModuleOption, TModuleGuide>(TM
     {
         base.ConvertToRegisterRequest();
 
-        var guide = new TModuleGuide(); // TODO: this path does not currently preserve the original registration source.
+        var guide = Application.CreateGuide<TModuleGuide>(ModuleKey);
 
         guide.ConfigureApplicationBuilder(context =>
         {

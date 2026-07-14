@@ -38,10 +38,12 @@ public class CrudPageRequestDto : LimitedResultRequestDto, IHasRequestFilter, IH
     /// <inheritdoc />
     public string? Sorting { get; set; }
 
+    /// <inheritdoc />
     public string? Cursor { get; set; }
 
-    static CrudPageRequestDto()
+    /// <inheritdoc />
+    protected override int GetMaximumResultCount(AutoControllerPaginationOption pagination)
     {
-        MaxMaxResultCount = 100000;
+        return pagination.MaximumCrudResultCount;
     }
 }

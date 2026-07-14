@@ -1,27 +1,22 @@
 using System.Collections.Concurrent;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
+using Monica.Core.Localization.Models.Internal;
 using Monica.Core.Localization.Services.Support;
-using Monica.Modules;
 
 namespace Monica.Core.Localization.Services;
 
 internal sealed class JsonStringLocalizerFactory(
-    IOptions<ModuleLocalizationOption> options,
-    ILoggerFactory loggerFactory,
-    LocalizationResourceRegistry resourceRegistry) : IStringLocalizerFactory
+    LocalizationRuntimeOptions options,
+    LocalizationResourceRegistry resourceRegistry,
+    ILogger<JsonStringLocalizerFactory> logger,
+    ILogger<DictionaryStringLocalizer> localizerLogger) : IStringLocalizerFactory
 {
     private readonly ConcurrentDictionary<Type, IStringLocalizer> _localizerCache = new();
-    private readonly ILogger<JsonStringLocalizerFactory> _logger = loggerFactory.CreateLogger<JsonStringLocalizerFactory>();
 
     public IStringLocalizer Create(Type resourceSource)
     {
         ArgumentNullException.ThrowIfNull(resourceSource);
-
-        LocalizationManager.UseOptions(options.Value.ToManagerOptions());
-        LocalizationManager.UseLoggerFactory(loggerFactory);
-
         return _localizerCache.GetOrAdd(resourceSource, CreateLocalizer);
     }
 
@@ -33,15 +28,16 @@ internal sealed class JsonStringLocalizerFactory(
 
     private IStringLocalizer CreateLocalizer(Type resourceSource)
     {
-        if (resourceRegistry.TryGetRegistration(resourceSource, out _))
+        if (resourceRegistry.TryGetRegistration(resourceSource, out var registration))
         {
-            return LocalizationManager.For(resourceSource);
+            var resources = EmbeddedJsonResourceLoader.Load(registration, options.SupportedCultures);
+            return new DictionaryStringLocalizer(resourceSource.Name, resources, options, localizerLogger);
         }
 
-        _logger.LogDebug(
+        logger.LogDebug(
             "No localization resource registration was found for {ResourceType}. Returning an empty localizer.",
             resourceSource.FullName ?? resourceSource.Name);
 
-        return LocalizationManager.CreateEmptyLocalizer(resourceSource);
+        return new DictionaryStringLocalizer(resourceSource.Name, [], options, localizerLogger);
     }
 }

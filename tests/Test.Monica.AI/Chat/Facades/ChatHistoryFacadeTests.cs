@@ -72,5 +72,7 @@ public sealed class ChatHistoryFacadeTests
         new TestAIChatAgentFactory(static (_, _, _) =>
             throw new InvalidOperationException("Catalog reads must not activate an agent.")),
         Substitute.For<IAgentCapabilityStateStore>(),
-        new AgentStreamingCoordinator(new AIChatRuntimeContextAccessor()));
+        new AgentStreamingCoordinator(
+            new AIChatRuntimeContextAccessor(),
+            new AgentResponseUpdateChannelContext()));
 }

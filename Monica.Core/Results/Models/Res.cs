@@ -25,10 +25,11 @@ public class Res : IResultEnvelope
     /// <summary>
     /// Create exception return
     /// </summary>
-    /// <param name="e"></param>
-    public Res(Exception e)
+    /// <param name="exception">The server-side exception. Its details are intentionally not exposed in the response.</param>
+    public Res(Exception exception)
     {
-        Message = $"服务出现异常：{e}";
+        ArgumentNullException.ThrowIfNull(exception);
+        Message = "An unexpected server error occurred.";
         Status = ResStatus.InternalError;
     }
 
@@ -200,9 +201,10 @@ public class Res<T> : IResultEnvelope
         Status = status;
     }
 
-    public Res(Exception e)
+    public Res(Exception exception)
     {
-        Message = $"服务出现异常：{e}";
+        ArgumentNullException.ThrowIfNull(exception);
+        Message = "An unexpected server error occurred.";
         Status = ResStatus.InternalError;
     }
 

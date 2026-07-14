@@ -237,11 +237,11 @@ public class ModuleFileOps(ModuleFileOpsOption option)
 
 public static class ModuleFileOpsBuilderExtensions
 {
-    extension(Mo)
+    extension(IMonicaBuilder builder)
     {
-        public static ModuleFileOpsGuide AddFileOps(Action<ModuleFileOpsOption>? action = null)
+        public ModuleFileOpsGuide AddFileOps(Action<ModuleFileOpsOption>? action = null)
         {
-            return new ModuleFileOpsGuide().Register(action);
+            return builder.AddModule<ModuleFileOps, ModuleFileOpsOption, ModuleFileOpsGuide>(action);
         }
     }
 }

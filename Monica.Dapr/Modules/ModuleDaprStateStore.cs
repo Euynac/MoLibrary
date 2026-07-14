@@ -17,7 +17,7 @@ public static class ModuleDaprStateStoreBuilderExtensions
         Action<ModuleDaprStateStoreOption>? action = null)
     {
         guide.SetCommonDistributedStateStoreProvider<DaprStateStoreProvider>();
-        return new ModuleDaprStateStoreGuide().Register(action);
+        return guide.AddModule<ModuleDaprStateStore, ModuleDaprStateStoreOption, ModuleDaprStateStoreGuide>(action);
     }
     
     /// <summary>
@@ -34,7 +34,7 @@ public static class ModuleDaprStateStoreBuilderExtensions
     {
         ArgumentNullException.ThrowIfNull(serviceKey);
         ArgumentNullException.ThrowIfNull(configureOptions);
-        new ModuleDaprStateStoreGuide().Register();
+        guide.AddModule<ModuleDaprStateStore, ModuleDaprStateStoreOption, ModuleDaprStateStoreGuide>();
         guide.ConfigureStateStoreServices(services =>
         {
             // Register keyed options

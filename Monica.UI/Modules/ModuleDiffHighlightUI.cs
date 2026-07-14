@@ -12,14 +12,14 @@ namespace Monica.Modules;
 
 public static class ModuleDiffHighlightUIBuilderExtensions
 {
-    extension(Mo)
+    extension(IMonicaBuilder builder)
     {
         /// <summary>
         /// Configure the DiffHighlightUI module
         /// </summary>
-        public static ModuleDiffHighlightUIGuide AddDiffHighlightUI(Action<ModuleDiffHighlightUIOption>? action = null)
+        public ModuleDiffHighlightUIGuide AddDiffHighlightUI(Action<ModuleDiffHighlightUIOption>? action = null)
         {
-            return new ModuleDiffHighlightUIGuide().Register(action);
+            return builder.AddModule<ModuleDiffHighlightUI, ModuleDiffHighlightUIOption, ModuleDiffHighlightUIGuide>(action);
         }
     }
 }

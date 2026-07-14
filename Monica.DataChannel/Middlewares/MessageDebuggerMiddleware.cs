@@ -59,8 +59,8 @@ public class MessageDebuggerMiddleware : PipelineInfoDisplayMiddlewareBase
         set
         {
             _isActive = value;
-            SetInfo("调试状态", value ? "已激活" : "未激活");
-            SetInfo("状态更新时间", DateTime.Now);
+            SetInfo("Debug status", value ? "Active" : "Inactive");
+            SetInfo("Status updated at", DateTime.Now);
         }
     }
 
@@ -73,7 +73,7 @@ public class MessageDebuggerMiddleware : PipelineInfoDisplayMiddlewareBase
         set
         {
             _filterKeyword = value ?? string.Empty;
-            SetInfo("当前过滤关键字", _filterKeyword);
+            SetInfo("Current filter keyword", _filterKeyword);
         }
     }
 
@@ -86,7 +86,7 @@ public class MessageDebuggerMiddleware : PipelineInfoDisplayMiddlewareBase
         set
         {
             _maxQueueSize = Math.Max(1, value);
-            SetInfo("队列最大长度", _maxQueueSize);
+            SetInfo("Queue capacity", _maxQueueSize);
             TrimQueue();
         }
     }
@@ -110,8 +110,8 @@ public class MessageDebuggerMiddleware : PipelineInfoDisplayMiddlewareBase
         lock (_queueLock)
         {
             while (_debugMessages.TryDequeue(out _)) { }
-            SetInfo("消息清空时间", DateTime.Now);
-            SetInfo("已捕获消息数", 0);
+            SetInfo("Messages cleared at", DateTime.Now);
+            SetInfo("Captured message count", 0);
         }
     }
 
@@ -146,7 +146,7 @@ public class MessageDebuggerMiddleware : PipelineInfoDisplayMiddlewareBase
         }
         catch (Exception ex)
         {
-            CollectException(ex, this, "消息调试处理失败");
+            CollectException(ex, this, "Message debugging failed.");
         }
 
         return context;
@@ -179,7 +179,7 @@ public class MessageDebuggerMiddleware : PipelineInfoDisplayMiddlewareBase
         }
         catch(Exception e)
         {
-            return $"{data.GetCleanFullName()}格式化出现异常：{e.GetMessageRecursively()}";
+            return $"Failed to format {data.GetCleanFullName()}: {e.GetMessageRecursively()}";
         }
     }
 
@@ -210,8 +210,8 @@ public class MessageDebuggerMiddleware : PipelineInfoDisplayMiddlewareBase
             TrimQueue();
             
             var count = _debugMessages.Count;
-            SetInfo("已捕获消息数", count);
-            SetInfo("最后捕获时间", message.Timestamp);
+            SetInfo("Captured message count", count);
+            SetInfo("Last captured at", message.Timestamp);
         }
     }
 
@@ -230,11 +230,11 @@ public class MessageDebuggerMiddleware : PipelineInfoDisplayMiddlewareBase
     /// </summary>
     public void Initialize()
     {
-        SetInfo("中间件名称", "消息调试器");
-        SetInfo("调试状态", "未激活");
-        SetInfo("队列最大长度", _maxQueueSize);
-        SetInfo("当前过滤关键字", "");
-        SetInfo("已捕获消息数", 0);
-        SetInfo("初始化时间", DateTime.Now);
+        SetInfo("Middleware name", "Message debugger");
+        SetInfo("Debug status", "Inactive");
+        SetInfo("Queue capacity", _maxQueueSize);
+        SetInfo("Current filter keyword", "");
+        SetInfo("Captured message count", 0);
+        SetInfo("Initialized at", DateTime.Now);
     }
 }

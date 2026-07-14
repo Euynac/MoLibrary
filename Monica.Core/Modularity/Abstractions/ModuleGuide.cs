@@ -1,34 +1,49 @@
 using System.Runtime.CompilerServices;
 using Microsoft.Extensions.Logging;
-using Monica.Core.Logging;
 using Monica.Core.Modularity.Models;
 using Monica.Core.Modularity.Models.Internal;
-using Monica.Core.Modularity.Services;
-using Monica.Core.Modularity.Services.Support;
 using Monica.Tool.Extensions;
 
 namespace Monica.Core.Modularity.Abstractions;
 public class ModuleGuide
 {
+    private MonicaApplication? _application;
+
     /// <summary>
     /// Indicates where this module configuration originated. `null` means the developer configured it directly.
     /// </summary>
-    public ModuleKey? GuideFrom { get; set; }
-
-    /// <summary>
-    /// Lazy-loaded logger instance for this module guide.
-    /// </summary>
-    private readonly Lazy<ILogger> _loggerLazy;
+    public ModuleKey? GuideFrom { get; private set; }
 
     /// <summary>
     /// Gets the logger instance for this module guide.
     /// </summary>
-    public ILogger Logger => _loggerLazy.Value;
+    public ILogger Logger => Application.CreateLogger(GetType());
 
-    public ModuleGuide()
+    /// <summary>
+    /// Gets the host-bound Monica application that owns this guide.
+    /// </summary>
+    /// <exception cref="InvalidOperationException">Thrown when a guide was constructed outside a Monica builder.</exception>
+    protected MonicaApplication Application =>
+        _application
+        ?? throw new InvalidOperationException(
+            $"{GetType().Name} is not bound to an IMonicaBuilder. Register modules inside AddMonica(...).");
+
+    /// <summary>
+    /// Binds this guide to one host composition context.
+    /// </summary>
+    /// <param name="application">The owning Monica application.</param>
+    /// <param name="configuredBy">The module that requested this guide, or <see langword="null"/> for direct registration.</param>
+    internal void Bind(MonicaApplication application, ModuleKey? configuredBy)
     {
-        GuideFrom = null; // null means direct developer configuration
-        _loggerLazy = new Lazy<ILogger>(() => LogManager.For(GetType()));
+        ArgumentNullException.ThrowIfNull(application);
+
+        if (_application is not null && !ReferenceEquals(_application, application))
+        {
+            throw new InvalidOperationException($"{GetType().Name} is already bound to another Monica host.");
+        }
+
+        _application = application;
+        GuideFrom = configuredBy;
     }
 
     /// <summary>
@@ -47,19 +62,12 @@ public class ModuleGuide
     /// </summary>
     /// <typeparam name="TDependsModuleGuide">Type of the module guide for the dependent module.</typeparam>
     /// <returns>A module guide for configuring the dependent module.</returns>
-    internal static TDependsModuleGuide DeclareDependency<TDependsModuleGuide>(ModuleKey fromModule, ModuleKey? guideFrom)
+    internal TDependsModuleGuide DeclareDependency<TDependsModuleGuide>(ModuleKey fromModule, ModuleKey? guideFrom)
         where TDependsModuleGuide : ModuleGuide, new()
     {
-        // Add dependency to the list if it's not already there
-        var dependsOnModule = new TDependsModuleGuide().GetTargetModuleKey();
-
-        // Register this dependency relationship in the ModuleDependencyAnalyzer
-        ModuleDependencyAnalyzer.AddDependency(fromModule, dependsOnModule);
-
-        return new TDependsModuleGuide()
-        {
-            GuideFrom = guideFrom
-        };
+        var dependencyGuide = Application.CreateGuide<TDependsModuleGuide>(guideFrom);
+        Application.Dependencies.AddDependency(fromModule, dependencyGuide.GetTargetModuleKey());
+        return dependencyGuide;
     }
 
     /// <summary>
@@ -72,6 +80,23 @@ public class ModuleGuide
     {
         return DeclareDependency<TOtherModuleGuide>(GetTargetModuleKey(), GetTargetModuleKey());
     }
+
+    /// <summary>
+    /// Registers a companion module in the same host composition without declaring a dependency edge from this module.
+    /// </summary>
+    /// <typeparam name="TModule">The companion module type.</typeparam>
+    /// <typeparam name="TModuleOption">The companion module option type.</typeparam>
+    /// <typeparam name="TModuleGuide">The companion module guide type.</typeparam>
+    /// <param name="configure">An optional module option callback.</param>
+    /// <returns>A guide bound to the same host composition.</returns>
+    public TModuleGuide AddModule<TModule, TModuleOption, TModuleGuide>(
+        Action<TModuleOption>? configure = null)
+        where TModuleOption : ModuleOptions<TModule>, new()
+        where TModuleGuide : ModuleGuide<TModule, TModuleOption, TModuleGuide>, new()
+        where TModule : ModuleBase<TModule, TModuleOption, TModuleGuide>
+    {
+        return Application.CreateGuide<TModuleGuide>().Register(configure);
+    }
 }
 public class ModuleGuide<TModule, TModuleOption, TModuleGuideSelf> : ModuleGuide, IModuleGuide, IModuleRequirementChecker
     where TModuleOption : ModuleOptions<TModule>, new()
@@ -80,7 +105,7 @@ public class ModuleGuide<TModule, TModuleOption, TModuleGuideSelf> : ModuleGuide
 {
     public override ModuleKey GetTargetModuleKey()
     {
-        return ModuleDependencyAnalyzer.ResolveModuleKey(typeof(TModule));
+        return Application.Dependencies.ResolveModuleKey(typeof(TModule));
     }
 
     /// <summary>
@@ -103,13 +128,14 @@ public class ModuleGuide<TModule, TModuleOption, TModuleGuideSelf> : ModuleGuide
     /// <returns>The module registration information.</returns>
     private ModuleRegistrationState RegisterModule()
     {
+        Application.Modules.EnsureCompositionIsOpen();
         var moduleType = typeof(TModule);
-        ModuleDependencyAnalyzer.ResolveModuleKey(moduleType);
-        if (ModuleRegistry.TryGetModuleRequestInfo(moduleType, out var requestInfo)) return requestInfo;
+        Application.Dependencies.ResolveModuleKey(moduleType);
+        if (Application.Modules.TryGetModuleRequestInfo(moduleType, out var requestInfo)) return requestInfo;
 
-        requestInfo = new ModuleRegistrationState(moduleType);
+        requestInfo = new ModuleRegistrationState(Application, moduleType);
         requestInfo.BindModuleOption<TModuleOption>();
-        ModuleRegistry.AddModuleRegisterContext(moduleType, requestInfo);
+        Application.Modules.AddModuleRegisterContext(moduleType, requestInfo);
         // Record configuration methods that must be provided explicitly.
         requestInfo.RequiredConfigMethodKeys = GetRequestedConfigMethodKeys().ToList();
 
@@ -379,6 +405,7 @@ public class ModuleGuide<TModule, TModuleOption, TModuleGuideSelf> : ModuleGuide
         [CallerMemberName] string key = "",
         ModuleConfigurationDuplicateBehavior duplicateBehavior = ModuleConfigurationDuplicateBehavior.Warn) where TOption : class, IModuleExtraOptions<TModule>, new()
     {
+        RegisterModule().DeclareExtraOption<TOption>();
         return ConfigureOption(optionAction, (int) order, secondKey, key, duplicateBehavior);
     }
 

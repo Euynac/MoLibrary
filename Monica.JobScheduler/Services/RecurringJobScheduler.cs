@@ -20,11 +20,10 @@ public class RecurringJobScheduler(
     JobDispatcher jobDispatcher,
     RecurringJobValidator validator,
     IOptions<ModuleJobSchedulerOption> options,
-    IOptions<ModuleClockOption> clockOptions,
     ILogger<RecurringJobScheduler> logger)
 {
     private readonly ModuleJobSchedulerOption _options = options.Value;
-    private readonly TimeZoneInfo _cronTimeZone = clockOptions.Value.ConfiguredTimeZone ?? TimeZoneInfo.Local;
+    private readonly TimeZoneInfo _cronTimeZone = options.Value.CronTimeZone;
 
     // Recurring job scheduling state
     private readonly ConcurrentDictionary<string, RecurringJobSchedule> _inFlightRecurringSchedules = new();

@@ -9,6 +9,7 @@
 
 - Use `DomainEventHandler<TEvent>` for distributed events.
 - Use `LocalEventHandler<TEvent>` for in-process reactions.
+- Inject the current host's `ILoggerFactory` and pass it to the handler base constructor.
 - Keep handlers thin. Delegate reusable logic to `DomainService`.
 - Make the event type stable before adding consumers.
 - Use `$ApplicationNamespace$` for the application-layer namespace chosen by the architecture skill.
@@ -17,13 +18,15 @@
 ## Distributed Handler Example
 
 ```csharp
+using Microsoft.Extensions.Logging;
 using Monica.WebApi.Abstractions;
 
 namespace $ApplicationNamespace$.HandlersEvent;
 
 public sealed class DomainEventHandlerOrderApproved(
-    DomainNotifyWarehouse domainService)
-    : DomainEventHandler<EventOrderApproved>
+    DomainNotifyWarehouse domainService,
+    ILoggerFactory loggerFactory)
+    : DomainEventHandler<EventOrderApproved>(loggerFactory)
 {
     public override async Task HandleEventAsync(EventOrderApproved eventData)
     {
@@ -35,13 +38,15 @@ public sealed class DomainEventHandlerOrderApproved(
 ## Local Handler Example
 
 ```csharp
+using Microsoft.Extensions.Logging;
 using Monica.WebApi.Abstractions;
 
 namespace $ApplicationNamespace$.HandlersEvent;
 
 public sealed class LocalEventHandlerOrderApproved(
-    DomainRefreshReadModel domainService)
-    : LocalEventHandler<EventOrderApproved>
+    DomainRefreshReadModel domainService,
+    ILoggerFactory loggerFactory)
+    : LocalEventHandler<EventOrderApproved>(loggerFactory)
 {
     public override async Task HandleEventAsync(EventOrderApproved eventData)
     {

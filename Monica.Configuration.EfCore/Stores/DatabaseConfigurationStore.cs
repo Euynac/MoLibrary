@@ -971,6 +971,7 @@ public sealed class DatabaseConfigurationStore(
         {
             _ = await dbContext.ConfigurationDefinitions
                 .AsNoTracking()
+                .OrderBy(definition => definition.DefinitionKey)
                 .Select(definition => new
                 {
                     definition.SchemaJson,
@@ -1016,6 +1017,7 @@ public sealed class DatabaseConfigurationStore(
 
             _ = await dbContext.ConfigurationDefinitionPublishHistories
                 .AsNoTracking()
+                .OrderBy(history => history.HistoryId)
                 .Select(history => new
                 {
                     history.HistoryId,
@@ -1026,6 +1028,7 @@ public sealed class DatabaseConfigurationStore(
                 .FirstOrDefaultAsync(cancellationToken);
             _ = await dbContext.ConfigurationUnifiedVersions
                 .AsNoTracking()
+                .OrderBy(version => version.Version)
                 .Select(version => new
                 {
                     version.Version,
@@ -1035,6 +1038,8 @@ public sealed class DatabaseConfigurationStore(
                 .FirstOrDefaultAsync(cancellationToken);
             _ = await dbContext.ConfigurationUnifiedVersionDocuments
                 .AsNoTracking()
+                .OrderBy(document => document.Version)
+                .ThenBy(document => document.DefinitionKey)
                 .Select(document => new
                 {
                     document.Version,

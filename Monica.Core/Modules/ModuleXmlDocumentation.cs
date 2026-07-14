@@ -16,14 +16,14 @@ namespace Monica.Modules;
 
 public static class ModuleXmlDocumentationBuilderExtensions
 {
-    extension(Mo)
+    extension(IMonicaBuilder builder)
     {
         /// <summary>
         /// Registers the XML documentation module.
         /// </summary>
-        public static ModuleXmlDocumentationGuide AddXmlDocumentation(Action<ModuleXmlDocumentationOption>? action = null)
+        public ModuleXmlDocumentationGuide AddXmlDocumentation(Action<ModuleXmlDocumentationOption>? action = null)
         {
-            return new ModuleXmlDocumentationGuide().Register(action);
+            return builder.AddModule<ModuleXmlDocumentation, ModuleXmlDocumentationOption, ModuleXmlDocumentationGuide>(action);
         }
     }
 }
@@ -35,17 +35,13 @@ public static class ModuleXmlDocumentationBuilderExtensions
 public class ModuleXmlDocumentation(ModuleXmlDocumentationOption option)
     : WebModuleBase<ModuleXmlDocumentation, ModuleXmlDocumentationOption, ModuleXmlDocumentationGuide>(option)
 {
-    public static IXmlDocumentationService? Singleton { get; private set; }
-
     /// <summary>
     /// Configures services.
     /// </summary>
     /// <param name="services">The service collection.</param>
     public override void ConfigureServices(IServiceCollection services)
     {
-        var xmlDocumentationService = new XmlDocumentationService();
-        Singleton = xmlDocumentationService;
-        services.AddSingleton<IXmlDocumentationService>(xmlDocumentationService);
+        services.AddSingleton<IXmlDocumentationService, XmlDocumentationService>();
     }
 
     /// <summary>
@@ -79,13 +75,13 @@ public class ModuleXmlDocumentation(ModuleXmlDocumentationOption option)
                 }
                 catch (Exception ex)
                 {
-                    return Res.Fail($"获取XML文档缓存信息失败: {ex.Message}").GetResponse();
+                    return Res.Fail($"Failed to get the XML documentation cache: {ex.Message}").GetResponse();
                 }
             })
-            .WithName("获取XML文档缓存信息")
+            .WithName("GetXmlDocumentationCache")
             .WithTags(tagName)
-            .WithSummary("获取XML文档缓存信息")
-            .WithDescription("获取当前缓存的所有XML文档信息，包括程序集名称、文件路径等");
+            .WithSummary("Gets the XML documentation cache")
+            .WithDescription("Returns the assembly, file path, and cache state for each loaded XML documentation file.");
 
             // Clear the cached XML documentation.
             endpoints.MapPost("/xml-docs/cache/clear", ([FromServices] IXmlDocumentationService xmlService) =>
@@ -93,25 +89,31 @@ public class ModuleXmlDocumentation(ModuleXmlDocumentationOption option)
                 try
                 {
                     xmlService.ClearCache();
-                    return Res.Ok("XML文档缓存已清空").GetResponse();
+                    return Res.Ok("The XML documentation cache was cleared.").GetResponse();
                 }
                 catch (Exception ex)
                 {
-                    return Res.Fail($"清空XML文档缓存失败: {ex.Message}").GetResponse();
+                    return Res.Fail($"Failed to clear the XML documentation cache: {ex.Message}").GetResponse();
                 }
             })
-            .WithName("清空XML文档缓存")
+            .WithName("ClearXmlDocumentationCache")
             .WithTags(tagName)
-            .WithSummary("清空XML文档缓存")
-            .WithDescription("清空所有缓存的XML文档，释放内存");
+            .WithSummary("Clears the XML documentation cache")
+            .WithDescription("Evicts all cached XML documentation files from this Monica host.");
         });
     }
 }
 
+/// <summary>
+/// Provides fluent configuration for the XML documentation module.
+/// </summary>
 public class ModuleXmlDocumentationGuide : WebModuleGuide<ModuleXmlDocumentation, ModuleXmlDocumentationOption, ModuleXmlDocumentationGuide>
 {
 }
 
+/// <summary>
+/// Configures XML documentation inspection for one Monica host.
+/// </summary>
 public class ModuleXmlDocumentationOption : MinimalApiModuleOptions<ModuleXmlDocumentation>
 {
     /// <summary>

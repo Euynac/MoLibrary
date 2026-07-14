@@ -1,3 +1,4 @@
+using System.Collections.Immutable;
 using System.Reflection;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Abstractions;
@@ -56,20 +57,23 @@ public static class ActionDescriptorExtensions
     }
 }
 
+/// <summary>
+/// Classifies MVC return types for AutoController response metadata.
+/// </summary>
 public static class ActionResultHelper
 {
-    public static List<Type> ObjectResultTypes { get; }
+    /// <summary>
+    /// Gets the immutable MVC result types that carry an object-shaped response.
+    /// </summary>
+    public static ImmutableArray<Type> ObjectResultTypes { get; } =
+        [typeof(JsonResult), typeof(ObjectResult), typeof(NoContentResult)];
 
-    static ActionResultHelper()
-    {
-        ObjectResultTypes = new List<Type>
-        {
-            typeof(JsonResult),
-            typeof(ObjectResult),
-            typeof(NoContentResult)
-        };
-    }
-
+    /// <summary>
+    /// Determines whether a return type represents an object-shaped response.
+    /// </summary>
+    /// <param name="returnType">The return type to classify.</param>
+    /// <param name="excludeTypes">Result types that should be treated as non-object results.</param>
+    /// <returns><see langword="true" /> when the type carries an object response; otherwise, <see langword="false" />.</returns>
     public static bool IsObjectResult(Type returnType, params Type[] excludeTypes)
     {
         returnType = AsyncHelper.UnwrapTask(returnType);

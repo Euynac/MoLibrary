@@ -15,7 +15,11 @@ public interface IApplicationBuilderConfigurable
     /// Note that this method may be invoked multiple times for components of the same type.
     /// </summary>
     /// <param name="app">The application builder instance.</param>
-    public void ConfigApplicationBuilder(IApplicationBuilder app);
+    void ConfigApplicationBuilder(IApplicationBuilder app);
 
-    public void ConfigEndpoints(IApplicationBuilder app);
+    /// <summary>
+    /// Maps component-owned endpoints into the current application host.
+    /// </summary>
+    /// <param name="app">The application builder for the host that owns the component.</param>
+    void ConfigEndpoints(IApplicationBuilder app);
 }

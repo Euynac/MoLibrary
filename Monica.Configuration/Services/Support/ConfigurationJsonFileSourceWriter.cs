@@ -16,20 +16,27 @@ namespace Monica.Configuration.Services.Support;
 internal sealed class ConfigurationJsonFileSourceWriter : IConfigurationJsonFileSourceWriter
 {
     private static readonly TimeSpan FILE_LOCK_RETRY_DELAY = TimeSpan.FromMilliseconds(50);
-    private static readonly ConcurrentDictionary<string, SemaphoreSlim> SOURCE_LOCKS =
+    private readonly ConcurrentDictionary<string, SemaphoreSlim> _sourceLocks =
         new(StringComparer.OrdinalIgnoreCase);
 
-    private static readonly JsonSerializerOptions WRITE_OPTIONS = new()
-    {
-        WriteIndented = true,
-        Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping
-    };
+    private static readonly JsonSerializerOptions WRITE_OPTIONS = CreateWriteOptions();
 
     private static readonly JsonDocumentOptions DOCUMENT_OPTIONS = new()
     {
         AllowTrailingCommas = true,
         CommentHandling = JsonCommentHandling.Skip
     };
+
+    private static JsonSerializerOptions CreateWriteOptions()
+    {
+        var options = new JsonSerializerOptions
+        {
+            WriteIndented = true,
+            Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping
+        };
+        options.MakeReadOnly(populateMissingResolver: true);
+        return options;
+    }
 
     /// <summary>
     /// Applies a source-targeted JSON mutation.
@@ -88,7 +95,7 @@ internal sealed class ConfigurationJsonFileSourceWriter : IConfigurationJsonFile
         }
 
         var physicalPath = Path.GetFullPath(source.PhysicalPath);
-        var sourceLock = SOURCE_LOCKS.GetOrAdd(physicalPath, static _ => new SemaphoreSlim(1, 1));
+        var sourceLock = _sourceLocks.GetOrAdd(physicalPath, static _ => new SemaphoreSlim(1, 1));
         await sourceLock.WaitAsync(cancellationToken);
         try
         {
@@ -214,7 +221,7 @@ internal sealed class ConfigurationJsonFileSourceWriter : IConfigurationJsonFile
         }
 
         var physicalPath = Path.GetFullPath(source.PhysicalPath);
-        var sourceLock = SOURCE_LOCKS.GetOrAdd(physicalPath, static _ => new SemaphoreSlim(1, 1));
+        var sourceLock = _sourceLocks.GetOrAdd(physicalPath, static _ => new SemaphoreSlim(1, 1));
         await sourceLock.WaitAsync(cancellationToken);
         try
         {

@@ -1,6 +1,5 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using Monica.Core.Logging;
 using Monica.Core.ObjectMapping.Abstractions;
 using Monica.DependencyInjection.Abstractions;
 using Monica.EventBus.Abstractions.Handlers;
@@ -14,11 +13,14 @@ public abstract class EventHandlerBase :
     ITransientDependency,
     ICachedServiceProviderAccessor
 {
-    private readonly Lazy<ILogger> _loggerLazy;
-
-    protected EventHandlerBase()
+    /// <summary>
+    /// Initializes an event handler with logging owned by the current host.
+    /// </summary>
+    /// <param name="loggerFactory">The host logger factory.</param>
+    protected EventHandlerBase(ILoggerFactory loggerFactory)
     {
-        _loggerLazy = new Lazy<ILogger>(() => LogManager.For(GetType()));
+        ArgumentNullException.ThrowIfNull(loggerFactory);
+        Logger = loggerFactory.CreateLogger(GetType());
     }
 
     public ICachedServiceProvider CachedServiceProvider
@@ -27,7 +29,7 @@ public abstract class EventHandlerBase :
         set => field = value ?? throw new ArgumentNullException(nameof(value));
     }
 
-    protected ILogger Logger => _loggerLazy.Value;
+    protected ILogger Logger { get; }
 
     protected IObjectMapper Mapper => CachedServiceProvider.GetRequiredService<IObjectMapper>();
 
@@ -47,8 +49,9 @@ public abstract class EventHandlerBase :
 /// event type as a catch-all listener for derived events.
 /// </remarks>
 /// <typeparam name="TEvent">The event payload type.</typeparam>
-public abstract class DomainEventHandler<TEvent> :
-    EventHandlerBase,
+/// <param name="loggerFactory">The host logger factory.</param>
+public abstract class DomainEventHandler<TEvent>(ILoggerFactory loggerFactory) :
+    EventHandlerBase(loggerFactory),
     IDistributedEventHandler<TEvent>
 {
     /// <summary>
@@ -66,8 +69,9 @@ public abstract class DomainEventHandler<TEvent> :
 /// type as a catch-all listener for derived events.
 /// </remarks>
 /// <typeparam name="TEvent">The event payload type.</typeparam>
-public abstract class LocalEventHandler<TEvent> :
-    EventHandlerBase,
+/// <param name="loggerFactory">The host logger factory.</param>
+public abstract class LocalEventHandler<TEvent>(ILoggerFactory loggerFactory) :
+    EventHandlerBase(loggerFactory),
     ILocalEventHandler<TEvent>
 {
     /// <summary>

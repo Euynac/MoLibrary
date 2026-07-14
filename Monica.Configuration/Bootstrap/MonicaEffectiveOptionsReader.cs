@@ -8,14 +8,11 @@ using Monica.Configuration.Binding;
 using Monica.Configuration.Models;
 using Monica.Configuration.Services;
 using Monica.Configuration.Services.Support;
-using Monica.Core.Logging;
 
 namespace Monica.Configuration.Bootstrap;
 
 internal sealed class MonicaEffectiveOptionsReader : IMonicaEffectiveOptionsReader
 {
-    private static readonly ILogger Logger = LogManager.For(typeof(MonicaEffectiveOptionsReader));
-
     private readonly IConfigurationEffectiveValueStore _store;
     private readonly IConfiguration _bootstrapConfiguration;
     private readonly string _contentRootPath;
@@ -25,6 +22,7 @@ internal sealed class MonicaEffectiveOptionsReader : IMonicaEffectiveOptionsRead
     private readonly ConfigurationDefinitionScanner _definitionScanner;
     private readonly ConfigurationEffectiveValueSeedFactory _seedFactory;
     private readonly ConfigurationEffectiveValueDocumentEditor _documentEditor;
+    private readonly ILogger _logger;
     private readonly Dictionary<Type, object> _loadedOptions = new();
     private readonly object _cacheLock = new();
     private bool _disposed;
@@ -34,19 +32,22 @@ internal sealed class MonicaEffectiveOptionsReader : IMonicaEffectiveOptionsRead
         IConfiguration bootstrapConfiguration,
         MonicaEffectiveOptionsReaderOptions options,
         IConfigurationEffectiveValueStore store,
-        IReadOnlyList<ManagedJsonConfigurationSourceRegistration> managedJsonSources)
+        IReadOnlyList<ManagedJsonConfigurationSourceRegistration> managedJsonSources,
+        ILogger logger)
     {
         ArgumentNullException.ThrowIfNull(hostBuilder);
         ArgumentNullException.ThrowIfNull(bootstrapConfiguration);
         ArgumentNullException.ThrowIfNull(options);
         ArgumentNullException.ThrowIfNull(store);
         ArgumentNullException.ThrowIfNull(managedJsonSources);
+        ArgumentNullException.ThrowIfNull(logger);
 
         _store = store;
         _bootstrapConfiguration = bootstrapConfiguration;
         _contentRootPath = hostBuilder.Environment.ContentRootPath;
         _managedJsonSources = managedJsonSources.ToArray();
         _options = options;
+        _logger = logger;
         _definitionScanner = new ConfigurationDefinitionScanner(
             new ConfigurationSchemaHasher(),
             options.SectionPathConvention);
@@ -174,7 +175,7 @@ internal sealed class MonicaEffectiveOptionsReader : IMonicaEffectiveOptionsRead
 
         if (_options.Debugging)
         {
-            Logger.LogInformation(
+            _logger.LogInformation(
                 "Reading {OptionsCount} Monica effective options from store '{StoreKey}'.",
                 seeds.Length,
                 _store.Descriptor.StoreKey);

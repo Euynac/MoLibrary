@@ -39,17 +39,17 @@ public sealed class ConfigurationDbContext(
         // Configuration values can include secrets, so this store never enables sensitive data logging implicitly.
     }
 
-    protected override void OnModelCreating(ModelBuilder modelBuilder)
+    protected override void OnModelCreatingExtend(ModelBuilder modelBuilder)
     {
-        base.OnModelCreating(modelBuilder);
+        ConfigureKeys(modelBuilder);
+        base.OnModelCreatingExtend(modelBuilder);
 
         var timeColumnType = UsesTimestampWithTimeZone(Database.ProviderName)
             ? TIMESTAMP_WITH_TIME_ZONE_COLUMN_TYPE
             : TIMESTAMP_COLUMN_TYPE;
 
         modelBuilder.Entity<ConfigurationSchemaMarkerEntity>()
-            .ToTable("ConfigurationSchemaMarkers")
-            .HasKey(x => x.MarkerKey);
+            .ToTable("ConfigurationSchemaMarkers");
         modelBuilder.Entity<ConfigurationSchemaMarkerEntity>()
             .Property(x => x.MarkerKey)
             .IsRequired()
@@ -57,7 +57,6 @@ public sealed class ConfigurationDbContext(
         modelBuilder.Entity<ConfigurationSchemaMarkerEntity>()
             .Property(x => x.SchemaVersion)
             .IsRequired();
-        modelBuilder.Entity<ConfigurationDefinitionEntity>().HasKey(x => x.DefinitionKey);
         modelBuilder.Entity<ConfigurationDefinitionEntity>()
             .HasIndex(x => x.FromProject);
         modelBuilder.Entity<ConfigurationDefinitionEntity>()
@@ -72,7 +71,6 @@ public sealed class ConfigurationDbContext(
         modelBuilder.Entity<ConfigurationDefinitionEntity>()
             .Property(x => x.PublishRevision)
             .IsConcurrencyToken();
-        modelBuilder.Entity<ConfigurationDefinitionPublishHistoryEntity>().HasKey(x => x.HistoryId);
         modelBuilder.Entity<ConfigurationDefinitionPublishHistoryEntity>()
             .HasIndex(x => new { x.DefinitionKey, x.PublishedTime });
         modelBuilder.Entity<ConfigurationDefinitionPublishHistoryEntity>()
@@ -86,7 +84,6 @@ public sealed class ConfigurationDbContext(
             .Property(x => x.PublishedTime)
             .HasPrecision(6)
             .HasColumnType(timeColumnType);
-        modelBuilder.Entity<ConfigurationEffectiveValueEntity>().HasKey(x => x.DefinitionKey);
         modelBuilder.Entity<ConfigurationEffectiveValueEntity>()
             .Property(x => x.Version)
             .IsConcurrencyToken();
@@ -94,7 +91,6 @@ public sealed class ConfigurationDbContext(
             .Property(x => x.LastModifiedTime)
             .HasPrecision(6)
             .HasColumnType(timeColumnType);
-        modelBuilder.Entity<ConfigurationValueHistoryEntity>().HasKey(x => x.HistoryId);
         modelBuilder.Entity<ConfigurationValueHistoryEntity>()
             .Property(x => x.ModifiedTime)
             .HasPrecision(6)
@@ -103,7 +99,6 @@ public sealed class ConfigurationDbContext(
             .HasIndex(x => new { x.DefinitionKey, x.PathDepth, x.ModifiedTime });
         modelBuilder.Entity<ConfigurationValueHistoryEntity>()
             .HasIndex(x => x.MutationGroupId);
-        modelBuilder.Entity<ConfigurationMutationGroupEntity>().HasKey(x => x.GroupId);
         modelBuilder.Entity<ConfigurationMutationGroupEntity>()
             .Property(x => x.CreatedTime)
             .HasPrecision(6)
@@ -114,7 +109,6 @@ public sealed class ConfigurationDbContext(
             .HasColumnType(timeColumnType);
         modelBuilder.Entity<ConfigurationMutationGroupEntity>()
             .HasIndex(x => x.CreatedTime);
-        modelBuilder.Entity<ConfigurationUnifiedVersionEntity>().HasKey(x => x.Version);
         modelBuilder.Entity<ConfigurationUnifiedVersionEntity>()
             .Property(x => x.CreatedTime)
             .HasPrecision(6)
@@ -124,9 +118,21 @@ public sealed class ConfigurationDbContext(
         modelBuilder.Entity<ConfigurationUnifiedVersionEntity>()
             .HasIndex(x => x.MutationGroupId);
         modelBuilder.Entity<ConfigurationUnifiedVersionDocumentEntity>()
-            .HasKey(x => new { x.Version, x.DefinitionKey });
-        modelBuilder.Entity<ConfigurationUnifiedVersionDocumentEntity>()
             .HasIndex(x => x.DefinitionKey);
+    }
+
+    private static void ConfigureKeys(ModelBuilder modelBuilder)
+    {
+        // Repository string conventions must see custom keys before applying database defaults.
+        modelBuilder.Entity<ConfigurationSchemaMarkerEntity>().HasKey(x => x.MarkerKey);
+        modelBuilder.Entity<ConfigurationDefinitionEntity>().HasKey(x => x.DefinitionKey);
+        modelBuilder.Entity<ConfigurationDefinitionPublishHistoryEntity>().HasKey(x => x.HistoryId);
+        modelBuilder.Entity<ConfigurationEffectiveValueEntity>().HasKey(x => x.DefinitionKey);
+        modelBuilder.Entity<ConfigurationValueHistoryEntity>().HasKey(x => x.HistoryId);
+        modelBuilder.Entity<ConfigurationMutationGroupEntity>().HasKey(x => x.GroupId);
+        modelBuilder.Entity<ConfigurationUnifiedVersionEntity>().HasKey(x => x.Version);
+        modelBuilder.Entity<ConfigurationUnifiedVersionDocumentEntity>()
+            .HasKey(x => new { x.Version, x.DefinitionKey });
     }
 
     private static bool UsesTimestampWithTimeZone(string? providerName)

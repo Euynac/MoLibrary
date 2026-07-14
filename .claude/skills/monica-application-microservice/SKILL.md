@@ -28,7 +28,7 @@ Use this skill to shape Monica application projects as DDD-aligned microservices
 - Keep pure helper code in the service `Domain` project under `Utilities/`, using `Utils*` names.
 - Configure default `ApplicationService` routing once in `{Subdomain}Service.API/Program.cs` with `AutoControllerConfig(DefaultRoutePrefix = "api/v1", DomainName = "{Subdomain}")`, and keep handlers focused on request-level method routes.
 - Treat the service `API` project and AppHost or gateway entry points as adapters or composition only. Keep AppHost or gateway projects down to the project file and `Program.cs`; business ProjectUnits belong in the service's `API` and `Domain` projects.
-- When host composition needs a `Configuration` ProjectUnit during registration, register `Mo.AddConfiguration(...)` first and call `Mo.RegisterInstantly(builder)` before later registrations depend on those options.
+- Register `monica.AddConfiguration()` inside the service host's single `builder.AddMonica(...)` callback. Read bootstrap values from `builder.Configuration` during composition; consume Configuration ProjectUnits through typed options injection at runtime.
 - Keep `.slnx` solution folders aligned with the physical layout under `src/AppHost`, `src/Shared`, `src/Services`, and `src/Migrations`.
 
 ## Reference Navigation

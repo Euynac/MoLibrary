@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Logging;
 using Monica.Core.Results;
 using Monica.Repository.Entity.Abstractions;
 using Monica.Repository.Persistence.Abstractions;
@@ -16,10 +17,13 @@ namespace Monica.WebApi.AutoControllers.Services;
 /// Implement <see cref="ICrudDisableDelete"/> as well to disable delete operations.
 /// </para>
 /// </summary>
+/// <param name="repository">The repository used for persistence operations.</param>
+/// <param name="loggerFactory">The current host's logger factory.</param>
 public abstract class CrudApplicationService<TEntity, TEntityDto, TKey, TGetListInput, TRepository>(
-    TRepository repository)
+    TRepository repository,
+    ILoggerFactory loggerFactory)
     : CrudApplicationService<TEntity, TEntityDto, TEntityDto, TKey, TGetListInput, CrudDisableDto, CrudDisableDto,
-        CrudDisableDto, TRepository>(repository)
+        CrudDisableDto, TRepository>(repository, loggerFactory)
     where TEntity : class, IEntity<TKey>
     where TEntityDto : IEntityDto<TKey>
     where TRepository : IRepository<TEntity, TKey>
@@ -33,10 +37,13 @@ public abstract class CrudApplicationService<TEntity, TEntityDto, TKey, TGetList
 /// and the default paged request DTO is used.
 /// </para>
 /// </summary>
+/// <param name="repository">The repository used for persistence operations.</param>
+/// <param name="loggerFactory">The current host's logger factory.</param>
 public abstract class CrudApplicationService<TEntity, TEntityDto, TKey, TCreateInput, TUpdateInput, TRepository>(
-    TRepository repository)
+    TRepository repository,
+    ILoggerFactory loggerFactory)
     : CrudApplicationService<TEntity, TEntityDto, TEntityDto, TKey, CrudPageRequestDto, TCreateInput, TUpdateInput,
-        CrudDisableDto, TRepository>(repository)
+        CrudDisableDto, TRepository>(repository, loggerFactory)
     where TEntity : class, IEntity<TKey>
     where TEntityDto : IEntityDto<TKey>
     where TRepository : IRepository<TEntity, TKey>
@@ -49,11 +56,14 @@ public abstract class CrudApplicationService<TEntity, TEntityDto, TKey, TCreateI
 /// Simplified variant: bulk delete is not generated, and the single-item DTO matches the list-item DTO.
 /// </para>
 /// </summary>
+/// <param name="repository">The repository used for persistence operations.</param>
+/// <param name="loggerFactory">The current host's logger factory.</param>
 public abstract class CrudApplicationService<TEntity, TEntityDto, TKey, TGetListInput, TCreateInput, TUpdateInput,
     TRepository>(
-        TRepository repository)
+        TRepository repository,
+        ILoggerFactory loggerFactory)
     : CrudApplicationService<TEntity, TEntityDto, TEntityDto, TKey, TGetListInput, TCreateInput, TUpdateInput, CrudDisableDto, TRepository>(
-        repository)
+        repository, loggerFactory)
     where TEntity : class, IEntity<TKey>
     where TEntityDto : IEntityDto<TKey>
     where TRepository : IRepository<TEntity, TKey>
@@ -78,11 +88,13 @@ public abstract class CrudApplicationService<TEntity, TEntityDto, TKey, TGetList
 /// <typeparam name="TBulkDeleteInput">The input type used for bulk delete operations.</typeparam>
 /// <typeparam name="TRepository">The repository type. Must implement <see cref="IRepository{TEntity}"/>.</typeparam>
 /// <param name="repository">The repository instance.</param>
+/// <param name="loggerFactory">The current host's logger factory.</param>
 public abstract class CrudApplicationService<TEntity, TGetOutputDto, TGetListOutputDto, TKey, TGetListInput, TCreateInput,
     TUpdateInput, TBulkDeleteInput, TRepository>(
-        TRepository repository) : 
+        TRepository repository,
+        ILoggerFactory loggerFactory) :
     AbstractKeyCrudApplicationService<TEntity, TGetOutputDto, TGetListOutputDto, TKey, TGetListInput, TCreateInput, TUpdateInput>(
-        repository), ICrudApplicationService
+        repository, loggerFactory), ICrudApplicationService
     where TEntity : class, IEntity<TKey>
     where TGetOutputDto : IEntityDto<TKey>
     where TGetListOutputDto : IEntityDto<TKey>

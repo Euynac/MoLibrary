@@ -8,7 +8,7 @@ using Microsoft.Extensions.Logging;
 using Monica.Core;
 using Monica.Core.Localization;
 using Monica.Core.Localization.Abstractions;
-using Monica.Core.Localization.Models;
+using Monica.Core.Localization.Models.Internal;
 using Monica.Core.Localization.Services;
 using Monica.Core.Localization.Services.Support;
 using Monica.Core.Modularity;
@@ -21,14 +21,14 @@ namespace Monica.Modules;
 
 public static class ModuleLocalizationBuilderExtensions
 {
-    extension(Mo)
+    extension(IMonicaBuilder builder)
     {
         /// <summary>
         /// Configure Localization module
         /// </summary>
-        public static ModuleLocalizationGuide AddLocalization(Action<ModuleLocalizationOption>? action = null)
+        public ModuleLocalizationGuide AddLocalization(Action<ModuleLocalizationOption>? action = null)
         {
-            return new ModuleLocalizationGuide().Register(action);
+            return builder.AddModule<ModuleLocalization, ModuleLocalizationOption, ModuleLocalizationGuide>(action);
         }
     }
 }
@@ -58,23 +58,27 @@ public class ModuleLocalization(ModuleLocalizationOption option)
 
     public override void ConfigureServices(IServiceCollection services)
     {
-        LocalizationManager.UseOptions(Option.ToManagerOptions());
+        var runtimeOptions = Option.ToRuntimeOptions();
 
         // Add ASP.NET Core localization services
         services.AddLocalization();
         services.TryAddSingleton(_resourceRegistry);
+        services.TryAddSingleton(runtimeOptions);
+        services.TryAddSingleton<JsonStringLocalizerFactory>();
+        services.TryAddSingleton<ILocalizationCatalog, LocalizationCatalog>();
 
         // Replace default factory with custom JSON-based factory
-        services.Replace(ServiceDescriptor.Singleton<IStringLocalizerFactory, JsonStringLocalizerFactory>());
+        services.Replace(ServiceDescriptor.Singleton<IStringLocalizerFactory>(serviceProvider =>
+            serviceProvider.GetRequiredService<JsonStringLocalizerFactory>()));
 
         // Configure RequestLocalizationOptions
         services.Configure<RequestLocalizationOptions>(options =>
         {
-            var supportedCultures = Option.SupportedCultures
+            var supportedCultures = runtimeOptions.SupportedCultures
                 .Select(c => new CultureInfo(c))
                 .ToArray();
 
-            options.DefaultRequestCulture = new RequestCulture(Option.DefaultCulture);
+            options.DefaultRequestCulture = new RequestCulture(runtimeOptions.DefaultCulture);
             options.SupportedCultures = supportedCultures;
             options.SupportedUICultures = supportedCultures;
 
@@ -172,12 +176,8 @@ public class ModuleLocalizationOption : ModuleOptions<ModuleLocalization>
     /// </summary>
     public List<Type> ResourceMarkerTypes { get; set; } = [];
 
-    internal LocalizationManagerOptions ToManagerOptions()
+    internal LocalizationRuntimeOptions ToRuntimeOptions()
     {
-        return new LocalizationManagerOptions
-        {
-            DefaultCulture = DefaultCulture,
-            SupportedCultures = [.. SupportedCultures]
-        };
+        return LocalizationRuntimeOptions.Create(DefaultCulture, SupportedCultures);
     }
 }

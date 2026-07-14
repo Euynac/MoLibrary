@@ -6,6 +6,7 @@ using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Microsoft.EntityFrameworkCore.Metadata;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
@@ -19,7 +20,6 @@ using Monica.Repository.Persistence.Services.Support;
 using Monica.Repository.UnitOfWork.Abstractions;
 using Monica.Repository.UnitOfWork.Models;
 using Monica.Tool.Extensions;
-using Monica.Tool.Runtime;
 
 namespace Monica.Repository.Persistence.Services;
 
@@ -41,10 +41,14 @@ public abstract class RepositoryDbContext<TDbContext>(DbContextOptions<TDbContex
     protected readonly DbContextOptions DbContextOptions = options;
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
     {
-        //check if is in development
-        if ((Options.EnableSensitiveDataLogging is null && RuntimeEnvironment.IsDevelopment()) || Options.EnableSensitiveDataLogging is true)
+        var enableSensitiveDataLogging = Options.EnableSensitiveDataLogging
+            ?? CachedServiceProvider.GetService<IHostEnvironment>()?.IsDevelopment()
+            ?? false;
+
+        if (enableSensitiveDataLogging)
         {
-            optionsBuilder.EnableSensitiveDataLogging();//巨坑:这个可以显示具体参数值的设置必须写在OnConfiguring里面才会生效。
+            // EF Core must receive this setting during OnConfiguring for parameter values to be included in diagnostics.
+            optionsBuilder.EnableSensitiveDataLogging();
         }
     }
 

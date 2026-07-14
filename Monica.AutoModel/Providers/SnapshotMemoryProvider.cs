@@ -11,23 +11,24 @@ using Monica.AutoModel.Models;
 using Monica.Modules;
 using Monica.Tool.Extensions;
 
-// ReSharper disable StaticMemberInGenericType
-
 namespace Monica.AutoModel.Providers;
 
 /// <summary>
 /// Builds and caches in-memory AutoModel snapshots.
 /// </summary>
 /// <typeparam name="TModel">The model type.</typeparam>
-public class SnapshotMemoryProvider<TModel> : IAutoModelSnapshot<TModel>
+internal sealed class SnapshotMemoryProvider<TModel> : IAutoModelSnapshot<TModel>
 {
-    private static AutoModelSnapshot _snapshot = null!;
-    private static FrozenDictionary<string, AutoField>? _fieldDictionary;
-    private static IReadOnlyList<string> _allActivateNames = null!;
+    private readonly AutoModelSnapshot _snapshot;
+    private readonly FrozenDictionary<string, AutoField> _fieldDictionary;
+    private readonly IReadOnlyList<string> _allActivateNames;
 
-    public SnapshotMemoryProvider(IOptions<ModuleAutoModelOption> options)
+    public SnapshotMemoryProvider(
+        IOptions<ModuleAutoModelOption> options,
+        SnapshotFactoryMemoryProvider snapshotFactory)
     {
-        Init(options.Value);
+        (_snapshot, _fieldDictionary, _allActivateNames) = BuildSnapshot(options.Value);
+        snapshotFactory.Register<TModel>(_snapshot);
     }
 
     private static IEnumerable<PropertyInfo> GetAutoFieldTypes(Type type)
@@ -36,7 +37,8 @@ public class SnapshotMemoryProvider<TModel> : IAutoModelSnapshot<TModel>
         return type.GetProperties().OrderByDescending(p => p.PropertyType == typeof(string)).ThenBy(p => p.PropertyType.IsClass);
     }
 
-    private static void Init(ModuleAutoModelOption options)
+    private static (AutoModelSnapshot Snapshot, FrozenDictionary<string, AutoField> Fields, IReadOnlyList<string> ActivationNames)
+        BuildSnapshot(ModuleAutoModelOption options)
     {
         Dictionary<string, AutoField> fieldDictionary = [];
         var table = new AutoTable()
@@ -44,7 +46,7 @@ public class SnapshotMemoryProvider<TModel> : IAutoModelSnapshot<TModel>
             FullTypeName = typeof(TModel).FullName ?? throw new InvalidOperationException(),
             Name = typeof(TModel).Name
         };
-        _snapshot = new AutoModelSnapshot
+        var snapshot = new AutoModelSnapshot
         {
             Table = table,
             Fields = []
@@ -53,7 +55,7 @@ public class SnapshotMemoryProvider<TModel> : IAutoModelSnapshot<TModel>
         var tableAttribute = typeof(TModel).GetCustomAttribute<AutoTableAttribute>();
         if (tableAttribute != null)
         {
-            _snapshot.Table.Name = tableAttribute.Name;
+            snapshot.Table.Name = tableAttribute.Name;
             isActiveMode = tableAttribute.ActiveMode ?? isActiveMode;
         }
 
@@ -61,9 +63,7 @@ public class SnapshotMemoryProvider<TModel> : IAutoModelSnapshot<TModel>
         List<string> allOriginActivateNames = [];
 
         ExtractFieldInfo(GetAutoFieldTypes(typeof(TModel)));
-        _fieldDictionary = fieldDictionary.ToFrozenDictionary();
-        SnapshotFactoryMemoryProvider.Snapshots.Add(_snapshot);
-        return;
+        return (snapshot, fieldDictionary.ToFrozenDictionary(StringComparer.OrdinalIgnoreCase), allOriginActivateNames.ToArray());
 
         void ExtractFieldInfo(IEnumerable<PropertyInfo> propertyInfos, PropertyInfo? fromNavigateProperty = null, List<(string, bool)>? previousNavigateTuples = null)
         {
@@ -151,32 +151,30 @@ public class SnapshotMemoryProvider<TModel> : IAutoModelSnapshot<TModel>
 
 
                     field.ActivateNames = [.. activateNames];
-                    _snapshot.Fields.Add(field);
+                    snapshot.Fields.Add(field);
                     foreach (var name in activateNames)
                     {
                         if (!fieldDictionary.TryAdd(name, field))
                             throw new AutoModelSnapshotException(
-                                displayMessage: "模型字段名称冲突，请使用 [AutoField] 特性重命名",
-                                technicalDetail: $"类型: {table.FullTypeName}, 冲突字段: {field.ReflectionName}, 激活名: {name}, 已存在: {fieldDictionary[name].ReflectionName}");
+                                displayMessage: "AutoModel field activation names must be unique. Rename the field with AutoFieldAttribute.",
+                                technicalDetail: $"Type: {table.FullTypeName}; conflicting field: {field.ReflectionName}; activation name: {name}; existing field: {fieldDictionary[name].ReflectionName}.");
                     }
                 }
                 catch (AutoModelSnapshotNotSupportTypeException)
                 {
                     var declaringTypeName = p.DeclaringType?.GetCleanFullName() ?? "Unknown";
                     var propertyTypeName = p.PropertyType.GetCleanFullName();
-                    var msg = $"AutoModel构建Snapshot时发现了不支持该字段类型：{propertyTypeName} in {declaringTypeName}";
+                    var message = $"AutoModel ignored unsupported field type {propertyTypeName} on {declaringTypeName}.";
                     if (options.EnableErrorForUnsupportedFieldTypes)
                     {
                         throw new AutoModelSnapshotException(
-                            displayMessage: "模型包含不支持的字段类型",
-                            technicalDetail: $"类型: {propertyTypeName}, 所在类: {declaringTypeName}");
+                            displayMessage: "The model contains an unsupported field type.",
+                            technicalDetail: $"Type: {propertyTypeName}; declaring type: {declaringTypeName}.");
                     }
 
-                    Console.WriteLine(msg); // TODO: replace with the unified module logger later.
+                    Console.WriteLine(message); // AutoModel can be constructed before the application logger is available.
                 }
             }
-
-            _allActivateNames = allOriginActivateNames;
         }
     }
 
@@ -199,8 +197,7 @@ public class SnapshotMemoryProvider<TModel> : IAutoModelSnapshot<TModel>
 
     public AutoField? GetField(string fieldActivateName)
     {
-        return _fieldDictionary!.TryGetValue(fieldActivateName, out var field) ? field :
-            _fieldDictionary.GetValueOrDefault(fieldActivateName.ToLowerInvariant());
+        return _fieldDictionary.GetValueOrDefault(fieldActivateName);
     }
 
     public IReadOnlyList<AutoField> GetFields(IReadOnlyList<string>? fieldActivateNames = null)
@@ -209,7 +206,7 @@ public class SnapshotMemoryProvider<TModel> : IAutoModelSnapshot<TModel>
         var list = new List<AutoField>();
         foreach (var name in fieldActivateNames)
         {
-            if (_fieldDictionary!.TryGetValue(name, out var field))
+            if (_fieldDictionary.TryGetValue(name, out var field))
             {
                 list.Add(field);
             }

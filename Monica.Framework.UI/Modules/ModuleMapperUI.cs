@@ -11,14 +11,14 @@ namespace Monica.Modules;
 
 public static class ModuleMapperUIBuilderExtensions
 {
-    extension(Mo)
+    extension(IMonicaBuilder builder)
     {
         /// <summary>
         /// Configure the MapperUI module
         /// </summary>
-        public static ModuleMapperUIGuide AddMapperUI(Action<ModuleMapperUIOption>? action = null)
+        public ModuleMapperUIGuide AddMapperUI(Action<ModuleMapperUIOption>? action = null)
         {
-            return new ModuleMapperUIGuide().Register(action);
+            return builder.AddModule<ModuleMapperUI, ModuleMapperUIOption, ModuleMapperUIGuide>(action);
         }
     }
 }

@@ -13,14 +13,14 @@ namespace Monica.Modules;
 
 public static class ModuleStateStoreBuilderExtensions
 {
-    extension(Mo)
+    extension(IMonicaBuilder builder)
     {
         /// <summary>
         /// Configure the StateStore module
         /// </summary>
-        public static ModuleStateStoreGuide AddStateStore(Action<ModuleStateStoreOption>? action = null)
+        public ModuleStateStoreGuide AddStateStore(Action<ModuleStateStoreOption>? action = null)
         {
-            return new ModuleStateStoreGuide().Register(action);
+            return builder.AddModule<ModuleStateStore, ModuleStateStoreOption, ModuleStateStoreGuide>(action);
         }
     }
 }

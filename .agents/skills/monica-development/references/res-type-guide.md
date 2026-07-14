@@ -245,7 +245,7 @@ return Res.Ok(data).AppendMessage("Operation completed successfully").GetRespons
 Use `GetResponse()` when you want Monica's standard wire contract (`message`, `status`, `data`, `metadata`). Configure top-level result-envelope JSON field names through the ResultEnvelope module:
 
 ```csharp
-Mo.AddResultEnvelope()
+monica.AddResultEnvelope()
     .UseResultFieldNames(fields =>
     {
         fields.Message = "msg";

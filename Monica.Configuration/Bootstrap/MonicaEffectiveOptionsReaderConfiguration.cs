@@ -1,5 +1,6 @@
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 using Monica.Configuration.Abstractions;
 using Monica.Configuration.Models;
 
@@ -27,10 +28,12 @@ internal sealed class MonicaEffectiveOptionsReaderConfiguration
     public IMonicaEffectiveOptionsReader CreateReader(
         IHostApplicationBuilder hostBuilder,
         IConfiguration bootstrapConfiguration,
-        Action<MonicaEffectiveOptionsReaderOptions>? configure)
+        Action<MonicaEffectiveOptionsReaderOptions>? configure,
+        ILogger logger)
     {
         ArgumentNullException.ThrowIfNull(hostBuilder);
         ArgumentNullException.ThrowIfNull(bootstrapConfiguration);
+        ArgumentNullException.ThrowIfNull(logger);
 
         if (_storeFactory is null)
         {
@@ -46,6 +49,7 @@ internal sealed class MonicaEffectiveOptionsReaderConfiguration
             bootstrapConfiguration,
             options,
             _storeFactory.Invoke(),
-            _managedJsonSources);
+            _managedJsonSources,
+            logger);
     }
 }

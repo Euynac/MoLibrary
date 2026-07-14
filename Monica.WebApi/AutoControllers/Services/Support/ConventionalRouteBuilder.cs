@@ -2,13 +2,17 @@ using System.Reflection;
 using Microsoft.AspNetCore.Mvc.ApplicationModels;
 using Monica.Tool.Extensions;
 using Monica.Tool.Helpers;
+using Monica.WebApi.AutoControllers.Abstractions;
 using Monica.WebApi.AutoControllers.Abstractions.Internal;
 using Monica.WebApi.AutoControllers.Models;
-using Monica.WebApi.AutoControllers.Utils;
 
 namespace Monica.WebApi.AutoControllers.Services.Support;
 
-public class ConventionalRouteBuilder
+/// <summary>
+/// Builds conventional routes for generated AutoController actions.
+/// </summary>
+/// <param name="httpMethodResolver">The current host's HTTP method convention resolver.</param>
+public class ConventionalRouteBuilder(IConventionalHttpMethodResolver httpMethodResolver)
     : IConventionalRouteBuilder
 {
     public virtual string Build(
@@ -64,8 +68,8 @@ public class ConventionalRouteBuilder
     protected virtual string NormalizeUrlActionName(string rootPath, string controllerName, ActionModel action,
         string httpMethod, ConventionalControllerSetting? configuration)
     {
-        var actionNameInUrl = HttpMethodHelper
-            .RemoveHttpMethodPrefix(action.ActionName, httpMethod)
+        var actionNameInUrl = httpMethodResolver
+            .RemovePrefix(action.ActionName, httpMethod)
             .RemovePostFix("Async");
 
         return actionNameInUrl;

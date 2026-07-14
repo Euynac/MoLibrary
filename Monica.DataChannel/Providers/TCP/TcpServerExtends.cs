@@ -1,10 +1,17 @@
 using System.Net.Sockets;
+using Monica.DataChannel.Providers.TCP.Utils;
 
 namespace Monica.DataChannel.Providers.TCP;
 
-public partial class TcpServerExtends : IDisposable
+internal sealed partial class TcpServerExtends : IDisposable
 {
-    public TcpListener? Server { get; set; }
-    public TcpReceiveEventHander? ReceivedMsgEvent { get; set; }
-}
+    private readonly TcpConnectionRuntime _runtime;
 
+    internal TcpServerExtends(TcpConnectionRuntime runtime)
+    {
+        _runtime = runtime;
+    }
+
+    internal TcpListener? Server { get; set; }
+    internal TcpReceiveEventHander? ReceivedMsgEvent { get; set; }
+}

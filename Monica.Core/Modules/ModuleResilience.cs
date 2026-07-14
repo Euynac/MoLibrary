@@ -12,14 +12,14 @@ namespace Monica.Modules;
 
 public static class ModuleResilienceBuilderExtensions
 {
-    extension(Mo)
+    extension(IMonicaBuilder builder)
     {
         /// <summary>
         /// Registers and configures the Resilience module.
         /// </summary>
-        public static ModuleResilienceGuide AddResilience(Action<ModuleResilienceOption>? action = null)
+        public ModuleResilienceGuide AddResilience(Action<ModuleResilienceOption>? action = null)
         {
-            return new ModuleResilienceGuide().Register(action);
+            return builder.AddModule<ModuleResilience, ModuleResilienceOption, ModuleResilienceGuide>(action);
         }
     }
 }

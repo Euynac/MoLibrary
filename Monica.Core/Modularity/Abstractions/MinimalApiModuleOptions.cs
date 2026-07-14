@@ -14,7 +14,7 @@ public class MinimalApiModuleOptions<TModule> : ModuleOptions<TModule>, IMinimal
     /// </summary>
     public bool? EnableMinimalApi { get; set; }
 
-    public string GetApiGroupName() => ApiGroup ?? Mo.ModuleSystem.DefaultApiGroupName ?? typeof(TModule).Name;
+    public string GetApiGroupName() => ApiGroup ?? ModuleSystem.DefaultApiGroupName ?? typeof(TModule).Name;
 
-    public bool GetIsMinimalApiEnabled() => EnableMinimalApi ?? Mo.ModuleSystem.EnableMinimalApiByDefault;
+    public bool GetIsMinimalApiEnabled() => EnableMinimalApi ?? ModuleSystem.EnableMinimalApiByDefault;
 }

@@ -36,7 +36,7 @@ public static class ModuleRedisStateStoreBuilderExtensions
             });
         });
 
-        return new ModuleRedisStateStoreGuide().Register(action);
+        return guide.AddModule<ModuleRedisStateStore, ModuleRedisStateStoreOption, ModuleRedisStateStoreGuide>(action);
     }
 
     /// <summary>
@@ -54,7 +54,7 @@ public static class ModuleRedisStateStoreBuilderExtensions
         ArgumentNullException.ThrowIfNull(serviceKey);
         ArgumentNullException.ThrowIfNull(configureOptions);
 
-        new ModuleRedisStateStoreGuide().Register();
+        guide.AddModule<ModuleRedisStateStore, ModuleRedisStateStoreOption, ModuleRedisStateStoreGuide>();
         guide.ConfigureStateStoreServices(services =>
         {
             // Register keyed options

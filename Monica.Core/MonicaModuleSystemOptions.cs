@@ -1,4 +1,5 @@
 using Microsoft.Extensions.Logging;
+using Monica.Core.Modularity.Abstractions;
 
 namespace Monica.Core;
 
@@ -50,7 +51,7 @@ public interface IMonicaModuleSystemOptions
 
 /// <summary>
 /// Mutable configuration model for Monica module-system defaults.
-/// Configure it through <see cref="Mo.ConfigModuleSystem"/>.
+/// Configure it through <see cref="IMonicaBuilder.ConfigureModuleSystem"/>.
 /// </summary>
 public sealed class MonicaModuleSystemOptions : IMonicaModuleSystemOptions
 {

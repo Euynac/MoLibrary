@@ -32,14 +32,14 @@ public class ModuleWebApi(ModuleWebApiOption option) : ModuleBase<ModuleWebApi, 
 
 public static class ModuleWebApiBuilderExtensions
 {
-    extension(Mo)
+    extension(IMonicaBuilder builder)
     {
         /// <summary>
         /// Registers and configures the Web API infrastructure module.
         /// </summary>
-        public static ModuleWebApiGuide AddWebApi(Action<ModuleWebApiOption>? action = null)
+        public ModuleWebApiGuide AddWebApi(Action<ModuleWebApiOption>? action = null)
         {
-            return new ModuleWebApiGuide().Register(action);
+            return builder.AddModule<ModuleWebApi, ModuleWebApiOption, ModuleWebApiGuide>(action);
         }
     }
 }

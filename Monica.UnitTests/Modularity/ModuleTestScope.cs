@@ -1,60 +1,49 @@
 using System.Reflection;
-using Monica.Core;
+using Monica.Core.Modularity.Abstractions;
 
 namespace Monica.UnitTests.Modularity;
 
 /// <summary>
-/// Isolates Monica module-system state between tests.
+/// Stores deterministic business-type discovery inputs for a lightweight Monica test host.
 /// </summary>
 public sealed class ModuleTestScope : IDisposable
 {
-    private readonly MonicaApplication _application;
-    private bool _disposed;
+    private readonly Assembly[] _assemblies;
 
-    private ModuleTestScope(MonicaApplication application)
+    private ModuleTestScope(Assembly[] assemblies)
     {
-        _application = application;
+        _assemblies = assemblies;
     }
 
     /// <summary>
-    /// Creates an isolated module test scope and narrows type discovery to the supplied assemblies.
+    /// Creates a module test scope that can configure one host-bound Monica builder.
     /// </summary>
+    /// <param name="assemblies">Assemblies included in business-type discovery.</param>
+    /// <returns>The test scope.</returns>
     public static ModuleTestScope Create(params Assembly[] assemblies)
     {
-        var application = MonicaApplication.CreateScoped();
-        Reset();
-
-        Mo.ConfigTypeDiscovery(options =>
-        {
-            options.ExcludeDefault();
-            if (assemblies.Length > 0)
-            {
-                options.Add(assemblies);
-            }
-        });
-
-        return new ModuleTestScope(application);
+        return new ModuleTestScope(assemblies);
     }
 
     /// <summary>
-    /// Clears Monica module-system state for the current Monica application.
+    /// Applies this scope's deterministic type-discovery configuration to a Monica builder.
     /// </summary>
-    public static void Reset()
+    /// <param name="builder">The host-bound Monica builder.</param>
+    public void Configure(IMonicaBuilder builder)
     {
-        MonicaApplication.Current.ResetModuleState();
+        ArgumentNullException.ThrowIfNull(builder);
+        builder.ConfigureTypeDiscovery(options =>
+        {
+            options.ExcludeDefault();
+            if (_assemblies.Length > 0)
+            {
+                options.Add(_assemblies);
+            }
+        });
     }
 
     /// <inheritdoc />
     public void Dispose()
     {
-        if (_disposed)
-        {
-            return;
-        }
-
-        Reset();
-        Mo.ConfigTypeDiscovery();
-        _application.Dispose();
-        _disposed = true;
     }
 }

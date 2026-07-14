@@ -29,8 +29,9 @@ public class JobZombieDetectorHostedService(
     IObservableInstanceRegistry observableManager,
     IOptions<ModuleHostedServiceOption> hostedServiceOptions,
     IOptions<ModuleServiceDiscoveryOption> serviceDiscoveryOptions,
+    ILogger<JobZombieDetectorHostedService> logger,
     IRegistrationStateManager? registrationStateManager = null
-) : CoordinatedLeaderService(leaderService, serviceDiscoveryOptions, coordinator, observableManager, hostedServiceOptions)
+) : CoordinatedLeaderService(leaderService, serviceDiscoveryOptions, coordinator, observableManager, hostedServiceOptions, logger)
 {
     private readonly ModuleJobSchedulerOption _jobSchedulerOptions = options.Value;
 

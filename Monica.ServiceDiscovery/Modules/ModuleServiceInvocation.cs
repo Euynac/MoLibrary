@@ -84,14 +84,14 @@ public class ModuleServiceInvocationGuide : ModuleGuide<ModuleServiceInvocation,
 
 public static class ModuleServiceInvocationBuilderExtensions
 {
-    extension(Mo)
+    extension(IMonicaBuilder builder)
     {
         /// <summary>
         /// Configure the ServiceInvocation module
         /// </summary>
-        public static ModuleServiceInvocationGuide AddServiceInvocation(Action<ModuleServiceInvocationOption>? action = null)
+        public ModuleServiceInvocationGuide AddServiceInvocation(Action<ModuleServiceInvocationOption>? action = null)
         {
-            return new ModuleServiceInvocationGuide().Register(action);
+            return builder.AddModule<ModuleServiceInvocation, ModuleServiceInvocationOption, ModuleServiceInvocationGuide>(action);
         }
     }
 }
