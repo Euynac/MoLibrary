@@ -50,4 +50,19 @@ public interface IConfigurationUnifiedVersionStore
     Task<ConfigurationUnifiedVersionSnapshot?> GetVersionByMutationGroupAsync(
         string mutationGroupId,
         CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Permanently deletes a historical unified configuration version and all of its definition documents.
+    /// </summary>
+    /// <remarks>
+    /// The latest version is the current version marker and cannot be deleted. Implementations must evaluate that
+    /// invariant and perform the deletion atomically with respect to concurrent append and delete operations.
+    /// Deleted version numbers are never reused.
+    /// </remarks>
+    /// <param name="version">The historical unified version number to delete.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>A task that completes when the version has been deleted.</returns>
+    /// <exception cref="KeyNotFoundException">Thrown when the version does not exist.</exception>
+    /// <exception cref="InvalidOperationException">Thrown when <paramref name="version"/> is the latest version.</exception>
+    Task DeleteVersionAsync(long version, CancellationToken cancellationToken);
 }

@@ -25,6 +25,7 @@ internal sealed partial class ConfigurationMutationGroupApplyService(
     IConfigurationSourceInspector sourceInspector,
     IConfigurationJsonFileSourceWriter sourceWriter,
     ConfigurationEffectiveValueSeedFactory seedFactory,
+    ConfigurationEffectiveSnapshotReader effectiveSnapshotReader,
     ConfigurationEffectiveValueDocumentEditor documentEditor,
     IConfigurationUnifiedVersionCoordinator unifiedVersionCoordinator,
     IConfigurationReloadCoordinator reloadCoordinator,
@@ -436,8 +437,8 @@ internal sealed partial class ConfigurationMutationGroupApplyService(
 
             try
             {
-                var effectiveJson = seedFactory.CreateRuntimeJson(definition.Root, definition.SectionPath);
-                if (!ConfigurationJsonSemanticComparer.Equals(effectiveJson, expected.Json))
+                var effectiveSnapshot = await effectiveSnapshotReader.ReadAsync(definition, cancellationToken);
+                if (!ConfigurationJsonSemanticComparer.Equals(effectiveSnapshot.Json, expected.Json))
                 {
                     mismatches.Add(expected.DefinitionKey);
                 }

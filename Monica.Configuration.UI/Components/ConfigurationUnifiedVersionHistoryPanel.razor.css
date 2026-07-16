@@ -1,0 +1,82 @@
+.configuration-version-history-panel {
+    min-width: 0;
+}
+
+.configuration-version-history-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.625rem;
+}
+
+.configuration-version-history-item {
+    border: 1px solid var(--mud-palette-lines-default);
+    border-radius: var(--mud-default-borderradius);
+    display: grid;
+    gap: 0.5rem 0.25rem;
+    grid-template-columns: minmax(0, 1fr) auto;
+    padding: 0.75rem;
+    transition: border-color 120ms ease, background-color 120ms ease;
+}
+
+.configuration-version-history-item:hover {
+    border-color: var(--mud-palette-primary);
+    background: var(--mud-palette-action-default-hover);
+}
+
+.configuration-version-history-item.is-selected {
+    border-color: var(--mud-palette-primary);
+    background: var(--mud-palette-primary-hover);
+}
+
+.configuration-version-history-selection {
+    appearance: none;
+    background: none;
+    border: 0;
+    color: inherit;
+    cursor: pointer;
+    min-width: 0;
+    padding: 0;
+    text-align: left;
+}
+
+.configuration-version-history-selection:focus-visible {
+    border-radius: var(--mud-default-borderradius);
+    outline: 2px solid var(--mud-palette-primary);
+    outline-offset: 0.25rem;
+}
+
+.configuration-version-history-selection-title,
+.configuration-version-history-selection-caption {
+    display: block;
+    overflow-wrap: anywhere;
+}
+
+.configuration-version-history-selection-title {
+    font-family: var(--mud-typography-subtitle2-family);
+    font-size: var(--mud-typography-subtitle2-size);
+    font-weight: var(--mud-typography-subtitle2-weight);
+    letter-spacing: var(--mud-typography-subtitle2-letterspacing);
+    line-height: var(--mud-typography-subtitle2-lineheight);
+    text-transform: var(--mud-typography-subtitle2-text-transform);
+}
+
+.configuration-version-history-selection-caption {
+    color: var(--mud-palette-text-secondary);
+    font-family: var(--mud-typography-caption-family);
+    font-size: var(--mud-typography-caption-size);
+    font-weight: var(--mud-typography-caption-weight);
+    letter-spacing: var(--mud-typography-caption-letterspacing);
+    line-height: var(--mud-typography-caption-lineheight);
+    text-transform: var(--mud-typography-caption-text-transform);
+}
+
+.configuration-version-history-actions {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.125rem;
+    flex-shrink: 0;
+}
+
+.configuration-version-history-metadata {
+    grid-column: 1 / -1;
+}

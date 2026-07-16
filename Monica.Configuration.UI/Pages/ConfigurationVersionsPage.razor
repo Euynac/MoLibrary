@@ -1,5 +1,5 @@
 @attribute [Route(PAGE_URL)]
-@inject ConfigurationFacade Facade
+@inject ConfigurationVersionsPageState State
 @inject IDialogService DialogService
 @inject ISnackbar Snackbar
 @inject IStringLocalizer<ConfigurationUIResource> L
@@ -15,15 +15,19 @@
                     <MudText Typo="Typo.body2" Color="Color.Secondary">@L["Versions:Subtitle"]</MudText>
                 </MudStack>
                 <MudTooltip Text="@L["Common:Actions:Refresh"]">
-                    <MudIconButton Icon="@Icons.Material.Filled.Refresh" Variant="Variant.Outlined" OnClick="LoadAsync" />
+                    <MudIconButton Icon="@Icons.Material.Filled.Refresh"
+                                   Variant="Variant.Outlined"
+                                   Disabled="@State.Loading"
+                                   OnClick="State.LoadAsync"
+                                   aria-label="@L["Common:Actions:Refresh"]" />
                 </MudTooltip>
             </MudStack>
 
-            @if (_loading)
+            @if (State.Loading)
             {
                 <MudProgressLinear Indeterminate="true" />
             }
-            else if (_versions.Count == 0)
+            else if (!State.HasVersions)
             {
                 <MudAlert Severity="Severity.Info">@L["Versions:Empty"]</MudAlert>
             }
@@ -32,136 +36,28 @@
                 <MudGrid Spacing="3">
                     <MudItem xs="12" md="5" lg="4">
                         <MudStack Spacing="3">
-                            @if (CurrentVersion is { } currentVersion)
+                            @if (State.CurrentVersion is { } currentVersion)
                             {
-                                <MudPaper Outlined="true" Class="pa-3 configuration-current-version-panel">
-                                    <MudStack Spacing="2">
-                                        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
-                                            <MudIcon Icon="@Icons.Material.Filled.Verified" Color="Color.Primary" />
-                                            <MudText Typo="Typo.subtitle1">@L["Versions:Current:Title"]</MudText>
-                                        </MudStack>
-                                        <MudText Typo="Typo.h6">@VersionText(currentVersion)</MudText>
-                                        <MudStack Row="true" Wrap="Wrap.Wrap" Spacing="1">
-                                            <MudTooltip Text="@DefinitionTooltip(currentVersion)">
-                                                <MudChip T="int" Size="Size.Small" Variant="Variant.Outlined">
-                                                    @L["Versions:Current:DefinitionCount", currentVersion.DefinitionCount]
-                                                </MudChip>
-                                            </MudTooltip>
-                                            <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">
-                                                @L["History:Dialog:Operator"]: @OperatorText(currentVersion)
-                                            </MudChip>
-                                            <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">
-                                                @L["Group:Label"]: @ValueOrEmpty(currentVersion.MutationGroupId)
-                                            </MudChip>
-                                        </MudStack>
-                                        @if (!string.IsNullOrWhiteSpace(currentVersion.Reason))
-                                        {
-                                            <MudText Typo="Typo.caption" Color="Color.Secondary">@currentVersion.Reason</MudText>
-                                        }
-                                    </MudStack>
-                                </MudPaper>
+                                <ConfigurationUnifiedVersionCurrentPanel Version="currentVersion" />
                             }
 
-                            <MudPaper Outlined="true" Class="pa-3 configuration-version-history-panel">
-                                <MudStack Spacing="2">
-                                    <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Spacing="2">
-                                        <MudText Typo="Typo.subtitle1">@L["Versions:List:Title"]</MudText>
-                                        <MudChip T="int" Size="Size.Small" Variant="Variant.Outlined">@HistoryVersions.Count</MudChip>
-                                    </MudStack>
-
-                                    @if (HistoryVersions.Count == 0)
-                                    {
-                                        <MudAlert Severity="Severity.Info">@L["Versions:List:Empty"]</MudAlert>
-                                    }
-                                    else
-                                    {
-                                        <div class="configuration-version-history-list">
-                                            @foreach (var version in HistoryVersions)
-                                            {
-                                                var previousVersion = PreviousVersion(version);
-                                                <div class="@HistoryItemClass(version)" @onclick="() => SelectVersionAsync(version.Version)">
-                                                    <MudStack Spacing="1">
-                                                        <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Spacing="1">
-                                                            <MudStack Spacing="0">
-                                                                <MudText Typo="Typo.subtitle2">@VersionText(version)</MudText>
-                                                                <MudText Typo="Typo.caption" Color="Color.Secondary">
-                                                                    @L["Versions:List:ComparedToCurrent", CurrentVersionLabel]
-                                                                </MudText>
-                                                            </MudStack>
-                                                            <div class="configuration-version-history-actions" @onclick:stopPropagation="true">
-                                                                <MudTooltip Text="@L["Versions:Actions:ComparePrevious"]">
-                                                                    <MudIconButton Icon="@Icons.Material.Filled.CompareArrows"
-                                                                                   Size="Size.Small"
-                                                                                   Color="@(IsPreviousComparisonSelected(version) ? Color.Primary : Color.Default)"
-                                                                                   Disabled="@(previousVersion is null)"
-                                                                                   OnClick="() => CompareWithPreviousAsync(version)" />
-                                                                </MudTooltip>
-                                                                <MudTooltip Text="@L["Rollback:Confirm"]">
-                                                                    <MudIconButton Icon="@Icons.Material.Filled.Restore"
-                                                                                   Size="Size.Small"
-                                                                                   Color="Color.Warning"
-                                                                                   OnClick="() => RollbackAsync(version)" />
-                                                                </MudTooltip>
-                                                            </div>
-                                                        </MudStack>
-                                                        <MudStack Row="true" Wrap="Wrap.Wrap" Spacing="1">
-                                                            <MudTooltip Text="@DefinitionTooltip(version)">
-                                                                <MudChip T="int" Size="Size.Small" Variant="Variant.Outlined">
-                                                                    @L["Versions:Current:DefinitionCount", version.DefinitionCount]
-                                                                </MudChip>
-                                                            </MudTooltip>
-                                                            <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">
-                                                                @OperatorText(version)
-                                                            </MudChip>
-                                                            @if (!string.IsNullOrWhiteSpace(version.Reason))
-                                                            {
-                                                                <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">@version.Reason</MudChip>
-                                                            }
-                                                        </MudStack>
-                                                    </MudStack>
-                                                </div>
-                                            }
-                                        </div>
-                                    }
-                                </MudStack>
-                            </MudPaper>
+                            <ConfigurationUnifiedVersionHistoryPanel Versions="State.HistoryVersions"
+                                                                     CurrentVersionLabel="@State.CurrentVersionLabel"
+                                                                     SelectedVersion="@State.SelectedHistoryVersion"
+                                                                     PreviousComparisonVersion="@State.PreviousComparisonVersion"
+                                                                     OnVersionSelected="State.SelectVersionAsync"
+                                                                     OnComparePrevious="State.CompareWithPreviousAsync"
+                                                                     OnRollback="RollbackAsync"
+                                                                     OnDeleted="State.LoadAsync" />
                         </MudStack>
                     </MudItem>
 
                     <MudItem xs="12" md="7" lg="8">
-                        <MudPaper Outlined="true" Class="pa-3 configuration-version-comparison-panel">
-                            <MudStack Spacing="3">
-                                <MudStack Row="true" Wrap="Wrap.Wrap" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Spacing="2">
-                                    <MudStack Spacing="0">
-                                        <MudText Typo="Typo.subtitle1">@ComparisonTitle</MudText>
-                                        <MudText Typo="Typo.caption" Color="Color.Secondary">@ComparisonSubtitle</MudText>
-                                    </MudStack>
-                                    @if (_selectedComparison is not null)
-                                    {
-                                        <MudChip T="int" Size="Size.Small" Color="Color.Primary" Variant="Variant.Outlined">
-                                            @L["Versions:Diff:ChangedDefinitions", _selectedComparison.Changes.Count]
-                                        </MudChip>
-                                    }
-                                </MudStack>
-
-                                @if (SelectedHistoryVersion is null)
-                                {
-                                    <MudAlert Severity="Severity.Info">@L["Versions:List:Empty"]</MudAlert>
-                                }
-                                else if (_comparisonLoading)
-                                {
-                                    <MudProgressLinear Indeterminate="true" />
-                                }
-                                else if (_selectedComparison is null)
-                                {
-                                    <MudAlert Severity="Severity.Warning">@L["Versions:Compare:Unavailable"]</MudAlert>
-                                }
-                                else
-                                {
-                                    <ConfigurationUnifiedVersionDiffPanel Comparison="_selectedComparison" ShowSummaryHeader="false" />
-                                }
-                            </MudStack>
-                        </MudPaper>
+                        <ConfigurationUnifiedVersionComparisonPanel Title="@State.ComparisonTitle"
+                                                                    Subtitle="@State.ComparisonSubtitle"
+                                                                    HasSelection="@State.HasSelectedHistoryVersion"
+                                                                    Loading="@State.ComparisonLoading"
+                                                                    Comparison="@State.SelectedComparison" />
                     </MudItem>
                 </MudGrid>
             }
@@ -172,197 +68,9 @@
 @code {
     public const string PAGE_URL = ConfigurationUiRoutes.VERSIONS_ROUTE;
 
-    private readonly List<ConfigurationUnifiedVersionSummary> _versions = [];
-    private readonly Dictionary<VersionComparisonCacheKey, ConfigurationUnifiedVersionComparison> _comparisonCache = new();
-    private ConfigurationUnifiedVersionComparison? _selectedComparison;
-    private long? _selectedHistoryVersion;
-    private long? _selectedOriginVersion;
-    private long? _selectedTargetVersion;
-    private long _comparisonRequestId;
-    private ConfigurationVersionComparisonMode _comparisonMode = ConfigurationVersionComparisonMode.Current;
-    private bool _loading = true;
-    private bool _comparisonLoading;
-
-    private ConfigurationUnifiedVersionSummary? CurrentVersion => _versions.FirstOrDefault();
-
-    private IReadOnlyList<ConfigurationUnifiedVersionSummary> HistoryVersions =>
-        _versions.Count <= 1 ? [] : _versions.Skip(1).ToArray();
-
-    private ConfigurationUnifiedVersionSummary? SelectedHistoryVersion =>
-        _selectedHistoryVersion is { } version
-            ? _versions.FirstOrDefault(candidate => candidate.Version == version)
-            : null;
-
-    private string CurrentVersionLabel => CurrentVersion is { } current
-        ? ConfigurationUnifiedVersionJsonFormatter.VersionLabel(current.Version)
-        : L["Common:States:Empty"];
-
-    private string ComparisonTitle =>
-        _selectedOriginVersion is { } originVersion && _selectedTargetVersion is { } targetVersion
-            ? _comparisonMode == ConfigurationVersionComparisonMode.Previous
-                ? L["Versions:Compare:AgainstPrevious", VersionText(originVersion), VersionText(targetVersion)]
-                : L["Versions:Compare:AgainstCurrent", VersionText(originVersion), VersionText(targetVersion)]
-            : L["Versions:Compare:NoSelection"];
-
-    private string ComparisonSubtitle => _comparisonMode == ConfigurationVersionComparisonMode.Previous
-        ? L["Versions:Compare:PreviousPair"]
-        : L["Versions:Compare:CurrentOnly"];
-
     protected override async Task OnInitializedAsync()
     {
-        await LoadAsync();
-    }
-
-    private async Task LoadAsync()
-    {
-        _loading = true;
-        _comparisonLoading = false;
-        _selectedComparison = null;
-        _comparisonCache.Clear();
-
-        var result = await Facade.GetUnifiedVersionsAsync(limit: 200);
-        if (result.IsFailed(out var error, out var versions))
-        {
-            Snackbar.Add($"{L["Common:Errors:LoadFailed"]}: {error.Message}", Severity.Error);
-            _versions.Clear();
-            _selectedHistoryVersion = null;
-            _selectedOriginVersion = null;
-            _selectedTargetVersion = null;
-        }
-        else
-        {
-            _versions.Clear();
-            _versions.AddRange(versions.OrderByDescending(static version => version.Version));
-            SelectDefaultHistoryVersion();
-        }
-
-        _loading = false;
-
-        if (_selectedHistoryVersion is { } selectedVersion
-            && _versions.FirstOrDefault(version => version.Version == selectedVersion) is { } selectedSummary)
-        {
-            if (_comparisonMode == ConfigurationVersionComparisonMode.Previous
-                && PreviousVersion(selectedSummary) is { } previousVersion)
-            {
-                await LoadComparisonAsync(
-                    previousVersion.Version,
-                    selectedSummary.Version,
-                    selectedSummary.Version,
-                    ConfigurationVersionComparisonMode.Previous);
-            }
-            else
-            {
-                await LoadCurrentComparisonAsync(selectedVersion);
-            }
-        }
-    }
-
-    private void SelectDefaultHistoryVersion()
-    {
-        var current = CurrentVersion;
-        if (current is null)
-        {
-            _selectedHistoryVersion = null;
-            return;
-        }
-
-        if (_selectedHistoryVersion is { } selected
-            && selected != current.Version
-            && _versions.Any(version => version.Version == selected))
-        {
-            return;
-        }
-
-        _selectedHistoryVersion = HistoryVersions.FirstOrDefault()?.Version;
-        _comparisonMode = ConfigurationVersionComparisonMode.Current;
-    }
-
-    private async Task SelectVersionAsync(long version)
-    {
-        await LoadCurrentComparisonAsync(version);
-    }
-
-    private async Task LoadCurrentComparisonAsync(long historyVersion)
-    {
-        var current = CurrentVersion;
-        if (current is null || historyVersion == current.Version)
-        {
-            _selectedHistoryVersion = null;
-            _selectedOriginVersion = null;
-            _selectedTargetVersion = null;
-            _selectedComparison = null;
-            return;
-        }
-
-        await LoadComparisonAsync(
-            historyVersion,
-            current.Version,
-            historyVersion,
-            ConfigurationVersionComparisonMode.Current);
-    }
-
-    private async Task CompareWithPreviousAsync(ConfigurationUnifiedVersionSummary version)
-    {
-        var previous = PreviousVersion(version);
-        if (previous is null)
-        {
-            return;
-        }
-
-        await LoadComparisonAsync(
-            previous.Version,
-            version.Version,
-            version.Version,
-            ConfigurationVersionComparisonMode.Previous);
-    }
-
-    private async Task LoadComparisonAsync(
-        long originVersion,
-        long targetVersion,
-        long selectedHistoryVersion,
-        ConfigurationVersionComparisonMode mode)
-    {
-        _selectedHistoryVersion = selectedHistoryVersion;
-        _selectedOriginVersion = originVersion;
-        _selectedTargetVersion = targetVersion;
-        _comparisonMode = mode;
-
-        var key = new VersionComparisonCacheKey(originVersion, targetVersion);
-        if (_comparisonCache.TryGetValue(key, out var cached))
-        {
-            _selectedComparison = cached;
-            _comparisonLoading = false;
-            return;
-        }
-
-        var requestId = ++_comparisonRequestId;
-        _comparisonLoading = true;
-        _selectedComparison = null;
-
-        try
-        {
-            var result = await Facade.CompareUnifiedVersionsAsync(originVersion, targetVersion);
-            if (requestId != _comparisonRequestId)
-            {
-                return;
-            }
-
-            if (result.IsFailed(out var error, out var comparison))
-            {
-                Snackbar.Add($"{L["Common:Errors:LoadFailed"]}: {error.Message}", Severity.Error);
-                return;
-            }
-
-            _comparisonCache[key] = comparison;
-            _selectedComparison = comparison;
-        }
-        finally
-        {
-            if (requestId == _comparisonRequestId)
-            {
-                _comparisonLoading = false;
-            }
-        }
+        await State.LoadAsync();
     }
 
     private async Task RollbackAsync(ConfigurationUnifiedVersionSummary version)
@@ -410,73 +118,7 @@
                 await issuesDialog.Result;
             }
 
-            await LoadAsync();
+            await State.LoadAsync();
         }
     }
-
-    private bool IsSelected(ConfigurationUnifiedVersionSummary version)
-    {
-        return _selectedHistoryVersion == version.Version;
-    }
-
-    private bool IsPreviousComparisonSelected(ConfigurationUnifiedVersionSummary version)
-    {
-        return _comparisonMode == ConfigurationVersionComparisonMode.Previous
-               && _selectedHistoryVersion == version.Version;
-    }
-
-    private string HistoryItemClass(ConfigurationUnifiedVersionSummary version)
-    {
-        return IsSelected(version)
-            ? "configuration-version-history-item is-selected"
-            : "configuration-version-history-item";
-    }
-
-    private string VersionText(ConfigurationUnifiedVersionSummary version)
-    {
-        return $"{ConfigurationUnifiedVersionJsonFormatter.VersionLabel(version.Version)} · {version.CreatedTime.ToLocalTime():yyyy-MM-dd HH:mm:ss}";
-    }
-
-    private string VersionText(long version)
-    {
-        var summary = _versions.FirstOrDefault(candidate => candidate.Version == version);
-        return summary is null
-            ? ConfigurationUnifiedVersionJsonFormatter.VersionLabel(version)
-            : VersionText(summary);
-    }
-
-    private ConfigurationUnifiedVersionSummary? PreviousVersion(ConfigurationUnifiedVersionSummary version)
-    {
-        var index = _versions.FindIndex(candidate => candidate.Version == version.Version);
-        return index >= 0 && index + 1 < _versions.Count ? _versions[index + 1] : null;
-    }
-
-    private string DefinitionTooltip(ConfigurationUnifiedVersionSummary version)
-    {
-        return version.DefinitionKeys.Count == 0
-            ? L["Versions:Definitions:Empty"]
-            : string.Join(Environment.NewLine, version.DefinitionKeys);
-    }
-
-    private string OperatorText(ConfigurationUnifiedVersionSummary version)
-    {
-        return !string.IsNullOrWhiteSpace(version.ModifierName)
-            ? version.ModifierName!
-            : !string.IsNullOrWhiteSpace(version.ModifierId)
-                ? version.ModifierId!
-                : L["Common:States:Empty"];
-    }
-
-    private string ValueOrEmpty(string? value)
-    {
-        return string.IsNullOrWhiteSpace(value) ? L["Common:States:Empty"] : value;
-    }
-
-    private enum ConfigurationVersionComparisonMode
-    {
-        Current,
-        Previous
-    }
-
-    private readonly record struct VersionComparisonCacheKey(long OriginVersion, long TargetVersion);
 }

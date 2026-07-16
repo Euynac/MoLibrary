@@ -1,0 +1,45 @@
+@inject IStringLocalizer<ConfigurationUIResource> L
+
+<div class="configuration-current-version-panel">
+    <MudPaper Outlined="true" Class="pa-3">
+        <MudStack Spacing="2">
+            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
+                <MudIcon Icon="@Icons.Material.Filled.Verified" Color="Color.Primary" />
+                <MudText Typo="Typo.subtitle1">@L["Versions:Current:Title"]</MudText>
+            </MudStack>
+            <MudText Typo="Typo.h6">@VersionText</MudText>
+            <MudStack Row="true" Wrap="Wrap.Wrap" Spacing="1">
+                <MudTooltip Text="@DefinitionTooltip">
+                    <MudChip T="int" Size="Size.Small" Variant="Variant.Outlined">
+                        @L["Versions:Current:DefinitionCount", Version.DefinitionCount]
+                    </MudChip>
+                </MudTooltip>
+                <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">
+                    @L["History:Dialog:Operator"]: @OperatorText
+                </MudChip>
+                <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">
+                    @L["Group:Label"]: @ConfigurationUnifiedVersionDisplayFormatter.ValueOrEmpty(Version.MutationGroupId, EmptyText)
+                </MudChip>
+            </MudStack>
+            @if (!string.IsNullOrWhiteSpace(Version.Reason))
+            {
+                <MudText Typo="Typo.caption" Color="Color.Secondary">@Version.Reason</MudText>
+            }
+        </MudStack>
+    </MudPaper>
+</div>
+
+@code {
+    [Parameter, EditorRequired]
+    public ConfigurationUnifiedVersionSummary Version { get; set; } = default!;
+
+    private string EmptyText => L["Common:States:Empty"];
+
+    private string VersionText => ConfigurationUnifiedVersionDisplayFormatter.VersionText(Version);
+
+    private string DefinitionTooltip => ConfigurationUnifiedVersionDisplayFormatter.DefinitionTooltip(
+        Version,
+        L["Versions:Definitions:Empty"]);
+
+    private string OperatorText => ConfigurationUnifiedVersionDisplayFormatter.OperatorText(Version, EmptyText);
+}

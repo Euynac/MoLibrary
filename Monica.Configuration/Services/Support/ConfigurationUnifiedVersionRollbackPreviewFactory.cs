@@ -7,7 +7,7 @@ namespace Monica.Configuration.Services.Support;
 /// </summary>
 internal sealed class ConfigurationUnifiedVersionRollbackPreviewFactory(
     ConfigurationDefinitionResolver definitionResolver,
-    ConfigurationEffectiveValueSeedFactory seedFactory,
+    ConfigurationEffectiveSnapshotReader effectiveSnapshotReader,
     ConfigurationValidationCoordinator validationCoordinator,
     ConfigurationRollbackPersistencePlanner persistencePlanner)
 {
@@ -50,7 +50,8 @@ internal sealed class ConfigurationUnifiedVersionRollbackPreviewFactory(
             };
         }
 
-        var currentJson = seedFactory.CreateRuntimeJson(definition.Root, definition.SectionPath);
+        var currentSnapshot = await effectiveSnapshotReader.ReadAsync(definition, cancellationToken);
+        var currentJson = currentSnapshot.Json;
         var target = new ConfigurationUnifiedVersionApplyTarget
         {
             DefinitionKey = document.DefinitionKey,
@@ -77,10 +78,12 @@ internal sealed class ConfigurationUnifiedVersionRollbackPreviewFactory(
             };
         }
 
-        var persistenceDrifts = await persistencePlanner.FindRuntimeSourceDriftsAsync(
-            definition,
-            currentJson,
-            cancellationToken);
+        var persistenceDrifts = definition.Origin == ConfigurationDefinitionOrigin.LocalScan
+            ? await persistencePlanner.FindRuntimeSourceDriftsAsync(
+                definition,
+                currentJson,
+                cancellationToken)
+            : [];
         if (persistenceDrifts.Count > 0)
         {
             return target with
@@ -95,11 +98,17 @@ internal sealed class ConfigurationUnifiedVersionRollbackPreviewFactory(
             return target with { Status = ConfigurationUnifiedVersionApplyTargetStatus.Unchanged };
         }
 
-        var mutations = await persistencePlanner.PlanAsync(
-            definition,
-            currentJson,
-            document.Json,
-            cancellationToken);
+        var mutations = definition.Origin == ConfigurationDefinitionOrigin.PublishedMetadata
+            ? persistencePlanner.PlanEffectiveStore(
+                definition,
+                currentJson,
+                document.Json,
+                currentSnapshot.RequireVersion(definition))
+            : await persistencePlanner.PlanAsync(
+                definition,
+                currentJson,
+                document.Json,
+                cancellationToken);
         var blockedMutation = mutations.FirstOrDefault(static mutation =>
             mutation.Status != ConfigurationUnifiedVersionApplyMutationStatus.Ready);
         if (blockedMutation is not null)

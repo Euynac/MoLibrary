@@ -15,8 +15,12 @@ internal sealed class ConfigurationRollbackPersistencePlanner(
     IConfigurationSourceInspector sourceInspector,
     IConfigurationJsonFileSourceWriter sourceWriter,
     ConfigurationEffectiveValueDocumentEditor documentEditor,
+    ConfigurationPathProjector pathProjector,
     MonicaConfigurationProviderAccessor providerAccessor)
 {
+    private const string EFFECTIVE_SOURCE_KEY = "monica:effective";
+    private const string EFFECTIVE_SOURCE_DISPLAY_NAME = "Monica Effective Store";
+
     public async Task<IReadOnlyList<ConfigurationUnifiedVersionApplyMutation>> PlanAsync(
         ConfigurationDefinition definition,
         string currentJson,
@@ -25,6 +29,35 @@ internal sealed class ConfigurationRollbackPersistencePlanner(
     {
         var changes = ConfigurationRollbackChangePlanner.Plan(definition.Root, currentJson, targetJson);
         return await ResolveMutationDestinationsAsync(definition, changes, cancellationToken);
+    }
+
+    /// <summary>
+    /// Plans a published-only definition directly against its shared effective-value document.
+    /// </summary>
+    /// <remarks>
+    /// The current JSON and expected version must come from the same store read. Consulting the local runtime source
+    /// chain would be incorrect because this process did not scan or project the remote definition.
+    /// </remarks>
+    public IReadOnlyList<ConfigurationUnifiedVersionApplyMutation> PlanEffectiveStore(
+        ConfigurationDefinition definition,
+        string currentJson,
+        string targetJson,
+        long expectedValueVersion)
+    {
+        return ConfigurationRollbackChangePlanner.Plan(definition.Root, currentJson, targetJson)
+            .Select(change => new ConfigurationUnifiedVersionApplyMutation
+            {
+                LogicalPath = change.LogicalPath.ToCanonicalString(),
+                ConfigurationPath = pathProjector.Project(definition.SectionPath, change.LogicalPath),
+                MutationKind = change.MutationKind,
+                CurrentJson = change.CurrentJson,
+                TargetJson = change.TargetJson,
+                SourceKey = EFFECTIVE_SOURCE_KEY,
+                SourceDisplayName = EFFECTIVE_SOURCE_DISPLAY_NAME,
+                SourceKind = ConfigurationSourceKind.MonicaEffectiveStore,
+                ExpectedValueVersion = expectedValueVersion
+            })
+            .ToArray();
     }
 
     public async Task<IReadOnlyList<ConfigurationUnifiedVersionApplyMutation>> FindRuntimeSourceDriftsAsync(
@@ -336,8 +369,8 @@ internal sealed class ConfigurationRollbackPersistencePlanner(
         {
             return mutation with
             {
-                SourceKey = "monica:effective",
-                SourceDisplayName = "Monica Effective Store",
+                SourceKey = EFFECTIVE_SOURCE_KEY,
+                SourceDisplayName = EFFECTIVE_SOURCE_DISPLAY_NAME,
                 SourceKind = ConfigurationSourceKind.MonicaEffectiveStore
             };
         }

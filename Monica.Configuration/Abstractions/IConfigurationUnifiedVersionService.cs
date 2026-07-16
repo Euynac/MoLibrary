@@ -68,4 +68,18 @@ public interface IConfigurationUnifiedVersionService
     Task<ConfigurationUnifiedVersionRollbackResult> RollbackToVersionAsync(
         ConfigurationUnifiedVersionRollbackRequest request,
         CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Permanently deletes a historical unified configuration version.
+    /// </summary>
+    /// <remarks>
+    /// The latest unified version represents the current version and cannot be deleted. Deleting a historical version
+    /// does not renumber the remaining versions, and its version number will not be reused.
+    /// </remarks>
+    /// <param name="version">The historical unified version number to delete.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>A task that completes when the version and its definition documents have been deleted.</returns>
+    /// <exception cref="KeyNotFoundException">Thrown when the version does not exist.</exception>
+    /// <exception cref="InvalidOperationException">Thrown when <paramref name="version"/> is the latest version.</exception>
+    Task DeleteVersionAsync(long version, CancellationToken cancellationToken);
 }

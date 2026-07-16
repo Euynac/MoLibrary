@@ -104,6 +104,7 @@ public sealed class ModuleConfigurationUI(ModuleConfigurationUIOption option)
         services.AddScoped<ConfigurationPendingChangeCompactor>();
         services.AddScoped<ConfigurationJsonDraftService>();
         services.AddScoped<ConfigurationParameterPackageService>();
+        services.AddScoped<ConfigurationVersionsPageState>();
     }
 }
 

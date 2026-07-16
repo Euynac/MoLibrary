@@ -417,7 +417,17 @@
       "Empty": "未捕获配置定义。"
     },
     "Actions": {
-      "ComparePrevious": "与上一版本对比"
+      "ComparePrevious": "与上一版本对比",
+      "Delete": "删除历史版本"
+    },
+    "Delete": {
+      "ConfirmTitle": "删除 {0}？",
+      "ConfirmMessage": "确定永久删除 {0} 的历史快照吗？此操作不会修改当前版本或任何生效配置值。",
+      "Confirm": "删除版本",
+      "Messages": {
+        "Succeeded": "已删除 {0}。",
+        "Failed": "删除 {0} 失败：{1}"
+      }
     },
     "Diff": {
       "Title": "{0} -> {1}",

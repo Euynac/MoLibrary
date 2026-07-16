@@ -738,6 +738,30 @@ public sealed class ConfigurationFacade(
     }
 
     /// <summary>
+    /// Permanently deletes a historical unified configuration version and its captured definition documents.
+    /// </summary>
+    /// <remarks>
+    /// The latest unified version represents the current version and cannot be deleted. Remaining versions keep their
+    /// original numbers, and deleted version numbers are not reused.
+    /// </remarks>
+    /// <param name="version">The historical unified version number to delete.</param>
+    /// <returns>
+    /// A success result when the version has been deleted; otherwise, a failure result with the store diagnostic.
+    /// </returns>
+    public async Task<Res> DeleteUnifiedVersionAsync(long version)
+    {
+        try
+        {
+            await unifiedVersionService.DeleteVersionAsync(version, CancellationToken.None);
+            return Res.Ok();
+        }
+        catch (Exception ex)
+        {
+            return Res.Fail($"Failed to delete unified configuration version: {ex.GetMessageRecursively()}");
+        }
+    }
+
+    /// <summary>
     /// Compares two unified configuration versions.
     /// </summary>
     /// <param name="originVersion">The origin version number.</param>

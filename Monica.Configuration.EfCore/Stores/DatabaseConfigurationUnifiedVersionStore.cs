@@ -10,44 +10,45 @@ namespace Monica.Configuration.EfCore.Stores;
 internal sealed class DatabaseConfigurationUnifiedVersionStore(ConfigurationDatabase database)
     : IConfigurationUnifiedVersionStore
 {
-    private const int MAX_APPEND_RETRY_COUNT = 5;
+    private const string UNIFIED_VERSION_LOCK_MARKER_KEY = "Configuration.EfCore.UnifiedVersionLock";
 
-    public async Task<ConfigurationUnifiedVersionSnapshot> AppendVersionAsync(
+    public Task<ConfigurationUnifiedVersionSnapshot> AppendVersionAsync(
         ConfigurationUnifiedVersionCreateRequest request,
         CancellationToken cancellationToken)
     {
-        for (var attempt = 1; attempt <= MAX_APPEND_RETRY_COUNT; attempt++)
+        // Appends are intentionally not retried as a whole: without a capture identity, an ambiguous successful
+        // commit could otherwise create a second version. The database lock removes allocation races.
+        return database.ExecuteAsync(async (dbContext, token) =>
         {
-            try
+            await ConfigurationDatabaseLock.EnsureMarkerExistsAsync(
+                dbContext,
+                UNIFIED_VERSION_LOCK_MARKER_KEY,
+                token);
+            await using var transaction = await dbContext.Database.BeginTransactionAsync(token);
+            // Append and delete use the same row lock, making version allocation and the current-version invariant serial.
+            await ConfigurationDatabaseLock.AcquireAsync(
+                dbContext,
+                UNIFIED_VERSION_LOCK_MARKER_KEY,
+                token);
+
+            var version = (await dbContext.ConfigurationUnifiedVersions
+                .Select(candidate => (long?)candidate.Version)
+                .MaxAsync(token) ?? 0) + 1;
+            var summary = CreateSummary(version, request);
+
+            dbContext.ConfigurationUnifiedVersions.Add(ConfigurationUnifiedVersionMapper.ToEntity(summary));
+            dbContext.ConfigurationUnifiedVersionDocuments.AddRange(
+                request.Definitions.Select(definition =>
+                    ConfigurationUnifiedVersionMapper.ToEntity(version, definition)));
+            await dbContext.SaveChangesAsync(token);
+            await transaction.CommitAsync(token);
+
+            return new ConfigurationUnifiedVersionSnapshot
             {
-                return await database.ExecuteAsync(async (dbContext, token) =>
-                {
-                    var version = (await dbContext.ConfigurationUnifiedVersions
-                        .Select(candidate => (long?)candidate.Version)
-                        .MaxAsync(token) ?? 0) + 1;
-                    var summary = CreateSummary(version, request);
-
-                    dbContext.ConfigurationUnifiedVersions.Add(ConfigurationUnifiedVersionMapper.ToEntity(summary));
-                    dbContext.ConfigurationUnifiedVersionDocuments.AddRange(
-                        request.Definitions.Select(definition =>
-                            ConfigurationUnifiedVersionMapper.ToEntity(version, definition)));
-                    await dbContext.SaveChangesAsync(token);
-
-                    return new ConfigurationUnifiedVersionSnapshot
-                    {
-                        Summary = summary,
-                        Definitions = request.Definitions
-                    };
-                }, cancellationToken);
-            }
-            catch (DbUpdateException) when (attempt < MAX_APPEND_RETRY_COUNT)
-            {
-                // Another instance may have assigned the same next version first.
-            }
-        }
-
-        throw new InvalidOperationException(
-            $"Failed to append a unified configuration version after {MAX_APPEND_RETRY_COUNT} attempts.");
+                Summary = summary,
+                Definitions = request.Definitions
+            };
+        }, cancellationToken);
     }
 
     public async Task<IReadOnlyList<ConfigurationUnifiedVersionSummary>> ListVersionsAsync(
@@ -111,6 +112,56 @@ internal sealed class DatabaseConfigurationUnifiedVersionStore(ConfigurationData
                     candidate.MutationGroupId == mutationGroupId),
                 token),
             cancellationToken);
+    }
+
+    public async Task DeleteVersionAsync(long version, CancellationToken cancellationToken)
+    {
+        var versionWasObserved = false;
+        _ = await database.ExecuteResilientAsync(async (dbContext, token) =>
+        {
+            await ConfigurationDatabaseLock.EnsureMarkerExistsAsync(
+                dbContext,
+                UNIFIED_VERSION_LOCK_MARKER_KEY,
+                token);
+            await using var transaction = await dbContext.Database.BeginTransactionAsync(token);
+            // The shared lock prevents an append from changing which version is current during this deletion.
+            await ConfigurationDatabaseLock.AcquireAsync(
+                dbContext,
+                UNIFIED_VERSION_LOCK_MARKER_KEY,
+                token);
+
+            var summary = await dbContext.ConfigurationUnifiedVersions
+                .SingleOrDefaultAsync(candidate => candidate.Version == version, token);
+            if (summary is null)
+            {
+                if (!versionWasObserved)
+                {
+                    throw new KeyNotFoundException($"Unified configuration version '{version}' was not found.");
+                }
+
+                // A retry after an ambiguous commit observes the already-completed deletion as success.
+                await transaction.RollbackAsync(token);
+                return true;
+            }
+
+            var latestVersion = await dbContext.ConfigurationUnifiedVersions
+                .MaxAsync(candidate => candidate.Version, token);
+            if (version == latestVersion)
+            {
+                throw new InvalidOperationException(
+                    $"Unified configuration version '{version}' is the current version and cannot be deleted.");
+            }
+
+            versionWasObserved = true;
+            var documents = await dbContext.ConfigurationUnifiedVersionDocuments
+                .Where(document => document.Version == version)
+                .ToArrayAsync(token);
+            dbContext.ConfigurationUnifiedVersionDocuments.RemoveRange(documents);
+            dbContext.ConfigurationUnifiedVersions.Remove(summary);
+            await dbContext.SaveChangesAsync(token);
+            await transaction.CommitAsync(token);
+            return true;
+        }, cancellationToken);
     }
 
     private static ConfigurationUnifiedVersionSummary CreateSummary(

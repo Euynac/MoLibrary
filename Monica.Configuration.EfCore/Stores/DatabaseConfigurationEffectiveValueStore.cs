@@ -117,6 +117,35 @@ internal sealed class DatabaseConfigurationEffectiveValueStore(ConfigurationData
     }
 
     /// <inheritdoc />
+    public async Task<IReadOnlyList<ConfigurationEffectiveValueDocument?>> GetManyAsync(
+        IReadOnlyList<string> definitionKeys,
+        CancellationToken cancellationToken)
+    {
+        if (definitionKeys.Count == 0)
+        {
+            return [];
+        }
+
+        return await database.ExecuteAsync(async (dbContext, token) =>
+        {
+            var definitionIdentities = definitionKeys
+                .Select(ConfigurationDefinitionIdentity.Compute)
+                .Distinct(StringComparer.Ordinal)
+                .ToArray();
+            var entities = await dbContext.ConfigurationEffectiveValues
+                .AsNoTracking()
+                .Where(value => definitionIdentities.Contains(value.DefinitionIdentity))
+                .ToArrayAsync(token);
+            var entitiesByKey = ConfigurationEffectiveValueMapper.ToEntityDictionary(entities);
+            return definitionKeys
+                .Select(definitionKey => entitiesByKey.TryGetValue(definitionKey, out var entity)
+                    ? ConfigurationEffectiveValueMapper.ToDocument(entity)
+                    : null)
+                .ToArray();
+        }, cancellationToken);
+    }
+
+    /// <inheritdoc />
     public async Task<ConfigurationEffectiveValueDocument> SaveAsync(
         ConfigurationEffectiveValueSaveRequest request,
         CancellationToken cancellationToken)

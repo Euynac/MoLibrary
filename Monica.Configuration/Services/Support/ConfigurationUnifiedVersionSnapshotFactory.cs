@@ -8,14 +8,14 @@ namespace Monica.Configuration.Services.Support;
 
 internal sealed class ConfigurationUnifiedVersionSnapshotFactory(
     ConfigurationDefinitionResolver definitionResolver,
-    IConfigurationEffectiveValueStore effectiveValueStore,
-    ConfigurationEffectiveValueSeedFactory seedFactory,
+    ConfigurationEffectiveSnapshotReader effectiveSnapshotReader,
     IConfigurationSourceInspector sourceInspector,
-    IConfigurationReloadCoordinator reloadCoordinator,
     ConfigurationRuntimeContext runtimeContext,
     IEnumerable<IConfigurationUnifiedVersionFilter> filters,
     IOptions<ModuleConfigurationOption> options)
 {
+    private const string EFFECTIVE_SOURCE_KEY = "monica:effective";
+    private const string EFFECTIVE_SOURCE_DISPLAY_NAME = "Monica Effective Store";
     private const int MAX_RUNTIME_SNAPSHOT_ATTEMPTS = 3;
 
     public bool IsEnabled => options.Value.UnifiedVersionControl.Enabled;
@@ -93,9 +93,12 @@ internal sealed class ConfigurationUnifiedVersionSnapshotFactory(
         CancellationToken cancellationToken)
     {
         var snapshots = new List<ConfigurationUnifiedVersionDefinitionSnapshot>(selectedDefinitions.Count);
-        foreach (var definition in selectedDefinitions)
+        var effectiveSnapshots = await effectiveSnapshotReader.ReadManyAsync(selectedDefinitions, cancellationToken);
+        for (var index = 0; index < selectedDefinitions.Count; index++)
         {
-            var document = await effectiveValueStore.GetAsync(definition.DefinitionKey, cancellationToken);
+            var definition = selectedDefinitions[index];
+            var effectiveSnapshot = effectiveSnapshots[index];
+            var isPublishedDefinition = definition.Origin == ConfigurationDefinitionOrigin.PublishedMetadata;
             snapshots.Add(new ConfigurationUnifiedVersionDefinitionSnapshot
             {
                 DefinitionKey = definition.DefinitionKey,
@@ -104,10 +107,13 @@ internal sealed class ConfigurationUnifiedVersionSnapshotFactory(
                 FromProject = definition.FromProject,
                 SchemaVersion = definition.SchemaVersion,
                 SchemaHash = definition.SchemaHash,
-                EffectiveValueVersion = reloadCoordinator.GetLoadedMonicaProjectionVersion(definition.DefinitionKey)
-                                        ?? document?.Version,
-                Json = seedFactory.CreateRuntimeJson(definition.Root, definition.SectionPath),
-                SourceContributions = CaptureSourceContributions(definition)
+                EffectiveValueVersion = effectiveSnapshot.Version,
+                Json = effectiveSnapshot.Json,
+                SourceContributions = isPublishedDefinition
+                    ? CapturePersistedSourceContribution(
+                        definition,
+                        effectiveSnapshot.RequirePersistedDocument(definition))
+                    : CaptureRuntimeSourceContributions(definition)
             });
         }
 
@@ -151,7 +157,7 @@ internal sealed class ConfigurationUnifiedVersionSnapshotFactory(
             .ToArray();
     }
 
-    private IReadOnlyList<ConfigurationUnifiedVersionSourceContribution> CaptureSourceContributions(
+    private IReadOnlyList<ConfigurationUnifiedVersionSourceContribution> CaptureRuntimeSourceContributions(
         ConfigurationDefinition definition)
     {
         try
@@ -171,5 +177,28 @@ internal sealed class ConfigurationUnifiedVersionSnapshotFactory(
         {
             return [];
         }
+    }
+
+    private IReadOnlyList<ConfigurationUnifiedVersionSourceContribution> CapturePersistedSourceContribution(
+        ConfigurationDefinition definition,
+        ConfigurationEffectiveValueDocument document)
+    {
+        var valueCount = ConfigurationRollbackChangePlanner.EnumerateLeaves(definition.Root, document.Json).Count;
+        if (valueCount == 0)
+        {
+            return [];
+        }
+
+        return
+        [
+            new ConfigurationUnifiedVersionSourceContribution
+            {
+                SourceKey = EFFECTIVE_SOURCE_KEY,
+                DisplayName = EFFECTIVE_SOURCE_DISPLAY_NAME,
+                Kind = ConfigurationSourceKind.MonicaEffectiveStore,
+                SuppliedValueCount = valueCount,
+                EffectiveValueCount = valueCount
+            }
+        ];
     }
 }

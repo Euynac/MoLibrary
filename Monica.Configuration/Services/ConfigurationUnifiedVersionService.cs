@@ -25,6 +25,11 @@ internal sealed class ConfigurationUnifiedVersionService(
         return versionStore.GetVersionAsync(version, cancellationToken);
     }
 
+    public Task DeleteVersionAsync(long version, CancellationToken cancellationToken)
+    {
+        return versionStore.DeleteVersionAsync(version, cancellationToken);
+    }
+
     public async Task<ConfigurationUnifiedVersionComparison> CompareVersionsAsync(
         long originVersion,
         long targetVersion,

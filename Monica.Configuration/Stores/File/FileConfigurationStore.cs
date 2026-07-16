@@ -119,6 +119,33 @@ public sealed class FileConfigurationStore(IOptions<ConfigurationFileStoreOption
     }
 
     /// <inheritdoc />
+    public async Task<IReadOnlyList<ConfigurationEffectiveValueDocument?>> GetManyAsync(
+        IReadOnlyList<string> definitionKeys,
+        CancellationToken cancellationToken)
+    {
+        if (definitionKeys.Count == 0)
+        {
+            return [];
+        }
+
+        await _lock.WaitAsync(cancellationToken);
+        try
+        {
+            var documents = new ConfigurationEffectiveValueDocument?[definitionKeys.Count];
+            for (var index = 0; index < definitionKeys.Count; index++)
+            {
+                documents[index] = await ReadDocumentAsync(definitionKeys[index], cancellationToken);
+            }
+
+            return documents;
+        }
+        finally
+        {
+            _lock.Release();
+        }
+    }
+
+    /// <inheritdoc />
     public async Task<ConfigurationEffectiveValueDocument> SaveAsync(
         ConfigurationEffectiveValueSaveRequest request,
         CancellationToken cancellationToken)
@@ -511,10 +538,7 @@ public sealed class FileConfigurationStore(IOptions<ConfigurationFileStoreOption
             summaries = summaries
                 .OrderByDescending(static item => item.Version)
                 .ToList();
-            await IoFile.WriteAllTextAsync(
-                GetUnifiedVersionIndexPath(),
-                JsonSerializer.Serialize(summaries, JSON_OPTIONS),
-                cancellationToken);
+            await WriteUnifiedVersionIndexAsync(summaries, cancellationToken);
             return snapshot;
         }
         finally
@@ -559,6 +583,12 @@ public sealed class FileConfigurationStore(IOptions<ConfigurationFileStoreOption
         await _lock.WaitAsync(cancellationToken);
         try
         {
+            var summaries = await ReadUnifiedVersionIndexAsync(cancellationToken);
+            if (summaries.All(summary => summary.Version != version))
+            {
+                return null;
+            }
+
             var path = GetUnifiedVersionSnapshotPath(version);
             return IoFile.Exists(path)
                 ? JsonSerializer.Deserialize<ConfigurationUnifiedVersionSnapshot>(
@@ -593,6 +623,50 @@ public sealed class FileConfigurationStore(IOptions<ConfigurationFileStoreOption
                     await IoFile.ReadAllTextAsync(path, cancellationToken),
                     JSON_OPTIONS)
                 : null;
+        }
+        finally
+        {
+            _lock.Release();
+        }
+    }
+
+    /// <inheritdoc />
+    public async Task DeleteVersionAsync(long version, CancellationToken cancellationToken)
+    {
+        await _lock.WaitAsync(cancellationToken);
+        try
+        {
+            EnsureDirectories();
+            var summaries = await ReadUnifiedVersionIndexAsync(cancellationToken);
+            var summaryIndex = summaries.FindIndex(candidate => candidate.Version == version);
+            if (summaryIndex < 0)
+            {
+                throw new KeyNotFoundException($"Unified configuration version '{version}' was not found.");
+            }
+
+            var latestVersion = summaries.Max(static candidate => candidate.Version);
+            if (version == latestVersion)
+            {
+                throw new InvalidOperationException(
+                    $"Unified configuration version '{version}' is the current version and cannot be deleted.");
+            }
+
+            var deletionMarkerPath = GetUnifiedVersionDeletionMarkerPath(version);
+            await IoFile.WriteAllTextAsync(deletionMarkerPath, string.Empty, cancellationToken);
+            try
+            {
+                summaries.RemoveAt(summaryIndex);
+                await WriteUnifiedVersionIndexAsync(summaries, cancellationToken);
+            }
+            catch
+            {
+                _ = TryDeleteFile(deletionMarkerPath);
+                throw;
+            }
+
+            // The index replacement is the commit point. Cleanup is recoverable and must not turn a committed delete
+            // into a reported failure when the snapshot cannot be removed immediately.
+            FinalizeUnifiedVersionDeletion(version, deletionMarkerPath);
         }
         finally
         {
@@ -768,9 +842,92 @@ public sealed class FileConfigurationStore(IOptions<ConfigurationFileStoreOption
             return [];
         }
 
-        return JsonSerializer.Deserialize<List<ConfigurationUnifiedVersionSummary>>(
+        var summaries = JsonSerializer.Deserialize<List<ConfigurationUnifiedVersionSummary>>(
             await IoFile.ReadAllTextAsync(path, cancellationToken),
             JSON_OPTIONS) ?? [];
+        RecoverUnifiedVersionDeletions(summaries);
+        return summaries;
+    }
+
+    private void RecoverUnifiedVersionDeletions(
+        IReadOnlyList<ConfigurationUnifiedVersionSummary> summaries)
+    {
+        var unifiedVersionDirectory = GetUnifiedVersionDirectory();
+        if (!IoDirectory.Exists(unifiedVersionDirectory))
+        {
+            return;
+        }
+
+        var retainedVersions = summaries
+            .Select(static summary => summary.Version)
+            .ToHashSet();
+        foreach (var markerPath in IoDirectory.EnumerateFiles(unifiedVersionDirectory, "v*.deleting"))
+        {
+            var markerName = Path.GetFileNameWithoutExtension(markerPath);
+            if (markerName.Length <= 1 || markerName[0] != 'v'
+                                       || !long.TryParse(markerName.AsSpan(1), out var version))
+            {
+                continue;
+            }
+
+            if (retainedVersions.Contains(version))
+            {
+                // The index update never committed, so discard only the abandoned intent marker.
+                _ = TryDeleteFile(markerPath);
+                continue;
+            }
+
+            FinalizeUnifiedVersionDeletion(version, markerPath);
+        }
+    }
+
+    private void FinalizeUnifiedVersionDeletion(long version, string deletionMarkerPath)
+    {
+        if (TryDeleteFile(GetUnifiedVersionSnapshotPath(version)))
+        {
+            _ = TryDeleteFile(deletionMarkerPath);
+        }
+    }
+
+    private static bool TryDeleteFile(string path)
+    {
+        try
+        {
+            IoFile.Delete(path);
+            return true;
+        }
+        catch (IOException)
+        {
+            return false;
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return false;
+        }
+    }
+
+    private async Task WriteUnifiedVersionIndexAsync(
+        IReadOnlyList<ConfigurationUnifiedVersionSummary> summaries,
+        CancellationToken cancellationToken)
+    {
+        var indexPath = GetUnifiedVersionIndexPath();
+        var stagingPath = $"{indexPath}.{Guid.NewGuid():N}.tmp";
+        try
+        {
+            // Replace the complete index in one filesystem operation so readers never observe a partial JSON document.
+            await IoFile.WriteAllTextAsync(
+                stagingPath,
+                JsonSerializer.Serialize(summaries, JSON_OPTIONS),
+                cancellationToken);
+            IoFile.Move(stagingPath, indexPath, overwrite: true);
+        }
+        finally
+        {
+            if (IoFile.Exists(stagingPath))
+            {
+                IoFile.Delete(stagingPath);
+            }
+        }
     }
 
     private void EnsureDirectories()
@@ -902,6 +1059,11 @@ public sealed class FileConfigurationStore(IOptions<ConfigurationFileStoreOption
     private string GetUnifiedVersionSnapshotPath(long version)
     {
         return Path.Combine(GetUnifiedVersionDirectory(), $"v{version}.json");
+    }
+
+    private string GetUnifiedVersionDeletionMarkerPath(long version)
+    {
+        return Path.Combine(GetUnifiedVersionDirectory(), $"v{version}.deleting");
     }
 
     private static string GetSafeFileName(string definitionKey)

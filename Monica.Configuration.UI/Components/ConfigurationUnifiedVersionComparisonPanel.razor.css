@@ -1,0 +1,11 @@
+.configuration-version-comparison-panel {
+    min-width: 0;
+    position: sticky;
+    top: 1rem;
+}
+
+@media (max-width: 959.98px) {
+    .configuration-version-comparison-panel {
+        position: static;
+    }
+}

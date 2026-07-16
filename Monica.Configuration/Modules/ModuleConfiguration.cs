@@ -120,6 +120,7 @@ public sealed class ModuleConfiguration
         services.TryAddSingleton<IConfigurationRollbackService, ConfigurationRollbackService>();
         services.TryAddSingleton<IConfigurationUnifiedVersionService, ConfigurationUnifiedVersionService>();
         services.TryAddSingleton<IConfigurationUnifiedVersionCoordinator, ConfigurationUnifiedVersionCoordinator>();
+        services.TryAddSingleton<ConfigurationEffectiveSnapshotReader>();
         services.TryAddSingleton<ConfigurationUnifiedVersionSnapshotFactory>();
         services.TryAddSingleton<ConfigurationUnifiedVersionRollbackPreviewFactory>();
         services.TryAddSingleton<ConfigurationRollbackPersistencePlanner>();

@@ -147,6 +147,13 @@ public static class ModuleConfigurationEfCoreBuilderExtensions
             return inner.GetAsync(definitionKey, cancellationToken);
         }
 
+        public Task<IReadOnlyList<ConfigurationEffectiveValueDocument?>> GetManyAsync(
+            IReadOnlyList<string> definitionKeys,
+            CancellationToken cancellationToken)
+        {
+            return inner.GetManyAsync(definitionKeys, cancellationToken);
+        }
+
         public Task<ConfigurationEffectiveValueDocument> SaveAsync(
             ConfigurationEffectiveValueSaveRequest request,
             CancellationToken cancellationToken)

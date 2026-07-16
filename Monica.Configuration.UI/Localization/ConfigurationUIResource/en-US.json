@@ -417,7 +417,17 @@
       "Empty": "No definitions were captured."
     },
     "Actions": {
-      "ComparePrevious": "Compare with previous version"
+      "ComparePrevious": "Compare with previous version",
+      "Delete": "Delete history version"
+    },
+    "Delete": {
+      "ConfirmTitle": "Delete {0}?",
+      "ConfirmMessage": "Permanently delete the {0} history snapshot? This does not change the current version or any effective configuration values.",
+      "Confirm": "Delete version",
+      "Messages": {
+        "Succeeded": "{0} was deleted.",
+        "Failed": "Failed to delete {0}: {1}"
+      }
     },
     "Diff": {
       "Title": "{0} -> {1}",
