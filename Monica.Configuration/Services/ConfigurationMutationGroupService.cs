@@ -95,6 +95,15 @@ internal sealed class ConfigurationMutationGroupService(
     }
 
     /// <inheritdoc />
+    public async Task<ConfigurationMutationGroupPageResult> QueryPageAsync(
+        ConfigurationMutationGroupPageRequest request,
+        CancellationToken cancellationToken)
+    {
+        request.Validate();
+        return await historyStore.QueryGroupsPageAsync(request, cancellationToken);
+    }
+
+    /// <inheritdoc />
     public async Task<ConfigurationMutationGroup?> GetAsync(string groupId, CancellationToken cancellationToken)
     {
         return await historyStore.GetGroupAsync(groupId, cancellationToken);

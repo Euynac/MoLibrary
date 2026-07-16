@@ -30,9 +30,27 @@ internal sealed class ConfigurationHistoryService(IConfigurationHistoryStore his
     }
 
     /// <inheritdoc />
+    public async Task<ConfigurationHistoryPageResult> QueryHistoryPageAsync(
+        ConfigurationHistoryPageRequest request,
+        CancellationToken cancellationToken)
+    {
+        request.Validate();
+        var page = await historyStore.QueryHistoryPageAsync(request, cancellationToken);
+        return page with { Items = Sort(page.Items) };
+    }
+
+    /// <inheritdoc />
     public async Task<ConfigurationValueHistory?> GetHistoryByIdAsync(string historyId, CancellationToken cancellationToken)
     {
         return await historyStore.GetHistoryByIdAsync(historyId, cancellationToken);
+    }
+
+    /// <inheritdoc />
+    public async Task<IReadOnlyList<ConfigurationValueHistory>> GetHistoriesByIdsAsync(
+        IReadOnlyCollection<string> historyIds,
+        CancellationToken cancellationToken)
+    {
+        return await historyStore.GetHistoriesByIdsAsync(historyIds, cancellationToken);
     }
 
     private static IReadOnlyList<ConfigurationValueHistory> Sort(IEnumerable<ConfigurationValueHistory> histories)
@@ -40,6 +58,7 @@ internal sealed class ConfigurationHistoryService(IConfigurationHistoryStore his
         return histories
             .OrderByDescending(history => history.ModifiedTime)
             .ThenByDescending(history => history.Version)
+            .ThenByDescending(history => history.HistoryId, StringComparer.Ordinal)
             .ToArray();
     }
 }

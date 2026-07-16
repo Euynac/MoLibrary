@@ -1,5 +1,6 @@
 @using Monica.Configuration.UI.Localization
 @using Monica.UI.UIDiffHighlight.Models
+@inject ConfigurationFacade Facade
 @inject IDialogService DialogService
 @inject ISnackbar Snackbar
 @inject IStringLocalizer<ConfigurationUIResource> L
@@ -171,6 +172,15 @@
         </MudStack>
     </DialogContent>
     <DialogActions>
+        @if (_hasMore)
+        {
+            <MudButton Variant="Variant.Outlined"
+                       StartIcon="@Icons.Material.Filled.ExpandMore"
+                       Disabled="@_loadingMore"
+                       OnClick="LoadMoreAsync">
+                @L["History:Actions:LoadMore"]
+            </MudButton>
+        }
         <MudButton OnClick="Close">@L["Common:Actions:Close"]</MudButton>
     </DialogActions>
 </MudDialog>
@@ -186,9 +196,16 @@
     [Parameter] public ConfigurationMutationGroup? Group { get; set; }
     [Parameter] public string? Title { get; set; }
     [Parameter] public LogicalPath? FocusPath { get; set; }
+    [Parameter] public ConfigurationHistoryPageRequest? HistoryRequest { get; set; }
+    [Parameter] public ConfigurationHistoryPageResult? InitialPage { get; set; }
 
+    private readonly List<ConfigurationValueHistory> _loadedRows = [];
     private readonly List<HistoryTimelineEntry> _entries = [];
+    private ConfigurationHistoryPageRequest? _pagingRequest;
     private HistoryTimelineEntry? _selectedEntry;
+    private ConfigurationHistoryCursor? _nextCursor;
+    private bool _hasMore;
+    private bool _loadingMore;
 
     private string DialogTitle => !string.IsNullOrWhiteSpace(Title)
         ? Title!
@@ -207,12 +224,24 @@
         ? L["Rollback:Confirm"].Value
         : L["History:Actions:RollbackBlockedMetadata"].Value;
 
-    protected override void OnParametersSet()
+    protected override void OnInitialized()
+    {
+        _loadedRows.AddRange(InitialPage?.Items ?? Rows);
+        _pagingRequest = HistoryRequest is null || InitialPage is null
+            ? null
+            : HistoryRequest;
+        _nextCursor = InitialPage?.NextCursor;
+        _hasMore = _pagingRequest is not null && InitialPage?.HasMore is true;
+        RebuildEntries();
+    }
+
+    private void RebuildEntries()
     {
         _entries.Clear();
-        var orderedRows = Rows
+        var orderedRows = _loadedRows
             .OrderByDescending(row => row.ModifiedTime)
             .ThenByDescending(row => row.Version)
+            .ThenByDescending(row => row.HistoryId, StringComparer.Ordinal)
             .ToArray();
         var focusedSinglePath = Group is null && FocusPath is not null;
 
@@ -245,6 +274,37 @@
         }
 
         _selectedEntry = _entries.FirstOrDefault(entry => _selectedEntry?.Id == entry.Id) ?? _entries.FirstOrDefault();
+    }
+
+    private async Task LoadMoreAsync()
+    {
+        if (_loadingMore || !_hasMore || _pagingRequest is null || _nextCursor is null)
+        {
+            return;
+        }
+
+        _loadingMore = true;
+        try
+        {
+            var result = await Facade.QueryHistoryPageAsync(_pagingRequest with { Cursor = _nextCursor });
+            if (result.IsFailed(out var error, out var page))
+            {
+                Snackbar.Add($"{L["Common:Errors:LoadFailed"]}: {error.Message}", Severity.Error);
+                return;
+            }
+
+            var loadedIds = _loadedRows
+                .Select(static history => history.HistoryId)
+                .ToHashSet(StringComparer.OrdinalIgnoreCase);
+            _loadedRows.AddRange(page.Items.Where(history => loadedIds.Add(history.HistoryId)));
+            _nextCursor = page.NextCursor;
+            _hasMore = page.HasMore;
+            RebuildEntries();
+        }
+        finally
+        {
+            _loadingMore = false;
+        }
     }
 
     private void SelectEntry(HistoryTimelineEntry entry)

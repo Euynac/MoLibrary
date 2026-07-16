@@ -33,9 +33,42 @@ internal sealed class ConfigurationJsonFileSourceWriter : IConfigurationJsonFile
     };
 
     /// <inheritdoc />
+    public async Task<ConfigurationJsonFilePhysicalValuesSnapshot> ReadPhysicalValuesAsync(
+        ConfigurationSourceDescriptor source,
+        IReadOnlyList<string> configurationPaths,
+        CancellationToken cancellationToken)
+    {
+        var read = await ReadPhysicalValuesCoreAsync(source, configurationPaths, cancellationToken);
+        return new ConfigurationJsonFilePhysicalValuesSnapshot
+        {
+            Values = read.Values,
+            Revision = read.Revision
+        };
+    }
+
+    /// <inheritdoc />
     public async Task<ConfigurationJsonFileValuesSnapshot> ReadValuesAsync(
         ConfigurationSourceDescriptor source,
         ConfigurationDefinition definition,
+        IReadOnlyList<string> configurationPaths,
+        CancellationToken cancellationToken)
+    {
+        var read = await ReadPhysicalValuesCoreAsync(source, configurationPaths, cancellationToken);
+        using var jsonStream = new MemoryStream(Encoding.UTF8.GetBytes(read.NormalizedText));
+        var isolatedRoot = new ConfigurationBuilder().AddJsonStream(jsonStream).Build();
+        using var isolatedRootLifetime = isolatedRoot as IDisposable;
+        return new ConfigurationJsonFileValuesSnapshot
+        {
+            Values = read.Values,
+            Revision = read.Revision,
+            ProjectionRevision = ConfigurationProviderProjectionRevision.Compute(
+                isolatedRoot.Providers.Single(),
+                definition)
+        };
+    }
+
+    private static async Task<PhysicalValuesRead> ReadPhysicalValuesCoreAsync(
+        ConfigurationSourceDescriptor source,
         IReadOnlyList<string> configurationPaths,
         CancellationToken cancellationToken)
     {
@@ -59,24 +92,13 @@ internal sealed class ConfigurationJsonFileSourceWriter : IConfigurationJsonFile
                 source.DisplayName);
             var root = JsonNode.Parse(normalizedText, documentOptions: DOCUMENT_OPTIONS)
                        ?? new JsonObject();
-            using var jsonStream = new MemoryStream(Encoding.UTF8.GetBytes(normalizedText));
-            var isolatedRoot = new ConfigurationBuilder().AddJsonStream(jsonStream).Build();
-            using var isolatedRootLifetime = isolatedRoot as IDisposable;
-            var projectionRevision = ConfigurationProviderProjectionRevision.Compute(
-                isolatedRoot.Providers.Single(),
-                definition);
             var values = configurationPaths
                 .Distinct(StringComparer.OrdinalIgnoreCase)
                 .ToDictionary(
                     static path => path,
                     path => Read(root, path.Split(':', StringSplitOptions.RemoveEmptyEntries)),
                     StringComparer.OrdinalIgnoreCase);
-            return new ConfigurationJsonFileValuesSnapshot
-            {
-                Values = values,
-                Revision = ComputeRevision(text),
-                ProjectionRevision = projectionRevision
-            };
+            return new PhysicalValuesRead(values, ComputeRevision(text), normalizedText);
         }
         finally
         {
@@ -520,4 +542,9 @@ internal sealed class ConfigurationJsonFileSourceWriter : IConfigurationJsonFile
     {
         return string.IsNullOrWhiteSpace(content) ? "{}" : content;
     }
+
+    private sealed record PhysicalValuesRead(
+        IReadOnlyDictionary<string, ConfigurationStoredValue?> Values,
+        string Revision,
+        string NormalizedText);
 }

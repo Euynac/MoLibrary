@@ -1,4 +1,5 @@
 using System.Data.Common;
+using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using Monica.Configuration.Abstractions;
 using Monica.Configuration.Exceptions;
@@ -15,12 +16,18 @@ public sealed class ConfigurationDefinitionResolver(
     IConfigurationDefinitionRegistry definitionRegistry,
     IConfigurationMetadataStore metadataStore)
 {
+    private static readonly TimeSpan READ_SNAPSHOT_LIFETIME = TimeSpan.FromSeconds(30);
+    private readonly Lock _readSnapshotLock = new();
+    private ConfigurationDefinitionReadSnapshot? _readSnapshot;
+    private long _readSnapshotGeneration;
+
     /// <summary>
     /// Gets a fault-isolated catalog for diagnostic UI scenarios without weakening authoritative resolution.
     /// </summary>
     internal async Task<ConfigurationDefinitionCatalogSnapshot> GetDiagnosticCatalogAsync(
         CancellationToken cancellationToken)
     {
+        var snapshotGeneration = CaptureReadSnapshotGeneration();
         var entriesByKey = new Dictionary<string, ConfigurationDefinitionCatalogEntry>(StringComparer.OrdinalIgnoreCase);
         foreach (var registeredDefinition in definitionRegistry.GetAll())
         {
@@ -44,6 +51,7 @@ public sealed class ConfigurationDefinitionResolver(
         }
         catch (Exception ex)
         {
+            InvalidateReadSnapshot();
             foreach (var (key, entry) in entriesByKey.ToArray())
             {
                 entriesByKey[key] = entry with
@@ -109,10 +117,12 @@ public sealed class ConfigurationDefinitionResolver(
             };
         }
 
-        return new ConfigurationDefinitionCatalogSnapshot
+        var snapshot = new ConfigurationDefinitionCatalogSnapshot
         {
             Entries = SortCatalogEntries(entriesByKey.Values)
         };
+        PublishReadSnapshot(snapshot, snapshotGeneration);
+        return snapshot;
     }
 
     /// <summary>
@@ -177,6 +187,40 @@ public sealed class ConfigurationDefinitionResolver(
             : publishedEntry.RequireDefinition() with { Origin = ConfigurationDefinitionOrigin.PublishedMetadata };
     }
 
+    /// <summary>
+    /// Gets one definition from the most recent complete management read snapshot when available.
+    /// </summary>
+    /// <remarks>
+    /// This read-optimized path is intended for display and inspection only. Mutation and rollback workflows must use
+    /// <see cref="GetRequiredAsync"/> so schema concurrency validation always starts from authoritative metadata.
+    /// </remarks>
+    internal async Task<ConfigurationDefinition> GetRequiredForReadAsync(
+        string definitionKey,
+        CancellationToken cancellationToken)
+    {
+        ConfigurationDefinitionReadSnapshot? snapshot;
+        lock (_readSnapshotLock)
+        {
+            snapshot = _readSnapshot;
+        }
+
+        return snapshot?.IsFresh is true
+            ? snapshot.GetRequired(definitionKey)
+            : await GetRequiredAsync(definitionKey, cancellationToken);
+    }
+
+    /// <summary>
+    /// Invalidates the management read snapshot after locally published or remotely observed metadata changes.
+    /// </summary>
+    internal void InvalidateReadSnapshot()
+    {
+        lock (_readSnapshotLock)
+        {
+            _readSnapshot = null;
+            _readSnapshotGeneration++;
+        }
+    }
+
     private static ConfigurationDefinition MergePublishedMetadata(
         ConfigurationDefinition localDefinition,
         ConfigurationDefinition? publishedDefinition)
@@ -212,6 +256,25 @@ public sealed class ConfigurationDefinitionResolver(
         ConfigurationDefinition publishedDefinition)
     {
         return string.Equals(localDefinition.SchemaHash, publishedDefinition.SchemaHash, StringComparison.Ordinal);
+    }
+
+    private long CaptureReadSnapshotGeneration()
+    {
+        lock (_readSnapshotLock)
+        {
+            return _readSnapshotGeneration;
+        }
+    }
+
+    private void PublishReadSnapshot(ConfigurationDefinitionCatalogSnapshot snapshot, long expectedGeneration)
+    {
+        lock (_readSnapshotLock)
+        {
+            if (_readSnapshotGeneration == expectedGeneration)
+            {
+                _readSnapshot = ConfigurationDefinitionReadSnapshot.Create(snapshot.Entries);
+            }
+        }
     }
 
     private ConfigurationMetadataStoreDiagnostic CreateStoreDiagnostic(Exception error)
@@ -277,5 +340,41 @@ public sealed class ConfigurationDefinitionResolver(
 
         definition = null;
         return false;
+    }
+
+    private sealed class ConfigurationDefinitionReadSnapshot(
+        IReadOnlyDictionary<string, ConfigurationDefinitionCatalogEntry> entriesByKey,
+        long createdTimestamp)
+    {
+        public bool IsFresh => Stopwatch.GetElapsedTime(createdTimestamp) < READ_SNAPSHOT_LIFETIME;
+
+        public static ConfigurationDefinitionReadSnapshot Create(
+            IReadOnlyList<ConfigurationDefinitionCatalogEntry> entries)
+        {
+            return new ConfigurationDefinitionReadSnapshot(entries.ToDictionary(
+                DefinitionKey,
+                StringComparer.OrdinalIgnoreCase), Stopwatch.GetTimestamp());
+        }
+
+        public ConfigurationDefinition GetRequired(string definitionKey)
+        {
+            if (!entriesByKey.TryGetValue(definitionKey, out var entry))
+            {
+                throw new ConfigurationDefinitionNotFoundException(definitionKey);
+            }
+
+            if (entry.Availability != ConfigurationDefinitionAvailability.Available)
+            {
+                throw new ConfigurationDefinitionMetadataUnavailableException(
+                    definitionKey,
+                    entry.Diagnostic
+                    ?? throw new InvalidOperationException(
+                        $"Unavailable definition '{definitionKey}' has no metadata diagnostic."));
+            }
+
+            return entry.Definition
+                   ?? throw new InvalidOperationException(
+                       $"Available definition '{definitionKey}' has no materialized schema.");
+        }
     }
 }

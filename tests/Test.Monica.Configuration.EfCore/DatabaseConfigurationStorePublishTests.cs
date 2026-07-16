@@ -216,7 +216,7 @@ public sealed class DatabaseConfigurationStorePublishTests
         var services = new ServiceCollection();
         services.AddLogging();
         services.AddOptions();
-        services.Configure<ModuleConfigurationEfCoreOption>(static options => options.AutoCreateSchema = true);
+        services.Configure<ModuleConfigurationEfCoreOption>(static options => options.AutoManageSchema = true);
         services.Configure<ModuleRepositoryOption>(static _ => { });
         services.AddScoped<ICachedServiceProvider, CachedServiceProvider>();
         services.AddSingleton<IAuditPropertySetter, NoOpAuditPropertySetter>();

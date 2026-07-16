@@ -245,9 +245,8 @@ internal sealed class ConfigurationRollbackPersistencePlanner(
                      .GroupBy(static mutation => mutation.SourceKey!, StringComparer.OrdinalIgnoreCase))
         {
             var source = sourceByKey[sourceGroup.Key];
-            var snapshot = await sourceWriter.ReadValuesAsync(
+            var snapshot = await sourceWriter.ReadPhysicalValuesAsync(
                 source,
-                definition,
                 sourceGroup.Select(static mutation => mutation.ConfigurationPath!).ToArray(),
                 cancellationToken);
             for (var index = 0; index < mutations.Length; index++)

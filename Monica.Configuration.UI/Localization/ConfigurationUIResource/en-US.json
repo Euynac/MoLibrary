@@ -261,6 +261,7 @@
     "Actions": {
       "ViewChange": "View change",
       "ViewDefinitionHistory": "View definition history",
+      "LoadMore": "Load more",
       "RollbackBlockedMetadata": "Rollback is unavailable because one or more affected definitions do not have complete authoritative metadata. Repair and refresh them first."
     },
     "Tabs": {

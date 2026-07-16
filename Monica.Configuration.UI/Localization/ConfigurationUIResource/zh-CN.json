@@ -261,6 +261,7 @@
     "Actions": {
       "ViewChange": "查看变更",
       "ViewDefinitionHistory": "查看配置定义历史",
+      "LoadMore": "加载更多",
       "RollbackBlockedMetadata": "一个或多个受影响的配置定义缺少完整的权威元数据，因此无法回滚。请先修复并刷新这些定义。"
     },
     "Tabs": {

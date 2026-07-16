@@ -7,6 +7,11 @@ public sealed class ConfigurationValueHistoryEntity
 {
     public string HistoryId { get; set; } = "";
 
+    /// <summary>
+    /// Gets or sets the provider-independent identity of the mutated definition.
+    /// </summary>
+    public string DefinitionIdentity { get; set; } = "";
+
     public string DefinitionKey { get; set; } = "";
 
     public string LogicalPath { get; set; } = "";

@@ -48,6 +48,36 @@ public sealed class ConfigurationEffectiveValueDocumentEditor(
     public ConfigurationStoredValue? ReadValue(ConfigurationDefinition definition, string json, LogicalPath logicalPath)
     {
         var root = JsonNode.Parse(string.IsNullOrWhiteSpace(json) ? "{}" : json) ?? new JsonObject();
+        return ReadValue(definition, root, logicalPath);
+    }
+
+    /// <summary>
+    /// Reads several logical paths after parsing the complete effective value document once.
+    /// </summary>
+    /// <param name="definition">The schema used to navigate the document.</param>
+    /// <param name="json">The complete effective value document.</param>
+    /// <param name="logicalPaths">The logical paths to read, in result order.</param>
+    /// <returns>One stored value for each requested path.</returns>
+    public IReadOnlyList<ConfigurationStoredValue?> ReadValues(
+        ConfigurationDefinition definition,
+        string json,
+        IReadOnlyList<LogicalPath> logicalPaths)
+    {
+        var root = JsonNode.Parse(string.IsNullOrWhiteSpace(json) ? "{}" : json) ?? new JsonObject();
+        var values = new ConfigurationStoredValue?[logicalPaths.Count];
+        for (var index = 0; index < logicalPaths.Count; index++)
+        {
+            values[index] = ReadValue(definition, root, logicalPaths[index]);
+        }
+
+        return values;
+    }
+
+    private static ConfigurationStoredValue? ReadValue(
+        ConfigurationDefinition definition,
+        JsonNode root,
+        LogicalPath logicalPath)
+    {
         if (logicalPath.Depth == 0)
         {
             return ConfigurationStoredValue.FromJson(root.ToJsonString());

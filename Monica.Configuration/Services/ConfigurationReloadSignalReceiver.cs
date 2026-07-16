@@ -12,6 +12,7 @@ namespace Monica.Configuration.Services;
 /// </summary>
 internal sealed class ConfigurationReloadSignalReceiver(
     IConfigurationDefinitionRegistry definitionRegistry,
+    ConfigurationDefinitionResolver definitionResolver,
     IConfigurationReloadCoordinator reloadCoordinator,
     IOptions<ModuleConfigurationOption> options)
     : IConfigurationReloadSignalReceiver
@@ -30,6 +31,10 @@ internal sealed class ConfigurationReloadSignalReceiver(
         {
             return Task.CompletedTask;
         }
+
+        // Reload notifications are the closest distributed metadata freshness boundary available today. Mutation
+        // workflows still resolve schemas authoritatively, so a missed notification can only stale management reads.
+        definitionResolver.InvalidateReadSnapshot();
 
         if (signal.Kind == ConfigurationReloadSignalKind.ReloadAll)
         {

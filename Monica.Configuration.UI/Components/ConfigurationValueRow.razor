@@ -528,15 +528,21 @@
 
     private async Task OpenHistoryAsync()
     {
-        var result = await Facade.GetHistoryAsync(Definition.DefinitionKey, Node.RelativePath);
-        if (result.IsFailed(out var error, out var rows))
+        var request = new ConfigurationHistoryPageRequest
+        {
+            DefinitionKey = Definition.DefinitionKey,
+            LogicalPath = Node.RelativePath
+        };
+        var result = await Facade.QueryHistoryPageAsync(request);
+        if (result.IsFailed(out var error, out var page))
         {
             Snackbar.Add($"{L["Common:Errors:LoadFailed"]}: {error.Message}", Severity.Error);
             return;
         }
 
         var parameters = new DialogParameters<ConfigurationHistoryDiffDialog>();
-        parameters.Add(dialog => dialog.Rows, rows);
+        parameters.Add(dialog => dialog.HistoryRequest, request);
+        parameters.Add(dialog => dialog.InitialPage, page);
         parameters.Add(dialog => dialog.Definition, Definition);
         parameters.Add(dialog => dialog.FocusPath, Node.RelativePath);
         parameters.Add(dialog => dialog.Title, L["History:Dialog:MutationTitle", Definition.DisplayName]);

@@ -29,6 +29,16 @@ public interface IConfigurationSourceInspector
     ConfigurationSourceChain GetSourceChain(ConfigurationDefinition definition, LogicalPath logicalPath);
 
     /// <summary>
+    /// Gets source chains for several paths while sharing one runtime-provider snapshot.
+    /// </summary>
+    /// <param name="definition">The managed definition.</param>
+    /// <param name="logicalPaths">The logical paths to inspect, in result order.</param>
+    /// <returns>One source chain for each requested path.</returns>
+    IReadOnlyList<ConfigurationSourceChain> GetSourceChains(
+        ConfigurationDefinition definition,
+        IReadOnlyList<LogicalPath> logicalPaths);
+
+    /// <summary>
     /// Gets an opaque revision of one runtime provider's schema-visible contribution to a definition.
     /// Sensitive values participate in the revision but are never returned to the caller.
     /// </summary>

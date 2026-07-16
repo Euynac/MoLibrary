@@ -190,26 +190,18 @@ public sealed class FileConfigurationStore(IOptions<ConfigurationFileStoreOption
                 return [];
             }
 
-            var canonicalPath = logicalPath?.ToCanonicalString();
             var result = new List<ConfigurationValueHistory>();
-            foreach (var line in await IoFile.ReadAllLinesAsync(path, cancellationToken))
+            await foreach (var line in IoFile.ReadLinesAsync(path, cancellationToken))
             {
-                if (string.IsNullOrWhiteSpace(line))
-                {
-                    continue;
-                }
-
-                var history = JsonSerializer.Deserialize<HistoryDto>(line)?.ToHistory();
-                if (history is null)
-                {
-                    continue;
-                }
-
-                if (from is not null && history.ModifiedTime < from
-                    || to is not null && history.ModifiedTime > to
-                    || !string.IsNullOrWhiteSpace(definitionKey) && !string.Equals(history.DefinitionKey, definitionKey, StringComparison.OrdinalIgnoreCase)
-                    || canonicalPath is not null && history.LogicalPath.ToCanonicalString() != canonicalPath
-                    || !string.IsNullOrWhiteSpace(mutationGroupId) && !string.Equals(history.MutationGroupId, mutationGroupId, StringComparison.OrdinalIgnoreCase))
+                var history = DeserializeHistory(line);
+                if (history is null || !MatchesHistoryFilters(
+                        history,
+                        from,
+                        to,
+                        definitionKey,
+                        logicalPath,
+                        mutationGroupId,
+                        targetKind: null))
                 {
                     continue;
                 }
@@ -226,10 +218,137 @@ public sealed class FileConfigurationStore(IOptions<ConfigurationFileStoreOption
     }
 
     /// <inheritdoc />
+    public async Task<ConfigurationHistoryPageResult> QueryHistoryPageAsync(
+        ConfigurationHistoryPageRequest request,
+        CancellationToken cancellationToken)
+    {
+        request.Validate();
+        await _lock.WaitAsync(cancellationToken);
+        try
+        {
+            var path = GetHistoryPath();
+            if (!IoFile.Exists(path))
+            {
+                return new ConfigurationHistoryPageResult
+                {
+                    Items = [],
+                    NextCursor = null,
+                    HasMore = false
+                };
+            }
+
+            var rowsByMutationUnit = new Dictionary<HistoryPageUnitKey, List<ConfigurationValueHistory>>();
+            await foreach (var line in IoFile.ReadLinesAsync(path, cancellationToken))
+            {
+                var history = DeserializeHistory(line);
+                if (history is null || !MatchesHistoryFilters(
+                        history,
+                        request.From,
+                        request.To,
+                        request.DefinitionKey,
+                        request.LogicalPath,
+                        request.MutationGroupId,
+                        request.TargetKind))
+                {
+                    continue;
+                }
+
+                var unitKey = history.MutationGroupId is null
+                    ? new HistoryPageUnitKey(ConfigurationHistoryUnitKind.StandaloneHistory, history.HistoryId)
+                    : new HistoryPageUnitKey(ConfigurationHistoryUnitKind.MutationGroup, history.MutationGroupId);
+                if (!rowsByMutationUnit.TryGetValue(unitKey, out var rows))
+                {
+                    rows = [];
+                    rowsByMutationUnit.Add(unitKey, rows);
+                }
+
+                rows.Add(history);
+            }
+
+            var cursor = request.Cursor;
+            var candidates = rowsByMutationUnit
+                .Select(static pair => new HistoryPageUnit(pair.Key.UnitKind, pair.Key.UnitId, pair.Value))
+                .Where(unit => cursor is null || IsAfterCursor(unit, cursor))
+                .OrderByDescending(static unit => unit.ModifiedTime)
+                .ThenByDescending(static unit => unit.Version)
+                .ThenByDescending(static unit => unit.UnitKind)
+                .ThenByDescending(static unit => unit.UnitId, StringComparer.Ordinal)
+                .Take(request.PageSize + 1)
+                .ToArray();
+            var selectedUnits = candidates.Take(request.PageSize).ToArray();
+            var hasMore = candidates.Length > request.PageSize;
+            var lastUnit = selectedUnits.LastOrDefault();
+            return new ConfigurationHistoryPageResult
+            {
+                Items = SortHistory(selectedUnits.SelectMany(static unit => unit.Rows)),
+                NextCursor = hasMore && lastUnit is not null
+                    ? new ConfigurationHistoryCursor
+                    {
+                        ModifiedTime = lastUnit.ModifiedTime,
+                        Version = lastUnit.Version,
+                        UnitKind = lastUnit.UnitKind,
+                        UnitId = lastUnit.UnitId
+                    }
+                    : null,
+                HasMore = hasMore
+            };
+        }
+        finally
+        {
+            _lock.Release();
+        }
+    }
+
+    /// <inheritdoc />
     public async Task<ConfigurationValueHistory?> GetHistoryByIdAsync(string historyId, CancellationToken cancellationToken)
     {
-        var rows = await QueryHistoryAsync(null, null, null, null, null, cancellationToken);
-        return rows.FirstOrDefault(row => string.Equals(row.HistoryId, historyId, StringComparison.OrdinalIgnoreCase));
+        return (await GetHistoriesByIdsAsync([historyId], cancellationToken)).SingleOrDefault();
+    }
+
+    /// <inheritdoc />
+    public async Task<IReadOnlyList<ConfigurationValueHistory>> GetHistoriesByIdsAsync(
+        IReadOnlyCollection<string> historyIds,
+        CancellationToken cancellationToken)
+    {
+        var remainingIds = historyIds
+            .Where(static historyId => !string.IsNullOrWhiteSpace(historyId))
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+        if (remainingIds.Count == 0)
+        {
+            return [];
+        }
+
+        await _lock.WaitAsync(cancellationToken);
+        try
+        {
+            var path = GetHistoryPath();
+            if (!IoFile.Exists(path))
+            {
+                return [];
+            }
+
+            var histories = new List<ConfigurationValueHistory>(remainingIds.Count);
+            await foreach (var line in IoFile.ReadLinesAsync(path, cancellationToken))
+            {
+                var history = DeserializeHistory(line);
+                if (history is null || !remainingIds.Remove(history.HistoryId))
+                {
+                    continue;
+                }
+
+                histories.Add(history);
+                if (remainingIds.Count == 0)
+                {
+                    break;
+                }
+            }
+
+            return SortHistory(histories);
+        }
+        finally
+        {
+            _lock.Release();
+        }
     }
 
     /// <inheritdoc />
@@ -276,7 +395,52 @@ public sealed class FileConfigurationStore(IOptions<ConfigurationFileStoreOption
                     && (to is null || group.CreatedTime <= to)
                     && (string.IsNullOrWhiteSpace(definitionKey) || group.DefinitionKeys.Contains(definitionKey, StringComparer.OrdinalIgnoreCase)))
                 .OrderByDescending(group => group.CreatedTime)
+                .ThenByDescending(group => group.GroupId, StringComparer.Ordinal)
                 .ToArray();
+        }
+        finally
+        {
+            _lock.Release();
+        }
+    }
+
+    /// <inheritdoc />
+    public async Task<ConfigurationMutationGroupPageResult> QueryGroupsPageAsync(
+        ConfigurationMutationGroupPageRequest request,
+        CancellationToken cancellationToken)
+    {
+        request.Validate();
+        await _lock.WaitAsync(cancellationToken);
+        try
+        {
+            var cursor = request.Cursor;
+            var candidates = (await ReadGroupsAsync(cancellationToken))
+                .Select(static group => group.ToGroup())
+                .Where(group =>
+                    (request.From is null || group.CreatedTime >= request.From)
+                    && (request.To is null || group.CreatedTime <= request.To)
+                    && (string.IsNullOrWhiteSpace(request.DefinitionKey)
+                        || group.DefinitionKeys.Contains(request.DefinitionKey, StringComparer.OrdinalIgnoreCase)))
+                .Where(group => cursor is null || IsAfterCursor(group, cursor))
+                .OrderByDescending(static group => group.CreatedTime)
+                .ThenByDescending(static group => group.GroupId, StringComparer.Ordinal)
+                .Take(request.PageSize + 1)
+                .ToArray();
+            var selectedGroups = candidates.Take(request.PageSize).ToArray();
+            var hasMore = candidates.Length > request.PageSize;
+            var lastGroup = selectedGroups.LastOrDefault();
+            return new ConfigurationMutationGroupPageResult
+            {
+                Items = selectedGroups,
+                NextCursor = hasMore && lastGroup is not null
+                    ? new ConfigurationMutationGroupCursor
+                    {
+                        CreatedTime = lastGroup.CreatedTime,
+                        GroupId = lastGroup.GroupId
+                    }
+                    : null,
+                HasMore = hasMore
+            };
         }
         finally
         {
@@ -439,14 +603,35 @@ public sealed class FileConfigurationStore(IOptions<ConfigurationFileStoreOption
     /// <inheritdoc />
     public async Task PublishAsync(IReadOnlyList<ConfigurationDefinition> definitions, CancellationToken cancellationToken)
     {
+        foreach (var definition in definitions)
+        {
+            _ = GetSafeFileName(definition.DefinitionKey);
+        }
+
+        var duplicateDefinition = definitions
+            .GroupBy(
+                static definition => ConfigurationDefinitionIdentity.Compute(definition.DefinitionKey),
+                StringComparer.Ordinal)
+            .FirstOrDefault(static group => group.Skip(1).Any());
+        if (duplicateDefinition is not null)
+        {
+            var keys = duplicateDefinition
+                .Select(static definition => $"'{definition.DefinitionKey}'")
+                .OrderBy(static key => key, StringComparer.Ordinal)
+                .ToArray();
+            throw new ConfigurationValidationFailedException(
+                $"The publisher supplied multiple definitions with the same case-insensitive identity: {string.Join(", ", keys)}.");
+        }
+
         await _lock.WaitAsync(cancellationToken);
         try
         {
             EnsureDirectories();
+            var definitionPaths = IndexDefinitionPaths(cancellationToken);
             foreach (var definition in definitions)
             {
                 cancellationToken.ThrowIfCancellationRequested();
-                var path = ResolveDefinitionPathForPublish(definition.DefinitionKey, cancellationToken);
+                var path = ResolveDefinitionPathForPublish(definition.DefinitionKey, definitionPaths);
                 var existing = IoFile.Exists(path)
                     ? await TryReadPublishedDefinitionDtoForRepairAsync(path, cancellationToken)
                     : null;
@@ -630,6 +815,7 @@ public sealed class FileConfigurationStore(IOptions<ConfigurationFileStoreOption
     private string? ResolveEffectiveValuePath(string definitionKey)
     {
         _ = GetEffectiveValuePath(definitionKey);
+
         return ResolveCaseInsensitivePath(
             GetEffectiveDirectory(),
             "*.json",
@@ -641,6 +827,7 @@ public sealed class FileConfigurationStore(IOptions<ConfigurationFileStoreOption
     private string? ResolveEffectiveMetadataPath(string definitionKey)
     {
         _ = GetMetadataPath(definitionKey);
+
         return ResolveCaseInsensitivePath(
             GetEffectiveMetadataDirectory(),
             "*.metadata.json",
@@ -661,22 +848,30 @@ public sealed class FileConfigurationStore(IOptions<ConfigurationFileStoreOption
             return null;
         }
 
-        var matches = IoDirectory
-            .EnumerateFiles(directory, searchPattern, SearchOption.TopDirectoryOnly)
-            .Where(path => string.Equals(
-                getDefinitionKey(path),
-                definitionKey,
-                StringComparison.OrdinalIgnoreCase))
-            .OrderBy(static path => path, StringComparer.Ordinal)
-            .Take(2)
-            .ToArray();
-        return matches.Length switch
+        var requestedIdentity = ConfigurationDefinitionIdentity.Compute(definitionKey);
+        string? matchingPath = null;
+        foreach (var path in IoDirectory.EnumerateFiles(directory, searchPattern, SearchOption.TopDirectoryOnly))
         {
-            0 => null,
-            1 => matches[0],
-            _ => throw new InvalidOperationException(
-                $"Multiple file-backed {documentKind} documents claim definition key '{definitionKey}' ignoring casing.")
-        };
+            var candidateKey = getDefinitionKey(path);
+            if (string.IsNullOrWhiteSpace(candidateKey)
+                || !string.Equals(
+                    ConfigurationDefinitionIdentity.Compute(candidateKey),
+                    requestedIdentity,
+                    StringComparison.Ordinal))
+            {
+                continue;
+            }
+
+            if (matchingPath is not null)
+            {
+                throw new InvalidOperationException(
+                    $"Multiple file-backed {documentKind} documents claim definition key '{definitionKey}' ignoring casing.");
+            }
+
+            matchingPath = path;
+        }
+
+        return matchingPath;
     }
 
     private string GetDefinitionPath(string definitionKey)
@@ -781,10 +976,10 @@ public sealed class FileConfigurationStore(IOptions<ConfigurationFileStoreOption
 
     private string ResolveDefinitionPathForPublish(
         string definitionKey,
-        CancellationToken cancellationToken)
+        IReadOnlyDictionary<string, IReadOnlyList<string>> definitionPaths)
     {
-        var matchingPaths = FindDefinitionPaths(definitionKey, cancellationToken);
-        if (matchingPaths.Length <= 1)
+        var matchingPaths = definitionPaths.GetValueOrDefault(definitionKey) ?? [];
+        if (matchingPaths.Count <= 1)
         {
             return matchingPaths.FirstOrDefault() ?? GetDefinitionPath(definitionKey);
         }
@@ -801,17 +996,45 @@ public sealed class FileConfigurationStore(IOptions<ConfigurationFileStoreOption
             });
     }
 
+    private IReadOnlyDictionary<string, IReadOnlyList<string>> IndexDefinitionPaths(
+        CancellationToken cancellationToken)
+    {
+        var pathsByDefinition = new Dictionary<string, List<string>>(StringComparer.OrdinalIgnoreCase);
+        foreach (var path in IoDirectory.EnumerateFiles(GetDefinitionsDirectory(), "*.json"))
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            var definitionKey = Path.GetFileNameWithoutExtension(path);
+            if (!pathsByDefinition.TryGetValue(definitionKey, out var paths))
+            {
+                paths = [];
+                pathsByDefinition[definitionKey] = paths;
+            }
+
+            paths.Add(path);
+        }
+
+        return pathsByDefinition.ToDictionary(
+            static pair => pair.Key,
+            static pair => (IReadOnlyList<string>)pair.Value
+                .OrderBy(static path => path, StringComparer.Ordinal)
+                .ToArray(),
+            StringComparer.OrdinalIgnoreCase);
+    }
+
     private string[] FindDefinitionPaths(string definitionKey, CancellationToken cancellationToken)
     {
         _ = GetDefinitionPath(definitionKey);
+        var requestedIdentity = ConfigurationDefinitionIdentity.Compute(definitionKey);
         var matchingPaths = new List<string>(2);
         foreach (var path in IoDirectory.EnumerateFiles(GetDefinitionsDirectory(), "*.json"))
         {
             cancellationToken.ThrowIfCancellationRequested();
-            if (!string.Equals(
-                    Path.GetFileNameWithoutExtension(path),
-                    definitionKey,
-                    StringComparison.OrdinalIgnoreCase))
+            var candidateKey = Path.GetFileNameWithoutExtension(path);
+            if (string.IsNullOrWhiteSpace(candidateKey)
+                || !string.Equals(
+                    ConfigurationDefinitionIdentity.Compute(candidateKey),
+                    requestedIdentity,
+                    StringComparison.Ordinal))
             {
                 continue;
             }
@@ -989,7 +1212,81 @@ public sealed class FileConfigurationStore(IOptions<ConfigurationFileStoreOption
         return histories
             .OrderByDescending(history => history.ModifiedTime)
             .ThenByDescending(history => history.Version)
+            .ThenByDescending(history => history.HistoryId, StringComparer.Ordinal)
             .ToArray();
+    }
+
+    private static bool MatchesHistoryFilters(
+        ConfigurationValueHistory history,
+        DateTimeOffset? from,
+        DateTimeOffset? to,
+        string? definitionKey,
+        LogicalPath? logicalPath,
+        string? mutationGroupId,
+        ConfigurationMutationTargetKind? targetKind)
+    {
+        return (from is null || history.ModifiedTime >= from)
+               && (to is null || history.ModifiedTime <= to)
+               && (string.IsNullOrWhiteSpace(definitionKey)
+                   || string.Equals(history.DefinitionKey, definitionKey, StringComparison.OrdinalIgnoreCase))
+               && (logicalPath is null
+                   || history.LogicalPath.ToCanonicalString() == logicalPath.ToCanonicalString())
+               && (string.IsNullOrWhiteSpace(mutationGroupId)
+                   || string.Equals(history.MutationGroupId, mutationGroupId, StringComparison.OrdinalIgnoreCase))
+               && (targetKind is null || history.TargetKind == targetKind.Value);
+    }
+
+    private static ConfigurationValueHistory? DeserializeHistory(string line)
+    {
+        return string.IsNullOrWhiteSpace(line)
+            ? null
+            : JsonSerializer.Deserialize<HistoryDto>(line)?.ToHistory();
+    }
+
+    private static bool IsAfterCursor(
+        HistoryPageUnit unit,
+        ConfigurationHistoryCursor cursor)
+    {
+        var timeComparison = unit.ModifiedTime.CompareTo(cursor.ModifiedTime);
+        if (timeComparison != 0)
+        {
+            return timeComparison < 0;
+        }
+
+        var versionComparison = unit.Version.CompareTo(cursor.Version);
+        if (versionComparison != 0)
+        {
+            return versionComparison < 0;
+        }
+
+        var unitKindComparison = unit.UnitKind.CompareTo(cursor.UnitKind);
+        return unitKindComparison != 0
+            ? unitKindComparison < 0
+            : string.CompareOrdinal(unit.UnitId, cursor.UnitId) < 0;
+    }
+
+    private static bool IsAfterCursor(
+        ConfigurationMutationGroup group,
+        ConfigurationMutationGroupCursor cursor)
+    {
+        var timeComparison = group.CreatedTime.CompareTo(cursor.CreatedTime);
+        return timeComparison != 0
+            ? timeComparison < 0
+            : string.CompareOrdinal(group.GroupId, cursor.GroupId) < 0;
+    }
+
+    private sealed record HistoryPageUnitKey(
+        ConfigurationHistoryUnitKind UnitKind,
+        string UnitId);
+
+    private sealed record HistoryPageUnit(
+        ConfigurationHistoryUnitKind UnitKind,
+        string UnitId,
+        IReadOnlyList<ConfigurationValueHistory> Rows)
+    {
+        public DateTimeOffset ModifiedTime => Rows.Max(static history => history.ModifiedTime);
+
+        public long Version => Rows.Max(static history => history.Version);
     }
 
     private sealed record DocumentMetadataDto

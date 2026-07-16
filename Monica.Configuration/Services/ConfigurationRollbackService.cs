@@ -209,88 +209,23 @@ internal sealed class ConfigurationRollbackService(
         }
 
         EnsureRollbackPreviewCanRepresent(rows);
+        var definitions = await ResolveDefinitionsAsync(rows, cancellationToken);
+        var preparedRows = PrepareRows(rows, definitions);
+        var statesByHistoryId = new Dictionary<string, HistoryRollbackTargetState>(StringComparer.OrdinalIgnoreCase);
+        await ReadEffectiveTargetStatesAsync(preparedRows, statesByHistoryId, cancellationToken);
+        await ReadExternalTargetStatesAsync(preparedRows, statesByHistoryId, cancellationToken);
 
-        var definitions = new Dictionary<string, ConfigurationDefinition>(StringComparer.OrdinalIgnoreCase);
-        var effectiveDocuments = new Dictionary<string, ConfigurationEffectiveValueDocument?>(StringComparer.OrdinalIgnoreCase);
-        var sourceRevisions = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
         var currentValues = new Dictionary<string, ConfigurationStoredValue?>(StringComparer.OrdinalIgnoreCase);
         var targets = new Dictionary<string, ConfigurationMutationTarget>(StringComparer.OrdinalIgnoreCase);
         var tokenEntries = new List<HistoryRollbackPlanTokenEntry>(rows.Count);
 
-        foreach (var history in rows)
+        foreach (var prepared in preparedRows)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            if (!definitions.TryGetValue(history.DefinitionKey, out var definition))
-            {
-                definition = await definitionResolver.GetRequiredAsync(history.DefinitionKey, cancellationToken);
-                definitions[history.DefinitionKey] = definition;
-            }
-
-            EnsureExactHistorySchema(history, definition);
-            ConfigurationStoredValue? currentValue;
-            ConfigurationMutationTarget target;
-            string? sourceKey = null;
-            string? sourceConfigurationPath = null;
-            long? effectiveVersion = null;
-            string? sourceRevision = null;
-
-            if (history.TargetKind == ConfigurationMutationTargetKind.ExternalConfigurationSource)
-            {
-                sourceKey = ResolveSourceKey(history);
-                var source = sourceInspector.GetRequiredSource(sourceKey);
-                sourceConfigurationPath = pathProjector.Project(definition.SectionPath, history.LogicalPath);
-                if (string.IsNullOrWhiteSpace(history.SourceConfigurationPath)
-                    || !string.Equals(
-                        sourceConfigurationPath,
-                        history.SourceConfigurationPath,
-                        StringComparison.OrdinalIgnoreCase))
-                {
-                    throw new InvalidOperationException(
-                        $"Configuration history '{history.HistoryId}' targets external path '{history.SourceConfigurationPath ?? "<missing>"}', "
-                        + $"but the current schema projects '{sourceConfigurationPath}'. The rollback cannot be applied safely.");
-                }
-
-                var snapshot = await sourceWriter.ReadValuesAsync(
-                    source,
-                    definition,
-                    [sourceConfigurationPath],
-                    cancellationToken);
-                if (sourceRevisions.TryGetValue(sourceKey, out var reviewedRevision)
-                    && !string.Equals(reviewedRevision, snapshot.Revision, StringComparison.Ordinal))
-                {
-                    throw new ConfigurationConcurrencyConflictException(
-                        $"Configuration source '{source.DisplayName}' changed while its rollback preview was being built. Review it again.");
-                }
-
-                sourceRevision = snapshot.Revision;
-                sourceRevisions[sourceKey] = sourceRevision;
-                snapshot.Values.TryGetValue(sourceConfigurationPath, out currentValue);
-                target = new ConfigurationExternalSourceMutationTarget
-                {
-                    SourceKey = sourceKey,
-                    ExpectedRevision = sourceRevision
-                };
-            }
-            else
-            {
-                if (!effectiveDocuments.TryGetValue(history.DefinitionKey, out var document))
-                {
-                    document = await effectiveValueStore.GetAsync(history.DefinitionKey, cancellationToken);
-                    effectiveDocuments[history.DefinitionKey] = document;
-                }
-
-                currentValue = document is null
-                    ? null
-                    : documentEditor.ReadValue(definition, document.Json, history.LogicalPath);
-                effectiveVersion = document?.Version ?? 0;
-                target = new ConfigurationEffectiveStoreMutationTarget
-                {
-                    ExpectedVersion = effectiveVersion
-                };
-            }
-
-            currentValues[history.HistoryId] = currentValue;
-            targets[history.HistoryId] = target;
+            var history = prepared.History;
+            var state = statesByHistoryId[history.HistoryId];
+            currentValues[history.HistoryId] = state.CurrentValue;
+            targets[history.HistoryId] = state.Target;
             tokenEntries.Add(new HistoryRollbackPlanTokenEntry
             {
                 HistoryId = history.HistoryId,
@@ -299,14 +234,14 @@ internal sealed class ConfigurationRollbackService(
                 SchemaVersion = history.SchemaVersion,
                 SchemaHash = history.SchemaHash!,
                 TargetKind = history.TargetKind,
-                CurrentValueExists = currentValue is not null,
-                CurrentJson = currentValue?.Json,
+                CurrentValueExists = state.CurrentValue is not null,
+                CurrentJson = state.CurrentValue?.Json,
                 RollbackValueExists = history.OldValue is not null,
                 RollbackJson = history.OldValue?.Json,
-                EffectiveVersion = effectiveVersion,
-                SourceKey = sourceKey,
-                SourceConfigurationPath = sourceConfigurationPath,
-                SourceRevision = sourceRevision
+                EffectiveVersion = state.EffectiveVersion,
+                SourceKey = state.SourceKey,
+                SourceConfigurationPath = state.SourceConfigurationPath,
+                SourceRevision = state.SourceRevision
             });
         }
 
@@ -317,6 +252,164 @@ internal sealed class ConfigurationRollbackService(
                 CurrentValuesByHistoryId = currentValues
             },
             targets);
+    }
+
+    private async Task<IReadOnlyDictionary<string, ConfigurationDefinition>> ResolveDefinitionsAsync(
+        IReadOnlyList<ConfigurationValueHistory> rows,
+        CancellationToken cancellationToken)
+    {
+        var definitions = new Dictionary<string, ConfigurationDefinition>(StringComparer.OrdinalIgnoreCase);
+        foreach (var definitionKey in rows
+                     .Select(static row => row.DefinitionKey)
+                     .Distinct(StringComparer.OrdinalIgnoreCase))
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            definitions[definitionKey] = await definitionResolver.GetRequiredAsync(definitionKey, cancellationToken);
+        }
+
+        return definitions;
+    }
+
+    private IReadOnlyList<PreparedHistoryRollbackRow> PrepareRows(
+        IReadOnlyList<ConfigurationValueHistory> rows,
+        IReadOnlyDictionary<string, ConfigurationDefinition> definitions)
+    {
+        var sourcesByPhysicalPath = BuildJsonSourcesByPhysicalPath();
+        var preparedRows = new List<PreparedHistoryRollbackRow>(rows.Count);
+        foreach (var history in rows)
+        {
+            var definition = definitions[history.DefinitionKey];
+            EnsureExactHistorySchema(history, definition);
+            if (history.TargetKind != ConfigurationMutationTargetKind.ExternalConfigurationSource)
+            {
+                preparedRows.Add(new PreparedHistoryRollbackRow(history, definition, null, null));
+                continue;
+            }
+
+            if (string.IsNullOrWhiteSpace(history.SourcePhysicalPath))
+            {
+                throw new InvalidOperationException(
+                    $"Configuration history row '{history.HistoryId}' does not contain a physical source path.");
+            }
+
+            var physicalPath = Path.GetFullPath(history.SourcePhysicalPath);
+            if (!sourcesByPhysicalPath.TryGetValue(physicalPath, out var source))
+            {
+                throw new InvalidOperationException(
+                    $"Configuration source '{history.SourcePhysicalPath}' is no longer registered and cannot be rolled back.");
+            }
+
+            var sourceConfigurationPath = pathProjector.Project(definition.SectionPath, history.LogicalPath);
+            if (string.IsNullOrWhiteSpace(history.SourceConfigurationPath)
+                || !string.Equals(
+                    sourceConfigurationPath,
+                    history.SourceConfigurationPath,
+                    StringComparison.OrdinalIgnoreCase))
+            {
+                throw new InvalidOperationException(
+                    $"Configuration history '{history.HistoryId}' targets external path '{history.SourceConfigurationPath ?? "<missing>"}', "
+                    + $"but the current schema projects '{sourceConfigurationPath}'. The rollback cannot be applied safely.");
+            }
+
+            preparedRows.Add(new PreparedHistoryRollbackRow(
+                history,
+                definition,
+                source,
+                sourceConfigurationPath));
+        }
+
+        return preparedRows;
+    }
+
+    private IReadOnlyDictionary<string, ConfigurationSourceDescriptor> BuildJsonSourcesByPhysicalPath()
+    {
+        var sources = new Dictionary<string, ConfigurationSourceDescriptor>(StringComparer.OrdinalIgnoreCase);
+        foreach (var source in sourceInspector.GetSources())
+        {
+            if (source.Kind == ConfigurationSourceKind.JsonFile
+                && !string.IsNullOrWhiteSpace(source.PhysicalPath))
+            {
+                sources.TryAdd(Path.GetFullPath(source.PhysicalPath), source);
+            }
+        }
+
+        return sources;
+    }
+
+    private async Task ReadEffectiveTargetStatesAsync(
+        IReadOnlyList<PreparedHistoryRollbackRow> preparedRows,
+        IDictionary<string, HistoryRollbackTargetState> statesByHistoryId,
+        CancellationToken cancellationToken)
+    {
+        foreach (var definitionGroup in preparedRows
+                     .Where(static row => row.History.TargetKind != ConfigurationMutationTargetKind.ExternalConfigurationSource)
+                     .GroupBy(static row => row.History.DefinitionKey, StringComparer.OrdinalIgnoreCase))
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            var rows = definitionGroup.ToArray();
+            var document = await effectiveValueStore.GetAsync(definitionGroup.Key, cancellationToken);
+            var effectiveVersion = document?.Version ?? 0;
+            var target = new ConfigurationEffectiveStoreMutationTarget
+            {
+                ExpectedVersion = effectiveVersion
+            };
+            var currentValues = document is null
+                ? null
+                : documentEditor.ReadValues(
+                    rows[0].Definition,
+                    document.Json,
+                    rows.Select(static row => row.History.LogicalPath).ToArray());
+            for (var index = 0; index < rows.Length; index++)
+            {
+                var prepared = rows[index];
+                statesByHistoryId[prepared.History.HistoryId] = new HistoryRollbackTargetState(
+                    currentValues?[index],
+                    target,
+                    effectiveVersion,
+                    SourceKey: null,
+                    SourceConfigurationPath: null,
+                    SourceRevision: null);
+            }
+        }
+    }
+
+    private async Task ReadExternalTargetStatesAsync(
+        IReadOnlyList<PreparedHistoryRollbackRow> preparedRows,
+        IDictionary<string, HistoryRollbackTargetState> statesByHistoryId,
+        CancellationToken cancellationToken)
+    {
+        foreach (var sourceGroup in preparedRows
+                     .Where(static row => row.History.TargetKind == ConfigurationMutationTargetKind.ExternalConfigurationSource)
+                     .GroupBy(static row => row.Source!.SourceKey, StringComparer.OrdinalIgnoreCase))
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            var rows = sourceGroup.ToArray();
+            var source = rows[0].Source!;
+            var configurationPaths = rows
+                .Select(static row => row.SourceConfigurationPath!)
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToArray();
+            var snapshot = await sourceWriter.ReadPhysicalValuesAsync(
+                source,
+                configurationPaths,
+                cancellationToken);
+            var target = new ConfigurationExternalSourceMutationTarget
+            {
+                SourceKey = source.SourceKey,
+                ExpectedRevision = snapshot.Revision
+            };
+            foreach (var prepared in rows)
+            {
+                snapshot.Values.TryGetValue(prepared.SourceConfigurationPath!, out var currentValue);
+                statesByHistoryId[prepared.History.HistoryId] = new HistoryRollbackTargetState(
+                    currentValue,
+                    target,
+                    EffectiveVersion: null,
+                    source.SourceKey,
+                    prepared.SourceConfigurationPath,
+                    snapshot.Revision);
+            }
+        }
     }
 
     private static void EnsureRollbackPreviewCanRepresent(IReadOnlyList<ConfigurationValueHistory> rows)
@@ -523,10 +616,22 @@ internal sealed class ConfigurationRollbackService(
             throw new InvalidOperationException("At least one configuration history row is required.");
         }
 
-        var rows = new List<ConfigurationValueHistory>(historyIds.Count);
-        foreach (var historyId in historyIds.Distinct(StringComparer.OrdinalIgnoreCase))
+        var distinctIds = historyIds
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+        var histories = await historyService.GetHistoriesByIdsAsync(distinctIds, cancellationToken);
+        var historyById = histories
+            .GroupBy(static history => history.HistoryId, StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(static group => group.Key, static group => group.First(), StringComparer.OrdinalIgnoreCase);
+        var rows = new List<ConfigurationValueHistory>(distinctIds.Length);
+        foreach (var historyId in distinctIds)
         {
-            rows.Add(await GetRequiredHistoryAsync(historyId, cancellationToken));
+            if (!historyById.TryGetValue(historyId, out var history))
+            {
+                throw new KeyNotFoundException($"Configuration history row '{historyId}' was not found.");
+            }
+
+            rows.Add(history);
         }
 
         return rows
@@ -564,29 +669,23 @@ internal sealed class ConfigurationRollbackService(
                + string.Join("; ", diagnostics);
     }
 
-    private string ResolveSourceKey(ConfigurationValueHistory history)
-    {
-        if (string.IsNullOrWhiteSpace(history.SourcePhysicalPath))
-        {
-            throw new InvalidOperationException($"Configuration history row '{history.HistoryId}' does not contain a physical source path.");
-        }
-
-        var source = sourceInspector.GetSources().FirstOrDefault(candidate =>
-            candidate.Kind == ConfigurationSourceKind.JsonFile
-            && !string.IsNullOrWhiteSpace(candidate.PhysicalPath)
-            && string.Equals(
-                Path.GetFullPath(candidate.PhysicalPath),
-                Path.GetFullPath(history.SourcePhysicalPath),
-                StringComparison.OrdinalIgnoreCase));
-
-        return source?.SourceKey
-               ?? throw new InvalidOperationException(
-                   $"Configuration source '{history.SourcePhysicalPath}' is no longer registered and cannot be rolled back.");
-    }
-
     private sealed record HistoryRollbackPlan(
         ConfigurationHistoryRollbackPreview Preview,
         IReadOnlyDictionary<string, ConfigurationMutationTarget> TargetsByHistoryId);
+
+    private sealed record PreparedHistoryRollbackRow(
+        ConfigurationValueHistory History,
+        ConfigurationDefinition Definition,
+        ConfigurationSourceDescriptor? Source,
+        string? SourceConfigurationPath);
+
+    private sealed record HistoryRollbackTargetState(
+        ConfigurationStoredValue? CurrentValue,
+        ConfigurationMutationTarget Target,
+        long? EffectiveVersion,
+        string? SourceKey,
+        string? SourceConfigurationPath,
+        string? SourceRevision);
 
     private sealed record RollbackCommandKey(
         ConfigurationMutationTargetKind TargetKind,

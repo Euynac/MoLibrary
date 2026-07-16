@@ -77,6 +77,16 @@
                                    Margin="Margin.Dense"
                                    Editable="true" />
                 </MudItem>
+                <MudItem xs="12">
+                    <MudStack Row="true" Justify="Justify.FlexEnd">
+                        <MudButton Variant="Variant.Filled"
+                                   Color="Color.Primary"
+                                   StartIcon="@Icons.Material.Filled.Search"
+                                   OnClick="LoadAsync">
+                            @L["Common:Actions:Search"]
+                        </MudButton>
+                    </MudStack>
+                </MudItem>
             </MudGrid>
         </MudPaper>
 
@@ -86,13 +96,13 @@
                 {
                     <MudProgressLinear Indeterminate="true" />
                 }
-                else if (FilteredHistory.Count == 0)
+                else if (_displayHistory.Count == 0)
                 {
                     <MudAlert Severity="Severity.Info">@L["History:States:Empty"]</MudAlert>
                 }
                 else
                 {
-                    <MudTable T="ConfigurationHistoryDisplayRow" Items="@FilteredHistory" Dense="true" Hover="true" Elevation="0" Class="configuration-history-table">
+                    <MudTable T="ConfigurationHistoryDisplayRow" Items="@_displayHistory" Dense="true" Hover="true" Elevation="0" Class="configuration-history-table">
                         <HeaderContent>
                             <MudTh>@L["History:Columns:Time"]</MudTh>
                             <MudTh>@L["State:Columns:Definition"]</MudTh>
@@ -181,6 +191,16 @@
                             </MudTd>
                         </RowTemplate>
                     </MudTable>
+                    @if (_historyHasMore)
+                    {
+                        <MudStack Row="true" Justify="Justify.Center" Class="mt-3">
+                            <MudButton Variant="Variant.Outlined"
+                                       Disabled="@_loadingMoreHistory"
+                                       OnClick="LoadMoreHistoryAsync">
+                                @L["History:Actions:LoadMore"]
+                            </MudButton>
+                        </MudStack>
+                    }
                 }
             </MudTabPanel>
 
@@ -252,6 +272,16 @@
                             </MudTd>
                         </RowTemplate>
                     </MudTable>
+                    @if (_groupsHaveMore)
+                    {
+                        <MudStack Row="true" Justify="Justify.Center" Class="mt-3">
+                            <MudButton Variant="Variant.Outlined"
+                                       Disabled="@_loadingMoreGroups"
+                                       OnClick="LoadMoreGroupsAsync">
+                                @L["History:Actions:LoadMore"]
+                            </MudButton>
+                        </MudStack>
+                    }
                 }
             </MudTabPanel>
         </MudTabs>
@@ -264,21 +294,28 @@
     private const string TARGET_FILTER_ALL = "all";
     private const string TARGET_FILTER_MONICA = "monica";
     private const string TARGET_FILTER_EXTERNAL = "external";
+    private const int PAGE_SIZE = 50;
 
     private readonly List<ConfigurationDefinitionSummary> _definitions = [];
     private readonly Dictionary<string, ConfigurationDefinition> _definitionDetails = new(StringComparer.OrdinalIgnoreCase);
     private readonly List<ConfigurationValueHistory> _history = [];
     private readonly List<ConfigurationMutationGroup> _groups = [];
+    private IReadOnlyList<ConfigurationHistoryDisplayRow> _displayHistory = [];
+    private ConfigurationHistoryPageRequest? _activeHistoryRequest;
+    private ConfigurationMutationGroupPageRequest? _activeGroupRequest;
     private string? _definitionKey;
     private string _pathText = string.Empty;
     private string _targetFilter = TARGET_FILTER_ALL;
     private DateTime? _fromDate;
     private DateTime? _toDate;
     private bool _loading = true;
+    private bool _loadingMoreHistory;
+    private bool _loadingMoreGroups;
+    private bool _historyHasMore;
+    private bool _groupsHaveMore;
+    private ConfigurationHistoryCursor? _historyNextCursor;
+    private ConfigurationMutationGroupCursor? _groupsNextCursor;
     private ConfigurationMetadataStoreDiagnostic? _metadataStoreDiagnostic;
-
-    private IReadOnlyList<ConfigurationHistoryDisplayRow> FilteredHistory =>
-        ConfigurationHistoryDisplayGrouper.Collapse(_history.Where(MatchesHistoryFilters).ToArray());
 
     protected override async Task OnInitializedAsync()
     {
@@ -325,50 +362,142 @@
     private async Task LoadAsync()
     {
         _loading = true;
-        LogicalPath? logicalPath = null;
-        if (!string.IsNullOrWhiteSpace(_pathText))
+        try
         {
-            try
+            LogicalPath? logicalPath = null;
+            if (!string.IsNullOrWhiteSpace(_pathText))
             {
-                logicalPath = LogicalPath.Parse(_pathText);
-                _pathText = logicalPath.ToCanonicalString();
+                try
+                {
+                    logicalPath = LogicalPath.Parse(_pathText);
+                    _pathText = logicalPath.ToCanonicalString();
+                }
+                catch (Exception ex)
+                {
+                    Snackbar.Add($"{L["Common:Errors:InvalidPath"]}: {ex.Message}", Severity.Error);
+                }
             }
-            catch (Exception ex)
+
+            DateTimeOffset? from = _fromDate is null ? null : new DateTimeOffset(_fromDate.Value);
+            DateTimeOffset? to = _toDate is null ? null : new DateTimeOffset(_toDate.Value.Date.AddDays(1).AddTicks(-1));
+            _activeHistoryRequest = new ConfigurationHistoryPageRequest
             {
-                Snackbar.Add($"{L["Common:Errors:InvalidPath"]}: {ex.Message}", Severity.Error);
+                From = from,
+                To = to,
+                DefinitionKey = _definitionKey,
+                LogicalPath = logicalPath,
+                TargetKind = SelectedTargetKind(),
+                PageSize = PAGE_SIZE
+            };
+            _activeGroupRequest = new ConfigurationMutationGroupPageRequest
+            {
+                From = from,
+                To = to,
+                DefinitionKey = _definitionKey,
+                PageSize = PAGE_SIZE
+            };
+
+            await LoadHistoryPageAsync(_activeHistoryRequest, append: false);
+            await LoadGroupPageAsync(_activeGroupRequest, append: false);
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private async Task LoadHistoryPageAsync(ConfigurationHistoryPageRequest request, bool append)
+    {
+        var result = await Facade.QueryHistoryPageAsync(request);
+        if (result.IsFailed(out var error, out var page))
+        {
+            Snackbar.Add($"{L["Common:Errors:LoadFailed"]}: {error.Message}", Severity.Error);
+            if (!append)
+            {
+                _history.Clear();
+                _displayHistory = [];
+                _historyHasMore = false;
+                _historyNextCursor = null;
             }
+
+            return;
         }
 
-        DateTimeOffset? from = _fromDate is null ? null : new DateTimeOffset(_fromDate.Value);
-        DateTimeOffset? to = _toDate is null ? null : new DateTimeOffset(_toDate.Value.Date.AddDays(1).AddTicks(-1));
-
-        var historyResult = await Facade.QueryHistoryAsync(from, to, _definitionKey, logicalPath);
-        if (historyResult.IsFailed(out var historyError, out var history))
+        if (!append)
         {
-            Snackbar.Add($"{L["Common:Errors:LoadFailed"]}: {historyError.Message}", Severity.Error);
             _history.Clear();
         }
-        else
+
+        var loadedIds = _history.Select(static history => history.HistoryId).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        _history.AddRange(page.Items.Where(history => loadedIds.Add(history.HistoryId)));
+        _displayHistory = ConfigurationHistoryDisplayGrouper.Collapse(_history);
+        _historyHasMore = page.HasMore;
+        _historyNextCursor = page.NextCursor;
+        await EnsureDefinitionDetailsAsync(page.Items.Select(static row => row.DefinitionKey));
+    }
+
+    private async Task LoadGroupPageAsync(ConfigurationMutationGroupPageRequest request, bool append)
+    {
+        var result = await Facade.QueryMutationGroupsPageAsync(request);
+        if (result.IsFailed(out var error, out var page))
         {
-            _history.Clear();
-            _history.AddRange(history);
-            await EnsureDefinitionDetailsAsync(history.Select(row => row.DefinitionKey));
+            Snackbar.Add($"{L["Common:Errors:LoadFailed"]}: {error.Message}", Severity.Error);
+            if (!append)
+            {
+                _groups.Clear();
+                _groupsHaveMore = false;
+                _groupsNextCursor = null;
+            }
+
+            return;
         }
 
-        var groupResult = await Facade.GetMutationGroupsAsync(from, to, _definitionKey);
-        if (groupResult.IsFailed(out var groupError, out var groups))
-        {
-            Snackbar.Add($"{L["Common:Errors:LoadFailed"]}: {groupError.Message}", Severity.Error);
-            _groups.Clear();
-        }
-        else
+        if (!append)
         {
             _groups.Clear();
-            _groups.AddRange(groups);
-            await EnsureDefinitionDetailsAsync(groups.SelectMany(group => group.DefinitionKeys));
         }
 
-        _loading = false;
+        var loadedIds = _groups.Select(static group => group.GroupId).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        _groups.AddRange(page.Items.Where(group => loadedIds.Add(group.GroupId)));
+        _groupsHaveMore = page.HasMore;
+        _groupsNextCursor = page.NextCursor;
+        await EnsureDefinitionDetailsAsync(page.Items.SelectMany(static group => group.DefinitionKeys));
+    }
+
+    private async Task LoadMoreHistoryAsync()
+    {
+        if (_loadingMoreHistory || !_historyHasMore || _activeHistoryRequest is null || _historyNextCursor is null)
+        {
+            return;
+        }
+
+        _loadingMoreHistory = true;
+        try
+        {
+            await LoadHistoryPageAsync(_activeHistoryRequest with { Cursor = _historyNextCursor }, append: true);
+        }
+        finally
+        {
+            _loadingMoreHistory = false;
+        }
+    }
+
+    private async Task LoadMoreGroupsAsync()
+    {
+        if (_loadingMoreGroups || !_groupsHaveMore || _activeGroupRequest is null || _groupsNextCursor is null)
+        {
+            return;
+        }
+
+        _loadingMoreGroups = true;
+        try
+        {
+            await LoadGroupPageAsync(_activeGroupRequest with { Cursor = _groupsNextCursor }, append: true);
+        }
+        finally
+        {
+            _loadingMoreGroups = false;
+        }
     }
 
     private async Task RollbackHistoryAsync(ConfigurationHistoryDisplayRow history)
@@ -726,19 +855,13 @@
         };
     }
 
-    private bool MatchesHistoryFilters(ConfigurationValueHistory history)
+    private ConfigurationMutationTargetKind? SelectedTargetKind()
     {
-        if (!string.IsNullOrWhiteSpace(_pathText)
-            && !history.LogicalPath.ToCanonicalString().Contains(_pathText, StringComparison.OrdinalIgnoreCase))
-        {
-            return false;
-        }
-
         return _targetFilter switch
         {
-            TARGET_FILTER_MONICA => history.TargetKind == ConfigurationMutationTargetKind.MonicaEffectiveStore,
-            TARGET_FILTER_EXTERNAL => history.TargetKind == ConfigurationMutationTargetKind.ExternalConfigurationSource,
-            _ => true
+            TARGET_FILTER_MONICA => ConfigurationMutationTargetKind.MonicaEffectiveStore,
+            TARGET_FILTER_EXTERNAL => ConfigurationMutationTargetKind.ExternalConfigurationSource,
+            _ => null
         };
     }
 

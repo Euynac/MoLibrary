@@ -70,8 +70,49 @@ internal sealed class ConfigurationSourceInspector(
     /// </summary>
     public ConfigurationSourceChain GetSourceChain(ConfigurationDefinition definition, LogicalPath logicalPath)
     {
-        var configurationPath = pathProjector.Project(definition.SectionPath, logicalPath);
-        return GetSourceChain(definition, logicalPath, configurationPath);
+        return GetSourceChains(definition, [logicalPath])[0];
+    }
+
+    /// <inheritdoc />
+    public IReadOnlyList<ConfigurationSourceChain> GetSourceChains(
+        ConfigurationDefinition definition,
+        IReadOnlyList<LogicalPath> logicalPaths)
+    {
+        if (logicalPaths.Count == 0)
+        {
+            return [];
+        }
+
+        if (runtimeContext.Root is not { } root)
+        {
+            return logicalPaths
+                .Select(logicalPath => EmptySourceChain(
+                    definition,
+                    logicalPath,
+                    pathProjector.Project(definition.SectionPath, logicalPath)))
+                .ToArray();
+        }
+
+        var descriptors = GetSources().ToDictionary(source => source.PriorityIndex);
+        var sources = new List<RuntimeConfigurationSource>(descriptors.Count);
+        foreach (var (provider, index) in root.Providers.Select((provider, index) => (provider, index)))
+        {
+            // Chained providers are aliases over another IConfiguration, not leaf sources. Querying them as direct
+            // value sources can re-enter the active root and block source-chain reads.
+            if (provider is not ChainedConfigurationProvider
+                && descriptors.TryGetValue(index, out var descriptor))
+            {
+                sources.Add(new RuntimeConfigurationSource(provider, descriptor));
+            }
+        }
+
+        return logicalPaths
+            .Select(logicalPath => BuildSourceChain(
+                definition,
+                logicalPath,
+                pathProjector.Project(definition.SectionPath, logicalPath),
+                sources))
+            .ToArray();
     }
 
     /// <inheritdoc />
@@ -326,33 +367,37 @@ internal sealed class ConfigurationSourceInspector(
         };
     }
 
-    private ConfigurationSourceChain GetSourceChain(ConfigurationDefinition definition, LogicalPath logicalPath, string configurationPath)
+    private static ConfigurationSourceChain EmptySourceChain(
+        ConfigurationDefinition definition,
+        LogicalPath logicalPath,
+        string configurationPath)
     {
-        if (runtimeContext.Root is not { } root)
+        return new ConfigurationSourceChain
         {
-            return new ConfigurationSourceChain
-            {
-                DefinitionKey = definition.DefinitionKey,
-                LogicalPath = logicalPath,
-                ConfigurationPath = configurationPath,
-                Values = []
-            };
-        }
+            DefinitionKey = definition.DefinitionKey,
+            LogicalPath = logicalPath,
+            ConfigurationPath = configurationPath,
+            Values = []
+        };
+    }
 
+    private static ConfigurationSourceChain BuildSourceChain(
+        ConfigurationDefinition definition,
+        LogicalPath logicalPath,
+        string configurationPath,
+        IReadOnlyList<RuntimeConfigurationSource> sources)
+    {
         var targetNode = ConfigurationSchemaNavigator.ResolveNode(definition.Root, logicalPath);
         var isSensitive = ConfigurationSchemaNavigator.IsSensitivePath(definition.Root, logicalPath);
-        var descriptors = GetSources().ToDictionary(source => source.PriorityIndex);
         var hits = new List<ConfigurationSourceValue>();
-        foreach (var (provider, index) in root.Providers.Select((provider, index) => (provider, index)))
+        foreach (var source in sources)
         {
-            // Chained providers are aliases over another IConfiguration, not leaf sources.
-            // Querying them as direct value sources can re-enter the active root and block source-chain reads.
-            if (provider is ChainedConfigurationProvider)
-            {
-                continue;
-            }
-
-            var value = BuildSourceValue(provider, descriptors[index], targetNode, configurationPath, isSensitive);
+            var value = BuildSourceValue(
+                source.Provider,
+                source.Descriptor,
+                targetNode,
+                configurationPath,
+                isSensitive);
             if (value is null)
             {
                 continue;
@@ -373,6 +418,10 @@ internal sealed class ConfigurationSourceInspector(
                 .ToArray()
         };
     }
+
+    private sealed record RuntimeConfigurationSource(
+        IConfigurationProvider Provider,
+        ConfigurationSourceDescriptor Descriptor);
 
     private static ConfigurationSourceValue? BuildSourceValue(
         IConfigurationProvider provider,

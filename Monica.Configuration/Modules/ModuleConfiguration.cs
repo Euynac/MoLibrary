@@ -110,6 +110,7 @@ public sealed class ModuleConfiguration
         _services = services;
         services.TryAddSingleton<IConfigurationDefinitionRegistry>(_definitionRegistry);
         services.TryAddSingleton<ConfigurationDefinitionResolver>();
+        services.TryAddSingleton<ConfigurationEffectiveStateReader>();
         services.TryAddSingleton<IConfigurationStoreStateTracker, ConfigurationStoreStateTracker>();
         services.TryAddSingleton<IConfigurationHistoryService, ConfigurationHistoryService>();
         services.TryAddSingleton<IConfigurationMutationBatchStore, SequentialConfigurationMutationBatchStore>();

@@ -6,6 +6,11 @@ namespace Monica.Configuration.EfCore.Entities;
 public sealed class ConfigurationEffectiveValueEntity
 {
     /// <summary>
+    /// Gets or sets the provider-independent, case-insensitive definition identity.
+    /// </summary>
+    public string DefinitionIdentity { get; set; } = "";
+
+    /// <summary>
     /// Gets or sets the owning configuration definition key.
     /// </summary>
     public string DefinitionKey { get; set; } = "";

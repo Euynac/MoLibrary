@@ -666,18 +666,16 @@
         _externalEffectiveSources.Clear();
         try
         {
-            var result = await LoadDefinitionDetailAsync(summary.DefinitionKey);
-            if (result.IsFailed(out var error, out var detail))
+            var result = await Facade.GetDefinitionStateAsync(summary.DefinitionKey);
+            if (result.IsFailed(out var error, out var definitionState))
             {
                 Snackbar.Add($"{L["Common:Errors:LoadFailed"]}: {error.Message}", Severity.Error);
                 ClearSelectedDefinition();
                 return;
             }
 
-            _selectedDefinition = detail.Definition;
-            _selectedNode = _selectedDefinition.Root;
-            _highlightedPath = null;
-            await LoadEffectiveValuesAsync();
+            ApplyDefinitionState(definitionState, resetSelection: true);
+            await LoadExternalEffectiveSourcesAsync();
         }
         catch (Exception ex)
         {
@@ -697,17 +695,34 @@
             return;
         }
 
-        _externalEffectiveSources.Clear();
-        foreach (var node in EnumerateNodes(_selectedDefinition.Root).Where(IsSimpleEditableNode))
+        var result = await Facade.GetDefinitionStateAsync(_selectedDefinition.DefinitionKey);
+        if (result.IsFailed(out var error, out var definitionState))
         {
-            var result = await Facade.GetEffectiveValueAsync(_selectedDefinition.DefinitionKey, node.RelativePath);
-            if (!result.IsFailed(out _, out var effectiveValue))
-            {
-                _effectiveValues[node.RelativePath] = effectiveValue;
-            }
+            Snackbar.Add($"{L["Common:Errors:LoadFailed"]}: {error.Message}", Severity.Error);
+            return;
         }
 
+        ApplyDefinitionState(definitionState, resetSelection: false);
         await LoadExternalEffectiveSourcesAsync();
+    }
+
+    private void ApplyDefinitionState(ConfigurationDefinitionState state, bool resetSelection)
+    {
+        var selectedPath = resetSelection ? LogicalPath.Root : _selectedNode?.RelativePath ?? LogicalPath.Root;
+        _selectedDefinition = state.Definition;
+        _definitionDetails[state.Definition.DefinitionKey] = state.Definition;
+        _selectedNode = ResolveNodeByPath(state.Definition.Root, selectedPath) ?? state.Definition.Root;
+        _effectiveValues.Clear();
+        foreach (var effectiveValue in state.EffectiveValues)
+        {
+            _effectiveValues[effectiveValue.LogicalPath] = effectiveValue;
+        }
+
+        _externalEffectiveSources.Clear();
+        if (resetSelection)
+        {
+            _highlightedPath = null;
+        }
     }
 
     private async Task LoadExternalEffectiveSourcesAsync()
@@ -717,18 +732,23 @@
             return;
         }
 
-        foreach (var node in EnumerateNodes(_selectedDefinition.Root).Where(IsComplexNodeItem))
+        var nodes = EnumerateNodes(_selectedDefinition.Root)
+            .Where(IsComplexNodeItem)
+            .ToArray();
+        var result = await Facade.GetSourceChainsAsync(
+            _selectedDefinition.DefinitionKey,
+            nodes.Select(static node => node.RelativePath).ToArray());
+        if (result.IsFailed(out _, out var sourceChains))
         {
-            var result = await Facade.GetSourceChainAsync(_selectedDefinition.DefinitionKey, node.RelativePath);
-            if (result.IsFailed(out _, out var sourceChain))
-            {
-                continue;
-            }
+            return;
+        }
 
-            var externalSource = ResolveExternalEffectiveSource(node, sourceChain);
+        for (var index = 0; index < nodes.Length; index++)
+        {
+            var externalSource = ResolveExternalEffectiveSource(nodes[index], sourceChains[index]);
             if (externalSource is not null)
             {
-                _externalEffectiveSources[node.RelativePath] = externalSource;
+                _externalEffectiveSources[nodes[index].RelativePath] = externalSource;
             }
         }
     }
@@ -1167,15 +1187,20 @@
             return;
         }
 
-        var result = await Facade.QueryHistoryAsync(null, null, _selectedDefinition.DefinitionKey, null);
-        if (result.IsFailed(out var error, out var rows))
+        var request = new ConfigurationHistoryPageRequest
+        {
+            DefinitionKey = _selectedDefinition.DefinitionKey
+        };
+        var result = await Facade.QueryHistoryPageAsync(request);
+        if (result.IsFailed(out var error, out var page))
         {
             Snackbar.Add($"{L["Common:Errors:LoadFailed"]}: {error.Message}", Severity.Error);
             return;
         }
 
         var parameters = new DialogParameters<ConfigurationHistoryDiffDialog>();
-        parameters.Add(dialog => dialog.Rows, rows);
+        parameters.Add(dialog => dialog.HistoryRequest, request);
+        parameters.Add(dialog => dialog.InitialPage, page);
         parameters.Add(dialog => dialog.Definitions, _definitions);
         parameters.Add(dialog => dialog.Definition, _selectedDefinition);
         parameters.Add(dialog => dialog.Title, L["History:Dialog:MutationTitle", _selectedDefinition.DisplayName]);

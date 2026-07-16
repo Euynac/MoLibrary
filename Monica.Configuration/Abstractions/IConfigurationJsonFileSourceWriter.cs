@@ -8,6 +8,18 @@ namespace Monica.Configuration.Abstractions;
 public interface IConfigurationJsonFileSourceWriter
 {
     /// <summary>
+    /// Reads selected physical JSON-source values and their shared source-content revision.
+    /// </summary>
+    /// <param name="source">The readable JSON source descriptor.</param>
+    /// <param name="configurationPaths">The distinct Microsoft configuration paths to read.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>The requested physical values and source revision captured under one source lock.</returns>
+    Task<ConfigurationJsonFilePhysicalValuesSnapshot> ReadPhysicalValuesAsync(
+        ConfigurationSourceDescriptor source,
+        IReadOnlyList<string> configurationPaths,
+        CancellationToken cancellationToken);
+
+    /// <summary>
     /// Reads selected physical JSON-source values together with the revision that contained them.
     /// </summary>
     /// <param name="source">The readable JSON source descriptor.</param>

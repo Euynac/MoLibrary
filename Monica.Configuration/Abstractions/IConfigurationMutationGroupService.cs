@@ -75,6 +75,16 @@ public interface IConfigurationMutationGroupService
         CancellationToken cancellationToken);
 
     /// <summary>
+    /// Gets a bounded page of persisted mutation groups.
+    /// </summary>
+    /// <param name="request">The filters and pagination bounds.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>The matching group page in deterministic newest-first order.</returns>
+    Task<ConfigurationMutationGroupPageResult> QueryPageAsync(
+        ConfigurationMutationGroupPageRequest request,
+        CancellationToken cancellationToken);
+
+    /// <summary>
     /// Gets one mutation group by identity.
     /// </summary>
     /// <param name="groupId">The group identity.</param>
