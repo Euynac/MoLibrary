@@ -7,7 +7,12 @@
     <MudPaper Outlined="true" Class="pa-3">
         <MudStack Spacing="2">
             <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Spacing="2">
-                <MudText Typo="Typo.subtitle1">@L["Versions:List:Title"]</MudText>
+                <MudStack Spacing="0">
+                    <MudText Typo="Typo.subtitle1">@L["Versions:List:Title"]</MudText>
+                    <MudText Typo="Typo.caption" Color="Color.Secondary">
+                        @L["Versions:List:ComparedToCurrent", CurrentVersionLabel]
+                    </MudText>
+                </MudStack>
                 <MudChip T="int" Size="Size.Small" Variant="Variant.Outlined">@Versions.Count</MudChip>
             </MudStack>
 
@@ -20,16 +25,46 @@
                 <div class="configuration-version-history-list">
                     @foreach (var version in Versions)
                     {
-                        <div class="@HistoryItemClass(version)">
+                        <div class="@HistoryItemClass(version)" @key="version.Version">
                             <button type="button"
                                     class="configuration-version-history-selection"
-                                    aria-pressed="@(SelectedVersion == version.Version)"
+                                    aria-pressed="@(SelectedVersion == version.Version ? "true" : "false")"
                                     @onclick="() => OnVersionSelected.InvokeAsync(version.Version)">
-                                <span class="configuration-version-history-selection-title">
-                                    @ConfigurationUnifiedVersionDisplayFormatter.VersionText(version)
+                                <span class="configuration-version-history-identity">
+                                    <span class="configuration-version-history-version">
+                                        @ConfigurationUnifiedVersionDisplayFormatter.VersionLabel(version)
+                                    </span>
+                                    <span class="configuration-version-history-timestamp">
+                                        @ConfigurationUnifiedVersionDisplayFormatter.CreatedTimeText(version)
+                                    </span>
                                 </span>
-                                <span class="configuration-version-history-selection-caption">
-                                    @L["Versions:List:ComparedToCurrent", CurrentVersionLabel]
+                                <span class="configuration-version-history-metadata">
+                                    <MudTooltip Text="@DefinitionTooltip(version)">
+                                        <span class="configuration-version-history-metadata-item">
+                                            <MudIcon Icon="@Icons.Material.Filled.Description"
+                                                     Size="Size.Small"
+                                                     Color="Color.Secondary" />
+                                            <span>@L["Versions:Current:DefinitionCount", version.DefinitionCount]</span>
+                                        </span>
+                                    </MudTooltip>
+                                    @if (ConfigurationUnifiedVersionDisplayFormatter.OperatorTextOrNull(version) is { } operatorText)
+                                    {
+                                        <span class="configuration-version-history-metadata-item">
+                                            <MudIcon Icon="@Icons.Material.Filled.Person"
+                                                     Size="Size.Small"
+                                                     Color="Color.Secondary" />
+                                            <span>@operatorText</span>
+                                        </span>
+                                    }
+                                    @if (!string.IsNullOrWhiteSpace(version.Reason))
+                                    {
+                                        <span class="configuration-version-history-metadata-item configuration-version-history-reason">
+                                            <MudIcon Icon="@Icons.Material.Filled.Notes"
+                                                     Size="Size.Small"
+                                                     Color="Color.Secondary" />
+                                            <span>@version.Reason</span>
+                                        </span>
+                                    }
                                 </span>
                             </button>
                             <div class="configuration-version-history-actions">
@@ -57,23 +92,6 @@
                                                    aria-label="@L["Versions:Actions:Delete"]" />
                                 </MudTooltip>
                             </div>
-                            <MudStack Class="configuration-version-history-metadata"
-                                      Row="true"
-                                      Wrap="Wrap.Wrap"
-                                      Spacing="1">
-                                <MudTooltip Text="@DefinitionTooltip(version)">
-                                    <MudChip T="int" Size="Size.Small" Variant="Variant.Outlined">
-                                        @L["Versions:Current:DefinitionCount", version.DefinitionCount]
-                                    </MudChip>
-                                </MudTooltip>
-                                <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">
-                                    @OperatorText(version)
-                                </MudChip>
-                                @if (!string.IsNullOrWhiteSpace(version.Reason))
-                                {
-                                    <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">@version.Reason</MudChip>
-                                }
-                            </MudStack>
                         </div>
                     }
                 </div>
@@ -183,8 +201,4 @@
             L["Versions:Definitions:Empty"]);
     }
 
-    private string OperatorText(ConfigurationUnifiedVersionSummary version)
-    {
-        return ConfigurationUnifiedVersionDisplayFormatter.OperatorText(version, L["Common:States:Empty"]);
-    }
 }

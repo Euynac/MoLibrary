@@ -6,7 +6,17 @@ internal static class ConfigurationUnifiedVersionDisplayFormatter
 {
     public static string VersionText(ConfigurationUnifiedVersionSummary version)
     {
-        return $"{ConfigurationUnifiedVersionJsonFormatter.VersionLabel(version.Version)} · {version.CreatedTime.ToLocalTime():yyyy-MM-dd HH:mm:ss}";
+        return $"{VersionLabel(version)} · {CreatedTimeText(version)}";
+    }
+
+    public static string VersionLabel(ConfigurationUnifiedVersionSummary version)
+    {
+        return ConfigurationUnifiedVersionJsonFormatter.VersionLabel(version.Version);
+    }
+
+    public static string CreatedTimeText(ConfigurationUnifiedVersionSummary version)
+    {
+        return version.CreatedTime.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss");
     }
 
     public static string DefinitionTooltip(ConfigurationUnifiedVersionSummary version, string emptyText)
@@ -18,11 +28,16 @@ internal static class ConfigurationUnifiedVersionDisplayFormatter
 
     public static string OperatorText(ConfigurationUnifiedVersionSummary version, string emptyText)
     {
+        return OperatorTextOrNull(version) ?? emptyText;
+    }
+
+    public static string? OperatorTextOrNull(ConfigurationUnifiedVersionSummary version)
+    {
         return !string.IsNullOrWhiteSpace(version.ModifierName)
             ? version.ModifierName!
             : !string.IsNullOrWhiteSpace(version.ModifierId)
                 ? version.ModifierId!
-                : emptyText;
+                : null;
     }
 
     public static string ValueOrEmpty(string? value, string emptyText)
