@@ -2,9 +2,11 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Options;
 using Monica.Configuration.Abstractions;
 using Monica.Configuration.EfCore.DbContext;
 using Monica.Configuration.EfCore.Stores;
+using Monica.Configuration.EfCore.Stores.Support;
 using Monica.Configuration.Models;
 using Monica.DependencyInjection.Abstractions;
 using Monica.DependencyInjection.Services;
@@ -67,12 +69,53 @@ public static class ModuleConfigurationEfCoreBuilderExtensions
         {
             optionsAction(serviceProvider, optionsBuilder);
         });
-        services.AddSingleton<DatabaseConfigurationStore>();
+        AddDatabaseConfigurationStores(services);
 
         var serviceProvider = services.BuildServiceProvider();
         return new OwnedConfigurationEffectiveValueStore(
             serviceProvider,
-            serviceProvider.GetRequiredService<DatabaseConfigurationStore>());
+            serviceProvider.GetRequiredService<DatabaseConfigurationEffectiveValueStore>());
+    }
+
+    internal static void AddDatabaseConfigurationStores(IServiceCollection services)
+    {
+        services.TryAddSingleton<ConfigurationDatabaseSchemaManager>(serviceProvider =>
+            new ConfigurationDatabaseSchemaManager(
+                serviceProvider.GetRequiredService<IDbContextOperation<ConfigurationDbContext>>(),
+                serviceProvider.GetRequiredService<IOptions<ModuleConfigurationEfCoreOption>>()));
+        services.TryAddSingleton<ConfigurationDatabase>(serviceProvider =>
+            new ConfigurationDatabase(
+                serviceProvider.GetRequiredService<IDbContextOperation<ConfigurationDbContext>>(),
+                serviceProvider.GetRequiredService<ConfigurationDatabaseSchemaManager>()));
+        services.TryAddSingleton<DatabaseConfigurationStore>(serviceProvider =>
+            new DatabaseConfigurationStore(
+                serviceProvider.GetRequiredService<ConfigurationDatabaseSchemaManager>()));
+        services.TryAddSingleton<DatabaseConfigurationEffectiveValueStore>(serviceProvider =>
+            new DatabaseConfigurationEffectiveValueStore(
+                serviceProvider.GetRequiredService<ConfigurationDatabase>()));
+        services.TryAddSingleton<DatabaseConfigurationHistoryStore>(serviceProvider =>
+            new DatabaseConfigurationHistoryStore(
+                serviceProvider.GetRequiredService<ConfigurationDatabase>()));
+        services.TryAddSingleton<DatabaseConfigurationMetadataStore>(serviceProvider =>
+            new DatabaseConfigurationMetadataStore(
+                serviceProvider.GetRequiredService<ConfigurationDatabase>()));
+        services.TryAddSingleton<DatabaseConfigurationUnifiedVersionStore>(serviceProvider =>
+            new DatabaseConfigurationUnifiedVersionStore(
+                serviceProvider.GetRequiredService<ConfigurationDatabase>()));
+        services.TryAddSingleton<DatabaseConfigurationMutationBatchStore>(serviceProvider =>
+            new DatabaseConfigurationMutationBatchStore(
+                serviceProvider.GetRequiredService<ConfigurationDatabase>()));
+
+        services.Replace(ServiceDescriptor.Singleton<IConfigurationEffectiveValueStore>(serviceProvider =>
+            serviceProvider.GetRequiredService<DatabaseConfigurationEffectiveValueStore>()));
+        services.Replace(ServiceDescriptor.Singleton<IConfigurationHistoryStore>(serviceProvider =>
+            serviceProvider.GetRequiredService<DatabaseConfigurationHistoryStore>()));
+        services.Replace(ServiceDescriptor.Singleton<IConfigurationMetadataStore>(serviceProvider =>
+            serviceProvider.GetRequiredService<DatabaseConfigurationMetadataStore>()));
+        services.Replace(ServiceDescriptor.Singleton<IConfigurationUnifiedVersionStore>(serviceProvider =>
+            serviceProvider.GetRequiredService<DatabaseConfigurationUnifiedVersionStore>()));
+        services.Replace(ServiceDescriptor.Singleton<IConfigurationMutationBatchStore>(serviceProvider =>
+            serviceProvider.GetRequiredService<DatabaseConfigurationMutationBatchStore>()));
     }
 
     private sealed class OwnedConfigurationEffectiveValueStore(
@@ -158,17 +201,7 @@ public sealed class ModuleConfigurationEfCore(ModuleConfigurationEfCoreOption op
     /// <inheritdoc />
     public override void ConfigureServices(IServiceCollection services)
     {
-        services.TryAddSingleton<DatabaseConfigurationStore>();
-        services.Replace(ServiceDescriptor.Singleton<IConfigurationEffectiveValueStore>(
-            serviceProvider => serviceProvider.GetRequiredService<DatabaseConfigurationStore>()));
-        services.Replace(ServiceDescriptor.Singleton<IConfigurationHistoryStore>(
-            serviceProvider => serviceProvider.GetRequiredService<DatabaseConfigurationStore>()));
-        services.Replace(ServiceDescriptor.Singleton<IConfigurationMetadataStore>(
-            serviceProvider => serviceProvider.GetRequiredService<DatabaseConfigurationStore>()));
-        services.Replace(ServiceDescriptor.Singleton<IConfigurationUnifiedVersionStore>(
-            serviceProvider => serviceProvider.GetRequiredService<DatabaseConfigurationStore>()));
-        services.Replace(ServiceDescriptor.Singleton<IConfigurationMutationBatchStore>(
-            serviceProvider => serviceProvider.GetRequiredService<DatabaseConfigurationStore>()));
+        ModuleConfigurationEfCoreBuilderExtensions.AddDatabaseConfigurationStores(services);
     }
 }
 

@@ -1,9 +1,8 @@
 using AwesomeAssertions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Options;
+using Monica.Configuration.Abstractions;
 using Monica.Configuration.EfCore.DbContext;
-using Monica.Configuration.EfCore.Stores;
 using Monica.Configuration.Models;
 using Monica.Configuration.Serialization;
 using Monica.DependencyInjection.Abstractions;
@@ -208,7 +207,7 @@ public sealed class DatabaseConfigurationStorePublishTests
             .ToArray();
         return new StoreSet(
             providers,
-            providers.Select(provider => provider.GetRequiredService<DatabaseConfigurationStore>()).ToArray());
+            providers.Select(provider => provider.GetRequiredService<IConfigurationMetadataStore>()).ToArray());
     }
 
     private static ServiceProvider CreateProvider(string databasePath)
@@ -227,7 +226,7 @@ public sealed class DatabaseConfigurationStorePublishTests
         {
             options.UseSqlite($"Data Source={databasePath}");
         });
-        services.AddSingleton<DatabaseConfigurationStore>();
+        new ModuleConfigurationEfCore(new ModuleConfigurationEfCoreOption()).ConfigureServices(services);
         return services.BuildServiceProvider();
     }
 
@@ -288,9 +287,9 @@ public sealed class DatabaseConfigurationStorePublishTests
         return Path.Combine(directory, "configuration.db");
     }
 
-    private sealed class StoreSet(ServiceProvider[] providers, DatabaseConfigurationStore[] items) : IAsyncDisposable
+    private sealed class StoreSet(ServiceProvider[] providers, IConfigurationMetadataStore[] items) : IAsyncDisposable
     {
-        public DatabaseConfigurationStore[] Items { get; } = items;
+        public IConfigurationMetadataStore[] Items { get; } = items;
 
         public async ValueTask DisposeAsync()
         {
