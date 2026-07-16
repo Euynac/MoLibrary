@@ -1314,17 +1314,11 @@ public sealed class DatabaseConfigurationStore(
 
         try
         {
+            // Only probe a legacy column before inspecting the marker. A failed additive upgrade may have already
+            // created a nullable database column for the required CLR property, which must not be materialized yet.
             _ = await dbContext.ConfigurationDefinitions
                 .AsNoTracking()
-                .Select(definition => new
-                {
-                    definition.DefinitionIdentity,
-                    definition.SchemaJson,
-                    definition.FromProject,
-                    definition.Category,
-                    definition.Description,
-                    definition.PublishRevision
-                })
+                .Select(static definition => definition.DefinitionKey)
                 .FirstOrDefaultAsync(cancellationToken);
         }
         catch (Exception ex) when (IsMissingTableException(ex))
@@ -1343,6 +1337,18 @@ public sealed class DatabaseConfigurationStore(
 
         try
         {
+            _ = await dbContext.ConfigurationDefinitions
+                .AsNoTracking()
+                .Select(definition => new
+                {
+                    definition.DefinitionIdentity,
+                    definition.SchemaJson,
+                    definition.FromProject,
+                    definition.Category,
+                    definition.Description,
+                    definition.PublishRevision
+                })
+                .FirstOrDefaultAsync(cancellationToken);
             _ = await dbContext.ConfigurationValueHistories
                 .AsNoTracking()
                 .Select(history => new
@@ -1464,6 +1470,11 @@ public sealed class DatabaseConfigurationStore(
         // Indexes are recreated after the column shape is finalized. Removing known indexes first makes a retry safe
         // when a previous attempt created indexes but failed before advancing the schema marker.
         await DropDefinitionIdentityIndexesAsync(dbContext, indexes, cancellationToken);
+
+        foreach (var index in indexes)
+        {
+            await PrepareDefinitionIdentityBackfillAsync(dbContext, index.TableName, cancellationToken);
+        }
 
         await BackfillDefinitionIdentitiesAsync(
             dbContext,
@@ -1596,6 +1607,24 @@ public sealed class DatabaseConfigurationStore(
             dbContext.ChangeTracker.Clear();
             processedCount += batch.Length;
         }
+    }
+
+    private static async Task PrepareDefinitionIdentityBackfillAsync(
+        ConfigurationDbContext dbContext,
+        string tableName,
+        CancellationToken cancellationToken)
+    {
+        var providerName = dbContext.Database.ProviderName;
+        var tableSql = FormatTableName(providerName, null, tableName);
+        var columnSql = QuoteIdentifier(providerName, nameof(ConfigurationDefinitionEntity.DefinitionIdentity));
+        var sql = $"UPDATE {tableSql} SET {columnSql} = {{0}} WHERE {columnSql} IS NULL";
+
+        // EF materializes this property as a required string. Give legacy NULLs a valid-width sentinel before the
+        // tracked backfill reads them; the normal backfill immediately replaces every sentinel with its derived hash.
+        await dbContext.Database.ExecuteSqlRawAsync(
+            sql,
+            [new string('0', ConfigurationDefinitionIdentity.Length)],
+            cancellationToken);
     }
 
     private static async Task EnsureDefinitionIdentityUniquenessAsync(
