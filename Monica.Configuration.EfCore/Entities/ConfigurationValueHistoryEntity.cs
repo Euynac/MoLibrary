@@ -43,6 +43,8 @@ public sealed class ConfigurationValueHistoryEntity
 
     public int SchemaVersion { get; set; }
 
+    public string? SchemaHash { get; set; }
+
     public DateTime ModifiedTime { get; set; }
 
     public string? ModifierId { get; set; }

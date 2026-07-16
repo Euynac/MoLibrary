@@ -101,6 +101,7 @@ internal sealed partial class ConfigurationMutationGroupApplyService
                             SourceRevisionBefore = write.OldRevision,
                             SourceRevisionAfter = write.NewRevision,
                             SchemaVersion = mutation.Definition.SchemaVersion,
+                            SchemaHash = mutation.Definition.SchemaHash,
                             ModifiedTime = write.ModifiedTime,
                             ModifierId = context.ModifierId,
                             ModifierName = context.ModifierName,
@@ -213,13 +214,31 @@ internal sealed partial class ConfigurationMutationGroupApplyService
         ConfigurationMutationGroup MutationGroup,
         bool Succeeded);
 
-    private void ValidateExternalTargets(IReadOnlyList<PreparedConfigurationMutation> mutations)
+    private void ValidateTargets(IReadOnlyList<PreparedConfigurationMutation> mutations)
     {
         var expectedRevisions = new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase);
+        var pathsByExternalTarget = new Dictionary<string, List<string>>(StringComparer.OrdinalIgnoreCase);
+        var monicaPathsByDefinition = new Dictionary<string, List<string>>(StringComparer.OrdinalIgnoreCase);
         foreach (var mutation in mutations)
         {
             if (mutation.Command.Target is ConfigurationEffectiveStoreMutationTarget)
             {
+                if (!monicaPathsByDefinition.TryGetValue(mutation.Definition.DefinitionKey, out var definitionPaths))
+                {
+                    definitionPaths = [];
+                    monicaPathsByDefinition[mutation.Definition.DefinitionKey] = definitionPaths;
+                }
+
+                var containingPath = definitionPaths.FirstOrDefault(path =>
+                    ConfigurationPathOverlapDetector.HasStrictContainment(path, mutation.ConfigurationPath));
+                if (containingPath is not null)
+                {
+                    throw new ConfigurationValidationFailedException(
+                        $"Mutation group contains ancestor/descendant paths '{containingPath}' and '{mutation.ConfigurationPath}' "
+                        + $"for Monica definition '{mutation.Definition.DefinitionKey}'. Submit one mutation for the owning path so review and rollback semantics remain unambiguous.");
+                }
+
+                definitionPaths.Add(mutation.ConfigurationPath);
                 continue;
             }
 
@@ -244,6 +263,26 @@ internal sealed partial class ConfigurationMutationGroupApplyService
             }
 
             expectedRevisions[target.SourceKey] = target.ExpectedRevision;
+
+            var externalTargetIdentity = string.IsNullOrWhiteSpace(source.PhysicalPath)
+                ? target.SourceKey
+                : source.PhysicalPath;
+            if (!pathsByExternalTarget.TryGetValue(externalTargetIdentity, out var sourcePaths))
+            {
+                sourcePaths = [];
+                pathsByExternalTarget[externalTargetIdentity] = sourcePaths;
+            }
+
+            var overlappingPath = sourcePaths.FirstOrDefault(path =>
+                ConfigurationPathOverlapDetector.Overlaps(path, mutation.ConfigurationPath));
+            if (overlappingPath is not null)
+            {
+                throw new ConfigurationValidationFailedException(
+                    $"Mutation group contains overlapping paths '{overlappingPath}' and '{mutation.ConfigurationPath}' "
+                    + $"for external source '{source.DisplayName}'. Submit one mutation for the owning path so the saved history has an unambiguous rollback order.");
+            }
+
+            sourcePaths.Add(mutation.ConfigurationPath);
         }
     }
 }

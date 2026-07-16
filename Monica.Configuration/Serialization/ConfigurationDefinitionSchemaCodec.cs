@@ -1,4 +1,8 @@
+using System.Diagnostics.CodeAnalysis;
+using System.Security.Cryptography;
+using System.Text;
 using System.Text.Json;
+using Monica.Configuration.Exceptions;
 using Monica.Configuration.Models;
 using Monica.Tool.Extensions;
 
@@ -9,6 +13,8 @@ namespace Monica.Configuration.Serialization;
 /// </summary>
 public static class ConfigurationDefinitionSchemaCodec
 {
+    private const int MAX_SCHEMA_DEPTH = 128;
+
     /// <summary>
     /// Serializes the definition schema with exact scalar and dictionary-key CLR identities while omitting runtime-only paths.
     /// </summary>
@@ -30,11 +36,28 @@ public static class ConfigurationDefinitionSchemaCodec
     {
         var input = new SchemaHashInputDto
         {
-            DefinitionKey = definitionKey,
+            DefinitionKey = definitionKey.ToUpperInvariant(),
             SectionPath = sectionPath,
             Root = ToNodeDto(root)
         };
         return JsonSerializer.Serialize(input, ConfigurationPersistedJsonOptions.CompactSchema);
+    }
+
+    /// <summary>
+    /// Computes the canonical SHA-256 identity for a configuration definition schema.
+    /// </summary>
+    /// <param name="definitionKey">The stable definition key.</param>
+    /// <param name="sectionPath">The Microsoft configuration section path.</param>
+    /// <param name="root">The root schema node.</param>
+    /// <returns>The canonical lowercase schema hash.</returns>
+    public static string ComputeSchemaHash(
+        string definitionKey,
+        string sectionPath,
+        ConfigurationNodeDefinition root)
+    {
+        var json = SerializeHashInput(definitionKey, sectionPath, root);
+        var hash = SHA256.HashData(Encoding.UTF8.GetBytes(json));
+        return $"sha256:{Convert.ToHexString(hash).ToLowerInvariant()}";
     }
 
     /// <summary>
@@ -72,6 +95,8 @@ public static class ConfigurationDefinitionSchemaCodec
     {
         var rootDto = JsonSerializer.Deserialize<NodeDto>(schemaJson, ConfigurationPersistedJsonOptions.CompactSchema)
             ?? throw new InvalidOperationException($"Configuration definition '{definitionKey}' has empty schema JSON.");
+
+        ValidateNodeDto(rootDto, LogicalPath.Root, 0);
 
         return new ConfigurationDefinition
         {
@@ -265,6 +290,210 @@ public static class ConfigurationDefinitionSchemaCodec
         };
     }
 
+    private static void ValidateNodeDto(NodeDto dto, LogicalPath path, int depth)
+    {
+        if (depth > MAX_SCHEMA_DEPTH)
+        {
+            ThrowInvalidSchema($"Persisted configuration schema exceeds the maximum depth of {MAX_SCHEMA_DEPTH}.", path);
+        }
+
+        if (string.IsNullOrWhiteSpace(dto.Name))
+        {
+            ThrowInvalidSchema("Persisted configuration schema contains a node without a name.", path);
+        }
+
+        if (!Enum.IsDefined(dto.NodeKind))
+        {
+            ThrowInvalidSchema($"Persisted configuration schema uses unsupported node kind '{dto.NodeKind}'.", path);
+        }
+
+        if (dto.ValueKind is { } valueKind && !Enum.IsDefined(valueKind))
+        {
+            ThrowInvalidSchema($"Persisted configuration schema uses unsupported value kind '{valueKind}'.", path);
+        }
+
+        if (dto.TextSemantic is { } textSemantic && !Enum.IsDefined(textSemantic))
+        {
+            ThrowInvalidSchema($"Persisted configuration schema uses unsupported text semantic '{textSemantic}'.", path);
+        }
+
+        if (dto.ReloadBehavior is { } reloadBehavior && !Enum.IsDefined(reloadBehavior))
+        {
+            ThrowInvalidSchema($"Persisted configuration schema uses unsupported reload behavior '{reloadBehavior}'.", path);
+        }
+
+        var children = dto.Children ?? [];
+        switch (dto.NodeKind)
+        {
+            case ConfigurationNodeKind.Scalar:
+                if (dto.ValueKind is null)
+                {
+                    ThrowInvalidSchema("Persisted scalar schema node is missing its value kind.", path);
+                }
+
+                RequireClrTypeName(dto.ClrTypeName, path, "scalar node");
+                RequireNoTemplatesOrChildren(dto, children, path);
+                break;
+            case ConfigurationNodeKind.Object:
+                if (dto.ValueKind is not null || dto.DictionaryTemplate is not null || dto.ListTemplate is not null)
+                {
+                    ThrowInvalidSchema("Persisted object schema node contains scalar or collection metadata.", path);
+                }
+
+                break;
+            case ConfigurationNodeKind.Dictionary:
+                if (dto.ValueKind is not null || dto.ListTemplate is not null || children.Count > 0)
+                {
+                    ThrowInvalidSchema("Persisted dictionary schema node contains incompatible node metadata.", path);
+                }
+
+                ValidateDictionaryTemplate(dto.DictionaryTemplate, path, depth);
+                break;
+            case ConfigurationNodeKind.List:
+                if (dto.ValueKind is not null || dto.DictionaryTemplate is not null || children.Count > 0)
+                {
+                    ThrowInvalidSchema("Persisted list schema node contains incompatible node metadata.", path);
+                }
+
+                ValidateListTemplate(dto.ListTemplate, path, depth);
+                break;
+        }
+
+        if (dto.NodeKind != ConfigurationNodeKind.Scalar && dto.TextSemantic is not null)
+        {
+            ThrowInvalidSchema("Persisted non-scalar schema node contains text-semantic metadata.", path);
+        }
+
+        if (dto.EnumValues is { Count: > 0 } enumValues)
+        {
+            if (dto.NodeKind != ConfigurationNodeKind.Scalar || dto.ValueKind != ConfigurationValueKind.Enum)
+            {
+                ThrowInvalidSchema("Persisted enum values belong to a non-enum schema node.", path);
+            }
+
+            foreach (var enumValue in enumValues)
+            {
+                if (enumValue is null
+                    || string.IsNullOrWhiteSpace(enumValue.Name)
+                    || string.IsNullOrWhiteSpace(enumValue.Value))
+                {
+                    ThrowInvalidSchema("Persisted schema contains an invalid enum value entry.", path);
+                }
+            }
+        }
+
+        foreach (var rule in dto.ValidationRules ?? [])
+        {
+            if (rule is null || rule.Kind is null || !Enum.IsDefined(rule.Kind.Value))
+            {
+                ThrowInvalidSchema("Persisted schema contains an invalid validation rule entry.", path);
+            }
+
+            switch (rule.Kind.Value)
+            {
+                case RuleKind.Range when rule.Min is not null && rule.Max is not null && rule.Min > rule.Max:
+                    ThrowInvalidSchema("Persisted range validation rule has a minimum greater than its maximum.", path);
+                    break;
+                case RuleKind.Regex when !ConfigurationRegexTextCodec.TryValidatePattern(rule.Pattern, out var regexProblem):
+                    ThrowInvalidSchema($"Persisted regex validation rule is invalid: {regexProblem}", path);
+                    break;
+                case RuleKind.MaxLength or RuleKind.MinLength when rule.Length < 0:
+                    ThrowInvalidSchema("Persisted length validation rule contains a negative length.", path);
+                    break;
+            }
+        }
+
+        var childNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var child in children)
+        {
+            if (child is null || string.IsNullOrWhiteSpace(child.Name))
+            {
+                ThrowInvalidSchema("Persisted object schema contains an invalid child node.", path);
+            }
+
+            if (!childNames.Add(child.Name))
+            {
+                ThrowInvalidSchema($"Persisted object schema contains duplicate child name '{child.Name}'.", path);
+            }
+
+            ValidateNodeDto(child, path.Append(new PropertySegment(child.Name)), depth + 1);
+        }
+    }
+
+    private static void RequireNoTemplatesOrChildren(
+        NodeDto dto,
+        IReadOnlyList<NodeDto> children,
+        LogicalPath path)
+    {
+        if (dto.DictionaryTemplate is not null || dto.ListTemplate is not null || children.Count > 0)
+        {
+            ThrowInvalidSchema("Persisted scalar schema node contains object or collection metadata.", path);
+        }
+    }
+
+    private static void ValidateDictionaryTemplate(
+        DictionaryTemplateDto? template,
+        LogicalPath path,
+        int depth)
+    {
+        if (template is null)
+        {
+            ThrowInvalidSchema("Persisted dictionary schema node is missing its value template.", path);
+        }
+
+        if (!Enum.IsDefined(template.KeyKind))
+        {
+            ThrowInvalidSchema($"Persisted dictionary schema uses unsupported key kind '{template.KeyKind}'.", path);
+        }
+
+        RequireClrTypeName(template.KeyClrTypeName, path, "dictionary key");
+        if (!ConfigurationRegexTextCodec.TryValidatePattern(template.KeyRegexPattern, out var regexProblem))
+        {
+            ThrowInvalidSchema($"Persisted dictionary key regex is invalid: {regexProblem}", path);
+        }
+
+        if (template.ValueTemplate is null)
+        {
+            ThrowInvalidSchema("Persisted dictionary schema node has a null value template.", path);
+        }
+
+        ValidateNodeDto(
+            template.ValueTemplate,
+            path.Append(new DictionaryKeySegment("*")),
+            depth + 1);
+    }
+
+    private static void ValidateListTemplate(
+        ListTemplateDto? template,
+        LogicalPath path,
+        int depth)
+    {
+        if (template is null)
+        {
+            ThrowInvalidSchema("Persisted list schema node is missing its item template.", path);
+        }
+
+        if (template.ItemTemplate is null)
+        {
+            ThrowInvalidSchema("Persisted list schema node has a null item template.", path);
+        }
+
+        ValidateNodeDto(
+            template.ItemTemplate,
+            path.Append(new ListItemKeySegment("*")),
+            depth + 1);
+    }
+
+    [DoesNotReturn]
+    private static void ThrowInvalidSchema(string message, LogicalPath path)
+    {
+        var schemaPath = path.ToCanonicalString();
+        throw new ConfigurationPersistedSchemaException(
+            ConfigurationDefinitionMetadataIssueKind.InvalidSchema,
+            $"{message} Schema path: '{schemaPath}'.",
+            schemaPath);
+    }
+
     private static ConfigurationDictionaryTemplate FromDictionaryDto(
         DictionaryTemplateDto dto,
         LogicalPath dictionaryPath,
@@ -347,9 +576,12 @@ public static class ConfigurationDefinitionSchemaCodec
     {
         if (string.IsNullOrWhiteSpace(clrTypeName))
         {
-            throw new InvalidOperationException(
-                $"Persisted configuration schema path '{path.ToCanonicalString()}' is missing the exact "
-                + $"{metadataKind} CLR type. Republish the definition metadata before using it.");
+            var schemaPath = path.ToCanonicalString();
+            throw new ConfigurationPersistedSchemaException(
+                ConfigurationDefinitionMetadataIssueKind.OutdatedSchemaContract,
+                $"Persisted configuration schema path '{schemaPath}' is missing the exact "
+                + $"{metadataKind} CLR type. Republish the definition metadata before using it.",
+                schemaPath);
         }
 
         return clrTypeName;

@@ -37,7 +37,53 @@
       "SchemaMetadataTitle": "Schema 元数据",
       "SchemaVersionDetail": "版本：{0}",
       "SchemaHashDetail": "Hash",
-      "SchemaHashMissing": "暂无 Hash"
+      "SchemaHashMissing": "暂无 Hash",
+      "Unavailable": "配置定义不可用",
+      "MetadataFault": "元数据异常",
+      "NoAvailableDefinitions": "当前没有具备完整权威元数据的配置定义。请检查已报告的问题，修复后刷新页面。",
+      "RequestedDefinitionNotFound": "未找到请求的配置定义“{0}”。",
+      "RequestedDefinitionUnresolved": "元数据存储不可用，暂时无法确认请求的配置定义“{0}”。请修复存储后刷新页面。",
+      "CatalogOperationBlocked": "导入和导出需要完整的配置定义目录。请先修复已报告的元数据问题并刷新页面。",
+      "FromProjectLabel": "发布项目",
+      "FromProjectValue": "项目：{0}",
+      "UnknownProject": "未知项目",
+      "MetadataStoreUnavailableForDefinition": "当前无法读取权威发布元数据，因此已禁用该配置定义的管理操作。",
+      "ViewProblemDetails": "查看问题详情",
+      "ViewProblemDetailsAria": "查看 {0} 的元数据问题详情",
+      "ProblemDetailsTitle": "元数据问题：{0}",
+      "ProblemSummary": "该持久化配置定义目前无法安全管理，其他有效配置定义不受影响。",
+      "SectionPathLabel": "配置 Section",
+      "SchemaVersionLabel": "Schema 版本",
+      "SchemaHashLabel": "Schema Hash",
+      "MetadataStoreLabel": "元数据存储",
+      "ProblemKindLabel": "问题类型",
+      "SchemaPathLabel": "受影响的 Schema 路径",
+      "JsonPathLabel": "持久化 JSON 路径",
+      "ErrorTypeLabel": "技术错误类型",
+      "TechnicalDetailsTitle": "技术详情",
+      "RepairTitle": "建议修复方式",
+      "RepublishGuidance": "请使用当前 Monica.Configuration 运行时部署或重启项目“{0}”所属服务，使其重新发布配置定义“{1}”。请勿手工修改存储中的 Schema JSON。",
+      "RepublishGuidanceUnknownOwner": "请先确定配置定义“{0}”的所属服务，再使用当前 Monica.Configuration 运行时部署或重启该服务，使其重新发布配置定义。请勿手工修改存储中的 Schema JSON。",
+      "RepairMetadataStoreGuidance": "元数据存储“{0}”中存在配置定义“{1}”的冲突记录或错误 Key。请先备份存储并修复冲突记录的标识，再重新发布所属配置定义；仅重新发布无法移除该冲突。",
+      "RefreshAfterRepublish": "发布成功后请刷新本页面。重新发布元数据不会修改现有有效配置值。",
+      "StoreFailureTitle": "发布元数据存储不可用",
+      "StoreFailureSummary": "Monica 无法完整读取“{0}”：{1}。页面仍会显示本地发现的定义用于诊断，但在权威元数据恢复前将禁用管理操作。",
+      "StoreKeyValue": "存储：{0}",
+      "StoreFailureGuidance": "请检查数据库或文件存储的可用性以及物理 Schema 兼容性，然后刷新页面。应先恢复存储，再重新发布单个配置定义。",
+      "MetadataIssues": {
+        "InvalidEnvelope": "元数据外层结构无效",
+        "InvalidReloadBehavior": "Reload 行为无效",
+        "InvalidSchemaJson": "Schema JSON 格式错误",
+        "SchemaHashMismatch": "Schema Hash 与内容不匹配",
+        "OutdatedSchemaContract": "Schema 契约版本过旧",
+        "InvalidSchema": "持久化 Schema 无效"
+      },
+      "StoreIssues": {
+        "Unavailable": "存储连接不可用",
+        "AccessDenied": "无读取权限",
+        "IncompatibleSchema": "物理存储 Schema 不兼容",
+        "ReadFailed": "读取目录失败"
+      }
     },
     "Tree": {
       "Root": "根节点"
@@ -48,7 +94,8 @@
     },
     "Footer": {
       "PendingCount": "暂存修改",
-      "ValidationIssueCount": "验证异常"
+      "ValidationIssueCount": "验证异常",
+      "SaveBlockedMetadata": "至少有一个暂存配置定义不再具备完整的权威元数据，因此当前无法保存。请先修复并刷新该定义。"
     },
     "RuntimeValidation": {
       "Title": "运行时验证",
@@ -213,7 +260,8 @@
     "CollapsedCount": "{0} 个字段",
     "Actions": {
       "ViewChange": "查看变更",
-      "ViewDefinitionHistory": "查看配置定义历史"
+      "ViewDefinitionHistory": "查看配置定义历史",
+      "RollbackBlockedMetadata": "一个或多个受影响的配置定义缺少完整的权威元数据，因此无法回滚。请先修复并刷新这些定义。"
     },
     "Tabs": {
       "Mutations": "按修改",
@@ -225,7 +273,8 @@
       "Target": "目标",
       "TargetAll": "全部目标",
       "TargetMonica": "Monica 存储",
-      "TargetExternal": "外部来源"
+      "TargetExternal": "外部来源",
+      "UnavailableDefinition": "{0}（元数据不可用）"
     },
     "States": {
       "Empty": "未找到历史记录。"
@@ -308,7 +357,7 @@
       "ExternalTargetCount": "外部 {0}",
       "Operator": "操作人",
       "DiffDirection": "旧值 -> 新值",
-      "RollbackDirection": "当前修改值 -> 回滚目标值",
+      "RollbackDirection": "当前目标值 -> 回滚目标值",
       "NoPreview": "没有可用于差异预览的历史记录。"
     }
   },
@@ -340,7 +389,8 @@
     "SelectionWarning": "这会将选中的历史记录按反向顺序作为一个回滚组回滚。如果其中一条失败，回滚组会被标记为部分应用。",
     "PreviewTitle": "变更预览",
     "Confirm": "回滚",
-    "Success": "回滚已完成。"
+    "Success": "回滚已完成。",
+    "AppliedWithIssues": "回滚值已保存，但重新加载、通知、审计或验证的后续处理出现问题。"
   },
   "Versions": {
     "Subtitle": "查看当前统一配置版本，并将历史版本与当前版本对比后按需恢复。",

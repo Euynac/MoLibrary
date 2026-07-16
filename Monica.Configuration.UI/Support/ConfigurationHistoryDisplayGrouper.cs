@@ -15,7 +15,7 @@ internal static class ConfigurationHistoryDisplayGrouper
     public static IReadOnlyList<ConfigurationHistoryDisplayRow> Collapse(IReadOnlyList<ConfigurationValueHistory> rows)
     {
         return rows
-            .GroupBy(GroupKey, StringComparer.OrdinalIgnoreCase)
+            .GroupBy(GroupKey, HistoryDisplayGroupKeyComparer.Instance)
             .Select(group => BuildDisplayRow(group.ToArray()))
             .OrderByDescending(row => row.ModifiedTime)
             .ThenByDescending(row => row.Version)
@@ -40,15 +40,23 @@ internal static class ConfigurationHistoryDisplayGrouper
             ordered.Length > 1);
     }
 
-    private static string GroupKey(ConfigurationValueHistory row)
+    private static HistoryDisplayGroupKey GroupKey(ConfigurationValueHistory row)
     {
         if (!CanGroup(row))
         {
-            return row.HistoryId;
+            return new HistoryDisplayGroupKey(
+                row.HistoryId,
+                MutationGroupId: null,
+                DefinitionKey: null,
+                row.TargetKind,
+                ProviderType: null,
+                DisplayName: null,
+                PhysicalPath: null,
+                LogicalPath: null);
         }
 
-        return string.Join(
-            '|',
+        return new HistoryDisplayGroupKey(
+            UniqueHistoryId: null,
             row.MutationGroupId,
             row.DefinitionKey,
             row.TargetKind,
@@ -75,6 +83,50 @@ internal static class ConfigurationHistoryDisplayGrouper
         return path.Depth == 0
             ? LogicalPath.Root
             : new LogicalPath([path.Segments[0]]);
+    }
+
+    private sealed record HistoryDisplayGroupKey(
+        string? UniqueHistoryId,
+        string? MutationGroupId,
+        string? DefinitionKey,
+        ConfigurationMutationTargetKind TargetKind,
+        string? ProviderType,
+        string? DisplayName,
+        string? PhysicalPath,
+        string? LogicalPath);
+
+    private sealed class HistoryDisplayGroupKeyComparer : IEqualityComparer<HistoryDisplayGroupKey>
+    {
+        public static HistoryDisplayGroupKeyComparer Instance { get; } = new();
+
+        public bool Equals(HistoryDisplayGroupKey? left, HistoryDisplayGroupKey? right)
+        {
+            return ReferenceEquals(left, right)
+                   || left is not null
+                   && right is not null
+                   && left.TargetKind == right.TargetKind
+                   && StringComparer.OrdinalIgnoreCase.Equals(left.UniqueHistoryId, right.UniqueHistoryId)
+                   && StringComparer.OrdinalIgnoreCase.Equals(left.MutationGroupId, right.MutationGroupId)
+                   && StringComparer.OrdinalIgnoreCase.Equals(left.DefinitionKey, right.DefinitionKey)
+                   && StringComparer.OrdinalIgnoreCase.Equals(left.ProviderType, right.ProviderType)
+                   && StringComparer.OrdinalIgnoreCase.Equals(left.DisplayName, right.DisplayName)
+                   && StringComparer.OrdinalIgnoreCase.Equals(left.PhysicalPath, right.PhysicalPath)
+                   && StringComparer.OrdinalIgnoreCase.Equals(left.LogicalPath, right.LogicalPath);
+        }
+
+        public int GetHashCode(HistoryDisplayGroupKey key)
+        {
+            var hash = new HashCode();
+            hash.Add(key.TargetKind);
+            hash.Add(key.UniqueHistoryId, StringComparer.OrdinalIgnoreCase);
+            hash.Add(key.MutationGroupId, StringComparer.OrdinalIgnoreCase);
+            hash.Add(key.DefinitionKey, StringComparer.OrdinalIgnoreCase);
+            hash.Add(key.ProviderType, StringComparer.OrdinalIgnoreCase);
+            hash.Add(key.DisplayName, StringComparer.OrdinalIgnoreCase);
+            hash.Add(key.PhysicalPath, StringComparer.OrdinalIgnoreCase);
+            hash.Add(key.LogicalPath, StringComparer.OrdinalIgnoreCase);
+            return hash.ToHashCode();
+        }
     }
 }
 

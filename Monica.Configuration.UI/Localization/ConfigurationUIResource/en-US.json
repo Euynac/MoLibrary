@@ -37,7 +37,53 @@
       "SchemaMetadataTitle": "Schema metadata",
       "SchemaVersionDetail": "Version: {0}",
       "SchemaHashDetail": "Hash",
-      "SchemaHashMissing": "No hash available"
+      "SchemaHashMissing": "No hash available",
+      "Unavailable": "Definition unavailable",
+      "MetadataFault": "Metadata problem",
+      "NoAvailableDefinitions": "No configuration definition currently has complete authoritative metadata. Review the reported problems and refresh after they are repaired.",
+      "RequestedDefinitionNotFound": "Requested configuration definition '{0}' was not found.",
+      "RequestedDefinitionUnresolved": "Requested configuration definition '{0}' could not be resolved while the metadata store is unavailable. Refresh after the store is repaired.",
+      "CatalogOperationBlocked": "Import and export require a complete definition catalog. Repair the reported metadata problems and refresh first.",
+      "FromProjectLabel": "Publishing project",
+      "FromProjectValue": "Project: {0}",
+      "UnknownProject": "Unknown project",
+      "MetadataStoreUnavailableForDefinition": "Authoritative published metadata is currently unavailable, so management operations are disabled for this definition.",
+      "ViewProblemDetails": "View problem details",
+      "ViewProblemDetailsAria": "View metadata problem details for {0}",
+      "ProblemDetailsTitle": "Metadata problem: {0}",
+      "ProblemSummary": "This persisted definition cannot be managed safely. Other valid definitions remain available.",
+      "SectionPathLabel": "Configuration section",
+      "SchemaVersionLabel": "Schema version",
+      "SchemaHashLabel": "Schema hash",
+      "MetadataStoreLabel": "Metadata store",
+      "ProblemKindLabel": "Problem type",
+      "SchemaPathLabel": "Affected schema path",
+      "JsonPathLabel": "Persisted JSON path",
+      "ErrorTypeLabel": "Technical error type",
+      "TechnicalDetailsTitle": "Technical details",
+      "RepairTitle": "Recommended repair",
+      "RepublishGuidance": "Deploy or restart the service from project '{0}' using the current Monica.Configuration runtime so it republishes definition '{1}'. Do not hand-edit the stored schema JSON.",
+      "RepublishGuidanceUnknownOwner": "Identify the service that owns definition '{0}', then deploy or restart it using the current Monica.Configuration runtime so it republishes the definition. Do not hand-edit the stored schema JSON.",
+      "RepairMetadataStoreGuidance": "Metadata store '{0}' contains conflicting or incorrectly keyed records for definition '{1}'. Back up the store, repair the conflicting record identity, and then republish the owning definition. Republishing alone cannot remove the conflict.",
+      "RefreshAfterRepublish": "After publication succeeds, refresh this page. Existing effective configuration values are not changed by metadata publication.",
+      "StoreFailureTitle": "Published metadata store is unavailable",
+      "StoreFailureSummary": "Monica could not read '{0}' completely: {1}. Locally discovered definitions are shown for diagnosis but management operations remain disabled until authoritative metadata is available.",
+      "StoreKeyValue": "Store: {0}",
+      "StoreFailureGuidance": "Check database or file-store availability and physical schema compatibility, then refresh. Republish individual definitions only after the store itself is healthy.",
+      "MetadataIssues": {
+        "InvalidEnvelope": "Invalid metadata envelope",
+        "InvalidReloadBehavior": "Invalid reload behavior",
+        "InvalidSchemaJson": "Malformed schema JSON",
+        "SchemaHashMismatch": "Schema hash does not match payload",
+        "OutdatedSchemaContract": "Outdated schema contract",
+        "InvalidSchema": "Invalid persisted schema"
+      },
+      "StoreIssues": {
+        "Unavailable": "store connection unavailable",
+        "AccessDenied": "access denied",
+        "IncompatibleSchema": "physical store schema is incompatible",
+        "ReadFailed": "catalog read failed"
+      }
     },
     "Tree": {
       "Root": "Root"
@@ -48,7 +94,8 @@
     },
     "Footer": {
       "PendingCount": "Staged changes",
-      "ValidationIssueCount": "Validation issues"
+      "ValidationIssueCount": "Validation issues",
+      "SaveBlockedMetadata": "Save is unavailable because at least one staged definition no longer has complete authoritative metadata. Repair and refresh it first."
     },
     "RuntimeValidation": {
       "Title": "Runtime validation",
@@ -213,7 +260,8 @@
     "CollapsedCount": "{0} fields",
     "Actions": {
       "ViewChange": "View change",
-      "ViewDefinitionHistory": "View definition history"
+      "ViewDefinitionHistory": "View definition history",
+      "RollbackBlockedMetadata": "Rollback is unavailable because one or more affected definitions do not have complete authoritative metadata. Repair and refresh them first."
     },
     "Tabs": {
       "Mutations": "By mutation",
@@ -225,7 +273,8 @@
       "Target": "Target",
       "TargetAll": "All targets",
       "TargetMonica": "Monica store",
-      "TargetExternal": "External sources"
+      "TargetExternal": "External sources",
+      "UnavailableDefinition": "{0} (metadata unavailable)"
     },
     "States": {
       "Empty": "No history records were found."
@@ -308,7 +357,7 @@
       "ExternalTargetCount": "External {0}",
       "Operator": "Operator",
       "DiffDirection": "Old value -> new value",
-      "RollbackDirection": "Current mutation value -> rollback target",
+      "RollbackDirection": "Current target value -> rollback target",
       "NoPreview": "No history rows are available for diff preview."
     }
   },
@@ -340,7 +389,8 @@
     "SelectionWarning": "This will roll back the selected history rows in reverse order as one rollback group. If one mutation fails, the rollback group will be partial.",
     "PreviewTitle": "Change preview",
     "Confirm": "Roll back",
-    "Success": "Rollback completed."
+    "Success": "Rollback completed.",
+    "AppliedWithIssues": "The rollback values were saved, but reload, notification, audit, or verification follow-up work reported a problem."
   },
   "Versions": {
     "Subtitle": "Review the current unified configuration version, compare history against it, and restore when needed.",

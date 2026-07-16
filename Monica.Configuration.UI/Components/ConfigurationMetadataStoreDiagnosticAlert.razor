@@ -1,0 +1,29 @@
+@inject IStringLocalizer<ConfigurationUIResource> L
+
+<MudAlert Severity="Severity.Error" Variant="Variant.Outlined">
+    <div class="configuration-metadata-store-diagnostic">
+        <MudText Typo="Typo.subtitle2">@L["State:Definitions:StoreFailureTitle"]</MudText>
+        <MudText Typo="Typo.body2">
+            @L["State:Definitions:StoreFailureSummary", Diagnostic.StoreDisplayName, StoreIssueText]
+        </MudText>
+        <MudText Typo="Typo.caption" Color="Color.Secondary">
+            @L["State:Definitions:StoreKeyValue", Diagnostic.StoreKey]
+        </MudText>
+        <div class="configuration-metadata-store-diagnostic-message">@Diagnostic.Message</div>
+        <MudText Typo="Typo.caption">
+            @L["State:Definitions:StoreFailureGuidance"]
+        </MudText>
+    </div>
+</MudAlert>
+
+@code {
+    [Parameter, EditorRequired] public ConfigurationMetadataStoreDiagnostic Diagnostic { get; set; } = null!;
+
+    private string StoreIssueText => Diagnostic.Kind switch
+    {
+        ConfigurationMetadataStoreIssueKind.Unavailable => L["State:Definitions:StoreIssues:Unavailable"].Value,
+        ConfigurationMetadataStoreIssueKind.AccessDenied => L["State:Definitions:StoreIssues:AccessDenied"].Value,
+        ConfigurationMetadataStoreIssueKind.IncompatibleStoreSchema => L["State:Definitions:StoreIssues:IncompatibleSchema"].Value,
+        _ => L["State:Definitions:StoreIssues:ReadFailed"].Value
+    };
+}

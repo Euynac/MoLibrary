@@ -16,9 +16,14 @@
                 <MudText Typo="Typo.body2" Color="Color.Secondary">@L["History:Subtitle"]</MudText>
             </MudStack>
             <MudTooltip Text="@L["Common:Actions:Refresh"]">
-                <MudIconButton Icon="@Icons.Material.Filled.Refresh" Variant="Variant.Outlined" OnClick="LoadAsync" />
+                <MudIconButton Icon="@Icons.Material.Filled.Refresh" Variant="Variant.Outlined" OnClick="ReloadAsync" />
             </MudTooltip>
         </MudStack>
+
+        @if (_metadataStoreDiagnostic is not null)
+        {
+            <ConfigurationMetadataStoreDiagnosticAlert Diagnostic="@_metadataStoreDiagnostic" />
+        }
 
         <MudPaper Outlined="true" Class="pa-3">
             <MudGrid Spacing="2">
@@ -31,7 +36,11 @@
                                Clearable="true">
                         @foreach (var definition in _definitions)
                         {
-                            <MudSelectItem T="string" Value="@definition.DefinitionKey">@definition.DisplayName</MudSelectItem>
+                            <MudSelectItem T="string"
+                                           Value="@definition.DefinitionKey"
+                                           Disabled="@(!definition.CanManage)">
+                                @DefinitionFilterLabel(definition)
+                            </MudSelectItem>
                         }
                     </MudSelect>
                 </MudItem>
@@ -161,10 +170,11 @@
                                                        Size="Size.Small"
                                                        OnClick="() => ShowHistoryAsync(context)" />
                                     </MudTooltip>
-                                    <MudTooltip Text="@L["Rollback:Confirm"]">
+                                    <MudTooltip Text="@RollbackTooltip(CanRollbackHistory(context))">
                                         <MudIconButton Icon="@Icons.Material.Filled.Restore"
                                                        Size="Size.Small"
                                                        Color="Color.Warning"
+                                                       Disabled="@(!CanRollbackHistory(context))"
                                                        OnClick="() => RollbackHistoryAsync(context)" />
                                     </MudTooltip>
                                 </MudStack>
@@ -231,11 +241,11 @@
                                                        Size="Size.Small"
                                                        OnClick="() => ShowGroupHistoryAsync(context)" />
                                     </MudTooltip>
-                                    <MudTooltip Text="@L["Rollback:Confirm"]">
+                                    <MudTooltip Text="@RollbackTooltip(CanRollbackGroup(context))">
                                         <MudIconButton Icon="@Icons.Material.Filled.Restore"
                                                        Size="Size.Small"
                                                        Color="Color.Warning"
-                                                       Disabled="@(context.Status == ConfigurationMutationGroupStatus.RolledBack)"
+                                                       Disabled="@(!CanRollbackGroup(context))"
                                                        OnClick="() => RollbackGroupAsync(context)" />
                                     </MudTooltip>
                                 </MudStack>
@@ -265,6 +275,7 @@
     private DateTime? _fromDate;
     private DateTime? _toDate;
     private bool _loading = true;
+    private ConfigurationMetadataStoreDiagnostic? _metadataStoreDiagnostic;
 
     private IReadOnlyList<ConfigurationHistoryDisplayRow> FilteredHistory =>
         ConfigurationHistoryDisplayGrouper.Collapse(_history.Where(MatchesHistoryFilters).ToArray());
@@ -289,12 +300,26 @@
 
     private async Task LoadDefinitionsAsync()
     {
-        var result = await Facade.GetDefinitionsAsync();
-        if (!result.IsFailed(out _, out var definitions))
+        var result = await Facade.GetDefinitionCatalogAsync();
+        if (result.IsFailed(out var error, out var catalog))
         {
             _definitions.Clear();
-            _definitions.AddRange(definitions);
+            _definitionDetails.Clear();
+            _metadataStoreDiagnostic = null;
+            Snackbar.Add($"{L["Common:Errors:LoadFailed"]}: {error.Message}", Severity.Error);
+            return;
         }
+
+        _definitions.Clear();
+        _definitions.AddRange(catalog.Definitions);
+        _definitionDetails.Clear();
+        _metadataStoreDiagnostic = catalog.StoreDiagnostic;
+    }
+
+    private async Task ReloadAsync()
+    {
+        await LoadDefinitionsAsync();
+        await LoadAsync();
     }
 
     private async Task LoadAsync()
@@ -348,6 +373,12 @@
 
     private async Task RollbackHistoryAsync(ConfigurationHistoryDisplayRow history)
     {
+        if (!CanRollbackHistory(history))
+        {
+            Snackbar.Add(L["History:Actions:RollbackBlockedMetadata"], Severity.Warning);
+            return;
+        }
+
         var parameters = new DialogParameters<RollbackConfirmationDialog>();
         if (history.Rows.Count == 1)
         {
@@ -361,18 +392,26 @@
             MaxWidth = MaxWidth.ExtraLarge,
             FullWidth = true
         });
-        if (await WasConfirmedAsync(dialog))
-        {
-            Snackbar.Add(L["Rollback:Success"], Severity.Success);
-            await LoadAsync();
-        }
+        await HandleRollbackDialogAsync(dialog);
     }
 
     private async Task RollbackGroupAsync(ConfigurationMutationGroup group)
     {
+        if (!CanRollbackGroup(group))
+        {
+            Snackbar.Add(L["History:Actions:RollbackBlockedMetadata"], Severity.Warning);
+            return;
+        }
+
         var rows = await GetGroupRowsAsync(group);
         if (rows is null)
         {
+            return;
+        }
+
+        if (!rows.All(CanRollbackRow))
+        {
+            Snackbar.Add(L["History:Actions:RollbackBlockedMetadata"], Severity.Warning);
             return;
         }
 
@@ -384,11 +423,7 @@
             MaxWidth = MaxWidth.ExtraLarge,
             FullWidth = true
         });
-        if (await WasConfirmedAsync(dialog))
-        {
-            Snackbar.Add(L["Rollback:Success"], Severity.Success);
-            await LoadAsync();
-        }
+        await HandleRollbackDialogAsync(dialog);
     }
 
     private async Task ShowHistoryAsync(ConfigurationHistoryDisplayRow history)
@@ -403,11 +438,7 @@
             MaxWidth = MaxWidth.ExtraLarge,
             FullWidth = true
         });
-        if (await WasRollbackConfirmedAsync(dialog))
-        {
-            Snackbar.Add(L["Rollback:Success"], Severity.Success);
-            await LoadAsync();
-        }
+        await HandleRollbackDialogAsync(dialog);
     }
 
     private async Task ShowGroupHistoryAsync(ConfigurationMutationGroup group)
@@ -428,11 +459,7 @@
             MaxWidth = MaxWidth.ExtraLarge,
             FullWidth = true
         });
-        if (await WasRollbackConfirmedAsync(dialog))
-        {
-            Snackbar.Add(L["Rollback:Success"], Severity.Success);
-            await LoadAsync();
-        }
+        await HandleRollbackDialogAsync(dialog);
     }
 
     private async Task<IReadOnlyList<ConfigurationValueHistory>?> GetGroupRowsAsync(ConfigurationMutationGroup group)
@@ -453,16 +480,16 @@
         return rows;
     }
 
-    private static async Task<bool> WasConfirmedAsync(IDialogReference dialog)
+    private async Task HandleRollbackDialogAsync(IDialogReference dialog)
     {
         var result = await dialog.Result;
-        return result is { Canceled: false };
-    }
+        if (result is not { Canceled: false, Data: ConfigurationHistoryRollbackDialogResult rollback })
+        {
+            return;
+        }
 
-    private static async Task<bool> WasRollbackConfirmedAsync(IDialogReference dialog)
-    {
-        var result = await dialog.Result;
-        return result is { Canceled: false, Data: true };
+        await ConfigurationRollbackCompletionPresenter.ShowAsync(rollback, DialogService, Snackbar, L);
+        await LoadAsync();
     }
 
     private string DefinitionDisplay(string definitionKey)
@@ -483,6 +510,11 @@
                      .Distinct(StringComparer.OrdinalIgnoreCase))
         {
             if (_definitionDetails.ContainsKey(definitionKey))
+            {
+                continue;
+            }
+
+            if (!CanManageDefinition(definitionKey))
             {
                 continue;
             }
@@ -589,6 +621,45 @@
     {
         return _definitions.FirstOrDefault(definition =>
             string.Equals(definition.DefinitionKey, definitionKey, StringComparison.OrdinalIgnoreCase));
+    }
+
+    private bool CanManageDefinition(string definitionKey)
+    {
+        return ResolveDefinitionSummary(definitionKey)?.CanManage is true;
+    }
+
+    private bool CanRollbackHistory(ConfigurationHistoryDisplayRow history)
+    {
+        return history.Rows.All(CanRollbackRow);
+    }
+
+    private bool CanRollbackGroup(ConfigurationMutationGroup group)
+    {
+        return group.Status != ConfigurationMutationGroupStatus.RolledBack
+               && group.DefinitionKeys.All(CanManageDefinition);
+    }
+
+    private bool CanRollbackRow(ConfigurationValueHistory row)
+    {
+        var definition = ResolveDefinitionSummary(row.DefinitionKey);
+        return definition is { CanManage: true }
+               && definition.SchemaVersion == row.SchemaVersion
+               && !string.IsNullOrWhiteSpace(row.SchemaHash)
+               && string.Equals(definition.SchemaHash, row.SchemaHash, StringComparison.Ordinal);
+    }
+
+    private string RollbackTooltip(bool canRollback)
+    {
+        return canRollback
+            ? L["Rollback:Confirm"].Value
+            : L["History:Actions:RollbackBlockedMetadata"].Value;
+    }
+
+    private string DefinitionFilterLabel(ConfigurationDefinitionSummary definition)
+    {
+        return definition.CanManage
+            ? definition.DisplayName
+            : L["History:Filters:UnavailableDefinition", definition.DisplayName].Value;
     }
 
     private static ConfigurationNodeDefinition? ResolveNodeByPath(ConfigurationNodeDefinition root, LogicalPath path)

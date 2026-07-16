@@ -1,0 +1,9 @@
+.configuration-definition-diagnostic-field {
+    min-width: 0;
+}
+
+.configuration-definition-diagnostic-field-value {
+    overflow-wrap: anywhere;
+    color: var(--mud-palette-text-primary);
+    font-size: var(--mud-typography-body2-size);
+}

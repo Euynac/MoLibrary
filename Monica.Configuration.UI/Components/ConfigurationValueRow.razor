@@ -546,9 +546,9 @@
             FullWidth = true
         });
         var dialogResult = await dialog.Result;
-        if (dialogResult is { Canceled: false, Data: true })
+        if (dialogResult is { Canceled: false, Data: ConfigurationHistoryRollbackDialogResult rollback })
         {
-            Snackbar.Add(L["Rollback:Success"], Severity.Success);
+            await ConfigurationRollbackCompletionPresenter.ShowAsync(rollback, DialogService, Snackbar, L);
             await CommittedChanged.InvokeAsync();
             await Changed.InvokeAsync();
         }

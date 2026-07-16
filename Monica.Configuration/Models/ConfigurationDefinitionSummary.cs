@@ -54,4 +54,19 @@ public sealed record ConfigurationDefinitionSummary
     /// Gets where this definition was resolved from for the current process.
     /// </summary>
     public ConfigurationDefinitionOrigin Origin { get; init; } = ConfigurationDefinitionOrigin.LocalScan;
+
+    /// <summary>
+    /// Gets whether this definition has complete authoritative metadata and can be managed safely.
+    /// </summary>
+    public ConfigurationDefinitionAvailability Availability { get; init; } = ConfigurationDefinitionAvailability.Available;
+
+    /// <summary>
+    /// Gets the persisted metadata problem associated with this definition, when one is known.
+    /// </summary>
+    public ConfigurationDefinitionMetadataDiagnostic? MetadataDiagnostic { get; init; }
+
+    /// <summary>
+    /// Gets whether Configuration UI operations that require a complete schema are allowed.
+    /// </summary>
+    public bool CanManage => Availability == ConfigurationDefinitionAvailability.Available;
 }

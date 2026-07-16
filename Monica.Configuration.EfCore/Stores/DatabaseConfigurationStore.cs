@@ -1,5 +1,7 @@
 using System.Data.Common;
 using System.Reflection;
+using System.Security.Cryptography;
+using System.Text;
 using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
@@ -112,13 +114,15 @@ public sealed class DatabaseConfigurationStore(
             return await BuildCommittedMutationBatchResultAsync(dbContext, request, existingGroup, cancellationToken);
         }
 
-        var definitionKeys = request.Items
+        var normalizedDefinitionKeys = request.Items
             .Select(item => item.SaveRequest.Definition.DefinitionKey)
-            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .Select(NormalizeDefinitionKeyIdentity)
+            .Distinct(StringComparer.Ordinal)
             .ToArray();
-        var entities = await dbContext.ConfigurationEffectiveValues
-            .Where(value => definitionKeys.Contains(value.DefinitionKey))
-            .ToDictionaryAsync(value => value.DefinitionKey, StringComparer.OrdinalIgnoreCase, cancellationToken);
+        var entityRows = await dbContext.ConfigurationEffectiveValues
+            .Where(value => normalizedDefinitionKeys.Contains(value.DefinitionKey.ToUpper()))
+            .ToArrayAsync(cancellationToken);
+        var entities = ToEffectiveValueEntityDictionary(entityRows);
 
         foreach (var item in request.Items)
         {
@@ -209,18 +213,20 @@ public sealed class DatabaseConfigurationStore(
         ConfigurationMutationGroupEntity groupEntity,
         CancellationToken cancellationToken)
     {
-        var definitionKeys = request.Items
+        var normalizedDefinitionKeys = request.Items
             .Select(item => item.SaveRequest.Definition.DefinitionKey)
-            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .Select(NormalizeDefinitionKeyIdentity)
+            .Distinct(StringComparer.Ordinal)
             .ToArray();
-        var documents = await dbContext.ConfigurationEffectiveValues
+        var entityRows = await dbContext.ConfigurationEffectiveValues
             .AsNoTracking()
-            .Where(value => definitionKeys.Contains(value.DefinitionKey))
-            .ToDictionaryAsync(
-                value => value.DefinitionKey,
-                value => ToDocument(value),
-                StringComparer.OrdinalIgnoreCase,
-                cancellationToken);
+            .Where(value => normalizedDefinitionKeys.Contains(value.DefinitionKey.ToUpper()))
+            .ToArrayAsync(cancellationToken);
+        var documents = ToEffectiveValueEntityDictionary(entityRows)
+            .ToDictionary(
+                static pair => pair.Key,
+                static pair => ToDocument(pair.Value),
+                StringComparer.OrdinalIgnoreCase);
         return new ConfigurationMutationBatchCommitResult
         {
             MutationGroup = ToGroup(groupEntity),
@@ -291,10 +297,14 @@ public sealed class DatabaseConfigurationStore(
             {
                 return await ExecuteAsync(async (dbContext, token) =>
                 {
-                    var keys = seeds.Select(seed => seed.Definition.DefinitionKey).ToArray();
-                    var existing = await dbContext.ConfigurationEffectiveValues
-                        .Where(value => keys.Contains(value.DefinitionKey))
-                        .ToDictionaryAsync(value => value.DefinitionKey, StringComparer.OrdinalIgnoreCase, token);
+                    var normalizedKeys = seeds
+                        .Select(seed => NormalizeDefinitionKeyIdentity(seed.Definition.DefinitionKey))
+                        .Distinct(StringComparer.Ordinal)
+                        .ToArray();
+                    var existingRows = await dbContext.ConfigurationEffectiveValues
+                        .Where(value => normalizedKeys.Contains(value.DefinitionKey.ToUpper()))
+                        .ToArrayAsync(token);
+                    var existing = ToEffectiveValueEntityDictionary(existingRows);
 
                     var documentsByKey = new Dictionary<string, ConfigurationEffectiveValueDocument>(StringComparer.OrdinalIgnoreCase);
                     foreach (var entity in existing.Values)
@@ -346,9 +356,14 @@ public sealed class DatabaseConfigurationStore(
     {
         return await ExecuteAsync(async (dbContext, token) =>
         {
-            var entity = await dbContext.ConfigurationEffectiveValues
+            var normalizedDefinitionKey = NormalizeDefinitionKeyIdentity(definitionKey);
+            var entities = await dbContext.ConfigurationEffectiveValues
                 .AsNoTracking()
-                .FirstOrDefaultAsync(value => value.DefinitionKey == definitionKey, token);
+                .Where(value => value.DefinitionKey.ToUpper() == normalizedDefinitionKey)
+                .OrderBy(value => value.DefinitionKey)
+                .Take(2)
+                .ToArrayAsync(token);
+            var entity = GetSingleEffectiveValueEntity(entities, definitionKey);
             return entity is null ? null : ToDocument(entity);
         }, cancellationToken);
     }
@@ -360,17 +375,23 @@ public sealed class DatabaseConfigurationStore(
     {
         return await ExecuteAsync(async (dbContext, token) =>
         {
-            var entity = await dbContext.ConfigurationEffectiveValues
-                .FirstOrDefaultAsync(value => value.DefinitionKey == request.Definition.DefinitionKey, token);
+            var definitionKey = request.Definition.DefinitionKey;
+            var normalizedDefinitionKey = NormalizeDefinitionKeyIdentity(definitionKey);
+            var entities = await dbContext.ConfigurationEffectiveValues
+                .Where(value => value.DefinitionKey.ToUpper() == normalizedDefinitionKey)
+                .OrderBy(value => value.DefinitionKey)
+                .Take(2)
+                .ToArrayAsync(token);
+            var entity = GetSingleEffectiveValueEntity(entities, definitionKey);
             if (request.ExpectedVersion is not null && entity?.Version != request.ExpectedVersion)
             {
                 throw new ConfigurationConcurrencyConflictException(
-                    $"Expected version {request.ExpectedVersion} for '{request.Definition.DefinitionKey}', but current version is {entity?.Version.ToString() ?? "<none>"}.");
+                    $"Expected version {request.ExpectedVersion} for '{definitionKey}', but current version is {entity?.Version.ToString() ?? "<none>"}.");
             }
 
             if (entity is null)
             {
-                entity = new ConfigurationEffectiveValueEntity { DefinitionKey = request.Definition.DefinitionKey };
+                entity = new ConfigurationEffectiveValueEntity { DefinitionKey = definitionKey };
                 dbContext.ConfigurationEffectiveValues.Add(entity);
             }
 
@@ -423,7 +444,8 @@ public sealed class DatabaseConfigurationStore(
 
             if (!string.IsNullOrWhiteSpace(definitionKey))
             {
-                query = query.Where(history => history.DefinitionKey == definitionKey);
+                var normalizedDefinitionKey = NormalizeDefinitionKeyIdentity(definitionKey);
+                query = query.Where(history => history.DefinitionKey.ToUpper() == normalizedDefinitionKey);
             }
 
             if (logicalPath is not null)
@@ -704,11 +726,11 @@ public sealed class DatabaseConfigurationStore(
 
         return await ExecuteAsync(async (dbContext, token) =>
         {
-            var keys = candidates.Select(candidate => candidate.DefinitionKey).ToArray();
-            var existing = await dbContext.ConfigurationDefinitions
-                .AsNoTracking()
-                .Where(definition => keys.Contains(definition.DefinitionKey))
-                .ToDictionaryAsync(definition => definition.DefinitionKey, StringComparer.OrdinalIgnoreCase, token);
+            var existing = await LoadExistingPublishedDefinitionsAsync(
+                dbContext,
+                candidates,
+                trackChanges: false,
+                token);
 
             return candidates
                 .Where(candidate => !existing.TryGetValue(candidate.DefinitionKey, out var current)
@@ -788,7 +810,7 @@ public sealed class DatabaseConfigurationStore(
         }
     }
 
-    private static async Task PublishCandidatesAsync(
+    private async Task PublishCandidatesAsync(
         ConfigurationDbContext dbContext,
         IReadOnlyList<PublishedDefinitionCandidate> candidates,
         CancellationToken cancellationToken)
@@ -798,13 +820,15 @@ public sealed class DatabaseConfigurationStore(
             return;
         }
 
-        var keys = candidates.Select(candidate => candidate.DefinitionKey).ToArray();
-        var existing = await dbContext.ConfigurationDefinitions
-            .Where(definition => keys.Contains(definition.DefinitionKey))
-            .ToDictionaryAsync(definition => definition.DefinitionKey, StringComparer.OrdinalIgnoreCase, cancellationToken);
+        var existing = await LoadExistingPublishedDefinitionsAsync(
+            dbContext,
+            candidates,
+            trackChanges: true,
+            cancellationToken);
 
         foreach (var candidate in candidates)
         {
+            cancellationToken.ThrowIfCancellationRequested();
             if (!existing.TryGetValue(candidate.DefinitionKey, out var current))
             {
                 var created = candidate.CreateEntity();
@@ -829,29 +853,96 @@ public sealed class DatabaseConfigurationStore(
         }
     }
 
-    /// <inheritdoc />
-    public async Task<IReadOnlyList<ConfigurationDefinition>> ListPublishedDefinitionsAsync(CancellationToken cancellationToken)
+    private async Task<Dictionary<string, ConfigurationDefinitionEntity>> LoadExistingPublishedDefinitionsAsync(
+        ConfigurationDbContext dbContext,
+        IReadOnlyList<PublishedDefinitionCandidate> candidates,
+        bool trackChanges,
+        CancellationToken cancellationToken)
     {
-        return await ExecuteAsync(async (dbContext, token) =>
+        var duplicateCandidateKey = candidates
+            .GroupBy(static candidate => candidate.DefinitionKey, StringComparer.OrdinalIgnoreCase)
+            .FirstOrDefault(static group => group.Count() > 1)?.Key;
+        if (duplicateCandidateKey is not null)
+        {
+            throw CreateDuplicateDefinitionIdentityException(
+                duplicateCandidateKey,
+                "The current publisher supplied multiple definitions with the same case-insensitive key.");
+        }
+
+        var normalizedKeys = candidates
+            .Select(static candidate => candidate.DefinitionKey.ToUpperInvariant())
+            .Distinct(StringComparer.Ordinal)
+            .ToArray();
+        IQueryable<ConfigurationDefinitionEntity> query = dbContext.ConfigurationDefinitions;
+        if (!trackChanges)
+        {
+            query = query.AsNoTracking();
+        }
+
+        var entities = await query
+            .Where(definition => normalizedKeys.Contains(definition.DefinitionKey.ToUpper()))
+            .ToArrayAsync(cancellationToken);
+        var duplicateStoredKey = entities
+            .GroupBy(static definition => definition.DefinitionKey, StringComparer.OrdinalIgnoreCase)
+            .FirstOrDefault(static group => group.Count() > 1)?.Key;
+        if (duplicateStoredKey is not null)
+        {
+            throw CreateDuplicateDefinitionIdentityException(
+                duplicateStoredKey,
+                "The metadata database contains multiple rows with the same case-insensitive key.");
+        }
+
+        return entities.ToDictionary(
+            static definition => definition.DefinitionKey,
+            StringComparer.OrdinalIgnoreCase);
+    }
+
+    private ConfigurationDefinitionMetadataUnavailableException CreateDuplicateDefinitionIdentityException(
+        string definitionKey,
+        string message)
+    {
+        return new ConfigurationDefinitionMetadataUnavailableException(
+            definitionKey,
+            new ConfigurationDefinitionMetadataDiagnostic
+            {
+                Kind = ConfigurationDefinitionMetadataIssueKind.InvalidEnvelope,
+                StoreKey = Descriptor.StoreKey,
+                ErrorType = typeof(InvalidDataException).FullName!,
+                Message = message,
+                RecommendedAction = ConfigurationDefinitionMetadataRepairAction.RepairMetadataStore
+            });
+    }
+
+    /// <inheritdoc />
+    public async Task<IReadOnlyList<ConfigurationPublishedDefinitionEntry>> ListPublishedDefinitionEntriesAsync(
+        CancellationToken cancellationToken)
+    {
+        return await ExecuteMetadataReadAsync(async (dbContext, token) =>
         {
             var entities = await dbContext.ConfigurationDefinitions
                 .AsNoTracking()
                 .OrderBy(definition => definition.DisplayName)
                 .ThenBy(definition => definition.DefinitionKey)
                 .ToArrayAsync(token);
-            return entities.Select(ToDefinition).ToArray();
+            return ToPublishedDefinitionEntries(entities, token);
         }, cancellationToken);
     }
 
     /// <inheritdoc />
-    public async Task<ConfigurationDefinition?> GetPublishedDefinitionAsync(string definitionKey, CancellationToken cancellationToken)
+    public async Task<ConfigurationPublishedDefinitionEntry?> GetPublishedDefinitionEntryAsync(
+        string definitionKey,
+        CancellationToken cancellationToken)
     {
-        return await ExecuteAsync(async (dbContext, token) =>
+        return await ExecuteMetadataReadAsync(async (dbContext, token) =>
         {
-            var entity = await dbContext.ConfigurationDefinitions
+            var normalizedDefinitionKey = definitionKey.ToUpperInvariant();
+            var entities = await dbContext.ConfigurationDefinitions
                 .AsNoTracking()
-                .FirstOrDefaultAsync(definition => definition.DefinitionKey == definitionKey, token);
-            return entity is null ? null : ToDefinition(entity);
+                .Where(definition => definition.DefinitionKey.ToUpper() == normalizedDefinitionKey)
+                .OrderBy(definition => definition.DefinitionKey)
+                .Take(2)
+                .ToArrayAsync(token);
+            return ToPublishedDefinitionEntries(entities, token).FirstOrDefault();
         }, cancellationToken);
     }
 
@@ -866,7 +957,7 @@ public sealed class DatabaseConfigurationStore(
             var normalizedLimit = Math.Clamp(limit, 1, 200);
             var histories = await dbContext.ConfigurationDefinitionPublishHistories
                 .AsNoTracking()
-                .Where(history => history.DefinitionKey == definitionKey)
+                .Where(history => history.DefinitionKey.ToUpper() == definitionKey.ToUpperInvariant())
                 .OrderByDescending(history => history.PublishedTime)
                 .ThenByDescending(history => history.HistoryId)
                 .Take(normalizedLimit)
@@ -884,6 +975,28 @@ public sealed class DatabaseConfigurationStore(
         return await dbContextOperation.ExecuteAsync(operation, cancellationToken);
     }
 
+    private async Task<TResult> ExecuteMetadataReadAsync<TResult>(
+        Func<ConfigurationDbContext, CancellationToken, Task<TResult>> operation,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            return await ExecuteAsync(operation, cancellationToken);
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch (Exception ex) when (IsMissingTableException(ex) || IsMissingColumnException(ex))
+        {
+            throw new ConfigurationMetadataStoreReadException(
+                ConfigurationMetadataStoreIssueKind.IncompatibleStoreSchema,
+                "The Monica.Configuration metadata database is missing required tables or columns. "
+                + "Apply the current Monica.Configuration schema before reading or republishing definitions.",
+                ex);
+        }
+    }
+
     private async Task ExecuteAsync(
         Func<ConfigurationDbContext, CancellationToken, Task> operation,
         CancellationToken cancellationToken)
@@ -894,7 +1007,7 @@ public sealed class DatabaseConfigurationStore(
 
     private async Task EnsureSchemaAsync(CancellationToken cancellationToken)
     {
-        if (!options.Value.AutoCreateSchema || _schemaInitialized)
+        if (_schemaInitialized)
         {
             return;
         }
@@ -909,9 +1022,15 @@ public sealed class DatabaseConfigurationStore(
 
             await dbContextOperation.ExecuteAsync(async (dbContext, token) =>
             {
+                var autoCreateSchema = options.Value.AutoCreateSchema;
                 var creator = dbContext.Database.GetService<IRelationalDatabaseCreator>();
                 if (!await creator.ExistsAsync(token))
                 {
+                    if (!autoCreateSchema)
+                    {
+                        ThrowSchemaUpgradeRequired("The Monica.Configuration database does not exist.");
+                    }
+
                     await creator.CreateAsync(token);
                     await creator.CreateTablesAsync(token);
                     await EnsureConfigurationSchemaMarkerAsync(dbContext, token);
@@ -921,6 +1040,11 @@ public sealed class DatabaseConfigurationStore(
                 var schemaState = await GetConfigurationSchemaStateAsync(dbContext, token);
                 if (schemaState == ConfigurationSchemaState.Missing)
                 {
+                    if (!autoCreateSchema)
+                    {
+                        ThrowSchemaUpgradeRequired("The Monica.Configuration database tables are missing.");
+                    }
+
                     await creator.CreateTablesAsync(token);
                     await EnsureConfigurationSchemaMarkerAsync(dbContext, token);
                     return;
@@ -928,6 +1052,11 @@ public sealed class DatabaseConfigurationStore(
 
                 if (schemaState == ConfigurationSchemaState.RequiresUpgrade)
                 {
+                    if (!autoCreateSchema)
+                    {
+                        ThrowSchemaUpgradeRequired("The Monica.Configuration database schema requires an upgrade.");
+                    }
+
                     await EnsureAdditiveSchemaAsync(dbContext, token);
                     await EnsureConfigurationSchemaMarkerAsync(dbContext, token);
                 }
@@ -941,10 +1070,41 @@ public sealed class DatabaseConfigurationStore(
         }
     }
 
+    [System.Diagnostics.CodeAnalysis.DoesNotReturn]
+    private static void ThrowSchemaUpgradeRequired(string problem)
+    {
+        throw new ConfigurationMetadataStoreReadException(
+            ConfigurationMetadataStoreIssueKind.IncompatibleStoreSchema,
+            $"{problem} Apply the current Monica.Configuration migration before reading or publishing metadata; "
+            + "automatic schema creation is disabled for this host.");
+    }
+
     private static async Task<ConfigurationSchemaState> GetConfigurationSchemaStateAsync(
         ConfigurationDbContext dbContext,
         CancellationToken cancellationToken)
     {
+        int? markerVersion = null;
+        try
+        {
+            markerVersion = await dbContext.ConfigurationSchemaMarkers
+                .AsNoTracking()
+                .Where(candidate => candidate.MarkerKey == ConfigurationSchemaMarkerEntity.CurrentMarkerKey)
+                .Select(candidate => (int?)candidate.SchemaVersion)
+                .SingleOrDefaultAsync(cancellationToken);
+        }
+        catch (Exception ex) when (IsMissingTableException(ex) || IsMissingColumnException(ex))
+        {
+            // Older schemas may not have a marker yet; inspect the core tables before deciding how to upgrade.
+        }
+
+        if (markerVersion > ConfigurationSchemaMarkerEntity.CurrentSchemaVersion)
+        {
+            throw new ConfigurationMetadataStoreReadException(
+                ConfigurationMetadataStoreIssueKind.IncompatibleStoreSchema,
+                $"The Monica.Configuration database schema is version {markerVersion}, but this runtime supports version {ConfigurationSchemaMarkerEntity.CurrentSchemaVersion}. "
+                + "Deploy a newer Monica.Configuration runtime instead of letting an older binary migrate or rewrite the schema.");
+        }
+
         try
         {
             _ = await dbContext.ConfigurationDefinitions
@@ -968,30 +1128,21 @@ public sealed class DatabaseConfigurationStore(
             return ConfigurationSchemaState.RequiresUpgrade;
         }
 
+        if (markerVersion != ConfigurationSchemaMarkerEntity.CurrentSchemaVersion)
+        {
+            return ConfigurationSchemaState.RequiresUpgrade;
+        }
+
         try
         {
-            var marker = await dbContext.ConfigurationSchemaMarkers
+            _ = await dbContext.ConfigurationValueHistories
                 .AsNoTracking()
-                .Where(candidate => candidate.MarkerKey == ConfigurationSchemaMarkerEntity.CurrentMarkerKey)
-                .Select(candidate => new { candidate.SchemaVersion })
-                .SingleOrDefaultAsync(cancellationToken);
-            if (marker is null)
-            {
-                return ConfigurationSchemaState.RequiresUpgrade;
-            }
-
-            if (marker.SchemaVersion > ConfigurationSchemaMarkerEntity.CurrentSchemaVersion)
-            {
-                throw new InvalidOperationException(
-                    $"The Monica.Configuration database schema is version {marker.SchemaVersion}, but this runtime supports version {ConfigurationSchemaMarkerEntity.CurrentSchemaVersion}. " +
-                    "Deploy a newer Monica.Configuration runtime instead of letting an older binary migrate or rewrite the schema.");
-            }
-
-            if (marker.SchemaVersion < ConfigurationSchemaMarkerEntity.CurrentSchemaVersion)
-            {
-                return ConfigurationSchemaState.RequiresUpgrade;
-            }
-
+                .Select(history => new
+                {
+                    history.HistoryId,
+                    history.SchemaHash
+                })
+                .FirstOrDefaultAsync(cancellationToken);
             _ = await dbContext.ConfigurationDefinitionPublishHistories
                 .AsNoTracking()
                 .Select(history => new
@@ -1033,7 +1184,51 @@ public sealed class DatabaseConfigurationStore(
         CancellationToken cancellationToken)
     {
         await EnsureConfigurationSchemaMarkerTableAsync(dbContext, cancellationToken);
+        await EnsureHistorySchemaHashColumnAsync(dbContext, cancellationToken);
         await EnsureUnifiedVersionTablesAsync(dbContext, cancellationToken);
+    }
+
+    private static async Task EnsureHistorySchemaHashColumnAsync(
+        ConfigurationDbContext dbContext,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            _ = await dbContext.ConfigurationValueHistories
+                .AsNoTracking()
+                .Select(static history => history.SchemaHash)
+                .FirstOrDefaultAsync(cancellationToken);
+            return;
+        }
+        catch (Exception ex) when (IsMissingColumnException(ex))
+        {
+            // Legacy rows remain null and are intentionally treated as unverified by rollback and history UI.
+        }
+
+        var providerName = dbContext.Database.ProviderName;
+        var tableSql = FormatTableName(providerName, null, "ConfigurationValueHistories");
+        var columnSql = QuoteIdentifier(providerName, nameof(ConfigurationValueHistoryEntity.SchemaHash));
+        var columnType = providerName switch
+        {
+            var name when name?.Contains("SqlServer", StringComparison.OrdinalIgnoreCase) is true => "nvarchar(max)",
+            var name when name?.Contains("MySql", StringComparison.OrdinalIgnoreCase) is true => "longtext",
+            _ => "text"
+        };
+        var alterSql = $"ALTER TABLE {tableSql} ADD {columnSql} {columnType} NULL";
+        try
+        {
+            await dbContext.Database.ExecuteSqlRawAsync(
+                alterSql,
+                cancellationToken);
+        }
+        catch (Exception ex) when (IsDuplicateColumnException(ex))
+        {
+            // Another replica may have completed the additive upgrade after this replica's probe.
+            _ = await dbContext.ConfigurationValueHistories
+                .AsNoTracking()
+                .Select(static history => history.SchemaHash)
+                .FirstOrDefaultAsync(cancellationToken);
+        }
     }
 
     private static async Task EnsureConfigurationSchemaMarkerAsync(
@@ -1048,7 +1243,8 @@ public sealed class DatabaseConfigurationStore(
         }
         else if (marker.SchemaVersion > ConfigurationSchemaMarkerEntity.CurrentSchemaVersion)
         {
-            throw new InvalidOperationException(
+            throw new ConfigurationMetadataStoreReadException(
+                ConfigurationMetadataStoreIssueKind.IncompatibleStoreSchema,
                 $"The Monica.Configuration database schema is version {marker.SchemaVersion}, but this runtime supports version {ConfigurationSchemaMarkerEntity.CurrentSchemaVersion}.");
         }
         else if (marker.SchemaVersion < ConfigurationSchemaMarkerEntity.CurrentSchemaVersion)
@@ -1200,6 +1396,23 @@ public sealed class DatabaseConfigurationStore(
         return false;
     }
 
+    private static bool IsDuplicateColumnException(Exception exception)
+    {
+        for (var current = exception; current is not null; current = current.InnerException)
+        {
+            if (current is DbException dbException
+                && (GetStringProperty(dbException, "SqlState") is "42701"
+                    || GetIntProperty(dbException, "Number") is 2705 or 1060
+                    || GetIntProperty(dbException, "SqliteErrorCode") is 1
+                       && dbException.Message.Contains("duplicate column", StringComparison.OrdinalIgnoreCase)))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     private static bool IsMissingTableException(DbException exception)
     {
         return GetStringProperty(exception, "SqlState") is "42P01"
@@ -1286,10 +1499,13 @@ public sealed class DatabaseConfigurationStore(
         {
             return await ExecuteAsync(async (dbContext, token) =>
             {
-                var keys = candidates.Select(candidate => candidate.DefinitionKey).ToArray();
+                var normalizedKeys = candidates
+                    .Select(candidate => NormalizeDefinitionKeyIdentity(candidate.DefinitionKey))
+                    .Distinct(StringComparer.Ordinal)
+                    .ToArray();
                 var currentByKey = await dbContext.ConfigurationDefinitions
                     .AsNoTracking()
-                    .Where(definition => keys.Contains(definition.DefinitionKey))
+                    .Where(definition => normalizedKeys.Contains(definition.DefinitionKey.ToUpper()))
                     .ToDictionaryAsync(definition => definition.DefinitionKey, StringComparer.OrdinalIgnoreCase, token);
                 var diagnostics = candidates
                     .Take(5)
@@ -1380,13 +1596,15 @@ public sealed class DatabaseConfigurationStore(
         public bool Matches(ConfigurationDefinitionEntity current)
         {
             return HasSameSchema(current)
+                   && current.SchemaVersion >= SourceSchemaVersion
                    && string.Equals(SectionPath, current.SectionPath, StringComparison.Ordinal)
                    && string.Equals(DisplayName, current.DisplayName, StringComparison.Ordinal)
                    && string.Equals(Description, NullIfWhiteSpace(current.Description), StringComparison.Ordinal)
                    && string.Equals(ClrTypeName, current.ClrTypeName, StringComparison.Ordinal)
                    && string.Equals(FromProject, current.FromProject, StringComparison.Ordinal)
                    && string.Equals(Category, NullIfWhiteSpace(current.Category), StringComparison.Ordinal)
-                   && string.Equals(ReloadBehavior, current.ReloadBehavior, StringComparison.Ordinal);
+                   && string.Equals(ReloadBehavior, current.ReloadBehavior, StringComparison.Ordinal)
+                   && string.Equals(SchemaJson, current.SchemaJson, StringComparison.Ordinal);
         }
 
         public bool HasSameSchema(ConfigurationDefinitionEntity current)
@@ -1467,7 +1685,7 @@ public sealed class DatabaseConfigurationStore(
 
             var currentVersion = Math.Max(Math.Max(current.SchemaVersion, SourceSchemaVersion), 1);
             return changeKind == ConfigurationDefinitionPublishChangeKind.SchemaChanged
-                ? currentVersion + 1
+                ? checked(currentVersion + 1)
                 : currentVersion;
         }
 
@@ -1490,6 +1708,11 @@ public sealed class DatabaseConfigurationStore(
                 AddChange(changes, nameof(Category), NullIfWhiteSpace(current.Category), Category);
                 AddChange(changes, nameof(ReloadBehavior), current.ReloadBehavior, ReloadBehavior);
                 AddChange(changes, nameof(SchemaHash), current.SchemaHash, SchemaHash);
+                AddChange(
+                    changes,
+                    $"{nameof(SchemaJson)}Fingerprint",
+                    Fingerprint(current.SchemaJson),
+                    Fingerprint(SchemaJson));
             }
 
             var summary = new SchemaPublishChangeSummaryDto(changeKind.ToString(), changes);
@@ -1506,6 +1729,17 @@ public sealed class DatabaseConfigurationStore(
             {
                 changes.Add(new SchemaPublishChangeDto(field, previousValue, newValue));
             }
+        }
+
+        private static string Fingerprint(string? value)
+        {
+            if (value is null)
+            {
+                return "<null>";
+            }
+
+            var hash = SHA256.HashData(Encoding.UTF8.GetBytes(value));
+            return $"sha256:{Convert.ToHexString(hash).ToLowerInvariant()}";
         }
 
         private static string? NullIfWhiteSpace(string? value)
@@ -1564,21 +1798,51 @@ public sealed class DatabaseConfigurationStore(
         };
     }
 
-    private static ConfigurationDefinition ToDefinition(ConfigurationDefinitionEntity entity)
+    private ConfigurationPublishedDefinitionEntry ToPublishedDefinitionEntry(ConfigurationDefinitionEntity entity)
     {
-        return ConfigurationDefinitionSchemaCodec.DeserializeDefinition(
-            entity.DefinitionKey,
-            entity.SectionPath,
-            entity.DisplayName,
-            entity.Description,
-            entity.ClrTypeName,
-            entity.FromProject,
-            entity.Category,
-            entity.SchemaVersion,
-            entity.SchemaHash,
-            Enum.Parse<ConfigurationReloadBehavior>(entity.ReloadBehavior),
-            entity.SchemaJson,
-            ConfigurationDefinitionOrigin.PublishedMetadata);
+        return ConfigurationPublishedDefinitionEntry.Materialize(new ConfigurationPublishedDefinitionRecord
+        {
+            StoreKey = Descriptor.StoreKey,
+            DefinitionKey = entity.DefinitionKey,
+            SectionPath = entity.SectionPath,
+            DisplayName = entity.DisplayName,
+            Description = entity.Description,
+            ClrTypeName = entity.ClrTypeName,
+            FromProject = entity.FromProject,
+            Category = entity.Category,
+            SchemaVersion = entity.SchemaVersion,
+            SchemaHash = entity.SchemaHash,
+            ReloadBehavior = entity.ReloadBehavior,
+            SchemaJson = entity.SchemaJson
+        });
+    }
+
+    private IReadOnlyList<ConfigurationPublishedDefinitionEntry> ToPublishedDefinitionEntries(
+        IReadOnlyList<ConfigurationDefinitionEntity> entities,
+        CancellationToken cancellationToken)
+    {
+        var entries = new List<ConfigurationPublishedDefinitionEntry>(entities.Count);
+        foreach (var entity in entities)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            entries.Add(ToPublishedDefinitionEntry(entity));
+        }
+
+        var duplicateKeys = entries
+            .GroupBy(static entry => entry.Metadata.DefinitionKey, StringComparer.OrdinalIgnoreCase)
+            .Where(static group => group.Count() > 1)
+            .Select(static group => group.Key)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+        return entries
+            .Select(entry => duplicateKeys.Contains(entry.Metadata.DefinitionKey)
+                ? ConfigurationPublishedDefinitionEntry.FromEnvelopeFailure(
+                    entry.Metadata,
+                    new InvalidDataException(
+                        $"Multiple persisted definition metadata rows claim key '{entry.Metadata.DefinitionKey}'."),
+                    ConfigurationDefinitionMetadataRepairAction.RepairMetadataStore)
+                : entry)
+            .ToArray();
     }
 
     private static ConfigurationDefinitionPublishHistory ToPublishHistory(
@@ -1631,6 +1895,7 @@ public sealed class DatabaseConfigurationStore(
             SourceRevisionBefore = history.SourceRevisionBefore,
             SourceRevisionAfter = history.SourceRevisionAfter,
             SchemaVersion = history.SchemaVersion,
+            SchemaHash = history.SchemaHash,
             ModifiedTime = NormalizeUtcDateTime(history.ModifiedTime),
             ModifierId = history.ModifierId,
             ModifierName = history.ModifierName,
@@ -1663,6 +1928,7 @@ public sealed class DatabaseConfigurationStore(
             SourceRevisionBefore = entity.SourceRevisionBefore,
             SourceRevisionAfter = entity.SourceRevisionAfter,
             SchemaVersion = entity.SchemaVersion,
+            SchemaHash = entity.SchemaHash,
             ModifiedTime = ToUtcOffset(entity.ModifiedTime),
             ModifierId = entity.ModifierId,
             ModifierName = entity.ModifierName,
@@ -1774,6 +2040,42 @@ public sealed class DatabaseConfigurationStore(
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .OrderBy(static key => key, StringComparer.OrdinalIgnoreCase)
             .ToArray();
+    }
+
+    private static string NormalizeDefinitionKeyIdentity(string definitionKey)
+    {
+        return definitionKey.ToUpperInvariant();
+    }
+
+    private static Dictionary<string, ConfigurationEffectiveValueEntity> ToEffectiveValueEntityDictionary(
+        IEnumerable<ConfigurationEffectiveValueEntity> entities)
+    {
+        var rows = entities.ToArray();
+        var duplicate = rows
+            .GroupBy(static entity => entity.DefinitionKey, StringComparer.OrdinalIgnoreCase)
+            .FirstOrDefault(static group => group.Skip(1).Any());
+        if (duplicate is not null)
+        {
+            throw new InvalidOperationException(
+                $"Multiple effective-value rows claim definition key '{duplicate.Key}' ignoring casing.");
+        }
+
+        return rows.ToDictionary(
+            static entity => entity.DefinitionKey,
+            StringComparer.OrdinalIgnoreCase);
+    }
+
+    private static ConfigurationEffectiveValueEntity? GetSingleEffectiveValueEntity(
+        IReadOnlyList<ConfigurationEffectiveValueEntity> entities,
+        string requestedDefinitionKey)
+    {
+        return entities.Count switch
+        {
+            0 => null,
+            1 => entities[0],
+            _ => throw new InvalidOperationException(
+                $"Multiple effective-value rows claim definition key '{requestedDefinitionKey}' ignoring casing.")
+        };
     }
 
     private static DateTime NormalizeUtcDateTime(DateTimeOffset value)

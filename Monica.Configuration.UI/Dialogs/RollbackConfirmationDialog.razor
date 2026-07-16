@@ -16,11 +16,11 @@
                           Variant="Variant.Outlined"
                           Lines="2" />
 
-            @if (_loadingGroupRows)
+            @if (_loadingGroupRows || _loadingRollbackPreview)
             {
                 <MudProgressLinear Indeterminate="true" />
             }
-            else
+            else if (_rollbackPreview is not null)
             {
                 <MudPaper Outlined="true" Class="pa-3">
                     <MudStack Spacing="2">
@@ -35,7 +35,10 @@
                         </MudStack>
                         <ConfigurationHistoryDiffPreview Rows="@PreviewRows"
                                                          IsRollbackPreview="true"
-                                                         ViewMode="EDiffViewMode.Split" />
+                                                         ViewMode="EDiffViewMode.Split"
+                                                         CurrentValuesByHistoryId="@_rollbackPreview!.CurrentValuesByHistoryId"
+                                                         PreviewIdentity="@_rollbackPreview.PlanToken"
+                                                         LoadingChanged="OnPreviewLoadingChanged" />
                     </MudStack>
                 </MudPaper>
             }
@@ -57,7 +60,8 @@
                    Variant="Variant.Filled"
                    StartIcon="@Icons.Material.Filled.Restore"
                    OnClick="RollbackAsync"
-                   Disabled="@(_saving || _loadingGroupRows)">
+                   Disabled="@(_saving || _loadingGroupRows || _loadingRollbackPreview || _loadingDiffPreview || _rollbackPreview is null || PreviewRows.Count == 0)"
+                   aria-label="@L["Rollback:Confirm"]">
             @L["Rollback:Confirm"]
         </MudButton>
     </DialogActions>
@@ -73,7 +77,10 @@
     private string? _error;
     private bool _saving;
     private bool _loadingGroupRows;
+    private bool _loadingRollbackPreview;
+    private bool _loadingDiffPreview = true;
     private IReadOnlyList<ConfigurationValueHistory> _loadedGroupRows = [];
+    private ConfigurationHistoryRollbackPreview? _rollbackPreview;
 
     private bool IsGroupRollback => Group is not null;
 
@@ -92,41 +99,73 @@
 
     protected override async Task OnInitializedAsync()
     {
-        if (Group is null || GroupRows.Count > 0)
+        if (Group is not null && GroupRows.Count == 0)
         {
+            _loadingGroupRows = true;
+            var result = await Facade.GetGroupHistoryAsync(Group.GroupId);
+            if (result.IsFailed(out var error, out var rows))
+            {
+                _error = error.Message;
+            }
+            else
+            {
+                _loadedGroupRows = rows;
+            }
+
+            _loadingGroupRows = false;
+        }
+
+        if (string.IsNullOrWhiteSpace(_error))
+        {
+            await LoadRollbackPreviewAsync();
+        }
+    }
+
+    private async Task LoadRollbackPreviewAsync()
+    {
+        var historyIds = PreviewRows.Select(static row => row.HistoryId).ToArray();
+        if (historyIds.Length == 0)
+        {
+            _error = L["Common:States:NotFound"];
             return;
         }
 
-        _loadingGroupRows = true;
-        var result = await Facade.GetGroupHistoryAsync(Group.GroupId);
-        if (result.IsFailed(out var error, out var rows))
+        _loadingRollbackPreview = true;
+        var result = await Facade.PreviewHistoryRollbackAsync(historyIds);
+        if (result.IsFailed(out var error, out var preview))
         {
             _error = error.Message;
         }
         else
         {
-            _loadedGroupRows = rows;
+            _rollbackPreview = preview;
         }
 
-        _loadingGroupRows = false;
+        _loadingRollbackPreview = false;
     }
 
     private async Task RollbackAsync()
     {
+        if (_rollbackPreview is null)
+        {
+            _error = L["Common:States:NotFound"];
+            return;
+        }
+
         _saving = true;
         _error = null;
 
         if (Group is not null)
         {
-            var result = await Facade.RollbackGroupAsync(Group.GroupId, _reason);
-            if (result.IsFailed(out var error, out _))
+            var result = await Facade.RollbackGroupAsync(Group.GroupId, _rollbackPreview.PlanToken, _reason);
+            if (result.IsFailed(out var error, out var appliedMutations))
             {
                 _error = error.Message;
                 _saving = false;
                 return;
             }
 
-            MudDialog.Close(DialogResult.Ok(true));
+            CompleteRollback(ConfigurationHistoryRollbackDialogResult.Applied(appliedMutations));
             return;
         }
 
@@ -140,27 +179,43 @@
                 return;
             }
 
-            var batchResult = await Facade.RollbackHistoriesAsync(rows.Select(row => row.HistoryId).ToArray(), _reason);
-            if (batchResult.IsFailed(out var batchError, out _))
+            var batchResult = await Facade.RollbackHistoriesAsync(
+                rows.Select(row => row.HistoryId).ToArray(),
+                _rollbackPreview.PlanToken,
+                _reason);
+            if (batchResult.IsFailed(out var batchError, out var appliedMutations))
             {
                 _error = batchError.Message;
                 _saving = false;
                 return;
             }
 
-            MudDialog.Close(DialogResult.Ok(true));
+            CompleteRollback(ConfigurationHistoryRollbackDialogResult.Applied(appliedMutations));
             return;
         }
 
-        var singleResult = await Facade.RollbackHistoryAsync(HistoryRow.HistoryId, _reason);
-        if (singleResult.IsFailed(out var singleError, out _))
+        var singleResult = await Facade.RollbackHistoryAsync(
+            HistoryRow.HistoryId,
+            _rollbackPreview.PlanToken,
+            _reason);
+        if (singleResult.IsFailed(out var singleError, out var appliedMutation))
         {
             _error = singleError.Message;
             _saving = false;
             return;
         }
 
-        MudDialog.Close(DialogResult.Ok(true));
+        CompleteRollback(ConfigurationHistoryRollbackDialogResult.Applied(appliedMutation));
+    }
+
+    private void CompleteRollback(ConfigurationHistoryRollbackDialogResult rollback)
+    {
+        MudDialog.Close(DialogResult.Ok(rollback));
+    }
+
+    private void OnPreviewLoadingChanged(bool loading)
+    {
+        _loadingDiffPreview = loading;
     }
 
     private void Cancel()

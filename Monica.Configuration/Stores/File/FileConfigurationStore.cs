@@ -72,8 +72,8 @@ public sealed class FileConfigurationStore(IOptions<ConfigurationFileStoreOption
                     continue;
                 }
 
-                var path = GetEffectiveValuePath(seed.Definition.DefinitionKey);
-                if (IoFile.Exists(path))
+                var path = ResolveEffectiveValuePath(seed.Definition.DefinitionKey);
+                if (path is not null)
                 {
                     documentsByKey[seed.Definition.DefinitionKey] =
                         await ReadDocumentAsync(seed.Definition.DefinitionKey, cancellationToken)
@@ -138,7 +138,7 @@ public sealed class FileConfigurationStore(IOptions<ConfigurationFileStoreOption
             var now = DateTimeOffset.UtcNow;
             var document = new ConfigurationEffectiveValueDocument
             {
-                DefinitionKey = request.Definition.DefinitionKey,
+                DefinitionKey = existing?.DefinitionKey ?? request.Definition.DefinitionKey,
                 Json = FormatJson(request.Json),
                 Version = (existing?.Version ?? 0) + 1,
                 SchemaVersion = request.Definition.SchemaVersion,
@@ -309,6 +309,16 @@ public sealed class FileConfigurationStore(IOptions<ConfigurationFileStoreOption
         try
         {
             EnsureDirectories();
+            var duplicateDefinition = request.Definitions
+                .GroupBy(static definition => definition.DefinitionKey, StringComparer.OrdinalIgnoreCase)
+                .FirstOrDefault(static group => group.Skip(1).Any());
+            if (duplicateDefinition is not null)
+            {
+                throw new InvalidOperationException(
+                    $"Unified version snapshots cannot contain duplicate definition key '{duplicateDefinition.Key}' ignoring casing.");
+            }
+
+            var definitions = request.Definitions.ToArray();
             var summaries = await ReadUnifiedVersionIndexAsync(cancellationToken);
             var version = summaries.Count == 0 ? 1 : summaries.Max(static summary => summary.Version) + 1;
             var summary = new ConfigurationUnifiedVersionSummary
@@ -316,8 +326,8 @@ public sealed class FileConfigurationStore(IOptions<ConfigurationFileStoreOption
                 Version = version,
                 MutationGroupId = request.MutationGroupId,
                 TriggerDefinitionKeys = NormalizeKeys(request.TriggerDefinitionKeys),
-                DefinitionKeys = NormalizeKeys(request.Definitions.Select(static definition => definition.DefinitionKey)),
-                DefinitionCount = request.Definitions.Count,
+                DefinitionKeys = NormalizeKeys(definitions.Select(static definition => definition.DefinitionKey)),
+                DefinitionCount = definitions.Length,
                 CreatedTime = request.CreatedTime,
                 ModifierId = request.ModifierId,
                 ModifierName = request.ModifierName,
@@ -326,7 +336,7 @@ public sealed class FileConfigurationStore(IOptions<ConfigurationFileStoreOption
             var snapshot = new ConfigurationUnifiedVersionSnapshot
             {
                 Summary = summary,
-                Definitions = request.Definitions
+                Definitions = definitions
             };
 
             await IoFile.WriteAllTextAsync(
@@ -435,8 +445,11 @@ public sealed class FileConfigurationStore(IOptions<ConfigurationFileStoreOption
             EnsureDirectories();
             foreach (var definition in definitions)
             {
-                var path = GetDefinitionPath(definition.DefinitionKey);
-                var existing = IoFile.Exists(path) ? ReadPublishedDefinitionDto(path) : null;
+                cancellationToken.ThrowIfCancellationRequested();
+                var path = ResolveDefinitionPathForPublish(definition.DefinitionKey, cancellationToken);
+                var existing = IoFile.Exists(path)
+                    ? await TryReadPublishedDefinitionDtoForRepairAsync(path, cancellationToken)
+                    : null;
                 var published = PublishedDefinitionDto.FromDefinition(definition, existing);
                 if (existing is not null && published.Matches(existing))
                 {
@@ -462,18 +475,14 @@ public sealed class FileConfigurationStore(IOptions<ConfigurationFileStoreOption
     }
 
     /// <inheritdoc />
-    public async Task<IReadOnlyList<ConfigurationDefinition>> ListPublishedDefinitionsAsync(CancellationToken cancellationToken)
+    public async Task<IReadOnlyList<ConfigurationPublishedDefinitionEntry>> ListPublishedDefinitionEntriesAsync(
+        CancellationToken cancellationToken)
     {
         await _lock.WaitAsync(cancellationToken);
         try
         {
             EnsureDirectories();
-            return IoDirectory.EnumerateFiles(GetDefinitionsDirectory(), "*.json")
-                .Select(path => ReadPublishedDefinition(path))
-                .OfType<ConfigurationDefinition>()
-                .OrderBy(definition => definition.DisplayName, StringComparer.OrdinalIgnoreCase)
-                .ThenBy(definition => definition.DefinitionKey, StringComparer.OrdinalIgnoreCase)
-                .ToArray();
+            return await ReadPublishedDefinitionEntriesAsync(cancellationToken);
         }
         finally
         {
@@ -482,14 +491,15 @@ public sealed class FileConfigurationStore(IOptions<ConfigurationFileStoreOption
     }
 
     /// <inheritdoc />
-    public async Task<ConfigurationDefinition?> GetPublishedDefinitionAsync(string definitionKey, CancellationToken cancellationToken)
+    public async Task<ConfigurationPublishedDefinitionEntry?> GetPublishedDefinitionEntryAsync(
+        string definitionKey,
+        CancellationToken cancellationToken)
     {
         await _lock.WaitAsync(cancellationToken);
         try
         {
             EnsureDirectories();
-            var path = GetDefinitionPath(definitionKey);
-            return IoFile.Exists(path) ? ReadPublishedDefinition(path) : null;
+            return await FindPublishedDefinitionEntryAsync(definitionKey, cancellationToken);
         }
         finally
         {
@@ -501,18 +511,19 @@ public sealed class FileConfigurationStore(IOptions<ConfigurationFileStoreOption
         string definitionKey,
         CancellationToken cancellationToken)
     {
-        var path = GetEffectiveValuePath(definitionKey);
-        if (!IoFile.Exists(path))
+        var path = ResolveEffectiveValuePath(definitionKey);
+        if (path is null)
         {
             return null;
         }
 
-        var metadata = await ReadMetadataAsync(definitionKey, cancellationToken);
+        var storedDefinitionKey = Path.GetFileNameWithoutExtension(path);
+        var metadata = await ReadMetadataAsync(storedDefinitionKey, cancellationToken);
         var json = await IoFile.ReadAllTextAsync(path, cancellationToken);
         var lastWrite = IoFile.GetLastWriteTimeUtc(path);
         return new ConfigurationEffectiveValueDocument
         {
-            DefinitionKey = definitionKey,
+            DefinitionKey = storedDefinitionKey,
             Json = FormatJson(json),
             Version = metadata?.Version ?? 1,
             SchemaVersion = metadata?.SchemaVersion ?? 1,
@@ -524,7 +535,10 @@ public sealed class FileConfigurationStore(IOptions<ConfigurationFileStoreOption
 
     private async Task WriteDocumentAsync(ConfigurationEffectiveValueDocument document, CancellationToken cancellationToken)
     {
-        await IoFile.WriteAllTextAsync(GetEffectiveValuePath(document.DefinitionKey), document.Json, cancellationToken);
+        var effectiveValuePath = ResolveEffectiveValuePath(document.DefinitionKey)
+                                 ?? GetEffectiveValuePath(document.DefinitionKey);
+        var storedDefinitionKey = Path.GetFileNameWithoutExtension(effectiveValuePath);
+        await IoFile.WriteAllTextAsync(effectiveValuePath, document.Json, cancellationToken);
         var metadata = new DocumentMetadataDto
         {
             Version = document.Version,
@@ -533,13 +547,15 @@ public sealed class FileConfigurationStore(IOptions<ConfigurationFileStoreOption
             LastModifierId = document.LastModifierId,
             LastModifierName = document.LastModifierName
         };
-        await IoFile.WriteAllTextAsync(GetMetadataPath(document.DefinitionKey), JsonSerializer.Serialize(metadata, JSON_OPTIONS), cancellationToken);
+        var metadataPath = ResolveEffectiveMetadataPath(storedDefinitionKey)
+                           ?? GetMetadataPath(storedDefinitionKey);
+        await IoFile.WriteAllTextAsync(metadataPath, JsonSerializer.Serialize(metadata, JSON_OPTIONS), cancellationToken);
     }
 
     private async Task<DocumentMetadataDto?> ReadMetadataAsync(string definitionKey, CancellationToken cancellationToken)
     {
-        var path = GetMetadataPath(definitionKey);
-        if (!IoFile.Exists(path))
+        var path = ResolveEffectiveMetadataPath(definitionKey);
+        if (path is null)
         {
             return null;
         }
@@ -611,6 +627,58 @@ public sealed class FileConfigurationStore(IOptions<ConfigurationFileStoreOption
         return Path.Combine(GetEffectiveMetadataDirectory(), $"{GetSafeFileName(definitionKey)}.metadata.json");
     }
 
+    private string? ResolveEffectiveValuePath(string definitionKey)
+    {
+        _ = GetEffectiveValuePath(definitionKey);
+        return ResolveCaseInsensitivePath(
+            GetEffectiveDirectory(),
+            "*.json",
+            path => Path.GetFileNameWithoutExtension(path),
+            definitionKey,
+            "effective-value");
+    }
+
+    private string? ResolveEffectiveMetadataPath(string definitionKey)
+    {
+        _ = GetMetadataPath(definitionKey);
+        return ResolveCaseInsensitivePath(
+            GetEffectiveMetadataDirectory(),
+            "*.metadata.json",
+            path => Path.GetFileName(path)[..^".metadata.json".Length],
+            definitionKey,
+            "effective-value metadata");
+    }
+
+    private static string? ResolveCaseInsensitivePath(
+        string directory,
+        string searchPattern,
+        Func<string, string> getDefinitionKey,
+        string definitionKey,
+        string documentKind)
+    {
+        if (!IoDirectory.Exists(directory))
+        {
+            return null;
+        }
+
+        var matches = IoDirectory
+            .EnumerateFiles(directory, searchPattern, SearchOption.TopDirectoryOnly)
+            .Where(path => string.Equals(
+                getDefinitionKey(path),
+                definitionKey,
+                StringComparison.OrdinalIgnoreCase))
+            .OrderBy(static path => path, StringComparer.Ordinal)
+            .Take(2)
+            .ToArray();
+        return matches.Length switch
+        {
+            0 => null,
+            1 => matches[0],
+            _ => throw new InvalidOperationException(
+                $"Multiple file-backed {documentKind} documents claim definition key '{definitionKey}' ignoring casing.")
+        };
+    }
+
     private string GetDefinitionPath(string definitionKey)
     {
         return Path.Combine(GetDefinitionsDirectory(), $"{GetSafeFileName(definitionKey)}.json");
@@ -670,14 +738,250 @@ public sealed class FileConfigurationStore(IOptions<ConfigurationFileStoreOption
             .ToArray();
     }
 
-    private static ConfigurationDefinition? ReadPublishedDefinition(string path)
+    private async Task<IReadOnlyList<ConfigurationPublishedDefinitionEntry>> ReadPublishedDefinitionEntriesAsync(
+        CancellationToken cancellationToken)
     {
-        return ReadPublishedDefinitionDto(path)?.ToDefinition();
+        var entries = new List<ConfigurationPublishedDefinitionEntry>();
+        foreach (var path in IoDirectory.EnumerateFiles(GetDefinitionsDirectory(), "*.json"))
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            entries.Add(await ReadPublishedDefinitionEntryAsync(path, cancellationToken));
+        }
+
+        var duplicateKeys = entries
+            .GroupBy(static entry => entry.Metadata.DefinitionKey, StringComparer.OrdinalIgnoreCase)
+            .Where(static group => group.Count() > 1)
+            .Select(static group => group.Key)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+        return entries
+            .Select(entry => duplicateKeys.Contains(entry.Metadata.DefinitionKey)
+                ? WithDuplicateIdentityDiagnostic(entry)
+                : entry)
+            .OrderBy(entry => DisplayNameOrKey(entry.Metadata), StringComparer.OrdinalIgnoreCase)
+            .ThenBy(entry => entry.Metadata.DefinitionKey, StringComparer.OrdinalIgnoreCase)
+            .ToArray();
     }
 
-    private static PublishedDefinitionDto? ReadPublishedDefinitionDto(string path)
+    private async Task<ConfigurationPublishedDefinitionEntry?> FindPublishedDefinitionEntryAsync(
+        string definitionKey,
+        CancellationToken cancellationToken)
     {
-        return JsonSerializer.Deserialize<PublishedDefinitionDto>(IoFile.ReadAllText(path), JSON_OPTIONS);
+        var matchingPaths = FindDefinitionPaths(definitionKey, cancellationToken);
+        if (matchingPaths.Length == 0)
+        {
+            return null;
+        }
+
+        var entry = await ReadPublishedDefinitionEntryAsync(matchingPaths[0], cancellationToken);
+        return matchingPaths.Length == 1
+            ? entry
+            : WithDuplicateIdentityDiagnostic(entry);
+    }
+
+    private string ResolveDefinitionPathForPublish(
+        string definitionKey,
+        CancellationToken cancellationToken)
+    {
+        var matchingPaths = FindDefinitionPaths(definitionKey, cancellationToken);
+        if (matchingPaths.Length <= 1)
+        {
+            return matchingPaths.FirstOrDefault() ?? GetDefinitionPath(definitionKey);
+        }
+
+        throw new ConfigurationDefinitionMetadataUnavailableException(
+            definitionKey,
+            new ConfigurationDefinitionMetadataDiagnostic
+            {
+                Kind = ConfigurationDefinitionMetadataIssueKind.InvalidEnvelope,
+                StoreKey = Descriptor.StoreKey,
+                ErrorType = typeof(InvalidDataException).FullName!,
+                Message = $"Multiple persisted definition metadata files claim key '{definitionKey}'.",
+                RecommendedAction = ConfigurationDefinitionMetadataRepairAction.RepairMetadataStore
+            });
+    }
+
+    private string[] FindDefinitionPaths(string definitionKey, CancellationToken cancellationToken)
+    {
+        _ = GetDefinitionPath(definitionKey);
+        var matchingPaths = new List<string>(2);
+        foreach (var path in IoDirectory.EnumerateFiles(GetDefinitionsDirectory(), "*.json"))
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            if (!string.Equals(
+                    Path.GetFileNameWithoutExtension(path),
+                    definitionKey,
+                    StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            matchingPaths.Add(path);
+            if (matchingPaths.Count == 2)
+            {
+                break;
+            }
+        }
+
+        return matchingPaths.ToArray();
+    }
+
+    private static ConfigurationPublishedDefinitionEntry WithDuplicateIdentityDiagnostic(
+        ConfigurationPublishedDefinitionEntry entry)
+    {
+        return ConfigurationPublishedDefinitionEntry.FromEnvelopeFailure(
+            entry.Metadata,
+            new InvalidDataException(
+                $"Multiple persisted definition metadata files claim key '{entry.Metadata.DefinitionKey}'."),
+            ConfigurationDefinitionMetadataRepairAction.RepairMetadataStore);
+    }
+
+    private async Task<ConfigurationPublishedDefinitionEntry> ReadPublishedDefinitionEntryAsync(
+        string path,
+        CancellationToken cancellationToken)
+    {
+        var content = await IoFile.ReadAllTextAsync(path, cancellationToken);
+        try
+        {
+            var dto = DeserializePublishedDefinitionDto(content);
+            if (dto is not null)
+            {
+                var record = dto.ToRecord(Descriptor.StoreKey);
+                var fileDefinitionKey = Path.GetFileNameWithoutExtension(path);
+                if (!string.Equals(fileDefinitionKey, record.DefinitionKey, StringComparison.OrdinalIgnoreCase))
+                {
+                    return ConfigurationPublishedDefinitionEntry.FromEnvelopeFailure(
+                        record with { DefinitionKey = fileDefinitionKey },
+                        new InvalidDataException(
+                            $"Persisted definition metadata file '{Path.GetFileName(path)}' claims definition key "
+                            + $"'{record.DefinitionKey}' instead of '{fileDefinitionKey}'."),
+                        ConfigurationDefinitionMetadataRepairAction.RepairMetadataStore);
+                }
+
+                return ConfigurationPublishedDefinitionEntry.Materialize(record);
+            }
+
+            return ConfigurationPublishedDefinitionEntry.FromEnvelopeFailure(
+                CreateFallbackPublishedDefinitionRecord(path),
+                new JsonException("Persisted definition metadata JSON contains no object."));
+        }
+        catch (Exception ex) when (ex is JsonException or NotSupportedException)
+        {
+            return ConfigurationPublishedDefinitionEntry.FromEnvelopeFailure(
+                CreateFallbackPublishedDefinitionRecord(path, TryReadPartialPublishedDefinitionDto(content)),
+                ex);
+        }
+    }
+
+    private static async Task<PublishedDefinitionDto?> TryReadPublishedDefinitionDtoForRepairAsync(
+        string path,
+        CancellationToken cancellationToken)
+    {
+        var content = await IoFile.ReadAllTextAsync(path, cancellationToken);
+        try
+        {
+            return DeserializePublishedDefinitionDto(content);
+        }
+        catch (Exception ex) when (ex is JsonException or NotSupportedException)
+        {
+            return TryReadPartialPublishedDefinitionDto(content);
+        }
+    }
+
+    private static PublishedDefinitionDto? DeserializePublishedDefinitionDto(string content)
+    {
+        return JsonSerializer.Deserialize<PublishedDefinitionDto>(content, JSON_OPTIONS);
+    }
+
+    private static PublishedDefinitionDto? TryReadPartialPublishedDefinitionDto(string content)
+    {
+        try
+        {
+            using var document = JsonDocument.Parse(content);
+            if (document.RootElement.ValueKind != JsonValueKind.Object)
+            {
+                return null;
+            }
+
+            var root = document.RootElement;
+            return new PublishedDefinitionDto
+            {
+                DefinitionKey = ReadString(root, nameof(PublishedDefinitionDto.DefinitionKey)),
+                SectionPath = ReadString(root, nameof(PublishedDefinitionDto.SectionPath)),
+                DisplayName = ReadString(root, nameof(PublishedDefinitionDto.DisplayName)),
+                Description = ReadOptionalString(root, nameof(PublishedDefinitionDto.Description)),
+                ClrTypeName = ReadString(root, nameof(PublishedDefinitionDto.ClrTypeName)),
+                FromProject = ReadString(root, nameof(PublishedDefinitionDto.FromProject)),
+                Category = ReadOptionalString(root, nameof(PublishedDefinitionDto.Category)),
+                SchemaVersion = ReadInt32(root, nameof(PublishedDefinitionDto.SchemaVersion)),
+                SchemaHash = ReadString(root, nameof(PublishedDefinitionDto.SchemaHash)),
+                ReloadBehavior = ReadString(root, nameof(PublishedDefinitionDto.ReloadBehavior)),
+                SchemaJson = ReadString(root, nameof(PublishedDefinitionDto.SchemaJson))
+            };
+        }
+        catch (JsonException)
+        {
+            return null;
+        }
+    }
+
+    private static string ReadString(JsonElement element, string propertyName)
+    {
+        return ReadOptionalString(element, propertyName) ?? string.Empty;
+    }
+
+    private static string? ReadOptionalString(JsonElement element, string propertyName)
+    {
+        return element.TryGetProperty(propertyName, out var property)
+               && property.ValueKind == JsonValueKind.String
+            ? property.GetString()
+            : null;
+    }
+
+    private static int ReadInt32(JsonElement element, string propertyName)
+    {
+        return element.TryGetProperty(propertyName, out var property)
+               && property.ValueKind == JsonValueKind.Number
+               && property.TryGetInt32(out var value)
+            ? value
+            : 0;
+    }
+
+    private ConfigurationPublishedDefinitionRecord CreateFallbackPublishedDefinitionRecord(
+        string path,
+        PublishedDefinitionDto? partial = null)
+    {
+        var definitionKey = Path.GetFileNameWithoutExtension(path);
+        if (partial is not null)
+        {
+            var metadata = partial.ToRecord(Descriptor.StoreKey);
+            return metadata with
+            {
+                DefinitionKey = definitionKey,
+                DisplayName = string.IsNullOrWhiteSpace(metadata.DisplayName)
+                    ? definitionKey
+                    : metadata.DisplayName
+            };
+        }
+
+        return new ConfigurationPublishedDefinitionRecord
+        {
+            StoreKey = Descriptor.StoreKey,
+            DefinitionKey = definitionKey,
+            SectionPath = "",
+            DisplayName = definitionKey,
+            ClrTypeName = "",
+            FromProject = "",
+            SchemaVersion = 0,
+            SchemaHash = "",
+            ReloadBehavior = "",
+            SchemaJson = ""
+        };
+    }
+
+    private static string DisplayNameOrKey(ConfigurationPublishedDefinitionRecord metadata)
+    {
+        return string.IsNullOrWhiteSpace(metadata.DisplayName) ? metadata.DefinitionKey : metadata.DisplayName;
     }
 
     private static IReadOnlyList<ConfigurationValueHistory> SortHistory(IEnumerable<ConfigurationValueHistory> histories)
@@ -754,8 +1058,29 @@ public sealed class FileConfigurationStore(IOptions<ConfigurationFileStoreOption
                    && string.Equals(ClrTypeName, existing.ClrTypeName, StringComparison.Ordinal)
                    && string.Equals(FromProject, existing.FromProject, StringComparison.Ordinal)
                    && string.Equals(Category, NullIfWhiteSpace(existing.Category), StringComparison.Ordinal)
+                   && SchemaVersion == existing.SchemaVersion
                    && string.Equals(SchemaHash, existing.SchemaHash, StringComparison.Ordinal)
-                   && string.Equals(ReloadBehavior, existing.ReloadBehavior, StringComparison.Ordinal);
+                   && string.Equals(ReloadBehavior, existing.ReloadBehavior, StringComparison.Ordinal)
+                   && string.Equals(SchemaJson, existing.SchemaJson, StringComparison.Ordinal);
+        }
+
+        public ConfigurationPublishedDefinitionRecord ToRecord(string storeKey)
+        {
+            return new ConfigurationPublishedDefinitionRecord
+            {
+                StoreKey = storeKey,
+                DefinitionKey = DefinitionKey,
+                SectionPath = SectionPath,
+                DisplayName = DisplayName,
+                Description = Description,
+                ClrTypeName = ClrTypeName,
+                FromProject = FromProject,
+                Category = Category,
+                SchemaVersion = SchemaVersion,
+                SchemaHash = SchemaHash,
+                ReloadBehavior = ReloadBehavior,
+                SchemaJson = SchemaJson
+            };
         }
 
         private static string? NullIfWhiteSpace(string? value)
@@ -775,25 +1100,9 @@ public sealed class FileConfigurationStore(IOptions<ConfigurationFileStoreOption
             var currentVersion = Math.Max(Math.Max(existing.SchemaVersion, definition.SchemaVersion), 1);
             return string.Equals(existing.SchemaHash, definition.SchemaHash, StringComparison.Ordinal)
                 ? currentVersion
-                : currentVersion + 1;
+                : checked(currentVersion + 1);
         }
 
-        public ConfigurationDefinition ToDefinition()
-        {
-            return ConfigurationDefinitionSchemaCodec.DeserializeDefinition(
-                DefinitionKey,
-                SectionPath,
-                DisplayName,
-                Description,
-                ClrTypeName,
-                FromProject,
-                Category,
-                SchemaVersion,
-                SchemaHash,
-                Enum.Parse<ConfigurationReloadBehavior>(ReloadBehavior),
-                SchemaJson,
-                ConfigurationDefinitionOrigin.PublishedMetadata);
-        }
     }
 
     private sealed record HistoryDto
@@ -834,6 +1143,8 @@ public sealed class FileConfigurationStore(IOptions<ConfigurationFileStoreOption
 
         public int SchemaVersion { get; init; }
 
+        public string? SchemaHash { get; init; }
+
         public DateTimeOffset ModifiedTime { get; init; }
 
         public string? ModifierId { get; init; }
@@ -866,6 +1177,7 @@ public sealed class FileConfigurationStore(IOptions<ConfigurationFileStoreOption
                 SourceRevisionBefore = history.SourceRevisionBefore,
                 SourceRevisionAfter = history.SourceRevisionAfter,
                 SchemaVersion = history.SchemaVersion,
+                SchemaHash = history.SchemaHash,
                 ModifiedTime = history.ModifiedTime,
                 ModifierId = history.ModifierId,
                 ModifierName = history.ModifierName,
@@ -898,6 +1210,7 @@ public sealed class FileConfigurationStore(IOptions<ConfigurationFileStoreOption
                 SourceRevisionBefore = SourceRevisionBefore,
                 SourceRevisionAfter = SourceRevisionAfter,
                 SchemaVersion = SchemaVersion,
+                SchemaHash = SchemaHash,
                 ModifiedTime = ModifiedTime,
                 ModifierId = ModifierId,
                 ModifierName = ModifierName,

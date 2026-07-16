@@ -1,6 +1,7 @@
 @using Monica.Configuration.UI.Localization
 @using Monica.UI.UIDiffHighlight.Models
 @inject IDialogService DialogService
+@inject ISnackbar Snackbar
 @inject IStringLocalizer<ConfigurationUIResource> L
 
 <MudDialog Class="configuration-history-diff-dialog">
@@ -84,15 +85,18 @@
                                             </MudChip>
                                             <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">@L["History:Dialog:Version", _selectedEntry.Version]</MudChip>
                                             <MudChip T="ConfigurationMutationKind" Size="Size.Small" Color="Color.Info" Variant="Variant.Outlined">@_selectedEntry.MutationKind</MudChip>
-                                            @if (CanRollbackSelectedEntry)
+                                            @if (_selectedEntry.Rows.Count > 0)
                                             {
-                                                <MudButton Size="Size.Small"
-                                                           Color="Color.Warning"
-                                                           Variant="Variant.Outlined"
-                                                           StartIcon="@Icons.Material.Filled.Restore"
-                                                           OnClick="RollbackSelectedEntryAsync">
-                                                    @L["Rollback:Confirm"]
-                                                </MudButton>
+                                                <MudTooltip Text="@SelectedRollbackTooltip">
+                                                    <MudButton Size="Size.Small"
+                                                               Color="Color.Warning"
+                                                               Variant="Variant.Outlined"
+                                                               StartIcon="@Icons.Material.Filled.Restore"
+                                                               Disabled="@(!CanRollbackSelectedEntry)"
+                                                               OnClick="RollbackSelectedEntryAsync">
+                                                        @L["Rollback:Confirm"]
+                                                    </MudButton>
+                                                </MudTooltip>
                                             }
                                         </MudStack>
                                     </MudStack>
@@ -194,7 +198,14 @@
 
     private string? FocusPathText => FocusPath?.ToCanonicalString();
 
-    private bool CanRollbackSelectedEntry => _selectedEntry is { Rows.Count: > 0 };
+    private bool CanRollbackSelectedEntry =>
+        _selectedEntry is { Rows.Count: > 0 } entry
+        && (Group is null || Group.Status != ConfigurationMutationGroupStatus.RolledBack)
+        && entry.Rows.All(CanRollbackRow);
+
+    private string SelectedRollbackTooltip => CanRollbackSelectedEntry
+        ? L["Rollback:Confirm"].Value
+        : L["History:Actions:RollbackBlockedMetadata"].Value;
 
     protected override void OnParametersSet()
     {
@@ -257,6 +268,24 @@
 
         return Definitions.FirstOrDefault(definition =>
             string.Equals(definition.DefinitionKey, definitionKey, StringComparison.OrdinalIgnoreCase))?.DisplayName ?? definitionKey;
+    }
+
+    private bool CanRollbackRow(ConfigurationValueHistory row)
+    {
+        if (Definition is not null
+            && string.Equals(Definition.DefinitionKey, row.DefinitionKey, StringComparison.OrdinalIgnoreCase))
+        {
+            return Definition.SchemaVersion == row.SchemaVersion
+                   && !string.IsNullOrWhiteSpace(row.SchemaHash)
+                   && string.Equals(Definition.SchemaHash, row.SchemaHash, StringComparison.Ordinal);
+        }
+
+        var summary = Definitions.FirstOrDefault(definition =>
+            string.Equals(definition.DefinitionKey, row.DefinitionKey, StringComparison.OrdinalIgnoreCase));
+        return summary is { CanManage: true }
+               && summary.SchemaVersion == row.SchemaVersion
+               && !string.IsNullOrWhiteSpace(row.SchemaHash)
+               && string.Equals(summary.SchemaHash, row.SchemaHash, StringComparison.Ordinal);
     }
 
     private string TimelineTitle(ConfigurationValueHistory row, bool focusedSinglePath)
@@ -387,14 +416,16 @@
 
     private async Task RollbackSelectedEntryAsync()
     {
-        if (_selectedEntry is null)
+        if (_selectedEntry is null || !CanRollbackSelectedEntry)
         {
+            Snackbar.Add(L["History:Actions:RollbackBlockedMetadata"], Severity.Warning);
             return;
         }
 
         var parameters = new DialogParameters<RollbackConfirmationDialog>();
         string title;
-        if (_selectedEntry.Id == GROUP_SUMMARY_ENTRY_ID && Group is not null)
+        if (Group is not null
+            && (_selectedEntry.Id == GROUP_SUMMARY_ENTRY_ID || Group.MutationCount == 1))
         {
             parameters.Add(dialog => dialog.Group, Group);
             parameters.Add(dialog => dialog.GroupRows, _selectedEntry.Rows);
@@ -423,15 +454,15 @@
             FullWidth = true
         });
         var result = await dialog.Result;
-        if (result is { Canceled: false })
+        if (result is { Canceled: false, Data: ConfigurationHistoryRollbackDialogResult rollback })
         {
-            MudDialog.Close(DialogResult.Ok(true));
+            MudDialog.Close(DialogResult.Ok(rollback));
         }
     }
 
     private void Close()
     {
-        MudDialog.Close(DialogResult.Ok(false));
+        MudDialog.Close();
     }
 
     private sealed record HistoryTimelineEntry(

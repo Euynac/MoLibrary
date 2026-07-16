@@ -75,7 +75,7 @@ internal sealed partial class ConfigurationMutationGroupApplyService(
         }
 
         ValidateReviewedSourceChains(prepared);
-        ValidateExternalTargets(prepared);
+        ValidateTargets(prepared);
         var monicaMutations = prepared
             .Where(static mutation => mutation.Command.Target is ConfigurationEffectiveStoreMutationTarget)
             .ToArray();

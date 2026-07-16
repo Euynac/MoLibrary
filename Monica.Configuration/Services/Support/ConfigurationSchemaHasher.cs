@@ -1,4 +1,3 @@
-using System.Security.Cryptography;
 using Monica.Configuration.Models;
 using Monica.Configuration.Serialization;
 
@@ -18,8 +17,6 @@ internal sealed class ConfigurationSchemaHasher
     /// <returns>The hash string.</returns>
     public string ComputeHash(string definitionKey, string sectionPath, ConfigurationNodeDefinition root)
     {
-        var json = ConfigurationDefinitionSchemaCodec.SerializeHashInput(definitionKey, sectionPath, root);
-        var hash = SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(json));
-        return $"sha256:{Convert.ToHexString(hash).ToLowerInvariant()}";
+        return ConfigurationDefinitionSchemaCodec.ComputeSchemaHash(definitionKey, sectionPath, root);
     }
 }

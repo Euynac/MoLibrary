@@ -75,6 +75,7 @@ internal sealed partial class ConfigurationMutationGroupApplyService
                 NewValue = newValue,
                 Version = newVersion,
                 SchemaVersion = mutation.Definition.SchemaVersion,
+                SchemaHash = mutation.Definition.SchemaHash,
                 ModifiedTime = modifiedTime,
                 ModifierId = context.ModifierId,
                 ModifierName = context.ModifierName,

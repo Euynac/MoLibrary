@@ -1,0 +1,31 @@
+.configuration-definition-problem-identity {
+    min-width: 0;
+}
+
+.configuration-definition-problem-identity ::deep .mud-typography {
+    overflow-wrap: anywhere;
+}
+
+.configuration-definition-problem-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1rem;
+}
+
+.configuration-definition-problem-message {
+    max-height: 16rem;
+    padding: 0.75rem;
+    overflow: auto;
+    overflow-wrap: anywhere;
+    white-space: pre-wrap;
+    background-color: var(--mud-palette-background-gray);
+    color: var(--mud-palette-text-primary);
+    font-family: var(--mud-typography-default-family);
+    font-size: var(--mud-typography-caption-size);
+}
+
+@media (max-width: 599.98px) {
+    .configuration-definition-problem-grid {
+        grid-template-columns: minmax(0, 1fr);
+    }
+}

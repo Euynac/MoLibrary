@@ -1,0 +1,10 @@
+<div class="configuration-definition-diagnostic-field">
+    <MudText Typo="Typo.caption" Color="Color.Secondary">@Label</MudText>
+    <div class="configuration-definition-diagnostic-field-value">@Value</div>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public string Label { get; set; } = "";
+
+    [Parameter] public string? Value { get; set; }
+}

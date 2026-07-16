@@ -4,6 +4,7 @@ using System.Text.Json.Nodes;
 using Monica.Configuration.Exceptions;
 using Monica.Configuration.Abstractions;
 using Monica.Configuration.Models;
+using Monica.Configuration.Models.Internal;
 using Monica.Configuration.Serialization;
 using Monica.Configuration.Services;
 using Monica.Configuration.Services.Support;
@@ -54,6 +55,32 @@ public sealed class ConfigurationFacade(
         catch (Exception ex)
         {
             return Res.Fail($"Failed to get configuration definitions: {ex.GetMessageRecursively()}");
+        }
+    }
+
+    /// <summary>
+    /// Gets a fault-isolated definition catalog for management UI diagnostics.
+    /// </summary>
+    /// <remarks>
+    /// This method is intentionally separate from <see cref="GetDefinitionsAsync"/>. Authoritative consumers such
+    /// as mutation, export, source redaction, and unified-version capture must continue to fail closed when metadata
+    /// is incomplete instead of treating a partial catalog as complete.
+    /// </remarks>
+    /// <returns>Available definitions, unavailable metadata entries, and any store-wide read diagnostic.</returns>
+    public async Task<Res<ConfigurationDefinitionCatalog>> GetDefinitionCatalogAsync()
+    {
+        try
+        {
+            var snapshot = await definitionResolver.GetDiagnosticCatalogAsync(CancellationToken.None);
+            return Res.Ok(new ConfigurationDefinitionCatalog
+            {
+                Definitions = snapshot.Entries.Select(ToSummary).ToArray(),
+                StoreDiagnostic = snapshot.StoreDiagnostic
+            });
+        }
+        catch (Exception ex)
+        {
+            return Res.Fail($"Failed to get configuration definition diagnostics: {ex.GetMessageRecursively()}");
         }
     }
 
@@ -261,6 +288,70 @@ public sealed class ConfigurationFacade(
             SchemaHash = definition.SchemaHash,
             Origin = definition.Origin
         };
+    }
+
+    private static ConfigurationDefinitionSummary ToSummary(ConfigurationDefinitionCatalogEntry entry)
+    {
+        if (entry.Diagnostic is not null && entry.PublishedMetadata is not null)
+        {
+            return ToDiagnosticSummary(entry);
+        }
+
+        if (entry.Definition is { } definition)
+        {
+            return ToSummary(definition) with
+            {
+                Availability = entry.Availability,
+                MetadataDiagnostic = entry.Diagnostic
+            };
+        }
+
+        var metadata = entry.PublishedMetadata
+                       ?? throw new InvalidOperationException("Unavailable catalog entry has no persisted metadata envelope.");
+        return new ConfigurationDefinitionSummary
+        {
+            DefinitionKey = metadata.DefinitionKey,
+            SectionPath = metadata.SectionPath,
+            DisplayName = string.IsNullOrWhiteSpace(metadata.DisplayName)
+                ? metadata.DefinitionKey
+                : metadata.DisplayName,
+            Description = metadata.Description,
+            ClrTypeName = metadata.ClrTypeName,
+            FromProject = metadata.FromProject,
+            Category = metadata.Category,
+            SchemaVersion = metadata.SchemaVersion,
+            SchemaHash = metadata.SchemaHash,
+            Origin = ConfigurationDefinitionOrigin.PublishedMetadata,
+            Availability = entry.Availability,
+            MetadataDiagnostic = entry.Diagnostic
+        };
+    }
+
+    private static ConfigurationDefinitionSummary ToDiagnosticSummary(ConfigurationDefinitionCatalogEntry entry)
+    {
+        var metadata = entry.PublishedMetadata!;
+        var local = entry.Definition;
+        var definitionKey = FirstNonEmpty(metadata.DefinitionKey, local?.DefinitionKey);
+        return new ConfigurationDefinitionSummary
+        {
+            DefinitionKey = definitionKey,
+            SectionPath = FirstNonEmpty(metadata.SectionPath, local?.SectionPath),
+            DisplayName = FirstNonEmpty(metadata.DisplayName, local?.DisplayName, definitionKey),
+            Description = metadata.Description ?? local?.Description,
+            ClrTypeName = FirstNonEmpty(metadata.ClrTypeName, local?.ClrTypeName),
+            FromProject = FirstNonEmpty(metadata.FromProject, local?.FromProject),
+            Category = metadata.Category ?? local?.Category,
+            SchemaVersion = metadata.SchemaVersion,
+            SchemaHash = metadata.SchemaHash,
+            Origin = ConfigurationDefinitionOrigin.PublishedMetadata,
+            Availability = entry.Availability,
+            MetadataDiagnostic = entry.Diagnostic
+        };
+    }
+
+    private static string FirstNonEmpty(params string?[] values)
+    {
+        return values.FirstOrDefault(static value => !string.IsNullOrWhiteSpace(value)) ?? string.Empty;
     }
 
     private static string? ToDisplayValue(ConfigurationStoredValue? storedValue, ConfigurationNodeDefinition? node)
@@ -827,17 +918,40 @@ public sealed class ConfigurationFacade(
     }
 
     /// <summary>
+    /// Previews selected history rollbacks against the current physical target values.
+    /// </summary>
+    /// <param name="historyIds">The history identities to preview.</param>
+    /// <returns>The current values and concurrency-bound rollback plan.</returns>
+    public async Task<Res<ConfigurationHistoryRollbackPreview>> PreviewHistoryRollbackAsync(
+        IReadOnlyList<string> historyIds)
+    {
+        try
+        {
+            return Res.Ok(await rollbackService.PreviewHistoriesAsync(historyIds, CancellationToken.None));
+        }
+        catch (Exception ex)
+        {
+            return Res.Fail($"Failed to preview configuration history rollback: {ex.GetMessageRecursively()}");
+        }
+    }
+
+    /// <summary>
     /// Rolls one history row back to its previous value.
     /// </summary>
     /// <param name="historyId">The history record identity.</param>
+    /// <param name="planToken">The current-state preview token reviewed by the operator.</param>
     /// <param name="reason">Optional rollback reason.</param>
     /// <returns>The rollback mutation result.</returns>
-    public async Task<Res<ConfigurationMutationResult>> RollbackHistoryAsync(string historyId, string? reason = null)
+    public async Task<Res<ConfigurationMutationResult>> RollbackHistoryAsync(
+        string historyId,
+        string planToken,
+        string? reason = null)
     {
         try
         {
             return Res.Ok(await rollbackService.RollbackHistoryAsync(
                 historyId,
+                planToken,
                 new ConfigurationMutationContext { Reason = reason },
                 CancellationToken.None));
         }
@@ -851,16 +965,19 @@ public sealed class ConfigurationFacade(
     /// Rolls selected history rows back in reverse history order.
     /// </summary>
     /// <param name="historyIds">The history record identities.</param>
+    /// <param name="planToken">The current-state preview token reviewed by the operator.</param>
     /// <param name="reason">Optional rollback reason.</param>
     /// <returns>The rollback mutation results.</returns>
     public async Task<Res<IReadOnlyList<ConfigurationMutationResult>>> RollbackHistoriesAsync(
         IReadOnlyList<string> historyIds,
+        string planToken,
         string? reason = null)
     {
         try
         {
             return Res.Ok(await rollbackService.RollbackHistoriesAsync(
                 historyIds,
+                planToken,
                 new ConfigurationMutationContext { Reason = reason },
                 CancellationToken.None));
         }
@@ -874,14 +991,19 @@ public sealed class ConfigurationFacade(
     /// Rolls one mutation group back in reverse history order.
     /// </summary>
     /// <param name="groupId">The group identity.</param>
+    /// <param name="planToken">The current-state preview token reviewed by the operator.</param>
     /// <param name="reason">Optional rollback reason.</param>
     /// <returns>The rollback mutation results.</returns>
-    public async Task<Res<IReadOnlyList<ConfigurationMutationResult>>> RollbackGroupAsync(string groupId, string? reason = null)
+    public async Task<Res<IReadOnlyList<ConfigurationMutationResult>>> RollbackGroupAsync(
+        string groupId,
+        string planToken,
+        string? reason = null)
     {
         try
         {
             return Res.Ok(await rollbackService.RollbackGroupAsync(
                 groupId,
+                planToken,
                 new ConfigurationMutationContext { Reason = reason },
                 CancellationToken.None));
         }
