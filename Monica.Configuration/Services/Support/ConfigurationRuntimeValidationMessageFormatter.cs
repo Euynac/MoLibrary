@@ -4,21 +4,54 @@ using Monica.Configuration.Models;
 namespace Monica.Configuration.Services.Support;
 
 /// <summary>
-/// Formats source-aware runtime validation diagnostics for startup exceptions and options validation.
+/// Formats source-aware runtime validation diagnostics for logging and opt-in enforcement.
 /// </summary>
 internal static class ConfigurationRuntimeValidationMessageFormatter
 {
     /// <summary>
-    /// Formats a full report as a concise startup failure message.
+    /// Formats a full report as a diagnostic warning that explains why the application continues.
     /// </summary>
     /// <param name="report">The validation report.</param>
     /// <returns>The formatted message.</returns>
-    public static string FormatReport(ConfigurationValidationReport report)
+    public static string FormatDiagnosticReport(ConfigurationValidationReport report)
     {
+        return FormatReport(
+            report,
+            "Monica runtime configuration validation found",
+            $"Monica will not reject application startup or managed options resolution for these findings because {nameof(ConfigurationRuntimeValidationBehavior.DiagnosticOnly)} is configured.");
+    }
+
+    /// <summary>
+    /// Formats a full report as a fail-fast enforcement exception message.
+    /// </summary>
+    /// <param name="report">The validation report.</param>
+    /// <returns>The formatted message.</returns>
+    public static string FormatFailFastReport(ConfigurationValidationReport report)
+    {
+        return FormatReport(
+            report,
+            "Monica runtime configuration validation failed:",
+            $"{nameof(ConfigurationRuntimeValidationBehavior.FailFast)} is configured.");
+    }
+
+    private static string FormatReport(
+        ConfigurationValidationReport report,
+        string summaryPrefix,
+        string behaviorExplanation)
+    {
+        var affectedDefinitionCount = report.Issues
+            .Select(issue => issue.DefinitionKey)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .Count();
         var builder = new StringBuilder();
-        builder.Append("Monica configuration validation failed: ")
+        builder.Append(summaryPrefix)
+            .Append(' ')
             .Append(report.IssueCount)
-            .Append(report.IssueCount == 1 ? " issue." : " issues.");
+            .Append(report.IssueCount == 1 ? " issue across " : " issues across ")
+            .Append(affectedDefinitionCount)
+            .Append(affectedDefinitionCount == 1 ? " managed definition." : " managed definitions.");
+
+        builder.Append(' ').Append(behaviorExplanation);
 
         foreach (var group in report.Issues
                      .GroupBy(issue => issue.DefinitionKey, StringComparer.OrdinalIgnoreCase)

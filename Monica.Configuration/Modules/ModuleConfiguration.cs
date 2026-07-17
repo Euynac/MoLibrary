@@ -107,6 +107,12 @@ public sealed class ModuleConfiguration
     /// <inheritdoc />
     public override void ConfigureServices(IServiceCollection services)
     {
+        if (!Enum.IsDefined(Option.RuntimeValidationBehavior))
+        {
+            throw new InvalidOperationException(
+                $"Unsupported {nameof(ConfigurationRuntimeValidationBehavior)} value '{Option.RuntimeValidationBehavior}'.");
+        }
+
         _services = services;
         services.TryAddSingleton<IConfigurationDefinitionRegistry>(_definitionRegistry);
         services.TryAddSingleton<ConfigurationDefinitionResolver>();
@@ -159,10 +165,19 @@ public sealed class ModuleConfiguration
 
         var validationService = app.ApplicationServices.GetRequiredService<IConfigurationRuntimeValidationService>();
         var report = validationService.GetReport();
-        if (!report.IsValid)
+        if (report.IsValid)
+        {
+            return;
+        }
+
+        if (Option.RuntimeValidationBehavior == ConfigurationRuntimeValidationBehavior.FailFast)
         {
             throw new ConfigurationRuntimeValidationException(report);
         }
+
+        Logger.LogWarning(
+            "{ConfigurationRuntimeValidationDiagnostic}",
+            ConfigurationRuntimeValidationMessageFormatter.FormatDiagnosticReport(report));
     }
 
     /// <inheritdoc />
@@ -236,7 +251,10 @@ public sealed class ModuleConfiguration
 
         var configurationSection = _runtimeContext.Configuration.GetSection(sectionPath);
         BIND_OPTIONS_METHOD.MakeGenericMethod(optionsType).Invoke(null, [optionsBuilder, configurationSection]);
-        RegisterOptionsValidator(optionsType, definitionKey);
+        if (Option.RuntimeValidationBehavior == ConfigurationRuntimeValidationBehavior.FailFast)
+        {
+            RegisterOptionsValidator(optionsType, definitionKey);
+        }
     }
 
     private void RegisterOptionsValidator(Type optionsType, string definitionKey)
@@ -550,6 +568,23 @@ public sealed class ModuleConfigurationOption : ModuleOptions<ModuleConfiguratio
     /// </remarks>
     public ConfigurationDuplicateSectionPathBehavior DuplicateSectionPathBehavior { get; set; } =
         ConfigurationDuplicateSectionPathBehavior.FailFast;
+
+    /// <summary>
+    /// Gets or sets whether invalid effective Monica-managed values are reported as diagnostics or enforced as
+    /// application failures.
+    /// </summary>
+    /// <remarks>
+    /// The default is <see cref="ConfigurationRuntimeValidationBehavior.DiagnosticOnly"/>. Monica still activates the
+    /// configured provider, generates the source-aware validation report, logs one warning, and exposes the findings
+    /// through its facade and UI, but it does not prevent application startup or managed options resolution. Invalid
+    /// values are not made safe by this setting; consumers must tolerate them until an operator corrects the source.
+    /// Set this to <see cref="ConfigurationRuntimeValidationBehavior.FailFast"/> when the host must reject startup and
+    /// subsequent Microsoft options resolution whenever a managed definition is invalid. Store access, provider
+    /// activation, report generation, binding conversion, and definition registration failures remain fatal in both
+    /// modes.
+    /// </remarks>
+    public ConfigurationRuntimeValidationBehavior RuntimeValidationBehavior { get; set; } =
+        ConfigurationRuntimeValidationBehavior.DiagnosticOnly;
 
     /// <summary>
     /// Gets unified configuration version control options.

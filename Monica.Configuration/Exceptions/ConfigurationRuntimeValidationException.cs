@@ -4,13 +4,13 @@ using Monica.Configuration.Services.Support;
 namespace Monica.Configuration.Exceptions;
 
 /// <summary>
-/// Thrown when the current runtime configuration does not satisfy Monica-managed schema validation rules.
+/// Thrown when fail-fast runtime validation rejects effective values that do not satisfy Monica-managed schema rules.
 /// </summary>
 public sealed class ConfigurationRuntimeValidationException(ConfigurationValidationReport report)
-    : InvalidOperationException(ConfigurationRuntimeValidationMessageFormatter.FormatReport(report))
+    : InvalidOperationException(ConfigurationRuntimeValidationMessageFormatter.FormatFailFastReport(report))
 {
     /// <summary>
-    /// Gets the structured validation report that caused startup to fail.
+    /// Gets the structured validation report that triggered fail-fast enforcement.
     /// </summary>
     public ConfigurationValidationReport Report { get; } = report;
 }

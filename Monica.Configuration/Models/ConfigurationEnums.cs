@@ -139,6 +139,24 @@ public enum ConfigurationDuplicateSectionPathBehavior
 }
 
 /// <summary>
+/// Defines whether runtime validation findings are exposed as diagnostics or enforced as application failures.
+/// </summary>
+public enum ConfigurationRuntimeValidationBehavior
+{
+    /// <summary>
+    /// Reports invalid effective values through logging and the runtime validation API while allowing application
+    /// startup and managed options resolution to continue.
+    /// </summary>
+    DiagnosticOnly,
+
+    /// <summary>
+    /// Rejects application startup when invalid effective values are found and registers Microsoft options validators
+    /// that reject later resolution of invalid managed options.
+    /// </summary>
+    FailFast
+}
+
+/// <summary>
 /// Describes where a configuration definition was resolved from for the current process.
 /// </summary>
 public enum ConfigurationDefinitionOrigin
