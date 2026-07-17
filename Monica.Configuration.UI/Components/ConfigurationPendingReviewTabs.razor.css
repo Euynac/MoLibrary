@@ -1,0 +1,13 @@
+.configuration-pending-review-tabs {
+    min-height: 0;
+    min-width: 0;
+}
+
+.configuration-pending-review-tabs ::deep .mud-tabs {
+    min-height: 0;
+    min-width: 0;
+}
+
+.configuration-pending-review-tabs ::deep .mud-tabs-panels {
+    min-width: 0;
+}

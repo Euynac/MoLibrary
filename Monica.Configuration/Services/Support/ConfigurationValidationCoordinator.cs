@@ -56,7 +56,23 @@ internal sealed class ConfigurationValidationCoordinator(ConfigurationValueValid
         ConfigurationDefinition definition,
         string json)
     {
-        return ValidateValue(definition.Root, LogicalPath.Root, json);
+        return ValidateValue(definition, LogicalPath.Root, json);
+    }
+
+    /// <summary>
+    /// Validates a complete JSON value for one definition scope and returns every issue.
+    /// </summary>
+    /// <param name="definition">The current configuration definition.</param>
+    /// <param name="logicalPath">The logical path whose complete value is represented by <paramref name="json"/>.</param>
+    /// <param name="json">The complete JSON value for the target scope.</param>
+    /// <returns>All schema validation issues found in the value.</returns>
+    public IReadOnlyList<ConfigurationValueValidationIssue> ValidateValue(
+        ConfigurationDefinition definition,
+        LogicalPath logicalPath,
+        string json)
+    {
+        var target = ResolveTargetNode(definition, logicalPath);
+        return ValidateValue(target, logicalPath, json);
     }
 
     private IReadOnlyList<ConfigurationValueValidationIssue> ValidateValue(
@@ -72,25 +88,12 @@ internal sealed class ConfigurationValidationCoordinator(ConfigurationValueValid
         ConfigurationDefinition definition,
         LogicalPath logicalPath)
     {
-        var current = definition.Root;
-        foreach (var segment in logicalPath.Segments)
+        if (ConfigurationSchemaNavigator.ResolveNode(definition.Root, logicalPath) is { } target)
         {
-            current = segment switch
-            {
-                PropertySegment property => current.Children.FirstOrDefault(child =>
-                    string.Equals(child.Name, property.Name, StringComparison.OrdinalIgnoreCase)),
-                DictionaryKeySegment => current.DictionaryTemplate?.ValueTemplate,
-                ListItemKeySegment or ListIndexSegment => current.ListTemplate?.ItemTemplate,
-                _ => null
-            };
-
-            if (current is null)
-            {
-                throw new ConfigurationValidationFailedException(
-                    $"{logicalPath.ToCanonicalString()}: Logical path '{logicalPath}' does not exist in definition '{definition.DefinitionKey}'.");
-            }
+            return target;
         }
 
-        return current;
+        throw new ConfigurationValidationFailedException(
+            $"{logicalPath.ToCanonicalString()}: Logical path '{logicalPath}' does not exist in definition '{definition.DefinitionKey}'.");
     }
 }

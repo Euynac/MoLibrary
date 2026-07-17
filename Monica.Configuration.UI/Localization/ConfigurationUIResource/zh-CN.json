@@ -235,6 +235,7 @@
     "DefinitionKey": "定义 Key",
     "LogicalPath": "逻辑路径",
     "Kinds": {
+      "Set": "设置",
       "Remove": "移除"
     }
   },
@@ -617,27 +618,13 @@
     },
     "SaveGroup": {
       "Title": "保存配置修改组",
-      "Tabs": {
-        "DefinitionDiff": "按配置类 Diff",
-        "ChangeList": "修改列表"
-      },
-      "ChangeCount": "{0} 个修改",
-      "ChangeListActions": "操作",
       "ExternalTargetSummary": "{0} 个暂存修改会写入当前生效的外部配置来源。",
       "MissingSourceTarget": "暂存修改缺少外部配置来源信息。",
       "Actions": {
-        "JumpToChange": "跳转到配置项",
-        "UndoChange": "撤销修改",
         "JumpFailed": "无法跳转到暂存修改配置项。"
       },
       "Validation": {
-        "Title": "验证异常",
         "BlockedSummary": "需要先修正或撤销 {0} 个验证异常，才能保存。",
-        "IssueCount": "{0} 个异常",
-        "InvalidValue": "异常值",
-        "Reason": "原因",
-        "NoRuleTip": "没有可用的验证规则说明。",
-        "NoSaveableChanges": "当前项没有可保存的修改。",
         "JumpFailed": "无法跳转到验证异常配置项。"
       }
     },
@@ -679,6 +666,33 @@
         "ColonNotAllowed": "字典 Key 不能包含 ':'。",
         "DuplicateKey": "这个 Key 已经存在。"
       }
+    }
+  },
+  "PendingReview": {
+    "Tabs": {
+      "DefinitionDiff": "按定义对比",
+      "ItemList": "待处理项"
+    },
+    "Empty": "已无待处理的修改或验证异常。",
+    "ChangeCount": "{0} 个修改",
+    "IssueCount": "{0} 个异常",
+    "Columns": {
+      "Actions": "操作"
+    },
+    "Actions": {
+      "JumpToChange": "跳转到配置项",
+      "UndoChange": "撤销修改",
+      "UndoIssue": "撤销验证异常",
+      "UndoDefinition": "撤销该定义的全部修改和异常",
+      "ExcludeChange": "不导入此修改",
+      "ExcludeIssue": "不导入此验证异常",
+      "ExcludeDefinition": "不导入此定义"
+    },
+    "Validation": {
+      "InvalidValue": "异常值",
+      "Reason": "原因",
+      "NoRuleTip": "没有可用的验证规则说明。",
+      "NoSaveableChanges": "当前定义没有可保存的修改。"
     }
   },
   "ImportExport": {
@@ -725,8 +739,7 @@
       "Unchanged": "{0} 个未变化",
       "RedactedSkipped": "{0} 个脱敏值已跳过",
       "Diagnostics": "{0} 条诊断",
-      "Definitions": "{0} 个配置定义",
-      "NoChanges": "未检测到可保存的修改。"
+      "Definitions": "{0} 个配置定义"
     },
     "Diagnostics": {
       "Title": "导入诊断",

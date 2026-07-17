@@ -31,6 +31,7 @@ public sealed class ConfigurationFacade(
     IConfigurationJsonFileSourceWriter sourceWriter,
     ConfigurationRuntimeContext runtimeContext,
     IConfigurationRuntimeValidationService runtimeValidationService,
+    IConfigurationCandidateValidationService candidateValidationService,
     IConfigurationRuntimeReloadService runtimeReloadService,
     IConfigurationReloadBroadcastService reloadBroadcastService)
 {
@@ -119,6 +120,28 @@ public sealed class ConfigurationFacade(
         {
             return Task.FromResult<Res<ConfigurationValidationReport>>(
                 Res.Fail($"Failed to get runtime configuration validation report: {ex.GetMessageRecursively()}"));
+        }
+    }
+
+    /// <summary>
+    /// Validates a complete candidate JSON value against the mutation-time constraints for one definition scope.
+    /// </summary>
+    /// <param name="definition">The active configuration definition that owns the candidate value.</param>
+    /// <param name="scopePath">The logical path whose complete value is represented by <paramref name="json"/>.</param>
+    /// <param name="json">The normalized candidate JSON value.</param>
+    /// <returns>A structured report containing every candidate validation issue.</returns>
+    public Res<ConfigurationCandidateValidationReport> ValidateCandidateValue(
+        ConfigurationDefinition definition,
+        LogicalPath scopePath,
+        string json)
+    {
+        try
+        {
+            return Res.Ok(candidateValidationService.Validate(definition, scopePath, json));
+        }
+        catch (Exception ex)
+        {
+            return Res.Fail($"Failed to validate candidate configuration value: {ex.GetMessageRecursively()}");
         }
     }
 

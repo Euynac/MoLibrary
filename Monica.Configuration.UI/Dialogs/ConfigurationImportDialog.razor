@@ -7,7 +7,8 @@
 
 <MudDialog>
     <DialogContent>
-        <MudStack Spacing="3" Class="configuration-import-dialog configuration-import-dialog-content">
+        <div class="configuration-import-dialog-content">
+            <MudStack Spacing="3">
             <MudPaper Outlined="true" Class="pa-3">
                 <MudStack Spacing="1">
                     <MudText Typo="Typo.subtitle2">@L["ImportExport:Import:Title"]</MudText>
@@ -40,20 +41,20 @@
                 <MudAlert Severity="Severity.Error">@_error</MudAlert>
             }
 
-            @if (_report is not null)
+            @if (_report is not null && _review is not null)
             {
                 <MudGrid Spacing="2">
                     <MudItem xs="6" md="3">
-                        <MudChip T="int" Color="Color.Primary" Variant="Variant.Outlined">@L["ImportExport:Report:Changes", _report.Changes.Count]</MudChip>
+                        <MudChip T="int" Color="Color.Primary" Variant="Variant.Outlined">@L["ImportExport:Report:Changes", _review.Changes.Count]</MudChip>
                     </MudItem>
                     <MudItem xs="6" md="3">
-                        <MudChip T="int" Color="Color.Error" Variant="Variant.Outlined">@L["ImportExport:Report:Issues", _report.ValidationIssues.Count]</MudChip>
+                        <MudChip T="int" Color="Color.Error" Variant="Variant.Outlined">@L["ImportExport:Report:Issues", _review.ValidationIssues.Count]</MudChip>
                     </MudItem>
                     <MudItem xs="6" md="3">
                         <MudChip T="int" Color="Color.Warning" Variant="Variant.Outlined">@L["ImportExport:Report:Diagnostics", _report.AllDiagnostics.Count]</MudChip>
                     </MudItem>
                     <MudItem xs="6" md="3">
-                        <MudChip T="int" Variant="Variant.Outlined">@L["ImportExport:Report:Definitions", _report.Drafts.Count]</MudChip>
+                        <MudChip T="int" Variant="Variant.Outlined">@L["ImportExport:Report:Definitions", _review.Definitions.Count]</MudChip>
                     </MudItem>
                 </MudGrid>
 
@@ -64,69 +65,34 @@
                     </MudText>
                 }
 
-                <MudTabs Rounded="true" ApplyEffectsToContainer="true">
-                    <MudTabPanel Text="@L["Dialogs:SaveGroup:Tabs:DefinitionDiff"]">
-                        <ConfigurationPendingDefinitionDiffPreview Changes="@_report.Changes"
-                                                                   ValidationIssues="@_report.ValidationIssues" />
-                    </MudTabPanel>
-                    <MudTabPanel Text="@L["Dialogs:SaveGroup:Tabs:ChangeList"]">
-                        <MudStack Spacing="2">
-                            @if (_report.AllDiagnostics.Count > 0)
+                @if (_report.AllDiagnostics.Count > 0)
+                {
+                    <MudPaper Outlined="true" Class="pa-3">
+                        <MudStack Spacing="1">
+                            <MudText Typo="Typo.subtitle2">@L["ImportExport:Diagnostics:Title"]</MudText>
+                            @foreach (var diagnostic in _report.AllDiagnostics)
                             {
-                                <MudPaper Outlined="true" Class="pa-3">
-                                    <MudStack Spacing="1">
-                                        <MudText Typo="Typo.subtitle2">@L["ImportExport:Diagnostics:Title"]</MudText>
-                                        @foreach (var diagnostic in _report.AllDiagnostics)
-                                        {
-                                            <MudAlert Severity="@DiagnosticSeverity(diagnostic)" Dense="true">
-                                                @diagnostic.Message
-                                            </MudAlert>
-                                        }
-                                    </MudStack>
-                                </MudPaper>
+                                <MudAlert Severity="@DiagnosticSeverity(diagnostic)" Dense="true">
+                                    @diagnostic.Message
+                                </MudAlert>
                             }
-
-                            <ConfigurationValidationIssueList Issues="@_report.ValidationIssues" ShowJump="false" />
-
-                            <MudTable T="PendingChange" Items="@_report.Changes" Dense="true" Hover="true">
-                                <HeaderContent>
-                                    <MudTh>@L["State:Columns:Definition"]</MudTh>
-                                    <MudTh>@L["State:Columns:Path"]</MudTh>
-                                    <MudTh>@L["History:Columns:Target"]</MudTh>
-                                    <MudTh>@L["History:Columns:Kind"]</MudTh>
-                                    <MudTh>@L["State:Columns:OldValue"]</MudTh>
-                                    <MudTh>@L["State:Columns:NewValue"]</MudTh>
-                                </HeaderContent>
-                                <RowTemplate>
-                                    <MudTd DataLabel="@L["State:Columns:Definition"]">@context.DefinitionDisplayName</MudTd>
-                                    <MudTd DataLabel="@L["State:Columns:Path"]"><code>@context.LogicalPath.ToCanonicalString()</code></MudTd>
-                                    <MudTd DataLabel="@L["History:Columns:Target"]">
-                                        <ConfigurationPendingChangeTargetChip Change="@context" />
-                                    </MudTd>
-                                    <MudTd DataLabel="@L["History:Columns:Kind"]">@context.MutationKind</MudTd>
-                                    <MudTd DataLabel="@L["State:Columns:OldValue"]">
-                                        <ConfigurationPendingChangeValue Change="@context" Value="@context.OriginalDisplayValue" />
-                                    </MudTd>
-                                    <MudTd DataLabel="@L["State:Columns:NewValue"]">
-                                        <ConfigurationPendingChangeValue Change="@context" Value="@context.NewDisplayValue" IsNewValue="true" />
-                                    </MudTd>
-                                </RowTemplate>
-                                <NoRecordsContent>
-                                    <MudAlert Severity="Severity.Info">@L["ImportExport:Report:NoChanges"]</MudAlert>
-                                </NoRecordsContent>
-                            </MudTable>
                         </MudStack>
-                    </MudTabPanel>
-                </MudTabs>
+                    </MudPaper>
+                }
+
+                <ConfigurationPendingReviewTabs Review="_review"
+                                                ActionMode="ConfigurationPendingReviewActionMode.Exclude"
+                                                UndoRequested="UndoReview" />
             }
-        </MudStack>
+            </MudStack>
+        </div>
     </DialogContent>
     <DialogActions>
         <MudButton OnClick="Cancel">@L["Common:Actions:Cancel"]</MudButton>
         <MudButton Color="Color.Primary"
                    Variant="Variant.Filled"
                    StartIcon="@Icons.Material.Filled.PlaylistAddCheck"
-                   Disabled="@(_report?.HasState is not true)"
+                   Disabled="@(_review?.HasItems is not true)"
                    OnClick="Apply">
             @L["Common:Actions:Apply"]
         </MudButton>
@@ -147,6 +113,7 @@
     [Parameter] public IReadOnlyList<PendingChange> PendingChanges { get; set; } = [];
 
     private ConfigurationImportReport? _report;
+    private ConfigurationPendingReviewState? _review;
     private ConfigurationPackageProgress _progress = new()
     {
         Operation = ConfigurationPackageProgressOperation.Import,
@@ -165,6 +132,7 @@
         _loading = true;
         _error = null;
         _report = null;
+        _review = null;
         ReportProgress(new ConfigurationPackageProgress
         {
             Operation = ConfigurationPackageProgressOperation.Import,
@@ -182,6 +150,7 @@
 
             var progress = new Progress<ConfigurationPackageProgress>(ReportProgress);
             _report = await PackageService.AnalyzeImportAsync(document, PendingChanges, file.Name, progress);
+            _review = new ConfigurationPendingReviewState(_report.Changes, _report.ValidationIssues);
         }
         catch (Exception ex)
         {
@@ -201,12 +170,17 @@
 
     private void Apply()
     {
-        if (_report?.HasState is not true)
+        if (_report is null || _review?.HasItems is not true)
         {
             return;
         }
 
-        MudDialog.Close(DialogResult.Ok(_report));
+        MudDialog.Close(DialogResult.Ok(_review.Filter(_report)));
+    }
+
+    private void UndoReview(ConfigurationPendingReviewUndoRequest request)
+    {
+        _review?.Undo(request);
     }
 
     private void Cancel()

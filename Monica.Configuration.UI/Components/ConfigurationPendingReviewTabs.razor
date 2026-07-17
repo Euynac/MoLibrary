@@ -1,0 +1,33 @@
+@using Monica.Configuration.UI.Localization
+@inject IStringLocalizer<ConfigurationUIResource> L
+
+<div class="configuration-pending-review-tabs">
+    <MudTabs Rounded="true" ApplyEffectsToContainer="true" TabPanelsClass="pa-3">
+        <MudTabPanel Text="@L["PendingReview:Tabs:DefinitionDiff"]" Icon="@Icons.Material.Filled.Difference">
+            <ConfigurationPendingDefinitionDiffPreview Changes="@Review.Changes"
+                                                       ValidationIssues="@Review.ValidationIssues"
+                                                       ActionMode="ActionMode"
+                                                       ActionsDisabled="ActionsDisabled"
+                                                       JumpRequested="JumpIssueRequested"
+                                                       JumpChangeRequested="JumpChangeRequested"
+                                                       UndoRequested="UndoRequested" />
+        </MudTabPanel>
+        <MudTabPanel Text="@L["PendingReview:Tabs:ItemList"]" Icon="@Icons.Material.Filled.List">
+            <ConfigurationPendingReviewList Review="Review"
+                                            ActionMode="ActionMode"
+                                            ActionsDisabled="ActionsDisabled"
+                                            JumpIssueRequested="JumpIssueRequested"
+                                            JumpChangeRequested="JumpChangeRequested"
+                                            UndoRequested="UndoRequested" />
+        </MudTabPanel>
+    </MudTabs>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public ConfigurationPendingReviewState Review { get; set; } = null!;
+    [Parameter] public ConfigurationPendingReviewActionMode ActionMode { get; set; }
+    [Parameter] public bool ActionsDisabled { get; set; }
+    [Parameter] public EventCallback<ConfigurationValidationIssue> JumpIssueRequested { get; set; }
+    [Parameter] public EventCallback<PendingChange> JumpChangeRequested { get; set; }
+    [Parameter] public EventCallback<ConfigurationPendingReviewUndoRequest> UndoRequested { get; set; }
+}

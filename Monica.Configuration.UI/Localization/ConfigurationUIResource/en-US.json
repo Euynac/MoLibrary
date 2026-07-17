@@ -235,6 +235,7 @@
     "DefinitionKey": "Definition key",
     "LogicalPath": "Logical path",
     "Kinds": {
+      "Set": "Set",
       "Remove": "Remove"
     }
   },
@@ -617,27 +618,13 @@
     },
     "SaveGroup": {
       "Title": "Save Configuration Group",
-      "Tabs": {
-        "DefinitionDiff": "Definition diff",
-        "ChangeList": "Change list"
-      },
-      "ChangeCount": "{0} changes",
-      "ChangeListActions": "Actions",
       "ExternalTargetSummary": "{0} staged changes will write the currently effective external configuration source.",
       "MissingSourceTarget": "The staged change is missing external source target metadata.",
       "Actions": {
-        "JumpToChange": "Jump to configuration item",
-        "UndoChange": "Undo change",
         "JumpFailed": "Failed to jump to the staged change."
       },
       "Validation": {
-        "Title": "Validation issues",
         "BlockedSummary": "{0} validation issues must be fixed or undone before saving.",
-        "IssueCount": "{0} issues",
-        "InvalidValue": "Invalid value",
-        "Reason": "Reason",
-        "NoRuleTip": "No validation rule details are available.",
-        "NoSaveableChanges": "No saveable changes are available for this item.",
         "JumpFailed": "Failed to jump to the validation issue."
       }
     },
@@ -679,6 +666,33 @@
         "ColonNotAllowed": "Dictionary keys cannot contain ':'.",
         "DuplicateKey": "This key already exists."
       }
+    }
+  },
+  "PendingReview": {
+    "Tabs": {
+      "DefinitionDiff": "Definition diff",
+      "ItemList": "Review items"
+    },
+    "Empty": "No pending changes or validation issues remain.",
+    "ChangeCount": "{0} changes",
+    "IssueCount": "{0} issues",
+    "Columns": {
+      "Actions": "Actions"
+    },
+    "Actions": {
+      "JumpToChange": "Jump to configuration item",
+      "UndoChange": "Undo change",
+      "UndoIssue": "Undo validation issue",
+      "UndoDefinition": "Undo all changes and issues for this definition",
+      "ExcludeChange": "Exclude change from import",
+      "ExcludeIssue": "Exclude validation issue from import",
+      "ExcludeDefinition": "Exclude this definition from import"
+    },
+    "Validation": {
+      "InvalidValue": "Invalid value",
+      "Reason": "Reason",
+      "NoRuleTip": "No validation rule details are available.",
+      "NoSaveableChanges": "No saveable changes are available for this definition."
     }
   },
   "ImportExport": {
@@ -725,8 +739,7 @@
       "Unchanged": "{0} unchanged",
       "RedactedSkipped": "{0} redacted skipped",
       "Diagnostics": "{0} diagnostics",
-      "Definitions": "{0} definitions",
-      "NoChanges": "No saveable changes were detected."
+      "Definitions": "{0} definitions"
     },
     "Diagnostics": {
       "Title": "Import diagnostics",

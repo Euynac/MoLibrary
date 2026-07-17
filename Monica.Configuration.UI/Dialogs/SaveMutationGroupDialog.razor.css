@@ -73,20 +73,3 @@
     min-height: 0;
     vertical-align: middle;
 }
-
-.configuration-save-group-preview ::deep .configuration-change-actions-column,
-.configuration-save-group-preview ::deep .configuration-change-actions-cell {
-    min-width: 7.5rem;
-    width: 7.5rem;
-    white-space: nowrap;
-}
-
-.configuration-save-group-preview ::deep .configuration-change-actions-column,
-.configuration-save-group-preview ::deep .configuration-change-actions-cell {
-    text-align: center;
-}
-
-.configuration-save-group-preview ::deep .configuration-change-actions {
-    justify-content: center;
-    width: 100%;
-}

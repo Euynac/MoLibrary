@@ -16,7 +16,7 @@ else if (!string.IsNullOrWhiteSpace(_error))
 }
 else if (_groups.Count == 0)
 {
-    <MudAlert Severity="Severity.Info">@L["Dialogs:ComplexEditor:NoPatch"]</MudAlert>
+    <MudAlert Severity="Severity.Info">@L["PendingReview:Empty"]</MudAlert>
 }
 else
 {
@@ -24,90 +24,128 @@ else
         <MudExpansionPanels MultiExpansion="true" Elevation="0">
             @foreach (var group in _groups)
             {
-                <MudExpansionPanel Text="@group.DisplayName"
+                <MudExpansionPanel @key="group.DefinitionKey"
                                    Expanded="@group.IsExpanded"
                                    ExpandedChanged="expanded => OnGroupExpandedChanged(group, expanded)"
                                    KeepContentAlive="false">
-                    <MudStack Spacing="2">
-                        <MudStack Row="true" Wrap="Wrap.Wrap" AlignItems="AlignItems.Center" Spacing="1">
-                            <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">@group.DefinitionKey</MudChip>
-                            @if (group.ChangeCount > 0)
-                            {
-                                <MudChip T="int" Size="Size.Small" Color="Color.Primary" Variant="Variant.Outlined">
-                                    @L["Dialogs:SaveGroup:ChangeCount", group.ChangeCount]
-                                </MudChip>
-                            }
-                            @if (group.ValidationIssues.Count > 0)
-                            {
-                                <MudChip T="int" Size="Size.Small" Color="Color.Error" Variant="Variant.Outlined">
-                                    @L["Dialogs:SaveGroup:Validation:IssueCount", group.ValidationIssues.Count]
-                                </MudChip>
-                            }
-                        </MudStack>
-                        @if (ShowChangeActions && group.Changes.Count > 0)
-                        {
-                            <MudStack Spacing="1" Class="configuration-definition-diff-change-actions">
-                                @foreach (var change in group.Changes)
+                    <TitleContent>
+                        <div class="configuration-definition-diff-header">
+                            <MudStack Row="true" Wrap="Wrap.Wrap" AlignItems="AlignItems.Center" Spacing="1">
+                                <MudText Typo="Typo.subtitle2">@group.DisplayName</MudText>
+                                <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">@group.DefinitionKey</MudChip>
+                                @if (group.ChangeCount > 0)
                                 {
-                                    <MudPaper Outlined="true" Class="pa-2 configuration-definition-diff-change-action">
-                                        <MudStack Row="true" Wrap="Wrap.Wrap" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Spacing="1">
-                                            <MudStack Row="true" Wrap="Wrap.Wrap" AlignItems="AlignItems.Center" Spacing="1" Class="configuration-definition-diff-change-summary">
-                                                <MudChip T="string" Size="Size.Small" Color="@PatchColor(change.MutationKind)" Variant="Variant.Outlined">
-                                                    @change.MutationKind
-                                                </MudChip>
-                                                <MudText Typo="Typo.caption"><code>@change.LogicalPath.ToCanonicalString()</code></MudText>
-                                            </MudStack>
-                                            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1" Class="configuration-definition-diff-change-action-buttons">
-                                                @if (JumpChangeRequested.HasDelegate)
-                                                {
-                                                    <MudTooltip Text="@L["Dialogs:SaveGroup:Actions:JumpToChange"]">
-                                                        <MudIconButton Icon="@Icons.Material.Filled.NearMe"
-                                                                       Size="Size.Small"
-                                                                       Color="Color.Primary"
-                                                                       OnClick="@(() => JumpChangeRequested.InvokeAsync(change))" />
-                                                    </MudTooltip>
-                                                }
-                                                @if (UndoRequested.HasDelegate)
-                                                {
-                                                    <MudTooltip Text="@L["Dialogs:SaveGroup:Actions:UndoChange"]">
-                                                        <MudIconButton Icon="@Icons.Material.Filled.Undo"
-                                                                       Size="Size.Small"
-                                                                       Color="Color.Warning"
-                                                                       OnClick="@(() => UndoRequested.InvokeAsync(change))" />
-                                                    </MudTooltip>
-                                                }
-                                            </MudStack>
-                                        </MudStack>
-                                    </MudPaper>
+                                    <MudChip T="int" Size="Size.Small" Color="Color.Primary" Variant="Variant.Outlined">
+                                        @L["PendingReview:ChangeCount", group.ChangeCount]
+                                    </MudChip>
+                                }
+                                @if (group.ValidationIssues.Count > 0)
+                                {
+                                    <MudChip T="int" Size="Size.Small" Color="Color.Error" Variant="Variant.Outlined">
+                                        @L["PendingReview:IssueCount", group.ValidationIssues.Count]
+                                    </MudChip>
                                 }
                             </MudStack>
-                        }
-                        <ConfigurationValidationIssueList Issues="@group.ValidationIssues"
-                                                          ShowDefinition="false"
-                                                          JumpRequested="JumpRequested" />
-                        @if (group.ChangeCount > 0)
-                        {
-                            @if (group.IsPreviewLoading)
+                            @if (UndoRequested.HasDelegate)
                             {
-                                <MudProgressLinear Indeterminate="true" />
+                                <div @onclick:stopPropagation="true">
+                                    <MudTooltip Text="@DefinitionRemovalText">
+                                        <MudIconButton Icon="@RemovalIcon"
+                                                       Size="Size.Small"
+                                                       Color="@RemovalColor"
+                                                       aria-label="@DefinitionRemovalText"
+                                                       Disabled="ActionsDisabled"
+                                                       OnClick="@(() => UndoDefinitionAsync(group.DefinitionKey))" />
+                                    </MudTooltip>
+                                </div>
                             }
-                            else if (!string.IsNullOrWhiteSpace(group.PreviewError))
+                        </div>
+                    </TitleContent>
+                    <ChildContent>
+                        <MudStack Spacing="2">
+                            @if (HasChangeActions && group.Changes.Count > 0)
                             {
-                                <MudAlert Severity="Severity.Error" Dense="true">@group.PreviewError</MudAlert>
+                                <div class="configuration-definition-diff-change-actions">
+                                    <MudStack Spacing="1">
+                                        @foreach (var change in group.Changes)
+                                        {
+                                            <div class="configuration-definition-diff-change-action" @key="change.RequestId">
+                                                <MudPaper Outlined="true" Class="pa-2">
+                                                    <MudStack Row="true" Wrap="Wrap.Wrap" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Spacing="1">
+                                                        <div class="configuration-definition-diff-change-summary">
+                                                            <MudStack Row="true" Wrap="Wrap.Wrap" AlignItems="AlignItems.Center" Spacing="1">
+                                                                <MudChip T="string" Size="Size.Small" Color="@PatchColor(change.MutationKind)" Variant="Variant.Outlined">
+                                                                    @MutationKindText(change.MutationKind)
+                                                                </MudChip>
+                                                                <MudText Typo="Typo.caption"><code>@change.LogicalPath.ToCanonicalString()</code></MudText>
+                                                            </MudStack>
+                                                        </div>
+                                                        <div class="configuration-definition-diff-change-action-buttons">
+                                                            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
+                                                                @if (JumpChangeRequested.HasDelegate)
+                                                                {
+                                                                    <MudTooltip Text="@L["PendingReview:Actions:JumpToChange"]">
+                                                                        <MudIconButton Icon="@Icons.Material.Filled.NearMe"
+                                                                                       Size="Size.Small"
+                                                                                       Color="Color.Primary"
+                                                                                       aria-label="@L["PendingReview:Actions:JumpToChange"]"
+                                                                                       Disabled="ActionsDisabled"
+                                                                                       OnClick="@(() => JumpChangeRequested.InvokeAsync(change))" />
+                                                                    </MudTooltip>
+                                                                }
+                                                                @if (UndoRequested.HasDelegate)
+                                                                {
+                                                                    <MudTooltip Text="@ChangeRemovalText">
+                                                                        <MudIconButton Icon="@RemovalIcon"
+                                                                                       Size="Size.Small"
+                                                                                       Color="@RemovalColor"
+                                                                                       aria-label="@ChangeRemovalText"
+                                                                                       Disabled="ActionsDisabled"
+                                                                                       OnClick="@(() => UndoRequested.InvokeAsync(ConfigurationPendingReviewUndoRequest.ForChange(change)))" />
+                                                                    </MudTooltip>
+                                                                }
+                                                            </MudStack>
+                                                        </div>
+                                                    </MudStack>
+                                                </MudPaper>
+                                            </div>
+                                        }
+                                    </MudStack>
+                                </div>
                             }
-                            else if (group.HasPreview)
+                            <ConfigurationValidationIssueList Issues="@group.ValidationIssues"
+                                                              ShowDefinition="false"
+                                                              ShowJump="JumpRequested.HasDelegate"
+                                                              JumpRequested="JumpRequested"
+                                                              UndoRequested="UndoRequested"
+                                                              UndoLabel="@IssueRemovalText"
+                                                              UndoIcon="@RemovalIcon"
+                                                              UndoColor="@RemovalColor"
+                                                              ActionsDisabled="ActionsDisabled" />
+                            @if (group.ChangeCount > 0)
                             {
-                                <DiffViewer OriginText="@group.OriginJson"
-                                            NewText="@group.TargetJson"
-                                            Options="@DiffOptions"
-                                            ViewMode="EDiffViewMode.Split" />
+                                @if (group.IsPreviewLoading)
+                                {
+                                    <MudProgressLinear Indeterminate="true" />
+                                }
+                                else if (!string.IsNullOrWhiteSpace(group.PreviewError))
+                                {
+                                    <MudAlert Severity="Severity.Error" Dense="true">@group.PreviewError</MudAlert>
+                                }
+                                else if (group.HasPreview)
+                                {
+                                    <DiffViewer OriginText="@group.OriginJson"
+                                                NewText="@group.TargetJson"
+                                                Options="@DiffOptions"
+                                                ViewMode="EDiffViewMode.Split" />
+                                }
                             }
-                        }
-                        else
-                        {
-                            <MudAlert Severity="Severity.Warning" Dense="true">@L["Dialogs:SaveGroup:Validation:NoSaveableChanges"]</MudAlert>
-                        }
-                    </MudStack>
+                            else
+                            {
+                                <MudAlert Severity="Severity.Warning" Dense="true">@L["PendingReview:Validation:NoSaveableChanges"]</MudAlert>
+                            }
+                        </MudStack>
+                    </ChildContent>
                 </MudExpansionPanel>
             }
         </MudExpansionPanels>
@@ -130,11 +168,37 @@ else
 
     [Parameter] public IReadOnlyList<PendingChange> Changes { get; set; } = [];
     [Parameter] public IReadOnlyList<ConfigurationValidationIssue> ValidationIssues { get; set; } = [];
+    [Parameter] public ConfigurationPendingReviewActionMode ActionMode { get; set; }
+    [Parameter] public bool ActionsDisabled { get; set; }
     [Parameter] public EventCallback<ConfigurationValidationIssue> JumpRequested { get; set; }
     [Parameter] public EventCallback<PendingChange> JumpChangeRequested { get; set; }
-    [Parameter] public EventCallback<PendingChange> UndoRequested { get; set; }
+    [Parameter] public EventCallback<ConfigurationPendingReviewUndoRequest> UndoRequested { get; set; }
 
-    private bool ShowChangeActions => JumpChangeRequested.HasDelegate || UndoRequested.HasDelegate;
+    private bool HasChangeActions => JumpChangeRequested.HasDelegate || UndoRequested.HasDelegate;
+    private bool IsExclusion => ActionMode == ConfigurationPendingReviewActionMode.Exclude;
+    private string ChangeRemovalText => IsExclusion
+        ? L["PendingReview:Actions:ExcludeChange"]
+        : L["PendingReview:Actions:UndoChange"];
+    private string IssueRemovalText => IsExclusion
+        ? L["PendingReview:Actions:ExcludeIssue"]
+        : L["PendingReview:Actions:UndoIssue"];
+    private string DefinitionRemovalText => IsExclusion
+        ? L["PendingReview:Actions:ExcludeDefinition"]
+        : L["PendingReview:Actions:UndoDefinition"];
+    private string RemovalIcon => IsExclusion
+        ? Icons.Material.Filled.RemoveCircleOutline
+        : Icons.Material.Filled.Undo;
+    private Color RemovalColor => IsExclusion ? Color.Error : Color.Warning;
+
+    private string MutationKindText(ConfigurationMutationKind kind)
+    {
+        return kind switch
+        {
+            ConfigurationMutationKind.Set => L["Mutation:Kinds:Set"],
+            ConfigurationMutationKind.Remove => L["Mutation:Kinds:Remove"],
+            _ => kind.ToString()
+        };
+    }
 
     protected override async Task OnParametersSetAsync()
     {
@@ -239,6 +303,11 @@ else
         {
             await EnsureGroupPreviewAsync(group);
         }
+    }
+
+    private Task UndoDefinitionAsync(string definitionKey)
+    {
+        return UndoRequested.InvokeAsync(ConfigurationPendingReviewUndoRequest.ForDefinition(definitionKey));
     }
 
     private async Task EnsureGroupPreviewAsync(DefinitionDiffGroup group)

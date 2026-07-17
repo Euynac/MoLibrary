@@ -201,6 +201,19 @@ public sealed class ConfigurationStateStore
     }
 
     /// <summary>
+    /// Removes only the staged change for one path, preserving any validation issue recorded at the same path.
+    /// </summary>
+    /// <param name="definitionKey">The definition key.</param>
+    /// <param name="path">The logical path.</param>
+    public void UndoChange(string definitionKey, LogicalPath path)
+    {
+        if (_pendingChanges.Remove(Key(definitionKey, path)))
+        {
+            NotifyChanged();
+        }
+    }
+
+    /// <summary>
     /// Removes all staged changes inside one definition path scope.
     /// </summary>
     /// <param name="definitionKey">The definition key that owns the scope.</param>

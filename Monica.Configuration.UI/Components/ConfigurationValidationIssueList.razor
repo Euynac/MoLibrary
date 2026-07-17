@@ -3,72 +3,93 @@
 
 @if (Issues.Count > 0)
 {
-    <MudStack Spacing="1" Class="configuration-validation-issue-list">
-        @foreach (var issue in OrderedIssues)
-        {
-            <MudPaper Outlined="true" Class="pa-3 configuration-validation-issue-card">
-                <MudStack Spacing="2">
-                    <MudStack Row="true" Wrap="Wrap.Wrap" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Spacing="1">
-                        <MudStack Spacing="0">
-                            <MudText Typo="Typo.subtitle2">@Title(issue)</MudText>
-                            <MudText Typo="Typo.caption" Color="Color.Secondary">@issue.LogicalPath.ToCanonicalString()</MudText>
-                            @if (ShowRuntimeMetadata && !string.IsNullOrWhiteSpace(issue.ConfigurationPath))
-                            {
-                                <MudText Typo="Typo.caption" Color="Color.Secondary">
-                                    @L["State:RuntimeValidation:ConfigurationPath"]: @issue.ConfigurationPath
-                                </MudText>
-                            }
-                        </MudStack>
-                        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
-                            <MudTooltip Text="@RuleTip(issue)" Placement="Placement.Left">
-                                <MudIconButton Icon="@Icons.Material.Filled.Info"
-                                               Size="Size.Small"
-                                               Color="Color.Info" />
-                            </MudTooltip>
-                            @if (ShowSourceChain && !string.IsNullOrWhiteSpace(issue.ConfigurationPath))
-                            {
-                                <MudTooltip Text="@L["State:RuntimeValidation:Actions:SourceChain"]">
-                                    <MudIconButton Icon="@Icons.Material.Filled.AccountTree"
-                                                   Size="Size.Small"
+    <div class="configuration-validation-issue-list">
+        <MudStack Spacing="1">
+            @foreach (var issue in OrderedIssues)
+            {
+                <div class="configuration-validation-issue-card">
+                    <MudPaper Outlined="true" Class="pa-3">
+                        <MudStack Spacing="2">
+                            <MudStack Row="true" Wrap="Wrap.Wrap" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Spacing="1">
+                                <MudStack Spacing="0">
+                                    <MudText Typo="Typo.subtitle2">@Title(issue)</MudText>
+                                    <MudText Typo="Typo.caption" Color="Color.Secondary">@issue.LogicalPath.ToCanonicalString()</MudText>
+                                    @if (ShowRuntimeMetadata && !string.IsNullOrWhiteSpace(issue.ConfigurationPath))
+                                    {
+                                        <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                            @L["State:RuntimeValidation:ConfigurationPath"]: @issue.ConfigurationPath
+                                        </MudText>
+                                    }
+                                </MudStack>
+                                <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
+                                    <MudTooltip Text="@RuleTip(issue)" Placement="Placement.Left">
+                                        <MudIconButton Icon="@Icons.Material.Filled.Info"
+                                                       Size="Size.Small"
+                                                       aria-label="@RuleTip(issue)"
+                                                       Color="Color.Info" />
+                                    </MudTooltip>
+                                    @if (ShowSourceChain && !string.IsNullOrWhiteSpace(issue.ConfigurationPath))
+                                    {
+                                        <MudTooltip Text="@L["State:RuntimeValidation:Actions:SourceChain"]">
+                                            <MudIconButton Icon="@Icons.Material.Filled.AccountTree"
+                                                           Size="Size.Small"
+                                                           Color="Color.Primary"
+                                                           Variant="Variant.Outlined"
+                                                           aria-label="@L["State:RuntimeValidation:Actions:SourceChain"]"
+                                                           Disabled="ActionsDisabled"
+                                                           OnClick="() => SourceChainRequested.InvokeAsync(issue)" />
+                                        </MudTooltip>
+                                    }
+                                    @if (ShowJump && JumpRequested.HasDelegate)
+                                    {
+                                        <MudButton Variant="Variant.Outlined"
                                                    Color="Color.Primary"
-                                                   Variant="Variant.Outlined"
-                                                   OnClick="() => SourceChainRequested.InvokeAsync(issue)" />
-                                </MudTooltip>
-                            }
-                            @if (ShowJump)
-                            {
-                                <MudButton Variant="Variant.Outlined"
-                                           Color="Color.Primary"
-                                           Size="Size.Small"
-                                           StartIcon="@Icons.Material.Filled.NearMe"
-                                           OnClick="() => JumpRequested.InvokeAsync(issue)">
-                                    @L["Common:Actions:Jump"]
-                                </MudButton>
-                            }
-                        </MudStack>
-                    </MudStack>
+                                                   Size="Size.Small"
+                                                   StartIcon="@Icons.Material.Filled.NearMe"
+                                                   Disabled="ActionsDisabled"
+                                                   OnClick="() => JumpRequested.InvokeAsync(issue)">
+                                            @L["Common:Actions:Jump"]
+                                        </MudButton>
+                                    }
+                                    @if (UndoRequested.HasDelegate)
+                                    {
+                                        <MudTooltip Text="@UndoLabelText">
+                                            <MudIconButton Icon="@UndoIcon"
+                                                           Size="Size.Small"
+                                                           Color="@UndoColor"
+                                                           aria-label="@UndoLabelText"
+                                                           Disabled="ActionsDisabled"
+                                                           OnClick="@(() => UndoRequested.InvokeAsync(ConfigurationPendingReviewUndoRequest.ForValidationIssue(issue)))" />
+                                        </MudTooltip>
+                                    }
+                                </MudStack>
+                            </MudStack>
 
-                    <MudGrid Spacing="2">
-                        <MudItem xs="12" md="@(ShowRuntimeMetadata ? 4 : 5)">
-                            <MudText Typo="Typo.caption" Color="Color.Secondary">@ValueLabelText</MudText>
-                            <MudText Typo="Typo.body2" Class="configuration-validation-issue-value">@DisplayInvalidValue(issue)</MudText>
-                        </MudItem>
-                        <MudItem xs="12" md="@(ShowRuntimeMetadata ? 4 : 7)">
-                            <MudText Typo="Typo.caption" Color="Color.Secondary">@ReasonLabelText</MudText>
-                            <MudText Typo="Typo.body2" Color="Color.Error">@issue.ValidationError</MudText>
-                        </MudItem>
-                        @if (ShowRuntimeMetadata)
-                        {
-                            <MudItem xs="12" md="4">
-                                <MudText Typo="Typo.caption" Color="Color.Secondary">@L["State:RuntimeValidation:EffectiveSource"]</MudText>
-                                <MudText Typo="Typo.body2">@DisplayEffectiveSource(issue)</MudText>
-                            </MudItem>
-                        }
-                    </MudGrid>
-                </MudStack>
-            </MudPaper>
-        }
-    </MudStack>
+                            <MudGrid Spacing="2">
+                                <MudItem xs="12" md="@(ShowRuntimeMetadata ? 4 : 5)">
+                                    <MudText Typo="Typo.caption" Color="Color.Secondary">@ValueLabelText</MudText>
+                                    <div class="configuration-validation-issue-value">
+                                        <MudText Typo="Typo.body2">@DisplayInvalidValue(issue)</MudText>
+                                    </div>
+                                </MudItem>
+                                <MudItem xs="12" md="@(ShowRuntimeMetadata ? 4 : 7)">
+                                    <MudText Typo="Typo.caption" Color="Color.Secondary">@ReasonLabelText</MudText>
+                                    <MudText Typo="Typo.body2" Color="Color.Error">@issue.ValidationError</MudText>
+                                </MudItem>
+                                @if (ShowRuntimeMetadata)
+                                {
+                                    <MudItem xs="12" md="4">
+                                        <MudText Typo="Typo.caption" Color="Color.Secondary">@L["State:RuntimeValidation:EffectiveSource"]</MudText>
+                                        <MudText Typo="Typo.body2">@DisplayEffectiveSource(issue)</MudText>
+                                    </MudItem>
+                                }
+                            </MudGrid>
+                        </MudStack>
+                    </MudPaper>
+                </div>
+            }
+        </MudStack>
+    </div>
 }
 
 @code {
@@ -79,12 +100,19 @@
     [Parameter] public bool ShowSourceChain { get; set; }
     [Parameter] public string? ValueLabel { get; set; }
     [Parameter] public string? ReasonLabel { get; set; }
+    [Parameter] public string? UndoLabel { get; set; }
+    [Parameter] public string UndoIcon { get; set; } = Icons.Material.Filled.Undo;
+    [Parameter] public Color UndoColor { get; set; } = Color.Warning;
+    [Parameter] public bool ActionsDisabled { get; set; }
     [Parameter] public EventCallback<ConfigurationValidationIssue> JumpRequested { get; set; }
     [Parameter] public EventCallback<ConfigurationValidationIssue> SourceChainRequested { get; set; }
+    [Parameter] public EventCallback<ConfigurationPendingReviewUndoRequest> UndoRequested { get; set; }
 
-    private string ValueLabelText => ValueLabel ?? L["Dialogs:SaveGroup:Validation:InvalidValue"].Value;
+    private string ValueLabelText => ValueLabel ?? L["PendingReview:Validation:InvalidValue"].Value;
 
-    private string ReasonLabelText => ReasonLabel ?? L["Dialogs:SaveGroup:Validation:Reason"].Value;
+    private string ReasonLabelText => ReasonLabel ?? L["PendingReview:Validation:Reason"].Value;
+
+    private string UndoLabelText => UndoLabel ?? L["PendingReview:Actions:UndoIssue"].Value;
 
     private IEnumerable<ConfigurationValidationIssue> OrderedIssues =>
         Issues
@@ -126,7 +154,7 @@
     {
         if (issue.ValidationRules.Count == 0)
         {
-            return L["Dialogs:SaveGroup:Validation:NoRuleTip"].Value;
+            return L["PendingReview:Validation:NoRuleTip"].Value;
         }
 
         return string.Join(

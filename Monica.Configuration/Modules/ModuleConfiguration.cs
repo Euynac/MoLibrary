@@ -132,6 +132,7 @@ public sealed class ModuleConfiguration
         services.TryAddSingleton<ConfigurationStoredValueCodec>();
         services.TryAddSingleton<ConfigurationValueValidationEngine>();
         services.TryAddSingleton<ConfigurationValidationCoordinator>();
+        services.TryAddSingleton<IConfigurationCandidateValidationService, ConfigurationCandidateValidationService>();
         services.TryAddSingleton<ConfigurationMutationPlanner>();
         services.TryAddSingleton<ConfigurationPathProjector>();
         services.TryAddSingleton<ConfigurationEffectiveValuePatchEngine>();

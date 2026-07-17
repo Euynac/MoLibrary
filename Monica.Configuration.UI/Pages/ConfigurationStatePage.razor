@@ -1018,7 +1018,9 @@
         var parameters = new DialogParameters<SaveMutationGroupDialog>();
         parameters.Add(dialog => dialog.Changes, changes);
         parameters.Add(dialog => dialog.ValidationIssues, validationIssues);
-        parameters.Add(dialog => dialog.UndoRequested, EventCallback.Factory.Create<PendingChange>(this, UndoPendingChangeAsync));
+        parameters.Add(
+            dialog => dialog.UndoRequested,
+            EventCallback.Factory.Create<ConfigurationPendingReviewUndoRequest>(this, UndoPendingReviewAsync));
         var dialog = await DialogService.ShowAsync<SaveMutationGroupDialog>(L["Dialogs:SaveGroup:Title"], parameters, new DialogOptions
         {
             MaxWidth = MaxWidth.False,
@@ -1102,9 +1104,9 @@
         return Task.CompletedTask;
     }
 
-    private Task UndoPendingChangeAsync(PendingChange change)
+    private Task UndoPendingReviewAsync(ConfigurationPendingReviewUndoRequest request)
     {
-        StateStore.Undo(change.DefinitionKey, change.LogicalPath);
+        request.ApplyTo(StateStore);
         return RefreshPendingCount();
     }
 

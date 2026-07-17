@@ -3,6 +3,10 @@
 }
 
 .configuration-validation-issue-card {
+    min-width: 0;
+}
+
+.configuration-validation-issue-card ::deep .mud-paper {
     border-color: var(--mud-palette-error);
 }
 
