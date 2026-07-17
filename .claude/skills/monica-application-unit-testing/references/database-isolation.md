@@ -1,53 +1,44 @@
 # Database Isolation
 
+Database state belongs to one `MonicaTestApplication` scenario. Configure the provider in the factory before host build, then create normal scopes from that application.
+
 ## PerScopeDatabase
 
-Use `DatabaseIsolation.PerScopeDatabase` as the default. Each `NewScope()` gets a fresh SQLite in-memory connection and schema.
+Use `DatabaseIsolation.PerScopeDatabase` by default. Every `application.CreateScope()` receives a fresh SQLite in-memory connection and schema.
 
 Best for:
 
-- handler tests
-- repository tests
-- tests that mutate data
-- tests that may run in any order
+- handler and repository scenarios
+- tests that mutate data in one scope
+- scenarios that must run in any order or in parallel
 
-Trade-off: schema creation happens per test scope.
+Trade-off: schema creation occurs for each scope. Data intentionally does not cross scope boundaries.
 
 ## SharedDatabaseWithTransaction
 
-Use `DatabaseIsolation.SharedDatabaseWithTransaction` when a service has expensive schema creation and tests do not depend on provider behavior that escapes a transaction. The fixture keeps one SQLite in-memory connection for the collection; each scope starts a transaction and rolls it back on dispose.
+Use `DatabaseIsolation.SharedDatabaseWithTransaction` when schema creation is measurably expensive and the scenario needs one host-owned SQLite database. Each scope starts a transaction and rolls it back on disposal.
 
-Best for:
+Check carefully with:
 
-- read-heavy repository tests
-- larger DbContexts where per-scope schema creation is too slow
+- overlapping scopes in one application
+- `ExecuteUpdateAsync` or raw SQL
+- several DbContext instances in one scope
+- behavior that escapes a transaction
 
-Check carefully when using:
-
-- `ExecuteUpdateAsync`
-- raw SQL
-- multiple DbContext instances in the same scope
-- provider-specific behavior
+The database is shared only within one `MonicaTestApplication`; separate scenario hosts still own separate databases. Do not run overlapping transactions against one shared SQLite connection.
 
 ## RealDatabase
 
-Use `DatabaseIsolation.RealDatabase` only when the behavior is specific to a real provider dialect and SQLite is not representative. This should be uncommon in unit tests and normally needs a caller-supplied provider configuration.
+Use `DatabaseIsolation.RealDatabase` only when a real provider dialect is part of the behavior and SQLite is not representative.
 
-Best for:
-
-- provider-specific SQL translation
-- migrations or schema behavior
-- functions and indexes SQLite cannot model
-
-Rules:
-
-- never hardcode developer machine credentials in tests
-- keep connection strings outside source control
-- roll back per scope when possible
-- mark these tests clearly if they are slower or environment-dependent
+- Apply provider registration before `CreateAsync` builds the host.
+- Use unique database or schema names per scenario when possible.
+- Keep credentials outside source control.
+- Dispose provider resources with the scenario application.
+- If isolation is impossible, serialize only the tests sharing that named database resource.
 
 ## Choosing Quickly
 
 - Start with `PerScopeDatabase`.
-- Move to `SharedDatabaseWithTransaction` only after measuring boot or schema cost.
-- Move to `RealDatabase` only when SQLite gives false confidence.
+- Use `SharedDatabaseWithTransaction` only after measuring schema cost and verifying single-connection transaction behavior.
+- Use `RealDatabase` only to cover provider-specific behavior.

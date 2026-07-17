@@ -2,7 +2,7 @@ using AwesomeAssertions;
 using Monica.JobScheduler.Models;
 using Monica.JobScheduler.UI.UIJobScheduler.Shared.Support;
 using MudBlazor;
-using Monica.UnitTests.UI;
+using Monica.Testing.UI;
 using Xunit;
 
 namespace Test.Monica.JobScheduler.UI.UIJobScheduler.Shared.Support;

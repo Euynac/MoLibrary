@@ -5,8 +5,8 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Monica.Configuration.Annotations;
+using Monica.Configuration.Binding;
 using Monica.Configuration.Bootstrap;
-using Monica.Modules;
 using Xunit;
 
 namespace Test.Monica.Configuration.Binding;
@@ -87,10 +87,9 @@ public class MonicaConfigurationCollectionBindingTests
         {
             ["Runtime:Items:0"] = "configured"
         });
-        var module = new ModuleConfiguration(new ModuleConfigurationOption());
-        module.ConfigureBuilder(builder);
-        module.ConfigureServices(builder.Services);
-        module.IterateBusinessTypes([typeof(RuntimeOptions)]).ToArray();
+        MonicaConfigurationBinder.BindOptions(
+            builder.Services.AddOptions<RuntimeOptions>(),
+            builder.Configuration.GetSection("Runtime"));
 
         using var serviceProvider = builder.Services.BuildServiceProvider();
         var options = serviceProvider.GetRequiredService<IOptions<RuntimeOptions>>().Value;

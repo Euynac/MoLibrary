@@ -35,9 +35,10 @@ public class ModuleJobSchedulerUITests
     }
 
     [Fact]
-    public void ClaimDependencies_WhenPagesAreEnabled_ShouldIncludeUiDependencies()
+    public async Task ClaimDependencies_WhenPagesAreEnabled_ShouldIncludeUiDependencies()
     {
-        var application = ComposeJobSchedulerUI(disablePages: false);
+        await using var host = ComposeJobSchedulerUI(disablePages: false);
+        var application = host.Services.GetRequiredService<MonicaApplication>();
         var dependencies = application.Dependencies.CalculateModuleDependencies(BuiltInModuleKey.JobSchedulerUI);
         dependencies.Should().Contain(BuiltInModuleKey.Localization);
         dependencies.Should().Contain(BuiltInModuleKey.JobScheduler);
@@ -46,9 +47,10 @@ public class ModuleJobSchedulerUITests
     }
 
     [Fact]
-    public void ClaimDependencies_WhenPagesAreDisabled_ShouldSkipUiCoreDependency()
+    public async Task ClaimDependencies_WhenPagesAreDisabled_ShouldSkipUiCoreDependency()
     {
-        var application = ComposeJobSchedulerUI(disablePages: true);
+        await using var host = ComposeJobSchedulerUI(disablePages: true);
+        var application = host.Services.GetRequiredService<MonicaApplication>();
         var dependencies = application.Dependencies.CalculateModuleDependencies(BuiltInModuleKey.JobSchedulerUI);
 
         dependencies.Should().Contain(BuiltInModuleKey.Localization);
@@ -57,7 +59,7 @@ public class ModuleJobSchedulerUITests
         dependencies.Should().NotContain(BuiltInModuleKey.UICore);
     }
 
-    private static MonicaApplication ComposeJobSchedulerUI(bool disablePages)
+    private static WebApplication ComposeJobSchedulerUI(bool disablePages)
     {
         var builder = WebApplication.CreateBuilder();
         builder.AddMonica(monica =>
@@ -77,8 +79,6 @@ public class ModuleJobSchedulerUITests
             monica.AddJobSchedulerUI(options => options.DisableJobSchedulerPages = disablePages);
         });
 
-        return (MonicaApplication)builder.Services
-            .Single(descriptor => descriptor.ServiceType == typeof(MonicaApplication))
-            .ImplementationInstance!;
+        return builder.Build();
     }
 }

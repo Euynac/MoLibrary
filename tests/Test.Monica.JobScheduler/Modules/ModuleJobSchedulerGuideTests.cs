@@ -32,7 +32,7 @@ public class ModuleJobSchedulerGuideTests
     }
 
     [Fact]
-    public void Register_WhenAllRequiredMethodsAreConfigured_ShouldRecordRequestsAndDependencies()
+    public async Task Register_WhenAllRequiredMethodsAreConfigured_ShouldRecordRequestsAndDependencies()
     {
         var builder = WebApplication.CreateBuilder();
         builder.AddMonica(monica =>
@@ -48,9 +48,8 @@ public class ModuleJobSchedulerGuideTests
                 .UseInMemoryMetadataRepository();
         });
 
-        var application = (MonicaApplication)builder.Services
-            .Single(descriptor => descriptor.ServiceType == typeof(MonicaApplication))
-            .ImplementationInstance!;
+        await using var host = builder.Build();
+        var application = host.Services.GetRequiredService<MonicaApplication>();
 
         var dependencies = application.Dependencies.CalculateModuleDependencies(BuiltInModuleKey.JobScheduler);
         dependencies.Should().Contain(BuiltInModuleKey.EventBus);

@@ -1,101 +1,85 @@
 ---
 name: monica-unit-testing
-description: Use when creating, extending, or standardizing Monica unit tests, test project scaffolding, shared test infrastructure, tests/ directory layout, xUnit or bUnit test setup, Monica-specific result assertions, module registration tests, or test-related skills and documentation.
+description: Create, migrate, or review Monica framework tests and shared testing infrastructure. Use for tests under tests/, the Monica.Testing toolkit, host-owned MonicaTestApplicationFactory scenarios, raw ProjectUnitFixture tests, xUnit v3 or bUnit setup, module tests, facade result assertions, test isolation, and testing documentation or skills.
 ---
 
 # Monica Unit Testing
 
-Create Monica unit tests under `tests/` using the shared root `Monica.UnitTests` toolkit, `Test.Monica.*` runnable project naming, xUnit v3 for unit tests, and bUnit for Blazor UI tests. Follow Monica-specific rules for `Res<T>` assertions, module guide testing, sociable host tests, and UI page or component boundaries instead of inventing per-project test conventions.
-
-## When To Use
-
-- Add a new Monica unit test project.
-- Extend or refactor tests under `tests/`.
-- Define Monica-wide test rules, test layout, or naming standards.
-- Add reusable test helpers to `Monica.UnitTests/`.
-- Test module guides, module dependencies, facades returning `Res<T>`, providers, support classes, or Blazor components and pages.
-- Create or update a Monica testing skill or testing documentation.
+Use `Monica.Testing` as the shared toolkit and keep runnable framework tests under `tests/Test.Monica.*`. Choose the smallest test boundary that proves the behavior without misrepresenting Monica's activation or host lifecycle.
 
 ## Workflow
 
-1. Read `<project-root>/tests/README.md` first. It is the current source of truth for Monica test layout, naming, stack, and WSL execution rules.
-2. Reuse `Monica.UnitTests/` before adding project-local helpers. Shared result assertions, module reset helpers, localization stubs, UI theme stubs, and sociable test fixtures belong there.
-3. Keep all unit-test-related artifacts under `tests/`. New runnable test projects must use the `Test.Monica.*` prefix and mirror the source project folder structure.
-4. Prefer public-surface tests first:
-   - `Modules/`
-   - `Facades/`
-   - public models or abstractions
-   - stable support classes or in-memory providers
-5. For UI modules, stay at component level and page-shell level. Use bUnit, deterministic localizers, and fake or in-memory services. Do not introduce browser automation or real backend dependencies into these unit tests.
-6. After edits, run `dotnet test` with Windows paths under WSL. Keep a single build or test process at a time.
+1. Read `<project-root>/tests/README.md` for the current project layout and execution rules.
+2. Classify the test before choosing infrastructure:
+   - Pure logic: construct the value or service directly.
+   - Raw ProjectUnit collaboration: use `ProjectUnitFixture<TUnit>` and accept its activation limits.
+   - Module wiring, options, conventional registration, proxies, hosted lifecycle, or cross-scope behavior: create a full host with `MonicaTestApplicationFactory<TDiscoveryAnchor>`.
+   - Blazor component or page shell: use bUnit in the runnable UI test project.
+3. Put reusable assertions, host helpers, and deterministic boundary doubles in `Monica.Testing`; keep scenario-specific data and doubles in the runnable test project.
+4. Prefer public-surface coverage: module guides, facades, public models and abstractions, stable providers, and observable side effects.
+5. Run one `dotnet test` process at a time with Windows paths under WSL.
 
-## Sociable Application Tests
+## Host-Owned Scenarios
 
-For Monica-based business applications, prefer the `monica-application-unit-testing` skill. It defines the exact `Test.{ProductionProjectName}` architecture, collection fixtures, database isolation choices, and migration rules for command handlers, query handlers, domain services, repositories, and module-registration tests.
+Use `MonicaTestApplicationFactory<TDiscoveryAnchor>` when the test depends on real Monica composition.
 
-Use `MonicaApplicationFixture<TStartupModule>` as the default when the service has a startup module. Keep `ApplicationServiceFixture<THandler>` as a fast path for narrow, fully substituted handler tests.
+- Derive a project factory and implement `ConfigureMonica(IMonicaBuilder)` with the production module graph needed by the scenario.
+- Use `ConfigureHost(WebApplicationBuilder)` for host configuration and environment inputs.
+- Use `ConfigureServices(IServiceCollection)` for stable test-boundary registrations shared by every scenario produced by that factory. Call the base implementation first unless the scenario intentionally replaces all standard seams.
+- Call `CreateAsync(...)` for each test scenario. Every call builds and starts a complete host with its own `MonicaApplication`, module graph, singleton services, logger ownership, and disposal boundary.
+- Pass scenario-specific seam replacements to `CreateAsync(Action<ISeamReplacementBuilder>?)`. The callback changes registrations before the host is built.
+- Call `MonicaTestApplication.CreateScope(...)` only to create a normal child scope. A built service provider is immutable; scope creation never replaces registrations.
+- Dispose the `MonicaTestApplication` after the scenario, even when several scopes are used within that scenario.
+
+Do not copy service descriptors into another root provider, share one `MonicaApplication` across providers, or emulate per-scope registration replacement.
+
+## Raw ProjectUnit Fast Path
+
+`ProjectUnitFixture<TUnit>` is an explicitly raw fast-path harness. It creates a small Microsoft DI container, activates the target, and initializes Monica's cached-service-provider accessor where applicable.
+
+Use it only when all collaborators are deliberately supplied and the assertion does not depend on:
+
+- Monica module composition or options binding
+- conventional type discovery and registration
+- dynamic proxies or interceptors
+- hosted-service startup and shutdown
+- host-owned singleton or logging isolation
+
+Use the host-owned scenario model for any of those behaviors. Do not introduce another application-service-specific fixture; `ApplicationServiceFixture<THandler>` is not part of the testing model.
 
 ## Required Conventions
 
-- Shared test infrastructure project: `Monica.UnitTests/Monica.UnitTests.csproj`
-- Runnable test project naming: `tests/Test.Monica.{ProjectName}/`
-- Test class naming: `{TypeName}Tests`
-- Test method naming: `Method_WhenCondition_ShouldExpectation`
-- Test folders should mirror the source layout, for example:
-  - `Modules/`
-  - `Facades/`
-  - `Providers/`
-  - `Services/`
-  - `Pages/`
-  - `Components/`
-  - `UIJobScheduler/Shared/Support/`
+- Shared toolkit: `Monica.Testing/Monica.Testing.csproj`
+- Runnable project: `tests/Test.Monica.{ProjectName}/`
+- Test class: `{TypeName}Tests`
+- Test method: `Method_WhenCondition_ShouldExpectation`
+- Test folders mirror source folders such as `Modules/`, `Facades/`, `Providers/`, `Services/`, `Pages/`, and `Components/`.
 
 ## Monica-Specific Rules
 
-- Assert `Res<T>` explicitly.
-  - Facade tests must assert `Status`, `Message`, and `Data`.
-  - For `Res<string>` success paths, always verify `Data`; Monica has a known `Res.Ok(string)` overload trap.
-- Module tests should not stop at checking static tables.
-  - Prefer testing required config methods, guide methods, dependency declarations, or service registrations.
-- Prefer in-memory and deterministic seams.
-  - Use in-memory providers, substitutes, or fixed timestamps.
-  - Avoid real network, real persistence, and `Task.Delay`-based waiting.
-- Use `MonicaApplicationFixture<TStartupModule>` for sociable application tests when the target has a module startup type.
-  - Override fixture configuration to register test-friendly providers and replace external seams.
-  - Keep the test assertion on public DI-visible behavior instead of private boot internals.
-- Keep `InternalsVisibleTo` exceptional.
-  - Only add it when public-surface tests genuinely cannot cover critical behavior.
-  - Scope it narrowly to the corresponding test project.
+- Assert `Res<T>` explicitly. Facade tests cover `Status`, `Message`, and `Data`; successful `Res<string>` paths always verify `Data`.
+- Test module behavior through guide configuration, dependencies, resulting options, or DI-visible registrations rather than static tables alone.
+- Replace external boundaries, not domain logic. Resolve application services, domain services, repositories, mappers, and options from the scenario host.
+- Avoid real network, uncontrolled persistence, sleeps, random inputs, and untracked machine state.
+- Keep `InternalsVisibleTo` exceptional and scoped to the corresponding runnable test project.
+- Run independent test scenarios in parallel by default. Serialize only tests that name and document a genuinely shared external resource.
 
 ## Default Stack
 
-- `xUnit v3`
-- `AwesomeAssertions`
-- `NSubstitute`
-- `NSubstitute.Analyzers.CSharp`
-- `coverlet.collector`
-- `bUnit` for UI test projects only
+- xUnit v3
+- AwesomeAssertions
+- NSubstitute with its analyzer
+- coverlet.collector
+- bUnit in UI test projects only
 
-## Sample Baseline
+## References
 
-- Shared infrastructure: `Monica.UnitTests/`
-- UI infrastructure sample: `tests/Test.Monica.UI/`
-- Infrastructure sample: `tests/Test.Monica.JobScheduler/`
-- UI sample: `tests/Test.Monica.JobScheduler.UI/`
-
-Use these sample projects before introducing a new pattern. When the new work matches an existing sample, copy the sample structure and adapt it instead of inventing another style.
-
-## Read As Needed
-
-- `references/standards.md`
-  - Stable Monica testing rules and decision points.
-- `references/samples.md`
-  - Current sample projects, recommended target types, and starter patterns.
-- `../monica-application-unit-testing/SKILL.md`
-  - Sociable application testing architecture for Monica-based business services.
+- Read `references/standards.md` for stable boundary and isolation rules.
+- Read `references/samples.md` when selecting an existing framework sample.
+- Use `../monica-application-unit-testing/SKILL.md` for Monica-based business-service tests.
 
 ## Validation
 
-- Use Windows paths for `dotnet` commands in WSL.
-- Run a single `dotnet build` or `dotnet test` process at a time.
-- Finish by running the relevant solution or project tests, not only by writing scaffolding.
+- Use Windows paths for `dotnet build` and `dotnet test` under WSL.
+- Run one build or test process at a time.
+- Run the relevant runnable test project or solution after changes.

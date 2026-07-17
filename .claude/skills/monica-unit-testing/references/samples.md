@@ -1,44 +1,38 @@
 # Monica Testing Samples
 
-Current Monica unit-testing baseline is defined by these sample projects:
+Use these projects as structural references:
 
-- `Monica.UnitTests`
-  - Shared assertion helpers
-  - Module-system scope helpers
-  - Deterministic localization and theme test doubles
-  - Application service, sociable host, and repository fixtures
-- `tests/Test.Monica.UI`
-  - Monica UI foundation tests
+- `Monica.Testing`
+  - Host-owned scenario factory and application lifetime
+  - Raw ProjectUnit fast-path fixture
+  - Result assertions, database helpers, and deterministic boundary doubles
+- `tests/Test.Monica.Core`
+  - Pure module-system and result tests
 - `tests/Test.Monica.JobScheduler`
-  - Module guide tests
-  - Sociable application fixture tests
-  - In-memory provider tests
-  - Facade tests for `Res<T>` flows
-  - Service validation tests
+  - Module guide, provider, facade, validator, and full-host scenario tests
+- `tests/Test.Monica.UI`
+  - UI foundation tests
 - `tests/Test.Monica.JobScheduler.UI`
-  - UI module service-registration tests
-  - bUnit component tests
-  - Page-shell error-state tests
-  - UI support class tests
+  - bUnit component and page-shell tests
 
 ## Recommended First Targets
 
 For infrastructure modules:
 
-- `Modules/`
-- `Facades/`
-- one stable in-memory provider or support class
+- module guide or runtime registration behavior
+- public facade behavior
+- one stable provider, validator, or support type
+- one full-host ownership scenario when the module participates in host lifecycle
 
 For UI modules:
 
 - module registration or dependency behavior
 - one stable component
-- one page-shell state test
-- one pure support or mapping class
+- one page-shell state
+- one pure support or mapping type
 
 ## Reuse Guidance
 
-- Put cross-project helpers into `Monica.UnitTests`, not into each test project.
-- Keep test project folder depth aligned with the source project.
-- When a new module follows an existing sample, copy the sample structure first and then adapt the assertions.
-- For business service test projects, use the `monica-application-unit-testing` skill. It contains the canonical `Test.{ProductionProjectName}` folder layout, collection fixture pattern, and handler/domain-service/repository templates.
+- Put genuinely cross-project infrastructure in `Monica.Testing`; keep scenario data and service-specific doubles local.
+- Copy only the structure of a relevant sample. Choose direct, raw ProjectUnit, full-host, or bUnit boundaries independently for each behavior.
+- Use the `monica-application-unit-testing` skill for business-service project layout and scenario-host templates.

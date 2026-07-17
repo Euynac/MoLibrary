@@ -1,4 +1,4 @@
 interface:
   display_name: "Monica Unit Testing"
-  short_description: "Monica unit testing standards and workflow"
-  default_prompt: "Use $monica-unit-testing to create or extend Monica unit tests under tests/ using the shared conventions."
+  short_description: "Host-owned Monica testing standards"
+  default_prompt: "Use $monica-unit-testing to create or review Monica tests with the correct direct, raw ProjectUnit, full-host, or bUnit boundary."

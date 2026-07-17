@@ -15,7 +15,8 @@ Use a docs tree that is:
 
 - Easy to scan
 - Stable for future migration
-- Focused on the active Chinese documentation set
+- Canonical in English for launch and adoption guidance
+- First-class in Simplified Chinese, with aligned public facts and navigation
 - Organized around **Monica modules and concepts**, not random historical folders
 
 ## 2. Root layout
@@ -24,17 +25,24 @@ The markdown source for this skill lives in the sibling docs project at `../Moni
 
 ```text
 ../Monica.Docs/docs/
+├── en-US/
+│   ├── index.md
+│   ├── getting-started/
+│   ├── concepts/
+│   ├── modules/
+│   └── guides/
 ├── zh-CN/
 │   ├── index.md
 │   ├── getting-started/
 │   ├── concepts/
 │   ├── modules/
+│   ├── guides/
 │   └── scenarios/
 └── shared/
     └── attachments/
 ```
 
-Author documentation in `zh-CN` by default. Treat other locale trees as out of scope unless the user explicitly requests them.
+Treat `en-US` as the canonical launch language and `zh-CN` as a first-class localized tree. Create or update both locales for new public concepts and launch-critical guides unless the user explicitly narrows the scope. Keep locale alternates at the same relative path whenever the site supports paired navigation.
 
 ## 3. Page families
 
@@ -95,7 +103,7 @@ Rules:
 ## 5. Module documentation pack layout
 
 ```text
-../Monica.Docs/docs/zh-CN/modules/{module-slug}/
+../Monica.Docs/docs/{locale}/modules/{module-slug}/
 ├── index.md
 ├── quick-start.md
 ├── configuration.md

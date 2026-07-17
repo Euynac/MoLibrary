@@ -37,9 +37,10 @@
         "Monica.StateStore",
         "Monica.StateStore.UI",
         "Monica.Templates",
+        "Monica.Testing",
+        "Monica.Testing.UI",
         "Monica.Tool",
         "Monica.UI",
-        "Monica.UnitTests",
         "Monica.Utilities",
         "Monica.WebApi"
       ]

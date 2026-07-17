@@ -1,0 +1,11 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <RootNamespace>Monica.Testing.UI</RootNamespace>
+    <PackageDescription>Reusable Monica UI test doubles and component-testing support.</PackageDescription>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Monica.Testing\Monica.Testing.csproj" />
+    <ProjectReference Include="..\Monica.UI\Monica.UI.csproj" />
+  </ItemGroup>
+</Project>
