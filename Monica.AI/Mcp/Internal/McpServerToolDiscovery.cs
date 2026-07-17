@@ -1,5 +1,6 @@
 using System.Reflection;
 using System.Text.Json;
+using System.Text.Json.Serialization.Metadata;
 using Microsoft.Extensions.AI;
 using ModelContextProtocol.Server;
 using Monica.AI.Skills.Internal;
@@ -75,6 +76,7 @@ internal static class McpServerToolDiscovery
         IServiceProvider serviceProvider,
         IXmlDocumentationService? xmlDocs)
     {
+        var effectiveSerializerOptions = CreateEffectiveSerializerOptions(serializerOptions);
         var toolMethods = new Dictionary<string, MethodInfo>(StringComparer.Ordinal);
         var descriptors = new List<McpServerToolDescriptor>();
 
@@ -117,7 +119,7 @@ internal static class McpServerToolDiscovery
                 Services = serviceProvider,
                 Name = name,
                 Description = description,
-                SerializerOptions = serializerOptions,
+                SerializerOptions = effectiveSerializerOptions,
                 SchemaCreateOptions = schemaCreateOptions,
                 Metadata = [metadata]
             });
@@ -137,13 +139,27 @@ internal static class McpServerToolDiscovery
                     {
                         Name = name,
                         Description = description,
-                        SerializerOptions = serializerOptions,
+                        SerializerOptions = effectiveSerializerOptions,
                         JsonSchemaCreateOptions = schemaCreateOptions
                     })
                     : null));
         }
 
         return descriptors;
+    }
+
+    private static JsonSerializerOptions CreateEffectiveSerializerOptions(JsonSerializerOptions? serializerOptions)
+    {
+        var effectiveOptions = serializerOptions ?? JsonSerializerOptions.Web;
+        if (effectiveOptions.TypeInfoResolver is not null)
+        {
+            return effectiveOptions;
+        }
+
+        return new JsonSerializerOptions(effectiveOptions)
+        {
+            TypeInfoResolver = new DefaultJsonTypeInfoResolver()
+        };
     }
 
     private static McpServerTransportKind ToMcpTransportKind(SkillMcpServerTransportKind transportKind)
