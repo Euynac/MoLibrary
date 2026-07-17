@@ -1,19 +1,17 @@
 ---
 name: monica-ui-bridge-debug
-description: Orchestrate Monica UI inspection, debugging, and refinement through a bridge ASP.NET Core project. Use when Monica has no standalone entry point and Codex must launch a bridge service on a user-provided or discovered URL/port, choose between a simple single-agent bridge workflow and a delegated sub-agent workflow, capture browser artifacts with Playwright, and implement Monica UI fixes under $monica-ui-development. Use simple mode for narrow tasks or when the user requests simple mode. Use $supervise-subagents for complex work or when the user requests sub-agent mode.
+description: Orchestrate Monica UI inspection, debugging, and refinement through a bridge ASP.NET Core project. Use when Monica has no standalone entry point and Codex must launch a bridge service on a user-provided or discovered URL/port, choose between a simple single-agent bridge workflow and a delegated sub-agent workflow, capture browser artifacts with Playwright, and implement Monica UI fixes under $monica-ui-development. Use simple mode for narrow tasks or when the user requests simple mode.
 ---
 
 # Monica UI Bridge Debug
 
 Use this skill when Monica UI work must be verified through a separate runnable application.
 
-## Required companion skills
+## Required UI and browser skills
 
-- Use `$planning-with-files` to create a new task folder for every bridge run.
 - Use `$monica-ui-development` for every Monica Blazor UI implementation or style change.
 - Use `$monica-ui-localization` for any UI text, localization resource, navigation/AppBar key, or i18n validation change.
 - Use `$playwright-cli` for browser inspection, snapshots, and screenshots.
-- Use `$supervise-subagents` whenever the selected workflow is delegated sub-agent mode.
 
 ## Inputs to collect or resolve
 
@@ -23,10 +21,11 @@ Collect or derive these inputs before bridge-based UI testing starts:
 2. Bridge service base URL when the user already knows it, for example `http://localhost:5092`
 3. Target page route or enough module context to discover the page route from the ModuleUI page
 4. The actual UI task to inspect, fix, or implement
+5. Bridge artifact directory when the user already has a preferred location
 
 The bridge service base URL is optional user input. If it is missing, derive it from project launch configuration, an existing project-owned listener, or a newly selected unused local port. Do not stop to ask for a base URL unless no reasonable URL can be discovered or selected.
 
-Do not hardcode any bridge project path or service URL inside the workflow.
+Do not hardcode any bridge project path, service URL, or artifact directory inside the workflow.
 
 ## DOM-first bridge diagnosis
 
@@ -48,11 +47,9 @@ Use simple mode when the task is narrow, the expected fix is localized, or the u
 
 Rules:
 
-- Run only the requirement-folder setup script from `$planning-with-files`.
-- Do not run the `$planning-with-files` session initialization script.
-- Do not create `task_plan.md`, `findings.md`, or `progress.md`.
+- Use the user-provided bridge artifact directory or create a task-specific directory under `.tmp/monica-ui-bridge-debug/`.
 - Do not use sub-agents.
-- Store bridge logs, screenshots, snapshots, and readiness artifacts in the created task folder.
+- Store bridge logs, screenshots, snapshots, and readiness artifacts in the bridge artifact directory.
 
 ### Delegated sub-agent mode
 
@@ -60,10 +57,9 @@ Use delegated sub-agent mode when the task is complex, spans multiple debug or v
 
 Rules:
 
-- Use `$supervise-subagents` without exception.
-- Act only as the orchestrator. Collect inputs, decide the workflow, ask the user for design confirmation, initialize coordination folders, supervise sub-agents, and summarize results.
+- Act only as the orchestrator. Collect inputs, decide the workflow, ask the user for design confirmation, coordinate sub-agents, and summarize results.
 - Delegate concrete bridge testing, Playwright capture, debugging, implementation, and verification to sub-agents through the runtime's SubAgent features.
-- Keep bridge artifacts in the task folder and supervision records in `.tmp/<timestamp>-<random>-agent-session/`.
+- Keep all bridge artifacts in the selected bridge artifact directory.
 - Do not silently downgrade to simple mode when the user asked for sub-agent mode.
 
 ## Mandatory Monica UI rule handoff
@@ -88,9 +84,9 @@ If a meaningful design choice needs user confirmation, ask as soon as the decisi
 ### Simple mode
 
 1. Collect the required inputs.
-2. Create the task folder with the `$planning-with-files` setup script only.
+2. Select the user-provided bridge artifact directory or create a task-specific directory under `.tmp/monica-ui-bridge-debug/`.
 3. Resolve the bridge service URL from user input, launch settings, an existing project-owned listener, or an unused local port.
-4. Place screenshots, snapshots, bridge logs, and readiness files in that task folder.
+4. Place screenshots, snapshots, bridge logs, and readiness files in that artifact directory.
 5. Launch the bridge service with `scripts/bridge_service.py run`.
 6. Wait for readiness with `scripts/bridge_service.py wait-ready`.
 7. Open the full page URL with `$playwright-cli` and capture artifacts.
@@ -101,31 +97,26 @@ If a meaningful design choice needs user confirmation, ask as soon as the decisi
 ### Delegated sub-agent mode
 
 1. Collect the required inputs and ask for any blocking design decision immediately.
-2. Create the task folder with the `$planning-with-files` setup script.
-3. Initialize one shared session root with `$supervise-subagents`.
-4. Spawn sub-agents with explicit ownership for bridge testing, debugging, implementation, or verification.
-5. Register every sub-agent, persist its native lifecycle, and verify its first `in_progress` event before trusting its progress.
-6. Supervise native lifecycle and reported checkpoints through status scans or the dashboard while keeping the main agent out of direct implementation work.
-7. Keep the bridge service running after successful verification unless the user asks otherwise.
+2. Select or create the bridge artifact directory.
+3. Spawn sub-agents with explicit ownership for bridge testing, debugging, implementation, or verification.
+4. Observe native lifecycle, respond promptly to blockers, and collect each completed result before integration.
+5. Keep the bridge service running after successful verification unless the user asks otherwise.
 
 ## Workflow
 
 ### Cleanup safety note
 
 The helper must never kill unrelated system listeners just because they share the target port. Before trusting `bridge_service.py cleanup/run`, verify cleanup only terminates:
-- PIDs recorded in the task folder state file, or
+- PIDs recorded in the artifact directory state file, or
 - project-owned bridge processes whose command line clearly references the selected bridge project.
 
 If the target port is occupied by an unrelated listener, the helper should report that conflict instead of force-killing it.
 
-### 1. Planning and task folder
+### 1. Bridge artifact directory
 
-Create the task folder first with the setup script from `$planning-with-files`.
+Select the artifact directory before launching the bridge. Use a user-provided directory when available; otherwise create a task-specific path under `.tmp/monica-ui-bridge-debug/<timestamp>-<short-slug>/`. The bridge helper creates the selected directory when necessary.
 
-- In simple mode, stop after the folder is created. Do not create the three planning files.
-- In delegated sub-agent mode, create additional planning files only when the user explicitly wants file-based planning or the orchestration genuinely needs persistent high-level notes.
-
-Save these artifacts in the task folder:
+Save these artifacts in the bridge artifact directory:
 
 - `app-run.log`
 - `bridge-ready.json`
@@ -151,12 +142,11 @@ Switch to delegated sub-agent mode when the task is complex or the user requests
 
 When delegated sub-agent mode is selected:
 
-1. Use `$supervise-subagents` in Main-Agent mode.
-2. Create one shared session root and reuse it for the whole run.
-3. Give each sub-agent a stable ownership boundary and require `$supervise-subagents` in Sub-Agent mode.
-4. Register each child immediately after spawning it and verify its first `in_progress` event with a bounded wait.
-5. Inspect native lifecycle and reported progress separately, and respond to `blocked` or `needs_input` immediately.
-6. Persist the terminal native lifecycle and close the agent record only after the runtime confirms completion, failure, or interruption.
+1. Give each sub-agent a stable ownership boundary and a concrete deliverable.
+2. Assign bridge-process ownership to one sub-agent at a time so concurrent workers do not restart or clean up the same service.
+3. Use native runtime lifecycle inspection and bounded waits while work continues.
+4. Respond immediately to explicit blockers or input requests.
+5. Collect terminal results and verify the integrated outcome in the main task before delivery.
 
 ### 4. Bridge service startup script
 
@@ -177,7 +167,7 @@ Launch:
 python scripts/bridge_service.py run \
   --project-dir "<bridge-project-dir>" \
   --service-url "<bridge-service-url>" \
-  --task-dir "<task-folder>"
+  --task-dir "<artifact-directory>"
 ```
 
 This is the default and recommended mode. It returns after the detached runner starts.
@@ -187,7 +177,7 @@ Readiness wait:
 ```bash
 python scripts/bridge_service.py wait-ready \
   --service-url "<bridge-service-url>" \
-  --task-dir "<task-folder>" \
+  --task-dir "<artifact-directory>" \
   --timeout 120
 ```
 
@@ -198,7 +188,7 @@ python scripts/bridge_service.py run \
   --project-dir "<bridge-project-dir>" \
   --project-file "<project-file>.csproj" \
   --service-url "<bridge-service-url>" \
-  --task-dir "<task-folder>"
+  --task-dir "<artifact-directory>"
 ```
 
 In delegated sub-agent mode, the sub-agent that owns bridge execution should run these commands.
@@ -275,12 +265,12 @@ playwright-cli eval "() => JSON.stringify((() => { const el = document.querySele
 4. If the class is present but styling is missing, inspect loaded stylesheet rules or fetch the emitted Blazor CSS bundle and compare the selector shape against the runtime DOM.
 5. Only after the DOM/CSS root cause is clear, capture screenshots to confirm the visible result.
 
-Use explicit artifact paths inside the task folder, for example:
+Use explicit paths inside the bridge artifact directory, for example:
 
 ```bash
 playwright-cli open "<service-url><page-route>"
-playwright-cli snapshot --filename="<task-folder>/page.yaml"
-playwright-cli screenshot --filename="<task-folder>/page.png"
+playwright-cli snapshot --filename="<artifact-directory>/page.yaml"
+playwright-cli screenshot --filename="<artifact-directory>/page.png"
 ```
 
 If the global `playwright-cli` binary is unavailable, fall back to `npx playwright-cli`.
@@ -323,12 +313,11 @@ Otherwise report it as unconfirmed instead of as a verified UI error.
 
 - [ ] Collect bridge project directory and resolve the bridge service URL from user input, launch settings, an existing owned listener, or an unused local port
 - [ ] Select simple mode or delegated sub-agent mode before launch
-- [ ] Create a new task folder with `$planning-with-files`
-- [ ] Skip the three planning files in simple mode
-- [ ] Use `$supervise-subagents` in delegated sub-agent mode
+- [ ] Select or create a task-specific bridge artifact directory
+- [ ] In delegated mode, assign stable ownership and observe native lifecycle
 - [ ] Run `$monica-ui-development` source check before UI edits
 - [ ] Use `bridge_service.py run` instead of ad-hoc launch commands
 - [ ] Use `bridge_service.py wait-ready` before opening Playwright
 - [ ] If `localhost` works in shell probes but Playwright cannot connect in WSL, retry with the WSL gateway IP
-- [ ] Save screenshots and snapshots inside the task folder
+- [ ] Save screenshots and snapshots inside the bridge artifact directory
 - [ ] Keep the bridge service running after successful verification

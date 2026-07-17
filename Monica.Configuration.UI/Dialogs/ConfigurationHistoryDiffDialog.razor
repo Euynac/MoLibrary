@@ -1,6 +1,8 @@
 @using Monica.Configuration.UI.Localization
 @using Monica.UI.UIDiffHighlight.Models
+@inject ConfigurationFacade Facade
 @inject IDialogService DialogService
+@inject ISnackbar Snackbar
 @inject IStringLocalizer<ConfigurationUIResource> L
 
 <MudDialog Class="configuration-history-diff-dialog">
@@ -84,15 +86,18 @@
                                             </MudChip>
                                             <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">@L["History:Dialog:Version", _selectedEntry.Version]</MudChip>
                                             <MudChip T="ConfigurationMutationKind" Size="Size.Small" Color="Color.Info" Variant="Variant.Outlined">@_selectedEntry.MutationKind</MudChip>
-                                            @if (CanRollbackSelectedEntry)
+                                            @if (_selectedEntry.Rows.Count > 0)
                                             {
-                                                <MudButton Size="Size.Small"
-                                                           Color="Color.Warning"
-                                                           Variant="Variant.Outlined"
-                                                           StartIcon="@Icons.Material.Filled.Restore"
-                                                           OnClick="RollbackSelectedEntryAsync">
-                                                    @L["Rollback:Confirm"]
-                                                </MudButton>
+                                                <MudTooltip Text="@SelectedRollbackTooltip">
+                                                    <MudButton Size="Size.Small"
+                                                               Color="Color.Warning"
+                                                               Variant="Variant.Outlined"
+                                                               StartIcon="@Icons.Material.Filled.Restore"
+                                                               Disabled="@(!CanRollbackSelectedEntry)"
+                                                               OnClick="RollbackSelectedEntryAsync">
+                                                        @L["Rollback:Confirm"]
+                                                    </MudButton>
+                                                </MudTooltip>
                                             }
                                         </MudStack>
                                     </MudStack>
@@ -167,6 +172,15 @@
         </MudStack>
     </DialogContent>
     <DialogActions>
+        @if (_hasMore)
+        {
+            <MudButton Variant="Variant.Outlined"
+                       StartIcon="@Icons.Material.Filled.ExpandMore"
+                       Disabled="@_loadingMore"
+                       OnClick="LoadMoreAsync">
+                @L["History:Actions:LoadMore"]
+            </MudButton>
+        }
         <MudButton OnClick="Close">@L["Common:Actions:Close"]</MudButton>
     </DialogActions>
 </MudDialog>
@@ -182,9 +196,16 @@
     [Parameter] public ConfigurationMutationGroup? Group { get; set; }
     [Parameter] public string? Title { get; set; }
     [Parameter] public LogicalPath? FocusPath { get; set; }
+    [Parameter] public ConfigurationHistoryPageRequest? HistoryRequest { get; set; }
+    [Parameter] public ConfigurationHistoryPageResult? InitialPage { get; set; }
 
+    private readonly List<ConfigurationValueHistory> _loadedRows = [];
     private readonly List<HistoryTimelineEntry> _entries = [];
+    private ConfigurationHistoryPageRequest? _pagingRequest;
     private HistoryTimelineEntry? _selectedEntry;
+    private ConfigurationHistoryCursor? _nextCursor;
+    private bool _hasMore;
+    private bool _loadingMore;
 
     private string DialogTitle => !string.IsNullOrWhiteSpace(Title)
         ? Title!
@@ -194,14 +215,33 @@
 
     private string? FocusPathText => FocusPath?.ToCanonicalString();
 
-    private bool CanRollbackSelectedEntry => _selectedEntry is { Rows.Count: > 0 };
+    private bool CanRollbackSelectedEntry =>
+        _selectedEntry is { Rows.Count: > 0 } entry
+        && (Group is null || Group.Status != ConfigurationMutationGroupStatus.RolledBack)
+        && entry.Rows.All(CanRollbackRow);
 
-    protected override void OnParametersSet()
+    private string SelectedRollbackTooltip => CanRollbackSelectedEntry
+        ? L["Rollback:Confirm"].Value
+        : L["History:Actions:RollbackBlockedMetadata"].Value;
+
+    protected override void OnInitialized()
+    {
+        _loadedRows.AddRange(InitialPage?.Items ?? Rows);
+        _pagingRequest = HistoryRequest is null || InitialPage is null
+            ? null
+            : HistoryRequest;
+        _nextCursor = InitialPage?.NextCursor;
+        _hasMore = _pagingRequest is not null && InitialPage?.HasMore is true;
+        RebuildEntries();
+    }
+
+    private void RebuildEntries()
     {
         _entries.Clear();
-        var orderedRows = Rows
+        var orderedRows = _loadedRows
             .OrderByDescending(row => row.ModifiedTime)
             .ThenByDescending(row => row.Version)
+            .ThenByDescending(row => row.HistoryId, StringComparer.Ordinal)
             .ToArray();
         var focusedSinglePath = Group is null && FocusPath is not null;
 
@@ -236,6 +276,37 @@
         _selectedEntry = _entries.FirstOrDefault(entry => _selectedEntry?.Id == entry.Id) ?? _entries.FirstOrDefault();
     }
 
+    private async Task LoadMoreAsync()
+    {
+        if (_loadingMore || !_hasMore || _pagingRequest is null || _nextCursor is null)
+        {
+            return;
+        }
+
+        _loadingMore = true;
+        try
+        {
+            var result = await Facade.QueryHistoryPageAsync(_pagingRequest with { Cursor = _nextCursor });
+            if (result.IsFailed(out var error, out var page))
+            {
+                Snackbar.Add($"{L["Common:Errors:LoadFailed"]}: {error.Message}", Severity.Error);
+                return;
+            }
+
+            var loadedIds = _loadedRows
+                .Select(static history => history.HistoryId)
+                .ToHashSet(StringComparer.OrdinalIgnoreCase);
+            _loadedRows.AddRange(page.Items.Where(history => loadedIds.Add(history.HistoryId)));
+            _nextCursor = page.NextCursor;
+            _hasMore = page.HasMore;
+            RebuildEntries();
+        }
+        finally
+        {
+            _loadingMore = false;
+        }
+    }
+
     private void SelectEntry(HistoryTimelineEntry entry)
     {
         _selectedEntry = entry;
@@ -257,6 +328,24 @@
 
         return Definitions.FirstOrDefault(definition =>
             string.Equals(definition.DefinitionKey, definitionKey, StringComparison.OrdinalIgnoreCase))?.DisplayName ?? definitionKey;
+    }
+
+    private bool CanRollbackRow(ConfigurationValueHistory row)
+    {
+        if (Definition is not null
+            && string.Equals(Definition.DefinitionKey, row.DefinitionKey, StringComparison.OrdinalIgnoreCase))
+        {
+            return Definition.SchemaVersion == row.SchemaVersion
+                   && !string.IsNullOrWhiteSpace(row.SchemaHash)
+                   && string.Equals(Definition.SchemaHash, row.SchemaHash, StringComparison.Ordinal);
+        }
+
+        var summary = Definitions.FirstOrDefault(definition =>
+            string.Equals(definition.DefinitionKey, row.DefinitionKey, StringComparison.OrdinalIgnoreCase));
+        return summary is { CanManage: true }
+               && summary.SchemaVersion == row.SchemaVersion
+               && !string.IsNullOrWhiteSpace(row.SchemaHash)
+               && string.Equals(summary.SchemaHash, row.SchemaHash, StringComparison.Ordinal);
     }
 
     private string TimelineTitle(ConfigurationValueHistory row, bool focusedSinglePath)
@@ -387,14 +476,16 @@
 
     private async Task RollbackSelectedEntryAsync()
     {
-        if (_selectedEntry is null)
+        if (_selectedEntry is null || !CanRollbackSelectedEntry)
         {
+            Snackbar.Add(L["History:Actions:RollbackBlockedMetadata"], Severity.Warning);
             return;
         }
 
         var parameters = new DialogParameters<RollbackConfirmationDialog>();
         string title;
-        if (_selectedEntry.Id == GROUP_SUMMARY_ENTRY_ID && Group is not null)
+        if (Group is not null
+            && (_selectedEntry.Id == GROUP_SUMMARY_ENTRY_ID || Group.MutationCount == 1))
         {
             parameters.Add(dialog => dialog.Group, Group);
             parameters.Add(dialog => dialog.GroupRows, _selectedEntry.Rows);
@@ -423,15 +514,15 @@
             FullWidth = true
         });
         var result = await dialog.Result;
-        if (result is { Canceled: false })
+        if (result is { Canceled: false, Data: ConfigurationHistoryRollbackDialogResult rollback })
         {
-            MudDialog.Close(DialogResult.Ok(true));
+            MudDialog.Close(DialogResult.Ok(rollback));
         }
     }
 
     private void Close()
     {
-        MudDialog.Close(DialogResult.Ok(false));
+        MudDialog.Close();
     }
 
     private sealed record HistoryTimelineEntry(

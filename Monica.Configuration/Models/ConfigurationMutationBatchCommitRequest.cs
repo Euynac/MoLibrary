@@ -14,11 +14,6 @@ public sealed record ConfigurationMutationBatchCommitRequest
     /// Gets prepared document and history steps in application order.
     /// </summary>
     public IReadOnlyList<ConfigurationMutationBatchCommitItem> Items { get; init; } = [];
-
-    /// <summary>
-    /// Gets the unified-version snapshot to append in the same commit, when enabled.
-    /// </summary>
-    public ConfigurationUnifiedVersionCreateRequest? UnifiedVersion { get; init; }
 }
 
 /// <summary>
@@ -69,7 +64,7 @@ public sealed record ConfigurationMutationBatchCommitResult
     public ConfigurationMutationBatchFailure? Failure { get; init; }
 
     /// <summary>
-    /// Gets non-blocking audit or version-capture failures that happened after value persistence.
+    /// Gets non-blocking audit failures that happened after value persistence.
     /// </summary>
     public IReadOnlyList<ConfigurationPostCommitIssue> PostCommitIssues { get; init; } = [];
 }

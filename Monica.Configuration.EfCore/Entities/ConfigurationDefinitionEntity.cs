@@ -5,6 +5,11 @@ namespace Monica.Configuration.EfCore.Entities;
 /// </summary>
 public sealed class ConfigurationDefinitionEntity
 {
+    /// <summary>
+    /// Gets or sets the provider-independent, case-insensitive definition identity.
+    /// </summary>
+    public string DefinitionIdentity { get; set; } = "";
+
     public string DefinitionKey { get; set; } = "";
 
     public string SectionPath { get; set; } = "";

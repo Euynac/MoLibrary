@@ -1,0 +1,59 @@
+.configuration-unified-version-rollback-preview {
+    min-width: 0;
+}
+
+.configuration-unified-version-rollback-target-title {
+    min-width: 0;
+    width: 100%;
+}
+
+.configuration-unified-version-rollback-source {
+    min-width: 0;
+}
+
+.configuration-unified-version-rollback-write {
+    min-width: 0;
+}
+
+.configuration-unified-version-rollback-write code {
+    color: var(--mud-palette-primary);
+    overflow-wrap: anywhere;
+}
+
+.configuration-unified-version-rollback-validation-issues {
+    display: grid;
+    gap: 0.5rem;
+    margin: 0.75rem 0 0;
+    padding-left: 1.25rem;
+}
+
+.configuration-unified-version-rollback-validation-issues li {
+    min-width: 0;
+}
+
+.configuration-unified-version-rollback-validation-issues code {
+    display: block;
+    color: var(--mud-palette-primary);
+    overflow-wrap: anywhere;
+}
+
+.configuration-unified-version-rollback-validation-issues span {
+    display: block;
+    overflow-wrap: anywhere;
+}
+
+.configuration-unified-version-rollback-diff {
+    min-width: 0;
+}
+
+.configuration-unified-version-rollback-preview ::deep .mud-expand-panel-content {
+    min-width: 0;
+}
+
+.configuration-unified-version-rollback-diff ::deep .diff-viewer {
+    width: 100%;
+}
+
+.configuration-unified-version-rollback-diff ::deep .diff-content {
+    max-height: min(48vh, 560px);
+}

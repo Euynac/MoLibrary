@@ -96,6 +96,15 @@ public sealed record ConfigurationValueHistory
     public int SchemaVersion { get; init; }
 
     /// <summary>
+    /// Gets the exact schema hash used to validate and persist this mutation.
+    /// </summary>
+    /// <remarks>
+    /// Null identifies a legacy history row whose schema identity cannot be proven. Consumers must redact its
+    /// values and must not apply it as a rollback command without an explicit migration or compatibility review.
+    /// </remarks>
+    public string? SchemaHash { get; init; }
+
+    /// <summary>
     /// Gets the mutation time.
     /// </summary>
     public DateTimeOffset ModifiedTime { get; init; }

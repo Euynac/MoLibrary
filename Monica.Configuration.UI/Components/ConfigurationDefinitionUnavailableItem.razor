@@ -1,0 +1,83 @@
+@inject IDialogService DialogService
+@inject IStringLocalizer<ConfigurationUIResource> L
+
+<div class="configuration-definition-unavailable-item"
+     role="listitem">
+    <div class="configuration-definition-unavailable-icon" aria-hidden="true">
+        <MudIcon Icon="@Icons.Material.Filled.WarningAmber" Color="Color.Warning" />
+    </div>
+    <div class="configuration-definition-unavailable-content">
+        <div class="configuration-definition-unavailable-disabled-content" aria-disabled="true">
+            <div class="configuration-definition-unavailable-title-row">
+                <MudText Typo="Typo.body2" Color="Color.Secondary">
+                    <MudHighlighter Text="@Definition.DisplayName" HighlightedTexts="@SearchTerms" />
+                </MudText>
+                <MudChip T="string"
+                         Size="Size.Small"
+                         Color="Color.Warning"
+                         Variant="Variant.Outlined">
+                    @StatusText
+                </MudChip>
+            </div>
+            <MudText Typo="Typo.caption" Color="Color.Secondary">
+                <MudHighlighter Text="@Definition.DefinitionKey" HighlightedTexts="@SearchTerms" />
+            </MudText>
+            <MudText Typo="Typo.caption" Color="Color.Secondary">
+                @L["State:Definitions:FromProjectValue", ProjectText]
+            </MudText>
+            <div class="configuration-definition-unavailable-problem">
+                <MudHighlighter Text="@ProblemText" HighlightedTexts="@SearchTerms" />
+            </div>
+        </div>
+        @if (Definition.MetadataDiagnostic is not null)
+        {
+            <div class="configuration-definition-unavailable-action">
+                <MudButton Variant="Variant.Text"
+                           Size="Size.Small"
+                           Color="Color.Warning"
+                           StartIcon="@Icons.Material.Filled.Troubleshoot"
+                           OnClick="ShowProblemDetailsAsync"
+                           aria-label="@L["State:Definitions:ViewProblemDetailsAria", Definition.DisplayName]">
+                    @L["State:Definitions:ViewProblemDetails"]
+                </MudButton>
+            </div>
+        }
+    </div>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public ConfigurationDefinitionSummary Definition { get; set; } = null!;
+
+    [Parameter] public IReadOnlyList<string> SearchTerms { get; set; } = [];
+
+    private string StatusText =>
+        ConfigurationDefinitionMetadataDiagnosticFormatter.AvailabilityLabel(Definition.Availability, L);
+
+    private string ProjectText => string.IsNullOrWhiteSpace(Definition.FromProject)
+        ? L["State:Definitions:UnknownProject"].Value
+        : Definition.FromProject;
+
+    private string ProblemText => Definition.MetadataDiagnostic is { } diagnostic
+        ? ConfigurationDefinitionMetadataDiagnosticFormatter.IssueLabel(diagnostic.Kind, L)
+        : L["State:Definitions:MetadataStoreUnavailableForDefinition"].Value;
+
+    private async Task ShowProblemDetailsAsync()
+    {
+        if (Definition.MetadataDiagnostic is null)
+        {
+            return;
+        }
+
+        var parameters = new DialogParameters<ConfigurationDefinitionMetadataProblemDialog>();
+        parameters.Add(dialog => dialog.Definition, Definition);
+        await DialogService.ShowAsync<ConfigurationDefinitionMetadataProblemDialog>(
+            L["State:Definitions:ProblemDetailsTitle", Definition.DisplayName],
+            parameters,
+            new DialogOptions
+            {
+                MaxWidth = MaxWidth.Medium,
+                FullWidth = true,
+                CloseButton = true
+            });
+    }
+}

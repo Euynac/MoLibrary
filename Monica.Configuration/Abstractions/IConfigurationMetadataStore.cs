@@ -20,19 +20,25 @@ public interface IConfigurationMetadataStore
     Task PublishAsync(IReadOnlyList<ConfigurationDefinition> definitions, CancellationToken cancellationToken);
 
     /// <summary>
-    /// Lists published definitions known by the metadata store.
+    /// Lists published definition records while isolating invalid persisted schemas per definition.
     /// </summary>
     /// <param name="cancellationToken">Cancellation token.</param>
-    /// <returns>Published definitions with reconstructed runtime schema paths.</returns>
-    Task<IReadOnlyList<ConfigurationDefinition>> ListPublishedDefinitionsAsync(CancellationToken cancellationToken);
+    /// <returns>
+    /// Independently materialized entries. Store-wide access, database-schema, and I/O failures still throw because
+    /// the returned catalog would otherwise be indistinguishable from a complete result.
+    /// </returns>
+    Task<IReadOnlyList<ConfigurationPublishedDefinitionEntry>> ListPublishedDefinitionEntriesAsync(
+        CancellationToken cancellationToken);
 
     /// <summary>
-    /// Gets one published definition by key.
+    /// Gets one published definition record without converting a persisted schema problem into not-found.
     /// </summary>
     /// <param name="definitionKey">The definition key.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
-    /// <returns>The published definition, or null when no metadata exists.</returns>
-    Task<ConfigurationDefinition?> GetPublishedDefinitionAsync(string definitionKey, CancellationToken cancellationToken);
+    /// <returns>The independently materialized entry, or null when no metadata record exists.</returns>
+    Task<ConfigurationPublishedDefinitionEntry?> GetPublishedDefinitionEntryAsync(
+        string definitionKey,
+        CancellationToken cancellationToken);
 
     /// <summary>
     /// Lists persisted schema publish history entries for one definition.

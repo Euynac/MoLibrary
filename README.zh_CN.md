@@ -133,7 +133,8 @@ Monica.UI 之上还提供多个运维型 Blazor UI：JobScheduler、Configuratio
 
 - 框架入口：`monica-framework`、`monica-development`、`monica-architecture`、`monica-ui-development`、`monica-ui-design`、`monica-ui-audit`、`monica-docs-authoring`、`monica-requirement-design`、`monica-unit-testing`、`monica-ui-bridge-debug`
 - 基于 Monica 的应用系统入口：`monica-application`、`monica-application-microservice`、`monica-application-modular-monolith`、`monica-application-project-unit-development`
-- 辅助工作流：`code-simplifier`、`playwright-cli`、`supervise-subagents`、`third-party-source-catalog`
+- 随仓库提供的辅助工作流：`code-simplifier`、`playwright-cli`、`supervise-subagents`
+- 需要单独安装的用户级配套 Skill：`inspect-dependency-source`（共享依赖源码目录）
 
 ## 包成熟度
 

@@ -41,10 +41,30 @@ public interface IConfigurationHistoryService
         CancellationToken cancellationToken);
 
     /// <summary>
+    /// Gets a bounded page of mutation history without splitting matching mutation groups across pages.
+    /// </summary>
+    /// <param name="request">The filters and mutation-unit pagination bounds.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>The matching history page in deterministic newest-first order.</returns>
+    Task<ConfigurationHistoryPageResult> QueryHistoryPageAsync(
+        ConfigurationHistoryPageRequest request,
+        CancellationToken cancellationToken);
+
+    /// <summary>
     /// Gets one mutation history row by identity.
     /// </summary>
     /// <param name="historyId">The history record identity.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>The history row, or null when not found.</returns>
     Task<ConfigurationValueHistory?> GetHistoryByIdAsync(string historyId, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Gets multiple mutation history rows in one logical store operation.
+    /// </summary>
+    /// <param name="historyIds">The distinct history identities to retrieve.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>The rows that exist. Missing identities are omitted and result ordering is unspecified.</returns>
+    Task<IReadOnlyList<ConfigurationValueHistory>> GetHistoriesByIdsAsync(
+        IReadOnlyCollection<string> historyIds,
+        CancellationToken cancellationToken);
 }

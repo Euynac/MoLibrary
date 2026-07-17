@@ -29,6 +29,25 @@ public interface IConfigurationSourceInspector
     ConfigurationSourceChain GetSourceChain(ConfigurationDefinition definition, LogicalPath logicalPath);
 
     /// <summary>
+    /// Gets source chains for several paths while sharing one runtime-provider snapshot.
+    /// </summary>
+    /// <param name="definition">The managed definition.</param>
+    /// <param name="logicalPaths">The logical paths to inspect, in result order.</param>
+    /// <returns>One source chain for each requested path.</returns>
+    IReadOnlyList<ConfigurationSourceChain> GetSourceChains(
+        ConfigurationDefinition definition,
+        IReadOnlyList<LogicalPath> logicalPaths);
+
+    /// <summary>
+    /// Gets an opaque revision of one runtime provider's schema-visible contribution to a definition.
+    /// Sensitive values participate in the revision but are never returned to the caller.
+    /// </summary>
+    /// <param name="definition">The managed definition.</param>
+    /// <param name="sourceKey">The source key.</param>
+    /// <returns>The provider projection revision.</returns>
+    string GetRuntimeProjectionRevision(ConfigurationDefinition definition, string sourceKey);
+
+    /// <summary>
     /// Gets source contribution counts for a definition.
     /// </summary>
     /// <param name="definition">The definition.</param>
@@ -38,8 +57,10 @@ public interface IConfigurationSourceInspector
     /// <summary>
     /// Gets all managed configuration values supplied by each runtime source.
     /// </summary>
+    /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>Source inventories ordered by provider priority from highest to lowest.</returns>
-    IReadOnlyList<ConfigurationSourceInventory> GetSourceInventories();
+    Task<IReadOnlyList<ConfigurationSourceInventory>> GetSourceInventoriesAsync(
+        CancellationToken cancellationToken);
 
     /// <summary>
     /// Gets a display-safe JSON file view for one source.

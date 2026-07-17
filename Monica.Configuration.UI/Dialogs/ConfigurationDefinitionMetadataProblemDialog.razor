@@ -1,0 +1,93 @@
+@inject IStringLocalizer<ConfigurationUIResource> L
+
+<MudDialog>
+    <DialogContent>
+        <MudStack Spacing="3">
+            <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined">
+                @L["State:Definitions:ProblemSummary"]
+            </MudAlert>
+
+            <div class="configuration-definition-problem-identity">
+                <MudText Typo="Typo.subtitle1">@Definition.DisplayName</MudText>
+                <MudText Typo="Typo.caption" Color="Color.Secondary">@Definition.DefinitionKey</MudText>
+            </div>
+
+            <div class="configuration-definition-problem-grid">
+                <ConfigurationDefinitionDiagnosticField Label="@L["State:Definitions:FromProjectLabel"].Value" Value="@ProjectText" />
+                <ConfigurationDefinitionDiagnosticField Label="@L["State:Definitions:SectionPathLabel"].Value" Value="@ValueOrUnknown(Definition.SectionPath)" />
+                <ConfigurationDefinitionDiagnosticField Label="@L["State:Definitions:SchemaVersionLabel"].Value" Value="@SchemaVersionText" />
+                <ConfigurationDefinitionDiagnosticField Label="@L["State:Definitions:SchemaHashLabel"].Value" Value="@ValueOrUnknown(Definition.SchemaHash)" />
+                <ConfigurationDefinitionDiagnosticField Label="@L["State:Definitions:MetadataStoreLabel"].Value" Value="@Diagnostic.StoreKey" />
+                <ConfigurationDefinitionDiagnosticField Label="@L["State:Definitions:ProblemKindLabel"].Value" Value="@IssueKindText" />
+                @if (!string.IsNullOrWhiteSpace(Diagnostic.SchemaPath))
+                {
+                    <ConfigurationDefinitionDiagnosticField Label="@L["State:Definitions:SchemaPathLabel"].Value" Value="@Diagnostic.SchemaPath" />
+                }
+                @if (!string.IsNullOrWhiteSpace(Diagnostic.JsonPath))
+                {
+                    <ConfigurationDefinitionDiagnosticField Label="@L["State:Definitions:JsonPathLabel"].Value" Value="@Diagnostic.JsonPath" />
+                }
+                <ConfigurationDefinitionDiagnosticField Label="@L["State:Definitions:ErrorTypeLabel"].Value" Value="@Diagnostic.ErrorType" />
+            </div>
+
+            <MudStack Spacing="1">
+                <MudText Typo="Typo.subtitle2">@L["State:Definitions:TechnicalDetailsTitle"]</MudText>
+                <div class="configuration-definition-problem-message">@Diagnostic.Message</div>
+            </MudStack>
+
+            <MudAlert Severity="Severity.Info" Variant="Variant.Outlined">
+                <MudStack Spacing="1">
+                    <MudText Typo="Typo.subtitle2">@L["State:Definitions:RepairTitle"]</MudText>
+                    <MudText Typo="Typo.body2">
+                        @RepairGuidance
+                    </MudText>
+                    <MudText Typo="Typo.caption">@L["State:Definitions:RefreshAfterRepublish"]</MudText>
+                </MudStack>
+            </MudAlert>
+        </MudStack>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Close">@L["Common:Actions:Close"]</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] private IMudDialogInstance MudDialog { get; set; } = null!;
+
+    [Parameter, EditorRequired] public ConfigurationDefinitionSummary Definition { get; set; } = null!;
+
+    private ConfigurationDefinitionMetadataDiagnostic Diagnostic =>
+        Definition.MetadataDiagnostic
+        ?? throw new InvalidOperationException("Metadata problem dialog requires a definition diagnostic.");
+
+    private string ProjectText => string.IsNullOrWhiteSpace(Definition.FromProject)
+        ? L["State:Definitions:UnknownProject"].Value
+        : Definition.FromProject;
+
+    private bool HasKnownProject => !string.IsNullOrWhiteSpace(Definition.FromProject);
+
+    private string RepairGuidance => Diagnostic.RecommendedAction switch
+    {
+        ConfigurationDefinitionMetadataRepairAction.RepairMetadataStore =>
+            L["State:Definitions:RepairMetadataStoreGuidance", Diagnostic.StoreKey, Definition.DefinitionKey],
+        _ when HasKnownProject =>
+            L["State:Definitions:RepublishGuidance", ProjectText, Definition.DefinitionKey],
+        _ => L["State:Definitions:RepublishGuidanceUnknownOwner", Definition.DefinitionKey]
+    };
+
+    private string SchemaVersionText => Definition.SchemaVersion < 1
+        ? L["Common:States:Empty"].Value
+        : Definition.SchemaVersion.ToString(System.Globalization.CultureInfo.InvariantCulture);
+
+    private string IssueKindText => ConfigurationDefinitionMetadataDiagnosticFormatter.IssueLabel(Diagnostic.Kind, L);
+
+    private string ValueOrUnknown(string? value)
+    {
+        return string.IsNullOrWhiteSpace(value) ? L["Common:States:Empty"].Value : value;
+    }
+
+    private void Close()
+    {
+        MudDialog.Close();
+    }
+}

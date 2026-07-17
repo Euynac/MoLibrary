@@ -1,0 +1,152 @@
+.configuration-version-history-panel {
+    min-width: 0;
+}
+
+.configuration-version-history-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.configuration-version-history-item {
+    background: var(--mud-palette-surface);
+    border: 1px solid var(--mud-palette-lines-default);
+    border-radius: var(--mud-default-borderradius);
+    display: grid;
+    gap: 0.625rem 0.75rem;
+    grid-template-columns: minmax(0, 1fr) auto;
+    overflow: hidden;
+    padding: 0.75rem 0.75rem 0.625rem 1rem;
+    position: relative;
+    transition: border-color 120ms ease, background-color 120ms ease;
+}
+
+.configuration-version-history-item::before {
+    background: transparent;
+    content: "";
+    inset-block: 0;
+    inset-inline-start: 0;
+    position: absolute;
+    width: 0.25rem;
+}
+
+.configuration-version-history-item:hover {
+    background: color-mix(in srgb, var(--mud-palette-primary) 3%, var(--mud-palette-surface));
+    border-color: var(--mud-palette-lines-inputs);
+}
+
+.configuration-version-history-item.is-selected {
+    background: color-mix(in srgb, var(--mud-palette-primary) 6%, var(--mud-palette-surface));
+    border-color: var(--mud-palette-primary);
+}
+
+.configuration-version-history-item.is-selected::before {
+    background: var(--mud-palette-primary);
+}
+
+.configuration-version-history-selection {
+    align-items: stretch;
+    appearance: none;
+    background: none;
+    border: 0;
+    color: inherit;
+    cursor: pointer;
+    display: grid;
+    gap: 0.5rem;
+    justify-content: stretch;
+    min-width: 0;
+    padding: 0;
+    text-align: left;
+}
+
+.configuration-version-history-selection:focus-visible {
+    border-radius: var(--mud-default-borderradius);
+    outline: 2px solid var(--mud-palette-primary);
+    outline-offset: 0.25rem;
+}
+
+.configuration-version-history-identity {
+    align-items: baseline;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.125rem 0.5rem;
+    overflow-wrap: anywhere;
+}
+
+.configuration-version-history-version {
+    font-family: var(--mud-typography-subtitle1-family);
+    font-size: var(--mud-typography-subtitle1-size);
+    font-weight: var(--mud-typography-subtitle1-weight);
+    letter-spacing: var(--mud-typography-subtitle1-letterspacing);
+    line-height: var(--mud-typography-subtitle1-lineheight);
+    text-transform: var(--mud-typography-subtitle1-text-transform);
+}
+
+.configuration-version-history-item.is-selected .configuration-version-history-version {
+    color: var(--mud-palette-primary);
+}
+
+.configuration-version-history-timestamp {
+    color: var(--mud-palette-text-secondary);
+    font-family: var(--mud-typography-caption-family);
+    font-size: var(--mud-typography-caption-size);
+    font-variant-numeric: tabular-nums;
+    font-weight: var(--mud-typography-caption-weight);
+    letter-spacing: var(--mud-typography-caption-letterspacing);
+    line-height: var(--mud-typography-caption-lineheight);
+    text-transform: var(--mud-typography-caption-text-transform);
+}
+
+.configuration-version-history-actions {
+    align-items: center;
+    align-self: start;
+    background: var(--mud-palette-background-gray);
+    border: 1px solid var(--mud-palette-divider-light);
+    border-radius: var(--mud-default-borderradius);
+    display: inline-flex;
+    flex-shrink: 0;
+    gap: 0.125rem;
+    padding: 0.125rem;
+}
+
+.configuration-version-history-metadata {
+    align-items: center;
+    border-top: 1px solid var(--mud-palette-divider-light);
+    color: var(--mud-palette-text-secondary);
+    display: flex;
+    flex-wrap: wrap;
+    font-family: var(--mud-typography-caption-family);
+    font-size: var(--mud-typography-caption-size);
+    font-weight: var(--mud-typography-caption-weight);
+    gap: 0.375rem 1rem;
+    letter-spacing: var(--mud-typography-caption-letterspacing);
+    line-height: var(--mud-typography-caption-lineheight);
+    min-width: 0;
+    padding-top: 0.625rem;
+    text-transform: var(--mud-typography-caption-text-transform);
+}
+
+.configuration-version-history-metadata-item {
+    align-items: center;
+    display: inline-flex;
+    gap: 0.375rem;
+    min-width: 0;
+}
+
+.configuration-version-history-reason {
+    flex: 1 1 100%;
+}
+
+.configuration-version-history-reason > span:last-child {
+    overflow-wrap: anywhere;
+}
+
+@media (max-width: 420px) {
+    .configuration-version-history-item {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .configuration-version-history-actions {
+        justify-self: end;
+    }
+}

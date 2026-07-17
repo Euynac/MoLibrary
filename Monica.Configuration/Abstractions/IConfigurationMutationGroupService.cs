@@ -12,7 +12,7 @@ public interface IConfigurationMutationGroupService
     /// </summary>
     /// <param name="label">Operator-facing label.</param>
     /// <param name="reason">Optional mutation reason.</param>
-    /// <param name="context">Audit context.</param>
+    /// <param name="context">Audit context. A non-empty mutation-group identity is preserved for history correlation.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>The created mutation group.</returns>
     Task<ConfigurationMutationGroup> BeginAsync(
@@ -72,6 +72,16 @@ public interface IConfigurationMutationGroupService
         DateTimeOffset? from,
         DateTimeOffset? to,
         string? definitionKey,
+        CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Gets a bounded page of persisted mutation groups.
+    /// </summary>
+    /// <param name="request">The filters and pagination bounds.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>The matching group page in deterministic newest-first order.</returns>
+    Task<ConfigurationMutationGroupPageResult> QueryPageAsync(
+        ConfigurationMutationGroupPageRequest request,
         CancellationToken cancellationToken);
 
     /// <summary>

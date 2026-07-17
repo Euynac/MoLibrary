@@ -218,6 +218,11 @@
     .configuration-state-page ::deep .configuration-state-layout,
     .configuration-state-page ::deep .configuration-state-grid,
     .configuration-state-page ::deep .configuration-definition-shell,
+    .configuration-state-page ::deep .configuration-definition-content,
+    .configuration-state-page ::deep .configuration-detail-grid,
+    .configuration-state-page ::deep .configuration-detail-grid > .mud-grid-item,
+    .configuration-state-page ::deep .configuration-detail-left,
+    .configuration-state-page ::deep .configuration-detail-right,
     .configuration-state-page ::deep .configuration-section-panel,
     .configuration-state-page ::deep .configuration-values-panel {
         height: auto;

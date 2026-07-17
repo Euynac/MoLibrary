@@ -75,6 +75,7 @@ internal sealed partial class ConfigurationMutationGroupApplyService
                 NewValue = newValue,
                 Version = newVersion,
                 SchemaVersion = mutation.Definition.SchemaVersion,
+                SchemaHash = mutation.Definition.SchemaHash,
                 ModifiedTime = modifiedTime,
                 ModifierId = context.ModifierId,
                 ModifierName = context.ModifierName,
@@ -105,7 +106,7 @@ internal sealed partial class ConfigurationMutationGroupApplyService
                     .RequiresProcessRestart()
             };
             plannedResults.Add(new PlannedMutationResult(mutation.Command.RequestId, result));
-            state.Advance(updatedJson, newVersion, mutation.Definition.SchemaVersion, modifiedTime, context);
+            state.Advance(updatedJson, newVersion);
         }
 
         var definitionKeys = mutations
@@ -127,27 +128,11 @@ internal sealed partial class ConfigurationMutationGroupApplyService
                 ? ConfigurationMutationGroupStatus.PartiallyApplied
                 : ConfigurationMutationGroupStatus.Applied
         };
-        ConfigurationUnifiedVersionCreateRequest? unifiedVersion = null;
-        if (!hasExternalMutations)
-        {
-            unifiedVersion = await unifiedVersionSnapshotFactory.CreateRequestAsync(
-                definitionKeys,
-                group.GroupId,
-                context,
-                createdTime,
-                cancellationToken,
-                states.ToDictionary(
-                    static pair => pair.Key,
-                    static pair => pair.Value.ToDocument(),
-                    StringComparer.OrdinalIgnoreCase));
-        }
-
         return new MonicaCommitPlan(
             new ConfigurationMutationBatchCommitRequest
             {
                 MutationGroup = group,
-                Items = commitItems,
-                UnifiedVersion = unifiedVersion
+                Items = commitItems
             },
             plannedResults);
     }
@@ -156,49 +141,16 @@ internal sealed partial class ConfigurationMutationGroupApplyService
         ConfigurationEffectiveValueDocument document,
         long? stagedExpectedVersion)
     {
-        public string DefinitionKey { get; } = document.DefinitionKey;
-
         public string Json { get; private set; } = document.Json;
 
         public long Version { get; private set; } = document.Version;
 
-        public int SchemaVersion { get; private set; } = document.SchemaVersion;
-
-        public DateTimeOffset ModifiedTime { get; private set; } = document.LastModifiedTime;
-
-        public string? ModifierId { get; private set; } = document.LastModifierId;
-
-        public string? ModifierName { get; private set; } = document.LastModifierName;
-
         public long? StagedExpectedVersion { get; } = stagedExpectedVersion;
 
-        public void Advance(
-            string json,
-            long version,
-            int schemaVersion,
-            DateTimeOffset modifiedTime,
-            ConfigurationMutationContext context)
+        public void Advance(string json, long version)
         {
             Json = json;
             Version = version;
-            SchemaVersion = schemaVersion;
-            ModifiedTime = modifiedTime;
-            ModifierId = context.ModifierId;
-            ModifierName = context.ModifierName;
-        }
-
-        public ConfigurationEffectiveValueDocument ToDocument()
-        {
-            return new ConfigurationEffectiveValueDocument
-            {
-                DefinitionKey = DefinitionKey,
-                Json = Json,
-                Version = Version,
-                SchemaVersion = SchemaVersion,
-                LastModifiedTime = ModifiedTime,
-                LastModifierId = ModifierId,
-                LastModifierName = ModifierName
-            };
         }
     }
 

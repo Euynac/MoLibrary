@@ -95,16 +95,22 @@
                     <MudText Typo="Typo.body2" Color="Color.Secondary">@L["State:Subtitle"]</MudText>
                 </MudStack>
                 <MudStack Row="true" Wrap="Wrap.Wrap" AlignItems="AlignItems.Center" Justify="Justify.FlexEnd" Spacing="1">
-                    <MudButton Variant="Variant.Outlined"
-                               StartIcon="@Icons.Material.Filled.UploadFile"
-                               OnClick="OpenImportDialog">
-                        @L["Common:Actions:Import"]
-                    </MudButton>
-                    <MudButton Variant="Variant.Outlined"
-                               StartIcon="@Icons.Material.Filled.Download"
-                               OnClick="() => OpenExportDialog(null, null)">
-                        @L["Common:Actions:Export"]
-                    </MudButton>
+                    <MudTooltip Text="@CatalogOperationTooltip("Common:Actions:Import")">
+                        <MudButton Variant="Variant.Outlined"
+                                   StartIcon="@Icons.Material.Filled.UploadFile"
+                                   Disabled="@(!CanUseCatalogOperations)"
+                                   OnClick="OpenImportDialog">
+                            @L["Common:Actions:Import"]
+                        </MudButton>
+                    </MudTooltip>
+                    <MudTooltip Text="@CatalogOperationTooltip("Common:Actions:Export")">
+                        <MudButton Variant="Variant.Outlined"
+                                   StartIcon="@Icons.Material.Filled.Download"
+                                   Disabled="@(!CanUseCatalogOperations)"
+                                   OnClick="() => OpenExportDialog(null, null)">
+                            @L["Common:Actions:Export"]
+                        </MudButton>
+                    </MudTooltip>
                     <MudTooltip Text="@L["Common:Actions:Refresh"]">
                         <MudIconButton Icon="@Icons.Material.Filled.Refresh"
                                        Variant="Variant.Outlined"
@@ -112,6 +118,11 @@
                     </MudTooltip>
                 </MudStack>
             </MudStack>
+
+            @if (_metadataStoreDiagnostic is not null)
+            {
+                <ConfigurationMetadataStoreDiagnosticAlert Diagnostic="@_metadataStoreDiagnostic" />
+            }
 
             @if (_loadingDefinitions)
             {
@@ -136,6 +147,7 @@
                                                      PendingCount="@_pendingCount"
                                                      ValidationIssueCount="@_validationIssueCount"
                                                      RuntimeValidationIssueCount="@RuntimeValidationIssueCount"
+                                                     CanSaveGroup="@CanSavePendingGroup"
                                                      SaveGroup="OpenSaveGroupDialog"
                                                      UndoAll="UndoAll" />
                     </MudItem>
@@ -143,7 +155,18 @@
                     <MudItem xs="12" md="9" Class="configuration-state-right">
                         @if (_selectedDefinition is null)
                         {
-                            <MudAlert Severity="Severity.Info">@L["State:Definitions:SelectPrompt"]</MudAlert>
+                            @if (_definitions.Count == 0)
+                            {
+                                <MudAlert Severity="Severity.Info">@L["State:Definitions:Empty"]</MudAlert>
+                            }
+                            else if (!_definitions.Any(static definition => definition.CanManage))
+                            {
+                                <MudAlert Severity="Severity.Warning">@L["State:Definitions:NoAvailableDefinitions"]</MudAlert>
+                            }
+                            else
+                            {
+                                <MudAlert Severity="Severity.Info">@L["State:Definitions:SelectPrompt"]</MudAlert>
+                            }
                         }
                         else
                         {
@@ -310,9 +333,34 @@
     private ConfigurationValidationReport? _runtimeValidationReport;
     private bool _runtimeValidationPopoverOpen;
     private ConfigurationReloadStatusButton? _reloadStatusButton;
+    private ConfigurationMetadataStoreDiagnostic? _metadataStoreDiagnostic;
+    private bool _definitionCatalogHealthy;
 
     private bool CanInspectSelectedDefinitionSources =>
         _selectedDefinition?.Origin == ConfigurationDefinitionOrigin.LocalScan;
+
+    private bool CanUseCatalogOperations => !_loadingDefinitions && _definitionCatalogHealthy;
+
+    private bool CanSavePendingGroup
+    {
+        get
+        {
+            var affectedDefinitionKeys = StateStore.GetPending()
+                .Select(static change => change.DefinitionKey)
+                .Concat(StateStore.GetValidationIssues().Select(static issue => issue.DefinitionKey))
+                .Distinct(StringComparer.OrdinalIgnoreCase);
+            return affectedDefinitionKeys.All(definitionKey => _definitions.Any(definition =>
+                definition.CanManage
+                && string.Equals(definition.DefinitionKey, definitionKey, StringComparison.OrdinalIgnoreCase)));
+        }
+    }
+
+    private string CatalogOperationTooltip(string actionKey)
+    {
+        return CanUseCatalogOperations
+            ? L[actionKey].Value
+            : L["State:Definitions:CatalogOperationBlocked"].Value;
+    }
 
     private string ReloadBehaviorLabel(ConfigurationReloadBehavior behavior)
     {
@@ -431,28 +479,78 @@
     private async Task LoadDefinitionsAsync()
     {
         _loadingDefinitions = true;
-        var result = await Facade.GetDefinitionsAsync();
-        if (result.IsFailed(out var error, out var definitions))
+        _definitionCatalogHealthy = false;
+        var previouslySelectedKey = _selectedSummary?.DefinitionKey;
+        var result = await Facade.GetDefinitionCatalogAsync();
+        if (result.IsFailed(out var error, out var catalog))
         {
             Snackbar.Add($"{L["Common:Errors:LoadFailed"]}: {error.Message}", Severity.Error);
             _definitions.Clear();
+            _metadataStoreDiagnostic = null;
             _runtimeValidationReport = null;
+            ClearSelectedDefinition();
             _loadingDefinitions = false;
             return;
         }
 
         _definitions.Clear();
-        _definitions.AddRange(definitions);
+        _definitions.AddRange(catalog.Definitions);
+        _metadataStoreDiagnostic = catalog.StoreDiagnostic;
+        _definitionCatalogHealthy = catalog.IsHealthy;
         _definitionDetails.Clear();
+        ClearSelectedDefinition();
         await LoadRuntimeValidationReportAsync();
         _loadingDefinitions = false;
 
-        if (_selectedSummary is null && _definitions.Count > 0)
+        var requestedSummary = ResolveRequestedDefinitionSummary();
+        if (!string.IsNullOrWhiteSpace(_requestedDefinitionKey) && requestedSummary is null)
         {
-            var initialSummary = ResolveRequestedDefinitionSummary() ?? _definitions[0];
-            await SelectDefinitionAsync(initialSummary);
-            ApplyRequestedPath();
+            var message = _metadataStoreDiagnostic is null
+                ? L["State:Definitions:RequestedDefinitionNotFound", _requestedDefinitionKey]
+                : L["State:Definitions:RequestedDefinitionUnresolved", _requestedDefinitionKey];
+            Snackbar.Add(message, Severity.Warning);
+            ClearRequestedRouteTarget();
+            return;
         }
+
+        if (requestedSummary is { CanManage: false })
+        {
+            ClearRequestedRouteTarget();
+            await ShowDefinitionMetadataProblemAsync(requestedSummary);
+            return;
+        }
+
+        var initialSummary = requestedSummary
+            ?? _definitions.FirstOrDefault(definition =>
+                definition.CanManage
+                && string.Equals(definition.DefinitionKey, previouslySelectedKey, StringComparison.OrdinalIgnoreCase))
+              ?? _definitions.FirstOrDefault(static definition => definition.CanManage);
+        if (initialSummary is not null)
+        {
+            await SelectDefinitionAsync(initialSummary);
+            if (requestedSummary is not null)
+            {
+                ApplyRequestedPath();
+            }
+            else
+            {
+                ClearRequestedRouteTarget();
+            }
+        }
+        else
+        {
+            ClearRequestedRouteTarget();
+        }
+    }
+
+    private void ClearSelectedDefinition()
+    {
+        _selectedSummary = null;
+        _selectedDefinition = null;
+        _selectedNode = null;
+        _highlightedPath = null;
+        _effectiveValues.Clear();
+        _externalEffectiveSources.Clear();
     }
 
     private async Task LoadRuntimeValidationReportAsync()
@@ -526,37 +624,63 @@
             JumpToCurrentDefinitionPath(_requestedPath);
         }
 
+        ClearRequestedRouteTarget();
+    }
+
+    private void ClearRequestedRouteTarget()
+    {
         _requestedPath = null;
         _requestedDefinitionKey = null;
     }
 
+    private async Task ShowDefinitionMetadataProblemAsync(ConfigurationDefinitionSummary summary)
+    {
+        if (summary.MetadataDiagnostic is null)
+        {
+            return;
+        }
+
+        var parameters = new DialogParameters<ConfigurationDefinitionMetadataProblemDialog>();
+        parameters.Add(dialog => dialog.Definition, summary);
+        await DialogService.ShowAsync<ConfigurationDefinitionMetadataProblemDialog>(
+            L["State:Definitions:ProblemDetailsTitle", summary.DisplayName],
+            parameters,
+            new DialogOptions
+            {
+                MaxWidth = MaxWidth.Medium,
+                FullWidth = true,
+                CloseButton = true
+            });
+    }
+
     private async Task SelectDefinitionAsync(ConfigurationDefinitionSummary summary)
     {
+        if (!summary.CanManage)
+        {
+            return;
+        }
+
         _selectedSummary = summary;
         _loadingDefinition = true;
         _effectiveValues.Clear();
         _externalEffectiveSources.Clear();
         try
         {
-            var result = await LoadDefinitionDetailAsync(summary.DefinitionKey);
-            if (result.IsFailed(out var error, out var detail))
+            var result = await Facade.GetDefinitionStateAsync(summary.DefinitionKey);
+            if (result.IsFailed(out var error, out var definitionState))
             {
                 Snackbar.Add($"{L["Common:Errors:LoadFailed"]}: {error.Message}", Severity.Error);
-                _selectedDefinition = null;
-                _selectedNode = null;
+                ClearSelectedDefinition();
                 return;
             }
 
-            _selectedDefinition = detail.Definition;
-            _selectedNode = _selectedDefinition.Root;
-            _highlightedPath = null;
-            await LoadEffectiveValuesAsync();
+            ApplyDefinitionState(definitionState, resetSelection: true);
+            await LoadExternalEffectiveSourcesAsync();
         }
         catch (Exception ex)
         {
             Snackbar.Add($"{L["Common:Errors:LoadFailed"]}: {ex.Message}", Severity.Error);
-            _selectedDefinition = null;
-            _selectedNode = null;
+            ClearSelectedDefinition();
         }
         finally
         {
@@ -571,17 +695,34 @@
             return;
         }
 
-        _externalEffectiveSources.Clear();
-        foreach (var node in EnumerateNodes(_selectedDefinition.Root).Where(IsSimpleEditableNode))
+        var result = await Facade.GetDefinitionStateAsync(_selectedDefinition.DefinitionKey);
+        if (result.IsFailed(out var error, out var definitionState))
         {
-            var result = await Facade.GetEffectiveValueAsync(_selectedDefinition.DefinitionKey, node.RelativePath);
-            if (!result.IsFailed(out _, out var effectiveValue))
-            {
-                _effectiveValues[node.RelativePath] = effectiveValue;
-            }
+            Snackbar.Add($"{L["Common:Errors:LoadFailed"]}: {error.Message}", Severity.Error);
+            return;
         }
 
+        ApplyDefinitionState(definitionState, resetSelection: false);
         await LoadExternalEffectiveSourcesAsync();
+    }
+
+    private void ApplyDefinitionState(ConfigurationDefinitionState state, bool resetSelection)
+    {
+        var selectedPath = resetSelection ? LogicalPath.Root : _selectedNode?.RelativePath ?? LogicalPath.Root;
+        _selectedDefinition = state.Definition;
+        _definitionDetails[state.Definition.DefinitionKey] = state.Definition;
+        _selectedNode = ResolveNodeByPath(state.Definition.Root, selectedPath) ?? state.Definition.Root;
+        _effectiveValues.Clear();
+        foreach (var effectiveValue in state.EffectiveValues)
+        {
+            _effectiveValues[effectiveValue.LogicalPath] = effectiveValue;
+        }
+
+        _externalEffectiveSources.Clear();
+        if (resetSelection)
+        {
+            _highlightedPath = null;
+        }
     }
 
     private async Task LoadExternalEffectiveSourcesAsync()
@@ -591,18 +732,23 @@
             return;
         }
 
-        foreach (var node in EnumerateNodes(_selectedDefinition.Root).Where(IsComplexNodeItem))
+        var nodes = EnumerateNodes(_selectedDefinition.Root)
+            .Where(IsComplexNodeItem)
+            .ToArray();
+        var result = await Facade.GetSourceChainsAsync(
+            _selectedDefinition.DefinitionKey,
+            nodes.Select(static node => node.RelativePath).ToArray());
+        if (result.IsFailed(out _, out var sourceChains))
         {
-            var result = await Facade.GetSourceChainAsync(_selectedDefinition.DefinitionKey, node.RelativePath);
-            if (result.IsFailed(out _, out var sourceChain))
-            {
-                continue;
-            }
+            return;
+        }
 
-            var externalSource = ResolveExternalEffectiveSource(node, sourceChain);
+        for (var index = 0; index < nodes.Length; index++)
+        {
+            var externalSource = ResolveExternalEffectiveSource(nodes[index], sourceChains[index]);
             if (externalSource is not null)
             {
-                _externalEffectiveSources[node.RelativePath] = externalSource;
+                _externalEffectiveSources[nodes[index].RelativePath] = externalSource;
             }
         }
     }
@@ -812,7 +958,7 @@
     {
         foreach (var summary in _definitions)
         {
-            if (_definitionDetails.ContainsKey(summary.DefinitionKey))
+            if (!summary.CanManage || _definitionDetails.ContainsKey(summary.DefinitionKey))
             {
                 continue;
             }
@@ -1041,15 +1187,20 @@
             return;
         }
 
-        var result = await Facade.QueryHistoryAsync(null, null, _selectedDefinition.DefinitionKey, null);
-        if (result.IsFailed(out var error, out var rows))
+        var request = new ConfigurationHistoryPageRequest
+        {
+            DefinitionKey = _selectedDefinition.DefinitionKey
+        };
+        var result = await Facade.QueryHistoryPageAsync(request);
+        if (result.IsFailed(out var error, out var page))
         {
             Snackbar.Add($"{L["Common:Errors:LoadFailed"]}: {error.Message}", Severity.Error);
             return;
         }
 
         var parameters = new DialogParameters<ConfigurationHistoryDiffDialog>();
-        parameters.Add(dialog => dialog.Rows, rows);
+        parameters.Add(dialog => dialog.HistoryRequest, request);
+        parameters.Add(dialog => dialog.InitialPage, page);
         parameters.Add(dialog => dialog.Definitions, _definitions);
         parameters.Add(dialog => dialog.Definition, _selectedDefinition);
         parameters.Add(dialog => dialog.Title, L["History:Dialog:MutationTitle", _selectedDefinition.DisplayName]);
@@ -1059,9 +1210,9 @@
             FullWidth = true
         });
         var dialogResult = await dialog.Result;
-        if (dialogResult is { Canceled: false, Data: true })
+        if (dialogResult is { Canceled: false, Data: ConfigurationHistoryRollbackDialogResult rollback })
         {
-            Snackbar.Add(L["Rollback:Success"], Severity.Success);
+            await ConfigurationRollbackCompletionPresenter.ShowAsync(rollback, DialogService, Snackbar, L);
             await LoadEffectiveValuesAsync();
             await RefreshPendingCount();
         }
@@ -1278,7 +1429,7 @@
     {
         var summary = _definitions.FirstOrDefault(definition =>
             string.Equals(definition.DefinitionKey, definitionKey, StringComparison.OrdinalIgnoreCase));
-        if (summary is null)
+        if (summary is null || !summary.CanManage)
         {
             ShowJumpFailure(failureMessage);
             return;

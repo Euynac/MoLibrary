@@ -1,0 +1,204 @@
+@inject ConfigurationFacade Facade
+@inject IDialogService DialogService
+@inject ISnackbar Snackbar
+@inject IStringLocalizer<ConfigurationUIResource> L
+
+<div class="configuration-version-history-panel">
+    <MudPaper Outlined="true" Class="pa-3">
+        <MudStack Spacing="2">
+            <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Spacing="2">
+                <MudStack Spacing="0">
+                    <MudText Typo="Typo.subtitle1">@L["Versions:List:Title"]</MudText>
+                    <MudText Typo="Typo.caption" Color="Color.Secondary">
+                        @L["Versions:List:ComparedToCurrent", CurrentVersionLabel]
+                    </MudText>
+                </MudStack>
+                <MudChip T="int" Size="Size.Small" Variant="Variant.Outlined">@Versions.Count</MudChip>
+            </MudStack>
+
+            @if (Versions.Count == 0)
+            {
+                <MudAlert Severity="Severity.Info">@L["Versions:List:Empty"]</MudAlert>
+            }
+            else
+            {
+                <div class="configuration-version-history-list">
+                    @foreach (var version in Versions)
+                    {
+                        <div class="@HistoryItemClass(version)" @key="version.Version">
+                            <button type="button"
+                                    class="configuration-version-history-selection"
+                                    aria-pressed="@(SelectedVersion == version.Version ? "true" : "false")"
+                                    @onclick="() => OnVersionSelected.InvokeAsync(version.Version)">
+                                <span class="configuration-version-history-identity">
+                                    <span class="configuration-version-history-version">
+                                        @ConfigurationUnifiedVersionDisplayFormatter.VersionLabel(version)
+                                    </span>
+                                    <span class="configuration-version-history-timestamp">
+                                        @ConfigurationUnifiedVersionDisplayFormatter.CreatedTimeText(version)
+                                    </span>
+                                </span>
+                                <span class="configuration-version-history-metadata">
+                                    <MudTooltip Text="@DefinitionTooltip(version)">
+                                        <span class="configuration-version-history-metadata-item">
+                                            <MudIcon Icon="@Icons.Material.Filled.Description"
+                                                     Size="Size.Small"
+                                                     Color="Color.Secondary" />
+                                            <span>@L["Versions:Current:DefinitionCount", version.DefinitionCount]</span>
+                                        </span>
+                                    </MudTooltip>
+                                    @if (ConfigurationUnifiedVersionDisplayFormatter.OperatorTextOrNull(version) is { } operatorText)
+                                    {
+                                        <span class="configuration-version-history-metadata-item">
+                                            <MudIcon Icon="@Icons.Material.Filled.Person"
+                                                     Size="Size.Small"
+                                                     Color="Color.Secondary" />
+                                            <span>@operatorText</span>
+                                        </span>
+                                    }
+                                    @if (!string.IsNullOrWhiteSpace(version.Reason))
+                                    {
+                                        <span class="configuration-version-history-metadata-item configuration-version-history-reason">
+                                            <MudIcon Icon="@Icons.Material.Filled.Notes"
+                                                     Size="Size.Small"
+                                                     Color="Color.Secondary" />
+                                            <span>@version.Reason</span>
+                                        </span>
+                                    }
+                                </span>
+                            </button>
+                            <div class="configuration-version-history-actions">
+                                <MudTooltip Text="@L["Versions:Actions:ComparePrevious"]">
+                                    <MudIconButton Icon="@Icons.Material.Filled.CompareArrows"
+                                                   Size="Size.Small"
+                                                   Color="@(PreviousComparisonVersion == version.Version ? Color.Primary : Color.Default)"
+                                                   Disabled="@(!HasPreviousVersion(version))"
+                                                   OnClick="() => OnComparePrevious.InvokeAsync(version)"
+                                                   aria-label="@L["Versions:Actions:ComparePrevious"]" />
+                                </MudTooltip>
+                                <MudTooltip Text="@L["Rollback:Confirm"]">
+                                    <MudIconButton Icon="@Icons.Material.Filled.Restore"
+                                                   Size="Size.Small"
+                                                   Color="Color.Warning"
+                                                   OnClick="() => OnRollback.InvokeAsync(version)"
+                                                   aria-label="@L["Rollback:Confirm"]" />
+                                </MudTooltip>
+                                <MudTooltip Text="@L["Versions:Actions:Delete"]">
+                                    <MudIconButton Icon="@(IsDeleting(version) ? Icons.Material.Filled.HourglassTop : Icons.Material.Filled.Delete)"
+                                                   Size="Size.Small"
+                                                   Color="Color.Error"
+                                                   Disabled="@DeleteBusy"
+                                                   OnClick="() => DeleteAsync(version)"
+                                                   aria-label="@L["Versions:Actions:Delete"]" />
+                                </MudTooltip>
+                            </div>
+                        </div>
+                    }
+                </div>
+            }
+        </MudStack>
+    </MudPaper>
+</div>
+
+@code {
+    [Parameter, EditorRequired]
+    public IReadOnlyList<ConfigurationUnifiedVersionSummary> Versions { get; set; } = [];
+
+    [Parameter, EditorRequired]
+    public string CurrentVersionLabel { get; set; } = string.Empty;
+
+    [Parameter]
+    public long? SelectedVersion { get; set; }
+
+    [Parameter]
+    public long? PreviousComparisonVersion { get; set; }
+
+    [Parameter]
+    public EventCallback<long> OnVersionSelected { get; set; }
+
+    [Parameter]
+    public EventCallback<ConfigurationUnifiedVersionSummary> OnComparePrevious { get; set; }
+
+    [Parameter]
+    public EventCallback<ConfigurationUnifiedVersionSummary> OnRollback { get; set; }
+
+    [Parameter]
+    public EventCallback OnDeleted { get; set; }
+
+    private long? _deletingVersion;
+
+    private bool DeleteBusy => _deletingVersion is not null;
+
+    private async Task DeleteAsync(ConfigurationUnifiedVersionSummary version)
+    {
+        if (DeleteBusy)
+        {
+            return;
+        }
+
+        _deletingVersion = version.Version;
+        var versionLabel = ConfigurationUnifiedVersionJsonFormatter.VersionLabel(version.Version);
+
+        try
+        {
+            var confirmed = await DialogService.ShowMessageBoxAsync(
+                L["Versions:Delete:ConfirmTitle", versionLabel],
+                L["Versions:Delete:ConfirmMessage", versionLabel],
+                yesText: L["Versions:Delete:Confirm"],
+                cancelText: L["Common:Actions:Cancel"]);
+            if (confirmed != true)
+            {
+                return;
+            }
+
+            var result = await Facade.DeleteUnifiedVersionAsync(version.Version);
+            if (result.IsFailed(out var error))
+            {
+                Snackbar.Add(
+                    L["Versions:Delete:Messages:Failed", versionLabel, error.Message ?? string.Empty],
+                    Severity.Error);
+                return;
+            }
+
+            Snackbar.Add(L["Versions:Delete:Messages:Succeeded", versionLabel], Severity.Success);
+            await OnDeleted.InvokeAsync();
+        }
+        finally
+        {
+            _deletingVersion = null;
+        }
+    }
+
+    private bool HasPreviousVersion(ConfigurationUnifiedVersionSummary version)
+    {
+        for (var index = 0; index < Versions.Count; index++)
+        {
+            if (Versions[index].Version == version.Version)
+            {
+                return index + 1 < Versions.Count;
+            }
+        }
+
+        return false;
+    }
+
+    private bool IsDeleting(ConfigurationUnifiedVersionSummary version)
+    {
+        return _deletingVersion == version.Version;
+    }
+
+    private string HistoryItemClass(ConfigurationUnifiedVersionSummary version)
+    {
+        return SelectedVersion == version.Version
+            ? "configuration-version-history-item is-selected"
+            : "configuration-version-history-item";
+    }
+
+    private string DefinitionTooltip(ConfigurationUnifiedVersionSummary version)
+    {
+        return ConfigurationUnifiedVersionDisplayFormatter.DefinitionTooltip(
+            version,
+            L["Versions:Definitions:Empty"]);
+    }
+
+}

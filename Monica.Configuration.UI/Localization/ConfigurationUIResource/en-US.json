@@ -37,7 +37,53 @@
       "SchemaMetadataTitle": "Schema metadata",
       "SchemaVersionDetail": "Version: {0}",
       "SchemaHashDetail": "Hash",
-      "SchemaHashMissing": "No hash available"
+      "SchemaHashMissing": "No hash available",
+      "Unavailable": "Definition unavailable",
+      "MetadataFault": "Metadata problem",
+      "NoAvailableDefinitions": "No configuration definition currently has complete authoritative metadata. Review the reported problems and refresh after they are repaired.",
+      "RequestedDefinitionNotFound": "Requested configuration definition '{0}' was not found.",
+      "RequestedDefinitionUnresolved": "Requested configuration definition '{0}' could not be resolved while the metadata store is unavailable. Refresh after the store is repaired.",
+      "CatalogOperationBlocked": "Import and export require a complete definition catalog. Repair the reported metadata problems and refresh first.",
+      "FromProjectLabel": "Publishing project",
+      "FromProjectValue": "Project: {0}",
+      "UnknownProject": "Unknown project",
+      "MetadataStoreUnavailableForDefinition": "Authoritative published metadata is currently unavailable, so management operations are disabled for this definition.",
+      "ViewProblemDetails": "View problem details",
+      "ViewProblemDetailsAria": "View metadata problem details for {0}",
+      "ProblemDetailsTitle": "Metadata problem: {0}",
+      "ProblemSummary": "This persisted definition cannot be managed safely. Other valid definitions remain available.",
+      "SectionPathLabel": "Configuration section",
+      "SchemaVersionLabel": "Schema version",
+      "SchemaHashLabel": "Schema hash",
+      "MetadataStoreLabel": "Metadata store",
+      "ProblemKindLabel": "Problem type",
+      "SchemaPathLabel": "Affected schema path",
+      "JsonPathLabel": "Persisted JSON path",
+      "ErrorTypeLabel": "Technical error type",
+      "TechnicalDetailsTitle": "Technical details",
+      "RepairTitle": "Recommended repair",
+      "RepublishGuidance": "Deploy or restart the service from project '{0}' using the current Monica.Configuration runtime so it republishes definition '{1}'. Do not hand-edit the stored schema JSON.",
+      "RepublishGuidanceUnknownOwner": "Identify the service that owns definition '{0}', then deploy or restart it using the current Monica.Configuration runtime so it republishes the definition. Do not hand-edit the stored schema JSON.",
+      "RepairMetadataStoreGuidance": "Metadata store '{0}' contains conflicting or incorrectly keyed records for definition '{1}'. Back up the store, repair the conflicting record identity, and then republish the owning definition. Republishing alone cannot remove the conflict.",
+      "RefreshAfterRepublish": "After publication succeeds, refresh this page. Existing effective configuration values are not changed by metadata publication.",
+      "StoreFailureTitle": "Published metadata store is unavailable",
+      "StoreFailureSummary": "Monica could not read '{0}' completely: {1}. Locally discovered definitions are shown for diagnosis but management operations remain disabled until authoritative metadata is available.",
+      "StoreKeyValue": "Store: {0}",
+      "StoreFailureGuidance": "Check database or file-store availability and physical schema compatibility, then refresh. Republish individual definitions only after the store itself is healthy.",
+      "MetadataIssues": {
+        "InvalidEnvelope": "Invalid metadata envelope",
+        "InvalidReloadBehavior": "Invalid reload behavior",
+        "InvalidSchemaJson": "Malformed schema JSON",
+        "SchemaHashMismatch": "Schema hash does not match payload",
+        "OutdatedSchemaContract": "Outdated schema contract",
+        "InvalidSchema": "Invalid persisted schema"
+      },
+      "StoreIssues": {
+        "Unavailable": "store connection unavailable",
+        "AccessDenied": "access denied",
+        "IncompatibleSchema": "physical store schema is incompatible",
+        "ReadFailed": "catalog read failed"
+      }
     },
     "Tree": {
       "Root": "Root"
@@ -48,7 +94,8 @@
     },
     "Footer": {
       "PendingCount": "Staged changes",
-      "ValidationIssueCount": "Validation issues"
+      "ValidationIssueCount": "Validation issues",
+      "SaveBlockedMetadata": "Save is unavailable because at least one staged definition no longer has complete authoritative metadata. Repair and refresh it first."
     },
     "RuntimeValidation": {
       "Title": "Runtime validation",
@@ -130,6 +177,11 @@
     },
     "Value": {
       "Sensitive": "Sensitive",
+      "Hidden": "Hidden",
+      "HiddenBeforeChange": "Hidden value (before change)",
+      "HiddenAfterChange": "Hidden value (after change)",
+      "HiddenChangedNotice": "One or more hidden values changed. Their contents are not shown.",
+      "SchemaDriftHiddenNotice": "Scalar values are hidden because the schemas differ and historical sensitivity metadata is unavailable.",
       "Required": "Required",
       "RestartNeeded": "Restart needed"
     },
@@ -208,7 +260,9 @@
     "CollapsedCount": "{0} fields",
     "Actions": {
       "ViewChange": "View change",
-      "ViewDefinitionHistory": "View definition history"
+      "ViewDefinitionHistory": "View definition history",
+      "LoadMore": "Load more",
+      "RollbackBlockedMetadata": "Rollback is unavailable because one or more affected definitions do not have complete authoritative metadata. Repair and refresh them first."
     },
     "Tabs": {
       "Mutations": "By mutation",
@@ -220,7 +274,8 @@
       "Target": "Target",
       "TargetAll": "All targets",
       "TargetMonica": "Monica store",
-      "TargetExternal": "External sources"
+      "TargetExternal": "External sources",
+      "UnavailableDefinition": "{0} (metadata unavailable)"
     },
     "States": {
       "Empty": "No history records were found."
@@ -303,7 +358,7 @@
       "ExternalTargetCount": "External {0}",
       "Operator": "Operator",
       "DiffDirection": "Old value -> new value",
-      "RollbackDirection": "Current mutation value -> rollback target",
+      "RollbackDirection": "Current target value -> rollback target",
       "NoPreview": "No history rows are available for diff preview."
     }
   },
@@ -335,7 +390,8 @@
     "SelectionWarning": "This will roll back the selected history rows in reverse order as one rollback group. If one mutation fails, the rollback group will be partial.",
     "PreviewTitle": "Change preview",
     "Confirm": "Roll back",
-    "Success": "Rollback completed."
+    "Success": "Rollback completed.",
+    "AppliedWithIssues": "The rollback values were saved, but reload, notification, audit, or verification follow-up work reported a problem."
   },
   "Versions": {
     "Subtitle": "Review the current unified configuration version, compare history against it, and restore when needed.",
@@ -361,7 +417,17 @@
       "Empty": "No definitions were captured."
     },
     "Actions": {
-      "ComparePrevious": "Compare with previous version"
+      "ComparePrevious": "Compare with previous version",
+      "Delete": "Delete history version"
+    },
+    "Delete": {
+      "ConfirmTitle": "Delete {0}?",
+      "ConfirmMessage": "Permanently delete the {0} history snapshot? This does not change the current version or any effective configuration values.",
+      "Confirm": "Delete version",
+      "Messages": {
+        "Succeeded": "{0} was deleted.",
+        "Failed": "Failed to delete {0}: {1}"
+      }
     },
     "Diff": {
       "Title": "{0} -> {1}",
@@ -377,17 +443,62 @@
     },
     "Rollback": {
       "Title": "Roll Back {0}",
-      "Ready": "This version can be restored. Review the writable targets before applying.",
-      "Blocked": "This version cannot be fully restored because one or more definitions are blocked.",
-      "TargetSource": "Target source",
-      "Diagnostic": "Diagnostic",
-      "NoTarget": "No writable target",
-      "Apply": "Roll back version",
+      "Messages": {
+        "Ready": "The changed values are compatible with the current configuration definitions and can be restored.",
+        "Blocked": "This version cannot be restored because one or more changed values are incompatible or have no safe writable target.",
+        "NoChanges": "This version already matches the current effective configuration. No values will be changed.",
+        "CompatibleSchemaDrift": "The configuration definition changed after this version. The rollback values still pass the current schema, but you must acknowledge the compatible schema drift before applying them.",
+        "RuntimeOutOfSync": "The loaded runtime value and its physical source disagree. Reload or reconcile the runtime before rolling back so Monica does not plan against stale state.",
+        "PartiallyApplied": "The rollback was only partially applied. Review mutation group {0} before retrying.",
+        "AppliedWithIssues": "The rollback values were saved, but reload, notification, audit, or version-capture follow-up work reported a problem. Review mutation group {0}."
+      },
+      "Summary": {
+        "Changes": "{0} affected definitions",
+        "Writes": "{0} path operations",
+        "Findings": "{0} blocking findings",
+        "Unchanged": "{0} unchanged",
+        "CompatibleSchemaDrift": "{0} compatible schema drift",
+        "Blocked": "{0} blocked"
+      },
+      "Fields": {
+        "PlannedWrites": "Exact persistence plan",
+        "BlockingFindings": "Blocking source findings (no writes will run)",
+        "HiddenPath": "Hidden sensitive path",
+        "DefinitionRoot": "Definition root",
+        "ConfigurationPath": "Physical configuration path: {0}",
+        "BlockingSource": "Controlled by read-only source {0}",
+        "CompositeSourceConflict": "This container also receives values from {0}; replacing it would create unreviewed overrides",
+        "LowerPriorityFallback": "Removal would reveal lower-priority source {0}",
+        "NoWritableTarget": "No writable target",
+        "DiffDirection": "Current effective value -> rollback target"
+      },
+      "MutationKinds": {
+        "Set": "Set",
+        "Remove": "Remove"
+      },
+      "Validation": {
+        "IssueCount": "{0} validation issues",
+        "Incompatible": "The captured value is not valid under the current configuration schema.",
+        "DetailHidden": "Details are hidden because this path may contain sensitive metadata."
+      },
+      "Acknowledgement": {
+        "CompatibleSchemaDrift": "I understand that the definition changed and want to restore these values under the current schema."
+      },
+      "Actions": {
+        "Apply": "Roll back version",
+        "AcknowledgeAndApply": "Acknowledge and roll back",
+        "ReloadAndRefresh": "Reload runtime and refresh"
+      },
       "Statuses": {
+        "Unchanged": "Unchanged",
         "Ready": "Ready",
+        "CompatibleSchemaDrift": "Compatible schema drift",
+        "InvalidValue": "Invalid value",
         "MissingDefinition": "Missing definition",
-        "SchemaMismatch": "Schema mismatch",
+        "RuntimeOutOfSync": "Runtime/source mismatch",
         "ReadOnlyOverride": "Read-only override",
+        "CompositeSourceConflict": "Multiple-source container",
+        "LowerPriorityFallback": "Lower-priority fallback",
         "UnsupportedSource": "Unsupported source"
       }
     }
@@ -500,7 +611,8 @@
         "LocalReload": "Local reload failed",
         "DistributedNotification": "Distributed notification failed",
         "AuditFinalization": "Audit finalization failed",
-        "UnifiedVersionCapture": "Unified version capture failed"
+        "UnifiedVersionCapture": "Unified version capture failed",
+        "EffectiveValueVerification": "Effective value verification failed"
       }
     },
     "SaveGroup": {

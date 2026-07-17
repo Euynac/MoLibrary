@@ -1,10 +1,8 @@
 using Microsoft.Extensions.Configuration;
-using System.Text.Json;
-using System.Text.Json.Nodes;
 using Monica.Configuration.Exceptions;
 using Monica.Configuration.Abstractions;
 using Monica.Configuration.Models;
-using Monica.Configuration.Serialization;
+using Monica.Configuration.Models.Internal;
 using Monica.Configuration.Services;
 using Monica.Configuration.Services.Support;
 using Monica.Core.Extensions;
@@ -28,8 +26,7 @@ public sealed class ConfigurationFacade(
     IConfigurationMetadataStore metadataStore,
     IEnumerable<IConfigurationChangeNotifier> changeNotifiers,
     IConfigurationStoreStateTracker storeStateTracker,
-    ConfigurationEffectiveValueSeedFactory seedFactory,
-    ConfigurationEffectiveValueDocumentEditor documentEditor,
+    ConfigurationEffectiveStateReader effectiveStateReader,
     IConfigurationSourceInspector sourceInspector,
     IConfigurationJsonFileSourceWriter sourceWriter,
     ConfigurationRuntimeContext runtimeContext,
@@ -58,6 +55,32 @@ public sealed class ConfigurationFacade(
     }
 
     /// <summary>
+    /// Gets a fault-isolated definition catalog for management UI diagnostics.
+    /// </summary>
+    /// <remarks>
+    /// This method is intentionally separate from <see cref="GetDefinitionsAsync"/>. Authoritative consumers such
+    /// as mutation, export, source redaction, and unified-version capture must continue to fail closed when metadata
+    /// is incomplete instead of treating a partial catalog as complete.
+    /// </remarks>
+    /// <returns>Available definitions, unavailable metadata entries, and any store-wide read diagnostic.</returns>
+    public async Task<Res<ConfigurationDefinitionCatalog>> GetDefinitionCatalogAsync()
+    {
+        try
+        {
+            var snapshot = await definitionResolver.GetDiagnosticCatalogAsync(CancellationToken.None);
+            return Res.Ok(new ConfigurationDefinitionCatalog
+            {
+                Definitions = snapshot.Entries.Select(ToSummary).ToArray(),
+                StoreDiagnostic = snapshot.StoreDiagnostic
+            });
+        }
+        catch (Exception ex)
+        {
+            return Res.Fail($"Failed to get configuration definition diagnostics: {ex.GetMessageRecursively()}");
+        }
+    }
+
+    /// <summary>
     /// Gets one configuration definition.
     /// </summary>
     /// <param name="definitionKey">The definition key.</param>
@@ -68,7 +91,7 @@ public sealed class ConfigurationFacade(
         {
             var detail = new ConfigurationDefinitionDetail
             {
-                Definition = await definitionResolver.GetRequiredAsync(definitionKey, CancellationToken.None)
+                Definition = await definitionResolver.GetRequiredForReadAsync(definitionKey, CancellationToken.None)
             };
             return detail;
         }
@@ -157,63 +180,8 @@ public sealed class ConfigurationFacade(
     {
         try
         {
-            var definition = await definitionResolver.GetRequiredAsync(definitionKey, CancellationToken.None);
-            var targetNode = ResolveTargetNode(definition, logicalPath);
-            var isSensitive = targetNode?.IsSensitive is true;
-            var document = await effectiveValueStore.GetAsync(definitionKey, CancellationToken.None);
-            var configurationPath = targetNode?.ConfigurationPath ?? ProjectPath(definition, logicalPath);
-            var runtimeSourceValue = definition.Origin == ConfigurationDefinitionOrigin.LocalScan
-                                     && targetNode?.NodeKind == ConfigurationNodeKind.Scalar
-                ? sourceInspector.GetSourceChain(definition, logicalPath).Values.FirstOrDefault(value => value.IsEffective)
-                : null;
-
-            if (runtimeSourceValue is not null)
-            {
-                return new ConfigurationEffectiveValue
-                {
-                    DefinitionKey = definitionKey,
-                    LogicalPath = logicalPath,
-                    ConfigurationPath = configurationPath,
-                    DisplayValue = runtimeSourceValue.DisplayValue,
-                    IsSensitive = runtimeSourceValue.IsSensitive,
-                    Version = runtimeSourceValue.Source.Kind == ConfigurationSourceKind.MonicaEffectiveStore ? document?.Version : null,
-                    EffectiveSource = runtimeSourceValue.Source
-                };
-            }
-
-            if (definition.Origin == ConfigurationDefinitionOrigin.PublishedMetadata)
-            {
-                var valueJson = document?.Json ?? seedFactory.CreateSeedJson(definition);
-                var storedValue = documentEditor.ReadValue(definition, valueJson, logicalPath);
-                return new ConfigurationEffectiveValue
-                {
-                    DefinitionKey = definitionKey,
-                    LogicalPath = logicalPath,
-                    ConfigurationPath = configurationPath,
-                    DisplayValue = isSensitive ? null : ToDisplayValue(storedValue, targetNode),
-                    IsSensitive = isSensitive,
-                    Version = document?.Version,
-                    EffectiveSource = targetNode?.NodeKind == ConfigurationNodeKind.Scalar ? BuildEffectiveStoreSource() : null
-                };
-            }
-
-            var displayValue = targetNode is null || targetNode.NodeKind == ConfigurationNodeKind.Scalar
-                ? runtimeContext.Configuration[configurationPath]
-                : seedFactory.CreateRuntimeJson(targetNode, configurationPath);
-
-            return new ConfigurationEffectiveValue
-            {
-                DefinitionKey = definitionKey,
-                LogicalPath = logicalPath,
-                ConfigurationPath = configurationPath,
-                DisplayValue = isSensitive || displayValue is null
-                    ? null
-                    : targetNode is null
-                        ? displayValue
-                        : ConfigurationRegexTextCodec.NormalizeDisplayValue(targetNode, displayValue),
-                IsSensitive = isSensitive,
-                Version = document?.Version
-            };
+            var definition = await definitionResolver.GetRequiredForReadAsync(definitionKey, CancellationToken.None);
+            return await effectiveStateReader.ReadValueAsync(definition, logicalPath, CancellationToken.None);
         }
         catch (Exception ex)
         {
@@ -221,29 +189,22 @@ public sealed class ConfigurationFacade(
         }
     }
 
-    private static string ProjectPath(ConfigurationDefinition definition, LogicalPath logicalPath)
+    /// <summary>
+    /// Gets one definition and all display-safe effective values required by the management state view.
+    /// </summary>
+    /// <param name="definitionKey">The definition key.</param>
+    /// <returns>The definition state snapshot.</returns>
+    public async Task<Res<ConfigurationDefinitionState>> GetDefinitionStateAsync(string definitionKey)
     {
-        var parts = new List<string>();
-        if (!string.IsNullOrWhiteSpace(definition.SectionPath))
+        try
         {
-            parts.Add(definition.SectionPath);
+            var definition = await definitionResolver.GetRequiredForReadAsync(definitionKey, CancellationToken.None);
+            return Res.Ok(await effectiveStateReader.ReadDefinitionAsync(definition, CancellationToken.None));
         }
-
-        parts.AddRange(logicalPath.Segments.Select(segment => segment.Value));
-        return string.Join(':', parts);
-    }
-
-    private ConfigurationSourceDescriptor BuildEffectiveStoreSource()
-    {
-        return new ConfigurationSourceDescriptor
+        catch (Exception ex)
         {
-            SourceKey = effectiveValueStore.Descriptor.StoreKey,
-            DisplayName = effectiveValueStore.Descriptor.DisplayName,
-            ProviderType = effectiveValueStore.Descriptor.Kind.ToString(),
-            Kind = ConfigurationSourceKind.MonicaEffectiveStore,
-            IsManagedByMonica = true,
-            IsWritable = effectiveValueStore.Descriptor.IsWritable
-        };
+            return Res.Fail($"Failed to get configuration definition state: {ex.GetMessageRecursively()}");
+        }
     }
 
     private static ConfigurationDefinitionSummary ToSummary(ConfigurationDefinition definition)
@@ -263,44 +224,68 @@ public sealed class ConfigurationFacade(
         };
     }
 
-    private static string? ToDisplayValue(ConfigurationStoredValue? storedValue, ConfigurationNodeDefinition? node)
+    private static ConfigurationDefinitionSummary ToSummary(ConfigurationDefinitionCatalogEntry entry)
     {
-        if (storedValue is null)
+        if (entry.Diagnostic is not null && entry.PublishedMetadata is not null)
         {
-            return null;
+            return ToDiagnosticSummary(entry);
         }
 
-        try
+        if (entry.Definition is { } definition)
         {
-            using var document = JsonDocument.Parse(storedValue.Json);
-            if (document.RootElement.ValueKind is JsonValueKind.Null or JsonValueKind.Undefined)
+            return ToSummary(definition) with
             {
-                return null;
-            }
-
-            if (node?.NodeKind == ConfigurationNodeKind.Scalar)
-            {
-                var displayValue = document.RootElement.ValueKind == JsonValueKind.String
-                    ? document.RootElement.GetString()
-                    : document.RootElement.GetRawText();
-                return node.IsRegexPatternText
-                    ? ConfigurationRegexTextCodec.NormalizePattern(displayValue)
-                    : displayValue;
-            }
-
-            if (node is not null)
-            {
-                var normalized = ConfigurationRegexTextCodec.NormalizeJsonNode(node, JsonNode.Parse(document.RootElement.GetRawText()));
-                return normalized?.ToJsonString(ConfigurationPersistedJsonOptions.ReadableValue)
-                       ?? JsonSerializer.Serialize(document.RootElement, ConfigurationPersistedJsonOptions.ReadableValue);
-            }
-
-            return JsonSerializer.Serialize(document.RootElement, ConfigurationPersistedJsonOptions.ReadableValue);
+                Availability = entry.Availability,
+                MetadataDiagnostic = entry.Diagnostic
+            };
         }
-        catch (JsonException)
+
+        var metadata = entry.PublishedMetadata
+                       ?? throw new InvalidOperationException("Unavailable catalog entry has no persisted metadata envelope.");
+        return new ConfigurationDefinitionSummary
         {
-            return storedValue.Json;
-        }
+            DefinitionKey = metadata.DefinitionKey,
+            SectionPath = metadata.SectionPath,
+            DisplayName = string.IsNullOrWhiteSpace(metadata.DisplayName)
+                ? metadata.DefinitionKey
+                : metadata.DisplayName,
+            Description = metadata.Description,
+            ClrTypeName = metadata.ClrTypeName,
+            FromProject = metadata.FromProject,
+            Category = metadata.Category,
+            SchemaVersion = metadata.SchemaVersion,
+            SchemaHash = metadata.SchemaHash,
+            Origin = ConfigurationDefinitionOrigin.PublishedMetadata,
+            Availability = entry.Availability,
+            MetadataDiagnostic = entry.Diagnostic
+        };
+    }
+
+    private static ConfigurationDefinitionSummary ToDiagnosticSummary(ConfigurationDefinitionCatalogEntry entry)
+    {
+        var metadata = entry.PublishedMetadata!;
+        var local = entry.Definition;
+        var definitionKey = FirstNonEmpty(metadata.DefinitionKey, local?.DefinitionKey);
+        return new ConfigurationDefinitionSummary
+        {
+            DefinitionKey = definitionKey,
+            SectionPath = FirstNonEmpty(metadata.SectionPath, local?.SectionPath),
+            DisplayName = FirstNonEmpty(metadata.DisplayName, local?.DisplayName, definitionKey),
+            Description = metadata.Description ?? local?.Description,
+            ClrTypeName = FirstNonEmpty(metadata.ClrTypeName, local?.ClrTypeName),
+            FromProject = FirstNonEmpty(metadata.FromProject, local?.FromProject),
+            Category = metadata.Category ?? local?.Category,
+            SchemaVersion = metadata.SchemaVersion,
+            SchemaHash = metadata.SchemaHash,
+            Origin = ConfigurationDefinitionOrigin.PublishedMetadata,
+            Availability = entry.Availability,
+            MetadataDiagnostic = entry.Diagnostic
+        };
+    }
+
+    private static string FirstNonEmpty(params string?[] values)
+    {
+        return values.FirstOrDefault(static value => !string.IsNullOrWhiteSpace(value)) ?? string.Empty;
     }
 
     /// <summary>
@@ -387,16 +372,15 @@ public sealed class ConfigurationFacade(
     /// Gets managed configuration values supplied by each runtime Microsoft configuration source.
     /// </summary>
     /// <returns>Source inventories ordered from highest priority to lowest priority.</returns>
-    public Task<Res<IReadOnlyList<ConfigurationSourceInventory>>> GetConfigurationSourceInventoriesAsync()
+    public async Task<Res<IReadOnlyList<ConfigurationSourceInventory>>> GetConfigurationSourceInventoriesAsync()
     {
         try
         {
-            return Task.FromResult(Res.Ok(sourceInspector.GetSourceInventories()));
+            return Res.Ok(await sourceInspector.GetSourceInventoriesAsync(CancellationToken.None));
         }
         catch (Exception ex)
         {
-            return Task.FromResult<Res<IReadOnlyList<ConfigurationSourceInventory>>>(
-                Res.Fail($"Failed to get configuration source inventory: {ex.GetMessageRecursively()}"));
+            return Res.Fail($"Failed to get configuration source inventory: {ex.GetMessageRecursively()}");
         }
     }
 
@@ -446,6 +430,33 @@ public sealed class ConfigurationFacade(
         {
             return Task.FromResult<Res<ConfigurationSourceChain>>(
                 Res.Fail($"Failed to get configuration source chain: {ex.GetMessageRecursively()}"));
+        }
+    }
+
+    /// <summary>
+    /// Gets source chains for several configuration paths from one runtime-provider snapshot.
+    /// </summary>
+    /// <param name="definitionKey">The locally scanned definition key.</param>
+    /// <param name="logicalPaths">The logical paths to inspect, in result order.</param>
+    /// <returns>One source chain for each requested path.</returns>
+    public Task<Res<IReadOnlyList<ConfigurationSourceChain>>> GetSourceChainsAsync(
+        string definitionKey,
+        IReadOnlyList<LogicalPath> logicalPaths)
+    {
+        try
+        {
+            if (!definitionResolver.TryGetLocal(definitionKey, out var definition))
+            {
+                return Task.FromResult<Res<IReadOnlyList<ConfigurationSourceChain>>>(
+                    Res.Fail("Configuration source-chain inspection is only available for definitions scanned by the current process."));
+            }
+
+            return Task.FromResult(Res.Ok(sourceInspector.GetSourceChains(definition, logicalPaths)));
+        }
+        catch (Exception ex)
+        {
+            return Task.FromResult<Res<IReadOnlyList<ConfigurationSourceChain>>>(
+                Res.Fail($"Failed to get configuration source chains: {ex.GetMessageRecursively()}"));
         }
     }
 
@@ -660,6 +671,24 @@ public sealed class ConfigurationFacade(
     }
 
     /// <summary>
+    /// Queries a bounded page of mutation history without splitting matching mutation groups across pages.
+    /// </summary>
+    /// <param name="request">The filters and mutation-unit pagination bounds.</param>
+    /// <returns>The matching history page in deterministic newest-first order.</returns>
+    public async Task<Res<ConfigurationHistoryPageResult>> QueryHistoryPageAsync(
+        ConfigurationHistoryPageRequest request)
+    {
+        try
+        {
+            return Res.Ok(await historyService.QueryHistoryPageAsync(request, CancellationToken.None));
+        }
+        catch (Exception ex)
+        {
+            return Res.Fail($"Failed to query configuration value history page: {ex.GetMessageRecursively()}");
+        }
+    }
+
+    /// <summary>
     /// Lists unified configuration versions.
     /// </summary>
     /// <param name="from">Earliest creation time to include.</param>
@@ -709,6 +738,30 @@ public sealed class ConfigurationFacade(
     }
 
     /// <summary>
+    /// Permanently deletes a historical unified configuration version and its captured definition documents.
+    /// </summary>
+    /// <remarks>
+    /// The latest unified version represents the current version and cannot be deleted. Remaining versions keep their
+    /// original numbers, and deleted version numbers are not reused.
+    /// </remarks>
+    /// <param name="version">The historical unified version number to delete.</param>
+    /// <returns>
+    /// A success result when the version has been deleted; otherwise, a failure result with the store diagnostic.
+    /// </returns>
+    public async Task<Res> DeleteUnifiedVersionAsync(long version)
+    {
+        try
+        {
+            await unifiedVersionService.DeleteVersionAsync(version, CancellationToken.None);
+            return Res.Ok();
+        }
+        catch (Exception ex)
+        {
+            return Res.Fail($"Failed to delete unified configuration version: {ex.GetMessageRecursively()}");
+        }
+    }
+
+    /// <summary>
     /// Compares two unified configuration versions.
     /// </summary>
     /// <param name="originVersion">The origin version number.</param>
@@ -749,20 +802,17 @@ public sealed class ConfigurationFacade(
     }
 
     /// <summary>
-    /// Applies the captured definition values from one unified configuration version.
+    /// Applies the changed definition values from a reviewed unified-version rollback preview.
     /// </summary>
-    /// <param name="version">The version number.</param>
-    /// <param name="reason">Optional rollback reason.</param>
+    /// <param name="request">The reviewed rollback request, including its preview fingerprint and acknowledgements.</param>
     /// <returns>The rollback result.</returns>
     public async Task<Res<ConfigurationUnifiedVersionRollbackResult>> RollbackUnifiedVersionAsync(
-        long version,
-        string? reason = null)
+        ConfigurationUnifiedVersionRollbackRequest request)
     {
         try
         {
             return Res.Ok(await unifiedVersionService.RollbackToVersionAsync(
-                version,
-                reason,
+                request,
                 CancellationToken.None));
         }
         catch (Exception ex)
@@ -790,6 +840,24 @@ public sealed class ConfigurationFacade(
         catch (Exception ex)
         {
             return Res.Fail($"Failed to get configuration mutation groups: {ex.GetMessageRecursively()}");
+        }
+    }
+
+    /// <summary>
+    /// Queries a bounded page of persisted mutation groups.
+    /// </summary>
+    /// <param name="request">The filters and pagination bounds.</param>
+    /// <returns>The matching group page in deterministic newest-first order.</returns>
+    public async Task<Res<ConfigurationMutationGroupPageResult>> QueryMutationGroupsPageAsync(
+        ConfigurationMutationGroupPageRequest request)
+    {
+        try
+        {
+            return Res.Ok(await mutationGroupService.QueryPageAsync(request, CancellationToken.None));
+        }
+        catch (Exception ex)
+        {
+            return Res.Fail($"Failed to query configuration mutation group page: {ex.GetMessageRecursively()}");
         }
     }
 
@@ -831,17 +899,40 @@ public sealed class ConfigurationFacade(
     }
 
     /// <summary>
+    /// Previews selected history rollbacks against the current physical target values.
+    /// </summary>
+    /// <param name="historyIds">The history identities to preview.</param>
+    /// <returns>The current values and concurrency-bound rollback plan.</returns>
+    public async Task<Res<ConfigurationHistoryRollbackPreview>> PreviewHistoryRollbackAsync(
+        IReadOnlyList<string> historyIds)
+    {
+        try
+        {
+            return Res.Ok(await rollbackService.PreviewHistoriesAsync(historyIds, CancellationToken.None));
+        }
+        catch (Exception ex)
+        {
+            return Res.Fail($"Failed to preview configuration history rollback: {ex.GetMessageRecursively()}");
+        }
+    }
+
+    /// <summary>
     /// Rolls one history row back to its previous value.
     /// </summary>
     /// <param name="historyId">The history record identity.</param>
+    /// <param name="planToken">The current-state preview token reviewed by the operator.</param>
     /// <param name="reason">Optional rollback reason.</param>
     /// <returns>The rollback mutation result.</returns>
-    public async Task<Res<ConfigurationMutationResult>> RollbackHistoryAsync(string historyId, string? reason = null)
+    public async Task<Res<ConfigurationMutationResult>> RollbackHistoryAsync(
+        string historyId,
+        string planToken,
+        string? reason = null)
     {
         try
         {
             return Res.Ok(await rollbackService.RollbackHistoryAsync(
                 historyId,
+                planToken,
                 new ConfigurationMutationContext { Reason = reason },
                 CancellationToken.None));
         }
@@ -855,16 +946,19 @@ public sealed class ConfigurationFacade(
     /// Rolls selected history rows back in reverse history order.
     /// </summary>
     /// <param name="historyIds">The history record identities.</param>
+    /// <param name="planToken">The current-state preview token reviewed by the operator.</param>
     /// <param name="reason">Optional rollback reason.</param>
     /// <returns>The rollback mutation results.</returns>
     public async Task<Res<IReadOnlyList<ConfigurationMutationResult>>> RollbackHistoriesAsync(
         IReadOnlyList<string> historyIds,
+        string planToken,
         string? reason = null)
     {
         try
         {
             return Res.Ok(await rollbackService.RollbackHistoriesAsync(
                 historyIds,
+                planToken,
                 new ConfigurationMutationContext { Reason = reason },
                 CancellationToken.None));
         }
@@ -878,14 +972,19 @@ public sealed class ConfigurationFacade(
     /// Rolls one mutation group back in reverse history order.
     /// </summary>
     /// <param name="groupId">The group identity.</param>
+    /// <param name="planToken">The current-state preview token reviewed by the operator.</param>
     /// <param name="reason">Optional rollback reason.</param>
     /// <returns>The rollback mutation results.</returns>
-    public async Task<Res<IReadOnlyList<ConfigurationMutationResult>>> RollbackGroupAsync(string groupId, string? reason = null)
+    public async Task<Res<IReadOnlyList<ConfigurationMutationResult>>> RollbackGroupAsync(
+        string groupId,
+        string planToken,
+        string? reason = null)
     {
         try
         {
             return Res.Ok(await rollbackService.RollbackGroupAsync(
                 groupId,
+                planToken,
                 new ConfigurationMutationContext { Reason = reason },
                 CancellationToken.None));
         }
@@ -893,28 +992,5 @@ public sealed class ConfigurationFacade(
         {
             return Res.Fail($"Failed to roll back configuration mutation group: {ex.GetMessageRecursively()}");
         }
-    }
-
-    private static ConfigurationNodeDefinition? ResolveTargetNode(ConfigurationDefinition definition, LogicalPath logicalPath)
-    {
-        var current = definition.Root;
-        foreach (var segment in logicalPath.Segments)
-        {
-            current = segment switch
-            {
-                PropertySegment property => current.Children.FirstOrDefault(child =>
-                    string.Equals(child.Name, property.Name, StringComparison.OrdinalIgnoreCase)),
-                DictionaryKeySegment => current.DictionaryTemplate?.ValueTemplate,
-                ListItemKeySegment or ListIndexSegment => current.ListTemplate?.ItemTemplate,
-                _ => null
-            };
-
-            if (current is null)
-            {
-                return null;
-            }
-        }
-
-        return current;
     }
 }

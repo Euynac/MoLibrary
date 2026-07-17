@@ -56,16 +56,30 @@ public interface IConfigurationUnifiedVersionService
         CancellationToken cancellationToken);
 
     /// <summary>
-    /// Applies the captured definition values from a unified version.
+    /// Applies the changed, current-schema-compatible definition values from a reviewed unified-version preview.
     /// </summary>
-    /// <param name="version">The unified version number to apply.</param>
-    /// <param name="reason">Optional rollback reason recorded in normal mutation history.</param>
+    /// <param name="request">The reviewed rollback request and its preview fingerprint.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>The rollback mutation group and per-definition mutation results.</returns>
-    /// <exception cref="InvalidOperationException">Thrown when preview target resolution blocks any captured definition.</exception>
+    /// <exception cref="InvalidOperationException">
+    /// Thrown when the preview is stale, a changed definition is blocked, or compatible schema drift was not acknowledged.
+    /// </exception>
     /// <exception cref="KeyNotFoundException">Thrown when the version does not exist.</exception>
     Task<ConfigurationUnifiedVersionRollbackResult> RollbackToVersionAsync(
-        long version,
-        string? reason,
+        ConfigurationUnifiedVersionRollbackRequest request,
         CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Permanently deletes a historical unified configuration version.
+    /// </summary>
+    /// <remarks>
+    /// The latest unified version represents the current version and cannot be deleted. Deleting a historical version
+    /// does not renumber the remaining versions, and its version number will not be reused.
+    /// </remarks>
+    /// <param name="version">The historical unified version number to delete.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>A task that completes when the version and its definition documents have been deleted.</returns>
+    /// <exception cref="KeyNotFoundException">Thrown when the version does not exist.</exception>
+    /// <exception cref="InvalidOperationException">Thrown when <paramref name="version"/> is the latest version.</exception>
+    Task DeleteVersionAsync(long version, CancellationToken cancellationToken);
 }

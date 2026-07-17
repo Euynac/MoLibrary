@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Monica.DependencyInjection.Abstractions;
 using Monica.Configuration.EfCore.Entities;
+using Monica.Configuration.Models;
 using Monica.Repository.Persistence.Services;
 
 namespace Monica.Configuration.EfCore.DbContext;
@@ -58,6 +59,16 @@ public sealed class ConfigurationDbContext(
             .Property(x => x.SchemaVersion)
             .IsRequired();
         modelBuilder.Entity<ConfigurationDefinitionEntity>()
+            .Property(x => x.DefinitionIdentity)
+            .IsRequired()
+            .IsUnicode(false)
+            .IsFixedLength()
+            .HasMaxLength(ConfigurationDefinitionIdentity.Length);
+        modelBuilder.Entity<ConfigurationDefinitionEntity>()
+            .HasIndex(x => x.DefinitionIdentity)
+            .HasDatabaseName(ConfigurationDbSchema.DefinitionIdentityIndex)
+            .IsUnique();
+        modelBuilder.Entity<ConfigurationDefinitionEntity>()
             .HasIndex(x => x.FromProject);
         modelBuilder.Entity<ConfigurationDefinitionEntity>()
             .HasIndex(x => x.Category);
@@ -72,7 +83,14 @@ public sealed class ConfigurationDbContext(
             .Property(x => x.PublishRevision)
             .IsConcurrencyToken();
         modelBuilder.Entity<ConfigurationDefinitionPublishHistoryEntity>()
-            .HasIndex(x => new { x.DefinitionKey, x.PublishedTime });
+            .Property(x => x.DefinitionIdentity)
+            .IsRequired()
+            .IsUnicode(false)
+            .IsFixedLength()
+            .HasMaxLength(ConfigurationDefinitionIdentity.Length);
+        modelBuilder.Entity<ConfigurationDefinitionPublishHistoryEntity>()
+            .HasIndex(x => new { x.DefinitionIdentity, x.PublishedTime })
+            .HasDatabaseName(ConfigurationDbSchema.DefinitionPublishIdentityIndex);
         modelBuilder.Entity<ConfigurationDefinitionPublishHistoryEntity>()
             .Property(x => x.FromProject)
             .IsRequired()
@@ -85,6 +103,16 @@ public sealed class ConfigurationDbContext(
             .HasPrecision(6)
             .HasColumnType(timeColumnType);
         modelBuilder.Entity<ConfigurationEffectiveValueEntity>()
+            .Property(x => x.DefinitionIdentity)
+            .IsRequired()
+            .IsUnicode(false)
+            .IsFixedLength()
+            .HasMaxLength(ConfigurationDefinitionIdentity.Length);
+        modelBuilder.Entity<ConfigurationEffectiveValueEntity>()
+            .HasIndex(x => x.DefinitionIdentity)
+            .HasDatabaseName(ConfigurationDbSchema.EffectiveValueIdentityIndex)
+            .IsUnique();
+        modelBuilder.Entity<ConfigurationEffectiveValueEntity>()
             .Property(x => x.Version)
             .IsConcurrencyToken();
         modelBuilder.Entity<ConfigurationEffectiveValueEntity>()
@@ -92,11 +120,18 @@ public sealed class ConfigurationDbContext(
             .HasPrecision(6)
             .HasColumnType(timeColumnType);
         modelBuilder.Entity<ConfigurationValueHistoryEntity>()
+            .Property(x => x.DefinitionIdentity)
+            .IsRequired()
+            .IsUnicode(false)
+            .IsFixedLength()
+            .HasMaxLength(ConfigurationDefinitionIdentity.Length);
+        modelBuilder.Entity<ConfigurationValueHistoryEntity>()
             .Property(x => x.ModifiedTime)
             .HasPrecision(6)
             .HasColumnType(timeColumnType);
         modelBuilder.Entity<ConfigurationValueHistoryEntity>()
-            .HasIndex(x => new { x.DefinitionKey, x.PathDepth, x.ModifiedTime });
+            .HasIndex(x => new { x.DefinitionIdentity, x.PathDepth, x.ModifiedTime })
+            .HasDatabaseName(ConfigurationDbSchema.ValueHistoryIdentityIndex);
         modelBuilder.Entity<ConfigurationValueHistoryEntity>()
             .HasIndex(x => x.MutationGroupId);
         modelBuilder.Entity<ConfigurationMutationGroupEntity>()
@@ -118,7 +153,15 @@ public sealed class ConfigurationDbContext(
         modelBuilder.Entity<ConfigurationUnifiedVersionEntity>()
             .HasIndex(x => x.MutationGroupId);
         modelBuilder.Entity<ConfigurationUnifiedVersionDocumentEntity>()
-            .HasIndex(x => x.DefinitionKey);
+            .Property(x => x.DefinitionIdentity)
+            .IsRequired()
+            .IsUnicode(false)
+            .IsFixedLength()
+            .HasMaxLength(ConfigurationDefinitionIdentity.Length);
+        modelBuilder.Entity<ConfigurationUnifiedVersionDocumentEntity>()
+            .HasIndex(x => new { x.DefinitionIdentity, x.Version })
+            .HasDatabaseName(ConfigurationDbSchema.UnifiedVersionDocumentIdentityIndex)
+            .IsUnique();
     }
 
     private static void ConfigureKeys(ModelBuilder modelBuilder)

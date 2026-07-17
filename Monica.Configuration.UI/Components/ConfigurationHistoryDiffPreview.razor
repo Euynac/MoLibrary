@@ -37,29 +37,53 @@
     private readonly Dictionary<string, ConfigurationDefinition> _definitions = new(StringComparer.OrdinalIgnoreCase);
     private string _originText = "null";
     private string _targetText = "null";
+    private string? _inputIdentity;
     private bool _loading;
 
     [Parameter] public IReadOnlyList<ConfigurationValueHistory> Rows { get; set; } = [];
     [Parameter] public bool IsRollbackPreview { get; set; }
     [Parameter] public EDiffViewMode ViewMode { get; set; } = EDiffViewMode.Unified;
+    [Parameter] public IReadOnlyDictionary<string, ConfigurationStoredValue?> CurrentValuesByHistoryId { get; set; } =
+        new Dictionary<string, ConfigurationStoredValue?>(StringComparer.OrdinalIgnoreCase);
+    [Parameter] public string? PreviewIdentity { get; set; }
+    [Parameter] public EventCallback<bool> LoadingChanged { get; set; }
 
     protected override async Task OnParametersSetAsync()
     {
+        var inputIdentity = $"{IsRollbackPreview}:{PreviewIdentity}:{string.Join('\u001f', Rows.Select(static row => row.HistoryId))}";
+        if (string.Equals(_inputIdentity, inputIdentity, StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        // Set this before notifying the parent so its rerender cannot restart the same asynchronous load.
+        _inputIdentity = inputIdentity;
         _loading = true;
-        await EnsureDefinitionsAsync();
-        _originText = ConfigurationHistoryDiffSnapshotBuilder.BuildOriginSnapshot(
-            Rows,
-            IsRollbackPreview,
-            IsSensitive,
-            DefinitionDisplay,
-            L["State:Value:Sensitive"]);
-        _targetText = ConfigurationHistoryDiffSnapshotBuilder.BuildTargetSnapshot(
-            Rows,
-            IsRollbackPreview,
-            IsSensitive,
-            DefinitionDisplay,
-            L["State:Value:Sensitive"]);
-        _loading = false;
+        await LoadingChanged.InvokeAsync(true);
+        try
+        {
+            await EnsureDefinitionsAsync();
+            _originText = ConfigurationHistoryDiffSnapshotBuilder.BuildOriginSnapshot(
+                Rows,
+                IsRollbackPreview,
+                CurrentValuesByHistoryId,
+                IsSensitive,
+                DefinitionDisplay,
+                TargetDisplay,
+                L["State:Value:Sensitive"]);
+            _targetText = ConfigurationHistoryDiffSnapshotBuilder.BuildTargetSnapshot(
+                Rows,
+                IsRollbackPreview,
+                IsSensitive,
+                DefinitionDisplay,
+                TargetDisplay,
+                L["State:Value:Sensitive"]);
+        }
+        finally
+        {
+            _loading = false;
+            await LoadingChanged.InvokeAsync(false);
+        }
     }
 
     private async Task EnsureDefinitionsAsync()
@@ -81,8 +105,17 @@
 
     private bool IsSensitive(ConfigurationValueHistory row)
     {
-        return _definitions.TryGetValue(row.DefinitionKey, out var definition)
-               && ResolveTargetNode(definition, row.LogicalPath)?.IsSensitive is true;
+        // Legacy rows and schema drift cannot prove the historical sensitivity contract, so hide their values.
+        if (!_definitions.TryGetValue(row.DefinitionKey, out var definition)
+            || definition.SchemaVersion != row.SchemaVersion
+            || string.IsNullOrWhiteSpace(row.SchemaHash)
+            || !string.Equals(definition.SchemaHash, row.SchemaHash, StringComparison.Ordinal))
+        {
+            return true;
+        }
+
+        var targetNode = ResolveTargetNode(definition, row.LogicalPath);
+        return targetNode is null || ContainsSensitiveNode(targetNode);
     }
 
     private string DefinitionDisplay(string definitionKey)
@@ -90,6 +123,19 @@
         return _definitions.TryGetValue(definitionKey, out var definition)
             ? definition.DisplayName
             : definitionKey;
+    }
+
+    private string TargetDisplay(ConfigurationValueHistory row)
+    {
+        if (row.TargetKind == ConfigurationMutationTargetKind.MonicaEffectiveStore)
+        {
+            return L["History:Targets:Monica"];
+        }
+
+        var sourceName = row.SourceDisplayName ?? L["History:Targets:External"];
+        return string.IsNullOrWhiteSpace(row.SourcePhysicalPath)
+            ? sourceName
+            : $"{sourceName} [{row.SourcePhysicalPath}]";
     }
 
     private static ConfigurationNodeDefinition? ResolveTargetNode(ConfigurationDefinition definition, LogicalPath logicalPath)
@@ -113,5 +159,18 @@
         }
 
         return current;
+    }
+
+    private static bool ContainsSensitiveNode(ConfigurationNodeDefinition node)
+    {
+        if (node.IsSensitive || node.Children.Any(ContainsSensitiveNode))
+        {
+            return true;
+        }
+
+        return node.DictionaryTemplate?.ValueTemplate is { } dictionaryValue
+                   && ContainsSensitiveNode(dictionaryValue)
+               || node.ListTemplate?.ItemTemplate is { } listItem
+                   && ContainsSensitiveNode(listItem);
     }
 }

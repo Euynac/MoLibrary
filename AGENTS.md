@@ -57,14 +57,14 @@ You have access to MCP tools called `microsoft_docs_search`, `microsoft_docs_fet
 
 When handling questions around how to work with native Microsoft technologies, such as C#, ASP.NET Core, Microsoft.Extensions, NuGet, Entity Framework, the `dotnet` runtime - please use these tools for research purposes when dealing with specific / narrowly defined questions that may occur.
 
-### /third-party-source-catalog
+### $inspect-dependency-source
 
 Invoke when:
 - Debugging behavior that crosses a NuGet or third-party dependency boundary
 - Exact SDK or package-version semantics affect the diagnosis
 - Third-party source code is needed to validate behavior that public API documentation does not make explicit
 
-Fetch and inspect the exact dependency version or tag before relying on the repository's latest branch or ad hoc raw source downloads.
+Resolve, fetch, and reuse exact dependency source through the user-level shared catalog before relying on a repository's latest branch or ad hoc raw source downloads. Consume the stable `resolve --json` CLI contract; do not read the catalog's internal storage directly.
 
 ## Git Commit Requests
 

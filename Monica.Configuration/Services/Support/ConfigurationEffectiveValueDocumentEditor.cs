@@ -48,6 +48,36 @@ public sealed class ConfigurationEffectiveValueDocumentEditor(
     public ConfigurationStoredValue? ReadValue(ConfigurationDefinition definition, string json, LogicalPath logicalPath)
     {
         var root = JsonNode.Parse(string.IsNullOrWhiteSpace(json) ? "{}" : json) ?? new JsonObject();
+        return ReadValue(definition, root, logicalPath);
+    }
+
+    /// <summary>
+    /// Reads several logical paths after parsing the complete effective value document once.
+    /// </summary>
+    /// <param name="definition">The schema used to navigate the document.</param>
+    /// <param name="json">The complete effective value document.</param>
+    /// <param name="logicalPaths">The logical paths to read, in result order.</param>
+    /// <returns>One stored value for each requested path.</returns>
+    public IReadOnlyList<ConfigurationStoredValue?> ReadValues(
+        ConfigurationDefinition definition,
+        string json,
+        IReadOnlyList<LogicalPath> logicalPaths)
+    {
+        var root = JsonNode.Parse(string.IsNullOrWhiteSpace(json) ? "{}" : json) ?? new JsonObject();
+        var values = new ConfigurationStoredValue?[logicalPaths.Count];
+        for (var index = 0; index < logicalPaths.Count; index++)
+        {
+            values[index] = ReadValue(definition, root, logicalPaths[index]);
+        }
+
+        return values;
+    }
+
+    private static ConfigurationStoredValue? ReadValue(
+        ConfigurationDefinition definition,
+        JsonNode root,
+        LogicalPath logicalPath)
+    {
         if (logicalPath.Depth == 0)
         {
             return ConfigurationStoredValue.FromJson(root.ToJsonString());
@@ -55,15 +85,23 @@ public sealed class ConfigurationEffectiveValueDocumentEditor(
 
         var current = root;
         var currentSchema = definition.Root;
-        foreach (var segment in logicalPath.Segments)
+        for (var segmentIndex = 0; segmentIndex < logicalPath.Segments.Count; segmentIndex++)
         {
+            var segment = logicalPath.Segments[segmentIndex];
             var childSchema = ResolveChildSchema(currentSchema, segment, logicalPath);
-            current = GetExistingChild(current, currentSchema, segment);
-            if (current is null)
+            if (!TryGetExistingChild(current, currentSchema, segment, out var child))
             {
                 return null;
             }
 
+            if (child is null)
+            {
+                return segmentIndex == logicalPath.Segments.Count - 1
+                    ? ConfigurationStoredValue.Null
+                    : null;
+            }
+
+            current = child;
             currentSchema = childSchema;
         }
 
@@ -113,44 +151,84 @@ public sealed class ConfigurationEffectiveValueDocumentEditor(
             $"Path segment '{segment.Value}' does not exist in schema for '{fullPath}'.");
     }
 
-    private static JsonNode? GetExistingChild(
+    private static bool TryGetExistingChild(
         JsonNode current,
         ConfigurationNodeDefinition currentSchema,
-        ConfigurationPathSegment segment)
+        ConfigurationPathSegment segment,
+        out JsonNode? child)
     {
-        return current switch
+        switch (current)
         {
-            JsonObject currentObject when segment is PropertySegment or DictionaryKeySegment => currentObject[segment.Value],
-            JsonArray currentArray => GetExistingArrayChild(currentArray, currentSchema, segment),
-            _ => null
-        };
+            case JsonObject currentObject when segment is PropertySegment or DictionaryKeySegment:
+                return TryGetObjectValue(currentObject, segment.Value, out child);
+            case JsonArray currentArray:
+                return TryGetExistingArrayChild(currentArray, currentSchema, segment, out child);
+            default:
+                child = null;
+                return false;
+        }
     }
 
-    private static JsonNode? GetExistingArrayChild(
+    private static bool TryGetExistingArrayChild(
         JsonArray currentArray,
         ConfigurationNodeDefinition listSchema,
-        ConfigurationPathSegment segment)
+        ConfigurationPathSegment segment,
+        out JsonNode? child)
     {
-        return segment switch
+        switch (segment)
         {
-            ListIndexSegment listIndex when listIndex.Index >= 0 && listIndex.Index < currentArray.Count => currentArray[listIndex.Index],
-            ListItemKeySegment itemKey => FindArrayItemByKey(currentArray, listSchema, itemKey.ItemKey),
-            _ => null
-        };
+            case ListIndexSegment listIndex when listIndex.Index >= 0 && listIndex.Index < currentArray.Count:
+                child = currentArray[listIndex.Index];
+                return true;
+            case ListItemKeySegment itemKey:
+                return TryFindArrayItemByKey(currentArray, listSchema, itemKey.ItemKey, out child);
+            default:
+                child = null;
+                return false;
+        }
     }
 
-    private static JsonNode? FindArrayItemByKey(JsonArray currentArray, ConfigurationNodeDefinition listSchema, string itemKey)
+    private static bool TryFindArrayItemByKey(
+        JsonArray currentArray,
+        ConfigurationNodeDefinition listSchema,
+        string itemKey,
+        out JsonNode? item)
     {
         var keyPropertyName = listSchema.ListTemplate?.ItemKeyPropertyName;
         if (string.IsNullOrWhiteSpace(keyPropertyName))
         {
-            return null;
+            item = null;
+            return false;
         }
 
-        return currentArray.FirstOrDefault(item =>
-            item is JsonObject itemObject
-            && itemObject.TryGetPropertyValue(keyPropertyName, out var value)
-            && string.Equals(ReadScalarAsString(value), itemKey, StringComparison.OrdinalIgnoreCase));
+        foreach (var candidate in currentArray)
+        {
+            if (candidate is JsonObject itemObject
+                && TryGetObjectValue(itemObject, keyPropertyName, out var value)
+                && string.Equals(ReadScalarAsString(value), itemKey, StringComparison.OrdinalIgnoreCase))
+            {
+                item = candidate;
+                return true;
+            }
+        }
+
+        item = null;
+        return false;
+    }
+
+    private static bool TryGetObjectValue(JsonObject jsonObject, string propertyName, out JsonNode? value)
+    {
+        foreach (var property in jsonObject)
+        {
+            if (string.Equals(property.Key, propertyName, StringComparison.OrdinalIgnoreCase))
+            {
+                value = property.Value;
+                return true;
+            }
+        }
+
+        value = null;
+        return false;
     }
 
     private static string? ReadScalarAsString(JsonNode? node)

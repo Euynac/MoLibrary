@@ -2,9 +2,11 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Options;
 using Monica.Configuration.Abstractions;
 using Monica.Configuration.EfCore.DbContext;
 using Monica.Configuration.EfCore.Stores;
+using Monica.Configuration.EfCore.Stores.Support;
 using Monica.Configuration.Models;
 using Monica.DependencyInjection.Abstractions;
 using Monica.DependencyInjection.Services;
@@ -68,12 +70,53 @@ public static class ModuleConfigurationEfCoreBuilderExtensions
         {
             optionsAction(serviceProvider, optionsBuilder);
         });
-        services.AddSingleton<DatabaseConfigurationStore>();
+        AddDatabaseConfigurationStores(services);
 
         var serviceProvider = services.BuildServiceProvider();
         return new OwnedConfigurationEffectiveValueStore(
             serviceProvider,
-            serviceProvider.GetRequiredService<DatabaseConfigurationStore>());
+            serviceProvider.GetRequiredService<DatabaseConfigurationEffectiveValueStore>());
+    }
+
+    internal static void AddDatabaseConfigurationStores(IServiceCollection services)
+    {
+        services.TryAddSingleton<ConfigurationDatabaseSchemaManager>(serviceProvider =>
+            new ConfigurationDatabaseSchemaManager(
+                serviceProvider.GetRequiredService<IDbContextOperation<ConfigurationDbContext>>(),
+                serviceProvider.GetRequiredService<IOptions<ModuleConfigurationEfCoreOption>>()));
+        services.TryAddSingleton<ConfigurationDatabase>(serviceProvider =>
+            new ConfigurationDatabase(
+                serviceProvider.GetRequiredService<IDbContextOperation<ConfigurationDbContext>>(),
+                serviceProvider.GetRequiredService<ConfigurationDatabaseSchemaManager>()));
+        services.TryAddSingleton<DatabaseConfigurationStore>(serviceProvider =>
+            new DatabaseConfigurationStore(
+                serviceProvider.GetRequiredService<ConfigurationDatabaseSchemaManager>()));
+        services.TryAddSingleton<DatabaseConfigurationEffectiveValueStore>(serviceProvider =>
+            new DatabaseConfigurationEffectiveValueStore(
+                serviceProvider.GetRequiredService<ConfigurationDatabase>()));
+        services.TryAddSingleton<DatabaseConfigurationHistoryStore>(serviceProvider =>
+            new DatabaseConfigurationHistoryStore(
+                serviceProvider.GetRequiredService<ConfigurationDatabase>()));
+        services.TryAddSingleton<DatabaseConfigurationMetadataStore>(serviceProvider =>
+            new DatabaseConfigurationMetadataStore(
+                serviceProvider.GetRequiredService<ConfigurationDatabase>()));
+        services.TryAddSingleton<DatabaseConfigurationUnifiedVersionStore>(serviceProvider =>
+            new DatabaseConfigurationUnifiedVersionStore(
+                serviceProvider.GetRequiredService<ConfigurationDatabase>()));
+        services.TryAddSingleton<DatabaseConfigurationMutationBatchStore>(serviceProvider =>
+            new DatabaseConfigurationMutationBatchStore(
+                serviceProvider.GetRequiredService<ConfigurationDatabase>()));
+
+        services.Replace(ServiceDescriptor.Singleton<IConfigurationEffectiveValueStore>(serviceProvider =>
+            serviceProvider.GetRequiredService<DatabaseConfigurationEffectiveValueStore>()));
+        services.Replace(ServiceDescriptor.Singleton<IConfigurationHistoryStore>(serviceProvider =>
+            serviceProvider.GetRequiredService<DatabaseConfigurationHistoryStore>()));
+        services.Replace(ServiceDescriptor.Singleton<IConfigurationMetadataStore>(serviceProvider =>
+            serviceProvider.GetRequiredService<DatabaseConfigurationMetadataStore>()));
+        services.Replace(ServiceDescriptor.Singleton<IConfigurationUnifiedVersionStore>(serviceProvider =>
+            serviceProvider.GetRequiredService<DatabaseConfigurationUnifiedVersionStore>()));
+        services.Replace(ServiceDescriptor.Singleton<IConfigurationMutationBatchStore>(serviceProvider =>
+            serviceProvider.GetRequiredService<DatabaseConfigurationMutationBatchStore>()));
     }
 
     private sealed class OwnedConfigurationEffectiveValueStore(
@@ -103,6 +146,13 @@ public static class ModuleConfigurationEfCoreBuilderExtensions
             CancellationToken cancellationToken)
         {
             return inner.GetAsync(definitionKey, cancellationToken);
+        }
+
+        public Task<IReadOnlyList<ConfigurationEffectiveValueDocument?>> GetManyAsync(
+            IReadOnlyList<string> definitionKeys,
+            CancellationToken cancellationToken)
+        {
+            return inner.GetManyAsync(definitionKeys, cancellationToken);
         }
 
         public Task<ConfigurationEffectiveValueDocument> SaveAsync(
@@ -159,17 +209,7 @@ public sealed class ModuleConfigurationEfCore(ModuleConfigurationEfCoreOption op
     /// <inheritdoc />
     public override void ConfigureServices(IServiceCollection services)
     {
-        services.TryAddSingleton<DatabaseConfigurationStore>();
-        services.Replace(ServiceDescriptor.Singleton<IConfigurationEffectiveValueStore>(
-            serviceProvider => serviceProvider.GetRequiredService<DatabaseConfigurationStore>()));
-        services.Replace(ServiceDescriptor.Singleton<IConfigurationHistoryStore>(
-            serviceProvider => serviceProvider.GetRequiredService<DatabaseConfigurationStore>()));
-        services.Replace(ServiceDescriptor.Singleton<IConfigurationMetadataStore>(
-            serviceProvider => serviceProvider.GetRequiredService<DatabaseConfigurationStore>()));
-        services.Replace(ServiceDescriptor.Singleton<IConfigurationUnifiedVersionStore>(
-            serviceProvider => serviceProvider.GetRequiredService<DatabaseConfigurationStore>()));
-        services.Replace(ServiceDescriptor.Singleton<IConfigurationMutationBatchStore>(
-            serviceProvider => serviceProvider.GetRequiredService<DatabaseConfigurationStore>()));
+        ModuleConfigurationEfCoreBuilderExtensions.AddDatabaseConfigurationStores(services);
     }
 }
 
@@ -205,13 +245,18 @@ public sealed class ModuleConfigurationEfCoreGuide
 public sealed class ModuleConfigurationEfCoreOption : ModuleOptions<ModuleConfigurationEfCore>
 {
     /// <summary>
-    /// Gets or sets whether the EF Core store creates Monica.Configuration tables when they are missing.
+    /// Gets or sets whether the EF Core store automatically creates and upgrades the Monica.Configuration schema.
     /// </summary>
     /// <remarks>
     /// This is enabled by default because Monica.Configuration.EfCore is often added to an existing application database
-    /// without a host-owned migration. The initializer only creates the tables owned by <see cref="ConfigurationDbContext"/>
-    /// when the Monica.Configuration table set is absent; it does not run data migrations.
-    /// Disable this when the host manages schema creation through explicit migrations.
+    /// without a host-owned migration. The initializer creates missing Monica.Configuration tables and applies versioned,
+    /// additive upgrades and required data backfills. Disable this when the host controls schema changes explicitly, then
+    /// resolve <see cref="DatabaseConfigurationStore"/> and call
+    /// <see cref="DatabaseConfigurationStore.UpgradeSchemaAsync(CancellationToken)"/> from the host's deployment or
+    /// startup migration step before the configuration stores are used. On a populated earlier schema, a stock generated
+    /// EF Core migration cannot compute provider-independent identities before creating unique indexes; omit or defer
+    /// those generated identity operations and let <c>UpgradeSchemaAsync</c> perform them, or customize the migration to
+    /// perform the equivalent backfill before it creates the indexes and advances the Configuration schema marker.
     /// </remarks>
-    public bool AutoCreateSchema { get; set; } = true;
+    public bool AutoManageSchema { get; set; } = true;
 }

@@ -244,7 +244,13 @@ public enum ConfigurationPostCommitIssueKind
     /// <summary>
     /// Unified-version capture failed after a non-transactional persistence boundary.
     /// </summary>
-    UnifiedVersionCapture
+    UnifiedVersionCapture,
+
+    /// <summary>
+    /// Persisted values reloaded successfully, but the resulting effective configuration did not match the
+    /// operation's reviewed postcondition.
+    /// </summary>
+    EffectiveValueVerification
 }
 
 /// <summary>

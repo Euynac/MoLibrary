@@ -1,3 +1,4 @@
+using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Monica.Configuration.Abstractions;
@@ -16,6 +17,7 @@ namespace Monica.Configuration.Services;
 /// </summary>
 internal sealed partial class ConfigurationMutationGroupApplyService(
     ConfigurationMutationPlanner mutationPlanner,
+    ConfigurationDefinitionResolver definitionResolver,
     IConfigurationEffectiveValueStore effectiveValueStore,
     IConfigurationMutationBatchStore batchStore,
     IConfigurationHistoryStore historyStore,
@@ -23,16 +25,37 @@ internal sealed partial class ConfigurationMutationGroupApplyService(
     IConfigurationSourceInspector sourceInspector,
     IConfigurationJsonFileSourceWriter sourceWriter,
     ConfigurationEffectiveValueSeedFactory seedFactory,
+    ConfigurationEffectiveSnapshotReader effectiveSnapshotReader,
     ConfigurationEffectiveValueDocumentEditor documentEditor,
-    ConfigurationUnifiedVersionSnapshotFactory unifiedVersionSnapshotFactory,
+    IConfigurationUnifiedVersionCoordinator unifiedVersionCoordinator,
     IConfigurationReloadCoordinator reloadCoordinator,
+    ConfigurationRuntimeSnapshotLock runtimeSnapshotLock,
     ConfigurationReloadNotificationDispatcher notificationDispatcher,
     IOptions<ModuleConfigurationOption> moduleOptions,
     ConfigurationMetricsRecorder metricsRecorder,
     ILogger<ConfigurationMutationGroupApplyService> logger)
     : IConfigurationMutationGroupApplyService
 {
+    private static readonly SemaphoreSlim PROCESS_APPLY_LOCK = new(1, 1);
+
     public async Task<ConfigurationMutationGroupApplyResult> ApplyAsync(
+        ConfigurationMutationGroupApplyRequest request,
+        CancellationToken cancellationToken)
+    {
+        // Keep persistence, reload, postcondition verification, and unified capture in one process-local order.
+        // Provider reloads are separately excluded while the verified runtime snapshot is captured.
+        await PROCESS_APPLY_LOCK.WaitAsync(cancellationToken);
+        try
+        {
+            return await ApplyCoreAsync(request, cancellationToken);
+        }
+        finally
+        {
+            PROCESS_APPLY_LOCK.Release();
+        }
+    }
+
+    private async Task<ConfigurationMutationGroupApplyResult> ApplyCoreAsync(
         ConfigurationMutationGroupApplyRequest request,
         CancellationToken cancellationToken)
     {
@@ -52,7 +75,8 @@ internal sealed partial class ConfigurationMutationGroupApplyService(
             prepared.Add(await mutationPlanner.PrepareAsync(command, context, cancellationToken));
         }
 
-        ValidateExternalTargets(prepared);
+        ValidateReviewedSourceChains(prepared);
+        ValidateTargets(prepared);
         var monicaMutations = prepared
             .Where(static mutation => mutation.Command.Target is ConfigurationEffectiveStoreMutationTarget)
             .ToArray();
@@ -75,7 +99,11 @@ internal sealed partial class ConfigurationMutationGroupApplyService(
                 monicaMutations,
                 externalMutations.Length > 0,
                 cancellationToken);
-            var commit = await batchStore.CommitAsync(plan.CommitRequest, cancellationToken);
+            var commit = await runtimeSnapshotLock.ExecuteAsync(token =>
+            {
+                ValidateReviewedSourceChains(monicaMutations);
+                return batchStore.CommitAsync(plan.CommitRequest, token);
+            }, cancellationToken);
             mutationGroup = commit.MutationGroup;
             committedDocuments = commit.Documents;
             monicaPersistenceFailed = commit.Failure is not null;
@@ -161,20 +189,14 @@ internal sealed partial class ConfigurationMutationGroupApplyService(
             .Where(static outcome => outcome.Status == ConfigurationMutationOutcomeStatus.Applied)
             .ToArray();
         var allApplied = appliedOutcomes.Length == orderedOutcomes.Length;
+        var groupFinalizationSucceeded = true;
 
-        if (externalMutations.Length > 0)
-        {
-            mutationGroup = await FinalizeMixedOrExternalGroupAsync(
-                mutationGroup,
-                appliedOutcomes,
-                allApplied,
-                postCommitIssues,
-                cancellationToken);
-        }
-
+        var runtimeReloadSucceeded = true;
         if (committedDocuments.Count > 0)
         {
-            postCommitIssues.AddRange(await ReloadCommittedDefinitionsAsync(committedDocuments, cancellationToken));
+            var reloadIssues = await ReloadCommittedDefinitionsAsync(committedDocuments, cancellationToken);
+            runtimeReloadSucceeded = reloadIssues.Count == 0;
+            postCommitIssues.AddRange(reloadIssues);
         }
 
         if (externalMutations.Any(mutation =>
@@ -187,6 +209,7 @@ internal sealed partial class ConfigurationMutationGroupApplyService(
             }
             catch (Exception ex)
             {
+                runtimeReloadSucceeded = false;
                 logger.LogWarning(
                     ex,
                     "External configuration sources were saved, but runtime configuration reload failed for group {GroupId}.",
@@ -199,6 +222,71 @@ internal sealed partial class ConfigurationMutationGroupApplyService(
                     Detail = ex.ToString()
                 });
             }
+        }
+
+        if (externalMutations.Length > 0)
+        {
+            var finalization = await FinalizeMixedOrExternalGroupAsync(
+                mutationGroup,
+                appliedOutcomes,
+                allApplied,
+                postCommitIssues,
+                cancellationToken);
+            mutationGroup = finalization.MutationGroup;
+            groupFinalizationSucceeded = finalization.Succeeded;
+        }
+
+        if (allApplied && runtimeReloadSucceeded)
+        {
+            await runtimeSnapshotLock.ExecuteAsync(async stableRuntimeCancellationToken =>
+            {
+                var effectiveValuesVerified = true;
+                if (request.ExpectedEffectiveValues.Count > 0)
+                {
+                    var verificationIssues = await VerifyExpectedEffectiveValuesAsync(
+                        request.ExpectedEffectiveValues,
+                        stableRuntimeCancellationToken);
+                    effectiveValuesVerified = verificationIssues.Count == 0;
+                    postCommitIssues.AddRange(verificationIssues);
+                }
+
+                if (!groupFinalizationSucceeded || !effectiveValuesVerified)
+                {
+                    return;
+                }
+
+                try
+                {
+                    await unifiedVersionCoordinator.CaptureMutationGroupAsync(
+                        mutationGroup,
+                        request.ExpectedEffectiveValues,
+                        stableRuntimeCancellationToken);
+                }
+                catch (Exception ex)
+                {
+                    logger.LogWarning(
+                        ex,
+                        "Unified configuration version capture failed for mutation group {GroupId}.",
+                        mutationGroup.GroupId);
+                    postCommitIssues.Add(new ConfigurationPostCommitIssue
+                    {
+                        Kind = ConfigurationPostCommitIssueKind.UnifiedVersionCapture,
+                        Source = nameof(IConfigurationUnifiedVersionCoordinator),
+                        Message = "Configuration values were applied, but the unified-version snapshot could not be persisted.",
+                        Detail = ex.ToString()
+                    });
+                }
+            }, cancellationToken);
+        }
+        else if (allApplied && groupFinalizationSucceeded)
+        {
+            postCommitIssues.Add(new ConfigurationPostCommitIssue
+            {
+                Kind = ConfigurationPostCommitIssueKind.UnifiedVersionCapture,
+                Source = nameof(ConfigurationMutationGroupApplyService),
+                Message = "Configuration values were applied, but unified-version capture was skipped because the current process could not reload the committed values.",
+                Detail = "Capturing before a successful reload could persist stale pre-mutation runtime values."
+            });
         }
 
         var monicaRequestIds = monicaMutations
@@ -295,6 +383,91 @@ internal sealed partial class ConfigurationMutationGroupApplyService(
             throw new ConfigurationValidationFailedException(
                 $"Mutation request id '{duplicateRequestId}' is duplicated in the group.");
         }
+
+        var duplicateExpectedDefinition = request.ExpectedEffectiveValues
+            .GroupBy(static expected => expected.DefinitionKey, StringComparer.OrdinalIgnoreCase)
+            .FirstOrDefault(static group => group.Count() > 1)?.Key;
+        if (duplicateExpectedDefinition is not null)
+        {
+            throw new ConfigurationValidationFailedException(
+                $"Expected effective definition '{duplicateExpectedDefinition}' is duplicated in the group.");
+        }
+
+        foreach (var expected in request.ExpectedEffectiveValues)
+        {
+            if (string.IsNullOrWhiteSpace(expected.DefinitionKey))
+            {
+                throw new ConfigurationValidationFailedException(
+                    "Expected effective definition keys cannot be empty.");
+            }
+
+            try
+            {
+                using var document = JsonDocument.Parse(expected.Json);
+            }
+            catch (JsonException ex)
+            {
+                throw new ConfigurationValidationFailedException(
+                    $"Expected effective value for '{expected.DefinitionKey}' is not valid JSON: {ex.Message}");
+            }
+        }
+    }
+
+    private async Task<IReadOnlyList<ConfigurationPostCommitIssue>> VerifyExpectedEffectiveValuesAsync(
+        IReadOnlyList<ConfigurationExpectedEffectiveValue> expectedValues,
+        CancellationToken cancellationToken)
+    {
+        var mismatches = new List<string>();
+        foreach (var expected in expectedValues)
+        {
+            ConfigurationDefinition definition;
+            try
+            {
+                definition = await definitionResolver.GetRequiredAsync(expected.DefinitionKey, cancellationToken);
+            }
+            catch (Exception ex)
+            {
+                logger.LogWarning(
+                    ex,
+                    "Effective-value postcondition verification failed for definition {DefinitionKey}.",
+                    expected.DefinitionKey);
+                mismatches.Add(expected.DefinitionKey);
+                continue;
+            }
+
+            try
+            {
+                var effectiveSnapshot = await effectiveSnapshotReader.ReadAsync(definition, cancellationToken);
+                if (!ConfigurationJsonSemanticComparer.Equals(effectiveSnapshot.Json, expected.Json))
+                {
+                    mismatches.Add(expected.DefinitionKey);
+                }
+            }
+            catch (Exception ex)
+            {
+                logger.LogWarning(
+                    ex,
+                    "Effective-value postcondition verification failed for definition {DefinitionKey}.",
+                    expected.DefinitionKey);
+                mismatches.Add(expected.DefinitionKey);
+            }
+        }
+
+        if (mismatches.Count == 0)
+        {
+            return [];
+        }
+
+        return
+        [
+            new ConfigurationPostCommitIssue
+            {
+                Kind = ConfigurationPostCommitIssueKind.EffectiveValueVerification,
+                Source = nameof(ConfigurationMutationGroupApplyService),
+                Message = "Configuration values were persisted, but the reloaded effective state did not match the reviewed result. Unified-version capture was skipped.",
+                Detail = $"Definitions with mismatched effective values: {string.Join(", ", mismatches.Order(StringComparer.OrdinalIgnoreCase))}."
+            }
+        ];
     }
 
     private static string NormalizeLabel(string label, DateTimeOffset createdTime)
@@ -302,6 +475,24 @@ internal sealed partial class ConfigurationMutationGroupApplyService(
         return string.IsNullOrWhiteSpace(label)
             ? $"Changes {createdTime:yyyy-MM-dd HH:mm}"
             : label.Trim();
+    }
+
+    private void ValidateReviewedSourceChains(IEnumerable<PreparedConfigurationMutation> mutations)
+    {
+        foreach (var mutation in mutations.Where(static mutation =>
+                     !string.IsNullOrWhiteSpace(mutation.Command.ExpectedSourceChainRevision)))
+        {
+            var currentRevision = ConfigurationSourceChainRevision.Compute(
+                sourceInspector.GetSourceChain(mutation.Definition, mutation.Command.LogicalPath));
+            if (!string.Equals(
+                    currentRevision,
+                    mutation.Command.ExpectedSourceChainRevision,
+                    StringComparison.Ordinal))
+            {
+                throw new ConfigurationConcurrencyConflictException(
+                    $"The effective source chain for '{mutation.Definition.DefinitionKey}' at '{mutation.Command.LogicalPath}' changed after review.");
+            }
+        }
     }
 
 }

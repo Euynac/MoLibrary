@@ -1,5 +1,7 @@
 using AwesomeAssertions;
 using Microsoft.Extensions.Options;
+using NSubstitute;
+using Monica.Configuration.Abstractions;
 using Monica.Configuration.Abstractions.Internal;
 using Monica.Configuration.Models;
 using Monica.Configuration.Services;
@@ -57,8 +59,11 @@ public sealed class ConfigurationReloadSignalReceiverTests
         ConfigurationDefinitionRegistry registry,
         RecordingReloadCoordinator coordinator)
     {
+        var metadataStore = Substitute.For<IConfigurationMetadataStore>();
+        var definitionResolver = new ConfigurationDefinitionResolver(registry, metadataStore);
         return new ConfigurationReloadSignalReceiver(
             registry,
+            definitionResolver,
             coordinator,
             Options.Create(new ModuleConfigurationOption
             {

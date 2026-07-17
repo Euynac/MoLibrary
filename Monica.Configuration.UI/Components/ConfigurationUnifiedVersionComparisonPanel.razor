@@ -1,0 +1,54 @@
+@inject IStringLocalizer<ConfigurationUIResource> L
+
+<div class="configuration-version-comparison-panel">
+    <MudPaper Outlined="true" Class="pa-3">
+        <MudStack Spacing="3">
+            <MudStack Row="true" Wrap="Wrap.Wrap" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Spacing="2">
+                <MudStack Spacing="0">
+                    <MudText Typo="Typo.subtitle1">@Title</MudText>
+                    <MudText Typo="Typo.caption" Color="Color.Secondary">@Subtitle</MudText>
+                </MudStack>
+                @if (Comparison is not null)
+                {
+                    <MudChip T="int" Size="Size.Small" Color="Color.Primary" Variant="Variant.Outlined">
+                        @L["Versions:Diff:ChangedDefinitions", Comparison.Changes.Count]
+                    </MudChip>
+                }
+            </MudStack>
+
+            @if (!HasSelection)
+            {
+                <MudAlert Severity="Severity.Info">@L["Versions:List:Empty"]</MudAlert>
+            }
+            else if (Loading)
+            {
+                <MudProgressLinear Indeterminate="true" />
+            }
+            else if (Comparison is null)
+            {
+                <MudAlert Severity="Severity.Warning">@L["Versions:Compare:Unavailable"]</MudAlert>
+            }
+            else
+            {
+                <ConfigurationUnifiedVersionDiffPanel Comparison="Comparison" ShowSummaryHeader="false" />
+            }
+        </MudStack>
+    </MudPaper>
+</div>
+
+@code {
+    [Parameter, EditorRequired]
+    public string Title { get; set; } = string.Empty;
+
+    [Parameter, EditorRequired]
+    public string Subtitle { get; set; } = string.Empty;
+
+    [Parameter]
+    public bool HasSelection { get; set; }
+
+    [Parameter]
+    public bool Loading { get; set; }
+
+    [Parameter]
+    public ConfigurationUnifiedVersionComparison? Comparison { get; set; }
+}

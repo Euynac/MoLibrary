@@ -7,6 +7,8 @@ using Monica.Core.Modularity.Extensions;
 using Monica.DataChannel.Abstractions;
 using Monica.DataChannel.Abstractions.Communication;
 using Monica.DataChannel.Abstractions.Partitioning;
+using Monica.DataChannel.Middlewares;
+using Monica.DataChannel.Models.DaprBinding;
 using Monica.DataChannel.Pipeline;
 
 namespace Monica.DataChannel.Providers.DaprBinding;
@@ -26,6 +28,7 @@ public class DaprBindingEndpoint(
     : CommunicationEndpointBase<DaprBindingOptions>(metadata), IApplicationBuilderConfigurable
 {
     private const string ROUTE_REGISTRY_KEY = "Monica.DataChannel.DaprBinding.RouteRegistry";
+    private readonly MessageReceiveDiagnostics _messageReceiveDiagnostics = new(metadata.InputListenerRoute);
 
     /// <inheritdoc />
     public override async Task ReceiveDataAsync(ChannelDataContext data)
@@ -76,6 +79,7 @@ public class DaprBindingEndpoint(
                 // Dapr can invoke multiple partitions, replicas, or sidecars concurrently. Each callback
                 // awaits the pipeline so the HTTP response still represents completion of that message.
                 var dataContext = new ChannelDataContext(ChannelSide.Outer, body);
+                DecorateInputMetadata(dataContext, MessageReceiveDiagnosticsMiddleware.GetSnapshot(context));
                 if (metadata.EnableInputDispatcher && inputDispatcher != null)
                 {
                     var dispatched = await inputDispatcher.TryDispatchAsync(
@@ -91,12 +95,35 @@ public class DaprBindingEndpoint(
 
                 await SendDataAsync(dataContext);
             })
+            .AddEndpointFilter(new MessageReceiveDiagnosticsMiddleware(_messageReceiveDiagnostics))
             .WithMonicaEndpoint()
             .WithName($"DataChannel.DaprBinding:{route}")
             .WithTags("DataChannel")
             .WithSummary("Receive a Dapr input binding message")
             .WithDescription("Forwards a Dapr input binding payload into its configured data-channel pipeline.");
         });
+    }
+
+    private static void DecorateInputMetadata(
+        ChannelDataContext dataContext,
+        MessageReceiveDiagnosticsSnapshot? receiveSnapshot)
+    {
+        if (receiveSnapshot is null)
+        {
+            return;
+        }
+
+        var inputMetadata = (IDictionary<string, object?>)dataContext.Metadata;
+        inputMetadata["Message.Receive.Route"] = receiveSnapshot.Route;
+        inputMetadata["Message.Receive.TraceIdentifier"] = receiveSnapshot.TraceIdentifier;
+        inputMetadata["Message.Receive.IsConcurrentReceive"] = receiveSnapshot.IsConcurrentReceive;
+        inputMetadata["Message.Receive.ActiveReceiveCount"] = receiveSnapshot.ActiveReceiveCount;
+        inputMetadata["Message.Receive.MaxConcurrentReceiveCount"] = receiveSnapshot.MaxConcurrentReceiveCount;
+        inputMetadata["Message.Receive.MessagePerSecond"] = receiveSnapshot.MessagePerSecond;
+        inputMetadata["Message.Receive.LastSecondCompletedMessageCount"] = receiveSnapshot.LastSecondCompletedMessageCount;
+        inputMetadata["Message.Receive.TotalReceivedMessageCount"] = receiveSnapshot.TotalReceivedMessageCount;
+        inputMetadata["Message.Receive.ThreadId"] = receiveSnapshot.ThreadId;
+        inputMetadata["Message.Receive.TimestampUtc"] = receiveSnapshot.TimestampUtc;
     }
 
     private bool ClaimRoute(IApplicationBuilder app, string route)

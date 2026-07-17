@@ -24,6 +24,31 @@ public sealed record ConfigurationMutationGroupApplyRequest
     /// Gets the commands in deterministic application order.
     /// </summary>
     public IReadOnlyList<ConfigurationMutationCommand> Commands { get; init; } = [];
+
+    /// <summary>
+    /// Gets optional definition-level effective values that must be observed after persistence and runtime reload.
+    /// </summary>
+    /// <remarks>
+    /// A mismatch is reported as a post-commit issue and prevents unified-version capture. This is the final guard
+    /// for operations whose persistence spans providers that cannot participate in one transaction.
+    /// </remarks>
+    public IReadOnlyList<ConfigurationExpectedEffectiveValue> ExpectedEffectiveValues { get; init; } = [];
+}
+
+/// <summary>
+/// Describes one effective definition value that must be observed after a mutation group reloads.
+/// </summary>
+public sealed record ConfigurationExpectedEffectiveValue
+{
+    /// <summary>
+    /// Gets the definition key.
+    /// </summary>
+    public required string DefinitionKey { get; init; }
+
+    /// <summary>
+    /// Gets the expected effective JSON value.
+    /// </summary>
+    public required string Json { get; init; }
 }
 
 /// <summary>
@@ -62,6 +87,23 @@ public sealed record ConfigurationMutationCommand
     public int ExpectedSchemaVersion { get; init; }
 
     /// <summary>
+    /// Gets the optional schema fingerprint reviewed by the caller.
+    /// </summary>
+    /// <remarks>
+    /// When provided, both this fingerprint and <see cref="ExpectedSchemaVersion"/> must still match at apply time.
+    /// This protects reviewed operations from metadata or structural schema replacement that reuses a version number.
+    /// </remarks>
+    public string? ExpectedSchemaHash { get; init; }
+
+    /// <summary>
+    /// Gets the optional revision of the provider chain reviewed for this path.
+    /// </summary>
+    /// <remarks>
+    /// When provided, mutation preparation fails if provider ownership or precedence changed after review.
+    /// </remarks>
+    public string? ExpectedSourceChainRevision { get; init; }
+
+    /// <summary>
     /// Gets the persistence target and its optimistic concurrency token.
     /// </summary>
     public required ConfigurationMutationTarget Target { get; init; }
@@ -80,6 +122,10 @@ public sealed record ConfigurationEffectiveStoreMutationTarget : ConfigurationMu
     /// <summary>
     /// Gets the document version observed when the command was staged.
     /// </summary>
+    /// <remarks>
+    /// Version zero represents an explicitly observed missing document. Null disables the initial version precondition
+    /// and should be reserved for callers that intentionally do not use optimistic concurrency.
+    /// </remarks>
     public long? ExpectedVersion { get; init; }
 }
 

@@ -1,3 +1,4 @@
+using Monica.Configuration.Abstractions;
 using Monica.Configuration.Exceptions;
 using Monica.Configuration.Models;
 using Monica.Configuration.Serialization;
@@ -8,7 +9,8 @@ namespace Monica.Configuration.Services.Support;
 internal sealed class ConfigurationMutationPlanner(
     ConfigurationDefinitionResolver definitionResolver,
     ConfigurationValidationCoordinator validationCoordinator,
-    ConfigurationPathProjector pathProjector)
+    ConfigurationPathProjector pathProjector,
+    IConfigurationSourceInspector sourceInspector)
 {
     public async Task<PreparedConfigurationMutation> PrepareAsync(
         ConfigurationMutationCommand command,
@@ -16,6 +18,7 @@ internal sealed class ConfigurationMutationPlanner(
         CancellationToken cancellationToken)
     {
         var definition = await definitionResolver.GetRequiredAsync(command.DefinitionKey, cancellationToken);
+        ValidateSourceChainRevision(definition, command);
         var targetNode = ResolveTargetNode(definition, command.LogicalPath);
         var request = new ConfigurationMutationRequest
         {
@@ -26,6 +29,7 @@ internal sealed class ConfigurationMutationPlanner(
                 ? ConfigurationRegexTextCodec.NormalizeStoredValue(targetNode, command.Value)
                 : command.Value,
             ExpectedSchemaVersion = command.ExpectedSchemaVersion,
+            ExpectedSchemaHash = command.ExpectedSchemaHash,
             ExpectedValueVersion = command.Target is ConfigurationEffectiveStoreMutationTarget target
                 ? target.ExpectedVersion
                 : null,
@@ -45,6 +49,27 @@ internal sealed class ConfigurationMutationPlanner(
                 ? ConfigurationMutationGranularity.Scalar
                 : ConfigurationMutationGranularity.Container
         };
+    }
+
+    private void ValidateSourceChainRevision(
+        ConfigurationDefinition definition,
+        ConfigurationMutationCommand command)
+    {
+        if (string.IsNullOrWhiteSpace(command.ExpectedSourceChainRevision))
+        {
+            return;
+        }
+
+        var currentRevision = ConfigurationSourceChainRevision.Compute(
+            sourceInspector.GetSourceChain(definition, command.LogicalPath));
+        if (!string.Equals(
+                currentRevision,
+                command.ExpectedSourceChainRevision,
+                StringComparison.Ordinal))
+        {
+            throw new ConfigurationConcurrencyConflictException(
+                $"The effective source chain for '{command.DefinitionKey}' at '{command.LogicalPath}' changed after review.");
+        }
     }
 
     private static ConfigurationNodeDefinition ResolveTargetNode(

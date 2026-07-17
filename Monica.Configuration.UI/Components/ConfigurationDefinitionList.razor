@@ -45,101 +45,109 @@
                             <MudListSubheader>@group.Key</MudListSubheader>
                             @foreach (var definition in group.OrderBy(x => x.DisplayName, StringComparer.OrdinalIgnoreCase))
                             {
-                                var matches = GetNodeMatches(definition);
-                                var pendingCount = GetPendingCount(definition);
-                                var runtimeIssueCount = GetRuntimeValidationCount(definition);
-                                <MudListItem T="ConfigurationDefinitionSummary"
-                                             Value="@definition"
-                                             Icon="@Icons.Material.Filled.Settings"
-                                             Class="@(IsSelected(definition) ? "selected-definition" : null)"
-                                             OnClick="() => SelectedDefinitionChanged.InvokeAsync(definition)">
-                                    <MudStack Spacing="0">
-                                        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1" Class="configuration-definition-title">
-                                            <MudText Typo="Typo.body2">
-                                                <MudHighlighter Text="@definition.DisplayName" HighlightedTexts="@SearchTerms" />
-                                            </MudText>
-                                            @if (!string.IsNullOrWhiteSpace(definition.Description))
-                                            {
-                                                <MudTooltip Text="@definition.Description">
-                                                    <span class="configuration-description-icon" @onclick:stopPropagation="true">
-                                                        <MudIcon Icon="@Icons.Material.Filled.Info"
+                                @if (!definition.CanManage)
+                                {
+                                    <ConfigurationDefinitionUnavailableItem Definition="@definition"
+                                                                            SearchTerms="@SearchTerms" />
+                                }
+                                else
+                                {
+                                    var matches = GetNodeMatches(definition);
+                                    var pendingCount = GetPendingCount(definition);
+                                    var runtimeIssueCount = GetRuntimeValidationCount(definition);
+                                    <MudListItem T="ConfigurationDefinitionSummary"
+                                                 Value="@definition"
+                                                 Icon="@Icons.Material.Filled.Settings"
+                                                 Class="@(IsSelected(definition) ? "selected-definition" : null)"
+                                                 OnClick="() => SelectedDefinitionChanged.InvokeAsync(definition)">
+                                        <MudStack Spacing="0">
+                                            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1" Class="configuration-definition-title">
+                                                <MudText Typo="Typo.body2">
+                                                    <MudHighlighter Text="@definition.DisplayName" HighlightedTexts="@SearchTerms" />
+                                                </MudText>
+                                                @if (!string.IsNullOrWhiteSpace(definition.Description))
+                                                {
+                                                    <MudTooltip Text="@definition.Description">
+                                                        <span class="configuration-description-icon" @onclick:stopPropagation="true">
+                                                            <MudIcon Icon="@Icons.Material.Filled.Info"
+                                                                     Size="Size.Small"
+                                                                     Color="Color.Info" />
+                                                        </span>
+                                                    </MudTooltip>
+                                                }
+                                                @if (definition.Origin == ConfigurationDefinitionOrigin.PublishedMetadata)
+                                                {
+                                                    <MudTooltip Text="@L["State:Definitions:PublishedMetadataTooltip"]">
+                                                        <MudChip T="string"
                                                                  Size="Size.Small"
-                                                                 Color="Color.Info" />
-                                                    </span>
-                                                </MudTooltip>
-                                            }
-                                            @if (definition.Origin == ConfigurationDefinitionOrigin.PublishedMetadata)
+                                                                 Color="Color.Info"
+                                                                 Variant="Variant.Outlined">
+                                                            @L["State:Definitions:PublishedMetadata"]
+                                                        </MudChip>
+                                                    </MudTooltip>
+                                                }
+                                                <ConfigurationSchemaMetadataChip SchemaVersion="@definition.SchemaVersion"
+                                                                                 SchemaHash="@definition.SchemaHash"
+                                                                                 Placement="Placement.Right" />
+                                                @if (pendingCount > 0)
+                                                {
+                                                    <MudTooltip Text="@L["State:Footer:PendingCount"]">
+                                                        <MudChip T="int"
+                                                                 Size="Size.Small"
+                                                                 Color="Color.Warning"
+                                                                 Variant="Variant.Filled"
+                                                                 Class="configuration-definition-pending-count">
+                                                            @pendingCount
+                                                        </MudChip>
+                                                    </MudTooltip>
+                                                }
+                                                @if (runtimeIssueCount > 0)
+                                                {
+                                                    <MudTooltip Text="@L["State:RuntimeValidation:DefinitionIssueCount"]">
+                                                        <MudChip T="int"
+                                                                 Size="Size.Small"
+                                                                 Color="Color.Error"
+                                                                 Variant="Variant.Filled"
+                                                                 Class="configuration-definition-validation-count">
+                                                            @runtimeIssueCount
+                                                        </MudChip>
+                                                    </MudTooltip>
+                                                }
+                                            </MudStack>
+                                            <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                                <MudHighlighter Text="@GetOptionsTypeName(definition)" HighlightedTexts="@SearchTerms" />
+                                            </MudText>
+                                            @if (matches.Count > 0)
                                             {
-                                                <MudTooltip Text="@L["State:Definitions:PublishedMetadataTooltip"]">
-                                                    <MudChip T="string"
-                                                             Size="Size.Small"
-                                                             Color="Color.Info"
-                                                             Variant="Variant.Outlined">
-                                                        @L["State:Definitions:PublishedMetadata"]
-                                                    </MudChip>
-                                                </MudTooltip>
-                                            }
-                                            <ConfigurationSchemaMetadataChip SchemaVersion="@definition.SchemaVersion"
-                                                                             SchemaHash="@definition.SchemaHash"
-                                                                             Placement="Placement.Right" />
-                                            @if (pendingCount > 0)
-                                            {
-                                                <MudTooltip Text="@L["State:Footer:PendingCount"]">
-                                                    <MudChip T="int"
-                                                             Size="Size.Small"
-                                                             Color="Color.Warning"
-                                                             Variant="Variant.Filled"
-                                                             Class="configuration-definition-pending-count">
-                                                        @pendingCount
-                                                    </MudChip>
-                                                </MudTooltip>
-                                            }
-                                            @if (runtimeIssueCount > 0)
-                                            {
-                                                <MudTooltip Text="@L["State:RuntimeValidation:DefinitionIssueCount"]">
-                                                    <MudChip T="int"
-                                                             Size="Size.Small"
-                                                             Color="Color.Error"
-                                                             Variant="Variant.Filled"
-                                                             Class="configuration-definition-validation-count">
-                                                        @runtimeIssueCount
-                                                    </MudChip>
-                                                </MudTooltip>
+                                                <div class="configuration-node-match-list">
+                                                    @foreach (var match in matches.Take(MAX_VISIBLE_NODE_MATCHES))
+                                                    {
+                                                        <div @onclick:stopPropagation="true">
+                                                            <MudButton Variant="Variant.Text"
+                                                                       Size="Size.Small"
+                                                                       StartIcon="@Icons.Material.Filled.SubdirectoryArrowRight"
+                                                                       Class="configuration-node-match-button"
+                                                                       OnClick="@(() => NodeSearchMatchSelected.InvokeAsync(match))">
+                                                                <MudStack Spacing="0" AlignItems="AlignItems.Start" Class="configuration-node-match-text">
+                                                                    <MudText Typo="Typo.caption">
+                                                                        <MudHighlighter Text="@match.DisplayName" HighlightedTexts="@SearchTerms" />
+                                                                    </MudText>
+                                                                    <MudText Typo="Typo.caption" Color="Color.Secondary">@match.PathLabel</MudText>
+                                                                </MudStack>
+                                                            </MudButton>
+                                                        </div>
+                                                    }
+                                                    @if (matches.Count > MAX_VISIBLE_NODE_MATCHES)
+                                                    {
+                                                        <MudChip T="int" Size="Size.Small" Variant="Variant.Outlined">
+                                                            +@(matches.Count - MAX_VISIBLE_NODE_MATCHES)
+                                                        </MudChip>
+                                                    }
+                                                </div>
                                             }
                                         </MudStack>
-                                        <MudText Typo="Typo.caption" Color="Color.Secondary">
-                                            <MudHighlighter Text="@GetOptionsTypeName(definition)" HighlightedTexts="@SearchTerms" />
-                                        </MudText>
-                                        @if (matches.Count > 0)
-                                        {
-                                            <div class="configuration-node-match-list">
-                                                @foreach (var match in matches.Take(MAX_VISIBLE_NODE_MATCHES))
-                                                {
-                                                    <div @onclick:stopPropagation="true">
-                                                        <MudButton Variant="Variant.Text"
-                                                                   Size="Size.Small"
-                                                                   StartIcon="@Icons.Material.Filled.SubdirectoryArrowRight"
-                                                                   Class="configuration-node-match-button"
-                                                                   OnClick="@(() => NodeSearchMatchSelected.InvokeAsync(match))">
-                                                            <MudStack Spacing="0" AlignItems="AlignItems.Start" Class="configuration-node-match-text">
-                                                                <MudText Typo="Typo.caption">
-                                                                    <MudHighlighter Text="@match.DisplayName" HighlightedTexts="@SearchTerms" />
-                                                                </MudText>
-                                                                <MudText Typo="Typo.caption" Color="Color.Secondary">@match.PathLabel</MudText>
-                                                            </MudStack>
-                                                        </MudButton>
-                                                    </div>
-                                                }
-                                                @if (matches.Count > MAX_VISIBLE_NODE_MATCHES)
-                                                {
-                                                    <MudChip T="int" Size="Size.Small" Variant="Variant.Outlined">
-                                                        +@(matches.Count - MAX_VISIBLE_NODE_MATCHES)
-                                                    </MudChip>
-                                                }
-                                            </div>
-                                        }
-                                    </MudStack>
-                                </MudListItem>
+                                    </MudListItem>
+                                }
                             }
                         }
                     </MudList>
@@ -179,11 +187,13 @@
                                            Disabled="@(PendingCount == 0 && ValidationIssueCount == 0)"
                                            OnClick="UndoAll" />
                         </MudTooltip>
-                        <MudTooltip Text="@L["State:Actions:SaveGroup"]">
+                        <MudTooltip Text="@(CanSaveGroup
+                            ? L["State:Actions:SaveGroup"]
+                            : L["State:Footer:SaveBlockedMetadata"])">
                             <MudIconButton Icon="@Icons.Material.Filled.Save"
                                            Color="Color.Primary"
                                            Variant="Variant.Filled"
-                                           Disabled="@(PendingCount == 0 && ValidationIssueCount == 0)"
+                                           Disabled="@(!CanSaveGroup || (PendingCount == 0 && ValidationIssueCount == 0))"
                                            OnClick="SaveGroup" />
                         </MudTooltip>
                     </MudStack>
@@ -213,6 +223,7 @@
     [Parameter] public int PendingCount { get; set; }
     [Parameter] public int ValidationIssueCount { get; set; }
     [Parameter] public int RuntimeValidationIssueCount { get; set; }
+    [Parameter] public bool CanSaveGroup { get; set; } = true;
     [Parameter] public EventCallback SaveGroup { get; set; }
     [Parameter] public EventCallback UndoAll { get; set; }
 
@@ -284,7 +295,15 @@
                || ContainsAny(definition.SectionPath)
                || ContainsAny(definition.SchemaHash)
                || ContainsAny(definition.FromProject)
-               || ContainsAny(definition.Category);
+               || ContainsAny(definition.Category)
+               || ContainsAny(ConfigurationDefinitionMetadataDiagnosticFormatter.AvailabilityLabel(definition.Availability, L))
+               || (definition.MetadataDiagnostic is { } diagnostic
+                   && ContainsAny(ConfigurationDefinitionMetadataDiagnosticFormatter.IssueLabel(diagnostic.Kind, L)))
+               || (!definition.CanManage
+                   && definition.MetadataDiagnostic is null
+                   && ContainsAny(L["State:Definitions:MetadataStoreUnavailableForDefinition"].Value))
+               || ContainsAny(definition.MetadataDiagnostic?.Message)
+               || ContainsAny(definition.MetadataDiagnostic?.ErrorType);
     }
 
     private string GetGroupName(ConfigurationDefinitionSummary definition)

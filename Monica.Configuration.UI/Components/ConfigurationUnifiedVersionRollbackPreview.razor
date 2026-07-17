@@ -1,0 +1,370 @@
+@inject ConfigurationFacade Facade
+@inject IStringLocalizer<ConfigurationUIResource> L
+
+<div class="configuration-unified-version-rollback-preview">
+    @if (_loading)
+    {
+        <MudProgressLinear Indeterminate="true" />
+    }
+    else
+    {
+        <MudStack Spacing="2">
+            <MudStack Row="true" Wrap="Wrap.Wrap" AlignItems="AlignItems.Center" Spacing="1">
+                <MudChip T="string" Size="Size.Small" Color="Color.Primary" Variant="Variant.Outlined">
+                    @L["Versions:Rollback:Summary:Changes", Preview.ChangeCount]
+                </MudChip>
+                <MudChip T="string" Size="Size.Small" Color="Color.Info" Variant="Variant.Outlined">
+                    @L["Versions:Rollback:Summary:Writes", Preview.MutationCount]
+                </MudChip>
+                @if (Preview.FindingCount > 0)
+                {
+                    <MudChip T="string" Size="Size.Small" Color="Color.Error" Variant="Variant.Outlined">
+                        @L["Versions:Rollback:Summary:Findings", Preview.FindingCount]
+                    </MudChip>
+                }
+                <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">
+                    @L["Versions:Rollback:Summary:Unchanged", Preview.UnchangedCount]
+                </MudChip>
+                @if (Preview.CompatibleSchemaDriftCount > 0)
+                {
+                    <MudChip T="string" Size="Size.Small" Color="Color.Warning" Variant="Variant.Outlined">
+                        @L["Versions:Rollback:Summary:CompatibleSchemaDrift", Preview.CompatibleSchemaDriftCount]
+                    </MudChip>
+                }
+                @if (Preview.BlockedCount > 0)
+                {
+                    <MudChip T="string" Size="Size.Small" Color="Color.Error" Variant="Variant.Outlined">
+                        @L["Versions:Rollback:Summary:Blocked", Preview.BlockedCount]
+                    </MudChip>
+                }
+            </MudStack>
+
+            @if (_rows.Count > 0)
+            {
+                <MudExpansionPanels MultiExpansion="true" Elevation="0" Dense="true">
+                    @foreach (var row in _rows)
+                    {
+                        <MudExpansionPanel Expanded="@(_rows.Count == 1)" KeepContentAlive="false">
+                            <TitleContent>
+                                <div class="configuration-unified-version-rollback-target-title">
+                                    <MudStack Row="true" Wrap="Wrap.Wrap" AlignItems="AlignItems.Center" Spacing="1">
+                                        <MudChip T="string"
+                                                 Size="Size.Small"
+                                                 Color="@StatusColor(row.Target.Status)"
+                                                 Variant="Variant.Outlined">
+                                            @StatusText(row.Target.Status)
+                                        </MudChip>
+                                        <MudText Typo="Typo.subtitle2">@row.Target.DisplayName</MudText>
+                                        <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">
+                                            @row.Target.DefinitionKey
+                                        </MudChip>
+                                    </MudStack>
+                                </div>
+                            </TitleContent>
+                            <ChildContent>
+                                <MudStack Spacing="2">
+                                    @if (row.Target.Mutations.Count > 0)
+                                    {
+                                        <div class="configuration-unified-version-rollback-source">
+                                            <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                                @(row.Target.IsBlocked
+                                                    ? L["Versions:Rollback:Fields:BlockingFindings"]
+                                                    : L["Versions:Rollback:Fields:PlannedWrites"])
+                                            </MudText>
+                                            <MudStack Spacing="1">
+                                                @foreach (var mutation in row.Target.Mutations)
+                                                {
+                                                    <div class="configuration-unified-version-rollback-write">
+                                                        <MudStack Row="true" Wrap="Wrap.Wrap" AlignItems="AlignItems.Center" Spacing="1">
+                                                            <MudChip T="string"
+                                                                     Size="Size.Small"
+                                                                     Color="@MutationColor(mutation.Status)"
+                                                                     Variant="Variant.Outlined">
+                                                                @MutationKindText(mutation.MutationKind)
+                                                            </MudChip>
+                                                            <code>@DisplayPath(row, mutation.LogicalPath)</code>
+                                                            <MudText Typo="Typo.body2">@MutationSourceText(mutation)</MudText>
+                                                        </MudStack>
+                                                        @if (!ShouldHidePath(row, mutation.LogicalPath)
+                                                             && !string.IsNullOrWhiteSpace(mutation.ConfigurationPath))
+                                                        {
+                                                            <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                                                @L["Versions:Rollback:Fields:ConfigurationPath", mutation.ConfigurationPath]
+                                                            </MudText>
+                                                        }
+                                                        @if (!string.IsNullOrWhiteSpace(mutation.BlockingSourceDisplayName))
+                                                        {
+                                                            <MudText Typo="Typo.caption" Color="Color.Warning">
+                                                                @BlockingSourceText(mutation)
+                                                            </MudText>
+                                                        }
+                                                    </div>
+                                                }
+                                            </MudStack>
+                                        </div>
+                                    }
+
+                                    @if (row.Target.ValidationIssues.Count > 0)
+                                    {
+                                        <MudAlert Severity="Severity.Error" Variant="Variant.Outlined" Dense="true">
+                                            <MudText Typo="Typo.subtitle2">
+                                                @L["Versions:Rollback:Validation:IssueCount", row.Target.ValidationIssues.Count]
+                                            </MudText>
+                                            <ul class="configuration-unified-version-rollback-validation-issues">
+                                                @foreach (var issue in row.Target.ValidationIssues)
+                                                {
+                                                    <li>
+                                                        <code>@(issue.DetailsHidden
+                                                            ? L["Versions:Rollback:Fields:HiddenPath"]
+                                                            : DisplayPath(row, issue.LogicalPath))</code>
+                                                        <span>@(issue.DetailsHidden || ShouldHidePath(row, issue.LogicalPath)
+                                                            ? L["Versions:Rollback:Validation:DetailHidden"]
+                                                            : L["Versions:Rollback:Validation:Incompatible"])</span>
+                                                    </li>
+                                                }
+                                            </ul>
+                                        </MudAlert>
+                                    }
+
+                                    @if (row.Target.Status == ConfigurationUnifiedVersionApplyTargetStatus.RuntimeOutOfSync)
+                                    {
+                                        <MudAlert Severity="Severity.Error" Variant="Variant.Outlined" Dense="true">
+                                            @L["Versions:Rollback:Messages:RuntimeOutOfSync"]
+                                        </MudAlert>
+                                    }
+
+                                    @if (row.HasSchemaDrift)
+                                    {
+                                        <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined" Dense="true">
+                                            @L["State:Value:SchemaDriftHiddenNotice"]
+                                        </MudAlert>
+                                    }
+                                    @if (row.HasHiddenChanges)
+                                    {
+                                        <MudAlert Severity="Severity.Info" Variant="Variant.Outlined" Dense="true">
+                                            @L["State:Value:HiddenChangedNotice"]
+                                        </MudAlert>
+                                    }
+
+                                    <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                        @L["Versions:Rollback:Fields:DiffDirection"]
+                                    </MudText>
+                                    <div class="configuration-unified-version-rollback-diff">
+                                        <DiffViewer OriginText="@row.CurrentText"
+                                                    NewText="@row.TargetText"
+                                                    Options="@_diffOptions"
+                                                    ViewMode="EDiffViewMode.Split" />
+                                    </div>
+                                </MudStack>
+                            </ChildContent>
+                        </MudExpansionPanel>
+                    }
+                </MudExpansionPanels>
+            }
+        </MudStack>
+    }
+</div>
+
+@code {
+    private readonly DiffHighlightOptions _diffOptions = new()
+    {
+        Mode = EDiffHighlightMode.Line,
+        ContextLines = 4,
+        MaxCharacterDiffLength = 20000
+    };
+
+    private readonly Dictionary<string, ConfigurationDefinition> _definitions =
+        new(StringComparer.OrdinalIgnoreCase);
+    private IReadOnlyList<RollbackPreviewRow> _rows = [];
+    private string? _previewToken;
+    private bool _loading;
+
+    [Parameter, EditorRequired]
+    public ConfigurationUnifiedVersionApplyPreview Preview { get; set; } = null!;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        var previewToken = $"{Preview.Version}:{Preview.PlanToken}";
+        if (string.Equals(_previewToken, previewToken, StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        _loading = true;
+        _definitions.Clear();
+        await LoadDefinitionsAsync();
+
+        _rows = Preview.ChangedTargets.Select(CreateRow).ToArray();
+        _previewToken = previewToken;
+        _loading = false;
+    }
+
+    private async Task LoadDefinitionsAsync()
+    {
+        foreach (var definitionKey in Preview.ChangedTargets
+                     .Select(static target => target.DefinitionKey)
+                     .Distinct(StringComparer.OrdinalIgnoreCase))
+        {
+            var result = await Facade.GetDefinitionAsync(definitionKey);
+            if (!result.IsFailed(out _, out var detail))
+            {
+                _definitions[definitionKey] = detail.Definition;
+            }
+        }
+    }
+
+    private RollbackPreviewRow CreateRow(ConfigurationUnifiedVersionApplyTarget target)
+    {
+        _definitions.TryGetValue(target.DefinitionKey, out var definition);
+        var hasSchemaDrift = HasSchemaDrift(target, definition);
+        var display = ConfigurationUnifiedVersionJsonFormatter.FormatComparisonForDisplay(
+            target.CurrentJson,
+            target.TargetJson,
+            definition,
+            L["State:Value:Sensitive"],
+            L["State:Value:Hidden"],
+            L["State:Value:HiddenBeforeChange"],
+            L["State:Value:HiddenAfterChange"],
+            hasSchemaDrift);
+
+        return new RollbackPreviewRow(
+            target,
+            display.OriginText,
+            display.TargetText,
+            display.HasHiddenChanges,
+            hasSchemaDrift);
+    }
+
+    private static bool HasSchemaDrift(
+        ConfigurationUnifiedVersionApplyTarget target,
+        ConfigurationDefinition? currentDefinition)
+    {
+        return currentDefinition is null
+               || !string.Equals(
+                   target.CapturedSchemaHash,
+                   target.CurrentSchemaHash,
+                   StringComparison.Ordinal)
+               || !string.Equals(
+                   target.CurrentSchemaHash,
+                   currentDefinition.SchemaHash,
+                   StringComparison.Ordinal);
+    }
+
+    private string MutationSourceText(ConfigurationUnifiedVersionApplyMutation mutation)
+    {
+        return string.IsNullOrWhiteSpace(mutation.SourceDisplayName)
+            ? L["Versions:Rollback:Fields:NoWritableTarget"]
+            : mutation.SourceDisplayName;
+    }
+
+    private string DisplayPath(RollbackPreviewRow row, string logicalPath)
+    {
+        return ShouldHidePath(row, logicalPath)
+            ? L["Versions:Rollback:Fields:HiddenPath"]
+            : string.IsNullOrWhiteSpace(logicalPath)
+                ? L["Versions:Rollback:Fields:DefinitionRoot"]
+                : logicalPath;
+    }
+
+    private bool ShouldHidePath(RollbackPreviewRow row, string logicalPath)
+    {
+        if (row.HasSchemaDrift
+            || !_definitions.TryGetValue(row.Target.DefinitionKey, out var definition))
+        {
+            return true;
+        }
+
+        try
+        {
+            var current = definition.Root;
+            if (current.IsSensitive)
+            {
+                return true;
+            }
+
+            foreach (var segment in LogicalPath.Parse(logicalPath).Segments)
+            {
+                current = segment switch
+                {
+                    PropertySegment property => current.Children.FirstOrDefault(child =>
+                        string.Equals(child.Name, property.Name, StringComparison.OrdinalIgnoreCase)),
+                    DictionaryKeySegment => current.DictionaryTemplate?.ValueTemplate,
+                    ListItemKeySegment or ListIndexSegment => current.ListTemplate?.ItemTemplate,
+                    _ => null
+                };
+
+                if (current is null || current.IsSensitive)
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+        catch (ConfigurationPathFormatException)
+        {
+            return true;
+        }
+    }
+
+    private string BlockingSourceText(ConfigurationUnifiedVersionApplyMutation mutation)
+    {
+        return mutation.Status switch
+        {
+            ConfigurationUnifiedVersionApplyMutationStatus.LowerPriorityFallback =>
+                L["Versions:Rollback:Fields:LowerPriorityFallback", mutation.BlockingSourceDisplayName ?? string.Empty],
+            ConfigurationUnifiedVersionApplyMutationStatus.CompositeSourceConflict =>
+                L["Versions:Rollback:Fields:CompositeSourceConflict", mutation.BlockingSourceDisplayName ?? string.Empty],
+            _ => L["Versions:Rollback:Fields:BlockingSource", mutation.BlockingSourceDisplayName ?? string.Empty]
+        };
+    }
+
+    private string MutationKindText(ConfigurationMutationKind mutationKind)
+    {
+        return mutationKind == ConfigurationMutationKind.Set
+            ? L["Versions:Rollback:MutationKinds:Set"]
+            : L["Versions:Rollback:MutationKinds:Remove"];
+    }
+
+    private static Color MutationColor(ConfigurationUnifiedVersionApplyMutationStatus status)
+    {
+        return status == ConfigurationUnifiedVersionApplyMutationStatus.Ready
+            ? Color.Info
+            : Color.Error;
+    }
+
+    private string StatusText(ConfigurationUnifiedVersionApplyTargetStatus status)
+    {
+        return status switch
+        {
+            ConfigurationUnifiedVersionApplyTargetStatus.Unchanged => L["Versions:Rollback:Statuses:Unchanged"],
+            ConfigurationUnifiedVersionApplyTargetStatus.Ready => L["Versions:Rollback:Statuses:Ready"],
+            ConfigurationUnifiedVersionApplyTargetStatus.CompatibleSchemaDrift => L["Versions:Rollback:Statuses:CompatibleSchemaDrift"],
+            ConfigurationUnifiedVersionApplyTargetStatus.InvalidValue => L["Versions:Rollback:Statuses:InvalidValue"],
+            ConfigurationUnifiedVersionApplyTargetStatus.MissingDefinition => L["Versions:Rollback:Statuses:MissingDefinition"],
+            ConfigurationUnifiedVersionApplyTargetStatus.RuntimeOutOfSync => L["Versions:Rollback:Statuses:RuntimeOutOfSync"],
+            ConfigurationUnifiedVersionApplyTargetStatus.ReadOnlyOverride => L["Versions:Rollback:Statuses:ReadOnlyOverride"],
+            ConfigurationUnifiedVersionApplyTargetStatus.CompositeSourceConflict => L["Versions:Rollback:Statuses:CompositeSourceConflict"],
+            ConfigurationUnifiedVersionApplyTargetStatus.LowerPriorityFallback => L["Versions:Rollback:Statuses:LowerPriorityFallback"],
+            _ => L["Versions:Rollback:Statuses:UnsupportedSource"]
+        };
+    }
+
+    private static Color StatusColor(ConfigurationUnifiedVersionApplyTargetStatus status)
+    {
+        return status switch
+        {
+            ConfigurationUnifiedVersionApplyTargetStatus.Unchanged => Color.Default,
+            ConfigurationUnifiedVersionApplyTargetStatus.Ready => Color.Success,
+            ConfigurationUnifiedVersionApplyTargetStatus.CompatibleSchemaDrift => Color.Warning,
+            _ => Color.Error
+        };
+    }
+
+    private sealed record RollbackPreviewRow(
+        ConfigurationUnifiedVersionApplyTarget Target,
+        string CurrentText,
+        string TargetText,
+        bool HasHiddenChanges,
+        bool HasSchemaDrift);
+}

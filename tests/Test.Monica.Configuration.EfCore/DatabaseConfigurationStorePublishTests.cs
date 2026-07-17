@@ -1,10 +1,10 @@
 using AwesomeAssertions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Options;
+using Monica.Configuration.Abstractions;
 using Monica.Configuration.EfCore.DbContext;
-using Monica.Configuration.EfCore.Stores;
 using Monica.Configuration.Models;
+using Monica.Configuration.Serialization;
 using Monica.DependencyInjection.Abstractions;
 using Monica.DependencyInjection.Services;
 using Monica.Modules;
@@ -25,12 +25,14 @@ public sealed class DatabaseConfigurationStorePublishTests
         var databasePath = CreateDatabasePath();
         await InitializeSchemaAsync(databasePath);
 
-        var definition = CreateDefinition("Test.Concurrent.Shared", "sha256:shared");
+        var definition = CreateDefinition("Test.Concurrent.Shared");
         await using var stores = CreateStores(databasePath, 12);
 
         await Task.WhenAll(stores.Items.Select(store => store.PublishAsync([definition], TestContext.Current.CancellationToken)));
 
-        var published = await stores.Items[0].ListPublishedDefinitionsAsync(TestContext.Current.CancellationToken);
+        var published = (await stores.Items[0].ListPublishedDefinitionEntriesAsync(TestContext.Current.CancellationToken))
+            .Select(static entry => entry.RequireDefinition())
+            .ToArray();
         published.Where(candidate => candidate.DefinitionKey == definition.DefinitionKey)
             .Should().ContainSingle();
         var histories = await stores.Items[0].ListDefinitionPublishHistoriesAsync(
@@ -47,7 +49,7 @@ public sealed class DatabaseConfigurationStorePublishTests
         var databasePath = CreateDatabasePath();
         await InitializeSchemaAsync(databasePath);
 
-        var definition = CreateDefinition("Test.Concurrent.LockMarker", "sha256:lock-marker");
+        var definition = CreateDefinition("Test.Concurrent.LockMarker");
         await using var stores = CreateStores(databasePath, 12);
 
         await Task.WhenAll(stores.Items.Select(store => store.PublishAsync([definition], TestContext.Current.CancellationToken)));
@@ -64,15 +66,17 @@ public sealed class DatabaseConfigurationStorePublishTests
 
         var definitions = new[]
         {
-            CreateDefinition("Test.Concurrent.Batch.One", "sha256:batch-one"),
-            CreateDefinition("Test.Concurrent.Batch.Two", "sha256:batch-two"),
-            CreateDefinition("Test.Concurrent.Batch.Three", "sha256:batch-three")
+            CreateDefinition("Test.Concurrent.Batch.One"),
+            CreateDefinition("Test.Concurrent.Batch.Two"),
+            CreateDefinition("Test.Concurrent.Batch.Three")
         };
         await using var stores = CreateStores(databasePath, 10);
 
         await Task.WhenAll(stores.Items.Select(store => store.PublishAsync(definitions, TestContext.Current.CancellationToken)));
 
-        var published = await stores.Items[0].ListPublishedDefinitionsAsync(TestContext.Current.CancellationToken);
+        var published = (await stores.Items[0].ListPublishedDefinitionEntriesAsync(TestContext.Current.CancellationToken))
+            .Select(static entry => entry.RequireDefinition())
+            .ToArray();
         published.Select(definition => definition.DefinitionKey)
             .Should().Contain(definitions.Select(static definition => definition.DefinitionKey));
         foreach (var definition in definitions)
@@ -90,7 +94,7 @@ public sealed class DatabaseConfigurationStorePublishTests
     {
         var databasePath = CreateDatabasePath();
         await using var stores = CreateStores(databasePath, 2);
-        var definition = CreateDefinition("Test.Concurrent.NoOp", "sha256:no-op");
+        var definition = CreateDefinition("Test.Concurrent.NoOp");
 
         await stores.Items[0].PublishAsync([definition], TestContext.Current.CancellationToken);
         await stores.Items[1].PublishAsync([definition], TestContext.Current.CancellationToken);
@@ -108,15 +112,16 @@ public sealed class DatabaseConfigurationStorePublishTests
     {
         var databasePath = CreateDatabasePath();
         await using var stores = CreateStores(databasePath, 1);
-        var original = CreateDefinition("Test.Concurrent.Metadata", "sha256:metadata");
+        var original = CreateDefinition("Test.Concurrent.Metadata");
         var changed = original with { DisplayName = "Updated Metadata Display Name" };
 
         await stores.Items[0].PublishAsync([original], TestContext.Current.CancellationToken);
         await stores.Items[0].PublishAsync([changed], TestContext.Current.CancellationToken);
 
-        var published = await stores.Items[0].GetPublishedDefinitionAsync(
+        var publishedEntry = await stores.Items[0].GetPublishedDefinitionEntryAsync(
             original.DefinitionKey,
             TestContext.Current.CancellationToken);
+        var published = publishedEntry?.RequireDefinition();
         published.Should().NotBeNull();
         published!.SchemaVersion.Should().Be(1);
         published.DisplayName.Should().Be(changed.DisplayName);
@@ -134,15 +139,27 @@ public sealed class DatabaseConfigurationStorePublishTests
     {
         var databasePath = CreateDatabasePath();
         await using var stores = CreateStores(databasePath, 1);
-        var original = CreateDefinition("Test.Concurrent.Schema", "sha256:schema-v1");
-        var changed = original with { SchemaHash = "sha256:schema-v2" };
+        var original = CreateDefinition("Test.Concurrent.Schema");
+        var changedRoot = original.Root with
+        {
+            Children =
+            [
+                original.Root.Children[0] with
+                {
+                    ClrTypeName = typeof(string).AssemblyQualifiedName!,
+                    ValueKind = ConfigurationValueKind.String
+                }
+            ]
+        };
+        var changed = WithComputedSchemaHash(original with { Root = changedRoot });
 
         await stores.Items[0].PublishAsync([original], TestContext.Current.CancellationToken);
         await stores.Items[0].PublishAsync([changed], TestContext.Current.CancellationToken);
 
-        var published = await stores.Items[0].GetPublishedDefinitionAsync(
+        var publishedEntry = await stores.Items[0].GetPublishedDefinitionEntryAsync(
             original.DefinitionKey,
             TestContext.Current.CancellationToken);
+        var published = publishedEntry?.RequireDefinition();
         published.Should().NotBeNull();
         published!.SchemaVersion.Should().Be(2);
         published.SchemaHash.Should().Be(changed.SchemaHash);
@@ -158,7 +175,7 @@ public sealed class DatabaseConfigurationStorePublishTests
     private static async Task InitializeSchemaAsync(string databasePath)
     {
         await using var stores = CreateStores(databasePath, 1);
-        _ = await stores.Items[0].ListPublishedDefinitionsAsync(TestContext.Current.CancellationToken);
+        _ = await stores.Items[0].ListPublishedDefinitionEntriesAsync(TestContext.Current.CancellationToken);
     }
 
     private static async Task<int> CountPublishLockMarkersAsync(string databasePath)
@@ -190,7 +207,7 @@ public sealed class DatabaseConfigurationStorePublishTests
             .ToArray();
         return new StoreSet(
             providers,
-            providers.Select(provider => provider.GetRequiredService<DatabaseConfigurationStore>()).ToArray());
+            providers.Select(provider => provider.GetRequiredService<IConfigurationMetadataStore>()).ToArray());
     }
 
     private static ServiceProvider CreateProvider(string databasePath)
@@ -198,7 +215,7 @@ public sealed class DatabaseConfigurationStorePublishTests
         var services = new ServiceCollection();
         services.AddLogging();
         services.AddOptions();
-        services.Configure<ModuleConfigurationEfCoreOption>(static options => options.AutoCreateSchema = true);
+        services.Configure<ModuleConfigurationEfCoreOption>(static options => options.AutoManageSchema = true);
         services.Configure<ModuleRepositoryOption>(static _ => { });
         services.AddScoped<ICachedServiceProvider, CachedServiceProvider>();
         services.AddSingleton<IAuditPropertySetter, NoOpAuditPropertySetter>();
@@ -209,13 +226,13 @@ public sealed class DatabaseConfigurationStorePublishTests
         {
             options.UseSqlite($"Data Source={databasePath}");
         });
-        services.AddSingleton<DatabaseConfigurationStore>();
+        new ModuleConfigurationEfCore(new ModuleConfigurationEfCoreOption()).ConfigureServices(services);
         return services.BuildServiceProvider();
     }
 
-    private static ConfigurationDefinition CreateDefinition(string definitionKey, string schemaHash)
+    private static ConfigurationDefinition CreateDefinition(string definitionKey)
     {
-        return new ConfigurationDefinition
+        var definition = new ConfigurationDefinition
         {
             DefinitionKey = definitionKey,
             SectionPath = definitionKey.Replace(".", ":", StringComparison.Ordinal),
@@ -223,7 +240,7 @@ public sealed class DatabaseConfigurationStorePublishTests
             ClrTypeName = typeof(DatabaseConfigurationStorePublishTests).AssemblyQualifiedName!,
             FromProject = "Test.Project",
             Category = "Test",
-            SchemaHash = schemaHash,
+            SchemaHash = string.Empty,
             Root = new ConfigurationNodeDefinition
             {
                 NodeKey = string.Empty,
@@ -249,6 +266,18 @@ public sealed class DatabaseConfigurationStorePublishTests
                 ]
             }
         };
+        return WithComputedSchemaHash(definition);
+    }
+
+    private static ConfigurationDefinition WithComputedSchemaHash(ConfigurationDefinition definition)
+    {
+        return definition with
+        {
+            SchemaHash = ConfigurationDefinitionSchemaCodec.ComputeSchemaHash(
+                definition.DefinitionKey,
+                definition.SectionPath,
+                definition.Root)
+        };
     }
 
     private static string CreateDatabasePath()
@@ -258,9 +287,9 @@ public sealed class DatabaseConfigurationStorePublishTests
         return Path.Combine(directory, "configuration.db");
     }
 
-    private sealed class StoreSet(ServiceProvider[] providers, DatabaseConfigurationStore[] items) : IAsyncDisposable
+    private sealed class StoreSet(ServiceProvider[] providers, IConfigurationMetadataStore[] items) : IAsyncDisposable
     {
-        public DatabaseConfigurationStore[] Items { get; } = items;
+        public IConfigurationMetadataStore[] Items { get; } = items;
 
         public async ValueTask DisposeAsync()
         {

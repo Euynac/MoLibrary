@@ -1,4 +1,6 @@
 interface:
   display_name: "Planning With Files"
-  short_description: "Create persistent markdown task plans"
-  default_prompt: "Use $planning-with-files to create persistent task planning files for multi-step work."
+  short_description: "Keep opt-in task memory on disk"
+  default_prompt: "Use $planning-with-files to create concise, persistent task memory for this task."
+policy:
+  allow_implicit_invocation: false

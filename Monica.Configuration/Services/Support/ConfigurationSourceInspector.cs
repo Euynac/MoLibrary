@@ -24,7 +24,8 @@ internal sealed class ConfigurationSourceInspector(
     ConfigurationRuntimeContext runtimeContext,
     IConfigurationDefinitionRegistry definitionRegistry,
     ConfigurationPathProjector pathProjector,
-    IOptions<ModuleConfigurationOption> moduleOptions)
+    IOptions<ModuleConfigurationOption> moduleOptions,
+    ConfigurationDefinitionResolver? definitionResolver = null)
     : IConfigurationSourceInspector
 {
     private static readonly JsonSerializerOptions READABLE_JSON_OPTIONS = new()
@@ -69,8 +70,63 @@ internal sealed class ConfigurationSourceInspector(
     /// </summary>
     public ConfigurationSourceChain GetSourceChain(ConfigurationDefinition definition, LogicalPath logicalPath)
     {
-        var configurationPath = pathProjector.Project(definition.SectionPath, logicalPath);
-        return GetSourceChain(definition, logicalPath, configurationPath);
+        return GetSourceChains(definition, [logicalPath])[0];
+    }
+
+    /// <inheritdoc />
+    public IReadOnlyList<ConfigurationSourceChain> GetSourceChains(
+        ConfigurationDefinition definition,
+        IReadOnlyList<LogicalPath> logicalPaths)
+    {
+        if (logicalPaths.Count == 0)
+        {
+            return [];
+        }
+
+        if (runtimeContext.Root is not { } root)
+        {
+            return logicalPaths
+                .Select(logicalPath => EmptySourceChain(
+                    definition,
+                    logicalPath,
+                    pathProjector.Project(definition.SectionPath, logicalPath)))
+                .ToArray();
+        }
+
+        var descriptors = GetSources().ToDictionary(source => source.PriorityIndex);
+        var sources = new List<RuntimeConfigurationSource>(descriptors.Count);
+        foreach (var (provider, index) in root.Providers.Select((provider, index) => (provider, index)))
+        {
+            // Chained providers are aliases over another IConfiguration, not leaf sources. Querying them as direct
+            // value sources can re-enter the active root and block source-chain reads.
+            if (provider is not ChainedConfigurationProvider
+                && descriptors.TryGetValue(index, out var descriptor))
+            {
+                sources.Add(new RuntimeConfigurationSource(provider, descriptor));
+            }
+        }
+
+        return logicalPaths
+            .Select(logicalPath => BuildSourceChain(
+                definition,
+                logicalPath,
+                pathProjector.Project(definition.SectionPath, logicalPath),
+                sources))
+            .ToArray();
+    }
+
+    /// <inheritdoc />
+    public string GetRuntimeProjectionRevision(ConfigurationDefinition definition, string sourceKey)
+    {
+        if (runtimeContext.Root is not { } root)
+        {
+            throw new InvalidOperationException("The runtime configuration root is not available.");
+        }
+
+        var source = GetRequiredSource(sourceKey);
+        var provider = root.Providers.ElementAtOrDefault(source.PriorityIndex)
+                       ?? throw new KeyNotFoundException($"Configuration source '{sourceKey}' is no longer active.");
+        return ConfigurationProviderProjectionRevision.Compute(provider, definition);
     }
 
     /// <summary>
@@ -138,14 +194,15 @@ internal sealed class ConfigurationSourceInspector(
     /// <summary>
     /// Gets all visible configuration values supplied by each runtime source.
     /// </summary>
-    public IReadOnlyList<ConfigurationSourceInventory> GetSourceInventories()
+    public async Task<IReadOnlyList<ConfigurationSourceInventory>> GetSourceInventoriesAsync(
+        CancellationToken cancellationToken)
     {
         if (runtimeContext.Root is not { } root)
         {
             return [];
         }
 
-        var definitions = definitionRegistry.GetAll().ToArray();
+        var definitions = await GetKnownDefinitionsAsync(cancellationToken);
         var sources = GetSources();
         var sourcesByPriority = sources.ToDictionary(source => source.PriorityIndex);
         var builders = sources.ToDictionary(
@@ -168,13 +225,18 @@ internal sealed class ConfigurationSourceInspector(
             {
                 foreach (var (configurationPath, value) in EnumerateProviderValues(provider, definition.SectionPath))
                 {
+                    var node = ResolveNodeFromConfigurationPath(definition, configurationPath);
+                    var isSensitive = IsSensitiveConfigurationPath(definition, configurationPath);
                     if (!suppliedPaths.Add(configurationPath))
                     {
+                        PreserveMostRestrictiveSensitivity(
+                            entries,
+                            source.SourceKey,
+                            configurationPath,
+                            isSensitive);
                         continue;
                     }
 
-                    var node = ResolveNodeFromConfigurationPath(definition, configurationPath);
-                    var isSensitive = node?.IsSensitive is true;
                     entries.Add(new SourceInventoryEntry(
                         source.SourceKey,
                         index,
@@ -239,6 +301,41 @@ internal sealed class ConfigurationSourceInspector(
             .ToArray();
     }
 
+    private static void PreserveMostRestrictiveSensitivity(
+        IList<SourceInventoryEntry> entries,
+        string sourceKey,
+        string configurationPath,
+        bool isSensitive)
+    {
+        if (!isSensitive)
+        {
+            return;
+        }
+
+        for (var index = entries.Count - 1; index >= 0; index--)
+        {
+            var existing = entries[index];
+            if (!string.Equals(existing.SourceKey, sourceKey, StringComparison.OrdinalIgnoreCase)
+                || !string.Equals(
+                    existing.Item.ConfigurationPath,
+                    configurationPath,
+                    StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            entries[index] = existing with
+            {
+                Item = existing.Item with
+                {
+                    DisplayValue = null,
+                    IsSensitive = true
+                }
+            };
+            return;
+        }
+    }
+
     /// <summary>
     /// Gets a display-safe JSON file view.
     /// </summary>
@@ -253,8 +350,15 @@ internal sealed class ConfigurationSourceInspector(
         var text = File.Exists(source.PhysicalPath)
             ? await File.ReadAllTextAsync(source.PhysicalPath, cancellationToken)
             : "{}";
-        var root = NormalizeKnownRegexPatternPaths(JsonNode.Parse(text, documentOptions: JSON_DOCUMENT_OPTIONS) ?? new JsonObject());
-        var redacted = RedactKnownSensitivePaths(root);
+        ConfigurationJsonStructureValidator.ValidateNoCaseInsensitiveDuplicates(
+            text,
+            JSON_DOCUMENT_OPTIONS,
+            source.DisplayName);
+        var definitions = await GetKnownDefinitionsAsync(cancellationToken);
+        var root = NormalizeKnownRegexPatternPaths(
+            JsonNode.Parse(text, documentOptions: JSON_DOCUMENT_OPTIONS) ?? new JsonObject(),
+            definitions);
+        root = RedactKnownSensitivePaths(root, definitions, out var redacted);
         return new ConfigurationSourceFileView
         {
             Source = source,
@@ -263,33 +367,37 @@ internal sealed class ConfigurationSourceInspector(
         };
     }
 
-    private ConfigurationSourceChain GetSourceChain(ConfigurationDefinition definition, LogicalPath logicalPath, string configurationPath)
+    private static ConfigurationSourceChain EmptySourceChain(
+        ConfigurationDefinition definition,
+        LogicalPath logicalPath,
+        string configurationPath)
     {
-        if (runtimeContext.Root is not { } root)
+        return new ConfigurationSourceChain
         {
-            return new ConfigurationSourceChain
-            {
-                DefinitionKey = definition.DefinitionKey,
-                LogicalPath = logicalPath,
-                ConfigurationPath = configurationPath,
-                Values = []
-            };
-        }
+            DefinitionKey = definition.DefinitionKey,
+            LogicalPath = logicalPath,
+            ConfigurationPath = configurationPath,
+            Values = []
+        };
+    }
 
-        var targetNode = ResolveNode(definition, logicalPath);
-        var isSensitive = targetNode?.IsSensitive is true;
-        var descriptors = GetSources().ToDictionary(source => source.PriorityIndex);
+    private static ConfigurationSourceChain BuildSourceChain(
+        ConfigurationDefinition definition,
+        LogicalPath logicalPath,
+        string configurationPath,
+        IReadOnlyList<RuntimeConfigurationSource> sources)
+    {
+        var targetNode = ConfigurationSchemaNavigator.ResolveNode(definition.Root, logicalPath);
+        var isSensitive = ConfigurationSchemaNavigator.IsSensitivePath(definition.Root, logicalPath);
         var hits = new List<ConfigurationSourceValue>();
-        foreach (var (provider, index) in root.Providers.Select((provider, index) => (provider, index)))
+        foreach (var source in sources)
         {
-            // Chained providers are aliases over another IConfiguration, not leaf sources.
-            // Querying them as direct value sources can re-enter the active root and block source-chain reads.
-            if (provider is ChainedConfigurationProvider)
-            {
-                continue;
-            }
-
-            var value = BuildSourceValue(provider, descriptors[index], targetNode, configurationPath, isSensitive);
+            var value = BuildSourceValue(
+                source.Provider,
+                source.Descriptor,
+                targetNode,
+                configurationPath,
+                isSensitive);
             if (value is null)
             {
                 continue;
@@ -310,6 +418,10 @@ internal sealed class ConfigurationSourceInspector(
                 .ToArray()
         };
     }
+
+    private sealed record RuntimeConfigurationSource(
+        IConfigurationProvider Provider,
+        ConfigurationSourceDescriptor Descriptor);
 
     private static ConfigurationSourceValue? BuildSourceValue(
         IConfigurationProvider provider,
@@ -339,7 +451,7 @@ internal sealed class ConfigurationSourceInspector(
         return new ConfigurationSourceValue
         {
             Source = source,
-            DisplayValue = node.ToJsonString(READABLE_JSON_OPTIONS),
+            DisplayValue = isSensitive ? null : node.ToJsonString(READABLE_JSON_OPTIONS),
             IsSensitive = isSensitive
         };
     }
@@ -577,25 +689,31 @@ internal sealed class ConfigurationSourceInspector(
             : "The JSON file directory does not exist or is not writable.";
     }
 
-    private bool RedactKnownSensitivePaths(JsonNode root)
+    private static JsonNode RedactKnownSensitivePaths(
+        JsonNode root,
+        IReadOnlyList<ConfigurationDefinition> definitions,
+        out bool hasRedactions)
     {
-        var redacted = false;
-        foreach (var definition in definitionRegistry.GetAll())
+        hasRedactions = false;
+        foreach (var definition in definitions)
         {
-            foreach (var node in EnumerateNodes(definition.Root).Where(node => node is { NodeKind: ConfigurationNodeKind.Scalar, IsSensitive: true }))
-            {
-                var configurationPath = pathProjector.Project(definition.SectionPath, node.RelativePath);
-                redacted |= RedactPath(root, configurationPath.Split(':', StringSplitOptions.RemoveEmptyEntries));
-            }
+            root = RedactPath(
+                root,
+                SplitConfigurationPath(definition.SectionPath),
+                definition.Root,
+                out var definitionRedacted);
+            hasRedactions |= definitionRedacted;
         }
 
-        return redacted;
+        return root;
     }
 
-    private JsonNode NormalizeKnownRegexPatternPaths(JsonNode root)
+    private static JsonNode NormalizeKnownRegexPatternPaths(
+        JsonNode root,
+        IReadOnlyList<ConfigurationDefinition> definitions)
     {
         var normalized = root;
-        foreach (var definition in definitionRegistry.GetAll())
+        foreach (var definition in definitions)
         {
             normalized = NormalizePath(
                 normalized,
@@ -604,6 +722,14 @@ internal sealed class ConfigurationSourceInspector(
         }
 
         return normalized;
+    }
+
+    private async Task<IReadOnlyList<ConfigurationDefinition>> GetKnownDefinitionsAsync(
+        CancellationToken cancellationToken)
+    {
+        return definitionResolver is null
+            ? definitionRegistry.GetAll().ToArray()
+            : await definitionResolver.GetMergedDefinitionsAsync(cancellationToken);
     }
 
     private static JsonNode NormalizePath(
@@ -619,14 +745,7 @@ internal sealed class ConfigurationSourceInspector(
         var current = root;
         for (var index = 0; index < segments.Count - 1; index++)
         {
-            current = current switch
-            {
-                JsonObject jsonObject => jsonObject[segments[index]],
-                JsonArray jsonArray when int.TryParse(segments[index], out var arrayIndex)
-                                      && arrayIndex >= 0
-                                      && arrayIndex < jsonArray.Count => jsonArray[arrayIndex],
-                _ => null
-            };
+            current = GetPathChild(current, segments[index]);
 
             if (current is null)
             {
@@ -635,9 +754,11 @@ internal sealed class ConfigurationSourceInspector(
         }
 
         var last = segments[^1];
-        if (current is JsonObject currentObject && currentObject[last] is { } objectValue)
+        if (current is JsonObject currentObject
+            && TryGetCaseInsensitiveProperty(currentObject, last, out var actualName, out var objectValue)
+            && objectValue is not null)
         {
-            currentObject[last] = ConfigurationRegexTextCodec.NormalizeJsonNode(schema, objectValue);
+            currentObject[actualName] = ConfigurationRegexTextCodec.NormalizeJsonNode(schema, objectValue);
         }
         else if (current is JsonArray currentArray
                  && int.TryParse(last, out var lastIndex)
@@ -655,34 +776,40 @@ internal sealed class ConfigurationSourceInspector(
         return value is null || schema is null ? value : ConfigurationRegexTextCodec.NormalizeDisplayValue(schema, value);
     }
 
-    private static bool RedactPath(JsonNode root, IReadOnlyList<string> segments)
+    private static JsonNode RedactPath(
+        JsonNode root,
+        IReadOnlyList<string> segments,
+        ConfigurationNodeDefinition schema,
+        out bool redacted)
     {
         if (segments.Count == 0)
         {
-            return false;
+            return RedactSchemaNode(root, schema, out redacted) ?? root;
         }
 
         var current = root;
-        for (var i = 0; i < segments.Count - 1; i++)
+        for (var index = 0; index < segments.Count - 1; index++)
         {
-            current = current switch
-            {
-                JsonObject jsonObject => jsonObject[segments[i]],
-                JsonArray jsonArray when int.TryParse(segments[i], out var index) && index >= 0 && index < jsonArray.Count => jsonArray[index],
-                _ => null
-            };
+            current = GetPathChild(current, segments[index]);
 
             if (current is null)
             {
-                return false;
+                redacted = false;
+                return root;
             }
         }
 
         var last = segments[^1];
-        if (current is JsonObject currentObject && currentObject.ContainsKey(last))
+        if (current is JsonObject currentObject
+            && TryGetCaseInsensitiveProperty(currentObject, last, out var actualName, out var objectValue))
         {
-            currentObject[last] = "***";
-            return true;
+            var replacement = RedactSchemaNode(objectValue, schema, out redacted);
+            if (!ReferenceEquals(replacement, objectValue))
+            {
+                currentObject[actualName] = replacement;
+            }
+
+            return root;
         }
 
         if (current is JsonArray currentArray
@@ -690,28 +817,125 @@ internal sealed class ConfigurationSourceInspector(
             && lastIndex >= 0
             && lastIndex < currentArray.Count)
         {
-            currentArray[lastIndex] = "***";
-            return true;
+            var currentValue = currentArray[lastIndex];
+            var replacement = RedactSchemaNode(currentValue, schema, out redacted);
+            if (!ReferenceEquals(replacement, currentValue))
+            {
+                currentArray[lastIndex] = replacement;
+            }
+
+            return root;
         }
 
-        return false;
+        redacted = false;
+        return root;
     }
 
-    private static ConfigurationNodeDefinition? ResolveNode(ConfigurationDefinition definition, LogicalPath logicalPath)
+    private static JsonNode? RedactSchemaNode(
+        JsonNode? value,
+        ConfigurationNodeDefinition schema,
+        out bool redacted)
     {
-        return EnumerateNodes(definition.Root).FirstOrDefault(node => node.RelativePath.Equals(logicalPath));
-    }
-
-    private static IEnumerable<ConfigurationNodeDefinition> EnumerateNodes(ConfigurationNodeDefinition node)
-    {
-        yield return node;
-        foreach (var child in node.Children)
+        if (schema.IsSensitive)
         {
-            foreach (var descendant in EnumerateNodes(child))
+            redacted = true;
+            return JsonValue.Create("***");
+        }
+
+        redacted = false;
+        // Walk collection templates against every physical item; wildcard schema paths cannot identify those values directly.
+        switch (value)
+        {
+            case JsonObject jsonObject when schema.NodeKind == ConfigurationNodeKind.Object:
+                foreach (var child in schema.Children)
+                {
+                    if (!TryGetCaseInsensitiveProperty(jsonObject, child.Name, out var actualName, out var childValue))
+                    {
+                        continue;
+                    }
+
+                    var replacement = RedactSchemaNode(childValue, child, out var childRedacted);
+                    redacted |= childRedacted;
+                    if (!ReferenceEquals(replacement, childValue))
+                    {
+                        jsonObject[actualName] = replacement;
+                    }
+                }
+
+                break;
+            case JsonObject jsonObject when schema.NodeKind == ConfigurationNodeKind.Dictionary
+                                            && schema.DictionaryTemplate is { } dictionaryTemplate:
+                foreach (var pair in jsonObject.ToArray())
+                {
+                    var replacement = RedactSchemaNode(
+                        pair.Value,
+                        dictionaryTemplate.ValueTemplate,
+                        out var itemRedacted);
+                    redacted |= itemRedacted;
+                    if (!ReferenceEquals(replacement, pair.Value))
+                    {
+                        jsonObject[pair.Key] = replacement;
+                    }
+                }
+
+                break;
+            case JsonArray jsonArray when schema.NodeKind == ConfigurationNodeKind.List
+                                          && schema.ListTemplate is { } listTemplate:
+                for (var index = 0; index < jsonArray.Count; index++)
+                {
+                    var itemValue = jsonArray[index];
+                    var replacement = RedactSchemaNode(itemValue, listTemplate.ItemTemplate, out var itemRedacted);
+                    redacted |= itemRedacted;
+                    if (!ReferenceEquals(replacement, itemValue))
+                    {
+                        jsonArray[index] = replacement;
+                    }
+                }
+
+                break;
+        }
+
+        return value;
+    }
+
+    private static JsonNode? GetPathChild(JsonNode? parent, string segment)
+    {
+        if (parent is JsonObject jsonObject
+            && TryGetCaseInsensitiveProperty(jsonObject, segment, out _, out var objectValue))
+        {
+            return objectValue;
+        }
+
+        if (parent is JsonArray jsonArray
+            && int.TryParse(segment, out var arrayIndex)
+            && arrayIndex >= 0
+            && arrayIndex < jsonArray.Count)
+        {
+            return jsonArray[arrayIndex];
+        }
+
+        return null;
+    }
+
+    private static bool TryGetCaseInsensitiveProperty(
+        JsonObject jsonObject,
+        string propertyName,
+        out string actualName,
+        out JsonNode? value)
+    {
+        foreach (var property in jsonObject)
+        {
+            if (string.Equals(property.Key, propertyName, StringComparison.OrdinalIgnoreCase))
             {
-                yield return descendant;
+                actualName = property.Key;
+                value = property.Value;
+                return true;
             }
         }
+
+        actualName = string.Empty;
+        value = null;
+        return false;
     }
 
     private static IEnumerable<(string ConfigurationPath, string? Value)> EnumerateProviderValues(
@@ -782,6 +1006,48 @@ internal sealed class ConfigurationSourceInspector(
         }
 
         return current;
+    }
+
+    private static bool IsSensitiveConfigurationPath(
+        ConfigurationDefinition definition,
+        string configurationPath)
+    {
+        var sectionSegments = SplitConfigurationPath(definition.SectionPath);
+        var pathSegments = SplitConfigurationPath(configurationPath);
+        if (pathSegments.Length < sectionSegments.Length || !HasPrefix(pathSegments, sectionSegments))
+        {
+            return false;
+        }
+
+        var current = definition.Root;
+        if (current.IsSensitive)
+        {
+            return true;
+        }
+
+        for (var index = sectionSegments.Length; index < pathSegments.Length; index++)
+        {
+            current = current.NodeKind switch
+            {
+                ConfigurationNodeKind.Object => current.Children.FirstOrDefault(child =>
+                    string.Equals(child.Name, pathSegments[index], StringComparison.OrdinalIgnoreCase)),
+                ConfigurationNodeKind.Dictionary => current.DictionaryTemplate?.ValueTemplate,
+                ConfigurationNodeKind.List => current.ListTemplate?.ItemTemplate,
+                _ => null
+            };
+
+            if (current is null)
+            {
+                return false;
+            }
+
+            if (current.IsSensitive)
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private static string[] SplitConfigurationPath(string path)

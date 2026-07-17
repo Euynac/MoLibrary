@@ -1,8 +1,11 @@
-using System.Collections.Concurrent;
+using System.Data.Common;
+using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using Monica.Configuration.Abstractions;
 using Monica.Configuration.Exceptions;
 using Monica.Configuration.Models;
+using Monica.Configuration.Models.Internal;
+using Monica.Core.Extensions;
 
 namespace Monica.Configuration.Services;
 
@@ -13,27 +16,140 @@ public sealed class ConfigurationDefinitionResolver(
     IConfigurationDefinitionRegistry definitionRegistry,
     IConfigurationMetadataStore metadataStore)
 {
-    private readonly ConcurrentDictionary<string, ConfigurationDefinition> _publishedMetadataByKey =
-        new(StringComparer.OrdinalIgnoreCase);
+    private static readonly TimeSpan READ_SNAPSHOT_LIFETIME = TimeSpan.FromSeconds(30);
+    private readonly Lock _readSnapshotLock = new();
+    private ConfigurationDefinitionReadSnapshot? _readSnapshot;
+    private long _readSnapshotGeneration;
+
+    /// <summary>
+    /// Gets a fault-isolated catalog for diagnostic UI scenarios without weakening authoritative resolution.
+    /// </summary>
+    internal async Task<ConfigurationDefinitionCatalogSnapshot> GetDiagnosticCatalogAsync(
+        CancellationToken cancellationToken)
+    {
+        var snapshotGeneration = CaptureReadSnapshotGeneration();
+        var entriesByKey = new Dictionary<string, ConfigurationDefinitionCatalogEntry>(StringComparer.OrdinalIgnoreCase);
+        foreach (var registeredDefinition in definitionRegistry.GetAll())
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            var definition = registeredDefinition with { Origin = ConfigurationDefinitionOrigin.LocalScan };
+            entriesByKey[definition.DefinitionKey] = new ConfigurationDefinitionCatalogEntry
+            {
+                Definition = definition,
+                Availability = ConfigurationDefinitionAvailability.Available
+            };
+        }
+
+        IReadOnlyList<ConfigurationPublishedDefinitionEntry> publishedEntries;
+        try
+        {
+            publishedEntries = await metadataStore.ListPublishedDefinitionEntriesAsync(cancellationToken);
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            InvalidateReadSnapshot();
+            foreach (var (key, entry) in entriesByKey.ToArray())
+            {
+                entriesByKey[key] = entry with
+                {
+                    Availability = ConfigurationDefinitionAvailability.AvailableWithMetadataFault
+                };
+            }
+
+            return new ConfigurationDefinitionCatalogSnapshot
+            {
+                Entries = SortCatalogEntries(entriesByKey.Values),
+                StoreDiagnostic = CreateStoreDiagnostic(ex)
+            };
+        }
+
+        foreach (var publishedEntry in publishedEntries)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            var definitionKey = publishedEntry.Metadata.DefinitionKey;
+            if (!publishedEntry.IsAvailable)
+            {
+                if (entriesByKey.TryGetValue(definitionKey, out var localEntry)
+                    && localEntry.Definition is not null)
+                {
+                    entriesByKey[definitionKey] = localEntry with
+                    {
+                        PublishedMetadata = publishedEntry.Metadata,
+                        Diagnostic = publishedEntry.Diagnostic,
+                        Availability = ConfigurationDefinitionAvailability.AvailableWithMetadataFault
+                    };
+                }
+                else
+                {
+                    entriesByKey[definitionKey] = new ConfigurationDefinitionCatalogEntry
+                    {
+                        PublishedMetadata = publishedEntry.Metadata,
+                        Diagnostic = publishedEntry.Diagnostic,
+                        Availability = ConfigurationDefinitionAvailability.Unavailable
+                    };
+                }
+
+                continue;
+            }
+
+            var publishedDefinition = publishedEntry.RequireDefinition();
+            if (entriesByKey.TryGetValue(definitionKey, out var existing)
+                && existing.Definition is { } localDefinition)
+            {
+                entriesByKey[definitionKey] = new ConfigurationDefinitionCatalogEntry
+                {
+                    Definition = MergePublishedMetadata(localDefinition, publishedDefinition),
+                    PublishedMetadata = publishedEntry.Metadata,
+                    Availability = ConfigurationDefinitionAvailability.Available
+                };
+                continue;
+            }
+
+            entriesByKey[definitionKey] = new ConfigurationDefinitionCatalogEntry
+            {
+                Definition = publishedDefinition with { Origin = ConfigurationDefinitionOrigin.PublishedMetadata },
+                PublishedMetadata = publishedEntry.Metadata,
+                Availability = ConfigurationDefinitionAvailability.Available
+            };
+        }
+
+        var snapshot = new ConfigurationDefinitionCatalogSnapshot
+        {
+            Entries = SortCatalogEntries(entriesByKey.Values)
+        };
+        PublishReadSnapshot(snapshot, snapshotGeneration);
+        return snapshot;
+    }
 
     /// <summary>
     /// Gets all locally scanned and published definitions, preferring local metadata on key collisions.
     /// </summary>
     public async Task<IReadOnlyList<ConfigurationDefinition>> GetMergedDefinitionsAsync(CancellationToken cancellationToken)
     {
-        var publishedDefinitions = await metadataStore.ListPublishedDefinitionsAsync(cancellationToken);
-        RefreshPublishedMetadataCache(publishedDefinitions);
+        var publishedEntries = await metadataStore.ListPublishedDefinitionEntriesAsync(cancellationToken);
+        var publishedDefinitions = new List<ConfigurationDefinition>(publishedEntries.Count);
+        foreach (var entry in publishedEntries)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            publishedDefinitions.Add(entry.RequireDefinition());
+        }
 
         var localDefinitions = definitionRegistry.GetAll()
             .ToArray();
         var definitionsByKey = new Dictionary<string, ConfigurationDefinition>(StringComparer.OrdinalIgnoreCase);
         foreach (var definition in localDefinitions)
         {
+            cancellationToken.ThrowIfCancellationRequested();
             definitionsByKey[definition.DefinitionKey] = definition with { Origin = ConfigurationDefinitionOrigin.LocalScan };
         }
 
         foreach (var published in publishedDefinitions)
         {
+            cancellationToken.ThrowIfCancellationRequested();
             if (definitionsByKey.TryGetValue(published.DefinitionKey, out var localDefinition))
             {
                 definitionsByKey[published.DefinitionKey] = MergePublishedMetadata(localDefinition, published);
@@ -56,49 +172,52 @@ public sealed class ConfigurationDefinitionResolver(
     {
         if (definitionRegistry.TryGet(definitionKey, out var localDefinition))
         {
-            var publishedMetadata = await GetPublishedMetadataAsync(definitionKey, cancellationToken);
-            return MergePublishedMetadata(localDefinition! with { Origin = ConfigurationDefinitionOrigin.LocalScan }, publishedMetadata);
+            var local = localDefinition!;
+            var localPublishedEntry = await metadataStore.GetPublishedDefinitionEntryAsync(
+                local.DefinitionKey,
+                cancellationToken);
+            return MergePublishedMetadata(
+                local with { Origin = ConfigurationDefinitionOrigin.LocalScan },
+                localPublishedEntry?.RequireDefinition());
         }
 
-        var published = await metadataStore.GetPublishedDefinitionAsync(definitionKey, cancellationToken);
-        return published is null
+        var publishedEntry = await metadataStore.GetPublishedDefinitionEntryAsync(definitionKey, cancellationToken);
+        return publishedEntry is null
             ? throw new ConfigurationDefinitionNotFoundException(definitionKey)
-            : published with { Origin = ConfigurationDefinitionOrigin.PublishedMetadata };
+            : publishedEntry.RequireDefinition() with { Origin = ConfigurationDefinitionOrigin.PublishedMetadata };
     }
 
-    private async Task<ConfigurationDefinition?> GetPublishedMetadataAsync(
+    /// <summary>
+    /// Gets one definition from the most recent complete management read snapshot when available.
+    /// </summary>
+    /// <remarks>
+    /// This read-optimized path is intended for display and inspection only. Mutation and rollback workflows must use
+    /// <see cref="GetRequiredAsync"/> so schema concurrency validation always starts from authoritative metadata.
+    /// </remarks>
+    internal async Task<ConfigurationDefinition> GetRequiredForReadAsync(
         string definitionKey,
         CancellationToken cancellationToken)
     {
-        if (_publishedMetadataByKey.TryGetValue(definitionKey, out var cached))
+        ConfigurationDefinitionReadSnapshot? snapshot;
+        lock (_readSnapshotLock)
         {
-            return cached;
+            snapshot = _readSnapshot;
         }
 
-        var published = await metadataStore.GetPublishedDefinitionAsync(definitionKey, cancellationToken);
-        if (published is not null)
-        {
-            _publishedMetadataByKey[published.DefinitionKey] = published;
-        }
-
-        return published;
+        return snapshot?.IsFresh is true
+            ? snapshot.GetRequired(definitionKey)
+            : await GetRequiredAsync(definitionKey, cancellationToken);
     }
 
-    private void RefreshPublishedMetadataCache(IReadOnlyList<ConfigurationDefinition> publishedDefinitions)
+    /// <summary>
+    /// Invalidates the management read snapshot after locally published or remotely observed metadata changes.
+    /// </summary>
+    internal void InvalidateReadSnapshot()
     {
-        var seenKeys = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        foreach (var published in publishedDefinitions)
+        lock (_readSnapshotLock)
         {
-            seenKeys.Add(published.DefinitionKey);
-            _publishedMetadataByKey[published.DefinitionKey] = published;
-        }
-
-        foreach (var key in _publishedMetadataByKey.Keys)
-        {
-            if (!seenKeys.Contains(key))
-            {
-                _publishedMetadataByKey.TryRemove(key, out _);
-            }
+            _readSnapshot = null;
+            _readSnapshotGeneration++;
         }
     }
 
@@ -124,7 +243,9 @@ public sealed class ConfigurationDefinitionResolver(
         var localVersion = Math.Max(localDefinition.SchemaVersion, 1);
         if (!HasSameSchemaHash(localDefinition, publishedDefinition))
         {
-            return localVersion;
+            // A differing local schema is the next unpublished revision; reusing the scanner's default version
+            // could make historical rows appear compatible with a different sensitivity contract.
+            return checked(Math.Max(localVersion, publishedDefinition.SchemaVersion) + 1);
         }
 
         return Math.Max(localVersion, publishedDefinition.SchemaVersion);
@@ -135,6 +256,75 @@ public sealed class ConfigurationDefinitionResolver(
         ConfigurationDefinition publishedDefinition)
     {
         return string.Equals(localDefinition.SchemaHash, publishedDefinition.SchemaHash, StringComparison.Ordinal);
+    }
+
+    private long CaptureReadSnapshotGeneration()
+    {
+        lock (_readSnapshotLock)
+        {
+            return _readSnapshotGeneration;
+        }
+    }
+
+    private void PublishReadSnapshot(ConfigurationDefinitionCatalogSnapshot snapshot, long expectedGeneration)
+    {
+        lock (_readSnapshotLock)
+        {
+            if (_readSnapshotGeneration == expectedGeneration)
+            {
+                _readSnapshot = ConfigurationDefinitionReadSnapshot.Create(snapshot.Entries);
+            }
+        }
+    }
+
+    private ConfigurationMetadataStoreDiagnostic CreateStoreDiagnostic(Exception error)
+    {
+        return new ConfigurationMetadataStoreDiagnostic
+        {
+            StoreKey = metadataStore.Descriptor.StoreKey,
+            StoreDisplayName = metadataStore.Descriptor.DisplayName,
+            Kind = ClassifyStoreFailure(error),
+            ErrorType = error.GetType().FullName ?? error.GetType().Name,
+            Message = error.GetMessageRecursively()
+        };
+    }
+
+    private static ConfigurationMetadataStoreIssueKind ClassifyStoreFailure(Exception error)
+    {
+        for (var current = error; current is not null; current = current.InnerException)
+        {
+            switch (current)
+            {
+                case ConfigurationMetadataStoreReadException classified:
+                    return classified.Kind;
+                case UnauthorizedAccessException:
+                    return ConfigurationMetadataStoreIssueKind.AccessDenied;
+                case DbException or IOException or TimeoutException:
+                    return ConfigurationMetadataStoreIssueKind.Unavailable;
+            }
+        }
+
+        return ConfigurationMetadataStoreIssueKind.ReadFailed;
+    }
+
+    private static IReadOnlyList<ConfigurationDefinitionCatalogEntry> SortCatalogEntries(
+        IEnumerable<ConfigurationDefinitionCatalogEntry> entries)
+    {
+        return entries
+            .OrderBy(DisplayNameOrKey, StringComparer.OrdinalIgnoreCase)
+            .ThenBy(DefinitionKey, StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+    }
+
+    private static string DisplayNameOrKey(ConfigurationDefinitionCatalogEntry entry)
+    {
+        var displayName = entry.Definition?.DisplayName ?? entry.PublishedMetadata?.DisplayName;
+        return string.IsNullOrWhiteSpace(displayName) ? DefinitionKey(entry) : displayName;
+    }
+
+    private static string DefinitionKey(ConfigurationDefinitionCatalogEntry entry)
+    {
+        return entry.Definition?.DefinitionKey ?? entry.PublishedMetadata?.DefinitionKey ?? string.Empty;
     }
 
     /// <summary>
@@ -150,5 +340,41 @@ public sealed class ConfigurationDefinitionResolver(
 
         definition = null;
         return false;
+    }
+
+    private sealed class ConfigurationDefinitionReadSnapshot(
+        IReadOnlyDictionary<string, ConfigurationDefinitionCatalogEntry> entriesByKey,
+        long createdTimestamp)
+    {
+        public bool IsFresh => Stopwatch.GetElapsedTime(createdTimestamp) < READ_SNAPSHOT_LIFETIME;
+
+        public static ConfigurationDefinitionReadSnapshot Create(
+            IReadOnlyList<ConfigurationDefinitionCatalogEntry> entries)
+        {
+            return new ConfigurationDefinitionReadSnapshot(entries.ToDictionary(
+                DefinitionKey,
+                StringComparer.OrdinalIgnoreCase), Stopwatch.GetTimestamp());
+        }
+
+        public ConfigurationDefinition GetRequired(string definitionKey)
+        {
+            if (!entriesByKey.TryGetValue(definitionKey, out var entry))
+            {
+                throw new ConfigurationDefinitionNotFoundException(definitionKey);
+            }
+
+            if (entry.Availability != ConfigurationDefinitionAvailability.Available)
+            {
+                throw new ConfigurationDefinitionMetadataUnavailableException(
+                    definitionKey,
+                    entry.Diagnostic
+                    ?? throw new InvalidOperationException(
+                        $"Unavailable definition '{definitionKey}' has no metadata diagnostic."));
+            }
+
+            return entry.Definition
+                   ?? throw new InvalidOperationException(
+                       $"Available definition '{definitionKey}' has no materialized schema.");
+        }
     }
 }

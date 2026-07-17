@@ -7,6 +7,11 @@ public sealed class ConfigurationDefinitionPublishHistoryEntity
 {
     public string HistoryId { get; set; } = "";
 
+    /// <summary>
+    /// Gets or sets the provider-independent identity of the published definition.
+    /// </summary>
+    public string DefinitionIdentity { get; set; } = "";
+
     public string DefinitionKey { get; set; } = "";
 
     public string SectionPath { get; set; } = "";

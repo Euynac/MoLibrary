@@ -183,3 +183,24 @@
     text-overflow: ellipsis;
     white-space: nowrap;
 }
+
+@media (max-width: 599.98px) {
+    .configuration-definition-list-toolbar {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .configuration-definition-list-group-toggle,
+    .configuration-definition-list-group-toggle ::deep .mud-tooltip-root,
+    .configuration-definition-list-group-toggle ::deep .mud-button-root {
+        width: 100%;
+    }
+
+    .configuration-definition-list-scroll {
+        max-height: 45vh;
+    }
+
+    .configuration-definition-title {
+        flex-wrap: wrap;
+    }
+}

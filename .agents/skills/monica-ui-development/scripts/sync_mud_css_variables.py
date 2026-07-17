@@ -12,11 +12,10 @@ from pathlib import Path
 
 from check_mudblazor_source import (
     REQUIRED_RELATIVE_FILE,
-    registration_commands,
-    resolve_mudblazor_source_root,
-    resolve_source_configuration,
+    print_failure_details,
+    resolve_mudblazor_source,
 )
-from mudblazor_skill_state import THIRD_PARTY_CATALOG_FILE, VARIABLES_JSON_FILE, ensure_state_dir
+from mudblazor_skill_state import VARIABLES_JSON_FILE, ensure_state_dir
 
 OUTPUT_JSON = VARIABLES_JSON_FILE
 CONST_PATTERN = re.compile(r'private const string\s+(\w+)\s*=\s*"([^"]+)";')
@@ -62,27 +61,15 @@ def main() -> int:
     parser.add_argument("--force", action="store_true", help="Rewrite JSON even when unchanged.")
     args = parser.parse_args()
 
-    catalog_path, config_source = resolve_source_configuration()
-    resolved_root, candidates = resolve_mudblazor_source_root()
-    if resolved_root is None:
-        print("[ERROR] MudBlazor source is not available through third-party-source-catalog.")
-        print(f"Catalog file: {THIRD_PARTY_CATALOG_FILE}")
-        print(f"Catalog state: {config_source}")
-        if catalog_path:
-            print(f"Matched catalog path: {catalog_path}")
-        if candidates:
-            print("Checked candidate roots:")
-            for candidate in candidates:
-                print(f"  - {candidate.as_posix()}")
-        print()
-        print("This source-dependent workflow cannot continue.")
-        print("Register MudBlazor source with third-party-source-catalog, then rerun this script.")
-        print("Suggested commands:")
-        for command in registration_commands():
-            print(f"  {command}")
+    resolution = resolve_mudblazor_source()
+    if not resolution.is_available:
+        print("[ERROR] MudBlazor source is not available through inspect-dependency-source.")
+        print_failure_details(resolution)
         print("Run scripts/check_mudblazor_source.py for detailed diagnostics.")
         return 1
 
+    resolved_root = resolution.source_root
+    assert resolved_root is not None
     source_file = resolved_root / REQUIRED_RELATIVE_FILE
     source_text = source_file.read_text(encoding="utf-8")
     variables = extract_mud_variables(source_text)

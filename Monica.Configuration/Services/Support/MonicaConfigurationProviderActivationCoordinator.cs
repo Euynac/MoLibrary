@@ -12,6 +12,7 @@ internal sealed class MonicaConfigurationProviderActivationCoordinator(
     MonicaConfigurationProviderAccessor accessor,
     IConfigurationDefinitionRegistry definitionRegistry,
     IConfigurationMetadataStore metadataStore,
+    ConfigurationDefinitionResolver definitionResolver,
     IConfigurationStoreStateTracker stateTracker,
     IConfigurationReloadCoordinator reloadCoordinator)
 {
@@ -41,6 +42,7 @@ internal sealed class MonicaConfigurationProviderActivationCoordinator(
             try
             {
                 await metadataStore.PublishAsync(definitionRegistry.GetAll(), cancellationToken);
+                definitionResolver.InvalidateReadSnapshot();
                 stateTracker.RecordSuccess(metadataStore.Descriptor.StoreKey);
             }
             catch (Exception ex)

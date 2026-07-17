@@ -46,10 +46,23 @@
                             </MudText>
                         </MudStack>
 
+                        @if (row.HasSchemaDrift)
+                        {
+                            <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined" Dense="true">
+                                @L["State:Value:SchemaDriftHiddenNotice"]
+                            </MudAlert>
+                        }
+                        @if (row.HasHiddenChanges)
+                        {
+                            <MudAlert Severity="Severity.Info" Variant="Variant.Outlined" Dense="true">
+                                @L["State:Value:HiddenChangedNotice"]
+                            </MudAlert>
+                        }
+
                         <DiffViewer OriginText="@row.OriginText"
                                     NewText="@row.TargetText"
                                     Options="@_diffOptions"
-                                    ViewMode="EDiffViewMode.Unified" />
+                                    ViewMode="EDiffViewMode.Split" />
                     </MudStack>
                 </section>
             }
@@ -112,19 +125,45 @@
     private UnifiedVersionDiffRow CreateRow(ConfigurationUnifiedVersionDefinitionChange change)
     {
         _definitions.TryGetValue(change.DefinitionKey, out var definition);
+        var hasSchemaDrift = HasSchemaDrift(change.DefinitionKey, definition);
+        var display = ConfigurationUnifiedVersionJsonFormatter.FormatComparisonForDisplay(
+            change.OriginJson,
+            change.TargetJson,
+            definition,
+            L["State:Value:Sensitive"],
+            L["State:Value:Hidden"],
+            L["State:Value:HiddenBeforeChange"],
+            L["State:Value:HiddenAfterChange"],
+            hasSchemaDrift);
+
         return new UnifiedVersionDiffRow(
             change.DefinitionKey,
             string.IsNullOrWhiteSpace(change.DisplayName) ? change.DefinitionKey : change.DisplayName,
             ChangeKindText(change.ChangeKind),
             change.ChangeKind,
-            ConfigurationUnifiedVersionJsonFormatter.FormatForDisplay(
-                change.OriginJson,
-                definition,
-                L["State:Value:Sensitive"]),
-            ConfigurationUnifiedVersionJsonFormatter.FormatForDisplay(
-                change.TargetJson,
-                definition,
-                L["State:Value:Sensitive"]));
+            display.OriginText,
+            display.TargetText,
+            display.HasHiddenChanges,
+            hasSchemaDrift);
+    }
+
+    private bool HasSchemaDrift(string definitionKey, ConfigurationDefinition? currentDefinition)
+    {
+        if (currentDefinition is null)
+        {
+            return true;
+        }
+
+        return Comparison.Origin.Definitions
+            .Concat(Comparison.Target.Definitions)
+            .Where(snapshot => string.Equals(
+                snapshot.DefinitionKey,
+                definitionKey,
+                StringComparison.OrdinalIgnoreCase))
+            .Any(snapshot => !string.Equals(
+                snapshot.SchemaHash,
+                currentDefinition.SchemaHash,
+                StringComparison.Ordinal));
     }
 
     private string ChangeKindText(ConfigurationUnifiedVersionDefinitionChangeKind kind)
@@ -158,5 +197,7 @@
         string ChangeKindText,
         ConfigurationUnifiedVersionDefinitionChangeKind ChangeKind,
         string OriginText,
-        string TargetText);
+        string TargetText,
+        bool HasHiddenChanges,
+        bool HasSchemaDrift);
 }

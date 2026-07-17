@@ -32,7 +32,10 @@ internal sealed class ConfigurationUnifiedVersionCoordinator(
         await versionStore.AppendVersionAsync(request, cancellationToken);
     }
 
-    public async Task CaptureMutationGroupAsync(ConfigurationMutationGroup group, CancellationToken cancellationToken)
+    public async Task CaptureMutationGroupAsync(
+        ConfigurationMutationGroup group,
+        IReadOnlyList<ConfigurationExpectedEffectiveValue> expectedValues,
+        CancellationToken cancellationToken)
     {
         if (!snapshotFactory.IsEnabled || !string.IsNullOrWhiteSpace(group.RolledBackGroupId))
         {
@@ -71,6 +74,29 @@ internal sealed class ConfigurationUnifiedVersionCoordinator(
             return;
         }
 
+        ValidateCapturedExpectedValues(request, expectedValues);
         await versionStore.AppendVersionAsync(request, cancellationToken);
+    }
+
+    private static void ValidateCapturedExpectedValues(
+        ConfigurationUnifiedVersionCreateRequest request,
+        IReadOnlyList<ConfigurationExpectedEffectiveValue> expectedValues)
+    {
+        if (expectedValues.Count == 0)
+        {
+            return;
+        }
+
+        var expectedByDefinition = expectedValues.ToDictionary(
+            static expected => expected.DefinitionKey,
+            StringComparer.OrdinalIgnoreCase);
+        var mismatch = request.Definitions.FirstOrDefault(definition =>
+            expectedByDefinition.TryGetValue(definition.DefinitionKey, out var expected)
+            && !ConfigurationJsonSemanticComparer.Equals(definition.Json, expected.Json));
+        if (mismatch is not null)
+        {
+            throw new InvalidOperationException(
+                $"Unified-version capture for '{mismatch.DefinitionKey}' no longer matches the verified effective value.");
+        }
     }
 }

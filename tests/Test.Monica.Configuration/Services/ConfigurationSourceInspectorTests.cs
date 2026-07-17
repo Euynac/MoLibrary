@@ -39,7 +39,7 @@ public sealed class ConfigurationSourceInspectorTests : IDisposable
         var inspector = CreateInspector(configuration);
 
         var sources = inspector.GetSources();
-        var inventories = inspector.GetSourceInventories();
+        var inventories = await inspector.GetSourceInventoriesAsync(TestContext.Current.CancellationToken);
 
         sources.Should().HaveCount(2);
         sources.Select(source => source.SourceKey).Should().OnlyHaveUniqueItems();
