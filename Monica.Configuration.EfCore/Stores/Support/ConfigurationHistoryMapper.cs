@@ -20,6 +20,7 @@ internal static class ConfigurationHistoryMapper
             FromProject = entity.FromProject,
             Category = entity.Category,
             ChangeKind = Enum.Parse<ConfigurationDefinitionPublishChangeKind>(entity.ChangeKind),
+            DefinitionRevision = entity.DefinitionRevision,
             PreviousSchemaVersion = entity.PreviousSchemaVersion,
             NewSchemaVersion = entity.NewSchemaVersion,
             PreviousSchemaHash = entity.PreviousSchemaHash,

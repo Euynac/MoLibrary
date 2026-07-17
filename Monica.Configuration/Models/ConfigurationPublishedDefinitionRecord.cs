@@ -58,6 +58,11 @@ public sealed record ConfigurationPublishedDefinitionRecord
     public int SchemaVersion { get; init; }
 
     /// <summary>
+    /// Gets the persisted definition revision.
+    /// </summary>
+    public int DefinitionRevision { get; init; }
+
+    /// <summary>
     /// Gets the persisted schema hash.
     /// </summary>
     public required string SchemaHash { get; init; }
@@ -78,6 +83,7 @@ public sealed record ConfigurationPublishedDefinitionRecord
     {
         return $"{nameof(ConfigurationPublishedDefinitionRecord)} {{ StoreKey = {StoreKey}, "
                + $"DefinitionKey = {DefinitionKey}, FromProject = {FromProject}, SchemaVersion = {SchemaVersion}, "
+               + $"DefinitionRevision = {DefinitionRevision}, "
                + $"SchemaHash = {SchemaHash}, SchemaJson = <redacted> }}";
     }
 }

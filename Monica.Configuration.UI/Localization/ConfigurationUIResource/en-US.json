@@ -33,11 +33,14 @@
       "GroupModeCategoryTooltip": "Grouped by category. Click to group by project.",
       "PublishedMetadata": "DB",
       "PublishedMetadataTooltip": "This definition was loaded from published database metadata. Monica database values can be edited here, but runtime source-chain inspection is available only in the service that scanned the CLR type.",
-      "SchemaVersionChip": "v{0}",
-      "SchemaMetadataTitle": "Schema metadata",
-      "SchemaVersionDetail": "Version: {0}",
+      "SchemaVersionCompactChip": "v{0}",
+      "SchemaVersionChip": "Schema v{0} · r{1}",
+      "SchemaMetadataTitle": "Definition versions",
+      "SchemaVersionDetail": "Schema v{0}: advances only when the configuration structure changes.",
+      "DefinitionRevisionDetail": "Definition revision r{0}: advances when the effective schema or metadata changes.",
       "SchemaHashDetail": "Hash",
       "SchemaHashMissing": "No hash available",
+      "ReloadContributorsTooltip": "Effective behavior: {0}. Click to inspect publishing-service contributions.",
       "Unavailable": "Definition unavailable",
       "MetadataFault": "Metadata problem",
       "NoAvailableDefinitions": "No configuration definition currently has complete authoritative metadata. Review the reported problems and refresh after they are repaired.",
@@ -255,6 +258,69 @@
       "StaticAfterStartup": "This configuration is read during service startup, so saving requires a service restart."
     }
   },
+  "DefinitionPublication": {
+    "Title": "Definition Publication - {0}",
+    "Unavailable": "Publication details are unavailable for this definition.",
+    "CurrentVersions": "Schema v{0} · r{1}",
+    "Tabs": {
+      "RevisionHistory": "Revision history",
+      "ReloadContributors": "Reload contributors"
+    },
+    "RevisionHistory": {
+      "Title": "Effective definition revisions",
+      "Count": "Latest {0} revisions",
+      "Empty": "No persisted definition revision history is available.",
+      "Timeline": "Revision timeline",
+      "PublishingInstance": "Publishing instance",
+      "PublishingServiceVersion": "Publishing service version",
+      "SectionPath": "Configuration section",
+      "FromProject": "Project",
+      "PreviousHash": "Previous hash",
+      "NewHash": "New hash",
+      "ChangeSummary": "Change summary",
+      "NoSummary": "No structured change summary is available.",
+      "Field": "Field",
+      "PreviousValue": "Previous value",
+      "NewValue": "New value",
+      "SchemaDiff": "Schema diff",
+      "SchemaUnchanged": "Schema v{0} remained unchanged in definition revision r{1}.",
+      "RevisionCreated": "Definition revision r{0} · Schema v{1}",
+      "RevisionMetadataChanged": "Definition revision r{0} · Schema v{1} unchanged",
+      "RevisionSchemaChanged": "Definition revision r{0} · Schema v{1} → v{2}",
+      "Kinds": {
+        "Created": "Definition created",
+        "SchemaChanged": "Schema changed",
+        "MetadataChanged": "Metadata changed"
+      }
+    },
+    "ReloadContributors": {
+      "EffectiveSummary": "Effective reload behavior: {0}",
+      "Precedence": "Monica chooses the safest participating evidence: Fixed after startup > Restart required > Unresolved > Online reloadable. Not consumed is neutral.",
+      "Empty": "No publishing-service contribution is available.",
+      "LogicalService": "Logical service",
+      "EvidenceSource": "Evidence source",
+      "ReportedBehavior": "Reported behavior",
+      "NotApplicable": "Not applicable",
+      "Evidence": {
+        "Declared": {
+          "Label": "Declared",
+          "Description": "Developer-authored metadata declares this behavior."
+        },
+        "Inferred": {
+          "Label": "Inferred",
+          "Description": "Monica inferred this behavior from the service's configuration consumption."
+        },
+        "Unresolved": {
+          "Label": "Unresolved",
+          "Description": "The service may consume the definition, but its reload behavior cannot be proven."
+        },
+        "NotConsumed": {
+          "Label": "Not consumed",
+          "Description": "The service does not consume this definition, so its report is neutral."
+        }
+      }
+    }
+  },
   "History": {
     "Title": "History",
     "Subtitle": "Audit individual mutations and persisted mutation groups.",
@@ -312,30 +378,6 @@
       "ReloadBehavior": "Reload behavior: {0}",
       "Description": "Description: {0}",
       "CollapsedRows": "Collapsed fields: {0}"
-    },
-    "SchemaPublish": {
-      "Title": "Schema Publish History - {0}",
-      "Count": "{0} publish records",
-      "Empty": "No schema publish history was found.",
-      "Publisher": "Publisher",
-      "PublisherVersion": "Publisher version",
-      "SectionPath": "Configuration section",
-      "FromProject": "Project",
-      "PreviousHash": "Previous hash",
-      "NewHash": "New hash",
-      "ChangeSummary": "Change summary",
-      "NoSummary": "No structured change summary is available.",
-      "Field": "Field",
-      "PreviousValue": "Previous value",
-      "NewValue": "New value",
-      "SchemaDiff": "Schema diff",
-      "VersionCreated": "v{0}",
-      "VersionChanged": "v{0} -> v{1}",
-      "Kinds": {
-        "Created": "First publish",
-        "SchemaChanged": "Schema changed",
-        "MetadataChanged": "Metadata changed"
-      }
     },
     "Dialog": {
       "Title": "Configuration History",

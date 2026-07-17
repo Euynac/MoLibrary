@@ -675,22 +675,36 @@ public sealed class FileConfigurationStore(IOptions<ConfigurationFileStoreOption
     }
 
     /// <inheritdoc />
-    public async Task PublishAsync(IReadOnlyList<ConfigurationDefinition> definitions, CancellationToken cancellationToken)
+    public async Task PublishAsync(ConfigurationDefinitionPublicationBatch batch, CancellationToken cancellationToken)
     {
-        foreach (var definition in definitions)
+        ArgumentNullException.ThrowIfNull(batch);
+        // The file store is a local/monolith provider, so its canonical value is the aggregate of this one publisher.
+        var publications = batch.Publications
+            .Select(static publication => new
+            {
+                Publication = publication,
+                Definition = publication.Definition with
+                {
+                    ReloadBehavior = ConfigurationReloadBehaviorObservation.Aggregate(
+                        [publication.ReloadBehaviorObservation])
+                }
+            })
+            .ToArray();
+
+        foreach (var publication in publications)
         {
-            _ = GetSafeFileName(definition.DefinitionKey);
+            _ = GetSafeFileName(publication.Definition.DefinitionKey);
         }
 
-        var duplicateDefinition = definitions
+        var duplicateDefinition = publications
             .GroupBy(
-                static definition => ConfigurationDefinitionIdentity.Compute(definition.DefinitionKey),
+                static publication => ConfigurationDefinitionIdentity.Compute(publication.Definition.DefinitionKey),
                 StringComparer.Ordinal)
             .FirstOrDefault(static group => group.Skip(1).Any());
         if (duplicateDefinition is not null)
         {
             var keys = duplicateDefinition
-                .Select(static definition => $"'{definition.DefinitionKey}'")
+                .Select(static publication => $"'{publication.Definition.DefinitionKey}'")
                 .OrderBy(static key => key, StringComparer.Ordinal)
                 .ToArray();
             throw new ConfigurationValidationFailedException(
@@ -702,14 +716,23 @@ public sealed class FileConfigurationStore(IOptions<ConfigurationFileStoreOption
         {
             EnsureDirectories();
             var definitionPaths = IndexDefinitionPaths(cancellationToken);
-            foreach (var definition in definitions)
+            var incomingIdentities = publications
+                .Select(static publication =>
+                    ConfigurationDefinitionIdentity.Compute(publication.Definition.DefinitionKey))
+                .ToHashSet(StringComparer.Ordinal);
+            foreach (var publication in publications)
             {
                 cancellationToken.ThrowIfCancellationRequested();
+                var definition = publication.Definition;
                 var path = ResolveDefinitionPathForPublish(definition.DefinitionKey, definitionPaths);
                 var existing = IoFile.Exists(path)
                     ? await TryReadPublishedDefinitionDtoForRepairAsync(path, cancellationToken)
                     : null;
-                var published = PublishedDefinitionDto.FromDefinition(definition, existing);
+                var published = PublishedDefinitionDto.FromPublication(
+                    definition,
+                    batch.Publisher.PublisherKey,
+                    publication.Publication.ReloadBehaviorObservation,
+                    existing);
                 if (existing is not null && published.Matches(existing))
                 {
                     continue;
@@ -717,6 +740,12 @@ public sealed class FileConfigurationStore(IOptions<ConfigurationFileStoreOption
 
                 await IoFile.WriteAllTextAsync(path, JsonSerializer.Serialize(published, JSON_OPTIONS), cancellationToken);
             }
+
+            await WithdrawMissingPublisherStatesAsync(
+                definitionPaths,
+                batch.Publisher.PublisherKey,
+                incomingIdentities,
+                cancellationToken);
         }
         finally
         {
@@ -725,12 +754,79 @@ public sealed class FileConfigurationStore(IOptions<ConfigurationFileStoreOption
     }
 
     /// <inheritdoc />
-    public Task<IReadOnlyList<ConfigurationDefinitionPublishHistory>> ListDefinitionPublishHistoriesAsync(
+    public async Task RetirePublisherAsync(
+        ConfigurationPublisherIdentity publisher,
+        CancellationToken cancellationToken)
+    {
+        var retirement = ConfigurationDefinitionPublicationBatch.Create(publisher, []);
+        await _lock.WaitAsync(cancellationToken);
+        try
+        {
+            EnsureDirectories();
+            await WithdrawMissingPublisherStatesAsync(
+                IndexDefinitionPaths(cancellationToken),
+                retirement.Publisher.PublisherKey,
+                new HashSet<string>(StringComparer.Ordinal),
+                cancellationToken);
+        }
+        finally
+        {
+            _lock.Release();
+        }
+    }
+
+    /// <inheritdoc />
+    public async Task<ConfigurationDefinitionPublicationOverview> GetDefinitionPublicationOverviewAsync(
         string definitionKey,
         int limit,
         CancellationToken cancellationToken)
     {
-        return Task.FromResult<IReadOnlyList<ConfigurationDefinitionPublishHistory>>([]);
+        await _lock.WaitAsync(cancellationToken);
+        try
+        {
+            EnsureDirectories();
+            var paths = FindDefinitionPaths(definitionKey, cancellationToken);
+            if (paths.Length == 0)
+            {
+                throw new KeyNotFoundException(
+                    $"Published configuration definition '{definitionKey}' was not found.");
+            }
+
+            if (paths.Length > 1)
+            {
+                throw new InvalidDataException(
+                    $"Multiple persisted definition metadata files claim key '{definitionKey}'.");
+            }
+
+            var dto = await TryReadPublishedDefinitionDtoForRepairAsync(paths[0], cancellationToken)
+                      ?? throw new InvalidDataException(
+                          $"Published configuration definition '{definitionKey}' could not be read.");
+            if (!Enum.TryParse<ConfigurationReloadBehavior>(
+                    dto.ReloadBehavior,
+                    ignoreCase: false,
+                    out var reloadBehavior)
+                || !Enum.IsDefined(reloadBehavior))
+            {
+                throw new InvalidDataException(
+                    $"Published definition '{definitionKey}' uses unsupported reload behavior '{dto.ReloadBehavior}'.");
+            }
+
+            return new ConfigurationDefinitionPublicationOverview
+            {
+                DefinitionKey = dto.DefinitionKey,
+                DefinitionRevision = dto.DefinitionRevision,
+                SchemaVersion = dto.SchemaVersion,
+                ReloadBehavior = reloadBehavior,
+                PublisherStates = dto.PublisherState is null
+                    ? []
+                    : [dto.PublisherState.ToModel()],
+                RevisionHistories = []
+            };
+        }
+        finally
+        {
+            _lock.Release();
+        }
     }
 
     /// <inheritdoc />
@@ -1183,6 +1279,37 @@ public sealed class FileConfigurationStore(IOptions<ConfigurationFileStoreOption
             StringComparer.OrdinalIgnoreCase);
     }
 
+    private static async Task WithdrawMissingPublisherStatesAsync(
+        IReadOnlyDictionary<string, IReadOnlyList<string>> definitionPaths,
+        string publisherKey,
+        IReadOnlySet<string> incomingIdentities,
+        CancellationToken cancellationToken)
+    {
+        foreach (var (definitionKey, paths) in definitionPaths)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            if (incomingIdentities.Contains(ConfigurationDefinitionIdentity.Compute(definitionKey)))
+            {
+                continue;
+            }
+
+            foreach (var path in paths)
+            {
+                var existing = await TryReadPublishedDefinitionDtoForRepairAsync(path, cancellationToken);
+                var withdrawn = existing?.WithdrawPublisher(publisherKey);
+                if (existing is null || withdrawn is null || withdrawn.Matches(existing))
+                {
+                    continue;
+                }
+
+                await IoFile.WriteAllTextAsync(
+                    path,
+                    JsonSerializer.Serialize(withdrawn, JSON_OPTIONS),
+                    cancellationToken);
+            }
+        }
+    }
+
     private string[] FindDefinitionPaths(string definitionKey, CancellationToken cancellationToken)
     {
         _ = GetDefinitionPath(definitionKey);
@@ -1299,9 +1426,16 @@ public sealed class FileConfigurationStore(IOptions<ConfigurationFileStoreOption
                 FromProject = ReadString(root, nameof(PublishedDefinitionDto.FromProject)),
                 Category = ReadOptionalString(root, nameof(PublishedDefinitionDto.Category)),
                 SchemaVersion = ReadInt32(root, nameof(PublishedDefinitionDto.SchemaVersion)),
+                DefinitionRevision = ReadInt32(root, nameof(PublishedDefinitionDto.DefinitionRevision)),
                 SchemaHash = ReadString(root, nameof(PublishedDefinitionDto.SchemaHash)),
                 ReloadBehavior = ReadString(root, nameof(PublishedDefinitionDto.ReloadBehavior)),
-                SchemaJson = ReadString(root, nameof(PublishedDefinitionDto.SchemaJson))
+                SchemaJson = ReadString(root, nameof(PublishedDefinitionDto.SchemaJson)),
+                PublisherState = root.TryGetProperty(
+                                     nameof(PublishedDefinitionDto.PublisherState),
+                                     out var publisherState)
+                                 && publisherState.ValueKind == JsonValueKind.Object
+                    ? publisherState.Deserialize<PublishedDefinitionPublisherStateDto>(JSON_OPTIONS)
+                    : null
             };
         }
         catch (JsonException)
@@ -1358,6 +1492,7 @@ public sealed class FileConfigurationStore(IOptions<ConfigurationFileStoreOption
             ClrTypeName = "",
             FromProject = "",
             SchemaVersion = 0,
+            DefinitionRevision = 0,
             SchemaHash = "",
             ReloadBehavior = "",
             SchemaJson = ""
@@ -1482,17 +1617,23 @@ public sealed class FileConfigurationStore(IOptions<ConfigurationFileStoreOption
 
         public int SchemaVersion { get; init; }
 
+        public int DefinitionRevision { get; init; }
+
         public string SchemaHash { get; init; } = "";
 
         public string ReloadBehavior { get; init; } = "";
 
         public string SchemaJson { get; init; } = "";
 
-        public static PublishedDefinitionDto FromDefinition(
+        public PublishedDefinitionPublisherStateDto? PublisherState { get; init; }
+
+        public static PublishedDefinitionDto FromPublication(
             ConfigurationDefinition definition,
+            string publisherKey,
+            ConfigurationReloadBehaviorObservation observation,
             PublishedDefinitionDto? existing)
         {
-            return new PublishedDefinitionDto
+            var candidate = new PublishedDefinitionDto
             {
                 DefinitionKey = definition.DefinitionKey,
                 SectionPath = definition.SectionPath,
@@ -1504,7 +1645,18 @@ public sealed class FileConfigurationStore(IOptions<ConfigurationFileStoreOption
                 SchemaVersion = ResolvePublishedSchemaVersion(definition, existing),
                 SchemaHash = definition.SchemaHash,
                 ReloadBehavior = definition.ReloadBehavior.ToString(),
-                SchemaJson = ConfigurationDefinitionSchemaCodec.SerializeSchema(definition)
+                SchemaJson = ConfigurationDefinitionSchemaCodec.SerializeSchema(definition),
+                PublisherState = PublishedDefinitionPublisherStateDto.FromObservation(publisherKey, observation)
+            };
+            var definitionRevision = existing is null
+                ? 1
+                : candidate.HasSameCanonicalSnapshot(existing)
+                    ? Math.Max(existing.DefinitionRevision, 1)
+                    : checked(Math.Max(existing.DefinitionRevision, 0) + 1);
+
+            return candidate with
+            {
+                DefinitionRevision = definitionRevision
             };
         }
 
@@ -1518,9 +1670,32 @@ public sealed class FileConfigurationStore(IOptions<ConfigurationFileStoreOption
                    && string.Equals(FromProject, existing.FromProject, StringComparison.Ordinal)
                    && string.Equals(Category, NullIfWhiteSpace(existing.Category), StringComparison.Ordinal)
                    && SchemaVersion == existing.SchemaVersion
+                   && DefinitionRevision == existing.DefinitionRevision
                    && string.Equals(SchemaHash, existing.SchemaHash, StringComparison.Ordinal)
                    && string.Equals(ReloadBehavior, existing.ReloadBehavior, StringComparison.Ordinal)
-                   && string.Equals(SchemaJson, existing.SchemaJson, StringComparison.Ordinal);
+                   && string.Equals(SchemaJson, existing.SchemaJson, StringComparison.Ordinal)
+                   && Equals(PublisherState, existing.PublisherState);
+        }
+
+        public PublishedDefinitionDto WithdrawPublisher(string publisherKey)
+        {
+            if (PublisherState is null
+                || !string.Equals(PublisherState.PublisherKey, publisherKey, StringComparison.OrdinalIgnoreCase))
+            {
+                return this;
+            }
+
+            var withdrawn = this with
+            {
+                PublisherState = null,
+                ReloadBehavior = ConfigurationReloadBehavior.Unknown.ToString()
+            };
+            return withdrawn with
+            {
+                DefinitionRevision = withdrawn.HasSameCanonicalSnapshot(this)
+                    ? Math.Max(DefinitionRevision, 1)
+                    : checked(Math.Max(DefinitionRevision, 0) + 1)
+            };
         }
 
         public ConfigurationPublishedDefinitionRecord ToRecord(string storeKey)
@@ -1536,6 +1711,7 @@ public sealed class FileConfigurationStore(IOptions<ConfigurationFileStoreOption
                 FromProject = FromProject,
                 Category = Category,
                 SchemaVersion = SchemaVersion,
+                DefinitionRevision = DefinitionRevision,
                 SchemaHash = SchemaHash,
                 ReloadBehavior = ReloadBehavior,
                 SchemaJson = SchemaJson
@@ -1547,6 +1723,21 @@ public sealed class FileConfigurationStore(IOptions<ConfigurationFileStoreOption
             return string.IsNullOrWhiteSpace(value) ? null : value;
         }
 
+        private bool HasSameCanonicalSnapshot(PublishedDefinitionDto existing)
+        {
+            return string.Equals(DefinitionKey, existing.DefinitionKey, StringComparison.Ordinal)
+                   && string.Equals(SectionPath, existing.SectionPath, StringComparison.Ordinal)
+                   && string.Equals(DisplayName, existing.DisplayName, StringComparison.Ordinal)
+                   && string.Equals(Description, NullIfWhiteSpace(existing.Description), StringComparison.Ordinal)
+                   && string.Equals(ClrTypeName, existing.ClrTypeName, StringComparison.Ordinal)
+                   && string.Equals(FromProject, existing.FromProject, StringComparison.Ordinal)
+                   && string.Equals(Category, NullIfWhiteSpace(existing.Category), StringComparison.Ordinal)
+                   && SchemaVersion == existing.SchemaVersion
+                   && string.Equals(SchemaHash, existing.SchemaHash, StringComparison.Ordinal)
+                   && string.Equals(ReloadBehavior, existing.ReloadBehavior, StringComparison.Ordinal)
+                   && string.Equals(SchemaJson, existing.SchemaJson, StringComparison.Ordinal);
+        }
+
         private static int ResolvePublishedSchemaVersion(
             ConfigurationDefinition definition,
             PublishedDefinitionDto? existing)
@@ -1556,12 +1747,64 @@ public sealed class FileConfigurationStore(IOptions<ConfigurationFileStoreOption
                 return Math.Max(definition.SchemaVersion, 1);
             }
 
-            var currentVersion = Math.Max(Math.Max(existing.SchemaVersion, definition.SchemaVersion), 1);
+            var currentVersion = Math.Max(existing.SchemaVersion, 1);
             return string.Equals(existing.SchemaHash, definition.SchemaHash, StringComparison.Ordinal)
                 ? currentVersion
-                : checked(currentVersion + 1);
+                : checked(Math.Max(currentVersion, definition.SchemaVersion) + 1);
         }
 
+    }
+
+    private sealed record PublishedDefinitionPublisherStateDto
+    {
+        public string PublisherKey { get; init; } = "";
+
+        public string ObservationKind { get; init; } = "";
+
+        public string ReloadBehavior { get; init; } = "";
+
+        public static PublishedDefinitionPublisherStateDto FromObservation(
+            string publisherKey,
+            ConfigurationReloadBehaviorObservation observation)
+        {
+            return new PublishedDefinitionPublisherStateDto
+            {
+                PublisherKey = publisherKey,
+                ObservationKind = observation.Kind.ToString(),
+                ReloadBehavior = observation.Behavior.ToString()
+            };
+        }
+
+        public ConfigurationDefinitionPublisherState ToModel()
+        {
+            if (!Enum.TryParse<ConfigurationReloadBehaviorObservationKind>(
+                    ObservationKind,
+                    ignoreCase: false,
+                    out var observationKind)
+                || !Enum.IsDefined(observationKind))
+            {
+                throw new InvalidDataException(
+                    $"Published definition publisher state uses unsupported observation kind '{ObservationKind}'.");
+            }
+
+            if (!Enum.TryParse<ConfigurationReloadBehavior>(
+                    ReloadBehavior,
+                    ignoreCase: false,
+                    out var reloadBehavior)
+                || !Enum.IsDefined(reloadBehavior))
+            {
+                throw new InvalidDataException(
+                    $"Published definition publisher state uses unsupported reload behavior '{ReloadBehavior}'.");
+            }
+
+            _ = new ConfigurationReloadBehaviorObservation(observationKind, reloadBehavior);
+            return new ConfigurationDefinitionPublisherState
+            {
+                PublisherKey = PublisherKey,
+                ObservationKind = observationKind,
+                ReloadBehavior = reloadBehavior
+            };
+        }
     }
 
     private sealed record HistoryDto

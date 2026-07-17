@@ -79,7 +79,10 @@ public sealed class ConfigurationPublishedDefinitionEntry
                 metadata.SchemaHash,
                 reloadBehavior,
                 metadata.SchemaJson,
-                ConfigurationDefinitionOrigin.PublishedMetadata);
+                ConfigurationDefinitionOrigin.PublishedMetadata) with
+            {
+                DefinitionRevision = metadata.DefinitionRevision
+            };
 
             var computedSchemaHash = ConfigurationDefinitionSchemaCodec.ComputeSchemaHash(
                 definition.DefinitionKey,
@@ -223,6 +226,12 @@ public sealed class ConfigurationPublishedDefinitionEntry
         if (metadata.SchemaVersion < 1)
         {
             problem = $"Persisted definition '{metadata.DefinitionKey}' has invalid schema version {metadata.SchemaVersion}.";
+            return true;
+        }
+
+        if (metadata.DefinitionRevision < 1)
+        {
+            problem = $"Persisted definition '{metadata.DefinitionKey}' has invalid definition revision {metadata.DefinitionRevision}.";
             return true;
         }
 

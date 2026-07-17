@@ -207,13 +207,15 @@
                                                 </MudTooltip>
                                             }
                                             <ConfigurationSchemaMetadataChip SchemaVersion="@_selectedDefinition.SchemaVersion"
+                                                                             DefinitionRevision="@_selectedDefinition.DefinitionRevision"
                                                                              SchemaHash="@_selectedDefinition.SchemaHash"
-                                                                             OnClick="OpenSelectedDefinitionPublishHistoryAsync" />
-                                            <MudTooltip Text="@ReloadBehaviorDescription(_selectedDefinition.ReloadBehavior)">
+                                                                             OnClick="() => OpenSelectedDefinitionPublicationAsync(ConfigurationDefinitionPublicationTab.RevisionHistory)" />
+                                            <MudTooltip Text="@L["State:Definitions:ReloadContributorsTooltip", ReloadBehaviorLabel(_selectedDefinition.ReloadBehavior)]">
                                                 <MudChip T="string"
                                                          Size="Size.Small"
                                                          Color="@ReloadBehaviorColor(_selectedDefinition.ReloadBehavior)"
-                                                         Variant="Variant.Outlined">
+                                                         Variant="Variant.Outlined"
+                                                         OnClick="() => OpenSelectedDefinitionPublicationAsync(ConfigurationDefinitionPublicationTab.ReloadContributors)">
                                                     @ReloadBehaviorLabel(_selectedDefinition.ReloadBehavior)
                                                 </MudChip>
                                             </MudTooltip>
@@ -365,11 +367,6 @@
     private string ReloadBehaviorLabel(ConfigurationReloadBehavior behavior)
     {
         return ConfigurationReloadBehaviorFormatter.Label(behavior, L);
-    }
-
-    private string ReloadBehaviorDescription(ConfigurationReloadBehavior behavior)
-    {
-        return ConfigurationReloadBehaviorFormatter.Description(behavior, L);
     }
 
     private static Color ReloadBehaviorColor(ConfigurationReloadBehavior behavior)
@@ -1090,11 +1087,7 @@
         var dialog = await DialogService.ShowAsync<ConfigurationPostCommitIssuesDialog>(
             L["Dialogs:PostCommitIssues:Title"],
             parameters,
-            new DialogOptions
-            {
-                MaxWidth = MaxWidth.Large,
-                FullWidth = true
-            });
+            ConfigurationPostCommitIssuesDialog.DefaultOptions);
         await dialog.Result;
     }
 
@@ -1220,25 +1213,26 @@
         }
     }
 
-    private async Task OpenSelectedDefinitionPublishHistoryAsync()
+    private async Task OpenSelectedDefinitionPublicationAsync(ConfigurationDefinitionPublicationTab initialTab)
     {
         if (_selectedDefinition is null)
         {
             return;
         }
 
-        var result = await Facade.GetDefinitionPublishHistoriesAsync(_selectedDefinition.DefinitionKey, 50);
-        if (result.IsFailed(out var error, out var histories))
+        var result = await Facade.GetDefinitionPublicationOverviewAsync(_selectedDefinition.DefinitionKey, 50);
+        if (result.IsFailed(out var error, out var overview))
         {
             Snackbar.Add($"{L["Common:Errors:LoadFailed"]}: {error.Message}", Severity.Error);
             return;
         }
 
-        var parameters = new DialogParameters<ConfigurationDefinitionPublishHistoryDialog>();
+        var parameters = new DialogParameters<ConfigurationDefinitionPublicationDialog>();
         parameters.Add(dialog => dialog.Definition, _selectedDefinition);
-        parameters.Add(dialog => dialog.Histories, histories);
-        await DialogService.ShowAsync<ConfigurationDefinitionPublishHistoryDialog>(
-            L["History:SchemaPublish:Title", _selectedDefinition.DisplayName],
+        parameters.Add(dialog => dialog.Overview, overview);
+        parameters.Add(dialog => dialog.InitialTab, initialTab);
+        await DialogService.ShowAsync<ConfigurationDefinitionPublicationDialog>(
+            L["DefinitionPublication:Title", _selectedDefinition.DisplayName],
             parameters,
             new DialogOptions
             {

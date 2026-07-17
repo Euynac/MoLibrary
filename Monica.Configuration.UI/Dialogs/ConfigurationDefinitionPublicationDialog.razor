@@ -1,0 +1,508 @@
+@using Monica.Configuration.UI.Localization
+@using Monica.Configuration.Serialization
+@using Monica.UI.UIDiffHighlight.Models
+@inject IStringLocalizer<ConfigurationUIResource> L
+
+<MudDialog>
+    <DialogContent>
+        <div class="configuration-definition-publication-content">
+            <div class="configuration-definition-publication-header">
+                <div class="configuration-definition-publication-identity">
+                    <div class="configuration-definition-publication-title">
+                        <MudText Typo="Typo.subtitle1">@Definition?.DisplayName</MudText>
+                        @if (!string.IsNullOrWhiteSpace(Definition?.Description))
+                        {
+                            <MudTooltip Text="@Definition.Description">
+                                <span class="configuration-description-icon">
+                                    <MudIcon Icon="@Icons.Material.Filled.Info"
+                                             Size="Size.Small"
+                                             Color="Color.Info" />
+                                </span>
+                            </MudTooltip>
+                        }
+                    </div>
+                    <MudText Typo="Typo.caption" Color="Color.Secondary">@(Definition?.DefinitionKey ?? Overview?.DefinitionKey)</MudText>
+                </div>
+                @if (Overview is not null)
+                {
+                    <MudStack Row="true" Wrap="Wrap.Wrap" AlignItems="AlignItems.Center" Spacing="1">
+                        <MudChip T="string" Size="Size.Small" Color="Color.Primary" Variant="Variant.Outlined">
+                            @L["DefinitionPublication:CurrentVersions", Overview.SchemaVersion, Overview.DefinitionRevision]
+                        </MudChip>
+                        <MudChip T="string"
+                                 Size="Size.Small"
+                                 Color="@ReloadBehaviorColor(Overview.ReloadBehavior)"
+                                 Variant="Variant.Outlined">
+                            @ConfigurationReloadBehaviorFormatter.Label(Overview.ReloadBehavior, L)
+                        </MudChip>
+                    </MudStack>
+                }
+            </div>
+
+            @if (Overview is null)
+            {
+                <MudAlert Severity="Severity.Info">@L["DefinitionPublication:Unavailable"]</MudAlert>
+            }
+            else
+            {
+                <div class="configuration-definition-publication-tabs">
+                    <MudTabs @bind-ActivePanelIndex="_activeTabIndex"
+                             Rounded="true"
+                             ApplyEffectsToContainer="true"
+                             TabPanelsClass="pa-3">
+                        <MudTabPanel Text="@L["DefinitionPublication:Tabs:RevisionHistory"]"
+                                     Icon="@Icons.Material.Filled.History">
+                            @RevisionHistoryContent
+                        </MudTabPanel>
+                        <MudTabPanel Text="@L["DefinitionPublication:Tabs:ReloadContributors"]"
+                                     Icon="@Icons.Material.Filled.AccountTree">
+                            @ReloadContributorsContent
+                        </MudTabPanel>
+                    </MudTabs>
+                </div>
+            }
+        </div>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Close">@L["Common:Actions:Close"]</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    private readonly DiffHighlightOptions _diffOptions = new()
+    {
+        Mode = EDiffHighlightMode.Line,
+        ContextLines = 4,
+        MaxCharacterDiffLength = 5000
+    };
+
+    [CascadingParameter] private IMudDialogInstance MudDialog { get; set; } = null!;
+
+    [Parameter] public ConfigurationDefinition? Definition { get; set; }
+    [Parameter] public ConfigurationDefinitionPublicationOverview? Overview { get; set; }
+    [Parameter] public ConfigurationDefinitionPublicationTab InitialTab { get; set; }
+
+    private int _activeTabIndex;
+    private ConfigurationDefinitionPublishHistory? _selectedHistory;
+
+    private IReadOnlyList<ConfigurationDefinitionPublishHistory> OrderedHistories =>
+        Overview?.RevisionHistories
+            .OrderByDescending(history => history.DefinitionRevision)
+            .ThenByDescending(history => history.PublishedTime)
+            .ThenByDescending(history => history.HistoryId)
+            .ToArray()
+        ?? [];
+
+    private IReadOnlyList<ConfigurationDefinitionPublisherState> OrderedPublisherStates =>
+        Overview?.PublisherStates
+            .OrderBy(state => state.PublisherKey, StringComparer.OrdinalIgnoreCase)
+            .ToArray()
+        ?? [];
+
+    private IReadOnlyList<SchemaPublishChangeView> SelectedChanges =>
+        _selectedHistory is null
+            ? []
+            : ParseChanges(_selectedHistory.ChangeSummaryJson);
+
+    private RenderFragment RevisionHistoryContent => @<div class="configuration-definition-publication-tab-content">
+        <div class="configuration-definition-publication-tab-summary">
+            <MudText Typo="Typo.subtitle2">@L["DefinitionPublication:RevisionHistory:Title"]</MudText>
+            <MudChip T="int" Size="Size.Small" Color="Color.Primary" Variant="Variant.Outlined">
+                @L["DefinitionPublication:RevisionHistory:Count", OrderedHistories.Count]
+            </MudChip>
+        </div>
+
+        @if (OrderedHistories.Count == 0)
+        {
+            <MudAlert Severity="Severity.Info">@L["DefinitionPublication:RevisionHistory:Empty"]</MudAlert>
+        }
+        else
+        {
+            <div class="configuration-definition-publication-layout">
+                <div class="configuration-definition-publication-timeline-column">
+                    <MudPaper Outlined="true" Class="pa-3 configuration-definition-publication-panel">
+                        <MudText Typo="Typo.subtitle2" Class="mb-2">@L["DefinitionPublication:RevisionHistory:Timeline"]</MudText>
+                        <div class="configuration-definition-publication-timeline-scroll">
+                            <MudTimeline TimelinePosition="TimelinePosition.Left" TimelineOrientation="TimelineOrientation.Vertical">
+                                @foreach (var history in OrderedHistories)
+                                {
+                                    <MudTimelineItem Color="@ChangeKindColor(history.ChangeKind)"
+                                                     Icon="@ChangeKindIcon(history.ChangeKind)"
+                                                     Size="Size.Small">
+                                        <ItemContent>
+                                            <MudButton Variant="@(history == _selectedHistory ? Variant.Outlined : Variant.Text)"
+                                                       Color="Color.Primary"
+                                                       FullWidth="true"
+                                                       Class="configuration-definition-publication-timeline-button"
+                                                       OnClick="() => SelectHistory(history)">
+                                                <MudStack Spacing="1" AlignItems="AlignItems.Start">
+                                                    <MudText Typo="Typo.subtitle2">@ChangeKindText(history.ChangeKind)</MudText>
+                                                    <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                                        @RevisionTransition(history)
+                                                    </MudText>
+                                                    <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                                        @history.PublishedTime.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss")
+                                                    </MudText>
+                                                </MudStack>
+                                            </MudButton>
+                                        </ItemContent>
+                                    </MudTimelineItem>
+                                }
+                            </MudTimeline>
+                        </div>
+                    </MudPaper>
+                </div>
+
+                <div class="configuration-definition-publication-detail-column">
+                    <MudPaper Outlined="true" Class="pa-3 configuration-definition-publication-panel">
+                        <div class="configuration-definition-publication-detail-scroll">
+                            @if (_selectedHistory is not null)
+                            {
+                                <div class="configuration-definition-publication-detail">
+                                    <div class="configuration-definition-publication-detail-header">
+                                        <div class="configuration-definition-publication-identity">
+                                            <MudText Typo="Typo.subtitle1">@ChangeKindText(_selectedHistory.ChangeKind)</MudText>
+                                            <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                                @_selectedHistory.PublishedTime.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss zzz")
+                                            </MudText>
+                                        </div>
+                                        <MudStack Row="true" Wrap="Wrap.Wrap" AlignItems="AlignItems.Center" Spacing="1">
+                                            <MudChip T="string"
+                                                     Size="Size.Small"
+                                                     Color="@ChangeKindColor(_selectedHistory.ChangeKind)"
+                                                     Variant="Variant.Outlined"
+                                                     Icon="@ChangeKindIcon(_selectedHistory.ChangeKind)">
+                                                @ChangeKindText(_selectedHistory.ChangeKind)
+                                            </MudChip>
+                                            <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">
+                                                @RevisionTransition(_selectedHistory)
+                                            </MudChip>
+                                        </MudStack>
+                                    </div>
+
+                                    <div class="configuration-definition-publication-metadata">
+                                        <div class="configuration-definition-publication-metadata-item">
+                                            <MudText Typo="Typo.caption" Color="Color.Secondary">@L["DefinitionPublication:RevisionHistory:PublishingInstance"]</MudText>
+                                            <MudText Typo="Typo.body2">@PublisherText(_selectedHistory)</MudText>
+                                        </div>
+                                        <div class="configuration-definition-publication-metadata-item">
+                                            <MudText Typo="Typo.caption" Color="Color.Secondary">@L["DefinitionPublication:RevisionHistory:PublishingServiceVersion"]</MudText>
+                                            <MudText Typo="Typo.body2">@ValueOrEmpty(_selectedHistory.PublisherVersion)</MudText>
+                                        </div>
+                                        <div class="configuration-definition-publication-metadata-item">
+                                            <MudText Typo="Typo.caption" Color="Color.Secondary">@L["DefinitionPublication:RevisionHistory:SectionPath"]</MudText>
+                                            <MudText Typo="Typo.body2">@_selectedHistory.SectionPath</MudText>
+                                        </div>
+                                        <div class="configuration-definition-publication-metadata-item">
+                                            <MudText Typo="Typo.caption" Color="Color.Secondary">@L["DefinitionPublication:RevisionHistory:FromProject"]</MudText>
+                                            <MudText Typo="Typo.body2">@_selectedHistory.FromProject</MudText>
+                                        </div>
+                                        <div class="configuration-definition-publication-metadata-item">
+                                            <MudText Typo="Typo.caption" Color="Color.Secondary">@L["DefinitionPublication:RevisionHistory:PreviousHash"]</MudText>
+                                            <MudText Typo="Typo.body2">@ValueOrEmpty(_selectedHistory.PreviousSchemaHash)</MudText>
+                                        </div>
+                                        <div class="configuration-definition-publication-metadata-item">
+                                            <MudText Typo="Typo.caption" Color="Color.Secondary">@L["DefinitionPublication:RevisionHistory:NewHash"]</MudText>
+                                            <MudText Typo="Typo.body2">@_selectedHistory.NewSchemaHash</MudText>
+                                        </div>
+                                    </div>
+
+                                    <div class="configuration-definition-publication-section">
+                                        <MudText Typo="Typo.subtitle2">@L["DefinitionPublication:RevisionHistory:ChangeSummary"]</MudText>
+                                        @if (SelectedChanges.Count == 0)
+                                        {
+                                            <MudAlert Severity="Severity.Info" Dense="true">@L["DefinitionPublication:RevisionHistory:NoSummary"]</MudAlert>
+                                        }
+                                        else
+                                        {
+                                            <div class="configuration-definition-publication-table">
+                                                <MudTable T="SchemaPublishChangeView" Items="@SelectedChanges" Dense="true" Hover="true" Elevation="0">
+                                                    <HeaderContent>
+                                                        <MudTh>@L["DefinitionPublication:RevisionHistory:Field"]</MudTh>
+                                                        <MudTh>@L["DefinitionPublication:RevisionHistory:PreviousValue"]</MudTh>
+                                                        <MudTh>@L["DefinitionPublication:RevisionHistory:NewValue"]</MudTh>
+                                                    </HeaderContent>
+                                                    <RowTemplate>
+                                                        <MudTd DataLabel="@L["DefinitionPublication:RevisionHistory:Field"]">@context.Field</MudTd>
+                                                        <MudTd DataLabel="@L["DefinitionPublication:RevisionHistory:PreviousValue"]">@ValueOrEmpty(context.PreviousValue)</MudTd>
+                                                        <MudTd DataLabel="@L["DefinitionPublication:RevisionHistory:NewValue"]">@ValueOrEmpty(context.NewValue)</MudTd>
+                                                    </RowTemplate>
+                                                </MudTable>
+                                            </div>
+                                        }
+                                    </div>
+
+                                    <div class="configuration-definition-publication-section">
+                                        @if (_selectedHistory.ChangeKind == ConfigurationDefinitionPublishChangeKind.MetadataChanged)
+                                        {
+                                            <MudAlert Severity="Severity.Info" Dense="true">
+                                                @L["DefinitionPublication:RevisionHistory:SchemaUnchanged", _selectedHistory.NewSchemaVersion, _selectedHistory.DefinitionRevision]
+                                            </MudAlert>
+                                        }
+                                        else
+                                        {
+                                            <MudText Typo="Typo.subtitle2">@L["DefinitionPublication:RevisionHistory:SchemaDiff"]</MudText>
+                                            <div class="configuration-definition-publication-diff">
+                                                <DiffViewer OriginText="@FormatJson(_selectedHistory.PreviousSchemaJson)"
+                                                            NewText="@FormatJson(_selectedHistory.NewSchemaJson)"
+                                                            Options="@_diffOptions"
+                                                            ViewMode="EDiffViewMode.Unified" />
+                                            </div>
+                                        }
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                    </MudPaper>
+                </div>
+            </div>
+        }
+    </div>;
+
+    private RenderFragment ReloadContributorsContent => @<div class="configuration-definition-publication-tab-content">
+        <div class="configuration-definition-publication-contributor-summary">
+            <MudAlert Severity="Severity.Info" Variant="Variant.Outlined">
+                <MudText Typo="Typo.body2">
+                    @L["DefinitionPublication:ReloadContributors:EffectiveSummary", ConfigurationReloadBehaviorFormatter.Label(Overview!.ReloadBehavior, L)]
+                </MudText>
+                <MudText Typo="Typo.caption">
+                    @L["DefinitionPublication:ReloadContributors:Precedence"]
+                </MudText>
+            </MudAlert>
+        </div>
+
+        @if (OrderedPublisherStates.Count == 0)
+        {
+            <MudAlert Severity="Severity.Info">@L["DefinitionPublication:ReloadContributors:Empty"]</MudAlert>
+        }
+        else
+        {
+            <div class="configuration-definition-publication-contributor-table">
+                <MudTable T="ConfigurationDefinitionPublisherState"
+                          Items="@OrderedPublisherStates"
+                          Dense="true"
+                          Hover="true"
+                          Elevation="0">
+                    <HeaderContent>
+                        <MudTh>@L["DefinitionPublication:ReloadContributors:LogicalService"]</MudTh>
+                        <MudTh>@L["DefinitionPublication:ReloadContributors:EvidenceSource"]</MudTh>
+                        <MudTh>@L["DefinitionPublication:ReloadContributors:ReportedBehavior"]</MudTh>
+                    </HeaderContent>
+                    <RowTemplate>
+                        <MudTd DataLabel="@L["DefinitionPublication:ReloadContributors:LogicalService"]">
+                            <span class="configuration-definition-publication-publisher-key">@context.PublisherKey</span>
+                        </MudTd>
+                        <MudTd DataLabel="@L["DefinitionPublication:ReloadContributors:EvidenceSource"]">
+                            <MudStack Spacing="0">
+                                <MudChip T="string"
+                                         Size="Size.Small"
+                                         Color="@ObservationKindColor(context.ObservationKind)"
+                                         Variant="Variant.Outlined">
+                                    @ObservationKindText(context.ObservationKind)
+                                </MudChip>
+                                <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                    @ObservationKindDescription(context.ObservationKind)
+                                </MudText>
+                            </MudStack>
+                        </MudTd>
+                        <MudTd DataLabel="@L["DefinitionPublication:ReloadContributors:ReportedBehavior"]">
+                            <MudChip T="string"
+                                     Size="Size.Small"
+                                     Color="@ReportedBehaviorColor(context)"
+                                     Variant="Variant.Outlined">
+                                @ReportedBehaviorText(context)
+                            </MudChip>
+                        </MudTd>
+                    </RowTemplate>
+                </MudTable>
+            </div>
+        }
+    </div>;
+
+    protected override void OnInitialized()
+    {
+        _activeTabIndex = (int)InitialTab;
+        _selectedHistory = OrderedHistories.FirstOrDefault();
+    }
+
+    private void SelectHistory(ConfigurationDefinitionPublishHistory history)
+    {
+        _selectedHistory = history;
+    }
+
+    private void Close()
+    {
+        MudDialog.Close();
+    }
+
+    private string ChangeKindText(ConfigurationDefinitionPublishChangeKind kind)
+    {
+        return kind switch
+        {
+            ConfigurationDefinitionPublishChangeKind.Created => L["DefinitionPublication:RevisionHistory:Kinds:Created"],
+            ConfigurationDefinitionPublishChangeKind.SchemaChanged => L["DefinitionPublication:RevisionHistory:Kinds:SchemaChanged"],
+            ConfigurationDefinitionPublishChangeKind.MetadataChanged => L["DefinitionPublication:RevisionHistory:Kinds:MetadataChanged"],
+            _ => kind.ToString()
+        };
+    }
+
+    private static Color ChangeKindColor(ConfigurationDefinitionPublishChangeKind kind)
+    {
+        return kind switch
+        {
+            ConfigurationDefinitionPublishChangeKind.Created => Color.Success,
+            ConfigurationDefinitionPublishChangeKind.SchemaChanged => Color.Warning,
+            ConfigurationDefinitionPublishChangeKind.MetadataChanged => Color.Info,
+            _ => Color.Default
+        };
+    }
+
+    private static string ChangeKindIcon(ConfigurationDefinitionPublishChangeKind kind)
+    {
+        return kind switch
+        {
+            ConfigurationDefinitionPublishChangeKind.Created => Icons.Material.Filled.Add,
+            ConfigurationDefinitionPublishChangeKind.SchemaChanged => Icons.Material.Filled.DataObject,
+            ConfigurationDefinitionPublishChangeKind.MetadataChanged => Icons.Material.Filled.Edit,
+            _ => Icons.Material.Filled.Timeline
+        };
+    }
+
+    private string RevisionTransition(ConfigurationDefinitionPublishHistory history)
+    {
+        if (history.ChangeKind == ConfigurationDefinitionPublishChangeKind.Created || history.PreviousSchemaVersion is null)
+        {
+            return L["DefinitionPublication:RevisionHistory:RevisionCreated", history.DefinitionRevision, history.NewSchemaVersion];
+        }
+
+        return history.ChangeKind == ConfigurationDefinitionPublishChangeKind.SchemaChanged
+            ? L[
+                "DefinitionPublication:RevisionHistory:RevisionSchemaChanged",
+                history.DefinitionRevision,
+                history.PreviousSchemaVersion,
+                history.NewSchemaVersion]
+            : L[
+                "DefinitionPublication:RevisionHistory:RevisionMetadataChanged",
+                history.DefinitionRevision,
+                history.NewSchemaVersion];
+    }
+
+    private string ObservationKindText(ConfigurationReloadBehaviorObservationKind kind)
+    {
+        return kind switch
+        {
+            ConfigurationReloadBehaviorObservationKind.Declared => L["DefinitionPublication:ReloadContributors:Evidence:Declared:Label"],
+            ConfigurationReloadBehaviorObservationKind.Inferred => L["DefinitionPublication:ReloadContributors:Evidence:Inferred:Label"],
+            ConfigurationReloadBehaviorObservationKind.Unresolved => L["DefinitionPublication:ReloadContributors:Evidence:Unresolved:Label"],
+            ConfigurationReloadBehaviorObservationKind.NotConsumed => L["DefinitionPublication:ReloadContributors:Evidence:NotConsumed:Label"],
+            _ => kind.ToString()
+        };
+    }
+
+    private string ObservationKindDescription(ConfigurationReloadBehaviorObservationKind kind)
+    {
+        return kind switch
+        {
+            ConfigurationReloadBehaviorObservationKind.Declared => L["DefinitionPublication:ReloadContributors:Evidence:Declared:Description"],
+            ConfigurationReloadBehaviorObservationKind.Inferred => L["DefinitionPublication:ReloadContributors:Evidence:Inferred:Description"],
+            ConfigurationReloadBehaviorObservationKind.Unresolved => L["DefinitionPublication:ReloadContributors:Evidence:Unresolved:Description"],
+            ConfigurationReloadBehaviorObservationKind.NotConsumed => L["DefinitionPublication:ReloadContributors:Evidence:NotConsumed:Description"],
+            _ => kind.ToString()
+        };
+    }
+
+    private static Color ObservationKindColor(ConfigurationReloadBehaviorObservationKind kind)
+    {
+        return kind switch
+        {
+            ConfigurationReloadBehaviorObservationKind.Declared => Color.Primary,
+            ConfigurationReloadBehaviorObservationKind.Inferred => Color.Info,
+            ConfigurationReloadBehaviorObservationKind.Unresolved => Color.Warning,
+            ConfigurationReloadBehaviorObservationKind.NotConsumed => Color.Default,
+            _ => Color.Default
+        };
+    }
+
+    private static Color ReloadBehaviorColor(ConfigurationReloadBehavior behavior)
+    {
+        return behavior.RequiresProcessRestart() ? Color.Warning : Color.Info;
+    }
+
+    private string ReportedBehaviorText(ConfigurationDefinitionPublisherState state)
+    {
+        return state.ObservationKind == ConfigurationReloadBehaviorObservationKind.NotConsumed
+            ? L["DefinitionPublication:ReloadContributors:NotApplicable"]
+            : ConfigurationReloadBehaviorFormatter.Label(state.ReloadBehavior, L);
+    }
+
+    private static Color ReportedBehaviorColor(ConfigurationDefinitionPublisherState state)
+    {
+        return state.ObservationKind == ConfigurationReloadBehaviorObservationKind.NotConsumed
+            ? Color.Default
+            : ReloadBehaviorColor(state.ReloadBehavior);
+    }
+
+    private static string PublisherText(ConfigurationDefinitionPublishHistory history)
+    {
+        return string.Equals(history.PublisherId, history.PublisherName, StringComparison.Ordinal)
+            ? history.PublisherName
+            : $"{history.PublisherName} ({history.PublisherId})";
+    }
+
+    private string ValueOrEmpty(string? value)
+    {
+        return string.IsNullOrWhiteSpace(value) ? L["Common:States:Empty"] : value;
+    }
+
+    private static string FormatJson(string? json)
+    {
+        if (string.IsNullOrWhiteSpace(json))
+        {
+            return "null";
+        }
+
+        try
+        {
+            using var document = JsonDocument.Parse(json);
+            return JsonSerializer.Serialize(document.RootElement, ConfigurationJsonDisplayFormatter.ReadableJsonOptions);
+        }
+        catch (JsonException)
+        {
+            return json;
+        }
+    }
+
+    private static IReadOnlyList<SchemaPublishChangeView> ParseChanges(string json)
+    {
+        if (string.IsNullOrWhiteSpace(json))
+        {
+            return [];
+        }
+
+        try
+        {
+            var summary = JsonSerializer.Deserialize<SchemaPublishChangeSummaryView>(
+                json,
+                ConfigurationPersistedJsonOptions.CompactSchema);
+            return summary?.Changes ?? [];
+        }
+        catch (JsonException)
+        {
+            return [];
+        }
+    }
+
+    private sealed class SchemaPublishChangeSummaryView
+    {
+        public IReadOnlyList<SchemaPublishChangeView> Changes { get; init; } = [];
+    }
+
+    private sealed class SchemaPublishChangeView
+    {
+        public string Field { get; init; } = "";
+
+        public string? PreviousValue { get; init; }
+
+        public string? NewValue { get; init; }
+    }
+}

@@ -22,6 +22,9 @@ public sealed class ConfigurationDbContext(
     public DbSet<ConfigurationDefinitionPublishHistoryEntity> ConfigurationDefinitionPublishHistories =>
         Set<ConfigurationDefinitionPublishHistoryEntity>();
 
+    public DbSet<ConfigurationDefinitionPublisherStateEntity> ConfigurationDefinitionPublisherStates =>
+        Set<ConfigurationDefinitionPublisherStateEntity>();
+
     public DbSet<ConfigurationEffectiveValueEntity> ConfigurationEffectiveValues => Set<ConfigurationEffectiveValueEntity>();
 
     public DbSet<ConfigurationValueHistoryEntity> ConfigurationValueHistories => Set<ConfigurationValueHistoryEntity>();
@@ -81,7 +84,7 @@ public sealed class ConfigurationDbContext(
             .Property(x => x.Category)
             .HasMaxLength(200);
         modelBuilder.Entity<ConfigurationDefinitionEntity>()
-            .Property(x => x.PublishRevision)
+            .Property(x => x.DefinitionRevision)
             .IsConcurrencyToken();
         modelBuilder.Entity<ConfigurationDefinitionPublishHistoryEntity>().HasKey(x => x.HistoryId);
         modelBuilder.Entity<ConfigurationDefinitionPublishHistoryEntity>()
@@ -91,8 +94,9 @@ public sealed class ConfigurationDbContext(
             .IsFixedLength()
             .HasMaxLength(ConfigurationDefinitionIdentity.Length);
         modelBuilder.Entity<ConfigurationDefinitionPublishHistoryEntity>()
-            .HasIndex(x => new { x.DefinitionIdentity, x.PublishedTime })
-            .HasDatabaseName(ConfigurationDbSchema.DefinitionPublishIdentityIndex);
+            .HasIndex(x => new { x.DefinitionIdentity, x.DefinitionRevision })
+            .HasDatabaseName(ConfigurationDbSchema.DefinitionRevisionIndex)
+            .IsUnique();
         modelBuilder.Entity<ConfigurationDefinitionPublishHistoryEntity>()
             .Property(x => x.FromProject)
             .IsRequired()
@@ -104,6 +108,37 @@ public sealed class ConfigurationDbContext(
             .Property(x => x.PublishedTime)
             .HasPrecision(6)
             .HasColumnType(timeColumnType);
+        modelBuilder.Entity<ConfigurationDefinitionPublisherStateEntity>()
+            .ToTable("ConfigurationDefinitionPublisherStates");
+        modelBuilder.Entity<ConfigurationDefinitionPublisherStateEntity>()
+            .HasKey(x => new { x.DefinitionIdentity, x.PublisherIdentity });
+        modelBuilder.Entity<ConfigurationDefinitionPublisherStateEntity>()
+            .Property(x => x.DefinitionIdentity)
+            .IsRequired()
+            .IsUnicode(false)
+            .IsFixedLength()
+            .HasMaxLength(ConfigurationDefinitionIdentity.Length);
+        modelBuilder.Entity<ConfigurationDefinitionPublisherStateEntity>()
+            .Property(x => x.PublisherIdentity)
+            .IsRequired()
+            .IsUnicode(false)
+            .IsFixedLength()
+            .HasMaxLength(ConfigurationDefinitionIdentity.Length);
+        modelBuilder.Entity<ConfigurationDefinitionPublisherStateEntity>()
+            .Property(x => x.PublisherKey)
+            .IsRequired()
+            .HasMaxLength(191);
+        modelBuilder.Entity<ConfigurationDefinitionPublisherStateEntity>()
+            .HasIndex(x => x.PublisherIdentity)
+            .HasDatabaseName(ConfigurationDbSchema.DefinitionPublisherIndex);
+        modelBuilder.Entity<ConfigurationDefinitionPublisherStateEntity>()
+            .Property(x => x.ObservationKind)
+            .IsRequired()
+            .HasMaxLength(50);
+        modelBuilder.Entity<ConfigurationDefinitionPublisherStateEntity>()
+            .Property(x => x.ReloadBehavior)
+            .IsRequired()
+            .HasMaxLength(50);
         modelBuilder.Entity<ConfigurationEffectiveValueEntity>().HasKey(x => x.DefinitionKey);
         modelBuilder.Entity<ConfigurationEffectiveValueEntity>()
             .Property(x => x.DefinitionIdentity)

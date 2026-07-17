@@ -21,7 +21,7 @@ internal sealed class ConfigurationDatabaseSchemaManager(
     private enum SchemaState
     {
         Missing,
-        RequiresUpgrade,
+        Incompatible,
         Ready
     }
 
@@ -30,13 +30,13 @@ internal sealed class ConfigurationDatabaseSchemaManager(
         return EnsureReadyAsync(options.Value.AutoManageSchema, cancellationToken);
     }
 
-    internal Task UpgradeAsync(CancellationToken cancellationToken)
+    internal Task InitializeAsync(CancellationToken cancellationToken)
     {
-        return EnsureReadyAsync(allowSchemaChanges: true, cancellationToken);
+        return EnsureReadyAsync(allowSchemaCreation: true, cancellationToken);
     }
 
     private async Task EnsureReadyAsync(
-        bool allowSchemaChanges,
+        bool allowSchemaCreation,
         CancellationToken cancellationToken)
     {
         if (_isInitialized)
@@ -53,7 +53,7 @@ internal sealed class ConfigurationDatabaseSchemaManager(
             }
 
             await dbContextOperation.ExecuteAsync(
-                (dbContext, token) => EnsureReadyAsync(dbContext, allowSchemaChanges, token),
+                (dbContext, token) => EnsureReadyAsync(dbContext, allowSchemaCreation, token),
                 cancellationToken);
             _isInitialized = true;
         }
@@ -65,15 +65,15 @@ internal sealed class ConfigurationDatabaseSchemaManager(
 
     private static async Task EnsureReadyAsync(
         ConfigurationDbContext dbContext,
-        bool allowSchemaChanges,
+        bool allowSchemaCreation,
         CancellationToken cancellationToken)
     {
         var creator = dbContext.Database.GetService<IRelationalDatabaseCreator>();
         if (!await creator.ExistsAsync(cancellationToken))
         {
-            if (!allowSchemaChanges)
+            if (!allowSchemaCreation)
             {
-                ThrowSchemaUpgradeRequired("The Monica.Configuration database does not exist.");
+                ThrowSchemaInitializationRequired("The Monica.Configuration database does not exist.");
             }
 
             await creator.CreateAsync(cancellationToken);
@@ -85,9 +85,9 @@ internal sealed class ConfigurationDatabaseSchemaManager(
         var schemaState = await GetSchemaStateAsync(dbContext, cancellationToken);
         if (schemaState == SchemaState.Missing)
         {
-            if (!allowSchemaChanges)
+            if (!allowSchemaCreation)
             {
-                ThrowSchemaUpgradeRequired("The Monica.Configuration database tables are missing.");
+                ThrowSchemaInitializationRequired("The Monica.Configuration database tables are missing.");
             }
 
             await creator.CreateTablesAsync(cancellationToken);
@@ -95,27 +95,24 @@ internal sealed class ConfigurationDatabaseSchemaManager(
             return;
         }
 
-        if (schemaState != SchemaState.RequiresUpgrade)
+        if (schemaState != SchemaState.Incompatible)
         {
             return;
         }
 
-        if (!allowSchemaChanges)
-        {
-            ThrowSchemaUpgradeRequired("The Monica.Configuration database schema requires an upgrade.");
-        }
-
-        await EnsureAdditiveSchemaAsync(dbContext, cancellationToken);
-        await EnsureConfigurationSchemaMarkerAsync(dbContext, cancellationToken);
+        throw new ConfigurationMetadataStoreReadException(
+            ConfigurationMetadataStoreIssueKind.IncompatibleStoreSchema,
+            "The Monica.Configuration schema predates the current definition-revision and publisher-state model. "
+            + "Schema version 8 requires a fresh database; retain the existing database only as an external archive.");
     }
 
     [System.Diagnostics.CodeAnalysis.DoesNotReturn]
-    private static void ThrowSchemaUpgradeRequired(string problem)
+    private static void ThrowSchemaInitializationRequired(string problem)
     {
         throw new ConfigurationMetadataStoreReadException(
             ConfigurationMetadataStoreIssueKind.IncompatibleStoreSchema,
-            $"{problem} Resolve {nameof(DatabaseConfigurationStore)} and call {nameof(DatabaseConfigurationStore.UpgradeSchemaAsync)} from an "
-            + "explicit deployment or startup migration step before reading or publishing metadata; automatic "
+            $"{problem} Resolve {nameof(DatabaseConfigurationStore)} and call {nameof(DatabaseConfigurationStore.InitializeSchemaAsync)} from an "
+            + "explicit deployment or startup initialization step before reading or publishing metadata; automatic "
             + "schema creation is disabled for this host.");
     }
 
@@ -124,6 +121,7 @@ internal sealed class ConfigurationDatabaseSchemaManager(
         CancellationToken cancellationToken)
     {
         int? markerVersion = null;
+        var markerTableExists = true;
         try
         {
             markerVersion = await dbContext.ConfigurationSchemaMarkers
@@ -132,10 +130,14 @@ internal sealed class ConfigurationDatabaseSchemaManager(
                 .Select(candidate => (int?)candidate.SchemaVersion)
                 .SingleOrDefaultAsync(cancellationToken);
         }
-        catch (Exception ex) when (ConfigurationDatabaseExceptionClassifier.IsMissingTable(ex)
-                                   || ConfigurationDatabaseExceptionClassifier.IsMissingColumn(ex))
+        catch (Exception ex) when (ConfigurationDatabaseExceptionClassifier.IsMissingTable(ex))
         {
-            // Older schemas may not have a marker yet; inspect the core tables before deciding how to upgrade.
+            markerTableExists = false;
+            // Earlier schemas may not have a marker; inspect the core tables before deciding compatibility.
+        }
+        catch (Exception ex) when (ConfigurationDatabaseExceptionClassifier.IsMissingColumn(ex))
+        {
+            return SchemaState.Incompatible;
         }
 
         if (markerVersion > ConfigurationSchemaMarkerEntity.CurrentSchemaVersion)
@@ -146,9 +148,14 @@ internal sealed class ConfigurationDatabaseSchemaManager(
                 + "Deploy a newer Monica.Configuration runtime instead of letting an older binary migrate or rewrite the schema.");
         }
 
+        if (markerTableExists && markerVersion != ConfigurationSchemaMarkerEntity.CurrentSchemaVersion)
+        {
+            return SchemaState.Incompatible;
+        }
+
         try
         {
-            // Do not materialize newly required CLR properties until a partially applied upgrade has normalized them.
+            // Probe only the legacy key until compatibility is established; newer required properties may not exist.
             _ = await dbContext.ConfigurationDefinitions
                 .AsNoTracking()
                 .Select(static definition => definition.DefinitionKey)
@@ -156,16 +163,16 @@ internal sealed class ConfigurationDatabaseSchemaManager(
         }
         catch (Exception ex) when (ConfigurationDatabaseExceptionClassifier.IsMissingTable(ex))
         {
-            return SchemaState.Missing;
+            return markerTableExists ? SchemaState.Incompatible : SchemaState.Missing;
         }
         catch (Exception ex) when (ConfigurationDatabaseExceptionClassifier.IsMissingColumn(ex))
         {
-            return SchemaState.RequiresUpgrade;
+            return SchemaState.Incompatible;
         }
 
         if (markerVersion != ConfigurationSchemaMarkerEntity.CurrentSchemaVersion)
         {
-            return SchemaState.RequiresUpgrade;
+            return SchemaState.Incompatible;
         }
 
         try
@@ -179,7 +186,7 @@ internal sealed class ConfigurationDatabaseSchemaManager(
                     definition.FromProject,
                     definition.Category,
                     definition.Description,
-                    definition.PublishRevision
+                    definition.DefinitionRevision
                 })
                 .FirstOrDefaultAsync(cancellationToken);
             _ = await dbContext.ConfigurationValueHistories
@@ -207,7 +214,19 @@ internal sealed class ConfigurationDatabaseSchemaManager(
                     history.DefinitionIdentity,
                     history.DefinitionKey,
                     history.Description,
+                    history.DefinitionRevision,
                     history.PublishedTime
+                })
+                .FirstOrDefaultAsync(cancellationToken);
+            _ = await dbContext.ConfigurationDefinitionPublisherStates
+                .AsNoTracking()
+                .Select(state => new
+                {
+                    state.DefinitionIdentity,
+                    state.PublisherIdentity,
+                    state.PublisherKey,
+                    state.ObservationKind,
+                    state.ReloadBehavior
                 })
                 .FirstOrDefaultAsync(cancellationToken);
             _ = await dbContext.ConfigurationUnifiedVersions
@@ -234,63 +253,7 @@ internal sealed class ConfigurationDatabaseSchemaManager(
         catch (Exception ex) when (ConfigurationDatabaseExceptionClassifier.IsMissingTable(ex)
                                    || ConfigurationDatabaseExceptionClassifier.IsMissingColumn(ex))
         {
-            return SchemaState.RequiresUpgrade;
-        }
-    }
-
-    private static async Task EnsureAdditiveSchemaAsync(
-        ConfigurationDbContext dbContext,
-        CancellationToken cancellationToken)
-    {
-        await EnsureConfigurationSchemaMarkerTableAsync(dbContext, cancellationToken);
-        await EnsureHistorySchemaHashColumnAsync(dbContext, cancellationToken);
-        await EnsureUnifiedVersionTablesAsync(dbContext, cancellationToken);
-        await ConfigurationDefinitionIdentitySchemaMigrator.EnsureSchemaAsync(dbContext, cancellationToken);
-    }
-
-    private static async Task EnsureHistorySchemaHashColumnAsync(
-        ConfigurationDbContext dbContext,
-        CancellationToken cancellationToken)
-    {
-        try
-        {
-            _ = await dbContext.ConfigurationValueHistories
-                .AsNoTracking()
-                .Select(static history => history.SchemaHash)
-                .FirstOrDefaultAsync(cancellationToken);
-            return;
-        }
-        catch (Exception ex) when (ConfigurationDatabaseExceptionClassifier.IsMissingColumn(ex))
-        {
-            // Legacy rows remain null and are intentionally treated as unverified by rollback and history UI.
-        }
-
-        var providerName = dbContext.Database.ProviderName;
-        var tableSql = ConfigurationDatabaseSql.FormatTableName(
-            providerName,
-            null,
-            "ConfigurationValueHistories");
-        var columnSql = ConfigurationDatabaseSql.QuoteIdentifier(
-            providerName,
-            nameof(ConfigurationValueHistoryEntity.SchemaHash));
-        var columnType = providerName switch
-        {
-            var name when ConfigurationDatabaseSql.IsSqlServer(name) => "nvarchar(max)",
-            var name when ConfigurationDatabaseSql.IsMySql(name) => "longtext",
-            _ => "text"
-        };
-        var alterSql = $"ALTER TABLE {tableSql} ADD {columnSql} {columnType} NULL";
-        try
-        {
-            await dbContext.Database.ExecuteSqlRawAsync(alterSql, cancellationToken);
-        }
-        catch (Exception ex) when (ConfigurationDatabaseExceptionClassifier.IsDuplicateColumn(ex))
-        {
-            // Another replica may have completed the additive upgrade after this replica's probe.
-            _ = await dbContext.ConfigurationValueHistories
-                .AsNoTracking()
-                .Select(static history => history.SchemaHash)
-                .FirstOrDefaultAsync(cancellationToken);
+            return SchemaState.Incompatible;
         }
     }
 
@@ -306,15 +269,11 @@ internal sealed class ConfigurationDatabaseSchemaManager(
         {
             dbContext.ConfigurationSchemaMarkers.Add(new ConfigurationSchemaMarkerEntity());
         }
-        else if (marker.SchemaVersion > ConfigurationSchemaMarkerEntity.CurrentSchemaVersion)
+        else if (marker.SchemaVersion != ConfigurationSchemaMarkerEntity.CurrentSchemaVersion)
         {
             throw new ConfigurationMetadataStoreReadException(
                 ConfigurationMetadataStoreIssueKind.IncompatibleStoreSchema,
                 $"The Monica.Configuration database schema is version {marker.SchemaVersion}, but this runtime supports version {ConfigurationSchemaMarkerEntity.CurrentSchemaVersion}.");
-        }
-        else if (marker.SchemaVersion < ConfigurationSchemaMarkerEntity.CurrentSchemaVersion)
-        {
-            marker.SchemaVersion = ConfigurationSchemaMarkerEntity.CurrentSchemaVersion;
         }
 
         if (dbContext.ChangeTracker.HasChanges())
@@ -323,51 +282,4 @@ internal sealed class ConfigurationDatabaseSchemaManager(
         }
     }
 
-    private static async Task EnsureConfigurationSchemaMarkerTableAsync(
-        ConfigurationDbContext dbContext,
-        CancellationToken cancellationToken)
-    {
-        var providerName = dbContext.Database.ProviderName;
-        var tableSql = ConfigurationDatabaseSql.FormatTableName(
-            providerName,
-            null,
-            "ConfigurationSchemaMarkers");
-        var sql = ConfigurationDatabaseSql.BuildCreateTableIfMissing(
-            providerName,
-            "ConfigurationSchemaMarkers",
-            tableSql,
-            ConfigurationDatabaseSql.BuildSchemaMarkerColumns(providerName));
-        await dbContext.Database.ExecuteSqlRawAsync(sql, cancellationToken);
-    }
-
-    private static async Task EnsureUnifiedVersionTablesAsync(
-        ConfigurationDbContext dbContext,
-        CancellationToken cancellationToken)
-    {
-        var providerName = dbContext.Database.ProviderName;
-        var versionsTableSql = ConfigurationDatabaseSql.FormatTableName(
-            providerName,
-            null,
-            "ConfigurationUnifiedVersions");
-        var documentsTableSql = ConfigurationDatabaseSql.FormatTableName(
-            providerName,
-            null,
-            "ConfigurationUnifiedVersionDocuments");
-
-        await dbContext.Database.ExecuteSqlRawAsync(
-            ConfigurationDatabaseSql.BuildCreateTableIfMissing(
-                providerName,
-                "ConfigurationUnifiedVersions",
-                versionsTableSql,
-                ConfigurationDatabaseSql.BuildUnifiedVersionsColumns(providerName)),
-            cancellationToken);
-
-        await dbContext.Database.ExecuteSqlRawAsync(
-            ConfigurationDatabaseSql.BuildCreateTableIfMissing(
-                providerName,
-                "ConfigurationUnifiedVersionDocuments",
-                documentsTableSql,
-                ConfigurationDatabaseSql.BuildUnifiedVersionDocumentsColumns(providerName)),
-            cancellationToken);
-    }
 }

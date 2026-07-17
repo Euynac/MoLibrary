@@ -46,6 +46,11 @@ public sealed record ConfigurationDefinitionSummary
     public int SchemaVersion { get; init; }
 
     /// <summary>
+    /// Gets the current persisted definition revision.
+    /// </summary>
+    public int DefinitionRevision { get; init; }
+
+    /// <summary>
     /// Gets the schema hash used to detect drift across services.
     /// </summary>
     public required string SchemaHash { get; init; }

@@ -1,13 +1,19 @@
 .configuration-pending-review-tabs {
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
     min-height: 0;
     min-width: 0;
+    width: 100%;
 }
 
 .configuration-pending-review-tabs ::deep .mud-tabs {
-    min-height: 0;
     min-width: 0;
+    width: 100%;
 }
 
-.configuration-pending-review-tabs ::deep .mud-tabs-panels {
+.configuration-pending-review-tabs ::deep .mud-tabs-panels,
+.configuration-pending-review-tabs ::deep .mud-tabs-panels > .mud-tab-panel {
     min-width: 0;
+    width: 100%;
 }

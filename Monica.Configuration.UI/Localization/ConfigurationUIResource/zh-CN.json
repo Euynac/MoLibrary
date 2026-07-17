@@ -33,11 +33,14 @@
       "GroupModeCategoryTooltip": "当前按分类分组。点击切换为按项目分组。",
       "PublishedMetadata": "DB",
       "PublishedMetadataTooltip": "该配置定义来自数据库中发布的元数据。这里可以编辑 Monica 数据库有效值，但运行时来源链路只能在扫描到该 CLR 类型的服务中查看。",
-      "SchemaVersionChip": "v{0}",
-      "SchemaMetadataTitle": "Schema 元数据",
-      "SchemaVersionDetail": "版本：{0}",
+      "SchemaVersionCompactChip": "v{0}",
+      "SchemaVersionChip": "Schema v{0} · r{1}",
+      "SchemaMetadataTitle": "配置定义版本",
+      "SchemaVersionDetail": "Schema v{0}：仅在配置结构变化时递增。",
+      "DefinitionRevisionDetail": "配置定义修订 r{0}：在有效 Schema 或元数据变化时递增。",
       "SchemaHashDetail": "Hash",
       "SchemaHashMissing": "暂无 Hash",
+      "ReloadContributorsTooltip": "当前生效方式：{0}。点击查看各发布服务的贡献。",
       "Unavailable": "配置定义不可用",
       "MetadataFault": "元数据异常",
       "NoAvailableDefinitions": "当前没有具备完整权威元数据的配置定义。请检查已报告的问题，修复后刷新页面。",
@@ -255,6 +258,69 @@
       "StaticAfterStartup": "该配置在服务启动时读取，保存后需要重启服务。"
     }
   },
+  "DefinitionPublication": {
+    "Title": "配置定义发布 - {0}",
+    "Unavailable": "当前无法获取该配置定义的发布详情。",
+    "CurrentVersions": "Schema v{0} · r{1}",
+    "Tabs": {
+      "RevisionHistory": "修订历史",
+      "ReloadContributors": "Reload 贡献者"
+    },
+    "RevisionHistory": {
+      "Title": "有效配置定义修订",
+      "Count": "最近 {0} 条修订",
+      "Empty": "暂无持久化的配置定义修订历史。",
+      "Timeline": "修订时间线",
+      "PublishingInstance": "发布实例",
+      "PublishingServiceVersion": "发布服务版本",
+      "SectionPath": "配置节",
+      "FromProject": "项目",
+      "PreviousHash": "旧 Hash",
+      "NewHash": "新 Hash",
+      "ChangeSummary": "变更摘要",
+      "NoSummary": "没有结构化变更摘要。",
+      "Field": "字段",
+      "PreviousValue": "旧值",
+      "NewValue": "新值",
+      "SchemaDiff": "Schema Diff",
+      "SchemaUnchanged": "Schema v{0} 在配置定义修订 r{1} 中未发生变化。",
+      "RevisionCreated": "配置定义修订 r{0} · Schema v{1}",
+      "RevisionMetadataChanged": "配置定义修订 r{0} · Schema v{1} 未变化",
+      "RevisionSchemaChanged": "配置定义修订 r{0} · Schema v{1} → v{2}",
+      "Kinds": {
+        "Created": "创建配置定义",
+        "SchemaChanged": "Schema 变化",
+        "MetadataChanged": "元数据变化"
+      }
+    },
+    "ReloadContributors": {
+      "EffectiveSummary": "当前有效 Reload 行为：{0}",
+      "Precedence": "Monica 采用参与报告中最安全的结果：启动后固定 > 需要重启 > 无法确定 > 可在线生效；未使用该配置的报告不参与聚合。",
+      "Empty": "暂无发布服务的贡献信息。",
+      "LogicalService": "逻辑服务",
+      "EvidenceSource": "证据来源",
+      "ReportedBehavior": "报告的行为",
+      "NotApplicable": "不适用",
+      "Evidence": {
+        "Declared": {
+          "Label": "已声明",
+          "Description": "开发者编写的元数据明确声明了该行为。"
+        },
+        "Inferred": {
+          "Label": "已推断",
+          "Description": "Monica 根据该服务使用配置的方式推断出此行为。"
+        },
+        "Unresolved": {
+          "Label": "无法确定",
+          "Description": "该服务可能使用此配置定义，但无法确认其 Reload 行为。"
+        },
+        "NotConsumed": {
+          "Label": "未使用",
+          "Description": "该服务不使用此配置定义，因此该报告不影响聚合结果。"
+        }
+      }
+    }
+  },
   "History": {
     "Title": "历史记录",
     "Subtitle": "审计单次修改和持久化修改组。",
@@ -312,30 +378,6 @@
       "ReloadBehavior": "重载行为: {0}",
       "Description": "说明: {0}",
       "CollapsedRows": "折叠字段数: {0}"
-    },
-    "SchemaPublish": {
-      "Title": "Schema 发布历史 - {0}",
-      "Count": "{0} 条发布记录",
-      "Empty": "未找到 Schema 发布历史。",
-      "Publisher": "发布实例",
-      "PublisherVersion": "发布版本",
-      "SectionPath": "配置节",
-      "FromProject": "项目",
-      "PreviousHash": "旧 Hash",
-      "NewHash": "新 Hash",
-      "ChangeSummary": "变更摘要",
-      "NoSummary": "没有结构化变更摘要。",
-      "Field": "字段",
-      "PreviousValue": "旧值",
-      "NewValue": "新值",
-      "SchemaDiff": "Schema Diff",
-      "VersionCreated": "v{0}",
-      "VersionChanged": "v{0} -> v{1}",
-      "Kinds": {
-        "Created": "首次发布",
-        "SchemaChanged": "Schema 变化",
-        "MetadataChanged": "元数据变化"
-      }
     },
     "Dialog": {
       "Title": "配置历史记录",

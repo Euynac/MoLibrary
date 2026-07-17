@@ -32,5 +32,5 @@ public sealed class ConfigurationDefinitionEntity
 
     public string SchemaJson { get; set; } = "";
 
-    public int PublishRevision { get; set; }
+    public int DefinitionRevision { get; set; }
 }

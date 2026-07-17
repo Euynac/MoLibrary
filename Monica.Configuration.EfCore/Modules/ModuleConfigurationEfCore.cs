@@ -244,18 +244,16 @@ public sealed class ModuleConfigurationEfCoreGuide
 public sealed class ModuleConfigurationEfCoreOption : ModuleOptions<ModuleConfigurationEfCore>
 {
     /// <summary>
-    /// Gets or sets whether the EF Core store automatically creates and upgrades the Monica.Configuration schema.
+    /// Gets or sets whether the EF Core store automatically creates and validates the Monica.Configuration schema.
     /// </summary>
     /// <remarks>
     /// This is enabled by default because Monica.Configuration.EfCore is often added to an existing application database
-    /// without a host-owned migration. The initializer creates missing Monica.Configuration tables and applies versioned,
-    /// additive upgrades and required data backfills. Disable this when the host controls schema changes explicitly, then
-    /// resolve <see cref="DatabaseConfigurationStore"/> and call
-    /// <see cref="DatabaseConfigurationStore.UpgradeSchemaAsync(CancellationToken)"/> from the host's deployment or
-    /// startup migration step before the configuration stores are used. On a populated earlier schema, a stock generated
-    /// EF Core migration cannot compute provider-independent identities before creating unique indexes; omit or defer
-    /// those generated identity operations and let <c>UpgradeSchemaAsync</c> perform them, or customize the migration to
-    /// perform the equivalent backfill before it creates the indexes and advances the Configuration schema marker.
+    /// without a host-owned migration. The initializer creates all Monica.Configuration tables only when that schema is
+    /// absent, and otherwise validates that the database already uses the current schema version. Disable this when the
+    /// host controls schema creation explicitly, then resolve <see cref="DatabaseConfigurationStore"/> and call
+    /// <see cref="DatabaseConfigurationStore.InitializeSchemaAsync(CancellationToken)"/> before configuration stores are
+    /// used. Earlier schema versions are deliberately rejected; create a fresh version 8 database and retain the earlier
+    /// database only as an external archive.
     /// </remarks>
     public bool AutoManageSchema { get; set; } = true;
 }

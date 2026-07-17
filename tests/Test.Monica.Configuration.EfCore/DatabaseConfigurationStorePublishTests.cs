@@ -3,6 +3,8 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Monica.Configuration.Abstractions;
 using Monica.Configuration.EfCore.DbContext;
+using Monica.Configuration.EfCore.Stores;
+using Monica.Configuration.Exceptions;
 using Monica.Configuration.Models;
 using Monica.Configuration.Serialization;
 using Monica.DependencyInjection.Abstractions;
@@ -15,7 +17,7 @@ using Xunit;
 
 namespace Test.Monica.Configuration.EfCore;
 
-public sealed class DatabaseConfigurationStorePublishTests
+public sealed partial class DatabaseConfigurationStorePublishTests
 {
     private const string PUBLISH_DEFINITIONS_LOCK_MARKER_KEY = "Configuration.EfCore.PublishDefinitionsLock";
 
@@ -28,19 +30,19 @@ public sealed class DatabaseConfigurationStorePublishTests
         var definition = CreateDefinition("Test.Concurrent.Shared");
         await using var stores = CreateStores(databasePath, 12);
 
-        await Task.WhenAll(stores.Items.Select(store => store.PublishAsync([definition], TestContext.Current.CancellationToken)));
+        await Task.WhenAll(stores.Items.Select(store => store.PublishAsync(
+            CreatePublication([definition]),
+            TestContext.Current.CancellationToken)));
 
         var published = (await stores.Items[0].ListPublishedDefinitionEntriesAsync(TestContext.Current.CancellationToken))
             .Select(static entry => entry.RequireDefinition())
             .ToArray();
         published.Where(candidate => candidate.DefinitionKey == definition.DefinitionKey)
             .Should().ContainSingle();
-        var histories = await stores.Items[0].ListDefinitionPublishHistoriesAsync(
-            definition.DefinitionKey,
-            20,
-            TestContext.Current.CancellationToken);
-        histories.Should().ContainSingle();
-        histories[0].ChangeKind.Should().Be(ConfigurationDefinitionPublishChangeKind.Created);
+        var overview = await GetOverviewAsync(stores, definition.DefinitionKey);
+        overview.DefinitionRevision.Should().Be(1);
+        overview.RevisionHistories.Should().ContainSingle();
+        overview.RevisionHistories[0].ChangeKind.Should().Be(ConfigurationDefinitionPublishChangeKind.Created);
     }
 
     [Fact]
@@ -52,7 +54,9 @@ public sealed class DatabaseConfigurationStorePublishTests
         var definition = CreateDefinition("Test.Concurrent.LockMarker");
         await using var stores = CreateStores(databasePath, 12);
 
-        await Task.WhenAll(stores.Items.Select(store => store.PublishAsync([definition], TestContext.Current.CancellationToken)));
+        await Task.WhenAll(stores.Items.Select(store => store.PublishAsync(
+            CreatePublication([definition]),
+            TestContext.Current.CancellationToken)));
 
         var lockMarkerCount = await CountPublishLockMarkersAsync(databasePath);
         lockMarkerCount.Should().Be(1);
@@ -72,7 +76,9 @@ public sealed class DatabaseConfigurationStorePublishTests
         };
         await using var stores = CreateStores(databasePath, 10);
 
-        await Task.WhenAll(stores.Items.Select(store => store.PublishAsync(definitions, TestContext.Current.CancellationToken)));
+        await Task.WhenAll(stores.Items.Select(store => store.PublishAsync(
+            CreatePublication(definitions),
+            TestContext.Current.CancellationToken)));
 
         var published = (await stores.Items[0].ListPublishedDefinitionEntriesAsync(TestContext.Current.CancellationToken))
             .Select(static entry => entry.RequireDefinition())
@@ -81,11 +87,8 @@ public sealed class DatabaseConfigurationStorePublishTests
             .Should().Contain(definitions.Select(static definition => definition.DefinitionKey));
         foreach (var definition in definitions)
         {
-            var histories = await stores.Items[0].ListDefinitionPublishHistoriesAsync(
-                definition.DefinitionKey,
-                20,
-                TestContext.Current.CancellationToken);
-            histories.Should().ContainSingle();
+            var overview = await GetOverviewAsync(stores, definition.DefinitionKey);
+            overview.RevisionHistories.Should().ContainSingle();
         }
     }
 
@@ -96,15 +99,15 @@ public sealed class DatabaseConfigurationStorePublishTests
         await using var stores = CreateStores(databasePath, 2);
         var definition = CreateDefinition("Test.Concurrent.NoOp");
 
-        await stores.Items[0].PublishAsync([definition], TestContext.Current.CancellationToken);
-        await stores.Items[1].PublishAsync([definition], TestContext.Current.CancellationToken);
+        await stores.Items[0].PublishAsync(CreatePublication([definition]), TestContext.Current.CancellationToken);
+        await stores.Items[1].PublishAsync(CreatePublication([definition]), TestContext.Current.CancellationToken);
 
-        var histories = await stores.Items[0].ListDefinitionPublishHistoriesAsync(
-            definition.DefinitionKey,
-            20,
-            TestContext.Current.CancellationToken);
-        histories.Should().ContainSingle();
-        histories[0].ChangeKind.Should().Be(ConfigurationDefinitionPublishChangeKind.Created);
+        var overview = await GetOverviewAsync(stores, definition.DefinitionKey);
+        overview.DefinitionRevision.Should().Be(1);
+        overview.SchemaVersion.Should().Be(1);
+        overview.PublisherStates.Should().ContainSingle();
+        overview.RevisionHistories.Should().ContainSingle();
+        overview.RevisionHistories[0].ChangeKind.Should().Be(ConfigurationDefinitionPublishChangeKind.Created);
     }
 
     [Fact]
@@ -115,8 +118,8 @@ public sealed class DatabaseConfigurationStorePublishTests
         var original = CreateDefinition("Test.Concurrent.Metadata");
         var changed = original with { DisplayName = "Updated Metadata Display Name" };
 
-        await stores.Items[0].PublishAsync([original], TestContext.Current.CancellationToken);
-        await stores.Items[0].PublishAsync([changed], TestContext.Current.CancellationToken);
+        await stores.Items[0].PublishAsync(CreatePublication([original]), TestContext.Current.CancellationToken);
+        await stores.Items[0].PublishAsync(CreatePublication([changed]), TestContext.Current.CancellationToken);
 
         var publishedEntry = await stores.Items[0].GetPublishedDefinitionEntryAsync(
             original.DefinitionKey,
@@ -124,13 +127,17 @@ public sealed class DatabaseConfigurationStorePublishTests
         var published = publishedEntry?.RequireDefinition();
         published.Should().NotBeNull();
         published!.SchemaVersion.Should().Be(1);
+        published.DefinitionRevision.Should().Be(2);
         published.DisplayName.Should().Be(changed.DisplayName);
 
-        var histories = await stores.Items[0].ListDefinitionPublishHistoriesAsync(
-            original.DefinitionKey,
-            20,
-            TestContext.Current.CancellationToken);
-        histories.Select(static history => history.ChangeKind)
+        var overview = await GetOverviewAsync(stores, original.DefinitionKey);
+        overview.DefinitionRevision.Should().Be(2);
+        overview.SchemaVersion.Should().Be(1);
+        overview.RevisionHistories.Select(static history => history.DefinitionRevision)
+            .Should().Equal(2, 1);
+        overview.RevisionHistories.Select(static history => history.DefinitionRevision)
+            .Should().OnlyHaveUniqueItems();
+        overview.RevisionHistories.Select(static history => history.ChangeKind)
             .Should().Contain([ConfigurationDefinitionPublishChangeKind.Created, ConfigurationDefinitionPublishChangeKind.MetadataChanged]);
     }
 
@@ -153,8 +160,8 @@ public sealed class DatabaseConfigurationStorePublishTests
         };
         var changed = WithComputedSchemaHash(original with { Root = changedRoot });
 
-        await stores.Items[0].PublishAsync([original], TestContext.Current.CancellationToken);
-        await stores.Items[0].PublishAsync([changed], TestContext.Current.CancellationToken);
+        await stores.Items[0].PublishAsync(CreatePublication([original]), TestContext.Current.CancellationToken);
+        await stores.Items[0].PublishAsync(CreatePublication([changed]), TestContext.Current.CancellationToken);
 
         var publishedEntry = await stores.Items[0].GetPublishedDefinitionEntryAsync(
             original.DefinitionKey,
@@ -162,20 +169,64 @@ public sealed class DatabaseConfigurationStorePublishTests
         var published = publishedEntry?.RequireDefinition();
         published.Should().NotBeNull();
         published!.SchemaVersion.Should().Be(2);
+        published.DefinitionRevision.Should().Be(2);
         published.SchemaHash.Should().Be(changed.SchemaHash);
 
-        var histories = await stores.Items[0].ListDefinitionPublishHistoriesAsync(
-            original.DefinitionKey,
-            20,
-            TestContext.Current.CancellationToken);
-        histories.Select(static history => history.ChangeKind)
+        var overview = await GetOverviewAsync(stores, original.DefinitionKey);
+        overview.DefinitionRevision.Should().Be(2);
+        overview.SchemaVersion.Should().Be(2);
+        overview.RevisionHistories.Select(static history => history.DefinitionRevision)
+            .Should().Equal(2, 1);
+        overview.RevisionHistories.Select(static history => history.ChangeKind)
             .Should().Contain([ConfigurationDefinitionPublishChangeKind.Created, ConfigurationDefinitionPublishChangeKind.SchemaChanged]);
+    }
+
+    [Fact]
+    public async Task InitializeSchemaAsync_WhenDatabaseUsesEarlierSchema_ShouldRejectInPlaceUpgrade()
+    {
+        var databasePath = CreateDatabasePath();
+        await CreateEarlierSchemaAsync(databasePath);
+        await using var provider = CreateProvider(databasePath);
+        var store = provider.GetRequiredService<DatabaseConfigurationStore>();
+
+        var act = () => store.InitializeSchemaAsync(TestContext.Current.CancellationToken);
+
+        await act.Should().ThrowAsync<ConfigurationMetadataStoreReadException>()
+            .WithMessage("*requires a fresh database*");
     }
 
     private static async Task InitializeSchemaAsync(string databasePath)
     {
         await using var stores = CreateStores(databasePath, 1);
         _ = await stores.Items[0].ListPublishedDefinitionEntriesAsync(TestContext.Current.CancellationToken);
+    }
+
+    private static async Task CreateEarlierSchemaAsync(string databasePath)
+    {
+        await using var provider = CreateProvider(databasePath);
+        await using var scope = provider.CreateAsyncScope();
+        var dbContext = scope.ServiceProvider.GetRequiredService<ConfigurationDbContext>();
+        await dbContext.Database.ExecuteSqlRawAsync(
+            """
+            CREATE TABLE "ConfigurationSchemaMarkers" (
+                "MarkerKey" TEXT NOT NULL PRIMARY KEY,
+                "SchemaVersion" INTEGER NOT NULL
+            )
+            """,
+            TestContext.Current.CancellationToken);
+        await dbContext.Database.ExecuteSqlRawAsync(
+            """
+            INSERT INTO "ConfigurationSchemaMarkers" ("MarkerKey", "SchemaVersion")
+            VALUES ('Configuration.EfCore', 7)
+            """,
+            TestContext.Current.CancellationToken);
+        await dbContext.Database.ExecuteSqlRawAsync(
+            """
+            CREATE TABLE "ConfigurationDefinitions" (
+                "DefinitionKey" TEXT NOT NULL PRIMARY KEY
+            )
+            """,
+            TestContext.Current.CancellationToken);
     }
 
     private static async Task<int> CountPublishLockMarkersAsync(string databasePath)
@@ -278,6 +329,19 @@ public sealed class DatabaseConfigurationStorePublishTests
                 definition.SectionPath,
                 definition.Root)
         };
+    }
+
+    private static ConfigurationDefinitionPublicationBatch CreatePublication(
+        IReadOnlyList<ConfigurationDefinition> definitions)
+    {
+        return ConfigurationDefinitionPublicationBatch.Create(
+            new ConfigurationPublisherIdentity
+            {
+                PublisherKey = "Test.Service",
+                InstanceId = "Test.Service:1",
+                Name = "Test Service"
+            },
+            definitions);
     }
 
     private static string CreateDatabasePath()

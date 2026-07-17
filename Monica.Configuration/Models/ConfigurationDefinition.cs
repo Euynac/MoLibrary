@@ -48,6 +48,12 @@ public sealed record ConfigurationDefinition
     public int SchemaVersion { get; init; } = 1;
 
     /// <summary>
+    /// Gets the current persisted definition revision. The revision advances for every effective metadata or schema
+    /// change, while <see cref="SchemaVersion"/> advances only when the schema hash changes.
+    /// </summary>
+    public int DefinitionRevision { get; init; }
+
+    /// <summary>
     /// Gets the schema hash used to detect drift across services.
     /// </summary>
     public required string SchemaHash { get; init; }
@@ -56,6 +62,16 @@ public sealed record ConfigurationDefinition
     /// Gets the default reload behavior for the definition.
     /// </summary>
     public ConfigurationReloadBehavior ReloadBehavior { get; init; } = ConfigurationReloadBehavior.Unknown;
+
+    /// <summary>
+    /// Gets how the current service obtained <see cref="ReloadBehavior"/> for publication.
+    /// </summary>
+    /// <remarks>
+    /// Definitions created without explicit provenance default to <see cref="ConfigurationReloadBehaviorObservationKind.Unresolved"/>.
+    /// Publication treats a concrete behavior on such a definition as a declared value so manually constructed definitions remain unambiguous.
+    /// </remarks>
+    public ConfigurationReloadBehaviorObservationKind ReloadBehaviorObservationKind { get; init; } =
+        ConfigurationReloadBehaviorObservationKind.Unresolved;
 
     /// <summary>
     /// Gets the root node of the configuration schema tree.

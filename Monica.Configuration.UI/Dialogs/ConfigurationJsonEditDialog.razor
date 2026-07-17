@@ -13,6 +13,7 @@
                     </MudStack>
                     <MudStack Row="true" Wrap="Wrap.Wrap" AlignItems="AlignItems.Center" Spacing="1">
                         <ConfigurationSchemaMetadataChip SchemaVersion="@Definition.SchemaVersion"
+                                                         DefinitionRevision="@Definition.DefinitionRevision"
                                                          SchemaHash="@Definition.SchemaHash" />
                         @if (_editorDocument.RedactedPaths.Count > 0)
                         {

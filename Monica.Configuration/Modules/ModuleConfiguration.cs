@@ -145,6 +145,7 @@ public sealed class ModuleConfiguration
         services.TryAddSingleton(_runtimeContext);
         services.TryAddSingleton(_providerAccessor);
         services.TryAddSingleton<ConfigurationMetricsRecorder>();
+        services.TryAddSingleton<ConfigurationPublisherIdentityProvider>();
         services.TryAddSingleton<MonicaConfigurationProviderActivationCoordinator>();
         services.AddHostedService<MonicaConfigurationProviderActivationHostedService>();
         services.TryAddSingleton<ConfigurationFacade>();
@@ -569,6 +570,16 @@ public sealed class ModuleConfigurationOption : ModuleOptions<ModuleConfiguratio
     /// Monica.Configuration UI.
     /// </remarks>
     public bool IncludeUnmanagedSourceInventoryItems { get; set; } = true;
+
+    /// <summary>
+    /// Gets or sets the stable logical service key used to reconcile configuration metadata published by replicas.
+    /// </summary>
+    /// <remarks>
+    /// Replicas of the same service must use the same value. When omitted, Monica uses the host application name,
+    /// which normally matches the entry assembly name. Configure this explicitly when multiple logical services
+    /// share an application name or when deployment naming must remain stable across entry-assembly changes.
+    /// </remarks>
+    public string? PublisherKey { get; set; }
 
     /// <summary>
     /// Gets or sets the stable identity used to ignore reload notifications produced by this process.

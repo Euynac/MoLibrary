@@ -14,7 +14,7 @@ namespace Monica.Configuration.Services;
 /// </summary>
 public sealed class ConfigurationDefinitionResolver(
     IConfigurationDefinitionRegistry definitionRegistry,
-    IConfigurationMetadataStore metadataStore)
+    IConfigurationMetadataStore? metadataStore = null)
 {
     private static readonly TimeSpan READ_SNAPSHOT_LIFETIME = TimeSpan.FromSeconds(30);
     private readonly Lock _readSnapshotLock = new();
@@ -40,31 +40,34 @@ public sealed class ConfigurationDefinitionResolver(
             };
         }
 
-        IReadOnlyList<ConfigurationPublishedDefinitionEntry> publishedEntries;
-        try
+        IReadOnlyList<ConfigurationPublishedDefinitionEntry> publishedEntries = [];
+        if (metadataStore is not null)
         {
-            publishedEntries = await metadataStore.ListPublishedDefinitionEntriesAsync(cancellationToken);
-        }
-        catch (OperationCanceledException)
-        {
-            throw;
-        }
-        catch (Exception ex)
-        {
-            InvalidateReadSnapshot();
-            foreach (var (key, entry) in entriesByKey.ToArray())
+            try
             {
-                entriesByKey[key] = entry with
+                publishedEntries = await metadataStore.ListPublishedDefinitionEntriesAsync(cancellationToken);
+            }
+            catch (OperationCanceledException)
+            {
+                throw;
+            }
+            catch (Exception ex)
+            {
+                InvalidateReadSnapshot();
+                foreach (var (key, entry) in entriesByKey.ToArray())
                 {
-                    Availability = ConfigurationDefinitionAvailability.AvailableWithMetadataFault
+                    entriesByKey[key] = entry with
+                    {
+                        Availability = ConfigurationDefinitionAvailability.AvailableWithMetadataFault
+                    };
+                }
+
+                return new ConfigurationDefinitionCatalogSnapshot
+                {
+                    Entries = SortCatalogEntries(entriesByKey.Values),
+                    StoreDiagnostic = CreateStoreDiagnostic(metadataStore, ex)
                 };
             }
-
-            return new ConfigurationDefinitionCatalogSnapshot
-            {
-                Entries = SortCatalogEntries(entriesByKey.Values),
-                StoreDiagnostic = CreateStoreDiagnostic(ex)
-            };
         }
 
         foreach (var publishedEntry in publishedEntries)
@@ -130,7 +133,9 @@ public sealed class ConfigurationDefinitionResolver(
     /// </summary>
     public async Task<IReadOnlyList<ConfigurationDefinition>> GetMergedDefinitionsAsync(CancellationToken cancellationToken)
     {
-        var publishedEntries = await metadataStore.ListPublishedDefinitionEntriesAsync(cancellationToken);
+        IReadOnlyList<ConfigurationPublishedDefinitionEntry> publishedEntries = metadataStore is null
+            ? []
+            : await metadataStore.ListPublishedDefinitionEntriesAsync(cancellationToken);
         var publishedDefinitions = new List<ConfigurationDefinition>(publishedEntries.Count);
         foreach (var entry in publishedEntries)
         {
@@ -173,12 +178,24 @@ public sealed class ConfigurationDefinitionResolver(
         if (definitionRegistry.TryGet(definitionKey, out var localDefinition))
         {
             var local = localDefinition!;
+            if (metadataStore is null)
+            {
+                return MergePublishedMetadata(
+                    local with { Origin = ConfigurationDefinitionOrigin.LocalScan },
+                    publishedDefinition: null);
+            }
+
             var localPublishedEntry = await metadataStore.GetPublishedDefinitionEntryAsync(
                 local.DefinitionKey,
                 cancellationToken);
             return MergePublishedMetadata(
                 local with { Origin = ConfigurationDefinitionOrigin.LocalScan },
                 localPublishedEntry?.RequireDefinition());
+        }
+
+        if (metadataStore is null)
+        {
+            throw new ConfigurationDefinitionNotFoundException(definitionKey);
         }
 
         var publishedEntry = await metadataStore.GetPublishedDefinitionEntryAsync(definitionKey, cancellationToken);
@@ -227,13 +244,33 @@ public sealed class ConfigurationDefinitionResolver(
     {
         if (publishedDefinition is null)
         {
-            return localDefinition with { SchemaVersion = Math.Max(localDefinition.SchemaVersion, 1) };
+            return localDefinition with
+            {
+                SchemaVersion = Math.Max(localDefinition.SchemaVersion, 1),
+                DefinitionRevision = Math.Max(localDefinition.DefinitionRevision, 0)
+            };
         }
 
         return localDefinition with
         {
-            SchemaVersion = ResolveLocalSchemaVersion(localDefinition, publishedDefinition)
+            SchemaVersion = ResolveLocalSchemaVersion(localDefinition, publishedDefinition),
+            DefinitionRevision = publishedDefinition.DefinitionRevision,
+            ReloadBehavior = ResolveMergedReloadBehavior(localDefinition, publishedDefinition)
         };
+    }
+
+    private static ConfigurationReloadBehavior ResolveMergedReloadBehavior(
+        ConfigurationDefinition localDefinition,
+        ConfigurationDefinition publishedDefinition)
+    {
+        var publishedObservation = publishedDefinition.ReloadBehavior is ConfigurationReloadBehavior.OnlineReloadable
+            or ConfigurationReloadBehavior.RequiresRestart
+            or ConfigurationReloadBehavior.StaticAfterStartup
+                ? ConfigurationReloadBehaviorObservation.Inferred(publishedDefinition.ReloadBehavior)
+                : ConfigurationReloadBehaviorObservation.Unresolved();
+
+        return ConfigurationReloadBehaviorObservation.Aggregate(
+            [ConfigurationReloadBehaviorObservation.FromDefinition(localDefinition), publishedObservation]);
     }
 
     private static int ResolveLocalSchemaVersion(
@@ -277,12 +314,14 @@ public sealed class ConfigurationDefinitionResolver(
         }
     }
 
-    private ConfigurationMetadataStoreDiagnostic CreateStoreDiagnostic(Exception error)
+    private static ConfigurationMetadataStoreDiagnostic CreateStoreDiagnostic(
+        IConfigurationMetadataStore store,
+        Exception error)
     {
         return new ConfigurationMetadataStoreDiagnostic
         {
-            StoreKey = metadataStore.Descriptor.StoreKey,
-            StoreDisplayName = metadataStore.Descriptor.DisplayName,
+            StoreKey = store.Descriptor.StoreKey,
+            StoreDisplayName = store.Descriptor.DisplayName,
             Kind = ClassifyStoreFailure(error),
             ErrorType = error.GetType().FullName ?? error.GetType().Name,
             Message = error.GetMessageRecursively()

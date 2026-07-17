@@ -24,25 +24,20 @@
     flex: 1 1 auto;
     flex-direction: column;
     min-height: 0;
-    min-width: 0;
     overflow: hidden;
-    width: 100%;
 }
 
 .configuration-save-group-preview ::deep .mud-tabs-tabbar {
     flex: 0 0 auto;
-    overflow: hidden;
 }
 
 .configuration-save-group-preview ::deep .mud-tabs-panels {
     flex: 1 1 auto;
     min-height: 0;
-    min-width: 0;
     overflow: hidden;
 }
 
-.configuration-save-group-preview ::deep .mud-tabs-panels > .mud-tab-panel,
-.configuration-save-group-preview ::deep .mud-tabs-panels > .mud-tabs-panel {
+.configuration-save-group-preview ::deep .mud-tabs-panels > .mud-tab-panel {
     height: 100%;
     min-height: 0;
     overflow: auto;

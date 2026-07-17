@@ -46,6 +46,11 @@ public sealed record ConfigurationDefinitionPublishHistory
     public ConfigurationDefinitionPublishChangeKind ChangeKind { get; init; }
 
     /// <summary>
+    /// Gets the definition revision produced by this publication.
+    /// </summary>
+    public int DefinitionRevision { get; init; }
+
+    /// <summary>
     /// Gets the previous schema version, or null when this is the initial publish.
     /// </summary>
     public int? PreviousSchemaVersion { get; init; }

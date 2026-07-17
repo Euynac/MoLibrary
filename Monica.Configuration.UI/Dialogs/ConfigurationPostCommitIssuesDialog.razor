@@ -45,6 +45,12 @@
 </MudDialog>
 
 @code {
+    internal static DialogOptions DefaultOptions => new()
+    {
+        MaxWidth = MaxWidth.Large,
+        FullWidth = true
+    };
+
     [CascadingParameter] private IMudDialogInstance MudDialog { get; set; } = null!;
     [Parameter] public IReadOnlyList<ConfigurationPostCommitIssue> Issues { get; set; } = [];
     [Parameter] public string? SummaryText { get; set; }

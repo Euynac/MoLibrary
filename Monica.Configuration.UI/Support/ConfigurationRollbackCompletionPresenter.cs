@@ -29,11 +29,7 @@ internal static class ConfigurationRollbackCompletionPresenter
         var dialog = await dialogService.ShowAsync<ConfigurationPostCommitIssuesDialog>(
             localizer["Dialogs:PostCommitIssues:Title"],
             parameters,
-            new DialogOptions
-            {
-                MaxWidth = MaxWidth.Large,
-                FullWidth = true
-            });
+            ConfigurationPostCommitIssuesDialog.DefaultOptions);
         await dialog.Result;
     }
 }

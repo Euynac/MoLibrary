@@ -30,6 +30,9 @@ internal sealed class ConfigurationDefinitionScanner(
         var definitionKey = attribute.DefinitionKey ?? optionsType.FullName ?? optionsType.Name;
         var sectionPath = ConfigurationSectionPathResolver.Resolve(optionsType, attribute, sectionPathConvention);
         var root = ScanNode(optionsType, optionsType.Name, LogicalPath.Root, sectionPath, attribute.ReloadBehavior);
+        var reloadBehavior = attribute.ReloadBehavior == ConfigurationReloadBehavior.Inherit
+            ? ConfigurationReloadBehavior.Unknown
+            : attribute.ReloadBehavior;
 
         return new ConfigurationDefinition
         {
@@ -40,7 +43,12 @@ internal sealed class ConfigurationDefinitionScanner(
             ClrTypeName = optionsType.AssemblyQualifiedName ?? optionsType.FullName ?? optionsType.Name,
             FromProject = ResolveFromProject(optionsType),
             Category = attribute.Category,
-            ReloadBehavior = attribute.ReloadBehavior,
+            ReloadBehavior = reloadBehavior,
+            ReloadBehaviorObservationKind = reloadBehavior is ConfigurationReloadBehavior.OnlineReloadable
+                or ConfigurationReloadBehavior.RequiresRestart
+                or ConfigurationReloadBehavior.StaticAfterStartup
+                    ? ConfigurationReloadBehaviorObservationKind.Declared
+                    : ConfigurationReloadBehaviorObservationKind.Unresolved,
             Root = root,
             SchemaHash = hasher.ComputeHash(definitionKey, sectionPath, root)
         };

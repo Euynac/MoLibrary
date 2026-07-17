@@ -17,6 +17,7 @@
                         </MudStack>
                         <MudStack Row="true" Wrap="Wrap.Wrap" Spacing="1">
                             <ConfigurationSchemaMetadataChip SchemaVersion="@Definition.SchemaVersion"
+                                                             DefinitionRevision="@Definition.DefinitionRevision"
                                                              SchemaHash="@Definition.SchemaHash" />
                             <MudChip T="ConfigurationNodeKind" Size="Size.Small" Color="Color.Info" Variant="Variant.Outlined">@Node.NodeKind</MudChip>
                         </MudStack>
