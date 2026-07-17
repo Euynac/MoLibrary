@@ -19,13 +19,14 @@ namespace Test.Monica.Configuration.EfCore;
 
 public sealed partial class DatabaseConfigurationStorePublishTests
 {
-    private const string PUBLISH_DEFINITIONS_LOCK_MARKER_KEY = "Configuration.EfCore.PublishDefinitionsLock";
+    private const string DEFINITION_PUBLICATION_LOCK_KEY = "DefinitionPublication";
+    private const string MUTATION_GROUPS_LOCK_KEY = "MutationGroups";
+    private const string UNIFIED_VERSIONS_LOCK_KEY = "UnifiedVersions";
 
     [Fact]
     public async Task PublishAsync_WhenManyStoresPublishSameNewDefinition_ShouldCreateSingleDefinition()
     {
-        var databasePath = CreateDatabasePath();
-        await InitializeSchemaAsync(databasePath);
+        var databasePath = await CreateMigratedDatabaseAsync();
 
         var definition = CreateDefinition("Test.Concurrent.Shared");
         await using var stores = CreateStores(databasePath, 12);
@@ -46,27 +47,43 @@ public sealed partial class DatabaseConfigurationStorePublishTests
     }
 
     [Fact]
-    public async Task PublishAsync_WhenLockRowIsMissingAndStoresPublishConcurrently_ShouldCreateSingleLockMarker()
+    public async Task ApplyMigrationsAsync_WhenDatabaseIsEmpty_ShouldSeedEveryStoreLock()
     {
-        var databasePath = CreateDatabasePath();
-        await InitializeSchemaAsync(databasePath);
+        var databasePath = await CreateMigratedDatabaseAsync();
 
-        var definition = CreateDefinition("Test.Concurrent.LockMarker");
-        await using var stores = CreateStores(databasePath, 12);
+        var locks = await ReadStoreLocksAsync(databasePath);
+        locks.Should().BeEquivalentTo(
+        [
+            new StoreLockRow(DEFINITION_PUBLICATION_LOCK_KEY, 0),
+            new StoreLockRow(MUTATION_GROUPS_LOCK_KEY, 0),
+            new StoreLockRow(UNIFIED_VERSIONS_LOCK_KEY, 0)
+        ]);
+        var legacyMarkerTableCount = await CountConfigurationTablesAsync(
+            databasePath,
+            "ConfigurationSchemaMarkers");
+        legacyMarkerTableCount.Should().Be(0);
+    }
 
-        await Task.WhenAll(stores.Items.Select(store => store.PublishAsync(
+    [Fact]
+    public async Task PublishAsync_WhenDefinitionPublicationLockIsMissing_ShouldRejectIncompatibleSchema()
+    {
+        var databasePath = await CreateMigratedDatabaseAsync();
+        await DeleteStoreLockAsync(databasePath, DEFINITION_PUBLICATION_LOCK_KEY);
+        await using var stores = CreateStores(databasePath, 1);
+        var definition = CreateDefinition("Test.Concurrent.MissingLock");
+
+        var act = () => stores.Items[0].PublishAsync(
             CreatePublication([definition]),
-            TestContext.Current.CancellationToken)));
+            TestContext.Current.CancellationToken);
 
-        var lockMarkerCount = await CountPublishLockMarkersAsync(databasePath);
-        lockMarkerCount.Should().Be(1);
+        await act.Should().ThrowAsync<ConfigurationStoreSchemaException>()
+            .WithMessage("*EF Core migration*");
     }
 
     [Fact]
     public async Task PublishAsync_WhenManyStoresPublishSameBatch_ShouldPublishEveryDefinitionWithoutConcurrencyFailure()
     {
-        var databasePath = CreateDatabasePath();
-        await InitializeSchemaAsync(databasePath);
+        var databasePath = await CreateMigratedDatabaseAsync();
 
         var definitions = new[]
         {
@@ -95,7 +112,7 @@ public sealed partial class DatabaseConfigurationStorePublishTests
     [Fact]
     public async Task PublishAsync_WhenDefinitionAlreadyPublished_ShouldNoOpWithoutExtraHistory()
     {
-        var databasePath = CreateDatabasePath();
+        var databasePath = await CreateMigratedDatabaseAsync();
         await using var stores = CreateStores(databasePath, 2);
         var definition = CreateDefinition("Test.Concurrent.NoOp");
 
@@ -113,7 +130,7 @@ public sealed partial class DatabaseConfigurationStorePublishTests
     [Fact]
     public async Task PublishAsync_WhenMetadataChanges_ShouldKeepSchemaVersionAndRecordMetadataHistory()
     {
-        var databasePath = CreateDatabasePath();
+        var databasePath = await CreateMigratedDatabaseAsync();
         await using var stores = CreateStores(databasePath, 1);
         var original = CreateDefinition("Test.Concurrent.Metadata");
         var changed = original with { DisplayName = "Updated Metadata Display Name" };
@@ -144,7 +161,7 @@ public sealed partial class DatabaseConfigurationStorePublishTests
     [Fact]
     public async Task PublishAsync_WhenSchemaChanges_ShouldIncrementSchemaVersionAndRecordSchemaHistory()
     {
-        var databasePath = CreateDatabasePath();
+        var databasePath = await CreateMigratedDatabaseAsync();
         await using var stores = CreateStores(databasePath, 1);
         var original = CreateDefinition("Test.Concurrent.Schema");
         var changedRoot = original.Root with
@@ -182,54 +199,31 @@ public sealed partial class DatabaseConfigurationStorePublishTests
     }
 
     [Fact]
-    public async Task InitializeSchemaAsync_WhenDatabaseUsesEarlierSchema_ShouldRejectInPlaceUpgrade()
+    public async Task ListPublishedDefinitionEntriesAsync_WhenDatabaseIsUnmigrated_ShouldFailWithoutCreatingSchema()
     {
         var databasePath = CreateDatabasePath();
-        await CreateEarlierSchemaAsync(databasePath);
-        await using var provider = CreateProvider(databasePath);
-        var store = provider.GetRequiredService<DatabaseConfigurationStore>();
-
-        var act = () => store.InitializeSchemaAsync(TestContext.Current.CancellationToken);
-
-        await act.Should().ThrowAsync<ConfigurationMetadataStoreReadException>()
-            .WithMessage("*requires a fresh database*");
-    }
-
-    private static async Task InitializeSchemaAsync(string databasePath)
-    {
         await using var stores = CreateStores(databasePath, 1);
-        _ = await stores.Items[0].ListPublishedDefinitionEntriesAsync(TestContext.Current.CancellationToken);
+
+        var act = () => stores.Items[0]
+            .ListPublishedDefinitionEntriesAsync(TestContext.Current.CancellationToken);
+
+        await act.Should().ThrowAsync<ConfigurationStoreSchemaException>()
+            .WithMessage("*EF Core migration*");
+        var configurationTableCount = await CountConfigurationTablesAsync(databasePath);
+        configurationTableCount.Should().Be(0);
     }
 
-    private static async Task CreateEarlierSchemaAsync(string databasePath)
+    private static async Task<string> CreateMigratedDatabaseAsync()
     {
+        var databasePath = CreateDatabasePath();
         await using var provider = CreateProvider(databasePath);
         await using var scope = provider.CreateAsyncScope();
         var dbContext = scope.ServiceProvider.GetRequiredService<ConfigurationDbContext>();
-        await dbContext.Database.ExecuteSqlRawAsync(
-            """
-            CREATE TABLE "ConfigurationSchemaMarkers" (
-                "MarkerKey" TEXT NOT NULL PRIMARY KEY,
-                "SchemaVersion" INTEGER NOT NULL
-            )
-            """,
-            TestContext.Current.CancellationToken);
-        await dbContext.Database.ExecuteSqlRawAsync(
-            """
-            INSERT INTO "ConfigurationSchemaMarkers" ("MarkerKey", "SchemaVersion")
-            VALUES ('Configuration.EfCore', 7)
-            """,
-            TestContext.Current.CancellationToken);
-        await dbContext.Database.ExecuteSqlRawAsync(
-            """
-            CREATE TABLE "ConfigurationDefinitions" (
-                "DefinitionKey" TEXT NOT NULL PRIMARY KEY
-            )
-            """,
-            TestContext.Current.CancellationToken);
+        await dbContext.Database.MigrateAsync(TestContext.Current.CancellationToken);
+        return databasePath;
     }
 
-    private static async Task<int> CountPublishLockMarkersAsync(string databasePath)
+    private static async Task<IReadOnlyList<StoreLockRow>> ReadStoreLocksAsync(string databasePath)
     {
         await using var provider = CreateProvider(databasePath);
         await using var scope = provider.CreateAsyncScope();
@@ -238,14 +232,50 @@ public sealed partial class DatabaseConfigurationStorePublishTests
         await dbContext.Database.OpenConnectionAsync(TestContext.Current.CancellationToken);
         await using var command = connection.CreateCommand();
         command.CommandText = """
-                              SELECT COUNT(*)
-                              FROM "ConfigurationSchemaMarkers"
-                              WHERE "MarkerKey" = $markerKey
+                              SELECT "LockKey", "LockVersion"
+                              FROM "ConfigurationStoreLocks"
+                              ORDER BY "LockKey"
                               """;
-        var parameter = command.CreateParameter();
-        parameter.ParameterName = "$markerKey";
-        parameter.Value = PUBLISH_DEFINITIONS_LOCK_MARKER_KEY;
-        command.Parameters.Add(parameter);
+        await using var reader = await command.ExecuteReaderAsync(TestContext.Current.CancellationToken);
+        var rows = new List<StoreLockRow>();
+        while (await reader.ReadAsync(TestContext.Current.CancellationToken))
+        {
+            rows.Add(new StoreLockRow(reader.GetString(0), reader.GetInt64(1)));
+        }
+
+        return rows;
+    }
+
+    private static async Task DeleteStoreLockAsync(string databasePath, string lockKey)
+    {
+        await using var provider = CreateProvider(databasePath);
+        await using var scope = provider.CreateAsyncScope();
+        var dbContext = scope.ServiceProvider.GetRequiredService<ConfigurationDbContext>();
+        await dbContext.Database.ExecuteSqlInterpolatedAsync(
+            $"DELETE FROM \"ConfigurationStoreLocks\" WHERE \"LockKey\" = {lockKey}",
+            TestContext.Current.CancellationToken);
+    }
+
+    private static async Task<int> CountConfigurationTablesAsync(
+        string databasePath,
+        string? exactTableName = null)
+    {
+        await using var provider = CreateProvider(databasePath);
+        await using var scope = provider.CreateAsyncScope();
+        var dbContext = scope.ServiceProvider.GetRequiredService<ConfigurationDbContext>();
+        var connection = dbContext.Database.GetDbConnection();
+        await dbContext.Database.OpenConnectionAsync(TestContext.Current.CancellationToken);
+        await using var command = connection.CreateCommand();
+        command.CommandText = exactTableName is null
+            ? "SELECT COUNT(*) FROM sqlite_schema WHERE type = 'table' AND name LIKE 'Configuration%'"
+            : "SELECT COUNT(*) FROM sqlite_schema WHERE type = 'table' AND name = $tableName";
+        if (exactTableName is not null)
+        {
+            var parameter = command.CreateParameter();
+            parameter.ParameterName = "$tableName";
+            parameter.Value = exactTableName;
+            command.Parameters.Add(parameter);
+        }
 
         var count = await command.ExecuteScalarAsync(TestContext.Current.CancellationToken);
         return Convert.ToInt32(count);
@@ -266,7 +296,6 @@ public sealed partial class DatabaseConfigurationStorePublishTests
         var services = new ServiceCollection();
         services.AddLogging();
         services.AddOptions();
-        services.Configure<ModuleConfigurationEfCoreOption>(static options => options.AutoManageSchema = true);
         services.Configure<ModuleRepositoryOption>(static _ => { });
         services.AddScoped<ICachedServiceProvider, CachedServiceProvider>();
         services.AddSingleton<IAuditPropertySetter, NoOpAuditPropertySetter>();
@@ -275,7 +304,9 @@ public sealed partial class DatabaseConfigurationStorePublishTests
             typeof(ScopedDbContextOperation<ConfigurationDbContext>));
         services.AddDbContext<ConfigurationDbContext>((_, options) =>
         {
-            options.UseSqlite($"Data Source={databasePath}");
+            ConfigurationStoreTestContextFactory.ConfigureOptions(
+                options,
+                $"Data Source={databasePath}");
         });
         new ModuleConfigurationEfCore(new ModuleConfigurationEfCoreOption()).ConfigureServices(services);
         return services.BuildServiceProvider();
@@ -363,6 +394,8 @@ public sealed partial class DatabaseConfigurationStorePublishTests
             }
         }
     }
+
+    private sealed record StoreLockRow(string LockKey, long LockVersion);
 
     private sealed class NoOpAuditPropertySetter : IAuditPropertySetter
     {

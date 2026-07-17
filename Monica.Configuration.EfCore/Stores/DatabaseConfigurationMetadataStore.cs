@@ -3,7 +3,6 @@ using Monica.Configuration.Abstractions;
 using Monica.Configuration.EfCore.DbContext;
 using Monica.Configuration.EfCore.Entities;
 using Monica.Configuration.EfCore.Stores.Support;
-using Monica.Configuration.Exceptions;
 using Monica.Configuration.Models;
 
 namespace Monica.Configuration.EfCore.Stores;
@@ -16,7 +15,6 @@ internal sealed class DatabaseConfigurationMetadataStore(ConfigurationDatabase d
 {
     private const int MAX_PUBLISH_RETRY_COUNT = 5;
     private const int PUBLISH_RETRY_BASE_DELAY_MS = 25;
-    private const string PUBLISH_DEFINITIONS_LOCK_MARKER_KEY = "Configuration.EfCore.PublishDefinitionsLock";
 
     /// <inheritdoc />
     public ConfigurationStoreDescriptor Descriptor => ConfigurationDatabase.Descriptor;
@@ -73,7 +71,7 @@ internal sealed class DatabaseConfigurationMetadataStore(ConfigurationDatabase d
     public async Task<IReadOnlyList<ConfigurationPublishedDefinitionEntry>> ListPublishedDefinitionEntriesAsync(
         CancellationToken cancellationToken)
     {
-        return await ExecuteMetadataReadAsync(async (dbContext, token) =>
+        return await database.ExecuteAsync(async (dbContext, token) =>
         {
             var entities = await dbContext.ConfigurationDefinitions
                 .AsNoTracking()
@@ -89,7 +87,7 @@ internal sealed class DatabaseConfigurationMetadataStore(ConfigurationDatabase d
         string definitionKey,
         CancellationToken cancellationToken)
     {
-        return await ExecuteMetadataReadAsync(async (dbContext, token) =>
+        return await database.ExecuteAsync(async (dbContext, token) =>
         {
             var definitionIdentity = ConfigurationDefinitionIdentity.Compute(definitionKey);
             var entities = await dbContext.ConfigurationDefinitions
@@ -108,7 +106,7 @@ internal sealed class DatabaseConfigurationMetadataStore(ConfigurationDatabase d
         int limit,
         CancellationToken cancellationToken)
     {
-        return await ExecuteMetadataReadAsync(async (dbContext, token) =>
+        return await database.ExecuteAsync(async (dbContext, token) =>
         {
             var normalizedLimit = Math.Clamp(limit, 1, 200);
             var definitionIdentity = ConfigurationDefinitionIdentity.Compute(definitionKey);
@@ -164,16 +162,10 @@ internal sealed class DatabaseConfigurationMetadataStore(ConfigurationDatabase d
     {
         await database.ExecuteResilientAsync(async (dbContext, token) =>
         {
-            // Marker creation performs SaveChanges and therefore must complete before the transaction it coordinates.
-            await ConfigurationDatabaseLock.EnsureMarkerExistsAsync(
-                dbContext,
-                PUBLISH_DEFINITIONS_LOCK_MARKER_KEY,
-                token);
-
             await using var transaction = await dbContext.Database.BeginTransactionAsync(token);
             await ConfigurationDatabaseLock.AcquireAsync(
                 dbContext,
-                PUBLISH_DEFINITIONS_LOCK_MARKER_KEY,
+                ConfigurationStoreLockEntity.DefinitionPublicationLockKey,
                 token);
             await PublishBatchAsync(dbContext, batch, token);
             if (dbContext.ChangeTracker.HasChanges())
@@ -319,29 +311,6 @@ internal sealed class DatabaseConfigurationMetadataStore(ConfigurationDatabase d
                 definitionRevision);
             candidate.ApplyTo(current, schemaVersion, definitionRevision);
             dbContext.ConfigurationDefinitionPublishHistories.Add(history);
-        }
-    }
-
-    private async Task<TResult> ExecuteMetadataReadAsync<TResult>(
-        Func<ConfigurationDbContext, CancellationToken, Task<TResult>> operation,
-        CancellationToken cancellationToken)
-    {
-        try
-        {
-            return await database.ExecuteAsync(operation, cancellationToken);
-        }
-        catch (OperationCanceledException)
-        {
-            throw;
-        }
-        catch (Exception ex) when (ConfigurationDatabaseExceptionClassifier.IsMissingTable(ex)
-                                   || ConfigurationDatabaseExceptionClassifier.IsMissingColumn(ex))
-        {
-            throw new ConfigurationMetadataStoreReadException(
-                ConfigurationMetadataStoreIssueKind.IncompatibleStoreSchema,
-                "The Monica.Configuration metadata database is missing required tables or columns. "
-                + "Apply the current Monica.Configuration schema before reading or republishing definitions.",
-                ex);
         }
     }
 

@@ -10,8 +10,6 @@ namespace Monica.Configuration.EfCore.Stores;
 internal sealed class DatabaseConfigurationUnifiedVersionStore(ConfigurationDatabase database)
     : IConfigurationUnifiedVersionStore
 {
-    private const string UNIFIED_VERSION_LOCK_MARKER_KEY = "Configuration.EfCore.UnifiedVersionLock";
-
     public Task<ConfigurationUnifiedVersionSnapshot> AppendVersionAsync(
         ConfigurationUnifiedVersionCreateRequest request,
         CancellationToken cancellationToken)
@@ -20,15 +18,11 @@ internal sealed class DatabaseConfigurationUnifiedVersionStore(ConfigurationData
         // commit could otherwise create a second version. The database lock removes allocation races.
         return database.ExecuteAsync(async (dbContext, token) =>
         {
-            await ConfigurationDatabaseLock.EnsureMarkerExistsAsync(
-                dbContext,
-                UNIFIED_VERSION_LOCK_MARKER_KEY,
-                token);
             await using var transaction = await dbContext.Database.BeginTransactionAsync(token);
             // Append and delete use the same row lock, making version allocation and the current-version invariant serial.
             await ConfigurationDatabaseLock.AcquireAsync(
                 dbContext,
-                UNIFIED_VERSION_LOCK_MARKER_KEY,
+                ConfigurationStoreLockEntity.UnifiedVersionsLockKey,
                 token);
 
             var version = (await dbContext.ConfigurationUnifiedVersions
@@ -119,15 +113,11 @@ internal sealed class DatabaseConfigurationUnifiedVersionStore(ConfigurationData
         var versionWasObserved = false;
         _ = await database.ExecuteResilientAsync(async (dbContext, token) =>
         {
-            await ConfigurationDatabaseLock.EnsureMarkerExistsAsync(
-                dbContext,
-                UNIFIED_VERSION_LOCK_MARKER_KEY,
-                token);
             await using var transaction = await dbContext.Database.BeginTransactionAsync(token);
             // The shared lock prevents an append from changing which version is current during this deletion.
             await ConfigurationDatabaseLock.AcquireAsync(
                 dbContext,
-                UNIFIED_VERSION_LOCK_MARKER_KEY,
+                ConfigurationStoreLockEntity.UnifiedVersionsLockKey,
                 token);
 
             var summary = await dbContext.ConfigurationUnifiedVersions

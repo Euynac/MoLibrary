@@ -2,7 +2,6 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Options;
 using Monica.Configuration.Abstractions;
 using Monica.Configuration.EfCore.DbContext;
 using Monica.Configuration.EfCore.Stores;
@@ -30,36 +29,31 @@ public static class ModuleConfigurationEfCoreBuilderExtensions
     /// <summary>
     /// Registers EF Core as the Monica.Configuration distributed store bundle.
     /// </summary>
+    /// <remarks>
+    /// The host must apply its <see cref="ConfigurationDbContext"/> migrations before the configuration provider is
+    /// activated. Registration never creates or upgrades database tables.
+    /// </remarks>
     /// <param name="guide">The configuration module guide.</param>
     /// <param name="optionsAction">DbContext configuration.</param>
-    /// <param name="configure">Optional EF Core store options.</param>
     /// <returns>The configuration module guide.</returns>
     public static ModuleConfigurationGuide UseDbConfigurationStore(
         this ModuleConfigurationGuide guide,
-        Action<IServiceProvider, DbContextOptionsBuilder> optionsAction,
-        Action<ModuleConfigurationEfCoreOption>? configure = null)
+        Action<IServiceProvider, DbContextOptionsBuilder> optionsAction)
     {
         ArgumentNullException.ThrowIfNull(guide);
         ArgumentNullException.ThrowIfNull(optionsAction);
 
-        new ModuleConfigurationEfCoreGuide().Register(configure).UseDbContext(optionsAction);
-        return guide.UseStartupEffectiveValueStore(() => CreateStartupStore(optionsAction, configure));
+        new ModuleConfigurationEfCoreGuide().Register().UseDbContext(optionsAction);
+        return guide.UseStartupEffectiveValueStore(() => CreateStartupStore(optionsAction));
     }
 
     private static IConfigurationEffectiveValueStore CreateStartupStore(
-        Action<IServiceProvider, DbContextOptionsBuilder> optionsAction,
-        Action<ModuleConfigurationEfCoreOption>? configure)
+        Action<IServiceProvider, DbContextOptionsBuilder> optionsAction)
     {
         var services = new ServiceCollection();
         services.AddLogging();
         services.AddOptions();
         services.AddOptions<ModuleRepositoryOption>();
-        services.AddOptions<ModuleConfigurationEfCoreOption>();
-        if (configure is not null)
-        {
-            services.Configure(configure);
-        }
-
         services.AddScoped<ICachedServiceProvider, CachedServiceProvider>();
         services.AddSingleton<IAuditPropertySetter, NoOpAuditPropertySetter>();
         services.AddSingleton(
@@ -79,17 +73,9 @@ public static class ModuleConfigurationEfCoreBuilderExtensions
 
     internal static void AddDatabaseConfigurationStores(IServiceCollection services)
     {
-        services.TryAddSingleton<ConfigurationDatabaseSchemaManager>(serviceProvider =>
-            new ConfigurationDatabaseSchemaManager(
-                serviceProvider.GetRequiredService<IDbContextOperation<ConfigurationDbContext>>(),
-                serviceProvider.GetRequiredService<IOptions<ModuleConfigurationEfCoreOption>>()));
         services.TryAddSingleton<ConfigurationDatabase>(serviceProvider =>
             new ConfigurationDatabase(
-                serviceProvider.GetRequiredService<IDbContextOperation<ConfigurationDbContext>>(),
-                serviceProvider.GetRequiredService<ConfigurationDatabaseSchemaManager>()));
-        services.TryAddSingleton<DatabaseConfigurationStore>(serviceProvider =>
-            new DatabaseConfigurationStore(
-                serviceProvider.GetRequiredService<ConfigurationDatabaseSchemaManager>()));
+                serviceProvider.GetRequiredService<IDbContextOperation<ConfigurationDbContext>>()));
         services.TryAddSingleton<DatabaseConfigurationEffectiveValueStore>(serviceProvider =>
             new DatabaseConfigurationEffectiveValueStore(
                 serviceProvider.GetRequiredService<ConfigurationDatabase>()));
@@ -227,6 +213,10 @@ public sealed class ModuleConfigurationEfCoreGuide
     /// <summary>
     /// Registers the configuration DbContext.
     /// </summary>
+    /// <remarks>
+    /// The supplied options should select the host-owned migrations assembly and migrations-history table when they
+    /// differ from the runtime assembly defaults. This module does not apply migrations at runtime.
+    /// </remarks>
     /// <param name="optionsAction">DbContext configuration.</param>
     /// <returns>The module guide.</returns>
     public ModuleConfigurationEfCoreGuide UseDbContext(Action<IServiceProvider, DbContextOptionsBuilder> optionsAction)
@@ -241,19 +231,10 @@ public sealed class ModuleConfigurationEfCoreGuide
 /// <summary>
 /// Module options for EF Core configuration persistence.
 /// </summary>
+/// <remarks>
+/// The host owns the <see cref="ConfigurationDbContext"/> schema through EF Core migrations. This module never creates or
+/// upgrades database schemas; store operations report missing schema objects with an actionable exception.
+/// </remarks>
 public sealed class ModuleConfigurationEfCoreOption : ModuleOptions<ModuleConfigurationEfCore>
 {
-    /// <summary>
-    /// Gets or sets whether the EF Core store automatically creates and validates the Monica.Configuration schema.
-    /// </summary>
-    /// <remarks>
-    /// This is enabled by default because Monica.Configuration.EfCore is often added to an existing application database
-    /// without a host-owned migration. The initializer creates all Monica.Configuration tables only when that schema is
-    /// absent, and otherwise validates that the database already uses the current schema version. Disable this when the
-    /// host controls schema creation explicitly, then resolve <see cref="DatabaseConfigurationStore"/> and call
-    /// <see cref="DatabaseConfigurationStore.InitializeSchemaAsync(CancellationToken)"/> before configuration stores are
-    /// used. Earlier schema versions are deliberately rejected; create a fresh version 8 database and retain the earlier
-    /// database only as an external archive.
-    /// </remarks>
-    public bool AutoManageSchema { get; set; } = true;
 }

@@ -334,6 +334,8 @@ public sealed class ConfigurationDefinitionResolver(
         {
             switch (current)
             {
+                case ConfigurationStoreSchemaException:
+                    return ConfigurationMetadataStoreIssueKind.IncompatibleStoreSchema;
                 case ConfigurationMetadataStoreReadException classified:
                     return classified.Kind;
                 case UnauthorizedAccessException:

@@ -1,54 +1,28 @@
 using Microsoft.EntityFrameworkCore;
 using Monica.Configuration.EfCore.DbContext;
-using Monica.Configuration.EfCore.Entities;
+using Monica.Configuration.Exceptions;
 
 namespace Monica.Configuration.EfCore.Stores.Support;
 
 internal static class ConfigurationDatabaseLock
 {
-    internal static async Task EnsureMarkerExistsAsync(
-        ConfigurationDbContext dbContext,
-        string markerKey,
-        CancellationToken cancellationToken)
-    {
-        var markerExists = await dbContext.ConfigurationSchemaMarkers
-            .AnyAsync(candidate => candidate.MarkerKey == markerKey, cancellationToken);
-        if (markerExists)
-        {
-            return;
-        }
-
-        dbContext.ConfigurationSchemaMarkers.Add(new ConfigurationSchemaMarkerEntity
-        {
-            MarkerKey = markerKey,
-            SchemaVersion = ConfigurationSchemaMarkerEntity.CurrentSchemaVersion
-        });
-
-        try
-        {
-            await dbContext.SaveChangesAsync(cancellationToken);
-        }
-        catch (DbUpdateException)
-        {
-            dbContext.ChangeTracker.Clear();
-            if (await dbContext.ConfigurationSchemaMarkers
-                    .AnyAsync(candidate => candidate.MarkerKey == markerKey, cancellationToken))
-            {
-                return;
-            }
-
-            throw;
-        }
-    }
-
     internal static async Task AcquireAsync(
         ConfigurationDbContext dbContext,
-        string markerKey,
+        string lockKey,
         CancellationToken cancellationToken)
     {
-        await dbContext.Database.ExecuteSqlRawAsync(
-            ConfigurationDatabaseSql.BuildStoreLockUpdate(dbContext.Database.ProviderName),
-            [markerKey],
-            cancellationToken);
+        var affectedRows = await dbContext.ConfigurationStoreLocks
+            .Where(candidate => candidate.LockKey == lockKey)
+            .ExecuteUpdateAsync(
+                setters => setters.SetProperty(
+                    candidate => candidate.LockVersion,
+                    candidate => candidate.LockVersion + 1),
+                cancellationToken);
+        if (affectedRows != 1)
+        {
+            throw new ConfigurationStoreSchemaException(
+                $"The Monica.Configuration database is missing the required '{lockKey}' store lock. "
+                + "Apply the host-owned EF Core migrations for ConfigurationDbContext before using the configuration store.");
+        }
     }
 }

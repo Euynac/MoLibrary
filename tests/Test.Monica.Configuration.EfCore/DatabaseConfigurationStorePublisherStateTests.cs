@@ -9,7 +9,7 @@ public sealed partial class DatabaseConfigurationStorePublishTests
     [Fact]
     public async Task PublishAsync_WhenLogicalPublishersReportDifferentBehaviors_ShouldPersistStatesAndUseConservativeAggregate()
     {
-        var databasePath = CreateDatabasePath();
+        var databasePath = await CreateMigratedDatabaseAsync();
         await using var stores = CreateStores(databasePath, 1);
         var definition = CreateDefinition("Test.Publishers.Precedence");
 
@@ -59,7 +59,7 @@ public sealed partial class DatabaseConfigurationStorePublishTests
     [Fact]
     public async Task PublishAsync_WhenReplicaWithSamePublisherKeyReplacesState_ShouldKeepSingleLogicalState()
     {
-        var databasePath = CreateDatabasePath();
+        var databasePath = await CreateMigratedDatabaseAsync();
         await using var stores = CreateStores(databasePath, 1);
         var definition = CreateDefinition("Test.Publishers.ReplicaReplacement");
 
@@ -85,7 +85,7 @@ public sealed partial class DatabaseConfigurationStorePublishTests
     [Fact]
     public async Task PublishAsync_WhenPublisherStateChangesWithoutChangingAggregate_ShouldUpdateStateWithoutNewRevision()
     {
-        var databasePath = CreateDatabasePath();
+        var databasePath = await CreateMigratedDatabaseAsync();
         await using var stores = CreateStores(databasePath, 1);
         var definition = CreateDefinition("Test.Publishers.StableAggregate");
 
@@ -114,7 +114,7 @@ public sealed partial class DatabaseConfigurationStorePublishTests
     [Fact]
     public async Task PublishAsync_WhenCompleteBatchOmitsDefinition_ShouldPruneOnlyThatPublishersState()
     {
-        var databasePath = CreateDatabasePath();
+        var databasePath = await CreateMigratedDatabaseAsync();
         await using var stores = CreateStores(databasePath, 1);
         var removed = CreateDefinition("Test.Publishers.Batch.Removed");
         var retained = CreateDefinition("Test.Publishers.Batch.Retained");
@@ -163,7 +163,7 @@ public sealed partial class DatabaseConfigurationStorePublishTests
     [Fact]
     public async Task RetirePublisherAsync_WhenPublisherHasActiveState_ShouldRemoveItsStatesAndRecomputeDefinitions()
     {
-        var databasePath = CreateDatabasePath();
+        var databasePath = await CreateMigratedDatabaseAsync();
         await using var stores = CreateStores(databasePath, 1);
         var definition = CreateDefinition("Test.Publishers.Retirement");
         var retiringPublisher = CreatePublisher("Service.Retiring", "retiring:1");
