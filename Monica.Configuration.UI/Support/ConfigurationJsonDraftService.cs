@@ -3,11 +3,13 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Text.RegularExpressions;
 using Microsoft.Extensions.Localization;
+using Monica.Configuration.Facades;
 using Monica.Configuration.Models;
 using Monica.Configuration.Serialization;
 using Monica.Configuration.UI.Localization;
 using Monica.Configuration.UI.Models;
 using Monica.Configuration.UI.State;
+using Monica.Core.Results;
 
 namespace Monica.Configuration.UI.Support;
 
@@ -15,6 +17,7 @@ namespace Monica.Configuration.UI.Support;
 /// Converts operator-provided JSON snapshots into staged configuration changes and validation issues.
 /// </summary>
 internal sealed class ConfigurationJsonDraftService(
+    ConfigurationFacade facade,
     IStringLocalizer<ConfigurationUIResource> localizer,
     ConfigurationPendingChangeCompactor changeCompactor)
 {
@@ -25,7 +28,7 @@ internal sealed class ConfigurationJsonDraftService(
     /// <returns>The draft result.</returns>
     public ConfigurationJsonDraftResult Analyze(ConfigurationJsonDraftRequest request)
     {
-        var state = new DraftState(request, localizer, changeCompactor);
+        var state = new DraftState(request, facade, localizer, changeCompactor);
         return state.Analyze();
     }
 
@@ -244,12 +247,15 @@ internal sealed class ConfigurationJsonDraftService(
 
     private sealed class DraftState(
         ConfigurationJsonDraftRequest request,
+        ConfigurationFacade facade,
         IStringLocalizer<ConfigurationUIResource> localizer,
         ConfigurationPendingChangeCompactor changeCompactor)
     {
         private readonly List<PendingChange> _changes = [];
         private readonly List<ConfigurationValidationIssue> _issues = [];
         private readonly List<ConfigurationImportDiagnostic> _diagnostics = [];
+        private readonly HashSet<LogicalPath> _invalidPaths = [];
+        private readonly IReadOnlyList<LogicalPath> _redactedPaths = ParseRedactedPaths(request.RedactedPaths);
         private readonly JsonNode? _originalNode = ParseOriginal(request.EffectiveValue.DisplayValue, request.ScopeNode);
         private int _unchangedCount;
         private int _redactedSkipCount;
@@ -305,9 +311,12 @@ internal sealed class ConfigurationJsonDraftService(
             var normalizedOriginal = NormalizeJsonNode(request.ScopeNode, _originalNode);
             var normalizedIncoming = NormalizeJsonNode(request.ScopeNode, incoming);
 
-            Visit(request.ScopeNode, request.ScopeNode.RelativePath, normalizedOriginal, normalizedIncoming, valueMissing: false);
+            if (ValidateCandidate(normalizedIncoming))
+            {
+                Visit(request.ScopeNode, request.ScopeNode.RelativePath, normalizedOriginal, normalizedIncoming, valueMissing: false);
+            }
 
-            var outputChanges = request.CompactChanges
+            var outputChanges = request.CompactChanges && _issues.Count == 0 && request.RedactedPaths.Count == 0
                 ? changeCompactor.Compact(
                     request.Definition,
                     request.ScopeNode,
@@ -330,6 +339,110 @@ internal sealed class ConfigurationJsonDraftService(
                 Diagnostics = _diagnostics.ToArray(),
                 UnchangedCount = _unchangedCount,
                 RedactedSkipCount = _redactedSkipCount
+            };
+        }
+
+        private bool ValidateCandidate(JsonNode? normalizedIncoming)
+        {
+            var candidateJson = normalizedIncoming?.ToJsonString() ?? "null";
+            var result = facade.ValidateCandidateValue(
+                request.Definition,
+                request.ScopeNode.RelativePath,
+                candidateJson);
+            if (result.IsFailed(out var error, out var report))
+            {
+                AddDiagnostic(
+                    ConfigurationImportDiagnosticSeverity.Error,
+                    request.ScopeNode.RelativePath,
+                    error.Message ?? "Candidate validation failed.");
+                return false;
+            }
+
+            foreach (var issue in report.Issues.Where(issue => !ShouldIgnoreCandidateIssue(issue.LogicalPath)))
+            {
+                _invalidPaths.Add(issue.LogicalPath);
+                _issues.Add(ToUiIssue(issue));
+            }
+
+            return true;
+        }
+
+        private ConfigurationValidationIssue ToUiIssue(ConfigurationCandidateValidationIssue issue)
+        {
+            return new ConfigurationValidationIssue
+            {
+                DefinitionKey = issue.DefinitionKey,
+                DefinitionDisplayName = issue.DefinitionDisplayName,
+                LogicalPath = issue.LogicalPath,
+                NodeDisplayName = issue.NodeDisplayName,
+                InvalidDisplayValue = issue.IsSensitive
+                    ? localizer["State:Value:Sensitive"]
+                    : issue.CandidateDisplayValue,
+                ValidationError = LocalizeCandidateProblem(issue),
+                IsMissing = issue.IsMissing,
+                IsSensitive = issue.IsSensitive,
+                ValidationRules = issue.ValidationRules
+            };
+        }
+
+        private string LocalizeCandidateProblem(ConfigurationCandidateValidationIssue issue)
+        {
+            if (issue.ValidationRules.Any(rule =>
+                    !string.IsNullOrWhiteSpace(rule.ErrorMessage)
+                    && string.Equals(rule.ErrorMessage, issue.Problem, StringComparison.Ordinal)))
+            {
+                return issue.Problem;
+            }
+
+            if (issue.IsMissing
+                || issue.Problem.Contains("value is required", StringComparison.OrdinalIgnoreCase))
+            {
+                return localizer["State:Editor:Required"];
+            }
+
+            if (issue.Problem.StartsWith("Value must be one of:", StringComparison.Ordinal)
+                || string.Equals(issue.Problem, "Value does not match the required pattern.", StringComparison.Ordinal)
+                || string.Equals(issue.Problem, "Dictionary key does not match the required pattern.", StringComparison.Ordinal))
+            {
+                return localizer["State:Editor:InvalidPattern"];
+            }
+
+            if (string.Equals(issue.Problem, "Value is outside the allowed range.", StringComparison.Ordinal))
+            {
+                return localizer["State:Editor:OutOfRange"];
+            }
+
+            if (issue.Problem.StartsWith("Value must be at most ", StringComparison.Ordinal)
+                || issue.Problem.StartsWith("value must contain at most ", StringComparison.Ordinal))
+            {
+                return localizer["State:Editor:TooLong"];
+            }
+
+            if (issue.Problem.StartsWith("Value must be at least ", StringComparison.Ordinal)
+                || issue.Problem.StartsWith("value must contain at least ", StringComparison.Ordinal))
+            {
+                return localizer["State:Editor:TooShort"];
+            }
+
+            return issue.Problem switch
+            {
+                "Expected a JSON object." or "Expected a JSON object for dictionary configuration." =>
+                    localizer["ImportExport:Diagnostics:ExpectedObject"],
+                "Expected a JSON array for list configuration." =>
+                    localizer["ImportExport:Diagnostics:ExpectedArray"],
+                "Expected a boolean value." =>
+                    localizer["ImportExport:Diagnostics:ExpectedBoolean"],
+                "Expected an integer value." =>
+                    localizer["ImportExport:Diagnostics:ExpectedInteger"],
+                "Expected a numeric value." or "Expected a floating-point value." =>
+                    localizer["ImportExport:Diagnostics:ExpectedNumber"],
+                "Expected a date/time value." =>
+                    localizer["ImportExport:Diagnostics:ExpectedDateTime"],
+                "Expected a valid time span value." =>
+                    localizer["State:Editor:InvalidTimeSpan"],
+                "Expected a scalar value." =>
+                    localizer["ImportExport:Diagnostics:ExpectedScalar"],
+                _ => issue.Problem
             };
         }
 
@@ -378,7 +491,7 @@ internal sealed class ConfigurationJsonDraftService(
             JsonElement element,
             List<DuplicateJsonProperty> duplicates)
         {
-            var propertyNames = new HashSet<string>(StringComparer.Ordinal);
+            var propertyNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             foreach (var property in element.EnumerateObject())
             {
                 var propertyPath = ResolveJsonPropertyPath(schema, path, property.Name);
@@ -416,7 +529,7 @@ internal sealed class ConfigurationJsonDraftService(
             return schema.NodeKind switch
             {
                 ConfigurationNodeKind.Object => schema.Children.FirstOrDefault(child =>
-                    string.Equals(child.Name, propertyName, StringComparison.Ordinal)),
+                    string.Equals(child.Name, propertyName, StringComparison.OrdinalIgnoreCase)),
                 ConfigurationNodeKind.Dictionary => schema.DictionaryTemplate?.ValueTemplate,
                 _ => null
             };
@@ -456,7 +569,7 @@ internal sealed class ConfigurationJsonDraftService(
 
             foreach (var property in item.EnumerateObject())
             {
-                if (!string.Equals(property.Name, propertyName, StringComparison.Ordinal))
+                if (!string.Equals(property.Name, propertyName, StringComparison.OrdinalIgnoreCase))
                 {
                     continue;
                 }
@@ -481,15 +594,26 @@ internal sealed class ConfigurationJsonDraftService(
             JsonNode? incoming,
             bool valueMissing)
         {
-            if (ShouldSkipRedacted(path))
+            if (IsRedactedPath(path))
             {
                 _redactedSkipCount++;
+                return;
+            }
+
+            if (_invalidPaths.Contains(path))
+            {
                 return;
             }
 
             if (valueMissing)
             {
                 VisitMissing(schema, path, original);
+                return;
+            }
+
+            if ((HasInvalidPathWithin(path) || HasRedactedPathWithin(path))
+                && !CanPreserveDescendants(schema, original))
+            {
                 return;
             }
 
@@ -570,8 +694,8 @@ internal sealed class ConfigurationJsonDraftService(
             var originalObject = original as JsonObject;
             var keys = incomingObject.Select(pair => pair.Key)
                 .Concat(originalObject?.Select(pair => pair.Key) ?? [])
-                .Distinct(StringComparer.Ordinal)
-                .OrderBy(static key => key, StringComparer.Ordinal)
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .OrderBy(static key => key, StringComparer.OrdinalIgnoreCase)
                 .ToArray();
 
             foreach (var key in keys)
@@ -582,8 +706,9 @@ internal sealed class ConfigurationJsonDraftService(
                     continue;
                 }
 
-                var hasIncoming = incomingObject.ContainsKey(key);
-                Visit(valueSchema, itemPath, originalObject?[key], incomingObject[key], !hasIncoming);
+                var hasIncoming = TryGetObjectValue(incomingObject, key, out var incomingValue);
+                TryGetObjectValue(originalObject, key, out var originalValue);
+                Visit(valueSchema, itemPath, originalValue, incomingValue, !hasIncoming);
             }
         }
 
@@ -607,7 +732,19 @@ internal sealed class ConfigurationJsonDraftService(
 
             if (!listTemplate.SupportsPerItemMutation)
             {
+                if (HasRedactedPathWithin(path))
+                {
+                    _redactedSkipCount++;
+                    return;
+                }
+
                 VisitWholeContainer(schema, path, original, incoming);
+                return;
+            }
+
+            if (HasRedactedStableIdentity(schema, path))
+            {
+                _redactedSkipCount++;
                 return;
             }
 
@@ -625,18 +762,24 @@ internal sealed class ConfigurationJsonDraftService(
             var keyName = listTemplate.ItemKeyPropertyName!;
             var originalItems = BuildKeyedItems(originalArray, keyName, path, reportDiagnostics: false);
             var incomingItems = BuildKeyedItems(incomingArray, keyName, path, reportDiagnostics: true);
+            var suppressRemovals = HasUnaddressableIncomingItemIssue(path);
             var keys = incomingItems.Keys
                 .Concat(originalItems.Keys)
-                .Distinct(StringComparer.Ordinal)
-                .OrderBy(static key => key, StringComparer.Ordinal)
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .OrderBy(static key => key, StringComparer.OrdinalIgnoreCase)
                 .ToArray();
 
             foreach (var key in keys)
             {
                 var itemPath = path.Append(new ListItemKeySegment(key));
-                incomingItems.TryGetValue(key, out var incomingItem);
+                var hasIncoming = incomingItems.TryGetValue(key, out var incomingItem);
                 originalItems.TryGetValue(key, out var originalItem);
-                Visit(itemSchema, itemPath, originalItem, incomingItem, !incomingItems.ContainsKey(key));
+                if (!hasIncoming && suppressRemovals)
+                {
+                    continue;
+                }
+
+                Visit(itemSchema, itemPath, originalItem, incomingItem, !hasIncoming);
             }
         }
 
@@ -646,7 +789,7 @@ internal sealed class ConfigurationJsonDraftService(
             LogicalPath listPath,
             bool reportDiagnostics)
         {
-            var items = new Dictionary<string, JsonNode?>(StringComparer.Ordinal);
+            var items = new Dictionary<string, JsonNode?>(StringComparer.OrdinalIgnoreCase);
             if (array is null)
             {
                 return items;
@@ -655,12 +798,18 @@ internal sealed class ConfigurationJsonDraftService(
             for (var index = 0; index < array.Count; index++)
             {
                 var item = array[index];
+                var indexPath = listPath.Append(new ListIndexSegment(index));
+                if (reportDiagnostics && HasInvalidPathWithin(indexPath))
+                {
+                    continue;
+                }
+
                 var key = ReadObjectScalar(item, keyName);
                 if (string.IsNullOrWhiteSpace(key))
                 {
                     if (reportDiagnostics)
                     {
-                        AddDiagnostic(ConfigurationImportDiagnosticSeverity.Warning, listPath.Append(new ListIndexSegment(index)),
+                        AddDiagnostic(ConfigurationImportDiagnosticSeverity.Warning, indexPath,
                             localizer["ImportExport:Diagnostics:MissingListKey", keyName]);
                     }
 
@@ -669,7 +818,7 @@ internal sealed class ConfigurationJsonDraftService(
 
                 if (!items.TryAdd(key, item) && reportDiagnostics)
                 {
-                    AddDiagnostic(ConfigurationImportDiagnosticSeverity.Warning, listPath.Append(new ListIndexSegment(index)),
+                    AddDiagnostic(ConfigurationImportDiagnosticSeverity.Warning, indexPath,
                         localizer["ImportExport:Diagnostics:DuplicateListKey", key]);
                 }
             }
@@ -683,6 +832,11 @@ internal sealed class ConfigurationJsonDraftService(
             JsonNode? original,
             JsonNode? incoming)
         {
+            if (HasInvalidPathWithin(path))
+            {
+                return;
+            }
+
             if (JsonEquivalent(original, incoming))
             {
                 _unchangedCount++;
@@ -828,13 +982,98 @@ internal sealed class ConfigurationJsonDraftService(
             return request.ScalarEffectiveValues.GetValueOrDefault(path);
         }
 
-        private bool ShouldSkipRedacted(LogicalPath path)
+        private bool IsRedactedPath(LogicalPath path)
         {
-            var canonical = path.ToCanonicalString();
-            return request.RedactedPaths.Contains(canonical)
-                   || request.RedactedPaths.Any(redacted =>
-                       string.Equals(redacted, canonical, StringComparison.Ordinal)
-                       || canonical.StartsWith($"{redacted}.", StringComparison.Ordinal));
+            return _redactedPaths.Any(redactedPath => IsRedactionPrefix(redactedPath, path));
+        }
+
+        private bool HasRedactedPathWithin(LogicalPath path)
+        {
+            return _redactedPaths.Any(redactedPath => IsRedactionPrefix(path, redactedPath));
+        }
+
+        private bool HasInvalidPathWithin(LogicalPath path)
+        {
+            return _invalidPaths.Any(invalidPath => IsPrefix(path, invalidPath));
+        }
+
+        private bool HasUnaddressableIncomingItemIssue(LogicalPath listPath)
+        {
+            return _invalidPaths.Any(invalidPath =>
+                IsPrefix(listPath, invalidPath)
+                && invalidPath.Depth > listPath.Depth
+                && invalidPath.Segments[listPath.Depth] is ListIndexSegment);
+        }
+
+        private bool ShouldIgnoreCandidateIssue(LogicalPath path)
+        {
+            return IsRedactedPath(path) || IsWithinRedactedStableIdentityList(path);
+        }
+
+        private bool IsWithinRedactedStableIdentityList(LogicalPath path)
+        {
+            var currentSchema = request.Definition.Root;
+            var currentPath = LogicalPath.Root;
+            if (HasRedactedStableIdentity(currentSchema, currentPath))
+            {
+                return true;
+            }
+
+            foreach (var segment in path.Segments)
+            {
+                var childSchema = ResolveChildSchema(currentSchema, segment);
+                if (childSchema is null)
+                {
+                    return false;
+                }
+
+                currentSchema = childSchema;
+                currentPath = currentPath.Append(segment);
+                if (HasRedactedStableIdentity(currentSchema, currentPath))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        private bool HasRedactedStableIdentity(ConfigurationNodeDefinition schema, LogicalPath path)
+        {
+            if (schema.ListTemplate is not { SupportsPerItemMutation: true } listTemplate
+                || !HasRedactedPathWithin(path))
+            {
+                return false;
+            }
+
+            var itemSchema = listTemplate.ItemTemplate;
+            var keySchema = itemSchema.Children.FirstOrDefault(child =>
+                string.Equals(child.Name, listTemplate.ItemKeyPropertyName, StringComparison.OrdinalIgnoreCase));
+            return schema.IsSensitive || itemSchema.IsSensitive || keySchema?.IsSensitive is true;
+        }
+
+        private static bool CanPreserveDescendants(ConfigurationNodeDefinition schema, JsonNode? original)
+        {
+            return schema.NodeKind switch
+            {
+                ConfigurationNodeKind.Object or ConfigurationNodeKind.Dictionary => original is JsonObject,
+                ConfigurationNodeKind.List => original is JsonArray,
+                _ => true
+            };
+        }
+
+        private static ConfigurationNodeDefinition? ResolveChildSchema(
+            ConfigurationNodeDefinition parent,
+            ConfigurationPathSegment segment)
+        {
+            return segment switch
+            {
+                PropertySegment property => parent.Children.FirstOrDefault(child =>
+                    string.Equals(child.Name, property.Name, StringComparison.OrdinalIgnoreCase)),
+                DictionaryKeySegment => parent.DictionaryTemplate?.ValueTemplate,
+                ListItemKeySegment or ListIndexSegment => parent.ListTemplate?.ItemTemplate,
+                _ => null
+            };
         }
 
         private void ReportUnknownProperties(ConfigurationNodeDefinition schema, LogicalPath path, JsonObject incomingObject)
@@ -1038,8 +1277,9 @@ internal sealed class ConfigurationJsonDraftService(
             foreach (var property in source)
             {
                 var childSchema = schema.Children.FirstOrDefault(child =>
-                    string.Equals(child.Name, property.Key, StringComparison.Ordinal));
-                normalized[property.Key] = childSchema is null
+                    string.Equals(child.Name, property.Key, StringComparison.OrdinalIgnoreCase));
+                var normalizedName = childSchema?.Name ?? property.Key;
+                normalized[normalizedName] = childSchema is null
                     ? CloneNode(property.Value)
                     : NormalizeJsonNode(childSchema, property.Value);
             }
@@ -1223,6 +1463,24 @@ internal sealed class ConfigurationJsonDraftService(
             };
         }
 
+        private static bool TryGetObjectValue(JsonObject? jsonObject, string propertyName, out JsonNode? value)
+        {
+            if (jsonObject is not null)
+            {
+                foreach (var property in jsonObject)
+                {
+                    if (string.Equals(property.Key, propertyName, StringComparison.OrdinalIgnoreCase))
+                    {
+                        value = property.Value;
+                        return true;
+                    }
+                }
+            }
+
+            value = null;
+            return false;
+        }
+
         private static bool StoredJsonEquals(string? left, string? right)
         {
             if (left is null || right is null)
@@ -1236,6 +1494,61 @@ internal sealed class ConfigurationJsonDraftService(
         private static bool JsonEquivalent(JsonNode? left, JsonNode? right)
         {
             return string.Equals(left?.ToJsonString() ?? "null", right?.ToJsonString() ?? "null", StringComparison.Ordinal);
+        }
+
+        private static IReadOnlyList<LogicalPath> ParseRedactedPaths(IEnumerable<string> canonicalPaths)
+        {
+            var paths = new List<LogicalPath>();
+            foreach (var canonicalPath in canonicalPaths)
+            {
+                try
+                {
+                    paths.Add(LogicalPath.Parse(canonicalPath));
+                }
+                catch (FormatException)
+                {
+                    // Malformed redaction metadata cannot identify what must be preserved, so the scope fails closed.
+                    paths.Add(LogicalPath.Root);
+                }
+            }
+
+            return paths;
+        }
+
+        private static bool IsRedactionPrefix(LogicalPath ancestor, LogicalPath path)
+        {
+            if (ancestor.Depth > path.Depth)
+            {
+                return false;
+            }
+
+            for (var index = 0; index < ancestor.Depth; index++)
+            {
+                if (!RedactionSegmentsEqual(ancestor.Segments[index], path.Segments[index]))
+                {
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
+        private static bool RedactionSegmentsEqual(
+            ConfigurationPathSegment left,
+            ConfigurationPathSegment right)
+        {
+            return (left, right) switch
+            {
+                (PropertySegment leftProperty, PropertySegment rightProperty) =>
+                    string.Equals(leftProperty.Name, rightProperty.Name, StringComparison.OrdinalIgnoreCase),
+                (DictionaryKeySegment leftKey, DictionaryKeySegment rightKey) =>
+                    string.Equals(leftKey.Key, rightKey.Key, StringComparison.OrdinalIgnoreCase),
+                (ListItemKeySegment leftKey, ListItemKeySegment rightKey) =>
+                    string.Equals(leftKey.ItemKey, rightKey.ItemKey, StringComparison.OrdinalIgnoreCase),
+                (ListIndexSegment leftIndex, ListIndexSegment rightIndex) =>
+                    leftIndex.Index == rightIndex.Index,
+                _ => false
+            };
         }
 
         private static bool IsPrefix(LogicalPath ancestor, LogicalPath path)

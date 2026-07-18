@@ -79,6 +79,33 @@ public enum ConfigurationReloadBehavior
 }
 
 /// <summary>
+/// Describes how the current service obtained its reload-behavior observation for a configuration definition.
+/// </summary>
+public enum ConfigurationReloadBehaviorObservationKind
+{
+    /// <summary>
+    /// The definition declares a concrete reload behavior in developer-authored metadata.
+    /// </summary>
+    Declared,
+
+    /// <summary>
+    /// Monica inferred a concrete reload behavior from how the current service consumes the options type.
+    /// </summary>
+    Inferred,
+
+    /// <summary>
+    /// The current service may consume the definition, but Monica cannot prove its reload behavior.
+    /// </summary>
+    Unresolved,
+
+    /// <summary>
+    /// Monica inspected the current service and found no consumer of the definition.
+    /// This observation is neutral when reload behavior is aggregated across services.
+    /// </summary>
+    NotConsumed
+}
+
+/// <summary>
 /// Defines how Monica derives a Microsoft configuration section path when
 /// <see cref="ConfigurationAttribute.SectionPath"/> is not set explicitly.
 /// </summary>
@@ -109,6 +136,24 @@ public enum ConfigurationDuplicateSectionPathBehavior
     /// Logs a warning and allows both definitions to be registered.
     /// </summary>
     Warning
+}
+
+/// <summary>
+/// Defines whether runtime validation findings are exposed as diagnostics or enforced as application failures.
+/// </summary>
+public enum ConfigurationRuntimeValidationBehavior
+{
+    /// <summary>
+    /// Reports invalid effective values through logging and the runtime validation API while allowing application
+    /// startup and managed options resolution to continue.
+    /// </summary>
+    DiagnosticOnly,
+
+    /// <summary>
+    /// Rejects application startup when invalid effective values are found and registers Microsoft options validators
+    /// that reject later resolution of invalid managed options.
+    /// </summary>
+    FailFast
 }
 
 /// <summary>

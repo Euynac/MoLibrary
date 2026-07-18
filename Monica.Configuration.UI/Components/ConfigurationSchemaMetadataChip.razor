@@ -10,7 +10,7 @@
                      Color="@Color"
                      Variant="@Variant"
                      OnClick="HandleClick">
-                @L["State:Definitions:SchemaVersionChip", SchemaVersion]
+                @ChipLabel
             </MudChip>
         }
         else
@@ -19,37 +19,48 @@
                      Size="@Size"
                      Color="@Color"
                      Variant="@Variant">
-                @L["State:Definitions:SchemaVersionChip", SchemaVersion]
+                @ChipLabel
             </MudChip>
         }
     </ChildContent>
     <TooltipContent>
-        <MudStack Spacing="1" Class="configuration-schema-metadata-tooltip">
-            <MudText Typo="Typo.caption" Class="configuration-schema-metadata-title">
-                @L["State:Definitions:SchemaMetadataTitle"]
-            </MudText>
-            <MudText Typo="Typo.caption">
-                @L["State:Definitions:SchemaVersionDetail", SchemaVersion]
-            </MudText>
-            <MudText Typo="Typo.caption">@L["State:Definitions:SchemaHashDetail"]</MudText>
-            <MudText Typo="Typo.caption" Class="configuration-schema-hash-short">
-                @ShortHash
-            </MudText>
-            <MudText Typo="Typo.caption" Class="configuration-schema-hash-value">
-                @DisplayHash
-            </MudText>
-        </MudStack>
+        <div class="configuration-schema-metadata-tooltip">
+            <MudStack Spacing="1">
+                <MudText Typo="Typo.caption" Class="configuration-schema-metadata-title">
+                    @L["State:Definitions:SchemaMetadataTitle"]
+                </MudText>
+                <MudText Typo="Typo.caption">
+                    @L["State:Definitions:SchemaVersionDetail", SchemaVersion]
+                </MudText>
+                <MudText Typo="Typo.caption">
+                    @L["State:Definitions:DefinitionRevisionDetail", DefinitionRevision]
+                </MudText>
+                <MudText Typo="Typo.caption">@L["State:Definitions:SchemaHashDetail"]</MudText>
+                <MudText Typo="Typo.caption" Class="configuration-schema-hash-short">
+                    @ShortHash
+                </MudText>
+                <MudText Typo="Typo.caption" Class="configuration-schema-hash-value">
+                    @DisplayHash
+                </MudText>
+            </MudStack>
+        </div>
     </TooltipContent>
 </MudTooltip>
 
 @code {
     [Parameter] public int SchemaVersion { get; set; }
+    [Parameter] public int DefinitionRevision { get; set; }
     [Parameter] public string? SchemaHash { get; set; }
+    [Parameter] public bool CompactLabel { get; set; }
     [Parameter] public Size Size { get; set; } = Size.Small;
     [Parameter] public Color Color { get; set; } = Color.Primary;
     [Parameter] public Variant Variant { get; set; } = Variant.Outlined;
     [Parameter] public Placement Placement { get; set; } = Placement.Bottom;
     [Parameter] public EventCallback OnClick { get; set; }
+
+    private string ChipLabel => CompactLabel
+        ? L["State:Definitions:SchemaVersionCompactChip", SchemaVersion]
+        : L["State:Definitions:SchemaVersionChip", SchemaVersion, DefinitionRevision];
 
     private string DisplayHash =>
         string.IsNullOrWhiteSpace(SchemaHash)

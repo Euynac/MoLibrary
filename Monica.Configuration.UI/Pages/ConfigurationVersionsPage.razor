@@ -114,7 +114,8 @@
                     L["Versions:Rollback:Messages:AppliedWithIssues", rollback.MutationGroup.GroupId].Value);
                 var issuesDialog = await DialogService.ShowAsync<ConfigurationPostCommitIssuesDialog>(
                     L["Dialogs:PostCommitIssues:Title"],
-                    issueParameters);
+                    issueParameters,
+                    ConfigurationPostCommitIssuesDialog.DefaultOptions);
                 await issuesDialog.Result;
             }
 

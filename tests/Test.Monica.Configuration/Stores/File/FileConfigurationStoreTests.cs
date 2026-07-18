@@ -83,6 +83,67 @@ public class FileConfigurationStoreTests : IDisposable
             .Should().ContainSingle(row => row.HistoryId == history.HistoryId);
     }
 
+    [Fact]
+    public async Task GetDefinitionPublicationOverviewAsync_WhenDefinitionChanges_ShouldExposeCurrentPublisherStateWithoutHistory()
+    {
+        var store = CreateStore();
+        var publisher = new ConfigurationPublisherIdentity
+        {
+            PublisherKey = "Test.FileService",
+            InstanceId = "test-file-service:1",
+            Name = "Test File Service",
+            Version = "1.0.0-test"
+        };
+        var original = TestConfigurationFactory.Definition() with
+        {
+            ReloadBehaviorObservationKind = ConfigurationReloadBehaviorObservationKind.Inferred,
+            ReloadBehavior = ConfigurationReloadBehavior.OnlineReloadable
+        };
+        var stateOnlyChanged = original with
+        {
+            ReloadBehaviorObservationKind = ConfigurationReloadBehaviorObservationKind.Declared
+        };
+        var changed = stateOnlyChanged with { DisplayName = "Updated Test App" };
+
+        await store.PublishAsync(
+            ConfigurationDefinitionPublicationBatch.Create(publisher, [original]),
+            CancellationToken.None);
+        await store.PublishAsync(
+            ConfigurationDefinitionPublicationBatch.Create(publisher, [stateOnlyChanged]),
+            CancellationToken.None);
+        var stateOnlyOverview = await store.GetDefinitionPublicationOverviewAsync(
+            original.DefinitionKey,
+            20,
+            CancellationToken.None);
+        stateOnlyOverview.DefinitionRevision.Should().Be(1);
+        stateOnlyOverview.PublisherStates.Should().ContainSingle();
+        stateOnlyOverview.PublisherStates[0].ObservationKind
+            .Should().Be(ConfigurationReloadBehaviorObservationKind.Declared);
+
+        await store.PublishAsync(
+            ConfigurationDefinitionPublicationBatch.Create(
+                publisher with { InstanceId = "test-file-service:2" },
+                [changed]),
+            CancellationToken.None);
+
+        var overview = await store.GetDefinitionPublicationOverviewAsync(
+            original.DefinitionKey,
+            20,
+            CancellationToken.None);
+
+        overview.DefinitionKey.Should().Be(original.DefinitionKey);
+        overview.DefinitionRevision.Should().Be(2);
+        overview.SchemaVersion.Should().Be(1);
+        overview.ReloadBehavior.Should().Be(ConfigurationReloadBehavior.OnlineReloadable);
+        overview.PublisherStates.Should().ContainSingle();
+        overview.PublisherStates[0].PublisherKey.Should().Be(publisher.PublisherKey);
+        overview.PublisherStates[0].ObservationKind
+            .Should().Be(ConfigurationReloadBehaviorObservationKind.Declared);
+        overview.PublisherStates[0].ReloadBehavior
+            .Should().Be(ConfigurationReloadBehavior.OnlineReloadable);
+        overview.RevisionHistories.Should().BeEmpty();
+    }
+
     public void Dispose()
     {
         if (Directory.Exists(_rootDirectory))

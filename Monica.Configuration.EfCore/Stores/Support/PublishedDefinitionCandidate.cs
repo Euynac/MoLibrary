@@ -1,4 +1,3 @@
-using System.Reflection;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
@@ -34,8 +33,11 @@ internal sealed record PublishedDefinitionCandidate
 
     public required string SchemaJson { get; init; }
 
-    public static PublishedDefinitionCandidate FromDefinition(ConfigurationDefinition definition)
+    public static PublishedDefinitionCandidate FromPublication(
+        ConfigurationDefinitionPublication publication,
+        ConfigurationReloadBehavior effectiveReloadBehavior)
     {
+        var definition = publication.Definition;
         return new PublishedDefinitionCandidate
         {
             DefinitionIdentity = ConfigurationDefinitionIdentity.Compute(definition.DefinitionKey),
@@ -48,15 +50,35 @@ internal sealed record PublishedDefinitionCandidate
             Category = NullIfWhiteSpace(definition.Category),
             SourceSchemaVersion = Math.Max(definition.SchemaVersion, 1),
             SchemaHash = definition.SchemaHash,
-            ReloadBehavior = definition.ReloadBehavior.ToString(),
+            ReloadBehavior = effectiveReloadBehavior.ToString(),
             SchemaJson = ConfigurationDefinitionSchemaCodec.SerializeSchema(definition)
+        };
+    }
+
+    public static PublishedDefinitionCandidate FromCurrent(
+        ConfigurationDefinitionEntity current,
+        ConfigurationReloadBehavior effectiveReloadBehavior)
+    {
+        return new PublishedDefinitionCandidate
+        {
+            DefinitionIdentity = current.DefinitionIdentity,
+            DefinitionKey = current.DefinitionKey,
+            SectionPath = current.SectionPath,
+            DisplayName = current.DisplayName,
+            Description = NullIfWhiteSpace(current.Description),
+            ClrTypeName = current.ClrTypeName,
+            FromProject = current.FromProject,
+            Category = NullIfWhiteSpace(current.Category),
+            SourceSchemaVersion = current.SchemaVersion,
+            SchemaHash = current.SchemaHash,
+            ReloadBehavior = effectiveReloadBehavior.ToString(),
+            SchemaJson = current.SchemaJson
         };
     }
 
     public bool Matches(ConfigurationDefinitionEntity current)
     {
         return HasSameSchema(current)
-               && current.SchemaVersion >= SourceSchemaVersion
                && string.Equals(SectionPath, current.SectionPath, StringComparison.Ordinal)
                && string.Equals(DisplayName, current.DisplayName, StringComparison.Ordinal)
                && string.Equals(Description, NullIfWhiteSpace(current.Description), StringComparison.Ordinal)
@@ -72,31 +94,35 @@ internal sealed record PublishedDefinitionCandidate
         return string.Equals(SchemaHash, current.SchemaHash, StringComparison.Ordinal);
     }
 
-    public ConfigurationDefinitionEntity CreateEntity()
+    public ConfigurationDefinitionEntity CreateEntity(int schemaVersion, int definitionRevision)
     {
         var entity = new ConfigurationDefinitionEntity
         {
             DefinitionIdentity = DefinitionIdentity,
             DefinitionKey = DefinitionKey,
-            SchemaVersion = SourceSchemaVersion,
-            PublishRevision = 1
+            SchemaVersion = schemaVersion,
+            DefinitionRevision = definitionRevision
         };
-        ApplySnapshot(entity, SourceSchemaVersion);
+        ApplySnapshot(entity, schemaVersion);
         return entity;
     }
 
-    public void ApplyTo(ConfigurationDefinitionEntity entity, int schemaVersion)
+    public void ApplyTo(
+        ConfigurationDefinitionEntity entity,
+        int schemaVersion,
+        int definitionRevision)
     {
         ApplySnapshot(entity, schemaVersion);
-        entity.PublishRevision = Math.Max(entity.PublishRevision, 0) + 1;
+        entity.DefinitionRevision = definitionRevision;
     }
 
     public ConfigurationDefinitionPublishHistoryEntity CreateHistory(
         ConfigurationDefinitionEntity? current,
-        ConfigurationDefinitionPublishChangeKind changeKind)
+        ConfigurationDefinitionPublishChangeKind changeKind,
+        ConfigurationPublisherIdentity publisher,
+        int schemaVersion,
+        int definitionRevision)
     {
-        var publisher = PublishActor.Capture();
-        var newSchemaVersion = ResolveNewSchemaVersion(current, changeKind);
         return new ConfigurationDefinitionPublishHistoryEntity
         {
             HistoryId = Guid.NewGuid().ToString("N"),
@@ -108,16 +134,17 @@ internal sealed record PublishedDefinitionCandidate
             FromProject = FromProject,
             Category = Category,
             ChangeKind = changeKind.ToString(),
+            DefinitionRevision = definitionRevision,
             PreviousSchemaVersion = current?.SchemaVersion,
-            NewSchemaVersion = newSchemaVersion,
+            NewSchemaVersion = schemaVersion,
             PreviousSchemaHash = current?.SchemaHash,
             NewSchemaHash = SchemaHash,
             PreviousSchemaJson = current?.SchemaJson,
             NewSchemaJson = SchemaJson,
             ChangeSummaryJson = CreateChangeSummaryJson(current, changeKind),
-            PublisherId = publisher.PublisherId,
-            PublisherName = publisher.PublisherName,
-            PublisherVersion = publisher.PublisherVersion,
+            PublisherId = publisher.InstanceId,
+            PublisherName = publisher.Name,
+            PublisherVersion = publisher.Version,
             PublishedTime = DateTime.UtcNow
         };
     }
@@ -137,7 +164,7 @@ internal sealed record PublishedDefinitionCandidate
         entity.SchemaJson = SchemaJson;
     }
 
-    private int ResolveNewSchemaVersion(
+    public int ResolveNewSchemaVersion(
         ConfigurationDefinitionEntity? current,
         ConfigurationDefinitionPublishChangeKind changeKind)
     {
@@ -146,9 +173,9 @@ internal sealed record PublishedDefinitionCandidate
             return SourceSchemaVersion;
         }
 
-        var currentVersion = Math.Max(Math.Max(current.SchemaVersion, SourceSchemaVersion), 1);
+        var currentVersion = Math.Max(current.SchemaVersion, 1);
         return changeKind == ConfigurationDefinitionPublishChangeKind.SchemaChanged
-            ? checked(currentVersion + 1)
+            ? checked(Math.Max(currentVersion, SourceSchemaVersion) + 1)
             : currentVersion;
     }
 
@@ -209,36 +236,6 @@ internal sealed record PublishedDefinitionCandidate
     private static string? NullIfWhiteSpace(string? value)
     {
         return string.IsNullOrWhiteSpace(value) ? null : value;
-    }
-
-    private sealed record PublishActor(
-        string PublisherId,
-        string PublisherName,
-        string? PublisherVersion)
-    {
-        internal static PublishActor Capture()
-        {
-            var publisherName = FirstNonEmpty(
-                Environment.GetEnvironmentVariable("MONICA_CONFIGURATION_INSTANCE_NAME"),
-                Environment.GetEnvironmentVariable("HOSTNAME"),
-                Environment.MachineName);
-            var publisherId = FirstNonEmpty(
-                Environment.GetEnvironmentVariable("MONICA_CONFIGURATION_INSTANCE_ID"),
-                $"{publisherName}:{Environment.ProcessId}");
-            return new PublishActor(publisherId, publisherName, GetEntryAssemblyVersion());
-        }
-
-        private static string FirstNonEmpty(params string?[] values)
-        {
-            return values.FirstOrDefault(value => !string.IsNullOrWhiteSpace(value)) ?? "unknown";
-        }
-
-        private static string? GetEntryAssemblyVersion()
-        {
-            var assembly = Assembly.GetEntryAssembly();
-            return assembly?.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion
-                   ?? assembly?.GetName().Version?.ToString();
-        }
     }
 
     private sealed record SchemaPublishChangeSummaryDto(

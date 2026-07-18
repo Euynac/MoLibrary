@@ -87,7 +87,9 @@
                                                     </MudTooltip>
                                                 }
                                                 <ConfigurationSchemaMetadataChip SchemaVersion="@definition.SchemaVersion"
+                                                                                 DefinitionRevision="@definition.DefinitionRevision"
                                                                                  SchemaHash="@definition.SchemaHash"
+                                                                                 CompactLabel="true"
                                                                                  Placement="Placement.Right" />
                                                 @if (pendingCount > 0)
                                                 {
@@ -106,7 +108,7 @@
                                                     <MudTooltip Text="@L["State:RuntimeValidation:DefinitionIssueCount"]">
                                                         <MudChip T="int"
                                                                  Size="Size.Small"
-                                                                 Color="Color.Error"
+                                                                 Color="Color.Warning"
                                                                  Variant="Variant.Filled"
                                                                  Class="configuration-definition-validation-count">
                                                             @runtimeIssueCount
@@ -175,7 +177,7 @@
                         @if (RuntimeValidationIssueCount > 0)
                         {
                             <MudTooltip Text="@L["State:RuntimeValidation:IssueCount"]">
-                                <MudChip T="int" Size="Size.Small" Color="Color.Error" Variant="Variant.Filled">
+                                <MudChip T="int" Size="Size.Small" Color="Color.Warning" Variant="Variant.Filled">
                                     @RuntimeValidationIssueCount
                                 </MudChip>
                             </MudTooltip>

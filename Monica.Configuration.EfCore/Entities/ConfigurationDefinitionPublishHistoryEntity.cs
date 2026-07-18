@@ -26,6 +26,8 @@ public sealed class ConfigurationDefinitionPublishHistoryEntity
 
     public string ChangeKind { get; set; } = "";
 
+    public int DefinitionRevision { get; set; }
+
     public int? PreviousSchemaVersion { get; set; }
 
     public int NewSchemaVersion { get; set; }

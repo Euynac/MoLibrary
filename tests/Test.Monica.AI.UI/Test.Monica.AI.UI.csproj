@@ -11,6 +11,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <PackageReference Include="AngleSharp" />
     <PackageReference Include="AwesomeAssertions" />
     <PackageReference Include="bunit" />
     <PackageReference Include="coverlet.collector">

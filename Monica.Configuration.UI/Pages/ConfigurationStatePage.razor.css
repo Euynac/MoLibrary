@@ -28,6 +28,51 @@
     flex: 0 0 auto;
 }
 
+.configuration-state-header-shell,
+.configuration-runtime-validation-popover-anchor {
+    width: 100%;
+    min-width: 0;
+}
+
+.configuration-state-header-shell {
+    flex: 0 0 auto;
+}
+
+.configuration-runtime-validation-popover-anchor {
+    height: 0;
+}
+
+.configuration-runtime-validation-banner {
+    flex: 0 0 auto;
+    width: 100%;
+    min-width: 0;
+}
+
+.configuration-runtime-validation-banner ::deep .configuration-runtime-validation-banner-alert {
+    width: 100%;
+    min-width: 0;
+}
+
+.configuration-runtime-validation-banner-content {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    width: 100%;
+    min-width: 0;
+}
+
+.configuration-runtime-validation-banner-message {
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow-wrap: anywhere;
+}
+
+.configuration-runtime-validation-banner-action {
+    display: inline-flex;
+    flex: 0 0 auto;
+}
+
 .configuration-state-title-row {
     min-width: 0;
     overflow: visible;
@@ -48,7 +93,7 @@
     transform: translateX(0.25rem);
 }
 
-.configuration-runtime-validation-popover-content {
+.configuration-runtime-validation-popover-surface {
     width: min(44rem, calc(100vw - 2rem));
     max-height: min(34rem, calc(100vh - 8rem));
     overflow: auto;
@@ -231,9 +276,18 @@
         overflow: visible;
     }
 
-    .configuration-runtime-validation-popover-content {
-        width: calc(100vw - 1rem);
+    .configuration-runtime-validation-popover-surface {
+        width: calc(100vw - 2rem);
         max-height: calc(100vh - 6rem);
+    }
+
+    .configuration-runtime-validation-banner-content {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .configuration-runtime-validation-banner-action {
+        align-self: flex-start;
     }
 
     .configuration-state-page ::deep .configuration-state-left,

@@ -1,0 +1,198 @@
+.configuration-definition-publication-content,
+.configuration-definition-publication-tabs,
+.configuration-definition-publication-tab-content {
+    min-height: 0;
+    min-width: 0;
+    width: 100%;
+}
+
+.configuration-definition-publication-content,
+.configuration-definition-publication-tab-content {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+.configuration-definition-publication-tabs ::deep .mud-tabs,
+.configuration-definition-publication-tabs ::deep .mud-tabs-panels,
+.configuration-definition-publication-tabs ::deep .mud-tab-panel {
+    min-width: 0;
+    width: 100%;
+}
+
+.configuration-definition-publication-header,
+.configuration-definition-publication-detail-header,
+.configuration-definition-publication-title,
+.configuration-definition-publication-tab-summary {
+    align-items: center;
+    display: flex;
+    gap: 0.75rem;
+    min-width: 0;
+}
+
+.configuration-definition-publication-header,
+.configuration-definition-publication-detail-header,
+.configuration-definition-publication-tab-summary {
+    flex-wrap: wrap;
+    justify-content: space-between;
+}
+
+.configuration-definition-publication-identity,
+.configuration-definition-publication-metadata-item,
+.configuration-definition-publication-section,
+.configuration-definition-publication-diff,
+.configuration-definition-publication-contributor-summary,
+.configuration-definition-publication-contributor-table {
+    min-width: 0;
+}
+
+.configuration-definition-publication-identity {
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+    overflow-wrap: anywhere;
+}
+
+.configuration-description-icon {
+    align-items: center;
+    display: inline-flex;
+    flex: 0 0 auto;
+    height: 1.5rem;
+    justify-content: center;
+    line-height: 0;
+    vertical-align: middle;
+}
+
+.configuration-description-icon ::deep .mud-icon-root {
+    display: block;
+}
+
+.configuration-definition-publication-layout {
+    align-items: start;
+    display: grid;
+    gap: 1.5rem;
+    grid-template-columns: minmax(16rem, 1fr) minmax(0, 2fr);
+    min-height: 0;
+    min-width: 0;
+    width: 100%;
+}
+
+.configuration-definition-publication-timeline-column,
+.configuration-definition-publication-detail-column {
+    min-height: 0;
+    min-width: 0;
+}
+
+.configuration-definition-publication-timeline-column ::deep .configuration-definition-publication-panel,
+.configuration-definition-publication-detail-column ::deep .configuration-definition-publication-panel {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    min-width: 0;
+    width: 100%;
+}
+
+.configuration-definition-publication-timeline-scroll,
+.configuration-definition-publication-detail-scroll {
+    max-height: min(60vh, 44rem);
+    min-height: 0;
+    min-width: 0;
+    overscroll-behavior: contain;
+    overflow-y: auto;
+    padding-right: 0.25rem;
+    scrollbar-gutter: stable;
+}
+
+.configuration-definition-publication-timeline-scroll ::deep .configuration-definition-publication-timeline-button {
+    justify-content: flex-start;
+    min-width: 0;
+    text-align: left;
+    width: 100%;
+}
+
+.configuration-definition-publication-timeline-scroll ::deep .mud-timeline {
+    min-width: 0;
+    width: 100%;
+}
+
+.configuration-definition-publication-timeline-scroll ::deep .configuration-definition-publication-timeline-button .mud-button-label {
+    justify-content: flex-start;
+    min-width: 0;
+    width: 100%;
+}
+
+.configuration-definition-publication-detail {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+    min-width: 0;
+}
+
+.configuration-definition-publication-metadata {
+    display: grid;
+    gap: 1rem;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    min-width: 0;
+}
+
+.configuration-definition-publication-metadata-item,
+.configuration-definition-publication-publisher-key {
+    overflow-wrap: anywhere;
+}
+
+.configuration-definition-publication-section {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.configuration-definition-publication-table,
+.configuration-definition-publication-contributor-table {
+    overflow-x: auto;
+}
+
+.configuration-definition-publication-table ::deep .mud-table,
+.configuration-definition-publication-contributor-table ::deep .mud-table,
+.configuration-definition-publication-contributor-summary ::deep .mud-alert {
+    min-width: 0;
+    width: 100%;
+}
+
+.configuration-definition-publication-table ::deep .mud-table-cell,
+.configuration-definition-publication-contributor-table ::deep .mud-table-cell {
+    overflow-wrap: anywhere;
+}
+
+.configuration-definition-publication-diff ::deep .diff-viewer {
+    max-width: 100%;
+    min-width: 0;
+}
+
+@media (max-width: 959.98px) {
+    .configuration-definition-publication-layout {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .configuration-definition-publication-timeline-scroll {
+        max-height: 22rem;
+    }
+
+    .configuration-definition-publication-detail-scroll {
+        max-height: none;
+        overflow: visible;
+        padding-right: 0;
+        scrollbar-gutter: auto;
+    }
+}
+
+@media (max-width: 599.98px) {
+    .configuration-definition-publication-metadata {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .configuration-definition-publication-header,
+    .configuration-definition-publication-detail-header,
+    .configuration-definition-publication-tab-summary {
+        align-items: flex-start;
+    }
+}

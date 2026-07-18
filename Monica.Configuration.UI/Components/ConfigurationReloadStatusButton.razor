@@ -286,7 +286,7 @@
             var dialog = await DialogService.ShowAsync<ConfigurationPostCommitIssuesDialog>(
                 L["State:ReloadStatus:BroadcastWarningTitle"],
                 parameters,
-                new DialogOptions { MaxWidth = MaxWidth.Large, FullWidth = true });
+                ConfigurationPostCommitIssuesDialog.DefaultOptions);
             await dialog.Result;
         }
         finally

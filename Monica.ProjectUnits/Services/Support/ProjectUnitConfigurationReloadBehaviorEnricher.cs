@@ -37,16 +37,34 @@ internal static class ProjectUnitConfigurationReloadBehaviorEnricher
         UnitConfiguration configurationUnit,
         ILogger logger)
     {
-        if (configurationUnit.InferredReloadBehavior is not { } inferredBehavior
-            || !definitionRegistry.TryGet(configurationUnit.DefinitionKey, out var definition)
+        if (!definitionRegistry.TryGet(configurationUnit.DefinitionKey, out var definition)
             || definition is null)
         {
             return;
         }
 
-        if (definition.ReloadBehavior == ConfigurationReloadBehavior.Unknown)
+        if (configurationUnit.InferredReloadBehavior is not { } inferredBehavior)
         {
-            definitionRegistry.Register(definition with { ReloadBehavior = inferredBehavior });
+            if (configurationUnit.ConfigurationDependencies.Count == 0
+                && definition.ReloadBehaviorObservationKind != ConfigurationReloadBehaviorObservationKind.Declared)
+            {
+                definitionRegistry.Register(definition with
+                {
+                    ReloadBehavior = ConfigurationReloadBehavior.Unknown,
+                    ReloadBehaviorObservationKind = ConfigurationReloadBehaviorObservationKind.NotConsumed
+                });
+            }
+
+            return;
+        }
+
+        if (definition.ReloadBehaviorObservationKind != ConfigurationReloadBehaviorObservationKind.Declared)
+        {
+            definitionRegistry.Register(definition with
+            {
+                ReloadBehavior = inferredBehavior,
+                ReloadBehaviorObservationKind = ConfigurationReloadBehaviorObservationKind.Inferred
+            });
             return;
         }
 

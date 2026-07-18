@@ -3,7 +3,6 @@ using Monica.Configuration.Abstractions;
 using Monica.Configuration.EfCore.DbContext;
 using Monica.Configuration.EfCore.Entities;
 using Monica.Configuration.EfCore.Stores.Support;
-using Monica.Configuration.Exceptions;
 using Monica.Configuration.Models;
 
 namespace Monica.Configuration.EfCore.Stores;
@@ -16,30 +15,28 @@ internal sealed class DatabaseConfigurationMetadataStore(ConfigurationDatabase d
 {
     private const int MAX_PUBLISH_RETRY_COUNT = 5;
     private const int PUBLISH_RETRY_BASE_DELAY_MS = 25;
-    private const string PUBLISH_DEFINITIONS_LOCK_MARKER_KEY = "Configuration.EfCore.PublishDefinitionsLock";
 
     /// <inheritdoc />
     public ConfigurationStoreDescriptor Descriptor => ConfigurationDatabase.Descriptor;
 
     /// <inheritdoc />
     public async Task PublishAsync(
-        IReadOnlyList<ConfigurationDefinition> definitions,
+        ConfigurationDefinitionPublicationBatch batch,
         CancellationToken cancellationToken)
     {
-        var candidates = definitions.Select(PublishedDefinitionCandidate.FromDefinition).ToArray();
-        if (!await HasPublishChangesAsync(candidates, cancellationToken))
-        {
-            return;
-        }
+        ArgumentNullException.ThrowIfNull(batch);
+        var diagnosticCandidates = batch.Publications
+            .Select(static publication => PublishedDefinitionCandidate.FromPublication(
+                publication,
+                ConfigurationReloadBehaviorObservation.Aggregate([publication.ReloadBehaviorObservation])))
+            .ToArray();
 
         Exception? lastException = null;
         for (var attempt = 1; attempt <= MAX_PUBLISH_RETRY_COUNT; attempt++)
         {
             try
             {
-                // This precheck avoids an unnecessary distributed lock only. The transaction re-evaluates every
-                // candidate because another publisher may have changed metadata after the precheck completed.
-                await PublishCandidatesWithLockAsync(candidates, cancellationToken);
+                await PublishBatchWithLockAsync(batch, cancellationToken);
                 return;
             }
             catch (Exception ex) when (IsPublishRetryableException(ex))
@@ -51,24 +48,30 @@ internal sealed class DatabaseConfigurationMetadataStore(ConfigurationDatabase d
                 }
 
                 await DelayPublishRetryAsync(attempt, cancellationToken);
-                if (!await HasPublishChangesAsync(candidates, cancellationToken))
-                {
-                    return;
-                }
             }
         }
 
-        var diagnostics = await BuildPublishFailureDiagnosticsAsync(candidates, cancellationToken);
+        var diagnostics = await BuildPublishFailureDiagnosticsAsync(diagnosticCandidates, cancellationToken);
         throw new InvalidOperationException(
-            $"Failed to publish {candidates.Length} configuration definition(s) after {MAX_PUBLISH_RETRY_COUNT} attempts. {diagnostics}",
+            $"Failed to publish {batch.Publications.Count} configuration definition(s) after {MAX_PUBLISH_RETRY_COUNT} attempts. {diagnostics}",
             lastException);
+    }
+
+    /// <inheritdoc />
+    public Task RetirePublisherAsync(
+        ConfigurationPublisherIdentity publisher,
+        CancellationToken cancellationToken)
+    {
+        return PublishAsync(
+            ConfigurationDefinitionPublicationBatch.Create(publisher, []),
+            cancellationToken);
     }
 
     /// <inheritdoc />
     public async Task<IReadOnlyList<ConfigurationPublishedDefinitionEntry>> ListPublishedDefinitionEntriesAsync(
         CancellationToken cancellationToken)
     {
-        return await ExecuteMetadataReadAsync(async (dbContext, token) =>
+        return await database.ExecuteAsync(async (dbContext, token) =>
         {
             var entities = await dbContext.ConfigurationDefinitions
                 .AsNoTracking()
@@ -84,7 +87,7 @@ internal sealed class DatabaseConfigurationMetadataStore(ConfigurationDatabase d
         string definitionKey,
         CancellationToken cancellationToken)
     {
-        return await ExecuteMetadataReadAsync(async (dbContext, token) =>
+        return await database.ExecuteAsync(async (dbContext, token) =>
         {
             var definitionIdentity = ConfigurationDefinitionIdentity.Compute(definitionKey);
             var entities = await dbContext.ConfigurationDefinitions
@@ -98,7 +101,7 @@ internal sealed class DatabaseConfigurationMetadataStore(ConfigurationDatabase d
     }
 
     /// <inheritdoc />
-    public async Task<IReadOnlyList<ConfigurationDefinitionPublishHistory>> ListDefinitionPublishHistoriesAsync(
+    public async Task<ConfigurationDefinitionPublicationOverview> GetDefinitionPublicationOverviewAsync(
         string definitionKey,
         int limit,
         CancellationToken cancellationToken)
@@ -107,59 +110,64 @@ internal sealed class DatabaseConfigurationMetadataStore(ConfigurationDatabase d
         {
             var normalizedLimit = Math.Clamp(limit, 1, 200);
             var definitionIdentity = ConfigurationDefinitionIdentity.Compute(definitionKey);
+            var definition = await dbContext.ConfigurationDefinitions
+                .AsNoTracking()
+                .SingleOrDefaultAsync(candidate => candidate.DefinitionIdentity == definitionIdentity, token)
+                ?? throw new KeyNotFoundException(
+                    $"Published configuration definition '{definitionKey}' was not found.");
             var histories = await dbContext.ConfigurationDefinitionPublishHistories
                 .AsNoTracking()
                 .Where(history => history.DefinitionIdentity == definitionIdentity)
-                .OrderByDescending(history => history.PublishedTime)
+                .OrderByDescending(history => history.DefinitionRevision)
                 .ThenByDescending(history => history.HistoryId)
                 .Take(normalizedLimit)
                 .ToArrayAsync(token);
+            var publisherStates = await dbContext.ConfigurationDefinitionPublisherStates
+                .AsNoTracking()
+                .Where(state => state.DefinitionIdentity == definitionIdentity)
+                .OrderBy(state => state.PublisherKey)
+                .ThenBy(state => state.PublisherIdentity)
+                .ToArrayAsync(token);
 
-            return histories.Select(ConfigurationHistoryMapper.ToPublishHistory).ToArray();
+            if (!Enum.TryParse<ConfigurationReloadBehavior>(
+                    definition.ReloadBehavior,
+                    ignoreCase: false,
+                    out var reloadBehavior)
+                || !Enum.IsDefined(reloadBehavior))
+            {
+                throw new InvalidDataException(
+                    $"Published definition '{definition.DefinitionKey}' uses unsupported reload behavior "
+                    + $"'{definition.ReloadBehavior}'.");
+            }
+
+            return new ConfigurationDefinitionPublicationOverview
+            {
+                DefinitionKey = definition.DefinitionKey,
+                DefinitionRevision = definition.DefinitionRevision,
+                SchemaVersion = definition.SchemaVersion,
+                ReloadBehavior = reloadBehavior,
+                PublisherStates = publisherStates
+                    .Select(PublishedDefinitionPublisherStateCandidate.Materialize)
+                    .ToArray(),
+                RevisionHistories = histories
+                    .Select(ConfigurationHistoryMapper.ToPublishHistory)
+                    .ToArray()
+            };
         }, cancellationToken);
     }
 
-    private async Task<bool> HasPublishChangesAsync(
-        IReadOnlyList<PublishedDefinitionCandidate> candidates,
-        CancellationToken cancellationToken)
-    {
-        if (candidates.Count == 0)
-        {
-            return false;
-        }
-
-        return await database.ExecuteAsync(async (dbContext, token) =>
-        {
-            var existing = await LoadExistingPublishedDefinitionsAsync(
-                dbContext,
-                candidates,
-                trackChanges: false,
-                token);
-
-            return candidates.Any(candidate =>
-                !existing.TryGetValue(candidate.DefinitionKey, out var current)
-                || !candidate.Matches(current));
-        }, cancellationToken);
-    }
-
-    private async Task PublishCandidatesWithLockAsync(
-        IReadOnlyList<PublishedDefinitionCandidate> candidates,
+    private async Task PublishBatchWithLockAsync(
+        ConfigurationDefinitionPublicationBatch batch,
         CancellationToken cancellationToken)
     {
         await database.ExecuteResilientAsync(async (dbContext, token) =>
         {
-            // Marker creation performs SaveChanges and therefore must complete before the transaction it coordinates.
-            await ConfigurationDatabaseLock.EnsureMarkerExistsAsync(
-                dbContext,
-                PUBLISH_DEFINITIONS_LOCK_MARKER_KEY,
-                token);
-
             await using var transaction = await dbContext.Database.BeginTransactionAsync(token);
             await ConfigurationDatabaseLock.AcquireAsync(
                 dbContext,
-                PUBLISH_DEFINITIONS_LOCK_MARKER_KEY,
+                ConfigurationStoreLockEntity.DefinitionPublicationLockKey,
                 token);
-            await PublishCandidatesAsync(dbContext, candidates, token);
+            await PublishBatchAsync(dbContext, batch, token);
             if (dbContext.ChangeTracker.HasChanges())
             {
                 await dbContext.SaveChangesAsync(token);
@@ -170,32 +178,118 @@ internal sealed class DatabaseConfigurationMetadataStore(ConfigurationDatabase d
         }, cancellationToken);
     }
 
-    private static async Task PublishCandidatesAsync(
+    private static async Task PublishBatchAsync(
         ConfigurationDbContext dbContext,
-        IReadOnlyList<PublishedDefinitionCandidate> candidates,
+        ConfigurationDefinitionPublicationBatch batch,
         CancellationToken cancellationToken)
     {
-        if (candidates.Count == 0)
+        var stateCandidates = batch.Publications
+            .Select(publication => PublishedDefinitionPublisherStateCandidate.FromPublication(
+                batch.Publisher,
+                publication))
+            .ToArray();
+        var incomingIdentities = stateCandidates
+            .Select(static candidate => candidate.DefinitionIdentity)
+            .ToHashSet(StringComparer.Ordinal);
+        var publisherIdentity = PublishedDefinitionPublisherIdentity.Compute(batch.Publisher.PublisherKey);
+        var currentPublisherStates = await dbContext.ConfigurationDefinitionPublisherStates
+            .Where(state => state.PublisherIdentity == publisherIdentity)
+            .ToArrayAsync(cancellationToken);
+        var affectedIdentities = currentPublisherStates
+            .Select(static state => state.DefinitionIdentity)
+            .Concat(incomingIdentities)
+            .Distinct(StringComparer.Ordinal)
+            .ToArray();
+        if (affectedIdentities.Length == 0)
         {
             return;
         }
 
-        var existing = await LoadExistingPublishedDefinitionsAsync(
-            dbContext,
-            candidates,
-            trackChanges: true,
-            cancellationToken);
+        var publisherStates = await dbContext.ConfigurationDefinitionPublisherStates
+            .Where(state => affectedIdentities.Contains(state.DefinitionIdentity))
+            .ToArrayAsync(cancellationToken);
+        var statesByPublisher = publisherStates.ToDictionary(
+            static state => (state.DefinitionIdentity, state.PublisherIdentity));
 
-        foreach (var candidate in candidates)
+        // A publication is a complete logical-service snapshot. Missing rows therefore withdraw that publisher's
+        // earlier evidence, while observations from other services remain active until explicitly retired.
+        foreach (var staleState in currentPublisherStates
+                     .Where(state => !incomingIdentities.Contains(state.DefinitionIdentity)))
+        {
+            dbContext.ConfigurationDefinitionPublisherStates.Remove(staleState);
+        }
+
+        foreach (var candidate in stateCandidates)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            if (!existing.TryGetValue(candidate.DefinitionKey, out var current))
+            var key = (candidate.DefinitionIdentity, candidate.PublisherIdentity);
+            if (statesByPublisher.TryGetValue(key, out var currentState))
             {
-                var created = candidate.CreateEntity();
+                candidate.ApplyTo(currentState);
+                continue;
+            }
+
+            var createdState = candidate.CreateEntity();
+            dbContext.ConfigurationDefinitionPublisherStates.Add(createdState);
+            statesByPublisher[key] = createdState;
+        }
+
+        var currentDefinitions = await dbContext.ConfigurationDefinitions
+            .Where(definition => affectedIdentities.Contains(definition.DefinitionIdentity))
+            .ToArrayAsync(cancellationToken);
+        var definitionsByIdentity = currentDefinitions.ToDictionary(
+            static definition => definition.DefinitionIdentity,
+            StringComparer.Ordinal);
+        var publicationsByIdentity = batch.Publications.ToDictionary(
+            publication => ConfigurationDefinitionIdentity.Compute(publication.Definition.DefinitionKey),
+            StringComparer.Ordinal);
+
+        // Aggregate after tracked additions and removals so the canonical definition changes only when the
+        // cross-service result changes, not whenever a different service happens to publish last.
+        foreach (var definitionIdentity in affectedIdentities.OrderBy(
+                     static identity => identity,
+                     StringComparer.Ordinal))
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            var effectiveReloadBehavior = ConfigurationReloadBehaviorObservation.Aggregate(
+                statesByPublisher.Values
+                    .Where(state =>
+                        string.Equals(state.DefinitionIdentity, definitionIdentity, StringComparison.Ordinal)
+                        && dbContext.Entry(state).State != EntityState.Deleted)
+                    .Select(PublishedDefinitionPublisherStateCandidate.MaterializeObservation));
+
+            definitionsByIdentity.TryGetValue(definitionIdentity, out var current);
+            PublishedDefinitionCandidate candidate;
+            if (publicationsByIdentity.TryGetValue(definitionIdentity, out var publication))
+            {
+                candidate = PublishedDefinitionCandidate.FromPublication(publication, effectiveReloadBehavior);
+            }
+            else if (current is not null)
+            {
+                candidate = PublishedDefinitionCandidate.FromCurrent(current, effectiveReloadBehavior);
+            }
+            else
+            {
+                // An orphaned observation cannot materialize a trustworthy definition envelope.
+                continue;
+            }
+
+            if (current is null)
+            {
+                const int initialDefinitionRevision = 1;
+                var initialSchemaVersion = candidate.ResolveNewSchemaVersion(
+                    null,
+                    ConfigurationDefinitionPublishChangeKind.Created);
+                var created = candidate.CreateEntity(initialSchemaVersion, initialDefinitionRevision);
                 dbContext.ConfigurationDefinitions.Add(created);
                 dbContext.ConfigurationDefinitionPublishHistories.Add(
-                    candidate.CreateHistory(null, ConfigurationDefinitionPublishChangeKind.Created));
-                existing[created.DefinitionKey] = created;
+                    candidate.CreateHistory(
+                        null,
+                        ConfigurationDefinitionPublishChangeKind.Created,
+                        batch.Publisher,
+                        initialSchemaVersion,
+                        initialDefinitionRevision));
+                definitionsByIdentity[created.DefinitionIdentity] = created;
                 continue;
             }
 
@@ -207,92 +301,16 @@ internal sealed class DatabaseConfigurationMetadataStore(ConfigurationDatabase d
             var changeKind = candidate.HasSameSchema(current)
                 ? ConfigurationDefinitionPublishChangeKind.MetadataChanged
                 : ConfigurationDefinitionPublishChangeKind.SchemaChanged;
-            var history = candidate.CreateHistory(current, changeKind);
-            candidate.ApplyTo(current, history.NewSchemaVersion);
+            var schemaVersion = candidate.ResolveNewSchemaVersion(current, changeKind);
+            var definitionRevision = checked(Math.Max(current.DefinitionRevision, 0) + 1);
+            var history = candidate.CreateHistory(
+                current,
+                changeKind,
+                batch.Publisher,
+                schemaVersion,
+                definitionRevision);
+            candidate.ApplyTo(current, schemaVersion, definitionRevision);
             dbContext.ConfigurationDefinitionPublishHistories.Add(history);
-        }
-    }
-
-    private static async Task<Dictionary<string, ConfigurationDefinitionEntity>> LoadExistingPublishedDefinitionsAsync(
-        ConfigurationDbContext dbContext,
-        IReadOnlyList<PublishedDefinitionCandidate> candidates,
-        bool trackChanges,
-        CancellationToken cancellationToken)
-    {
-        var duplicateCandidateKey = candidates
-            .GroupBy(static candidate => candidate.DefinitionKey, StringComparer.OrdinalIgnoreCase)
-            .FirstOrDefault(static group => group.Count() > 1)?.Key;
-        if (duplicateCandidateKey is not null)
-        {
-            throw CreateDuplicateDefinitionIdentityException(
-                duplicateCandidateKey,
-                "The current publisher supplied multiple definitions with the same case-insensitive key.");
-        }
-
-        var definitionIdentities = candidates
-            .Select(static candidate => candidate.DefinitionIdentity)
-            .Distinct(StringComparer.Ordinal)
-            .ToArray();
-        IQueryable<ConfigurationDefinitionEntity> query = dbContext.ConfigurationDefinitions;
-        if (!trackChanges)
-        {
-            query = query.AsNoTracking();
-        }
-
-        var entities = await query
-            .Where(definition => definitionIdentities.Contains(definition.DefinitionIdentity))
-            .ToArrayAsync(cancellationToken);
-        var duplicateStoredKey = entities
-            .GroupBy(static definition => definition.DefinitionKey, StringComparer.OrdinalIgnoreCase)
-            .FirstOrDefault(static group => group.Count() > 1)?.Key;
-        if (duplicateStoredKey is not null)
-        {
-            throw CreateDuplicateDefinitionIdentityException(
-                duplicateStoredKey,
-                "The metadata database contains multiple rows with the same case-insensitive key.");
-        }
-
-        return entities.ToDictionary(
-            static definition => definition.DefinitionKey,
-            StringComparer.OrdinalIgnoreCase);
-    }
-
-    private static ConfigurationDefinitionMetadataUnavailableException CreateDuplicateDefinitionIdentityException(
-        string definitionKey,
-        string message)
-    {
-        return new ConfigurationDefinitionMetadataUnavailableException(
-            definitionKey,
-            new ConfigurationDefinitionMetadataDiagnostic
-            {
-                Kind = ConfigurationDefinitionMetadataIssueKind.InvalidEnvelope,
-                StoreKey = ConfigurationDatabase.Descriptor.StoreKey,
-                ErrorType = typeof(InvalidDataException).FullName!,
-                Message = message,
-                RecommendedAction = ConfigurationDefinitionMetadataRepairAction.RepairMetadataStore
-            });
-    }
-
-    private async Task<TResult> ExecuteMetadataReadAsync<TResult>(
-        Func<ConfigurationDbContext, CancellationToken, Task<TResult>> operation,
-        CancellationToken cancellationToken)
-    {
-        try
-        {
-            return await database.ExecuteAsync(operation, cancellationToken);
-        }
-        catch (OperationCanceledException)
-        {
-            throw;
-        }
-        catch (Exception ex) when (ConfigurationDatabaseExceptionClassifier.IsMissingTable(ex)
-                                   || ConfigurationDatabaseExceptionClassifier.IsMissingColumn(ex))
-        {
-            throw new ConfigurationMetadataStoreReadException(
-                ConfigurationMetadataStoreIssueKind.IncompatibleStoreSchema,
-                "The Monica.Configuration metadata database is missing required tables or columns. "
-                + "Apply the current Monica.Configuration schema before reading or republishing definitions.",
-                ex);
         }
     }
 
@@ -351,6 +369,7 @@ internal sealed class DatabaseConfigurationMetadataStore(ConfigurationDatabase d
             FromProject = entity.FromProject,
             Category = entity.Category,
             SchemaVersion = entity.SchemaVersion,
+            DefinitionRevision = entity.DefinitionRevision,
             SchemaHash = entity.SchemaHash,
             ReloadBehavior = entity.ReloadBehavior,
             SchemaJson = entity.SchemaJson

@@ -31,6 +31,7 @@ public sealed class ConfigurationFacade(
     IConfigurationJsonFileSourceWriter sourceWriter,
     ConfigurationRuntimeContext runtimeContext,
     IConfigurationRuntimeValidationService runtimeValidationService,
+    IConfigurationCandidateValidationService candidateValidationService,
     IConfigurationRuntimeReloadService runtimeReloadService,
     IConfigurationReloadBroadcastService reloadBroadcastService)
 {
@@ -119,6 +120,28 @@ public sealed class ConfigurationFacade(
         {
             return Task.FromResult<Res<ConfigurationValidationReport>>(
                 Res.Fail($"Failed to get runtime configuration validation report: {ex.GetMessageRecursively()}"));
+        }
+    }
+
+    /// <summary>
+    /// Validates a complete candidate JSON value against the mutation-time constraints for one definition scope.
+    /// </summary>
+    /// <param name="definition">The active configuration definition that owns the candidate value.</param>
+    /// <param name="scopePath">The logical path whose complete value is represented by <paramref name="json"/>.</param>
+    /// <param name="json">The normalized candidate JSON value.</param>
+    /// <returns>A structured report containing every candidate validation issue.</returns>
+    public Res<ConfigurationCandidateValidationReport> ValidateCandidateValue(
+        ConfigurationDefinition definition,
+        LogicalPath scopePath,
+        string json)
+    {
+        try
+        {
+            return Res.Ok(candidateValidationService.Validate(definition, scopePath, json));
+        }
+        catch (Exception ex)
+        {
+            return Res.Fail($"Failed to validate candidate configuration value: {ex.GetMessageRecursively()}");
         }
     }
 
@@ -219,6 +242,7 @@ public sealed class ConfigurationFacade(
             FromProject = definition.FromProject,
             Category = definition.Category,
             SchemaVersion = definition.SchemaVersion,
+            DefinitionRevision = definition.DefinitionRevision,
             SchemaHash = definition.SchemaHash,
             Origin = definition.Origin
         };
@@ -254,6 +278,7 @@ public sealed class ConfigurationFacade(
             FromProject = metadata.FromProject,
             Category = metadata.Category,
             SchemaVersion = metadata.SchemaVersion,
+            DefinitionRevision = metadata.DefinitionRevision,
             SchemaHash = metadata.SchemaHash,
             Origin = ConfigurationDefinitionOrigin.PublishedMetadata,
             Availability = entry.Availability,
@@ -276,6 +301,7 @@ public sealed class ConfigurationFacade(
             FromProject = FirstNonEmpty(metadata.FromProject, local?.FromProject),
             Category = metadata.Category ?? local?.Category,
             SchemaVersion = metadata.SchemaVersion,
+            DefinitionRevision = metadata.DefinitionRevision,
             SchemaHash = metadata.SchemaHash,
             Origin = ConfigurationDefinitionOrigin.PublishedMetadata,
             Availability = entry.Availability,
@@ -312,25 +338,25 @@ public sealed class ConfigurationFacade(
     }
 
     /// <summary>
-    /// Gets schema publish history entries for one configuration definition.
+    /// Gets current publisher state and revision history for one configuration definition.
     /// </summary>
     /// <param name="definitionKey">The definition key.</param>
     /// <param name="limit">Maximum number of newest entries to return.</param>
-    /// <returns>Newest schema publish history entries first.</returns>
-    public async Task<Res<IReadOnlyList<ConfigurationDefinitionPublishHistory>>> GetDefinitionPublishHistoriesAsync(
+    /// <returns>The current publication overview with newest revisions first.</returns>
+    public async Task<Res<ConfigurationDefinitionPublicationOverview>> GetDefinitionPublicationOverviewAsync(
         string definitionKey,
         int limit = 20)
     {
         try
         {
-            return Res.Ok(await metadataStore.ListDefinitionPublishHistoriesAsync(
+            return Res.Ok(await metadataStore.GetDefinitionPublicationOverviewAsync(
                 definitionKey,
                 limit,
                 CancellationToken.None));
         }
         catch (Exception ex)
         {
-            return Res.Fail($"Failed to get configuration definition publish histories: {ex.GetMessageRecursively()}");
+            return Res.Fail($"Failed to get configuration definition publication overview: {ex.GetMessageRecursively()}");
         }
     }
 

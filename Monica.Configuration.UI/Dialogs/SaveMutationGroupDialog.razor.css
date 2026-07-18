@@ -24,25 +24,20 @@
     flex: 1 1 auto;
     flex-direction: column;
     min-height: 0;
-    min-width: 0;
     overflow: hidden;
-    width: 100%;
 }
 
 .configuration-save-group-preview ::deep .mud-tabs-tabbar {
     flex: 0 0 auto;
-    overflow: hidden;
 }
 
 .configuration-save-group-preview ::deep .mud-tabs-panels {
     flex: 1 1 auto;
     min-height: 0;
-    min-width: 0;
     overflow: hidden;
 }
 
-.configuration-save-group-preview ::deep .mud-tabs-panels > .mud-tab-panel,
-.configuration-save-group-preview ::deep .mud-tabs-panels > .mud-tabs-panel {
+.configuration-save-group-preview ::deep .mud-tabs-panels > .mud-tab-panel {
     height: 100%;
     min-height: 0;
     overflow: auto;
@@ -72,21 +67,4 @@
     height: auto;
     min-height: 0;
     vertical-align: middle;
-}
-
-.configuration-save-group-preview ::deep .configuration-change-actions-column,
-.configuration-save-group-preview ::deep .configuration-change-actions-cell {
-    min-width: 7.5rem;
-    width: 7.5rem;
-    white-space: nowrap;
-}
-
-.configuration-save-group-preview ::deep .configuration-change-actions-column,
-.configuration-save-group-preview ::deep .configuration-change-actions-cell {
-    text-align: center;
-}
-
-.configuration-save-group-preview ::deep .configuration-change-actions {
-    justify-content: center;
-    width: 100%;
 }

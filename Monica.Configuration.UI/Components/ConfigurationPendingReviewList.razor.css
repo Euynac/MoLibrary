@@ -1,0 +1,37 @@
+.configuration-pending-review-list,
+.configuration-pending-review-definition,
+.configuration-pending-review-change-table {
+    min-width: 0;
+}
+
+.configuration-pending-review-definition-header {
+    align-items: center;
+    display: flex;
+    gap: 0.75rem;
+    justify-content: space-between;
+    min-width: 0;
+}
+
+.configuration-pending-review-change-table {
+    overflow-x: auto;
+}
+
+.configuration-pending-review-change-table ::deep .mud-table-cell {
+    overflow-wrap: anywhere;
+    vertical-align: middle;
+}
+
+.configuration-pending-review-change-table ::deep .configuration-pending-review-actions-column,
+.configuration-pending-review-change-table ::deep .configuration-pending-review-actions-cell {
+    min-width: 7.5rem;
+    text-align: center;
+    width: 7.5rem;
+    white-space: nowrap;
+}
+
+@media (max-width: 600px) {
+    .configuration-pending-review-definition-header {
+        align-items: stretch;
+        flex-direction: column;
+    }
+}

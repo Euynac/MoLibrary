@@ -1,0 +1,166 @@
+@using Monica.Configuration.UI.Localization
+@inject IStringLocalizer<ConfigurationUIResource> L
+
+@if (!Review.HasItems)
+{
+    <MudAlert Severity="Severity.Info">@L["PendingReview:Empty"]</MudAlert>
+}
+else
+{
+    <div class="configuration-pending-review-list">
+        <MudStack Spacing="2">
+            @foreach (var definition in Review.Definitions)
+            {
+                <div class="configuration-pending-review-definition" @key="definition.DefinitionKey">
+                    <MudPaper Outlined="true" Class="pa-3">
+                        <MudStack Spacing="2">
+                            <div class="configuration-pending-review-definition-header">
+                                <MudStack Row="true" Wrap="Wrap.Wrap" AlignItems="AlignItems.Center" Spacing="1">
+                                    <MudText Typo="Typo.subtitle2">@definition.DisplayName</MudText>
+                                    <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">@definition.DefinitionKey</MudChip>
+                                    @if (definition.Changes.Count > 0)
+                                    {
+                                        <MudChip T="int" Size="Size.Small" Color="Color.Primary" Variant="Variant.Outlined">
+                                            @L["PendingReview:ChangeCount", definition.Changes.Count]
+                                        </MudChip>
+                                    }
+                                    @if (definition.ValidationIssues.Count > 0)
+                                    {
+                                        <MudChip T="int" Size="Size.Small" Color="Color.Error" Variant="Variant.Outlined">
+                                            @L["PendingReview:IssueCount", definition.ValidationIssues.Count]
+                                        </MudChip>
+                                    }
+                                </MudStack>
+                                @if (UndoRequested.HasDelegate)
+                                {
+                                    <MudButton Variant="Variant.Outlined"
+                                               Color="@RemovalColor"
+                                               Size="Size.Small"
+                                               StartIcon="@RemovalIcon"
+                                               Disabled="ActionsDisabled"
+                                               OnClick="@(() => UndoDefinitionAsync(definition.DefinitionKey))">
+                                        @DefinitionRemovalText
+                                    </MudButton>
+                                }
+                            </div>
+
+                            @if (definition.ValidationIssues.Count > 0)
+                            {
+                                <ConfigurationValidationIssueList Issues="definition.ValidationIssues"
+                                                                  ShowDefinition="false"
+                                                                  ShowJump="JumpIssueRequested.HasDelegate"
+                                                                  JumpRequested="JumpIssueRequested"
+                                                                  UndoRequested="UndoRequested"
+                                                                  UndoLabel="@IssueRemovalText"
+                                                                  UndoIcon="@RemovalIcon"
+                                                                  UndoColor="@RemovalColor"
+                                                                  ActionsDisabled="ActionsDisabled" />
+                            }
+
+                            @if (definition.Changes.Count > 0)
+                            {
+                                <div class="configuration-pending-review-change-table">
+                                    <MudTable T="PendingChange" Items="definition.Changes" Dense="true" Hover="true" Elevation="0">
+                                        <HeaderContent>
+                                            <MudTh>@L["State:Columns:Path"]</MudTh>
+                                            <MudTh>@L["History:Columns:Target"]</MudTh>
+                                            <MudTh>@L["History:Columns:Kind"]</MudTh>
+                                            <MudTh>@L["State:Columns:OldValue"]</MudTh>
+                                            <MudTh>@L["State:Columns:NewValue"]</MudTh>
+                                            @if (HasItemActions)
+                                            {
+                                                <MudTh Class="configuration-pending-review-actions-column">@L["PendingReview:Columns:Actions"]</MudTh>
+                                            }
+                                        </HeaderContent>
+                                        <RowTemplate>
+                                            <MudTd DataLabel="@L["State:Columns:Path"]"><code>@context.LogicalPath.ToCanonicalString()</code></MudTd>
+                                            <MudTd DataLabel="@L["History:Columns:Target"]">
+                                                <ConfigurationPendingChangeTargetChip Change="context" />
+                                            </MudTd>
+                                            <MudTd DataLabel="@L["History:Columns:Kind"]">@MutationKindText(context.MutationKind)</MudTd>
+                                            <MudTd DataLabel="@L["State:Columns:OldValue"]">
+                                                <ConfigurationPendingChangeValue Change="context" Value="context.OriginalDisplayValue" />
+                                            </MudTd>
+                                            <MudTd DataLabel="@L["State:Columns:NewValue"]">
+                                                <ConfigurationPendingChangeValue Change="context" Value="context.NewDisplayValue" IsNewValue="true" />
+                                            </MudTd>
+                                            @if (HasItemActions)
+                                            {
+                                                <MudTd DataLabel="@L["PendingReview:Columns:Actions"]" Class="configuration-pending-review-actions-cell">
+                                                    <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.Center" Spacing="1">
+                                                        @if (JumpChangeRequested.HasDelegate)
+                                                        {
+                                                            <MudTooltip Text="@L["PendingReview:Actions:JumpToChange"]">
+                                                                <MudIconButton Icon="@Icons.Material.Filled.NearMe"
+                                                                               Size="Size.Small"
+                                                                               Color="Color.Primary"
+                                                                               aria-label="@L["PendingReview:Actions:JumpToChange"]"
+                                                                               Disabled="ActionsDisabled"
+                                                                               OnClick="@(() => JumpChangeRequested.InvokeAsync(context))" />
+                                                            </MudTooltip>
+                                                        }
+                                                        @if (UndoRequested.HasDelegate)
+                                                        {
+                                                            <MudTooltip Text="@ChangeRemovalText">
+                                                                <MudIconButton Icon="@RemovalIcon"
+                                                                               Size="Size.Small"
+                                                                               Color="@RemovalColor"
+                                                                               aria-label="@ChangeRemovalText"
+                                                                               Disabled="ActionsDisabled"
+                                                                               OnClick="@(() => UndoRequested.InvokeAsync(ConfigurationPendingReviewUndoRequest.ForChange(context)))" />
+                                                            </MudTooltip>
+                                                        }
+                                                    </MudStack>
+                                                </MudTd>
+                                            }
+                                        </RowTemplate>
+                                    </MudTable>
+                                </div>
+                            }
+                        </MudStack>
+                    </MudPaper>
+                </div>
+            }
+        </MudStack>
+    </div>
+}
+
+@code {
+    [Parameter, EditorRequired] public ConfigurationPendingReviewState Review { get; set; } = null!;
+    [Parameter] public ConfigurationPendingReviewActionMode ActionMode { get; set; }
+    [Parameter] public bool ActionsDisabled { get; set; }
+    [Parameter] public EventCallback<ConfigurationValidationIssue> JumpIssueRequested { get; set; }
+    [Parameter] public EventCallback<PendingChange> JumpChangeRequested { get; set; }
+    [Parameter] public EventCallback<ConfigurationPendingReviewUndoRequest> UndoRequested { get; set; }
+
+    private bool HasItemActions => JumpChangeRequested.HasDelegate || UndoRequested.HasDelegate;
+    private bool IsExclusion => ActionMode == ConfigurationPendingReviewActionMode.Exclude;
+    private string ChangeRemovalText => IsExclusion
+        ? L["PendingReview:Actions:ExcludeChange"]
+        : L["PendingReview:Actions:UndoChange"];
+    private string IssueRemovalText => IsExclusion
+        ? L["PendingReview:Actions:ExcludeIssue"]
+        : L["PendingReview:Actions:UndoIssue"];
+    private string DefinitionRemovalText => IsExclusion
+        ? L["PendingReview:Actions:ExcludeDefinition"]
+        : L["PendingReview:Actions:UndoDefinition"];
+    private string RemovalIcon => IsExclusion
+        ? Icons.Material.Filled.RemoveCircleOutline
+        : Icons.Material.Filled.Undo;
+    private Color RemovalColor => IsExclusion ? Color.Error : Color.Warning;
+
+    private string MutationKindText(ConfigurationMutationKind kind)
+    {
+        return kind switch
+        {
+            ConfigurationMutationKind.Set => L["Mutation:Kinds:Set"],
+            ConfigurationMutationKind.Remove => L["Mutation:Kinds:Remove"],
+            _ => kind.ToString()
+        };
+    }
+
+    private Task UndoDefinitionAsync(string definitionKey)
+    {
+        return UndoRequested.InvokeAsync(ConfigurationPendingReviewUndoRequest.ForDefinition(definitionKey));
+    }
+}

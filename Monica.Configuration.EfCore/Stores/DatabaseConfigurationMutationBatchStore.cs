@@ -11,8 +11,6 @@ namespace Monica.Configuration.EfCore.Stores;
 internal sealed class DatabaseConfigurationMutationBatchStore(ConfigurationDatabase database)
     : IConfigurationMutationBatchStore
 {
-    private const string MUTATION_GROUP_LOCK_MARKER_KEY = "Configuration.EfCore.MutationGroupLock";
-
     public async Task<ConfigurationMutationBatchCommitResult> CommitAsync(
         ConfigurationMutationBatchCommitRequest request,
         CancellationToken cancellationToken)
@@ -46,14 +44,10 @@ internal sealed class DatabaseConfigurationMutationBatchStore(ConfigurationDatab
             return await BuildCommittedResultAsync(dbContext, request, existingGroup, cancellationToken);
         }
 
-        await ConfigurationDatabaseLock.EnsureMarkerExistsAsync(
-            dbContext,
-            MUTATION_GROUP_LOCK_MARKER_KEY,
-            cancellationToken);
         await using var transaction = await dbContext.Database.BeginTransactionAsync(cancellationToken);
         await ConfigurationDatabaseLock.AcquireAsync(
             dbContext,
-            MUTATION_GROUP_LOCK_MARKER_KEY,
+            ConfigurationStoreLockEntity.MutationGroupsLockKey,
             cancellationToken);
 
         existingGroup = await FindGroupAsync(dbContext, request.MutationGroup.GroupId, cancellationToken);

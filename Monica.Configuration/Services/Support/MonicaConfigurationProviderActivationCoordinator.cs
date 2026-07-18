@@ -1,5 +1,6 @@
 using Monica.Configuration.Abstractions;
 using Monica.Configuration.Abstractions.Internal;
+using Monica.Configuration.Models;
 using Monica.Configuration.Projection;
 
 namespace Monica.Configuration.Services.Support;
@@ -12,6 +13,7 @@ internal sealed class MonicaConfigurationProviderActivationCoordinator(
     MonicaConfigurationProviderAccessor accessor,
     IConfigurationDefinitionRegistry definitionRegistry,
     IConfigurationMetadataStore metadataStore,
+    ConfigurationPublisherIdentityProvider publisherIdentityProvider,
     ConfigurationDefinitionResolver definitionResolver,
     IConfigurationStoreStateTracker stateTracker,
     IConfigurationReloadCoordinator reloadCoordinator)
@@ -41,7 +43,10 @@ internal sealed class MonicaConfigurationProviderActivationCoordinator(
             accessor.ServiceProvider = serviceProvider;
             try
             {
-                await metadataStore.PublishAsync(definitionRegistry.GetAll(), cancellationToken);
+                var publication = ConfigurationDefinitionPublicationBatch.Create(
+                    publisherIdentityProvider.GetIdentity(),
+                    definitionRegistry.GetAll());
+                await metadataStore.PublishAsync(publication, cancellationToken);
                 definitionResolver.InvalidateReadSnapshot();
                 stateTracker.RecordSuccess(metadataStore.Descriptor.StoreKey);
             }

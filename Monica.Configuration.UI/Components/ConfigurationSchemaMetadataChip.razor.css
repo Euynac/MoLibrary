@@ -3,12 +3,12 @@
     color: inherit;
 }
 
-.configuration-schema-metadata-title {
+.configuration-schema-metadata-tooltip ::deep .configuration-schema-metadata-title {
     font-weight: 600;
 }
 
-.configuration-schema-hash-short,
-.configuration-schema-hash-value {
+.configuration-schema-metadata-tooltip ::deep .configuration-schema-hash-short,
+.configuration-schema-metadata-tooltip ::deep .configuration-schema-hash-value {
     display: block;
     max-width: 100%;
     overflow-wrap: anywhere;
@@ -16,6 +16,6 @@
     color: inherit;
 }
 
-.configuration-schema-hash-short {
+.configuration-schema-metadata-tooltip ::deep .configuration-schema-hash-short {
     font-weight: 600;
 }

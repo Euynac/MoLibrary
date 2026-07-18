@@ -285,7 +285,8 @@ public class TaskProgress(TaskProgressSetting setting, ITaskProgressService serv
     /// <returns>A task that completes when cancellation persistence finishes.</returns>
     public virtual async Task CancelTaskAsync(string? reason = null)
     {
-        if (IsCompleted || _isCancelled) return;
+        // External cancellation marks the in-memory task first; the status still needs one terminal persistence pass.
+        if (IsCompleted || Status.IsCancelled) return;
 
         _isCancelled = true;
         Status.IsCancelled = true;

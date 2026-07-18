@@ -10,15 +10,22 @@
     font-size: 0.8125rem;
 }
 
-.configuration-definition-diff-change-actions {
+.configuration-definition-diff-header {
+    align-items: center;
+    display: flex;
+    gap: 0.75rem;
+    justify-content: space-between;
     min-width: 0;
+    width: 100%;
 }
 
-.configuration-definition-diff-change-action {
-    min-width: 0;
-}
-
+.configuration-definition-diff-change-actions,
+.configuration-definition-diff-change-action,
 .configuration-definition-diff-change-summary {
+    min-width: 0;
+}
+
+.configuration-definition-diff-change-action ::deep .mud-paper {
     min-width: 0;
 }
 
@@ -28,4 +35,10 @@
 
 .configuration-definition-diff-change-action-buttons {
     flex: 0 0 auto;
+}
+
+@media (max-width: 600px) {
+    .configuration-definition-diff-header {
+        align-items: flex-start;
+    }
 }
