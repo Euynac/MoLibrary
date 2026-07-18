@@ -158,8 +158,7 @@ namespace Test.Monica.Configuration.EfCore.Migrations
                 name: "ConfigurationUnifiedVersions",
                 columns: table => new
                 {
-                    Version = table.Column<long>(type: "INTEGER", nullable: false)
-                        .Annotation("Sqlite:Autoincrement", true),
+                    Version = table.Column<long>(type: "INTEGER", nullable: false),
                     MutationGroupId = table.Column<string>(type: "TEXT", nullable: true, defaultValue: ""),
                     TriggerDefinitionKeysJson = table.Column<string>(type: "TEXT", nullable: false, defaultValue: ""),
                     DefinitionKeysJson = table.Column<string>(type: "TEXT", nullable: false, defaultValue: ""),

@@ -184,6 +184,9 @@ public sealed class ConfigurationDbContext(
         modelBuilder.Entity<ConfigurationMutationGroupEntity>()
             .HasIndex(x => x.CreatedTime);
         modelBuilder.Entity<ConfigurationUnifiedVersionEntity>()
+            .Property(x => x.Version)
+            .ValueGeneratedNever();
+        modelBuilder.Entity<ConfigurationUnifiedVersionEntity>()
             .Property(x => x.CreatedTime)
             .HasPrecision(6)
             .HasColumnType(timeColumnType);

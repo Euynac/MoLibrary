@@ -483,7 +483,6 @@ namespace Test.Monica.Configuration.EfCore.Migrations
             modelBuilder.Entity("Monica.Configuration.EfCore.Entities.ConfigurationUnifiedVersionEntity", b =>
                 {
                     b.Property<long>("Version")
-                        .ValueGeneratedOnAdd()
                         .HasColumnType("INTEGER");
 
                     b.Property<DateTime>("CreatedTime")
