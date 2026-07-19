@@ -273,12 +273,11 @@
             OriginalDisplayValue = NormalizeEffectiveDisplayValue(),
             NewDisplayValue = result.DisplayValue,
             ExpectedSchemaVersion = Definition.SchemaVersion,
-            ExpectedValueVersion = EffectiveSource?.Kind == ConfigurationSourceKind.MonicaEffectiveStore ? EffectiveValue?.Version : null,
             IsSensitive = Node.IsSensitive,
             NodeKind = Node.NodeKind,
             ValueKind = Node.ValueKind,
             ReloadBehavior = EffectiveReloadBehavior
-        }.WithTarget(Definition, EffectiveSource));
+        }.WithTarget(Definition, EffectiveSource, EffectiveValue?.Version));
         await Changed.InvokeAsync();
     }
 
@@ -325,12 +324,11 @@
             OriginalDisplayValue = EffectiveValue?.DisplayValue,
             NewDisplayValue = result.DisplayValue,
             ExpectedSchemaVersion = Definition.SchemaVersion,
-            ExpectedValueVersion = EffectiveSource?.Kind == ConfigurationSourceKind.MonicaEffectiveStore ? EffectiveValue?.Version : null,
             IsSensitive = IsCollectionSensitive,
             NodeKind = Node.NodeKind,
             ValueKind = Node.ValueKind,
             ReloadBehavior = EffectiveReloadBehavior
-        }.WithTarget(Definition, EffectiveSource));
+        }.WithTarget(Definition, EffectiveSource, EffectiveValue?.Version));
         await Changed.InvokeAsync();
     }
 
@@ -447,7 +445,7 @@
 
         if (result.Data is IReadOnlyList<PendingChange> changes)
         {
-            var scalarValues = await PackageService.LoadScalarEffectiveValuesAsync(Definition);
+            var scalarValues = await PackageService.LoadScalarEffectiveValuesAsync(Definition, Node, effectiveValue);
             var compactedChanges = ChangeCompactor.Compact(Definition, Node, effectiveValue, changes, scalarValues);
             StateStore.ReplaceScope(Definition.DefinitionKey, Node.RelativePath, compactedChanges);
             await Changed.InvokeAsync();
@@ -493,7 +491,7 @@
 
     private async Task OpenJsonEditDialogAsync(ConfigurationEffectiveValue effectiveValue)
     {
-        var scalarValues = await PackageService.LoadScalarEffectiveValuesAsync(Definition);
+        var scalarValues = await PackageService.LoadScalarEffectiveValuesAsync(Definition, Node, effectiveValue);
         var parameters = new DialogParameters<ConfigurationJsonEditDialog>();
         parameters.Add(dialog => dialog.Definition, Definition);
         parameters.Add(dialog => dialog.Node, Node);

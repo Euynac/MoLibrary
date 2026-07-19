@@ -93,8 +93,12 @@ public sealed record PendingChange
     public int ExpectedSchemaVersion { get; init; }
 
     /// <summary>
-    /// Gets the expected value version for optimistic concurrency.
+    /// Gets the expected effective-document version for optimistic concurrency.
     /// </summary>
+    /// <remarks>
+    /// Every Monica-store mutation for the same definition in one group must carry the same version. External-source
+    /// mutations do not use this value.
+    /// </remarks>
     public long? ExpectedValueVersion { get; init; }
 
     /// <summary>

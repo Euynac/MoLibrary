@@ -905,14 +905,14 @@ internal sealed class ConfigurationJsonDraftService(
                 OriginalDisplayValue = DisplayJson(original, schema),
                 NewDisplayValue = scalarConversion?.DisplayValue ?? DisplayJson(incoming, schema),
                 ExpectedSchemaVersion = request.Definition.SchemaVersion,
-                ExpectedValueVersion = source?.Kind == ConfigurationSourceKind.MonicaEffectiveStore
-                    ? EffectiveValueFor(path)?.Version ?? request.EffectiveValue.Version
-                    : null,
                 IsSensitive = schema.IsSensitive,
                 NodeKind = schema.NodeKind,
                 ValueKind = schema.ValueKind,
                 ReloadBehavior = EffectiveReloadBehaviorFor(schema)
-            }.WithTarget(request.Definition, source);
+            }.WithTarget(
+                request.Definition,
+                source,
+                request.EffectiveValue.Version);
             _changes.Add(change);
         }
 
@@ -939,14 +939,14 @@ internal sealed class ConfigurationJsonDraftService(
                 OriginalDisplayValue = DisplayJson(original, schema),
                 NewDisplayValue = localizer["Mutation:Kinds:Remove"],
                 ExpectedSchemaVersion = request.Definition.SchemaVersion,
-                ExpectedValueVersion = source?.Kind == ConfigurationSourceKind.MonicaEffectiveStore
-                    ? EffectiveValueFor(path)?.Version ?? request.EffectiveValue.Version
-                    : null,
                 IsSensitive = schema.IsSensitive,
                 NodeKind = schema.NodeKind,
                 ValueKind = schema.ValueKind,
                 ReloadBehavior = EffectiveReloadBehaviorFor(schema)
-            }.WithTarget(request.Definition, source));
+            }.WithTarget(
+                request.Definition,
+                source,
+                request.EffectiveValue.Version));
         }
 
         private ConfigurationSourceDescriptor? ResolveTargetSource(LogicalPath path)

@@ -74,13 +74,11 @@ internal sealed class ConfigurationParameterPackageService(
     /// Analyzes an uploaded export document and converts it into UI staged state.
     /// </summary>
     /// <param name="document">The import document.</param>
-    /// <param name="pendingChanges">Existing pending changes that should remain outside analyzed scopes.</param>
     /// <param name="fileName">The uploaded file name.</param>
     /// <param name="progress">Optional progress sink for reporting import analysis stages and discovered counts.</param>
     /// <returns>The import report.</returns>
     public async Task<ConfigurationImportReport> AnalyzeImportAsync(
         ConfigurationExportDocument document,
-        IReadOnlyList<PendingChange> pendingChanges,
         string? fileName,
         IProgress<ConfigurationPackageProgress>? progress = null)
     {
@@ -169,7 +167,7 @@ internal sealed class ConfigurationParameterPackageService(
             }
 
             var effectiveValue = await LoadEffectiveValueAsync(definition.DefinitionKey, LogicalPath.Root);
-            var scalarValues = await LoadScalarEffectiveValuesAsync(definition);
+            var scalarValues = await LoadScalarEffectiveValuesAsync(definition, definition.Root, effectiveValue);
             var json = exportedDefinition.Value?.ToJsonString(ConfigurationJsonDisplayFormatter.ReadableJsonOptions) ?? "null";
             var draft = draftService.Analyze(new ConfigurationJsonDraftRequest
             {
@@ -216,17 +214,61 @@ internal sealed class ConfigurationParameterPackageService(
     /// Loads current effective scalar values for a definition.
     /// </summary>
     /// <param name="definition">The definition.</param>
+    /// <param name="scopeNode">The schema scope represented by <paramref name="effectiveValue"/>.</param>
+    /// <param name="effectiveValue">The effective-value snapshot whose concrete collection paths should be inspected.</param>
     /// <returns>Effective values keyed by logical path.</returns>
     public async Task<IReadOnlyDictionary<LogicalPath, ConfigurationEffectiveValue>> LoadScalarEffectiveValuesAsync(
-        ConfigurationDefinition definition)
+        ConfigurationDefinition definition,
+        ConfigurationNodeDefinition scopeNode,
+        ConfigurationEffectiveValue effectiveValue)
     {
-        var values = new Dictionary<LogicalPath, ConfigurationEffectiveValue>();
-        foreach (var node in EnumerateNodes(definition.Root).Where(static node => node.NodeKind == ConfigurationNodeKind.Scalar))
+        var paths = ConfigurationConcreteScalarPathEnumerator.Enumerate(
+            scopeNode,
+            effectiveValue.DisplayValue);
+        if (definition.Origin == ConfigurationDefinitionOrigin.LocalScan)
         {
-            values[node.RelativePath] = await LoadEffectiveValueAsync(definition.DefinitionKey, node.RelativePath);
+            return await LoadLocalScalarEffectiveValuesAsync(definition, effectiveValue.Version, paths);
+        }
+
+        var values = new Dictionary<LogicalPath, ConfigurationEffectiveValue>();
+        foreach (var path in paths)
+        {
+            values[path] = await LoadEffectiveValueAsync(definition.DefinitionKey, path);
         }
 
         return values;
+    }
+
+    private async Task<IReadOnlyDictionary<LogicalPath, ConfigurationEffectiveValue>> LoadLocalScalarEffectiveValuesAsync(
+        ConfigurationDefinition definition,
+        long? effectiveStoreVersion,
+        IReadOnlyList<LogicalPath> paths)
+    {
+        var result = await facade.GetSourceChainsAsync(definition.DefinitionKey, paths);
+        if (result.IsFailed(out var error, out var chains))
+        {
+            throw new InvalidOperationException(error.Message);
+        }
+
+        return chains.ToDictionary(
+            static chain => chain.LogicalPath,
+            chain =>
+            {
+                var effectiveSourceValue = chain.Values.FirstOrDefault(static value => value.IsEffective);
+                var source = effectiveSourceValue?.Source;
+                return new ConfigurationEffectiveValue
+                {
+                    DefinitionKey = chain.DefinitionKey,
+                    LogicalPath = chain.LogicalPath,
+                    ConfigurationPath = chain.ConfigurationPath,
+                    DisplayValue = effectiveSourceValue?.DisplayValue,
+                    IsSensitive = effectiveSourceValue?.IsSensitive is true,
+                    Version = source?.Kind is null or ConfigurationSourceKind.MonicaEffectiveStore
+                        ? effectiveStoreVersion
+                        : null,
+                    EffectiveSource = source
+                };
+            });
     }
 
     /// <summary>
@@ -392,7 +434,7 @@ internal sealed class ConfigurationParameterPackageService(
         bool includeSensitive)
     {
         var effectiveValue = await LoadEffectiveValueAsync(definition.DefinitionKey, LogicalPath.Root);
-        var scalarValues = await LoadScalarEffectiveValuesAsync(definition);
+        var scalarValues = await LoadScalarEffectiveValuesAsync(definition, definition.Root, effectiveValue);
         var root = ParseJson(effectiveValue.DisplayValue) ?? ConfigurationPendingValueDocumentBuilder.CreateDefaultJsonFor(definition.Root);
         IReadOnlyList<string> redactedPaths = [];
         if (!includeSensitive)
@@ -448,18 +490,6 @@ internal sealed class ConfigurationParameterPackageService(
         }
 
         return effectiveValue;
-    }
-
-    private static IEnumerable<ConfigurationNodeDefinition> EnumerateNodes(ConfigurationNodeDefinition node)
-    {
-        yield return node;
-        foreach (var child in node.Children)
-        {
-            foreach (var descendant in EnumerateNodes(child))
-            {
-                yield return descendant;
-            }
-        }
     }
 
     private static JsonNode? ParseJson(string? json)
