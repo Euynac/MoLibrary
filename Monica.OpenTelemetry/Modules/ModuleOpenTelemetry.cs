@@ -25,16 +25,16 @@ namespace Monica.Modules;
 /// </summary>
 public static class ModuleOpenTelemetryBuilderExtensions
 {
-    extension(Mo)
+    extension(IMonicaBuilder builder)
     {
         /// <summary>
         /// Registers Monica's out-of-the-box OpenTelemetry SDK wiring for metrics exporters and instrumentations.
         /// </summary>
         /// <param name="action">Optional module option configuration delegate.</param>
         /// <returns>The module guide used to continue OpenTelemetry registration.</returns>
-        public static ModuleOpenTelemetryGuide AddOpenTelemetry(Action<ModuleOpenTelemetryOption>? action = null)
+        public ModuleOpenTelemetryGuide AddOpenTelemetry(Action<ModuleOpenTelemetryOption>? action = null)
         {
-            return new ModuleOpenTelemetryGuide().Register(action);
+            return builder.AddModule<ModuleOpenTelemetry, ModuleOpenTelemetryOption, ModuleOpenTelemetryGuide>(action);
         }
     }
 }
@@ -270,26 +270,26 @@ public class ModuleOpenTelemetryOption : MinimalApiModuleOptions<ModuleOpenTelem
 
     /// <summary>
     /// Gets or sets the OpenTelemetry resource service name.
-    /// When not configured, the module uses the application defaults configured through <see cref="Mo.ConfigApplication"/>
+    /// When not configured, the module uses the application defaults configured through <see cref="IMonicaBuilder.ConfigureApplication"/>
     /// and resolves to the project name.
     /// </summary>
     public string? ResourceServiceName { get; set; }
 
     /// <summary>
     /// Gets or sets the optional OpenTelemetry resource service version.
-    /// When not configured, the module uses the application version configured through <see cref="Mo.ConfigApplication"/>.
+    /// When not configured, the module uses the application version configured through <see cref="IMonicaBuilder.ConfigureApplication"/>.
     /// </summary>
     public string? ResourceServiceVersion { get; set; }
 
     /// <summary>
     /// Resolves the OpenTelemetry resource service name.
     /// </summary>
-    public string GetResourceServiceName() => Mo.Application.ResolveProjectName(ResourceServiceName);
+    public string GetResourceServiceName() => Application.ResolveProjectName(ResourceServiceName);
 
     /// <summary>
     /// Resolves the OpenTelemetry resource service version.
     /// </summary>
-    public string? GetResourceServiceVersion() => Mo.Application.ResolveAppVersion(ResourceServiceVersion);
+    public string? GetResourceServiceVersion() => Application.ResolveAppVersion(ResourceServiceVersion);
 
     /// <summary>
     /// Gets or sets the optional deployment environment resource attribute, such as <c>Development</c> or <c>Production</c>.

@@ -1,4 +1,4 @@
-
+using Microsoft.Extensions.Logging;
 using Monica.Core.ObservableInstance.Abstractions;
 using Monica.Core.ObservableInstance.Models;
 using Monica.DataChannel.Abstractions;
@@ -71,12 +71,16 @@ public class ChannelPipeline : IObservableInstance
     /// <param name="outerEndpoint">The outer endpoint.</param>
     /// <param name="id">The pipeline identifier.</param>
     /// <param name="observableManager">The observable instance registry.</param>
+    /// <param name="logger">The host-owned pipeline logger.</param>
+    /// <param name="maxHistorySize">The maximum observable history size.</param>
     /// <param name="groupId">An optional pipeline group identifier.</param>
     internal ChannelPipeline(
         IPipelineEndpoint innerEndpoint,
         IPipelineEndpoint outerEndpoint,
         string id,
         IObservableInstanceRegistry observableManager,
+        ILogger<ChannelPipeline> logger,
+        int maxHistorySize,
         string? groupId = null)
     {
         InnerEndpoint = innerEndpoint;
@@ -87,11 +91,11 @@ public class ChannelPipeline : IObservableInstance
         // Register the pipeline with the observable tracker.
         ObservableTracker = observableManager.Register(id, opt =>
         {
-            opt.MaxHistorySize = DataChannelCentral.Setting.RecentExceptionToKeep;
+            opt.MaxHistorySize = maxHistorySize;
             opt.InstanceName = id;
             opt.InstanceType = typeof(ChannelPipeline);
             opt.GroupId = groupId;
-            opt.Logger = DataChannelCentral.Logger;
+            opt.Logger = logger;
         });
     }
 
@@ -201,7 +205,6 @@ public class ChannelPipeline : IObservableInstance
 
     /// <summary>
     /// Gets all recorded exceptions.
-    /// Kept for backward compatibility.
     /// </summary>
     public IReadOnlyList<ObservableStateEntry> GetExceptions()
     {
@@ -210,7 +213,6 @@ public class ChannelPipeline : IObservableInstance
 
     /// <summary>
     /// Gets the most recent exception records.
-    /// Kept for backward compatibility.
     /// </summary>
     public IReadOnlyList<ObservableStateEntry> GetRecentExceptions(int count)
     {
@@ -285,7 +287,10 @@ public class ChannelPipeline : IObservableInstance
             catch (Exception e)
             {
                 // Record the initialization failure.
-                CollectException(e, communicationCore, $"ChannelPipeline:{Id}，初始化通信核心时发生错误，通信核心：{communicationCore.GetType().Name}");
+                CollectException(
+                    e,
+                    communicationCore,
+                    $"Data channel '{Id}' failed to initialize communication endpoint {communicationCore.GetType().Name}.");
                 
                 IsNotAvailable = true;
                 IsInitializing = false;

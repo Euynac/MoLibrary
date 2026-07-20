@@ -15,14 +15,14 @@ namespace Monica.Modules;
 /// </summary>
 public static class ModuleGitUIBuilderExtensions
 {
-    extension(Mo)
+    extension(IMonicaBuilder builder)
     {
         /// <summary>
         /// Configures the Git dashboard UI module.
         /// </summary>
-        public static ModuleGitUIGuide AddGitUI(Action<ModuleGitUIOption>? action = null)
+        public ModuleGitUIGuide AddGitUI(Action<ModuleGitUIOption>? action = null)
         {
-            return new ModuleGitUIGuide().Register(action);
+            return builder.AddModule<ModuleGitUI, ModuleGitUIOption, ModuleGitUIGuide>(action);
         }
     }
 }

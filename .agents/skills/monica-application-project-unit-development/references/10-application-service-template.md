@@ -18,6 +18,8 @@
 ## Rules
 
 - Derive from `ApplicationService<TRequest, TResponse>` or `ApplicationService<TRequest>`.
+- Use the inherited `Logger` in handler methods when logging is needed. Monica resolves it after activation from the
+  host that owns the service instance; do not access it from a constructor.
 - Make the request implement `IResultRequest<TResponse>` or `IResultRequest`.
 - Keep the handler thin. Push reusable rules into `DomainService` or the entity itself.
 - Catch exceptions only when you are adding boundary-specific context. Do not smother useful failures.
@@ -44,8 +46,7 @@ namespace $ApplicationNamespace$.HandlersQuery;
 
 public sealed record Query$FeatureName$(long Id) : IResultRequest<$ResponseName$>;
 
-public sealed class QueryHandler$FeatureName$(
-    $RepositoryName$ repository)
+public sealed class QueryHandler$FeatureName$($RepositoryName$ repository)
     : ApplicationService<Query$FeatureName$, $ResponseName$>
 {
     [HttpGet("$RequestRoute$")]
@@ -78,8 +79,7 @@ namespace $ApplicationNamespace$.HandlersCommand;
 
 public sealed record Command$FeatureName$(long Id) : IResultRequest;
 
-public sealed class CommandHandler$FeatureName$(
-    Domain$FeatureName$ domainService)
+public sealed class CommandHandler$FeatureName$(Domain$FeatureName$ domainService)
     : ApplicationService<Command$FeatureName$>
 {
     [HttpPost("$RequestRoute$")]

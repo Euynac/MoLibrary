@@ -59,12 +59,12 @@ public record {ModelName}(
 | Module | `Module{Name}` | {Purpose} |
 | Option | `Module{Name}Option` | {Purpose} |
 | Guide | `Module{Name}Guide` | {Purpose} |
-| Builder Extension | `Mo.Add{Name}()` | {Purpose} |
+| Builder Extension | `monica.Add{Name}()` | {Purpose} |
 
 ### Module Registration
 
 ```csharp
-Mo.Add{Name}(options =>
+monica.Add{Name}(options =>
 {
     // Configuration
 });

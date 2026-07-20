@@ -70,7 +70,11 @@ Resolve, fetch, and reuse exact dependency source through the user-level shared 
 
 When the user asks you to commit changes, read the repository's current commit message guidance first, especially the Conventional Commit rules in `CONTRIBUTING.md`, and use a commit message that follows that policy.
 
-## Coding Annotations
+## Monica Repository Coding Annotations
+
+The rules in this section apply only to source files in this Monica repository. Do not carry this
+language policy into sibling or consumer repositories; those repositories follow
+their own `AGENTS.md` files and local documentation conventions.
 
 - All code annotations (comments, XML doc comments, `<summary>`, `<param>`, `<returns>`, etc.) must be written in English.
 - Add necessary developer-facing documentation, not just code that compiles.

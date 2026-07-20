@@ -13,14 +13,14 @@ namespace Monica.Modules;
 
 public static class ModuleExcelBuilderExtensions
 {
-    extension(Mo)
+    extension(IMonicaBuilder builder)
     {
         /// <summary>
         /// Configures the Excel module
         /// </summary>
-        public static ModuleExcelGuide AddExcel(Action<ModuleExcelOption>? action = null)
+        public ModuleExcelGuide AddExcel(Action<ModuleExcelOption>? action = null)
         {
-            return new ModuleExcelGuide().Register(action);
+            return builder.AddModule<ModuleExcel, ModuleExcelOption, ModuleExcelGuide>(action);
         }
     }
 }

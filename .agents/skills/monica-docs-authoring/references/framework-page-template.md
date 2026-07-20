@@ -13,7 +13,7 @@ sidebar_position: 1
 
 # Getting Started with Monica
 
-Monica is a modular .NET infrastructure library. Start by installing only the package you need, then register the module through `Mo.Add*()`.
+Monica is agent-governed application architecture for observable .NET backends. Start with the Stable packages you need, then compose one explicit host-bound module graph.
 
 ## What you will do
 
@@ -32,9 +32,10 @@ dotnet add package Monica.Example
 ```csharp
 var builder = WebApplication.CreateBuilder(args);
 
-Mo.AddExample();
-
-builder.UseMonica();
+builder.AddMonica(monica =>
+{
+    monica.AddExample();
+});
 
 var app = builder.Build();
 app.UseMonica();
@@ -60,7 +61,7 @@ sidebar_position: 2
 
 # Monica Module Pattern
 
-Monica modules follow a consistent public pattern built around `Mo.Add*()`, `ModuleOption`, and `ModuleGuide`.
+Monica modules follow a consistent public pattern built around `builder.AddMonica(...)`, `monica.Add*()`, `ModuleOption`, and `ModuleGuide`.
 
 ## Why this pattern exists
 
@@ -68,7 +69,8 @@ Explain the Monica-specific reason for the abstraction.
 
 ## Public parts
 
-- `Mo.Add*()` registration entry
+- `builder.AddMonica(...)` host boundary
+- `monica.Add*()` registration entry
 - `ModuleOption`
 - `ModuleGuide`
 - Public Facades / Abstractions / Models when relevant
@@ -76,11 +78,14 @@ Explain the Monica-specific reason for the abstraction.
 ## Example
 
 ```csharp
-Mo.AddExample(o =>
+builder.AddMonica(monica =>
 {
-    o.SomeSetting = true;
-})
-.UseSomeProvider();
+    monica.AddExample(o =>
+    {
+        o.SomeSetting = true;
+    })
+    .UseSomeProvider();
+});
 ```
 
 ## Key rules

@@ -47,10 +47,10 @@ public sealed class ConfigurationDbContext(
         // Configuration values can include secrets, so this store never enables sensitive data logging implicitly.
     }
 
-    protected override void OnModelCreating(ModelBuilder modelBuilder)
+    protected override void OnModelCreatingExtend(ModelBuilder modelBuilder)
     {
         ConfigureKeys(modelBuilder);
-        base.OnModelCreating(modelBuilder);
+        base.OnModelCreatingExtend(modelBuilder);
 
         var timeColumnType = UsesTimestampWithTimeZone(Database.ProviderName)
             ? TIMESTAMP_WITH_TIME_ZONE_COLUMN_TYPE

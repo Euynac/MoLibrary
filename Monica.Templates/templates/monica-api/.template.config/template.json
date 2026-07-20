@@ -1,0 +1,65 @@
+{
+  "$schema": "http://json.schemastore.org/template",
+  "author": "Momean",
+  "classifications": [
+    "Web",
+    "API",
+    "Monica",
+    "OpenTelemetry"
+  ],
+  "identity": "Monica.Templates.Api",
+  "name": "Monica observable API",
+  "shortName": "monica-api",
+  "sourceName": "MonicaStarter",
+  "defaultName": "MonicaStarter",
+  "description": "An observable ASP.NET Core API composed with Monica's host-bound module graph.",
+  "preferNameDirectory": true,
+  "tags": {
+    "language": "C#",
+    "type": "project"
+  },
+  "symbols": {
+    "frameworkVersion": {
+      "type": "parameter",
+      "datatype": "string",
+      "defaultValue": "1.0.0-rc.2",
+      "replaces": "1.0.0-rc.2",
+      "displayName": "Monica framework version",
+      "description": "The Monica package version referenced by the generated project."
+    },
+    "skipRestore": {
+      "type": "parameter",
+      "datatype": "bool",
+      "defaultValue": "false",
+      "description": "If specified, skips restoring the generated project."
+    },
+    "kestrelHttpPort": {
+      "type": "generated",
+      "generator": "port",
+      "parameters": {
+        "low": 5000,
+        "high": 5300
+      },
+      "replaces": "5274"
+    }
+  },
+  "primaryOutputs": [
+    {
+      "path": "MonicaStarter.csproj"
+    }
+  ],
+  "postActions": [
+    {
+      "id": "restore",
+      "condition": "(!skipRestore)",
+      "description": "Restore NuGet packages required by this project.",
+      "manualInstructions": [
+        {
+          "text": "Run 'dotnet restore'"
+        }
+      ],
+      "actionId": "210D431B-A78B-4D2F-B762-4ED3E3EA9025",
+      "continueOnError": true
+    }
+  ]
+}

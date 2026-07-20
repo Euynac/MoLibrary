@@ -7,7 +7,7 @@ using Monica.DependencyInjection.Abstractions;
 using Monica.Repository.Entity.Abstractions;
 using Monica.Repository.Persistence.Services;
 using Monica.Repository.Persistence.Services.Support;
-using Monica.UnitTests.Repository;
+using Monica.Testing.Repository;
 using Xunit;
 
 namespace Test.Monica.Repository.Persistence.Services.Support;

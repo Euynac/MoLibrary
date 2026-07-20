@@ -20,16 +20,16 @@ namespace Monica.Modules;
 /// </summary>
 public static class ModuleSkillSystemBuilderExtensions
 {
-    extension(Mo)
+    extension(IMonicaBuilder builder)
     {
         /// <summary>
         /// Enables class-based AI skill discovery and registration.
         /// </summary>
         /// <param name="action">Optional configuration action.</param>
         /// <returns>The skill-system module guide.</returns>
-        public static ModuleSkillSystemGuide AddAISkillSystem(Action<ModuleSkillSystemOption>? action = null)
+        public ModuleSkillSystemGuide AddAISkillSystem(Action<ModuleSkillSystemOption>? action = null)
         {
-            return new ModuleSkillSystemGuide().Register(action);
+            return builder.AddModule<ModuleSkillSystem, ModuleSkillSystemOption, ModuleSkillSystemGuide>(action);
         }
     }
 }

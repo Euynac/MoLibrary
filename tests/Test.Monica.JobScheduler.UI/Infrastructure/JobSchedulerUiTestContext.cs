@@ -12,8 +12,8 @@ using Monica.Modules;
 using Monica.UI.Shell.State;
 using MudBlazor.Services;
 using NSubstitute;
-using Monica.UnitTests.Localization;
-using Monica.UnitTests.UI;
+using Monica.Testing.Localization;
+using Monica.Testing.UI;
 
 namespace Test.Monica.JobScheduler.UI.Infrastructure;
 
@@ -26,7 +26,7 @@ public sealed class JobSchedulerUiTestContext : BunitContext
         Services.AddMudServices();
         Services.AddSingleton<IStringLocalizer<JobSchedulerResource>, EchoStringLocalizer<JobSchedulerResource>>();
         Services.AddSingleton<IThemeState, TestThemeState>();
-        Services.AddSingleton<IOptions<ModuleClockOption>>(Options.Create(new ModuleClockOption()));
+        Services.AddSingleton<IOptions<ModuleJobSchedulerOption>>(Options.Create(new ModuleJobSchedulerOption()));
         Services.AddSingleton<IOptions<ModuleJobSchedulerUIOption>>(Options.Create(new ModuleJobSchedulerUIOption()));
         Services.AddSingleton<JobStateColorResolver>();
         Services.AddSingleton<JobArgsJsonSchemaSupport>();

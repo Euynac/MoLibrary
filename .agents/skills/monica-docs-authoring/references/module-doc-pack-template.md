@@ -5,7 +5,7 @@ This is the default output shape for a Monica module.
 ## File layout
 
 ```text
-../Monica.Docs/docs/zh-CN/modules/{module-slug}/
+../Monica.Docs/docs/{locale}/modules/{module-slug}/
 ├── index.md
 ├── quick-start.md
 ├── configuration.md
@@ -36,8 +36,8 @@ sidebar_position: 1
 | Item | Value |
 |---|---|
 | Package | `Monica.{ProjectOrPackage}` |
-| Registration | `Mo.Add{Name}()` |
-| Related UI module | `Mo.Add{Name}UI()` / None |
+| Registration | `monica.Add{Name}()` |
+| Related UI module | `monica.Add{Name}UI()` / None |
 
 ## Public surface
 
@@ -75,9 +75,10 @@ dotnet add package Monica.{ProjectOrPackage}
 ```csharp
 var builder = WebApplication.CreateBuilder(args);
 
-Mo.Add{Name}();
-
-builder.UseMonica();
+builder.AddMonica(monica =>
+{
+    monica.Add{Name}();
+});
 
 var app = builder.Build();
 app.UseMonica();

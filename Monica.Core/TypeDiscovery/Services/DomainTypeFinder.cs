@@ -1,6 +1,5 @@
 using System.Reflection;
 using Microsoft.Extensions.Logging;
-using Monica.Core.Logging;
 using Monica.Core.TypeDiscovery.Abstractions;
 using Monica.Core.TypeDiscovery.Models;
 using Monica.Core.TypeDiscovery.Services.Support;
@@ -14,10 +13,9 @@ namespace Monica.Core.TypeDiscovery.Services;
 /// Initializes a new domain type finder.
 /// </remarks>
 /// <param name="options">The type finder options.</param>
-public class DomainTypeFinder(TypeFinderOptions options) : ITypeFinder
+/// <param name="logger">The host-owned logger used for discovery diagnostics.</param>
+public class DomainTypeFinder(TypeFinderOptions options, ILogger<DomainTypeFinder> logger) : ITypeFinder
 {
-    public ILogger? Logger { get; set; } = LogManager.For<DomainTypeFinder>(); 
-
     #region Fields
 
     private bool _assemblyListLoaded;
@@ -37,11 +35,11 @@ public class DomainTypeFinder(TypeFinderOptions options) : ITypeFinder
         if (_assemblyListLoaded)
             return;
 
-        var scan = new TypeFinderAssemblyResolver(options, Logger).Resolve();
+        var scan = new TypeFinderAssemblyResolver(options, logger).Resolve();
         MergeAssemblyLoadFailures(scan.FailedLoads.Values);
         _assemblies.AddRange(scan.Assemblies);
 
-        Logger?.LogInformation(
+        logger.LogInformation(
             "Module system will scan the following assemblies:{Assemblies}",
             Environment.NewLine + string.Join(Environment.NewLine, _assemblies.Select(static assembly => assembly.GetName().Name).OrderBy(static name => name)));
 
@@ -95,8 +93,8 @@ public class DomainTypeFinder(TypeFinderOptions options) : ITypeFinder
                 {
                     _assemblyLoadFailures[loadFailure.Name] = loadFailure;
 
-                    Logger?.LogWarning(
-                        "程序集 {AssemblyName} 部分类型加载失败: {Exceptions}",
+                    logger.LogWarning(
+                        "Some types from assembly {AssemblyName} could not be loaded: {Exceptions}",
                         loadFailure.Name,
                         loadFailure.ErrorMessage);
                 }

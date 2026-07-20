@@ -22,14 +22,14 @@ namespace Monica.Modules;
 /// </summary>
 public static class ModuleGitBuilderExtensions
 {
-    extension(Mo)
+    extension(IMonicaBuilder builder)
     {
         /// <summary>
         /// Configures the Git synchronization module.
         /// </summary>
-        public static ModuleGitGuide AddGit(Action<ModuleGitOption>? action = null)
+        public ModuleGitGuide AddGit(Action<ModuleGitOption>? action = null)
         {
-            return new ModuleGitGuide().Register(action);
+            return builder.AddModule<ModuleGit, ModuleGitOption, ModuleGitGuide>(action);
         }
     }
 }

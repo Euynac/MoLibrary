@@ -6,25 +6,26 @@ using Monica.Tool.Extensions;
 
 namespace Monica.Repository.Persistence.Services.Support;
 
-public class ExtraPropertiesValueConverter(Type entityType) : ValueConverter<ExtraPropertyDictionary, string>(
+internal sealed class ExtraPropertiesValueConverter(Type entityType) : ValueConverter<ExtraPropertyDictionary, string>(
     d => SerializeObject(d, entityType),
     s => DeserializeObject(s, entityType))
 {
-    public static readonly JsonSerializerOptions SerializeOptions = new();
+    private static readonly JsonSerializerOptions SERIALIZE_OPTIONS = CreateReadOnlyOptions(new JsonSerializerOptions());
 
     private static string SerializeObject(ExtraPropertyDictionary extraProperties, Type? entityType)
     {
         var copyDictionary = new Dictionary<string, object?>(extraProperties);
-        return JsonSerializer.Serialize(copyDictionary, SerializeOptions);
+        return JsonSerializer.Serialize(copyDictionary, SERIALIZE_OPTIONS);
     }
 
-    public static readonly JsonSerializerOptions DeserializeOptions = new()
-    {
-        Converters =
+    private static readonly JsonSerializerOptions DESERIALIZE_OPTIONS = CreateReadOnlyOptions(
+        new JsonSerializerOptions
         {
-            new ObjectToInferredTypesConverter()
-        }
-    };
+            Converters =
+            {
+                new ObjectToInferredTypesConverter()
+            }
+        });
 
     private static ExtraPropertyDictionary DeserializeObject(string extraPropertiesAsJson, Type? entityType)
     {
@@ -33,10 +34,16 @@ public class ExtraPropertiesValueConverter(Type entityType) : ValueConverter<Ext
             return new ExtraPropertyDictionary();
         }
 
-        var dictionary = JsonSerializer.Deserialize<ExtraPropertyDictionary>(extraPropertiesAsJson, DeserializeOptions) ??
+        var dictionary = JsonSerializer.Deserialize<ExtraPropertyDictionary>(extraPropertiesAsJson, DESERIALIZE_OPTIONS) ??
                             new ExtraPropertyDictionary();
 
         return dictionary;
+    }
+
+    private static JsonSerializerOptions CreateReadOnlyOptions(JsonSerializerOptions options)
+    {
+        options.MakeReadOnly(populateMissingResolver: true);
+        return options;
     }
 }
 
@@ -45,7 +52,7 @@ public class ExtraPropertiesValueConverter(Type entityType) : ValueConverter<Ext
 /// <summary>
 /// https://docs.microsoft.com/en-us/dotnet/standard/serialization/system-text-json-converters-how-to#deserialize-inferred-types-to-object-properties
 /// </summary>
-public class ObjectToInferredTypesConverter : JsonConverter<object>
+internal sealed class ObjectToInferredTypesConverter : JsonConverter<object>
 {
     public override object Read(
         ref Utf8JsonReader reader,

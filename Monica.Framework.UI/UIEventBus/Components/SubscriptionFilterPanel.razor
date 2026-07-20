@@ -34,7 +34,7 @@
                         @foreach (var provider in Providers)
                         {
                             <MudSelectItem T="string" Value="@provider.UniqueId">
-                                @provider.DisplayName (@provider.ProviderTypeName, @L.GetProviderModeText(provider.IsDistributed))
+                                @L.GetProviderDisplayName(provider) (@L.GetProviderKindText(provider.ProviderType), @L.GetProviderModeText(provider.IsDistributed))
                             </MudSelectItem>
                         }
                     </MudSelect>

@@ -10,7 +10,6 @@ using Monica.WebApi.Annotations;
 using Monica.WebApi.AutoControllers.Abstractions;
 using Monica.WebApi.AutoControllers.Abstractions.Internal;
 using Monica.WebApi.AutoControllers.Models;
-using Monica.WebApi.AutoControllers.Utils;
 
 namespace Monica.WebApi.AutoControllers.Services.Support;
 
@@ -18,10 +17,14 @@ namespace Monica.WebApi.AutoControllers.Services.Support;
 /// Convention applied only to auto-generated CRUD controllers.
 /// </summary>
 /// <param name="conventionalRouteBuilder">Builds conventional routes for generated controllers.</param>
+/// <param name="httpMethodResolver">Resolves host-specific action-name and HTTP method conventions.</param>
 /// <param name="logger">The logger instance.</param>
 /// <param name="options">Auto CRUD controller configuration.</param>
 public class CrudControllerServiceConvention(
-    IConventionalRouteBuilder conventionalRouteBuilder, ILogger<CrudControllerServiceConvention> logger, IOptions<CrudControllerOption> options)
+    IConventionalRouteBuilder conventionalRouteBuilder,
+    IConventionalHttpMethodResolver httpMethodResolver,
+    ILogger<CrudControllerServiceConvention> logger,
+    IOptions<CrudControllerOption> options)
     : IServiceConvention
 {
 
@@ -266,7 +269,7 @@ public class CrudControllerServiceConvention(
     /// <returns>The inferred HTTP method.</returns>
     protected virtual string SelectHttpMethod(ActionModel action, ConventionalControllerSetting? configuration)
     {
-        return HttpMethodHelper.GetConventionalVerbForMethodName(action.ActionName);
+        return httpMethodResolver.Resolve(action.ActionName);
     }
 
     /// <summary>

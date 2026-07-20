@@ -30,7 +30,7 @@
                                 <MudChip T="string"
                                         Color="@change.ChangeTypeColor"
                                         Size="Size.Small">
-                                    @change.ChangeTypeDisplay
+                                    @L.GetSubscriptionChangeTypeText(change.ChangeType)
                                 </MudChip>
                                 <MudTooltip Text="@change.Subscription.EventType">
                                     <MudText Typo="Typo.body2">@change.Subscription.EventTypeShortName</MudText>
@@ -43,12 +43,12 @@
                                 <MudChip T="string"
                                         Color="@change.Subscription.ScopeColor"
                                         Size="Size.Small">
-                                    @change.Subscription.ScopeDisplay
+                                    @L.GetSubscriptionScopeText(change.Subscription.Scope)
                                 </MudChip>
                                 <MudChip T="string"
                                         Color="@change.Subscription.StateColor"
                                         Size="Size.Small">
-                                    @change.Subscription.StateDisplay
+                                    @L.GetSubscriptionStateText(change.Subscription.State)
                                 </MudChip>
                             </MudStack>
                         </MudStack>

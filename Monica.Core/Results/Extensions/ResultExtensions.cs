@@ -25,6 +25,8 @@ public static class ResultExtensions
             case ResStatus.Created:
                 return HttpStatusCode.Created;
 
+            case ResStatus.NotFound:
+                return HttpStatusCode.NotFound;
 
             case ResStatus.Unauthorized:
             case ResStatus.RefreshTokenExpired:

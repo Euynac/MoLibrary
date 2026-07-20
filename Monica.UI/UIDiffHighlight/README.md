@@ -18,7 +18,10 @@
 在 `Program.cs` 或应用配置中添加：
 
 ```csharp
-Mo.AddDiffHighlightUI();
+builder.AddMonica(monica =>
+{
+    monica.AddDiffHighlightUI();
+});
 ```
 
 ### 2. 访问页面

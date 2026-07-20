@@ -15,11 +15,14 @@
 ## 安装使用
 
 ```cs
- Mo.AddUICore().RegisterUIComponents(registry =>
+builder.AddMonica(monica =>
+{
+    monica.AddUICore().RegisterUIComponents(registry =>
     {
         // 注册SignalR调试组件，同时添加到导航菜单
         registry.RegisterComponent<SignalRDebug>("debug", "SignalR调试", Icons.Material.Filled.ManageAccounts, "SignalR调试", addToNav: true, navOrder: 100);
     });
+});
 ```
 
 ## 最佳实践

@@ -29,16 +29,16 @@ namespace Monica.Modules;
 /// </summary>
 public static class ModuleAIBuilderExtensions
 {
-    extension(Mo)
+    extension(IMonicaBuilder builder)
     {
         /// <summary>
         /// Configures the AI module.
         /// </summary>
         /// <param name="action">The module configuration action.</param>
         /// <returns>An AI module configuration builder.</returns>
-        public static ModuleAIGuide AddAI(Action<ModuleAIOption>? action = null)
+        public ModuleAIGuide AddAI(Action<ModuleAIOption>? action = null)
         {
-            return new ModuleAIGuide().Register(action);
+            return builder.AddModule<ModuleAI, ModuleAIOption, ModuleAIGuide>(action);
         }
     }
 }
@@ -75,6 +75,7 @@ public class ModuleAI(ModuleAIOption option)
         services.TryAddSingleton<IAIChatRuntimeContextAccessor>(sp =>
             sp.GetRequiredService<AIChatRuntimeContextAccessor>());
         services.TryAddSingleton<AgentStreamingCoordinator>();
+        services.TryAddSingleton<AgentResponseUpdateChannelContext>();
         services.AddSingleton<AIProviderRegistry>();
         services.AddSingleton<IAIProviderFactory>(sp => sp.GetRequiredService<AIProviderRegistry>());
         services.AddSingleton<IAIChatAgentFactory, AIChatAgentFactory>();

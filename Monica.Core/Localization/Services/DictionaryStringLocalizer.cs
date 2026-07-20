@@ -1,14 +1,14 @@
 using System.Globalization;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
-using Monica.Core.Localization.Models;
+using Monica.Core.Localization.Models.Internal;
 
 namespace Monica.Core.Localization.Services;
 
 internal sealed class DictionaryStringLocalizer(
     string resourceName,
     Dictionary<string, Dictionary<string, string>> resources,
-    LocalizationManagerOptions options,
+    LocalizationRuntimeOptions options,
     ILogger<DictionaryStringLocalizer> logger) : IStringLocalizer
 {
     public LocalizedString this[string name]

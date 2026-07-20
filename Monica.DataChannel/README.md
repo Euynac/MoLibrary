@@ -3,210 +3,133 @@
 [![NuGet](https://img.shields.io/nuget/v/Monica.DataChannel.svg)](https://www.nuget.org/packages/Monica.DataChannel/)
 [![License](https://img.shields.io/github/license/Tairitsua/Monica.svg)](../LICENSE.txt)
 
-A lightweight, flexible ETL (Extract, Transform, Load) framework for .NET applications, designed to simplify system integration through a pipeline-based data exchange approach.
+> Maturity: **Labs**. DataChannel is intentionally outside Monica's Stable 1.0 contract and may change as its provider and lifecycle model is refined.
 
-## 🌟 Features
+`Monica.DataChannel` composes bidirectional data pipelines from an inner endpoint, an outer endpoint, and optional transform or monitoring middleware. Pipeline declarations and runtime state belong to the current Monica host; two hosts in one process do not share registrations, TCP connections, or channel diagnostics.
 
-- **Template-Based Development**: Create standardized data exchange adapters quickly
-- **Unified Management**: Centralized control of multiple communication channels
-- **Pluggable Communication Providers**: Support for TCP, UDP, ActiveMQ, Dapr, and more
-- **Extensible Pipeline Architecture**: Add custom middleware for data transformation and processing
-- **Bidirectional Communication**: Support for both input and output operations in the same pipeline
-- **Dashboard Integration**: Monitor channel status and configurations
-
-## 📦 Installation
+## Install
 
 ```bash
-dotnet add package Monica.DataChannel
+dotnet add package Monica.DataChannel --prerelease
 ```
 
-## 🚀 Quick Start
+## Minimal setup
 
-### 1. Define Your Channels
-
-Create a channel builder that sets up your data pipelines:
+Implement `IDataChannelSetup` and add each pipeline through the host-provided registrar. Every pipeline requires an outer endpoint; the inner endpoint defaults to `DefaultChannelEndpoint` when omitted.
 
 ```csharp
-public class ChannelBuilder : ISetupPipeline
+using Monica.DataChannel.Abstractions;
+using Monica.DataChannel.Abstractions.Communication;
+using Monica.DataChannel.Middlewares;
+using Monica.DataChannel.Providers.Kafka;
+
+public sealed class OrderingChannelSetup : IDataChannelSetup
 {
-    public void Setup()
+    public void Setup(IDataChannelRegistrar channels)
     {
-        // Create a pipeline using Dapr binding for Kafka
-        DataPipeline.Create()
-            .SetOuterEndpoint(
-                new MetadataForDaprBinding(EDaprBindingType.Kafka, EConnectionDirection.Output)
+        channels.Add(
+            id: "ordering.events",
+            configure: pipeline => pipeline
+                .SetOuterEndpoint(new KafkaOptions(ConnectionDirection.Output)
                 {
-                    OutputBindingName = "my-output-binding"
+                    BootstrapServers = "localhost:9092",
+                    Topic = "ordering-events"
                 })
-            .AddPipeMiddleware(new PipeLoggingMiddleware())
-            .Register("MyProducerChannel");
-            
-        // Create another pipeline for input
-        DataPipeline.Create()
-            .SetOuterEndpoint(new MetadataForDaprBinding(EDaprBindingType.Kafka, EConnectionDirection.Input)
-            {
-                InputListenerRoute = "/data-sync"
-            })
-            .SetInnerEndpoint<MyCustomSubscriberEndpoint>()
-            .Register("MySubscriberChannel");
+                .AddPipeMiddleware<MessageCounterMiddleware>(),
+            groupId: "ordering");
     }
 }
 ```
 
-### 2. Register Services in Startup
+Register the required setup inside the host-bound Monica callback:
 
 ```csharp
-public void ConfigureServices(IServiceCollection services)
-{
-    // Register DataChannel services
-    services.AddDataChannel<ChannelBuilder>();
-}
+using Monica.Core.Modularity.Extensions;
+using Monica.Modules;
 
-public void Configure(IApplicationBuilder app)
-{
-    // Initialize DataChannel
-    app.UseDataChannel();
-}
-```
+var builder = WebApplication.CreateBuilder(args);
 
-### 3. Use the Channel in Your Application
-
-```csharp
-public class MyService
+builder.AddMonica(monica =>
 {
-    private readonly IDataChannelManager _channelManager;
-    
-    public MyService(IDataChannelManager channelManager)
-    {
-        _channelManager = channelManager;
-    }
-    
-    public async Task SendDataAsync(object data)
-    {
-        var channel = _channelManager.Fetch("MyProducerChannel");
-        if (channel != null)
+    monica.AddDataChannel(options =>
         {
-            var context = new DataContext
-            {
-                Operation = "send",
-                Data = data,
-                Entrance = EDataSource.Inner
-            };
-            
-            await channel.Pipe.SendDataAsync(context);
-        }
-    }
-}
+            options.RecentExceptionToKeep = 20;
+            options.InitThreadCount = 4;
+        })
+        .UseSetup<OrderingChannelSetup>();
+});
+
+var app = builder.Build();
+app.UseMonica();
+app.MapMonica();
+app.Run();
 ```
 
-## 🏗️ Architecture
+`UseSetup<TSetup>()` is required. Monica invokes the singleton setup once for that host, materializes its pipelines before endpoint mapping, and initializes them through `DataChannelInitializerService` during host startup.
 
-Monica.DataChannel is built around three core concepts:
+## Send data
 
-### 1. DataPipeline
-
-The main building block that defines a communication channel with:
-- Inner Endpoint: Represents your application side
-- Outer Endpoint: Connects to external systems
-- Middleware: Components that process data as it flows through the pipeline
-
-### 2. Endpoints
-
-Communication interfaces that can be:
-- Built-in communication cores (TCP, UDP, ActiveMQ, etc.)
-- Custom implementations for specific protocols
-- Default cores for special use cases
-
-### 3. Middleware
-
-Processing units that can:
-- Transform data formats
-- Apply business logic
-- Log activities
-- Handle special protocols (like TCP packet splitting)
-
-## 🔄 Data Flow
-
-Data flows through the pipeline following these steps:
-
-1. Data enters through an endpoint (Inner or Outer)
-2. Passes through transformation middleware
-3. Gets processed by endpoint middleware
-4. Exits through the opposite endpoint
-
-## 🧩 Extending the Framework
-
-### Creating Custom Communication Providers
+Inject `IDataChannelManager` at runtime. The manager can access only channels materialized for its host.
 
 ```csharp
-public class MyCustomProvider : CommunicationCore
+using Monica.DataChannel.Abstractions;
+
+public sealed class OrderEventPublisher(IDataChannelManager channels)
 {
-    public MyCustomProvider(CommunicationMetadata metadata) : base(metadata)
+    public async Task PublishAsync(object message)
     {
-    }
-    
-    public override async Task<bool> SendDataAsync(DataContext context)
-    {
-        // Implementation details
-    }
-    
-    protected override Task OnInitializeAsync()
-    {
-        // Connection initialization
+        var channel = channels.Fetch("ordering.events")
+            ?? throw new InvalidOperationException("The ordering event channel is not registered.");
+
+        await channel.SendDataFromInnerAsync(message);
     }
 }
 ```
 
-### Creating Custom Middleware
+## Public composition model
 
-```csharp
-public class MyCustomMiddleware : PipeMiddlewareBase, IPipeTransformMiddleware
-{
-    public async Task<DataContext> PassAsync(DataContext context)
-    {
-        // Transform the data
-        context.Data = TransformData(context.Data);
-        return context;
-    }
-    
-    private object TransformData(object data)
-    {
-        // Transformation logic
-    }
-}
-```
+| Surface | Purpose |
+|---|---|
+| `IDataChannelSetup` | Declares all pipelines required by one host. |
+| `IDataChannelRegistrar.Add(...)` | Registers a unique pipeline ID, optional group, endpoints, and middleware during startup. |
+| `ChannelPipelineBuilder` | Configures inner/outer endpoints and direct or DI-resolved middleware. |
+| `IDataChannelManager` | Fetches one channel, a group, or the current host's full channel snapshot at runtime. |
+| `DataChannel` | Sends data from either side and exposes the materialized pipeline. |
+| `DataChannelFacade` | Provides result-envelope management operations used by Minimal APIs and the optional UI. |
 
-## 📋 Available Communication Providers
+Registration closes after the setup returns. Duplicate IDs, late registrations, and pipelines without an outer endpoint fail with an explicit exception.
 
-- TCP
-- UDP
+## Providers
+
+The Labs package currently contains:
+
+- Kafka
 - ActiveMQ
-- Dapr Binding (supporting Kafka, RabbitMQ, etc.)
-- Default (for special cases)
+- Dapr input/output bindings
+- TCP client and listener endpoints
+- UDP
+- the default in-process endpoint
 
-## 🧰 Built-in Middleware
+Provider options derive from `CommunicationOptions` and declare a `ConnectionDirection`. External brokers, Dapr components, addresses, credentials, and durability remain deployment responsibilities.
 
-- `PipeLoggingMiddleware`: Logs all data passing through the pipeline
-- `FilterSpecialCharacterMiddleware`: Removes or escapes special characters
-- Various data transformers for common format conversions
+## Middleware
 
-## 📊 Dashboard Integration
+Use `AddPipeMiddleware<TMiddleware>()` for middleware resolved from the host's dependency injection container. Use `AddPipeMiddleware(instance)` only when the setup intentionally owns that instance.
 
-Monica.DataChannel includes a dashboard for monitoring:
+Built-in middleware includes transform helpers, special-character filtering, logging/debugging helpers, and `MessageCounterMiddleware`. Information-display middleware exposes a host-local snapshot to the DataChannel operational UI.
 
-- Active channels and their status
-- Communication statistics
-- Configuration settings
-- Error logs
+## Operational endpoints and UI
 
-## 📚 Documentation
+When Minimal APIs are enabled, `ModuleDataChannel` can expose channel status, exception history, exception summaries, clearing, and reinitialization endpoints. These are operational controls; protect them with the host's authentication and network policy.
 
-For more details, check out the [design document](MoDataChannel.md) and the [API reference](https://example.com/api-reference).
+`monica.AddDataChannelUI()` adds the optional Monica UI page. It is part of this Labs package and composes the shared Monica UI shell through module dependencies.
 
-## 📄 License
+## Lifecycle and boundaries
 
-This project is licensed under the MIT License - see the LICENSE file for details.
+- Channel declarations, materialized pipelines, TCP state, and diagnostics are host-owned.
+- Channels initialize with bounded concurrency (`InitThreadCount`, default `10`).
+- Each channel retains a bounded recent exception history (`RecentExceptionToKeep`, default `10`).
+- Pipeline endpoints are disposed during graceful host shutdown.
+- In-process and provider-local state is not a substitute for durable delivery or distributed coordination.
 
-## 🤝 Contributing
-
-Contributions are welcome! Please feel free to submit a Pull Request.
+See [DataChannel.Framework.md](DataChannel.Framework.md) for the component and lifecycle model. The published Chinese module pack lives in `../Monica.Docs/docs/zh-CN/modules/data-channel/`.

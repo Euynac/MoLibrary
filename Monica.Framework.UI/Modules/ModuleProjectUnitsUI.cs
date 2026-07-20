@@ -13,14 +13,14 @@ namespace Monica.Modules;
 
 public static class ModuleProjectUnitsUIBuilderExtensions
 {
-    extension(Mo)
+    extension(IMonicaBuilder builder)
     {
         /// <summary>
         /// Registers the project-units UI module.
         /// </summary>
-        public static ModuleProjectUnitsUIGuide AddProjectUnitsUI(Action<ModuleProjectUnitsUIOption>? action = null)
+        public ModuleProjectUnitsUIGuide AddProjectUnitsUI(Action<ModuleProjectUnitsUIOption>? action = null)
         {
-            return new ModuleProjectUnitsUIGuide().Register(action);
+            return builder.AddModule<ModuleProjectUnitsUI, ModuleProjectUnitsUIOption, ModuleProjectUnitsUIGuide>(action);
         }
     }
 }

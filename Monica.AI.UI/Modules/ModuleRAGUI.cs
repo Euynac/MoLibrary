@@ -17,14 +17,14 @@ namespace Monica.Modules;
 /// </summary>
 public static class ModuleRAGUIBuilderExtensions
 {
-    extension(Mo)
+    extension(IMonicaBuilder builder)
     {
         /// <summary>
         /// Configures the RAG UI module.
         /// </summary>
-        public static ModuleRAGUIGuide AddRAGUI(Action<ModuleRAGUIOption>? action = null)
+        public ModuleRAGUIGuide AddRAGUI(Action<ModuleRAGUIOption>? action = null)
         {
-            return new ModuleRAGUIGuide().Register(action);
+            return builder.AddModule<ModuleRAGUI, ModuleRAGUIOption, ModuleRAGUIGuide>(action);
         }
     }
 }

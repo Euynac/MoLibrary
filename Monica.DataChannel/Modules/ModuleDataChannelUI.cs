@@ -45,14 +45,14 @@ public class ModuleDataChannelUI(ModuleDataChannelUIOption option)
 
 public static class ModuleDataChannelUIBuilderExtensions
 {
-    extension(Mo)
+    extension(IMonicaBuilder builder)
     {
         /// <summary>
         /// Configures the DataChannelUI module.
         /// </summary>
-        public static ModuleDataChannelUIGuide AddDataChannelUI(Action<ModuleDataChannelUIOption>? action = null)
+        public ModuleDataChannelUIGuide AddDataChannelUI(Action<ModuleDataChannelUIOption>? action = null)
         {
-            return new ModuleDataChannelUIGuide().Register(action);
+            return builder.AddModule<ModuleDataChannelUI, ModuleDataChannelUIOption, ModuleDataChannelUIGuide>(action);
         }
     }
 }

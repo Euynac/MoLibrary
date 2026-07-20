@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Extensions;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Options;
 using Microsoft.Extensions.Logging;
 using Monica.Core.ExceptionHandling.Abstractions;
 using Monica.Core.ExceptionHandling.Exceptions;
@@ -8,14 +9,19 @@ using Monica.Core.ExceptionHandling.Models.Internal;
 using Monica.Core.Extensions;
 using Monica.Core.Results;
 using Monica.Core.Results.Abstractions;
+using Monica.Modules;
 
 namespace Monica.Core.ExceptionHandling.Services;
 
 internal class ExceptionHandlerService(
     ILogger<ExceptionHandlerService> logger,
     IHttpContextAccessor accessor,
-    IEnumerable<IExceptionResponseMapper> mappers) : IExceptionHandlerService
+    IEnumerable<IExceptionResponseMapper> mappers,
+    IOptions<ModuleExceptionHandlingOption> options) : IExceptionHandlerService
 {
+    private const string UNEXPECTED_ERROR_MESSAGE = "An unexpected server error occurred.";
+    private readonly ModuleExceptionHandlingOption _options = options.Value;
+
     public Task<Res> HandleCurrentHttpContextAsync(Exception exception, CancellationToken cancellationToken)
     {
         return HandleAsync(accessor.HttpContext, exception, cancellationToken);
@@ -38,6 +44,7 @@ internal class ExceptionHandlerService(
             }
         }
 
+        var includeContextualMetadata = true;
         Res result = actualException switch
         {
             BusinessException businessException => Res.Fail(businessException.Message),
@@ -45,7 +52,12 @@ internal class ExceptionHandlerService(
             _ => CreateUnexpectedErrorResponse(httpContext, actualException)
         };
 
-        return Task.FromResult(AppendMetadataEntries(result));
+        if (result.Status == ResStatus.InternalError && !_options.IncludeExceptionDetails)
+        {
+            includeContextualMetadata = false;
+        }
+
+        return Task.FromResult(includeContextualMetadata ? AppendMetadataEntries(result) : result);
 
         T AppendMetadataEntries<T>(T response) where T : IResultEnvelope
         {
@@ -93,8 +105,13 @@ internal class ExceptionHandlerService(
         return response;
     }
 
-    private static Res CreateUnexpectedErrorResponse(HttpContext? httpContext, Exception exception)
+    private Res CreateUnexpectedErrorResponse(HttpContext? httpContext, Exception exception)
     {
+        if (!_options.IncludeExceptionDetails)
+        {
+            return Res.Fail(UNEXPECTED_ERROR_MESSAGE, ResStatus.InternalError);
+        }
+
         var problemDetails = new ProblemDetails
         {
             Status = StatusCodes.Status500InternalServerError,
@@ -112,7 +129,7 @@ internal class ExceptionHandlerService(
             }
         };
 
-        return Res.Fail("服务器出现异常", ResStatus.InternalError)
+        return Res.Fail(UNEXPECTED_ERROR_MESSAGE, ResStatus.InternalError)
             .AppendMetadata("error", problemDetails);
     }
 }

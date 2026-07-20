@@ -3,8 +3,6 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Monica.Core.Modularity.Models;
-using Monica.Core.Modularity.Services;
-using Monica.Core.Modularity.Services.Support;
 
 namespace Monica.Core.Modularity.Abstractions;
 
@@ -13,10 +11,33 @@ namespace Monica.Core.Modularity.Abstractions;
 /// </summary>
 public abstract class ModuleBase : IModule
 {
+    private MonicaApplication? _application;
+
+    /// <summary>
+    /// Gets the Monica application that owns this materialized module instance.
+    /// </summary>
+    /// <exception cref="InvalidOperationException">Thrown before the module is bound to a host.</exception>
+    protected MonicaApplication Application =>
+        _application
+            ?? throw new InvalidOperationException($"{GetType().Name} has not been bound to a Monica host.");
+
+    /// <summary>
+    /// Replaces the logger factory used to create future Monica composition loggers for the owning host.
+    /// </summary>
+    /// <remarks>
+    /// Ownership transfers to the Monica application. Previously issued composition loggers remain valid until the
+    /// application is disposed, even when a later module supplies a replacement factory.
+    /// </remarks>
+    /// <param name="factory">The host-specific logger factory.</param>
+    protected void UseCompositionLoggerFactory(ILoggerFactory factory)
+    {
+        Application.ReplaceCompositionLoggerFactory(factory);
+    }
+
     /// <summary>
     /// Gets the resolved module key declared on the concrete module type.
     /// </summary>
-    public ModuleKey ModuleKey => ModuleDependencyAnalyzer.ResolveModuleKey(GetType());
+    public ModuleKey ModuleKey => Application.Dependencies.ResolveModuleKey(GetType());
 
     /// <summary>
     /// Configures the host application builder.
@@ -43,6 +64,22 @@ public abstract class ModuleBase : IModule
     }
 
     internal abstract void ConvertToRegisterRequest();
+
+    /// <summary>
+    /// Binds a materialized module to the host that owns its lifecycle.
+    /// </summary>
+    /// <param name="application">The owning Monica application.</param>
+    internal void Bind(MonicaApplication application)
+    {
+        ArgumentNullException.ThrowIfNull(application);
+
+        if (_application is not null && !ReferenceEquals(_application, application))
+        {
+            throw new InvalidOperationException($"{GetType().Name} is already bound to another Monica host.");
+        }
+
+        _application = application;
+    }
 }
 
 
@@ -55,7 +92,7 @@ public abstract class ModuleBase<TModuleSelf, TModuleOption, TModuleGuide>(TModu
     where TModuleGuide : ModuleGuide<TModuleSelf, TModuleOption, TModuleGuide>, new()
 {
     public TModuleOption Option { get; } = option;
-    public ILogger Logger { get;  } = option.Logger;
+    public ILogger Logger => Option.Logger;
 
     /// <summary>
     /// Gets a configured option object for another module.
@@ -73,15 +110,12 @@ public abstract class ModuleBase<TModuleSelf, TModuleOption, TModuleGuide>(TModu
             throw new InvalidOperationException($"{typeof(TSpecificModuleOption).Name} does not implement IModuleOptionsBase<T>.");
 
         var moduleType = optionInterface.GetGenericArguments()[0];
-        ModuleRegistry.ModuleRegisterContextDict.TryGetValue(moduleType, out var context);
+        Application.Modules.TryGetModuleRequestInfo(moduleType, out var context);
         
         if (context == null)
             throw new InvalidOperationException($"Module {moduleType.Name} is not registered.");
 
-        context.FinalConfigures.TryGetValue(typeof(TSpecificModuleOption), out var value);
-        if(value == null)
-            throw new InvalidOperationException($"Module {moduleType.Name} does not have option {typeof(TSpecificModuleOption).Name} or is not initialized in current stage.");
-        return (TSpecificModuleOption)value;
+        return context.GetOrCreateFinalOption<TSpecificModuleOption>();
     }
 
     /// <summary>
@@ -119,7 +153,7 @@ public abstract class ModuleBase<TModuleSelf, TModuleOption, TModuleGuide>(TModu
 
     internal override void ConvertToRegisterRequest()
     {
-        var guide = new TModuleGuide(); // TODO: this path does not currently preserve the original registration source.
+        var guide = Application.CreateGuide<TModuleGuide>(ModuleKey);
 
         guide.ConfigureBuilder(context =>
         {
@@ -139,7 +173,7 @@ public abstract class ModuleBase<TModuleSelf, TModuleOption, TModuleGuide>(TModu
 
     public void CheckRequiredMethod(string methodName, string? errorDetail = null)
     {
-        new TModuleGuide().CheckRequiredMethod(methodName, errorDetail);
+        Application.CreateGuide<TModuleGuide>(ModuleKey).CheckRequiredMethod(methodName, errorDetail);
     }
 
     public virtual void ClaimDependencies()
@@ -150,7 +184,9 @@ public abstract class ModuleBase<TModuleSelf, TModuleOption, TModuleGuide>(TModu
     protected TOtherModuleGuide DependsOnModule<TOtherModuleGuide>()
         where TOtherModuleGuide : ModuleGuide, new()
     {
-        return ModuleGuide.DeclareDependency<TOtherModuleGuide>(ModuleKey, ModuleKey);
+        var dependencyGuide = Application.CreateGuide<TOtherModuleGuide>(ModuleKey);
+        Application.Dependencies.AddDependency(ModuleKey, dependencyGuide.GetTargetModuleKey());
+        return dependencyGuide;
     }
 }
 

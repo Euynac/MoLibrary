@@ -28,7 +28,7 @@
                                 <MudStack Spacing="1">
                                     <MudText Typo="Typo.caption" Color="Color.Secondary">@L["SubscriptionDetail:Fields:State"]</MudText>
                                     <MudChip T="string" Color="@Subscription.StateColor" Size="Size.Small">
-                                        @Subscription.StateDisplay
+                                        @L.GetSubscriptionStateText(Subscription.State)
                                     </MudChip>
                                 </MudStack>
                             </MudItem>
@@ -48,7 +48,7 @@
                                 <MudStack Spacing="1">
                                     <MudText Typo="Typo.caption" Color="Color.Secondary">@L["SubscriptionDetail:Fields:Scope"]</MudText>
                                     <MudChip T="string" Color="@Subscription.ScopeColor" Size="Size.Small">
-                                        @Subscription.ScopeDisplay
+                                        @L.GetSubscriptionScopeText(Subscription.Scope)
                                     </MudChip>
                                 </MudStack>
                             </MudItem>
@@ -215,7 +215,7 @@
                                         <MudStack Spacing="1">
                                             <MudText Typo="Typo.body2" Style="font-weight: 500;">@L["SubscriptionDetail:Timeline:CurrentState"]</MudText>
                                             <MudText Typo="Typo.caption" Color="Color.Success">
-                                                @L["SubscriptionDetail:Timeline:ActiveRunning", Subscription.DurationDisplay]
+                                                @L["SubscriptionDetail:Timeline:ActiveRunning", L.GetSubscriptionDurationText(Subscription)]
                                             </MudText>
                                         </MudStack>
                                     </ItemContent>

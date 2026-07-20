@@ -1,68 +1,66 @@
-# Monica Framework
+# Monica
 
-Monica is **Mo**dular **.N**ET **I**nfrastructure for **C#** **A**I-era backends.
+**Architecture agents can follow. Systems humans can inspect.**
 
-It provides typed DDD ProjectUnits, composable infrastructure modules, built-in Blazor dashboards, and bundled agent skills so AI-assisted backend work remains observable as a codebase grows.
+Monica is an agent-governed application architecture for observable .NET backends. Its packages provide host-scoped module composition, typed DDD ProjectUnits, infrastructure adapters, operational dashboards, and runtime diagnostics.
 
-## Release Status
+## Install
 
-`1.0.0-rc.2` is a release candidate for validation and feedback before the stable `1.0.0` release. Breaking changes may still happen before the stable release.
-
-## Installation
-
-Install only the modules you need:
+Install only the capabilities the host uses:
 
 ```bash
-dotnet add package Monica.Core --version 1.0.0-rc.2
-dotnet add package Monica.JobScheduler --version 1.0.0-rc.2
-dotnet add package Monica.JobScheduler.UI --version 1.0.0-rc.2
+dotnet add package Monica.ProjectUnits --prerelease
+dotnet add package Monica.JobScheduler --prerelease
+dotnet add package Monica.JobScheduler.UI --prerelease
 ```
 
-## JobScheduler Example
+## Compose one host
 
 ```csharp
-using Microsoft.Extensions.Logging;
-using Monica.JobScheduler.Abstractions;
-using Monica.JobScheduler.Annotations;
+using Monica.Core.Modularity.Extensions;
 using Monica.Modules;
 
-Mo.AddJobScheduler()
-    .UseInMemoryMetadataRepository()
-    .UseSchedulerScope("local-dev")
-    .UseInMemoryProvider();
+var builder = WebApplication.CreateBuilder(args);
 
-[JobConfig(
-    JobName = "Heartbeat",
-    Description = "Writes a heartbeat every five minutes.",
-    CronSchedule = "0 */5 * * * *")]
-public sealed class HeartbeatJob(ILogger<HeartbeatJob> logger) : RecurringJob
+builder.AddMonica(monica =>
 {
-    public override Task ExecuteAsync(CancellationToken cancellationToken)
+    monica.ConfigureApplication(options =>
     {
-        logger.LogInformation("Heartbeat job ran.");
-        return Task.CompletedTask;
-    }
-}
+        options.AppName = "Orders";
+        options.AppId = "orders";
+    });
+
+    monica.AddProjectUnits();
+
+    monica.AddJobScheduler()
+        .UseInMemoryMetadataRepository()
+        .UseSchedulerScope("orders")
+        .UseInMemoryProvider();
+
+    monica.AddJobSchedulerUI();
+});
+
+var app = builder.Build();
+app.UseMonica();
+app.MapMonica();
+app.Run();
 ```
 
-Add `Mo.AddJobSchedulerUI()` when you want the browser dashboard.
+`AddMonica(...)` records and validates the complete module graph for this host before applying registrations. The composition is isolated from other hosts in the same process.
 
-## Module Families
+## Maturity tiers
 
-- Core infrastructure: `Monica.Core`, `Monica.Tool`, `Monica.DependencyInjection`
-- DDD and application flow: `Monica.Core`, `Monica.Repository`, `Monica.WebApi`, `Monica.AutoModel`
-- Background and ops: `Monica.JobScheduler`, `Monica.Configuration`, `Monica.Logging`, `Monica.StateStore`
-- UI modules: `Monica.UI`, `Monica.Framework.UI`, `Monica.JobScheduler.UI`, `Monica.Configuration.UI`
-- AI and integration: `Monica.AI`, `Monica.Dapr`, `Monica.EventBus`, `Monica.SignalR`
-- Code generation: `Monica.Framework.Generators`, `Monica.Generators.AutoController`
+- **Stable:** Core, ProjectUnits, WebApi, Configuration, Repository, JobScheduler, OpenTelemetry, and UI runtime inspection.
+- **Integrations:** optional EF Core, Kafka, Redis/StackExchange, Dapr, SignalR, and other provider adapters.
+- **Labs:** fast-moving AI/RAG/MCP, DataChannel, DevOps and profiling, Office, and Experimental capabilities.
 
-## Documentation
+The package catalog is validated in CI: Stable can depend only on Stable, Integrations can depend on Stable or Integrations, and Labs may opt into any tier.
 
-- Documentation site: https://monica.dpdns.org/
+## Learn more
+
+- Documentation: https://monica.dpdns.org/
+- Reference application: https://github.com/Tairitsua/Monica/tree/dev/examples/Monica.ReferenceApplication
 - Repository: https://github.com/Tairitsua/Monica
-- Example docs host: https://github.com/Tairitsua/Monica.Docs
 - Issues: https://github.com/Tairitsua/Monica/issues
 
-## License
-
-MIT License. See `LICENSE.txt` in the repository.
+Monica is MIT licensed and remains pre-1.0 while its public architecture is finalized.

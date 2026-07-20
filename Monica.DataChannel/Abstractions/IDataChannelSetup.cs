@@ -2,14 +2,15 @@ namespace Monica.DataChannel.Abstractions;
 
 /// <summary>
 /// Defines the entry point for configuring and initializing data channel pipelines.
-/// Implementations are responsible for building and registering all required pipelines.
+/// Implementations declare every pipeline required by one application host.
 /// </summary>
 public interface IDataChannelSetup
 {
     /// <summary>
-    /// Configures the pipelines.
-    /// Create, configure, and register all data pipelines in this method.
-    /// The framework calls it automatically during application startup.
+    /// Declares the pipelines owned by the current application host.
     /// </summary>
-    void Setup();
+    /// <param name="channels">
+    /// The host-owned registrar. It remains valid only until the framework materializes the registered pipelines.
+    /// </param>
+    void Setup(IDataChannelRegistrar channels);
 }

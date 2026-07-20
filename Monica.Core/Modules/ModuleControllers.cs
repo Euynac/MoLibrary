@@ -11,14 +11,14 @@ namespace Monica.Modules;
 
 public static class ModuleControllersBuilderExtensions
 {
-    extension(Mo)
+    extension(IMonicaBuilder builder)
     {
         /// <summary>
         /// Configures the Controllers module.
         /// </summary>
-        public static ModuleControllersGuide AddControllers(Action<ModuleControllersOption>? action = null)
+        public ModuleControllersGuide AddControllers(Action<ModuleControllersOption>? action = null)
         {
-            return new ModuleControllersGuide().Register(action);
+            return builder.AddModule<ModuleControllers, ModuleControllersOption, ModuleControllersGuide>(action);
         }
     }
 }

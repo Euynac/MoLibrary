@@ -1,6 +1,6 @@
 using System.Diagnostics;
 using System.Text;
-using Monica.Core;
+using Monica.Core.Modularity.State;
 using Monica.Core.Modularity.Models;
 
 namespace Monica.Core.Modularity.Services.Support;
@@ -9,14 +9,24 @@ namespace Monica.Core.Modularity.Services.Support;
 /// Provides performance profiling capabilities for the module system.
 /// Tracks initialization times, phase durations, and module-specific metrics.
 /// </summary>
-public static class ModuleInitializationProfiler
+internal sealed class ModuleInitializationProfiler
 {
+    private readonly ModuleProfilingState _state = new();
+
+    /// <summary>
+    /// Clears all profiling data for this host.
+    /// </summary>
+    public void Clear()
+    {
+        _state.Clear();
+    }
+
     /// <summary>
     /// Starts the module system profiling.
     /// </summary>
-    public static void StartModuleSystem()
+    public void StartModuleSystem()
     {
-        var state = MonicaApplication.Current.Profiling;
+        var state = _state;
         if (state.IsStarted) return;
         
         state.SystemStopwatch.Start();
@@ -26,9 +36,9 @@ public static class ModuleInitializationProfiler
     /// <summary>
     /// Stops the module system profiling.
     /// </summary>
-    public static void StopModuleSystem()
+    public void StopModuleSystem()
     {
-        var state = MonicaApplication.Current.Profiling;
+        var state = _state;
         if (!state.IsStarted) return;
         
         state.SystemStopwatch.Stop();
@@ -39,9 +49,9 @@ public static class ModuleInitializationProfiler
     /// Starts profiling a specific phase of the module system.
     /// </summary>
     /// <param name="phaseName">The name of the phase to profile.</param>
-    public static void StartPhase(string phaseName)
+    public void StartPhase(string phaseName)
     {
-        var state = MonicaApplication.Current.Profiling;
+        var state = _state;
         if (!state.PhaseStopwatches.TryGetValue(phaseName, out var stopwatch))
         {
             stopwatch = new Stopwatch();
@@ -57,9 +67,9 @@ public static class ModuleInitializationProfiler
     /// </summary>
     /// <param name="phaseName">The name of the phase to stop profiling.</param>
     /// <returns>The elapsed milliseconds for this phase.</returns>
-    public static long StopPhase(string phaseName)
+    public long StopPhase(string phaseName)
     {
-        if (!MonicaApplication.Current.Profiling.PhaseStopwatches.TryGetValue(phaseName, out var stopwatch))
+        if (!_state.PhaseStopwatches.TryGetValue(phaseName, out var stopwatch))
         {
             return 0;
         }
@@ -73,9 +83,9 @@ public static class ModuleInitializationProfiler
     /// </summary>
     /// <param name="moduleType">The type of the module.</param>
     /// <param name="phase">The module configuration phase.</param>
-    public static void StartModulePhase(Type moduleType, ModulePhase phase)
+    public void StartModulePhase(Type moduleType, ModulePhase phase)
     {
-        var state = MonicaApplication.Current.Profiling;
+        var state = _state;
         if (!state.ModuleProfiles.TryGetValue(moduleType, out var profile))
         {
             profile = new ModuleProfileInfo(moduleType);
@@ -91,9 +101,9 @@ public static class ModuleInitializationProfiler
     /// <param name="moduleType">The type of the module.</param>
     /// <param name="phase">The module configuration phase.</param>
     /// <returns>The elapsed milliseconds for this module phase.</returns>
-    public static long StopModulePhase(Type moduleType, ModulePhase phase)
+    public long StopModulePhase(Type moduleType, ModulePhase phase)
     {
-        if (!MonicaApplication.Current.Profiling.ModuleProfiles.TryGetValue(moduleType, out var profile))
+        if (!_state.ModuleProfiles.TryGetValue(moduleType, out var profile))
         {
             return 0;
         }
@@ -105,18 +115,18 @@ public static class ModuleInitializationProfiler
     /// Gets the total elapsed time for the module system.
     /// </summary>
     /// <returns>The total elapsed milliseconds.</returns>
-    public static long GetTotalElapsedMilliseconds()
+    public long GetTotalElapsedMilliseconds()
     {
-        return MonicaApplication.Current.Profiling.SystemStopwatch.ElapsedMilliseconds;
+        return _state.SystemStopwatch.ElapsedMilliseconds;
     }
 
     /// <summary>
     /// Gets all phase durations for the module system.
     /// </summary>
     /// <returns>A dictionary mapping phase names to their durations in milliseconds.</returns>
-    public static Dictionary<string, long> GetPhaseDurations()
+    public Dictionary<string, long> GetPhaseDurations()
     {
-        return MonicaApplication.Current.Profiling.PhaseStopwatches.ToDictionary(
+        return _state.PhaseStopwatches.ToDictionary(
             kvp => kvp.Key,
             kvp => kvp.Value.ElapsedMilliseconds
         );
@@ -127,9 +137,9 @@ public static class ModuleInitializationProfiler
     /// </summary>
     /// <param name="phaseName">The name of the phase.</param>
     /// <returns>The duration of the phase in milliseconds.</returns>
-    public static long GetPhaseDuration(string phaseName)
+    public long GetPhaseDuration(string phaseName)
     {
-        return MonicaApplication.Current.Profiling.PhaseStopwatches.TryGetValue(phaseName, out var stopwatch) 
+        return _state.PhaseStopwatches.TryGetValue(phaseName, out var stopwatch)
             ? stopwatch.ElapsedMilliseconds 
             : 0;
     }
@@ -138,9 +148,9 @@ public static class ModuleInitializationProfiler
     /// Gets profile information for all modules, sorted by total duration in descending order.
     /// </summary>
     /// <returns>A list of module profile information.</returns>
-    public static List<ModuleProfileInfo> GetModuleProfilesSortedByTotalDuration()
+    public List<ModuleProfileInfo> GetModuleProfilesSortedByTotalDuration()
     {
-        return MonicaApplication.Current.Profiling.ModuleProfiles.Values
+        return _state.ModuleProfiles.Values
             .OrderByDescending(p => p.GetTotalDuration())
             .ToList();
     }
@@ -150,9 +160,9 @@ public static class ModuleInitializationProfiler
     /// </summary>
     /// <param name="phase">The phase to sort by.</param>
     /// <returns>A list of module profile information.</returns>
-    public static List<ModuleProfileInfo> GetModuleProfilesSortedByPhaseDuration(ModulePhase phase)
+    public List<ModuleProfileInfo> GetModuleProfilesSortedByPhaseDuration(ModulePhase phase)
     {
-        return MonicaApplication.Current.Profiling.ModuleProfiles.Values
+        return _state.ModuleProfiles.Values
             .OrderByDescending(p => p.GetPhaseDuration(phase))
             .ToList();
     }
@@ -161,7 +171,7 @@ public static class ModuleInitializationProfiler
     /// Gets a formatted string summary of module system performance.
     /// </summary>
     /// <returns>A string containing performance summary information.</returns>
-    public static string GetPerformanceSummary()
+    public string GetPerformanceSummary()
     {
         var sb = new StringBuilder();
         sb.AppendLine("Module System Performance Summary:");
@@ -170,7 +180,7 @@ public static class ModuleInitializationProfiler
         sb.AppendLine("\nPhase Durations (in initialization order):");
         var totalSystemPhaseDuration = 0L;
         var systemPhaseCount = 0;
-        var state = MonicaApplication.Current.Profiling;
+        var state = _state;
         
         foreach (var phaseName in state.PhaseInitializationOrder)
         {
@@ -252,9 +262,9 @@ public static class ModuleInitializationProfiler
     /// </summary>
     /// <param name="moduleType">The type of the module to get profile information for.</param>
     /// <returns>The ModuleProfileInfo for the specified module type, or null if not found.</returns>
-    public static ModuleProfileInfo? GetModuleProfile(Type moduleType)
+    public ModuleProfileInfo? GetModuleProfile(Type moduleType)
     {
-        return MonicaApplication.Current.Profiling.ModuleProfiles.GetValueOrDefault(moduleType);
+        return _state.ModuleProfiles.GetValueOrDefault(moduleType);
     }
 
     /// <summary>
@@ -262,9 +272,9 @@ public static class ModuleInitializationProfiler
     /// </summary>
     /// <param name="moduleType">The type of the module to get duration for.</param>
     /// <returns>The total initialization duration in milliseconds, or 0 if not found.</returns>
-    public static long GetModuleTotalDuration(Type moduleType)
+    public long GetModuleTotalDuration(Type moduleType)
     {
-        return MonicaApplication.Current.Profiling.ModuleProfiles.TryGetValue(moduleType, out var profile)
+        return _state.ModuleProfiles.TryGetValue(moduleType, out var profile)
             ? profile.GetTotalDuration()
             : 0;
     }

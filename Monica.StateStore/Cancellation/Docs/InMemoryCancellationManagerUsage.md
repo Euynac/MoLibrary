@@ -19,11 +19,14 @@
 ```csharp
 var builder = WebApplication.CreateBuilder(args);
 
-// 配置内存版取消令牌管理器
-Mo.AddCancellationManager(options =>
+builder.AddMonica(monica =>
 {
-    options.UseInMemoryImplementation = true;
-    options.EnableVerboseLogging = true; // 可选：启用详细日志
+    // UseDistributed 默认为 false，因此使用进程内实现。
+    monica.AddCancellationManager(options =>
+    {
+        options.UseDistributed = false;
+        options.EnableVerboseLogging = true;
+    });
 });
 
 var app = builder.Build();
@@ -34,10 +37,12 @@ var app = builder.Build();
 ```csharp
 var builder = WebApplication.CreateBuilder(args);
 
-// 添加多个内存版取消令牌管理器实例
-Mo.AddCancellationManager()
-    .AddKeyedCancellationManager("instance1", useInMemory: true)
-    .AddKeyedCancellationManager("instance2", useInMemory: true);
+builder.AddMonica(monica =>
+{
+    monica.AddCancellationManager()
+        .AddKeyedCancellationManager("instance1", useDistributed: false)
+        .AddKeyedCancellationManager("instance2", useDistributed: false);
+});
 
 var app = builder.Build();
 ```
@@ -47,9 +52,12 @@ var app = builder.Build();
 ```csharp
 var builder = WebApplication.CreateBuilder(args);
 
-Mo.AddCancellationManager()
-    .AddKeyedCancellationManager("memory-service", useInMemory: true)
-    .AddKeyedCancellationManager("distributed-service", useInMemory: false);
+builder.AddMonica(monica =>
+{
+    monica.AddCancellationManager()
+        .AddKeyedCancellationManager("memory-service", useDistributed: false)
+        .AddKeyedCancellationManager("distributed-service", useDistributed: true);
+});
 
 var app = builder.Build();
 ```
@@ -249,4 +257,4 @@ public async Task<IActionResult> CleanupTask(string taskId)
 1. **及时清理**：完成的任务应调用 `DeleteTokenAsync` 清理资源
 2. **异常处理**：始终正确处理 `OperationCanceledException`
 3. **状态检查**：在长时间运行的循环中定期检查取消状态
-4. **键命名**：使用有意义且唯一的键名，避免冲突 
+4. **键命名**：使用有意义且唯一的键名，避免冲突

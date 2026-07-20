@@ -7,6 +7,13 @@
   <Folder Name="/examples/">
     <Project Path="examples/JobSchedulerMinimal/JobSchedulerMinimal.csproj" />
   </Folder>
+  <Folder Name="/examples/Monica.ReferenceApplication/">
+    <Project Path="examples/Monica.ReferenceApplication/src/AppHost/Monica.Reference.Api/Monica.Reference.Api.csproj" />
+    <Project Path="examples/Monica.ReferenceApplication/src/Domains/Ordering/Domains.Ordering.csproj" />
+    <Project Path="examples/Monica.ReferenceApplication/src/Shared/Platform.BuildingBlocks/Platform.BuildingBlocks.csproj" />
+    <Project Path="examples/Monica.ReferenceApplication/src/Shared/Platform.Infrastructure/Platform.Infrastructure.csproj" />
+    <Project Path="examples/Monica.ReferenceApplication/src/Shared/Platform.Protocol/Platform.Protocol.csproj" />
+  </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/Test.Monica.Configuration.EventBus/Test.Monica.Configuration.EventBus.csproj" />
     <Project Path="tests/Test.Monica.Configuration.EfCore/Test.Monica.Configuration.EfCore.csproj" />
@@ -52,6 +59,7 @@
   <Project Path="Monica.OpenTelemetry.UI/Monica.OpenTelemetry.UI.csproj" />
   <Project Path="Monica.OpenTelemetry/Monica.OpenTelemetry.csproj" />
   <Project Path="Monica.Profiling/Monica.Profiling.csproj" />
+  <Project Path="Monica.ProjectUnits/Monica.ProjectUnits.csproj" />
   <Project Path="Monica.ServiceDiscovery/Monica.ServiceDiscovery.csproj" />
   <Project Path="Monica.Repository.UI/Monica.Repository.UI.csproj" />
   <Project Path="Monica.Repository/Monica.Repository.csproj" />
@@ -59,8 +67,10 @@
   <Project Path="Monica.StateStore.StackExchange/Monica.StateStore.StackExchange.csproj" />
   <Project Path="Monica.StateStore.UI/Monica.StateStore.UI.csproj" />
   <Project Path="Monica.StateStore/Monica.StateStore.csproj" />
+  <Project Path="Monica.Templates/Monica.Templates.csproj" />
   <Project Path="Monica.Tool/Monica.Tool.csproj" />
-  <Project Path="Monica.UnitTests/Monica.UnitTests.csproj" />
+  <Project Path="Monica.Testing/Monica.Testing.csproj" />
+  <Project Path="Monica.Testing.UI/Monica.Testing.UI.csproj" />
   <Project Path="Monica.UI/Monica.UI.csproj" />
   <Project Path="Monica.Utilities/Monica.Utilities.csproj" />
 </Solution>

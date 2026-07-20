@@ -20,7 +20,7 @@ public static class ModuleConfigurationEventBusBuilderExtensions
         Action<ModuleConfigurationEventBusOption>? action = null)
     {
         ArgumentNullException.ThrowIfNull(guide);
-        return new ModuleConfigurationEventBusGuide().Register(action);
+        return guide.AddModule<ModuleConfigurationEventBus, ModuleConfigurationEventBusOption, ModuleConfigurationEventBusGuide>(action);
     }
 
     /// <summary>

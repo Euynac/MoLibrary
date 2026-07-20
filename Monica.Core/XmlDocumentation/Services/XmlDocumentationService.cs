@@ -3,7 +3,6 @@ using System.Reflection;
 using System.Text.RegularExpressions;
 using System.Xml.XPath;
 using Microsoft.Extensions.Logging;
-using Monica.Core.Logging;
 using Monica.Core.XmlDocumentation.Abstractions;
 using Monica.Core.XmlDocumentation.Models;
 
@@ -12,13 +11,12 @@ namespace Monica.Core.XmlDocumentation.Services;
 /// <summary>
 /// Default implementation of <see cref="IXmlDocumentationService" />.
 /// </summary>
-internal sealed class XmlDocumentationService : IXmlDocumentationService
+internal sealed class XmlDocumentationService(ILogger<XmlDocumentationService> logger) : IXmlDocumentationService
 {
     private readonly ConcurrentDictionary<string, XmlDocumentCacheInfo> _documentCache = new();
     private readonly ConcurrentDictionary<string, XPathNavigator?> _navigatorCache = new();
     private static readonly Regex CleanWhitespaceRegex = new(@"\s+", RegexOptions.Compiled);
     private static readonly Regex RemoveTagsRegex = new(@"<[^>]*>", RegexOptions.Compiled);
-    private readonly ILogger<XmlDocumentationService> _logger = LogManager.For<XmlDocumentationService>();
 
     /// <summary>
     /// Gets XML documentation for a method.
@@ -93,7 +91,7 @@ internal sealed class XmlDocumentationService : IXmlDocumentationService
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to get method documentation for {Method}", method.Name);
+            logger.LogError(ex, "Failed to get method documentation for {Method}", method.Name);
             return null;
         }
     }
@@ -117,7 +115,7 @@ internal sealed class XmlDocumentationService : IXmlDocumentationService
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to get type documentation for {Type}", type.FullName);
+            logger.LogError(ex, "Failed to get type documentation for {Type}", type.FullName);
             return null;
         }
     }
@@ -129,7 +127,7 @@ internal sealed class XmlDocumentationService : IXmlDocumentationService
     {
         _documentCache.Clear();
         _navigatorCache.Clear();
-        _logger.LogInformation("XML documentation cache cleared");
+        logger.LogInformation("XML documentation cache cleared");
     }
 
     /// <summary>
@@ -164,7 +162,7 @@ internal sealed class XmlDocumentationService : IXmlDocumentationService
 
         if (!File.Exists(xmlPath))
         {
-            _logger.LogWarning("Project XML file not found: {FilePath}, you need to add <GenerateDocumentationFile>True</GenerateDocumentationFile> into your .csproj file to generate swagger documents", xmlPath);
+            logger.LogWarning("Project XML file not found: {FilePath}, you need to add <GenerateDocumentationFile>True</GenerateDocumentationFile> into your .csproj file to generate swagger documents", xmlPath);
             _navigatorCache[assemblyName] = null;
             return null;
         }
@@ -187,12 +185,12 @@ internal sealed class XmlDocumentationService : IXmlDocumentationService
             // Cache the navigator for reuse.
             _navigatorCache[assemblyName] = navigator;
 
-            _logger.LogDebug("Loaded XML documentation for assembly {Assembly} from {Path}", assemblyName, xmlPath);
+            logger.LogDebug("Loaded XML documentation for assembly {Assembly} from {Path}", assemblyName, xmlPath);
             return navigator;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to load XML documentation from {Path}", xmlPath);
+            logger.LogError(ex, "Failed to load XML documentation from {Path}", xmlPath);
             _navigatorCache[assemblyName] = null;
             return null;
         }

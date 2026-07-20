@@ -5,56 +5,69 @@ using Monica.DataChannel.Pipeline;
 using Monica.DataChannel.Providers.TCP.Utils;
 using Monica.Tool.Extensions;
 
-namespace Monica.DataChannel.Providers.TCP
+namespace Monica.DataChannel.Providers.TCP;
+
+/// <summary>
+/// Connects a data-channel pipeline to a TCP listener owned by the current host.
+/// </summary>
+/// <param name="metadata">The TCP listener configuration.</param>
+/// <param name="logger">The host logger for connection events.</param>
+/// <param name="manager">The current host's data-channel manager.</param>
+/// <param name="runtime">The current host's TCP connection runtime.</param>
+public class TcpServerEndpoint(
+    TcpServerOptions metadata,
+    ILogger<TcpServerEndpoint> logger,
+    IDataChannelManager manager,
+    TcpConnectionRuntime runtime) : CommunicationEndpointBase<TcpServerOptions>(metadata)
 {
-    public class TcpServerEndpoint(TcpServerOptions metadata, ILogger<TcpServerEndpoint> logger, IDataChannelManager manager) : CommunicationEndpointBase<TcpServerOptions>(metadata)
+    private TcpServerExtends? _server;
+
+    /// <inheritdoc />
+    public override async Task ReceiveDataAsync(ChannelDataContext data)
     {
-        private TcpServerExtends? server;
+        var key = data.Metadata.GetOrDefault("ConnectionName") as string;
+        var message = data.Data?.ToString();
 
-        public override async Task ReceiveDataAsync(ChannelDataContext data)
+        if (!key.IsNullOrEmptySet())
         {
-            var key = data.Metadata.GetOrDefault("ConnectionName") as string;
-            var message = data.Data?.ToString();
-
-            if (!key.IsNullOrEmptySet())
+            if (runtime.TryGetClient(key, out var client) && client is not null)
             {
-                if (TcpUtils.clients.TryGetValue(key, out var client))
-                {
-                    await client.SendMsg(message, logger, manager);
-                }
-
-                return;
+                await client.SendMsg(message, logger, manager);
             }
 
-            foreach (var item in TcpUtils.clients.Values)
-            {
-                await item.SendMsg(message, logger, manager);
-            }
+            return;
         }
 
-        public override Task InitAsync(CancellationToken cancellationToken = default)
+        foreach (var client in runtime.GetClients())
         {
-            var tcpClientExtends = new TcpServerExtends();
-            server = tcpClientExtends;
-            server.ReceivedMsgEvent += (e) =>
-            {
-                var data = CreateData(e.Data);
-                data.Metadata.Set("ConnectionName", e.ConnectionName);
-                SendData(data);
-            };
-            server.Init(metadata, logger);
-            return Task.CompletedTask;
+            await client.SendMsg(message, logger, manager);
         }
+    }
 
-        public override ConnectionDirection SupportedConnectionDirection()
+    /// <inheritdoc />
+    public override Task InitAsync(CancellationToken cancellationToken = default)
+    {
+        _server = new TcpServerExtends(runtime);
+        _server.ReceivedMsgEvent += eventArgs =>
         {
-            return ConnectionDirection.InputAndOutput;
-        }
+            var data = CreateData(eventArgs.Data);
+            data.Metadata.Set("ConnectionName", eventArgs.ConnectionName);
+            SendData(data);
+        };
+        _server.Init(metadata, logger);
+        return Task.CompletedTask;
+    }
 
-        public override Task DisposeAsync(CancellationToken cancellationToken = default)
-        {
-            server?.Dispose();
-            return base.DisposeAsync(cancellationToken);
-        }
+    /// <inheritdoc />
+    public override ConnectionDirection SupportedConnectionDirection()
+    {
+        return ConnectionDirection.InputAndOutput;
+    }
+
+    /// <inheritdoc />
+    public override Task DisposeAsync(CancellationToken cancellationToken = default)
+    {
+        _server?.Dispose();
+        return base.DisposeAsync(cancellationToken);
     }
 }

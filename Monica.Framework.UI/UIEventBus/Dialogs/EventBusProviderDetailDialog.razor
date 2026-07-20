@@ -12,7 +12,7 @@
                     <MudAvatar Color="@GetProviderColor()" Size="Size.Medium" Class="mr-2">
                         <MudIcon Icon="@GetProviderIcon()" />
                     </MudAvatar>
-                    @Provider.DisplayName
+                    @L.GetProviderDisplayName(Provider)
                 </MudText>
                 <MudText Typo="Typo.subtitle1" Color="Color.Secondary">
                     @Provider.ImplementationType
@@ -30,7 +30,7 @@
                                         <MudText Typo="Typo.subtitle1" Style="font-weight: 500;">@L["Providers:Detail:Fields:ProviderType"]</MudText>
                                     </div>
                                     <MudChip T="string" Color="@GetProviderColor()" Size="Size.Small">
-                                        @Provider.ProviderTypeName
+                                        @L.GetProviderKindText(Provider.ProviderType)
                                     </MudChip>
                                 </MudPaper>
                             </MudItem>
@@ -137,7 +137,7 @@
                                     <TemplateColumn Title="@L["Providers:Columns:State"]">
                                         <CellTemplate>
                                             <MudChip T="string" Size="Size.Small" Color="@context.Item.StateColor">
-                                                @context.Item.StateDisplay
+                                                @L.GetSubscriptionStateText(context.Item.State)
                                             </MudChip>
                                         </CellTemplate>
                                     </TemplateColumn>

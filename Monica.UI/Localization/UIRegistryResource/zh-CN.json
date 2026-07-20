@@ -11,6 +11,9 @@
     "Infrastructure": "基础设施"
   },
   "Pages": {
+    "Workflow": {
+      "Title": "工作流"
+    },
     "AIChat": {
       "Title": "AI 助手"
     },

@@ -1,6 +1,7 @@
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
 using Monica.Framework.UI.UIObservableInstance.Models;
+using Monica.Tool.Extensions;
 
 namespace Monica.Framework.UI.Localization;
 
@@ -9,6 +10,24 @@ namespace Monica.Framework.UI.Localization;
 /// </summary>
 public static class ObservableInstanceLocalizationExtensions
 {
+    /// <summary>
+    /// Gets the localized display text for an observable instance type.
+    /// </summary>
+    public static string GetInstanceTypeText(this IStringLocalizer localizer, ObservableInstanceViewModel instance)
+    {
+        return instance.InstanceType?.GetCleanName() ?? localizer["Shared:Labels:Unknown"].Value;
+    }
+
+    /// <summary>
+    /// Gets the localized display text for an observable instance group.
+    /// </summary>
+    public static string GetGroupIdText(this IStringLocalizer localizer, ObservableInstanceViewModel instance)
+    {
+        return string.IsNullOrEmpty(instance.GroupId)
+            ? localizer["Shared:Labels:Ungrouped"].Value
+            : instance.GroupId;
+    }
+
     /// <summary>
     /// Gets localized display text for a health state.
     /// </summary>

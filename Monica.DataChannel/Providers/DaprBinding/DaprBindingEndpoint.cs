@@ -13,6 +13,13 @@ using Monica.DataChannel.Pipeline;
 
 namespace Monica.DataChannel.Providers.DaprBinding;
 
+/// <summary>
+/// Connects a data-channel pipeline to Dapr input and output bindings.
+/// </summary>
+/// <param name="metadata">The binding direction, route, component name, and partition settings.</param>
+/// <param name="client">The current host's Dapr client.</param>
+/// <param name="partitionKeyResolver">An optional resolver for output-binding partition metadata.</param>
+/// <param name="inputDispatcher">An optional host service that dispatches input messages before pipeline processing.</param>
 public class DaprBindingEndpoint(
     DaprBindingOptions metadata,
     DaprClient client,
@@ -20,87 +27,130 @@ public class DaprBindingEndpoint(
     IDaprBindingInputDispatcher? inputDispatcher = null)
     : CommunicationEndpointBase<DaprBindingOptions>(metadata), IApplicationBuilderConfigurable
 {
-    private static readonly HashSet<string> _registeredRoutes = [];
+    private const string ROUTE_REGISTRY_KEY = "Monica.DataChannel.DaprBinding.RouteRegistry";
     private readonly MessageReceiveDiagnostics _messageReceiveDiagnostics = new(metadata.InputListenerRoute);
 
+    /// <inheritdoc />
     public override async Task ReceiveDataAsync(ChannelDataContext data)
     {
-        if (metadata.Type == CommunicationType.MQ)
+        if (metadata.Type != CommunicationType.MQ ||
+            string.IsNullOrWhiteSpace(metadata.OutputBindingName) ||
+            data.Data is null)
         {
-            if (string.IsNullOrWhiteSpace(metadata.OutputBindingName)) return;
-            if (data.Data is null) return;
-            await client.InvokeBindingAsync(metadata.OutputBindingName, "create", data.Data, await ResolveOutputMetadataAsync(data));
+            return;
         }
-   
+
+        await client.InvokeBindingAsync(
+            metadata.OutputBindingName,
+            "create",
+            data.Data,
+            await ResolveOutputMetadataAsync(data));
     }
 
+    /// <inheritdoc />
     public void ConfigApplicationBuilder(IApplicationBuilder app)
     {
-        
     }
 
+    /// <inheritdoc />
     public override ConnectionDirection SupportedConnectionDirection()
     {
         return ConnectionDirection.InputAndOutput;
     }
 
+    /// <inheritdoc />
     public void ConfigEndpoints(IApplicationBuilder app)
     {
-        if (metadata.Type == CommunicationType.MQ)
+        var route = metadata.InputListenerRoute;
+        if (metadata.Type != CommunicationType.MQ || string.IsNullOrWhiteSpace(route))
         {
-            if (string.IsNullOrWhiteSpace(metadata.InputListenerRoute)) return;
-            if (_registeredRoutes.Add(metadata.InputListenerRoute))
-            {
-                app.UseEndpoints(endpoints =>
-                {
-                    //接收不是由我们项目代码串行化的；整体是“可并发接收”。更准确地说：单条 Dapr Binding 回调内部是同步 await 到处理完成；
-                    //同一个 Kafka partition 内通常按顺序一条条处理；但多个 partition、多个副本/sidecar、或 Dapr 并发回调时，这里接收会并发进入。
-                    endpoints.MapPost($"{metadata.InputListenerRoute}", async ([FromBody] JsonElement body, HttpResponse response, HttpContext context) =>
-                    {
-                        var dataContext = new ChannelDataContext(ChannelSide.Outer, body);
-                        DecorateInputMetadata(dataContext, MessageReceiveDiagnosticsMiddleware.GetSnapshot(context));
-
-                        if (metadata.EnableInputDispatcher && inputDispatcher != null)
-                        {
-                            var dispatched = await inputDispatcher.TryDispatchAsync(
-                                dataContext,
-                                async (message, _) => await SendDataAsync(message),
-                                context.RequestAborted);
-
-                            if (dispatched)
-                            {
-                                return;
-                            }
-                        }
-
-                        await SendDataAsync(dataContext);
-                    })
-                    .AddEndpointFilter(new MessageReceiveDiagnosticsMiddleware(_messageReceiveDiagnostics))
-                    .WithMonicaEndpoint()
-                    .WithName("DaprBinding路由")
-                    .WithTags("基础功能")
-                    .WithSummary("DaprBinding路由")
-                    .WithDescription("DaprBinding路由");
-                });
-            }
+            return;
         }
+
+        if (!ClaimRoute(app, route))
+        {
+            return;
+        }
+
+        app.UseEndpoints(endpoints =>
+        {
+            endpoints.MapPost(route, async ([FromBody] JsonElement body, HttpContext context) =>
+            {
+                // Dapr can invoke multiple partitions, replicas, or sidecars concurrently. Each callback
+                // awaits the pipeline so the HTTP response still represents completion of that message.
+                var dataContext = new ChannelDataContext(ChannelSide.Outer, body);
+                DecorateInputMetadata(dataContext, MessageReceiveDiagnosticsMiddleware.GetSnapshot(context));
+                if (metadata.EnableInputDispatcher && inputDispatcher != null)
+                {
+                    var dispatched = await inputDispatcher.TryDispatchAsync(
+                        dataContext,
+                        async (message, _) => await SendDataAsync(message),
+                        context.RequestAborted);
+
+                    if (dispatched)
+                    {
+                        return;
+                    }
+                }
+
+                await SendDataAsync(dataContext);
+            })
+            .AddEndpointFilter(new MessageReceiveDiagnosticsMiddleware(_messageReceiveDiagnostics))
+            .WithMonicaEndpoint()
+            .WithName($"DataChannel.DaprBinding:{route}")
+            .WithTags("DataChannel")
+            .WithSummary("Receive a Dapr input binding message")
+            .WithDescription("Forwards a Dapr input binding payload into its configured data-channel pipeline.");
+        });
     }
 
-    private void DecorateInputMetadata(ChannelDataContext dataContext, MessageReceiveDiagnosticsSnapshot? receiveSnapshot)
+    private static void DecorateInputMetadata(
+        ChannelDataContext dataContext,
+        MessageReceiveDiagnosticsSnapshot? receiveSnapshot)
     {
-        if (receiveSnapshot is null) return;
+        if (receiveSnapshot is null)
+        {
+            return;
+        }
 
-        var metadata = (IDictionary<string, object?>)dataContext.Metadata;
-        metadata["Message.Receive.Route"] = receiveSnapshot.Route;
-        metadata["Message.Receive.TraceIdentifier"] = receiveSnapshot.TraceIdentifier;
-        metadata["Message.Receive.IsConcurrentReceive"] = receiveSnapshot.IsConcurrentReceive;
-        metadata["Message.Receive.ActiveReceiveCount"] = receiveSnapshot.ActiveReceiveCount;
-        metadata["Message.Receive.MaxConcurrentReceiveCount"] = receiveSnapshot.MaxConcurrentReceiveCount;
-        metadata["Message.Receive.MessagePerSecond"] = receiveSnapshot.MessagePerSecond;
-        metadata["Message.Receive.LastSecondCompletedMessageCount"] = receiveSnapshot.LastSecondCompletedMessageCount;
-        metadata["Message.Receive.TotalReceivedMessageCount"] = receiveSnapshot.TotalReceivedMessageCount;
-        metadata["Message.Receive.ThreadId"] = receiveSnapshot.ThreadId;
-        metadata["Message.Receive.TimestampUtc"] = receiveSnapshot.TimestampUtc;
+        var inputMetadata = (IDictionary<string, object?>)dataContext.Metadata;
+        inputMetadata["Message.Receive.Route"] = receiveSnapshot.Route;
+        inputMetadata["Message.Receive.TraceIdentifier"] = receiveSnapshot.TraceIdentifier;
+        inputMetadata["Message.Receive.IsConcurrentReceive"] = receiveSnapshot.IsConcurrentReceive;
+        inputMetadata["Message.Receive.ActiveReceiveCount"] = receiveSnapshot.ActiveReceiveCount;
+        inputMetadata["Message.Receive.MaxConcurrentReceiveCount"] = receiveSnapshot.MaxConcurrentReceiveCount;
+        inputMetadata["Message.Receive.MessagePerSecond"] = receiveSnapshot.MessagePerSecond;
+        inputMetadata["Message.Receive.LastSecondCompletedMessageCount"] = receiveSnapshot.LastSecondCompletedMessageCount;
+        inputMetadata["Message.Receive.TotalReceivedMessageCount"] = receiveSnapshot.TotalReceivedMessageCount;
+        inputMetadata["Message.Receive.ThreadId"] = receiveSnapshot.ThreadId;
+        inputMetadata["Message.Receive.TimestampUtc"] = receiveSnapshot.TimestampUtc;
+    }
+
+    private bool ClaimRoute(IApplicationBuilder app, string route)
+    {
+        lock (app.Properties)
+        {
+            if (!app.Properties.TryGetValue(ROUTE_REGISTRY_KEY, out var value) ||
+                value is not Dictionary<string, DaprBindingEndpoint> routes)
+            {
+                routes = new Dictionary<string, DaprBindingEndpoint>(StringComparer.OrdinalIgnoreCase);
+                app.Properties[ROUTE_REGISTRY_KEY] = routes;
+            }
+
+            if (!routes.TryGetValue(route, out var owner))
+            {
+                routes.Add(route, this);
+                return true;
+            }
+
+            if (ReferenceEquals(owner, this))
+            {
+                return false;
+            }
+
+            throw new InvalidOperationException(
+                $"Dapr input binding route '{route}' is already owned by another data channel in the current host.");
+        }
     }
 
     private async Task<IReadOnlyDictionary<string, string>?> ResolveOutputMetadataAsync(ChannelDataContext data)
@@ -113,7 +163,7 @@ public class DaprBindingEndpoint(
         var partitionKey = await partitionKeyResolver.ResolvePartitionKeyAsync(data);
         if (string.IsNullOrWhiteSpace(partitionKey))
         {
-            return null; 
+            return null;
         }
 
         return new Dictionary<string, string>

@@ -19,13 +19,13 @@ namespace Monica.DataChannel.Services;
 /// <param name="options">Provides the data channel module options.</param>
 /// <param name="observableManager">Registers the hosted service with observable-instance tracking.</param>
 /// <param name="hostedServiceOptions">Provides shared hosted-service observability options.</param>
-/// <param name="logger">Logs initialization lifecycle events.</param>
+/// <param name="logger">The host logger used by the hosted-service observability base.</param>
 public class DataChannelInitializerService(
     IDataChannelManager manager,
     IOptions<ModuleDataChannelOption> options,
     IObservableInstanceRegistry observableManager,
     IOptions<ModuleHostedServiceOption> hostedServiceOptions,
-    ILogger<DataChannelInitializerService>? logger = null) : MoHostedService(observableManager, hostedServiceOptions)
+    ILogger<DataChannelInitializerService> logger) : MoHostedService(observableManager, hostedServiceOptions, logger)
 {
     private readonly int _initThreadCount = options.Value.InitThreadCount;
 
@@ -58,13 +58,11 @@ public class DataChannelInitializerService(
             try
             {
                 await channel.Pipe.InitAsync(token);
-                logger?.LogInformation("Successfully initialized channel: {ChannelId}", channel.Id);
             }
             catch (Exception ex)
             {
                 Interlocked.Increment(ref failureCount);
                 RecordState($"Failed to initialize channel: {channel.Id}", HostedServiceState.Degraded, ex);
-                logger?.LogError(ex, "Failed to initialize channel: {ChannelId}", channel.Id);
             }
         });
 
@@ -78,9 +76,21 @@ public class DataChannelInitializerService(
     }
 
     /// <inheritdoc />
-    protected override Task OnStoppingAsync(CancellationToken cancellationToken)
+    protected override async Task OnStoppingAsync(CancellationToken cancellationToken)
     {
-        logger?.LogInformation("DataChannelInitializerService is stopping");
-        return Task.CompletedTask;
+        foreach (var channel in manager.FetchAll())
+        {
+            try
+            {
+                await channel.Pipe.DisposeAsync();
+            }
+            catch (Exception ex)
+            {
+                RecordState(
+                    $"Failed to dispose channel: {channel.Id}",
+                    HostedServiceState.Degraded,
+                    ex);
+            }
+        }
     }
-} 
+}

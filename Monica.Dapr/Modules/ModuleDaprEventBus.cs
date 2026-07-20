@@ -22,7 +22,7 @@ public static class ModuleDaprEventBusBuilderExtensions
         Action<ModuleDaprEventBusOption>? action = null)
     {
         guide.UseDistributedEventBus<DaprEventBusProvider>();
-        return new ModuleDaprEventBusGuide().Register(action);
+        return guide.AddModule<ModuleDaprEventBus, ModuleDaprEventBusOption, ModuleDaprEventBusGuide>(action);
     }
 }
 

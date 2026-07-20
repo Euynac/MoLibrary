@@ -22,7 +22,7 @@ namespace Monica.Framework.ChainTracing.Services;
 /// <param name="jsonSerializerOptionsProvider">Global JSON serialization options.</param>
 public class AsyncLocalChainTracingService(IOptions<ModuleChainTracingOption> options, ILogger<AsyncLocalChainTracingService> logger, IJsonSerializerOptionsProvider jsonSerializerOptionsProvider) : IChainTracing
 {
-    private static readonly AsyncLocal<ChainTraceContext?> _chainContext = new();
+    private readonly AsyncLocal<ChainTraceContext?> _chainContext = new();
     private readonly ModuleChainTracingOption _options = options.Value;
 
     /// <summary>
@@ -42,14 +42,14 @@ public class AsyncLocalChainTracingService(IOptions<ModuleChainTracingOption> op
 
             if (IsMaxDepthReached())
             {
-                logger.LogWarning("调用链深度已达到最大限制 {MaxChainDepth}，跳过创建新节点: {Handler}.{Operation}", 
+                logger.LogWarning("Chain depth reached the {MaxChainDepth} limit; skipping {Handler}.{Operation}.",
                     _options.MaxChainDepth, handler, operation);
                 return Guid.NewGuid().ToString("N"); // Return a synthetic TraceId so follow-up calls stay safe.
             }
 
             if (IsMaxNodeCountReached())
             {
-                logger.LogWarning("调用链节点数量已达到最大限制 {MaxNodeCount}，跳过创建新节点: {Handler}.{Operation}", 
+                logger.LogWarning("Chain node count reached the {MaxNodeCount} limit; skipping {Handler}.{Operation}.",
                     _options.MaxNodeCount, handler, operation);
                 return Guid.NewGuid().ToString("N"); // Return a synthetic TraceId so follow-up calls stay safe.
             }
@@ -65,14 +65,14 @@ public class AsyncLocalChainTracingService(IOptions<ModuleChainTracingOption> op
 
             context.AddNode(node);
 
-            logger.LogDebug("开始调用链节点: {Handler}.{Operation}, TraceId: {TraceId}, 当前深度: {Depth}, 总节点数: {NodeCount}", 
+            logger.LogDebug("Started chain node {Handler}.{Operation} ({TraceId}); depth {Depth}, nodes {NodeCount}.",
                 handler, operation, node.TraceId, context.ActiveNodes.Count, context.NodeMap.Count);
 
             return node.TraceId;
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "开始调用链节点时发生异常: {Handler}.{Operation}", handler, operation);
+            logger.LogError(ex, "Failed to start chain node {Handler}.{Operation}.", handler, operation);
             return Guid.NewGuid().ToString("N"); // Return a synthetic TraceId so follow-up calls stay safe.
         }
     }
@@ -93,18 +93,18 @@ public class AsyncLocalChainTracingService(IOptions<ModuleChainTracingOption> op
             var context = _chainContext.Value;
             if (context == null)
             {
-                logger.LogWarning("尝试完成调用链节点但当前上下文为空: TraceId: {TraceId}", traceId);
+                logger.LogWarning("Cannot complete chain node {TraceId} because no chain context is active.", traceId);
                 return;
             }
 
             context.CompleteNode(traceId, result, success, exception, extraInfo);
 
-            logger.LogDebug("完成调用链节点: TraceId: {TraceId}, Success: {Success}, Result: {Result}", 
+            logger.LogDebug("Completed chain node {TraceId}; success {Success}, result {Result}.",
                 traceId, success, result);
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "完成调用链节点时发生异常: TraceId: {TraceId}", traceId);
+            logger.LogError(ex, "Failed to complete chain node {TraceId}.", traceId);
         }
     }
 
@@ -127,7 +127,7 @@ public class AsyncLocalChainTracingService(IOptions<ModuleChainTracingOption> op
 
             if (IsMaxNodeCountReached())
             {
-                logger.LogWarning("调用链节点数量已达到最大限制 {MaxNodeCount}，跳过记录简单调用: {Handler}.{Operation}", 
+                logger.LogWarning("Chain node count reached the {MaxNodeCount} limit; skipping {Handler}.{Operation}.",
                     _options.MaxNodeCount, handler, operation);
                 return;
             }
@@ -156,12 +156,12 @@ public class AsyncLocalChainTracingService(IOptions<ModuleChainTracingOption> op
             context.AddNode(node);
             context.CompleteNode(node.TraceId, result, success, null, extraInfo);
 
-            logger.LogDebug("记录简单调用链: {Handler}.{Operation}, Success: {Success}, Duration: {Duration}ms, 总节点数: {NodeCount}", 
+            logger.LogDebug("Recorded chain node {Handler}.{Operation}; success {Success}, duration {Duration} ms, nodes {NodeCount}.",
                 handler, operation, success, node.Duration, context.NodeMap.Count);
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "记录简单调用链时发生异常: {Handler}.{Operation}", handler, operation);
+            logger.LogError(ex, "Failed to record chain node {Handler}.{Operation}.", handler, operation);
         }
     }
 
@@ -233,7 +233,7 @@ public class AsyncLocalChainTracingService(IOptions<ModuleChainTracingOption> op
             var context = _chainContext.Value;
             if (context == null)
             {
-                logger.LogWarning("尝试合并远程调用链但当前上下文为空: TraceId: {TraceId}", traceId);
+                logger.LogWarning("Cannot merge remote chain into {TraceId} because no chain context is active.", traceId);
                 return;
             }
             var success = false;
@@ -251,13 +251,13 @@ public class AsyncLocalChainTracingService(IOptions<ModuleChainTracingOption> op
             if (success) return;
 
             var remoteChainInfoStr = remoteRes.ToJsonString()?.LimitMaxLength(3000, "...");
-            logger.LogWarning("合并远程调用链失败: TraceId: {TraceId}, RemoteChainInfo: {RemoteChainInfo}",
+            logger.LogWarning("Failed to merge remote chain into {TraceId}. Remote chain: {RemoteChainInfo}",
                 traceId, remoteChainInfoStr);
         }
         catch (Exception ex)
         {
             var remoteChainInfoStr = remoteRes.ToJsonString()?.LimitMaxLength(3000, "...");
-            logger.LogError(ex, "合并远程调用链时发生异常: TraceId: {TraceId}, RemoteChainInfo: {RemoteChainInfo}", 
+            logger.LogError(ex, "An error occurred while merging a remote chain into {TraceId}. Remote chain: {RemoteChainInfo}",
                 traceId, remoteChainInfoStr);
         }
     }

@@ -17,16 +17,16 @@ namespace Monica.Modules;
 /// </summary>
 public static class ModuleOpenTelemetryUIBuilderExtensions
 {
-    extension(Mo)
+    extension(IMonicaBuilder builder)
     {
         /// <summary>
         /// Registers the OpenTelemetry dashboard UI module and applies optional module configuration.
         /// </summary>
         /// <param name="action">Optional module option configuration delegate.</param>
         /// <returns>The module guide used to continue OpenTelemetry UI registration.</returns>
-        public static ModuleOpenTelemetryUIGuide AddOpenTelemetryUI(Action<ModuleOpenTelemetryUIOption>? action = null)
+        public ModuleOpenTelemetryUIGuide AddOpenTelemetryUI(Action<ModuleOpenTelemetryUIOption>? action = null)
         {
-            return new ModuleOpenTelemetryUIGuide().Register(action);
+            return builder.AddModule<ModuleOpenTelemetryUI, ModuleOpenTelemetryUIOption, ModuleOpenTelemetryUIGuide>(action);
         }
     }
 }

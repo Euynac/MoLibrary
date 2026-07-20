@@ -48,14 +48,14 @@ public class ModuleServiceDiscoveryUIGuide : ModuleGuide<ModuleServiceDiscoveryU
 
 public static class ModuleServiceDiscoveryUIBuilderExtensions
 {
-    extension(Mo)
+    extension(IMonicaBuilder builder)
     {
         /// <summary>
         /// Configure the ServiceDiscoveryUI module
         /// </summary>
-        public static ModuleServiceDiscoveryUIGuide AddServiceDiscoveryUI(Action<ModuleServiceDiscoveryUIOption>? action = null)
+        public ModuleServiceDiscoveryUIGuide AddServiceDiscoveryUI(Action<ModuleServiceDiscoveryUIOption>? action = null)
         {
-            return new ModuleServiceDiscoveryUIGuide().Register(action);
+            return builder.AddModule<ModuleServiceDiscoveryUI, ModuleServiceDiscoveryUIOption, ModuleServiceDiscoveryUIGuide>(action);
         }
     }
 }

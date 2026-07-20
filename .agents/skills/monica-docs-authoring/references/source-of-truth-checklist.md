@@ -27,7 +27,7 @@ Confirm:
 
 Open `Modules/Module{Name}.cs` and extract:
 
-- builder extension name: `Mo.Add{Name}()`
+- builder extension name: `monica.Add{Name}()` on `IMonicaBuilder`
 - `Module{Name}` summary and responsibilities
 - `Module{Name}Option` properties and real default values
 - extra option types
@@ -76,8 +76,8 @@ These are confirmation sources, not primary authority.
 When revising content under `../Monica.Docs/docs`:
 
 - keep only explanations that still match the code
-- rewrite old registration names to current `Mo.Add*()` names
-- add `Mo.RegisterInstantly(builder)` guidance when the real host composition requires registration-time module availability
+- rewrite old ambient registration to the complete `builder.AddMonica(monica => { ... })` host boundary
+- remove `builder.UseMonica()` and `Mo.RegisterInstantly(...)`; web hosts use `app.UseMonica()` and `app.MapMonica()` after `Build()`
 - discard stale architectural descriptions
 - remove speculation, abandoned plans, and historical notes unless the target page is explicitly about migration history
 
@@ -91,8 +91,8 @@ Confirm all of the following:
 - required setup is called out when applicable
 - package name is correct
 - public / private boundary is respected
-- the target output path is intentional and defaults to `../Monica.Docs/docs/zh-CN/`
-- no `en-US` mirror is added unless the user explicitly asks for English documentation
+- the target output path and locale are intentional
+- launch-critical public documentation is aligned across `en-US` and `zh-CN`
 
 ## Useful discovery commands
 

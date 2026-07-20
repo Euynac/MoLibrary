@@ -13,14 +13,22 @@ namespace Monica.Dapr.Services;
 /// Dapr-based distributed event bus implementation.
 /// Publishes events using Dapr PubSub component.
 /// </summary>
+/// <param name="serviceScopeFactory">Creates scopes for event handlers.</param>
+/// <param name="eventHandlerInvoker">Invokes resolved event handlers.</param>
+/// <param name="subscriptionManager">Owns this host's subscription catalog.</param>
+/// <param name="daprClient">Publishes events through the Dapr sidecar.</param>
+/// <param name="daprOptions">Provides Dapr event bus options.</param>
+/// <param name="loggerFactory">Creates the event bus logger.</param>
+/// <param name="serviceKey">An optional keyed-provider identifier.</param>
 public class DaprEventBusProvider(
     IServiceScopeFactory serviceScopeFactory,
     IEventHandlerInvoker eventHandlerInvoker,
     IEventSubscriptionRegistry subscriptionManager,
     DaprClient daprClient,
     IOptions<ModuleDaprEventBusOption> daprOptions,
+    ILoggerFactory loggerFactory,
     string? serviceKey = null)
-    : DistributedEventBusBase(serviceScopeFactory, eventHandlerInvoker, subscriptionManager, serviceKey)
+    : DistributedEventBusBase(serviceScopeFactory, eventHandlerInvoker, subscriptionManager, loggerFactory, serviceKey)
 {
     private readonly DaprClient _daprClient = daprClient ?? throw new ArgumentNullException(nameof(daprClient));
     private readonly ModuleDaprEventBusOption _daprOptions = daprOptions.Value ?? throw new ArgumentNullException(nameof(daprOptions));

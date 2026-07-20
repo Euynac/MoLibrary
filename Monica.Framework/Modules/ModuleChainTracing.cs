@@ -3,7 +3,6 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
 using Monica.Core;
-using Monica.Core.Logging;
 using Monica.Core.Modularity;
 using Monica.Core.Modularity.Abstractions;
 using Monica.Core.Modularity.Annotations;
@@ -24,14 +23,14 @@ namespace Monica.Modules;
 
 public static class ModuleChainTracingBuilderExtensions
 {
-    extension(Mo)
+    extension(IMonicaBuilder builder)
     {
         /// <summary>
         /// Configures the ChainTracing module.
         /// </summary>
-        public static ModuleChainTracingGuide AddChainTracing(Action<ModuleChainTracingOption>? action = null)
+        public ModuleChainTracingGuide AddChainTracing(Action<ModuleChainTracingOption>? action = null)
         {
-            return new ModuleChainTracingGuide().Register(action);
+            return builder.AddModule<ModuleChainTracing, ModuleChainTracingOption, ModuleChainTracingGuide>(action);
         }
     }
 }
@@ -94,7 +93,6 @@ public class ModuleChainTracingGuide : WebModuleGuide<ModuleChainTracing, Module
     public ModuleChainTracingGuide UseInvocationTracing(
         Func<ProxyBuildContext, bool>? shouldIntercept = null)
     {
-        DependsOnModule<ModuleExecutionTimingGuide>().Register();
         DependsOnModule<ModuleDynamicProxyGuide>().Register()
             .AddInterceptor<ChainTracingInvocationInterceptor>(shouldIntercept ?? ShouldTraceInvocation);
 
@@ -127,7 +125,7 @@ public class ModuleChainTracingGuide : WebModuleGuide<ModuleChainTracing, Module
         return this;
     }
 
-    private static bool ShouldTraceInvocation(
+    private bool ShouldTraceInvocation(
         ProxyBuildContext context)
     {
         var type = context.ImplementationType;
@@ -138,8 +136,7 @@ public class ModuleChainTracingGuide : WebModuleGuide<ModuleChainTracing, Module
             return false;
         }
 
-        LogManager.For(typeof(ModuleChainTracingGuide))
-            .LogDebug("Invocation chain record bind: {Service}", type.GetCleanFullName());
+        Logger.LogDebug("Invocation chain record bind: {Service}", type.GetCleanFullName());
 
         return true;
     }

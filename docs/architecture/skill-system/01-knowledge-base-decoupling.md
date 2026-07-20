@@ -57,7 +57,7 @@ Monica.AI/
       ModuleKnowledgeBase.cs              // module + Guide + Option
 ```
 
-Module key: `Monica.AI` already owns the existing `BuiltInModuleKey.AI` and `BuiltInModuleKey.RAG`. Add `BuiltInModuleKey.KnowledgeBase` (next to `RAG` in `BuiltInModuleKey.cs`). The module is registered via `Mo.AddKnowledgeBase(...)` in the standard Monica fluent style.
+Module key: `Monica.AI` already owns the existing `BuiltInModuleKey.AI` and `BuiltInModuleKey.RAG`. Add `BuiltInModuleKey.KnowledgeBase` (next to `RAG` in `BuiltInModuleKey.cs`). The module is registered via `monica.AddKnowledgeBase(...)` in the standard Monica fluent style.
 
 Rationale for keeping it inside `Monica.AI` rather than carving out `Monica.AI.KnowledgeBase` as a separate project: KB is conceptually part of the AI surface, has no consumers outside `Monica.AI`, and a separate project would invert the dependency arrow (RAG would have to reference KB) — which is correct, but the project graph already handles that internally without requiring a new `.csproj` file. See open question (a).
 
@@ -480,12 +480,12 @@ When Phase A is implemented and PR merged:
 1. `Monica.AI/KnowledgeBase/` feature folder exists with all directories listed in §2.1 and §5.2 populated.
 2. `Monica.AI.UI/UIKnowledgeBase/` feature folder exists with all directories listed in §2.2 and §5.5 populated.
 3. `BuiltInModuleKey.cs` has `KnowledgeBase` and `KnowledgeBaseUI` entries.
-4. `Mo.AddKnowledgeBase()` and `Mo.AddKnowledgeBaseUI()` extension methods are callable from a host that does not register `Mo.AddRAG()`. The KB Manage page renders, KB CRUD works, KB Selector works in the chat page — all without RAG.
+4. `monica.AddKnowledgeBase()` and `monica.AddKnowledgeBaseUI()` extension methods are callable from a host that does not register `monica.AddRAG()`. The KB Manage page renders, KB CRUD works, KB Selector works in the chat page — all without RAG.
 5. `KnowledgeSearchToolProvider` continues to work unchanged in this phase (its full Skill migration is Phase B). KB list load in `ChatPageState` uses `KnowledgeBaseFacade`, not `RAGFacade`.
 6. `RAGFacade` no longer carries any KB-CRUD methods. In-tree callers were migrated to `KnowledgeBaseFacade` in the same PR.
 7. `ModuleRAG` declares `DependsOnModule<ModuleKnowledgeBaseGuide>()`. `ModuleRAGUI` declares `DependsOnModule<ModuleKnowledgeBaseUIGuide>()` and no longer registers KB management pages.
 8. Solution builds with **zero new warnings** (per `CLAUDE.md` build-warning policy).
-9. UI smoke test: load chat page with `Mo.AddRAG()` not configured → KB selector still renders → user can select a KB → chat starts normally (with no RAG-search Skill available, only the lookup-only Skill from Phase B; in Phase A pre-merge, no Skill at all is fine).
+9. UI smoke test: load chat page with `monica.AddRAG()` not configured → KB selector still renders → user can select a KB → chat starts normally (with no RAG-search Skill available, only the lookup-only Skill from Phase B; in Phase A pre-merge, no Skill at all is fine).
 
 ## 8. Cross-doc references
 

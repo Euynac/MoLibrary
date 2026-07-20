@@ -5,8 +5,8 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Localization;
 using Monica.Core;
-using Monica.Core.Localization.Services;
 using Monica.Core.Modularity;
 using Monica.Core.Modularity.Abstractions;
 using Monica.Core.Modularity.Annotations;
@@ -29,16 +29,16 @@ namespace Monica.Modules;
 /// </summary>
 public static class ModuleEventBusKafkaBuilderExtensions
 {
-    extension(Mo)
+    extension(IMonicaBuilder builder)
     {
         /// <summary>
         /// Registers the Kafka EventBus provider and Kafka management console services.
         /// </summary>
         /// <param name="action">Optional module option configuration.</param>
         /// <returns>The Kafka EventBus guide used for chained configuration.</returns>
-        public static ModuleEventBusKafkaGuide AddEventBusKafka(Action<ModuleEventBusKafkaOption>? action = null)
+        public ModuleEventBusKafkaGuide AddEventBusKafka(Action<ModuleEventBusKafkaOption>? action = null)
         {
-            return new ModuleEventBusKafkaGuide().Register(action);
+            return builder.AddModule<ModuleEventBusKafka, ModuleEventBusKafkaOption, ModuleEventBusKafkaGuide>(action);
         }
     }
 }
@@ -102,6 +102,8 @@ public sealed class ModuleEventBusKafka(ModuleEventBusKafkaOption option)
     /// <inheritdoc />
     public override void ConfigureEndpoints(IApplicationBuilder app)
     {
+        var localizer = app.ApplicationServices.GetRequiredService<IStringLocalizer<EventBusKafkaResource>>();
+
         UseEndpoints(app, endpoints =>
         {
             var tagName = Option.GetApiGroupName();
@@ -111,16 +113,16 @@ public sealed class ModuleEventBusKafka(ModuleEventBusKafkaOption option)
                         (await facade.GetIntegrationAsync(cancellationToken)).GetResponse())
                 .WithName("GetEventBusKafkaIntegration")
                 .WithTags(tagName)
-                .WithSummary(LocalizationManager.Get<EventBusKafkaResource>("Api:Integration:Get:Summary"))
-                .WithDescription(LocalizationManager.Get<EventBusKafkaResource>("Api:Integration:Get:Description"));
+                .WithSummary(localizer["Api:Integration:Get:Summary"].Value)
+                .WithDescription(localizer["Api:Integration:Get:Description"].Value);
 
             endpoints.MapGet("/eventbus-kafka/clusters",
                     async ([FromServices] KafkaConsoleFacade facade, CancellationToken cancellationToken) =>
                         (await facade.ListClustersAsync(cancellationToken)).GetResponse())
                 .WithName("ListEventBusKafkaClusters")
                 .WithTags(tagName)
-                .WithSummary(LocalizationManager.Get<EventBusKafkaResource>("Api:Clusters:List:Summary"))
-                .WithDescription(LocalizationManager.Get<EventBusKafkaResource>("Api:Clusters:List:Description"));
+                .WithSummary(localizer["Api:Clusters:List:Summary"].Value)
+                .WithDescription(localizer["Api:Clusters:List:Description"].Value);
 
             endpoints.MapPost("/eventbus-kafka/clusters",
                     async ([FromBody] KafkaClusterUpsertRequest request,
@@ -129,8 +131,8 @@ public sealed class ModuleEventBusKafka(ModuleEventBusKafkaOption option)
                         (await facade.UpsertClusterAsync(request, cancellationToken)).GetResponse())
                 .WithName("UpsertEventBusKafkaCluster")
                 .WithTags(tagName)
-                .WithSummary(LocalizationManager.Get<EventBusKafkaResource>("Api:Clusters:Upsert:Summary"))
-                .WithDescription(LocalizationManager.Get<EventBusKafkaResource>("Api:Clusters:Upsert:Description"));
+                .WithSummary(localizer["Api:Clusters:Upsert:Summary"].Value)
+                .WithDescription(localizer["Api:Clusters:Upsert:Description"].Value);
 
             endpoints.MapDelete("/eventbus-kafka/clusters/{clusterId}",
                     async ([FromRoute] string clusterId,
@@ -139,8 +141,8 @@ public sealed class ModuleEventBusKafka(ModuleEventBusKafkaOption option)
                         (await facade.DeleteClusterAsync(clusterId, cancellationToken)).GetResponse())
                 .WithName("DeleteEventBusKafkaCluster")
                 .WithTags(tagName)
-                .WithSummary(LocalizationManager.Get<EventBusKafkaResource>("Api:Clusters:Delete:Summary"))
-                .WithDescription(LocalizationManager.Get<EventBusKafkaResource>("Api:Clusters:Delete:Description"));
+                .WithSummary(localizer["Api:Clusters:Delete:Summary"].Value)
+                .WithDescription(localizer["Api:Clusters:Delete:Description"].Value);
 
             endpoints.MapPost("/eventbus-kafka/clusters/{clusterId}/test",
                     async ([FromRoute] string clusterId,
@@ -149,8 +151,8 @@ public sealed class ModuleEventBusKafka(ModuleEventBusKafkaOption option)
                         (await facade.TestClusterAsync(clusterId, cancellationToken)).GetResponse())
                 .WithName("TestEventBusKafkaCluster")
                 .WithTags(tagName)
-                .WithSummary(LocalizationManager.Get<EventBusKafkaResource>("Api:Clusters:Test:Summary"))
-                .WithDescription(LocalizationManager.Get<EventBusKafkaResource>("Api:Clusters:Test:Description"));
+                .WithSummary(localizer["Api:Clusters:Test:Summary"].Value)
+                .WithDescription(localizer["Api:Clusters:Test:Description"].Value);
 
             endpoints.MapGet("/eventbus-kafka/clusters/{clusterId}/dashboard",
                     async ([FromRoute] string clusterId,
@@ -159,8 +161,8 @@ public sealed class ModuleEventBusKafka(ModuleEventBusKafkaOption option)
                         (await facade.GetDashboardAsync(clusterId, cancellationToken)).GetResponse())
                 .WithName("GetEventBusKafkaDashboard")
                 .WithTags(tagName)
-                .WithSummary(LocalizationManager.Get<EventBusKafkaResource>("Api:Dashboard:Get:Summary"))
-                .WithDescription(LocalizationManager.Get<EventBusKafkaResource>("Api:Dashboard:Get:Description"));
+                .WithSummary(localizer["Api:Dashboard:Get:Summary"].Value)
+                .WithDescription(localizer["Api:Dashboard:Get:Description"].Value);
 
             endpoints.MapGet("/eventbus-kafka/clusters/{clusterId}/topics",
                     async ([FromRoute] string clusterId,
@@ -169,8 +171,8 @@ public sealed class ModuleEventBusKafka(ModuleEventBusKafkaOption option)
                         (await facade.ListTopicsAsync(clusterId, cancellationToken)).GetResponse())
                 .WithName("ListEventBusKafkaTopics")
                 .WithTags(tagName)
-                .WithSummary(LocalizationManager.Get<EventBusKafkaResource>("Api:Topics:List:Summary"))
-                .WithDescription(LocalizationManager.Get<EventBusKafkaResource>("Api:Topics:List:Description"));
+                .WithSummary(localizer["Api:Topics:List:Summary"].Value)
+                .WithDescription(localizer["Api:Topics:List:Description"].Value);
 
             endpoints.MapPost("/eventbus-kafka/topics",
                     async ([FromBody] KafkaTopicCreateRequest request,
@@ -179,8 +181,8 @@ public sealed class ModuleEventBusKafka(ModuleEventBusKafkaOption option)
                         (await facade.CreateTopicAsync(request, cancellationToken)).GetResponse())
                 .WithName("CreateEventBusKafkaTopic")
                 .WithTags(tagName)
-                .WithSummary(LocalizationManager.Get<EventBusKafkaResource>("Api:Topics:Create:Summary"))
-                .WithDescription(LocalizationManager.Get<EventBusKafkaResource>("Api:Topics:Create:Description"));
+                .WithSummary(localizer["Api:Topics:Create:Summary"].Value)
+                .WithDescription(localizer["Api:Topics:Create:Description"].Value);
 
             endpoints.MapDelete("/eventbus-kafka/clusters/{clusterId}/topics/{topicName}",
                     async ([FromRoute] string clusterId,
@@ -190,8 +192,8 @@ public sealed class ModuleEventBusKafka(ModuleEventBusKafkaOption option)
                         (await facade.DeleteTopicAsync(clusterId, topicName, cancellationToken)).GetResponse())
                 .WithName("DeleteEventBusKafkaTopic")
                 .WithTags(tagName)
-                .WithSummary(LocalizationManager.Get<EventBusKafkaResource>("Api:Topics:Delete:Summary"))
-                .WithDescription(LocalizationManager.Get<EventBusKafkaResource>("Api:Topics:Delete:Description"));
+                .WithSummary(localizer["Api:Topics:Delete:Summary"].Value)
+                .WithDescription(localizer["Api:Topics:Delete:Description"].Value);
 
             endpoints.MapPost("/eventbus-kafka/topics/partitions",
                     async ([FromBody] KafkaTopicPartitionRequest request,
@@ -200,8 +202,8 @@ public sealed class ModuleEventBusKafka(ModuleEventBusKafkaOption option)
                         (await facade.IncreasePartitionsAsync(request, cancellationToken)).GetResponse())
                 .WithName("IncreaseEventBusKafkaTopicPartitions")
                 .WithTags(tagName)
-                .WithSummary(LocalizationManager.Get<EventBusKafkaResource>("Api:Topics:Partitions:Summary"))
-                .WithDescription(LocalizationManager.Get<EventBusKafkaResource>("Api:Topics:Partitions:Description"));
+                .WithSummary(localizer["Api:Topics:Partitions:Summary"].Value)
+                .WithDescription(localizer["Api:Topics:Partitions:Description"].Value);
 
             endpoints.MapPost("/eventbus-kafka/topics/retention",
                     async ([FromBody] KafkaTopicRetentionRequest request,
@@ -210,8 +212,8 @@ public sealed class ModuleEventBusKafka(ModuleEventBusKafkaOption option)
                         (await facade.UpdateRetentionAsync(request, cancellationToken)).GetResponse())
                 .WithName("UpdateEventBusKafkaTopicRetention")
                 .WithTags(tagName)
-                .WithSummary(LocalizationManager.Get<EventBusKafkaResource>("Api:Topics:Retention:Summary"))
-                .WithDescription(LocalizationManager.Get<EventBusKafkaResource>("Api:Topics:Retention:Description"));
+                .WithSummary(localizer["Api:Topics:Retention:Summary"].Value)
+                .WithDescription(localizer["Api:Topics:Retention:Description"].Value);
 
             endpoints.MapPost("/eventbus-kafka/topics/messages",
                     async ([FromBody] KafkaTopicMessagesRequest request,
@@ -220,8 +222,8 @@ public sealed class ModuleEventBusKafka(ModuleEventBusKafkaOption option)
                         (await facade.ReadTopicMessagesAsync(request, cancellationToken)).GetResponse())
                 .WithName("ReadEventBusKafkaTopicMessages")
                 .WithTags(tagName)
-                .WithSummary(LocalizationManager.Get<EventBusKafkaResource>("Api:Topics:Messages:Summary"))
-                .WithDescription(LocalizationManager.Get<EventBusKafkaResource>("Api:Topics:Messages:Description"));
+                .WithSummary(localizer["Api:Topics:Messages:Summary"].Value)
+                .WithDescription(localizer["Api:Topics:Messages:Description"].Value);
 
             endpoints.MapGet("/eventbus-kafka/clusters/{clusterId}/topics/{topicName}/backlog",
                     async ([FromRoute] string clusterId,
@@ -231,8 +233,8 @@ public sealed class ModuleEventBusKafka(ModuleEventBusKafkaOption option)
                         (await facade.GetTopicBacklogAsync(clusterId, topicName, cancellationToken)).GetResponse())
                 .WithName("GetEventBusKafkaTopicBacklog")
                 .WithTags(tagName)
-                .WithSummary(LocalizationManager.Get<EventBusKafkaResource>("Api:Topics:Backlog:Summary"))
-                .WithDescription(LocalizationManager.Get<EventBusKafkaResource>("Api:Topics:Backlog:Description"));
+                .WithSummary(localizer["Api:Topics:Backlog:Summary"].Value)
+                .WithDescription(localizer["Api:Topics:Backlog:Description"].Value);
 
             endpoints.MapGet("/eventbus-kafka/clusters/{clusterId}/consumer-groups",
                     async ([FromRoute] string clusterId,
@@ -241,8 +243,8 @@ public sealed class ModuleEventBusKafka(ModuleEventBusKafkaOption option)
                         (await facade.ListConsumerGroupsAsync(clusterId, cancellationToken)).GetResponse())
                 .WithName("ListEventBusKafkaConsumerGroups")
                 .WithTags(tagName)
-                .WithSummary(LocalizationManager.Get<EventBusKafkaResource>("Api:ConsumerGroups:List:Summary"))
-                .WithDescription(LocalizationManager.Get<EventBusKafkaResource>("Api:ConsumerGroups:List:Description"));
+                .WithSummary(localizer["Api:ConsumerGroups:List:Summary"].Value)
+                .WithDescription(localizer["Api:ConsumerGroups:List:Description"].Value);
 
             endpoints.MapGet("/eventbus-kafka/clusters/{clusterId}/performance",
                     async ([FromRoute] string clusterId,
@@ -252,8 +254,8 @@ public sealed class ModuleEventBusKafka(ModuleEventBusKafkaOption option)
                         (await facade.GetPerformanceHistoryAsync(clusterId, limit, cancellationToken)).GetResponse())
                 .WithName("GetEventBusKafkaPerformanceHistory")
                 .WithTags(tagName)
-                .WithSummary(LocalizationManager.Get<EventBusKafkaResource>("Api:Performance:History:Summary"))
-                .WithDescription(LocalizationManager.Get<EventBusKafkaResource>("Api:Performance:History:Description"));
+                .WithSummary(localizer["Api:Performance:History:Summary"].Value)
+                .WithDescription(localizer["Api:Performance:History:Description"].Value);
 
             endpoints.MapPost("/eventbus-kafka/clusters/{clusterId}/performance/capture",
                     async ([FromRoute] string clusterId,
@@ -262,8 +264,8 @@ public sealed class ModuleEventBusKafka(ModuleEventBusKafkaOption option)
                         (await facade.CapturePerformanceAsync(clusterId, cancellationToken)).GetResponse())
                 .WithName("CaptureEventBusKafkaPerformance")
                 .WithTags(tagName)
-                .WithSummary(LocalizationManager.Get<EventBusKafkaResource>("Api:Performance:Capture:Summary"))
-                .WithDescription(LocalizationManager.Get<EventBusKafkaResource>("Api:Performance:Capture:Description"));
+                .WithSummary(localizer["Api:Performance:Capture:Summary"].Value)
+                .WithDescription(localizer["Api:Performance:Capture:Description"].Value);
         });
     }
 }

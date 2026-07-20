@@ -23,8 +23,9 @@ public abstract class EventBusSubscriptionHostedServiceBase(
     IEventBus eventBus,
     IObservableInstanceRegistry observableManager,
     IOptions<ModuleHostedServiceOption> hostedServiceOptions,
+    ILogger logger,
     string? serviceKey)
-    : MoBackgroundService(observableManager, hostedServiceOptions), IObserver<EventSubscriptionChange>
+    : MoBackgroundService(observableManager, hostedServiceOptions, logger), IObserver<EventSubscriptionChange>
 {
     protected readonly IEventSubscriptionRegistry SubscriptionManager = subscriptionManager;
     protected readonly IEventBus EventBus = eventBus;

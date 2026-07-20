@@ -2,33 +2,22 @@
 
 ## Test Shape
 
-Sociable application tests boot a real Monica application graph and replace only boundaries. The test should exercise production registrations for handlers, domain services, repositories, mappers, options, and module guide wiring.
+A sociable scenario creates a complete Monica host, replaces only boundaries before host build, and resolves production handlers, domain services, repositories, mappers, options, and module services from DI.
 
-Use this pattern for business application services and DDD modules. Infrastructure modules can still use focused module-guide, provider, facade, or pure service tests when full host boot does not add signal.
+Use focused direct or raw ProjectUnit tests only when host composition adds no relevant behavior.
 
 ## Project Layout
 
-The runnable test project name must be `Test.` plus the exact production project name. The folder, `.csproj` file, assembly name, and root namespace must match that value exactly.
-
-Examples:
-
-- `UserService.API.csproj` -> `Test.UserService.API/Test.UserService.API.csproj`
-- `AlarmService.API.csproj` -> `Test.AlarmService.API/Test.AlarmService.API.csproj`
-- `MessageService.Domain.csproj` -> `Test.MessageService.Domain/Test.MessageService.Domain.csproj`
-
-Do not drop suffixes such as `.API`, `.Domain`, `.Infrastructure`, `.Adaptor`, or `.WebAPI`. A shortened name like `Test.AlarmService` is not compliant when the project under test is `AlarmService.API`.
+Name the runnable project `Test.` plus the exact production project stem. Keep its folder, project file, assembly, and root namespace identical.
 
 ```text
 Test.UserService.API/
   Test.UserService.API.csproj
   GlobalUsings.cs
-  CollectionFixtures/
-    UserServiceCollection.cs
-    UserServiceTestFixture.cs
+  Factories/
+    UserServiceTestApplicationFactory.cs
   HandlersCommand/
-    CommandHandlerUserLoginTests.cs
   HandlersQuery/
-    QueryHandlerUserCheckTests.cs
   DomainServices/
   Repositories/
   Entities/
@@ -38,47 +27,62 @@ Test.UserService.API/
   TestData/
 ```
 
-Mirror source folders for tests. Keep test-only support folders at the project root.
+Do not shorten suffixes such as `.API`, `.Domain`, `.Infrastructure`, `.Adaptor`, or `.WebAPI`.
 
-## Fixture Rules
+## Factory Rules
 
-- One service test project has one primary collection fixture.
-- The fixture derives from `MonicaApplicationFixture<TStartupModule>` when a module startup type exists.
-- Register test databases in `ConfigureDefaults`.
-- Register service-specific module guide options in `ConfigureModule`.
-- Use `ConfigureOverrides` only for final replacements after Monica module registration.
-- Keep fixtures small; project-specific fake behavior belongs in `TestDoubles/`.
+- Derive one stateless project recipe from `MonicaTestApplicationFactory<TDiscoveryAnchor>`.
+- Choose an anchor whose assembly contains the business types that Monica must discover.
+- Override `TypeDiscoveryAssemblies` when the scenario spans multiple production assemblies; do not duplicate Monica type-discovery setup inside `ConfigureMonica`.
+- Implement `ConfigureMonica(IMonicaBuilder)` with the relevant production module graph.
+- Use `ConfigureHost(WebApplicationBuilder)` for configuration sources, environment, or other host-builder inputs.
+- Use `ConfigureServices(IServiceCollection)` for stable test databases and boundary adapters shared by all scenarios; call `base.ConfigureServices(services)` first unless all standard seams are intentionally replaced.
+- Keep project-specific double behavior in `TestDoubles/`.
+- Never store a created `MonicaTestApplication`, service provider, scope, or mutable scenario state on the factory.
 
-## Test Rules
+## Scenario Rules
 
-- Test classes using the host carry `[Collection(ServiceCollection.Name)]`.
-- Constructor receives the fixture and stores it as `_app`.
-- The first action in each test is `await using var scope = _app.NewScope(...)`.
-- Resolve the unit under test from `scope`.
-- Pass `scope.CancellationToken` to async Monica or EF calls.
-- Assert `Res<T>` with Monica result assertion helpers when applicable.
-- Assert side effects through public surfaces: repositories, DbContexts, `RecordingEventBus`, or state-store reads.
+- Call `factory.CreateAsync(...)` once per independently isolated scenario.
+- Put test-specific seam registrations in its `ISeamReplacementBuilder` callback.
+- Create normal child scopes with `application.CreateScope(...)`.
+- Resolve units under test from `MonicaTestScope`.
+- Dispose every scope before its owning application.
+- Use multiple scopes in one application only when the behavior deliberately spans scopes under the same host.
+- Use `application.Services`, `application.Application`, or `application.ModuleSnapshots` for host-level assertions.
+
+The service collection is immutable after build. A scope may select scoped state, but it cannot replace registrations.
 
 ## Replacement Rules
 
 Replace leaves and adapters:
 
-- state store
-- event bus
-- DbContext provider/database
+- state stores and caches
+- event transports
+- DbContext provider or database
 - HTTP/RPC clients
-- current user or tenant
-- local config/adapters
+- current user or tenant context
+- local configuration adapters
+- clocks, random sources, or ID generators when nondeterminism matters
 
-Do not replace application services, domain services, repositories, or mappers unless the test is deliberately about an external seam exposed through that type.
+Do not replace application services, domain services, repositories, or mappers unless that type is itself the external boundary under test.
+
+## Fast Path
+
+Use `ProjectUnitFixture<TUnit>` only as a raw activation harness with explicit collaborators. Its assertions must not claim to cover Monica module wiring, type discovery, conventional registration, dynamic proxies, interceptors, options binding, hosted lifecycle, or host isolation.
+
+Do not maintain a parallel `ApplicationServiceFixture<THandler>` abstraction.
 
 ## Migration Rules
 
-- Delete tests that have no assertions, only `Console.WriteLine`, only performance loops, only random/manual output, or depend on untracked local files.
-- Migrate deterministic parser, validator, domain model, and branch behavior tests.
-- Convert old Moq/Shouldly/NUnit style to xUnit v3, NSubstitute, and AwesomeAssertions.
-- Keep names in exact `Test.{ProductionProjectName}` form. Do not keep shortened names like `Test.AlarmService` for `AlarmService.API`, or legacy names like `*.Xunit.Test`, `*.XUnit`, or `TestBase`.
+- Replace copied service-descriptor roots and shared `MonicaApplication` fixtures with scenario hosts.
+- Move per-scope registration replacements to the `CreateAsync(...)` callback.
+- Replace shared mutable singleton doubles with scenario-owned registrations.
+- Delete compatibility fixtures that manually reconstruct production DI.
+- Delete tests with no assertions, manual output only, uncontrolled random loops, untracked files, or live external calls.
+- Convert retained tests to xUnit v3, NSubstitute, and AwesomeAssertions.
 
 ## Parallelism
 
-Monica application tests assume serial collection execution because module registration and type discovery include ambient process state. Keep the test runner serial unless the host state isolation has been revalidated.
+Run independent scenarios in parallel because each scenario host owns its composition state.
+
+Serialize only tests that share a named external resource that cannot be isolated. Prefer unique database names, ports, directories, topics, queue names, and containers before introducing a collection-level lock.

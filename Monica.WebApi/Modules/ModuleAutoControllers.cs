@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Mvc.ApiExplorer;
 using Microsoft.AspNetCore.Mvc.Controllers;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Options;
 using Monica.Core;
 using Monica.Core.Modularity;
 using Monica.Core.Modularity.Abstractions;
@@ -20,15 +21,14 @@ namespace Monica.Modules;
 
 public static class ModuleAutoControllersBuilderExtensions
 {
-    extension(Mo)
+    extension(IMonicaBuilder builder)
     {
         /// <summary>
         /// Registers and configures the AutoControllers module.
         /// </summary>
-        public static ModuleAutoControllersGuide AddAutoControllers(Action<ModuleAutoControllersOption>? action = null, Action<CrudControllerOption>? crudOptionAction = null)
+        public ModuleAutoControllersGuide AddAutoControllers(Action<ModuleAutoControllersOption>? action = null, Action<CrudControllerOption>? crudOptionAction = null)
         {
-            return new ModuleAutoControllersGuide()
-                .Register(action)
+            return builder.AddModule<ModuleAutoControllers, ModuleAutoControllersOption, ModuleAutoControllersGuide>(action)
                 .ConfigureExtraOption(crudOptionAction);
         }
     }
@@ -44,6 +44,10 @@ public class ModuleAutoControllers(ModuleAutoControllersOption option)
     {
         // Keep discovery state on a module-owned singleton so direct and transitive registration paths share it.
         services.AddSingleton(_applicationPartCatalog);
+        services.TryAddSingleton<IConventionalHttpMethodResolver, ConventionalHttpMethodResolver>();
+        services.TryAddEnumerable(
+            ServiceDescriptor.Singleton<IValidateOptions<CrudControllerOption>, CrudControllerOptionValidator>());
+        services.AddOptions<CrudControllerOption>().ValidateOnStart();
     }
 
     public override void ConfigureEndpoints(IApplicationBuilder app)
@@ -107,10 +111,20 @@ public class ModuleAutoControllers(ModuleAutoControllersOption option)
     }
 }
 
+/// <summary>
+/// Provides fluent configuration for generated AutoControllers.
+/// </summary>
 public class ModuleAutoControllersGuide : WebModuleGuide<ModuleAutoControllers, ModuleAutoControllersOption,
     ModuleAutoControllersGuide>
 {
 
 }
 
+/// <summary>
+/// Configures the AutoControllers module lifecycle.
+/// </summary>
+/// <remarks>
+/// Generated CRUD routes, paging, and HTTP method conventions are configured through
+/// <see cref="CrudControllerOption" /> in the second <c>AddAutoControllers</c> callback.
+/// </remarks>
 public class ModuleAutoControllersOption : ModuleOptions<ModuleAutoControllers>;

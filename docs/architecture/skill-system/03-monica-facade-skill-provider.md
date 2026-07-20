@@ -397,17 +397,17 @@ public sealed class ModuleAIFacadeProviderGuide
 }
 ```
 
-The `Mo` extension methods:
+The `IMonicaBuilder` extension method:
 
 ```csharp
 public static class ModuleAIFacadeProviderBuilderExtensions
 {
-    extension(Mo)
+    extension(IMonicaBuilder builder)
     {
-        public static ModuleAIFacadeProviderGuide AddAIFacadeSkills(
+        public ModuleAIFacadeProviderGuide AddAIFacadeSkills(
             Action<ModuleAIFacadeProviderOption>? action = null)
         {
-            return new ModuleAIFacadeProviderGuide().Register(action);
+            return builder.AddModule<ModuleAIFacadeProvider, ModuleAIFacadeProviderOption, ModuleAIFacadeProviderGuide>(action);
         }
     }
 }
@@ -417,10 +417,10 @@ Usage:
 
 ```csharp
 // Register everything.
-Mo.AddAIFacadeSkills().UseAllFacades();
+monica.AddAIFacadeSkills().UseAllFacades();
 
 // Register selectively.
-Mo.AddAIFacadeSkills().UseFacades(
+monica.AddAIFacadeSkills().UseFacades(
     typeof(RAGFacade),
     typeof(KnowledgeBaseFacade));
 ```
@@ -522,7 +522,7 @@ The `IServiceProvider` parameter is treated specially by `AIFunctionFactory.Crea
 
 A `ModuleFacadeSkill`'s `RequiredModules`-equivalent gate is implicit: the discovery scan only sees Facade types whose owning assemblies are loaded. There is no per-Skill `RequiredModules` because `IMonicaFacade` types aren't `MoSkill<TSelf>` subclasses. If a Facade lives in an assembly that isn't loaded, the type isn't discovered, and no script is created for it.
 
-The `ModuleFacadeSkill` is built only for modules with at least one surviving Facade script. If `Mo.AddRAG()` is not called, no `RAGFacade` is registered (today, RAG facades are registered conditionally inside `ModuleRAG`), and `module-rag` doesn't appear.
+The `ModuleFacadeSkill` is built only for modules with at least one surviving Facade script. If `monica.AddRAG()` is not called, no `RAGFacade` is registered (today, RAG facades are registered conditionally inside `ModuleRAG`), and `module-rag` doesn't appear.
 
 ### 7.3 Async vs sync
 
@@ -628,9 +628,9 @@ When Phase C is implemented:
 
 1. `Monica.Framework/AISkillProviders/Facade/` folder exists with all files listed in §1.1.
 2. `BuiltInModuleKey.AIFacadeProvider` exists.
-3. `Mo.AddAIFacadeSkills().UseAllFacades()` and `Mo.AddAIFacadeSkills().UseFacades(...)` are callable from a host `Program.cs`.
+3. `monica.AddAIFacadeSkills().UseAllFacades()` and `monica.AddAIFacadeSkills().UseFacades(...)` are callable from a host `Program.cs`.
 4. Every existing Monica Facade has been marked `: IMonicaFacade`. The migration PR includes a comprehensive checklist of Facades touched.
-5. End-to-end smoke test: a host registers `Mo.AddAI()`, `Mo.AddRAG()`, `Mo.AddKnowledgeBase()`, and `Mo.AddAIFacadeSkills().UseAllFacades()`. The chat agent's system prompt contains entries for `module-rag`, `module-knowledge-base`, and `module-ai`. Loading each module skill shows Facade-grouped scripts with method-derived names and non-fallback descriptions.
+5. End-to-end smoke test: a host registers `monica.AddAI()`, `monica.AddRAG()`, `monica.AddKnowledgeBase()`, and `monica.AddAIFacadeSkills().UseAllFacades()`. The chat agent's system prompt contains entries for `module-rag`, `module-knowledge-base`, and `module-ai`. Loading each module skill shows Facade-grouped scripts with method-derived names and non-fallback descriptions.
 6. The smoke test verifies the Agent Framework call shape: Facade methods are invoked through `run_skill_script` using `skillName`, `scriptName`, and `arguments`; individual scripts are not top-level tools.
 7. The `Res<T>` unwrap rule is verified in the smoke test: a script that calls `RAGFacade.SearchAsync` returns the unwrapped `IReadOnlyList<TextSearchResult>` JSON. A script that calls a method that returns `Res.Fail("...")` results in a tool error with the failure message visible to the agent.
 8. The two worked examples from §2.6 and §2.7 are reproduced verbatim in the integration test fixtures.

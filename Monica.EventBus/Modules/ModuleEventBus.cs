@@ -19,14 +19,14 @@ namespace Monica.Modules;
 
 public static class ModuleEventBusBuilderExtensions
 {
-    extension(Mo)
+    extension(IMonicaBuilder builder)
     {
         /// <summary>
         /// Configures the EventBus module.
         /// </summary>
-        public static ModuleEventBusGuide AddEventBus(Action<ModuleEventBusOption>? action = null)
+        public ModuleEventBusGuide AddEventBus(Action<ModuleEventBusOption>? action = null)
         {
-            return new ModuleEventBusGuide().Register(action);
+            return builder.AddModule<ModuleEventBus, ModuleEventBusOption, ModuleEventBusGuide>(action);
         }
     }
 }

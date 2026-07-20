@@ -1,76 +1,58 @@
 # Sociable Application Test Templates
 
-These templates use `UserService.API` as the neutral business-service sample. When adapting them, keep the runnable test project name equal to `Test.` plus the exact production project name.
+These templates use `UserService.API` as a neutral example. Keep the real runnable project name equal to `Test.` plus the exact production project stem.
 
-## Collection
-
-```csharp
-namespace Test.UserService.API.CollectionFixtures;
-
-[CollectionDefinition(Name)]
-public sealed class UserServiceCollection : ICollectionFixture<UserServiceTestFixture>
-{
-    public const string Name = "UserService";
-}
-```
-
-## Fixture
+## Project Factory
 
 ```csharp
-using Microsoft.Extensions.DependencyInjection.Extensions;
-
-namespace Test.UserService.API.CollectionFixtures;
-
-public sealed class UserServiceTestFixture : PlatformApplicationFixture<CommandHandlerUserLogin>
+public sealed class UserServiceTestApplicationFactory
+    : MonicaTestApplicationFactory<CommandHandlerUserLogin>
 {
-    protected override void ConfigureMappings(TypeAdapterConfig config)
+    protected override void ConfigureHost(WebApplicationBuilder builder)
     {
-        config.NewConfig<JwtAuthResult, ResponseUserLogin>();
-        config.NewConfig<User, ResponseUserCheck>()
-            .Map(destination => destination.OrganUnit, source => source.OrganUnit);
-        config.NewConfig<OrganUnit, DtoOrganUnit>();
+        builder.Environment.EnvironmentName = Environments.Development;
     }
 
-    protected override void ConfigureService(IServiceCollection services)
+    protected override void ConfigureMonica(IMonicaBuilder monica)
     {
-        AddTestDbContext<UserDbContext>(services);
-        AddRepository<IRepositoryUser, RepositoryUser>(services);
-        AddRepository<IRepositoryRole, RepositoryRole>(services);
-        AddRepository<IRepositoryPermission, RepositoryPermission>(services);
+        monica.AddUserService(options => options.EnableExternalNotifications = false);
+    }
 
-        services.AddScoped<DomainUserManager>();
-        services.AddScoped<QueryHandlerUserCheck>();
-        services.AddScoped<CommandHandlerUserLogin>();
-        services.AddSingleton<IPasswordCrypto, PasswordCrypto>();
-        services.AddSingleton<IAeroLocalConfig, TestAeroLocalConfig>();
-        services.AddSingleton<ISnowflakeIdGenerator, SequentialTestSnowflakeIdGenerator>();
-
-        services.RemoveAll<IJwtAuthManager>();
-        services.AddSingleton<IJwtAuthManager, StubJwtAuthManager>();
+    protected override void ConfigureServices(IServiceCollection services)
+    {
+        base.ConfigureServices(services);
+        services.UseTestDatabase<UserDbContext>(DatabaseIsolation.PerScopeDatabase);
+        services.RemoveAll<IExternalUserDirectory>();
+        services.AddSingleton<IExternalUserDirectory, StubExternalUserDirectory>();
     }
 }
 ```
 
-If the business service has a Monica startup module, derive from `MonicaApplicationFixture<TStartupModule>` and override the module guide/database options. If it has no startup module or the host is too broad for the scenario, use a business compatibility fixture such as `PlatformApplicationFixture<TService>` and register the real collaborators needed by the unit under test.
+The factory is a stateless recipe. `CreateAsync(...)` builds a new host; do not cache an application or provider on the factory.
 
-## Command Handler Test
+## Command Handler Scenario
 
 ```csharp
-[Collection(UserServiceCollection.Name)]
-public sealed class CommandHandlerUserLoginTests(UserServiceTestFixture app)
+public sealed class CommandHandlerUserLoginTests(
+    UserServiceTestApplicationFactory factory)
+    : IClassFixture<UserServiceTestApplicationFactory>
 {
-    private readonly UserServiceTestFixture _app = app;
+    private readonly UserServiceTestApplicationFactory _factory = factory;
 
     [Fact]
     public async Task Handle_WhenCredentialsAreValid_ShouldIssueTokenWithBusinessClaims()
     {
-        await using var scope = _app.NewScope(replace => replace.Substitute<IJwtAuthManager>(out _));
-        var jwt = scope.Resolve<IJwtAuthManager>();
+        var jwt = Substitute.For<IJwtAuthManager>();
         var expectedToken = CreateJwtAuthResult("exam01");
         Claim[] issuedClaims = [];
 
         jwt.GenerateTokens("exam01", Arg.Do<Claim[]>(claims => issuedClaims = claims), Arg.Any<DateTime?>())
             .Returns(expectedToken);
+
+        await using var application = await _factory.CreateAsync(
+            scenario => scenario.With<IJwtAuthManager>(jwt),
+            TestContext.Current.CancellationToken);
+        await using var scope = application.CreateScope(TestContext.Current.CancellationToken);
         await SeedLoginUserAsync(scope);
 
         var handler = scope.Resolve<CommandHandlerUserLogin>();
@@ -85,53 +67,39 @@ public sealed class CommandHandlerUserLoginTests(UserServiceTestFixture app)
 
         var data = result.ShouldSucceed();
         data!.AccessToken.Should().Be(expectedToken.AccessToken);
-        issuedClaims.Should().Contain(claim => claim.Type == AuthorityClaimTypes.Username && claim.Value == "exam01");
+        issuedClaims.Should().Contain(claim =>
+            claim.Type == AuthorityClaimTypes.Username && claim.Value == "exam01");
         jwt.Received(1).GenerateTokens("exam01", Arg.Any<Claim[]>(), Arg.Any<DateTime?>());
     }
 }
 ```
 
-## Query Handler Fast-Path Test
+The replacement callback changes the service collection before `Build()`. `CreateScope()` only creates a child scope.
+
+## Repository Scenario
 
 ```csharp
-public sealed class QueryHandlerUserCheckTests
+public sealed class RepositoryUserTests(
+    UserServiceTestApplicationFactory factory)
+    : IClassFixture<UserServiceTestApplicationFactory>
 {
-    [Fact]
-    public async Task Handle_WhenUserDoesNotExist_ShouldReturnBadRequest()
-    {
-        const string username = "missing";
-        using var fixture = PlatformApplicationServiceFixture
-            .Builder<QueryHandlerUserCheck>()
-            .WithSubstitute<IRepositoryUser>(out var repository)
-            .Build();
-
-        repository.GetUserInfo(username).Returns(Task.FromResult<User?>(null));
-
-        var result = await fixture.Service.Handle(
-            new QueryUserCheck { Username = username },
-            CancellationToken.None);
-
-        result.ShouldFail(ResStatus.BadRequest, "user does not exist");
-        result.Data.Should().BeNull();
-    }
-}
-```
-
-## Repository Test
-
-```csharp
-[Collection(UserServiceCollection.Name)]
-public sealed class RepositoryUserTests(UserServiceTestFixture app)
-{
-    private readonly UserServiceTestFixture _app = app;
+    private readonly UserServiceTestApplicationFactory _factory = factory;
 
     [Fact]
     public async Task GetUserInfo_WhenUserExists_ShouldReturnUserWithOrganUnit()
     {
-        await using var scope = _app.NewScope();
+        await using var application = await _factory.CreateAsync(
+            cancellationToken: TestContext.Current.CancellationToken);
+        await using var scope = application.CreateScope(TestContext.Current.CancellationToken);
         await scope.SeedAsync(
             new OrganUnit { Id = 20, OrganName = "Test Tower", Code = "ZBAA-TWR" },
-            new User { Id = Guid.NewGuid(), Username = "exam01", Nickname = "Exam User", OrganUnitId = 20 });
+            new User
+            {
+                Id = Guid.NewGuid(),
+                Username = "exam01",
+                Nickname = "Exam User",
+                OrganUnitId = 20
+            });
 
         var repository = scope.Resolve<IRepositoryUser>();
         var user = await repository.GetUserInfo("exam01");
@@ -142,38 +110,66 @@ public sealed class RepositoryUserTests(UserServiceTestFixture app)
 }
 ```
 
-## Module Registration Test
+## Module Composition Scenario
 
 ```csharp
-[Collection(UserServiceCollection.Name)]
-public sealed class UserServiceModuleTests(UserServiceTestFixture app)
+public sealed class UserServiceModuleTests(
+    UserServiceTestApplicationFactory factory)
+    : IClassFixture<UserServiceTestApplicationFactory>
 {
-    private readonly UserServiceTestFixture _app = app;
+    private readonly UserServiceTestApplicationFactory _factory = factory;
 
     [Fact]
-    public void Module_WhenBooted_ShouldRegisterExpectedServices()
+    public async Task Module_WhenHostStarts_ShouldExposeExpectedComposition()
     {
-        _app.Services.GetService<IRepositoryUser>().Should().NotBeNull();
-        _app.Services.GetService<CommandHandlerUserLogin>().Should().NotBeNull();
-        _app.Services.GetService<IPasswordCrypto>().Should().NotBeNull();
+        await using var application = await _factory.CreateAsync(
+            cancellationToken: TestContext.Current.CancellationToken);
+
+        application.Application.Should().BeSameAs(
+            application.Services.GetRequiredService<MonicaApplication>());
+        application.ModuleSnapshots.Should().Contain(snapshot =>
+            snapshot.ModuleType == typeof(ModuleUserService));
+        application.Services.GetService<IRepositoryUser>().Should().NotBeNull();
     }
 }
 ```
 
-## Entity Invariant Test
+## Raw ProjectUnit Fast Path
+
+```csharp
+public sealed class QueryHandlerUserCheckTests
+{
+    [Fact]
+    public async Task Handle_WhenUserDoesNotExist_ShouldReturnBadRequest()
+    {
+        await using var fixture = ProjectUnitFixture<QueryHandlerUserCheck>
+            .Builder()
+            .WithSubstitute<IRepositoryUser>(out var repository)
+            .Build();
+
+        repository.GetUserInfo("missing").Returns(Task.FromResult<User?>(null));
+
+        var result = await fixture.Unit.Handle(
+            new QueryUserCheck { Username = "missing" },
+            CancellationToken.None);
+
+        result.ShouldFail(ResStatus.BadRequest, "user does not exist");
+        result.Data.Should().BeNull();
+    }
+}
+```
+
+This is raw Microsoft DI activation. Use it only when module registration, options, proxies, interceptors, hosted lifecycle, and host isolation are outside the assertion.
+
+## Entity Invariant
 
 ```csharp
 public sealed class UserTests
 {
     [Fact]
-    public void IsActive_WhenNewUserCreated_ShouldDefaultToExpectedState()
+    public void Create_WhenRequiredValuesAreValid_ShouldPreserveIdentity()
     {
-        var user = new User
-        {
-            Id = Guid.NewGuid(),
-            Username = "exam01",
-            Nickname = "Exam User"
-        };
+        var user = User.Create("exam01", "Exam User");
 
         user.Username.Should().Be("exam01");
         user.Nickname.Should().Be("Exam User");

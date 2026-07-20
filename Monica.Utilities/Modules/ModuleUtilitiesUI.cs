@@ -54,16 +54,16 @@ public class ModuleUtilitiesUI(ModuleUtilitiesUIOption option)
 /// </summary>
 public static class ModuleUtilitiesUIBuilderExtensions
 {
-    extension(Mo)
+    extension(IMonicaBuilder builder)
     {
         /// <summary>
         /// Registers the utilities toolbox UI module.
         /// </summary>
         /// <param name="action">Optional configuration applied to <see cref="ModuleUtilitiesUIOption" />.</param>
         /// <returns>The fluent guide used to continue module configuration.</returns>
-        public static ModuleUtilitiesUIGuide AddUtilitiesUI(Action<ModuleUtilitiesUIOption>? action = null)
+        public ModuleUtilitiesUIGuide AddUtilitiesUI(Action<ModuleUtilitiesUIOption>? action = null)
         {
-            return new ModuleUtilitiesUIGuide().Register(action);
+            return builder.AddModule<ModuleUtilitiesUI, ModuleUtilitiesUIOption, ModuleUtilitiesUIGuide>(action);
         }
     }
 }

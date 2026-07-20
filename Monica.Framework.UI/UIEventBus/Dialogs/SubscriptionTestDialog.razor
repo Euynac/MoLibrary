@@ -34,7 +34,7 @@
                         </MudItem>
                         <MudItem xs="12" md="6">
                             <MudText Typo="Typo.caption" Color="Color.Secondary">@L["SubscriptionTestDialog:Fields:Scope"]</MudText>
-                            <MudChip T="string" Color="@Subscription.ScopeColor" Size="Size.Small">@Subscription.ScopeDisplay</MudChip>
+                            <MudChip T="string" Color="@Subscription.ScopeColor" Size="Size.Small">@L.GetSubscriptionScopeText(Subscription.Scope)</MudChip>
                         </MudItem>
                         <MudItem xs="12" md="6">
                             <MudText Typo="Typo.caption" Color="Color.Secondary">@L["SubscriptionTestDialog:Fields:Provider"]</MudText>
@@ -42,7 +42,7 @@
                         </MudItem>
                         <MudItem xs="12">
                             <MudText Typo="Typo.caption" Color="Color.Secondary">@L["SubscriptionTestDialog:Fields:Handler"]</MudText>
-                            <MudText Typo="Typo.body2">@Subscription.HandlerDisplay</MudText>
+                            <MudText Typo="Typo.body2">@L.GetHandlerDisplayText(Subscription)</MudText>
                         </MudItem>
                     </MudGrid>
                 </MudPaper>

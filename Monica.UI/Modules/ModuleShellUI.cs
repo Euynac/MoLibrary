@@ -25,14 +25,14 @@ namespace Monica.Modules;
 
 public static class ModuleShellUIBuilderExtensions
 {
-    extension(Mo)
+    extension(IMonicaBuilder builder)
     {
         /// <summary>
         /// Configures the shell UI module.
         /// </summary>
-        public static ModuleShellUIGuide AddUIShell(Action<ModuleShellUIOption>? action = null)
+        public ModuleShellUIGuide AddUIShell(Action<ModuleShellUIOption>? action = null)
         {
-            return new ModuleShellUIGuide().Register(action);
+            return builder.AddModule<ModuleShellUI, ModuleShellUIOption, ModuleShellUIGuide>(action);
         }
     }
 }
@@ -225,19 +225,19 @@ public class ModuleShellUIOption : ModuleOptions<ModuleShellUI>
 
     /// <summary>
     /// Application name displayed in the shell app bar.
-    /// When not configured, the shell uses the application defaults configured through <see cref="Mo.ConfigApplication"/>.
+    /// When not configured, the shell uses the application defaults configured through <see cref="IMonicaBuilder.ConfigureApplication"/>.
     /// </summary>
     public string? AppName { get; set; }
 
     /// <summary>
     /// Application identifier displayed before the version badge.
-    /// When not configured, the shell uses the application defaults configured through <see cref="Mo.ConfigApplication"/>.
+    /// When not configured, the shell uses the application defaults configured through <see cref="IMonicaBuilder.ConfigureApplication"/>.
     /// </summary>
     public string? AppId { get; set; }
 
     /// <summary>
     /// Application version displayed in the shell.
-    /// When not configured, the shell uses the application defaults configured through <see cref="Mo.ConfigApplication"/>
+    /// When not configured, the shell uses the application defaults configured through <see cref="IMonicaBuilder.ConfigureApplication"/>
     /// and finally <c>v1.0</c>.
     /// </summary>
     public string? AppVersion { get; set; }
@@ -245,17 +245,17 @@ public class ModuleShellUIOption : ModuleOptions<ModuleShellUI>
     /// <summary>
     /// Resolves the application name displayed in the shell app bar.
     /// </summary>
-    public string GetAppName() => Mo.Application.ResolveAppName(AppName, nameof(Monica));
+    public string GetAppName() => Application.ResolveAppName(AppName, nameof(Monica));
 
     /// <summary>
     /// Resolves the application identifier displayed before the version badge.
     /// </summary>
-    public string GetAppId() => Mo.Application.ResolveAppId(AppId);
+    public string GetAppId() => Application.ResolveAppId(AppId);
 
     /// <summary>
     /// Resolves the application version displayed in the shell.
     /// </summary>
-    public string GetAppVersion() => Mo.Application.ResolveAppVersion(AppVersion, "v1.0")!;
+    public string GetAppVersion() => Application.ResolveAppVersion(AppVersion, "v1.0")!;
 
     /// <summary>
     /// Enables UI debug diagnostics, including Blazor circuit detailed errors and SignalR hub detailed errors.

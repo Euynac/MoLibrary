@@ -11,6 +11,8 @@ Use `$DomainNamespace$` for the domain project namespace selected by the archite
 ## Rules
 
 - Derive from `DomainService`.
+- Use the inherited `Logger` in service methods when logging is needed. Monica resolves it after activation from the
+  host that owns the service instance; do not access it from a constructor.
 - Start the class name with `Domain`.
 - Prefer normal return types and exceptions. Let `ApplicationService` translate failures into `Res`.
 - Keep persistence access delegated to repositories.
@@ -23,9 +25,7 @@ using Monica.WebApi.Abstractions;
 
 namespace $DomainNamespace$.DomainServices;
 
-public sealed class Domain$FeatureName$(
-    IRepositoryOrder repository)
-    : DomainService
+public sealed class Domain$FeatureName$(IRepositoryOrder repository) : DomainService
 {
     public async Task<Order> ExecuteAsync(
         long orderId,

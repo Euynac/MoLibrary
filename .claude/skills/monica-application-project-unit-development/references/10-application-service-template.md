@@ -18,6 +18,7 @@
 ## Rules
 
 - Derive from `ApplicationService<TRequest, TResponse>` or `ApplicationService<TRequest>`.
+- Inject the current host's `ILoggerFactory` and pass it to the base constructor.
 - Make the request implement `IResultRequest<TResponse>` or `IResultRequest`.
 - Keep the handler thin. Push reusable rules into `DomainService` or the entity itself.
 - Catch exceptions only when you are adding boundary-specific context. Do not smother useful failures.
@@ -36,6 +37,7 @@
 
 ```csharp
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Logging;
 using Monica.Core.Results;
 using Monica.Repository.Persistence.Abstractions;
 using Monica.WebApi.Abstractions;
@@ -45,8 +47,9 @@ namespace $ApplicationNamespace$.HandlersQuery;
 public sealed record Query$FeatureName$(long Id) : IResultRequest<$ResponseName$>;
 
 public sealed class QueryHandler$FeatureName$(
-    $RepositoryName$ repository)
-    : ApplicationService<Query$FeatureName$, $ResponseName$>
+    $RepositoryName$ repository,
+    ILoggerFactory loggerFactory)
+    : ApplicationService<Query$FeatureName$, $ResponseName$>(loggerFactory)
 {
     [HttpGet("$RequestRoute$")]
     public override async Task<Res<$ResponseName$>> Handle(
@@ -71,6 +74,7 @@ public sealed class QueryHandler$FeatureName$(
 
 ```csharp
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Logging;
 using Monica.Core.Results;
 using Monica.WebApi.Abstractions;
 
@@ -79,8 +83,9 @@ namespace $ApplicationNamespace$.HandlersCommand;
 public sealed record Command$FeatureName$(long Id) : IResultRequest;
 
 public sealed class CommandHandler$FeatureName$(
-    Domain$FeatureName$ domainService)
-    : ApplicationService<Command$FeatureName$>
+    Domain$FeatureName$ domainService,
+    ILoggerFactory loggerFactory)
+    : ApplicationService<Command$FeatureName$>(loggerFactory)
 {
     [HttpPost("$RequestRoute$")]
     public override async Task<Res> Handle(

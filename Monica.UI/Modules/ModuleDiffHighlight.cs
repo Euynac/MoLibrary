@@ -90,14 +90,14 @@ public class ModuleDiffHighlight(ModuleDiffHighlightOption option) : WebModuleBa
 
 public static class ModuleDiffHighlightBuilderExtensions
 {
-    extension(Mo)
+    extension(IMonicaBuilder builder)
     {
         /// <summary>
         /// Configures the DiffHighlight module.
         /// </summary>
-        public static ModuleDiffHighlightGuide AddDiffHighlight(Action<ModuleDiffHighlightOption>? action = null)
+        public ModuleDiffHighlightGuide AddDiffHighlight(Action<ModuleDiffHighlightOption>? action = null)
         {
-            return new ModuleDiffHighlightGuide().Register(action);
+            return builder.AddModule<ModuleDiffHighlight, ModuleDiffHighlightOption, ModuleDiffHighlightGuide>(action);
         }
     }
 }

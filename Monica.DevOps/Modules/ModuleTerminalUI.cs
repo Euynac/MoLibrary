@@ -15,16 +15,16 @@ namespace Monica.Modules;
 /// </summary>
 public static class ModuleTerminalUIBuilderExtensions
 {
-    extension(Mo)
+    extension(IMonicaBuilder builder)
     {
         /// <summary>
         /// Registers the local terminal UI module and applies optional configuration.
         /// </summary>
         /// <param name="action">Optional module option configuration delegate.</param>
         /// <returns>The terminal UI module guide.</returns>
-        public static ModuleTerminalUIGuide AddTerminalUI(Action<ModuleTerminalUIOption>? action = null)
+        public ModuleTerminalUIGuide AddTerminalUI(Action<ModuleTerminalUIOption>? action = null)
         {
-            return new ModuleTerminalUIGuide().Register(action);
+            return builder.AddModule<ModuleTerminalUI, ModuleTerminalUIOption, ModuleTerminalUIGuide>(action);
         }
     }
 }

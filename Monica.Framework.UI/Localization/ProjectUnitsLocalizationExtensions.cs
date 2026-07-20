@@ -1,5 +1,5 @@
 using Microsoft.Extensions.Localization;
-using Monica.Framework.ProjectUnits.Models;
+using Monica.ProjectUnits.Models;
 using Monica.Framework.UI.UIProjectUnits.Models;
 using MudBlazor;
 

@@ -13,14 +13,14 @@ namespace Monica.Modules;
 
 public static class ModuleSeederBuilderExtensions
 {
-    extension(Mo)
+    extension(IMonicaBuilder builder)
     {
         /// <summary>
         /// Configure the Seeder module
         /// </summary>
-        public static ModuleSeederGuide AddSeeder(Action<ModuleSeederOption>? action = null)
+        public ModuleSeederGuide AddSeeder(Action<ModuleSeederOption>? action = null)
         {
-            return new ModuleSeederGuide().Register(action);
+            return builder.AddModule<ModuleSeeder, ModuleSeederOption, ModuleSeederGuide>(action);
         }
     }
 }

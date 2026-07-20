@@ -1,6 +1,7 @@
 using System.Text.Json;
 using Confluent.Kafka;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Monica.Core.JsonSerialization.Abstractions;
 using Monica.EventBus.Abstractions;
@@ -14,6 +15,14 @@ namespace Monica.EventBus.Kafka.Providers.ConfluentKafka;
 /// <summary>
 /// Native Kafka distributed EventBus provider.
 /// </summary>
+/// <param name="serviceScopeFactory">Creates scopes for event handlers.</param>
+/// <param name="eventHandlerInvoker">Invokes resolved event handlers.</param>
+/// <param name="subscriptionManager">Owns this host's subscription catalog.</param>
+/// <param name="clusterConfigProvider">Provides Kafka cluster settings.</param>
+/// <param name="jsonSerializerOptionsProvider">Provides host JSON settings.</param>
+/// <param name="options">Provides Kafka event bus options.</param>
+/// <param name="loggerFactory">Creates the event bus logger.</param>
+/// <param name="serviceKey">An optional keyed-provider identifier.</param>
 public sealed class KafkaEventBusProvider(
     IServiceScopeFactory serviceScopeFactory,
     IEventHandlerInvoker eventHandlerInvoker,
@@ -21,8 +30,9 @@ public sealed class KafkaEventBusProvider(
     IKafkaClusterConfigProvider clusterConfigProvider,
     IJsonSerializerOptionsProvider jsonSerializerOptionsProvider,
     IOptions<ModuleEventBusKafkaOption> options,
+    ILoggerFactory loggerFactory,
     string? serviceKey = null)
-    : DistributedEventBusBase(serviceScopeFactory, eventHandlerInvoker, subscriptionManager, serviceKey), IDisposable
+    : DistributedEventBusBase(serviceScopeFactory, eventHandlerInvoker, subscriptionManager, loggerFactory, serviceKey), IDisposable
 {
     private readonly Lazy<IProducer<string, string>> _producer = new(() =>
     {

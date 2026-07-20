@@ -1,0 +1,29 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <RootNamespace>Monica.Testing</RootNamespace>
+    <PackageDescription>Host-owned test applications, fast ProjectUnit harnesses, assertions, and deterministic seams for Monica.</PackageDescription>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+    <ProjectReference Include="..\Monica.Authority\Monica.Authority.csproj" />
+    <ProjectReference Include="..\Monica.Core\Monica.Core.csproj" />
+    <ProjectReference Include="..\Monica.DependencyInjection\Monica.DependencyInjection.csproj" />
+    <ProjectReference Include="..\Monica.EventBus\Monica.EventBus.csproj" />
+    <ProjectReference Include="..\Monica.JobScheduler\Monica.JobScheduler.csproj" />
+    <ProjectReference Include="..\Monica.Repository\Monica.Repository.csproj" />
+    <ProjectReference Include="..\Monica.StateStore\Monica.StateStore.csproj" />
+    <ProjectReference Include="..\Monica.WebApi\Monica.WebApi.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="AwesomeAssertions" Version="9.4.0" />
+    <PackageReference Include="Microsoft.AspNetCore.TestHost" Version="10.0.9" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.InMemory" Version="10.0.9" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="10.0.9" />
+    <PackageReference Include="NSubstitute" Version="5.3.0" />
+    <PackageReference Include="NSubstitute.Analyzers.CSharp" Version="1.0.17" PrivateAssets="all" />
+    <PackageReference Include="SQLitePCLRaw.bundle_e_sqlite3" Version="3.0.3" />
+    <PackageReference Include="xunit.v3.extensibility.core" Version="3.2.2" />
+  </ItemGroup>
+</Project>

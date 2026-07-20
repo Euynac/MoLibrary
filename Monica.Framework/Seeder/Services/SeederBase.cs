@@ -1,5 +1,4 @@
 using Microsoft.Extensions.Logging;
-using Monica.Core.Logging;
 using Monica.Framework.Seeder.Abstractions;
 using Monica.Tool.Extensions;
 
@@ -10,20 +9,18 @@ namespace Monica.Framework.Seeder.Services;
 /// </summary>
 public abstract class SeederBase : ISeeder
 {
+    /// <summary>
+    /// Gets the host-owned logger for this seeder.
+    /// </summary>
+    public ILogger Logger { get; }
 
     /// <summary>
-    /// Lazy-loaded logger instance for this module guide.
+    /// Initializes the seeder with logging owned by the current host.
     /// </summary>
-    private readonly Lazy<ILogger> _loggerLazy;
-
-    /// <summary>
-    /// Gets the logger instance for this module guide.
-    /// </summary>
-    public ILogger Logger => _loggerLazy.Value;
-
-    protected SeederBase()
+    /// <param name="logger">The logger for the concrete seeder type.</param>
+    protected SeederBase(ILogger logger)
     {
-        _loggerLazy = new Lazy<ILogger>(() => LogManager.For(GetType()));
+        Logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
     public virtual async Task SeedAsync()
@@ -34,7 +31,7 @@ public abstract class SeederBase : ISeeder
         }
         catch (Exception e)
         {
-            Logger.LogError(e, $"Seeder:{GetType().GetCleanFullName()} 出现异常");
+            Logger.LogError(e, "Seeder {SeederType} failed", GetType().GetCleanFullName());
         }
 
     }

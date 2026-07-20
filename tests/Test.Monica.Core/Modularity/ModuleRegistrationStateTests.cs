@@ -1,4 +1,5 @@
 using AwesomeAssertions;
+using Monica.Core;
 using Monica.Core.Modularity.Models.Internal;
 using Monica.Modules;
 using Xunit;
@@ -10,7 +11,8 @@ public class ModuleRegistrationStateTests
     [Fact]
     public void GetMissingRequiredConfigMethodKeys_WhenRequestUsesCascadedSuffix_ShouldTreatRequirementAsSatisfied()
     {
-        var state = new ModuleRegistrationState(typeof(ModuleSystem))
+        using var application = new MonicaApplication();
+        var state = new ModuleRegistrationState(application, typeof(ModuleSystem))
         {
             RequiredConfigMethodKeys =
             [
@@ -27,7 +29,8 @@ public class ModuleRegistrationStateTests
     [Fact]
     public void GetMissingRequiredConfigMethodKeys_WhenRequiredKeyIsAbsent_ShouldStillReportIt()
     {
-        var state = new ModuleRegistrationState(typeof(ModuleSystem))
+        using var application = new MonicaApplication();
+        var state = new ModuleRegistrationState(application, typeof(ModuleSystem))
         {
             RequiredConfigMethodKeys =
             [

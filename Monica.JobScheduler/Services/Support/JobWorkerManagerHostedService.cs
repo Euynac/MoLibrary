@@ -25,8 +25,9 @@ public class JobWorkerManagerHostedService(
     [FromKeyedServices(nameof(ModuleJobScheduler))] IEventBus eventBus,
     JobOrchestrator jobOrchestrator,
     IJobMetadataRepository metadataRepository,
-    IReadOnlyList<JobDefinition> jobDefinitions)
-    : MoBackgroundService(observableManager, hostedServiceOptions)
+    IReadOnlyList<JobDefinition> jobDefinitions,
+    ILogger<JobWorkerManagerHostedService> logger)
+    : MoBackgroundService(observableManager, hostedServiceOptions, logger)
 {
     private readonly ModuleJobSchedulerOption _options = jobSchedulerOptions.Value;
     private readonly List<IAsyncDisposable> _eventSubscriptions = [];

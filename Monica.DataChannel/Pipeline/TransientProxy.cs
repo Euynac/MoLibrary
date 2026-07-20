@@ -94,7 +94,9 @@ public static class TransientProxy
             return CreateEndpointMiddlewareProxy(serviceProvider, componentType);
         }
 
-        throw new InvalidOperationException($"中间件类型 {componentType.FullName} 无法创建实例");
+        throw new InvalidOperationException(
+            $"Middleware type '{componentType.FullName}' must implement either " +
+            $"{nameof(IPipelineTransformMiddleware)} or {nameof(IPipelineEndpointMiddleware)}.");
     }
 
     /// <summary>
@@ -138,7 +140,8 @@ internal abstract class TransientComponentProxyBase(
             return typedInstance;
         }
 
-        throw new Exception($"无法创建类型为 {ComponentType.FullName} 的实例");
+        throw new Exception(
+            $"Component type '{ComponentType.FullName}' could not be created as '{typeof(T).FullName}'.");
     }
 }
 

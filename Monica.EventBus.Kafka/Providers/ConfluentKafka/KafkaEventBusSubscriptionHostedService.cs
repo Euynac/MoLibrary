@@ -1,6 +1,7 @@
 using System.Collections.Concurrent;
 using System.Text.Json;
 using Confluent.Kafka;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Monica.Core.HostedService.Models;
 using Monica.Core.JsonSerialization.Abstractions;
@@ -25,12 +26,14 @@ internal sealed class KafkaEventBusSubscriptionHostedService(
     IKafkaClusterConfigProvider clusterConfigProvider,
     IJsonSerializerOptionsProvider jsonSerializerOptionsProvider,
     IOptions<ModuleEventBusKafkaOption> options,
+    ILogger<KafkaEventBusSubscriptionHostedService> logger,
     string? serviceKey = null)
     : EventBusSubscriptionHostedServiceBase(
         subscriptionManager,
         eventBus,
         observableManager,
         hostedServiceOptions,
+        logger,
         serviceKey)
 {
     private readonly ConcurrentDictionary<string, TopicConsumer> _consumers = new(StringComparer.Ordinal);

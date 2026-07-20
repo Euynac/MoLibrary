@@ -12,5 +12,5 @@ Use this checklist before finishing a modular-monolith architecture change.
 - AppHost stays as a Program-only composition entry point.
 - Domain-owned application units live under `Application/HandlersCommand`, `Application/HandlersQuery`, `Application/HandlersEvent`, and `Application/BackgroundWorkers`.
 - Domain models, `DomainServices`, `Utilities`, repositories, and `DbContext`-related files stay inside the owning domain package.
-- Any registration-time use of `Configuration` ProjectUnits is preceded by `Mo.AddConfiguration(...)` and `Mo.RegisterInstantly(builder)`.
+- `monica.AddConfiguration()` is part of the host-bound module graph; bootstrap composition reads `builder.Configuration`, and runtime consumers use typed options injection.
 - Unit-level implementation follows `monica-application-project-unit-development`.

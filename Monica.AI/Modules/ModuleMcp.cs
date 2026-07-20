@@ -26,16 +26,16 @@ namespace Monica.Modules;
 /// </summary>
 public static class ModuleMcpBuilderExtensions
 {
-    extension(Mo)
+    extension(IMonicaBuilder builder)
     {
         /// <summary>
         /// Enables Monica MCP server discovery, MCP hosting, and external MCP client cataloging.
         /// </summary>
         /// <param name="action">Optional MCP module configuration action.</param>
         /// <returns>The MCP module guide.</returns>
-        public static ModuleMcpGuide AddMcp(Action<ModuleMcpOption>? action = null)
+        public ModuleMcpGuide AddMcp(Action<ModuleMcpOption>? action = null)
         {
-            return new ModuleMcpGuide().Register(action);
+            return builder.AddModule<ModuleMcp, ModuleMcpOption, ModuleMcpGuide>(action);
         }
     }
 }
@@ -155,8 +155,13 @@ public sealed class ModuleMcp(ModuleMcpOption option)
 
         UseEndpoints(app, endpoints =>
         {
-            endpoints.MapMcp(Option.CreateHttpEndpointRoutePattern())
+            var endpoint = endpoints.MapMcp(Option.CreateHttpEndpointRoutePattern())
                 .WithMonicaEndpoint();
+
+            if (!string.IsNullOrWhiteSpace(Option.McpHttpAuthorizationPolicy))
+            {
+                endpoint.RequireAuthorization(Option.McpHttpAuthorizationPolicy);
+            }
         });
     }
 }
@@ -188,6 +193,12 @@ public sealed class ModuleMcpOption : ModuleOptions<ModuleMcp>
     /// server-side MCP session storage and maps only the HTTP POST endpoint.
     /// </summary>
     public bool McpHttpStateless { get; set; } = true;
+
+    /// <summary>
+    /// Optional ASP.NET Core authorization policy required by every Monica-hosted HTTP MCP endpoint.
+    /// Leave this unset only for endpoints that are intentionally anonymous or protected by another host-level boundary.
+    /// </summary>
+    public string? McpHttpAuthorizationPolicy { get; set; }
 
     /// <summary>
     /// Relative or absolute file path used to persist runtime-managed external MCP client profiles.
@@ -280,6 +291,22 @@ public sealed class ModuleMcpGuide
             options.McpHttpDisplayUrl = displayUrl;
             options.McpHttpStateless = stateless;
         });
+        return this;
+    }
+
+    /// <summary>
+    /// Requires an ASP.NET Core authorization policy for every Monica-hosted HTTP MCP endpoint.
+    /// </summary>
+    /// <param name="policyName">
+    /// Name of a policy registered by the host through <c>AddAuthorization</c>. Authentication and authorization
+    /// middleware must run before Monica maps its endpoints.
+    /// </param>
+    /// <returns>The current guide instance.</returns>
+    public ModuleMcpGuide RequireHttpAuthorization(string policyName)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(policyName);
+
+        ConfigureModuleOption(options => options.McpHttpAuthorizationPolicy = policyName.Trim());
         return this;
     }
 

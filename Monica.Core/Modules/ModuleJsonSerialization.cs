@@ -17,14 +17,14 @@ namespace Monica.Modules;
 
 public static class ModuleJsonSerializationBuilderExtensions
 {
-    extension(Mo)
+    extension(IMonicaBuilder builder)
     {
         /// <summary>
         /// Configures the JsonSerialization module.
         /// </summary>
-        public static ModuleJsonSerializationGuide AddJsonSerialization(Action<ModuleJsonSerializationOption>? action = null)
+        public ModuleJsonSerializationGuide AddJsonSerialization(Action<ModuleJsonSerializationOption>? action = null)
         {
-            return new ModuleJsonSerializationGuide().Register(action);
+            return builder.AddModule<ModuleJsonSerialization, ModuleJsonSerializationOption, ModuleJsonSerializationGuide>(action);
         }
     }
 }
@@ -38,22 +38,33 @@ public class ModuleJsonSerialization(ModuleJsonSerializationOption option)
         var jsonSerializerOptions = new JsonSerializerOptions();
         jsonSerializerOptions.ApplyJsonSerializationDefaults(Option);
         Option.ExtendAction?.Invoke(jsonSerializerOptions);
+
+        if (Application.Modules.TryGetModuleRequestInfo(
+                typeof(ModuleResultEnvelope),
+                out var resultEnvelopeRegistration))
+        {
+            ((ModuleResultEnvelopeOption)resultEnvelopeRegistration.ModuleOption)
+                .FieldNames
+                .ApplyTo(jsonSerializerOptions);
+        }
+
         jsonSerializerOptions.TypeInfoResolver = jsonSerializerOptions.GetConfiguredTypeInfoResolver();
-        JsonSerializerOptionsProvider.SharedSerializerOptions = jsonSerializerOptions;
+        var provider = new JsonSerializerOptionsProvider(jsonSerializerOptions);
 
         services.AddHttpContextAccessor();
 
         services.Configure<JsonOptions>(o =>
         {
-            o.SerializerOptions.CloneFrom(JsonSerializerOptionsProvider.SharedSerializerOptions);
+            o.SerializerOptions.CloneFrom(jsonSerializerOptions);
         });
 
         services.Configure<Microsoft.AspNetCore.Mvc.JsonOptions>(o =>
         {
-            o.JsonSerializerOptions.CloneFrom(JsonSerializerOptionsProvider.SharedSerializerOptions);
+            o.JsonSerializerOptions.CloneFrom(jsonSerializerOptions);
         });
 
-        services.AddSingleton<IJsonSerializerOptionsProvider, JsonSerializerOptionsProvider>();
+        services.AddSingleton(jsonSerializerOptions);
+        services.AddSingleton<IJsonSerializerOptionsProvider>(provider);
     }
 }
 

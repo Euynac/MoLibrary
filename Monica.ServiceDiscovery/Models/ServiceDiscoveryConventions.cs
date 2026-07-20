@@ -3,32 +3,32 @@ namespace Monica.ServiceDiscovery.Models;
 public static class ServiceDiscoveryConventions
 {
     /// <summary>
-    /// Microservice registration registration center
+    /// Route used to register a service instance with the registry.
     /// </summary>
-    public static string RegistryRegister = "/registry/register";
+    public const string RegistryRegister = "/registry/register";
 
     /// <summary>
-    /// Microservice heartbeat
+    /// Route used to send a service-instance heartbeat.
     /// </summary>
-    public static string RegistryHeartbeat = "/registry/heartbeat";
+    public const string RegistryHeartbeat = "/registry/heartbeat";
 
     /// <summary>
-    /// Query leader status
+    /// Route used to query registry leader status.
     /// </summary>
-    public static string RegistryLeaderStatus = "/registry/leader-status";
+    public const string RegistryLeaderStatus = "/registry/leader-status";
 
     /// <summary>
-    /// Get the status of all microservices
+    /// Route used to query the status of registered services.
     /// </summary>
-    public static string RegistryServiceStatus = "/registry/services";
+    public const string RegistryServiceStatus = "/registry/services";
 
     /// <summary>
-    /// Cancel all microservice registrations
+    /// Route used to unregister every service instance owned by the caller.
     /// </summary>
-    public static string RegistryUnregisterAll = "/registry/unregister-all";
+    public const string RegistryUnregisterAll = "/registry/unregister-all";
 
     /// <summary>
-    /// Test reconnection registry service
+    /// Route used to request that a client reconnect to its registry.
     /// </summary>
-    public static string ClientReconnectRegistry = "/registry-client/reconnect";
+    public const string ClientReconnectRegistry = "/registry-client/reconnect";
 }

@@ -16,8 +16,11 @@
   <a href="README.md">English</a> | 简体中文
 </p>
 
-> **Mo**dular **.N**ET **I**nfrastructure for **C#** **A**I-era backends.
-> Monica 将类型化的 DDD ProjectUnit、可组合的基础设施模块、内置仪表板和随仓库交付的 agent skills 组合在一起，让 AI 辅助的后端开发在规模变大后仍然可观察、可维护。
+<p align="center">
+  <strong>AI agent 能遵循的架构，人类能检查的系统。</strong>
+</p>
+
+Monica 是面向可观测 .NET 后端的 agent-governed application architecture。它让开发者和编码 agent 共用同一套模块、DDD ProjectUnit、基础设施和运行时诊断语言，使生成的代码仍然结构可预期，运行中的系统仍然可理解。
 
 > **候选版本**：Monica 1.0.0-rc.2 是用于验证和反馈的预发布版本。在 1.0.0 稳定版之前仍可能出现破坏性变更。
 
@@ -31,7 +34,8 @@
 ## 为什么是 Monica
 
 - AI 可以很快产出代码，但如果没有统一规格，代码会在规模增长后变得脆弱且难以观测。
-- Monica 把基础设施本身变成规格：每个模块都通过同一套 `Mo.Add*()` 模式注册，每个后端功能都以类型化 ProjectUnit 来表达，而不是靠零散胶水代码拼接。
+- Monica 把基础设施本身变成规格：`AddMonica(...)` 先记录一个宿主的完整模块图，验证依赖与循环，再按确定性阶段应用注册。
+- 每个组合都属于具体宿主；同一进程中的多个宿主不共享模块注册表、选项或 ProjectUnit 目录。
 - 仓库里的 `.claude/skills/` 和 `.agents/skills/` 会在 AI 写代码之前先教它 Monica 的写法。
 
 ## 演示视频
@@ -50,14 +54,33 @@ https://github.com/user-attachments/assets/250e1e5f-0a78-4b8b-b832-756d682a01bd
 
 ```csharp
 using Microsoft.Extensions.Logging;
+using Monica.Core.Modularity.Extensions;
 using Monica.JobScheduler.Abstractions;
 using Monica.JobScheduler.Annotations;
 using Monica.Modules;
 
-Mo.AddJobScheduler()
-    .UseInMemoryMetadataRepository()
-    .UseSchedulerScope("local-dev")
-    .UseInMemoryProvider();
+var builder = WebApplication.CreateBuilder(args);
+
+builder.AddMonica(monica =>
+{
+    monica.ConfigureApplication(options =>
+    {
+        options.AppName = "Orders";
+        options.AppId = "orders";
+    });
+
+    monica.AddJobScheduler()
+        .UseInMemoryMetadataRepository()
+        .UseSchedulerScope("local-dev")
+        .UseInMemoryProvider();
+
+    monica.AddJobSchedulerUI();
+});
+
+var app = builder.Build();
+app.UseMonica();
+app.MapMonica();
+app.Run();
 
 [JobConfig(
     JobName = "Heartbeat",
@@ -75,27 +98,30 @@ public sealed class HeartbeatJob(ILogger<HeartbeatJob> logger) : RecurringJob
 
 - 定时作业和触发式作业使用同一套调度模型。
 - 并发控制、僵尸检测和持久化选项都已内置。
-- 需要浏览器运维界面时，再补上 `Mo.AddJobSchedulerUI()`。UI 需要 ASP.NET Core Web 宿主来提供 Blazor 路由和静态资源；普通 Console 宿主适合只跑调度任务，但不能承载仪表板。
+- 需要浏览器运维界面时，在同一个 `AddMonica(...)` 回调中加入 `monica.AddJobSchedulerUI()`。UI 需要 ASP.NET Core Web 宿主来提供 Blazor 路由和静态资源。
 - 最小可运行参考见 [`examples/JobSchedulerMinimal`](examples/JobSchedulerMinimal)，它演示了如何用最少 ASP.NET Core 宿主在 `/job-scheduler` 跑起 JobScheduler + JobScheduler UI。
 
-## 全局配置
+## 宿主级配置
 
-在注册模块之前，通过根级 `Mo.Config*()` 方法配置 Monica 全局默认值：
+应用身份和模块系统默认值在同一个宿主组合边界中配置：
 
 ```csharp
-Mo.ConfigApplication(options =>
+builder.AddMonica(monica =>
 {
-    options.AppName = "My Application";
-    options.AppId = "my-application";
-});
+    monica.ConfigureApplication(options =>
+    {
+        options.AppName = "My Application";
+        options.AppId = "my-application";
+    });
 
-Mo.ConfigModuleSystem(options =>
-{
-    options.DefaultApiGroupName = "基础功能";
+    monica.ConfigureModuleSystem(options =>
+    {
+        options.DefaultApiGroupName = "Core";
+    });
 });
 ```
 
-模块自身配置仍然优先于这些全局默认值。
+回调返回后模块图即被封闭，保留下来的 Guide 不能再修改组合。
 
 ## 仪表板、主题与国际化
 
@@ -107,21 +133,18 @@ Monica.UI 之上还提供多个运维型 Blazor UI：JobScheduler、Configuratio
 
 - 框架入口：`monica-framework`、`monica-development`、`monica-architecture`、`monica-ui-development`、`monica-ui-design`、`monica-ui-audit`、`monica-docs-authoring`、`monica-requirement-design`、`monica-unit-testing`、`monica-ui-bridge-debug`
 - 基于 Monica 的应用系统入口：`monica-application`、`monica-application-microservice`、`monica-application-modular-monolith`、`monica-application-project-unit-development`
-- 随仓库提供的辅助工作流：`code-simplifier`、`playwright-cli`、`subagent-progress-report`
+- 随仓库提供的辅助工作流：`code-simplifier`、`playwright-cli`、`supervise-subagents`
 - 需要单独安装的用户级配套 Skill：`inspect-dependency-source`（共享依赖源码目录）
 
-## 模块目录
+## 包成熟度
 
-Monica 采用大量小而可组合的模块，而不是少数几个大型包。
+| 层级 | 承诺 | 代表能力 |
+|---|---|---|
+| **Stable** | 1.0 支持的应用主路径 | Core、ProjectUnits、WebApi、Configuration、Repository、JobScheduler、OpenTelemetry、UI |
+| **Integrations** | 围绕外部系统的版本化适配器 | EF Core、Kafka、Redis/StackExchange、Dapr、SignalR |
+| **Labs** | 保持快速演进的实验能力 | AI/RAG/MCP、DataChannel、DevOps/Profiling、Office、Experimental |
 
-- 核心基础设施：`Core`、`Tool`、`DependencyInjection`、`ResultEnvelope`、`Mediator`、`JsonSerialization`、`Localization`
-- DDD 与应用流程：`ProjectUnits`、`AutoController`、`AutoModel`、`Repository`、`UnitOfWork`
-- 后台与运维：`JobScheduler`、`Configuration`、`Logging`、`ObservableInstance`、`HostedService`、`ServiceDiscovery`、`Locker`、`Resilience`
-- 通信与集成：`EventBus`、`SignalR`、`DataChannel`、`Dapr`、`Markdown`
-- AI 与分析：`AI`、`RAG`、`Framework`、`Framework.UI`、`AI.UI`、`JobScheduler.UI`、`Configuration.UI`、`DependencyInjection.UI`
-- 平台工具：`WebApi`、`Validation`、`Office`、`Profiling`、`DevOps`、`K8S`、`Git`、`FileOps`、`Utilities`
-
-> 以文档站点里的完整模块索引为准。
+Stable 不依赖 Labs，Integration 也始终是按需引入的 provider-specific 包；CI 会同时验证包分类完整性和 maturity tier 的单向依赖规则。
 
 ## 架构速览
 
@@ -130,7 +153,7 @@ Monica 采用大量小而可组合的模块，而不是少数几个大型包。
 - `Module{Name}Option`：公开配置入口
 - `Module{Name}Guide`：链式补充配置
 - `Module{Name}`：模块实现本体
-- `Module{Name}BuilderExtensions`：`Mo.Add*()` 入口
+- `Module{Name}BuilderExtensions`：`monica.Add{Name}()` 入口
 
 ### ProjectUnit 模式
 

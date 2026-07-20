@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Logging;
 using Monica.JobScheduler.Annotations;
 
 namespace Monica.JobScheduler.Abstractions;
@@ -30,7 +31,8 @@ namespace Monica.JobScheduler.Abstractions;
 /// Implementations should respect the cancellation token and exit gracefully when signaled.
 /// </para>
 /// </remarks>
-public abstract class RecurringJob : JobBase, IRecurringJob
+/// <param name="logger">The logger for the concrete recurring job.</param>
+public abstract class RecurringJob(ILogger logger) : JobBase(logger), IRecurringJob
 {
     public abstract Task ExecuteAsync(CancellationToken cancellationToken);
 }

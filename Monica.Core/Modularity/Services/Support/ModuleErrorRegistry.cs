@@ -10,14 +10,14 @@ namespace Monica.Core.Modularity.Services.Support;
 /// <summary>
 /// Utility class for handling module-related errors.
 /// </summary>
-public static class ModuleErrorRegistry
+internal sealed class ModuleErrorRegistry(MonicaApplication application)
 {
     /// <summary>
     /// Validates module configuration requirements and throws an exception if requirements are not met.
     /// </summary>
     /// <param name="moduleRegisterContextDict">Dictionary of module registration contexts.</param>
     /// <exception cref="ModuleRegistrationException">Thrown when module registration requirements are not met.</exception>
-    public static void ValidateModuleRequirements(
+    public void ValidateModuleRequirements(
         Dictionary<Type, ModuleRegistrationState> moduleRegisterContextDict)
     {
         // Check if modules meet necessary configuration requirements
@@ -38,72 +38,47 @@ public static class ModuleErrorRegistry
                     MissingConfigKeys = missingKeys,
                     ErrorType = ModuleRegistrationErrorType.MissingRequiredConfig
                 };
-                if(!CheckDisableModuleIfHasException(moduleType, error)) ModuleRegistry.ModuleRegisterErrors.Add(error);
+                if (!CheckDisableModuleIfHasException(moduleType, error))
+                {
+                    application.Modules.AddRegistrationError(error);
+                }
             }
 
         }
-
-        //// Check for missing dependencies
-        //ValidateDependencies();
-
 
         RaiseModuleErrors();
     }
-    //// 1.1 Check for circular dependencies in the dependency graph
-    //if (ModuleDependencyAnalyzer.HasCircularDependencies())
-    //{
-    //    var error = new ModuleRegistrationError
-    //    {
-    //        ErrorMessage = "Circular dependency detected in module dependencies. Please check the dependency graph.",
-    //        ErrorType = ModuleRegistrationErrorType.CircularDependency
-    //    };
-    //    ModuleRegisterErrors.Add(error);
-
-    //    // Log the dependency graph for debugging
-    //    var graph = ModuleDependencyAnalyzer.CalculateCompleteModuleDependencyGraph();
-
-    //   Logger.LogError("Module dependency graph contains circular dependencies:\n{Graph}", graph.ToString());
-
-    //    // Continue with registration but warn about potential issues
-    //}
-    //else
-    //{
-    //    var modulesInOrder = ModuleDependencyAnalyzer.GetModulesInDependencyOrder();
-
-    //    var graph = ModuleDependencyAnalyzer.CalculateCompleteModuleDependencyGraph();
-    //    Logger.LogInformation("Modules will be initialized in the following dependency order: {Modules}\n{Graph}",
-    //        string.Join(", ", modulesInOrder), graph);
-    //}
 
     /// <summary>
-    /// Validates dependencies between modules using the ModuleDependencyAnalyzer.
+    /// Validates the complete dependency graph before any host services are mutated.
     /// </summary>
-    private static void ValidateDependencies()
+    internal void ValidateDependencyGraph()
     {
-        // Check for circular dependencies
-        if (ModuleDependencyAnalyzer.HasCircularDependencies())
+        if (!application.Dependencies.HasCircularDependencies())
         {
-            // Find modules involved in cycles
-            foreach (var moduleKey in ModuleDependencyAnalyzer.ModuleKeyToTypeDict.Keys)
-            {
-                var dependencyInfo = ModuleDependencyAnalyzer.GetModuleDependencyInfo(moduleKey);
-
-                if (dependencyInfo.IsPartOfCycle)
-                {
-                    // Get module type from key using the direct mapping
-                    if (!ModuleDependencyAnalyzer.ModuleKeyToTypeDict.TryGetValue(moduleKey, out var moduleType) || moduleType == null)
-                        continue;
-
-                    ModuleRegistry.ModuleRegisterErrors.Add(new ModuleRegistrationError
-                    {
-                        ModuleType = moduleType,
-                        ErrorMessage = $"Module is part of a circular dependency chain: {string.Join(" → ", dependencyInfo.CyclePath)} → {moduleKey}",
-                        ErrorType = ModuleRegistrationErrorType.CircularDependency,
-                        DependencyInfo = dependencyInfo
-                    });
-                }
-            }
+            return;
         }
+
+        var moduleTypesByKey = application.Dependencies.ModuleTypesByKey;
+        foreach (var moduleKey in moduleTypesByKey.Keys)
+        {
+            var dependencyInfo = application.Dependencies.GetModuleDependencyInfo(moduleKey);
+            if (!dependencyInfo.IsPartOfCycle ||
+                !moduleTypesByKey.TryGetValue(moduleKey, out var moduleType))
+            {
+                continue;
+            }
+
+            application.Modules.AddRegistrationError(new ModuleRegistrationError
+            {
+                ModuleType = moduleType,
+                ErrorMessage = $"Module is part of a circular dependency chain: {string.Join(" → ", dependencyInfo.CyclePath)} → {moduleKey}",
+                ErrorType = ModuleRegistrationErrorType.CircularDependency,
+                DependencyInfo = dependencyInfo
+            });
+        }
+
+        RaiseModuleErrors();
     }
     
     /// <summary>
@@ -113,7 +88,7 @@ public static class ModuleErrorRegistry
     /// <param name="exception">The error.</param>
     /// <param name="phase">The phase where the error occurred.</param>
     /// <param name="errorType">The type of error.</param>
-    public static void RecordModuleError(
+    public void RecordModuleError(
         Type moduleType, 
         Exception exception, 
         ModulePhase phase, 
@@ -127,7 +102,7 @@ public static class ModuleErrorRegistry
             Phase = phase,
             StackTrace = exception.StackTrace
         };
-        ModuleRegistry.ModuleRegisterErrors.Add(error);
+        application.Modules.AddRegistrationError(error);
         
         if(phase > ModulePhase.InitFinalConfigures)
         {
@@ -143,7 +118,7 @@ public static class ModuleErrorRegistry
     /// <param name="moduleType">The type of the module where the error occurred.</param>
     /// <param name="request">The request that caused the error.</param>
     /// <param name="exception">The exception that was thrown.</param>
-    public static void RecordRequestError(
+    public void RecordRequestError(
         Type moduleType, 
         ModuleConfigurationRequest request, 
         Exception exception)
@@ -157,7 +132,7 @@ public static class ModuleErrorRegistry
             Phase = request.RequestMethod,
             StackTrace = exception.StackTrace
         };
-        ModuleRegistry.ModuleRegisterErrors.Add(error);
+        application.Modules.AddRegistrationError(error);
         
         // Immediately check if the module should be disabled due to exception
         CheckDisableModuleIfHasException(moduleType, error);
@@ -168,9 +143,9 @@ public static class ModuleErrorRegistry
     /// </summary>
     /// <param name="moduleType">The incompatible module type.</param>
     /// <param name="message">The compatibility error message.</param>
-    public static void RecordHostCompatibilityError(Type moduleType, string message)
+    public void RecordHostCompatibilityError(Type moduleType, string message)
     {
-        ModuleRegistry.ModuleRegisterErrors.Add(new ModuleRegistrationError
+        application.Modules.AddRegistrationError(new ModuleRegistrationError
         {
             ModuleType = moduleType,
             ErrorMessage = message,
@@ -184,21 +159,21 @@ public static class ModuleErrorRegistry
     /// <param name="moduleType">The module type to check</param>
     /// <param name="error">The error that occurred</param>
     /// <returns>If it should disable module, return true.</returns>
-    internal static bool CheckDisableModuleIfHasException(Type moduleType, ModuleRegistrationError error)
+    internal bool CheckDisableModuleIfHasException(Type moduleType, ModuleRegistrationError error)
     {
         // Try to find the module option through ModuleRegistry
-        if (ModuleRegistry.TryGetModuleRequestInfo(moduleType, out var requestInfo))
+        if (application.Modules.TryGetModuleRequestInfo(moduleType, out var requestInfo))
         {
             // Check if the module has DisableModuleIfHasException set
             var moduleOption = requestInfo.ModuleOption;
 
-            if (moduleOption.DisableModuleIfHasException ?? Mo.ModuleSystem.DisableOnRegistrationError)
+            if (moduleOption.DisableModuleIfHasException ?? application.ModuleSystem.DisableOnRegistrationError)
             {
                 // Disable the module
-                if (ModuleStateRegistry.DisableModule(requestInfo))
+                if (application.ModuleStates.DisableModule(requestInfo))
                 {
                     // Log the error but don't throw an exception for this module
-                    ModuleRegistry.Logger.LogWarning(
+                    application.Modules.Logger.LogWarning(
                         "Module {ModuleName} was disabled due to an error: {ErrorMessage}",
                         moduleType.Name,
                         error);
@@ -216,7 +191,7 @@ public static class ModuleErrorRegistry
     /// </summary>
     /// <param name="errors">List of module registration errors.</param>
     /// <returns>A formatted error message.</returns>
-    public static string BuildErrorMessage(List<ModuleRegistrationError> errors)
+    public string BuildErrorMessage(List<ModuleRegistrationError> errors)
     {
         var sb = new StringBuilder();
         sb.AppendLine("Module registration errors:");
@@ -242,21 +217,23 @@ public static class ModuleErrorRegistry
     /// <summary>
     /// Raises an exception if there are any module registration errors.
     /// </summary>
-    public static void RaiseModuleErrors()
+    public void RaiseModuleErrors()
     {
-        if (ModuleRegistry.ModuleRegisterErrors.Count == 0)
+        if (application.Modules.RegistrationErrors.Count == 0)
         {
             return;
         }
 
         // Filter out errors for modules that have already been disabled
-        var errorsToThrow = ModuleRegistry.ModuleRegisterErrors.Where(e => !ModuleStateRegistry.IsModuleDisabled(e.ModuleType)).ToList();
+        var errorsToThrow = application.Modules.RegistrationErrors
+            .Where(e => !application.ModuleStates.IsModuleDisabled(e.ModuleType))
+            .ToList();
         
         //// Log summary of disabled modules
-        //var disabledModules = ModuleStateRegistry.GetDisabledModuleTypes();
+        //var disabledModules = application.ModuleStates.GetDisabledModuleTypes();
         //if (disabledModules.Count > 0)
         //{
-        //    ModuleRegistry.Logger.LogWarning(
+        //    application.Modules.Logger.LogWarning(
         //        "The following modules were disabled due to exceptions: {DisabledModules}",
         //        string.Join(", ", disabledModules.Select(m => m.Name)));
         //}

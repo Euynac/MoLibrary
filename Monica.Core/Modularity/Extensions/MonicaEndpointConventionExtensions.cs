@@ -9,7 +9,7 @@ namespace Monica.Core.Modularity.Extensions;
 public static class MonicaEndpointConventionExtensions
 {
     /// <summary>
-    /// Marks an endpoint as Monica-owned and applies the global Monica endpoint port constraint when configured.
+    /// Marks an endpoint as Monica-owned so the host-level Monica endpoint policy can identify it.
     /// </summary>
     /// <typeparam name="TBuilder">Endpoint convention builder type.</typeparam>
     /// <param name="builder">Endpoint convention builder to configure.</param>
@@ -26,12 +26,6 @@ public static class MonicaEndpointConventionExtensions
         if (kind == MonicaEndpointKind.MinimalApi)
         {
             builder.WithMetadata(MonicaMinimalApiMetadata.Instance);
-        }
-
-        var port = Mo.ModuleSystem.MonicaEndpointPort;
-        if (port is not null)
-        {
-            builder.RequireHost($"*:{port.Value}");
         }
 
         return builder;

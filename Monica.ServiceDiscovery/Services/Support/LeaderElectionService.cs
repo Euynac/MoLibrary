@@ -61,7 +61,7 @@ public class LeaderElectionService(
             _currentETag = eTag;
         }
 
-        logger.LogInformation("成为 Leader，时间: {Time}", becomeTime);
+        logger.LogInformation("Leadership acquired at {BecomeTime}.", becomeTime);
 
         // trigger event
         var serviceStatus = clientInfo.GetServiceStatus();
@@ -79,7 +79,7 @@ public class LeaderElectionService(
         {
             _currentETag = newETag;
         }
-        logger.LogDebug("更新 ETag: {ETag}", newETag);
+        logger.LogDebug("Leader ETag updated to {ETag}.", newETag);
     }
 
     public void TriggerLeaderLost(LeaderLostReason reason)
@@ -98,7 +98,14 @@ public class LeaderElectionService(
             _currentETag = null;
         }
 
-        logger.LogWarning("失去 Leader 地位，原因: {Reason}", reason);
+        if (reason == LeaderLostReason.GracefulShutdown)
+        {
+            logger.LogInformation("Leadership released. Reason: {Reason}.", reason);
+        }
+        else
+        {
+            logger.LogWarning("Leadership lost. Reason: {Reason}.", reason);
+        }
 
         // trigger event
         var serviceStatus = clientInfo.GetServiceStatus();
@@ -119,6 +126,6 @@ public class LeaderElectionService(
             _leaderBecomeTime = null;
             _currentETag = null;
         }
-        logger.LogDebug("重置 Leader 状态");
+        logger.LogDebug("Leader state reset.");
     }
 }

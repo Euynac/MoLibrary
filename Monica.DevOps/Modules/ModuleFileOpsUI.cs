@@ -34,11 +34,11 @@ public class ModuleFileOpsUI(ModuleFileOpsUIOption option)
 
 public static class ModuleFileOpsUIBuilderExtensions
 {
-    extension(Mo)
+    extension(IMonicaBuilder builder)
     {
-        public static ModuleFileOpsUIGuide AddFileOpsUI(Action<ModuleFileOpsUIOption>? action = null)
+        public ModuleFileOpsUIGuide AddFileOpsUI(Action<ModuleFileOpsUIOption>? action = null)
         {
-            return new ModuleFileOpsUIGuide().Register(action);
+            return builder.AddModule<ModuleFileOpsUI, ModuleFileOpsUIOption, ModuleFileOpsUIGuide>(action);
         }
     }
 }

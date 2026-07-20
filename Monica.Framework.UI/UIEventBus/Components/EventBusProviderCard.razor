@@ -10,13 +10,13 @@
             </MudAvatar>
         </CardHeaderAvatar>
         <CardHeaderContent>
-            <MudText Typo="Typo.h6">@Provider.DisplayName</MudText>
+            <MudText Typo="Typo.h6">@L.GetProviderDisplayName(Provider)</MudText>
             <MudText Typo="Typo.body2" Color="Color.Secondary">@Provider.ImplementationType</MudText>
         </CardHeaderContent>
         <CardHeaderActions>
             <MudStack Row="true" Spacing="1">
                 <MudChip T="string" Color="@GetProviderColor()" Size="Size.Small">
-                    @Provider.ProviderTypeName
+                    @L.GetProviderKindText(Provider.ProviderType)
                 </MudChip>
                 <MudChip T="string" Color="@(Provider.IsDistributed ? Color.Info : Color.Success)" Size="Size.Small">
                     @L.GetProviderModeText(Provider.IsDistributed)

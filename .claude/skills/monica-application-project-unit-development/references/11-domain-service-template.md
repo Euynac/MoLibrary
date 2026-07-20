@@ -11,6 +11,7 @@ Use `$DomainNamespace$` for the domain project namespace selected by the archite
 ## Rules
 
 - Derive from `DomainService`.
+- Inject the current host's `ILoggerFactory` and pass it to the base constructor.
 - Start the class name with `Domain`.
 - Prefer normal return types and exceptions. Let `ApplicationService` translate failures into `Res`.
 - Keep persistence access delegated to repositories.
@@ -19,13 +20,15 @@ Use `$DomainNamespace$` for the domain project namespace selected by the archite
 ## Minimal Example
 
 ```csharp
+using Microsoft.Extensions.Logging;
 using Monica.WebApi.Abstractions;
 
 namespace $DomainNamespace$.DomainServices;
 
 public sealed class Domain$FeatureName$(
-    IRepositoryOrder repository)
-    : DomainService
+    IRepositoryOrder repository,
+    ILoggerFactory loggerFactory)
+    : DomainService(loggerFactory)
 {
     public async Task<Order> ExecuteAsync(
         long orderId,

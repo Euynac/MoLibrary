@@ -8,8 +8,6 @@ namespace Monica.Core.JsonSerialization.Converters;
 /// </summary>
 public class PreserveOriginalConverter : JsonConverter<object>
 {
-    //internal static JsonSerializerOptions Options = new() {Encoder = JavaScriptEncoder.Default};
-    internal static JsonSerializerOptions Options = new();
     public override object? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
     {
         return JsonDocument.ParseValue(ref reader).RootElement.Clone();
@@ -23,7 +21,7 @@ public class PreserveOriginalConverter : JsonConverter<object>
         }
         else
         {
-            JsonSerializer.Serialize(writer, value, value.GetType(), Options);
+            JsonSerializer.Serialize(writer, value, value.GetType(), JsonSerializerOptions.Default);
         }
     }
 }
@@ -33,9 +31,6 @@ public class PreserveOriginalConverter : JsonConverter<object>
 /// </summary>
 public class PreserveOriginalConverter<T> : JsonConverter<T>
 {
-    //internal static JsonSerializerOptions Options = new() {Encoder = JavaScriptEncoder.Default};
-    internal static JsonSerializerOptions Options = new();
-  
     public override T? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
     {
         return JsonSerializer.Deserialize<T?>(ref reader, options);
@@ -48,6 +43,6 @@ public class PreserveOriginalConverter<T> : JsonConverter<T>
             writer.WriteNullValue();
             return;
         }
-        JsonSerializer.Serialize(writer, value, value.GetType(), Options);
+        JsonSerializer.Serialize(writer, value, value.GetType(), JsonSerializerOptions.Default);
     }
 }

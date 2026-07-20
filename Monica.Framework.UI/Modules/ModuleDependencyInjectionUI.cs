@@ -13,14 +13,14 @@ namespace Monica.Modules;
 
 public static class ModuleDependencyInjectionUIBuilderExtensions
 {
-    extension(Mo)
+    extension(IMonicaBuilder builder)
     {
         /// <summary>
         /// Registers the dependency-injection diagnostics UI module.
         /// </summary>
-        public static ModuleDependencyInjectionUIGuide AddDependencyInjectionUI(Action<ModuleDependencyInjectionUIOption>? action = null)
+        public ModuleDependencyInjectionUIGuide AddDependencyInjectionUI(Action<ModuleDependencyInjectionUIOption>? action = null)
         {
-            return new ModuleDependencyInjectionUIGuide().Register(action);
+            return builder.AddModule<ModuleDependencyInjectionUI, ModuleDependencyInjectionUIOption, ModuleDependencyInjectionUIGuide>(action);
         }
     }
 }

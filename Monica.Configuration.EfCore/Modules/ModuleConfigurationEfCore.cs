@@ -43,7 +43,8 @@ public static class ModuleConfigurationEfCoreBuilderExtensions
         ArgumentNullException.ThrowIfNull(guide);
         ArgumentNullException.ThrowIfNull(optionsAction);
 
-        new ModuleConfigurationEfCoreGuide().Register().UseDbContext(optionsAction);
+        guide.AddModule<ModuleConfigurationEfCore, ModuleConfigurationEfCoreOption, ModuleConfigurationEfCoreGuide>()
+            .UseDbContext(optionsAction);
         return guide.UseStartupEffectiveValueStore(() => CreateStartupStore(optionsAction));
     }
 

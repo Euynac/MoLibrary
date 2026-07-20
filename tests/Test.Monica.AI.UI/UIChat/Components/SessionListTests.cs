@@ -6,7 +6,7 @@ using Monica.AI.Chat.Models;
 using Monica.AI.Models;
 using Monica.AI.UI.Localization;
 using Monica.AI.UI.UIChat.Components;
-using Monica.UnitTests.Localization;
+using Monica.Testing.Localization;
 using MudBlazor.Services;
 
 namespace Test.Monica.AI.UI.UIChat.Components;

@@ -7,8 +7,6 @@ internal sealed class RepositoryDbContextRegistry(IEnumerable<RepositoryDbContex
     : IRepositoryDbContextRegistry
 {
     private readonly IReadOnlyList<RepositoryDbContextRegistration> _registrations = registrations
-        .OrderBy(registration => registration.RegistrationOrder)
-        .ThenBy(registration => registration.FullName, StringComparer.Ordinal)
         .ToList();
 
     public IReadOnlyList<RepositoryDbContextRegistration> GetRegistrations()

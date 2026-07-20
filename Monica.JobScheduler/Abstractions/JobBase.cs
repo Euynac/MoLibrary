@@ -1,5 +1,4 @@
 using Microsoft.Extensions.Logging;
-using Monica.Core.Logging;
 
 namespace Monica.JobScheduler.Abstractions;
 
@@ -20,18 +19,21 @@ namespace Monica.JobScheduler.Abstractions;
 /// </remarks>
 public abstract class JobBase : IJobExecutionLogBindingTarget
 {
-    private readonly Lazy<ILogger> _loggerLazy;
     private JobExecutionLogWriter? _executionLogWriter;
 
-    protected JobBase()
+    /// <summary>
+    /// Initializes the job with a logger owned by the current host.
+    /// </summary>
+    /// <param name="logger">The logger for the concrete job type.</param>
+    protected JobBase(ILogger logger)
     {
-        _loggerLazy = new Lazy<ILogger>(() => LogManager.For(GetType()));
+        Logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
     /// <summary>
     /// Gets the type-specific logger for the current job instance.
     /// </summary>
-    protected ILogger Logger => _loggerLazy.Value;
+    protected ILogger Logger { get; }
 
     /// <summary>
     /// Writes a curated execution log entry into the current job instance history.

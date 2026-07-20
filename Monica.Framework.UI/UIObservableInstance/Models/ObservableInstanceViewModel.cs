@@ -1,7 +1,5 @@
 using System.Text.Json;
 using Microsoft.Extensions.Logging;
-using Monica.Core.Localization.Services;
-using Monica.Framework.UI.Localization;
 using Monica.Framework.UI.UIObservableInstance.Support;
 using Monica.Tool.Extensions;
 using MudBlazor;
@@ -129,19 +127,9 @@ public class ObservableInstanceViewModel
     public string StateTypeDisplay => CurrentState?.GetType().GetCleanName() ?? "-";
 
     /// <summary>
-    /// Short type name using GetCleanName()
-    /// </summary>
-    public string InstanceTypeDisplay => InstanceType?.GetCleanName() ?? LocalizationManager.Get<ObservableInstanceResource>("Shared:Labels:Unknown");
-
-    /// <summary>
     /// Full type name using GetCleanFullName()
     /// </summary>
     public string InstanceTypeFullName => InstanceType?.GetCleanFullName() ?? "-";
-
-    /// <summary>
-    /// Handles null/empty GroupId gracefully
-    /// </summary>
-    public string GroupIdDisplay => string.IsNullOrEmpty(GroupId) ? LocalizationManager.Get<ObservableInstanceResource>("Shared:Labels:Ungrouped") : GroupId;
 
     /// <summary>
     /// Formatted registered timestamp
@@ -154,23 +142,6 @@ public class ObservableInstanceViewModel
     public string StateChangedAtDisplay => StateChangedAt.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss");
 
     /// <summary>
-    /// Time since RegisteredAt
-    /// </summary>
-    public string RunningDurationDisplay
-    {
-        get
-        {
-            var duration = DateTime.UtcNow - RegisteredAt;
-            return FormatDuration(duration);
-        }
-    }
-
-    /// <summary>
-    /// Log level text for display
-    /// </summary>
-    public string LogLevelText => LocalizationManager.For<ObservableInstanceResource>().GetLogLevelText(CurrentLogLevel);
-
-    /// <summary>
     /// MudBlazor color for log level
     /// </summary>
     public Color LogLevelColor => ObservableInstanceDisplayMapping.GetLogLevelColor(CurrentLogLevel);
@@ -179,11 +150,6 @@ public class ObservableInstanceViewModel
     /// Icon for log level
     /// </summary>
     public string LogLevelIcon => ObservableInstanceDisplayMapping.GetLogLevelIcon(CurrentLogLevel);
-
-    /// <summary>
-    /// Health state text
-    /// </summary>
-    public string HealthStateText => LocalizationManager.For<ObservableInstanceResource>().GetHealthStateText(HealthState);
 
     /// <summary>
     /// MudBlazor color for health state
@@ -203,11 +169,6 @@ public class ObservableInstanceViewModel
     /// Color based on exception status
     /// </summary>
     public Color ExceptionStatusColor => HasExceptions ? Color.Error : Color.Success;
-
-    /// <summary>
-    /// Exception status badge text
-    /// </summary>
-    public string ExceptionStatusText => LocalizationManager.For<ObservableInstanceResource>().GetExceptionStatusText(HasExceptions, ExceptionCount);
 
     #endregion
 
@@ -251,14 +212,6 @@ public class ObservableInstanceViewModel
         {
             return state.GetType().GetCleanName();  // Fallback to type name
         }
-    }
-
-    /// <summary>
-    /// Formats duration to human-readable string
-    /// </summary>
-    private static string FormatDuration(TimeSpan duration)
-    {
-        return LocalizationManager.For<ObservableInstanceResource>().FormatDuration(duration);
     }
 
     #endregion

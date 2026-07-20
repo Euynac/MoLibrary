@@ -1,3 +1,4 @@
+using System.Collections.Frozen;
 using Monica.UI.Theming.Definitions;
 
 namespace Monica.UI.Theming;
@@ -7,39 +8,21 @@ namespace Monica.UI.Theming;
 /// </summary>
 public static class ThemeCatalog
 {
-    private static readonly Dictionary<MonicaThemeKind, IThemeDefinition> _themes = new();
-
-    static ThemeCatalog()
-    {
-        RegisterDefaultThemes();
-    }
-
-    /// <summary>
-    /// Register default theme
-    /// </summary>
-    private static void RegisterDefaultThemes()
-    {
-        RegisterTheme(new MudBlazorDefaultTheme());
-        RegisterTheme(new DefaultTheme());
-        RegisterTheme(new HermesTealTheme());
-        RegisterTheme(new VibeUsageMatrixTheme());
-        RegisterTheme(new MaterialDesign3Theme());
-        RegisterTheme(new FluentDesignTheme());
-        RegisterTheme(new FreshTheme());
-        RegisterTheme(new MacaronSweetheartTheme());
-        RegisterTheme(new InkLandscapeTheme());
-        RegisterTheme(new ZenInkTheme());
-        RegisterTheme(new ComicBurstTheme());
-    }
-
-    /// <summary>
-    /// Register theme.
-    /// </summary>
-    /// <param name="themeProvider">Theme provider.</param>
-    public static void RegisterTheme(IThemeDefinition themeProvider)
-    {
-        _themes[themeProvider.Kind] = themeProvider;
-    }
+    private static readonly FrozenDictionary<MonicaThemeKind, IThemeDefinition> _themes =
+        new IThemeDefinition[]
+        {
+            new MudBlazorDefaultTheme(),
+            new DefaultTheme(),
+            new HermesTealTheme(),
+            new VibeUsageMatrixTheme(),
+            new MaterialDesign3Theme(),
+            new FluentDesignTheme(),
+            new FreshTheme(),
+            new MacaronSweetheartTheme(),
+            new InkLandscapeTheme(),
+            new ZenInkTheme(),
+            new ComicBurstTheme()
+        }.ToFrozenDictionary(static theme => theme.Kind);
 
     /// <summary>
     /// Gets a theme provider.

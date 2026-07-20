@@ -15,10 +15,10 @@ namespace Monica.JobScheduler.Facades;
 public class JobSchedulerQueryFacade(
     IJobDefinitionCacheService cacheService,
     IJobMetadataRepository metadataRepository,
-    IOptions<ModuleClockOption> clockOptions,
+    IOptions<ModuleJobSchedulerOption> options,
     ILogger<JobSchedulerQueryFacade> logger)
 {
-    private readonly TimeZoneInfo _cronTimeZone = clockOptions.Value.ConfiguredTimeZone ?? TimeZoneInfo.Local;
+    private readonly TimeZoneInfo _cronTimeZone = options.Value.CronTimeZone;
 
     /// <summary>
     /// Gets job definitions with filtering and pagination.

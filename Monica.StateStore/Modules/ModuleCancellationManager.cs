@@ -13,14 +13,14 @@ namespace Monica.Modules;
 
 public static class ModuleCancellationManagerBuilderExtensions
 {
-    extension(Mo)
+    extension(IMonicaBuilder builder)
     {
         /// <summary>
         /// Configure the CancellationManager module
         /// </summary>
-        public static ModuleCancellationManagerGuide AddCancellationManager(Action<ModuleCancellationManagerOption>? action = null)
+        public ModuleCancellationManagerGuide AddCancellationManager(Action<ModuleCancellationManagerOption>? action = null)
         {
-            return new ModuleCancellationManagerGuide().Register(action);
+            return builder.AddModule<ModuleCancellationManager, ModuleCancellationManagerOption, ModuleCancellationManagerGuide>(action);
         }
     }
 }

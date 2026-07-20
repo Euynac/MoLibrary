@@ -27,7 +27,7 @@ public static class ModuleJobSchedulerEfCoreBuilderExtensions
         Action<IServiceProvider, DbContextOptionsBuilder> optionsAction,
         Action<ModuleJobSchedulerEfCoreOption>? moduleAction = null)
     {
-        new ModuleJobSchedulerEfCoreGuide().Register(moduleAction)
+        guide.AddModule<ModuleJobSchedulerEfCore, ModuleJobSchedulerEfCoreOption, ModuleJobSchedulerEfCoreGuide>(moduleAction)
             .UseDbContext(optionsAction);
 
         return guide;

@@ -1,42 +1,15 @@
-﻿using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
-using Monica.Core.Logging;
-using Monica.Core.ObjectMapping.Abstractions;
-using Monica.DependencyInjection.Abstractions;
+﻿using Monica.DependencyInjection.Abstractions;
 using Monica.EventBus.Abstractions.Handlers;
 
 namespace Monica.WebApi.Abstractions;
 
 /// <summary>
-/// Base class for event handlers, providing common properties and methods.
+/// Provides host-bound logging and mapping services to Monica event handlers.
 /// </summary>
-public abstract class EventHandlerBase :
-    ITransientDependency,
-    ICachedServiceProviderAccessor
-{
-    private readonly Lazy<ILogger> _loggerLazy;
-
-    protected EventHandlerBase()
-    {
-        _loggerLazy = new Lazy<ILogger>(() => LogManager.For(GetType()));
-    }
-
-    public ICachedServiceProvider CachedServiceProvider
-    {
-        get => field ?? throw CreateNotInitializedException();
-        set => field = value ?? throw new ArgumentNullException(nameof(value));
-    }
-
-    protected ILogger Logger => _loggerLazy.Value;
-
-    protected IObjectMapper Mapper => CachedServiceProvider.GetRequiredService<IObjectMapper>();
-
-    private InvalidOperationException CreateNotInitializedException()
-    {
-        return new InvalidOperationException(
-            $"Cached service provider is not initialized for {GetType().FullName}. Resolve the service through Monica DI instead of constructing it manually.");
-    }
-}
+/// <remarks>
+/// Event handlers must be resolved through Monica dependency injection so their host service provider is assigned.
+/// </remarks>
+public abstract class EventHandlerBase : ServiceBase, ITransientDependency;
 
 
 /// <summary>

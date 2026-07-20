@@ -19,16 +19,16 @@ namespace Monica.Modules;
 /// </summary>
 public static class ModuleConfigurationUIBuilderExtensions
 {
-    extension(Mo)
+    extension(IMonicaBuilder builder)
     {
         /// <summary>
         /// Registers the configuration operator console UI module.
         /// </summary>
         /// <param name="action">Optional module option configuration.</param>
         /// <returns>The module guide used to continue configuration.</returns>
-        public static ModuleConfigurationUIGuide AddConfigurationUI(Action<ModuleConfigurationUIOption>? action = null)
+        public ModuleConfigurationUIGuide AddConfigurationUI(Action<ModuleConfigurationUIOption>? action = null)
         {
-            return new ModuleConfigurationUIGuide().Register(action);
+            return builder.AddModule<ModuleConfigurationUI, ModuleConfigurationUIOption, ModuleConfigurationUIGuide>(action);
         }
     }
 }

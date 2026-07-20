@@ -14,14 +14,14 @@ namespace Monica.Modules;
 
 public static class ModuleObservableInstanceBuilderExtensions
 {
-    extension(Mo)
+    extension(IMonicaBuilder builder)
     {
         /// <summary>
         /// Configures the ObservableInstance module.
         /// </summary>
-        public static ModuleObservableInstanceGuide AddObservableInstance(Action<ModuleObservableInstanceOption>? action = null)
+        public ModuleObservableInstanceGuide AddObservableInstance(Action<ModuleObservableInstanceOption>? action = null)
         {
-            return new ModuleObservableInstanceGuide().Register(action);
+            return builder.AddModule<ModuleObservableInstance, ModuleObservableInstanceOption, ModuleObservableInstanceGuide>(action);
         }
     }
 }

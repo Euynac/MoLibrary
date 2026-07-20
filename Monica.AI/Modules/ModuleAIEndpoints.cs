@@ -16,15 +16,15 @@ namespace Monica.Modules;
 /// </summary>
 public static class ModuleAIEndpointsBuilderExtensions
 {
-    extension(Mo)
+    extension(IMonicaBuilder builder)
     {
         /// <summary>
         /// Registers stateless HTTP endpoints for AI provider discovery.
         /// </summary>
         /// <param name="action">Optional endpoint configuration.</param>
         /// <returns>The AI endpoints module guide.</returns>
-        public static ModuleAIEndpointsGuide AddAIEndpoints(Action<ModuleAIEndpointsOption>? action = null)
-            => new ModuleAIEndpointsGuide().Register(action);
+        public ModuleAIEndpointsGuide AddAIEndpoints(Action<ModuleAIEndpointsOption>? action = null)
+            => builder.AddModule<ModuleAIEndpoints, ModuleAIEndpointsOption, ModuleAIEndpointsGuide>(action);
     }
 }
 

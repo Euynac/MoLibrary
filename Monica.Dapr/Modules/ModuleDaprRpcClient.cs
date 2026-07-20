@@ -12,7 +12,7 @@ public static class ModuleDaprRpcClientBuilderExtensions
     public static ModuleDaprRpcClientGuide UseDaprProvider(this ModuleRpcClientGuide guide,
         Action<ModuleDaprRpcClientOption>? action = null)
     {
-        return new ModuleDaprRpcClientGuide().Register(action);
+        return guide.AddModule<ModuleDaprRpcClient, ModuleDaprRpcClientOption, ModuleDaprRpcClientGuide>(action);
     }
 }
 

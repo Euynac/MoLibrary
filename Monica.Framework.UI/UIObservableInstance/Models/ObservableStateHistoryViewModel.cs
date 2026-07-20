@@ -1,7 +1,5 @@
 using System.Text.Json;
 using Microsoft.Extensions.Logging;
-using Monica.Core.Localization.Services;
-using Monica.Framework.UI.Localization;
 using Monica.Core.Extensions;
 using Monica.Framework.UI.UIObservableInstance.Support;
 using Monica.Tool.Extensions;
@@ -85,11 +83,6 @@ public class ObservableStateHistoryViewModel
     public string TimestampDisplay => Timestamp.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss.fff");
 
     /// <summary>
-    /// Relative time display ("2 minutes ago" format)
-    /// </summary>
-    public string RelativeTimeDisplay => LocalizationManager.For<ObservableInstanceResource>().FormatRelativeTime(Timestamp);
-
-    /// <summary>
     /// Exception message (if exception exists)
     /// </summary>
     public string ExceptionMessage => Exception?.GetMessageRecursively() ?? string.Empty;
@@ -120,11 +113,6 @@ public class ObservableStateHistoryViewModel
             return $"{ExceptionType}: {message}";
         }
     }
-
-    /// <summary>
-    /// Log level text for display
-    /// </summary>
-    public string LogLevelText => LocalizationManager.For<ObservableInstanceResource>().GetLogLevelText(LogLevel);
 
     /// <summary>
     /// Log level color
@@ -172,11 +160,6 @@ public class ObservableStateHistoryViewModel
         (false, true) => Icons.Material.Filled.SwapHoriz,       // Normal state change
         (false, false) => Icons.Material.Filled.Info           // Message only
     };
-
-    /// <summary>
-    /// Entry type description
-    /// </summary>
-    public string EntryTypeDescription => LocalizationManager.For<ObservableInstanceResource>().GetEntryTypeDescription(this);
 
     #endregion
 

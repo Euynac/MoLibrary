@@ -6,6 +6,7 @@ using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Microsoft.EntityFrameworkCore.Metadata;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
@@ -19,13 +20,14 @@ using Monica.Repository.Persistence.Services.Support;
 using Monica.Repository.UnitOfWork.Abstractions;
 using Monica.Repository.UnitOfWork.Models;
 using Monica.Tool.Extensions;
-using Monica.Tool.Runtime;
 
 namespace Monica.Repository.Persistence.Services;
 
 public abstract class RepositoryDbContext<TDbContext>(DbContextOptions<TDbContext> options, ICachedServiceProvider serviceProvider) : DbContext(options), IUnitOfWorkAwareDbContext
     where TDbContext : DbContext
 {
+    private IServiceScope? _factoryScope;
+
     public ICachedServiceProvider CachedServiceProvider { get; } = serviceProvider;
 
     protected IAuditPropertySetter AuditPropertySetter => CachedServiceProvider.GetRequiredService<IAuditPropertySetter>();
@@ -36,15 +38,71 @@ public abstract class RepositoryDbContext<TDbContext>(DbContextOptions<TDbContex
 
     public bool HasInit { get; protected set; }
 
+    /// <summary>
+    /// Transfers ownership of the factory-created dependency injection scope to this context.
+    /// </summary>
+    /// <remarks>
+    /// Contexts resolved normally from an application scope never use this path. Factory-created contexts dispose
+    /// the attached scope together with the context so scoped dependencies cannot escape their operation boundary.
+    /// </remarks>
+    internal void OwnFactoryScope(IServiceScope scope)
+    {
+        ArgumentNullException.ThrowIfNull(scope);
+
+        if (Interlocked.CompareExchange(ref _factoryScope, scope, null) is not null)
+        {
+            throw new InvalidOperationException("A repository DbContext can own only one factory scope.");
+        }
+    }
+
+    /// <inheritdoc />
+    public override void Dispose()
+    {
+        var scope = Interlocked.Exchange(ref _factoryScope, null);
+        try
+        {
+            base.Dispose();
+        }
+        finally
+        {
+            scope?.Dispose();
+        }
+    }
+
+    /// <inheritdoc />
+    public override async ValueTask DisposeAsync()
+    {
+        var scope = Interlocked.Exchange(ref _factoryScope, null);
+        try
+        {
+            await base.DisposeAsync().ConfigureAwait(false);
+        }
+        finally
+        {
+            if (scope is IAsyncDisposable asyncDisposable)
+            {
+                await asyncDisposable.DisposeAsync().ConfigureAwait(false);
+            }
+            else
+            {
+                scope?.Dispose();
+            }
+        }
+    }
+
 
 
     protected readonly DbContextOptions DbContextOptions = options;
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
     {
-        //check if is in development
-        if ((Options.EnableSensitiveDataLogging is null && RuntimeEnvironment.IsDevelopment()) || Options.EnableSensitiveDataLogging is true)
+        var enableSensitiveDataLogging = Options.EnableSensitiveDataLogging
+            ?? CachedServiceProvider.GetService<IHostEnvironment>()?.IsDevelopment()
+            ?? false;
+
+        if (enableSensitiveDataLogging)
         {
-            optionsBuilder.EnableSensitiveDataLogging();//巨坑:这个可以显示具体参数值的设置必须写在OnConfiguring里面才会生效。
+            // EF Core must receive this setting during OnConfiguring for parameter values to be included in diagnostics.
+            optionsBuilder.EnableSensitiveDataLogging();
         }
     }
 

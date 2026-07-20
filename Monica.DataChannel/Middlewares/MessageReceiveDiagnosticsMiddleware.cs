@@ -28,14 +28,14 @@ namespace Monica.DataChannel.Middlewares
         public static MessageReceiveDiagnosticsSnapshot? GetSnapshot(HttpContext context)
         {
             return context.Items.TryGetValue(SnapshotItemKey, out var snapshot)
-                ? snapshot as MessageReceiveDiagnosticsSnapshot 
+                ? snapshot as MessageReceiveDiagnosticsSnapshot
                 : null;
         }
     }
 
     public sealed class MessageReceiveDiagnostics(string? route)
     {
-        private long _receiveSequence; 
+        private long _receiveSequence;
         private readonly ConcurrentDictionary<string, MessageReceiveActive> _activeReceives = new();
         private readonly object _rateLock = new();
         private int _currentSecondMessageCount;
@@ -49,8 +49,8 @@ namespace Monica.DataChannel.Middlewares
             var utcNow = DateTimeOffset.UtcNow;
             var receiveId = $"{context.TraceIdentifier}:{Interlocked.Increment(ref _receiveSequence)}";
             var activeReceive = new MessageReceiveActive(
-                receiveId, 
-                context.TraceIdentifier, 
+                receiveId,
+                context.TraceIdentifier,
                 Thread.CurrentThread.ManagedThreadId,
                 utcNow);
 

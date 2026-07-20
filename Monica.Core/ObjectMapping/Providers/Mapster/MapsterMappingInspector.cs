@@ -7,21 +7,21 @@ using Monica.Tool.Extensions;
 
 namespace Monica.Core.ObjectMapping.Providers.Mapster;
 
-internal static class MapsterMappingInspector
+internal sealed class MapsterMappingInspector(TypeAdapterConfig config)
 {
-    public static IReadOnlyList<ObjectMapperInfo> GetMappings()
+    public IReadOnlyList<ObjectMapperInfo> GetMappings()
     {
-        TypeAdapterConfig.GlobalSettings.SelfContainedCodeGeneration = true;
+        config.SelfContainedCodeGeneration = true;
 
         var buildAdapterMethod = GetBuildAdapterMethod();
         var mappings = new List<ObjectMapperInfo>();
 
-        foreach (var rule in TypeAdapterConfig.GlobalSettings.RuleMap)
+        foreach (var rule in config.RuleMap)
         {
             var sourceType = rule.Key.Source;
             var destinationType = rule.Key.Destination;
             var adapterBuilder = buildAdapterMethod.MakeGenericMethod(sourceType)
-                .Invoke(null, [GetDefaultValue(sourceType)])
+                .Invoke(null, [GetDefaultValue(sourceType), config])
                 ?? throw new InvalidOperationException("Failed to create the Mapster adapter builder.");
             var createMapExpression = typeof(ITypeAdapterBuilder<>)
                 .MakeGenericType(sourceType)
@@ -48,7 +48,8 @@ internal static class MapsterMappingInspector
         return typeof(TypeAdapter).GetMethods(BindingFlags.Public | BindingFlags.Static)
                    .SingleOrDefault(method =>
                        method is { Name: "BuildAdapter", IsGenericMethod: true } &&
-                       method.GetParameters().Length == 1)
+                       method.GetParameters() is [{}, { ParameterType: not null } parameters] &&
+                       parameters.ParameterType == typeof(TypeAdapterConfig))
                ?? throw new InvalidOperationException("BuildAdapter<T> method was not found.");
     }
 

@@ -50,6 +50,12 @@ public class LangDetector
         public int Scores { get; set; }
     }
 
+    private static readonly IReadOnlyList<LanguageRuleSet> LANGUAGE_RULES = LoadLanguageRules();
+
+    private sealed record LanguageRule(string Pattern, int Points, bool NearTop);
+
+    private sealed record LanguageRuleSet(string Language, IReadOnlyList<LanguageRule> Rules);
+
     public string GetFileExtension(SupportedLanguages language)
     {
         return language switch
@@ -83,8 +89,6 @@ public class LangDetector
     }
     public List<ScoresResult> GetLangScores(string snippet)
     {
-        var languages = JsonSerializer.Deserialize<Dictionary<string, List<LangOption>>>(JsonConfig)
-            ?? throw new InvalidOperationException("Failed to load language detector configuration.");
         var linesOfCode = snippet.RegexReplace("\r\n?", "\n").RegexReplace("\n{2,}", "\n").Split('\n');
 
         bool NearTop(int index)
@@ -100,13 +104,11 @@ public class LangDetector
                 .ToArray();
         }
 
-        var pairs = languages.Select(pair => new { language = pair.Key, checkers = pair.Value }).ToList();
-
         var useNearTop = linesOfCode.Length > 500;
-        var results = pairs.Select(pair =>
+        var results = LANGUAGE_RULES.Select(ruleSet =>
         {
-            var language = pair.language;
-            var checkers = pair.checkers;
+            var language = ruleSet.Language;
+            var checkers = ruleSet.Rules;
             if (language == "Unknown") return new ScoresResult()
             {
                 Languages = SupportedLanguages.Unknown,
@@ -116,12 +118,12 @@ public class LangDetector
             {
                 
                 var relevantCheckers = !useNearTop ? checkers:NearTop(index)
-                    ? checkers.Where(checker => checker.nearTop).ToList()
-                    : checkers.Where(checker => !checker.nearTop).ToList();
+                    ? checkers.Where(checker => checker.NearTop).ToList()
+                    : checkers.Where(checker => !checker.NearTop).ToList();
 
                 return relevantCheckers
-                    .Where(checker => Regex.IsMatch(lineOfCode, checker.pattern))
-                    .Sum(checker => checker.points);
+                    .Where(checker => Regex.IsMatch(lineOfCode, checker.Pattern))
+                    .Sum(checker => checker.Points);
             }).ToList();
 
             var points = pointsList.Sum();
@@ -135,8 +137,21 @@ public class LangDetector
         return results;
     }
 
+    private static IReadOnlyList<LanguageRuleSet> LoadLanguageRules()
+    {
+        var languages = JsonSerializer.Deserialize<Dictionary<string, List<LangOption>>>(LANGUAGE_RULES_JSON)
+            ?? throw new InvalidOperationException("Failed to load language detector configuration.");
 
-    public static string JsonConfig = """
+        return languages
+            .Select(pair => new LanguageRuleSet(
+                pair.Key,
+                pair.Value
+                    .Select(option => new LanguageRule(option.pattern, option.points, option.nearTop))
+                    .ToArray()))
+            .ToArray();
+    }
+
+    private const string LANGUAGE_RULES_JSON = """
                {
             "JavaScript": [
                 {

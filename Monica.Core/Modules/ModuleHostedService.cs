@@ -17,14 +17,14 @@ namespace Monica.Modules;
 
 public static class ModuleHostedServiceBuilderExtensions
 {
-    extension(Mo)
+    extension(IMonicaBuilder builder)
     {
         /// <summary>
         /// Configures the HostedService module.
         /// </summary>
-        public static ModuleHostedServiceGuide AddHostedService(Action<ModuleHostedServiceOption>? action = null)
+        public ModuleHostedServiceGuide AddHostedService(Action<ModuleHostedServiceOption>? action = null)
         {
-            return new ModuleHostedServiceGuide().Register(action);
+            return builder.AddModule<ModuleHostedService, ModuleHostedServiceOption, ModuleHostedServiceGuide>(action);
         }
     }
 }

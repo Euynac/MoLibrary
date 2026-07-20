@@ -11,14 +11,14 @@ namespace Monica.Modules;
 
 public static class ModuleSystemUIBuilderExtensions
 {
-    extension(Mo)
+    extension(IMonicaBuilder builder)
     {
         /// <summary>
         /// Configures the module system dashboard UI module.
         /// </summary>
-        public static ModuleSystemUIGuide AddModuleSystemUI(Action<ModuleSystemUIOption>? action = null)
+        public ModuleSystemUIGuide AddModuleSystemUI(Action<ModuleSystemUIOption>? action = null)
         {
-            return new ModuleSystemUIGuide().Register(action);
+            return builder.AddModule<ModuleSystemUI, ModuleSystemUIOption, ModuleSystemUIGuide>(action);
         }
     }
 }

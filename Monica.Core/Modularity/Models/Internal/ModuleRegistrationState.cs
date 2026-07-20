@@ -1,6 +1,5 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using Monica.Core.Logging;
 using Monica.Core.Modularity.Abstractions;
 using Monica.Core.Modularity.Models;
 using Monica.Core.Modularity.Services.Support;
@@ -11,7 +10,7 @@ namespace Monica.Core.Modularity.Models.Internal;
 /// <summary>
 /// Stores module registration requests and configuration data.
 /// </summary>
-public class ModuleRegistrationState(Type moduleType)
+public class ModuleRegistrationState(MonicaApplication application, Type moduleType)
 {
     public Type ModuleType { get; } = moduleType;
 
@@ -34,6 +33,11 @@ public class ModuleRegistrationState(Type moduleType)
     /// Pending configuration actions grouped by option type and ordered by execution priority.
     /// </summary>
     private Dictionary<Type, SortedList<int, Action<object>>> PendingConfigActions { get; } = [];
+
+    /// <summary>
+    /// Option types declared by this module, including extra options that use only their defaults.
+    /// </summary>
+    private HashSet<Type> DeclaredOptionTypes { get; } = [];
 
     /// <summary>
     /// Finalized configuration objects indexed by option type.
@@ -78,13 +82,13 @@ public class ModuleRegistrationState(Type moduleType)
 
     public void StartModulePhase(ModulePhase phase)
     {
-        ModuleInitializationProfiler.StartModulePhase(ModuleType, phase);
+        application.Profiling.StartModulePhase(ModuleType, phase);
         SetModulePhase(phase);
     }
 
     public void EndModulePhase(ModulePhase phase)
     {
-        ModuleInitializationProfiler.StopModulePhase(ModuleType, phase);
+        application.Profiling.StopModulePhase(ModuleType, phase);
     }
 
     /// <summary>
@@ -94,7 +98,7 @@ public class ModuleRegistrationState(Type moduleType)
     /// <returns>The current module option instance.</returns>
     public object CreateCurrentModuleOption()
     {
-        var currentModuleOption = Activator.CreateInstance(ModuleOptionType)!;
+        var currentModuleOption = CreateOption(ModuleOptionType);
         
         if(!PendingConfigActions.TryGetValue(ModuleOptionType, out var value))
         {
@@ -115,34 +119,27 @@ public class ModuleRegistrationState(Type moduleType)
     /// </summary>
     public void InitFinalConfigures()
     {
-        foreach (var configType in PendingConfigActions.Keys)
+        foreach (var configType in DeclaredOptionTypes)
         {
             // Create an instance for the configuration type.
-            var configInstance = Activator.CreateInstance(configType);
-            
-            if (configInstance == null)
-                continue;
-            
-            // Retrieve all actions for the type, already sorted by priority.
-            var sortedActions = PendingConfigActions[configType];
-            
-            // Apply each configuration action in order.
-            foreach (var action in sortedActions.Values)
+            var configInstance = CreateOption(configType);
+
+            if (PendingConfigActions.TryGetValue(configType, out var sortedActions))
             {
-                action.Invoke(configInstance);
+                // Apply each configuration action in order.
+                foreach (var action in sortedActions.Values)
+                {
+                    action.Invoke(configInstance);
+                }
             }
-            
+
             // Persist the finalized configuration instance.
             FinalConfigures[configType] = configInstance;
         }
 
-        if(!FinalConfigures.ContainsKey(ModuleOptionType))
-        {
-            FinalConfigures[ModuleOptionType] = Activator.CreateInstance(ModuleOptionType)!;
-        }
-
         if (Activator.CreateInstance(ModuleType, ModuleOption) is ModuleBase instance)
         {
+            instance.Bind(application);
             instance.ConvertToRegisterRequest();
             ModuleSingleton = instance;
         }
@@ -158,6 +155,42 @@ public class ModuleRegistrationState(Type moduleType)
         PendingConfigActions.Clear();
     }
 
+    private object CreateOption(Type optionType)
+    {
+        var option = Activator.CreateInstance(optionType)
+            ?? throw new InvalidOperationException($"Could not create module option {optionType.GetCleanFullName()}.");
+
+        if (option is IModuleOptionsContext context)
+        {
+            context.Bind(application);
+        }
+
+        return option;
+    }
+
+    /// <summary>
+    /// Gets a finalized option or materializes its default value when the owning module declared no configuration action.
+    /// </summary>
+    /// <typeparam name="TOption">The option type owned by this module.</typeparam>
+    /// <returns>The finalized configured or default option instance.</returns>
+    internal TOption GetOrCreateFinalOption<TOption>() where TOption : IModuleOptionsBase, new()
+    {
+        if (FinalConfigures.TryGetValue(typeof(TOption), out var configuredOption))
+        {
+            return (TOption)configuredOption;
+        }
+
+        if (ModulePhase < ModulePhase.InitFinalConfigures)
+        {
+            throw new InvalidOperationException(
+                $"Module {ModuleType.Name} has not finalized option {typeof(TOption).Name}.");
+        }
+
+        var defaultOption = (TOption)CreateOption(typeof(TOption));
+        FinalConfigures.Add(typeof(TOption), defaultOption);
+        return defaultOption;
+    }
+
     /// <summary>
     /// Binds the primary module option type.
     /// </summary>
@@ -165,6 +198,16 @@ public class ModuleRegistrationState(Type moduleType)
     public void BindModuleOption<TOption>() where TOption : class, IModuleOptions, new()
     {
         ModuleOptionType = typeof(TOption);
+        DeclaredOptionTypes.Add(ModuleOptionType);
+    }
+
+    /// <summary>
+    /// Declares an extra option type so its default instance is finalized even when no configuration callback is supplied.
+    /// </summary>
+    /// <typeparam name="TOption">The extra option type owned by this module.</typeparam>
+    internal void DeclareExtraOption<TOption>() where TOption : class, IModuleOptionsBase, new()
+    {
+        DeclaredOptionTypes.Add(typeof(TOption));
     }
 
     /// <summary>
@@ -245,12 +288,19 @@ public class ModuleRegistrationState(Type moduleType)
     public IEnumerable<ModuleConfigurationRequest> DeduplicateRequests(
         IEnumerable<ModuleConfigurationRequest> requests)
     {
-        var logger = LogManager.For<ModuleRegistrationState>();
-        var seenKeys = new HashSet<string>();
+        var logger = application.CreateLogger<ModuleRegistrationState>();
+        var requestList = requests.ToList();
+        var lastRequestIndexByKey = new Dictionary<string, int>(StringComparer.Ordinal);
 
-        foreach (var request in requests.Reverse())
+        for (var index = 0; index < requestList.Count; index++)
         {
-            if (seenKeys.Add(request.ExecutionKey))
+            lastRequestIndexByKey[requestList[index].ExecutionKey] = index;
+        }
+
+        for (var index = 0; index < requestList.Count; index++)
+        {
+            var request = requestList[index];
+            if (lastRequestIndexByKey[request.ExecutionKey] == index)
             {
                 yield return request;
             }

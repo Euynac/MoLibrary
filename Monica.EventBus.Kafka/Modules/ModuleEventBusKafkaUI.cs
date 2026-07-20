@@ -17,16 +17,16 @@ namespace Monica.Modules;
 /// </summary>
 public static class ModuleEventBusKafkaUIBuilderExtensions
 {
-    extension(Mo)
+    extension(IMonicaBuilder builder)
     {
         /// <summary>
         /// Registers the Kafka EventBus console UI.
         /// </summary>
         /// <param name="action">Optional UI module option configuration.</param>
         /// <returns>The Kafka EventBus UI guide used for chained configuration.</returns>
-        public static ModuleEventBusKafkaUIGuide AddEventBusKafkaUI(Action<ModuleEventBusKafkaUIOption>? action = null)
+        public ModuleEventBusKafkaUIGuide AddEventBusKafkaUI(Action<ModuleEventBusKafkaUIOption>? action = null)
         {
-            return new ModuleEventBusKafkaUIGuide().Register(action);
+            return builder.AddModule<ModuleEventBusKafkaUI, ModuleEventBusKafkaUIOption, ModuleEventBusKafkaUIGuide>(action);
         }
     }
 }

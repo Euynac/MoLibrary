@@ -1,9 +1,11 @@
 using Microsoft.Extensions.DependencyInjection;
-
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using Monica.Core.ObservableInstance.Abstractions;
 using Monica.DataChannel.Abstractions.Communication;
 using Monica.DataChannel.Abstractions.Pipeline;
 using Monica.DataChannel.Providers.Default;
+using Monica.Modules;
 
 namespace Monica.DataChannel.Pipeline;
 
@@ -28,7 +30,7 @@ public class ChannelPipelineBuilder
     public Type? OuterCoreType { get; private set; }
 
     private readonly List<IPipelineMiddleware> _middlewares = [];
-    
+
     /// <summary>
     /// Gets the middleware instances that were added directly to the builder.
     /// </summary>
@@ -40,16 +42,16 @@ public class ChannelPipelineBuilder
     private readonly List<Type> _diMiddlewares = [];
 
     /// <summary>
-    /// Gets or sets the pipeline registration identifier.
+    /// Gets the pipeline registration identifier.
     /// Used to uniquely identify the pipeline.
     /// </summary>
-    public string Id { get; set; } = null!;
+    public string Id { get; private set; } = null!;
 
     /// <summary>
-    /// Gets or sets the pipeline group identifier.
+    /// Gets the pipeline group identifier.
     /// Used to organize related pipelines together.
     /// </summary>
-    public string? GroupId { get; set; }
+    public string? GroupId { get; private set; }
 
     /// <summary>
     /// Sets the outer communication endpoint to the default endpoint implementation.
@@ -124,21 +126,24 @@ public class ChannelPipelineBuilder
     }
 
     /// <summary>
-    /// Registers the configured pipeline builder with <see cref="DataChannelCentral"/>.
+    /// Finalizes the identity and validates the required endpoints before host materialization.
     /// </summary>
     /// <param name="id">The unique pipeline identifier.</param>
     /// <param name="groupId">An optional pipeline group identifier.</param>
-    /// <exception cref="Exception">Thrown when the outer endpoint has not been configured.</exception>
-    public void Register(string id, string? groupId = null)
+    internal void Prepare(string id, string? groupId)
     {
-        if (OuterCoreType == null) throw new Exception("You must set outer endpoint for data pipeline");
+        if (OuterCoreType is null)
+        {
+            throw new InvalidOperationException($"Data channel '{id}' must configure an outer endpoint.");
+        }
+
         if (_innerEndpointMetadata == null && InnerCoreType == null)
         {
             SetInnerEndpoint(new DefaultEndpointOptions());
         }
+
         Id = id;
         GroupId = groupId;
-        DataChannelCentral.RegisterBuilder(this);
     }
 
     /// <summary>
@@ -159,9 +164,18 @@ public class ChannelPipelineBuilder
 
         // Resolve the observable instance registry.
         var observableManager = provider.GetRequiredService<IObservableInstanceRegistry>();
+        var logger = provider.GetRequiredService<ILogger<ChannelPipeline>>();
+        var options = provider.GetRequiredService<IOptions<ModuleDataChannelOption>>().Value;
 
         // Create the pipeline.
-        var pipe = new ChannelPipeline(innerEndpoint, outerEndpoint, Id, observableManager, GroupId);
+        var pipe = new ChannelPipeline(
+            innerEndpoint,
+            outerEndpoint,
+            Id,
+            observableManager,
+            logger,
+            options.RecentExceptionToKeep,
+            GroupId);
 
         // Start with directly registered middleware.
         var middlewaresList = new List<IPipelineMiddleware>(_middlewares);
@@ -174,7 +188,6 @@ public class ChannelPipelineBuilder
         }
 
         pipe.SetMiddlewares(middlewaresList);
-        DataChannelCentral.RegisterPipeline(pipe);
         return pipe;
     }
 }

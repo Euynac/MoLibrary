@@ -17,16 +17,16 @@ namespace Monica.Modules;
 /// </summary>
 public static class ModuleKnowledgeBaseUIBuilderExtensions
 {
-    extension(Mo)
+    extension(IMonicaBuilder builder)
     {
         /// <summary>
         /// Configures knowledge-base UI components.
         /// </summary>
         /// <param name="action">Optional configuration action.</param>
         /// <returns>The knowledge-base UI module guide.</returns>
-        public static ModuleKnowledgeBaseUIGuide AddKnowledgeBaseUI(Action<ModuleKnowledgeBaseUIOption>? action = null)
+        public ModuleKnowledgeBaseUIGuide AddKnowledgeBaseUI(Action<ModuleKnowledgeBaseUIOption>? action = null)
         {
-            return new ModuleKnowledgeBaseUIGuide().Register(action);
+            return builder.AddModule<ModuleKnowledgeBaseUI, ModuleKnowledgeBaseUIOption, ModuleKnowledgeBaseUIGuide>(action);
         }
     }
 }

@@ -15,14 +15,14 @@ namespace Monica.Modules;
 
 public static class ModuleJobSchedulerUIBuilderExtensions
 {
-    extension(Mo)
+    extension(IMonicaBuilder builder)
     {
         /// <summary>
         /// Configure the JobSchedulerUI module
         /// </summary>
-        public static ModuleJobSchedulerUIGuide AddJobSchedulerUI(Action<ModuleJobSchedulerUIOption>? action = null)
+        public ModuleJobSchedulerUIGuide AddJobSchedulerUI(Action<ModuleJobSchedulerUIOption>? action = null)
         {
-            return new ModuleJobSchedulerUIGuide().Register(action);
+            return builder.AddModule<ModuleJobSchedulerUI, ModuleJobSchedulerUIOption, ModuleJobSchedulerUIGuide>(action);
         }
     }
 }
@@ -117,7 +117,7 @@ public class ModuleJobSchedulerUIGuide
     : ModuleGuide<ModuleJobSchedulerUI, ModuleJobSchedulerUIOption, ModuleJobSchedulerUIGuide>
 {
     // Configuration methods can be added later if needed
-    // Currently, it can be configured directly through Mo.AddJobSchedulerUI(options => { ... })
+    // Configure this through IMonicaBuilder.AddJobSchedulerUI(options => { ... }).
 }
 
 /// <summary>

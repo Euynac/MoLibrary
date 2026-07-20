@@ -16,6 +16,6 @@ internal sealed class AutoControllerApplicationPartCatalog
 
     public IReadOnlyCollection<Type> GetApplicationPartTypes()
     {
-        return _applicationPartTypes;
+        return _applicationPartTypes.ToArray();
     }
 }

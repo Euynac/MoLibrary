@@ -1,8 +1,4 @@
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
-using Monica.Core.Logging;
 using Monica.Core.Mediator;
-using Monica.Core.ObjectMapping.Abstractions;
 using Monica.Core.Results;
 using Monica.DependencyInjection.Abstractions;
 
@@ -19,32 +15,10 @@ public interface IApplicationService
 /// Base class for application services, providing common properties and methods.
 /// </summary>
 public abstract class ApplicationService :
+    ServiceBase,
     IApplicationService,
-    ITransientDependency,
-    ICachedServiceProviderAccessor
+    ITransientDependency
 {
-    private readonly Lazy<ILogger> _loggerLazy;
-
-    protected ApplicationService()
-    {
-        _loggerLazy = new Lazy<ILogger>(() => LogManager.For(GetType()));
-    }
-
-    public ICachedServiceProvider CachedServiceProvider
-    {
-        get => field ?? throw CreateNotInitializedException();
-        set => field = value ?? throw new ArgumentNullException(nameof(value));
-    }
-
-    protected ILogger Logger => _loggerLazy.Value;
-
-    protected IObjectMapper Mapper => CachedServiceProvider.GetRequiredService<IObjectMapper>();
-
-    private InvalidOperationException CreateNotInitializedException()
-    {
-        return new InvalidOperationException(
-            $"Cached service provider is not initialized for {GetType().FullName}. Resolve the service through Monica DI instead of constructing it manually.");
-    }
 }
 
 /// <summary>

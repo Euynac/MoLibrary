@@ -14,7 +14,7 @@ REPO_ROOT = Path(__file__).resolve().parents[4]
 DEFAULT_SOURCE_FONT = REPO_ROOT / ".tmp" / "monica-ui-font-sources" / "zcool_qingke_huangyou.ttf"
 DEFAULT_TARGET_FONT = REPO_ROOT / "Monica.UI" / "wwwroot" / "fonts" / "Komi-ZCOOL-QingKe-HuangYou.woff2"
 EXCLUDED_DEFAULT_LOCALIZATION_PROJECTS = {
-    "Monica.UnitTests",
+    "Monica.Testing",
 }
 
 COMMON_UI_TEXT = (

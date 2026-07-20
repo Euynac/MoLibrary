@@ -14,8 +14,9 @@ The launch profile uses the `Development` environment so Blazor static web asset
 
 ## What It Registers
 
-- `Mo.AddJobScheduler().UseInMemoryMetadataRepository().UseSchedulerScope("job-scheduler-minimal").UseInMemoryProvider()`
-- `Mo.AddJobSchedulerUI()`
-- Monica host lifecycle: `builder.UseMonica()`, `app.UseMonica()`, and `app.MapMonica()`
+- one `builder.AddMonica(monica => ...)` host boundary
+- `monica.AddJobScheduler().UseInMemoryMetadataRepository().UseSchedulerScope("job-scheduler-minimal").UseInMemoryProvider()`
+- `monica.AddJobSchedulerUI()`
+- web lifecycle: `app.UseMonica()` and `app.MapMonica()`
 
 The app defines one recurring `MinimalHeartbeatJob` so the dashboard and job definitions page have a concrete job to display.

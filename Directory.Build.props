@@ -4,7 +4,7 @@
     <TargetFramework>net10.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
-    <NoWarn>$(NoWarn);1591;NU1903;CS9107</NoWarn>
+    <NoWarn>$(NoWarn);1591;CS9107</NoWarn>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
   </PropertyGroup>
 
@@ -34,7 +34,7 @@
     <PackageTags>monica;dotnet;aspnetcore;blazor;mudblazor;ddd;ai-agent;jobscheduler;modular;recurringjob</PackageTags>
 
     <!-- Package Release Notes -->
-    <PackageReleaseNotes>Monica 1.0.0-rc.2 release candidate for validation and feedback before the stable 1.0.0 release. Adds global Monica application defaults, endpoint metadata and port constraints, OpenTelemetry metrics dashboards, SignalR diagnostics, UI localization improvements, and NuGet static web asset fixes.</PackageReleaseNotes>
+    <PackageReleaseNotes>Monica 1.0 release-candidate line for validation before the stable release. Introduces host-bound AddMonica composition, deterministic module-graph validation, a dedicated ProjectUnits package, host-isolated runtime catalogs, Stable/Integrations/Labs maturity tiers, official templates, and an observable reference application.</PackageReleaseNotes>
 
     <!-- Symbol Packages -->
     <IncludeSymbols>true</IncludeSymbols>

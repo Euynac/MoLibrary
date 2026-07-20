@@ -12,27 +12,27 @@ public class MessageCounterMiddleware(MessageMetrics metrics) : PipelineInfoDisp
     /// <summary>
     /// Key for the total message counter.
     /// </summary>
-    private const string TOTAL_MESSAGES_KEY = "消息总数";
+    private const string TOTAL_MESSAGES_KEY = "Total messages";
 
     /// <summary>
     /// Key for the inbound message counter.
     /// </summary>
-    private const string INPUT_MESSAGES_KEY = "输入消息数";
+    private const string INPUT_MESSAGES_KEY = "Inbound messages";
 
     /// <summary>
     /// Key for the outbound message counter.
     /// </summary>
-    private const string OUTPUT_MESSAGES_KEY = "输出消息数";
+    private const string OUTPUT_MESSAGES_KEY = "Outbound messages";
 
     /// <summary>
     /// Key for the error message counter.
     /// </summary>
-    private const string ERROR_MESSAGES_KEY = "错误消息数";
+    private const string ERROR_MESSAGES_KEY = "Error messages";
 
     /// <summary>
     /// Key for the last processed timestamp.
     /// </summary>
-    private const string LAST_PROCESSED_KEY = "最后处理时间";
+    private const string LAST_PROCESSED_KEY = "Last processed at";
 
     /// <summary>
     /// Processes the data context synchronously.
@@ -79,8 +79,8 @@ public class MessageCounterMiddleware(MessageMetrics metrics) : PipelineInfoDisp
             // Record middleware failures.
             IncrementCounter(ERROR_MESSAGES_KEY);
             metrics.RecordFailure(context.Source);
-            SetInfo("最后异常", ex.Message);
-            SetInfo("最后异常时间", DateTime.Now);
+            SetInfo("Last exception", ex.Message);
+            SetInfo("Last exception at", DateTime.Now);
 
             // Return the original context so the data flow can continue.
             return context;
@@ -106,7 +106,7 @@ public class MessageCounterMiddleware(MessageMetrics metrics) : PipelineInfoDisp
         ResetCounter(INPUT_MESSAGES_KEY);
         ResetCounter(OUTPUT_MESSAGES_KEY);
         ResetCounter(ERROR_MESSAGES_KEY);
-        SetInfo("重置时间", DateTime.Now);
+        SetInfo("Counters reset at", DateTime.Now);
     }
 
     /// <summary>
@@ -116,7 +116,7 @@ public class MessageCounterMiddleware(MessageMetrics metrics) : PipelineInfoDisp
     public double GetMessagesPerMinute()
     {
         var totalMessages = GetInfo<long>(TOTAL_MESSAGES_KEY);
-        var startTime = GetInfo<DateTime>("启动时间", DateTime.Now);
+        var startTime = GetInfo<DateTime>("Started at", DateTime.Now);
         var timeSpan = DateTime.Now - startTime;
         
         if (timeSpan.TotalMinutes < 0.1) return 0; // Avoid division by zero.
@@ -154,8 +154,8 @@ public class MessageCounterMiddleware(MessageMetrics metrics) : PipelineInfoDisp
     /// </summary>
     public void Initialize()
     {
-        SetInfo("启动时间", DateTime.Now);
-        SetInfo("中间件版本", "1.0.0");
-        SetInfo("功能描述", "消息计数统计中间件");
+        SetInfo("Started at", DateTime.Now);
+        SetInfo("Middleware version", "1.0.0");
+        SetInfo("Description", "Message counting and statistics middleware");
     }
 }

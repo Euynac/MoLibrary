@@ -3,30 +3,26 @@ using System.Text.Json;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
-using Monica.Core.Logging;
+using Microsoft.Extensions.Options;
+using Monica.Core.JsonSerialization.Abstractions;
 using Monica.Core.Results.Abstractions;
 using Monica.Core.Results.Models.Internal;
 using Monica.Tool.Diagnostics;
 using Monica.Tool.Extensions;
+using Monica.Modules;
 
 namespace Monica.Core.Results.Services;
 
 /// <summary>
 /// Centralizes Monica result projection, HTTP response shaping, and remote response resolution.
 /// </summary>
-public static class ResultEnvelopeProvider
+public sealed class ResultEnvelopeProvider(
+    IJsonSerializerOptionsProvider serializerOptionsProvider,
+    IOptions<ModuleResultEnvelopeOption> options,
+    ILogger<ResultEnvelopeProvider> logger) : IResultEnvelopeReader
 {
-    private static readonly ILogger Logger = LogManager.For(typeof(ResultEnvelopeProvider));
-
-    /// <summary>
-    /// Gets the serializer options used for inbound response deserialization.
-    /// </summary>
-    internal static JsonSerializerOptions SerializerOptions { get; set; } = new();
-
-    /// <summary>
-    /// Gets the maximum number of bytes captured for remote request and response diagnostics.
-    /// </summary>
-    internal static int MaxDiagnosticBodyBytes { get; set; } = 32 * 1024;
+    private readonly JsonSerializerOptions _serializerOptions = serializerOptionsProvider.SerializerOptions;
+    private readonly int _maxDiagnosticBodyBytes = options.Value.MaxRemoteDiagnosticBodyBytes;
 
     /// <summary>
     /// Converts a Monica result envelope into a Minimal API result.
@@ -64,24 +60,24 @@ public static class ResultEnvelopeProvider
     /// <param name="json">The remote JSON payload.</param>
     /// <returns>The deserialized Monica result envelope.</returns>
     /// <exception cref="JsonException">Thrown when the payload cannot be deserialized into the requested envelope type.</exception>
-    public static TResponse DeserializeResponse<TResponse>(string json)
+    public TResponse DeserializeResponse<TResponse>(string json)
         where TResponse : class, IResultEnvelope, new()
     {
         ArgumentNullException.ThrowIfNull(json);
 
-        return JsonSerializer.Deserialize<TResponse>(json, SerializerOptions)
+        return JsonSerializer.Deserialize<TResponse>(json, _serializerOptions)
                ?? throw new JsonException(
                    $"The remote response could not be deserialized into {typeof(TResponse).GetCleanFullName()}.");
     }
 
-    internal static async ValueTask<TResponse> DeserializeResponseAsync<TResponse>(
+    internal async ValueTask<TResponse> DeserializeResponseAsync<TResponse>(
         Stream jsonStream,
         CancellationToken cancellationToken = default)
         where TResponse : class, IResultEnvelope, new()
     {
         ArgumentNullException.ThrowIfNull(jsonStream);
 
-        return await JsonSerializer.DeserializeAsync<TResponse>(jsonStream, SerializerOptions, cancellationToken)
+        return await JsonSerializer.DeserializeAsync<TResponse>(jsonStream, _serializerOptions, cancellationToken)
                ?? throw new JsonException(
                    $"The remote response could not be deserialized into {typeof(TResponse).GetCleanFullName()}.");
     }
@@ -91,11 +87,11 @@ public static class ResultEnvelopeProvider
     /// </summary>
     /// <typeparam name="TResponse">The Monica envelope type to deserialize.</typeparam>
     /// <param name="httpResponse">The remote HTTP response.</param>
-    /// <param name="logger">The optional logger used for diagnostics.</param>
+    /// <param name="cancellationToken">A token that cancels response reading and deserialization.</param>
     /// <returns>The resolved Monica envelope, or an internal-error envelope when the remote payload is invalid.</returns>
-    public static async Task<TResponse> ReadRemoteResponse<TResponse>(
+    public async Task<TResponse> ReadRemoteResponse<TResponse>(
         HttpResponseMessage httpResponse,
-        ILogger? logger = null)
+        CancellationToken cancellationToken = default)
         where TResponse : class, IResultEnvelope, new()
     {
         ArgumentNullException.ThrowIfNull(httpResponse);
@@ -108,10 +104,10 @@ public static class ResultEnvelopeProvider
 
         try
         {
-            responseStream = await httpResponse.Content.ReadAsStreamAsync();
+            responseStream = await httpResponse.Content.ReadAsStreamAsync(cancellationToken);
             var decodedResponseStream = CreateDecodedResponseStream(responseStream, httpResponse.Content.Headers.ContentEncoding);
-            captureStream = new ResultEnvelopeContentCaptureStream(decodedResponseStream, MaxDiagnosticBodyBytes);
-            parsedResponse = await DeserializeResponseAsync<TResponse>(captureStream);
+            captureStream = new ResultEnvelopeContentCaptureStream(decodedResponseStream, _maxDiagnosticBodyBytes);
+            parsedResponse = await DeserializeResponseAsync<TResponse>(captureStream, cancellationToken);
 
             if (parsedResponse.IsRemoteResultHealthy())
             {
@@ -146,12 +142,12 @@ public static class ResultEnvelopeProvider
             httpResponse,
             responseContent,
             parsedResponse,
-            SerializerOptions,
-            MaxDiagnosticBodyBytes);
+            _serializerOptions,
+            _maxDiagnosticBodyBytes);
 
         AppendExceptionMetadata(errorResponse, exception, responseContent);
         AppendExchangeMetadata(errorResponse, exchangeInfo);
-        LogRemoteResponseError(logger ?? Logger, exchangeInfo, httpResponse, errorResponse, exception);
+        LogRemoteResponseError(logger, exchangeInfo, httpResponse, errorResponse, exception);
         return errorResponse;
     }
 

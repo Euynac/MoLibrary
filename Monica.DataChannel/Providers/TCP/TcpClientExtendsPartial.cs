@@ -5,166 +5,139 @@ using Monica.Tool.Extensions;
 
 namespace Monica.DataChannel.Providers.TCP;
 
-public partial class TcpClientExtends
+internal sealed partial class TcpClientExtends
 {
     private CancellationTokenSource? _source;
-    private CancellationToken cancellation;
 
-    /// <summary>
-    /// Initializes the TCP client worker loop.
-    /// </summary>
-    /// <param name="metadata">The TCP client metadata.</param>
-    /// <param name="logger">The logger used for connection lifecycle events.</param>
-    public void Init(TcpClientOptions metadata, ILogger logger)
+    internal void Init(TcpClientOptions metadata, ILogger logger)
     {
         _source = new CancellationTokenSource();
-        cancellation = _source.Token;
+        var cancellationToken = _source.Token;
         _ = Task.Factory.StartNew(
-            () => RunClientLoopAsync(metadata, logger, cancellation),
-            cancellation,
+            () => RunClientLoopAsync(metadata, logger, cancellationToken),
+            cancellationToken,
             TaskCreationOptions.LongRunning,
-            TaskScheduler.Current).Unwrap();
+            TaskScheduler.Default).Unwrap();
     }
 
-    private async Task RunClientLoopAsync(TcpClientOptions metadata, ILogger logger, CancellationToken cancellationToken)
+    private async Task RunClientLoopAsync(
+        TcpClientOptions metadata,
+        ILogger logger,
+        CancellationToken cancellationToken)
     {
-        var recvErrorCnt = 0;
+        var reconnectCount = 0;
         var connectionName = metadata.ClientAddress.Key;
 
-        while (metadata.IsClient)
+        while (metadata.IsClient && !cancellationToken.IsCancellationRequested)
         {
-            if (cancellationToken.IsCancellationRequested)
-            {
-                break;
-            }
-
             try
             {
-                var value = metadata.ClientAddress.Value;
-                var address = value.address ?? throw new InvalidOperationException("TCP client address is not configured.");
-                var host = address.Item1;
-                var port = address.Item2;
+                var address = metadata.ClientAddress.Value.Address
+                    ?? throw new InvalidOperationException("TCP client address is not configured.");
 
-                await GetTcpClient(metadata.ClientAddress.Key, port, host, logger, value.IsMainConnected);
+                await ConnectAsync(
+                    metadata.ClientAddress.Key,
+                    address.Item2,
+                    address.Item1,
+                    logger,
+                    metadata.ClientAddress.Value.IsMainConnected,
+                    cancellationToken);
+
                 connectionName = ConnectionName ?? metadata.ClientAddress.Key;
-                await TcpUtils.ClientReceive(this, logger, cancellationToken);
+                _runtime.ReceiveClient(this, logger, cancellationToken);
             }
             catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
             {
                 break;
             }
-            catch (SocketException ex)
+            catch (SocketException exception)
             {
-                logger.LogError(ex, "{ConnectionName}连接TCP Server失败!!!", connectionName);
+                logger.LogError(exception, "TCP client {ConnectionName} failed to connect.", connectionName);
             }
-            catch (Exception ex)
+            catch (Exception exception)
             {
-                logger.LogError(ex, "Tcp client初始化任务启动失败");
+                logger.LogError(exception, "TCP client {ConnectionName} failed to initialize.", connectionName);
                 throw;
             }
 
-            recvErrorCnt++;
-            logger.LogError("{ConnectionName} TCP Server连接断开", connectionName);
-            logger.LogError("{ConnectionName}任务开始第{ReconnectCount}次重连", connectionName, recvErrorCnt);
-            await Task.Delay(TimeSpan.FromSeconds(TcpUtils.WaitConnectInterval));
+            reconnectCount++;
+            logger.LogWarning(
+                "TCP client {ConnectionName} disconnected; reconnect attempt {ReconnectCount} will start after a delay.",
+                connectionName,
+                reconnectCount);
+            await Task.Delay(TcpConnectionRuntime.ReconnectDelay, cancellationToken);
         }
     }
 
-
-
-    public async Task GetTcpClient(string jobKey, int port, string hostName, ILogger logger, bool isMainConnected)
+    private async Task ConnectAsync(
+        string connectionName,
+        int port,
+        string hostName,
+        ILogger logger,
+        bool isMainConnection,
+        CancellationToken cancellationToken)
     {
-        try
+        if (_runtime.TryGetClient(connectionName, out var existingClient))
         {
-            if (TcpUtils.clients.TryGetValue(jobKey, out var existingClient))
+            if (existingClient is not null && IsConnected(existingClient, logger))
             {
-                if (!IsTcpClientConnected(existingClient, logger))
-                {
-                    existingClient.Client?.Close();
-                    var client = new TcpClient(hostName, port);
-
-                    if (!client.Connected)
-                    {
-                        client.ConnectAsync(hostName, port).Wait(10 * 1000);
-                    }
-
-                    logger.LogInformation("{JobKey}相关任务与{HostName}:{Port}重建连接成功...", jobKey, hostName, port);
-
-                    Client = client;
-                    Connected = true;
-                    ConnectionName = jobKey;
-                    TcpUtils.clients[jobKey] = this;
-                }
-
                 return;
             }
 
-            var newClient = new TcpClient(hostName, port);
-            Client = newClient;
-            Connected = true;
-            IsMainThread = isMainConnected;
-            ConnectionName = jobKey;
+            existingClient?.Client?.Dispose();
+        }
 
-            TcpUtils.clients.TryAdd(jobKey, this);
-            logger.LogInformation("{JobKey}相关任务与{HostName}:{Port}连接成功...", jobKey, hostName, port);
-        }
-        catch (ArgumentNullException e)
-        {
-            logger.LogError(e, "ArgumentNullException");
-            throw;
-        }
-        catch (SocketException e)
-        {
-            logger.LogError(e, "SocketException");
-            throw;
-        }
-        catch (NullReferenceException e)
-        {
-            logger.LogError(e, "NullReferenceException");
-            throw;
-        }
+        var client = new TcpClient();
+        await client.ConnectAsync(hostName, port, cancellationToken);
+
+        Client = client;
+        Connected = true;
+        IsMainThread = isMainConnection;
+        ConnectionName = connectionName;
+        _runtime.SetClient(connectionName, this);
+
+        logger.LogInformation(
+            "TCP client {ConnectionName} connected to {HostName}:{Port}.",
+            connectionName,
+            hostName,
+            port);
     }
 
-
-    public bool IsTcpClientConnected(TcpClientExtends clientExtends, ILogger logger)
+    private static bool IsConnected(TcpClientExtends connection, ILogger logger)
     {
         try
         {
-            if (clientExtends.Client != null && clientExtends.Client.Client != null && clientExtends.Connected)
+            var socket = connection.Client?.Client;
+            if (socket is null || !connection.Connected)
             {
-                // Use Poll to check whether the socket has readable data.
-                if (clientExtends.Client.Client.Poll(0, SelectMode.SelectRead))
-                {
-                    var buff = new byte[1];
-                    if (clientExtends.Client.Client.Receive(buff, SocketFlags.Peek) == 0)
-                    {
-                        logger.LogError("tcp连接已中断");
-                        return false;
-                    }
-                    else
-                    {
-                        return true;
-                    }
-                }
-                return true;
-            }
-            else
-            {
-                logger.LogError("tcp连接已中断");
                 return false;
             }
 
+            if (!socket.Poll(0, SelectMode.SelectRead))
+            {
+                return true;
+            }
+
+            var buffer = new byte[1];
+            return socket.Receive(buffer, SocketFlags.Peek) != 0;
         }
-        catch (Exception)
+        catch (Exception exception)
         {
-            logger.LogError("tcp连接已中断");
+            logger.LogDebug(exception, "TCP connection health check failed.");
             return false;
         }
     }
+
     public void Dispose()
     {
         _source.SafeCancelAndDispose();
         _source = null;
+        Client?.Dispose();
+        Client = null;
+        Connected = false;
+        if (!IsServerConnection)
+        {
+            _runtime.UnregisterOutboundClient(this);
+        }
     }
 }
-

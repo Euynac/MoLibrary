@@ -8,7 +8,6 @@ using Monica.Framework.ChainTracing.Abstractions;
 using Monica.Framework.ChainTracing.Extensions;
 using Monica.Framework.ChainTracing.Models;
 using Monica.Framework.ChainTracing.Services.Support;
-using Monica.Profiling.ExecutionTiming.Abstractions;
 using Monica.Tool.Extensions;
 using Monica.WebApi.RpcClient.Abstractions;
 
@@ -40,13 +39,10 @@ public record ChainTracingInvocationDescriptor(MethodInfo MethodInfo)
 /// Records chain data automatically for methods that return <see cref="IResultEnvelope" />.
 /// </summary>
 /// <param name="chainTracing">Call chain tracking service</param>
-/// <param name="executionTimingFactory">Execution timing factory.</param>
 /// https://kozmic.net/dynamic-proxy-tutorial/
 /// https://github.com/moframework/mo/issues/14378
 /// https://docs.mo.io/en/mo/7.4/Dependency-Injection#advanced-features
-public class ChainTracingInvocationInterceptor(
-    IChainTracing chainTracing,
-    IExecutionTimingFactory executionTimingFactory) : InvocationInterceptor
+public class ChainTracingInvocationInterceptor(IChainTracing chainTracing) : InvocationInterceptor
 {
     /// <summary>
     /// Determine whether the call chain should be recorded
@@ -95,7 +91,7 @@ public class ChainTracingInvocationInterceptor(
             {
                 // For methods excluded from chain tracing, wrap the exception and attach invocation context.
                 throw new ContextualException(
-                    $"执行方法 {invocation.Method.DeclaringType?.Name}.{invocation.Method.Name} 异常",
+                    $"Invoking {invocation.Method.DeclaringType?.Name}.{invocation.Method.Name} failed.",
                     ex)
                     .WithMetadata("declaringType", invocation.Method.DeclaringType?.Name)
                     .WithMetadata("methodName", invocation.Method.Name)
@@ -110,9 +106,6 @@ public class ChainTracingInvocationInterceptor(
         using var scope =
             chainTracing.BeginScope(info.OperationName, info.HandlerName, type: info.GetInvocationType());
 
-        // Create timer
-        using var timer = executionTimingFactory.BeginScope(info.HandlerName);
-        
         try
         {
             await invocation.ProceedAsync();
@@ -144,7 +137,9 @@ public class ChainTracingInvocationInterceptor(
         catch (Exception ex)
         {
             // Log exceptions to the call chain
-            scope.EndWithException(ex, $"执行方法 {invocation.Method.DeclaringType?.Name}.{invocation.Method.Name} 异常");
+            scope.EndWithException(
+                ex,
+                $"Invoking {invocation.Method.DeclaringType?.Name}.{invocation.Method.Name} failed.");
 
             throw;
         }

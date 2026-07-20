@@ -19,14 +19,14 @@ namespace Monica.Modules;
 
 public static class ModuleLoggingUIBuilderExtensions
 {
-    extension(Mo)
+    extension(IMonicaBuilder builder)
     {
         /// <summary>
         /// Configure LoggingUI module
         /// </summary>
-        public static ModuleLoggingUIGuide AddLoggingUI(Action<ModuleLoggingUIOption>? action = null)
+        public ModuleLoggingUIGuide AddLoggingUI(Action<ModuleLoggingUIOption>? action = null)
         {
-            return new ModuleLoggingUIGuide().Register(action);
+            return builder.AddModule<ModuleLoggingUI, ModuleLoggingUIOption, ModuleLoggingUIGuide>(action);
         }
     }
 }

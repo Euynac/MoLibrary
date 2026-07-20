@@ -16,14 +16,14 @@ namespace Monica.Modules;
 /// </summary>
 public static class ModuleRuntimeMetricsUIBuilderExtensions
 {
-    extension(Mo)
+    extension(IMonicaBuilder builder)
     {
         /// <summary>
         /// Configures the runtime metrics UI module.
         /// </summary>
-        public static ModuleRuntimeMetricsUIGuide AddRuntimeMetricsUI(Action<ModuleRuntimeMetricsUIOption>? action = null)
+        public ModuleRuntimeMetricsUIGuide AddRuntimeMetricsUI(Action<ModuleRuntimeMetricsUIOption>? action = null)
         {
-            return new ModuleRuntimeMetricsUIGuide().Register(action);
+            return builder.AddModule<ModuleRuntimeMetricsUI, ModuleRuntimeMetricsUIOption, ModuleRuntimeMetricsUIGuide>(action);
         }
     }
 }

@@ -9,6 +9,8 @@
 
 - Use `DomainEventHandler<TEvent>` for distributed events.
 - Use `LocalEventHandler<TEvent>` for in-process reactions.
+- Use the inherited `Logger` in handler methods when logging is needed. Monica resolves it after activation from the
+  host that owns the handler instance; do not access it from a constructor.
 - Keep handlers thin. Delegate reusable logic to `DomainService`.
 - Make the event type stable before adding consumers.
 - Use `$ApplicationNamespace$` for the application-layer namespace chosen by the architecture skill.
@@ -21,8 +23,7 @@ using Monica.WebApi.Abstractions;
 
 namespace $ApplicationNamespace$.HandlersEvent;
 
-public sealed class DomainEventHandlerOrderApproved(
-    DomainNotifyWarehouse domainService)
+public sealed class DomainEventHandlerOrderApproved(DomainNotifyWarehouse domainService)
     : DomainEventHandler<EventOrderApproved>
 {
     public override async Task HandleEventAsync(EventOrderApproved eventData)
@@ -39,8 +40,7 @@ using Monica.WebApi.Abstractions;
 
 namespace $ApplicationNamespace$.HandlersEvent;
 
-public sealed class LocalEventHandlerOrderApproved(
-    DomainRefreshReadModel domainService)
+public sealed class LocalEventHandlerOrderApproved(DomainRefreshReadModel domainService)
     : LocalEventHandler<EventOrderApproved>
 {
     public override async Task HandleEventAsync(EventOrderApproved eventData)

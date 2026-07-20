@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using Microsoft.Extensions.Options;
 using Monica.WebApi.AutoControllers.Abstractions;
 
 namespace Monica.WebApi.AutoControllers.Models;
@@ -9,37 +10,49 @@ namespace Monica.WebApi.AutoControllers.Models;
 [Serializable]
 public class LimitedResultRequestDto : IHasRequestLimitedResult, IValidatableObject
 {
-    /// <summary>Default value: 10.</summary>
-    public static int DefaultMaxResultCount { get; set; } = 10;
-
-    /// <summary>
-    /// Maximum possible value of the <see cref="MaxResultCount" />.
-    /// Default value: 1,000.
-    /// </summary>
-    public static int MaxMaxResultCount { get; set; } = 1000;
+    private int? _maxResultCount;
 
     /// <summary>
     /// Maximum result count should be returned.
-    /// This is generally used to limit result count on paging.
+    /// This is generally used to limit result count on paging. When omitted from an HTTP request,
+    /// the value is populated from the current host's AutoController paging options during validation.
     /// </summary>
     [Range(1, 2147483647)]
-    public virtual int MaxResultCount { get; set; } = DefaultMaxResultCount;
+    public virtual int MaxResultCount
+    {
+        get => _maxResultCount ?? AutoControllerPaginationDefaults.DefaultResultCount;
+        set => _maxResultCount = value;
+    }
 
+    /// <inheritdoc />
     public virtual IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
     {
-        if (MaxResultCount > MaxMaxResultCount)
+        var pagination = (validationContext.GetService(typeof(IOptions<CrudControllerOption>)) as
+            IOptions<CrudControllerOption>)?.Value.Pagination ?? new AutoControllerPaginationOption();
+
+        ApplyDefaults(pagination);
+
+        var maximumResultCount = GetMaximumResultCount(pagination);
+        if (MaxResultCount > maximumResultCount)
+        {
             yield return new ValidationResult(
-                $"{nameof(MaxResultCount)} exceeds the limit of {MaxMaxResultCount}.",
+                $"{nameof(MaxResultCount)} exceeds the limit of {maximumResultCount}.",
                 [nameof(MaxResultCount)]);
-        //yield return new ValidationResult((string) validationContext.GetRequiredService<IStringLocalizer<AbpDddApplicationContractsResource>>()["MaxResultCountExceededExceptionMessage", new object[4]
-        //    {
-        //        (object) "MaxResultCount",
-        //        (object) LimitedResultRequestDto.MaxMaxResultCount,
-        //        (object) typeof (LimitedResultRequestDto).FullName,
-        //        (object) "MaxMaxResultCount"
-        //    }], (IEnumerable<string>) new string[1]
-        //    {
-        //        "MaxResultCount"
-        //    });
+        }
+    }
+
+    /// <summary>
+    /// Resolves the host-specific maximum for this request type.
+    /// </summary>
+    /// <param name="pagination">The current host's pagination options.</param>
+    /// <returns>The largest accepted result count.</returns>
+    protected virtual int GetMaximumResultCount(AutoControllerPaginationOption pagination)
+    {
+        return pagination.MaximumResultCount;
+    }
+
+    internal void ApplyDefaults(AutoControllerPaginationOption pagination)
+    {
+        _maxResultCount ??= pagination.DefaultResultCount;
     }
 }

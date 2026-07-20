@@ -14,15 +14,12 @@ public sealed record RepositoryDbContextRegistration
     /// </summary>
     /// <param name="dbContextType">The registered DbContext type.</param>
     /// <param name="providerType">How repositories resolve the DbContext in scoped operations.</param>
-    /// <param name="registrationOrder">The order in which the context was registered.</param>
     public RepositoryDbContextRegistration(
         Type dbContextType,
-        DbContextProviderType providerType,
-        int registrationOrder)
+        DbContextProviderType providerType)
     {
         DbContextType = dbContextType;
         ProviderType = providerType;
-        RegistrationOrder = registrationOrder;
     }
 
     /// <summary>
@@ -55,10 +52,6 @@ public sealed record RepositoryDbContextRegistration
     /// </summary>
     public DbContextProviderType ProviderType { get; }
 
-    /// <summary>
-    /// Registration order captured from module configuration.
-    /// </summary>
-    public int RegistrationOrder { get; }
 }
 
 /// <summary>

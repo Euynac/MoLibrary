@@ -9,7 +9,7 @@ using Monica.JobScheduler.Models;
 using Monica.JobScheduler.Providers;
 using Monica.Modules;
 using NSubstitute;
-using Monica.UnitTests.Results;
+using Monica.Testing.Results;
 using Xunit;
 
 namespace Test.Monica.JobScheduler.Facades;

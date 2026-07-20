@@ -41,24 +41,24 @@ public class DaprBindingOptions : CommunicationOptions<DaprBindingEndpoint>
                 Type = CommunicationType.MQ;
                 if (!Direction.EqualsAny(ConnectionDirection.Output, ConnectionDirection.Input))
                     throw new InvalidOperationException(
-                        $"{DaprBindingType}仅支持{ConnectionDirection.Output}或{ConnectionDirection.Input}");
+                        $"{DaprBindingType} supports only the {ConnectionDirection.Output} or {ConnectionDirection.Input} direction.");
                 if (Direction == ConnectionDirection.Input && string.IsNullOrWhiteSpace(InputListenerRoute))
                 {
                     throw new InvalidOperationException(
-                        $"{nameof(InputListenerRoute)}在{ConnectionDirection.Input}时必须有值");
+                        $"{nameof(InputListenerRoute)} must be provided when the direction is {ConnectionDirection.Input}.");
                 }
 
                 if (Direction == ConnectionDirection.Output && string.IsNullOrWhiteSpace(OutputBindingName))
                 {
                     throw new InvalidOperationException(
-                        $"{nameof(OutputBindingName)}在{ConnectionDirection.Output}时必须有值");
+                        $"{nameof(OutputBindingName)} must be provided when the direction is {ConnectionDirection.Output}.");
                 }
                 break;
             case EDaprBindingType.Cron:
                 Type = CommunicationType.Trigger;
                 if (!Direction.EqualsAny(ConnectionDirection.Input))
                     throw new InvalidOperationException(
-                        $"{DaprBindingType}仅支持{ConnectionDirection.Input}");
+                        $"{DaprBindingType} supports only the {ConnectionDirection.Input} direction.");
                 break;
             default:
                 throw new ArgumentOutOfRangeException(nameof(DaprBindingType), DaprBindingType, null);

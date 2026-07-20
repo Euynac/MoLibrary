@@ -23,8 +23,9 @@ public class DaprSidecarHealthCoordinator(
     IObservableInstanceRegistry observableManager,
     IHostApplicationLifetime applicationLifetime,
     IOptions<ModuleDaprClientOption> clientOptions,
-    IOptions<ModuleHostedServiceOption> hostedServiceOptions)
-    : MoBackgroundService(observableManager, hostedServiceOptions), IDaprSidecarHealthCoordinator
+    IOptions<ModuleHostedServiceOption> hostedServiceOptions,
+    ILogger<DaprSidecarHealthCoordinator> logger)
+    : MoBackgroundService(observableManager, hostedServiceOptions, logger), IDaprSidecarHealthCoordinator
 {
     private readonly ModuleDaprClientOption _options = clientOptions.Value;
 

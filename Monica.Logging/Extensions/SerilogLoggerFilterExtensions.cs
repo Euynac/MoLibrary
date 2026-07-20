@@ -20,6 +20,7 @@ public static class SerilogLoggerFilterExtensions
     {
         ArgumentNullException.ThrowIfNull(configuration);
         ArgumentNullException.ThrowIfNull(inclusionPredicate);
+        ArgumentOutOfRangeException.ThrowIfLessThanOrEqual(span, TimeSpan.Zero);
         return configuration.With(new UniqueOverSpanFilter(inclusionPredicate, span));
     }
 }

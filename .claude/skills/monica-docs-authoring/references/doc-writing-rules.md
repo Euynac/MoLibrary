@@ -70,14 +70,14 @@ Style rules:
 - Put the answer first, then detail
 - Prefer short sections and tables over long prose
 - Keep identifiers, API names, types, namespaces, and code in English
-- Keep narrative language in Chinese unless the user explicitly requests another locale
+- Write natural English under `en-US` and natural Simplified Chinese under `zh-CN`; keep code identifiers unchanged
 - Explain defaults and tradeoffs, not just names
 - Be explicit about required vs optional setup
 
 ## 5. Code sample rules
 
 - Use real current APIs from source code
-- Use `Mo.Add*()` naming, not obsolete registration names
+- Place `monica.Add*()` inside `builder.AddMonica(...)`; never show ambient `Mo`, `builder.UseMonica()`, or `Mo.RegisterInstantly(...)`
 - Prefer the smallest copy-pasteable sample that communicates the concept
 - Use `bash` for installation and `csharp` for Monica code samples
 - If a sample omits unrelated lines, omit them clearly rather than inventing scaffolding
@@ -124,16 +124,18 @@ The Monica.Docs backend rewrites relative local asset links automatically. Prese
 
 ## 8. Locale scope rules
 
-The default documentation target for this skill is:
+The default documentation targets are:
 
-- `../Monica.Docs/docs/zh-CN/...`
+- `../Monica.Docs/docs/en-US/...` for canonical launch and adoption guidance
+- `../Monica.Docs/docs/zh-CN/...` as a first-class localized tree
 
 Rules:
 
-- Update Chinese docs in `zh-CN` by default
-- Do not create or maintain `en-US` mirrors unless the user explicitly asks for English documentation
-- Keep narrative language in Chinese for Monica user docs unless the user explicitly requests another locale
-- If an English page already exists but the task is not explicitly multi-locale, you still only update the Chinese source by default
+- Create or update both locales for new public concepts and launch-critical guides unless the user explicitly narrows the scope
+- Keep locale alternates at the same relative path so the documentation site can associate them
+- Keep public APIs, navigation intent, examples, defaults, and factual claims aligned across locales
+- Write natural English in `en-US` and natural Simplified Chinese in `zh-CN`; do not translate identifiers
+- For a narrowly scoped revision to a non-launch page, update only the requested locale unless the change would leave a public contract factually inconsistent
 
 ## 9. Do not do these things
 

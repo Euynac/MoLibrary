@@ -12,12 +12,14 @@
 - Use `TriggeredJob<TArgs>` for on-demand asynchronous work and name it `Job*`.
 - Keep the job focused on scheduling, retry, and orchestration. Put reusable business behavior in a `DomainService`.
 - Add `[JobConfig]` only when defaults are not enough.
+- Inject `ILogger<TConcreteJob>` and pass it to the job base constructor.
 - Use `$ApplicationNamespace$` for the application-layer namespace chosen by the architecture skill.
 - Place jobs in `BackgroundWorkers/`.
 
 ## RecurringJob Example
 
 ```csharp
+using Microsoft.Extensions.Logging;
 using Monica.JobScheduler.Abstractions;
 using Monica.JobScheduler.Annotations;
 
@@ -25,8 +27,9 @@ namespace $ApplicationNamespace$.BackgroundWorkers;
 
 [JobConfig(CronSchedule = "0 */5 * * * *", RetryCount = 3)]
 public sealed class WorkerRefreshOrderSnapshot(
-    DomainRefreshOrderSnapshot domainService)
-    : RecurringJob
+    DomainRefreshOrderSnapshot domainService,
+    ILogger<WorkerRefreshOrderSnapshot> logger)
+    : RecurringJob(logger)
 {
     public override async Task ExecuteAsync(CancellationToken cancellationToken)
     {
@@ -38,6 +41,7 @@ public sealed class WorkerRefreshOrderSnapshot(
 ## TriggeredJob Example
 
 ```csharp
+using Microsoft.Extensions.Logging;
 using Monica.JobScheduler.Abstractions;
 
 namespace $ApplicationNamespace$.BackgroundWorkers;
@@ -48,8 +52,9 @@ public sealed class RefreshOrderSnapshotArgs
 }
 
 public sealed class JobRefreshOrderSnapshot(
-    DomainRefreshOrderSnapshot domainService)
-    : TriggeredJob<RefreshOrderSnapshotArgs>
+    DomainRefreshOrderSnapshot domainService,
+    ILogger<JobRefreshOrderSnapshot> logger)
+    : TriggeredJob<RefreshOrderSnapshotArgs>(logger)
 {
     public override async Task ExecuteAsync(
         RefreshOrderSnapshotArgs parameters,

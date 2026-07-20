@@ -23,14 +23,14 @@ namespace Monica.Modules;
 /// </summary>
 public static class ModuleAIUIBuilderExtensions
 {
-    extension(Mo)
+    extension(IMonicaBuilder builder)
     {
         /// <summary>
         /// Configure AI UI module
         /// </summary>
-        public static ModuleAIUIGuide AddAIUI(Action<ModuleAIUIOption>? action = null)
+        public ModuleAIUIGuide AddAIUI(Action<ModuleAIUIOption>? action = null)
         {
-            return new ModuleAIUIGuide().Register(action);
+            return builder.AddModule<ModuleAIUI, ModuleAIUIOption, ModuleAIUIGuide>(action);
         }
     }
 }

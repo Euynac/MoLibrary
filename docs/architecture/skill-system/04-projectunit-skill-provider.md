@@ -21,8 +21,8 @@ The most important business-safety call in the entire refactor lives in this doc
 
 | Type | File | Role |
 |---|---|---|
-| `ProjectUnit` | `Monica.Framework/ProjectUnits/Models/ProjectUnit.cs` | Abstract base for every business unit; carries `Type`, `Title`, `Description`, `Methods`, `Group`. |
-| `ModuleProjectUnits` | `Monica.Framework/ProjectUnits/Modules/ModuleProjectUnits.cs` | Implements `IBusinessTypeIterator`; already iterates business types and builds a `ProjectUnitRegistry`. |
+| `ProjectUnit` | `Monica.ProjectUnits/Models/ProjectUnit.cs` | Abstract base for every business unit; carries `Type`, `Title`, `Description`, `Methods`, `Group`. |
+| `ModuleProjectUnits` | `Monica.ProjectUnits/Modules/ModuleProjectUnits.cs` | Implements `IBusinessTypeIterator`; iterates business types and populates the host-owned `IProjectUnitCatalog`. |
 | `ApplicationService` | `Monica.WebApi/Abstractions/ApplicationService.cs` | Base for business application services (Command / Query). |
 | `CustomApplicationService<TRequest, TResponse>` | same file | Parent of all single-Handle services. |
 | `ApplicationService<TRequest, TResponse>` | same file | Returns `Res<TResponse>`; the typical Query / Command shape. |
@@ -31,7 +31,7 @@ The most important business-safety call in the entire refactor lives in this doc
 
 ### 1.2 The discovery hook is already there
 
-`ModuleProjectUnits.IterateBusinessTypes` already walks every business assembly and produces a typed `ProjectUnitRegistry`. The Provider in this doc piggybacks on that registry — it does not re-iterate. New work is purely the projection of each registered `ProjectUnit` into an `AgentSkill`.
+`ModuleProjectUnits.IterateBusinessTypes` already walks every business assembly and populates an `IProjectUnitCatalog` owned by the current host. The Provider in this doc consumes that catalog — it does not re-iterate. New work is purely the projection of each registered `ProjectUnit` into an `AgentSkill`.
 
 This makes Phase D the cheapest of the four phases: no new iteration pass, no new marker interface, no parallel registry.
 
@@ -276,7 +276,7 @@ If a `Handle` performs a destructive action, the author *must* either:
 - Add `[MoAITool(Disabled = true)]` on the Handle method.
 - Or rename the request DTO / convert the service to inherit a project-defined `MutatingApplicationService<TRequest>` marker the project chooses to filter out (see §10 open question (a)).
 
-The doc-writer of Phase D documents this in the new `Monica.Framework` release notes as a checklist for projects that use `Mo.AddAIProjectUnitSkills().UseAllUnits()` — every Handle that mutates state must be reviewed.
+The doc-writer of Phase D documents this in the new `Monica.Framework` release notes as a checklist for projects that use `monica.AddAIProjectUnitSkills().UseAllUnits()` — every Handle that mutates state must be reviewed.
 
 ## 5. Activation
 
@@ -289,7 +289,7 @@ For now, projects that need permission gating implement it inside individual `Ha
 The Provider's iterator step:
 
 ```csharp
-public sealed class ModuleAIProjectUnitProvider(ModuleAIProjectUnitProviderOption option, IProjectUnitRegistry units)
+public sealed class ModuleAIProjectUnitProvider(ModuleAIProjectUnitProviderOption option, IProjectUnitCatalog units)
     : ModuleBase<ModuleAIProjectUnitProvider, ModuleAIProjectUnitProviderOption, ModuleAIProjectUnitProviderGuide>(option),
       IBusinessTypeIterator
 {
@@ -305,7 +305,7 @@ public sealed class ModuleAIProjectUnitProvider(ModuleAIProjectUnitProviderOptio
     public override void PostConfigureServices(IServiceCollection services)
     {
         // Read the ProjectUnits the Guide selected.
-        var allUnits = units.GetAll();
+        var allUnits = units.GetAllUnits();
         _selectedUnits.AddRange(option.RegistrationMode switch
         {
             ProjectUnitRegistrationMode.All       => allUnits,
@@ -322,7 +322,7 @@ public sealed class ModuleAIProjectUnitProvider(ModuleAIProjectUnitProviderOptio
 }
 ```
 
-Key design point: the Provider does **not** re-implement type discovery. It consults the existing `ProjectUnitRegistry` (populated by `ModuleProjectUnits` during its own iteration phase). This honors Monica's "one source of truth per concern" rule and avoids duplicate scanning.
+Key design point: the Provider does **not** re-implement type discovery. It consults the host-owned `IProjectUnitCatalog` populated by `ModuleProjectUnits` during its own iteration phase. This honors Monica's "one source of truth per concern" rule and avoids duplicate scanning or cross-host state.
 
 ## 7. RequestDto validation propagation
 
@@ -403,17 +403,17 @@ public sealed class ModuleAIProjectUnitProviderGuide
 }
 ```
 
-`Mo` extension:
+`IMonicaBuilder` extension:
 
 ```csharp
 public static class ModuleAIProjectUnitProviderBuilderExtensions
 {
-    extension(Mo)
+    extension(IMonicaBuilder builder)
     {
-        public static ModuleAIProjectUnitProviderGuide AddAIProjectUnitSkills(
+        public ModuleAIProjectUnitProviderGuide AddAIProjectUnitSkills(
             Action<ModuleAIProjectUnitProviderOption>? action = null)
         {
-            return new ModuleAIProjectUnitProviderGuide().Register(action);
+            return builder.AddModule<ModuleAIProjectUnitProvider, ModuleAIProjectUnitProviderOption, ModuleAIProjectUnitProviderGuide>(action);
         }
     }
 }
@@ -453,8 +453,8 @@ When Phase D is implemented:
 
 1. `Monica.Framework/AISkillProviders/ProjectUnit/` folder exists with all files listed in §1.3.
 2. `BuiltInModuleKey.AIProjectUnitProvider` exists.
-3. `Mo.AddAIProjectUnitSkills().UseAllUnits()` and `Mo.AddAIProjectUnitSkills().UseUnits(...)` are callable from a host `Program.cs`.
-4. End-to-end smoke test: a sample business app with one Custom ApplicationService (PlaceOrderApplicationService) and one CrudApplicationService (CustomerCrudAppService) registers `Mo.AddAIProjectUnitSkills().UseAllUnits()`. The agent's system prompt contains `unit-orders` and `unit-customer` skills (or whatever the unit titles are). The order skill has `place-order` script. The customer skill has `get` and `list` scripts but **NOT** `create`, `update`, `delete`, `bulk-delete`.
+3. `monica.AddAIProjectUnitSkills().UseAllUnits()` and `monica.AddAIProjectUnitSkills().UseUnits(...)` are callable from a host `Program.cs`.
+4. End-to-end smoke test: a sample business app with one Custom ApplicationService (PlaceOrderApplicationService) and one CrudApplicationService (CustomerCrudAppService) registers `monica.AddAIProjectUnitSkills().UseAllUnits()`. The agent's system prompt contains `unit-orders` and `unit-customer` skills (or whatever the unit titles are). The order skill has `place-order` script. The customer skill has `get` and `list` scripts but **NOT** `create`, `update`, `delete`, `bulk-delete`.
 5. Adding `[MoAITool(Description = "...")]` to `CustomerCrudAppService.CreateAsync` makes `create` appear in the smoke test's customer skill.
 6. Adding `[MoAITool(Disabled = true)]` to `PlaceOrderApplicationService.Handle` makes `place-order` disappear.
 7. The DTO validation propagation in §7.1 is verified end-to-end: the `PlaceOrderRequestDto`'s `[Required]` and `[MinLength(1)]` annotations appear in the JSON schema.

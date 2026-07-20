@@ -1,36 +1,21 @@
-using Microsoft.Extensions.Logging;
 using Monica.Core.ObjectMapping.Models;
 using Monica.Core.ObjectMapping.Providers.Mapster;
-using Monica.Core.Results;
 
 namespace Monica.Core.ObjectMapping.Services;
 
 /// <summary>
 /// Provides object mapping inspection data for debug endpoints and UI pages.
 /// </summary>
-public class ObjectMappingStatusService(ILogger<ObjectMappingStatusService> logger)
+internal sealed class ObjectMappingStatusService(
+    MapsterMappingInspector mappingInspector)
 {
-    /// <summary>
-    /// Gets the current object mapping status snapshot.
-    /// </summary>
-    /// <returns>The current object mapping status.</returns>
-    public Task<Res<ObjectMapperStatusResponse>> GetStatusAsync()
+    public ObjectMapperStatusResponse GetStatus()
     {
-        try
+        var mappings = mappingInspector.GetMappings();
+        return new ObjectMapperStatusResponse
         {
-            var mappings = MapsterMappingInspector.GetMappings();
-            logger.LogDebug("Retrieved object mapping status with {Count} mappings.", mappings.Count);
-
-            return Task.FromResult(Res.Ok(new ObjectMapperStatusResponse
-            {
-                Count = mappings.Count,
-                Mappings = mappings
-            }));
-        }
-        catch (Exception ex)
-        {
-            logger.LogError(ex, "Failed to retrieve object mapping status.");
-            return Task.FromResult<Res<ObjectMapperStatusResponse>>($"Failed to retrieve object mapping status: {ex.Message}");
-        }
+            Count = mappings.Count,
+            Mappings = mappings
+        };
     }
 }

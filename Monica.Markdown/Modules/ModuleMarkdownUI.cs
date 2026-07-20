@@ -130,14 +130,14 @@ public class ModuleMarkdownUI(ModuleMarkdownUIOption option)
 
 public static class ModuleMarkdownUIBuilderExtensions
 {
-    extension(Mo)
+    extension(IMonicaBuilder builder)
     {
         /// <summary>
         /// Configures the Markdown UI module.
         /// </summary>
-        public static ModuleMarkdownUIGuide AddMarkdownUI(Action<ModuleMarkdownUIOption>? action = null)
+        public ModuleMarkdownUIGuide AddMarkdownUI(Action<ModuleMarkdownUIOption>? action = null)
         {
-            return new ModuleMarkdownUIGuide().Register(action);
+            return builder.AddModule<ModuleMarkdownUI, ModuleMarkdownUIOption, ModuleMarkdownUIGuide>(action);
         }
     }
 }

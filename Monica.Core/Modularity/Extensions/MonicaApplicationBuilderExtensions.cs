@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.DependencyInjection;
 using Monica.Core;
 using Monica.Core.Modularity.Models;
 using Monica.Core.Modularity.Services;
@@ -18,11 +19,12 @@ public static class MonicaApplicationBuilderExtensions
     {
         ArgumentNullException.ThrowIfNull(app);
 
-        ConfigureMonicaHttpListener(app);
-        ModuleRegistry.ConfigApplicationPipeline(app, ModuleOrder.MIDDLEWARE_USE_ROUTING, afterGivenOrder: false);
+        var application = app.ApplicationServices.GetRequiredService<MonicaApplication>();
+        ConfigureMonicaHttpListener(app, application.ModuleSystem);
+        application.Modules.ConfigApplicationPipeline(app, ModuleOrder.MIDDLEWARE_USE_ROUTING, afterGivenOrder: false);
         app.UseRouting();
-        app.UseMonicaEndpointPortGuard();
-        ModuleRegistry.ConfigApplicationPipeline(app, ModuleOrder.MIDDLEWARE_USE_ROUTING, afterGivenOrder: true);
+        app.UseMonicaEndpointPortGuard(application.ModuleSystem);
+        application.Modules.ConfigApplicationPipeline(app, ModuleOrder.MIDDLEWARE_USE_ROUTING, afterGivenOrder: true);
         return app;
     }
 
@@ -35,13 +37,16 @@ public static class MonicaApplicationBuilderExtensions
     {
         ArgumentNullException.ThrowIfNull(app);
 
-        ModuleRegistry.ConfigEndpoints(app);
+        var application = app.ApplicationServices.GetRequiredService<MonicaApplication>();
+        application.Modules.ConfigEndpoints(app);
         return app;
     }
 
-    private static void UseMonicaEndpointPortGuard(this IApplicationBuilder app)
+    private static void UseMonicaEndpointPortGuard(
+        this IApplicationBuilder app,
+        IMonicaModuleSystemOptions moduleSystem)
     {
-        var port = Mo.ModuleSystem.MonicaEndpointPort;
+        var port = moduleSystem.MonicaEndpointPort;
         if (port is null)
         {
             return;
@@ -61,16 +66,18 @@ public static class MonicaApplicationBuilderExtensions
         });
     }
 
-    private static void ConfigureMonicaHttpListener(IApplicationBuilder app)
+    private static void ConfigureMonicaHttpListener(
+        IApplicationBuilder app,
+        IMonicaModuleSystemOptions moduleSystem)
     {
-        var port = Mo.ModuleSystem.MonicaEndpointPort;
-        if (port is null || !Mo.ModuleSystem.AutoAddMonicaHttpListener || app is not WebApplication webApplication)
+        var port = moduleSystem.MonicaEndpointPort;
+        if (port is null || !moduleSystem.AutoAddMonicaHttpListener || app is not WebApplication webApplication)
         {
             return;
         }
 
         var hasExistingUrls = webApplication.Urls.Count > 0;
-        var monicaUrl = BuildMonicaHttpUrl(port.Value, webApplication.Urls);
+        var monicaUrl = BuildMonicaHttpUrl(port.Value, webApplication.Urls, moduleSystem.MonicaEndpointHost);
         if (webApplication.Urls.Any(url => string.Equals(url, monicaUrl, StringComparison.OrdinalIgnoreCase)))
         {
             return;
@@ -84,17 +91,22 @@ public static class MonicaApplicationBuilderExtensions
         webApplication.Urls.Add(monicaUrl);
     }
 
-    private static string BuildMonicaHttpUrl(int port, ICollection<string> existingUrls)
+    private static string BuildMonicaHttpUrl(
+        int port,
+        ICollection<string> existingUrls,
+        string? configuredHost)
     {
-        var host = ResolveMonicaEndpointHost(existingUrls);
+        var host = ResolveMonicaEndpointHost(existingUrls, configuredHost);
         return $"http://{host}:{port}";
     }
 
-    private static string ResolveMonicaEndpointHost(IEnumerable<string> existingUrls)
+    private static string ResolveMonicaEndpointHost(
+        IEnumerable<string> existingUrls,
+        string? configuredHost)
     {
-        if (!string.IsNullOrWhiteSpace(Mo.ModuleSystem.MonicaEndpointHost))
+        if (!string.IsNullOrWhiteSpace(configuredHost))
         {
-            return Mo.ModuleSystem.MonicaEndpointHost.Trim();
+            return configuredHost.Trim();
         }
 
         foreach (var existingUrl in existingUrls)

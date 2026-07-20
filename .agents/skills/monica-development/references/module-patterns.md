@@ -12,7 +12,7 @@ This guide defines the standardized patterns and conventions for creating module
 | Module class | `Module{Name}` | `ModuleSignalR`, `ModuleJobScheduler` |
 | Options class | `Module{Name}Option` | `ModuleSignalROption` |
 | Guide class | `Module{Name}Guide` | `ModuleSignalRGuide` |
-| Builder extensions | `extension(Mo)` with `Add{Name}()` | `Mo.AddSignalR()` |
+| Builder extensions | `extension(IMonicaBuilder)` with `Add{Name}()` | `monica.AddSignalR()` inside `builder.AddMonica(...)` |
 | Module key entry | `BuiltInModuleKey.{Name}` | `BuiltInModuleKey.SignalR` |
 
 ## Module Runtime Kinds
@@ -227,24 +227,35 @@ For web modules, switch the guide base type to `WebModuleGuide<Module{Name}, Mod
 ## Builder Extensions
 
 ```csharp
-public static Module{Name}Guide Add{Name}(Action<Module{Name}Option>? action = null)
+public static class Module{Name}BuilderExtensions
 {
-    // Registration logic handled by Mo infrastructure
+    extension(IMonicaBuilder builder)
+    {
+        public Module{Name}Guide Add{Name}(Action<Module{Name}Option>? action = null)
+        {
+            return builder.AddModule<Module{Name}, Module{Name}Option, Module{Name}Guide>(action);
+        }
+    }
 }
 ```
 
 Usage:
 
 ```csharp
-Mo.Add{Name}(options =>
-{
-    options.EnableFeature = true;
-    options.MaxItems = 50;
-});
+var builder = WebApplication.CreateBuilder(args);
 
-Mo.Add{Name}()
-    .EnableFeature()
-    .WithMaxItems(50);
+builder.AddMonica(monica =>
+{
+    monica.Add{Name}(options =>
+    {
+        options.EnableFeature = true;
+        options.MaxItems = 50;
+    });
+
+    monica.Add{Name}()
+        .EnableFeature()
+        .WithMaxItems(50);
+});
 ```
 
 ## Features Pattern (Bundled Sub-Modules)

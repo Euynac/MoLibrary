@@ -22,7 +22,8 @@ public abstract class CoordinatedLeaderService(
     IOptions<ModuleServiceDiscoveryOption> options,
     IServiceRegistrationCoordinator coordinator,
     IObservableInstanceRegistry observableManager,
-    IOptions<ModuleHostedServiceOption> hostedServiceOptions) : MoBackgroundService(observableManager, hostedServiceOptions)
+    IOptions<ModuleHostedServiceOption> hostedServiceOptions,
+    ILogger logger) : MoBackgroundService(observableManager, hostedServiceOptions, logger)
 {
     /// <summary>
     /// Module configuration options

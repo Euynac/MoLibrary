@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Monica.Core.HostedService.Abstractions;
 using Monica.Core.HostedService.Models;
@@ -15,8 +16,9 @@ namespace Monica.DevOps.Git.Services;
 public sealed class GitStartupSyncHostedService(
     IGitRepositoryService repositoryService,
     IObservableInstanceRegistry observableManager,
-    IOptions<ModuleHostedServiceOption> hostedServiceOptions)
-    : MoBackgroundService(observableManager, hostedServiceOptions)
+    IOptions<ModuleHostedServiceOption> hostedServiceOptions,
+    ILogger<GitStartupSyncHostedService> logger)
+    : MoBackgroundService(observableManager, hostedServiceOptions, logger)
 {
     /// <inheritdoc />
     public override string ServiceName => "GitStartupSyncHostedService";
