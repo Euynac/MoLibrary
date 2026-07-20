@@ -672,12 +672,11 @@ public partial class ComplexValueEditorDialog : IAsyncDisposable
             OriginalDisplayValue = DisplayJson(oldValue, schema),
             NewDisplayValue = kind == ConfigurationMutationKind.Remove ? L["Mutation:Kinds:Remove"] : DisplayJson(newValue, schema),
             ExpectedSchemaVersion = Definition.SchemaVersion,
-            ExpectedValueVersion = _valueVersion,
             IsSensitive = IsSensitiveNode(schema),
             NodeKind = schema.NodeKind,
             ValueKind = schema.ValueKind,
             ReloadBehavior = EffectiveReloadBehaviorFor(schema)
-        }.WithTarget(Definition, EffectiveValue?.EffectiveSource);
+        }.WithTarget(Definition, EffectiveValue?.EffectiveSource, _valueVersion);
     }
 
     private void UpsertChange(PendingChange change)

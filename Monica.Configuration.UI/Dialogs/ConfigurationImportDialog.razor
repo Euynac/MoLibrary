@@ -110,7 +110,6 @@
     };
 
     [CascadingParameter] private IMudDialogInstance MudDialog { get; set; } = null!;
-    [Parameter] public IReadOnlyList<PendingChange> PendingChanges { get; set; } = [];
 
     private ConfigurationImportReport? _report;
     private ConfigurationPendingReviewState? _review;
@@ -149,7 +148,7 @@
             }
 
             var progress = new Progress<ConfigurationPackageProgress>(ReportProgress);
-            _report = await PackageService.AnalyzeImportAsync(document, PendingChanges, file.Name, progress);
+            _report = await PackageService.AnalyzeImportAsync(document, file.Name, progress);
             _review = new ConfigurationPendingReviewState(_report.Changes, _report.ValidationIssues);
         }
         catch (Exception ex)

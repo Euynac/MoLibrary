@@ -1145,13 +1145,13 @@
 
     private async Task OpenImportDialog()
     {
-        var parameters = new DialogParameters<ConfigurationImportDialog>();
-        parameters.Add(dialog => dialog.PendingChanges, StateStore.GetPending());
-        var dialog = await DialogService.ShowAsync<ConfigurationImportDialog>(L["ImportExport:Import:Title"], parameters, new DialogOptions
-        {
-            MaxWidth = MaxWidth.False,
-            FullWidth = true
-        });
+        var dialog = await DialogService.ShowAsync<ConfigurationImportDialog>(
+            L["ImportExport:Import:Title"],
+            new DialogOptions
+            {
+                MaxWidth = MaxWidth.False,
+                FullWidth = true
+            });
         var result = await dialog.Result;
         if (result is not { Canceled: false, Data: ConfigurationImportReport report })
         {
@@ -1189,7 +1189,10 @@
         try
         {
             var effectiveValue = await PackageService.LoadEffectiveValueAsync(_selectedDefinition.DefinitionKey, LogicalPath.Root);
-            var scalarValues = await PackageService.LoadScalarEffectiveValuesAsync(_selectedDefinition);
+            var scalarValues = await PackageService.LoadScalarEffectiveValuesAsync(
+                _selectedDefinition,
+                _selectedDefinition.Root,
+                effectiveValue);
             var parameters = new DialogParameters<ConfigurationJsonEditDialog>();
             parameters.Add(dialog => dialog.Definition, _selectedDefinition);
             parameters.Add(dialog => dialog.Node, _selectedDefinition.Root);
@@ -1343,33 +1346,51 @@
         }
 
         var refreshedChanges = new List<PendingChange>(pendingChanges.Count);
-        foreach (var change in pendingChanges)
+        foreach (var definitionChanges in pendingChanges.GroupBy(
+                     static change => change.DefinitionKey,
+                     StringComparer.OrdinalIgnoreCase))
         {
-            var result = await LoadDefinitionDetailAsync(change.DefinitionKey);
+            var result = await LoadDefinitionDetailAsync(definitionChanges.Key);
             if (result.IsFailed(out _, out var detail))
             {
-                refreshedChanges.Add(change);
+                refreshedChanges.AddRange(definitionChanges);
                 continue;
             }
 
-            var schema = ResolveSchemaNodeByPath(detail.Definition.Root, change.LogicalPath);
-            if (schema is null)
+            var rootValueResult = await Facade.GetEffectiveValueAsync(definitionChanges.Key, LogicalPath.Root);
+            if (rootValueResult.IsFailed(out _, out var rootValue))
             {
-                refreshedChanges.Add(change);
+                refreshedChanges.AddRange(definitionChanges);
                 continue;
             }
 
-            var effectiveValueResult = await Facade.GetEffectiveValueAsync(change.DefinitionKey, change.LogicalPath);
-            if (effectiveValueResult.IsFailed(out _, out var effectiveValue))
+            // One persisted document version guards every Monica mutation for this definition.
+            foreach (var change in definitionChanges)
             {
-                refreshedChanges.Add(change);
-                continue;
-            }
+                var schema = ResolveSchemaNodeByPath(detail.Definition.Root, change.LogicalPath);
+                if (schema is null)
+                {
+                    refreshedChanges.Add(change);
+                    continue;
+                }
 
-            var refreshedChange = change.RebaseBaseline(detail.Definition, schema, effectiveValue, L);
-            if (!refreshedChange.HasSameOriginalAndNewValue())
-            {
-                refreshedChanges.Add(refreshedChange);
+                var effectiveValueResult = await Facade.GetEffectiveValueAsync(change.DefinitionKey, change.LogicalPath);
+                if (effectiveValueResult.IsFailed(out _, out var effectiveValue))
+                {
+                    refreshedChanges.Add(change);
+                    continue;
+                }
+
+                var refreshedChange = change.RebaseBaseline(
+                    detail.Definition,
+                    schema,
+                    effectiveValue,
+                    rootValue.Version,
+                    L);
+                if (!refreshedChange.HasSameOriginalAndNewValue())
+                {
+                    refreshedChanges.Add(refreshedChange);
+                }
             }
         }
 

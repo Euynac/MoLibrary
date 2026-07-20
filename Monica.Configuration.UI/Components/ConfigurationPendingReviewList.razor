@@ -79,10 +79,10 @@ else
                                             </MudTd>
                                             <MudTd DataLabel="@L["History:Columns:Kind"]">@MutationKindText(context.MutationKind)</MudTd>
                                             <MudTd DataLabel="@L["State:Columns:OldValue"]">
-                                                <ConfigurationPendingChangeValue Change="context" Value="context.OriginalDisplayValue" />
+                                                <ConfigurationPendingChangeValue Change="context" Value="@context.OriginalDisplayValue" />
                                             </MudTd>
                                             <MudTd DataLabel="@L["State:Columns:NewValue"]">
-                                                <ConfigurationPendingChangeValue Change="context" Value="context.NewDisplayValue" IsNewValue="true" />
+                                                <ConfigurationPendingChangeValue Change="context" Value="@context.NewDisplayValue" IsNewValue="true" />
                                             </MudTd>
                                             @if (HasItemActions)
                                             {

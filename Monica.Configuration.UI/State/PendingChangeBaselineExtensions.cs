@@ -14,6 +14,7 @@ internal static class PendingChangeBaselineExtensions
         ConfigurationDefinition definition,
         ConfigurationNodeDefinition schema,
         ConfigurationEffectiveValue effectiveValue,
+        long? effectiveStoreVersion,
         IStringLocalizer<ConfigurationUIResource> localizer)
     {
         var rebased = change with
@@ -23,9 +24,6 @@ internal static class PendingChangeBaselineExtensions
             OriginalValue = CreateOriginalStoredValue(schema, effectiveValue, localizer),
             OriginalDisplayValue = CreateOriginalDisplayValue(change, schema, effectiveValue),
             ExpectedSchemaVersion = definition.SchemaVersion,
-            ExpectedValueVersion = effectiveValue.EffectiveSource?.Kind == ConfigurationSourceKind.MonicaEffectiveStore
-                ? effectiveValue.Version
-                : null,
             TargetKind = ConfigurationMutationTargetKind.MonicaEffectiveStore,
             SourceKey = null,
             SourceDisplayName = null,
@@ -38,7 +36,7 @@ internal static class PendingChangeBaselineExtensions
             ReloadBehavior = schema.ResolveEffectiveReloadBehavior(definition)
         };
 
-        return rebased.WithTarget(definition, effectiveValue.EffectiveSource);
+        return rebased.WithTarget(definition, effectiveValue.EffectiveSource, effectiveStoreVersion);
     }
 
     public static bool HasSameOriginalAndNewValue(this PendingChange change)
