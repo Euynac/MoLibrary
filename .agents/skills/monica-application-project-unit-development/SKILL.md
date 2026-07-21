@@ -1,6 +1,6 @@
 ---
 name: monica-application-project-unit-development
-description: Shared Monica-native DDD ProjectUnit development guidance for application projects. Use when creating, naming, placing, or refactoring ApplicationService, RequestDto, DomainService, Entity, Repository, DomainEvent, DomainEventHandler, LocalEventHandler, Configuration, RecurringJob, or TriggeredJob types, or when deciding which ProjectUnits a new feature requires in either microservice or modular monolith solutions.
+description: Shared Monica-native DDD ProjectUnit development guidance for application projects. Use when creating, naming, placing, or refactoring ApplicationService, RequestDto, request-owned HTTP or published RPC endpoint contracts, DomainService, Entity, Repository, DomainEvent, DomainEventHandler, LocalEventHandler, Configuration, RecurringJob, or TriggeredJob types, or when deciding which ProjectUnits a new feature requires in either microservice or modular monolith solutions.
 ---
 
 # Monica Application ProjectUnit Development
@@ -25,7 +25,11 @@ Use this skill for unit-level application development in Monica-based DDD projec
 - Keep repository implementations in the owning subdomain or service infrastructure boundary. Do not move a repository or adapter to `Platform` just because it uses an external library; only project-common reusable infrastructure belongs in `Platform`.
 - Keep contracts stable: requests, DTOs, and events are not persistence entities.
 - If a handler returns `Res<string>`, use `Res.Ok<string>(value)` instead of `Res.Ok(value)` to avoid the non-generic string overload.
-- For HTTP-exposed `ApplicationService` handlers, prefer the controller route pattern `api/{version}/{DomainName(PascalCase)}` and keep only the request-specific segment on the handler method, such as `GET api/v1/Documentation/tree`.
+- Make HTTP contracts request-owned. Put `[ApiEndpoint]` on the request type and keep route, verb, binding, and optional operation name off the `ApplicationService` handler.
+- A request is published for generated RPC clients only when it is attributed source in the exact namespace `*.PublishedLanguages.Domain{DomainName}.Requests`. Attributed requests outside that boundary remain local HTTP endpoints.
+- Put `[assembly: WebApiGenerationConfig(...)]` in each assembly that owns attributed requests. Protocol assemblies select the required `RpcClientTargets`; local-only assemblies normally use `None`.
+- Do not add MVC `[Http*]`, `[Route]`, or `[From*]` attributes to generated `ApplicationService` endpoints. The request contract is the single endpoint authority.
+- Use `ApplicationService` only for HTTP-exposed mediator handlers. If a request is intentionally internal and must have no HTTP endpoint, implement `IRequestHandler<TRequest, TResult>` as a normal transient dependency instead of omitting `[ApiEndpoint]` from an `ApplicationService`.
 - Register `monica.AddConfiguration()` inside `builder.AddMonica(...)`. Runtime consumers receive configuration ProjectUnits through `IOptions<T>`, `IOptionsSnapshot<T>`, or `IOptionsMonitor<T>`; composition code that needs bootstrap values reads `builder.Configuration` directly and passes explicit values into module options.
 
 ## Reference Navigation

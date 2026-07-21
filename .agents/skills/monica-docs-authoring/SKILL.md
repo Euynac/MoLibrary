@@ -1,6 +1,6 @@
 ---
 name: monica-docs-authoring
-description: This skill should be used when the user asks to "write docs", "document module", "rewrite docs", "migrate docs", "quick start", "configuration reference", "guide method docs", "双语文档", "编写文档", "模块文档", "文档迁移", or needs to create, revise, migrate, or standardize Monica user documentation from current source code, including Monica.Docs/docs pages, framework guides, module documentation packs, configuration tables, provider guides, and zh-CN documentation pages.
+description: This skill should be used when the user asks to "write docs", "document module", "rewrite docs", "migrate docs", "quick start", "configuration reference", "guide method docs", "双语文档", "编写文档", "模块文档", "文档迁移", or needs to create, revise, migrate, or standardize Monica user documentation from current source code, including Monica.Docs/docs pages, framework guides, request-owned Web API and RPC contracts, module documentation packs, configuration tables, provider guides, and zh-CN documentation pages.
 ---
 
 # Monica Docs Authoring
@@ -39,6 +39,7 @@ Always extract and verify:
 - `GetRequestedConfigMethodKeys()` requirements when present
 - Declared module dependencies
 - Host-facing public surface and notable providers
+- For generated Web APIs, request-owned `[ApiEndpoint]` declarations, `WebApiGenerationConfig`, and the namespace boundary that determines RPC publication
 
 Existing docs under `../Monica.Docs/docs` are the current publication target. Revise them in place when they already exist, but never trust them over current code.
 
@@ -65,6 +66,8 @@ Important defaults:
 - Show the **smallest correct example first**
 - Show the complete host boundary: `builder.AddMonica(monica => { ... })`, followed by `app.UseMonica()` and `app.MapMonica()` for web hosts
 - Never publish ambient `Mo.Add*()`, `builder.UseMonica()`, or `Mo.RegisterInstantly(...)`; those APIs no longer exist
+- For generated endpoints, document route, verb, binding, and operation name on the request contract. Do not show MVC `[Http*]`, `[Route]`, or `[From*]` attributes on `ApplicationService` handlers.
+- Distinguish published RPC requests under `*.PublishedLanguages.Domain{DomainName}.Requests` from local-only attributed HTTP requests outside that namespace.
 - Keep local asset links relative so Monica.Docs can rewrite them correctly
 
 ### 5. Apply the correct template
@@ -83,6 +86,7 @@ When the user asks for “module docs”, default to the module pack template un
 - If an infra module has a related UI module, cross-link them; do not merge them by default
 - Prefer file-path-based slugs; do not add frontmatter `slug` unless the site explicitly needs an override
 - Keep English and Chinese navigation, code APIs, and factual claims aligned; narrative should read naturally in each locale rather than as literal translation
+- Treat moving an attributed request into or out of the published-language namespace as a public RPC contract change and document the impact explicitly
 
 ## References
 

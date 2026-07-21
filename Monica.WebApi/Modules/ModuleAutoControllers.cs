@@ -85,6 +85,7 @@ public class ModuleAutoControllers(ModuleAutoControllersOption option)
         {
             services.AddTransient<IServiceConvention, CrudControllerServiceConvention>();
             services.AddTransient<IApiDescriptionProvider, CrudApiDescriptionProvider>();
+            services.AddTransient<IApiDescriptionProvider, RequestEndpointApiDescriptionProvider>();
             services.AddTransient<IConventionalRouteBuilder, ConventionalRouteBuilder>();
             services.AddSingleton<ResultEnvelopeMvcFilter>();
             //https://learn.microsoft.com/en-us/aspnet/core/fundamentals/minimal-apis/openapi?view=aspnetcore-7.0

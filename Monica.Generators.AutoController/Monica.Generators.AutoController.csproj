@@ -13,47 +13,23 @@
 		<DevelopmentDependency>true</DevelopmentDependency>
 		<SuppressDependenciesWhenPacking>true</SuppressDependenciesWhenPacking>
 		<IncludeSymbols>false</IncludeSymbols>
-		<TargetsForTfmSpecificContentInPackage>$(TargetsForTfmSpecificContentInPackage);PackBuildTaskAssets</TargetsForTfmSpecificContentInPackage>
-		<PackageDescription>Source generator for automatic RPC controller generation in Monica framework, enabling seamless API endpoint creation from service interfaces.</PackageDescription>
+		<PackageDescription>Analyzer-only source generator for request-owned HTTP controllers and RPC clients in Monica applications.</PackageDescription>
+		<PackageReleaseNotes>Replaces handler-owned routes and RPC metadata snapshots with request-owned ApiEndpoint contracts. Generates controllers and HTTP/local RPC clients incrementally without build tasks or source-tree writes.</PackageReleaseNotes>
+		<PackageTags>monica;dotnet;roslyn;source-generator;aspnetcore;rpc;api-controller;cqrs</PackageTags>
 	</PropertyGroup>
 
 	<ItemGroup>
-		<PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="5.0.0" />
-		<PackageReference Include="Microsoft.CodeAnalysis.Analyzers" Version="3.11.0" PrivateAssets="all" />
+		<PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="5.0.0" ExcludeAssets="analyzers" />
 	</ItemGroup>
 
 	<!-- Pack as analyzer -->
 	<ItemGroup>
 		<None Include="$(OutputPath)\$(AssemblyName).dll" Pack="true" PackagePath="analyzers/dotnet/cs" Visible="false" />
 	</ItemGroup>
+
+	<!-- Roslyn release tracking inputs are analyzer-development metadata, not consumer AdditionalFiles. -->
 	<ItemGroup>
-	  <AdditionalFiles Include="AnalyzerReleases.Shipped.md" />
-	  <AdditionalFiles Include="AnalyzerReleases.Unshipped.md" />
+		<AdditionalFiles Include="AnalyzerReleases.Shipped.md" />
+		<AdditionalFiles Include="AnalyzerReleases.Unshipped.md" />
 	</ItemGroup>
-
-	<ItemGroup>
-		<None Include="build\Monica.Generators.AutoController.props" Pack="true" PackagePath="build\Monica.Generators.AutoController.props" />
-		<None Include="build\Monica.Generators.AutoController.targets" Pack="true" PackagePath="build\Monica.Generators.AutoController.targets" />
-		<None Include="buildTransitive\Monica.Generators.AutoController.props" Pack="true" PackagePath="buildTransitive\Monica.Generators.AutoController.props" />
-		<None Include="buildTransitive\Monica.Generators.AutoController.targets" Pack="true" PackagePath="buildTransitive\Monica.Generators.AutoController.targets" />
-	</ItemGroup>
-
-	<Target Name="PackBuildTaskAssets">
-	  <MSBuild Projects="..\Monica.Generators.AutoController.BuildTasks\Monica.Generators.AutoController.BuildTasks.csproj"
-	           Targets="$(PackBuildTaskTarget)"
-	           RemoveProperties="TargetFramework;TargetFrameworks"
-	           Properties="Configuration=$(Configuration);TargetFramework=net10.0" />
-
-	  <ItemGroup>
-	    <TfmSpecificPackageFile Include="..\Monica.Generators.AutoController.BuildTasks\bin\$(Configuration)\net10.0\Monica.Generators.AutoController.BuildTasks.dll">
-	      <PackagePath>build\Monica.Generators.AutoController.BuildTasks.dll</PackagePath>
-	    </TfmSpecificPackageFile>
-	  </ItemGroup>
-	</Target>
-
-	<PropertyGroup>
-		<PackBuildTaskTarget Condition="'$(NoBuild)' == 'true'">GetTargetPath</PackBuildTaskTarget>
-		<PackBuildTaskTarget Condition="'$(PackBuildTaskTarget)' == ''">Build</PackBuildTaskTarget>
-	</PropertyGroup>
-
 </Project>

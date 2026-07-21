@@ -1,19 +1,26 @@
-﻿; Unshipped analyzer release
+; Unshipped analyzer release
 ; https://github.com/dotnet/roslyn-analyzers/blob/main/src/Microsoft.CodeAnalysis.Analyzers/ReleaseTrackingAnalyzers.Help.md
 
 ### New Rules
 
 Rule ID | Category | Severity | Notes
 --------|----------|----------|-------
-AC0001 | AutoController | Error | DiagnosticDescriptors
-AC0002 | AutoController | Error | DiagnosticDescriptors
-AC0003 | AutoController | Error | DiagnosticDescriptors
-AC0004 | AutoController | Error | DiagnosticDescriptors
-AC0005 | AutoController | Error | DiagnosticDescriptors
-AC0006 | AutoController | Error | DiagnosticDescriptors
-AC0007 | AutoController | Error | DiagnosticDescriptors
-AC0008 | AutoController | Error | DiagnosticDescriptors
-AC0009 | AutoController | Error | DiagnosticDescriptors
-AC0010 | AutoController | Error | DiagnosticDescriptors
-AC0011 | AutoController | Error | DiagnosticDescriptors
-AC0012 | AutoController | Error | DiagnosticDescriptors
+AC1001 | RequestOwnedWebApi | Error | Application request has no endpoint contract
+AC1002 | RequestOwnedWebApi | Error | Handler contains endpoint metadata
+AC1003 | RequestOwnedWebApi | Error | Missing Web API generation configuration
+AC1004 | RequestOwnedWebApi | Error | Invalid Web API generation configuration
+AC1005 | RequestOwnedWebApi | Error | Invalid published request namespace
+AC1006 | RequestOwnedWebApi | Error | Invalid endpoint request name
+AC1007 | RequestOwnedWebApi | Error | Invalid request result contract
+AC1008 | RequestOwnedWebApi | Error | Handler and request result contracts differ
+AC1009 | RequestOwnedWebApi | Error | Duplicate endpoint route
+AC1010 | RequestOwnedWebApi | Error | Duplicate RPC operation
+AC1011 | RequestOwnedWebApi | Error | Invalid endpoint route
+AC1012 | RequestOwnedWebApi | Error | Route placeholder has no request property
+AC1013 | RequestOwnedWebApi | Error | Published endpoint binding is not supported
+AC1014 | RequestOwnedWebApi | Error | Endpoint request has no XML summary
+AC1015 | RequestOwnedWebApi | Error | Published endpoint result is not supported
+AC1016 | RequestOwnedWebApi | Error | Invalid RPC operation name
+AC1017 | RequestOwnedWebApi | Error | Published endpoint result is not a self-constructing remote result envelope
+AC1018 | RequestOwnedWebApi | Error | Route property cannot receive the route value
+AC1099 | RequestOwnedWebApi | Error | Request-owned API generation failed

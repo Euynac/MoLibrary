@@ -1,199 +1,136 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text;
 using Microsoft.CodeAnalysis;
 using Monica.Generators.AutoController.Constants;
 using Monica.Generators.AutoController.Diagnostics;
-using Monica.Generators.AutoController.Helpers;
 using Monica.Generators.AutoController.Models;
-using Monica.Generators.AutoController.Templates;
 
 namespace Monica.Generators.AutoController.Generators;
 
 internal static class ControllerCodeGenerator
 {
-    /// <summary>
-    /// Groups candidates by Route and HandlerType, merges tags and using dependencies,
-    /// and then generates one controller file per group with comprehensive error handling.
-    /// </summary>
-    /// <param name="context">The source production context</param>
-    /// <param name="candidates">The collection of handler candidates</param>
-    public static void GenerateControllers(SourceProductionContext context, List<HandlerCandidate> candidates)
+    public static void Generate(SourceProductionContext context, IReadOnlyList<ControllerCandidate> candidates)
     {
-        try
+        var duplicateCandidates = ReportDuplicateRoutes(context, candidates);
+        foreach (var group in candidates
+                     .Where(candidate => !duplicateCandidates.Contains(candidate))
+                     .GroupBy(static candidate => new
+                     {
+                         candidate.Endpoint.ControllerRoute,
+                         candidate.Endpoint.Domain,
+                         candidate.Endpoint.RequestKind
+                     }))
         {
-            // Detect route conflicts before generation
-            DetectRouteConflicts(context, candidates);
-
-            // Group candidates by the Route (class-level attribute) and handler type
-            var groups = candidates.GroupBy(c => (c.ClassRoute, c.HandlerType));
-
-            foreach (var group in groups)
-            {
-                GenerateControllerForGroup(context, group);
-            }
-        }
-        catch (Exception ex)
-        {
-            var diagnostic = Diagnostic.Create(
-                DiagnosticDescriptors.CodeGenerationFailed,
-                Location.None,
-                "Unknown",
-                "Unknown",
-                ex.Message);
-            context.ReportDiagnostic(diagnostic);
-        }
-    }
-
-    /// <summary>
-    /// Detects route conflicts between handlers that would result in duplicate endpoints.
-    /// </summary>
-    /// <param name="context">The source production context for error reporting</param>
-    /// <param name="candidates">The collection of handler candidates to check</param>
-    private static void DetectRouteConflicts(SourceProductionContext context, List<HandlerCandidate> candidates)
-    {
-        // Group by final route and HTTP method to detect conflicts
-        var routeGroups = candidates
-            .GroupBy(c => new {
-                Route = BuildFinalRoute(c),
-                HttpMethod = c.HttpMethodAttribute
-            })
-            .Where(g => g.Count() > 1);
-
-        foreach (var conflictGroup in routeGroups)
-        {
-            var conflictingHandlers = conflictGroup.Select(c => c.MethodName).ToList();
-            var diagnostic = Diagnostic.Create(
-                DiagnosticDescriptors.RouteConflict,
-                Location.None,
-                conflictGroup.Key.Route,
-                conflictGroup.Key.HttpMethod,
-                string.Join(", ", conflictingHandlers));
-            context.ReportDiagnostic(diagnostic);
-        }
-    }
-
-    /// <summary>
-    /// Builds the final route that will be exposed for a handler candidate.
-    /// </summary>
-    /// <param name="candidate">The handler candidate</param>
-    /// <returns>The final route string</returns>
-    private static string BuildFinalRoute(HandlerCandidate candidate)
-    {
-        var baseRoute = candidate.ClassRoute.TrimEnd('/');
-        if (string.IsNullOrEmpty(candidate.HttpMethodRoute))
-        {
-            return baseRoute;
-        }
-        return $"{baseRoute}/{candidate.HttpMethodRoute.TrimStart('/')}";
-    }
-
-    /// <summary>
-    /// Generates a single controller for a group of candidates sharing the same route and handler type.
-    /// </summary>
-    /// <param name="context">The source production context</param>
-    /// <param name="group">The group of candidates to generate controller for</param>
-    private static void GenerateControllerForGroup(
-        SourceProductionContext context,
-        IGrouping<(string ClassRoute, string HandlerType), HandlerCandidate> group)
-    {
-        var route = group.Key.ClassRoute; // e.g., "api/v1/Flight"
-        var handlerType = group.Key.HandlerType; // "Command" or "Query"
-
-        try
-        {
-            // Validate route template format
-            if (!IsValidRouteTemplate(route))
-            {
-                var diagnostic = Diagnostic.Create(
-                    DiagnosticDescriptors.InvalidRouteTemplate,
-                    Location.None,
-                    route,
-                    $"Group with {group.Count()} handlers");
-                context.ReportDiagnostic(diagnostic);
-                return;
-            }
-
-            // Merge all distinct tags from the group
-            var tags = group.SelectMany(c => c.Tags).Distinct().ToList();
-
-            // Generate controller name
-            var controllerName = NamingHelper.GenerateEndpointControllerName(
-                route,
-                GeneratorConstants.Transports.Http,
-                handlerType);
-
-            // Merge using directives
-            var allUsings = MergeUsingDirectives(group);
-            var usingDirectives = ControllerTemplate.GenerateUsingDirectives(allUsings);
-
-            // Generate all the methods for this controller
-            var methodsCode = ControllerTemplate.GenerateAllMethods(group);
-
-            // Compose the complete controller class
-            var generatedCode = ControllerTemplate.GenerateControllerClass(
+            var controllerName = $"HttpEndpoint{group.Key.RequestKind}{group.Key.Domain}";
+            context.AddSource($"{controllerName}.g.cs", GenerateController(
                 controllerName,
-                route,
-                tags,
-                usingDirectives,
-                methodsCode);
-
-            // Generate the filename and add the source
-            var fileName = NamingHelper.GenerateControllerFileName(controllerName);
-            context.AddSource(fileName, generatedCode);
+                group.Key.ControllerRoute,
+                group));
         }
-        catch (Exception ex)
+    }
+
+    private static HashSet<ControllerCandidate> ReportDuplicateRoutes(
+        SourceProductionContext context,
+        IReadOnlyList<ControllerCandidate> candidates)
+    {
+        var duplicates = new HashSet<ControllerCandidate>();
+        foreach (var group in candidates.GroupBy(static candidate => new
+                 {
+                     candidate.Endpoint.HttpMethod,
+                     candidate.Endpoint.NormalizedRoute
+                 }).Where(static group => group.Count() > 1))
         {
-            var diagnostic = Diagnostic.Create(
-                DiagnosticDescriptors.CodeGenerationFailed,
-                Location.None,
-                route,
-                handlerType,
-                ex.Message);
-            context.ReportDiagnostic(diagnostic);
+            var names = string.Join(", ", group.Select(static candidate =>
+                candidate.Endpoint.RequestDisplayName));
+            foreach (var candidate in group)
+            {
+                duplicates.Add(candidate);
+            }
+
+            context.ReportDiagnostic(Diagnostic.Create(
+                DiagnosticDescriptors.DuplicateRoute,
+                group.First().Endpoint.Location?.ToLocation() ?? Location.None,
+                group.Key.HttpMethod.ToUpperInvariant(),
+                group.First().Endpoint.CompleteRoute,
+                names));
         }
+
+        return duplicates;
     }
 
-    /// <summary>
-    /// Validates that a route template follows ASP.NET Core routing conventions.
-    /// </summary>
-    /// <param name="route">The route template to validate</param>
-    /// <returns>True if the route is valid, false otherwise</returns>
-    private static bool IsValidRouteTemplate(string route)
+    private static string GenerateController(
+        string controllerName,
+        string controllerRoute,
+        IEnumerable<ControllerCandidate> candidates)
     {
-        if (string.IsNullOrWhiteSpace(route))
-            return false;
+        var candidateList = candidates
+            .OrderBy(static candidate => candidate.Endpoint.OperationName, StringComparer.Ordinal)
+            .ToArray();
+        var tags = candidateList.SelectMany(static candidate => candidate.Tags)
+            .Distinct(StringComparer.Ordinal)
+            .ToArray();
+        var builder = new StringBuilder();
+        builder.AppendLine("// <auto-generated />");
+        builder.AppendLine("#nullable enable");
+        builder.AppendLine("using System.Net;");
+        builder.AppendLine("using Microsoft.AspNetCore.Http;");
+        builder.AppendLine("using Microsoft.AspNetCore.Mvc;");
+        builder.AppendLine("using Monica.Core.Mediator;");
+        builder.AppendLine("using Monica.Core.Results;");
+        builder.AppendLine("using Monica.DependencyInjection.Abstractions;");
+        builder.AppendLine();
+        builder.Append("namespace ").Append(GeneratorConstants.GENERATED_CONTROLLER_NAMESPACE).AppendLine(";");
+        builder.AppendLine();
+        builder.Append("[Route(\"").Append(EscapeString(controllerRoute)).AppendLine("\")]");
+        builder.AppendLine("[ApiController]");
+        if (tags.Length > 0)
+        {
+            builder.Append("[Tags(")
+                .Append(string.Join(", ", tags.Select(static tag => $"\"{EscapeString(tag)}\"")))
+                .AppendLine(")]");
+        }
 
-        // Basic validation for common route template issues
-        if (route.Contains("//") || route.StartsWith("/") || route.EndsWith("/"))
-            return false;
+        builder.Append("public sealed class ").Append(controllerName)
+            .AppendLine("(IMediator mediator) : ControllerBase, ITransientDependency");
+        builder.AppendLine("{");
+        foreach (var candidate in candidateList)
+        {
+            AppendAction(builder, candidate.Endpoint);
+        }
 
-        // Check for invalid characters that would break routing
-        var invalidChars = new[] { '<', '>', '"', '\'', '\\', '\n', '\r', '\t' };
-        if (route.IndexOfAny(invalidChars) >= 0)
-            return false;
-
-        return true;
+        builder.AppendLine("}");
+        return builder.ToString();
     }
 
-    /// <summary>
-    /// Merges using directives from base usings, original usings, and candidate namespaces.
-    /// </summary>
-    /// <param name="group">The group of candidates</param>
-    /// <returns>Collection of merged using statements</returns>
-    private static IEnumerable<string> MergeUsingDirectives(
-        IGrouping<(string ClassRoute, string HandlerType), HandlerCandidate> group)
+    private static void AppendAction(StringBuilder builder, EndpointModel endpoint)
     {
-        // Include the candidate's own namespaces from where the request/response classes may live
-        var candidateNamespaces = group
-            .Select(c => c.CandidateNamespace)
-            .Where(ns => !string.IsNullOrWhiteSpace(ns));
+        foreach (var line in endpoint.DocumentationComment.Split(new[] { "\r\n", "\n", "\r" }, StringSplitOptions.None))
+        {
+            builder.Append("    ").AppendLine(line);
+        }
 
-        // Merge using directives: base usings, the original usings, and candidate namespaces
-        var originalUsings = group.SelectMany(c => c.OriginalUsings);
-        
-        return GeneratorConstants.BaseUsingStatements
-            .Concat(originalUsings)
-            .Concat(candidateNamespaces);
+        builder.Append("    [Http").Append(endpoint.HttpMethod).Append("(\"")
+            .Append(EscapeString(endpoint.RelativeRoute)).AppendLine("\")]");
+        builder.Append("    [ProducesResponseType(typeof(").Append(endpoint.ResultTypeName)
+            .AppendLine("), (int)HttpStatusCode.OK)]");
+        builder.Append("    public async global::System.Threading.Tasks.Task<object> ")
+            .Append(endpoint.OperationName).AppendLine("(");
+        builder.Append("        [global::Monica.WebApi.AutoControllers.ModelBinding.ApiEndpointRequestAttribute(")
+            .Append("global::Monica.WebApi.Annotations.ApiRequestBinding.")
+            .Append(endpoint.Binding)
+            .Append(")] ")
+            .Append(endpoint.RequestTypeName).AppendLine(" request,");
+        builder.AppendLine("        global::System.Threading.CancellationToken cancellationToken)");
+        builder.AppendLine("    {");
+        builder.AppendLine("        return await mediator.Send(request, cancellationToken).GetResponse(this);");
+        builder.AppendLine("    }");
+        builder.AppendLine();
+    }
+
+    private static string EscapeString(string value)
+    {
+        return value.Replace("\\", "\\\\").Replace("\"", "\\\"");
     }
 }

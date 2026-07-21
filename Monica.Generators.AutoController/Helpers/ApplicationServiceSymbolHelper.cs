@@ -1,51 +1,122 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
 using Microsoft.CodeAnalysis;
-using Microsoft.CodeAnalysis.CSharp.Syntax;
+using Monica.Generators.AutoController.Constants;
 
 namespace Monica.Generators.AutoController.Helpers;
 
 internal static class ApplicationServiceSymbolHelper
 {
-    private const string ApplicationServiceNamespace = "Monica.WebApi.Abstractions";
-
-    /// <summary>
-    /// Determines whether the class ultimately derives from a supported application-service handler base.
-    /// </summary>
-    public static bool IsSupportedHandlerCandidate(
-        SemanticModel semanticModel,
-        ClassDeclarationSyntax classDeclaration)
+    private static readonly HashSet<string> LegacyEndpointAttributeNames = new(StringComparer.Ordinal)
     {
-        return IsSupportedHandlerCandidate(semanticModel.GetDeclaredSymbol(classDeclaration) as INamedTypeSymbol);
-    }
+        "Microsoft.AspNetCore.Mvc.RouteAttribute",
+        "Microsoft.AspNetCore.Mvc.HttpGetAttribute",
+        "Microsoft.AspNetCore.Mvc.HttpPostAttribute",
+        "Microsoft.AspNetCore.Mvc.HttpPutAttribute",
+        "Microsoft.AspNetCore.Mvc.HttpPatchAttribute",
+        "Microsoft.AspNetCore.Mvc.HttpDeleteAttribute",
+        "Microsoft.AspNetCore.Mvc.HttpHeadAttribute",
+        "Microsoft.AspNetCore.Mvc.HttpOptionsAttribute",
+        "Microsoft.AspNetCore.Mvc.AcceptVerbsAttribute",
+        "Microsoft.AspNetCore.Mvc.FromBodyAttribute",
+        "Microsoft.AspNetCore.Mvc.FromQueryAttribute",
+        "Microsoft.AspNetCore.Mvc.FromFormAttribute",
+        "Microsoft.AspNetCore.Mvc.FromRouteAttribute"
+    };
 
-    /// <summary>
-    /// Determines whether the symbol ultimately derives from a supported application-service handler base.
-    /// </summary>
-    public static bool IsSupportedHandlerCandidate(INamedTypeSymbol? typeSymbol)
+    public static bool TryGetContract(
+        INamedTypeSymbol? handler,
+        out INamedTypeSymbol request,
+        out ITypeSymbol result)
     {
-        for (var current = typeSymbol; current != null; current = current.BaseType)
+        for (var current = handler; current is not null; current = current.BaseType)
         {
-            if (IsSupportedHandlerBase(current))
+            var definition = current.OriginalDefinition;
+            if (definition.Name == "CustomApplicationService" &&
+                definition.Arity == 2 &&
+                definition.ContainingNamespace.ToDisplayString() == GeneratorConstants.APPLICATION_SERVICE_NAMESPACE &&
+                current.TypeArguments[0] is INamedTypeSymbol requestType)
             {
+                request = requestType;
+                result = current.TypeArguments[1];
                 return true;
             }
         }
 
+        request = null!;
+        result = null!;
         return false;
     }
 
-    private static bool IsSupportedHandlerBase(INamedTypeSymbol typeSymbol)
+    public static IEnumerable<(AttributeData Attribute, string Name)> GetLegacyEndpointAttributes(
+        INamedTypeSymbol handler)
     {
-        var definition = typeSymbol.OriginalDefinition;
-        if (definition.ContainingNamespace.ToDisplayString() != ApplicationServiceNamespace)
+        foreach (var attribute in handler.GetAttributes())
         {
-            return false;
+            if (TryGetLegacyAttributeName(attribute, out var name))
+            {
+                yield return (attribute, name);
+            }
         }
 
-        return definition switch
+        foreach (var method in handler.GetMembers().OfType<IMethodSymbol>())
         {
-            { Name: "ApplicationService", Arity: 1 or 2 } => true,
-            { Name: "CustomApplicationService", Arity: 2 } => true,
-            _ => false
-        };
+            foreach (var attribute in method.GetAttributes())
+            {
+                if (TryGetLegacyAttributeName(attribute, out var name))
+                {
+                    yield return (attribute, name);
+                }
+            }
+
+            foreach (var parameter in method.Parameters)
+            {
+                foreach (var attribute in parameter.GetAttributes())
+                {
+                    if (TryGetLegacyAttributeName(attribute, out var name))
+                    {
+                        yield return (attribute, name);
+                    }
+                }
+            }
+        }
+    }
+
+    public static IReadOnlyList<string> GetTags(INamedTypeSymbol handler)
+    {
+        var tags = new List<string>();
+        foreach (var attribute in handler.GetAttributes().Where(static attributeData =>
+                     attributeData.AttributeClass?.Name == "TagsAttribute"))
+        {
+            foreach (var argument in attribute.ConstructorArguments)
+            {
+                if (argument.Kind == TypedConstantKind.Array)
+                {
+                    tags.AddRange(argument.Values
+                        .Select(static value => value.Value as string)
+                        .Where(static value => !string.IsNullOrWhiteSpace(value))!);
+                }
+                else if (argument.Value is string value && !string.IsNullOrWhiteSpace(value))
+                {
+                    tags.Add(value);
+                }
+            }
+        }
+
+        return tags.Distinct(StringComparer.Ordinal).ToArray();
+    }
+
+    private static bool TryGetLegacyAttributeName(AttributeData attribute, out string name)
+    {
+        var fullName = attribute.AttributeClass?.ToDisplayString();
+        if (fullName is not null && LegacyEndpointAttributeNames.Contains(fullName))
+        {
+            name = attribute.AttributeClass!.Name;
+            return true;
+        }
+
+        name = string.Empty;
+        return false;
     }
 }

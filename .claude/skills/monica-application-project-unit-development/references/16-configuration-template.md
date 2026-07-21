@@ -35,16 +35,14 @@ public sealed class OrderProcessingOptions
 ## Consumer Example
 
 ```csharp
-using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Monica.WebApi.Abstractions;
 
 namespace $DomainNamespace$.DomainServices;
 
 public sealed class DomainOrderApproval(
-    IOptions<OrderProcessingOptions> options,
-    ILoggerFactory loggerFactory)
-    : DomainService(loggerFactory)
+    IOptions<OrderProcessingOptions> options)
+    : DomainService
 {
     private OrderProcessingOptions Options => options.Value;
 

@@ -10,7 +10,8 @@ Within solution-project references, use the chain `Domains.{Subdomain} -> Platfo
 
 ## What Belongs in Platform.Protocol
 
-- Requests
+- Stable published requests under strict `PublishedLanguages.Domain{Domain}.Requests` namespaces. Add `[ApiEndpoint]` only when the request is an RPC operation.
+- Published RPC results use `Res`, `Res<T>`, `ResPaged<T>`, or a custom `IRemoteResultEnvelope<TSelf>` whose `CreateRemoteFailure` preserves constructor invariants.
 - DTOs
 - Enums
 - Cross-domain events
@@ -30,5 +31,7 @@ Within solution-project references, use the chain `Domains.{Subdomain} -> Platfo
 
 - Use direct contract-driven requests when another domain needs synchronous data or command execution.
 - Use events when the collaboration can be asynchronous and loosely coupled.
-- When RPC generation is enabled, generated HTTP clients may surface as `Implementations.Http`; only check in `Implementations/Http` source when intentionally wrapping or customizing that client surface.
+- Generated synchronous contracts are `I{Domain}CommandApi` and `I{Domain}QueryApi`; `WebApiGenerationConfig` selects HTTP and/or local implementations. Only check in wrappers when intentionally extending that surface.
+- Keep multipart, download, raw-object, and other transport-only requests beside their handlers as local HTTP endpoints; they must not enter published RPC language.
+- Do not use JSON snapshots, `AdditionalFiles`, bootstrap scans, or source-tree writes for RPC discovery.
 - Keep collaboration intentional. A modular monolith should not simulate service calls for everything, but it should still preserve domain boundaries.

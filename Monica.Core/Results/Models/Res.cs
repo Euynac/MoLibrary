@@ -13,7 +13,7 @@ namespace Monica.Core.Results;
 /// Unified response model, only containing response code and response information
 /// </summary>
 [DebuggerDisplay("{GetDebugValue()}")]
-public class Res : IResultEnvelope
+public class Res : IRemoteResultEnvelope<Res>
 {
     public string? Message { get; set; }
 
@@ -100,6 +100,9 @@ public class Res : IResultEnvelope
         return new Res(failDesc, status);
     }
 
+    /// <inheritdoc />
+    public static Res CreateRemoteFailure(ResStatus status, string message) => new(message, status);
+
     public static Res<T> Ok<T>(T data)
     {
         return new Res<T>(data);
@@ -163,7 +166,7 @@ public class Res : IResultEnvelope
 /// </summary>
 /// <typeparam name="T"></typeparam>
 [DebuggerDisplay("{GetDebugValue()}")]
-public class Res<T> : IResultEnvelope
+public class Res<T> : IRemoteResultEnvelope<Res<T>>
 {
     public string? Message { get; set; }
 
@@ -207,6 +210,9 @@ public class Res<T> : IResultEnvelope
         Message = "An unexpected server error occurred.";
         Status = ResStatus.InternalError;
     }
+
+    /// <inheritdoc />
+    public static Res<T> CreateRemoteFailure(ResStatus status, string message) => new(message, status);
 
     public static implicit operator Res<T>(string res) => new(res, ResStatus.BadRequest);
 

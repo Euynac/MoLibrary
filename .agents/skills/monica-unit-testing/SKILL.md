@@ -1,6 +1,6 @@
 ---
 name: monica-unit-testing
-description: Create, migrate, or review Monica framework tests and shared testing infrastructure. Use for tests under tests/, the Monica.Testing toolkit, host-owned MonicaTestApplicationFactory scenarios, raw ProjectUnitFixture tests, xUnit v3 or bUnit setup, module tests, facade result assertions, test isolation, and testing documentation or skills.
+description: Create, migrate, or review Monica framework tests and shared testing infrastructure. Use for tests under tests/, the Monica.Testing toolkit, host-owned MonicaTestApplicationFactory scenarios, raw ProjectUnitFixture tests, Roslyn GeneratorDriver source-generator tests, xUnit v3 or bUnit setup, module tests, facade result assertions, test isolation, and testing documentation or skills.
 ---
 
 # Monica Unit Testing
@@ -15,6 +15,7 @@ Use `Monica.Testing` as the shared toolkit and keep runnable framework tests und
    - Raw ProjectUnit collaboration: use `ProjectUnitFixture<TUnit>` and accept its activation limits.
    - Module wiring, options, conventional registration, proxies, hosted lifecycle, or cross-scope behavior: create a full host with `MonicaTestApplicationFactory<TDiscoveryAnchor>`.
    - Blazor component or page shell: use bUnit in the runnable UI test project.
+   - Roslyn source-generator semantics: build an in-memory `CSharpCompilation` and run the generator through `GeneratorDriver`.
 3. Put reusable assertions, host helpers, and deterministic boundary doubles in `Monica.Testing`; keep scenario-specific data and doubles in the runnable test project.
 4. Prefer public-surface coverage: module guides, facades, public models and abstractions, stable providers, and observable side effects.
 5. Run one `dotnet test` process at a time with Windows paths under WSL.
@@ -47,6 +48,18 @@ Use it only when all collaborators are deliberately supplied and the assertion d
 
 Use the host-owned scenario model for any of those behaviors. Do not introduce another application-service-specific fixture; `ApplicationServiceFixture<THandler>` is not part of the testing model.
 
+## Roslyn Generator Boundary
+
+Test source generators with raw Roslyn inputs under a dedicated `tests/Test.Monica.{GeneratorProject}` project.
+
+- Reference the generator as a normal test dependency so the test can instantiate its public `IIncrementalGenerator` types. Do not rely on MSBuild analyzer execution for semantic generator tests.
+- Create all source text in memory, provide explicit metadata references, and run `CSharpGeneratorDriver` with the same language version the scenario requires.
+- Assert generator diagnostics, generated hint names and source, and the diagnostics of the updated output compilation.
+- Run the same driver again with identical inputs and assert byte-identical generated sources and diagnostics. This protects incremental determinism.
+- Verify generator execution does not create or mutate files. File export, package imports, and MSBuild target ordering belong in separate integration tests only when those build surfaces are intentionally under test.
+- For request-owned Web API generation, cover the public contract matrix: route, verb, binding, operation naming, cancellation, result shapes, published-RPC namespace selection, local-only HTTP exclusion, duplicate or invalid declarations, and same-compilation client/controller availability.
+- When a published request uses a custom `IRemoteResultEnvelope<TSelf>`, test that `CreateRemoteFailure` returns a valid constructor-initialized envelope and that cancellation is propagated rather than projected as a failure result.
+
 ## Required Conventions
 
 - Shared toolkit: `Monica.Testing/Monica.Testing.csproj`
@@ -71,6 +84,7 @@ Use the host-owned scenario model for any of those behaviors. Do not introduce a
 - NSubstitute with its analyzer
 - coverlet.collector
 - bUnit in UI test projects only
+- Microsoft.CodeAnalysis.CSharp in source-generator test projects only
 
 ## References
 

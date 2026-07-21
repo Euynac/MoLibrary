@@ -14,8 +14,18 @@
 | One ProjectUnit with every collaborator supplied explicitly | Raw `ProjectUnitFixture<TUnit>` |
 | Module graph, options, DI registration, proxies, hosted lifecycle, or cross-scope behavior | `MonicaTestApplicationFactory<TDiscoveryAnchor>` scenario |
 | Blazor component or page shell | bUnit in the UI test project |
+| Incremental source-generator input, diagnostic, or generated source | In-memory Roslyn `GeneratorDriver` |
 
 `ProjectUnitFixture<TUnit>` does not validate Monica composition. Do not add a separate `ApplicationServiceFixture`; application services use either the raw ProjectUnit fast path or a real scenario host according to the behavior being tested.
+
+## Source-Generator Isolation
+
+- Build source-generator scenarios from in-memory `CSharpCompilation` instances and explicit `MetadataReference` values.
+- Instantiate the public incremental generator and adapt it with `AsSourceGenerator()` for `CSharpGeneratorDriver`.
+- Assert both `GeneratorDriverRunResult` and the updated compilation. Generated text alone cannot prove that same-compilation references bind.
+- Compare a repeated run using identical inputs to prove deterministic hint names, source text, and diagnostics.
+- Keep semantic generator tests free from solution builds, analyzer package imports, generated-source output folders, and repository file writes.
+- Use MSBuild integration tests only for behavior actually owned by `.props`, `.targets`, packaging, or post-compilation tasks.
 
 ## Scenario Ownership
 
@@ -51,6 +61,7 @@
 - NSubstitute and `NSubstitute.Analyzers.CSharp`
 - coverlet.collector
 - bUnit only in UI test projects
+- Microsoft.CodeAnalysis.CSharp only in generator test projects
 
 ## WSL Execution
 

@@ -56,12 +56,14 @@ public sealed class ResultEnvelopeProvider(
     /// <summary>
     /// Deserializes remote JSON into a Monica result envelope.
     /// </summary>
-    /// <typeparam name="TResponse">The Monica envelope type to deserialize.</typeparam>
+    /// <typeparam name="TResponse">
+    /// The concrete Monica envelope type to deserialize. A public parameterless constructor is not required.
+    /// </typeparam>
     /// <param name="json">The remote JSON payload.</param>
     /// <returns>The deserialized Monica result envelope.</returns>
     /// <exception cref="JsonException">Thrown when the payload cannot be deserialized into the requested envelope type.</exception>
     public TResponse DeserializeResponse<TResponse>(string json)
-        where TResponse : class, IResultEnvelope, new()
+        where TResponse : class, IResultEnvelope
     {
         ArgumentNullException.ThrowIfNull(json);
 
@@ -73,7 +75,7 @@ public sealed class ResultEnvelopeProvider(
     internal async ValueTask<TResponse> DeserializeResponseAsync<TResponse>(
         Stream jsonStream,
         CancellationToken cancellationToken = default)
-        where TResponse : class, IResultEnvelope, new()
+        where TResponse : class, IResultEnvelope
     {
         ArgumentNullException.ThrowIfNull(jsonStream);
 
@@ -85,14 +87,16 @@ public sealed class ResultEnvelopeProvider(
     /// <summary>
     /// Reads and resolves a remote HTTP response into a Monica result envelope.
     /// </summary>
-    /// <typeparam name="TResponse">The Monica envelope type to deserialize.</typeparam>
+    /// <typeparam name="TResponse">
+    /// The concrete Monica remote envelope type to deserialize and safely construct on transport failure.
+    /// </typeparam>
     /// <param name="httpResponse">The remote HTTP response.</param>
     /// <param name="cancellationToken">A token that cancels response reading and deserialization.</param>
     /// <returns>The resolved Monica envelope, or an internal-error envelope when the remote payload is invalid.</returns>
     public async Task<TResponse> ReadRemoteResponse<TResponse>(
         HttpResponseMessage httpResponse,
         CancellationToken cancellationToken = default)
-        where TResponse : class, IResultEnvelope, new()
+        where TResponse : class, IRemoteResultEnvelope<TResponse>
     {
         ArgumentNullException.ThrowIfNull(httpResponse);
 
@@ -116,6 +120,10 @@ public sealed class ResultEnvelopeProvider(
 
             responseContent = captureStream.ToCapturedContent(httpResponse.Content.Headers);
         }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
         catch (Exception ex)
         {
             exception = ex;
@@ -133,22 +141,27 @@ public sealed class ResultEnvelopeProvider(
             }
         }
 
-        var errorResponse = new TResponse
-        {
-            Status = ResStatus.InternalError,
-            Message = "Failed to process remote API response."
-        };
+        var errorResponse = CreateErrorResponse<TResponse>();
         var exchangeInfo = await ResultEnvelopeHttpExchangeInfo.CreateAsync(
             httpResponse,
             responseContent,
             parsedResponse,
             _serializerOptions,
-            _maxDiagnosticBodyBytes);
+            _maxDiagnosticBodyBytes,
+            cancellationToken);
 
         AppendExceptionMetadata(errorResponse, exception, responseContent);
         AppendExchangeMetadata(errorResponse, exchangeInfo);
         LogRemoteResponseError(logger, exchangeInfo, httpResponse, errorResponse, exception);
         return errorResponse;
+    }
+
+    private static TResponse CreateErrorResponse<TResponse>()
+        where TResponse : class, IRemoteResultEnvelope<TResponse>
+    {
+        return TResponse.CreateRemoteFailure(
+            ResStatus.InternalError,
+            "Failed to process remote API response.");
     }
 
     private static Stream CreateDecodedResponseStream(Stream responseStream, ICollection<string>? contentEncodings)
