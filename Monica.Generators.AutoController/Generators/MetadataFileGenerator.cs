@@ -9,15 +9,13 @@ namespace Monica.Generators.AutoController.Generators;
 
 /// <summary>
 /// Generates RPC metadata files for client code generation.
-/// Since Source Generators cannot write directly to the file system,
-/// we generate a C# file containing the JSON metadata as a comment,
-/// which will be extracted by MSBuild post-processing.
+/// The metadata is compiled into the producer assembly so the post-compilation task can export
+/// the document without relying on generated-source files in the intermediate directory.
 /// </summary>
 internal static class MetadataFileGenerator
 {
     /// <summary>
-    /// Generates RPC metadata as a C# file containing JSON in comments.
-    /// The JSON will be extracted by MSBuild to create the actual .rpc-metadata.json file.
+    /// Generates RPC metadata as a C# string constant that is exported from the compiled assembly.
     /// </summary>
     /// <param name="context">The source production context</param>
     /// <param name="candidates">The handler candidates to convert to metadata</param>
@@ -92,8 +90,12 @@ internal static class MetadataFileGenerator
             }
         }
 
-        // Sort namespaces for consistent output
-        metadata.RelatedNamespaces = allNamespaces.OrderBy(ns => ns).ToList();
+        metadata.Handlers = metadata.Handlers
+            .OrderBy(handler => handler.ClientMethodName, System.StringComparer.Ordinal)
+            .ToList();
+        metadata.RelatedNamespaces = allNamespaces
+            .OrderBy(ns => ns, System.StringComparer.Ordinal)
+            .ToList();
 
         return metadata;
     }
@@ -217,7 +219,7 @@ internal static class MetadataFileGenerator
 
     /// <summary>
     /// Generates a C# source file containing the JSON metadata as a constant string.
-    /// The constant string will be extracted by MSBuild to create .rpc-metadata.json
+    /// The post-compilation task reads the constant directly from managed assembly metadata.
     /// Uses C# 11 raw string literals for cleaner representation.
     /// </summary>
     private static string GenerateMetadataSourceFile(string json)
@@ -230,7 +232,7 @@ internal static class MetadataFileGenerator
         sb.AppendLine("{");
         sb.AppendLine("    /// <summary>");
         sb.AppendLine("    /// Contains RPC metadata JSON for this assembly.");
-        sb.AppendLine("    /// This constant will be extracted by MSBuild to create .rpc-metadata.json");
+        sb.AppendLine("    /// This constant is exported by MSBuild to create .rpc-metadata.json.");
         sb.AppendLine("    /// </summary>");
         sb.AppendLine("    internal static class __RpcMetadataMarker");
         sb.AppendLine("    {");

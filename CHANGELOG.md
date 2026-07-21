@@ -18,6 +18,7 @@ This project follows semantic versioning for public NuGet packages. Release cand
 - Logging, localization, JSON serialization, mapping, ProjectUnits, AutoController configuration, DataChannel pipelines, scheduler time zones, and runtime catalogs are owned by each host.
 - `Monica.Framework` is a focused application package instead of an all-dependencies bundle.
 - RPC client helpers now live in `Monica.WebApi`, alongside the transport feature they configure.
+- AutoController exports RPC metadata from the exact compiled producer assembly, skips IDE design-time builds, and writes deterministic producer-specific output.
 - `Microsoft.OpenApi`, `System.Security.Cryptography.Xml`, and the SQLite native bundle were upgraded to supported releases with published security fixes.
 - Authentication accepts access tokens from the `Authorization` header by default; query-string tokens require an explicit, path-scoped opt-in.
 - Configuration persistence and Entity Framework integration now use deterministic, warning-free schemas and read-only serializer options.
@@ -29,6 +30,7 @@ This project follows semantic versioning for public NuGet packages. Release cand
 - Ambient `Mo` registration, `builder.UseMonica()`, `Mo.RegisterInstantly(...)`, and process-wide `LogManager` state.
 - The unauthenticated JWT decode endpoint and global query-string token extraction.
 - Global mutable clock, DataChannel, principal, localization, JSON, mapping, and runtime-environment state.
+- AutoController's source-scanning RPC metadata bootstrap; producer assemblies are now the only metadata authority.
 - Unused process-wide debug helpers and the unbounded delayed-task scheduler.
 
 ## [1.0.0-rc.2] - 2026-05-09

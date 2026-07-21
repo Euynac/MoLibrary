@@ -4,19 +4,6 @@
     .NET 10 tasks must use the .NET task host there, while dotnet CLI can load them in-process.
   -->
   <UsingTask
-    TaskName="Monica.Generators.AutoController.BuildTasks.BootstrapRpcMetadataTask"
-    AssemblyFile="$(MonicaRpcMetadataBuildTasksAssembly)"
-    Runtime="NET"
-    TaskFactory="TaskHostFactory"
-    Condition="'$(MSBuildRuntimeType)' != 'Core'" />
-
-  <UsingTask
-    TaskName="Monica.Generators.AutoController.BuildTasks.BootstrapRpcMetadataTask"
-    AssemblyFile="$(MonicaRpcMetadataBuildTasksAssembly)"
-    Runtime="NET"
-    Condition="'$(MSBuildRuntimeType)' == 'Core'" />
-
-  <UsingTask
     TaskName="Monica.Generators.AutoController.BuildTasks.ExportRpcMetadataTask"
     AssemblyFile="$(MonicaRpcMetadataBuildTasksAssembly)"
     Runtime="NET"
@@ -28,52 +15,38 @@
     AssemblyFile="$(MonicaRpcMetadataBuildTasksAssembly)"
     Runtime="NET"
     Condition="'$(MSBuildRuntimeType)' == 'Core'" />
-
-  <PropertyGroup Condition="'$(MonicaRpcMetadataExportDirectory)' != ''">
-    <EmitCompilerGeneratedFiles>true</EmitCompilerGeneratedFiles>
-    <CompilerGeneratedFilesOutputPath Condition="'$(CompilerGeneratedFilesOutputPath)' == ''">$(IntermediateOutputPath)generated</CompilerGeneratedFilesOutputPath>
-    <MonicaRpcMetadataGeneratedFilesDirectory Condition="'$(MonicaRpcMetadataGeneratedFilesDirectory)' == '' and '$(CompilerGeneratedFilesOutputPath)' != ''">$(CompilerGeneratedFilesOutputPath)</MonicaRpcMetadataGeneratedFilesDirectory>
-    <MonicaRpcMetadataGeneratedFilesDirectory Condition="'$(MonicaRpcMetadataGeneratedFilesDirectory)' == ''">$(IntermediateOutputPath)generated</MonicaRpcMetadataGeneratedFilesDirectory>
-  </PropertyGroup>
 
   <ItemGroup Condition="'$(MonicaRpcMetadataConsumeDirectory)' != '' and Exists('$(MSBuildProjectDirectory)\$(MonicaRpcMetadataConsumeDirectory)')">
     <AdditionalFiles Include="$(MSBuildProjectDirectory)\$(MonicaRpcMetadataConsumeDirectory)\*.rpc-metadata.json" />
   </ItemGroup>
 
   <Target
-    Name="MonicaPrepareRpcMetadata"
-    BeforeTargets="CoreCompile"
-    Condition="('$(IsCrossTargetingBuild)' != 'true')
-      and (Exists('$(MSBuildProjectDirectory)\$(MonicaRpcMetadataConsumeDirectory)')
-      or Exists('$(MSBuildProjectDirectory)\PublishedLanguages'))">
-    <Error
-      Condition="!Exists('$(MonicaRpcMetadataBuildTasksAssembly)')"
-      Text="Monica RPC metadata bootstrap/export requires build task assembly '$(MonicaRpcMetadataBuildTasksAssembly)'. Ensure Monica.Generators.AutoController.BuildTasks has been built or packaged correctly." />
-
-    <BootstrapRpcMetadataTask
-      ProjectDirectory="$(MSBuildProjectDirectory)"
-      ConsumeDirectory="$(MonicaRpcMetadataConsumeDirectory)" />
-
-    <ItemGroup Condition="Exists('$(MSBuildProjectDirectory)\$(MonicaRpcMetadataConsumeDirectory)')">
-      <AdditionalFiles Remove="$(MSBuildProjectDirectory)\$(MonicaRpcMetadataConsumeDirectory)\*.rpc-metadata.json" />
-      <AdditionalFiles Include="$(MSBuildProjectDirectory)\$(MonicaRpcMetadataConsumeDirectory)\*.rpc-metadata.json" />
-    </ItemGroup>
-  </Target>
-
-  <Target
     Name="MonicaExportRpcMetadata"
-    AfterTargets="CoreCompile"
-    Condition="'$(MonicaRpcMetadataExportDirectory)' != '' and '$(IsCrossTargetingBuild)' != 'true'">
+    AfterTargets="Compile"
+    Condition="'$(MonicaRpcMetadataExportDirectory)' != ''
+      and '$(DesignTimeBuild)' != 'true'
+      and '$(BuildingProject)' == 'true'
+      and '$(IsCrossTargetingBuild)' != 'true'">
     <Error
       Condition="!Exists('$(MonicaRpcMetadataBuildTasksAssembly)')"
       Text="Monica RPC metadata export requires build task assembly '$(MonicaRpcMetadataBuildTasksAssembly)'. Ensure Monica.Generators.AutoController.BuildTasks has been built or packaged correctly." />
 
+    <Error
+      Condition="'$(TargetFrameworks)' != '' and '$(MonicaRpcMetadataExportTargetFramework)' == ''"
+      Text="RPC metadata export for multi-target project '$(MSBuildProjectName)' requires MonicaRpcMetadataExportTargetFramework to select one target framework." />
+
+    <Error
+      Condition="'$(TargetFrameworks)' != ''
+        and '$(MonicaRpcMetadataExportTargetFramework)' != ''
+        and $([System.String]::Copy(';$(TargetFrameworks);').Contains(';$(MonicaRpcMetadataExportTargetFramework);')) != 'true'"
+      Text="RPC metadata export target framework '$(MonicaRpcMetadataExportTargetFramework)' is not present in TargetFrameworks '$(TargetFrameworks)' for project '$(MSBuildProjectName)'." />
+
     <ExportRpcMetadataTask
+      Condition="'$(TargetFrameworks)' == '' or '$(TargetFramework)' == '$(MonicaRpcMetadataExportTargetFramework)'"
       ProjectDirectory="$(MSBuildProjectDirectory)"
-      GeneratedFilesDirectory="$(MonicaRpcMetadataGeneratedFilesDirectory)"
-      MetadataFileName="$(MonicaRpcMetadataFileName)"
-      OutputDirectory="$(MonicaRpcMetadataExportDirectory)"
-      AssemblyName="$(AssemblyName)">
+      CompiledAssemblyPath="@(IntermediateAssembly)"
+      ExpectedAssemblyName="$(AssemblyName)"
+      OutputDirectory="$(MonicaRpcMetadataExportDirectory)">
       <Output TaskParameter="OutputFilePath" PropertyName="MonicaRpcMetadataOutputFilePath" />
     </ExportRpcMetadataTask>
   </Target>
