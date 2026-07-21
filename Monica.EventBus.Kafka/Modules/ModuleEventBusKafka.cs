@@ -195,6 +195,17 @@ public sealed class ModuleEventBusKafka(ModuleEventBusKafkaOption option)
                 .WithSummary(localizer["Api:Topics:Delete:Summary"].Value)
                 .WithDescription(localizer["Api:Topics:Delete:Description"].Value);
 
+            endpoints.MapPost("/eventbus-kafka/clusters/{clusterId}/topics/{topicName}/clear-messages",
+                    async ([FromRoute] string clusterId,
+                        [FromRoute] string topicName,
+                        [FromServices] KafkaConsoleFacade facade,
+                        CancellationToken cancellationToken) =>
+                        (await facade.ClearTopicMessagesAsync(clusterId, topicName, cancellationToken)).GetResponse())
+                .WithName("ClearEventBusKafkaTopicMessages")
+                .WithTags(tagName)
+                .WithSummary(localizer["Api:Topics:ClearMessages:Summary"].Value)
+                .WithDescription(localizer["Api:Topics:ClearMessages:Description"].Value);
+
             endpoints.MapPost("/eventbus-kafka/topics/partitions",
                     async ([FromBody] KafkaTopicPartitionRequest request,
                         [FromServices] KafkaConsoleFacade facade,

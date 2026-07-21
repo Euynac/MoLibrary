@@ -58,6 +58,10 @@
       "Backlog": {
         "Summary": "获取 Kafka 主题积压",
         "Description": "返回基于 Kafka earliest 和 latest offset 计算的分区级保留消息数量。"
+      },
+      "ClearMessages": {
+        "Summary": "清空 Kafka 主题消息",
+        "Description": "删除主题所有分区当前保留的消息，但保留主题本身及其分区。"
       }
     },
     "ConsumerGroups": {
@@ -213,7 +217,8 @@
       "Messages": "查看消息",
       "Backlog": "分区积压",
       "Partitions": "增加分区",
-      "Retention": "设置保留时间"
+      "Retention": "设置保留时间",
+      "ClearMessages": "清空消息"
     },
     "Columns": {
       "Name": "名称",
@@ -266,13 +271,16 @@
     },
     "Confirm": {
       "DeleteTitle": "删除 Kafka 主题",
-      "DeleteMessage": "删除主题 {0}？"
+      "DeleteMessage": "删除主题 {0}？",
+      "ClearMessagesTitle": "清空 Kafka 主题消息",
+      "ClearMessagesMessage": "清空主题 {0} 所有分区当前保留的消息？主题及其分区会保留，此操作不可撤销。"
     },
     "Messages": {
       "Created": "Kafka 主题已创建。",
       "Deleted": "Kafka 主题已删除。",
       "PartitionsUpdated": "Kafka 主题分区已更新。",
-      "RetentionUpdated": "Kafka 主题保留时间已更新。"
+      "RetentionUpdated": "Kafka 主题保留时间已更新。",
+      "Cleared": "Kafka 主题中的所有保留消息已清空。"
     },
     "Fields": {
       "TopicName": "主题名称",

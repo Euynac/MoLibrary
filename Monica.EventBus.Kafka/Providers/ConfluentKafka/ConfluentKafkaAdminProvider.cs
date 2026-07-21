@@ -125,6 +125,39 @@ internal sealed class ConfluentKafkaAdminProvider(IOptions<ModuleEventBusKafkaOp
         });
     }
 
+    public async Task ClearTopicMessagesAsync(
+        KafkaClusterConfig cluster,
+        string topicName,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(topicName);
+        cancellationToken.ThrowIfCancellationRequested();
+
+        var normalizedTopicName = topicName.Trim();
+        using var admin = CreateAdminClient(cluster);
+        var partitions = ResolveTopicPartitions(admin, normalizedTopicName);
+        if (partitions.Count == 0)
+        {
+            return;
+        }
+
+        var latestOffsets = await ReadLatestOffsetsAsync(admin, partitions, cancellationToken);
+        if (latestOffsets.Count != partitions.Count)
+        {
+            throw new InvalidOperationException(
+                $"Kafka did not return a latest offset for every partition of topic '{normalizedTopicName}'.");
+        }
+
+        await admin.DeleteRecordsAsync(
+                latestOffsets.Select(item => new TopicPartitionOffset(item.Key, new Offset(item.Value))),
+                new DeleteRecordsOptions
+                {
+                    RequestTimeout = Option.AdminRequestTimeout,
+                    OperationTimeout = Option.AdminRequestTimeout
+                })
+            .WaitAsync(cancellationToken);
+    }
+
     public async Task IncreasePartitionsAsync(KafkaClusterConfig cluster, KafkaTopicPartitionRequest request, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(request);
@@ -230,6 +263,65 @@ internal sealed class ConfluentKafkaAdminProvider(IOptions<ModuleEventBusKafkaOp
         }
 
         return new AdminClientBuilder(KafkaClientConfigFactory.BuildAdminConfig(cluster, Option)).Build();
+    }
+
+    private IReadOnlyList<TopicPartition> ResolveTopicPartitions(IAdminClient admin, string topicName)
+    {
+        var metadata = admin.GetMetadata(topicName, Option.AdminRequestTimeout);
+        var topic = metadata.Topics.FirstOrDefault(item =>
+            string.Equals(item.Topic, topicName, StringComparison.Ordinal));
+        if (topic is null || topic.Error.Code != ErrorCode.NoError)
+        {
+            var reason = topic?.Error.Reason;
+            throw new InvalidOperationException(
+                string.IsNullOrWhiteSpace(reason)
+                    ? $"Kafka topic '{topicName}' metadata is not available."
+                    : $"Kafka topic '{topicName}' metadata is not available: {reason}");
+        }
+
+        return topic.Partitions
+            .Where(partition => partition.Error.Code == ErrorCode.NoError)
+            .Select(partition => new TopicPartition(topicName, new Partition(partition.PartitionId)))
+            .OrderBy(partition => partition.Partition.Value)
+            .ToList();
+    }
+
+    private async Task<Dictionary<TopicPartition, long>> ReadLatestOffsetsAsync(
+        IAdminClient admin,
+        IReadOnlyList<TopicPartition> partitions,
+        CancellationToken cancellationToken)
+    {
+        var offsets = new Dictionary<TopicPartition, long>();
+        var batchSize = Math.Max(1, Option.OffsetQueryBatchSize);
+        foreach (var batch in partitions.Chunk(batchSize))
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            var result = await admin.ListOffsetsAsync(
+                    batch.Select(partition => new TopicPartitionOffsetSpec
+                    {
+                        TopicPartition = partition,
+                        OffsetSpec = OffsetSpec.Latest()
+                    }),
+                    new ListOffsetsOptions
+                    {
+                        RequestTimeout = Option.AdminRequestTimeout
+                    })
+                .WaitAsync(cancellationToken);
+
+            foreach (var item in result.ResultInfos)
+            {
+                var offset = item.TopicPartitionOffsetError;
+                if (offset.Error.Code != ErrorCode.NoError || offset.Offset.Value < 0)
+                {
+                    throw new InvalidOperationException(
+                        $"Kafka could not read the latest offset for {offset.TopicPartition}: {offset.Error.Reason}");
+                }
+
+                offsets[offset.TopicPartition] = offset.Offset.Value;
+            }
+        }
+
+        return offsets;
     }
 
     private DescribeClusterOptions BuildDescribeClusterOptions()

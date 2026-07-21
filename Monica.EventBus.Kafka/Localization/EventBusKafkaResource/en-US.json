@@ -58,6 +58,10 @@
       "Backlog": {
         "Summary": "Gets Kafka topic backlog",
         "Description": "Returns partition-level retained-message counts calculated from Kafka earliest and latest offsets."
+      },
+      "ClearMessages": {
+        "Summary": "Clears Kafka topic messages",
+        "Description": "Deletes all currently retained records from every partition without deleting the topic."
       }
     },
     "ConsumerGroups": {
@@ -213,7 +217,8 @@
       "Messages": "View messages",
       "Backlog": "Partition backlog",
       "Partitions": "Increase partitions",
-      "Retention": "Set retention"
+      "Retention": "Set retention",
+      "ClearMessages": "Clear messages"
     },
     "Columns": {
       "Name": "Name",
@@ -266,13 +271,16 @@
     },
     "Confirm": {
       "DeleteTitle": "Delete Kafka topic",
-      "DeleteMessage": "Delete topic {0}?"
+      "DeleteMessage": "Delete topic {0}?",
+      "ClearMessagesTitle": "Clear Kafka topic messages",
+      "ClearMessagesMessage": "Delete all currently retained messages from every partition of topic {0}? The topic and its partitions will be kept. This cannot be undone."
     },
     "Messages": {
       "Created": "Kafka topic created.",
       "Deleted": "Kafka topic deleted.",
       "PartitionsUpdated": "Kafka topic partitions updated.",
-      "RetentionUpdated": "Kafka topic retention updated."
+      "RetentionUpdated": "Kafka topic retention updated.",
+      "Cleared": "All retained messages in the Kafka topic were cleared."
     },
     "Fields": {
       "TopicName": "Topic name",
