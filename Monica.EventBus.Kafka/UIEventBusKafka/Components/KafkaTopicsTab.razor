@@ -2,9 +2,23 @@
 @inject IStringLocalizer<EventBusKafkaResource> L
 
 <MudStack Spacing="3">
-    <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Spacing="2">
-        <MudText Typo="Typo.h6">@L["Topics:Title"]</MudText>
-        <MudStack Row="true" Spacing="1">
+    <div class="topics-toolbar">
+        <div class="topics-heading">
+            <MudText Typo="Typo.h6">@L["Topics:Title"]</MudText>
+            <MudText Typo="Typo.caption" Color="Color.Secondary">
+                @L["Topics:Summary", FilteredTopicCount, State.Topics.Count]
+            </MudText>
+        </div>
+        <div class="topics-actions">
+            <MudTextField T="string"
+                          @bind-Value="_searchText"
+                          Immediate="true"
+                          DebounceInterval="250"
+                          Placeholder="@L["Topics:Search:Placeholder"]"
+                          Adornment="Adornment.Start"
+                          AdornmentIcon="@Icons.Material.Filled.Search"
+                          Variant="Variant.Outlined"
+                          Margin="Margin.Dense" />
             <MudButton Variant="Variant.Outlined"
                        StartIcon="@Icons.Material.Filled.Refresh"
                        Disabled="@State.IsBusy"
@@ -18,8 +32,8 @@
                        OnClick="OnCreate">
                 @L["Topics:Actions:Create"]
             </MudButton>
-        </MudStack>
-    </MudStack>
+        </div>
+    </div>
 
     @if (!State.CanAdminSelectedCluster)
     {
@@ -35,57 +49,77 @@
     }
     else
     {
-        <MudTable T="KafkaTopicSummary" Items="@State.Topics" Dense="true" Hover="true">
-            <HeaderContent>
-                <MudTh>@L["Topics:Columns:Name"]</MudTh>
-                <MudTh>@L["Topics:Columns:Partitions"]</MudTh>
-                <MudTh>@L["Topics:Columns:Replication"]</MudTh>
-                <MudTh>@L["Topics:Columns:AvailableMessages"]</MudTh>
-                <MudTh>@L["Topics:Columns:Retention"]</MudTh>
-                <MudTh>@L["Topics:Columns:Actions"]</MudTh>
-            </HeaderContent>
-            <RowTemplate>
-                <MudTd DataLabel="@L["Topics:Columns:Name"]">
-                    <MudStack Spacing="0">
-                        <MudText Typo="Typo.body2">@context.TopicName</MudText>
-                        @if (context.IsInternal)
-                        {
-                            <MudText Typo="Typo.caption" Color="Color.Secondary">@L["Topics:Values:Internal"]</MudText>
-                        }
-                    </MudStack>
-                </MudTd>
-                <MudTd DataLabel="@L["Topics:Columns:Partitions"]">@context.Partitions</MudTd>
-                <MudTd DataLabel="@L["Topics:Columns:Replication"]">@context.ReplicationFactor</MudTd>
-                <MudTd DataLabel="@L["Topics:Columns:AvailableMessages"]">@FormatAvailableMessages(context.AvailableMessageCount)</MudTd>
-                <MudTd DataLabel="@L["Topics:Columns:Retention"]">@FormatRetention(context.RetentionMs)</MudTd>
-                <MudTd DataLabel="@L["Topics:Columns:Actions"]">
-                    <MudMenu Icon="@Icons.Material.Filled.MoreVert"
-                             Size="Size.Small"
-                             Dense="true"
-                             Disabled="@State.IsBusy">
-                        <MudMenuItem Icon="@Icons.Material.Filled.Visibility" OnClick="@(() => OnViewMessages.InvokeAsync(context))">
-                            @L["Topics:Actions:Messages"]
-                        </MudMenuItem>
-                        <MudMenuItem Icon="@Icons.Material.Filled.Storage" OnClick="@(() => OnViewBacklog.InvokeAsync(context))">
-                            @L["Topics:Actions:Backlog"]
-                        </MudMenuItem>
-                        <MudMenuItem Icon="@Icons.Material.Filled.CallSplit" OnClick="@(() => OnIncreasePartitions.InvokeAsync(context))">
-                            @L["Topics:Actions:Partitions"]
-                        </MudMenuItem>
-                        <MudMenuItem Icon="@Icons.Material.Filled.Schedule" OnClick="@(() => OnUpdateRetention.InvokeAsync(context))">
-                            @L["Topics:Actions:Retention"]
-                        </MudMenuItem>
-                        <MudMenuItem Icon="@Icons.Material.Filled.Delete" OnClick="@(() => OnDelete.InvokeAsync(context))">
-                            @L["Common:Actions:Delete"]
-                        </MudMenuItem>
-                    </MudMenu>
-                </MudTd>
-            </RowTemplate>
-        </MudTable>
+        <div class="topics-table">
+            <MudTable T="KafkaTopicSummary"
+                      Items="@State.Topics"
+                      Filter="FilterTopic"
+                      RowsPerPage="25"
+                      Dense="true"
+                      Hover="true">
+                <HeaderContent>
+                    <MudTh>@L["Topics:Columns:Name"]</MudTh>
+                    <MudTh>@L["Topics:Columns:Partitions"]</MudTh>
+                    <MudTh>@L["Topics:Columns:Replication"]</MudTh>
+                    <MudTh>@L["Topics:Columns:AvailableMessages"]</MudTh>
+                    <MudTh>@L["Topics:Columns:Retention"]</MudTh>
+                    <MudTh>@L["Topics:Columns:Actions"]</MudTh>
+                </HeaderContent>
+                <RowTemplate>
+                    <MudTd DataLabel="@L["Topics:Columns:Name"]">
+                        <MudStack Spacing="0">
+                            <div class="topic-name">
+                                <MudText Typo="Typo.body2">@context.TopicName</MudText>
+                                @if (!context.IsMetadataAvailable)
+                                {
+                                    <MudTooltip Text="@L["Topics:Values:MetadataUnavailable", context.MetadataError ?? string.Empty]">
+                                        <MudIcon Icon="@Icons.Material.Filled.WarningAmber" Color="Color.Warning" Size="Size.Small" />
+                                    </MudTooltip>
+                                }
+                            </div>
+                            @if (context.IsInternal)
+                            {
+                                <MudText Typo="Typo.caption" Color="Color.Secondary">@L["Topics:Values:Internal"]</MudText>
+                            }
+                        </MudStack>
+                    </MudTd>
+                    <MudTd DataLabel="@L["Topics:Columns:Partitions"]">@context.Partitions</MudTd>
+                    <MudTd DataLabel="@L["Topics:Columns:Replication"]">@context.ReplicationFactor</MudTd>
+                    <MudTd DataLabel="@L["Topics:Columns:AvailableMessages"]">@FormatAvailableMessages(context.AvailableMessageCount)</MudTd>
+                    <MudTd DataLabel="@L["Topics:Columns:Retention"]">@FormatRetention(context.RetentionMs)</MudTd>
+                    <MudTd DataLabel="@L["Topics:Columns:Actions"]">
+                        <MudMenu Icon="@Icons.Material.Filled.MoreVert"
+                                 Size="Size.Small"
+                                 Dense="true"
+                                 Disabled="@State.IsBusy">
+                            <MudMenuItem Icon="@Icons.Material.Filled.Visibility" OnClick="@(() => OnViewMessages.InvokeAsync(context))">
+                                @L["Topics:Actions:Messages"]
+                            </MudMenuItem>
+                            <MudMenuItem Icon="@Icons.Material.Filled.Storage" OnClick="@(() => OnViewBacklog.InvokeAsync(context))">
+                                @L["Topics:Actions:Backlog"]
+                            </MudMenuItem>
+                            <MudMenuItem Icon="@Icons.Material.Filled.CallSplit" OnClick="@(() => OnIncreasePartitions.InvokeAsync(context))">
+                                @L["Topics:Actions:Partitions"]
+                            </MudMenuItem>
+                            <MudMenuItem Icon="@Icons.Material.Filled.Schedule" OnClick="@(() => OnUpdateRetention.InvokeAsync(context))">
+                                @L["Topics:Actions:Retention"]
+                            </MudMenuItem>
+                            <MudMenuItem Icon="@Icons.Material.Filled.Delete" OnClick="@(() => OnDelete.InvokeAsync(context))">
+                                @L["Common:Actions:Delete"]
+                            </MudMenuItem>
+                        </MudMenu>
+                    </MudTd>
+                </RowTemplate>
+                <PagerContent>
+                    <MudTablePager PageSizeOptions="@(new[] { 10, 25, 50, 100 })" />
+                </PagerContent>
+            </MudTable>
+        </div>
     }
 </MudStack>
 
 @code {
+    private string _searchText = string.Empty;
+
     [Parameter, EditorRequired] public EventBusKafkaPageState State { get; set; } = default!;
 
     [Parameter] public EventCallback OnCreate { get; set; }
@@ -101,6 +135,14 @@
     [Parameter] public EventCallback<KafkaTopicSummary> OnIncreasePartitions { get; set; }
 
     [Parameter] public EventCallback<KafkaTopicSummary> OnUpdateRetention { get; set; }
+
+    private int FilteredTopicCount => State.Topics.Count(FilterTopic);
+
+    private bool FilterTopic(KafkaTopicSummary topic)
+    {
+        return string.IsNullOrWhiteSpace(_searchText) ||
+               topic.TopicName.Contains(_searchText.Trim(), StringComparison.OrdinalIgnoreCase);
+    }
 
     private string FormatRetention(long? retentionMs)
     {

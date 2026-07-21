@@ -2,9 +2,29 @@
 @inject IStringLocalizer<EventBusKafkaResource> L
 
 <MudStack Spacing="3">
-    <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Spacing="2">
-        <MudText Typo="Typo.h6">@L["Performance:Title"]</MudText>
-        <MudStack Row="true" Spacing="1">
+    <div class="performance-toolbar">
+        <div class="performance-heading">
+            <MudText Typo="Typo.h6">@L["Performance:Title"]</MudText>
+            <MudText Typo="Typo.caption" Color="Color.Secondary">@LiveStatus</MudText>
+        </div>
+
+        <div class="performance-controls">
+            <MudSwitch T="bool"
+                       Value="@State.IsPerformanceAutoRefreshEnabled"
+                       ValueChanged="SetAutoRefreshAsync"
+                       Color="Color.Primary"
+                       Disabled="@(!State.CanAdminSelectedCluster)"
+                       Label="@L["Performance:Live:AutoRefresh"]" />
+            <MudNumericField T="int"
+                             Value="@State.PerformanceRefreshIntervalSeconds"
+                             ValueChanged="SetRefreshIntervalAsync"
+                             Label="@L["Performance:Live:IntervalSeconds"]"
+                             Min="@KafkaPerformancePollingState.MinimumRefreshIntervalSeconds"
+                             Max="@KafkaPerformancePollingState.MaximumRefreshIntervalSeconds"
+                             Variant="Variant.Outlined"
+                             Margin="Margin.Dense"
+                             HelperText="@L["Performance:Live:IntervalHint", KafkaPerformancePollingState.MinimumRefreshIntervalSeconds, KafkaPerformancePollingState.MaximumRefreshIntervalSeconds]"
+                             Disabled="@(!State.CanAdminSelectedCluster || !State.IsPerformanceAutoRefreshEnabled)" />
             <MudButton Variant="Variant.Outlined"
                        StartIcon="@Icons.Material.Filled.Refresh"
                        Disabled="@State.IsBusy"
@@ -14,12 +34,61 @@
             <MudButton Variant="Variant.Filled"
                        Color="Color.Primary"
                        StartIcon="@Icons.Material.Filled.MonitorHeart"
-                       Disabled="@(State.IsBusy || !State.CanAdminSelectedCluster)"
+                       Disabled="@(State.IsBusy || State.IsPerformanceSampling || !State.CanAdminSelectedCluster)"
                        OnClick="OnCapture">
+                @if (State.IsPerformanceSampling)
+                {
+                    <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+                }
                 @L["Performance:Actions:Capture"]
             </MudButton>
-        </MudStack>
-    </MudStack>
+        </div>
+    </div>
+
+    @if (!string.IsNullOrWhiteSpace(State.PerformanceSamplingError))
+    {
+        <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined" Dense="true">
+            @State.PerformanceSamplingError
+        </MudAlert>
+    }
+
+    @if (State.LatestPerformance is { } latest)
+    {
+        <MudGrid Spacing="2">
+            <MudItem xs="12" sm="6" lg="3">
+                <div class="metric-card">
+                    <MudPaper Class="pa-3" Outlined="true">
+                        <MudText Typo="Typo.overline">@L["Performance:Columns:AvailableMessages"]</MudText>
+                        <MudText Typo="Typo.h5">@FormatAvailableMessages(latest.TotalAvailableMessageCount)</MudText>
+                    </MudPaper>
+                </div>
+            </MudItem>
+            <MudItem xs="12" sm="6" lg="3">
+                <div class="metric-card">
+                    <MudPaper Class="pa-3" Outlined="true">
+                        <MudText Typo="Typo.overline">@L["Performance:Columns:WriteRate"]</MudText>
+                        <MudText Typo="Typo.h5">@FormatRate(latest.MessageWriteRatePerSecond)</MudText>
+                    </MudPaper>
+                </div>
+            </MudItem>
+            <MudItem xs="12" sm="6" lg="3">
+                <div class="metric-card">
+                    <MudPaper Class="pa-3" Outlined="true">
+                        <MudText Typo="Typo.overline">@L["Performance:Columns:ConsumeRate"]</MudText>
+                        <MudText Typo="Typo.h5">@FormatRate(latest.MessageConsumeRatePerSecond)</MudText>
+                    </MudPaper>
+                </div>
+            </MudItem>
+            <MudItem xs="12" sm="6" lg="3">
+                <div class="metric-card">
+                    <MudPaper Class="pa-3" Outlined="true">
+                        <MudText Typo="Typo.overline">@L["Performance:Columns:Lag"]</MudText>
+                        <MudText Typo="Typo.h5">@FormatLag(latest.TotalLag)</MudText>
+                    </MudPaper>
+                </div>
+            </MudItem>
+        </MudGrid>
+    }
 
     @if (!State.CanAdminSelectedCluster)
     {
@@ -35,30 +104,39 @@
     }
     else
     {
-        <MudTable T="KafkaPerformanceSnapshot" Items="@State.PerformanceSnapshots.OrderByDescending(snapshot => snapshot.CapturedAt)" Dense="true" Hover="true">
-            <HeaderContent>
-                <MudTh>@L["Performance:Columns:CapturedAt"]</MudTh>
-                <MudTh>@L["Performance:Columns:Brokers"]</MudTh>
-                <MudTh>@L["Performance:Columns:Topics"]</MudTh>
-                <MudTh>@L["Performance:Columns:Groups"]</MudTh>
-                <MudTh>@L["Performance:Columns:AvailableMessages"]</MudTh>
-                <MudTh>@L["Performance:Columns:WriteRate"]</MudTh>
-                <MudTh>@L["Performance:Columns:ConsumeRate"]</MudTh>
-                <MudTh>@L["Performance:Columns:Lag"]</MudTh>
-                <MudTh>@L["Performance:Columns:Message"]</MudTh>
-            </HeaderContent>
-            <RowTemplate>
-                <MudTd DataLabel="@L["Performance:Columns:CapturedAt"]">@context.CapturedAt.LocalDateTime.ToString("yyyy-MM-dd HH:mm:ss")</MudTd>
-                <MudTd DataLabel="@L["Performance:Columns:Brokers"]">@context.BrokerCount</MudTd>
-                <MudTd DataLabel="@L["Performance:Columns:Topics"]">@context.TopicCount</MudTd>
-                <MudTd DataLabel="@L["Performance:Columns:Groups"]">@context.ConsumerGroupCount</MudTd>
-                <MudTd DataLabel="@L["Performance:Columns:AvailableMessages"]">@FormatAvailableMessages(context.TotalAvailableMessageCount)</MudTd>
-                <MudTd DataLabel="@L["Performance:Columns:WriteRate"]">@FormatRate(context.MessageWriteRatePerSecond)</MudTd>
-                <MudTd DataLabel="@L["Performance:Columns:ConsumeRate"]">@FormatRate(context.MessageConsumeRatePerSecond)</MudTd>
-                <MudTd DataLabel="@L["Performance:Columns:Lag"]">@FormatLag(context.TotalLag)</MudTd>
-                <MudTd DataLabel="@L["Performance:Columns:Message"]">@FormatMessage(context.Message)</MudTd>
-            </RowTemplate>
-        </MudTable>
+        <div class="performance-table">
+            <MudTable T="KafkaPerformanceSnapshot"
+                      Items="@State.PerformanceSnapshots.OrderByDescending(snapshot => snapshot.CapturedAt)"
+                      RowsPerPage="20"
+                      Dense="true"
+                      Hover="true">
+                <HeaderContent>
+                    <MudTh>@L["Performance:Columns:CapturedAt"]</MudTh>
+                    <MudTh>@L["Performance:Columns:Brokers"]</MudTh>
+                    <MudTh>@L["Performance:Columns:Topics"]</MudTh>
+                    <MudTh>@L["Performance:Columns:Groups"]</MudTh>
+                    <MudTh>@L["Performance:Columns:AvailableMessages"]</MudTh>
+                    <MudTh>@L["Performance:Columns:WriteRate"]</MudTh>
+                    <MudTh>@L["Performance:Columns:ConsumeRate"]</MudTh>
+                    <MudTh>@L["Performance:Columns:Lag"]</MudTh>
+                    <MudTh>@L["Performance:Columns:Message"]</MudTh>
+                </HeaderContent>
+                <RowTemplate>
+                    <MudTd DataLabel="@L["Performance:Columns:CapturedAt"]">@context.CapturedAt.LocalDateTime.ToString("yyyy-MM-dd HH:mm:ss")</MudTd>
+                    <MudTd DataLabel="@L["Performance:Columns:Brokers"]">@context.BrokerCount</MudTd>
+                    <MudTd DataLabel="@L["Performance:Columns:Topics"]">@context.TopicCount</MudTd>
+                    <MudTd DataLabel="@L["Performance:Columns:Groups"]">@context.ConsumerGroupCount</MudTd>
+                    <MudTd DataLabel="@L["Performance:Columns:AvailableMessages"]">@FormatAvailableMessages(context.TotalAvailableMessageCount)</MudTd>
+                    <MudTd DataLabel="@L["Performance:Columns:WriteRate"]">@FormatRate(context.MessageWriteRatePerSecond)</MudTd>
+                    <MudTd DataLabel="@L["Performance:Columns:ConsumeRate"]">@FormatRate(context.MessageConsumeRatePerSecond)</MudTd>
+                    <MudTd DataLabel="@L["Performance:Columns:Lag"]">@FormatLag(context.TotalLag)</MudTd>
+                    <MudTd DataLabel="@L["Performance:Columns:Message"]">@FormatMessage(context.Message)</MudTd>
+                </RowTemplate>
+                <PagerContent>
+                    <MudTablePager PageSizeOptions="@(new[] { 10, 20, 50, 100 })" />
+                </PagerContent>
+            </MudTable>
+        </div>
     }
 </MudStack>
 
@@ -68,6 +146,24 @@
     [Parameter] public EventCallback OnRefresh { get; set; }
 
     [Parameter] public EventCallback OnCapture { get; set; }
+
+    private string LiveStatus => State.IsPerformanceSampling
+        ? L["Performance:Live:Sampling"]
+        : State.LastPerformanceCapturedAt is { } capturedAt
+            ? L["Performance:Live:LastCapturedAt", capturedAt.LocalDateTime.ToString("yyyy-MM-dd HH:mm:ss")]
+            : State.IsPerformanceAutoRefreshEnabled
+                ? L["Performance:Live:WaitingForFirstSample"]
+                : L["Performance:Live:Paused"];
+
+    private Task SetAutoRefreshAsync(bool enabled)
+    {
+        return State.SetPerformanceAutoRefreshAsync(enabled);
+    }
+
+    private Task SetRefreshIntervalAsync(int seconds)
+    {
+        return State.SetPerformanceRefreshIntervalAsync(seconds);
+    }
 
     private string FormatLag(long? lag)
     {

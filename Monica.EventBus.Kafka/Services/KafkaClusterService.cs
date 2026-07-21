@@ -191,7 +191,7 @@ public sealed class KafkaClusterService(
     {
         try
         {
-            var topics = await adminProvider.ListTopicsAsync(summary.Config, cancellationToken);
+            var topics = await adminProvider.ListTopicMetadataAsync(summary.Config, cancellationToken);
             summary.TopicCount = topics.Count;
         }
         catch (Exception ex)

@@ -401,6 +401,11 @@ public sealed class ModuleEventBusKafkaGuide
 public sealed class ModuleEventBusKafkaOption : MinimalApiModuleOptions<ModuleEventBusKafka>
 {
     /// <summary>
+    /// Maximum number of performance snapshots that can be returned to the console.
+    /// </summary>
+    public const int MaximumPerformanceHistoryLimit = 100;
+
+    /// <summary>
     /// Gets the clusters declared through module configuration.
     /// </summary>
     /// <remarks>
@@ -470,6 +475,29 @@ public sealed class ModuleEventBusKafkaOption : MinimalApiModuleOptions<ModuleEv
     public int MaxConsumerGroupsToDescribe { get; set; } = 100;
 
     /// <summary>
+    /// Gets or sets the maximum number of topic partitions included in one Kafka offset request.
+    /// </summary>
+    /// <remarks>
+    /// Large clusters can exceed broker or client request limits when all partitions are sent in
+    /// one call. Batching keeps topic inventory and live performance sampling bounded.
+    /// </remarks>
+    public int OffsetQueryBatchSize { get; set; } = 500;
+
+    /// <summary>
+    /// Gets or sets the maximum number of consumer-group offset requests executed concurrently.
+    /// </summary>
+    /// <remarks>
+    /// Kafka's consumer-group offset API accepts exactly one group per request. This setting limits
+    /// the bounded parallelism used while sampling several groups.
+    /// </remarks>
+    public int ConsumerGroupOffsetParallelism { get; set; } = 4;
+
+    /// <summary>
+    /// Gets or sets the maximum number of topic configuration resources sent to one describe call.
+    /// </summary>
+    public int TopicConfigQueryBatchSize { get; set; } = 100;
+
+    /// <summary>
     /// Gets or sets the maximum number of topic messages a console preview request can return.
     /// </summary>
     /// <remarks>
@@ -499,7 +527,27 @@ public sealed class ModuleEventBusKafkaOption : MinimalApiModuleOptions<ModuleEv
     /// <summary>
     /// Gets or sets the default number of performance snapshots returned to the UI.
     /// </summary>
-    public int PerformanceHistoryLimit { get; set; } = 60;
+    /// <remarks>
+    /// Values outside the supported range are normalized by
+    /// <see cref="GetPerformanceHistoryLimit(int?)"/>. The console always keeps the newest
+    /// snapshots when the requested history is larger than the maximum.
+    /// </remarks>
+    public int PerformanceHistoryLimit { get; set; } = MaximumPerformanceHistoryLimit;
+
+    /// <summary>
+    /// Resolves a safe performance-history limit for configuration or an individual request.
+    /// </summary>
+    /// <param name="requestedLimit">
+    /// Optional request-specific limit. When omitted, <see cref="PerformanceHistoryLimit"/> is used.
+    /// </param>
+    /// <returns>A value between 1 and <see cref="MaximumPerformanceHistoryLimit"/>.</returns>
+    public int GetPerformanceHistoryLimit(int? requestedLimit = null)
+    {
+        return Math.Clamp(
+            requestedLimit ?? PerformanceHistoryLimit,
+            1,
+            MaximumPerformanceHistoryLimit);
+    }
 
     /// <summary>
     /// Gets or sets how long captured performance snapshots are retained.
