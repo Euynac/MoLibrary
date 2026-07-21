@@ -1,11 +1,11 @@
 <Project>
   <PropertyGroup>
     <MonicaRpcMetadataConsumeDirectory Condition="'$(MonicaRpcMetadataConsumeDirectory)' == ''">RpcMetadata</MonicaRpcMetadataConsumeDirectory>
-    <MonicaRpcMetadataFileName Condition="'$(MonicaRpcMetadataFileName)' == ''">__RpcMetadata.g.cs</MonicaRpcMetadataFileName>
     <MonicaRpcMetadataBuildTasksAssembly Condition="'$(MonicaRpcMetadataBuildTasksAssembly)' == ''">$(MSBuildThisFileDirectory)Monica.Generators.AutoController.BuildTasks.dll</MonicaRpcMetadataBuildTasksAssembly>
   </PropertyGroup>
 
-  <PropertyGroup Condition="'$(MonicaRpcMetadataExportDirectory)' != ''">
-    <EmitCompilerGeneratedFiles>true</EmitCompilerGeneratedFiles>
-  </PropertyGroup>
+  <!--
+    Multi-target producer projects must set MonicaRpcMetadataExportTargetFramework to the one
+    target framework whose compiled assembly owns the exported RPC contract.
+  -->
 </Project>

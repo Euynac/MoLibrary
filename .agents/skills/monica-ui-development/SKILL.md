@@ -1,7 +1,6 @@
 ---
 name: monica-ui-development
 description: This skill should be used when the user asks to create or modify Blazor UI components, build MudBlazor pages, style MudBlazor components, fix CSS isolation, customize themes, add offline WOFF2 font assets, migrate to MudBlazor v9, validate MudBlazor CSS variables, or implement browser storage with IBrowserStorage.
-version: 2.13.0
 ---
 
 # Monica UI Development Guide
@@ -180,13 +179,14 @@ Always specify `T` for generic MudBlazor components:
 - Loading, empty, and placeholder states should consume available space with flex/grid alignment when the parent height is available, instead of using large fixed top/bottom padding for visual centering.
 - Keep scrolling in `.mo-body-content` or the page's own scroll containers; do not move scrolling back to `body`.
 
-### 9. Theme-First Visual Simplicity and Component Responsibility
+### 9. Theme-First Visual Richness and Component Responsibility
 
-- Prefer simple, quiet layouts that mostly rely on the active MudBlazor theme.
-- Do not introduce gradients, glow effects, decorative shadows, or custom multi-color surfaces unless the user explicitly asks for a branded visual treatment.
-- Favor `var(--mud-palette-surface)`, `var(--mud-palette-background-gray)`, `var(--mud-palette-lines-default)`, and `var(--mud-palette-text-secondary)` over inventing new color systems.
-- Use CSS isolation primarily for layout, spacing, centering, sizing, and overflow control. Do not use it to repaint large parts of MudBlazor unless there is a clear product requirement.
-- When list or card UIs become dense, remove redundant metadata first. Prefer a minimal primary view and move secondary details into dialogs, drawers, or detail panes.
+- Do not default to a monotonous layout made almost entirely of neutral surfaces plus one accent color. Use clear hierarchy and enough visual variation to make sections and states easy to scan.
+- Use `var(--mud-palette-*)`, approved `var(--mo-color-*)` tokens, and MudBlazor `Color`, `Variant`, and `Elevation` parameters. Give statuses, severities, categories, progress, and selection purposeful semantic colors when differentiation helps the user.
+- Tinted surfaces, subtle gradients, borders, elevation, and restrained shadows or glow are allowed when they improve hierarchy, depth, or focus. Build them from approved tokens or theme-owned styles and preserve contrast, focus visibility, and readability.
+- Theme-first means coherent with the active theme, not colorless. Avoid both timid one-accent styling and arbitrary rainbow decoration; every visual treatment should communicate hierarchy, state, grouping, or atmosphere.
+- Component CSS may own component-specific, token-based presentation as well as layout. Keep global MudBlazor visual language in theme CSS, and do not create a raw, page-private color system.
+- When list or card UIs become dense, prioritize scanability and task flow. Remove genuinely redundant metadata or use progressive disclosure, but retain information needed for comparison, diagnosis, and decisions.
 - If centered alignment looks wrong, fix the container layout first (`display`, `align-items`, `justify-content`, `min-height`, `min-width`) before adding margin or padding hacks.
 - Cards that visually belong to the same row should generally align to the same height. Prefer row-level grid/flex stretch plus wrapper-owned `height: 100%` over fixed pixel heights.
 
@@ -336,6 +336,7 @@ For `Res/Res<T>` usage, `IResultEnvelope`, and the `IsFailed` pattern in UI serv
 - [ ] Use `IBrowserStorage` for browser persistence
 - [ ] Keep AppBar height and viewport compensation in the shell layout, not in page CSS
 - [ ] Use `$monica-ui-localization` for any user-facing text or i18n resource changes
+- [ ] Check that the page does not collapse into neutral surfaces plus one accent color
 
 ## Page Complexity Checklist
 
