@@ -1,7 +1,6 @@
 using Domains.Ordering.Entities;
 using Domains.Ordering.Interfaces;
 using Domains.Ordering.Utilities;
-using Microsoft.AspNetCore.Mvc;
 using Monica.Core.Results;
 using Monica.WebApi.Abstractions;
 using Platform.Protocol.PublishedLanguages.DomainOrdering.Models;
@@ -14,7 +13,7 @@ namespace Domains.Ordering.Application.HandlersCommand;
 /// </summary>
 public sealed class CommandHandlerCreateOrder(
     IRepositoryOrder repository)
-    : ApplicationService<CreateOrderRequest, OrderDto>
+    : ApplicationService<CommandCreateOrder, OrderDto>
 {
     /// <summary>
     /// Creates an order after applying entity and repository invariants.
@@ -22,9 +21,8 @@ public sealed class CommandHandlerCreateOrder(
     /// <param name="request">The order creation request.</param>
     /// <param name="cancellationToken">Cancels the operation.</param>
     /// <returns>The created order, or a boundary failure when input or uniqueness rules are violated.</returns>
-    [HttpPost("orders")]
     public override async Task<Res<OrderDto>> Handle(
-        CreateOrderRequest request,
+        CommandCreateOrder request,
         CancellationToken cancellationToken)
     {
         try

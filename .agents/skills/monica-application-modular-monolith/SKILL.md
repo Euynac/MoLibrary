@@ -27,7 +27,9 @@ Use this skill to structure a Monica application solution as a modular monolith 
 - Keep cross-domain dependencies pointed at `Shared/Platform.Protocol/PublishedLanguages`, consuming shared `Contracts/` and only the deliberate `Implementations/*` surfaces exposed there. Do not reference another domain's internal implementation directly.
 - Keep domain-owned application units in `Application/HandlersCommand`, `Application/HandlersQuery`, `Application/HandlersEvent`, and `Application/BackgroundWorkers`.
 - Keep repository implementations and `DbContext`-related files in `Repository/`, and keep pure helper code in `Utilities/` with `Utils*` names.
-- When a domain exposes `ApplicationService` HTTP endpoints through default routing, keep one assembly-level `AutoControllerConfig(DefaultRoutePrefix = "api/v1", DomainName = "{Subdomain}")` file in the domain project root instead of repeating class-level `Route` attributes on every handler.
+- Declare every `ApplicationService` endpoint on its `Command*` or `Query*` request with `[ApiEndpoint]`; handlers contain behavior, not MVC route or binding attributes.
+- A request in strict `Platform.Protocol.PublishedLanguages.Domain{Subdomain}.Requests` with `[ApiEndpoint]` is published HTTP/RPC language and generates `I{Subdomain}CommandApi` or `I{Subdomain}QueryApi`. A request local to the domain project generates HTTP only.
+- Keep one `WebApiGenerationConfig("api/v1", DomainName = "{Subdomain}")` in each domain assembly for local endpoints, and configure published RPC targets in `Platform.Protocol`. Do not use RPC metadata snapshots or source-tree export tasks.
 - AppHost entry projects are composition-only entry points. Keep them down to the project file and `Program.cs`; do not place business ProjectUnits there.
 - Register `monica.AddConfiguration()` inside the AppHost's single `builder.AddMonica(...)` callback. Read bootstrap values from `builder.Configuration` during composition; consume Configuration ProjectUnits through typed options injection at runtime.
 - Keep `.slnx` solution folders aligned with the physical layout under `src/AppHost`, `src/Shared`, and `src/Domains`.

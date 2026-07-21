@@ -13,7 +13,10 @@ internal sealed class ResultEnvelopeCapturedContent(string content, bool isTrunc
 
     public string DisplayContent => string.IsNullOrWhiteSpace(Content) ? "<Empty>" : Content;
 
-    public static async Task<ResultEnvelopeCapturedContent> ReadAsync(HttpContent? content, int maxBytes)
+    public static async Task<ResultEnvelopeCapturedContent> ReadAsync(
+        HttpContent? content,
+        int maxBytes,
+        CancellationToken cancellationToken)
     {
         if (content is null)
         {
@@ -25,11 +28,11 @@ internal sealed class ResultEnvelopeCapturedContent(string content, bool isTrunc
 
         try
         {
-            contentStream = await content.ReadAsStreamAsync();
+            contentStream = await content.ReadAsStreamAsync(cancellationToken);
             captureStream = new ResultEnvelopeContentCaptureStream(contentStream, maxBytes);
             var buffer = new byte[8192];
 
-            while (await captureStream.ReadAsync(buffer.AsMemory(0, buffer.Length)) > 0)
+            while (await captureStream.ReadAsync(buffer.AsMemory(0, buffer.Length), cancellationToken) > 0)
             {
             }
 

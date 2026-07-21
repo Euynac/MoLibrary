@@ -18,7 +18,10 @@ internal sealed class ResultEnvelopeHttpRequestInfo
 
     public bool IsContentTruncated { get; init; }
 
-    public static async Task<ResultEnvelopeHttpRequestInfo?> CreateAsync(HttpRequestMessage? request, int maxBodyBytes)
+    public static async Task<ResultEnvelopeHttpRequestInfo?> CreateAsync(
+        HttpRequestMessage? request,
+        int maxBodyBytes,
+        CancellationToken cancellationToken)
     {
         if (request is null)
         {
@@ -28,7 +31,10 @@ internal sealed class ResultEnvelopeHttpRequestInfo
         ResultEnvelopeCapturedContent? content = null;
         if (request.Content is not null)
         {
-            content = await ResultEnvelopeCapturedContent.ReadAsync(request.Content, maxBodyBytes);
+            content = await ResultEnvelopeCapturedContent.ReadAsync(
+                request.Content,
+                maxBodyBytes,
+                cancellationToken);
         }
 
         return new ResultEnvelopeHttpRequestInfo

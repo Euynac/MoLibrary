@@ -47,6 +47,13 @@ Inspect public folders that define the user contract:
 - `Exceptions/`
 - public `Extensions/`
 
+For AutoController or RPC documentation, also inspect:
+
+- request types carrying `ApiEndpointAttribute`
+- assembly-level `WebApiGenerationConfigAttribute` declarations
+- the request namespace, because only `*.PublishedLanguages.Domain{DomainName}.Requests` and child namespaces are published to RPC clients
+- generated-source tests for exact controller and client names when the public output shape matters
+
 Do not base user docs on internal `Services/` behavior unless a public API clearly exposes that behavior.
 
 ## 5. Check for a related UI module
@@ -91,6 +98,7 @@ Confirm all of the following:
 - required setup is called out when applicable
 - package name is correct
 - public / private boundary is respected
+- generated endpoint examples keep endpoint metadata on requests and correctly distinguish published RPC from local-only HTTP
 - the target output path and locale are intentional
 - launch-critical public documentation is aligned across `en-US` and `zh-CN`
 

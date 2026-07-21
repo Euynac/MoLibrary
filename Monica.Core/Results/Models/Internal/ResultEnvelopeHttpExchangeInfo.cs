@@ -14,7 +14,8 @@ internal sealed class ResultEnvelopeHttpExchangeInfo
         ResultEnvelopeCapturedContent responseContent,
         TResponse? parsedResponse,
         JsonSerializerOptions serializerOptions,
-        int maxBodyBytes)
+        int maxBodyBytes,
+        CancellationToken cancellationToken)
         where TResponse : class, IResultEnvelope
     {
         ArgumentNullException.ThrowIfNull(response);
@@ -22,7 +23,10 @@ internal sealed class ResultEnvelopeHttpExchangeInfo
 
         return new ResultEnvelopeHttpExchangeInfo
         {
-            Request = await ResultEnvelopeHttpRequestInfo.CreateAsync(response.RequestMessage, maxBodyBytes),
+            Request = await ResultEnvelopeHttpRequestInfo.CreateAsync(
+                response.RequestMessage,
+                maxBodyBytes,
+                cancellationToken),
             Response = ResultEnvelopeHttpResponseInfo.Create(response, responseContent, parsedResponse, serializerOptions)
         };
     }

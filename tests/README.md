@@ -17,6 +17,7 @@ This directory contains Monica's runnable test projects and shared execution con
 | One ProjectUnit with explicit collaborators | Raw `ProjectUnitFixture<TUnit>` |
 | Module graph, options, registration, proxies, hosted lifecycle, or cross-scope behavior | Full `MonicaTestApplicationFactory<TDiscoveryAnchor>` scenario |
 | Blazor component or page shell | bUnit in a UI test project |
+| Source-generator input, diagnostics, generated source, or same-compilation binding | In-memory Roslyn `GeneratorDriver` |
 
 `ProjectUnitFixture<TUnit>` uses a small raw Microsoft DI container. It does not prove Monica type discovery, conventional registration, dynamic proxies, module options, hosted lifecycle, or host ownership. There is no separate `ApplicationServiceFixture<THandler>`; apply the same boundary decision to application services as to every other ProjectUnit.
 
@@ -106,6 +107,8 @@ Mirror source folders such as `Modules/`, `Facades/`, `Services/`, `Providers/`,
 4. Add a `MonicaTestApplicationFactory<TDiscoveryAnchor>` only when host composition is part of the behavior.
 5. Add direct or raw ProjectUnit tests where the smaller boundary is honest.
 6. Keep scenario-specific seams in the runnable project; promote only genuinely reusable infrastructure to the shared toolkit.
+
+Source-generator tests are the exception to the host and ProjectUnit boundaries above. Keep them in a dedicated `Test.Monica.{GeneratorProject}` project, instantiate the incremental generator directly, and run it against an in-memory `CSharpCompilation`. Assert the updated compilation as well as generated text so same-compilation references are proven. Repeated identical runs must remain deterministic and must not create repository files; reserve solution-build tests for behavior owned by analyzer packaging or MSBuild targets.
 
 ## WSL Execution
 

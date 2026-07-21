@@ -5,10 +5,10 @@ A runnable ordering backend that demonstrates Monica's Stable application path w
 The sample is intentionally more realistic than a hello-world endpoint:
 
 - one composition-only AppHost and one ordering bounded context
-- stable request, response, and event contracts in `Platform.Protocol`
+- stable request, response, endpoint, and event contracts in `Platform.Protocol`
 - rich order invariants owned by the entity
 - a replaceable in-memory repository for zero-infrastructure startup
-- command and query `ApplicationService` units exposed by AutoController
+- request-owned API contracts exposed by command and query `ApplicationService` units
 - a schema-first `[Configuration]` ProjectUnit consumed through `IOptions<OrderingOptions>`
 - a unit-of-work boundary around controller requests
 - an `EventOrderApproved` local event published only after unit-of-work completion
@@ -58,6 +58,23 @@ Explore the running architecture:
 `OrderingOptions.MaximumOrdersReturned` limits the collection response. The values in `appsettings.json` seed Monica's local effective-value store on first startup, and the query consumes the resulting configuration through `IOptions<OrderingOptions>`.
 
 The backlog worker runs once per minute. Its execution history and normal application log report the draft count, escalating to a warning when `OrderingOptions.BacklogWarningThreshold` is reached.
+
+## Request-owned API contracts
+
+Published endpoints are declared beside their request contracts in `Platform.Protocol`, not on the handlers that execute them:
+
+```csharp
+[ApiEndpoint(
+    ApiHttpMethod.Post,
+    "orders",
+    Binding = ApiRequestBinding.Body)]
+public sealed record CommandCreateOrder(
+    string OrderNumber,
+    string CustomerName,
+    decimal Total) : IResultRequest<OrderDto>;
+```
+
+`WebApiGenerationConfig` supplies the shared `api/v1/Ordering` prefix and asks the generator for the published HTTP RPC client. The `Command` prefix classifies the operation and produces the default `CreateOrder` method name. The corresponding `CommandHandlerCreateOrder` contains only execution logic; it does not repeat the route, verb, or binding attributes. Requests under `PublishedLanguages.DomainOrdering.Requests` are eligible for RPC clients. An attributed request outside that published-language namespace can still expose a local HTTP endpoint, but it remains intentionally absent from the generated RPC contract.
 
 ## Host-bound module graph
 

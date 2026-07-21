@@ -1,0 +1,63 @@
+.performance-toolbar {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+    min-width: 0;
+}
+
+.performance-heading {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    min-width: 0;
+}
+
+.performance-controls {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 8px;
+    min-width: 0;
+}
+
+.performance-controls ::deep .mud-input-control {
+    min-width: 132px;
+    max-width: 180px;
+}
+
+.metric-card {
+    height: 100%;
+    min-width: 0;
+}
+
+.metric-card ::deep .mud-paper {
+    height: 100%;
+}
+
+.performance-table {
+    width: 100%;
+    min-width: 0;
+    overflow-x: auto;
+}
+
+.performance-table ::deep .mud-table {
+    min-width: 980px;
+}
+
+@media (max-width: 720px) {
+    .performance-toolbar {
+        flex-direction: column;
+    }
+
+    .performance-controls {
+        width: 100%;
+        justify-content: flex-start;
+    }
+
+    .performance-controls ::deep .mud-input-control {
+        flex: 1 1 132px;
+        max-width: none;
+    }
+}

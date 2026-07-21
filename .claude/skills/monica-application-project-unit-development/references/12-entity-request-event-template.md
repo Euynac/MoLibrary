@@ -8,11 +8,14 @@ Use request contracts for use-case input. Keep them stable and serializable.
 
 ```csharp
 using Monica.WebApi.Abstractions;
+using Monica.WebApi.Annotations;
 
 namespace $ContractNamespace$.Requests;
 
+[ApiEndpoint(ApiHttpMethod.Get, "$QueryRoute$", Binding = ApiRequestBinding.Query)]
 public sealed record Query$FeatureName$(long Id) : IResultRequest<$ResponseName$>;
 
+[ApiEndpoint(ApiHttpMethod.Post, "$CommandRoute$", Binding = ApiRequestBinding.Body)]
 public sealed record Command$FeatureName$(long Id, string Reason) : IResultRequest;
 ```
 
@@ -21,6 +24,10 @@ Rules:
 - Use request types for commands and queries, not for persistence state.
 - Keep request contracts small and explicit.
 - Place response DTOs near contracts, not near persistence.
+- Let `[ApiEndpoint]` own the HTTP verb, relative route, request binding, and optional operation name. Generated handlers must not repeat these with MVC attributes.
+- Requests in the exact `*.PublishedLanguages.Domain{DomainName}.Requests` namespace are published RPC contracts when their source assembly has matching `WebApiGenerationConfig`; attributed requests elsewhere are local HTTP contracts only.
+- Published RPC result envelopes must implement `IRemoteResultEnvelope<TSelf>`. Built-in `Res`, `Res<T>`, and `ResPaged<T>` already do; custom envelopes must construct remote failures through `CreateRemoteFailure` without bypassing their invariants.
+- Treat moving a request into or out of `PublishedLanguages` as a public compatibility decision because it changes RPC client generation.
 
 ## Entity
 

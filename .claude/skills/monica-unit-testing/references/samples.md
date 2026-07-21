@@ -14,6 +14,9 @@ Use these projects as structural references:
   - UI foundation tests
 - `tests/Test.Monica.JobScheduler.UI`
   - bUnit component and page-shell tests
+- `tests/Test.Monica.Generators.AutoController`
+  - Raw Roslyn `GeneratorDriver` coverage for request-owned controller and RPC-client generation
+  - Same-compilation binding, diagnostics, incremental determinism, and no-file-write assertions
 
 ## Recommended First Targets
 
@@ -30,6 +33,13 @@ For UI modules:
 - one stable component
 - one page-shell state
 - one pure support or mapping type
+
+For source generators:
+
+- one exact happy-path generated surface
+- one same-compilation dependency scenario
+- invalid-input diagnostics rather than runtime fallbacks
+- repeated-run determinism and no-file-write coverage
 
 ## Reuse Guidance
 

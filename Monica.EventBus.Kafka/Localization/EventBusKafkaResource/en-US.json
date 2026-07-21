@@ -202,8 +202,12 @@
   },
   "Topics": {
     "Title": "Topics",
+    "Summary": "Showing {0} of {1} topics",
     "Unavailable": "Topic management requires direct Kafka broker access.",
     "Empty": "No topics were returned for the selected cluster.",
+    "Search": {
+      "Placeholder": "Search topics"
+    },
     "Actions": {
       "Create": "Create topic",
       "Messages": "View messages",
@@ -221,6 +225,7 @@
     },
     "Values": {
       "Internal": "Internal topic",
+      "MetadataUnavailable": "Topic metadata is temporarily unavailable: {0}",
       "NoKey": "No key",
       "EmptyValue": "Empty value",
       "Tombstone": "Tombstone message",
@@ -300,6 +305,15 @@
     "Title": "Performance snapshots",
     "Unavailable": "Performance sampling requires direct Kafka broker access.",
     "Empty": "No performance snapshots have been captured.",
+    "Live": {
+      "AutoRefresh": "Live refresh",
+      "IntervalSeconds": "Interval (seconds)",
+      "IntervalHint": "Allowed range: {0}–{1} seconds",
+      "Sampling": "Sampling Kafka metrics...",
+      "LastCapturedAt": "Last updated at {0}",
+      "WaitingForFirstSample": "Waiting for the first live sample",
+      "Paused": "Live refresh is paused"
+    },
     "Actions": {
       "Capture": "Capture"
     },

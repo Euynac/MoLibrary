@@ -60,7 +60,7 @@ public interface IKafkaConsoleRepository
     /// Gets recent sampled performance snapshots for one cluster.
     /// </summary>
     /// <param name="clusterId">Cluster identifier.</param>
-    /// <param name="limit">Maximum number of snapshots to return.</param>
+    /// <param name="limit">Maximum number of snapshots to return. The service layer caps this at 100.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>Snapshots ordered from oldest to newest.</returns>
     Task<IReadOnlyList<KafkaPerformanceSnapshot>> GetPerformanceSnapshotsAsync(

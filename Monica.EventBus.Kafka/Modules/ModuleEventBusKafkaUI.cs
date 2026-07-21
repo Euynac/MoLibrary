@@ -65,6 +65,7 @@ public sealed class ModuleEventBusKafkaUI(ModuleEventBusKafkaUIOption option)
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddScoped<EventBusKafkaPageState>();
+        services.AddScoped<KafkaPerformancePollingState>();
     }
 }
 
@@ -85,4 +86,22 @@ public sealed class ModuleEventBusKafkaUIOption : ModuleOptions<ModuleEventBusKa
     /// Gets or sets a value indicating whether the Kafka console page should be hidden from navigation.
     /// </summary>
     public bool DisableKafkaConsolePage { get; set; }
+
+    /// <summary>
+    /// Gets or sets whether the Kafka performance tab starts live sampling automatically.
+    /// </summary>
+    /// <remarks>
+    /// The page still provides a manual capture button when this is disabled. The default is
+    /// enabled so a newly opened console establishes a rate baseline without extra clicks.
+    /// </remarks>
+    public bool EnablePerformanceAutoRefresh { get; set; } = true;
+
+    /// <summary>
+    /// Gets or sets the default interval used by the live performance sampler.
+    /// </summary>
+    /// <remarks>
+    /// The default is five seconds. Users can change the interval on the performance tab for the
+    /// current page session; this option controls the initial value for new sessions.
+    /// </remarks>
+    public TimeSpan PerformanceRefreshInterval { get; set; } = TimeSpan.FromSeconds(5);
 }

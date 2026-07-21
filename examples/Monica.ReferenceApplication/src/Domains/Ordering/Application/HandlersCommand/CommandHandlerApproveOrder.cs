@@ -1,6 +1,5 @@
 using Domains.Ordering.Interfaces;
 using Domains.Ordering.Utilities;
-using Microsoft.AspNetCore.Mvc;
 using Monica.Core.Results;
 using Monica.EventBus.Abstractions;
 using Monica.Repository.UnitOfWork.Abstractions;
@@ -18,7 +17,7 @@ public sealed class CommandHandlerApproveOrder(
     IRepositoryOrder repository,
     IUnitOfWorkManager unitOfWorkManager,
     ILocalEventBus localEventBus)
-    : ApplicationService<ApproveOrderRequest, OrderDto>
+    : ApplicationService<CommandApproveOrder, OrderDto>
 {
     /// <summary>
     /// Approves the requested draft order.
@@ -26,9 +25,8 @@ public sealed class CommandHandlerApproveOrder(
     /// <param name="request">The approval request.</param>
     /// <param name="cancellationToken">Cancels the operation.</param>
     /// <returns>The approved order, or a boundary failure when it is missing or already approved.</returns>
-    [HttpPost("orders/approve")]
     public override async Task<Res<OrderDto>> Handle(
-        ApproveOrderRequest request,
+        CommandApproveOrder request,
         CancellationToken cancellationToken)
     {
         var order = await repository.FindAsync(request.OrderId, cancellationToken);

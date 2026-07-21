@@ -11,7 +11,9 @@ public static class ResultRemoteExtensions
     /// <summary>
     /// Awaits a remote HTTP response and resolves it as a Monica result envelope.
     /// </summary>
-    /// <typeparam name="TResponse">The Monica response type.</typeparam>
+    /// <typeparam name="TResponse">
+    /// The concrete Monica remote result-envelope type.
+    /// </typeparam>
     /// <param name="response">The task that returns the HTTP response.</param>
     /// <param name="reader">The host-owned remote envelope reader.</param>
     /// <param name="cancellationToken">A token that cancels response reading and deserialization.</param>
@@ -20,7 +22,7 @@ public static class ResultRemoteExtensions
         this Task<HttpResponseMessage> response,
         IResultEnvelopeReader reader,
         CancellationToken cancellationToken = default)
-        where TResponse : class, IResultEnvelope, new()
+        where TResponse : class, IRemoteResultEnvelope<TResponse>
     {
         ArgumentNullException.ThrowIfNull(reader);
 

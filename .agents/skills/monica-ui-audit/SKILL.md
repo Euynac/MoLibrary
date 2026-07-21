@@ -1,11 +1,11 @@
 ---
 name: monica-ui-audit
-description: Audit and fix Monica Blazor UI compliance, including theme use, MudBlazor primitives, responsive layout containment, dialog or container width, overflow ownership, and duplicate utility logic. Use when the user asks to "audit UI components", "check theme compliance", "find CSS violations", "review component styling", "theme-first audit", "UI规约检查", "组件合规", or reports clipped content, unused width, unwanted horizontal scrolling, fixed-height whitespace, or broken flex/grid sizing.
+description: Audit and fix Monica Blazor UI compliance, including visual hierarchy, theme-token use, MudBlazor primitives, responsive layout containment, dialog or container width, overflow ownership, and duplicate utility logic. Use when the user asks to "audit UI components", "check theme compliance", "find CSS violations", "review component styling", "theme-first audit", "UI规约检查", "组件合规", or reports that a UI is bland, monotonous, lacks meaningful color differentiation, clips content, wastes width, or has broken responsive sizing.
 ---
 
-# Theme-First Component Compliance Audit
+# Theme-First UI Compliance Audit
 
-Audit Blazor components for violations of the Monica UI theme-first rules defined in `monica-ui-development` SKILL.md Rules #9 and #10.
+Audit Blazor components for violations of the Monica UI theme-first rules defined in `monica-ui-development` SKILL.md Rules #9 and #10. Theme-first means coherent and token-governed, not minimal, monochrome, or visually flat.
 
 ## How to Determine Audit Target
 
@@ -38,16 +38,18 @@ Indicators:
 
 Fix: trace the layout from the dialog/page surface to the failing descendant and assign width, shrink, wrap, and overflow responsibility explicitly. Remove contradictory internal width caps, use `width: 100%`, `min-width: 0`, `minmax(0, 1fr)`, `overflow-wrap`, or a local scroll surface only where each property expresses the intended contract. Keep long identifiers fully accessible for inspection and copying. Justify every retained width cap or fixed/minimum height with a concrete readability, interaction, or viewport requirement.
 
-### P2 — Inline or hardcoded styling that bypasses the theme
+### P2 — Theme bypass or insufficient visual differentiation
 
 Indicators:
 - Inline `Style=` / `style=` attributes for layout or visuals
-- Hardcoded color, shadow, radius, or background values instead of MudBlazor parameters or `var(--mud-palette-*)` tokens
+- Hardcoded color, shadow, radius, or background values instead of MudBlazor parameters, `var(--mud-palette-*)`, or approved `var(--mo-color-*)` tokens
+- Semantically distinct statuses, severities, categories, or progress states collapse into visually identical neutral surfaces when scanability requires differentiation
+- Multiple hierarchy levels and semantic states rely on the same neutral surface plus one accent, producing a flat or monotonous page
 - Component CSS repainting global MudBlazor behavior that should be consistent across modules
 - Component CSS painting route `.active`, `:hover`, or `:focus` states for menu items, nav links, or list items that are themed globally
 - Dark-mode overrides inside component CSS (`[data-theme*="dark"]` in `.razor.css`)
 
-Fix: keep component-owned layout and localized presentation in the component's `.razor.css` file. Use MudBlazor parameters and theme tokens (`var(--mud-palette-*)`, spacing classes, `Color`, `Variant`, `Elevation`, `Outlined`) instead of hardcoded colors or inline styles. Move rules to theme CSS only when the rule intentionally changes a global MudBlazor/theme behavior across modules.
+Fix: add purposeful hierarchy and semantic variation with MudBlazor parameters and approved theme tokens (`var(--mud-palette-*)`, `var(--mo-color-*)`, `Color`, `Variant`, `Elevation`, `Outlined`). Keep component-owned layout and token-based presentation in the component's `.razor.css` file. Move rules to theme CSS only when the rule intentionally changes global MudBlazor/theme behavior across modules.
 
 ### P3 — Private component classes that force theme coupling
 
@@ -90,11 +92,12 @@ Include desktop and narrow results for `scrollWidth <= clientWidth`, rendered-wi
 ## Constraints
 
 - Do NOT add hardcoded visual styling to component CSS. Component isolation CSS may own component-specific layout, overflow, sizing, truncation, and localized presentation that uses MudBlazor theme tokens.
+- Do NOT reject purposeful token-based color, elevation, gradients, borders, or atmosphere merely because a more minimal treatment exists.
 - Do NOT break existing responsive or compact-mode behavior.
 - Do NOT treat `overflow-x: hidden` on the page or dialog as a containment fix; repair the child width contract and keep scrolling on the smallest surface that needs it.
 - Layout-only hooks (sizing, scroll, positioning, truncation) should usually stay in the component's `.razor.css`. Use `mo-*` shared CSS only for truly shared layout utilities used across multiple modules.
 - Active route state: use `.active` class via `NavigationRouteMatcher.GetActiveClass()`, styled by themes on `.mud-menu-item.active`.
-- Follow `monica-ui-development` SKILL.md Rule #1 (CSS Isolation), Rule #9 (Theme-First Visual Simplicity and Component Responsibility), and Rule #10 (Use MudBlazor Primitives for Interactive UI) as the authoritative references.
+- Follow `monica-ui-development` SKILL.md Rule #1 (CSS Isolation), Rule #9 (Theme-First Visual Richness and Component Responsibility), and Rule #10 (Use MudBlazor Primitives for Interactive UI) as the authoritative references.
 
 ## Component CSS Responsibility Reference
 

@@ -135,6 +135,22 @@ public sealed class KafkaTopicSummary
     public bool IsInternal { get; set; }
 
     /// <summary>
+    /// Metadata error reported by Kafka for this topic, when the topic name is known but its
+    /// partition metadata is currently unavailable.
+    /// </summary>
+    /// <remarks>
+    /// Kafka can return a topic name together with a per-topic error (for example while a leader
+    /// is being elected). Keeping that row visible makes the topic inventory consistent with the
+    /// cluster metadata count instead of silently dropping it from the console.
+    /// </remarks>
+    public string? MetadataError { get; set; }
+
+    /// <summary>
+    /// Whether partition metadata is currently available for this topic.
+    /// </summary>
+    public bool IsMetadataAvailable => string.IsNullOrWhiteSpace(MetadataError);
+
+    /// <summary>
     /// Optional retention time in milliseconds.
     /// </summary>
     public long? RetentionMs { get; set; }
@@ -460,6 +476,10 @@ public sealed class KafkaPerformanceSnapshot
     /// <summary>
     /// Sum of latest offsets across sampled non-internal topic partitions.
     /// </summary>
+    /// <remarks>
+    /// The value is <see langword="null"/> when any required topic metadata or offset batch is
+    /// incomplete; partial totals are not used for rate calculation.
+    /// </remarks>
     public long? TotalLogEndOffset { get; set; }
 
     /// <summary>
@@ -504,7 +524,20 @@ public sealed class KafkaPerformanceOffsetTotals
     /// <summary>
     /// Sum of latest offsets across sampled non-internal topic partitions.
     /// </summary>
+    /// <remarks>
+    /// Check <see cref="IsComplete"/> before using the value; partial totals are not used for rate
+    /// calculation.
+    /// </remarks>
     public long TotalLogEndOffset { get; set; }
+
+    /// <summary>
+    /// Whether all required topic metadata and offset batches were captured.
+    /// </summary>
+    /// <remarks>
+    /// Consumers should not derive rates from a partial total. The default is <see langword="true"/>
+    /// for providers that return a complete total without setting this flag explicitly.
+    /// </remarks>
+    public bool IsComplete { get; set; } = true;
 
     /// <summary>
     /// Sum of committed offsets across sampled consumer groups and non-internal topic partitions.

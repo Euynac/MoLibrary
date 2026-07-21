@@ -8,7 +8,9 @@ namespace Monica.EventBus.Kafka.UIEventBusKafka.State;
 /// <summary>
 /// Page state for the Kafka EventBus console.
 /// </summary>
-public sealed class EventBusKafkaPageState(KafkaConsoleFacade facade)
+public sealed class EventBusKafkaPageState(
+    KafkaConsoleFacade facade,
+    KafkaPerformancePollingState performancePollingState)
 {
     private string? _topicsClusterId;
     private string? _consumerGroupsClusterId;
@@ -42,7 +44,59 @@ public sealed class EventBusKafkaPageState(KafkaConsoleFacade facade)
     /// <summary>
     /// Performance snapshots for the selected cluster.
     /// </summary>
-    public List<KafkaPerformanceSnapshot> PerformanceSnapshots { get; private set; } = [];
+    public IReadOnlyList<KafkaPerformanceSnapshot> PerformanceSnapshots => performancePollingState.Snapshots;
+
+    /// <summary>
+    /// Latest performance snapshot, including captures produced by the live sampler.
+    /// </summary>
+    public KafkaPerformanceSnapshot? LatestPerformance =>
+        performancePollingState.LatestSnapshot ?? Dashboard.LatestPerformance;
+
+    /// <summary>
+    /// Current retained-message inventory from the latest live sample or topic enrichment.
+    /// </summary>
+    public long? TotalAvailableMessageCount =>
+        LatestPerformance?.TotalAvailableMessageCount ?? Dashboard.TotalAvailableMessageCount;
+
+    /// <summary>
+    /// Current topic count from the latest live metadata sample or dashboard snapshot.
+    /// </summary>
+    public int CurrentTopicCount => LatestPerformance?.TopicCount ?? Dashboard.TopicCount;
+
+    /// <summary>
+    /// Current consumer-group count from the latest live metadata sample or dashboard snapshot.
+    /// </summary>
+    public int CurrentConsumerGroupCount => LatestPerformance?.ConsumerGroupCount ?? Dashboard.ConsumerGroupCount;
+
+    /// <summary>
+    /// Current broker count from the latest live metadata sample or dashboard snapshot.
+    /// </summary>
+    public int CurrentBrokerCount => LatestPerformance?.BrokerCount ?? Dashboard.BrokerCount;
+
+    /// <summary>
+    /// Whether live performance sampling is enabled.
+    /// </summary>
+    public bool IsPerformanceAutoRefreshEnabled => performancePollingState.IsAutomaticRefreshEnabled;
+
+    /// <summary>
+    /// Current live performance refresh interval in seconds.
+    /// </summary>
+    public int PerformanceRefreshIntervalSeconds => performancePollingState.RefreshIntervalSeconds;
+
+    /// <summary>
+    /// Whether a live performance sample is in progress.
+    /// </summary>
+    public bool IsPerformanceSampling => performancePollingState.IsSampling;
+
+    /// <summary>
+    /// Timestamp of the latest completed live performance sample.
+    /// </summary>
+    public DateTimeOffset? LastPerformanceCapturedAt => performancePollingState.LastCapturedAt;
+
+    /// <summary>
+    /// Latest live sampling diagnostic.
+    /// </summary>
+    public string? PerformanceSamplingError => performancePollingState.LastError;
 
     /// <summary>
     /// Selected cluster id.
@@ -129,6 +183,8 @@ public sealed class EventBusKafkaPageState(KafkaConsoleFacade facade)
             ApplyLoadedDetailsToDashboard();
             await RefreshSelectedClusterDetailsAsync(cancellationToken);
         });
+
+        await SynchronizePerformancePollingAsync(cancellationToken);
     }
 
     /// <summary>
@@ -155,6 +211,8 @@ public sealed class EventBusKafkaPageState(KafkaConsoleFacade facade)
 
             await RefreshSelectedClusterDetailsAsync(cancellationToken);
         });
+
+        await SynchronizePerformancePollingAsync(cancellationToken);
     }
 
     /// <summary>
@@ -201,7 +259,7 @@ public sealed class EventBusKafkaPageState(KafkaConsoleFacade facade)
     /// </summary>
     public async Task<bool> TestClusterAsync(string clusterId, CancellationToken cancellationToken = default)
     {
-        return await RunAsync(async () =>
+        var succeeded = await RunAsync(async () =>
         {
             if (!TryRead(await facade.TestClusterAsync(clusterId, cancellationToken), out var summary))
             {
@@ -223,6 +281,9 @@ public sealed class EventBusKafkaPageState(KafkaConsoleFacade facade)
             ErrorMessage = summary.ErrorMessage ?? $"Kafka cluster '{summary.Config.DisplayName}' is not reachable.";
             return false;
         });
+
+        await SynchronizePerformancePollingAsync(cancellationToken);
+        return succeeded;
     }
 
     /// <summary>
@@ -390,14 +451,43 @@ public sealed class EventBusKafkaPageState(KafkaConsoleFacade facade)
 
         return await RunAsync(async () =>
         {
-            if (!TryRead(await facade.CapturePerformanceAsync(SelectedClusterId, cancellationToken), out _))
+            if (!await performancePollingState.CaptureNowAsync(cancellationToken))
             {
+                ErrorMessage = performancePollingState.LastError;
                 return false;
             }
 
-            await RefreshPerformanceAsync(cancellationToken);
+            Dashboard.LatestPerformance = performancePollingState.LatestSnapshot;
             return true;
         });
+    }
+
+    /// <summary>
+    /// Enables or disables live performance sampling for the selected cluster.
+    /// </summary>
+    public Task SetPerformanceAutoRefreshAsync(
+        bool enabled,
+        CancellationToken cancellationToken = default)
+    {
+        return performancePollingState.SetAutomaticRefreshAsync(enabled, cancellationToken);
+    }
+
+    /// <summary>
+    /// Changes the live performance sampling interval for the current page session.
+    /// </summary>
+    public Task SetPerformanceRefreshIntervalAsync(
+        int seconds,
+        CancellationToken cancellationToken = default)
+    {
+        return performancePollingState.SetRefreshIntervalAsync(seconds, cancellationToken);
+    }
+
+    /// <summary>
+    /// Stops live sampling when the page is no longer active.
+    /// </summary>
+    public Task DeactivateAsync()
+    {
+        return performancePollingState.DeactivateAsync();
     }
 
     private async Task RefreshSelectedClusterDetailsAsync(CancellationToken cancellationToken, bool suppressErrors = false)
@@ -440,11 +530,12 @@ public sealed class EventBusKafkaPageState(KafkaConsoleFacade facade)
     {
         Topics = [];
         ConsumerGroups = [];
-        PerformanceSnapshots = [];
+        performancePollingState.ClearHistory();
         _topicsClusterId = null;
         _consumerGroupsClusterId = null;
         _performanceClusterId = null;
         Dashboard.TotalAvailableMessageCount = null;
+        Dashboard.LatestPerformance = null;
     }
 
     private void ApplyClusterSummary(KafkaClusterSummary summary)
@@ -524,9 +615,12 @@ public sealed class EventBusKafkaPageState(KafkaConsoleFacade facade)
         }
 
         Dashboard.SelectedCluster = selectedCluster;
-        Dashboard.BrokerCount = ResolveCurrentCount(selectedCluster.BrokerCount, Dashboard.BrokerCount);
-        Dashboard.TopicCount = ResolveCurrentCount(selectedCluster.TopicCount, Dashboard.TopicCount);
-        Dashboard.ConsumerGroupCount = ResolveCurrentCount(selectedCluster.ConsumerGroupCount, Dashboard.ConsumerGroupCount);
+        if (selectedCluster.IsReachable)
+        {
+            Dashboard.BrokerCount = selectedCluster.BrokerCount;
+            Dashboard.TopicCount = selectedCluster.TopicCount;
+            Dashboard.ConsumerGroupCount = selectedCluster.ConsumerGroupCount;
+        }
     }
 
     private void ApplyLoadedDetailsToDashboard()
@@ -543,13 +637,8 @@ public sealed class EventBusKafkaPageState(KafkaConsoleFacade facade)
 
         if (string.Equals(_performanceClusterId, SelectedClusterId, StringComparison.Ordinal))
         {
-            Dashboard.LatestPerformance = PerformanceSnapshots.LastOrDefault() ?? Dashboard.LatestPerformance;
+            Dashboard.LatestPerformance = performancePollingState.LatestSnapshot ?? Dashboard.LatestPerformance;
         }
-    }
-
-    private static int ResolveCurrentCount(int liveCount, int existingCount)
-    {
-        return liveCount > 0 ? liveCount : existingCount;
     }
 
     private static void CopyRuntimeState(KafkaClusterSummary source, KafkaClusterSummary target)
@@ -596,7 +685,11 @@ public sealed class EventBusKafkaPageState(KafkaConsoleFacade facade)
     private void ApplyTopicBacklogSummary()
     {
         Dashboard.TopicCount = Topics.Count;
-        Dashboard.TotalAvailableMessageCount = Topics.Sum(topic => topic.AvailableMessageCount.GetValueOrDefault());
+        Dashboard.TotalAvailableMessageCount = Topics.Count == 0
+            ? 0
+            : Topics.All(topic => topic.AvailableMessageCount.HasValue)
+                ? Topics.Sum(topic => topic.AvailableMessageCount.GetValueOrDefault())
+                : null;
     }
 
     private async Task RefreshConsumerGroupsAsync(CancellationToken cancellationToken, bool suppressErrors = false)
@@ -623,7 +716,7 @@ public sealed class EventBusKafkaPageState(KafkaConsoleFacade facade)
     {
         if (SelectedClusterId is null)
         {
-            PerformanceSnapshots = [];
+            performancePollingState.ClearHistory();
             _performanceClusterId = null;
             return;
         }
@@ -633,10 +726,18 @@ public sealed class EventBusKafkaPageState(KafkaConsoleFacade facade)
                 ? TryReadSilently(result, out var snapshots)
                 : TryRead(result, out snapshots))
         {
-            PerformanceSnapshots = snapshots.ToList();
+            performancePollingState.SetHistory(snapshots);
             _performanceClusterId = SelectedClusterId;
-            Dashboard.LatestPerformance = PerformanceSnapshots.LastOrDefault() ?? Dashboard.LatestPerformance;
+            Dashboard.LatestPerformance = performancePollingState.LatestSnapshot ?? Dashboard.LatestPerformance;
         }
+    }
+
+    private Task SynchronizePerformancePollingAsync(CancellationToken cancellationToken)
+    {
+        return performancePollingState.ActivateAsync(
+            SelectedClusterId,
+            ShouldLoadSelectedClusterDetails,
+            cancellationToken);
     }
 
     private string? ResolveSelectedClusterId()
