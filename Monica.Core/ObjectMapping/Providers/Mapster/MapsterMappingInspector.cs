@@ -11,17 +11,18 @@ internal sealed class MapsterMappingInspector(TypeAdapterConfig config)
 {
     public IReadOnlyList<ObjectMapperInfo> GetMappings()
     {
-        config.SelfContainedCodeGeneration = true;
+        var inspectionConfig = config.Clone();
+        inspectionConfig.SelfContainedCodeGeneration = true;
 
         var buildAdapterMethod = GetBuildAdapterMethod();
         var mappings = new List<ObjectMapperInfo>();
 
-        foreach (var rule in config.RuleMap)
+        foreach (var rule in inspectionConfig.RuleMap)
         {
             var sourceType = rule.Key.Source;
             var destinationType = rule.Key.Destination;
             var adapterBuilder = buildAdapterMethod.MakeGenericMethod(sourceType)
-                .Invoke(null, [GetDefaultValue(sourceType), config])
+                .Invoke(null, [GetDefaultValue(sourceType), inspectionConfig])
                 ?? throw new InvalidOperationException("Failed to create the Mapster adapter builder.");
             var createMapExpression = typeof(ITypeAdapterBuilder<>)
                 .MakeGenericType(sourceType)

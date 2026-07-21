@@ -1,5 +1,3 @@
-using Mapster;
-
 namespace Monica.Core.ObjectMapping.Abstractions;
 
 /// <summary>
@@ -7,11 +5,6 @@ namespace Monica.Core.ObjectMapping.Abstractions;
 /// </summary>
 public interface IObjectMapper
 {
-    /// <summary>
-    /// Gets the underlying Mapster configuration used by the mapper.
-    /// </summary>
-    TypeAdapterConfig Config { get; }
-
     /// <summary>
     /// Converts an object to another. Creates a new object of <typeparamref name="TDestination"/>.
     /// </summary>

@@ -30,9 +30,6 @@ public sealed class TestObjectMapper : IObjectMapper
     }
 
     /// <inheritdoc />
-    public TypeAdapterConfig Config => _mapper.Config;
-
-    /// <inheritdoc />
     public TDestination Map<TDestination>(object source)
     {
         return _mapper.Map<TDestination>(source);
@@ -68,6 +65,6 @@ public sealed class TestObjectMapper : IObjectMapper
     /// <inheritdoc />
     public IQueryable<TDestination> ProjectToType<TDestination>(IQueryable source)
     {
-        return source.ProjectToType<TDestination>(Config);
+        return source.ProjectToType<TDestination>(_mapper.Config);
     }
 }

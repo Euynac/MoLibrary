@@ -41,6 +41,12 @@ public static class ModuleObjectMappingBuilderExtensions
 [ModuleKey(BuiltInModuleKey.ObjectMapping)]
 public class ModuleObjectMapping(ModuleObjectMappingOption option) : WebModuleBase<ModuleObjectMapping, ModuleObjectMappingOption, ModuleObjectMappingGuide>(option)
 {
+    /// <inheritdoc />
+    public override bool CanDowngradeToNonWebModule()
+    {
+        return true;
+    }
+
     public override void ConfigureServices(IServiceCollection services)
     {
         var mapsterConfig = new TypeAdapterConfig();
@@ -55,9 +61,19 @@ public class ModuleObjectMapping(ModuleObjectMappingOption option) : WebModuleBa
                 });
         }
 
+        foreach (var profileType in option.ProfileTypes)
+        {
+            var profile = Activator.CreateInstance(profileType, nonPublic: true) as IRegister
+                ?? throw new InvalidOperationException(
+                    $"Object-mapping profile '{profileType.FullName}' must be a concrete {nameof(IRegister)} type with a parameterless constructor.");
+            profile.Register(mapsterConfig);
+        }
+
+        mapsterConfig.Compile(failFast: false);
+
         services.AddSingleton(mapsterConfig);
         services.AddScoped<IMapper, ServiceMapper>();
-        services.AddTransient<IObjectMapper, MapsterObjectMapper>();
+        services.AddScoped<IObjectMapper, MapsterObjectMapper>();
         services.AddSingleton<MapsterMappingInspector>();
         services.AddScoped<ObjectMappingStatusService>();
         services.AddScoped<ObjectMappingFacade>(serviceProvider => new ObjectMappingFacade(
@@ -106,6 +122,32 @@ public class ModuleObjectMapping(ModuleObjectMappingOption option) : WebModuleBa
 /// </summary>
 public class ModuleObjectMappingGuide : WebModuleGuide<ModuleObjectMapping, ModuleObjectMappingOption, ModuleObjectMappingGuide>
 {
+    /// <summary>
+    /// Adds a Mapster profile to the current host's object-mapping configuration.
+    /// </summary>
+    /// <typeparam name="TProfile">
+    /// A stateless profile with a parameterless constructor. The profile may be non-public because Monica activates it
+    /// only while composing the owning host.
+    /// </typeparam>
+    /// <returns>The current guide for fluent configuration.</returns>
+    /// <remarks>
+    /// Profiles execute once in registration order. Register shared platform profiles before domain profiles and
+    /// adapter profiles. Repeating the same profile type is idempotent within one host.
+    /// </remarks>
+    public ModuleObjectMappingGuide AddProfile<TProfile>()
+        where TProfile : class, IRegister
+    {
+        var profileType = typeof(TProfile);
+        var profileKey = profileType.AssemblyQualifiedName
+            ?? throw new InvalidOperationException(
+                $"Object-mapping profile '{profileType.FullName}' does not have an assembly-qualified type name.");
+
+        ConfigureModuleOption(
+            moduleOption => moduleOption.AddProfile(profileType, profileKey),
+            secondKey: profileKey,
+            duplicateBehavior: ModuleConfigurationDuplicateBehavior.SilentIdempotent);
+        return this;
+    }
 }
 
 /// <summary>
@@ -113,6 +155,9 @@ public class ModuleObjectMappingGuide : WebModuleGuide<ModuleObjectMapping, Modu
 /// </summary>
 public class ModuleObjectMappingOption : MinimalApiModuleOptions<ModuleObjectMapping>
 {
+    private readonly HashSet<string> _profileKeys = new(StringComparer.Ordinal);
+    private readonly List<Type> _profileTypes = [];
+
     /// <summary>
     /// Enables generation of debuggable Mapster mapping assemblies for manual troubleshooting.
     /// </summary>
@@ -122,4 +167,22 @@ public class ModuleObjectMappingOption : MinimalApiModuleOptions<ModuleObjectMap
     /// Additional assemblies that contain base types or extension methods required when debugging mapping definitions.
     /// </summary>
     public Assembly[]? DebuggerRelatedAssemblies { get; set; }
+
+    /// <summary>
+    /// Gets the explicitly registered mapping profiles in deterministic composition order.
+    /// </summary>
+    internal IReadOnlyList<Type> ProfileTypes => _profileTypes;
+
+    /// <summary>
+    /// Records one mapping profile while preserving first-registration order.
+    /// </summary>
+    /// <param name="profileType">The concrete Mapster profile type.</param>
+    /// <param name="profileKey">The assembly-qualified idempotency key.</param>
+    internal void AddProfile(Type profileType, string profileKey)
+    {
+        if (_profileKeys.Add(profileKey))
+        {
+            _profileTypes.Add(profileType);
+        }
+    }
 }

@@ -9,8 +9,6 @@ namespace Monica.Core.ObjectMapping.Providers.Mapster;
 /// </summary>
 internal sealed class MapsterObjectMapper(IMapper mapper) : IObjectMapper
 {
-    public TypeAdapterConfig Config => mapper.Config;
-
     public TDestination Map<TDestination>(object source)
     {
         return mapper.Map<TDestination>(source);
