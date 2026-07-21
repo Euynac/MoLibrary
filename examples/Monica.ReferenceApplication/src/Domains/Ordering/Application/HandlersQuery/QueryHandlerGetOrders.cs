@@ -1,7 +1,6 @@
 using Domains.Ordering.Configurations;
 using Domains.Ordering.Interfaces;
 using Domains.Ordering.Utilities;
-using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
 using Monica.Core.Results;
 using Monica.WebApi.Abstractions;
@@ -16,7 +15,7 @@ namespace Domains.Ordering.Application.HandlersQuery;
 public sealed class QueryHandlerGetOrders(
     IRepositoryOrder repository,
     IOptions<OrderingOptions> options)
-    : ApplicationService<GetOrdersRequest, IReadOnlyList<OrderDto>>
+    : ApplicationService<QueryGetOrders, IReadOnlyList<OrderDto>>
 {
     /// <summary>
     /// Gets all known orders in reverse creation order.
@@ -24,9 +23,8 @@ public sealed class QueryHandlerGetOrders(
     /// <param name="request">The list request.</param>
     /// <param name="cancellationToken">Cancels the operation.</param>
     /// <returns>The immutable order view.</returns>
-    [HttpGet("orders")]
     public override async Task<Res<IReadOnlyList<OrderDto>>> Handle(
-        GetOrdersRequest request,
+        QueryGetOrders request,
         CancellationToken cancellationToken)
     {
         var orders = await repository.ListAsync(cancellationToken);

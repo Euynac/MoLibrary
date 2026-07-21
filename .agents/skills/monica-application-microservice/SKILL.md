@@ -26,7 +26,10 @@ Use this skill to shape Monica application projects as DDD-aligned microservices
 - Keep `Shared/Platform.Protocol/PublishedLanguages` stable and explicit. Do not leak persistence entities across service boundaries.
 - Keep each subdomain service independently evolvable: `API`, `Domain`, and migrations move together.
 - Keep pure helper code in the service `Domain` project under `Utilities/`, using `Utils*` names.
-- Configure default `ApplicationService` routing once in `{Subdomain}Service.API/Program.cs` with `AutoControllerConfig(DefaultRoutePrefix = "api/v1", DomainName = "{Subdomain}")`, and keep handlers focused on request-level method routes.
+- Declare every `ApplicationService` HTTP contract on its `Command*` or `Query*` request with `[ApiEndpoint]`; handlers contain behavior, not MVC routing metadata.
+- Put cross-service RPC endpoints under the strict `Platform.Protocol.PublishedLanguages.Domain{Subdomain}.Requests` namespace. A published request with `[ApiEndpoint]` generates `I{Subdomain}CommandApi` or `I{Subdomain}QueryApi`; a published type without the attribute remains shared language only.
+- Keep service-private HTTP requests beside their handlers. A local request with `[ApiEndpoint]` generates a controller only and must not leak into the RPC contract.
+- Configure each request-owning assembly once with `WebApiGenerationConfig`: `Platform.Protocol` owns its published RPC targets and route prefix, while `{Subdomain}Service.API` supplies `DomainName` for local endpoints. Do not use metadata snapshots or handler-owned route attributes.
 - Treat the service `API` project and AppHost or gateway entry points as adapters or composition only. Keep AppHost or gateway projects down to the project file and `Program.cs`; business ProjectUnits belong in the service's `API` and `Domain` projects.
 - Register `monica.AddConfiguration()` inside the service host's single `builder.AddMonica(...)` callback. Read bootstrap values from `builder.Configuration` during composition; consume Configuration ProjectUnits through typed options injection at runtime.
 - Keep `.slnx` solution folders aligned with the physical layout under `src/AppHost`, `src/Shared`, `src/Services`, and `src/Migrations`.

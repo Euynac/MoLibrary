@@ -29,6 +29,8 @@ src/Shared/Platform.Protocol/PublishedLanguages/Domain{Subdomain}/
 Rules:
 
 - Put only stable cross-service contracts here.
+- Add `[ApiEndpoint]` only to `Command*` or `Query*` requests that are callable endpoints. Shared DTOs, events, and non-endpoint language stay unattributed.
+- Configure the protocol assembly with `[assembly: WebApiGenerationConfig("api/v1", RpcClientTargets = ...)]`. Omit `DomainName` when one protocol assembly publishes more than one domain.
 - Put checked-in synchronous abstractions in `Contracts/`.
 - Put checked-in shared providers in `Implementations/Local/` or deliberate wrappers in `Implementations/Http/`.
 - Do not copy entity types into this area.
@@ -61,7 +63,8 @@ Use `monica-application-project-unit-development` to fill the correct ProjectUni
 - Keep pure helpers in `{Subdomain}Service.Domain/Utilities/` and name them `Utils*`.
 - Keep repository implementations, `DbContext`, and EF mapping in `{Subdomain}Service.Domain/Repository/`.
 - Use the strict solution-project reference chain `{Subdomain}Service.API -> {Subdomain}Service.Domain -> Platform.Infrastructure -> Platform.Protocol -> Platform.BuildingBlocks`.
-- Put `[assembly: AutoControllerConfig(DefaultRoutePrefix = "api/v1", DomainName = "{Subdomain}")]` in `{Subdomain}Service.API/Program.cs` so handlers only declare request-level routes.
+- Put `[assembly: WebApiGenerationConfig("api/v1", DomainName = "{Subdomain}")]` in `{Subdomain}Service.API/Program.cs` for service-local requests.
+- Co-locate a service-private request and response with its handler by default. Give the request `[ApiEndpoint]`; keep all HTTP verb, route, binding, operation-name, and XML-summary metadata off the handler.
 
 ## Step 4. Add persistence ownership
 
@@ -71,7 +74,7 @@ Use `monica-application-project-unit-development` to fill the correct ProjectUni
 ## Step 5. Wire the host and update the solution
 
 - Register the service in the solution's host or gateway `Program.cs`.
-- Keep the service's default `ApplicationService` route config in `{Subdomain}Service.API/Program.cs`, even if the solution also has a gateway or AppHost.
+- Keep the service's local-request generation config in `{Subdomain}Service.API/Program.cs`, even if the solution also has a gateway or AppHost.
 - Register `monica.AddConfiguration()` in the service host's `builder.AddMonica(...)` callback. If later module options need bootstrap values, read them directly from `builder.Configuration`; do not resolve runtime Configuration ProjectUnits during composition.
 - Keep orchestration metadata outside the domain projects.
 - Keep `.slnx` folders aligned with `src/AppHost`, `src/Shared`, `src/Services`, and `src/Migrations`.

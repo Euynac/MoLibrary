@@ -56,12 +56,14 @@ public class SystemInfoService(
             var fileInfo = FileVersionInfo.GetVersionInfo(entryAssembly.Location);
             var buildTime = File.GetLastWriteTime(fileInfo.FileName);
             var processStartTime = Process.GetCurrentProcess().StartTime;
+            var utcNow = DateTimeOffset.UtcNow;
 
             var response = new SystemInfoResponse
             {
                 BuildTime = buildTime,
-                LocalTime = DateTime.Now,
-                UtcTime = DateTime.UtcNow,
+                LocalTime = utcNow.LocalDateTime,
+                UtcTime = utcNow.UtcDateTime,
+                TimeZone = SystemTimeZone.CaptureLocal(utcNow),
                 ProcessStartTime = processStartTime,
                 ListeningAddresses = GetListeningAddresses()
             };

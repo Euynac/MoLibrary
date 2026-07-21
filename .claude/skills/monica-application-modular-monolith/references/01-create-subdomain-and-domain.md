@@ -29,6 +29,8 @@ src/Shared/Platform.Protocol/PublishedLanguages/Domain{Subdomain}/
 Rules:
 
 - Put only stable cross-domain requests, DTOs, enums, events, and optional shared `Contracts/` or `Implementations/*` surfaces here.
+- Add `[ApiEndpoint]` only to published `Command*` or `Query*` requests that should become HTTP/RPC operations. Leave other shared language unattributed.
+- Configure the protocol assembly with `[assembly: WebApiGenerationConfig("api/v1", RpcClientTargets = ...)]`; omit `DomainName` when it publishes several domains.
 - Keep persistence entities and repositories out of `Platform.Protocol`.
 
 ## Step 3. Create the domain package
@@ -38,7 +40,7 @@ Create:
 ```text
 src/Domains/{Subdomain}/
 ├── Domains.{Subdomain}.csproj
-├── AutoControllerGeneratorConfig.cs
+├── WebApiGeneratorConfig.cs
 ├── Application/
 │   ├── HandlersCommand/
 │   ├── HandlersQuery/
@@ -59,7 +61,8 @@ Use `monica-application-project-unit-development` to place domain-owned units in
 - `DomainService` units go under `DomainServices/`.
 - Pure helpers go under `Utilities/` and use `Utils*` names.
 - Keep repository implementations, `DbContext`, and EF mapping in `Repository/`.
-- Add one assembly-level `AutoControllerConfig(DefaultRoutePrefix = "api/v1", DomainName = "{Subdomain}")` file at the project root so handlers do not repeat the same class-level base route.
+- Add one assembly-level `WebApiGenerationConfig("api/v1", DomainName = "{Subdomain}")` file at the project root for local requests.
+- Co-locate domain-private endpoint requests and responses with their handlers by default. Put `[ApiEndpoint]` and the XML summary on the request; do not put endpoint metadata on the handler.
 
 ## Step 4. Keep AppHost as the Program-only entry
 
@@ -76,7 +79,7 @@ Keep AppHost as the composition root only. Do not place handlers, jobs, reposito
 ## Step 5. Register the domain and update the solution
 
 - Add domain registration and host composition in `Program.cs`.
-- Keep the default `ApplicationService` base route inside the domain project root config file, not in AppHost `Program.cs`.
+- Keep the local-request generation config inside the domain project root, not in AppHost `Program.cs`.
 - Register `monica.AddConfiguration()` in the AppHost's `builder.AddMonica(...)` callback. If later module options need bootstrap values, read them directly from `builder.Configuration`; do not resolve runtime Configuration ProjectUnits during composition.
 - Keep `.slnx` folders aligned with `src/AppHost`, `src/Shared`, and `src/Domains`.
 

@@ -6,6 +6,9 @@
 
   <ItemGroup>
     <ProjectReference Include="../Platform.BuildingBlocks/Platform.BuildingBlocks.csproj" />
+    <ProjectReference Include="../../../../../Monica.Generators.AutoController/Monica.Generators.AutoController.csproj"
+                      OutputItemType="Analyzer"
+                      ReferenceOutputAssembly="false" />
   </ItemGroup>
 
 </Project>

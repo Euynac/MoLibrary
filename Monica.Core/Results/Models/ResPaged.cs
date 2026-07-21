@@ -9,7 +9,7 @@ namespace Monica.Core.Results;
 /// Unified pagination response model
 /// </summary>
 /// <typeparam name="TDto"></typeparam>
-public class ResPaged<TDto> : IResultEnvelope
+public class ResPaged<TDto> : IRemoteResultEnvelope<ResPaged<TDto>>
 {
     public string? Message { get; set; }
 
@@ -99,6 +99,13 @@ public class ResPaged<TDto> : IResultEnvelope
             Cursor = cursor
         };
     }
+
+    /// <inheritdoc />
+    public static ResPaged<TDto> CreateRemoteFailure(ResStatus status, string message) => new()
+    {
+        Status = status,
+        Message = message
+    };
 
     /// <summary>
     /// Get inheritable error information

@@ -29,6 +29,12 @@
                 <MudText Class="ml-6 system-info-basic-card__value">@FormatDateTime(Info.LocalTime)</MudText>
 
                 <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                    <MudIcon Icon="@Icons.Material.Filled.Language" Size="Size.Small" Color="Color.Tertiary" />
+                    <MudText><strong>@L["Page:BasicInfo:TimeZone"]:</strong></MudText>
+                </MudStack>
+                <MudText Class="ml-6 system-info-basic-card__value">@Info.TimeZone.ToDisplayString()</MudText>
+
+                <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
                     <MudIcon Icon="@Icons.Material.Filled.Public" Size="Size.Small" Color="Color.Warning" />
                     <MudText><strong>@L["Page:BasicInfo:UtcTime"]:</strong></MudText>
                 </MudStack>

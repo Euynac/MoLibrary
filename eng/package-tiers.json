@@ -78,11 +78,6 @@
       "project": "Monica.Experimental",
       "tier": "labs",
       "reason": "Experimental source is intentionally not published as a package."
-    },
-    {
-      "project": "Monica.Generators.AutoController.BuildTasks",
-      "tier": "stable",
-      "reason": "Build-task implementation is packaged through its public generator package."
     }
   ]
 }

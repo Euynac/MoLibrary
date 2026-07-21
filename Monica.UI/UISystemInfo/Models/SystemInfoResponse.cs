@@ -23,6 +23,11 @@ public class SystemInfoResponse
     public DateTime UtcTime { get; set; }
 
     /// <summary>
+    /// Gets or sets the server time zone and the UTC offset in effect when this response was captured.
+    /// </summary>
+    public required SystemTimeZone TimeZone { get; set; }
+
+    /// <summary>
     /// Gets or sets the product version returned in simplified mode.
     /// </summary>
     public string? ProductVersion { get; set; }

@@ -82,6 +82,8 @@ Style rules:
 - Use `bash` for installation and `csharp` for Monica code samples
 - If a sample omits unrelated lines, omit them clearly rather than inventing scaffolding
 - Do not label pseudocode as production-ready code
+- In generated Web API samples, put `[ApiEndpoint]` on the request contract and keep MVC endpoint and binding attributes off the handler.
+- State whether the request is a published RPC contract or a local-only HTTP contract. Publication requires an attributed source request in `*.PublishedLanguages.Domain{DomainName}.Requests` (or a child namespace) plus matching `WebApiGenerationConfig`.
 
 Good sample goals:
 
@@ -145,3 +147,4 @@ Rules:
 - Do not leave placeholder headings or TODO text in delivered docs
 - Do not describe private implementation classes as stable user contracts unless the public API exposes them intentionally
 - Do not mix architecture criticism, migration notes, and user onboarding in the same page unless the page is explicitly about migration
+- Do not describe every attributed HTTP request as RPC-capable; requests outside the published-language namespace are intentionally local-only
