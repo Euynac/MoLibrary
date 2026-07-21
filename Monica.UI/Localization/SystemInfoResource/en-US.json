@@ -22,6 +22,7 @@
       "Title": "Basic Information",
       "BuildTime": "Build Time",
       "LocalTime": "Local Time",
+      "TimeZone": "Current Time Zone",
       "UtcTime": "UTC Time",
       "ProductVersion": "Product Version",
       "ProcessStartTime": "Process Start Time",

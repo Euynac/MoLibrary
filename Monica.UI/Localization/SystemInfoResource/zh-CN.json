@@ -22,6 +22,7 @@
       "Title": "基本信息",
       "BuildTime": "构建时间",
       "LocalTime": "本地时间",
+      "TimeZone": "当前时区",
       "UtcTime": "UTC时间",
       "ProductVersion": "产品版本",
       "ProcessStartTime": "进程启动时间",
