@@ -3,12 +3,15 @@ using Mapster;
 using MapsterMapper;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Monica.Core.Modularity.Annotations;
 using Monica.Core.Modularity.Exceptions;
 using Monica.Core.Modularity.Extensions;
 using Monica.Core.ObjectMapping.Abstractions;
 using Monica.Core.ObjectMapping.Facades;
+using Monica.Core.ObjectMapping.Providers.Mapster;
 using Monica.Core.Results;
 using Monica.Modules;
+using Monica.Testing.ObjectMapping;
 using Xunit;
 
 namespace Test.Monica.Core.ObjectMapping;
@@ -16,15 +19,165 @@ namespace Test.Monica.Core.ObjectMapping;
 public sealed class ModuleObjectMappingTests
 {
     [Fact]
-    public void Build_GenericHostWithInternalProfile_ShouldProvideObjectMapping()
+    public void Build_ShouldRegisterTheHostOwnedProfileCatalogAsSingleton()
     {
-        using var host = BuildHost(mapping => mapping.AddProfile<InternalMappingProfile>());
+        using var host = BuildHost();
+
+        var catalog = host.Services.GetRequiredService<MapsterProfileCatalog>();
+
+        host.Services.GetRequiredService<MapsterProfileCatalog>().Should().BeSameAs(catalog);
+        catalog.GetOrderedProfileTypes([], [typeof(ModuleObjectMappingTests).Assembly])
+            .Should().Contain(typeof(InternalMappingProfile));
+    }
+
+    [Fact]
+    public void Build_GenericHostWithAutomaticallyDiscoveredInternalProfile_ShouldProvideObjectMapping()
+    {
+        using var host = BuildHost();
         using var scope = host.Services.CreateScope();
 
         var mapper = scope.ServiceProvider.GetRequiredService<IObjectMapper>();
 
         mapper.Map<MappingDestination>(new MappingSource { Value = "flight" })
             .Value.Should().Be("flight-profile");
+    }
+
+    [Fact]
+    public void Build_WhenExplicitProfileOwnsPair_ShouldApplyAutomaticRefinementAfterIt()
+    {
+        using var host = BuildHost(mapping => mapping.AddProfile<ExplicitOwnerProfile>());
+        using var scope = host.Services.CreateScope();
+
+        var mapper = scope.ServiceProvider.GetRequiredService<IObjectMapper>();
+
+        var destination = mapper.Map<ExplicitFirstDestination>(new ExplicitFirstSource());
+
+        destination.ExplicitLayer.Should().Be("explicit");
+        destination.AutomaticLayer.Should().Be("automatic");
+    }
+
+    [Fact]
+    public void Catalog_WhenExplicitProfileIsAlsoDiscovered_ShouldKeepItOnceBeforeAutomaticProfiles()
+    {
+        var catalog = new MapsterProfileCatalog();
+        catalog.Discover(typeof(InternalMappingProfile));
+        catalog.Discover(typeof(AutomaticRefinementProfile));
+
+        var profiles = catalog.GetOrderedProfileTypes(
+            [typeof(InternalMappingProfile)],
+            [typeof(ModuleObjectMappingTests).Assembly]);
+
+        profiles.Should().Equal(typeof(InternalMappingProfile), typeof(AutomaticRefinementProfile));
+    }
+
+    [Fact]
+    public void Catalog_WhenProfileAssembliesDependOnEachOther_ShouldOrderDependenciesFirstWithStableTypeTies()
+    {
+        var profiles = MapsterProfileCatalog.OrderByAssemblyDependencies(
+            [
+                typeof(ZStableOrderType),
+                typeof(TestObjectMapper),
+                typeof(ModuleObjectMapping),
+                typeof(AStableOrderType)
+            ],
+            [
+                typeof(ModuleObjectMappingTests).Assembly,
+                typeof(TestObjectMapper).Assembly,
+                typeof(ModuleObjectMapping).Assembly
+            ]);
+
+        profiles.Should().Equal(
+            typeof(ModuleObjectMapping),
+            typeof(TestObjectMapper),
+            typeof(AStableOrderType),
+            typeof(ZStableOrderType));
+    }
+
+    [Fact]
+    public void Catalog_WhenOnlyNonProfileDependenciesDiffer_ShouldPreserveProfileIdentityTieOrder()
+    {
+        var scannedDependencies = new Dictionary<string, IReadOnlyCollection<string>>(StringComparer.Ordinal)
+        {
+            ["Profile.A"] = ["Z.NonProfile"],
+            ["Profile.B"] = [],
+            ["Z.NonProfile"] = []
+        };
+
+        var profileDependencies = MapsterProfileCatalog.ProjectProfileDependencyGraph(
+            scannedDependencies,
+            ["Profile.A", "Profile.B"]);
+
+        MapsterProfileCatalog.OrderAssemblyGraph(profileDependencies)
+            .Should().Equal("Profile.A", "Profile.B");
+    }
+
+    [Fact]
+    public void Catalog_WhenProfilesAreConnectedThroughNonProfileAssembly_ShouldRetainTransitiveDependency()
+    {
+        var scannedDependencies = new Dictionary<string, IReadOnlyCollection<string>>(StringComparer.Ordinal)
+        {
+            ["Profile.Adapter"] = ["NonProfile.Bridge"],
+            ["NonProfile.Bridge"] = ["Profile.Domain"],
+            ["Profile.Domain"] = []
+        };
+
+        var profileDependencies = MapsterProfileCatalog.ProjectProfileDependencyGraph(
+            scannedDependencies,
+            ["Profile.Adapter", "Profile.Domain"]);
+
+        profileDependencies["Profile.Adapter"].Should().Equal("Profile.Domain");
+        MapsterProfileCatalog.OrderAssemblyGraph(profileDependencies)
+            .Should().Equal("Profile.Domain", "Profile.Adapter");
+    }
+
+    [Fact]
+    public void Catalog_WhenUnrelatedNonProfileAssembliesContainCycle_ShouldIgnoreIt()
+    {
+        var scannedDependencies = new Dictionary<string, IReadOnlyCollection<string>>(StringComparer.Ordinal)
+        {
+            ["Profile.A"] = [],
+            ["Profile.B"] = [],
+            ["NonProfile.Left"] = ["NonProfile.Right"],
+            ["NonProfile.Right"] = ["NonProfile.Left"]
+        };
+
+        var profileDependencies = MapsterProfileCatalog.ProjectProfileDependencyGraph(
+            scannedDependencies,
+            ["Profile.A", "Profile.B"]);
+
+        MapsterProfileCatalog.OrderAssemblyGraph(profileDependencies)
+            .Should().Equal("Profile.A", "Profile.B");
+    }
+
+    [Fact]
+    public void Catalog_WhenAssemblyDependencyGraphContainsCycle_ShouldSeparateParticipantsFromBlockedConsumers()
+    {
+        var dependencies = new Dictionary<string, IReadOnlyCollection<string>>(StringComparer.Ordinal)
+        {
+            ["Domain"] = ["Adapter"],
+            ["Adapter"] = ["Domain"],
+            ["Consumer"] = ["Domain"],
+            ["Independent"] = []
+        };
+
+        var exception = Assert.Throws<InvalidOperationException>(
+            () => MapsterProfileCatalog.OrderAssemblyGraph(dependencies));
+
+        exception.Message.Should().Be(
+            "Object-mapping profile order cannot be resolved because the profile assembly dependency graph contains a cycle. " +
+            "Cycle participants: Adapter, Domain. Blocked profile assemblies: Consumer.");
+    }
+
+    [Fact]
+    public void Catalog_WhenProfilesCannotBeActivated_ShouldIgnoreAbstractAndOpenGenericTypes()
+    {
+        var catalog = new MapsterProfileCatalog();
+
+        catalog.Discover(typeof(AbstractMappingProfile));
+        catalog.Discover(typeof(OpenGenericMappingProfile<>));
+
+        catalog.GetOrderedProfileTypes([], [typeof(ModuleObjectMappingTests).Assembly])
+            .Should().BeEmpty();
     }
 
     [Fact]
@@ -80,6 +233,26 @@ public sealed class ModuleObjectMappingTests
     }
 
     [Fact]
+    public void AddMonica_WhenProfileConstructorThrows_ShouldReportModuleCompositionFailure()
+    {
+        Action compose = () => BuildHost(mapping => mapping.AddProfile<ThrowingConstructorProfile>());
+
+        compose.Should().Throw<ModuleRegistrationException>()
+            .WithMessage("*Module registration errors:*")
+            .WithMessage("*constructor-profile-failure*");
+    }
+
+    [Fact]
+    public void AddMonica_WhenProfileRegisterThrows_ShouldReportModuleCompositionFailure()
+    {
+        Action compose = () => BuildHost(mapping => mapping.AddProfile<ThrowingRegisterProfile>());
+
+        compose.Should().Throw<ModuleRegistrationException>()
+            .WithMessage("*Module registration errors:*")
+            .WithMessage("*register-profile-failure*");
+    }
+
+    [Fact]
     public async Task Build_TwoHostsWithConflictingProfiles_ShouldRemainIsolatedAndLeaveGlobalSettingsUntouched()
     {
         GlobalSettingsContains<HostMappingSource, HostMappingDestination>().Should().BeFalse();
@@ -117,7 +290,7 @@ public sealed class ModuleObjectMappingTests
     [Fact]
     public async Task Diagnostics_WhenMappingsAreInspected_ShouldNotMutateLiveConfiguration()
     {
-        using var host = BuildHost(mapping => mapping.AddProfile<InternalMappingProfile>());
+        using var host = BuildHost();
         using var scope = host.Services.CreateScope();
         var config = host.Services.GetRequiredService<TypeAdapterConfig>();
         var serviceMapper = scope.ServiceProvider.GetRequiredService<IMapper>();
@@ -136,7 +309,7 @@ public sealed class ModuleObjectMappingTests
         config.SelfContainedCodeGeneration.Should().BeFalse();
     }
 
-    private static IHost BuildHost(Action<ModuleObjectMappingGuide> configureMapping)
+    private static IHost BuildHost(Action<ModuleObjectMappingGuide>? configureMapping = null)
     {
         var builder = Host.CreateApplicationBuilder();
         builder.AddMonica(monica =>
@@ -144,7 +317,8 @@ public sealed class ModuleObjectMappingTests
             monica.ConfigureTypeDiscovery(options => options
                 .ExcludeDefault()
                 .Add(typeof(ModuleObjectMappingTests).Assembly));
-            configureMapping(monica.AddObjectMapping());
+            var mapping = monica.AddObjectMapping();
+            configureMapping?.Invoke(mapping);
         });
         return builder.Build();
     }
@@ -168,6 +342,26 @@ public sealed class ModuleObjectMappingTests
         }
     }
 
+    private sealed class AutomaticRefinementProfile : IRegister
+    {
+        public void Register(TypeAdapterConfig config)
+        {
+            config.ForType<ExplicitFirstSource, ExplicitFirstDestination>()
+                .Map(destination => destination.AutomaticLayer, _ => "automatic");
+        }
+    }
+
+    [ExcludeFromBusinessTypeDiscovery]
+    private sealed class ExplicitOwnerProfile : IRegister
+    {
+        public void Register(TypeAdapterConfig config)
+        {
+            config.NewConfig<ExplicitFirstSource, ExplicitFirstDestination>()
+                .Map(destination => destination.ExplicitLayer, _ => "explicit");
+        }
+    }
+
+    [ExcludeFromBusinessTypeDiscovery]
     private sealed class CountingMappingProfile : IRegister
     {
         private static int _registrationCount;
@@ -187,6 +381,7 @@ public sealed class ModuleObjectMappingTests
         }
     }
 
+    [ExcludeFromBusinessTypeDiscovery]
     private sealed class PlatformRefinementProfile : IRegister
     {
         public void Register(TypeAdapterConfig config)
@@ -197,6 +392,7 @@ public sealed class ModuleObjectMappingTests
         }
     }
 
+    [ExcludeFromBusinessTypeDiscovery]
     private sealed class DomainRefinementProfile : IRegister
     {
         public void Register(TypeAdapterConfig config)
@@ -207,6 +403,7 @@ public sealed class ModuleObjectMappingTests
         }
     }
 
+    [ExcludeFromBusinessTypeDiscovery]
     private sealed class AdapterRefinementProfile : IRegister
     {
         public void Register(TypeAdapterConfig config)
@@ -247,6 +444,7 @@ public sealed class ModuleObjectMappingTests
         }
     }
 
+    [ExcludeFromBusinessTypeDiscovery]
     private sealed class InvalidMappingProfile : IRegister
     {
         public void Register(TypeAdapterConfig config)
@@ -257,6 +455,29 @@ public sealed class ModuleObjectMappingTests
         }
     }
 
+    [ExcludeFromBusinessTypeDiscovery]
+    private sealed class ThrowingConstructorProfile : IRegister
+    {
+        private ThrowingConstructorProfile()
+        {
+            throw new InvalidOperationException("constructor-profile-failure");
+        }
+
+        public void Register(TypeAdapterConfig config)
+        {
+        }
+    }
+
+    [ExcludeFromBusinessTypeDiscovery]
+    private sealed class ThrowingRegisterProfile : IRegister
+    {
+        public void Register(TypeAdapterConfig config)
+        {
+            throw new InvalidOperationException("register-profile-failure");
+        }
+    }
+
+    [ExcludeFromBusinessTypeDiscovery]
     private sealed class FirstHostMappingProfile : IRegister
     {
         public void Register(TypeAdapterConfig config)
@@ -266,6 +487,7 @@ public sealed class ModuleObjectMappingTests
         }
     }
 
+    [ExcludeFromBusinessTypeDiscovery]
     private sealed class SecondHostMappingProfile : IRegister
     {
         public void Register(TypeAdapterConfig config)
@@ -283,6 +505,15 @@ public sealed class ModuleObjectMappingTests
     private sealed class MappingDestination
     {
         public string Value { get; set; } = string.Empty;
+    }
+
+    private sealed class ExplicitFirstSource;
+
+    private sealed class ExplicitFirstDestination
+    {
+        public string ExplicitLayer { get; set; } = string.Empty;
+
+        public string AutomaticLayer { get; set; } = string.Empty;
     }
 
     private sealed class CountingSource;
@@ -335,4 +566,20 @@ public sealed class ModuleObjectMappingTests
     {
         public string Value { get; set; } = string.Empty;
     }
+
+    private abstract class AbstractMappingProfile : IRegister
+    {
+        public abstract void Register(TypeAdapterConfig config);
+    }
+
+    private sealed class OpenGenericMappingProfile<T> : IRegister
+    {
+        public void Register(TypeAdapterConfig config)
+        {
+        }
+    }
+
+    private sealed class AStableOrderType;
+
+    private sealed class ZStableOrderType;
 }

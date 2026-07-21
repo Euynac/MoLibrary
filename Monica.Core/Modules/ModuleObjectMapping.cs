@@ -26,8 +26,15 @@ public static class ModuleObjectMappingBuilderExtensions
     extension(IMonicaBuilder builder)
     {
         /// <summary>
-        /// Registers the object mapping module.
+        /// Registers one host-owned Mapster configuration and automatically applies concrete <see cref="IRegister"/>
+        /// profiles found by Monica's business-type discovery pipeline.
         /// </summary>
+        /// <param name="action">Optional configuration for explicit profiles and object-mapping diagnostics.</param>
+        /// <returns>The object-mapping guide for optional explicit registration.</returns>
+        /// <remarks>
+        /// Profiles outside the host's type-discovery scope can be added explicitly through
+        /// <see cref="ModuleObjectMappingGuide.AddProfile{TProfile}"/>.
+        /// </remarks>
         public ModuleObjectMappingGuide AddObjectMapping(Action<ModuleObjectMappingOption>? action = null)
         {
             return builder.AddModule<ModuleObjectMapping, ModuleObjectMappingOption, ModuleObjectMappingGuide>(action);
@@ -38,9 +45,18 @@ public static class ModuleObjectMappingBuilderExtensions
 /// <summary>
 /// Provides the Mapster-based object mapping capability.
 /// </summary>
+/// <remarks>
+/// Each Monica host owns an isolated configuration. Concrete, closed <see cref="IRegister"/> profiles discovered as
+/// business types are composed after explicitly registered profiles in dependency-first assembly order.
+/// </remarks>
 [ModuleKey(BuiltInModuleKey.ObjectMapping)]
-public class ModuleObjectMapping(ModuleObjectMappingOption option) : WebModuleBase<ModuleObjectMapping, ModuleObjectMappingOption, ModuleObjectMappingGuide>(option)
+public class ModuleObjectMapping(ModuleObjectMappingOption option)
+    : WebModuleBase<ModuleObjectMapping, ModuleObjectMappingOption, ModuleObjectMappingGuide>(option),
+        IBusinessTypeIterator
 {
+    private readonly TypeAdapterConfig _mapsterConfig = new();
+    private readonly MapsterProfileCatalog _profileCatalog = new();
+
     /// <inheritdoc />
     public override bool CanDowngradeToNonWebModule()
     {
@@ -49,11 +65,9 @@ public class ModuleObjectMapping(ModuleObjectMappingOption option) : WebModuleBa
 
     public override void ConfigureServices(IServiceCollection services)
     {
-        var mapsterConfig = new TypeAdapterConfig();
-
         if (option.DebugMapper)
         {
-            mapsterConfig.Compiler = expression => ((LambdaExpression)expression).CompileWithDebugInfo(
+            _mapsterConfig.Compiler = expression => ((LambdaExpression)expression).CompileWithDebugInfo(
                 new ExpressionCompilationOptions()
                 {
                     EmitFile = true,
@@ -61,17 +75,8 @@ public class ModuleObjectMapping(ModuleObjectMappingOption option) : WebModuleBa
                 });
         }
 
-        foreach (var profileType in option.ProfileTypes)
-        {
-            var profile = Activator.CreateInstance(profileType, nonPublic: true) as IRegister
-                ?? throw new InvalidOperationException(
-                    $"Object-mapping profile '{profileType.FullName}' must be a concrete {nameof(IRegister)} type with a parameterless constructor.");
-            profile.Register(mapsterConfig);
-        }
-
-        mapsterConfig.Compile(failFast: false);
-
-        services.AddSingleton(mapsterConfig);
+        services.AddSingleton(_profileCatalog);
+        services.AddSingleton(_mapsterConfig);
         services.AddScoped<IMapper, ServiceMapper>();
         services.AddScoped<IObjectMapper, MapsterObjectMapper>();
         services.AddSingleton<MapsterMappingInspector>();
@@ -79,6 +84,23 @@ public class ModuleObjectMapping(ModuleObjectMappingOption option) : WebModuleBa
         services.AddScoped<ObjectMappingFacade>(serviceProvider => new ObjectMappingFacade(
             serviceProvider.GetRequiredService<ObjectMappingStatusService>(),
             serviceProvider.GetRequiredService<ILogger<ObjectMappingFacade>>()));
+    }
+
+    /// <inheritdoc />
+    public IEnumerable<Type> IterateBusinessTypes(IEnumerable<Type> types)
+    {
+        foreach (var type in types)
+        {
+            _profileCatalog.Discover(type);
+            yield return type;
+        }
+    }
+
+    /// <inheritdoc />
+    public override void PostConfigureServices(IServiceCollection _)
+    {
+        _profileCatalog.ApplyProfiles(_mapsterConfig, option.ProfileTypes, Application.TypeFinder.GetAssemblies());
+        _mapsterConfig.Compile(failFast: false);
     }
 
     public override void ConfigureEndpoints(IApplicationBuilder app)
@@ -131,8 +153,9 @@ public class ModuleObjectMappingGuide : WebModuleGuide<ModuleObjectMapping, Modu
     /// </typeparam>
     /// <returns>The current guide for fluent configuration.</returns>
     /// <remarks>
-    /// Profiles execute once in registration order. Register shared platform profiles before domain profiles and
-    /// adapter profiles. Repeating the same profile type is idempotent within one host.
+    /// Explicit profiles execute once in registration order before automatically discovered business profiles.
+    /// Use this method for reusable library profiles that are outside the host's business-type scan or for intentional
+    /// refinements that require an explicit position. Repeating the same profile type is idempotent within one host.
     /// </remarks>
     public ModuleObjectMappingGuide AddProfile<TProfile>()
         where TProfile : class, IRegister
