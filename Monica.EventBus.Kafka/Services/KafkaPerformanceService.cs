@@ -1,6 +1,7 @@
 using Microsoft.Extensions.Options;
 using Monica.EventBus.Kafka.Abstractions;
 using Monica.EventBus.Kafka.Models;
+using Monica.EventBus.Kafka.Services.Support;
 using Monica.Modules;
 
 namespace Monica.EventBus.Kafka.Services;
@@ -27,9 +28,10 @@ public sealed class KafkaPerformanceService(
         CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(clusterId);
+        var historyLimit = options.Value.GetPerformanceHistoryLimit(limit);
         return await repository.GetPerformanceSnapshotsAsync(
             clusterId.Trim(),
-            limit.GetValueOrDefault(options.Value.PerformanceHistoryLimit),
+            historyLimit,
             cancellationToken);
     }
 
@@ -56,7 +58,10 @@ public sealed class KafkaPerformanceService(
             await clusterService.EnsureDirectKafkaAccessAsync(cluster, cancellationToken);
 
             var brokers = await adminProvider.ListBrokersAsync(cluster, cancellationToken);
-            var topics = await adminProvider.ListTopicsAsync(cluster, cancellationToken);
+            // Performance sampling only needs partition metadata. Avoid issuing a full topic
+            // configuration scan on every live sample; the topic-management path enriches rows
+            // with retention independently.
+            var topics = await adminProvider.ListTopicMetadataAsync(cluster, cancellationToken);
             var groups = await adminProvider.ListConsumerGroupsAsync(cluster, cancellationToken);
 
             snapshot.BrokerCount = brokers.Count;
@@ -64,11 +69,15 @@ public sealed class KafkaPerformanceService(
             snapshot.ConsumerGroupCount = groups.Count;
 
             var offsetTotals = await offsetMetricsProvider.CapturePerformanceOffsetTotalsAsync(cluster, topics, groups, cancellationToken);
-            snapshot.TotalLag = offsetTotals.TotalLag;
-            snapshot.TotalLogEndOffset = offsetTotals.TotalLogEndOffset;
-            snapshot.TotalAvailableMessageCount = offsetTotals.TotalAvailableMessageCount;
-            snapshot.TotalConsumerCommittedOffset = offsetTotals.TotalConsumerCommittedOffset;
-            ApplyRates(snapshot, previous);
+            snapshot.TotalLag = offsetTotals.IsComplete ? offsetTotals.TotalLag : null;
+            snapshot.TotalLogEndOffset = offsetTotals.IsComplete ? offsetTotals.TotalLogEndOffset : null;
+            snapshot.TotalAvailableMessageCount = offsetTotals.IsComplete
+                ? offsetTotals.TotalAvailableMessageCount
+                : null;
+            snapshot.TotalConsumerCommittedOffset = offsetTotals.IsComplete
+                ? offsetTotals.TotalConsumerCommittedOffset
+                : null;
+            KafkaPerformanceRateCalculator.ApplyRates(snapshot, previous);
         }
         catch (Exception ex)
         {
@@ -77,39 +86,6 @@ public sealed class KafkaPerformanceService(
 
         await SaveSnapshotAsync(snapshot, cancellationToken);
         return snapshot;
-    }
-
-    private static void ApplyRates(KafkaPerformanceSnapshot current, KafkaPerformanceSnapshot? previous)
-    {
-        if (previous is null)
-        {
-            return;
-        }
-
-        var elapsedSeconds = (current.CapturedAt - previous.CapturedAt).TotalSeconds;
-        if (elapsedSeconds <= 0)
-        {
-            return;
-        }
-
-        current.MessageWriteRatePerSecond = CalculateRate(
-            previous.TotalLogEndOffset,
-            current.TotalLogEndOffset,
-            elapsedSeconds);
-        current.MessageConsumeRatePerSecond = CalculateRate(
-            previous.TotalConsumerCommittedOffset,
-            current.TotalConsumerCommittedOffset,
-            elapsedSeconds);
-    }
-
-    private static double? CalculateRate(long? previous, long? current, double elapsedSeconds)
-    {
-        if (!previous.HasValue || !current.HasValue || current.Value < previous.Value)
-        {
-            return null;
-        }
-
-        return (current.Value - previous.Value) / elapsedSeconds;
     }
 
     private async Task SaveSnapshotAsync(KafkaPerformanceSnapshot snapshot, CancellationToken cancellationToken)

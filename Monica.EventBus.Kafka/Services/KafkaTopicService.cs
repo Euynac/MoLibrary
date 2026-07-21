@@ -16,7 +16,21 @@ public sealed class KafkaTopicService(
     {
         var cluster = await GetAdminClusterAsync(clusterId, cancellationToken);
         var topics = (await adminProvider.ListTopicsAsync(cluster, cancellationToken)).ToList();
-        var backlogs = await offsetMetricsProvider.CaptureTopicBacklogsAsync(cluster, topics, cancellationToken);
+        IReadOnlyList<KafkaTopicBacklogSnapshot> backlogs;
+        try
+        {
+            // Topic metadata is the authoritative inventory. Offset ranges are optional
+            // enrichment and may be unavailable for a large or partially healthy cluster.
+            backlogs = await offsetMetricsProvider.CaptureTopicBacklogsAsync(cluster, topics, cancellationToken);
+        }
+        catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
+        {
+            backlogs = [];
+        }
+        catch
+        {
+            backlogs = [];
+        }
         var backlogsByTopic = backlogs.ToDictionary(
             backlog => backlog.TopicName,
             StringComparer.Ordinal);

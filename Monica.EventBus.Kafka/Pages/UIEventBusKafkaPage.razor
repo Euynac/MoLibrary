@@ -3,9 +3,11 @@
 @using Monica.EventBus.Kafka.UIEventBusKafka.Dialogs
 @using Monica.EventBus.Kafka.UIEventBusKafka.State
 @inject EventBusKafkaPageState PageState
+@inject KafkaPerformancePollingState PerformancePollingState
 @inject IDialogService DialogService
 @inject ISnackbar Snackbar
 @inject IStringLocalizer<EventBusKafkaResource> L
+@implements IAsyncDisposable
 
 <PageTitle>@L["Page:PageTitle"]</PageTitle>
 
@@ -92,6 +94,8 @@
 @code {
     public const string PAGE_URL = "/eventbus-kafka";
 
+    private bool _isDisposed;
+
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (!firstRender)
@@ -99,6 +103,7 @@
             return;
         }
 
+        PerformancePollingState.StateChanged += HandlePerformanceStateChanged;
         await PageState.InitializeAsync();
         StateHasChanged();
     }
@@ -377,6 +382,21 @@
     private void ShowStateError()
     {
         Snackbar.Add(PageState.ErrorMessage ?? L["Page:Messages:OperationFailed"], Severity.Error);
+    }
+
+    private void HandlePerformanceStateChanged()
+    {
+        if (!_isDisposed)
+        {
+            _ = InvokeAsync(StateHasChanged);
+        }
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        _isDisposed = true;
+        PerformancePollingState.StateChanged -= HandlePerformanceStateChanged;
+        await PageState.DeactivateAsync();
     }
 
     private static DialogOptions DefaultDialogOptions => new()

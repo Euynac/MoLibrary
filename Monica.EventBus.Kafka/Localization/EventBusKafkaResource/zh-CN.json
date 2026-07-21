@@ -201,6 +201,10 @@
     }
   },
   "Topics": {
+    "Summary": "显示 {0} / 共 {1} 个主题",
+    "Search": {
+      "Placeholder": "搜索主题"
+    },
     "Title": "主题",
     "Unavailable": "主题管理需要直接 Kafka Broker 访问。",
     "Empty": "选中集群未返回主题。",
@@ -220,6 +224,7 @@
       "Actions": "操作"
     },
     "Values": {
+      "MetadataUnavailable": "主题元数据暂不可用：{0}",
       "Internal": "内部主题",
       "NoKey": "无 Key",
       "EmptyValue": "空值",
@@ -297,6 +302,15 @@
     }
   },
   "Performance": {
+    "Live": {
+      "AutoRefresh": "实时刷新",
+      "IntervalSeconds": "间隔（秒）",
+      "IntervalHint": "可设置范围：{0}–{1} 秒",
+      "Sampling": "正在采样 Kafka 指标……",
+      "LastCapturedAt": "最近更新于 {0}",
+      "WaitingForFirstSample": "正在等待首次实时采样",
+      "Paused": "实时刷新已暂停"
+    },
     "Title": "性能快照",
     "Unavailable": "性能采样需要直接 Kafka Broker 访问。",
     "Empty": "尚未采集性能快照。",

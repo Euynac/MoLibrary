@@ -1,0 +1,60 @@
+.topics-toolbar {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+    min-width: 0;
+}
+
+.topics-heading {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    min-width: 0;
+}
+
+.topics-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 8px;
+    min-width: 0;
+}
+
+.topics-actions ::deep .mud-input-control {
+    min-width: 220px;
+}
+
+.topic-name {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    min-width: 0;
+    overflow-wrap: anywhere;
+}
+
+.topics-table {
+    width: 100%;
+    min-width: 0;
+    overflow-x: auto;
+}
+
+.topics-table ::deep .mud-table {
+    min-width: 760px;
+}
+
+@media (max-width: 720px) {
+    .topics-toolbar {
+        flex-direction: column;
+    }
+
+    .topics-actions {
+        width: 100%;
+        justify-content: flex-start;
+    }
+
+    .topics-actions ::deep .mud-input-control {
+        flex: 1 1 220px;
+    }
+}

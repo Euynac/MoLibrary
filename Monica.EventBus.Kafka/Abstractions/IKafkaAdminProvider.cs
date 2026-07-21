@@ -36,6 +36,25 @@ public interface IKafkaAdminProvider
     Task<IReadOnlyList<KafkaTopicSummary>> ListTopicsAsync(KafkaClusterConfig cluster, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Lists topic metadata without requesting per-topic configuration values.
+    /// </summary>
+    /// <remarks>
+    /// Performance sampling uses this lightweight path so a large topic inventory does not pay
+    /// for a <c>DescribeConfigs</c> request on every sample.
+    /// </remarks>
+    /// <param name="cluster">Target Kafka cluster.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>All topic names returned by Kafka metadata, including rows with transient metadata errors.</returns>
+    Task<IReadOnlyList<KafkaTopicSummary>> ListTopicMetadataAsync(
+        KafkaClusterConfig cluster,
+        CancellationToken cancellationToken = default)
+    {
+        // Provider implementations can override this with a metadata-only query. The default
+        // keeps custom providers source-compatible while retaining the existing topic contract.
+        return ListTopicsAsync(cluster, cancellationToken);
+    }
+
+    /// <summary>
     /// Creates a topic.
     /// </summary>
     /// <param name="cluster">Cluster configuration.</param>

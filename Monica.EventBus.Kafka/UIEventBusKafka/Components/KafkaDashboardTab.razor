@@ -18,7 +18,7 @@
             <MudPaper Class="pa-4" Outlined="true">
                 <MudStack Spacing="1">
                     <MudText Typo="Typo.overline">@L["Dashboard:Cards:Brokers"]</MudText>
-                    <MudText Typo="Typo.h5">@State.Dashboard.BrokerCount</MudText>
+                    <MudText Typo="Typo.h5">@State.CurrentBrokerCount</MudText>
                     <MudText Typo="Typo.caption" Color="Color.Secondary">@L["Dashboard:Cards:BrokersHint"]</MudText>
                 </MudStack>
             </MudPaper>
@@ -27,7 +27,7 @@
             <MudPaper Class="pa-4" Outlined="true">
                 <MudStack Spacing="1">
                     <MudText Typo="Typo.overline">@L["Dashboard:Cards:Topics"]</MudText>
-                    <MudText Typo="Typo.h5">@State.Dashboard.TopicCount</MudText>
+                    <MudText Typo="Typo.h5">@State.CurrentTopicCount</MudText>
                     <MudText Typo="Typo.caption" Color="Color.Secondary">@L["Dashboard:Cards:TopicsHint"]</MudText>
                 </MudStack>
             </MudPaper>
@@ -36,7 +36,7 @@
             <MudPaper Class="pa-4" Outlined="true">
                 <MudStack Spacing="1">
                     <MudText Typo="Typo.overline">@L["Dashboard:Cards:AvailableMessages"]</MudText>
-                    <MudText Typo="Typo.h5">@FormatAvailableMessages(State.Dashboard.TotalAvailableMessageCount)</MudText>
+                    <MudText Typo="Typo.h5">@FormatAvailableMessages(State.TotalAvailableMessageCount)</MudText>
                     <MudText Typo="Typo.caption" Color="Color.Secondary">@L["Dashboard:Cards:AvailableMessagesHint"]</MudText>
                 </MudStack>
             </MudPaper>
@@ -45,7 +45,7 @@
             <MudPaper Class="pa-4" Outlined="true">
                 <MudStack Spacing="1">
                     <MudText Typo="Typo.overline">@L["Dashboard:Cards:ConsumerGroups"]</MudText>
-                    <MudText Typo="Typo.h5">@State.Dashboard.ConsumerGroupCount</MudText>
+                    <MudText Typo="Typo.h5">@State.CurrentConsumerGroupCount</MudText>
                     <MudText Typo="Typo.caption" Color="Color.Secondary">@L["Dashboard:Cards:ConsumerGroupsHint"]</MudText>
                 </MudStack>
             </MudPaper>
@@ -54,7 +54,7 @@
             <MudPaper Class="pa-4" Outlined="true">
                 <MudStack Spacing="1">
                     <MudText Typo="Typo.overline">@L["Dashboard:Cards:WriteRate"]</MudText>
-                    <MudText Typo="Typo.h5">@FormatRate(State.Dashboard.LatestPerformance?.MessageWriteRatePerSecond)</MudText>
+                    <MudText Typo="Typo.h5">@FormatRate(State.LatestPerformance?.MessageWriteRatePerSecond)</MudText>
                     <MudText Typo="Typo.caption" Color="Color.Secondary">@L["Dashboard:Cards:WriteRateHint"]</MudText>
                 </MudStack>
             </MudPaper>
@@ -63,7 +63,7 @@
             <MudPaper Class="pa-4" Outlined="true">
                 <MudStack Spacing="1">
                     <MudText Typo="Typo.overline">@L["Dashboard:Cards:ConsumeRate"]</MudText>
-                    <MudText Typo="Typo.h5">@FormatRate(State.Dashboard.LatestPerformance?.MessageConsumeRatePerSecond)</MudText>
+                    <MudText Typo="Typo.h5">@FormatRate(State.LatestPerformance?.MessageConsumeRatePerSecond)</MudText>
                     <MudText Typo="Typo.caption" Color="Color.Secondary">@L["Dashboard:Cards:ConsumeRateHint"]</MudText>
                 </MudStack>
             </MudPaper>

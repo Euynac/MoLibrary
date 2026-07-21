@@ -40,25 +40,51 @@ internal sealed class ConfluentKafkaAdminProvider(IOptions<ModuleEventBusKafkaOp
         return MapNodes(result.Nodes);
     }
 
-    public async Task<IReadOnlyList<KafkaTopicSummary>> ListTopicsAsync(KafkaClusterConfig cluster, CancellationToken cancellationToken = default)
+    public Task<IReadOnlyList<KafkaTopicSummary>> ListTopicsAsync(
+        KafkaClusterConfig cluster,
+        CancellationToken cancellationToken = default)
     {
+        return ListTopicsCoreAsync(cluster, includeConfigurations: true, cancellationToken);
+    }
+
+    public Task<IReadOnlyList<KafkaTopicSummary>> ListTopicMetadataAsync(
+        KafkaClusterConfig cluster,
+        CancellationToken cancellationToken = default)
+    {
+        return ListTopicsCoreAsync(cluster, includeConfigurations: false, cancellationToken);
+    }
+
+    private async Task<IReadOnlyList<KafkaTopicSummary>> ListTopicsCoreAsync(
+        KafkaClusterConfig cluster,
+        bool includeConfigurations,
+        CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
         using var admin = CreateAdminClient(cluster);
         var metadata = admin.GetMetadata(Option.AdminRequestTimeout);
-        var topicNames = metadata.Topics
-            .Where(topic => topic.Error.Code == ErrorCode.NoError)
-            .Select(topic => topic.Topic)
-            .OrderBy(topic => topic, StringComparer.OrdinalIgnoreCase)
+        var topicMetadata = metadata.Topics
+            .Where(topic => !string.IsNullOrWhiteSpace(topic.Topic))
+            .GroupBy(topic => topic.Topic, StringComparer.Ordinal)
+            .Select(group => group.First())
+            .OrderBy(topic => topic.Topic, StringComparer.OrdinalIgnoreCase)
             .ToList();
 
-        var retention = await DescribeTopicRetentionsAsync(admin, topicNames, cancellationToken);
-        var topics = metadata.Topics
+        var topicNames = topicMetadata
             .Where(topic => topic.Error.Code == ErrorCode.NoError)
+            .Select(topic => topic.Topic)
+            .ToList();
+        var retention = includeConfigurations
+            ? await DescribeTopicRetentionsAsync(admin, topicNames, cancellationToken)
+            : [];
+
+        var topics = topicMetadata
             .Select(topic => new KafkaTopicSummary
             {
                 TopicName = topic.Topic,
                 Partitions = topic.Partitions.Count,
                 ReplicationFactor = topic.Partitions.Count == 0 ? 0 : topic.Partitions.Max(partition => partition.Replicas.Length),
                 IsInternal = topic.Topic.StartsWith("__", StringComparison.Ordinal),
+                MetadataError = topic.Error.Code == ErrorCode.NoError ? null : topic.Error.Code.ToString(),
                 RetentionMs = retention.GetValueOrDefault(topic.Topic)
             })
             .OrderBy(topic => topic.TopicName, StringComparer.OrdinalIgnoreCase)
@@ -250,28 +276,43 @@ internal sealed class ConfluentKafkaAdminProvider(IOptions<ModuleEventBusKafkaOp
             return [];
         }
 
-        try
+        var retentions = new Dictionary<string, long?>(StringComparer.Ordinal);
+        var batchSize = Math.Max(1, Option.TopicConfigQueryBatchSize);
+        foreach (var batch in topicNames.Chunk(batchSize))
         {
-            var resources = topicNames.Select(topicName => new ConfigResource
+            cancellationToken.ThrowIfCancellationRequested();
+            try
             {
-                Type = ResourceType.Topic,
-                Name = topicName
-            });
-            var result = await admin.DescribeConfigsAsync(resources, new DescribeConfigsOptions
-            {
-                RequestTimeout = Option.AdminRequestTimeout
-            });
+                var resources = batch.Select(topicName => new ConfigResource
+                {
+                    Type = ResourceType.Topic,
+                    Name = topicName
+                });
+                var result = await admin.DescribeConfigsAsync(resources, new DescribeConfigsOptions
+                {
+                    RequestTimeout = Option.AdminRequestTimeout
+                }).WaitAsync(cancellationToken);
 
-            return result.ToDictionary(
-                item => item.ConfigResource.Name,
-                item => item.Entries.TryGetValue("retention.ms", out var entry) && long.TryParse(entry.Value, out var value)
-                    ? value
-                    : (long?)null,
-                StringComparer.Ordinal);
+                foreach (var item in result)
+                {
+                    retentions[item.ConfigResource.Name] = item.Entries.TryGetValue("retention.ms", out var entry) &&
+                                                           long.TryParse(entry.Value, out var value)
+                        ? value
+                        : null;
+                }
+            }
+            catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
+            {
+                // A provider-side timeout for one configuration batch should not hide the topic
+                // inventory. The caller will render retention as unknown for that batch.
+            }
+            catch
+            {
+                // Topic configuration is optional diagnostic enrichment. Keep metadata rows when
+                // ACLs or broker limits prevent reading one batch.
+            }
         }
-        catch
-        {
-            return [];
-        }
+
+        return retentions;
     }
 }
