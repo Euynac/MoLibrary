@@ -8,7 +8,7 @@ using Monica.DataChannel.Abstractions;
 using Monica.DataChannel.Abstractions.Communication;
 using Monica.DataChannel.Abstractions.Partitioning;
 using Monica.DataChannel.Middlewares;
-using Monica.DataChannel.Models.DaprBinding;
+using Monica.DataChannel.Models;
 using Monica.DataChannel.Pipeline;
 
 namespace Monica.DataChannel.Providers.DaprBinding;

@@ -1,6 +1,6 @@
 using Microsoft.AspNetCore.Http;
-using Monica.DataChannel.Models.DaprBinding;
 using System.Collections.Concurrent;
+using Monica.DataChannel.Models;
 
 namespace Monica.DataChannel.Middlewares
 {

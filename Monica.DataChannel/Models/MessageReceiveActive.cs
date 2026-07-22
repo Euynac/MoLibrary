@@ -1,4 +1,4 @@
-namespace Monica.DataChannel.Models.DaprBinding
+namespace Monica.DataChannel.Models
 {
     public sealed record MessageReceiveActive(
         string ReceiveId,
