@@ -1,109 +1,131 @@
 using Microsoft.AspNetCore.Components.Routing;
+using Monica.Core.Localization.Abstractions;
 
 namespace Monica.UI.Shell.Models;
 
 /// <summary>
-/// UI page information
+/// Describes a page contributed to the Monica UI shell.
 /// </summary>
 public class PageDefinition
 {
     /// <summary>
-    /// routing path
+    /// Gets the normalized route without leading or trailing slashes.
     /// </summary>
     public required string Route { get; init; }
 
     /// <summary>
-    /// Component type
+    /// Gets the Blazor component rendered for <see cref="Route"/>.
     /// </summary>
     public required Type ComponentType { get; init; }
 
     /// <summary>
-    /// display name
+    /// Gets the display text and its optional localization metadata.
     /// </summary>
-    public required string DisplayName { get; init; }
+    public required UIRegistryText DisplayName { get; init; }
 
     /// <summary>
-    /// icon
+    /// Gets the optional icon identifier shown by the shell.
     /// </summary>
     public string? Icon { get; init; }
 
     /// <summary>
-    /// Classification
+    /// Gets the optional category text and its localization metadata.
     /// </summary>
-    public string? Category { get; init; }
+    public UIRegistryText? Category { get; init; }
 
     /// <summary>
-    /// localization key for display name
+    /// Resolves the page display name through the specified host localization catalog.
     /// </summary>
-    public string? DisplayNameKey { get; init; }
+    /// <param name="localizationCatalog">The localization catalog owned by the current host.</param>
+    /// <returns>The localized value, or the registered fallback when no localized value exists.</returns>
+    public string ResolveDisplayName(ILocalizationCatalog localizationCatalog)
+    {
+        return DisplayName.Resolve(localizationCatalog);
+    }
 
     /// <summary>
-    /// Classification localization key
+    /// Resolves the optional page category through the specified host localization catalog.
     /// </summary>
-    public string? CategoryKey { get; init; }
+    /// <param name="localizationCatalog">The localization catalog owned by the current host.</param>
+    /// <returns>The localized category, its fallback value, or <see langword="null"/> when no category is configured.</returns>
+    public string? ResolveCategory(ILocalizationCatalog localizationCatalog)
+    {
+        return Category?.Resolve(localizationCatalog);
+    }
 }
 
 /// <summary>
-/// Navigation menu items
+/// Describes one navigation entry contributed to the Monica UI shell.
 /// </summary>
 public class NavigationItem
 {
     /// <summary>
-    /// display text
+    /// Gets the label text and its optional localization metadata.
     /// </summary>
-    public required string Text { get; init; }
+    public required UIRegistryText Text { get; init; }
 
     /// <summary>
-    /// Link address
+    /// Gets the target route or URI.
     /// </summary>
     public string? Href { get; init; }
 
     /// <summary>
-    /// icon
+    /// Gets the optional icon identifier shown by the shell.
     /// </summary>
     public string? Icon { get; init; }
 
     /// <summary>
-    /// Whether to expand (for menus with sub-items)
+    /// Gets or sets whether a navigation group is expanded.
     /// </summary>
     public bool IsExpanded { get; set; }
 
     /// <summary>
-    /// Navigation item classification
+    /// Gets the optional category text and its localization metadata.
     /// </summary>
-    public string? Category { get; set; }
-    /// <summary>
-    /// submenu item
-    /// </summary>
-    public List<NavigationItem> Children { get; init; } = new();
+    public UIRegistryText? Category { get; init; }
 
     /// <summary>
-    /// click event
+    /// Gets nested navigation entries.
+    /// </summary>
+    public List<NavigationItem> Children { get; init; } = [];
+
+    /// <summary>
+    /// Gets an optional callback invoked by a programmatic navigation entry.
     /// </summary>
     public Action? OnClick { get; init; }
 
     /// <summary>
-    /// Whether to disable
+    /// Gets whether the entry is unavailable for interaction.
     /// </summary>
     public bool Disabled { get; init; }
 
     /// <summary>
-    /// sort order
+    /// Gets the navigation sort order.
     /// </summary>
     public int Order { get; init; }
 
     /// <summary>
-    /// Navigation link matching pattern
+    /// Gets the route-matching behavior used by the navigation link.
     /// </summary>
     public NavLinkMatch NavLinkMatch { get; init; } = NavLinkMatch.Prefix;
 
     /// <summary>
-    /// Display localization key for text
+    /// Resolves the navigation label through the specified host localization catalog.
     /// </summary>
-    public string? TextKey { get; init; }
+    /// <param name="localizationCatalog">The localization catalog owned by the current host.</param>
+    /// <returns>The localized label, or the registered fallback when no localized value exists.</returns>
+    public string ResolveText(ILocalizationCatalog localizationCatalog)
+    {
+        return Text.Resolve(localizationCatalog);
+    }
 
     /// <summary>
-    /// Classification localization key
+    /// Resolves the optional navigation category through the specified host localization catalog.
     /// </summary>
-    public string? CategoryKey { get; init; }
-} 
+    /// <param name="localizationCatalog">The localization catalog owned by the current host.</param>
+    /// <returns>The localized category, its fallback value, or <see langword="null"/> when no category is configured.</returns>
+    public string? ResolveCategory(ILocalizationCatalog localizationCatalog)
+    {
+        return Category?.Resolve(localizationCatalog);
+    }
+}

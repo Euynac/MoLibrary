@@ -10,7 +10,7 @@
 
   <PropertyGroup Condition="'$(IsPackable)' != 'false'">
     <!-- Package Metadata -->
-    <Version>1.0.0-rc.2</Version>
+    <Version>1.0.0-rc.6</Version>
     <Authors>Momean</Authors>
     <Company>Momean</Company>
     <Product>Monica Framework</Product>
@@ -34,7 +34,7 @@
     <PackageTags>monica;dotnet;aspnetcore;blazor;mudblazor;ddd;ai-agent;jobscheduler;modular;recurringjob</PackageTags>
 
     <!-- Package Release Notes -->
-    <PackageReleaseNotes>Monica 1.0 release-candidate line for validation before the stable release. Introduces host-bound AddMonica composition, deterministic module-graph validation, a dedicated ProjectUnits package, host-isolated runtime catalogs, Stable/Integrations/Labs maturity tiers, official templates, and an observable reference application.</PackageReleaseNotes>
+    <PackageReleaseNotes>Monica 1.0 release candidate 6 introduces the third-party module ecosystem contract, publisher-owned module identities, collision-safe module registration, module-owned UI localization, and compatibility guidance for independent packages.</PackageReleaseNotes>
 
     <!-- Symbol Packages -->
     <IncludeSymbols>true</IncludeSymbols>

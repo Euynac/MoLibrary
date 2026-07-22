@@ -1,18 +1,20 @@
 using System.Reflection;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Routing;
+using Monica.Core.Localization.Abstractions;
+using Monica.UI.Localization;
 using Monica.UI.Shell.Components;
 using Monica.UI.Shell.Models;
 
 namespace Monica.UI.Shell.Support;
 
 /// <summary>
-/// UI component registration service implementation
+/// Stores the page and navigation contributions for one Monica host.
 /// </summary>
 public class PageRegistry : IPageRegistry
 {
     private readonly HashSet<Assembly> _assemblies = [];
-    private readonly Dictionary<string, Type> _components = new();
+    private readonly Dictionary<string, Type> _components = new(StringComparer.OrdinalIgnoreCase);
     private readonly List<PageDefinition> _pages = [];
     private readonly List<NavigationItem> _navItems = [];
 
@@ -21,145 +23,144 @@ public class PageRegistry : IPageRegistry
     /// </summary>
     private readonly HashSet<Assembly> _excludedAssemblies = [typeof(AppRouter).Assembly];
 
-    /// <summary>
-    /// Register page components
-    /// </summary>
-    /// <typeparam name="T">Component type, must inherit from ComponentBase</typeparam>
-    /// <param name="route">Route path</param>
-    /// <param name="displayName">Display name</param>
-    /// <param name="icon">icon</param>
-    /// <param name="category">Category</param>
-    /// <param name="addToNav">Whether to add to the navigation menu</param>
-    /// <param name="navOrder">Navigation menu sort order</param>
-    /// <param name="navLinkMatch">Navigation link matching pattern</param>
-    public void RegisterComponent<T>(string route, string displayName, string? icon = null, string? category = null, bool addToNav = false, int navOrder = 0, NavLinkMatch navLinkMatch = NavLinkMatch.Prefix) where T : ComponentBase
+    /// <inheritdoc />
+    public void RegisterComponent<TComponent>(
+        string route,
+        string displayName,
+        string? icon = null,
+        string? category = null,
+        bool addToNav = false,
+        int navOrder = 0,
+        NavLinkMatch navLinkMatch = NavLinkMatch.Prefix)
+        where TComponent : ComponentBase
     {
-        route = route.TrimStart('/');
-        var componentType = typeof(T);
+        ArgumentException.ThrowIfNullOrWhiteSpace(displayName);
 
-        // Registration page information
-        var pageInfo = new PageDefinition
-        {
-            Route = route,
-            ComponentType = componentType,
-            DisplayName = displayName,
-            Icon = icon,
-            Category = category
-        };
-        _pages.Add(pageInfo);
-
-        // Register component type (for name lookup)
-        _components[route] = componentType;
-
-        // Automatically create navigation menu items if needed
-        if (addToNav)
-        {
-            var navItem = new NavigationItem
+        RegisterPage(
+            new PageDefinition
             {
-                Text = displayName,
-                Href = route,
+                Route = NormalizeRoute(route),
+                ComponentType = typeof(TComponent),
+                DisplayName = UIRegistryText.Literal(displayName),
                 Icon = icon,
-                Category = category,
-                Order = navOrder,
-                NavLinkMatch = navLinkMatch
-            };
-            _navItems.Add(navItem);
-        }
-
-        if (!_excludedAssemblies.Contains(componentType.Assembly))
-        {
-            // Add the assembly where the component is located
-            _assemblies.Add(componentType.Assembly);
-        }
-
+                Category = category is null ? null : UIRegistryText.Literal(category)
+            },
+            addToNav,
+            navOrder,
+            navLinkMatch);
     }
 
-    /// <summary>
-    /// Register page components (support localization)
-    /// </summary>
-    /// <typeparam name="T">Component type, must inherit from ComponentBase</typeparam>
-    /// <param name="route">Route path</param>
-    /// <param name="displayNameKey">Localized key for display name (using UIRegistryResource)</param>
-    /// <param name="icon">icon</param>
-    /// <param name="categoryKey">Category localization key (using UIRegistryResource)</param>
-    /// <param name="addToNav">Whether to add to the navigation menu</param>
-    /// <param name="navOrder">Navigation menu sort order</param>
-    /// <param name="navLinkMatch">Navigation link matching pattern</param>
-    public void RegisterLocalizedComponent<T>(string route, string displayNameKey, string? icon = null, string? categoryKey = null, bool addToNav = false, int navOrder = 0, NavLinkMatch navLinkMatch = NavLinkMatch.Prefix) where T : ComponentBase
+    /// <inheritdoc />
+    public void RegisterLocalizedComponent<TComponent>(
+        string route,
+        string displayNameKey,
+        string? icon = null,
+        string? categoryKey = null,
+        bool addToNav = false,
+        int navOrder = 0,
+        NavLinkMatch navLinkMatch = NavLinkMatch.Prefix)
+        where TComponent : ComponentBase
     {
-        route = route.TrimStart('/');
-        var componentType = typeof(T);
-
-        // Registration page information
-        var pageInfo = new PageDefinition
-        {
-            Route = route,
-            ComponentType = componentType,
-            DisplayName = displayNameKey,  // Fallback
-            DisplayNameKey = displayNameKey,
-            Icon = icon,
-            Category = categoryKey,  // Fallback
-            CategoryKey = categoryKey
-        };
-        _pages.Add(pageInfo);
-
-        // Register component type (for name lookup)
-        _components[route] = componentType;
-
-        // Automatically create navigation menu items if needed
-        if (addToNav)
-        {
-            var navItem = new NavigationItem
-            {
-                Text = displayNameKey,  // Fallback
-                TextKey = displayNameKey,
-                Href = route,
-                Icon = icon,
-                Category = categoryKey,  // Fallback
-                CategoryKey = categoryKey,
-                Order = navOrder,
-                NavLinkMatch = navLinkMatch
-            };
-            _navItems.Add(navItem);
-        }
-
-        if (!_excludedAssemblies.Contains(componentType.Assembly))
-        {
-            // Add the assembly where the component is located
-            _assemblies.Add(componentType.Assembly);
-        }
+        RegisterLocalizedComponent<TComponent, UIRegistryResource>(
+            route,
+            displayNameKey,
+            icon,
+            categoryKey,
+            addToNav,
+            navOrder,
+            navLinkMatch);
     }
 
-    /// <summary>
-    /// Get all registered pages
-    /// </summary>
+    /// <inheritdoc />
+    public void RegisterLocalizedComponent<TComponent, TResource>(
+        string route,
+        string displayNameKey,
+        string? icon = null,
+        string? categoryKey = null,
+        bool addToNav = false,
+        int navOrder = 0,
+        NavLinkMatch navLinkMatch = NavLinkMatch.Prefix)
+        where TComponent : ComponentBase
+        where TResource : class, ILocalizationResource
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(displayNameKey);
+
+        RegisterPage(
+            new PageDefinition
+            {
+                Route = NormalizeRoute(route),
+                ComponentType = typeof(TComponent),
+                DisplayName = UIRegistryText.Localized<TResource>(displayNameKey),
+                Icon = icon,
+                Category = categoryKey is null ? null : UIRegistryText.Localized<TResource>(categoryKey)
+            },
+            addToNav,
+            navOrder,
+            navLinkMatch);
+    }
+
+    /// <inheritdoc />
     public IReadOnlyList<PageDefinition> GetRegisteredPages()
     {
         return _pages.AsReadOnly();
     }
 
-    /// <summary>
-    /// Get all registered navigation items
-    /// </summary>
+    /// <inheritdoc />
     public IReadOnlyList<NavigationItem> GetNavItems()
     {
-        return _navItems.OrderBy(x => x.Order).ToList().AsReadOnly();
+        return _navItems.OrderBy(static item => item.Order).ToList().AsReadOnly();
     }
 
-    /// <summary>
-    /// Get the registered component type
-    /// </summary>
+    /// <inheritdoc />
     public Type? GetComponentType(string name)
     {
         return _components.GetValueOrDefault(name);
     }
 
-    /// <summary>
-    /// Get additional assemblies related to the currently registered component
-    /// </summary>
-    /// <returns>Additional assemblies</returns>
+    /// <inheritdoc />
     public Assembly[] GetAdditionalAssemblies()
     {
         return _assemblies.ToArray();
     }
-} 
+
+    private static string NormalizeRoute(string route)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(route);
+        return route.Trim().Trim('/');
+    }
+
+    private void RegisterPage(
+        PageDefinition page,
+        bool addToNav,
+        int navOrder,
+        NavLinkMatch navLinkMatch)
+    {
+        if (_components.TryGetValue(page.Route, out var existingComponentType))
+        {
+            throw new InvalidOperationException(
+                $"UI route '/{page.Route}' is already registered by component " +
+                $"'{existingComponentType.FullName}' and cannot also map to '{page.ComponentType.FullName}'.");
+        }
+
+        _pages.Add(page);
+        _components[page.Route] = page.ComponentType;
+
+        if (addToNav)
+        {
+            _navItems.Add(new NavigationItem
+            {
+                Text = page.DisplayName,
+                Href = page.Route,
+                Icon = page.Icon,
+                Category = page.Category,
+                Order = navOrder,
+                NavLinkMatch = navLinkMatch
+            });
+        }
+
+        if (!_excludedAssemblies.Contains(page.ComponentType.Assembly))
+        {
+            _assemblies.Add(page.ComponentType.Assembly);
+        }
+    }
+}

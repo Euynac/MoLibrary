@@ -1,12 +1,4 @@
 {
-  "Pages": {
-    "GitRepositories": {
-      "Title": "Git Repositories"
-    }
-  },
-  "Categories": {
-    "Infrastructure": "Infrastructure"
-  },
   "GitDashboard": {
     "PageTitle": "Git Repositories",
     "Title": "Git Repositories",

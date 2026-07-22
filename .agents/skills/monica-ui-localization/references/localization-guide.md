@@ -16,19 +16,24 @@ Each `*.UI` project has its own localization infrastructure:
 - Embedded resources configured in `.csproj`
 - Auto-discovered by `MoStringLocalizerFactory`
 
-### Auto-Discovery Mechanism
+### Resource Registration and Loading
 
-`MoStringLocalizerFactory` automatically discovers localization resources:
+Reusable Monica modules register their resource marker explicitly:
 
-1. Scans all assemblies starting with "Monica"
-2. Finds types in namespaces containing ".Localization"
-3. For each resource type, loads embedded JSON files using pattern: `{Namespace}.{ResourceName}.{Culture}.json`
+```csharp
+DependsOnModule<ModuleLocalizationGuide>().Register()
+    .AddResource<StateStoreResource>();
+```
+
+Host/business resource types may also be discovered through the host's configured business-type scan. Independent packages must not rely on an assembly-name prefix or on the host scanning their assembly.
+
+For each registered resource type, Monica loads embedded JSON files using `{Namespace}.{ResourceName}.{Culture}.json`.
 
 **Example:** For type `StateStoreResource` in namespace `Monica.StateStore.UI.Localization`, it loads:
 - `Monica.StateStore.UI.Localization.StateStoreResource.zh-CN.json`
 - `Monica.StateStore.UI.Localization.StateStoreResource.en-US.json`
 
-**No registration code needed!** Just create the marker class, add JSON files, and configure embedding.
+Module packages must register the marker type through `AddResource<TResource>()`, create the JSON files, and configure embedding.
 
 ### Implementation Steps
 
@@ -287,7 +292,7 @@ python scripts/validate_localization.py --json
 1. **Missing keys** (ERROR): Keys used in Razor or C# but not defined in JSON
 2. **Unused keys** (WARNING): Keys defined in JSON but never used
 3. **Language sync** (ERROR): Keys in one language but not another
-4. **UI registry keys** (ERROR): Keys passed to `RegisterLocalizedComponent` must exist in `Monica.UI/Localization/UIRegistryResource/*.json`
+4. **UI registration keys** (ERROR): One-generic calls must resolve from `UIRegistryResource`; two-generic calls must resolve from their declared module resource
 
 ### Example Output
 
@@ -345,13 +350,13 @@ Summary:
 
 **Symptom:** The navigation or AppBar shows a raw key such as `Pages:GitRepositories:Title`
 
-**Cause:** `RegisterLocalizedComponent` keys are resolved from `UIRegistryResource`, not the page module resource.
+**Cause:** The one-generic `RegisterLocalizedComponent<TComponent>` overload resolves keys from `UIRegistryResource`. Independent and reusable modules should select their own resource with the two-generic overload.
 
 **Solution:**
-1. Keep page-local text in the module resource JSON files
-2. Add the navigation/AppBar key to `Monica.UI/Localization/UIRegistryResource/zh-CN.json`
-3. Add the same key to `Monica.UI/Localization/UIRegistryResource/en-US.json`
-4. Re-run `python scripts/validate_localization.py`
+1. For a first-party shell entry that intentionally uses the one-generic overload, add the key to both `UIRegistryResource` language files.
+2. For a reusable or third-party module, call `RegisterLocalizedComponent<TComponent, TResource>` and keep the keys in both language files for `TResource`.
+3. Ensure the module declares `AddResource<TResource>()` through its localization dependency.
+4. Re-run `python scripts/validate_localization.py --strict`.
 
 ### Parameterized String Shows {0}
 

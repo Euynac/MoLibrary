@@ -102,6 +102,12 @@ ProjectUnits add the application vocabulary:
 
 The repository also ships agent skills under `.agents/skills/` and `.claude/skills/`. They encode the same module boundaries, ProjectUnit roles, UI rules, and testing conventions used by the framework itself.
 
+## Third-party ecosystem
+
+Independent packages use the publisher-first ID `<Publisher>.Monica.<Package>[.<Variant>]`; one NuGet package may contain any coherent number of infrastructure, provider, web, and UI modules. The official `Monica.*` prefix and purple logo remain reserved for first-party packages.
+
+Start with the [`monica-third-party-module-development`](.agents/skills/monica-third-party-module-development) skill to scaffold, validate, test, pack, and publish an independent package. The compatibility identity and usage rules are summarized in [BRANDING.md](BRANDING.md), with the complete bilingual guide in [Monica.Docs](https://monica.dpdns.org/).
+
 ## Package maturity
 
 The maturity label describes the compatibility promise, not package quality.

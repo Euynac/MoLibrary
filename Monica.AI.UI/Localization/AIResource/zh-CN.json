@@ -224,8 +224,7 @@
       "Close": "关闭",
       "Save": "保存",
       "Update": "更新",
-      "Cancel": "取消",
-      "Confirm": "确认"
+      "Cancel": "取消"
     }
   },
   "RAG": {
@@ -678,23 +677,6 @@
       "Parameters": "参数",
       "NoParameters": "无参数",
       "Schema": "原始 Schema"
-    }
-  },
-  "Pages": {
-    "KnowledgeBaseManage": {
-      "Title": "知识库"
-    },
-    "RAGManage": {
-      "Title": "RAG 索引"
-    },
-    "RAGDebug": {
-      "Title": "RAG 调试"
-    },
-    "RAGChunkers": {
-      "Title": "RAG 分块器"
-    },
-    "AICapabilities": {
-      "Title": "AI 能力"
     }
   }
 }

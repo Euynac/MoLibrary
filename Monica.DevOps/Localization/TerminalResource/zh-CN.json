@@ -10,8 +10,7 @@
     "Cancel": "取消",
     "Clear": "清空",
     "NewSession": "新建会话",
-    "CloseSession": "关闭会话",
-    "Refresh": "刷新"
+    "CloseSession": "关闭会话"
   },
   "Labels": {
     "Session": "会话",

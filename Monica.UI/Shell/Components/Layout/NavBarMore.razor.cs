@@ -22,12 +22,7 @@ public partial class NavBarMore : IDisposable
 
     private string GetItemText(NavigationItem item)
     {
-        if (!string.IsNullOrEmpty(item.TextKey))
-        {
-            return RegistryL[item.TextKey];
-        }
-
-        return item.Text;
+        return item.ResolveText(LocalizationCatalog);
     }
 
     private void OnMouseEnter()

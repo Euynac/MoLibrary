@@ -1,7 +1,6 @@
-@using Microsoft.Extensions.Localization
-@using Monica.UI.Localization
+@using Monica.Core.Localization.Abstractions
 @using Monica.UI.Shell.Models
-@inject IStringLocalizer<UIRegistryResource> RegistryL
+@inject ILocalizationCatalog LocalizationCatalog
 
 <div class="navbar-item"
      @onmouseenter="OnMouseEnter"
@@ -39,11 +38,7 @@
 
     private string GetItemText(NavigationItem item)
     {
-        if (!string.IsNullOrEmpty(item.TextKey))
-        {
-            return RegistryL[item.TextKey];
-        }
-        return item.Text;
+        return item.ResolveText(LocalizationCatalog);
     }
 
     private void OnMouseEnter()

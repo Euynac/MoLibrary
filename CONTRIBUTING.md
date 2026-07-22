@@ -71,8 +71,8 @@ BREAKING CHANGE: replace ambient Mo registration with builder.AddMonica(monica =
 Release tags use the `v` prefix:
 
 ```bash
-git tag v1.0.0-rc.2
-git push origin v1.0.0-rc.2
+git tag v1.0.0-rc.6
+git push origin v1.0.0-rc.6
 ```
 
 The release workflow builds, tests, packs, uploads package artifacts, publishes to NuGet when configured, generates release notes from commit prefixes with `git-cliff`, and creates a GitHub pre-release for `*-rc.*` tags.

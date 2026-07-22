@@ -182,7 +182,7 @@ public static class ModuleConfigurationEfCoreBuilderExtensions
 /// <summary>
 /// EF Core module for Monica.Configuration.
 /// </summary>
-[ModuleKey("Monica.Configuration.EfCore")]
+[ModuleKey(BuiltInModuleKey.ConfigurationEfCore)]
 public sealed class ModuleConfigurationEfCore(ModuleConfigurationEfCoreOption option)
     : ModuleBase<ModuleConfigurationEfCore, ModuleConfigurationEfCoreOption, ModuleConfigurationEfCoreGuide>(option)
 {

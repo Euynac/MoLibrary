@@ -31,8 +31,9 @@ The strict result must have zero JSON integrity errors, missing keys, invalid UI
 - Never use ambient or static localization access. When DI is unavailable inside a helper or view model, accept an `IStringLocalizer` parameter or move the display behavior into a cohesive formatter that receives one.
 - Inject `ILocalizationCatalog` only for scenarios that genuinely need generic resource lookup. At application-composition boundaries such as endpoint metadata configuration, resolve the localizer or catalog from the current host's service provider so localization state never crosses host boundaries.
 - For page content, use the module-local resource marker and JSON files.
-- For `RegisterLocalizedComponent(...)` navigation/AppBar text, `displayNameKey` and `categoryKey` must exist in `Monica.UI/Localization/UIRegistryResource/*.json`, because the UI registry resolves them with `IStringLocalizer<UIRegistryResource>`.
-- When adding a new page to navigation, add the corresponding `Pages:*:Title` key to `UIRegistryResource` in addition to the page module resource when needed.
+- First-party one-generic `RegisterLocalizedComponent<TComponent>(...)` calls resolve `displayNameKey` and `categoryKey` from `Monica.UI/Localization/UIRegistryResource/*.json`.
+- Reusable and third-party modules must use `RegisterLocalizedComponent<TComponent, TResource>(...)`; those keys live in the module-owned `TResource` JSON files and the module must register that resource with `DependsOnModule<ModuleLocalizationGuide>().Register().AddResource<TResource>()`.
+- When adding a first-party page through the one-generic overload, add the corresponding navigation keys to `UIRegistryResource`. Do not force independent packages to modify Monica.UI resources.
 - Resource marker classes and JSON folders stay under the project root `Localization/` directory, not feature folders.
 
 ## Validation Commands

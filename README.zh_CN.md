@@ -22,7 +22,7 @@
 
 Monica 是面向可观测 .NET 后端的 agent-governed application architecture。它让开发者和编码 agent 共用同一套模块、DDD ProjectUnit、基础设施和运行时诊断语言，使生成的代码仍然结构可预期，运行中的系统仍然可理解。
 
-> **候选版本**：Monica 1.0.0-rc.2 是用于验证和反馈的预发布版本。在 1.0.0 稳定版之前仍可能出现破坏性变更。
+> **候选版本**：Monica 1.0.0-rc.6 是用于验证和反馈的预发布版本。在 1.0.0 稳定版之前仍可能出现破坏性变更。
 
 ## 快速链接
 
@@ -132,9 +132,12 @@ Monica.UI 之上还提供多个运维型 Blazor UI：JobScheduler、Configuratio
 仓库已经内置了可直接使用的 skill pack，位于 `.claude/skills/` 和 `.agents/skills/`。
 
 - 框架入口：`monica-framework`、`monica-development`、`monica-architecture`、`monica-ui-development`、`monica-ui-design`、`monica-ui-audit`、`monica-docs-authoring`、`monica-requirement-design`、`monica-unit-testing`、`monica-ui-bridge-debug`
+- 第三方生态入口：`monica-third-party-module-development`，用于创建、校验、测试、打包和发布 `<Publisher>.Monica.<Package>` 包；一个 NuGet 包可以包含多个内聚模块
 - 基于 Monica 的应用系统入口：`monica-application`、`monica-application-microservice`、`monica-application-modular-monolith`、`monica-application-project-unit-development`
 - 随仓库提供的辅助工作流：`code-simplifier`、`playwright-cli`、`supervise-subagents`
 - 需要单独安装的用户级配套 Skill：`inspect-dependency-source`（共享依赖源码目录）
+
+第三方包不得使用官方 `Monica.*` 前缀与紫色 Logo。兼容标识、包命名和独立维护声明见 [BRANDING.md](BRANDING.md)，完整中英文规范见 [Monica.Docs](https://monica.dpdns.org/)。
 
 ## 包成熟度
 
