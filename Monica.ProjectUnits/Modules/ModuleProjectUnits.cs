@@ -54,6 +54,9 @@ public class ModuleProjectUnits(ModuleProjectUnitsOption option)
         {
             DependsOnModule<ModuleXmlDocumentationGuide>().Register();
         }
+
+        DependsOnModule<ModuleJsonSerializationGuide>().Register();
+        DependsOnModule<ModuleObjectMappingGuide>().Register();
         DependsOnModule<ModuleEventBusGuide>().Register();
     }
 
