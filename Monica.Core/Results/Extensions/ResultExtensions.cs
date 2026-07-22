@@ -43,6 +43,12 @@ public static class ResultExtensions
             case ResStatus.BadRequest:
                 return HttpStatusCode.BadRequest;
 
+            case ResStatus.PayloadTooLarge:
+                return HttpStatusCode.RequestEntityTooLarge;
+
+            case ResStatus.UnsupportedMediaType:
+                return HttpStatusCode.UnsupportedMediaType;
+
 
             case ResStatus.InternalError:
                 return HttpStatusCode.InternalServerError;

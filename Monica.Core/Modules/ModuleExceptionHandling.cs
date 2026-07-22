@@ -1,5 +1,7 @@
 using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
 using Monica.Core.ExceptionHandling.Abstractions;
 using Monica.Core.ExceptionHandling.Services;
@@ -32,10 +34,31 @@ public class ModuleExceptionHandling(ModuleExceptionHandlingOption option)
     : WebModuleBase<ModuleExceptionHandling, ModuleExceptionHandlingOption, ModuleExceptionHandlingGuide>(option)
 {
     /// <summary>
-    /// Adds the ASP.NET Core exception handling middleware.
+    /// Adds ASP.NET Core exception handling and structured request-rejection responses.
     /// </summary>
     public override void ConfigureApplicationBuilder(IApplicationBuilder app)
     {
+        // Minimal API body binding returns 413 and 415 directly instead of throwing, so translate only those
+        // otherwise-empty framework responses into the same result envelope used for thrown binding failures.
+        app.UseStatusCodePages(async context =>
+        {
+            var response = context.HttpContext.Response;
+            var rejection = response.StatusCode switch
+            {
+                StatusCodes.Status413PayloadTooLarge => Res.Fail(
+                    "The request payload is too large.",
+                    ResStatus.PayloadTooLarge),
+                StatusCodes.Status415UnsupportedMediaType => Res.Fail(
+                    "The request content type is not supported.",
+                    ResStatus.UnsupportedMediaType),
+                _ => null
+            };
+
+            if (rejection is not null)
+            {
+                await response.WriteAsJsonAsync(rejection, context.HttpContext.RequestAborted);
+            }
+        });
         app.UseExceptionHandler();
     }
 
@@ -44,7 +67,11 @@ public class ModuleExceptionHandling(ModuleExceptionHandlingOption option)
         services.AddHttpContextAccessor();
         services.AddProblemDetails();
         services.AddSingleton<IExceptionHandlerService, ExceptionHandlerService>();
+        services.AddTransient<IExceptionResponseMapper, BadHttpRequestExceptionMapper>();
         services.AddExceptionHandler<AspNetCoreExceptionHandler>();
+
+        // Minimal API binding otherwise writes an empty 400 response outside Development before endpoint code runs.
+        services.Configure<RouteHandlerOptions>(options => options.ThrowOnBadRequest = true);
 
         services.Configure<ApiBehaviorOptions>(options =>
         {

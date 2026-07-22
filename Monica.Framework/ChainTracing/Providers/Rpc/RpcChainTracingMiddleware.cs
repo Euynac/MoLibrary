@@ -99,7 +99,7 @@ internal sealed class RpcChainTracingMiddleware(
         catch (Exception exception)
         {
             var errorResponse = await handler.HandleAsync(context, exception, CancellationToken.None);
-            handler.LogException(context, exception);
+            handler.LogException(context, exception, errorResponse);
 
             using var exceptionStream = new MemoryStream();
             context.Response.Body = exceptionStream;
