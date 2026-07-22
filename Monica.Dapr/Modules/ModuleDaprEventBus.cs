@@ -114,8 +114,9 @@ public class ModuleDaprEventBusOption : MinimalApiModuleOptions<ModuleDaprEventB
     public int? BulkChunkSize { get; set; } = 1000;
 
     /// <summary>
-    /// Message handling timeout for streaming subscriptions. Defaults to 10 seconds.
-    /// If a handler takes longer than this, Dapr will retry the message.
+    /// Gets or sets the message-handling deadline passed to the Dapr streaming subscription. Defaults to 30 seconds.
+    /// When the deadline elapses, Monica stops awaiting the handler and requests a retry. The same cancellation token
+    /// is passed to the handler for cooperative shutdown, but non-cooperative handler code may continue running.
     /// </summary>
     public TimeSpan MessageHandlingTimeout { get; set; } = TimeSpan.FromSeconds(30);
 

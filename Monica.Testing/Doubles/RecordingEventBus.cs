@@ -73,7 +73,9 @@ public sealed class RecordingEventBus : ILocalEventBus, IDistributedEventBus
     }
 
     /// <inheritdoc />
-    public Task<IEventSubscription> SubscribeAsync<TEvent>(Func<TEvent, Task> handler, string? topicName = null)
+    public Task<IEventSubscription> SubscribeAsync<TEvent>(
+        Func<TEvent, CancellationToken, Task> handler,
+        string? topicName = null)
         where TEvent : class
     {
         return _local.SubscribeAsync(handler, topicName);

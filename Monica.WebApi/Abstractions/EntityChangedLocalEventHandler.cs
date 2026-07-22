@@ -23,32 +23,44 @@ public abstract class EntityChangedLocalEventHandler<TEntity> :
     /// Handles an entity creation event.
     /// </summary>
     /// <param name="eventData">The entity creation event payload.</param>
-    public virtual Task HandleEventAsync(EntityCreatedEventData<TEntity> eventData)
+    /// <param name="cancellationToken">Signals that the publisher is no longer waiting.</param>
+    public virtual Task HandleEventAsync(
+        EntityCreatedEventData<TEntity> eventData,
+        CancellationToken cancellationToken)
     {
-        return HandleChangedAsync(eventData);
+        return HandleChangedAsync(eventData, cancellationToken);
     }
 
     /// <summary>
     /// Handles an entity update event.
     /// </summary>
     /// <param name="eventData">The entity update event payload.</param>
-    public virtual Task HandleEventAsync(EntityUpdatedEventData<TEntity> eventData)
+    /// <param name="cancellationToken">Signals that the publisher is no longer waiting.</param>
+    public virtual Task HandleEventAsync(
+        EntityUpdatedEventData<TEntity> eventData,
+        CancellationToken cancellationToken)
     {
-        return HandleChangedAsync(eventData);
+        return HandleChangedAsync(eventData, cancellationToken);
     }
 
     /// <summary>
     /// Handles an entity deletion event.
     /// </summary>
     /// <param name="eventData">The entity deletion event payload.</param>
-    public virtual Task HandleEventAsync(EntityDeletedEventData<TEntity> eventData)
+    /// <param name="cancellationToken">Signals that the publisher is no longer waiting.</param>
+    public virtual Task HandleEventAsync(
+        EntityDeletedEventData<TEntity> eventData,
+        CancellationToken cancellationToken)
     {
-        return HandleChangedAsync(eventData);
+        return HandleChangedAsync(eventData, cancellationToken);
     }
 
     /// <summary>
     /// Handles any create, update, or delete event for the configured entity type.
     /// </summary>
     /// <param name="eventData">The normalized entity change event payload.</param>
-    protected abstract Task HandleChangedAsync(EntityChangedEventData<TEntity> eventData);
+    /// <param name="cancellationToken">Signals that the publisher is no longer waiting.</param>
+    protected abstract Task HandleChangedAsync(
+        EntityChangedEventData<TEntity> eventData,
+        CancellationToken cancellationToken);
 }

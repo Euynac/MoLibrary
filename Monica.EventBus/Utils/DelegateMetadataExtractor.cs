@@ -13,10 +13,9 @@ internal static class DelegateMetadataExtractor
     /// <summary>
     /// Extracts metadata from an event handler delegate.
     /// </summary>
-    /// <typeparam name="TEvent">Event type.</typeparam>
     /// <param name="handler">Event handler delegate.</param>
     /// <returns>A dictionary containing the extracted metadata.</returns>
-    public static Dictionary<string, object> ExtractMetadata<TEvent>(Func<TEvent, Task> handler)
+    public static Dictionary<string, object> ExtractMetadata(Delegate handler)
     {
         var metadata = new Dictionary<string, object>();
 

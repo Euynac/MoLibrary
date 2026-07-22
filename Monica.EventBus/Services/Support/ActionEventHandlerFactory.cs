@@ -11,31 +11,32 @@ public class ActionEventHandler<TEvent> : ILocalEventHandler<TEvent>
     /// <summary>
     /// Delegate used to handle the event.
     /// </summary>
-    public Func<TEvent, Task> Action { get; }
+    public Func<TEvent, CancellationToken, Task> Action { get; }
 
     /// <summary>
     /// Creates a new instance of <see cref="ActionEventHandler{TEvent}"/>.
     /// </summary>
     /// <param name="handler">Delegate that handles the event.</param>
-    public ActionEventHandler(Func<TEvent, Task> handler) => Action = handler;
+    public ActionEventHandler(Func<TEvent, CancellationToken, Task> handler) => Action = handler;
 
     /// <summary>
     /// Handles the event by invoking the configured delegate.
     /// </summary>
     /// <param name="eventData">Event payload.</param>
-    public async Task HandleEventAsync(TEvent eventData)
+    /// <param name="cancellationToken">Signals that the event delivery is no longer waiting.</param>
+    public Task HandleEventAsync(TEvent eventData, CancellationToken cancellationToken)
     {
-        await Action(eventData);
+        return Action(eventData, cancellationToken);
     }
 }
 
 /// <summary>
 /// Factory for delegate-based event handlers.
 /// </summary>
-internal class ActionEventHandlerFactory<TEvent>(Func<TEvent, Task> action) : IEventHandlerFactory
+internal class ActionEventHandlerFactory<TEvent>(Func<TEvent, CancellationToken, Task> action) : IEventHandlerFactory
     where TEvent : class
 {
-    private readonly Func<TEvent, Task> _action = action ?? throw new ArgumentNullException(nameof(action));
+    private readonly Func<TEvent, CancellationToken, Task> _action = action ?? throw new ArgumentNullException(nameof(action));
 
     public IEventHandlerDisposeWrapper GetHandler()
     {

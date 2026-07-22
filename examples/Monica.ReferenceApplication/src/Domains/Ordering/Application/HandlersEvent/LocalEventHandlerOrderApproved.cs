@@ -10,8 +10,11 @@ namespace Domains.Ordering.Application.HandlersEvent;
 public sealed class LocalEventHandlerOrderApproved : LocalEventHandler<EventOrderApproved>
 {
     /// <inheritdoc />
-    public override Task HandleEventAsync(EventOrderApproved eventData)
+    public override Task HandleEventAsync(
+        EventOrderApproved eventData,
+        CancellationToken cancellationToken)
     {
+        cancellationToken.ThrowIfCancellationRequested();
         Logger.LogInformation(
             "Observed committed approval for order {OrderNumber} ({OrderId}) at {ApprovedAtUtc}.",
             eventData.OrderNumber,

@@ -26,7 +26,7 @@ public sealed class ConfigurationEventBusSubscriptionHostedService(
 
         _eventBus = ConfigurationEventBusChangeNotifier.ResolveDistributedEventBus(serviceProvider, options.Value);
         _subscription = await _eventBus.SubscribeAsync<ConfigurationReloadSignal>(
-            signal => receiver.ReceiveAsync(signal, CancellationToken.None),
+            receiver.ReceiveAsync,
             options.Value.TopicName);
     }
 

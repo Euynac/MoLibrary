@@ -69,7 +69,11 @@ public class RecurringJobScheduler(
     /// <summary>
     /// Handles JobDefinitionsChangedEvent to update in-flight schedules dynamically.
     /// </summary>
-    public async Task OnJobDefinitionsChangedAsync(JobDefinitionsChangedEvent evt)
+    /// <param name="evt">The published definition changes.</param>
+    /// <param name="cancellationToken">Signals that the event delivery is no longer waiting.</param>
+    public async Task OnJobDefinitionsChangedAsync(
+        JobDefinitionsChangedEvent evt,
+        CancellationToken cancellationToken)
     {
         if (!string.Equals(evt.SchedulerScopeKey, _options.SchedulerScopeKey, StringComparison.Ordinal))
         {
@@ -77,7 +81,7 @@ public class RecurringJobScheduler(
             return;
         }
 
-        await _scheduleLock.WaitAsync();
+        await _scheduleLock.WaitAsync(cancellationToken);
         try
         {
             logger.LogInformation(
@@ -90,6 +94,7 @@ public class RecurringJobScheduler(
             // 1. Remove schedules for deleted jobs
             foreach (var deletedJobKey in evt.DeletedJobKeys)
             {
+                cancellationToken.ThrowIfCancellationRequested();
                 logger.LogInformation("Removed schedule for deleted job: {JobKey}", deletedJobKey);
                 await RemoveSchedule(deletedJobKey);
             }
@@ -107,11 +112,15 @@ public class RecurringJobScheduler(
             // 4. Update or add schedules for current recurring jobs
             foreach (var jobDefinition in addedRecurringJobs.CombineForeach(updatedRecurringJobs))
             {
+                cancellationToken.ThrowIfCancellationRequested();
+
                 if (_inFlightRecurringSchedules.ContainsKey(jobDefinition.JobKey))
                 {
                     await RemoveSchedule(jobDefinition.JobKey);
                     logger.LogInformation("Removed schedule for updated job: {JobKey}", jobDefinition.JobKey);
                 }
+
+                // Recurring timers intentionally outlive the delivery that updates their schedule.
                 ScheduleRecurringJob(jobDefinition);
             }
 

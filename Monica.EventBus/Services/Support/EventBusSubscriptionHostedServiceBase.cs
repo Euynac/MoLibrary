@@ -409,6 +409,10 @@ public abstract class EventBusSubscriptionHostedServiceBase(
                     topicName);
             }
         }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
         catch (Exception ex)
         {
             RecordState($"Error handling external message for topic {topicName}",

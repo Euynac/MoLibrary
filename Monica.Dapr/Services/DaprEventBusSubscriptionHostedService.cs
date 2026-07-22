@@ -177,40 +177,82 @@ internal class DaprEventBusSubscriptionHostedService(
         // Message handler - deserializes and delegates to base class
         async Task<TopicResponseAction> HandleMessageAsync(TopicMessage message, CancellationToken ct)
         {
+            if (_options.EnableMessageDataDebugLogging)
+            {
+                var rawJson = System.Text.Encoding.UTF8.GetString(message.Data.Span);
+                Logger.LogInformation(
+                    "Received message on topic {Topic}: {RawJson}",
+                    message.Topic, rawJson);
+            }
+
+            object? eventData;
             try
             {
-                // Debug logging for raw message data
-                if (_options.EnableMessageDataDebugLogging)
-                {
-                    var rawJson = System.Text.Encoding.UTF8.GetString(message.Data.Span);
-                    Logger.LogInformation(
-                        "Received message on topic {Topic}: {RawJson}",
-                        message.Topic, rawJson);
-                }
-
-                // Deserialize message data using the topic's event type
-                var eventData = JsonSerializer.Deserialize(
+                eventData = JsonSerializer.Deserialize(
                     message.Data.Span,
                     eventType,
                     jsonSerializerOptionsProvider.SerializerOptions);
+            }
+            catch (Exception ex) when (ex is JsonException or NotSupportedException)
+            {
+                RecordState(
+                    $"Rejected malformed Dapr message for topic {message.Topic}",
+                    HostedServiceState.Degraded,
+                    ex);
+                Logger.LogWarning(
+                    ex,
+                    "Dropping malformed Dapr message for topic {Topic}",
+                    message.Topic);
+                return TopicResponseAction.Drop;
+            }
+            catch (Exception ex)
+            {
+                RecordState(
+                    $"Error deserializing Dapr message for topic {message.Topic}",
+                    HostedServiceState.Degraded,
+                    ex);
+                Logger.LogError(
+                    ex,
+                    "Transient error deserializing Dapr message for topic {Topic}; requesting retry",
+                    message.Topic);
+                return TopicResponseAction.Retry;
+            }
 
-                if (eventData == null)
-                {
-                    RecordState($"Failed to deserialize message for topic {message.Topic}", HostedServiceState.Degraded);
+            if (eventData is null)
+            {
+                RecordState($"Failed to deserialize message for topic {message.Topic}", HostedServiceState.Degraded);
+                Logger.LogWarning(
+                    "Dropping Dapr message for topic {Topic} because it deserialized to null",
+                    message.Topic);
+                return TopicResponseAction.Drop;
+            }
 
-                    Logger.LogWarning(
-                        "Deserialized message for topic {Topic} was null",
-                        message.Topic);
-                    return TopicResponseAction.Drop;
-                }
+            var handlingTask = HandleExternalMessageAsync(
+                message.Topic,
+                eventData,
+                ct);
 
-                // Delegate to base class for handler routing and invocation
-                await HandleExternalMessageAsync(
-                    message.Topic,
-                    eventData,
-                    ct);
+            try
+            {
+                // The Dapr SDK only cancels this token; it still awaits the callback indefinitely.
+                // Bound our wait while allowing the handler task to retain and dispose its scope when it finishes.
+                await handlingTask.WaitAsync(ct);
 
                 return TopicResponseAction.Success;
+            }
+            catch (OperationCanceledException ex) when (ct.IsCancellationRequested)
+            {
+                _ = ObserveLateMessageHandlingAsync(handlingTask, message.Topic);
+
+                RecordState(
+                    $"Dapr message handling deadline elapsed for topic {message.Topic}",
+                    HostedServiceState.Degraded,
+                    ex);
+                Logger.LogWarning(
+                    ex,
+                    "Dapr message handling deadline elapsed for topic {Topic}; requesting retry",
+                    message.Topic);
+                return TopicResponseAction.Retry;
             }
             catch (Exception ex)
             {
@@ -218,10 +260,29 @@ internal class DaprEventBusSubscriptionHostedService(
                     HostedServiceState.Degraded, ex);
 
                 Logger.LogError(ex,
-                    "Error handling Dapr message for topic {Topic}",
+                    "Error handling Dapr message for topic {Topic}; requesting retry",
                     message.Topic);
-                return TopicResponseAction.Drop;
+                return TopicResponseAction.Retry;
             }
+        }
+    }
+
+    private async Task ObserveLateMessageHandlingAsync(Task handlingTask, string topicName)
+    {
+        try
+        {
+            await handlingTask;
+        }
+        catch (OperationCanceledException)
+        {
+            // Cooperative cancellation after the callback returned Retry is expected.
+        }
+        catch (Exception ex)
+        {
+            Logger.LogWarning(
+                ex,
+                "Dapr message handling for topic {Topic} faulted after the callback returned Retry",
+                topicName);
         }
     }
 

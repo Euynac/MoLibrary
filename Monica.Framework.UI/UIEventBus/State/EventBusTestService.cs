@@ -356,8 +356,9 @@ public sealed class EventBusTestService(
                 }
             }
 
-            var subscription = await distributedEventBus.SubscribeAsync<TestEventMessage>(async eventData =>
+            var subscription = await distributedEventBus.SubscribeAsync<TestEventMessage>((eventData, cancellationToken) =>
             {
+                cancellationToken.ThrowIfCancellationRequested();
                 var receivedMessage = new ReceivedTestMessage
                 {
                     EventData = eventData,
@@ -375,7 +376,7 @@ public sealed class EventBusTestService(
                 logger.LogInformation("收到测试消息: {MessageId} from topic {TopicName}",
                     eventData.MessageId, topicName);
 
-                await Task.CompletedTask;
+                return Task.CompletedTask;
             }, topicName);
 
             lock (_legacySubscriptionLock)

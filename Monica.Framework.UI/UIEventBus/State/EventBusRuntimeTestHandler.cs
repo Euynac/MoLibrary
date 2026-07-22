@@ -16,8 +16,10 @@ internal sealed class EventBusRuntimeLocalTestHandler<TEvent>(Func<object, Task>
     /// Captures a locally delivered event payload.
     /// </summary>
     /// <param name="eventData">Event payload.</param>
-    public Task HandleEventAsync(TEvent eventData)
+    /// <param name="cancellationToken">Signals that the publisher is no longer waiting.</param>
+    public Task HandleEventAsync(TEvent eventData, CancellationToken cancellationToken)
     {
+        cancellationToken.ThrowIfCancellationRequested();
         return _onEvent(eventData!);
     }
 }
@@ -35,8 +37,10 @@ internal sealed class EventBusRuntimeDistributedTestHandler<TEvent>(Func<object,
     /// Captures a distributed event payload.
     /// </summary>
     /// <param name="eventData">Event payload.</param>
-    public Task HandleEventAsync(TEvent eventData)
+    /// <param name="cancellationToken">Signals that the delivery is no longer waiting.</param>
+    public Task HandleEventAsync(TEvent eventData, CancellationToken cancellationToken)
     {
+        cancellationToken.ThrowIfCancellationRequested();
         return _onEvent(eventData!);
     }
 }

@@ -28,7 +28,8 @@ public abstract class DomainEventHandler<TEvent> :
     /// Handles the distributed event.
     /// </summary>
     /// <param name="eventData">The event payload.</param>
-    public abstract Task HandleEventAsync(TEvent eventData);
+    /// <param name="cancellationToken">Signals that the event delivery is no longer waiting.</param>
+    public abstract Task HandleEventAsync(TEvent eventData, CancellationToken cancellationToken);
 }
 
 /// <summary>
@@ -47,5 +48,6 @@ public abstract class LocalEventHandler<TEvent> :
     /// Handles the local event.
     /// </summary>
     /// <param name="eventData">The event payload.</param>
-    public abstract Task HandleEventAsync(TEvent eventData);
+    /// <param name="cancellationToken">Signals that the publisher is no longer waiting.</param>
+    public abstract Task HandleEventAsync(TEvent eventData, CancellationToken cancellationToken);
 }

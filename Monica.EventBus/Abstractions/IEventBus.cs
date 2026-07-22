@@ -70,10 +70,15 @@ public interface IEventBus
     /// subscriptions are not used as catch-all listeners for derived events.
     /// </remarks>
     /// <typeparam name="TEvent">Event type</typeparam>
-    /// <param name="handler">Handler action</param>
+    /// <param name="handler">
+    /// Handler action. The cancellation token signals that the publisher or message delivery is no longer
+    /// waiting; handlers should pass it to cancellable operations and stop promptly.
+    /// </param>
     /// <param name="topicName">Optional custom topic name (overrides EventNameAttribute)</param>
     /// <returns>The created subscription</returns>
-    Task<IEventSubscription> SubscribeAsync<TEvent>(Func<TEvent, Task> handler, string? topicName = null)
+    Task<IEventSubscription> SubscribeAsync<TEvent>(
+        Func<TEvent, CancellationToken, Task> handler,
+        string? topicName = null)
         where TEvent : class;
 
     #endregion
