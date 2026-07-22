@@ -11,7 +11,14 @@ public sealed record ConfigurationDefinitionState
     public required ConfigurationDefinition Definition { get; init; }
 
     /// <summary>
-    /// Gets effective values for scalar nodes and scalar collection nodes in the definition.
+    /// Gets the persisted effective-value document version observed while building this state, or null when no
+    /// persisted document exists.
+    /// </summary>
+    public long? EffectiveValueVersion { get; init; }
+
+    /// <summary>
+    /// Gets display-safe effective values for every statically declared non-root schema node in preorder.
+    /// Aggregate values whose schema subtree contains sensitive data are redacted as a whole.
     /// </summary>
     public IReadOnlyList<ConfigurationEffectiveValue> EffectiveValues { get; init; } = [];
 }

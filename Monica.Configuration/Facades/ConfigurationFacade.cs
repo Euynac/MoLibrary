@@ -230,6 +230,28 @@ public sealed class ConfigurationFacade(
         }
     }
 
+    /// <summary>
+    /// Gets every definition and its display-safe effective values in one cohesive snapshot.
+    /// </summary>
+    /// <remarks>
+    /// Definitions are resolved once and effective documents are loaded in one store operation. Results preserve the
+    /// catalog order, and each state's non-root values follow schema preorder so callers can flatten the snapshot without
+    /// issuing per-definition or per-node reads.
+    /// </remarks>
+    /// <returns>All definition state snapshots.</returns>
+    public async Task<Res<IReadOnlyList<ConfigurationDefinitionState>>> GetDefinitionStatesAsync()
+    {
+        try
+        {
+            var definitions = await definitionResolver.GetMergedDefinitionsAsync(CancellationToken.None);
+            return Res.Ok(await effectiveStateReader.ReadDefinitionsAsync(definitions, CancellationToken.None));
+        }
+        catch (Exception ex)
+        {
+            return Res.Fail($"Failed to get configuration definition states: {ex.GetMessageRecursively()}");
+        }
+    }
+
     private static ConfigurationDefinitionSummary ToSummary(ConfigurationDefinition definition)
     {
         return new ConfigurationDefinitionSummary
