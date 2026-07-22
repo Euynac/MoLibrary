@@ -326,6 +326,30 @@ public sealed class EventBusKafkaPageState(
     }
 
     /// <summary>
+    /// Clears all retained records from every partition of a selected topic without deleting it.
+    /// </summary>
+    public async Task<bool> ClearTopicMessagesAsync(
+        string topicName,
+        CancellationToken cancellationToken = default)
+    {
+        if (SelectedClusterId is null)
+        {
+            return false;
+        }
+
+        return await RunAsync(async () =>
+        {
+            if (!TryRead(await facade.ClearTopicMessagesAsync(SelectedClusterId, topicName, cancellationToken)))
+            {
+                return false;
+            }
+
+            await RefreshTopicsAsync(cancellationToken);
+            return true;
+        });
+    }
+
+    /// <summary>
     /// Increases a topic partition count.
     /// </summary>
     public async Task<bool> IncreasePartitionsAsync(string topicName, int increaseTo, CancellationToken cancellationToken = default)

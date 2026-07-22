@@ -59,6 +59,22 @@
     padding: 16px;
 }
 
+/* MudTabs is a fixed-height flex surface in the shell. Let its panel own vertical scrolling so
+   long table pages (including their pager footer) are not clipped by the rounded tab surface. */
+.eventbus-kafka-page ::deep .mud-tabs {
+    min-height: 0;
+}
+
+.eventbus-kafka-page ::deep .mud-tabs-panels {
+    min-height: 0;
+    overflow-y: auto;
+    overflow-x: hidden;
+}
+
+.eventbus-kafka-page ::deep .mud-tabs-panels > .mud-tab-panel {
+    min-width: 0;
+}
+
 @media (max-width: 720px) {
     .eventbus-kafka-page {
         padding: 14px;

@@ -1,0 +1,12 @@
+.clusters-table {
+    width: 100%;
+    min-width: 0;
+}
+
+.clusters-table ::deep .mud-table-root {
+    min-width: 760px;
+}
+
+.clusters-table ::deep .mud-table-container {
+    overflow-x: auto;
+}

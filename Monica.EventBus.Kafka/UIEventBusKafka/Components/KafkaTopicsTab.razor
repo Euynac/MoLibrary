@@ -103,6 +103,11 @@
                             <MudMenuItem Icon="@Icons.Material.Filled.Schedule" OnClick="@(() => OnUpdateRetention.InvokeAsync(context))">
                                 @L["Topics:Actions:Retention"]
                             </MudMenuItem>
+                            <MudMenuItem Icon="@Icons.Material.Filled.DeleteSweep"
+                                         Disabled="@(!context.IsMetadataAvailable)"
+                                         OnClick="@(() => OnClearMessages.InvokeAsync(context))">
+                                @L["Topics:Actions:ClearMessages"]
+                            </MudMenuItem>
                             <MudMenuItem Icon="@Icons.Material.Filled.Delete" OnClick="@(() => OnDelete.InvokeAsync(context))">
                                 @L["Common:Actions:Delete"]
                             </MudMenuItem>
@@ -135,6 +140,8 @@
     [Parameter] public EventCallback<KafkaTopicSummary> OnIncreasePartitions { get; set; }
 
     [Parameter] public EventCallback<KafkaTopicSummary> OnUpdateRetention { get; set; }
+
+    [Parameter] public EventCallback<KafkaTopicSummary> OnClearMessages { get; set; }
 
     private int FilteredTopicCount => State.Topics.Count(FilterTopic);
 

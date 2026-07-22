@@ -37,11 +37,16 @@
 .topics-table {
     width: 100%;
     min-width: 0;
-    overflow-x: auto;
 }
 
-.topics-table ::deep .mud-table {
+.topics-table ::deep .mud-table-root {
     min-width: 760px;
+}
+
+/* Keep horizontal scrolling on the data surface. The pager is a sibling of this container and
+   must remain in the full-width table footer instead of being clipped by the scrollbar. */
+.topics-table ::deep .mud-table-container {
+    overflow-x: auto;
 }
 
 @media (max-width: 720px) {

@@ -97,6 +97,20 @@ public sealed class KafkaConsoleFacade(
     }
 
     /// <summary>
+    /// Clears all retained records from every partition of a topic while keeping the topic itself.
+    /// </summary>
+    public Task<Res> ClearTopicMessagesAsync(
+        string clusterId,
+        string topicName,
+        CancellationToken cancellationToken = default)
+    {
+        return ExecuteAsync(
+            () => topicService.ClearTopicMessagesAsync(clusterId, topicName, cancellationToken),
+            "Kafka topic messages cleared",
+            "Failed to clear Kafka topic messages");
+    }
+
+    /// <summary>
     /// Increases the partition count for a topic.
     /// </summary>
     public Task<Res> IncreasePartitionsAsync(KafkaTopicPartitionRequest request, CancellationToken cancellationToken = default)

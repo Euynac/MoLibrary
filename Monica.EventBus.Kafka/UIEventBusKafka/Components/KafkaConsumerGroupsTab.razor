@@ -26,20 +26,29 @@
     }
     else
     {
-        <MudTable T="KafkaConsumerGroupSummary" Items="@State.ConsumerGroups" Dense="true" Hover="true">
-            <HeaderContent>
-                <MudTh>@L["ConsumerGroups:Columns:GroupId"]</MudTh>
-                <MudTh>@L["ConsumerGroups:Columns:State"]</MudTh>
-                <MudTh>@L["ConsumerGroups:Columns:Members"]</MudTh>
-                <MudTh>@L["ConsumerGroups:Columns:Lag"]</MudTh>
-            </HeaderContent>
-            <RowTemplate>
-                <MudTd DataLabel="@L["ConsumerGroups:Columns:GroupId"]">@context.GroupId</MudTd>
-                <MudTd DataLabel="@L["ConsumerGroups:Columns:State"]">@context.State</MudTd>
-                <MudTd DataLabel="@L["ConsumerGroups:Columns:Members"]">@context.MemberCount</MudTd>
-                <MudTd DataLabel="@L["ConsumerGroups:Columns:Lag"]">@FormatLag(context.TotalLag)</MudTd>
-            </RowTemplate>
-        </MudTable>
+        <div class="consumer-groups-table">
+            <MudTable T="KafkaConsumerGroupSummary"
+                      Items="@State.ConsumerGroups"
+                      RowsPerPage="25"
+                      Dense="true"
+                      Hover="true">
+                <HeaderContent>
+                    <MudTh>@L["ConsumerGroups:Columns:GroupId"]</MudTh>
+                    <MudTh>@L["ConsumerGroups:Columns:State"]</MudTh>
+                    <MudTh>@L["ConsumerGroups:Columns:Members"]</MudTh>
+                    <MudTh>@L["ConsumerGroups:Columns:Lag"]</MudTh>
+                </HeaderContent>
+                <RowTemplate>
+                    <MudTd DataLabel="@L["ConsumerGroups:Columns:GroupId"]">@context.GroupId</MudTd>
+                    <MudTd DataLabel="@L["ConsumerGroups:Columns:State"]">@context.State</MudTd>
+                    <MudTd DataLabel="@L["ConsumerGroups:Columns:Members"]">@context.MemberCount</MudTd>
+                    <MudTd DataLabel="@L["ConsumerGroups:Columns:Lag"]">@FormatLag(context.TotalLag)</MudTd>
+                </RowTemplate>
+                <PagerContent>
+                    <MudTablePager PageSizeOptions="@(new[] { 10, 25, 50, 100 })" />
+                </PagerContent>
+            </MudTable>
+        </div>
     }
 </MudStack>
 

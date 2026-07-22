@@ -73,11 +73,12 @@
                 <KafkaTopicsTab State="PageState"
                                 OnCreate="OpenCreateTopicDialogAsync"
                                 OnRefresh="RefreshAsync"
-                                OnDelete="DeleteTopicAsync"
-                                OnViewMessages="OpenMessagesDialogAsync"
+                                 OnDelete="DeleteTopicAsync"
+                                 OnViewMessages="OpenMessagesDialogAsync"
                                 OnViewBacklog="OpenTopicBacklogDialogAsync"
                                 OnIncreasePartitions="OpenIncreasePartitionsDialogAsync"
-                                OnUpdateRetention="OpenRetentionDialogAsync" />
+                                OnUpdateRetention="OpenRetentionDialogAsync"
+                                OnClearMessages="ClearTopicMessagesAsync" />
             </MudTabPanel>
             <MudTabPanel Text="@L["Tabs:ConsumerGroups"]" Icon="@Icons.Material.Filled.Group">
                 <KafkaConsumerGroupsTab State="PageState" OnRefresh="RefreshAsync" />
@@ -250,6 +251,31 @@
         if (await PageState.DeleteTopicAsync(topic.TopicName))
         {
             Snackbar.Add(L["Topics:Messages:Deleted"], Severity.Success);
+        }
+        else
+        {
+            ShowStateError();
+        }
+
+        StateHasChanged();
+    }
+
+    private async Task ClearTopicMessagesAsync(KafkaTopicSummary topic)
+    {
+        var confirmed = await DialogService.ShowMessageBoxAsync(
+            L["Topics:Confirm:ClearMessagesTitle"],
+            L["Topics:Confirm:ClearMessagesMessage", topic.TopicName],
+            yesText: L["Topics:Actions:ClearMessages"],
+            cancelText: L["Common:Actions:Cancel"]);
+
+        if (confirmed != true)
+        {
+            return;
+        }
+
+        if (await PageState.ClearTopicMessagesAsync(topic.TopicName))
+        {
+            Snackbar.Add(L["Topics:Messages:Cleared"], Severity.Success);
         }
         else
         {

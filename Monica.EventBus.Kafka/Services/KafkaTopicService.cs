@@ -58,6 +58,21 @@ public sealed class KafkaTopicService(
         await adminProvider.DeleteTopicAsync(cluster, topicName, cancellationToken);
     }
 
+    /// <summary>
+    /// Clears all retained records from every partition of a topic without deleting the topic.
+    /// </summary>
+    /// <param name="clusterId">Target cluster id.</param>
+    /// <param name="topicName">Topic name.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    public async Task ClearTopicMessagesAsync(
+        string clusterId,
+        string topicName,
+        CancellationToken cancellationToken = default)
+    {
+        var cluster = await GetAdminClusterAsync(clusterId, cancellationToken);
+        await adminProvider.ClearTopicMessagesAsync(cluster, topicName, cancellationToken);
+    }
+
     public async Task IncreasePartitionsAsync(KafkaTopicPartitionRequest request, CancellationToken cancellationToken = default)
     {
         var cluster = await GetAdminClusterAsync(request.ClusterId, cancellationToken);

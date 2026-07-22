@@ -1,0 +1,12 @@
+.consumer-groups-table {
+    width: 100%;
+    min-width: 0;
+}
+
+.consumer-groups-table ::deep .mud-table-root {
+    min-width: 640px;
+}
+
+.consumer-groups-table ::deep .mud-table-container {
+    overflow-x: auto;
+}

@@ -71,6 +71,19 @@ public interface IKafkaAdminProvider
     Task DeleteTopicAsync(KafkaClusterConfig cluster, string topicName, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Removes all currently retained records from every partition of a topic while keeping the
+    /// topic, its partitions, and its configuration intact.
+    /// </summary>
+    /// <param name="cluster">Cluster configuration.</param>
+    /// <param name="topicName">Topic name.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <remarks>
+    /// Implementations should use Kafka's record-deletion API rather than deleting and recreating
+    /// the topic. Consumer-group offsets are not reset by this operation.
+    /// </remarks>
+    Task ClearTopicMessagesAsync(KafkaClusterConfig cluster, string topicName, CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Increases a topic's partition count.
     /// </summary>
     /// <param name="cluster">Cluster configuration.</param>
