@@ -71,9 +71,9 @@
       }
     },
     "Performance": {
-      "History": {
-        "Summary": "获取 Kafka 性能历史",
-        "Description": "返回集群最近的 Kafka 性能快照。"
+      "Latest": {
+        "Summary": "获取 Kafka 最新性能快照",
+        "Description": "返回集群当前保留的最新 Kafka 性能快照。"
       },
       "Capture": {
         "Summary": "采集 Kafka 性能",
@@ -322,6 +322,7 @@
     "Title": "性能快照",
     "Unavailable": "性能采样需要直接 Kafka Broker 访问。",
     "Empty": "尚未采集性能快照。",
+    "NoTopicMetrics": "最新性能快照中没有可显示的主题指标。",
     "TopicFilter": {
       "Label": "筛选主题",
       "Placeholder": "输入主题名称",

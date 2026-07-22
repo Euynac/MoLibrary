@@ -42,11 +42,6 @@ public sealed class EventBusKafkaPageState(
     public List<KafkaConsumerGroupSummary> ConsumerGroups { get; private set; } = [];
 
     /// <summary>
-    /// Performance snapshots for the selected cluster.
-    /// </summary>
-    public IReadOnlyList<KafkaPerformanceSnapshot> PerformanceSnapshots => performancePollingState.Snapshots;
-
-    /// <summary>
     /// Latest performance snapshot, including captures produced by the live sampler.
     /// </summary>
     public KafkaPerformanceSnapshot? LatestPerformance =>
@@ -556,7 +551,7 @@ public sealed class EventBusKafkaPageState(
     {
         Topics = [];
         ConsumerGroups = [];
-        performancePollingState.ClearHistory();
+        performancePollingState.ClearSnapshot();
         _topicsClusterId = null;
         _consumerGroupsClusterId = null;
         _performanceClusterId = null;
@@ -745,19 +740,19 @@ public sealed class EventBusKafkaPageState(
     {
         if (SelectedClusterId is null)
         {
-            performancePollingState.ClearHistory();
+            performancePollingState.ClearSnapshot();
             _performanceClusterId = null;
             return;
         }
 
-        var result = await facade.GetPerformanceHistoryAsync(SelectedClusterId, cancellationToken: cancellationToken);
+        var result = await facade.GetLatestPerformanceAsync(SelectedClusterId, cancellationToken);
         if (suppressErrors
-                ? TryReadSilently(result, out var snapshots)
-                : TryRead(result, out snapshots))
+                ? TryReadSilently(result, out var snapshot)
+                : TryRead(result, out snapshot))
         {
-            performancePollingState.SetHistory(snapshots);
+            performancePollingState.SetSnapshot(snapshot);
             _performanceClusterId = SelectedClusterId;
-            Dashboard.LatestPerformance = performancePollingState.LatestSnapshot ?? Dashboard.LatestPerformance;
+            Dashboard.LatestPerformance = snapshot;
         }
     }
 

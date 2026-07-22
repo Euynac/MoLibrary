@@ -143,12 +143,7 @@ public sealed class KafkaPerformanceSnapshotEntity
     private static readonly JsonSerializerOptions TOPIC_METRICS_JSON_OPTIONS = new(JsonSerializerDefaults.Web);
 
     /// <summary>
-    /// Entity id.
-    /// </summary>
-    public Guid Id { get; set; } = Guid.NewGuid();
-
-    /// <summary>
-    /// Cluster identifier.
+    /// Cluster identifier and primary key.
     /// </summary>
     public string ClusterId { get; set; } = string.Empty;
 
@@ -285,7 +280,7 @@ public sealed class KafkaPerformanceSnapshotEntity
         }
         catch (JsonException)
         {
-            // A malformed optional payload should not make the entire historical snapshot unreadable.
+            // A malformed optional payload should not make the current aggregate snapshot unreadable.
             return [];
         }
     }

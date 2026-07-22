@@ -71,9 +71,9 @@
       }
     },
     "Performance": {
-      "History": {
-        "Summary": "Gets Kafka performance history",
-        "Description": "Returns recent Kafka performance snapshots for a cluster."
+      "Latest": {
+        "Summary": "Gets the latest Kafka performance snapshot",
+        "Description": "Returns the latest Kafka performance snapshot currently retained for a cluster."
       },
       "Capture": {
         "Summary": "Captures Kafka performance",
@@ -312,7 +312,8 @@
   "Performance": {
     "Title": "Performance snapshots",
     "Unavailable": "Performance sampling requires direct Kafka broker access.",
-    "Empty": "No performance snapshots have been captured.",
+    "Empty": "No performance snapshot has been captured.",
+    "NoTopicMetrics": "The latest performance snapshot has no topic metrics to display.",
     "TopicFilter": {
       "Label": "Filter topics",
       "Placeholder": "Enter a topic name",

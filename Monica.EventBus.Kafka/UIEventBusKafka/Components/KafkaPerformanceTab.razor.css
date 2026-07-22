@@ -25,33 +25,53 @@
 .performance-interval-control {
     display: flex;
     align-items: center;
+    flex: 0 1 180px;
+    width: 180px;
     min-width: 132px;
+    height: 40px;
     min-height: 40px;
+}
+
+.performance-interval-control ::deep .mud-tooltip-root {
+    display: flex;
+    align-items: center;
+    width: 100%;
+    height: 40px;
 }
 
 .performance-interval-control ::deep .mud-input-control {
+    width: 100%;
     min-width: 132px;
-    max-width: 180px;
     margin: 0;
 }
 
-.performance-controls ::deep .mud-input-control {
-    min-width: 132px;
-    max-width: 180px;
-}
-
-.performance-controls ::deep .mud-button-root,
-.performance-controls ::deep .mud-input-control-boolean-input {
-    min-height: 40px;
-}
-
 .performance-topic-filter {
-    width: min(100%, 360px);
-    min-width: 0;
+    display: flex;
+    align-items: center;
+    flex: 0 1 280px;
+    width: 280px;
+    min-width: 220px;
+    height: 40px;
+    min-height: 40px;
 }
 
 .performance-topic-filter ::deep .mud-input-control {
     width: 100%;
+    margin: 0;
+}
+
+.performance-interval-control ::deep .mud-input-control.mud-input-outlined-with-label,
+.performance-interval-control ::deep .mud-input-control.mud-input-control-margin-dense,
+.performance-topic-filter ::deep .mud-input-control.mud-input-outlined-with-label,
+.performance-topic-filter ::deep .mud-input-control.mud-input-control-margin-dense {
+    margin: 0;
+}
+
+.performance-controls ::deep .mud-button-root,
+.performance-controls ::deep .mud-input-control-boolean-input,
+.performance-controls ::deep .mud-switch {
+    height: 40px;
+    min-height: 40px;
 }
 
 .metric-card {
@@ -86,8 +106,10 @@
         justify-content: flex-start;
     }
 
-    .performance-controls ::deep .mud-input-control {
-        flex: 1 1 132px;
+    .performance-interval-control,
+    .performance-topic-filter {
+        flex: 1 1 220px;
+        width: auto;
         max-width: none;
     }
 }

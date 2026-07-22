@@ -450,7 +450,7 @@ public sealed class KafkaConsumerGroupSummary
 }
 
 /// <summary>
-/// Cluster performance snapshot retained by the Kafka console.
+/// Latest cluster performance snapshot retained by the Kafka console.
 /// </summary>
 public sealed class KafkaPerformanceSnapshot
 {
