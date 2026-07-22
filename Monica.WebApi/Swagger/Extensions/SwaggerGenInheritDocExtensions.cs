@@ -109,6 +109,12 @@ public static class SwaggerGenInheritDocExtensions
                     continue;
                 }
 
+                if (parentElement.Name.LocalName == "member")
+                {
+                    MergeMemberDocumentation(parentElement, inheritDocElement, referencedMember);
+                    continue;
+                }
+
                 var referencedElement = referencedMember.Element(parentElement.Name);
                 if (referencedElement is null)
                 {
@@ -119,5 +125,39 @@ public static class SwaggerGenInheritDocExtensions
                 parentElement.ReplaceNodes(referencedElement.Nodes());
             }
         }
+    }
+
+    private static void MergeMemberDocumentation(
+        XElement member,
+        XElement inheritDocElement,
+        XElement referencedMember)
+    {
+        // Member-level inheritdoc inherits every documentation section while explicit local sections remain authoritative.
+        var localElementIdentities = member.Elements()
+            .Where(element => !ReferenceEquals(element, inheritDocElement))
+            .Select(GetDocumentationElementIdentity)
+            .ToHashSet(StringComparer.Ordinal);
+
+        foreach (var referencedElement in referencedMember.Elements())
+        {
+            if (!localElementIdentities.Add(GetDocumentationElementIdentity(referencedElement)))
+            {
+                continue;
+            }
+
+            inheritDocElement.AddBeforeSelf(new XElement(referencedElement));
+        }
+
+        inheritDocElement.Remove();
+    }
+
+    private static string GetDocumentationElementIdentity(XElement element)
+    {
+        var discriminator = element.Attribute("name")
+                            ?? element.Attribute("cref")
+                            ?? element.Attribute("code");
+        return discriminator is null
+            ? element.Name.LocalName
+            : $"{element.Name.LocalName}:{discriminator.Value}";
     }
 }
