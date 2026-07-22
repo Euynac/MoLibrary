@@ -49,6 +49,7 @@ internal sealed class KafkaEventBusSubscriptionHostedService(
         var consumer = new TopicConsumer(topicName, eventType, CancellationTokenSource.CreateLinkedTokenSource(cancellationToken));
         if (!_consumers.TryAdd(topicName, consumer))
         {
+            consumer.CancellationTokenSource.Dispose();
             return Task.CompletedTask;
         }
 

@@ -26,6 +26,7 @@ internal sealed class ConfluentKafkaMessageReader(IOptions<ModuleEventBusKafkaOp
     {
         ArgumentNullException.ThrowIfNull(request);
         ArgumentException.ThrowIfNullOrWhiteSpace(request.TopicName);
+        cancellationToken.ThrowIfCancellationRequested();
 
         var maxMessages = Math.Clamp(request.MaxMessages, 1, Math.Max(1, Option.MessagePreviewMaxMessages));
         using var admin = CreateAdminClient(cluster);
@@ -99,10 +100,10 @@ internal sealed class ConfluentKafkaMessageReader(IOptions<ModuleEventBusKafkaOp
     {
         cancellationToken.ThrowIfCancellationRequested();
 
-        var lowOffsets = await ReadOffsetsAsync(admin, partitions, OffsetSpec.Earliest());
+        var lowOffsets = await ReadOffsetsAsync(admin, partitions, OffsetSpec.Earliest(), cancellationToken);
         cancellationToken.ThrowIfCancellationRequested();
 
-        var highOffsets = await ReadOffsetsAsync(admin, partitions, OffsetSpec.Latest());
+        var highOffsets = await ReadOffsetsAsync(admin, partitions, OffsetSpec.Latest(), cancellationToken);
         cancellationToken.ThrowIfCancellationRequested();
 
         return partitions
@@ -115,7 +116,8 @@ internal sealed class ConfluentKafkaMessageReader(IOptions<ModuleEventBusKafkaOp
     private async Task<Dictionary<TopicPartition, long>> ReadOffsetsAsync(
         IAdminClient admin,
         IReadOnlyList<TopicPartition> partitions,
-        OffsetSpec offsetSpec)
+        OffsetSpec offsetSpec,
+        CancellationToken cancellationToken)
     {
         var specs = partitions.Select(partition => new TopicPartitionOffsetSpec
         {
@@ -123,10 +125,12 @@ internal sealed class ConfluentKafkaMessageReader(IOptions<ModuleEventBusKafkaOp
             OffsetSpec = offsetSpec
         });
 
-        var result = await admin.ListOffsetsAsync(specs, new ListOffsetsOptions
-        {
-            RequestTimeout = Option.AdminRequestTimeout
-        });
+        var result = await KafkaNativeRequestAwaiter.AwaitAsync(
+            admin.ListOffsetsAsync(specs, new ListOffsetsOptions
+            {
+                RequestTimeout = Option.AdminRequestTimeout
+            }),
+            cancellationToken);
 
         return result.ResultInfos
             .Where(info => info.TopicPartitionOffsetError.Error.Code == ErrorCode.NoError &&

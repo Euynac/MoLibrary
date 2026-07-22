@@ -1,3 +1,4 @@
+using System.Text.Json;
 using Monica.EventBus.Kafka.Models;
 
 namespace Monica.EventBus.Kafka.Providers.EfCore;
@@ -139,6 +140,8 @@ public sealed class KafkaClusterEntity
 /// </summary>
 public sealed class KafkaPerformanceSnapshotEntity
 {
+    private static readonly JsonSerializerOptions TOPIC_METRICS_JSON_OPTIONS = new(JsonSerializerDefaults.Web);
+
     /// <summary>
     /// Entity id.
     /// </summary>
@@ -180,7 +183,7 @@ public sealed class KafkaPerformanceSnapshotEntity
     public long? TotalLogEndOffset { get; set; }
 
     /// <summary>
-    /// Total retained messages across all sampled topic partitions.
+    /// Total retained messages across all sampled non-internal topic partitions.
     /// </summary>
     public long? TotalAvailableMessageCount { get; set; }
 
@@ -210,6 +213,15 @@ public sealed class KafkaPerformanceSnapshotEntity
     public string? Message { get; set; }
 
     /// <summary>
+    /// Serialized per-topic metrics captured with this snapshot.
+    /// </summary>
+    /// <remarks>
+    /// Keeping the collection in one provider-neutral column avoids coupling the console model to a
+    /// particular relational provider's JSON or owned-collection support.
+    /// </remarks>
+    public string? TopicMetricsJson { get; set; }
+
+    /// <summary>
     /// Converts the entity to a public model.
     /// </summary>
     public KafkaPerformanceSnapshot ToModel()
@@ -228,7 +240,8 @@ public sealed class KafkaPerformanceSnapshotEntity
             MessageWriteRatePerSecond = MessageWriteRatePerSecond,
             MessageConsumeRatePerSecond = MessageConsumeRatePerSecond,
             IncludesJmxMetrics = IncludesJmxMetrics,
-            Message = Message
+            Message = Message,
+            TopicMetrics = DeserializeTopicMetrics(TopicMetricsJson)
         };
     }
 
@@ -251,7 +264,36 @@ public sealed class KafkaPerformanceSnapshotEntity
             MessageWriteRatePerSecond = model.MessageWriteRatePerSecond,
             MessageConsumeRatePerSecond = model.MessageConsumeRatePerSecond,
             IncludesJmxMetrics = model.IncludesJmxMetrics,
-            Message = model.Message
+            Message = model.Message,
+            TopicMetricsJson = SerializeTopicMetrics(model.TopicMetrics)
         };
+    }
+
+    private static IReadOnlyList<KafkaTopicPerformanceSnapshot> DeserializeTopicMetrics(string? json)
+    {
+        if (string.IsNullOrWhiteSpace(json))
+        {
+            return [];
+        }
+
+        try
+        {
+            return JsonSerializer.Deserialize<List<KafkaTopicPerformanceSnapshot>>(
+                       json,
+                       TOPIC_METRICS_JSON_OPTIONS)
+                   ?? [];
+        }
+        catch (JsonException)
+        {
+            // A malformed optional payload should not make the entire historical snapshot unreadable.
+            return [];
+        }
+    }
+
+    private static string? SerializeTopicMetrics(IReadOnlyList<KafkaTopicPerformanceSnapshot> metrics)
+    {
+        return metrics.Count == 0
+            ? null
+            : JsonSerializer.Serialize(metrics, TOPIC_METRICS_JSON_OPTIONS);
     }
 }

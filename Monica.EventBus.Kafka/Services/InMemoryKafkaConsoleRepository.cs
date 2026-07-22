@@ -128,7 +128,19 @@ internal sealed class InMemoryKafkaConsoleRepository : IKafkaConsoleRepository
             MessageWriteRatePerSecond = snapshot.MessageWriteRatePerSecond,
             MessageConsumeRatePerSecond = snapshot.MessageConsumeRatePerSecond,
             IncludesJmxMetrics = snapshot.IncludesJmxMetrics,
-            Message = snapshot.Message
+            Message = snapshot.Message,
+            TopicMetrics = snapshot.TopicMetrics
+                .Select(metric => new KafkaTopicPerformanceSnapshot
+                {
+                    TopicName = metric.TopicName,
+                    TotalLogEndOffset = metric.TotalLogEndOffset,
+                    TotalAvailableMessageCount = metric.TotalAvailableMessageCount,
+                    TotalConsumerCommittedOffset = metric.TotalConsumerCommittedOffset,
+                    TotalLag = metric.TotalLag,
+                    MessageWriteRatePerSecond = metric.MessageWriteRatePerSecond,
+                    MessageConsumeRatePerSecond = metric.MessageConsumeRatePerSecond
+                })
+                .ToList()
         };
     }
 }

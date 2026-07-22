@@ -19,8 +19,11 @@ internal sealed class ConfluentKafkaAdminProvider(IOptions<ModuleEventBusKafkaOp
         KafkaClusterConfig cluster,
         CancellationToken cancellationToken = default)
     {
+        cancellationToken.ThrowIfCancellationRequested();
         using var admin = CreateAdminClient(cluster);
-        var result = await admin.DescribeClusterAsync(BuildDescribeClusterOptions()).WaitAsync(cancellationToken);
+        var result = await KafkaNativeRequestAwaiter.AwaitAsync(
+            admin.DescribeClusterAsync(BuildDescribeClusterOptions()),
+            cancellationToken);
         var brokers = MapNodes(result.Nodes);
         if (brokers.Count == 0)
         {
@@ -35,8 +38,11 @@ internal sealed class ConfluentKafkaAdminProvider(IOptions<ModuleEventBusKafkaOp
 
     public async Task<IReadOnlyList<KafkaBrokerInfo>> ListBrokersAsync(KafkaClusterConfig cluster, CancellationToken cancellationToken = default)
     {
+        cancellationToken.ThrowIfCancellationRequested();
         using var admin = CreateAdminClient(cluster);
-        var result = await admin.DescribeClusterAsync(BuildDescribeClusterOptions()).WaitAsync(cancellationToken);
+        var result = await KafkaNativeRequestAwaiter.AwaitAsync(
+            admin.DescribeClusterAsync(BuildDescribeClusterOptions()),
+            cancellationToken);
         return MapNodes(result.Nodes);
     }
 
@@ -97,6 +103,7 @@ internal sealed class ConfluentKafkaAdminProvider(IOptions<ModuleEventBusKafkaOp
     {
         ArgumentNullException.ThrowIfNull(request);
         ArgumentException.ThrowIfNullOrWhiteSpace(request.TopicName);
+        cancellationToken.ThrowIfCancellationRequested();
         using var admin = CreateAdminClient(cluster);
 
         var specification = new TopicSpecification
@@ -109,20 +116,25 @@ internal sealed class ConfluentKafkaAdminProvider(IOptions<ModuleEventBusKafkaOp
                 : null
         };
 
-        await admin.CreateTopicsAsync([specification], new CreateTopicsOptions
-        {
-            RequestTimeout = Option.AdminRequestTimeout
-        });
+        await KafkaNativeRequestAwaiter.AwaitAsync(
+            admin.CreateTopicsAsync([specification], new CreateTopicsOptions
+            {
+                RequestTimeout = Option.AdminRequestTimeout
+            }),
+            cancellationToken);
     }
 
     public async Task DeleteTopicAsync(KafkaClusterConfig cluster, string topicName, CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(topicName);
+        cancellationToken.ThrowIfCancellationRequested();
         using var admin = CreateAdminClient(cluster);
-        await admin.DeleteTopicsAsync([topicName.Trim()], new DeleteTopicsOptions
-        {
-            RequestTimeout = Option.AdminRequestTimeout
-        });
+        await KafkaNativeRequestAwaiter.AwaitAsync(
+            admin.DeleteTopicsAsync([topicName.Trim()], new DeleteTopicsOptions
+            {
+                RequestTimeout = Option.AdminRequestTimeout
+            }),
+            cancellationToken);
     }
 
     public async Task ClearTopicMessagesAsync(
@@ -134,6 +146,12 @@ internal sealed class ConfluentKafkaAdminProvider(IOptions<ModuleEventBusKafkaOp
         cancellationToken.ThrowIfCancellationRequested();
 
         var normalizedTopicName = topicName.Trim();
+        if (IsInternalTopic(normalizedTopicName))
+        {
+            throw new InvalidOperationException(
+                $"Kafka internal topic '{normalizedTopicName}' cannot be cleared.");
+        }
+
         using var admin = CreateAdminClient(cluster);
         var partitions = ResolveTopicPartitions(admin, normalizedTopicName);
         if (partitions.Count == 0)
@@ -148,14 +166,15 @@ internal sealed class ConfluentKafkaAdminProvider(IOptions<ModuleEventBusKafkaOp
                 $"Kafka did not return a latest offset for every partition of topic '{normalizedTopicName}'.");
         }
 
-        await admin.DeleteRecordsAsync(
+        await KafkaNativeRequestAwaiter.AwaitAsync(
+            admin.DeleteRecordsAsync(
                 latestOffsets.Select(item => new TopicPartitionOffset(item.Key, new Offset(item.Value))),
                 new DeleteRecordsOptions
                 {
                     RequestTimeout = Option.AdminRequestTimeout,
                     OperationTimeout = Option.AdminRequestTimeout
-                })
-            .WaitAsync(cancellationToken);
+                }),
+            cancellationToken);
     }
 
     public async Task IncreasePartitionsAsync(KafkaClusterConfig cluster, KafkaTopicPartitionRequest request, CancellationToken cancellationToken = default)
@@ -167,19 +186,22 @@ internal sealed class ConfluentKafkaAdminProvider(IOptions<ModuleEventBusKafkaOp
             throw new ArgumentOutOfRangeException(nameof(request), "Partition count must be greater than zero.");
         }
 
+        cancellationToken.ThrowIfCancellationRequested();
         using var admin = CreateAdminClient(cluster);
-        await admin.CreatePartitionsAsync(
-            [
-                new PartitionsSpecification
+        await KafkaNativeRequestAwaiter.AwaitAsync(
+            admin.CreatePartitionsAsync(
+                [
+                    new PartitionsSpecification
+                    {
+                        Topic = request.TopicName.Trim(),
+                        IncreaseTo = request.IncreaseTo
+                    }
+                ],
+                new CreatePartitionsOptions
                 {
-                    Topic = request.TopicName.Trim(),
-                    IncreaseTo = request.IncreaseTo
-                }
-            ],
-            new CreatePartitionsOptions
-            {
-                RequestTimeout = Option.AdminRequestTimeout
-            });
+                    RequestTimeout = Option.AdminRequestTimeout
+                }),
+            cancellationToken);
     }
 
     public async Task UpdateRetentionAsync(KafkaClusterConfig cluster, KafkaTopicRetentionRequest request, CancellationToken cancellationToken = default)
@@ -191,6 +213,7 @@ internal sealed class ConfluentKafkaAdminProvider(IOptions<ModuleEventBusKafkaOp
             throw new ArgumentOutOfRangeException(nameof(request), "Retention must be greater than zero.");
         }
 
+        cancellationToken.ThrowIfCancellationRequested();
         using var admin = CreateAdminClient(cluster);
         var resource = new ConfigResource
         {
@@ -210,19 +233,24 @@ internal sealed class ConfluentKafkaAdminProvider(IOptions<ModuleEventBusKafkaOp
             ]
         };
 
-        await admin.IncrementalAlterConfigsAsync(configs, new IncrementalAlterConfigsOptions
-        {
-            RequestTimeout = Option.AdminRequestTimeout
-        });
+        await KafkaNativeRequestAwaiter.AwaitAsync(
+            admin.IncrementalAlterConfigsAsync(configs, new IncrementalAlterConfigsOptions
+            {
+                RequestTimeout = Option.AdminRequestTimeout
+            }),
+            cancellationToken);
     }
 
     public async Task<IReadOnlyList<KafkaConsumerGroupSummary>> ListConsumerGroupsAsync(KafkaClusterConfig cluster, CancellationToken cancellationToken = default)
     {
+        cancellationToken.ThrowIfCancellationRequested();
         using var admin = CreateAdminClient(cluster);
-        var result = await admin.ListConsumerGroupsAsync(new ListConsumerGroupsOptions
-        {
-            RequestTimeout = Option.AdminRequestTimeout
-        });
+        var result = await KafkaNativeRequestAwaiter.AwaitAsync(
+            admin.ListConsumerGroupsAsync(new ListConsumerGroupsOptions
+            {
+                RequestTimeout = Option.AdminRequestTimeout
+            }),
+            cancellationToken);
 
         var groupIds = result.Valid
             .Select(group => group.GroupId)
@@ -237,10 +265,12 @@ internal sealed class ConfluentKafkaAdminProvider(IOptions<ModuleEventBusKafkaOp
             return [];
         }
 
-        var descriptions = await admin.DescribeConsumerGroupsAsync(groupIds, new DescribeConsumerGroupsOptions
-        {
-            RequestTimeout = Option.AdminRequestTimeout
-        });
+        var descriptions = await KafkaNativeRequestAwaiter.AwaitAsync(
+            admin.DescribeConsumerGroupsAsync(groupIds, new DescribeConsumerGroupsOptions
+            {
+                RequestTimeout = Option.AdminRequestTimeout
+            }),
+            cancellationToken);
 
         return descriptions.ConsumerGroupDescriptions
             .Select(group => new KafkaConsumerGroupSummary
@@ -296,7 +326,8 @@ internal sealed class ConfluentKafkaAdminProvider(IOptions<ModuleEventBusKafkaOp
         foreach (var batch in partitions.Chunk(batchSize))
         {
             cancellationToken.ThrowIfCancellationRequested();
-            var result = await admin.ListOffsetsAsync(
+            var result = await KafkaNativeRequestAwaiter.AwaitAsync(
+                admin.ListOffsetsAsync(
                     batch.Select(partition => new TopicPartitionOffsetSpec
                     {
                         TopicPartition = partition,
@@ -305,8 +336,8 @@ internal sealed class ConfluentKafkaAdminProvider(IOptions<ModuleEventBusKafkaOp
                     new ListOffsetsOptions
                     {
                         RequestTimeout = Option.AdminRequestTimeout
-                    })
-                .WaitAsync(cancellationToken);
+                    }),
+                cancellationToken);
 
             foreach (var item in result.ResultInfos)
             {
@@ -330,6 +361,11 @@ internal sealed class ConfluentKafkaAdminProvider(IOptions<ModuleEventBusKafkaOp
         {
             RequestTimeout = Option.AdminRequestTimeout
         };
+    }
+
+    private static bool IsInternalTopic(string topicName)
+    {
+        return topicName.StartsWith("__", StringComparison.Ordinal);
     }
 
     private static List<KafkaBrokerInfo> MapNodes(IReadOnlyList<Node> nodes)
@@ -380,10 +416,12 @@ internal sealed class ConfluentKafkaAdminProvider(IOptions<ModuleEventBusKafkaOp
                     Type = ResourceType.Topic,
                     Name = topicName
                 });
-                var result = await admin.DescribeConfigsAsync(resources, new DescribeConfigsOptions
-                {
-                    RequestTimeout = Option.AdminRequestTimeout
-                }).WaitAsync(cancellationToken);
+                var result = await KafkaNativeRequestAwaiter.AwaitAsync(
+                    admin.DescribeConfigsAsync(resources, new DescribeConfigsOptions
+                    {
+                        RequestTimeout = Option.AdminRequestTimeout
+                    }),
+                    cancellationToken);
 
                 foreach (var item in result)
                 {
@@ -393,7 +431,11 @@ internal sealed class ConfluentKafkaAdminProvider(IOptions<ModuleEventBusKafkaOp
                         : null;
                 }
             }
-            catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                throw;
+            }
+            catch (OperationCanceledException)
             {
                 // A provider-side timeout for one configuration batch should not hide the topic
                 // inventory. The caller will render retention as unknown for that batch.

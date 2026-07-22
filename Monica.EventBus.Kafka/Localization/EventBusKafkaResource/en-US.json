@@ -123,7 +123,7 @@
       "ConsumerGroups": "Consumer groups",
       "ConsumerGroupsHint": "Described from Kafka admin APIs",
       "AvailableMessages": "Available messages",
-      "AvailableMessagesHint": "Sum of available messages across all topics",
+      "AvailableMessagesHint": "Sum of available messages across non-internal topics",
       "WriteRate": "Write rate",
       "WriteRateHint": "Latest offset growth",
       "ConsumeRate": "Consume rate",
@@ -313,6 +313,11 @@
     "Title": "Performance snapshots",
     "Unavailable": "Performance sampling requires direct Kafka broker access.",
     "Empty": "No performance snapshots have been captured.",
+    "TopicFilter": {
+      "Label": "Filter topics",
+      "Placeholder": "Enter a topic name",
+      "NoMatches": "No topic performance metrics match the current filter."
+    },
     "Live": {
       "AutoRefresh": "Live refresh",
       "IntervalSeconds": "Interval (seconds)",
@@ -327,21 +332,17 @@
     },
     "Columns": {
       "CapturedAt": "Captured at",
-      "Brokers": "Brokers",
-      "Topics": "Topics",
-      "Groups": "Groups",
+      "Topic": "Topic",
       "AvailableMessages": "Available messages",
       "WriteRate": "Write rate",
       "ConsumeRate": "Consume rate",
-      "Lag": "Lag",
-      "Message": "Message"
+      "Lag": "Lag"
     },
     "Values": {
       "LagUnknown": "Unknown",
       "AvailableMessagesUnknown": "Unknown",
       "RateUnknown": "Unknown",
-      "RatePerSecond": "{0} msg/s",
-      "NoMessage": "OK"
+      "RatePerSecond": "{0} msg/s"
     },
     "Messages": {
       "Captured": "Kafka performance snapshot captured."

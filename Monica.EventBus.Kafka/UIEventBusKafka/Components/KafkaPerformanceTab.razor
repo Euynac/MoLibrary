@@ -15,16 +15,19 @@
                        Color="Color.Primary"
                        Disabled="@(!State.CanAdminSelectedCluster)"
                        Label="@L["Performance:Live:AutoRefresh"]" />
-            <MudNumericField T="int"
-                             Value="@State.PerformanceRefreshIntervalSeconds"
-                             ValueChanged="SetRefreshIntervalAsync"
-                             Label="@L["Performance:Live:IntervalSeconds"]"
-                             Min="@KafkaPerformancePollingState.MinimumRefreshIntervalSeconds"
-                             Max="@KafkaPerformancePollingState.MaximumRefreshIntervalSeconds"
-                             Variant="Variant.Outlined"
-                             Margin="Margin.Dense"
-                             HelperText="@L["Performance:Live:IntervalHint", KafkaPerformancePollingState.MinimumRefreshIntervalSeconds, KafkaPerformancePollingState.MaximumRefreshIntervalSeconds]"
-                             Disabled="@(!State.CanAdminSelectedCluster || !State.IsPerformanceAutoRefreshEnabled)" />
+            <div class="performance-interval-control">
+                <MudTooltip Text="@L["Performance:Live:IntervalHint", KafkaPerformancePollingState.MinimumRefreshIntervalSeconds, KafkaPerformancePollingState.MaximumRefreshIntervalSeconds]">
+                    <MudNumericField T="int"
+                                     Value="@State.PerformanceRefreshIntervalSeconds"
+                                     ValueChanged="SetRefreshIntervalAsync"
+                                     Label="@L["Performance:Live:IntervalSeconds"]"
+                                     Min="@KafkaPerformancePollingState.MinimumRefreshIntervalSeconds"
+                                     Max="@KafkaPerformancePollingState.MaximumRefreshIntervalSeconds"
+                                     Variant="Variant.Outlined"
+                                     Margin="Margin.Dense"
+                                     Disabled="@(!State.CanAdminSelectedCluster || !State.IsPerformanceAutoRefreshEnabled)" />
+                </MudTooltip>
+            </div>
             <MudButton Variant="Variant.Outlined"
                        StartIcon="@Icons.Material.Filled.Refresh"
                        Disabled="@State.IsBusy"
@@ -45,6 +48,20 @@
         </div>
     </div>
 
+    <div class="performance-topic-filter">
+        <MudTextField T="string"
+                      @bind-Value="_topicFilter"
+                      Immediate="true"
+                      DebounceInterval="200"
+                      Label="@L["Performance:TopicFilter:Label"]"
+                      Placeholder="@L["Performance:TopicFilter:Placeholder"]"
+                      Adornment="Adornment.Start"
+                      AdornmentIcon="@Icons.Material.Filled.FilterAlt"
+                      Variant="Variant.Outlined"
+                      Margin="Margin.Dense"
+                      Clearable="true" />
+    </div>
+
     @if (!string.IsNullOrWhiteSpace(State.PerformanceSamplingError))
     {
         <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined" Dense="true">
@@ -59,7 +76,7 @@
                 <div class="metric-card">
                     <MudPaper Class="pa-3" Outlined="true">
                         <MudText Typo="Typo.overline">@L["Performance:Columns:AvailableMessages"]</MudText>
-                        <MudText Typo="Typo.h5">@FormatAvailableMessages(latest.TotalAvailableMessageCount)</MudText>
+                        <MudText Typo="Typo.h5">@FormatAvailableMessages(State.TotalAvailableMessageCount)</MudText>
                     </MudPaper>
                 </div>
             </MudItem>
@@ -102,38 +119,38 @@
             @L["Performance:Empty"]
         </MudAlert>
     }
+    else if (FilteredTopicMetrics.Count == 0)
+    {
+        <MudAlert Severity="Severity.Info" Variant="Variant.Outlined">
+            @L["Performance:TopicFilter:NoMatches"]
+        </MudAlert>
+    }
     else
     {
         <div class="performance-table">
-            <MudTable T="KafkaPerformanceSnapshot"
-                      Items="@State.PerformanceSnapshots.OrderByDescending(snapshot => snapshot.CapturedAt)"
-                      RowsPerPage="20"
+            <MudTable T="TopicPerformanceRow"
+                      Items="@FilteredTopicMetrics"
+                      @bind-RowsPerPage="_rowsPerPage"
                       Dense="true"
                       Hover="true">
                 <HeaderContent>
                     <MudTh>@L["Performance:Columns:CapturedAt"]</MudTh>
-                    <MudTh>@L["Performance:Columns:Brokers"]</MudTh>
-                    <MudTh>@L["Performance:Columns:Topics"]</MudTh>
-                    <MudTh>@L["Performance:Columns:Groups"]</MudTh>
+                    <MudTh>@L["Performance:Columns:Topic"]</MudTh>
                     <MudTh>@L["Performance:Columns:AvailableMessages"]</MudTh>
                     <MudTh>@L["Performance:Columns:WriteRate"]</MudTh>
                     <MudTh>@L["Performance:Columns:ConsumeRate"]</MudTh>
                     <MudTh>@L["Performance:Columns:Lag"]</MudTh>
-                    <MudTh>@L["Performance:Columns:Message"]</MudTh>
                 </HeaderContent>
                 <RowTemplate>
                     <MudTd DataLabel="@L["Performance:Columns:CapturedAt"]">@context.CapturedAt.LocalDateTime.ToString("yyyy-MM-dd HH:mm:ss")</MudTd>
-                    <MudTd DataLabel="@L["Performance:Columns:Brokers"]">@context.BrokerCount</MudTd>
-                    <MudTd DataLabel="@L["Performance:Columns:Topics"]">@context.TopicCount</MudTd>
-                    <MudTd DataLabel="@L["Performance:Columns:Groups"]">@context.ConsumerGroupCount</MudTd>
-                    <MudTd DataLabel="@L["Performance:Columns:AvailableMessages"]">@FormatAvailableMessages(context.TotalAvailableMessageCount)</MudTd>
-                    <MudTd DataLabel="@L["Performance:Columns:WriteRate"]">@FormatRate(context.MessageWriteRatePerSecond)</MudTd>
-                    <MudTd DataLabel="@L["Performance:Columns:ConsumeRate"]">@FormatRate(context.MessageConsumeRatePerSecond)</MudTd>
-                    <MudTd DataLabel="@L["Performance:Columns:Lag"]">@FormatLag(context.TotalLag)</MudTd>
-                    <MudTd DataLabel="@L["Performance:Columns:Message"]">@FormatMessage(context.Message)</MudTd>
+                    <MudTd DataLabel="@L["Performance:Columns:Topic"]">@context.Metric.TopicName</MudTd>
+                    <MudTd DataLabel="@L["Performance:Columns:AvailableMessages"]">@FormatAvailableMessages(context.Metric.TotalAvailableMessageCount)</MudTd>
+                    <MudTd DataLabel="@L["Performance:Columns:WriteRate"]">@FormatRate(context.Metric.MessageWriteRatePerSecond)</MudTd>
+                    <MudTd DataLabel="@L["Performance:Columns:ConsumeRate"]">@FormatRate(context.Metric.MessageConsumeRatePerSecond)</MudTd>
+                    <MudTd DataLabel="@L["Performance:Columns:Lag"]">@FormatLag(context.Metric.TotalLag)</MudTd>
                 </RowTemplate>
                 <PagerContent>
-                    <MudTablePager PageSizeOptions="@(new[] { 10, 20, 50, 100 })" />
+                    <MudTablePager PageSizeOptions="@PageSizeOptions" />
                 </PagerContent>
             </MudTable>
         </div>
@@ -141,11 +158,27 @@
 </MudStack>
 
 @code {
+    private static readonly int[] PageSizeOptions = [10, 20, 50, 100];
+
+    private string _topicFilter = string.Empty;
+    private int _rowsPerPage = 20;
+
     [Parameter, EditorRequired] public EventBusKafkaPageState State { get; set; } = default!;
 
     [Parameter] public EventCallback OnRefresh { get; set; }
 
     [Parameter] public EventCallback OnCapture { get; set; }
+
+    private IReadOnlyList<TopicPerformanceRow> FilteredTopicMetrics => State.PerformanceSnapshots
+        .SelectMany(snapshot => snapshot.TopicMetrics
+            .Where(metric => !string.IsNullOrWhiteSpace(metric.TopicName) &&
+                             !metric.TopicName.StartsWith("__", StringComparison.Ordinal))
+            .Select(metric => new TopicPerformanceRow(snapshot.CapturedAt, metric)))
+        .Where(row => string.IsNullOrWhiteSpace(_topicFilter) ||
+                      row.Metric.TopicName.Contains(_topicFilter.Trim(), StringComparison.OrdinalIgnoreCase))
+        .OrderByDescending(row => row.CapturedAt)
+        .ThenBy(row => row.Metric.TopicName, StringComparer.OrdinalIgnoreCase)
+        .ToList();
 
     private string LiveStatus => State.IsPerformanceSampling
         ? L["Performance:Live:Sampling"]
@@ -182,8 +215,5 @@
             : L["Performance:Values:RateUnknown"];
     }
 
-    private string FormatMessage(string? message)
-    {
-        return string.IsNullOrWhiteSpace(message) ? L["Performance:Values:NoMessage"] : message;
-    }
+    private sealed record TopicPerformanceRow(DateTimeOffset CapturedAt, KafkaTopicPerformanceSnapshot Metric);
 }

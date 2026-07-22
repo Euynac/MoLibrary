@@ -77,7 +77,21 @@ public sealed class KafkaPerformanceService(
             snapshot.TotalConsumerCommittedOffset = offsetTotals.IsComplete
                 ? offsetTotals.TotalConsumerCommittedOffset
                 : null;
+            snapshot.TopicMetrics = offsetTotals.TopicTotals
+                .Select(total => new KafkaTopicPerformanceSnapshot
+                {
+                    TopicName = total.TopicName,
+                    TotalLogEndOffset = total.TotalLogEndOffset,
+                    TotalAvailableMessageCount = total.TotalAvailableMessageCount,
+                    TotalConsumerCommittedOffset = total.TotalConsumerCommittedOffset,
+                    TotalLag = total.TotalLag
+                })
+                .ToList();
             KafkaPerformanceRateCalculator.ApplyRates(snapshot, previous);
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
         }
         catch (Exception ex)
         {

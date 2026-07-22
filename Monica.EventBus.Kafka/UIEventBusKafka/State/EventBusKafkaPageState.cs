@@ -56,7 +56,9 @@ public sealed class EventBusKafkaPageState(
     /// Current retained-message inventory from the latest live sample or topic enrichment.
     /// </summary>
     public long? TotalAvailableMessageCount =>
-        LatestPerformance?.TotalAvailableMessageCount ?? Dashboard.TotalAvailableMessageCount;
+        LatestPerformance is { TopicMetrics.Count: > 0 } latest
+            ? latest.TotalAvailableMessageCount
+            : Dashboard.TotalAvailableMessageCount;
 
     /// <summary>
     /// Current topic count from the latest live metadata sample or dashboard snapshot.
@@ -708,11 +710,14 @@ public sealed class EventBusKafkaPageState(
 
     private void ApplyTopicBacklogSummary()
     {
+        var applicationTopics = Topics
+            .Where(topic => !topic.IsInternal)
+            .ToList();
         Dashboard.TopicCount = Topics.Count;
-        Dashboard.TotalAvailableMessageCount = Topics.Count == 0
+        Dashboard.TotalAvailableMessageCount = applicationTopics.Count == 0
             ? 0
-            : Topics.All(topic => topic.AvailableMessageCount.HasValue)
-                ? Topics.Sum(topic => topic.AvailableMessageCount.GetValueOrDefault())
+            : applicationTopics.All(topic => topic.AvailableMessageCount.HasValue)
+                ? applicationTopics.Sum(topic => topic.AvailableMessageCount.GetValueOrDefault())
                 : null;
     }
 

@@ -132,7 +132,18 @@ public sealed class KafkaTopicSummary
     /// <summary>
     /// Whether the topic is an internal Kafka topic.
     /// </summary>
-    public bool IsInternal { get; set; }
+    /// <remarks>
+    /// Kafka's metadata flag is combined with the reserved <c>__</c> name prefix so callers remain
+    /// safe when a provider returns a topic summary without setting the metadata flag.
+    /// </remarks>
+    public bool IsInternal
+    {
+        get => _isInternal ||
+               (!string.IsNullOrEmpty(TopicName) && TopicName.StartsWith("__", StringComparison.Ordinal));
+        set => _isInternal = value;
+    }
+
+    private bool _isInternal;
 
     /// <summary>
     /// Metadata error reported by Kafka for this topic, when the topic name is known but its
@@ -483,7 +494,7 @@ public sealed class KafkaPerformanceSnapshot
     public long? TotalLogEndOffset { get; set; }
 
     /// <summary>
-    /// Total retained messages across all sampled topic partitions.
+    /// Total retained messages across all sampled non-internal topic partitions.
     /// </summary>
     /// <remarks>
     /// This is independent of consumer groups and can be calculated when no consumer group exists.
@@ -514,6 +525,56 @@ public sealed class KafkaPerformanceSnapshot
     /// Optional diagnostic message recorded during sampling.
     /// </summary>
     public string? Message { get; set; }
+
+    /// <summary>
+    /// Per-topic offset and rate metrics captured during this sampling cycle.
+    /// </summary>
+    /// <remarks>
+    /// Internal Kafka topics are intentionally omitted. The collection is ordered by topic name so
+    /// callers can render a stable list without applying another ordering pass.
+    /// </remarks>
+    public IReadOnlyList<KafkaTopicPerformanceSnapshot> TopicMetrics { get; set; } = [];
+}
+
+/// <summary>
+/// Performance metrics for one application Kafka topic at a point in time.
+/// </summary>
+public sealed class KafkaTopicPerformanceSnapshot
+{
+    /// <summary>
+    /// Topic name.
+    /// </summary>
+    public string TopicName { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Sum of latest offsets across the topic's partitions.
+    /// </summary>
+    public long? TotalLogEndOffset { get; set; }
+
+    /// <summary>
+    /// Number of retained messages estimated from the topic's partition watermarks.
+    /// </summary>
+    public long? TotalAvailableMessageCount { get; set; }
+
+    /// <summary>
+    /// Sum of committed offsets across sampled consumer groups for this topic.
+    /// </summary>
+    public long? TotalConsumerCommittedOffset { get; set; }
+
+    /// <summary>
+    /// Sum of consumer lag across sampled consumer groups for this topic.
+    /// </summary>
+    public long? TotalLag { get; set; }
+
+    /// <summary>
+    /// Estimated write rate in messages per second.
+    /// </summary>
+    public double? MessageWriteRatePerSecond { get; set; }
+
+    /// <summary>
+    /// Estimated consumer processing rate in messages per second.
+    /// </summary>
+    public double? MessageConsumeRatePerSecond { get; set; }
 }
 
 /// <summary>
@@ -550,9 +611,50 @@ public sealed class KafkaPerformanceOffsetTotals
     public long? TotalLag { get; set; }
 
     /// <summary>
-    /// Total retained messages across all sampled topic partitions.
+    /// Total retained messages across all sampled non-internal topic partitions.
     /// </summary>
     public long? TotalAvailableMessageCount { get; set; }
+
+    /// <summary>
+    /// Raw offset totals grouped by application topic.
+    /// </summary>
+    public IReadOnlyList<KafkaTopicPerformanceOffsetTotals> TopicTotals { get; set; } = [];
+}
+
+/// <summary>
+/// Raw offset totals for one application Kafka topic.
+/// </summary>
+public sealed class KafkaTopicPerformanceOffsetTotals
+{
+    /// <summary>
+    /// Topic name.
+    /// </summary>
+    public string TopicName { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Sum of latest offsets across the topic's partitions.
+    /// </summary>
+    public long? TotalLogEndOffset { get; set; }
+
+    /// <summary>
+    /// Number of retained messages estimated from partition watermarks.
+    /// </summary>
+    public long? TotalAvailableMessageCount { get; set; }
+
+    /// <summary>
+    /// Sum of committed offsets across sampled consumer groups for this topic.
+    /// </summary>
+    public long? TotalConsumerCommittedOffset { get; set; }
+
+    /// <summary>
+    /// Sum of consumer lag across sampled consumer groups for this topic.
+    /// </summary>
+    public long? TotalLag { get; set; }
+
+    /// <summary>
+    /// Whether all required partition offsets for this topic were captured.
+    /// </summary>
+    public bool IsComplete { get; set; } = true;
 }
 
 /// <summary>

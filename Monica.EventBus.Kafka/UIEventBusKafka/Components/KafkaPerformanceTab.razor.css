@@ -22,9 +22,36 @@
     min-width: 0;
 }
 
+.performance-interval-control {
+    display: flex;
+    align-items: center;
+    min-width: 132px;
+    min-height: 40px;
+}
+
+.performance-interval-control ::deep .mud-input-control {
+    min-width: 132px;
+    max-width: 180px;
+    margin: 0;
+}
+
 .performance-controls ::deep .mud-input-control {
     min-width: 132px;
     max-width: 180px;
+}
+
+.performance-controls ::deep .mud-button-root,
+.performance-controls ::deep .mud-input-control-boolean-input {
+    min-height: 40px;
+}
+
+.performance-topic-filter {
+    width: min(100%, 360px);
+    min-width: 0;
+}
+
+.performance-topic-filter ::deep .mud-input-control {
+    width: 100%;
 }
 
 .metric-card {
@@ -39,11 +66,14 @@
 .performance-table {
     width: 100%;
     min-width: 0;
-    overflow-x: auto;
 }
 
-.performance-table ::deep .mud-table {
+.performance-table ::deep .mud-table-root {
     min-width: 980px;
+}
+
+.performance-table ::deep .mud-table-container {
+    overflow-x: auto;
 }
 
 @media (max-width: 720px) {

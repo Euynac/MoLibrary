@@ -53,7 +53,7 @@
             <MudTable T="KafkaTopicSummary"
                       Items="@State.Topics"
                       Filter="FilterTopic"
-                      RowsPerPage="25"
+                      @bind-RowsPerPage="_rowsPerPage"
                       Dense="true"
                       Hover="true">
                 <HeaderContent>
@@ -104,7 +104,7 @@
                                 @L["Topics:Actions:Retention"]
                             </MudMenuItem>
                             <MudMenuItem Icon="@Icons.Material.Filled.DeleteSweep"
-                                         Disabled="@(!context.IsMetadataAvailable)"
+                                         Disabled="@(!context.IsMetadataAvailable || context.IsInternal)"
                                          OnClick="@(() => OnClearMessages.InvokeAsync(context))">
                                 @L["Topics:Actions:ClearMessages"]
                             </MudMenuItem>
@@ -115,7 +115,7 @@
                     </MudTd>
                 </RowTemplate>
                 <PagerContent>
-                    <MudTablePager PageSizeOptions="@(new[] { 10, 25, 50, 100 })" />
+                    <MudTablePager PageSizeOptions="@PageSizeOptions" />
                 </PagerContent>
             </MudTable>
         </div>
@@ -123,7 +123,10 @@
 </MudStack>
 
 @code {
+    private static readonly int[] PageSizeOptions = [10, 25, 50, 100];
+
     private string _searchText = string.Empty;
+    private int _rowsPerPage = 25;
 
     [Parameter, EditorRequired] public EventBusKafkaPageState State { get; set; } = default!;
 
