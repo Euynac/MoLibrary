@@ -10,8 +10,8 @@ using Monica.Core.ObjectMapping.Abstractions;
 using Monica.Core.ObjectMapping.Facades;
 using Monica.Core.ObjectMapping.Providers.Mapster;
 using Monica.Core.Results;
+using Monica.Core.TypeDiscovery.Services;
 using Monica.Modules;
-using Monica.Testing.ObjectMapping;
 using Xunit;
 
 namespace Test.Monica.Core.ObjectMapping;
@@ -26,7 +26,7 @@ public sealed class ModuleObjectMappingTests
         var catalog = host.Services.GetRequiredService<MapsterProfileCatalog>();
 
         host.Services.GetRequiredService<MapsterProfileCatalog>().Should().BeSameAs(catalog);
-        catalog.GetOrderedProfileTypes([], [typeof(ModuleObjectMappingTests).Assembly])
+        catalog.GetOrderedProfileTypes([], CreateTypeDependencyOrderer())
             .Should().Contain(typeof(InternalMappingProfile));
     }
 
@@ -65,107 +65,9 @@ public sealed class ModuleObjectMappingTests
 
         var profiles = catalog.GetOrderedProfileTypes(
             [typeof(InternalMappingProfile)],
-            [typeof(ModuleObjectMappingTests).Assembly]);
+            CreateTypeDependencyOrderer());
 
         profiles.Should().Equal(typeof(InternalMappingProfile), typeof(AutomaticRefinementProfile));
-    }
-
-    [Fact]
-    public void Catalog_WhenProfileAssembliesDependOnEachOther_ShouldOrderDependenciesFirstWithStableTypeTies()
-    {
-        var profiles = MapsterProfileCatalog.OrderByAssemblyDependencies(
-            [
-                typeof(ZStableOrderType),
-                typeof(TestObjectMapper),
-                typeof(ModuleObjectMapping),
-                typeof(AStableOrderType)
-            ],
-            [
-                typeof(ModuleObjectMappingTests).Assembly,
-                typeof(TestObjectMapper).Assembly,
-                typeof(ModuleObjectMapping).Assembly
-            ]);
-
-        profiles.Should().Equal(
-            typeof(ModuleObjectMapping),
-            typeof(TestObjectMapper),
-            typeof(AStableOrderType),
-            typeof(ZStableOrderType));
-    }
-
-    [Fact]
-    public void Catalog_WhenOnlyNonProfileDependenciesDiffer_ShouldPreserveProfileIdentityTieOrder()
-    {
-        var scannedDependencies = new Dictionary<string, IReadOnlyCollection<string>>(StringComparer.Ordinal)
-        {
-            ["Profile.A"] = ["Z.NonProfile"],
-            ["Profile.B"] = [],
-            ["Z.NonProfile"] = []
-        };
-
-        var profileDependencies = MapsterProfileCatalog.ProjectProfileDependencyGraph(
-            scannedDependencies,
-            ["Profile.A", "Profile.B"]);
-
-        MapsterProfileCatalog.OrderAssemblyGraph(profileDependencies)
-            .Should().Equal("Profile.A", "Profile.B");
-    }
-
-    [Fact]
-    public void Catalog_WhenProfilesAreConnectedThroughNonProfileAssembly_ShouldRetainTransitiveDependency()
-    {
-        var scannedDependencies = new Dictionary<string, IReadOnlyCollection<string>>(StringComparer.Ordinal)
-        {
-            ["Profile.Adapter"] = ["NonProfile.Bridge"],
-            ["NonProfile.Bridge"] = ["Profile.Domain"],
-            ["Profile.Domain"] = []
-        };
-
-        var profileDependencies = MapsterProfileCatalog.ProjectProfileDependencyGraph(
-            scannedDependencies,
-            ["Profile.Adapter", "Profile.Domain"]);
-
-        profileDependencies["Profile.Adapter"].Should().Equal("Profile.Domain");
-        MapsterProfileCatalog.OrderAssemblyGraph(profileDependencies)
-            .Should().Equal("Profile.Domain", "Profile.Adapter");
-    }
-
-    [Fact]
-    public void Catalog_WhenUnrelatedNonProfileAssembliesContainCycle_ShouldIgnoreIt()
-    {
-        var scannedDependencies = new Dictionary<string, IReadOnlyCollection<string>>(StringComparer.Ordinal)
-        {
-            ["Profile.A"] = [],
-            ["Profile.B"] = [],
-            ["NonProfile.Left"] = ["NonProfile.Right"],
-            ["NonProfile.Right"] = ["NonProfile.Left"]
-        };
-
-        var profileDependencies = MapsterProfileCatalog.ProjectProfileDependencyGraph(
-            scannedDependencies,
-            ["Profile.A", "Profile.B"]);
-
-        MapsterProfileCatalog.OrderAssemblyGraph(profileDependencies)
-            .Should().Equal("Profile.A", "Profile.B");
-    }
-
-    [Fact]
-    public void Catalog_WhenAssemblyDependencyGraphContainsCycle_ShouldSeparateParticipantsFromBlockedConsumers()
-    {
-        var dependencies = new Dictionary<string, IReadOnlyCollection<string>>(StringComparer.Ordinal)
-        {
-            ["Domain"] = ["Adapter"],
-            ["Adapter"] = ["Domain"],
-            ["Consumer"] = ["Domain"],
-            ["Independent"] = []
-        };
-
-        var exception = Assert.Throws<InvalidOperationException>(
-            () => MapsterProfileCatalog.OrderAssemblyGraph(dependencies));
-
-        exception.Message.Should().Be(
-            "Object-mapping profile order cannot be resolved because the profile assembly dependency graph contains a cycle. " +
-            "Cycle participants: Adapter, Domain. Blocked profile assemblies: Consumer.");
     }
 
     [Fact]
@@ -176,7 +78,7 @@ public sealed class ModuleObjectMappingTests
         catalog.Discover(typeof(AbstractMappingProfile));
         catalog.Discover(typeof(OpenGenericMappingProfile<>));
 
-        catalog.GetOrderedProfileTypes([], [typeof(ModuleObjectMappingTests).Assembly])
+        catalog.GetOrderedProfileTypes([], CreateTypeDependencyOrderer())
             .Should().BeEmpty();
     }
 
@@ -327,6 +229,11 @@ public sealed class ModuleObjectMappingTests
     {
         return TypeAdapterConfig.GlobalSettings.RuleMap.Keys.Any(key =>
             key.Source == typeof(TSource) && key.Destination == typeof(TDestination));
+    }
+
+    private static TypeDependencyOrderer CreateTypeDependencyOrderer()
+    {
+        return new TypeDependencyOrderer([typeof(ModuleObjectMappingTests).Assembly]);
     }
 
     private sealed class InternalMappingProfile : IRegister
@@ -579,7 +486,4 @@ public sealed class ModuleObjectMappingTests
         }
     }
 
-    private sealed class AStableOrderType;
-
-    private sealed class ZStableOrderType;
 }

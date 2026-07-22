@@ -23,6 +23,7 @@ public sealed class MonicaApplication : IDisposable
     private ILoggerFactory _compositionLoggerFactory;
     private bool _disposed;
     private TypeFinderOptions _typeFinderOptions = new();
+    private ITypeDependencyOrderer? _typeDependencyOrderer;
     private ITypeFinder? _typeFinder;
 
     internal MonicaApplication()
@@ -54,6 +55,16 @@ public sealed class MonicaApplication : IDisposable
         CreateLogger<DomainTypeFinder>());
 
     /// <summary>
+    /// Gets the host-bound service that orders selected business types by their assembly dependencies.
+    /// </summary>
+    /// <remarks>
+    /// The service builds one immutable dependency graph from this host's configured type-discovery assemblies. Modules
+    /// opt into ordering only their own selected subsets; the shared business-type stream remains unchanged.
+    /// </remarks>
+    public ITypeDependencyOrderer TypeDependencyOrderer =>
+        _typeDependencyOrderer ??= new TypeDependencyOrderer(TypeFinder.GetAssemblies());
+
+    /// <summary>
     /// Gets the host-bound module registry and its read-only runtime views.
     /// </summary>
     public ModuleRegistry Modules { get; }
@@ -79,6 +90,7 @@ public sealed class MonicaApplication : IDisposable
         configure?.Invoke(options);
         _typeFinderOptions = options;
         _typeFinder = null;
+        _typeDependencyOrderer = null;
     }
 
     internal ILogger<T> CreateLogger<T>()

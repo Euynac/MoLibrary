@@ -99,7 +99,7 @@ public class ModuleObjectMapping(ModuleObjectMappingOption option)
     /// <inheritdoc />
     public override void PostConfigureServices(IServiceCollection _)
     {
-        _profileCatalog.ApplyProfiles(_mapsterConfig, option.ProfileTypes, Application.TypeFinder.GetAssemblies());
+        _profileCatalog.ApplyProfiles(_mapsterConfig, option.ProfileTypes, Application.TypeDependencyOrderer);
         _mapsterConfig.Compile(failFast: false);
     }
 
