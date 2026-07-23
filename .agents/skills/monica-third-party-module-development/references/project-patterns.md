@@ -73,7 +73,7 @@ Rules:
 - The UI module normally remains `ModuleBase`; use `WebModuleBase` only for middleware or endpoints.
 - The UI module depends on the infrastructure module and `ModuleShellUI`.
 - Register navigation with the package's own localization resource type.
-- Prefix every public UI route with the publisher and complete package family. Convert PascalCase package segments to readable kebab-case words: `Euynac.Monica.GachaPool` owns `/euynac-gacha-pool` and subroutes such as `/euynac-gacha-pool-history`. Never claim a generic route such as `/dashboard`.
+- Prefix every public UI route with the publisher and complete package family. Convert PascalCase package segments to readable kebab-case words: `Tairitsua.Monica.GachaPool` owns `/tairitsua-gacha-pool` and subroutes such as `/tairitsua-gacha-pool-history`. Never claim a generic route such as `/dashboard`.
 - Pages inject Facades directly. Do not add a UI service wrapper around a Facade.
 - Keep page code thin and move state/orchestration to `UI{Name}/State` or `Support`.
 - Use isolated `.razor.css`, MudBlazor primitives, and Monica/MudBlazor theme tokens.

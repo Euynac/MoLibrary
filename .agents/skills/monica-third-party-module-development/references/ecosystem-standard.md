@@ -53,7 +53,7 @@ Keys:
 
 Keys are compared with ordinal case-insensitive semantics. Preserve canonical casing in source and diagnostics. A third-party UI module uses `.UI` as its final segment.
 
-Third-party UI routes must be publisher/package-prefixed so independently installed packages cannot claim generic host routes. Omit the literal `Monica` segment, split each remaining PascalCase segment into lowercase kebab-case words, and join the result with hyphens. For example, `Euynac.Monica.GachaPool` uses `/euynac-gacha-pool`; a Dashboard sub-capability may use `/euynac-gacha-pool-dashboard`. The full package-derived prefix, not merely the publisher name, is required for collision resistance.
+Third-party UI routes must be publisher/package-prefixed so independently installed packages cannot claim generic host routes. Omit the literal `Monica` segment, split each remaining PascalCase segment into lowercase kebab-case words, and join the result with hyphens. For example, `Tairitsua.Monica.GachaPool` uses `/tairitsua-gacha-pool`; a Dashboard sub-capability may use `/tairitsua-gacha-pool-dashboard`. The full package-derived prefix, not merely the publisher name, is required for collision resistance.
 
 ## 4. Public API naming
 

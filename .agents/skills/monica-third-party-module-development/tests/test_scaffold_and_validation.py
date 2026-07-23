@@ -226,28 +226,28 @@ class ScaffoldTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
             payload = valid_manifest()
-            payload["packageId"] = "Euynac.Monica.GachaPool"
-            payload["repositoryUrl"] = "https://github.com/euynac/euynac-monica-gacha-pool"
+            payload["packageId"] = "Tairitsua.Monica.GachaPool"
+            payload["repositoryUrl"] = "https://github.com/Tairitsua/MoLibrary.GachaPool"
             payload["modules"] = [
                 {
                     "name": "GachaPool",
                     "kind": "infrastructure",
-                    "key": "Euynac.Monica.GachaPool",
+                    "key": "Tairitsua.Monica.GachaPool",
                 },
                 {
                     "name": "GachaPoolUI",
                     "kind": "ui",
-                    "key": "Euynac.Monica.GachaPool.UI",
+                    "key": "Tairitsua.Monica.GachaPool.UI",
                     "dependsOn": ["GachaPool"],
                 },
             ]
             manifest = scaffold.load_manifest(self.write_manifest(root, payload))
             output = root / "output"
             scaffold.create_repository(manifest, output)
-            project = output / "src/Euynac.Monica.GachaPool/Euynac.Monica.GachaPool.csproj"
-            module = output / "src/Euynac.Monica.GachaPool/Modules/ModuleGachaPoolUI.cs"
+            project = output / "src/Tairitsua.Monica.GachaPool/Tairitsua.Monica.GachaPool.csproj"
+            module = output / "src/Tairitsua.Monica.GachaPool/Modules/ModuleGachaPoolUI.cs"
 
-            self.assertIn('"/euynac-gacha-pool"', module.read_text(encoding="utf-8"))
+            self.assertIn('"/tairitsua-gacha-pool"', module.read_text(encoding="utf-8"))
             findings = validator.validate_project(
                 output,
                 project,

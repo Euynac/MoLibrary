@@ -72,10 +72,10 @@ Module keys:
   Acme.Monica.Observability.Tracing
   Acme.Monica.Observability.UI
 
-PackageId: Euynac.Monica.GachaPool
+PackageId: Tairitsua.Monica.GachaPool
 Module keys:
-  Euynac.Monica.GachaPool
-  Euynac.Monica.GachaPool.UI
+  Tairitsua.Monica.GachaPool
+  Tairitsua.Monica.GachaPool.UI
 ```
 
 ## Branding
