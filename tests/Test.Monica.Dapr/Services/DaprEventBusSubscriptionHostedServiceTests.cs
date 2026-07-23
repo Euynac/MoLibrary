@@ -47,7 +47,9 @@ public sealed class DaprEventBusSubscriptionHostedServiceTests
     [Fact]
     public async Task Subscription_WhenBackgroundStreamFails_ReconnectsAndDisposesFailedGeneration()
     {
-        using var fixture = await CreateFixtureAsync((_, _) => Task.CompletedTask);
+        using var fixture = await CreateFixtureAsync(
+            (_, _) => Task.CompletedTask,
+            configureOptions: options => options.DeadLetterTopicSuffix = ".dead-letter");
         var failedOptions = fixture.Client.Options;
 
         await failedOptions.ErrorHandler!(new DaprException("stream closed"));
@@ -57,6 +59,7 @@ public sealed class DaprEventBusSubscriptionHostedServiceTests
 
         Assert.Equal(1, fixture.Client.DisposedSubscriptionCount);
         Assert.NotSame(failedOptions, fixture.Client.Options);
+        Assert.Equal("test.progress.dead-letter", fixture.Client.Options.DeadLetterTopic);
     }
 
     [Fact]
@@ -114,13 +117,46 @@ public sealed class DaprEventBusSubscriptionHostedServiceTests
     }
 
     [Fact]
-    public async Task Subscription_ForwardsDeadLetterTopic()
+    public async Task Subscription_WithDefaultConfiguration_ShouldNotConfigureDeadLetterTopic()
+    {
+        using var fixture = await CreateFixtureAsync((_, _) => Task.CompletedTask);
+
+        Assert.Null(fixture.Client.Options.DeadLetterTopic);
+    }
+
+    [Fact]
+    public async Task Subscription_WithConfiguredSuffix_ShouldCreateDistinctDeadLetterTopics()
     {
         using var fixture = await CreateFixtureAsync(
             (_, _) => Task.CompletedTask,
-            configureOptions: options => options.DeadLetterTopic = "events.dead-letter");
+            configureOptions: options => options.DeadLetterTopicSuffix = ".dead-letter");
 
-        Assert.Equal("events.dead-letter", fixture.Client.Options.DeadLetterTopic);
+        await fixture.AddSubscriptionAsync("test.audit");
+        await WaitUntilAsync(
+            () => fixture.Client.HasSubscriptionForTopic("test.audit"),
+            TestContext.Current.CancellationToken);
+
+        Assert.Equal(
+            "test.progress.dead-letter",
+            fixture.Client.GetOptions("test.progress").DeadLetterTopic);
+        Assert.Equal(
+            "test.audit.dead-letter",
+            fixture.Client.GetOptions("test.audit").DeadLetterTopic);
+    }
+
+    [Fact]
+    public async Task Subscription_WhenSourceIsDeadLetterTopic_ShouldNotConfigureAnotherDeadLetterTopic()
+    {
+        using var fixture = await CreateFixtureAsync(
+            (_, _) => Task.CompletedTask,
+            configureOptions: options => options.DeadLetterTopicSuffix = ".dead-letter");
+
+        await fixture.AddSubscriptionAsync("test.progress.dead-letter");
+        await WaitUntilAsync(
+            () => fixture.Client.HasSubscriptionForTopic("test.progress.dead-letter"),
+            TestContext.Current.CancellationToken);
+
+        Assert.Null(fixture.Client.GetOptions("test.progress.dead-letter").DeadLetterTopic);
     }
 
     [Fact]
@@ -438,6 +474,10 @@ public sealed class DaprEventBusSubscriptionHostedServiceTests
         : DaprPublishSubscribeClient(Substitute.For<P.Dapr.DaprClient>(), new HttpClient())
     {
         private int _remainingSubscriptionFailures = initialSubscriptionFailures;
+        private readonly ConcurrentDictionary<string, DaprSubscriptionOptions> _optionsByTopic =
+            new(StringComparer.Ordinal);
+        private readonly ConcurrentDictionary<string, TopicMessageHandler> _handlersByTopic =
+            new(StringComparer.Ordinal);
         private DaprSubscriptionOptions? _options;
         private TopicMessageHandler? _handler;
         private int _subscriptionCount;
@@ -450,6 +490,18 @@ public sealed class DaprEventBusSubscriptionHostedServiceTests
             Volatile.Read(ref _handler) ?? throw new InvalidOperationException("No subscription has been attempted.");
 
         public bool HasSubscription => Volatile.Read(ref _handler) is not null;
+
+        public bool HasSubscriptionForTopic(string topicName)
+        {
+            return _handlersByTopic.ContainsKey(topicName);
+        }
+
+        public DaprSubscriptionOptions GetOptions(string topicName)
+        {
+            return _optionsByTopic.TryGetValue(topicName, out var options)
+                ? options
+                : throw new InvalidOperationException($"No subscription has been attempted for topic '{topicName}'.");
+        }
 
         public int SubscriptionCount => Volatile.Read(ref _subscriptionCount);
 
@@ -464,6 +516,8 @@ public sealed class DaprEventBusSubscriptionHostedServiceTests
         {
             Volatile.Write(ref _options, options);
             Volatile.Write(ref _handler, messageHandler);
+            _optionsByTopic[topicName] = options;
+            _handlersByTopic[topicName] = messageHandler;
             Interlocked.Increment(ref _subscriptionCount);
 
             if (_remainingSubscriptionFailures > 0)

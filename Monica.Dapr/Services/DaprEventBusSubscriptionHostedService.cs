@@ -44,6 +44,8 @@ internal class DaprEventBusSubscriptionHostedService(
         serviceKey)
 {
     private readonly ModuleDaprEventBusOption _options = options.Value;
+    private readonly DaprDeadLetterTopicPolicy _deadLetterTopicPolicy =
+        DaprDeadLetterTopicPolicy.Create(options.Value);
     private readonly DaprSubscriptionRecoveryPolicy _recoveryPolicy =
         DaprSubscriptionRecoveryPolicy.Create(options.Value);
 
@@ -152,6 +154,7 @@ internal class DaprEventBusSubscriptionHostedService(
                 _options,
                 _recoveryPolicy,
                 topicName,
+                _deadLetterTopicPolicy.Resolve(topicName),
                 HandleMessageAsync,
                 _subscriptionStopping.Token,
                 OnSubscriptionReceiverCreated,

@@ -132,9 +132,15 @@ public class ModuleDaprEventBusOption : MinimalApiModuleOptions<ModuleDaprEventB
     public TimeSpan MaximumCleanupTimeout { get; set; } = TimeSpan.FromSeconds(30);
 
     /// <summary>
-    /// Dead letter topic name for failed messages. Defaults to null.
+    /// Gets or sets the suffix appended to each source topic to derive its dedicated dead-letter topic.
+    /// Defaults to <see langword="null" />, which disables dead-letter forwarding. For example, the suffix
+    /// <c>.dead-letter</c> maps <c>orders</c> to <c>orders.dead-letter</c>. A subscription whose source topic already
+    /// ends with this suffix is treated as terminal and receives no further dead-letter target, preventing recursive
+    /// forwarding. Configuring this option does not provision broker topics or define Dapr retry limits; the host must
+    /// deploy those resources separately before enabling forwarding. A configured suffix must be non-empty and contain
+    /// no whitespace; invalid values are rejected when the subscription hosted service is activated.
     /// </summary>
-    public string? DeadLetterTopic { get; set; }
+    public string? DeadLetterTopicSuffix { get; set; }
 
     /// <summary>
     /// Gets or sets the initial delay before reconnecting a failed streaming subscription. Defaults to one second.
