@@ -1,4 +1,9 @@
 {
+  "Pages": {
+    "ServiceDiscovery": {
+      "Title": "服务发现"
+    }
+  },
   "Shared": {
     "Actions": {
       "Cancel": "取消",

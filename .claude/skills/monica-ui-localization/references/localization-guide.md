@@ -287,7 +287,9 @@ python scripts/validate_localization.py --json
 1. **Missing keys** (ERROR): Keys used in Razor or C# but not defined in JSON
 2. **Unused keys** (WARNING): Keys defined in JSON but never used
 3. **Language sync** (ERROR): Keys in one language but not another
-4. **UI registry keys** (ERROR): Keys passed to `RegisterLocalizedComponent` must exist in `Monica.UI/Localization/UIRegistryResource/*.json`
+4. **Navigation registration keys** (ERROR): Page/category keys must exist in their explicitly declared module resource
+5. **Navigation resource registration** (ERROR): Every navigation resource must be registered through `AddResource<TResource>()`
+6. **Legacy navigation API** (ERROR): `RegisterLocalizedComponent` and an implicit resource type are rejected
 
 ### Example Output
 
@@ -345,13 +347,13 @@ Summary:
 
 **Symptom:** The navigation or AppBar shows a raw key such as `Pages:GitRepositories:Title`
 
-**Cause:** `RegisterLocalizedComponent` keys are resolved from `UIRegistryResource`, not the page module resource.
+**Cause:** The page or category key is missing from its explicitly declared module resource, or that resource was not registered. There is no central `UIRegistryResource` fallback.
 
 **Solution:**
-1. Keep page-local text in the module resource JSON files
-2. Add the navigation/AppBar key to `Monica.UI/Localization/UIRegistryResource/zh-CN.json`
-3. Add the same key to `Monica.UI/Localization/UIRegistryResource/en-US.json`
-4. Re-run `python scripts/validate_localization.py`
+1. Use `RegisterLocalizedPage<TPage, TResource>` and keep the title key in both `TResource` language files.
+2. Use `BuiltInNavigationCategoryIds` or register a module-owned category with `RegisterLocalizedCategory<TResource>(stableId, displayNameKey, order)`.
+3. Register `TResource` through `AddResource<TResource>()`.
+4. Re-run `python scripts/validate_localization.py --strict`.
 
 ### Parameterized String Shows {0}
 

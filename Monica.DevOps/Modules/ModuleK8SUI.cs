@@ -4,6 +4,8 @@ using Monica.Core.Modularity.Abstractions;
 using Monica.Core.Modularity.Annotations;
 using Monica.Core.Modularity.Models;
 using Monica.DevOps.K8S.Pages;
+using Monica.DevOps.Localization;
+using Monica.UI.Shell.Models;
 using MudBlazor;
 
 // ReSharper disable once CheckNamespace
@@ -22,11 +24,11 @@ public class ModuleK8SUI(ModuleK8SUIOption option)
 
         DependsOnModule<ModuleK8SGuide>().Register();
         DependsOnModule<ModuleShellUIGuide>().Register()
-            .RegisterUIComponents(registry => registry.RegisterLocalizedComponent<UIK8SPage>(
+            .RegisterUIComponents(registry => registry.RegisterLocalizedPage<UIK8SPage, K8SResource>(
                 UIK8SPage.PAGE_URL,
                 "Pages:K8S:Title",
                 Icons.Material.Filled.Dns,
-                "Categories:Infrastructure",
+                BuiltInNavigationCategoryIds.Infrastructure,
                 addToNav: true,
                 navOrder: 35));
     }

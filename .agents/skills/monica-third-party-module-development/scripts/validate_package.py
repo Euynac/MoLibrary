@@ -26,11 +26,6 @@ MODULE_ATTRIBUTE_PATTERN = re.compile(
     re.MULTILINE,
 )
 NAMESPACE_PATTERN = re.compile(r"\bnamespace\s+(?P<namespace>[A-Za-z_][A-Za-z0-9_.]*)\s*[;{]")
-LOCALIZED_ROUTE_ARGUMENT_PATTERN = re.compile(
-    r"RegisterLocalizedComponent\s*<[^>]+>\s*\(\s*"
-    r"(?P<argument>\"/[^\"]+\"|[A-Za-z_][A-Za-z0-9_]*(?:\.[A-Za-z_][A-Za-z0-9_]*)+)",
-    re.MULTILINE,
-)
 CONST_STRING_PATTERN_TEMPLATE = (
     r"\bconst\s+string\s+{name}\s*=\s*\"(?P<route>/[^\"]+)\"\s*;"
 )
@@ -53,9 +48,11 @@ SOURCE_LINK_PROVIDERS = {
     "azure-repos": "Microsoft.SourceLink.AzureRepos.Git",
 }
 MANAGED_TAGS = {"monica", "monica-module", "monica-ecosystem-v1", "monica-ui", "extension"}
-DISCLAIMER = (
-    "This community package is independently maintained and is not affiliated with, "
-    "endorsed by, or supported by the Monica project."
+COMPATIBILITY_MARK_SHA256 = "d7825fce56b42710468b95b76a689c512114e693a4d52d76dbb2ad6c96f27d7b"
+COMPATIBILITY_NOTICE = (
+    "Monica compatibility is self-attested by the publisher. This community package is "
+    "independently maintained and is not affiliated with, endorsed by, or supported by "
+    "the Monica project."
 )
 
 
@@ -78,6 +75,15 @@ class ModuleDeclaration:
     class_name: str
     namespace: str
     path: Path
+
+
+@dataclass(frozen=True)
+class Invocation:
+    method_name: str
+    type_arguments: tuple[str, ...]
+    arguments: tuple[str, ...]
+    start: int
+    end: int
 
 
 def parse_args() -> argparse.Namespace:
@@ -281,14 +287,321 @@ def find_module_declarations(project: Path) -> list[ModuleDeclaration]:
     return declarations
 
 
+def mask_csharp_comments(source: str) -> str:
+    """Replace comments with spaces while preserving source offsets and string literals."""
+    masked = list(source)
+    index = 0
+    while index < len(source):
+        if source.startswith("//", index):
+            end = source.find("\n", index + 2)
+            end = len(source) if end < 0 else end
+            for position in range(index, end):
+                masked[position] = " "
+            index = end
+            continue
+        if source.startswith("/*", index):
+            end = source.find("*/", index + 2)
+            end = len(source) if end < 0 else end + 2
+            for position in range(index, end):
+                if masked[position] not in "\r\n":
+                    masked[position] = " "
+            index = end
+            continue
+        if source[index] in {'"', "'"}:
+            index = csharp_literal_end(source, index)
+            continue
+        index += 1
+    return "".join(masked)
+
+
+def mask_csharp_non_code(source: str) -> str:
+    """Mask comments and literals so invocation names are discovered only in executable code."""
+    comments_masked = mask_csharp_comments(source)
+    masked = list(comments_masked)
+    index = 0
+    while index < len(comments_masked):
+        if comments_masked[index] not in {'"', "'"}:
+            index += 1
+            continue
+        end = csharp_literal_end(comments_masked, index)
+        for position in range(index, end):
+            if masked[position] not in "\r\n":
+                masked[position] = " "
+        index = end
+    return "".join(masked)
+
+
+def csharp_literal_end(source: str, quote_index: int) -> int:
+    quote = source[quote_index]
+    if quote == '"' and source.startswith('"""', quote_index):
+        quote_count = 3
+        while quote_index + quote_count < len(source) and source[quote_index + quote_count] == '"':
+            quote_count += 1
+        delimiter = '"' * quote_count
+        end = source.find(delimiter, quote_index + quote_count)
+        return len(source) if end < 0 else end + quote_count
+
+    is_verbatim = quote == '"' and quote_index > 0 and source[quote_index - 1] == "@"
+    index = quote_index + 1
+    while index < len(source):
+        if is_verbatim and source.startswith('""', index):
+            index += 2
+            continue
+        if source[index] == quote:
+            return index + 1
+        if not is_verbatim and source[index] == "\\":
+            index += 2
+            continue
+        index += 1
+    return len(source)
+
+
+def find_matching_delimiter(source: str, opening_index: int, opening: str, closing: str) -> int | None:
+    depth = 0
+    index = opening_index
+    while index < len(source):
+        if source[index] in {'"', "'"}:
+            index = csharp_literal_end(source, index)
+            continue
+        if source[index] == opening:
+            depth += 1
+        elif source[index] == closing:
+            depth -= 1
+            if depth == 0:
+                return index
+        index += 1
+    return None
+
+
+def split_top_level(source: str) -> tuple[str, ...]:
+    parts: list[str] = []
+    stack: list[str] = []
+    pair = {')': '(', ']': '[', '}': '{', '>': '<'}
+    start = 0
+    index = 0
+    while index < len(source):
+        character = source[index]
+        if character in {'"', "'"}:
+            index = csharp_literal_end(source, index)
+            continue
+        if character in "([{<":
+            stack.append(character)
+        elif character in pair:
+            if stack and stack[-1] == pair[character]:
+                stack.pop()
+        elif character == "," and not stack:
+            parts.append(source[start:index].strip())
+            start = index + 1
+        index += 1
+    tail = source[start:].strip()
+    if tail:
+        parts.append(tail)
+    return tuple(parts)
+
+
+def find_generic_invocations(source: str, method_name: str) -> list[Invocation]:
+    delimiters = mask_csharp_comments(source)
+    searchable = mask_csharp_non_code(source)
+    pattern = re.compile(rf"\b{re.escape(method_name)}\s*<")
+    invocations: list[Invocation] = []
+    for match in pattern.finditer(searchable):
+        opening_angle = searchable.find("<", match.start(), match.end())
+        closing_angle = find_matching_delimiter(delimiters, opening_angle, "<", ">")
+        if closing_angle is None:
+            continue
+        opening_parenthesis = closing_angle + 1
+        while opening_parenthesis < len(searchable) and searchable[opening_parenthesis].isspace():
+            opening_parenthesis += 1
+        if opening_parenthesis >= len(searchable) or searchable[opening_parenthesis] != "(":
+            continue
+        closing_parenthesis = find_matching_delimiter(
+            delimiters,
+            opening_parenthesis,
+            "(",
+            ")",
+        )
+        if closing_parenthesis is None:
+            continue
+        invocations.append(
+            Invocation(
+                method_name=method_name,
+                type_arguments=split_top_level(source[opening_angle + 1:closing_angle]),
+                arguments=split_top_level(source[opening_parenthesis + 1:closing_parenthesis]),
+                start=match.start(),
+                end=closing_parenthesis + 1,
+            )
+        )
+    return invocations
+
+
+def find_method_invocations(source: str, method_name: str) -> list[Invocation]:
+    delimiters = mask_csharp_comments(source)
+    searchable = mask_csharp_non_code(source)
+    pattern = re.compile(rf"\b{re.escape(method_name)}\s*\(")
+    invocations: list[Invocation] = []
+    for match in pattern.finditer(searchable):
+        opening_parenthesis = searchable.find("(", match.start(), match.end())
+        closing_parenthesis = find_matching_delimiter(
+            delimiters,
+            opening_parenthesis,
+            "(",
+            ")",
+        )
+        if closing_parenthesis is None:
+            continue
+        invocations.append(
+            Invocation(
+                method_name=method_name,
+                type_arguments=(),
+                arguments=split_top_level(source[opening_parenthesis + 1:closing_parenthesis]),
+                start=match.start(),
+                end=closing_parenthesis + 1,
+            )
+        )
+    return invocations
+
+
+def invocation_argument(invocation: Invocation, position: int, name: str) -> str | None:
+    positional: list[str] = []
+    named: dict[str, str] = {}
+    for argument in invocation.arguments:
+        match = re.match(r"^(?P<name>[A-Za-z_][A-Za-z0-9_]*)\s*:\s*(?P<value>.*)$", argument, re.DOTALL)
+        if match:
+            named[match.group("name")] = match.group("value").strip()
+        else:
+            positional.append(argument.strip())
+    return named.get(name) or (positional[position] if position < len(positional) else None)
+
+
+def csharp_string_value(expression: str | None) -> str | None:
+    if expression is None:
+        return None
+    value = expression.strip()
+    if value.startswith('@"') and value.endswith('"'):
+        return value[2:-1].replace('""', '"')
+    if not (value.startswith('"') and value.endswith('"')):
+        return None
+    try:
+        decoded = json.loads(value)
+    except json.JSONDecodeError:
+        return None
+    return decoded if isinstance(decoded, str) else None
+
+
+def normalize_csharp_type(value: str) -> str:
+    return re.sub(r"\s+", "", value).removeprefix("global::")
+
+
+def assigned_identifier(source: str, invocation: Invocation) -> str | None:
+    prefix = source[max(0, invocation.start - 240):invocation.start]
+    match = re.search(
+        r"\b(?:var|NavigationCategoryId)\s+(?P<name>[A-Za-z_][A-Za-z0-9_]*)\s*=\s*"
+        r"(?:(?:[A-Za-z_][A-Za-z0-9_]*)\s*\.\s*)+$",
+        prefix,
+    )
+    return match.group("name") if match else None
+
+
+def is_integer_literal(expression: str | None) -> bool:
+    return bool(expression and re.fullmatch(r"-?[0-9][0-9_]*", expression.strip()))
+
+
+def localized_navigation_contract_errors(
+    module_text: str,
+    expected_category_id: str,
+    expected_page_type: str,
+) -> list[str]:
+    errors: list[str] = []
+    blocks = find_method_invocations(module_text, "RegisterUIComponents")
+    categories = find_generic_invocations(module_text, "RegisterLocalizedCategory")
+    pages = find_generic_invocations(module_text, "RegisterLocalizedPage")
+
+    if len(blocks) != 1:
+        errors.append("use exactly one RegisterUIComponents block")
+    if len(categories) != 1:
+        errors.append("register exactly one localized navigation category")
+    if not pages:
+        errors.append("register at least one localized page")
+    if len(blocks) == 1:
+        block = blocks[0]
+        if any(not (block.start < item.start < item.end <= block.end) for item in [*categories, *pages]):
+            errors.append("keep category and page registrations inside the RegisterUIComponents block")
+
+    if len(categories) != 1:
+        return errors
+
+    category = categories[0]
+    category_resource = (
+        normalize_csharp_type(category.type_arguments[0])
+        if len(category.type_arguments) == 1
+        else None
+    )
+    if category_resource is None:
+        errors.append("give RegisterLocalizedCategory exactly one resource type")
+    if csharp_string_value(invocation_argument(category, 0, "categoryId")) != expected_category_id:
+        errors.append(f"derive category id '{expected_category_id}' from the UI ModuleKey")
+    if csharp_string_value(invocation_argument(category, 1, "displayNameKey")) != "Navigation:Category":
+        errors.append("use Navigation:Category as the category resource key")
+    if not is_integer_literal(invocation_argument(category, 2, "order")):
+        errors.append("set an explicit integer category order")
+
+    category_variable = assigned_identifier(module_text, category)
+    if category_variable is None:
+        errors.append("assign the registered category id to a local variable")
+
+    found_primary_page = False
+    for page in pages:
+        page_types = tuple(normalize_csharp_type(value) for value in page.type_arguments)
+        if len(page_types) != 2:
+            errors.append("give RegisterLocalizedPage one page type and one resource type")
+            continue
+        page_type, page_resource = page_types
+        is_primary_page = page_type == expected_page_type
+        found_primary_page = found_primary_page or is_primary_page
+        if category_resource is not None and page_resource != category_resource:
+            errors.append("use the category resource type for every localized page")
+        page_key = csharp_string_value(invocation_argument(page, 1, "displayNameKey"))
+        if is_primary_page and page_key != "Navigation:Title":
+            errors.append("use Navigation:Title for the primary page resource key")
+        elif not is_primary_page and (page_key is None or not page_key.startswith("Navigation:")):
+            errors.append("use a module-owned Navigation:* resource key for every additional page")
+        category_expression = invocation_argument(page, 3, "categoryId")
+        if category_variable is not None and (
+            category_expression is None or category_expression.strip() != category_variable
+        ):
+            errors.append("pass the registered category variable through categoryId")
+        add_to_nav = (invocation_argument(page, 4, "addToNav") or "").strip().casefold()
+        nav_order = invocation_argument(page, 5, "navOrder")
+        if is_primary_page:
+            if add_to_nav != "true":
+                errors.append("set addToNav to true for the primary page")
+            if not is_integer_literal(nav_order):
+                errors.append("set an explicit integer navigation order for the primary page")
+        elif add_to_nav not in {"", "false", "true"}:
+            errors.append("set addToNav to a boolean literal for every additional page")
+        elif add_to_nav == "true" and not is_integer_literal(nav_order):
+            errors.append("set an explicit integer navigation order for every additional navigation page")
+
+    if pages and not found_primary_page:
+        errors.append(f"register primary page type {expected_page_type}")
+
+    return list(dict.fromkeys(errors))
+
+
 def resolve_registered_route(project: Path, module_source: Path) -> tuple[str | None, str | None]:
     module_text = module_source.read_text(encoding="utf-8-sig")
-    match = LOCALIZED_ROUTE_ARGUMENT_PATTERN.search(module_text)
-    if match is None:
+    invocations = find_generic_invocations(module_text, "RegisterLocalizedPage")
+    if not invocations:
         return None, "localized route registration was not found"
-    argument = match.group("argument")
-    if argument.startswith('"'):
-        return argument[1:-1], None
+    argument = invocation_argument(invocations[0], 0, "route")
+    literal = csharp_string_value(argument)
+    if literal is not None:
+        return literal, None
+    if argument is None or re.fullmatch(
+        r"[A-Za-z_][A-Za-z0-9_]*(?:\.[A-Za-z_][A-Za-z0-9_]*)+",
+        argument,
+    ) is None:
+        return None, "route argument is neither a literal nor a qualified const string"
 
     qualifier, constant_name = argument.rsplit(".", 1)
     type_name = qualifier.rsplit(".", 1)[-1]
@@ -342,7 +655,6 @@ def package_route_prefix(package_id: str) -> str:
 def validate_project(
     root: Path,
     project: Path,
-    canonical_mark: Path,
     effective_package_version: str | None,
 ) -> list[Finding]:
     findings: list[Finding] = []
@@ -435,13 +747,23 @@ def validate_project(
 
     uses_compatibility_mark = False
     if icon is not None:
-        uses_compatibility_mark = icon.name.casefold() == "monica-compatibility-mark.png"
-        if not uses_compatibility_mark and canonical_mark.is_file():
-            uses_compatibility_mark = sha256(icon) == sha256(canonical_mark)
+        icon_matches_canonical_mark = sha256(icon) == COMPATIBILITY_MARK_SHA256
+        claims_compatibility_mark = icon.name.casefold() == "monica-compatibility-mark.png"
+        if claims_compatibility_mark and not icon_matches_canonical_mark:
+            add(
+                "MTP032",
+                "monica-compatibility-mark.png must match the canonical Monica Compatibility Mark unchanged.",
+                icon,
+            )
+        uses_compatibility_mark = icon_matches_canonical_mark
     if uses_compatibility_mark and readme is not None:
         readme_text = readme.read_text(encoding="utf-8-sig")
-        if DISCLAIMER not in readme_text:
-            add("MTP012", "README must include the Monica Compatibility Mark independence disclaimer.", readme)
+        if COMPATIBILITY_NOTICE not in readme_text:
+            add(
+                "MTP012",
+                "README must include the Monica Compatibility Mark self-attestation and independence notice.",
+                readme,
+            )
 
     tags = {
         tag.casefold()
@@ -516,6 +838,21 @@ def validate_project(
     declarations = find_module_declarations(project)
     if not declarations:
         add("MTP018", "No third-party [ModuleKey(\"...\")] module declaration was found.")
+
+    legacy_registration_sources: set[Path] = set()
+    for source in project.parent.rglob("*.cs"):
+        if any(part in {"bin", "obj"} for part in source.parts):
+            continue
+        source_text = source.read_text(encoding="utf-8-sig")
+        if find_generic_invocations(source_text, "RegisterLocalizedComponent"):
+            legacy_registration_sources.add(source)
+            add(
+                "MTP030",
+                "RegisterLocalizedComponent is a legacy navigation API; register a stable localized category "
+                "and use RegisterLocalizedPage instead.",
+                source,
+            )
+
     seen: dict[str, str] = {}
     package_prefix = package_id.casefold() + "."
     expected_namespace = f"{package_id}.Modules"
@@ -550,6 +887,24 @@ def validate_project(
                 add(
                     "MTP022",
                     f"UI identity mismatch: {class_name} must end with one exact 'UI' suffix and have a non-empty base name.",
+                    source,
+                )
+            if source in legacy_registration_sources:
+                continue
+
+            module_text = source.read_text(encoding="utf-8-sig")
+            category_id = key[:-3]
+            navigation_errors = localized_navigation_contract_errors(
+                module_text,
+                category_id,
+                f"UI{base_name}Page",
+            )
+            if navigation_errors:
+                add(
+                    "MTP031",
+                    f"{class_name} does not follow the stable localized navigation contract: "
+                    + "; ".join(navigation_errors)
+                    + ".",
                     source,
                 )
             registered_route, route_error = resolve_registered_route(project, source)
@@ -603,13 +958,10 @@ def main() -> int:
         print("No packable third-party Monica project was found.", file=sys.stderr)
         return 2
 
-    canonical_mark = Path(__file__).resolve().parent.parent / "assets" / "monica-compatibility-mark.png"
-    if not canonical_mark.is_file():
-        canonical_mark = root / "monica-compatibility-mark.png"
     results = [
         finding
         for project in projects
-        for finding in validate_project(root, project, canonical_mark, args.package_version)
+        for finding in validate_project(root, project, args.package_version)
     ]
     failures = [finding for finding in results if finding.code != "OK"]
 

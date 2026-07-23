@@ -1,4 +1,9 @@
 {
+  "Pages": {
+    "FileOps": {
+      "Title": "FileOps Workspace"
+    }
+  },
   "Page": {
     "DocumentTitle": "FileOps Workspace",
     "Title": "FileOps Workspace",

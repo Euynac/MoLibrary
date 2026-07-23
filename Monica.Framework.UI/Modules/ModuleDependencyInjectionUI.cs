@@ -6,6 +6,7 @@ using Monica.Core.Modularity.Annotations;
 using Monica.Core.Modularity.Models;
 using Monica.Framework.UI.Localization;
 using Monica.Framework.UI.Pages;
+using Monica.UI.Shell.Models;
 using MudBlazor;
 
 // ReSharper disable once CheckNamespace
@@ -50,11 +51,11 @@ public class ModuleDependencyInjectionUI(ModuleDependencyInjectionUIOption optio
         DependsOnModule<ModuleDependencyInjectionGuide>().Register()
             .EnableAutoRegistrationDiagnostics();
         DependsOnModule<ModuleShellUIGuide>().Register()
-            .RegisterUIComponents(registry => registry.RegisterLocalizedComponent<UIDependencyInjectionPage>(
+            .RegisterUIComponents(registry => registry.RegisterLocalizedPage<UIDependencyInjectionPage, DependencyInjectionResource>(
                 UIDependencyInjectionPage.PAGE_URL,
                 "Pages:DependencyInjection:Title",
                 Icons.Material.Filled.AccountTree,
-                "Categories:Infrastructure",
+                BuiltInNavigationCategoryIds.Infrastructure,
                 addToNav: true,
                 navOrder: 10));
     }

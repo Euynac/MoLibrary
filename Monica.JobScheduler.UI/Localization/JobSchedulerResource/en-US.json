@@ -1,4 +1,21 @@
 {
+  "Pages": {
+    "JobSchedulerDashboard": {
+      "Title": "Dashboard"
+    },
+    "JobSchedulerMonitor": {
+      "Title": "Real-time Monitor"
+    },
+    "JobDefinitions": {
+      "Title": "Job Definitions"
+    },
+    "JobInstances": {
+      "Title": "Job Instances"
+    },
+    "JobStatistics": {
+      "Title": "Statistics"
+    }
+  },
   "Common": {
     "Actions": {
       "Search": "Search",

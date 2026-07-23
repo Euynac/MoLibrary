@@ -1,4 +1,9 @@
 {
+  "Pages": {
+    "ObservableInstance": {
+      "Title": "单例服务监控"
+    }
+  },
   "Page": {
     "PageTitle": "可观测实例监控",
     "Header": {

@@ -1,4 +1,9 @@
 {
+  "Pages": {
+    "GitRepositories": {
+      "Title": "Git 仓库"
+    }
+  },
   "GitDashboard": {
     "PageTitle": "Git 仓库",
     "Title": "Git 仓库",

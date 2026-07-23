@@ -12,18 +12,29 @@
 - 类库模式，无需独立的入口程序
 - 完整的文档注释支持
 
-## 安装使用
+## 模块注册
 
-```cs
-builder.AddMonica(monica =>
+每个 UI 模块必须显式声明页面标题所属的资源类型，并使用稳定的分类 ID。分类文本只用于显示，不能作为分组标识。
+
+```csharp
+public override void ClaimDependencies()
 {
-    monica.AddUICore().RegisterUIComponents(registry =>
-    {
-        // 注册SignalR调试组件，同时添加到导航菜单
-        registry.RegisterComponent<SignalRDebug>("debug", "SignalR调试", Icons.Material.Filled.ManageAccounts, "SignalR调试", addToNav: true, navOrder: 100);
-    });
-});
+    DependsOnModule<ModuleLocalizationGuide>().Register()
+        .AddResource<SignalRResource>();
+
+    DependsOnModule<ModuleShellUIGuide>().Register()
+        .RegisterUIComponents(registry => registry.RegisterLocalizedPage<SignalRDebug, SignalRResource>(
+            "debug",
+            "Navigation:Title",
+            Icons.Material.Filled.ManageAccounts,
+            BuiltInNavigationCategoryIds.Debug,
+            addToNav: true,
+            navOrder: 100));
+}
 ```
+
+模块自有分类应先通过 `RegisterLocalizedCategory<TResource>()` 注册 publisher-qualified ID，再将返回的
+`NavigationCategoryId` 传给页面。注册表在路由读取时冻结，之后的修改会被拒绝。
 
 ## 最佳实践
 

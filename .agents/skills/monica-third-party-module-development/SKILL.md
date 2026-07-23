@@ -60,6 +60,8 @@ Build independent Monica packages against one versioned ecosystem contract. Trea
 - Assign every module a unique string key that equals the package ID or starts with `<PackageId>.`.
 - Use a final `.UI` key segment for a third-party UI module.
 - End UI module type names with one exact `UI` suffix and give them a non-empty base name. Non-UI module names must not end in `UI`.
+- Give every UI module its own stable navigation category ID by removing only the final `.UI` segment from that module's key. Keep publisher identity in the category ID even though public routes omit it.
+- Register each UI module's category and pages together in one `RegisterUIComponents` block. Use the module-owned resource marker with `Navigation:Category`; the scaffold's primary page uses `Navigation:Title`, while additional pages use their own `Navigation:*` keys. Do not use the legacy `RegisterLocalizedComponent` API.
 - Keep module keys unique under ordinal case-insensitive comparison.
 - Do not encode license, maturity, or “community” status in the package ID.
 
@@ -83,10 +85,10 @@ Module keys:
 - Copy [monica-compatibility-mark.svg](assets/monica-compatibility-mark.svg) or [monica-compatibility-mark.png](assets/monica-compatibility-mark.png) when the publisher wants the Monica Compatibility Mark.
 - An open-source publisher may explicitly request the README-only [monica-open-source-badge.svg](assets/monica-open-source-badge.svg) when the manifest declares `license.openSource=true` and a NuGet-accepted SPDX `PackageLicenseExpression`. Never infer open-source status merely from the presence of an expression. The badge is not a package icon and does not change package identity.
 - A publisher-owned icon is equally valid.
-- Never recolor, modify, or reuse Monica's official purple package mark for a third-party package.
+- Keep Monica's official purple `#512BD4` package mark first-party only. The supplied emerald mark is the one approved compatibility colorway: use that asset unchanged instead of recoloring the official file or creating another color or geometry variant.
 - Include this notice when using the compatibility mark:
 
-  > This community package is independently maintained and is not affiliated with, endorsed by, or supported by the Monica project.
+  > Monica compatibility is self-attested by the publisher. This community package is independently maintained and is not affiliated with, endorsed by, or supported by the Monica project.
 
 - Do not claim “official”, “certified”, or “verified”. The v1 mark is self-attested compatibility, not Monica approval.
 

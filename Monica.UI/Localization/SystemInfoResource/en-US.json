@@ -1,4 +1,9 @@
 {
+  "Pages": {
+    "SystemInfo": {
+      "Title": "System Information"
+    }
+  },
   "Page": {
     "PageTitle": "System Information",
     "Header": {

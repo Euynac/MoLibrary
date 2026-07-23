@@ -39,9 +39,12 @@ SOURCE_LINK_PACKAGES = {
 SOURCE_PROVIDERS = {*SOURCE_LINK_PACKAGES, "none"}
 PUBLISH_TARGETS = {"nuget.org", "private-feed", "none"}
 ICON_KINDS = {"compatibility-mark", "publisher"}
-DISCLAIMER = (
-    "This community package is independently maintained and is not affiliated with, "
-    "endorsed by, or supported by the Monica project."
+UI_CATEGORY_ORDER_BASE = 450
+UI_NAV_ORDER_BASE = 80
+COMPATIBILITY_NOTICE = (
+    "Monica compatibility is self-attested by the publisher. This community package is "
+    "independently maintained and is not affiliated with, endorsed by, or supported by "
+    "the Monica project."
 )
 
 
@@ -59,6 +62,12 @@ class ModuleSpec:
     @property
     def base_name(self) -> str:
         return self.name[:-2] if self.is_ui and self.name.endswith("UI") else self.name
+
+    @property
+    def navigation_category_id(self) -> str:
+        if not self.is_ui or not self.key.casefold().endswith(".ui"):
+            raise ValueError(f"Module '{self.name}' is not a UI module with a final .UI key segment.")
+        return self.key[:-3]
 
 
 @dataclass(frozen=True)
@@ -656,13 +665,20 @@ def create_module(project_dir: Path, manifest: Manifest, module: ModuleSpec, ui_
         )
         registration = textwrap.dedent(
             f"""
-            shellGuide.RegisterUIComponents(registry => registry.RegisterLocalizedComponent<{page_name}, {resource_name}>(
-                "{route}",
-                "Navigation:Title",
-                Icons.Material.Filled.Extension,
-                "Navigation:Category",
-                addToNav: true,
-                navOrder: {80 + ui_index}));
+            shellGuide.RegisterUIComponents(registry =>
+            {{
+                var category = registry.RegisterLocalizedCategory<{resource_name}>(
+                    "{csharp_escape(module.navigation_category_id)}",
+                    "Navigation:Category",
+                    order: {UI_CATEGORY_ORDER_BASE + ui_index});
+                registry.RegisterLocalizedPage<{page_name}, {resource_name}>(
+                    "{route}",
+                    "Navigation:Title",
+                    Icons.Material.Filled.Extension,
+                    categoryId: category,
+                    addToNav: true,
+                    navOrder: {UI_NAV_ORDER_BASE + ui_index});
+            }});
             """
         ).strip()
         dependencies.append(registration)
@@ -900,21 +916,39 @@ def create_tests(root: Path, manifest: Manifest) -> None:
         ui_usings = f"""using {manifest.package_id}.Localization;
 using {manifest.package_id}.Pages;
 using Monica.Core.Localization.Abstractions;
+using Monica.UI.Shell.Models;
 using Monica.UI.Shell.Support;
 """
         ui_setup = """
-        var pageRegistry = scope.Resolve<IPageRegistry>();
+        var pageCatalog = scope.Resolve<IPageCatalog>();
         var localizationCatalog = scope.Resolve<ILocalizationCatalog>();
 """.rstrip()
         ui_assertion_blocks: list[str] = []
         for index, module in enumerate(ui_modules):
             route = ui_route(manifest, module).lstrip("/")
+            category_id = module.navigation_category_id
             ui_assertion_blocks.append(
-                f"""        var page{index} = pageRegistry.GetRegisteredPages()
+                f"""        var categoryId{index} = NavigationCategoryId.Create("{csharp_escape(category_id)}");
+        var page{index} = pageCatalog.GetRegisteredPages()
             .Single(page => page.ComponentType == typeof(UI{module.base_name}Page));
+        var category{index} = pageCatalog.GetNavigationCategories()
+            .Single(category => category.Id == categoryId{index});
+        var navigationItem{index} = pageCatalog.GetNavItems()
+            .Single(item => item.Href == "{route}");
+
         page{index}.Route.Should().Be("{route}");
+        page{index}.ComponentType.Should().Be(typeof(UI{module.base_name}Page));
         page{index}.DisplayName.ResourceType.Should().Be(typeof({module.base_name}Resource));
-        pageRegistry.GetComponentType("{route}").Should().Be(typeof(UI{module.base_name}Page));
+        page{index}.DisplayName.Key.Should().Be("Navigation:Title");
+        category{index}.Id.Should().Be(categoryId{index});
+        category{index}.DisplayName.ResourceType.Should().Be(typeof({module.base_name}Resource));
+        category{index}.DisplayName.Key.Should().Be("Navigation:Category");
+        category{index}.Order.Should().Be({UI_CATEGORY_ORDER_BASE + index});
+        navigationItem{index}.Href.Should().Be("{route}");
+        navigationItem{index}.Text.ResourceType.Should().Be(typeof({module.base_name}Resource));
+        navigationItem{index}.Text.Key.Should().Be("Navigation:Title");
+        navigationItem{index}.CategoryId.Should().Be(categoryId{index});
+        navigationItem{index}.Order.Should().Be({UI_NAV_ORDER_BASE + index});
         localizationCatalog.For<{module.base_name}Resource>().Should().NotBeNull();"""
             )
         ui_assertions = "\n\n" + "\n\n".join(ui_assertion_blocks)
@@ -962,7 +996,8 @@ public sealed class ModuleRegistrationTests(PackageTestApplicationFactory factor
         That publisher-first name intentionally overrides Monica's first-party `Test.Monica.*` repository convention.
 
         `ModuleRegistrationTests` registers only graph entry modules. Dependencies must compose transitively,
-        and UI contributions must reach the host-owned page registry with the package resource marker.
+        and each UI contribution must reach the host-owned read-only page catalog with its module-key-derived category,
+        module resource marker, localized page/navigation keys, deterministic orders, and navigation item.
 
         Run one test process at a time. Under WSL, pass the Windows project path:
 
@@ -991,7 +1026,7 @@ def create_readme(root: Path, manifest: Manifest) -> None:
         lines.extend(["", "![Monica Open Source](monica-open-source-badge.svg)"])
     lines.extend(["", manifest.description, ""])
     if manifest.icon_kind == "compatibility-mark":
-        lines.extend([DISCLAIMER, ""])
+        lines.extend([COMPATIBILITY_NOTICE, ""])
     lines.extend(
         [
             "## Install",

@@ -1,4 +1,9 @@
 {
+  "Pages": {
+    "EventBusMonitor": {
+      "Title": "事件总线监控"
+    }
+  },
   "Page": {
     "PageTitle": "事件总线监控",
     "Header": {

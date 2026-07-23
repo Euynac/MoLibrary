@@ -1,4 +1,3 @@
-using Microsoft.AspNetCore.Components.Routing;
 using Microsoft.Extensions.DependencyInjection;
 using Monica.Configuration.UI.Localization;
 using Monica.Configuration.UI.Pages;
@@ -9,6 +8,7 @@ using Monica.Core.Modularity;
 using Monica.Core.Modularity.Abstractions;
 using Monica.Core.Modularity.Annotations;
 using Monica.Core.Modularity.Models;
+using Monica.UI.Shell.Models;
 using MudBlazor;
 
 // ReSharper disable once CheckNamespace
@@ -54,44 +54,43 @@ public sealed class ModuleConfigurationUI(ModuleConfigurationUIOption option)
         DependsOnModule<ModuleShellUIGuide>().Register()
             .RegisterUIComponents(registry =>
             {
-                registry.RegisterLocalizedComponent<ConfigurationStatePage>(
+                registry.RegisterLocalizedPage<ConfigurationStatePage, ConfigurationUIResource>(
                     ConfigurationUiRoutes.STATE_ROUTE,
                     "Pages:ConfigurationState:Title",
                     Icons.Material.Filled.Tune,
-                    "Categories:Configuration",
+                    BuiltInNavigationCategoryIds.Configuration,
                     addToNav: true,
-                    navOrder: 10,
-                    navLinkMatch: NavLinkMatch.All);
+                    navOrder: 10);
 
-                registry.RegisterLocalizedComponent<ConfigurationHistoryPage>(
+                registry.RegisterLocalizedPage<ConfigurationHistoryPage, ConfigurationUIResource>(
                     ConfigurationUiRoutes.HISTORY_ROUTE,
                     "Pages:ConfigurationHistory:Title",
                     Icons.Material.Filled.History,
-                    "Categories:Configuration",
+                    BuiltInNavigationCategoryIds.Configuration,
                     addToNav: true,
                     navOrder: 20);
 
-                registry.RegisterLocalizedComponent<ConfigurationVersionsPage>(
+                registry.RegisterLocalizedPage<ConfigurationVersionsPage, ConfigurationUIResource>(
                     ConfigurationUiRoutes.VERSIONS_ROUTE,
                     "Pages:ConfigurationVersions:Title",
                     Icons.Material.Filled.SettingsBackupRestore,
-                    "Categories:Configuration",
+                    BuiltInNavigationCategoryIds.Configuration,
                     addToNav: true,
                     navOrder: 25);
 
-                registry.RegisterLocalizedComponent<ConfigurationDebugPage>(
+                registry.RegisterLocalizedPage<ConfigurationDebugPage, ConfigurationUIResource>(
                     ConfigurationUiRoutes.DEBUG_ROUTE,
                     "Pages:ConfigurationDebug:Title",
                     Icons.Material.Filled.BugReport,
-                    "Categories:Configuration",
+                    BuiltInNavigationCategoryIds.Configuration,
                     addToNav: true,
                     navOrder: 30);
 
-                registry.RegisterLocalizedComponent<ConfigurationStoragePage>(
+                registry.RegisterLocalizedPage<ConfigurationStoragePage, ConfigurationUIResource>(
                     ConfigurationUiRoutes.STORAGE_ROUTE,
                     "Pages:ConfigurationStorage:Title",
                     Icons.Material.Filled.Storage,
-                    "Categories:Configuration",
+                    BuiltInNavigationCategoryIds.Configuration,
                     addToNav: true,
                     navOrder: 40);
             });

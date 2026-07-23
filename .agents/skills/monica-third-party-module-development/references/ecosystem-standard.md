@@ -57,6 +57,10 @@ Third-party UI routes use the package family without the publisher-owned identit
 
 The resulting route namespace is shared by the host rather than isolated by publisher. Keep every contributed route at the package-family prefix or a descriptive extension such as `/gacha-pool-history`. Monica rejects duplicate normalized routes during registration; packages that must coexist therefore need distinct package families or distinct package-family subroutes. Do not claim an unrelated generic route such as `/dashboard` or `/settings`.
 
+Navigation category identity follows a different rule from routes: derive it from each UI module's full key by removing only the final `.UI` segment. For example, `Acme.Monica.Toolkit.Audit.UI` owns category ID `Acme.Monica.Toolkit.Audit`. This keeps categories collision-resistant across publishers and gives multiple UI modules in one package independent identities.
+
+Every UI module registers its category and localized pages in one `RegisterUIComponents` block. Register `Navigation:Category` through `RegisterLocalizedCategory<TResource>` with an explicit deterministic order, assign the returned ID, and pass it to `RegisterLocalizedPage<TPage, TResource>` through `categoryId`. The scaffold's primary page uses `Navigation:Title`; additional pages use distinct module-owned `Navigation:*` keys. Every navigation page sets `addToNav: true` and an explicit navigation order, and the category and pages use the UI module's own resource marker. `RegisterLocalizedComponent` is a legacy API and is not ecosystem-v1 compliant.
+
 ## 4. Public API naming
 
 For each module named `{Name}`:
@@ -97,6 +101,8 @@ Add `monica-ui` for UI packages and at least one useful package-specific capabil
 
 ## 7. Branding
 
-`Monica.*` and the official purple mark identify first-party packages. Third parties may use their own icon or the emerald Monica Compatibility Mark. Color is not the only distinction: the compatibility mark includes an extension/plug motif.
+`Monica.*` and the official purple `#512BD4` mark identify first-party packages. Third parties may use their own icon or the canonical emerald `#10B981` Monica Compatibility Mark. The compatibility asset deliberately preserves the Monica silhouette in a fixed emerald colorway so the ecosystem relationship is recognizable while the purple official identity remains unambiguous. Use the supplied asset unchanged; do not recolor the official file, invent another colorway, or alter the compatibility artwork.
 
-The mark means only that the publisher asserts compatibility with this standard. It does not mean official, certified, verified, endorsed, or supported by Monica. Include the standard independence disclaimer in the package README.
+The package validator verifies the compatibility PNG against the canonical asset contents; renaming modified artwork to `monica-compatibility-mark.png` does not satisfy the branding contract.
+
+The mark means only that the publisher self-attests compatibility with this standard. It does not mean official, certified, verified, endorsed, or supported by Monica. Include the standard self-attestation and independence notice in the package README.

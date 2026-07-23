@@ -1,4 +1,9 @@
 {
+  "Pages": {
+    "DependencyInjection": {
+      "Title": "依赖注入"
+    }
+  },
   "Page": {
     "PageTitle": "依赖注入",
     "Header": {

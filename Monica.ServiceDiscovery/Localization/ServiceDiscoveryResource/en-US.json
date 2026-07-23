@@ -1,4 +1,9 @@
 {
+  "Pages": {
+    "ServiceDiscovery": {
+      "Title": "Service Discovery"
+    }
+  },
   "Shared": {
     "Actions": {
       "Cancel": "Cancel",

@@ -4,6 +4,8 @@ using Monica.Core.Modularity.Abstractions;
 using Monica.Core.Modularity.Annotations;
 using Monica.Core.Modularity.Models;
 using Monica.Framework.UI.Pages;
+using Monica.Framework.UI.Localization;
+using Monica.UI.Shell.Models;
 using MudBlazor;
 
 // ReSharper disable once CheckNamespace
@@ -36,13 +38,15 @@ public class ModuleMapperUI(ModuleMapperUIOption option)
         if (!Option.DisablePage)
         {
             DependsOnModule<ModuleObjectMappingGuide>().Register();
+            DependsOnModule<ModuleLocalizationGuide>().Register()
+                .AddResource<MapperResource>();
             DependsOnModule<ModuleShellUIGuide>().Register()
                 .ConfigureModuleOption(o => o.EnableMarkdown = true)
-                .RegisterUIComponents(p => p.RegisterLocalizedComponent<UIMapperDebugPage>(
+                .RegisterUIComponents(p => p.RegisterLocalizedPage<UIMapperDebugPage, MapperResource>(
                     UIMapperDebugPage.PAGE_URL,
                     "Pages:MapperDebug:Title",
                     Icons.Material.Filled.Code,
-                    "Categories:Debug",
+                    BuiltInNavigationCategoryIds.Debug,
                     addToNav: true,
                     navOrder: 10));
         }

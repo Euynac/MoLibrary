@@ -1,4 +1,9 @@
 {
+  "Pages": {
+    "K8S": {
+      "Title": "K8S 运维"
+    }
+  },
   "Page": {
     "DocumentTitle": "K8S 运维",
     "Title": "K8S 运维",

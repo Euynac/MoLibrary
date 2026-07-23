@@ -94,7 +94,16 @@ class ScaffoldTests(unittest.TestCase):
             self.assertIn("## Install", readme)
             self.assertNotIn("assets/monica", readme)
             self.assertIn("![Package icon](monica-compatibility-mark.png)", readme)
+            self.assertIn(scaffold.COMPATIBILITY_NOTICE, readme)
             self.assertTrue((output / "monica-open-source-badge.svg").is_file())
+            self.assertEqual(
+                (SKILL_ROOT / "assets/monica-compatibility-mark.png").read_bytes(),
+                (output / "monica-compatibility-mark.png").read_bytes(),
+            )
+            self.assertEqual(
+                (SKILL_ROOT / "assets/monica-compatibility-mark.svg").read_bytes(),
+                (output / "monica-compatibility-mark.svg").read_bytes(),
+            )
             self.assertIn("monica-ui;example", project)
             self.assertIn("<RepositoryUrl>", project)
             self.assertIn("<RepositoryType>git</RepositoryType>", project)
@@ -104,10 +113,87 @@ class ScaffoldTests(unittest.TestCase):
             self.assertIn("namespace Acme.Monica.Example.Modules;", ui_module)
             self.assertIn("using Monica.Modules;", ui_module)
             self.assertIn('"/example"', ui_module)
+            self.assertEqual(1, ui_module.count("RegisterUIComponents"))
+            self.assertIn("RegisterLocalizedCategory<ExampleResource>", ui_module)
+            self.assertIn('"Acme.Monica.Example"', ui_module)
+            self.assertIn('"Navigation:Category"', ui_module)
+            self.assertIn("order: 450", ui_module)
+            self.assertIn("RegisterLocalizedPage<UIExamplePage, ExampleResource>", ui_module)
+            self.assertIn("categoryId: category", ui_module)
+            self.assertIn("navOrder: 80", ui_module)
+            self.assertNotIn("RegisterLocalizedComponent", ui_module)
             self.assertIn("builder.AddExampleUI();", tests)
             self.assertNotIn("builder.AddExample();", tests)
+            self.assertIn("scope.Resolve<IPageCatalog>()", tests)
+            self.assertNotIn("IPageRegistry", tests)
+            self.assertIn('NavigationCategoryId.Create("Acme.Monica.Example")', tests)
+            self.assertIn('DisplayName.Key.Should().Be("Navigation:Category")', tests)
+            self.assertIn('DisplayName.Key.Should().Be("Navigation:Title")', tests)
+            self.assertIn("category0.Order.Should().Be(450)", tests)
+            self.assertIn("navigationItem0.Order.Should().Be(80)", tests)
+            self.assertNotIn("page0.CategoryId", tests)
+            self.assertNotIn("navigationItem0.Disabled", tests)
+            self.assertNotIn("GetComponentType", tests)
             self.assertTrue((output / "tests/README.md").is_file())
             self.assertTrue((output / "package.manifest.json").is_file())
+
+    def test_scaffold_gives_each_ui_module_its_own_category_contract(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            payload = valid_manifest()
+            payload["packageId"] = "Acme.Monica.Toolkit"
+            payload["modules"] = [
+                {
+                    "name": "Toolkit",
+                    "kind": "infrastructure",
+                    "key": "Acme.Monica.Toolkit",
+                },
+                {
+                    "name": "AuditUI",
+                    "kind": "ui",
+                    "key": "Acme.Monica.Toolkit.Audit.UI",
+                    "dependsOn": ["Toolkit"],
+                },
+                {
+                    "name": "ReportsUI",
+                    "kind": "ui",
+                    "key": "Acme.Monica.Toolkit.Reports.UI",
+                    "dependsOn": ["Toolkit"],
+                },
+            ]
+            manifest = scaffold.load_manifest(self.write_manifest(root, payload))
+            output = root / "output"
+
+            scaffold.create_repository(manifest, output)
+
+            audit_module = (output / "src/Acme.Monica.Toolkit/Modules/ModuleAuditUI.cs").read_text(
+                encoding="utf-8"
+            )
+            reports_module = (output / "src/Acme.Monica.Toolkit/Modules/ModuleReportsUI.cs").read_text(
+                encoding="utf-8"
+            )
+            tests = (
+                output / "tests/Test.Acme.Monica.Toolkit/Modules/ModuleRegistrationTests.cs"
+            ).read_text(encoding="utf-8")
+            findings = validator.validate_project(
+                output,
+                output / "src/Acme.Monica.Toolkit/Acme.Monica.Toolkit.csproj",
+                None,
+            )
+
+            self.assertIn('"Acme.Monica.Toolkit.Audit"', audit_module)
+            self.assertIn("order: 450", audit_module)
+            self.assertIn("navOrder: 80", audit_module)
+            self.assertIn('"Acme.Monica.Toolkit.Reports"', reports_module)
+            self.assertIn("order: 451", reports_module)
+            self.assertIn("navOrder: 81", reports_module)
+            self.assertEqual(1, audit_module.count("RegisterUIComponents"))
+            self.assertEqual(1, reports_module.count("RegisterUIComponents"))
+            self.assertIn('NavigationCategoryId.Create("Acme.Monica.Toolkit.Audit")', tests)
+            self.assertIn('NavigationCategoryId.Create("Acme.Monica.Toolkit.Reports")', tests)
+            self.assertIn("category1.Order.Should().Be(451)", tests)
+            self.assertIn("navigationItem1.Order.Should().Be(81)", tests)
+            self.assertEqual(["OK"], [finding.code for finding in findings])
 
     def test_private_feed_does_not_emit_nuget_workflow_or_oss_branding(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
@@ -138,7 +224,6 @@ class ScaffoldTests(unittest.TestCase):
             findings = validator.validate_project(
                 output,
                 output / "src/Acme.Monica.Example/Acme.Monica.Example.csproj",
-                SKILL_ROOT / "assets/monica-compatibility-mark.png",
                 None,
             )
             self.assertEqual(["OK"], [finding.code for finding in findings])
@@ -207,7 +292,7 @@ class ScaffoldTests(unittest.TestCase):
             project = project_root / "Acme.Monica.GachaPool.csproj"
             project.write_text("<Project />", encoding="utf-8")
             module_source.write_text(
-                "registry.RegisterLocalizedComponent<UIGachaPoolPage, GachaPoolResource>(\n"
+                "registry.RegisterLocalizedPage<UIGachaPoolPage, GachaPoolResource>(\n"
                 "    UIGachaPoolPage.PAGE_URL,\n"
                 "    \"Navigation:Title\");\n",
                 encoding="utf-8",
@@ -221,6 +306,51 @@ class ScaffoldTests(unittest.TestCase):
 
             self.assertEqual("/gacha-pool", route)
             self.assertIsNone(error)
+
+    def test_navigation_contract_parser_handles_named_arguments_and_additional_hidden_page(self) -> None:
+        module_text = """
+// RegisterLocalizedComponent<LegacyPage, LegacyResource>("/ignored", "Ignored");
+var legacyDocumentation = "RegisterLocalizedComponent<LegacyPage, LegacyResource>";
+shellGuide.RegisterUIComponents
+(
+    registry =>
+    {
+        var category =
+            registry
+                .RegisterLocalizedCategory<AuditResource>
+                (
+                    categoryId: "Acme.Monica.Toolkit.Audit",
+                    displayNameKey: "Navigation:Category",
+                    order: 4_00
+                );
+        registry.RegisterLocalizedPage<UIAuditPage, AuditResource>
+        (
+            route: "/toolkit-audit",
+            displayNameKey: "Navigation:Title",
+            icon: null,
+            categoryId: category,
+            addToNav: true,
+            navOrder: 80
+        );
+        registry.RegisterLocalizedPage<UIAuditDetailsPage, AuditResource>(
+            route: "/toolkit-audit-details",
+            displayNameKey: "Navigation:Details",
+            categoryId: category);
+    }
+);
+"""
+
+        errors = validator.localized_navigation_contract_errors(
+            module_text,
+            "Acme.Monica.Toolkit.Audit",
+            "UIAuditPage",
+        )
+
+        self.assertEqual([], errors)
+        self.assertEqual(
+            [],
+            validator.find_generic_invocations(module_text, "RegisterLocalizedComponent"),
+        )
 
     def test_camel_case_package_segment_uses_readable_package_family_route(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
@@ -251,7 +381,6 @@ class ScaffoldTests(unittest.TestCase):
             findings = validator.validate_project(
                 output,
                 project,
-                SKILL_ROOT / "assets/monica-compatibility-mark.png",
                 None,
             )
             self.assertEqual(["OK"], [finding.code for finding in findings])
@@ -279,7 +408,6 @@ class ScaffoldTests(unittest.TestCase):
             findings = validator.validate_project(
                 output,
                 project,
-                SKILL_ROOT / "assets/monica-compatibility-mark.png",
                 None,
             )
             self.assertEqual(["OK"], [finding.code for finding in findings])
@@ -312,7 +440,6 @@ class ScaffoldTests(unittest.TestCase):
             findings = validator.validate_project(
                 output,
                 project,
-                SKILL_ROOT / "assets/monica-compatibility-mark.png",
                 None,
             )
 
@@ -343,12 +470,99 @@ class ScaffoldTests(unittest.TestCase):
             findings = validator.validate_project(
                 output,
                 project,
-                SKILL_ROOT / "assets/monica-compatibility-mark.png",
                 "1.0.0",
             )
             codes = {finding.code for finding in findings}
 
             self.assertTrue({"MTP016", "MTP017", "MTP024", "MTP025"}.issubset(codes))
+
+    def test_validator_requires_self_attestation_with_compatibility_mark(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            manifest = scaffold.load_manifest(self.write_manifest(root, valid_manifest()))
+            output = root / "output"
+            scaffold.create_repository(manifest, output)
+            readme = output / "README.md"
+            readme.write_text(
+                readme.read_text(encoding="utf-8").replace(
+                    "Monica compatibility is self-attested by the publisher. ",
+                    "",
+                ),
+                encoding="utf-8",
+            )
+
+            findings = validator.validate_project(
+                output,
+                output / "src/Acme.Monica.Example/Acme.Monica.Example.csproj",
+                None,
+            )
+
+            self.assertIn("MTP012", {finding.code for finding in findings})
+
+    def test_validator_rejects_modified_compatibility_mark(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            manifest = scaffold.load_manifest(self.write_manifest(root, valid_manifest()))
+            output = root / "output"
+            scaffold.create_repository(manifest, output)
+            mark = output / "monica-compatibility-mark.png"
+            mark.write_bytes(mark.read_bytes() + b"modified")
+
+            findings = validator.validate_project(
+                output,
+                output / "src/Acme.Monica.Example/Acme.Monica.Example.csproj",
+                None,
+            )
+
+            self.assertIn("MTP032", {finding.code for finding in findings})
+
+    def test_validator_rejects_legacy_localized_component_registration(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            manifest = scaffold.load_manifest(self.write_manifest(root, valid_manifest()))
+            output = root / "output"
+            scaffold.create_repository(manifest, output)
+            module = output / "src/Acme.Monica.Example/Modules/ModuleExampleUI.cs"
+            module.write_text(
+                module.read_text(encoding="utf-8").replace(
+                    "RegisterLocalizedPage<UIExamplePage, ExampleResource>",
+                    "RegisterLocalizedComponent<UIExamplePage, ExampleResource>",
+                ),
+                encoding="utf-8",
+            )
+
+            findings = validator.validate_project(
+                output,
+                output / "src/Acme.Monica.Example/Acme.Monica.Example.csproj",
+                None,
+            )
+
+            self.assertIn("MTP030", {finding.code for finding in findings})
+
+    def test_validator_rejects_category_identity_and_resource_key_drift(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            manifest = scaffold.load_manifest(self.write_manifest(root, valid_manifest()))
+            output = root / "output"
+            scaffold.create_repository(manifest, output)
+            module = output / "src/Acme.Monica.Example/Modules/ModuleExampleUI.cs"
+            module.write_text(
+                module.read_text(encoding="utf-8")
+                .replace('"Acme.Monica.Example",', '"Acme.Monica.Shared",')
+                .replace('"Navigation:Category",', '"Navigation:Group",'),
+                encoding="utf-8",
+            )
+
+            findings = validator.validate_project(
+                output,
+                output / "src/Acme.Monica.Example/Acme.Monica.Example.csproj",
+                None,
+            )
+            contract_findings = [finding for finding in findings if finding.code == "MTP031"]
+
+            self.assertEqual(1, len(contract_findings))
+            self.assertIn("derive category id 'Acme.Monica.Example'", contract_findings[0].message)
+            self.assertIn("Navigation:Category", contract_findings[0].message)
 
     def test_artifact_inspector_accepts_root_assets_and_valid_symbol_package(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:

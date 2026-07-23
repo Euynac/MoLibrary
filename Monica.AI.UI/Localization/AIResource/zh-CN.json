@@ -1,4 +1,27 @@
 {
+  "Pages": {
+    "AIChat": {
+      "Title": "AI 助手"
+    },
+    "AIProviderManage": {
+      "Title": "AI Provider 管理"
+    },
+    "AICapabilities": {
+      "Title": "AI 能力"
+    },
+    "RAGManage": {
+      "Title": "RAG 索引"
+    },
+    "RAGDebug": {
+      "Title": "RAG 调试"
+    },
+    "RAGChunkers": {
+      "Title": "RAG 分块器管理"
+    },
+    "KnowledgeBaseManage": {
+      "Title": "知识库"
+    }
+  },
   "Session": {
     "NewChat": "新对话",
     "RecentSessions": "最近会话",

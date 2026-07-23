@@ -1,4 +1,9 @@
 {
+  "Pages": {
+    "DependencyInjection": {
+      "Title": "Dependency Injection"
+    }
+  },
   "Page": {
     "PageTitle": "Dependency Injection",
     "Header": {

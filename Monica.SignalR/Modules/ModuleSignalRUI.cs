@@ -8,6 +8,7 @@ using Monica.SignalR.Localization;
 using Monica.SignalR.Pages;
 using Monica.SignalR.UISignalR.State;
 using Monica.SignalR.UISignalR.Support;
+using Monica.UI.Shell.Models;
 using MudBlazor;
 
 // ReSharper disable once CheckNamespace
@@ -56,11 +57,11 @@ public class ModuleSignalRUI(ModuleSignalRUIOption option)
         {
             DependsOnModule<ModuleSignalRGuide>().Register();
             DependsOnModule<ModuleShellUIGuide>().Register()
-                .RegisterUIComponents(registry => registry.RegisterLocalizedComponent<UISignalRDebugPage>(
+                .RegisterUIComponents(registry => registry.RegisterLocalizedPage<UISignalRDebugPage, SignalRResource>(
                     UISignalRDebugPage.PAGE_URL,
                     "Pages:SignalRDebug:Title",
                     Icons.Material.Filled.Settings,
-                    "Categories:Debug",
+                    BuiltInNavigationCategoryIds.Debug,
                     addToNav: true,
                     navOrder: 20));
         }

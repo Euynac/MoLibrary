@@ -5,6 +5,7 @@ using Monica.Core.Modularity.Annotations;
 using Monica.Core.Modularity.Models;
 using Monica.DevOps.Localization;
 using Monica.DevOps.Terminal.Pages;
+using Monica.UI.Shell.Models;
 using MudBlazor;
 
 // ReSharper disable once CheckNamespace
@@ -51,11 +52,11 @@ public sealed class ModuleTerminalUI(ModuleTerminalUIOption option)
             .AddResource<TerminalResource>();
 
         DependsOnModule<ModuleShellUIGuide>().Register()
-            .RegisterUIComponents(registry => registry.RegisterLocalizedComponent<UITerminalPage>(
+            .RegisterUIComponents(registry => registry.RegisterLocalizedPage<UITerminalPage, TerminalResource>(
                 UITerminalPage.PAGE_URL,
                 "Pages:Terminal:Title",
                 Icons.Material.Filled.Terminal,
-                "Categories:Infrastructure",
+                BuiltInNavigationCategoryIds.Infrastructure,
                 addToNav: true,
                 navOrder: 58));
     }

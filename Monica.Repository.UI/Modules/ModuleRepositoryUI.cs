@@ -7,6 +7,7 @@ using Monica.Core.Modularity.Models;
 using Monica.Repository.UI.Localization;
 using Monica.Repository.UI.Pages;
 using Monica.Repository.UI.UIRepository.State;
+using Monica.UI.Shell.Models;
 using MudBlazor;
 
 // ReSharper disable once CheckNamespace
@@ -52,11 +53,11 @@ public sealed class ModuleRepositoryUI(ModuleRepositoryUIOption option)
             DependsOnModule<ModuleShellUIGuide>().Register()
                 .RegisterUIComponents(registry =>
                 {
-                    registry.RegisterLocalizedComponent<UIRepositoryDashboardPage>(
+                    registry.RegisterLocalizedPage<UIRepositoryDashboardPage, RepositoryUIResource>(
                         UIRepositoryDashboardPage.PAGE_URL,
                         "Pages:RepositoryDashboard:Title",
                         Icons.Material.Filled.Storage,
-                        "Categories:Monitor",
+                        BuiltInNavigationCategoryIds.Monitor,
                         addToNav: true,
                         navOrder: 35);
                 });

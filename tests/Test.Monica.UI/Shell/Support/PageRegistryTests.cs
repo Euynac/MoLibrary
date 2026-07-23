@@ -3,7 +3,7 @@ using AwesomeAssertions;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.Localization;
 using Monica.Core.Localization.Abstractions;
-using Monica.UI.Localization;
+using Monica.UI.Shell.Models;
 using Monica.UI.Shell.Support;
 using Xunit;
 
@@ -12,24 +12,32 @@ namespace Test.Monica.UI.Shell.Support;
 public sealed class PageRegistryTests
 {
     [Fact]
-    public void RegisterLocalizedComponent_WhenModuleOwnsResource_ShouldResolveThroughCurrentHostCatalog()
+    public void RegisterLocalizedPage_WhenModuleOwnsResources_ShouldResolveThroughCurrentHostCatalog()
     {
         var registry = new PageRegistry();
-        registry.RegisterLocalizedComponent<TestPage, ThirdPartyResource>(
+        var categoryId = registry.RegisterLocalizedCategory<ThirdPartyResource>(
+            "Tairitsua.Monica.GachaPool",
+            "Navigation:Category",
+            order: 450);
+        registry.RegisterLocalizedPage<TestPage, ThirdPartyResource>(
             "/gacha-pool",
             "Navigation:Title",
-            categoryKey: "Navigation:Category",
+            categoryId: categoryId,
             addToNav: true);
+        registry.Seal();
+
         var page = registry.GetRegisteredPages().Single();
         var navigationItem = registry.GetNavItems().Single();
+        var category = registry.GetNavigationCategories().Single(item => item.Id == categoryId);
         var firstHostCatalog = new HostLocalizationCatalog("first-host");
         var secondHostCatalog = new HostLocalizationCatalog("second-host");
 
         page.DisplayName.ResourceType.Should().Be(typeof(ThirdPartyResource));
         page.ResolveDisplayName(firstHostCatalog)
             .Should().Be("first-host:ThirdPartyResource:Navigation:Title");
-        page.ResolveCategory(firstHostCatalog)
+        category.ResolveDisplayName(firstHostCatalog)
             .Should().Be("first-host:ThirdPartyResource:Navigation:Category");
+        navigationItem.CategoryId.Should().Be(categoryId);
         navigationItem.ResolveText(firstHostCatalog)
             .Should().Be("first-host:ThirdPartyResource:Navigation:Title");
         navigationItem.ResolveText(secondHostCatalog)
@@ -39,47 +47,172 @@ public sealed class PageRegistryTests
     }
 
     [Fact]
-    public void RegisterLocalizedComponent_WhenUsingBuiltInOverload_ShouldUseUIRegistryResource()
+    public void RegisterLocalizedCategory_WhenDefinitionMatches_ShouldBeIdempotentAcrossCasing()
     {
         var registry = new PageRegistry();
 
-        registry.RegisterLocalizedComponent<TestPage>(
-            "module-system",
-            "Pages:ModuleSystem:Title",
+        var first = registry.RegisterLocalizedCategory<ThirdPartyResource>(
+            "Tairitsua.Monica.GachaPool",
+            "Navigation:Category",
+            order: 450);
+        var second = registry.RegisterLocalizedCategory<ThirdPartyResource>(
+            "tairitsua.monica.gachapool",
+            "Navigation:Category",
+            order: 450);
+        registry.Seal();
+
+        second.Should().Be(first);
+        registry.GetNavigationCategories().Count(item => item.Id == first).Should().Be(1);
+    }
+
+    [Fact]
+    public void RegisterLocalizedCategory_WhenDefinitionConflicts_ShouldRejectCollision()
+    {
+        var registry = new PageRegistry();
+        registry.RegisterLocalizedCategory<ThirdPartyResource>(
+            "Tairitsua.Monica.GachaPool",
+            "Navigation:Category",
+            order: 450);
+
+        var act = () => registry.RegisterLocalizedCategory<SecondResource>(
+            "tairitsua.monica.gachapool",
+            "Navigation:DifferentCategory",
+            order: 451);
+
+        act.Should().Throw<InvalidOperationException>()
+            .WithMessage("*tairitsua.monica.gachapool*different label, resource, or order*");
+    }
+
+    [Fact]
+    public void GetNavItems_WhenPageReferencesUnknownCategory_ShouldFailBeforeRouting()
+    {
+        var registry = new PageRegistry();
+        registry.RegisterLocalizedPage<TestPage, ThirdPartyResource>(
+            "gacha-pool",
+            "Navigation:Title",
+            categoryId: NavigationCategoryId.Create("Tairitsua.Monica.GachaPool"),
             addToNav: true);
 
-        registry.GetRegisteredPages().Single().DisplayName.ResourceType
-            .Should().Be(typeof(UIRegistryResource));
-        registry.GetNavItems().Single().Text.ResourceType
-            .Should().Be(typeof(UIRegistryResource));
+        var act = registry.Seal;
+
+        act.Should().Throw<InvalidOperationException>()
+            .WithMessage("*unregistered categories*tairitsua.monica.gachapool*");
+    }
+
+    [Fact]
+    public void RegisterPage_WhenRegistryIsSealed_ShouldRejectLateMutation()
+    {
+        var registry = new PageRegistry();
+        registry.RegisterPage<TestPage>("first", "First page");
+        registry.Seal();
+
+        var act = () => registry.RegisterPage<SecondTestPage>("second", "Second page");
+
+        act.Should().Throw<InvalidOperationException>()
+            .WithMessage("*sealed*application startup*");
+    }
+
+    [Fact]
+    public void GetNavigationCategories_ShouldUseExplicitCultureIndependentOrder()
+    {
+        var registry = new PageRegistry();
+        registry.RegisterLocalizedCategory<ThirdPartyResource>(
+            "Tairitsua.Monica.GachaPool",
+            "Navigation:Category",
+            order: 450);
+        registry.Seal();
+
+        var ids = registry.GetNavigationCategories().Select(static category => category.Id).ToArray();
+
+        ids.Should().ContainInOrder(
+            BuiltInNavigationCategoryIds.AI,
+            BuiltInNavigationCategoryIds.KnowledgeRetrieval,
+            BuiltInNavigationCategoryIds.Documentation,
+            BuiltInNavigationCategoryIds.Configuration,
+            NavigationCategoryId.Create("Tairitsua.Monica.GachaPool"),
+            BuiltInNavigationCategoryIds.Infrastructure,
+            BuiltInNavigationCategoryIds.Module,
+            BuiltInNavigationCategoryIds.TaskScheduling,
+            BuiltInNavigationCategoryIds.Monitor,
+            BuiltInNavigationCategoryIds.Debug,
+            BuiltInNavigationCategoryIds.Uncategorized);
     }
 
     [Fact]
     public void ResolveText_WhenResourceDoesNotContainKey_ShouldUseRegisteredFallback()
     {
         var registry = new PageRegistry();
-        registry.RegisterLocalizedComponent<TestPage, ThirdPartyResource>(
+        registry.RegisterLocalizedPage<TestPage, ThirdPartyResource>(
             "gacha-pool",
             "Navigation:Title",
-            categoryKey: "Navigation:Category",
             addToNav: true);
+        registry.Seal();
         var catalog = new HostLocalizationCatalog("host", resourceNotFound: true);
         var navigationItem = registry.GetNavItems().Single();
 
         navigationItem.ResolveText(catalog).Should().Be("Navigation:Title");
-        navigationItem.ResolveCategory(catalog).Should().Be("Navigation:Category");
+        navigationItem.CategoryId.Should().Be(BuiltInNavigationCategoryIds.Uncategorized);
     }
 
     [Fact]
-    public void RegisterComponent_WhenAnotherComponentOwnsTheRoute_ShouldRejectCollision()
+    public void RegisterPage_WhenAnotherComponentOwnsTheRoute_ShouldRejectCollision()
     {
         var registry = new PageRegistry();
-        registry.RegisterComponent<TestPage>("/shared", "First page");
+        registry.RegisterPage<TestPage>("/shared", "First page");
 
-        var act = () => registry.RegisterComponent<SecondTestPage>("SHARED", "Second page");
+        var act = () => registry.RegisterPage<SecondTestPage>("SHARED", "Second page");
 
         act.Should().Throw<InvalidOperationException>()
             .WithMessage("*/SHARED*TestPage*SecondTestPage*");
+    }
+
+    [Fact]
+    public void ContributorContract_ShouldBeWriteOnlyAndCannotSealComposition()
+    {
+        var registry = new PageRegistry();
+        INavigationRegistryBuilder contributor = registry;
+        IPageCatalog catalog = registry;
+
+        var readBeforeSeal = catalog.GetNavItems;
+
+        readBeforeSeal.Should().Throw<InvalidOperationException>()
+            .WithMessage("*not available*startup registration*");
+        contributor.RegisterPage<TestPage>("first", "First page");
+        registry.Seal();
+        catalog.GetRegisteredPages().Should().ContainSingle();
+        typeof(INavigationRegistryBuilder).GetMethods()
+            .Should().OnlyContain(method => method.Name.StartsWith("Register", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void GetNavItems_WhenOrdersMatch_ShouldUseRouteAsDeterministicTieBreaker()
+    {
+        var registry = new PageRegistry();
+        registry.RegisterPage<SecondTestPage>("zeta", "Zeta", addToNav: true, navOrder: 30);
+        registry.RegisterPage<TestPage>("alpha", "Alpha", addToNav: true, navOrder: 30);
+        registry.Seal();
+
+        registry.GetNavItems().Select(static item => item.Href)
+            .Should().ContainInOrder("alpha", "zeta");
+    }
+
+    [Fact]
+    public void NavigationCategoryId_Create_ShouldCanonicalizeCasingAndHaveNoInvalidDefault()
+    {
+        var id = NavigationCategoryId.Create("Tairitsua.Monica.GachaPool");
+
+        id.Value.Should().Be("tairitsua.monica.gachapool");
+        id.Should().Be(NavigationCategoryId.Create("TAIRITSUA.MONICA.GACHAPOOL"));
+        typeof(NavigationCategoryId).IsValueType.Should().BeFalse();
+    }
+
+    [Fact]
+    public void CatalogModels_ShouldExposeImmutableState()
+    {
+        typeof(PageDefinition).GetProperties()
+            .Should().OnlyContain(property => property.SetMethod == null);
+        typeof(NavigationItem).GetProperties()
+            .Should().OnlyContain(property => property.SetMethod == null);
     }
 
     private sealed class TestPage : ComponentBase;
@@ -87,6 +220,8 @@ public sealed class PageRegistryTests
     private sealed class SecondTestPage : ComponentBase;
 
     private sealed class ThirdPartyResource : ILocalizationResource;
+
+    private sealed class SecondResource : ILocalizationResource;
 
     private sealed class HostLocalizationCatalog(string hostName, bool resourceNotFound = false)
         : ILocalizationCatalog

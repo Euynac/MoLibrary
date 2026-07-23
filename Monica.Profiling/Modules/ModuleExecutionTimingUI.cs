@@ -4,8 +4,10 @@ using Monica.Core.Modularity;
 using Monica.Core.Modularity.Abstractions;
 using Monica.Core.Modularity.Annotations;
 using Monica.Core.Modularity.Models;
+using Monica.Profiling.Localization;
 using Monica.Profiling.Pages;
 using Monica.Profiling.UIExecutionTiming.State;
+using Monica.UI.Shell.Models;
 using MudBlazor;
 
 // ReSharper disable once CheckNamespace
@@ -42,13 +44,15 @@ public class ModuleExecutionTimingUI(ModuleExecutionTimingUIOption option)
         if (!Option.DisableExecutionTimingPage)
         {
             DependsOnModule<ModuleExecutionTimingGuide>().Register();
+            DependsOnModule<ModuleLocalizationGuide>().Register()
+                .AddResource<ExecutionTimingResource>();
 
             DependsOnModule<ModuleShellUIGuide>().Register()
-                .RegisterUIComponents(p => p.RegisterLocalizedComponent<UIExecutionTimingPage>(
+                .RegisterUIComponents(p => p.RegisterLocalizedPage<UIExecutionTimingPage, ExecutionTimingResource>(
                     UIExecutionTimingPage.PAGE_URL,
                     "Pages:ExecutionTiming:Title",
                     Icons.Material.Filled.Timer,
-                    "Categories:Monitor",
+                    BuiltInNavigationCategoryIds.Monitor,
                     addToNav: true,
                     navOrder: 30));
         }

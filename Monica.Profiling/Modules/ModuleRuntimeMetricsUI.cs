@@ -4,8 +4,10 @@ using Monica.Core.Modularity;
 using Monica.Core.Modularity.Abstractions;
 using Monica.Core.Modularity.Annotations;
 using Monica.Core.Modularity.Models;
+using Monica.Profiling.Localization;
 using Monica.Profiling.Pages;
 using Monica.Profiling.UIRuntimeMetrics.State;
+using Monica.UI.Shell.Models;
 using MudBlazor;
 
 // ReSharper disable once CheckNamespace
@@ -44,12 +46,14 @@ public class ModuleRuntimeMetricsUI(ModuleRuntimeMetricsUIOption option)
         }
 
         DependsOnModule<ModuleRuntimeMetricsGuide>().Register();
+        DependsOnModule<ModuleLocalizationGuide>().Register()
+            .AddResource<RuntimeMetricsResource>();
         DependsOnModule<ModuleShellUIGuide>().Register()
-            .RegisterUIComponents(registry => registry.RegisterLocalizedComponent<UIRuntimeMetricsPage>(
+            .RegisterUIComponents(registry => registry.RegisterLocalizedPage<UIRuntimeMetricsPage, RuntimeMetricsResource>(
                 UIRuntimeMetricsPage.PAGE_URL,
                 "Pages:RuntimeMetrics:Title",
                 Icons.Material.Filled.Speed,
-                "Categories:Monitor",
+                BuiltInNavigationCategoryIds.Monitor,
                 addToNav: true,
                 navOrder: 10));
     }
