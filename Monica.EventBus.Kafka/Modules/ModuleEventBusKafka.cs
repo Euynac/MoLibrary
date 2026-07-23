@@ -259,14 +259,13 @@ public sealed class ModuleEventBusKafka(ModuleEventBusKafkaOption option)
 
             endpoints.MapGet("/eventbus-kafka/clusters/{clusterId}/performance",
                     async ([FromRoute] string clusterId,
-                        [FromQuery] int? limit,
                         [FromServices] KafkaConsoleFacade facade,
                         CancellationToken cancellationToken) =>
-                        (await facade.GetPerformanceHistoryAsync(clusterId, limit, cancellationToken)).GetResponse())
-                .WithName("GetEventBusKafkaPerformanceHistory")
+                        (await facade.GetLatestPerformanceAsync(clusterId, cancellationToken)).GetResponse())
+                .WithName("GetEventBusKafkaLatestPerformance")
                 .WithTags(tagName)
-                .WithSummary(localizer["Api:Performance:History:Summary"].Value)
-                .WithDescription(localizer["Api:Performance:History:Description"].Value);
+                .WithSummary(localizer["Api:Performance:Latest:Summary"].Value)
+                .WithDescription(localizer["Api:Performance:Latest:Description"].Value);
 
             endpoints.MapPost("/eventbus-kafka/clusters/{clusterId}/performance/capture",
                     async ([FromRoute] string clusterId,
@@ -412,11 +411,6 @@ public sealed class ModuleEventBusKafkaGuide
 public sealed class ModuleEventBusKafkaOption : MinimalApiModuleOptions<ModuleEventBusKafka>
 {
     /// <summary>
-    /// Maximum number of performance snapshots that can be returned to the console.
-    /// </summary>
-    public const int MaximumPerformanceHistoryLimit = 100;
-
-    /// <summary>
     /// Gets the clusters declared through module configuration.
     /// </summary>
     /// <remarks>
@@ -534,36 +528,6 @@ public sealed class ModuleEventBusKafkaOption : MinimalApiModuleOptions<ModuleEv
     /// large topics without rendering unbounded payloads.
     /// </remarks>
     public int MessagePreviewMaxValueBytes { get; set; } = 64 * 1024;
-
-    /// <summary>
-    /// Gets or sets the default number of performance snapshots returned to the UI.
-    /// </summary>
-    /// <remarks>
-    /// Values outside the supported range are normalized by
-    /// <see cref="GetPerformanceHistoryLimit(int?)"/>. The console always keeps the newest
-    /// snapshots when the requested history is larger than the maximum.
-    /// </remarks>
-    public int PerformanceHistoryLimit { get; set; } = MaximumPerformanceHistoryLimit;
-
-    /// <summary>
-    /// Resolves a safe performance-history limit for configuration or an individual request.
-    /// </summary>
-    /// <param name="requestedLimit">
-    /// Optional request-specific limit. When omitted, <see cref="PerformanceHistoryLimit"/> is used.
-    /// </param>
-    /// <returns>A value between 1 and <see cref="MaximumPerformanceHistoryLimit"/>.</returns>
-    public int GetPerformanceHistoryLimit(int? requestedLimit = null)
-    {
-        return Math.Clamp(
-            requestedLimit ?? PerformanceHistoryLimit,
-            1,
-            MaximumPerformanceHistoryLimit);
-    }
-
-    /// <summary>
-    /// Gets or sets how long captured performance snapshots are retained.
-    /// </summary>
-    public TimeSpan PerformanceSnapshotRetention { get; set; } = TimeSpan.FromHours(24);
 
     /// <summary>
     /// Adds or replaces a configured cluster using its normalized cluster id.

@@ -42,11 +42,6 @@ public sealed class EventBusKafkaPageState(
     public List<KafkaConsumerGroupSummary> ConsumerGroups { get; private set; } = [];
 
     /// <summary>
-    /// Performance snapshots for the selected cluster.
-    /// </summary>
-    public IReadOnlyList<KafkaPerformanceSnapshot> PerformanceSnapshots => performancePollingState.Snapshots;
-
-    /// <summary>
     /// Latest performance snapshot, including captures produced by the live sampler.
     /// </summary>
     public KafkaPerformanceSnapshot? LatestPerformance =>
@@ -56,7 +51,9 @@ public sealed class EventBusKafkaPageState(
     /// Current retained-message inventory from the latest live sample or topic enrichment.
     /// </summary>
     public long? TotalAvailableMessageCount =>
-        LatestPerformance?.TotalAvailableMessageCount ?? Dashboard.TotalAvailableMessageCount;
+        LatestPerformance is { TopicMetrics.Count: > 0 } latest
+            ? latest.TotalAvailableMessageCount
+            : Dashboard.TotalAvailableMessageCount;
 
     /// <summary>
     /// Current topic count from the latest live metadata sample or dashboard snapshot.
@@ -554,7 +551,7 @@ public sealed class EventBusKafkaPageState(
     {
         Topics = [];
         ConsumerGroups = [];
-        performancePollingState.ClearHistory();
+        performancePollingState.ClearSnapshot();
         _topicsClusterId = null;
         _consumerGroupsClusterId = null;
         _performanceClusterId = null;
@@ -708,11 +705,14 @@ public sealed class EventBusKafkaPageState(
 
     private void ApplyTopicBacklogSummary()
     {
+        var applicationTopics = Topics
+            .Where(topic => !topic.IsInternal)
+            .ToList();
         Dashboard.TopicCount = Topics.Count;
-        Dashboard.TotalAvailableMessageCount = Topics.Count == 0
+        Dashboard.TotalAvailableMessageCount = applicationTopics.Count == 0
             ? 0
-            : Topics.All(topic => topic.AvailableMessageCount.HasValue)
-                ? Topics.Sum(topic => topic.AvailableMessageCount.GetValueOrDefault())
+            : applicationTopics.All(topic => topic.AvailableMessageCount.HasValue)
+                ? applicationTopics.Sum(topic => topic.AvailableMessageCount.GetValueOrDefault())
                 : null;
     }
 
@@ -740,19 +740,19 @@ public sealed class EventBusKafkaPageState(
     {
         if (SelectedClusterId is null)
         {
-            performancePollingState.ClearHistory();
+            performancePollingState.ClearSnapshot();
             _performanceClusterId = null;
             return;
         }
 
-        var result = await facade.GetPerformanceHistoryAsync(SelectedClusterId, cancellationToken: cancellationToken);
+        var result = await facade.GetLatestPerformanceAsync(SelectedClusterId, cancellationToken);
         if (suppressErrors
-                ? TryReadSilently(result, out var snapshots)
-                : TryRead(result, out snapshots))
+                ? TryReadSilently(result, out var snapshot)
+                : TryRead(result, out snapshot))
         {
-            performancePollingState.SetHistory(snapshots);
+            performancePollingState.SetSnapshot(snapshot);
             _performanceClusterId = SelectedClusterId;
-            Dashboard.LatestPerformance = performancePollingState.LatestSnapshot ?? Dashboard.LatestPerformance;
+            Dashboard.LatestPerformance = snapshot;
         }
     }
 

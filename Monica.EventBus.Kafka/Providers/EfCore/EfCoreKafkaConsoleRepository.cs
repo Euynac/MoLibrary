@@ -65,10 +65,38 @@ public sealed class EfCoreKafkaConsoleRepository(KafkaConsoleDbContext dbContext
     }
 
     /// <inheritdoc />
-    public async Task SavePerformanceSnapshotAsync(KafkaPerformanceSnapshot snapshot, CancellationToken cancellationToken = default)
+    public async Task ReplacePerformanceSnapshotAsync(KafkaPerformanceSnapshot snapshot, CancellationToken cancellationToken = default)
     {
-        dbContext.KafkaPerformanceSnapshots.Add(KafkaPerformanceSnapshotEntity.FromModel(snapshot));
-        await dbContext.SaveChangesAsync(cancellationToken);
+        var existing = await dbContext.KafkaPerformanceSnapshots
+            .FirstOrDefaultAsync(item => item.ClusterId == snapshot.ClusterId, cancellationToken);
+        var replacement = KafkaPerformanceSnapshotEntity.FromModel(snapshot);
+        if (existing is not null)
+        {
+            dbContext.Entry(existing).CurrentValues.SetValues(replacement);
+            await dbContext.SaveChangesAsync(cancellationToken);
+            return;
+        }
+
+        dbContext.KafkaPerformanceSnapshots.Add(replacement);
+        try
+        {
+            await dbContext.SaveChangesAsync(cancellationToken);
+        }
+        catch (DbUpdateException)
+        {
+            // Two independent UI scopes can race on the first capture. The ClusterId primary key
+            // chooses one insert; the losing scope then applies its newer snapshot as an update.
+            dbContext.Entry(replacement).State = EntityState.Detached;
+            var concurrentlyInserted = await dbContext.KafkaPerformanceSnapshots
+                .FirstOrDefaultAsync(item => item.ClusterId == snapshot.ClusterId, cancellationToken);
+            if (concurrentlyInserted is null)
+            {
+                throw;
+            }
+
+            dbContext.Entry(concurrentlyInserted).CurrentValues.SetValues(replacement);
+            await dbContext.SaveChangesAsync(cancellationToken);
+        }
     }
 
     /// <inheritdoc />
@@ -76,36 +104,7 @@ public sealed class EfCoreKafkaConsoleRepository(KafkaConsoleDbContext dbContext
     {
         var entity = await dbContext.KafkaPerformanceSnapshots
             .AsNoTracking()
-            .Where(snapshot => snapshot.ClusterId == clusterId)
-            .OrderByDescending(snapshot => snapshot.CapturedAt)
-            .FirstOrDefaultAsync(cancellationToken);
+            .FirstOrDefaultAsync(snapshot => snapshot.ClusterId == clusterId, cancellationToken);
         return entity?.ToModel();
-    }
-
-    /// <inheritdoc />
-    public async Task<IReadOnlyList<KafkaPerformanceSnapshot>> GetPerformanceSnapshotsAsync(
-        string clusterId,
-        int limit,
-        CancellationToken cancellationToken = default)
-    {
-        var snapshots = await dbContext.KafkaPerformanceSnapshots
-            .AsNoTracking()
-            .Where(snapshot => snapshot.ClusterId == clusterId)
-            .OrderByDescending(snapshot => snapshot.CapturedAt)
-            .Take(Math.Max(1, limit))
-            .ToListAsync(cancellationToken);
-
-        return snapshots
-            .Select(snapshot => snapshot.ToModel())
-            .Reverse()
-            .ToList();
-    }
-
-    /// <inheritdoc />
-    public async Task DeletePerformanceSnapshotsOlderThanAsync(DateTimeOffset olderThanUtc, CancellationToken cancellationToken = default)
-    {
-        await dbContext.KafkaPerformanceSnapshots
-            .Where(snapshot => snapshot.CapturedAt < olderThanUtc)
-            .ExecuteDeleteAsync(cancellationToken);
     }
 }

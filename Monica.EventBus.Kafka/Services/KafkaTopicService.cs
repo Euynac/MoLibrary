@@ -23,7 +23,11 @@ public sealed class KafkaTopicService(
             // enrichment and may be unavailable for a large or partially healthy cluster.
             backlogs = await offsetMetricsProvider.CaptureTopicBacklogsAsync(cluster, topics, cancellationToken);
         }
-        catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch (OperationCanceledException)
         {
             backlogs = [];
         }

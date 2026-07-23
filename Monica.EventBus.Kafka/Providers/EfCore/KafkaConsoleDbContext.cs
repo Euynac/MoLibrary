@@ -46,10 +46,10 @@ public sealed class KafkaConsoleDbContext(
         builder.Entity<KafkaPerformanceSnapshotEntity>(entity =>
         {
             entity.ToTable("mo_eventbus_kafka_performance_snapshots");
-            entity.HasKey(snapshot => snapshot.Id);
+            entity.HasKey(snapshot => snapshot.ClusterId);
             entity.Property(snapshot => snapshot.ClusterId).HasMaxLength(128);
             entity.Property(snapshot => snapshot.Message).HasMaxLength(2048);
-            entity.HasIndex(snapshot => new { snapshot.ClusterId, snapshot.CapturedAt });
+            entity.Property(snapshot => snapshot.TopicMetricsJson);
         });
     }
 }

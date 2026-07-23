@@ -71,9 +71,9 @@
       }
     },
     "Performance": {
-      "History": {
-        "Summary": "获取 Kafka 性能历史",
-        "Description": "返回集群最近的 Kafka 性能快照。"
+      "Latest": {
+        "Summary": "获取 Kafka 最新性能快照",
+        "Description": "返回集群当前保留的最新 Kafka 性能快照。"
       },
       "Capture": {
         "Summary": "采集 Kafka 性能",
@@ -123,7 +123,7 @@
       "ConsumerGroups": "消费者组",
       "ConsumerGroupsHint": "来自 Kafka 管理 API 描述",
       "AvailableMessages": "可消费消息",
-      "AvailableMessagesHint": "所有主题可消费消息总和",
+      "AvailableMessagesHint": "所有非内部主题可消费消息总和",
       "WriteRate": "写入速率",
       "WriteRateHint": "来自最新 offset 增长",
       "ConsumeRate": "消费速率",
@@ -322,26 +322,28 @@
     "Title": "性能快照",
     "Unavailable": "性能采样需要直接 Kafka Broker 访问。",
     "Empty": "尚未采集性能快照。",
+    "NoTopicMetrics": "最新性能快照中没有可显示的主题指标。",
+    "TopicFilter": {
+      "Label": "筛选主题",
+      "Placeholder": "输入主题名称",
+      "NoMatches": "没有符合当前筛选条件的主题性能指标。"
+    },
     "Actions": {
       "Capture": "采集"
     },
     "Columns": {
       "CapturedAt": "采集时间",
-      "Brokers": "Broker",
-      "Topics": "主题",
-      "Groups": "消费者组",
+      "Topic": "主题",
       "AvailableMessages": "可消费消息",
       "WriteRate": "写入速率",
       "ConsumeRate": "消费速率",
-      "Lag": "Lag",
-      "Message": "消息"
+      "Lag": "Lag"
     },
     "Values": {
       "LagUnknown": "未知",
       "AvailableMessagesUnknown": "未知",
       "RateUnknown": "未知",
-      "RatePerSecond": "{0} msg/s",
-      "NoMessage": "正常"
+      "RatePerSecond": "{0} msg/s"
     },
     "Messages": {
       "Captured": "Kafka 性能快照已采集。"
