@@ -9,6 +9,8 @@ namespace Monica.EventBus.Kafka.Services.Support;
 /// </summary>
 internal static class KafkaClientConfigFactory
 {
+    private const int MINIMUM_KAFKA_TIMEOUT_MS = 1_000;
+
     public static AdminClientConfig BuildAdminConfig(KafkaClusterConfig cluster, ModuleEventBusKafkaOption option)
     {
         var config = new AdminClientConfig();
@@ -52,6 +54,24 @@ internal static class KafkaClientConfigFactory
         return config;
     }
 
+    public static ConsumerConfig BuildOffsetQueryConsumerConfig(
+        KafkaClusterConfig cluster,
+        ModuleEventBusKafkaOption option,
+        string groupId)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(groupId);
+        var config = new ConsumerConfig
+        {
+            GroupId = groupId.Trim(),
+            AutoOffsetReset = AutoOffsetReset.Latest,
+            EnableAutoCommit = false,
+            EnableAutoOffsetStore = false,
+            AllowAutoCreateTopics = false
+        };
+        ApplyCommon(config, cluster, option);
+        return config;
+    }
+
     private static void ApplyCommon(ClientConfig config, KafkaClusterConfig cluster, ModuleEventBusKafkaOption option)
     {
         var normalized = cluster.Clone().Normalize();
@@ -62,7 +82,11 @@ internal static class KafkaClientConfigFactory
 
         config.BootstrapServers = normalized.BootstrapServers;
         config.ClientId = normalized.ClientId ?? option.ClientId;
-        config.SocketTimeoutMs = (int)option.AdminRequestTimeout.TotalMilliseconds;
+        var requestTimeoutMs = NormalizeTimeoutMilliseconds(option.AdminRequestTimeout);
+        config.SocketTimeoutMs = requestTimeoutMs;
+        config.SocketConnectionSetupTimeoutMs = Math.Min(
+            requestTimeoutMs,
+            NormalizeTimeoutMilliseconds(option.ConnectionSetupTimeout));
 
         if (TryParseEnum(normalized.SecurityProtocol, nameof(KafkaClusterConfig.SecurityProtocol), out SecurityProtocol securityProtocol))
         {
@@ -95,6 +119,14 @@ internal static class KafkaClientConfigFactory
         return string.IsNullOrWhiteSpace(serviceKey)
             ? option.ConsumerGroupId
             : $"{option.ConsumerGroupId}-{serviceKey}";
+    }
+
+    private static int NormalizeTimeoutMilliseconds(TimeSpan timeout)
+    {
+        return (int)Math.Clamp(
+            timeout.TotalMilliseconds,
+            MINIMUM_KAFKA_TIMEOUT_MS,
+            int.MaxValue);
     }
 
     private static bool TryParseEnum<TEnum>(string? value, string propertyName, out TEnum result) where TEnum : struct, Enum

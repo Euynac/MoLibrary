@@ -455,6 +455,16 @@ public sealed class ModuleEventBusKafkaOption : MinimalApiModuleOptions<ModuleEv
     public TimeSpan AdminRequestTimeout { get; set; } = TimeSpan.FromSeconds(10);
 
     /// <summary>
+    /// Gets or sets the maximum time a Kafka client spends establishing a broker connection.
+    /// </summary>
+    /// <remarks>
+    /// The effective value is at least one second and never exceeds
+    /// <see cref="AdminRequestTimeout"/>. The five-second default prevents librdkafka's longer
+    /// connection-setup default from outliving console request timeouts when a broker is offline.
+    /// </remarks>
+    public TimeSpan ConnectionSetupTimeout { get; set; } = TimeSpan.FromSeconds(5);
+
+    /// <summary>
     /// Gets or sets the managed TCP timeout used before creating native Kafka clients for console probes.
     /// </summary>
     /// <remarks>
@@ -475,9 +485,13 @@ public sealed class ModuleEventBusKafkaOption : MinimalApiModuleOptions<ModuleEv
     public TimeSpan ConsumerErrorBackoff { get; set; } = TimeSpan.FromSeconds(5);
 
     /// <summary>
-    /// Gets or sets the maximum number of consumer groups described by one console request.
+    /// Gets or sets the maximum number of consumer groups inspected by one console request.
     /// </summary>
-    public int MaxConsumerGroupsToDescribe { get; set; } = 100;
+    /// <remarks>
+    /// This limit bounds both the group list returned to the UI and the number of temporary
+    /// consumers created while collecting committed offsets for one performance snapshot.
+    /// </remarks>
+    public int MaxConsumerGroupsToInspect { get; set; } = 100;
 
     /// <summary>
     /// Gets or sets the maximum number of topic partitions included in one Kafka offset request.
@@ -489,13 +503,14 @@ public sealed class ModuleEventBusKafkaOption : MinimalApiModuleOptions<ModuleEv
     public int OffsetQueryBatchSize { get; set; } = 500;
 
     /// <summary>
-    /// Gets or sets the maximum number of consumer-group offset requests executed concurrently.
+    /// Gets or sets the maximum number of read-only consumer offset queries executed concurrently.
     /// </summary>
     /// <remarks>
-    /// Kafka's consumer-group offset API accepts exactly one group per request. This setting limits
-    /// the bounded parallelism used while sampling several groups.
+    /// Each query owns one short-lived native consumer because a Kafka consumer group id is fixed
+    /// when the client is built. Keep this value low to bound native memory, connections, and
+    /// worker threads while sampling several groups.
     /// </remarks>
-    public int ConsumerGroupOffsetParallelism { get; set; } = 4;
+    public int ConsumerOffsetQueryParallelism { get; set; } = 2;
 
     /// <summary>
     /// Gets or sets the maximum number of topic configuration resources sent to one describe call.

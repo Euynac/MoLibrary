@@ -245,42 +245,28 @@ internal sealed class ConfluentKafkaAdminProvider(IOptions<ModuleEventBusKafkaOp
     {
         cancellationToken.ThrowIfCancellationRequested();
         using var admin = CreateAdminClient(cluster);
-        var result = await KafkaNativeRequestAwaiter.AwaitAsync(
-            admin.ListConsumerGroupsAsync(new ListConsumerGroupsOptions
-            {
-                RequestTimeout = Option.AdminRequestTimeout
-            }),
+        // librdkafka 2.13.0 has a native use-after-free in coordinator-targeted Admin requests
+        // when connection setup fails (confluentinc/librdkafka#5397). The legacy group-list API
+        // uses a different native path and still provides every field needed by this summary.
+        var groups = await KafkaNativeRequestAwaiter.RunBlockingAsync(
+            () => admin.ListGroups(Option.AdminRequestTimeout),
             cancellationToken);
 
-        var groupIds = result.Valid
-            .Select(group => group.GroupId)
-            .Where(groupId => !string.IsNullOrWhiteSpace(groupId))
-            .Distinct(StringComparer.Ordinal)
-            .OrderBy(groupId => groupId, StringComparer.OrdinalIgnoreCase)
-            .Take(Option.MaxConsumerGroupsToDescribe)
-            .ToList();
-
-        if (groupIds.Count == 0)
-        {
-            return [];
-        }
-
-        var descriptions = await KafkaNativeRequestAwaiter.AwaitAsync(
-            admin.DescribeConsumerGroupsAsync(groupIds, new DescribeConsumerGroupsOptions
-            {
-                RequestTimeout = Option.AdminRequestTimeout
-            }),
-            cancellationToken);
-
-        return descriptions.ConsumerGroupDescriptions
+        return groups
+            .Where(group => group.Error.Code == ErrorCode.NoError &&
+                            string.Equals(group.ProtocolType, "consumer", StringComparison.OrdinalIgnoreCase) &&
+                            !string.IsNullOrWhiteSpace(group.Group))
+            .GroupBy(group => group.Group, StringComparer.Ordinal)
+            .Select(group => group.First())
+            .OrderBy(group => group.Group, StringComparer.OrdinalIgnoreCase)
+            .Take(Math.Max(0, Option.MaxConsumerGroupsToInspect))
             .Select(group => new KafkaConsumerGroupSummary
             {
-                GroupId = group.GroupId,
-                State = group.State.ToString(),
+                GroupId = group.Group,
+                State = group.State,
                 MemberCount = group.Members.Count,
                 TotalLag = null
             })
-            .OrderBy(group => group.GroupId, StringComparer.OrdinalIgnoreCase)
             .ToList();
     }
 
