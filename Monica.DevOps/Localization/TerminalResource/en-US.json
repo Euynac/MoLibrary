@@ -10,8 +10,7 @@
     "Cancel": "Cancel",
     "Clear": "Clear",
     "NewSession": "New Session",
-    "CloseSession": "Close Session",
-    "Refresh": "Refresh"
+    "CloseSession": "Close Session"
   },
   "Labels": {
     "Session": "Session",

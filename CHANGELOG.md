@@ -6,8 +6,13 @@ This project follows semantic versioning for public NuGet packages. Release cand
 
 ## [Unreleased]
 
+## [1.0.0-rc.6] - 2026-07-23
+
 ### Added
 
+- A first-class third-party module ecosystem standard, compatibility mark, package validator, and scaffolding skill.
+- Publisher-owned module keys in the form `<Publisher>.Monica.<Module>[.<Feature>...]`, including case-insensitive collision detection.
+- Module-owned UI navigation localization so independent packages can resolve labels from their own resource catalogs.
 - Host-bound `builder.AddMonica(monica => ...)` composition with deterministic module-graph validation.
 - Stable, Integrations, and Labs package tiers with CI-enforced dependency direction.
 - A dedicated `Monica.ProjectUnits` package, official `Monica.Templates`, and the Ordering reference application.
@@ -15,6 +20,7 @@ This project follows semantic versioning for public NuGet packages. Release cand
 
 ### Changed
 
+- `ModuleKey.Create(...)` now validates the publisher-first ecosystem grammar and reserves official `Monica.*` identities for built-in module keys.
 - Logging, localization, JSON serialization, mapping, ProjectUnits, AutoController configuration, DataChannel pipelines, scheduler time zones, and runtime catalogs are owned by each host.
 - `Monica.Framework` is a focused application package instead of an all-dependencies bundle.
 - RPC client helpers now live in `Monica.WebApi`, alongside the transport feature they configure.

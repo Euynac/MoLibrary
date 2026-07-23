@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
 using Microsoft.JSInterop;
+using Monica.Core.Localization.Abstractions;
 using Monica.Modules;
 using Monica.UI.Localization;
 using Monica.UI.Shell.Models;
@@ -17,7 +18,7 @@ public partial class NavBar : IAsyncDisposable
     [Inject] private IPageRegistry UIRegistry { get; set; } = default!;
     [Inject] private IOptions<ModuleShellUIOption> Options { get; set; } = default!;
     [Inject] private IStringLocalizer<SharedResource> L { get; set; } = default!;
-    [Inject] private IStringLocalizer<UIRegistryResource> RegistryL { get; set; } = default!;
+    [Inject] private ILocalizationCatalog LocalizationCatalog { get; set; } = default!;
     [Inject] private IJSRuntime JSRuntime { get; set; } = default!;
 
     private readonly Dictionary<string, List<NavigationItem>> _categorizedNavItems = [];
@@ -60,8 +61,8 @@ public partial class NavBar : IAsyncDisposable
         foreach (var group in allNavItems
                      .GroupBy(item =>
                      {
-                         var category = item.Category ?? L["ModuleSystem:Common:Labels:Uncategorized"];
-                         return GetLocalizedText(category, item.CategoryKey);
+                         return item.ResolveCategory(LocalizationCatalog) ??
+                                L["ModuleSystem:Common:Labels:Uncategorized"];
                      })
                      .OrderBy(group => group.Key))
         {
@@ -108,16 +109,6 @@ public partial class NavBar : IAsyncDisposable
 
         _visibleCategoryCount = clampedVisibleCategoryCount;
         return InvokeAsync(StateHasChanged);
-    }
-
-    private string GetLocalizedText(string text, string? key)
-    {
-        if (!string.IsNullOrEmpty(key))
-        {
-            return RegistryL[key];
-        }
-
-        return text;
     }
 
     public async ValueTask DisposeAsync()

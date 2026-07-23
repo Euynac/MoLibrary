@@ -22,6 +22,7 @@ internal sealed class ConfluentKafkaOffsetMetricsProvider(IOptions<ModuleEventBu
         CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(topicName);
+        cancellationToken.ThrowIfCancellationRequested();
 
         using var admin = CreateAdminClient(cluster);
         var normalizedTopicName = topicName.Trim();
@@ -37,6 +38,7 @@ internal sealed class ConfluentKafkaOffsetMetricsProvider(IOptions<ModuleEventBu
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(topics);
+        cancellationToken.ThrowIfCancellationRequested();
 
         var partitions = BuildTopicPartitions(topics);
         if (partitions.Count == 0)
@@ -62,21 +64,33 @@ internal sealed class ConfluentKafkaOffsetMetricsProvider(IOptions<ModuleEventBu
         IReadOnlyList<KafkaConsumerGroupSummary> consumerGroups,
         CancellationToken cancellationToken = default)
     {
-        var hasUnavailableTopicMetadata = topics.Any(topic => !topic.IsMetadataAvailable);
-        var allPartitions = BuildTopicPartitions(topics);
-        if (allPartitions.Count == 0)
+        ArgumentNullException.ThrowIfNull(topics);
+        ArgumentNullException.ThrowIfNull(consumerGroups);
+        cancellationToken.ThrowIfCancellationRequested();
+
+        // Kafka's internal topics (especially __consumer_offsets) are implementation details, not
+        // application traffic. Excluding them before any watermark request keeps dashboard totals
+        // and per-topic rates aligned with the topics users can actually operate.
+        var applicationTopics = topics
+            .Where(topic => !topic.IsInternal)
+            .ToList();
+        var hasUnavailableTopicMetadata = applicationTopics.Any(topic => !topic.IsMetadataAvailable);
+        var applicationPartitions = BuildTopicPartitions(applicationTopics);
+        if (applicationPartitions.Count == 0)
         {
             return new KafkaPerformanceOffsetTotals
             {
                 IsComplete = !hasUnavailableTopicMetadata,
                 TotalLogEndOffset = 0,
-                TotalAvailableMessageCount = hasUnavailableTopicMetadata ? null : 0
+                TotalAvailableMessageCount = hasUnavailableTopicMetadata ? null : 0,
+                TopicTotals = BuildTopicTotals(
+                    applicationTopics,
+                    new Dictionary<TopicPartition, PartitionWatermark>())
             };
         }
 
         using var admin = CreateAdminClient(cluster);
-        var watermarks = await ReadWatermarksAsync(admin, allPartitions, cancellationToken);
-        var applicationPartitions = BuildTopicPartitions(topics.Where(topic => !topic.IsInternal));
+        var watermarks = await ReadWatermarksAsync(admin, applicationPartitions, cancellationToken);
         var applicationWatermarks = applicationPartitions
             .Where(watermarks.ContainsKey)
             .ToDictionary(partition => partition, partition => watermarks[partition]);
@@ -85,21 +99,22 @@ internal sealed class ConfluentKafkaOffsetMetricsProvider(IOptions<ModuleEventBu
             item => item.Value.LatestOffset);
         var hasCompleteApplicationOffsets = !hasUnavailableTopicMetadata &&
                                             applicationWatermarks.Count == applicationPartitions.Count;
-        var hasCompleteWatermarks = !hasUnavailableTopicMetadata &&
-                                    watermarks.Count == allPartitions.Count;
-        var consumerOffsets = !hasCompleteApplicationOffsets || latestOffsets.Count == 0
-            ? new ConsumerOffsetTotals(null, null)
+        var consumerOffsets = latestOffsets.Count == 0
+            ? ConsumerOffsetTotals.Empty
             : await ReadConsumerOffsetsAsync(admin, applicationPartitions, latestOffsets, consumerGroups, cancellationToken);
+        var topicTotals = BuildTopicTotals(applicationTopics, applicationWatermarks);
+        ApplyConsumerOffsets(topicTotals, consumerOffsets);
 
         return new KafkaPerformanceOffsetTotals
         {
-            IsComplete = hasCompleteApplicationOffsets && hasCompleteWatermarks,
+            IsComplete = hasCompleteApplicationOffsets,
             TotalLogEndOffset = hasCompleteApplicationOffsets ? latestOffsets.Values.Sum() : 0,
-            TotalAvailableMessageCount = hasCompleteWatermarks
-                ? watermarks.Values.Sum(watermark => watermark.AvailableMessageCount)
+            TotalAvailableMessageCount = hasCompleteApplicationOffsets
+                ? applicationWatermarks.Values.Sum(watermark => watermark.AvailableMessageCount)
                 : null,
             TotalConsumerCommittedOffset = consumerOffsets.TotalCommittedOffset,
-            TotalLag = consumerOffsets.TotalLag
+            TotalLag = consumerOffsets.TotalLag,
+            TopicTotals = topicTotals
         };
     }
 
@@ -139,6 +154,56 @@ internal sealed class ConfluentKafkaOffsetMetricsProvider(IOptions<ModuleEventBu
             .SelectMany(topic => Enumerable.Range(0, topic.Partitions)
                 .Select(partition => new TopicPartition(topic.TopicName, new Partition(partition))))
             .ToList();
+    }
+
+    private static List<KafkaTopicPerformanceOffsetTotals> BuildTopicTotals(
+        IEnumerable<KafkaTopicSummary> topics,
+        IReadOnlyDictionary<TopicPartition, PartitionWatermark> watermarks)
+    {
+        return topics
+            .OrderBy(topic => topic.TopicName, StringComparer.OrdinalIgnoreCase)
+            .Select(topic =>
+            {
+                var expectedPartitions = topic.Partitions > 0
+                    ? Enumerable.Range(0, topic.Partitions)
+                        .Select(partition => new TopicPartition(topic.TopicName, new Partition(partition)))
+                        .ToList()
+                    : [];
+                var capturedPartitions = expectedPartitions
+                    .Where(watermarks.ContainsKey)
+                    .ToList();
+                var isComplete = topic.IsMetadataAvailable &&
+                                  capturedPartitions.Count == expectedPartitions.Count;
+
+                return new KafkaTopicPerformanceOffsetTotals
+                {
+                    TopicName = topic.TopicName,
+                    TotalLogEndOffset = isComplete
+                        ? capturedPartitions.Sum(partition => watermarks[partition].LatestOffset)
+                        : null,
+                    TotalAvailableMessageCount = isComplete
+                        ? capturedPartitions.Sum(partition => watermarks[partition].AvailableMessageCount)
+                        : null,
+                    IsComplete = isComplete
+                };
+            })
+            .ToList();
+    }
+
+    private static void ApplyConsumerOffsets(
+        IReadOnlyList<KafkaTopicPerformanceOffsetTotals> topicTotals,
+        ConsumerOffsetTotals consumerOffsets)
+    {
+        foreach (var topic in topicTotals)
+        {
+            if (!consumerOffsets.ByTopic.TryGetValue(topic.TopicName, out var offsets))
+            {
+                continue;
+            }
+
+            topic.TotalConsumerCommittedOffset = offsets.TotalCommittedOffset;
+            topic.TotalLag = offsets.TotalLag;
+        }
     }
 
     private async Task<IReadOnlyList<KafkaTopicBacklogSnapshot>> CaptureTopicBacklogsAsync(
@@ -230,10 +295,12 @@ internal sealed class ConfluentKafkaOffsetMetricsProvider(IOptions<ModuleEventBu
             OffsetSpec = offsetSpec
         });
 
-        var result = await admin.ListOffsetsAsync(specs, new ListOffsetsOptions
-        {
-            RequestTimeout = Option.AdminRequestTimeout
-        }).WaitAsync(cancellationToken);
+        var result = await KafkaNativeRequestAwaiter.AwaitAsync(
+            admin.ListOffsetsAsync(specs, new ListOffsetsOptions
+            {
+                RequestTimeout = Option.AdminRequestTimeout
+            }),
+            cancellationToken);
 
         return result.ResultInfos
             .Where(info => info.TopicPartitionOffsetError.Error.Code == ErrorCode.NoError &&
@@ -283,12 +350,14 @@ internal sealed class ConfluentKafkaOffsetMetricsProvider(IOptions<ModuleEventBu
             .ToList();
         if (groups.Count == 0)
         {
-            return new ConsumerOffsetTotals(null, null);
+            return ConsumerOffsetTotals.Empty;
         }
 
         // Confluent.Kafka requires exactly one ConsumerGroupTopicPartitions item per
         // ListConsumerGroupOffsetsAsync call. Query groups with bounded parallelism and split very
-        // large partition lists so one oversized request cannot invalidate the whole sample.
+        // large partition lists so one oversized request cannot invalidate the whole sample. The
+        // final WhenAll also keeps every active native request alive through cancellation before
+        // the shared admin client can be disposed.
         var parallelism = Math.Max(1, Option.ConsumerGroupOffsetParallelism);
         using var gate = new SemaphoreSlim(parallelism, parallelism);
         var groupTasks = groups.Select(async group =>
@@ -313,6 +382,7 @@ internal sealed class ConfluentKafkaOffsetMetricsProvider(IOptions<ModuleEventBu
         var committedTotal = 0L;
         var lagTotal = 0L;
         var hasConsumerOffsets = false;
+        var byTopic = new Dictionary<string, TopicConsumerOffsetTotals>(StringComparer.Ordinal);
         foreach (var total in groupTotals)
         {
             if (!total.TotalCommittedOffset.HasValue)
@@ -323,11 +393,12 @@ internal sealed class ConfluentKafkaOffsetMetricsProvider(IOptions<ModuleEventBu
             hasConsumerOffsets = true;
             committedTotal += total.TotalCommittedOffset.GetValueOrDefault();
             lagTotal += total.TotalLag.GetValueOrDefault();
+            MergeTopicOffsets(byTopic, total.ByTopic);
         }
 
         return hasConsumerOffsets
-            ? new ConsumerOffsetTotals(committedTotal, lagTotal)
-            : new ConsumerOffsetTotals(null, null);
+            ? new ConsumerOffsetTotals(committedTotal, lagTotal, byTopic)
+            : ConsumerOffsetTotals.Empty;
     }
 
     private async Task<ConsumerOffsetTotals> ReadConsumerGroupOffsetsAsync(
@@ -340,6 +411,7 @@ internal sealed class ConfluentKafkaOffsetMetricsProvider(IOptions<ModuleEventBu
         var committedTotal = 0L;
         var lagTotal = 0L;
         var hasConsumerOffsets = false;
+        var byTopic = new Dictionary<string, TopicConsumerOffsetTotals>(StringComparer.Ordinal);
         var batchSize = Math.Max(1, Option.OffsetQueryBatchSize);
 
         foreach (var batch in partitions.Chunk(batchSize))
@@ -347,18 +419,21 @@ internal sealed class ConfluentKafkaOffsetMetricsProvider(IOptions<ModuleEventBu
             cancellationToken.ThrowIfCancellationRequested();
             try
             {
-                var result = await admin.ListConsumerGroupOffsetsAsync(
-                    [new ConsumerGroupTopicPartitions(groupId, batch.ToList())],
-                    new ListConsumerGroupOffsetsOptions
-                    {
-                        RequestTimeout = Option.AdminRequestTimeout,
-                        RequireStableOffsets = false
-                    }).WaitAsync(cancellationToken);
+                var result = await KafkaNativeRequestAwaiter.AwaitAsync(
+                    admin.ListConsumerGroupOffsetsAsync(
+                        [new ConsumerGroupTopicPartitions(groupId, batch.ToList())],
+                        new ListConsumerGroupOffsetsOptions
+                        {
+                            RequestTimeout = Option.AdminRequestTimeout,
+                            RequireStableOffsets = false
+                        }),
+                    cancellationToken);
 
                 var total = CalculateConsumerOffsetTotals(result.SelectMany(item => item.Partitions), latestOffsets);
                 committedTotal += total.TotalCommittedOffset.GetValueOrDefault();
                 lagTotal += total.TotalLag.GetValueOrDefault();
                 hasConsumerOffsets |= total.TotalCommittedOffset.HasValue;
+                MergeTopicOffsets(byTopic, total.ByTopic);
             }
             catch (ListConsumerGroupOffsetsException ex)
             {
@@ -366,37 +441,61 @@ internal sealed class ConfluentKafkaOffsetMetricsProvider(IOptions<ModuleEventBu
                 committedTotal += total.TotalCommittedOffset.GetValueOrDefault();
                 lagTotal += total.TotalLag.GetValueOrDefault();
                 hasConsumerOffsets |= total.TotalCommittedOffset.HasValue;
+                MergeTopicOffsets(byTopic, total.ByTopic);
             }
         }
 
         return hasConsumerOffsets
-            ? new ConsumerOffsetTotals(committedTotal, lagTotal)
-            : new ConsumerOffsetTotals(null, null);
+            ? new ConsumerOffsetTotals(committedTotal, lagTotal, byTopic)
+            : ConsumerOffsetTotals.Empty;
     }
 
     private static ConsumerOffsetTotals CalculateConsumerOffsetTotals(
         IEnumerable<TopicPartitionOffsetError> partitions,
         IReadOnlyDictionary<TopicPartition, long> latestOffsets)
     {
-        long committedTotal = 0;
-        long lagTotal = 0;
-        var hasConsumerOffsets = false;
+        var byTopic = new Dictionary<string, TopicConsumerOffsetTotals>(StringComparer.Ordinal);
 
         foreach (var partition in partitions)
         {
-            if (partition.Error.Code != ErrorCode.NoError || partition.Offset.Value < 0)
+            if (partition.Error.Code != ErrorCode.NoError ||
+                partition.Offset.Value < 0 ||
+                !latestOffsets.ContainsKey(partition.TopicPartition))
             {
                 continue;
             }
 
-            hasConsumerOffsets = true;
-            committedTotal += partition.Offset.Value;
-            lagTotal += CalculateLag(partition, latestOffsets);
+            var topicName = partition.TopicPartition.Topic;
+            var current = byTopic.GetValueOrDefault(topicName);
+            byTopic[topicName] = new TopicConsumerOffsetTotals(
+                current.TotalCommittedOffset + partition.Offset.Value,
+                current.TotalLag + CalculateLag(partition, latestOffsets));
         }
 
-        return hasConsumerOffsets
-            ? new ConsumerOffsetTotals(committedTotal, lagTotal)
-            : new ConsumerOffsetTotals(null, null);
+        if (byTopic.Count == 0)
+        {
+            return ConsumerOffsetTotals.Empty;
+        }
+
+        return new ConsumerOffsetTotals(
+            byTopic.Values.Sum(offsets => offsets.TotalCommittedOffset),
+            byTopic.Values.Sum(offsets => offsets.TotalLag),
+            byTopic);
+    }
+
+    private static void MergeTopicOffsets(
+        IDictionary<string, TopicConsumerOffsetTotals> target,
+        IReadOnlyDictionary<string, TopicConsumerOffsetTotals> source)
+    {
+        foreach (var (topicName, offsets) in source)
+        {
+            var current = target.TryGetValue(topicName, out var existing)
+                ? existing
+                : default;
+            target[topicName] = new TopicConsumerOffsetTotals(
+                current.TotalCommittedOffset + offsets.TotalCommittedOffset,
+                current.TotalLag + offsets.TotalLag);
+        }
     }
 
     private static long CalculateLag(
@@ -408,7 +507,18 @@ internal sealed class ConfluentKafkaOffsetMetricsProvider(IOptions<ModuleEventBu
             : 0;
     }
 
-    private sealed record ConsumerOffsetTotals(long? TotalCommittedOffset, long? TotalLag);
+    private readonly record struct TopicConsumerOffsetTotals(long TotalCommittedOffset, long TotalLag);
+
+    private sealed record ConsumerOffsetTotals(
+        long? TotalCommittedOffset,
+        long? TotalLag,
+        IReadOnlyDictionary<string, TopicConsumerOffsetTotals> ByTopic)
+    {
+        public static ConsumerOffsetTotals Empty { get; } = new(
+            null,
+            null,
+            new Dictionary<string, TopicConsumerOffsetTotals>(StringComparer.Ordinal));
+    }
 
     private sealed record PartitionWatermark(long EarliestOffset, long LatestOffset)
     {

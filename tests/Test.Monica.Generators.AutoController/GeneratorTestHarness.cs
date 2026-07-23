@@ -19,14 +19,49 @@ internal static class GeneratorTestHarness
         string source,
         params IIncrementalGenerator[] generators)
     {
-        return Run([source], optionsProvider: null, generators);
+        return Run([source], optionsProvider: null, MetadataReferences, generators);
     }
 
     public static GeneratorTestRun Run(
         IReadOnlyList<string> sources,
         params IIncrementalGenerator[] generators)
     {
-        return Run(sources, optionsProvider: null, generators);
+        return Run(sources, optionsProvider: null, MetadataReferences, generators);
+    }
+
+    public static GeneratorTestRun RunWithReferences(
+        string source,
+        IReadOnlyCollection<MetadataReference> additionalReferences,
+        params IIncrementalGenerator[] generators)
+    {
+        return Run(
+            [source],
+            optionsProvider: null,
+            MetadataReferences.AddRange(additionalReferences),
+            generators);
+    }
+
+    public static PortableExecutableReference CompileToMetadataReference(
+        string assemblyName,
+        string source,
+        CancellationToken cancellationToken = default)
+    {
+        var compilation = CreateCompilation(assemblyName, [source], MetadataReferences);
+        using var assemblyStream = new MemoryStream();
+        var emitResult = compilation.Emit(
+            assemblyStream,
+            cancellationToken: cancellationToken);
+        var errors = emitResult.Diagnostics
+            .Where(static diagnostic => diagnostic.Severity == DiagnosticSeverity.Error)
+            .ToArray();
+        if (errors.Length > 0)
+        {
+            throw new InvalidOperationException(string.Join(Environment.NewLine, errors));
+        }
+
+        return MetadataReference.CreateFromImage(
+            ImmutableArray.CreateRange(assemblyStream.ToArray()),
+            filePath: $"{assemblyName}.dll");
     }
 
     public static GeneratorTestRun RunWithProjectDirectory(
@@ -41,27 +76,19 @@ internal static class GeneratorTestHarness
                 ["build_property.ProjectDir"] = projectDirectory
             });
 
-        return Run([source], optionsProvider, generators);
+        return Run([source], optionsProvider, MetadataReferences, generators);
     }
 
     private static GeneratorTestRun Run(
         IReadOnlyList<string> sources,
         AnalyzerConfigOptionsProvider? optionsProvider,
+        ImmutableArray<MetadataReference> metadataReferences,
         params IIncrementalGenerator[] generators)
     {
-        var syntaxTrees = sources
-            .Select((source, index) => CSharpSyntaxTree.ParseText(
-                source,
-                ParseOptions,
-                path: $"Source{index}.cs"))
-            .ToArray();
-        var compilation = CSharpCompilation.Create(
-            assemblyName: $"GeneratorScenario_{Guid.NewGuid():N}",
-            syntaxTrees,
-            MetadataReferences,
-            new CSharpCompilationOptions(
-                OutputKind.DynamicallyLinkedLibrary,
-                nullableContextOptions: NullableContextOptions.Enable));
+        var compilation = CreateCompilation(
+            $"GeneratorScenario_{Guid.NewGuid():N}",
+            sources,
+            metadataReferences);
         GeneratorDriver driver = CSharpGeneratorDriver.Create(
             generators.Select(static generator => generator.AsSourceGenerator()),
             additionalTexts: null,
@@ -69,6 +96,27 @@ internal static class GeneratorTestHarness
             optionsProvider: optionsProvider);
 
         return Run(compilation, driver);
+    }
+
+    private static CSharpCompilation CreateCompilation(
+        string assemblyName,
+        IReadOnlyList<string> sources,
+        IEnumerable<MetadataReference> metadataReferences)
+    {
+        var syntaxTrees = sources
+            .Select((source, index) => CSharpSyntaxTree.ParseText(
+                source,
+                ParseOptions,
+                path: $"Source{index}.cs"))
+            .ToArray();
+
+        return CSharpCompilation.Create(
+            assemblyName,
+            syntaxTrees,
+            metadataReferences,
+            new CSharpCompilationOptions(
+                OutputKind.DynamicallyLinkedLibrary,
+                nullableContextOptions: NullableContextOptions.Enable));
     }
 
     private sealed class TestAnalyzerConfigOptionsProvider(

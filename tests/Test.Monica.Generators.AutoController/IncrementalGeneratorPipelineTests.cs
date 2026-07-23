@@ -92,6 +92,29 @@ public sealed class IncrementalGeneratorPipelineTests
     }
 
     [Fact]
+    public void Run_WhenProtocolMetadataHasNoDocumentationProvider_ShouldEmitCompilableTopLevelInheritDoc()
+    {
+        var protocolReference = GeneratorTestHarness.CompileToMetadataReference(
+            "Scenario.Protocol",
+            ProtocolMetadataScenario,
+            TestContext.Current.CancellationToken);
+
+        var run = GeneratorTestHarness.RunWithReferences(
+            ServiceCompilationScenario,
+            [protocolReference],
+            new HttpApiControllerSourceGenerator());
+
+        run.RunResult.Diagnostics.Should().BeEmpty();
+        run.OutputErrors.Should().BeEmpty();
+        var expectedDocumentation = string.Join(
+            Environment.NewLine,
+            "    /// <inheritdoc cref=\"global::Scenario.PublishedLanguages.DomainOrdering.Requests.QueryGetPublishedOrder\"/>",
+            "    [HttpGet(\"orders/{Id}\")]");
+        run.GeneratedSources["HttpEndpointQueryOrdering.g.cs"]
+            .Should().Contain(expectedDocumentation);
+    }
+
+    [Fact]
     public void Run_WhenHttpClientReturnsPositionalEnvelope_ShouldCompileWithoutParameterlessConstructor()
     {
         var run = GeneratorTestHarness.Run(

@@ -13,12 +13,11 @@ namespace Monica.EventBus.Kafka.UIEventBusKafka.State;
 /// <remarks>
 /// The sampler deliberately lives outside the Razor page. It serializes manual and automatic
 /// captures, cancels its <see cref="PeriodicTimer"/> when the selected cluster changes, and keeps
-/// a bounded history for the performance and dashboard tabs.
+/// only the latest snapshot for the performance and dashboard tabs.
 /// </remarks>
 public sealed class KafkaPerformancePollingState(
     KafkaConsoleFacade facade,
-    IOptions<ModuleEventBusKafkaUIOption> uiOptions,
-    IOptions<ModuleEventBusKafkaOption> kafkaOptions) : IAsyncDisposable
+    IOptions<ModuleEventBusKafkaUIOption> uiOptions) : IAsyncDisposable
 {
     /// <summary>
     /// Minimum interval accepted by the live sampler.
@@ -32,8 +31,7 @@ public sealed class KafkaPerformancePollingState(
 
     private readonly CancellationTokenSource _lifetimeCts = new();
     private readonly SemaphoreSlim _captureGate = new(1, 1);
-    private readonly object _historySync = new();
-    private readonly int _historyLimit = kafkaOptions.Value.GetPerformanceHistoryLimit();
+    private readonly object _snapshotSync = new();
 
     private PeriodicTimer? _timer;
     private CancellationTokenSource? _loopCts;
@@ -41,13 +39,9 @@ public sealed class KafkaPerformancePollingState(
     private string? _clusterId;
     private bool _isEnabled = uiOptions.Value.EnablePerformanceAutoRefresh;
     private TimeSpan _refreshInterval = NormalizeInterval(uiOptions.Value.PerformanceRefreshInterval);
+    private KafkaPerformanceSnapshot? _latestSnapshot;
     private DateTimeOffset? _lastCapturedAt;
     private bool _disposed;
-
-    /// <summary>
-    /// Gets the bounded performance history currently displayed by the page.
-    /// </summary>
-    public IReadOnlyList<KafkaPerformanceSnapshot> Snapshots { get; private set; } = [];
 
     /// <summary>
     /// Gets the most recent live snapshot, when one exists.
@@ -56,9 +50,9 @@ public sealed class KafkaPerformancePollingState(
     {
         get
         {
-            lock (_historySync)
+            lock (_snapshotSync)
             {
-                return Snapshots.LastOrDefault();
+                return _latestSnapshot;
             }
         }
     }
@@ -90,7 +84,7 @@ public sealed class KafkaPerformancePollingState(
     {
         get
         {
-            lock (_historySync)
+            lock (_snapshotSync)
             {
                 return _lastCapturedAt;
             }
@@ -103,42 +97,27 @@ public sealed class KafkaPerformancePollingState(
     public string? LastError { get; private set; }
 
     /// <summary>
-    /// Raised when the sampler state or history changes.
+    /// Raised when the sampler state or latest snapshot changes.
     /// </summary>
     public event Action? StateChanged;
 
     /// <summary>
-    /// Replaces the history loaded from the repository for a selected cluster.
+    /// Replaces the latest snapshot loaded from the repository for a selected cluster.
     /// </summary>
-    /// <param name="snapshots">Snapshots ordered in any direction.</param>
-    public void SetHistory(IReadOnlyList<KafkaPerformanceSnapshot> snapshots)
+    /// <param name="snapshot">Latest snapshot, or <see langword="null"/> when none has been captured.</param>
+    public void SetSnapshot(KafkaPerformanceSnapshot? snapshot)
     {
-        ArgumentNullException.ThrowIfNull(snapshots);
-
-        lock (_historySync)
-        {
-            Snapshots = snapshots
-                .OrderBy(snapshot => snapshot.CapturedAt)
-                .TakeLast(_historyLimit)
-                .ToList();
-            _lastCapturedAt = Snapshots.LastOrDefault()?.CapturedAt;
-        }
+        ReplaceLatestSnapshot(snapshot);
         LastError = null;
         NotifyStateChanged();
     }
 
     /// <summary>
-    /// Clears history while switching away from a cluster.
+    /// Clears the latest snapshot while switching away from a cluster.
     /// </summary>
-    public void ClearHistory()
+    public void ClearSnapshot()
     {
-        lock (_historySync)
-        {
-            Snapshots = [];
-            _lastCapturedAt = null;
-        }
-        LastError = null;
-        NotifyStateChanged();
+        SetSnapshot(null);
     }
 
     /// <summary>
@@ -239,7 +218,7 @@ public sealed class KafkaPerformancePollingState(
     }
 
     /// <summary>
-    /// Stops the periodic loop while retaining the current history and settings.
+    /// Stops the periodic loop while retaining the current snapshot and settings.
     /// </summary>
     public Task DeactivateAsync()
     {
@@ -304,11 +283,7 @@ public sealed class KafkaPerformancePollingState(
             }
 
             var snapshot = result.Data!;
-            AddSnapshot(snapshot);
-            lock (_historySync)
-            {
-                _lastCapturedAt = snapshot.CapturedAt;
-            }
+            ReplaceLatestSnapshot(snapshot);
             LastError = snapshot.Message;
             NotifyStateChanged();
             return true;
@@ -331,16 +306,12 @@ public sealed class KafkaPerformancePollingState(
         }
     }
 
-    private void AddSnapshot(KafkaPerformanceSnapshot snapshot)
+    private void ReplaceLatestSnapshot(KafkaPerformanceSnapshot? snapshot)
     {
-        lock (_historySync)
+        lock (_snapshotSync)
         {
-            Snapshots = Snapshots
-                .Where(existing => existing.CapturedAt != snapshot.CapturedAt)
-                .Append(snapshot)
-                .OrderBy(item => item.CapturedAt)
-                .TakeLast(_historyLimit)
-                .ToList();
+            _latestSnapshot = snapshot;
+            _lastCapturedAt = snapshot?.CapturedAt;
         }
     }
 

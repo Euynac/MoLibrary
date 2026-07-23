@@ -34,6 +34,32 @@ internal static class KafkaPerformanceRateCalculator
             previous.TotalConsumerCommittedOffset,
             current.TotalConsumerCommittedOffset,
             elapsedSeconds);
+
+        if (current.TopicMetrics.Count == 0 || previous.TopicMetrics.Count == 0)
+        {
+            return;
+        }
+
+        var previousByTopic = previous.TopicMetrics
+            .Where(metric => !string.IsNullOrWhiteSpace(metric.TopicName))
+            .GroupBy(metric => metric.TopicName, StringComparer.Ordinal)
+            .ToDictionary(group => group.Key, group => group.Last(), StringComparer.Ordinal);
+        foreach (var metric in current.TopicMetrics)
+        {
+            if (!previousByTopic.TryGetValue(metric.TopicName, out var previousMetric))
+            {
+                continue;
+            }
+
+            metric.MessageWriteRatePerSecond = CalculateRate(
+                previousMetric.TotalLogEndOffset,
+                metric.TotalLogEndOffset,
+                elapsedSeconds);
+            metric.MessageConsumeRatePerSecond = CalculateRate(
+                previousMetric.TotalConsumerCommittedOffset,
+                metric.TotalConsumerCommittedOffset,
+                elapsedSeconds);
+        }
     }
 
     private static double? CalculateRate(long? previous, long? current, double elapsedSeconds)

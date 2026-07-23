@@ -168,14 +168,13 @@ public sealed class KafkaConsoleFacade(
     }
 
     /// <summary>
-    /// Gets recent performance snapshots.
+    /// Gets the latest performance snapshot for a cluster.
     /// </summary>
-    public Task<Res<IReadOnlyList<KafkaPerformanceSnapshot>>> GetPerformanceHistoryAsync(
+    public Task<Res<KafkaPerformanceSnapshot?>> GetLatestPerformanceAsync(
         string clusterId,
-        int? limit = null,
         CancellationToken cancellationToken = default)
     {
-        return ExecuteAsync(() => performanceService.GetHistoryAsync(clusterId, limit, cancellationToken), "Failed to load Kafka performance history");
+        return ExecuteAsync(() => performanceService.GetLatestAsync(clusterId, cancellationToken), "Failed to load the latest Kafka performance snapshot");
     }
 
     /// <summary>

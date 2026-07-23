@@ -1,8 +1,6 @@
-using Microsoft.Extensions.Options;
 using Monica.EventBus.Kafka.Abstractions;
 using Monica.EventBus.Kafka.Models;
 using Monica.EventBus.Kafka.Services.Support;
-using Monica.Modules;
 
 namespace Monica.EventBus.Kafka.Services;
 
@@ -13,26 +11,12 @@ public sealed class KafkaPerformanceService(
     KafkaClusterService clusterService,
     IKafkaAdminProvider adminProvider,
     IKafkaOffsetMetricsProvider offsetMetricsProvider,
-    IKafkaConsoleRepository repository,
-    IOptions<ModuleEventBusKafkaOption> options)
+    IKafkaConsoleRepository repository)
 {
     public async Task<KafkaPerformanceSnapshot?> GetLatestAsync(string clusterId, CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(clusterId);
         return await repository.GetLatestPerformanceSnapshotAsync(clusterId.Trim(), cancellationToken);
-    }
-
-    public async Task<IReadOnlyList<KafkaPerformanceSnapshot>> GetHistoryAsync(
-        string clusterId,
-        int? limit = null,
-        CancellationToken cancellationToken = default)
-    {
-        ArgumentException.ThrowIfNullOrWhiteSpace(clusterId);
-        var historyLimit = options.Value.GetPerformanceHistoryLimit(limit);
-        return await repository.GetPerformanceSnapshotsAsync(
-            clusterId.Trim(),
-            historyLimit,
-            cancellationToken);
     }
 
     public async Task<KafkaPerformanceSnapshot> CaptureAsync(string clusterId, CancellationToken cancellationToken = default)
@@ -49,7 +33,7 @@ public sealed class KafkaPerformanceService(
         if (!cluster.HasDirectKafkaAccess)
         {
             snapshot.Message = "Direct Kafka access is not configured; performance sampling is limited to configuration visibility.";
-            await SaveSnapshotAsync(snapshot, cancellationToken);
+            await repository.ReplacePerformanceSnapshotAsync(snapshot, cancellationToken);
             return snapshot;
         }
 
@@ -77,24 +61,28 @@ public sealed class KafkaPerformanceService(
             snapshot.TotalConsumerCommittedOffset = offsetTotals.IsComplete
                 ? offsetTotals.TotalConsumerCommittedOffset
                 : null;
+            snapshot.TopicMetrics = offsetTotals.TopicTotals
+                .Select(total => new KafkaTopicPerformanceSnapshot
+                {
+                    TopicName = total.TopicName,
+                    TotalLogEndOffset = total.TotalLogEndOffset,
+                    TotalAvailableMessageCount = total.TotalAvailableMessageCount,
+                    TotalConsumerCommittedOffset = total.TotalConsumerCommittedOffset,
+                    TotalLag = total.TotalLag
+                })
+                .ToList();
             KafkaPerformanceRateCalculator.ApplyRates(snapshot, previous);
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
         }
         catch (Exception ex)
         {
             snapshot.Message = ex.Message;
         }
 
-        await SaveSnapshotAsync(snapshot, cancellationToken);
+        await repository.ReplacePerformanceSnapshotAsync(snapshot, cancellationToken);
         return snapshot;
-    }
-
-    private async Task SaveSnapshotAsync(KafkaPerformanceSnapshot snapshot, CancellationToken cancellationToken)
-    {
-        await repository.SavePerformanceSnapshotAsync(snapshot, cancellationToken);
-        if (options.Value.PerformanceSnapshotRetention > TimeSpan.Zero)
-        {
-            var cutoff = DateTimeOffset.UtcNow.Subtract(options.Value.PerformanceSnapshotRetention);
-            await repository.DeletePerformanceSnapshotsOlderThanAsync(cutoff, cancellationToken);
-        }
     }
 }

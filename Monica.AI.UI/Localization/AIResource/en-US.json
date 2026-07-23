@@ -224,8 +224,7 @@
       "Close": "Close",
       "Save": "Save",
       "Update": "Update",
-      "Cancel": "Cancel",
-      "Confirm": "Confirm"
+      "Cancel": "Cancel"
     }
   },
   "RAG": {
@@ -678,23 +677,6 @@
       "Parameters": "Parameters",
       "NoParameters": "No parameters",
       "Schema": "Raw schema"
-    }
-  },
-  "Pages": {
-    "KnowledgeBaseManage": {
-      "Title": "Knowledge Bases"
-    },
-    "RAGManage": {
-      "Title": "RAG Indexing"
-    },
-    "RAGDebug": {
-      "Title": "RAG Debug"
-    },
-    "RAGChunkers": {
-      "Title": "RAG Chunkers"
-    },
-    "AICapabilities": {
-      "Title": "AI Capabilities"
     }
   }
 }

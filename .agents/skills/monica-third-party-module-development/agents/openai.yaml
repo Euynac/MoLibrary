@@ -1,0 +1,7 @@
+interface:
+  display_name: "Monica Ecosystem Module Development"
+  short_description: "Build and publish third-party Monica modules"
+  default_prompt: "Use $monica-third-party-module-development to create and publish a standards-compliant third-party Monica module package."
+  icon_small: "./assets/monica-compatibility-mark.png"
+  icon_large: "./assets/monica-compatibility-mark.svg"
+  brand_color: "#10B981"

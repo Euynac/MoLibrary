@@ -19,6 +19,10 @@ public enum BuiltInModuleKey
     /// </summary>
     ConfigurationEventBus,
     /// <summary>
+    /// EF Core persistence module for configuration data.
+    /// </summary>
+    ConfigurationEfCore,
+    /// <summary>
     /// Kafka provider and management console module for EventBus integrations.
     /// </summary>
     EventBusKafka,

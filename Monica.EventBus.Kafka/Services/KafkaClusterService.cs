@@ -176,6 +176,10 @@ public sealed class KafkaClusterService(
             summary.BrokerCount = connection.Brokers.Count;
             await TryPopulateInventoryCountsAsync(summary, cancellationToken);
         }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
         catch (Exception ex)
         {
             summary.IsReachable = false;
@@ -194,6 +198,10 @@ public sealed class KafkaClusterService(
             var topics = await adminProvider.ListTopicMetadataAsync(summary.Config, cancellationToken);
             summary.TopicCount = topics.Count;
         }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
         catch (Exception ex)
         {
             summary.ErrorMessage = $"Kafka connection succeeded, but topic metadata could not be read: {ex.GetMessageRecursively()}";
@@ -203,6 +211,10 @@ public sealed class KafkaClusterService(
         {
             var groups = await adminProvider.ListConsumerGroupsAsync(summary.Config, cancellationToken);
             summary.ConsumerGroupCount = groups.Count;
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
         }
         catch (Exception ex)
         {

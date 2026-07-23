@@ -34,25 +34,26 @@ public sealed class KafkaEventBusProvider(
     string? serviceKey = null)
     : DistributedEventBusBase(serviceScopeFactory, eventHandlerInvoker, subscriptionManager, loggerFactory, serviceKey), IDisposable
 {
+    // Starting a produce request and disposing the native handle must be mutually exclusive. Once
+    // queued, librdkafka owns the delivery and Flush drains it during shutdown.
+    private readonly object _producerLifetimeLock = new();
     private readonly Lazy<IProducer<string, string>> _producer = new(() =>
     {
         var cluster = clusterConfigProvider.GetDirectEventBusCluster();
         var config = KafkaClientConfigFactory.BuildProducerConfig(cluster, options.Value);
         return new ProducerBuilder<string, string>(config).Build();
     });
+    private bool _isDisposed;
 
     /// <inheritdoc />
     public override async Task PublishAsync(Type eventType, object eventData, string? topicName = null, CancellationToken cancellationToken = default)
     {
         var finalTopicName = ResolveTopicName(eventType, topicName);
         var payload = JsonSerializer.Serialize(eventData, eventType, jsonSerializerOptionsProvider.SerializerOptions);
-        await _producer.Value.ProduceAsync(
+        await StartProduce(
             finalTopicName,
-            new Message<string, string>
-            {
-                Key = eventType.FullName ?? eventType.Name,
-                Value = payload
-            },
+            eventType,
+            payload,
             cancellationToken);
     }
 
@@ -64,8 +65,26 @@ public sealed class KafkaEventBusProvider(
         {
             cancellationToken.ThrowIfCancellationRequested();
             var payload = JsonSerializer.Serialize(eventData, eventType, jsonSerializerOptionsProvider.SerializerOptions);
-            await _producer.Value.ProduceAsync(
+            await StartProduce(
                 finalTopicName,
+                eventType,
+                payload,
+                cancellationToken);
+        }
+    }
+
+    private Task<DeliveryResult<string, string>> StartProduce(
+        string topicName,
+        Type eventType,
+        string payload,
+        CancellationToken cancellationToken)
+    {
+        lock (_producerLifetimeLock)
+        {
+            ObjectDisposedException.ThrowIf(_isDisposed, this);
+            cancellationToken.ThrowIfCancellationRequested();
+            return _producer.Value.ProduceAsync(
+                topicName,
                 new Message<string, string>
                 {
                     Key = eventType.FullName ?? eventType.Name,
@@ -78,12 +97,27 @@ public sealed class KafkaEventBusProvider(
     /// <inheritdoc />
     public void Dispose()
     {
-        if (!_producer.IsValueCreated)
+        lock (_producerLifetimeLock)
         {
-            return;
-        }
+            if (_isDisposed)
+            {
+                return;
+            }
 
-        _producer.Value.Flush(options.Value.ProducerFlushTimeout);
-        _producer.Value.Dispose();
+            _isDisposed = true;
+            if (!_producer.IsValueCreated)
+            {
+                return;
+            }
+
+            try
+            {
+                _producer.Value.Flush(options.Value.ProducerFlushTimeout);
+            }
+            finally
+            {
+                _producer.Value.Dispose();
+            }
+        }
     }
 }

@@ -3,7 +3,7 @@ using Monica.EventBus.Kafka.Models;
 namespace Monica.EventBus.Kafka.Abstractions;
 
 /// <summary>
-/// Stores Kafka console cluster configuration and sampled performance snapshots.
+/// Stores Kafka console cluster configuration and the latest sampled performance snapshot.
 /// </summary>
 /// <remarks>
 /// Implementations must be safe for concurrent reads and writes because UI requests and hosted
@@ -35,18 +35,22 @@ public interface IKafkaConsoleRepository
     Task UpsertClusterAsync(KafkaClusterConfig cluster, CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Deletes one configured Kafka cluster and any cluster-owned sampled snapshots.
+    /// Deletes one configured Kafka cluster and its latest sampled snapshot.
     /// </summary>
     /// <param name="clusterId">Cluster identifier.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     Task DeleteClusterAsync(string clusterId, CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Saves a sampled performance snapshot.
+    /// Replaces the latest sampled performance snapshot for one cluster.
     /// </summary>
-    /// <param name="snapshot">Snapshot to save.</param>
+    /// <remarks>
+    /// Implementations retain at most one snapshot per cluster. Replacing the current value must
+    /// not append historical rows or keep previous snapshots in memory.
+    /// </remarks>
+    /// <param name="snapshot">Snapshot that becomes the latest value.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
-    Task SavePerformanceSnapshotAsync(KafkaPerformanceSnapshot snapshot, CancellationToken cancellationToken = default);
+    Task ReplacePerformanceSnapshotAsync(KafkaPerformanceSnapshot snapshot, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Gets the latest sampled performance snapshot for one cluster.
@@ -55,23 +59,4 @@ public interface IKafkaConsoleRepository
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>The latest snapshot when found; otherwise <see langword="null"/>.</returns>
     Task<KafkaPerformanceSnapshot?> GetLatestPerformanceSnapshotAsync(string clusterId, CancellationToken cancellationToken = default);
-
-    /// <summary>
-    /// Gets recent sampled performance snapshots for one cluster.
-    /// </summary>
-    /// <param name="clusterId">Cluster identifier.</param>
-    /// <param name="limit">Maximum number of snapshots to return. The service layer caps this at 100.</param>
-    /// <param name="cancellationToken">Cancellation token.</param>
-    /// <returns>Snapshots ordered from oldest to newest.</returns>
-    Task<IReadOnlyList<KafkaPerformanceSnapshot>> GetPerformanceSnapshotsAsync(
-        string clusterId,
-        int limit,
-        CancellationToken cancellationToken = default);
-
-    /// <summary>
-    /// Removes sampled performance snapshots older than the specified timestamp.
-    /// </summary>
-    /// <param name="olderThanUtc">Exclusive UTC cutoff.</param>
-    /// <param name="cancellationToken">Cancellation token.</param>
-    Task DeletePerformanceSnapshotsOlderThanAsync(DateTimeOffset olderThanUtc, CancellationToken cancellationToken = default);
 }

@@ -1,7 +1,4 @@
 {
-  "Module": {
-    "DisplayName": "OpenTelemetry"
-  },
   "Snapshot": {
     "ReadFailed": "读取 OpenTelemetry 进程内指标快照失败：{0}"
   }

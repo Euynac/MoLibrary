@@ -1,7 +1,8 @@
 @using Microsoft.Extensions.Localization
+@using Monica.Core.Localization.Abstractions
 @using Monica.UI.Localization
 @inject IStringLocalizer<SharedResource> L
-@inject IStringLocalizer<UIRegistryResource> RegistryL
+@inject ILocalizationCatalog LocalizationCatalog
 
 <div class="@RootCssClass"
      @onmouseenter="OnMouseEnter"

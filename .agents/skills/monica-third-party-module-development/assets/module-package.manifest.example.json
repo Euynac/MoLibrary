@@ -1,0 +1,47 @@
+{
+  "schemaVersion": 1,
+  "packageId": "Acme.Monica.Example",
+  "version": "0.1.0-alpha.1",
+  "description": "An independently maintained Monica module package.",
+  "authors": "Acme Engineering",
+  "nugetOwner": "Acme",
+  "repositoryUrl": "https://github.com/acme/acme-monica-example",
+  "projectUrl": "https://github.com/acme/acme-monica-example",
+  "supportUrl": "https://github.com/acme/acme-monica-example/issues",
+  "securityUrl": "https://github.com/acme/acme-monica-example/security/policy",
+  "source": {
+    "available": true,
+    "provider": "github",
+    "sourceLinkVersion": "10.0.102"
+  },
+  "distribution": "public",
+  "publishing": {
+    "target": "nuget.org"
+  },
+  "targetFramework": "net10.0",
+  "monicaVersion": "1.0.0-rc.6",
+  "capabilityTags": ["example"],
+  "license": {
+    "openSource": true,
+    "expression": "MIT"
+  },
+  "branding": {
+    "icon": {
+      "kind": "compatibility-mark"
+    },
+    "showOpenSourceBadge": true
+  },
+  "modules": [
+    {
+      "name": "Example",
+      "kind": "infrastructure",
+      "key": "Acme.Monica.Example"
+    },
+    {
+      "name": "ExampleUI",
+      "kind": "ui",
+      "key": "Acme.Monica.Example.UI",
+      "dependsOn": ["Example"]
+    }
+  ]
+}
