@@ -2,6 +2,9 @@
 /* This is the main CSS file that pulls in all theme-related CSS */
 /* Color is managed by the MudBlazor theme system, CSS is only responsible for component styles */
 
+/* Shared shell layout primitives */
+@import url('./layout/mo-navbar.css');
+
 /* 0. Introduce the baseline MudBlazor-compatible theme hook */
 @import url('./themes/mo-theme-mud-blazor.css');
 

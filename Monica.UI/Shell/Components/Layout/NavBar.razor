@@ -6,19 +6,22 @@
         {
             <NavBarDropdown Category="@category.DisplayName"
                             CategoryId="@category.Id"
+                            CurrentRoute="@CurrentRoute"
                             Items="@category.Items" />
         }
 
         @if (HasMoreCategories)
         {
-            <NavBarMore Categories="@MoreCategories" />
+            <NavBarMore Categories="@MoreCategories" CurrentRoute="@CurrentRoute" />
         }
     </div>
 
     <div class="navbar-nav navbar-nav-compact">
         @if (HasAnyCategories)
         {
-            <NavBarMore Categories="@AllCategories" CompactMode="true" />
+            <NavBarMore Categories="@AllCategories"
+                        CurrentRoute="@CurrentRoute"
+                        CompactMode="true" />
         }
     </div>
 

@@ -186,6 +186,7 @@
     font-weight: 400;
     gap: 8px;
     padding: 0 12px;
+    --mo-navbar-link-padding-inline: 12px;
     transition:
         background-color var(--mo-fluent-motion),
         color var(--mo-fluent-motion);

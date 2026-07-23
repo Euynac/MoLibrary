@@ -1,5 +1,6 @@
 @using Monica.Core.Localization.Abstractions
 @using Monica.UI.Shell.Models
+@using Monica.UI.Shell.Support
 @inject ILocalizationCatalog LocalizationCatalog
 
 <div class="navbar-item" data-navigation-category-id="@CategoryId.Value">
@@ -7,14 +8,17 @@
              AriaLabel="@Category"
              EndIcon="@Icons.Material.Filled.KeyboardArrowDown"
              Variant="Variant.Text"
-             Class="navbar-menu"
+             Class="navbar-menu navbar-link"
+             ActivationEvent="@MouseEvent.MouseOver"
              AnchorOrigin="Origin.BottomLeft"
              TransformOrigin="Origin.TopLeft"
-             Dense="true"
+             PopoverClass="dropdown-menu mo-navbar-menu-popover mo-navbar-dropdown-popover"
              ListClass="mo-appbar-menu-list">
         @foreach (var item in Items)
         {
-            <MudMenuItem Href="@item.Href" Icon="@item.Icon">
+            <MudMenuItem Href="@item.Href"
+                         Icon="@item.Icon"
+                         Class="@NavigationRouteMatcher.GetActiveClass(CurrentRoute, item.Href)">
                 @item.ResolveText(LocalizationCatalog)
             </MudMenuItem>
         }
@@ -24,5 +28,6 @@
 @code {
     [Parameter] public string Category { get; set; } = string.Empty;
     [Parameter] public NavigationCategoryId CategoryId { get; set; } = default!;
+    [Parameter] public string CurrentRoute { get; set; } = string.Empty;
     [Parameter] public IReadOnlyList<NavigationItem> Items { get; set; } = [];
 }
