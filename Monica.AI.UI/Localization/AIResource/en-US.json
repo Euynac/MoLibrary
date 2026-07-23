@@ -1,4 +1,27 @@
 {
+  "Pages": {
+    "AIChat": {
+      "Title": "AI Assistant"
+    },
+    "AIProviderManage": {
+      "Title": "AI Provider Management"
+    },
+    "AICapabilities": {
+      "Title": "AI Capabilities"
+    },
+    "RAGManage": {
+      "Title": "RAG Indexing"
+    },
+    "RAGDebug": {
+      "Title": "RAG Debug"
+    },
+    "RAGChunkers": {
+      "Title": "RAG Chunker Management"
+    },
+    "KnowledgeBaseManage": {
+      "Title": "Knowledge Bases"
+    }
+  },
   "Session": {
     "NewChat": "New Chat",
     "RecentSessions": "Recent Sessions",

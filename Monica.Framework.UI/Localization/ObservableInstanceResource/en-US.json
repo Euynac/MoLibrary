@@ -1,4 +1,9 @@
 {
+  "Pages": {
+    "ObservableInstance": {
+      "Title": "Observable Instance"
+    }
+  },
   "Page": {
     "PageTitle": "Observable Instance Monitor",
     "Header": {

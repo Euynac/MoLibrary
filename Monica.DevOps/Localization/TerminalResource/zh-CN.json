@@ -1,4 +1,9 @@
 {
+  "Pages": {
+    "Terminal": {
+      "Title": "终端"
+    }
+  },
   "Page": {
     "DocumentTitle": "终端",
     "Title": "终端",

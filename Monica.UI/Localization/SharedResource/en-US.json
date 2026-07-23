@@ -1,4 +1,12 @@
 {
+  "Pages": {
+    "DiffHighlight": {
+      "Title": "Text Diff Comparison"
+    },
+    "ModuleSystemDashboard": {
+      "Title": "Module System Dashboard"
+    }
+  },
   "Common": {
     "Close": "Close"
   },
@@ -68,7 +76,19 @@
   },
   "NavBar": {
     "More": "More",
-    "MoreModules": "More Modules"
+    "MoreModules": "More Modules",
+    "Categories": {
+      "AI": "AI",
+      "KnowledgeRetrieval": "Knowledge & Retrieval",
+      "Documentation": "Documentation",
+      "Configuration": "Configuration",
+      "Infrastructure": "Infrastructure",
+      "Module": "Module",
+      "TaskScheduling": "Task Scheduling",
+      "Monitor": "Monitor",
+      "Debug": "Debug",
+      "Uncategorized": "Uncategorized"
+    }
   },
   "ModuleSystem": {
     "Dashboard": {
@@ -367,11 +387,6 @@
       },
       "Labels": {
         "Close": "Close"
-      }
-    },
-    "Common": {
-      "Labels": {
-        "Uncategorized": "Uncategorized"
       }
     },
     "AssemblyAnalysis": {

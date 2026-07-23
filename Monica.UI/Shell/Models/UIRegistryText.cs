@@ -5,7 +5,7 @@ namespace Monica.UI.Shell.Models;
 /// <summary>
 /// Represents literal or resource-backed text contributed to the Monica UI registry.
 /// </summary>
-public sealed class UIRegistryText
+public sealed record UIRegistryText
 {
     private UIRegistryText(string fallback, string? key, Type? resourceType)
     {

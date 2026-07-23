@@ -1,4 +1,9 @@
 {
+  "Pages": {
+    "OpenTelemetryMetrics": {
+      "Title": "OpenTelemetry Metrics"
+    }
+  },
   "Page": {
     "Title": "OpenTelemetry Metrics",
     "Subtitle": "In-process snapshot for debugging and offline use"

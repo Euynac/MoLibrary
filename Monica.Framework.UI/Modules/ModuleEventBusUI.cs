@@ -11,6 +11,7 @@ using Monica.Core.Modularity.Models;
 using Monica.Core.Results;
 using Monica.Framework.UI.Localization;
 using Monica.Framework.UI.Pages;
+using Monica.UI.Shell.Models;
 using Monica.Framework.UI.UIEventBus.State;
 using Monica.Framework.UI.UIEventBus.Support;
 using MudBlazor;
@@ -64,11 +65,11 @@ public class ModuleEventBusUI(ModuleEventBusUIOption option)
         if (!Option.DisablePage)
         {
             DependsOnModule<ModuleShellUIGuide>().Register()
-                .RegisterUIComponents(p => p.RegisterLocalizedComponent<UIEventBusMonitorPage>(
+                .RegisterUIComponents(p => p.RegisterLocalizedPage<UIEventBusMonitorPage, EventBusResource>(
                     UIEventBusMonitorPage.PAGE_URL,
                     "Pages:EventBusMonitor:Title",
                     Icons.Material.Filled.Hub,
-                    "Categories:Monitor",
+                    BuiltInNavigationCategoryIds.Monitor,
                     addToNav: true,
                     navOrder: 40));
         }

@@ -1,4 +1,9 @@
 {
+  "Pages": {
+    "StateStoreManage": {
+      "Title": "State Store Management"
+    }
+  },
   "Dashboard": {
     "PageTitle": "State Store Management",
     "Eyebrow": "State Browser",

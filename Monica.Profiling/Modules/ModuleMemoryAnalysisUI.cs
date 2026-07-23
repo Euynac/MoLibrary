@@ -4,8 +4,10 @@ using Monica.Core.Modularity;
 using Monica.Core.Modularity.Abstractions;
 using Monica.Core.Modularity.Annotations;
 using Monica.Core.Modularity.Models;
+using Monica.Profiling.Localization;
 using Monica.Profiling.Pages;
 using Monica.Profiling.UIMemoryAnalysis.State;
+using Monica.UI.Shell.Models;
 using MudBlazor;
 
 // ReSharper disable once CheckNamespace
@@ -45,6 +47,8 @@ public class ModuleMemoryAnalysisUI(ModuleMemoryAnalysisUIOption option)
 
         DependsOnModule<ModuleMemoryDiagnosticsGuide>().Register();
         DependsOnModule<ModuleRuntimeMetricsGuide>().Register();
+        DependsOnModule<ModuleLocalizationGuide>().Register()
+            .AddResource<MemoryAnalysisResource>();
 
         if (Option.EnableTypeAllocationTab)
         {
@@ -52,11 +56,11 @@ public class ModuleMemoryAnalysisUI(ModuleMemoryAnalysisUIOption option)
         }
 
         DependsOnModule<ModuleShellUIGuide>().Register()
-            .RegisterUIComponents(registry => registry.RegisterLocalizedComponent<UIMemoryAnalysisPage>(
+            .RegisterUIComponents(registry => registry.RegisterLocalizedPage<UIMemoryAnalysisPage, MemoryAnalysisResource>(
                 UIMemoryAnalysisPage.PAGE_URL,
                 "Pages:MemoryAnalysis:Title",
                 Icons.Material.Filled.Memory,
-                "Categories:Monitor",
+                BuiltInNavigationCategoryIds.Monitor,
                 addToNav: true,
                 navOrder: 60));
     }

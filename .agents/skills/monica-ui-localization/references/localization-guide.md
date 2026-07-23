@@ -133,6 +133,47 @@ Inject the localizer in your components:
 <MudTextField Label="@L["KeyExplorer:Labels:KeyPattern"]" />
 ```
 
+#### Step 6: Register localized navigation explicitly
+
+Every localized page declares its owning resource type. Shared shell categories use stable built-in IDs:
+
+```csharp
+DependsOnModule<ModuleLocalizationGuide>().Register()
+    .AddResource<StateStoreResource>();
+
+DependsOnModule<ModuleShellUIGuide>().Register()
+    .RegisterUIComponents(registry => registry.RegisterLocalizedPage<UIStateStorePage, StateStoreResource>(
+        UIStateStorePage.PAGE_URL,
+        "Navigation:Title",
+        Icons.Material.Filled.Storage,
+        BuiltInNavigationCategoryIds.Debug,
+        addToNav: true,
+        navOrder: 20));
+```
+
+A package-owned category registers its stable identity and localized label once, then passes the returned ID to pages:
+
+```csharp
+DependsOnModule<ModuleShellUIGuide>().Register()
+    .RegisterUIComponents(registry =>
+    {
+        var categoryId = registry.RegisterLocalizedCategory<ExampleResource>(
+            "Contoso.Monica.Example",
+            "Navigation:Category",
+            order: 450);
+
+        registry.RegisterLocalizedPage<UIExamplePage, ExampleResource>(
+            UIExamplePage.PAGE_URL,
+            "Navigation:Title",
+            Icons.Material.Filled.Extension,
+            categoryId,
+            addToNav: true,
+            navOrder: 10);
+    });
+```
+
+The category ID is never translated and is compared case-insensitively. Category order is explicit. The registry freezes on its first read, so all contributions must occur during application startup.
+
 ### Key Naming Conventions
 
 **Hierarchical structure** matching JSON organization:
@@ -292,7 +333,9 @@ python scripts/validate_localization.py --json
 1. **Missing keys** (ERROR): Keys used in Razor or C# but not defined in JSON
 2. **Unused keys** (WARNING): Keys defined in JSON but never used
 3. **Language sync** (ERROR): Keys in one language but not another
-4. **UI registration keys** (ERROR): One-generic calls must resolve from `UIRegistryResource`; two-generic calls must resolve from their declared module resource
+4. **Navigation registration keys** (ERROR): Every page/category key must resolve from its explicitly declared module resource
+5. **Navigation resource registration** (ERROR): Every page/category resource must be registered through `AddResource<TResource>()`
+6. **Legacy navigation API** (ERROR): `RegisterLocalizedComponent` and an implicit resource type are rejected
 
 ### Example Output
 
@@ -350,13 +393,14 @@ Summary:
 
 **Symptom:** The navigation or AppBar shows a raw key such as `Pages:GitRepositories:Title`
 
-**Cause:** The one-generic `RegisterLocalizedComponent<TComponent>` overload resolves keys from `UIRegistryResource`. Independent and reusable modules should select their own resource with the two-generic overload.
+**Cause:** The page or category key is missing from the explicitly declared module resource, or the module did not register that resource. Monica no longer has an implicit `UIRegistryResource` fallback.
 
 **Solution:**
-1. For a first-party shell entry that intentionally uses the one-generic overload, add the key to both `UIRegistryResource` language files.
-2. For a reusable or third-party module, call `RegisterLocalizedComponent<TComponent, TResource>` and keep the keys in both language files for `TResource`.
-3. Ensure the module declares `AddResource<TResource>()` through its localization dependency.
-4. Re-run `python scripts/validate_localization.py --strict`.
+1. Register the page with `RegisterLocalizedPage<TPage, TResource>` and keep its title key in both language files for `TResource`.
+2. Use a `BuiltInNavigationCategoryIds` value for shell taxonomy, or register a module-owned category once with `RegisterLocalizedCategory<TResource>(stableId, displayNameKey, order)`.
+3. Keep a module-owned category label key in the same `TResource` language files and pass the returned category ID to every page in that category.
+4. Ensure the module declares `AddResource<TResource>()` through its localization dependency.
+5. Re-run `python scripts/validate_localization.py --strict`.
 
 ### Parameterized String Shows {0}
 

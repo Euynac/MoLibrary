@@ -4,8 +4,9 @@
     <div class="navbar-nav navbar-nav-desktop" @ref="_desktopNavRef">
         @foreach (var category in VisibleCategories)
         {
-            <NavBarDropdown Category="@category.Key"
-                            Items="@category.Value" />
+            <NavBarDropdown Category="@category.DisplayName"
+                            CategoryId="@category.Id"
+                            Items="@category.Items" />
         }
 
         @if (HasMoreCategories)
@@ -24,11 +25,11 @@
     <NavBarActions />
 
     <div class="navbar-measurements" @ref="_measurementRailRef" aria-hidden="true">
-        @foreach (var category in OrderedCategories)
+        @foreach (var category in AllCategories)
         {
             <div class="navbar-measure-item" data-nav-measure="category">
                 <button class="navbar-measure-link" type="button">
-                    <span>@category.Key</span>
+                    <span>@category.DisplayName</span>
                     <MudIcon Icon="@Icons.Material.Filled.KeyboardArrowDown"
                              Size="Size.Small"
                              Class="navbar-measure-icon" />

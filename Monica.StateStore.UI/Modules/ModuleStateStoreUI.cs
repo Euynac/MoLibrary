@@ -8,6 +8,7 @@ using Monica.StateStore.UI.Pages;
 using Monica.StateStore.UI.Localization;
 using Monica.StateStore.UI.Services;
 using Monica.StateStore.UI.Services.Browser;
+using Monica.UI.Shell.Models;
 using MudBlazor;
 
 // ReSharper disable once CheckNamespace
@@ -49,11 +50,11 @@ public class ModuleStateStoreUI(ModuleStateStoreUIOption option)
             DependsOnModule<ModuleShellUIGuide>().Register()
                 .RegisterUIComponents(registry =>
                 {
-                    registry.RegisterLocalizedComponent<UIStateStoreDashboardPage>(
+                    registry.RegisterLocalizedPage<UIStateStoreDashboardPage, StateStoreResource>(
                         UIStateStoreDashboardPage.PAGE_URL,
                         "Pages:StateStoreManage:Title",
                         Icons.Material.Filled.Storage,
-                        "Categories:Debug",
+                        BuiltInNavigationCategoryIds.Debug,
                         addToNav: true,
                         navOrder: 20);
                 });

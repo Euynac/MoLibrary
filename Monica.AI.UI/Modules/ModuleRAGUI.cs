@@ -7,6 +7,7 @@ using Monica.Core.Modularity;
 using Monica.Core.Modularity.Abstractions;
 using Monica.Core.Modularity.Annotations;
 using Monica.Core.Modularity.Models;
+using Monica.UI.Shell.Models;
 using MudBlazor;
 
 // ReSharper disable once CheckNamespace
@@ -61,11 +62,11 @@ public class ModuleRAGUI(ModuleRAGUIOption option)
             DependsOnModule<ModuleShellUIGuide>().Register()
                 .RegisterUIComponents(p =>
                 {
-                    p.RegisterLocalizedComponent<RAGManagePage>(
+                    p.RegisterLocalizedPage<RAGManagePage, AIResource>(
                         RAGManagePage.PAGE_URL,
                         "Pages:RAGManage:Title",
                         Icons.Material.Filled.PlaylistPlay,
-                        "Categories:KnowledgeRetrieval",
+                        BuiltInNavigationCategoryIds.KnowledgeRetrieval,
                         addToNav: true,
                         navOrder: 4);
                 });
@@ -76,11 +77,11 @@ public class ModuleRAGUI(ModuleRAGUIOption option)
             DependsOnModule<ModuleShellUIGuide>().Register()
                 .RegisterUIComponents(p =>
                 {
-                    p.RegisterLocalizedComponent<RAGDebugPage>(
+                    p.RegisterLocalizedPage<RAGDebugPage, AIResource>(
                         RAGDebugPage.PAGE_URL,
                         "Pages:RAGDebug:Title",
                         Icons.Material.Filled.ManageSearch,
-                        "Categories:KnowledgeRetrieval",
+                        BuiltInNavigationCategoryIds.KnowledgeRetrieval,
                         addToNav: true,
                         navOrder: 5);
                 });
@@ -91,11 +92,11 @@ public class ModuleRAGUI(ModuleRAGUIOption option)
             DependsOnModule<ModuleShellUIGuide>().Register()
                 .RegisterUIComponents(p =>
                 {
-                    p.RegisterLocalizedComponent<RAGChunkersPage>(
+                    p.RegisterLocalizedPage<RAGChunkersPage, AIResource>(
                         RAGChunkersPage.PAGE_URL,
                         "Pages:RAGChunkers:Title",
                         Icons.Material.Filled.AccountTree,
-                        "Categories:KnowledgeRetrieval",
+                        BuiltInNavigationCategoryIds.KnowledgeRetrieval,
                         addToNav: true,
                         navOrder: 6);
                 });

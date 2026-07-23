@@ -1,4 +1,9 @@
 {
+  "Pages": {
+    "EventBusMonitor": {
+      "Title": "Event Bus Monitor"
+    }
+  },
   "Page": {
     "PageTitle": "Event Bus Monitor",
     "Header": {

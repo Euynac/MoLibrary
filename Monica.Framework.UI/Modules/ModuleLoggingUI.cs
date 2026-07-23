@@ -12,6 +12,8 @@ using Monica.Framework.UI.Pages;
 using Monica.Core.Results;
 using Monica.Framework.UI.UILogging.State;
 using Monica.Framework.UI.UILogging.Support;
+using Monica.Framework.UI.Localization;
+using Monica.UI.Shell.Models;
 using MudBlazor;
 
 // ReSharper disable once CheckNamespace
@@ -50,15 +52,17 @@ public class ModuleLoggingUI(ModuleLoggingUIOption option)
     public override void ClaimDependencies()
     {
         DependsOnModule<ModuleLoggingGuide>().Register();
+        DependsOnModule<ModuleLocalizationGuide>().Register()
+            .AddResource<LoggingResource>();
 
         if (!Option.DisablePage)
         {
             DependsOnModule<ModuleShellUIGuide>().Register()
-                .RegisterUIComponents(p => p.RegisterLocalizedComponent<UILoggingMonitorPage>(
+                .RegisterUIComponents(p => p.RegisterLocalizedPage<UILoggingMonitorPage, LoggingResource>(
                     UILoggingMonitorPage.PAGE_URL,
                     "Pages:LoggingMonitor:Title",
                     Icons.Material.Filled.Article,
-                    "Categories:Monitor",
+                    BuiltInNavigationCategoryIds.Monitor,
                     addToNav: true,
                     navOrder: 30));
         }

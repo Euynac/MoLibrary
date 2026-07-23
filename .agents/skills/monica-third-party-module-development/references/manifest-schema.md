@@ -75,7 +75,7 @@ The scaffold writes a normalized `package.manifest.json` into the generated repo
 
 - `license.openSource` is an explicit publisher declaration.
 - Configure exactly one string `license.expression` or relative `license.file`. An open-source declaration requires a NuGet SPDX expression.
-- `branding.icon.kind` is `compatibility-mark` or `publisher`. A publisher icon requires a relative PNG `file` that is transparent and at least 64×64.
+- `branding.icon.kind` is `compatibility-mark` or `publisher`. `compatibility-mark` copies Monica's canonical emerald PNG and SVG unchanged and adds the required self-attestation and independence notice to the README. A publisher icon requires a relative PNG `file` that is transparent and at least 64×64.
 - `branding.showOpenSourceBadge` is explicit. It may be `true` only when `license.openSource` is `true` and the package uses a license expression. The scaffold otherwise neither copies nor displays the badge.
 - README images and the package icon are copied and packed at the package root so the embedded NuGet README uses root-relative paths.
 
@@ -85,10 +85,11 @@ The scaffold writes a normalized `package.manifest.json` into the generated repo
 - Module `kind` is `infrastructure`, `web`, or `ui`.
 - UI module names must end with one exact `UI` suffix and have a non-empty base name. Non-UI module names must not end in `UI`.
 - `key` is the explicit ecosystem module key. `dependsOn` contains unique, exact module names from the same manifest.
+- For each UI module, the scaffold removes only the key's final `.UI` segment to create its stable navigation category ID. Multiple UI modules in one package therefore need distinct pre-`.UI` key identities; package ID alone is not used as their shared category.
 - Duplicate dependencies, dependency cycles, duplicate names/keys, and UI generated-name collisions are rejected before writing files.
 - Third-party module registrations and `Add*` extensions use `<PackageId>.Modules`; Monica framework dependency guides remain in `Monica.Modules`.
 
-The scaffold is a compilable architectural starting point, not a releasable capability. Its generated tests prove graph-entry registration, transitive options, UI page registration, and resource-marker wiring. Replace the sample shell with real public behavior and scenario tests before publishing.
+The scaffold is a compilable architectural starting point, not a releasable capability. Its generated tests prove graph-entry registration, transitive options, stable category identity, localized page and navigation metadata, deterministic order, and resource-marker wiring. Replace the sample shell with real public behavior and scenario tests before publishing.
 
 Until the selected Monica version is available on a feed, build against a local Monica checkout without changing project files:
 

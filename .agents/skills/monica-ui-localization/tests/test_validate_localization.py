@@ -99,7 +99,7 @@ class LocalizationValidatorTests(unittest.TestCase):
             validator.sync_issues[(resource_b, 'Shared:Title')],
         )
 
-    def test_two_generic_registry_keys_are_checked_against_declared_resource(self) -> None:
+    def test_navigation_keys_are_checked_against_explicit_registered_resource(self) -> None:
         self._add_project(
             'MixedPackage',
             resources={
@@ -121,13 +121,18 @@ class LocalizationValidatorTests(unittest.TestCase):
                     '[ModuleKey("Acme.Monica.MixedPackage.UI")]\n'
                     'public sealed class ModuleDashboard\n'
                     '{\n'
-                    '    void Register(IPageRegistry registry)\n'
+                    '    void Register(INavigationRegistryBuilder registry)\n'
                     '    {\n'
-                    '        registry.RegisterLocalizedComponent<Page, ResourceB>(\n'
+                    '        localization.AddResource<ResourceB>();\n'
+                    '        var category = registry.RegisterLocalizedCategory<ResourceB>(\n'
+                    '            "Acme.Monica.MixedPackage",\n'
+                    '            "Navigation:Category");\n'
+                    '        registry.RegisterLocalizedPage<Page, ResourceB>(\n'
                     '            "/page",\n'
                     '            "Navigation:Page",\n'
-                    '            categoryKey: "Navigation:Category");\n'
+                    '            categoryId: category);\n'
                     '    }\n'
+                    '    ModuleLocalizationGuide localization = default!;\n'
                     '}\n'
                 ),
             },
@@ -145,6 +150,101 @@ class LocalizationValidatorTests(unittest.TestCase):
             (resource_b, 'Navigation:Category'),
             validator.module_resource_missing_keys,
         )
+
+    def test_localized_page_without_explicit_resource_is_rejected(self) -> None:
+        self._add_project(
+            'MixedPackage',
+            resources={
+                'ResourceA': {
+                    'en-US': {'Navigation': {'Page': 'Page'}},
+                    'zh-CN': {'Navigation': {'Page': '页面'}},
+                },
+            },
+            sources={
+                'Modules/ModuleDashboard.cs': (
+                    '[ModuleKey("Acme.Monica.MixedPackage.UI")]\n'
+                    'public sealed class ModuleDashboard\n'
+                    '{\n'
+                    '    void Register(INavigationRegistryBuilder registry)\n'
+                    '    {\n'
+                    '        registry.RegisterLocalizedPage<Page>("/page", "Navigation:Page");\n'
+                    '    }\n'
+                    '}\n'
+                ),
+            },
+            razor_sdk=False,
+        )
+
+        _, report = self._validate()
+
+        self.assertTrue(any(
+            'must declare both TPage and TResource' in message
+            for message in report['resource_resolution_errors']
+        ))
+
+    def test_navigation_resource_must_be_registered_through_add_resource(self) -> None:
+        self._add_project(
+            'MixedPackage',
+            resources={
+                'ResourceA': {
+                    'en-US': {'Navigation': {'Page': 'Page'}},
+                    'zh-CN': {'Navigation': {'Page': '页面'}},
+                },
+            },
+            sources={
+                'Modules/ModuleDashboard.cs': (
+                    '[ModuleKey("Acme.Monica.MixedPackage.UI")]\n'
+                    'public sealed class ModuleDashboard\n'
+                    '{\n'
+                    '    void Register(INavigationRegistryBuilder registry)\n'
+                    '    {\n'
+                    '        registry.RegisterLocalizedPage<Page, ResourceA>(\n'
+                    '            "/page", "Navigation:Page");\n'
+                    '    }\n'
+                    '}\n'
+                ),
+            },
+            razor_sdk=False,
+        )
+
+        _, report = self._validate()
+
+        self.assertTrue(any(
+            'is not registered through AddResource<ResourceA>()' in message
+            for message in report['resource_resolution_errors']
+        ))
+
+    def test_legacy_localized_component_registration_is_rejected(self) -> None:
+        self._add_project(
+            'MixedPackage',
+            resources={
+                'ResourceA': {
+                    'en-US': {'Navigation': {'Page': 'Page'}},
+                    'zh-CN': {'Navigation': {'Page': '页面'}},
+                },
+            },
+            sources={
+                'Modules/ModuleDashboard.cs': (
+                    '[ModuleKey("Acme.Monica.MixedPackage.UI")]\n'
+                    'public sealed class ModuleDashboard\n'
+                    '{\n'
+                    '    void Register(INavigationRegistryBuilder registry)\n'
+                    '    {\n'
+                    '        registry.RegisterLocalizedComponent<Page, ResourceA>(\n'
+                    '            "/page", "Navigation:Page");\n'
+                    '    }\n'
+                    '}\n'
+                ),
+            },
+            razor_sdk=False,
+        )
+
+        _, report = self._validate()
+
+        self.assertTrue(any(
+            'Legacy RegisterLocalizedComponent usage is not allowed' in message
+            for message in report['resource_resolution_errors']
+        ))
 
     def test_mixed_ui_project_does_not_require_ui_project_suffix(self) -> None:
         project = self._add_project(

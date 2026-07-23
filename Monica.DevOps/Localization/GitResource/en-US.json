@@ -1,4 +1,9 @@
 {
+  "Pages": {
+    "GitRepositories": {
+      "Title": "Git Repositories"
+    }
+  },
   "GitDashboard": {
     "PageTitle": "Git Repositories",
     "Title": "Git Repositories",

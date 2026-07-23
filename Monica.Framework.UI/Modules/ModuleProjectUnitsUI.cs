@@ -6,6 +6,7 @@ using Monica.Core.Modularity.Annotations;
 using Monica.Core.Modularity.Models;
 using Monica.Framework.UI.Localization;
 using Monica.Framework.UI.Pages;
+using Monica.UI.Shell.Models;
 using MudBlazor;
 
 // ReSharper disable once CheckNamespace
@@ -47,11 +48,11 @@ public class ModuleProjectUnitsUI(ModuleProjectUnitsUIOption option)
 
             DependsOnModule<ModuleProjectUnitsGuide>().Register();
             DependsOnModule<ModuleShellUIGuide>().Register(o => o.EnableMarkdown = true)
-                .RegisterUIComponents(p => p.RegisterLocalizedComponent<UIProjectUnitsPage>(
+                .RegisterUIComponents(p => p.RegisterLocalizedPage<UIProjectUnitsPage, ProjectUnitsResource>(
                     UIProjectUnitsPage.PAGE_URL,
                     "Pages:ProjectUnits:Title",
                     Icons.Material.Filled.Monitor,
-                    "Categories:Monitor",
+                    BuiltInNavigationCategoryIds.Monitor,
                     addToNav: true,
                     navOrder: 20));
         }

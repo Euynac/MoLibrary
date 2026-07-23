@@ -1,4 +1,12 @@
 {
+  "Pages": {
+    "DiffHighlight": {
+      "Title": "文本差异对比"
+    },
+    "ModuleSystemDashboard": {
+      "Title": "模块系统概览"
+    }
+  },
   "Common": {
     "Close": "关闭"
   },
@@ -68,7 +76,19 @@
   },
   "NavBar": {
     "More": "更多",
-    "MoreModules": "更多模块"
+    "MoreModules": "更多模块",
+    "Categories": {
+      "AI": "AI",
+      "KnowledgeRetrieval": "知识与检索",
+      "Documentation": "文档",
+      "Configuration": "配置",
+      "Infrastructure": "基础设施",
+      "Module": "模块",
+      "TaskScheduling": "任务调度",
+      "Monitor": "监控",
+      "Debug": "调试",
+      "Uncategorized": "未分类"
+    }
   },
   "ModuleSystem": {
     "Dashboard": {
@@ -367,11 +387,6 @@
       },
       "Labels": {
         "Close": "关闭"
-      }
-    },
-    "Common": {
-      "Labels": {
-        "Uncategorized": "未分类"
       }
     },
     "AssemblyAnalysis": {

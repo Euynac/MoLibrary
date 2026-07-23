@@ -3,7 +3,9 @@ using Monica.Core.Modularity;
 using Monica.Core.Modularity.Abstractions;
 using Monica.Core.Modularity.Annotations;
 using Monica.Core.Modularity.Models;
+using Monica.UI.Localization;
 using Monica.UI.Pages;
+using Monica.UI.Shell.Models;
 using MudBlazor;
 
 // ReSharper disable once CheckNamespace
@@ -42,11 +44,11 @@ public class ModuleSystemUI(ModuleSystemUIOption option)
 
         DependsOnModule<ModuleSystemGuide>().Register();
         DependsOnModule<ModuleShellUIGuide>().Register()
-            .RegisterUIComponents(registry => registry.RegisterLocalizedComponent<ModuleSystemPage>(
+            .RegisterUIComponents(registry => registry.RegisterLocalizedPage<ModuleSystemPage, SharedResource>(
                 ModuleSystemPage.MODULE_SYSTEM_DASHBOARD_URL,
                 "Pages:ModuleSystemDashboard:Title",
                 Icons.Material.Filled.Dashboard,
-                "Categories:Module",
+                BuiltInNavigationCategoryIds.Module,
                 addToNav: true,
                 navOrder: 10));
     }

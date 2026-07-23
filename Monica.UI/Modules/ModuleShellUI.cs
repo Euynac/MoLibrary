@@ -51,7 +51,6 @@ public class ModuleShellUI(ModuleShellUIOption option)
     public override void ClaimDependencies()
     {
         DependsOnModule<ModuleLocalizationGuide>().Register()
-            .AddResource<UIRegistryResource>()
             .AddResource<SharedResource>();
     }
 
@@ -97,8 +96,12 @@ public class ModuleShellUI(ModuleShellUIOption option)
                 options.EnableDetailedErrors = Option.EnableDebug;
             });
 
-        // Register UI component management service
-        services.AddSingleton<IPageRegistry, PageRegistry>();
+        // Keep startup contributions write-only and publish a separate immutable read catalog.
+        services.AddSingleton<PageRegistry>();
+        services.AddSingleton<INavigationRegistryBuilder>(
+            static serviceProvider => serviceProvider.GetRequiredService<PageRegistry>());
+        services.AddSingleton<IPageCatalog>(
+            static serviceProvider => serviceProvider.GetRequiredService<PageRegistry>());
 
         // Register for browser storage service
         services.AddScoped<IBrowserStorage, BrowserStorage>();
@@ -128,7 +131,8 @@ public class ModuleShellUI(ModuleShellUIOption option)
     public override void ConfigureEndpoints(IApplicationBuilder app)
     {
         var webApp = RequireWebApplication(app);
-        var registry = app.ApplicationServices.GetRequiredService<IPageRegistry>();
+        var registry = app.ApplicationServices.GetRequiredService<PageRegistry>();
+        registry.Seal();
 
         foreach (var redirect in Option.RouteRedirects)
         {
@@ -171,16 +175,29 @@ public class ModuleShellUIGuide : WebModuleGuide<ModuleShellUI, ModuleShellUIOpt
 {
 
     /// <summary>
-    /// Register UI components
+    /// Registers startup-only page and navigation contributions with the Monica UI shell.
     /// </summary>
-    /// <param name="registrationAction">Component registration configuration action</param>
-    /// <returns>Configuration Director</returns>
-    public ModuleShellUIGuide RegisterUIComponents(Action<IPageRegistry> registrationAction)
+    /// <param name="registrationAction">
+    /// The callback that receives the host's write-only navigation registry during application startup.
+    /// </param>
+    /// <returns>This guide so additional shell configuration can be chained.</returns>
+    /// <remarks>
+    /// The callback runs before routing is added. Do not capture or retain its registry argument: the shell seals all
+    /// contributions when endpoint configuration begins, after which further writes fail. A module that calls
+    /// <see cref="INavigationRegistryBuilder.RegisterLocalizedPage{TPage,TResource}"/> or
+    /// <see cref="INavigationRegistryBuilder.RegisterLocalizedCategory{TResource}"/> must also register the same
+    /// module-owned resource through <see cref="ModuleLocalizationGuide.AddResource{TResource}"/>.
+    /// </remarks>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="registrationAction"/> is null.</exception>
+    public ModuleShellUIGuide RegisterUIComponents(Action<INavigationRegistryBuilder> registrationAction)
     {
+        ArgumentNullException.ThrowIfNull(registrationAction);
+
         // Perform component registration at application startup.
         ConfigureApplicationBuilder(builder =>
         {
-            var registry = builder.ApplicationBuilder.ApplicationServices.GetRequiredService<IPageRegistry>();
+            var registry = builder.ApplicationBuilder.ApplicationServices
+                .GetRequiredService<INavigationRegistryBuilder>();
             registrationAction(registry);
         }, ModuleApplicationMiddlewareOrder.BeforeUseRouting, secondKey: Guid.NewGuid().ToString());
 

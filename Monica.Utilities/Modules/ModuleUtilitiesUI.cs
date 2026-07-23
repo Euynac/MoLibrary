@@ -4,6 +4,8 @@ using Monica.Core.Modularity;
 using Monica.Core.Modularity.Abstractions;
 using Monica.Core.Modularity.Annotations;
 using Monica.Core.Modularity.Models;
+using Monica.UI.Shell.Models;
+using Monica.Utilities.Localization;
 using Monica.Utilities.Pages;
 using Monica.Utilities.UIUtilities.State;
 using MudBlazor;
@@ -39,11 +41,11 @@ public class ModuleUtilitiesUI(ModuleUtilitiesUIOption option)
 
         DependsOnModule<ModuleUtilitiesGuide>().Register();
         DependsOnModule<ModuleShellUIGuide>().Register()
-            .RegisterUIComponents(registry => registry.RegisterLocalizedComponent<UIUtilitiesPage>(
+            .RegisterUIComponents(registry => registry.RegisterLocalizedPage<UIUtilitiesPage, UtilitiesResource>(
                 UIUtilitiesPage.PAGE_URL,
                 "Pages:UtilitiesToolbox:Title",
                 Icons.Material.Filled.Build,
-                "Categories:Infrastructure",
+                BuiltInNavigationCategoryIds.Infrastructure,
                 addToNav: true,
                 navOrder: 38));
     }

@@ -1,4 +1,9 @@
 {
+  "Pages": {
+    "StateStoreManage": {
+      "Title": "状态存储管理"
+    }
+  },
   "Dashboard": {
     "PageTitle": "状态存储管理",
     "Eyebrow": "状态浏览器",

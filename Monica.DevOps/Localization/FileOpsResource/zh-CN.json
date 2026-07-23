@@ -1,4 +1,9 @@
 {
+  "Pages": {
+    "FileOps": {
+      "Title": "文件运维工作区"
+    }
+  },
   "Page": {
     "DocumentTitle": "文件运维工作区",
     "Title": "文件运维工作区",

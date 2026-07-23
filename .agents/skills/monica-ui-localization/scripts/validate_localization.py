@@ -73,6 +73,11 @@ LITERAL_UI_MODULE_KEY_PATTERN = re.compile(
     r'\[\s*ModuleKey\s*\(\s*"[^"]*\.UI"\s*\)\s*\]',
     re.IGNORECASE,
 )
+ADD_RESOURCE_PATTERN = re.compile(
+    r'\bAddResource\s*<\s*'
+    r'(?P<resource>(?:global::)?[A-Za-z_][A-Za-z0-9_]*(?:(?:::|\.)[A-Za-z_][A-Za-z0-9_]*)*)'
+    r'\s*>',
+)
 
 
 class Colors:
@@ -104,10 +109,6 @@ class LocalizationValidator:
             self.project_resources[project_path].append(resource_path)
             self.resources_by_name[resource_dir.name].append(resource_path)
 
-        ui_registry_candidates = self.resources_by_name.get('UIRegistryResource', [])
-        self.ui_registry_resource_path = (
-            ui_registry_candidates[0] if len(ui_registry_candidates) == 1 else None
-        )
         # Resource-aware source state.
         self.used_keys: DefaultDict[ResourceKey, List[Location]] = defaultdict(list)
         self.unresolved_used_keys: DefaultDict[ResourceKey, List[Location]] = defaultdict(list)
@@ -121,8 +122,6 @@ class LocalizationValidator:
         self.sync_issues: Dict[ResourceKey, Dict[str, bool]] = {}
 
         # Resource-aware registry state.
-        self.ui_registry_used_keys: DefaultDict[str, List[RegistrationLocation]] = defaultdict(list)
-        self.ui_registry_missing_keys: DefaultDict[str, List[RegistrationLocation]] = defaultdict(list)
         self.module_resource_used_keys: DefaultDict[
             ResourceKey, List[RegistrationLocation]
         ] = defaultdict(list)
@@ -207,7 +206,8 @@ class LocalizationValidator:
             except OSError:
                 continue
             if (
-                'RegisterLocalizedComponent<' in module_text
+                'RegisterLocalizedPage<' in module_text
+                or 'RegisterLocalizedComponent<' in module_text
                 or LITERAL_UI_MODULE_KEY_PATTERN.search(module_text)
             ):
                 return True
@@ -340,7 +340,12 @@ class LocalizationValidator:
 
         registration_ranges = [
             (start, end)
-            for start, _, _, end in self._extract_register_localized_component_calls(masked_content)
+            for marker in (
+                'RegisterLocalizedPage<',
+                'RegisterLocalizedCategory<',
+                'RegisterLocalizedComponent<',
+            )
+            for start, _, _, end in self._extract_generic_calls(masked_content, marker)
         ]
         ignored_ranges = registration_ranges + [access.span() for access in localizer_accesses]
         self._scan_indirect_key_literals(
@@ -556,9 +561,10 @@ class LocalizationValidator:
         except re.error:
             return None
 
-    def scan_ui_registry_keys(self) -> None:
-        """Route each localized registration to its declared resource marker."""
+    def scan_navigation_registration_keys(self) -> None:
+        """Route page and category registration keys to their explicit resource markers."""
         for project_path in self.ui_projects:
+            registered_resource_types = self._discover_registered_resource_types(project_path)
             for cs_file in self._walk_files(project_path, ('.cs',)):
                 try:
                     content = cs_file.read_text(encoding='utf-8')
@@ -568,12 +574,28 @@ class LocalizationValidator:
 
                 masked_content = self._mask_comments(content)
                 relative_path = self._relative_path(cs_file)
-                calls = self._extract_register_localized_component_calls(masked_content)
-                for start_index, resource_type, argument_block, _ in calls:
+                legacy_index = masked_content.find('RegisterLocalizedComponent<')
+                if legacy_index >= 0:
+                    line_number = masked_content.count('\n', 0, legacy_index) + 1
+                    self.resource_resolution_errors.add(
+                        'Legacy RegisterLocalizedComponent usage is not allowed at '
+                        f'{relative_path}:{line_number}. Use RegisterLocalizedPage<TPage, TResource> '
+                        'and a stable navigation category identifier.'
+                    )
+
+                page_calls = self._extract_generic_calls(masked_content, 'RegisterLocalizedPage<')
+                for start_index, generic_arguments, argument_block, _ in page_calls:
                     line_number = masked_content.count('\n', 0, start_index) + 1
+                    if len(generic_arguments) != 2:
+                        self.resource_resolution_errors.add(
+                            'RegisterLocalizedPage must declare both TPage and TResource at '
+                            f'{relative_path}:{line_number}.'
+                        )
+                        continue
+
+                    resource_type = self._simple_type_name(generic_arguments[1])
                     args = self._split_top_level_args(argument_block)
                     display_name = self._find_string_argument(args, 1, 'displayNameKey')
-                    category = self._find_string_argument(args, 3, 'categoryKey')
 
                     if display_name:
                         self._record_registration_key(
@@ -583,16 +605,48 @@ class LocalizationValidator:
                             relative_path,
                             line_number,
                             'displayNameKey',
+                            registered_resource_types,
                         )
-                    if category:
+
+                category_calls = self._extract_generic_calls(
+                    masked_content,
+                    'RegisterLocalizedCategory<',
+                )
+                for start_index, generic_arguments, argument_block, _ in category_calls:
+                    line_number = masked_content.count('\n', 0, start_index) + 1
+                    if len(generic_arguments) != 1:
+                        self.resource_resolution_errors.add(
+                            'RegisterLocalizedCategory must declare exactly one TResource at '
+                            f'{relative_path}:{line_number}.'
+                        )
+                        continue
+
+                    resource_type = self._simple_type_name(generic_arguments[0])
+                    args = self._split_top_level_args(argument_block)
+                    display_name = self._find_string_argument(args, 1, 'displayNameKey')
+                    if display_name:
                         self._record_registration_key(
                             project_path,
                             resource_type,
-                            category,
+                            display_name,
                             relative_path,
                             line_number,
-                            'categoryKey',
+                            'categoryDisplayNameKey',
+                            registered_resource_types,
                         )
+
+    def _discover_registered_resource_types(self, project_path: Path) -> Set[str]:
+        registered: Set[str] = set()
+        for source_file in self._walk_files(project_path, ('.cs',)):
+            try:
+                content = self._mask_comments(source_file.read_text(encoding='utf-8'))
+            except OSError:
+                continue
+            registered.update(
+                self._simple_type_name(match.group('resource'))
+                for match in ADD_RESOURCE_PATTERN.finditer(content)
+            )
+        return registered
 
     def _record_registration_key(
         self,
@@ -602,24 +656,21 @@ class LocalizationValidator:
         relative_path: str,
         line_number: int,
         role: str,
+        registered_resource_types: Set[str],
     ) -> None:
         location = (relative_path, line_number, role)
-        if resource_type == 'UIRegistryResource':
-            self.ui_registry_used_keys[key].append(location)
-            if self.ui_registry_resource_path is None:
-                self.resource_resolution_errors.add(
-                    'One-generic RegisterLocalizedComponent usage requires a discovered '
-                    'UIRegistryResource. Use the two-generic overload with the module-owned '
-                    f'resource at {relative_path}:{line_number}.'
-                )
-            return
-
         resource_path = self._resolve_resource_type(project_path, resource_type)
         if resource_path is None:
             resource_path = f'<unresolved:{resource_type}>'
             self.resource_resolution_errors.add(
                 f'Could not resolve registration resource {resource_type} at '
                 f'{relative_path}:{line_number}.'
+            )
+        if resource_type not in registered_resource_types:
+            self.resource_resolution_errors.add(
+                f'Navigation resource {resource_type} is not registered through '
+                f'AddResource<{resource_type}>() in project {project_path.name}; '
+                f'used at {relative_path}:{line_number}.'
             )
         self.module_resource_used_keys[(resource_path, key)].append(
             (relative_path, line_number, f'{resource_type}.{role}')
@@ -641,12 +692,12 @@ class LocalizationValidator:
     def _simple_type_name(type_name: str) -> str:
         return type_name.replace('global::', '').replace('::', '.').split('.')[-1].strip()
 
-    def _extract_register_localized_component_calls(
+    def _extract_generic_calls(
         self,
         content: str,
-    ) -> List[Tuple[int, str, str, int]]:
-        marker = 'RegisterLocalizedComponent<'
-        results: List[Tuple[int, str, str, int]] = []
+        marker: str,
+    ) -> List[Tuple[int, List[str], str, int]]:
+        results: List[Tuple[int, List[str], str, int]] = []
         index = 0
         while True:
             start = content.find(marker, index)
@@ -661,10 +712,6 @@ class LocalizationValidator:
             generic_arguments = self._split_top_level_args(
                 content[generic_open + 1:generic_close]
             )
-            resource_type = 'UIRegistryResource'
-            if len(generic_arguments) >= 2:
-                resource_type = self._simple_type_name(generic_arguments[1])
-
             open_parenthesis = content.find('(', generic_close)
             if open_parenthesis == -1:
                 break
@@ -675,7 +722,7 @@ class LocalizationValidator:
             results.append(
                 (
                     start,
-                    resource_type,
+                    generic_arguments,
                     content[open_parenthesis + 1:close_parenthesis],
                     close_parenthesis + 1,
                 )
@@ -884,11 +931,6 @@ class LocalizationValidator:
             self.missing_keys[resource_key].extend(locations)
 
         used_resource_keys = set(self.used_keys)
-        if self.ui_registry_resource_path is not None:
-            used_resource_keys.update(
-                (self.ui_registry_resource_path, key)
-                for key in self.ui_registry_used_keys
-            )
         used_resource_keys.update(
             resource_key
             for resource_key in self.module_resource_used_keys
@@ -916,14 +958,9 @@ class LocalizationValidator:
                 if not all(presence.values()):
                     self.sync_issues[(resource_path, key)] = presence
 
-    def validate_ui_registry_usage(self) -> None:
+    def validate_navigation_registration_usage(self) -> None:
         """Ensure registration keys exist in the registration's exact resource."""
-        self.ui_registry_missing_keys.clear()
         self.module_resource_missing_keys.clear()
-        ui_registry_keys = self._resource_key_union(self.ui_registry_resource_path)
-        for key, locations in self.ui_registry_used_keys.items():
-            if key not in ui_registry_keys:
-                self.ui_registry_missing_keys[key].extend(locations)
         for resource_key, locations in self.module_resource_used_keys.items():
             resource_path, key = resource_key
             if key not in self._resource_key_union(resource_path):
@@ -942,7 +979,6 @@ class LocalizationValidator:
                 self.missing_language_files,
                 self.missing_keys,
                 self.sync_issues,
-                self.ui_registry_missing_keys,
                 self.module_resource_missing_keys,
                 self.resource_resolution_errors,
                 self.ambiguous_used_keys,
@@ -995,10 +1031,6 @@ class LocalizationValidator:
                 }
                 for (resource, key), presence in sorted(self.sync_issues.items())
             ],
-            'ui_registry_missing_keys': {
-                key: self._registration_locations(locations)
-                for key, locations in sorted(self.ui_registry_missing_keys.items())
-            },
             'module_resource_missing_keys': [
                 {
                     'resource': self._resource_label(resource),
@@ -1018,7 +1050,6 @@ class LocalizationValidator:
                     for resource in self.resource_defined_keys
                 ),
                 'total_keys_used': len(self.used_keys)
-                + len(self.ui_registry_used_keys)
                 + len(self.module_resource_used_keys),
                 'discovery_errors_count': len(self.discovery_errors),
                 'discovery_warnings_count': len(self.discovery_warnings),
@@ -1028,7 +1059,6 @@ class LocalizationValidator:
                 'ambiguous_count': len(self.ambiguous_used_keys),
                 'unused_count': len(self.unused_keys),
                 'sync_issues_count': len(self.sync_issues),
-                'ui_registry_missing_count': len(self.ui_registry_missing_keys),
                 'module_resource_missing_count': len(self.module_resource_missing_keys),
                 'resource_resolution_errors_count': len(self.resource_resolution_errors),
                 'status': 'FAILED' if hard_error else 'PASSED',
@@ -1085,8 +1115,7 @@ class LocalizationValidator:
         self._print_count('Missing culture files', summary['missing_language_files_count'], True)
         self._print_count('Missing source keys', summary['missing_count'], True)
         self._print_count('Ambiguous source keys', summary['ambiguous_count'], True)
-        self._print_count('Invalid UI registry keys', summary['ui_registry_missing_count'], True)
-        self._print_count('Invalid module resource keys', summary['module_resource_missing_count'], True)
+        self._print_count('Invalid navigation resource keys', summary['module_resource_missing_count'], True)
         self._print_count(
             'Resource resolution errors',
             summary['resource_resolution_errors_count'],
@@ -1126,10 +1155,6 @@ class LocalizationValidator:
             print(f'{Colors.RED}[ERROR] Ambiguous key {key}; candidates: {labels}{Colors.END}')
             for file_path, line_number in locations:
                 print(f'  Used in: {file_path}:{line_number}')
-        for key, locations in sorted(self.ui_registry_missing_keys.items()):
-            print(f'{Colors.RED}[ERROR] Missing UIRegistryResource key {key}{Colors.END}')
-            for file_path, line_number, role in locations:
-                print(f'  Used in: {file_path}:{line_number} ({role})')
         for (resource, key), locations in sorted(self.module_resource_missing_keys.items()):
             print(
                 f'{Colors.RED}[ERROR] Missing registry key {key} in '
@@ -1160,7 +1185,6 @@ class LocalizationValidator:
                 self.missing_language_files,
                 self.missing_keys,
                 self.ambiguous_used_keys,
-                self.ui_registry_missing_keys,
                 self.module_resource_missing_keys,
                 self.resource_resolution_errors,
                 self.unused_keys,
@@ -1180,10 +1204,10 @@ def run_validation(
         validator.load_json_keys()
         validator.scan_razor_files()
         validator.scan_cs_files()
-        validator.scan_ui_registry_keys()
+        validator.scan_navigation_registration_keys()
         validator.validate_bidirectional()
         validator.validate_language_sync()
-        validator.validate_ui_registry_usage()
+        validator.validate_navigation_registration_usage()
     return validator.generate_report(output_format, summary_only)
 
 

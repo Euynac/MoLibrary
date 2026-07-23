@@ -7,6 +7,7 @@ using Monica.Core.Modularity;
 using Monica.Core.Modularity.Abstractions;
 using Monica.Core.Modularity.Annotations;
 using Monica.Core.Modularity.Models;
+using Monica.UI.Shell.Models;
 using MudBlazor;
 
 // ReSharper disable once CheckNamespace
@@ -51,11 +52,11 @@ public sealed class ModuleKnowledgeBaseUI(ModuleKnowledgeBaseUIOption option)
             DependsOnModule<ModuleShellUIGuide>().Register()
                 .RegisterUIComponents(p =>
                 {
-                    p.RegisterLocalizedComponent<KnowledgeBaseManagePage>(
+                    p.RegisterLocalizedPage<KnowledgeBaseManagePage, AIResource>(
                         KnowledgeBaseManagePage.PAGE_URL,
                         "Pages:KnowledgeBaseManage:Title",
                         Icons.Material.Filled.Storage,
-                        "Categories:KnowledgeRetrieval",
+                        BuiltInNavigationCategoryIds.KnowledgeRetrieval,
                         addToNav: true,
                         navOrder: 3);
                 });

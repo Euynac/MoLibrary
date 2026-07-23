@@ -14,6 +14,7 @@ using Monica.Core.Modularity.Models;
 using Monica.Core.Results;
 using Monica.UI.Localization;
 using Monica.UI.Pages;
+using Monica.UI.Shell.Models;
 using Monica.UI.UISystemInfo.Models;
 using Monica.UI.UISystemInfo.Support;
 using MudBlazor;
@@ -67,11 +68,11 @@ public class ModuleSystemInfoUI(ModuleSystemInfoUIOption option)
         if (!Option.DisablePage)
         {
             DependsOnModule<ModuleShellUIGuide>().Register()
-                .RegisterUIComponents(p => p.RegisterLocalizedComponent<UISystemInfoPage>(
+                .RegisterUIComponents(p => p.RegisterLocalizedPage<UISystemInfoPage, SystemInfoResource>(
                     UISystemInfoPage.PAGE_URL,
                     "Pages:SystemInfo:Title",
                     Icons.Material.Filled.Info,
-                    "Categories:Monitor",
+                    BuiltInNavigationCategoryIds.Monitor,
                     addToNav: true,
                     navOrder: 50));
         }

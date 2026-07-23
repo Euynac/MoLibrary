@@ -4,6 +4,8 @@ using Monica.Core.Modularity.Abstractions;
 using Monica.Core.Modularity.Annotations;
 using Monica.Core.Modularity.Models;
 using Monica.DevOps.FileOps.Pages;
+using Monica.DevOps.Localization;
+using Monica.UI.Shell.Models;
 using MudBlazor;
 
 // ReSharper disable once CheckNamespace
@@ -22,11 +24,11 @@ public class ModuleFileOpsUI(ModuleFileOpsUIOption option)
 
         DependsOnModule<ModuleFileOpsGuide>().Register();
         DependsOnModule<ModuleShellUIGuide>().Register()
-            .RegisterUIComponents(registry => registry.RegisterLocalizedComponent<UIFileOpsPage>(
+            .RegisterUIComponents(registry => registry.RegisterLocalizedPage<UIFileOpsPage, FileOpsResource>(
                 UIFileOpsPage.PAGE_URL,
                 "Pages:FileOps:Title",
                 Icons.Material.Filled.Folder,
-                "Categories:Infrastructure",
+                BuiltInNavigationCategoryIds.Infrastructure,
                 addToNav: true,
                 navOrder: 36));
     }
