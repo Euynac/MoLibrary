@@ -131,6 +131,8 @@
     font-size: 0.95rem;
     font-weight: 500;
     padding: 0.5rem 1.2rem;
+    --mo-navbar-link-padding-block: 0.5rem;
+    --mo-navbar-link-padding-inline: 1.2rem;
     border-radius: var(--mo-zen-radius-irregular);
     transition: all var(--mo-zen-transition);
 }

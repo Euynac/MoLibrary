@@ -1,4 +1,9 @@
 {
+  "Pages": {
+    "ProjectUnits": {
+      "Title": "项目单元"
+    }
+  },
   "Page": {
     "PageTitle": "项目单元",
     "Header": {

@@ -1,4 +1,9 @@
 {
+  "Pages": {
+    "RepositoryDashboard": {
+      "Title": "Repository 诊断"
+    }
+  },
   "Dashboard": {
     "PageTitle": "Repository 诊断",
     "Eyebrow": "Repository",

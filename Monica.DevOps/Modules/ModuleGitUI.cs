@@ -5,6 +5,7 @@ using Monica.Core.Modularity.Annotations;
 using Monica.Core.Modularity.Models;
 using Monica.DevOps.Git.Pages;
 using Monica.DevOps.Localization;
+using Monica.UI.Shell.Models;
 using MudBlazor;
 
 // ReSharper disable once CheckNamespace
@@ -47,11 +48,11 @@ public class ModuleGitUI(ModuleGitUIOption option)
             DependsOnModule<ModuleShellUIGuide>().Register()
                 .RegisterUIComponents(registry =>
                 {
-                    registry.RegisterLocalizedComponent<UIGitRepositoriesPage>(
+                    registry.RegisterLocalizedPage<UIGitRepositoriesPage, GitResource>(
                         UIGitRepositoriesPage.PAGE_URL,
                         "Pages:GitRepositories:Title",
                         Icons.Material.Filled.Source,
-                        "Categories:Infrastructure",
+                        BuiltInNavigationCategoryIds.Infrastructure,
                         addToNav: true,
                         navOrder: 55);
                 });

@@ -31,7 +31,7 @@ Invoke when:
 ### /monica-ui-localization
 
 Invoke when:
-- Adding, changing, reviewing, or validating Monica UI localization/i18n, user-facing text, `IStringLocalizer<TResource>` usage, `RegisterLocalizedComponent(...)` keys, or `zh-CN`/`en-US` resources
+- Adding, changing, reviewing, or validating Monica UI localization/i18n, user-facing text, `IStringLocalizer<TResource>` usage, `RegisterLocalizedPage(...)` or `RegisterLocalizedCategory(...)` keys, or `zh-CN`/`en-US` resources
 
 ## UI Theme Color Contract
 

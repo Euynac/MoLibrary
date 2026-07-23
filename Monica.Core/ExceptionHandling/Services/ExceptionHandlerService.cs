@@ -27,9 +27,21 @@ internal class ExceptionHandlerService(
         return HandleAsync(accessor.HttpContext, exception, cancellationToken);
     }
 
-    public void LogException(HttpContext? httpContext, Exception exception)
+    public void LogException(HttpContext? httpContext, Exception exception, Res response)
     {
-        logger.LogError(exception, $"{httpContext?.Request.Path} threw an exception");
+        var statusCode = response.ToHttpStatusCode() ?? System.Net.HttpStatusCode.InternalServerError;
+        if ((int)statusCode >= StatusCodes.Status500InternalServerError)
+        {
+            logger.LogError(exception, "{Path} threw an unhandled server exception", httpContext?.Request.Path);
+            return;
+        }
+
+        logger.LogWarning(
+            "{Path} rejected a request with HTTP {StatusCode}: {ExceptionType}: {ExceptionMessage}",
+            httpContext?.Request.Path,
+            (int)statusCode,
+            exception.GetType().Name,
+            exception.Message);
     }
 
     public Task<Res> HandleAsync(HttpContext? httpContext, Exception exception, CancellationToken cancellationToken)

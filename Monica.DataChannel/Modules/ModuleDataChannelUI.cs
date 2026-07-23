@@ -3,7 +3,9 @@ using Monica.Core.Modularity;
 using Monica.Core.Modularity.Abstractions;
 using Monica.Core.Modularity.Annotations;
 using Monica.Core.Modularity.Models;
+using Monica.DataChannel.Localization;
 using Monica.DataChannel.Pages;
+using Monica.UI.Shell.Models;
 using MudBlazor;
 
 // ReSharper disable once CheckNamespace
@@ -30,13 +32,16 @@ public class ModuleDataChannelUI(ModuleDataChannelUIOption option)
             // Depend on the UIStackTrace module for exception stack visualization.
             DependsOnModule<ModuleStackTraceUIGuide>().Register();
 
+            DependsOnModule<ModuleLocalizationGuide>().Register()
+                .AddResource<DataChannelResource>();
+
             // Depend on the UI core module and register the DataChannel page.
             DependsOnModule<ModuleShellUIGuide>().Register()
-                .RegisterUIComponents(p => p.RegisterLocalizedComponent<UIDataChannelPage>(
+                .RegisterUIComponents(p => p.RegisterLocalizedPage<UIDataChannelPage, DataChannelResource>(
                     UIDataChannelPage.PAGE_URL,
                     "Pages:DataChannelManage:Title",
                     Icons.Material.Filled.DataObject,
-                    "Categories:Monitor",
+                    BuiltInNavigationCategoryIds.Monitor,
                     addToNav: true,
                     navOrder: 30));
         }

@@ -69,6 +69,18 @@ internal sealed class ModuleDependencyState
 
     internal void RegisterMapping(Type moduleType, ModuleKey moduleKey)
     {
+        if (_moduleKeysByType.TryGetValue(moduleType, out var existingKey) && existingKey != moduleKey)
+        {
+            throw new InvalidOperationException(
+                $"Module type '{moduleType.FullName}' is already mapped to key '{existingKey}' and cannot be remapped to '{moduleKey}'.");
+        }
+
+        if (_moduleTypesByKey.TryGetValue(moduleKey, out var existingType) && existingType != moduleType)
+        {
+            throw new InvalidOperationException(
+                $"Module key '{moduleKey}' is already mapped to type '{existingType.FullName}' and cannot also map to '{moduleType.FullName}'.");
+        }
+
         _moduleKeysByType[moduleType] = moduleKey;
         _moduleTypesByKey[moduleKey] = moduleType;
     }

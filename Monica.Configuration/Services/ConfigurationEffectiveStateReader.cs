@@ -14,13 +14,11 @@ namespace Monica.Configuration.Services;
 /// <param name="seedFactory">The factory for persisted and runtime fallback JSON values.</param>
 /// <param name="documentEditor">The logical-path reader for effective-value documents.</param>
 /// <param name="sourceInspector">The runtime configuration source inspector.</param>
-/// <param name="runtimeContext">The current Microsoft configuration runtime context.</param>
 public sealed class ConfigurationEffectiveStateReader(
     IConfigurationEffectiveValueStore effectiveValueStore,
     ConfigurationEffectiveValueSeedFactory seedFactory,
     ConfigurationEffectiveValueDocumentEditor documentEditor,
-    IConfigurationSourceInspector sourceInspector,
-    ConfigurationRuntimeContext runtimeContext)
+    IConfigurationSourceInspector sourceInspector)
 {
     /// <summary>
     /// Reads one display-safe effective value.
@@ -35,28 +33,24 @@ public sealed class ConfigurationEffectiveStateReader(
         CancellationToken cancellationToken)
     {
         var document = await effectiveValueStore.GetAsync(definition.DefinitionKey, cancellationToken);
-        var publishedValueJson = definition.Origin == ConfigurationDefinitionOrigin.PublishedMetadata
-            ? document?.Json ?? seedFactory.CreateSeedJson(definition)
-            : null;
-        var publishedStoredValue = publishedValueJson is null
-            ? null
-            : documentEditor.ReadValue(definition, publishedValueJson, logicalPath);
         var targetNode = ConfigurationSchemaNavigator.ResolveNode(definition.Root, logicalPath);
+        var snapshotJson = CreateSnapshotJson(definition, document);
+        var storedValue = documentEditor.ReadValue(definition, snapshotJson, logicalPath);
         var runtimeSourceValue = definition.Origin == ConfigurationDefinitionOrigin.LocalScan
                                  && targetNode?.NodeKind == ConfigurationNodeKind.Scalar
             ? sourceInspector.GetSourceChain(definition, logicalPath).Values.FirstOrDefault(value => value.IsEffective)
             : null;
-        return ReadValue(
+        return MaterializeValue(
             definition,
             logicalPath,
             targetNode,
             document,
-            publishedStoredValue,
+            storedValue,
             runtimeSourceValue);
     }
 
     /// <summary>
-    /// Reads the effective management state for every directly editable value in one definition.
+    /// Reads the effective management state for every statically declared value in one definition.
     /// </summary>
     /// <param name="definition">The definition to read.</param>
     /// <param name="cancellationToken">The cancellation token.</param>
@@ -66,47 +60,94 @@ public sealed class ConfigurationEffectiveStateReader(
         CancellationToken cancellationToken)
     {
         var document = await effectiveValueStore.GetAsync(definition.DefinitionKey, cancellationToken);
-        var publishedValueJson = definition.Origin == ConfigurationDefinitionOrigin.PublishedMetadata
-            ? document?.Json ?? seedFactory.CreateSeedJson(definition)
-            : null;
+        return MaterializeDefinition(definition, document);
+    }
+
+    /// <summary>
+    /// Reads effective management state for several definitions with one effective-value store operation.
+    /// </summary>
+    /// <param name="definitions">The definitions to read, in required result order.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>Definition states in the same order as <paramref name="definitions"/>.</returns>
+    public async Task<IReadOnlyList<ConfigurationDefinitionState>> ReadDefinitionsAsync(
+        IReadOnlyList<ConfigurationDefinition> definitions,
+        CancellationToken cancellationToken)
+    {
+        if (definitions.Count == 0)
+        {
+            return [];
+        }
+
+        var documents = await effectiveValueStore.GetManyAsync(
+            definitions.Select(static definition => definition.DefinitionKey).ToArray(),
+            cancellationToken);
+        if (documents.Count != definitions.Count)
+        {
+            throw new InvalidOperationException(
+                "The effective-value store returned a different number of documents than requested definitions.");
+        }
+
+        var states = new ConfigurationDefinitionState[definitions.Count];
+        for (var index = 0; index < definitions.Count; index++)
+        {
+            states[index] = MaterializeDefinition(definitions[index], documents[index]);
+        }
+
+        return states;
+    }
+
+    private ConfigurationDefinitionState MaterializeDefinition(
+        ConfigurationDefinition definition,
+        ConfigurationEffectiveValueDocument? document)
+    {
         var stateNodes = EnumerateNodes(definition.Root)
-            .Where(IsStateValueNode)
+            .Where(static node => node.RelativePath.Depth > 0)
             .ToArray();
-        var storedValues = publishedValueJson is null
-            ? null
-            : documentEditor.ReadValues(
-                definition,
-                publishedValueJson,
-                stateNodes.Select(node => node.RelativePath).ToArray());
+        var snapshotJson = CreateSnapshotJson(definition, document);
+        var storedValues = documentEditor.ReadValues(
+            definition,
+            snapshotJson,
+            stateNodes.Select(static node => node.RelativePath).ToArray());
         var runtimeSourceValues = ReadRuntimeSourceValues(definition, stateNodes);
         var values = new ConfigurationEffectiveValue[stateNodes.Length];
         for (var index = 0; index < stateNodes.Length; index++)
         {
-            values[index] = ReadValue(
+            values[index] = MaterializeValue(
                 definition,
                 stateNodes[index].RelativePath,
                 stateNodes[index],
                 document,
-                storedValues?[index],
+                storedValues[index],
                 runtimeSourceValues?[index]);
         }
 
         return new ConfigurationDefinitionState
         {
             Definition = definition,
+            EffectiveValueVersion = document?.Version,
             EffectiveValues = values
         };
     }
 
-    private ConfigurationEffectiveValue ReadValue(
+    private string CreateSnapshotJson(
+        ConfigurationDefinition definition,
+        ConfigurationEffectiveValueDocument? document)
+    {
+        return definition.Origin == ConfigurationDefinitionOrigin.PublishedMetadata
+            ? document?.Json ?? seedFactory.CreateSeedJson(definition)
+            : seedFactory.CreateRuntimeJson(definition.Root, definition.SectionPath);
+    }
+
+    private ConfigurationEffectiveValue MaterializeValue(
         ConfigurationDefinition definition,
         LogicalPath logicalPath,
         ConfigurationNodeDefinition? targetNode,
         ConfigurationEffectiveValueDocument? document,
-        ConfigurationStoredValue? publishedStoredValue,
+        ConfigurationStoredValue? snapshotStoredValue,
         ConfigurationSourceValue? runtimeSourceValue)
     {
-        var isSensitive = ConfigurationSchemaNavigator.IsSensitivePath(definition.Root, logicalPath);
+        var isSensitive = ConfigurationSchemaNavigator.IsSensitivePath(definition.Root, logicalPath)
+                          || targetNode is not null && ContainsSensitiveValue(targetNode);
         var configurationPath = targetNode?.ConfigurationPath
                                 ?? ProjectPath(definition, logicalPath);
 
@@ -117,8 +158,10 @@ public sealed class ConfigurationEffectiveStateReader(
                 DefinitionKey = definition.DefinitionKey,
                 LogicalPath = logicalPath,
                 ConfigurationPath = configurationPath,
-                DisplayValue = runtimeSourceValue.DisplayValue,
-                IsSensitive = runtimeSourceValue.IsSensitive,
+                DisplayValue = isSensitive || runtimeSourceValue.IsSensitive
+                    ? null
+                    : runtimeSourceValue.DisplayValue,
+                IsSensitive = isSensitive || runtimeSourceValue.IsSensitive,
                 Version = runtimeSourceValue.Source.Kind == ConfigurationSourceKind.MonicaEffectiveStore
                     ? document?.Version
                     : null,
@@ -126,37 +169,18 @@ public sealed class ConfigurationEffectiveStateReader(
             };
         }
 
-        if (definition.Origin == ConfigurationDefinitionOrigin.PublishedMetadata)
-        {
-            return new ConfigurationEffectiveValue
-            {
-                DefinitionKey = definition.DefinitionKey,
-                LogicalPath = logicalPath,
-                ConfigurationPath = configurationPath,
-                DisplayValue = isSensitive ? null : ToDisplayValue(publishedStoredValue, targetNode),
-                IsSensitive = isSensitive,
-                Version = document?.Version,
-                EffectiveSource = targetNode?.NodeKind == ConfigurationNodeKind.Scalar
-                    ? BuildEffectiveStoreSource()
-                    : null
-            };
-        }
-
-        var displayValue = targetNode is null || targetNode.NodeKind == ConfigurationNodeKind.Scalar
-            ? runtimeContext.Configuration[configurationPath]
-            : seedFactory.CreateRuntimeJson(targetNode, configurationPath);
         return new ConfigurationEffectiveValue
         {
             DefinitionKey = definition.DefinitionKey,
             LogicalPath = logicalPath,
             ConfigurationPath = configurationPath,
-            DisplayValue = isSensitive || displayValue is null
-                ? null
-                : targetNode is null
-                    ? displayValue
-                    : ConfigurationRegexTextCodec.NormalizeDisplayValue(targetNode, displayValue),
+            DisplayValue = isSensitive ? null : ToDisplayValue(snapshotStoredValue, targetNode),
             IsSensitive = isSensitive,
-            Version = document?.Version
+            Version = document?.Version,
+            EffectiveSource = definition.Origin == ConfigurationDefinitionOrigin.PublishedMetadata
+                              && targetNode?.NodeKind == ConfigurationNodeKind.Scalar
+                ? BuildEffectiveStoreSource()
+                : null
         };
     }
 
@@ -173,9 +197,20 @@ public sealed class ConfigurationEffectiveStateReader(
             .Select((node, index) => (Node: node, Index: index))
             .Where(static item => item.Node.NodeKind == ConfigurationNodeKind.Scalar)
             .ToArray();
+        if (scalarNodes.Length == 0)
+        {
+            return new ConfigurationSourceValue?[stateNodes.Count];
+        }
+
         var sourceChains = sourceInspector.GetSourceChains(
             definition,
             scalarNodes.Select(static item => item.Node.RelativePath).ToArray());
+        if (sourceChains.Count != scalarNodes.Length)
+        {
+            throw new InvalidOperationException(
+                "The source inspector returned a different number of source chains than requested paths.");
+        }
+
         var values = new ConfigurationSourceValue?[stateNodes.Count];
         for (var index = 0; index < scalarNodes.Length; index++)
         {
@@ -264,16 +299,16 @@ public sealed class ConfigurationEffectiveStateReader(
         }
     }
 
-    private static bool IsStateValueNode(ConfigurationNodeDefinition node)
+    private static bool ContainsSensitiveValue(ConfigurationNodeDefinition node)
     {
-        return node.NodeKind == ConfigurationNodeKind.Scalar
-               || node.NodeKind == ConfigurationNodeKind.List
-               && node.ListTemplate?.ItemTemplate.NodeKind == ConfigurationNodeKind.Scalar
-               || node.NodeKind == ConfigurationNodeKind.Dictionary
-               && node.DictionaryTemplate is
-               {
-                   KeyKind: ConfigurationValueKind.String,
-                   ValueTemplate.NodeKind: ConfigurationNodeKind.Scalar
-               };
+        if (node.IsSensitive || node.Children.Any(ContainsSensitiveValue))
+        {
+            return true;
+        }
+
+        return node.DictionaryTemplate?.ValueTemplate is { } dictionaryValue
+                   && ContainsSensitiveValue(dictionaryValue)
+               || node.ListTemplate?.ItemTemplate is { } listItem
+                   && ContainsSensitiveValue(listItem);
     }
 }

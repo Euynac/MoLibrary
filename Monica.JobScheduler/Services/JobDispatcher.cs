@@ -32,6 +32,8 @@ public class JobDispatcher(
         string? jobArgsJson,
         CancellationToken cancellationToken = default)
     {
+        var reservationAcquired = false;
+
         try
         {
             // Atomically reserve execution slot (with local lock)
@@ -58,6 +60,8 @@ public class JobDispatcher(
                 return;
             }
 
+            reservationAcquired = true;
+
             // Publish event (slot is reserved)
             var executionEvent = new JobExecutionEvent
             {
@@ -82,6 +86,16 @@ public class JobDispatcher(
                 definition.JobKey,
                 instance.InstanceId);
         }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            // A retry must be able to reserve the slot after this delivery is abandoned.
+            if (reservationAcquired)
+            {
+                await TryReleaseReservationAsync(instance, definition, CancellationToken.None);
+            }
+
+            throw;
+        }
         catch (Exception ex)
         {
             logger.LogError(
@@ -91,20 +105,9 @@ public class JobDispatcher(
                 instance.InstanceId,
                 ex.Message);
 
-            // Release reservation if we reserved but failed to publish
-            try
+            if (reservationAcquired)
             {
-                await concurrencyGuard.ReleaseReservedSlotAsync(
-                    definition.JobKey,
-                    instance.InstanceId,
-                    cancellationToken);
-            }
-            catch (Exception releaseEx)
-            {
-                logger.LogWarning(
-                    releaseEx,
-                    "Failed to release reservation after publish failure for instance {InstanceId}",
-                    instance.InstanceId);
+                await TryReleaseReservationAsync(instance, definition, cancellationToken);
             }
 
             // Mark instance as failed
@@ -113,6 +116,31 @@ public class JobDispatcher(
                 JobState.Failed,
                 $"Event bus publishing failure: {ex}",
                 cancellationToken);
+        }
+    }
+
+    private async Task TryReleaseReservationAsync(
+        JobInstance instance,
+        JobDefinition definition,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            await concurrencyGuard.ReleaseReservedSlotAsync(
+                definition.JobKey,
+                instance.InstanceId,
+                cancellationToken);
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch (Exception releaseException)
+        {
+            logger.LogWarning(
+                releaseException,
+                "Failed to release reservation after publish failure for instance {InstanceId}",
+                instance.InstanceId);
         }
     }
 

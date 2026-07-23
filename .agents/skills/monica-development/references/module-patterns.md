@@ -15,6 +15,8 @@ This guide defines the standardized patterns and conventions for creating module
 | Builder extensions | `extension(IMonicaBuilder)` with `Add{Name}()` | `monica.AddSignalR()` inside `builder.AddMonica(...)` |
 | Module key entry | `BuiltInModuleKey.{Name}` | `BuiltInModuleKey.SignalR` |
 
+This table describes first-party Monica modules. Independent packages use string keys governed by `$monica-third-party-module-development`; one NuGet package may contain multiple module registration files and keys. Their registration namespace is `<PackageId>.Modules`, while official dependency guides remain in `Monica.Modules`.
+
 ## Module Runtime Kinds
 
 Choose the runtime kind before filling in the registration logic.

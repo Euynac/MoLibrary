@@ -107,7 +107,7 @@ public abstract class EventBusSubscriptionHostedServiceBase(
         RecordState("Disposing subscription manager observer", HostedServiceState.Stopping);
 
         // Unsubscribe from EventSubscriptionRegistry
-        _subscriptionManagerObserver?.Dispose();
+        Interlocked.Exchange(ref _subscriptionManagerObserver, null)?.Dispose();
 
         RecordState($"Disposing {_topicSubscriptions.Count} tracked topics", HostedServiceState.Stopping);
         await DisposeExternalSubscriptionsAsync(cancellationToken);
@@ -409,6 +409,10 @@ public abstract class EventBusSubscriptionHostedServiceBase(
                     topicName);
             }
         }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
         catch (Exception ex)
         {
             RecordState($"Error handling external message for topic {topicName}",
@@ -419,5 +423,12 @@ public abstract class EventBusSubscriptionHostedServiceBase(
                 topicName);
             throw;
         }
+    }
+
+    /// <inheritdoc />
+    public override void Dispose()
+    {
+        Interlocked.Exchange(ref _subscriptionManagerObserver, null)?.Dispose();
+        base.Dispose();
     }
 }

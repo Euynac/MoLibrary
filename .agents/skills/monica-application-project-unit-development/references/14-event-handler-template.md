@@ -26,9 +26,11 @@ namespace $ApplicationNamespace$.HandlersEvent;
 public sealed class DomainEventHandlerOrderApproved(DomainNotifyWarehouse domainService)
     : DomainEventHandler<EventOrderApproved>
 {
-    public override async Task HandleEventAsync(EventOrderApproved eventData)
+    public override async Task HandleEventAsync(
+        EventOrderApproved eventData,
+        CancellationToken cancellationToken)
     {
-        await domainService.ExecuteAsync(eventData.OrderId);
+        await domainService.ExecuteAsync(eventData.OrderId, cancellationToken);
     }
 }
 ```
@@ -43,9 +45,11 @@ namespace $ApplicationNamespace$.HandlersEvent;
 public sealed class LocalEventHandlerOrderApproved(DomainRefreshReadModel domainService)
     : LocalEventHandler<EventOrderApproved>
 {
-    public override async Task HandleEventAsync(EventOrderApproved eventData)
+    public override async Task HandleEventAsync(
+        EventOrderApproved eventData,
+        CancellationToken cancellationToken)
     {
-        await domainService.ExecuteAsync(eventData.OrderId);
+        await domainService.ExecuteAsync(eventData.OrderId, cancellationToken);
     }
 }
 ```
@@ -53,4 +57,6 @@ public sealed class LocalEventHandlerOrderApproved(DomainRefreshReadModel domain
 ## Notes
 
 - If the reaction is slow, retriable, or should survive process restarts, move the heavy work into a `TriggeredJob`.
+- Pass the handler `CancellationToken` into every cancellable dependency. A distributed delivery timeout can return
+  the message for retry, but it cannot forcibly terminate handler code that ignores cancellation.
 - Do not let handlers become alternate application services with large control flow and validation logic.

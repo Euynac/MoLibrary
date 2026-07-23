@@ -1,60 +1,33 @@
-@using Microsoft.Extensions.Localization
-@using Monica.UI.Localization
+@using Monica.Core.Localization.Abstractions
 @using Monica.UI.Shell.Models
-@inject IStringLocalizer<UIRegistryResource> RegistryL
+@using Monica.UI.Shell.Support
+@inject ILocalizationCatalog LocalizationCatalog
 
-<div class="navbar-item"
-     @onmouseenter="OnMouseEnter"
-     @onmouseleave="OnMouseLeave">
-
-    <button class="navbar-link">
-        @Category
-        <MudIcon Icon="@Icons.Material.Filled.KeyboardArrowDown" Size="Size.Small" />
-    </button>
-
-    @if (_isHovered)
-    {
-        <div class="dropdown-menu">
-            @foreach (var item in Items.OrderBy(i => i.Order))
-            {
-                <MudNavLink Href="@item.Href"
-                           Class="dropdown-item"
-                           Match="@item.NavLinkMatch">
-                    @if (!string.IsNullOrEmpty(item.Icon))
-                    {
-                        <MudIcon Icon="@item.Icon" Size="Size.Small" Class="item-icon" />
-                    }
-                    <span>@GetItemText(item)</span>
-                </MudNavLink>
-            }
-        </div>
-    }
+<div class="navbar-item" data-navigation-category-id="@CategoryId.Value">
+    <MudMenu Label="@Category"
+             AriaLabel="@Category"
+             EndIcon="@Icons.Material.Filled.KeyboardArrowDown"
+             Variant="Variant.Text"
+             Class="navbar-menu navbar-link"
+             ActivationEvent="@MouseEvent.MouseOver"
+             AnchorOrigin="Origin.BottomLeft"
+             TransformOrigin="Origin.TopLeft"
+             PopoverClass="dropdown-menu mo-navbar-menu-popover mo-navbar-dropdown-popover"
+             ListClass="mo-appbar-menu-list">
+        @foreach (var item in Items)
+        {
+            <MudMenuItem Href="@item.Href"
+                         Icon="@item.Icon"
+                         Class="@NavigationRouteMatcher.GetActiveClass(CurrentRoute, item.Href)">
+                @item.ResolveText(LocalizationCatalog)
+            </MudMenuItem>
+        }
+    </MudMenu>
 </div>
 
 @code {
     [Parameter] public string Category { get; set; } = string.Empty;
-    [Parameter] public List<NavigationItem> Items { get; set; } = new();
-
-    private bool _isHovered = false;
-
-    private string GetItemText(NavigationItem item)
-    {
-        if (!string.IsNullOrEmpty(item.TextKey))
-        {
-            return RegistryL[item.TextKey];
-        }
-        return item.Text;
-    }
-
-    private void OnMouseEnter()
-    {
-        _isHovered = true;
-        StateHasChanged();
-    }
-
-    private void OnMouseLeave()
-    {
-        _isHovered = false;
-        StateHasChanged();
-    }
+    [Parameter] public NavigationCategoryId CategoryId { get; set; } = default!;
+    [Parameter] public string CurrentRoute { get; set; } = string.Empty;
+    [Parameter] public IReadOnlyList<NavigationItem> Items { get; set; } = [];
 }

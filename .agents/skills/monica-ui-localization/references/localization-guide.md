@@ -16,19 +16,24 @@ Each `*.UI` project has its own localization infrastructure:
 - Embedded resources configured in `.csproj`
 - Auto-discovered by `MoStringLocalizerFactory`
 
-### Auto-Discovery Mechanism
+### Resource Registration and Loading
 
-`MoStringLocalizerFactory` automatically discovers localization resources:
+Reusable Monica modules register their resource marker explicitly:
 
-1. Scans all assemblies starting with "Monica"
-2. Finds types in namespaces containing ".Localization"
-3. For each resource type, loads embedded JSON files using pattern: `{Namespace}.{ResourceName}.{Culture}.json`
+```csharp
+DependsOnModule<ModuleLocalizationGuide>().Register()
+    .AddResource<StateStoreResource>();
+```
+
+Host/business resource types may also be discovered through the host's configured business-type scan. Independent packages must not rely on an assembly-name prefix or on the host scanning their assembly.
+
+For each registered resource type, Monica loads embedded JSON files using `{Namespace}.{ResourceName}.{Culture}.json`.
 
 **Example:** For type `StateStoreResource` in namespace `Monica.StateStore.UI.Localization`, it loads:
 - `Monica.StateStore.UI.Localization.StateStoreResource.zh-CN.json`
 - `Monica.StateStore.UI.Localization.StateStoreResource.en-US.json`
 
-**No registration code needed!** Just create the marker class, add JSON files, and configure embedding.
+Module packages must register the marker type through `AddResource<TResource>()`, create the JSON files, and configure embedding.
 
 ### Implementation Steps
 
@@ -127,6 +132,47 @@ Inject the localizer in your components:
 <MudButton OnClick="ScanKeys">@L["KeyExplorer:Actions:Scan"]</MudButton>
 <MudTextField Label="@L["KeyExplorer:Labels:KeyPattern"]" />
 ```
+
+#### Step 6: Register localized navigation explicitly
+
+Every localized page declares its owning resource type. Shared shell categories use stable built-in IDs:
+
+```csharp
+DependsOnModule<ModuleLocalizationGuide>().Register()
+    .AddResource<StateStoreResource>();
+
+DependsOnModule<ModuleShellUIGuide>().Register()
+    .RegisterUIComponents(registry => registry.RegisterLocalizedPage<UIStateStorePage, StateStoreResource>(
+        UIStateStorePage.PAGE_URL,
+        "Navigation:Title",
+        Icons.Material.Filled.Storage,
+        BuiltInNavigationCategoryIds.Debug,
+        addToNav: true,
+        navOrder: 20));
+```
+
+A package-owned category registers its stable identity and localized label once, then passes the returned ID to pages:
+
+```csharp
+DependsOnModule<ModuleShellUIGuide>().Register()
+    .RegisterUIComponents(registry =>
+    {
+        var categoryId = registry.RegisterLocalizedCategory<ExampleResource>(
+            "Contoso.Monica.Example",
+            "Navigation:Category",
+            order: 450);
+
+        registry.RegisterLocalizedPage<UIExamplePage, ExampleResource>(
+            UIExamplePage.PAGE_URL,
+            "Navigation:Title",
+            Icons.Material.Filled.Extension,
+            categoryId,
+            addToNav: true,
+            navOrder: 10);
+    });
+```
+
+The category ID is never translated and is compared case-insensitively. Category order is explicit. The registry freezes on its first read, so all contributions must occur during application startup.
 
 ### Key Naming Conventions
 
@@ -287,7 +333,9 @@ python scripts/validate_localization.py --json
 1. **Missing keys** (ERROR): Keys used in Razor or C# but not defined in JSON
 2. **Unused keys** (WARNING): Keys defined in JSON but never used
 3. **Language sync** (ERROR): Keys in one language but not another
-4. **UI registry keys** (ERROR): Keys passed to `RegisterLocalizedComponent` must exist in `Monica.UI/Localization/UIRegistryResource/*.json`
+4. **Navigation registration keys** (ERROR): Every page/category key must resolve from its explicitly declared module resource
+5. **Navigation resource registration** (ERROR): Every page/category resource must be registered through `AddResource<TResource>()`
+6. **Legacy navigation API** (ERROR): `RegisterLocalizedComponent` and an implicit resource type are rejected
 
 ### Example Output
 
@@ -345,13 +393,14 @@ Summary:
 
 **Symptom:** The navigation or AppBar shows a raw key such as `Pages:GitRepositories:Title`
 
-**Cause:** `RegisterLocalizedComponent` keys are resolved from `UIRegistryResource`, not the page module resource.
+**Cause:** The page or category key is missing from the explicitly declared module resource, or the module did not register that resource. Monica no longer has an implicit `UIRegistryResource` fallback.
 
 **Solution:**
-1. Keep page-local text in the module resource JSON files
-2. Add the navigation/AppBar key to `Monica.UI/Localization/UIRegistryResource/zh-CN.json`
-3. Add the same key to `Monica.UI/Localization/UIRegistryResource/en-US.json`
-4. Re-run `python scripts/validate_localization.py`
+1. Register the page with `RegisterLocalizedPage<TPage, TResource>` and keep its title key in both language files for `TResource`.
+2. Use a `BuiltInNavigationCategoryIds` value for shell taxonomy, or register a module-owned category once with `RegisterLocalizedCategory<TResource>(stableId, displayNameKey, order)`.
+3. Keep a module-owned category label key in the same `TResource` language files and pass the returned category ID to every page in that category.
+4. Ensure the module declares `AddResource<TResource>()` through its localization dependency.
+5. Re-run `python scripts/validate_localization.py --strict`.
 
 ### Parameterized String Shows {0}
 

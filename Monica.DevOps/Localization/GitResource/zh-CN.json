@@ -4,9 +4,6 @@
       "Title": "Git 仓库"
     }
   },
-  "Categories": {
-    "Infrastructure": "基础设施"
-  },
   "GitDashboard": {
     "PageTitle": "Git 仓库",
     "Title": "Git 仓库",

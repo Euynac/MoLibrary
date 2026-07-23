@@ -1,109 +1,98 @@
-using Microsoft.AspNetCore.Components.Routing;
+using Monica.Core.Localization.Abstractions;
 
 namespace Monica.UI.Shell.Models;
 
 /// <summary>
-/// UI page information
+/// Describes a page contributed to the Monica UI shell.
 /// </summary>
-public class PageDefinition
+public sealed class PageDefinition
 {
-    /// <summary>
-    /// routing path
-    /// </summary>
-    public required string Route { get; init; }
+    internal PageDefinition(string route, Type componentType, UIRegistryText displayName)
+    {
+        Route = route;
+        ComponentType = componentType;
+        DisplayName = displayName;
+    }
 
     /// <summary>
-    /// Component type
+    /// Gets the normalized route without leading or trailing slashes.
     /// </summary>
-    public required Type ComponentType { get; init; }
+    public string Route { get; }
 
     /// <summary>
-    /// display name
+    /// Gets the Blazor component rendered for <see cref="Route"/>.
     /// </summary>
-    public required string DisplayName { get; init; }
+    public Type ComponentType { get; }
 
     /// <summary>
-    /// icon
+    /// Gets the display text and its optional localization metadata.
     /// </summary>
-    public string? Icon { get; init; }
+    public UIRegistryText DisplayName { get; }
 
     /// <summary>
-    /// Classification
+    /// Resolves the page display name through the specified host localization catalog.
     /// </summary>
-    public string? Category { get; init; }
+    /// <param name="localizationCatalog">The localization catalog owned by the current host.</param>
+    /// <returns>The localized value, or the registered fallback when no localized value exists.</returns>
+    public string ResolveDisplayName(ILocalizationCatalog localizationCatalog)
+    {
+        return DisplayName.Resolve(localizationCatalog);
+    }
 
-    /// <summary>
-    /// localization key for display name
-    /// </summary>
-    public string? DisplayNameKey { get; init; }
-
-    /// <summary>
-    /// Classification localization key
-    /// </summary>
-    public string? CategoryKey { get; init; }
 }
 
 /// <summary>
-/// Navigation menu items
+/// Describes one navigation entry contributed to the Monica UI shell.
 /// </summary>
-public class NavigationItem
+public sealed class NavigationItem
 {
-    /// <summary>
-    /// display text
-    /// </summary>
-    public required string Text { get; init; }
+    internal NavigationItem(
+        UIRegistryText text,
+        string href,
+        string? icon,
+        NavigationCategoryId categoryId,
+        int order)
+    {
+        Text = text;
+        Href = href;
+        Icon = icon;
+        CategoryId = categoryId;
+        Order = order;
+    }
 
     /// <summary>
-    /// Link address
+    /// Gets the label text and its optional localization metadata.
     /// </summary>
-    public string? Href { get; init; }
+    public UIRegistryText Text { get; }
 
     /// <summary>
-    /// icon
+    /// Gets the target route or URI.
     /// </summary>
-    public string? Icon { get; init; }
+    public string Href { get; }
 
     /// <summary>
-    /// Whether to expand (for menus with sub-items)
+    /// Gets the optional icon identifier shown by the shell.
     /// </summary>
-    public bool IsExpanded { get; set; }
+    public string? Icon { get; }
 
     /// <summary>
-    /// Navigation item classification
+    /// Gets the stable category identity used to group this navigation entry.
     /// </summary>
-    public string? Category { get; set; }
-    /// <summary>
-    /// submenu item
-    /// </summary>
-    public List<NavigationItem> Children { get; init; } = new();
+    public NavigationCategoryId CategoryId { get; }
 
     /// <summary>
-    /// click event
+    /// Gets the navigation sort order.
     /// </summary>
-    public Action? OnClick { get; init; }
+    public int Order { get; }
 
     /// <summary>
-    /// Whether to disable
+    /// Resolves the navigation label through the specified host localization catalog.
     /// </summary>
-    public bool Disabled { get; init; }
+    /// <param name="localizationCatalog">The localization catalog owned by the current host.</param>
+    /// <returns>The localized label, or the registered fallback when no localized value exists.</returns>
+    public string ResolveText(ILocalizationCatalog localizationCatalog)
+    {
+        return Text.Resolve(localizationCatalog);
+    }
 
-    /// <summary>
-    /// sort order
-    /// </summary>
-    public int Order { get; init; }
-
-    /// <summary>
-    /// Navigation link matching pattern
-    /// </summary>
-    public NavLinkMatch NavLinkMatch { get; init; } = NavLinkMatch.Prefix;
-
-    /// <summary>
-    /// Display localization key for text
-    /// </summary>
-    public string? TextKey { get; init; }
-
-    /// <summary>
-    /// Classification localization key
-    /// </summary>
-    public string? CategoryKey { get; init; }
-} 
+}

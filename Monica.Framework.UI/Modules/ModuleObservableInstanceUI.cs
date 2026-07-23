@@ -10,6 +10,7 @@ using Monica.Core.Modularity.Models;
 using Monica.Core.Results;
 using Monica.Framework.UI.Localization;
 using Monica.Framework.UI.Pages;
+using Monica.UI.Shell.Models;
 using Monica.Framework.UI.UIObservableInstance.Support;
 using MudBlazor;
 
@@ -56,11 +57,11 @@ public class ModuleObservableInstanceUI(ModuleObservableInstanceUIOption option)
                 .AddResource<ObservableInstanceResource>();
 
             DependsOnModule<ModuleShellUIGuide>().Register()
-                .RegisterUIComponents(p => p.RegisterLocalizedComponent<UIObservableInstanceMonitorPage>(
+                .RegisterUIComponents(p => p.RegisterLocalizedPage<UIObservableInstanceMonitorPage, ObservableInstanceResource>(
                     UIObservableInstanceMonitorPage.PAGE_URL,
                     "Pages:ObservableInstance:Title",
                     Icons.Material.Filled.Inventory,
-                    "Categories:Debug",
+                    BuiltInNavigationCategoryIds.Debug,
                     addToNav: true,
                     navOrder: 50));
         }

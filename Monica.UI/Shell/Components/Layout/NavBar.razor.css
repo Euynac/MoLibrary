@@ -90,7 +90,7 @@
         display: flex;
     }
 
-    .navbar-nav-compact > ::deep .navbar-more > .navbar-link {
+    .navbar-nav-compact > ::deep .navbar-more .mud-menu-button-activator {
         white-space: nowrap;
         writing-mode: horizontal-tb;
         text-orientation: mixed;
@@ -122,32 +122,5 @@
 
     .navbar-nav {
         gap: 2px;
-    }
-}
-
-[data-theme*="dark"] .mo-navbar {
-    background: var(--mo-appbar-dark-background, var(--mo-appbar-background));
-}
-
-/* Animation keyframes */
-@keyframes dropdownFadeIn {
-    from {
-        opacity: 0;
-        transform: translateY(-10px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
-}
-
-@keyframes flyoutSlideIn {
-    from {
-        opacity: 0;
-        transform: translateX(-10px);
-    }
-    to {
-        opacity: 1;
-        transform: translateX(0);
     }
 }

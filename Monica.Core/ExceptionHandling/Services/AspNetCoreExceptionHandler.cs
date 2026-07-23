@@ -19,7 +19,7 @@ public class AspNetCoreExceptionHandler(IExceptionHandlerService handler) : IExc
     public virtual async ValueTask<bool> TryHandleAsync(HttpContext httpContext, Exception exception, CancellationToken cancellationToken)
     {
         var res = await handler.HandleAsync(httpContext, exception, cancellationToken);
-        handler.LogException(httpContext, exception);
+        handler.LogException(httpContext, exception, res);
         httpContext.Response.StatusCode =
             (int)(res.ToHttpStatusCode() ?? HttpStatusCode.InternalServerError);
 

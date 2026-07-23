@@ -17,6 +17,14 @@ Invoke when:
 - Implementing hosted services (MoBackgroundService, RecordState)
 - Structuring module folders (Abstractions, Models, Facades, Services, Providers)
 
+### /monica-third-party-module-development
+
+Invoke when:
+- Creating or modernizing an independently published Monica NuGet package
+- Choosing publisher-first package IDs or third-party `ModuleKey` values
+- Packaging multiple coherent Monica modules in one NuGet package
+- Applying Monica ecosystem branding, licensing, validation, or NuGet publishing guidance
+
 ### /monica-ui-development
 
 Invoke when:
@@ -31,7 +39,7 @@ Invoke when:
 ### /monica-ui-localization
 
 Invoke when:
-- Adding, changing, reviewing, or validating Monica UI localization/i18n, user-facing text, `IStringLocalizer<TResource>` usage, `RegisterLocalizedComponent(...)` keys, or `zh-CN`/`en-US` resources
+- Adding, changing, reviewing, or validating Monica UI localization/i18n, user-facing text, `IStringLocalizer<TResource>` usage, `RegisterLocalizedPage(...)` or `RegisterLocalizedCategory(...)` keys, or `zh-CN`/`en-US` resources
 
 ## UI Theme Color Contract
 

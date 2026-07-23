@@ -4,9 +4,11 @@ using Monica.Core.Modularity;
 using Monica.Core.Modularity.Abstractions;
 using Monica.Core.Modularity.Annotations;
 using Monica.Core.Modularity.Models;
+using Monica.ServiceDiscovery.Localization;
 using Monica.ServiceDiscovery.Pages;
 using Monica.ServiceDiscovery.UIServiceDiscovery.State;
 using Monica.ServiceDiscovery.UIServiceDiscovery.Support;
+using Monica.UI.Shell.Models;
 using MudBlazor;
 
 // ReSharper disable once CheckNamespace
@@ -31,11 +33,11 @@ public class ModuleServiceDiscoveryUI(ModuleServiceDiscoveryUIOption option)
         {
             DependsOnModule<ModuleServiceDiscoveryGuide>().Register();
             DependsOnModule<ModuleShellUIGuide>().Register()
-                .RegisterUIComponents(p => p.RegisterLocalizedComponent<UIServiceDiscoveryPage>(
+                .RegisterUIComponents(p => p.RegisterLocalizedPage<UIServiceDiscoveryPage, ServiceDiscoveryResource>(
                     UIServiceDiscoveryPage.SERVICE_DISCOVERY_DEBUG_URL,
                     "Pages:ServiceDiscovery:Title",
                     Icons.Material.Filled.CloudQueue,
-                    "Categories:Monitor",
+                    BuiltInNavigationCategoryIds.Monitor,
                     addToNav: true,
                     navOrder: 40));
         }

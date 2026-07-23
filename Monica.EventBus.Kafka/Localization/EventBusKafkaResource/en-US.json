@@ -1,4 +1,9 @@
 {
+  "Pages": {
+    "EventBusKafka": {
+      "Title": "Kafka EventBus"
+    }
+  },
   "Api": {
     "Integration": {
       "Get": {

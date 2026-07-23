@@ -114,8 +114,9 @@ public class ModuleDaprEventBusOption : MinimalApiModuleOptions<ModuleDaprEventB
     public int? BulkChunkSize { get; set; } = 1000;
 
     /// <summary>
-    /// Message handling timeout for streaming subscriptions. Defaults to 10 seconds.
-    /// If a handler takes longer than this, Dapr will retry the message.
+    /// Gets or sets the message-handling deadline passed to the Dapr streaming subscription. Defaults to 30 seconds.
+    /// When the deadline elapses, Monica stops awaiting the handler and requests a retry. The same cancellation token
+    /// is passed to the handler for cooperative shutdown, but non-cooperative handler code may continue running.
     /// </summary>
     public TimeSpan MessageHandlingTimeout { get; set; } = TimeSpan.FromSeconds(30);
 
@@ -134,6 +135,34 @@ public class ModuleDaprEventBusOption : MinimalApiModuleOptions<ModuleDaprEventB
     /// Dead letter topic name for failed messages. Defaults to null.
     /// </summary>
     public string? DeadLetterTopic { get; set; }
+
+    /// <summary>
+    /// Gets or sets the initial delay before reconnecting a failed streaming subscription. Defaults to one second.
+    /// Connection recovery is independent from message redelivery and continues until the host stops.
+    /// The value must be greater than zero and no longer than <see cref="SubscriptionRecoveryMaxDelay" />.
+    /// Monica applies up to 20 percent deterministic per-topic jitter below the calculated delay to avoid reconnect herds.
+    /// </summary>
+    public TimeSpan SubscriptionRecoveryInitialDelay { get; set; } = TimeSpan.FromSeconds(1);
+
+    /// <summary>
+    /// Gets or sets the maximum delay between streaming-subscription recovery attempts. Defaults to 30 seconds.
+    /// The cap prevents prolonged outages from producing either a hot loop or unbounded backoff.
+    /// The value must be at least <see cref="SubscriptionRecoveryInitialDelay" />.
+    /// </summary>
+    public TimeSpan SubscriptionRecoveryMaxDelay { get; set; } = TimeSpan.FromSeconds(30);
+
+    /// <summary>
+    /// Gets or sets the exponential multiplier applied after consecutive subscription connection failures.
+    /// Defaults to <c>2</c>. The value must be finite and at least <c>1</c>.
+    /// </summary>
+    public double SubscriptionRecoveryBackoffMultiplier { get; set; } = 2d;
+
+    /// <summary>
+    /// Gets or sets how long a streaming receiver must remain fault-free before its recovery backoff is reset.
+    /// Defaults to 30 seconds. This prevents a receiver that repeatedly fails immediately after creation from
+    /// reconnecting forever at the initial delay.
+    /// </summary>
+    public TimeSpan SubscriptionRecoveryStabilityPeriod { get; set; } = TimeSpan.FromSeconds(30);
 
     /// <summary>
     /// Enable debug logging for incoming message data.

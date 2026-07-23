@@ -14,17 +14,23 @@ namespace Monica.Dapr.Services;
 /// </summary>
 public class DaprServiceInvocationConnector(
     DaprClient client,
+    IHttpClientFactory httpClientFactory,
     ILogger<DaprServiceInvocationConnector> logger,
     IJsonSerializerOptionsProvider jsonSerializerOptionsProvider) : IServiceInvocationConnector
 {
+    internal const string HttpClientName = "Monica.Dapr.ServiceInvocation";
+
     public async Task<Res<TResponse>> GetAsync<TResponse>(string appId, string callbackUrl)
     {
         var content = "";
         try
         {
-            var response = await client.InvokeMethodWithResponseAsync(
-                client.CreateInvokeMethodRequest(HttpMethod.Get, appId,
-                    callbackUrl, []));
+            using var request = client.CreateInvokeMethodRequest(
+                HttpMethod.Get,
+                appId,
+                callbackUrl,
+                []);
+            using var response = await httpClientFactory.CreateClient(HttpClientName).SendAsync(request);
             content = await response.Content.ReadAsStringAsync();
             var res = JsonSerializer.Deserialize<TResponse>(content, jsonSerializerOptionsProvider.SerializerOptions);
             if (res == null)
@@ -77,9 +83,13 @@ public class DaprServiceInvocationConnector(
         var content = "";
         try
         {
-            var response = await client.InvokeMethodWithResponseAsync(
-                client.CreateInvokeMethodRequest(HttpMethod.Post, appId,
-                    callbackUrl, [], request));
+            using var invocationRequest = client.CreateInvokeMethodRequest(
+                HttpMethod.Post,
+                appId,
+                callbackUrl,
+                [],
+                request);
+            using var response = await httpClientFactory.CreateClient(HttpClientName).SendAsync(invocationRequest);
 
             content = await response.Content.ReadAsStringAsync();
             var res = JsonSerializer.Deserialize<TResponse>(content, jsonSerializerOptionsProvider.SerializerOptions);

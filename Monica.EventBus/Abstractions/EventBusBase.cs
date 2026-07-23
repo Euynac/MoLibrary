@@ -63,7 +63,9 @@ public abstract class EventBusBase : IEventBus
         return await SubscriptionManager.SubscribeAsync(descriptor);
     }
 
-    public virtual async Task<IEventSubscription> SubscribeAsync<TEvent>(Func<TEvent, Task> handler, string? topicName = null)
+    public virtual async Task<IEventSubscription> SubscribeAsync<TEvent>(
+        Func<TEvent, CancellationToken, Task> handler,
+        string? topicName = null)
         where TEvent : class
     {
         var finalTopicName = topicName ?? EventNameAttribute.GetNameOrDefault(typeof(TEvent));
@@ -134,10 +136,20 @@ public abstract class EventBusBase : IEventBus
         // Invoke each handler
         foreach (var subscription in subscriptions)
         {
+            cancellationToken.ThrowIfCancellationRequested();
+
             try
             {
                 using var handlerWrapper = subscription.HandlerFactory.GetHandler();
-                await EventHandlerInvoker.InvokeAsync(handlerWrapper.EventHandler, eventData, eventType);
+                await EventHandlerInvoker.InvokeAsync(
+                    handlerWrapper.EventHandler,
+                    eventData,
+                    eventType,
+                    cancellationToken);
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                throw;
             }
             catch (Exception ex)
             {

@@ -77,6 +77,10 @@ public class JobDefinitionCacheService : JobDefinitionCacheServiceDefault, IDisp
                 {
                     isStale = await _staleStore.ExistAsync(_stalePrefix + jobKey, cancellationToken);
                 }
+                catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+                {
+                    throw;
+                }
                 catch (Exception ex)
                 {
                     // StateStore failure: log warning, assume not stale (availability over consistency)
@@ -104,6 +108,10 @@ public class JobDefinitionCacheService : JobDefinitionCacheServiceDefault, IDisp
                     try
                     {
                         await _staleStore.DeleteStateAsync(_stalePrefix + jobKey, cancellationToken);
+                    }
+                    catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+                    {
+                        throw;
                     }
                     catch (Exception ex)
                     {
@@ -218,6 +226,10 @@ public class JobDefinitionCacheService : JobDefinitionCacheServiceDefault, IDisp
                     cancellationToken,
                     _staleFlagTtl);
             }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                throw;
+            }
             catch (Exception ex)
             {
                 Logger.LogWarning(ex, "Failed to mark job {JobKey} as stale in StateStore", definition.JobKey);
@@ -234,7 +246,9 @@ public class JobDefinitionCacheService : JobDefinitionCacheServiceDefault, IDisp
     /// <summary>
     /// Handles JobDefinitionsChangedEvent to invalidate cache entries.
     /// </summary>
-    private async Task OnJobDefinitionsChangedAsync(JobDefinitionsChangedEvent evt)
+    private async Task OnJobDefinitionsChangedAsync(
+        JobDefinitionsChangedEvent evt,
+        CancellationToken cancellationToken)
     {
         if (!string.Equals(evt.SchedulerScopeKey, JobSchedulerOptions.SchedulerScopeKey, StringComparison.Ordinal))
         {
@@ -251,14 +265,21 @@ public class JobDefinitionCacheService : JobDefinitionCacheServiceDefault, IDisp
         // Mark added/updated jobs as stale (lazy invalidation)
         foreach (var jobKey in evt.AddedJobKeys.Concat(evt.UpdatedJobKeys))
         {
+            cancellationToken.ThrowIfCancellationRequested();
+
             try
             {
                 await _staleStore.SaveStateAsync(
                     _stalePrefix + jobKey,
                     true,
+                    cancellationToken,
                     ttl: _staleFlagTtl);
 
                 Logger.LogDebug("Marked job {JobKey} as stale", jobKey);
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                throw;
             }
             catch (Exception ex)
             {
@@ -269,12 +290,18 @@ public class JobDefinitionCacheService : JobDefinitionCacheServiceDefault, IDisp
         // Remove deleted jobs from cache immediately
         foreach (var jobKey in evt.DeletedJobKeys)
         {
+            cancellationToken.ThrowIfCancellationRequested();
+
             _cache.TryRemove(jobKey, out _);
             Logger.LogDebug("Removed deleted job {JobKey} from cache", jobKey);
 
             try
             {
-                await _staleStore.DeleteStateAsync(_stalePrefix + jobKey);
+                await _staleStore.DeleteStateAsync(_stalePrefix + jobKey, cancellationToken);
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                throw;
             }
             catch (Exception ex)
             {

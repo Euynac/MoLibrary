@@ -27,6 +27,7 @@ Every module follows a consistent pattern with four components in one `Module{Na
 
 - For Monica first-party modules in this repository, add new keys to `Monica.Core/Modularity/Models/BuiltInModuleKey.cs` and use `[ModuleKey(BuiltInModuleKey.YourModule)]`.
 - Do not introduce ad-hoc string keys such as `BuildingBlocksPlatform.*` for Monica-owned modules unless the module is intentionally external to Monica's built-in key set.
+- For independently published modules, use `$monica-third-party-module-development`. String keys must follow `<Publisher>.Monica.<Module>[.<Feature>...]`, and every module key in a package must equal its `PackageId` or begin with `PackageId.`. Put their module types and `Add*` extensions in `<PackageId>.Modules`; only official Monica dependency guides remain in `Monica.Modules`. A package may expose multiple coherent modules.
 
 ### Module Runtime Kinds
 

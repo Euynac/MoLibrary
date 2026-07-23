@@ -40,6 +40,7 @@ public class ModuleDaprServiceInvocation(ModuleDaprServiceInvocationOption optio
 
     public override void ConfigureServices(IServiceCollection services)
     {
+        services.AddHttpClient(DaprServiceInvocationConnector.HttpClientName);
         services.AddSingleton<IServiceInvocationConnector, DaprServiceInvocationConnector>();
     }
 }

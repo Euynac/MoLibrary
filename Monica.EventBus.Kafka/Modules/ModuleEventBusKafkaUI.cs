@@ -7,6 +7,7 @@ using Monica.Core.Modularity.Models;
 using Monica.EventBus.Kafka.Localization;
 using Monica.EventBus.Kafka.Pages;
 using Monica.EventBus.Kafka.UIEventBusKafka.State;
+using Monica.UI.Shell.Models;
 using MudBlazor;
 
 // ReSharper disable once CheckNamespace
@@ -52,11 +53,11 @@ public sealed class ModuleEventBusKafkaUI(ModuleEventBusKafkaUIOption option)
         }
 
         DependsOnModule<ModuleShellUIGuide>().Register()
-            .RegisterUIComponents(registry => registry.RegisterLocalizedComponent<UIEventBusKafkaPage>(
+            .RegisterUIComponents(registry => registry.RegisterLocalizedPage<UIEventBusKafkaPage, EventBusKafkaResource>(
                 UIEventBusKafkaPage.PAGE_URL,
                 "Pages:EventBusKafka:Title",
                 Icons.Material.Filled.Storage,
-                "Categories:Infrastructure",
+                BuiltInNavigationCategoryIds.Infrastructure,
                 addToNav: true,
                 navOrder: 38));
     }

@@ -551,7 +551,9 @@ public class JobConcurrencyGuardHostedService(
         }
     }
 
-    private async Task OnJobStartedAsync(JobStartedEvent evt)
+    private async Task OnJobStartedAsync(
+        JobStartedEvent evt,
+        CancellationToken cancellationToken)
     {
         if (!string.Equals(evt.SchedulerScopeKey, _jobSchedulerOptions.SchedulerScopeKey, StringComparison.Ordinal))
         {
@@ -568,7 +570,7 @@ public class JobConcurrencyGuardHostedService(
         }
 
         var semaphore = _jobLocks.GetOrAdd(evt.JobKey, _ => new SemaphoreSlim(1, 1));
-        await semaphore.WaitAsync();
+        await semaphore.WaitAsync(cancellationToken);
 
         try
         {
@@ -592,7 +594,9 @@ public class JobConcurrencyGuardHostedService(
         }
     }
 
-    private async Task OnJobCompletedAsync(JobCompletedEvent evt)
+    private async Task OnJobCompletedAsync(
+        JobCompletedEvent evt,
+        CancellationToken cancellationToken)
     {
         if (!string.Equals(evt.SchedulerScopeKey, _jobSchedulerOptions.SchedulerScopeKey, StringComparison.Ordinal))
         {
@@ -609,7 +613,7 @@ public class JobConcurrencyGuardHostedService(
         }
 
         var semaphore = _jobLocks.GetOrAdd(evt.JobKey, _ => new SemaphoreSlim(1, 1));
-        await semaphore.WaitAsync();
+        await semaphore.WaitAsync(cancellationToken);
 
         try
         {
@@ -637,8 +641,12 @@ public class JobConcurrencyGuardHostedService(
     /// <summary>
     /// Handles JobDefinitionsChangedEvent to add or update concurrency tracking for job definition changes after startup.
     /// </summary>
-    private Task OnJobDefinitionsChangedAsync(JobDefinitionsChangedEvent evt)
+    private Task OnJobDefinitionsChangedAsync(
+        JobDefinitionsChangedEvent evt,
+        CancellationToken cancellationToken)
     {
+        cancellationToken.ThrowIfCancellationRequested();
+
         if (!string.Equals(evt.SchedulerScopeKey, _jobSchedulerOptions.SchedulerScopeKey, StringComparison.Ordinal))
         {
             RecordState($"Ignored JobDefinitionsChangedEvent for foreign scope {evt.SchedulerScopeKey}", logLevel: LogLevel.Debug);
@@ -652,6 +660,8 @@ public class JobConcurrencyGuardHostedService(
         // 1. Add statistics for newly added jobs
         foreach (var definition in evt.AddedDefinitions)
         {
+            cancellationToken.ThrowIfCancellationRequested();
+
             if (!_statistics.ContainsKey(definition.JobKey))
             {
                 _statistics[definition.JobKey] = new JobExecutionStatistic
@@ -671,6 +681,8 @@ public class JobConcurrencyGuardHostedService(
         // 2. Handle updated jobs (update MaxConcurrency if changed)
         foreach (var definition in evt.UpdatedDefinitions)
         {
+            cancellationToken.ThrowIfCancellationRequested();
+
             if (_statistics.TryGetValue(definition.JobKey, out var statistic))
             {
                 statistic.MaxConcurrency = definition.MaxConcurrency;

@@ -3,53 +3,92 @@ using Monica.EventBus.Abstractions.Handlers;
 
 namespace Monica.EventBus.Services.Support;
 
+/// <summary>
+/// Invokes a resolved event handler for a runtime event type.
+/// </summary>
 public interface IEventHandlerInvoker
 {
-    Task InvokeAsync(IEventHandler eventHandler, object eventData, Type eventType);
+    /// <summary>
+    /// Invokes every local or distributed handler contract implemented for the supplied event type.
+    /// </summary>
+    /// <param name="eventHandler">The resolved handler instance.</param>
+    /// <param name="eventData">The event payload.</param>
+    /// <param name="eventType">The exact event type used for dispatch.</param>
+    /// <param name="cancellationToken">Signals that the caller no longer needs the handler result.</param>
+    Task InvokeAsync(
+        IEventHandler eventHandler,
+        object eventData,
+        Type eventType,
+        CancellationToken cancellationToken = default);
 }
-public class EventHandlerInvokerCacheItem
+
+/// <summary>
+/// Invokes strongly typed event-handler methods while caching their runtime adapters.
+/// </summary>
+public sealed class EventHandlerInvoker : IEventHandlerInvoker
 {
-    public IEventHandlerMethodExecutor? Local { get; set; }
+    private readonly ConcurrentDictionary<(Type HandlerType, Type EventType), HandlerExecutors> _cache = new();
 
-    public IEventHandlerMethodExecutor? Distributed { get; set; }
-}
-
-public class EventHandlerInvoker : IEventHandlerInvoker
-{
-    private readonly ConcurrentDictionary<string, EventHandlerInvokerCacheItem> _cache = new();
-
-    public async Task InvokeAsync(IEventHandler eventHandler, object eventData, Type eventType)
+    /// <inheritdoc />
+    public async Task InvokeAsync(
+        IEventHandler eventHandler,
+        object eventData,
+        Type eventType,
+        CancellationToken cancellationToken = default)
     {
-        var cacheItem = _cache.GetOrAdd($"{eventHandler.GetType().FullName}-{eventType.FullName}", _ =>
+        var executors = _cache.GetOrAdd(
+            (eventHandler.GetType(), eventType),
+            static key => CreateExecutors(key.HandlerType, key.EventType));
+
+        if (executors.Local is not null)
         {
-            var item = new EventHandlerInvokerCacheItem();
-
-            if (typeof(ILocalEventHandler<>).MakeGenericType(eventType).IsInstanceOfType(eventHandler))
-            {
-                item.Local = (IEventHandlerMethodExecutor?) Activator.CreateInstance(typeof(LocalEventHandlerMethodExecutor<>).MakeGenericType(eventType));
-            }
-
-            if (typeof(IDistributedEventHandler<>).MakeGenericType(eventType).IsInstanceOfType(eventHandler))
-            {
-                item.Distributed = (IEventHandlerMethodExecutor?) Activator.CreateInstance(typeof(DistributedEventHandlerMethodExecutor<>).MakeGenericType(eventType));
-            }
-
-            return item;
-        });
-
-        if (cacheItem.Local != null)
-        {
-            await cacheItem.Local.ExecutorAsync(eventHandler, eventData);
+            cancellationToken.ThrowIfCancellationRequested();
+            await executors.Local.ExecutorAsync(eventHandler, eventData, cancellationToken);
         }
 
-        if (cacheItem.Distributed != null)
+        if (executors.Distributed is not null)
         {
-            await cacheItem.Distributed.ExecutorAsync(eventHandler, eventData);
+            cancellationToken.ThrowIfCancellationRequested();
+            await executors.Distributed.ExecutorAsync(eventHandler, eventData, cancellationToken);
         }
 
-        if (cacheItem.Local == null && cacheItem.Distributed == null)
+        if (executors.Local is null && executors.Distributed is null)
         {
-            throw new Exception("The object instance is not an event handler. Object type: " + eventHandler.GetType().AssemblyQualifiedName);
+            throw new InvalidOperationException(
+                $"The object instance is not an event handler. Object type: {eventHandler.GetType().AssemblyQualifiedName}");
         }
     }
+
+    private static HandlerExecutors CreateExecutors(Type handlerType, Type eventType)
+    {
+        return new HandlerExecutors(
+            CreateExecutorIfImplemented(
+                handlerType,
+                typeof(ILocalEventHandler<>).MakeGenericType(eventType),
+                typeof(LocalEventHandlerMethodExecutor<>),
+                eventType),
+            CreateExecutorIfImplemented(
+                handlerType,
+                typeof(IDistributedEventHandler<>).MakeGenericType(eventType),
+                typeof(DistributedEventHandlerMethodExecutor<>),
+                eventType));
+    }
+
+    private static IEventHandlerMethodExecutor? CreateExecutorIfImplemented(
+        Type handlerType,
+        Type handlerContract,
+        Type executorType,
+        Type eventType)
+    {
+        if (!handlerContract.IsAssignableFrom(handlerType))
+        {
+            return null;
+        }
+
+        return (IEventHandlerMethodExecutor?)Activator.CreateInstance(executorType.MakeGenericType(eventType));
+    }
+
+    private sealed record HandlerExecutors(
+        IEventHandlerMethodExecutor? Local,
+        IEventHandlerMethodExecutor? Distributed);
 }

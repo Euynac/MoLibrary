@@ -197,6 +197,7 @@
     letter-spacing: 0.00625rem;
     line-height: 1.25rem;
     padding: 0 16px;
+    --mo-navbar-link-padding-inline: 16px;
     transition:
         background-color var(--mo-m3-motion-standard),
         color var(--mo-m3-motion-standard);
@@ -530,5 +531,6 @@
     .mo-theme-material-design-3-light .navbar-measure-link,
     .mo-theme-material-design-3-dark .navbar-measure-link {
         padding: 0 12px;
+        --mo-navbar-link-padding-inline: 12px;
     }
 }

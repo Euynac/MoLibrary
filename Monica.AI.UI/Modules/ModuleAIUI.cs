@@ -13,6 +13,7 @@ using Monica.Core.Modularity;
 using Monica.Core.Modularity.Abstractions;
 using Monica.Core.Modularity.Annotations;
 using Monica.Core.Modularity.Models;
+using Monica.UI.Shell.Models;
 using MudBlazor;
 
 // ReSharper disable once CheckNamespace
@@ -73,11 +74,11 @@ public class ModuleAIUI(ModuleAIUIOption option)
             DependsOnModule<ModuleShellUIGuide>().Register(o => o.EnableMarkdown = true)
                 .RegisterUIComponents(p =>
                 {
-                    p.RegisterLocalizedComponent<ChatPage>(
+                    p.RegisterLocalizedPage<ChatPage, AIResource>(
                         ChatPage.PAGE_URL,
                         "Pages:AIChat:Title",
                         Icons.Material.Filled.SmartToy,
-                        "Categories:AI",
+                        BuiltInNavigationCategoryIds.AI,
                         addToNav: true,
                         navOrder: 1);
                 });
@@ -88,11 +89,11 @@ public class ModuleAIUI(ModuleAIUIOption option)
             DependsOnModule<ModuleShellUIGuide>().Register()
                 .RegisterUIComponents(p =>
                 {
-                    p.RegisterLocalizedComponent<ProviderManagePage>(
+                    p.RegisterLocalizedPage<ProviderManagePage, AIResource>(
                         ProviderManagePage.PAGE_URL,
                         "Pages:AIProviderManage:Title",
                         Icons.Material.Filled.Hub,
-                        "Categories:AI",
+                        BuiltInNavigationCategoryIds.AI,
                         addToNav: true,
                         navOrder: 2);
                 });
@@ -105,11 +106,11 @@ public class ModuleAIUI(ModuleAIUIOption option)
             DependsOnModule<ModuleShellUIGuide>().Register()
                 .RegisterUIComponents(p =>
                 {
-                    p.RegisterLocalizedComponent<AgentCapabilityManagePage>(
+                    p.RegisterLocalizedPage<AgentCapabilityManagePage, AIResource>(
                         AgentCapabilityManagePage.PAGE_URL,
                         "Pages:AICapabilities:Title",
                         Icons.Material.Filled.Extension,
-                        "Categories:AI",
+                        BuiltInNavigationCategoryIds.AI,
                         addToNav: true,
                         navOrder: 3);
                 });

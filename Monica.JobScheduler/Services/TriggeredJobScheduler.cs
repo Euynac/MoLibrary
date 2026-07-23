@@ -80,7 +80,9 @@ public class TriggeredJobScheduler(
     /// <summary>
     /// Handles JobTriggeredEvent to create and schedule triggered jobs.
     /// </summary>
-    private async Task OnJobTriggeredAsync(JobTriggeredEvent evt)
+    private async Task OnJobTriggeredAsync(
+        JobTriggeredEvent evt,
+        CancellationToken cancellationToken)
     {
         if (!string.Equals(evt.SchedulerScopeKey, _options.SchedulerScopeKey, StringComparison.Ordinal))
         {
@@ -90,7 +92,7 @@ public class TriggeredJobScheduler(
 
         try
         {
-            var definition = await cacheService.GetDefinitionAsync(evt.JobKey);
+            var definition = await cacheService.GetDefinitionAsync(evt.JobKey, cancellationToken);
             if (definition == null || definition.IsDisabled)
             {
                 logger.LogWarning("Triggered job {JobKey} not found or disabled", evt.JobKey);
@@ -107,6 +109,7 @@ public class TriggeredJobScheduler(
                 definition,
                 parameters: evt.JobArgs,
                 initialState,
+                cancellationToken,
                 instanceId: evt.InstanceId,
                 initDescription: evt.Delay.HasValue
                     ? $"JobTriggeredEvent delayed execution (delay: {evt.Delay.Value}, scheduled: {scheduledTime!.Value:yyyy-MM-dd HH:mm:ss})"
@@ -115,7 +118,7 @@ public class TriggeredJobScheduler(
             if (scheduledTime.HasValue)
             {
                 instance.ScheduledExecutionTime = scheduledTime.Value;
-                await metadataRepository.SaveInstanceAsync(instance);
+                await metadataRepository.SaveInstanceAsync(instance, cancellationToken);
             }
 
             logger.LogInformation(
@@ -127,13 +130,24 @@ public class TriggeredJobScheduler(
 
             if (scheduledTime is not null)
             {
+                cancellationToken.ThrowIfCancellationRequested();
+
+                // The persisted delayed schedule intentionally outlives this event delivery.
                 ScheduleDelayedJob(instance, definition, scheduledTime.Value);
             }
             else
             {
                 // Pass JSON string directly (already serialized)
-                await jobDispatcher.PublishJobExecutionEventAsync(instance, definition, evt.JobArgs);
+                await jobDispatcher.PublishJobExecutionEventAsync(
+                    instance,
+                    definition,
+                    evt.JobArgs,
+                    cancellationToken);
             }
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
         }
         catch (Exception ex)
         {
@@ -145,7 +159,9 @@ public class TriggeredJobScheduler(
     /// Handles ManualJobExecutionRequestEvent from worker nodes.
     /// Loads the pre-created job instance and dispatches it for execution on the registry node.
     /// </summary>
-    private async Task OnManualJobExecutionRequestAsync(ManualJobExecutionRequestEvent evt)
+    private async Task OnManualJobExecutionRequestAsync(
+        ManualJobExecutionRequestEvent evt,
+        CancellationToken cancellationToken)
     {
         if (!string.Equals(evt.SchedulerScopeKey, _options.SchedulerScopeKey, StringComparison.Ordinal))
         {
@@ -155,14 +171,14 @@ public class TriggeredJobScheduler(
 
         try
         {
-            var definition = await cacheService.GetDefinitionAsync(evt.JobKey);
+            var definition = await cacheService.GetDefinitionAsync(evt.JobKey, cancellationToken);
             if (definition == null || definition.IsDisabled)
             {
                 logger.LogWarning("Manual execution request for job {JobKey}: not found or disabled", evt.JobKey);
                 return;
             }
 
-            var instance = await metadataRepository.GetInstanceAsync(evt.InstanceId);
+            var instance = await metadataRepository.GetInstanceAsync(evt.InstanceId, cancellationToken);
             if (instance == null)
             {
                 logger.LogWarning(
@@ -172,11 +188,19 @@ public class TriggeredJobScheduler(
             }
 
             // Dispatch for execution
-            await jobDispatcher.PublishJobExecutionEventAsync(instance, definition, evt.JobArgsJson);
+            await jobDispatcher.PublishJobExecutionEventAsync(
+                instance,
+                definition,
+                evt.JobArgsJson,
+                cancellationToken);
 
             logger.LogInformation(
                 "Registry processed manual execution request: {JobKey}, InstanceId: {InstanceId}",
                 evt.JobKey, instance.InstanceId);
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
         }
         catch (Exception ex)
         {
@@ -324,7 +348,9 @@ public class TriggeredJobScheduler(
     /// <summary>
     /// Handles JobCancellationRequestedEvent to cancel scheduled jobs.
     /// </summary>
-    private async Task OnJobCancellationRequestedAsync(JobCancellationRequestedEvent evt)
+    private async Task OnJobCancellationRequestedAsync(
+        JobCancellationRequestedEvent evt,
+        CancellationToken cancellationToken)
     {
         if (!string.Equals(evt.SchedulerScopeKey, _options.SchedulerScopeKey, StringComparison.Ordinal))
         {
@@ -345,9 +371,14 @@ public class TriggeredJobScheduler(
             await jobInstanceManager.UpdateStateAsync(
                 evt.InstanceId,
                 JobState.Cancelled,
-                "Cancelled by user request");
+                "Cancelled by user request",
+                cancellationToken);
 
             logger.LogInformation("Cancelled scheduled job {InstanceId}", evt.InstanceId);
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
         }
         catch (Exception ex)
         {

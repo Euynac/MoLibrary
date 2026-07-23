@@ -14,6 +14,7 @@ using Monica.Markdown.UIMarkdown.Models;
 using Monica.Markdown.UIMarkdown.State;
 using Monica.Markdown.UIMarkdown.Support;
 using Monica.UI.Shared.Components.Markdown;
+using Monica.UI.Shell.Models;
 using MudBlazor;
 
 // ReSharper disable once CheckNamespace
@@ -51,11 +52,11 @@ public class ModuleMarkdownUI(ModuleMarkdownUIOption option)
             DependsOnModule<ModuleLocalizationGuide>().Register()
                 .AddResource<MarkdownResource>();
 
-            uiCoreGuide.RegisterUIComponents(p => p.RegisterLocalizedComponent<UIMarkdownPage>(
+            uiCoreGuide.RegisterUIComponents(p => p.RegisterLocalizedPage<UIMarkdownPage, MarkdownResource>(
                 MarkdownViewerLocation.PAGE_URL,
                 "Pages:MarkdownDocuments:Title",
                 Icons.Material.Filled.MenuBook,
-                "Categories:Documentation",
+                BuiltInNavigationCategoryIds.Documentation,
                 addToNav: true,
                 navOrder: 50));
         }

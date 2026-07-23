@@ -1,4 +1,3 @@
-using Microsoft.AspNetCore.Components.Routing;
 using Microsoft.Extensions.DependencyInjection;
 using Monica.Core;
 using Monica.Core.Modularity;
@@ -8,6 +7,7 @@ using Monica.Core.Modularity.Models;
 using Monica.JobScheduler.UI.Localization;
 using Monica.JobScheduler.UI.Pages;
 using Monica.JobScheduler.UI.UIJobScheduler.Shared.Support;
+using Monica.UI.Shell.Models;
 using MudBlazor;
 
 // ReSharper disable once CheckNamespace
@@ -63,46 +63,45 @@ public class ModuleJobSchedulerUI(ModuleJobSchedulerUIOption option)
                 .RegisterUIComponents(p =>
                 {
                     // Overview dashboard
-                    p.RegisterLocalizedComponent<DashboardPage>(
+                    p.RegisterLocalizedPage<DashboardPage, JobSchedulerResource>(
                         DashboardPage.PAGE_URL,
                         "Pages:JobSchedulerDashboard:Title",
                         Icons.Material.Filled.Dashboard,
-                        "Categories:TaskScheduling",
+                        BuiltInNavigationCategoryIds.TaskScheduling,
                         addToNav: true,
-                        navOrder: 99,
-                        navLinkMatch: NavLinkMatch.All);
+                        navOrder: 99);
 
                     // Real-time monitoring
-                    p.RegisterLocalizedComponent<MonitorPage>(
+                    p.RegisterLocalizedPage<MonitorPage, JobSchedulerResource>(
                         MonitorPage.PAGE_URL,
                         "Pages:JobSchedulerMonitor:Title",
                         Icons.Material.Filled.Monitor,
-                        "Categories:TaskScheduling",
+                        BuiltInNavigationCategoryIds.TaskScheduling,
                         addToNav: true,
                         navOrder: 100);
 
-                    p.RegisterLocalizedComponent<JobDefinitionsPage>(
+                    p.RegisterLocalizedPage<JobDefinitionsPage, JobSchedulerResource>(
                         JobDefinitionsPage.PAGE_URL,
                         "Pages:JobDefinitions:Title",
                         Icons.Material.Filled.WorkOutline,
-                        "Categories:TaskScheduling",
+                        BuiltInNavigationCategoryIds.TaskScheduling,
                         addToNav: true,
                         navOrder: 101);
 
-                    p.RegisterLocalizedComponent<JobInstancesPage>(
+                    p.RegisterLocalizedPage<JobInstancesPage, JobSchedulerResource>(
                         JobInstancesPage.PAGE_URL,
                         "Pages:JobInstances:Title",
                         Icons.Material.Filled.PlaylistPlay,
-                        "Categories:TaskScheduling",
+                        BuiltInNavigationCategoryIds.TaskScheduling,
                         addToNav: true,
                         navOrder: 102);
 
                     // Statistical analysis
-                    p.RegisterLocalizedComponent<StatisticsPage>(
+                    p.RegisterLocalizedPage<StatisticsPage, JobSchedulerResource>(
                         StatisticsPage.PAGE_URL,
                         "Pages:JobStatistics:Title",
                         Icons.Material.Filled.Analytics,
-                        "Categories:TaskScheduling",
+                        BuiltInNavigationCategoryIds.TaskScheduling,
                         addToNav: true,
                         navOrder: 103);
                 });

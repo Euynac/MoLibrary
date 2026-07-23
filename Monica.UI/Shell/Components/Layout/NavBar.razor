@@ -4,31 +4,35 @@
     <div class="navbar-nav navbar-nav-desktop" @ref="_desktopNavRef">
         @foreach (var category in VisibleCategories)
         {
-            <NavBarDropdown Category="@category.Key"
-                            Items="@category.Value" />
+            <NavBarDropdown Category="@category.DisplayName"
+                            CategoryId="@category.Id"
+                            CurrentRoute="@CurrentRoute"
+                            Items="@category.Items" />
         }
 
         @if (HasMoreCategories)
         {
-            <NavBarMore Categories="@MoreCategories" />
+            <NavBarMore Categories="@MoreCategories" CurrentRoute="@CurrentRoute" />
         }
     </div>
 
     <div class="navbar-nav navbar-nav-compact">
         @if (HasAnyCategories)
         {
-            <NavBarMore Categories="@AllCategories" CompactMode="true" />
+            <NavBarMore Categories="@AllCategories"
+                        CurrentRoute="@CurrentRoute"
+                        CompactMode="true" />
         }
     </div>
 
     <NavBarActions />
 
     <div class="navbar-measurements" @ref="_measurementRailRef" aria-hidden="true">
-        @foreach (var category in OrderedCategories)
+        @foreach (var category in AllCategories)
         {
             <div class="navbar-measure-item" data-nav-measure="category">
                 <button class="navbar-measure-link" type="button">
-                    <span>@category.Key</span>
+                    <span>@category.DisplayName</span>
                     <MudIcon Icon="@Icons.Material.Filled.KeyboardArrowDown"
                              Size="Size.Small"
                              Class="navbar-measure-icon" />

@@ -42,6 +42,16 @@ public enum ResStatus
     NotFound = 404,
 
     /// <summary>
+    /// The request payload exceeds the server's accepted size.
+    /// </summary>
+    PayloadTooLarge = 413,
+
+    /// <summary>
+    /// The request content type is not supported by the target operation.
+    /// </summary>
+    UnsupportedMediaType = 415,
+
+    /// <summary>
     /// Request validation failed.
     /// </summary>
     ValidateError = 451,

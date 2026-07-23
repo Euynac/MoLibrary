@@ -1,4 +1,9 @@
 {
+  "Pages": {
+    "SystemInfo": {
+      "Title": "系统信息"
+    }
+  },
   "Page": {
     "PageTitle": "系统信息",
     "Header": {

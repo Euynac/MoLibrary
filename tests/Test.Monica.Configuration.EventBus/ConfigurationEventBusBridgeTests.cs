@@ -83,6 +83,7 @@ public sealed class ConfigurationEventBusBridgeTests
         await eventBus.PublishAsync(notification, "custom.configuration.reload", TestContext.Current.CancellationToken);
 
         receiver.ReceivedNotifications.Should().ContainSingle().Which.Should().Be(notification);
+        receiver.ReceivedCancellationTokens.Should().ContainSingle().Which.Should().Be(TestContext.Current.CancellationToken);
     }
 
     [Fact]
@@ -149,19 +150,22 @@ public sealed class ConfigurationEventBusBridgeTests
     private sealed class RecordingReloadSignalReceiver : IConfigurationReloadSignalReceiver
     {
         private readonly List<ConfigurationReloadSignal> _receivedNotifications = [];
+        private readonly List<CancellationToken> _receivedCancellationTokens = [];
 
         public IReadOnlyList<ConfigurationReloadSignal> ReceivedNotifications => _receivedNotifications;
+        public IReadOnlyList<CancellationToken> ReceivedCancellationTokens => _receivedCancellationTokens;
 
         public Task ReceiveAsync(ConfigurationReloadSignal notification, CancellationToken cancellationToken)
         {
             _receivedNotifications.Add(notification);
+            _receivedCancellationTokens.Add(cancellationToken);
             return Task.CompletedTask;
         }
     }
 
     private sealed class RecordingDistributedEventBus : IDistributedEventBus
     {
-        private Func<ConfigurationReloadSignal, Task>? _notificationHandler;
+        private Func<ConfigurationReloadSignal, CancellationToken, Task>? _notificationHandler;
         private string? _subscriptionTopic;
 
         public List<PublishedEvent> PublishedEvents { get; } = [];
@@ -176,7 +180,7 @@ public sealed class ConfigurationEventBusBridgeTests
                 && string.Equals(topicName, _subscriptionTopic, StringComparison.Ordinal)
                 && _notificationHandler is not null)
             {
-                return _notificationHandler(notification);
+                return _notificationHandler(notification, cancellationToken);
             }
 
             return Task.CompletedTask;
@@ -195,7 +199,9 @@ public sealed class ConfigurationEventBusBridgeTests
             throw new NotSupportedException();
         }
 
-        public Task<IEventSubscription> SubscribeAsync<TEvent>(Func<TEvent, Task> handler, string? topicName = null)
+        public Task<IEventSubscription> SubscribeAsync<TEvent>(
+            Func<TEvent, CancellationToken, Task> handler,
+            string? topicName = null)
             where TEvent : class
         {
             if (typeof(TEvent) != typeof(ConfigurationReloadSignal))
@@ -204,7 +210,8 @@ public sealed class ConfigurationEventBusBridgeTests
             }
 
             _subscriptionTopic = topicName;
-            _notificationHandler = notification => handler((TEvent)(object)notification);
+            _notificationHandler = (notification, cancellationToken) =>
+                handler((TEvent)(object)notification, cancellationToken);
             return Task.FromResult<IEventSubscription>(new RecordingEventSubscription());
         }
 

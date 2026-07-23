@@ -163,12 +163,14 @@ public class Module{Name}UI(Module{Name}UIOption option)
         if (!Option.Disable{Name}Page)
         {
             DependsOnModule<Module{Name}Guide>().Register();
+            DependsOnModule<ModuleLocalizationGuide>().Register()
+                .AddResource<{Name}Resource>();
             DependsOnModule<ModuleShellUIGuide>().Register()
-                .RegisterUIComponents(p => p.RegisterLocalizedComponent<UI{Name}Page>(
+                .RegisterUIComponents(p => p.RegisterLocalizedPage<UI{Name}Page, {Name}Resource>(
                     UI{Name}Page.{NAME}_URL,
                     displayNameKey: "Pages:{Name}:Title",
                     Icons.Material.Filled.Settings,
-                    categoryKey: "Categories:SystemManagement",
+                    categoryId: BuiltInNavigationCategoryIds.Infrastructure,
                     addToNav: true,
                     navOrder: 100));
         }

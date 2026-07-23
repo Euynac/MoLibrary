@@ -1,56 +1,58 @@
 @using Microsoft.Extensions.Localization
+@using Monica.Core.Localization.Abstractions
 @using Monica.UI.Localization
+@using Monica.UI.Shell.Models
+@using Monica.UI.Shell.Support
 @inject IStringLocalizer<SharedResource> L
-@inject IStringLocalizer<UIRegistryResource> RegistryL
+@inject ILocalizationCatalog LocalizationCatalog
 
-<div class="@RootCssClass"
-     @onmouseenter="OnMouseEnter"
-     @onmouseleave="OnMouseLeave">
-
-    <button class="navbar-link">
-        @L["NavBar:More"]
-        <MudIcon Icon="@Icons.Material.Filled.MoreHoriz" Size="Size.Small" />
-    </button>
-
-    @if (_isDropdownOpen)
-    {
-        <div class="@MoreMenuCssClass">
-            <div class="more-menu-header">
-                <span>@L["NavBar:MoreModules"]</span>
-            </div>
-            @foreach (var category in Categories.OrderBy(c => c.Key))
-            {
-                <div class="more-category-item"
-                     @onmouseenter="() => OnCategoryHover(category.Key)"
-                     @onmouseleave="OnCategoryLeave">
-
-                    <div class="category-header">
-                        <span>@category.Key</span>
-                        <MudIcon Icon="@Icons.Material.Filled.ChevronRight" Size="Size.Small" />
-                    </div>
-
-                    @if (_activeFlyoutCategory == category.Key)
-                    {
-                        <div class="flyout-menu">
-                            <div class="flyout-menu-header">
-                                <span>@category.Key</span>
-                            </div>
-                            @foreach (var item in category.Value.OrderBy(i => i.Order))
-                            {
-                                <MudNavLink Href="@item.Href"
-                                           Class="flyout-item"
-                                           Match="@item.NavLinkMatch">
-                                    @if (!string.IsNullOrEmpty(item.Icon))
-                                    {
-                                        <MudIcon Icon="@item.Icon" Size="Size.Small" Class="item-icon" />
-                                    }
-                                    <span>@GetItemText(item)</span>
-                                </MudNavLink>
-                            }
-                        </div>
-                    }
-                </div>
-            }
-        </div>
-    }
+<div class="@RootCssClass">
+    <MudMenu Label="@L["NavBar:More"]"
+             AriaLabel="@L["NavBar:More"]"
+             EndIcon="@Icons.Material.Filled.MoreHoriz"
+             Variant="Variant.Text"
+             Class="navbar-menu navbar-link"
+             ActivationEvent="@MouseEvent.MouseOver"
+             AnchorOrigin="Origin.BottomRight"
+             TransformOrigin="Origin.TopRight"
+             PopoverClass="@MorePopoverCssClass"
+             ListClass="mo-appbar-menu-list">
+        <div class="more-menu-header">@L["NavBar:MoreModules"]</div>
+        @foreach (var category in Categories)
+        {
+            <MudMenu Label="@category.DisplayName"
+                     AriaLabel="@category.DisplayName"
+                     EndIcon="@Icons.Material.Filled.ChevronRight"
+                     Class="more-category-item"
+                     PopoverClass="@FlyoutPopoverCssClass"
+                     ListClass="mo-appbar-menu-list"
+                     data-navigation-category-id="@category.Id.Value">
+                <div class="flyout-menu-header">@category.DisplayName</div>
+                @foreach (var item in category.Items)
+                {
+                    <MudMenuItem Href="@item.Href"
+                                 Icon="@item.Icon"
+                                 Class="@NavigationRouteMatcher.GetActiveClass(CurrentRoute, item.Href)">
+                        @item.ResolveText(LocalizationCatalog)
+                    </MudMenuItem>
+                }
+            </MudMenu>
+        }
+    </MudMenu>
 </div>
+
+@code {
+    [Parameter] public IReadOnlyList<NavigationGroup> Categories { get; set; } = [];
+    [Parameter] public string CurrentRoute { get; set; } = string.Empty;
+    [Parameter] public bool CompactMode { get; set; }
+
+    private string RootCssClass => CompactMode ? "navbar-more navbar-more-compact" : "navbar-more";
+
+    private string MorePopoverCssClass => CompactMode
+        ? "dropdown-menu more-menu more-menu-scrollable mo-navbar-menu-popover mo-navbar-more-popover mo-navbar-menu-popover-compact"
+        : "dropdown-menu more-menu more-menu-scrollable mo-navbar-menu-popover mo-navbar-more-popover";
+
+    private string FlyoutPopoverCssClass => CompactMode
+        ? "flyout-menu mo-navbar-menu-popover mo-navbar-flyout-popover mo-navbar-menu-popover-compact"
+        : "flyout-menu mo-navbar-menu-popover mo-navbar-flyout-popover";
+}

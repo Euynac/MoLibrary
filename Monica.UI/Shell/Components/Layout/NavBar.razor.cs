@@ -1,7 +1,9 @@
 using Microsoft.AspNetCore.Components;
+using Microsoft.AspNetCore.Components.Routing;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
 using Microsoft.JSInterop;
+using Monica.Core.Localization.Abstractions;
 using Monica.Modules;
 using Monica.UI.Localization;
 using Monica.UI.Shell.Models;
@@ -14,14 +16,14 @@ public partial class NavBar : IAsyncDisposable
     private const string LayoutModulePath = "./_content/Monica.UI/js/navbar-layout.js";
     private const int LayoutSafetyMarginPx = 8;
 
-    [Inject] private IPageRegistry UIRegistry { get; set; } = default!;
+    [Inject] private IPageCatalog PageCatalog { get; set; } = default!;
     [Inject] private IOptions<ModuleShellUIOption> Options { get; set; } = default!;
     [Inject] private IStringLocalizer<SharedResource> L { get; set; } = default!;
-    [Inject] private IStringLocalizer<UIRegistryResource> RegistryL { get; set; } = default!;
+    [Inject] private ILocalizationCatalog LocalizationCatalog { get; set; } = default!;
+    [Inject] private NavigationManager NavigationManager { get; set; } = default!;
     [Inject] private IJSRuntime JSRuntime { get; set; } = default!;
 
-    private readonly Dictionary<string, List<NavigationItem>> _categorizedNavItems = [];
-    private readonly List<string> _orderedCategoryNames = [];
+    private readonly List<NavigationGroup> _navigationGroups = [];
 
     private DotNetObjectReference<NavBar>? _selfReference;
     private ElementReference _desktopNavRef;
@@ -32,49 +34,58 @@ public partial class NavBar : IAsyncDisposable
 
     private int MaxVisibleCategories => Options.Value.MaxVisibleCategories;
 
-    private IEnumerable<KeyValuePair<string, List<NavigationItem>>> OrderedCategories =>
-        _orderedCategoryNames.Select(name => new KeyValuePair<string, List<NavigationItem>>(name, _categorizedNavItems[name]));
+    private string CurrentRoute => NavigationManager.ToBaseRelativePath(NavigationManager.Uri);
 
-    private IEnumerable<KeyValuePair<string, List<NavigationItem>>> VisibleCategories =>
-        OrderedCategories.Take(EffectiveVisibleCategoryCount);
+    private IEnumerable<NavigationGroup> VisibleCategories =>
+        _navigationGroups.Take(EffectiveVisibleCategoryCount);
 
-    private bool HasMoreCategories => _orderedCategoryNames.Count > EffectiveVisibleCategoryCount;
+    private bool HasMoreCategories => _navigationGroups.Count > EffectiveVisibleCategoryCount;
 
-    private bool HasAnyCategories => _orderedCategoryNames.Count > 0;
+    private bool HasAnyCategories => _navigationGroups.Count > 0;
 
-    private Dictionary<string, List<NavigationItem>> AllCategories =>
-        OrderedCategories.ToDictionary(entry => entry.Key, entry => entry.Value);
+    private IReadOnlyList<NavigationGroup> AllCategories => _navigationGroups;
 
-    private Dictionary<string, List<NavigationItem>> MoreCategories =>
-        OrderedCategories
+    private IReadOnlyList<NavigationGroup> MoreCategories =>
+        _navigationGroups
             .Skip(EffectiveVisibleCategoryCount)
-            .ToDictionary(entry => entry.Key, entry => entry.Value);
+            .ToList();
 
     private int EffectiveVisibleCategoryCount =>
-        Math.Clamp(_visibleCategoryCount, 0, Math.Min(MaxVisibleCategories, _orderedCategoryNames.Count));
+        Math.Clamp(_visibleCategoryCount, 0, Math.Min(MaxVisibleCategories, _navigationGroups.Count));
 
     protected override void OnInitialized()
     {
-        var allNavItems = UIRegistry.GetNavItems();
+        NavigationManager.LocationChanged += HandleLocationChanged;
 
-        foreach (var group in allNavItems
-                     .GroupBy(item =>
-                     {
-                         var category = item.Category ?? L["ModuleSystem:Common:Labels:Uncategorized"];
-                         return GetLocalizedText(category, item.CategoryKey);
-                     })
-                     .OrderBy(group => group.Key))
+        var itemsByCategory = PageCatalog.GetNavItems()
+            .GroupBy(static item => item.CategoryId)
+            .ToDictionary(static group => group.Key, static group => (IReadOnlyList<NavigationItem>)group.ToList());
+
+        foreach (var category in PageCatalog.GetNavigationCategories())
         {
-            _categorizedNavItems[group.Key] = group.ToList();
-            _orderedCategoryNames.Add(group.Key);
+            if (!itemsByCategory.TryGetValue(category.Id, out var items))
+            {
+                continue;
+            }
+
+            _navigationGroups.Add(
+                new NavigationGroup(
+                    category.Id,
+                    category.ResolveDisplayName(LocalizationCatalog),
+                    items));
         }
 
-        _visibleCategoryCount = Math.Min(MaxVisibleCategories, _orderedCategoryNames.Count);
+        _visibleCategoryCount = Math.Min(MaxVisibleCategories, _navigationGroups.Count);
+    }
+
+    private void HandleLocationChanged(object? sender, LocationChangedEventArgs args)
+    {
+        _ = InvokeAsync(StateHasChanged);
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if (!firstRender || _orderedCategoryNames.Count == 0)
+        if (!firstRender || _navigationGroups.Count == 0)
         {
             return;
         }
@@ -99,7 +110,7 @@ public partial class NavBar : IAsyncDisposable
         var clampedVisibleCategoryCount = Math.Clamp(
             visibleCategoryCount,
             0,
-            Math.Min(MaxVisibleCategories, _orderedCategoryNames.Count));
+            Math.Min(MaxVisibleCategories, _navigationGroups.Count));
 
         if (clampedVisibleCategoryCount == _visibleCategoryCount)
         {
@@ -110,18 +121,10 @@ public partial class NavBar : IAsyncDisposable
         return InvokeAsync(StateHasChanged);
     }
 
-    private string GetLocalizedText(string text, string? key)
-    {
-        if (!string.IsNullOrEmpty(key))
-        {
-            return RegistryL[key];
-        }
-
-        return text;
-    }
-
     public async ValueTask DisposeAsync()
     {
+        NavigationManager.LocationChanged -= HandleLocationChanged;
+
         if (_layoutObserver != null)
         {
             try

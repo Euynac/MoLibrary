@@ -1,4 +1,21 @@
 {
+  "Pages": {
+    "JobSchedulerDashboard": {
+      "Title": "总览"
+    },
+    "JobSchedulerMonitor": {
+      "Title": "实时监控"
+    },
+    "JobDefinitions": {
+      "Title": "作业定义"
+    },
+    "JobInstances": {
+      "Title": "作业实例"
+    },
+    "JobStatistics": {
+      "Title": "统计分析"
+    }
+  },
   "Common": {
     "Actions": {
       "Search": "搜索",

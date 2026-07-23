@@ -1,4 +1,9 @@
 {
+  "Pages": {
+    "OpenTelemetryMetrics": {
+      "Title": "OpenTelemetry 指标"
+    }
+  },
   "Page": {
     "Title": "OpenTelemetry 指标",
     "Subtitle": "用于调试和离线排查的进程内快照"

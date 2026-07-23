@@ -114,7 +114,9 @@ public class JobWorkerManagerHostedService(
             var topicName = JobEventTopicHelper.GetProjectTopicName<JobExecutionEvent>(
                 _options.SchedulerScopeKey,
                 fromProject);
-            var subscription = await eventBus.SubscribeAsync<JobExecutionEvent>(HandleJobExecutionAsync, topicName);
+            var subscription = await eventBus.SubscribeAsync<JobExecutionEvent>(
+                HandleJobExecutionAsync,
+                topicName);
 
             _eventSubscriptions.Add(subscription);
             _subscribedProjects.Add(fromProject);
@@ -131,27 +133,32 @@ public class JobWorkerManagerHostedService(
     /// Handles job execution events from the event bus.
     /// </summary>
     /// <param name="executionEvent">The job execution event.</param>
-    private async Task HandleJobExecutionAsync(JobExecutionEvent executionEvent)
+    /// <param name="cancellationToken">Signals that the event delivery is no longer waiting.</param>
+    private Task HandleJobExecutionAsync(
+        JobExecutionEvent executionEvent,
+        CancellationToken cancellationToken)
     {
+        cancellationToken.ThrowIfCancellationRequested();
+
         if (!string.Equals(executionEvent.SchedulerScopeKey, _options.SchedulerScopeKey, StringComparison.Ordinal))
         {
             RecordState(
                 $"Ignored JobExecutionEvent for foreign scope {executionEvent.SchedulerScopeKey}",
                 logLevel: LogLevel.Debug);
-            return;
+            return Task.CompletedTask;
         }
 
         RecordState(
             $"Received JobExecutionEvent for job {executionEvent.JobKey}, InstanceId: {executionEvent.InstanceId}",
             logLevel: LogLevel.Debug);
 
-        // Don't block the event handler - execute asynchronously
+        // Acknowledged job execution intentionally outlives this message-delivery token.
         _ = Task.Run(async () =>
         {
             await ExecuteJobAsync(executionEvent);
         });
 
-        await Task.CompletedTask;
+        return Task.CompletedTask;
     }
 
     /// <summary>

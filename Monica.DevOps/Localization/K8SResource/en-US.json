@@ -1,4 +1,9 @@
 {
+  "Pages": {
+    "K8S": {
+      "Title": "K8S Operations"
+    }
+  },
   "Page": {
     "DocumentTitle": "K8S Operations",
     "Title": "K8S Operations",
