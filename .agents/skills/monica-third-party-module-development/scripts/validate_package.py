@@ -332,11 +332,10 @@ def kebab_case(value: str) -> str:
 
 
 def package_route_prefix(package_id: str) -> str:
-    segments = [
-        kebab_case(segment)
-        for segment in package_id.split(".")
-        if segment.casefold() != "monica"
-    ]
+    package_segments = package_id.split(".")[2:]
+    if len(package_segments) > 1 and package_segments[-1].casefold() == "ui":
+        package_segments = package_segments[:-1]
+    segments = [kebab_case(segment) for segment in package_segments]
     return "/" + "-".join(segments)
 
 

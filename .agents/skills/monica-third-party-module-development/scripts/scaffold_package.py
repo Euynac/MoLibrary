@@ -473,13 +473,16 @@ def kebab_case(value: str) -> str:
     return "-".join(token.casefold() for token in tokens)
 
 
+def package_route_segments(package_id: str) -> list[str]:
+    segments = package_id.split(".")[2:]
+    if len(segments) > 1 and segments[-1].casefold() == "ui":
+        segments = segments[:-1]
+    return segments
+
+
 def ui_route(manifest: Manifest, module: ModuleSpec) -> str:
-    package_segments = [
-        segment
-        for segment in manifest.package_id.split(".")
-        if segment.casefold() != "monica"
-    ]
-    if package_segments[-1].casefold() != module.base_name.casefold():
+    package_segments = package_route_segments(manifest.package_id)
+    if not any(segment.casefold() == module.base_name.casefold() for segment in package_segments):
         package_segments.append(module.base_name)
     return "/" + "-".join(kebab_case(segment) for segment in package_segments)
 

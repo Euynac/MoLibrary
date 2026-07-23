@@ -103,7 +103,7 @@ class ScaffoldTests(unittest.TestCase):
             self.assertNotIn('PackagePath="\\"', project)
             self.assertIn("namespace Acme.Monica.Example.Modules;", ui_module)
             self.assertIn("using Monica.Modules;", ui_module)
-            self.assertIn('"/acme-example"', ui_module)
+            self.assertIn('"/example"', ui_module)
             self.assertIn("builder.AddExampleUI();", tests)
             self.assertNotIn("builder.AddExample();", tests)
             self.assertTrue((output / "tests/README.md").is_file())
@@ -213,16 +213,16 @@ class ScaffoldTests(unittest.TestCase):
                 encoding="utf-8",
             )
             page_source.write_text(
-                'public const string PAGE_URL = "/acme-gacha-pool";\n',
+                'public const string PAGE_URL = "/gacha-pool";\n',
                 encoding="utf-8",
             )
 
             route, error = validator.resolve_registered_route(project, module_source)
 
-            self.assertEqual("/acme-gacha-pool", route)
+            self.assertEqual("/gacha-pool", route)
             self.assertIsNone(error)
 
-    def test_camel_case_package_segment_uses_readable_collision_resistant_route(self) -> None:
+    def test_camel_case_package_segment_uses_readable_package_family_route(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
             payload = valid_manifest()
@@ -247,7 +247,35 @@ class ScaffoldTests(unittest.TestCase):
             project = output / "src/Tairitsua.Monica.GachaPool/Tairitsua.Monica.GachaPool.csproj"
             module = output / "src/Tairitsua.Monica.GachaPool/Modules/ModuleGachaPoolUI.cs"
 
-            self.assertIn('"/tairitsua-gacha-pool"', module.read_text(encoding="utf-8"))
+            self.assertIn('"/gacha-pool"', module.read_text(encoding="utf-8"))
+            findings = validator.validate_project(
+                output,
+                project,
+                SKILL_ROOT / "assets/monica-compatibility-mark.png",
+                None,
+            )
+            self.assertEqual(["OK"], [finding.code for finding in findings])
+
+    def test_separately_shipped_ui_variant_does_not_duplicate_route_segments(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            payload = valid_manifest()
+            payload["packageId"] = "Acme.Monica.Analytics.UI"
+            payload["modules"] = [
+                {
+                    "name": "AnalyticsUI",
+                    "kind": "ui",
+                    "key": "Acme.Monica.Analytics.UI",
+                },
+            ]
+            manifest = scaffold.load_manifest(self.write_manifest(root, payload))
+            output = root / "output"
+
+            scaffold.create_repository(manifest, output)
+
+            project = output / "src/Acme.Monica.Analytics.UI/Acme.Monica.Analytics.UI.csproj"
+            module = output / "src/Acme.Monica.Analytics.UI/Modules/ModuleAnalyticsUI.cs"
+            self.assertIn('"/analytics"', module.read_text(encoding="utf-8"))
             findings = validator.validate_project(
                 output,
                 project,
