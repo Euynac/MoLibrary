@@ -32,4 +32,17 @@ internal static class KafkaNativeRequestAwaiter
         await request.ConfigureAwait(false);
         cancellationToken.ThrowIfCancellationRequested();
     }
+
+    /// <summary>
+    /// Runs a blocking native Kafka request without disposing its client when managed cancellation
+    /// occurs, then observes cancellation after the request has completed.
+    /// </summary>
+    public static async Task<T> RunBlockingAsync<T>(Func<T> request, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+        cancellationToken.ThrowIfCancellationRequested();
+        var result = await Task.Run(request, CancellationToken.None).ConfigureAwait(false);
+        cancellationToken.ThrowIfCancellationRequested();
+        return result;
+    }
 }
