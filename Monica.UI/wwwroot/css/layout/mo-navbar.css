@@ -135,6 +135,21 @@
 
 .mud-popover.mo-navbar-menu-popover .mo-appbar-menu-list {
     overscroll-behavior: contain;
+    padding-block: 8px;
+}
+
+:root[data-theme] .mud-popover.mo-navbar-menu-popover .mo-appbar-menu-list .mud-menu-item-icon {
+    font-size: 20px;
+    margin-inline: 12px;
+}
+
+:root[data-theme] .mud-popover.mo-navbar-menu-popover .mo-appbar-menu-list .mud-menu-submenu-icon {
+    font-size: 20px;
+}
+
+:root[data-theme] .mud-popover.mo-navbar-menu-popover .mo-appbar-menu-list .mud-menu-item-text {
+    line-height: 1.75;
+    margin-block: 0;
 }
 
 @media (max-width: 1280px) {
