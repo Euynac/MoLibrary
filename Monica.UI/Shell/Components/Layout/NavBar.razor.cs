@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Components;
+using Microsoft.AspNetCore.Components.Routing;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
 using Microsoft.JSInterop;
@@ -19,6 +20,7 @@ public partial class NavBar : IAsyncDisposable
     [Inject] private IOptions<ModuleShellUIOption> Options { get; set; } = default!;
     [Inject] private IStringLocalizer<SharedResource> L { get; set; } = default!;
     [Inject] private ILocalizationCatalog LocalizationCatalog { get; set; } = default!;
+    [Inject] private NavigationManager NavigationManager { get; set; } = default!;
     [Inject] private IJSRuntime JSRuntime { get; set; } = default!;
 
     private readonly List<NavigationGroup> _navigationGroups = [];
@@ -31,6 +33,8 @@ public partial class NavBar : IAsyncDisposable
     private int _visibleCategoryCount;
 
     private int MaxVisibleCategories => Options.Value.MaxVisibleCategories;
+
+    private string CurrentRoute => NavigationManager.ToBaseRelativePath(NavigationManager.Uri);
 
     private IEnumerable<NavigationGroup> VisibleCategories =>
         _navigationGroups.Take(EffectiveVisibleCategoryCount);
@@ -51,6 +55,8 @@ public partial class NavBar : IAsyncDisposable
 
     protected override void OnInitialized()
     {
+        NavigationManager.LocationChanged += HandleLocationChanged;
+
         var itemsByCategory = PageCatalog.GetNavItems()
             .GroupBy(static item => item.CategoryId)
             .ToDictionary(static group => group.Key, static group => (IReadOnlyList<NavigationItem>)group.ToList());
@@ -70,6 +76,11 @@ public partial class NavBar : IAsyncDisposable
         }
 
         _visibleCategoryCount = Math.Min(MaxVisibleCategories, _navigationGroups.Count);
+    }
+
+    private void HandleLocationChanged(object? sender, LocationChangedEventArgs args)
+    {
+        _ = InvokeAsync(StateHasChanged);
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -112,6 +123,8 @@ public partial class NavBar : IAsyncDisposable
 
     public async ValueTask DisposeAsync()
     {
+        NavigationManager.LocationChanged -= HandleLocationChanged;
+
         if (_layoutObserver != null)
         {
             try

@@ -1,0 +1,171 @@
+/* Shared AppBar menu layout. Theme-specific files may override this visual baseline. */
+
+.navbar-item,
+.navbar-more {
+    --mo-navbar-link-padding-block: 0;
+    --mo-navbar-link-padding-inline: 20px;
+    align-items: center;
+    display: flex;
+    height: 100%;
+}
+
+.navbar-more {
+    flex-shrink: 0;
+}
+
+.navbar-more-compact {
+    margin-left: auto;
+}
+
+.navbar-menu.navbar-link {
+    align-items: center;
+    align-self: stretch;
+    background: transparent;
+    border: none;
+    color: var(--mud-palette-text-primary);
+    cursor: pointer;
+    display: inline-flex;
+    flex-wrap: nowrap;
+    font-size: 14px;
+    font-weight: 500;
+    height: 100%;
+    padding: 0 !important;
+    position: relative;
+    transition: background-color 0.2s ease, color 0.2s ease;
+    white-space: nowrap;
+}
+
+:root[data-theme] .navbar-menu.navbar-link > button.mud-button-root.mud-menu-button-activator {
+    background: transparent !important;
+    border: 0 !important;
+    border-radius: inherit !important;
+    box-shadow: none !important;
+    color: inherit !important;
+    filter: none !important;
+    font-family: inherit !important;
+    font-size: inherit !important;
+    font-weight: inherit !important;
+    height: 100%;
+    letter-spacing: inherit !important;
+    line-height: inherit !important;
+    min-width: 0;
+    padding: var(--mo-navbar-link-padding-block, 0) var(--mo-navbar-link-padding-inline, 20px) !important;
+    text-transform: inherit !important;
+    transform: none !important;
+    transition: none !important;
+    white-space: nowrap;
+}
+
+:root[data-theme] .navbar-menu.navbar-link > button.mud-button-root.mud-menu-button-activator:is(:hover, :focus, :active) {
+    background: transparent !important;
+    box-shadow: none !important;
+    color: inherit !important;
+    transform: none !important;
+}
+
+:root[data-theme] .navbar-menu.navbar-link > button.mud-button-root.mud-menu-button-activator::before,
+:root[data-theme] .navbar-menu.navbar-link > button.mud-button-root.mud-menu-button-activator::after {
+    display: none !important;
+}
+
+.navbar-menu.navbar-link:hover,
+.navbar-menu.navbar-link:focus-within {
+    background-color: var(--mud-palette-action-default-hover);
+    color: var(--mud-palette-primary);
+}
+
+.navbar-menu.navbar-link::before {
+    background: var(--mud-palette-primary);
+    bottom: 0;
+    content: '';
+    height: 2px;
+    left: 50%;
+    position: absolute;
+    transform: translateX(-50%);
+    transition: width 0.3s ease;
+    width: 0;
+}
+
+.navbar-menu.navbar-link:hover::before,
+.navbar-menu.navbar-link:focus-within::before {
+    width: 80%;
+}
+
+.mud-popover.mo-navbar-menu-popover {
+    background-color: var(--mud-palette-surface);
+    border: 1px solid var(--mud-palette-divider);
+    border-radius: var(--mo-nav-menu-border-radius, var(--mo-card-border-radius, var(--mud-default-borderradius)));
+}
+
+.mud-popover.mo-navbar-dropdown-popover {
+    min-width: 240px;
+}
+
+.mud-popover.mo-navbar-more-popover {
+    max-height: calc(100vh - var(--mo-appbar-height) - 24px);
+    max-height: calc(100dvh - var(--mo-appbar-height) - 24px);
+    min-width: 220px;
+    overscroll-behavior: contain;
+    overflow-y: auto;
+}
+
+.mud-popover.mo-navbar-flyout-popover {
+    max-height: calc(100vh - var(--mo-appbar-height) - 32px);
+    max-height: calc(100dvh - var(--mo-appbar-height) - 32px);
+    min-width: 240px;
+    overscroll-behavior: contain;
+    overflow-y: auto;
+}
+
+.mud-popover.mo-navbar-menu-popover-compact {
+    min-width: min(220px, calc((100vw - 32px) / 2));
+    width: min(220px, calc((100vw - 32px) / 2));
+}
+
+.mud-popover.mo-navbar-menu-popover :is(.more-menu-header, .flyout-menu-header) {
+    border-bottom: 1px solid var(--mud-palette-divider);
+    color: var(--mud-palette-text-secondary);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    margin-bottom: 4px;
+    padding: 8px 16px;
+    text-transform: uppercase;
+}
+
+.mud-popover.mo-navbar-menu-popover .mo-appbar-menu-list {
+    overscroll-behavior: contain;
+    padding-block: 8px;
+}
+
+:root[data-theme] .mud-popover.mo-navbar-menu-popover .mo-appbar-menu-list .mud-menu-item-icon {
+    font-size: 20px;
+    margin-inline: 12px;
+}
+
+:root[data-theme] .mud-popover.mo-navbar-menu-popover .mo-appbar-menu-list .mud-menu-submenu-icon {
+    font-size: 20px;
+}
+
+:root[data-theme] .mud-popover.mo-navbar-menu-popover .mo-appbar-menu-list .mud-menu-item-text {
+    line-height: 1.75;
+    margin-block: 0;
+}
+
+@media (max-width: 1280px) {
+    .navbar-item,
+    .navbar-more {
+        --mo-navbar-link-padding-inline: 14px;
+    }
+}
+
+@media (max-width: 1080px) {
+    .navbar-item,
+    .navbar-more {
+        --mo-navbar-link-padding-inline: 10px;
+    }
+
+    .navbar-menu.navbar-link {
+        font-size: 13px;
+    }
+}

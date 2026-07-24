@@ -11,10 +11,10 @@
   <PropertyGroup Condition="'$(IsPackable)' != 'false'">
     <!-- Package Metadata -->
     <Version>1.0.0-rc.6</Version>
-    <Authors>Momean</Authors>
-    <Company>Momean</Company>
+    <Authors>MonicaFramework</Authors>
+    <Company>MonicaFramework</Company>
     <Product>Monica Framework</Product>
-    <Copyright>Copyright © Momean 2026</Copyright>
+    <Copyright>Copyright © Tairitsua 2025-$([System.DateTime]::Now.Year)</Copyright>
 
     <!-- License -->
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
