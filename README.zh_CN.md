@@ -162,6 +162,23 @@ Stable 不依赖 Labs，Integration 也始终是按需引入的 provider-specifi
 
 用于约束 AI 能写什么的类型化 DDD 单元：`ApplicationService`、`RequestDto`、`DomainService`、`Entity`、`Repository`、`DomainEvent`、`DomainEventHandler`、`LocalEventHandler`、`Configuration`、`RecurringJob`、`TriggeredJob`。
 
+每个被发现的单元还可以声明明确的 Agent 上下文和需求追踪关系：
+
+```csharp
+[ProjectUnitMetadata(
+    "审核订单",
+    Owner = "订单团队",
+    Description = "审核满足条件的订单。",
+    Tags = ["ordering", "approval"])]
+[ProjectUnitRequirement("ORD-REQ-001")]
+public sealed class CommandHandlerApproveOrder : ApplicationService<CommandApproveOrder>
+{
+    // ...
+}
+```
+
+`Monica.Framework.UI` 的第一个 Tab 会展示当前宿主的项目单元状态，包括类型分布、依赖健康度、告警，以及彼此独立的元数据、描述、负责人和需求覆盖率。`/framework/units`、`/framework/units/dashboard` 与 `/framework/units/{key}` 提供相同的类型化目录数据，不会把反射对象暴露到 UI 或 API 边界。
+
 ProjectUnit 的详细约定可以在 `monica-application-project-unit-development` 和 Monica.Docs 的概念页里继续查看。
 
 ## 技术栈

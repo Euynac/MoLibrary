@@ -6,6 +6,7 @@ using Monica.Core.Modularity.Annotations;
 using Monica.Core.Modularity.Models;
 using Monica.Framework.UI.Localization;
 using Monica.Framework.UI.Pages;
+using Monica.Framework.UI.UIProjectUnits.Services;
 using Monica.UI.Shell.Models;
 using MudBlazor;
 
@@ -27,16 +28,15 @@ public static class ModuleProjectUnitsUIBuilderExtensions
 }
 
 /// <summary>
-    /// Project-units UI module.
+/// Project-units UI module.
 /// </summary>
 [ModuleKey(BuiltInModuleKey.ProjectUnitsUI)]
 public class ModuleProjectUnitsUI(ModuleProjectUnitsUIOption option)
     : ModuleBase<ModuleProjectUnitsUI, ModuleProjectUnitsUIOption, ModuleProjectUnitsUIGuide>(option)
 {
-
     public override void ConfigureServices(IServiceCollection services)
     {
-        // UI components inject the infrastructure facade directly.
+        services.AddScoped<IProjectUnitsUiDataSource, ProjectUnitsUiDataSource>();
     }
 
     public override void ClaimDependencies()
@@ -47,7 +47,7 @@ public class ModuleProjectUnitsUI(ModuleProjectUnitsUIOption option)
                 .AddResource<ProjectUnitsResource>();
 
             DependsOnModule<ModuleProjectUnitsGuide>().Register();
-            DependsOnModule<ModuleShellUIGuide>().Register(o => o.EnableMarkdown = true)
+            DependsOnModule<ModuleShellUIGuide>().Register()
                 .RegisterUIComponents(p => p.RegisterLocalizedPage<UIProjectUnitsPage, ProjectUnitsResource>(
                     UIProjectUnitsPage.PAGE_URL,
                     "Pages:ProjectUnits:Title",

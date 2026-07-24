@@ -29,12 +29,12 @@
         else if (_projectUnits.Any())
         {
             <div class="project-units-monitor-grid">
-            <MudDataGrid T="DtoProjectUnit" Items="@_projectUnits" Filterable="true"
+            <MudDataGrid T="ProjectUnitSummary" Items="@_projectUnits" Filterable="true"
                         SortMode="SortMode.Multiple" Groupable="true" GroupExpanded="false"
                         Dense="true" Hover="true" ReadOnly="true"
                         RowsPerPage="@DEFAULT_PAGE_SIZE">
                 <Columns>
-                    <PropertyColumn T="DtoProjectUnit" TProperty="string" Property="x => x.Title" Title="@L["ProjectUnitMonitor:Columns:Name"]"
+                    <PropertyColumn T="ProjectUnitSummary" TProperty="string" Property="x => x.Title" Title="@L["ProjectUnitMonitor:Columns:Name"]"
                                     HeaderClass="project-units-monitor-grid__name-column"
                                     CellClass="project-units-monitor-grid__name-column">
                         <CellTemplate>
@@ -43,7 +43,7 @@
                             </MudTooltip>
                         </CellTemplate>
                     </PropertyColumn>
-                    <PropertyColumn T="DtoProjectUnit" TProperty="string" Property="x => x.Key" Title="@L["ProjectUnitMonitor:Columns:FullName"]"
+                    <PropertyColumn T="ProjectUnitSummary" TProperty="string" Property="x => x.Key" Title="@L["ProjectUnitMonitor:Columns:FullName"]"
                                     HeaderClass="project-units-monitor-grid__full-name-column"
                                     CellClass="project-units-monitor-grid__full-name-column">
                         <CellTemplate>
@@ -68,7 +68,7 @@
                         <CellTemplate>
                             <MudChip T="int" Size="Size.Small" Color="Color.Info"
                                      Icon="@Icons.Material.Filled.Link">
-                                @context.Item.DependencyUnits.Count
+                                @context.Item.Dependencies.Count
                             </MudChip>
                         </CellTemplate>
                     </TemplateColumn>
@@ -86,17 +86,17 @@
                                     HeaderClass="project-units-monitor-grid__actions-column"
                                     CellClass="project-units-monitor-grid__actions-column">
                         <CellTemplate>
-                            <MudButton Size="Size.Small"
-                                      Variant="Variant.Text"
-                                      Color="Color.Primary"
-                                      OnClick="@(() => ViewDetails(context.Item))">
-                                @L["Shared:Actions:Details"]
-                            </MudButton>
+                            <MudTooltip Text="@L["Shared:Actions:Details"]">
+                                <MudIconButton Size="Size.Small"
+                                               Icon="@Icons.Material.Filled.OpenInNew"
+                                               Color="Color.Primary"
+                                               OnClick="@(() => ViewDetails(context.Item))" />
+                            </MudTooltip>
                         </CellTemplate>
                     </TemplateColumn>
                 </Columns>
                 <PagerContent>
-                    <MudDataGridPager T="DtoProjectUnit" PageSizeOptions="@PAGE_SIZE_OPTIONS" />
+                    <MudDataGridPager T="ProjectUnitSummary" PageSizeOptions="@PAGE_SIZE_OPTIONS" />
                 </PagerContent>
             </MudDataGrid>
             </div>
@@ -111,17 +111,16 @@
 </div>
 
 <ProjectUnitDetailDialog @bind-Visible="_detailDialogVisible" 
-                         SelectedUnit="_selectedUnit"
-                         AllProjectUnits="_projectUnits" />
+                         SelectedUnit="_selectedUnit" />
 
 @code {
     private const int DEFAULT_PAGE_SIZE = 50;
     private static readonly int[] PAGE_SIZE_OPTIONS = [25, 50, 100, 200];
 
-    private List<DtoProjectUnit> _projectUnits = [];
+    private List<ProjectUnitSummary> _projectUnits = [];
     private bool _loading;
     private bool _detailDialogVisible;
-    private DtoProjectUnit? _selectedUnit;
+    private ProjectUnitSummary? _selectedUnit;
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -158,7 +157,7 @@
         }
     }
 
-    private void ViewDetails(DtoProjectUnit unit)
+    private void ViewDetails(ProjectUnitSummary unit)
     {
         _selectedUnit = unit;
         _detailDialogVisible = true;

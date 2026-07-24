@@ -65,7 +65,7 @@
                     @if (_selectedEvent != null)
                     {
                         <MudStack Spacing="3">
-                            <MudTextField @bind-Value="_selectedEvent.Info.Title"
+                            <MudTextField Value="@_selectedEvent.Info.Title"
                                          Label="@L["DomainEventTester:Fields:EventName"]"
                                          Variant="Variant.Outlined"
                                          ReadOnly="true" />
@@ -110,10 +110,10 @@
 
 
 @code {
-    private List<DtoDomainEventInfo> _domainEvents = [];
+    private List<ProjectUnitDomainEventInfo> _domainEvents = [];
     private bool _loading;
     private bool _publishing;
-    private DtoDomainEventInfo? _selectedEvent;
+    private ProjectUnitDomainEventInfo? _selectedEvent;
     private string _eventContent = string.Empty;
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -151,7 +151,7 @@
         }
     }
 
-    private void SelectEvent(DtoDomainEventInfo eventInfo)
+    private void SelectEvent(ProjectUnitDomainEventInfo eventInfo)
     {
         _selectedEvent = eventInfo;
         _eventContent = JsonSerializer.Serialize(eventInfo.Structure, JsonSerializerOptionsProvider.SerializerOptions.Clone(o => o.WriteIndented = true)) ?? "{}";

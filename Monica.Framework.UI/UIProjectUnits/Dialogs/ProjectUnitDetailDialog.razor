@@ -1,512 +1,476 @@
 @using Monica.Core.Results
-@using Monica.ProjectUnits.Facades
-@using Monica.UI.Shared.Components.Markdown
-@using System.Linq
-@using System.Reflection
-@using Monica.ProjectUnits.Annotations
+@using Monica.Framework.UI.UIProjectUnits.Services
 @using Monica.ProjectUnits.Models
-@using Monica.Tool.Extensions
-@inject ProjectUnitsFacade ProjectUnitsFacade
+@inject IProjectUnitsUiDataSource DataSource
 @inject IStringLocalizer<ProjectUnitsResource> L
+@implements IAsyncDisposable
 
-<MudDialog @bind-Visible="Visible" Options="DialogOptions" OnBackdropClick="HandleBackdropClick">
+<MudDialog @bind-Visible="Visible" Options="_dialogOptions" OnBackdropClick="CloseAsync">
     <TitleContent>
-        <MudText Typo="Typo.h6">
-            <MudIcon Icon="@Icons.Material.Filled.Info" Class="mr-3" />
-            @L["ProjectUnitDetailDialog:Title"]
-        </MudText>
+        <div class="project-unit-detail__dialog-title">
+            <MudIcon Icon="@Icons.Material.Filled.AccountTree" Color="Color.Primary" />
+            <MudText Typo="Typo.h6">@L["ProjectUnitDetailDialog:Title"]</MudText>
+        </div>
     </TitleContent>
     <DialogContent>
-        @if (SelectedUnit != null)
+        @if (_loading)
         {
-            <MudSimpleTable Style="overflow-x: auto;" Elevation="0">
-                <tbody>
-                    <tr>
-                        <td style="min-width: 120px;"><MudText Typo="Typo.subtitle2">@L["ProjectUnitDetailDialog:Fields:Name"]</MudText></td>
-                        <td><MudText>@SelectedUnit.Title</MudText></td>
-                    </tr>
-                    <tr>
-                        <td><MudText Typo="Typo.subtitle2">@L["ProjectUnitDetailDialog:Fields:FullName"]</MudText></td>
-                        <td><MudText>@SelectedUnit.Key</MudText></td>
-                    </tr>
-                    @if (!string.IsNullOrEmpty(SelectedUnit.Author))
+            <div class="project-unit-detail__loading" data-testid="project-unit-detail-loading">
+                <MudProgressCircular Color="Color.Primary" Indeterminate="true" />
+                <MudText Color="Color.Secondary">@L["ProjectUnitDetailDialog:States:Loading"]</MudText>
+            </div>
+        }
+        else if (_loadError is not null)
+        {
+            <MudAlert Severity="Severity.Error" Variant="Variant.Outlined" data-testid="project-unit-detail-error">
+                @_loadError
+            </MudAlert>
+        }
+        else if (_detail is not null)
+        {
+            var summary = _detail.Summary;
+            <article class="project-unit-detail" data-testid="project-unit-detail">
+                <header class="project-unit-detail__hero">
+                    <div class="project-unit-detail__identity">
+                        <div class="project-unit-detail__icon" data-color-role="@ProjectUnitVisualizationConfig.GetUnitTypeColorRole(summary.UnitType)">
+                            <MudIcon Icon="@ProjectUnitVisualizationConfig.GetUnitTypeIcon(summary.UnitType)" Size="Size.Large" />
+                        </div>
+                        <div class="project-unit-detail__heading">
+                            <MudText Typo="Typo.h5">@summary.Title</MudText>
+                            <MudText Typo="Typo.body2" Color="Color.Secondary" Class="project-unit-detail__key">
+                                @summary.Key
+                            </MudText>
+                        </div>
+                    </div>
+                    <div class="project-unit-detail__badges">
+                        <MudChip T="string" Size="Size.Small"
+                                 Color="@ProjectUnitVisualizationConfig.GetUnitTypeMudColor(summary.UnitType)"
+                                 Icon="@ProjectUnitVisualizationConfig.GetUnitTypeIcon(summary.UnitType)">
+                            @L.GetProjectUnitTypeText(summary.UnitType)
+                        </MudChip>
+                        <MudChip T="string" Size="Size.Small"
+                                 Color="@(summary.HasExplicitMetadata ? Color.Success : Color.Warning)"
+                                 Variant="Variant.Outlined"
+                                 Icon="@(summary.HasExplicitMetadata ? Icons.Material.Filled.Verified : Icons.Material.Filled.Info)">
+                            @(summary.HasExplicitMetadata
+                                ? L["ProjectUnitDetailDialog:Badges:MetadataDeclared"]
+                                : L["ProjectUnitDetailDialog:Badges:MetadataMissing"])
+                        </MudChip>
+                    </div>
+                </header>
+
+                @if (!string.IsNullOrWhiteSpace(summary.Description))
+                {
+                    <MudText Typo="Typo.body1" Class="project-unit-detail__description">@summary.Description</MudText>
+                }
+
+                <div class="project-unit-detail__facts">
+                    <div class="project-unit-detail__fact">
+                        <MudIcon Icon="@Icons.Material.Filled.Badge" Color="Color.Primary" Size="Size.Small" />
+                        <span>
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">@L["ProjectUnitDetailDialog:Fields:Owner"]</MudText>
+                            <MudText Typo="Typo.body2">@(summary.Owner ?? L["Shared:Labels:NotDeclared"])</MudText>
+                        </span>
+                    </div>
+                    <div class="project-unit-detail__fact">
+                        <MudIcon Icon="@Icons.Material.Filled.Link" Color="Color.Info" Size="Size.Small" />
+                        <span>
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">@L["ProjectUnitDetailDialog:Fields:Dependencies"]</MudText>
+                            <MudText Typo="Typo.body2">@summary.Dependencies.Count</MudText>
+                        </span>
+                    </div>
+                    <div class="project-unit-detail__fact">
+                        <MudIcon Icon="@Icons.Material.Filled.CallReceived" Color="Color.Success" Size="Size.Small" />
+                        <span>
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">@L["ProjectUnitDetailDialog:Fields:DependedBy"]</MudText>
+                            <MudText Typo="Typo.body2">@summary.DependedByCount</MudText>
+                        </span>
+                    </div>
+                    <div class="project-unit-detail__fact">
+                        <MudIcon Icon="@Icons.Material.Filled.Functions" Color="Color.Secondary" Size="Size.Small" />
+                        <span>
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">@L["ProjectUnitDetailDialog:Fields:Methods"]</MudText>
+                            <MudText Typo="Typo.body2">@summary.MethodCount</MudText>
+                        </span>
+                    </div>
+                </div>
+
+                <section class="project-unit-detail__section">
+                    <div class="project-unit-detail__section-title">
+                        <MudIcon Icon="@Icons.Material.Filled.AssignmentTurnedIn" Color="Color.Secondary" />
+                        <div>
+                            <MudText Typo="Typo.h6">@L["ProjectUnitDetailDialog:Sections:Requirements"]</MudText>
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                @L["ProjectUnitDetailDialog:Sections:RequirementsHint"]
+                            </MudText>
+                        </div>
+                    </div>
+                    @if (_detail.Requirements.Count == 0)
                     {
-                        <tr>
-                            <td><MudText Typo="Typo.subtitle2">@L["ProjectUnitDetailDialog:Fields:Author"]</MudText></td>
-                            <td><MudText>@SelectedUnit.Author</MudText></td>
-                        </tr>
+                        <MudAlert Severity="Severity.Info" Variant="Variant.Text">
+                            @L["ProjectUnitDetailDialog:States:NoRequirements"]
+                        </MudAlert>
                     }
-                    @if (SelectedUnit.Group?.Any() == true)
+                    else
                     {
-                        <tr>
-                            <td><MudText Typo="Typo.subtitle2">@L["ProjectUnitDetailDialog:Fields:Group"]</MudText></td>
-                            <td><MudText>@string.Join(", ", SelectedUnit.Group)</MudText></td>
-                        </tr>
+                        <div class="project-unit-detail__requirements">
+                            @foreach (var requirement in _detail.Requirements)
+                            {
+                                <div class="project-unit-detail__requirement" data-resolved="@requirement.IsResolved.ToString().ToLowerInvariant()">
+                                    <MudIcon Icon="@(requirement.IsResolved ? Icons.Material.Filled.Link : Icons.Material.Filled.LinkOff)"
+                                             Color="@(requirement.IsResolved ? Color.Primary : Color.Default)" />
+                                    <div class="project-unit-detail__requirement-copy">
+                                        @if (requirement.IsResolved)
+                                        {
+                                            <a href="@requirement.Href" target="_blank" rel="noopener noreferrer"
+                                               class="project-unit-detail__requirement-link">
+                                                @requirement.Title
+                                                <MudIcon Icon="@Icons.Material.Filled.OpenInNew" Size="Size.Small" />
+                                            </a>
+                                        }
+                                        else
+                                        {
+                                            <MudText Typo="Typo.body2">@requirement.Title</MudText>
+                                        }
+                                        <MudText Typo="Typo.caption" Color="Color.Secondary">@requirement.Id</MudText>
+                                    </div>
+                                    <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined"
+                                             Color="@(requirement.IsResolved ? Color.Success : Color.Default)">
+                                        @(requirement.IsResolved
+                                            ? L["ProjectUnitDetailDialog:Badges:Resolved"]
+                                            : L["ProjectUnitDetailDialog:Badges:Unresolved"])
+                                    </MudChip>
+                                </div>
+                            }
+                        </div>
                     }
-                    @if (!string.IsNullOrEmpty(SelectedUnit.Description))
-                    {
-                        <tr>
-                            <td><MudText Typo="Typo.subtitle2">@L["ProjectUnitDetailDialog:Fields:Description"]</MudText></td>
-                            <td><MudText>@SelectedUnit.Description</MudText></td>
-                        </tr>
-                    }
-                    <tr>
-                        <td><MudText Typo="Typo.subtitle2">@L["ProjectUnitDetailDialog:Fields:Type"]</MudText></td>
-                        <td>
+                </section>
+
+                @if (summary.Tags.Count != 0)
+                {
+                    <section class="project-unit-detail__section">
+                        <div class="project-unit-detail__section-title">
+                            <MudIcon Icon="@Icons.Material.Filled.Label" Color="Color.Tertiary" />
+                            <MudText Typo="Typo.h6">@L["ProjectUnitDetailDialog:Sections:Tags"]</MudText>
+                        </div>
+                        <MudChipSet T="string">
+                            @foreach (var tag in summary.Tags)
+                            {
+                                <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">@tag</MudChip>
+                            }
+                        </MudChipSet>
+                    </section>
+                }
+
+                <section class="project-unit-detail__section">
+                    <div class="project-unit-detail__section-title">
+                        <MudIcon Icon="@Icons.Material.Filled.Hub" Color="Color.Info" />
+                        <MudText Typo="Typo.h6">@L["ProjectUnitDetailDialog:Sections:Relationships"]</MudText>
+                    </div>
+                    <div class="project-unit-detail__relationships">
+                        <div>
+                            <MudText Typo="Typo.subtitle2">@L["ProjectUnitDetailDialog:Fields:Dependencies"]</MudText>
+                            @if (summary.Dependencies.Count == 0)
+                            {
+                                <MudText Typo="Typo.body2" Color="Color.Secondary">@L["Shared:Labels:None"]</MudText>
+                            }
+                            else
+                            {
+                                <div class="project-unit-detail__reference-list">
+                                    @foreach (var dependency in summary.Dependencies)
+                                    {
+                                        <button type="button" class="project-unit-detail__reference" @onclick="@(() => LoadDetailAsync(dependency.Key))">
+                                            <MudIcon Icon="@ProjectUnitVisualizationConfig.GetUnitTypeIcon(dependency.UnitType)" Size="Size.Small" />
+                                            <span>@dependency.Title</span>
+                                            <MudIcon Icon="@Icons.Material.Filled.ChevronRight" Size="Size.Small" />
+                                        </button>
+                                    }
+                                </div>
+                            }
+                        </div>
+                        <div>
+                            <MudText Typo="Typo.subtitle2">@L["ProjectUnitDetailDialog:Fields:DependedBy"]</MudText>
+                            @if (_detail.Dependents.Count == 0)
+                            {
+                                <MudText Typo="Typo.body2" Color="Color.Secondary">@L["Shared:Labels:None"]</MudText>
+                            }
+                            else
+                            {
+                                <div class="project-unit-detail__reference-list">
+                                    @foreach (var dependent in _detail.Dependents)
+                                    {
+                                        <button type="button" class="project-unit-detail__reference" @onclick="@(() => LoadDetailAsync(dependent.Key))">
+                                            <MudIcon Icon="@ProjectUnitVisualizationConfig.GetUnitTypeIcon(dependent.UnitType)" Size="Size.Small" />
+                                            <span>@dependent.Title</span>
+                                            <MudIcon Icon="@Icons.Material.Filled.ChevronRight" Size="Size.Small" />
+                                        </button>
+                                    }
+                                </div>
+                            }
+                        </div>
+                    </div>
+                </section>
+
+                @if (_detail.Configuration is not null)
+                {
+                    <section class="project-unit-detail__section">
+                        <div class="project-unit-detail__section-title">
+                            <MudIcon Icon="@Icons.Material.Filled.Settings" Color="Color.Warning" />
+                            <MudText Typo="Typo.h6">@L["ProjectUnitDetailDialog:Sections:Configuration"]</MudText>
+                        </div>
+                        <div class="project-unit-detail__configuration">
+                            <div>
+                                <MudText Typo="Typo.caption" Color="Color.Secondary">@L["ProjectUnitDetailDialog:Fields:DefinitionKey"]</MudText>
+                                <code>@_detail.Configuration.DefinitionKey</code>
+                            </div>
                             <MudChip T="string" Size="Size.Small"
-                                     Color="@GetUnitTypeColor(SelectedUnit.UnitType)">
-                                @L.GetProjectUnitTypeText(SelectedUnit.UnitType)
+                                     Color="@(_detail.Configuration.IsOffline is true ? Color.Success : Color.Info)"
+                                     Icon="@(_detail.Configuration.IsOffline is true ? Icons.Material.Filled.CloudOff : Icons.Material.Filled.Cloud)">
+                                @L.GetConfigurationModeText(_detail.Configuration.IsOffline)
                             </MudChip>
-                        </td>
-                    </tr>
-                    <tr>
-                        <td><MudText Typo="Typo.subtitle2">@L["ProjectUnitDetailDialog:Fields:Statistics"]</MudText></td>
-                        <td>
-                            <MudChipSet T="string">
-                                @if (SelectedUnit.DependencyUnits.Count > 0)
-                                {
-                                    <MudChip T="string" Size="Size.Small" Color="Color.Info"
-                                             Icon="@Icons.Material.Filled.Link">
-                                        @L.GetCountText(ProjectUnitsCountText.Dependency, SelectedUnit.DependencyUnits.Count)
-                                    </MudChip>
-                                }
-                                @if (SelectedUnit.DependedByCount > 0)
-                                {
-                                    <MudChip T="string" Size="Size.Small" Color="Color.Success"
-                                             Icon="@Icons.Material.Filled.CallReceived">
-                                        @L.GetCountText(ProjectUnitsCountText.DependedBy, SelectedUnit.DependedByCount)
-                                    </MudChip>
-                                }
-                                @if (SelectedUnit.Attributes.Any())
-                                {
-                                    <MudChip T="string" Size="Size.Small" Color="Color.Secondary"
-                                             Icon="@Icons.Material.Filled.Label">
-                                        @L.GetCountText(ProjectUnitsCountText.Attribute, SelectedUnit.Attributes.Count)
-                                    </MudChip>
-                                }
-                                @if (SelectedUnit.Methods.Any())
-                                {
-                                    <MudChip T="string" Size="Size.Small" Color="Color.Primary"
-                                             Icon="@Icons.Material.Filled.Functions">
-                                        @L.GetCountText(ProjectUnitsCountText.Method, SelectedUnit.Methods.Count)
-                                    </MudChip>
-                                }
-                                @if (SelectedUnit.Alerts.Any())
-                                {
-                                    var errorCount = SelectedUnit.Alerts.Count(a => a.Level == EAlertLevel.Error);
-                                    var warningCount = SelectedUnit.Alerts.Count(a => a.Level == EAlertLevel.Warning);
-                                    var infoCount = SelectedUnit.Alerts.Count(a => a.Level == EAlertLevel.Info);
-                                    
-                                    @if (errorCount > 0)
-                                    {
-                                        <MudChip T="string" Size="Size.Small" Color="Color.Error"
-                                                 Icon="@Icons.Material.Filled.Error">
-                                            @L.GetCountText(ProjectUnitsCountText.Error, errorCount)
-                                        </MudChip>
-                                    }
-                                    @if (warningCount > 0)
-                                    {
-                                        <MudChip T="string" Size="Size.Small" Color="Color.Warning"
-                                                 Icon="@Icons.Material.Filled.Warning">
-                                            @L.GetCountText(ProjectUnitsCountText.Warning, warningCount)
-                                        </MudChip>
-                                    }
-                                    @if (infoCount > 0)
-                                    {
-                                        <MudChip T="string" Size="Size.Small" Color="Color.Info"
-                                                 Icon="@Icons.Material.Filled.Info">
-                                            @L.GetCountText(ProjectUnitsCountText.Info, infoCount)
-                                        </MudChip>
-                                    }
-                                }
-                            </MudChipSet>
-                        </td>
-                    </tr>
-                    @if (SelectedUnit.DependencyUnits.Any())
-                    {
-                        <tr>
-                            <td style="vertical-align: top;"><MudText Typo="Typo.subtitle2">@L["ProjectUnitDetailDialog:Fields:Dependencies"]</MudText></td>
-                            <td>
-                                <MudChipSet T="string">
-                                    @foreach (var dep in SelectedUnit.DependencyUnits)
-                                    {
-                                        <MudChip T="string" Size="Size.Small" 
-                                                 Color="@GetUnitTypeColor(dep.UnitType)"
-                                                 OnClick="@(() => OnChipClick(dep.Key))">
-                                            @dep.Title
-                                        </MudChip>
-                                    }
-                                </MudChipSet>
-                            </td>
-                        </tr>
-                    }
-                    @if (SelectedUnit.UnitType == EProjectUnitType.Configuration && _originalProjectUnit is UnitConfiguration configUnit)
-                    {
-                        <tr>
-                            <td><MudText Typo="Typo.subtitle2">@L["ProjectUnitDetailDialog:Fields:ConfigurationMode"]</MudText></td>
-                            <td>
-                                @{
-                                    var modeText = L.GetConfigurationModeText(configUnit.IsOffline);
-                                    var modeColor = configUnit.IsOffline switch
-                                    {
-                                        true => Color.Success,
-                                        false => Color.Warning,
-                                        null => Color.Default
-                                    };
-                                    var modeIcon = configUnit.IsOffline switch
-                                    {
-                                        true => Icons.Material.Filled.CloudOff,
-                                        false => Icons.Material.Filled.Cloud,
-                                        null => Icons.Material.Filled.QuestionMark
-                                    };
-                                }
-                                <MudChip T="string" Size="Size.Small" Color="@modeColor" Icon="@modeIcon">
-                                    @modeText
-                                </MudChip>
-                            </td>
-                        </tr>
-                        @if (configUnit.ConfigurationDependencies.Any())
+                        </div>
+                        @if (_detail.Configuration.Usages.Count != 0)
                         {
-                            <tr>
-                                <td style="vertical-align: top;"><MudText Typo="Typo.subtitle2">@L["ProjectUnitDetailDialog:Fields:ConfigurationUsage"]</MudText></td>
-                                <td>
-                                    <MudExpansionPanels>
-                                        <MudExpansionPanel>
-                                            <TitleContent>
-                                                <div style="display: flex; align-items: center">
-                                                    <MudIcon Icon="@Icons.Material.Filled.Link" class="mr-3" />
-                                                    <MudText>@L["ProjectUnitDetailDialog:Sections:ConfigurationUsageDetails", configUnit.ConfigurationDependencies.Count]</MudText>
-                                                </div>
-                                            </TitleContent>
-                                            <ChildContent>
-                                                <MudStack Spacing="1">
-                                                    @foreach (var dependency in configUnit.ConfigurationDependencies)
-                                                    {
-                                                        var unit = dependency.Key;
-                                                        var usage = dependency.Value;
-                                                        var usageText = L.GetConfigurationUsageText(usage);
-                                                        var usageColor = usage switch
-                                                        {
-                                                            EConfigurationUsageType.Offline => Color.Success,
-                                                            EConfigurationUsageType.OnlineSnapshot => Color.Warning,
-                                                            EConfigurationUsageType.OnlineMonitor => Color.Info,
-                                                            EConfigurationUsageType.Unknown => Color.Default,
-                                                            _ => Color.Default
-                                                        };
-                                                        var usageIcon = usage switch
-                                                        {
-                                                            EConfigurationUsageType.Offline => Icons.Material.Filled.CloudOff,
-                                                            EConfigurationUsageType.OnlineSnapshot => Icons.Material.Filled.Cloud,
-                                                            EConfigurationUsageType.OnlineMonitor => Icons.Material.Filled.Refresh,
-                                                            EConfigurationUsageType.Unknown => Icons.Material.Filled.QuestionMark,
-                                                            _ => Icons.Material.Filled.QuestionMark
-                                                        };
-                                                        
-                                                        <div class="d-flex align-center justify-space-between">
-                                                            <div class="d-flex align-center">
-                                                                <MudChip T="string" Size="Size.Small" 
-                                                                         Color="@GetUnitTypeColor(unit.UnitType)"
-                                                                         OnClick="@(() => OnChipClick(unit.Key))">
-                                                                    @unit.Title
-                                                                </MudChip>
-                                                                <MudText Typo="Typo.caption" Class="ml-2" Style="color: var(--mud-palette-text-secondary);">
-                                                                    (@L.GetProjectUnitTypeText(unit.UnitType))
-                                                                </MudText>
-                                                            </div>
-                                                            <MudChip T="string" Size="Size.Small" Color="@usageColor" Icon="@usageIcon">
-                                                                @usageText
-                                                            </MudChip>
-                                                        </div>
-                                                    }
-                                                </MudStack>
-                                            </ChildContent>
-                                        </MudExpansionPanel>
-                                    </MudExpansionPanels>
-                                </td>
-                            </tr>
+                            <div class="project-unit-detail__usage-list">
+                                @foreach (var usage in _detail.Configuration.Usages)
+                                {
+                                    <div class="project-unit-detail__usage">
+                                        <button type="button" class="project-unit-detail__reference" @onclick="@(() => LoadDetailAsync(usage.Unit.Key))">
+                                            <span>@usage.Unit.Title</span>
+                                            <MudIcon Icon="@Icons.Material.Filled.ChevronRight" Size="Size.Small" />
+                                        </button>
+                                        <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">
+                                            @L.GetConfigurationUsageText(usage.UsageType)
+                                        </MudChip>
+                                    </div>
+                                }
+                            </div>
                         }
-                    }
-                    @if (_originalProjectUnit?.ConstructorParameterTypes.Any() == true)
-                    {
-                        <tr>
-                            <td style="vertical-align: top;"><MudText Typo="Typo.subtitle2">@L["ProjectUnitDetailDialog:Fields:ConstructorParameters"]</MudText></td>
-                            <td>
-                                <MudExpansionPanels>
-                                    <MudExpansionPanel>
-                                        <TitleContent>
-                                            <div style="display: flex; align-items: center">
-                                                <MudIcon Icon="@Icons.Material.Filled.Construction" class="mr-3" />
-                                                <MudText>@L["ProjectUnitDetailDialog:Sections:ConstructorParameters", _originalProjectUnit.ConstructorParameterTypes.Count]</MudText>
-                                            </div>
-                                        </TitleContent>
-                                        <ChildContent>
-                                            <MudStack Spacing="1">
-                                                @foreach (var paramType in _originalProjectUnit.ConstructorParameterTypes)
-                                                {
-                                                    <div class="d-flex align-center">
-                                                        <MudIcon Icon="@Icons.Material.Filled.Code" Size="Size.Small" Class="mr-2" />
-                                                        <MudText Style="font-family: 'Cascadia Code', 'JetBrains Mono', monospace; background-color: var(--mud-palette-background-gray); padding: 4px 8px; border-radius: 4px;">
-                                                            @paramType.GetCleanName()
-                                                        </MudText>
-                                                        <MudText Typo="Typo.caption" Class="ml-2" Style="color: var(--mud-palette-text-secondary);">
-                                                            (@paramType.GetCleanFullName())
-                                                        </MudText>
-                                                    </div>
-                                                }
-                                            </MudStack>
-                                        </ChildContent>
-                                    </MudExpansionPanel>
-                                </MudExpansionPanels>
-                            </td>
-                        </tr>
-                    }
-                    @if (DependedByUnits != null && DependedByUnits.Any())
-                    {
-                        <tr>
-                            <td style="vertical-align: top;"><MudText Typo="Typo.subtitle2">@L["ProjectUnitDetailDialog:Fields:DependedBy"]</MudText></td>
-                            <td>
-                                <MudChipSet T="string">
-                                    @foreach (var dep in DependedByUnits)
-                                    {
-                                        <MudChip T="string" Size="Size.Small"
-                                                 Color="@GetUnitTypeColor(dep.UnitType)"
-                                                 OnClick="@(() => OnChipClick(dep.Key))">
-                                            @dep.Title
-                                        </MudChip>
-                                    }
-                                </MudChipSet>
-                            </td>
-                        </tr>
-                    }
-                    @if (SelectedUnit.Attributes.Any())
-                    {
-                        <tr>
-                            <td style="vertical-align: top;"><MudText Typo="Typo.subtitle2">@L["ProjectUnitDetailDialog:Fields:Attributes"]</MudText></td>
-                            <td>
-                                <MudChipSet T="string">
-                                    @foreach (var attr in SelectedUnit.Attributes)
-                                    {
-                                        <MudChip T="string" Size="Size.Small" Color="Color.Secondary">
-                                            @attr.GetType().Name
-                                        </MudChip>
-                                    }
-                                </MudChipSet>
-                            </td>
-                        </tr>
-                    }
-                    @if (SelectedUnit.Methods.Any())
-                    {
-                        <tr>
-                            <td style="vertical-align: top;"><MudText Typo="Typo.subtitle2">@L["ProjectUnitDetailDialog:Fields:Methods"]</MudText></td>
-                            <td>
-                                <MudExpansionPanels>
-                                    <MudExpansionPanel>
-                                        <TitleContent>
-                                            <div style="display: flex; align-items: center">
-                                                <MudIcon Icon="@Icons.Material.Filled.Functions" class="mr-3" />
-                                                <MudText>@L["ProjectUnitDetailDialog:Sections:PublicMethods", SelectedUnit.Methods.Count]</MudText>
-                                            </div>
-                                        </TitleContent>
-                                        <ChildContent>
-                                            <MudStack Spacing="2">
-                                                @foreach (var method in SelectedUnit.Methods)
-                                                {
-                                                    <MudCard Outlined="true" Style="border-left: 3px solid var(--mud-palette-primary);">
-                                                        <MudCardContent Class="pa-2">
-                                                            <div class="d-flex align-center justify-space-between">
-                                                                <MudText Typo="Typo.caption" Style="font-family: 'Cascadia Code', 'JetBrains Mono', monospace; background-color: var(--mud-palette-background-gray); padding: 6px 10px; border-radius: 4px; flex-grow: 1;">
-                                                                    @method.MethodSignature
-                                                                </MudText>
-                                                                <MudChipSet T="string" Class="ml-2">
-                                                                    @if (method.MethodInfo.IsStatic)
-                                                                    {
-                                                                        <MudChip T="string" Size="Size.Small" Color="Color.Secondary"
-                                                                                 Icon="@Icons.Material.Filled.Public">
-                                                                            @L.GetMethodModifierText(ProjectUnitsMethodModifier.Static)
-                                                                        </MudChip>
-                                                                    }
-                                                                    @if (method.MethodInfo.IsVirtual && !method.MethodInfo.IsAbstract)
-                                                                    {
-                                                                        <MudChip T="string" Size="Size.Small" Color="Color.Tertiary">
-                                                                            @L.GetMethodModifierText(ProjectUnitsMethodModifier.Virtual)
-                                                                        </MudChip>
-                                                                    }
-                                                                    @if (method.MethodInfo.IsAbstract)
-                                                                    {
-                                                                        <MudChip T="string" Size="Size.Small" Color="Color.Warning">
-                                                                            @L.GetMethodModifierText(ProjectUnitsMethodModifier.Abstract)
-                                                                        </MudChip>
-                                                                    }
-                                                                    @if (IsAsyncMethod(method.MethodInfo))
-                                                                    {
-                                                                        <MudChip T="string" Size="Size.Small" Color="Color.Info"
-                                                                                 Icon="@Icons.Material.Filled.Sync">
-                                                                            @L.GetMethodModifierText(ProjectUnitsMethodModifier.Async)
-                                                                        </MudChip>
-                                                                    }
-                                                                </MudChipSet>
-                                                            </div>
-                                                            
-                                                            @if (!string.IsNullOrEmpty(method.Description))
-                                                            {
-                                                                <MudText Typo="Typo.body2" Class="mt-2 ml-2" Style="color: var(--mud-palette-text-secondary); font-style: italic;">
-                                                                    // @method.Description
-                                                                </MudText>
-                                                            }
-                                                        </MudCardContent>
-                                                    </MudCard>
-                                                }
-                                            </MudStack>
-                                        </ChildContent>
-                                    </MudExpansionPanel>
-                                </MudExpansionPanels>
-                            </td>
-                        </tr>
-                    }
-                    @if (SelectedUnit.Alerts.Any())
-                    {
-                        <tr>
-                            <td style="vertical-align: top;"><MudText Typo="Typo.subtitle2">@L["ProjectUnitDetailDialog:Fields:Alerts"]</MudText></td>
-                            <td>
-                                <MudStack Spacing="1">
-                                    @foreach (var alert in SelectedUnit.Alerts.OrderByDescending(a => a.Level))
-                                    {
-                                        var alertColor = alert.Level switch
+                    </section>
+                }
+
+                @if (_detail.ConstructorParameters.Count != 0 || _detail.Methods.Count != 0)
+                {
+                    <section class="project-unit-detail__section">
+                        <div class="project-unit-detail__section-title">
+                            <MudIcon Icon="@Icons.Material.Filled.Code" Color="Color.Primary" />
+                            <MudText Typo="Typo.h6">@L["ProjectUnitDetailDialog:Sections:TechnicalShape"]</MudText>
+                        </div>
+                        @if (_detail.ConstructorParameters.Count != 0)
+                        {
+                            <MudText Typo="Typo.subtitle2">@L["ProjectUnitDetailDialog:Fields:ConstructorParameters"]</MudText>
+                            <div class="project-unit-detail__code-list">
+                                @foreach (var parameter in _detail.ConstructorParameters)
+                                {
+                                    <code>@parameter</code>
+                                }
+                            </div>
+                        }
+                        @if (_detail.Methods.Count != 0)
+                        {
+                            <MudExpansionPanels Class="project-unit-detail__methods" Elevation="0">
+                                <MudExpansionPanel Text="@L["ProjectUnitDetailDialog:Sections:PublicMethods", _detail.Methods.Count]">
+                                    <div class="project-unit-detail__method-list">
+                                        @foreach (var method in _detail.Methods)
                                         {
-                                            EAlertLevel.Error => Color.Error,
-                                            EAlertLevel.Warning => Color.Warning,
-                                            EAlertLevel.Info => Color.Info,
-                                            _ => Color.Default
-                                        };
-                                        var alertIcon = alert.Level switch
-                                        {
-                                            EAlertLevel.Error => Icons.Material.Filled.Error,
-                                            EAlertLevel.Warning => Icons.Material.Filled.Warning,
-                                            EAlertLevel.Info => Icons.Material.Filled.Info,
-                                            _ => Icons.Material.Filled.Info
-                                        };
-                                        <div class="d-flex align-center">
-                                            <MudIcon Icon="@alertIcon" Color="@alertColor" Size="Size.Small" Class="mr-2" />
-                                            <MudText>
-                                                <strong>[@L.GetAlertLevelText(alert.Level)]</strong> @alert.Message
-                                                @if (!string.IsNullOrEmpty(alert.Source))
+                                            <div class="project-unit-detail__method">
+                                                <code>@method.Signature</code>
+                                                <div class="project-unit-detail__method-badges">
+                                                    @if (method.IsAsync)
+                                                    {
+                                                        <MudChip T="string" Size="Size.Small" Color="Color.Info">@L.GetMethodModifierText(ProjectUnitsMethodModifier.Async)</MudChip>
+                                                    }
+                                                    @if (method.IsStatic)
+                                                    {
+                                                        <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">@L.GetMethodModifierText(ProjectUnitsMethodModifier.Static)</MudChip>
+                                                    }
+                                                    @if (method.IsVirtual)
+                                                    {
+                                                        <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">@L.GetMethodModifierText(ProjectUnitsMethodModifier.Virtual)</MudChip>
+                                                    }
+                                                    @if (method.IsAbstract)
+                                                    {
+                                                        <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">@L.GetMethodModifierText(ProjectUnitsMethodModifier.Abstract)</MudChip>
+                                                    }
+                                                </div>
+                                                @if (!string.IsNullOrWhiteSpace(method.Description))
                                                 {
-                                                    <MudText Typo="Typo.caption" Class="ml-2" Style="display: inline;">(@alert.Source)</MudText>
+                                                    <MudText Typo="Typo.body2" Color="Color.Secondary">@method.Description</MudText>
                                                 }
-                                            </MudText>
-                                        </div>
+                                            </div>
+                                        }
+                                    </div>
+                                </MudExpansionPanel>
+                            </MudExpansionPanels>
+                        }
+                    </section>
+                }
+
+                @if (summary.Alerts.Count != 0)
+                {
+                    <section class="project-unit-detail__section">
+                        <div class="project-unit-detail__section-title">
+                            <MudIcon Icon="@Icons.Material.Filled.Warning" Color="Color.Warning" />
+                            <MudText Typo="Typo.h6">@L["ProjectUnitDetailDialog:Fields:Alerts"]</MudText>
+                        </div>
+                        <div class="project-unit-detail__alerts">
+                            @foreach (var alert in summary.Alerts)
+                            {
+                                <MudAlert Severity="@GetAlertSeverity(alert.Level)" Variant="Variant.Outlined" Dense="true">
+                                    <strong>@L.GetAlertLevelText(alert.Level)</strong>
+                                    @alert.Message
+                                    @if (!string.IsNullOrWhiteSpace(alert.Source))
+                                    {
+                                        <span class="project-unit-detail__alert-source">@alert.Source</span>
                                     }
-                                </MudStack>
-                            </td>
-                        </tr>
-                    }
-                    @{
-                        var unitInfoAttribute = GetUnitInfoAttribute();
-                    }
-                    @if (unitInfoAttribute?.MarkdownDocs != null)
-                    {
-                        <tr>
-                            <td style="vertical-align: top;"><MudText Typo="Typo.subtitle2">@L["ProjectUnitDetailDialog:Fields:Documentation"]</MudText></td>
-                            <td>
-                                <MudExpansionPanels>
-                                    <MudExpansionPanel>
-                                        <TitleContent>
-                                            <div style="display: flex; align-items: center">
-                                                <MudIcon Icon="@Icons.Material.Filled.Description" class="mr-3" />
-                                                <MudText>@L["ProjectUnitDetailDialog:Sections:MarkdownDocument"]</MudText>
-                                            </div>
-                                        </TitleContent>
-                                        <ChildContent>
-                                            <MarkdownThemeSync />
-                                            <div style="max-height: 400px; overflow-y: auto;">
-                                                <MudMarkdown Value="@unitInfoAttribute.MarkdownDocs" />
-                                            </div>
-                                        </ChildContent>
-                                    </MudExpansionPanel>
-                                </MudExpansionPanels>
-                            </td>
-                        </tr>
-                    }
-                </tbody>
-            </MudSimpleTable>
+                                </MudAlert>
+                            }
+                        </div>
+                    </section>
+                }
+            </article>
         }
     </DialogContent>
     <DialogActions>
-        <MudButton OnClick="Close">@L["Shared:Actions:Close"]</MudButton>
+        @if (_detail is not null && OnNodeFocus.HasDelegate)
+        {
+            <MudButton Variant="Variant.Text" StartIcon="@Icons.Material.Filled.CenterFocusStrong" OnClick="FocusCurrentAsync">
+                @L["ProjectUnitDetailDialog:Actions:FocusInGraph"]
+            </MudButton>
+        }
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="CloseAsync">
+            @L["Shared:Actions:Close"]
+        </MudButton>
     </DialogActions>
 </MudDialog>
 
 @code {
-    [Parameter] public bool Visible { get; set; }
-    [Parameter] public EventCallback<bool> VisibleChanged { get; set; }
-    
-    [Parameter] public DtoProjectUnit? SelectedUnit { get; set; }
-    [Parameter] public List<DtoProjectUnit>? AllProjectUnits { get; set; }
-    [Parameter] public EventCallback<string> OnNodeFocus { get; set; }
-    
-    private List<DtoProjectUnit>? DependedByUnits { get; set; }
-    private ProjectUnit? _originalProjectUnit;
-    
-    private readonly DialogOptions DialogOptions = new()
+    [Parameter]
+    public bool Visible { get; set; }
+
+    [Parameter]
+    public EventCallback<bool> VisibleChanged { get; set; }
+
+    [Parameter]
+    public ProjectUnitSummary? SelectedUnit { get; set; }
+
+    [Parameter]
+    public EventCallback<string> OnNodeFocus { get; set; }
+
+    private readonly DialogOptions _dialogOptions = new()
     {
-        MaxWidth = MaxWidth.Medium,
+        MaxWidth = MaxWidth.Large,
         FullWidth = true,
-        BackdropClick = true, 
-        CloseOnEscapeKey = true 
+        BackdropClick = true,
+        CloseOnEscapeKey = true
     };
-    
-    protected override void OnParametersSet()
-    {
-        if (SelectedUnit != null && AllProjectUnits != null)
-        {
-            // Calculate units that depend on the current unit.
-            DependedByUnits = AllProjectUnits
-                .Where(u => u.DependencyUnits.Any(d => d.Key == SelectedUnit.Key))
-                .ToList();
 
-            // Try to load the original ProjectUnit instance.
-            var result = ProjectUnitsFacade.GetProjectUnitByKey(SelectedUnit.Key);
-            _originalProjectUnit = result.IsFailed(out _, out var data) ? null : data;
+    private CancellationTokenSource? _loadCancellation;
+    private ProjectUnitDetail? _detail;
+    private string? _loadError;
+    private string? _selectedSourceKey;
+    private bool _loading;
+    private bool _wasVisible;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        var shouldLoad = Visible
+                         && SelectedUnit is not null
+                         && (!_wasVisible || !string.Equals(_selectedSourceKey, SelectedUnit.Key, StringComparison.Ordinal));
+
+        _wasVisible = Visible;
+        if (!shouldLoad)
+        {
+            return;
+        }
+
+        _selectedSourceKey = SelectedUnit!.Key;
+        await LoadDetailAsync(SelectedUnit.Key);
+    }
+
+    private async Task LoadDetailAsync(string key)
+    {
+        await CancelPendingLoadAsync();
+        var cancellation = new CancellationTokenSource();
+        _loadCancellation = cancellation;
+        _loading = true;
+        _loadError = null;
+        StateHasChanged();
+
+        try
+        {
+            var result = await DataSource.GetDetailAsync(key, cancellation.Token);
+            if (result.IsFailed(out var error, out var detail))
+            {
+                _detail = null;
+                _loadError = L["ProjectUnitDetailDialog:States:LoadFailed", error];
+                return;
+            }
+
+            _detail = detail;
+        }
+        catch (OperationCanceledException) when (cancellation.IsCancellationRequested)
+        {
+        }
+        catch (Exception exception)
+        {
+            _detail = null;
+            _loadError = L["ProjectUnitDetailDialog:States:LoadFailed", exception.Message];
+        }
+        finally
+        {
+            if (ReferenceEquals(_loadCancellation, cancellation))
+            {
+                _loadCancellation.Dispose();
+                _loadCancellation = null;
+                _loading = false;
+                StateHasChanged();
+            }
         }
     }
-    
-    private async Task OnChipClick(string nodeKey)
-    {
-        // Close the dialog first.
-        await VisibleChanged.InvokeAsync(false);
 
-        // Then request graph focus.
-        if (OnNodeFocus.HasDelegate)
+    private async Task FocusCurrentAsync()
+    {
+        if (_detail is null || !OnNodeFocus.HasDelegate)
         {
-            await OnNodeFocus.InvokeAsync(nodeKey);
+            return;
         }
+
+        var key = _detail.Summary.Key;
+        await CloseAsync();
+        await OnNodeFocus.InvokeAsync(key);
     }
-    
-    private async Task Close()
+
+    private async Task CloseAsync()
     {
+        await CancelPendingLoadAsync();
         await VisibleChanged.InvokeAsync(false);
     }
-    
-    private async Task HandleBackdropClick()
+
+    private async Task CancelPendingLoadAsync()
     {
-        // Keep dialog state synchronized when the backdrop is clicked.
-        await VisibleChanged.InvokeAsync(false);
+        if (_loadCancellation is null)
+        {
+            return;
+        }
+
+        await _loadCancellation.CancelAsync();
+        _loadCancellation.Dispose();
+        _loadCancellation = null;
     }
-    
-    private Color GetUnitTypeColor(EProjectUnitType unitType)
+
+    private static Severity GetAlertSeverity(EAlertLevel level)
     {
-        return ProjectUnitVisualizationConfig.GetUnitTypeMudColor(unitType);
+        return level switch
+        {
+            EAlertLevel.Error => Severity.Error,
+            EAlertLevel.Warning => Severity.Warning,
+            _ => Severity.Info
+        };
     }
-    
-    private bool IsAsyncMethod(MethodInfo method)
+
+    public async ValueTask DisposeAsync()
     {
-        return method.ReturnType.IsGenericType && 
-               (method.ReturnType.GetGenericTypeDefinition() == typeof(Task<>) || 
-                method.ReturnType == typeof(Task));
-    }
-    
-    private UnitInfoAttribute? GetUnitInfoAttribute()
-    {
-        return SelectedUnit?.Attributes.OfType<UnitInfoAttribute>().FirstOrDefault();
+        await CancelPendingLoadAsync();
     }
 }

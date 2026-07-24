@@ -21,10 +21,17 @@ Use `$DomainNamespace$` for the domain project namespace selected by the archite
 ## Minimal Example
 
 ```csharp
+using Monica.ProjectUnits.Annotations;
 using Monica.WebApi.Abstractions;
 
 namespace $DomainNamespace$.DomainServices;
 
+[ProjectUnitMetadata(
+    "$FeatureName$ Domain Rules",
+    Owner = "$Owner$",
+    Description = "Enforces reusable domain rules for $FeatureName$.",
+    Tags = ["$SubdomainTag$", "$FeatureTag$"])]
+[ProjectUnitRequirement("$RequirementId$")]
 public sealed class Domain$FeatureName$(IRepositoryOrder repository) : DomainService
 {
     public async Task<Order> ExecuteAsync(

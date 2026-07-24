@@ -94,7 +94,7 @@ public static class ProjectUnitVisualizationConfig
         };
     }
 
-    public static string? GetHighestAlertLevel(DtoProjectUnit unit)
+    public static string? GetHighestAlertLevel(ProjectUnitSummary unit)
     {
         if (!unit.Alerts.Any())
         {

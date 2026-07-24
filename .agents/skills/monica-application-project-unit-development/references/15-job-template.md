@@ -22,10 +22,17 @@
 using Microsoft.Extensions.Logging;
 using Monica.JobScheduler.Abstractions;
 using Monica.JobScheduler.Annotations;
+using Monica.ProjectUnits.Annotations;
 
 namespace $ApplicationNamespace$.BackgroundWorkers;
 
 [JobConfig(CronSchedule = "0 */5 * * * *", RetryCount = 3)]
+[ProjectUnitMetadata(
+    "Refresh Order Snapshot Worker",
+    Owner = "$Owner$",
+    Description = "Refreshes order snapshots on a fixed schedule.",
+    Tags = ["$SubdomainTag$", "$FeatureTag$"])]
+[ProjectUnitRequirement("$RequirementId$")]
 public sealed class WorkerRefreshOrderSnapshot(
     DomainRefreshOrderSnapshot domainService,
     ILogger<WorkerRefreshOrderSnapshot> logger)
@@ -43,6 +50,7 @@ public sealed class WorkerRefreshOrderSnapshot(
 ```csharp
 using Microsoft.Extensions.Logging;
 using Monica.JobScheduler.Abstractions;
+using Monica.ProjectUnits.Annotations;
 
 namespace $ApplicationNamespace$.BackgroundWorkers;
 
@@ -51,6 +59,12 @@ public sealed class RefreshOrderSnapshotArgs
     public long OrderId { get; init; }
 }
 
+[ProjectUnitMetadata(
+    "Refresh Order Snapshot Job",
+    Owner = "$Owner$",
+    Description = "Refreshes one order snapshot asynchronously.",
+    Tags = ["$SubdomainTag$", "$FeatureTag$"])]
+[ProjectUnitRequirement("$RequirementId$")]
 public sealed class JobRefreshOrderSnapshot(
     DomainRefreshOrderSnapshot domainService,
     ILogger<JobRefreshOrderSnapshot> logger)

@@ -1,0 +1,358 @@
+@using Monica.Core.Results
+@using Monica.Framework.UI.UIProjectUnits.Services
+@using Monica.ProjectUnits.Models
+@inject IProjectUnitsUiDataSource DataSource
+@inject IStringLocalizer<ProjectUnitsResource> L
+
+<div class="project-unit-dashboard" data-testid="project-unit-dashboard">
+    @if (_loading)
+    {
+        <div class="project-unit-dashboard__state" data-testid="project-unit-dashboard-loading">
+            <MudProgressCircular Color="Color.Primary" Indeterminate="true" Size="Size.Large" />
+            <MudText Color="Color.Secondary">@L["ProjectUnitDashboard:States:Loading"]</MudText>
+        </div>
+    }
+    else if (_error is not null)
+    {
+        <div class="project-unit-dashboard__state" data-testid="project-unit-dashboard-error">
+            <MudIcon Icon="@Icons.Material.Filled.CloudOff" Color="Color.Error" Size="Size.Large" />
+            <MudText Typo="Typo.h6">@L["ProjectUnitDashboard:States:LoadFailedTitle"]</MudText>
+            <MudText Color="Color.Secondary">@_error</MudText>
+            <MudButton Variant="Variant.Filled" Color="Color.Primary"
+                       StartIcon="@Icons.Material.Filled.Refresh" OnClick="LoadDashboardAsync">
+                @L["ProjectUnitDashboard:Actions:Retry"]
+            </MudButton>
+        </div>
+    }
+    else if (_snapshot is not null)
+    {
+        <header class="project-unit-dashboard__header">
+            <div class="project-unit-dashboard__service">
+                <div class="project-unit-dashboard__service-icon">
+                    <MudIcon Icon="@Icons.Material.Filled.Dns" Size="Size.Large" />
+                </div>
+                <div class="project-unit-dashboard__service-copy">
+                    <div class="project-unit-dashboard__service-heading">
+                        <MudText Typo="Typo.h5">@_snapshot.Service.AppName</MudText>
+                        @if (!string.IsNullOrWhiteSpace(_snapshot.Service.AppVersion))
+                        {
+                            <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">
+                                @_snapshot.Service.AppVersion
+                            </MudChip>
+                        }
+                    </div>
+                    <MudText Typo="Typo.body2" Color="Color.Secondary">
+                        @_snapshot.Service.ProjectName · @_snapshot.Service.AppId
+                    </MudText>
+                    @if (!string.IsNullOrWhiteSpace(_snapshot.Service.DomainName))
+                    {
+                        <MudText Typo="Typo.caption" Color="Color.Secondary">
+                            @L["ProjectUnitDashboard:Service:Domain", _snapshot.Service.DomainName]
+                        </MudText>
+                    }
+                </div>
+            </div>
+            <MudTooltip Text="@L["Shared:Actions:Refresh"]">
+                <MudIconButton Icon="@Icons.Material.Filled.Refresh" Color="Color.Primary"
+                               Disabled="@_loading" OnClick="LoadDashboardAsync" />
+            </MudTooltip>
+        </header>
+
+        <div class="project-unit-dashboard__metrics" data-testid="project-unit-dashboard-metrics">
+            <div class="project-unit-dashboard__metric" data-tone="primary">
+                <MudIcon Icon="@Icons.Material.Filled.AccountTree" />
+                <div>
+                    <MudText Typo="Typo.h4">@_snapshot.TotalUnits</MudText>
+                    <MudText Typo="Typo.caption" Color="Color.Secondary">@L["ProjectUnitDashboard:Metrics:TotalUnits"]</MudText>
+                </div>
+            </div>
+            <div class="project-unit-dashboard__metric" data-tone="info">
+                <MudIcon Icon="@Icons.Material.Filled.Category" />
+                <div>
+                    <MudText Typo="Typo.h4">@_snapshot.DistinctUnitTypes</MudText>
+                    <MudText Typo="Typo.caption" Color="Color.Secondary">@L["ProjectUnitDashboard:Metrics:UnitTypes"]</MudText>
+                </div>
+            </div>
+            <div class="project-unit-dashboard__metric" data-tone="success">
+                <MudIcon Icon="@Icons.Material.Filled.Verified" />
+                <div>
+                    <MudText Typo="Typo.h4">@FormatPercentage(GetCoverage(ProjectUnitCoverageKind.Metadata)?.Percentage)</MudText>
+                    <MudText Typo="Typo.caption" Color="Color.Secondary">@L["ProjectUnitDashboard:Metrics:MetadataCoverage"]</MudText>
+                </div>
+            </div>
+            <div class="project-unit-dashboard__metric" data-tone="secondary">
+                <MudIcon Icon="@Icons.Material.Filled.AssignmentTurnedIn" />
+                <div>
+                    <MudText Typo="Typo.h4">@FormatPercentage(GetCoverage(ProjectUnitCoverageKind.Requirements)?.Percentage)</MudText>
+                    <MudText Typo="Typo.caption" Color="Color.Secondary">@L["ProjectUnitDashboard:Metrics:RequirementCoverage"]</MudText>
+                </div>
+            </div>
+            <div class="project-unit-dashboard__metric" data-tone="@GetAlertTone(_snapshot.Alerts)">
+                <MudIcon Icon="@Icons.Material.Filled.Warning" />
+                <div>
+                    <MudText Typo="Typo.h4">@_snapshot.Alerts.TotalCount</MudText>
+                    <MudText Typo="Typo.caption" Color="Color.Secondary">@L["ProjectUnitDashboard:Metrics:Alerts"]</MudText>
+                </div>
+            </div>
+        </div>
+
+        @if (_snapshot.TotalUnits == 0)
+        {
+            <div class="project-unit-dashboard__state project-unit-dashboard__state--empty" data-testid="project-unit-dashboard-empty">
+                <MudIcon Icon="@Icons.Material.Filled.Inventory2" Color="Color.Info" Size="Size.Large" />
+                <MudText Typo="Typo.h6">@L["ProjectUnitDashboard:States:EmptyTitle"]</MudText>
+                <MudText Color="Color.Secondary">@L["ProjectUnitDashboard:States:EmptyDescription"]</MudText>
+            </div>
+        }
+        else
+        {
+            <div class="project-unit-dashboard__primary-grid">
+                <section class="project-unit-dashboard__section" data-testid="project-unit-type-distribution">
+                    <div class="project-unit-dashboard__section-heading">
+                        <div>
+                            <MudText Typo="Typo.h6">@L["ProjectUnitDashboard:Sections:Distribution"]</MudText>
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">@L["ProjectUnitDashboard:Sections:DistributionHint"]</MudText>
+                        </div>
+                        <MudIcon Icon="@Icons.Material.Filled.BarChart" Color="Color.Primary" />
+                    </div>
+                    <div class="project-unit-dashboard__distribution">
+                        @foreach (var statistic in _snapshot.UnitTypes)
+                        {
+                            <div class="project-unit-dashboard__distribution-row">
+                                <div class="project-unit-dashboard__distribution-label">
+                                    <MudIcon Icon="@ProjectUnitVisualizationConfig.GetUnitTypeIcon(statistic.UnitType)"
+                                             Color="@ProjectUnitVisualizationConfig.GetUnitTypeMudColor(statistic.UnitType)"
+                                             Size="Size.Small" />
+                                    <span>@L.GetProjectUnitTypeText(statistic.UnitType)</span>
+                                    <strong>@statistic.Count</strong>
+                                </div>
+                                <MudProgressLinear Value="@ToDouble(statistic.Percentage)"
+                                                   Color="@ProjectUnitVisualizationConfig.GetUnitTypeMudColor(statistic.UnitType)"
+                                                   Rounded="true" Size="Size.Small" />
+                            </div>
+                        }
+                    </div>
+                </section>
+
+                <section class="project-unit-dashboard__section" data-testid="project-unit-coverage">
+                    <div class="project-unit-dashboard__section-heading">
+                        <div>
+                            <MudText Typo="Typo.h6">@L["ProjectUnitDashboard:Sections:Coverage"]</MudText>
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">@L["ProjectUnitDashboard:Sections:CoverageHint"]</MudText>
+                        </div>
+                        <MudIcon Icon="@Icons.Material.Filled.Radar" Color="Color.Success" />
+                    </div>
+                    <div class="project-unit-dashboard__coverage">
+                        @foreach (var metric in _snapshot.Coverage)
+                        {
+                            <div class="project-unit-dashboard__coverage-item">
+                                <div class="project-unit-dashboard__gauge">
+                                    <MudProgressCircular Value="@ToDouble(metric.Percentage)"
+                                                         Color="@GetCoverageColor(metric.Kind)"
+                                                         Size="Size.Large" />
+                                    <strong>@FormatPercentage(metric.Percentage)</strong>
+                                </div>
+                                <MudText Typo="Typo.subtitle2">@GetCoverageTitle(metric.Kind)</MudText>
+                                <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                    @L["ProjectUnitDashboard:Coverage:Ratio", metric.Covered, metric.Total]
+                                </MudText>
+                            </div>
+                        }
+                    </div>
+                </section>
+            </div>
+
+            <section class="project-unit-dashboard__section project-unit-dashboard__health" data-testid="project-unit-architecture-health">
+                <div class="project-unit-dashboard__section-heading">
+                    <div>
+                        <MudText Typo="Typo.h6">@L["ProjectUnitDashboard:Sections:ArchitectureHealth"]</MudText>
+                        <MudText Typo="Typo.caption" Color="Color.Secondary">@L["ProjectUnitDashboard:Sections:ArchitectureHealthHint"]</MudText>
+                    </div>
+                    <MudIcon Icon="@Icons.Material.Filled.MonitorHeart" Color="Color.Error" />
+                </div>
+                <div class="project-unit-dashboard__health-items">
+                    <div>
+                        <MudIcon Icon="@Icons.Material.Filled.Route" Color="Color.Info" />
+                        <strong>@_snapshot.Dependencies.EdgeCount</strong>
+                        <span>@L["ProjectUnitDashboard:Health:DependencyEdges"]</span>
+                    </div>
+                    <div>
+                        <MudIcon Icon="@Icons.Material.Filled.ScatterPlot" Color="Color.Warning" />
+                        <strong>@_snapshot.Dependencies.IsolatedUnitCount</strong>
+                        <span>@L["ProjectUnitDashboard:Health:IsolatedUnits"]</span>
+                    </div>
+                    <div>
+                        <MudIcon Icon="@Icons.Material.Filled.Error" Color="Color.Error" />
+                        <strong>@_snapshot.Alerts.ErrorCount</strong>
+                        <span>@L["ProjectUnitDashboard:Health:Errors"]</span>
+                    </div>
+                    <div>
+                        <MudIcon Icon="@Icons.Material.Filled.Warning" Color="Color.Warning" />
+                        <strong>@_snapshot.Alerts.WarningCount</strong>
+                        <span>@L["ProjectUnitDashboard:Health:Warnings"]</span>
+                    </div>
+                </div>
+            </section>
+
+            <section class="project-unit-dashboard__section" data-testid="project-unit-coverage-gaps">
+                <div class="project-unit-dashboard__section-heading">
+                    <div>
+                        <MudText Typo="Typo.h6">@L["ProjectUnitDashboard:Sections:CoverageGaps"]</MudText>
+                        <MudText Typo="Typo.caption" Color="Color.Secondary">@L["ProjectUnitDashboard:Sections:CoverageGapsHint"]</MudText>
+                    </div>
+                    <MudChip T="int" Size="Size.Small" Color="@(_snapshot.CoverageGaps.Count == 0 ? Color.Success : Color.Warning)"
+                             Icon="@(_snapshot.CoverageGaps.Count == 0 ? Icons.Material.Filled.CheckCircle : Icons.Material.Filled.Build)">
+                        @_snapshot.CoverageGaps.Count
+                    </MudChip>
+                </div>
+                @if (_snapshot.CoverageGaps.Count == 0)
+                {
+                    <MudAlert Severity="Severity.Success" Variant="Variant.Text">
+                        @L["ProjectUnitDashboard:States:NoCoverageGaps"]
+                    </MudAlert>
+                }
+                else
+                {
+                    <div class="project-unit-dashboard__gap-list">
+                        @foreach (var gap in _snapshot.CoverageGaps)
+                        {
+                            <button type="button" class="project-unit-dashboard__gap" @onclick="@(() => OpenDetail(gap.Unit))">
+                                <div class="project-unit-dashboard__gap-icon">
+                                    <MudIcon Icon="@ProjectUnitVisualizationConfig.GetUnitTypeIcon(gap.Unit.UnitType)" />
+                                </div>
+                                <div class="project-unit-dashboard__gap-copy">
+                                    <MudText Typo="Typo.subtitle2">@gap.Unit.Title</MudText>
+                                    <MudText Typo="Typo.caption" Color="Color.Secondary" Class="project-unit-dashboard__gap-key">
+                                        @gap.Unit.Key
+                                    </MudText>
+                                    <div class="project-unit-dashboard__gap-badges">
+                                        @foreach (var missing in gap.MissingCoverage)
+                                        {
+                                            <MudChip T="string" Size="Size.Small" Color="Color.Warning" Variant="Variant.Outlined">
+                                                @L["ProjectUnitDashboard:Gaps:Missing", GetCoverageTitle(missing)]
+                                            </MudChip>
+                                        }
+                                        @if (gap.Unit.Alerts.Count != 0)
+                                        {
+                                            <MudChip T="string" Size="Size.Small" Color="@GetUnitAlertColor(gap.Unit)" Variant="Variant.Outlined">
+                                                @L["ProjectUnitDashboard:Gaps:Alerts", gap.Unit.Alerts.Count]
+                                            </MudChip>
+                                        }
+                                    </div>
+                                </div>
+                                <MudIcon Icon="@Icons.Material.Filled.ChevronRight" Color="Color.Secondary" />
+                            </button>
+                        }
+                    </div>
+                }
+            </section>
+        }
+    }
+</div>
+
+<ProjectUnitDetailDialog @bind-Visible="_detailDialogVisible" SelectedUnit="_selectedUnit" />
+
+@code {
+    private ProjectUnitDashboardSnapshot? _snapshot;
+    private ProjectUnitSummary? _selectedUnit;
+    private string? _error;
+    private bool _loading;
+    private bool _detailDialogVisible;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await LoadDashboardAsync();
+        }
+    }
+
+    private async Task LoadDashboardAsync()
+    {
+        _loading = true;
+        _error = null;
+        StateHasChanged();
+
+        try
+        {
+            var result = await DataSource.GetDashboardAsync();
+            if (result.IsFailed(out var error, out var snapshot))
+            {
+                _snapshot = null;
+                _error = L["ProjectUnitDashboard:States:LoadFailed", error];
+                return;
+            }
+
+            _snapshot = snapshot;
+        }
+        catch (Exception exception)
+        {
+            _snapshot = null;
+            _error = L["ProjectUnitDashboard:States:LoadFailed", exception.Message];
+        }
+        finally
+        {
+            _loading = false;
+            StateHasChanged();
+        }
+    }
+
+    private ProjectUnitCoverageMetric? GetCoverage(ProjectUnitCoverageKind kind)
+    {
+        return _snapshot?.Coverage.FirstOrDefault(metric => metric.Kind == kind);
+    }
+
+    private string GetCoverageTitle(ProjectUnitCoverageKind kind)
+    {
+        return kind switch
+        {
+            ProjectUnitCoverageKind.Metadata => L["ProjectUnitDashboard:Coverage:Metadata"],
+            ProjectUnitCoverageKind.Description => L["ProjectUnitDashboard:Coverage:Description"],
+            ProjectUnitCoverageKind.Ownership => L["ProjectUnitDashboard:Coverage:Ownership"],
+            ProjectUnitCoverageKind.Requirements => L["ProjectUnitDashboard:Coverage:Requirements"],
+            _ => kind.ToString()
+        };
+    }
+
+    private static Color GetCoverageColor(ProjectUnitCoverageKind kind)
+    {
+        return kind switch
+        {
+            ProjectUnitCoverageKind.Metadata => Color.Primary,
+            ProjectUnitCoverageKind.Description => Color.Info,
+            ProjectUnitCoverageKind.Ownership => Color.Success,
+            ProjectUnitCoverageKind.Requirements => Color.Secondary,
+            _ => Color.Default
+        };
+    }
+
+    private static string FormatPercentage(decimal? percentage)
+    {
+        return percentage is null ? "--" : $"{percentage:0.#}%";
+    }
+
+    private static double ToDouble(decimal? value)
+    {
+        return value is null ? 0d : decimal.ToDouble(value.Value);
+    }
+
+    private static string GetAlertTone(ProjectUnitAlertStatistics alerts)
+    {
+        return alerts.ErrorCount > 0 ? "error" : alerts.WarningCount > 0 ? "warning" : "success";
+    }
+
+    private static Color GetUnitAlertColor(ProjectUnitSummary unit)
+    {
+        return unit.Alerts.Any(alert => alert.Level == EAlertLevel.Error)
+            ? Color.Error
+            : unit.Alerts.Any(alert => alert.Level == EAlertLevel.Warning)
+                ? Color.Warning
+                : Color.Info;
+    }
+
+    private void OpenDetail(ProjectUnitSummary unit)
+    {
+        _selectedUnit = unit;
+        _detailDialogVisible = true;
+    }
+}

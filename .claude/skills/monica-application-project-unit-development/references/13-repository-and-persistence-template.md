@@ -36,9 +36,16 @@ public interface IRepositoryOrder : IRepository<Order, long>
 ```csharp
 using Monica.Repository.Persistence.Abstractions;
 using Monica.Repository.Persistence.Services;
+using Monica.ProjectUnits.Annotations;
 
 namespace $RepositoryNamespace$.Repository;
 
+[ProjectUnitMetadata(
+    "Order Repository",
+    Owner = "$Owner$",
+    Description = "Persists orders and resolves business-relevant order queries.",
+    Tags = ["$SubdomainTag$", "$FeatureTag$"])]
+[ProjectUnitRequirement("$RequirementId$")]
 public sealed class RepositoryOrder(
     IDbContextProvider<OrderingDbContext> dbContextProvider)
     : EfRepository<OrderingDbContext, Order, long>(dbContextProvider), IRepositoryOrder

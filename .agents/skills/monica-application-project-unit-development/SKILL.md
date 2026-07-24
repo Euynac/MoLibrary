@@ -13,9 +13,10 @@ Use this skill for unit-level application development in Monica-based DDD projec
 
 1. Start with the architecture skill to choose the target subdomain, project, and folder layout.
 2. Read [00-project-unit-overview.md](references/00-project-unit-overview.md) and [02-project-unit-composition-map.md](references/02-project-unit-composition-map.md) to identify the units the feature needs.
-3. Load only the template references relevant to the units you are creating or changing.
-4. Keep the boundary thin: `ApplicationService` returns `Res`, while internal `DomainService`, repository, and entity logic stay on normal .NET return types and exceptions.
-5. Prefer rich entities and value objects over procedural handlers that directly mutate persistence state.
+3. Resolve the owning team, stable requirement IDs, and concise unit responsibility using [03-project-unit-context-metadata.md](references/03-project-unit-context-metadata.md).
+4. Load only the template references relevant to the units you are creating or changing.
+5. Keep the boundary thin: `ApplicationService` returns `Res`, while internal `DomainService`, repository, and entity logic stay on normal .NET return types and exceptions.
+6. Prefer rich entities and value objects over procedural handlers that directly mutate persistence state.
 
 ## Ground Rules
 
@@ -24,6 +25,8 @@ Use this skill for unit-level application development in Monica-based DDD projec
 - Keep persistence concerns in repositories and persistence classes, not in request handlers.
 - Keep repository implementations in the owning subdomain or service infrastructure boundary. Do not move a repository or adapter to `Platform` just because it uses an external library; only project-common reusable infrastructure belongs in `Platform`.
 - Keep contracts stable: requests, DTOs, and events are not persistence entities.
+- Add explicit `[ProjectUnitMetadata]` and one or more `[ProjectUnitRequirement]` annotations to every discovered unit. Do not rely on metadata inherited from a base class.
+- Treat missing metadata, description, ownership, and requirement references as four independent catalog debts. Do not collapse them into one readiness score.
 - If a handler returns `Res<string>`, use `Res.Ok<string>(value)` instead of `Res.Ok(value)` to avoid the non-generic string overload.
 - Make HTTP contracts request-owned. Put `[ApiEndpoint]` on the request type and keep route, verb, binding, and optional operation name off the `ApplicationService` handler.
 - A request is published for generated RPC clients only when it is attributed source in the exact namespace `*.PublishedLanguages.Domain{DomainName}.Requests`. Attributed requests outside that boundary remain local HTTP endpoints.
@@ -37,6 +40,7 @@ Use this skill for unit-level application development in Monica-based DDD projec
 - Unit catalog and responsibilities: [00-project-unit-overview.md](references/00-project-unit-overview.md)
 - Naming, placement, and boundary rules: [01-project-unit-naming-and-boundaries.md](references/01-project-unit-naming-and-boundaries.md)
 - Unit selection by feature shape: [02-project-unit-composition-map.md](references/02-project-unit-composition-map.md)
+- Metadata, ownership, and requirement traceability: [03-project-unit-context-metadata.md](references/03-project-unit-context-metadata.md)
 - `ApplicationService` templates: [10-application-service-template.md](references/10-application-service-template.md)
 - `DomainService` templates: [11-domain-service-template.md](references/11-domain-service-template.md)
 - Entity, request, and event templates: [12-entity-request-event-template.md](references/12-entity-request-event-template.md)

@@ -102,10 +102,9 @@
 
 <ProjectUnitDetailDialog @bind-Visible="_detailDialogVisible"
                          SelectedUnit="_selectedUnit"
-                         AllProjectUnits="_allProjectUnits"
                          OnNodeFocus="HandleNodeFocusFromDialog" />
 
-<MoContextMenu TItem="DtoProjectUnit"
+<MoContextMenu TItem="ProjectUnitSummary"
                Items="@_contextMenuItems"
                Visible="@_contextMenuOpen"
                InitialX="@_contextMenuX"
@@ -116,12 +115,12 @@
 
 @code {
     private IJSObjectReference? _jsModule;
-    private List<DtoProjectUnit> _allProjectUnits = [];
-    private List<DtoProjectUnit> _filteredUnits = [];
+    private List<ProjectUnitSummary> _allProjectUnits = [];
+    private List<ProjectUnitSummary> _filteredUnits = [];
     private bool _loading;
     private bool _detailDialogVisible;
-    private DtoProjectUnit? _selectedUnit;
-    private DtoProjectUnit? _contextMenuUnit;
+    private ProjectUnitSummary? _selectedUnit;
+    private ProjectUnitSummary? _contextMenuUnit;
     private bool _showFilterPanel;
     private bool _showLayoutPanel;
     private string _filterText = string.Empty;
@@ -135,7 +134,7 @@
     private LayoutType _currentLayout = LayoutType.Force;
     private int _forceDistance = 500;
     private int _forceStrength = -300;
-    private List<ContextMenuItem<DtoProjectUnit>> _contextMenuItems = [];
+    private List<ContextMenuItem<ProjectUnitSummary>> _contextMenuItems = [];
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -191,7 +190,7 @@
                     Enum.GetValues<EProjectUnitType>().Where(static type => type != EProjectUnitType.None));
             }
 
-            _filteredUnits = new List<DtoProjectUnit>(_allProjectUnits);
+            _filteredUnits = new List<ProjectUnitSummary>(_allProjectUnits);
             await UpdateGraph();
         }
         catch (Exception ex)
@@ -230,11 +229,11 @@
             title = unit.Title,
             type = L.GetProjectUnitTypeText(unit.UnitType),
             typeValue = (int)unit.UnitType,
-            dependencyCount = unit.DependencyUnits.Count,
+            dependencyCount = unit.Dependencies.Count,
             dependedByCount = unit.DependedByCount,
-            hasAttributes = unit.Attributes.Any(),
-            methodCount = unit.Methods.Count,
-            hasMethod = unit.Methods.Any(),
+            hasAttributes = unit.HasExplicitMetadata,
+            methodCount = unit.MethodCount,
+            hasMethod = unit.MethodCount > 0,
             isComplex = ProjectUnitVisualizationConfig.IsComplexUnitType(unit.UnitType),
             colorRole = ProjectUnitVisualizationConfig.GetUnitTypeColorRole(unit.UnitType),
             icon = ProjectUnitVisualizationConfig.GetUnitTypeIcon(unit.UnitType),
@@ -250,7 +249,7 @@
         var links = new List<object>();
         foreach (var unit in _filteredUnits)
         {
-            foreach (var dependency in unit.DependencyUnits)
+            foreach (var dependency in unit.Dependencies)
             {
                 if (_filteredUnits.Any(item => item.Key == dependency.Key))
                 {
@@ -334,12 +333,12 @@
             var matchesText = string.IsNullOrWhiteSpace(_filterText)
                 || unit.Title.Contains(_filterText, StringComparison.OrdinalIgnoreCase)
                 || unit.Key.Contains(_filterText, StringComparison.OrdinalIgnoreCase)
-                || (!string.IsNullOrEmpty(unit.Author) && unit.Author.Contains(_filterText, StringComparison.OrdinalIgnoreCase))
-                || (unit.Group?.Any(group => group.Contains(_filterText, StringComparison.OrdinalIgnoreCase)) == true)
+                || (!string.IsNullOrEmpty(unit.Owner) && unit.Owner.Contains(_filterText, StringComparison.OrdinalIgnoreCase))
+                || unit.Tags.Any(tag => tag.Contains(_filterText, StringComparison.OrdinalIgnoreCase))
                 || (!string.IsNullOrEmpty(unit.Description) && unit.Description.Contains(_filterText, StringComparison.OrdinalIgnoreCase));
 
             var matchesType = !_selectedUnitTypes.Any() || _selectedUnitTypes.Contains(unit.UnitType);
-            var matchesDependencies = !_showOnlyWithDependencies || unit.DependencyUnits.Any() || unit.DependedByCount > 0;
+            var matchesDependencies = !_showOnlyWithDependencies || unit.Dependencies.Any() || unit.DependedByCount > 0;
             var matchesAlerts = !_showOnlyWithAlerts || unit.Alerts.Any();
 
             return matchesText && matchesType && matchesDependencies && matchesAlerts;
@@ -413,9 +412,9 @@
         _contextMenuOpen = false;
     }
 
-    private List<ContextMenuItem<DtoProjectUnit>> BuildContextMenuItems(DtoProjectUnit unit)
+    private List<ContextMenuItem<ProjectUnitSummary>> BuildContextMenuItems(ProjectUnitSummary unit)
     {
-        var builder = ContextMenuBuilder<DtoProjectUnit>.Create()
+        var builder = ContextMenuBuilder<ProjectUnitSummary>.Create()
             .AddItem(L["ProjectUnitVisualization:ContextMenu:Details"], Icons.Material.Filled.Info, ShowContextDetailsAsync)
             .AddItem(L["ProjectUnitVisualization:ContextMenu:FocusNode"], Icons.Material.Filled.CenterFocusStrong, FocusOnNodeAsync)
             .AddItem(L["ProjectUnitVisualization:ContextMenu:FilterByType"], Icons.Material.Filled.FilterAlt, FilterByTypeAsync);
@@ -444,21 +443,21 @@
         return builder.Build();
     }
 
-    private Task OnContextMenuItemClick(ContextMenuItem<DtoProjectUnit> item)
+    private Task OnContextMenuItemClick(ContextMenuItem<ProjectUnitSummary> item)
     {
         _contextMenuOpen = false;
         StateHasChanged();
         return Task.CompletedTask;
     }
 
-    private Task ShowContextDetailsAsync(DtoProjectUnit? unit)
+    private Task ShowContextDetailsAsync(ProjectUnitSummary? unit)
     {
         _selectedUnit = unit ?? _contextMenuUnit;
         _detailDialogVisible = true;
         return Task.CompletedTask;
     }
 
-    private async Task FocusOnNodeAsync(DtoProjectUnit? unit)
+    private async Task FocusOnNodeAsync(ProjectUnitSummary? unit)
     {
         var targetUnit = unit ?? _contextMenuUnit;
         if (_jsModule is not null && targetUnit is not null)
@@ -472,7 +471,7 @@
         return SetLayout(layoutType);
     }
 
-    private async Task FilterByTypeAsync(DtoProjectUnit? unit)
+    private async Task FilterByTypeAsync(ProjectUnitSummary? unit)
     {
         var targetUnit = unit ?? _contextMenuUnit;
         if (targetUnit is null)
@@ -485,7 +484,7 @@
         await ApplyFilters();
     }
 
-    private async Task ClearAllFiltersAsync(DtoProjectUnit? unit)
+    private async Task ClearAllFiltersAsync(ProjectUnitSummary? unit)
     {
         _filterText = string.Empty;
         _selectedUnitTypes = new HashSet<EProjectUnitType>(
@@ -496,7 +495,7 @@
         await ApplyFilters();
     }
 
-    private async Task ShowRelatedNodesAsync(DtoProjectUnit? unit)
+    private async Task ShowRelatedNodesAsync(ProjectUnitSummary? unit)
     {
         var targetUnit = unit ?? _contextMenuUnit;
         if (targetUnit is null)
@@ -510,7 +509,7 @@
         Snackbar.Add(L["ProjectUnitVisualization:Messages:ShowingRelatedNodes", targetUnit.Title], Severity.Info);
     }
 
-    private Task ClearRelatedFilterAsync(DtoProjectUnit? unit)
+    private Task ClearRelatedFilterAsync(ProjectUnitSummary? unit)
     {
         _relatedToNodeId = null;
         return ApplyFilters();
@@ -522,7 +521,7 @@
         return ApplyFilters();
     }
 
-    private async Task CopyFullNameAsync(DtoProjectUnit? unit)
+    private async Task CopyFullNameAsync(ProjectUnitSummary? unit)
     {
         var targetUnit = unit ?? _contextMenuUnit;
         if (targetUnit is null)
@@ -549,7 +548,7 @@
 
             if (currentUnit is not null)
             {
-                foreach (var dependency in currentUnit.DependencyUnits)
+                foreach (var dependency in currentUnit.Dependencies)
                 {
                     if (related.Add(dependency.Key))
                     {
@@ -559,7 +558,7 @@
             }
 
             var dependents = _allProjectUnits.Where(unit =>
-                unit.DependencyUnits.Any(dependency => dependency.Key == currentId));
+                unit.Dependencies.Any(dependency => dependency.Key == currentId));
 
             foreach (var dependent in dependents)
             {

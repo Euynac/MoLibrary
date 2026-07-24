@@ -10,6 +10,7 @@
       "Title": "项目单元"
     },
     "Tabs": {
+      "StatusOverview": "状态概览",
       "ProjectUnit": "项目单元",
       "ArchitectureVisualization": "架构可视化",
       "DomainEventTester": "领域事件测试",
@@ -28,7 +29,9 @@
       "NextMatch": "下一个匹配"
     },
     "Labels": {
-      "Unknown": "未知"
+      "Unknown": "未知",
+      "NotDeclared": "未声明",
+      "None": "无"
     },
     "Messages": {
       "LoadFailed": "加载失败: {0}",
@@ -79,9 +82,9 @@
         "Singular": "被依赖 {0}",
         "Plural": "被依赖 {0}"
       },
-      "Attribute": {
-        "Singular": "特性 {0}",
-        "Plural": "特性 {0}"
+      "Requirement": {
+        "Singular": "需求 {0}",
+        "Plural": "需求 {0}"
       },
       "Method": {
         "Singular": "方法 {0}",
@@ -185,7 +188,7 @@
   "ProjectUnitFilterPanel": {
     "Fields": {
       "SearchLabel": "搜索项目单元",
-      "SearchHelper": "支持按名称、作者、分组或描述搜索"
+      "SearchHelper": "支持按名称、负责人、标签或描述搜索"
     },
     "Sections": {
       "TypeFilter": "单元类型筛选"
@@ -229,28 +232,86 @@
   "ProjectUnitDetailDialog": {
     "Title": "项目单元详情",
     "Fields": {
-      "Name": "单元名称",
-      "FullName": "完整名称",
-      "Author": "作者",
-      "Group": "分组",
-      "Description": "描述",
-      "Type": "单元类型",
-      "Statistics": "统计信息",
+      "Owner": "负责人",
       "Dependencies": "依赖单元",
       "DependedBy": "被依赖单元",
-      "Attributes": "特性",
       "Methods": "方法信息",
       "Alerts": "告警信息",
-      "Documentation": "文档",
-      "ConfigurationMode": "配置模式",
-      "ConfigurationUsage": "使用方式",
-      "ConstructorParameters": "构造参数"
+      "ConstructorParameters": "构造参数",
+      "DefinitionKey": "定义键"
     },
     "Sections": {
-      "ConfigurationUsageDetails": "配置使用详情（{0}）",
-      "ConstructorParameters": "构造函数参数（{0}）",
-      "PublicMethods": "公共方法（{0}）",
-      "MarkdownDocument": "Markdown 文档"
+      "Requirements": "需求追溯",
+      "RequirementsHint": "仅在打开详情时，由当前应用解析需求跳转地址。",
+      "Tags": "标签",
+      "Relationships": "架构关系",
+      "Configuration": "配置行为",
+      "TechnicalShape": "技术结构",
+      "PublicMethods": "公共方法（{0}）"
+    },
+    "Badges": {
+      "MetadataDeclared": "已声明元数据",
+      "MetadataMissing": "缺少元数据",
+      "Resolved": "可访问",
+      "Unresolved": "未解析"
+    },
+    "States": {
+      "Loading": "正在加载项目单元详情...",
+      "LoadFailed": "无法加载项目单元详情：{0}",
+      "NoRequirements": "当前项目单元尚未声明需求引用。"
+    },
+    "Actions": {
+      "FocusInGraph": "在关系图中聚焦"
+    }
+  },
+  "ProjectUnitDashboard": {
+    "Actions": {
+      "Retry": "重试"
+    },
+    "Service": {
+      "Domain": "领域：{0}"
+    },
+    "Metrics": {
+      "TotalUnits": "项目单元",
+      "UnitTypes": "单元类型",
+      "MetadataCoverage": "元数据覆盖率",
+      "RequirementCoverage": "需求覆盖率",
+      "Alerts": "目录告警"
+    },
+    "Sections": {
+      "Distribution": "单元分布",
+      "DistributionHint": "当前服务中已发现的架构类型。",
+      "Coverage": "Agent 上下文覆盖率",
+      "CoverageHint": "针对全部项目单元独立计算的上下文证据维度。",
+      "ArchitectureHealth": "架构健康度",
+      "ArchitectureHealthHint": "当前服务的依赖拓扑与显式发现诊断。",
+      "CoverageGaps": "待完善的上下文",
+      "CoverageGapsHint": "打开项目单元，补充缺失的元数据、负责人、说明或需求追溯。"
+    },
+    "Coverage": {
+      "Metadata": "元数据",
+      "Description": "说明",
+      "Ownership": "负责人",
+      "Requirements": "需求追溯",
+      "Ratio": "{0} / {1} 个单元"
+    },
+    "Health": {
+      "DependencyEdges": "依赖关系",
+      "IsolatedUnits": "孤立单元",
+      "Errors": "错误",
+      "Warnings": "警告"
+    },
+    "Gaps": {
+      "Missing": "缺少{0}",
+      "Alerts": "{0} 个告警"
+    },
+    "States": {
+      "Loading": "正在加载架构状态...",
+      "LoadFailedTitle": "架构状态暂不可用",
+      "LoadFailed": "无法加载项目单元状态面板：{0}",
+      "EmptyTitle": "未发现项目单元",
+      "EmptyDescription": "当前服务中没有受支持的项目单元类型。此时覆盖率为无数据，不视为已完成。",
+      "NoCoverageGaps": "所有项目单元的上下文元数据均已完整，且没有目录告警。"
     }
   },
   "ProjectUnitVisualization": {
@@ -297,14 +358,12 @@
         "DependedBy": "被依赖: {0}"
       },
       "MetadataLabels": {
-        "Group": "分组",
+        "Tags": "标签",
         "Description": "描述",
-        "AttributeCount": "特性数量",
+        "Owner": "负责人",
+        "RequirementCount": "需求数量",
         "DependencyCount": "依赖数量",
-        "Method": "方法"
-      },
-      "Metadata": {
-        "MoreMethods": "还有 {0} 个方法"
+        "MethodCount": "方法数量"
       }
     }
   },

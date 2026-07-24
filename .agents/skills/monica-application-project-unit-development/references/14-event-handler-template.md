@@ -19,10 +19,17 @@
 ## Distributed Handler Example
 
 ```csharp
+using Monica.ProjectUnits.Annotations;
 using Monica.WebApi.Abstractions;
 
 namespace $ApplicationNamespace$.HandlersEvent;
 
+[ProjectUnitMetadata(
+    "Notify Warehouse After Order Approval",
+    Owner = "$Owner$",
+    Description = "Coordinates the warehouse reaction to an approved order.",
+    Tags = ["$SubdomainTag$", "$FeatureTag$"])]
+[ProjectUnitRequirement("$RequirementId$")]
 public sealed class DomainEventHandlerOrderApproved(DomainNotifyWarehouse domainService)
     : DomainEventHandler<EventOrderApproved>
 {
@@ -38,10 +45,17 @@ public sealed class DomainEventHandlerOrderApproved(DomainNotifyWarehouse domain
 ## Local Handler Example
 
 ```csharp
+using Monica.ProjectUnits.Annotations;
 using Monica.WebApi.Abstractions;
 
 namespace $ApplicationNamespace$.HandlersEvent;
 
+[ProjectUnitMetadata(
+    "Refresh Order Read Model",
+    Owner = "$Owner$",
+    Description = "Refreshes the local read model after order approval.",
+    Tags = ["$SubdomainTag$", "$FeatureTag$"])]
+[ProjectUnitRequirement("$RequirementId$")]
 public sealed class LocalEventHandlerOrderApproved(DomainRefreshReadModel domainService)
     : LocalEventHandler<EventOrderApproved>
 {

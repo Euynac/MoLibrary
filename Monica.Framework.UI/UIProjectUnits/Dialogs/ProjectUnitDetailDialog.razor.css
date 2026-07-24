@@ -1,0 +1,310 @@
+.project-unit-detail__dialog-title,
+.project-unit-detail__identity,
+.project-unit-detail__badges,
+.project-unit-detail__fact,
+.project-unit-detail__section-title,
+.project-unit-detail__requirement,
+.project-unit-detail__configuration,
+.project-unit-detail__usage,
+.project-unit-detail__method-badges {
+    align-items: center;
+    display: flex;
+}
+
+.project-unit-detail__dialog-title {
+    gap: 0.75rem;
+}
+
+.project-unit-detail__loading {
+    align-items: center;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    justify-content: center;
+    min-height: 18rem;
+}
+
+.project-unit-detail {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+    min-width: 0;
+}
+
+.project-unit-detail__hero {
+    align-items: flex-start;
+    display: flex;
+    gap: 1rem;
+    justify-content: space-between;
+    min-width: 0;
+}
+
+.project-unit-detail__identity {
+    gap: 1rem;
+    min-width: 0;
+}
+
+.project-unit-detail__icon {
+    align-items: center;
+    background: var(--mud-palette-action-default-hover);
+    border: 1px solid var(--mud-palette-divider);
+    border-radius: 6px;
+    color: var(--mud-palette-primary);
+    display: flex;
+    flex: 0 0 3rem;
+    height: 3rem;
+    justify-content: center;
+}
+
+.project-unit-detail__icon[data-color-role="success"] {
+    color: var(--mud-palette-success);
+}
+
+.project-unit-detail__icon[data-color-role="warning"] {
+    color: var(--mud-palette-warning);
+}
+
+.project-unit-detail__icon[data-color-role="error"] {
+    color: var(--mud-palette-error);
+}
+
+.project-unit-detail__icon[data-color-role="info"] {
+    color: var(--mud-palette-info);
+}
+
+.project-unit-detail__icon[data-color-role="secondary"],
+.project-unit-detail__icon[data-color-role="tertiary"] {
+    color: var(--mud-palette-secondary);
+}
+
+.project-unit-detail__heading,
+.project-unit-detail__requirement-copy {
+    min-width: 0;
+}
+
+.project-unit-detail__key,
+.project-unit-detail__description,
+.project-unit-detail__requirement-copy,
+.project-unit-detail__method code,
+.project-unit-detail__configuration code {
+    overflow-wrap: anywhere;
+    word-break: break-word;
+}
+
+.project-unit-detail__badges {
+    flex-shrink: 0;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    justify-content: flex-end;
+}
+
+.project-unit-detail__description {
+    border-left: 3px solid var(--mud-palette-primary);
+    margin: 0;
+    padding: 0.25rem 0 0.25rem 1rem;
+}
+
+.project-unit-detail__facts {
+    display: grid;
+    gap: 0.75rem;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.project-unit-detail__fact {
+    background: var(--mud-palette-background-gray);
+    border: 1px solid var(--mud-palette-divider);
+    border-radius: 6px;
+    gap: 0.75rem;
+    min-height: 4.25rem;
+    padding: 0.75rem;
+}
+
+.project-unit-detail__fact > span {
+    min-width: 0;
+}
+
+.project-unit-detail__section {
+    border-top: 1px solid var(--mud-palette-divider);
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    padding-top: 1.25rem;
+}
+
+.project-unit-detail__section-title {
+    gap: 0.75rem;
+}
+
+.project-unit-detail__requirements,
+.project-unit-detail__reference-list,
+.project-unit-detail__usage-list,
+.project-unit-detail__method-list,
+.project-unit-detail__alerts {
+    display: flex;
+    flex-direction: column;
+    gap: 0.625rem;
+}
+
+.project-unit-detail__requirement {
+    background: var(--mud-palette-background-gray);
+    border: 1px solid var(--mud-palette-divider);
+    border-radius: 6px;
+    gap: 0.75rem;
+    min-height: 3.5rem;
+    padding: 0.75rem;
+}
+
+.project-unit-detail__requirement-copy {
+    flex: 1;
+}
+
+.project-unit-detail__requirement-link {
+    align-items: center;
+    color: var(--mud-palette-primary);
+    display: inline-flex;
+    font-weight: 600;
+    gap: 0.25rem;
+    max-width: 100%;
+    text-decoration: none;
+}
+
+.project-unit-detail__requirement-link:hover {
+    text-decoration: underline;
+}
+
+.project-unit-detail__requirement-link:focus-visible,
+.project-unit-detail__reference:focus-visible {
+    outline: 2px solid var(--mud-palette-primary);
+    outline-offset: 2px;
+}
+
+.project-unit-detail__relationships {
+    display: grid;
+    gap: 1rem;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.project-unit-detail__relationships > div {
+    min-width: 0;
+}
+
+.project-unit-detail__reference {
+    align-items: center;
+    background: transparent;
+    border: 0;
+    border-radius: 4px;
+    color: var(--mud-palette-text-primary);
+    cursor: pointer;
+    display: grid;
+    font: inherit;
+    gap: 0.5rem;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    min-height: 2.5rem;
+    padding: 0.375rem 0.5rem;
+    text-align: left;
+    width: 100%;
+}
+
+.project-unit-detail__reference:hover {
+    background: var(--mud-palette-action-default-hover);
+}
+
+.project-unit-detail__reference span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.project-unit-detail__configuration,
+.project-unit-detail__usage {
+    gap: 1rem;
+    justify-content: space-between;
+}
+
+.project-unit-detail__configuration > div,
+.project-unit-detail__usage .project-unit-detail__reference {
+    min-width: 0;
+}
+
+.project-unit-detail__usage .project-unit-detail__reference {
+    flex: 1;
+}
+
+.project-unit-detail__code-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.project-unit-detail__code-list code,
+.project-unit-detail__method code,
+.project-unit-detail__configuration code {
+    background: var(--mud-palette-background-gray);
+    border: 1px solid var(--mud-palette-divider);
+    border-radius: 4px;
+    display: inline-block;
+    padding: 0.375rem 0.5rem;
+}
+
+.project-unit-detail__methods {
+    margin-top: 0.25rem;
+}
+
+.project-unit-detail__method {
+    border-bottom: 1px solid var(--mud-palette-divider);
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    padding: 0.75rem 0;
+}
+
+.project-unit-detail__method:last-child {
+    border-bottom: 0;
+}
+
+.project-unit-detail__method-badges {
+    flex-wrap: wrap;
+    gap: 0.375rem;
+}
+
+.project-unit-detail__alert-source {
+    color: var(--mud-palette-text-secondary);
+    display: block;
+    font-size: 0.75rem;
+    margin-top: 0.25rem;
+}
+
+@media (max-width: 767.98px) {
+    .project-unit-detail__hero {
+        flex-direction: column;
+    }
+
+    .project-unit-detail__badges {
+        justify-content: flex-start;
+    }
+
+    .project-unit-detail__facts {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .project-unit-detail__relationships {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 479.98px) {
+    .project-unit-detail__facts {
+        grid-template-columns: 1fr;
+    }
+
+    .project-unit-detail__identity {
+        align-items: flex-start;
+    }
+
+    .project-unit-detail__requirement,
+    .project-unit-detail__configuration,
+    .project-unit-detail__usage {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+}

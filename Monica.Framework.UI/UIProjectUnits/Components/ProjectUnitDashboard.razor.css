@@ -1,0 +1,290 @@
+.project-unit-dashboard {
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+    min-width: 0;
+}
+
+.project-unit-dashboard__header,
+.project-unit-dashboard__service,
+.project-unit-dashboard__service-heading,
+.project-unit-dashboard__metric,
+.project-unit-dashboard__section-heading,
+.project-unit-dashboard__gap,
+.project-unit-dashboard__gap-badges {
+    align-items: center;
+    display: flex;
+}
+
+.project-unit-dashboard__header {
+    border-bottom: 1px solid var(--mud-palette-divider);
+    gap: 1rem;
+    justify-content: space-between;
+    padding-bottom: 1rem;
+}
+
+.project-unit-dashboard__service {
+    gap: 1rem;
+    min-width: 0;
+}
+
+.project-unit-dashboard__service-icon {
+    align-items: center;
+    background: var(--mud-palette-primary);
+    border-radius: 6px;
+    color: var(--mud-palette-primary-text);
+    display: flex;
+    flex: 0 0 3.5rem;
+    height: 3.5rem;
+    justify-content: center;
+}
+
+.project-unit-dashboard__service-copy {
+    min-width: 0;
+}
+
+.project-unit-dashboard__service-heading {
+    flex-wrap: wrap;
+    gap: 0.625rem;
+}
+
+.project-unit-dashboard__state {
+    align-items: center;
+    display: flex;
+    flex-direction: column;
+    gap: 0.875rem;
+    justify-content: center;
+    min-height: 24rem;
+    padding: 2rem;
+    text-align: center;
+}
+
+.project-unit-dashboard__state--empty {
+    border: 1px dashed var(--mud-palette-divider);
+    border-radius: 6px;
+    min-height: 18rem;
+}
+
+.project-unit-dashboard__metrics {
+    display: grid;
+    gap: 0.75rem;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+}
+
+.project-unit-dashboard__metric {
+    background: var(--mud-palette-surface);
+    border: 1px solid var(--mud-palette-divider);
+    border-radius: 6px;
+    gap: 0.875rem;
+    min-height: 6.25rem;
+    padding: 1rem;
+}
+
+.project-unit-dashboard__metric > .mud-icon-root {
+    color: var(--mud-palette-primary);
+    flex-shrink: 0;
+}
+
+.project-unit-dashboard__metric[data-tone="info"] > .mud-icon-root {
+    color: var(--mud-palette-info);
+}
+
+.project-unit-dashboard__metric[data-tone="success"] > .mud-icon-root {
+    color: var(--mud-palette-success);
+}
+
+.project-unit-dashboard__metric[data-tone="secondary"] > .mud-icon-root {
+    color: var(--mud-palette-secondary);
+}
+
+.project-unit-dashboard__metric[data-tone="warning"] > .mud-icon-root {
+    color: var(--mud-palette-warning);
+}
+
+.project-unit-dashboard__metric[data-tone="error"] > .mud-icon-root {
+    color: var(--mud-palette-error);
+}
+
+.project-unit-dashboard__primary-grid {
+    display: grid;
+    gap: 1rem;
+    grid-template-columns: minmax(0, 1.1fr) minmax(24rem, 0.9fr);
+}
+
+.project-unit-dashboard__section {
+    border: 1px solid var(--mud-palette-divider);
+    border-radius: 6px;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    min-width: 0;
+    padding: 1rem;
+}
+
+.project-unit-dashboard__section-heading {
+    gap: 1rem;
+    justify-content: space-between;
+}
+
+.project-unit-dashboard__distribution {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.project-unit-dashboard__distribution-row {
+    display: flex;
+    flex-direction: column;
+    gap: 0.375rem;
+}
+
+.project-unit-dashboard__distribution-label {
+    align-items: center;
+    display: grid;
+    gap: 0.5rem;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+}
+
+.project-unit-dashboard__coverage {
+    display: grid;
+    gap: 1rem;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.project-unit-dashboard__coverage-item {
+    align-items: center;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    text-align: center;
+}
+
+.project-unit-dashboard__gauge {
+    align-items: center;
+    display: flex;
+    height: 5rem;
+    justify-content: center;
+    position: relative;
+    width: 5rem;
+}
+
+.project-unit-dashboard__gauge strong {
+    position: absolute;
+}
+
+.project-unit-dashboard__health-items {
+    display: grid;
+    gap: 0.75rem;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.project-unit-dashboard__health-items > div {
+    background: var(--mud-palette-background-gray);
+    border-radius: 6px;
+    display: grid;
+    gap: 0.5rem;
+    grid-template-columns: auto auto minmax(0, 1fr);
+    min-height: 3.5rem;
+    padding: 0.75rem;
+}
+
+.project-unit-dashboard__health-items span {
+    color: var(--mud-palette-text-secondary);
+    min-width: 0;
+}
+
+.project-unit-dashboard__gap-list {
+    display: grid;
+    gap: 0.625rem;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.project-unit-dashboard__gap {
+    background: transparent;
+    border: 1px solid var(--mud-palette-divider);
+    border-radius: 6px;
+    color: var(--mud-palette-text-primary);
+    cursor: pointer;
+    font: inherit;
+    gap: 0.75rem;
+    min-height: 5.5rem;
+    padding: 0.75rem;
+    text-align: left;
+    width: 100%;
+}
+
+.project-unit-dashboard__gap:hover {
+    background: var(--mud-palette-action-default-hover);
+    border-color: var(--mud-palette-primary);
+}
+
+.project-unit-dashboard__gap:focus-visible {
+    outline: 2px solid var(--mud-palette-primary);
+    outline-offset: 2px;
+}
+
+.project-unit-dashboard__gap-icon {
+    align-items: center;
+    background: var(--mud-palette-action-default-hover);
+    border-radius: 4px;
+    color: var(--mud-palette-primary);
+    display: flex;
+    flex: 0 0 2.5rem;
+    height: 2.5rem;
+    justify-content: center;
+}
+
+.project-unit-dashboard__gap-copy {
+    flex: 1;
+    min-width: 0;
+}
+
+.project-unit-dashboard__gap-key {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.project-unit-dashboard__gap-badges {
+    flex-wrap: wrap;
+    gap: 0.375rem;
+    margin-top: 0.375rem;
+}
+
+@media (max-width: 1199.98px) {
+    .project-unit-dashboard__metrics {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    .project-unit-dashboard__primary-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 767.98px) {
+    .project-unit-dashboard__metrics,
+    .project-unit-dashboard__health-items,
+    .project-unit-dashboard__gap-list {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 559.98px) {
+    .project-unit-dashboard__header {
+        align-items: flex-start;
+    }
+
+    .project-unit-dashboard__service {
+        align-items: flex-start;
+    }
+
+    .project-unit-dashboard__metrics,
+    .project-unit-dashboard__health-items,
+    .project-unit-dashboard__gap-list {
+        grid-template-columns: 1fr;
+    }
+
+    .project-unit-dashboard__metric {
+        min-height: 5rem;
+    }
+}

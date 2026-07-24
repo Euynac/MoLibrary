@@ -3,6 +3,10 @@
 Use this checklist before finishing a ProjectUnit change.
 
 - The chosen ProjectUnits match the feature shape in [02-project-unit-composition-map.md](02-project-unit-composition-map.md).
+- Every discovered unit declares its own `[ProjectUnitMetadata]` title, owner, description, and useful tags.
+- Every discovered unit declares one or more stable `[ProjectUnitRequirement]` IDs, with no copied file paths or URLs in the annotation.
+- Metadata titles describe the individual unit, and ownership comes from repository or requirement facts rather than invention.
+- The status dashboard has been reviewed for independent metadata, description, ownership, and requirement coverage gaps.
 - Class names follow the conventions in [01-project-unit-naming-and-boundaries.md](01-project-unit-naming-and-boundaries.md).
 - The physical folders match the placement matrix in [01-project-unit-naming-and-boundaries.md](01-project-unit-naming-and-boundaries.md).
 - `ApplicationService` remains thin and returns `Res` only at the boundary.

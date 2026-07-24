@@ -100,6 +100,23 @@ ProjectUnits add the application vocabulary:
 
 `ApplicationService` · `RequestDto` · `DomainService` · `Entity` · `Repository` · `DomainEvent` · `DomainEventHandler` · `LocalEventHandler` · `Configuration` · `RecurringJob` · `TriggeredJob`
 
+Each discovered unit can also carry explicit agent context and requirement traceability:
+
+```csharp
+[ProjectUnitMetadata(
+    "Approve Order",
+    Owner = "Ordering Team",
+    Description = "Approves an eligible order.",
+    Tags = ["ordering", "approval"])]
+[ProjectUnitRequirement("ORD-REQ-001")]
+public sealed class CommandHandlerApproveOrder : ApplicationService<CommandApproveOrder>
+{
+    // ...
+}
+```
+
+`Monica.Framework.UI` exposes a first-tab status dashboard for the current host with unit distribution, dependency health, alerts, and independent metadata, description, ownership, and requirement coverage. The typed `/framework/units`, `/framework/units/dashboard`, and `/framework/units/{key}` APIs expose the same catalog without leaking reflection objects.
+
 The repository also ships agent skills under `.agents/skills/` and `.claude/skills/`. They encode the same module boundaries, ProjectUnit roles, UI rules, and testing conventions used by the framework itself.
 
 ## Third-party ecosystem

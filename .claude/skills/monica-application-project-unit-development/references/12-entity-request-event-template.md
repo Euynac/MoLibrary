@@ -7,15 +7,28 @@ Use `$ContractNamespace$` for the contract project selected by the architecture 
 Use request contracts for use-case input. Keep them stable and serializable.
 
 ```csharp
+using Monica.ProjectUnits.Annotations;
 using Monica.WebApi.Abstractions;
 using Monica.WebApi.Annotations;
 
 namespace $ContractNamespace$.Requests;
 
 [ApiEndpoint(ApiHttpMethod.Get, "$QueryRoute$", Binding = ApiRequestBinding.Query)]
+[ProjectUnitMetadata(
+    "$FeatureName$ Query",
+    Owner = "$Owner$",
+    Description = "Requests the $FeatureName$ query use case.",
+    Tags = ["$SubdomainTag$", "$FeatureTag$"])]
+[ProjectUnitRequirement("$RequirementId$")]
 public sealed record Query$FeatureName$(long Id) : IResultRequest<$ResponseName$>;
 
 [ApiEndpoint(ApiHttpMethod.Post, "$CommandRoute$", Binding = ApiRequestBinding.Body)]
+[ProjectUnitMetadata(
+    "$FeatureName$ Command",
+    Owner = "$Owner$",
+    Description = "Requests the $FeatureName$ command use case.",
+    Tags = ["$SubdomainTag$", "$FeatureTag$"])]
+[ProjectUnitRequirement("$RequirementId$")]
 public sealed record Command$FeatureName$(long Id, string Reason) : IResultRequest;
 ```
 
@@ -34,10 +47,17 @@ Rules:
 Use entities to own identity, state transitions, and invariants.
 
 ```csharp
+using Monica.ProjectUnits.Annotations;
 using Monica.Repository.Entity.Abstractions;
 
 namespace $DomainNamespace$.Entities;
 
+[ProjectUnitMetadata(
+    "Order",
+    Owner = "$Owner$",
+    Description = "Owns order state transitions and invariants.",
+    Tags = ["$SubdomainTag$", "$FeatureTag$"])]
+[ProjectUnitRequirement("$RequirementId$")]
 public sealed class Order : Entity<long>
 {
     public string Number { get; private set; } = string.Empty;
@@ -93,9 +113,16 @@ Use domain events to describe meaningful business facts.
 
 ```csharp
 using Monica.EventBus.Events;
+using Monica.ProjectUnits.Annotations;
 
 namespace $ContractNamespace$.Events;
 
+[ProjectUnitMetadata(
+    "Order Approved Event",
+    Owner = "$Owner$",
+    Description = "Publishes the fact that an order was approved.",
+    Tags = ["$SubdomainTag$", "$FeatureTag$"])]
+[ProjectUnitRequirement("$RequirementId$")]
 public sealed class EventOrderApproved : DomainEvent
 {
     public long OrderId { get; init; }

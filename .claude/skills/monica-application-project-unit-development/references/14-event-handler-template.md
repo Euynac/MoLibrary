@@ -19,16 +19,25 @@
 ## Distributed Handler Example
 
 ```csharp
+using Monica.ProjectUnits.Annotations;
 using Monica.WebApi.Abstractions;
 
 namespace $ApplicationNamespace$.HandlersEvent;
 
+[ProjectUnitMetadata(
+    "Notify Warehouse After Order Approval",
+    Owner = "$Owner$",
+    Description = "Coordinates the warehouse reaction to an approved order.",
+    Tags = ["$SubdomainTag$", "$FeatureTag$"])]
+[ProjectUnitRequirement("$RequirementId$")]
 public sealed class DomainEventHandlerOrderApproved(DomainNotifyWarehouse domainService)
     : DomainEventHandler<EventOrderApproved>
 {
-    public override async Task HandleEventAsync(EventOrderApproved eventData)
+    public override async Task HandleEventAsync(
+        EventOrderApproved eventData,
+        CancellationToken cancellationToken)
     {
-        await domainService.ExecuteAsync(eventData.OrderId);
+        await domainService.ExecuteAsync(eventData.OrderId, cancellationToken);
     }
 }
 ```
@@ -36,16 +45,25 @@ public sealed class DomainEventHandlerOrderApproved(DomainNotifyWarehouse domain
 ## Local Handler Example
 
 ```csharp
+using Monica.ProjectUnits.Annotations;
 using Monica.WebApi.Abstractions;
 
 namespace $ApplicationNamespace$.HandlersEvent;
 
+[ProjectUnitMetadata(
+    "Refresh Order Read Model",
+    Owner = "$Owner$",
+    Description = "Refreshes the local read model after order approval.",
+    Tags = ["$SubdomainTag$", "$FeatureTag$"])]
+[ProjectUnitRequirement("$RequirementId$")]
 public sealed class LocalEventHandlerOrderApproved(DomainRefreshReadModel domainService)
     : LocalEventHandler<EventOrderApproved>
 {
-    public override async Task HandleEventAsync(EventOrderApproved eventData)
+    public override async Task HandleEventAsync(
+        EventOrderApproved eventData,
+        CancellationToken cancellationToken)
     {
-        await domainService.ExecuteAsync(eventData.OrderId);
+        await domainService.ExecuteAsync(eventData.OrderId, cancellationToken);
     }
 }
 ```
@@ -53,4 +71,6 @@ public sealed class LocalEventHandlerOrderApproved(DomainRefreshReadModel domain
 ## Notes
 
 - If the reaction is slow, retriable, or should survive process restarts, move the heavy work into a `TriggeredJob`.
+- Pass the handler `CancellationToken` into every cancellable dependency. A distributed delivery timeout can return
+  the message for retry, but it cannot forcibly terminate handler code that ignores cancellation.
 - Do not let handlers become alternate application services with large control flow and validation logic.

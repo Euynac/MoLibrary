@@ -20,10 +20,17 @@ Use `$DomainNamespace$` for the domain project namespace selected by the archite
 
 ```csharp
 using Monica.Configuration.Annotations;
+using Monica.ProjectUnits.Annotations;
 
 namespace $DomainNamespace$.Configurations;
 
 [Configuration]
+[ProjectUnitMetadata(
+    "Order Processing Configuration",
+    Owner = "$Owner$",
+    Description = "Controls host-specific order processing behavior.",
+    Tags = ["$SubdomainTag$", "$FeatureTag$"])]
+[ProjectUnitRequirement("$RequirementId$")]
 public sealed class OrderProcessingOptions
 {
     public bool AutoApproveEnabled { get; set; }
@@ -36,10 +43,17 @@ public sealed class OrderProcessingOptions
 
 ```csharp
 using Microsoft.Extensions.Options;
+using Monica.ProjectUnits.Annotations;
 using Monica.WebApi.Abstractions;
 
 namespace $DomainNamespace$.DomainServices;
 
+[ProjectUnitMetadata(
+    "Order Approval Rules",
+    Owner = "$Owner$",
+    Description = "Evaluates configured order approval behavior.",
+    Tags = ["$SubdomainTag$", "$FeatureTag$"])]
+[ProjectUnitRequirement("$RequirementId$")]
 public sealed class DomainOrderApproval(
     IOptions<OrderProcessingOptions> options)
     : DomainService

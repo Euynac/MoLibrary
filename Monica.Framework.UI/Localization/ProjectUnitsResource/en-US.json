@@ -10,6 +10,7 @@
       "Title": "Project Units"
     },
     "Tabs": {
+      "StatusOverview": "Status Overview",
       "ProjectUnit": "Project Units",
       "ArchitectureVisualization": "Architecture Visualization",
       "DomainEventTester": "Domain Event Tester",
@@ -28,7 +29,9 @@
       "NextMatch": "Next match"
     },
     "Labels": {
-      "Unknown": "Unknown"
+      "Unknown": "Unknown",
+      "NotDeclared": "Not declared",
+      "None": "None"
     },
     "Messages": {
       "LoadFailed": "Load failed: {0}",
@@ -79,9 +82,9 @@
         "Singular": "{0} dependent",
         "Plural": "{0} dependents"
       },
-      "Attribute": {
-        "Singular": "{0} attribute",
-        "Plural": "{0} attributes"
+      "Requirement": {
+        "Singular": "{0} requirement",
+        "Plural": "{0} requirements"
       },
       "Method": {
         "Singular": "{0} method",
@@ -185,7 +188,7 @@
   "ProjectUnitFilterPanel": {
     "Fields": {
       "SearchLabel": "Search project units",
-      "SearchHelper": "Search by name, author, group, or description"
+      "SearchHelper": "Search by name, owner, tag, or description"
     },
     "Sections": {
       "TypeFilter": "Unit type filters"
@@ -229,28 +232,86 @@
   "ProjectUnitDetailDialog": {
     "Title": "Project Unit Details",
     "Fields": {
-      "Name": "Unit name",
-      "FullName": "Full name",
-      "Author": "Author",
-      "Group": "Group",
-      "Description": "Description",
-      "Type": "Unit type",
-      "Statistics": "Statistics",
+      "Owner": "Owner",
       "Dependencies": "Dependencies",
       "DependedBy": "Depended by",
-      "Attributes": "Attributes",
       "Methods": "Methods",
       "Alerts": "Alerts",
-      "Documentation": "Documentation",
-      "ConfigurationMode": "Configuration mode",
-      "ConfigurationUsage": "Configuration usage",
-      "ConstructorParameters": "Constructor parameters"
+      "ConstructorParameters": "Constructor parameters",
+      "DefinitionKey": "Definition key"
     },
     "Sections": {
-      "ConfigurationUsageDetails": "Configuration usage details ({0})",
-      "ConstructorParameters": "Constructor parameters ({0})",
-      "PublicMethods": "Public methods ({0})",
-      "MarkdownDocument": "Markdown document"
+      "Requirements": "Requirement traceability",
+      "RequirementsHint": "Links are resolved by the current application only when this detail is opened.",
+      "Tags": "Tags",
+      "Relationships": "Architecture relationships",
+      "Configuration": "Configuration behavior",
+      "TechnicalShape": "Technical shape",
+      "PublicMethods": "Public methods ({0})"
+    },
+    "Badges": {
+      "MetadataDeclared": "Metadata declared",
+      "MetadataMissing": "Metadata missing",
+      "Resolved": "Resolved",
+      "Unresolved": "Unresolved"
+    },
+    "States": {
+      "Loading": "Loading project-unit details...",
+      "LoadFailed": "Unable to load project-unit details: {0}",
+      "NoRequirements": "No requirement references have been declared for this project unit."
+    },
+    "Actions": {
+      "FocusInGraph": "Focus in graph"
+    }
+  },
+  "ProjectUnitDashboard": {
+    "Actions": {
+      "Retry": "Retry"
+    },
+    "Service": {
+      "Domain": "Domain: {0}"
+    },
+    "Metrics": {
+      "TotalUnits": "Project units",
+      "UnitTypes": "Unit types",
+      "MetadataCoverage": "Metadata coverage",
+      "RequirementCoverage": "Requirement coverage",
+      "Alerts": "Catalog alerts"
+    },
+    "Sections": {
+      "Distribution": "Unit distribution",
+      "DistributionHint": "Discovered architecture categories in the current host.",
+      "Coverage": "Agent context coverage",
+      "CoverageHint": "Independent evidence dimensions across every discovered unit.",
+      "ArchitectureHealth": "Architecture health",
+      "ArchitectureHealthHint": "Topology and explicit discovery diagnostics for this host.",
+      "CoverageGaps": "Actionable context gaps",
+      "CoverageGapsHint": "Open a unit to add the missing metadata, ownership, documentation, or traceability."
+    },
+    "Coverage": {
+      "Metadata": "Metadata",
+      "Description": "Description",
+      "Ownership": "Ownership",
+      "Requirements": "Requirements",
+      "Ratio": "{0} of {1} units"
+    },
+    "Health": {
+      "DependencyEdges": "Dependency edges",
+      "IsolatedUnits": "Isolated units",
+      "Errors": "Errors",
+      "Warnings": "Warnings"
+    },
+    "Gaps": {
+      "Missing": "Missing {0}",
+      "Alerts": "{0} alerts"
+    },
+    "States": {
+      "Loading": "Loading architecture status...",
+      "LoadFailedTitle": "Architecture status is unavailable",
+      "LoadFailed": "Unable to load the project-unit dashboard: {0}",
+      "EmptyTitle": "No project units discovered",
+      "EmptyDescription": "The current host has no supported project-unit types. Coverage has no data and is not treated as complete.",
+      "NoCoverageGaps": "Every discovered unit has complete context metadata and no catalog alerts."
     }
   },
   "ProjectUnitVisualization": {
@@ -297,14 +358,12 @@
         "DependedBy": "Depended by: {0}"
       },
       "MetadataLabels": {
-        "Group": "Group",
+        "Tags": "Tags",
         "Description": "Description",
-        "AttributeCount": "Attribute count",
+        "Owner": "Owner",
+        "RequirementCount": "Requirement count",
         "DependencyCount": "Dependency count",
-        "Method": "Method"
-      },
-      "Metadata": {
-        "MoreMethods": "{0} more methods"
+        "MethodCount": "Method count"
       }
     }
   },

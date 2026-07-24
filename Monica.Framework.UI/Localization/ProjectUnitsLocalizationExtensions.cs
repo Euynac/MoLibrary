@@ -13,7 +13,7 @@ public enum ProjectUnitsCountText
     ProjectUnit,
     Dependency,
     DependedBy,
-    Attribute,
+    Requirement,
     Method,
     Error,
     Warning,
@@ -81,9 +81,9 @@ public static class ProjectUnitsLocalizationExtensions
             ProjectUnitsCountText.DependedBy => singular
                 ? localizer["Shared:Counts:DependedBy:Singular", count].Value
                 : localizer["Shared:Counts:DependedBy:Plural", count].Value,
-            ProjectUnitsCountText.Attribute => singular
-                ? localizer["Shared:Counts:Attribute:Singular", count].Value
-                : localizer["Shared:Counts:Attribute:Plural", count].Value,
+            ProjectUnitsCountText.Requirement => singular
+                ? localizer["Shared:Counts:Requirement:Singular", count].Value
+                : localizer["Shared:Counts:Requirement:Plural", count].Value,
             ProjectUnitsCountText.Method => singular
                 ? localizer["Shared:Counts:Method:Singular", count].Value
                 : localizer["Shared:Counts:Method:Plural", count].Value,
@@ -148,26 +148,26 @@ public static class ProjectUnitsLocalizationExtensions
         };
     }
 
-    public static string BuildProjectUnitGraphTooltip(this IStringLocalizer<ProjectUnitsResource> localizer, DtoProjectUnit unit)
+    public static string BuildProjectUnitGraphTooltip(this IStringLocalizer<ProjectUnitsResource> localizer, ProjectUnitSummary unit)
     {
         var lines = new[]
         {
             unit.Title,
             localizer["ProjectUnitVisualization:Graph:Tooltip:Type", localizer.GetProjectUnitTypeText(unit.UnitType)].Value,
-            localizer["ProjectUnitVisualization:Graph:Tooltip:Dependencies", unit.DependencyUnits.Count].Value,
+            localizer["ProjectUnitVisualization:Graph:Tooltip:Dependencies", unit.Dependencies.Count].Value,
             localizer["ProjectUnitVisualization:Graph:Tooltip:DependedBy", unit.DependedByCount].Value
         };
 
         return string.Join(Environment.NewLine, lines);
     }
 
-    public static string BuildProjectUnitGraphSummary(this IStringLocalizer<ProjectUnitsResource> localizer, DtoProjectUnit unit)
+    public static string BuildProjectUnitGraphSummary(this IStringLocalizer<ProjectUnitsResource> localizer, ProjectUnitSummary unit)
     {
         var parts = new List<string>();
 
-        if (unit.DependencyUnits.Count > 0)
+        if (unit.Dependencies.Count > 0)
         {
-            parts.Add(localizer["ProjectUnitVisualization:Graph:Summary:Dependencies", unit.DependencyUnits.Count].Value);
+            parts.Add(localizer["ProjectUnitVisualization:Graph:Summary:Dependencies", unit.Dependencies.Count].Value);
         }
 
         if (unit.DependedByCount > 0)
@@ -178,7 +178,7 @@ public static class ProjectUnitsLocalizationExtensions
         return string.Join(" | ", parts);
     }
 
-    public static object[] BuildProjectUnitGraphChips(this IStringLocalizer<ProjectUnitsResource> localizer, DtoProjectUnit unit)
+    public static object[] BuildProjectUnitGraphChips(this IStringLocalizer<ProjectUnitsResource> localizer, ProjectUnitSummary unit)
     {
         var chips = new List<object>
         {
@@ -190,21 +190,21 @@ public static class ProjectUnitsLocalizationExtensions
             }
         };
 
-        if (!string.IsNullOrWhiteSpace(unit.Author))
+        if (!string.IsNullOrWhiteSpace(unit.Owner))
         {
             chips.Add(new
             {
-                text = unit.Author,
+                text = unit.Owner,
                 color = "dark",
                 icon = Icons.Material.Filled.Person
             });
         }
 
-        if (unit.DependencyUnits.Count > 0)
+        if (unit.Dependencies.Count > 0)
         {
             chips.Add(new
             {
-                text = localizer.GetCountText(ProjectUnitsCountText.Dependency, unit.DependencyUnits.Count),
+                text = localizer.GetCountText(ProjectUnitsCountText.Dependency, unit.Dependencies.Count),
                 color = "info",
                 icon = Icons.Material.Filled.Link
             });
@@ -220,21 +220,21 @@ public static class ProjectUnitsLocalizationExtensions
             });
         }
 
-        if (unit.Attributes.Any())
+        if (unit.RequirementCount > 0)
         {
             chips.Add(new
             {
-                text = localizer.GetCountText(ProjectUnitsCountText.Attribute, unit.Attributes.Count),
+                text = localizer.GetCountText(ProjectUnitsCountText.Requirement, unit.RequirementCount),
                 color = "secondary",
-                icon = Icons.Material.Filled.Label
+                icon = Icons.Material.Filled.AssignmentTurnedIn
             });
         }
 
-        if (unit.Methods.Any())
+        if (unit.MethodCount > 0)
         {
             chips.Add(new
             {
-                text = localizer.GetCountText(ProjectUnitsCountText.Method, unit.Methods.Count),
+                text = localizer.GetCountText(ProjectUnitsCountText.Method, unit.MethodCount),
                 color = "primary",
                 icon = Icons.Material.Filled.Functions
             });
@@ -280,17 +280,17 @@ public static class ProjectUnitsLocalizationExtensions
         return chips.ToArray();
     }
 
-    public static object[] BuildProjectUnitGraphMetadata(this IStringLocalizer<ProjectUnitsResource> localizer, DtoProjectUnit unit)
+    public static object[] BuildProjectUnitGraphMetadata(this IStringLocalizer<ProjectUnitsResource> localizer, ProjectUnitSummary unit)
     {
         var metadata = new List<object>();
 
-        if (unit.Group?.Any() == true)
+        if (unit.Tags.Count != 0)
         {
             metadata.Add(new
             {
-                kind = "group",
-                key = localizer["ProjectUnitVisualization:Graph:MetadataLabels:Group"].Value,
-                value = string.Join(", ", unit.Group)
+                kind = "tags",
+                key = localizer["ProjectUnitVisualization:Graph:MetadataLabels:Tags"].Value,
+                value = string.Join(", ", unit.Tags)
             });
         }
 
@@ -304,51 +304,44 @@ public static class ProjectUnitsLocalizationExtensions
             });
         }
 
-        if (unit.Attributes.Any())
+        if (!string.IsNullOrWhiteSpace(unit.Owner))
         {
             metadata.Add(new
             {
-                kind = "attribute-count",
-                key = localizer["ProjectUnitVisualization:Graph:MetadataLabels:AttributeCount"].Value,
-                value = unit.Attributes.Count.ToString()
+                kind = "owner",
+                key = localizer["ProjectUnitVisualization:Graph:MetadataLabels:Owner"].Value,
+                value = unit.Owner
             });
         }
 
-        if (unit.DependencyUnits.Any())
+        if (unit.RequirementCount > 0)
+        {
+            metadata.Add(new
+            {
+                kind = "requirement-count",
+                key = localizer["ProjectUnitVisualization:Graph:MetadataLabels:RequirementCount"].Value,
+                value = unit.RequirementCount.ToString()
+            });
+        }
+
+        if (unit.Dependencies.Count > 0)
         {
             metadata.Add(new
             {
                 kind = "dependency-count",
                 key = localizer["ProjectUnitVisualization:Graph:MetadataLabels:DependencyCount"].Value,
-                value = unit.DependencyUnits.Count.ToString()
+                value = unit.Dependencies.Count.ToString()
             });
         }
 
-        if (unit.Methods.Any())
+        if (unit.MethodCount > 0)
         {
-            foreach (var method in unit.Methods.Take(5))
+            metadata.Add(new
             {
-                var methodInfo = string.IsNullOrWhiteSpace(method.Description)
-                    ? method.MethodName
-                    : $"{method.MethodName}: {method.Description}";
-
-                metadata.Add(new
-                {
-                    kind = "method",
-                    key = localizer["ProjectUnitVisualization:Graph:MetadataLabels:Method"].Value,
-                    value = methodInfo
-                });
-            }
-
-            if (unit.Methods.Count > 5)
-            {
-                metadata.Add(new
-                {
-                    kind = "more-methods",
-                    key = "...",
-                    value = localizer["ProjectUnitVisualization:Graph:Metadata:MoreMethods", unit.Methods.Count - 5].Value
-                });
-            }
+                kind = "method-count",
+                key = localizer["ProjectUnitVisualization:Graph:MetadataLabels:MethodCount"].Value,
+                value = unit.MethodCount.ToString()
+            });
         }
 
         return metadata.ToArray();

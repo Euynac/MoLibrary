@@ -16,6 +16,12 @@
                 <MudTabs Elevation="1"
                          Rounded="true"
                          ApplyEffectsToContainer="true">
+                    <MudTabPanel Text="@L["Page:Tabs:StatusOverview"]"
+                                 Icon="@Icons.Material.Filled.Dashboard"
+                                 PanelClass="project-units-tab-panel">
+                        <ProjectUnitDashboard />
+                    </MudTabPanel>
+
                     <MudTabPanel Text="@L["Page:Tabs:ProjectUnit"]"
                                  Icon="@Icons.Material.Filled.AccountTree"
                                  PanelClass="project-units-tab-panel">

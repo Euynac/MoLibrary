@@ -55,6 +55,7 @@ For an assembly that owns only local HTTP endpoints, use the same configuration 
 
 ```csharp
 using Monica.Core.Results;
+using Monica.ProjectUnits.Annotations;
 using Monica.Repository.Persistence.Abstractions;
 using Monica.WebApi.Abstractions;
 using Monica.WebApi.Annotations;
@@ -66,8 +67,20 @@ namespace $ApplicationNamespace$.HandlersQuery;
     "$RequestRoute$",
     Binding = ApiRequestBinding.Query,
     OperationName = "$OperationName$")]
+[ProjectUnitMetadata(
+    "$FeatureName$ Query",
+    Owner = "$Owner$",
+    Description = "Requests the $FeatureName$ use case.",
+    Tags = ["$SubdomainTag$", "$FeatureTag$"])]
+[ProjectUnitRequirement("$RequirementId$")]
 public sealed record Query$FeatureName$(long Id) : IResultRequest<$ResponseName$>;
 
+[ProjectUnitMetadata(
+    "$FeatureName$",
+    Owner = "$Owner$",
+    Description = "Coordinates the $FeatureName$ query boundary.",
+    Tags = ["$SubdomainTag$", "$FeatureTag$"])]
+[ProjectUnitRequirement("$RequirementId$")]
 public sealed class QueryHandler$FeatureName$($RepositoryName$ repository)
     : ApplicationService<Query$FeatureName$, $ResponseName$>
 {
@@ -93,6 +106,7 @@ public sealed class QueryHandler$FeatureName$($RepositoryName$ repository)
 
 ```csharp
 using Monica.Core.Results;
+using Monica.ProjectUnits.Annotations;
 using Monica.WebApi.Abstractions;
 using Monica.WebApi.Annotations;
 
@@ -103,8 +117,20 @@ namespace $ApplicationNamespace$.HandlersCommand;
     "$RequestRoute$",
     Binding = ApiRequestBinding.Body,
     OperationName = "$OperationName$")]
+[ProjectUnitMetadata(
+    "$FeatureName$ Command",
+    Owner = "$Owner$",
+    Description = "Requests the $FeatureName$ use case.",
+    Tags = ["$SubdomainTag$", "$FeatureTag$"])]
+[ProjectUnitRequirement("$RequirementId$")]
 public sealed record Command$FeatureName$(long Id) : IResultRequest;
 
+[ProjectUnitMetadata(
+    "$FeatureName$",
+    Owner = "$Owner$",
+    Description = "Coordinates the $FeatureName$ command boundary.",
+    Tags = ["$SubdomainTag$", "$FeatureTag$"])]
+[ProjectUnitRequirement("$RequirementId$")]
 public sealed class CommandHandler$FeatureName$(Domain$FeatureName$ domainService)
     : ApplicationService<Command$FeatureName$>
 {
