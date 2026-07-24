@@ -130,18 +130,6 @@ internal sealed class ProjectUnitCatalog : IProjectUnitCatalog, IRequestFilter
         return FindByName(typeName) as TProjectUnit;
     }
 
-    public TAttribute? GetAttributeByFullName<TAttribute>(string? typeFullName)
-        where TAttribute : Attribute, IUnitCachedAttribute
-    {
-        return FindByFullName(typeFullName)?.Attributes.OfType<TAttribute>().FirstOrDefault();
-    }
-
-    public TAttribute? GetAttributeByName<TAttribute>(string? typeName)
-        where TAttribute : Attribute, IUnitCachedAttribute
-    {
-        return FindByName(typeName)?.Attributes.OfType<TAttribute>().FirstOrDefault();
-    }
-
     public void Disable(string url)
     {
         ArgumentNullException.ThrowIfNull(url);

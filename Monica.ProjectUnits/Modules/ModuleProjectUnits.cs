@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Monica.Core;
 using Monica.Core.Modularity;
 using Monica.Core.Modularity.Abstractions;
@@ -56,7 +57,6 @@ public class ModuleProjectUnits(ModuleProjectUnitsOption option)
         }
 
         DependsOnModule<ModuleJsonSerializationGuide>().Register();
-        DependsOnModule<ModuleObjectMappingGuide>().Register();
         DependsOnModule<ModuleEventBusGuide>().Register();
     }
 
@@ -68,6 +68,8 @@ public class ModuleProjectUnits(ModuleProjectUnitsOption option)
 
         services.AddSingleton(_catalog);
         services.AddSingleton<IProjectUnitCatalog>(_catalog);
+        services.TryAddScoped<IProjectUnitRequirementLinkResolver, NullProjectUnitRequirementLinkResolver>();
+        services.AddScoped<ProjectUnitProjectionService>();
         services.AddScoped<ProjectUnitCatalogService>();
         services.AddScoped<ProjectUnitsFacade>();
     }
@@ -182,6 +184,16 @@ public class ModuleProjectUnits(ModuleProjectUnitsOption option)
                 .WithSummary("List discovered project units")
                 .WithDescription("Returns every architecture unit discovered for the current host.");
 
+            endpoints.MapGet("/framework/units/dashboard",
+                async ([FromServices] ProjectUnitsFacade projectUnitsFacade) =>
+                {
+                    return await projectUnitsFacade.GetDashboardAsync();
+                })
+                .WithName("ProjectUnits.Dashboard")
+                .WithTags(tagName)
+                .WithSummary("Get the project-unit status dashboard")
+                .WithDescription("Returns host identity, architecture health, independent context coverage, and actionable gaps.");
+
             endpoints.MapGet("/framework/units/domain-event",
                 async ([FromServices] ProjectUnitsFacade projectUnitsFacade) =>
                 {
@@ -191,6 +203,18 @@ public class ModuleProjectUnits(ModuleProjectUnitsOption option)
                 .WithTags(tagName)
                 .WithSummary("List discovered domain events")
                 .WithDescription("Returns domain-event project units and their serializable structure.");
+
+            endpoints.MapGet("/framework/units/{key}",
+                async ([FromRoute] string key,
+                      [FromServices] ProjectUnitsFacade projectUnitsFacade,
+                      CancellationToken cancellationToken) =>
+                {
+                    return await projectUnitsFacade.GetProjectUnitDetailAsync(key, cancellationToken);
+                })
+                .WithName("ProjectUnits.Detail")
+                .WithTags(tagName)
+                .WithSummary("Get project-unit detail")
+                .WithDescription("Returns typed project-unit metadata, dependencies, methods, and requirement links.");
 
             endpoints.MapGet("/framework/enum",
                 async ([FromServices] ProjectUnitsFacade projectUnitsFacade,
@@ -221,7 +245,25 @@ public class ModuleProjectUnits(ModuleProjectUnitsOption option)
 public class ModuleProjectUnitsGuide : WebModuleGuide<ModuleProjectUnits, ModuleProjectUnitsOption,
     ModuleProjectUnitsGuide>
 {
-
+    /// <summary>
+    /// Registers the application-owned resolver used to turn requirement identifiers into optional navigation links.
+    /// </summary>
+    /// <typeparam name="TResolver">A scoped requirement-link resolver implementation.</typeparam>
+    /// <returns>The current guide instance.</returns>
+    /// <remarks>
+    /// Resolution occurs only when project-unit detail is requested. Unknown requirements should return
+    /// <see langword="null"/> so they remain visible as unresolved references.
+    /// </remarks>
+    public ModuleProjectUnitsGuide UseRequirementLinkResolver<TResolver>()
+        where TResolver : class, IProjectUnitRequirementLinkResolver
+    {
+        ConfigureServices(context =>
+        {
+            context.Services.Replace(
+                ServiceDescriptor.Scoped<IProjectUnitRequirementLinkResolver, TResolver>());
+        });
+        return this;
+    }
 }
 
 /// <summary>

@@ -1,6 +1,5 @@
 using System.Text.Json;
 using System.Text.Json.Nodes;
-using MapsterMapper;
 using Monica.Core.JsonSerialization.Abstractions;
 using Monica.EventBus.Abstractions;
 using Monica.ProjectUnits.Abstractions;
@@ -9,45 +8,36 @@ using Monica.Tool.Extensions;
 
 namespace Monica.ProjectUnits.Services;
 
-/// <summary>
-/// Provides the internal project-unit query and command operations used by the facade.
-/// </summary>
-public sealed class ProjectUnitCatalogService(
+internal sealed class ProjectUnitCatalogService(
     IDistributedEventBus eventBus,
     IJsonSerializerOptionsProvider jsonSerializerOptionsProvider,
-    IMapper mapper,
     IProjectUnitCatalog catalog,
+    ProjectUnitProjectionService projections,
     IRequestFilter? requestFilter = null)
 {
-    /// <summary>
-    /// Gets every discovered project unit.
-    /// </summary>
-    public List<DtoProjectUnit> GetAllProjectUnits()
+    internal List<ProjectUnitSummary> GetAllProjectUnits()
     {
-        var units = catalog.GetAllUnits();
-        var result = mapper.Map<List<DtoProjectUnit>>(units);
-        PopulateDependedByCounts(result);
-        return result;
+        return projections.GetAllProjectUnits();
     }
 
-    /// <summary>
-    /// Gets discovered domain-event metadata.
-    /// </summary>
-    public List<DtoDomainEventInfo> GetDomainEvents()
+    internal ProjectUnitDashboardSnapshot GetDashboard()
     {
-        return catalog.GetUnits<UnitDomainEvent>()
-            .Select(unit => new DtoDomainEventInfo
-            {
-                Info = mapper.Map<DtoProjectUnit>(unit),
-                Structure = unit.GetStructure()
-            })
-            .ToList();
+        return projections.GetDashboard();
     }
 
-    /// <summary>
-    /// Publishes a domain event by the discovered project-unit key.
-    /// </summary>
-    public async Task<object> PublishDomainEventAsync(string eventKey, JsonNode eventContent)
+    internal Task<ProjectUnitDetail> GetProjectUnitDetailAsync(
+        string key,
+        CancellationToken cancellationToken = default)
+    {
+        return projections.GetProjectUnitDetailAsync(key, cancellationToken);
+    }
+
+    internal List<ProjectUnitDomainEventInfo> GetDomainEvents()
+    {
+        return projections.GetDomainEvents();
+    }
+
+    internal async Task<object> PublishDomainEventAsync(string eventKey, JsonNode eventContent)
     {
         if (catalog.FindByName<UnitDomainEvent>(eventKey) is not { } unitEvent)
         {
@@ -62,10 +52,7 @@ public sealed class ProjectUnitCatalogService(
         return eventToPublish;
     }
 
-    /// <summary>
-    /// Reads and updates the request-filter state.
-    /// </summary>
-    public List<string> ManageRequestFilter(List<string>? urls, bool? disable)
+    internal List<string> ManageRequestFilter(List<string>? urls, bool? disable)
     {
         if (requestFilter == null)
         {
@@ -90,10 +77,7 @@ public sealed class ProjectUnitCatalogService(
         return requestFilter.GetDisabledUrls();
     }
 
-    /// <summary>
-    /// Gets enum metadata for the whole registry or for one specific enum name.
-    /// </summary>
-    public List<DtoAssemblyEnumInfo> GetEnumInfo(string? name = null)
+    internal List<DtoAssemblyEnumInfo> GetEnumInfo(string? name = null)
     {
         if (name == null)
         {
@@ -141,37 +125,5 @@ public sealed class ProjectUnitCatalogService(
                 ]
             }
         ];
-    }
-
-    /// <summary>
-    /// Gets the original project-unit model by key.
-    /// </summary>
-    public ProjectUnit? GetProjectUnitByKey(string key)
-    {
-        return catalog.FindByFullName(key);
-    }
-
-    private static void PopulateDependedByCounts(List<DtoProjectUnit> units)
-    {
-        var dependencyCountMap = new Dictionary<string, int>();
-
-        foreach (var unit in units)
-        {
-            foreach (var dependency in unit.DependencyUnits)
-            {
-                if (!dependencyCountMap.TryAdd(dependency.Key, 1))
-                {
-                    dependencyCountMap[dependency.Key]++;
-                }
-            }
-        }
-
-        foreach (var unit in units)
-        {
-            if (dependencyCountMap.TryGetValue(unit.Key, out var count))
-            {
-                unit.DependedByCount = count;
-            }
-        }
     }
 }

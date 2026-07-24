@@ -1,4 +1,5 @@
 using System.Text.Json.Nodes;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Monica.Core.Extensions;
 using Monica.Core.Results;
@@ -10,24 +11,67 @@ namespace Monica.ProjectUnits.Facades;
 /// <summary>
 /// Host-facing facade for project-unit inspection and diagnostics.
 /// </summary>
-public class ProjectUnitsFacade(
+public sealed class ProjectUnitsFacade(
     ILogger<ProjectUnitsFacade> logger,
-    ProjectUnitCatalogService catalogService)
+    IServiceProvider serviceProvider)
 {
+    private ProjectUnitCatalogService CatalogService =>
+        serviceProvider.GetRequiredService<ProjectUnitCatalogService>();
+
     /// <summary>
     /// Gets every discovered project unit.
     /// </summary>
     /// <returns>A result envelope containing the project-unit projections for the current host.</returns>
-    public Task<Res<List<DtoProjectUnit>>> GetAllProjectUnitsAsync()
+    public Task<Res<List<ProjectUnitSummary>>> GetAllProjectUnitsAsync()
     {
         try
         {
-            return Task.FromResult(Res.Ok<List<DtoProjectUnit>>(catalogService.GetAllProjectUnits()));
+            return Task.FromResult(Res.Ok<List<ProjectUnitSummary>>(CatalogService.GetAllProjectUnits()));
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Failed to load project units.");
-            return Task.FromResult<Res<List<DtoProjectUnit>>>($"Failed to load project units: {ex.GetMessageRecursively()}");
+            return Task.FromResult<Res<List<ProjectUnitSummary>>>(
+                Res.Fail($"Failed to load project units: {ex.GetMessageRecursively()}"));
+        }
+    }
+
+    /// <summary>
+    /// Gets the current host's project-unit status dashboard.
+    /// </summary>
+    /// <returns>A result envelope containing independent coverage, topology, and catalog-health metrics.</returns>
+    public Task<Res<ProjectUnitDashboardSnapshot>> GetDashboardAsync()
+    {
+        try
+        {
+            return Task.FromResult(Res.Ok(CatalogService.GetDashboard()));
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Failed to load the project-unit dashboard.");
+            return Task.FromResult<Res<ProjectUnitDashboardSnapshot>>(
+                Res.Fail($"Failed to load the project-unit dashboard: {ex.GetMessageRecursively()}"));
+        }
+    }
+
+    /// <summary>
+    /// Gets a complete typed detail projection for one project unit.
+    /// </summary>
+    /// <param name="key">The represented CLR type's full name.</param>
+    /// <param name="cancellationToken">Signals that the detail request has been cancelled.</param>
+    /// <returns>A result envelope containing the detail projection.</returns>
+    public async Task<Res<ProjectUnitDetail>> GetProjectUnitDetailAsync(
+        string key,
+        CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            return Res.Ok(await CatalogService.GetProjectUnitDetailAsync(key, cancellationToken));
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Failed to resolve project unit {ProjectUnitKey}.", key);
+            return Res.Fail($"Failed to resolve project unit: {ex.GetMessageRecursively()}");
         }
     }
 
@@ -35,16 +79,17 @@ public class ProjectUnitsFacade(
     /// Gets discovered domain-event metadata.
     /// </summary>
     /// <returns>A result envelope containing domain-event metadata and representative payload structures.</returns>
-    public Task<Res<List<DtoDomainEventInfo>>> GetDomainEventsAsync()
+    public Task<Res<List<ProjectUnitDomainEventInfo>>> GetDomainEventsAsync()
     {
         try
         {
-            return Task.FromResult(Res.Ok<List<DtoDomainEventInfo>>(catalogService.GetDomainEvents()));
+            return Task.FromResult(Res.Ok<List<ProjectUnitDomainEventInfo>>(CatalogService.GetDomainEvents()));
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Failed to load domain events.");
-            return Task.FromResult<Res<List<DtoDomainEventInfo>>>($"Failed to load domain events: {ex.GetMessageRecursively()}");
+            return Task.FromResult<Res<List<ProjectUnitDomainEventInfo>>>(
+                Res.Fail($"Failed to load domain events: {ex.GetMessageRecursively()}"));
         }
     }
 
@@ -58,7 +103,7 @@ public class ProjectUnitsFacade(
     {
         try
         {
-            var eventToPublish = await catalogService.PublishDomainEventAsync(eventKey, eventContent);
+            var eventToPublish = await CatalogService.PublishDomainEventAsync(eventKey, eventContent);
             return Res.Ok(eventToPublish).AppendMessage($"Published domain event '{eventKey}'.");
         }
         catch (Exception ex)
@@ -78,7 +123,7 @@ public class ProjectUnitsFacade(
     {
         try
         {
-            return Task.FromResult(Res.Ok<List<string>>(catalogService.ManageRequestFilter(urls, disable)));
+            return Task.FromResult(Res.Ok<List<string>>(CatalogService.ManageRequestFilter(urls, disable)));
         }
         catch (Exception ex)
         {
@@ -96,7 +141,7 @@ public class ProjectUnitsFacade(
     {
         try
         {
-            return Task.FromResult(Res.Ok<List<DtoAssemblyEnumInfo>>(catalogService.GetEnumInfo(name)));
+            return Task.FromResult(Res.Ok<List<DtoAssemblyEnumInfo>>(CatalogService.GetEnumInfo(name)));
         }
         catch (Exception ex)
         {
@@ -105,21 +150,4 @@ public class ProjectUnitsFacade(
         }
     }
 
-    /// <summary>
-    /// Gets the original project-unit model for detail inspection.
-    /// </summary>
-    /// <param name="key">The represented CLR type's full name.</param>
-    /// <returns>A result envelope containing the project unit, or <see langword="null"/> when it is not found.</returns>
-    public Res<ProjectUnit?> GetProjectUnitByKey(string key)
-    {
-        try
-        {
-            return Res.Ok<ProjectUnit?>(catalogService.GetProjectUnitByKey(key));
-        }
-        catch (Exception ex)
-        {
-            logger.LogError(ex, "Failed to resolve project unit {ProjectUnitKey}.", key);
-            return Res.Fail($"Failed to resolve project unit: {ex.GetMessageRecursively()}");
-        }
-    }
 }

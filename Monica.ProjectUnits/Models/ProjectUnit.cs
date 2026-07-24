@@ -1,6 +1,6 @@
+using System.Reflection;
 using Microsoft.Extensions.Logging;
 using Monica.Modules;
-using Monica.ProjectUnits.Abstractions;
 using Monica.ProjectUnits.Annotations;
 using Monica.ProjectUnits.Services.Support;
 using Monica.Tool.Extensions;
@@ -50,14 +50,29 @@ public abstract class ProjectUnit
     public string? Description { get; set; }
 
     /// <summary>
-    /// Gets or sets the project-unit author.
+    /// Gets the valid, normalized title declared by <see cref="ProjectUnitMetadataAttribute"/>.
     /// </summary>
-    public string? Author { get; set; }
+    public string? MetadataTitle { get; private set; }
 
     /// <summary>
-    /// Gets or sets the project-unit groups.
+    /// Gets whether the represented type explicitly declares project-unit metadata.
     /// </summary>
-    public List<string>? Group { get; set; }
+    public bool HasExplicitMetadata { get; private set; }
+
+    /// <summary>
+    /// Gets the normalized project-unit owner.
+    /// </summary>
+    public string? Owner { get; private set; }
+
+    /// <summary>
+    /// Gets normalized project-unit classification tags.
+    /// </summary>
+    public IReadOnlyList<string> Tags { get; private set; } = [];
+
+    /// <summary>
+    /// Gets normalized, case-insensitively deduplicated requirement identifiers.
+    /// </summary>
+    public IReadOnlyList<string> RequirementIds { get; private set; } = [];
 
     /// <summary>
     /// Gets the represented CLR type.
@@ -73,11 +88,6 @@ public abstract class ProjectUnit
     /// Gets the project units on which this unit depends.
     /// </summary>
     public HashSet<ProjectUnit> DependencyUnits { get; protected set; } = [];
-
-    /// <summary>
-    /// Gets cached developer annotations discovered on the represented type.
-    /// </summary>
-    public List<IUnitCachedAttribute> Attributes { get; protected set; } = [];
 
     /// <summary>
     /// Gets architecture alerts raised while analyzing the unit.
@@ -111,24 +121,33 @@ public abstract class ProjectUnit
     protected virtual bool ShouldAnalyzeConstructorDependencies => false;
 
     /// <summary>
-    /// Enriches the unit with attributes, documentation, and constructor metadata.
+    /// Enriches the unit with normalized metadata, requirements, documentation, and constructor metadata.
     /// </summary>
     public virtual void PolishUnitInfo()
     {
-        var attributes = Type.GetCustomAttributes(true).OfType<IUnitCachedAttribute>().ToList();
-        if (attributes.Count != 0)
+        InitializeClassInfo();
+
+        if (Type.GetCustomAttributes<ProjectUnitMetadataAttribute>(inherit: false).SingleOrDefault() is { } metadata)
         {
-            Attributes.AddRange(attributes);
+            HasExplicitMetadata = true;
+            MetadataTitle = Normalize(metadata.Title);
+            if (MetadataTitle is null)
+            {
+                AddMetadataWarning(
+                    "ProjectUnit.Metadata.Title.Empty",
+                    "Project-unit metadata title must not be empty.");
+            }
+            else
+            {
+                Title = MetadataTitle;
+            }
+
+            Owner = Normalize(metadata.Owner);
+            Description = Normalize(metadata.Description) ?? Description;
+            Tags = NormalizeTags(metadata.Tags ?? []);
         }
 
-        InitializeClassInfo();
-        if (attributes.OfType<UnitInfoAttribute>().FirstOrDefault() is { } info)
-        {
-            Title = info.Name;
-            Description = info.Description;
-            Author = info.Author;
-            Group = info.Group?.ToList();
-        }
+        RequirementIds = NormalizeRequirements();
     }
 
     /// <summary>
@@ -289,6 +308,69 @@ public abstract class ProjectUnit
         {
             ConstructorParameterTypes = [.. mainConstructor.GetParameters().Select(parameter => parameter.ParameterType)];
         }
+    }
+
+    private IReadOnlyList<string> NormalizeTags(IEnumerable<string?> tags)
+    {
+        var normalized = new List<string>();
+        var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var tag in tags)
+        {
+            if (Normalize(tag) is not { } value)
+            {
+                AddMetadataWarning(
+                    "ProjectUnit.Metadata.Tag.Empty",
+                    "Project-unit metadata tags must not contain empty values.");
+                continue;
+            }
+
+            if (seen.Add(value))
+            {
+                normalized.Add(value);
+            }
+        }
+
+        return normalized;
+    }
+
+    private IReadOnlyList<string> NormalizeRequirements()
+    {
+        var normalized = new List<string>();
+        var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var requirement in Type.GetCustomAttributes<ProjectUnitRequirementAttribute>(inherit: false))
+        {
+            if (Normalize(requirement.RequirementId) is not { } requirementId)
+            {
+                AddMetadataWarning(
+                    "ProjectUnit.Requirement.Id.Empty",
+                    "Project-unit requirement identifiers must not be empty.");
+                continue;
+            }
+
+            if (seen.Add(requirementId))
+            {
+                normalized.Add(requirementId);
+            }
+        }
+
+        return normalized;
+    }
+
+    private void AddMetadataWarning(string source, string message)
+    {
+        Alerts.Add(new ProjectUnitAlert
+        {
+            Level = EAlertLevel.Warning,
+            Message = message,
+            Source = source
+        });
+    }
+
+    private static string? Normalize(string? value)
+    {
+        return string.IsNullOrWhiteSpace(value) ? null : value.Trim();
     }
 
     private void DetectConstructorUnitDependencies()

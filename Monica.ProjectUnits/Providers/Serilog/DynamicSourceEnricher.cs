@@ -1,5 +1,4 @@
 using Monica.ProjectUnits.Abstractions;
-using Monica.ProjectUnits.Annotations;
 using Monica.Tool.Extensions;
 using Serilog;
 using Serilog.Configuration;
@@ -56,10 +55,7 @@ public sealed class DynamicSourceEnricher(IProjectUnitCatalog catalog) : ILogEve
         var properties = (Dictionary<string, LogEventPropertyValue>?)logEvent.GetPropertyValue(PROPERTIES_TEMPLATE_NAME);
         if (properties?.TryGetValue(SOURCE_CONTEXT_TEMPLATE_NAME, out var propertyValue) is true)
         {
-            var unitInfoAttribute =
-                catalog.GetAttributeByFullName<UnitInfoAttribute>(propertyValue.ToString().Trim('\"'));
-
-            var name = unitInfoAttribute?.Name;
+            var name = catalog.FindByFullName(propertyValue.ToString().Trim('\"'))?.MetadataTitle;
 
             if (name != null)
             {

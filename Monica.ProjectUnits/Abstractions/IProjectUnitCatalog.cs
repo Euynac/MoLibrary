@@ -59,21 +59,4 @@ public interface IProjectUnitCatalog
     /// <returns>The matching typed unit, or <see langword="null"/> when no compatible unit was discovered.</returns>
     TProjectUnit? FindByName<TProjectUnit>(string? typeName) where TProjectUnit : ProjectUnit;
 
-    /// <summary>
-    /// Gets a cached project-unit attribute by the represented type's full name.
-    /// </summary>
-    /// <typeparam name="TAttribute">The attribute type to retrieve.</typeparam>
-    /// <param name="typeFullName">The full name of the represented CLR type.</param>
-    /// <returns>The cached attribute, or <see langword="null"/> when it is unavailable.</returns>
-    TAttribute? GetAttributeByFullName<TAttribute>(string? typeFullName)
-        where TAttribute : Attribute, IUnitCachedAttribute;
-
-    /// <summary>
-    /// Gets a cached project-unit attribute by the represented type's short name.
-    /// </summary>
-    /// <typeparam name="TAttribute">The attribute type to retrieve.</typeparam>
-    /// <param name="typeName">The short name of the represented CLR type.</param>
-    /// <returns>The cached attribute, or <see langword="null"/> when it is unavailable.</returns>
-    TAttribute? GetAttributeByName<TAttribute>(string? typeName)
-        where TAttribute : Attribute, IUnitCachedAttribute;
 }
