@@ -1,18 +1,3 @@
-.topics-toolbar {
-    display: flex;
-    align-items: flex-start;
-    justify-content: space-between;
-    gap: 16px;
-    min-width: 0;
-}
-
-.topics-heading {
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-    min-width: 0;
-}
-
 .topics-actions {
     display: flex;
     flex-wrap: wrap;
@@ -23,43 +8,87 @@
 }
 
 .topics-actions ::deep .mud-input-control {
+    width: 240px;
     min-width: 220px;
+    margin: 0;
 }
 
 .topic-name {
     display: flex;
-    align-items: center;
+    align-items: flex-start;
     gap: 6px;
     min-width: 0;
+    max-width: 100%;
+}
+
+.topic-name ::deep .mud-typography-root {
+    min-width: 0;
     overflow-wrap: anywhere;
+    word-break: break-word;
 }
 
 .topics-table {
     width: 100%;
     min-width: 0;
+    overflow: hidden;
+    border: 1px solid var(--mud-palette-lines-default);
+    border-radius: 9px;
 }
 
 .topics-table ::deep .mud-table-root {
-    min-width: 760px;
+    min-width: 780px;
 }
 
-/* Keep horizontal scrolling on the data surface. The pager is a sibling of this container and
-   must remain in the full-width table footer instead of being clipped by the scrollbar. */
+/* Keep horizontal scrolling on the data surface while the pager remains full width. */
 .topics-table ::deep .mud-table-container {
     overflow-x: auto;
 }
 
-@media (max-width: 720px) {
-    .topics-toolbar {
-        flex-direction: column;
-    }
+.topics-table ::deep .mud-table-head {
+    background: color-mix(in srgb, var(--mud-palette-info) 5%, var(--mud-palette-surface));
+}
 
+.topics-empty-filter {
+    min-height: 150px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    padding: 24px;
+    text-align: center;
+    border: 1px dashed color-mix(in srgb, var(--mud-palette-info) 34%, var(--mud-palette-lines-default));
+    border-radius: 9px;
+    background: color-mix(in srgb, var(--mud-palette-info) 5%, var(--mud-palette-surface));
+}
+
+.topics-empty-filter__icon {
+    width: 42px;
+    height: 42px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 10px;
+    color: var(--mud-palette-info);
+    background: color-mix(in srgb, var(--mud-palette-info) 12%, var(--mud-palette-surface));
+}
+
+.topics-empty-filter__icon ::deep .mud-icon-root {
+    color: inherit;
+}
+
+@media (max-width: 720px) {
     .topics-actions {
         width: 100%;
         justify-content: flex-start;
     }
 
     .topics-actions ::deep .mud-input-control {
-        flex: 1 1 220px;
+        flex: 1 1 100%;
+        width: 100%;
+    }
+
+    .topics-actions ::deep .mud-button-root {
+        flex: 1 1 auto;
     }
 }

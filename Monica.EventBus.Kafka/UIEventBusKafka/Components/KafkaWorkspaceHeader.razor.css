@@ -1,0 +1,58 @@
+.kafka-workspace-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+    min-width: 0;
+    padding-bottom: 2px;
+}
+
+.kafka-workspace-header__identity {
+    display: flex;
+    align-items: center;
+    gap: 11px;
+    min-width: 0;
+}
+
+.kafka-workspace-header__icon {
+    width: 38px;
+    height: 38px;
+    flex: 0 0 38px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 9px;
+    color: var(--mud-palette-primary);
+    background: color-mix(in srgb, var(--mud-palette-primary) 11%, var(--mud-palette-surface));
+    border: 1px solid color-mix(in srgb, var(--mud-palette-primary) 22%, var(--mud-palette-lines-default));
+}
+
+.kafka-workspace-header__icon ::deep .mud-icon-root {
+    color: inherit;
+}
+
+.kafka-workspace-header__copy {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+}
+
+.kafka-workspace-header__copy ::deep .mud-typography-root {
+    overflow-wrap: anywhere;
+}
+
+.kafka-workspace-header__actions {
+    min-width: 0;
+}
+
+@media (max-width: 720px) {
+    .kafka-workspace-header {
+        flex-direction: column;
+        gap: 12px;
+    }
+
+    .kafka-workspace-header__actions {
+        width: 100%;
+    }
+}

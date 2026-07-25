@@ -1,0 +1,47 @@
+<header class="kafka-workspace-header">
+    <div class="kafka-workspace-header__identity">
+        <span class="kafka-workspace-header__icon" aria-hidden="true">
+            <MudIcon Icon="@Icon" />
+        </span>
+        <div class="kafka-workspace-header__copy">
+            <MudText Typo="Typo.h6">@Title</MudText>
+            @if (!string.IsNullOrWhiteSpace(Subtitle))
+            {
+                <MudText Typo="Typo.caption" Color="Color.Secondary">@Subtitle</MudText>
+            }
+        </div>
+    </div>
+
+    @if (Actions is not null)
+    {
+        <div class="kafka-workspace-header__actions">
+            @Actions
+        </div>
+    }
+</header>
+
+@code {
+    /// <summary>
+    /// Gets or sets the Material icon used to identify the workspace.
+    /// </summary>
+    [Parameter, EditorRequired]
+    public string Icon { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the localized workspace title.
+    /// </summary>
+    [Parameter, EditorRequired]
+    public string Title { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the optional localized workspace status or summary.
+    /// </summary>
+    [Parameter]
+    public string? Subtitle { get; set; }
+
+    /// <summary>
+    /// Gets or sets the action controls rendered opposite the workspace identity.
+    /// </summary>
+    [Parameter]
+    public RenderFragment? Actions { get; set; }
+}

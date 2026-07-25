@@ -2,24 +2,27 @@
 @inject IStringLocalizer<EventBusKafkaResource> L
 
 <MudStack Spacing="3">
-    <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Spacing="2">
-        <MudText Typo="Typo.h6">@L["Clusters:Title"]</MudText>
-        <MudStack Row="true" Spacing="1">
-            <MudButton Variant="Variant.Outlined"
-                       StartIcon="@Icons.Material.Filled.Refresh"
-                       Disabled="@State.IsBusy"
-                       OnClick="OnRefresh">
-                @L["Common:Actions:Refresh"]
-            </MudButton>
-            <MudButton Variant="Variant.Filled"
-                       Color="Color.Primary"
-                       StartIcon="@Icons.Material.Filled.Add"
-                       Disabled="@State.IsBusy"
-                       OnClick="OnCreate">
-                @L["Clusters:Actions:New"]
-            </MudButton>
-        </MudStack>
-    </MudStack>
+    <KafkaWorkspaceHeader Icon="@Icons.Material.Filled.Storage"
+                          Title="@L["Clusters:Title"]"
+                          Subtitle="@L["Clusters:Summary", State.Clusters.Count]">
+        <Actions>
+            <div class="clusters-actions">
+                <MudButton Variant="Variant.Outlined"
+                           StartIcon="@Icons.Material.Filled.Refresh"
+                           Disabled="@State.IsBusy"
+                           OnClick="OnRefresh">
+                    @L["Common:Actions:Refresh"]
+                </MudButton>
+                <MudButton Variant="Variant.Filled"
+                           Color="Color.Primary"
+                           StartIcon="@Icons.Material.Filled.Add"
+                           Disabled="@State.IsBusy"
+                           OnClick="OnCreate">
+                    @L["Clusters:Actions:New"]
+                </MudButton>
+            </div>
+        </Actions>
+    </KafkaWorkspaceHeader>
 
     @if (State.Clusters.Count == 0)
     {
@@ -35,6 +38,9 @@
                       RowsPerPage="25"
                       Dense="true"
                       Hover="true"
+                      Striped="true"
+                      Breakpoint="Breakpoint.None"
+                      RowClassFunc="@GetRowClass"
                       Bordered="false">
                 <HeaderContent>
                     <MudTh>@L["Clusters:Columns:Name"]</MudTh>
@@ -45,12 +51,14 @@
                 </HeaderContent>
                 <RowTemplate>
                     <MudTd DataLabel="@L["Clusters:Columns:Name"]">
-                        <MudStack Spacing="0">
-                            <MudText Typo="Typo.body2">@context.Config.DisplayName</MudText>
-                            <MudText Typo="Typo.caption" Color="Color.Secondary">@context.Config.ClusterId</MudText>
+                        <MudStack Spacing="0" Class="cluster-identity">
+                            <MudText Typo="Typo.body2" Class="cluster-display-name">@context.Config.DisplayName</MudText>
+                            <MudText Typo="Typo.caption" Color="Color.Secondary" Class="cluster-id">@context.Config.ClusterId</MudText>
                         </MudStack>
                     </MudTd>
-                    <MudTd DataLabel="@L["Clusters:Columns:Bootstrap"]">@GetBootstrapText(context)</MudTd>
+                    <MudTd DataLabel="@L["Clusters:Columns:Bootstrap"]">
+                        <span class="cluster-bootstrap">@GetBootstrapText(context)</span>
+                    </MudTd>
                     <MudTd DataLabel="@L["Clusters:Columns:Mode"]">
                         <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Color="@GetClusterModeColor(context)">
                             @GetClusterMode(context)
@@ -62,37 +70,41 @@
                         </MudChip>
                     </MudTd>
                     <MudTd DataLabel="@L["Clusters:Columns:Actions"]">
-                        <MudStack Row="true" Spacing="1">
+                        <MudStack Row="true" Spacing="1" Class="cluster-row-actions">
                             <MudTooltip Text="@L["Common:Actions:Select"]">
                                 <MudIconButton Icon="@Icons.Material.Filled.CheckCircle"
                                                Size="Size.Small"
                                                Disabled="@(State.IsBusy || !context.IsReachable)"
-                                               OnClick="@(() => OnSelect.InvokeAsync(context))" />
+                                               OnClick="@(() => OnSelect.InvokeAsync(context))"
+                                               aria-label="@L["Common:Actions:Select"]" />
                             </MudTooltip>
                             <MudTooltip Text="@L["Common:Actions:Edit"]">
                                 <MudIconButton Icon="@Icons.Material.Filled.Edit"
                                                Size="Size.Small"
                                                Disabled="@State.IsBusy"
-                                               OnClick="@(() => OnEdit.InvokeAsync(context))" />
+                                               OnClick="@(() => OnEdit.InvokeAsync(context))"
+                                               aria-label="@L["Common:Actions:Edit"]" />
                             </MudTooltip>
                             <MudTooltip Text="@L["Clusters:Actions:Test"]">
                                 <MudIconButton Icon="@Icons.Material.Filled.Cable"
                                                Size="Size.Small"
                                                Disabled="@(State.IsBusy || !context.Config.HasDirectKafkaAccess)"
-                                               OnClick="@(() => OnTest.InvokeAsync(context))" />
+                                               OnClick="@(() => OnTest.InvokeAsync(context))"
+                                               aria-label="@L["Clusters:Actions:Test"]" />
                             </MudTooltip>
                             <MudTooltip Text="@L["Common:Actions:Delete"]">
                                 <MudIconButton Icon="@Icons.Material.Filled.Delete"
                                                Size="Size.Small"
                                                Color="Color.Error"
                                                Disabled="@State.IsBusy"
-                                               OnClick="@(() => OnDelete.InvokeAsync(context))" />
+                                               OnClick="@(() => OnDelete.InvokeAsync(context))"
+                                               aria-label="@L["Common:Actions:Delete"]" />
                             </MudTooltip>
                         </MudStack>
                     </MudTd>
                 </RowTemplate>
                 <PagerContent>
-                    <MudTablePager PageSizeOptions="@(new[] { 10, 25, 50, 100 })" />
+                    <MudTablePager PageSizeOptions="@PageSizeOptions" />
                 </PagerContent>
             </MudTable>
         </div>
@@ -100,6 +112,8 @@
 </MudStack>
 
 @code {
+    private static readonly int[] PageSizeOptions = [10, 25, 50, 100];
+
     [Parameter, EditorRequired] public EventBusKafkaPageState State { get; set; } = default!;
 
     [Parameter] public EventCallback OnCreate { get; set; }
@@ -150,4 +164,7 @@
 
         return cluster.Config.HasDirectKafkaAccess ? Color.Secondary : Color.Warning;
     }
+
+    private string GetRowClass(KafkaClusterSummary cluster, int _) =>
+        cluster.Config.ClusterId == State.SelectedClusterId ? "cluster-row--selected" : string.Empty;
 }
