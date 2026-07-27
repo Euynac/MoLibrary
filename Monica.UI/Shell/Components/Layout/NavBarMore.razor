@@ -7,37 +7,42 @@
 @inject ILocalizationCatalog LocalizationCatalog
 
 <div class="@RootCssClass">
-    <MudMenu Label="@L["NavBar:More"]"
-             AriaLabel="@L["NavBar:More"]"
-             EndIcon="@Icons.Material.Filled.MoreHoriz"
-             Variant="Variant.Text"
+    <MudMenu AriaLabel="@L["NavBar:More"]"
              Class="navbar-menu navbar-link"
              ActivationEvent="@MouseEvent.MouseOver"
              AnchorOrigin="Origin.BottomRight"
              TransformOrigin="Origin.TopRight"
              PopoverClass="@MorePopoverCssClass"
              ListClass="mo-appbar-menu-list">
-        <div class="more-menu-header">@L["NavBar:MoreModules"]</div>
-        @foreach (var category in Categories)
-        {
-            <MudMenu Label="@category.DisplayName"
-                     AriaLabel="@category.DisplayName"
-                     EndIcon="@Icons.Material.Filled.ChevronRight"
-                     Class="more-category-item"
-                     PopoverClass="@FlyoutPopoverCssClass"
-                     ListClass="mo-appbar-menu-list"
-                     data-navigation-category-id="@category.Id.Value">
-                <div class="flyout-menu-header">@category.DisplayName</div>
-                @foreach (var item in category.Items)
-                {
-                    <MudMenuItem Href="@item.Href"
-                                 Icon="@item.Icon"
-                                 Class="@NavigationRouteMatcher.GetActiveClass(CurrentRoute, item.Href)">
-                        @item.ResolveText(LocalizationCatalog)
-                    </MudMenuItem>
-                }
-            </MudMenu>
-        }
+        <ActivatorContent Context="menu">
+            <span class="mo-navbar-menu-activator-content" @onclick="menu.OpenAsync">
+                <span>@L["NavBar:More"]</span>
+                <MudIcon Icon="@Icons.Material.Filled.MoreHoriz" Size="Size.Small" />
+            </span>
+        </ActivatorContent>
+        <ChildContent>
+            <div class="more-menu-header">@L["NavBar:MoreModules"]</div>
+            @foreach (var category in Categories)
+            {
+                <MudMenu Label="@category.DisplayName"
+                         AriaLabel="@category.DisplayName"
+                         EndIcon="@Icons.Material.Filled.ChevronRight"
+                         Class="more-category-item"
+                         PopoverClass="@FlyoutPopoverCssClass"
+                         ListClass="mo-appbar-menu-list"
+                         data-navigation-category-id="@category.Id.Value">
+                    <div class="flyout-menu-header">@category.DisplayName</div>
+                    @foreach (var item in category.Items)
+                    {
+                        <MudMenuItem Href="@item.Href"
+                                     Icon="@item.Icon"
+                                     Class="@NavigationRouteMatcher.GetActiveClass(CurrentRoute, item.Href)">
+                            @item.ResolveText(LocalizationCatalog)
+                        </MudMenuItem>
+                    }
+                </MudMenu>
+            }
+        </ChildContent>
     </MudMenu>
 </div>
 

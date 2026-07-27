@@ -90,7 +90,7 @@
         display: flex;
     }
 
-    .navbar-nav-compact > ::deep .navbar-more .mud-menu-button-activator {
+    .navbar-nav-compact > ::deep .navbar-more .mud-menu-activator {
         white-space: nowrap;
         writing-mode: horizontal-tb;
         text-orientation: mixed;

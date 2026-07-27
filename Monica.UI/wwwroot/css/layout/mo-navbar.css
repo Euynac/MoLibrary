@@ -35,12 +35,14 @@
     white-space: nowrap;
 }
 
-:root[data-theme] .navbar-menu.navbar-link > button.mud-button-root.mud-menu-button-activator {
+:root[data-theme] .navbar-menu.navbar-link > .mud-menu-activator {
+    align-items: center;
     background: transparent !important;
     border: 0 !important;
     border-radius: inherit !important;
     box-shadow: none !important;
     color: inherit !important;
+    display: flex;
     filter: none !important;
     font-family: inherit !important;
     font-size: inherit !important;
@@ -49,23 +51,34 @@
     letter-spacing: inherit !important;
     line-height: inherit !important;
     min-width: 0;
-    padding: var(--mo-navbar-link-padding-block, 0) var(--mo-navbar-link-padding-inline, 20px) !important;
+    outline: none;
+    padding: 0 !important;
     text-transform: inherit !important;
     transform: none !important;
     transition: none !important;
     white-space: nowrap;
 }
 
-:root[data-theme] .navbar-menu.navbar-link > button.mud-button-root.mud-menu-button-activator:is(:hover, :focus, :active) {
+:root[data-theme] .navbar-menu.navbar-link > .mud-menu-activator:is(:hover, :focus, :active) {
     background: transparent !important;
     box-shadow: none !important;
     color: inherit !important;
     transform: none !important;
 }
 
-:root[data-theme] .navbar-menu.navbar-link > button.mud-button-root.mud-menu-button-activator::before,
-:root[data-theme] .navbar-menu.navbar-link > button.mud-button-root.mud-menu-button-activator::after {
-    display: none !important;
+:root[data-theme] .navbar-menu.navbar-link > .mud-menu-activator:focus-visible {
+    outline: 2px solid var(--mud-palette-primary);
+    outline-offset: -2px;
+}
+
+.mo-navbar-menu-activator-content {
+    align-items: center;
+    cursor: pointer;
+    display: inline-flex;
+    gap: 0.375rem;
+    height: 100%;
+    padding: var(--mo-navbar-link-padding-block, 0) var(--mo-navbar-link-padding-inline, 20px);
+    white-space: nowrap;
 }
 
 .navbar-menu.navbar-link:hover,

@@ -4,24 +4,29 @@
 @inject ILocalizationCatalog LocalizationCatalog
 
 <div class="navbar-item" data-navigation-category-id="@CategoryId.Value">
-    <MudMenu Label="@Category"
-             AriaLabel="@Category"
-             EndIcon="@Icons.Material.Filled.KeyboardArrowDown"
-             Variant="Variant.Text"
+    <MudMenu AriaLabel="@Category"
              Class="navbar-menu navbar-link"
              ActivationEvent="@MouseEvent.MouseOver"
              AnchorOrigin="Origin.BottomLeft"
              TransformOrigin="Origin.TopLeft"
              PopoverClass="dropdown-menu mo-navbar-menu-popover mo-navbar-dropdown-popover"
              ListClass="mo-appbar-menu-list">
-        @foreach (var item in Items)
-        {
-            <MudMenuItem Href="@item.Href"
-                         Icon="@item.Icon"
-                         Class="@NavigationRouteMatcher.GetActiveClass(CurrentRoute, item.Href)">
-                @item.ResolveText(LocalizationCatalog)
-            </MudMenuItem>
-        }
+        <ActivatorContent Context="menu">
+            <span class="mo-navbar-menu-activator-content" @onclick="menu.OpenAsync">
+                <span>@Category</span>
+                <MudIcon Icon="@Icons.Material.Filled.KeyboardArrowDown" Size="Size.Small" />
+            </span>
+        </ActivatorContent>
+        <ChildContent>
+            @foreach (var item in Items)
+            {
+                <MudMenuItem Href="@item.Href"
+                             Icon="@item.Icon"
+                             Class="@NavigationRouteMatcher.GetActiveClass(CurrentRoute, item.Href)">
+                    @item.ResolveText(LocalizationCatalog)
+                </MudMenuItem>
+            }
+        </ChildContent>
     </MudMenu>
 </div>
 
