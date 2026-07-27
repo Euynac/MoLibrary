@@ -1,5 +1,5 @@
 @using Monica.ProjectUnits.Facades
-@using Monica.Core.Results;
+@using Monica.Core.Results
 @using Monica.ProjectUnits.Models
 @inject ProjectUnitsFacade ProjectUnitsFacade
 @inject ISnackbar Snackbar
@@ -28,78 +28,102 @@
         }
         else if (_projectUnits.Any())
         {
-            <div class="project-units-monitor-grid">
-            <MudDataGrid T="ProjectUnitSummary" Items="@_projectUnits" Filterable="true"
-                        SortMode="SortMode.Multiple" Groupable="true" GroupExpanded="false"
-                        Dense="true" Hover="true" ReadOnly="true"
-                        RowsPerPage="@DEFAULT_PAGE_SIZE">
-                <Columns>
-                    <PropertyColumn T="ProjectUnitSummary" TProperty="string" Property="x => x.Title" Title="@L["ProjectUnitMonitor:Columns:Name"]"
-                                    HeaderClass="project-units-monitor-grid__name-column"
-                                    CellClass="project-units-monitor-grid__name-column">
-                        <CellTemplate>
-                            <MudTooltip Text="@context.Item.Title">
-                                <span class="project-units-monitor-grid__ellipsis">@context.Item.Title</span>
-                            </MudTooltip>
-                        </CellTemplate>
-                    </PropertyColumn>
-                    <PropertyColumn T="ProjectUnitSummary" TProperty="string" Property="x => x.Key" Title="@L["ProjectUnitMonitor:Columns:FullName"]"
-                                    HeaderClass="project-units-monitor-grid__full-name-column"
-                                    CellClass="project-units-monitor-grid__full-name-column">
-                        <CellTemplate>
-                            <MudTooltip Text="@context.Item.Key">
-                                <span class="project-units-monitor-grid__ellipsis">@context.Item.Key</span>
-                            </MudTooltip>
-                        </CellTemplate>
-                    </PropertyColumn>
-                    <TemplateColumn Title="@L["ProjectUnitMonitor:Columns:Type"]"
-                                    HeaderClass="project-units-monitor-grid__type-column"
-                                    CellClass="project-units-monitor-grid__type-column">
-                        <CellTemplate>
-                            <MudChip T="string" Size="Size.Small"
-                                     Color="@ProjectUnitVisualizationConfig.GetUnitTypeMudColor(context.Item.UnitType)">
-                                @L.GetProjectUnitTypeText(context.Item.UnitType)
-                            </MudChip>
-                        </CellTemplate>
-                    </TemplateColumn>
-                    <TemplateColumn Title="@L["ProjectUnitMonitor:Columns:Dependencies"]" Sortable="false"
-                                    HeaderClass="project-units-monitor-grid__count-column"
-                                    CellClass="project-units-monitor-grid__count-column">
-                        <CellTemplate>
-                            <MudChip T="int" Size="Size.Small" Color="Color.Info"
-                                     Icon="@Icons.Material.Filled.Link">
-                                @context.Item.Dependencies.Count
-                            </MudChip>
-                        </CellTemplate>
-                    </TemplateColumn>
-                    <TemplateColumn Title="@L["ProjectUnitMonitor:Columns:DependedBy"]" Sortable="false"
-                                    HeaderClass="project-units-monitor-grid__count-column"
-                                    CellClass="project-units-monitor-grid__count-column">
-                        <CellTemplate>
-                            <MudChip T="int" Size="Size.Small" Color="Color.Success"
-                                     Icon="@Icons.Material.Filled.CallReceived">
-                                @context.Item.DependedByCount
-                            </MudChip>
-                        </CellTemplate>
-                    </TemplateColumn>
-                    <TemplateColumn Title="@L["ProjectUnitMonitor:Columns:Actions"]" Sortable="false"
-                                    HeaderClass="project-units-monitor-grid__actions-column"
-                                    CellClass="project-units-monitor-grid__actions-column">
-                        <CellTemplate>
-                            <MudTooltip Text="@L["Shared:Actions:Details"]">
-                                <MudIconButton Size="Size.Small"
-                                               Icon="@Icons.Material.Filled.OpenInNew"
-                                               Color="Color.Primary"
-                                               OnClick="@(() => ViewDetails(context.Item))" />
-                            </MudTooltip>
-                        </CellTemplate>
-                    </TemplateColumn>
-                </Columns>
-                <PagerContent>
-                    <MudDataGridPager T="ProjectUnitSummary" PageSizeOptions="@PAGE_SIZE_OPTIONS" />
-                </PagerContent>
-            </MudDataGrid>
+            <ProjectUnitFilterPanel Units="_projectUnits"
+                                    @bind-FilterText="_filterText"
+                                    @bind-SelectedUnitTypes="_selectedUnitTypes"
+                                    @bind-ShowOnlyWithDependencies="_showOnlyWithDependencies"
+                                    @bind-ShowOnlyWithAlerts="_showOnlyWithAlerts"
+                                    OnFiltersChanged="ApplyFilters" />
+
+            <div class="project-units-monitor-summary">
+                <MudIcon Icon="@Icons.Material.Filled.FilterList" Color="Color.Secondary" Size="Size.Small" />
+                <MudText Typo="Typo.caption">
+                    @L["ProjectUnitMonitor:Summary:VisibleCount", _filteredProjectUnits.Count, _projectUnits.Count]
+                </MudText>
             </div>
+
+            @if (_filteredProjectUnits.Any())
+            {
+                <div class="project-units-monitor-grid">
+                    <MudDataGrid T="ProjectUnitSummary" Items="@_filteredProjectUnits"
+                                 SortMode="SortMode.Multiple"
+                                 ShowColumnOptions="false"
+                                 Dense="true" Hover="true" ReadOnly="true"
+                                 RowsPerPage="@DEFAULT_PAGE_SIZE">
+                        <Columns>
+                            <PropertyColumn T="ProjectUnitSummary" TProperty="string" Property="x => x.Title" Title="@L["ProjectUnitMonitor:Columns:Name"]"
+                                            HeaderClass="project-units-monitor-grid__name-column"
+                                            CellClass="project-units-monitor-grid__name-column">
+                                <CellTemplate>
+                                    <MudTooltip Text="@context.Item.Title">
+                                        <span class="project-units-monitor-grid__ellipsis">@context.Item.Title</span>
+                                    </MudTooltip>
+                                </CellTemplate>
+                            </PropertyColumn>
+                            <PropertyColumn T="ProjectUnitSummary" TProperty="string" Property="x => x.Key" Title="@L["ProjectUnitMonitor:Columns:FullName"]"
+                                            HeaderClass="project-units-monitor-grid__full-name-column"
+                                            CellClass="project-units-monitor-grid__full-name-column">
+                                <CellTemplate>
+                                    <MudTooltip Text="@context.Item.Key">
+                                        <span class="project-units-monitor-grid__ellipsis">@context.Item.Key</span>
+                                    </MudTooltip>
+                                </CellTemplate>
+                            </PropertyColumn>
+                            <TemplateColumn Title="@L["ProjectUnitMonitor:Columns:Type"]"
+                                            HeaderClass="project-units-monitor-grid__type-column"
+                                            CellClass="project-units-monitor-grid__type-column">
+                                <CellTemplate>
+                                    <MudChip T="string" Size="Size.Small"
+                                             Color="@ProjectUnitVisualizationConfig.GetUnitTypeMudColor(context.Item.UnitType)">
+                                        @L.GetProjectUnitTypeText(context.Item.UnitType)
+                                    </MudChip>
+                                </CellTemplate>
+                            </TemplateColumn>
+                            <TemplateColumn Title="@L["ProjectUnitMonitor:Columns:Dependencies"]" Sortable="false"
+                                            HeaderClass="project-units-monitor-grid__count-column"
+                                            CellClass="project-units-monitor-grid__count-column">
+                                <CellTemplate>
+                                    <MudChip T="int" Size="Size.Small" Color="Color.Info"
+                                             Icon="@Icons.Material.Filled.Link">
+                                        @context.Item.Dependencies.Count
+                                    </MudChip>
+                                </CellTemplate>
+                            </TemplateColumn>
+                            <TemplateColumn Title="@L["ProjectUnitMonitor:Columns:DependedBy"]" Sortable="false"
+                                            HeaderClass="project-units-monitor-grid__count-column"
+                                            CellClass="project-units-monitor-grid__count-column">
+                                <CellTemplate>
+                                    <MudChip T="int" Size="Size.Small" Color="Color.Success"
+                                             Icon="@Icons.Material.Filled.CallReceived">
+                                        @context.Item.DependedByCount
+                                    </MudChip>
+                                </CellTemplate>
+                            </TemplateColumn>
+                            <TemplateColumn Title="@L["ProjectUnitMonitor:Columns:Actions"]" Sortable="false"
+                                            HeaderClass="project-units-monitor-grid__actions-column"
+                                            CellClass="project-units-monitor-grid__actions-column">
+                                <CellTemplate>
+                                    <MudTooltip Text="@L["Shared:Actions:Details"]">
+                                        <MudIconButton Size="Size.Small"
+                                                       Icon="@Icons.Material.Filled.OpenInNew"
+                                                       Color="Color.Primary"
+                                                       OnClick="@(() => ViewDetails(context.Item))" />
+                                    </MudTooltip>
+                                </CellTemplate>
+                            </TemplateColumn>
+                        </Columns>
+                        <PagerContent>
+                            <MudDataGridPager T="ProjectUnitSummary" PageSizeOptions="@PAGE_SIZE_OPTIONS" />
+                        </PagerContent>
+                    </MudDataGrid>
+                </div>
+            }
+            else
+            {
+                <MudAlert Severity="Severity.Info" Variant="Variant.Outlined">
+                    @L["ProjectUnitMonitor:States:NoMatches"]
+                </MudAlert>
+            }
         }
         else
         {
@@ -118,6 +142,11 @@
     private static readonly int[] PAGE_SIZE_OPTIONS = [25, 50, 100, 200];
 
     private List<ProjectUnitSummary> _projectUnits = [];
+    private List<ProjectUnitSummary> _filteredProjectUnits = [];
+    private string _filterText = string.Empty;
+    private IReadOnlyCollection<EProjectUnitType> _selectedUnitTypes = new HashSet<EProjectUnitType>();
+    private bool _showOnlyWithDependencies;
+    private bool _showOnlyWithAlerts;
     private bool _loading;
     private bool _detailDialogVisible;
     private ProjectUnitSummary? _selectedUnit;
@@ -145,6 +174,11 @@
             }
 
             _projectUnits = data;
+            _selectedUnitTypes = _projectUnits
+                .Select(static unit => unit.UnitType)
+                .Where(static type => type != EProjectUnitType.None)
+                .ToHashSet();
+            ApplyFilters();
         }
         catch (Exception ex)
         {
@@ -161,5 +195,31 @@
     {
         _selectedUnit = unit;
         _detailDialogVisible = true;
+    }
+
+    private void ApplyFilters()
+    {
+        _filteredProjectUnits = _projectUnits
+            .Where(MatchesFilters)
+            .ToList();
+    }
+
+    private bool MatchesFilters(ProjectUnitSummary unit)
+    {
+        var matchesText = string.IsNullOrWhiteSpace(_filterText)
+                          || unit.Title.Contains(_filterText, StringComparison.OrdinalIgnoreCase)
+                          || unit.Key.Contains(_filterText, StringComparison.OrdinalIgnoreCase)
+                          || (!string.IsNullOrWhiteSpace(unit.Owner)
+                              && unit.Owner.Contains(_filterText, StringComparison.OrdinalIgnoreCase))
+                          || unit.Tags.Any(tag => tag.Contains(_filterText, StringComparison.OrdinalIgnoreCase))
+                          || (!string.IsNullOrWhiteSpace(unit.Description)
+                              && unit.Description.Contains(_filterText, StringComparison.OrdinalIgnoreCase));
+        var matchesType = _selectedUnitTypes.Contains(unit.UnitType);
+        var matchesDependencies = !_showOnlyWithDependencies
+                                  || unit.Dependencies.Count != 0
+                                  || unit.DependedByCount != 0;
+        var matchesAlerts = !_showOnlyWithAlerts || unit.Alerts.Count != 0;
+
+        return matchesText && matchesType && matchesDependencies && matchesAlerts;
     }
 }

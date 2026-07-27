@@ -35,15 +35,16 @@
                         SelectionMode="SelectionMode.MultiSelection"
                         SelectedValues="SelectedUnitTypes"
                         SelectedValuesChanged="OnSelectedUnitTypesChanged">
-                @foreach (var unitType in AllUnitTypes)
+                @foreach (var option in _unitTypeOptions)
                 {
-                    var isSelected = SelectedUnitTypes.Contains(unitType);
+                    var isSelected = SelectedUnitTypes.Contains(option.UnitType);
                     <MudChip T="EProjectUnitType"
-                             Value="unitType"
-                             Color="@ProjectUnitVisualizationConfig.GetUnitTypeMudColor(unitType)"
+                             Value="@option.UnitType"
+                             Icon="@ProjectUnitVisualizationConfig.GetUnitTypeIcon(option.UnitType)"
+                             Color="@ProjectUnitVisualizationConfig.GetUnitTypeMudColor(option.UnitType)"
                              Variant="@(isSelected ? Variant.Filled : Variant.Outlined)"
                              Size="Size.Small">
-                        @L.GetProjectUnitTypeText(unitType)
+                        @L["ProjectUnitFilterPanel:Formats:TypeCount", L.GetProjectUnitTypeText(option.UnitType), option.Count]
                     </MudChip>
                 }
             </MudChipSet>
@@ -64,36 +65,35 @@
 </MudPaper>
 
 @code {
+    [Parameter] public IReadOnlyCollection<ProjectUnitSummary> Units { get; set; } = [];
+
     [Parameter] public string FilterText { get; set; } = string.Empty;
     [Parameter] public EventCallback<string> FilterTextChanged { get; set; }
-    
+
     [Parameter] public IReadOnlyCollection<EProjectUnitType> SelectedUnitTypes { get; set; } = new HashSet<EProjectUnitType>();
     [Parameter] public EventCallback<IReadOnlyCollection<EProjectUnitType>> SelectedUnitTypesChanged { get; set; }
-    
+
     [Parameter] public bool ShowOnlyWithDependencies { get; set; }
     [Parameter] public EventCallback<bool> ShowOnlyWithDependenciesChanged { get; set; }
-    
+
     [Parameter] public bool ShowOnlyWithAlerts { get; set; }
     [Parameter] public EventCallback<bool> ShowOnlyWithAlertsChanged { get; set; }
-    
-    [Parameter] public EventCallback OnFiltersChanged { get; set; }
-    
-    private List<EProjectUnitType> AllUnitTypes { get; set; } = [];
-    
-    protected override void OnInitialized()
-    {
-        AllUnitTypes = Enum.GetValues<EProjectUnitType>()
-            .Where(static type => type != EProjectUnitType.None)
-            .ToList();
 
-        if (!SelectedUnitTypes.Any())
-        {
-            var allTypes = new HashSet<EProjectUnitType>(AllUnitTypes);
-            SelectedUnitTypes = allTypes;
-            SelectedUnitTypesChanged.InvokeAsync(allTypes);
-        }
+    [Parameter] public EventCallback OnFiltersChanged { get; set; }
+
+    private IReadOnlyList<UnitTypeOption> _unitTypeOptions = [];
+
+    protected override void OnParametersSet()
+    {
+        _unitTypeOptions = Units
+            .Where(static unit => unit.UnitType != EProjectUnitType.None)
+            .GroupBy(static unit => unit.UnitType)
+            .Select(static group => new UnitTypeOption(group.Key, group.Count()))
+            .OrderByDescending(static option => option.Count)
+            .ThenBy(static option => option.UnitType)
+            .ToList();
     }
-    
+
     private async Task OnFilterTextChanged()
     {
         await FilterTextChanged.InvokeAsync(FilterText);
@@ -109,7 +109,8 @@
     
     private async Task SelectAllTypes()
     {
-        await OnSelectedUnitTypesChanged(new HashSet<EProjectUnitType>(AllUnitTypes));
+        await OnSelectedUnitTypesChanged(
+            new HashSet<EProjectUnitType>(_unitTypeOptions.Select(static option => option.UnitType)));
     }
     
     private async Task ClearAllTypes()
@@ -130,4 +131,6 @@
         await ShowOnlyWithAlertsChanged.InvokeAsync(value);
         await OnFiltersChanged.InvokeAsync();
     }
+
+    private sealed record UnitTypeOption(EProjectUnitType UnitType, int Count);
 }

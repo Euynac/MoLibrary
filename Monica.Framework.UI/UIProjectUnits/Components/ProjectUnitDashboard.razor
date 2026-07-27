@@ -41,9 +41,33 @@
                             </MudChip>
                         }
                     </div>
-                    <MudText Typo="Typo.body2" Color="Color.Secondary">
-                        @_snapshot.Service.ProjectName · @_snapshot.Service.AppId
-                    </MudText>
+                    @if (HasDistinctTechnicalIdentity(_snapshot.Service))
+                    {
+                        <div class="project-unit-dashboard__service-identities">
+                            @if (ShouldShowProjectName(_snapshot.Service))
+                            {
+                                <MudChip T="string"
+                                         Size="Size.Small"
+                                         Variant="Variant.Outlined"
+                                         Color="Color.Info"
+                                         Icon="@Icons.Material.Filled.FolderOpen"
+                                         data-testid="project-unit-service-project-name">
+                                    @L["ProjectUnitDashboard:Service:ProjectName", _snapshot.Service.ProjectName]
+                                </MudChip>
+                            }
+                            @if (ShouldShowAppId(_snapshot.Service))
+                            {
+                                <MudChip T="string"
+                                         Size="Size.Small"
+                                         Variant="Variant.Outlined"
+                                         Color="Color.Secondary"
+                                         Icon="@Icons.Material.Filled.Fingerprint"
+                                         data-testid="project-unit-service-app-id">
+                                    @L["ProjectUnitDashboard:Service:AppId", _snapshot.Service.AppId]
+                                </MudChip>
+                            }
+                        </div>
+                    }
                     @if (!string.IsNullOrWhiteSpace(_snapshot.Service.DomainName))
                     {
                         <MudText Typo="Typo.caption" Color="Color.Secondary">
@@ -60,35 +84,45 @@
 
         <div class="project-unit-dashboard__metrics" data-testid="project-unit-dashboard-metrics">
             <div class="project-unit-dashboard__metric" data-tone="primary">
-                <MudIcon Icon="@Icons.Material.Filled.AccountTree" />
+                <div class="project-unit-dashboard__metric-icon">
+                    <MudIcon Icon="@Icons.Material.Filled.AccountTree" />
+                </div>
                 <div>
                     <MudText Typo="Typo.h4">@_snapshot.TotalUnits</MudText>
                     <MudText Typo="Typo.caption" Color="Color.Secondary">@L["ProjectUnitDashboard:Metrics:TotalUnits"]</MudText>
                 </div>
             </div>
             <div class="project-unit-dashboard__metric" data-tone="info">
-                <MudIcon Icon="@Icons.Material.Filled.Category" />
+                <div class="project-unit-dashboard__metric-icon">
+                    <MudIcon Icon="@Icons.Material.Filled.Category" />
+                </div>
                 <div>
                     <MudText Typo="Typo.h4">@_snapshot.DistinctUnitTypes</MudText>
                     <MudText Typo="Typo.caption" Color="Color.Secondary">@L["ProjectUnitDashboard:Metrics:UnitTypes"]</MudText>
                 </div>
             </div>
             <div class="project-unit-dashboard__metric" data-tone="success">
-                <MudIcon Icon="@Icons.Material.Filled.Verified" />
+                <div class="project-unit-dashboard__metric-icon">
+                    <MudIcon Icon="@Icons.Material.Filled.Verified" />
+                </div>
                 <div>
                     <MudText Typo="Typo.h4">@FormatPercentage(GetCoverage(ProjectUnitCoverageKind.Metadata)?.Percentage)</MudText>
                     <MudText Typo="Typo.caption" Color="Color.Secondary">@L["ProjectUnitDashboard:Metrics:MetadataCoverage"]</MudText>
                 </div>
             </div>
             <div class="project-unit-dashboard__metric" data-tone="secondary">
-                <MudIcon Icon="@Icons.Material.Filled.AssignmentTurnedIn" />
+                <div class="project-unit-dashboard__metric-icon">
+                    <MudIcon Icon="@Icons.Material.Filled.AssignmentTurnedIn" />
+                </div>
                 <div>
                     <MudText Typo="Typo.h4">@FormatPercentage(GetCoverage(ProjectUnitCoverageKind.Requirements)?.Percentage)</MudText>
                     <MudText Typo="Typo.caption" Color="Color.Secondary">@L["ProjectUnitDashboard:Metrics:RequirementCoverage"]</MudText>
                 </div>
             </div>
             <div class="project-unit-dashboard__metric" data-tone="@GetAlertTone(_snapshot.Alerts)">
-                <MudIcon Icon="@Icons.Material.Filled.Warning" />
+                <div class="project-unit-dashboard__metric-icon">
+                    <MudIcon Icon="@Icons.Material.Filled.Warning" />
+                </div>
                 <div>
                     <MudText Typo="Typo.h4">@_snapshot.Alerts.TotalCount</MudText>
                     <MudText Typo="Typo.caption" Color="Color.Secondary">@L["ProjectUnitDashboard:Metrics:Alerts"]</MudText>
@@ -107,7 +141,7 @@
         else
         {
             <div class="project-unit-dashboard__primary-grid">
-                <section class="project-unit-dashboard__section" data-testid="project-unit-type-distribution">
+                <section class="project-unit-dashboard__section" data-tone="primary" data-testid="project-unit-type-distribution">
                     <div class="project-unit-dashboard__section-heading">
                         <div>
                             <MudText Typo="Typo.h6">@L["ProjectUnitDashboard:Sections:Distribution"]</MudText>
@@ -134,7 +168,7 @@
                     </div>
                 </section>
 
-                <section class="project-unit-dashboard__section" data-testid="project-unit-coverage">
+                <section class="project-unit-dashboard__section" data-tone="success" data-testid="project-unit-coverage">
                     <div class="project-unit-dashboard__section-heading">
                         <div>
                             <MudText Typo="Typo.h6">@L["ProjectUnitDashboard:Sections:Coverage"]</MudText>
@@ -145,7 +179,7 @@
                     <div class="project-unit-dashboard__coverage">
                         @foreach (var metric in _snapshot.Coverage)
                         {
-                            <div class="project-unit-dashboard__coverage-item">
+                            <div class="project-unit-dashboard__coverage-item" data-tone="@GetCoverageTone(metric.Kind)">
                                 <div class="project-unit-dashboard__gauge">
                                     <MudProgressCircular Value="@ToDouble(metric.Percentage)"
                                                          Color="@GetCoverageColor(metric.Kind)"
@@ -162,7 +196,7 @@
                 </section>
             </div>
 
-            <section class="project-unit-dashboard__section project-unit-dashboard__health" data-testid="project-unit-architecture-health">
+            <section class="project-unit-dashboard__section project-unit-dashboard__health" data-tone="info" data-testid="project-unit-architecture-health">
                 <div class="project-unit-dashboard__section-heading">
                     <div>
                         <MudText Typo="Typo.h6">@L["ProjectUnitDashboard:Sections:ArchitectureHealth"]</MudText>
@@ -171,22 +205,22 @@
                     <MudIcon Icon="@Icons.Material.Filled.MonitorHeart" Color="Color.Error" />
                 </div>
                 <div class="project-unit-dashboard__health-items">
-                    <div>
+                    <div data-tone="info">
                         <MudIcon Icon="@Icons.Material.Filled.Route" Color="Color.Info" />
                         <strong>@_snapshot.Dependencies.EdgeCount</strong>
                         <span>@L["ProjectUnitDashboard:Health:DependencyEdges"]</span>
                     </div>
-                    <div>
+                    <div data-tone="warning">
                         <MudIcon Icon="@Icons.Material.Filled.ScatterPlot" Color="Color.Warning" />
                         <strong>@_snapshot.Dependencies.IsolatedUnitCount</strong>
                         <span>@L["ProjectUnitDashboard:Health:IsolatedUnits"]</span>
                     </div>
-                    <div>
+                    <div data-tone="error">
                         <MudIcon Icon="@Icons.Material.Filled.Error" Color="Color.Error" />
                         <strong>@_snapshot.Alerts.ErrorCount</strong>
                         <span>@L["ProjectUnitDashboard:Health:Errors"]</span>
                     </div>
-                    <div>
+                    <div data-tone="warning">
                         <MudIcon Icon="@Icons.Material.Filled.Warning" Color="Color.Warning" />
                         <strong>@_snapshot.Alerts.WarningCount</strong>
                         <span>@L["ProjectUnitDashboard:Health:Warnings"]</span>
@@ -194,7 +228,9 @@
                 </div>
             </section>
 
-            <section class="project-unit-dashboard__section" data-testid="project-unit-coverage-gaps">
+            <section class="project-unit-dashboard__section"
+                     data-tone="@(_snapshot.CoverageGaps.Count == 0 ? "success" : "warning")"
+                     data-testid="project-unit-coverage-gaps">
                 <div class="project-unit-dashboard__section-heading">
                     <div>
                         <MudText Typo="Typo.h6">@L["ProjectUnitDashboard:Sections:CoverageGaps"]</MudText>
@@ -324,6 +360,34 @@
             ProjectUnitCoverageKind.Requirements => Color.Secondary,
             _ => Color.Default
         };
+    }
+
+    private static string GetCoverageTone(ProjectUnitCoverageKind kind)
+    {
+        return kind switch
+        {
+            ProjectUnitCoverageKind.Metadata => "primary",
+            ProjectUnitCoverageKind.Description => "info",
+            ProjectUnitCoverageKind.Ownership => "success",
+            ProjectUnitCoverageKind.Requirements => "secondary",
+            _ => "default"
+        };
+    }
+
+    private static bool HasDistinctTechnicalIdentity(ProjectUnitServiceIdentity service)
+    {
+        return ShouldShowProjectName(service) || ShouldShowAppId(service);
+    }
+
+    private static bool ShouldShowProjectName(ProjectUnitServiceIdentity service)
+    {
+        return !string.Equals(service.ProjectName, service.AppName, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool ShouldShowAppId(ProjectUnitServiceIdentity service)
+    {
+        return !string.Equals(service.AppId, service.AppName, StringComparison.OrdinalIgnoreCase)
+               && !string.Equals(service.AppId, service.ProjectName, StringComparison.OrdinalIgnoreCase);
     }
 
     private static string FormatPercentage(decimal? percentage)

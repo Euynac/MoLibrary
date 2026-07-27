@@ -188,10 +188,13 @@
   "ProjectUnitFilterPanel": {
     "Fields": {
       "SearchLabel": "Search project units",
-      "SearchHelper": "Search by name, owner, tag, or description"
+      "SearchHelper": "Search by name, full name, owner, tag, or description"
     },
     "Sections": {
       "TypeFilter": "Unit type filters"
+    },
+    "Formats": {
+      "TypeCount": "{0} · {1}"
     },
     "Switches": {
       "OnlyDependencies": "Show only units with dependencies",
@@ -226,7 +229,11 @@
       "Actions": "Actions"
     },
     "States": {
-      "Empty": "No project unit data is available. Click refresh to load the data."
+      "Empty": "No project unit data is available. Click refresh to load the data.",
+      "NoMatches": "No project units match the current filters."
+    },
+    "Summary": {
+      "VisibleCount": "Showing {0} of {1} project units"
     }
   },
   "ProjectUnitDetailDialog": {
@@ -269,6 +276,8 @@
       "Retry": "Retry"
     },
     "Service": {
+      "ProjectName": "Project: {0}",
+      "AppId": "Application ID: {0}",
       "Domain": "Domain: {0}"
     },
     "Metrics": {

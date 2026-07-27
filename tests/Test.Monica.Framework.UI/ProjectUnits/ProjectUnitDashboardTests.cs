@@ -25,8 +25,34 @@ public sealed class ProjectUnitDashboardTests
             cut.Find("[data-testid='project-unit-dashboard-metrics']").Should().NotBeNull();
             cut.Find("[data-testid='project-unit-type-distribution']").Should().NotBeNull();
             cut.Find("[data-testid='project-unit-coverage-gaps']").Should().NotBeNull();
+            cut.Find("[data-testid='project-unit-service-project-name']").Should().NotBeNull();
+            cut.Find("[data-testid='project-unit-service-app-id']").Should().NotBeNull();
             cut.Markup.Should().Contain("Ordering Service");
             cut.Markup.Should().Contain("Approve Order");
+        });
+    }
+
+    [Fact]
+    public async Task Fallback_service_identities_are_not_rendered_as_duplicate_values()
+    {
+        var snapshot = CreateSnapshot(service: new ProjectUnitServiceIdentity
+        {
+            ProjectName = "FlightService.API",
+            AppId = "FlightService.API",
+            AppName = "FlightService.API",
+            AppVersion = "1.0.3"
+        });
+        await using var context = new ProjectUnitsUiTestContext(
+            new StubProjectUnitsUiDataSource(Res.Ok(snapshot)));
+
+        var cut = context.Render<ProjectUnitDashboard>();
+
+        cut.WaitForAssertion(() =>
+        {
+            cut.FindAll("[data-testid='project-unit-service-project-name']").Should().BeEmpty();
+            cut.FindAll("[data-testid='project-unit-service-app-id']").Should().BeEmpty();
+            cut.Markup.Should().NotContain("ProjectUnitDashboard:Service:ProjectName");
+            cut.Markup.Should().NotContain("ProjectUnitDashboard:Service:AppId");
         });
     }
 
@@ -113,11 +139,13 @@ public sealed class ProjectUnitDashboardTests
         });
     }
 
-    private static ProjectUnitDashboardSnapshot CreateSnapshot(ProjectUnitSummary? summary = null)
+    private static ProjectUnitDashboardSnapshot CreateSnapshot(
+        ProjectUnitSummary? summary = null,
+        ProjectUnitServiceIdentity? service = null)
     {
         return new ProjectUnitDashboardSnapshot
         {
-            Service = new ProjectUnitServiceIdentity
+            Service = service ?? new ProjectUnitServiceIdentity
             {
                 ProjectName = "Ordering.Api",
                 AppId = "ordering-api",

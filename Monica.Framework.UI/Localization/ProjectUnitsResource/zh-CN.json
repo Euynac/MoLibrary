@@ -188,10 +188,13 @@
   "ProjectUnitFilterPanel": {
     "Fields": {
       "SearchLabel": "搜索项目单元",
-      "SearchHelper": "支持按名称、负责人、标签或描述搜索"
+      "SearchHelper": "支持按名称、完整名称、负责人、标签或描述搜索"
     },
     "Sections": {
       "TypeFilter": "单元类型筛选"
+    },
+    "Formats": {
+      "TypeCount": "{0} · {1}"
     },
     "Switches": {
       "OnlyDependencies": "仅显示有依赖关系的单元",
@@ -226,7 +229,11 @@
       "Actions": "操作"
     },
     "States": {
-      "Empty": "暂无项目单元数据，请点击刷新按钮加载数据。"
+      "Empty": "暂无项目单元数据，请点击刷新按钮加载数据。",
+      "NoMatches": "没有符合当前筛选条件的项目单元。"
+    },
+    "Summary": {
+      "VisibleCount": "显示 {0} / {1} 个项目单元"
     }
   },
   "ProjectUnitDetailDialog": {
@@ -269,6 +276,8 @@
       "Retry": "重试"
     },
     "Service": {
+      "ProjectName": "项目：{0}",
+      "AppId": "应用标识：{0}",
       "Domain": "领域：{0}"
     },
     "Metrics": {

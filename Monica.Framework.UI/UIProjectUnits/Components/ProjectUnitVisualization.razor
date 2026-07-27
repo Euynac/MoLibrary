@@ -61,7 +61,8 @@
                 </MudAlert>
             }
 
-            <ProjectUnitFilterPanel @bind-FilterText="_filterText"
+            <ProjectUnitFilterPanel Units="_allProjectUnits"
+                                    @bind-FilterText="_filterText"
                                     @bind-SelectedUnitTypes="_selectedUnitTypes"
                                     @bind-ShowOnlyWithDependencies="_showOnlyWithDependencies"
                                     @bind-ShowOnlyWithAlerts="_showOnlyWithAlerts"
@@ -125,6 +126,7 @@
     private bool _showLayoutPanel;
     private string _filterText = string.Empty;
     private IReadOnlyCollection<EProjectUnitType> _selectedUnitTypes = new HashSet<EProjectUnitType>();
+    private bool _unitTypeFilterInitialized;
     private bool _showOnlyWithDependencies;
     private bool _showOnlyWithAlerts;
     private string? _relatedToNodeId;
@@ -184,10 +186,16 @@
             }
 
             _allProjectUnits = data;
-            if (!_selectedUnitTypes.Any())
+            var availableUnitTypes = GetAvailableUnitTypes();
+            if (!_unitTypeFilterInitialized)
+            {
+                _selectedUnitTypes = availableUnitTypes;
+                _unitTypeFilterInitialized = true;
+            }
+            else
             {
                 _selectedUnitTypes = new HashSet<EProjectUnitType>(
-                    Enum.GetValues<EProjectUnitType>().Where(static type => type != EProjectUnitType.None));
+                    _selectedUnitTypes.Where(availableUnitTypes.Contains));
             }
 
             _filteredUnits = new List<ProjectUnitSummary>(_allProjectUnits);
@@ -337,7 +345,7 @@
                 || unit.Tags.Any(tag => tag.Contains(_filterText, StringComparison.OrdinalIgnoreCase))
                 || (!string.IsNullOrEmpty(unit.Description) && unit.Description.Contains(_filterText, StringComparison.OrdinalIgnoreCase));
 
-            var matchesType = !_selectedUnitTypes.Any() || _selectedUnitTypes.Contains(unit.UnitType);
+            var matchesType = _selectedUnitTypes.Contains(unit.UnitType);
             var matchesDependencies = !_showOnlyWithDependencies || unit.Dependencies.Any() || unit.DependedByCount > 0;
             var matchesAlerts = !_showOnlyWithAlerts || unit.Alerts.Any();
 
@@ -487,12 +495,19 @@
     private async Task ClearAllFiltersAsync(ProjectUnitSummary? unit)
     {
         _filterText = string.Empty;
-        _selectedUnitTypes = new HashSet<EProjectUnitType>(
-            Enum.GetValues<EProjectUnitType>().Where(static type => type != EProjectUnitType.None));
+        _selectedUnitTypes = GetAvailableUnitTypes();
         _showOnlyWithDependencies = false;
         _showOnlyWithAlerts = false;
         _relatedToNodeId = null;
         await ApplyFilters();
+    }
+
+    private HashSet<EProjectUnitType> GetAvailableUnitTypes()
+    {
+        return _allProjectUnits
+            .Select(static unit => unit.UnitType)
+            .Where(static type => type != EProjectUnitType.None)
+            .ToHashSet();
     }
 
     private async Task ShowRelatedNodesAsync(ProjectUnitSummary? unit)
