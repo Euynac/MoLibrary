@@ -1,6 +1,6 @@
-using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
 using Monica.Core;
+using Monica.Core.Execution;
 using Monica.Core.Modularity;
 using Monica.Core.Modularity.Abstractions;
 using Monica.Core.Modularity.Annotations;
@@ -11,7 +11,7 @@ using Monica.Repository.Persistence.Services;
 using Monica.Repository.Persistence.Services.Support;
 using Monica.Repository.UnitOfWork.Abstractions;
 using Monica.Repository.UnitOfWork.Services;
-using Monica.Repository.UnitOfWork.Services.Support;
+using Monica.Repository.UnitOfWork.Services.Behaviors;
 
 // ReSharper disable once CheckNamespace
 namespace Monica.Modules;
@@ -34,12 +34,11 @@ public static class ModuleUnitOfWorkBuilderExtensions
 public class ModuleUnitOfWork(ModuleUnitOfWorkOption option)
     : ModuleBase<ModuleUnitOfWork, ModuleUnitOfWorkOption, ModuleUnitOfWorkGuide>(option)
 {
-
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddSingleton<IUnitOfWorkManager, UnitOfWorkManager>();
 
-        if (option.EnableEntityEvent)
+        if (Option.EnableEntityEvent)
         {
             services.AddTransient<IAsyncLocalEventPublisher, AsyncLocalEventPublisher>();
             services.AddTransient<IAsyncLocalEventStore, AsyncLocalEventStore>();
@@ -48,12 +47,16 @@ public class ModuleUnitOfWork(ModuleUnitOfWorkOption option)
         {
             services.AddTransient<IAsyncLocalEventPublisher, NullAsyncLocalEventPublisher>();
         }
+    }
 
-        services.AddTransient<UnitOfWorkActionFilter>();
-        services.Configure<MvcOptions>(p =>
-        {
-            p.Filters.AddService(typeof(UnitOfWorkActionFilter));
-        });
+    public override void ClaimDependencies()
+    {
+        DependsOnModule<ModuleExecutionPipelineGuide>().Register()
+            .AddBehavior(
+                "repository.unit-of-work",
+                typeof(UnitOfWorkExecutionBehavior<,>),
+                ExecutionBehaviorOrder.UnitOfWork,
+                static descriptor => descriptor.IsBusinessOperation && !descriptor.IsLongRunning);
     }
 }
 
@@ -63,17 +66,16 @@ public class ModuleUnitOfWorkGuide : ModuleGuide<ModuleUnitOfWork, ModuleUnitOfW
     {
         ConfigureServices(context =>
         {
-            context.Services.AddTransient(typeof(IDbContextProvider<TDbContext>), typeof(AdaptiveDbContextProvider<TDbContext>));
-            //TODO Can I use Singleton?
+            context.Services.AddTransient(
+                typeof(IDbContextProvider<TDbContext>),
+                typeof(AdaptiveDbContextProvider<TDbContext>));
         }, secondKey: typeof(TDbContext).FullName);
         return this;
     }
-
 }
 
 public class ModuleUnitOfWorkOption : ModuleOptions<ModuleUnitOfWork>
 {
-
     /// <summary>
     /// Enable entity change event support
     /// </summary>

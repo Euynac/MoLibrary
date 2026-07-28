@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Monica.Core.HostedService.Abstractions;
@@ -18,8 +19,9 @@ internal sealed class BackgroundExecutionTimingCoordinator(
     IObservableInstanceRegistry observableManager,
     IOptions<ModuleHostedServiceOption> hostedServiceOptions,
     IOptions<ModuleExecutionTimingOption> executionTimingOptions,
+    IServiceScopeFactory serviceScopeFactory,
     ILogger<BackgroundExecutionTimingCoordinator> logger)
-    : MoBackgroundService(observableManager, hostedServiceOptions, logger), IExecutionTimingCoordinator
+    : MoBackgroundService(observableManager, hostedServiceOptions, serviceScopeFactory, logger), IExecutionTimingCoordinator
 {
     private static readonly TimeSpan _defaultFlushInterval = TimeSpan.FromMilliseconds(250);
 
@@ -70,11 +72,16 @@ internal sealed class BackgroundExecutionTimingCoordinator(
             memoryBytes));
     }
 
-    public override async Task StopAsync(CancellationToken cancellationToken)
+    protected override Task OnStoppingAsync(CancellationToken cancellationToken)
     {
         FlushPendingSamples();
-        await base.StopAsync(cancellationToken);
+        return base.OnStoppingAsync(cancellationToken);
+    }
+
+    protected override Task OnStoppedAsync(CancellationToken cancellationToken)
+    {
         FlushPendingSamples();
+        return base.OnStoppedAsync(cancellationToken);
     }
 
     protected override async Task ExecuteBackgroundAsync(CancellationToken stoppingToken)

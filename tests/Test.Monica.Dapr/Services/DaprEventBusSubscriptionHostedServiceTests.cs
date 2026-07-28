@@ -8,6 +8,7 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
+using Monica.Core.Execution;
 using Monica.Core.JsonSerialization.Services;
 using Monica.Core.ObservableInstance.Services;
 using Monica.Dapr.Abstractions;
@@ -345,7 +346,9 @@ public sealed class DaprEventBusSubscriptionHostedServiceTests
         Action<ModuleDaprEventBusOption>? configureOptions = null)
     {
         var registry = new EventSubscriptionRegistry(NullLogger<EventSubscriptionRegistry>.Instance);
-        var serviceProvider = new ServiceCollection().BuildServiceProvider();
+        var serviceProvider = new ServiceCollection()
+            .AddScoped<IExecutionPipeline, PassThroughExecutionPipeline>()
+            .BuildServiceProvider();
         var eventBus = new TestDistributedEventBus(
             serviceProvider.GetRequiredService<IServiceScopeFactory>(),
             new EventHandlerInvoker(),
@@ -374,6 +377,7 @@ public sealed class DaprEventBusSubscriptionHostedServiceTests
             {
                 DefaultHeartbeatInterval = TimeSpan.Zero
             }),
+            serviceProvider.GetRequiredService<IServiceScopeFactory>(),
             new JsonSerializerOptionsProvider(new JsonSerializerOptions(JsonSerializerDefaults.Web)),
             NullLogger<DaprTopicSubscription>.Instance,
             logger);
@@ -381,7 +385,10 @@ public sealed class DaprEventBusSubscriptionHostedServiceTests
         {
             EventType = typeof(TestEvent),
             TopicName = "test.progress",
-            HandlerFactory = new DelegateHandlerFactory(handler, () => handlerDisposed.TrySetResult()),
+            HandlerFactory = new DelegateHandlerFactory(
+                handler,
+                serviceProvider.GetRequiredService<IServiceScopeFactory>(),
+                () => handlerDisposed.TrySetResult()),
             Scope = EventSubscriptionScope.Distributed
         });
 
@@ -452,7 +459,10 @@ public sealed class DaprEventBusSubscriptionHostedServiceTests
             {
                 EventType = typeof(TestEvent),
                 TopicName = topicName,
-                HandlerFactory = new DelegateHandlerFactory((_, _) => Task.CompletedTask, () => { }),
+                HandlerFactory = new DelegateHandlerFactory(
+                    (_, _) => Task.CompletedTask,
+                    serviceProvider.GetRequiredService<IServiceScopeFactory>(),
+                    () => { }),
                 Scope = EventSubscriptionScope.Distributed
             });
 
@@ -563,11 +573,21 @@ public sealed class DaprEventBusSubscriptionHostedServiceTests
 
     private sealed class DelegateHandlerFactory(
         Func<TestEvent, CancellationToken, Task> handler,
+        IServiceScopeFactory serviceScopeFactory,
         Action onDispose) : IEventHandlerFactory
     {
-        public IEventHandlerDisposeWrapper GetHandler()
+        public ValueTask<IEventHandlerExecutionScope> CreateExecutionScopeAsync()
         {
-            return new EventHandlerDisposeWrapper(new DelegateHandler(handler), onDispose);
+            var scope = serviceScopeFactory.CreateAsyncScope();
+            return ValueTask.FromResult<IEventHandlerExecutionScope>(
+                new EventHandlerExecutionScope(
+                    new DelegateHandler(handler),
+                    scope.ServiceProvider,
+                    async () =>
+                    {
+                        await scope.DisposeAsync();
+                        onDispose();
+                    }));
         }
 
         public Type GetHandlerType()
@@ -586,6 +606,16 @@ public sealed class DaprEventBusSubscriptionHostedServiceTests
     }
 
     private sealed record TestEvent(string Value);
+
+    private sealed class PassThroughExecutionPipeline : IExecutionPipeline
+    {
+        public Task<TResult> ExecuteAsync<TInput, TResult>(
+            ExecutionContext<TInput> context,
+            ExecutionDelegate<TResult> terminal)
+        {
+            return terminal();
+        }
+    }
 
     private sealed class TestLogger<T> : ILogger<T>
     {

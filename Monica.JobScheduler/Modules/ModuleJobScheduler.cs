@@ -229,6 +229,7 @@ public class ModuleJobScheduler(ModuleJobSchedulerOption option)
     {
         // Depend on HostedService module for observable hosted services
         DependsOnModule<ModuleHostedServiceGuide>().Register();
+        DependsOnModule<ModuleExecutionPipelineGuide>().Register();
     }
 }
 

@@ -61,6 +61,7 @@ public class ModuleAutoControllers(ModuleAutoControllersOption option)
 
     public override void ClaimDependencies()
     {
+        DependsOnModule<ModuleExecutionPipelineGuide>().Register();
         DependsOnModule<ModuleAutoModelGuide>().Register();
         DependsOnModule<ModuleControllersGuide>().Register().ConfigMvcBuilder((builder, provider) =>
         {
@@ -75,9 +76,6 @@ public class ModuleAutoControllers(ModuleAutoControllersOption option)
                 ActivatorUtilities
                     .CreateInstance<CrudControllerFeatureProvider>(provider));
             builder.Services.Replace(ServiceDescriptor.Transient<IControllerActivator, ServiceBasedControllerActivator>());
-            
-            // Important: ASP.NET Core MVC uses its own controller activation by default. However, for CrudApplicationService, it needs to be obtained from dependency injection (including ICachedServiceProvider).
-            
         }).ConfigMvcOption((o, provider) =>
         {
             o.ConfigAutoController(provider);
@@ -88,11 +86,7 @@ public class ModuleAutoControllers(ModuleAutoControllersOption option)
             services.AddTransient<IApiDescriptionProvider, RequestEndpointApiDescriptionProvider>();
             services.AddTransient<IConventionalRouteBuilder, ConventionalRouteBuilder>();
             services.AddSingleton<ResultEnvelopeMvcFilter>();
-            //https://learn.microsoft.com/en-us/aspnet/core/fundamentals/minimal-apis/openapi?view=aspnetcore-7.0
-
-            // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
-
-            // if you use v6's "minimal APIs" https://stackoverflow.com/questions/71932980/what-is-addendpointsapiexplorer-in-asp-net-core-6
+            services.AddScoped<ExecutionPipelineMvcFilter>();
             services.AddEndpointsApiExplorer();
         });
     }
@@ -116,10 +110,7 @@ public class ModuleAutoControllers(ModuleAutoControllersOption option)
 /// Provides fluent configuration for generated AutoControllers.
 /// </summary>
 public class ModuleAutoControllersGuide : WebModuleGuide<ModuleAutoControllers, ModuleAutoControllersOption,
-    ModuleAutoControllersGuide>
-{
-
-}
+    ModuleAutoControllersGuide>;
 
 /// <summary>
 /// Configures the AutoControllers module lifecycle.

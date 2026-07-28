@@ -12,7 +12,7 @@ internal abstract class CastleMethodInvocationAdapterBase : IMethodInvocation
     public IReadOnlyDictionary<string, object> ArgumentsDictionary => _lazyArgumentsDictionary.Value;
     private readonly Lazy<IReadOnlyDictionary<string, object>> _lazyArgumentsDictionary;
 
-    public Type[] GenericArguments => Invocation.GenericArguments;
+    public Type[] GenericArguments => Invocation.GenericArguments ?? [];
 
     public object TargetObject => Invocation.InvocationTarget ?? Invocation.MethodInvocationTarget;
 

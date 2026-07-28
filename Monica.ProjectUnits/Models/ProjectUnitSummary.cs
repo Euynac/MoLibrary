@@ -61,6 +61,12 @@ public sealed class ProjectUnitSummary
     public EProjectUnitType UnitType { get; init; }
 
     /// <summary>
+    /// Gets the stable execution points supported by Monica adapters for this unit type. Presence indicates a
+    /// supported boundary and does not guarantee that every instance emits it.
+    /// </summary>
+    public IReadOnlyList<string> ExecutionPoints { get; init; } = [];
+
+    /// <summary>
     /// Gets whether the represented type declares project-unit metadata explicitly.
     /// </summary>
     public bool HasExplicitMetadata { get; init; }

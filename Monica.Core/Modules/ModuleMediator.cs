@@ -36,6 +36,11 @@ public class ModuleMediator(ModuleMediatorOption option)
         services.TryAddTransient<IMediator, Mediator>();
     }
 
+    public override void ClaimDependencies()
+    {
+        DependsOnModule<ModuleExecutionPipelineGuide>().Register();
+    }
+
     public IEnumerable<Type> IterateBusinessTypes(IEnumerable<Type> types)
     {
         if (_services == null)
@@ -76,59 +81,8 @@ public class ModuleMediator(ModuleMediatorOption option)
             services.TryAddTransient(serviceType, implementationType);
         }
     }
-
-    internal static void RegisterPipelineBehavior(IServiceCollection services, Type implementationType)
-    {
-        ArgumentNullException.ThrowIfNull(services);
-        ArgumentNullException.ThrowIfNull(implementationType);
-
-        if (implementationType is not { IsClass: true, IsAbstract: false })
-        {
-            throw new ArgumentException("Pipeline behavior must be a non-abstract class.", nameof(implementationType));
-        }
-
-        var behaviorInterfaces = implementationType
-            .GetInterfaces()
-            .Where(static serviceType => serviceType.IsGenericType &&
-                                         serviceType.GetGenericTypeDefinition() == typeof(IPipelineBehavior<,>))
-            .ToArray();
-
-        if (behaviorInterfaces.Length == 0)
-        {
-            throw new ArgumentException(
-                $"Type '{implementationType.FullName}' does not implement IPipelineBehavior<,>.",
-                nameof(implementationType));
-        }
-
-        foreach (var serviceType in behaviorInterfaces)
-        {
-            var registrationServiceType = implementationType.IsGenericTypeDefinition
-                ? serviceType.GetGenericTypeDefinition()
-                : serviceType;
-
-            services.TryAddEnumerable(ServiceDescriptor.Transient(registrationServiceType, implementationType));
-        }
-    }
 }
 
-public class ModuleMediatorGuide : ModuleGuide<ModuleMediator, ModuleMediatorOption, ModuleMediatorGuide>
-{
-    public ModuleMediatorGuide AddPipelineBehavior(Type behaviorType)
-    {
-        var behaviorKey = behaviorType.AssemblyQualifiedName ?? behaviorType.FullName ?? behaviorType.Name;
-        ConfigureServices(
-            context => ModuleMediator.RegisterPipelineBehavior(context.Services, behaviorType),
-            secondKey: behaviorKey);
-        return this;
-    }
+public class ModuleMediatorGuide : ModuleGuide<ModuleMediator, ModuleMediatorOption, ModuleMediatorGuide>;
 
-    public ModuleMediatorGuide AddPipelineBehavior<TBehavior>()
-        where TBehavior : class
-    {
-        return AddPipelineBehavior(typeof(TBehavior));
-    }
-}
-
-public class ModuleMediatorOption : ModuleOptions<ModuleMediator>
-{
-}
+public class ModuleMediatorOption : ModuleOptions<ModuleMediator>;

@@ -1,5 +1,7 @@
 using System.Collections.Concurrent;
+using Monica.EventBus.Abstractions;
 using Monica.EventBus.Abstractions.Handlers;
+using Monica.EventBus.Models;
 
 namespace Monica.EventBus.Services.Support;
 
@@ -9,16 +11,20 @@ namespace Monica.EventBus.Services.Support;
 public interface IEventHandlerInvoker
 {
     /// <summary>
-    /// Invokes every local or distributed handler contract implemented for the supplied event type.
+    /// Invokes the exact local or distributed handler contract selected by the subscription.
     /// </summary>
     /// <param name="eventHandler">The resolved handler instance.</param>
     /// <param name="eventData">The event payload.</param>
     /// <param name="eventType">The exact event type used for dispatch.</param>
+    /// <param name="subscription">The subscription that selected the handler contract.</param>
+    /// <param name="serviceProvider">The scope that owns the handler and pipeline behaviors.</param>
     /// <param name="cancellationToken">Signals that the caller no longer needs the handler result.</param>
     Task InvokeAsync(
         IEventHandler eventHandler,
         object eventData,
         Type eventType,
+        IEventSubscription subscription,
+        IServiceProvider serviceProvider,
         CancellationToken cancellationToken = default);
 }
 
@@ -34,29 +40,36 @@ public sealed class EventHandlerInvoker : IEventHandlerInvoker
         IEventHandler eventHandler,
         object eventData,
         Type eventType,
+        IEventSubscription subscription,
+        IServiceProvider serviceProvider,
         CancellationToken cancellationToken = default)
     {
         var executors = _cache.GetOrAdd(
             (eventHandler.GetType(), eventType),
             static key => CreateExecutors(key.HandlerType, key.EventType));
 
-        if (executors.Local is not null)
+        var executor = subscription.Scope switch
         {
-            cancellationToken.ThrowIfCancellationRequested();
-            await executors.Local.ExecutorAsync(eventHandler, eventData, cancellationToken);
-        }
+            EventSubscriptionScope.Local => executors.Local,
+            EventSubscriptionScope.Distributed => executors.Distributed,
+            _ => throw new ArgumentOutOfRangeException(
+                nameof(subscription), subscription.Scope, "Unsupported event subscription scope.")
+        };
 
-        if (executors.Distributed is not null)
-        {
-            cancellationToken.ThrowIfCancellationRequested();
-            await executors.Distributed.ExecutorAsync(eventHandler, eventData, cancellationToken);
-        }
-
-        if (executors.Local is null && executors.Distributed is null)
+        if (executor is null)
         {
             throw new InvalidOperationException(
-                $"The object instance is not an event handler. Object type: {eventHandler.GetType().AssemblyQualifiedName}");
+                $"Event handler '{eventHandler.GetType().AssemblyQualifiedName}' does not implement the " +
+                $"{subscription.Scope.ToString().ToLowerInvariant()} contract for event '{eventType.FullName}'.");
         }
+
+        cancellationToken.ThrowIfCancellationRequested();
+        await executor.ExecutorAsync(
+            eventHandler,
+            eventData,
+            subscription,
+            serviceProvider,
+            cancellationToken);
     }
 
     private static HandlerExecutors CreateExecutors(Type handlerType, Type eventType)
@@ -65,19 +78,16 @@ public sealed class EventHandlerInvoker : IEventHandlerInvoker
             CreateExecutorIfImplemented(
                 handlerType,
                 typeof(ILocalEventHandler<>).MakeGenericType(eventType),
-                typeof(LocalEventHandlerMethodExecutor<>),
                 eventType),
             CreateExecutorIfImplemented(
                 handlerType,
                 typeof(IDistributedEventHandler<>).MakeGenericType(eventType),
-                typeof(DistributedEventHandlerMethodExecutor<>),
                 eventType));
     }
 
     private static IEventHandlerMethodExecutor? CreateExecutorIfImplemented(
         Type handlerType,
         Type handlerContract,
-        Type executorType,
         Type eventType)
     {
         if (!handlerContract.IsAssignableFrom(handlerType))
@@ -85,7 +95,8 @@ public sealed class EventHandlerInvoker : IEventHandlerInvoker
             return null;
         }
 
-        return (IEventHandlerMethodExecutor?)Activator.CreateInstance(executorType.MakeGenericType(eventType));
+        return (IEventHandlerMethodExecutor?)Activator.CreateInstance(
+            typeof(EventHandlerMethodExecutor<>).MakeGenericType(eventType));
     }
 
     private sealed record HandlerExecutors(

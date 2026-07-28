@@ -1,7 +1,9 @@
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Monica.Core.HostedService.Models;
+using Monica.Core.HostedService.Services.Support;
 using Monica.Core.ObservableInstance.Abstractions;
 using Monica.Core.ObservableInstance.Models;
 using Monica.Modules;
@@ -12,15 +14,14 @@ namespace Monica.Core.HostedService.Abstractions;
 /// <summary>
 /// Base class for observable BackgroundService implementations with built-in state management,
 /// exception tracking, and heartbeat monitoring.
-/// Now uses ObservableInstanceTracker for unified tracking.
 /// </summary>
 public abstract class MoBackgroundService : BackgroundService, IMoHostedService
 {
     private readonly ILogger _logger;
+    private readonly IServiceScopeFactory _serviceScopeFactory;
     private readonly ModuleHostedServiceOption _options;
     private readonly IObservableInstanceRegistry _observableManager;
 
-    // Heartbeat mechanism
     private CancellationTokenSource? _heartbeatCts;
     private Task? _heartbeatTask;
 
@@ -29,20 +30,21 @@ public abstract class MoBackgroundService : BackgroundService, IMoHostedService
     /// </summary>
     /// <param name="observableManager">The registry used to expose service state.</param>
     /// <param name="options">The shared hosted-service options.</param>
+    /// <param name="serviceScopeFactory">Creates operation scopes for lifecycle and finite work-item behaviors.</param>
     /// <param name="logger">The logger for the concrete background service.</param>
     protected MoBackgroundService(
         IObservableInstanceRegistry observableManager,
         IOptions<ModuleHostedServiceOption> options,
+        IServiceScopeFactory serviceScopeFactory,
         ILogger logger)
     {
         _observableManager = observableManager;
         _options = options.Value;
+        _serviceScopeFactory = serviceScopeFactory;
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
     protected ILogger Logger => _logger;
-
-    // IMoHostedService implementation
 
     /// <summary>
     /// Gets the name of the service for identification purposes
@@ -159,19 +161,34 @@ public abstract class MoBackgroundService : BackgroundService, IMoHostedService
         => Task.CompletedTask;
 
     /// <summary>
-    /// Starts the background service
+    /// Starts the background service through the shared execution pipeline.
+    /// Derived services customize startup through <see cref="OnStartingAsync"/> and
+    /// <see cref="OnStartedAsync"/> so their work remains inside the lifecycle boundary.
     /// </summary>
-    public override async Task StartAsync(CancellationToken cancellationToken)
+    /// <param name="cancellationToken">Signals that application startup is being aborted.</param>
+    public sealed override async Task StartAsync(CancellationToken cancellationToken)
     {
         try
         {
-            RecordState("Service starting", HostedServiceState.Starting);
-            RuntimeInfo.StartedAt = DateTime.UtcNow;
+            await HostedServiceExecutionAdapter.ExecuteLifecycleAsync(
+                _serviceScopeFactory,
+                this,
+                ServiceName,
+                HostedServiceExecutionPoints.Start,
+                HostedServiceLifecyclePhase.Start,
+                async () =>
+                {
+                    RecordState("Service starting", HostedServiceState.Starting);
+                    RuntimeInfo.StartedAt = DateTime.UtcNow;
 
-            await base.StartAsync(cancellationToken);
-            StartHeartbeat();
+                    await OnStartingAsync(cancellationToken).ConfigureAwait(false);
+                    await base.StartAsync(cancellationToken).ConfigureAwait(false);
+                    StartHeartbeat();
 
-            RecordState("Service started, executing background work", HostedServiceState.Running);
+                    RecordState("Service started, executing background work", HostedServiceState.Running);
+                    await OnStartedAsync(cancellationToken).ConfigureAwait(false);
+                },
+                cancellationToken).ConfigureAwait(false);
         }
         catch (Exception ex)
         {
@@ -185,36 +202,83 @@ public abstract class MoBackgroundService : BackgroundService, IMoHostedService
     }
 
     /// <summary>
-    /// Stops the background service
+    /// Stops the background service through the shared execution pipeline.
+    /// Derived services customize shutdown through <see cref="OnStoppingAsync"/> and
+    /// <see cref="OnStoppedAsync"/> so all cleanup remains inside the lifecycle boundary.
     /// </summary>
-    public override async Task StopAsync(CancellationToken cancellationToken)
+    /// <param name="cancellationToken">Signals the graceful-shutdown deadline.</param>
+    public sealed override async Task StopAsync(CancellationToken cancellationToken)
     {
         try
         {
-            RecordState("Service stopping", HostedServiceState.Stopping);
+            await HostedServiceExecutionAdapter.ExecuteLifecycleAsync(
+                _serviceScopeFactory,
+                this,
+                ServiceName,
+                HostedServiceExecutionPoints.Stop,
+                HostedServiceLifecyclePhase.Stop,
+                async () =>
+                {
+                    RecordState("Service stopping", HostedServiceState.Stopping);
+                    await OnStoppingAsync(cancellationToken).ConfigureAwait(false);
 
-            if (_heartbeatCts != null)
-            {
-                try { await _heartbeatCts.CancelAsync(); }
-                catch (ObjectDisposedException) { }
-            }
-            if (_heartbeatTask != null)
-            {
-                await _heartbeatTask;
-            }
-            _heartbeatCts.SafeCancelAndDispose();
-            _heartbeatCts = null;
+                    if (_heartbeatCts != null)
+                    {
+                        try { await _heartbeatCts.CancelAsync().ConfigureAwait(false); }
+                        catch (ObjectDisposedException) { }
+                    }
+                    if (_heartbeatTask != null)
+                    {
+                        await _heartbeatTask.ConfigureAwait(false);
+                    }
+                    _heartbeatCts.SafeCancelAndDispose();
+                    _heartbeatCts = null;
 
-            await base.StopAsync(cancellationToken);
+                    await base.StopAsync(cancellationToken).ConfigureAwait(false);
 
-            RuntimeInfo.StoppedAt = DateTime.UtcNow;
-            RecordState("Service stopped", HostedServiceState.Stopped);
+                    RuntimeInfo.StoppedAt = DateTime.UtcNow;
+                    RecordState("Service stopped", HostedServiceState.Stopped);
+                    await OnStoppedAsync(cancellationToken).ConfigureAwait(false);
+                },
+                cancellationToken).ConfigureAwait(false);
         }
         catch (Exception ex)
         {
             RecordState("Service stop failed", HostedServiceState.Faulted, ex);
         }
     }
+
+    /// <summary>
+    /// Performs derived startup work before the permanent background operation starts.
+    /// The hook executes inside the hosted-service start pipeline.
+    /// </summary>
+    /// <param name="cancellationToken">Signals that application startup is being aborted.</param>
+    protected virtual Task OnStartingAsync(CancellationToken cancellationToken)
+        => Task.CompletedTask;
+
+    /// <summary>
+    /// Performs derived startup work after the permanent background operation has started.
+    /// The hook executes before the hosted-service start pipeline completes.
+    /// </summary>
+    /// <param name="cancellationToken">Signals that application startup is being aborted.</param>
+    protected virtual Task OnStartedAsync(CancellationToken cancellationToken)
+        => Task.CompletedTask;
+
+    /// <summary>
+    /// Performs derived shutdown work before the permanent background operation is stopped.
+    /// The hook executes inside the hosted-service stop pipeline.
+    /// </summary>
+    /// <param name="cancellationToken">Signals the graceful-shutdown deadline.</param>
+    protected virtual Task OnStoppingAsync(CancellationToken cancellationToken)
+        => Task.CompletedTask;
+
+    /// <summary>
+    /// Performs derived shutdown work after the permanent background operation has stopped.
+    /// The hook executes before the hosted-service stop pipeline completes.
+    /// </summary>
+    /// <param name="cancellationToken">Signals the graceful-shutdown deadline.</param>
+    protected virtual Task OnStoppedAsync(CancellationToken cancellationToken)
+        => Task.CompletedTask;
 
     /// <summary>
     /// Wraps ExecuteAsync to track state and handle errors
@@ -241,6 +305,44 @@ public abstract class MoBackgroundService : BackgroundService, IMoHostedService
     /// </summary>
     /// <param name="stoppingToken">Triggered when the application host is performing a graceful shutdown</param>
     protected abstract Task ExecuteBackgroundAsync(CancellationToken stoppingToken);
+
+    /// <summary>
+    /// Resolves and executes one finite scoped work item through the shared execution pipeline.
+    /// The permanent background loop itself is intentionally never wrapped in business behaviors.
+    /// </summary>
+    /// <typeparam name="TWorkItem">The scoped work-item implementation.</typeparam>
+    /// <param name="cancellationToken">Signals that the hosted service is stopping.</param>
+    protected Task ExecuteWorkItemAsync<TWorkItem>(CancellationToken cancellationToken)
+        where TWorkItem : class, IHostedServiceWorkItem
+    {
+        return HostedServiceExecutionAdapter.ExecuteWorkItemAsync<TWorkItem>(
+            _serviceScopeFactory,
+            this,
+            ServiceName,
+            cancellationToken);
+    }
+
+    /// <summary>
+    /// Resolves and executes one finite typed scoped work item through the shared execution pipeline.
+    /// The permanent background loop itself is intentionally never wrapped in business behaviors.
+    /// </summary>
+    /// <typeparam name="TWorkItem">The scoped work-item implementation.</typeparam>
+    /// <typeparam name="TInput">The work-item input type.</typeparam>
+    /// <typeparam name="TResult">The work-item result type.</typeparam>
+    /// <param name="input">The work-item input.</param>
+    /// <param name="cancellationToken">Signals that the hosted service is stopping.</param>
+    protected Task<TResult> ExecuteWorkItemAsync<TWorkItem, TInput, TResult>(
+        TInput input,
+        CancellationToken cancellationToken)
+        where TWorkItem : class, IHostedServiceWorkItem<TInput, TResult>
+    {
+        return HostedServiceExecutionAdapter.ExecuteWorkItemAsync<TWorkItem, TInput, TResult>(
+            _serviceScopeFactory,
+            this,
+            ServiceName,
+            input,
+            cancellationToken);
+    }
 
     /// <summary>
     /// Disposes resources

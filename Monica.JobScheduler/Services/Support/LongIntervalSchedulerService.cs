@@ -1,3 +1,4 @@
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Monica.Core.HostedService.Abstractions;
@@ -25,8 +26,9 @@ public class LongIntervalSchedulerService(
     IOptions<ModuleJobSchedulerOption> options,
     IObservableInstanceRegistry observableManager,
     IOptions<ModuleHostedServiceOption> hostedServiceOptions,
+    IServiceScopeFactory serviceScopeFactory,
     ILogger<LongIntervalSchedulerService> logger)
-    : MoBackgroundService(observableManager, hostedServiceOptions, logger)
+    : MoBackgroundService(observableManager, hostedServiceOptions, serviceScopeFactory, logger)
 {
     private readonly ModuleJobSchedulerOption _options = options.Value;
 

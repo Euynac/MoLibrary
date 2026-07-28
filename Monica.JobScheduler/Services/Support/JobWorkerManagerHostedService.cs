@@ -26,8 +26,9 @@ public class JobWorkerManagerHostedService(
     JobOrchestrator jobOrchestrator,
     IJobMetadataRepository metadataRepository,
     IReadOnlyList<JobDefinition> jobDefinitions,
+    IServiceScopeFactory serviceScopeFactory,
     ILogger<JobWorkerManagerHostedService> logger)
-    : MoBackgroundService(observableManager, hostedServiceOptions, logger)
+    : MoBackgroundService(observableManager, hostedServiceOptions, serviceScopeFactory, logger)
 {
     private readonly ModuleJobSchedulerOption _options = jobSchedulerOptions.Value;
     private readonly List<IAsyncDisposable> _eventSubscriptions = [];
@@ -38,9 +39,9 @@ public class JobWorkerManagerHostedService(
     public override string? ServiceGroupId => nameof(BuiltInModuleKey.JobScheduler);
 
     /// <summary>
-    /// Stops the worker manager by unsubscribing from events and waiting for in-flight jobs.
+    /// Unsubscribes from events and releases worker resources before the background operation stops.
     /// </summary>
-    public override async Task StopAsync(CancellationToken cancellationToken)
+    protected override async Task OnStoppingAsync(CancellationToken cancellationToken)
     {
         // Unsubscribe from all events
         if (_eventSubscriptions.Count > 0)
@@ -64,7 +65,7 @@ public class JobWorkerManagerHostedService(
         _workerThreadSemaphore?.Dispose();
         _workerThreadSemaphore = null;
 
-        await base.StopAsync(cancellationToken);
+        await base.OnStoppingAsync(cancellationToken).ConfigureAwait(false);
     }
 
     /// <summary>

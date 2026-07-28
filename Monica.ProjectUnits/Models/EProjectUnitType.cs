@@ -50,6 +50,10 @@ public enum EProjectUnitType
     /// </summary>
     TriggeredJob,
     /// <summary>
+    /// Host-managed long-running or lifecycle service
+    /// </summary>
+    HostedService,
+    /// <summary>
     /// HTTP API
     /// </summary>
     HttpApi,

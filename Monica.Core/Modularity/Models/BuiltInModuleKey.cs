@@ -65,6 +65,10 @@ public enum BuiltInModuleKey
     AutoControllers,
     JsonSerialization,
     ResultEnvelope,
+    /// <summary>
+    /// Shared typed execution-pipeline kernel.
+    /// </summary>
+    ExecutionPipeline,
     Mediator,
     Swagger,
     /// <summary>

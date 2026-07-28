@@ -1,4 +1,5 @@
 using Monica.ProjectUnits.Services.Support;
+using Monica.JobScheduler;
 using Monica.JobScheduler.Abstractions;
 using Monica.Modules;
 using Monica.Tool.Extensions;
@@ -11,7 +12,7 @@ namespace Monica.ProjectUnits.Models;
 public class UnitTriggeredJob : ProjectUnit
 {
     internal UnitTriggeredJob(Type type, ProjectUnitCatalog catalog)
-        : base(type, EProjectUnitType.TriggeredJob, catalog)
+        : base(type, EProjectUnitType.TriggeredJob, catalog, JobSchedulerExecutionPoints.TriggeredAttempt)
     {
     }
 

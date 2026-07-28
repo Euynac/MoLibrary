@@ -1,3 +1,4 @@
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Monica.Core.HostedService.Abstractions;
@@ -19,13 +20,16 @@ namespace Monica.DataChannel.Services;
 /// <param name="options">Provides the data channel module options.</param>
 /// <param name="observableManager">Registers the hosted service with observable-instance tracking.</param>
 /// <param name="hostedServiceOptions">Provides shared hosted-service observability options.</param>
+/// <param name="serviceScopeFactory">Creates execution-pipeline scopes for lifecycle work.</param>
 /// <param name="logger">The host logger used by the hosted-service observability base.</param>
 public class DataChannelInitializerService(
     IDataChannelManager manager,
     IOptions<ModuleDataChannelOption> options,
     IObservableInstanceRegistry observableManager,
     IOptions<ModuleHostedServiceOption> hostedServiceOptions,
-    ILogger<DataChannelInitializerService> logger) : MoHostedService(observableManager, hostedServiceOptions, logger)
+    IServiceScopeFactory serviceScopeFactory,
+    ILogger<DataChannelInitializerService> logger)
+    : MoHostedService(observableManager, hostedServiceOptions, serviceScopeFactory, logger)
 {
     private readonly int _initThreadCount = options.Value.InitThreadCount;
 

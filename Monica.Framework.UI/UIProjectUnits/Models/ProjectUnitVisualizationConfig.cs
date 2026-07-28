@@ -18,6 +18,7 @@ public static class ProjectUnitVisualizationConfig
             EProjectUnitType.LocalEventHandler => Color.Info,
             EProjectUnitType.RecurringJob => Color.Info,
             EProjectUnitType.TriggeredJob => Color.Success,
+            EProjectUnitType.HostedService => Color.Info,
             EProjectUnitType.HttpApi => Color.Error,
             EProjectUnitType.GrpcApi => Color.Secondary,
             EProjectUnitType.Entity => Color.Dark,
@@ -38,6 +39,7 @@ public static class ProjectUnitVisualizationConfig
             or EProjectUnitType.DomainService
             or EProjectUnitType.RecurringJob
             or EProjectUnitType.TriggeredJob
+            or EProjectUnitType.HostedService
             or EProjectUnitType.HttpApi
             or EProjectUnitType.GrpcApi;
     }
@@ -55,6 +57,7 @@ public static class ProjectUnitVisualizationConfig
             EProjectUnitType.LocalEventHandler => "info",
             EProjectUnitType.RecurringJob => "info",
             EProjectUnitType.TriggeredJob => "success",
+            EProjectUnitType.HostedService => "info",
             EProjectUnitType.HttpApi => "error",
             EProjectUnitType.GrpcApi => "secondary",
             EProjectUnitType.Entity => "dark",
@@ -81,6 +84,7 @@ public static class ProjectUnitVisualizationConfig
             EProjectUnitType.LocalEventHandler => Icons.Material.Filled.EventNote,
             EProjectUnitType.RecurringJob => Icons.Material.Filled.Work,
             EProjectUnitType.TriggeredJob => Icons.Material.Filled.Schedule,
+            EProjectUnitType.HostedService => Icons.Material.Filled.Engineering,
             EProjectUnitType.HttpApi => Icons.Material.Filled.Http,
             EProjectUnitType.GrpcApi => Icons.Material.Filled.Api,
             EProjectUnitType.Entity => Icons.Material.Filled.Dataset,

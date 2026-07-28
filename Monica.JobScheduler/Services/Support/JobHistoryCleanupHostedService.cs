@@ -1,3 +1,4 @@
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Monica.Core.Modularity.Models;
@@ -22,8 +23,9 @@ public class JobHistoryCleanupHostedService(
     IObservableInstanceRegistry observableManager,
     IOptions<ModuleHostedServiceOption> hostedServiceOptions,
     IOptions<ModuleServiceDiscoveryOption> serviceDiscoveryOptions,
+    IServiceScopeFactory serviceScopeFactory,
     ILogger<JobHistoryCleanupHostedService> logger
-) : CoordinatedLeaderService(leaderService, serviceDiscoveryOptions, coordinator, observableManager, hostedServiceOptions, logger)
+) : CoordinatedLeaderService(leaderService, serviceDiscoveryOptions, coordinator, observableManager, hostedServiceOptions, serviceScopeFactory, logger)
 {
     private readonly ModuleJobSchedulerOption _jobSchedulerOptions = options.Value;
 

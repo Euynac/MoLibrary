@@ -48,6 +48,7 @@
       "Seeder": "Seeder",
       "RecurringJob": "Recurring Job",
       "TriggeredJob": "Triggered Job",
+      "HostedService": "Hosted Service",
       "HttpApi": "HTTP API",
       "GrpcApi": "gRPC API",
       "StateStore": "State Store",

@@ -12,11 +12,11 @@ namespace Monica.JobScheduler.Services;
 
 /// <summary>
 /// Orchestrates job execution lifecycle including state management, timeout enforcement, and retry logic.
-/// Delegates actual job invocation to IMoJobExecutor while managing the complete execution workflow.
+/// Delegates each job attempt to <see cref="JobExecutor"/> while managing the complete execution workflow.
 /// Lifecycle events are automatically published by JobInstanceManager during state transitions.
 /// </summary>
 public class JobOrchestrator(
-    IServiceProvider serviceProvider,
+    IServiceScopeFactory serviceScopeFactory,
     JobInstanceManager jobInstanceManager,
     IJobCancellationTokenManager jobCancellationManager,
     JobExecutor jobExecutor,
@@ -44,14 +44,8 @@ public class JobOrchestrator(
             instance.JobKey,
             instance.InstanceId);
 
-        IServiceScope? scope = null;
-
         try
         {
-            // Step 1: Create scoped service provider for job execution
-            scope = serviceProvider.CreateScope();
-
-            // Step 2: Get or create distributed cancellation token
             var jobCancellationToken = await jobCancellationManager.GetOrCreateJobTokenAsync(
                 instance.InstanceId,
                 cancellationToken);
@@ -60,21 +54,19 @@ public class JobOrchestrator(
                 "Acquired cancellation token for instance {InstanceId}",
                 instance.InstanceId);
 
-            // Step 3: Update state to Processing (will automatically publish JobStartedEvent)
             await jobInstanceManager.UpdateStateAsync(
                 instance.InstanceId,
                 JobState.Processing,
                 null,
                 cancellationToken);
 
-            // Step 4: Execute job via executor
-            var executionTask = ExecuteJobViaExecutorAsync(
-                scope.ServiceProvider,
+            // The execution task owns its asynchronous DI scope so timeout handling cannot release job dependencies
+            // while user code is still running.
+            var executionTask = ExecuteJobInScopeAsync(
                 executionEvent,
                 instance,
                 jobCancellationToken);
 
-            // Step 5: Enforce timeout using Task.WhenAny
             var timeoutTask = Task.Delay(executionEvent.MaxExecutionTimeout, cancellationToken);
             var completedTask = await Task.WhenAny(executionTask, timeoutTask);
 
@@ -181,7 +173,6 @@ public class JobOrchestrator(
         }
         finally
         {
-            // Step 10: Always cleanup cancellation token
             try
             {
                 await jobCancellationManager.DeleteJobTokenAsync(instance.InstanceId, CancellationToken.None);
@@ -198,14 +189,24 @@ public class JobOrchestrator(
                     ex.Message);
             }
 
-            // Dispose scope
-            scope?.Dispose();
-
             logger.LogDebug(
                 "Completed execution lifecycle for job {JobKey} instance {InstanceId}",
                 instance.JobKey,
                 instance.InstanceId);
         }
+    }
+
+    private async Task ExecuteJobInScopeAsync(
+        JobExecutionEvent executionEvent,
+        JobInstance instance,
+        CancellationToken cancellationToken)
+    {
+        await using var scope = serviceScopeFactory.CreateAsyncScope();
+        await ExecuteJobViaExecutorAsync(
+            scope.ServiceProvider,
+            executionEvent,
+            instance,
+            cancellationToken);
     }
 
     /// <summary>

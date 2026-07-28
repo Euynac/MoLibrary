@@ -1,6 +1,7 @@
 using Monica.ProjectUnits.Services.Support;
 using Monica.Tool.Extensions;
 using Monica.WebApi.Abstractions;
+using Monica.WebApi.AutoControllers;
 using Monica.WebApi.AutoControllers.Abstractions;
 
 namespace Monica.ProjectUnits.Models;
@@ -18,7 +19,7 @@ namespace Monica.ProjectUnits.Models;
 public class UnitCrudApplicationService : ProjectUnit
 {
     internal UnitCrudApplicationService(Type type, ProjectUnitCatalog catalog)
-        : base(type, EProjectUnitType.CrudApplicationService, catalog)
+        : base(type, EProjectUnitType.CrudApplicationService, catalog, MvcExecutionPoints.Action)
     {
     }
 

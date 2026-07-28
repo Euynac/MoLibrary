@@ -1,4 +1,5 @@
 using Microsoft.Extensions.Logging;
+using Monica.Core.Mediator;
 using Monica.ProjectUnits.Services.Support;
 using Monica.Modules;
 using Monica.Tool.Extensions;
@@ -13,7 +14,7 @@ namespace Monica.ProjectUnits.Models;
 public class UnitApplicationService : ProjectUnit
 {
     internal UnitApplicationService(Type type, ProjectUnitCatalog catalog)
-        : base(type, EProjectUnitType.ApplicationService, catalog)
+        : base(type, EProjectUnitType.ApplicationService, catalog, MediatorExecutionPoints.Request)
     {
     }
 

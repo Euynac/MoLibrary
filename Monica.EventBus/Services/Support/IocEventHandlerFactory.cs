@@ -1,5 +1,6 @@
 using Microsoft.Extensions.DependencyInjection;
 using Monica.EventBus.Abstractions.Handlers;
+using Monica.EventBus.Models;
 
 namespace Monica.EventBus.Services.Support;
 
@@ -11,23 +12,22 @@ public class IocEventHandlerFactory(IServiceScopeFactory serviceScopeFactory, Ty
     private readonly IServiceScopeFactory _serviceScopeFactory = serviceScopeFactory ?? throw new ArgumentNullException(nameof(serviceScopeFactory));
     private readonly Type _handlerType = handlerType ?? throw new ArgumentNullException(nameof(handlerType));
 
-    public IEventHandlerDisposeWrapper GetHandler()
+    /// <inheritdoc />
+    public async ValueTask<IEventHandlerExecutionScope> CreateExecutionScopeAsync()
     {
-        var scope = _serviceScopeFactory.CreateScope();
-        var handler = (IEventHandler)scope.ServiceProvider.GetRequiredService(_handlerType);
-        return new IocEventHandlerDisposeWrapper(handler, scope);
-    }
-
-    public Type GetHandlerType() => _handlerType;
-
-    private class IocEventHandlerDisposeWrapper(IEventHandler eventHandler, IServiceScope scope)
-        : IEventHandlerDisposeWrapper
-    {
-        public IEventHandler EventHandler { get; } = eventHandler;
-
-        public void Dispose()
+        var scope = _serviceScopeFactory.CreateAsyncScope();
+        try
         {
-            scope.Dispose();
+            var handler = (IEventHandler)scope.ServiceProvider.GetRequiredService(_handlerType);
+            return new EventHandlerExecutionScope(handler, scope.ServiceProvider, scope.DisposeAsync);
+        }
+        catch
+        {
+            await scope.DisposeAsync().ConfigureAwait(false);
+            throw;
         }
     }
+
+    /// <inheritdoc />
+    public Type GetHandlerType() => _handlerType;
 }

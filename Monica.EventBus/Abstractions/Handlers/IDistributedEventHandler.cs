@@ -1,6 +1,12 @@
+using Monica.Core.Execution;
+
 namespace Monica.EventBus.Abstractions.Handlers;
 
-public interface IDistributedEventHandler<in TEvent> : IEventHandler<TEvent>
+/// <summary>
+/// Handles an event delivered through a Monica distributed event-bus provider.
+/// </summary>
+/// <typeparam name="TEvent">The handled event payload type.</typeparam>
+public interface IDistributedEventHandler<in TEvent> : IEventHandler<TEvent>, IExecutionAdapterOwnedComponent
 {
     /// <summary>
     /// Handles a distributed event.

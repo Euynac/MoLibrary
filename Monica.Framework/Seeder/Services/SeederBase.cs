@@ -1,6 +1,5 @@
 using Microsoft.Extensions.Logging;
 using Monica.Framework.Seeder.Abstractions;
-using Monica.Tool.Extensions;
 
 namespace Monica.Framework.Seeder.Services;
 
@@ -23,18 +22,15 @@ public abstract class SeederBase : ISeeder
         Logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
-    public virtual async Task SeedAsync()
+    /// <inheritdoc />
+    public virtual Task SeedAsync(CancellationToken cancellationToken)
     {
-        try
-        {
-            await SeedingAsync();
-        }
-        catch (Exception e)
-        {
-            Logger.LogError(e, "Seeder {SeederType} failed", GetType().GetCleanFullName());
-        }
-
+        return SeedingAsync(cancellationToken);
     }
 
-    public abstract Task SeedingAsync();
+    /// <summary>
+    /// Implements the seeder's finite startup work.
+    /// </summary>
+    /// <param name="cancellationToken">Signals that host startup is being cancelled.</param>
+    public abstract Task SeedingAsync(CancellationToken cancellationToken);
 }

@@ -30,6 +30,7 @@ internal sealed class ProjectUnitCatalog : IProjectUnitCatalog, IRequestFilter
         [
             type => UnitCrudApplicationService.Create(type, this),
             type => UnitApplicationService.Create(type, this),
+            type => UnitHttpApi.Create(type, this),
             type => UnitConfiguration.Create(type, this),
             type => UnitDomainEventHandler.Create(type, this),
             type => UnitLocalEventHandler.Create(type, this),
@@ -39,6 +40,8 @@ internal sealed class ProjectUnitCatalog : IProjectUnitCatalog, IRequestFilter
             type => UnitDomainService.Create(type, this),
             type => UnitRecurringJob.Create(type, this),
             type => UnitTriggeredJob.Create(type, this),
+            type => UnitSeeder.Create(type, this),
+            type => UnitHostedService.Create(type, this),
             type => UnitRequestDto.Create(type, this)
         ];
     }

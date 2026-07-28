@@ -37,22 +37,14 @@ public static class ModuleHostedServiceBuilderExtensions
 public class ModuleHostedService(ModuleHostedServiceOption option)
     : WebModuleBase<ModuleHostedService, ModuleHostedServiceOption, ModuleHostedServiceGuide>(option)
 {
-
     public override void ClaimDependencies()
     {
-        // Depend on ObservableInstance module for state and exception tracking
         DependsOnModule<ModuleObservableInstanceGuide>().Register();
+        DependsOnModule<ModuleExecutionPipelineGuide>().Register();
     }
 
     public override void ConfigureServices(IServiceCollection services)
     {
-        
-        // builder.Services.Configure<HostOptions>(options =>
-        // {
-        //     options.ServicesStartConcurrently = true;
-        //     options.ServicesStopConcurrently = true;
-        // });
-
         services.AddSingleton<HostedServiceRegistry>();
         services.AddSingleton<IHostedServiceRegistryWriter>(provider => provider.GetRequiredService<HostedServiceRegistry>());
         services.AddSingleton<IMoHostedServiceRegistry>(provider => provider.GetRequiredService<HostedServiceRegistry>());
@@ -75,9 +67,7 @@ public class ModuleHostedService(ModuleHostedServiceOption option)
 /// Fluent configuration guide for the HostedService observability module
 /// </summary>
 public class ModuleHostedServiceGuide
-    : WebModuleGuide<ModuleHostedService, ModuleHostedServiceOption, ModuleHostedServiceGuide>
-{
-}
+    : WebModuleGuide<ModuleHostedService, ModuleHostedServiceOption, ModuleHostedServiceGuide>;
 
 /// <summary>
 /// Configuration options for the HostedService observability module
@@ -100,5 +90,5 @@ public class ModuleHostedServiceOption : ModuleOptions<ModuleHostedService>
     /// When false, exceptions are logged but not re-thrown, allowing the application to continue.
     /// Default is false for production stability.
     /// </summary>
-    public bool FailFastOnStartupError { get; set; } = false;
+    public bool FailFastOnStartupError { get; set; }
 }
