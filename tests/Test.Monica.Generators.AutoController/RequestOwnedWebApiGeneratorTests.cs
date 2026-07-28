@@ -25,6 +25,17 @@ public sealed class RequestOwnedWebApiGeneratorTests
     }
 
     [Fact]
+    public void Run_WhenPublishedEndpointUsesBody_ShouldDelegateSerializationToTransportBase()
+    {
+        var run = RunGenerators(PublishedOrderingScenario);
+
+        run.OutputErrors.Should().BeEmpty();
+        var httpClient = run.GeneratedSources["HttpOrderingCommandApi.g.cs"];
+        httpClient.Should().Contain("httpRequest.Content = CreateJsonRequestContent(request);");
+        httpClient.Should().NotContain("JsonContent.Create");
+    }
+
+    [Fact]
     public void Run_WhenPublishedAndLocalRequestsShareADomain_ShouldExcludeLocalRequestFromRpcContract()
     {
         var run = RunGenerators(PublishedAndLocalScenario);

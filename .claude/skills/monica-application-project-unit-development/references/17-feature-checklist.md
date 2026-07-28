@@ -14,6 +14,7 @@ Use this checklist before finishing a ProjectUnit change.
 - Contracts are separate from persistence entities.
 - Every generated HTTP endpoint declares `[ApiEndpoint]` on its request, while its handler contains no MVC endpoint or binding attributes.
 - Published RPC requests use the matching `PublishedLanguages.Domain{DomainName}.Requests` namespace and protocol `WebApiGenerationConfig`; local HTTP requests remain outside the published namespace.
+- Temporal contract fields use `DateTime` only for timezone-free wall-clock values and `DateTimeOffset` for instants or explicit offsets; handlers do not compensate for transport with ad hoc `Kind` or time-zone conversions.
 - Repository interfaces and implementations live on the correct side of the boundary.
 - `DbContext`, EF mapping, and utility helpers use the expected folders and naming conventions.
 - New events, jobs, and options exist only because the feature genuinely needs them.

@@ -1,4 +1,5 @@
 using AwesomeAssertions;
+using Microsoft.AspNetCore.WebUtilities;
 using Monica.WebApi.RpcClient.Extensions;
 using Xunit;
 
@@ -47,6 +48,45 @@ public sealed class HttpApiRequestExtensionsTests
             .WithMessage("*Route property 'Id'*");
     }
 
+    [Fact]
+    public void BuildApiRequestUri_WhenQueryContainsTemporalValues_ShouldPreserveTheirWireSemantics()
+    {
+        var wallClock = new DateTime(2026, 7, 28, 14, 30, 0).AddTicks(1_234_567);
+        var request = new TemporalQueryRequest(
+            DateTime.SpecifyKind(wallClock, DateTimeKind.Local),
+            DateTime.SpecifyKind(wallClock, DateTimeKind.Utc),
+            DateTime.SpecifyKind(wallClock, DateTimeKind.Unspecified),
+            DateTime.SpecifyKind(wallClock, DateTimeKind.Local),
+            null,
+            new DateTimeOffset(wallClock, TimeSpan.FromHours(8)),
+            [wallClock, wallClock.AddTicks(1)]);
+
+        var uri = request.BuildApiRequestUri("api/events", includeQueryString: true);
+        var query = QueryHelpers.ParseQuery(new Uri($"https://localhost/{uri}").Query);
+
+        const string expectedWallClock = "2026-07-28T14:30:00.1234567";
+        query["local"].ToString().Should().Be(expectedWallClock);
+        query["utc"].ToString().Should().Be(expectedWallClock);
+        query["unspecified"].ToString().Should().Be(expectedWallClock);
+        query["nullable"].ToString().Should().Be(expectedWallClock);
+        query.Should().NotContainKey("missing");
+        query["instant"].ToString().Should().Be("2026-07-28T14:30:00.1234567+08:00");
+        query["samples"].Should().Equal(
+            expectedWallClock,
+            "2026-07-28T14:30:00.1234568");
+    }
+
+    [Fact]
+    public void BuildApiRequestUri_WhenRouteContainsDateTime_ShouldUseCanonicalWallClockFormat()
+    {
+        var request = new TemporalRouteRequest(
+            new DateTime(2026, 7, 28, 14, 30, 0, DateTimeKind.Utc).AddTicks(1_234_567));
+
+        var uri = request.BuildApiRequestUri("api/events/{OccurredAt}", includeQueryString: false);
+
+        uri.Should().Be("api/events/2026-07-28T14%3A30%3A00.1234567");
+    }
+
     private sealed record OptionalRouteRequest(long? Id, string Filter);
 
     private sealed record DefaultRouteRequest(string? Culture, string Filter);
@@ -54,4 +94,15 @@ public sealed class HttpApiRequestExtensionsTests
     private sealed record CatchAllRouteRequest(string Path, string Filter);
 
     private sealed record RequiredRouteRequest(long? Id);
+
+    private sealed record TemporalQueryRequest(
+        DateTime Local,
+        DateTime Utc,
+        DateTime Unspecified,
+        DateTime? Nullable,
+        DateTime? Missing,
+        DateTimeOffset Instant,
+        IReadOnlyList<DateTime> Samples);
+
+    private sealed record TemporalRouteRequest(DateTime OccurredAt);
 }

@@ -5,6 +5,7 @@ using System.Reflection;
 using System.Text.RegularExpressions;
 using Microsoft.AspNetCore.Http.Extensions;
 using Microsoft.AspNetCore.Routing.Patterns;
+using Monica.Core.JsonSerialization.Services;
 using Monica.Tool.Extensions;
 
 namespace Monica.WebApi.RpcClient.Extensions;
@@ -159,7 +160,9 @@ public static class HttpApiRequestExtensions
     {
         return value switch
         {
-            DateTime dateTime => dateTime.ToString("O", CultureInfo.InvariantCulture),
+            DateTime dateTime => dateTime.ToString(
+                JsonSerializerOptionsProvider.OutputDateTimeFormat,
+                CultureInfo.InvariantCulture),
             DateTimeOffset dateTimeOffset => dateTimeOffset.ToString("O", CultureInfo.InvariantCulture),
             IFormattable formattable => formattable.ToString(null, CultureInfo.InvariantCulture),
             _ => value.ToString() ?? string.Empty

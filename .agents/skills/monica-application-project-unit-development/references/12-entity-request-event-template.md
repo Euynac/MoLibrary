@@ -41,6 +41,9 @@ Rules:
 - Requests in the exact `*.PublishedLanguages.Domain{DomainName}.Requests` namespace are published RPC contracts when their source assembly has matching `WebApiGenerationConfig`; attributed requests elsewhere are local HTTP contracts only.
 - Published RPC result envelopes must implement `IRemoteResultEnvelope<TSelf>`. Built-in `Res`, `Res<T>`, and `ResPaged<T>` already do; custom envelopes must construct remote failures through `CreateRemoteFailure` without bypassing their invariants.
 - Treat moving a request into or out of `PublishedLanguages` as a public compatibility decision because it changes RPC client generation.
+- Use `DateTime` only for a timezone-free wall-clock value. Monica writes it as `yyyy-MM-dd'T'HH:mm:ss.FFFFFFF`, preserves significant fractional ticks, and omits `Kind`. Its default query binding and canonical JSON converter deliver `DateTimeKind.Unspecified`; a host that replaces the JSON converter owns its custom body semantics.
+- Use `DateTimeOffset` for an instant or explicit offset; its round-trip `"O"` representation preserves both. Do not use `DateTime` plus an assumed machine-local zone for instant semantics.
+- Rely on generated query/route serialization and the owning host's JSON options for body requests. Do not hand-format temporal fields or add endpoint-specific `SpecifyKind`, UTC, or local-time compensation.
 
 ## Entity
 
@@ -135,3 +138,4 @@ Rules:
 - Name events after facts, not handlers.
 - Keep event payloads stable, serializable, and focused on what consumers need.
 - Do not expose the full entity graph in an event.
+- Apply the same temporal meaning to events: `DateTime` is a timezone-free wall-clock value, while `DateTimeOffset` represents an instant or explicit offset.

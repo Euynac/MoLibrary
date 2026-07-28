@@ -13,18 +13,29 @@ public class DateTimeJsonConverter : JsonConverter<DateTime>
 {
     public override DateTime Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
     {
-        var input = reader.GetString();
+        return ReadValue(ref reader);
+    }
+
+    internal static DateTime ReadValue(ref Utf8JsonReader reader)
+    {
         if (reader.TokenType == JsonTokenType.String)
         {
-            foreach (var format in JsonSerializerOptionsProvider.DateTimeFormats)
+            var input = reader.GetString();
+            if (DateTime.TryParseExact(
+                    input,
+                    JsonSerializerOptionsProvider.DateTimeFormats,
+                    CultureInfo.InvariantCulture,
+                    DateTimeStyles.None,
+                    out var date))
             {
-                if (DateTime.TryParseExact(input, format, null, DateTimeStyles.None, out var date))
-                {
-                    return JsonSerializerOptionsProvider.NormalizeInTime(date);
-                }
+                return JsonSerializerOptionsProvider.NormalizeInTime(date);
             }
 
-            if (DateTime.TryParse(input, out var defaultDate))
+            if (DateTime.TryParse(
+                    input,
+                    CultureInfo.InvariantCulture,
+                    DateTimeStyles.None,
+                    out var defaultDate))
             {
                 return JsonSerializerOptionsProvider.NormalizeInTime(defaultDate);
             }
@@ -35,6 +46,13 @@ public class DateTimeJsonConverter : JsonConverter<DateTime>
 
     public override void Write(Utf8JsonWriter writer, DateTime value, JsonSerializerOptions options)
     {
-        writer.WriteStringValue(JsonSerializerOptionsProvider.NormalizeOutTime(value).ToString(JsonSerializerOptionsProvider.OutputDateTimeFormat));
+        WriteValue(writer, value);
+    }
+
+    internal static void WriteValue(Utf8JsonWriter writer, DateTime value)
+    {
+        writer.WriteStringValue(JsonSerializerOptionsProvider.NormalizeOutTime(value).ToString(
+            JsonSerializerOptionsProvider.OutputDateTimeFormat,
+            CultureInfo.InvariantCulture));
     }
 }

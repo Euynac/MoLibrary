@@ -9,6 +9,7 @@ Use this checklist before finishing a microservice architecture change.
 - Every `ApplicationService` request has one request-owned `[ApiEndpoint]`, while handlers contain no MVC routing or binding attributes.
 - Published attributed requests generate the intended `I{Domain}CommandApi`/`I{Domain}QueryApi`; local attributed requests generate controllers only.
 - `WebApiGenerationConfig` is present in each request-owning assembly, and no RPC metadata snapshots or build-integrated export tasks remain.
+- Request time fields use `DateTime` only for timezone-free wall-clock values and `DateTimeOffset` for instants or explicit offsets; no endpoint applies an ad hoc UTC/local conversion to compensate for transport.
 - The `.slnx` solution folders mirror the physical `src/AppHost`, `src/Shared`, `src/Services`, and `src/Migrations` layout.
 - The new service has a coherent `API` and `Domain` split.
 - AppHost or gateway projects remain composition-only and do not absorb business ProjectUnits.

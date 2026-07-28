@@ -225,7 +225,7 @@ internal static class RpcClientCodeGenerator
             .Append(GetHttpMethodExpression(endpoint.HttpMethod)).AppendLine(", requestUri);");
         if (endpoint.Binding == "Body")
         {
-            builder.AppendLine("        httpRequest.Content = global::System.Net.Http.Json.JsonContent.Create(request);");
+            builder.AppendLine("        httpRequest.Content = CreateJsonRequestContent(request);");
         }
 
         builder.Append("        return await global::Monica.Core.Results.ResultRemoteExtensions.GetResponse<")

@@ -37,6 +37,13 @@ Within solution-project references, use the chain `{Subdomain}Service.API -> {Su
 - Keep `PublishedLanguages` narrow. If a contract is only used inside one service, keep it local.
 - Do not use metadata JSON, `AdditionalFiles`, bootstrap scans, or source-tree writes to discover RPC operations; attributed published source is the contract.
 
+## Temporal Transport Contract
+
+- Use `DateTime` only for a timezone-free wall-clock value. Monica transmits it as `yyyy-MM-dd'T'HH:mm:ss.FFFFFFF`, omits trailing fractional zeroes, preserves significant ticks, and does not transport `DateTimeKind`.
+- Expect Monica's default HTTP query binding and canonical JSON converter to deliver `DateTimeKind.Unspecified`. A host that replaces the `DateTime` JSON converter owns its custom body semantics. Do not infer UTC or the server's local zone from the received value.
+- Use `DateTimeOffset` for an instant or explicit offset. Monica preserves it with the round-trip `"O"` format.
+- Do not choose the shorter `"s"` format for contract fields because it drops sub-second precision, and do not add per-request formatting workarounds. Generated query/route clients and host-owned JSON options already apply the transport contract.
+
 ## Stability Rules
 
 - Change published contracts deliberately. They are not internal implementation details.

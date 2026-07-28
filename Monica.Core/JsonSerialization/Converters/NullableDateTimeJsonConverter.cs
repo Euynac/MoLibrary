@@ -1,10 +1,13 @@
-using System.Globalization;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Monica.Core.JsonSerialization.Services;
 
 namespace Monica.Core.JsonSerialization.Converters;
 
+/// <summary>
+/// JSON converter that serializes and deserializes nullable <see cref="DateTime"/> values
+/// with the global Monica date-time formats.
+/// </summary>
 public class NullableDateTimeJsonConverter : JsonConverter<DateTime?>
 {
     // HandleNull must be enabled or null tokens never reach this converter.
@@ -12,28 +15,13 @@ public class NullableDateTimeJsonConverter : JsonConverter<DateTime?>
 
     public override DateTime? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
     {
-        var input = reader.GetString();
-        if (string.IsNullOrEmpty(input))
+        if (reader.TokenType == JsonTokenType.Null ||
+            reader.TokenType == JsonTokenType.String && string.IsNullOrEmpty(reader.GetString()))
         {
             return null;
         }
 
-
-        if (reader.TokenType == JsonTokenType.String)
-        {
-            if (DateTime.TryParseExact(input, JsonSerializerOptionsProvider.DateTimeFormats, CultureInfo.InvariantCulture, DateTimeStyles.None, out var date))
-            {
-                return JsonSerializerOptionsProvider.NormalizeInTime(date);
-            }
-
-
-            if (DateTime.TryParse(input, out var defaultDate))
-            {
-                return JsonSerializerOptionsProvider.NormalizeInTime(defaultDate);
-            }
-        }
-
-        return JsonSerializerOptionsProvider.NormalizeInTime(reader.GetDateTime());
+        return DateTimeJsonConverter.ReadValue(ref reader);
     }
 
     public override void Write(Utf8JsonWriter writer, DateTime? value, JsonSerializerOptions options)
@@ -43,6 +31,7 @@ public class NullableDateTimeJsonConverter : JsonConverter<DateTime?>
             writer.WriteNullValue();
             return;
         }
-        writer.WriteStringValue(JsonSerializerOptionsProvider.NormalizeOutTime(value.Value).ToString(JsonSerializerOptionsProvider.OutputDateTimeFormat));
+
+        DateTimeJsonConverter.WriteValue(writer, value.Value);
     }
 }
