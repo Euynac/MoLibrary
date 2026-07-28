@@ -27,7 +27,7 @@ public static class ModuleProjectUnitCodeAnalysisBuilderExtensions
 }
 
 /// <summary>Provides on-demand semantic source analysis for ProjectUnits.</summary>
-[ModuleKey("Monica.ProjectUnits.CodeAnalysis")]
+[ModuleKey(BuiltInModuleKey.ProjectUnitsCodeAnalysis)]
 public sealed class ModuleProjectUnitCodeAnalysis(ModuleProjectUnitCodeAnalysisOption option)
     : ModuleBase<ModuleProjectUnitCodeAnalysis, ModuleProjectUnitCodeAnalysisOption,
         ModuleProjectUnitCodeAnalysisGuide>(option)

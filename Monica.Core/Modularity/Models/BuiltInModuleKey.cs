@@ -43,6 +43,10 @@ public enum BuiltInModuleKey
     ServiceInvocation,
     DataChannel,
     ProjectUnits,
+    /// <summary>
+    /// Source-level ProjectUnit analysis module.
+    /// </summary>
+    ProjectUnitsCodeAnalysis,
     Locker,
     UnitOfWork,
     ObjectMapping,
