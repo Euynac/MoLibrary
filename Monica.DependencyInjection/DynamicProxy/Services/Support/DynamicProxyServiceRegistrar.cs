@@ -3,6 +3,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Monica.DependencyInjection.Abstractions;
 using Monica.DependencyInjection.DynamicProxy.Models;
+using Monica.DependencyInjection.DynamicProxy.Models.Internal;
 using Monica.DependencyInjection.DynamicProxy.Providers.Castle;
 using Monica.DependencyInjection.Models;
 using Monica.DependencyInjection.Services.Support;
@@ -49,13 +50,20 @@ internal static class DynamicProxyServiceRegistrar
         public RegisterContext(ModuleDynamicProxyOption option, bool shouldInjectCachedServiceProvider,
             ServiceDescriptor oldDescriptor,
             Type implementType,
-            List<Type> interceptorTypes, ERegisterWays way)
+            IReadOnlyList<DynamicProxyInterceptorRegistration> interceptorRegistrations, ERegisterWays way)
         {
             Option = option;
             ShouldInjectCachedServiceProvider = shouldInjectCachedServiceProvider;
             OldDescriptor = oldDescriptor;
             ImplementType = implementType;
-            InterceptorTypes = interceptorTypes;
+            InterceptorTypes = interceptorRegistrations
+                .Select(registration => registration.InterceptorType)
+                .Distinct()
+                .ToArray();
+            InterceptorAdapterTypes = interceptorRegistrations
+                .Select(registration => registration.GetAdapterType())
+                .Distinct()
+                .ToArray();
             Way = way;
             CalculateProxyKind();
             ValidateServiceInject();
@@ -66,7 +74,8 @@ internal static class DynamicProxyServiceRegistrar
         public ServiceDescriptor OldDescriptor { get; }
         public Type ServiceType => OldDescriptor.ServiceType;
         public Type ImplementType { get; }
-        public List<Type> InterceptorTypes { get; }
+        public IReadOnlyList<Type> InterceptorTypes { get; }
+        public IReadOnlyList<Type> InterceptorAdapterTypes { get; }
         public ERegisterWays Way { get; }
         public EDynamicProxyKind Kind { get; set; }
         public void CalculateProxyKind()
@@ -93,6 +102,18 @@ internal static class DynamicProxyServiceRegistrar
             if (Kind == EDynamicProxyKind.InterfaceProxy && !ServiceType.IsInterface)
                 throw new InvalidOperationException(
                     $"ServiceType '{ServiceType.FullName}' must be an interface for InterfaceProxy.");
+
+            if (Kind == EDynamicProxyKind.ClassProxy && ImplementType.IsSealed)
+            {
+                var matchedInterceptors = string.Join(", ",
+                    InterceptorTypes.Select(type => type.GetCleanFullName()));
+                throw new InvalidOperationException(
+                    $"Service '{ServiceType.GetCleanFullName()}' with implementation " +
+                    $"'{ImplementType.GetCleanFullName()}' cannot use proxy kind '{Kind}' because the implementation " +
+                    $"is sealed. Matched interceptors: {matchedInterceptors}. Make the implementation non-sealed " +
+                    $"and keep intercepted members virtual, or expose the service through an interface and use " +
+                    $"'{EDynamicProxyKind.InterfaceProxy}'.");
+            }
 
             if (Kind == EDynamicProxyKind.ClassProxy && Way is ERegisterWays.Factory or ERegisterWays.Instance
                 && Option.EnableClassProxyTargetStateWarning)
@@ -136,7 +157,7 @@ internal static class DynamicProxyServiceRegistrar
 
             if (implementType is null) continue;
 
-            var interceptorTypes = new List<Type>();
+            var interceptorRegistrations = new List<DynamicProxyInterceptorRegistration>();
 
             foreach (var registration in option.InterceptorRegistrations)
             {
@@ -145,14 +166,20 @@ internal static class DynamicProxyServiceRegistrar
                     continue;
                 }
 
-                interceptorTypes.Add(registration.GetAdapterType());
+                interceptorRegistrations.Add(registration);
             }
-            if (interceptorTypes.Count <= 0) continue;
-
-            collection.RemoveAt(index);
+            if (interceptorRegistrations.Count <= 0) continue;
 
             var shouldInjectCachedServiceProvider = implementType.IsImplementInterface<ICachedServiceProviderAccessor>();
-            var context = new RegisterContext(option, shouldInjectCachedServiceProvider, oldDescriptor, implementType, interceptorTypes, way);
+            var context = new RegisterContext(
+                option,
+                shouldInjectCachedServiceProvider,
+                oldDescriptor,
+                implementType,
+                interceptorRegistrations,
+                way);
+
+            collection.RemoveAt(index);
 
             switch (way)
             {
@@ -181,12 +208,7 @@ internal static class DynamicProxyServiceRegistrar
         // Avoid registering the same interceptor type more than once.
         IInterceptor[] GetInterceptors(IServiceProvider provider, RegisterContext context)
         {
-            var types = context.InterceptorTypes;
-            if (types.Count > 1)
-            {
-                types = types.DistinctBy(p => p.FullName).ToList();
-            }
-            return types
+            return context.InterceptorAdapterTypes
                 .Select(p => (IInterceptor)ActivatorUtilities.CreateInstance(provider, p))
                 .ToArray();
         }
@@ -331,8 +353,8 @@ internal static class DynamicProxyServiceRegistrar
 public enum EDynamicProxyKind
 {
     /// <summary>
-    /// Creates proxies for virtual members on concrete classes. Currently only virtual methods are
-    /// supported.
+    /// Creates proxies for virtual members on non-sealed concrete classes. The implementation must be inheritable, and
+    /// only virtual methods can be intercepted.
     /// </summary>
     ClassProxy,
     /// <summary>

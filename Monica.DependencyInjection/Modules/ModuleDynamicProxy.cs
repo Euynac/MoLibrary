@@ -54,6 +54,12 @@ public class
     /// <typeparam name="TInterceptor">The interceptor type.</typeparam>
     /// <param name="shouldIntercept">Predicate that decides whether the interceptor applies to a service.</param>
     /// <param name="secondKey">Optional stable secondary key used when repeated calls should collapse into a single configuration.</param>
+    /// <remarks>
+    /// Monica uses an interface proxy when the exposed service type is an interface and a class proxy otherwise, unless
+    /// the host configures another proxy kind explicitly. Class proxies require a non-sealed implementation, and only
+    /// virtual members can be intercepted. A sealed implementation can still be intercepted when it is exposed through
+    /// an interface and uses <see cref="EDynamicProxyKind.InterfaceProxy"/>.
+    /// </remarks>
     public ModuleDynamicProxyGuide AddInterceptor<TInterceptor>(
         Func<ProxyBuildContext, bool> shouldIntercept,
         string? secondKey = null)
@@ -72,6 +78,11 @@ public class
     /// </summary>
     /// <typeparam name="TServiceType">The service type to configure.</typeparam>
     /// <param name="kind">The proxy kind.</param>
+    /// <remarks>
+    /// <see cref="EDynamicProxyKind.InterfaceProxy"/> requires <typeparamref name="TServiceType"/> to be an interface.
+    /// <see cref="EDynamicProxyKind.ClassProxy"/> requires each matched implementation to be non-sealed, and only its
+    /// virtual members can be intercepted.
+    /// </remarks>
     public ModuleDynamicProxyGuide SetProxyKindOfServiceType<TServiceType>(EDynamicProxyKind kind)
     {
         ConfigureModuleOption(option => option.SetProxyKindOfServiceType<TServiceType>(kind),

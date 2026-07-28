@@ -20,6 +20,7 @@
     <Project Path="tests/Test.Monica.Configuration/Test.Monica.Configuration.csproj" />
     <Project Path="tests/Test.Monica.Core/Test.Monica.Core.csproj" />
     <Project Path="tests/Test.Monica.Dapr/Test.Monica.Dapr.csproj" />
+    <Project Path="tests/Test.Monica.DependencyInjection/Test.Monica.DependencyInjection.csproj" />
     <Project Path="tests/Test.Monica.Framework.UI/Test.Monica.Framework.UI.csproj" />
     <Project Path="tests/Test.Monica.Generators.AutoController/Test.Monica.Generators.AutoController.csproj" />
     <Project Path="tests/Test.Monica.JobScheduler.UI/Test.Monica.JobScheduler.UI.csproj" />
