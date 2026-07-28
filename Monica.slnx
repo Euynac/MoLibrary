@@ -62,6 +62,7 @@
   <Project Path="Monica.OpenTelemetry.UI/Monica.OpenTelemetry.UI.csproj" />
   <Project Path="Monica.OpenTelemetry/Monica.OpenTelemetry.csproj" />
   <Project Path="Monica.Profiling/Monica.Profiling.csproj" />
+  <Project Path="Monica.ProjectUnits.CodeAnalysis/Monica.ProjectUnits.CodeAnalysis.csproj" />
   <Project Path="Monica.ProjectUnits/Monica.ProjectUnits.csproj" />
   <Project Path="Monica.ServiceDiscovery/Monica.ServiceDiscovery.csproj" />
   <Project Path="Monica.Repository.UI/Monica.Repository.UI.csproj" />
