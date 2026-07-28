@@ -73,9 +73,26 @@ public sealed class SeederStartupHostedServiceTests
     private sealed class PassThroughExecutionPipeline : IExecutionPipeline
     {
         public Task<TResult> ExecuteAsync<TInput, TResult>(
-            ExecutionContext<TInput> context,
-            ExecutionDelegate<TResult> terminal)
+            ExecutionDescriptor descriptor,
+            TInput input,
+            object? target,
+            ExecutionDelegate<TResult> terminal,
+            CancellationToken cancellationToken = default,
+            ExecutionFeatureCollection? features = null)
         {
+            descriptor.TransactionMode.Should().Be(ExecutionTransactionMode.Automatic);
+            return terminal();
+        }
+
+        public Task ExecuteAsync<TInput>(
+            ExecutionDescriptor descriptor,
+            TInput input,
+            object? target,
+            Func<Task> terminal,
+            CancellationToken cancellationToken = default,
+            ExecutionFeatureCollection? features = null)
+        {
+            descriptor.TransactionMode.Should().Be(ExecutionTransactionMode.Automatic);
             return terminal();
         }
     }

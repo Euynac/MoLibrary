@@ -45,10 +45,9 @@ public class ModuleExecutionTiming(ModuleExecutionTimingOption option)
     {
         DependsOnModule<ModuleExecutionPipelineGuide>().Register()
             .AddBehavior(
-                "profiling.execution-timing",
                 typeof(ExecutionTimingBehavior<,>),
                 ExecutionBehaviorOrder.Diagnostics + 100,
-                static descriptor => descriptor.IsBusinessOperation && !descriptor.IsLongRunning);
+                static descriptor => descriptor.IsBusinessOperation);
 
         if (Option.AggregationMode == ExecutionTimingAggregationMode.BackgroundBatch)
         {

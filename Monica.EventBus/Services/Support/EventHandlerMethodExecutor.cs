@@ -1,4 +1,3 @@
-using System.Collections.Concurrent;
 using Microsoft.Extensions.DependencyInjection;
 using Monica.Core.Execution;
 using Monica.EventBus.Abstractions;
@@ -30,9 +29,6 @@ internal sealed class EventHandlerMethodExecutor<TEvent> : IEventHandlerMethodEx
 internal static class EventHandlerExecutionAdapter<TEvent>
     where TEvent : class
 {
-    private static readonly ConcurrentDictionary<(Type HandlerType, EventSubscriptionScope Scope), ExecutionDescriptor>
-        DESCRIPTORS = new();
-
     public static async Task ExecuteAsync(
         IEventHandler target,
         object parameter,
@@ -47,9 +43,19 @@ internal static class EventHandlerExecutionAdapter<TEvent>
                 nameof(parameter));
         }
 
-        var descriptor = DESCRIPTORS.GetOrAdd(
-            (target.GetType(), subscription.Scope),
-            static key => CreateDescriptor(key.HandlerType, key.Scope));
+        var handlerType = target.GetType();
+        var contract = subscription.Scope == EventSubscriptionScope.Local
+            ? typeof(ILocalEventHandler<TEvent>)
+            : typeof(IDistributedEventHandler<TEvent>);
+        var point = subscription.Scope == EventSubscriptionScope.Local
+            ? EventBusExecutionPoints.LocalHandler
+            : EventBusExecutionPoints.DistributedHandler;
+        var descriptor = ExecutionDescriptor.ForInterface<TEvent, ExecutionUnit>(
+            point,
+            handlerType,
+            contract,
+            isBusinessOperation: true,
+            transactionMode: ExecutionTransactionMode.Automatic);
         var features = new ExecutionFeatureCollection();
         features.Set(new EventHandlerExecutionFeature(
             subscription.Id,
@@ -57,23 +63,14 @@ internal static class EventHandlerExecutionAdapter<TEvent>
             subscription.Scope,
             subscription.ServiceKey,
             subscription.IsAutoDiscovered));
-        var context = new ExecutionContext<TEvent>(
-            descriptor,
-            eventData,
-            target,
-            cancellationToken,
-            features);
         await serviceProvider.GetRequiredService<IExecutionPipeline>()
-            .ExecuteAsync(context, async () =>
-            {
-                await InvokeHandlerAsync(
-                        target,
-                        eventData,
-                        subscription.Scope,
-                        cancellationToken)
-                    .ConfigureAwait(false);
-                return ExecutionUnit.Value;
-            })
+            .ExecuteAsync(
+                descriptor,
+                eventData,
+                target,
+                () => InvokeHandlerAsync(target, eventData, subscription.Scope, cancellationToken),
+                cancellationToken,
+                features)
             .ConfigureAwait(false);
     }
 
@@ -91,26 +88,5 @@ internal static class EventHandlerExecutionAdapter<TEvent>
                 ((IDistributedEventHandler<TEvent>)handler).HandleEventAsync(eventData, cancellationToken),
             _ => throw new ArgumentOutOfRangeException(nameof(scope), scope, "Unsupported event subscription scope.")
         };
-    }
-
-    private static ExecutionDescriptor CreateDescriptor(Type handlerType, EventSubscriptionScope scope)
-    {
-        var contract = scope == EventSubscriptionScope.Local
-            ? typeof(ILocalEventHandler<TEvent>)
-            : typeof(IDistributedEventHandler<TEvent>);
-        var entryMethod = handlerType.GetInterfaceMap(contract).TargetMethods.Single();
-        var point = scope == EventSubscriptionScope.Local
-            ? EventBusExecutionPoints.LocalHandler
-            : EventBusExecutionPoints.DistributedHandler;
-
-        return new ExecutionDescriptor(
-            point,
-            $"{handlerType.FullName}.{entryMethod.Name}",
-            handlerType,
-            entryMethod,
-            typeof(TEvent),
-            typeof(ExecutionUnit),
-            isBusinessOperation: true,
-            isLongRunning: false);
     }
 }

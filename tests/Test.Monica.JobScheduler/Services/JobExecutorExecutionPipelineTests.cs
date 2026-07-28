@@ -36,6 +36,7 @@ public sealed class JobExecutorExecutionPipelineTests
 
         pipeline.Invocations.Should().Be(1);
         pipeline.Point.Should().Be(JobSchedulerExecutionPoints.RecurringAttempt);
+        pipeline.TransactionMode.Should().Be(ExecutionTransactionMode.None);
         pipeline.Feature.Should().Be(new JobExecutionFeature("recurring-1", JobType.Recurring));
         scope.ServiceProvider.GetRequiredService<RecordingRecurringJob>().Invocations.Should().Be(1);
     }
@@ -64,6 +65,7 @@ public sealed class JobExecutorExecutionPipelineTests
         assertion.Which.Should().BeSameAs(expected);
         pipeline.Invocations.Should().Be(1);
         pipeline.Point.Should().Be(JobSchedulerExecutionPoints.TriggeredAttempt);
+        pipeline.TransactionMode.Should().Be(ExecutionTransactionMode.None);
         pipeline.Feature.Should().Be(new JobExecutionFeature("triggered-1", JobType.Triggered));
     }
 
@@ -94,16 +96,40 @@ public sealed class JobExecutorExecutionPipelineTests
 
         public ExecutionPoint? Point { get; private set; }
 
+        public ExecutionTransactionMode TransactionMode { get; private set; }
+
         public JobExecutionFeature? Feature { get; private set; }
 
         public Task<TResult> ExecuteAsync<TInput, TResult>(
-            ExecutionContext<TInput> context,
-            ExecutionDelegate<TResult> terminal)
+            ExecutionDescriptor descriptor,
+            TInput input,
+            object? target,
+            ExecutionDelegate<TResult> terminal,
+            CancellationToken cancellationToken = default,
+            ExecutionFeatureCollection? features = null)
+        {
+            Record(descriptor, features);
+            return terminal();
+        }
+
+        public Task ExecuteAsync<TInput>(
+            ExecutionDescriptor descriptor,
+            TInput input,
+            object? target,
+            Func<Task> terminal,
+            CancellationToken cancellationToken = default,
+            ExecutionFeatureCollection? features = null)
+        {
+            Record(descriptor, features);
+            return terminal();
+        }
+
+        private void Record(ExecutionDescriptor descriptor, ExecutionFeatureCollection? features)
         {
             Invocations++;
-            Point = context.Descriptor.Point;
-            Feature = context.Features.GetRequired<JobExecutionFeature>();
-            return terminal();
+            Point = descriptor.Point;
+            TransactionMode = descriptor.TransactionMode;
+            Feature = features?.GetRequired<JobExecutionFeature>();
         }
     }
 

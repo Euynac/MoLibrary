@@ -99,10 +99,8 @@ public sealed class MvcExecutionPipelineIntegrationTests
             monica.AddMediator();
             monica.AddExecutionPipeline()
                 .AddBehavior<MvcPipelineObservationBehavior>(
-                    "test.mvc-observation",
                     descriptorFilter: static descriptor => descriptor.Point == MvcExecutionPoints.Action)
                 .AddBehavior<MediatorPipelineObservationBehavior>(
-                    "test.mediator-observation",
                     descriptorFilter: static descriptor => descriptor.Point == MediatorExecutionPoints.Request);
         });
 

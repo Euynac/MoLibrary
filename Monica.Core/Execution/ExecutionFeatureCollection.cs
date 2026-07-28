@@ -11,12 +11,12 @@ namespace Monica.Core.Execution;
 /// </remarks>
 public sealed class ExecutionFeatureCollection
 {
-    private readonly Dictionary<Type, object> _features = [];
+    private Dictionary<Type, object>? _features;
 
     /// <summary>
     /// Gets the number of registered features.
     /// </summary>
-    public int Count => _features.Count;
+    public int Count => _features?.Count ?? 0;
 
     /// <summary>
     /// Adds or replaces a feature under its exact generic type.
@@ -27,7 +27,7 @@ public sealed class ExecutionFeatureCollection
         where TFeature : notnull
     {
         ArgumentNullException.ThrowIfNull(feature);
-        _features[typeof(TFeature)] = feature;
+        (_features ??= [])[typeof(TFeature)] = feature;
     }
 
     /// <summary>
@@ -39,7 +39,7 @@ public sealed class ExecutionFeatureCollection
     public bool TryGet<TFeature>([MaybeNullWhen(false)] out TFeature feature)
         where TFeature : notnull
     {
-        if (_features.TryGetValue(typeof(TFeature), out var value))
+        if (_features is not null && _features.TryGetValue(typeof(TFeature), out var value))
         {
             feature = (TFeature)value;
             return true;
@@ -75,6 +75,6 @@ public sealed class ExecutionFeatureCollection
     public bool Remove<TFeature>()
         where TFeature : notnull
     {
-        return _features.Remove(typeof(TFeature));
+        return _features?.Remove(typeof(TFeature)) == true;
     }
 }

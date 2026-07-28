@@ -1,4 +1,4 @@
-using System.Collections.Concurrent;
+using System.Reflection;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Monica.Core.Execution;
@@ -9,10 +9,8 @@ namespace Monica.Core.HostedService.Services.Support;
 
 internal static class HostedServiceExecutionAdapter
 {
-    private static readonly ConcurrentDictionary<
-        (Type ComponentType, ExecutionPoint Point, Type InputType, Type ResultType),
-        ExecutionDescriptor>
-        DESCRIPTORS = new();
+    private static readonly MethodInfo START_METHOD = typeof(IHostedService).GetMethod(nameof(IHostedService.StartAsync))!;
+    private static readonly MethodInfo STOP_METHOD = typeof(IHostedService).GetMethod(nameof(IHostedService.StopAsync))!;
 
     public static async Task ExecuteLifecycleAsync(
         IServiceScopeFactory serviceScopeFactory,
@@ -25,24 +23,24 @@ internal static class HostedServiceExecutionAdapter
     {
         await using var scope = serviceScopeFactory.CreateAsyncScope();
         var serviceType = service.GetType();
-        var descriptor = DESCRIPTORS.GetOrAdd(
-            (serviceType, point, typeof(ExecutionUnit), typeof(ExecutionUnit)),
-            static key => CreateLifecycleDescriptor(key.ComponentType, key.Point));
-        var context = CreateContext(
-            descriptor,
-            ExecutionUnit.Value,
-            service,
-            serviceName,
-            phase,
+        var isStart = point == HostedServiceExecutionPoints.Start;
+        var entryMethod = isStart ? START_METHOD : STOP_METHOD;
+        var descriptor = ExecutionDescriptor.ForMethod<ExecutionUnit, ExecutionUnit>(
+            point,
             serviceType,
-            cancellationToken);
+            entryMethod,
+            isBusinessOperation: false,
+            transactionMode: ExecutionTransactionMode.None);
+        var features = CreateFeatures(serviceName, phase, serviceType);
 
         await scope.ServiceProvider.GetRequiredService<IExecutionPipeline>()
-            .ExecuteAsync(context, async () =>
-            {
-                await terminal().ConfigureAwait(false);
-                return ExecutionUnit.Value;
-            })
+            .ExecuteAsync(
+                descriptor,
+                ExecutionUnit.Value,
+                service,
+                terminal,
+                cancellationToken,
+                features)
             .ConfigureAwait(false);
     }
 
@@ -55,28 +53,25 @@ internal static class HostedServiceExecutionAdapter
     {
         await using var scope = serviceScopeFactory.CreateAsyncScope();
         var workItem = scope.ServiceProvider.GetRequiredService<TWorkItem>();
-        var descriptor = DESCRIPTORS.GetOrAdd(
-            (typeof(TWorkItem), HostedServiceExecutionPoints.WorkItem, typeof(ExecutionUnit), typeof(ExecutionUnit)),
-            static key => CreateWorkItemDescriptor(
-                key.ComponentType,
-                typeof(IHostedServiceWorkItem),
-                typeof(ExecutionUnit),
-                typeof(ExecutionUnit)));
-        var context = CreateContext(
-            descriptor,
-            ExecutionUnit.Value,
-            workItem,
+        var descriptor = ExecutionDescriptor.ForInterface<ExecutionUnit, ExecutionUnit>(
+            HostedServiceExecutionPoints.WorkItem,
+            typeof(TWorkItem),
+            typeof(IHostedServiceWorkItem),
+            isBusinessOperation: true,
+            transactionMode: ExecutionTransactionMode.Automatic);
+        var features = CreateFeatures(
             serviceName,
             HostedServiceLifecyclePhase.WorkItem,
-            service.GetType(),
-            cancellationToken);
+            service.GetType());
 
         await scope.ServiceProvider.GetRequiredService<IExecutionPipeline>()
-            .ExecuteAsync(context, async () =>
-            {
-                await workItem.ExecuteAsync(cancellationToken).ConfigureAwait(false);
-                return ExecutionUnit.Value;
-            })
+            .ExecuteAsync(
+                descriptor,
+                ExecutionUnit.Value,
+                workItem,
+                () => workItem.ExecuteAsync(cancellationToken),
+                cancellationToken,
+                features)
             .ConfigureAwait(false);
     }
 
@@ -90,77 +85,35 @@ internal static class HostedServiceExecutionAdapter
     {
         await using var scope = serviceScopeFactory.CreateAsyncScope();
         var workItem = scope.ServiceProvider.GetRequiredService<TWorkItem>();
-        var descriptor = DESCRIPTORS.GetOrAdd(
-            (typeof(TWorkItem), HostedServiceExecutionPoints.WorkItem, typeof(TInput), typeof(TResult)),
-            static key => CreateWorkItemDescriptor(
-                key.ComponentType,
-                typeof(IHostedServiceWorkItem<TInput, TResult>),
-                typeof(TInput),
-                typeof(TResult)));
-        var context = CreateContext(
-            descriptor,
-            input,
-            workItem,
+        var descriptor = ExecutionDescriptor.ForInterface<TInput, TResult>(
+            HostedServiceExecutionPoints.WorkItem,
+            typeof(TWorkItem),
+            typeof(IHostedServiceWorkItem<TInput, TResult>),
+            isBusinessOperation: true,
+            transactionMode: ExecutionTransactionMode.Automatic);
+        var features = CreateFeatures(
             serviceName,
             HostedServiceLifecyclePhase.WorkItem,
-            service.GetType(),
-            cancellationToken);
+            service.GetType());
 
         return await scope.ServiceProvider.GetRequiredService<IExecutionPipeline>()
-            .ExecuteAsync(context, () => workItem.ExecuteAsync(input, cancellationToken))
+            .ExecuteAsync(
+                descriptor,
+                input,
+                workItem,
+                () => workItem.ExecuteAsync(input, cancellationToken),
+                cancellationToken,
+                features)
             .ConfigureAwait(false);
     }
 
-    private static ExecutionContext<TInput> CreateContext<TInput>(
-        ExecutionDescriptor descriptor,
-        TInput input,
-        object target,
+    private static ExecutionFeatureCollection CreateFeatures(
         string serviceName,
         HostedServiceLifecyclePhase phase,
-        Type ownerType,
-        CancellationToken cancellationToken)
+        Type ownerType)
     {
         var features = new ExecutionFeatureCollection();
         features.Set(new HostedServiceExecutionFeature(serviceName, phase, ownerType));
-        return new ExecutionContext<TInput>(
-            descriptor,
-            input,
-            target,
-            cancellationToken,
-            features);
-    }
-
-    private static ExecutionDescriptor CreateLifecycleDescriptor(Type serviceType, ExecutionPoint point)
-    {
-        var isStart = point == HostedServiceExecutionPoints.Start;
-        var methodName = isStart ? nameof(IHostedService.StartAsync) : nameof(IHostedService.StopAsync);
-        var entryMethod = serviceType.GetMethod(methodName, [typeof(CancellationToken)]);
-        return new ExecutionDescriptor(
-            point,
-            $"{serviceType.FullName}.{methodName}",
-            serviceType,
-            entryMethod,
-            typeof(ExecutionUnit),
-            typeof(ExecutionUnit),
-            isBusinessOperation: false,
-            isLongRunning: false);
-    }
-
-    private static ExecutionDescriptor CreateWorkItemDescriptor(
-        Type workItemType,
-        Type contract,
-        Type inputType,
-        Type resultType)
-    {
-        var entryMethod = workItemType.GetInterfaceMap(contract).TargetMethods.Single();
-        return new ExecutionDescriptor(
-            HostedServiceExecutionPoints.WorkItem,
-            $"{workItemType.FullName}.{entryMethod.Name}",
-            workItemType,
-            entryMethod,
-            inputType,
-            resultType,
-            isBusinessOperation: true,
-            isLongRunning: false);
+        return features;
     }
 }

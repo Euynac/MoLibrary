@@ -21,7 +21,6 @@ public sealed class MediatorExecutionPipelineTests
         {
             monica.AddMediator();
             monica.AddExecutionPipeline().AddBehavior<MediatorBehavior>(
-                "test.mediator",
                 descriptorFilter: descriptor => descriptor.Point == MediatorExecutionPoints.Request,
                 lifetime: ServiceLifetime.Scoped);
         });
@@ -46,7 +45,6 @@ public sealed class MediatorExecutionPipelineTests
         {
             monica.AddMediator();
             monica.AddExecutionPipeline().AddBehavior<ShortCircuitBehavior>(
-                "test.mediator.short-circuit",
                 descriptorFilter: descriptor => descriptor.Point == MediatorExecutionPoints.Request);
         });
 
@@ -100,6 +98,7 @@ public sealed class MediatorExecutionPipelineTests
             ExecutionDelegate<string> next)
         {
             context.Descriptor.Point.Should().Be(MediatorExecutionPoints.Request);
+            context.Descriptor.TransactionMode.Should().Be(ExecutionTransactionMode.Automatic);
             context.Target.Should().BeOfType<TestHandler>();
             var result = await next();
             result.Should().StartWith(identity.Value.ToString());

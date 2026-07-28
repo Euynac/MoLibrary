@@ -41,15 +41,12 @@ public sealed class ExecutionTimingBehaviorTests
 
     private static ExecutionContext<string> CreateContext()
     {
-        var descriptor = new ExecutionDescriptor(
+        var descriptor = ExecutionDescriptor.ForMethod<string, int>(
             new ExecutionPoint("test.execution-timing"),
-            "test operation",
             typeof(ExecutionTimingBehaviorTests),
             entryMethod: null,
-            typeof(string),
-            typeof(int),
             isBusinessOperation: true,
-            isLongRunning: false);
+            transactionMode: ExecutionTransactionMode.Automatic);
         return new ExecutionContext<string>(
             descriptor,
             "input",

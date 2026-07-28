@@ -14,8 +14,6 @@ namespace Monica.JobScheduler.Services;
 /// </summary>
 public sealed class JobExecutor(JobInstanceManager jobInstanceManager)
 {
-    private static readonly ConcurrentDictionary<Type, ExecutionDescriptor> RECURRING_DESCRIPTORS = new();
-    private static readonly ConcurrentDictionary<Type, ExecutionDescriptor> TRIGGERED_DESCRIPTORS = new();
     private static readonly ConcurrentDictionary<Type, Func<JobExecutor, object, JobExecutionContext, Task>>
         TRIGGERED_EXECUTORS = new();
 
@@ -28,7 +26,12 @@ public sealed class JobExecutor(JobInstanceManager jobInstanceManager)
                 $"Job type does not implement {nameof(IRecurringJob)}: {context.JobType.FullName}");
         }
 
-        var descriptor = RECURRING_DESCRIPTORS.GetOrAdd(context.JobType, CreateRecurringDescriptor);
+        var descriptor = ExecutionDescriptor.ForInterface<ExecutionUnit, ExecutionUnit>(
+            JobSchedulerExecutionPoints.RecurringAttempt,
+            context.JobType,
+            typeof(IRecurringJob),
+            isBusinessOperation: true,
+            transactionMode: ExecutionTransactionMode.None);
         await ExecuteAttemptAsync(
             job,
             context,
@@ -62,9 +65,12 @@ public sealed class JobExecutor(JobInstanceManager jobInstanceManager)
                 $"Triggered job '{context.JobType.FullName}' requires arguments of type '{typeof(TArgs).FullName}'.");
         }
 
-        var descriptor = TRIGGERED_DESCRIPTORS.GetOrAdd(
+        var descriptor = ExecutionDescriptor.ForInterface<TArgs, ExecutionUnit>(
+            JobSchedulerExecutionPoints.TriggeredAttempt,
             context.JobType,
-            static jobType => CreateTriggeredDescriptor<TArgs>(jobType));
+            typeof(ITriggeredJob<TArgs>),
+            isBusinessOperation: true,
+            transactionMode: ExecutionTransactionMode.None);
         await ExecuteAttemptAsync(
             job,
             context,
@@ -79,36 +85,6 @@ public sealed class JobExecutor(JobInstanceManager jobInstanceManager)
         return context.ServiceProvider.GetService(context.JobType)
                ?? throw new InvalidOperationException(
                    $"The job type is not registered in DI: {context.JobType.FullName}");
-    }
-
-    private static ExecutionDescriptor CreateRecurringDescriptor(Type jobType)
-    {
-        var entryMethod = jobType.GetInterfaceMap(typeof(IRecurringJob)).TargetMethods.Single();
-        return new ExecutionDescriptor(
-            JobSchedulerExecutionPoints.RecurringAttempt,
-            $"{jobType.FullName}.{entryMethod.Name}",
-            jobType,
-            entryMethod,
-            typeof(ExecutionUnit),
-            typeof(ExecutionUnit),
-            isBusinessOperation: true,
-            isLongRunning: false);
-    }
-
-    private static ExecutionDescriptor CreateTriggeredDescriptor<TArgs>(Type jobType)
-        where TArgs : class
-    {
-        var contract = typeof(ITriggeredJob<TArgs>);
-        var entryMethod = jobType.GetInterfaceMap(contract).TargetMethods.Single();
-        return new ExecutionDescriptor(
-            JobSchedulerExecutionPoints.TriggeredAttempt,
-            $"{jobType.FullName}.{entryMethod.Name}",
-            jobType,
-            entryMethod,
-            typeof(TArgs),
-            typeof(ExecutionUnit),
-            isBusinessOperation: true,
-            isLongRunning: false);
     }
 
     private static Func<JobExecutor, object, JobExecutionContext, Task> CreateTriggeredExecutor(Type jobType)
@@ -148,22 +124,17 @@ public sealed class JobExecutor(JobInstanceManager jobInstanceManager)
     {
         var features = new ExecutionFeatureCollection();
         features.Set(new JobExecutionFeature(jobContext.InstanceId, jobType));
-        var executionContext = new ExecutionContext<TInput>(
-            descriptor,
-            input,
-            job,
-            jobContext.CancellationToken,
-            features);
-
         BindExecutionLogWriter(job, jobContext.InstanceId);
         try
         {
             await jobContext.ServiceProvider.GetRequiredService<IExecutionPipeline>()
-                .ExecuteAsync(executionContext, async () =>
-                {
-                    await executeJob().ConfigureAwait(false);
-                    return ExecutionUnit.Value;
-                })
+                .ExecuteAsync(
+                    descriptor,
+                    input,
+                    job,
+                    executeJob,
+                    jobContext.CancellationToken,
+                    features)
                 .ConfigureAwait(false);
         }
         finally

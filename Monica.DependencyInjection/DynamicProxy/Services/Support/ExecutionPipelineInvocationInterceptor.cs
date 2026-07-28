@@ -22,7 +22,6 @@ internal sealed class ExecutionPipelineInvocationInterceptor(IExecutionPipeline 
             BindingFlags.Instance | BindingFlags.NonPublic)!;
 
     private static readonly ConcurrentDictionary<Type, ResultInvocation> RESULT_INVOCATIONS = new();
-    private static readonly ConcurrentDictionary<DescriptorCacheKey, ExecutionDescriptor> DESCRIPTORS = new();
 
     /// <inheritdoc />
     public override Task InterceptAsync(IMethodInvocation invocation)
@@ -45,56 +44,49 @@ internal sealed class ExecutionPipelineInvocationInterceptor(IExecutionPipeline 
 
     private async Task ExecuteWithoutResultAsync(IMethodInvocation invocation)
     {
-        var context = CreateContext(invocation, typeof(ExecutionUnit));
-        await executionPipeline.ExecuteAsync<DynamicProxyMethodInput, ExecutionUnit>(
-            context,
-            async () =>
-            {
-                await invocation.ProceedAsync();
-                return ExecutionUnit.Value;
-            });
+        var descriptor = CreateDescriptor<ExecutionUnit>(invocation);
+        await executionPipeline.ExecuteAsync(
+            descriptor,
+            CreateInput(invocation),
+            invocation.TargetObject,
+            invocation.ProceedAsync,
+            FindCancellationToken(invocation.Method, invocation.Arguments));
     }
 
     private async Task ExecuteWithResultAsync<TResult>(IMethodInvocation invocation)
     {
-        var context = CreateContext(invocation, typeof(TResult));
-        var result = await executionPipeline.ExecuteAsync<DynamicProxyMethodInput, TResult>(
-            context,
+        var descriptor = CreateDescriptor<TResult>(invocation);
+        var result = await executionPipeline.ExecuteAsync(
+            descriptor,
+            CreateInput(invocation),
+            invocation.TargetObject,
             async () =>
             {
                 await invocation.ProceedAsync();
                 return (TResult)invocation.ReturnValue;
-            });
+            },
+            FindCancellationToken(invocation.Method, invocation.Arguments));
         invocation.ReturnValue = result!;
     }
 
-    private static ExecutionContext<DynamicProxyMethodInput> CreateContext(
-        IMethodInvocation invocation,
-        Type resultType)
+    private static ExecutionDescriptor CreateDescriptor<TResult>(IMethodInvocation invocation)
     {
         var method = invocation.Method;
         var componentType = method.DeclaringType ?? invocation.TargetObject.GetType();
-        var descriptor = DESCRIPTORS.GetOrAdd(
-            new DescriptorCacheKey(method, componentType, resultType),
-            static key => new ExecutionDescriptor(
-                DynamicProxyExecutionPoints.Method,
-                $"{key.ComponentType.FullName ?? key.ComponentType.Name}.{key.Method.Name}",
-                key.ComponentType,
-                key.Method,
-                typeof(DynamicProxyMethodInput),
-                key.ResultType,
-                isBusinessOperation: true,
-                isLongRunning: false));
-        var input = new DynamicProxyMethodInput(
+        return ExecutionDescriptor.ForMethod<DynamicProxyMethodInput, TResult>(
+            DynamicProxyExecutionPoints.Method,
+            componentType,
             method,
+            isBusinessOperation: true,
+            transactionMode: ExecutionTransactionMode.Automatic);
+    }
+
+    private static DynamicProxyMethodInput CreateInput(IMethodInvocation invocation)
+    {
+        return new DynamicProxyMethodInput(
+            invocation.Method,
             invocation.Arguments.ToArray(),
             invocation.GenericArguments.ToArray());
-
-        return new ExecutionContext<DynamicProxyMethodInput>(
-            descriptor,
-            input,
-            invocation.TargetObject,
-            FindCancellationToken(method, invocation.Arguments));
     }
 
     private static CancellationToken FindCancellationToken(MethodInfo method, IReadOnlyList<object> arguments)
@@ -118,9 +110,4 @@ internal sealed class ExecutionPipelineInvocationInterceptor(IExecutionPipeline 
             .MakeGenericMethod(resultType)
             .CreateDelegate<ResultInvocation>();
     }
-
-    private readonly record struct DescriptorCacheKey(
-        MethodInfo Method,
-        Type ComponentType,
-        Type ResultType);
 }

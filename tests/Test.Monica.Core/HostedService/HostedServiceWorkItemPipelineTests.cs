@@ -36,6 +36,7 @@ public sealed class HostedServiceWorkItemPipelineTests
         result.Should().Be("value");
         capture.PipelineScopeIdentity.Should().Be(capture.WorkItemScopeIdentity);
         capture.Point.Should().Be(HostedServiceExecutionPoints.WorkItem);
+        capture.TransactionMode.Should().Be(ExecutionTransactionMode.Automatic);
         capture.Feature.Should().NotBeNull();
         capture.Feature!.ServiceName.Should().Be(nameof(TestHostedService));
         capture.WorkItemDisposed.Should().BeTrue();
@@ -76,6 +77,8 @@ public sealed class HostedServiceWorkItemPipelineTests
 
         public ExecutionPoint? Point { get; set; }
 
+        public ExecutionTransactionMode TransactionMode { get; set; }
+
         public HostedServiceExecutionFeature? Feature { get; set; }
 
         public bool WorkItemDisposed { get; set; }
@@ -86,13 +89,35 @@ public sealed class HostedServiceWorkItemPipelineTests
         WorkItemCapture capture) : IExecutionPipeline
     {
         public Task<TResult> ExecuteAsync<TInput, TResult>(
-            ExecutionContext<TInput> context,
-            ExecutionDelegate<TResult> terminal)
+            ExecutionDescriptor descriptor,
+            TInput input,
+            object? target,
+            ExecutionDelegate<TResult> terminal,
+            CancellationToken cancellationToken = default,
+            ExecutionFeatureCollection? features = null)
+        {
+            Record(descriptor, features);
+            return terminal();
+        }
+
+        public Task ExecuteAsync<TInput>(
+            ExecutionDescriptor descriptor,
+            TInput input,
+            object? target,
+            Func<Task> terminal,
+            CancellationToken cancellationToken = default,
+            ExecutionFeatureCollection? features = null)
+        {
+            Record(descriptor, features);
+            return terminal();
+        }
+
+        private void Record(ExecutionDescriptor descriptor, ExecutionFeatureCollection? features)
         {
             capture.PipelineScopeIdentity = identity.Value;
-            capture.Point = context.Descriptor.Point;
-            capture.Feature = context.Features.GetRequired<HostedServiceExecutionFeature>();
-            return terminal();
+            capture.Point = descriptor.Point;
+            capture.TransactionMode = descriptor.TransactionMode;
+            capture.Feature = features?.GetRequired<HostedServiceExecutionFeature>();
         }
     }
 

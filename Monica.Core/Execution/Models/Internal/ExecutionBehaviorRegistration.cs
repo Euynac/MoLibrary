@@ -8,7 +8,6 @@ internal sealed class ExecutionBehaviorRegistration
     private readonly HashSet<(Type InputType, Type ResultType)> _closedContracts;
 
     private ExecutionBehaviorRegistration(
-        string key,
         Type implementationType,
         int order,
         Func<ExecutionDescriptor, bool> descriptorFilter,
@@ -16,8 +15,10 @@ internal sealed class ExecutionBehaviorRegistration
         HashSet<(Type InputType, Type ResultType)> closedContracts,
         bool isOpenGeneric)
     {
-        Key = key;
         ImplementationType = implementationType;
+        SortName = implementationType.AssemblyQualifiedName
+                   ?? implementationType.FullName
+                   ?? implementationType.Name;
         Order = order;
         DescriptorFilter = descriptorFilter;
         Lifetime = lifetime;
@@ -25,9 +26,9 @@ internal sealed class ExecutionBehaviorRegistration
         IsOpenGeneric = isOpenGeneric;
     }
 
-    public string Key { get; }
-
     public Type ImplementationType { get; }
+
+    public string SortName { get; }
 
     public int Order { get; }
 
@@ -38,21 +39,12 @@ internal sealed class ExecutionBehaviorRegistration
     private bool IsOpenGeneric { get; }
 
     public static ExecutionBehaviorRegistration Create(
-        string key,
         Type implementationType,
         int order,
         Func<ExecutionDescriptor, bool>? descriptorFilter,
         ServiceLifetime lifetime)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(key);
         ArgumentNullException.ThrowIfNull(implementationType);
-
-        if (!string.Equals(key, key.Trim(), StringComparison.Ordinal))
-        {
-            throw new ArgumentException(
-                "Execution behavior keys must not contain leading or trailing whitespace.",
-                nameof(key));
-        }
 
         if (implementationType is not { IsClass: true, IsAbstract: false })
         {
@@ -103,7 +95,6 @@ internal sealed class ExecutionBehaviorRegistration
         }
 
         return new ExecutionBehaviorRegistration(
-            key,
             implementationType,
             order,
             descriptorFilter ?? (static _ => true),
@@ -114,14 +105,36 @@ internal sealed class ExecutionBehaviorRegistration
 
     public ServiceDescriptor CreateServiceDescriptor()
     {
-        return ServiceDescriptor.DescribeKeyed(
+        return ServiceDescriptor.Describe(
             ImplementationType,
-            Key,
             ImplementationType,
             Lifetime);
     }
 
-    public ExecutionBehaviorPlan? TryCreatePlan(
+    public void ValidateExclusiveServiceRegistration(IServiceCollection services)
+    {
+        var registrations = services
+            .Where(descriptor => descriptor.ServiceType == ImplementationType)
+            .ToArray();
+
+        if (registrations.Length == 1)
+        {
+            var registration = registrations[0];
+            if (registration.ImplementationType == ImplementationType &&
+                registration.ImplementationFactory is null &&
+                registration.ImplementationInstance is null &&
+                registration.Lifetime == Lifetime)
+            {
+                return;
+            }
+        }
+
+        throw new InvalidOperationException(
+            $"Execution behavior '{ImplementationType.FullName}' must have exactly one service registration, owned " +
+            "by AddBehavior. Do not register the behavior implementation separately in the host service collection.");
+    }
+
+    public Type? TryCreatePlan(
         ExecutionDescriptor descriptor,
         Type inputType,
         Type resultType)
@@ -131,10 +144,7 @@ internal sealed class ExecutionBehaviorRegistration
             return null;
         }
 
-        var implementationType = TryCloseImplementation(inputType, resultType);
-        return implementationType is null
-            ? null
-            : new ExecutionBehaviorPlan(Key, implementationType);
+        return TryCloseImplementation(inputType, resultType);
     }
 
     private Type? TryCloseImplementation(Type inputType, Type resultType)

@@ -110,7 +110,6 @@ public sealed class JobOrchestratorAsyncScopeTests
         builder.AddMonica(monica => monica
             .AddExecutionPipeline()
             .AddBehavior<AsyncOnlyDisposableJobBehavior>(
-                "test.jobs.async-disposal",
                 descriptorFilter: static descriptor =>
                     descriptor.Point == JobSchedulerExecutionPoints.RecurringAttempt,
                 lifetime: ServiceLifetime.Scoped));

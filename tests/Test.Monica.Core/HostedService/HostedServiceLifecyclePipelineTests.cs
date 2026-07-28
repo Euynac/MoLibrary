@@ -185,16 +185,38 @@ public sealed class HostedServiceLifecyclePipelineTests
     private sealed class LifecycleRecordingPipeline(ConcurrentQueue<string> steps) : IExecutionPipeline
     {
         public async Task<TResult> ExecuteAsync<TInput, TResult>(
-            ExecutionContext<TInput> context,
-            ExecutionDelegate<TResult> terminal)
+            ExecutionDescriptor descriptor,
+            TInput input,
+            object? target,
+            ExecutionDelegate<TResult> terminal,
+            CancellationToken cancellationToken = default,
+            ExecutionFeatureCollection? features = null)
         {
-            var feature = context.Features.GetRequired<HostedServiceExecutionFeature>();
+            descriptor.TransactionMode.Should().Be(ExecutionTransactionMode.None);
+            var feature = features!.GetRequired<HostedServiceExecutionFeature>();
             steps.Enqueue($"{feature.Phase}:pipeline-before");
 
             var result = await terminal();
 
             steps.Enqueue($"{feature.Phase}:pipeline-after");
             return result;
+        }
+
+        public async Task ExecuteAsync<TInput>(
+            ExecutionDescriptor descriptor,
+            TInput input,
+            object? target,
+            Func<Task> terminal,
+            CancellationToken cancellationToken = default,
+            ExecutionFeatureCollection? features = null)
+        {
+            descriptor.TransactionMode.Should().Be(ExecutionTransactionMode.None);
+            var feature = features!.GetRequired<HostedServiceExecutionFeature>();
+            steps.Enqueue($"{feature.Phase}:pipeline-before");
+
+            await terminal();
+
+            steps.Enqueue($"{feature.Phase}:pipeline-after");
         }
     }
 }

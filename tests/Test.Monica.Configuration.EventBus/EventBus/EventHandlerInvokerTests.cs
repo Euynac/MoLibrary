@@ -103,6 +103,7 @@ public sealed class EventHandlerInvokerTests
                 ? EventBusExecutionPoints.LocalHandler
                 : EventBusExecutionPoints.DistributedHandler);
         capture.ScopeIdentity.Should().Be(expectedScopeIdentity);
+        capture.TransactionMode.Should().Be(ExecutionTransactionMode.Automatic);
         capture.Feature.Should().NotBeNull();
         capture.Feature!.TopicName.Should().Be("test.topic");
         capture.Feature.Scope.Should().Be(scope);
@@ -119,7 +120,6 @@ public sealed class EventHandlerInvokerTests
         builder.AddMonica(monica => monica
             .AddExecutionPipeline()
             .AddBehavior<AsyncOnlyDisposableBehavior>(
-                "test.eventbus.async-disposal",
                 descriptorFilter: static descriptor =>
                     descriptor.Point == EventBusExecutionPoints.LocalHandler,
                 lifetime: ServiceLifetime.Scoped));
@@ -223,6 +223,8 @@ public sealed class EventHandlerInvokerTests
 
         public Guid ScopeIdentity { get; set; }
 
+        public ExecutionTransactionMode TransactionMode { get; set; }
+
         public EventHandlerExecutionFeature? Feature { get; set; }
     }
 
@@ -231,13 +233,35 @@ public sealed class EventHandlerInvokerTests
         ExecutionCapture capture) : IExecutionPipeline
     {
         public Task<TResult> ExecuteAsync<TInput, TResult>(
-            ExecutionContext<TInput> context,
-            ExecutionDelegate<TResult> terminal)
+            ExecutionDescriptor descriptor,
+            TInput input,
+            object? target,
+            ExecutionDelegate<TResult> terminal,
+            CancellationToken cancellationToken = default,
+            ExecutionFeatureCollection? features = null)
         {
-            capture.Point = context.Descriptor.Point;
-            capture.ScopeIdentity = scopeIdentity.Value;
-            capture.Feature = context.Features.GetRequired<EventHandlerExecutionFeature>();
+            Record(descriptor, features);
             return terminal();
+        }
+
+        public Task ExecuteAsync<TInput>(
+            ExecutionDescriptor descriptor,
+            TInput input,
+            object? target,
+            Func<Task> terminal,
+            CancellationToken cancellationToken = default,
+            ExecutionFeatureCollection? features = null)
+        {
+            Record(descriptor, features);
+            return terminal();
+        }
+
+        private void Record(ExecutionDescriptor descriptor, ExecutionFeatureCollection? features)
+        {
+            capture.Point = descriptor.Point;
+            capture.ScopeIdentity = scopeIdentity.Value;
+            capture.TransactionMode = descriptor.TransactionMode;
+            capture.Feature = features?.GetRequired<EventHandlerExecutionFeature>();
         }
     }
 }

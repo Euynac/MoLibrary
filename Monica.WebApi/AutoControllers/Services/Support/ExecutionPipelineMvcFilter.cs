@@ -1,4 +1,3 @@
-using System.Collections.Concurrent;
 using System.Runtime.ExceptionServices;
 using Microsoft.AspNetCore.Mvc.Controllers;
 using Microsoft.AspNetCore.Mvc.Filters;
@@ -13,9 +12,6 @@ namespace Monica.WebApi.AutoControllers.Services.Support;
 /// </summary>
 internal sealed class ExecutionPipelineMvcFilter(IExecutionPipeline executionPipeline) : IAsyncActionFilter
 {
-    private static readonly ConcurrentDictionary<(Type ControllerType, string ActionId), ExecutionDescriptor>
-        DESCRIPTORS = new();
-
     public async Task OnActionExecutionAsync(
         ActionExecutingContext context,
         ActionExecutionDelegate next)
@@ -34,23 +30,24 @@ internal sealed class ExecutionPipelineMvcFilter(IExecutionPipeline executionPip
         }
 
         var controllerType = context.Controller.GetType();
-        var descriptor = DESCRIPTORS.GetOrAdd(
-            (controllerType, actionDescriptor.Id),
-            _ => CreateDescriptor(controllerType, actionDescriptor));
+        var descriptor = ExecutionDescriptor.ForMethod<MvcActionExecutionInput, MvcActionExecutionResult>(
+            MvcExecutionPoints.Action,
+            controllerType,
+            actionDescriptor.MethodInfo,
+            isBusinessOperation: true,
+            transactionMode: ExecutionTransactionMode.Automatic);
         var input = new MvcActionExecutionInput(
             context.HttpContext,
             context.Controller,
             actionDescriptor,
             context.ActionArguments);
-        var executionContext = new ExecutionContext<MvcActionExecutionInput>(
-            descriptor,
-            input,
-            context.Controller,
-            context.HttpContext.RequestAborted);
-
         var result = await executionPipeline.ExecuteAsync(
-            executionContext,
-            async () => CreateResult(await next().ConfigureAwait(false))).ConfigureAwait(false);
+                descriptor,
+                input,
+                context.Controller,
+                async () => CreateResult(await next().ConfigureAwait(false)),
+                context.HttpContext.RequestAborted)
+            .ConfigureAwait(false);
 
         if (result.ExecutedContext is null)
         {
@@ -66,20 +63,5 @@ internal sealed class ExecutionPipelineMvcFilter(IExecutionPipeline executionPip
         }
 
         return MvcActionExecutionResult.FromExecutedAction(context);
-    }
-
-    private static ExecutionDescriptor CreateDescriptor(
-        Type controllerType,
-        ControllerActionDescriptor actionDescriptor)
-    {
-        return new ExecutionDescriptor(
-            MvcExecutionPoints.Action,
-            $"{controllerType.FullName}.{actionDescriptor.MethodInfo.Name}",
-            controllerType,
-            actionDescriptor.MethodInfo,
-            typeof(MvcActionExecutionInput),
-            typeof(MvcActionExecutionResult),
-            isBusinessOperation: true,
-            isLongRunning: false);
     }
 }

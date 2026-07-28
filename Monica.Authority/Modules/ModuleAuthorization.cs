@@ -74,10 +74,9 @@ public class ModuleAuthorization(ModuleAuthorizationOption option) : WebModuleBa
         DependsOnModule<ModuleAuthenticationGuide>().Register();
         DependsOnModule<ModuleExecutionPipelineGuide>().Register()
             .AddBehavior(
-                "authority.authorization",
                 typeof(ExecutionAuthorizationBehavior<,>),
                 ExecutionBehaviorOrder.Authorization,
-                static descriptor => descriptor.IsBusinessOperation && !descriptor.IsLongRunning);
+                static descriptor => descriptor.IsBusinessOperation);
     }
 }
 

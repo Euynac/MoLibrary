@@ -60,10 +60,9 @@ public class ModuleChainTracing(ModuleChainTracingOption option)
         DependsOnModule<ModuleJsonSerializationGuide>().Register();
         DependsOnModule<ModuleExecutionPipelineGuide>().Register()
             .AddBehavior(
-                "framework.chain-tracing",
                 typeof(ChainTracingExecutionBehavior<,>),
                 ExecutionBehaviorOrder.Diagnostics,
-                static descriptor => descriptor.IsBusinessOperation && !descriptor.IsLongRunning);
+                static descriptor => descriptor.IsBusinessOperation);
 
         if (Option.EnableControllerTracing || Option.EnableAttachToRes)
         {

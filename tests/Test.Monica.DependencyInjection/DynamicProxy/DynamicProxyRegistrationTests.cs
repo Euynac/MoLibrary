@@ -24,7 +24,6 @@ public sealed class DynamicProxyRegistrationTests
         {
             monica.AddExecutionPipeline()
                 .AddBehavior(
-                    "test.dynamic-proxy-bridge",
                     typeof(TrackingExecutionBehavior<,>),
                     descriptorFilter: descriptor => descriptor.Point == DynamicProxyExecutionPoints.Method);
             monica.AddDynamicProxy()
@@ -56,7 +55,6 @@ public sealed class DynamicProxyRegistrationTests
         {
             monica.AddExecutionPipeline()
                 .AddBehavior(
-                    "test.dynamic-proxy-scope",
                     typeof(ScopeTrackingExecutionBehavior<,>),
                     descriptorFilter: descriptor => descriptor.Point == DynamicProxyExecutionPoints.Method);
             monica.AddDynamicProxy()
@@ -105,7 +103,6 @@ public sealed class DynamicProxyRegistrationTests
         {
             monica.AddExecutionPipeline()
                 .AddBehavior(
-                    "test.dynamic-proxy-composition",
                     typeof(TrackingExecutionBehavior<,>),
                     descriptorFilter: descriptor => descriptor.Point == DynamicProxyExecutionPoints.Method);
             monica.AddDynamicProxy()
@@ -132,7 +129,6 @@ public sealed class DynamicProxyRegistrationTests
         {
             monica.AddExecutionPipeline()
                 .AddBehavior(
-                    "test.dynamic-proxy-owned-adapter",
                     typeof(TrackingExecutionBehavior<,>),
                     descriptorFilter: descriptor => descriptor.Point == DynamicProxyExecutionPoints.Method);
             monica.AddDynamicProxy()
@@ -327,6 +323,7 @@ public sealed class DynamicProxyRegistrationTests
             ExecutionContext<TInput> context,
             ExecutionDelegate<TResult> next)
         {
+            context.Descriptor.TransactionMode.Should().Be(ExecutionTransactionMode.Automatic);
             tracker.Record(typeof(TResult));
             return await next();
         }

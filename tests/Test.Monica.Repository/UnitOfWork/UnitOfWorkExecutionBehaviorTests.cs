@@ -80,15 +80,12 @@ public sealed class UnitOfWorkExecutionBehaviorTests
 
     private static ExecutionContext<string> CreateContext(CancellationToken cancellationToken = default)
     {
-        var descriptor = new ExecutionDescriptor(
+        var descriptor = ExecutionDescriptor.ForMethod<string, int>(
             new ExecutionPoint("test.unit-of-work"),
-            "test.operation",
             typeof(UnitOfWorkExecutionBehaviorTests),
             entryMethod: null,
-            typeof(string),
-            typeof(int),
             isBusinessOperation: true,
-            isLongRunning: false);
+            transactionMode: ExecutionTransactionMode.Automatic);
         return new ExecutionContext<string>(descriptor, "input", cancellationToken: cancellationToken);
     }
 
@@ -106,7 +103,13 @@ public sealed class UnitOfWorkExecutionBehaviorTests
             UnitOfWorkScopeOptions? options = null,
             CancellationToken cancellationToken = default)
         {
-            throw new NotSupportedException();
+            return RunCoreAsync(
+                async () =>
+                {
+                    await work();
+                    return ExecutionUnit.Value;
+                },
+                cancellationToken);
         }
 
         public Task<T> RunAsync<T>(
@@ -114,7 +117,31 @@ public sealed class UnitOfWorkExecutionBehaviorTests
             UnitOfWorkScopeOptions? options = null,
             CancellationToken cancellationToken = default)
         {
-            throw new NotSupportedException();
+            return RunCoreAsync(work, cancellationToken);
+        }
+
+        private async Task<T> RunCoreAsync<T>(Func<Task<T>> work, CancellationToken cancellationToken)
+        {
+            await using var scope = BeginScope();
+            try
+            {
+                var result = await work();
+                await scope.CompleteAsync(cancellationToken);
+                return result;
+            }
+            catch (Exception operationException)
+            {
+                try
+                {
+                    await scope.RollbackAsync(CancellationToken.None);
+                }
+                catch (Exception rollbackException)
+                {
+                    operationException.Data["Monica.Repository.UnitOfWork.RollbackException"] = rollbackException;
+                }
+
+                throw;
+            }
         }
     }
 

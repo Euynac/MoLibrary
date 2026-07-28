@@ -12,7 +12,6 @@ namespace Monica.Core.Mediator;
 public sealed class Mediator(IServiceProvider serviceProvider) : IMediator
 {
     private static readonly ConcurrentDictionary<(Type RequestType, Type ResponseType), Func<Mediator, object, CancellationToken, Task<object?>>> _dispatcherCache = new();
-    private static readonly ConcurrentDictionary<(Type HandlerType, Type RequestType, Type ResponseType), ExecutionDescriptor> _descriptorCache = new();
 
     /// <inheritdoc />
     public async Task<TResponse> Send<TResponse>(IRequest<TResponse> request, CancellationToken cancellationToken = default)
@@ -62,35 +61,23 @@ public sealed class Mediator(IServiceProvider serviceProvider) : IMediator
         where TRequest : IRequest<TResponse>
     {
         var handler = serviceProvider.GetRequiredService<IRequestHandler<TRequest, TResponse>>();
-        var descriptor = _descriptorCache.GetOrAdd(
-            (handler.GetType(), typeof(TRequest), typeof(TResponse)),
-            static key => CreateDescriptor(key.HandlerType, key.RequestType, key.ResponseType));
-        var context = new ExecutionContext<TRequest>(
-            descriptor,
-            request,
-            handler,
-            cancellationToken);
+        var handlerType = handler.GetType();
+        var descriptor = ExecutionDescriptor.ForInterface<TRequest, TResponse>(
+            MediatorExecutionPoints.Request,
+            handlerType,
+            typeof(IRequestHandler<TRequest, TResponse>),
+            isBusinessOperation: true,
+            transactionMode: ExecutionTransactionMode.Automatic);
 
         return await serviceProvider
             .GetRequiredService<IExecutionPipeline>()
-            .ExecuteAsync(context, () => handler.Handle(request, cancellationToken))
+            .ExecuteAsync(
+                descriptor,
+                request,
+                handler,
+                () => handler.Handle(request, cancellationToken),
+                cancellationToken)
             .ConfigureAwait(false);
-    }
-
-    private static ExecutionDescriptor CreateDescriptor(Type handlerType, Type requestType, Type responseType)
-    {
-        var contract = typeof(IRequestHandler<,>).MakeGenericType(requestType, responseType);
-        var entryMethod = handlerType.GetInterfaceMap(contract).TargetMethods.Single();
-
-        return new ExecutionDescriptor(
-            MediatorExecutionPoints.Request,
-            $"{handlerType.FullName}.{entryMethod.Name}",
-            handlerType,
-            entryMethod,
-            requestType,
-            responseType,
-            isBusinessOperation: true,
-            isLongRunning: false);
     }
 
     private static async Task<object?> BoxResultAsync<TResponse>(Task<TResponse> responseTask)

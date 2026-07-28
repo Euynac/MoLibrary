@@ -51,12 +51,12 @@ public class ModuleUnitOfWork(ModuleUnitOfWorkOption option)
 
     public override void ClaimDependencies()
     {
+        DependsOnModule<ModuleDependencyInjectionGuide>().Register();
         DependsOnModule<ModuleExecutionPipelineGuide>().Register()
             .AddBehavior(
-                "repository.unit-of-work",
                 typeof(UnitOfWorkExecutionBehavior<,>),
                 ExecutionBehaviorOrder.UnitOfWork,
-                static descriptor => descriptor.IsBusinessOperation && !descriptor.IsLongRunning);
+                static descriptor => descriptor.TransactionMode == ExecutionTransactionMode.Automatic);
     }
 }
 

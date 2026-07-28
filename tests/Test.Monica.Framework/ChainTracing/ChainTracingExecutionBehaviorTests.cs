@@ -102,15 +102,12 @@ public sealed class ChainTracingExecutionBehaviorTests
     private static ExecutionContext<string> CreateContext<TComponent, TResult>()
     {
         var method = typeof(TComponent).GetMethod(nameof(LocalComponent.Execute))!;
-        var descriptor = new ExecutionDescriptor(
+        var descriptor = ExecutionDescriptor.ForMethod<string, TResult>(
             new ExecutionPoint("test.chain-tracing"),
-            method.Name,
             typeof(TComponent),
             method,
-            typeof(string),
-            typeof(TResult),
             isBusinessOperation: true,
-            isLongRunning: false);
+            transactionMode: ExecutionTransactionMode.Automatic);
         return new ExecutionContext<string>(
             descriptor,
             "input",

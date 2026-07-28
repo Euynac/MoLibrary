@@ -6,6 +6,8 @@ namespace Monica.Core.Execution;
 /// <typeparam name="TInput">The input type declared by the execution descriptor.</typeparam>
 public sealed class ExecutionContext<TInput>
 {
+    private ExecutionFeatureCollection? _features;
+
     /// <summary>
     /// Initializes an execution context.
     /// </summary>
@@ -13,7 +15,7 @@ public sealed class ExecutionContext<TInput>
     /// <param name="input">The invocation input.</param>
     /// <param name="target">The concrete target instance when one exists.</param>
     /// <param name="cancellationToken">The cancellation token governing this invocation.</param>
-    /// <param name="features">Optional adapter-specific features. A new collection is created when omitted.</param>
+    /// <param name="features">Optional adapter-specific features. The collection remains lazy when omitted.</param>
     /// <exception cref="ArgumentException">
     /// Thrown when the descriptor input type does not exactly match <typeparamref name="TInput"/>.
     /// </exception>
@@ -38,7 +40,7 @@ public sealed class ExecutionContext<TInput>
         Input = input;
         Target = target;
         CancellationToken = cancellationToken;
-        Features = features ?? new ExecutionFeatureCollection();
+        _features = features;
     }
 
     /// <summary>
@@ -64,5 +66,5 @@ public sealed class ExecutionContext<TInput>
     /// <summary>
     /// Gets adapter-specific invocation metadata.
     /// </summary>
-    public ExecutionFeatureCollection Features { get; }
+    public ExecutionFeatureCollection Features => _features ??= new ExecutionFeatureCollection();
 }

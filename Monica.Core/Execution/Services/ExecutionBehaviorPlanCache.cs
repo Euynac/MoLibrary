@@ -5,36 +5,34 @@ namespace Monica.Core.Execution.Services;
 
 internal sealed class ExecutionBehaviorPlanCache
 {
-    private readonly ConcurrentDictionary<ExecutionPlanCacheKey, ExecutionBehaviorPlan[]> _plans = new();
+    private readonly ConcurrentDictionary<ExecutionDescriptor, Type[]> _plans =
+        new(ReferenceEqualityComparer.Instance);
     private readonly ExecutionBehaviorRegistration[] _registrations;
 
-    public ExecutionBehaviorPlanCache(IReadOnlyList<ExecutionBehaviorRegistration> registrations)
+    public ExecutionBehaviorPlanCache(
+        IReadOnlyList<ExecutionBehaviorRegistration> registrations,
+        ExecutionBehaviorServiceRegistrationValidator registrationValidator)
     {
+        _ = registrationValidator;
         _registrations = registrations
             .OrderBy(static registration => registration.Order)
-            .ThenBy(static registration => registration.Key, StringComparer.Ordinal)
+            .ThenBy(static registration => registration.SortName, StringComparer.Ordinal)
             .ToArray();
     }
 
-    public IReadOnlyList<ExecutionBehaviorPlan> GetPlan<TInput, TResult>(ExecutionDescriptor descriptor)
+    public Type[] GetPlan(ExecutionDescriptor descriptor)
     {
-        var key = new ExecutionPlanCacheKey(descriptor, typeof(TInput), typeof(TResult));
-        return _plans.GetOrAdd(key, static (cacheKey, state) => state.BuildPlan(cacheKey), this);
+        return _plans.GetOrAdd(descriptor, static (key, state) => state.BuildPlan(key), this);
     }
 
-    private ExecutionBehaviorPlan[] BuildPlan(ExecutionPlanCacheKey key)
+    private Type[] BuildPlan(ExecutionDescriptor descriptor)
     {
         return _registrations
             .Select(registration => registration.TryCreatePlan(
-                key.Descriptor,
-                key.InputType,
-                key.ResultType))
-            .OfType<ExecutionBehaviorPlan>()
+                descriptor,
+                descriptor.InputType,
+                descriptor.ResultType))
+            .OfType<Type>()
             .ToArray();
     }
-
-    private readonly record struct ExecutionPlanCacheKey(
-        ExecutionDescriptor Descriptor,
-        Type InputType,
-        Type ResultType);
 }

@@ -249,15 +249,12 @@ public sealed class ExecutionAuthorizationTests
     private static ExecutionContext<string> CreateExecutionContext<TComponent>(string methodName)
     {
         var method = typeof(TComponent).GetMethod(methodName)!;
-        var descriptor = new ExecutionDescriptor(
+        var descriptor = ExecutionDescriptor.ForMethod<string, int>(
             new ExecutionPoint("test.authorization"),
-            methodName,
             typeof(TComponent),
             method,
-            typeof(string),
-            typeof(int),
             isBusinessOperation: true,
-            isLongRunning: false);
+            transactionMode: ExecutionTransactionMode.Automatic);
         return new ExecutionContext<string>(
             descriptor,
             "input",
@@ -266,15 +263,12 @@ public sealed class ExecutionAuthorizationTests
 
     private static ExecutionContext<string> CreateExecutionContextWithoutEntryMethod<TComponent>()
     {
-        var descriptor = new ExecutionDescriptor(
+        var descriptor = ExecutionDescriptor.ForMethod<string, int>(
             new ExecutionPoint("test.authorization"),
-            "class-only",
             typeof(TComponent),
             entryMethod: null,
-            typeof(string),
-            typeof(int),
             isBusinessOperation: true,
-            isLongRunning: false);
+            transactionMode: ExecutionTransactionMode.Automatic);
         return new ExecutionContext<string>(
             descriptor,
             "input",
