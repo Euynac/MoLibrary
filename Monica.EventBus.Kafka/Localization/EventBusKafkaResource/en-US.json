@@ -145,6 +145,7 @@
       "Unknown": "Unknown"
     },
     "SelectedCluster": {
+      "Label": "Active cluster",
       "None": "No cluster selected",
       "NoneDescription": "Create or configure a Kafka cluster to enable console views.",
       "ExternalCredentials": "Kafka credentials are managed outside Monica."
@@ -152,6 +153,7 @@
   },
   "Clusters": {
     "Title": "Kafka clusters",
+    "Summary": "{0} configured clusters",
     "Empty": "No Kafka clusters are visible. Create a cluster or declare one through module configuration.",
     "Actions": {
       "New": "New cluster",
@@ -215,7 +217,9 @@
     "Unavailable": "Topic management requires direct Kafka broker access.",
     "Empty": "No topics were returned for the selected cluster.",
     "Search": {
-      "Placeholder": "Search topics"
+      "Label": "Filter topics",
+      "Placeholder": "Search topics",
+      "NoMatches": "No topics match the current filter."
     },
     "Actions": {
       "Create": "Create topic",
@@ -302,6 +306,7 @@
   },
   "ConsumerGroups": {
     "Title": "Consumer groups",
+    "Summary": "{0} visible consumer groups",
     "Unavailable": "Consumer group inspection requires direct Kafka broker access.",
     "Empty": "No consumer groups were returned for the selected cluster.",
     "Columns": {

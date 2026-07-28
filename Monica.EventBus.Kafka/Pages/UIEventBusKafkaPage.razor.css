@@ -1,43 +1,89 @@
 .eventbus-kafka-page {
     height: 100%;
     min-height: 0;
+    width: 100%;
     display: flex;
     flex-direction: column;
     gap: 16px;
-    width: 100%;
     padding: 20px;
 }
 
 .page-banner {
+    flex: 0 0 auto;
     display: flex;
-    align-items: flex-start;
+    align-items: center;
     justify-content: space-between;
-    gap: 16px;
-    padding: 18px;
-    border-radius: 8px;
-    border: 1px solid var(--mud-palette-lines-default);
-    background: var(--mud-palette-surface);
+    gap: 24px;
+    padding: 20px;
+    overflow: hidden;
+    border-radius: 10px;
+    border: 1px solid color-mix(in srgb, var(--mud-palette-primary) 22%, var(--mud-palette-lines-default));
+    background: linear-gradient(
+        125deg,
+        color-mix(in srgb, var(--mud-palette-primary) 10%, var(--mud-palette-surface)),
+        var(--mud-palette-surface) 48%);
+    box-shadow: var(--mud-elevation-1);
+}
+
+.page-banner__identity {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    min-width: 0;
+}
+
+.page-banner__icon {
+    width: 52px;
+    height: 52px;
+    flex: 0 0 52px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 12px;
+    color: var(--mud-palette-primary);
+    background: color-mix(in srgb, var(--mud-palette-primary) 14%, var(--mud-palette-surface));
+    border: 1px solid color-mix(in srgb, var(--mud-palette-primary) 25%, var(--mud-palette-lines-default));
+}
+
+.page-banner__icon ::deep .mud-icon-root {
+    color: inherit;
+    font-size: 1.75rem;
 }
 
 .page-banner__copy {
     display: flex;
     flex-direction: column;
-    gap: 6px;
+    gap: 4px;
     min-width: 0;
+}
+
+.page-banner__copy ::deep .mud-typography-root {
+    overflow-wrap: anywhere;
 }
 
 .page-banner__actions {
     display: flex;
+    flex: 0 0 auto;
     flex-wrap: wrap;
-    gap: 8px;
     align-items: center;
     justify-content: flex-end;
+    gap: 8px;
 }
 
 ::deep .page-eyebrow {
-    letter-spacing: 0;
+    color: var(--mud-palette-primary);
+    letter-spacing: 0.065em;
     text-transform: uppercase;
-    color: var(--mud-palette-text-secondary);
+}
+
+::deep .page-title {
+    line-height: 1.2;
+}
+
+.eventbus-kafka-page ::deep .page-activity {
+    flex: 0 0 auto;
+    margin-block: -10px -11px;
+    border-radius: 999px;
 }
 
 .page-state {
@@ -45,47 +91,98 @@
     min-height: 320px;
     display: flex;
     flex-direction: column;
-    gap: 10px;
     align-items: center;
     justify-content: center;
-    text-align: center;
+    gap: 10px;
     padding: 28px;
-    border-radius: 8px;
-    border: 1px dashed var(--mud-palette-lines-default);
-    background: color-mix(in srgb, var(--mud-palette-background-gray) 36%, var(--mud-palette-surface));
+    text-align: center;
+    border-radius: 10px;
+    border: 1px dashed color-mix(in srgb, var(--mud-palette-primary) 30%, var(--mud-palette-lines-default));
+    background: linear-gradient(
+        145deg,
+        color-mix(in srgb, var(--mud-palette-primary) 5%, var(--mud-palette-background-gray)),
+        var(--mud-palette-surface));
+}
+
+.workspace-shell {
+    flex: 1 1 0;
+    min-height: 0;
+    min-width: 0;
 }
 
 ::deep .eventbus-kafka-tab-panels {
-    padding: 16px;
+    padding: 18px;
 }
 
-/* MudTabs is a fixed-height flex surface in the shell. Let its panel own vertical scrolling so
-   long table pages (including their pager footer) are not clipped by the rounded tab surface. */
-.eventbus-kafka-page ::deep .mud-tabs {
+/* The tab panel remains the smallest vertical scroll owner so long tables keep their pager visible. */
+.eventbus-kafka-page ::deep .eventbus-kafka-tabs {
+    height: 100%;
     min-height: 0;
+    background: var(--mud-palette-surface);
+}
+
+.eventbus-kafka-page ::deep .mud-tabs-tabbar {
+    background: color-mix(in srgb, var(--mud-palette-primary) 4%, var(--mud-palette-surface));
+    border-bottom: 1px solid var(--mud-palette-lines-default);
+}
+
+.eventbus-kafka-page ::deep .mud-tab.mud-tab-active {
+    background: color-mix(in srgb, var(--mud-palette-primary) 9%, var(--mud-palette-surface));
 }
 
 .eventbus-kafka-page ::deep .mud-tabs-panels {
     min-height: 0;
-    overflow-y: auto;
     overflow-x: hidden;
+    overflow-y: auto;
 }
 
 .eventbus-kafka-page ::deep .mud-tabs-panels > .mud-tab-panel {
     min-width: 0;
 }
 
+.eventbus-kafka-page ::deep .mud-alert {
+    border-radius: 9px;
+}
+
+.eventbus-kafka-page ::deep button:focus-visible,
+.eventbus-kafka-page ::deep a:focus-visible {
+    outline: 2px solid var(--mud-palette-primary);
+    outline-offset: 2px;
+}
+
 @media (max-width: 720px) {
     .eventbus-kafka-page {
-        padding: 14px;
         gap: 14px;
+        padding: 14px;
     }
 
     .page-banner {
         flex-direction: column;
+        align-items: stretch;
+        gap: 16px;
+        padding: 16px;
+    }
+
+    .page-banner__identity {
+        align-items: flex-start;
+    }
+
+    .page-banner__icon {
+        width: 44px;
+        height: 44px;
+        flex-basis: 44px;
+        border-radius: 10px;
     }
 
     .page-banner__actions {
         justify-content: flex-start;
+    }
+
+    .page-banner__actions ::deep .mud-button-root {
+        flex: 1 1 auto;
+    }
+
+    ::deep .eventbus-kafka-tab-panels {
+        padding: 12px;
     }
 }

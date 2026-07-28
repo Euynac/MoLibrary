@@ -19,6 +19,7 @@ internal sealed class DaprTopicSubscription(
     ModuleDaprEventBusOption options,
     DaprSubscriptionRecoveryPolicy recoveryPolicy,
     string topicName,
+    string? deadLetterTopic,
     TopicMessageHandler messageHandler,
     CancellationToken applicationStopping,
     Action<string> onReceiverCreated,
@@ -99,7 +100,7 @@ internal sealed class DaprTopicSubscription(
                 var subscriptionOptions = new DaprSubscriptionOptions(
                     new MessageHandlingPolicy(options.MessageHandlingTimeout, TopicResponseAction.Retry))
                 {
-                    DeadLetterTopic = options.DeadLetterTopic,
+                    DeadLetterTopic = deadLetterTopic,
                     MaximumCleanupTimeout = options.MaximumCleanupTimeout,
                     MaximumQueuedMessages = options.MaximumQueuedMessages,
                     ErrorHandler = exception =>

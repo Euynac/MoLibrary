@@ -2,15 +2,20 @@
 @inject IStringLocalizer<EventBusKafkaResource> L
 
 <MudStack Spacing="3">
-    <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Spacing="2">
-        <MudText Typo="Typo.h6">@L["ConsumerGroups:Title"]</MudText>
-        <MudButton Variant="Variant.Outlined"
-                   StartIcon="@Icons.Material.Filled.Refresh"
-                   Disabled="@State.IsBusy"
-                   OnClick="OnRefresh">
-            @L["Common:Actions:Refresh"]
-        </MudButton>
-    </MudStack>
+    <KafkaWorkspaceHeader Icon="@Icons.Material.Filled.Groups"
+                          Title="@L["ConsumerGroups:Title"]"
+                          Subtitle="@L["ConsumerGroups:Summary", State.ConsumerGroups.Count]">
+        <Actions>
+            <div class="consumer-groups-actions">
+                <MudButton Variant="Variant.Outlined"
+                           StartIcon="@Icons.Material.Filled.Refresh"
+                           Disabled="@State.IsBusy"
+                           OnClick="OnRefresh">
+                    @L["Common:Actions:Refresh"]
+                </MudButton>
+            </div>
+        </Actions>
+    </KafkaWorkspaceHeader>
 
     @if (!State.CanAdminSelectedCluster)
     {
@@ -31,7 +36,9 @@
                       Items="@State.ConsumerGroups"
                       RowsPerPage="25"
                       Dense="true"
-                      Hover="true">
+                      Hover="true"
+                      Striped="true"
+                      Breakpoint="Breakpoint.None">
                 <HeaderContent>
                     <MudTh>@L["ConsumerGroups:Columns:GroupId"]</MudTh>
                     <MudTh>@L["ConsumerGroups:Columns:State"]</MudTh>
@@ -39,13 +46,26 @@
                     <MudTh>@L["ConsumerGroups:Columns:Lag"]</MudTh>
                 </HeaderContent>
                 <RowTemplate>
-                    <MudTd DataLabel="@L["ConsumerGroups:Columns:GroupId"]">@context.GroupId</MudTd>
-                    <MudTd DataLabel="@L["ConsumerGroups:Columns:State"]">@context.State</MudTd>
+                    <MudTd DataLabel="@L["ConsumerGroups:Columns:GroupId"]">
+                        <span class="consumer-group-id">@context.GroupId</span>
+                    </MudTd>
+                    <MudTd DataLabel="@L["ConsumerGroups:Columns:State"]">
+                        <MudChip T="string"
+                                 Size="Size.Small"
+                                 Variant="Variant.Outlined"
+                                 Color="@GetStateColor(context.State)">
+                            @context.State
+                        </MudChip>
+                    </MudTd>
                     <MudTd DataLabel="@L["ConsumerGroups:Columns:Members"]">@context.MemberCount</MudTd>
-                    <MudTd DataLabel="@L["ConsumerGroups:Columns:Lag"]">@FormatLag(context.TotalLag)</MudTd>
+                    <MudTd DataLabel="@L["ConsumerGroups:Columns:Lag"]">
+                        <span class="consumer-group-lag">
+                            @KafkaMetricDisplayFormatter.FormatOptionalInt64(context.TotalLag, L["ConsumerGroups:Values:LagUnknown"])
+                        </span>
+                    </MudTd>
                 </RowTemplate>
                 <PagerContent>
-                    <MudTablePager PageSizeOptions="@(new[] { 10, 25, 50, 100 })" />
+                    <MudTablePager PageSizeOptions="@PageSizeOptions" />
                 </PagerContent>
             </MudTable>
         </div>
@@ -53,12 +73,21 @@
 </MudStack>
 
 @code {
-    [Parameter, EditorRequired] public EventBusKafkaPageState State { get; set; } = default!;
+    private static readonly int[] PageSizeOptions = [10, 25, 50, 100];
 
-    [Parameter] public EventCallback OnRefresh { get; set; }
+    [Parameter, EditorRequired]
+    public EventBusKafkaPageState State { get; set; } = default!;
 
-    private string FormatLag(long? lag)
+    [Parameter]
+    public EventCallback OnRefresh { get; set; }
+
+    private static Color GetStateColor(string state) => state.ToUpperInvariant() switch
     {
-        return lag?.ToString() ?? L["ConsumerGroups:Values:LagUnknown"];
-    }
+        "STABLE" => Color.Success,
+        "PREPARINGREBALANCE" or "COMPLETINGREBALANCE" => Color.Warning,
+        "DEAD" => Color.Error,
+        "EMPTY" => Color.Secondary,
+        _ => Color.Info
+    };
+
 }

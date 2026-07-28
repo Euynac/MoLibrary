@@ -2,38 +2,38 @@
 @inject IStringLocalizer<EventBusKafkaResource> L
 
 <MudStack Spacing="3">
-    <div class="topics-toolbar">
-        <div class="topics-heading">
-            <MudText Typo="Typo.h6">@L["Topics:Title"]</MudText>
-            <MudText Typo="Typo.caption" Color="Color.Secondary">
-                @L["Topics:Summary", FilteredTopicCount, State.Topics.Count]
-            </MudText>
-        </div>
-        <div class="topics-actions">
-            <MudTextField T="string"
-                          @bind-Value="_searchText"
-                          Immediate="true"
-                          DebounceInterval="250"
-                          Placeholder="@L["Topics:Search:Placeholder"]"
-                          Adornment="Adornment.Start"
-                          AdornmentIcon="@Icons.Material.Filled.Search"
-                          Variant="Variant.Outlined"
-                          Margin="Margin.Dense" />
-            <MudButton Variant="Variant.Outlined"
-                       StartIcon="@Icons.Material.Filled.Refresh"
-                       Disabled="@State.IsBusy"
-                       OnClick="OnRefresh">
-                @L["Common:Actions:Refresh"]
-            </MudButton>
-            <MudButton Variant="Variant.Filled"
-                       Color="Color.Primary"
-                       StartIcon="@Icons.Material.Filled.Add"
-                       Disabled="@(State.IsBusy || !State.CanAdminSelectedCluster)"
-                       OnClick="OnCreate">
-                @L["Topics:Actions:Create"]
-            </MudButton>
-        </div>
-    </div>
+    <KafkaWorkspaceHeader Icon="@Icons.Material.Filled.Topic"
+                          Title="@L["Topics:Title"]"
+                          Subtitle="@L["Topics:Summary", FilteredTopicCount, State.Topics.Count]">
+        <Actions>
+            <div class="topics-actions">
+                <MudTextField T="string"
+                              @bind-Value="_searchText"
+                              Immediate="true"
+                              DebounceInterval="250"
+                              Label="@L["Topics:Search:Label"]"
+                              Placeholder="@L["Topics:Search:Placeholder"]"
+                              Adornment="Adornment.Start"
+                              AdornmentIcon="@Icons.Material.Filled.Search"
+                              Variant="Variant.Outlined"
+                              Margin="Margin.Dense"
+                              Clearable="true" />
+                <MudButton Variant="Variant.Outlined"
+                           StartIcon="@Icons.Material.Filled.Refresh"
+                           Disabled="@State.IsBusy"
+                           OnClick="OnRefresh">
+                    @L["Common:Actions:Refresh"]
+                </MudButton>
+                <MudButton Variant="Variant.Filled"
+                           Color="Color.Primary"
+                           StartIcon="@Icons.Material.Filled.Add"
+                           Disabled="@(State.IsBusy || !State.CanAdminSelectedCluster)"
+                           OnClick="OnCreate">
+                    @L["Topics:Actions:Create"]
+                </MudButton>
+            </div>
+        </Actions>
+    </KafkaWorkspaceHeader>
 
     @if (!State.CanAdminSelectedCluster)
     {
@@ -47,6 +47,17 @@
             @L["Topics:Empty"]
         </MudAlert>
     }
+    else if (FilteredTopicCount == 0)
+    {
+        <div class="topics-empty-filter">
+            <span class="topics-empty-filter__icon" aria-hidden="true">
+                <MudIcon Icon="@Icons.Material.Filled.SearchOff" />
+            </span>
+            <MudText Typo="Typo.body2" Color="Color.Secondary">
+                @L["Topics:Search:NoMatches"]
+            </MudText>
+        </div>
+    }
     else
     {
         <div class="topics-table">
@@ -55,7 +66,9 @@
                       Filter="FilterTopic"
                       @bind-RowsPerPage="_rowsPerPage"
                       Dense="true"
-                      Hover="true">
+                      Hover="true"
+                      Striped="true"
+                      Breakpoint="Breakpoint.None">
                 <HeaderContent>
                     <MudTh>@L["Topics:Columns:Name"]</MudTh>
                     <MudTh>@L["Topics:Columns:Partitions"]</MudTh>
@@ -84,7 +97,9 @@
                     </MudTd>
                     <MudTd DataLabel="@L["Topics:Columns:Partitions"]">@context.Partitions</MudTd>
                     <MudTd DataLabel="@L["Topics:Columns:Replication"]">@context.ReplicationFactor</MudTd>
-                    <MudTd DataLabel="@L["Topics:Columns:AvailableMessages"]">@FormatAvailableMessages(context.AvailableMessageCount)</MudTd>
+                    <MudTd DataLabel="@L["Topics:Columns:AvailableMessages"]">
+                        @KafkaMetricDisplayFormatter.FormatOptionalInt64(context.AvailableMessageCount, L["Topics:Values:AvailableMessagesUnknown"])
+                    </MudTd>
                     <MudTd DataLabel="@L["Topics:Columns:Retention"]">@FormatRetention(context.RetentionMs)</MudTd>
                     <MudTd DataLabel="@L["Topics:Columns:Actions"]">
                         <MudMenu Icon="@Icons.Material.Filled.MoreVert"
@@ -128,30 +143,40 @@
     private string _searchText = string.Empty;
     private int _rowsPerPage = 25;
 
-    [Parameter, EditorRequired] public EventBusKafkaPageState State { get; set; } = default!;
+    [Parameter, EditorRequired]
+    public EventBusKafkaPageState State { get; set; } = default!;
 
-    [Parameter] public EventCallback OnCreate { get; set; }
+    [Parameter]
+    public EventCallback OnCreate { get; set; }
 
-    [Parameter] public EventCallback OnRefresh { get; set; }
+    [Parameter]
+    public EventCallback OnRefresh { get; set; }
 
-    [Parameter] public EventCallback<KafkaTopicSummary> OnDelete { get; set; }
+    [Parameter]
+    public EventCallback<KafkaTopicSummary> OnDelete { get; set; }
 
-    [Parameter] public EventCallback<KafkaTopicSummary> OnViewMessages { get; set; }
+    [Parameter]
+    public EventCallback<KafkaTopicSummary> OnViewMessages { get; set; }
 
-    [Parameter] public EventCallback<KafkaTopicSummary> OnViewBacklog { get; set; }
+    [Parameter]
+    public EventCallback<KafkaTopicSummary> OnViewBacklog { get; set; }
 
-    [Parameter] public EventCallback<KafkaTopicSummary> OnIncreasePartitions { get; set; }
+    [Parameter]
+    public EventCallback<KafkaTopicSummary> OnIncreasePartitions { get; set; }
 
-    [Parameter] public EventCallback<KafkaTopicSummary> OnUpdateRetention { get; set; }
+    [Parameter]
+    public EventCallback<KafkaTopicSummary> OnUpdateRetention { get; set; }
 
-    [Parameter] public EventCallback<KafkaTopicSummary> OnClearMessages { get; set; }
+    [Parameter]
+    public EventCallback<KafkaTopicSummary> OnClearMessages { get; set; }
 
     private int FilteredTopicCount => State.Topics.Count(FilterTopic);
 
     private bool FilterTopic(KafkaTopicSummary topic)
     {
-        return string.IsNullOrWhiteSpace(_searchText) ||
-               topic.TopicName.Contains(_searchText.Trim(), StringComparison.OrdinalIgnoreCase);
+        var searchText = _searchText.Trim();
+        return searchText.Length == 0 ||
+               topic.TopicName.Contains(searchText, StringComparison.OrdinalIgnoreCase);
     }
 
     private string FormatRetention(long? retentionMs)
@@ -161,8 +186,4 @@
             : L["Topics:Values:RetentionMs", retentionMs.Value];
     }
 
-    private string FormatAvailableMessages(long? availableMessageCount)
-    {
-        return availableMessageCount?.ToString() ?? L["Topics:Values:AvailableMessagesUnknown"];
-    }
 }

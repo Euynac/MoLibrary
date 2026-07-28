@@ -1,0 +1,117 @@
+.kafka-metric-card {
+    --kafka-metric-accent: var(--mud-palette-primary);
+    height: 100%;
+    min-width: 0;
+}
+
+.kafka-metric-card--secondary {
+    --kafka-metric-accent: var(--mud-palette-secondary);
+}
+
+.kafka-metric-card--info {
+    --kafka-metric-accent: var(--mud-palette-info);
+}
+
+.kafka-metric-card--success {
+    --kafka-metric-accent: var(--mud-palette-success);
+}
+
+.kafka-metric-card--warning {
+    --kafka-metric-accent: var(--mud-palette-warning);
+}
+
+.kafka-metric-card--error {
+    --kafka-metric-accent: var(--mud-palette-error);
+}
+
+.kafka-metric-card ::deep .mud-paper {
+    height: 100%;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 14px;
+    overflow: hidden;
+    border-inline-start: 3px solid var(--kafka-metric-accent);
+    background: linear-gradient(
+        145deg,
+        color-mix(in srgb, var(--kafka-metric-accent) 6%, var(--mud-palette-surface)),
+        var(--mud-palette-surface) 58%);
+    transition: border-color 140ms ease, box-shadow 140ms ease, transform 140ms ease;
+}
+
+.kafka-metric-card ::deep .mud-paper:hover {
+    box-shadow: var(--mud-elevation-2);
+    transform: translateY(-1px);
+}
+
+.kafka-metric-card__header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+}
+
+.kafka-metric-card__icon {
+    width: 28px;
+    height: 28px;
+    flex: 0 0 28px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 7px;
+    color: var(--kafka-metric-accent);
+    background: color-mix(in srgb, var(--kafka-metric-accent) 12%, var(--mud-palette-surface));
+}
+
+.kafka-metric-card__icon ::deep .mud-icon-root {
+    color: inherit;
+}
+
+.kafka-metric-card ::deep .kafka-metric-card__label {
+    min-width: 0;
+    color: var(--mud-palette-text-secondary);
+    letter-spacing: 0.035em;
+    line-height: 1.25;
+    overflow-wrap: anywhere;
+}
+
+.kafka-metric-card ::deep .kafka-metric-card__value {
+    min-width: 0;
+    line-height: 1.15;
+    font-variant-numeric: tabular-nums;
+    overflow-wrap: anywhere;
+}
+
+.kafka-metric-card ::deep .kafka-metric-card__hint {
+    min-width: 0;
+    line-height: 1.35;
+    overflow-wrap: anywhere;
+}
+
+@media (max-width: 520px) {
+    .kafka-metric-card ::deep .mud-paper {
+        gap: 6px;
+        padding: 11px;
+    }
+
+    .kafka-metric-card__icon {
+        width: 26px;
+        height: 26px;
+        flex-basis: 26px;
+    }
+
+    .kafka-metric-card ::deep .kafka-metric-card__hint {
+        display: none;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .kafka-metric-card ::deep .mud-paper {
+        transition: none;
+    }
+
+    .kafka-metric-card ::deep .mud-paper:hover {
+        transform: none;
+    }
+}

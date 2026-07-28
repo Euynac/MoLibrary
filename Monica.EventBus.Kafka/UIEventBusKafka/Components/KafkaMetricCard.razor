@@ -1,0 +1,63 @@
+<div class="@RootClass">
+    <MudPaper Class="mo-self-painted" Outlined="true">
+        <div class="kafka-metric-card__header">
+            <span class="kafka-metric-card__icon" aria-hidden="true">
+                <MudIcon Icon="@Icon" Size="Size.Small" />
+            </span>
+            <MudText Typo="Typo.overline" Class="kafka-metric-card__label">@Label</MudText>
+        </div>
+
+        <MudText Typo="Typo.h5" Class="kafka-metric-card__value">@Value</MudText>
+
+        @if (!string.IsNullOrWhiteSpace(Hint))
+        {
+            <MudText Typo="Typo.caption" Color="Color.Secondary" Class="kafka-metric-card__hint">
+                @Hint
+            </MudText>
+        }
+    </MudPaper>
+</div>
+
+@code {
+    /// <summary>
+    /// Gets or sets the Material icon that identifies the metric category.
+    /// </summary>
+    [Parameter, EditorRequired]
+    public string Icon { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the localized metric label.
+    /// </summary>
+    [Parameter, EditorRequired]
+    public string Label { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the formatted metric value displayed as the primary content.
+    /// </summary>
+    [Parameter, EditorRequired]
+    public string Value { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the optional localized explanation shown below the value.
+    /// </summary>
+    [Parameter]
+    public string? Hint { get; set; }
+
+    /// <summary>
+    /// Gets or sets the semantic MudBlazor color used for the accent rail and icon.
+    /// </summary>
+    [Parameter]
+    public Color AccentColor { get; set; } = Color.Primary;
+
+    private string RootClass => $"kafka-metric-card kafka-metric-card--{GetAccentName(AccentColor)}";
+
+    private static string GetAccentName(Color color) => color switch
+    {
+        Color.Secondary => "secondary",
+        Color.Info => "info",
+        Color.Success => "success",
+        Color.Warning => "warning",
+        Color.Error => "error",
+        _ => "primary"
+    };
+}

@@ -1,74 +1,91 @@
 @using Monica.EventBus.Kafka.UIEventBusKafka.State
 @inject IStringLocalizer<EventBusKafkaResource> L
 
-<MudStack Spacing="3">
-    <MudGrid Spacing="3">
-        <MudItem xs="12" md="6" lg="2">
-            <MudPaper Class="pa-4" Outlined="true">
-                <MudStack Spacing="1">
-                    <MudText Typo="Typo.overline">@L["Dashboard:Cards:Provider"]</MudText>
-                    <MudText Typo="Typo.h6">@State.Integration.ActiveProviderName</MudText>
-                    <MudChip T="string" Size="Size.Small" Color="@ModeColor" Variant="Variant.Outlined">
-                        @ModeLabel
-                    </MudChip>
-                </MudStack>
+<div class="kafka-dashboard">
+    <div class="dashboard-layout">
+        <section class="integration-context" aria-labelledby="kafka-provider-heading">
+            <MudPaper Class="mo-self-painted" Outlined="true">
+                <div class="integration-context__provider">
+                    <span class="integration-context__icon" aria-hidden="true">
+                        <MudIcon Icon="@Icons.Material.Filled.Hub" />
+                    </span>
+                    <div class="integration-context__provider-copy">
+                        <MudText Typo="Typo.overline" Color="Color.Secondary">
+                            @L["Dashboard:Cards:Provider"]
+                        </MudText>
+                        <MudText Typo="Typo.h5" id="kafka-provider-heading" Class="integration-context__provider-name">
+                            @State.Integration.ActiveProviderName
+                        </MudText>
+                    </div>
+                </div>
+
+                <MudChip T="string"
+                         Size="Size.Small"
+                         Color="@ModeColor"
+                         Variant="Variant.Outlined"
+                         Icon="@Icons.Material.Filled.Route">
+                    @ModeLabel
+                </MudChip>
+
+                <MudDivider />
+
+                <div class="integration-context__cluster">
+                    <span class="@SelectedClusterMarkerClass" aria-hidden="true"></span>
+                    <div class="integration-context__cluster-copy">
+                        <MudText Typo="Typo.overline" Color="Color.Secondary">
+                            @L["Dashboard:SelectedCluster:Label"]
+                        </MudText>
+                        <MudText Typo="Typo.h6" Class="integration-context__cluster-name">
+                            @SelectedClusterName
+                        </MudText>
+                        <MudText Typo="Typo.body2" Color="Color.Secondary" Class="integration-context__cluster-description">
+                            @SelectedClusterSubtitle
+                        </MudText>
+                    </div>
+                </div>
+
+                <MudButton Variant="Variant.Text"
+                           StartIcon="@Icons.Material.Filled.Refresh"
+                           Disabled="@State.IsBusy"
+                           OnClick="OnRefresh">
+                    @L["Common:Actions:Refresh"]
+                </MudButton>
             </MudPaper>
-        </MudItem>
-        <MudItem xs="12" md="6" lg="2">
-            <MudPaper Class="pa-4" Outlined="true">
-                <MudStack Spacing="1">
-                    <MudText Typo="Typo.overline">@L["Dashboard:Cards:Brokers"]</MudText>
-                    <MudText Typo="Typo.h5">@State.CurrentBrokerCount</MudText>
-                    <MudText Typo="Typo.caption" Color="Color.Secondary">@L["Dashboard:Cards:BrokersHint"]</MudText>
-                </MudStack>
-            </MudPaper>
-        </MudItem>
-        <MudItem xs="12" md="6" lg="2">
-            <MudPaper Class="pa-4" Outlined="true">
-                <MudStack Spacing="1">
-                    <MudText Typo="Typo.overline">@L["Dashboard:Cards:Topics"]</MudText>
-                    <MudText Typo="Typo.h5">@State.CurrentTopicCount</MudText>
-                    <MudText Typo="Typo.caption" Color="Color.Secondary">@L["Dashboard:Cards:TopicsHint"]</MudText>
-                </MudStack>
-            </MudPaper>
-        </MudItem>
-        <MudItem xs="12" md="6" lg="2">
-            <MudPaper Class="pa-4" Outlined="true">
-                <MudStack Spacing="1">
-                    <MudText Typo="Typo.overline">@L["Dashboard:Cards:AvailableMessages"]</MudText>
-                    <MudText Typo="Typo.h5">@FormatAvailableMessages(State.TotalAvailableMessageCount)</MudText>
-                    <MudText Typo="Typo.caption" Color="Color.Secondary">@L["Dashboard:Cards:AvailableMessagesHint"]</MudText>
-                </MudStack>
-            </MudPaper>
-        </MudItem>
-        <MudItem xs="12" md="6" lg="2">
-            <MudPaper Class="pa-4" Outlined="true">
-                <MudStack Spacing="1">
-                    <MudText Typo="Typo.overline">@L["Dashboard:Cards:ConsumerGroups"]</MudText>
-                    <MudText Typo="Typo.h5">@State.CurrentConsumerGroupCount</MudText>
-                    <MudText Typo="Typo.caption" Color="Color.Secondary">@L["Dashboard:Cards:ConsumerGroupsHint"]</MudText>
-                </MudStack>
-            </MudPaper>
-        </MudItem>
-        <MudItem xs="12" md="6" lg="2">
-            <MudPaper Class="pa-4" Outlined="true">
-                <MudStack Spacing="1">
-                    <MudText Typo="Typo.overline">@L["Dashboard:Cards:WriteRate"]</MudText>
-                    <MudText Typo="Typo.h5">@FormatRate(State.LatestPerformance?.MessageWriteRatePerSecond)</MudText>
-                    <MudText Typo="Typo.caption" Color="Color.Secondary">@L["Dashboard:Cards:WriteRateHint"]</MudText>
-                </MudStack>
-            </MudPaper>
-        </MudItem>
-        <MudItem xs="12" md="6" lg="2">
-            <MudPaper Class="pa-4" Outlined="true">
-                <MudStack Spacing="1">
-                    <MudText Typo="Typo.overline">@L["Dashboard:Cards:ConsumeRate"]</MudText>
-                    <MudText Typo="Typo.h5">@FormatRate(State.LatestPerformance?.MessageConsumeRatePerSecond)</MudText>
-                    <MudText Typo="Typo.caption" Color="Color.Secondary">@L["Dashboard:Cards:ConsumeRateHint"]</MudText>
-                </MudStack>
-            </MudPaper>
-        </MudItem>
-    </MudGrid>
+        </section>
+
+        <section class="dashboard-signals" aria-label="@L["Tabs:Dashboard"]">
+            <KafkaMetricCard Icon="@Icons.Material.Filled.Dns"
+                             Label="@L["Dashboard:Cards:Brokers"]"
+                             Value="@State.CurrentBrokerCount.ToString()"
+                             Hint="@L["Dashboard:Cards:BrokersHint"]"
+                             AccentColor="@BrokerAccentColor" />
+            <KafkaMetricCard Icon="@Icons.Material.Filled.Topic"
+                             Label="@L["Dashboard:Cards:Topics"]"
+                             Value="@State.CurrentTopicCount.ToString()"
+                             Hint="@L["Dashboard:Cards:TopicsHint"]"
+                             AccentColor="Color.Info" />
+            <KafkaMetricCard Icon="@Icons.Material.Filled.MarkEmailUnread"
+                             Label="@L["Dashboard:Cards:AvailableMessages"]"
+                             Value="@KafkaMetricDisplayFormatter.FormatOptionalInt64(State.TotalAvailableMessageCount, L["Dashboard:Values:AvailableMessagesUnknown"])"
+                             Hint="@L["Dashboard:Cards:AvailableMessagesHint"]"
+                             AccentColor="@AvailableMessagesAccentColor" />
+            <KafkaMetricCard Icon="@Icons.Material.Filled.Groups"
+                             Label="@L["Dashboard:Cards:ConsumerGroups"]"
+                             Value="@State.CurrentConsumerGroupCount.ToString()"
+                             Hint="@L["Dashboard:Cards:ConsumerGroupsHint"]"
+                             AccentColor="Color.Secondary" />
+            <KafkaMetricCard Icon="@Icons.Material.Filled.NorthEast"
+                             Label="@L["Dashboard:Cards:WriteRate"]"
+                             Value="@KafkaMetricDisplayFormatter.FormatRate(State.LatestPerformance?.MessageWriteRatePerSecond, L)"
+                             Hint="@L["Dashboard:Cards:WriteRateHint"]"
+                             AccentColor="@WriteRateAccentColor" />
+            <KafkaMetricCard Icon="@Icons.Material.Filled.SouthWest"
+                             Label="@L["Dashboard:Cards:ConsumeRate"]"
+                             Value="@KafkaMetricDisplayFormatter.FormatRate(State.LatestPerformance?.MessageConsumeRatePerSecond, L)"
+                             Hint="@L["Dashboard:Cards:ConsumeRateHint"]"
+                             AccentColor="@ConsumeRateAccentColor" />
+        </section>
+    </div>
 
     @if (State.Integration.Messages.Count > 0)
     {
@@ -81,27 +98,14 @@
             </MudStack>
         </MudAlert>
     }
-
-    <MudPaper Class="pa-4" Outlined="true">
-        <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Start" Spacing="2">
-            <MudStack Spacing="1">
-                <MudText Typo="Typo.h6">@SelectedClusterName</MudText>
-                <MudText Typo="Typo.body2" Color="Color.Secondary">@SelectedClusterSubtitle</MudText>
-            </MudStack>
-            <MudButton Variant="Variant.Outlined"
-                       StartIcon="@Icons.Material.Filled.Refresh"
-                       Disabled="@State.IsBusy"
-                       OnClick="OnRefresh">
-                @L["Common:Actions:Refresh"]
-            </MudButton>
-        </MudStack>
-    </MudPaper>
-</MudStack>
+</div>
 
 @code {
-    [Parameter, EditorRequired] public EventBusKafkaPageState State { get; set; } = default!;
+    [Parameter, EditorRequired]
+    public EventBusKafkaPageState State { get; set; } = default!;
 
-    [Parameter] public EventCallback OnRefresh { get; set; }
+    [Parameter]
+    public EventCallback OnRefresh { get; set; }
 
     private string ModeLabel => State.Integration.Mode switch
     {
@@ -120,6 +124,18 @@
         _ => Color.Default
     };
 
+    private Color BrokerAccentColor => State.CurrentBrokerCount > 0 ? Color.Success : Color.Warning;
+
+    private Color AvailableMessagesAccentColor => State.TotalAvailableMessageCount.HasValue ? Color.Info : Color.Warning;
+
+    private Color WriteRateAccentColor => State.LatestPerformance?.MessageWriteRatePerSecond is not null
+        ? Color.Success
+        : Color.Warning;
+
+    private Color ConsumeRateAccentColor => State.LatestPerformance?.MessageConsumeRatePerSecond is not null
+        ? Color.Success
+        : Color.Warning;
+
     private string SelectedClusterName =>
         State.SelectedCluster?.Config.DisplayName ?? L["Dashboard:SelectedCluster:None"];
 
@@ -130,15 +146,11 @@
                 ? State.SelectedCluster.Config.BootstrapServers
                 : L["Dashboard:SelectedCluster:ExternalCredentials"];
 
-    private string FormatRate(double? rate)
+    private string SelectedClusterMarkerClass => State.SelectedCluster switch
     {
-        return rate.HasValue
-            ? L["Performance:Values:RatePerSecond", rate.Value.ToString("0.##")]
-            : L["Performance:Values:RateUnknown"];
-    }
+        { IsReachable: true } => "integration-context__cluster-marker integration-context__cluster-marker--ready",
+        not null => "integration-context__cluster-marker integration-context__cluster-marker--limited",
+        _ => "integration-context__cluster-marker"
+    };
 
-    private string FormatAvailableMessages(long? availableMessageCount)
-    {
-        return availableMessageCount?.ToString() ?? L["Dashboard:Values:AvailableMessagesUnknown"];
-    }
 }

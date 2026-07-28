@@ -145,6 +145,7 @@
       "Unknown": "未知"
     },
     "SelectedCluster": {
+      "Label": "当前集群",
       "None": "未选择集群",
       "NoneDescription": "新建或配置 Kafka 集群后可启用控制台视图。",
       "ExternalCredentials": "Kafka 凭据由 Monica 外部管理。"
@@ -152,6 +153,7 @@
   },
   "Clusters": {
     "Title": "Kafka 集群",
+    "Summary": "已配置 {0} 个集群",
     "Empty": "当前没有可见 Kafka 集群。请新建集群或通过模块配置声明集群。",
     "Actions": {
       "New": "新建集群",
@@ -212,7 +214,9 @@
   "Topics": {
     "Summary": "显示 {0} / 共 {1} 个主题",
     "Search": {
-      "Placeholder": "搜索主题"
+      "Label": "筛选主题",
+      "Placeholder": "搜索主题",
+      "NoMatches": "没有主题符合当前筛选条件。"
     },
     "Title": "主题",
     "Unavailable": "主题管理需要直接 Kafka Broker 访问。",
@@ -302,6 +306,7 @@
   },
   "ConsumerGroups": {
     "Title": "消费者组",
+    "Summary": "当前可见 {0} 个消费者组",
     "Unavailable": "消费者组查看需要直接 Kafka Broker 访问。",
     "Empty": "选中集群未返回消费者组。",
     "Columns": {
