@@ -33,7 +33,7 @@ public sealed class ChainTracingExecutionBehavior<TInput, TResult>(IChainTracing
         var traceType = isRemoteCall ? EChainTracingType.RemoteService : EChainTracingType.Unknown;
 
         using var scope = chainTracing.BeginScope(
-            descriptor.OperationName,
+            descriptor.DisplayName,
             descriptor.ComponentType.Name,
             type: traceType);
 
@@ -72,7 +72,7 @@ public sealed class ChainTracingExecutionBehavior<TInput, TResult>(IChainTracing
         {
             scope.EndWithException(
                 exception,
-                $"Invoking {descriptor.ComponentType.Name}.{descriptor.OperationName} failed.");
+                $"Invoking {descriptor.DisplayName} failed.");
             throw;
         }
     }

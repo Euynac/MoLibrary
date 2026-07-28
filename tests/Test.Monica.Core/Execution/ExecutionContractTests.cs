@@ -1,3 +1,4 @@
+using System.Reflection;
 using AwesomeAssertions;
 using Monica.Core.Execution;
 using Xunit;
@@ -74,7 +75,7 @@ public sealed class ExecutionContractTests
     }
 
     [Fact]
-    public void ExecutionDescriptor_WhenDefaultOperationNameIsUsed_ShouldReturnMemoizedInstance()
+    public void ExecutionDescriptor_WhenDefaultDisplayNameIsUsed_ShouldReturnMemoizedInstance()
     {
         var first = ExecutionDescriptor.ForMethod<string, ExecutionUnit>(
             new ExecutionPoint("test.default-name"),
@@ -91,7 +92,7 @@ public sealed class ExecutionContractTests
             transactionMode: ExecutionTransactionMode.Automatic);
 
         second.Should().BeSameAs(first);
-        second.OperationName.Should().Be($"{typeof(ExecutionContractTests).FullName}.test.default-name");
+        second.DisplayName.Should().Be($"{typeof(ExecutionContractTests).FullName}.test.default-name");
     }
 
     [Fact]
@@ -146,6 +147,94 @@ public sealed class ExecutionContractTests
         infrastructureOperation.Should().NotBeSameAs(automatic);
     }
 
+    [Fact]
+    public void ExecutionDescriptor_WhenOverloadOrExecutionPointDiffers_ShouldUseDistinctOperationKeys()
+    {
+        var stringOverload = GetOverload(typeof(string));
+        var integerOverload = GetOverload(typeof(int));
+
+        var first = ExecutionDescriptor.ForMethod<string, ExecutionUnit>(
+            new ExecutionPoint("test.identity.first"),
+            typeof(ExecutionContractTests),
+            stringOverload,
+            isBusinessOperation: true,
+            transactionMode: ExecutionTransactionMode.Automatic);
+        var overloaded = ExecutionDescriptor.ForMethod<int, ExecutionUnit>(
+            new ExecutionPoint("test.identity.first"),
+            typeof(ExecutionContractTests),
+            integerOverload,
+            isBusinessOperation: true,
+            transactionMode: ExecutionTransactionMode.Automatic);
+        var otherPoint = ExecutionDescriptor.ForMethod<string, ExecutionUnit>(
+            new ExecutionPoint("test.identity.second"),
+            typeof(ExecutionContractTests),
+            stringOverload,
+            isBusinessOperation: true,
+            transactionMode: ExecutionTransactionMode.Automatic);
+
+        first.DisplayName.Should().Be(overloaded.DisplayName);
+        first.OperationKey.Should().NotBe(overloaded.OperationKey);
+        first.OperationKey.Should().NotBe(otherPoint.OperationKey);
+    }
+
+    [Fact]
+    public void ExecutionContext_WhenCreatedForSameDescriptor_ShouldUseDistinctInvocationIds()
+    {
+        var descriptor = ExecutionDescriptor.ForMethod<string, ExecutionUnit>(
+            new ExecutionPoint("test.invocation"),
+            typeof(ExecutionContractTests),
+            entryMethod: null,
+            isBusinessOperation: true,
+            transactionMode: ExecutionTransactionMode.Automatic);
+
+        var first = new ExecutionContext<string>(descriptor, "first");
+        var second = new ExecutionContext<string>(descriptor, "second");
+
+        first.InvocationId.Should().NotBe(Guid.Empty);
+        second.InvocationId.Should().NotBe(Guid.Empty);
+        first.InvocationId.Should().NotBe(second.InvocationId);
+    }
+
+    [Fact]
+    public void ExecutionDescriptor_WhenContractDiffers_ShouldUseDistinctOperationKeys()
+    {
+        var first = ExecutionDescriptor.ForInterface<string, ExecutionUnit>(
+            new ExecutionPoint("test.contract-identity"),
+            typeof(DualContractComponent),
+            typeof(IFirstContract),
+            isBusinessOperation: true,
+            transactionMode: ExecutionTransactionMode.Automatic);
+        var second = ExecutionDescriptor.ForInterface<string, ExecutionUnit>(
+            new ExecutionPoint("test.contract-identity"),
+            typeof(DualContractComponent),
+            typeof(ISecondContract),
+            isBusinessOperation: true,
+            transactionMode: ExecutionTransactionMode.Automatic);
+
+        first.EntryMethod.Should().BeSameAs(second.EntryMethod);
+        first.ContractType.Should().Be(typeof(IFirstContract));
+        second.ContractType.Should().Be(typeof(ISecondContract));
+        first.OperationKey.Should().NotBe(second.OperationKey);
+    }
+
+    private static MethodInfo GetOverload(Type parameterType)
+    {
+        return typeof(ExecutionContractTests)
+            .GetMethods(BindingFlags.NonPublic | BindingFlags.Static)
+            .Single(method =>
+                method.Name == nameof(OverloadedOperation)
+                && method.GetParameters() is [{ ParameterType: var type }]
+                && type == parameterType);
+    }
+
+    private static void OverloadedOperation(string value)
+    {
+    }
+
+    private static void OverloadedOperation(int value)
+    {
+    }
+
     private interface IFeature;
 
     private interface IExplicitContract
@@ -153,9 +242,27 @@ public sealed class ExecutionContractTests
         Task ExecuteAsync(string input);
     }
 
+    private interface IFirstContract
+    {
+        Task ExecuteAsync(string input);
+    }
+
+    private interface ISecondContract
+    {
+        Task ExecuteAsync(string input);
+    }
+
     private sealed class ExplicitComponent : IExplicitContract
     {
         Task IExplicitContract.ExecuteAsync(string input)
+        {
+            return Task.CompletedTask;
+        }
+    }
+
+    private sealed class DualContractComponent : IFirstContract, ISecondContract
+    {
+        public Task ExecuteAsync(string input)
         {
             return Task.CompletedTask;
         }

@@ -8,10 +8,11 @@ namespace Monica.Core.Execution;
 /// Describes one reusable execution boundary independently of a concrete invocation.
 /// </summary>
 /// <remarks>
-/// Descriptors are immutable and interned from stable boundary metadata. The factories keep weak component buckets,
-/// so descriptors remain reference-stable while their component type is alive without preventing collectible
-/// components from unloading. Do not place request-specific state in a descriptor; use
-/// <see cref="ExecutionFeatureCollection"/> on the execution context instead.
+/// Descriptors are immutable and interned from stable boundary metadata. They are reusable for the lifetime of the
+/// current host, but executed component types may be retained by downstream plan and diagnostics caches. Collectible
+/// plugin unloading is therefore not supported for component types that have entered the execution pipeline. Do not
+/// place request-specific state in a descriptor; use <see cref="ExecutionFeatureCollection"/> on the execution
+/// context instead.
 /// </remarks>
 public sealed class ExecutionDescriptor
 {
@@ -21,8 +22,10 @@ public sealed class ExecutionDescriptor
     /// Initializes an execution descriptor.
     /// </summary>
     /// <param name="point">The subsystem execution point.</param>
-    /// <param name="operationName">A stable operation name suitable for diagnostics.</param>
+    /// <param name="operationKey">The stable aggregate identity of the operation.</param>
+    /// <param name="displayName">The human-readable operation name.</param>
     /// <param name="componentType">The concrete or contractual component type being invoked.</param>
+    /// <param name="contractType">The adapter contract used to identify the entry method, when applicable.</param>
     /// <param name="entryMethod">The concrete entry method when one is available.</param>
     /// <param name="inputType">The pipeline input type.</param>
     /// <param name="resultType">The pipeline result type.</param>
@@ -30,8 +33,10 @@ public sealed class ExecutionDescriptor
     /// <param name="transactionMode">The automatic transaction policy for the boundary.</param>
     private ExecutionDescriptor(
         ExecutionPoint point,
-        string operationName,
+        string operationKey,
+        string displayName,
         Type componentType,
+        Type? contractType,
         MethodInfo? entryMethod,
         Type inputType,
         Type resultType,
@@ -39,21 +44,31 @@ public sealed class ExecutionDescriptor
         ExecutionTransactionMode transactionMode)
     {
         ArgumentNullException.ThrowIfNull(point);
-        ArgumentException.ThrowIfNullOrWhiteSpace(operationName);
+        ArgumentException.ThrowIfNullOrWhiteSpace(operationKey);
+        ArgumentException.ThrowIfNullOrWhiteSpace(displayName);
         ArgumentNullException.ThrowIfNull(componentType);
         ArgumentNullException.ThrowIfNull(inputType);
         ArgumentNullException.ThrowIfNull(resultType);
 
-        if (!string.Equals(operationName, operationName.Trim(), StringComparison.Ordinal))
+        if (!string.Equals(operationKey, operationKey.Trim(), StringComparison.Ordinal))
         {
             throw new ArgumentException(
-                "Execution operation names must not contain leading or trailing whitespace.",
-                nameof(operationName));
+                "Execution operation keys must not contain leading or trailing whitespace.",
+                nameof(operationKey));
+        }
+
+        if (!string.Equals(displayName, displayName.Trim(), StringComparison.Ordinal))
+        {
+            throw new ArgumentException(
+                "Execution display names must not contain leading or trailing whitespace.",
+                nameof(displayName));
         }
 
         Point = point;
-        OperationName = operationName;
+        OperationKey = operationKey;
+        DisplayName = displayName;
         ComponentType = componentType;
+        ContractType = contractType;
         EntryMethod = entryMethod;
         InputType = inputType;
         ResultType = resultType;
@@ -140,14 +155,28 @@ public sealed class ExecutionDescriptor
     public ExecutionPoint Point { get; }
 
     /// <summary>
-    /// Gets the stable operation name used for diagnostics and behavior selection.
+    /// Gets the stable identity used to aggregate diagnostics for equivalent executions.
     /// </summary>
-    public string OperationName { get; }
+    /// <remarks>
+    /// The key includes the execution point, assembly-scoped component and contract identities, concrete method
+    /// signature, and pipeline input/result types. It is intended for machine identity, not user-facing display.
+    /// </remarks>
+    public string OperationKey { get; }
+
+    /// <summary>
+    /// Gets the human-readable operation name used by diagnostic views and logs.
+    /// </summary>
+    public string DisplayName { get; }
 
     /// <summary>
     /// Gets the concrete or contractual component type being invoked.
     /// </summary>
     public Type ComponentType { get; }
+
+    /// <summary>
+    /// Gets the adapter contract used to identify the entry method, when one was supplied.
+    /// </summary>
+    public Type? ContractType { get; }
 
     /// <summary>
     /// Gets the concrete entry method when the adapter can identify one.
@@ -222,12 +251,21 @@ public sealed class ExecutionDescriptor
                 entryMethod = interfaceMapping.TargetMethods[0];
             }
 
-            var operationName = $"{componentType.FullName ?? componentType.Name}.{entryMethod?.Name ?? Point.Value}";
+            var displayName = $"{componentType.FullName ?? componentType.Name}.{entryMethod?.Name ?? Point.Value}";
+            var operationKey = ExecutionOperationKey.Create(
+                Point,
+                componentType,
+                ContractType,
+                entryMethod,
+                InputType,
+                ResultType);
 
             return new ExecutionDescriptor(
                 Point,
-                operationName,
+                operationKey,
+                displayName,
                 componentType,
+                ContractType,
                 entryMethod,
                 InputType,
                 ResultType,

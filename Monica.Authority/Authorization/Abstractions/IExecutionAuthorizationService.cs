@@ -14,7 +14,7 @@ public interface IExecutionAuthorizationService
     /// <summary>
     /// Verifies that the current principal may execute the described operation.
     /// </summary>
-    /// <param name="context">The execution descriptor and principal to authorize.</param>
+    /// <param name="context">The descriptor, invocation state, and principal to authorize.</param>
     /// <param name="cancellationToken">
     /// Signals cancellation before authorization and between underlying ASP.NET Core operations that do not accept a
     /// cancellation token themselves.

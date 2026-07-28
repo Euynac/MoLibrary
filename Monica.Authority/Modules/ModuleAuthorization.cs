@@ -76,7 +76,8 @@ public class ModuleAuthorization(ModuleAuthorizationOption option) : WebModuleBa
             .AddBehavior(
                 typeof(ExecutionAuthorizationBehavior<,>),
                 ExecutionBehaviorOrder.Authorization,
-                static descriptor => descriptor.IsBusinessOperation);
+                static descriptor => descriptor.IsBusinessOperation
+                                     && ExecutionAuthorizationMetadata.RequiresAuthorization(descriptor));
     }
 }
 

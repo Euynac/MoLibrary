@@ -1,10 +1,11 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <RootNamespace>Test.Monica.ProjectUnits</RootNamespace>
+    <RootNamespace>Test.Monica.ProjectUnits.CodeAnalysis</RootNamespace>
     <IsTestProject>true</IsTestProject>
   </PropertyGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\Monica.ProjectUnits.CodeAnalysis\Monica.ProjectUnits.CodeAnalysis.csproj" />
     <ProjectReference Include="..\..\Monica.ProjectUnits\Monica.ProjectUnits.csproj" />
   </ItemGroup>
 
@@ -15,11 +16,7 @@
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
     <PackageReference Include="Microsoft.NET.Test.Sdk" />
-    <PackageReference Include="NSubstitute" />
-    <PackageReference Include="NSubstitute.Analyzers.CSharp">
-      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-      <PrivateAssets>all</PrivateAssets>
-    </PackageReference>
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp" />
     <PackageReference Include="xunit.runner.visualstudio">
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
       <PrivateAssets>all</PrivateAssets>

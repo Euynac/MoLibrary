@@ -61,7 +61,6 @@ public class ModuleAutoControllers(ModuleAutoControllersOption option)
 
     public override void ClaimDependencies()
     {
-        DependsOnModule<ModuleExecutionPipelineGuide>().Register();
         DependsOnModule<ModuleAutoModelGuide>().Register();
         DependsOnModule<ModuleControllersGuide>().Register().ConfigMvcBuilder((builder, provider) =>
         {
@@ -86,7 +85,6 @@ public class ModuleAutoControllers(ModuleAutoControllersOption option)
             services.AddTransient<IApiDescriptionProvider, RequestEndpointApiDescriptionProvider>();
             services.AddTransient<IConventionalRouteBuilder, ConventionalRouteBuilder>();
             services.AddSingleton<ResultEnvelopeMvcFilter>();
-            services.AddScoped<ExecutionPipelineMvcFilter>();
             services.AddEndpointsApiExplorer();
         });
     }

@@ -7,7 +7,15 @@ using Monica.ProjectUnits.CodeAnalysis.Models;
 
 namespace Monica.ProjectUnits.CodeAnalysis.Services;
 
-internal sealed class ProjectUnitSourceAnalyzer : IProjectUnitSourceAnalyzer
+/// <summary>
+/// Performs on-demand MSBuild and Roslyn analysis without registering a Monica runtime module or loading consumer
+/// application assemblies.
+/// </summary>
+/// <remarks>
+/// The analyzer serializes calls made through one instance because MSBuild registration and workspace loading use
+/// process-wide resources. Consumers such as Monica Workflow should register one shared instance.
+/// </remarks>
+public sealed class ProjectUnitSourceAnalyzer : IProjectUnitSourceAnalyzer
 {
     private static readonly Lock MSBUILD_REGISTRATION_LOCK = new();
     private readonly SemaphoreSlim _analysisLock = new(1, 1);
@@ -430,6 +438,7 @@ internal sealed class ProjectUnitSourceAnalyzer : IProjectUnitSourceAnalyzer
                     candidate.Candidate.RequirementIds,
                     candidate.Candidate.HasExplicitMetadata,
                     candidate.Location,
+                    candidate.Candidate.ExecutionPoints,
                     dependenciesByKey[key],
                     dependedBy[key].Order(StringComparer.Ordinal).ToArray(),
                     diagnosticsByKey[key]);

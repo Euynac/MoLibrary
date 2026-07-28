@@ -8,10 +8,20 @@ internal interface IExecutionTimingCoordinator : IExecutionTimingQuery
     /// <summary>
     /// Registers that a timing sample has started.
     /// </summary>
-    void RegisterStart(string name, DateTimeOffset startedAt, string? description);
+    void RegisterStart(
+        Guid invocationId,
+        string operationKey,
+        string displayName,
+        DateTimeOffset startedAt,
+        string? description);
 
     /// <summary>
     /// Completes a timing sample and forwards it to the active aggregation strategy.
     /// </summary>
-    void CompleteSample(string name, long durationMs, string? description, long? memoryBytes);
+    void CompleteSample(
+        Guid invocationId,
+        string operationKey,
+        string displayName,
+        long durationMs,
+        long? memoryBytes);
 }

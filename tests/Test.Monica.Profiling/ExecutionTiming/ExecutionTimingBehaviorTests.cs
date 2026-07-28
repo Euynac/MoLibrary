@@ -18,7 +18,9 @@ public sealed class ExecutionTimingBehaviorTests
         var result = await behavior.ExecuteAsync(context, () => Task.FromResult(42));
 
         result.Should().Be(42);
-        timingFactory.Name.Should().Be(context.Descriptor.OperationName);
+        timingFactory.OperationKey.Should().Be(context.Descriptor.OperationKey);
+        timingFactory.DisplayName.Should().Be(context.Descriptor.DisplayName);
+        timingFactory.InvocationId.Should().Be(context.InvocationId);
         timingFactory.Description.Should().Be(
             $"{context.Descriptor.Point.Value}: {typeof(ExecutionTimingBehaviorTests).FullName}");
         timingFactory.Recorder.DisposeCount.Should().Be(1);
@@ -57,7 +59,11 @@ public sealed class ExecutionTimingBehaviorTests
     {
         public TrackingExecutionTimingRecorder Recorder { get; } = new();
 
-        public string? Name { get; private set; }
+        public string? OperationKey { get; private set; }
+
+        public string? DisplayName { get; private set; }
+
+        public Guid? InvocationId { get; private set; }
 
         public string? Description { get; private set; }
 
@@ -68,7 +74,18 @@ public sealed class ExecutionTimingBehaviorTests
 
         public IExecutionTimingRecorder BeginScope(string name, string? description = null)
         {
-            Name = name;
+            throw new NotSupportedException();
+        }
+
+        public IExecutionTimingRecorder BeginInvocation(
+            string operationKey,
+            string displayName,
+            Guid invocationId,
+            string? description = null)
+        {
+            OperationKey = operationKey;
+            DisplayName = displayName;
+            InvocationId = invocationId;
             Description = description;
             return Recorder;
         }

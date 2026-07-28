@@ -22,7 +22,7 @@ public sealed class RequestOwnedWebApiGeneratorTests
             "LocalOrderingCommandApi.g.cs",
             "LocalOrderingQueryApi.g.cs");
         run.GeneratedSources["HttpEndpointCommandOrdering.g.cs"]
-            .Should().Contain("Monica.WebApi.AutoControllers.Annotations.MediatedController");
+            .Should().Contain("Monica.Core.Execution.Mvc.MediatedController");
         run.OutputErrors.Should().BeEmpty();
     }
 

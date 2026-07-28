@@ -1,14 +1,16 @@
 namespace Monica.Profiling.ExecutionTiming.Models;
 
 /// <summary>
-/// Aggregated timing statistics for a named operation.
+/// Aggregated timing statistics for a stable operation identity.
 /// </summary>
-/// <param name="Name">Logical operation name.</param>
+/// <param name="OperationKey">Stable machine identity of the operation.</param>
+/// <param name="DisplayName">Human-readable operation name.</param>
 /// <param name="ExecutionCount">Number of completed samples recorded for this operation.</param>
 /// <param name="AverageDurationMs">Average duration, in milliseconds, across all recorded samples.</param>
 /// <param name="FirstRecordedAt">Timestamp of the first completed sample.</param>
 public sealed record ExecutionTimingStatistics(
-    string Name,
+    string OperationKey,
+    string DisplayName,
     int ExecutionCount,
     double AverageDurationMs,
     DateTimeOffset FirstRecordedAt)

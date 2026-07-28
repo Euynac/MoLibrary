@@ -40,33 +40,44 @@ internal sealed class BackgroundExecutionTimingCoordinator(
         return collector.GetStatistics();
     }
 
-    public ExecutionTimingStatistics? GetStatistics(string name)
+    public ExecutionTimingStatistics? GetStatistics(string operationKey)
     {
         FlushPendingSamples();
-        return collector.GetStatistics(name);
+        return collector.GetStatistics(operationKey);
     }
 
-    public IReadOnlyDictionary<string, RunningExecutionTimingInfo> GetRunningOperations()
+    public IReadOnlyDictionary<Guid, RunningExecutionTimingInfo> GetRunningOperations()
     {
         return collector.GetRunningOperations();
     }
 
-    public void Reset(string name)
+    public void Reset(string operationKey)
     {
         FlushPendingSamples();
-        collector.Reset(name);
+        collector.Reset(operationKey);
     }
 
-    public void RegisterStart(string name, DateTimeOffset startedAt, string? description)
+    public void RegisterStart(
+        Guid invocationId,
+        string operationKey,
+        string displayName,
+        DateTimeOffset startedAt,
+        string? description)
     {
-        collector.RegisterStart(name, startedAt, description);
+        collector.RegisterStart(invocationId, operationKey, displayName, startedAt, description);
     }
 
-    public void CompleteSample(string name, long durationMs, string? description, long? memoryBytes)
+    public void CompleteSample(
+        Guid invocationId,
+        string operationKey,
+        string displayName,
+        long durationMs,
+        long? memoryBytes)
     {
-        collector.CompleteRunning(name);
+        collector.CompleteRunning(invocationId);
         _pendingSamples.Enqueue(new ExecutionTimingCompletedSample(
-            name,
+            operationKey,
+            displayName,
             durationMs,
             DateTimeOffset.UtcNow,
             memoryBytes));

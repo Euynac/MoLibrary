@@ -2,10 +2,8 @@ using System.Runtime.ExceptionServices;
 using Microsoft.AspNetCore.Mvc.Controllers;
 using Microsoft.AspNetCore.Mvc.Filters;
 using Monica.Core.Execution;
-using Monica.WebApi.AutoControllers.Annotations;
-using Monica.WebApi.AutoControllers.Models;
 
-namespace Monica.WebApi.AutoControllers.Services.Support;
+namespace Monica.Core.Execution.Mvc;
 
 /// <summary>
 /// Adapts direct MVC actions into Monica's shared execution pipeline while leaving mediated actions untouched.
@@ -22,14 +20,14 @@ internal sealed class ExecutionPipelineMvcFilter(IExecutionPipeline executionPip
             return;
         }
 
-        if (context.Controller.GetType().IsDefined(typeof(MediatedControllerAttribute), inherit: false)
+        var controllerType = actionDescriptor.ControllerTypeInfo.AsType();
+        if (controllerType.IsDefined(typeof(MediatedControllerAttribute), inherit: false)
             || actionDescriptor.MethodInfo.IsDefined(typeof(MediatedControllerAttribute), inherit: false))
         {
             await next().ConfigureAwait(false);
             return;
         }
 
-        var controllerType = context.Controller.GetType();
         var descriptor = ExecutionDescriptor.ForMethod<MvcActionExecutionInput, MvcActionExecutionResult>(
             MvcExecutionPoints.Action,
             controllerType,

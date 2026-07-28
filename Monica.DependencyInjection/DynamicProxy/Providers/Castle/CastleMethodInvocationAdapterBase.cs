@@ -14,7 +14,9 @@ internal abstract class CastleMethodInvocationAdapterBase : IMethodInvocation
 
     public Type[] GenericArguments => Invocation.GenericArguments ?? [];
 
-    public object TargetObject => Invocation.InvocationTarget ?? Invocation.MethodInvocationTarget;
+    public Type ComponentType { get; }
+
+    public object TargetObject => Invocation.InvocationTarget ?? Invocation.Proxy;
 
     public MethodInfo Method => Invocation.MethodInvocationTarget ?? Invocation.Method;
 
@@ -22,9 +24,10 @@ internal abstract class CastleMethodInvocationAdapterBase : IMethodInvocation
 
     protected IInvocation Invocation { get; }
 
-    protected CastleMethodInvocationAdapterBase(IInvocation invocation)
+    protected CastleMethodInvocationAdapterBase(IInvocation invocation, Type componentType)
     {
         Invocation = invocation;
+        ComponentType = componentType;
         _lazyArgumentsDictionary = new Lazy<IReadOnlyDictionary<string, object>>(GetArgumentsDictionary);
     }
 

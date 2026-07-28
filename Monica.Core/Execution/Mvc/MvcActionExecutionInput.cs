@@ -1,7 +1,7 @@
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc.Controllers;
 
-namespace Monica.WebApi.AutoControllers.Models;
+namespace Monica.Core.Execution.Mvc;
 
 /// <summary>
 /// Carries the bound MVC action state exposed to execution-pipeline behaviors.

@@ -15,8 +15,10 @@ public sealed class ExecutionTimingBehavior<TInput, TResult>(IExecutionTimingFac
         ExecutionDelegate<TResult> next)
     {
         var descriptor = context.Descriptor;
-        using var timing = timingFactory.BeginScope(
-            descriptor.OperationName,
+        using var timing = timingFactory.BeginInvocation(
+            descriptor.OperationKey,
+            descriptor.DisplayName,
+            context.InvocationId,
             $"{descriptor.Point.Value}: {descriptor.ComponentType.FullName ?? descriptor.ComponentType.Name}");
         return await next();
     }

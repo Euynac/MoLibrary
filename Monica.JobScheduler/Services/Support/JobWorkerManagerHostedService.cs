@@ -33,7 +33,9 @@ public class JobWorkerManagerHostedService(
     private readonly ModuleJobSchedulerOption _options = jobSchedulerOptions.Value;
     private readonly List<IAsyncDisposable> _eventSubscriptions = [];
     private readonly HashSet<string> _subscribedProjects = [];
+    private readonly JobExecutionRegistry _executionRegistry = new();
     private SemaphoreSlim? _workerThreadSemaphore;
+    private CancellationToken _workerStoppingToken;
 
     public override string ServiceName => "JobWorkerManager";
     public override string? ServiceGroupId => nameof(BuiltInModuleKey.JobScheduler);
@@ -43,6 +45,8 @@ public class JobWorkerManagerHostedService(
     /// </summary>
     protected override async Task OnStoppingAsync(CancellationToken cancellationToken)
     {
+        _executionRegistry.CloseAdmission();
+
         // Unsubscribe from all events
         if (_eventSubscriptions.Count > 0)
         {
@@ -59,11 +63,49 @@ public class JobWorkerManagerHostedService(
             RecordState("All subscriptions disposed", logLevel: LogLevel.Information);
         }
 
-        // TODO Print all in-flight jobs
+        if (_executionRegistry.Count > 0)
+        {
+            RecordState(
+                $"Waiting for {_executionRegistry.Count} in-flight job execution(s) to acknowledge host cancellation",
+                logLevel: LogLevel.Information);
+            try
+            {
+                await _executionRegistry.DrainAsync(cancellationToken);
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                RecordState(
+                    $"Host shutdown stopped waiting for {_executionRegistry.Count} in-flight job execution(s)",
+                    HostedServiceState.Degraded,
+                    logLevel: LogLevel.Warning);
+            }
+        }
 
-        // Dispose semaphore
-        _workerThreadSemaphore?.Dispose();
-        _workerThreadSemaphore = null;
+        try
+        {
+            await jobOrchestrator.DrainLateExecutionsAsync(cancellationToken);
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            RecordState(
+                "Host shutdown stopped waiting for cancellation-ignoring jobs to release their execution scopes",
+                HostedServiceState.Degraded,
+                logLevel: LogLevel.Warning);
+        }
+
+        if (_executionRegistry.Count == 0)
+        {
+            // Executions release their slots before removal, so the semaphore can now be disposed safely.
+            _workerThreadSemaphore?.Dispose();
+            _workerThreadSemaphore = null;
+        }
+        else
+        {
+            RecordState(
+                "The worker semaphore remains allocated because job executions outlived the shutdown wait boundary",
+                HostedServiceState.Degraded,
+                logLevel: LogLevel.Warning);
+        }
 
         await base.OnStoppingAsync(cancellationToken).ConfigureAwait(false);
     }
@@ -73,6 +115,9 @@ public class JobWorkerManagerHostedService(
     /// </summary>
     protected override async Task ExecuteBackgroundAsync(CancellationToken stoppingToken)
     {
+        _workerStoppingToken = stoppingToken;
+        _executionRegistry.OpenAdmission();
+
         // Initialize worker thread semaphore if MaxWorkerExecutionThreads is configured
         if (_options.MaxWorkerExecutionThreads is > 0)
         {
@@ -153,11 +198,20 @@ public class JobWorkerManagerHostedService(
             $"Received JobExecutionEvent for job {executionEvent.JobKey}, InstanceId: {executionEvent.InstanceId}",
             logLevel: LogLevel.Debug);
 
-        // Acknowledged job execution intentionally outlives this message-delivery token.
-        _ = Task.Run(async () =>
+        // Acknowledged job execution intentionally outlives this message-delivery token, but remains owned by the
+        // worker host so application shutdown can cancel and await the orchestration lifecycle.
+        if (!_executionRegistry.TryStart(
+                executionEvent.InstanceId,
+                () => ExecuteJobAsync(executionEvent, _workerStoppingToken),
+                out var executionTask))
         {
-            await ExecuteJobAsync(executionEvent);
-        });
+            RecordState(
+                $"Ignored duplicate or shutdown-time execution delivery for job instance {executionEvent.InstanceId}",
+                logLevel: LogLevel.Warning);
+            return Task.CompletedTask;
+        }
+
+        _ = ObserveExecutionAsync(executionEvent.InstanceId, executionTask);
 
         return Task.CompletedTask;
     }
@@ -165,7 +219,9 @@ public class JobWorkerManagerHostedService(
     /// <summary>
     /// Executes a job with concurrency control and thread limiting.
     /// </summary>
-    private async Task ExecuteJobAsync(JobExecutionEvent executionEvent)
+    private async Task ExecuteJobAsync(
+        JobExecutionEvent executionEvent,
+        CancellationToken stoppingToken)
     {
         var workerSlotAcquired = false;
 
@@ -174,7 +230,7 @@ public class JobWorkerManagerHostedService(
             // Acquire worker thread slot (if limit configured)
             if (_workerThreadSemaphore != null)
             {
-                await _workerThreadSemaphore.WaitAsync();
+                await _workerThreadSemaphore.WaitAsync(stoppingToken);
                 workerSlotAcquired = true;
 
                 RecordState(
@@ -203,11 +259,17 @@ public class JobWorkerManagerHostedService(
                 $"Starting execution for job {executionEvent.JobKey} instance {executionEvent.InstanceId}",
                 logLevel: LogLevel.Debug);
 
-            await jobOrchestrator.ExecuteAsync(instance, executionEvent);
+            await jobOrchestrator.ExecuteAsync(instance, executionEvent, stoppingToken);
 
             RecordState(
                 $"Completed execution for job {executionEvent.JobKey} instance {executionEvent.InstanceId}",
                 logLevel: LogLevel.Debug);
+        }
+        catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
+        {
+            RecordState(
+                $"Host cancellation stopped job {executionEvent.JobKey} instance {executionEvent.InstanceId}",
+                logLevel: LogLevel.Information);
         }
         catch (Exception ex)
         {
@@ -220,11 +282,30 @@ public class JobWorkerManagerHostedService(
         {
             if (workerSlotAcquired && _workerThreadSemaphore != null)
             {
+                await jobOrchestrator.WaitForExecutionReleaseAsync(executionEvent.InstanceId);
                 _workerThreadSemaphore.Release();
                 RecordState(
                     $"Released worker thread slot for job {executionEvent.JobKey} instance {executionEvent.InstanceId}",
                     logLevel: LogLevel.Debug);
             }
+        }
+    }
+
+    private async Task ObserveExecutionAsync(string instanceId, Task executionTask)
+    {
+        try
+        {
+            await executionTask;
+        }
+        catch (Exception exception)
+        {
+            // ExecuteJobAsync normally records terminal failures itself. This guard ensures unexpected observer faults
+            // are never left unobserved while the event delivery has already been acknowledged.
+            RecordState(
+                $"Unexpected observer failure for job instance {instanceId}: {exception.Message}",
+                HostedServiceState.Degraded,
+                exception,
+                LogLevel.Error);
         }
     }
 }

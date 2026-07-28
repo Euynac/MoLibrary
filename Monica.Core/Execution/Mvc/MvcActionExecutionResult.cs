@@ -1,7 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Filters;
 
-namespace Monica.WebApi.AutoControllers.Models;
+namespace Monica.Core.Execution.Mvc;
 
 /// <summary>
 /// Represents either an executed MVC action or an execution-pipeline short circuit.

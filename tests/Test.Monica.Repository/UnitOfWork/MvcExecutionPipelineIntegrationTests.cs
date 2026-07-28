@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.Net;
 using AwesomeAssertions;
 using Microsoft.AspNetCore.Builder;
@@ -7,14 +8,13 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Filters;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
 using Monica.Core.Execution;
+using Monica.Core.Execution.Mvc;
 using Monica.Core.Mediator;
 using Monica.Core.Modularity.Extensions;
 using Monica.Modules;
-using Monica.WebApi.AutoControllers;
-using Monica.WebApi.AutoControllers.Annotations;
-using Monica.WebApi.AutoControllers.Models;
 using Xunit;
 
 namespace Test.Monica.Repository.UnitOfWork;
@@ -81,7 +81,51 @@ public sealed class MvcExecutionPipelineIntegrationTests
         observation.MvcFailed.Should().Be(0);
     }
 
-    private static async Task<WebApplication> StartApplicationAsync()
+    [Fact]
+    public async Task AddControllers_ShouldRouteDirectActionsThroughTheExecutionPipeline()
+    {
+        await using var application = await StartApplicationAsync(useAutoControllers: false);
+        using var client = application.GetTestClient();
+        var observation = application.Services.GetRequiredService<MvcPipelineObservation>();
+
+        using var response = await client.GetAsync(
+            "/execution-pipeline-test/direct",
+            TestContext.Current.CancellationToken);
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        observation.MvcStarted.Should().Be(1);
+        observation.MvcSucceeded.Should().Be(1);
+        observation.MvcFailed.Should().Be(0);
+    }
+
+    [Fact]
+    public async Task DeclaredControllerMetadata_ShouldRemainAuthoritativeForDerivedRuntimeControllers()
+    {
+        await using var application = await StartApplicationAsync(
+            useAutoControllers: false,
+            useDerivedRuntimeController: true);
+        using var client = application.GetTestClient();
+        var observation = application.Services.GetRequiredService<MvcPipelineObservation>();
+
+        using var response = await client.GetAsync(
+            "/execution-pipeline-declared-controller",
+            TestContext.Current.CancellationToken);
+        using var directResponse = await client.GetAsync(
+            "/execution-pipeline-declared-direct-controller",
+            TestContext.Current.CancellationToken);
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        directResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        observation.MvcStarted.Should().Be(1, "only the declared direct controller enters the MVC boundary");
+        observation.MvcComponentTypes.Should().ContainSingle()
+            .Which.Should().Be(typeof(DeclaredDirectController));
+        observation.MediatorStarted.Should().Be(1);
+        observation.MediatorSucceeded.Should().Be(1);
+    }
+
+    private static async Task<WebApplication> StartApplicationAsync(
+        bool useAutoControllers = true,
+        bool useDerivedRuntimeController = false)
     {
         var builder = WebApplication.CreateBuilder(new WebApplicationOptions
         {
@@ -95,7 +139,17 @@ public sealed class MvcExecutionPipelineIntegrationTests
             monica.ConfigureTypeDiscovery(options => options
                 .ExcludeDefault()
                 .Add(typeof(MvcExecutionPipelineIntegrationTests).Assembly));
-            monica.AddAutoControllers();
+            if (useAutoControllers)
+            {
+                monica.AddAutoControllers();
+            }
+            else
+            {
+                monica.AddControllers()
+                    .ConfigMvcBuilder((mvc, _) => mvc
+                        .AddApplicationPart(typeof(MvcExecutionPipelineIntegrationTests).Assembly)
+                        .AddControllersAsServices());
+            }
             monica.AddMediator();
             monica.AddExecutionPipeline()
                 .AddBehavior<MvcPipelineObservationBehavior>(
@@ -103,6 +157,14 @@ public sealed class MvcExecutionPipelineIntegrationTests
                 .AddBehavior<MediatorPipelineObservationBehavior>(
                     descriptorFilter: static descriptor => descriptor.Point == MediatorExecutionPoints.Request);
         });
+
+        if (useDerivedRuntimeController)
+        {
+            builder.Services.Replace(ServiceDescriptor.Transient<DeclaredMediatedController>(provider =>
+                new DerivedRuntimeMediatedController(provider.GetRequiredService<IMediator>())));
+            builder.Services.Replace(ServiceDescriptor.Transient<DeclaredDirectController>(_ =>
+                new DerivedRuntimeDirectController()));
+        }
 
         var application = builder.Build();
         application.Use(async (context, next) =>
@@ -118,11 +180,43 @@ public sealed class MvcExecutionPipelineIntegrationTests
             }
         });
         application.UseMonica();
+        if (!useAutoControllers)
+        {
+            application.MapControllers();
+        }
         application.MapMonica();
         await application.StartAsync(TestContext.Current.CancellationToken);
         return application;
     }
 }
+
+[ApiController]
+[MediatedController]
+[Route("execution-pipeline-declared-controller")]
+public class DeclaredMediatedController(IMediator mediator) : ControllerBase
+{
+    [HttpGet]
+    public async Task<IActionResult> Execute(CancellationToken cancellationToken)
+    {
+        return Ok(await mediator.Send(new MvcPipelineRequest("mediated"), cancellationToken));
+    }
+}
+
+internal sealed class DerivedRuntimeMediatedController(IMediator mediator)
+    : DeclaredMediatedController(mediator);
+
+[ApiController]
+[Route("execution-pipeline-declared-direct-controller")]
+public class DeclaredDirectController : ControllerBase
+{
+    [HttpGet]
+    public IActionResult Execute()
+    {
+        return Ok("direct");
+    }
+}
+
+internal sealed class DerivedRuntimeDirectController : DeclaredDirectController;
 
 [ApiController]
 [Route("execution-pipeline-test")]
@@ -189,7 +283,7 @@ public sealed class MvcPipelineObservationBehavior(MvcPipelineObservation observ
         ExecutionContext<MvcActionExecutionInput> context,
         ExecutionDelegate<MvcActionExecutionResult> next)
     {
-        observation.RecordMvcStarted();
+        observation.RecordMvcStarted(context.Descriptor.ComponentType);
         try
         {
             var result = await next();
@@ -228,6 +322,7 @@ public sealed class MediatorPipelineObservationBehavior(MvcPipelineObservation o
 
 public sealed class MvcPipelineObservation
 {
+    private readonly ConcurrentQueue<Type> _mvcComponentTypes = new();
     private int _mvcStarted;
     private int _mvcSucceeded;
     private int _mvcFailed;
@@ -247,7 +342,13 @@ public sealed class MvcPipelineObservation
 
     public int MediatorFailed => Volatile.Read(ref _mediatorFailed);
 
-    public void RecordMvcStarted() => Interlocked.Increment(ref _mvcStarted);
+    public IReadOnlyList<Type> MvcComponentTypes => _mvcComponentTypes.ToArray();
+
+    public void RecordMvcStarted(Type componentType)
+    {
+        _mvcComponentTypes.Enqueue(componentType);
+        Interlocked.Increment(ref _mvcStarted);
+    }
 
     public void RecordMvcSucceeded() => Interlocked.Increment(ref _mvcSucceeded);
 

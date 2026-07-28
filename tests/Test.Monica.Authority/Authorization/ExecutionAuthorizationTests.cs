@@ -3,6 +3,7 @@ using AwesomeAssertions;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc.Controllers;
 using Microsoft.Extensions.DependencyInjection;
 using Monica.Authority.Authorization.Abstractions;
 using Monica.Authority.Authorization.Exceptions;
@@ -11,6 +12,7 @@ using Monica.Authority.Authorization.Services;
 using Monica.Authority.Authorization.Services.Behaviors;
 using Monica.Authority.Identity.Abstractions;
 using Monica.Core.Execution;
+using Monica.Core.Execution.Mvc;
 using Xunit;
 
 namespace Test.Monica.Authority.Authorization;
@@ -73,8 +75,8 @@ public sealed class ExecutionAuthorizationTests
         var service = CreateService(
             new TrackingPolicyProvider(),
             new TrackingAuthorizationService(AuthorizationResult.Success()));
-        var context = new ExecutionAuthorizationContext(
-            CreateExecutionContextWithoutEntryMethod<ClassProtectedComponent>().Descriptor,
+        var context = CreateAuthorizationContext(
+            CreateExecutionContextWithoutEntryMethod<ClassProtectedComponent>(),
             new ClaimsPrincipal());
 
         var action = () => service.CheckAsync(context, TestContext.Current.CancellationToken);
@@ -89,8 +91,8 @@ public sealed class ExecutionAuthorizationTests
         var policyProvider = new TrackingPolicyProvider();
         var authorizationService = new TrackingAuthorizationService(AuthorizationResult.Failed());
         var service = CreateService(policyProvider, authorizationService);
-        var context = new ExecutionAuthorizationContext(
-            CreateExecutionContextWithoutEntryMethod<ClassAnonymousComponent>().Descriptor,
+        var context = CreateAuthorizationContext(
+            CreateExecutionContextWithoutEntryMethod<ClassAnonymousComponent>(),
             new ClaimsPrincipal());
 
         await service.CheckAsync(context, TestContext.Current.CancellationToken);
@@ -116,6 +118,60 @@ public sealed class ExecutionAuthorizationTests
         policyProvider.DefaultPolicyRequestCount.Should().Be(1);
         authorizationService.AuthorizationCount.Should().Be(1);
         authorizationService.LastPrincipal.Should().BeSameAs(principal);
+    }
+
+    [Fact]
+    public async Task CheckAsync_WhenMvcActionIsAuthorized_ShouldUseActionHttpContextAsResource()
+    {
+        var authorizationService = new TrackingAuthorizationService(AuthorizationResult.Success());
+        var httpContext = new DefaultHttpContext();
+        var service = new ExecutionAuthorizationService(
+            new TrackingPolicyProvider(),
+            authorizationService,
+            new HttpContextAccessor { HttpContext = httpContext });
+
+        await service.CheckAsync(
+            CreateMvcAuthorizationContext(httpContext, CreateAuthenticatedPrincipal()),
+            TestContext.Current.CancellationToken);
+
+        authorizationService.LastResource.Should().BeSameAs(httpContext);
+    }
+
+    [Fact]
+    public async Task CheckAsync_WhenNonMvcOperationHasAmbientHttpContext_ShouldKeepExecutionTargetAsResource()
+    {
+        var authorizationService = new TrackingAuthorizationService(AuthorizationResult.Success());
+        var target = new ProtectedComponent();
+        var executionContext = CreateExecutionContext<ProtectedComponent>(
+            nameof(ProtectedComponent.Execute),
+            target);
+        var service = new ExecutionAuthorizationService(
+            new TrackingPolicyProvider(),
+            authorizationService,
+            new HttpContextAccessor { HttpContext = new DefaultHttpContext() });
+
+        await service.CheckAsync(
+            CreateAuthorizationContext(executionContext, CreateAuthenticatedPrincipal()),
+            TestContext.Current.CancellationToken);
+
+        authorizationService.LastResource.Should().BeSameAs(target);
+    }
+
+    [Fact]
+    public async Task CheckAsync_OutsideHttpRequest_ShouldAuthorizeAgainstExecutionTarget()
+    {
+        var authorizationService = new TrackingAuthorizationService(AuthorizationResult.Success());
+        var target = new ProtectedComponent();
+        var executionContext = CreateExecutionContext<ProtectedComponent>(
+            nameof(ProtectedComponent.Execute),
+            target);
+        var service = CreateService(new TrackingPolicyProvider(), authorizationService);
+
+        await service.CheckAsync(
+            CreateAuthorizationContext(executionContext, CreateAuthenticatedPrincipal()),
+            TestContext.Current.CancellationToken);
+
+        authorizationService.LastResource.Should().BeSameAs(target);
     }
 
     [Fact]
@@ -188,7 +244,8 @@ public sealed class ExecutionAuthorizationTests
         var behavior = new ExecutionAuthorizationBehavior<string, int>(
             authorizationService,
             new FixedPrincipalAccessor(principal));
-        var context = CreateExecutionContext<ProtectedComponent>(nameof(ProtectedComponent.Execute));
+        var target = new ProtectedComponent();
+        var context = CreateExecutionContext<ProtectedComponent>(nameof(ProtectedComponent.Execute), target);
 
         var result = await behavior.ExecuteAsync(
             context,
@@ -202,6 +259,9 @@ public sealed class ExecutionAuthorizationTests
         callOrder.Should().Equal("authorize", "terminal");
         authorizationService.Context!.Principal.Should().BeSameAs(principal);
         authorizationService.Context.Descriptor.Should().BeSameAs(context.Descriptor);
+        authorizationService.Context.Input.Should().Be(context.Input);
+        authorizationService.Context.Target.Should().BeSameAs(target);
+        authorizationService.Context.Features.Should().BeSameAs(context.Features);
         authorizationService.CancellationToken.Should().Be(context.CancellationToken);
     }
 
@@ -241,12 +301,49 @@ public sealed class ExecutionAuthorizationTests
         string methodName,
         ClaimsPrincipal principal)
     {
-        return new ExecutionAuthorizationContext(
-            CreateExecutionContext<TComponent>(methodName).Descriptor,
-            principal);
+        return CreateAuthorizationContext(CreateExecutionContext<TComponent>(methodName), principal);
     }
 
-    private static ExecutionContext<string> CreateExecutionContext<TComponent>(string methodName)
+    private static ExecutionAuthorizationContext CreateAuthorizationContext<TInput>(
+        ExecutionContext<TInput> context,
+        ClaimsPrincipal principal)
+    {
+        return new ExecutionAuthorizationContext(
+            context.Descriptor,
+            principal,
+            context.Input,
+            context.Target,
+            context.Features);
+    }
+
+    private static ExecutionAuthorizationContext CreateMvcAuthorizationContext(
+        HttpContext httpContext,
+        ClaimsPrincipal principal)
+    {
+        var method = typeof(ProtectedComponent).GetMethod(nameof(ProtectedComponent.Execute))!;
+        var descriptor = ExecutionDescriptor.ForMethod<MvcActionExecutionInput, int>(
+            MvcExecutionPoints.Action,
+            typeof(ProtectedComponent),
+            method,
+            isBusinessOperation: true,
+            transactionMode: ExecutionTransactionMode.Automatic);
+        var target = new ProtectedComponent();
+        var input = new MvcActionExecutionInput(
+            httpContext,
+            target,
+            new ControllerActionDescriptor(),
+            new Dictionary<string, object?>());
+        return new ExecutionAuthorizationContext(
+            descriptor,
+            principal,
+            input,
+            target,
+            new ExecutionFeatureCollection());
+    }
+
+    private static ExecutionContext<string> CreateExecutionContext<TComponent>(
+        string methodName,
+        object? target = null)
     {
         var method = typeof(TComponent).GetMethod(methodName)!;
         var descriptor = ExecutionDescriptor.ForMethod<string, int>(
@@ -258,6 +355,7 @@ public sealed class ExecutionAuthorizationTests
         return new ExecutionContext<string>(
             descriptor,
             "input",
+            target,
             cancellationToken: TestContext.Current.CancellationToken);
     }
 
@@ -317,6 +415,8 @@ public sealed class ExecutionAuthorizationTests
 
         public ClaimsPrincipal? LastPrincipal { get; private set; }
 
+        public object? LastResource { get; private set; }
+
         public Task<AuthorizationResult> AuthorizeAsync(
             ClaimsPrincipal user,
             object? resource,
@@ -324,6 +424,7 @@ public sealed class ExecutionAuthorizationTests
         {
             AuthorizationCount++;
             LastPrincipal = user;
+            LastResource = resource;
             return Task.FromResult(result);
         }
 

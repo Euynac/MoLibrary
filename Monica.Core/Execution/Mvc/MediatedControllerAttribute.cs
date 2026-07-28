@@ -1,4 +1,4 @@
-namespace Monica.WebApi.AutoControllers.Annotations;
+namespace Monica.Core.Execution.Mvc;
 
 /// <summary>
 /// Marks an HTTP controller or action that delegates business execution to Monica Mediator.

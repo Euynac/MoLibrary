@@ -19,7 +19,12 @@ public sealed class ExecutionAuthorizationBehavior<TInput, TResult>(
         ExecutionDelegate<TResult> next)
     {
         await authorizationService.CheckAsync(
-            new ExecutionAuthorizationContext(context.Descriptor, principalAccessor.Principal),
+            new ExecutionAuthorizationContext(
+                context.Descriptor,
+                principalAccessor.Principal,
+                context.Input,
+                context.Target,
+                context.Features),
             context.CancellationToken);
         return await next();
     }

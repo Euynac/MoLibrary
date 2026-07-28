@@ -3,86 +3,89 @@ namespace Monica.ProjectUnits.Models;
 /// <summary>
 /// Identifies the architectural role represented by a discovered project unit.
 /// </summary>
+/// <remarks>
+/// Numeric values are part of the serialized compatibility contract. Assign new roles only by appending a new value.
+/// </remarks>
 public enum EProjectUnitType
 {
     /// <summary>
     /// No architectural role has been assigned.
     /// </summary>
-    None,
+    None = 0,
     /// <summary>
-    /// application services
+    /// Application service.
     /// </summary>
-    ApplicationService,
+    ApplicationService = 1,
     /// <summary>
-    /// CRUD application services that participate in automatic controller generation
+    /// CRUD application service that participates in automatic controller generation.
     /// </summary>
-    CrudApplicationService,
+    CrudApplicationService = 2,
     /// <summary>
-    /// Domain services
+    /// Domain service.
     /// </summary>
-    DomainService,
+    DomainService = 3,
     /// <summary>
-    /// warehousing
+    /// Repository.
     /// </summary>
-    Repository,
+    Repository = 4,
     /// <summary>
-    /// domain events
+    /// Domain event.
     /// </summary>
-    DomainEvent,
+    DomainEvent = 5,
     /// <summary>
-    /// Domain event handler
+    /// Distributed domain-event handler.
     /// </summary>
-    DomainEventHandler,
+    DomainEventHandler = 6,
     /// <summary>
-    /// local event handler
+    /// Local event handler.
     /// </summary>
-    LocalEventHandler,
+    LocalEventHandler = 7,
     /// <summary>
-    /// Seed data
+    /// Startup data seeder.
     /// </summary>
-    Seeder,
+    Seeder = 8,
     /// <summary>
-    /// Background scheduled jobs
+    /// Recurring scheduled job.
     /// </summary>
-    RecurringJob,
+    RecurringJob = 9,
     /// <summary>
-    /// background job
+    /// Triggered job.
     /// </summary>
-    TriggeredJob,
+    TriggeredJob = 10,
     /// <summary>
-    /// Host-managed long-running or lifecycle service
+    /// HTTP API.
     /// </summary>
-    HostedService,
+    HttpApi = 11,
     /// <summary>
-    /// HTTP API
+    /// gRPC API.
     /// </summary>
-    HttpApi,
+    GrpcApi = 12,
     /// <summary>
-    /// gRPC API
+    /// State store.
     /// </summary>
-    GrpcApi,
+    StateStore = 13,
     /// <summary>
-    /// state storage
+    /// Event bus.
     /// </summary>
-    StateStore,
+    EventBus = 14,
     /// <summary>
-    /// event bus
+    /// Actor.
     /// </summary>
-    EventBus,
+    Actor = 15,
     /// <summary>
-    /// Actor model
+    /// Entity or aggregate.
     /// </summary>
-    Actor,
+    Entity = 16,
     /// <summary>
-    /// entities, aggregates
+    /// Request DTO.
     /// </summary>
-    Entity,
+    RequestDto = 17,
     /// <summary>
-    /// Request class
+    /// Configuration model.
     /// </summary>
-    RequestDto,
+    Configuration = 18,
     /// <summary>
-    /// Configuration class
+    /// Host-managed long-running or lifecycle service.
     /// </summary>
-    Configuration,
+    HostedService = 19
 }

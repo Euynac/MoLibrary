@@ -11,7 +11,8 @@ internal sealed class ExecutionTimingService(IExecutionTimingQuery executionTimi
             .GetStatistics()
             .Values
             .OrderByDescending(statistics => statistics.AverageDurationMs)
-            .ThenBy(statistics => statistics.Name, StringComparer.Ordinal)
+            .ThenBy(statistics => statistics.DisplayName, StringComparer.Ordinal)
+            .ThenBy(statistics => statistics.OperationKey, StringComparer.Ordinal)
             .ToList();
     }
 
@@ -21,7 +22,8 @@ internal sealed class ExecutionTimingService(IExecutionTimingQuery executionTimi
             .GetRunningOperations()
             .Values
             .OrderByDescending(info => info.GetCurrentElapsedMs())
-            .ThenBy(info => info.Name, StringComparer.Ordinal)
+            .ThenBy(info => info.DisplayName, StringComparer.Ordinal)
+            .ThenBy(info => info.InvocationId)
             .ToList();
     }
 }

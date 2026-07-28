@@ -7,6 +7,7 @@ using Monica.Core.Modularity;
 using Monica.Core.Modularity.Abstractions;
 using Monica.Core.Modularity.Annotations;
 using Monica.Core.Modularity.Models;
+using Monica.Core.Results.Abstractions;
 using Monica.Framework.ChainTracing.Abstractions;
 using Monica.Framework.ChainTracing.Providers.AspNetCore;
 using Monica.Framework.ChainTracing.Providers.Execution;
@@ -62,7 +63,9 @@ public class ModuleChainTracing(ModuleChainTracingOption option)
             .AddBehavior(
                 typeof(ChainTracingExecutionBehavior<,>),
                 ExecutionBehaviorOrder.Diagnostics,
-                static descriptor => descriptor.IsBusinessOperation);
+                static descriptor =>
+                    descriptor.IsBusinessOperation
+                    && typeof(IResultEnvelope).IsAssignableFrom(descriptor.ResultType));
 
         if (Option.EnableControllerTracing || Option.EnableAttachToRes)
         {

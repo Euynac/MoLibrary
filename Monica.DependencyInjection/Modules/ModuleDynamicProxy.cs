@@ -36,7 +36,6 @@ public class ModuleDynamicProxy(ModuleDynamicProxyOption option)
     public override void PostConfigureServices(IServiceCollection services)
     {
         services.AddSingleton(new ServiceProviderProxyGenerator());
-        services.AddTransient(typeof(AsyncDeterminationInterceptorAdapter<>));
         DynamicProxyServiceRegistrar.ApplyInterceptors(services, Option);
     }
 

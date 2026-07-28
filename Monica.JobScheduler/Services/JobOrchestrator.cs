@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.Text.Json;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -24,6 +25,8 @@ public class JobOrchestrator(
     IOptions<ModuleJobSchedulerOption> options,
     ILogger<JobOrchestrator> logger)
 {
+    private readonly ConcurrentDictionary<string, Task> _lateExecutionObservers = new(StringComparer.Ordinal);
+
     /// <summary>
     /// Executes a job instance with full lifecycle management.
     /// </summary>
@@ -44,6 +47,7 @@ public class JobOrchestrator(
             instance.JobKey,
             instance.InstanceId);
 
+        var tokenLease = new JobCancellationTokenLease(instance.InstanceId, CleanupJobTokenAsync);
         try
         {
             var jobCancellationToken = await jobCancellationManager.GetOrCreateJobTokenAsync(
@@ -67,82 +71,78 @@ public class JobOrchestrator(
                 instance,
                 jobCancellationToken);
 
-            var timeoutTask = Task.Delay(executionEvent.MaxExecutionTimeout, cancellationToken);
-            var completedTask = await Task.WhenAny(executionTask, timeoutTask);
-
-            if (completedTask == timeoutTask)
+            try
             {
-                // Timeout occurred
+                await executionTask.WaitAsync(
+                    executionEvent.MaxExecutionTimeout,
+                    cancellationToken);
+
+                logger.LogDebug(
+                    "Job {JobKey} instance {InstanceId} completed successfully",
+                    instance.JobKey,
+                    instance.InstanceId);
+
+                await jobInstanceManager.UpdateStateAsync(
+                    instance.InstanceId,
+                    JobState.Succeeded,
+                    cancellationToken: CancellationToken.None);
+            }
+            catch (TimeoutException) when (cancellationToken.IsCancellationRequested)
+            {
+                await HandleHostCancellationAsync(instance, executionTask, tokenLease);
+                throw new OperationCanceledException(
+                    "Host operation was cancelled while the job deadline was expiring.",
+                    cancellationToken);
+            }
+            catch (TimeoutException) when (!executionTask.IsCompleted)
+            {
+                await HandleTimeoutAsync(
+                    instance,
+                    executionEvent.MaxExecutionTimeout,
+                    executionTask,
+                    tokenLease);
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                await HandleHostCancellationAsync(instance, executionTask, tokenLease);
+                throw;
+            }
+            catch (OperationCanceledException) when (jobCancellationToken.IsCancellationRequested)
+            {
                 logger.LogWarning(
-                    "Job {JobKey} instance {InstanceId} exceeded timeout of {Timeout}",
+                    "Job {JobKey} instance {InstanceId} was cancelled",
+                    instance.JobKey,
+                    instance.InstanceId);
+
+                await jobInstanceManager.UpdateStateAsync(
+                    instance.InstanceId,
+                    JobState.Cancelled,
+                    "Job execution was cancelled",
+                    CancellationToken.None);
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(
+                    ex,
+                    "Job {JobKey} instance {InstanceId} failed with exception: {Message}",
                     instance.JobKey,
                     instance.InstanceId,
-                    executionEvent.MaxExecutionTimeout);
+                    ex.GetMessageRecursively());
 
-                // Cancel the distributed token (propagates to all workers if distributed)
-                await jobCancellationManager.CancelJobTokenAsync(instance.InstanceId, cancellationToken);
-
-                // Wait a brief moment for graceful cancellation
-                await Task.WhenAny(executionTask, Task.Delay(TimeSpan.FromSeconds(2)));
-
-                // Update state to Failed (will automatically publish JobCompletedEvent)
                 await jobInstanceManager.UpdateStateAsync(
                     instance.InstanceId,
                     JobState.Failed,
-                    $"Execution timeout after {executionEvent.MaxExecutionTimeout}",
-                    cancellationToken);
+                    $"{ex}",
+                    CancellationToken.None);
             }
-            else
-            {
-                // Job completed (either successfully or with exception)
-                try
-                {
-                    await executionTask; // Rethrow any exception
-
-                    logger.LogDebug(
-                        "Job {JobKey} instance {InstanceId} completed successfully",
-                        instance.JobKey,
-                        instance.InstanceId);
-
-                    // Update state to Succeeded (will automatically publish JobCompletedEvent)
-                    await jobInstanceManager.UpdateStateAsync(
-                        instance.InstanceId,
-                        JobState.Succeeded,
-                        null,
-                        cancellationToken);
-                }
-                catch (OperationCanceledException) when (jobCancellationToken.IsCancellationRequested)
-                {
-                    // Job was cancelled via distributed cancellation (manual or timeout)
-                    logger.LogWarning(
-                        "Job {JobKey} instance {InstanceId} was cancelled",
-                        instance.JobKey,
-                        instance.InstanceId);
-
-                    // Update state to Cancelled (will automatically publish JobCompletedEvent)
-                    await jobInstanceManager.UpdateStateAsync(
-                        instance.InstanceId,
-                        JobState.Cancelled,
-                        "Job execution was cancelled",
-                        cancellationToken);
-                }
-                catch (Exception ex)
-                {
-                    // Job threw an exception
-                    logger.LogError(
-                        ex,
-                        "Job {JobKey} instance {InstanceId} failed with exception: {Message}",
-                        instance.JobKey,
-                        instance.InstanceId,
-                        ex.GetMessageRecursively());
-
-                    await jobInstanceManager.UpdateStateAsync(
-                        instance.InstanceId,
-                        JobState.Failed,
-                        $"{ex}",
-                        cancellationToken);
-                }
-            }
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            logger.LogInformation(
+                "Job {JobKey} instance {InstanceId} execution was abandoned because the host operation was cancelled",
+                instance.JobKey,
+                instance.InstanceId);
+            throw;
         }
         catch (Exception ex)
         {
@@ -161,7 +161,7 @@ public class JobOrchestrator(
                     instance.InstanceId,
                     JobState.Failed,
                     $"Orchestrator error: {ex}",
-                    cancellationToken);
+                    CancellationToken.None);
             }
             catch (Exception updateEx)
             {
@@ -173,26 +173,269 @@ public class JobOrchestrator(
         }
         finally
         {
-            try
-            {
-                await jobCancellationManager.DeleteJobTokenAsync(instance.InstanceId, CancellationToken.None);
-                logger.LogDebug(
-                    "Cleaned up cancellation token for instance {InstanceId}",
-                    instance.InstanceId);
-            }
-            catch (Exception ex)
-            {
-                logger.LogWarning(
-                    ex,
-                    "Failed to cleanup cancellation token for instance {InstanceId}: {Message}",
-                    instance.InstanceId,
-                    ex.Message);
-            }
+            await tokenLease.DisposeAsync();
 
             logger.LogDebug(
                 "Completed execution lifecycle for job {JobKey} instance {InstanceId}",
                 instance.JobKey,
                 instance.InstanceId);
+        }
+    }
+
+    /// <summary>
+    /// Waits for cancellation-ignoring executions that outlived their finalized scheduler operation.
+    /// </summary>
+    /// <remarks>
+    /// The worker host calls this during shutdown after normal orchestration tasks have stopped. The wait is bounded by
+    /// the host shutdown token; jobs that ignore cancellation beyond that boundary are reported by the worker as a
+    /// degraded shutdown.
+    /// </remarks>
+    internal async Task DrainLateExecutionsAsync(CancellationToken cancellationToken)
+    {
+        while (true)
+        {
+            var observers = _lateExecutionObservers.Values.ToArray();
+            if (observers.Length == 0)
+            {
+                return;
+            }
+
+            await Task.WhenAll(observers).WaitAsync(cancellationToken);
+        }
+    }
+
+    /// <summary>
+    /// Waits until a job execution that ignored scheduler cancellation has released its execution scope.
+    /// </summary>
+    /// <remarks>
+    /// Worker concurrency slots use this completion boundary so a timed-out job still counts as executing until its
+    /// user code actually exits. Completed or cancellation-cooperative jobs return immediately.
+    /// </remarks>
+    internal Task WaitForExecutionReleaseAsync(string instanceId)
+    {
+        return _lateExecutionObservers.GetValueOrDefault(instanceId) ?? Task.CompletedTask;
+    }
+
+    private async Task HandleTimeoutAsync(
+        JobInstance instance,
+        TimeSpan timeout,
+        Task executionTask,
+        JobCancellationTokenLease tokenLease)
+    {
+        logger.LogWarning(
+            "Job {JobKey} instance {InstanceId} exceeded timeout of {Timeout}",
+            instance.JobKey,
+            instance.InstanceId,
+            timeout);
+
+        await TryCancelJobTokenAsync(instance.InstanceId);
+        var completedDuringGracePeriod = await WaitForGracefulCompletionAsync(executionTask);
+        if (!completedDuringGracePeriod)
+        {
+            tokenLease.TransferToLateExecution();
+            TrackLateExecution(instance, executionTask, "after timeout", tokenLease);
+        }
+
+        await jobInstanceManager.UpdateStateAsync(
+            instance.InstanceId,
+            JobState.Failed,
+            $"Execution timeout after {timeout}",
+            CancellationToken.None);
+
+        if (completedDuringGracePeriod)
+        {
+            await ObserveCompletedExecutionAsync(instance, executionTask, "after timeout cancellation");
+        }
+    }
+
+    private async Task HandleHostCancellationAsync(
+        JobInstance instance,
+        Task executionTask,
+        JobCancellationTokenLease tokenLease)
+    {
+        logger.LogInformation(
+            "Host cancellation requested for job {JobKey} instance {InstanceId}",
+            instance.JobKey,
+            instance.InstanceId);
+
+        await TryCancelJobTokenAsync(instance.InstanceId);
+        var completedDuringGracePeriod = await WaitForGracefulCompletionAsync(executionTask);
+        if (!completedDuringGracePeriod)
+        {
+            tokenLease.TransferToLateExecution();
+            TrackLateExecution(instance, executionTask, "after host cancellation", tokenLease);
+        }
+
+        await jobInstanceManager.UpdateStateAsync(
+            instance.InstanceId,
+            JobState.Cancelled,
+            "Host operation was cancelled",
+            CancellationToken.None);
+
+        if (completedDuringGracePeriod)
+        {
+            await ObserveCompletedExecutionAsync(instance, executionTask, "after host cancellation");
+        }
+    }
+
+    private async Task<bool> WaitForGracefulCompletionAsync(Task executionTask)
+    {
+        var gracePeriod = options.Value.ExecutionCancellationGracePeriod;
+        if (gracePeriod <= TimeSpan.Zero)
+        {
+            return executionTask.IsCompleted;
+        }
+
+        return await Task.WhenAny(
+            executionTask,
+            Task.Delay(gracePeriod, CancellationToken.None)) == executionTask;
+    }
+
+    private void TrackLateExecution(
+        JobInstance instance,
+        Task executionTask,
+        string completionContext,
+        JobCancellationTokenLease tokenLease)
+    {
+        var observer = ObserveLateExecutionAsync(instance, executionTask, completionContext, tokenLease);
+        if (!_lateExecutionObservers.TryAdd(instance.InstanceId, observer))
+        {
+            throw new InvalidOperationException(
+                $"A late execution is already tracked for job instance '{instance.InstanceId}'.");
+        }
+
+        observer.GetAwaiter().OnCompleted(() =>
+            _lateExecutionObservers.TryRemove(instance.InstanceId, out _));
+
+        logger.LogWarning(
+            "Job {JobKey} instance {InstanceId} is still running {CompletionContext}; its scope and cancellation token remain tracked",
+            instance.JobKey,
+            instance.InstanceId,
+            completionContext);
+    }
+
+    private async Task ObserveLateExecutionAsync(
+        JobInstance instance,
+        Task executionTask,
+        string completionContext,
+        JobCancellationTokenLease tokenLease)
+    {
+        try
+        {
+            await ObserveCompletedExecutionAsync(instance, executionTask, completionContext);
+        }
+        finally
+        {
+            await tokenLease.CompleteLateExecutionAsync();
+        }
+    }
+
+    private async Task ObserveCompletedExecutionAsync(
+        JobInstance instance,
+        Task executionTask,
+        string completionContext)
+    {
+        try
+        {
+            await executionTask;
+            logger.LogWarning(
+                "Job {JobKey} instance {InstanceId} completed {CompletionContext} after the scheduler stopped waiting",
+                instance.JobKey,
+                instance.InstanceId,
+                completionContext);
+        }
+        catch (OperationCanceledException)
+        {
+            logger.LogDebug(
+                "Job {JobKey} instance {InstanceId} acknowledged cancellation {CompletionContext}",
+                instance.JobKey,
+                instance.InstanceId,
+                completionContext);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(
+                ex,
+                "Job {JobKey} instance {InstanceId} failed late {CompletionContext}: {Message}",
+                instance.JobKey,
+                instance.InstanceId,
+                completionContext,
+                ex.GetMessageRecursively());
+        }
+    }
+
+    private async Task TryCancelJobTokenAsync(string instanceId)
+    {
+        try
+        {
+            await jobCancellationManager.CancelJobTokenAsync(instanceId, CancellationToken.None);
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(
+                ex,
+                "Failed to signal cancellation for job instance {InstanceId}: {Message}",
+                instanceId,
+                ex.Message);
+        }
+    }
+
+    private async Task CleanupJobTokenAsync(string instanceId)
+    {
+        try
+        {
+            await jobCancellationManager.DeleteJobTokenAsync(instanceId, CancellationToken.None);
+            logger.LogDebug(
+                "Cleaned up cancellation token for instance {InstanceId}",
+                instanceId);
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(
+                ex,
+                "Failed to cleanup cancellation token for instance {InstanceId}: {Message}",
+                instanceId,
+                ex.Message);
+        }
+    }
+
+    private sealed class JobCancellationTokenLease(
+        string instanceId,
+        Func<string, Task> cleanup) : IAsyncDisposable
+    {
+        private const int ORCHESTRATOR_OWNER = 0;
+        private const int LATE_EXECUTION_OWNER = 1;
+        private const int CLEANED = 2;
+        private int _owner = ORCHESTRATOR_OWNER;
+
+        public void TransferToLateExecution()
+        {
+            if (Interlocked.CompareExchange(
+                    ref _owner,
+                    LATE_EXECUTION_OWNER,
+                    ORCHESTRATOR_OWNER) != ORCHESTRATOR_OWNER)
+            {
+                throw new InvalidOperationException(
+                    $"Cancellation-token cleanup for job instance '{instanceId}' has already been transferred or completed.");
+            }
+        }
+
+        public async Task CompleteLateExecutionAsync()
+        {
+            if (Interlocked.CompareExchange(ref _owner, CLEANED, LATE_EXECUTION_OWNER)
+                == LATE_EXECUTION_OWNER)
+            {
+                await cleanup(instanceId);
+            }
+        }
+
+        public async ValueTask DisposeAsync()
+        {
+            if (Interlocked.CompareExchange(ref _owner, CLEANED, ORCHESTRATOR_OWNER)
+                == ORCHESTRATOR_OWNER)
+            {
+                await cleanup(instanceId);
+            }
         }
     }
 

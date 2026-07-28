@@ -72,10 +72,9 @@ internal sealed class ExecutionPipelineInvocationInterceptor(IExecutionPipeline 
     private static ExecutionDescriptor CreateDescriptor<TResult>(IMethodInvocation invocation)
     {
         var method = invocation.Method;
-        var componentType = method.DeclaringType ?? invocation.TargetObject.GetType();
         return ExecutionDescriptor.ForMethod<DynamicProxyMethodInput, TResult>(
             DynamicProxyExecutionPoints.Method,
-            componentType,
+            invocation.ComponentType,
             method,
             isBusinessOperation: true,
             transactionMode: ExecutionTransactionMode.Automatic);

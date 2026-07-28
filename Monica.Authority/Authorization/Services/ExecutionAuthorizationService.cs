@@ -1,10 +1,11 @@
-using System.Reflection;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Monica.Authority.Authorization.Abstractions;
 using Monica.Authority.Authorization.Exceptions;
 using Monica.Authority.Authorization.Models;
+using Monica.Authority.Authorization.Services.Support;
+using Monica.Core.Execution.Mvc;
 
 namespace Monica.Authority.Authorization.Services;
 
@@ -27,12 +28,14 @@ public sealed class ExecutionAuthorizationService(
 
         var descriptor = context.Descriptor;
         var entryMethod = descriptor.EntryMethod;
-        if (AllowsAnonymous(entryMethod, descriptor.ComponentType))
+        if (ExecutionAuthorizationMetadata.AllowsAnonymous(entryMethod, descriptor.ComponentType))
         {
             return;
         }
 
-        var authorizationData = GetAuthorizationData(entryMethod, descriptor.ComponentType).ToArray();
+        var authorizationData = ExecutionAuthorizationMetadata
+            .GetAuthorizationData(entryMethod, descriptor.ComponentType)
+            .ToArray();
         if (authorizationData.Length == 0)
         {
             return;
@@ -60,27 +63,16 @@ public sealed class ExecutionAuthorizationService(
             return;
         }
 
-        var result = await authorizationService.AuthorizeAsync(context.Principal, null, policy);
+        // Direct MVC policies receive their action HttpContext. Other adapters keep their own target/input resource even
+        // when they happen to execute within an ambient HTTP request.
+        var resource = context.Input is MvcActionExecutionInput mvcInput
+            ? mvcInput.HttpContext
+            : context.DefaultResource;
+        var result = await authorizationService.AuthorizeAsync(context.Principal, resource, policy);
         cancellationToken.ThrowIfCancellationRequested();
         if (!result.Succeeded)
         {
             throw new AuthorizationException(result.Failure);
         }
-    }
-
-    private static bool AllowsAnonymous(MethodInfo? entryMethod, Type componentType)
-    {
-        return entryMethod?.GetCustomAttributes(true).OfType<IAllowAnonymous>().Any() is true
-               || componentType.GetCustomAttributes(true).OfType<IAllowAnonymous>().Any();
-    }
-
-    private static IEnumerable<IAuthorizeData> GetAuthorizationData(
-        MethodInfo? entryMethod,
-        Type componentType)
-    {
-        var componentData = componentType.GetCustomAttributes(true).OfType<IAuthorizeData>();
-        return entryMethod is null
-            ? componentData
-            : entryMethod.GetCustomAttributes(true).OfType<IAuthorizeData>().Concat(componentData);
     }
 }

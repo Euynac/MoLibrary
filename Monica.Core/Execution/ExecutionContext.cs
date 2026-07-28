@@ -37,6 +37,7 @@ public sealed class ExecutionContext<TInput>
         }
 
         Descriptor = descriptor;
+        InvocationId = Guid.NewGuid();
         Input = input;
         Target = target;
         CancellationToken = cancellationToken;
@@ -47,6 +48,11 @@ public sealed class ExecutionContext<TInput>
     /// Gets the reusable execution descriptor.
     /// </summary>
     public ExecutionDescriptor Descriptor { get; }
+
+    /// <summary>
+    /// Gets the unique identity of this concrete pipeline invocation.
+    /// </summary>
+    public Guid InvocationId { get; }
 
     /// <summary>
     /// Gets the invocation input.

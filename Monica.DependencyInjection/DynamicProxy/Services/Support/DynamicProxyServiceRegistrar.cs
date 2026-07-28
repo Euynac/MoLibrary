@@ -206,10 +206,16 @@ internal static class DynamicProxyServiceRegistrar
         }
 
         // Avoid registering the same interceptor type more than once.
-        IInterceptor[] GetInterceptors(IServiceProvider provider, RegisterContext context)
+        IInterceptor[] GetInterceptors(
+            IServiceProvider provider,
+            RegisterContext context,
+            Type? componentType = null)
         {
             return context.InterceptorAdapterTypes
-                .Select(p => (IInterceptor)ActivatorUtilities.CreateInstance(provider, p))
+                .Select(type => (IInterceptor)ActivatorUtilities.CreateInstance(
+                    provider,
+                    type,
+                    componentType ?? context.ImplementType))
                 .ToArray();
         }
 
@@ -252,8 +258,8 @@ internal static class DynamicProxyServiceRegistrar
                 (provider, o) =>
                 {
                     var proxyGenerator = provider.GetRequiredService<ServiceProviderProxyGenerator>();
-                    var interceptors = GetInterceptors(provider, context);
                     var targetFromFactory = factory.Invoke(provider);
+                    var interceptors = GetInterceptors(provider, context, targetFromFactory.GetType());
                     object? proxiedObject;
                     // TODO: Property injection is not supported here because the factory result is created only once.
                     switch (context.Kind)

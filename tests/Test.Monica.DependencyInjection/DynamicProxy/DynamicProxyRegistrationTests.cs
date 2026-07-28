@@ -77,6 +77,60 @@ public sealed class DynamicProxyRegistrationTests
     }
 
     [Fact]
+    public async Task UseExecutionPipeline_WhenMethodIsInherited_ShouldUseRegisteredImplementationIdentity()
+    {
+        var builder = Host.CreateApplicationBuilder();
+        builder.Services.AddSingleton<ComponentIdentityTracker>();
+        builder.Services.AddTransient<IInheritedBridgeService, DerivedInheritedBridgeService>();
+        builder.AddMonica(monica =>
+        {
+            monica.AddExecutionPipeline()
+                .AddBehavior(
+                    typeof(ComponentIdentityExecutionBehavior<,>),
+                    descriptorFilter: descriptor =>
+                        descriptor.Point == DynamicProxyExecutionPoints.Method
+                        && descriptor.ComponentType == typeof(DerivedInheritedBridgeService));
+            monica.AddDynamicProxy()
+                .UseExecutionPipeline(context => context.ServiceType == typeof(IInheritedBridgeService));
+        });
+        using var host = builder.Build();
+
+        await host.Services.GetRequiredService<IInheritedBridgeService>().ExecuteAsync();
+
+        var observation = host.Services.GetRequiredService<ComponentIdentityTracker>();
+        observation.ComponentType.Should().Be(typeof(DerivedInheritedBridgeService));
+        observation.MethodDeclaringType.Should().Be(typeof(InheritedBridgeServiceBase));
+        observation.HasDerivedMetadata.Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task UseExecutionPipeline_WhenFactoryReturnsDerivedTarget_ShouldUseConcreteTargetIdentity()
+    {
+        var builder = Host.CreateApplicationBuilder();
+        builder.Services.AddSingleton<ComponentIdentityTracker>();
+        builder.Services.AddTransient<IInheritedBridgeService>(_ => new DerivedInheritedBridgeService());
+        builder.AddMonica(monica =>
+        {
+            monica.AddExecutionPipeline()
+                .AddBehavior(
+                    typeof(ComponentIdentityExecutionBehavior<,>),
+                    descriptorFilter: descriptor =>
+                        descriptor.Point == DynamicProxyExecutionPoints.Method
+                        && descriptor.ComponentType == typeof(DerivedInheritedBridgeService));
+            monica.AddDynamicProxy()
+                .UseExecutionPipeline(context => context.ServiceType == typeof(IInheritedBridgeService));
+        });
+        using var host = builder.Build();
+
+        await host.Services.GetRequiredService<IInheritedBridgeService>().ExecuteAsync();
+
+        var observation = host.Services.GetRequiredService<ComponentIdentityTracker>();
+        observation.ComponentType.Should().Be(typeof(DerivedInheritedBridgeService));
+        observation.MethodDeclaringType.Should().Be(typeof(InheritedBridgeServiceBase));
+        observation.HasDerivedMetadata.Should().BeTrue();
+    }
+
+    [Fact]
     public void UseExecutionPipeline_WhenPredicateSelectsSingleton_ShouldRejectComposition()
     {
         var builder = Host.CreateApplicationBuilder();
@@ -177,7 +231,9 @@ public sealed class DynamicProxyRegistrationTests
         await service.ExecuteAsync();
 
         ProxyHelper.IsProxy(service).Should().BeTrue();
-        host.Services.GetRequiredService<InvocationTracker>().InvocationCount.Should().Be(1);
+        var tracker = host.Services.GetRequiredService<InvocationTracker>();
+        tracker.InvocationCount.Should().Be(1);
+        tracker.LastTarget.Should().BeOfType<SealedInterfaceService>();
     }
 
     [Fact]
@@ -195,7 +251,9 @@ public sealed class DynamicProxyRegistrationTests
         await service.ExecuteAsync();
 
         ProxyHelper.IsProxy(service).Should().BeTrue();
-        host.Services.GetRequiredService<InvocationTracker>().InvocationCount.Should().Be(1);
+        var tracker = host.Services.GetRequiredService<InvocationTracker>();
+        tracker.InvocationCount.Should().Be(1);
+        tracker.LastTarget.Should().BeAssignableTo<InheritableConcreteService>();
     }
 
     private static bool ShouldInterceptTestService(ProxyBuildContext context)
@@ -222,6 +280,11 @@ public sealed class DynamicProxyRegistrationTests
     }
 
     public interface IAdapterOwnedService : IExecutionAdapterOwnedComponent
+    {
+        Task ExecuteAsync();
+    }
+
+    public interface IInheritedBridgeService
     {
         Task ExecuteAsync();
     }
@@ -257,6 +320,20 @@ public sealed class DynamicProxyRegistrationTests
         }
     }
 
+    public abstract class InheritedBridgeServiceBase : IInheritedBridgeService
+    {
+        public Task ExecuteAsync()
+        {
+            return Task.CompletedTask;
+        }
+    }
+
+    [DerivedExecutionMetadata]
+    public sealed class DerivedInheritedBridgeService : InheritedBridgeServiceBase;
+
+    [AttributeUsage(AttributeTargets.Class, Inherited = false)]
+    public sealed class DerivedExecutionMetadataAttribute : Attribute;
+
     public sealed class SealedConcreteService
     {
         public Task ExecuteAsync()
@@ -285,9 +362,12 @@ public sealed class DynamicProxyRegistrationTests
     {
         public int InvocationCount { get; private set; }
 
-        public void RecordInvocation()
+        public object? LastTarget { get; private set; }
+
+        public void RecordInvocation(object target)
         {
             InvocationCount++;
+            LastTarget = target;
         }
     }
 
@@ -313,6 +393,24 @@ public sealed class DynamicProxyRegistrationTests
         public void Record(Guid scopeId)
         {
             ScopeIds.Add(scopeId);
+        }
+    }
+
+    public sealed class ComponentIdentityTracker
+    {
+        public Type? ComponentType { get; private set; }
+
+        public Type? MethodDeclaringType { get; private set; }
+
+        public bool HasDerivedMetadata { get; private set; }
+
+        public void Record(ExecutionDescriptor descriptor)
+        {
+            ComponentType = descriptor.ComponentType;
+            MethodDeclaringType = descriptor.EntryMethod?.DeclaringType;
+            HasDerivedMetadata = descriptor.ComponentType.IsDefined(
+                typeof(DerivedExecutionMetadataAttribute),
+                inherit: false);
         }
     }
 
@@ -343,11 +441,23 @@ public sealed class DynamicProxyRegistrationTests
         }
     }
 
+    public sealed class ComponentIdentityExecutionBehavior<TInput, TResult>(ComponentIdentityTracker tracker)
+        : IExecutionBehavior<TInput, TResult>
+    {
+        public async Task<TResult> ExecuteAsync(
+            ExecutionContext<TInput> context,
+            ExecutionDelegate<TResult> next)
+        {
+            tracker.Record(context.Descriptor);
+            return await next();
+        }
+    }
+
     public sealed class TrackingInterceptor(InvocationTracker tracker) : InvocationInterceptor
     {
         public override async Task InterceptAsync(IMethodInvocation invocation)
         {
-            tracker.RecordInvocation();
+            tracker.RecordInvocation(invocation.TargetObject);
             await invocation.ProceedAsync();
         }
     }
