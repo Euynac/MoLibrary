@@ -2,6 +2,7 @@ using System.Collections.Concurrent;
 using System.Linq.Expressions;
 using System.Reflection;
 using Microsoft.Extensions.DependencyInjection;
+using Monica.Core.Execution;
 
 namespace Monica.Core.Mediator;
 
@@ -60,17 +61,23 @@ public sealed class Mediator(IServiceProvider serviceProvider) : IMediator
         where TRequest : IRequest<TResponse>
     {
         var handler = serviceProvider.GetRequiredService<IRequestHandler<TRequest, TResponse>>();
-        var behaviors = serviceProvider.GetServices<IPipelineBehavior<TRequest, TResponse>>();
+        var handlerType = handler.GetType();
+        var descriptor = ExecutionDescriptor.ForInterface<TRequest, TResponse>(
+            MediatorExecutionPoints.Request,
+            handlerType,
+            typeof(IRequestHandler<TRequest, TResponse>),
+            isBusinessOperation: true,
+            transactionMode: ExecutionTransactionMode.Automatic);
 
-        RequestHandlerDelegate<TResponse> next = () => handler.Handle(request, cancellationToken);
-
-        foreach (var behavior in behaviors.Reverse())
-        {
-            var currentNext = next;
-            next = () => behavior.Handle(request, currentNext, cancellationToken);
-        }
-
-        return await next().ConfigureAwait(false);
+        return await serviceProvider
+            .GetRequiredService<IExecutionPipeline>()
+            .ExecuteAsync(
+                descriptor,
+                request,
+                handler,
+                () => handler.Handle(request, cancellationToken),
+                cancellationToken)
+            .ConfigureAwait(false);
     }
 
     private static async Task<object?> BoxResultAsync<TResponse>(Task<TResponse> responseTask)

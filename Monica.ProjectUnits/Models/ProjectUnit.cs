@@ -1,5 +1,6 @@
 using System.Reflection;
 using Microsoft.Extensions.Logging;
+using Monica.Core.Execution;
 using Monica.Modules;
 using Monica.ProjectUnits.Annotations;
 using Monica.ProjectUnits.Services.Support;
@@ -12,25 +13,28 @@ namespace Monica.ProjectUnits.Models;
 /// </summary>
 public abstract class ProjectUnit
 {
-    private readonly ProjectUnitCatalog _catalog;
-
-    private protected ProjectUnit(Type type, EProjectUnitType unitType, ProjectUnitCatalog catalog)
+    private protected ProjectUnit(
+        Type type,
+        EProjectUnitType unitType,
+        ProjectUnitCatalog catalog,
+        params ExecutionPoint[] executionPoints)
     {
         Type = type;
         UnitType = unitType;
         Title = type.Name;
-        _catalog = catalog;
+        ExecutionPoints = [.. executionPoints.Select(static point => point.Value)];
+        Catalog = catalog;
     }
 
-    private protected ProjectUnitCatalog Catalog => _catalog;
+    private protected ProjectUnitCatalog Catalog { get; }
 
-    private protected ILogger Logger => _catalog.Logger;
+    private protected ILogger Logger => Catalog.Logger;
 
     /// <summary>
     /// Gets the naming rule configured for this unit type, falling back to the unit's default convention.
     /// </summary>
     internal ProjectUnitNamingRule? ConventionOption =>
-        _catalog.Options.ConventionOptions.Dict.TryGetValue(UnitType, out var option)
+        Catalog.Options.ConventionOptions.Dict.TryGetValue(UnitType, out var option)
             ? option
             : DefaultConventionOption();
 
@@ -83,6 +87,13 @@ public abstract class ProjectUnit
     /// Gets the architectural category assigned to the unit.
     /// </summary>
     public EProjectUnitType UnitType { get; protected set; }
+
+    /// <summary>
+    /// Gets the stable execution points supported by Monica adapters for this unit type. A listed point indicates that
+    /// matching work can enter that boundary; it does not guarantee that every instance emits it. Unsupported,
+    /// collaborator, and data-only units expose an empty list.
+    /// </summary>
+    public IReadOnlyList<string> ExecutionPoints { get; }
 
     /// <summary>
     /// Gets the project units on which this unit depends.
@@ -181,7 +192,7 @@ public abstract class ProjectUnit
     /// </summary>
     protected void InitializeMethods()
     {
-        Methods = _catalog.Documentation.GetPublicMethods(Type);
+        Methods = Catalog.Documentation.GetPublicMethods(Type);
     }
 
     /// <summary>
@@ -190,7 +201,7 @@ public abstract class ProjectUnit
     /// <typeparam name="TBaseType">The base type whose declared methods should be excluded.</typeparam>
     protected void InitializeMethods<TBaseType>()
     {
-        Methods = _catalog.Documentation.GetPublicMethods(Type, typeof(TBaseType));
+        Methods = Catalog.Documentation.GetPublicMethods(Type, typeof(TBaseType));
     }
 
     /// <summary>
@@ -223,7 +234,7 @@ public abstract class ProjectUnit
     /// <returns><see langword="true"/> when the name satisfies the convention or convention checking is disabled.</returns>
     protected virtual bool VerifyNameConvention()
     {
-        if (!_catalog.Options.ConventionOptions.EnableNameConvention || ConventionOption is not { } option)
+        if (!Catalog.Options.ConventionOptions.EnableNameConvention || ConventionOption is not { } option)
         {
             return true;
         }
@@ -265,7 +276,7 @@ public abstract class ProjectUnit
 
         var alertMessage = $"{Type.GetCleanFullName()} must satisfy the naming convention: {option}";
 
-        switch (option.NameConventionMode ?? _catalog.Options.ConventionOptions.NameConventionMode)
+        switch (option.NameConventionMode ?? Catalog.Options.ConventionOptions.NameConventionMode)
         {
             case ENameConventionMode.Strict:
                 Alerts.Add(new ProjectUnitAlert
@@ -299,7 +310,7 @@ public abstract class ProjectUnit
 
     private void InitializeClassInfo()
     {
-        Description = _catalog.Documentation.ExtractTypeDescription(Type);
+        Description = Catalog.Documentation.ExtractTypeDescription(Type);
 
         var mainConstructor = Type.GetConstructors()
             .OrderByDescending(constructor => constructor.GetParameters().Length)
@@ -379,7 +390,7 @@ public abstract class ProjectUnit
         {
             foreach (var parameter in constructor.GetParameters())
             {
-                if (_catalog.ResolveConstructorDependency(parameter.ParameterType, this) is not { } dependentUnit)
+                if (Catalog.ResolveConstructorDependency(parameter.ParameterType, this) is not { } dependentUnit)
                 {
                     continue;
                 }

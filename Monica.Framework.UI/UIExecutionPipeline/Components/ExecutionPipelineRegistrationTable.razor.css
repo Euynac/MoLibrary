@@ -1,0 +1,27 @@
+.execution-pipeline-registrations {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    min-width: 0;
+    padding: 1rem;
+}
+
+.execution-pipeline-registrations > header {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.execution-pipeline-registrations__table-scroll {
+    min-width: 0;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+}
+
+.execution-pipeline-registrations__table-scroll ::deep .mud-table {
+    min-width: 56rem;
+}
+
+.execution-pipeline-registrations__table-scroll ::deep .mud-table-cell {
+    overflow-wrap: anywhere;
+}

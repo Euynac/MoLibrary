@@ -9,11 +9,20 @@ namespace Monica.Profiling.ExecutionTiming.Services;
 public sealed class ExecutionTimingScope : ExecutionTimingRecorder
 {
     internal ExecutionTimingScope(
-        string name,
+        string operationKey,
+        string displayName,
+        Guid? invocationId,
         string? description,
         ILogger logger,
         IExecutionTimingCoordinator coordinator)
-        : base(name, description, logger, coordinator, stopOnDispose: true)
+        : base(
+            operationKey,
+            displayName,
+            description,
+            logger,
+            coordinator,
+            invocationId,
+            stopOnDispose: true)
     {
         Start();
     }

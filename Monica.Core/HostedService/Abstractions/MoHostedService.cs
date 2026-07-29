@@ -1,7 +1,10 @@
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using Monica.Core.Execution;
 using Monica.Core.HostedService.Models;
+using Monica.Core.HostedService.Services.Support;
 using Monica.Core.ObservableInstance.Abstractions;
 using Monica.Core.ObservableInstance.Models;
 using Monica.Modules;
@@ -9,35 +12,35 @@ using Monica.Modules;
 namespace Monica.Core.HostedService.Abstractions;
 
 /// <summary>
-/// Base class for observable IHostedService implementations with built-in state management and exception tracking.
-/// Now uses ObservableInstanceTracker for unified tracking.
+/// Base class for observable <see cref="IHostedService"/> implementations with state and exception tracking.
 /// </summary>
 public abstract class MoHostedService : IHostedService, IMoHostedService
 {
     private readonly ILogger _logger;
+    private readonly IServiceScopeFactory _serviceScopeFactory;
     private readonly ModuleHostedServiceOption _options;
     private readonly IObservableInstanceRegistry _observableManager;
-    private HostedServiceRuntimeInfo? _runtimeInfo;
 
     /// <summary>
     /// Initializes an observable hosted service with dependencies owned by the current host.
     /// </summary>
     /// <param name="observableManager">The registry used to expose service state.</param>
     /// <param name="options">The shared hosted-service options.</param>
+    /// <param name="serviceScopeFactory">Creates operation scopes for lifecycle and finite work-item behaviors.</param>
     /// <param name="logger">The logger for the concrete hosted service.</param>
     protected MoHostedService(
         IObservableInstanceRegistry observableManager,
         IOptions<ModuleHostedServiceOption> options,
+        IServiceScopeFactory serviceScopeFactory,
         ILogger logger)
     {
         _observableManager = observableManager;
         _options = options.Value;
+        _serviceScopeFactory = serviceScopeFactory;
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
     protected ILogger Logger => _logger;
-
-    // IMoHostedService implementation
 
     /// <summary>
     /// Gets the name of the service for identification purposes
@@ -63,7 +66,7 @@ public abstract class MoHostedService : IHostedService, IMoHostedService
     /// <summary>
     /// Gets the runtime information for this service.
     /// </summary>
-    public HostedServiceRuntimeInfo RuntimeInfo => _runtimeInfo ??= CreateRuntimeInfo();
+    public HostedServiceRuntimeInfo RuntimeInfo => field ??= CreateRuntimeInfo();
 
     /// <summary>
     /// Creates runtime information lazily after the derived hosted service has finished construction.
@@ -116,25 +119,32 @@ public abstract class MoHostedService : IHostedService, IMoHostedService
     }
 
     /// <summary>
-    /// Starts the hosted service
+    /// Starts the hosted service through a non-overridable template that surrounds all derived startup hooks
+    /// with the shared execution pipeline.
     /// </summary>
+    /// <param name="cancellationToken">Signals that application startup is being aborted.</param>
     public async Task StartAsync(CancellationToken cancellationToken)
     {
         try
         {
-            RecordState("Service starting", HostedServiceState.Starting);
-            RuntimeInfo.StartedAt = DateTime.UtcNow;
+            await ExecuteLifecycleAsync(
+                HostedServiceExecutionPoints.Start,
+                HostedServiceLifecyclePhase.Start,
+                async () =>
+                {
+                    RecordState("Service starting", HostedServiceState.Starting);
+                    RuntimeInfo.StartedAt = DateTime.UtcNow;
 
-            await OnStartingAsync(cancellationToken);
+                    await OnStartingAsync(cancellationToken).ConfigureAwait(false);
 
-            // Only transition to Running if not already unhealthy
-            if (!RuntimeInfo.Tracker.IsUnhealthy())
-            {
-                RecordState("Service started successfully", HostedServiceState.Running);
-            }
-            // If unhealthy, preserve the state set during OnStartingAsync
+                    if (!RuntimeInfo.Tracker.IsUnhealthy())
+                    {
+                        RecordState("Service started successfully", HostedServiceState.Running);
+                    }
 
-            await OnStartedAsync(cancellationToken);
+                    await OnStartedAsync(cancellationToken).ConfigureAwait(false);
+                },
+                cancellationToken).ConfigureAwait(false);
         }
         catch (Exception ex)
         {
@@ -148,20 +158,29 @@ public abstract class MoHostedService : IHostedService, IMoHostedService
     }
 
     /// <summary>
-    /// Stops the hosted service
+    /// Stops the hosted service through a non-overridable template that surrounds all derived shutdown hooks
+    /// with the shared execution pipeline.
     /// </summary>
+    /// <param name="cancellationToken">Signals the graceful-shutdown deadline.</param>
     public async Task StopAsync(CancellationToken cancellationToken)
     {
         try
         {
-            RecordState("Service stopping", HostedServiceState.Stopping);
+            await ExecuteLifecycleAsync(
+                HostedServiceExecutionPoints.Stop,
+                HostedServiceLifecyclePhase.Stop,
+                async () =>
+                {
+                    RecordState("Service stopping", HostedServiceState.Stopping);
 
-            await OnStoppingAsync(cancellationToken);
+                    await OnStoppingAsync(cancellationToken).ConfigureAwait(false);
 
-            RuntimeInfo.StoppedAt = DateTime.UtcNow;
-            RecordState("Service stopped successfully", HostedServiceState.Stopped);
+                    RuntimeInfo.StoppedAt = DateTime.UtcNow;
+                    RecordState("Service stopped successfully", HostedServiceState.Stopped);
 
-            await OnStoppedAsync(cancellationToken);
+                    await OnStoppedAsync(cancellationToken).ConfigureAwait(false);
+                },
+                cancellationToken).ConfigureAwait(false);
         }
         catch (Exception ex)
         {
@@ -169,33 +188,86 @@ public abstract class MoHostedService : IHostedService, IMoHostedService
         }
     }
 
-    // Template method hooks
-
     /// <summary>
-    /// Called during service startup, before the service is marked as running
+    /// Called during service startup, before the service is marked as running.
+    /// The hook executes inside the hosted-service start pipeline.
     /// </summary>
     /// <param name="cancellationToken">Cancellation token</param>
     protected virtual Task OnStartingAsync(CancellationToken cancellationToken)
         => Task.CompletedTask;
 
     /// <summary>
-    /// Called after the service has started successfully
+    /// Called after the service has started successfully and before the hosted-service start pipeline completes.
     /// </summary>
     /// <param name="cancellationToken">Cancellation token</param>
     protected virtual Task OnStartedAsync(CancellationToken cancellationToken)
         => Task.CompletedTask;
 
     /// <summary>
-    /// Called during service shutdown, before the service is marked as stopped
+    /// Called during service shutdown, before the service is marked as stopped.
+    /// The hook executes inside the hosted-service stop pipeline.
     /// </summary>
     /// <param name="cancellationToken">Cancellation token</param>
     protected virtual Task OnStoppingAsync(CancellationToken cancellationToken)
         => Task.CompletedTask;
 
     /// <summary>
-    /// Called after the service has stopped successfully
+    /// Called after the service has stopped successfully and before the hosted-service stop pipeline completes.
     /// </summary>
     /// <param name="cancellationToken">Cancellation token</param>
     protected virtual Task OnStoppedAsync(CancellationToken cancellationToken)
         => Task.CompletedTask;
+
+    /// <summary>
+    /// Resolves and executes one finite scoped work item through the shared execution pipeline.
+    /// </summary>
+    /// <typeparam name="TWorkItem">The scoped work-item implementation.</typeparam>
+    /// <param name="cancellationToken">Signals that the hosted service is stopping.</param>
+    protected Task ExecuteWorkItemAsync<TWorkItem>(CancellationToken cancellationToken)
+        where TWorkItem : class, IHostedServiceWorkItem
+    {
+        return HostedServiceExecutionAdapter.ExecuteWorkItemAsync<TWorkItem>(
+            _serviceScopeFactory,
+            this,
+            ServiceName,
+            cancellationToken);
+    }
+
+    /// <summary>
+    /// Resolves and executes one finite typed scoped work item through the shared execution pipeline.
+    /// </summary>
+    /// <typeparam name="TWorkItem">The scoped work-item implementation.</typeparam>
+    /// <typeparam name="TInput">The work-item input type.</typeparam>
+    /// <typeparam name="TResult">The work-item result type.</typeparam>
+    /// <param name="input">The work-item input.</param>
+    /// <param name="cancellationToken">Signals that the hosted service is stopping.</param>
+    protected Task<TResult> ExecuteWorkItemAsync<TWorkItem, TInput, TResult>(
+        TInput input,
+        CancellationToken cancellationToken)
+        where TWorkItem : class, IHostedServiceWorkItem<TInput, TResult>
+    {
+        return HostedServiceExecutionAdapter.ExecuteWorkItemAsync<TWorkItem, TInput, TResult>(
+            _serviceScopeFactory,
+            this,
+            ServiceName,
+            input,
+            cancellationToken);
+    }
+
+    private async Task ExecuteLifecycleAsync(
+        ExecutionPoint point,
+        HostedServiceLifecyclePhase phase,
+        Func<Task> terminal,
+        CancellationToken cancellationToken)
+    {
+        await HostedServiceExecutionAdapter.ExecuteLifecycleAsync(
+            _serviceScopeFactory,
+            this,
+            ServiceName,
+            point,
+            phase,
+            terminal,
+            cancellationToken)
+            .ConfigureAwait(false);
+    }
 }

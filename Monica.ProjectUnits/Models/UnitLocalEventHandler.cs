@@ -1,4 +1,5 @@
 using Microsoft.Extensions.Logging;
+using Monica.EventBus;
 using Monica.EventBus.Abstractions.Handlers;
 using Monica.EventBus.Events;
 using Monica.ProjectUnits.Services.Support;
@@ -13,7 +14,7 @@ namespace Monica.ProjectUnits.Models;
 public class UnitLocalEventHandler : ProjectUnit
 {
     internal UnitLocalEventHandler(Type type, ProjectUnitCatalog catalog)
-        : base(type, EProjectUnitType.LocalEventHandler, catalog)
+        : base(type, EProjectUnitType.LocalEventHandler, catalog, EventBusExecutionPoints.LocalHandler)
     {
     }
 

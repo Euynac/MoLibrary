@@ -5,7 +5,6 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\Monica.ProjectUnits.CodeAnalysis\Monica.ProjectUnits.CodeAnalysis.csproj" />
     <ProjectReference Include="..\..\Monica.ProjectUnits\Monica.ProjectUnits.csproj" />
   </ItemGroup>
 
@@ -16,7 +15,6 @@
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
     <PackageReference Include="Microsoft.NET.Test.Sdk" />
-    <PackageReference Include="Microsoft.CodeAnalysis.CSharp" />
     <PackageReference Include="NSubstitute" />
     <PackageReference Include="NSubstitute.Analyzers.CSharp">
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>

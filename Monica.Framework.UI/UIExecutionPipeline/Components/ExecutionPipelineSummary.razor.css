@@ -1,0 +1,51 @@
+.execution-pipeline-summary {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 0.75rem;
+    min-width: 0;
+}
+
+.execution-pipeline-summary__card {
+    min-width: 0;
+}
+
+.execution-pipeline-summary__card ::deep .mud-paper {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    gap: 0.75rem;
+    align-items: center;
+    height: 100%;
+    border-top: 0.2rem solid var(--mud-palette-primary);
+    background: color-mix(in srgb, var(--mud-palette-primary) 5%, var(--mud-palette-surface));
+}
+
+.execution-pipeline-summary__card--plans ::deep .mud-paper {
+    border-top-color: var(--mud-palette-info);
+    background: color-mix(in srgb, var(--mud-palette-info) 5%, var(--mud-palette-surface));
+}
+
+.execution-pipeline-summary__card--points ::deep .mud-paper {
+    border-top-color: var(--mud-palette-secondary);
+    background: color-mix(in srgb, var(--mud-palette-secondary) 5%, var(--mud-palette-surface));
+}
+
+.execution-pipeline-summary__card--faults ::deep .mud-paper {
+    border-top-color: var(--mud-palette-warning);
+    background: color-mix(in srgb, var(--mud-palette-warning) 5%, var(--mud-palette-surface));
+}
+
+.execution-pipeline-summary__card span {
+    min-width: 0;
+}
+
+@media (max-width: 900px) {
+    .execution-pipeline-summary {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 520px) {
+    .execution-pipeline-summary {
+        grid-template-columns: 1fr;
+    }
+}

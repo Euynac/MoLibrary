@@ -1,3 +1,5 @@
+using Monica.Core.Execution;
+
 namespace Monica.Core.Mediator;
 
 /// <summary>
@@ -5,7 +7,7 @@ namespace Monica.Core.Mediator;
 /// </summary>
 /// <typeparam name="TRequest">The request type.</typeparam>
 /// <typeparam name="TResponse">The response type.</typeparam>
-public interface IRequestHandler<in TRequest, TResponse>
+public interface IRequestHandler<in TRequest, TResponse> : IExecutionAdapterOwnedComponent
     where TRequest : IRequest<TResponse>
 {
     /// <summary>

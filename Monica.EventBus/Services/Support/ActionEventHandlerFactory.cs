@@ -1,4 +1,6 @@
-﻿using Monica.EventBus.Abstractions.Handlers;
+﻿using Microsoft.Extensions.DependencyInjection;
+using Monica.EventBus.Abstractions.Handlers;
+using Monica.EventBus.Models;
 
 namespace Monica.EventBus.Services.Support;
 /// <summary>
@@ -6,18 +8,14 @@ namespace Monica.EventBus.Services.Support;
 /// implementation.
 /// </summary>
 /// <typeparam name="TEvent">Event type.</typeparam>
-public class ActionEventHandler<TEvent> : ILocalEventHandler<TEvent>
+public class ActionEventHandler<TEvent>(Func<TEvent, CancellationToken, Task> action)
+    : ILocalEventHandler<TEvent>, IDistributedEventHandler<TEvent>
 {
     /// <summary>
     /// Delegate used to handle the event.
     /// </summary>
-    public Func<TEvent, CancellationToken, Task> Action { get; }
-
-    /// <summary>
-    /// Creates a new instance of <see cref="ActionEventHandler{TEvent}"/>.
-    /// </summary>
-    /// <param name="handler">Delegate that handles the event.</param>
-    public ActionEventHandler(Func<TEvent, CancellationToken, Task> handler) => Action = handler;
+    public Func<TEvent, CancellationToken, Task> Action { get; } =
+        action ?? throw new ArgumentNullException(nameof(action));
 
     /// <summary>
     /// Handles the event by invoking the configured delegate.
@@ -33,29 +31,25 @@ public class ActionEventHandler<TEvent> : ILocalEventHandler<TEvent>
 /// <summary>
 /// Factory for delegate-based event handlers.
 /// </summary>
-internal class ActionEventHandlerFactory<TEvent>(Func<TEvent, CancellationToken, Task> action) : IEventHandlerFactory
+internal class ActionEventHandlerFactory<TEvent>(
+    Func<TEvent, CancellationToken, Task> action,
+    IServiceScopeFactory serviceScopeFactory) : IEventHandlerFactory
     where TEvent : class
 {
     private readonly Func<TEvent, CancellationToken, Task> _action = action ?? throw new ArgumentNullException(nameof(action));
 
-    public IEventHandlerDisposeWrapper GetHandler()
+    /// <inheritdoc />
+    public ValueTask<IEventHandlerExecutionScope> CreateExecutionScopeAsync()
     {
+        var scope = serviceScopeFactory.CreateAsyncScope();
         var handler = new ActionEventHandler<TEvent>(_action);
-        return new EventHandlerDisposeWrapper(handler);
+        return ValueTask.FromResult<IEventHandlerExecutionScope>(
+            new EventHandlerExecutionScope(handler, scope.ServiceProvider, scope.DisposeAsync));
     }
 
+    /// <inheritdoc />
     public Type? GetHandlerType()
     {
         return null;
-    }
-
-    private class EventHandlerDisposeWrapper(IEventHandler eventHandler) : IEventHandlerDisposeWrapper
-    {
-        public IEventHandler EventHandler { get; } = eventHandler;
-
-        public void Dispose()
-        {
-            // Delegate-based handlers do not require disposal.
-        }
     }
 }

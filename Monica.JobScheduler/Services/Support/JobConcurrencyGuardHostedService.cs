@@ -34,8 +34,9 @@ public class JobConcurrencyGuardHostedService(
     IOptions<ModuleHostedServiceOption> hostedServiceOptions,
     IOptions<ModuleServiceDiscoveryOption> serviceDiscoveryOptions,
     IOptions<ModuleJobSchedulerOption> jobSchedulerOptions,
+    IServiceScopeFactory serviceScopeFactory,
     ILogger<JobConcurrencyGuardHostedService> logger
-) : CoordinatedLeaderService(leaderService, serviceDiscoveryOptions, coordinator, observableManager, hostedServiceOptions, logger), IJobConcurrencyGuard
+) : CoordinatedLeaderService(leaderService, serviceDiscoveryOptions, coordinator, observableManager, hostedServiceOptions, serviceScopeFactory, logger), IJobConcurrencyGuard
 {
     private readonly ModuleJobSchedulerOption _jobSchedulerOptions = jobSchedulerOptions.Value;
     private ConcurrentDictionary<string, JobExecutionStatistic> _statistics = new();

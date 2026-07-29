@@ -1,0 +1,52 @@
+.execution-pipeline-page {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    height: 100%;
+    min-width: 0;
+    min-height: 0;
+    padding: 1rem 1rem 1.5rem;
+    box-sizing: border-box;
+}
+
+.execution-pipeline-page__header,
+.execution-pipeline-page__catalog {
+    min-width: 0;
+}
+
+.execution-pipeline-page__header ::deep .mud-paper {
+    background: linear-gradient(
+        120deg,
+        color-mix(in srgb, var(--mud-palette-primary) 9%, var(--mud-palette-surface)),
+        color-mix(in srgb, var(--mud-palette-info) 5%, var(--mud-palette-surface)));
+}
+
+.execution-pipeline-page__catalog {
+    flex: 1 1 auto;
+}
+
+.execution-pipeline-page__catalog ::deep .mud-tabs {
+    min-width: 0;
+}
+
+.execution-pipeline-page__catalog ::deep .mud-tabs-panels,
+.execution-pipeline-page__catalog ::deep .execution-pipeline-page__tab-panel {
+    min-width: 0;
+}
+
+.execution-pipeline-page__state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 1rem;
+    min-height: 18rem;
+    padding: 1.5rem;
+    text-align: center;
+}
+
+@media (max-width: 720px) {
+    .execution-pipeline-page {
+        padding: 0.75rem 0.75rem 1.25rem;
+    }
+}

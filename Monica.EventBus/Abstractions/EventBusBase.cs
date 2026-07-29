@@ -78,7 +78,7 @@ public abstract class EventBusBase : IEventBus
             ServiceKey = ServiceKey,
             EventType = typeof(TEvent),
             TopicName = finalTopicName,
-            HandlerFactory = new ActionEventHandlerFactory<TEvent>(handler),
+            HandlerFactory = new ActionEventHandlerFactory<TEvent>(handler, ServiceScopeFactory),
             Scope = this is ILocalEventBus ? EventSubscriptionScope.Local : EventSubscriptionScope.Distributed,
             IsAutoDiscovered = false,
             Metadata = metadata
@@ -140,11 +140,15 @@ public abstract class EventBusBase : IEventBus
 
             try
             {
-                using var handlerWrapper = subscription.HandlerFactory.GetHandler();
+                await using var handlerScope = await subscription.HandlerFactory
+                    .CreateExecutionScopeAsync()
+                    .ConfigureAwait(false);
                 await EventHandlerInvoker.InvokeAsync(
-                    handlerWrapper.EventHandler,
+                    handlerScope.EventHandler,
                     eventData,
                     eventType,
+                    subscription,
+                    handlerScope.ServiceProvider,
                     cancellationToken);
             }
             catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)

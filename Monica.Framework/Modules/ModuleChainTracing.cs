@@ -1,22 +1,19 @@
 using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
-using Microsoft.Extensions.Logging;
 using Monica.Core;
+using Monica.Core.Execution;
 using Monica.Core.Modularity;
 using Monica.Core.Modularity.Abstractions;
 using Monica.Core.Modularity.Annotations;
 using Monica.Core.Modularity.Models;
-using Monica.DependencyInjection.DynamicProxy.Models;
+using Monica.Core.Results.Abstractions;
 using Monica.Framework.ChainTracing.Abstractions;
 using Monica.Framework.ChainTracing.Providers.AspNetCore;
-using Monica.Framework.ChainTracing.Providers.DynamicProxy;
+using Monica.Framework.ChainTracing.Providers.Execution;
 using Monica.Framework.ChainTracing.Providers.EntityFrameworkCore;
 using Monica.Framework.ChainTracing.Providers.Rpc;
 using Monica.Framework.ChainTracing.Services;
-using Monica.Tool.Extensions;
-using Monica.WebApi.Abstractions;
-using Monica.WebApi.RpcClient.Abstractions;
 
 // ReSharper disable once CheckNamespace
 namespace Monica.Modules;
@@ -62,6 +59,13 @@ public class ModuleChainTracing(ModuleChainTracingOption option)
         }
 
         DependsOnModule<ModuleJsonSerializationGuide>().Register();
+        DependsOnModule<ModuleExecutionPipelineGuide>().Register()
+            .AddBehavior(
+                typeof(ChainTracingExecutionBehavior<,>),
+                ExecutionBehaviorOrder.Diagnostics,
+                static descriptor =>
+                    descriptor.IsBusinessOperation
+                    && typeof(IResultEnvelope).IsAssignableFrom(descriptor.ResultType));
 
         if (Option.EnableControllerTracing || Option.EnableAttachToRes)
         {
@@ -87,19 +91,6 @@ public class ModuleChainTracing(ModuleChainTracingOption option)
 public class ModuleChainTracingGuide : WebModuleGuide<ModuleChainTracing, ModuleChainTracingOption, ModuleChainTracingGuide>
 {
     /// <summary>
-    /// Enables method-invocation tracing through the DynamicProxy module.
-    /// </summary>
-    /// <param name="shouldIntercept">Optional predicate that controls which services should be proxied.</param>
-    public ModuleChainTracingGuide UseInvocationTracing(
-        Func<ProxyBuildContext, bool>? shouldIntercept = null)
-    {
-        DependsOnModule<ModuleDynamicProxyGuide>().Register()
-            .AddInterceptor<ChainTracingInvocationInterceptor>(shouldIntercept ?? ShouldTraceInvocation);
-
-        return this;
-    }
-
-    /// <summary>
     /// Enables EF Core command tracing support.
     /// </summary>
     public ModuleChainTracingGuide UseDatabaseTracing()
@@ -123,22 +114,6 @@ public class ModuleChainTracingGuide : WebModuleGuide<ModuleChainTracing, Module
             ModuleApplicationMiddlewareOrder.AfterUseRouting);
 
         return this;
-    }
-
-    private bool ShouldTraceInvocation(
-        ProxyBuildContext context)
-    {
-        var type = context.ImplementationType;
-        if (!type.IsAssignableTo<IApplicationService>() &&
-            !type.IsAssignableTo<IDomainService>() &&
-            !type.IsSubclassOf(typeof(RpcApi)))
-        {
-            return false;
-        }
-
-        Logger.LogDebug("Invocation chain record bind: {Service}", type.GetCleanFullName());
-
-        return true;
     }
 }
 

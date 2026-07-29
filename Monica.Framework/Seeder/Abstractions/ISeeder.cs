@@ -1,10 +1,15 @@
+using Monica.Core.Execution;
+
 namespace Monica.Framework.Seeder.Abstractions;
 
-public interface ISeeder
+/// <summary>
+/// Defines one host-startup seed operation executed through Monica's seeder adapter.
+/// </summary>
+public interface ISeeder : IExecutionAdapterOwnedComponent
 {
     /// <summary>
-    /// Execute seed method
+    /// Executes one startup seed operation.
     /// </summary>
-    /// <returns></returns>
-    public Task SeedAsync();
+    /// <param name="cancellationToken">Signals that host startup is being cancelled.</param>
+    Task SeedAsync(CancellationToken cancellationToken);
 }

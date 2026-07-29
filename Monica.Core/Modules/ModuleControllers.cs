@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
 using Monica.Core;
+using Monica.Core.Execution.Mvc;
 using Monica.Core.Modularity;
 using Monica.Core.Modularity.Abstractions;
 using Monica.Core.Modularity.Annotations;
@@ -27,18 +28,28 @@ public static class ModuleControllersBuilderExtensions
 public class ModuleControllers(ModuleControllersOption option)
     : ModuleBase<ModuleControllers, ModuleControllersOption, ModuleControllersGuide>(option)
 {
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddScoped<ExecutionPipelineMvcFilter>();
+    }
+
     public override void PostConfigureServices(IServiceCollection services)
     {
-        var mvcBuilder = services.AddControllers().ConfigureApplicationPartManager(manager =>
-            {
+        var mvcBuilder = services.AddControllers(options =>
+            options.Filters.AddService(typeof(ExecutionPipelineMvcFilter)));
 
-            }); 
+        if (Option.MvcBuilderActions.Count <= 0
+            && Option.MvcOptionActions.Count <= 0
+            && Option.DependentServicesActions.Count <= 0)
+        {
+            return;
+        }
 
-        if (Option.MvcBuilderActions.Count <= 0 && Option.MvcOptionActions.Count <= 0 && Option.DependentServicesActions.Count <= 0) return;
         foreach (var action in Option.DependentServicesActions)
         {
             action(services);
         }
+
         var serviceProvider = services.BuildServiceProvider();
         foreach (var action in Option.MvcBuilderActions)
         {
@@ -51,6 +62,11 @@ public class ModuleControllers(ModuleControllersOption option)
                 action(o, serviceProvider);
             });
         }
+    }
+
+    public override void ClaimDependencies()
+    {
+        DependsOnModule<ModuleExecutionPipelineGuide>().Register();
     }
 
 }

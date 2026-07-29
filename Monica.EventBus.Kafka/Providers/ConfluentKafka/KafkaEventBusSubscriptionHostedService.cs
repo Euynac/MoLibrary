@@ -1,6 +1,7 @@
 using System.Collections.Concurrent;
 using System.Text.Json;
 using Confluent.Kafka;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Monica.Core.HostedService.Models;
@@ -23,6 +24,7 @@ internal sealed class KafkaEventBusSubscriptionHostedService(
     IDistributedEventBus eventBus,
     IObservableInstanceRegistry observableManager,
     IOptions<ModuleHostedServiceOption> hostedServiceOptions,
+    IServiceScopeFactory serviceScopeFactory,
     IKafkaClusterConfigProvider clusterConfigProvider,
     IJsonSerializerOptionsProvider jsonSerializerOptionsProvider,
     IOptions<ModuleEventBusKafkaOption> options,
@@ -33,6 +35,7 @@ internal sealed class KafkaEventBusSubscriptionHostedService(
         eventBus,
         observableManager,
         hostedServiceOptions,
+        serviceScopeFactory,
         logger,
         serviceKey)
 {

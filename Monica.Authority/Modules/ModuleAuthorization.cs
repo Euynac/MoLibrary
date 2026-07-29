@@ -4,10 +4,12 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Monica.Authority.Authorization.Abstractions;
 using Monica.Authority.Authorization.Exceptions;
+using Monica.Authority.Authorization.Services.Behaviors;
 using Monica.Authority.Authorization.Services;
 using Monica.Authority.Authorization.Services.Support;
 using Monica.Authority.Localization;
 using Monica.Core;
+using Monica.Core.Execution;
 using Monica.Core.Modularity;
 using Monica.Core.Modularity.Abstractions;
 using Monica.Core.Modularity.Annotations;
@@ -48,13 +50,12 @@ public class ModuleAuthorization(ModuleAuthorizationOption option) : WebModuleBa
     {
         services.TryAddSingleton<AuthorityMessageLocalizer>();
         services.AddAuthorization();
-        //services.AddAuthorizationCore();
         services.AddSingleton<IAuthorizationHandler, PolicyEnumPermissionRequirementHandler>();
         services.AddTransient<DefaultAuthorizationPolicyProvider>();
 
         services.AddSingleton<IAuthorizationService, AuthorityAuthorizationService>();
         services.AddSingleton<IAuthorityAuthorizationService, AuthorityAuthorizationService>();
-        services.AddSingleton<IMethodInvocationAuthorizationService, MethodInvocationAuthorizationService>();
+        services.AddSingleton<IExecutionAuthorizationService, ExecutionAuthorizationService>();
 
         services.AddTransient<IAuthorityAuthorizationPolicyProvider, PolicyEnumAuthorizationProvider>();
 
@@ -71,6 +72,12 @@ public class ModuleAuthorization(ModuleAuthorizationOption option) : WebModuleBa
                 .AddExceptionMapper<AuthorizationExceptionMapper>();
         }
         DependsOnModule<ModuleAuthenticationGuide>().Register();
+        DependsOnModule<ModuleExecutionPipelineGuide>().Register()
+            .AddBehavior(
+                typeof(ExecutionAuthorizationBehavior<,>),
+                ExecutionBehaviorOrder.Authorization,
+                static descriptor => descriptor.IsBusinessOperation
+                                     && ExecutionAuthorizationMetadata.RequiresAuthorization(descriptor));
     }
 }
 
@@ -120,29 +127,12 @@ public class ModuleAuthorizationGuide : WebModuleGuide<ModuleAuthorization, Modu
             context.Services.Replace(ServiceDescriptor.Singleton<IAuthorizationService, AlwaysAllowAuthorizationService>());
             context.Services.Replace(ServiceDescriptor.Singleton<IAuthorityAuthorizationService, AlwaysAllowAuthorizationService>());
             context.Services.Replace(ServiceDescriptor
-                .Singleton<IMethodInvocationAuthorizationService, AlwaysAllowMethodInvocationAuthorizationService>());
+                .Singleton<IExecutionAuthorizationService, AlwaysAllowExecutionAuthorizationService>());
             context.Services.Replace(ServiceDescriptor.Singleton<IPermissionChecker, AlwaysAllowPermissionChecker>());
         }, ModuleRegistrationOrder.PostConfig);
         return this;
     }
 
-    public ModuleAuthorizationGuide AddAuthorizationInterceptor()
-    {
-        DependsOnModule<ModuleDynamicProxyGuide>().Register()
-            .AddInterceptor<InterceptionAuthorizer>(descriptor =>
-            {
-                if (InterceptionRegistrar.ShouldIntercept(descriptor.ImplementationType))
-                {
-                    //TODO: support permission enforcement on Controller and OurCRUD types
-                    //TODO: emit diagnostics for authorization registration
-                    //GlobalLog.LogInformation("Injected authorization checks: {name}", descriptor.ImplementationType.Name);
-                    return true;
-                }
-
-                return false;
-            });
-        return this;
-    }
 }
 
 public class ModuleAuthorizationOption : ModuleOptions<ModuleAuthorization>

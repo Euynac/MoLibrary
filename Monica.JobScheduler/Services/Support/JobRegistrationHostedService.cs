@@ -33,7 +33,9 @@ public class JobRegistrationHostedService(
     IObservableInstanceRegistry observableManager,
     IOptions<ModuleHostedServiceOption> hostedServiceOptions,
     IOptions<ModuleServiceDiscoveryOption> serviceDiscoveryOptions,
-    ILogger<JobRegistrationHostedService> logger) : CoordinatedLeaderService(leaderService, serviceDiscoveryOptions, coordinator, observableManager, hostedServiceOptions, logger)
+    IServiceScopeFactory serviceScopeFactory,
+    ILogger<JobRegistrationHostedService> logger)
+    : CoordinatedLeaderService(leaderService, serviceDiscoveryOptions, coordinator, observableManager, hostedServiceOptions, serviceScopeFactory, logger)
 {
     private readonly ModuleJobSchedulerOption _jobSchedulerOptions = option.Value;
 

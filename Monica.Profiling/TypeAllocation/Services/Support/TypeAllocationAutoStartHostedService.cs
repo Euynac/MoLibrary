@@ -1,3 +1,4 @@
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Monica.Core.HostedService.Abstractions;
@@ -17,7 +18,9 @@ internal sealed class TypeAllocationAutoStartHostedService(
     IOptions<ModuleTypeAllocationOption> options,
     ILogger<TypeAllocationAutoStartHostedService> logger,
     IObservableInstanceRegistry observableManager,
-    IOptions<ModuleHostedServiceOption> hostedServiceOptions) : MoHostedService(observableManager, hostedServiceOptions, logger)
+    IOptions<ModuleHostedServiceOption> hostedServiceOptions,
+    IServiceScopeFactory serviceScopeFactory)
+    : MoHostedService(observableManager, hostedServiceOptions, serviceScopeFactory, logger)
 {
     /// <inheritdoc />
     public override string ServiceName => nameof(TypeAllocationAutoStartHostedService);

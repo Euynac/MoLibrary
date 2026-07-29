@@ -46,6 +46,11 @@ public class ModuleEventBus(ModuleEventBusOption option)
         services.AddSingleton<ILocalEventBus, LocalEventBus>();
     }
 
+    public override void ClaimDependencies()
+    {
+        DependsOnModule<ModuleExecutionPipelineGuide>().Register();
+    }
+
     public override void ConfigureApplicationBuilder(IApplicationBuilder app)
     {
         var sp = app.ApplicationServices;

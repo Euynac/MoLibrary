@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Monica.Core;
+using Monica.Core.Execution;
 using Monica.Core.Modularity;
 using Monica.Core.Modularity.Abstractions;
 using Monica.Core.Modularity.Annotations;
@@ -14,6 +15,7 @@ using Monica.Profiling.ExecutionTiming.Abstractions.Internal;
 using Monica.Profiling.ExecutionTiming.Facades;
 using Monica.Profiling.ExecutionTiming.Models;
 using Monica.Profiling.ExecutionTiming.Services;
+using Monica.Profiling.ExecutionTiming.Services.Behaviors;
 
 // ReSharper disable once CheckNamespace
 namespace Monica.Modules;
@@ -41,6 +43,12 @@ public class ModuleExecutionTiming(ModuleExecutionTimingOption option)
 {
     public override void ClaimDependencies()
     {
+        DependsOnModule<ModuleExecutionPipelineGuide>().Register()
+            .AddBehavior(
+                typeof(ExecutionTimingBehavior<,>),
+                ExecutionBehaviorOrder.Diagnostics + 100,
+                static descriptor => descriptor.IsBusinessOperation);
+
         if (Option.AggregationMode == ExecutionTimingAggregationMode.BackgroundBatch)
         {
             DependsOnModule<ModuleHostedServiceGuide>().Register();

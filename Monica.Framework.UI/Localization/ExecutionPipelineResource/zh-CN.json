@@ -1,0 +1,100 @@
+{
+  "Pages": {
+    "ExecutionPipeline": {
+      "Title": "执行管线"
+    }
+  },
+  "Page": {
+    "PageTitle": "执行管线",
+    "Header": {
+      "Title": "执行管线",
+      "Description": "查看已注册行为，以及观测到的操作实际应用的精确行为链。",
+      "Refresh": "刷新",
+      "CapturedAt": "快照采集于 {0}"
+    },
+    "Summary": {
+      "Registrations": "行为注册",
+      "Plans": "已观测计划",
+      "ExecutionPoints": "执行点",
+      "Faults": "失败计划"
+    },
+    "Tabs": {
+      "Plans": "已观测计划",
+      "Registrations": "注册行为"
+    },
+    "States": {
+      "Loading": "正在加载执行管线目录……",
+      "LoadFailed": "加载执行管线目录失败。",
+      "NoObservedPlans": "尚未观测到执行计划。操作执行或被显式检查后，计划才会出现在此处。",
+      "NoFilteredPlans": "没有符合当前筛选条件的执行计划。",
+      "NoRegistrations": "当前没有注册执行行为。",
+      "SelectPlan": "请选择一个已观测计划以查看其应用的行为链。",
+      "NoAppliedBehaviors": "此操作没有应用任何行为，会直接调用终端处理程序。",
+      "NotAvailable": "暂无",
+      "ApplicationHost": "应用 / 宿主"
+    },
+    "Messages": {
+      "RefreshSucceeded": "执行管线目录已刷新。",
+      "RefreshFailed": "加载执行管线目录失败：{0}"
+    },
+    "Filters": {
+      "Search": "搜索操作",
+      "SearchPlaceholder": "按操作、组件、行为、来源模块、契约或方法搜索",
+      "ExecutionPoint": "执行点",
+      "BusinessOperation": "业务操作",
+      "TransactionMode": "事务模式",
+      "Status": "计划状态",
+      "All": "全部",
+      "BusinessOnly": "仅业务操作",
+      "NonBusinessOnly": "仅非业务操作",
+      "Showing": "正在显示 {0} / {1} 个已观测计划"
+    },
+    "Plans": {
+      "Title": "已观测操作计划",
+      "Component": "组件",
+      "Behaviors": "行为数",
+      "DetailTitle": "应用行为链",
+      "DetailDescription": "行为按照最外层到最内层的实际执行顺序排列。",
+      "Order": "顺序 {0}",
+      "RegisteredType": "注册类型",
+      "PlanKey": "计划键",
+      "OperationKey": "操作键",
+      "Contract": "契约",
+      "Method": "入口方法",
+      "Input": "输入",
+      "Result": "结果",
+      "StartedAt": "计划开始时间",
+      "CompletedAt": "计划完成时间",
+      "Business": "业务操作",
+      "Transaction": "事务模式",
+      "Fault": "计划构建失败",
+      "ExceptionType": "异常类型",
+      "Yes": "是",
+      "No": "否"
+    },
+    "Registrations": {
+      "Title": "已注册行为",
+      "Description": "以下注册项按确定性的全局顺序排列，此时尚未应用描述符筛选器。",
+      "Behavior": "行为",
+      "Order": "顺序",
+      "Lifetime": "生命周期",
+      "Source": "来源",
+      "OpenGeneric": "开放泛型",
+      "DescriptorFilter": "描述符筛选器"
+    },
+    "Statuses": {
+      "Building": "构建中",
+      "Ready": "就绪",
+      "Faulted": "失败"
+    },
+    "TransactionModes": {
+      "None": "无",
+      "Automatic": "自动"
+    },
+    "Lifetimes": {
+      "Singleton": "单例",
+      "Scoped": "作用域",
+      "Transient": "瞬时"
+    }
+  }
+}

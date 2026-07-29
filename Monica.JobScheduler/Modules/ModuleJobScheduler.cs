@@ -229,6 +229,7 @@ public class ModuleJobScheduler(ModuleJobSchedulerOption option)
     {
         // Depend on HostedService module for observable hosted services
         DependsOnModule<ModuleHostedServiceGuide>().Register();
+        DependsOnModule<ModuleExecutionPipelineGuide>().Register();
     }
 }
 
@@ -375,7 +376,12 @@ public class ModuleJobSchedulerOption : ModuleOptions<ModuleJobScheduler>
     /// </summary>
     public int? MaxWorkerExecutionThreads { get; set; } = null;
 
-   
+    /// <summary>
+    /// Gets or sets how long the orchestrator waits for a job to honor timeout or host-cancellation signals before it
+    /// finalizes scheduler state and continues observing the job in the background. The cancellation token and job
+    /// scope remain alive until that late execution actually completes. The default is two seconds.
+    /// </summary>
+    public TimeSpan ExecutionCancellationGracePeriod { get; set; } = TimeSpan.FromSeconds(2);
 
     /// <summary>
     /// Enables periodic scanning for stuck jobs in Processing or Enqueued states.

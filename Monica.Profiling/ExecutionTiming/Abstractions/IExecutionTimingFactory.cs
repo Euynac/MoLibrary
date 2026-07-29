@@ -20,4 +20,18 @@ public interface IExecutionTimingFactory
     /// <param name="description">Optional display text used in running-state views and logs.</param>
     /// <returns>A disposable recorder that has already been started.</returns>
     IExecutionTimingRecorder BeginScope(string name, string? description = null);
+
+    /// <summary>
+    /// Begins timing one invocation of a stable operation identity.
+    /// </summary>
+    /// <param name="operationKey">Stable machine identity used to aggregate completed samples.</param>
+    /// <param name="displayName">Human-readable operation name used by diagnostic views and logs.</param>
+    /// <param name="invocationId">Unique identity of this concrete invocation.</param>
+    /// <param name="description">Optional supplementary display text.</param>
+    /// <returns>A disposable recorder that has already been started.</returns>
+    IExecutionTimingRecorder BeginInvocation(
+        string operationKey,
+        string displayName,
+        Guid invocationId,
+        string? description = null);
 }

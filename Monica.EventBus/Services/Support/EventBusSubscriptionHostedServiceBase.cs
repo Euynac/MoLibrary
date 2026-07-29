@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Monica.Core.HostedService.Abstractions;
@@ -23,9 +24,10 @@ public abstract class EventBusSubscriptionHostedServiceBase(
     IEventBus eventBus,
     IObservableInstanceRegistry observableManager,
     IOptions<ModuleHostedServiceOption> hostedServiceOptions,
+    IServiceScopeFactory serviceScopeFactory,
     ILogger logger,
     string? serviceKey)
-    : MoBackgroundService(observableManager, hostedServiceOptions, logger), IObserver<EventSubscriptionChange>
+    : MoBackgroundService(observableManager, hostedServiceOptions, serviceScopeFactory, logger), IObserver<EventSubscriptionChange>
 {
     protected readonly IEventSubscriptionRegistry SubscriptionManager = subscriptionManager;
     protected readonly IEventBus EventBus = eventBus;
@@ -100,9 +102,9 @@ public abstract class EventBusSubscriptionHostedServiceBase(
     }
 
     /// <summary>
-    /// Called during service shutdown. Disposes all external subscriptions and cleans up.
+    /// Disposes the registry observer and all external subscriptions before the background operation stops.
     /// </summary>
-    public override async Task StopAsync(CancellationToken cancellationToken)
+    protected override async Task OnStoppingAsync(CancellationToken cancellationToken)
     {
         RecordState("Disposing subscription manager observer", HostedServiceState.Stopping);
 
@@ -119,8 +121,7 @@ public abstract class EventBusSubscriptionHostedServiceBase(
             ServiceName,
             ServiceKey ?? "default");
 
-        // Call base to complete the shutdown
-        await base.StopAsync(cancellationToken);
+        await base.OnStoppingAsync(cancellationToken).ConfigureAwait(false);
     }
 
     #region IObserver Implementation

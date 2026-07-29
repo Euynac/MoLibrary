@@ -83,6 +83,7 @@ internal static class ControllerCodeGenerator
         builder.AppendLine();
         builder.Append("namespace ").Append(GeneratorConstants.GENERATED_CONTROLLER_NAMESPACE).AppendLine(";");
         builder.AppendLine();
+        builder.AppendLine("[global::Monica.Core.Execution.Mvc.MediatedController]");
         builder.Append("[Route(\"").Append(EscapeString(controllerRoute)).AppendLine("\")]");
         builder.AppendLine("[ApiController]");
         if (tags.Length > 0)

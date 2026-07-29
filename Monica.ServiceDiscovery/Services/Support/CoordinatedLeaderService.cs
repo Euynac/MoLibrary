@@ -1,3 +1,4 @@
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Monica.Core.Extensions;
@@ -23,7 +24,8 @@ public abstract class CoordinatedLeaderService(
     IServiceRegistrationCoordinator coordinator,
     IObservableInstanceRegistry observableManager,
     IOptions<ModuleHostedServiceOption> hostedServiceOptions,
-    ILogger logger) : MoBackgroundService(observableManager, hostedServiceOptions, logger)
+    IServiceScopeFactory serviceScopeFactory,
+    ILogger logger) : MoBackgroundService(observableManager, hostedServiceOptions, serviceScopeFactory, logger)
 {
     /// <summary>
     /// Module configuration options

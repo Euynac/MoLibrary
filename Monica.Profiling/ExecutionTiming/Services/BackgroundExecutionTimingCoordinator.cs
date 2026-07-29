@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Monica.Core.HostedService.Abstractions;
@@ -18,8 +19,9 @@ internal sealed class BackgroundExecutionTimingCoordinator(
     IObservableInstanceRegistry observableManager,
     IOptions<ModuleHostedServiceOption> hostedServiceOptions,
     IOptions<ModuleExecutionTimingOption> executionTimingOptions,
+    IServiceScopeFactory serviceScopeFactory,
     ILogger<BackgroundExecutionTimingCoordinator> logger)
-    : MoBackgroundService(observableManager, hostedServiceOptions, logger), IExecutionTimingCoordinator
+    : MoBackgroundService(observableManager, hostedServiceOptions, serviceScopeFactory, logger), IExecutionTimingCoordinator
 {
     private static readonly TimeSpan _defaultFlushInterval = TimeSpan.FromMilliseconds(250);
 
@@ -38,43 +40,59 @@ internal sealed class BackgroundExecutionTimingCoordinator(
         return collector.GetStatistics();
     }
 
-    public ExecutionTimingStatistics? GetStatistics(string name)
+    public ExecutionTimingStatistics? GetStatistics(string operationKey)
     {
         FlushPendingSamples();
-        return collector.GetStatistics(name);
+        return collector.GetStatistics(operationKey);
     }
 
-    public IReadOnlyDictionary<string, RunningExecutionTimingInfo> GetRunningOperations()
+    public IReadOnlyDictionary<Guid, RunningExecutionTimingInfo> GetRunningOperations()
     {
         return collector.GetRunningOperations();
     }
 
-    public void Reset(string name)
+    public void Reset(string operationKey)
     {
         FlushPendingSamples();
-        collector.Reset(name);
+        collector.Reset(operationKey);
     }
 
-    public void RegisterStart(string name, DateTimeOffset startedAt, string? description)
+    public void RegisterStart(
+        Guid invocationId,
+        string operationKey,
+        string displayName,
+        DateTimeOffset startedAt,
+        string? description)
     {
-        collector.RegisterStart(name, startedAt, description);
+        collector.RegisterStart(invocationId, operationKey, displayName, startedAt, description);
     }
 
-    public void CompleteSample(string name, long durationMs, string? description, long? memoryBytes)
+    public void CompleteSample(
+        Guid invocationId,
+        string operationKey,
+        string displayName,
+        long durationMs,
+        long? memoryBytes)
     {
-        collector.CompleteRunning(name);
+        collector.CompleteRunning(invocationId);
         _pendingSamples.Enqueue(new ExecutionTimingCompletedSample(
-            name,
+            operationKey,
+            displayName,
             durationMs,
             DateTimeOffset.UtcNow,
             memoryBytes));
     }
 
-    public override async Task StopAsync(CancellationToken cancellationToken)
+    protected override Task OnStoppingAsync(CancellationToken cancellationToken)
     {
         FlushPendingSamples();
-        await base.StopAsync(cancellationToken);
+        return base.OnStoppingAsync(cancellationToken);
+    }
+
+    protected override Task OnStoppedAsync(CancellationToken cancellationToken)
+    {
         FlushPendingSamples();
+        return base.OnStoppedAsync(cancellationToken);
     }
 
     protected override async Task ExecuteBackgroundAsync(CancellationToken stoppingToken)

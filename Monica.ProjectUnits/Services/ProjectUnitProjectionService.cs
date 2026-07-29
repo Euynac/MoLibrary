@@ -213,6 +213,7 @@ internal sealed class ProjectUnitProjectionService(
             Owner = Normalize(unit.Owner),
             Tags = unit.Tags.ToList(),
             UnitType = unit.UnitType,
+            ExecutionPoints = unit.ExecutionPoints.ToList(),
             HasExplicitMetadata = unit.HasExplicitMetadata,
             RequirementCount = unit.RequirementIds.Count,
             MethodCount = unit.Methods.Count,

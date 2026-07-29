@@ -45,6 +45,7 @@ public static class ProjectUnitsLocalizationExtensions
             EProjectUnitType.Seeder => localizer["Shared:ProjectUnitTypes:Seeder"].Value,
             EProjectUnitType.RecurringJob => localizer["Shared:ProjectUnitTypes:RecurringJob"].Value,
             EProjectUnitType.TriggeredJob => localizer["Shared:ProjectUnitTypes:TriggeredJob"].Value,
+            EProjectUnitType.HostedService => localizer["Shared:ProjectUnitTypes:HostedService"].Value,
             EProjectUnitType.HttpApi => localizer["Shared:ProjectUnitTypes:HttpApi"].Value,
             EProjectUnitType.GrpcApi => localizer["Shared:ProjectUnitTypes:GrpcApi"].Value,
             EProjectUnitType.StateStore => localizer["Shared:ProjectUnitTypes:StateStore"].Value,

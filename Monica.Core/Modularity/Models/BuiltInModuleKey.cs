@@ -43,10 +43,6 @@ public enum BuiltInModuleKey
     ServiceInvocation,
     DataChannel,
     ProjectUnits,
-    /// <summary>
-    /// Source-level ProjectUnit analysis module.
-    /// </summary>
-    ProjectUnitsCodeAnalysis,
     Locker,
     UnitOfWork,
     ObjectMapping,
@@ -65,6 +61,10 @@ public enum BuiltInModuleKey
     AutoControllers,
     JsonSerialization,
     ResultEnvelope,
+    /// <summary>
+    /// Shared typed execution-pipeline kernel.
+    /// </summary>
+    ExecutionPipeline,
     Mediator,
     Swagger,
     /// <summary>
@@ -128,6 +128,10 @@ public enum BuiltInModuleKey
     /// Dependency-injection diagnostics UI module.
     /// </summary>
     DependencyInjectionUI,
+    /// <summary>
+    /// Execution-pipeline runtime catalog UI module.
+    /// </summary>
+    ExecutionPipelineUI,
     SignalRUI,
     SystemInfoUI,
     ExecutionTimingUI,

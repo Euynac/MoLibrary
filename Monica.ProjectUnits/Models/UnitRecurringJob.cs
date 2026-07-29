@@ -1,4 +1,5 @@
 using Monica.ProjectUnits.Services.Support;
+using Monica.JobScheduler;
 using Monica.JobScheduler.Abstractions;
 using Monica.Modules;
 
@@ -10,7 +11,7 @@ namespace Monica.ProjectUnits.Models;
 public class UnitRecurringJob : ProjectUnit
 {
     internal UnitRecurringJob(Type type, ProjectUnitCatalog catalog)
-        : base(type, EProjectUnitType.RecurringJob, catalog)
+        : base(type, EProjectUnitType.RecurringJob, catalog, JobSchedulerExecutionPoints.RecurringAttempt)
     {
     }
 

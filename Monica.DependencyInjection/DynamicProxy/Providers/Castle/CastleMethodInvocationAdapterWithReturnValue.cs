@@ -5,9 +5,10 @@ namespace Monica.DependencyInjection.DynamicProxy.Providers.Castle;
 
 internal class CastleMethodInvocationAdapterWithReturnValue<TResult>(
     IInvocation invocation,
+    Type componentType,
     IInvocationProceedInfo proceedInfo,
     Func<IInvocation, IInvocationProceedInfo, Task<TResult>> proceed)
-    : CastleMethodInvocationAdapterBase(invocation), IMethodInvocation
+    : CastleMethodInvocationAdapterBase(invocation, componentType), IMethodInvocation
 {
     protected IInvocationProceedInfo ProceedInfo { get; } = proceedInfo;
     protected Func<IInvocation, IInvocationProceedInfo, Task<TResult>> Proceed { get; } = proceed;

@@ -48,6 +48,7 @@
       "Seeder": "种子数据",
       "RecurringJob": "定时作业",
       "TriggeredJob": "触发作业",
+      "HostedService": "托管服务",
       "HttpApi": "HTTP API",
       "GrpcApi": "gRPC API",
       "StateStore": "状态存储",

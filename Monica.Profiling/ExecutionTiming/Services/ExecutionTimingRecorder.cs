@@ -6,7 +6,7 @@ using Monica.Profiling.ExecutionTiming.Abstractions.Internal;
 namespace Monica.Profiling.ExecutionTiming.Services;
 
 /// <summary>
-/// Collects one or more timing samples for the same logical operation name.
+/// Collects one or more timing samples for the same stable operation identity.
 /// </summary>
 public class ExecutionTimingRecorder : IExecutionTimingRecorder
 {
@@ -14,24 +14,29 @@ public class ExecutionTimingRecorder : IExecutionTimingRecorder
     private readonly ILogger _logger;
     private readonly bool _stopOnDispose;
     private readonly Stopwatch _stopwatch = new();
-    private readonly string _name;
+    private readonly string _displayName;
+    private readonly string _operationKey;
 
+    private Guid? _activeInvocationId;
     private bool _disposed;
+    private Guid? _initialInvocationId;
     private long? _startedMemoryBytes;
 
     internal ExecutionTimingRecorder(
-        string name,
+        string operationKey,
+        string displayName,
         string? description,
         ILogger logger,
         IExecutionTimingCoordinator coordinator,
+        Guid? invocationId = null,
         bool stopOnDispose = false)
     {
-        _name = string.IsNullOrWhiteSpace(name)
-            ? throw new ArgumentException("Execution timing name cannot be null or whitespace.", nameof(name))
-            : name;
+        _operationKey = ValidateIdentity(operationKey, nameof(operationKey), "operation key");
+        _displayName = ValidateIdentity(displayName, nameof(displayName), "display name");
         Description = description;
         _logger = logger;
         _coordinator = coordinator;
+        _initialInvocationId = invocationId;
         _stopOnDispose = stopOnDispose;
     }
 
@@ -54,8 +59,16 @@ public class ExecutionTimingRecorder : IExecutionTimingRecorder
             return;
         }
 
+        var invocationId = _initialInvocationId ?? Guid.NewGuid();
+        _initialInvocationId = null;
+        _coordinator.RegisterStart(
+            invocationId,
+            _operationKey,
+            _displayName,
+            DateTimeOffset.UtcNow,
+            Description);
+        _activeInvocationId = invocationId;
         _stopwatch.Start();
-        _coordinator.RegisterStart(_name, DateTimeOffset.UtcNow, Description);
 
 #pragma warning disable CS0618
         if (EnableMemoryTracking)
@@ -76,15 +89,26 @@ public class ExecutionTimingRecorder : IExecutionTimingRecorder
         _stopwatch.Stop();
         var elapsedMilliseconds = _stopwatch.ElapsedMilliseconds;
         var memoryBytes = CaptureMemoryUsage();
+        var invocationId = _activeInvocationId
+            ?? throw new InvalidOperationException("A running execution timing sample has no invocation identity.");
 
-        _coordinator.CompleteSample(_name, elapsedMilliseconds, Description, memoryBytes);
+        _coordinator.CompleteSample(
+            invocationId,
+            _operationKey,
+            _displayName,
+            elapsedMilliseconds,
+            memoryBytes);
 
         if (EnableLogging)
         {
-            _logger.LogInformation("{name} cost time: {time}", Description ?? _name, $"{elapsedMilliseconds}ms");
+            _logger.LogInformation(
+                "{name} cost time: {time}",
+                Description ?? _displayName,
+                $"{elapsedMilliseconds}ms");
         }
 
         _stopwatch.Reset();
+        _activeInvocationId = null;
         _startedMemoryBytes = null;
     }
 
@@ -127,5 +151,18 @@ public class ExecutionTimingRecorder : IExecutionTimingRecorder
     private void ThrowIfDisposed()
     {
         ObjectDisposedException.ThrowIf(_disposed, GetType());
+    }
+
+    private static string ValidateIdentity(string value, string parameterName, string identityKind)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(value, parameterName);
+        if (!string.Equals(value, value.Trim(), StringComparison.Ordinal))
+        {
+            throw new ArgumentException(
+                $"Execution timing {identityKind} cannot contain leading or trailing whitespace.",
+                parameterName);
+        }
+
+        return value;
     }
 }

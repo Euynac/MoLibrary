@@ -1,4 +1,5 @@
 using Dapr.Client;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -21,11 +22,12 @@ namespace Monica.Dapr.Services;
 public class DaprSidecarHealthCoordinator(
     DaprClient daprClient,
     IObservableInstanceRegistry observableManager,
+    IServiceScopeFactory serviceScopeFactory,
     IHostApplicationLifetime applicationLifetime,
     IOptions<ModuleDaprClientOption> clientOptions,
     IOptions<ModuleHostedServiceOption> hostedServiceOptions,
     ILogger<DaprSidecarHealthCoordinator> logger)
-    : MoBackgroundService(observableManager, hostedServiceOptions, logger), IDaprSidecarHealthCoordinator
+    : MoBackgroundService(observableManager, hostedServiceOptions, serviceScopeFactory, logger), IDaprSidecarHealthCoordinator
 {
     private readonly ModuleDaprClientOption _options = clientOptions.Value;
 

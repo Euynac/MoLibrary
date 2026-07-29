@@ -78,6 +78,11 @@
       "project": "Monica.Experimental",
       "tier": "labs",
       "reason": "Experimental source is intentionally not published as a package."
+    },
+    {
+      "project": "Monica.ProjectUnits.CodeAnalysis",
+      "tier": "labs",
+      "reason": "Source-level ProjectUnit analysis is an internal Monica.Workflow capability and is intentionally not published as a package."
     }
   ]
 }

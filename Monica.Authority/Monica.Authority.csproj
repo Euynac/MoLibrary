@@ -9,7 +9,6 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Monica.Core\Monica.Core.csproj" />
-    <ProjectReference Include="..\Monica.DependencyInjection\Monica.DependencyInjection.csproj" />
   </ItemGroup>
 
   <ItemGroup>

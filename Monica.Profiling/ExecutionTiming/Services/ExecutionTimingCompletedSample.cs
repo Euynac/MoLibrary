@@ -4,7 +4,8 @@ namespace Monica.Profiling.ExecutionTiming.Services;
 /// Represents a completed execution-timing sample waiting to be aggregated.
 /// </summary>
 internal readonly record struct ExecutionTimingCompletedSample(
-    string Name,
+    string OperationKey,
+    string DisplayName,
     long DurationMs,
     DateTimeOffset RecordedAt,
     long? MemoryBytes);

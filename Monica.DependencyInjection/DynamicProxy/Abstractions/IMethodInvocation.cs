@@ -23,6 +23,15 @@ public interface IMethodInvocation
     Type[] GenericArguments { get; }
 
     /// <summary>
+    /// Gets the concrete application component type selected when the proxy target is created.
+    /// </summary>
+    /// <remarks>
+    /// This type is stable for inherited methods and class proxies; it is not the generated proxy type or the
+    /// method's declaring base type. Factory registrations use the concrete type returned by the factory.
+    /// </remarks>
+    Type ComponentType { get; }
+
+    /// <summary>
     /// Gets the target object that will receive the invocation.
     /// </summary>
     object TargetObject { get; }

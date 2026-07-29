@@ -12,6 +12,7 @@
     <ProjectReference Include="..\Monica.Configuration\Monica.Configuration.csproj" />
     <ProjectReference Include="..\Monica.Core\Monica.Core.csproj" />
     <ProjectReference Include="..\Monica.EventBus\Monica.EventBus.csproj" />
+    <ProjectReference Include="..\Monica.Framework\Monica.Framework.csproj" />
     <ProjectReference Include="..\Monica.JobScheduler\Monica.JobScheduler.csproj" />
     <ProjectReference Include="..\Monica.Logging\Monica.Logging.csproj" />
     <ProjectReference Include="..\Monica.Repository\Monica.Repository.csproj" />

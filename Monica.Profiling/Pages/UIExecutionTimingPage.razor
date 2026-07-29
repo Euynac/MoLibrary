@@ -68,7 +68,7 @@
                                     @{
                                         var operation = (RunningExecutionTimingInfo)context;
                                     }
-                                    <MudTd Style="font-family: monospace; font-size: 0.875rem;">@operation.Name</MudTd>
+                                    <MudTd Style="font-family: monospace; font-size: 0.875rem;">@operation.DisplayName</MudTd>
                                     <MudTd Style="font-size: 0.875rem;">@(operation.Description ?? "无")</MudTd>
                                     <MudTd Style="font-size: 0.875rem;">@ExecutionTimingDisplayFormatter.FormatDateTime(operation.StartedAt)</MudTd>
                                     <MudTd Style="font-family: monospace; font-size: 0.875rem; color: var(--mud-palette-success);">
@@ -114,7 +114,7 @@
                                     @{
                                         var statistics = (ExecutionTimingStatistics)context;
                                     }
-                                    <MudTd Style="font-family: monospace; font-size: 0.875rem;">@statistics.Name</MudTd>
+                                    <MudTd Style="font-family: monospace; font-size: 0.875rem;">@statistics.DisplayName</MudTd>
                                     <MudTd Style="font-size: 0.875rem;">@statistics.ExecutionCount</MudTd>
                                     <MudTd Style="font-family: monospace; font-size: 0.875rem; color: var(--mud-palette-warning);">
                                         @ExecutionTimingDisplayFormatter.FormatDuration(statistics.AverageDurationMs)
@@ -165,7 +165,7 @@
                                     @{
                                         var statistics = (ExecutionTimingStatistics)context;
                                     }
-                                    <MudTd Style="font-family: monospace; font-size: 0.875rem;">@statistics.Name</MudTd>
+                                    <MudTd Style="font-family: monospace; font-size: 0.875rem;">@statistics.DisplayName</MudTd>
                                     <MudTd Style="font-size: 0.875rem;">@statistics.ExecutionCount</MudTd>
                                     <MudTd Style="font-family: monospace; font-size: 0.875rem; color: var(--mud-palette-warning);">
                                         @ExecutionTimingDisplayFormatter.FormatDuration(statistics.AverageDurationMs)

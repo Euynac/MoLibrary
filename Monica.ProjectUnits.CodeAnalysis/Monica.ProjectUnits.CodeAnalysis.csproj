@@ -2,11 +2,8 @@
 
   <PropertyGroup>
     <PackageDescription>Semantic source analysis for Monica ProjectUnits across MSBuild workspaces without loading application assemblies.</PackageDescription>
+    <IsPackable>false</IsPackable>
   </PropertyGroup>
-
-  <ItemGroup>
-    <ProjectReference Include="..\Monica.ProjectUnits\Monica.ProjectUnits.csproj" />
-  </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="Microsoft.Build.Locator" Version="1.11.2" />

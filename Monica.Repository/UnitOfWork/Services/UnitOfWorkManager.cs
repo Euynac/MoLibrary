@@ -11,6 +11,7 @@ namespace Monica.Repository.UnitOfWork.Services;
 public class UnitOfWorkManager(IServiceScopeFactory serviceScopeFactory)
     : IUnitOfWorkManager
 {
+    private const string ROLLBACK_EXCEPTION_DATA_KEY = "Monica.Repository.UnitOfWork.RollbackException";
     private readonly AsyncLocal<IUnitOfWork?> _currentUow = new();
 
     public IUnitOfWork? Current => GetCurrentByChecking();
@@ -38,9 +39,9 @@ public class UnitOfWorkManager(IServiceScopeFactory serviceScopeFactory)
             await work();
             await unitOfWork.CompleteAsync(cancellationToken);
         }
-        catch
+        catch (Exception operationException)
         {
-            await unitOfWork.RollbackAsync(cancellationToken);
+            await RollbackPreservingOperationExceptionAsync(unitOfWork, operationException);
             throw;
         }
     }
@@ -57,10 +58,26 @@ public class UnitOfWorkManager(IServiceScopeFactory serviceScopeFactory)
             await unitOfWork.CompleteAsync(cancellationToken);
             return result;
         }
-        catch
+        catch (Exception operationException)
         {
-            await unitOfWork.RollbackAsync(cancellationToken);
+            await RollbackPreservingOperationExceptionAsync(unitOfWork, operationException);
             throw;
+        }
+    }
+
+    private static async Task RollbackPreservingOperationExceptionAsync(
+        IUnitOfWork unitOfWork,
+        Exception operationException)
+    {
+        // Rollback is cleanup and must still run when the operation's cancellation token caused the failure.
+        try
+        {
+            await unitOfWork.RollbackAsync(CancellationToken.None);
+        }
+        catch (Exception rollbackException)
+        {
+            // Keep the operation failure primary while retaining cleanup diagnostics for callers and telemetry.
+            operationException.Data[ROLLBACK_EXCEPTION_DATA_KEY] = rollbackException;
         }
     }
 

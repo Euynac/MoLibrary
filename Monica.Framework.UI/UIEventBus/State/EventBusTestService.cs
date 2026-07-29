@@ -3,6 +3,7 @@ using System.Collections;
 using System.Reflection;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -24,6 +25,7 @@ namespace Monica.Framework.UI.UIEventBus.State;
 /// Event bus test service for managing test publishing, listener sessions, and message collection.
 /// </summary>
 public sealed class EventBusTestService(
+    IServiceScopeFactory serviceScopeFactory,
     IDistributedEventBus distributedEventBus,
     IEventSubscriptionRegistry subscriptionRegistry,
     EventBusProviderDiscoveryService providerDiscoveryService,
@@ -204,6 +206,7 @@ public sealed class EventBusTestService(
                 IsAutoDiscovered = false,
                 Metadata = EventBusTestMetadataKeys.CreateListenerMetadata(subscriptionId),
                 HandlerFactory = new EventBusRuntimeTestHandlerFactory(
+                    serviceScopeFactory,
                     subscription.EventType,
                     subscription.Scope,
                     state.CaptureAsync)

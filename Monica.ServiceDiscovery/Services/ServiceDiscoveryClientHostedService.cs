@@ -1,3 +1,4 @@
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
@@ -25,8 +26,9 @@ public class ServiceDiscoveryClientHostedService(
     IObservableInstanceRegistry observableManager,
     IOptions<ModuleHostedServiceOption> hostedServiceOptions,
     ResiliencePipelineProvider<string> pipelineProvider,
+    IServiceScopeFactory serviceScopeFactory,
     ILogger<ServiceDiscoveryClientHostedService> logger)
-    : MoBackgroundService(observableManager, hostedServiceOptions, logger), IServiceRegistrationCoordinator
+    : MoBackgroundService(observableManager, hostedServiceOptions, serviceScopeFactory, logger), IServiceRegistrationCoordinator
 {
     private readonly ModuleServiceDiscoveryOption _option = option.Value;
     private readonly TaskCompletionSource<bool> _registrationCompletionSource = new();

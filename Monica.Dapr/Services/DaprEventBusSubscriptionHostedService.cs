@@ -1,6 +1,7 @@
 using System.Collections.Concurrent;
 using System.Text.Json;
 using Dapr.Messaging.PublishSubscribe;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -31,6 +32,7 @@ internal class DaprEventBusSubscriptionHostedService(
     IDaprSidecarHealthCoordinator healthCoordinator,
     IOptions<ModuleDaprEventBusOption> options,
     IOptions<ModuleHostedServiceOption> hostedServiceOptions,
+    IServiceScopeFactory serviceScopeFactory,
     IJsonSerializerOptionsProvider jsonSerializerOptionsProvider,
     ILogger<DaprTopicSubscription> topicSubscriptionLogger,
     ILogger<DaprEventBusSubscriptionHostedService> logger,
@@ -40,6 +42,7 @@ internal class DaprEventBusSubscriptionHostedService(
         eventBus,
         observableManager,
         hostedServiceOptions,
+        serviceScopeFactory,
         logger,
         serviceKey)
 {
@@ -434,10 +437,10 @@ internal class DaprEventBusSubscriptionHostedService(
     }
 
     /// <inheritdoc />
-    public override async Task StopAsync(CancellationToken cancellationToken)
+    protected override async Task OnStoppingAsync(CancellationToken cancellationToken)
     {
         BeginSubscriptionShutdown();
-        await base.StopAsync(cancellationToken);
+        await base.OnStoppingAsync(cancellationToken).ConfigureAwait(false);
     }
 
     private void BeginSubscriptionShutdown()

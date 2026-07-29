@@ -1,0 +1,83 @@
+@using Monica.Core.Execution.Models
+@inject IStringLocalizer<ExecutionPipelineResource> L
+
+<div class="execution-pipeline-explorer" data-testid="execution-pipeline-plan-explorer">
+    <section class="execution-pipeline-explorer__list" aria-label="@L["Page:Plans:Title"]">
+        <header>
+            <MudText Typo="Typo.subtitle1">@L["Page:Plans:Title"]</MudText>
+            <MudChip T="int" Value="@Plans.Count" Size="Size.Small" Variant="Variant.Outlined">@Plans.Count</MudChip>
+        </header>
+
+        <div class="execution-pipeline-explorer__list-scroll">
+            @if (Plans.Count == 0)
+            {
+                <div class="execution-pipeline-explorer__empty" data-testid="execution-pipeline-filter-empty">
+                    <MudIcon Icon="@Icons.Material.Filled.FilterAltOff" Color="Color.Secondary" Size="Size.Large" />
+                    <MudText Typo="Typo.body2" Color="Color.Secondary">@L["Page:States:NoFilteredPlans"]</MudText>
+                </div>
+            }
+            else
+            {
+                @foreach (var plan in Plans)
+                {
+                    <button type="button"
+                            class="@PlanClass(plan)"
+                            data-plan-key="@plan.PlanKey"
+                            @onclick="() => PlanSelected.InvokeAsync(plan)">
+                        <span class="execution-pipeline-explorer__plan-icon">
+                            <MudIcon Icon="@PlanIcon(plan.Status)" Size="Size.Small" Color="@StatusColor(plan.Status)" />
+                        </span>
+                        <span class="execution-pipeline-explorer__plan-content">
+                            <strong>@plan.Descriptor.DisplayName</strong>
+                            <small>@plan.Descriptor.ComponentType.DisplayName</small>
+                            <span class="execution-pipeline-explorer__plan-badges">
+                                <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">@plan.Descriptor.Point.Value</MudChip>
+                                <MudChip T="string" Size="Size.Small" Color="@StatusColor(plan.Status)">@L[$"Page:Statuses:{plan.Status}"]</MudChip>
+                                <MudChip T="int" Value="@plan.Behaviors.Length" Size="Size.Small" Variant="Variant.Outlined">
+                                    @L["Page:Plans:Behaviors"]: @plan.Behaviors.Length
+                                </MudChip>
+                            </span>
+                        </span>
+                        <MudIcon Icon="@Icons.Material.Filled.ChevronRight" Size="Size.Small" Color="Color.Secondary" />
+                    </button>
+                }
+            }
+        </div>
+    </section>
+
+    <section class="execution-pipeline-explorer__detail">
+        <ExecutionPipelinePlanDetail Plan="@SelectedPlan" />
+    </section>
+</div>
+
+@code {
+    [Parameter, EditorRequired]
+    public IReadOnlyList<ExecutionPipelinePlanSnapshot> Plans { get; set; } = [];
+
+    [Parameter]
+    public ExecutionPipelinePlanSnapshot? SelectedPlan { get; set; }
+
+    [Parameter]
+    public EventCallback<ExecutionPipelinePlanSnapshot> PlanSelected { get; set; }
+
+    private string PlanClass(ExecutionPipelinePlanSnapshot plan) =>
+        string.Equals(SelectedPlan?.PlanKey, plan.PlanKey, StringComparison.Ordinal)
+            ? "execution-pipeline-explorer__plan execution-pipeline-explorer__plan--selected"
+            : "execution-pipeline-explorer__plan";
+
+    private static Color StatusColor(ExecutionPipelinePlanStatus status) => status switch
+    {
+        ExecutionPipelinePlanStatus.Building => Color.Info,
+        ExecutionPipelinePlanStatus.Ready => Color.Success,
+        ExecutionPipelinePlanStatus.Faulted => Color.Error,
+        _ => Color.Default
+    };
+
+    private static string PlanIcon(ExecutionPipelinePlanStatus status) => status switch
+    {
+        ExecutionPipelinePlanStatus.Building => Icons.Material.Filled.Pending,
+        ExecutionPipelinePlanStatus.Ready => Icons.Material.Filled.CheckCircle,
+        ExecutionPipelinePlanStatus.Faulted => Icons.Material.Filled.Error,
+        _ => Icons.Material.Filled.HelpOutline
+    };
+}
