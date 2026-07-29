@@ -1,0 +1,64 @@
+@using Monica.Core.Execution.Models
+@inject IStringLocalizer<ExecutionPipelineResource> L
+
+<section class="execution-pipeline-registrations" data-testid="execution-pipeline-registrations">
+    <header>
+        <MudText Typo="Typo.h6">@L["Page:Registrations:Title"]</MudText>
+        <MudText Typo="Typo.body2" Color="Color.Secondary">@L["Page:Registrations:Description"]</MudText>
+    </header>
+
+    @if (Registrations.Count == 0)
+    {
+        <MudAlert Severity="Severity.Info" Variant="Variant.Outlined" data-testid="execution-pipeline-registration-empty">
+            @L["Page:States:NoRegistrations"]
+        </MudAlert>
+    }
+    else
+    {
+        <div class="execution-pipeline-registrations__table-scroll">
+            <MudTable T="ExecutionBehaviorRegistrationSnapshot"
+                      Items="@Registrations"
+                      Dense="true"
+                      Hover="true"
+                      Outlined="true">
+                <HeaderContent>
+                    <MudTh>@L["Page:Registrations:Behavior"]</MudTh>
+                    <MudTh>@L["Page:Registrations:Order"]</MudTh>
+                    <MudTh>@L["Page:Registrations:Lifetime"]</MudTh>
+                    <MudTh>@L["Page:Registrations:Source"]</MudTh>
+                    <MudTh>@L["Page:Registrations:OpenGeneric"]</MudTh>
+                    <MudTh>@L["Page:Registrations:DescriptorFilter"]</MudTh>
+                </HeaderContent>
+                <RowTemplate>
+                    <MudTd DataLabel="@L["Page:Registrations:Behavior"]" data-testid="execution-pipeline-registration-row">
+                        <MudText Typo="Typo.body2"><strong>@context.BehaviorType.DisplayName</strong></MudText>
+                        <MudText Typo="Typo.caption" Color="Color.Secondary">@context.BehaviorType.Identity</MudText>
+                    </MudTd>
+                    <MudTd DataLabel="@L["Page:Registrations:Order"]">@context.Order</MudTd>
+                    <MudTd DataLabel="@L["Page:Registrations:Lifetime"]">
+                        <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">@L[$"Page:Lifetimes:{context.Lifetime}"]</MudChip>
+                    </MudTd>
+                    <MudTd DataLabel="@L["Page:Registrations:Source"]">@SourceText(context.SourceModuleKey)</MudTd>
+                    <MudTd DataLabel="@L["Page:Registrations:OpenGeneric"]">
+                        <MudChip T="bool" Value="@context.IsOpenGeneric" Size="Size.Small" Color="@(context.IsOpenGeneric ? Color.Primary : Color.Default)">
+                            @(context.IsOpenGeneric ? L["Page:Plans:Yes"] : L["Page:Plans:No"])
+                        </MudChip>
+                    </MudTd>
+                    <MudTd DataLabel="@L["Page:Registrations:DescriptorFilter"]">
+                        <MudChip T="bool" Value="@context.HasDescriptorFilter" Size="Size.Small" Color="@(context.HasDescriptorFilter ? Color.Info : Color.Default)">
+                            @(context.HasDescriptorFilter ? L["Page:Plans:Yes"] : L["Page:Plans:No"])
+                        </MudChip>
+                    </MudTd>
+                </RowTemplate>
+            </MudTable>
+        </div>
+    }
+</section>
+
+@code {
+    [Parameter, EditorRequired]
+    public IReadOnlyList<ExecutionBehaviorRegistrationSnapshot> Registrations { get; set; } = [];
+
+    private string SourceText(Monica.Core.Modularity.Models.ModuleKey? moduleKey) =>
+        moduleKey?.Value ?? L["Page:States:ApplicationHost"];
+}

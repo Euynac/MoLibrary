@@ -1,4 +1,6 @@
 using Microsoft.Extensions.DependencyInjection;
+using Monica.Core.Execution.Models;
+using Monica.Core.Modularity.Models;
 
 namespace Monica.Core.Execution.Models.Internal;
 
@@ -13,7 +15,9 @@ internal sealed class ExecutionBehaviorRegistration
         Func<ExecutionDescriptor, bool> descriptorFilter,
         ServiceLifetime lifetime,
         HashSet<(Type InputType, Type ResultType)> closedContracts,
-        bool isOpenGeneric)
+        bool isOpenGeneric,
+        bool hasDescriptorFilter,
+        ModuleKey? sourceModuleKey)
     {
         ImplementationType = implementationType;
         SortName = implementationType.AssemblyQualifiedName
@@ -24,6 +28,8 @@ internal sealed class ExecutionBehaviorRegistration
         Lifetime = lifetime;
         _closedContracts = closedContracts;
         IsOpenGeneric = isOpenGeneric;
+        HasDescriptorFilter = hasDescriptorFilter;
+        SourceModuleKey = sourceModuleKey;
     }
 
     public Type ImplementationType { get; }
@@ -34,15 +40,20 @@ internal sealed class ExecutionBehaviorRegistration
 
     private Func<ExecutionDescriptor, bool> DescriptorFilter { get; }
 
-    private ServiceLifetime Lifetime { get; }
+    public ServiceLifetime Lifetime { get; }
 
-    private bool IsOpenGeneric { get; }
+    public bool IsOpenGeneric { get; }
+
+    public bool HasDescriptorFilter { get; }
+
+    public ModuleKey? SourceModuleKey { get; }
 
     public static ExecutionBehaviorRegistration Create(
         Type implementationType,
         int order,
         Func<ExecutionDescriptor, bool>? descriptorFilter,
-        ServiceLifetime lifetime)
+        ServiceLifetime lifetime,
+        ModuleKey? sourceModuleKey)
     {
         ArgumentNullException.ThrowIfNull(implementationType);
 
@@ -100,7 +111,9 @@ internal sealed class ExecutionBehaviorRegistration
             descriptorFilter ?? (static _ => true),
             lifetime,
             closedContracts,
-            isOpenGeneric);
+            isOpenGeneric,
+            descriptorFilter is not null,
+            sourceModuleKey);
     }
 
     public ServiceDescriptor CreateServiceDescriptor()
@@ -145,6 +158,28 @@ internal sealed class ExecutionBehaviorRegistration
         }
 
         return TryCloseImplementation(inputType, resultType);
+    }
+
+    public ExecutionBehaviorRegistrationSnapshot CreateSnapshot()
+    {
+        return new ExecutionBehaviorRegistrationSnapshot(
+            ExecutionPipelineCatalogSnapshotFactory.CreateType(ImplementationType),
+            Order,
+            Lifetime,
+            SourceModuleKey,
+            IsOpenGeneric,
+            HasDescriptorFilter);
+    }
+
+    public ExecutionPipelineAppliedBehaviorSnapshot CreateAppliedSnapshot(int position, Type resolvedType)
+    {
+        return new ExecutionPipelineAppliedBehaviorSnapshot(
+            position,
+            ExecutionPipelineCatalogSnapshotFactory.CreateType(ImplementationType),
+            ExecutionPipelineCatalogSnapshotFactory.CreateType(resolvedType),
+            Order,
+            Lifetime,
+            SourceModuleKey);
     }
 
     private Type? TryCloseImplementation(Type inputType, Type resultType)

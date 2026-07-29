@@ -1,0 +1,128 @@
+@using Monica.Core.Execution.Models
+@inject IStringLocalizer<ExecutionPipelineResource> L
+
+@if (Plan is null)
+{
+    <div class="execution-pipeline-plan-detail__empty" data-testid="execution-pipeline-plan-unselected">
+        <MudIcon Icon="@Icons.Material.Filled.TouchApp" Color="Color.Secondary" Size="Size.Large" />
+        <MudText Typo="Typo.body2" Color="Color.Secondary">@L["Page:States:SelectPlan"]</MudText>
+    </div>
+}
+else
+{
+    <article class="execution-pipeline-plan-detail" data-testid="execution-pipeline-plan-detail">
+        <header class="execution-pipeline-plan-detail__header">
+            <span>
+                <MudText Typo="Typo.h5">@Plan.Descriptor.DisplayName</MudText>
+                <MudText Typo="Typo.body2" Color="Color.Secondary">@Plan.Descriptor.Point.Value</MudText>
+            </span>
+            <MudChip T="string" Color="@StatusColor(Plan.Status)" Icon="@StatusIcon(Plan.Status)">
+                @L[$"Page:Statuses:{Plan.Status}"]
+            </MudChip>
+        </header>
+
+        <div class="execution-pipeline-plan-detail__metadata">
+            @Metadata(L["Page:Plans:PlanKey"], Plan.PlanKey)
+            @Metadata(L["Page:Plans:OperationKey"], Plan.Descriptor.OperationKey)
+            @Metadata(L["Page:Plans:Component"], Plan.Descriptor.ComponentType.DisplayName)
+            @Metadata(L["Page:Plans:Contract"], Plan.Descriptor.ContractType?.DisplayName ?? L["Page:States:NotAvailable"])
+            @Metadata(L["Page:Plans:Method"], Plan.Descriptor.EntryMethod ?? L["Page:States:NotAvailable"])
+            @Metadata(L["Page:Plans:Input"], Plan.Descriptor.InputType.DisplayName)
+            @Metadata(L["Page:Plans:Result"], Plan.Descriptor.ResultType.DisplayName)
+            @Metadata(L["Page:Plans:StartedAt"], FormatTime(Plan.StartedAt))
+            @Metadata(L["Page:Plans:CompletedAt"], Plan.CompletedAt is { } completedAt ? FormatTime(completedAt) : L["Page:States:NotAvailable"])
+        </div>
+
+        <div class="execution-pipeline-plan-detail__policies">
+            <MudChip T="string" Variant="Variant.Outlined" Color="@(Plan.Descriptor.IsBusinessOperation ? Color.Primary : Color.Default)">
+                @L["Page:Plans:Business"]: @(Plan.Descriptor.IsBusinessOperation ? L["Page:Plans:Yes"] : L["Page:Plans:No"])
+            </MudChip>
+            <MudChip T="string" Variant="Variant.Outlined" Color="Color.Secondary">
+                @L["Page:Plans:Transaction"]: @L[$"Page:TransactionModes:{Plan.Descriptor.TransactionMode}"]
+            </MudChip>
+        </div>
+
+        @if (Plan.Error is { } error)
+        {
+            <MudAlert Severity="Severity.Error" Variant="Variant.Outlined" data-testid="execution-pipeline-plan-error">
+                <MudText Typo="Typo.subtitle2">@L["Page:Plans:Fault"]</MudText>
+                <MudText Typo="Typo.caption">@L["Page:Plans:ExceptionType"]: @error.ExceptionType</MudText>
+                <MudText Typo="Typo.body2">@error.Message</MudText>
+            </MudAlert>
+        }
+
+        @if (Plan.Status == ExecutionPipelinePlanStatus.Ready || !Plan.Behaviors.IsDefaultOrEmpty)
+        {
+            <section class="execution-pipeline-plan-detail__chain">
+                <header>
+                    <MudText Typo="Typo.h6">@L["Page:Plans:DetailTitle"]</MudText>
+                    <MudText Typo="Typo.body2" Color="Color.Secondary">@L["Page:Plans:DetailDescription"]</MudText>
+                </header>
+
+                @if (Plan.Behaviors.IsDefaultOrEmpty)
+                {
+                    <MudAlert Severity="Severity.Info" Variant="Variant.Outlined" data-testid="execution-pipeline-zero-behaviors">
+                        @L["Page:States:NoAppliedBehaviors"]
+                    </MudAlert>
+                }
+                else
+                {
+                    <ol class="execution-pipeline-plan-detail__behavior-list">
+                        @foreach (var behavior in Plan.Behaviors)
+                        {
+                            <li data-testid="execution-pipeline-applied-behavior">
+                                <span class="execution-pipeline-plan-detail__position">@behavior.Position</span>
+                                <span class="execution-pipeline-plan-detail__behavior-content">
+                                    <strong>@behavior.ResolvedType.DisplayName</strong>
+                                    <small>@L["Page:Plans:RegisteredType"]: @behavior.RegisteredType.DisplayName</small>
+                                    <span class="execution-pipeline-plan-detail__behavior-badges">
+                                        <MudChip T="int" Value="@behavior.Order" Size="Size.Small" Variant="Variant.Outlined">
+                                            @L["Page:Plans:Order", behavior.Order]
+                                        </MudChip>
+                                        <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">
+                                            @L[$"Page:Lifetimes:{behavior.Lifetime}"]
+                                        </MudChip>
+                                        <MudChip T="string" Size="Size.Small" Color="Color.Info">
+                                            @SourceText(behavior.SourceModuleKey)
+                                        </MudChip>
+                                    </span>
+                                </span>
+                            </li>
+                        }
+                    </ol>
+                }
+            </section>
+        }
+    </article>
+}
+
+@code {
+    [Parameter]
+    public ExecutionPipelinePlanSnapshot? Plan { get; set; }
+
+    private RenderFragment Metadata(string label, string value) => @<div class="execution-pipeline-plan-detail__metadata-item">
+        <small>@label</small>
+        <strong title="@value">@value</strong>
+    </div>;
+
+    private string SourceText(Monica.Core.Modularity.Models.ModuleKey? moduleKey) =>
+        moduleKey?.Value ?? L["Page:States:ApplicationHost"];
+
+    private static string FormatTime(DateTimeOffset value) => value.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss.fff");
+
+    private static Color StatusColor(ExecutionPipelinePlanStatus status) => status switch
+    {
+        ExecutionPipelinePlanStatus.Building => Color.Info,
+        ExecutionPipelinePlanStatus.Ready => Color.Success,
+        ExecutionPipelinePlanStatus.Faulted => Color.Error,
+        _ => Color.Default
+    };
+
+    private static string StatusIcon(ExecutionPipelinePlanStatus status) => status switch
+    {
+        ExecutionPipelinePlanStatus.Building => Icons.Material.Filled.Pending,
+        ExecutionPipelinePlanStatus.Ready => Icons.Material.Filled.CheckCircle,
+        ExecutionPipelinePlanStatus.Faulted => Icons.Material.Filled.Error,
+        _ => Icons.Material.Filled.HelpOutline
+    };
+}

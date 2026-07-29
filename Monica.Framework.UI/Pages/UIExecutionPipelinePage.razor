@@ -1,0 +1,127 @@
+@attribute [Route(PAGE_URL)]
+@implements IDisposable
+@using Monica.Framework.UI.UIExecutionPipeline.Components
+@using Monica.Framework.UI.UIExecutionPipeline.State
+@inject ExecutionPipelinePageState PageState
+@inject ISnackbar Snackbar
+@inject IStringLocalizer<ExecutionPipelineResource> L
+
+<PageTitle>@L["Page:PageTitle"]</PageTitle>
+
+<div class="execution-pipeline-page">
+    <div class="execution-pipeline-page__header">
+        <MudPaper Class="pa-4" Outlined="true">
+            <MudStack Row="true" Wrap="Wrap.Wrap" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Spacing="3">
+                <MudStack Spacing="1">
+                    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                        <MudIcon Icon="@Icons.Material.Filled.Schema" Size="Size.Large" Color="Color.Primary" />
+                        <MudText Typo="Typo.h4">@L["Page:Header:Title"]</MudText>
+                    </MudStack>
+                    <MudText Typo="Typo.body1" Color="Color.Secondary">@L["Page:Header:Description"]</MudText>
+                    @if (PageState.Snapshot is { } snapshot)
+                    {
+                        <MudText Typo="Typo.caption" Color="Color.Secondary">
+                            @L["Page:Header:CapturedAt", snapshot.CapturedAt.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss")]
+                        </MudText>
+                    }
+                </MudStack>
+
+                <MudButton Variant="Variant.Outlined"
+                           Color="Color.Primary"
+                           StartIcon="@Icons.Material.Filled.Refresh"
+                           Disabled="@PageState.IsLoading"
+                           OnClick="RefreshAsync">
+                    @L["Page:Header:Refresh"]
+                </MudButton>
+            </MudStack>
+        </MudPaper>
+    </div>
+
+    @if (!string.IsNullOrWhiteSpace(PageState.LoadError))
+    {
+        <MudAlert Severity="Severity.Error" Variant="Variant.Outlined" data-testid="execution-pipeline-load-error">
+            @L["Page:Messages:RefreshFailed", PageState.LoadError]
+        </MudAlert>
+    }
+
+    @if (PageState.IsLoading && PageState.Snapshot is null)
+    {
+        <div class="execution-pipeline-page__state" data-testid="execution-pipeline-loading">
+            <MudProgressCircular Indeterminate="true" Color="Color.Primary" />
+            <MudText Typo="Typo.h6">@L["Page:States:Loading"]</MudText>
+        </div>
+    }
+    else if (PageState.Snapshot is { } catalog)
+    {
+        <ExecutionPipelineSummary Snapshot="@catalog" />
+
+        <div class="execution-pipeline-page__catalog">
+            <MudTabs Rounded="true"
+                     Outlined="true"
+                     Elevation="0"
+                     ApplyEffectsToContainer="true"
+                     TabPanelsClass="execution-pipeline-page__tab-panel">
+                <MudTabPanel Text="@L["Page:Tabs:Plans"]" Icon="@Icons.Material.Filled.Route">
+                    @if (catalog.Plans.IsDefaultOrEmpty)
+                    {
+                        <div class="execution-pipeline-page__state" data-testid="execution-pipeline-observed-empty">
+                            <MudIcon Icon="@Icons.Material.Filled.Route" Color="Color.Secondary" Size="Size.Large" />
+                            <MudText Typo="Typo.body1" Color="Color.Secondary">@L["Page:States:NoObservedPlans"]</MudText>
+                        </div>
+                    }
+                    else
+                    {
+                        <ExecutionPipelinePlanFilterBar State="@PageState" />
+                        <ExecutionPipelinePlanExplorer Plans="@PageState.FilteredPlans"
+                                                       SelectedPlan="@PageState.SelectedPlan"
+                                                       PlanSelected="PageState.SelectPlan" />
+                    }
+                </MudTabPanel>
+                <MudTabPanel Text="@L["Page:Tabs:Registrations"]" Icon="@Icons.Material.Filled.Extension">
+                    <ExecutionPipelineRegistrationTable Registrations="@catalog.Registrations" />
+                </MudTabPanel>
+            </MudTabs>
+        </div>
+    }
+    else if (!PageState.IsLoading)
+    {
+        <MudAlert Severity="Severity.Error" Variant="Variant.Outlined">
+            @L["Page:States:LoadFailed"]
+        </MudAlert>
+    }
+</div>
+
+@code {
+    public const string PAGE_URL = "/execution-pipeline";
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender)
+        {
+            return;
+        }
+
+        PageState.StateChanged += OnStateChanged;
+        await PageState.InitializeAsync();
+    }
+
+    private async Task RefreshAsync()
+    {
+        var succeeded = await PageState.RefreshAsync();
+        Snackbar.Add(
+            succeeded
+                ? L["Page:Messages:RefreshSucceeded"]
+                : L["Page:Messages:RefreshFailed", PageState.LoadError ?? L["Page:States:LoadFailed"]],
+            succeeded ? Severity.Success : Severity.Error);
+    }
+
+    private void OnStateChanged()
+    {
+        _ = InvokeAsync(StateHasChanged);
+    }
+
+    public void Dispose()
+    {
+        PageState.StateChanged -= OnStateChanged;
+    }
+}

@@ -128,6 +128,10 @@ public enum BuiltInModuleKey
     /// Dependency-injection diagnostics UI module.
     /// </summary>
     DependencyInjectionUI,
+    /// <summary>
+    /// Execution-pipeline runtime catalog UI module.
+    /// </summary>
+    ExecutionPipelineUI,
     SignalRUI,
     SystemInfoUI,
     ExecutionTimingUI,

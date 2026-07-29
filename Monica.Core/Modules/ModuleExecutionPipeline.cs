@@ -1,6 +1,8 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Monica.Core.Execution;
+using Monica.Core.Execution.Abstractions;
+using Monica.Core.Execution.Facades;
 using Monica.Core.Execution.Models.Internal;
 using Monica.Core.Execution.Services;
 using Monica.Core.Modularity;
@@ -55,6 +57,9 @@ public sealed class ModuleExecutionPipeline(ModuleExecutionPipelineOption option
         services.TryAddSingleton(_ =>
             new ExecutionBehaviorServiceRegistrationValidator(registrations, services));
         services.TryAddSingleton<ExecutionBehaviorPlanCache>();
+        services.TryAddSingleton<IExecutionPipelineCatalog>(serviceProvider =>
+            serviceProvider.GetRequiredService<ExecutionBehaviorPlanCache>());
+        services.TryAddSingleton<ExecutionPipelineCatalogFacade>();
         services.TryAddScoped<IExecutionPipeline, ExecutionPipeline>();
     }
 
@@ -110,7 +115,8 @@ public sealed class ModuleExecutionPipelineGuide
             behaviorType,
             order,
             descriptorFilter,
-            lifetime);
+            lifetime,
+            GuideFrom);
 
         ConfigureModuleOption(
             moduleOption => moduleOption.AddBehavior(registration),

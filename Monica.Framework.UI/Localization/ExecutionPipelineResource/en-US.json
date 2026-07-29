@@ -1,0 +1,100 @@
+{
+  "Pages": {
+    "ExecutionPipeline": {
+      "Title": "Execution Pipeline"
+    }
+  },
+  "Page": {
+    "PageTitle": "Execution Pipeline",
+    "Header": {
+      "Title": "Execution Pipeline",
+      "Description": "Inspect registered behaviors and the exact behavior chain applied to observed operations.",
+      "Refresh": "Refresh",
+      "CapturedAt": "Snapshot captured at {0}"
+    },
+    "Summary": {
+      "Registrations": "Behavior registrations",
+      "Plans": "Observed plans",
+      "ExecutionPoints": "Execution points",
+      "Faults": "Faulted plans"
+    },
+    "Tabs": {
+      "Plans": "Observed plans",
+      "Registrations": "Registrations"
+    },
+    "States": {
+      "Loading": "Loading the execution-pipeline catalog...",
+      "LoadFailed": "Failed to load the execution-pipeline catalog.",
+      "NoObservedPlans": "No execution plans have been observed yet. A plan appears after its operation executes or is explicitly inspected.",
+      "NoFilteredPlans": "No observed plans match the current filters.",
+      "NoRegistrations": "No execution behaviors are registered.",
+      "SelectPlan": "Select an observed plan to inspect its applied behavior chain.",
+      "NoAppliedBehaviors": "This operation uses the terminal handler directly because no behaviors were applied.",
+      "NotAvailable": "Not available",
+      "ApplicationHost": "Application / host"
+    },
+    "Messages": {
+      "RefreshSucceeded": "Execution-pipeline catalog refreshed.",
+      "RefreshFailed": "Failed to load the execution-pipeline catalog: {0}"
+    },
+    "Filters": {
+      "Search": "Search operations",
+      "SearchPlaceholder": "Search by operation, component, behavior, source module, contract, or method",
+      "ExecutionPoint": "Execution point",
+      "BusinessOperation": "Business operation",
+      "TransactionMode": "Transaction mode",
+      "Status": "Plan status",
+      "All": "All",
+      "BusinessOnly": "Business only",
+      "NonBusinessOnly": "Non-business only",
+      "Showing": "Showing {0} of {1} observed plans"
+    },
+    "Plans": {
+      "Title": "Observed operation plans",
+      "Component": "Component",
+      "Behaviors": "Behaviors",
+      "DetailTitle": "Applied behavior chain",
+      "DetailDescription": "Behaviors are listed outermost to innermost in their exact execution order.",
+      "Order": "Order {0}",
+      "RegisteredType": "Registered type",
+      "PlanKey": "Plan key",
+      "OperationKey": "Operation key",
+      "Contract": "Contract",
+      "Method": "Entry method",
+      "Input": "Input",
+      "Result": "Result",
+      "StartedAt": "Plan started",
+      "CompletedAt": "Plan completed",
+      "Business": "Business operation",
+      "Transaction": "Transaction mode",
+      "Fault": "Plan construction failed",
+      "ExceptionType": "Exception type",
+      "Yes": "Yes",
+      "No": "No"
+    },
+    "Registrations": {
+      "Title": "Registered behaviors",
+      "Description": "Registrations are shown in their deterministic global order before descriptor filters are evaluated.",
+      "Behavior": "Behavior",
+      "Order": "Order",
+      "Lifetime": "Lifetime",
+      "Source": "Source",
+      "OpenGeneric": "Open generic",
+      "DescriptorFilter": "Descriptor filter"
+    },
+    "Statuses": {
+      "Building": "Building",
+      "Ready": "Ready",
+      "Faulted": "Faulted"
+    },
+    "TransactionModes": {
+      "None": "None",
+      "Automatic": "Automatic"
+    },
+    "Lifetimes": {
+      "Singleton": "Singleton",
+      "Scoped": "Scoped",
+      "Transient": "Transient"
+    }
+  }
+}

@@ -17,7 +17,7 @@ internal sealed class ExecutionPipeline(
         ValidateDescriptor<TInput, TResult>(descriptor);
         ArgumentNullException.ThrowIfNull(terminal);
 
-        var plan = planCache.GetPlan(descriptor);
+        var plan = planCache.GetPlan(descriptor).BehaviorTypes;
         if (plan.Length == 0)
         {
             return terminal();
@@ -38,7 +38,7 @@ internal sealed class ExecutionPipeline(
         ValidateDescriptor<TInput, ExecutionUnit>(descriptor);
         ArgumentNullException.ThrowIfNull(terminal);
 
-        var plan = planCache.GetPlan(descriptor);
+        var plan = planCache.GetPlan(descriptor).BehaviorTypes;
         if (plan.Length == 0)
         {
             return terminal();
