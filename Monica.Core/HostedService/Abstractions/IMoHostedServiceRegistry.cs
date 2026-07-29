@@ -14,25 +14,39 @@ public interface IMoHostedServiceRegistry
     IReadOnlyList<HostedServiceRuntimeInfo> GetAllServices();
 
     /// <summary>
-    /// Gets observable information for a specific service by type
+    /// Gets all hosted-service instances whose concrete type matches <typeparamref name="TService"/>.
     /// </summary>
-    /// <typeparam name="TService">The hosted service type</typeparam>
-    /// <returns>Observable information for the service, or null if not found</returns>
-    HostedServiceRuntimeInfo? GetService<TService>() where TService : IMoHostedService;
+    /// <typeparam name="TService">The concrete hosted-service type.</typeparam>
+    /// <returns>An ordered, read-only list of matching runtime information.</returns>
+    IReadOnlyList<HostedServiceRuntimeInfo> GetServices<TService>() where TService : IMoHostedService;
 
     /// <summary>
-    /// Gets observable information for a specific service by type
+    /// Gets all hosted-service instances whose concrete type matches <paramref name="serviceType"/>.
     /// </summary>
-    /// <param name="serviceType">The hosted service type</param>
-    /// <returns>Observable information for the service, or null if not found</returns>
-    HostedServiceRuntimeInfo? GetService(Type serviceType);
+    /// <param name="serviceType">The concrete hosted-service type.</param>
+    /// <returns>An ordered, read-only list of matching runtime information.</returns>
+    IReadOnlyList<HostedServiceRuntimeInfo> GetServices(Type serviceType);
 
     /// <summary>
-    /// Gets observable information for a service by its name
+    /// Gets all hosted-service instances with the specified display name.
     /// </summary>
-    /// <param name="serviceName">The service name</param>
-    /// <returns>Observable information for the service, or null if not found</returns>
-    HostedServiceRuntimeInfo? GetServiceByName(string serviceName);
+    /// <param name="serviceName">The case-insensitive service name.</param>
+    /// <returns>An ordered, read-only list of matching runtime information.</returns>
+    IReadOnlyList<HostedServiceRuntimeInfo> GetServicesByName(string serviceName);
+
+    /// <summary>
+    /// Gets all hosted-service instances with the specified dependency-injection key.
+    /// </summary>
+    /// <param name="serviceKey">The service key, or <see langword="null"/> for default instances.</param>
+    /// <returns>An ordered, read-only list of matching runtime information.</returns>
+    IReadOnlyList<HostedServiceRuntimeInfo> GetServicesByKey(string? serviceKey);
+
+    /// <summary>
+    /// Gets one hosted-service instance by its exact runtime identity.
+    /// </summary>
+    /// <param name="instanceId">The instance identity exposed by <see cref="HostedServiceRuntimeInfo.InstanceId"/>.</param>
+    /// <returns>The matching runtime information, or <see langword="null"/> when the instance is not registered.</returns>
+    HostedServiceRuntimeInfo? GetServiceByInstanceId(string instanceId);
 
     /// <summary>
     /// Gets all services in a specific state

@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using System.Runtime.Versioning;
 using System.Text;
 using System.Text.Json;
 using Dapr;
@@ -9,7 +10,11 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Monica.Core.Execution;
+using Monica.Core.HostedService.Abstractions;
+using Monica.Core.HostedService.Models;
+using Monica.Core.JsonSerialization.Abstractions;
 using Monica.Core.JsonSerialization.Services;
+using Monica.Core.Modularity.Extensions;
 using Monica.Core.ObservableInstance.Services;
 using Monica.Dapr.Abstractions;
 using Monica.Dapr.Services;
@@ -27,6 +32,85 @@ namespace Test.Monica.Dapr.Services;
 
 public sealed class DaprEventBusSubscriptionHostedServiceTests
 {
+    [Fact]
+    [RequiresPreviewFeatures]
+    public async Task AddKeyedDaprEventBus_WithTwoKeys_ShouldPublishBothRegisteredInstances()
+    {
+        var builder = Host.CreateApplicationBuilder();
+        builder.AddMonica(monica =>
+        {
+            monica.ConfigureTypeDiscovery(static options => options.ExcludeDefault());
+            var dapr = monica.AddEventBus().UseDaprProvider();
+            dapr.AddKeyedDaprEventBus("orders", static _ => { });
+            dapr.AddKeyedDaprEventBus("payments", static _ => { });
+        });
+        builder.Services.AddSingleton(Substitute.For<IDaprSidecarHealthCoordinator>());
+        builder.Services.AddSingleton(Substitute.For<global::Dapr.Client.DaprClient>());
+        builder.Services.AddSingleton(Substitute.For<IJsonSerializerOptionsProvider>());
+
+        using var host = builder.Build();
+        var registryLifecycle = host.Services.GetServices<IHostedService>()
+            .OfType<IHostedLifecycleService>()
+            .Single(service => service.GetType().Name == "HostedServiceRegistryLifecycle");
+
+        await registryLifecycle.StartingAsync(TestContext.Current.CancellationToken);
+
+        var registry = host.Services.GetRequiredService<IMoHostedServiceRegistry>();
+        var keyedServices = registry.GetServices<DaprEventBusSubscriptionHostedService>()
+            .Where(static service => service.ServiceKey is not null)
+            .ToArray();
+        Assert.Equal(2, keyedServices.Length);
+        Assert.Equal(2, keyedServices.Select(static service => service.InstanceId).Distinct().Count());
+        Assert.Equal(["orders", "payments"], keyedServices.Select(static service => service.ServiceKey).Order());
+        Assert.All(keyedServices, static service => Assert.Equal(HostedServiceState.NotStarted, service.CurrentState));
+    }
+
+    [Fact]
+    public async Task RegistryLifecycle_WithTwoKeyedServices_PublishesDistinctInstancesBeforeStartAsync()
+    {
+        using var dependencyProvider = new ServiceCollection()
+            .AddScoped<IExecutionPipeline, PassThroughExecutionPipeline>()
+            .BuildServiceProvider();
+        var subscriptionRegistry = new EventSubscriptionRegistry(
+            NullLogger<EventSubscriptionRegistry>.Instance);
+        using var firstClient = new CapturingDaprPublishSubscribeClient(0);
+        using var secondClient = new CapturingDaprPublishSubscribeClient(0);
+        using var first = CreateUnstartedService(
+            firstClient,
+            subscriptionRegistry,
+            dependencyProvider,
+            "orders");
+        using var second = CreateUnstartedService(
+            secondClient,
+            subscriptionRegistry,
+            dependencyProvider,
+            "payments");
+        var builder = Host.CreateApplicationBuilder();
+        new ModuleHostedService(new ModuleHostedServiceOption()).ConfigureServices(builder.Services);
+        builder.Services.AddSingleton<IHostedService>(first);
+        builder.Services.AddSingleton<IHostedService>(second);
+
+        using var host = builder.Build();
+        var registryLifecycle = host.Services.GetServices<IHostedService>()
+            .OfType<IHostedLifecycleService>()
+            .Single(service => service.GetType().Name == "HostedServiceRegistryLifecycle");
+
+        await registryLifecycle.StartingAsync(TestContext.Current.CancellationToken);
+
+        var registry = host.Services.GetRequiredService<IMoHostedServiceRegistry>();
+        var services = registry.GetServices<DaprEventBusSubscriptionHostedService>();
+        Assert.Equal(2, services.Count);
+        Assert.Equal(2, services.Select(service => service.InstanceId).Distinct().Count());
+        Assert.All(services, service => Assert.Equal(HostedServiceState.NotStarted, service.CurrentState));
+        Assert.Same(
+            services.Single(service => service.ServiceKey == "orders"),
+            registry.GetServicesByKey("orders").Single());
+        Assert.Same(
+            services.Single(service => service.ServiceKey == "payments"),
+            registry.GetServicesByKey("payments").Single());
+        Assert.All(services, service => Assert.Same(service, registry.GetServiceByInstanceId(service.InstanceId)));
+    }
+
     [Fact]
     public async Task Subscription_UsesRetryAsTheDefaultTimeoutResponse()
     {
@@ -401,6 +485,35 @@ public sealed class DaprEventBusSubscriptionHostedServiceTests
             () => client.HasSubscription,
             TestContext.Current.CancellationToken);
         return new TestFixture(serviceProvider, service, registry, client, logger, handlerDisposed.Task);
+    }
+
+    private static DaprEventBusSubscriptionHostedService CreateUnstartedService(
+        DaprPublishSubscribeClient client,
+        EventSubscriptionRegistry subscriptionRegistry,
+        IServiceProvider dependencyProvider,
+        string serviceKey)
+    {
+        var eventBus = new TestDistributedEventBus(
+            dependencyProvider.GetRequiredService<IServiceScopeFactory>(),
+            new EventHandlerInvoker(),
+            subscriptionRegistry);
+        var healthCoordinator = Substitute.For<IDaprSidecarHealthCoordinator>();
+        healthCoordinator.IsHealthy.Returns(true);
+
+        return new DaprEventBusSubscriptionHostedService(
+            client,
+            subscriptionRegistry,
+            Substitute.For<IHostApplicationLifetime>(),
+            eventBus,
+            new ObservableInstanceRegistry(Options.Create(new ModuleObservableInstanceOption())),
+            healthCoordinator,
+            Options.Create(new ModuleDaprEventBusOption()),
+            Options.Create(new ModuleHostedServiceOption { DefaultHeartbeatInterval = TimeSpan.Zero }),
+            dependencyProvider.GetRequiredService<IServiceScopeFactory>(),
+            new JsonSerializerOptionsProvider(new JsonSerializerOptions(JsonSerializerDefaults.Web)),
+            NullLogger<DaprTopicSubscription>.Instance,
+            NullLogger<DaprEventBusSubscriptionHostedService>.Instance,
+            serviceKey);
     }
 
     private static async Task WaitUntilAsync(Func<bool> condition, CancellationToken cancellationToken)

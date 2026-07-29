@@ -20,6 +20,7 @@ public static class MonicaApplicationBuilderExtensions
         ArgumentNullException.ThrowIfNull(app);
 
         var application = app.ApplicationServices.GetRequiredService<MonicaApplication>();
+        application.Modules.BeginApplicationPipeline(app);
         ConfigureMonicaHttpListener(app, application.ModuleSystem);
         application.Modules.ConfigApplicationPipeline(app, ModuleOrder.MIDDLEWARE_USE_ROUTING, afterGivenOrder: false);
         app.UseRouting();
@@ -38,6 +39,7 @@ public static class MonicaApplicationBuilderExtensions
         ArgumentNullException.ThrowIfNull(app);
 
         var application = app.ApplicationServices.GetRequiredService<MonicaApplication>();
+        application.Modules.BeginEndpointMapping(app);
         application.Modules.ConfigEndpoints(app);
         return app;
     }

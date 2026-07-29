@@ -1,6 +1,7 @@
 using System.Collections.Concurrent;
 using Microsoft.Extensions.Options;
 using Monica.Core.ObservableInstance.Abstractions;
+using Monica.Core.ObservableInstance.Abstractions.Internal;
 using Monica.Core.ObservableInstance.Models;
 using Monica.Modules;
 
@@ -9,7 +10,8 @@ namespace Monica.Core.ObservableInstance.Services;
 /// <summary>
 /// Default registry for observable instance trackers.
 /// </summary>
-public class ObservableInstanceRegistry(IOptions<ModuleObservableInstanceOption> globalOptions) : IObservableInstanceRegistry
+public class ObservableInstanceRegistry(IOptions<ModuleObservableInstanceOption> globalOptions)
+    : IObservableInstanceRegistry, IObservableInstanceRegistryWriter
 {
     private readonly ConcurrentDictionary<string, ObservableInstanceTracker> _instances = new();
 
@@ -58,6 +60,18 @@ public class ObservableInstanceRegistry(IOptions<ModuleObservableInstanceOption>
     public ObservableInstanceTracker? GetById(string instanceId)
     {
         return _instances.GetValueOrDefault(instanceId);
+    }
+
+    bool IObservableInstanceRegistryWriter.Unregister(string instanceId)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(instanceId);
+        if (!_instances.TryRemove(instanceId, out var tracker))
+        {
+            return false;
+        }
+
+        tracker.Dispose();
+        return true;
     }
 
     /// <summary>

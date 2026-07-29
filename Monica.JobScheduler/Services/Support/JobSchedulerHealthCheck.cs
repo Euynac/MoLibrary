@@ -24,8 +24,7 @@ public class JobSchedulerHealthCheck(IMoHostedServiceRegistry serviceRegistry) :
         };
 
         var services = serviceTypes
-            .Select(serviceRegistry.GetService)
-            .Where(info => info != null)
+            .SelectMany(serviceRegistry.GetServices)
             .ToList();
 
         if (services.Count == 0)
@@ -36,12 +35,12 @@ public class JobSchedulerHealthCheck(IMoHostedServiceRegistry serviceRegistry) :
         }
 
         // Check if any service is faulted
-        var faultedServices = services.Where(s => s!.IsFaulted).ToList();
+        var faultedServices = services.Where(static service => service.IsFaulted).ToList();
         if (faultedServices.Any())
         {
             var errors = string.Join("; ", faultedServices.Select(s =>
             {
-                var lastError = s!.StateHistory
+                var lastError = s.StateHistory
                     .Where(h => h.Exception != null)
                     .OrderByDescending(h => h.Timestamp)
                     .FirstOrDefault();
@@ -53,25 +52,25 @@ public class JobSchedulerHealthCheck(IMoHostedServiceRegistry serviceRegistry) :
         }
 
         // Check if any service is degraded
-        var degradedServices = services.Where(s => s!.IsDegraded).ToList();
+        var degradedServices = services.Where(static service => service.IsDegraded).ToList();
         if (degradedServices.Any())
         {
-            var names = string.Join(", ", degradedServices.Select(s => s!.ServiceName));
+            var names = string.Join(", ", degradedServices.Select(static service => service.ServiceName));
             return Task.FromResult(HealthCheckResult.Degraded(
                 $"JobScheduler services degraded: {names}"));
         }
 
         // Check if any service is not healthy (not Running or Executing)
-        var unhealthyServices = services.Where(s => !s!.IsHealthy).ToList();
+        var unhealthyServices = services.Where(static service => !service.IsHealthy).ToList();
         if (unhealthyServices.Any())
         {
-            var names = string.Join(", ", unhealthyServices.Select(s => $"{s!.ServiceName} ({s.CurrentState})"));
+            var names = string.Join(", ", unhealthyServices.Select(static service => $"{service.ServiceName} ({service.CurrentState})"));
             return Task.FromResult(HealthCheckResult.Degraded(
                 $"JobScheduler services not fully initialized: {names}"));
         }
 
         // All services are healthy
-        var healthyNames = string.Join(", ", services.Select(s => s!.ServiceName));
+        var healthyNames = string.Join(", ", services.Select(static service => service.ServiceName));
         return Task.FromResult(HealthCheckResult.Healthy(
             $"All JobScheduler services healthy: {healthyNames}"));
     }

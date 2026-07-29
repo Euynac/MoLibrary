@@ -23,6 +23,7 @@ namespace Monica.Core.Modularity.Services;
 /// </summary>
 public sealed class ModuleRegistry(MonicaApplication application)
 {
+    private readonly ModuleCompositionState _composition = new();
     private readonly ModuleRegistryState _state = new();
     private bool _hasStarted;
     private bool _isSealed;
@@ -131,6 +132,7 @@ public sealed class ModuleRegistry(MonicaApplication application)
         }
 
         _hasStarted = true;
+        _composition.Initialize(builder);
         var services = builder.Services;
 
 
@@ -202,6 +204,7 @@ public sealed class ModuleRegistry(MonicaApplication application)
         services.AddSingleton<MonicaApplication>(_ => application);
         services.AddSingleton<IMonicaApplicationOptions>(application.Application);
         services.AddSingleton<IMonicaModuleSystemOptions>(application.ModuleSystem);
+        RegisterCompositionStartupValidation(services);
         foreach (var optionType in Registrations.Values
                      .Select(info => info.ModuleOptionType)
                      .Distinct())
@@ -311,7 +314,15 @@ public sealed class ModuleRegistry(MonicaApplication application)
         }
         application.Profiling.StopPhase(nameof(ModulePhase.PostConfigureServices));
         _state.AddRuntimeSnapshots(snapshots);
-        application.Errors.RaiseModuleErrors();
+        if (builder is WebApplicationBuilder)
+        {
+            // Web composition remains open until MapMonica() has configured every endpoint.
+            application.Errors.RaiseModuleErrors();
+        }
+        else
+        {
+            CompleteComposition(ModuleCompositionCompletionPoint.ServiceRegistration);
+        }
     }
 
     /// <summary>
@@ -320,6 +331,7 @@ public sealed class ModuleRegistry(MonicaApplication application)
     internal void Clear()
     {
         _state.Clear();
+        _composition.Clear();
         _hasStarted = false;
         _isSealed = false;
     }
@@ -344,6 +356,69 @@ public sealed class ModuleRegistry(MonicaApplication application)
             ?? throw new InvalidOperationException(
                 $"Could not create the Monica option context binder for {optionType.GetCleanFullName()}.");
         services.AddSingleton(postConfigureType, implementation);
+    }
+
+    private void RegisterCompositionStartupValidation(IServiceCollection services)
+    {
+        services.AddSingleton<IValidateOptions<ModuleCompositionStartupOptions>>(
+            new ModuleCompositionStartupValidator(application));
+        services.AddOptions<ModuleCompositionStartupOptions>().ValidateOnStart();
+    }
+
+    /// <summary>
+    /// Claims the application builder before Monica configures the Web pipeline.
+    /// </summary>
+    internal void BeginApplicationPipeline(IApplicationBuilder app)
+    {
+        _composition.BeginApplicationPipeline(app);
+    }
+
+    /// <summary>
+    /// Claims the application builder before Monica maps Web endpoints.
+    /// </summary>
+    internal void BeginEndpointMapping(IApplicationBuilder app)
+    {
+        _composition.BeginEndpointMapping(app);
+    }
+
+    /// <summary>
+    /// Completes composition once at the host-appropriate boundary.
+    /// </summary>
+    internal void CompleteComposition(ModuleCompositionCompletionPoint completionPoint)
+    {
+        if (!_composition.TryBeginCompletion(completionPoint))
+        {
+            return;
+        }
+
+        try
+        {
+            application.Profiling.StopModuleSystem();
+
+            if (application.ModuleSystem.EnableSummaryLog)
+            {
+                Logger.LogInformation("Module system performance summary:\n{PerformanceSummary}",
+                    application.Profiling.GetPerformanceSummary());
+                Logger.LogInformation("Module system register order summary:\n{Order}",
+                    application.Dependencies.GetModuleRegistrationSummary());
+            }
+
+            application.Errors.RaiseModuleErrors();
+            _composition.CommitCompletion();
+        }
+        catch (Exception exception)
+        {
+            _composition.FailCompletion(exception);
+            throw;
+        }
+    }
+
+    /// <summary>
+    /// Gets a host-start failure when the Web pipeline has not completed Monica composition.
+    /// </summary>
+    internal string? GetStartupValidationFailure()
+    {
+        return _composition.GetStartupValidationFailure();
     }
 
     /// <summary>
@@ -424,19 +499,7 @@ public sealed class ModuleRegistry(MonicaApplication application)
         }
 
         application.Profiling.StopPhase(nameof(ModulePhase.ConfigureEndpoints));
-        application.Profiling.StopModuleSystem();
-
-        if (application.ModuleSystem.EnableSummaryLog)
-        {
-            // Log performance summary details
-            Logger.LogInformation("Module system performance summary:\n{PerformanceSummary}",
-                application.Profiling.GetPerformanceSummary());
-            Logger.LogInformation("Module system register order summary:\n{Order}",
-                application.Dependencies.GetModuleRegistrationSummary());
-        }
-       
-
-        application.Errors.RaiseModuleErrors();
+        CompleteComposition(ModuleCompositionCompletionPoint.EndpointMapping);
     }
 
     /// <summary>

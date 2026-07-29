@@ -104,7 +104,7 @@ public class ModuleDaprEventBusGuide : ModuleGuide<ModuleDaprEventBus, ModuleDap
     }
 }
 
-public class ModuleDaprEventBusOption : MinimalApiModuleOptions<ModuleDaprEventBus>
+public class ModuleDaprEventBusOption : ModuleOptions<ModuleDaprEventBus>
 {
     public string PubSubName { get; set; } = "pubsub";
 

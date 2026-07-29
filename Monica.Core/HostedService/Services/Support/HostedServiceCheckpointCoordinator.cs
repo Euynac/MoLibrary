@@ -1,5 +1,4 @@
 using Monica.Core.Extensions;
-
 using Monica.Core.HostedService.Abstractions;
 using Monica.Core.HostedService.Abstractions.Internal;
 using Monica.Core.HostedService.Models;
@@ -9,97 +8,86 @@ using Monica.Core.ObservableInstance.Models;
 namespace Monica.Core.HostedService.Services.Support;
 
 internal sealed class HostedServiceCheckpointCoordinator(IMoHostedServiceRegistry serviceRegistry)
-    : IMoHostedServiceCheckpointCoordinator, IHostedServiceCheckpointObserver
+    : IMoHostedServiceCheckpointCoordinator, IHostedServiceRuntimeObserver
 {
     private readonly Lock _checkpointLock = new();
     private readonly Dictionary<HostedServiceCheckpointKey, HostedServiceCheckpointState> _checkpoints = [];
 
-    public void Observe(IMoHostedService service)
+    public IDisposable Observe(IMoHostedService service)
     {
         ArgumentNullException.ThrowIfNull(service);
 
-        service.RuntimeInfo.Tracker.StateChanged += stateChange => OnServiceStateChanged(service.GetType(), stateChange);
+        var runtimeInfo = service.RuntimeInfo;
+        ObservableInstanceTracker.StateChangedHandler handler =
+            stateChange => OnServiceStateChanged(runtimeInfo, stateChange);
+        runtimeInfo.Tracker.StateChanged += handler;
 
-        if (service.RuntimeInfo.CurrentState == HostedServiceState.Faulted)
+        if (runtimeInfo.CurrentState == HostedServiceState.Faulted)
         {
-            FailWaitersForFaultedService(service.GetType(), service.RuntimeInfo);
+            FailWaitersForFaultedService(runtimeInfo);
         }
+
+        return new StateChangedSubscription(runtimeInfo.Tracker, handler);
     }
 
-    public async Task WaitForCheckpointAsync<TService>(
+    public Task WaitForCheckpointAsync<TService>(
         string checkpoint,
         DateTime? notBeforeUtc = null,
         CancellationToken cancellationToken = default)
         where TService : IMoHostedService
     {
-        if (string.IsNullOrWhiteSpace(checkpoint))
-        {
-            throw new ArgumentException("Checkpoint name cannot be null or empty.", nameof(checkpoint));
-        }
-
-        var serviceType = typeof(TService);
-        var checkpointKey = new HostedServiceCheckpointKey(serviceType, checkpoint);
-        HostedServiceCheckpointWaiter? waiter = null;
-        Exception? startException = null;
-        var isAlreadySatisfied = false;
-
-        lock (_checkpointLock)
-        {
-            var checkpointState = GetOrCreateCheckpointState(checkpointKey);
-            if (checkpointState.LastOccurredAtUtc.HasValue &&
-                (!notBeforeUtc.HasValue || checkpointState.LastOccurredAtUtc.Value >= notBeforeUtc.Value))
-            {
-                isAlreadySatisfied = true;
-            }
-            else if (TryCreateFaultedServiceException(serviceType, checkpoint, out startException))
-            {
-                isAlreadySatisfied = true;
-            }
-            else
-            {
-                waiter = new HostedServiceCheckpointWaiter(notBeforeUtc);
-                checkpointState.Waiters.Add(waiter);
-            }
-        }
-
-        if (startException != null)
-        {
-            throw startException;
-        }
-
-        if (isAlreadySatisfied || waiter == null)
-        {
-            return;
-        }
-
-        using var cancellationRegistration = cancellationToken.Register(
-            static state =>
-            {
-                var (coordinator, key, pendingWaiter, token) =
-                    ((HostedServiceCheckpointCoordinator Coordinator, HostedServiceCheckpointKey Key, HostedServiceCheckpointWaiter Waiter, CancellationToken Token))state!;
-                coordinator.CancelWaiter(key, pendingWaiter, token);
-            },
-            (this, checkpointKey, waiter, cancellationToken));
-
-        await waiter.CompletionSource.Task.ConfigureAwait(false);
+        var serviceInfo = ResolveExactlyOne(
+            serviceRegistry.GetServices<TService>(),
+            $"hosted service type '{typeof(TService).FullName}'");
+        return WaitForCheckpointAsync(serviceInfo, checkpoint, notBeforeUtc, cancellationToken);
     }
 
-    public void SignalCheckpoint<TService>(string checkpoint, DateTime? occurredAtUtc = null)
+    public Task WaitForCheckpointAsync<TService>(
+        string serviceKey,
+        string checkpoint,
+        DateTime? notBeforeUtc = null,
+        CancellationToken cancellationToken = default)
         where TService : IMoHostedService
     {
-        SignalCheckpoint(typeof(TService), checkpoint, occurredAtUtc);
+        ArgumentException.ThrowIfNullOrWhiteSpace(serviceKey);
+        var serviceInfo = ResolveExactlyOne(
+            serviceRegistry.GetServices<TService>()
+                .Where(info => string.Equals(info.ServiceKey, serviceKey, StringComparison.Ordinal))
+                .ToArray(),
+            $"hosted service type '{typeof(TService).FullName}' with key '{serviceKey}'");
+        return WaitForCheckpointAsync(serviceInfo, checkpoint, notBeforeUtc, cancellationToken);
     }
 
-    public void SignalCheckpoint(Type serviceType, string checkpoint, DateTime? occurredAtUtc = null)
+    public Task WaitForCheckpointAsync(
+        string instanceId,
+        string checkpoint,
+        DateTime? notBeforeUtc = null,
+        CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(serviceType);
+        ArgumentException.ThrowIfNullOrWhiteSpace(instanceId);
+        var serviceInfo = serviceRegistry.GetServiceByInstanceId(instanceId)
+            ?? throw new InvalidOperationException(
+                $"Hosted service instance '{instanceId}' is not registered in the current host.");
+        return WaitForCheckpointAsync(serviceInfo, checkpoint, notBeforeUtc, cancellationToken);
+    }
 
-        if (string.IsNullOrWhiteSpace(checkpoint))
+    public void SignalCheckpoint(
+        IMoHostedService source,
+        string checkpoint,
+        DateTime? occurredAtUtc = null)
+    {
+        ArgumentNullException.ThrowIfNull(source);
+        ValidateCheckpoint(checkpoint);
+
+        var runtimeInfo = source.RuntimeInfo;
+        var registered = serviceRegistry.GetServiceByInstanceId(runtimeInfo.InstanceId);
+        if (!ReferenceEquals(registered, runtimeInfo))
         {
-            throw new ArgumentException("Checkpoint name cannot be null or empty.", nameof(checkpoint));
+            throw new InvalidOperationException(
+                $"Hosted service instance '{runtimeInfo.InstanceId}' is not registered in the current host.");
         }
 
-        var checkpointKey = new HostedServiceCheckpointKey(serviceType, checkpoint);
+        var checkpointKey = new HostedServiceCheckpointKey(runtimeInfo.InstanceId, checkpoint);
         var occurredAt = occurredAtUtc ?? DateTime.UtcNow;
         List<HostedServiceCheckpointWaiter>? waitersToRelease = null;
 
@@ -122,7 +110,7 @@ internal sealed class HostedServiceCheckpointCoordinator(IMoHostedServiceRegistr
             }
         }
 
-        if (waitersToRelease == null)
+        if (waitersToRelease is null)
         {
             return;
         }
@@ -133,17 +121,68 @@ internal sealed class HostedServiceCheckpointCoordinator(IMoHostedServiceRegistr
         }
     }
 
-    private void OnServiceStateChanged(Type serviceType, ObservableStateEntry stateChange)
+    private async Task WaitForCheckpointAsync(
+        HostedServiceRuntimeInfo serviceInfo,
+        string checkpoint,
+        DateTime? notBeforeUtc,
+        CancellationToken cancellationToken)
     {
-        if (stateChange.CurrentState is not HostedServiceState.Faulted)
+        ValidateCheckpoint(checkpoint);
+
+        var checkpointKey = new HostedServiceCheckpointKey(serviceInfo.InstanceId, checkpoint);
+        HostedServiceCheckpointWaiter? waiter = null;
+        Exception? startException = null;
+        var isAlreadySatisfied = false;
+
+        lock (_checkpointLock)
+        {
+            var checkpointState = GetOrCreateCheckpointState(checkpointKey);
+            if (checkpointState.LastOccurredAtUtc.HasValue
+                && (!notBeforeUtc.HasValue || checkpointState.LastOccurredAtUtc.Value >= notBeforeUtc.Value))
+            {
+                isAlreadySatisfied = true;
+            }
+            else if (serviceInfo.CurrentState == HostedServiceState.Faulted)
+            {
+                startException = CreateFaultedServiceException(serviceInfo, checkpoint);
+                isAlreadySatisfied = true;
+            }
+            else
+            {
+                waiter = new HostedServiceCheckpointWaiter(notBeforeUtc);
+                checkpointState.Waiters.Add(waiter);
+            }
+        }
+
+        if (startException is not null)
+        {
+            throw startException;
+        }
+
+        if (isAlreadySatisfied || waiter is null)
         {
             return;
         }
 
-        var serviceInfo = serviceRegistry.GetService(serviceType);
-        if (serviceInfo != null)
+        using var cancellationRegistration = cancellationToken.Register(
+            static state =>
+            {
+                var (coordinator, key, pendingWaiter, token) =
+                    ((HostedServiceCheckpointCoordinator Coordinator, HostedServiceCheckpointKey Key, HostedServiceCheckpointWaiter Waiter, CancellationToken Token))state!;
+                coordinator.CancelWaiter(key, pendingWaiter, token);
+            },
+            (this, checkpointKey, waiter, cancellationToken));
+
+        await waiter.CompletionSource.Task.ConfigureAwait(false);
+    }
+
+    private void OnServiceStateChanged(
+        HostedServiceRuntimeInfo serviceInfo,
+        ObservableStateEntry stateChange)
+    {
+        if (stateChange.CurrentState is HostedServiceState.Faulted)
         {
-            FailWaitersForFaultedService(serviceType, serviceInfo);
+            FailWaitersForFaultedService(serviceInfo);
         }
     }
 
@@ -175,7 +214,7 @@ internal sealed class HostedServiceCheckpointCoordinator(IMoHostedServiceRegistr
         waiter.CompletionSource.TrySetCanceled(cancellationToken);
     }
 
-    private void FailWaitersForFaultedService(Type serviceType, HostedServiceRuntimeInfo serviceInfo)
+    private void FailWaitersForFaultedService(HostedServiceRuntimeInfo serviceInfo)
     {
         List<(string Checkpoint, HostedServiceCheckpointWaiter Waiter)>? waitersToFail = null;
 
@@ -183,7 +222,8 @@ internal sealed class HostedServiceCheckpointCoordinator(IMoHostedServiceRegistr
         {
             foreach (var (checkpointKey, checkpointState) in _checkpoints)
             {
-                if (checkpointKey.ServiceType != serviceType || checkpointState.Waiters.Count == 0)
+                if (!string.Equals(checkpointKey.InstanceId, serviceInfo.InstanceId, StringComparison.Ordinal)
+                    || checkpointState.Waiters.Count == 0)
                 {
                     continue;
                 }
@@ -198,7 +238,7 @@ internal sealed class HostedServiceCheckpointCoordinator(IMoHostedServiceRegistr
             }
         }
 
-        if (waitersToFail == null)
+        if (waitersToFail is null)
         {
             return;
         }
@@ -209,20 +249,30 @@ internal sealed class HostedServiceCheckpointCoordinator(IMoHostedServiceRegistr
         }
     }
 
-    private bool TryCreateFaultedServiceException(
-        Type serviceType,
-        string checkpoint,
-        out Exception? exception)
+    private static HostedServiceRuntimeInfo ResolveExactlyOne(
+        IReadOnlyList<HostedServiceRuntimeInfo> matches,
+        string description)
     {
-        exception = null;
-        var serviceInfo = serviceRegistry.GetService(serviceType);
-        if (serviceInfo?.CurrentState != HostedServiceState.Faulted)
+        return matches.Count switch
         {
-            return false;
-        }
+            1 => matches[0],
+            0 => throw new InvalidOperationException($"No {description} is registered in the current host."),
+            _ => throw new InvalidOperationException(
+                $"More than one {description} is registered. Select one by service key or instance ID. "
+                + $"Matches: {string.Join(", ", matches.Select(FormatIdentity))}.")
+        };
+    }
 
-        exception = CreateFaultedServiceException(serviceInfo, checkpoint);
-        return true;
+    private static string FormatIdentity(HostedServiceRuntimeInfo serviceInfo)
+    {
+        return serviceInfo.ServiceKey is null
+            ? serviceInfo.InstanceId
+            : $"{serviceInfo.InstanceId} (key: {serviceInfo.ServiceKey})";
+    }
+
+    private static void ValidateCheckpoint(string checkpoint)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(checkpoint);
     }
 
     private static Exception CreateFaultedServiceException(
@@ -230,15 +280,30 @@ internal sealed class HostedServiceCheckpointCoordinator(IMoHostedServiceRegistr
         string checkpoint)
     {
         var lastError = serviceInfo.StateHistory
-            .Where(history => history.Exception != null)
-            .OrderByDescending(history => history.Timestamp)
+            .Where(static history => history.Exception is not null)
+            .OrderByDescending(static history => history.Timestamp)
             .FirstOrDefault()
             ?.Exception;
 
-        var message = lastError == null
-            ? $"Hosted service '{serviceInfo.ServiceName}' faulted before checkpoint '{checkpoint}' was reached."
-            : $"Hosted service '{serviceInfo.ServiceName}' faulted before checkpoint '{checkpoint}' was reached: {lastError.GetMessageRecursively()}";
+        var message = lastError is null
+            ? $"Hosted service '{serviceInfo.ServiceName}' ({serviceInfo.InstanceId}) faulted before checkpoint '{checkpoint}' was reached."
+            : $"Hosted service '{serviceInfo.ServiceName}' ({serviceInfo.InstanceId}) faulted before checkpoint '{checkpoint}' was reached: {lastError.GetMessageRecursively()}";
 
         return new InvalidOperationException(message, lastError);
+    }
+
+    private sealed class StateChangedSubscription(
+        ObservableInstanceTracker tracker,
+        ObservableInstanceTracker.StateChangedHandler handler) : IDisposable
+    {
+        private int _disposed;
+
+        public void Dispose()
+        {
+            if (Interlocked.Exchange(ref _disposed, 1) == 0)
+            {
+                tracker.StateChanged -= handler;
+            }
+        }
     }
 }

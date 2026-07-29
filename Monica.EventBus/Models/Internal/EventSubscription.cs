@@ -8,7 +8,8 @@ namespace Monica.EventBus.Models.Internal;
 /// </summary>
 internal class EventSubscription(EventSubscriptionDescriptor descriptor) : IEventSubscription
 {
-    private EventSubscriptionState _state = EventSubscriptionState.Pending;
+    private readonly SemaphoreSlim _mutationGate = new(1, 1);
+    private volatile EventSubscriptionState _state = EventSubscriptionState.Pending;
 
     #region Identity
 
@@ -58,51 +59,90 @@ internal class EventSubscription(EventSubscriptionDescriptor descriptor) : IEven
     #region State Transitions
 
     public Task ActivateAsync()
-    {
-        if (_state != EventSubscriptionState.Pending && _state != EventSubscriptionState.Inactive)
-        {
-            throw new InvalidOperationException($"Cannot activate subscription in state {_state}");
-        }
+        => ActivateAsync(static _ => { }, CancellationToken.None);
 
-        _state = EventSubscriptionState.Active;
-        ActivatedAt = DateTime.UtcNow;
-        return Task.CompletedTask;
+    internal async Task ActivateAsync(
+        Action<EventSubscription> onCommitted,
+        CancellationToken cancellationToken)
+    {
+        await _mutationGate.WaitAsync(cancellationToken).ConfigureAwait(false);
+        try
+        {
+            if (_state != EventSubscriptionState.Pending && _state != EventSubscriptionState.Inactive)
+            {
+                throw new InvalidOperationException($"Cannot activate subscription in state {_state}");
+            }
+
+            _state = EventSubscriptionState.Active;
+            ActivatedAt = DateTime.UtcNow;
+            onCommitted(this);
+        }
+        finally
+        {
+            _mutationGate.Release();
+        }
     }
 
     public Task DeactivateAsync()
+        => DeactivateAsync(static _ => { }, CancellationToken.None);
+
+    internal async Task DeactivateAsync(
+        Action<EventSubscription> onCommitted,
+        CancellationToken cancellationToken)
     {
-        if (_state != EventSubscriptionState.Active)
+        await _mutationGate.WaitAsync(cancellationToken).ConfigureAwait(false);
+        try
         {
-            throw new InvalidOperationException($"Cannot deactivate subscription in state {_state}");
+            if (_state != EventSubscriptionState.Active)
+            {
+                throw new InvalidOperationException($"Cannot deactivate subscription in state {_state}");
+            }
+
+            _state = EventSubscriptionState.Inactive;
+            DeactivatedAt = DateTime.UtcNow;
+            onCommitted(this);
         }
-
-        _state = EventSubscriptionState.Inactive;
-        DeactivatedAt = DateTime.UtcNow;
-        return Task.CompletedTask;
+        finally
+        {
+            _mutationGate.Release();
+        }
     }
 
-    public Task ReactivateAsync()
-    {
-        return ActivateAsync();
-    }
+    public Task ReactivateAsync() => ActivateAsync();
 
     #endregion
 
-    public async ValueTask DisposeAsync()
+    public ValueTask DisposeAsync()
+        => DisposeAsync(static _ => { }, CancellationToken.None);
+
+    internal async ValueTask DisposeAsync(
+        Action<EventSubscription> onCommitted,
+        CancellationToken cancellationToken)
     {
-        if (_state == EventSubscriptionState.Disposed)
-            return;
-
-        _state = EventSubscriptionState.Disposed;
-
-        // Dispose handler factory if it's disposable
-        if (HandlerFactory is IAsyncDisposable asyncDisposable)
+        await _mutationGate.WaitAsync(cancellationToken).ConfigureAwait(false);
+        try
         {
-            await asyncDisposable.DisposeAsync();
+            if (_state == EventSubscriptionState.Disposed)
+            {
+                onCommitted(this);
+                return;
+            }
+
+            if (HandlerFactory is IAsyncDisposable asyncDisposable)
+            {
+                await asyncDisposable.DisposeAsync().ConfigureAwait(false);
+            }
+            else if (HandlerFactory is IDisposable disposable)
+            {
+                disposable.Dispose();
+            }
+
+            _state = EventSubscriptionState.Disposed;
+            onCommitted(this);
         }
-        else if (HandlerFactory is IDisposable disposable)
+        finally
         {
-            disposable.Dispose();
+            _mutationGate.Release();
         }
     }
 }

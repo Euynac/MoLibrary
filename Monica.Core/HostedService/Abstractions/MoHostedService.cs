@@ -3,9 +3,11 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Monica.Core.Execution;
+using Monica.Core.HostedService.Abstractions.Internal;
 using Monica.Core.HostedService.Models;
 using Monica.Core.HostedService.Services.Support;
 using Monica.Core.ObservableInstance.Abstractions;
+using Monica.Core.ObservableInstance.Abstractions.Internal;
 using Monica.Core.ObservableInstance.Models;
 using Monica.Modules;
 
@@ -14,12 +16,13 @@ namespace Monica.Core.HostedService.Abstractions;
 /// <summary>
 /// Base class for observable <see cref="IHostedService"/> implementations with state and exception tracking.
 /// </summary>
-public abstract class MoHostedService : IHostedService, IMoHostedService
+public abstract class MoHostedService : IHostedService, IMoHostedService, IHostedServiceRuntimeOwner
 {
     private readonly ILogger _logger;
     private readonly IServiceScopeFactory _serviceScopeFactory;
     private readonly ModuleHostedServiceOption _options;
     private readonly IObservableInstanceRegistry _observableManager;
+    private HostedServiceRuntimeInfo? _runtimeInfo;
 
     /// <summary>
     /// Initializes an observable hosted service with dependencies owned by the current host.
@@ -48,6 +51,11 @@ public abstract class MoHostedService : IHostedService, IMoHostedService
     public virtual string ServiceName => GetType().Name;
 
     /// <summary>
+    /// Gets the optional key that distinguishes this hosted-service instance from other instances of the same type.
+    /// </summary>
+    public virtual string? ServiceKey => null;
+
+    /// <summary>
     /// Gets the observable group identifier used to group related hosted services.
     /// Return null to leave the service ungrouped.
     /// </summary>
@@ -66,7 +74,7 @@ public abstract class MoHostedService : IHostedService, IMoHostedService
     /// <summary>
     /// Gets the runtime information for this service.
     /// </summary>
-    public HostedServiceRuntimeInfo RuntimeInfo => field ??= CreateRuntimeInfo();
+    public HostedServiceRuntimeInfo RuntimeInfo => _runtimeInfo ??= CreateRuntimeInfo();
 
     /// <summary>
     /// Creates runtime information lazily after the derived hosted service has finished construction.
@@ -79,16 +87,45 @@ public abstract class MoHostedService : IHostedService, IMoHostedService
             opt.MaxHistorySize = MaxHistorySize;
             opt.InstanceName = ServiceName;
             opt.InstanceType = GetType();
+            opt.InstanceKey = ServiceKey;
             opt.GroupId = ServiceGroupId;
             opt.Logger = Logger;
         });
 
-        ConfigureStateLogLevels(tracker);
-
-        return new HostedServiceRuntimeInfo(tracker)
+        try
         {
-            HeartbeatInterval = HeartbeatInterval
-        };
+            ConfigureStateLogLevels(tracker);
+
+            return new HostedServiceRuntimeInfo(tracker)
+            {
+                HeartbeatInterval = HeartbeatInterval
+            };
+        }
+        catch
+        {
+            ReleaseTracker(tracker);
+            throw;
+        }
+    }
+
+    void IHostedServiceRuntimeOwner.ReleaseRuntimeInfo()
+    {
+        var runtimeInfo = Interlocked.Exchange(ref _runtimeInfo, null);
+        if (runtimeInfo is not null)
+        {
+            ReleaseTracker(runtimeInfo.Tracker);
+        }
+    }
+
+    private void ReleaseTracker(ObservableInstanceTracker tracker)
+    {
+        if (_observableManager is not IObservableInstanceRegistryWriter writer)
+        {
+            throw new InvalidOperationException(
+                $"Observable registry '{_observableManager.GetType().FullName}' does not support reversible registrations.");
+        }
+
+        _ = writer.Unregister(tracker.InstanceId);
     }
 
     /// <summary>

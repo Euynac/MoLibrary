@@ -41,6 +41,12 @@ public static class ModuleExecutionTimingBuilderExtensions
 public class ModuleExecutionTiming(ModuleExecutionTimingOption option)
     : WebModuleBase<ModuleExecutionTiming, ModuleExecutionTimingOption, ModuleExecutionTimingGuide>(option)
 {
+    /// <inheritdoc />
+    public override bool CanDowngradeToNonWebModule()
+    {
+        return true;
+    }
+
     public override void ClaimDependencies()
     {
         DependsOnModule<ModuleExecutionPipelineGuide>().Register()
@@ -82,11 +88,6 @@ public class ModuleExecutionTiming(ModuleExecutionTimingOption option)
 
     public override void ConfigureEndpoints(IApplicationBuilder app)
     {
-        if (!Option.ExposeExecutionTimingEndpoints)
-        {
-            return;
-        }
-
         UseEndpoints(app, endpoints =>
         {
             var tagName = Option.GetApiGroupName();
@@ -152,6 +153,10 @@ public class ModuleExecutionTimingGuide
 /// <summary>
 /// Configuration options for the execution-timing module.
 /// </summary>
+/// <remarks>
+/// Use the inherited <see cref="MinimalApiModuleOptions{ModuleExecutionTiming}.EnableMinimalApi" /> switch to control
+/// the diagnostic endpoints. Generic Hosts retain collection and aggregation while skipping Web-only endpoints.
+/// </remarks>
 public class ModuleExecutionTimingOption : MinimalApiModuleOptions<ModuleExecutionTiming>
 {
     /// <summary>
@@ -166,10 +171,4 @@ public class ModuleExecutionTimingOption : MinimalApiModuleOptions<ModuleExecuti
     /// Set a positive value; invalid values fall back to an internal default.
     /// </summary>
     public TimeSpan BackgroundFlushInterval { get; set; } = TimeSpan.FromMilliseconds(250);
-
-    /// <summary>
-    /// Exposes minimal API endpoints for execution-timing diagnostics.
-    /// Disable this when the module should provide only DI services for in-process consumers.
-    /// </summary>
-    public bool ExposeExecutionTimingEndpoints { get; set; } = true;
 }
