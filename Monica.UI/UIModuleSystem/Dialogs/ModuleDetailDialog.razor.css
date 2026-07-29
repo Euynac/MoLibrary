@@ -7,6 +7,27 @@
     padding: 16px 24px;
 }
 
+.composition-work-table {
+    min-width: 0;
+    overflow-x: auto;
+}
+
+.composition-work-table__content {
+    min-width: 960px;
+}
+
+.composition-work-table__identifier,
+.composition-work-table__error {
+    display: block;
+    min-width: 0;
+    overflow-wrap: anywhere;
+    white-space: normal;
+}
+
+.composition-work-table__error {
+    max-width: 360px;
+}
+
 .detail-card {
     border-radius: 8px;
     transition: all 0.2s ease;
@@ -73,6 +94,10 @@
 
     .dependency-stat-card {
         margin-bottom: 16px;
+    }
+
+    .composition-work-table__content {
+        min-width: 760px;
     }
 }
 

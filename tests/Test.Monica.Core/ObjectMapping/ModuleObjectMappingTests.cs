@@ -12,12 +12,15 @@ using Monica.Core.ObjectMapping.Providers.Mapster;
 using Monica.Core.Results;
 using Monica.Core.TypeDiscovery.Services;
 using Monica.Modules;
+using Test.Monica.Core.Modularity;
 using Xunit;
 
 namespace Test.Monica.Core.ObjectMapping;
 
 public sealed class ModuleObjectMappingTests
 {
+    private static readonly TimeSpan HANG_GUARD = TimeSpan.FromSeconds(10);
+
     [Fact]
     public void Build_ShouldRegisterTheHostOwnedProfileCatalogAsSingleton()
     {
@@ -132,6 +135,60 @@ public sealed class ModuleObjectMappingTests
         compose.Should().Throw<ModuleRegistrationException>()
             .WithMessage($"*{nameof(InvalidDestinationOne)}*")
             .WithMessage($"*{nameof(InvalidDestinationTwo)}*");
+    }
+
+    [Fact]
+    public async Task AddMonica_WhenObjectMappingCompilationRuns_ShouldOverlapCompanionWorkAndRemainABarrier()
+    {
+        using var overlap = new CompositionOverlapProbe();
+        BlockingCompilerProfile.SetProbe(overlap);
+        var builder = Host.CreateApplicationBuilder();
+        var composition = Task.Run(
+            () => builder.AddMonica(monica =>
+            {
+                monica.ConfigureModuleSystem(options => options.MaxConcurrentCompositionWorkItems = 2);
+                monica.ConfigureTypeDiscovery(static options => options.ExcludeDefault());
+                monica.AddObjectMapping().AddProfile<BlockingCompilerProfile>();
+                monica.AddModule<
+                    CompositionWorkProbeModuleOne,
+                    CompositionWorkProbeModuleOneOption,
+                    CompositionWorkProbeModuleOneGuide>(
+                    options => options.AddConfigureServicesWork(
+                        "object-mapping-companion-work",
+                        overlap.EnterCompanionWork));
+            }),
+            TestContext.Current.CancellationToken);
+
+        try
+        {
+            await overlap.BothWorkItemsEntered.WaitAsync(HANG_GUARD, TestContext.Current.CancellationToken);
+
+            composition.IsCompleted.Should().BeFalse();
+            overlap.CompilerEntrances.Should().Be(1);
+            overlap.CompanionEntrances.Should().Be(1);
+
+            overlap.Release();
+            await composition.WaitAsync(HANG_GUARD, TestContext.Current.CancellationToken);
+
+            using var host = builder.Build();
+            using var scope = host.Services.CreateScope();
+            var mapper = scope.ServiceProvider.GetRequiredService<IObjectMapper>();
+            mapper.Map<ConcurrentCompilationDestination>(new ConcurrentCompilationSource { Value = "compiled" })
+                .Value.Should().Be("compiled");
+        }
+        finally
+        {
+            overlap.Release();
+            BlockingCompilerProfile.ClearProbe();
+            try
+            {
+                await composition.WaitAsync(HANG_GUARD, TestContext.Current.CancellationToken);
+            }
+            catch (Exception)
+            {
+                // The assertion path owns composition failures; cleanup only waits for both workers to exit.
+            }
+        }
     }
 
     [Fact]
@@ -385,6 +442,39 @@ public sealed class ModuleObjectMappingTests
     }
 
     [ExcludeFromBusinessTypeDiscovery]
+    private sealed class BlockingCompilerProfile : IRegister
+    {
+        private static readonly AsyncLocal<CompositionOverlapProbe?> _probe = new();
+
+        public static void SetProbe(CompositionOverlapProbe probe)
+        {
+            _probe.Value = probe;
+        }
+
+        public static void ClearProbe()
+        {
+            _probe.Value = null;
+        }
+
+        public void Register(TypeAdapterConfig config)
+        {
+            var probe = _probe.Value
+                ?? throw new InvalidOperationException("The blocking compiler profile requires a test-owned probe.");
+            var compilerEntered = 0;
+            config.Compiler = expression =>
+            {
+                if (Interlocked.Exchange(ref compilerEntered, 1) == 0)
+                {
+                    probe.EnterCompiler();
+                }
+
+                return expression.Compile();
+            };
+            config.NewConfig<ConcurrentCompilationSource, ConcurrentCompilationDestination>();
+        }
+    }
+
+    [ExcludeFromBusinessTypeDiscovery]
     private sealed class FirstHostMappingProfile : IRegister
     {
         public void Register(TypeAdapterConfig config)
@@ -472,6 +562,68 @@ public sealed class ModuleObjectMappingTests
     private sealed class HostMappingDestination
     {
         public string Value { get; set; } = string.Empty;
+    }
+
+    private sealed class ConcurrentCompilationSource
+    {
+        public string Value { get; init; } = string.Empty;
+    }
+
+    private sealed class ConcurrentCompilationDestination
+    {
+        public string Value { get; set; } = string.Empty;
+    }
+
+    private sealed class CompositionOverlapProbe : IDisposable
+    {
+        private readonly ManualResetEventSlim _release = new(initialState: false);
+        private readonly TaskCompletionSource _bothWorkItemsEntered = new(
+            TaskCreationOptions.RunContinuationsAsynchronously);
+        private int _compilerEntrances;
+        private int _companionEntrances;
+        private int _totalEntrances;
+
+        public Task BothWorkItemsEntered => _bothWorkItemsEntered.Task;
+
+        public int CompilerEntrances => Volatile.Read(ref _compilerEntrances);
+
+        public int CompanionEntrances => Volatile.Read(ref _companionEntrances);
+
+        public void EnterCompiler()
+        {
+            Interlocked.Increment(ref _compilerEntrances);
+            EnterAndWait();
+        }
+
+        public void EnterCompanionWork()
+        {
+            Interlocked.Increment(ref _companionEntrances);
+            EnterAndWait();
+        }
+
+        public void Release()
+        {
+            _release.Set();
+        }
+
+        public void Dispose()
+        {
+            _release.Set();
+            _release.Dispose();
+        }
+
+        private void EnterAndWait()
+        {
+            if (Interlocked.Increment(ref _totalEntrances) == 2)
+            {
+                _bothWorkItemsEntered.TrySetResult();
+            }
+
+            if (!_release.Wait(HANG_GUARD))
+            {
+                throw new TimeoutException("The object-mapping composition-work gate was not released in time.");
+            }
+        }
     }
 
     private abstract class AbstractMappingProfile : IRegister

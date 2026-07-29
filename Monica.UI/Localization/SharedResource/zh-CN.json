@@ -150,13 +150,13 @@
         "DisabledModules": "禁用模块",
         "WebModules": "具备 Web 能力的模块",
         "DowngradedModules": "已降级的 Web 模块",
-        "TotalInitTime": "总初始化时间",
+        "TotalSerialPhaseDuration": "串行阶段总耗时",
         "ModuleDistribution": "模块分布",
         "ModuleName": "模块名称",
         "Status": "状态",
         "RuntimeMode": "运行模式",
         "Order": "顺序",
-        "InitTime": "初始化时间",
+        "SerialPhaseDuration": "串行阶段耗时",
         "Dependencies": "依赖",
         "Actions": "操作"
       },
@@ -179,8 +179,8 @@
         "PerformanceMetrics": "性能指标",
         "CheckItems": "检查项目",
         "DiscoveredIssues": "发现的问题",
-        "AverageInitTime": "平均初始化时间",
-        "SlowestModuleTime": "最慢模块时间",
+        "AverageSerialPhaseDuration": "平均串行阶段耗时",
+        "SlowestSerialPhaseDuration": "最慢模块串行阶段耗时",
         "EfficiencyScore": "效率评分",
         "MemoryUsage": "内存使用"
       },
@@ -206,12 +206,14 @@
     "PerformanceMonitoring": {
       "Labels": {
         "PerformanceOverview": "性能概览",
-        "SlowestModules": "最慢模块",
+        "SlowestModules": "串行回调最慢模块",
         "PhasePerformanceAnalysis": "阶段性能分析",
-        "TotalInitTime": "总初始化时间",
-        "TotalSystemPhaseDuration": "系统阶段总耗时",
-        "TotalModulePhaseDuration": "模块阶段总耗时",
-        "TotalModulePhaseExecutions": "总模块阶段执行次数",
+        "SystemWallDuration": "组合墙钟耗时",
+        "ModulePhaseAggregateDuration": "模块阶段累计工作耗时",
+        "CompositionWorkWallDuration": "组合工作墙钟耗时",
+        "CompositionWorkExecutionDuration": "组合工作累计执行耗时",
+        "CompositionWorkQueueDuration": "累计排队耗时",
+        "CompositionCheckpointWaitDuration": "累计检查点等待耗时",
         "Order": "顺序",
         "PhaseName": "阶段名称",
         "Duration": "耗时 (ms)",
@@ -220,7 +222,8 @@
       },
       "Messages": {
         "NoPerformanceData": "暂无性能数据",
-        "NoPhasePerformanceData": "暂无阶段性能数据"
+        "NoPhasePerformanceData": "暂无阶段性能数据",
+        "ModulePhaseExecutionCount": "共执行 {0} 个模块阶段"
       },
       "States": {
         "Slow": "缓慢",
@@ -232,6 +235,59 @@
         "PerformanceOverview": "加载性能概览...",
         "SlowestModules": "加载最慢模块...",
         "PhasePerformanceData": "加载阶段性能数据..."
+      }
+    },
+    "CompositionWork": {
+      "Labels": {
+        "ModuleWork": "模块组合工作",
+        "CheckpointSummary": "组合工作检查点",
+        "Checkpoint": "检查点",
+        "WorkItemCount": "工作项数",
+        "CheckpointWaitDuration": "串行等待耗时",
+        "AggregateExecutionDuration": "累计执行耗时",
+        "AggregateQueueDuration": "累计排队耗时",
+        "FailedWorkItemCount": "失败工作项数",
+        "WorkName": "工作名称",
+        "OriginPhase": "来源阶段",
+        "Deadline": "完成期限",
+        "Status": "状态",
+        "QueueDuration": "排队耗时",
+        "ExecutionDuration": "执行耗时",
+        "Error": "错误"
+      },
+      "Messages": {
+        "NoWorkTitle": "没有组合工作",
+        "NoWorkDescription": "当前应用没有模块调度并发组合工作。",
+        "NoModuleWorkTitle": "没有组合工作",
+        "NoModuleWorkDescription": "该模块仅通过串行模块阶段完成组合。",
+        "WorkItemCount": "共 {0} 个组合工作项",
+        "ConcurrentWorkExplanation": "执行耗时按工作线程累加；工作重叠时，该值可能大于墙钟耗时。",
+        "QueueDurationExplanation": "所有工作项等待可用组合工作线程的累计时间。",
+        "CheckpointWaitExplanation": "串行组合管线在工作期限检查点等待的累计时间。",
+        "NoCheckpointData": "未记录检查点等待数据。"
+      },
+      "States": {
+        "Succeeded": "成功",
+        "Failed": "失败",
+        "None": "无",
+        "Unknown": "未知"
+      },
+      "Deadlines": {
+        "BeforeBusinessTypeIteration": "业务类型迭代前",
+        "BeforePostConfigureServices": "服务后配置前",
+        "BeforeServiceRegistrationCompletion": "服务注册完成前"
+      },
+      "Phases": {
+        "None": "无",
+        "ClaimDependencies": "声明依赖",
+        "InitFinalConfigures": "初始化最终配置",
+        "ConfigureBuilder": "配置主机构建器",
+        "ConfigureServices": "配置服务",
+        "IterateBusinessTypes": "迭代业务类型",
+        "PostConfigureServices": "服务后配置",
+        "ConfigureApplicationBuilder": "配置应用管线",
+        "ConfigureEndpoints": "配置端点",
+        "Disabled": "已禁用"
       }
     },
     "DependencyGraph": {
@@ -344,13 +400,12 @@
       "Labels": {
         "ModuleKey": "模块键",
         "RegistrationOrder": "注册顺序",
-        "InitializationTime": "初始化时间",
         "ModuleStatus": "模块状态",
         "ModuleCapability": "模块能力",
         "RuntimeMode": "运行模式",
         "ModuleOption": "模块选项",
         "ExtraOption": "额外选项",
-        "TotalDuration": "总耗时",
+        "SerialPhaseDuration": "串行阶段耗时",
         "PhaseDetails": "阶段详情",
         "DirectDependencies": "直接依赖",
         "TotalDependencies": "总依赖数",
@@ -368,7 +423,7 @@
         "WebRuntime": "Web 运行时",
         "NonWebRuntime": "非 Web 运行时",
         "Downgraded": "已降级为非 Web",
-        "Unknown": "Unknown"
+        "Unknown": "未知"
       },
       "Messages": {
         "CircularDependencyDetected": "检测到循环依赖",

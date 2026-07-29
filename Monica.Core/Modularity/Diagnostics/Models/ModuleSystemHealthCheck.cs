@@ -126,14 +126,14 @@ public class HealthIssue
 public class HealthPerformanceMetrics
 {
     /// <summary>
-    /// Average module initialization time in milliseconds.
+    /// Average module serial composition phase duration in milliseconds.
     /// </summary>
-    public double AverageModuleInitTimeMs { get; set; }
+    public double AverageModuleSerialPhaseDurationMs { get; set; }
 
     /// <summary>
-    /// Slowest module initialization time in milliseconds.
+    /// Highest module serial composition phase duration in milliseconds.
     /// </summary>
-    public long SlowestModuleInitTimeMs { get; set; }
+    public long SlowestModuleSerialPhaseDurationMs { get; set; }
 
     /// <summary>
     /// Slowest module name.

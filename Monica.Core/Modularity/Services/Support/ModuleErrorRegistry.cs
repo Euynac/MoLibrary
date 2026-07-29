@@ -139,6 +139,27 @@ internal sealed class ModuleErrorRegistry(MonicaApplication application)
     }
 
     /// <summary>
+    /// Records a required composition-work failure without applying registration-error downgrade policy.
+    /// </summary>
+    /// <param name="result">The failed worker result.</param>
+    internal void RecordCompositionWorkError(ModuleCompositionWorkResult result)
+    {
+        if (result.Failure is null)
+        {
+            throw new ArgumentException("A successful composition work result cannot be recorded as an error.", nameof(result));
+        }
+
+        application.Modules.AddRegistrationError(new ModuleRegistrationError
+        {
+            ModuleType = result.ModuleType,
+            ErrorMessage = $"Error in composition work '{result.Name}' ({result.Deadline}): {result.Failure.GetMessageRecursively()}",
+            ErrorType = ModuleRegistrationErrorType.CompositionWorkError,
+            Phase = result.OriginPhase,
+            StackTrace = result.Failure.StackTrace
+        });
+    }
+
+    /// <summary>
     /// Records an error indicating that the current host cannot satisfy a module's ASP.NET Core requirements.
     /// </summary>
     /// <param name="moduleType">The incompatible module type.</param>
@@ -224,9 +245,10 @@ internal sealed class ModuleErrorRegistry(MonicaApplication application)
             return;
         }
 
-        // Filter out errors for modules that have already been disabled
+        // Required composition work always aborts startup; ordinary registration errors may be absorbed by disabling.
         var errorsToThrow = application.Modules.RegistrationErrors
-            .Where(e => !application.ModuleStates.IsModuleDisabled(e.ModuleType))
+            .Where(e => e.ErrorType == ModuleRegistrationErrorType.CompositionWorkError
+                        || !application.ModuleStates.IsModuleDisabled(e.ModuleType))
             .ToList();
         
         //// Log summary of disabled modules

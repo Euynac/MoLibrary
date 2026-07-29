@@ -9,6 +9,11 @@ namespace Monica.Core;
 public interface IMonicaModuleSystemOptions
 {
     /// <summary>
+    /// Gets the maximum number of scheduled module composition work items that may run concurrently.
+    /// </summary>
+    int MaxConcurrentCompositionWorkItems { get; }
+
+    /// <summary>
     /// Gets the default log level used by module registration loggers.
     /// </summary>
     LogLevel DefaultLogLevel { get; }
@@ -55,8 +60,18 @@ public interface IMonicaModuleSystemOptions
 /// </summary>
 public sealed class MonicaModuleSystemOptions : IMonicaModuleSystemOptions
 {
+    private const int MIN_CONCURRENT_COMPOSITION_WORK_ITEMS = 1;
     private const int MIN_PORT = 1;
     private const int MAX_PORT = 65535;
+
+    /// <summary>
+    /// Gets or sets the maximum number of scheduled module composition work items that may run concurrently.
+    /// Defaults to the current processor count. Set this to <c>1</c> to serialize composition work while preserving
+    /// its checkpoint contracts. This limit does not change the serial ordering of module phase callbacks.
+    /// </summary>
+    public int MaxConcurrentCompositionWorkItems { get; set; } = Math.Max(
+        MIN_CONCURRENT_COMPOSITION_WORK_ITEMS,
+        Environment.ProcessorCount);
 
     /// <summary>
     /// Gets or sets the default log level used by module registration loggers.
@@ -118,6 +133,14 @@ public sealed class MonicaModuleSystemOptions : IMonicaModuleSystemOptions
 
     internal void Validate()
     {
+        if (MaxConcurrentCompositionWorkItems < MIN_CONCURRENT_COMPOSITION_WORK_ITEMS)
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(MaxConcurrentCompositionWorkItems),
+                MaxConcurrentCompositionWorkItems,
+                $"At least {MIN_CONCURRENT_COMPOSITION_WORK_ITEMS} composition work item must be allowed to run.");
+        }
+
         if (MonicaEndpointPort is null)
         {
             return;

@@ -35,6 +35,45 @@ public abstract class ModuleBase : IModule
     }
 
     /// <summary>
+    /// Schedules isolated module-owned CPU work that may overlap later serial composition callbacks.
+    /// </summary>
+    /// <param name="name">A stable name that is unique within the module.</param>
+    /// <param name="work">The synchronous work Monica should execute on a bounded composition worker.</param>
+    /// <param name="deadline">
+    /// The latest composition checkpoint by which the work must complete. The default blocks service-registration
+    /// completion, while allowing the greatest safe overlap with later composition callbacks.
+    /// </param>
+    /// <remarks>
+    /// Schedule only CPU-bound work over immutable or module-owned state that no other callback consumes before the
+    /// selected deadline. The callback must not mutate the host builder, service collection, module graph, provider,
+    /// or shared static state. Runtime, I/O, optional, or fire-and-forget work belongs in the Generic Host lifecycle.
+    /// Monica rejects asynchronous delegates and does not flow the caller's ambient execution context into workers.
+    /// Capture required module-owned values explicitly. Monica owns execution and propagates every failure at the
+    /// declared checkpoint.
+    /// </remarks>
+    /// <exception cref="ArgumentException">
+    /// Thrown when <paramref name="name"/> is empty or <paramref name="work"/> is an asynchronous delegate.
+    /// </exception>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="work"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentOutOfRangeException">
+    /// Thrown when <paramref name="deadline"/> is not a defined <see cref="ModuleCompositionWorkDeadline"/> value.
+    /// </exception>
+    /// <exception cref="InvalidOperationException">
+    /// Thrown when the module is not the materialized host-owned instance; scheduling does not occur synchronously
+    /// on the same thread as that instance's <c>ConfigureBuilder</c>, <c>ConfigureServices</c>, or
+    /// <c>PostConfigureServices</c> callback; the name is duplicated; the deadline already passed; or scheduling is
+    /// nested from a composition worker.
+    /// </exception>
+    protected void ScheduleCompositionWork(
+        string name,
+        Action work,
+        ModuleCompositionWorkDeadline deadline =
+            ModuleCompositionWorkDeadline.BeforeServiceRegistrationCompletion)
+    {
+        Application.Modules.ScheduleCompositionWork(this, name, work, deadline);
+    }
+
+    /// <summary>
     /// Gets the resolved module key declared on the concrete module type.
     /// </summary>
     public ModuleKey ModuleKey => Application.Dependencies.ResolveModuleKey(GetType());

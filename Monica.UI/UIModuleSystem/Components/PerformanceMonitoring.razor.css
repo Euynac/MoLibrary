@@ -2,6 +2,15 @@
     width: 100%;
 }
 
+.composition-checkpoint-table {
+    min-width: 0;
+    overflow-x: auto;
+}
+
+.composition-checkpoint-table__content {
+    min-width: 520px;
+}
+
 .performance-monitoring-container ::deep .performance-equal-card {
     display: flex;
     min-width: 0;

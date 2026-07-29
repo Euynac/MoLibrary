@@ -64,9 +64,9 @@ public class ModuleBasicInfo
     public List<ModuleKey> Dependencies { get; set; } = [];
 
     /// <summary>
-    /// Initialization time in milliseconds.
+    /// Aggregate serial composition phase duration in milliseconds.
     /// </summary>
-    public long InitializationTimeMs { get; set; }
+    public long SerialPhaseDurationMs { get; set; }
 
     /// <summary>
     /// Indicates whether the module is disabled.
@@ -110,12 +110,12 @@ public class ModuleRegistrationStatistics
     public int DisabledModules { get; set; }
 
     /// <summary>
-    /// Total initialization time in milliseconds.
+    /// Aggregate serial composition phase duration across enabled modules, in milliseconds.
     /// </summary>
-    public long TotalInitializationTimeMs { get; set; }
+    public long TotalSerialPhaseDurationMs { get; set; }
 
     /// <summary>
-    /// Five slowest modules.
+    /// Five modules with the highest serial composition phase duration.
     /// </summary>
     public List<ModuleBasicInfo> SlowestModules { get; set; } = [];
 } 

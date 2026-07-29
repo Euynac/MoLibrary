@@ -76,22 +76,25 @@ public sealed class ModuleSystemInspectionService(MonicaApplication application)
                 {
                     ModuleTypeName = snapshot.ModuleType.Name,
                     ModuleKey = snapshot.ModuleKey,
-                    TotalDurationMs = profile.GetTotalDuration(),
-                    PhaseDurations = profile.GetPhaseDurations()
+                    SerialPhaseDurationMs = profile.GetSerialPhaseDuration(),
+                    PhaseDurations = profile.GetPhaseDurations(),
+                    CompositionWorkItems = profile.GetCompositionWork().ToList()
                 };
                 modulePerformances.Add(modulePerf);
             }
         }
 
         slowestModules = modulePerformances
-            .OrderByDescending(m => m.TotalDurationMs)
+            .OrderByDescending(m => m.SerialPhaseDurationMs)
             .Take(5)
             .ToList();
 
         var configMethodStats = CalculateConfigMethodStatistics(modulePerformances);
 
         var totalSystemPhaseDuration = phaseDurations.Values.Sum();
-        var totalModulePhaseDuration = modulePerformances.Sum(m => m.TotalDurationMs);
+        var totalModulePhaseDuration = modulePerformances.Sum(static performance =>
+            performance.PhaseDurations.Values.Sum());
+        var compositionWorkSummary = application.Profiling.GetCompositionWorkSummary();
 
         return new ModuleSystemPerformance
         {
@@ -102,6 +105,12 @@ public sealed class ModuleSystemInspectionService(MonicaApplication application)
             ConfigMethodStatistics = configMethodStats,
             TotalSystemPhaseDurationMs = totalSystemPhaseDuration,
             TotalModulePhaseDurationMs = totalModulePhaseDuration,
+            CompositionWorkWallDurationMs = compositionWorkSummary.WallDurationMs,
+            TotalCompositionWorkExecutionDurationMs = compositionWorkSummary.TotalExecutionDurationMs,
+            TotalCompositionWorkQueueDurationMs = compositionWorkSummary.TotalQueueDurationMs,
+            TotalCompositionCheckpointWaitDurationMs = compositionWorkSummary.TotalCheckpointWaitDurationMs,
+            CompositionWorkItemCount = compositionWorkSummary.Count,
+            CompositionCheckpoints = compositionWorkSummary.Checkpoints.ToList(),
             SystemPhaseCount = phaseDurations.Count,
             TotalModulePhaseExecutions = modulePerformances.Sum(m => m.PhaseDurations.Count)
         };
@@ -141,7 +150,7 @@ public sealed class ModuleSystemInspectionService(MonicaApplication application)
                 Dependencies = application.Dependencies.DependenciesByModule.TryGetValue(moduleKey, out var deps)
                     ? [.. deps]
                     : [],
-                InitializationTimeMs = 0,
+                SerialPhaseDurationMs = 0,
                 IsDisabled = true,
                 IsWebModule = typeof(IWebModule).IsAssignableFrom(moduleType),
                 IsDowngradedFromWebModule = false,
@@ -150,10 +159,10 @@ public sealed class ModuleSystemInspectionService(MonicaApplication application)
             disabledModules.Add(basicInfo);
         }
 
-        var totalInitTime = enabledModules.Sum(m => m.InitializationTimeMs);
+        var totalSerialPhaseDuration = enabledModules.Sum(m => m.SerialPhaseDurationMs);
         var slowestModules = enabledModules
-            .Where(m => m.InitializationTimeMs > 0)
-            .OrderByDescending(m => m.InitializationTimeMs)
+            .Where(m => m.SerialPhaseDurationMs > 0)
+            .OrderByDescending(m => m.SerialPhaseDurationMs)
             .Take(5)
             .ToList();
 
@@ -162,7 +171,7 @@ public sealed class ModuleSystemInspectionService(MonicaApplication application)
             TotalModules = enabledModules.Count + disabledModules.Count,
             EnabledModules = enabledModules.Count,
             DisabledModules = disabledModules.Count,
-            TotalInitializationTimeMs = totalInitTime,
+            TotalSerialPhaseDurationMs = totalSerialPhaseDuration,
             SlowestModules = slowestModules
         };
 
@@ -434,7 +443,7 @@ public sealed class ModuleSystemInspectionService(MonicaApplication application)
             Order = snapshot.RegisterInfo.Order,
             Status = snapshot.RegisterInfo.ModulePhase,
             Dependencies = dependencies,
-            InitializationTimeMs = snapshot.TotalInitializationDurationMs,
+            SerialPhaseDurationMs = snapshot.SerialPhaseDurationMs,
             IsDisabled = false,
             IsWebModule = snapshot.IsWebModule,
             IsDowngradedFromWebModule = snapshot.IsDowngradedFromWebModule,
@@ -451,8 +460,9 @@ public sealed class ModuleSystemInspectionService(MonicaApplication application)
         {
             ModuleTypeName = snapshot.ModuleType.Name,
             ModuleKey = snapshot.ModuleKey,
-            TotalDurationMs = profile?.GetTotalDuration() ?? 0,
-            PhaseDurations = profile?.GetPhaseDurations() ?? []
+            SerialPhaseDurationMs = profile?.GetSerialPhaseDuration() ?? 0,
+            PhaseDurations = profile?.GetPhaseDurations() ?? [],
+            CompositionWorkItems = profile?.GetCompositionWork().ToList() ?? []
         };
 
         var moduleKey = snapshot.ModuleKey;
@@ -671,7 +681,7 @@ public sealed class ModuleSystemInspectionService(MonicaApplication application)
     private HealthCheckItem CheckPerformanceIssues(List<HealthIssue> issues)
     {
         var totalInitTime = application.Profiling.GetTotalElapsedMilliseconds();
-        var slowModules = application.Profiling.GetModuleProfilesSortedByTotalDuration().Take(3).ToList();
+        var slowModules = application.Profiling.GetModuleProfilesSortedBySerialPhaseDuration().Take(3).ToList();
         
         var status = HealthStatus.Healthy;
         var details = $"Total initialization time: {totalInitTime}ms";
@@ -693,13 +703,14 @@ public sealed class ModuleSystemInspectionService(MonicaApplication application)
             });
         }
 
-        foreach (var module in slowModules.Where(m => m.GetTotalDuration() > verySlowModuleThreshold))
+        foreach (var module in slowModules.Where(module =>
+                     module.GetSerialPhaseDuration() > verySlowModuleThreshold))
         {
             issues.Add(new HealthIssue
             {
                 Severity = IssueSeverity.Low,
                 Title = $"Slow Module: {module.ModuleType.Name}",
-                Description = $"Module took {module.GetTotalDuration()}ms to initialize",
+                Description = $"Module serial callbacks took {module.GetSerialPhaseDuration()}ms to initialize",
                 IssueType = IssueType.Performance,
                 RecommendedAction = $"Optimize {module.ModuleType.Name} module initialization"
             });
@@ -817,15 +828,15 @@ public sealed class ModuleSystemInspectionService(MonicaApplication application)
 
     private HealthPerformanceMetrics CalculateHealthPerformanceMetrics()
     {
-        var moduleProfiles = application.Profiling.GetModuleProfilesSortedByTotalDuration();
+        var moduleProfiles = application.Profiling.GetModuleProfilesSortedBySerialPhaseDuration();
         var totalInitTime = application.Profiling.GetTotalElapsedMilliseconds();
         
-        var averageModuleInitTime = moduleProfiles.Count > 0 
-            ? moduleProfiles.Average(p => p.GetTotalDuration()) 
+        var averageModuleSerialPhaseDuration = moduleProfiles.Count > 0
+            ? moduleProfiles.Average(static profile => profile.GetSerialPhaseDuration())
             : 0;
 
         var slowestModule = moduleProfiles.FirstOrDefault();
-        var slowestModuleInitTime = slowestModule?.GetTotalDuration() ?? 0;
+        var slowestModuleSerialPhaseDuration = slowestModule?.GetSerialPhaseDuration() ?? 0;
         var slowestModuleName = slowestModule?.ModuleType.Name;
 
         // Calculate an efficiency score from 0-100 based on init time and module count.
@@ -833,8 +844,8 @@ public sealed class ModuleSystemInspectionService(MonicaApplication application)
 
         return new HealthPerformanceMetrics
         {
-            AverageModuleInitTimeMs = averageModuleInitTime,
-            SlowestModuleInitTimeMs = slowestModuleInitTime,
+            AverageModuleSerialPhaseDurationMs = averageModuleSerialPhaseDuration,
+            SlowestModuleSerialPhaseDurationMs = slowestModuleSerialPhaseDuration,
             SlowestModuleName = slowestModuleName,
             TotalSystemInitTimeMs = totalInitTime,
             InitializationEfficiencyScore = efficiencyScore,

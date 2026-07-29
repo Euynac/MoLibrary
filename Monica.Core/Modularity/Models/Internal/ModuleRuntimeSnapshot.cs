@@ -45,10 +45,10 @@ public class ModuleRuntimeSnapshot(
     public ModuleKey ModuleKey => application.Dependencies.ResolveModuleKey(ModuleType);
 
     /// <summary>
-    /// Gets the total initialization duration for the module, in milliseconds.
+    /// Gets the aggregate serial composition phase duration for the module, in milliseconds.
     /// </summary>
-    public long TotalInitializationDurationMs =>
-        application.Profiling.GetModuleTotalDuration(ModuleType);
+    public long SerialPhaseDurationMs =>
+        application.Profiling.GetModuleSerialPhaseDuration(ModuleType);
 
 
     public override string ToString()
