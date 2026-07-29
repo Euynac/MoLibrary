@@ -1,6 +1,6 @@
-using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Options;
 using Monica.Core;
 using Monica.Core.HostedService.Abstractions;
 using Monica.Core.HostedService.Abstractions.Internal;
@@ -35,7 +35,7 @@ public static class ModuleHostedServiceBuilderExtensions
 /// </summary>
 [ModuleKey(BuiltInModuleKey.HostedService)]
 public class ModuleHostedService(ModuleHostedServiceOption option)
-    : WebModuleBase<ModuleHostedService, ModuleHostedServiceOption, ModuleHostedServiceGuide>(option)
+    : ModuleBase<ModuleHostedService, ModuleHostedServiceOption, ModuleHostedServiceGuide>(option)
 {
     public override void ClaimDependencies()
     {
@@ -45,21 +45,19 @@ public class ModuleHostedService(ModuleHostedServiceOption option)
 
     public override void ConfigureServices(IServiceCollection services)
     {
+        services.AddSingleton(new HostedServiceDescriptorCatalog(services));
+        services.AddSingleton<IValidateOptions<HostedServiceRegistrationValidationOptions>, HostedServiceRegistrationValidator>();
+        services.AddOptions<HostedServiceRegistrationValidationOptions>().ValidateOnStart();
+
         services.AddSingleton<HostedServiceRegistry>();
         services.AddSingleton<IHostedServiceRegistryWriter>(provider => provider.GetRequiredService<HostedServiceRegistry>());
         services.AddSingleton<IMoHostedServiceRegistry>(provider => provider.GetRequiredService<HostedServiceRegistry>());
         services.AddSingleton<HostedServiceCheckpointCoordinator>();
-        services.AddSingleton<IHostedServiceCheckpointObserver>(provider => provider.GetRequiredService<HostedServiceCheckpointCoordinator>());
+        services.AddSingleton<IHostedServiceRuntimeObserver>(provider => provider.GetRequiredService<HostedServiceCheckpointCoordinator>());
         services.AddSingleton<IMoHostedServiceCheckpointCoordinator>(provider => provider.GetRequiredService<HostedServiceCheckpointCoordinator>());
         services.TryAddSingleton<HostedServiceMetrics>();
-        services.AddSingleton<HostedServiceRegistryInitializer>();
-    }
-
-    public override void ConfigureApplicationBuilder(IApplicationBuilder app)
-    {
-        app.ApplicationServices
-            .GetRequiredService<HostedServiceRegistryInitializer>()
-            .Initialize(app.ApplicationServices);
+        services.AddSingleton<IHostedServiceRuntimeObserver>(provider => provider.GetRequiredService<HostedServiceMetrics>());
+        services.AddHostedService<HostedServiceRegistryLifecycle>();
     }
 }
 
@@ -67,7 +65,7 @@ public class ModuleHostedService(ModuleHostedServiceOption option)
 /// Fluent configuration guide for the HostedService observability module
 /// </summary>
 public class ModuleHostedServiceGuide
-    : WebModuleGuide<ModuleHostedService, ModuleHostedServiceOption, ModuleHostedServiceGuide>;
+    : ModuleGuide<ModuleHostedService, ModuleHostedServiceOption, ModuleHostedServiceGuide>;
 
 /// <summary>
 /// Configuration options for the HostedService observability module

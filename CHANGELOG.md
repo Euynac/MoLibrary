@@ -6,6 +6,20 @@ This project follows semantic versioning for public NuGet packages. Release cand
 
 ## [Unreleased]
 
+### Added
+
+- Generic Host lifecycle support for hosted-service observability, EventBus auto-discovery, and execution-timing aggregation.
+
+### Changed
+
+- Monica composition now completes at service registration for Generic Hosts and at endpoint mapping for Web hosts, with startup validation for incomplete Web pipelines.
+- Hosted-service diagnostics and checkpoints now identify runtime instances explicitly, including multiple keyed services of the same concrete type.
+- EventBus batch mutations are cancellable and transactional, and auto-discovered subscriptions are owned and cleaned up by the Host lifecycle.
+
+### Removed
+
+- `ModuleExecutionTimingOption.ExposeExecutionTimingEndpoints`; use the shared `EnableMinimalApi` option instead.
+
 ## [1.0.0-rc.6] - 2026-07-23
 
 ### Added

@@ -27,6 +27,11 @@ public class HostedServiceRuntimeInfo
     // Service Identity (delegates to tracker)
 
     /// <summary>
+    /// Gets the unique identity of this hosted-service instance within the current host.
+    /// </summary>
+    public string InstanceId => _tracker.InstanceId;
+
+    /// <summary>
     /// Gets the name of the service
     /// </summary>
     public string ServiceName => _tracker.InstanceName;

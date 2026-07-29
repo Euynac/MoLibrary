@@ -13,34 +13,53 @@ public interface IEventSubscriptionRegistry : IObservable<EventSubscriptionChang
     /// <summary>
     /// Creates and activates a new subscription.
     /// </summary>
-    /// <param name="descriptor">EventSubscription descriptor</param>
-    /// <returns>The created and activated subscription</returns>
-    Task<IEventSubscription> SubscribeAsync(EventSubscriptionDescriptor descriptor);
+    /// <param name="descriptor">EventSubscription descriptor.</param>
+    /// <param name="cancellationToken">Cancels the operation before the subscription is committed.</param>
+    /// <returns>The created and activated subscription.</returns>
+    Task<IEventSubscription> SubscribeAsync(
+        EventSubscriptionDescriptor descriptor,
+        CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Creates and activates multiple subscriptions in a single batch.
     /// </summary>
-    /// <param name="descriptors">Collection of subscription descriptors</param>
-    /// <returns>Created and activated subscriptions</returns>
-    Task<IReadOnlyList<IEventSubscription>> SubscribeBatchAsync(IEnumerable<EventSubscriptionDescriptor> descriptors);
+    /// <param name="descriptors">Collection of subscription descriptors.</param>
+    /// <param name="cancellationToken">Cancels the operation and rolls back subscriptions already created by this batch.</param>
+    /// <returns>Created and activated subscriptions.</returns>
+    Task<IReadOnlyList<IEventSubscription>> SubscribeBatchAsync(
+        IEnumerable<EventSubscriptionDescriptor> descriptors,
+        CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Removes and disposes a subscription.
     /// </summary>
-    /// <param name="subscriptionId">EventSubscription ID</param>
-    Task UnsubscribeAsync(EventSubscriptionId subscriptionId);
+    /// <param name="subscriptionId">EventSubscription ID.</param>
+    /// <param name="cancellationToken">Cancels the operation before the subscription is removed.</param>
+    Task UnsubscribeAsync(
+        EventSubscriptionId subscriptionId,
+        CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Removes and disposes multiple subscriptions in a single batch.
     /// </summary>
-    /// <param name="subscriptionIds">Collection of subscription IDs</param>
-    Task UnsubscribeBatchAsync(IEnumerable<EventSubscriptionId> subscriptionIds);
+    /// <param name="subscriptionIds">Collection of subscription IDs.</param>
+    /// <param name="cancellationToken">Cancels pending removals. Removals already started are allowed to finish.</param>
+    /// <remarks>
+    /// Every requested subscription is attempted even when one removal fails. Any failures are reported after
+    /// the remaining subscriptions have been processed.
+    /// </remarks>
+    Task UnsubscribeBatchAsync(
+        IEnumerable<EventSubscriptionId> subscriptionIds,
+        CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Removes and disposes all subscriptions matching a predicate.
     /// </summary>
-    /// <param name="predicate">Filter predicate</param>
-    Task UnsubscribeWhereAsync(Func<IEventSubscription, bool> predicate);
+    /// <param name="predicate">Filter predicate.</param>
+    /// <param name="cancellationToken">Cancels pending removals.</param>
+    Task UnsubscribeWhereAsync(
+        Func<IEventSubscription, bool> predicate,
+        CancellationToken cancellationToken = default);
 
     #endregion
 
@@ -101,20 +120,29 @@ public interface IEventSubscriptionRegistry : IObservable<EventSubscriptionChang
     /// <summary>
     /// Activates a pending subscription (providers will be notified).
     /// </summary>
-    /// <param name="subscriptionId">EventSubscription ID</param>
-    Task ActivateAsync(EventSubscriptionId subscriptionId);
+    /// <param name="subscriptionId">EventSubscription ID.</param>
+    /// <param name="cancellationToken">Cancels the operation before the state transition.</param>
+    Task ActivateAsync(
+        EventSubscriptionId subscriptionId,
+        CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Deactivates an active subscription without disposing it (providers will be notified).
     /// </summary>
-    /// <param name="subscriptionId">EventSubscription ID</param>
-    Task DeactivateAsync(EventSubscriptionId subscriptionId);
+    /// <param name="subscriptionId">EventSubscription ID.</param>
+    /// <param name="cancellationToken">Cancels the operation before the state transition.</param>
+    Task DeactivateAsync(
+        EventSubscriptionId subscriptionId,
+        CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Reactivates a deactivated subscription.
     /// </summary>
-    /// <param name="subscriptionId">EventSubscription ID</param>
-    Task ReactivateAsync(EventSubscriptionId subscriptionId);
+    /// <param name="subscriptionId">EventSubscription ID.</param>
+    /// <param name="cancellationToken">Cancels the operation before the state transition.</param>
+    Task ReactivateAsync(
+        EventSubscriptionId subscriptionId,
+        CancellationToken cancellationToken = default);
 
     #endregion
 

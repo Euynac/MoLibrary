@@ -31,7 +31,8 @@ public abstract class EventBusSubscriptionHostedServiceBase(
 {
     protected readonly IEventSubscriptionRegistry SubscriptionManager = subscriptionManager;
     protected readonly IEventBus EventBus = eventBus;
-    protected readonly string? ServiceKey = serviceKey;
+    /// <inheritdoc />
+    public override string? ServiceKey { get; } = serviceKey;
 
     /// <inheritdoc />
     public override string? ServiceGroupId => nameof(BuiltInModuleKey.EventBus);

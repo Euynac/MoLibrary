@@ -1,5 +1,6 @@
 using System.Diagnostics.Metrics;
 using Monica.Core.HostedService.Abstractions;
+using Monica.Core.HostedService.Abstractions.Internal;
 using Monica.Core.HostedService.Models;
 using Monica.Core.ObservableInstance.Models;
 
@@ -8,7 +9,7 @@ namespace Monica.Core.HostedService.Metrics;
 /// <summary>
 /// Emits hosted-service state transition metrics and observes the current hosted-service state snapshot.
 /// </summary>
-internal sealed class HostedServiceMetrics
+internal sealed class HostedServiceMetrics : IHostedServiceRuntimeObserver
 {
     private const string MODULE_TAG_NAME = "monica.module";
     private const string SERVICE_NAME_TAG_NAME = "service.name";
@@ -47,9 +48,15 @@ internal sealed class HostedServiceMetrics
     /// <summary>
     /// Starts observing transition events for a hosted service.
     /// </summary>
-    public void Observe(IMoHostedService service)
+    public IDisposable Observe(IMoHostedService service)
     {
-        service.RuntimeInfo.Tracker.StateChanged += stateChange => RecordTransition(service, stateChange);
+        ArgumentNullException.ThrowIfNull(service);
+
+        ObservableInstanceTracker.StateChangedHandler handler =
+            stateChange => RecordTransition(service, stateChange);
+        var tracker = service.RuntimeInfo.Tracker;
+        tracker.StateChanged += handler;
+        return new StateChangedSubscription(tracker, handler);
     }
 
     private void RecordTransition(IMoHostedService service, ObservableStateEntry stateChange)
@@ -103,4 +110,19 @@ internal sealed class HostedServiceMetrics
     }
 
     private readonly record struct HostedServiceStateKey(string Module, string ServiceName, string State);
+
+    private sealed class StateChangedSubscription(
+        ObservableInstanceTracker tracker,
+        ObservableInstanceTracker.StateChangedHandler handler) : IDisposable
+    {
+        private int _disposed;
+
+        public void Dispose()
+        {
+            if (Interlocked.Exchange(ref _disposed, 1) == 0)
+            {
+                tracker.StateChanged -= handler;
+            }
+        }
+    }
 }

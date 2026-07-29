@@ -1,4 +1,3 @@
-using System.Collections.Concurrent;
 using Monica.Core.HostedService.Abstractions;
 using Monica.Core.HostedService.Abstractions.Internal;
 using Monica.Core.HostedService.Models;
@@ -10,56 +9,103 @@ namespace Monica.Core.HostedService.Services.Support;
 /// </summary>
 internal sealed class HostedServiceRegistry : IMoHostedServiceRegistry, IHostedServiceRegistryWriter
 {
-    private readonly ConcurrentDictionary<Type, IMoHostedService> _services = new();
+    private IMoHostedService[] _services = [];
 
     /// <inheritdoc />
-    public bool Register(IMoHostedService service)
+    public void Publish(IReadOnlyList<IMoHostedService> services)
     {
-        ArgumentNullException.ThrowIfNull(service);
-        return _services.TryAdd(service.GetType(), service);
+        ArgumentNullException.ThrowIfNull(services);
+
+        var snapshot = services.ToArray();
+        var distinctInstances = new HashSet<IMoHostedService>(ReferenceEqualityComparer.Instance);
+        foreach (var service in snapshot)
+        {
+            if (!distinctInstances.Add(service))
+            {
+                throw new InvalidOperationException(
+                    $"Hosted service instance '{service.ServiceName}' is registered more than once as IHostedService.");
+            }
+        }
+
+        var duplicateId = snapshot
+            .GroupBy(static service => service.RuntimeInfo.InstanceId, StringComparer.Ordinal)
+            .FirstOrDefault(static group => group.Count() > 1);
+        if (duplicateId is not null)
+        {
+            throw new InvalidOperationException(
+                $"Hosted service instance ID '{duplicateId.Key}' is not unique within the current host.");
+        }
+
+        Volatile.Write(ref _services, snapshot);
     }
 
     /// <inheritdoc />
     public IReadOnlyList<HostedServiceRuntimeInfo> GetAllServices()
     {
-        return _services.Values.Select(s => s.RuntimeInfo).ToList();
+        return GetSnapshot().Select(static service => service.RuntimeInfo).ToArray();
     }
 
     /// <inheritdoc />
-    public HostedServiceRuntimeInfo? GetService<TService>() where TService : IMoHostedService
+    public IReadOnlyList<HostedServiceRuntimeInfo> GetServices<TService>() where TService : IMoHostedService
     {
-        return GetService(typeof(TService));
+        return GetServices(typeof(TService));
     }
 
     /// <inheritdoc />
-    public HostedServiceRuntimeInfo? GetService(Type serviceType)
+    public IReadOnlyList<HostedServiceRuntimeInfo> GetServices(Type serviceType)
     {
-        return _services.TryGetValue(serviceType, out var service) ? service.RuntimeInfo : null;
+        ArgumentNullException.ThrowIfNull(serviceType);
+        return GetSnapshot()
+            .Where(service => service.GetType() == serviceType)
+            .Select(static service => service.RuntimeInfo)
+            .ToArray();
     }
 
     /// <inheritdoc />
-    public HostedServiceRuntimeInfo? GetServiceByName(string serviceName)
+    public IReadOnlyList<HostedServiceRuntimeInfo> GetServicesByName(string serviceName)
     {
-        return _services.Values
-            .Select(s => s.RuntimeInfo)
-            .FirstOrDefault(info => info.ServiceName.Equals(serviceName, StringComparison.OrdinalIgnoreCase));
+        ArgumentException.ThrowIfNullOrWhiteSpace(serviceName);
+        return GetSnapshot()
+            .Select(static service => service.RuntimeInfo)
+            .Where(info => info.ServiceName.Equals(serviceName, StringComparison.OrdinalIgnoreCase))
+            .ToArray();
+    }
+
+    /// <inheritdoc />
+    public IReadOnlyList<HostedServiceRuntimeInfo> GetServicesByKey(string? serviceKey)
+    {
+        return GetSnapshot()
+            .Select(static service => service.RuntimeInfo)
+            .Where(info => string.Equals(info.ServiceKey, serviceKey, StringComparison.Ordinal))
+            .ToArray();
+    }
+
+    /// <inheritdoc />
+    public HostedServiceRuntimeInfo? GetServiceByInstanceId(string instanceId)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(instanceId);
+        return GetSnapshot()
+            .Select(static service => service.RuntimeInfo)
+            .SingleOrDefault(info => string.Equals(info.InstanceId, instanceId, StringComparison.Ordinal));
     }
 
     /// <inheritdoc />
     public IReadOnlyList<HostedServiceRuntimeInfo> GetServicesByState(HostedServiceState state)
     {
-        return _services.Values
-            .Select(s => s.RuntimeInfo)
+        return GetSnapshot()
+            .Select(static service => service.RuntimeInfo)
             .Where(info => info.CurrentState == state)
-            .ToList();
+            .ToArray();
     }
 
     /// <inheritdoc />
     public IReadOnlyList<HostedServiceRuntimeInfo> GetUnhealthyServices()
     {
-        return _services.Values
-            .Select(s => s.RuntimeInfo)
+        return GetSnapshot()
+            .Select(static service => service.RuntimeInfo)
             .Where(info => !info.IsHealthy)
-            .ToList();
+            .ToArray();
     }
+
+    private IMoHostedService[] GetSnapshot() => Volatile.Read(ref _services);
 }

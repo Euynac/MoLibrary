@@ -14,6 +14,11 @@ internal sealed class ModuleInitializationProfiler
     private readonly ModuleProfilingState _state = new();
 
     /// <summary>
+    /// Gets whether the full module-system composition stopwatch is currently running.
+    /// </summary>
+    internal bool IsRunning => _state.IsStarted;
+
+    /// <summary>
     /// Clears all profiling data for this host.
     /// </summary>
     public void Clear()

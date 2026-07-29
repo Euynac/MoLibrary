@@ -1,4 +1,3 @@
-using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Monica.Core;
@@ -33,7 +32,7 @@ public static class ModuleEventBusBuilderExtensions
 
 [ModuleKey(BuiltInModuleKey.EventBus)]
 public class ModuleEventBus(ModuleEventBusOption option)
-    : WebModuleBase<ModuleEventBus, ModuleEventBusOption, ModuleEventBusGuide>(option),
+    : ModuleBase<ModuleEventBus, ModuleEventBusOption, ModuleEventBusGuide>(option),
       IBusinessTypeIterator
 {
     private readonly EventBusAutoDiscovery _autoDiscovery = new();
@@ -44,25 +43,13 @@ public class ModuleEventBus(ModuleEventBusOption option)
         services.AddSingleton<IEventSubscriptionRegistry, EventSubscriptionRegistry>();
         services.AddSingleton<IEventHandlerInvoker, EventHandlerInvoker>();
         services.AddSingleton<ILocalEventBus, LocalEventBus>();
+        services.AddSingleton(_autoDiscovery);
+        services.AddHostedService<EventBusAutoDiscoveryLifecycle>();
     }
 
     public override void ClaimDependencies()
     {
         DependsOnModule<ModuleExecutionPipelineGuide>().Register();
-    }
-
-    public override void ConfigureApplicationBuilder(IApplicationBuilder app)
-    {
-        var sp = app.ApplicationServices;
-        var subscriptionRegistry = sp.GetRequiredService<IEventSubscriptionRegistry>();
-        var serviceScopeFactory = sp.GetRequiredService<IServiceScopeFactory>();
-        var descriptors = _autoDiscovery.BuildDescriptors(serviceScopeFactory);
-
-        // Batch subscribe synchronously during module initialization
-        if (descriptors.Count != 0)
-        {
-            subscriptionRegistry.SubscribeBatchAsync(descriptors).GetAwaiter().GetResult();
-        }
     }
 
     public IEnumerable<Type> IterateBusinessTypes(IEnumerable<Type> types)
@@ -94,7 +81,7 @@ public class ModuleEventBus(ModuleEventBusOption option)
     }
 }
 
-public class ModuleEventBusGuide : WebModuleGuide<ModuleEventBus, ModuleEventBusOption, ModuleEventBusGuide>
+public class ModuleEventBusGuide : ModuleGuide<ModuleEventBus, ModuleEventBusOption, ModuleEventBusGuide>
 {
     /// <summary>
     /// Registers the shared distributed event bus provider for the default EventBus instance
@@ -175,7 +162,7 @@ public class ModuleEventBusGuide : WebModuleGuide<ModuleEventBus, ModuleEventBus
     }
 }
 
-public class ModuleEventBusOption : MinimalApiModuleOptions<ModuleEventBus>
+public class ModuleEventBusOption : ModuleOptions<ModuleEventBus>
 {
     /// <summary>
     /// Gets or sets a value indicating whether automatic discovery is disabled for types that

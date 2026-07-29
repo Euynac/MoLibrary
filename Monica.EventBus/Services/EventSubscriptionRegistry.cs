@@ -11,13 +11,20 @@ namespace Monica.EventBus.Services;
 /// </summary>
 public class EventSubscriptionRegistry(ILogger<EventSubscriptionRegistry> logger) : IEventSubscriptionRegistry
 {
+    private readonly ConcurrentQueue<EventSubscriptionChange> _notificationQueue = new();
     private readonly ConcurrentDictionary<EventSubscriptionId, EventSubscription> _subscriptions = new();
     private readonly ConcurrentDictionary<Guid, IObserver<EventSubscriptionChange>> _observers = new();
+    private int _isDispatchingNotifications;
 
     #region EventSubscription CRUD
 
-    public async Task<IEventSubscription> SubscribeAsync(EventSubscriptionDescriptor descriptor)
+    public async Task<IEventSubscription> SubscribeAsync(
+        EventSubscriptionDescriptor descriptor,
+        CancellationToken cancellationToken = default)
     {
+        ArgumentNullException.ThrowIfNull(descriptor);
+        cancellationToken.ThrowIfCancellationRequested();
+
         var subscription = new EventSubscription(descriptor);
  
         if (!_subscriptions.TryAdd(subscription.Id, subscription))
@@ -29,63 +36,152 @@ public class EventSubscriptionRegistry(ILogger<EventSubscriptionRegistry> logger
             "EventSubscription {EventSubscriptionId} created for {EventType} on topic {Topic}",
             subscription.Id, descriptor.EventType.Name, descriptor.TopicName);
 
-        // Notify observers
-        NotifyObservers(new EventSubscriptionChange(
-            EventSubscriptionChangeType.Added,
-            subscription,
-            DateTime.UtcNow));
+        try
+        {
+            // Creation and activation form one committed mutation. Notifications are queued while
+            // the subscription gate is held and dispatched only after it has been released.
+            await subscription.ActivateAsync(
+                committed =>
+                {
+                    EnqueueNotification(EventSubscriptionChangeType.Added, committed);
+                    EnqueueNotification(EventSubscriptionChangeType.Activated, committed);
+                },
+                cancellationToken).ConfigureAwait(false);
+            DrainNotifications();
+            return subscription;
+        }
+        catch (Exception activationError)
+        {
+            try
+            {
+                await RemoveSubscriptionAsync(
+                    subscription.Id,
+                    notifyObservers: false,
+                    CancellationToken.None).ConfigureAwait(false);
+            }
+            catch (Exception rollbackError)
+            {
+                throw new AggregateException(
+                    $"EventSubscription {subscription.Id} activation failed and the subscription could not be rolled back.",
+                    activationError,
+                    rollbackError);
+            }
 
-        // Auto-activate
-        await ActivateAsync(subscription.Id);
-
-        return subscription;
+            throw;
+        }
     }
 
-    public async Task<IReadOnlyList<IEventSubscription>> SubscribeBatchAsync(IEnumerable<EventSubscriptionDescriptor> descriptors)
+    public async Task<IReadOnlyList<IEventSubscription>> SubscribeBatchAsync(
+        IEnumerable<EventSubscriptionDescriptor> descriptors,
+        CancellationToken cancellationToken = default)
     {
+        ArgumentNullException.ThrowIfNull(descriptors);
+
         var subscriptions = new List<IEventSubscription>();
 
-        foreach (var descriptor in descriptors)
+        try
         {
-            var sub = await SubscribeAsync(descriptor);
-            subscriptions.Add(sub);
+            foreach (var descriptor in descriptors)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                var subscription = await SubscribeAsync(descriptor, cancellationToken).ConfigureAwait(false);
+                subscriptions.Add(subscription);
+            }
+
+            return subscriptions;
         }
-
-        return subscriptions;
-    }
-
-    public async Task UnsubscribeAsync(EventSubscriptionId subscriptionId)
-    {
-        if (!_subscriptions.TryRemove(subscriptionId, out var subscription))
+        catch (Exception subscriptionError)
         {
-            logger.LogWarning("EventSubscription {EventSubscriptionId} not found for unsubscribe", subscriptionId);
-            return;
-        }
+            var rollbackErrors = await UnsubscribeCreatedSubscriptionsAsync(subscriptions).ConfigureAwait(false);
+            if (rollbackErrors.Count != 0)
+            {
+                throw new AggregateException(
+                    "Event subscription batch creation failed and one or more created subscriptions could not be rolled back.",
+                    [subscriptionError, .. rollbackErrors]);
+            }
 
-        logger.LogDebug("Unsubscribing {EventSubscriptionId}", subscriptionId);
-
-        // Notify observers before disposal
-        NotifyObservers(new EventSubscriptionChange(
-            EventSubscriptionChangeType.Removed,
-            subscription,
-            DateTime.UtcNow));
-
-        // Dispose the subscription
-        await subscription.DisposeAsync();
-    }
-
-    public async Task UnsubscribeBatchAsync(IEnumerable<EventSubscriptionId> subscriptionIds)
-    {
-        foreach (var id in subscriptionIds)
-        {
-            await UnsubscribeAsync(id);
+            throw;
         }
     }
 
-    public async Task UnsubscribeWhereAsync(Func<IEventSubscription, bool> predicate)
+    public async Task UnsubscribeAsync(
+        EventSubscriptionId subscriptionId,
+        CancellationToken cancellationToken = default)
     {
+        cancellationToken.ThrowIfCancellationRequested();
+        await RemoveSubscriptionAsync(
+            subscriptionId,
+            notifyObservers: true,
+            cancellationToken).ConfigureAwait(false);
+    }
+
+    public async Task UnsubscribeBatchAsync(
+        IEnumerable<EventSubscriptionId> subscriptionIds,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(subscriptionIds);
+
+        var failures = new List<Exception>();
+        var cancellationObserved = cancellationToken.IsCancellationRequested;
+
+        foreach (var id in subscriptionIds.ToArray())
+        {
+            try
+            {
+                var effectiveToken = cancellationObserved ? CancellationToken.None : cancellationToken;
+                await UnsubscribeAsync(id, effectiveToken).ConfigureAwait(false);
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                // Batch cleanup is best effort. Continue without the cancelled token so the remaining
+                // subscriptions are still released, then report cancellation after cleanup completes.
+                cancellationObserved = true;
+                try
+                {
+                    await UnsubscribeAsync(id, CancellationToken.None).ConfigureAwait(false);
+                }
+                catch (Exception exception)
+                {
+                    failures.Add(new InvalidOperationException(
+                        $"Failed to unsubscribe EventSubscription {id} after cancellation was requested.",
+                        exception));
+                }
+            }
+            catch (Exception exception)
+            {
+                failures.Add(new InvalidOperationException(
+                    $"Failed to unsubscribe EventSubscription {id}.",
+                    exception));
+            }
+        }
+
+        if (failures.Count != 0)
+        {
+            if (cancellationObserved)
+            {
+                failures.Insert(0, new OperationCanceledException(cancellationToken));
+            }
+
+            throw new AggregateException(
+                "One or more event subscriptions could not be removed.",
+                failures);
+        }
+
+        if (cancellationObserved)
+        {
+            throw new OperationCanceledException(cancellationToken);
+        }
+    }
+
+    public async Task UnsubscribeWhereAsync(
+        Func<IEventSubscription, bool> predicate,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(predicate);
+        cancellationToken.ThrowIfCancellationRequested();
+
         var toRemove = _subscriptions.Values.Where(predicate).Select(s => s.Id).ToList();
-        await UnsubscribeBatchAsync(toRemove);
+        await UnsubscribeBatchAsync(toRemove, cancellationToken).ConfigureAwait(false);
     }
 
     #endregion
@@ -134,43 +230,47 @@ public class EventSubscriptionRegistry(ILogger<EventSubscriptionRegistry> logger
 
     #region Lifecycle Operations
 
-    public async Task ActivateAsync(EventSubscriptionId subscriptionId)
+    public async Task ActivateAsync(
+        EventSubscriptionId subscriptionId,
+        CancellationToken cancellationToken = default)
     {
-        var subscription = GetById(subscriptionId);
-        if (subscription == null)
+        cancellationToken.ThrowIfCancellationRequested();
+
+        if (!_subscriptions.TryGetValue(subscriptionId, out var subscription))
         {
             logger.LogWarning("EventSubscription {EventSubscriptionId} not found for activation", subscriptionId);
             return;
         }  
 
-        await subscription.ActivateAsync();
-
-        NotifyObservers(new EventSubscriptionChange(
-            EventSubscriptionChangeType.Activated,
-            subscription,
-            DateTime.UtcNow));
+        await subscription.ActivateAsync(
+            committed => EnqueueNotification(EventSubscriptionChangeType.Activated, committed),
+            cancellationToken).ConfigureAwait(false);
+        DrainNotifications();
     }
 
-    public async Task DeactivateAsync(EventSubscriptionId subscriptionId)
+    public async Task DeactivateAsync(
+        EventSubscriptionId subscriptionId,
+        CancellationToken cancellationToken = default)
     {
-        var subscription = GetById(subscriptionId);
-        if (subscription == null)
+        cancellationToken.ThrowIfCancellationRequested();
+
+        if (!_subscriptions.TryGetValue(subscriptionId, out var subscription))
         {
             logger.LogWarning("EventSubscription {EventSubscriptionId} not found for deactivation", subscriptionId);
             return;
         }
 
-        await subscription.DeactivateAsync();
-
-        NotifyObservers(new EventSubscriptionChange(
-            EventSubscriptionChangeType.Deactivated,
-            subscription,
-            DateTime.UtcNow));
+        await subscription.DeactivateAsync(
+            committed => EnqueueNotification(EventSubscriptionChangeType.Deactivated, committed),
+            cancellationToken).ConfigureAwait(false);
+        DrainNotifications();
     }
 
-    public async Task ReactivateAsync(EventSubscriptionId subscriptionId)
+    public async Task ReactivateAsync(
+        EventSubscriptionId subscriptionId,
+        CancellationToken cancellationToken = default)
     {
-        await ActivateAsync(subscriptionId);
+        await ActivateAsync(subscriptionId, cancellationToken).ConfigureAwait(false);
     }
 
     #endregion
@@ -179,23 +279,87 @@ public class EventSubscriptionRegistry(ILogger<EventSubscriptionRegistry> logger
 
     public async Task UnsubscribeByEventTypeAsync(Type eventType, CancellationToken cancellationToken = default)
     {
+        ArgumentNullException.ThrowIfNull(eventType);
+        cancellationToken.ThrowIfCancellationRequested();
+
         var subscriptions = GetByEventType(eventType);
-        await UnsubscribeBatchAsync(subscriptions.Select(s => s.Id));
+        await UnsubscribeBatchAsync(subscriptions.Select(s => s.Id), cancellationToken).ConfigureAwait(false);
     }
 
     public async Task UnsubscribeByHandlerTypeAsync(Type handlerType, CancellationToken cancellationToken = default)
     {
+        ArgumentNullException.ThrowIfNull(handlerType);
+        cancellationToken.ThrowIfCancellationRequested();
+
         var subscriptions = _subscriptions.Values
             .Where(s => s.HandlerType == handlerType)
             .Select(s => s.Id)
             .ToList();
-        await UnsubscribeBatchAsync(subscriptions);
+        await UnsubscribeBatchAsync(subscriptions, cancellationToken).ConfigureAwait(false);
     }
 
     public async Task UnsubscribeByServiceKeyAsync(string? serviceKey, CancellationToken cancellationToken = default)
     {
+        cancellationToken.ThrowIfCancellationRequested();
+
         var subscriptions = GetByServiceKey(serviceKey);
-        await UnsubscribeBatchAsync(subscriptions.Select(s => s.Id));
+        await UnsubscribeBatchAsync(subscriptions.Select(s => s.Id), cancellationToken).ConfigureAwait(false);
+    }
+
+    private async Task<IReadOnlyList<Exception>> UnsubscribeCreatedSubscriptionsAsync(
+        IReadOnlyList<IEventSubscription> subscriptions)
+    {
+        var rollbackErrors = new List<Exception>();
+
+        for (var index = subscriptions.Count - 1; index >= 0; index--)
+        {
+            var subscriptionId = subscriptions[index].Id;
+            try
+            {
+                await UnsubscribeAsync(subscriptionId, CancellationToken.None).ConfigureAwait(false);
+            }
+            catch (Exception exception)
+            {
+                rollbackErrors.Add(new InvalidOperationException(
+                    $"Failed to roll back EventSubscription {subscriptionId}.",
+                    exception));
+            }
+        }
+
+        return rollbackErrors;
+    }
+
+    private async Task RemoveSubscriptionAsync(
+        EventSubscriptionId subscriptionId,
+        bool notifyObservers,
+        CancellationToken cancellationToken)
+    {
+        if (!_subscriptions.TryGetValue(subscriptionId, out var subscription))
+        {
+            logger.LogWarning("EventSubscription {EventSubscriptionId} not found for unsubscribe", subscriptionId);
+            return;
+        }
+
+        logger.LogDebug("Unsubscribing {EventSubscriptionId}", subscriptionId);
+
+        // Keep the entry queryable until its resources have been released. The subscription owns
+        // the mutation gate, so activation, deactivation, and removal cannot overtake each other.
+        await subscription.DisposeAsync(
+            committed =>
+            {
+                if (!_subscriptions.TryRemove(
+                        new KeyValuePair<EventSubscriptionId, EventSubscription>(subscriptionId, committed)))
+                {
+                    return;
+                }
+
+                if (notifyObservers)
+                {
+                    EnqueueNotification(EventSubscriptionChangeType.Removed, committed);
+                }
+            },
+            cancellationToken).ConfigureAwait(false);
+        DrainNotifications();
     }
 
     #endregion
@@ -208,6 +372,39 @@ public class EventSubscriptionRegistry(ILogger<EventSubscriptionRegistry> logger
         var observerId = Guid.NewGuid();
         _observers[observerId] = observer;
         return new Unsubscriber(_observers, observerId);
+    }
+
+    private void EnqueueNotification(
+        EventSubscriptionChangeType changeType,
+        IEventSubscription subscription)
+    {
+        _notificationQueue.Enqueue(new EventSubscriptionChange(
+            changeType,
+            subscription,
+            DateTime.UtcNow));
+    }
+
+    private void DrainNotifications()
+    {
+        if (Interlocked.Exchange(ref _isDispatchingNotifications, 1) != 0)
+        {
+            return;
+        }
+
+        while (true)
+        {
+            while (_notificationQueue.TryDequeue(out var change))
+            {
+                NotifyObservers(change);
+            }
+
+            Volatile.Write(ref _isDispatchingNotifications, 0);
+            if (_notificationQueue.IsEmpty
+                || Interlocked.Exchange(ref _isDispatchingNotifications, 1) != 0)
+            {
+                return;
+            }
+        }
     }
 
     private void NotifyObservers(EventSubscriptionChange change)

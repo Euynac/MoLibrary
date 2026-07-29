@@ -86,7 +86,8 @@ public class JobRegistrationHostedService(
             await jobRegistry.RegisterJob(definition, status);
         }
 
-        hostedServiceCheckpointCoordinator.SignalCheckpoint<JobRegistrationHostedService>(
+        hostedServiceCheckpointCoordinator.SignalCheckpoint(
+            this,
             JobSchedulerHostedServiceCheckpoints.JobDefinitionsReady);
 
         RecordState(
