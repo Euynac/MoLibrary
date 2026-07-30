@@ -7,8 +7,7 @@ namespace Monica.DependencyInjection.Abstractions;
 /// Exposes a cached service provider for services activated by Monica DI.
 /// </summary>
 /// <remarks>
-/// Monica populates this property only when the instance is created through its conventional
-/// registration pipeline or dynamic-proxy activation pipeline.
+/// Monica populates this property only when the instance is created through its conventional registration pipeline.
 /// Typical conventional registration entry points include <see cref="ITransientDependency"/>,
 /// <see cref="IScopedDependency"/>, and
 /// <see cref="DependencyAttribute"/>.

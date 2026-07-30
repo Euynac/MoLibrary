@@ -72,7 +72,6 @@ public enum BuiltInModuleKey
     /// </summary>
     SwaggerUI,
     Seeder,
-    DynamicProxy,
     Snowflake,
     ExecutionTiming,
     Excel,

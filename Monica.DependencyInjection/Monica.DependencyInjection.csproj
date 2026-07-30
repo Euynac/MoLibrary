@@ -1,13 +1,9 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <PackageDescription>Enhanced dependency injection capabilities for Monica framework including dynamic proxy support and async interceptors using Castle.Core.</PackageDescription>
+    <PackageDescription>Conventional dependency injection registration and diagnostics for the Monica framework.</PackageDescription>
   </PropertyGroup>
 
-  <ItemGroup>
-    <PackageReference Include="Castle.Core.AsyncInterceptor" Version="2.1.0" />
-    <PackageReference Include="System.Linq.Async" Version="7.0.0" />
-  </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Monica.Core\Monica.Core.csproj" />
   </ItemGroup>

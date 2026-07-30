@@ -91,19 +91,4 @@ public sealed class DependencyInjectionDescriptorInfo
     /// Gets whether the descriptor has captured error-level automatic-registration issues.
     /// </summary>
     public bool HasErrorIssues { get; init; }
-
-    /// <summary>
-    /// Gets whether a later step rewrote the descriptor after conventional registration.
-    /// </summary>
-    public bool WasRewritten { get; init; }
-
-    /// <summary>
-    /// Gets the captured rewrite steps when the descriptor was rewritten.
-    /// </summary>
-    public IReadOnlyList<DependencyInjectionDescriptorRewriteInfo> Rewrites { get; init; } = [];
-
-    /// <summary>
-    /// Gets the rewrite reason when <see cref="WasRewritten"/> is <see langword="true"/>.
-    /// </summary>
-    public string? RewriteReason { get; init; }
 }

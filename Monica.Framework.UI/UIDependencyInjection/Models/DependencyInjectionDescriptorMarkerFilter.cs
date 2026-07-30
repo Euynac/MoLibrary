@@ -6,7 +6,7 @@ namespace Monica.Framework.UI.UIDependencyInjection.Models;
 public enum DependencyInjectionDescriptorMarkerFilter
 {
     /// <summary>
-    /// Show descriptors without keyed, warning, error, or rewrite markers.
+    /// Show descriptors without keyed, warning, or error markers.
     /// </summary>
     Standard,
 
@@ -23,10 +23,5 @@ public enum DependencyInjectionDescriptorMarkerFilter
     /// <summary>
     /// Show descriptors with error-level auto-registration issues.
     /// </summary>
-    Errors,
-
-    /// <summary>
-    /// Show rewritten descriptors.
-    /// </summary>
-    Rewritten
+    Errors
 }

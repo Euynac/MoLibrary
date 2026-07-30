@@ -44,13 +44,6 @@
                             </MudTooltip>
                         }
 
-                        @if (context.Item.WasRewritten)
-                        {
-                            <MudTooltip Text="@GetRewriteTooltip(context.Item)">
-                                <MudIcon Icon="@Icons.Material.Filled.AutoFixHigh" Color="Color.Secondary" Size="Size.Small" />
-                            </MudTooltip>
-                        }
-
                         <MudTooltip Text="@context.Item.ServiceType">
                             <MudText Typo="Typo.body2" Class="di-mono-truncate">
                                 @context.Item.ServiceTypeDisplayName
@@ -163,11 +156,5 @@
         return severity == DependencyInjectionDiagnosticSeverity.Error
             ? item.HasErrorIssues
             : item.HasWarningIssues;
-    }
-
-    private string GetRewriteTooltip(DependencyInjectionDescriptorInfo item)
-    {
-        return item.RewriteReason
-               ?? L["Page:Grid:Badges:Rewritten"];
     }
 }

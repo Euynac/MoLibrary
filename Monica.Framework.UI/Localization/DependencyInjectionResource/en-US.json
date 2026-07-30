@@ -17,7 +17,6 @@
       "AutoRegistered": "Auto Registered",
       "Keyed": "Keyed",
       "Factories": "Factories",
-      "Rewritten": "Rewritten",
       "Warnings": "Warnings",
       "Errors": "Errors"
     },
@@ -55,8 +54,7 @@
         "Standard": "Standard",
         "Keyed": "Keyed",
         "Warnings": "Warnings",
-        "Errors": "Errors",
-        "Rewritten": "Rewritten"
+        "Errors": "Errors"
       }
     },
     "Grid": {
@@ -73,8 +71,7 @@
         "AutoRegistered": "Auto registered by ModuleDependencyInjection",
         "Warning": "Automatic-registration warning",
         "Error": "Automatic-registration error",
-        "Keyed": "Keyed service",
-        "Rewritten": "Rewritten after registration"
+        "Keyed": "Keyed service"
       },
       "Actions": {
         "ViewDetails": "Details"
@@ -91,8 +88,7 @@
       "Sections": {
         "Descriptor": "Descriptor",
         "Implementation": "Implementation",
-        "AutoRegistration": "Auto Registration",
-        "Rewrite": "Rewrite / Proxy"
+        "AutoRegistration": "Auto Registration"
       },
       "Fields": {
         "ServiceType": "Service type",
@@ -112,16 +108,10 @@
         "RegistrationMode": "Registration mode",
         "Outcome": "Outcome",
         "ExposedServices": "Exposed services",
-        "Issues": "Issues",
-        "RewriteKind": "Rewrite kind",
-        "InterceptorTypes": "Interceptor types"
-      },
-      "Formats": {
-        "CachedProviderInjection": "Cached provider injection: {0}"
+        "Issues": "Issues"
       },
       "States": {
-        "NoAutoRegistration": "This descriptor was not created by Monica conventional registration.",
-        "NoRewrite": "No post-registration rewrite was detected."
+        "NoAutoRegistration": "This descriptor was not created by Monica conventional registration."
       }
     },
     "Shared": {

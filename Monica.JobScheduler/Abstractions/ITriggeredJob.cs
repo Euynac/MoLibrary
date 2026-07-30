@@ -1,11 +1,9 @@
-﻿using Monica.Core.Execution;
-
-namespace Monica.JobScheduler.Abstractions;
+﻿namespace Monica.JobScheduler.Abstractions;
 
 /// <summary>
 ///     Defines interface of a triggered job.
 /// </summary>
-public interface ITriggeredJob<in TArgs> : IJobDefinition, IExecutionAdapterOwnedComponent
+public interface ITriggeredJob<in TArgs> : IJobDefinition
 {
     /// <summary>
     /// Executes the triggered job logic with the provided parameters.

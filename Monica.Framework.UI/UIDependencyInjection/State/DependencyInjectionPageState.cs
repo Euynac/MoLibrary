@@ -27,8 +27,7 @@ public sealed class DependencyInjectionPageState
         DependencyInjectionDescriptorMarkerFilter.Standard,
         DependencyInjectionDescriptorMarkerFilter.Keyed,
         DependencyInjectionDescriptorMarkerFilter.Warnings,
-        DependencyInjectionDescriptorMarkerFilter.Errors,
-        DependencyInjectionDescriptorMarkerFilter.Rewritten
+        DependencyInjectionDescriptorMarkerFilter.Errors
     ];
 
     /// <summary>
@@ -182,8 +181,6 @@ public sealed class DependencyInjectionPageState
                ContainsText(descriptor.ImplementationTypeDisplayName) ||
                ContainsText(descriptor.ImplementationAssemblyName) ||
                ContainsText(descriptor.FactoryDisplay) ||
-               ContainsText(descriptor.RewriteReason) ||
-               descriptor.Rewrites.Any(MatchesRewrite) ||
                (descriptor.AutoRegistration != null && MatchesAutoRegistration(descriptor.AutoRegistration));
     }
 
@@ -223,15 +220,6 @@ public sealed class DependencyInjectionPageState
             }
         }
 
-        if (descriptor.WasRewritten)
-        {
-            hasMarker = true;
-            if (MarkerFilters.Contains(DependencyInjectionDescriptorMarkerFilter.Rewritten))
-            {
-                return true;
-            }
-        }
-
         return !hasMarker && MarkerFilters.Contains(DependencyInjectionDescriptorMarkerFilter.Standard);
     }
 
@@ -243,7 +231,6 @@ public sealed class DependencyInjectionPageState
                ContainsText(autoRegistration.RegistrationMode.ToString()) ||
                ContainsText(autoRegistration.LifetimeSource.ToString()) ||
                autoRegistration.Issues.Any(MatchesIssue) ||
-               autoRegistration.Rewrites.Any(MatchesRewrite) ||
                autoRegistration.ExposedServices.Any(service =>
                    ContainsText(service.ServiceType) ||
                    ContainsText(service.ServiceTypeDisplayName) ||
@@ -260,20 +247,6 @@ public sealed class DependencyInjectionPageState
                    ContainsText(service.ServiceType) ||
                    ContainsText(service.ServiceTypeDisplayName) ||
                    ContainsText(service.ServiceKey));
-    }
-
-    private bool MatchesRewrite(DependencyInjectionDescriptorRewriteInfo rewrite)
-    {
-        return ContainsText(rewrite.SourceModule) ||
-               ContainsText(rewrite.Summary) ||
-               ContainsText(rewrite.RewriteKind) ||
-               ContainsText(rewrite.ProxyKind) ||
-               ContainsText(rewrite.RegistrationStyle) ||
-               ContainsText(rewrite.ImplementationType) ||
-               ContainsText(rewrite.ImplementationTypeDisplayName) ||
-               ContainsText(rewrite.ImplementationAssemblyName) ||
-               rewrite.InterceptorTypes.Any(ContainsText) ||
-               rewrite.InterceptorTypeDisplayNames.Any(ContainsText);
     }
 
     private bool ContainsText(string? value)

@@ -4,7 +4,7 @@ using Microsoft.Extensions.DependencyInjection;
 namespace Monica.Experimental.Decorator.Strategies;
 
 /// <summary>
-/// A dynamic proxy that implements an interface and delegates calls appropriately.
+/// An interface dispatch proxy that delegates calls to a decorator.
 /// </summary>
 /// <typeparam name="T">The interface type to implement</typeparam>
 internal class InterfaceProxy<T> : DispatchProxy where T : class
@@ -250,18 +250,18 @@ public sealed class InterfaceProxyDecorationStrategy(
 
             // Otherwise, we need to create a proxy that implements the service type's interfaces
             // and delegates calls to the base decorator
-            return CreateDynamicProxy(serviceType, baseDecorator, instanceToDecorate);
+            return CreateServiceProxy(serviceType, baseDecorator, instanceToDecorate);
         };
     }
 
     /// <summary>
-    /// Creates a dynamic proxy that implements the service type's interfaces and delegates calls to the decorator.
+    /// Creates a proxy that implements the service type's interfaces and delegates calls to the decorator.
     /// </summary>
     /// <param name="serviceType">The service type to implement</param>
     /// <param name="baseDecorator">The base decorator that implements the target interface</param>
     /// <param name="originalInstance">The original service instance</param>
     /// <returns>A proxy object that implements the service type</returns>
-    private object CreateDynamicProxy(Type serviceType, object baseDecorator, object originalInstance)
+    private object CreateServiceProxy(Type serviceType, object baseDecorator, object originalInstance)
     {
         // For simplicity, we'll use a more direct approach here
         // Create a wrapper that implements the service type and delegates appropriately

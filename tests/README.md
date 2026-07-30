@@ -15,11 +15,11 @@ This directory contains Monica's runnable test projects and shared execution con
 |---|---|
 | Value object, parser, validator, or deterministic support logic | Construct directly |
 | One ProjectUnit with explicit collaborators | Raw `ProjectUnitFixture<TUnit>` |
-| Module graph, options, registration, proxies, hosted lifecycle, or cross-scope behavior | Full `MonicaTestApplicationFactory<TDiscoveryAnchor>` scenario |
+| Module graph, options, registration, hosted lifecycle, or cross-scope behavior | Full `MonicaTestApplicationFactory<TDiscoveryAnchor>` scenario |
 | Blazor component or page shell | bUnit in a UI test project |
 | Source-generator input, diagnostics, generated source, or same-compilation binding | In-memory Roslyn `GeneratorDriver` |
 
-`ProjectUnitFixture<TUnit>` uses a small raw Microsoft DI container. It does not prove Monica type discovery, conventional registration, dynamic proxies, module options, hosted lifecycle, or host ownership. There is no separate `ApplicationServiceFixture<THandler>`; apply the same boundary decision to application services as to every other ProjectUnit.
+`ProjectUnitFixture<TUnit>` uses a small raw Microsoft DI container. It does not prove Monica type discovery, conventional registration, module options, hosted lifecycle, or host ownership. There is no separate `ApplicationServiceFixture<THandler>`; apply the same boundary decision to application services as to every other ProjectUnit.
 
 ## Host-Owned Scenario Model
 

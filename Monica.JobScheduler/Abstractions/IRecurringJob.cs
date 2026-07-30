@@ -1,11 +1,9 @@
-﻿using Monica.Core.Execution;
-
-namespace Monica.JobScheduler.Abstractions;
+﻿namespace Monica.JobScheduler.Abstractions;
 
 /// <summary>
 /// Defines interface of a recurring job.
 /// </summary>
-public interface IRecurringJob : IJobDefinition, IExecutionAdapterOwnedComponent
+public interface IRecurringJob : IJobDefinition
 {
     /// <summary>
     /// Executes the recurring job logic.

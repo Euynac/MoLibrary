@@ -166,8 +166,7 @@
         DependencyInjectionDescriptorMarkerFilter.Standard,
         DependencyInjectionDescriptorMarkerFilter.Keyed,
         DependencyInjectionDescriptorMarkerFilter.Warnings,
-        DependencyInjectionDescriptorMarkerFilter.Errors,
-        DependencyInjectionDescriptorMarkerFilter.Rewritten
+        DependencyInjectionDescriptorMarkerFilter.Errors
     ];
 
     [Parameter]
@@ -262,7 +261,6 @@
             DependencyInjectionDescriptorMarkerFilter.Keyed => Color.Info,
             DependencyInjectionDescriptorMarkerFilter.Warnings => Color.Warning,
             DependencyInjectionDescriptorMarkerFilter.Errors => Color.Error,
-            DependencyInjectionDescriptorMarkerFilter.Rewritten => Color.Secondary,
             _ => Color.Default
         };
     }

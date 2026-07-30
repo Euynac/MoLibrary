@@ -17,7 +17,6 @@
       "AutoRegistered": "自动注册",
       "Keyed": "Keyed",
       "Factories": "工厂",
-      "Rewritten": "已改写",
       "Warnings": "警告",
       "Errors": "错误"
     },
@@ -55,8 +54,7 @@
         "Standard": "标准",
         "Keyed": "Keyed",
         "Warnings": "警告",
-        "Errors": "错误",
-        "Rewritten": "已改写"
+        "Errors": "错误"
       }
     },
     "Grid": {
@@ -73,8 +71,7 @@
         "AutoRegistered": "由 ModuleDependencyInjection 自动注册",
         "Warning": "自动注册警告",
         "Error": "自动注册错误",
-        "Keyed": "Keyed 服务",
-        "Rewritten": "注册后被改写"
+        "Keyed": "Keyed 服务"
       },
       "Actions": {
         "ViewDetails": "详情"
@@ -91,8 +88,7 @@
       "Sections": {
         "Descriptor": "描述符",
         "Implementation": "实现",
-        "AutoRegistration": "自动注册",
-        "Rewrite": "改写 / 代理"
+        "AutoRegistration": "自动注册"
       },
       "Fields": {
         "ServiceType": "服务类型",
@@ -112,16 +108,10 @@
         "RegistrationMode": "注册方式",
         "Outcome": "结果",
         "ExposedServices": "暴露服务",
-        "Issues": "问题",
-        "RewriteKind": "改写方式",
-        "InterceptorTypes": "拦截器类型"
-      },
-      "Formats": {
-        "CachedProviderInjection": "缓存服务提供器注入：{0}"
+        "Issues": "问题"
       },
       "States": {
-        "NoAutoRegistration": "该描述符不是由 Monica 约定注册创建的。",
-        "NoRewrite": "未检测到注册后的描述符改写。"
+        "NoAutoRegistration": "该描述符不是由 Monica 约定注册创建的。"
       }
     },
     "Shared": {

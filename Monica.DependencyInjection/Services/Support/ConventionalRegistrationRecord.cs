@@ -17,20 +17,13 @@ internal sealed class ConventionalRegistrationRecord(
     IReadOnlyList<ServiceIdentifier> exposedServices,
     IReadOnlyList<DependencyInjectionAutoRegistrationIssueInfo> issues)
 {
-    private readonly List<DependencyInjectionDescriptorRewriteInfo> _rewrites = [];
-
     /// <summary>
-    /// Gets the descriptor currently associated with the record.
+    /// Gets the descriptor associated with the record.
     /// </summary>
-    public ServiceDescriptor CurrentDescriptor { get; private set; } = descriptor;
+    public ServiceDescriptor Descriptor { get; } = descriptor;
 
     /// <summary>
-    /// Gets the originally applied descriptor.
-    /// </summary>
-    public ServiceDescriptor OriginalDescriptor { get; } = descriptor;
-
-    /// <summary>
-    /// Gets the implementation type Monica discovered before descriptor rewriting.
+    /// Gets the implementation type Monica discovered during conventional registration.
     /// </summary>
     public Type SourceImplementationType { get; } = sourceImplementationType;
 
@@ -63,30 +56,4 @@ internal sealed class ConventionalRegistrationRecord(
     /// Gets the warnings Monica emitted while evaluating this registration.
     /// </summary>
     public IReadOnlyList<DependencyInjectionAutoRegistrationIssueInfo> Issues { get; } = issues;
-
-    /// <summary>
-    /// Gets whether a later step rewrote the descriptor.
-    /// </summary>
-    public bool WasRewritten => _rewrites.Count > 0;
-
-    /// <summary>
-    /// Gets the captured rewrite steps.
-    /// </summary>
-    public IReadOnlyList<DependencyInjectionDescriptorRewriteInfo> Rewrites => _rewrites;
-
-    /// <summary>
-    /// Gets the rewrite reason when <see cref="WasRewritten"/> is <see langword="true"/>.
-    /// </summary>
-    public string? RewriteReason => _rewrites.Count == 0
-        ? null
-        : string.Join("; ", _rewrites.Select(item => item.Summary));
-
-    /// <summary>
-    /// Associates the record with a rewritten descriptor.
-    /// </summary>
-    public void UpdateDescriptor(ServiceDescriptor descriptor, DependencyInjectionDescriptorRewriteInfo rewrite)
-    {
-        CurrentDescriptor = descriptor;
-        _rewrites.Add(rewrite);
-    }
 }

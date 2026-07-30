@@ -1,11 +1,9 @@
-using Monica.Core.Execution;
-
 namespace Monica.Framework.Seeder.Abstractions;
 
 /// <summary>
 /// Defines one host-startup seed operation executed through Monica's seeder adapter.
 /// </summary>
-public interface ISeeder : IExecutionAdapterOwnedComponent
+public interface ISeeder
 {
     /// <summary>
     /// Executes one startup seed operation.

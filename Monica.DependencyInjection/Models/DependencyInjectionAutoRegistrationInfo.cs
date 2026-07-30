@@ -51,19 +51,4 @@ public sealed class DependencyInjectionAutoRegistrationInfo
     /// Gets the warnings Monica emitted while evaluating this automatic registration.
     /// </summary>
     public IReadOnlyList<DependencyInjectionAutoRegistrationIssueInfo> Issues { get; init; } = [];
-
-    /// <summary>
-    /// Gets the captured rewrite steps applied after the original registration.
-    /// </summary>
-    public IReadOnlyList<DependencyInjectionDescriptorRewriteInfo> Rewrites { get; init; } = [];
-
-    /// <summary>
-    /// Gets whether a later step rewrote the applied descriptor.
-    /// </summary>
-    public bool WasRewritten { get; init; }
-
-    /// <summary>
-    /// Gets the rewrite reason when <see cref="WasRewritten"/> is <see langword="true"/>.
-    /// </summary>
-    public string? RewriteReason { get; init; }
 }

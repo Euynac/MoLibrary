@@ -1,11 +1,9 @@
-using Monica.Core.Execution;
-
 namespace Monica.Core.HostedService.Abstractions;
 
 /// <summary>
 /// Defines finite scoped work resolved and dispatched by a Monica background service.
 /// </summary>
-public interface IHostedServiceWorkItem : IExecutionAdapterOwnedComponent
+public interface IHostedServiceWorkItem
 {
     /// <summary>
     /// Executes one bounded work item.
@@ -19,7 +17,7 @@ public interface IHostedServiceWorkItem : IExecutionAdapterOwnedComponent
 /// </summary>
 /// <typeparam name="TInput">The work-item input type.</typeparam>
 /// <typeparam name="TResult">The work-item result type.</typeparam>
-public interface IHostedServiceWorkItem<TInput, TResult> : IExecutionAdapterOwnedComponent
+public interface IHostedServiceWorkItem<TInput, TResult>
 {
     /// <summary>
     /// Executes one bounded work item.

@@ -90,32 +90,6 @@ internal sealed class DependencyInjectionDiagnosticsRegistry
     }
 
     /// <summary>
-    /// Transfers a conventional-registration record from an old descriptor to its rewritten replacement.
-    /// </summary>
-    public void TransferConventionalRegistration(
-        ServiceDescriptor oldDescriptor,
-        ServiceDescriptor newDescriptor,
-        DependencyInjectionDescriptorRewriteInfo rewrite)
-    {
-        ArgumentNullException.ThrowIfNull(oldDescriptor);
-        ArgumentNullException.ThrowIfNull(newDescriptor);
-        ArgumentNullException.ThrowIfNull(rewrite);
-
-        lock (_sync)
-        {
-            if (!_recordsByDescriptor.TryGetValue(oldDescriptor, out var record))
-            {
-                return;
-            }
-
-            _recordsByDescriptor.Remove(oldDescriptor);
-            record.UpdateDescriptor(newDescriptor, rewrite);
-            _recordsByDescriptor[newDescriptor] = record;
-            _snapshot = null;
-        }
-    }
-
-    /// <summary>
     /// Gets the finalized diagnostics snapshot, building it once from the final service collection.
     /// </summary>
     public DependencyInjectionDiagnosticsSnapshot GetSnapshot()
@@ -181,7 +155,6 @@ internal sealed class DependencyInjectionDiagnosticsRegistry
             KeyedDescriptorCount = descriptors.Count(item => item.IsKeyedService),
             FactoryDescriptorCount = descriptors.Count(item => item.ImplementationKind == DependencyInjectionDescriptorImplementationKind.Factory),
             InstanceDescriptorCount = descriptors.Count(item => item.ImplementationKind == DependencyInjectionDescriptorImplementationKind.Instance),
-            RewrittenDescriptorCount = descriptors.Count(item => item.WasRewritten),
             AutoRegistrationWarningCount = autoRegistrationIssues.Count(item => item.Severity == DependencyInjectionDiagnosticSeverity.Warning),
             AutoRegistrationErrorCount = autoRegistrationIssues.Count(item => item.Severity == DependencyInjectionDiagnosticSeverity.Error)
         };
@@ -197,7 +170,7 @@ internal sealed class DependencyInjectionDiagnosticsRegistry
         return records.FirstOrDefault(record =>
             !matchedRecords.Contains(record) &&
             record.Lifetime == descriptor.Lifetime &&
-            descriptor.MatchesServiceIdentity(record.CurrentDescriptor.ServiceType, record.CurrentDescriptor.ServiceKey) &&
+            descriptor.MatchesServiceIdentity(record.Descriptor.ServiceType, record.Descriptor.ServiceKey) &&
             implementationType == record.SourceImplementationType);
     }
 
@@ -229,10 +202,7 @@ internal sealed class DependencyInjectionDiagnosticsRegistry
             IsAutoRegistered = record != null,
             AutoRegistration = record == null ? null : CreateAutoRegistrationInfo(record),
             HasWarningIssues = hasWarningIssues,
-            HasErrorIssues = hasErrorIssues,
-            WasRewritten = record?.WasRewritten ?? false,
-            Rewrites = record?.Rewrites.ToArray() ?? [],
-            RewriteReason = record?.RewriteReason
+            HasErrorIssues = hasErrorIssues
         };
     }
 
@@ -256,10 +226,7 @@ internal sealed class DependencyInjectionDiagnosticsRegistry
                     ServiceKey = ServiceDescriptorDiagnosticsExtensions.FormatServiceKey(item.ServiceKey)
                 })
                 .ToArray(),
-            Issues = record.Issues,
-            Rewrites = record.Rewrites.ToArray(),
-            WasRewritten = record.WasRewritten,
-            RewriteReason = record.RewriteReason
+            Issues = record.Issues
         };
     }
 

@@ -1,4 +1,3 @@
-using Monica.Core.Execution;
 using Monica.Core.HostedService.Models;
 
 namespace Monica.Core.HostedService.Abstractions;
@@ -6,7 +5,7 @@ namespace Monica.Core.HostedService.Abstractions;
 /// <summary>
 /// Interface for observable hosted services with state management and exception tracking.
 /// </summary>
-public interface IMoHostedService : IExecutionAdapterOwnedComponent
+public interface IMoHostedService
 {
     /// <summary>
     /// Gets the name of the service
