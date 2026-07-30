@@ -10,6 +10,7 @@ using Monica.Core;
 using Monica.Core.Extensions;
 using Monica.Core.Modularity.Abstractions;
 using Monica.Core.Modularity.Annotations;
+using Monica.Core.Modularity.Diagnostics.Models;
 using Monica.Core.Modularity.Exceptions;
 using Monica.Core.Modularity.Models;
 using Monica.Core.Modularity.Models.Internal;
@@ -24,6 +25,8 @@ namespace Monica.Core.Modularity.Services;
 /// </summary>
 public sealed class ModuleRegistry(MonicaApplication application)
 {
+    private const string CONFIGURE_BUILDER_AND_SERVICES_PHASE = "ConfigureBuilderAndServices";
+
     private readonly ModuleCompositionState _composition = new();
     private readonly object _compositionCallbackGate = new();
     private readonly ModuleRegistryState _state = new();
@@ -104,13 +107,6 @@ public sealed class ModuleRegistry(MonicaApplication application)
         {
             throw new ModuleRegistrationException($"Module type {moduleType.FullName} is already registered.");
         }
-
-        // Start overall profiling when the first module is registered.
-        if (Registrations.Count == 1)
-        {
-            application.Profiling.StartModuleSystem();
-            Logger.LogInformation("Module system initialization started");
-        }
     }
 
     /// <summary>
@@ -163,12 +159,9 @@ public sealed class ModuleRegistry(MonicaApplication application)
             _ = FinalizeCompositionWork(abort: false);
 
             _state.AddRuntimeSnapshots(snapshots);
-            if (builder is WebApplicationBuilder)
-            {
-                // Web composition remains open until MapMonica() has configured every endpoint.
-                application.Errors.RaiseModuleErrors();
-            }
-            else
+            application.Errors.RaiseModuleErrors();
+            application.Profiling.RecordMilestone(ModuleCompositionMilestone.ServiceRegistrationCompleted);
+            if (builder is not WebApplicationBuilder)
             {
                 CompleteComposition(ModuleCompositionCompletionPoint.ServiceRegistration);
             }
@@ -285,8 +278,7 @@ public sealed class ModuleRegistry(MonicaApplication application)
         IReadOnlyList<ModuleRegistrationState> registrations)
     {
         var snapshots = new List<ModuleRuntimeSnapshot>(registrations.Count);
-        var phaseName = nameof(ModulePhase.ConfigureBuilder) + nameof(ModulePhase.ConfigureServices);
-        application.Profiling.StartPhase(phaseName);
+        application.Profiling.StartPhase(CONFIGURE_BUILDER_AND_SERVICES_PHASE);
         try
         {
             foreach (var info in registrations)
@@ -300,7 +292,7 @@ public sealed class ModuleRegistry(MonicaApplication application)
         }
         finally
         {
-            application.Profiling.StopPhase(phaseName);
+            application.Profiling.StopPhase(CONFIGURE_BUILDER_AND_SERVICES_PHASE);
         }
     }
 
@@ -371,26 +363,31 @@ public sealed class ModuleRegistry(MonicaApplication application)
         application.Profiling.StartPhase(nameof(ModulePhase.IterateBusinessTypes));
         try
         {
-            var businessTypes = application.TypeFinder.GetTypes()
-                .Where(static type => !type.IsDefined(
-                    typeof(ExcludeFromBusinessTypeDiscoveryAttribute),
-                    inherit: false));
-            var hasIterators = false;
-            foreach (var snapshot in snapshots)
+            var iterators = snapshots
+                .Where(static snapshot => snapshot.ModuleInstance is IBusinessTypeIterator)
+                .ToArray();
+            if (iterators.Length == 0)
             {
-                if (snapshot.ModuleInstance is not IBusinessTypeIterator iterator)
-                {
-                    continue;
-                }
-
-                snapshot.RegisterInfo.SetModulePhase(ModulePhase.IterateBusinessTypes);
-                hasIterators = true;
-                businessTypes = iterator.IterateBusinessTypes(businessTypes);
+                return;
             }
 
-            if (hasIterators)
+            IReadOnlyList<Type> businessTypes = application.TypeFinder.GetTypes()
+                .Where(static type => !type.IsDefined(
+                    typeof(ExcludeFromBusinessTypeDiscoveryAttribute),
+                    inherit: false))
+                .ToArray();
+            foreach (var snapshot in iterators)
             {
-                _ = businessTypes.ToList();
+                var iterator = (IBusinessTypeIterator)snapshot.ModuleInstance;
+                snapshot.RegisterInfo.StartModulePhase(ModulePhase.IterateBusinessTypes);
+                try
+                {
+                    businessTypes = iterator.IterateBusinessTypes(businessTypes).ToArray();
+                }
+                finally
+                {
+                    snapshot.RegisterInfo.EndModulePhase(ModulePhase.IterateBusinessTypes);
+                }
             }
         }
         catch (Exception exception)
@@ -484,7 +481,14 @@ public sealed class ModuleRegistry(MonicaApplication application)
 
         var scheduler = _compositionWork
             ?? throw new InvalidOperationException("Module composition work is no longer available for this host.");
-        scheduler.Schedule(moduleType, info.Order, name, info.ModulePhase, deadline, work);
+        scheduler.Schedule(
+            moduleType,
+            application.Dependencies.ResolveModuleKey(moduleType),
+            info.Order,
+            name,
+            info.ModulePhase,
+            deadline,
+            work);
     }
 
     private void RegisterModuleOptionContext(IServiceCollection services, Type optionType)
@@ -608,6 +612,15 @@ public sealed class ModuleRegistry(MonicaApplication application)
     internal void BeginApplicationPipeline(IApplicationBuilder app)
     {
         _composition.BeginApplicationPipeline(app);
+        application.Profiling.RecordMilestone(ModuleCompositionMilestone.ApplicationPipelineStarted);
+    }
+
+    /// <summary>
+    /// Records successful completion of the <c>UseMonica()</c> application-pipeline boundary.
+    /// </summary>
+    internal void CompleteApplicationPipeline()
+    {
+        application.Profiling.RecordMilestone(ModuleCompositionMilestone.ApplicationPipelineCompleted);
     }
 
     /// <summary>
@@ -616,6 +629,7 @@ public sealed class ModuleRegistry(MonicaApplication application)
     internal void BeginEndpointMapping(IApplicationBuilder app)
     {
         _composition.BeginEndpointMapping(app);
+        application.Profiling.RecordMilestone(ModuleCompositionMilestone.EndpointMappingStarted);
     }
 
     /// <summary>
@@ -630,6 +644,8 @@ public sealed class ModuleRegistry(MonicaApplication application)
 
         try
         {
+            application.Errors.RaiseModuleErrors();
+            application.Profiling.RecordMilestone(ModuleCompositionMilestone.CompositionCompleted);
             application.Profiling.StopModuleSystem();
 
             if (application.ModuleSystem.EnableSummaryLog)
@@ -640,11 +656,11 @@ public sealed class ModuleRegistry(MonicaApplication application)
                     application.Dependencies.GetModuleRegistrationSummary());
             }
 
-            application.Errors.RaiseModuleErrors();
             _composition.CommitCompletion();
         }
         catch (Exception exception)
         {
+            application.Profiling.StopModuleSystem();
             _composition.FailCompletion(exception);
             throw;
         }

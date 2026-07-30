@@ -1,7 +1,6 @@
 using System.Diagnostics.Metrics;
 using Monica.Core.Modularity.Models;
 using Monica.Core.Modularity.Models.Internal;
-using Monica.Core.Modularity.Services.Support;
 
 namespace Monica.Core.Modularity.Metrics;
 
@@ -14,7 +13,7 @@ internal sealed class ModuleInitMetrics(IMeterFactory meterFactory, MonicaApplic
     private const string DURATION_KIND_TAG_NAME = "kind";
     private const string EXECUTION_DURATION_KIND = "execution";
     private const string QUEUE_DURATION_KIND = "queue";
-    private const string WALL_DURATION_KIND = "wall";
+    private const string ACTIVE_SPAN_DURATION_KIND = "active_span";
     private const string CHECKPOINT_WAIT_DURATION_KIND = "checkpoint_wait";
     private const string PHASE_TAG_NAME = "phase";
     private Meter Meter { get; } = CreateMeter(meterFactory, application);
@@ -46,36 +45,34 @@ internal sealed class ModuleInitMetrics(IMeterFactory meterFactory, MonicaApplic
 
     private static Measurement<double>[] ObserveModuleInitDurations(MonicaApplication application)
     {
-        var profiles = application.Modules.RuntimeSnapshots
-            .Select(snapshot => application.Profiling.GetModuleProfile(snapshot.ModuleType))
-            .OfType<ModuleProfileInfo>()
-            .ToArray();
-        var phases = profiles
-            .SelectMany(static profile => profile.GetPhaseDurations())
-            .Where(static phaseDuration => phaseDuration.Value > 0)
-            .GroupBy(static phaseDuration => FormatPhase(phaseDuration.Key))
+        var composition = application.Profiling.GetCompositionPerformance();
+        var phases = composition.ModulePhaseExecutions
+            .Where(static execution => execution.DurationMs > 0)
+            .GroupBy(static execution => FormatPhase(execution.Phase))
             .Select(static group => CreateDurationMeasurement(
                 group.Key,
-                group.Sum(static phaseDuration => phaseDuration.Value) / 1000d));
+                group.Sum(static execution => execution.DurationMs) / 1000d));
         return [.. phases];
     }
 
     private static Measurement<double>[] ObserveCompositionWorkDurations(MonicaApplication application)
     {
-        var summary = application.Profiling.GetCompositionWorkSummary();
-        if (summary.Count == 0)
+        var composition = application.Profiling.GetCompositionPerformance();
+        if (composition.WorkItems.Count == 0)
         {
             return [];
         }
 
         return
         [
-            CreateCompositionWorkDurationMeasurement(WALL_DURATION_KIND, summary.WallDurationMs),
-            CreateCompositionWorkDurationMeasurement(EXECUTION_DURATION_KIND, summary.TotalExecutionDurationMs),
-            CreateCompositionWorkDurationMeasurement(QUEUE_DURATION_KIND, summary.TotalQueueDurationMs),
+            CreateCompositionWorkDurationMeasurement(
+                ACTIVE_SPAN_DURATION_KIND,
+                composition.ParallelWorkActiveSpanMs),
+            CreateCompositionWorkDurationMeasurement(EXECUTION_DURATION_KIND, composition.AggregateWorkExecutionDurationMs),
+            CreateCompositionWorkDurationMeasurement(QUEUE_DURATION_KIND, composition.AggregateWorkQueueDurationMs),
             CreateCompositionWorkDurationMeasurement(
                 CHECKPOINT_WAIT_DURATION_KIND,
-                summary.TotalCheckpointWaitDurationMs)
+                composition.AggregateCheckpointWaitDurationMs)
         ];
     }
 
@@ -98,7 +95,7 @@ internal sealed class ModuleInitMetrics(IMeterFactory meterFactory, MonicaApplic
             new KeyValuePair<string, object?>(PHASE_TAG_NAME, phase));
     }
 
-    private static Measurement<double> CreateCompositionWorkDurationMeasurement(string kind, long milliseconds)
+    private static Measurement<double> CreateCompositionWorkDurationMeasurement(string kind, double milliseconds)
     {
         return new Measurement<double>(
             milliseconds / 1000d,

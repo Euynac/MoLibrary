@@ -1,84 +1,84 @@
 .module-detail-header {
-    border-bottom: 1px solid rgba(var(--mud-palette-divider-rgb), 0.12);
+    min-width: 0;
     padding-bottom: 16px;
+    border-bottom: 1px solid var(--mud-palette-lines-default);
+}
+
+.module-detail-header ::deep .mud-typography {
+    overflow-wrap: anywhere;
 }
 
 .tab-content {
+    min-width: 0;
     padding: 16px 24px;
 }
 
-.composition-work-table {
-    min-width: 0;
-    overflow-x: auto;
+.tab-content ::deep .detail-card,
+.tab-content ::deep .dependency-stat-card {
+    height: 100%;
+    border: 1px solid var(--mud-palette-lines-default);
+    border-radius: var(--mud-default-borderradius);
+    background: color-mix(in srgb, var(--mud-palette-primary) 4%, var(--mud-palette-surface));
 }
 
-.composition-work-table__content {
-    min-width: 960px;
+.tab-content ::deep .dependency-stat-card {
+    background: color-mix(in srgb, var(--mud-palette-info) 5%, var(--mud-palette-surface));
 }
 
-.composition-work-table__identifier,
-.composition-work-table__error {
-    display: block;
+.module-performance-detail {
+    display: grid;
+    gap: 16px;
     min-width: 0;
+    padding-top: 16px;
+}
+
+.module-performance-detail__summary {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 10px;
+}
+
+.module-performance-detail__summary article {
+    display: grid;
+    gap: 4px;
+    min-width: 0;
+    padding: 14px;
+    border: 1px solid var(--mud-palette-lines-default);
+    border-radius: var(--mud-default-borderradius);
+    background: var(--mud-palette-background-gray);
+}
+
+.module-performance-detail__summary article:nth-child(1) {
+    border-color: color-mix(in srgb, var(--mud-palette-primary) 45%, var(--mud-palette-lines-default));
+}
+
+.module-performance-detail__summary article:nth-child(2) {
+    border-color: color-mix(in srgb, var(--mud-palette-info) 45%, var(--mud-palette-lines-default));
+}
+
+.module-performance-detail__summary article:nth-child(3) {
+    border-color: color-mix(in srgb, var(--mud-palette-success) 45%, var(--mud-palette-lines-default));
+}
+
+.module-performance-detail__summary article:nth-child(4) {
+    border-color: color-mix(in srgb, var(--mud-palette-secondary) 45%, var(--mud-palette-lines-default));
+}
+
+.module-performance-detail__summary small {
+    color: var(--mud-palette-text-secondary);
+}
+
+.module-performance-detail__summary strong {
     overflow-wrap: anywhere;
-    white-space: normal;
+    font-size: 1.25rem;
 }
 
-.composition-work-table__error {
-    max-width: 360px;
-}
-
-.detail-card {
-    border-radius: 8px;
-    transition: all 0.2s ease;
-    background: linear-gradient(135deg, rgba(var(--mud-palette-primary-rgb), 0.02) 0%, rgba(var(--mud-palette-surface-rgb), 0.02) 100%);
-}
-
-    .detail-card:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+@media (max-width: 900px) {
+    .module-performance-detail__summary {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
     }
-
-.phase-card {
-    border-radius: 6px;
-    transition: all 0.2s ease;
-    background: linear-gradient(135deg, rgba(var(--mud-palette-secondary-rgb), 0.02) 0%, rgba(var(--mud-palette-surface-rgb), 0.02) 100%);
 }
 
-    .phase-card:hover {
-        transform: translateY(-1px);
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
-    }
-
-.dependency-stat-card {
-    border-radius: 8px;
-    transition: all 0.2s ease;
-    background: linear-gradient(135deg, rgba(var(--mud-palette-info-rgb), 0.02) 0%, rgba(var(--mud-palette-primary-rgb), 0.02) 100%);
-}
-
-    .dependency-stat-card:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
-    }
-
-
-/* Chip style adjustment */
-::deep .mud-chip {
-    margin: 2px;
-    transition: all 0.2s ease;
-}
-
-    ::deep .mud-chip:hover {
-        transform: translateY(-1px);
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-    }
-
-/* Alert box style */
-::deep .mud-alert {
-    border-radius: 8px;
-}
-
-/* Responsive design */
 @media (max-width: 600px) {
     .module-detail-header {
         text-align: center;
@@ -88,52 +88,11 @@
         padding: 12px 16px;
     }
 
-    .detail-card {
+    .tab-content ::deep .detail-card {
         text-align: center;
     }
 
-    .dependency-stat-card {
-        margin-bottom: 16px;
+    .module-performance-detail__summary {
+        grid-template-columns: 1fr;
     }
-
-    .composition-work-table__content {
-        min-width: 760px;
-    }
-}
-
-/* Dark theme adaptation */
-@media (prefers-color-scheme: dark) {
-    .detail-card {
-        background: linear-gradient(135deg, rgba(var(--mud-palette-primary-rgb), 0.08) 0%, rgba(var(--mud-palette-surface-rgb), 0.08) 100%);
-        border-color: rgba(var(--mud-palette-divider-rgb), 0.2);
-    }
-    
-    .phase-card {
-        background: linear-gradient(135deg, rgba(var(--mud-palette-secondary-rgb), 0.08) 0%, rgba(var(--mud-palette-surface-rgb), 0.08) 100%);
-        border-color: rgba(var(--mud-palette-divider-rgb), 0.2);
-    }
-    
-    .dependency-stat-card {
-        background: linear-gradient(135deg, rgba(var(--mud-palette-info-rgb), 0.08) 0%, rgba(var(--mud-palette-primary-rgb), 0.08) 100%);
-        border-color: rgba(var(--mud-palette-divider-rgb), 0.2);
-    }
-}
-
-/* MudBlazor dark theme adaptation */
-[data-theme="dark"] .detail-card,
-.mud-theme-dark .detail-card {
-    background: linear-gradient(135deg, rgba(var(--mud-palette-primary-rgb), 0.08) 0%, rgba(var(--mud-palette-surface-rgb), 0.08) 100%);
-    border-color: rgba(var(--mud-palette-divider-rgb), 0.2);
-}
-
-[data-theme="dark"] .phase-card,
-.mud-theme-dark .phase-card {
-    background: linear-gradient(135deg, rgba(var(--mud-palette-secondary-rgb), 0.08) 0%, rgba(var(--mud-palette-surface-rgb), 0.08) 100%);
-    border-color: rgba(var(--mud-palette-divider-rgb), 0.2);
-}
-
-[data-theme="dark"] .dependency-stat-card,
-.mud-theme-dark .dependency-stat-card {
-    background: linear-gradient(135deg, rgba(var(--mud-palette-info-rgb), 0.08) 0%, rgba(var(--mud-palette-primary-rgb), 0.08) 100%);
-    border-color: rgba(var(--mud-palette-divider-rgb), 0.2);
 }

@@ -37,6 +37,7 @@ public static class MonicaHostBuilderExtensions
         }
 
         var application = new MonicaApplication();
+        application.Profiling.StartModuleSystem();
         var monicaBuilder = new MonicaBuilder(builder, application);
         builder.Properties.Add(MONICA_APPLICATION_KEY, application);
 

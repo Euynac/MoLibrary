@@ -31,19 +31,9 @@ public class ModuleSystemStatus
     public int ErrorModules { get; set; }
 
     /// <summary>
-    /// Total system initialization time in milliseconds.
+    /// Monotonic elapsed duration from <c>AddMonica(...)</c> entry through completed service registration, in milliseconds.
     /// </summary>
-    public long TotalInitializationTimeMs { get; set; }
-
-    /// <summary>
-    /// System start time.
-    /// </summary>
-    public DateTime? StartTime { get; set; }
-
-    /// <summary>
-    /// System initialization completion time.
-    /// </summary>
-    public DateTime? CompletionTime { get; set; }
+    public double ServiceRegistrationDurationMs { get; set; }
 
     /// <summary>
     /// Current module system state.

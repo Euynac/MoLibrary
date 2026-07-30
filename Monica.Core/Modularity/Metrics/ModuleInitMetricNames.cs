@@ -16,7 +16,7 @@ public static class ModuleInitMetricNames
     public const string Duration = "monica.module.init.duration";
 
     /// <summary>
-    /// Observable gauge instrument that reports composition-work wall, execution, queue, and checkpoint-wait
+    /// Observable gauge instrument that reports composition-work active-span, execution, queue, and checkpoint-wait
     /// durations in seconds.
     /// </summary>
     public const string CompositionWorkDuration = "monica.module.composition.work.duration";

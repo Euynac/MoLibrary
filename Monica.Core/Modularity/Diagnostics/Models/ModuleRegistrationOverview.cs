@@ -114,8 +114,4 @@ public class ModuleRegistrationStatistics
     /// </summary>
     public long TotalSerialPhaseDurationMs { get; set; }
 
-    /// <summary>
-    /// Five modules with the highest serial composition phase duration.
-    /// </summary>
-    public List<ModuleBasicInfo> SlowestModules { get; set; } = [];
-} 
+}

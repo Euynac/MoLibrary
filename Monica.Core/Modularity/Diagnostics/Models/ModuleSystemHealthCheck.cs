@@ -141,14 +141,14 @@ public class HealthPerformanceMetrics
     public string? SlowestModuleName { get; set; }
 
     /// <summary>
-    /// Total system initialization time in milliseconds.
+    /// Monotonic elapsed duration from <c>AddMonica(...)</c> entry through completed service registration, in milliseconds.
     /// </summary>
-    public long TotalSystemInitTimeMs { get; set; }
+    public double ServiceRegistrationDurationMs { get; set; }
 
     /// <summary>
-    /// Initialization efficiency score from 0 to 100.
+    /// Service-registration efficiency score from 0 to 100.
     /// </summary>
-    public int InitializationEfficiencyScore { get; set; }
+    public int ServiceRegistrationEfficiencyScore { get; set; }
 
     /// <summary>
     /// Memory usage, when available.

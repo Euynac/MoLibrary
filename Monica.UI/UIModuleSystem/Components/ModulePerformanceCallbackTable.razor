@@ -1,0 +1,54 @@
+@using Monica.Core.Modularity.Diagnostics.Models
+@using Monica.UI.UIModuleSystem.Support
+@inject IStringLocalizer<SharedResource> L
+
+<section class="performance-callbacks" aria-labelledby="performance-callbacks-title">
+    <header class="performance-callbacks__header">
+        <div>
+            <MudText id="performance-callbacks-title" Typo="Typo.h6">@L["ModuleSystem:ModuleDetail:Labels:CallbackExecutions"]</MudText>
+            <MudText Typo="Typo.body2" Color="Color.Secondary">@L["ModuleSystem:ModuleDetail:Messages:CallbackExecutionsDescription"]</MudText>
+        </div>
+        <MudChip T="string" Size="Size.Small" Color="Color.Info" Variant="Variant.Outlined">@Executions.Count</MudChip>
+    </header>
+
+    @if (Executions.Count == 0)
+    {
+        <MudText Typo="Typo.body2" Color="Color.Secondary">@L["ModuleSystem:ModuleDetail:Messages:NoCallbackExecutions"]</MudText>
+    }
+    else
+    {
+        <div class="performance-callbacks__table-scroll" role="region" aria-label="@L["ModuleSystem:ModuleDetail:Labels:CallbackExecutions"]" tabindex="0">
+            <div class="performance-callbacks__table-content">
+                <MudTable T="ModulePhaseExecutionPerformanceInfo"
+                          Items="@Executions.OrderBy(static execution => execution.Sequence)"
+                          Dense="true"
+                          Hover="true"
+                          Breakpoint="Breakpoint.None">
+                    <HeaderContent>
+                        <MudTh>@L["ModuleSystem:PerformanceMonitoring:Labels:Order"]</MudTh>
+                        <MudTh>@L["ModuleSystem:PerformanceMonitoring:Labels:PhaseName"]</MudTh>
+                        <MudTh>@L["ModuleSystem:PerformanceMonitoring:Labels:StartedAt"]</MudTh>
+                        <MudTh>@L["ModuleSystem:PerformanceMonitoring:Labels:Duration"]</MudTh>
+                    </HeaderContent>
+                    <RowTemplate>
+                        <MudTd DataLabel="@L["ModuleSystem:PerformanceMonitoring:Labels:Order"]">@(context.Sequence + 1)</MudTd>
+                        <MudTd DataLabel="@L["ModuleSystem:PerformanceMonitoring:Labels:PhaseName"]">
+                            @ModulePerformanceDisplayText.Phase(L, context.Phase.ToString())
+                        </MudTd>
+                        <MudTd DataLabel="@L["ModuleSystem:PerformanceMonitoring:Labels:StartedAt"]">
+                            @L["ModuleSystem:PerformanceMonitoring:Formats:Offset", context.StartedOffsetMs]
+                        </MudTd>
+                        <MudTd DataLabel="@L["ModuleSystem:PerformanceMonitoring:Labels:Duration"]">
+                            <strong>@L["ModuleSystem:PerformanceMonitoring:Formats:Duration", context.DurationMs]</strong>
+                        </MudTd>
+                    </RowTemplate>
+                </MudTable>
+            </div>
+        </div>
+    }
+</section>
+
+@code {
+    [Parameter, EditorRequired]
+    public IReadOnlyList<ModulePhaseExecutionPerformanceInfo> Executions { get; set; } = [];
+}

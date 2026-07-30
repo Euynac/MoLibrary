@@ -12,6 +12,7 @@ using Monica.Core.Modularity.Annotations;
 using Monica.Core.Modularity.Exceptions;
 using Monica.Core.Modularity.Extensions;
 using Monica.Core.Modularity.Models;
+using Monica.Core.Modularity.Services.Support;
 using Monica.Modules;
 using Xunit;
 
@@ -46,22 +47,184 @@ public sealed class ModuleCompositionWorkTests
         using var host = builder.Build();
         var performance = host.Services.GetRequiredService<IModuleSystemInspectionService>()
             .GetSystemPerformance();
-        var module = performance.ModulePerformances.Single(item =>
+        var module = performance.Modules.Single(item =>
             item.ModuleTypeName == nameof(CompositionWorkProbeModuleOne));
         var work = module.CompositionWorkItems.Should().ContainSingle().Subject;
+        var composition = performance.Composition;
 
-        performance.CompositionWorkItemCount.Should().Be(1);
-        performance.CompositionCheckpoints.Select(static checkpoint => checkpoint.Deadline).Should().Equal(
+        composition.WorkItems.Should().ContainSingle();
+        composition.Checkpoints.Select(static checkpoint => checkpoint.Deadline).Should().Equal(
             ModuleCompositionWorkDeadline.BeforeBusinessTypeIteration,
             ModuleCompositionWorkDeadline.BeforePostConfigureServices,
             ModuleCompositionWorkDeadline.BeforeServiceRegistrationCompletion);
-        module.SerialPhaseDurationMs.Should().Be(module.PhaseDurations.Values.Sum());
+        module.SerialDurationMs.Should().Be(module.PhaseExecutions.Sum(static execution => execution.DurationMs));
+        module.PhaseExecutions.Should().Contain(static execution =>
+            execution.Phase == ModulePhase.IterateBusinessTypes);
+        composition.AggregateSerialModuleDurationMs.Should()
+            .Be(composition.ModulePhaseExecutions.Sum(static execution => execution.DurationMs));
         work.Name.Should().Be("diagnostic-work");
+        work.ModuleKey.Should().Be(module.ModuleKey);
+        work.ModuleTypeName.Should().Be(module.ModuleTypeName);
+        work.ModuleRegistrationOrder.Should().Be(module.RegistrationOrder);
         work.OriginPhase.Should().Be(ModulePhase.ConfigureServices);
         work.Deadline.Should().Be(ModuleCompositionWorkDeadline.BeforeServiceRegistrationCompletion);
         work.Status.Should().Be(ModuleCompositionWorkStatus.Succeeded);
+        work.SubmittedOffsetMs.Should().BeLessThanOrEqualTo(work.StartedOffsetMs);
+        work.StartedOffsetMs.Should().BeLessThanOrEqualTo(work.CompletedOffsetMs);
         work.SubmittedAtUtc.Should().BeOnOrBefore(work.StartedAtUtc);
         work.StartedAtUtc.Should().BeOnOrBefore(work.CompletedAtUtc);
+        composition.SystemPhases.Should().OnlyContain(phase =>
+            phase.StartedOffsetMs >= 0
+            && phase.StartedOffsetMs <= phase.CompletedOffsetMs
+            && phase.CompletedOffsetMs <= composition.ElapsedDurationMs);
+        composition.ModulePhaseExecutions.Should().OnlyContain(execution =>
+            execution.StartedOffsetMs >= 0
+            && execution.StartedOffsetMs <= execution.CompletedOffsetMs
+            && execution.CompletedOffsetMs <= composition.ElapsedDurationMs);
+        composition.WorkItems.Should().OnlyContain(item =>
+            item.SubmittedOffsetMs >= 0
+            && item.SubmittedOffsetMs <= item.StartedOffsetMs
+            && item.StartedOffsetMs <= item.CompletedOffsetMs
+            && item.CompletedOffsetMs <= composition.ElapsedDurationMs);
+        composition.Checkpoints.Should().OnlyContain(checkpoint =>
+            checkpoint.EnteredOffsetMs >= 0
+            && checkpoint.EnteredOffsetMs <= checkpoint.ReleasedOffsetMs
+            && checkpoint.ReleasedOffsetMs <= composition.ElapsedDurationMs);
+    }
+
+    [Fact]
+    public void Diagnostics_WhenCompositionWorkFails_ShouldPreserveTheTerminalFailureWithinTheTimeline()
+    {
+        var profiler = new ModuleInitializationProfiler();
+        profiler.StartModuleSystem();
+        using var scheduler = new ModuleCompositionWorkScheduler(maxConcurrency: 1);
+        scheduler.Schedule(
+            typeof(CompositionWorkProbeModuleOne),
+            ModuleKey.Create("Test.Monica.FailedCompositionWork"),
+            registrationOrder: 1,
+            "failed-work",
+            ModulePhase.ConfigureServices,
+            ModuleCompositionWorkDeadline.BeforeBusinessTypeIteration,
+            static () => throw new InvalidOperationException("diagnostic-work-failure"));
+
+        var checkpoint = scheduler.ReachCheckpoint(
+            ModuleCompositionWorkDeadline.BeforeBusinessTypeIteration);
+        checkpoint.HasFailures.Should().BeTrue();
+        scheduler.AbortAndDrain();
+        profiler.RecordCompositionWork(scheduler.GetSnapshot());
+        profiler.StopModuleSystem();
+
+        var composition = profiler.GetCompositionPerformance();
+        var failed = composition.WorkItems.Should().ContainSingle().Subject;
+        failed.Status.Should().Be(ModuleCompositionWorkStatus.Failed);
+        failed.ErrorMessage.Should().Contain("diagnostic-work-failure");
+        failed.SubmittedOffsetMs.Should().BeGreaterThanOrEqualTo(0);
+        failed.SubmittedOffsetMs.Should().BeLessThanOrEqualTo(failed.StartedOffsetMs);
+        failed.StartedOffsetMs.Should().BeLessThanOrEqualTo(failed.CompletedOffsetMs);
+        failed.CompletedOffsetMs.Should().BeLessThanOrEqualTo(composition.ElapsedDurationMs);
+    }
+
+    [Fact]
+    public async Task Diagnostics_WhenCheckpointHasCompletedAndPendingWork_ShouldIdentifyExactBarrierReleaser()
+    {
+        var completedBeforeCheckpoint = NewSignal();
+        var checkpointEntered = NewSignal();
+        using var blocker = new WorkGate(expectedEntrants: 1);
+        var profiler = new ModuleInitializationProfiler();
+        profiler.StartModuleSystem();
+        using var scheduler = new ModuleCompositionWorkScheduler(maxConcurrency: 1);
+        var moduleKey = ModuleKey.Create("Test.Monica.CompositionWork");
+        scheduler.Schedule(
+            typeof(CompositionWorkProbeModuleOne),
+            moduleKey,
+            1,
+            "completed-before-checkpoint",
+            ModulePhase.ConfigureServices,
+            ModuleCompositionWorkDeadline.BeforeBusinessTypeIteration,
+            () => completedBeforeCheckpoint.TrySetResult());
+        scheduler.Schedule(
+            typeof(CompositionWorkProbeModuleOne),
+            moduleKey,
+            1,
+            "checkpoint-releaser",
+            ModulePhase.ConfigureServices,
+            ModuleCompositionWorkDeadline.BeforeBusinessTypeIteration,
+            blocker.Run);
+        Task<ModuleCompositionWorkCheckpointResult>? checkpoint = null;
+
+        try
+        {
+            await blocker.ExpectedEntrantsReached.WaitAsync(HANG_GUARD, TestContext.Current.CancellationToken);
+            checkpoint = Task.Run(
+                () => scheduler.ReachCheckpoint(
+                    ModuleCompositionWorkDeadline.BeforeBusinessTypeIteration,
+                    _ => checkpointEntered.TrySetResult()),
+                TestContext.Current.CancellationToken);
+            await checkpointEntered.Task.WaitAsync(HANG_GUARD, TestContext.Current.CancellationToken);
+            completedBeforeCheckpoint.Task.IsCompleted.Should().BeTrue();
+
+            blocker.Release();
+            var result = await checkpoint.WaitAsync(HANG_GUARD, TestContext.Current.CancellationToken);
+            var completed = result.WorkItems.Single(item => item.Name == "completed-before-checkpoint");
+            var releaser = result.WorkItems.Single(item => item.Name == "checkpoint-releaser");
+
+            result.WorkItems.Select(static item => item.WorkItemId)
+                .Should().Equal(completed.WorkItemId, releaser.WorkItemId);
+            result.PendingWorkItems.Should().ContainSingle()
+                .Which.WorkItemId.Should().Be(releaser.WorkItemId);
+            result.ReleasingWorkItemId.Should().Be(releaser.WorkItemId);
+            result.PendingWorkItems[0].RemainingDuration.Should().BeGreaterThan(TimeSpan.Zero);
+
+            profiler.RecordCompositionWork(scheduler.GetSnapshot());
+            profiler.StopModuleSystem();
+            var composition = profiler.GetCompositionPerformance();
+            var completedPerformance = composition.WorkItems.Single(item =>
+                item.Name == "completed-before-checkpoint");
+            var releaserPerformance = composition.WorkItems.Single(item =>
+                item.Name == "checkpoint-releaser");
+
+            completedPerformance.WasPendingAtDeadline.Should().BeFalse();
+            completedPerformance.IsDeadlineReleaser.Should().BeFalse();
+            releaserPerformance.WasPendingAtDeadline.Should().BeTrue();
+            releaserPerformance.IsDeadlineReleaser.Should().BeTrue();
+            releaserPerformance.RemainingAtDeadlineMs.Should().BeGreaterThan(0);
+            composition.CriticalCheckpoint?.ReleasingWorkItemId.Should().Be(releaser.WorkItemId);
+            composition.CriticalWorkItem?.WorkItemId.Should().Be(releaser.WorkItemId);
+        }
+        finally
+        {
+            blocker.Release();
+            if (checkpoint is not null)
+            {
+                await ObserveCompositionCompletionAsync(checkpoint);
+            }
+        }
+    }
+
+    [Fact]
+    public void Diagnostics_WhenRegistrationHasNoRuntimeSnapshot_ShouldPreserveItsCallbackSpans()
+    {
+        var profiler = new ModuleInitializationProfiler();
+        var moduleKey = ModuleKey.Create("Test.Monica.DisabledComposition");
+        profiler.StartModuleSystem();
+        profiler.StartModulePhase(
+            typeof(CompositionWorkProbeModuleOne),
+            moduleKey,
+            registrationOrder: 42,
+            phase: ModulePhase.ClaimDependencies);
+        profiler.StopModulePhase(typeof(CompositionWorkProbeModuleOne), ModulePhase.ClaimDependencies);
+        profiler.StopModuleSystem();
+
+        var composition = profiler.GetCompositionPerformance();
+        var module = profiler.GetModulePerformances(new HashSet<ModuleKey>()).Should().ContainSingle().Subject;
+
+        composition.ModulePhaseExecutions.Should().ContainSingle(execution =>
+            execution.ModuleKey == moduleKey
+            && execution.ModuleRegistrationOrder == 42
+            && execution.Phase == ModulePhase.ClaimDependencies);
+        module.ModuleKey.Should().Be(moduleKey);
+        module.IsRuntimeAvailable.Should().BeFalse();
+        module.PhaseExecutions.Should().ContainSingle();
     }
 
     [Fact]

@@ -1,0 +1,158 @@
+@using Monica.Core.Modularity.Models
+@using Monica.UI.UIModuleSystem.Support
+@inject IStringLocalizer<SharedResource> L
+
+<section class="performance-work" aria-labelledby="@_titleId">
+    <header class="performance-work__header">
+        <div>
+            <MudText id="@_titleId" Typo="Typo.h6">@L["ModuleSystem:PerformanceMonitoring:Labels:ParallelCompositionWork"]</MudText>
+            <MudText Typo="Typo.body2" Color="Color.Secondary">@L["ModuleSystem:PerformanceMonitoring:Messages:ParallelCompositionWorkDescription"]</MudText>
+        </div>
+        <MudIcon Icon="@Icons.Material.Filled.AccountTree" Color="Color.Success" />
+    </header>
+
+    @if (WorkItems.Count == 0)
+    {
+        <div class="performance-work__empty">
+            <MudIcon Icon="@Icons.Material.Filled.Info" Color="Color.Secondary" Size="Size.Large" />
+            <div>
+                <MudText Typo="Typo.subtitle2">@L["ModuleSystem:CompositionWork:Messages:NoWorkTitle"]</MudText>
+                <MudText Typo="Typo.body2" Color="Color.Secondary">@L["ModuleSystem:CompositionWork:Messages:NoWorkDescription"]</MudText>
+            </div>
+        </div>
+    }
+    else
+    {
+        <div class="performance-work__table-scroll" role="region" aria-label="@L["ModuleSystem:PerformanceMonitoring:Labels:ParallelCompositionWork"]" tabindex="0">
+            <div class="performance-work__table-content">
+                <MudTable T="ModuleCompositionWorkItemView"
+                          Items="@WorkItems.OrderByDescending(static item => item.ExecutionDurationMs).ThenBy(static item => item.Sequence)"
+                          Dense="true"
+                          Hover="true"
+                          Breakpoint="Breakpoint.None">
+                    <HeaderContent>
+                        @if (ShowModuleColumn)
+                        {
+                            <MudTh>@L["ModuleSystem:PerformanceMonitoring:Labels:Module"]</MudTh>
+                        }
+                        <MudTh>@L["ModuleSystem:PerformanceMonitoring:Labels:WorkItem"]</MudTh>
+                        <MudTh>@L["ModuleSystem:PerformanceMonitoring:Labels:ScheduledIn"]</MudTh>
+                        <MudTh>@L["ModuleSystem:PerformanceMonitoring:Labels:MustFinishBefore"]</MudTh>
+                        <MudTh>@L["ModuleSystem:PerformanceMonitoring:Labels:Queue"]</MudTh>
+                        <MudTh>@L["ModuleSystem:PerformanceMonitoring:Labels:Execution"]</MudTh>
+                        <MudTh>@L["ModuleSystem:PerformanceMonitoring:Labels:CheckpointImpact"]</MudTh>
+                        <MudTh>@L["ModuleSystem:PerformanceMonitoring:Labels:Status"]</MudTh>
+                        <MudTh>@L["ModuleSystem:PerformanceMonitoring:Labels:Details"]</MudTh>
+                    </HeaderContent>
+                    <RowTemplate>
+                        @if (ShowModuleColumn)
+                        {
+                            <MudTd DataLabel="@L["ModuleSystem:PerformanceMonitoring:Labels:Module"]">
+                                @if (context.ModuleKey is { } moduleKey)
+                                {
+                                    <MudButton Variant="Variant.Text"
+                                               Color="Color.Primary"
+                                               Size="Size.Small"
+                                               OnClick="() => OpenModuleAsync(moduleKey)">
+                                        @context.ModuleTypeName
+                                    </MudButton>
+                                }
+                                else
+                                {
+                                    <span class="performance-work__identifier">@context.ModuleTypeName</span>
+                                }
+                            </MudTd>
+                        }
+                        <MudTd DataLabel="@L["ModuleSystem:PerformanceMonitoring:Labels:WorkItem"]">
+                            <span class="performance-work__identifier">@context.Name</span>
+                        </MudTd>
+                        <MudTd DataLabel="@L["ModuleSystem:PerformanceMonitoring:Labels:ScheduledIn"]">
+                            @ModulePerformanceDisplayText.Phase(L, context.OriginPhase)
+                        </MudTd>
+                        <MudTd DataLabel="@L["ModuleSystem:PerformanceMonitoring:Labels:MustFinishBefore"]">
+                            @ModulePerformanceDisplayText.Deadline(L, context.Deadline)
+                        </MudTd>
+                        <MudTd DataLabel="@L["ModuleSystem:PerformanceMonitoring:Labels:Queue"]">
+                            @FormatDuration(context.QueueDurationMs)
+                        </MudTd>
+                        <MudTd DataLabel="@L["ModuleSystem:PerformanceMonitoring:Labels:Execution"]">
+                            <strong>@FormatDuration(context.ExecutionDurationMs)</strong>
+                        </MudTd>
+                        <MudTd DataLabel="@L["ModuleSystem:PerformanceMonitoring:Labels:CheckpointImpact"]">
+                            <MudChip T="string"
+                                     Color="@(context.WasPendingAtDeadline ? Color.Warning : Color.Success)"
+                                     Variant="Variant.Outlined"
+                                     Size="Size.Small">
+                                @(context.WasPendingAtDeadline
+                                    ? L["ModuleSystem:PerformanceMonitoring:States:BlockedCheckpoint"]
+                                    : L["ModuleSystem:PerformanceMonitoring:States:CompletedBeforeCheckpoint"])
+                            </MudChip>
+                        </MudTd>
+                        <MudTd DataLabel="@L["ModuleSystem:PerformanceMonitoring:Labels:Status"]">
+                            <MudChip T="string"
+                                     Color="@GetStatusColor(context.Status)"
+                                     Size="Size.Small"
+                                     Icon="@GetStatusIcon(context.Status)">
+                                @ModulePerformanceDisplayText.WorkStatus(L, context.Status)
+                            </MudChip>
+                        </MudTd>
+                        <MudTd DataLabel="@L["ModuleSystem:PerformanceMonitoring:Labels:Details"]">
+                            <span class="performance-work__details">@GetDetails(context)</span>
+                        </MudTd>
+                    </RowTemplate>
+                </MudTable>
+            </div>
+        </div>
+    }
+</section>
+
+@code {
+    private readonly string _titleId = $"performance-work-{Guid.NewGuid():N}";
+
+    [Parameter, EditorRequired]
+    public IReadOnlyList<ModuleCompositionWorkItemView> WorkItems { get; set; } = [];
+
+    [Parameter]
+    public bool ShowModuleColumn { get; set; } = true;
+
+    [Parameter]
+    public EventCallback<ModuleKey> ModuleSelected { get; set; }
+
+    private Task OpenModuleAsync(ModuleKey moduleKey) => ModuleSelected.InvokeAsync(moduleKey);
+
+    private string FormatDuration(double durationMs)
+        => L["ModuleSystem:PerformanceMonitoring:Formats:Duration", durationMs];
+
+    private string GetDetails(ModuleCompositionWorkItemView item)
+    {
+        if (!string.IsNullOrWhiteSpace(item.ErrorMessage))
+        {
+            return item.ErrorMessage;
+        }
+
+        if (item.RemainingAtDeadlineMs is { } remaining)
+        {
+            return L["ModuleSystem:PerformanceMonitoring:Messages:RemainingAtDeadline", remaining];
+        }
+
+        return L["ModuleSystem:PerformanceMonitoring:States:None"];
+    }
+
+    private static Color GetStatusColor(string status) => status switch
+    {
+        "Succeeded" => Color.Success,
+        "Failed" => Color.Error,
+        "Running" => Color.Info,
+        "Canceled" or "Cancelled" => Color.Warning,
+        _ => Color.Default
+    };
+
+    private static string GetStatusIcon(string status) => status switch
+    {
+        "Succeeded" => Icons.Material.Filled.CheckCircle,
+        "Failed" => Icons.Material.Filled.Error,
+        "Running" => Icons.Material.Filled.Sync,
+        "Canceled" or "Cancelled" => Icons.Material.Filled.Cancel,
+        _ => Icons.Material.Filled.HelpOutline
+    };
+}

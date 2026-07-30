@@ -1,0 +1,37 @@
+.performance-callbacks {
+    display: grid;
+    gap: 12px;
+    min-width: 0;
+}
+
+.performance-callbacks__header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.performance-callbacks__header > div {
+    min-width: 0;
+}
+
+.performance-callbacks__table-scroll {
+    min-width: 0;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    border: 1px solid var(--mud-palette-lines-default);
+    border-radius: var(--mud-default-borderradius);
+}
+
+.performance-callbacks__table-scroll:focus-visible {
+    outline: 2px solid var(--mud-palette-primary);
+    outline-offset: -2px;
+}
+
+.performance-callbacks__table-content {
+    min-width: 620px;
+}
+
+.performance-callbacks__table-scroll ::deep .mud-table-container {
+    overflow: visible;
+}

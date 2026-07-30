@@ -1,0 +1,78 @@
+@using Monica.UI.UIModuleSystem.Support
+@inject IStringLocalizer<SharedResource> L
+
+<section class="performance-summary" aria-labelledby="performance-summary-title">
+    <header class="performance-summary__header">
+        <div>
+            <MudText id="performance-summary-title" Typo="Typo.h5">@L["ModuleSystem:PerformanceMonitoring:Labels:DiagnosticsTitle"]</MudText>
+            <MudText Typo="Typo.body2" Color="Color.Secondary">@L["ModuleSystem:PerformanceMonitoring:Messages:DiagnosticsDescription"]</MudText>
+        </div>
+        <MudChip T="string" Color="Color.Info" Variant="Variant.Outlined" Icon="@Icons.Material.Filled.AccountTree">
+            @L["ModuleSystem:PerformanceMonitoring:Messages:WorkItemCount", Summary.WorkItemCount]
+        </MudChip>
+    </header>
+
+    <div class="performance-summary__metrics">
+        @Metric(
+            "performance-summary__metric--primary",
+            Icons.Material.Filled.Timer,
+            L["ModuleSystem:PerformanceMonitoring:Labels:EndToEndElapsed"],
+            Summary.EndToEndElapsedMs,
+            L["ModuleSystem:PerformanceMonitoring:Messages:EndToEndElapsedDescription"])
+        @Metric(
+            "performance-summary__metric--info",
+            Icons.Material.Filled.Memory,
+            L["ModuleSystem:PerformanceMonitoring:Labels:AggregateSerialCallbacks"],
+            Summary.AggregateSerialCallbackMs,
+            L["ModuleSystem:PerformanceMonitoring:Messages:SerialCallbackCount", Summary.SerialCallbackCount])
+        @Metric(
+            "performance-summary__metric--warning",
+            Icons.Material.Filled.Lock,
+            L["ModuleSystem:PerformanceMonitoring:Labels:StartupBlockingWait"],
+            Summary.StartupBlockingWaitMs,
+            L["ModuleSystem:PerformanceMonitoring:Messages:StartupBlockingWaitDescription"])
+        @Metric(
+            "performance-summary__metric--success",
+            Icons.Material.Filled.Schema,
+            L["ModuleSystem:PerformanceMonitoring:Labels:ParallelWorkActiveSpan"],
+            Summary.ParallelWorkActiveSpanMs,
+            L["ModuleSystem:PerformanceMonitoring:Messages:ParallelWorkActiveSpanDescription"])
+    </div>
+
+    <div class="performance-summary__secondary">
+        <span>
+            <small>@L["ModuleSystem:PerformanceMonitoring:Labels:AggregateWorkerExecution"]</small>
+            <strong>@FormatDuration(Summary.AggregateWorkerExecutionMs)</strong>
+        </span>
+        <span>
+            <small>@L["ModuleSystem:PerformanceMonitoring:Labels:AggregateWorkerQueue"]</small>
+            <strong>@FormatDuration(Summary.AggregateWorkerQueueMs)</strong>
+        </span>
+    </div>
+
+    <MudAlert Severity="Severity.Info" Variant="Variant.Outlined" Dense="true">
+        @L["ModuleSystem:PerformanceMonitoring:Messages:MetricsOverlap"]
+    </MudAlert>
+</section>
+
+@code {
+    [Parameter, EditorRequired]
+    public ModulePerformanceSummaryView Summary { get; set; } = default!;
+
+    private RenderFragment Metric(
+        string modifier,
+        string icon,
+        string label,
+        double durationMs,
+        string description) => @<article class="performance-summary__metric @modifier">
+        <MudIcon Icon="@icon" Size="Size.Large" />
+        <div>
+            <small>@label</small>
+            <strong>@FormatDuration(durationMs)</strong>
+            <span>@description</span>
+        </div>
+    </article>;
+
+    private string FormatDuration(double durationMs)
+        => L["ModuleSystem:PerformanceMonitoring:Formats:Duration", durationMs];
+}

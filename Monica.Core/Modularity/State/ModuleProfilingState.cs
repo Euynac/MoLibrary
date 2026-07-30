@@ -1,61 +1,91 @@
-using System.Diagnostics;
 using Monica.Core.Modularity.Diagnostics.Models;
-using Monica.Core.Modularity.Models;
 using Monica.Core.Modularity.Services.Support;
 
 namespace Monica.Core.Modularity.State;
 
 /// <summary>
-/// Stores module initialization profiling data for one Monica application instance.
+/// Stores module composition profiling data for one Monica application instance.
 /// </summary>
 internal sealed class ModuleProfilingState
 {
     /// <summary>
-    /// Gets the stopwatch that measures the full module-system initialization lifecycle.
+    /// Gets active system phases keyed by profiler name.
     /// </summary>
-    public Stopwatch SystemStopwatch { get; } = new();
+    internal Dictionary<string, ModuleSystemPhaseProfileStart> ActiveSystemPhases { get; } = [];
 
     /// <summary>
-    /// Gets stopwatches keyed by module-system phase name.
+    /// Gets completed system-phase executions in occurrence order.
     /// </summary>
-    public Dictionary<string, Stopwatch> PhaseStopwatches { get; } = [];
-
-    /// <summary>
-    /// Gets phase names in first-observed initialization order.
-    /// </summary>
-    public List<string> PhaseInitializationOrder { get; } = [];
+    internal List<ModuleSystemPhasePerformanceInfo> SystemPhases { get; } = [];
 
     /// <summary>
     /// Gets per-module profiling data keyed by module type.
     /// </summary>
-    public Dictionary<Type, ModuleProfileInfo> ModuleProfiles { get; } = [];
+    internal Dictionary<Type, ModuleProfileState> ModuleProfiles { get; } = [];
 
     /// <summary>
-    /// Gets composition-work checkpoint waits in lifecycle order.
+    /// Gets lifecycle milestones in occurrence order.
     /// </summary>
-    public List<ModuleCompositionCheckpointPerformanceInfo> CompositionCheckpoints { get; } = [];
+    internal List<ModuleCompositionMilestonePerformanceInfo> Milestones { get; } = [];
 
     /// <summary>
-    /// Gets or sets the monotonic wall-clock span across scheduled composition work.
+    /// Gets scheduled composition work in stable submission order.
     /// </summary>
-    public long CompositionWorkWallDurationMs { get; set; }
+    internal List<ModuleCompositionWorkPerformanceInfo> CompositionWorkItems { get; } = [];
+
+    /// <summary>
+    /// Gets composition-work checkpoint observations in lifecycle order.
+    /// </summary>
+    internal List<ModuleCompositionCheckpointPerformanceInfo> CompositionCheckpoints { get; } = [];
+
+    /// <summary>
+    /// Gets the UTC timestamp paired with <see cref="OriginTimestamp"/>.
+    /// </summary>
+    internal DateTimeOffset OriginUtc { get; set; }
+
+    /// <summary>
+    /// Gets the monotonic timestamp used as offset zero.
+    /// </summary>
+    internal long? OriginTimestamp { get; set; }
+
+    /// <summary>
+    /// Gets or sets the terminal monotonic timestamp after composition profiling stops.
+    /// </summary>
+    internal long? TerminalTimestamp { get; set; }
 
     /// <summary>
     /// Gets or sets whether system-level module profiling is currently running.
     /// </summary>
-    public bool IsStarted { get; set; }
+    internal bool IsStarted { get; set; }
+
+    /// <summary>
+    /// Gets the next global occurrence sequence for milestones and serial phases.
+    /// </summary>
+    internal long NextSequence { get; set; }
 
     /// <summary>
     /// Clears profiling data.
     /// </summary>
-    public void Clear()
+    internal void Clear()
     {
-        SystemStopwatch.Reset();
-        PhaseStopwatches.Clear();
-        PhaseInitializationOrder.Clear();
+        ActiveSystemPhases.Clear();
+        SystemPhases.Clear();
         ModuleProfiles.Clear();
+        Milestones.Clear();
+        CompositionWorkItems.Clear();
         CompositionCheckpoints.Clear();
-        CompositionWorkWallDurationMs = 0;
+        OriginUtc = default;
+        OriginTimestamp = null;
+        TerminalTimestamp = null;
         IsStarted = false;
+        NextSequence = 0;
     }
 }
+
+/// <summary>
+/// Stores the active boundary of one system-level serial phase.
+/// </summary>
+internal sealed record ModuleSystemPhaseProfileStart(
+    long Sequence,
+    long StartedTimestamp,
+    DateTimeOffset StartedAtUtc);

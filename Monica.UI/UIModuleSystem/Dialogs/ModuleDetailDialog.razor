@@ -3,9 +3,10 @@
 @using Microsoft.Extensions.Localization
 @using Monica.Core.Modularity.Diagnostics.Models
 @using Monica.Core.Modularity.Models
+@using Monica.UI.UIModuleSystem.Support
 @inject IStringLocalizer<SharedResource> L
 
-<MudDialog Visible="IsVisible" VisibleChanged="OnVisibleChanged" Options="DialogOptions">
+<MudDialog Visible="IsVisible" VisibleChanged="OnVisibleChanged" Options="@DIALOG_OPTIONS">
     <DialogContent>
         @if (SelectedModuleDetail != null)
         {
@@ -19,7 +20,11 @@
                 </MudText>
             </div>
             
-            <MudTabs Elevation="2" Rounded="true" ApplyEffectsToContainer="true">
+            <MudTabs Elevation="2"
+                     Rounded="true"
+                     ApplyEffectsToContainer="true"
+                     ActivePanelIndex="@((int)_activeTab)"
+                     ActivePanelIndexChanged="OnActiveTabChanged">
                 <MudTabPanel Text="@L["ModuleSystem:ModuleDetail:Tabs:BasicInfo"]" Icon="@Icons.Material.Filled.Info">
                     <div class="tab-content">
                         <MudGrid Spacing="3" Class="mt-4">
@@ -114,149 +119,31 @@
 
                 <MudTabPanel Text="@L["ModuleSystem:ModuleDetail:Tabs:PerformanceInfo"]" Icon="@Icons.Material.Filled.Speed">
                     <div class="tab-content">
-                        <MudGrid Spacing="3" Class="mt-4">
-                            <MudItem xs="12">
-                                <MudPaper Class="pa-4 detail-card" Elevation="2">
-                                    <div class="d-flex align-center mb-3">
-                                        <MudIcon Icon="@Icons.Material.Filled.Timer" Color="Color.Primary" Size="Size.Medium" Class="mr-2" />
-                                        <MudText Typo="Typo.h6">@L["ModuleSystem:ModuleDetail:Labels:SerialPhaseDuration"]</MudText>
-                                    </div>
-                                    <MudText Typo="Typo.h4" Color="Color.Primary">
-                                        @($"{SelectedModuleDetail.PerformanceInfo.SerialPhaseDurationMs}ms")
-                                    </MudText>
-                                </MudPaper>
-                            </MudItem>
-                            @if (SelectedModuleDetail.PerformanceInfo.CompositionWorkItems.Count == 0)
-                            {
-                                <MudItem xs="12">
-                                    <MudPaper Class="pa-4" Elevation="0">
-                                        <div class="d-flex align-center">
-                                            <MudIcon Icon="@Icons.Material.Filled.Info" Color="Color.Secondary" Class="mr-3" />
-                                            <div>
-                                                <MudText Typo="Typo.subtitle1">@L["ModuleSystem:CompositionWork:Messages:NoModuleWorkTitle"]</MudText>
-                                                <MudText Typo="Typo.caption" Color="Color.Secondary">
-                                                    @L["ModuleSystem:CompositionWork:Messages:NoModuleWorkDescription"]
-                                                </MudText>
-                                            </div>
-                                        </div>
-                                    </MudPaper>
-                                </MudItem>
-                            }
-                            else
-                            {
-                                <MudItem xs="12">
-                                    <MudText Typo="Typo.h6" Class="mb-3">@L["ModuleSystem:CompositionWork:Labels:ModuleWork"]</MudText>
-                                    <MudGrid Spacing="2">
-                                        <MudItem xs="12" sm="6" md="3">
-                                            <MudPaper Class="pa-3 detail-card" Elevation="1">
-                                                <MudText Typo="Typo.caption" Color="Color.Secondary">@L["ModuleSystem:CompositionWork:Labels:WorkItemCount"]</MudText>
-                                                <MudText Typo="Typo.h5" Color="Color.Primary">@SelectedModuleDetail.PerformanceInfo.CompositionWorkItems.Count</MudText>
-                                            </MudPaper>
-                                        </MudItem>
-                                        <MudItem xs="12" sm="6" md="3">
-                                            <MudPaper Class="pa-3 detail-card" Elevation="1">
-                                                <MudText Typo="Typo.caption" Color="Color.Secondary">@L["ModuleSystem:CompositionWork:Labels:AggregateExecutionDuration"]</MudText>
-                                                <MudText Typo="Typo.h5" Color="Color.Success">
-                                                    @($"{GetTotalExecutionDuration(SelectedModuleDetail.PerformanceInfo.CompositionWorkItems)}ms")
-                                                </MudText>
-                                            </MudPaper>
-                                        </MudItem>
-                                        <MudItem xs="12" sm="6" md="3">
-                                            <MudPaper Class="pa-3 detail-card" Elevation="1">
-                                                <MudText Typo="Typo.caption" Color="Color.Secondary">@L["ModuleSystem:CompositionWork:Labels:AggregateQueueDuration"]</MudText>
-                                                <MudText Typo="Typo.h5" Color="Color.Info">
-                                                    @($"{GetTotalQueueDuration(SelectedModuleDetail.PerformanceInfo.CompositionWorkItems)}ms")
-                                                </MudText>
-                                            </MudPaper>
-                                        </MudItem>
-                                        <MudItem xs="12" sm="6" md="3">
-                                            <MudPaper Class="pa-3 detail-card" Elevation="1">
-                                                <MudText Typo="Typo.caption" Color="Color.Secondary">@L["ModuleSystem:CompositionWork:Labels:FailedWorkItemCount"]</MudText>
-                                                <MudText Typo="Typo.h5" Color="@GetFailureCountColor(SelectedModuleDetail.PerformanceInfo.CompositionWorkItems)">
-                                                    @GetFailedWorkItemCount(SelectedModuleDetail.PerformanceInfo.CompositionWorkItems)
-                                                </MudText>
-                                            </MudPaper>
-                                        </MudItem>
-                                    </MudGrid>
-                                </MudItem>
-                                <MudItem xs="12">
-                                    <div class="composition-work-table">
-                                        <div class="composition-work-table__content">
-                                            <MudTable T="ModuleCompositionWorkPerformanceInfo"
-                                                      Items="@SelectedModuleDetail.PerformanceInfo.CompositionWorkItems"
-                                                      Dense="true"
-                                                      Hover="true">
-                                                <HeaderContent>
-                                                    <MudTh>@L["ModuleSystem:CompositionWork:Labels:WorkName"]</MudTh>
-                                                    <MudTh>@L["ModuleSystem:CompositionWork:Labels:OriginPhase"]</MudTh>
-                                                    <MudTh>@L["ModuleSystem:CompositionWork:Labels:Deadline"]</MudTh>
-                                                    <MudTh>@L["ModuleSystem:CompositionWork:Labels:Status"]</MudTh>
-                                                    <MudTh>@L["ModuleSystem:CompositionWork:Labels:QueueDuration"]</MudTh>
-                                                    <MudTh>@L["ModuleSystem:CompositionWork:Labels:ExecutionDuration"]</MudTh>
-                                                    <MudTh>@L["ModuleSystem:CompositionWork:Labels:Error"]</MudTh>
-                                                </HeaderContent>
-                                                <RowTemplate>
-                                                    <MudTd DataLabel="@L["ModuleSystem:CompositionWork:Labels:WorkName"]">
-                                                        <span class="composition-work-table__identifier">@context.Name</span>
-                                                    </MudTd>
-                                                    <MudTd DataLabel="@L["ModuleSystem:CompositionWork:Labels:OriginPhase"]">
-                                                        @GetPhaseText(context.OriginPhase)
-                                                    </MudTd>
-                                                    <MudTd DataLabel="@L["ModuleSystem:CompositionWork:Labels:Deadline"]">
-                                                        @GetDeadlineText(context.Deadline)
-                                                    </MudTd>
-                                                    <MudTd DataLabel="@L["ModuleSystem:CompositionWork:Labels:Status"]">
-                                                        <MudChip T="string"
-                                                                 Color="@GetCompositionWorkStatusColor(context.Status)"
-                                                                 Size="Size.Small"
-                                                                 Icon="@GetCompositionWorkStatusIcon(context.Status)">
-                                                            @GetCompositionWorkStatusText(context.Status)
-                                                        </MudChip>
-                                                    </MudTd>
-                                                    <MudTd DataLabel="@L["ModuleSystem:CompositionWork:Labels:QueueDuration"]">
-                                                        @($"{context.QueueDurationMs}ms")
-                                                    </MudTd>
-                                                    <MudTd DataLabel="@L["ModuleSystem:CompositionWork:Labels:ExecutionDuration"]">
-                                                        @($"{context.ExecutionDurationMs}ms")
-                                                    </MudTd>
-                                                    <MudTd DataLabel="@L["ModuleSystem:CompositionWork:Labels:Error"]">
-                                                        <span class="composition-work-table__error">
-                                                            @GetCompositionWorkErrorText(context.ErrorMessage)
-                                                        </span>
-                                                    </MudTd>
-                                                </RowTemplate>
-                                            </MudTable>
-                                        </div>
-                                    </div>
-                                </MudItem>
-                            }
-                            @if (SelectedModuleDetail.PerformanceInfo.PhaseDurations.Any())
-                            {
-                                <MudItem xs="12">
-                                    <MudText Typo="Typo.h6" Class="mb-3">@L["ModuleSystem:ModuleDetail:Labels:PhaseDetails"]</MudText>
-                                    <MudStack Spacing="2">
-                                        @foreach (var phase in SelectedModuleDetail.PerformanceInfo.PhaseDurations)
-                                        {
-                                            <MudPaper Class="pa-3 phase-card" Elevation="1">
-                                                <div class="d-flex justify-space-between align-center">
-                                                    <div class="d-flex align-center">
-                                                        <MudIcon Icon="@GetPhaseIcon(phase.Key)" Color="Color.Secondary" Size="Size.Small" Class="mr-2" />
-                                                        <MudText Typo="Typo.subtitle1">@GetPhaseText(phase.Key)</MudText>
-                                                    </div>
-                                                    <div class="text-right">
-                                                        <MudText Typo="Typo.body1" Color="Color.Secondary">@($"{phase.Value}ms")</MudText>
-                                                        <MudProgressLinear Color="@GetPhaseColor(phase.Key)" 
-                                                                         Value="@GetPhasePercentage(phase.Value)" 
-                                                                         Class="mt-1" 
-                                                                         Style="width: 100px; height: 4px;" />
-                                                    </div>
-                                                </div>
-                                            </MudPaper>
-                                        }
-                                    </MudStack>
-                                </MudItem>
-                            }
-                        </MudGrid>
+                        <div class="module-performance-detail">
+                            <div class="module-performance-detail__summary">
+                                <article>
+                                    <small>@L["ModuleSystem:ModuleDetail:Labels:SerialPhaseDuration"]</small>
+                                    <strong>@FormatDuration(SelectedModuleDetail.PerformanceInfo.SerialDurationMs)</strong>
+                                </article>
+                                <article>
+                                    <small>@L["ModuleSystem:CompositionWork:Labels:WorkItemCount"]</small>
+                                    <strong>@SelectedModuleDetail.PerformanceInfo.CompositionWorkItems.Count</strong>
+                                </article>
+                                <article>
+                                    <small>@L["ModuleSystem:CompositionWork:Labels:AggregateExecutionDuration"]</small>
+                                    <strong>@FormatDuration(GetTotalExecutionDuration(SelectedModuleDetail.PerformanceInfo.CompositionWorkItems))</strong>
+                                </article>
+                                <article>
+                                    <small>@L["ModuleSystem:CompositionWork:Labels:AggregateQueueDuration"]</small>
+                                    <strong>@FormatDuration(GetTotalQueueDuration(SelectedModuleDetail.PerformanceInfo.CompositionWorkItems))</strong>
+                                </article>
+                            </div>
+
+                            <ModulePerformanceWorkTable
+                                WorkItems="@ModulePerformanceDashboardViewFactory.CreateWorkItems(SelectedModuleDetail.PerformanceInfo.CompositionWorkItems)"
+                                ShowModuleColumn="false" />
+                            <ModulePerformanceCallbackTable Executions="SelectedModuleDetail.PerformanceInfo.PhaseExecutions" />
+                        </div>
                     </div>
                 </MudTabPanel>
 
@@ -421,6 +308,18 @@
 
 
 @code {
+    private static readonly DialogOptions DIALOG_OPTIONS = new()
+    {
+        CloseButton = true,
+        CloseOnEscapeKey = true,
+        FullWidth = true,
+        MaxWidth = MaxWidth.Large
+    };
+
+    private ModuleDetailTab _activeTab;
+    private ModuleKey? _displayedModuleKey;
+    private bool _wasVisible;
+
     /// <summary>
     /// Whether to display the dialog box
     /// </summary>
@@ -437,15 +336,22 @@
     [Parameter] public ModuleDetailInfo? SelectedModuleDetail { get; set; }
 
     /// <summary>
-    /// Dialog options
+    /// Gets the tab selected when the dialog opens for a module.
     /// </summary>
-    private DialogOptions DialogOptions = new()
+    [Parameter]
+    public ModuleDetailTab InitialTab { get; set; } = ModuleDetailTab.Basic;
+
+    protected override void OnParametersSet()
     {
-        CloseButton = true,
-        CloseOnEscapeKey = true,
-        FullWidth = true,
-        MaxWidth = MaxWidth.Large
-    };
+        var moduleKey = SelectedModuleDetail?.BasicInfo.ModuleKey;
+        if (IsVisible && (!_wasVisible || !Equals(moduleKey, _displayedModuleKey)))
+        {
+            _activeTab = InitialTab;
+            _displayedModuleKey = moduleKey;
+        }
+
+        _wasVisible = IsVisible;
+    }
 
     /// <summary>
     /// Close dialog
@@ -454,6 +360,14 @@
     private Task OnClose() => SetVisibilityAsync(false);
 
     private Task OnVisibleChanged(bool isVisible) => SetVisibilityAsync(isVisible);
+
+    private void OnActiveTabChanged(int tabIndex)
+    {
+        if (Enum.IsDefined(typeof(ModuleDetailTab), tabIndex))
+        {
+            _activeTab = (ModuleDetailTab)tabIndex;
+        }
+    }
 
     private async Task SetVisibilityAsync(bool isVisible)
     {
@@ -479,115 +393,14 @@
         return transitive;
     }
 
-    /// <summary>
-    /// Get stage icon
-    /// </summary>
-    /// <param name="phase">Phase</param>
-    /// <returns></returns>
-    private string GetPhaseIcon(ModulePhase phase) => phase switch
-    {
-        ModulePhase.ConfigureBuilder => Icons.Material.Filled.AppRegistration,
-        ModulePhase.InitFinalConfigures => Icons.Material.Filled.Settings,
-		ModulePhase.ConfigureServices => Icons.Material.Filled.FirstPage,
-        ModulePhase.PostConfigureServices => Icons.Material.Filled.LastPage,
-        ModulePhase.ClaimDependencies => Icons.Material.Filled.AccountTree,
-
-        _ => Icons.Material.Filled.PlayArrow
-    };
-
-    /// <summary>
-    /// Get stage color
-    /// </summary>
-    /// <param name="phase">Phase</param>
-    /// <returns></returns>
-    private Color GetPhaseColor(ModulePhase phase) => phase switch
-    {
-        ModulePhase.ConfigureBuilder => Color.Primary,
-        ModulePhase.InitFinalConfigures => Color.Secondary,
-        ModulePhase.ConfigureServices => Color.Info,
-        ModulePhase.PostConfigureServices => Color.Success,
-        ModulePhase.ClaimDependencies => Color.Warning,
-        _ => Color.Default
-    };
-
-    /// <summary>
-    /// Get stage percentage
-    /// </summary>
-    /// <param name="duration">Duration</param>
-    /// <returns></returns>
-    private double GetPhasePercentage(long duration)
-    {
-        if (SelectedModuleDetail?.PerformanceInfo == null) return 0;
-        
-        var totalDuration = SelectedModuleDetail.PerformanceInfo.PhaseDurations.Values.Sum();
-        return totalDuration > 0 ? (double)duration / totalDuration * 100 : 0;
-    }
-
-    private string GetCompositionWorkStatusText(ModuleCompositionWorkStatus status) => status switch
-    {
-        ModuleCompositionWorkStatus.Succeeded => L["ModuleSystem:CompositionWork:States:Succeeded"],
-        ModuleCompositionWorkStatus.Failed => L["ModuleSystem:CompositionWork:States:Failed"],
-        _ => L["ModuleSystem:CompositionWork:States:Unknown"]
-    };
-
-    private static Color GetCompositionWorkStatusColor(ModuleCompositionWorkStatus status) => status switch
-    {
-        ModuleCompositionWorkStatus.Succeeded => Color.Success,
-        ModuleCompositionWorkStatus.Failed => Color.Error,
-        _ => Color.Default
-    };
-
-    private static string GetCompositionWorkStatusIcon(ModuleCompositionWorkStatus status) => status switch
-    {
-        ModuleCompositionWorkStatus.Succeeded => Icons.Material.Filled.CheckCircle,
-        ModuleCompositionWorkStatus.Failed => Icons.Material.Filled.Error,
-        _ => Icons.Material.Filled.HelpOutline
-    };
-
-    private static Color GetFailureCountColor(IReadOnlyCollection<ModuleCompositionWorkPerformanceInfo> workItems)
-        => GetFailedWorkItemCount(workItems) > 0
-            ? Color.Error
-            : Color.Success;
-
-    private static long GetTotalExecutionDuration(IEnumerable<ModuleCompositionWorkPerformanceInfo> workItems)
+    private static double GetTotalExecutionDuration(IEnumerable<ModuleCompositionWorkPerformanceInfo> workItems)
         => workItems.Sum(static item => item.ExecutionDurationMs);
 
-    private static long GetTotalQueueDuration(IEnumerable<ModuleCompositionWorkPerformanceInfo> workItems)
+    private static double GetTotalQueueDuration(IEnumerable<ModuleCompositionWorkPerformanceInfo> workItems)
         => workItems.Sum(static item => item.QueueDurationMs);
 
-    private static int GetFailedWorkItemCount(IEnumerable<ModuleCompositionWorkPerformanceInfo> workItems)
-        => workItems.Count(static item => item.Status == ModuleCompositionWorkStatus.Failed);
-
-    private string GetCompositionWorkErrorText(string? errorMessage)
-        => string.IsNullOrWhiteSpace(errorMessage)
-            ? L["ModuleSystem:CompositionWork:States:None"]
-            : errorMessage;
-
-    private string GetDeadlineText(ModuleCompositionWorkDeadline deadline) => deadline switch
-    {
-        ModuleCompositionWorkDeadline.BeforeBusinessTypeIteration =>
-            L["ModuleSystem:CompositionWork:Deadlines:BeforeBusinessTypeIteration"],
-        ModuleCompositionWorkDeadline.BeforePostConfigureServices =>
-            L["ModuleSystem:CompositionWork:Deadlines:BeforePostConfigureServices"],
-        ModuleCompositionWorkDeadline.BeforeServiceRegistrationCompletion =>
-            L["ModuleSystem:CompositionWork:Deadlines:BeforeServiceRegistrationCompletion"],
-        _ => L["ModuleSystem:CompositionWork:States:Unknown"]
-    };
-
-    private string GetPhaseText(ModulePhase phase) => phase switch
-    {
-        ModulePhase.None => L["ModuleSystem:CompositionWork:Phases:None"],
-        ModulePhase.ClaimDependencies => L["ModuleSystem:CompositionWork:Phases:ClaimDependencies"],
-        ModulePhase.InitFinalConfigures => L["ModuleSystem:CompositionWork:Phases:InitFinalConfigures"],
-        ModulePhase.ConfigureBuilder => L["ModuleSystem:CompositionWork:Phases:ConfigureBuilder"],
-        ModulePhase.ConfigureServices => L["ModuleSystem:CompositionWork:Phases:ConfigureServices"],
-        ModulePhase.IterateBusinessTypes => L["ModuleSystem:CompositionWork:Phases:IterateBusinessTypes"],
-        ModulePhase.PostConfigureServices => L["ModuleSystem:CompositionWork:Phases:PostConfigureServices"],
-        ModulePhase.ConfigureApplicationBuilder => L["ModuleSystem:CompositionWork:Phases:ConfigureApplicationBuilder"],
-        ModulePhase.ConfigureEndpoints => L["ModuleSystem:CompositionWork:Phases:ConfigureEndpoints"],
-        ModulePhase.Disabled => L["ModuleSystem:CompositionWork:Phases:Disabled"],
-        _ => L["ModuleSystem:CompositionWork:States:Unknown"]
-    };
+    private string FormatDuration(double durationMs)
+        => L["ModuleSystem:PerformanceMonitoring:Formats:Duration", durationMs];
 
     /// <summary>
     /// Gets the localized capability label for the selected module.

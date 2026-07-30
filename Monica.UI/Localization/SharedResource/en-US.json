@@ -112,10 +112,9 @@
       "Labels": {
         "SystemStatus": "System Status",
         "ModuleStatistics": "Module Statistics",
-        "InitializationTime": "Initialization Time",
+        "InitializationTime": "Service Registration Time",
         "HealthStatus": "Health Status",
         "TotalModules": "Total Modules",
-        "StartTime": "Start Time",
         "Unknown": "Unknown",
         "Loading": "Loading..."
       },
@@ -181,7 +180,7 @@
         "DiscoveredIssues": "Discovered Issues",
         "AverageSerialPhaseDuration": "Average Serial Phase Duration",
         "SlowestSerialPhaseDuration": "Slowest Serial Module Duration",
-        "EfficiencyScore": "Efficiency Score",
+        "EfficiencyScore": "Service Registration Efficiency",
         "MemoryUsage": "Memory Usage"
       },
       "Messages": {
@@ -205,72 +204,110 @@
     },
     "PerformanceMonitoring": {
       "Labels": {
-        "PerformanceOverview": "Performance Overview",
-        "SlowestModules": "Slowest Serial Module Callbacks",
-        "PhasePerformanceAnalysis": "Phase Performance Analysis",
-        "SystemWallDuration": "Composition Wall Time",
-        "ModulePhaseAggregateDuration": "Aggregate Module-Phase Work",
-        "CompositionWorkWallDuration": "Composition Work Wall Time",
-        "CompositionWorkExecutionDuration": "Aggregate Composition Work Execution",
-        "CompositionWorkQueueDuration": "Aggregate Queue Time",
-        "CompositionCheckpointWaitDuration": "Aggregate Checkpoint Wait",
+        "DiagnosticsTitle": "Startup Performance Diagnostics",
+        "EndToEndElapsed": "End-to-end composition elapsed",
+        "AggregateSerialCallbacks": "Aggregate serial module callbacks",
+        "StartupBlockingWait": "Startup-blocking wait",
+        "ParallelWorkActiveSpan": "Parallel work active span",
+        "AggregateWorkerExecution": "Aggregate worker execution",
+        "AggregateWorkerQueue": "Aggregate worker queue",
+        "MilestoneTimeline": "Composition milestone timeline",
+        "ParallelWorkBarriers": "Parallel-work barriers",
+        "DueWorkItems": "Due work",
+        "PendingAtEntry": "Pending at entry",
+        "CheckpointEntered": "Entered",
+        "CheckpointReleased": "Released",
+        "BarrierReleaser": "Barrier releaser",
+        "PendingWorkItems": "Pending work items",
+        "ParallelCompositionWork": "Parallel composition work",
+        "Module": "Module",
+        "WorkItem": "Work item",
+        "ScheduledIn": "Scheduled in",
+        "MustFinishBefore": "Must finish before",
+        "Queue": "Queue",
+        "Execution": "Execution",
+        "CheckpointImpact": "Checkpoint impact",
+        "Details": "Details",
+        "SerialModuleCallbacks": "Serial module callbacks",
+        "SortBy": "Sort by",
+        "SerialTotal": "Serial total",
+        "SlowestPhase": "Slowest phase",
+        "SlowestPhaseDuration": "Slowest phase duration",
+        "CallbackCount": "Callbacks",
+        "ScheduledWorkCount": "Scheduled work",
+        "CompositionPhaseElapsed": "Composition phase elapsed",
         "Order": "Order",
         "PhaseName": "Phase Name",
-        "Duration": "Duration (ms)",
-        "PerformanceRatio": "Performance Ratio",
+        "StartedAt": "Started at",
+        "Duration": "Duration",
+        "EndToEndShare": "End-to-end share",
         "Status": "Status"
       },
       "Messages": {
+        "DiagnosticsDescription": "Locate startup cost across serial callbacks, parallel workers, host-owned gaps, and blocking barriers.",
+        "WorkItemCount": "{0} parallel work items",
+        "EndToEndElapsedDescription": "From Monica composition start to the host-specific completion boundary.",
+        "SerialCallbackCount": "{0} callback executions",
+        "StartupBlockingWaitDescription": "Time the serial composition path actually waited at parallel-work barriers.",
+        "ParallelWorkActiveSpanDescription": "From the earliest worker start to the latest worker completion.",
+        "MetricsOverlap": "These metrics describe different dimensions. Some intervals overlap and must not be added together.",
+        "MilestoneTimelineDescription": "Separates Monica composition from host-owned gaps between registration, pipeline setup, and endpoint mapping.",
+        "CriticalPath": "{0} waited {3}; {1} / {2} released the barrier.",
+        "NoBlockingCriticalPath": "No parallel work item blocked a composition barrier.",
+        "NoMilestones": "No composition milestones were recorded.",
+        "ParallelWorkBarriersDescription": "Shows which work was due and still pending when each startup checkpoint was reached.",
+        "NoCheckpoints": "No parallel-work checkpoints were recorded.",
+        "ParallelCompositionWorkDescription": "Module-owned work ordered by active execution time, with scheduling phase and startup impact.",
+        "RemainingAtDeadline": "{0:N0} ms remained when the deadline was reached.",
+        "SerialModuleCallbacksDescription": "Ranks only synchronous module callbacks; parallel work remains visible in its own table.",
+        "CompositionPhaseElapsedDescription": "Every system phase span and its share of end-to-end composition time.",
         "NoPerformanceData": "No performance data",
-        "NoPhasePerformanceData": "No phase performance data",
-        "ModulePhaseExecutionCount": "{0} module-phase executions"
+        "NoPhasePerformanceData": "No phase performance data"
       },
       "States": {
-        "Slow": "Slow",
-        "Medium": "Medium",
-        "Good": "Good",
-        "Excellent": "Excellent"
+        "None": "None",
+        "BlockedCheckpoint": "Blocked checkpoint",
+        "CompletedBeforeCheckpoint": "Completed before checkpoint",
+        "HostOwnedGap": "Host-owned gap",
+        "MonicaCompositionInterval": "Monica composition"
+      },
+      "Actions": {
+        "InspectModule": "Inspect module",
+        "SortAscending": "Sort ascending",
+        "SortDescending": "Sort descending"
+      },
+      "Formats": {
+        "Duration": "{0:N0} ms",
+        "Offset": "+{0:N0} ms",
+        "ElapsedSincePrevious": "{0:N0} ms since previous milestone",
+        "PendingWorkItem": "{0} · {1:N0} ms remaining",
+        "Percentage": "{0:N1}%"
+      },
+      "Milestones": {
+        "CompositionStarted": "Composition started",
+        "ServiceRegistrationCompleted": "Service registration completed",
+        "ApplicationPipelineStarted": "Application pipeline started",
+        "ApplicationPipelineCompleted": "Application pipeline completed",
+        "EndpointMappingStarted": "Endpoint mapping started",
+        "CompositionCompleted": "Composition completed"
       },
       "Loading": {
-        "PerformanceOverview": "Loading performance overview...",
-        "SlowestModules": "Loading slowest modules...",
-        "PhasePerformanceData": "Loading phase performance data..."
+        "Diagnostics": "Loading startup performance diagnostics..."
       }
     },
     "CompositionWork": {
       "Labels": {
-        "ModuleWork": "Module Composition Work",
-        "CheckpointSummary": "Composition Checkpoints",
-        "Checkpoint": "Checkpoint",
         "WorkItemCount": "Work Items",
-        "CheckpointWaitDuration": "Serial Wait",
         "AggregateExecutionDuration": "Aggregate Execution",
-        "AggregateQueueDuration": "Aggregate Queue Time",
-        "FailedWorkItemCount": "Failed Work Items",
-        "WorkName": "Work Name",
-        "OriginPhase": "Origin Phase",
-        "Deadline": "Deadline",
-        "Status": "Status",
-        "QueueDuration": "Queue Time",
-        "ExecutionDuration": "Execution Time",
-        "Error": "Error"
+        "AggregateQueueDuration": "Aggregate Queue Time"
       },
       "Messages": {
         "NoWorkTitle": "No composition work",
-        "NoWorkDescription": "No module scheduled concurrent composition work for this application.",
-        "NoModuleWorkTitle": "No composition work",
-        "NoModuleWorkDescription": "This module completed through the serial module phases only.",
-        "WorkItemCount": "{0} composition work items",
-        "ConcurrentWorkExplanation": "Execution time is summed across workers and can exceed wall time when work overlaps.",
-        "QueueDurationExplanation": "Total time work items waited for an available composition worker.",
-        "CheckpointWaitExplanation": "Total time the serial composition pipeline waited at work deadlines.",
-        "NoCheckpointData": "No checkpoint wait data was recorded."
+        "NoWorkDescription": "No module scheduled concurrent composition work for this application."
       },
       "States": {
         "Succeeded": "Succeeded",
-        "Failed": "Failed",
-        "None": "None",
-        "Unknown": "Unknown"
+        "Failed": "Failed"
       },
       "Deadlines": {
         "BeforeBusinessTypeIteration": "Before business-type iteration",
@@ -282,6 +319,7 @@
         "ClaimDependencies": "Claim dependencies",
         "InitFinalConfigures": "Initialize final configuration",
         "ConfigureBuilder": "Configure host builder",
+        "ConfigureBuilderAndServices": "Configure host builder and services",
         "ConfigureServices": "Configure services",
         "IterateBusinessTypes": "Iterate business types",
         "PostConfigureServices": "Post-configure services",
@@ -406,7 +444,7 @@
         "ModuleOption": "Module Option",
         "ExtraOption": "Extra Option",
         "SerialPhaseDuration": "Serial Phase Duration",
-        "PhaseDetails": "Phase Details",
+        "CallbackExecutions": "Serial callback executions",
         "DirectDependencies": "Direct Dependencies",
         "TotalDependencies": "Total Dependencies",
         "DependedByCount": "Depended By",
@@ -430,7 +468,9 @@
         "CircularPath": "Circular Path",
         "DowngradedRuntimeDescription": "This web-capable module is active in generic-host downgrade mode and only runs non-web phases.",
         "WebRuntimeDescription": "This module participates in the full ASP.NET Core lifecycle.",
-        "NonWebRuntimeDescription": "This module only exposes non-web registration phases."
+        "NonWebRuntimeDescription": "This module only exposes non-web registration phases.",
+        "CallbackExecutionsDescription": "Each callback occurrence is preserved so repeated executions remain visible.",
+        "NoCallbackExecutions": "This module recorded no serial callback executions."
       }
     },
     "ModuleOption": {

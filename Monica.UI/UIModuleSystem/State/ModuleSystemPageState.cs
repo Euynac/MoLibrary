@@ -1,5 +1,6 @@
 using Monica.Core.Modularity.Diagnostics.Models;
 using Monica.Core.TypeDiscovery.Models;
+using Monica.UI.UIModuleSystem.Support;
 
 namespace Monica.UI.UIModuleSystem.State;
 
@@ -44,6 +45,11 @@ public sealed class ModuleSystemPageState
     /// Gets the selected module detail.
     /// </summary>
     public ModuleDetailInfo? SelectedModuleDetail { get; private set; }
+
+    /// <summary>
+    /// Gets the section that should be selected when the module detail dialog opens.
+    /// </summary>
+    public ModuleDetailTab SelectedModuleDetailTab { get; private set; }
 
     /// <summary>
     /// Gets whether the module detail dialog should be visible.
@@ -92,9 +98,12 @@ public sealed class ModuleSystemPageState
     /// <summary>
     /// Opens the module detail dialog for the requested detail object.
     /// </summary>
-    public void ShowModuleDetailDialog(ModuleDetailInfo detail)
+    public void ShowModuleDetailDialog(
+        ModuleDetailInfo detail,
+        ModuleDetailTab initialTab = ModuleDetailTab.Basic)
     {
         SelectedModuleDetail = detail;
+        SelectedModuleDetailTab = initialTab;
         ShowModuleDetail = true;
     }
 
@@ -107,6 +116,7 @@ public sealed class ModuleSystemPageState
         if (!isVisible)
         {
             SelectedModuleDetail = null;
+            SelectedModuleDetailTab = ModuleDetailTab.Basic;
         }
     }
 }

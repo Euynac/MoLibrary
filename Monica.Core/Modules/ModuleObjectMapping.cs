@@ -1,6 +1,4 @@
-using System.Linq.Expressions;
 using System.Reflection;
-using ExpressionDebugger;
 using Mapster;
 using MapsterMapper;
 using Microsoft.AspNetCore.Builder;
@@ -14,6 +12,7 @@ using Monica.Core.Modularity.Annotations;
 using Monica.Core.Modularity.Models;
 using Monica.Core.ObjectMapping.Abstractions;
 using Monica.Core.ObjectMapping.Facades;
+using Monica.Core.ObjectMapping.Models;
 using Monica.Core.ObjectMapping.Providers.Mapster;
 using Monica.Core.ObjectMapping.Services;
 using Monica.Core.Results;
@@ -29,7 +28,7 @@ public static class ModuleObjectMappingBuilderExtensions
         /// Registers one host-owned Mapster configuration and automatically applies concrete <see cref="IRegister"/>
         /// profiles found by Monica's business-type discovery pipeline.
         /// </summary>
-        /// <param name="action">Optional configuration for explicit profiles and object-mapping diagnostics.</param>
+        /// <param name="action">Optional configuration for the Mapster compiler and object-mapping endpoints.</param>
         /// <returns>The object-mapping guide for optional explicit registration.</returns>
         /// <remarks>
         /// Profiles outside the host's type-discovery scope can be added explicitly through
@@ -65,15 +64,7 @@ public class ModuleObjectMapping(ModuleObjectMappingOption option)
 
     public override void ConfigureServices(IServiceCollection services)
     {
-        if (option.DebugMapper)
-        {
-            _mapsterConfig.Compiler = expression => ((LambdaExpression)expression).CompileWithDebugInfo(
-                new ExpressionCompilationOptions()
-                {
-                    EmitFile = true,
-                    References = [Assembly.GetAssembly(typeof(Res))!, Assembly.GetAssembly(typeof(Enumerable))!, .. option.DebuggerRelatedAssemblies ?? []]
-                });
-        }
+        MapsterCompilerConfigurator.Configure(_mapsterConfig, option);
 
         services.AddSingleton(_profileCatalog);
         services.AddSingleton(_mapsterConfig);
@@ -184,14 +175,18 @@ public class ModuleObjectMappingOption : MinimalApiModuleOptions<ModuleObjectMap
     private readonly List<Type> _profileTypes = [];
 
     /// <summary>
-    /// Enables generation of debuggable Mapster mapping assemblies for manual troubleshooting.
+    /// Gets or sets the expression compiler used by the host-owned Mapster configuration. The default uses the
+    /// standard LINQ expression compiler. FastExpressionCompiler provides an opt-in startup optimization and rejects
+    /// unsupported expressions during eager validation instead of falling back silently.
     /// </summary>
-    public bool DebugMapper { get; set; } = false;
+    public ObjectMappingCompilerStrategy CompilerStrategy { get; set; } = ObjectMappingCompilerStrategy.Default;
 
     /// <summary>
-    /// Additional assemblies that contain base types or extension methods required when debugging mapping definitions.
+    /// Gets or sets additional assemblies containing base types or extension methods required by the
+    /// <see cref="ObjectMappingCompilerStrategy.Debug"/> compiler. The default is empty, and this setting has no
+    /// effect for other strategies.
     /// </summary>
-    public Assembly[]? DebuggerRelatedAssemblies { get; set; }
+    public Assembly[] DebuggerRelatedAssemblies { get; set; } = [];
 
     /// <summary>
     /// Gets the explicitly registered mapping profiles in deterministic composition order.

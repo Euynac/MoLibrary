@@ -1,4 +1,7 @@
+using System.Linq.Expressions;
+using System.Runtime.CompilerServices;
 using AwesomeAssertions;
+using FastExpressionCompiler;
 using Mapster;
 using MapsterMapper;
 using Microsoft.Extensions.DependencyInjection;
@@ -8,12 +11,14 @@ using Monica.Core.Modularity.Exceptions;
 using Monica.Core.Modularity.Extensions;
 using Monica.Core.ObjectMapping.Abstractions;
 using Monica.Core.ObjectMapping.Facades;
+using Monica.Core.ObjectMapping.Models;
 using Monica.Core.ObjectMapping.Providers.Mapster;
 using Monica.Core.Results;
 using Monica.Core.TypeDiscovery.Services;
 using Monica.Modules;
 using Test.Monica.Core.Modularity;
 using Xunit;
+using TestContext = Xunit.TestContext;
 
 namespace Test.Monica.Core.ObjectMapping;
 
@@ -33,10 +38,15 @@ public sealed class ModuleObjectMappingTests
             .Should().Contain(typeof(InternalMappingProfile));
     }
 
-    [Fact]
-    public void Build_GenericHostWithAutomaticallyDiscoveredInternalProfile_ShouldProvideObjectMapping()
+    [Theory]
+    [InlineData(ObjectMappingCompilerStrategy.Default)]
+    [InlineData(ObjectMappingCompilerStrategy.FastExpressionCompiler)]
+    [InlineData(ObjectMappingCompilerStrategy.Debug)]
+    public void Build_WhenCompilerStrategyIsSelected_ShouldEagerlyCompileAndProvideObjectMapping(
+        ObjectMappingCompilerStrategy compilerStrategy)
     {
-        using var host = BuildHost();
+        using var host = BuildHost(
+            configureOption: options => options.CompilerStrategy = compilerStrategy);
         using var scope = host.Services.CreateScope();
 
         var mapper = scope.ServiceProvider.GetRequiredService<IObjectMapper>();
@@ -123,18 +133,41 @@ public sealed class ModuleObjectMappingTests
         RefinementRegistrationTrace.Snapshot().Should().Equal("platform", "domain", "adapter");
     }
 
-    [Fact]
-    public void AddMonica_WhenMultipleMappingsAreInvalid_ShouldReportEveryCompilationError()
+    [Theory]
+    [InlineData(ObjectMappingCompilerStrategy.Default)]
+    [InlineData(ObjectMappingCompilerStrategy.FastExpressionCompiler)]
+    [InlineData(ObjectMappingCompilerStrategy.Debug)]
+    public void AddMonica_WhenMultipleMappingsAreInvalid_ShouldReportEveryCompilationError(
+        ObjectMappingCompilerStrategy compilerStrategy)
     {
         var builder = Host.CreateApplicationBuilder();
 
         Action compose = () => builder.AddMonica(monica =>
-            monica.AddObjectMapping()
+            monica.AddObjectMapping(options => options.CompilerStrategy = compilerStrategy)
                 .AddProfile<InvalidMappingProfile>());
 
         compose.Should().Throw<ModuleRegistrationException>()
             .WithMessage($"*{nameof(InvalidDestinationOne)}*")
             .WithMessage($"*{nameof(InvalidDestinationTwo)}*");
+    }
+
+    [Fact]
+    public void Configure_WhenFastCompilerDoesNotSupportAnExpression_ShouldNotFallBackToSystemCompiler()
+    {
+        var config = new TypeAdapterConfig();
+        var option = new ModuleObjectMappingOption
+        {
+            CompilerStrategy = ObjectMappingCompilerStrategy.FastExpressionCompiler
+        };
+        var value = Expression.Parameter(typeof(int), "value");
+        var expression = Expression.Lambda<Func<int, IRuntimeVariables>>(
+            Expression.RuntimeVariables(value),
+            value);
+
+        MapsterCompilerConfigurator.Configure(config, option);
+
+        Action compile = () => config.Compiler(expression);
+        compile.Should().Throw<NotSupportedExpressionException>();
     }
 
     [Fact]
@@ -268,7 +301,9 @@ public sealed class ModuleObjectMappingTests
         config.SelfContainedCodeGeneration.Should().BeFalse();
     }
 
-    private static IHost BuildHost(Action<ModuleObjectMappingGuide>? configureMapping = null)
+    private static IHost BuildHost(
+        Action<ModuleObjectMappingGuide>? configureMapping = null,
+        Action<ModuleObjectMappingOption>? configureOption = null)
     {
         var builder = Host.CreateApplicationBuilder();
         builder.AddMonica(monica =>
@@ -276,7 +311,7 @@ public sealed class ModuleObjectMappingTests
             monica.ConfigureTypeDiscovery(options => options
                 .ExcludeDefault()
                 .Add(typeof(ModuleObjectMappingTests).Assembly));
-            var mapping = monica.AddObjectMapping();
+            var mapping = monica.AddObjectMapping(configureOption);
             configureMapping?.Invoke(mapping);
         });
         return builder.Build();

@@ -2,181 +2,210 @@ using System.Diagnostics;
 using System.Text;
 using Monica.Core.Extensions;
 using Monica.Core.Modularity.Diagnostics.Models;
-using Monica.Core.Modularity.State;
 using Monica.Core.Modularity.Models;
+using Monica.Core.Modularity.Models.Internal;
+using Monica.Core.Modularity.State;
 
 namespace Monica.Core.Modularity.Services.Support;
 
 /// <summary>
-/// Provides performance profiling capabilities for the module system.
-/// Tracks initialization times, phase durations, and module-specific metrics.
+/// Records one monotonic, host-owned timeline for Monica module composition.
 /// </summary>
 internal sealed class ModuleInitializationProfiler
 {
     private readonly ModuleProfilingState _state = new();
 
     /// <summary>
-    /// Gets whether the full module-system composition stopwatch is currently running.
+    /// Gets whether the full module-composition stopwatch is currently running.
     /// </summary>
     internal bool IsRunning => _state.IsStarted;
 
     /// <summary>
     /// Clears all profiling data for this host.
     /// </summary>
-    public void Clear()
+    internal void Clear()
     {
         _state.Clear();
     }
 
     /// <summary>
-    /// Starts the module system profiling.
+    /// Starts the module composition timeline at the <c>AddMonica(...)</c> boundary.
     /// </summary>
-    public void StartModuleSystem()
+    internal void StartModuleSystem()
     {
-        var state = _state;
-        if (state.IsStarted) return;
-        
-        state.SystemStopwatch.Start();
-        state.IsStarted = true;
-    }
-
-    /// <summary>
-    /// Stops the module system profiling.
-    /// </summary>
-    public void StopModuleSystem()
-    {
-        var state = _state;
-        if (!state.IsStarted) return;
-        
-        state.SystemStopwatch.Stop();
-        state.IsStarted = false;
-    }
-
-    /// <summary>
-    /// Starts profiling a specific phase of the module system.
-    /// </summary>
-    /// <param name="phaseName">The name of the phase to profile.</param>
-    public void StartPhase(string phaseName)
-    {
-        var state = _state;
-        if (!state.PhaseStopwatches.TryGetValue(phaseName, out var stopwatch))
+        if (_state.IsStarted)
         {
-            stopwatch = new Stopwatch();
-            state.PhaseStopwatches[phaseName] = stopwatch;
-            state.PhaseInitializationOrder.Add(phaseName);
+            return;
         }
-        
-        stopwatch.Start();
+
+        _state.OriginUtc = DateTimeOffset.UtcNow;
+        _state.OriginTimestamp = Stopwatch.GetTimestamp();
+        _state.TerminalTimestamp = null;
+        _state.IsStarted = true;
+        RecordMilestone(ModuleCompositionMilestone.CompositionStarted);
     }
 
     /// <summary>
-    /// Stops profiling a specific phase of the module system.
+    /// Stops the end-to-end composition timer without inventing a successful completion milestone.
     /// </summary>
-    /// <param name="phaseName">The name of the phase to stop profiling.</param>
-    /// <returns>The elapsed milliseconds for this phase.</returns>
-    public long StopPhase(string phaseName)
+    internal void StopModuleSystem()
     {
-        if (!_state.PhaseStopwatches.TryGetValue(phaseName, out var stopwatch))
+        if (!_state.IsStarted)
+        {
+            return;
+        }
+
+        _state.TerminalTimestamp = Stopwatch.GetTimestamp();
+        _state.IsStarted = false;
+    }
+
+    /// <summary>
+    /// Records one unique host-owned lifecycle milestone.
+    /// </summary>
+    /// <param name="milestone">The milestone that just occurred.</param>
+    internal void RecordMilestone(ModuleCompositionMilestone milestone)
+    {
+        if (_state.OriginTimestamp is not { } originTimestamp)
+        {
+            throw new InvalidOperationException("Module composition profiling has not started.");
+        }
+
+        if (_state.Milestones.Any(info => info.Milestone == milestone))
+        {
+            throw new InvalidOperationException($"Composition milestone {milestone} has already been recorded.");
+        }
+
+        var occurredAtUtc = DateTimeOffset.UtcNow;
+        var timestamp = milestone == ModuleCompositionMilestone.CompositionStarted
+            ? originTimestamp
+            : Stopwatch.GetTimestamp();
+        _state.Milestones.Add(new ModuleCompositionMilestonePerformanceInfo
+        {
+            Milestone = milestone,
+            Sequence = NextSequence(),
+            OccurredAtUtc = milestone == ModuleCompositionMilestone.CompositionStarted
+                ? _state.OriginUtc
+                : occurredAtUtc,
+            OffsetMs = GetOffsetMs(timestamp)
+        });
+    }
+
+    /// <summary>
+    /// Starts one system-level serial phase execution.
+    /// </summary>
+    /// <param name="phaseName">The profiler phase name.</param>
+    internal void StartPhase(string phaseName)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(phaseName);
+        if (_state.ActiveSystemPhases.ContainsKey(phaseName))
+        {
+            throw new InvalidOperationException($"System composition phase '{phaseName}' is already running.");
+        }
+
+        _state.ActiveSystemPhases.Add(
+            phaseName,
+            new ModuleSystemPhaseProfileStart(
+                NextSequence(),
+                Stopwatch.GetTimestamp(),
+                DateTimeOffset.UtcNow));
+    }
+
+    /// <summary>
+    /// Completes one system-level serial phase execution.
+    /// </summary>
+    /// <param name="phaseName">The profiler phase name.</param>
+    /// <returns>The completed phase duration in whole milliseconds.</returns>
+    internal long StopPhase(string phaseName)
+    {
+        if (!_state.ActiveSystemPhases.Remove(phaseName, out var start))
         {
             return 0;
         }
-        
-        stopwatch.Stop();
-        return stopwatch.ElapsedMilliseconds;
-    }
 
-    /// <summary>
-    /// Starts profiling a specific module's phase.
-    /// </summary>
-    /// <param name="moduleType">The type of the module.</param>
-    /// <param name="phase">The module configuration phase.</param>
-    public void StartModulePhase(Type moduleType, ModulePhase phase)
-    {
-        var state = _state;
-        if (!state.ModuleProfiles.TryGetValue(moduleType, out var profile))
+        var completedTimestamp = Stopwatch.GetTimestamp();
+        var execution = new ModuleSystemPhasePerformanceInfo
         {
-            profile = new ModuleProfileInfo(moduleType);
-            state.ModuleProfiles[moduleType] = profile;
-        }
-        
-        profile.StartPhase(phase);
+            ExecutionId = FormatExecutionId("system-phase", start.Sequence),
+            Sequence = start.Sequence,
+            PhaseName = phaseName,
+            StartedAtUtc = start.StartedAtUtc,
+            CompletedAtUtc = DateTimeOffset.UtcNow,
+            StartedOffsetMs = GetOffsetMs(start.StartedTimestamp),
+            CompletedOffsetMs = GetOffsetMs(completedTimestamp)
+        };
+        _state.SystemPhases.Add(execution);
+        return ToWholeMilliseconds(execution.DurationMs);
     }
 
     /// <summary>
-    /// Stops profiling a specific module's phase.
+    /// Starts one serial callback execution for a module phase.
     /// </summary>
-    /// <param name="moduleType">The type of the module.</param>
-    /// <param name="phase">The module configuration phase.</param>
-    /// <returns>The elapsed milliseconds for this module phase.</returns>
-    public long StopModulePhase(Type moduleType, ModulePhase phase)
+    internal void StartModulePhase(
+        Type moduleType,
+        ModuleKey moduleKey,
+        int registrationOrder,
+        ModulePhase phase)
     {
-        if (!_state.ModuleProfiles.TryGetValue(moduleType, out var profile))
-        {
-            return 0;
-        }
-        
-        return profile.StopPhase(phase);
+        ArgumentNullException.ThrowIfNull(moduleType);
+        GetOrCreateModuleProfile(moduleType, moduleKey, registrationOrder).StartPhase(
+            phase,
+            NextSequence(),
+            Stopwatch.GetTimestamp(),
+            DateTimeOffset.UtcNow);
     }
 
     /// <summary>
-    /// Gets the total elapsed time for the module system.
+    /// Completes one serial callback execution for a module phase.
     /// </summary>
-    /// <returns>The total elapsed milliseconds.</returns>
-    public long GetTotalElapsedMilliseconds()
+    internal long StopModulePhase(Type moduleType, ModulePhase phase)
     {
-        return _state.SystemStopwatch.ElapsedMilliseconds;
-    }
-
-    /// <summary>
-    /// Gets all phase durations for the module system.
-    /// </summary>
-    /// <returns>A dictionary mapping phase names to their durations in milliseconds.</returns>
-    public Dictionary<string, long> GetPhaseDurations()
-    {
-        return _state.PhaseStopwatches.ToDictionary(
-            kvp => kvp.Key,
-            kvp => kvp.Value.ElapsedMilliseconds
-        );
-    }
-
-    /// <summary>
-    /// Gets the duration for a specific phase.
-    /// </summary>
-    /// <param name="phaseName">The name of the phase.</param>
-    /// <returns>The duration of the phase in milliseconds.</returns>
-    public long GetPhaseDuration(string phaseName)
-    {
-        return _state.PhaseStopwatches.TryGetValue(phaseName, out var stopwatch)
-            ? stopwatch.ElapsedMilliseconds 
+        return _state.ModuleProfiles.TryGetValue(moduleType, out var profile)
+            ? ToWholeMilliseconds(profile.StopPhase(phase, Stopwatch.GetTimestamp(), DateTimeOffset.UtcNow))
             : 0;
     }
 
     /// <summary>
-    /// Merges one complete immutable scheduler snapshot into diagnostics on the serial composition thread.
+    /// Merges one immutable scheduler snapshot into the host composition timeline.
     /// </summary>
     internal void RecordCompositionWork(ModuleCompositionWorkSnapshot snapshot)
     {
         ArgumentNullException.ThrowIfNull(snapshot);
 
-        if (snapshot.WorkItems.Count > 0)
-        {
-            var startedTimestamp = snapshot.WorkItems.Min(static result => result.StartedTimestamp);
-            var completedTimestamp = snapshot.WorkItems.Max(static result => result.CompletedTimestamp);
-            _state.CompositionWorkWallDurationMs = (long)Stopwatch
-                .GetElapsedTime(startedTimestamp, completedTimestamp)
-                .TotalMilliseconds;
-        }
+        var checkpoints = snapshot.Checkpoints.Select(checkpoint =>
+            new ModuleCompositionCheckpointPerformanceInfo
+            {
+                Sequence = checkpoint.Sequence,
+                Deadline = checkpoint.Deadline,
+                EnteredAtUtc = checkpoint.EnteredAtUtc,
+                ReleasedAtUtc = checkpoint.ReleasedAtUtc,
+                EnteredOffsetMs = GetOffsetMs(checkpoint.EnteredTimestamp),
+                ReleasedOffsetMs = GetOffsetMs(checkpoint.ReleasedTimestamp),
+                DueWorkItemIds = checkpoint.WorkItems.Select(static work => work.WorkItemId).ToArray(),
+                PendingWorkItems = checkpoint.PendingWorkItems.Select(static pending =>
+                    new ModuleCompositionCheckpointPendingWorkInfo
+                    {
+                        WorkItemId = pending.WorkItemId,
+                        RemainingDurationMs = pending.RemainingDuration.TotalMilliseconds
+                    }).ToArray(),
+                ReleasingWorkItemId = checkpoint.ReleasingWorkItemId
+            }).ToArray();
+        var checkpointByWorkItemId = checkpoints
+            .SelectMany(checkpoint => checkpoint.DueWorkItemIds.Select(workItemId => (workItemId, checkpoint)))
+            .ToDictionary(static pair => pair.workItemId, static pair => pair.checkpoint, StringComparer.Ordinal);
 
         foreach (var result in snapshot.WorkItems)
         {
-            if (!_state.ModuleProfiles.TryGetValue(result.ModuleType, out var profile))
+            checkpointByWorkItemId.TryGetValue(result.WorkItemId, out var checkpoint);
+            var pending = checkpoint?.PendingWorkItems.FirstOrDefault(item =>
+                string.Equals(item.WorkItemId, result.WorkItemId, StringComparison.Ordinal));
+            _state.CompositionWorkItems.Add(new ModuleCompositionWorkPerformanceInfo
             {
-                profile = new ModuleProfileInfo(result.ModuleType);
-                _state.ModuleProfiles.Add(result.ModuleType, profile);
-            }
-
-            profile.AddCompositionWork(new ModuleCompositionWorkPerformanceInfo
-            {
+                WorkItemId = result.WorkItemId,
+                Sequence = result.Sequence,
+                ModuleKey = result.ModuleKey,
+                ModuleTypeName = result.ModuleType.Name,
+                ModuleFullTypeName = result.ModuleType.FullName ?? result.ModuleType.Name,
+                ModuleRegistrationOrder = result.RegistrationOrder,
                 Name = result.Name,
                 OriginPhase = result.OriginPhase,
                 Deadline = result.Deadline,
@@ -186,312 +215,196 @@ internal sealed class ModuleInitializationProfiler
                 SubmittedAtUtc = result.SubmittedAtUtc,
                 StartedAtUtc = result.StartedAtUtc,
                 CompletedAtUtc = result.CompletedAtUtc,
-                QueueDurationMs = (long)result.QueueDuration.TotalMilliseconds,
-                ExecutionDurationMs = (long)result.ExecutionDuration.TotalMilliseconds,
+                SubmittedOffsetMs = GetOffsetMs(result.SubmittedTimestamp),
+                StartedOffsetMs = GetOffsetMs(result.StartedTimestamp),
+                CompletedOffsetMs = GetOffsetMs(result.CompletedTimestamp),
+                WasPendingAtDeadline = pending is not null,
+                RemainingAtDeadlineMs = pending?.RemainingDurationMs ?? 0,
+                IsDeadlineReleaser = string.Equals(
+                    checkpoint?.ReleasingWorkItemId,
+                    result.WorkItemId,
+                    StringComparison.Ordinal),
                 ErrorMessage = result.Failure?.GetMessageRecursively()
             });
         }
 
-        _state.CompositionCheckpoints.AddRange(snapshot.Checkpoints.Select(static checkpoint =>
-            new ModuleCompositionCheckpointPerformanceInfo
-            {
-                Deadline = checkpoint.Deadline,
-                WorkItemCount = checkpoint.WorkItemCount,
-                WaitDurationMs = (long)checkpoint.WaitDuration.TotalMilliseconds
-            }));
+        _state.CompositionCheckpoints.AddRange(checkpoints);
     }
 
     /// <summary>
-    /// Gets wall-clock, aggregate worker, queue, and checkpoint wait time for scheduled composition work.
+    /// Builds the immutable end-to-end composition performance model.
     /// </summary>
-    internal ModuleCompositionWorkSummary GetCompositionWorkSummary()
+    internal ModuleCompositionPerformance GetCompositionPerformance()
     {
-        var workItems = _state.ModuleProfiles.Values
-            .SelectMany(static profile => profile.GetCompositionWork())
+        var moduleExecutions = _state.ModuleProfiles.Values
+            .SelectMany(profile => profile.CreateExecutions(GetOffsetMs))
+            .OrderBy(static execution => execution.Sequence)
             .ToArray();
-        if (workItems.Length == 0)
-        {
-            return ModuleCompositionWorkSummary.Empty with
-            {
-                Checkpoints = _state.CompositionCheckpoints.ToArray(),
-                TotalCheckpointWaitDurationMs = _state.CompositionCheckpoints.Sum(static checkpoint => checkpoint.WaitDurationMs)
-            };
-        }
 
-        return new ModuleCompositionWorkSummary(
-            workItems.Length,
-            _state.CompositionWorkWallDurationMs,
-            workItems.Sum(static work => work.ExecutionDurationMs),
-            workItems.Sum(static work => work.QueueDurationMs),
-            _state.CompositionCheckpoints.Sum(static checkpoint => checkpoint.WaitDurationMs),
-            _state.CompositionCheckpoints.ToArray());
+        return new ModuleCompositionPerformance
+        {
+            StartedAtUtc = _state.OriginUtc,
+            ElapsedDurationMs = GetElapsedDurationMs(),
+            Milestones = _state.Milestones.OrderBy(static milestone => milestone.Sequence).ToArray(),
+            SystemPhases = _state.SystemPhases.OrderBy(static phase => phase.Sequence).ToArray(),
+            ModulePhaseExecutions = moduleExecutions,
+            WorkItems = _state.CompositionWorkItems.OrderBy(static work => work.Sequence).ToArray(),
+            Checkpoints = _state.CompositionCheckpoints.OrderBy(static checkpoint => checkpoint.Sequence).ToArray()
+        };
     }
 
     /// <summary>
-    /// Gets profile information for all modules, sorted by aggregate serial phase duration in descending order.
+    /// Creates the module-oriented performance projection used by details and tables.
     /// </summary>
-    /// <returns>A list of module profile information.</returns>
-    public List<ModuleProfileInfo> GetModuleProfilesSortedBySerialPhaseDuration()
+    internal ModulePerformanceInfo GetModulePerformance(ModuleRuntimeSnapshot snapshot)
+    {
+        ArgumentNullException.ThrowIfNull(snapshot);
+        var phaseExecutions = _state.ModuleProfiles.TryGetValue(snapshot.ModuleType, out var profile)
+            ? profile.CreateExecutions(GetOffsetMs)
+            : [];
+        return new ModulePerformanceInfo
+        {
+            ModuleKey = snapshot.ModuleKey,
+            ModuleTypeName = snapshot.ModuleType.Name,
+            ModuleFullTypeName = snapshot.ModuleType.FullName ?? snapshot.ModuleType.Name,
+            RegistrationOrder = snapshot.RegisterInfo.Order,
+            IsRuntimeAvailable = true,
+            PhaseExecutions = phaseExecutions,
+            CompositionWorkItems = _state.CompositionWorkItems
+                .Where(work => work.ModuleKey == snapshot.ModuleKey)
+                .OrderBy(static work => work.Sequence)
+                .ToArray()
+        };
+    }
+
+    /// <summary>
+    /// Creates module-oriented projections for every registration that executed a callback, including disabled modules.
+    /// </summary>
+    internal IReadOnlyList<ModulePerformanceInfo> GetModulePerformances(
+        IReadOnlySet<ModuleKey> runtimeModuleKeys)
+    {
+        ArgumentNullException.ThrowIfNull(runtimeModuleKeys);
+        return _state.ModuleProfiles.Values
+            .OrderBy(static profile => profile.RegistrationOrder)
+            .ThenBy(static profile => profile.ModuleType.FullName, StringComparer.Ordinal)
+            .Select(profile => new ModulePerformanceInfo
+            {
+                ModuleKey = profile.ModuleKey,
+                ModuleTypeName = profile.ModuleType.Name,
+                ModuleFullTypeName = profile.ModuleType.FullName ?? profile.ModuleType.Name,
+                RegistrationOrder = profile.RegistrationOrder,
+                IsRuntimeAvailable = runtimeModuleKeys.Contains(profile.ModuleKey),
+                PhaseExecutions = profile.CreateExecutions(GetOffsetMs),
+                CompositionWorkItems = _state.CompositionWorkItems
+                    .Where(work => work.ModuleKey == profile.ModuleKey)
+                    .OrderBy(static work => work.Sequence)
+                    .ToArray()
+            })
+            .ToArray();
+    }
+
+    /// <summary>
+    /// Gets module profiles sorted by aggregate serial callback duration.
+    /// </summary>
+    internal List<ModuleProfileState> GetModuleProfilesSortedBySerialPhaseDuration()
     {
         return _state.ModuleProfiles.Values
-            .OrderByDescending(static profile => profile.GetSerialPhaseDuration())
+            .OrderByDescending(static profile => profile.GetSerialPhaseDurationMs())
             .ToList();
     }
 
     /// <summary>
-    /// Gets profile information for all modules, sorted by a specific phase duration in descending order.
+    /// Gets a concise factual summary without treating overlapping timing dimensions as additive.
     /// </summary>
-    /// <param name="phase">The phase to sort by.</param>
-    /// <returns>A list of module profile information.</returns>
-    public List<ModuleProfileInfo> GetModuleProfilesSortedByPhaseDuration(ModulePhase phase)
+    internal string GetPerformanceSummary()
     {
-        return _state.ModuleProfiles.Values
-            .OrderByDescending(p => p.GetPhaseDuration(phase))
-            .ToList();
-    }
+        var builder = new StringBuilder();
+        builder.AppendLine("Module System Performance Summary:");
+        builder.AppendLine($"End-to-end composition elapsed: {GetElapsedDurationMs():F1}ms");
+        builder.AppendLine($"Aggregate system phases: {_state.SystemPhases.Sum(static phase => phase.DurationMs):F1}ms");
+        builder.AppendLine(
+            $"Aggregate serial module callbacks: {_state.ModuleProfiles.Values.Sum(static profile => profile.GetSerialPhaseDurationMs()):F1}ms");
 
-    /// <summary>
-    /// Gets a formatted string summary of module system performance.
-    /// </summary>
-    /// <returns>A string containing performance summary information.</returns>
-    public string GetPerformanceSummary()
-    {
-        var sb = new StringBuilder();
-        sb.AppendLine("Module System Performance Summary:");
-        sb.AppendLine($"Total initialization time: {GetTotalElapsedMilliseconds()}ms");
-        
-        sb.AppendLine("\nPhase Durations (in initialization order):");
-        var totalSystemPhaseDuration = 0L;
-        var systemPhaseCount = 0;
-        var state = _state;
-        
-        foreach (var phaseName in state.PhaseInitializationOrder)
+        if (_state.CompositionWorkItems.Count > 0)
         {
-            if (state.PhaseStopwatches.TryGetValue(phaseName, out var stopwatch))
-            {
-                sb.AppendLine($"  {phaseName}: {stopwatch.ElapsedMilliseconds}ms");
-                totalSystemPhaseDuration += stopwatch.ElapsedMilliseconds;
-                systemPhaseCount++;
-            }
-        }
-        
-        if (systemPhaseCount > 0)
-        {
-            sb.AppendLine($"\nAll System Phases Total Duration: {totalSystemPhaseDuration}ms (across {systemPhaseCount} phases)");
-        }
-        
-        // Add module phase statistics
-        sb.AppendLine("\nModule Phase Statistics:");
-        var allPhases = Enum.GetValues<ModulePhase>();
-        
-        // Calculate total duration across all module phases
-        var totalModulePhaseDuration = 0L;
-        var totalModulePhaseCount = 0;
-        
-        foreach (var phase in allPhases)
-        {
-            var moduleCount = 0;
-            var totalDuration = 0L;
-            var maxDuration = 0L;
-            string? slowestModule = null;
-            
-            foreach (var profile in state.ModuleProfiles.Values)
-            {
-                var duration = profile.GetPhaseDuration(phase);
-                if (duration > 0)
-                {
-                    moduleCount++;
-                    totalDuration += duration;
-                    totalModulePhaseDuration += duration;
-                    if (duration > maxDuration)
-                    {
-                        maxDuration = duration;
-                        slowestModule = profile.ModuleType.Name;
-                    }
-                }
-            }
-            
-            if (moduleCount > 0)
-            {
-                totalModulePhaseCount += moduleCount;
-                var averageDuration = totalDuration / moduleCount;
-                sb.AppendLine($"  {phase}:");
-                sb.AppendLine($"    Total: {totalDuration}ms | Average: {averageDuration}ms | Modules: {moduleCount}");
-                sb.AppendLine($"    Slowest: {slowestModule} ({maxDuration}ms)");
-            }
-        }
-        
-        // Add total summary at the end
-        if (totalModulePhaseCount > 0)
-        {
-            sb.AppendLine($"\nAll Module Phases Total Duration: {totalModulePhaseDuration}ms (across {totalModulePhaseCount} phase executions)");
+            var activeSpan = _state.CompositionWorkItems.Max(static work => work.CompletedOffsetMs)
+                             - _state.CompositionWorkItems.Min(static work => work.StartedOffsetMs);
+            builder.AppendLine($"Parallel work active span: {activeSpan:F1}ms");
+            builder.AppendLine(
+                $"Aggregate worker execution: {_state.CompositionWorkItems.Sum(static work => work.ExecutionDurationMs):F1}ms");
+            builder.AppendLine(
+                $"Aggregate checkpoint wait: {_state.CompositionCheckpoints.Sum(static checkpoint => checkpoint.BlockingWaitDurationMs):F1}ms");
         }
 
-        var compositionWork = GetCompositionWorkSummary();
-        if (compositionWork.Count > 0)
-        {
-            sb.AppendLine("\nComposition Work:");
-            sb.AppendLine($"  Wall time: {compositionWork.WallDurationMs}ms");
-            sb.AppendLine($"  Aggregate worker time: {compositionWork.TotalExecutionDurationMs}ms across {compositionWork.Count} items");
-            sb.AppendLine($"  Aggregate checkpoint wait: {compositionWork.TotalCheckpointWaitDurationMs}ms");
-        }
-        
-        sb.AppendLine("\nTop 5 Slowest Modules (by serial callback duration):");
+        builder.AppendLine("Slowest serial module callbacks:");
         foreach (var profile in GetModuleProfilesSortedBySerialPhaseDuration().Take(5))
         {
-            sb.AppendLine($"  {profile.ModuleType.Name}: {profile.GetSerialPhaseDuration()}ms");
-            foreach (var phase in profile.GetPhaseDurations())
-            {
-                sb.AppendLine($"    {phase.Key}: {phase.Value}ms");
-            }
-
-            foreach (var workItem in profile.GetCompositionWork())
-            {
-                sb.AppendLine(
-                    $"    CompositionWork[{workItem.Name}]: {workItem.ExecutionDurationMs}ms ({workItem.Status}, {workItem.Deadline})");
-            }
+            builder.AppendLine($"  {profile.ModuleType.Name}: {profile.GetSerialPhaseDurationMs():F1}ms");
         }
-        
-        return sb.ToString();
+
+        return builder.ToString();
     }
 
     /// <summary>
-    /// Gets profile information for a specific module type.
+    /// Gets aggregate serial callback time for one module in whole milliseconds.
     /// </summary>
-    /// <param name="moduleType">The type of the module to get profile information for.</param>
-    /// <returns>The ModuleProfileInfo for the specified module type, or null if not found.</returns>
-    public ModuleProfileInfo? GetModuleProfile(Type moduleType)
-    {
-        return _state.ModuleProfiles.GetValueOrDefault(moduleType);
-    }
-
-    /// <summary>
-    /// Gets the aggregate serial phase duration for a specific module type.
-    /// </summary>
-    /// <param name="moduleType">The type of the module to get duration for.</param>
-    /// <returns>The serial phase duration in milliseconds, or 0 if not found.</returns>
-    public long GetModuleSerialPhaseDuration(Type moduleType)
+    internal long GetModuleSerialPhaseDuration(Type moduleType)
     {
         return _state.ModuleProfiles.TryGetValue(moduleType, out var profile)
-            ? profile.GetSerialPhaseDuration()
+            ? ToWholeMilliseconds(profile.GetSerialPhaseDurationMs())
             : 0;
     }
-}
 
-/// <summary>
-/// Contains performance profiling information for a specific module.
-/// </summary>
-public class ModuleProfileInfo
-{
-    /// <summary>
-    /// The type of the module being profiled.
-    /// </summary>
-    public Type ModuleType { get; }
-    
-    private readonly Dictionary<ModulePhase, Stopwatch> _phaseStopwatches = new();
-    private readonly List<ModuleCompositionWorkPerformanceInfo> _compositionWork = [];
-    
-    /// <summary>
-    /// Creates a new module profile information instance.
-    /// </summary>
-    /// <param name="moduleType">The type of the module.</param>
-    public ModuleProfileInfo(Type moduleType)
+    private ModuleProfileState GetOrCreateModuleProfile(
+        Type moduleType,
+        ModuleKey moduleKey,
+        int registrationOrder)
     {
-        ModuleType = moduleType;
-    }
-    
-    /// <summary>
-    /// Starts profiling a specific phase for this module.
-    /// </summary>
-    /// <param name="phase">The module configuration phase.</param>
-    public void StartPhase(ModulePhase phase)
-    {
-        if (!_phaseStopwatches.TryGetValue(phase, out var stopwatch))
+        if (_state.ModuleProfiles.TryGetValue(moduleType, out var profile))
         {
-            stopwatch = new Stopwatch();
-            _phaseStopwatches[phase] = stopwatch;
+            profile.UpdateRegistrationOrder(registrationOrder);
+            return profile;
         }
-        
-        stopwatch.Start();
+
+        profile = new ModuleProfileState(moduleType, moduleKey, registrationOrder);
+        _state.ModuleProfiles.Add(moduleType, profile);
+        return profile;
     }
-    
-    /// <summary>
-    /// Stops profiling a specific phase for this module.
-    /// </summary>
-    /// <param name="phase">The module configuration phase.</param>
-    /// <returns>The elapsed milliseconds for this phase.</returns>
-    public long StopPhase(ModulePhase phase)
+
+    private long NextSequence()
     {
-        if (!_phaseStopwatches.TryGetValue(phase, out var stopwatch))
+        return _state.NextSequence++;
+    }
+
+    private double GetOffsetMs(long timestamp)
+    {
+        if (_state.OriginTimestamp is not { } originTimestamp || timestamp <= originTimestamp)
         {
             return 0;
         }
-        
-        stopwatch.Stop();
-        return stopwatch.ElapsedMilliseconds;
-    }
-    
-    /// <summary>
-    /// Gets the duration for a specific phase.
-    /// </summary>
-    /// <param name="phase">The module configuration phase.</param>
-    /// <returns>The duration in milliseconds.</returns>
-    public long GetPhaseDuration(ModulePhase phase)
-    {
-        return _phaseStopwatches.TryGetValue(phase, out var stopwatch) 
-            ? stopwatch.ElapsedMilliseconds 
-            : 0;
-    }
-    
-    /// <summary>
-    /// Gets the aggregate duration across this module's serial composition phases.
-    /// </summary>
-    /// <returns>The serial phase duration in milliseconds.</returns>
-    public long GetSerialPhaseDuration()
-    {
-        return _phaseStopwatches.Values.Sum(static stopwatch => stopwatch.ElapsedMilliseconds);
+
+        return Stopwatch.GetElapsedTime(originTimestamp, timestamp).TotalMilliseconds;
     }
 
-    /// <summary>
-    /// Gets composition work in stable submission order.
-    /// </summary>
-    public IReadOnlyList<ModuleCompositionWorkPerformanceInfo> GetCompositionWork()
+    private double GetElapsedDurationMs()
     {
-        return _compositionWork;
+        if (_state.OriginTimestamp is not { } originTimestamp)
+        {
+            return 0;
+        }
+
+        var terminalTimestamp = _state.TerminalTimestamp ?? Stopwatch.GetTimestamp();
+        return Stopwatch.GetElapsedTime(originTimestamp, terminalTimestamp).TotalMilliseconds;
     }
 
-    /// <summary>
-    /// Records one composition work item for the module.
-    /// </summary>
-    internal void AddCompositionWork(ModuleCompositionWorkPerformanceInfo workItem)
+    private static string FormatExecutionId(string prefix, long sequence)
     {
-        ArgumentNullException.ThrowIfNull(workItem);
-        _compositionWork.Add(workItem);
+        return $"{prefix}-{sequence:D6}";
     }
-    
-    /// <summary>
-    /// Gets all phase durations for this module.
-    /// </summary>
-    /// <returns>A dictionary mapping phase types to their durations in milliseconds.</returns>
-    public Dictionary<ModulePhase, long> GetPhaseDurations()
-    {
-        return _phaseStopwatches.ToDictionary(
-            kvp => kvp.Key,
-            kvp => kvp.Value.ElapsedMilliseconds
-        );
-    }
-}
 
-/// <summary>
-/// Aggregates required composition work without conflating parallel work, queueing, and checkpoint waits.
-/// </summary>
-internal sealed record ModuleCompositionWorkSummary(
-    int Count,
-    long WallDurationMs,
-    long TotalExecutionDurationMs,
-    long TotalQueueDurationMs,
-    long TotalCheckpointWaitDurationMs,
-    IReadOnlyList<ModuleCompositionCheckpointPerformanceInfo> Checkpoints)
-{
-    internal static ModuleCompositionWorkSummary Empty { get; } = new(0, 0, 0, 0, 0, []);
+    private static long ToWholeMilliseconds(double milliseconds)
+    {
+        return (long)Math.Floor(Math.Max(0, milliseconds));
+    }
+
 }

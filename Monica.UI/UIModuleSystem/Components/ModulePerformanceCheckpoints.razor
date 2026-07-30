@@ -1,0 +1,110 @@
+@using Monica.UI.UIModuleSystem.Support
+@inject IStringLocalizer<SharedResource> L
+
+<section class="performance-checkpoints" aria-labelledby="performance-checkpoints-title">
+    <header class="performance-checkpoints__header">
+        <div>
+            <MudText id="performance-checkpoints-title" Typo="Typo.h6">@L["ModuleSystem:PerformanceMonitoring:Labels:ParallelWorkBarriers"]</MudText>
+            <MudText Typo="Typo.body2" Color="Color.Secondary">@L["ModuleSystem:PerformanceMonitoring:Messages:ParallelWorkBarriersDescription"]</MudText>
+        </div>
+        <MudIcon Icon="@Icons.Material.Filled.Lock" Color="Color.Warning" />
+    </header>
+
+    @if (Checkpoints.Count == 0)
+    {
+        <div class="performance-checkpoints__empty">
+            <MudIcon Icon="@Icons.Material.Filled.LockOpen" Color="Color.Secondary" Size="Size.Large" />
+            <MudText Typo="Typo.body2" Color="Color.Secondary">@L["ModuleSystem:PerformanceMonitoring:Messages:NoCheckpoints"]</MudText>
+        </div>
+    }
+    else
+    {
+        <div class="performance-checkpoints__grid">
+            @foreach (var checkpoint in Checkpoints.OrderBy(static checkpoint => checkpoint.Sequence))
+            {
+                <article class="performance-checkpoints__item @GetCheckpointClass(checkpoint)">
+                    <div class="performance-checkpoints__item-header">
+                        <strong>@ModulePerformanceDisplayText.Deadline(L, checkpoint.Deadline)</strong>
+                        <MudChip T="string"
+                                 Size="Size.Small"
+                                 Color="@(checkpoint.PendingWorkItems.Count > 0 ? Color.Warning : Color.Success)"
+                                 Variant="Variant.Outlined">
+                            @FormatDuration(checkpoint.WaitDurationMs)
+                        </MudChip>
+                    </div>
+
+                    <dl class="performance-checkpoints__facts">
+                        <div>
+                            <dt>@L["ModuleSystem:PerformanceMonitoring:Labels:DueWorkItems"]</dt>
+                            <dd>@checkpoint.DueWorkItemNames.Count</dd>
+                        </div>
+                        <div>
+                            <dt>@L["ModuleSystem:PerformanceMonitoring:Labels:PendingAtEntry"]</dt>
+                            <dd>@checkpoint.PendingWorkItems.Count</dd>
+                        </div>
+                        <div>
+                            <dt>@L["ModuleSystem:PerformanceMonitoring:Labels:CheckpointEntered"]</dt>
+                            <dd>@FormatOffset(checkpoint.EnteredOffsetMs)</dd>
+                        </div>
+                        <div>
+                            <dt>@L["ModuleSystem:PerformanceMonitoring:Labels:CheckpointReleased"]</dt>
+                            <dd>@FormatOffset(checkpoint.ReleasedOffsetMs)</dd>
+                        </div>
+                    </dl>
+
+                    <div class="performance-checkpoints__releaser">
+                        <small>@L["ModuleSystem:PerformanceMonitoring:Labels:BarrierReleaser"]</small>
+                        <strong>@(checkpoint.ReleasingWorkItemName ?? L["ModuleSystem:PerformanceMonitoring:States:None"])</strong>
+                    </div>
+
+                    @if (checkpoint.DueWorkItemNames.Count > 0)
+                    {
+                        <div class="performance-checkpoints__due">
+                            <small>@L["ModuleSystem:PerformanceMonitoring:Labels:DueWorkItems"]</small>
+                            <div>
+                                @foreach (var workName in checkpoint.DueWorkItemNames)
+                                {
+                                    <MudChip T="string" Size="Size.Small" Color="Color.Info" Variant="Variant.Text">@workName</MudChip>
+                                }
+                            </div>
+                        </div>
+                    }
+
+                    @if (checkpoint.PendingWorkItems.Count > 0)
+                    {
+                        <div class="performance-checkpoints__pending">
+                            <small>@L["ModuleSystem:PerformanceMonitoring:Labels:PendingWorkItems"]</small>
+                            <div>
+                                @foreach (var pending in checkpoint.PendingWorkItems)
+                                {
+                                    <MudChip T="string" Size="Size.Small" Color="Color.Warning" Variant="Variant.Text">
+                                        @L[
+                                            "ModuleSystem:PerformanceMonitoring:Formats:PendingWorkItem",
+                                            pending.WorkItemName,
+                                            pending.RemainingDurationMs]
+                                    </MudChip>
+                                }
+                            </div>
+                        </div>
+                    }
+                </article>
+            }
+        </div>
+    }
+</section>
+
+@code {
+    [Parameter, EditorRequired]
+    public IReadOnlyList<ModuleCompositionCheckpointView> Checkpoints { get; set; } = [];
+
+    private static string GetCheckpointClass(ModuleCompositionCheckpointView checkpoint)
+        => checkpoint.PendingWorkItems.Count > 0
+            ? "performance-checkpoints__item--blocked"
+            : "performance-checkpoints__item--clear";
+
+    private string FormatDuration(double durationMs)
+        => L["ModuleSystem:PerformanceMonitoring:Formats:Duration", durationMs];
+
+    private string FormatOffset(double offsetMs)
+        => L["ModuleSystem:PerformanceMonitoring:Formats:Offset", offsetMs];
+}

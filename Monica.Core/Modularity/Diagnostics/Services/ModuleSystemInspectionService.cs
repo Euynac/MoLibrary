@@ -28,16 +28,19 @@ public sealed class ModuleSystemInspectionService(MonicaApplication application)
         var hasCircularDependencies = application.Dependencies.HasCircularDependencies();
         var hasRegistrationErrors = application.Modules.RegistrationErrors.Count > 0;
 
-        var state = DetermineSystemState(enabledModules, errorModules, hasCircularDependencies);
+        var composition = application.Profiling.GetCompositionPerformance();
+        var compositionCompleted = composition.Milestones.Any(static milestone =>
+            milestone.Milestone == ModuleCompositionMilestone.CompositionCompleted);
+        var state = DetermineSystemState(compositionCompleted, errorModules, hasCircularDependencies);
 
         return new ModuleSystemStatus
         {
-            IsInitialized = application.Modules.RuntimeSnapshots.Count > 0,
+            IsInitialized = compositionCompleted,
             TotalModules = totalModules,
             EnabledModules = enabledModules,
             DisabledModules = disabledModules,
             ErrorModules = errorModules,
-            TotalInitializationTimeMs = application.Profiling.GetTotalElapsedMilliseconds(),
+            ServiceRegistrationDurationMs = composition.ServiceRegistrationDurationMs,
             State = state,
             HasCircularDependencies = hasCircularDependencies,
             HasRegistrationErrors = hasRegistrationErrors
@@ -50,69 +53,13 @@ public sealed class ModuleSystemInspectionService(MonicaApplication application)
     /// <returns>The performance snapshot.</returns>
     public ModuleSystemPerformance GetSystemPerformance()
     {
-        var phaseDurations = application.Profiling.GetPhaseDurations();
-        var phasePerformances = new List<PhasePerformanceInfo>();
-        
-        var order = 0;
-        foreach (var (phaseName, duration) in phaseDurations)
-        {
-            phasePerformances.Add(new PhasePerformanceInfo
-            {
-                PhaseName = phaseName,
-                DurationMs = duration,
-                Order = order++
-            });
-        }
-
-        var modulePerformances = new List<ModulePerformanceInfo>();
-        var slowestModules = new List<ModulePerformanceInfo>();
-
-        foreach (var snapshot in application.Modules.RuntimeSnapshots)
-        {
-            var profile = application.Profiling.GetModuleProfile(snapshot.ModuleType);
-            if (profile != null)
-            {
-                var modulePerf = new ModulePerformanceInfo
-                {
-                    ModuleTypeName = snapshot.ModuleType.Name,
-                    ModuleKey = snapshot.ModuleKey,
-                    SerialPhaseDurationMs = profile.GetSerialPhaseDuration(),
-                    PhaseDurations = profile.GetPhaseDurations(),
-                    CompositionWorkItems = profile.GetCompositionWork().ToList()
-                };
-                modulePerformances.Add(modulePerf);
-            }
-        }
-
-        slowestModules = modulePerformances
-            .OrderByDescending(m => m.SerialPhaseDurationMs)
-            .Take(5)
-            .ToList();
-
-        var configMethodStats = CalculateConfigMethodStatistics(modulePerformances);
-
-        var totalSystemPhaseDuration = phaseDurations.Values.Sum();
-        var totalModulePhaseDuration = modulePerformances.Sum(static performance =>
-            performance.PhaseDurations.Values.Sum());
-        var compositionWorkSummary = application.Profiling.GetCompositionWorkSummary();
-
+        var runtimeModuleKeys = application.Modules.RuntimeSnapshots
+            .Select(static snapshot => snapshot.ModuleKey)
+            .ToHashSet();
         return new ModuleSystemPerformance
         {
-            TotalSystemInitializationTimeMs = application.Profiling.GetTotalElapsedMilliseconds(),
-            PhasePerformances = phasePerformances,
-            ModulePerformances = modulePerformances,
-            SlowestModules = slowestModules,
-            ConfigMethodStatistics = configMethodStats,
-            TotalSystemPhaseDurationMs = totalSystemPhaseDuration,
-            TotalModulePhaseDurationMs = totalModulePhaseDuration,
-            CompositionWorkWallDurationMs = compositionWorkSummary.WallDurationMs,
-            TotalCompositionWorkExecutionDurationMs = compositionWorkSummary.TotalExecutionDurationMs,
-            TotalCompositionWorkQueueDurationMs = compositionWorkSummary.TotalQueueDurationMs,
-            TotalCompositionCheckpointWaitDurationMs = compositionWorkSummary.TotalCheckpointWaitDurationMs,
-            CompositionWorkItemCount = compositionWorkSummary.Count,
-            CompositionCheckpoints = compositionWorkSummary.Checkpoints.ToList(),
-            SystemPhaseCount = phaseDurations.Count,
-            TotalModulePhaseExecutions = modulePerformances.Sum(m => m.PhaseDurations.Count)
+            Composition = application.Profiling.GetCompositionPerformance(),
+            Modules = application.Profiling.GetModulePerformances(runtimeModuleKeys)
         };
     }
 
@@ -160,19 +107,12 @@ public sealed class ModuleSystemInspectionService(MonicaApplication application)
         }
 
         var totalSerialPhaseDuration = enabledModules.Sum(m => m.SerialPhaseDurationMs);
-        var slowestModules = enabledModules
-            .Where(m => m.SerialPhaseDurationMs > 0)
-            .OrderByDescending(m => m.SerialPhaseDurationMs)
-            .Take(5)
-            .ToList();
-
         var statistics = new ModuleRegistrationStatistics
         {
             TotalModules = enabledModules.Count + disabledModules.Count,
             EnabledModules = enabledModules.Count,
             DisabledModules = disabledModules.Count,
-            TotalSerialPhaseDurationMs = totalSerialPhaseDuration,
-            SlowestModules = slowestModules
+            TotalSerialPhaseDurationMs = totalSerialPhaseDuration
         };
 
         return new ModuleRegistrationOverview
@@ -378,52 +318,22 @@ public sealed class ModuleSystemInspectionService(MonicaApplication application)
 
     #region Private Helpers
 
-    private ModuleSystemState DetermineSystemState(int enabledModules, int errorModules, bool hasCircularDependencies)
+    private static ModuleSystemState DetermineSystemState(
+        bool compositionCompleted,
+        int errorModules,
+        bool hasCircularDependencies)
     {
         if (errorModules > 0 || hasCircularDependencies)
         {
             return ModuleSystemState.Failed;
         }
 
-        if (enabledModules == 0)
+        if (!compositionCompleted)
         {
             return ModuleSystemState.NotInitialized;
         }
 
         return ModuleSystemState.Initialized;
-    }
-
-    private List<ConfigMethodStatistics> CalculateConfigMethodStatistics(List<ModulePerformanceInfo> modulePerformances)
-    {
-        var configMethodStats = new List<ConfigMethodStatistics>();
-        var allPhases = Enum.GetValues<ModulePhase>();
-
-        foreach (var phase in allPhases)
-        {
-            if (phase == ModulePhase.None) continue;
-
-            var moduleData = modulePerformances
-                .Where(m => m.PhaseDurations.ContainsKey(phase) && m.PhaseDurations[phase] > 0)
-                .ToList();
-
-            if (moduleData.Count == 0) continue;
-
-            var totalDuration = moduleData.Sum(m => m.PhaseDurations[phase]);
-            var averageDuration = totalDuration / moduleData.Count;
-            var slowestModule = moduleData.OrderByDescending(m => m.PhaseDurations[phase]).First();
-
-            configMethodStats.Add(new ConfigMethodStatistics
-            {
-                ConfigMethod = phase,
-                TotalDurationMs = totalDuration,
-                AverageDurationMs = averageDuration,
-                ModuleCount = moduleData.Count,
-                SlowestModuleName = slowestModule.ModuleTypeName,
-                SlowestModuleDurationMs = slowestModule.PhaseDurations[phase]
-            });
-        }
-
-        return configMethodStats;
     }
 
     private ModuleBasicInfo CreateModuleBasicInfo(ModuleRuntimeSnapshot snapshot)
@@ -455,15 +365,7 @@ public sealed class ModuleSystemInspectionService(MonicaApplication application)
     {
         var basicInfo = CreateModuleBasicInfo(snapshot);
 
-        var profile = application.Profiling.GetModuleProfile(snapshot.ModuleType);
-        var performanceInfo = new ModulePerformanceInfo
-        {
-            ModuleTypeName = snapshot.ModuleType.Name,
-            ModuleKey = snapshot.ModuleKey,
-            SerialPhaseDurationMs = profile?.GetSerialPhaseDuration() ?? 0,
-            PhaseDurations = profile?.GetPhaseDurations() ?? [],
-            CompositionWorkItems = profile?.GetCompositionWork().ToList() ?? []
-        };
+        var performanceInfo = application.Profiling.GetModulePerformance(snapshot);
 
         var moduleKey = snapshot.ModuleKey;
         var dependencyInfo = application.Dependencies.GetModuleDependencyInfo(moduleKey);
@@ -680,37 +582,39 @@ public sealed class ModuleSystemInspectionService(MonicaApplication application)
 
     private HealthCheckItem CheckPerformanceIssues(List<HealthIssue> issues)
     {
-        var totalInitTime = application.Profiling.GetTotalElapsedMilliseconds();
+        var serviceRegistrationDuration = application.Profiling
+            .GetCompositionPerformance()
+            .ServiceRegistrationDurationMs;
         var slowModules = application.Profiling.GetModuleProfilesSortedBySerialPhaseDuration().Take(3).ToList();
         
         var status = HealthStatus.Healthy;
-        var details = $"Total initialization time: {totalInitTime}ms";
+        var details = $"Service registration time: {serviceRegistrationDuration:F1}ms";
 
         // Performance thresholds.
-        const long slowInitThreshold = 5000; // 5 seconds
+        const double slowServiceRegistrationThreshold = 5000; // 5 seconds
         const long verySlowModuleThreshold = 1000; // 1 second
 
-        if (totalInitTime > slowInitThreshold)
+        if (serviceRegistrationDuration > slowServiceRegistrationThreshold)
         {
             status = HealthStatus.Warning;
             issues.Add(new HealthIssue
             {
                 Severity = IssueSeverity.Medium,
-                Title = "Slow System Initialization",
-                Description = $"System initialization took {totalInitTime}ms, which exceeds the recommended threshold",
+                Title = "Slow Monica Service Registration",
+                Description = $"Monica service registration took {serviceRegistrationDuration:F1}ms, which exceeds the recommended threshold",
                 IssueType = IssueType.Performance,
-                RecommendedAction = "Review module initialization logic and optimize slow modules"
+                RecommendedAction = "Review serial module callbacks, composition work, and blocking checkpoints"
             });
         }
 
         foreach (var module in slowModules.Where(module =>
-                     module.GetSerialPhaseDuration() > verySlowModuleThreshold))
+                     module.GetSerialPhaseDurationMs() > verySlowModuleThreshold))
         {
             issues.Add(new HealthIssue
             {
                 Severity = IssueSeverity.Low,
                 Title = $"Slow Module: {module.ModuleType.Name}",
-                Description = $"Module serial callbacks took {module.GetSerialPhaseDuration()}ms to initialize",
+                Description = $"Module serial callbacks took {module.GetSerialPhaseDurationMs():F1}ms to initialize",
                 IssueType = IssueType.Performance,
                 RecommendedAction = $"Optimize {module.ModuleType.Name} module initialization"
             });
@@ -829,44 +733,51 @@ public sealed class ModuleSystemInspectionService(MonicaApplication application)
     private HealthPerformanceMetrics CalculateHealthPerformanceMetrics()
     {
         var moduleProfiles = application.Profiling.GetModuleProfilesSortedBySerialPhaseDuration();
-        var totalInitTime = application.Profiling.GetTotalElapsedMilliseconds();
+        var serviceRegistrationDuration = application.Profiling
+            .GetCompositionPerformance()
+            .ServiceRegistrationDurationMs;
         
         var averageModuleSerialPhaseDuration = moduleProfiles.Count > 0
-            ? moduleProfiles.Average(static profile => profile.GetSerialPhaseDuration())
+            ? moduleProfiles.Average(static profile => profile.GetSerialPhaseDurationMs())
             : 0;
 
         var slowestModule = moduleProfiles.FirstOrDefault();
-        var slowestModuleSerialPhaseDuration = slowestModule?.GetSerialPhaseDuration() ?? 0;
+        var slowestModuleSerialPhaseDuration = (long)Math.Floor(
+            slowestModule?.GetSerialPhaseDurationMs() ?? 0);
         var slowestModuleName = slowestModule?.ModuleType.Name;
 
         // Calculate an efficiency score from 0-100 based on init time and module count.
-        var efficiencyScore = CalculateEfficiencyScore(totalInitTime, moduleProfiles.Count);
+        var efficiencyScore = CalculateServiceRegistrationEfficiencyScore(
+            serviceRegistrationDuration,
+            moduleProfiles.Count);
 
         return new HealthPerformanceMetrics
         {
             AverageModuleSerialPhaseDurationMs = averageModuleSerialPhaseDuration,
             SlowestModuleSerialPhaseDurationMs = slowestModuleSerialPhaseDuration,
             SlowestModuleName = slowestModuleName,
-            TotalSystemInitTimeMs = totalInitTime,
-            InitializationEfficiencyScore = efficiencyScore,
+            ServiceRegistrationDurationMs = serviceRegistrationDuration,
+            ServiceRegistrationEfficiencyScore = efficiencyScore,
             MemoryUsageBytes = GC.GetTotalMemory(false) // Current memory usage.
         };
     }
 
-    private int CalculateEfficiencyScore(long totalInitTime, int moduleCount)
+    private static int CalculateServiceRegistrationEfficiencyScore(
+        double serviceRegistrationDuration,
+        int moduleCount)
     {
         if (moduleCount == 0) return 100;
 
         // Baseline: 100 ms per module, with 3 seconds as the minimum efficient total.
         var baselineTime = Math.Max(moduleCount * 100, 3000);
         
-        if (totalInitTime <= baselineTime)
+        if (serviceRegistrationDuration <= baselineTime)
         {
             return 100;
         }
 
         // Deduct points linearly once the baseline is exceeded.
-        var score = Math.Max(0, 100 - (int)((totalInitTime - baselineTime) / 100));
+        var score = Math.Max(0, 100 - (int)((serviceRegistrationDuration - baselineTime) / 100));
         return Math.Min(100, score);
     }
 

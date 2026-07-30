@@ -26,6 +26,7 @@ public static class MonicaApplicationBuilderExtensions
         app.UseRouting();
         app.UseMonicaEndpointPortGuard(application.ModuleSystem);
         application.Modules.ConfigApplicationPipeline(app, ModuleOrder.MIDDLEWARE_USE_ROUTING, afterGivenOrder: true);
+        application.Modules.CompleteApplicationPipeline();
         return app;
     }
 

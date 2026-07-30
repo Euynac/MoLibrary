@@ -25,6 +25,7 @@ internal sealed class ModuleCompositionWorkScheduler(int maxConcurrency) : IDisp
     /// </summary>
     internal void Schedule(
         Type moduleType,
+        ModuleKey moduleKey,
         int registrationOrder,
         string name,
         ModulePhase originPhase,
@@ -60,6 +61,7 @@ internal sealed class ModuleCompositionWorkScheduler(int maxConcurrency) : IDisp
             var sequence = _nextSequence++;
             var item = new ModuleCompositionWorkItem(
                 moduleType,
+                moduleKey,
                 registrationOrder,
                 name,
                 originPhase,
@@ -76,7 +78,9 @@ internal sealed class ModuleCompositionWorkScheduler(int maxConcurrency) : IDisp
     /// <summary>
     /// Waits for all work due at the next checkpoint while allowing later-deadline work to continue independently.
     /// </summary>
-    internal ModuleCompositionWorkCheckpointResult ReachCheckpoint(ModuleCompositionWorkDeadline deadline)
+    internal ModuleCompositionWorkCheckpointResult ReachCheckpoint(
+        ModuleCompositionWorkDeadline deadline,
+        Action<ModuleCompositionWorkDeadline>? checkpointEntered = null)
     {
         ObjectDisposedException.ThrowIf(_disposed, this);
         ValidateNextCheckpoint(deadline);
@@ -96,19 +100,43 @@ internal sealed class ModuleCompositionWorkScheduler(int maxConcurrency) : IDisp
         }
 
         ReleaseWorkerExitSignals(exitSignalCount);
-        var waitStarted = Stopwatch.GetTimestamp();
+        var enteredAtUtc = DateTimeOffset.UtcNow;
+        var enteredTimestamp = Stopwatch.GetTimestamp();
+        checkpointEntered?.Invoke(deadline);
         WaitForItems(dueItems);
-        var waitDuration = Stopwatch.GetElapsedTime(waitStarted);
 
         if (isFinal)
         {
             WaitForWorkers();
         }
 
+        var releasedAtUtc = DateTimeOffset.UtcNow;
+        var releasedTimestamp = Stopwatch.GetTimestamp();
+        var dueResults = dueItems.Select(static item => item.Result!).ToArray();
+        var pendingWorkItems = dueResults
+            .Where(result => result.CompletedTimestamp > enteredTimestamp)
+            .Select(result => new ModuleCompositionCheckpointPendingResult(
+                result.WorkItemId,
+                Stopwatch.GetElapsedTime(enteredTimestamp, result.CompletedTimestamp)))
+            .ToArray();
+        var releasingWorkItemId = dueResults
+            .Where(result => result.CompletedTimestamp > enteredTimestamp)
+            .OrderBy(static result => result.CompletedTimestamp)
+            .ThenBy(static result => result.RegistrationOrder)
+            .ThenBy(static result => result.Sequence)
+            .Select(static result => result.WorkItemId)
+            .LastOrDefault();
+
         var result = new ModuleCompositionWorkCheckpointResult(
             deadline,
-            dueItems.Select(static item => item.Result!).ToArray(),
-            waitDuration);
+            _checkpoints.Count,
+            enteredTimestamp,
+            releasedTimestamp,
+            enteredAtUtc,
+            releasedAtUtc,
+            dueResults,
+            pendingWorkItems,
+            releasingWorkItemId);
         lock (_gate)
         {
             foreach (var item in dueItems)
@@ -322,6 +350,7 @@ internal sealed class ModuleCompositionWorkScheduler(int maxConcurrency) : IDisp
 /// </summary>
 internal sealed class ModuleCompositionWorkItem(
     Type moduleType,
+    ModuleKey moduleKey,
     int registrationOrder,
     string name,
     ModulePhase originPhase,
@@ -337,6 +366,8 @@ internal sealed class ModuleCompositionWorkItem(
 
     internal Type ModuleType { get; } = moduleType;
 
+    internal ModuleKey ModuleKey { get; } = moduleKey;
+
     internal int RegistrationOrder { get; } = registrationOrder;
 
     internal string Name { get; } = name;
@@ -346,6 +377,8 @@ internal sealed class ModuleCompositionWorkItem(
     internal ModuleCompositionWorkDeadline Deadline { get; } = deadline;
 
     internal long Sequence { get; } = sequence;
+
+    internal string WorkItemId { get; } = $"composition-work-{sequence:D6}";
 
     internal Task Completion => _completion.Task;
 
@@ -376,12 +409,15 @@ internal sealed class ModuleCompositionWorkItem(
         var completedAtUtc = DateTimeOffset.UtcNow;
         var completedTimestamp = Stopwatch.GetTimestamp();
         Result = new ModuleCompositionWorkResult(
+            WorkItemId,
             ModuleType,
+            ModuleKey,
             RegistrationOrder,
             Name,
             OriginPhase,
             Deadline,
             Sequence,
+            _submittedTimestamp,
             _startedTimestamp,
             completedTimestamp,
             _submittedAtUtc,
@@ -403,12 +439,15 @@ internal sealed class ModuleCompositionWorkItem(
 /// Immutable worker-local outcome merged into diagnostics on the serial composition thread.
 /// </summary>
 internal sealed record ModuleCompositionWorkResult(
+    string WorkItemId,
     Type ModuleType,
+    ModuleKey ModuleKey,
     int RegistrationOrder,
     string Name,
     ModulePhase OriginPhase,
     ModuleCompositionWorkDeadline Deadline,
     long Sequence,
+    long SubmittedTimestamp,
     long StartedTimestamp,
     long CompletedTimestamp,
     DateTimeOffset SubmittedAtUtc,
@@ -426,13 +465,26 @@ internal sealed record ModuleCompositionWorkResult(
 /// </summary>
 internal sealed record ModuleCompositionWorkCheckpointResult(
     ModuleCompositionWorkDeadline Deadline,
+    long Sequence,
+    long EnteredTimestamp,
+    long ReleasedTimestamp,
+    DateTimeOffset EnteredAtUtc,
+    DateTimeOffset ReleasedAtUtc,
     IReadOnlyList<ModuleCompositionWorkResult> WorkItems,
-    TimeSpan WaitDuration)
+    IReadOnlyList<ModuleCompositionCheckpointPendingResult> PendingWorkItems,
+    string? ReleasingWorkItemId)
 {
     internal int WorkItemCount => WorkItems.Count;
 
     internal bool HasFailures => WorkItems.Any(static item => !item.IsSucceeded);
 }
+
+/// <summary>
+/// Records the exact remaining duration of one item that was pending at checkpoint entry.
+/// </summary>
+internal sealed record ModuleCompositionCheckpointPendingResult(
+    string WorkItemId,
+    TimeSpan RemainingDuration);
 
 /// <summary>
 /// Immutable complete scheduler result used by profiling and error aggregation.

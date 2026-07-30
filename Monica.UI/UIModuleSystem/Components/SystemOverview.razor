@@ -70,7 +70,7 @@
                 </div>
             </MudItem>
 
-            <!-- initialization time -->            <MudItem xs="12" sm="6" md="3">
+            <!-- Monica service-registration time -->            <MudItem xs="12" sm="6" md="3">
                 <div class="overview-summary-item">
                     <MudCard Class="performance-card modern-card">
                         <MudCardContent Class="pa-4">
@@ -83,17 +83,14 @@
                             </div>
                             <div class="card-content">
                                 <MudText Typo="Typo.h4" Color="Color.Warning" Class="mb-3">
-                                    @(SystemStatus.TotalInitializationTimeMs)ms
-                                </MudText>
-                                <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-2">
-                                    @L["ModuleSystem:SystemOverview:Labels:StartTime"]: @(SystemStatus.StartTime?.ToString("HH:mm:ss") ?? L["ModuleSystem:SystemOverview:Labels:Unknown"])
+                                    @($"{SystemStatus.ServiceRegistrationDurationMs:F1}ms")
                                 </MudText>
                                 <MudProgressLinear Color="Color.Warning" 
-                                                 Value="@GetInitTimeProgress(SystemStatus.TotalInitializationTimeMs)" 
+                                                 Value="@GetServiceRegistrationProgress(SystemStatus.ServiceRegistrationDurationMs)"
                                                  Class="mb-2"
                                                  Size="Size.Medium" />
                                 <MudText Typo="Typo.caption" Color="Color.Secondary">
-                                    @GetInitTimeDescription(SystemStatus.TotalInitializationTimeMs)
+                                    @GetServiceRegistrationDescription(SystemStatus.ServiceRegistrationDurationMs)
                                 </MudText>
                             </div>
                         </MudCardContent>
@@ -327,25 +324,25 @@
     };
 
     /// <summary>
-    /// Get initialization time progress
+    /// Gets the service-registration progress indicator.
     /// </summary>
-    /// <param name="totalTimeMs">Total initialization time (milliseconds)</param>
+    /// <param name="durationMs">Completed service-registration duration in milliseconds.</param>
     /// <returns>Progress value</returns>
-    private double GetInitTimeProgress(long totalTimeMs)
+    private double GetServiceRegistrationProgress(double durationMs)
     {
-        if (totalTimeMs == 0) return 0;
-        return SystemStatus?.IsInitialized == true ? 100 : (SystemStatus?.TotalInitializationTimeMs ?? 0) / totalTimeMs * 100;
+        if (durationMs == 0) return 0;
+        return SystemStatus?.IsInitialized == true ? 100 : 0;
     }
 
     /// <summary>
-    /// Get initialization time description
+    /// Gets the service-registration state description.
     /// </summary>
-    /// <param name="totalTimeMs">Total initialization time (milliseconds)</param>
+    /// <param name="durationMs">Observed service-registration duration in milliseconds.</param>
     /// <returns>Description text</returns>
-    private string GetInitTimeDescription(long totalTimeMs)
+    private string GetServiceRegistrationDescription(double durationMs)
     {
-        if (totalTimeMs == 0) return L["ModuleSystem:SystemOverview:Messages:SystemStarting"];
+        if (durationMs == 0) return L["ModuleSystem:SystemOverview:Messages:SystemStarting"];
         if (SystemStatus?.IsInitialized == true) return L["ModuleSystem:SystemOverview:Messages:SystemInitialized"];
-        return string.Format(L["ModuleSystem:SystemOverview:Messages:SystemRunning"], totalTimeMs);
+        return string.Format(L["ModuleSystem:SystemOverview:Messages:SystemRunning"], durationMs);
     }
 }

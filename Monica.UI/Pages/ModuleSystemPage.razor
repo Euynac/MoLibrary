@@ -5,6 +5,7 @@
 @using Monica.Core.Results
 @using Monica.UI.Localization
 @using Monica.UI.UIModuleSystem.State
+@using Monica.UI.UIModuleSystem.Support
 @inject ModuleDiagnosticsFacade ModuleDiagnostics
 @inject ISnackbar SnackBar
 @inject IStringLocalizer<SharedResource> L
@@ -38,7 +39,8 @@
 
             <MudTabPanel Text="@L["ModuleSystem:Dashboard:Tabs:PerformanceMonitoring"]" Icon="@Icons.Material.Filled.Speed">
                 <div class="tab-content-panel">
-                    <PerformanceMonitoring SystemPerformance="_state.SystemPerformance" />
+                    <PerformanceMonitoring SystemPerformance="_state.SystemPerformance"
+                                           ModuleSelected="ViewModulePerformance" />
                 </div>
             </MudTabPanel>
 
@@ -68,7 +70,8 @@
 
 <!-- Module Details Dialog --><ModuleDetailDialog IsVisible="_state.ShowModuleDetail"
                    IsVisibleChanged="OnModuleDetailVisibilityChanged"
-                   SelectedModuleDetail="_state.SelectedModuleDetail" />
+                   SelectedModuleDetail="_state.SelectedModuleDetail"
+                   InitialTab="_state.SelectedModuleDetailTab" />
 
 
 @code {
@@ -131,7 +134,13 @@
     /// </summary>
     /// <param name="moduleKey">Module key</param>
     /// <returns></returns>
-    private async Task ViewModuleDetail(ModuleKey moduleKey)
+    private Task ViewModuleDetail(ModuleKey moduleKey)
+        => ViewModuleDetail(moduleKey, ModuleDetailTab.Basic);
+
+    private Task ViewModulePerformance(ModuleKey moduleKey)
+        => ViewModuleDetail(moduleKey, ModuleDetailTab.Performance);
+
+    private async Task ViewModuleDetail(ModuleKey moduleKey, ModuleDetailTab initialTab)
     {
         var result = await ModuleDiagnostics.GetModuleDetailAsync(moduleKey);
         if (result.IsFailed(out var error, out var moduleDetail))
@@ -146,7 +155,7 @@
             return;
         }
 
-        _state.ShowModuleDetailDialog(moduleDetail);
+        _state.ShowModuleDetailDialog(moduleDetail, initialTab);
     }
 
     private Task OnModuleDetailVisibilityChanged(bool isVisible)

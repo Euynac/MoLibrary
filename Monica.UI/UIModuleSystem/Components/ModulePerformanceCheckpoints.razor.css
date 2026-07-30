@@ -1,0 +1,117 @@
+.performance-checkpoints {
+    display: grid;
+    gap: 16px;
+    min-width: 0;
+    padding: 20px;
+    border: 1px solid var(--mud-palette-lines-default);
+    border-radius: var(--mud-default-borderradius);
+    background: var(--mud-palette-surface);
+}
+
+.performance-checkpoints__header,
+.performance-checkpoints__item-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+}
+
+.performance-checkpoints__header > div,
+.performance-checkpoints__item-header > strong {
+    min-width: 0;
+    overflow-wrap: anywhere;
+}
+
+.performance-checkpoints__grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 12px;
+}
+
+.performance-checkpoints__item {
+    display: grid;
+    align-content: start;
+    gap: 14px;
+    min-width: 0;
+    padding: 16px;
+    border: 1px solid var(--mud-palette-lines-default);
+    border-radius: var(--mud-default-borderradius);
+    background: var(--mud-palette-background-gray);
+}
+
+.performance-checkpoints__item--blocked {
+    border-color: color-mix(in srgb, var(--mud-palette-warning) 58%, var(--mud-palette-lines-default));
+    background: color-mix(in srgb, var(--mud-palette-warning) 8%, var(--mud-palette-surface));
+}
+
+.performance-checkpoints__item--clear {
+    border-color: color-mix(in srgb, var(--mud-palette-success) 42%, var(--mud-palette-lines-default));
+}
+
+.performance-checkpoints__facts {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+    margin: 0;
+}
+
+.performance-checkpoints__facts > div,
+.performance-checkpoints__releaser,
+.performance-checkpoints__due,
+.performance-checkpoints__pending {
+    display: grid;
+    gap: 3px;
+    min-width: 0;
+}
+
+.performance-checkpoints__facts > div {
+    padding: 8px;
+    border-radius: var(--mud-default-borderradius);
+    background: var(--mud-palette-surface);
+}
+
+.performance-checkpoints__facts dt,
+.performance-checkpoints__releaser small,
+.performance-checkpoints__due small,
+.performance-checkpoints__pending small {
+    color: var(--mud-palette-text-secondary);
+    font-size: 0.72rem;
+}
+
+.performance-checkpoints__facts dd {
+    margin: 0;
+    font-weight: 700;
+}
+
+.performance-checkpoints__releaser strong {
+    overflow-wrap: anywhere;
+}
+
+.performance-checkpoints__due > div,
+.performance-checkpoints__pending > div {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+}
+
+.performance-checkpoints__empty {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    padding: 24px;
+    border: 1px dashed var(--mud-palette-lines-default);
+    border-radius: var(--mud-default-borderradius);
+}
+
+@media (max-width: 1000px) {
+    .performance-checkpoints__grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 600px) {
+    .performance-checkpoints {
+        padding: 16px;
+    }
+}

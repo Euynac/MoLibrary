@@ -82,7 +82,11 @@ public class ModuleRegistrationState(MonicaApplication application, Type moduleT
 
     public void StartModulePhase(ModulePhase phase)
     {
-        application.Profiling.StartModulePhase(ModuleType, phase);
+        application.Profiling.StartModulePhase(
+            ModuleType,
+            application.Dependencies.ResolveModuleKey(ModuleType),
+            Order,
+            phase);
         SetModulePhase(phase);
     }
 
