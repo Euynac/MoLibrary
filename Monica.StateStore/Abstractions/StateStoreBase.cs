@@ -31,6 +31,14 @@ public abstract class StateStoreBase(ILogger logger) : IStateStore
     public abstract Task<(bool Success, string? NewETag)> TrySaveStateWithETagAsync<T>(string key, T value, string expectedETag,
         CancellationToken cancellationToken = default, TimeSpan? ttl = null);
 
+    /// <inheritdoc />
+    public virtual async Task<bool> TrySaveStateWithETagWithoutReadBackAsync<T>(string key, T value, string expectedETag,
+        CancellationToken cancellationToken = default, TimeSpan? ttl = null)
+    {
+        var (success, _) = await TrySaveStateWithETagAsync(key, value, expectedETag, cancellationToken, ttl);
+        return success;
+    }
+
     public abstract Task<bool> TrySaveStateIfNotExistsAsync<T>(string key, T value,
         CancellationToken cancellationToken = default, TimeSpan? ttl = null);
 

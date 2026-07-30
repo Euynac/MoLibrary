@@ -98,6 +98,18 @@ public sealed class InMemoryDistributedStateStore : IDistributedStateStore
     }
 
     /// <inheritdoc />
+    public async Task<bool> TrySaveStateWithETagWithoutReadBackAsync<T>(
+        string key,
+        T value,
+        string expectedETag,
+        CancellationToken cancellationToken = default,
+        TimeSpan? ttl = null)
+    {
+        var (success, _) = await TrySaveStateWithETagAsync(key, value, expectedETag, cancellationToken, ttl);
+        return success;
+    }
+
+    /// <inheritdoc />
     public Task<bool> TrySaveStateIfNotExistsAsync<T>(
         string key,
         T value,
