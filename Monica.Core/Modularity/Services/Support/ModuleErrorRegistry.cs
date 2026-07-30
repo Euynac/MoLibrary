@@ -160,6 +160,27 @@ internal sealed class ModuleErrorRegistry(MonicaApplication application)
     }
 
     /// <summary>
+    /// Records a failure raised while the serial composition thread publishes completed worker state.
+    /// </summary>
+    internal void RecordCompositionWorkCommitError(
+        ModuleCompositionWorkResult result,
+        Exception exception)
+    {
+        ArgumentNullException.ThrowIfNull(exception);
+
+        application.Modules.AddRegistrationError(new ModuleRegistrationError
+        {
+            ModuleType = result.ModuleType,
+            ErrorMessage =
+                $"Error committing composition work '{result.Name}' ({result.Deadline}): " +
+                exception.GetMessageRecursively(),
+            ErrorType = ModuleRegistrationErrorType.CompositionWorkError,
+            Phase = result.OriginPhase,
+            StackTrace = exception.StackTrace
+        });
+    }
+
+    /// <summary>
     /// Records an error indicating that the current host cannot satisfy a module's ASP.NET Core requirements.
     /// </summary>
     /// <param name="moduleType">The incompatible module type.</param>

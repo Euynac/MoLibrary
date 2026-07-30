@@ -575,24 +575,236 @@ public sealed class ModuleCompositionWorkTests
 
         compose.Should().Throw<ModuleRegistrationException>()
             .WithMessage("*can schedule composition work only while its synchronous ConfigureBuilder, " +
-                         "ConfigureServices, or PostConfigureServices callback is executing*");
+                         "ConfigureServices, IterateBusinessTypes, or PostConfigureServices callback is executing*");
     }
 
     [Fact]
-    public void AddMonica_WhenWorkIsScheduledDuringBusinessTypeIteration_ShouldRejectOutsideAllowedCallbacks()
+    public async Task AddMonica_WhenWorkIsScheduledDuringBusinessTypeIteration_ShouldOverlapIterationAndHoldPostConfigure()
+    {
+        using var gate = new WorkGate(expectedEntrants: 1);
+        var iterationReached = NewSignal();
+        var postConfigureReached = NewSignal();
+        var builder = Host.CreateApplicationBuilder();
+        var composition = Task.Run(
+            () => builder.AddMonica(monica =>
+            {
+                monica.ConfigureTypeDiscovery(static options => options.ExcludeDefault());
+                monica.AddModuleSystem();
+                AddProbeOne(monica, options =>
+                {
+                    options.AddBusinessTypeIterationWork(
+                        "iteration-work",
+                        gate.Run,
+                        ModuleCompositionWorkDeadline.BeforePostConfigureServices);
+                    options.BusinessTypeIterationReached = () => iterationReached.TrySetResult();
+                    options.PostConfigureReached = () => postConfigureReached.TrySetResult();
+                });
+            }),
+            TestContext.Current.CancellationToken);
+
+        try
+        {
+            await gate.ExpectedEntrantsReached.WaitAsync(HANG_GUARD, TestContext.Current.CancellationToken);
+            await iterationReached.Task.WaitAsync(HANG_GUARD, TestContext.Current.CancellationToken);
+
+            composition.IsCompleted.Should().BeFalse();
+            postConfigureReached.Task.IsCompleted.Should().BeFalse();
+
+            gate.Release();
+            await postConfigureReached.Task.WaitAsync(HANG_GUARD, TestContext.Current.CancellationToken);
+            await composition.WaitAsync(HANG_GUARD, TestContext.Current.CancellationToken);
+
+            using var host = builder.Build();
+            var work = host.Services.GetRequiredService<IModuleSystemInspectionService>()
+                .GetSystemPerformance()
+                .Composition.WorkItems.Should().ContainSingle(item => item.Name == "iteration-work").Subject;
+            work.OriginPhase.Should().Be(ModulePhase.IterateBusinessTypes);
+            work.Deadline.Should().Be(ModuleCompositionWorkDeadline.BeforePostConfigureServices);
+        }
+        finally
+        {
+            gate.Release();
+            await ObserveCompositionCompletionAsync(composition);
+        }
+    }
+
+    [Fact]
+    public void AddMonica_WhenIterationWorkHasCommits_ShouldCommitInRegistrationOrderBeforePostConfigure()
+    {
+        using var secondWorkerCompleted = new ManualResetEventSlim(initialState: false);
+        var commits = new List<string>();
+        var commitThreadIds = new List<int>();
+        IReadOnlyList<string>? observedAtPostConfigure = null;
+        var compositionThreadId = Environment.CurrentManagedThreadId;
+        var builder = Host.CreateApplicationBuilder();
+
+        builder.AddMonica(monica =>
+        {
+            monica.ConfigureModuleSystem(options => options.MaxConcurrentCompositionWorkItems = 2);
+            monica.ConfigureTypeDiscovery(static options => options.ExcludeDefault());
+            monica.AddModuleSystem();
+            AddProbeOne(monica, options =>
+            {
+                options.AddBusinessTypeIterationWork(
+                    "first-commit",
+                    () =>
+                    {
+                        if (!secondWorkerCompleted.Wait(HANG_GUARD))
+                        {
+                            throw new TimeoutException("The second worker did not complete.");
+                        }
+                    },
+                    () =>
+                    {
+                        commits.Add("first");
+                        commitThreadIds.Add(Environment.CurrentManagedThreadId);
+                    },
+                    ModuleCompositionWorkDeadline.BeforePostConfigureServices);
+                options.PostConfigureReached = () => observedAtPostConfigure = commits.ToArray();
+            });
+            AddProbeTwo(monica, options => options.AddBusinessTypeIterationWork(
+                "second-commit",
+                secondWorkerCompleted.Set,
+                () =>
+                {
+                    commits.Add("second");
+                    commitThreadIds.Add(Environment.CurrentManagedThreadId);
+                },
+                ModuleCompositionWorkDeadline.BeforePostConfigureServices));
+        });
+
+        commits.Should().Equal("first", "second");
+        commitThreadIds.Should().OnlyContain(threadId => threadId == compositionThreadId);
+        observedAtPostConfigure.Should().Equal("first", "second");
+
+        using var host = builder.Build();
+        var performance = host.Services.GetRequiredService<IModuleSystemInspectionService>()
+            .GetSystemPerformance();
+        var module = performance.Modules.Single(item =>
+            item.ModuleTypeName == nameof(CompositionWorkProbeModuleOne));
+        var iterationExecutions = module.PhaseExecutions
+            .Where(static execution => execution.Phase == ModulePhase.IterateBusinessTypes)
+            .OrderBy(static execution => execution.StartedOffsetMs)
+            .ToArray();
+        var checkpoint = performance.Composition.Checkpoints.Single(item =>
+            item.Deadline == ModuleCompositionWorkDeadline.BeforePostConfigureServices);
+
+        iterationExecutions.Should().HaveCount(2);
+        checkpoint.ReleasedOffsetMs.Should().BeLessThanOrEqualTo(iterationExecutions[^1].StartedOffsetMs);
+    }
+
+    [Fact]
+    public void AddMonica_WhenOneDueWorkerFails_ShouldSkipEveryCommitAtThatCheckpoint()
+    {
+        var successfulCommitRan = false;
+        var failedWorkerCommitRan = false;
+        var builder = Host.CreateApplicationBuilder();
+
+        Action compose = () => builder.AddMonica(monica =>
+        {
+            monica.ConfigureTypeDiscovery(static options => options.ExcludeDefault());
+            AddProbeOne(monica, options => options.AddBusinessTypeIterationWork(
+                "successful-worker",
+                static () => { },
+                () => successfulCommitRan = true,
+                ModuleCompositionWorkDeadline.BeforePostConfigureServices));
+            AddProbeTwo(monica, options => options.AddBusinessTypeIterationWork(
+                "failed-worker",
+                static () => throw new InvalidOperationException("checkpoint-worker-failure"),
+                () => failedWorkerCommitRan = true,
+                ModuleCompositionWorkDeadline.BeforePostConfigureServices));
+        });
+
+        compose.Should().Throw<ModuleRegistrationException>()
+            .WithMessage("*checkpoint-worker-failure*");
+        successfulCommitRan.Should().BeFalse();
+        failedWorkerCommitRan.Should().BeFalse();
+    }
+
+    [Fact]
+    public void AddMonica_WhenACommitFails_ShouldRecordTheErrorAndStopLaterCommits()
+    {
+        var laterCommitRan = false;
+        var builder = Host.CreateApplicationBuilder();
+
+        Action compose = () => builder.AddMonica(monica =>
+        {
+            monica.ConfigureTypeDiscovery(static options => options.ExcludeDefault());
+            AddProbeOne(monica, options => options.AddBusinessTypeIterationWork(
+                "failed-commit",
+                static () => { },
+                static () => throw new InvalidOperationException("serial-commit-failure"),
+                ModuleCompositionWorkDeadline.BeforePostConfigureServices));
+            AddProbeTwo(monica, options => options.AddBusinessTypeIterationWork(
+                "later-commit",
+                static () => { },
+                () => laterCommitRan = true,
+                ModuleCompositionWorkDeadline.BeforePostConfigureServices));
+        });
+
+        compose.Should().Throw<ModuleRegistrationException>()
+            .WithMessage("*Error committing composition work 'failed-commit'*serial-commit-failure*");
+        laterCommitRan.Should().BeFalse();
+    }
+
+    [Fact]
+    public void AddMonica_WhenACommitAttemptsNestedScheduling_ShouldRejectTheCommit()
     {
         var builder = Host.CreateApplicationBuilder();
 
         Action compose = () => builder.AddMonica(monica =>
         {
             monica.ConfigureTypeDiscovery(static options => options.ExcludeDefault());
-            AddProbeOne(monica, options => options.ScheduleDuringBusinessTypeIteration = true);
+            AddProbeOne(monica, options => options.ScheduleNestedWorkFromCommit = true);
+        });
+
+        compose.Should().Throw<ModuleRegistrationException>()
+            .WithMessage("*Error committing composition work 'outer-commit-work'*" +
+                         "can schedule composition work only while its synchronous*callback is executing*");
+    }
+
+    [Fact]
+    public void AddMonica_WhenIterationWorkTargetsThePassedDeadline_ShouldRejectTheDeadline()
+    {
+        var builder = Host.CreateApplicationBuilder();
+
+        Action compose = () => builder.AddMonica(monica =>
+        {
+            monica.ConfigureTypeDiscovery(static options => options.ExcludeDefault());
+            AddProbeOne(monica, options => options.AddBusinessTypeIterationWork(
+                "late-iteration-work",
+                static () => { },
+                ModuleCompositionWorkDeadline.BeforeBusinessTypeIteration));
         });
 
         var exception = compose.Should().Throw<Exception>().Which;
-        exception.ToString().Should().Contain(
-            "can schedule composition work only while its synchronous ConfigureBuilder, " +
-            "ConfigureServices, or PostConfigureServices callback is executing");
+        exception.ToString().Should()
+            .Contain("cannot schedule composition work for BeforeBusinessTypeIteration during business-type iteration")
+            .And.Contain("Use BeforePostConfigureServices or BeforeServiceRegistrationCompletion");
+    }
+
+    [Fact]
+    public void AddMonica_WhenIterationWorkFails_ShouldStopAtThePostConfigureBarrier()
+    {
+        var postConfigureReached = false;
+        var builder = Host.CreateApplicationBuilder();
+
+        Action compose = () => builder.AddMonica(monica =>
+        {
+            monica.ConfigureTypeDiscovery(static options => options.ExcludeDefault());
+            AddProbeOne(monica, options =>
+            {
+                options.AddBusinessTypeIterationWork(
+                    "failed-iteration-work",
+                    static () => throw new InvalidOperationException("iteration-work-failure"),
+                    ModuleCompositionWorkDeadline.BeforePostConfigureServices);
+                options.PostConfigureReached = () => postConfigureReached = true;
+            });
+        });
+
+        compose.Should().Throw<Exception>()
+            .Which.ToString().Should().Contain("iteration-work-failure");
+        postConfigureReached.Should().BeFalse();
     }
 
     [Fact]
@@ -608,7 +820,7 @@ public sealed class ModuleCompositionWorkTests
 
         compose.Should().Throw<ModuleRegistrationException>()
             .WithMessage("*can schedule composition work only while its synchronous ConfigureBuilder, " +
-                         "ConfigureServices, or PostConfigureServices callback is executing*");
+                         "ConfigureServices, IterateBusinessTypes, or PostConfigureServices callback is executing*");
     }
 
     [Fact]
@@ -633,6 +845,36 @@ public sealed class ModuleCompositionWorkTests
             .Contain("async")
             .And.Contain("composition work");
         invocationCount.Should().Be(0);
+    }
+
+    [Fact]
+    public void AddMonica_WhenCommitIsAnAsyncStateMachineAction_ShouldRejectBeforeWorkerInvocation()
+    {
+        var workerInvocationCount = 0;
+        var commitInvocationCount = 0;
+        Action asyncCommit = async () =>
+        {
+            Interlocked.Increment(ref commitInvocationCount);
+            await Task.Yield();
+        };
+        var builder = Host.CreateApplicationBuilder();
+
+        Action compose = () => builder.AddMonica(monica =>
+        {
+            monica.ConfigureTypeDiscovery(static options => options.ExcludeDefault());
+            AddProbeOne(monica, options => options.AddBusinessTypeIterationWork(
+                "async-void-commit",
+                () => Interlocked.Increment(ref workerInvocationCount),
+                asyncCommit,
+                ModuleCompositionWorkDeadline.BeforePostConfigureServices));
+        });
+
+        var exception = compose.Should().Throw<Exception>().Which;
+        exception.ToString().ToLowerInvariant().Should()
+            .Contain("async")
+            .And.Contain("composition work commits");
+        workerInvocationCount.Should().Be(0);
+        commitInvocationCount.Should().Be(0);
     }
 
     [Fact]
@@ -827,7 +1069,8 @@ public sealed class ModuleCompositionWorkTests
 internal sealed record CompositionWorkTestPlan(
     string Name,
     Action Work,
-    ModuleCompositionWorkDeadline Deadline);
+    ModuleCompositionWorkDeadline Deadline,
+    Action? Commit = null);
 
 internal abstract class CompositionWorkProbeOption<TModule> : ModuleOptions<TModule>
     where TModule : IModule
@@ -836,15 +1079,17 @@ internal abstract class CompositionWorkProbeOption<TModule> : ModuleOptions<TMod
 
     internal List<CompositionWorkTestPlan> ConfigureServicesWork { get; } = [];
 
+    internal List<CompositionWorkTestPlan> BusinessTypeIterationWork { get; } = [];
+
     internal List<CompositionWorkTestPlan> PostConfigureWork { get; } = [];
 
     internal Action? BusinessTypeIterationReached { get; set; }
 
     internal Action? PostConfigureReached { get; set; }
 
-    internal bool ScheduleDuringBusinessTypeIteration { get; set; }
-
     internal bool ScheduleNestedWork { get; set; }
+
+    internal bool ScheduleNestedWorkFromCommit { get; set; }
 
     internal bool ScheduleFromCapturedThread { get; set; }
 
@@ -874,6 +1119,25 @@ internal abstract class CompositionWorkProbeOption<TModule> : ModuleOptions<TMod
     {
         PostConfigureWork.Add(new CompositionWorkTestPlan(name, work, deadline));
     }
+
+    internal void AddBusinessTypeIterationWork(
+        string name,
+        Action work,
+        ModuleCompositionWorkDeadline deadline =
+            ModuleCompositionWorkDeadline.BeforeServiceRegistrationCompletion)
+    {
+        BusinessTypeIterationWork.Add(new CompositionWorkTestPlan(name, work, deadline));
+    }
+
+    internal void AddBusinessTypeIterationWork(
+        string name,
+        Action work,
+        Action commit,
+        ModuleCompositionWorkDeadline deadline =
+            ModuleCompositionWorkDeadline.BeforeServiceRegistrationCompletion)
+    {
+        BusinessTypeIterationWork.Add(new CompositionWorkTestPlan(name, work, deadline, commit));
+    }
 }
 
 internal abstract class CompositionWorkProbeModule<TModule, TOption, TGuide>(TOption option)
@@ -895,6 +1159,15 @@ internal abstract class CompositionWorkProbeModule<TModule, TOption, TGuide>(TOp
             ScheduleCompositionWork(
                 "outer-work",
                 () => ScheduleCompositionWork("nested-work", static () => { }));
+        }
+
+        if (Option.ScheduleNestedWorkFromCommit)
+        {
+            ScheduleCompositionWork(
+                "outer-commit-work",
+                static () => { },
+                () => ScheduleCompositionWork("nested-commit-work", static () => { }),
+                ModuleCompositionWorkDeadline.BeforeBusinessTypeIteration);
         }
 
         if (Option.ScheduleFromCapturedThread)
@@ -922,10 +1195,7 @@ internal abstract class CompositionWorkProbeModule<TModule, TOption, TGuide>(TOp
 
     public IEnumerable<Type> IterateBusinessTypes(IEnumerable<Type> types)
     {
-        if (Option.ScheduleDuringBusinessTypeIteration)
-        {
-            ScheduleCompositionWork("iteration-work", static () => { });
-        }
+        Schedule(Option.BusinessTypeIterationWork);
 
         Option.BusinessTypeIterationReached?.Invoke();
         foreach (var type in types)
@@ -944,7 +1214,13 @@ internal abstract class CompositionWorkProbeModule<TModule, TOption, TGuide>(TOp
     {
         foreach (var plan in plans)
         {
-            ScheduleCompositionWork(plan.Name, plan.Work, plan.Deadline);
+            if (plan.Commit is null)
+            {
+                ScheduleCompositionWork(plan.Name, plan.Work, plan.Deadline);
+                continue;
+            }
+
+            ScheduleCompositionWork(plan.Name, plan.Work, plan.Commit, plan.Deadline);
         }
     }
 }

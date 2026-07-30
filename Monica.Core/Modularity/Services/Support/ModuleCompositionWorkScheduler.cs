@@ -22,6 +22,7 @@ internal sealed class ModuleCompositionWorkScheduler(int maxConcurrency) : IDisp
 
     /// <summary>
     /// Schedules one work item and makes it immediately eligible for bounded execution.
+    /// The optional commit remains dormant for the serial registry to invoke after a successful checkpoint.
     /// </summary>
     internal void Schedule(
         Type moduleType,
@@ -30,7 +31,8 @@ internal sealed class ModuleCompositionWorkScheduler(int maxConcurrency) : IDisp
         string name,
         ModulePhase originPhase,
         ModuleCompositionWorkDeadline deadline,
-        Action work)
+        Action work,
+        Action? commit = null)
     {
         ArgumentNullException.ThrowIfNull(moduleType);
         ArgumentException.ThrowIfNullOrWhiteSpace(name);
@@ -67,7 +69,8 @@ internal sealed class ModuleCompositionWorkScheduler(int maxConcurrency) : IDisp
                 originPhase,
                 deadline,
                 sequence,
-                work);
+                work,
+                commit);
             _items.Add(identity, item);
             _queue.Enqueue(item, ((int)deadline, sequence));
         }
@@ -356,7 +359,8 @@ internal sealed class ModuleCompositionWorkItem(
     ModulePhase originPhase,
     ModuleCompositionWorkDeadline deadline,
     long sequence,
-    Action work)
+    Action work,
+    Action? commit)
 {
     private readonly TaskCompletionSource _completion = new(TaskCreationOptions.RunContinuationsAsynchronously);
     private readonly long _submittedTimestamp = Stopwatch.GetTimestamp();
@@ -425,7 +429,8 @@ internal sealed class ModuleCompositionWorkItem(
             completedAtUtc,
             Stopwatch.GetElapsedTime(_submittedTimestamp, _startedTimestamp),
             Stopwatch.GetElapsedTime(_startedTimestamp, completedTimestamp),
-            failure);
+            failure,
+            commit);
         _completion.TrySetResult();
     }
 
@@ -436,7 +441,7 @@ internal sealed class ModuleCompositionWorkItem(
 }
 
 /// <summary>
-/// Immutable worker-local outcome merged into diagnostics on the serial composition thread.
+/// Immutable worker-local outcome and optional checkpoint-owned serial commit.
 /// </summary>
 internal sealed record ModuleCompositionWorkResult(
     string WorkItemId,
@@ -455,7 +460,8 @@ internal sealed record ModuleCompositionWorkResult(
     DateTimeOffset CompletedAtUtc,
     TimeSpan QueueDuration,
     TimeSpan ExecutionDuration,
-    Exception? Failure)
+    Exception? Failure,
+    Action? Commit)
 {
     internal bool IsSucceeded => Failure is null;
 }

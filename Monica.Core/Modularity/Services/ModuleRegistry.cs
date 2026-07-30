@@ -383,7 +383,16 @@ public sealed class ModuleRegistry(MonicaApplication application)
                 snapshot.RegisterInfo.StartModulePhase(ModulePhase.IterateBusinessTypes);
                 try
                 {
-                    businessTypes = iterator.IterateBusinessTypes(businessTypes).ToArray();
+                    BeginCompositionCallback(snapshot.RegisterInfo);
+                    try
+                    {
+                        // Keep the callback active through enumeration because iterator bodies execute lazily.
+                        businessTypes = iterator.IterateBusinessTypes(businessTypes).ToArray();
+                    }
+                    finally
+                    {
+                        EndCompositionCallback(snapshot.RegisterInfo);
+                    }
                 }
                 finally
                 {
@@ -439,18 +448,23 @@ public sealed class ModuleRegistry(MonicaApplication application)
         ModuleBase owner,
         string name,
         Action work,
+        Action? commit,
         ModuleCompositionWorkDeadline deadline)
     {
         ArgumentNullException.ThrowIfNull(owner);
         ArgumentException.ThrowIfNullOrWhiteSpace(name);
         ArgumentNullException.ThrowIfNull(work);
 
-        if (work.GetInvocationList().Any(static callback =>
-                callback.Method.IsDefined(typeof(AsyncStateMachineAttribute), inherit: false)))
+        ValidateSynchronousCompositionDelegate(
+            work,
+            nameof(work),
+            "Module composition work must be synchronous. Use the Generic Host lifecycle for asynchronous work.");
+        if (commit is not null)
         {
-            throw new ArgumentException(
-                "Module composition work must be synchronous. Use the Generic Host lifecycle for asynchronous work.",
-                nameof(work));
+            ValidateSynchronousCompositionDelegate(
+                commit,
+                nameof(commit),
+                "Module composition work commits must be synchronous and cannot launch asynchronous work.");
         }
 
         if (!Enum.IsDefined(deadline))
@@ -472,11 +486,23 @@ public sealed class ModuleRegistry(MonicaApplication application)
                 || _activeCompositionCallbackThreadId != Environment.CurrentManagedThreadId
                 || info.ModulePhase is not (ModulePhase.ConfigureBuilder
                     or ModulePhase.ConfigureServices
+                    or ModulePhase.IterateBusinessTypes
                     or ModulePhase.PostConfigureServices))
             {
                 throw new InvalidOperationException(
                     $"Module {moduleType.Name} can schedule composition work only while its synchronous " +
-                    "ConfigureBuilder, ConfigureServices, or PostConfigureServices callback is executing.");
+                    "ConfigureBuilder, ConfigureServices, IterateBusinessTypes, or PostConfigureServices " +
+                    "callback is executing.");
+            }
+
+            if (info.ModulePhase == ModulePhase.IterateBusinessTypes
+                && deadline == ModuleCompositionWorkDeadline.BeforeBusinessTypeIteration)
+            {
+                throw new InvalidOperationException(
+                    $"Module {moduleType.Name} cannot schedule composition work for " +
+                    $"{ModuleCompositionWorkDeadline.BeforeBusinessTypeIteration} during business-type iteration. " +
+                    $"Use {ModuleCompositionWorkDeadline.BeforePostConfigureServices} or " +
+                    $"{ModuleCompositionWorkDeadline.BeforeServiceRegistrationCompletion}.");
             }
         }
 
@@ -489,7 +515,20 @@ public sealed class ModuleRegistry(MonicaApplication application)
             name,
             info.ModulePhase,
             deadline,
-            work);
+            work,
+            commit);
+    }
+
+    private static void ValidateSynchronousCompositionDelegate(
+        Action callback,
+        string parameterName,
+        string errorMessage)
+    {
+        if (callback.GetInvocationList().Any(static invocation =>
+                invocation.Method.IsDefined(typeof(AsyncStateMachineAttribute), inherit: false)))
+        {
+            throw new ArgumentException(errorMessage, parameterName);
+        }
     }
 
     private void RegisterModuleOptionContext(IServiceCollection services, Type optionType)
@@ -536,9 +575,48 @@ public sealed class ModuleRegistry(MonicaApplication application)
     {
         var scheduler = _compositionWork
             ?? throw new InvalidOperationException("Module composition work has already completed.");
-        if (scheduler.ReachCheckpoint(deadline).HasFailures)
+        var checkpoint = scheduler.ReachCheckpoint(deadline);
+        if (checkpoint.HasFailures)
         {
             throw new ModuleCompositionWorkFailureException(deadline);
+        }
+
+        CommitCompositionWork(checkpoint.WorkItems);
+    }
+
+    private void CommitCompositionWork(IReadOnlyList<ModuleCompositionWorkResult> workItems)
+    {
+        foreach (var result in workItems)
+        {
+            if (result.Commit is not { } commit)
+            {
+                continue;
+            }
+
+            if (!TryGetModuleRequestInfo(result.ModuleType, out var registration))
+            {
+                throw new InvalidOperationException(
+                    $"Composition work '{result.Name}' cannot commit because module {result.ModuleType.FullName} " +
+                    "is no longer registered.");
+            }
+
+            registration.StartModulePhase(result.OriginPhase);
+            try
+            {
+                // The worker checkpoint is already released. This serial publication is intentionally profiled as a
+                // repeated callback of the phase that scheduled the work rather than as worker wait time.
+                commit();
+            }
+            catch (Exception exception)
+            {
+                application.Errors.RecordCompositionWorkCommitError(result, exception);
+                application.Errors.RaiseModuleErrors();
+                throw;
+            }
+            finally
+            {
+                registration.EndModulePhase(result.OriginPhase);
+            }
         }
     }
 

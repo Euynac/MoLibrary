@@ -70,6 +70,7 @@ public sealed class ModuleConfiguration
     private readonly ConfigurationSchemaHasher _schemaHasher;
     private readonly ConfigurationDefinitionScanner _definitionScanner;
     private readonly MonicaConfigurationProviderAccessor _providerAccessor = new();
+    private ConfigurationDefinitionAnalysis _definitionAnalysis = ConfigurationDefinitionAnalysis.Empty;
     private IServiceCollection? _services;
 
     /// <summary>
@@ -189,84 +190,149 @@ public sealed class ModuleConfiguration
     /// <inheritdoc />
     public IEnumerable<Type> IterateBusinessTypes(IEnumerable<Type> types)
     {
+        var configurationTypes = new List<Type>();
         foreach (var type in types)
         {
             if (type is { IsClass: true, IsAbstract: false }
                 && type.GetCustomAttribute<ConfigurationAttribute>(inherit: false) is not null)
             {
-                RegisterConfigurationType(type);
+                configurationTypes.Add(type);
             }
 
             yield return type;
         }
-    }
 
-    private void RegisterConfigurationType(Type optionsType)
-    {
-        var definition = _definitionScanner.Scan(optionsType);
-        ValidateSectionPathIsUnique(definition);
-        _definitionRegistry.Register(definition);
-        RegisterOptionsBinding(optionsType, definition.SectionPath, definition.DefinitionKey);
-    }
-
-    private void ValidateSectionPathIsUnique(ConfigurationDefinition definition)
-    {
-        var duplicate = _definitionRegistry.GetAll()
-            .FirstOrDefault(existing =>
-                !string.Equals(existing.DefinitionKey, definition.DefinitionKey, StringComparison.OrdinalIgnoreCase)
-                && string.Equals(existing.SectionPath, definition.SectionPath, StringComparison.OrdinalIgnoreCase));
-
-        if (duplicate is null)
+        if (configurationTypes.Count == 0)
         {
-            return;
+            yield break;
         }
 
-        var message =
-            $"Configuration section path '{definition.SectionPath}' is used by both '{duplicate.DefinitionKey}' and '{definition.DefinitionKey}'. " +
-            $"Set an explicit {nameof(ConfigurationAttribute.SectionPath)}, change {nameof(ModuleConfigurationOption.DefaultSectionPathConvention)}, " +
-            $"or set {nameof(ModuleConfigurationOption.DuplicateSectionPathBehavior)} to {nameof(ConfigurationDuplicateSectionPathBehavior.Warning)}.";
+        var typesToAnalyze = configurationTypes.ToArray();
+        ScheduleCompositionWork(
+            "build-configuration-definitions",
+            () => BuildDefinitions(typesToAnalyze),
+            CommitDefinitions,
+            ModuleCompositionWorkDeadline.BeforePostConfigureServices);
+    }
 
-        if (Option.DuplicateSectionPathBehavior == ConfigurationDuplicateSectionPathBehavior.Warning)
+    private void BuildDefinitions(IReadOnlyList<Type> optionsTypes)
+    {
+        var analysis = ConfigurationDefinitionAnalysis.Create(_definitionScanner, optionsTypes);
+        var conflicts = ValidateDefinitions(analysis.Registrations);
+        Volatile.Write(ref _definitionAnalysis, analysis.WithSectionPathConflicts(conflicts));
+    }
+
+    private void CommitDefinitions()
+    {
+        var services = _services
+            ?? throw new InvalidOperationException($"{nameof(ModuleConfiguration)} services have not been configured.");
+        var analysis = Volatile.Read(ref _definitionAnalysis);
+
+        foreach (var registration in analysis.Registrations)
+        {
+            RegisterOptionsBinding(
+                services,
+                registration.OptionsType,
+                registration.Definition.SectionPath,
+                registration.Definition.DefinitionKey);
+        }
+
+        _definitionRegistry.RegisterRange(
+            analysis.Registrations.Select(static registration => registration.Definition));
+
+        foreach (var conflict in analysis.SectionPathConflicts)
         {
             Logger.LogWarning(
                 "Duplicate Monica configuration section path '{SectionPath}' is used by definitions '{ExistingDefinitionKey}' and '{NewDefinitionKey}'.",
-                definition.SectionPath,
-                duplicate.DefinitionKey,
-                definition.DefinitionKey);
-            return;
+                conflict.Existing.SectionPath,
+                conflict.Existing.DefinitionKey,
+                conflict.Duplicate.DefinitionKey);
         }
-
-        throw new InvalidOperationException(message);
     }
 
-    private void RegisterOptionsBinding(Type optionsType, string sectionPath, string definitionKey)
+    private IReadOnlyList<ConfigurationSectionPathConflict> ValidateDefinitions(
+        IReadOnlyList<ConfigurationDefinitionRegistration> registrations)
     {
-        if (_services is null)
+        var duplicateKey = registrations
+            .GroupBy(static registration => registration.Definition.DefinitionKey, StringComparer.OrdinalIgnoreCase)
+            .FirstOrDefault(static group => group.Skip(1).Any());
+        if (duplicateKey is not null)
         {
-            throw new InvalidOperationException($"{nameof(ModuleConfiguration)} services have not been configured.");
+            var types = string.Join(
+                ", ",
+                duplicateKey.Select(static registration => registration.OptionsType.FullName)
+                    .Order(StringComparer.Ordinal));
+            throw new InvalidOperationException(
+                $"Configuration definition key '{duplicateKey.Key}' is declared by multiple options types: {types}.");
         }
 
-        var optionsBuilder = ADD_OPTIONS_METHOD.MakeGenericMethod(optionsType).Invoke(null, [_services])
+        var definitions = _definitionRegistry.GetAll()
+            .Concat(registrations.Select(static registration => registration.Definition))
+            .OrderBy(static definition => definition.DefinitionKey, StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+        var conflicts = new List<ConfigurationSectionPathConflict>();
+        foreach (var sectionGroup in definitions.GroupBy(
+                     static definition => definition.SectionPath,
+                     StringComparer.OrdinalIgnoreCase))
+        {
+            var distinctDefinitions = sectionGroup
+                .GroupBy(static definition => definition.DefinitionKey, StringComparer.OrdinalIgnoreCase)
+                .Select(static group => group.First())
+                .OrderBy(static definition => definition.DefinitionKey, StringComparer.OrdinalIgnoreCase)
+                .ToArray();
+            if (distinctDefinitions.Length < 2)
+            {
+                continue;
+            }
+
+            foreach (var duplicate in distinctDefinitions.Skip(1))
+            {
+                var conflict = new ConfigurationSectionPathConflict(distinctDefinitions[0], duplicate);
+                if (Option.DuplicateSectionPathBehavior == ConfigurationDuplicateSectionPathBehavior.FailFast)
+                {
+                    throw new InvalidOperationException(BuildDuplicateSectionPathMessage(conflict));
+                }
+
+                conflicts.Add(conflict);
+            }
+        }
+
+        return conflicts;
+    }
+
+    private static string BuildDuplicateSectionPathMessage(ConfigurationSectionPathConflict conflict)
+    {
+        return
+            $"Configuration section path '{conflict.Existing.SectionPath}' is used by both '{conflict.Existing.DefinitionKey}' and '{conflict.Duplicate.DefinitionKey}'. " +
+            $"Set an explicit {nameof(ConfigurationAttribute.SectionPath)}, change {nameof(ModuleConfigurationOption.DefaultSectionPathConvention)}, " +
+            $"or set {nameof(ModuleConfigurationOption.DuplicateSectionPathBehavior)} to {nameof(ConfigurationDuplicateSectionPathBehavior.Warning)}.";
+    }
+
+    private void RegisterOptionsBinding(
+        IServiceCollection services,
+        Type optionsType,
+        string sectionPath,
+        string definitionKey)
+    {
+        var optionsBuilder = ADD_OPTIONS_METHOD.MakeGenericMethod(optionsType).Invoke(null, [services])
             ?? throw new InvalidOperationException($"Failed to create OptionsBuilder for '{optionsType.FullName}'.");
 
         var configurationSection = _runtimeContext.Configuration.GetSection(sectionPath);
         BIND_OPTIONS_METHOD.MakeGenericMethod(optionsType).Invoke(null, [optionsBuilder, configurationSection]);
         if (Option.RuntimeValidationBehavior == ConfigurationRuntimeValidationBehavior.FailFast)
         {
-            RegisterOptionsValidator(optionsType, definitionKey);
+            RegisterOptionsValidator(services, optionsType, definitionKey);
         }
     }
 
-    private void RegisterOptionsValidator(Type optionsType, string definitionKey)
+    private static void RegisterOptionsValidator(
+        IServiceCollection services,
+        Type optionsType,
+        string definitionKey)
     {
-        if (_services is null)
-        {
-            throw new InvalidOperationException($"{nameof(ModuleConfiguration)} services have not been configured.");
-        }
-
         var serviceType = typeof(IValidateOptions<>).MakeGenericType(optionsType);
         var validatorType = typeof(MonicaConfigurationOptionsValidator<>).MakeGenericType(optionsType);
-        _services.AddSingleton(serviceType, provider => ActivatorUtilities.CreateInstance(provider, validatorType, definitionKey));
+        services.AddSingleton(serviceType, provider => ActivatorUtilities.CreateInstance(provider, validatorType, definitionKey));
     }
 
     private static MethodInfo GetRequiredGenericMethod(Type extensionType, string methodName, IReadOnlyList<Type> parameterTypeDefinitions)

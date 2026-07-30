@@ -45,7 +45,11 @@ public abstract class ModuleBase : IModule
     /// </param>
     /// <remarks>
     /// Schedule only CPU-bound work over immutable or module-owned state that no other callback consumes before the
-    /// selected deadline. The callback must not mutate the host builder, service collection, module graph, provider,
+    /// selected deadline. Scheduling is valid from the synchronous <c>ConfigureBuilder</c>, <c>ConfigureServices</c>,
+    /// <c>IterateBusinessTypes</c>, and <c>PostConfigureServices</c> callbacks. Work scheduled during business-type
+    /// iteration must use <see cref="ModuleCompositionWorkDeadline.BeforePostConfigureServices"/> or
+    /// <see cref="ModuleCompositionWorkDeadline.BeforeServiceRegistrationCompletion"/> because the earlier checkpoint
+    /// has already passed. The callback must not mutate the host builder, service collection, module graph, provider,
     /// or shared static state. Runtime, I/O, optional, or fire-and-forget work belongs in the Generic Host lifecycle.
     /// Monica rejects asynchronous delegates and does not flow the caller's ambient execution context into workers.
     /// Capture required module-owned values explicitly. Monica owns execution and propagates every failure at the
@@ -60,9 +64,9 @@ public abstract class ModuleBase : IModule
     /// </exception>
     /// <exception cref="InvalidOperationException">
     /// Thrown when the module is not the materialized host-owned instance; scheduling does not occur synchronously
-    /// on the same thread as that instance's <c>ConfigureBuilder</c>, <c>ConfigureServices</c>, or
-    /// <c>PostConfigureServices</c> callback; the name is duplicated; the deadline already passed; or scheduling is
-    /// nested from a composition worker.
+    /// on the same thread as that instance's <c>ConfigureBuilder</c>, <c>ConfigureServices</c>,
+    /// <c>IterateBusinessTypes</c>, or <c>PostConfigureServices</c> callback; the name is duplicated; the selected
+    /// deadline is unavailable from the active callback; or scheduling is nested from a composition worker.
     /// </exception>
     protected void ScheduleCompositionWork(
         string name,
@@ -70,7 +74,45 @@ public abstract class ModuleBase : IModule
         ModuleCompositionWorkDeadline deadline =
             ModuleCompositionWorkDeadline.BeforeServiceRegistrationCompletion)
     {
-        Application.Modules.ScheduleCompositionWork(this, name, work, deadline);
+        Application.Modules.ScheduleCompositionWork(this, name, work, commit: null, deadline: deadline);
+    }
+
+    /// <summary>
+    /// Schedules isolated CPU work and a deterministic serial commit that publishes its completed result.
+    /// </summary>
+    /// <param name="name">A stable name that is unique within the module.</param>
+    /// <param name="work">The synchronous work Monica should execute on a bounded composition worker.</param>
+    /// <param name="commit">
+    /// The synchronous, lightweight action Monica executes on the serial composition thread after every work item due
+    /// at the checkpoint succeeds. The action may publish module-owned state or mutate the host service collection.
+    /// </param>
+    /// <param name="deadline">The checkpoint that waits for the worker and owns the serial commit.</param>
+    /// <remarks>
+    /// Monica executes successful commits in module registration and work submission order before the next serial
+    /// composition phase begins. If any worker due at the checkpoint fails, no commit at that checkpoint runs. Commit
+    /// actions must not perform I/O, launch asynchronous work, or schedule additional composition work.
+    /// </remarks>
+    /// <exception cref="ArgumentException">
+    /// Thrown when <paramref name="name"/> is empty or either delegate is asynchronous.
+    /// </exception>
+    /// <exception cref="ArgumentNullException">
+    /// Thrown when <paramref name="work"/> or <paramref name="commit"/> is <see langword="null"/>.
+    /// </exception>
+    /// <exception cref="ArgumentOutOfRangeException">
+    /// Thrown when <paramref name="deadline"/> is not a defined <see cref="ModuleCompositionWorkDeadline"/> value.
+    /// </exception>
+    /// <exception cref="InvalidOperationException">
+    /// Thrown for the same ownership, callback, duplicate-name, and deadline violations as the worker-only overload.
+    /// </exception>
+    protected void ScheduleCompositionWork(
+        string name,
+        Action work,
+        Action commit,
+        ModuleCompositionWorkDeadline deadline =
+            ModuleCompositionWorkDeadline.BeforeServiceRegistrationCompletion)
+    {
+        ArgumentNullException.ThrowIfNull(commit);
+        Application.Modules.ScheduleCompositionWork(this, name, work, commit, deadline);
     }
 
     /// <summary>
