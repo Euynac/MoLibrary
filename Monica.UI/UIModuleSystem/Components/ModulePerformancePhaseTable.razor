@@ -31,21 +31,21 @@
                         <MudTh>@L["ModuleSystem:PerformanceMonitoring:Labels:PhaseName"]</MudTh>
                         <MudTh>@L["ModuleSystem:PerformanceMonitoring:Labels:StartedAt"]</MudTh>
                         <MudTh>@L["ModuleSystem:PerformanceMonitoring:Labels:Duration"]</MudTh>
-                        <MudTh>@L["ModuleSystem:PerformanceMonitoring:Labels:EndToEndShare"]</MudTh>
+                        <MudTh>@L["ModuleSystem:PerformanceMonitoring:Labels:RelativeToLongest"]</MudTh>
                     </HeaderContent>
                     <RowTemplate>
                         <MudTd DataLabel="@L["ModuleSystem:PerformanceMonitoring:Labels:Order"]">@context.Sequence</MudTd>
                         <MudTd DataLabel="@L["ModuleSystem:PerformanceMonitoring:Labels:PhaseName"]">
-                            @ModulePerformanceDisplayText.Phase(L, context.Name)
+                            <span class="performance-phases__identifier">@context.Name</span>
                         </MudTd>
                         <MudTd DataLabel="@L["ModuleSystem:PerformanceMonitoring:Labels:StartedAt"]">@FormatOffset(context.StartedOffsetMs)</MudTd>
                         <MudTd DataLabel="@L["ModuleSystem:PerformanceMonitoring:Labels:Duration"]"><strong>@FormatDuration(context.DurationMs)</strong></MudTd>
-                        <MudTd DataLabel="@L["ModuleSystem:PerformanceMonitoring:Labels:EndToEndShare"]">
+                        <MudTd DataLabel="@L["ModuleSystem:PerformanceMonitoring:Labels:RelativeToLongest"]">
                             <div class="performance-phases__share">
-                                <MudProgressLinear Value="@context.EndToEndPercentage"
-                                                   Color="Color.Tertiary"
-                                                   Size="Size.Small" />
-                                <span>@FormatPercentage(context.EndToEndPercentage)</span>
+                                <MudProgressLinear Value="@context.RelativeToLongestPercentage"
+                                                   Color="@GetRelativeColor(context.RelativeToLongestPercentage)"
+                                                   Size="Size.Medium" />
+                                <span>@FormatPercentage(context.RelativeToLongestPercentage)</span>
                             </div>
                         </MudTd>
                     </RowTemplate>
@@ -67,4 +67,11 @@
 
     private string FormatPercentage(double percentage)
         => L["ModuleSystem:PerformanceMonitoring:Formats:Percentage", percentage];
+
+    private static Color GetRelativeColor(double percentage) => percentage switch
+    {
+        >= 75 => Color.Error,
+        >= 40 => Color.Warning,
+        _ => Color.Success
+    };
 }

@@ -205,9 +205,14 @@
     "PerformanceMonitoring": {
       "Labels": {
         "DiagnosticsTitle": "启动性能诊断",
-        "EndToEndElapsed": "端到端组合实际耗时",
-        "AggregateSerialCallbacks": "串行模块回调累计耗时",
-        "StartupBlockingWait": "启动受阻等待",
+        "ModuleSystemInitializationElapsed": "模块系统初始化耗时",
+        "MonicaFrameworkElapsed": "Monica 框架实际耗时",
+        "ApplicationConfigurationElapsed": "应用模块配置耗时",
+        "HostOwnedElapsed": "宿主侧间隔耗时",
+        "ServiceRegistrationElapsed": "服务注册耗时",
+        "BlockingCheckpointWait": "检查点阻塞等待",
+        "MonicaOrchestration": "Monica 编排与发现",
+        "ParallelActivity": "重叠的并行活动",
         "ParallelWorkActiveSpan": "并行工作活动跨度",
         "AggregateWorkerExecution": "工作线程累计执行耗时",
         "AggregateWorkerQueue": "工作线程累计排队耗时",
@@ -240,17 +245,17 @@
         "PhaseName": "阶段名称",
         "StartedAt": "开始时间",
         "Duration": "耗时",
-        "EndToEndShare": "端到端占比",
+        "RelativeToLongest": "相对耗时（最长阶段 = 100%）",
         "Status": "状态"
       },
       "Messages": {
-        "DiagnosticsDescription": "定位串行回调、并行工作、主机侧间隔与阻塞检查点中的启动开销。",
+        "DiagnosticsDescription": "使用可相加的耗时分解解释模块系统初始化，并将会发生重叠的并行工作单独展示。",
         "WorkItemCount": "共 {0} 个并行工作项",
-        "EndToEndElapsedDescription": "从 Monica 开始组合到当前主机类型的组合完成边界。",
+        "InitializationBreakdownDescription": "精确分解：Monica 框架实际耗时、应用模块配置耗时和宿主侧间隔耗时，等于模块系统初始化总耗时。",
+        "ServiceRegistrationBreakdownDescription": "精确分解：应用模块配置、串行模块回调、检查点阻塞等待和 Monica 编排耗时，等于服务注册耗时。",
         "SerialCallbackCount": "共执行 {0} 次回调",
-        "StartupBlockingWaitDescription": "串行组合路径在并行工作等待点实际受阻的时间。",
-        "ParallelWorkActiveSpanDescription": "从最早工作线程开始到最晚工作线程完成。",
-        "MetricsOverlap": "这些指标描述不同维度，部分时间会重叠，不能直接相加。",
+        "ParallelActivityDescription": "初始化期间观测到的工作线程活动，与可相加的耗时分解保持分离。",
+        "ParallelMetricsOverlap": "并行活动跨度、累计执行和累计排队会彼此重叠，也会与精确耗时分解重叠，不能直接相加。",
         "MilestoneTimelineDescription": "区分 Monica 组合与服务注册、应用管线和端点映射之间的主机侧间隔。",
         "CriticalPath": "{0} 等待了 {3}；由 {1} / {2} 释放屏障。",
         "NoBlockingCriticalPath": "没有并行工作阻塞组合等待点。",
@@ -260,7 +265,7 @@
         "ParallelCompositionWorkDescription": "按实际执行耗时展示模块工作，并标明调度阶段和启动影响。",
         "RemainingAtDeadline": "到达期限时仍剩余 {0:N0} 毫秒。",
         "SerialModuleCallbacksDescription": "仅排行同步模块回调；并行工作在独立表格中展示。",
-        "CompositionPhaseElapsedDescription": "展示每次系统阶段执行及其占端到端组合时间的比例。",
+        "CompositionPhaseElapsedDescription": "展示每次系统阶段的实际标识与耗时，并与观测到的最长阶段比较。",
         "NoPerformanceData": "暂无性能数据",
         "NoPhasePerformanceData": "暂无阶段性能数据"
       },
@@ -313,19 +318,6 @@
         "BeforeBusinessTypeIteration": "业务类型迭代前",
         "BeforePostConfigureServices": "服务后配置前",
         "BeforeServiceRegistrationCompletion": "服务注册完成前"
-      },
-      "Phases": {
-        "None": "无",
-        "ClaimDependencies": "声明依赖",
-        "InitFinalConfigures": "初始化最终配置",
-        "ConfigureBuilder": "配置主机构建器",
-        "ConfigureBuilderAndServices": "配置主机构建器与服务",
-        "ConfigureServices": "配置服务",
-        "IterateBusinessTypes": "迭代业务类型",
-        "PostConfigureServices": "服务后配置",
-        "ConfigureApplicationBuilder": "配置应用管线",
-        "ConfigureEndpoints": "配置端点",
-        "Disabled": "已禁用"
       }
     },
     "DependencyGraph": {

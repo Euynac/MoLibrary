@@ -25,7 +25,8 @@ namespace Monica.Core.Modularity.Services;
 /// </summary>
 public sealed class ModuleRegistry(MonicaApplication application)
 {
-    private const string CONFIGURE_BUILDER_AND_SERVICES_PHASE = "ConfigureBuilderAndServices";
+    private const string CONFIGURE_BUILDER_AND_SERVICES_PHASE =
+        nameof(ModulePhase.ConfigureBuilder) + " / " + nameof(ModulePhase.ConfigureServices);
 
     private readonly ModuleCompositionState _composition = new();
     private readonly object _compositionCallbackGate = new();

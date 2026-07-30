@@ -21,12 +21,22 @@ public sealed class ModuleCompositionPerformance
 
     /// <summary>
     /// Gets the monotonic elapsed duration from <c>AddMonica(...)</c> entry through completed service registration.
-    /// Host-owned delays before <c>UseMonica()</c> and <c>MapMonica()</c> are excluded.
+    /// Host-owned delays before <c>UseMonica()</c> and <c>MapMonica()</c> are excluded. When registration fails before
+    /// its completion milestone, this reports the observed terminal duration instead of discarding the partial span.
     /// </summary>
-    public double ServiceRegistrationDurationMs => Milestones
-        .FirstOrDefault(static milestone =>
-            milestone.Milestone == ModuleCompositionMilestone.ServiceRegistrationCompleted)
-        ?.OffsetMs ?? 0;
+    public double ServiceRegistrationDurationMs => GetServiceRegistrationDurationMs();
+
+    /// <summary>
+    /// Gets the exact system-initialization partition between Monica-controlled work and host-owned gaps.
+    /// </summary>
+    public ModuleCompositionInitializationPerformance Initialization =>
+        ModuleCompositionInitializationPerformance.Create(this);
+
+    /// <summary>
+    /// Gets the exact service-registration partition between callbacks, blocking waits, and orchestration.
+    /// </summary>
+    public ModuleServiceRegistrationPerformance ServiceRegistration =>
+        ModuleServiceRegistrationPerformance.Create(this);
 
     /// <summary>
     /// Gets lifecycle milestones in occurrence order.
@@ -111,5 +121,34 @@ public sealed class ModuleCompositionPerformance
                 ? null
                 : WorkItems.FirstOrDefault(work => string.Equals(work.WorkItemId, workItemId, StringComparison.Ordinal));
         }
+    }
+
+    /// <summary>Gets the first finite, non-negative offset for a lifecycle milestone.</summary>
+    internal double? GetMilestoneOffset(ModuleCompositionMilestone milestone)
+    {
+        var offsetMs = Milestones
+            .Where(info => info.Milestone == milestone)
+            .OrderBy(static info => info.Sequence)
+            .Select(static info => (double?)info.OffsetMs)
+            .FirstOrDefault();
+        return offsetMs is { } value && double.IsFinite(value)
+            ? Math.Max(0, value)
+            : null;
+    }
+
+    /// <summary>
+    /// Resolves completed registration time, or terminal elapsed time when registration ended before its milestone.
+    /// </summary>
+    internal double GetServiceRegistrationDurationMs()
+    {
+        var elapsedDurationMs = ModuleCompositionTimingIntervals.NormalizeDuration(ElapsedDurationMs);
+        if (GetMilestoneOffset(ModuleCompositionMilestone.ServiceRegistrationCompleted) is not { } completedOffsetMs)
+        {
+            return elapsedDurationMs;
+        }
+
+        return elapsedDurationMs == 0
+            ? completedOffsetMs
+            : Math.Clamp(completedOffsetMs, 0, elapsedDurationMs);
     }
 }

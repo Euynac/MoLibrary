@@ -38,6 +38,10 @@ public sealed class ModuleCompositionLifecycleTests
             ModuleCompositionMilestone.ServiceRegistrationCompleted,
             ModuleCompositionMilestone.CompositionCompleted);
         composition.ServiceRegistrationDurationMs.Should().BeGreaterThanOrEqualTo(20);
+        composition.ServiceRegistration.ApplicationConfigurationDurationMs.Should().BeGreaterThanOrEqualTo(20);
+        composition.SystemPhases.Should().ContainSingle(phase =>
+            phase.PhaseName == "ApplicationConfiguration"
+            && phase.DurationMs >= 20);
         composition.ModulePhaseExecutions.Should().BeEmpty();
 
         var status = new ModuleSystemInspectionService(application).GetSystemStatus();
@@ -72,11 +76,29 @@ public sealed class ModuleCompositionLifecycleTests
             ModuleCompositionMilestone.ServiceRegistrationCompleted,
             ModuleCompositionMilestone.CompositionCompleted);
         composition.Milestones.Select(static milestone => milestone.OffsetMs).Should().BeInAscendingOrder();
+        composition.Initialization.HostOwnedDurationMs.Should().Be(0);
+        (composition.Initialization.MonicaFrameworkDurationMs
+         + composition.Initialization.ApplicationConfigurationDurationMs)
+            .Should().BeApproximately(composition.Initialization.TotalDurationMs, 0.001);
+        (composition.ServiceRegistration.ApplicationConfigurationDurationMs
+         + composition.ServiceRegistration.SerialModuleCallbackDurationMs
+         + composition.ServiceRegistration.BlockingWaitDurationMs
+         + composition.ServiceRegistration.OrchestrationDurationMs)
+            .Should().BeApproximately(composition.ServiceRegistration.TotalDurationMs, 0.001);
+        composition.SystemPhases.Should().Contain(phase =>
+            phase.PhaseName == $"{nameof(ModulePhase.ConfigureBuilder)} / {nameof(ModulePhase.ConfigureServices)}");
         composition.WorkItems.Should().BeEmpty();
         composition.Checkpoints.Should().OnlyContain(static checkpoint => checkpoint.PendingWorkItemCount == 0);
         composition.AggregateCheckpointWaitDurationMs.Should().Be(0);
         composition.CriticalCheckpoint.Should().BeNull();
         composition.CriticalWorkItem.Should().BeNull();
+        application.Profiling.GetPerformanceSummary().Should()
+            .Contain("Module system initialization elapsed:")
+            .And.Contain("Monica framework work:")
+            .And.Contain("Application module configuration:")
+            .And.Contain("Host-owned gaps:")
+            .And.Contain("Service registration elapsed:")
+            .And.NotContain("End-to-end composition elapsed:");
 
         var inspection = new ModuleSystemInspectionService(application);
         inspection.GetSystemStatus().ServiceRegistrationDurationMs
@@ -126,6 +148,11 @@ public sealed class ModuleCompositionLifecycleTests
         composition.Milestones.Select(static milestone => milestone.OffsetMs).Should().BeInAscendingOrder();
         composition.ServiceRegistrationDurationMs.Should().Be(serviceRegistrationDuration);
         composition.ElapsedDurationMs.Should().BeGreaterThan(serviceRegistrationDuration + 30);
+        composition.Initialization.HostOwnedDurationMs.Should().BeGreaterThan(30);
+        (composition.Initialization.MonicaFrameworkDurationMs
+         + composition.Initialization.ApplicationConfigurationDurationMs
+         + composition.Initialization.HostOwnedDurationMs)
+            .Should().BeApproximately(composition.Initialization.TotalDurationMs, 0.001);
 
         var webModule = composition.ModulePhaseExecutions
             .Where(static execution => execution.ModuleTypeName == nameof(CompositionWebProbeModule))

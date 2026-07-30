@@ -12,67 +12,148 @@
         </MudChip>
     </header>
 
-    <div class="performance-summary__metrics">
-        @Metric(
-            "performance-summary__metric--primary",
-            Icons.Material.Filled.Timer,
-            L["ModuleSystem:PerformanceMonitoring:Labels:EndToEndElapsed"],
-            Summary.EndToEndElapsedMs,
-            L["ModuleSystem:PerformanceMonitoring:Messages:EndToEndElapsedDescription"])
-        @Metric(
-            "performance-summary__metric--info",
-            Icons.Material.Filled.Memory,
-            L["ModuleSystem:PerformanceMonitoring:Labels:AggregateSerialCallbacks"],
-            Summary.AggregateSerialCallbackMs,
-            L["ModuleSystem:PerformanceMonitoring:Messages:SerialCallbackCount", Summary.SerialCallbackCount])
-        @Metric(
-            "performance-summary__metric--warning",
-            Icons.Material.Filled.Lock,
-            L["ModuleSystem:PerformanceMonitoring:Labels:StartupBlockingWait"],
-            Summary.StartupBlockingWaitMs,
-            L["ModuleSystem:PerformanceMonitoring:Messages:StartupBlockingWaitDescription"])
-        @Metric(
-            "performance-summary__metric--success",
-            Icons.Material.Filled.Schema,
-            L["ModuleSystem:PerformanceMonitoring:Labels:ParallelWorkActiveSpan"],
-            Summary.ParallelWorkActiveSpanMs,
-            L["ModuleSystem:PerformanceMonitoring:Messages:ParallelWorkActiveSpanDescription"])
+    <div class="performance-summary__breakdowns">
+        <article class="performance-summary__breakdown performance-summary__breakdown--initialization">
+            @BreakdownHeader(
+                Icons.Material.Filled.Timer,
+                L["ModuleSystem:PerformanceMonitoring:Labels:ModuleSystemInitializationElapsed"],
+                Summary.Initialization.TotalDurationMs)
+            <MudText Typo="Typo.body2" Color="Color.Secondary">
+                @L["ModuleSystem:PerformanceMonitoring:Messages:InitializationBreakdownDescription"]
+            </MudText>
+            <div class="performance-summary__breakdown-rows">
+                @BreakdownRow(
+                    "performance-summary__breakdown-row--primary",
+                    L["ModuleSystem:PerformanceMonitoring:Labels:MonicaFrameworkElapsed"],
+                    Summary.Initialization.MonicaFrameworkDurationMs,
+                    Summary.Initialization.MonicaFrameworkPercentage,
+                    Color.Primary)
+                @BreakdownRow(
+                    "performance-summary__breakdown-row--info",
+                    L["ModuleSystem:PerformanceMonitoring:Labels:ApplicationConfigurationElapsed"],
+                    Summary.Initialization.ApplicationConfigurationDurationMs,
+                    Summary.Initialization.ApplicationConfigurationPercentage,
+                    Color.Info)
+                @BreakdownRow(
+                    "performance-summary__breakdown-row--warning",
+                    L["ModuleSystem:PerformanceMonitoring:Labels:HostOwnedElapsed"],
+                    Summary.Initialization.HostOwnedDurationMs,
+                    Summary.Initialization.HostOwnedPercentage,
+                    Color.Warning)
+            </div>
+        </article>
+
+        <article class="performance-summary__breakdown performance-summary__breakdown--registration">
+            @BreakdownHeader(
+                Icons.Material.Filled.AppRegistration,
+                L["ModuleSystem:PerformanceMonitoring:Labels:ServiceRegistrationElapsed"],
+                Summary.ServiceRegistration.TotalDurationMs)
+            <MudText Typo="Typo.body2" Color="Color.Secondary">
+                @L["ModuleSystem:PerformanceMonitoring:Messages:ServiceRegistrationBreakdownDescription"]
+            </MudText>
+            <div class="performance-summary__breakdown-rows">
+                @BreakdownRow(
+                    "performance-summary__breakdown-row--primary",
+                    L["ModuleSystem:PerformanceMonitoring:Labels:ApplicationConfigurationElapsed"],
+                    Summary.ServiceRegistration.ApplicationConfigurationDurationMs,
+                    Summary.ServiceRegistration.ApplicationConfigurationPercentage,
+                    Color.Primary)
+                @BreakdownRow(
+                    "performance-summary__breakdown-row--info",
+                    L["ModuleSystem:PerformanceMonitoring:Labels:SerialModuleCallbacks"],
+                    Summary.ServiceRegistration.SerialModuleCallbackDurationMs,
+                    Summary.ServiceRegistration.SerialModuleCallbackPercentage,
+                    Color.Info,
+                    L["ModuleSystem:PerformanceMonitoring:Messages:SerialCallbackCount", Summary.ServiceRegistrationCallbackCount])
+                @BreakdownRow(
+                    "performance-summary__breakdown-row--warning",
+                    L["ModuleSystem:PerformanceMonitoring:Labels:BlockingCheckpointWait"],
+                    Summary.ServiceRegistration.BlockingWaitDurationMs,
+                    Summary.ServiceRegistration.BlockingWaitPercentage,
+                    Color.Warning)
+                @BreakdownRow(
+                    "performance-summary__breakdown-row--secondary",
+                    L["ModuleSystem:PerformanceMonitoring:Labels:MonicaOrchestration"],
+                    Summary.ServiceRegistration.OrchestrationDurationMs,
+                    Summary.ServiceRegistration.OrchestrationPercentage,
+                    Color.Secondary)
+            </div>
+        </article>
     </div>
 
-    <div class="performance-summary__secondary">
-        <span>
-            <small>@L["ModuleSystem:PerformanceMonitoring:Labels:AggregateWorkerExecution"]</small>
-            <strong>@FormatDuration(Summary.AggregateWorkerExecutionMs)</strong>
-        </span>
-        <span>
-            <small>@L["ModuleSystem:PerformanceMonitoring:Labels:AggregateWorkerQueue"]</small>
-            <strong>@FormatDuration(Summary.AggregateWorkerQueueMs)</strong>
-        </span>
-    </div>
+    <section class="performance-summary__parallel" aria-labelledby="performance-summary-parallel-title">
+        <header>
+            <div>
+                <MudText id="performance-summary-parallel-title" Typo="Typo.h6">@L["ModuleSystem:PerformanceMonitoring:Labels:ParallelActivity"]</MudText>
+                <MudText Typo="Typo.body2" Color="Color.Secondary">@L["ModuleSystem:PerformanceMonitoring:Messages:ParallelActivityDescription"]</MudText>
+            </div>
+            <MudIcon Icon="@Icons.Material.Filled.Schema" Color="Color.Success" />
+        </header>
 
-    <MudAlert Severity="Severity.Info" Variant="Variant.Outlined" Dense="true">
-        @L["ModuleSystem:PerformanceMonitoring:Messages:MetricsOverlap"]
-    </MudAlert>
+        <div class="performance-summary__parallel-metrics">
+            @ParallelMetric(
+                "performance-summary__parallel-metric--success",
+                L["ModuleSystem:PerformanceMonitoring:Labels:ParallelWorkActiveSpan"],
+                Summary.ParallelActivity.ActiveSpanMs)
+            @ParallelMetric(
+                "performance-summary__parallel-metric--info",
+                L["ModuleSystem:PerformanceMonitoring:Labels:AggregateWorkerExecution"],
+                Summary.ParallelActivity.AggregateExecutionMs)
+            @ParallelMetric(
+                "performance-summary__parallel-metric--secondary",
+                L["ModuleSystem:PerformanceMonitoring:Labels:AggregateWorkerQueue"],
+                Summary.ParallelActivity.AggregateQueueMs)
+        </div>
+
+        <MudAlert Severity="Severity.Info" Variant="Variant.Outlined" Dense="true">
+            @L["ModuleSystem:PerformanceMonitoring:Messages:ParallelMetricsOverlap"]
+        </MudAlert>
+    </section>
 </section>
 
 @code {
     [Parameter, EditorRequired]
     public ModulePerformanceSummaryView Summary { get; set; } = default!;
 
-    private RenderFragment Metric(
-        string modifier,
-        string icon,
-        string label,
-        double durationMs,
-        string description) => @<article class="performance-summary__metric @modifier">
-        <MudIcon Icon="@icon" Size="Size.Large" />
-        <div>
+    private RenderFragment BreakdownHeader(string icon, string label, double durationMs) => @<header class="performance-summary__breakdown-header">
+        <span class="performance-summary__breakdown-icon">
+            <MudIcon Icon="@icon" Size="Size.Large" />
+        </span>
+        <span>
             <small>@label</small>
             <strong>@FormatDuration(durationMs)</strong>
-            <span>@description</span>
+        </span>
+    </header>;
+
+    private RenderFragment BreakdownRow(
+        string modifier,
+        string label,
+        double durationMs,
+        double percentage,
+        Color color,
+        string? detail = null) => @<div class="performance-summary__breakdown-row @modifier">
+        <div class="performance-summary__breakdown-label">
+            <span>@label</span>
+            <strong>@FormatDuration(durationMs)</strong>
         </div>
+        <div class="performance-summary__bar">
+            <MudProgressLinear Value="@percentage" Color="@color" Size="Size.Medium" />
+            <span>@FormatPercentage(percentage)</span>
+        </div>
+        @if (!string.IsNullOrWhiteSpace(detail))
+        {
+            <small>@detail</small>
+        }
+    </div>;
+
+    private RenderFragment ParallelMetric(string modifier, string label, double durationMs) => @<article class="performance-summary__parallel-metric @modifier">
+        <small>@label</small>
+        <strong>@FormatDuration(durationMs)</strong>
     </article>;
 
     private string FormatDuration(double durationMs)
         => L["ModuleSystem:PerformanceMonitoring:Formats:Duration", durationMs];
+
+    private string FormatPercentage(double percentage)
+        => L["ModuleSystem:PerformanceMonitoring:Formats:Percentage", percentage];
 }

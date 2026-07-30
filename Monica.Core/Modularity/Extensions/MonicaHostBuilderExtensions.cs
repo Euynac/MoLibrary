@@ -1,5 +1,6 @@
 using Microsoft.Extensions.Hosting;
 using Monica.Core.Modularity.Abstractions;
+using Monica.Core.Modularity.Diagnostics.Models;
 using Monica.Core.Modularity.Services;
 
 namespace Monica.Core.Modularity.Extensions;
@@ -43,7 +44,16 @@ public static class MonicaHostBuilderExtensions
 
         try
         {
-            configure(monicaBuilder);
+            application.Profiling.StartPhase(ModuleCompositionSystemPhaseNames.APPLICATION_CONFIGURATION);
+            try
+            {
+                configure(monicaBuilder);
+            }
+            finally
+            {
+                application.Profiling.StopPhase(ModuleCompositionSystemPhaseNames.APPLICATION_CONFIGURATION);
+            }
+
             monicaBuilder.Complete();
             return builder;
         }

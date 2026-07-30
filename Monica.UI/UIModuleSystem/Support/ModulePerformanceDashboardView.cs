@@ -15,17 +15,88 @@ public sealed record ModulePerformanceDashboardView(
     IReadOnlyList<ModuleSystemPhaseView> SystemPhases);
 
 /// <summary>
-/// Contains the non-additive headline dimensions of module composition performance.
+/// Contains the exact elapsed-time partitions and separately reported parallel activity.
 /// </summary>
 public sealed record ModulePerformanceSummaryView(
-    double EndToEndElapsedMs,
-    double AggregateSerialCallbackMs,
-    int SerialCallbackCount,
-    double StartupBlockingWaitMs,
-    double ParallelWorkActiveSpanMs,
-    double AggregateWorkerExecutionMs,
-    double AggregateWorkerQueueMs,
+    ModuleInitializationBreakdownView Initialization,
+    ModuleServiceRegistrationBreakdownView ServiceRegistration,
+    ModuleParallelActivityView ParallelActivity,
+    int ServiceRegistrationCallbackCount,
     int WorkItemCount);
+
+/// <summary>
+/// Splits module-system initialization into Monica-controlled time and host-owned gaps.
+/// </summary>
+public sealed record ModuleInitializationBreakdownView(
+    double TotalDurationMs,
+    double MonicaFrameworkDurationMs,
+    double ApplicationConfigurationDurationMs,
+    double HostOwnedDurationMs)
+{
+    /// <summary>
+    /// Gets Monica framework time as a percentage of total module-system initialization.
+    /// </summary>
+    public double MonicaFrameworkPercentage => PercentageOf(MonicaFrameworkDurationMs, TotalDurationMs);
+
+    /// <summary>
+    /// Gets application configuration time as a percentage of total module-system initialization.
+    /// </summary>
+    public double ApplicationConfigurationPercentage => PercentageOf(
+        ApplicationConfigurationDurationMs,
+        TotalDurationMs);
+
+    /// <summary>
+    /// Gets host-owned gaps as a percentage of total module-system initialization.
+    /// </summary>
+    public double HostOwnedPercentage => PercentageOf(HostOwnedDurationMs, TotalDurationMs);
+
+    private static double PercentageOf(double durationMs, double totalMs)
+        => totalMs <= 0 ? 0 : durationMs / totalMs * 100;
+}
+
+/// <summary>
+/// Splits service registration into its exact, additive timing categories.
+/// </summary>
+public sealed record ModuleServiceRegistrationBreakdownView(
+    double TotalDurationMs,
+    double ApplicationConfigurationDurationMs,
+    double SerialModuleCallbackDurationMs,
+    double BlockingWaitDurationMs,
+    double OrchestrationDurationMs)
+{
+    /// <summary>
+    /// Gets application configuration time as a percentage of service registration.
+    /// </summary>
+    public double ApplicationConfigurationPercentage => PercentageOf(
+        ApplicationConfigurationDurationMs,
+        TotalDurationMs);
+
+    /// <summary>
+    /// Gets serial callback time as a percentage of service registration.
+    /// </summary>
+    public double SerialModuleCallbackPercentage => PercentageOf(SerialModuleCallbackDurationMs, TotalDurationMs);
+
+    /// <summary>
+    /// Gets checkpoint blocking time as a percentage of service registration.
+    /// </summary>
+    public double BlockingWaitPercentage => PercentageOf(BlockingWaitDurationMs, TotalDurationMs);
+
+    /// <summary>
+    /// Gets Monica orchestration time as a percentage of service registration.
+    /// </summary>
+    public double OrchestrationPercentage => PercentageOf(OrchestrationDurationMs, TotalDurationMs);
+
+    private static double PercentageOf(double durationMs, double totalMs)
+        => totalMs <= 0 ? 0 : durationMs / totalMs * 100;
+}
+
+/// <summary>
+/// Contains parallel worker measurements that overlap the exact elapsed-time partitions.
+/// </summary>
+public sealed record ModuleParallelActivityView(
+    double ActiveSpanMs,
+    double AggregateExecutionMs,
+    double AggregateQueueMs);
 
 /// <summary>
 /// Identifies the parallel work item that released the longest startup-blocking checkpoint.
@@ -101,11 +172,11 @@ public sealed record ModuleSerialCallbackView(
     int WorkItemCount);
 
 /// <summary>
-/// Represents one system composition phase span and its share of end-to-end composition time.
+/// Represents one system composition phase span relative to the longest observed phase.
 /// </summary>
 public sealed record ModuleSystemPhaseView(
     long Sequence,
     string Name,
     double StartedOffsetMs,
     double DurationMs,
-    double EndToEndPercentage);
+    double RelativeToLongestPercentage);

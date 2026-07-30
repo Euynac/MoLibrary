@@ -67,7 +67,7 @@
                             <span class="performance-work__identifier">@context.Name</span>
                         </MudTd>
                         <MudTd DataLabel="@L["ModuleSystem:PerformanceMonitoring:Labels:ScheduledIn"]">
-                            @ModulePerformanceDisplayText.Phase(L, context.OriginPhase)
+                            <span class="performance-work__identifier">@context.OriginPhase</span>
                         </MudTd>
                         <MudTd DataLabel="@L["ModuleSystem:PerformanceMonitoring:Labels:MustFinishBefore"]">
                             @ModulePerformanceDisplayText.Deadline(L, context.Deadline)

@@ -31,26 +31,6 @@ internal static class ModulePerformanceDisplayText
     };
 
     /// <summary>
-    /// Gets the localized display name of a system or module phase.
-    /// </summary>
-    public static string Phase(IStringLocalizer<SharedResource> localizer, string name) => name switch
-    {
-        nameof(ModulePhase.None) => localizer["ModuleSystem:CompositionWork:Phases:None"],
-        nameof(ModulePhase.ClaimDependencies) => localizer["ModuleSystem:CompositionWork:Phases:ClaimDependencies"],
-        nameof(ModulePhase.InitFinalConfigures) => localizer["ModuleSystem:CompositionWork:Phases:InitFinalConfigures"],
-        nameof(ModulePhase.ConfigureBuilder) => localizer["ModuleSystem:CompositionWork:Phases:ConfigureBuilder"],
-        nameof(ModulePhase.ConfigureServices) => localizer["ModuleSystem:CompositionWork:Phases:ConfigureServices"],
-        nameof(ModulePhase.IterateBusinessTypes) => localizer["ModuleSystem:CompositionWork:Phases:IterateBusinessTypes"],
-        nameof(ModulePhase.PostConfigureServices) => localizer["ModuleSystem:CompositionWork:Phases:PostConfigureServices"],
-        nameof(ModulePhase.ConfigureApplicationBuilder) => localizer["ModuleSystem:CompositionWork:Phases:ConfigureApplicationBuilder"],
-        nameof(ModulePhase.ConfigureEndpoints) => localizer["ModuleSystem:CompositionWork:Phases:ConfigureEndpoints"],
-        nameof(ModulePhase.Disabled) => localizer["ModuleSystem:CompositionWork:Phases:Disabled"],
-        "ConfigureBuilderAndServices" =>
-            localizer["ModuleSystem:CompositionWork:Phases:ConfigureBuilderAndServices"],
-        _ => name
-    };
-
-    /// <summary>
     /// Gets the localized display name of a parallel-work deadline.
     /// </summary>
     public static string Deadline(IStringLocalizer<SharedResource> localizer, string name) => name switch

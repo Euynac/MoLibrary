@@ -72,9 +72,7 @@
                             <strong>@FormatDuration(context.AggregateDurationMs)</strong>
                         </MudTd>
                         <MudTd DataLabel="@L["ModuleSystem:PerformanceMonitoring:Labels:SlowestPhase"]">
-                            @(context.SlowestPhase is null
-                                ? L["ModuleSystem:PerformanceMonitoring:States:None"]
-                                : ModulePerformanceDisplayText.Phase(L, context.SlowestPhase))
+                            @(context.SlowestPhase ?? L["ModuleSystem:PerformanceMonitoring:States:None"])
                         </MudTd>
                         <MudTd DataLabel="@L["ModuleSystem:PerformanceMonitoring:Labels:SlowestPhaseDuration"]">
                             @FormatDuration(context.SlowestPhaseDurationMs)

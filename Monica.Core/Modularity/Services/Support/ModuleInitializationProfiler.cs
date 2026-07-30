@@ -318,22 +318,28 @@ internal sealed class ModuleInitializationProfiler
     /// </summary>
     internal string GetPerformanceSummary()
     {
+        var composition = GetCompositionPerformance();
+        var initialization = composition.Initialization;
+        var serviceRegistration = composition.ServiceRegistration;
         var builder = new StringBuilder();
         builder.AppendLine("Module System Performance Summary:");
-        builder.AppendLine($"End-to-end composition elapsed: {GetElapsedDurationMs():F1}ms");
-        builder.AppendLine($"Aggregate system phases: {_state.SystemPhases.Sum(static phase => phase.DurationMs):F1}ms");
-        builder.AppendLine(
-            $"Aggregate serial module callbacks: {_state.ModuleProfiles.Values.Sum(static profile => profile.GetSerialPhaseDurationMs()):F1}ms");
+        builder.AppendLine($"Module system initialization elapsed: {initialization.TotalDurationMs:F1}ms");
+        builder.AppendLine($"  Monica framework work: {initialization.MonicaFrameworkDurationMs:F1}ms");
+        builder.AppendLine($"  Application module configuration: {initialization.ApplicationConfigurationDurationMs:F1}ms");
+        builder.AppendLine($"  Host-owned gaps: {initialization.HostOwnedDurationMs:F1}ms");
+        builder.AppendLine($"Service registration elapsed: {serviceRegistration.TotalDurationMs:F1}ms");
+        builder.AppendLine($"  Application module configuration: {serviceRegistration.ApplicationConfigurationDurationMs:F1}ms");
+        builder.AppendLine($"  Serial module callbacks: {serviceRegistration.SerialModuleCallbackDurationMs:F1}ms");
+        builder.AppendLine($"  Blocking checkpoint waits: {serviceRegistration.BlockingWaitDurationMs:F1}ms");
+        builder.AppendLine($"  Monica orchestration: {serviceRegistration.OrchestrationDurationMs:F1}ms");
+        builder.AppendLine($"Aggregate system phases (overlapping diagnostic dimension): {composition.AggregateSystemPhaseDurationMs:F1}ms");
 
-        if (_state.CompositionWorkItems.Count > 0)
+        if (composition.WorkItems.Count > 0)
         {
-            var activeSpan = _state.CompositionWorkItems.Max(static work => work.CompletedOffsetMs)
-                             - _state.CompositionWorkItems.Min(static work => work.StartedOffsetMs);
-            builder.AppendLine($"Parallel work active span: {activeSpan:F1}ms");
-            builder.AppendLine(
-                $"Aggregate worker execution: {_state.CompositionWorkItems.Sum(static work => work.ExecutionDurationMs):F1}ms");
-            builder.AppendLine(
-                $"Aggregate checkpoint wait: {_state.CompositionCheckpoints.Sum(static checkpoint => checkpoint.BlockingWaitDurationMs):F1}ms");
+            builder.AppendLine("Parallel work (overlaps the exact elapsed partitions above):");
+            builder.AppendLine($"  Active span: {composition.ParallelWorkActiveSpanMs:F1}ms");
+            builder.AppendLine($"  Aggregate worker execution: {composition.AggregateWorkExecutionDurationMs:F1}ms");
+            builder.AppendLine($"  Aggregate queue duration: {composition.AggregateWorkQueueDurationMs:F1}ms");
         }
 
         builder.AppendLine("Slowest serial module callbacks:");

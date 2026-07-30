@@ -72,9 +72,10 @@ public sealed class ModulePerformanceDashboardViewFactoryTests
                 ],
                 SystemPhases =
                 [
-                    SystemPhase(0, "ServiceRegistration", 0, 13_714),
-                    SystemPhase(1, "ConfigureApplicationBuilder", 13_750, 100),
-                    SystemPhase(2, "ConfigureEndpoints", 13_900, 17)
+                    SystemPhase(0, "ApplicationConfiguration", 100, 500),
+                    SystemPhase(1, "ServiceRegistration", 0, 13_714),
+                    SystemPhase(2, "ConfigureApplicationBuilder", 13_750, 100),
+                    SystemPhase(3, "ConfigureEndpoints", 13_900, 17)
                 ],
                 ModulePhaseExecutions = [configurationCallback, objectMappingCallback, remainingCallback],
                 WorkItems = [mapsterWork],
@@ -109,12 +110,31 @@ public sealed class ModulePerformanceDashboardViewFactoryTests
 
         var dashboard = ModulePerformanceDashboardViewFactory.Create(performance);
 
-        dashboard.Summary.EndToEndElapsedMs.Should().Be(13_917);
-        dashboard.Summary.AggregateSerialCallbackMs.Should().Be(1_561);
-        dashboard.Summary.ParallelWorkActiveSpanMs.Should().Be(9_712);
-        dashboard.Summary.AggregateWorkerExecutionMs.Should().Be(9_712);
-        dashboard.Summary.AggregateWorkerQueueMs.Should().Be(2);
-        dashboard.Summary.StartupBlockingWaitMs.Should().Be(9_668);
+        dashboard.Summary.Initialization.Should().BeEquivalentTo(new ModuleInitializationBreakdownView(
+            TotalDurationMs: 13_917,
+            MonicaFrameworkDurationMs: 13_331,
+            ApplicationConfigurationDurationMs: 500,
+            HostOwnedDurationMs: 86));
+        dashboard.Summary.ServiceRegistration.Should().BeEquivalentTo(new ModuleServiceRegistrationBreakdownView(
+            TotalDurationMs: 13_714,
+            ApplicationConfigurationDurationMs: 500,
+            SerialModuleCallbackDurationMs: 1_561,
+            BlockingWaitDurationMs: 9_668,
+            OrchestrationDurationMs: 1_985));
+        (dashboard.Summary.Initialization.MonicaFrameworkDurationMs
+         + dashboard.Summary.Initialization.ApplicationConfigurationDurationMs
+         + dashboard.Summary.Initialization.HostOwnedDurationMs)
+            .Should().Be(dashboard.Summary.Initialization.TotalDurationMs);
+        (dashboard.Summary.ServiceRegistration.ApplicationConfigurationDurationMs
+         + dashboard.Summary.ServiceRegistration.SerialModuleCallbackDurationMs
+         + dashboard.Summary.ServiceRegistration.BlockingWaitDurationMs
+         + dashboard.Summary.ServiceRegistration.OrchestrationDurationMs)
+            .Should().Be(dashboard.Summary.ServiceRegistration.TotalDurationMs);
+        dashboard.Summary.ServiceRegistrationCallbackCount.Should().Be(3);
+        dashboard.Summary.ParallelActivity.Should().BeEquivalentTo(new ModuleParallelActivityView(
+            ActiveSpanMs: 9_712,
+            AggregateExecutionMs: 9_712,
+            AggregateQueueMs: 2));
 
         dashboard.CriticalPath.Should().BeEquivalentTo(new ModuleCriticalPathView(
             ModuleCompositionWorkDeadline.BeforeServiceRegistrationCompletion.ToString(),
@@ -149,6 +169,12 @@ public sealed class ModulePerformanceDashboardViewFactoryTests
             && milestone.ElapsedSincePreviousMs == 17
             && !milestone.IsHostOwnedGap);
         dashboard.Milestones.Select(static milestone => milestone.Sequence).Should().Equal(1, 2, 3, 4, 5, 6);
+        dashboard.SystemPhases.Select(static phase => phase.RelativeToLongestPercentage)
+            .Should().Equal(
+                500d / 13_714 * 100,
+                100,
+                100d / 13_714 * 100,
+                17d / 13_714 * 100);
     }
 
     [Fact]
@@ -180,10 +206,11 @@ public sealed class ModulePerformanceDashboardViewFactoryTests
 
         var dashboard = ModulePerformanceDashboardViewFactory.Create(performance);
 
-        dashboard.Summary.SerialCallbackCount.Should().Be(2);
-        dashboard.Summary.AggregateSerialCallbackMs.Should().Be(55);
+        dashboard.Summary.ServiceRegistrationCallbackCount.Should().Be(2);
+        dashboard.Summary.ServiceRegistration.SerialModuleCallbackDurationMs.Should().Be(55);
+        dashboard.Summary.ServiceRegistration.OrchestrationDurationMs.Should().Be(45);
         dashboard.Summary.WorkItemCount.Should().Be(0);
-        dashboard.Summary.ParallelWorkActiveSpanMs.Should().Be(0);
+        dashboard.Summary.ParallelActivity.ActiveSpanMs.Should().Be(0);
         dashboard.CriticalPath.Should().BeNull();
         dashboard.SerialModules.Should().ContainSingle(module =>
             module.CallbackCount == 2
@@ -249,9 +276,10 @@ public sealed class ModulePerformanceDashboardViewFactoryTests
             item.Name == "failed-work"
             && item.Status == ModuleCompositionWorkStatus.Failed.ToString()
             && item.ErrorMessage == "mapping failure");
-        dashboard.Summary.ParallelWorkActiveSpanMs.Should().Be(100);
-        dashboard.Summary.AggregateWorkerExecutionMs.Should().Be(150);
-        dashboard.Summary.StartupBlockingWaitMs.Should().Be(80);
+        dashboard.Summary.ParallelActivity.ActiveSpanMs.Should().Be(100);
+        dashboard.Summary.ParallelActivity.AggregateExecutionMs.Should().Be(150);
+        dashboard.Summary.ServiceRegistration.BlockingWaitDurationMs.Should().Be(80);
+        dashboard.Summary.ServiceRegistration.OrchestrationDurationMs.Should().Be(40);
         dashboard.CriticalPath?.ReleasingWorkName.Should().Be("first-work");
         dashboard.Checkpoints.Single().PendingWorkItems.Should().HaveCount(2);
     }

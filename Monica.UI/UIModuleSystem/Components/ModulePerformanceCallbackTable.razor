@@ -33,7 +33,7 @@
                     <RowTemplate>
                         <MudTd DataLabel="@L["ModuleSystem:PerformanceMonitoring:Labels:Order"]">@(context.Sequence + 1)</MudTd>
                         <MudTd DataLabel="@L["ModuleSystem:PerformanceMonitoring:Labels:PhaseName"]">
-                            @ModulePerformanceDisplayText.Phase(L, context.Phase.ToString())
+                            @context.Phase
                         </MudTd>
                         <MudTd DataLabel="@L["ModuleSystem:PerformanceMonitoring:Labels:StartedAt"]">
                             @L["ModuleSystem:PerformanceMonitoring:Formats:Offset", context.StartedOffsetMs]

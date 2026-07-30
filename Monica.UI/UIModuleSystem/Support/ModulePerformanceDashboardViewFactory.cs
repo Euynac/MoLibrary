@@ -27,25 +27,43 @@ internal static class ModulePerformanceDashboardViewFactory
             .OrderByDescending(static module => module.AggregateDurationMs)
             .ThenBy(static module => module.ModuleOrder)
             .ToArray();
-        var systemPhases = composition.SystemPhases
+        var orderedSystemPhases = composition.SystemPhases
             .OrderBy(static phase => phase.Sequence)
+            .ToArray();
+        var longestSystemPhaseDurationMs = orderedSystemPhases.Length == 0
+            ? 0
+            : orderedSystemPhases.Max(static phase => phase.DurationMs);
+        var systemPhases = orderedSystemPhases
             .Select(phase => new ModuleSystemPhaseView(
                 phase.Sequence,
                 phase.PhaseName,
                 phase.StartedOffsetMs,
                 phase.DurationMs,
-                PercentageOf(phase.DurationMs, composition.ElapsedDurationMs)))
+                PercentageOf(phase.DurationMs, longestSystemPhaseDurationMs)))
             .ToArray();
+
+        var initialization = composition.Initialization;
+        var serviceRegistration = composition.ServiceRegistration;
 
         return new ModulePerformanceDashboardView(
             new ModulePerformanceSummaryView(
-                composition.ElapsedDurationMs,
-                composition.AggregateSerialModuleDurationMs,
-                composition.ModulePhaseExecutions.Count,
-                composition.AggregateCheckpointWaitDurationMs,
-                composition.ParallelWorkActiveSpanMs,
-                composition.AggregateWorkExecutionDurationMs,
-                composition.AggregateWorkQueueDurationMs,
+                new ModuleInitializationBreakdownView(
+                    initialization.TotalDurationMs,
+                    initialization.MonicaFrameworkDurationMs,
+                    initialization.ApplicationConfigurationDurationMs,
+                    initialization.HostOwnedDurationMs),
+                new ModuleServiceRegistrationBreakdownView(
+                    serviceRegistration.TotalDurationMs,
+                    serviceRegistration.ApplicationConfigurationDurationMs,
+                    serviceRegistration.SerialModuleCallbackDurationMs,
+                    serviceRegistration.BlockingWaitDurationMs,
+                    serviceRegistration.OrchestrationDurationMs),
+                new ModuleParallelActivityView(
+                    composition.ParallelWorkActiveSpanMs,
+                    composition.AggregateWorkExecutionDurationMs,
+                    composition.AggregateWorkQueueDurationMs),
+                composition.ModulePhaseExecutions.Count(execution =>
+                    execution.StartedOffsetMs < serviceRegistration.TotalDurationMs),
                 composition.WorkItems.Count),
             CreateCriticalPath(composition),
             milestones,

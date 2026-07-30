@@ -205,9 +205,14 @@
     "PerformanceMonitoring": {
       "Labels": {
         "DiagnosticsTitle": "Startup Performance Diagnostics",
-        "EndToEndElapsed": "End-to-end composition elapsed",
-        "AggregateSerialCallbacks": "Aggregate serial module callbacks",
-        "StartupBlockingWait": "Startup-blocking wait",
+        "ModuleSystemInitializationElapsed": "Module system initialization elapsed",
+        "MonicaFrameworkElapsed": "Monica framework work",
+        "ApplicationConfigurationElapsed": "Application module configuration",
+        "HostOwnedElapsed": "Host-owned gaps",
+        "ServiceRegistrationElapsed": "Service registration elapsed",
+        "BlockingCheckpointWait": "Blocking checkpoint wait",
+        "MonicaOrchestration": "Monica orchestration and discovery",
+        "ParallelActivity": "Overlapping parallel activity",
         "ParallelWorkActiveSpan": "Parallel work active span",
         "AggregateWorkerExecution": "Aggregate worker execution",
         "AggregateWorkerQueue": "Aggregate worker queue",
@@ -240,17 +245,17 @@
         "PhaseName": "Phase Name",
         "StartedAt": "Started at",
         "Duration": "Duration",
-        "EndToEndShare": "End-to-end share",
+        "RelativeToLongest": "Relative duration (longest phase = 100%)",
         "Status": "Status"
       },
       "Messages": {
-        "DiagnosticsDescription": "Locate startup cost across serial callbacks, parallel workers, host-owned gaps, and blocking barriers.",
+        "DiagnosticsDescription": "Exact elapsed-time partitions explain module-system initialization; parallel worker activity is reported separately because it overlaps.",
         "WorkItemCount": "{0} parallel work items",
-        "EndToEndElapsedDescription": "From Monica composition start to the host-specific completion boundary.",
+        "InitializationBreakdownDescription": "Exact partition: Monica framework work, application module configuration, and host-owned gaps equal total initialization.",
+        "ServiceRegistrationBreakdownDescription": "Exact partition: application configuration, serial module callbacks, blocking waits, and Monica orchestration equal service registration.",
         "SerialCallbackCount": "{0} callback executions",
-        "StartupBlockingWaitDescription": "Time the serial composition path actually waited at parallel-work barriers.",
-        "ParallelWorkActiveSpanDescription": "From the earliest worker start to the latest worker completion.",
-        "MetricsOverlap": "These metrics describe different dimensions. Some intervals overlap and must not be added together.",
+        "ParallelActivityDescription": "Worker activity observed during initialization, kept separate from the additive elapsed-time breakdowns.",
+        "ParallelMetricsOverlap": "Parallel active span, aggregate execution, and queue time can overlap each other and the exact elapsed-time partitions; do not add them together.",
         "MilestoneTimelineDescription": "Separates Monica composition from host-owned gaps between registration, pipeline setup, and endpoint mapping.",
         "CriticalPath": "{0} waited {3}; {1} / {2} released the barrier.",
         "NoBlockingCriticalPath": "No parallel work item blocked a composition barrier.",
@@ -260,7 +265,7 @@
         "ParallelCompositionWorkDescription": "Module-owned work ordered by active execution time, with scheduling phase and startup impact.",
         "RemainingAtDeadline": "{0:N0} ms remained when the deadline was reached.",
         "SerialModuleCallbacksDescription": "Ranks only synchronous module callbacks; parallel work remains visible in its own table.",
-        "CompositionPhaseElapsedDescription": "Every system phase span and its share of end-to-end composition time.",
+        "CompositionPhaseElapsedDescription": "Every actual system phase identifier and duration, compared with the longest observed phase.",
         "NoPerformanceData": "No performance data",
         "NoPhasePerformanceData": "No phase performance data"
       },
@@ -313,19 +318,6 @@
         "BeforeBusinessTypeIteration": "Before business-type iteration",
         "BeforePostConfigureServices": "Before post-service configuration",
         "BeforeServiceRegistrationCompletion": "Before service registration completes"
-      },
-      "Phases": {
-        "None": "None",
-        "ClaimDependencies": "Claim dependencies",
-        "InitFinalConfigures": "Initialize final configuration",
-        "ConfigureBuilder": "Configure host builder",
-        "ConfigureBuilderAndServices": "Configure host builder and services",
-        "ConfigureServices": "Configure services",
-        "IterateBusinessTypes": "Iterate business types",
-        "PostConfigureServices": "Post-configure services",
-        "ConfigureApplicationBuilder": "Configure application pipeline",
-        "ConfigureEndpoints": "Configure endpoints",
-        "Disabled": "Disabled"
       }
     },
     "DependencyGraph": {

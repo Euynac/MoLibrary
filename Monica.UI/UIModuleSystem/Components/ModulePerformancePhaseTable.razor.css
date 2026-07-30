@@ -53,6 +53,12 @@
     font-size: 0.75rem;
 }
 
+.performance-phases__identifier {
+    display: block;
+    min-width: 0;
+    overflow-wrap: anywhere;
+}
+
 .performance-phases__empty {
     display: flex;
     align-items: center;
