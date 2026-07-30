@@ -1,6 +1,7 @@
 using System.Collections.Concurrent;
 using System.Reflection;
 using System.Runtime.CompilerServices;
+using Monica.Tool.Extensions;
 
 namespace Monica.Core.Execution;
 
@@ -251,7 +252,7 @@ public sealed class ExecutionDescriptor
                 entryMethod = interfaceMapping.TargetMethods[0];
             }
 
-            var displayName = $"{componentType.FullName ?? componentType.Name}.{entryMethod?.Name ?? Point.Value}";
+            var displayName = $"{componentType.GetCleanFullName()}.{entryMethod?.Name ?? Point.Value}";
             var operationKey = ExecutionOperationKey.Create(
                 Point,
                 componentType,

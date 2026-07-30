@@ -8,7 +8,7 @@
     "PageTitle": "Execution Pipeline",
     "Header": {
       "Title": "Execution Pipeline",
-      "Description": "Inspect registered behaviors and the exact behavior chain applied to observed operations.",
+      "Description": "Inspect the final behavior chain for observed operations and compare it with every candidate behavior registered in the host.",
       "Refresh": "Refresh",
       "CapturedAt": "Snapshot captured at {0}"
     },
@@ -30,7 +30,11 @@
       "NoRegistrations": "No execution behaviors are registered.",
       "SelectPlan": "Select an observed plan to inspect its applied behavior chain.",
       "NoAppliedBehaviors": "This operation uses the terminal handler directly because no behaviors were applied.",
-      "NotAvailable": "Not available",
+      "NotAvailable": "Not available"
+    },
+    "Common": {
+      "Yes": "Yes",
+      "No": "No",
       "ApplicationHost": "Application / host"
     },
     "Messages": {
@@ -53,12 +57,13 @@
       "Title": "Observed operation plans",
       "Component": "Component",
       "Behaviors": "Behaviors",
+      "OverviewTitle": "Operation overview",
+      "OverviewDescription": "Readable execution metadata used to understand what enters the pipeline and which policies apply.",
       "DetailTitle": "Applied behavior chain",
-      "DetailDescription": "Behaviors are listed outermost to innermost in their exact execution order.",
+      "DetailDescription": "Final positions run outermost to innermost; configured order is the value used to sort matching registrations.",
       "Order": "Order {0}",
+      "ResolvedType": "Resolved behavior",
       "RegisteredType": "Registered type",
-      "PlanKey": "Plan key",
-      "OperationKey": "Operation key",
       "Contract": "Contract",
       "Method": "Entry method",
       "Input": "Input",
@@ -68,19 +73,73 @@
       "Business": "Business operation",
       "Transaction": "Transaction mode",
       "Fault": "Plan construction failed",
-      "ExceptionType": "Exception type",
-      "Yes": "Yes",
-      "No": "No"
+      "ExceptionType": "Exception type"
     },
     "Registrations": {
       "Title": "Registered behaviors",
-      "Description": "Registrations are shown in their deterministic global order before descriptor filters are evaluated.",
+      "Description": "All candidate behaviors registered in this host, in execution order. A behavior enters an operation plan only when its type matches and its descriptor filter passes.",
       "Behavior": "Behavior",
       "Order": "Order",
       "Lifetime": "Lifetime",
       "Source": "Source",
       "OpenGeneric": "Open generic",
       "DescriptorFilter": "Descriptor filter"
+    },
+    "Diagnostics": {
+      "Title": "Developer diagnostics",
+      "Description": "Exact machine identities are kept here for support and correlation. They are intentionally hidden from the normal reading flow.",
+      "Copy": "Copy diagnostics",
+      "CopySucceeded": "Execution diagnostics copied.",
+      "CopyFailed": "Could not copy execution diagnostics.",
+      "PlanId": "Plan ID",
+      "OperationId": "Operation ID",
+      "PlanKey": "Canonical plan key",
+      "OperationKey": "Canonical operation key",
+      "ExactTypeHelp": "Exact assembly-qualified CLR identity used to disambiguate types in advanced diagnostics.",
+      "ExactMethodHelp": "Exact method signature paired with its assembly-scoped declaring type."
+    },
+    "Help": {
+      "Summary": {
+        "Registrations": "Total behavior registrations in this host; one registration may apply to many operations.",
+        "Plans": "Distinct execution plans observed through execution or explicit inspection and cached by this host.",
+        "ExecutionPoints": "Distinct execution-boundary categories represented by observed plans, such as event handling or hosted-service start.",
+        "Faults": "Plans whose behavior chain failed to materialize; the failure is cached for the current host lifetime."
+      },
+      "Concepts": {
+        "ExecutionPoint": "Stable subsystem boundary where the operation enters the pipeline, such as eventbus.distributed-handler.",
+        "BusinessOperation": "Whether the adapter marks this execution as application business work; behaviors may use it as an applicability filter.",
+        "TransactionMode": "Whether the boundary allows the registered unit-of-work behavior to wrap the whole execution automatically; None still permits explicit transactions.",
+        "PlanStatus": "Behavior-chain state: Building is matching, Ready has an available chain, and Faulted has a cached materialization error.",
+        "BehaviorOrder": "Configured sort value; lower values run earlier and outermost, with type identity breaking ties deterministically.",
+        "Lifetime": "Dependency-injection lifetime of the behavior instance: Singleton, Scoped, or Transient.",
+        "Source": "Monica module that contributed the registration; Application / host means direct host registration."
+      },
+      "Plans": {
+        "OperationName": "Readable operation name derived from the invoked component and entry method.",
+        "BehaviorCount": "Number of behaviors actually applied after type matching and descriptor filtering.",
+        "PlanId": "Compact deterministic identifier for this policy-specific execution plan.",
+        "OperationId": "Compact deterministic identifier for the underlying execution operation.",
+        "PlanKey": "Canonical cache identity composed of the operation key, business flag, and transaction mode; intended for diagnostics.",
+        "OperationKey": "Canonical machine identity built from the execution point, assembly-scoped types, and method signature.",
+        "Component": "Concrete or contractual component type invoked at this execution boundary.",
+        "Contract": "Interface used by the adapter to locate the entry method; unavailable for direct method boundaries.",
+        "Method": "Concrete method invoked by this execution boundary.",
+        "Input": "Type passed into the execution pipeline and its behaviors.",
+        "Result": "Result type returned by the behavior chain; no-result operations use an internal placeholder type.",
+        "StartedAt": "Time behavior-plan materialization started, not the business operation start time.",
+        "CompletedAt": "Time behavior-plan materialization completed or faulted, not the business operation completion time.",
+        "AppliedChain": "Behaviors actually executed for this operation, ordered outermost to innermost before the terminal handler.",
+        "BehaviorPosition": "One-based position of the behavior in the final applied chain.",
+        "ResolvedType": "Concrete behavior type resolved for this operation; open generics appear as their closed type.",
+        "RegisteredType": "Behavior type originally registered with the host; it may be open generic.",
+        "Fault": "Deterministic error raised while materializing this operation's behavior chain; cached for the host lifetime.",
+        "ExceptionType": ".NET exception type that caused plan materialization to fail."
+      },
+      "Registrations": {
+        "Behavior": "Candidate behavior implementation; it enters a plan only after input/result matching and descriptor filtering.",
+        "OpenGeneric": "Whether the behavior is registered as a generic type definition and closed using the operation's input and result types.",
+        "DescriptorFilter": "Whether an additional applicability predicate uses metadata such as execution point or business classification."
+      }
     },
     "Statuses": {
       "Building": "Building",

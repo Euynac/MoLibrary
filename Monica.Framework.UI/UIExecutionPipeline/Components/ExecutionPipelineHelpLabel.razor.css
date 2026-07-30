@@ -1,0 +1,29 @@
+.execution-pipeline-help-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    min-width: 0;
+}
+
+.execution-pipeline-help-label__trigger {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 auto;
+    padding: 0;
+    color: var(--mud-palette-text-secondary);
+    cursor: help;
+    border: 0;
+    border-radius: 50%;
+    background: transparent;
+}
+
+.execution-pipeline-help-label__trigger:focus-visible {
+    color: var(--mud-palette-primary);
+    outline: 0.125rem solid var(--mud-palette-primary);
+    outline-offset: 0.1rem;
+}
+
+.execution-pipeline-help-label__trigger ::deep .mud-icon-root {
+    font-size: 1rem;
+}

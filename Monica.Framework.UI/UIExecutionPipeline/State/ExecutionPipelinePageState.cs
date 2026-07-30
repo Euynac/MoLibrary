@@ -173,7 +173,7 @@ public sealed class ExecutionPipelinePageState(ExecutionPipelineCatalogFacade ca
     }
 
     /// <summary>
-    /// Selects an observed execution plan by its stable plan key.
+    /// Selects an observed execution plan by its compact stable identifier.
     /// </summary>
     public void SelectPlan(ExecutionPipelinePlanSnapshot? plan)
     {
@@ -192,8 +192,7 @@ public sealed class ExecutionPipelinePageState(ExecutionPipelineCatalogFacade ca
         var filteredPlans = FilteredPlans;
         SelectedPlan = SelectedPlan is null
             ? filteredPlans.FirstOrDefault()
-            : filteredPlans.FirstOrDefault(plan =>
-                  string.Equals(plan.PlanKey, SelectedPlan.PlanKey, StringComparison.Ordinal))
+            : filteredPlans.FirstOrDefault(plan => plan.Id == SelectedPlan.Id)
               ?? filteredPlans.FirstOrDefault();
     }
 
@@ -234,20 +233,30 @@ public sealed class ExecutionPipelinePageState(ExecutionPipelineCatalogFacade ca
             return true;
         }
 
-        return Contains(plan.PlanKey) ||
-               Contains(plan.Descriptor.OperationKey) ||
-               Contains(plan.Descriptor.DisplayName) ||
+        return Contains(plan.Id.Value) ||
+               Contains(plan.Diagnostics.CanonicalKey) ||
+               Contains(plan.Descriptor.Id.Value) ||
+               Contains(plan.Descriptor.Diagnostics.CanonicalKey) ||
+               Contains(plan.Descriptor.Name) ||
+               Contains(plan.Descriptor.FullName) ||
                Contains(plan.Descriptor.Point.Value) ||
-               Contains(plan.Descriptor.ComponentType.Identity) ||
-               Contains(plan.Descriptor.ComponentType.DisplayName) ||
-               Contains(plan.Descriptor.ContractType?.Identity) ||
-               Contains(plan.Descriptor.ContractType?.DisplayName) ||
-               Contains(plan.Descriptor.EntryMethod) ||
+               Contains(plan.Descriptor.ComponentType.Name) ||
+               Contains(plan.Descriptor.ComponentType.FullName) ||
+               Contains(plan.Descriptor.ComponentType.AssemblyName) ||
+               Contains(plan.Descriptor.ComponentType.Diagnostics.AssemblyQualifiedName) ||
+               Contains(plan.Descriptor.ContractType?.Name) ||
+               Contains(plan.Descriptor.ContractType?.FullName) ||
+               Contains(plan.Descriptor.ContractType?.AssemblyName) ||
+               Contains(plan.Descriptor.ContractType?.Diagnostics.AssemblyQualifiedName) ||
+               Contains(plan.Descriptor.EntryMethod?.Name) ||
+               Contains(plan.Descriptor.EntryMethod?.DisplaySignature) ||
                plan.Behaviors.Any(behavior =>
-                   Contains(behavior.RegisteredType.Identity) ||
-                   Contains(behavior.RegisteredType.DisplayName) ||
-                   Contains(behavior.ResolvedType.Identity) ||
-                   Contains(behavior.ResolvedType.DisplayName) ||
+                   Contains(behavior.RegisteredType.Name) ||
+                   Contains(behavior.RegisteredType.FullName) ||
+                   Contains(behavior.RegisteredType.AssemblyName) ||
+                   Contains(behavior.ResolvedType.Name) ||
+                   Contains(behavior.ResolvedType.FullName) ||
+                   Contains(behavior.ResolvedType.AssemblyName) ||
                    Contains(behavior.SourceModuleKey?.Value));
     }
 

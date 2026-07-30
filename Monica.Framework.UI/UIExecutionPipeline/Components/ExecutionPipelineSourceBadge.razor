@@ -1,0 +1,16 @@
+@using Monica.Core.Modularity.Models
+@inject IStringLocalizer<ExecutionPipelineResource> L
+
+<MudTooltip Text="@L["Page:Help:Concepts:Source"]" Arrow="true" Placement="Placement.Top">
+    <MudChip T="string" Size="@Size" Color="Color.Info" Variant="Variant.Outlined">
+        @(SourceModuleKey?.Value ?? L["Page:Common:ApplicationHost"])
+    </MudChip>
+</MudTooltip>
+
+@code {
+    [Parameter]
+    public ModuleKey? SourceModuleKey { get; set; }
+
+    [Parameter]
+    public Size Size { get; set; } = Size.Small;
+}

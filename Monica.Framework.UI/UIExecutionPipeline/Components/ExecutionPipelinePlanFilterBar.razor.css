@@ -13,8 +13,16 @@
     min-width: 0;
 }
 
+.execution-pipeline-filters__field {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+    min-width: 0;
+}
+
 .execution-pipeline-filters__search ::deep .mud-input-control,
-.execution-pipeline-filters ::deep .mud-select {
+.execution-pipeline-filters__field ::deep .mud-select,
+.execution-pipeline-filters__field ::deep .mud-input-control {
     min-width: 0;
 }
 

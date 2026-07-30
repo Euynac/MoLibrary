@@ -1,0 +1,53 @@
+.execution-pipeline-technical-identity {
+    min-width: 0;
+}
+
+.execution-pipeline-technical-identity ::deep .mud-expand-panel {
+    background: var(--mud-palette-surface);
+}
+
+.execution-pipeline-technical-identity__content {
+    display: flex;
+    flex-direction: column;
+    gap: 0.9rem;
+    min-width: 0;
+    padding-bottom: 0.75rem;
+}
+
+.execution-pipeline-technical-identity__intro {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+}
+
+.execution-pipeline-technical-identity__grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0.55rem;
+    min-width: 0;
+}
+
+.execution-pipeline-technical-identity__item {
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+    min-width: 0;
+    padding: 0.65rem 0.75rem;
+    border-radius: var(--mud-default-borderradius);
+    background: var(--mud-palette-background-gray);
+}
+
+.execution-pipeline-technical-identity__item code {
+    overflow-wrap: anywhere;
+    color: var(--mud-palette-text-primary);
+    font-size: 0.78rem;
+    user-select: text;
+}
+
+@media (max-width: 580px) {
+    .execution-pipeline-technical-identity__intro {
+        align-items: stretch;
+        flex-direction: column;
+    }
+}

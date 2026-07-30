@@ -1,6 +1,7 @@
 using System.Reflection;
 using AwesomeAssertions;
 using Monica.Core.Execution;
+using Monica.Tool.Extensions;
 using Xunit;
 
 namespace Test.Monica.Core.Execution;
@@ -92,7 +93,7 @@ public sealed class ExecutionContractTests
             transactionMode: ExecutionTransactionMode.Automatic);
 
         second.Should().BeSameAs(first);
-        second.DisplayName.Should().Be($"{typeof(ExecutionContractTests).FullName}.test.default-name");
+        second.DisplayName.Should().Be($"{typeof(ExecutionContractTests).GetCleanFullName()}.test.default-name");
     }
 
     [Fact]

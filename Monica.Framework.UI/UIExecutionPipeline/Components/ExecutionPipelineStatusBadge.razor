@@ -1,0 +1,18 @@
+@using Monica.Core.Execution.Models
+@using Monica.Framework.UI.UIExecutionPipeline.Support
+@inject IStringLocalizer<ExecutionPipelineResource> L
+
+<MudChip T="string"
+         Size="@Size"
+         Color="@ExecutionPipelinePresentation.GetStatusColor(Status)"
+         Icon="@ExecutionPipelinePresentation.GetStatusIcon(Status)">
+    @L[$"Page:Statuses:{Status}"]
+</MudChip>
+
+@code {
+    [Parameter]
+    public ExecutionPipelinePlanStatus Status { get; set; }
+
+    [Parameter]
+    public Size Size { get; set; } = Size.Medium;
+}

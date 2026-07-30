@@ -1,0 +1,73 @@
+@using Monica.Core.Execution.Models
+@using Monica.Framework.UI.UIExecutionPipeline.Support
+@inject IStringLocalizer<ExecutionPipelineResource> L
+
+<section class="execution-pipeline-plan-list" aria-label="@L["Page:Plans:Title"]">
+    <header>
+        <ExecutionPipelineHelpLabel Text="@L["Page:Plans:Title"]"
+                                    HelpText="@L["Page:Help:Plans:OperationName"]" />
+        <MudChip T="int" Value="@Plans.Count" Size="Size.Small" Variant="Variant.Outlined">@Plans.Count</MudChip>
+    </header>
+
+    <div class="execution-pipeline-plan-list__scroll">
+        @if (Plans.Count == 0)
+        {
+            <div class="execution-pipeline-plan-list__empty" data-testid="execution-pipeline-filter-empty">
+                <MudIcon Icon="@Icons.Material.Filled.FilterAltOff" Color="Color.Secondary" Size="Size.Large" />
+                <MudText Typo="Typo.body2" Color="Color.Secondary">@L["Page:States:NoFilteredPlans"]</MudText>
+            </div>
+        }
+        else
+        {
+            @foreach (var plan in Plans)
+            {
+                <button type="button"
+                        class="@PlanClass(plan)"
+                        data-plan-id="@plan.Id.Value"
+                        @onclick="() => PlanSelected.InvokeAsync(plan)">
+                    <span class="execution-pipeline-plan-list__icon">
+                        <MudIcon Icon="@ExecutionPipelinePresentation.GetStatusIcon(plan.Status)"
+                                 Size="Size.Small"
+                                 Color="@ExecutionPipelinePresentation.GetStatusColor(plan.Status)" />
+                    </span>
+                    <span class="execution-pipeline-plan-list__content">
+                        <MudTooltip Text="@plan.Descriptor.FullName" Arrow="true" Placement="Placement.Top">
+                            <strong>@plan.Descriptor.Name</strong>
+                        </MudTooltip>
+                        <small>@plan.Descriptor.ComponentType.AssemblyName</small>
+                        <span class="execution-pipeline-plan-list__badges">
+                            <MudTooltip Text="@L["Page:Help:Concepts:ExecutionPoint"]" Arrow="true" Placement="Placement.Top">
+                                <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">@plan.Descriptor.Point.Value</MudChip>
+                            </MudTooltip>
+                            <MudTooltip Text="@L["Page:Help:Concepts:PlanStatus"]" Arrow="true" Placement="Placement.Top">
+                                <ExecutionPipelineStatusBadge Status="@plan.Status" Size="Size.Small" />
+                            </MudTooltip>
+                            <MudTooltip Text="@L["Page:Help:Plans:BehaviorCount"]" Arrow="true" Placement="Placement.Top">
+                                <MudChip T="int" Value="@plan.Behaviors.Length" Size="Size.Small" Variant="Variant.Outlined">
+                                    @L["Page:Plans:Behaviors"]: @plan.Behaviors.Length
+                                </MudChip>
+                            </MudTooltip>
+                        </span>
+                    </span>
+                    <MudIcon Icon="@Icons.Material.Filled.ChevronRight" Size="Size.Small" Color="Color.Secondary" />
+                </button>
+            }
+        }
+    </div>
+</section>
+
+@code {
+    [Parameter, EditorRequired]
+    public IReadOnlyList<ExecutionPipelinePlanSnapshot> Plans { get; set; } = [];
+
+    [Parameter]
+    public ExecutionPipelinePlanSnapshot? SelectedPlan { get; set; }
+
+    [Parameter]
+    public EventCallback<ExecutionPipelinePlanSnapshot> PlanSelected { get; set; }
+
+    private string PlanClass(ExecutionPipelinePlanSnapshot plan) =>
+        SelectedPlan?.Id == plan.Id
+            ? "execution-pipeline-plan-list__plan execution-pipeline-plan-list__plan--selected"
+            : "execution-pipeline-plan-list__plan";
+}

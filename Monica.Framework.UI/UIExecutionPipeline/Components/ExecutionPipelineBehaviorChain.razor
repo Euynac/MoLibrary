@@ -1,0 +1,63 @@
+@using Monica.Core.Execution.Models
+@inject IStringLocalizer<ExecutionPipelineResource> L
+
+<section class="execution-pipeline-behavior-chain">
+    <header>
+        <ExecutionPipelineHelpLabel Text="@L["Page:Plans:DetailTitle"]"
+                                    HelpText="@L["Page:Help:Plans:AppliedChain"]" />
+        <MudText Typo="Typo.body2" Color="Color.Secondary">@L["Page:Plans:DetailDescription"]</MudText>
+    </header>
+
+    @if (Plan.Behaviors.IsDefaultOrEmpty)
+    {
+        <MudAlert Severity="Severity.Info" Variant="Variant.Outlined" data-testid="execution-pipeline-zero-behaviors">
+            @L["Page:States:NoAppliedBehaviors"]
+        </MudAlert>
+    }
+    else
+    {
+        <ol class="execution-pipeline-behavior-chain__list">
+            @foreach (var behavior in Plan.Behaviors)
+            {
+                <li data-testid="execution-pipeline-applied-behavior">
+                    <MudTooltip Text="@L["Page:Help:Plans:BehaviorPosition"]" Arrow="true" Placement="Placement.Top">
+                        <span class="execution-pipeline-behavior-chain__position">@behavior.Position</span>
+                    </MudTooltip>
+                    <div class="execution-pipeline-behavior-chain__content">
+                        <div class="execution-pipeline-behavior-chain__type">
+                            <ExecutionPipelineHelpLabel Text="@L["Page:Plans:ResolvedType"]"
+                                                        HelpText="@L["Page:Help:Plans:ResolvedType"]" />
+                            <strong>@behavior.ResolvedType.FullName</strong>
+                        </div>
+                        @if (behavior.HasDistinctResolvedType)
+                        {
+                            <div class="execution-pipeline-behavior-chain__registered-type">
+                                <ExecutionPipelineHelpLabel Text="@L["Page:Plans:RegisteredType"]"
+                                                            HelpText="@L["Page:Help:Plans:RegisteredType"]" />
+                                <span>@behavior.RegisteredType.FullName</span>
+                            </div>
+                        }
+                        <div class="execution-pipeline-behavior-chain__badges">
+                            <MudTooltip Text="@L["Page:Help:Concepts:BehaviorOrder"]" Arrow="true" Placement="Placement.Top">
+                                <MudChip T="int" Value="@behavior.Order" Size="Size.Small" Variant="Variant.Outlined">
+                                    @L["Page:Plans:Order", behavior.Order]
+                                </MudChip>
+                            </MudTooltip>
+                            <MudTooltip Text="@L["Page:Help:Concepts:Lifetime"]" Arrow="true" Placement="Placement.Top">
+                                <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">
+                                    @L[$"Page:Lifetimes:{behavior.Lifetime}"]
+                                </MudChip>
+                            </MudTooltip>
+                            <ExecutionPipelineSourceBadge SourceModuleKey="@behavior.SourceModuleKey" />
+                        </div>
+                    </div>
+                </li>
+            }
+        </ol>
+    }
+</section>
+
+@code {
+    [Parameter, EditorRequired]
+    public ExecutionPipelinePlanSnapshot Plan { get; set; } = null!;
+}

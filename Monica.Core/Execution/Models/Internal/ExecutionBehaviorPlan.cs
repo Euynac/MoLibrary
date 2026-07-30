@@ -16,14 +16,18 @@ internal sealed class ExecutionBehaviorPlan
         Func<ExecutionBehaviorPlanContent> materialize)
     {
         Descriptor = ExecutionPipelineCatalogSnapshotFactory.CreateDescriptor(descriptor);
-        PlanKey = ExecutionPipelinePlanKey.Create(descriptor);
+        var canonicalPlanKey = ExecutionPipelinePlanKey.Create(descriptor);
+        Id = ExecutionDiagnosticIdFactory.CreatePlan(canonicalPlanKey);
+        Diagnostics = new ExecutionPlanDiagnosticsSnapshot(canonicalPlanKey);
         StartedAt = DateTimeOffset.UtcNow;
         _content = new Lazy<ExecutionBehaviorPlanContent>(
             () => Materialize(materialize),
             LazyThreadSafetyMode.ExecutionAndPublication);
     }
 
-    public string PlanKey { get; }
+    public ExecutionPlanId Id { get; }
+
+    public ExecutionPlanDiagnosticsSnapshot Diagnostics { get; }
 
     public DateTimeOffset StartedAt { get; }
 
@@ -54,13 +58,14 @@ internal sealed class ExecutionBehaviorPlan
             : ImmutableArray<ExecutionPipelineAppliedBehaviorSnapshot>.Empty;
 
         return new ExecutionPipelinePlanSnapshot(
-            PlanKey,
+            Id,
             status,
             StartedAt,
             status == ExecutionPipelinePlanStatus.Building ? null : _completedAt,
             Descriptor,
             behaviors,
-            status == ExecutionPipelinePlanStatus.Faulted ? _error : null);
+            status == ExecutionPipelinePlanStatus.Faulted ? _error : null,
+            Diagnostics);
     }
 
     private ExecutionBehaviorPlanContent Materialize(Func<ExecutionBehaviorPlanContent> materialize)

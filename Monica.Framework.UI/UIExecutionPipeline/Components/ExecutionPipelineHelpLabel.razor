@@ -1,0 +1,22 @@
+<span class="execution-pipeline-help-label" data-testid="execution-pipeline-help-label">
+    <span>@Text</span>
+    <MudTooltip Text="@HelpText"
+                Arrow="true"
+                Delay="150"
+                Placement="Placement.Top"
+                ShowOnClick="true">
+        <button class="execution-pipeline-help-label__trigger"
+                type="button"
+                aria-label="@HelpText">
+            <MudIcon Icon="@Icons.Material.Outlined.Info" Size="Size.Small" />
+        </button>
+    </MudTooltip>
+</span>
+
+@code {
+    [Parameter, EditorRequired]
+    public string Text { get; set; } = string.Empty;
+
+    [Parameter, EditorRequired]
+    public string HelpText { get; set; } = string.Empty;
+}

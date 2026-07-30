@@ -1,0 +1,69 @@
+@using Monica.Core.Execution.Models
+@inject IStringLocalizer<ExecutionPipelineResource> L
+
+<section class="execution-pipeline-overview" data-testid="execution-pipeline-plan-overview">
+    <header>
+        <ExecutionPipelineHelpLabel Text="@L["Page:Plans:OverviewTitle"]"
+                                    HelpText="@L["Page:Help:Plans:OperationName"]" />
+        <MudText Typo="Typo.body2" Color="Color.Secondary">@L["Page:Plans:OverviewDescription"]</MudText>
+    </header>
+
+    <div class="execution-pipeline-overview__grid">
+        @Metadata(
+            L["Page:Plans:Component"],
+            L["Page:Help:Plans:Component"],
+            Plan.Descriptor.ComponentType.FullName,
+            wide: true)
+        @Metadata(
+            L["Page:Filters:ExecutionPoint"],
+            L["Page:Help:Concepts:ExecutionPoint"],
+            Plan.Descriptor.Point.Value)
+        @Metadata(
+            L["Page:Plans:Contract"],
+            L["Page:Help:Plans:Contract"],
+            Plan.Descriptor.ContractType?.FullName ?? L["Page:States:NotAvailable"])
+        @Metadata(
+            L["Page:Plans:Method"],
+            L["Page:Help:Plans:Method"],
+            Plan.Descriptor.EntryMethod?.DisplaySignature ?? L["Page:States:NotAvailable"],
+            wide: true)
+        @Metadata(
+            L["Page:Plans:Input"],
+            L["Page:Help:Plans:Input"],
+            Plan.Descriptor.InputType.FullName)
+        @Metadata(
+            L["Page:Plans:Result"],
+            L["Page:Help:Plans:Result"],
+            Plan.Descriptor.ResultType.FullName)
+        @Metadata(
+            L["Page:Plans:Business"],
+            L["Page:Help:Concepts:BusinessOperation"],
+            Plan.Descriptor.IsBusinessOperation ? L["Page:Common:Yes"] : L["Page:Common:No"])
+        @Metadata(
+            L["Page:Plans:Transaction"],
+            L["Page:Help:Concepts:TransactionMode"],
+            L[$"Page:TransactionModes:{Plan.Descriptor.TransactionMode}"])
+        @Metadata(
+            L["Page:Plans:StartedAt"],
+            L["Page:Help:Plans:StartedAt"],
+            FormatTime(Plan.StartedAt))
+        @Metadata(
+            L["Page:Plans:CompletedAt"],
+            L["Page:Help:Plans:CompletedAt"],
+            Plan.CompletedAt is { } completedAt ? FormatTime(completedAt) : L["Page:States:NotAvailable"])
+    </div>
+</section>
+
+@code {
+    [Parameter, EditorRequired]
+    public ExecutionPipelinePlanSnapshot Plan { get; set; } = null!;
+
+    private RenderFragment Metadata(string label, string helpText, string value, bool wide = false) =>
+        @<div class="@(wide ? "execution-pipeline-overview__item execution-pipeline-overview__item--wide" : "execution-pipeline-overview__item")">
+            <ExecutionPipelineHelpLabel Text="@label" HelpText="@helpText" />
+            <span title="@value">@value</span>
+        </div>;
+
+    private static string FormatTime(DateTimeOffset value) =>
+        value.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss.fff");
+}

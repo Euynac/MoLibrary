@@ -1,0 +1,131 @@
+@using System.Text
+@using Monica.Core.Execution.Models
+@inject IStringLocalizer<ExecutionPipelineResource> L
+@inject IJSRuntime JSRuntime
+@inject ISnackbar Snackbar
+
+<div class="execution-pipeline-technical-identity" data-testid="execution-pipeline-technical-identity">
+    <MudExpansionPanels Elevation="0" Outlined="true" Dense="true">
+        <MudExpansionPanel KeepContentAlive="false">
+            <TitleContent>
+                <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                    <MudIcon Icon="@Icons.Material.Filled.DataObject" Color="Color.Secondary" />
+                    <MudText Typo="Typo.subtitle2">@L["Page:Diagnostics:Title"]</MudText>
+                </MudStack>
+            </TitleContent>
+            <ChildContent>
+                <div class="execution-pipeline-technical-identity__content">
+                    <div class="execution-pipeline-technical-identity__intro">
+                        <MudText Typo="Typo.body2" Color="Color.Secondary">@L["Page:Diagnostics:Description"]</MudText>
+                        <MudButton Variant="Variant.Outlined"
+                                   Color="Color.Primary"
+                                   Size="Size.Small"
+                                   StartIcon="@Icons.Material.Filled.ContentCopy"
+                                   OnClick="CopyAsync">
+                            @L["Page:Diagnostics:Copy"]
+                        </MudButton>
+                    </div>
+
+                    <div class="execution-pipeline-technical-identity__grid">
+                        @Diagnostic(
+                            L["Page:Diagnostics:PlanId"],
+                            L["Page:Help:Plans:PlanId"],
+                            Plan.Id.Value)
+                        @Diagnostic(
+                            L["Page:Diagnostics:OperationId"],
+                            L["Page:Help:Plans:OperationId"],
+                            Plan.Descriptor.Id.Value)
+                        @Diagnostic(
+                            L["Page:Diagnostics:PlanKey"],
+                            L["Page:Help:Plans:PlanKey"],
+                            Plan.Diagnostics.CanonicalKey)
+                        @Diagnostic(
+                            L["Page:Diagnostics:OperationKey"],
+                            L["Page:Help:Plans:OperationKey"],
+                            Plan.Descriptor.Diagnostics.CanonicalKey)
+                        @Diagnostic(
+                            L["Page:Plans:Component"],
+                            L["Page:Diagnostics:ExactTypeHelp"],
+                            Plan.Descriptor.ComponentType.Diagnostics.AssemblyQualifiedName)
+                        @if (Plan.Descriptor.ContractType is { } contractType)
+                        {
+                            @Diagnostic(
+                                L["Page:Plans:Contract"],
+                                L["Page:Diagnostics:ExactTypeHelp"],
+                                contractType.Diagnostics.AssemblyQualifiedName)
+                        }
+                        @if (Plan.Descriptor.EntryMethod is { } entryMethod)
+                        {
+                            @Diagnostic(
+                                L["Page:Plans:Method"],
+                                L["Page:Diagnostics:ExactMethodHelp"],
+                                entryMethod.Diagnostics.CanonicalSignature)
+                        }
+                        @Diagnostic(
+                            L["Page:Plans:Input"],
+                            L["Page:Diagnostics:ExactTypeHelp"],
+                            Plan.Descriptor.InputType.Diagnostics.AssemblyQualifiedName)
+                        @Diagnostic(
+                            L["Page:Plans:Result"],
+                            L["Page:Diagnostics:ExactTypeHelp"],
+                            Plan.Descriptor.ResultType.Diagnostics.AssemblyQualifiedName)
+                    </div>
+                </div>
+            </ChildContent>
+        </MudExpansionPanel>
+    </MudExpansionPanels>
+</div>
+
+@code {
+    [Parameter, EditorRequired]
+    public ExecutionPipelinePlanSnapshot Plan { get; set; } = null!;
+
+    private RenderFragment Diagnostic(string label, string helpText, string value) =>
+        @<div class="execution-pipeline-technical-identity__item">
+            <ExecutionPipelineHelpLabel Text="@label" HelpText="@helpText" />
+            <code>@value</code>
+        </div>;
+
+    private async Task CopyAsync()
+    {
+        var copied = false;
+        try
+        {
+            copied = await JSRuntime.InvokeAsync<bool>("MoClipboard.copyText", BuildDiagnosticsText());
+        }
+        catch (JSException)
+        {
+            // The snackbar below provides the localized failure state.
+        }
+
+        Snackbar.Add(
+            copied ? L["Page:Diagnostics:CopySucceeded"] : L["Page:Diagnostics:CopyFailed"],
+            copied ? Severity.Success : Severity.Error);
+    }
+
+    private string BuildDiagnosticsText()
+    {
+        var descriptor = Plan.Descriptor;
+        var builder = new StringBuilder()
+            .AppendLine($"{L["Page:Diagnostics:PlanId"]}: {Plan.Id.Value}")
+            .AppendLine($"{L["Page:Diagnostics:OperationId"]}: {descriptor.Id.Value}")
+            .AppendLine($"{L["Page:Diagnostics:PlanKey"]}: {Plan.Diagnostics.CanonicalKey}")
+            .AppendLine($"{L["Page:Diagnostics:OperationKey"]}: {descriptor.Diagnostics.CanonicalKey}")
+            .AppendLine($"{L["Page:Plans:Component"]}: {descriptor.ComponentType.Diagnostics.AssemblyQualifiedName}");
+
+        if (descriptor.ContractType is { } contractType)
+        {
+            builder.AppendLine($"{L["Page:Plans:Contract"]}: {contractType.Diagnostics.AssemblyQualifiedName}");
+        }
+
+        if (descriptor.EntryMethod is { } entryMethod)
+        {
+            builder.AppendLine($"{L["Page:Plans:Method"]}: {entryMethod.Diagnostics.CanonicalSignature}");
+        }
+
+        return builder
+            .AppendLine($"{L["Page:Plans:Input"]}: {descriptor.InputType.Diagnostics.AssemblyQualifiedName}")
+            .Append($"{L["Page:Plans:Result"]}: {descriptor.ResultType.Diagnostics.AssemblyQualifiedName}")
+            .ToString();
+    }
+}

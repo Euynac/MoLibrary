@@ -19,9 +19,37 @@
 }
 
 .execution-pipeline-registrations__table-scroll ::deep .mud-table {
-    min-width: 56rem;
+    min-width: 58rem;
 }
 
-.execution-pipeline-registrations__table-scroll ::deep .mud-table-cell {
+.execution-pipeline-registrations__table-scroll ::deep .execution-pipeline-registrations__behavior {
+    max-width: 25rem;
+}
+
+.execution-pipeline-registrations__behavior-name {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.2rem;
+    min-width: 0;
+}
+
+.execution-pipeline-registrations__behavior-name strong,
+.execution-pipeline-registrations__behavior-name small {
+    max-width: 100%;
     overflow-wrap: anywhere;
+}
+
+.execution-pipeline-registrations__behavior-name small {
+    color: var(--mud-palette-text-secondary);
+}
+
+@media (max-width: 599.98px) {
+    .execution-pipeline-registrations__table-scroll {
+        overflow-x: visible;
+    }
+
+    .execution-pipeline-registrations__table-scroll ::deep .mud-table {
+        min-width: 0;
+    }
 }
