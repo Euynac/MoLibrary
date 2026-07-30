@@ -69,8 +69,8 @@
                             <MudPaper Class="pa-4 modern-stat-card" Elevation="2">
                                 <div class="d-flex justify-space-between align-center">
                                     <div>
-                                        <MudText Typo="Typo.subtitle1" Color="Color.Info">@L["ModuleSystem:ModuleManagement:Labels:TotalInitTime"]</MudText>
-                                        <MudText Typo="Typo.h4" Color="Color.Info">@($"{RegistrationInfo.Statistics.TotalInitializationTimeMs}ms")</MudText>
+                                        <MudText Typo="Typo.subtitle1" Color="Color.Info">@L["ModuleSystem:ModuleManagement:Labels:TotalSerialPhaseDuration"]</MudText>
+                                        <MudText Typo="Typo.h4" Color="Color.Info">@($"{RegistrationInfo.Statistics.TotalSerialPhaseDurationMs}ms")</MudText>
                                     </div>
                                     <MudIcon Icon="@Icons.Material.Filled.Timer" Color="Color.Info" Size="Size.Large" />
                                 </div>
@@ -158,12 +158,12 @@
                                     </CellTemplate>
                                 </TemplateColumn>
                                 <PropertyColumn Property="x => x.Order" Title="@L["ModuleSystem:ModuleManagement:Labels:Order"]" />
-                                <TemplateColumn Title="@L["ModuleSystem:ModuleManagement:Labels:InitTime"]">
+                                <TemplateColumn Title="@L["ModuleSystem:ModuleManagement:Labels:SerialPhaseDuration"]">
                                     <CellTemplate>
                                         <div class="d-flex align-center">
-                                            <MudText Typo="Typo.body2" Class="mr-2">@($"{context.Item.InitializationTimeMs}ms")</MudText>
-                                            <MudProgressLinear Color="@GetInitTimeColor(context.Item.InitializationTimeMs)" 
-                                                             Value="@GetInitTimePercentage(context.Item.InitializationTimeMs)" 
+                                            <MudText Typo="Typo.body2" Class="mr-2">@($"{context.Item.SerialPhaseDurationMs}ms")</MudText>
+                                            <MudProgressLinear Color="@GetSerialPhaseDurationColor(context.Item.SerialPhaseDurationMs)"
+                                                             Value="@GetSerialPhaseDurationPercentage(context.Item.SerialPhaseDurationMs)"
                                                              Style="width: 80px; height: 8px;" />
                                         </div>
                                     </CellTemplate>
@@ -293,11 +293,11 @@
     private int GetDowngradedWebModuleCount() => GetAllModules().Count(module => module.IsDowngradedFromWebModule);
 
     /// <summary>
-    /// Get initialization time color
+    /// Gets the color for a serial module phase duration.
     /// </summary>
     /// <param name="timeMs">Time in milliseconds</param>
     /// <returns>Color</returns>
-    private Color GetInitTimeColor(long timeMs) => timeMs switch
+    private Color GetSerialPhaseDurationColor(long timeMs) => timeMs switch
     {
         <= 100 => Color.Success,
         <= 500 => Color.Info,
@@ -306,16 +306,16 @@
     };
 
     /// <summary>
-    /// Get initialization time percentage
+    /// Gets the serial module phase duration relative to the slowest module.
     /// </summary>
     /// <param name="timeMs">Time in milliseconds</param>
     /// <returns>Percentage</returns>
-    private double GetInitTimePercentage(long timeMs)
+    private double GetSerialPhaseDurationPercentage(long timeMs)
     {
         if (RegistrationInfo == null) return 0;
         
         var allModules = GetAllModules();
-        var maxTime = allModules.Max(m => m.InitializationTimeMs);
+        var maxTime = allModules.Max(m => m.SerialPhaseDurationMs);
         
         return maxTime > 0 ? (double)timeMs / maxTime * 100 : 0;
     }

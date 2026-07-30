@@ -38,5 +38,10 @@ public enum ModuleRegistrationErrorType
     /// <summary>
     /// Error indicating that the current host cannot satisfy a module's ASP.NET Core requirements.
     /// </summary>
-    HostCompatibility = 6
-} 
+    HostCompatibility = 6,
+
+    /// <summary>
+    /// Error raised by required scheduled module composition work.
+    /// </summary>
+    CompositionWorkError = 7
+}

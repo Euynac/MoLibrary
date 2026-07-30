@@ -100,7 +100,9 @@ public class ModuleObjectMapping(ModuleObjectMappingOption option)
     public override void PostConfigureServices(IServiceCollection _)
     {
         _profileCatalog.ApplyProfiles(_mapsterConfig, option.ProfileTypes, Application.TypeDependencyOrderer);
-        _mapsterConfig.Compile(failFast: false);
+        ScheduleCompositionWork(
+            "compile-mapster-configuration",
+            () => _mapsterConfig.Compile(failFast: false));
     }
 
     public override void ConfigureEndpoints(IApplicationBuilder app)

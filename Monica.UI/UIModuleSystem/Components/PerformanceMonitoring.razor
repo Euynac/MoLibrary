@@ -2,6 +2,7 @@
 @using Monica.UI.Localization
 @using Microsoft.Extensions.Localization
 @using Monica.Core.Modularity.Diagnostics.Models
+@using Monica.Core.Modularity.Models
 @inject IStringLocalizer<SharedResource> L
 
 <div class="performance-monitoring-container">
@@ -24,7 +25,7 @@
                                 <MudPaper Class="pa-4 performance-metric-card mo-self-painted" Elevation="2">
                                     <div class="d-flex justify-space-between align-center">
                                         <div>
-                                            <MudText Typo="Typo.subtitle1" Color="Color.Primary">@L["ModuleSystem:PerformanceMonitoring:Labels:TotalInitTime"]</MudText>
+                                            <MudText Typo="Typo.subtitle1" Color="Color.Primary">@L["ModuleSystem:PerformanceMonitoring:Labels:SystemWallDuration"]</MudText>
                                             <MudText Typo="Typo.h5" Color="Color.Primary">@($"{SystemPerformance.TotalSystemInitializationTimeMs}ms")</MudText>
                                         </div>
                                         <MudIcon Icon="@Icons.Material.Filled.Timer" Color="Color.Primary" Size="Size.Large" />
@@ -35,35 +36,91 @@
                                 <MudPaper Class="pa-4 performance-metric-card mo-self-painted" Elevation="2">
                                     <div class="d-flex justify-space-between align-center">
                                         <div>
-                                            <MudText Typo="Typo.subtitle1" Color="Color.Info">@L["ModuleSystem:PerformanceMonitoring:Labels:TotalSystemPhaseDuration"]</MudText>
-                                            <MudText Typo="Typo.h5" Color="Color.Info">@($"{SystemPerformance.TotalSystemPhaseDurationMs}ms")</MudText>
+                                            <MudText Typo="Typo.subtitle1" Color="Color.Info">@L["ModuleSystem:PerformanceMonitoring:Labels:ModulePhaseAggregateDuration"]</MudText>
+                                            <MudText Typo="Typo.h5" Color="Color.Info">@($"{SystemPerformance.TotalModulePhaseDurationMs}ms")</MudText>
+                                            <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                                @L["ModuleSystem:PerformanceMonitoring:Messages:ModulePhaseExecutionCount", SystemPerformance.TotalModulePhaseExecutions]
+                                            </MudText>
                                         </div>
-                                        <MudIcon Icon="@Icons.Material.Filled.Timeline" Color="Color.Info" Size="Size.Large" />
+                                        <MudIcon Icon="@Icons.Material.Filled.Memory" Color="Color.Info" Size="Size.Large" />
                                     </div>
                                 </MudPaper>
                             </MudItem>
-                            <MudItem xs="12">
-                                <MudPaper Class="pa-4 performance-metric-card mo-self-painted" Elevation="2">
-                                    <div class="d-flex justify-space-between align-center">
-                                        <div>
-                                            <MudText Typo="Typo.subtitle1" Color="Color.Success">@L["ModuleSystem:PerformanceMonitoring:Labels:TotalModulePhaseDuration"]</MudText>
-                                            <MudText Typo="Typo.h5" Color="Color.Success">@($"{SystemPerformance.TotalModulePhaseDurationMs}ms")</MudText>
+                            @if (SystemPerformance.CompositionWorkItemCount == 0)
+                            {
+                                <MudItem xs="12">
+                                    <MudPaper Class="pa-4" Elevation="0">
+                                        <div class="d-flex align-center">
+                                            <MudIcon Icon="@Icons.Material.Filled.Info" Color="Color.Secondary" Class="mr-3" />
+                                            <div>
+                                                <MudText Typo="Typo.subtitle1">@L["ModuleSystem:CompositionWork:Messages:NoWorkTitle"]</MudText>
+                                                <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                                    @L["ModuleSystem:CompositionWork:Messages:NoWorkDescription"]
+                                                </MudText>
+                                            </div>
                                         </div>
-                                        <MudIcon Icon="@Icons.Material.Filled.Memory" Color="Color.Success" Size="Size.Large" />
-                                    </div>
-                                </MudPaper>
-                            </MudItem>
-                            <MudItem xs="12">
-                                <MudPaper Class="pa-4 performance-metric-card mo-self-painted" Elevation="2">
-                                    <div class="d-flex justify-space-between align-center">
-                                        <div>
-                                            <MudText Typo="Typo.subtitle1" Color="Color.Warning">@L["ModuleSystem:PerformanceMonitoring:Labels:TotalModulePhaseExecutions"]</MudText>
-                                            <MudText Typo="Typo.h5" Color="Color.Warning">@SystemPerformance.TotalModulePhaseExecutions.ToString()</MudText>
+                                    </MudPaper>
+                                </MudItem>
+                            }
+                            else
+                            {
+                                <MudItem xs="12">
+                                    <MudPaper Class="pa-4 performance-metric-card mo-self-painted" Elevation="2">
+                                        <div class="d-flex justify-space-between align-center">
+                                            <div>
+                                                <MudText Typo="Typo.subtitle1" Color="Color.Secondary">@L["ModuleSystem:PerformanceMonitoring:Labels:CompositionWorkWallDuration"]</MudText>
+                                                <MudText Typo="Typo.h5" Color="Color.Secondary">@($"{SystemPerformance.CompositionWorkWallDurationMs}ms")</MudText>
+                                                <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                                    @L["ModuleSystem:CompositionWork:Messages:WorkItemCount", SystemPerformance.CompositionWorkItemCount]
+                                                </MudText>
+                                            </div>
+                                            <MudIcon Icon="@Icons.Material.Filled.Schedule" Color="Color.Secondary" Size="Size.Large" />
                                         </div>
-                                        <MudIcon Icon="@Icons.Material.Filled.PlayArrow" Color="Color.Warning" Size="Size.Large" />
-                                    </div>
-                                </MudPaper>
-                            </MudItem>
+                                    </MudPaper>
+                                </MudItem>
+                                <MudItem xs="12">
+                                    <MudPaper Class="pa-4 performance-metric-card mo-self-painted" Elevation="2">
+                                        <div class="d-flex justify-space-between align-center">
+                                            <div>
+                                                <MudText Typo="Typo.subtitle1" Color="Color.Success">@L["ModuleSystem:PerformanceMonitoring:Labels:CompositionWorkExecutionDuration"]</MudText>
+                                                <MudText Typo="Typo.h5" Color="Color.Success">@($"{SystemPerformance.TotalCompositionWorkExecutionDurationMs}ms")</MudText>
+                                                <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                                    @L["ModuleSystem:CompositionWork:Messages:ConcurrentWorkExplanation"]
+                                                </MudText>
+                                            </div>
+                                            <MudIcon Icon="@Icons.Material.Filled.Memory" Color="Color.Success" Size="Size.Large" />
+                                        </div>
+                                    </MudPaper>
+                                </MudItem>
+                                <MudItem xs="12">
+                                    <MudPaper Class="pa-4 performance-metric-card mo-self-painted" Elevation="2">
+                                        <div class="d-flex justify-space-between align-center">
+                                            <div>
+                                                <MudText Typo="Typo.subtitle1" Color="Color.Info">@L["ModuleSystem:PerformanceMonitoring:Labels:CompositionWorkQueueDuration"]</MudText>
+                                                <MudText Typo="Typo.h5" Color="Color.Info">@($"{SystemPerformance.TotalCompositionWorkQueueDurationMs}ms")</MudText>
+                                                <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                                    @L["ModuleSystem:CompositionWork:Messages:QueueDurationExplanation"]
+                                                </MudText>
+                                            </div>
+                                            <MudIcon Icon="@Icons.Material.Filled.HourglassEmpty" Color="Color.Info" Size="Size.Large" />
+                                        </div>
+                                    </MudPaper>
+                                </MudItem>
+                                <MudItem xs="12">
+                                    <MudPaper Class="pa-4 performance-metric-card mo-self-painted" Elevation="2">
+                                        <div class="d-flex justify-space-between align-center">
+                                            <div>
+                                                <MudText Typo="Typo.subtitle1" Color="Color.Warning">@L["ModuleSystem:PerformanceMonitoring:Labels:CompositionCheckpointWaitDuration"]</MudText>
+                                                <MudText Typo="Typo.h5" Color="Color.Warning">@($"{SystemPerformance.TotalCompositionCheckpointWaitDurationMs}ms")</MudText>
+                                                <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                                    @L["ModuleSystem:CompositionWork:Messages:CheckpointWaitExplanation"]
+                                                </MudText>
+                                            </div>
+                                            <MudIcon Icon="@Icons.Material.Filled.Lock" Color="Color.Warning" Size="Size.Large" />
+                                        </div>
+                                    </MudPaper>
+                                </MudItem>
+                            }
                         </MudGrid>
                     </MudCardContent>
                 </MudCard>
@@ -97,8 +154,8 @@
                                                 </div>
                                             </div>
                                             <div class="text-right">
-                                                <MudText Typo="Typo.h6" Color="@GetRankColor(index)">@($"{module.TotalDurationMs}ms")</MudText>
-                                                <MudProgressLinear Value="@GetPercentage(module.TotalDurationMs)" 
+                                                <MudText Typo="Typo.h6" Color="@GetRankColor(index)">@($"{module.SerialPhaseDurationMs}ms")</MudText>
+                                                <MudProgressLinear Value="@GetPercentage(module.SerialPhaseDurationMs)"
                                                                  Color="@GetRankColor(index)" 
                                                                  Class="mt-2" 
                                                                  Size="Size.Medium" 
@@ -121,6 +178,60 @@
                     </MudCardContent>
                 </MudCard>
             </MudItem>
+
+            @if (SystemPerformance.CompositionWorkItemCount > 0)
+            {
+                <MudItem xs="12">
+                    <MudCard Class="modern-card">
+                        <MudCardHeader>
+                            <CardHeaderContent>
+                                <div class="d-flex align-center">
+                                    <MudIcon Icon="@Icons.Material.Filled.Lock" Color="Color.Warning" Class="mr-2" />
+                                    <MudText Typo="Typo.h6">@L["ModuleSystem:CompositionWork:Labels:CheckpointSummary"]</MudText>
+                                </div>
+                            </CardHeaderContent>
+                        </MudCardHeader>
+                        <MudCardContent Class="pa-0">
+                            @if (SystemPerformance.CompositionCheckpoints.Any())
+                            {
+                                <div class="composition-checkpoint-table">
+                                    <div class="composition-checkpoint-table__content">
+                                        <MudTable T="ModuleCompositionCheckpointPerformanceInfo"
+                                                  Items="@SystemPerformance.CompositionCheckpoints"
+                                                  Dense="true"
+                                                  Hover="true">
+                                            <HeaderContent>
+                                                <MudTh>@L["ModuleSystem:CompositionWork:Labels:Checkpoint"]</MudTh>
+                                                <MudTh>@L["ModuleSystem:CompositionWork:Labels:WorkItemCount"]</MudTh>
+                                                <MudTh>@L["ModuleSystem:CompositionWork:Labels:CheckpointWaitDuration"]</MudTh>
+                                            </HeaderContent>
+                                            <RowTemplate>
+                                                <MudTd DataLabel="@L["ModuleSystem:CompositionWork:Labels:Checkpoint"]">
+                                                    @GetDeadlineText(context.Deadline)
+                                                </MudTd>
+                                                <MudTd DataLabel="@L["ModuleSystem:CompositionWork:Labels:WorkItemCount"]">
+                                                    @context.WorkItemCount
+                                                </MudTd>
+                                                <MudTd DataLabel="@L["ModuleSystem:CompositionWork:Labels:CheckpointWaitDuration"]">
+                                                    @($"{context.WaitDurationMs}ms")
+                                                </MudTd>
+                                            </RowTemplate>
+                                        </MudTable>
+                                    </div>
+                                </div>
+                            }
+                            else
+                            {
+                                <div class="pa-4">
+                                    <MudText Typo="Typo.body2" Color="Color.Secondary">
+                                        @L["ModuleSystem:CompositionWork:Messages:NoCheckpointData"]
+                                    </MudText>
+                                </div>
+                            }
+                        </MudCardContent>
+                    </MudCard>
+                </MudItem>
+            }
 
             <!-- stage performance -->            <MudItem xs="12">
                 <MudCard Class="modern-card">
@@ -255,7 +366,7 @@
         if (SystemPerformance?.SlowestModules == null || !SystemPerformance.SlowestModules.Any())
             return 0;
 
-        var maxDuration = SystemPerformance.SlowestModules.Max(m => m.TotalDurationMs);
+        var maxDuration = SystemPerformance.SlowestModules.Max(m => m.SerialPhaseDurationMs);
         return maxDuration > 0 ? (double)duration / maxDuration * 100 : 0;
     }
 
@@ -283,5 +394,16 @@
         >= 60 => L["ModuleSystem:PerformanceMonitoring:States:Medium"],
         >= 40 => L["ModuleSystem:PerformanceMonitoring:States:Good"],
         _ => L["ModuleSystem:PerformanceMonitoring:States:Excellent"]
+    };
+
+    private string GetDeadlineText(ModuleCompositionWorkDeadline deadline) => deadline switch
+    {
+        ModuleCompositionWorkDeadline.BeforeBusinessTypeIteration =>
+            L["ModuleSystem:CompositionWork:Deadlines:BeforeBusinessTypeIteration"],
+        ModuleCompositionWorkDeadline.BeforePostConfigureServices =>
+            L["ModuleSystem:CompositionWork:Deadlines:BeforePostConfigureServices"],
+        ModuleCompositionWorkDeadline.BeforeServiceRegistrationCompletion =>
+            L["ModuleSystem:CompositionWork:Deadlines:BeforeServiceRegistrationCompletion"],
+        _ => L["ModuleSystem:CompositionWork:States:Unknown"]
     };
 }

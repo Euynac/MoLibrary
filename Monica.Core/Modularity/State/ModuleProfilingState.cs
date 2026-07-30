@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using Monica.Core.Modularity.Diagnostics.Models;
 using Monica.Core.Modularity.Models;
 using Monica.Core.Modularity.Services.Support;
 
@@ -30,6 +31,16 @@ internal sealed class ModuleProfilingState
     public Dictionary<Type, ModuleProfileInfo> ModuleProfiles { get; } = [];
 
     /// <summary>
+    /// Gets composition-work checkpoint waits in lifecycle order.
+    /// </summary>
+    public List<ModuleCompositionCheckpointPerformanceInfo> CompositionCheckpoints { get; } = [];
+
+    /// <summary>
+    /// Gets or sets the monotonic wall-clock span across scheduled composition work.
+    /// </summary>
+    public long CompositionWorkWallDurationMs { get; set; }
+
+    /// <summary>
     /// Gets or sets whether system-level module profiling is currently running.
     /// </summary>
     public bool IsStarted { get; set; }
@@ -43,6 +54,8 @@ internal sealed class ModuleProfilingState
         PhaseStopwatches.Clear();
         PhaseInitializationOrder.Clear();
         ModuleProfiles.Clear();
+        CompositionCheckpoints.Clear();
+        CompositionWorkWallDurationMs = 0;
         IsStarted = false;
     }
 }

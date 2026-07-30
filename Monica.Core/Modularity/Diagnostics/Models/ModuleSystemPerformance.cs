@@ -23,7 +23,7 @@ public class ModuleSystemPerformance
     public List<ModulePerformanceInfo> ModulePerformances { get; set; } = [];
 
     /// <summary>
-    /// Five slowest modules.
+    /// Five modules with the highest aggregate serial callback duration.
     /// </summary>
     public List<ModulePerformanceInfo> SlowestModules { get; set; } = [];
 
@@ -41,6 +41,37 @@ public class ModuleSystemPerformance
     /// Total duration of all module phases, in milliseconds.
     /// </summary>
     public long TotalModulePhaseDurationMs { get; set; }
+
+    /// <summary>
+    /// Wall-clock span from the first composition work item starting until the last item completed.
+    /// </summary>
+    public long CompositionWorkWallDurationMs { get; set; }
+
+    /// <summary>
+    /// Sum of active worker durations across all module composition work items.
+    /// This value may exceed wall time because work items can overlap.
+    /// </summary>
+    public long TotalCompositionWorkExecutionDurationMs { get; set; }
+
+    /// <summary>
+    /// Sum of queue durations across all module composition work items.
+    /// </summary>
+    public long TotalCompositionWorkQueueDurationMs { get; set; }
+
+    /// <summary>
+    /// Sum of waits imposed on the serial composition pipeline at composition-work checkpoints.
+    /// </summary>
+    public long TotalCompositionCheckpointWaitDurationMs { get; set; }
+
+    /// <summary>
+    /// Number of scheduled module composition work items.
+    /// </summary>
+    public int CompositionWorkItemCount { get; set; }
+
+    /// <summary>
+    /// Wait performance for each composition-work checkpoint.
+    /// </summary>
+    public List<ModuleCompositionCheckpointPerformanceInfo> CompositionCheckpoints { get; set; } = [];
 
     /// <summary>
     /// Number of system phases.
@@ -90,14 +121,19 @@ public class ModulePerformanceInfo
     public ModuleKey? ModuleKey { get; set; }
 
     /// <summary>
-    /// Total module duration in milliseconds.
+    /// Total duration of this module's serial composition phase callbacks, in milliseconds.
     /// </summary>
-    public long TotalDurationMs { get; set; }
+    public long SerialPhaseDurationMs { get; set; }
 
     /// <summary>
     /// Duration for each configuration phase.
     /// </summary>
     public Dictionary<ModulePhase, long> PhaseDurations { get; set; } = [];
+
+    /// <summary>
+    /// Composition work scheduled by this module in stable submission order.
+    /// </summary>
+    public List<ModuleCompositionWorkPerformanceInfo> CompositionWorkItems { get; set; } = [];
 }
 
 /// <summary>

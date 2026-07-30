@@ -1,5 +1,7 @@
 using System.Diagnostics;
 using System.Text;
+using Monica.Core.Extensions;
+using Monica.Core.Modularity.Diagnostics.Models;
 using Monica.Core.Modularity.State;
 using Monica.Core.Modularity.Models;
 
@@ -150,13 +152,89 @@ internal sealed class ModuleInitializationProfiler
     }
 
     /// <summary>
-    /// Gets profile information for all modules, sorted by total duration in descending order.
+    /// Merges one complete immutable scheduler snapshot into diagnostics on the serial composition thread.
+    /// </summary>
+    internal void RecordCompositionWork(ModuleCompositionWorkSnapshot snapshot)
+    {
+        ArgumentNullException.ThrowIfNull(snapshot);
+
+        if (snapshot.WorkItems.Count > 0)
+        {
+            var startedTimestamp = snapshot.WorkItems.Min(static result => result.StartedTimestamp);
+            var completedTimestamp = snapshot.WorkItems.Max(static result => result.CompletedTimestamp);
+            _state.CompositionWorkWallDurationMs = (long)Stopwatch
+                .GetElapsedTime(startedTimestamp, completedTimestamp)
+                .TotalMilliseconds;
+        }
+
+        foreach (var result in snapshot.WorkItems)
+        {
+            if (!_state.ModuleProfiles.TryGetValue(result.ModuleType, out var profile))
+            {
+                profile = new ModuleProfileInfo(result.ModuleType);
+                _state.ModuleProfiles.Add(result.ModuleType, profile);
+            }
+
+            profile.AddCompositionWork(new ModuleCompositionWorkPerformanceInfo
+            {
+                Name = result.Name,
+                OriginPhase = result.OriginPhase,
+                Deadline = result.Deadline,
+                Status = result.IsSucceeded
+                    ? ModuleCompositionWorkStatus.Succeeded
+                    : ModuleCompositionWorkStatus.Failed,
+                SubmittedAtUtc = result.SubmittedAtUtc,
+                StartedAtUtc = result.StartedAtUtc,
+                CompletedAtUtc = result.CompletedAtUtc,
+                QueueDurationMs = (long)result.QueueDuration.TotalMilliseconds,
+                ExecutionDurationMs = (long)result.ExecutionDuration.TotalMilliseconds,
+                ErrorMessage = result.Failure?.GetMessageRecursively()
+            });
+        }
+
+        _state.CompositionCheckpoints.AddRange(snapshot.Checkpoints.Select(static checkpoint =>
+            new ModuleCompositionCheckpointPerformanceInfo
+            {
+                Deadline = checkpoint.Deadline,
+                WorkItemCount = checkpoint.WorkItemCount,
+                WaitDurationMs = (long)checkpoint.WaitDuration.TotalMilliseconds
+            }));
+    }
+
+    /// <summary>
+    /// Gets wall-clock, aggregate worker, queue, and checkpoint wait time for scheduled composition work.
+    /// </summary>
+    internal ModuleCompositionWorkSummary GetCompositionWorkSummary()
+    {
+        var workItems = _state.ModuleProfiles.Values
+            .SelectMany(static profile => profile.GetCompositionWork())
+            .ToArray();
+        if (workItems.Length == 0)
+        {
+            return ModuleCompositionWorkSummary.Empty with
+            {
+                Checkpoints = _state.CompositionCheckpoints.ToArray(),
+                TotalCheckpointWaitDurationMs = _state.CompositionCheckpoints.Sum(static checkpoint => checkpoint.WaitDurationMs)
+            };
+        }
+
+        return new ModuleCompositionWorkSummary(
+            workItems.Length,
+            _state.CompositionWorkWallDurationMs,
+            workItems.Sum(static work => work.ExecutionDurationMs),
+            workItems.Sum(static work => work.QueueDurationMs),
+            _state.CompositionCheckpoints.Sum(static checkpoint => checkpoint.WaitDurationMs),
+            _state.CompositionCheckpoints.ToArray());
+    }
+
+    /// <summary>
+    /// Gets profile information for all modules, sorted by aggregate serial phase duration in descending order.
     /// </summary>
     /// <returns>A list of module profile information.</returns>
-    public List<ModuleProfileInfo> GetModuleProfilesSortedByTotalDuration()
+    public List<ModuleProfileInfo> GetModuleProfilesSortedBySerialPhaseDuration()
     {
         return _state.ModuleProfiles.Values
-            .OrderByDescending(p => p.GetTotalDuration())
+            .OrderByDescending(static profile => profile.GetSerialPhaseDuration())
             .ToList();
     }
 
@@ -248,14 +326,29 @@ internal sealed class ModuleInitializationProfiler
         {
             sb.AppendLine($"\nAll Module Phases Total Duration: {totalModulePhaseDuration}ms (across {totalModulePhaseCount} phase executions)");
         }
-        
-        sb.AppendLine("\nTop 5 Slowest Modules (by total duration):");
-        foreach (var profile in GetModuleProfilesSortedByTotalDuration().Take(5))
+
+        var compositionWork = GetCompositionWorkSummary();
+        if (compositionWork.Count > 0)
         {
-            sb.AppendLine($"  {profile.ModuleType.Name}: {profile.GetTotalDuration()}ms");
+            sb.AppendLine("\nComposition Work:");
+            sb.AppendLine($"  Wall time: {compositionWork.WallDurationMs}ms");
+            sb.AppendLine($"  Aggregate worker time: {compositionWork.TotalExecutionDurationMs}ms across {compositionWork.Count} items");
+            sb.AppendLine($"  Aggregate checkpoint wait: {compositionWork.TotalCheckpointWaitDurationMs}ms");
+        }
+        
+        sb.AppendLine("\nTop 5 Slowest Modules (by serial callback duration):");
+        foreach (var profile in GetModuleProfilesSortedBySerialPhaseDuration().Take(5))
+        {
+            sb.AppendLine($"  {profile.ModuleType.Name}: {profile.GetSerialPhaseDuration()}ms");
             foreach (var phase in profile.GetPhaseDurations())
             {
                 sb.AppendLine($"    {phase.Key}: {phase.Value}ms");
+            }
+
+            foreach (var workItem in profile.GetCompositionWork())
+            {
+                sb.AppendLine(
+                    $"    CompositionWork[{workItem.Name}]: {workItem.ExecutionDurationMs}ms ({workItem.Status}, {workItem.Deadline})");
             }
         }
         
@@ -273,14 +366,14 @@ internal sealed class ModuleInitializationProfiler
     }
 
     /// <summary>
-    /// Gets the total initialization duration for a specific module type.
+    /// Gets the aggregate serial phase duration for a specific module type.
     /// </summary>
     /// <param name="moduleType">The type of the module to get duration for.</param>
-    /// <returns>The total initialization duration in milliseconds, or 0 if not found.</returns>
-    public long GetModuleTotalDuration(Type moduleType)
+    /// <returns>The serial phase duration in milliseconds, or 0 if not found.</returns>
+    public long GetModuleSerialPhaseDuration(Type moduleType)
     {
         return _state.ModuleProfiles.TryGetValue(moduleType, out var profile)
-            ? profile.GetTotalDuration()
+            ? profile.GetSerialPhaseDuration()
             : 0;
     }
 }
@@ -296,6 +389,7 @@ public class ModuleProfileInfo
     public Type ModuleType { get; }
     
     private readonly Dictionary<ModulePhase, Stopwatch> _phaseStopwatches = new();
+    private readonly List<ModuleCompositionWorkPerformanceInfo> _compositionWork = [];
     
     /// <summary>
     /// Creates a new module profile information instance.
@@ -350,12 +444,29 @@ public class ModuleProfileInfo
     }
     
     /// <summary>
-    /// Gets the total duration across all phases for this module.
+    /// Gets the aggregate duration across this module's serial composition phases.
     /// </summary>
-    /// <returns>The total duration in milliseconds.</returns>
-    public long GetTotalDuration()
+    /// <returns>The serial phase duration in milliseconds.</returns>
+    public long GetSerialPhaseDuration()
     {
-        return _phaseStopwatches.Values.Sum(s => s.ElapsedMilliseconds);
+        return _phaseStopwatches.Values.Sum(static stopwatch => stopwatch.ElapsedMilliseconds);
+    }
+
+    /// <summary>
+    /// Gets composition work in stable submission order.
+    /// </summary>
+    public IReadOnlyList<ModuleCompositionWorkPerformanceInfo> GetCompositionWork()
+    {
+        return _compositionWork;
+    }
+
+    /// <summary>
+    /// Records one composition work item for the module.
+    /// </summary>
+    internal void AddCompositionWork(ModuleCompositionWorkPerformanceInfo workItem)
+    {
+        ArgumentNullException.ThrowIfNull(workItem);
+        _compositionWork.Add(workItem);
     }
     
     /// <summary>
@@ -369,4 +480,18 @@ public class ModuleProfileInfo
             kvp => kvp.Value.ElapsedMilliseconds
         );
     }
-} 
+}
+
+/// <summary>
+/// Aggregates required composition work without conflating parallel work, queueing, and checkpoint waits.
+/// </summary>
+internal sealed record ModuleCompositionWorkSummary(
+    int Count,
+    long WallDurationMs,
+    long TotalExecutionDurationMs,
+    long TotalQueueDurationMs,
+    long TotalCheckpointWaitDurationMs,
+    IReadOnlyList<ModuleCompositionCheckpointPerformanceInfo> Checkpoints)
+{
+    internal static ModuleCompositionWorkSummary Empty { get; } = new(0, 0, 0, 0, 0, []);
+}

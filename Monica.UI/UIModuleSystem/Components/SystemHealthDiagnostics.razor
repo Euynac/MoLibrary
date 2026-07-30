@@ -19,14 +19,14 @@
                         <MudGrid Spacing="3">
                             <MudItem xs="12" sm="6" md="3">
                                 <MudPaper Class="metric-card pa-4" Elevation="0">
-                                    <MudText Typo="Typo.caption" Color="Color.Secondary">@L["ModuleSystem:HealthCheck:Labels:AverageInitTime"]</MudText>
-                                    <MudText Typo="Typo.h5" Color="Color.Primary">@($"{HealthCheckData.PerformanceMetrics.AverageModuleInitTimeMs:F2}ms")</MudText>
+                                    <MudText Typo="Typo.caption" Color="Color.Secondary">@L["ModuleSystem:HealthCheck:Labels:AverageSerialPhaseDuration"]</MudText>
+                                    <MudText Typo="Typo.h5" Color="Color.Primary">@($"{HealthCheckData.PerformanceMetrics.AverageModuleSerialPhaseDurationMs:F2}ms")</MudText>
                                 </MudPaper>
                             </MudItem>
                             <MudItem xs="12" sm="6" md="3">
                                 <MudPaper Class="metric-card pa-4" Elevation="0">
-                                    <MudText Typo="Typo.caption" Color="Color.Secondary">@L["ModuleSystem:HealthCheck:Labels:SlowestModuleTime"]</MudText>
-                                    <MudText Typo="Typo.h5" Color="Color.Warning">@($"{HealthCheckData.PerformanceMetrics.SlowestModuleInitTimeMs}ms")</MudText>
+                                    <MudText Typo="Typo.caption" Color="Color.Secondary">@L["ModuleSystem:HealthCheck:Labels:SlowestSerialPhaseDuration"]</MudText>
+                                    <MudText Typo="Typo.h5" Color="Color.Warning">@($"{HealthCheckData.PerformanceMetrics.SlowestModuleSerialPhaseDurationMs}ms")</MudText>
                                 </MudPaper>
                             </MudItem>
                             <MudItem xs="12" sm="6" md="3">

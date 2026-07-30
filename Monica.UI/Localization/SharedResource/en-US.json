@@ -150,13 +150,13 @@
         "DisabledModules": "Disabled Modules",
         "WebModules": "Web-capable Modules",
         "DowngradedModules": "Downgraded Web Modules",
-        "TotalInitTime": "Total Init Time",
+        "TotalSerialPhaseDuration": "Total Serial Phase Duration",
         "ModuleDistribution": "Module Distribution",
         "ModuleName": "Module Name",
         "Status": "Status",
         "RuntimeMode": "Runtime Mode",
         "Order": "Order",
-        "InitTime": "Init Time",
+        "SerialPhaseDuration": "Serial Phase Duration",
         "Dependencies": "Dependencies",
         "Actions": "Actions"
       },
@@ -179,8 +179,8 @@
         "PerformanceMetrics": "Performance Metrics",
         "CheckItems": "Check Items",
         "DiscoveredIssues": "Discovered Issues",
-        "AverageInitTime": "Average Init Time",
-        "SlowestModuleTime": "Slowest Module Time",
+        "AverageSerialPhaseDuration": "Average Serial Phase Duration",
+        "SlowestSerialPhaseDuration": "Slowest Serial Module Duration",
         "EfficiencyScore": "Efficiency Score",
         "MemoryUsage": "Memory Usage"
       },
@@ -206,12 +206,14 @@
     "PerformanceMonitoring": {
       "Labels": {
         "PerformanceOverview": "Performance Overview",
-        "SlowestModules": "Slowest Modules",
+        "SlowestModules": "Slowest Serial Module Callbacks",
         "PhasePerformanceAnalysis": "Phase Performance Analysis",
-        "TotalInitTime": "Total Init Time",
-        "TotalSystemPhaseDuration": "Total System Phase Duration",
-        "TotalModulePhaseDuration": "Total Module Phase Duration",
-        "TotalModulePhaseExecutions": "Total Module Phase Executions",
+        "SystemWallDuration": "Composition Wall Time",
+        "ModulePhaseAggregateDuration": "Aggregate Module-Phase Work",
+        "CompositionWorkWallDuration": "Composition Work Wall Time",
+        "CompositionWorkExecutionDuration": "Aggregate Composition Work Execution",
+        "CompositionWorkQueueDuration": "Aggregate Queue Time",
+        "CompositionCheckpointWaitDuration": "Aggregate Checkpoint Wait",
         "Order": "Order",
         "PhaseName": "Phase Name",
         "Duration": "Duration (ms)",
@@ -220,7 +222,8 @@
       },
       "Messages": {
         "NoPerformanceData": "No performance data",
-        "NoPhasePerformanceData": "No phase performance data"
+        "NoPhasePerformanceData": "No phase performance data",
+        "ModulePhaseExecutionCount": "{0} module-phase executions"
       },
       "States": {
         "Slow": "Slow",
@@ -232,6 +235,59 @@
         "PerformanceOverview": "Loading performance overview...",
         "SlowestModules": "Loading slowest modules...",
         "PhasePerformanceData": "Loading phase performance data..."
+      }
+    },
+    "CompositionWork": {
+      "Labels": {
+        "ModuleWork": "Module Composition Work",
+        "CheckpointSummary": "Composition Checkpoints",
+        "Checkpoint": "Checkpoint",
+        "WorkItemCount": "Work Items",
+        "CheckpointWaitDuration": "Serial Wait",
+        "AggregateExecutionDuration": "Aggregate Execution",
+        "AggregateQueueDuration": "Aggregate Queue Time",
+        "FailedWorkItemCount": "Failed Work Items",
+        "WorkName": "Work Name",
+        "OriginPhase": "Origin Phase",
+        "Deadline": "Deadline",
+        "Status": "Status",
+        "QueueDuration": "Queue Time",
+        "ExecutionDuration": "Execution Time",
+        "Error": "Error"
+      },
+      "Messages": {
+        "NoWorkTitle": "No composition work",
+        "NoWorkDescription": "No module scheduled concurrent composition work for this application.",
+        "NoModuleWorkTitle": "No composition work",
+        "NoModuleWorkDescription": "This module completed through the serial module phases only.",
+        "WorkItemCount": "{0} composition work items",
+        "ConcurrentWorkExplanation": "Execution time is summed across workers and can exceed wall time when work overlaps.",
+        "QueueDurationExplanation": "Total time work items waited for an available composition worker.",
+        "CheckpointWaitExplanation": "Total time the serial composition pipeline waited at work deadlines.",
+        "NoCheckpointData": "No checkpoint wait data was recorded."
+      },
+      "States": {
+        "Succeeded": "Succeeded",
+        "Failed": "Failed",
+        "None": "None",
+        "Unknown": "Unknown"
+      },
+      "Deadlines": {
+        "BeforeBusinessTypeIteration": "Before business-type iteration",
+        "BeforePostConfigureServices": "Before post-service configuration",
+        "BeforeServiceRegistrationCompletion": "Before service registration completes"
+      },
+      "Phases": {
+        "None": "None",
+        "ClaimDependencies": "Claim dependencies",
+        "InitFinalConfigures": "Initialize final configuration",
+        "ConfigureBuilder": "Configure host builder",
+        "ConfigureServices": "Configure services",
+        "IterateBusinessTypes": "Iterate business types",
+        "PostConfigureServices": "Post-configure services",
+        "ConfigureApplicationBuilder": "Configure application pipeline",
+        "ConfigureEndpoints": "Configure endpoints",
+        "Disabled": "Disabled"
       }
     },
     "DependencyGraph": {
@@ -344,13 +400,12 @@
       "Labels": {
         "ModuleKey": "Module Key",
         "RegistrationOrder": "Registration Order",
-        "InitializationTime": "Initialization Time",
         "ModuleStatus": "Module Status",
         "ModuleCapability": "Module Capability",
         "RuntimeMode": "Runtime Mode",
         "ModuleOption": "Module Option",
         "ExtraOption": "Extra Option",
-        "TotalDuration": "Total Duration",
+        "SerialPhaseDuration": "Serial Phase Duration",
         "PhaseDetails": "Phase Details",
         "DirectDependencies": "Direct Dependencies",
         "TotalDependencies": "Total Dependencies",

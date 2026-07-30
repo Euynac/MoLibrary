@@ -397,7 +397,7 @@ public sealed class ModuleDependencyAnalyzer(MonicaApplication application)
                 var moduleKey = snapshot.ModuleKey;
                 var order = snapshot.RegisterInfo.Order;
                 var moduleTypeName = snapshot.ModuleType.Name;
-                var initDuration = snapshot.TotalInitializationDurationMs;
+                var serialPhaseDuration = snapshot.SerialPhaseDurationMs;
 
                 // Basic module information.
                 var moduleKeyDisplay = moduleKey.ToString();
@@ -409,8 +409,8 @@ public sealed class ModuleDependencyAnalyzer(MonicaApplication application)
                     sb.AppendLine($"           Dependencies: {string.Join(", ", dependencies)}");
                 }
 
-                // Initialization timing.
-                sb.AppendLine($"           Initialization Time: {initDuration}ms");
+                // Serial composition callback timing.
+                sb.AppendLine($"           Serial Phase Duration: {serialPhaseDuration}ms");
             }
         }
         else
@@ -445,7 +445,7 @@ public sealed class ModuleDependencyAnalyzer(MonicaApplication application)
         var totalEnabledModules = moduleInfos.Count;
         var totalDisabledModules = disabledModuleTypes.Count;
         var totalModules = totalEnabledModules + totalDisabledModules;
-        var totalInitTime = moduleInfos.Sum(s => s.TotalInitializationDurationMs);
+        var totalSerialPhaseDuration = moduleInfos.Sum(s => s.SerialPhaseDurationMs);
 
         sb.AppendLine();
         sb.AppendLine("Statistics:");
@@ -453,12 +453,12 @@ public sealed class ModuleDependencyAnalyzer(MonicaApplication application)
         sb.AppendLine($"  Total modules: {totalModules}");
         sb.AppendLine($"  Enabled modules: {totalEnabledModules}");
         sb.AppendLine($"  Disabled modules: {totalDisabledModules}");
-        sb.AppendLine($"  Total initialization time: {totalInitTime}ms");
+        sb.AppendLine($"  Total serial phase duration: {totalSerialPhaseDuration}ms");
 
         // Show the five slowest enabled modules.
         var slowestModules = moduleInfos
-            .Where(s => s.TotalInitializationDurationMs > 0)
-            .OrderByDescending(s => s.TotalInitializationDurationMs)
+            .Where(s => s.SerialPhaseDurationMs > 0)
+            .OrderByDescending(s => s.SerialPhaseDurationMs)
             .Take(5)
             .ToList();
 
@@ -468,7 +468,7 @@ public sealed class ModuleDependencyAnalyzer(MonicaApplication application)
             foreach (var module in slowestModules)
             {
                 var moduleKeyDisplay = module.ModuleKey.ToString();
-                sb.AppendLine($"    {moduleKeyDisplay}: {module.TotalInitializationDurationMs}ms");
+                sb.AppendLine($"    {moduleKeyDisplay}: {module.SerialPhaseDurationMs}ms");
             }
         }
 
