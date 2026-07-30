@@ -58,9 +58,31 @@ public sealed class MediatorExecutionPipelineTests
         host.Services.GetRequiredService<HandlerInvocationCounter>().Value.Should().Be(0);
     }
 
+    [Fact]
+    public async Task Send_WhenHandlerIsDiscoveredWithoutMonicaDependencyInjection_ShouldUseFallbackActivation()
+    {
+        var builder = Host.CreateApplicationBuilder();
+        builder.AddMonica(monica =>
+        {
+            monica.ConfigureTypeDiscovery(options => options
+                .ExcludeDefault()
+                .Add(typeof(MediatorExecutionPipelineTests).Assembly));
+            monica.AddMediator();
+        });
+        using var host = builder.Build();
+
+        var response = await host.Services
+            .GetRequiredService<IMediator>()
+            .Send(new DiscoveredRequest("standalone"), TestContext.Current.CancellationToken);
+
+        response.Should().Be("standalone");
+    }
+
     private sealed record TestRequest(string Value) : IRequest<string>;
 
     private sealed record ShortCircuitRequest : IRequest<string>;
+
+    private sealed record DiscoveredRequest(string Value) : IRequest<string>;
 
     private sealed class ScopeIdentity
     {
@@ -87,6 +109,14 @@ public sealed class MediatorExecutionPipelineTests
         {
             Interlocked.Increment(ref counter.Value);
             return Task.FromResult("handler");
+        }
+    }
+
+    private sealed class DiscoveredHandler : IRequestHandler<DiscoveredRequest, string>
+    {
+        public Task<string> Handle(DiscoveredRequest request, CancellationToken cancellationToken)
+        {
+            return Task.FromResult(request.Value);
         }
     }
 

@@ -67,18 +67,34 @@ public class ModuleMediator(ModuleMediatorOption option)
             return;
         }
 
-        foreach (var serviceType in implementationType
-                     .GetInterfaces()
-                     .Where(static serviceType => serviceType.IsGenericType &&
-                                                  serviceType.GetGenericTypeDefinition() == typeof(IRequestHandler<,>)))
+        var serviceTypes = implementationType
+            .GetInterfaces()
+            .Where(static serviceType => serviceType.IsGenericType &&
+                                         serviceType.GetGenericTypeDefinition() == typeof(IRequestHandler<,>))
+            .ToArray();
+        if (serviceTypes.Length == 0)
         {
-            if (implementationType.IsGenericTypeDefinition)
+            return;
+        }
+
+        if (implementationType.IsGenericTypeDefinition)
+        {
+            foreach (var serviceType in serviceTypes)
             {
                 services.TryAddTransient(serviceType.GetGenericTypeDefinition(), implementationType);
-                continue;
             }
 
-            services.TryAddTransient(serviceType, implementationType);
+            return;
+        }
+
+        // Keep one canonical activation path for closed handlers. Other modules may enrich or replace the concrete
+        // registration, while the mediator contract remains an alias to that final registration.
+        services.TryAddTransient(implementationType);
+        foreach (var serviceType in serviceTypes)
+        {
+            services.TryAddTransient(
+                serviceType,
+                provider => provider.GetRequiredService(implementationType));
         }
     }
 }
