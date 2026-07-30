@@ -42,6 +42,11 @@ public enum ResStatus
     NotFound = 404,
 
     /// <summary>
+    /// The request conflicts with the current state of the target resource.
+    /// </summary>
+    Conflict = 409,
+
+    /// <summary>
     /// The request payload exceeds the server's accepted size.
     /// </summary>
     PayloadTooLarge = 413,

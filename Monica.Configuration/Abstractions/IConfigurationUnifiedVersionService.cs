@@ -1,3 +1,4 @@
+using Monica.Configuration.Exceptions;
 using Monica.Configuration.Models;
 
 namespace Monica.Configuration.Abstractions;
@@ -61,8 +62,11 @@ public interface IConfigurationUnifiedVersionService
     /// <param name="request">The reviewed rollback request and its preview fingerprint.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>The rollback mutation group and per-definition mutation results.</returns>
+    /// <exception cref="ConfigurationConcurrencyConflictException">
+    /// Thrown when current state no longer matches the reviewed preview fingerprint.
+    /// </exception>
     /// <exception cref="InvalidOperationException">
-    /// Thrown when the preview is stale, a changed definition is blocked, or compatible schema drift was not acknowledged.
+    /// Thrown when a changed definition is blocked or compatible schema drift was not acknowledged.
     /// </exception>
     /// <exception cref="KeyNotFoundException">Thrown when the version does not exist.</exception>
     Task<ConfigurationUnifiedVersionRollbackResult> RollbackToVersionAsync(

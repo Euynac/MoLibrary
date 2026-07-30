@@ -1,6 +1,6 @@
 using Microsoft.Extensions.Configuration;
-using Monica.Configuration.Exceptions;
 using Monica.Configuration.Abstractions;
+using Monica.Configuration.Exceptions;
 using Monica.Configuration.Models;
 using Monica.Configuration.Models.Internal;
 using Monica.Configuration.Services;
@@ -862,6 +862,12 @@ public sealed class ConfigurationFacade(
             return Res.Ok(await unifiedVersionService.RollbackToVersionAsync(
                 request,
                 CancellationToken.None));
+        }
+        catch (ConfigurationConcurrencyConflictException ex)
+        {
+            return Res.Fail(
+                $"Failed to roll back unified configuration version: {ex.GetMessageRecursively()}",
+                ResStatus.Conflict);
         }
         catch (Exception ex)
         {

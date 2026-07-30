@@ -176,7 +176,7 @@
     private readonly Dictionary<string, ConfigurationDefinition> _definitions =
         new(StringComparer.OrdinalIgnoreCase);
     private IReadOnlyList<RollbackPreviewRow> _rows = [];
-    private string? _previewToken;
+    private string? _previewIdentity;
     private bool _loading;
 
     [Parameter, EditorRequired]
@@ -184,8 +184,8 @@
 
     protected override async Task OnParametersSetAsync()
     {
-        var previewToken = $"{Preview.Version}:{Preview.PlanToken}";
-        if (string.Equals(_previewToken, previewToken, StringComparison.Ordinal))
+        var previewIdentity = $"{Preview.Version}:{Preview.PreviewFingerprint}";
+        if (string.Equals(_previewIdentity, previewIdentity, StringComparison.Ordinal))
         {
             return;
         }
@@ -195,7 +195,7 @@
         await LoadDefinitionsAsync();
 
         _rows = Preview.ChangedTargets.Select(CreateRow).ToArray();
-        _previewToken = previewToken;
+        _previewIdentity = previewIdentity;
         _loading = false;
     }
 

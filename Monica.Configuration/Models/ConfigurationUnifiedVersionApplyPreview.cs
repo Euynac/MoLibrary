@@ -17,7 +17,7 @@ public sealed record ConfigurationUnifiedVersionApplyPreview
     /// Applying the rollback fails when current values, schemas, destinations, or concurrency tokens have changed
     /// since this fingerprint was created. Callers must request a new preview instead of applying stale changes.
     /// </remarks>
-    public required string PlanToken { get; init; }
+    public required string PreviewFingerprint { get; init; }
 
     /// <summary>
     /// Gets the per-definition apply targets, including definitions that require no change.
@@ -332,6 +332,15 @@ public sealed record ConfigurationUnifiedVersionValidationIssue
     /// Gets the developer-facing validation detail.
     /// </summary>
     public required string Message { get; init; }
+
+    /// <summary>
+    /// Gets the current schema validation rules associated with the incompatible value.
+    /// </summary>
+    /// <remarks>
+    /// Consumers can use this structured metadata to present localized validation guidance without parsing the
+    /// developer-facing <see cref="Message"/> text.
+    /// </remarks>
+    public IReadOnlyList<ConfigurationValidationRule> ValidationRules { get; init; } = [];
 
     /// <summary>
     /// Gets whether the path and developer detail were withheld because historical or current sensitivity metadata

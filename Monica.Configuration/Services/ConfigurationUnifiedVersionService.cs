@@ -1,4 +1,5 @@
 using Monica.Configuration.Abstractions;
+using Monica.Configuration.Exceptions;
 using Monica.Configuration.Models;
 using Monica.Configuration.Services.Support;
 
@@ -95,10 +96,10 @@ internal sealed class ConfigurationUnifiedVersionService(
     {
         var snapshot = await GetRequiredVersionAsync(request.Version, cancellationToken);
         var preview = await rollbackPreviewFactory.CreateAsync(snapshot, cancellationToken);
-        if (!string.Equals(preview.PlanToken, request.PlanToken, StringComparison.Ordinal))
+        if (!string.Equals(preview.PreviewFingerprint, request.PreviewFingerprint, StringComparison.Ordinal))
         {
-            throw new InvalidOperationException(
-                "The rollback preview is stale because configuration values, schemas, or destinations changed. Review a new preview before applying.");
+            throw new ConfigurationConcurrencyConflictException(
+                "The unified-version rollback preview is stale because current configuration values, schemas, persistence destinations, or concurrency revisions changed. Request and review a new preview before applying the rollback.");
         }
 
         if (!preview.CanApplyWithAcknowledgement(request.AcknowledgeCompatibleSchemaDrift))
@@ -109,7 +110,9 @@ internal sealed class ConfigurationUnifiedVersionService(
         var commands = BuildCommands(request.Version, preview);
         var applyResult = await mutationGroupApplyService.ApplyAsync(new ConfigurationMutationGroupApplyRequest
         {
-            Label = $"Apply configuration version v{request.Version}",
+            Label = string.IsNullOrWhiteSpace(request.Label)
+                ? $"Apply configuration version v{request.Version}"
+                : request.Label.Trim(),
             Reason = request.Reason,
             Context = new ConfigurationMutationContext { Reason = request.Reason },
             Commands = commands,

@@ -24,7 +24,9 @@ internal sealed class ConfigurationUnifiedVersionRollbackPreviewFactory(
         return new ConfigurationUnifiedVersionApplyPreview
         {
             Version = snapshot.Summary.Version,
-            PlanToken = ConfigurationUnifiedVersionRollbackPlanToken.Compute(snapshot.Summary.Version, targets),
+            PreviewFingerprint = ConfigurationUnifiedVersionRollbackPreviewFingerprint.Compute(
+                snapshot.Summary.Version,
+                targets),
             Targets = targets
         };
     }
@@ -153,6 +155,7 @@ internal sealed class ConfigurationUnifiedVersionRollbackPreviewFactory(
             Message = detailsHidden
                 ? "Validation details are hidden because the affected historical path may contain sensitive metadata."
                 : issue.Message,
+            ValidationRules = detailsHidden ? [] : issue.ValidationRules,
             DetailsHidden = detailsHidden
         };
     }

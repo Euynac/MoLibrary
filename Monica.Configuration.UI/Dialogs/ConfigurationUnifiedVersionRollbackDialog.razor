@@ -150,7 +150,7 @@
         var result = await Facade.RollbackUnifiedVersionAsync(new ConfigurationUnifiedVersionRollbackRequest
         {
             Version = Version,
-            PlanToken = _preview.PlanToken,
+            PreviewFingerprint = _preview.PreviewFingerprint,
             Reason = _reason,
             AcknowledgeCompatibleSchemaDrift = _acknowledgeSchemaDrift
         });

@@ -11,9 +11,22 @@ public sealed record ConfigurationUnifiedVersionRollbackRequest
     public required long Version { get; init; }
 
     /// <summary>
-    /// Gets the preview fingerprint reviewed by the caller.
+    /// Gets the fingerprint of the exact rollback preview reviewed by the caller.
     /// </summary>
-    public required string PlanToken { get; init; }
+    /// <remarks>
+    /// This is an optimistic-concurrency value, not an authentication credential. The apply operation rejects the
+    /// request when current values, schemas, destinations, or concurrency revisions no longer match the preview.
+    /// </remarks>
+    public required string PreviewFingerprint { get; init; }
+
+    /// <summary>
+    /// Gets the optional operator-facing label recorded with the rollback mutation group.
+    /// </summary>
+    /// <remarks>
+    /// Leading and trailing whitespace is ignored. The service uses its default English label when this value is
+    /// null, empty, or consists only of whitespace.
+    /// </remarks>
+    public string? Label { get; init; }
 
     /// <summary>
     /// Gets the optional operator reason recorded with the rollback mutation group.
