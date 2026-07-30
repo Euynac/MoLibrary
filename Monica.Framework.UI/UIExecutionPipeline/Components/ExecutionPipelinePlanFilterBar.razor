@@ -16,55 +16,73 @@
                       Variant="Variant.Outlined"
                       Margin="Margin.Dense" />
     </div>
-    <MudSelect T="string"
-               Value="@State.ExecutionPointFilter"
-               ValueChanged="State.SetExecutionPointFilter"
-               Label="@L["Page:Filters:ExecutionPoint"]"
-               Variant="Variant.Outlined"
-               Margin="Margin.Dense">
-        <MudSelectItem T="string" Value="@string.Empty">@L["Page:Filters:All"]</MudSelectItem>
-        @foreach (var point in State.AvailableExecutionPoints)
-        {
-            <MudSelectItem T="string" Value="@point">@point</MudSelectItem>
-        }
-    </MudSelect>
-    <MudSelect T="ExecutionPipelineBusinessFilter"
-               Value="@State.BusinessFilter"
-               ValueChanged="State.SetBusinessFilter"
-               Label="@L["Page:Filters:BusinessOperation"]"
-               Variant="Variant.Outlined"
-               Margin="Margin.Dense">
-        <MudSelectItem T="ExecutionPipelineBusinessFilter" Value="ExecutionPipelineBusinessFilter.All">@L["Page:Filters:All"]</MudSelectItem>
-        <MudSelectItem T="ExecutionPipelineBusinessFilter" Value="ExecutionPipelineBusinessFilter.BusinessOnly">@L["Page:Filters:BusinessOnly"]</MudSelectItem>
-        <MudSelectItem T="ExecutionPipelineBusinessFilter" Value="ExecutionPipelineBusinessFilter.NonBusinessOnly">@L["Page:Filters:NonBusinessOnly"]</MudSelectItem>
-    </MudSelect>
-    <MudSelect T="string"
-               Value="@State.TransactionModeFilter"
-               ValueChanged="State.SetTransactionModeFilter"
-               Label="@L["Page:Filters:TransactionMode"]"
-               Variant="Variant.Outlined"
-               Margin="Margin.Dense">
-        <MudSelectItem T="string" Value="@string.Empty">@L["Page:Filters:All"]</MudSelectItem>
-        @foreach (var mode in State.AvailableTransactionModes)
-        {
-            <MudSelectItem T="string" Value="@mode">@L[$"Page:TransactionModes:{mode}"]</MudSelectItem>
-        }
-    </MudSelect>
-    <MudSelect T="string"
-               Value="@State.StatusFilter"
-               ValueChanged="State.SetStatusFilter"
-               Label="@L["Page:Filters:Status"]"
-               Variant="Variant.Outlined"
-               Margin="Margin.Dense">
-        <MudSelectItem T="string" Value="@string.Empty">@L["Page:Filters:All"]</MudSelectItem>
-        @foreach (var status in State.AvailableStatuses)
-        {
-            <MudSelectItem T="string" Value="@status">@L[$"Page:Statuses:{status}"]</MudSelectItem>
-        }
-    </MudSelect>
-    <MudText Typo="Typo.caption" Color="Color.Secondary" Class="execution-pipeline-filters__count">
-        @L["Page:Filters:Showing", State.FilteredPlans.Count, State.Snapshot?.Plans.Length ?? 0]
-    </MudText>
+    <div class="execution-pipeline-filters__field">
+        <ExecutionPipelineHelpLabel Text="@L["Page:Filters:ExecutionPoint"]"
+                                    HelpText="@L["Page:Help:Concepts:ExecutionPoint"]" />
+        <MudSelect T="string"
+                   Value="@State.ExecutionPointFilter"
+                   ValueChanged="State.SetExecutionPointFilter"
+                   aria-label="@L["Page:Filters:ExecutionPoint"]"
+                   Variant="Variant.Outlined"
+                   Margin="Margin.Dense">
+            <MudSelectItem T="string" Value="@string.Empty">@L["Page:Filters:All"]</MudSelectItem>
+            @foreach (var point in State.AvailableExecutionPoints)
+            {
+                <MudSelectItem T="string" Value="@point">@point</MudSelectItem>
+            }
+        </MudSelect>
+    </div>
+    <div class="execution-pipeline-filters__field">
+        <ExecutionPipelineHelpLabel Text="@L["Page:Filters:BusinessOperation"]"
+                                    HelpText="@L["Page:Help:Concepts:BusinessOperation"]" />
+        <MudSelect T="ExecutionPipelineBusinessFilter"
+                   Value="@State.BusinessFilter"
+                   ValueChanged="State.SetBusinessFilter"
+                   aria-label="@L["Page:Filters:BusinessOperation"]"
+                   Variant="Variant.Outlined"
+                   Margin="Margin.Dense">
+            <MudSelectItem T="ExecutionPipelineBusinessFilter" Value="ExecutionPipelineBusinessFilter.All">@L["Page:Filters:All"]</MudSelectItem>
+            <MudSelectItem T="ExecutionPipelineBusinessFilter" Value="ExecutionPipelineBusinessFilter.BusinessOnly">@L["Page:Filters:BusinessOnly"]</MudSelectItem>
+            <MudSelectItem T="ExecutionPipelineBusinessFilter" Value="ExecutionPipelineBusinessFilter.NonBusinessOnly">@L["Page:Filters:NonBusinessOnly"]</MudSelectItem>
+        </MudSelect>
+    </div>
+    <div class="execution-pipeline-filters__field">
+        <ExecutionPipelineHelpLabel Text="@L["Page:Filters:TransactionMode"]"
+                                    HelpText="@L["Page:Help:Concepts:TransactionMode"]" />
+        <MudSelect T="string"
+                   Value="@State.TransactionModeFilter"
+                   ValueChanged="State.SetTransactionModeFilter"
+                   aria-label="@L["Page:Filters:TransactionMode"]"
+                   Variant="Variant.Outlined"
+                   Margin="Margin.Dense">
+            <MudSelectItem T="string" Value="@string.Empty">@L["Page:Filters:All"]</MudSelectItem>
+            @foreach (var mode in State.AvailableTransactionModes)
+            {
+                <MudSelectItem T="string" Value="@mode">@L[$"Page:TransactionModes:{mode}"]</MudSelectItem>
+            }
+        </MudSelect>
+    </div>
+    <div class="execution-pipeline-filters__field">
+        <ExecutionPipelineHelpLabel Text="@L["Page:Filters:Status"]"
+                                    HelpText="@L["Page:Help:Concepts:PlanStatus"]" />
+        <MudSelect T="string"
+                   Value="@State.StatusFilter"
+                   ValueChanged="State.SetStatusFilter"
+                   aria-label="@L["Page:Filters:Status"]"
+                   Variant="Variant.Outlined"
+                   Margin="Margin.Dense">
+            <MudSelectItem T="string" Value="@string.Empty">@L["Page:Filters:All"]</MudSelectItem>
+            @foreach (var status in State.AvailableStatuses)
+            {
+                <MudSelectItem T="string" Value="@status">@L[$"Page:Statuses:{status}"]</MudSelectItem>
+            }
+        </MudSelect>
+    </div>
+    <div class="execution-pipeline-filters__count">
+        <MudText Typo="Typo.caption" Color="Color.Secondary">
+            @L["Page:Filters:Showing", State.FilteredPlans.Count, State.Snapshot?.Plans.Length ?? 0]
+        </MudText>
+    </div>
 </div>
 
 @code {

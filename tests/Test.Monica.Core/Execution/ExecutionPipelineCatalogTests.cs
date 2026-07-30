@@ -12,6 +12,7 @@ using Monica.Core.Modularity.Extensions;
 using Monica.Core.Modularity.Models;
 using Monica.Core.Results;
 using Monica.Modules;
+using Monica.Tool.Extensions;
 using Xunit;
 
 namespace Test.Monica.Core.Execution;
@@ -42,10 +43,10 @@ public sealed class ExecutionPipelineCatalogTests
         await ExecuteAsync(scope.ServiceProvider.GetRequiredService<IExecutionPipeline>(), descriptor);
 
         var snapshot = catalog.GetSnapshot();
-        snapshot.Registrations.Select(static registration => registration.BehaviorType.DisplayName)
+        snapshot.Registrations.Select(static registration => registration.BehaviorType.FullName)
             .Should().Equal(
-                typeof(ModuleCatalogBehavior).FullName,
-                typeof(HostCatalogBehavior).FullName);
+                typeof(ModuleCatalogBehavior).GetCleanFullName(),
+                typeof(HostCatalogBehavior).GetCleanFullName());
         snapshot.Registrations[0].SourceModuleKey.Should().Be(
             ModuleKey.Create(CatalogContributorModule.MODULE_KEY));
         snapshot.Registrations[1].SourceModuleKey.Should().BeNull();
@@ -55,10 +56,10 @@ public sealed class ExecutionPipelineCatalogTests
         plan.Status.Should().Be(ExecutionPipelinePlanStatus.Ready);
         plan.Error.Should().BeNull();
         plan.Behaviors.Select(static behavior => behavior.Position).Should().Equal(1, 2);
-        plan.Behaviors.Select(static behavior => behavior.ResolvedType.DisplayName)
+        plan.Behaviors.Select(static behavior => behavior.ResolvedType.FullName)
             .Should().Equal(
-                typeof(ModuleCatalogBehavior).FullName,
-                typeof(HostCatalogBehavior).FullName);
+                typeof(ModuleCatalogBehavior).GetCleanFullName(),
+                typeof(HostCatalogBehavior).GetCleanFullName());
     }
 
     [Fact]
@@ -141,8 +142,8 @@ public sealed class ExecutionPipelineCatalogTests
         var businessPlan = catalog.InspectPlan(businessDescriptor);
         var infrastructurePlan = catalog.InspectPlan(infrastructureDescriptor);
 
-        businessPlan.Descriptor.OperationKey.Should().Be(infrastructurePlan.Descriptor.OperationKey);
-        businessPlan.PlanKey.Should().NotBe(infrastructurePlan.PlanKey);
+        businessPlan.Descriptor.Id.Should().Be(infrastructurePlan.Descriptor.Id);
+        businessPlan.Id.Should().NotBe(infrastructurePlan.Id);
         businessPlan.Status.Should().Be(ExecutionPipelinePlanStatus.Ready);
         businessPlan.Behaviors.Should().BeEmpty();
         catalog.GetSnapshot().Plans.Should().HaveCount(2);
@@ -210,7 +211,10 @@ public sealed class ExecutionPipelineCatalogTests
         var plan = catalog.InspectPlan(CreateDescriptor());
 
         var registration = catalog.GetSnapshot().Registrations.Should().ContainSingle().Subject;
-        registration.BehaviorType.Identity.Should().Be(typeof(OpenCatalogBehavior<,>).AssemblyQualifiedName);
+        registration.BehaviorType.Diagnostics.AssemblyQualifiedName
+            .Should().Be(typeof(OpenCatalogBehavior<,>).AssemblyQualifiedName);
+        registration.BehaviorType.FullName.Should().Be(typeof(OpenCatalogBehavior<,>).GetCleanFullName());
+        registration.BehaviorType.FullName.Should().NotContain("Version=");
         registration.Order.Should().Be(321);
         registration.Lifetime.Should().Be(ServiceLifetime.Singleton);
         registration.SourceModuleKey.Should().Be(ModuleKey.Create(OpenCatalogContributorModule.MODULE_KEY));
@@ -218,9 +222,13 @@ public sealed class ExecutionPipelineCatalogTests
         registration.HasDescriptorFilter.Should().BeTrue();
 
         var applied = plan.Behaviors.Should().ContainSingle().Subject;
-        applied.RegisteredType.Identity.Should().Be(typeof(OpenCatalogBehavior<,>).AssemblyQualifiedName);
-        applied.ResolvedType.Identity.Should().Be(
+        applied.RegisteredType.Diagnostics.AssemblyQualifiedName
+            .Should().Be(typeof(OpenCatalogBehavior<,>).AssemblyQualifiedName);
+        applied.ResolvedType.Diagnostics.AssemblyQualifiedName.Should().Be(
             typeof(OpenCatalogBehavior<CatalogRequest, string>).AssemblyQualifiedName);
+        applied.ResolvedType.FullName.Should().Be(
+            typeof(OpenCatalogBehavior<CatalogRequest, string>).GetCleanFullName());
+        applied.ResolvedType.FullName.Should().NotContain("Version=");
         applied.Order.Should().Be(registration.Order);
         applied.Lifetime.Should().Be(registration.Lifetime);
         applied.SourceModuleKey.Should().Be(registration.SourceModuleKey);

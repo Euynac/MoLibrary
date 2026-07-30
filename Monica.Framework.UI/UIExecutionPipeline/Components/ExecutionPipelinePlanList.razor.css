@@ -1,0 +1,104 @@
+.execution-pipeline-plan-list {
+    display: grid;
+    grid-template-rows: auto minmax(0, 1fr);
+    height: 100%;
+    min-width: 0;
+    min-height: 0;
+}
+
+.execution-pipeline-plan-list > header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    padding: 0.75rem 1rem;
+    border-bottom: 1px solid var(--mud-palette-lines-default);
+}
+
+.execution-pipeline-plan-list__scroll {
+    min-height: 0;
+    overflow-x: hidden;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+}
+
+.execution-pipeline-plan-list__plan {
+    display: grid;
+    grid-template-columns: 2rem minmax(0, 1fr) auto;
+    gap: 0.75rem;
+    align-items: start;
+    width: 100%;
+    min-width: 0;
+    padding: 0.875rem 1rem;
+    color: inherit;
+    text-align: left;
+    border: 0;
+    border-bottom: 1px solid var(--mud-palette-lines-default);
+    background: transparent;
+    cursor: pointer;
+}
+
+.execution-pipeline-plan-list__plan:hover {
+    background: var(--mud-palette-action-default-hover);
+}
+
+.execution-pipeline-plan-list__plan:focus-visible {
+    outline: 0.15rem solid var(--mud-palette-primary);
+    outline-offset: -0.2rem;
+}
+
+.execution-pipeline-plan-list__plan--selected {
+    box-shadow: inset 0.2rem 0 0 var(--mud-palette-primary);
+    background: color-mix(in srgb, var(--mud-palette-primary) 9%, transparent);
+}
+
+.execution-pipeline-plan-list__icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 2rem;
+    height: 2rem;
+    border-radius: var(--mud-default-borderradius);
+    background: var(--mud-palette-background-gray);
+}
+
+.execution-pipeline-plan-list__content {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+    min-width: 0;
+}
+
+.execution-pipeline-plan-list__content ::deep .mud-tooltip-root,
+.execution-pipeline-plan-list__content ::deep strong,
+.execution-pipeline-plan-list__content > small {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.execution-pipeline-plan-list__content ::deep .mud-tooltip-root {
+    display: block;
+}
+
+.execution-pipeline-plan-list__content > small {
+    color: var(--mud-palette-text-secondary);
+}
+
+.execution-pipeline-plan-list__badges {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.35rem;
+}
+
+.execution-pipeline-plan-list__empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.75rem;
+    min-height: 16rem;
+    padding: 1.5rem;
+    text-align: center;
+}

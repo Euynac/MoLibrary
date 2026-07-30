@@ -6,7 +6,10 @@
         <MudPaper Class="pa-3" Outlined="true">
             <MudIcon Icon="@Icons.Material.Filled.Extension" Size="Size.Large" Color="Color.Primary" />
             <span>
-                <MudText Typo="Typo.overline" Color="Color.Secondary">@L["Page:Summary:Registrations"]</MudText>
+                <MudText Typo="Typo.overline" Color="Color.Secondary">
+                    <ExecutionPipelineHelpLabel Text="@L["Page:Summary:Registrations"]"
+                                                HelpText="@L["Page:Help:Summary:Registrations"]" />
+                </MudText>
                 <MudText Typo="Typo.h5" data-testid="execution-pipeline-registration-count">@Snapshot.Registrations.Length</MudText>
             </span>
         </MudPaper>
@@ -15,7 +18,10 @@
         <MudPaper Class="pa-3" Outlined="true">
             <MudIcon Icon="@Icons.Material.Filled.Route" Size="Size.Large" Color="Color.Info" />
             <span>
-                <MudText Typo="Typo.overline" Color="Color.Secondary">@L["Page:Summary:Plans"]</MudText>
+                <MudText Typo="Typo.overline" Color="Color.Secondary">
+                    <ExecutionPipelineHelpLabel Text="@L["Page:Summary:Plans"]"
+                                                HelpText="@L["Page:Help:Summary:Plans"]" />
+                </MudText>
                 <MudText Typo="Typo.h5" data-testid="execution-pipeline-plan-count">@Snapshot.Plans.Length</MudText>
             </span>
         </MudPaper>
@@ -24,16 +30,22 @@
         <MudPaper Class="pa-3" Outlined="true">
             <MudIcon Icon="@Icons.Material.Filled.Hub" Size="Size.Large" Color="Color.Secondary" />
             <span>
-                <MudText Typo="Typo.overline" Color="Color.Secondary">@L["Page:Summary:ExecutionPoints"]</MudText>
+                <MudText Typo="Typo.overline" Color="Color.Secondary">
+                    <ExecutionPipelineHelpLabel Text="@L["Page:Summary:ExecutionPoints"]"
+                                                HelpText="@L["Page:Help:Summary:ExecutionPoints"]" />
+                </MudText>
                 <MudText Typo="Typo.h5" data-testid="execution-pipeline-point-count">@ExecutionPointCount</MudText>
             </span>
         </MudPaper>
     </div>
-    <div class="execution-pipeline-summary__card execution-pipeline-summary__card--faults">
+    <div class="@FaultCardClass">
         <MudPaper Class="pa-3" Outlined="true">
             <MudIcon Icon="@Icons.Material.Filled.ErrorOutline" Size="Size.Large" Color="@(FaultCount > 0 ? Color.Error : Color.Success)" />
             <span>
-                <MudText Typo="Typo.overline" Color="Color.Secondary">@L["Page:Summary:Faults"]</MudText>
+                <MudText Typo="Typo.overline" Color="Color.Secondary">
+                    <ExecutionPipelineHelpLabel Text="@L["Page:Summary:Faults"]"
+                                                HelpText="@L["Page:Help:Summary:Faults"]" />
+                </MudText>
                 <MudText Typo="Typo.h5" data-testid="execution-pipeline-fault-count">@FaultCount</MudText>
             </span>
         </MudPaper>
@@ -50,4 +62,8 @@
         .Count();
 
     private int FaultCount => Snapshot.Plans.Count(static plan => plan.Status == ExecutionPipelinePlanStatus.Faulted);
+
+    private string FaultCardClass => FaultCount == 0
+        ? "execution-pipeline-summary__card execution-pipeline-summary__card--faults-clear"
+        : "execution-pipeline-summary__card execution-pipeline-summary__card--faults-found";
 }

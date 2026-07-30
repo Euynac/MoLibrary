@@ -5,15 +5,6 @@ using Monica.Core.Modularity.Models;
 namespace Monica.Core.Execution.Models;
 
 /// <summary>
-/// Provides stable and display-oriented identities for a CLR type exposed by execution-pipeline diagnostics.
-/// </summary>
-/// <param name="Identity">
-/// The assembly-qualified identity used to distinguish types from different assemblies and versions.
-/// </param>
-/// <param name="DisplayName">The human-readable fully qualified type name.</param>
-public sealed record ExecutionTypeSnapshot(string Identity, string DisplayName);
-
-/// <summary>
 /// Describes one behavior registration owned by the current Monica host.
 /// </summary>
 /// <param name="BehaviorType">The registered behavior implementation type.</param>
@@ -56,8 +47,7 @@ public enum ExecutionPipelinePlanStatus
 /// <summary>
 /// Captures the stable, invocation-independent metadata used to select an execution plan.
 /// </summary>
-/// <param name="OperationKey">The stable aggregate identity of the operation.</param>
-/// <param name="DisplayName">The human-readable operation name.</param>
+/// <param name="Id">The compact stable operation identifier.</param>
 /// <param name="Point">The subsystem execution point.</param>
 /// <param name="ComponentType">The concrete or contractual component type being invoked.</param>
 /// <param name="ContractType">The adapter contract used to identify the entry method, when present.</param>
@@ -66,17 +56,29 @@ public enum ExecutionPipelinePlanStatus
 /// <param name="ResultType">The pipeline result type.</param>
 /// <param name="IsBusinessOperation">Whether the execution represents application business work.</param>
 /// <param name="TransactionMode">The automatic transaction policy for the boundary.</param>
+/// <param name="Diagnostics">The canonical identity reserved for advanced diagnostics.</param>
 public sealed record ExecutionDescriptorSnapshot(
-    string OperationKey,
-    string DisplayName,
+    ExecutionOperationId Id,
     ExecutionPoint Point,
     ExecutionTypeSnapshot ComponentType,
     ExecutionTypeSnapshot? ContractType,
-    string? EntryMethod,
+    ExecutionMethodSnapshot? EntryMethod,
     ExecutionTypeSnapshot InputType,
     ExecutionTypeSnapshot ResultType,
     bool IsBusinessOperation,
-    ExecutionTransactionMode TransactionMode);
+    ExecutionTransactionMode TransactionMode,
+    ExecutionOperationDiagnosticsSnapshot Diagnostics)
+{
+    /// <summary>
+    /// Gets the compact operation name used in dense lists.
+    /// </summary>
+    public string Name => $"{ComponentType.Name}.{EntryMethod?.Name ?? Point.Value}";
+
+    /// <summary>
+    /// Gets the clean namespace-qualified operation name used in detailed diagnostics views.
+    /// </summary>
+    public string FullName => $"{ComponentType.FullName}.{EntryMethod?.Name ?? Point.Value}";
+}
 
 /// <summary>
 /// Describes one behavior in the exact outer-to-inner order applied to an observed execution plan.
@@ -95,7 +97,16 @@ public sealed record ExecutionPipelineAppliedBehaviorSnapshot(
     ExecutionTypeSnapshot ResolvedType,
     int Order,
     ServiceLifetime Lifetime,
-    ModuleKey? SourceModuleKey);
+    ModuleKey? SourceModuleKey)
+{
+    /// <summary>
+    /// Gets whether the resolved behavior type differs from the type originally registered with the host.
+    /// </summary>
+    public bool HasDistinctResolvedType => !string.Equals(
+        RegisteredType.Diagnostics.AssemblyQualifiedName,
+        ResolvedType.Diagnostics.AssemblyQualifiedName,
+        StringComparison.Ordinal);
+}
 
 /// <summary>
 /// Describes a deterministic failure encountered while materializing an execution plan.
@@ -107,23 +118,23 @@ public sealed record ExecutionPipelinePlanErrorSnapshot(string ExceptionType, st
 /// <summary>
 /// Describes one cached execution plan and the exact behavior chain used by the pipeline.
 /// </summary>
-/// <param name="PlanKey">
-/// The stable plan identity, including operation identity and plan-affecting business and transaction policies.
-/// </param>
+/// <param name="Id">The compact stable plan identifier.</param>
 /// <param name="Status">The current plan materialization state.</param>
 /// <param name="StartedAt">The time plan materialization began.</param>
 /// <param name="CompletedAt">The completion time for a ready or faulted plan.</param>
 /// <param name="Descriptor">The invocation-independent descriptor metadata.</param>
 /// <param name="Behaviors">The immutable outer-to-inner behavior chain.</param>
 /// <param name="Error">The cached materialization failure, when the plan is faulted.</param>
+/// <param name="Diagnostics">The canonical identity reserved for advanced diagnostics.</param>
 public sealed record ExecutionPipelinePlanSnapshot(
-    string PlanKey,
+    ExecutionPlanId Id,
     ExecutionPipelinePlanStatus Status,
     DateTimeOffset StartedAt,
     DateTimeOffset? CompletedAt,
     ExecutionDescriptorSnapshot Descriptor,
     ImmutableArray<ExecutionPipelineAppliedBehaviorSnapshot> Behaviors,
-    ExecutionPipelinePlanErrorSnapshot? Error);
+    ExecutionPipelinePlanErrorSnapshot? Error,
+    ExecutionPlanDiagnosticsSnapshot Diagnostics);
 
 /// <summary>
 /// Represents a point-in-time view of behavior registrations and observed execution plans for one host.

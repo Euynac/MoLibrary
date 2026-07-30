@@ -101,10 +101,12 @@ public sealed class ExecutionPipelineCatalogPageTests
 
         var row = cut.Find("[data-testid='execution-pipeline-registration-row']");
         row.TextContent.Should().Contain("AuthorizationBehavior");
+        cut.Markup.Should().NotContain("Version=1.0.0.0");
+        cut.FindAll("[data-testid='execution-pipeline-help-label']").Should().HaveCountGreaterThanOrEqualTo(6);
         cut.Markup.Should().Contain("-1000");
         cut.Markup.Should().Contain("Page:Lifetimes:Scoped");
         cut.Markup.Should().Contain(BuiltInModuleKey.Mediator.ToString());
-        cut.Markup.Should().Contain("Page:Plans:Yes");
+        cut.Markup.Should().Contain("Page:Common:Yes");
     }
 
     [Fact]
@@ -119,12 +121,28 @@ public sealed class ExecutionPipelineCatalogPageTests
         (await state.InitializeAsync()).Should().BeTrue();
 
         state.SetSearchText("AuthorizationBehavior");
-        state.FilteredPlans.Should().ContainSingle().Which.PlanKey.Should().Be(plan.PlanKey);
+        state.FilteredPlans.Should().ContainSingle().Which.Id.Should().Be(plan.Id);
 
         state.SetSearchText("Mediator");
-        state.FilteredPlans.Should().ContainSingle().Which.PlanKey.Should().Be(plan.PlanKey);
+        state.FilteredPlans.Should().ContainSingle().Which.Id.Should().Be(plan.Id);
 
         state.SetSearchText("missing-behavior");
         state.FilteredPlans.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task Plan_detail_keeps_canonical_identities_out_of_the_primary_reading_flow()
+    {
+        var plan = ExecutionPipelineUiTestContext.CreatePlan("ApproveOrder");
+        await using var context = new ExecutionPipelineUiTestContext(
+            ExecutionPipelineUiTestContext.CreateSnapshot(plans: [plan]));
+
+        var cut = context.Render<ExecutionPipelinePlanDetail>(parameters => parameters
+            .Add(component => component.Plan, plan));
+
+        cut.Find("[data-testid='execution-pipeline-plan-overview']").Should().NotBeNull();
+        cut.Markup.Should().Contain("Page:Diagnostics:Title");
+        cut.Markup.Should().NotContain(plan.Diagnostics.CanonicalKey);
+        cut.Markup.Should().NotContain("Version=1.0.0.0");
     }
 }

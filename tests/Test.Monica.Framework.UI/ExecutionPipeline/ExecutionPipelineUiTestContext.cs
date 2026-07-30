@@ -49,26 +49,32 @@ internal sealed class ExecutionPipelineUiTestContext : BunitContext
         IReadOnlyList<ExecutionPipelineAppliedBehaviorSnapshot>? behaviors = null,
         ExecutionPipelinePlanErrorSnapshot? error = null)
     {
+        var operationKey = $"operation:{name}";
+        var planKey = $"plan:{name}";
         return new ExecutionPipelinePlanSnapshot(
-            $"plan:{name}",
+            new ExecutionPlanId($"plan_{name}"),
             status,
             DateTimeOffset.Parse("2026-07-29T00:00:00Z"),
             status == ExecutionPipelinePlanStatus.Building
                 ? null
                 : DateTimeOffset.Parse("2026-07-29T00:00:01Z"),
             new ExecutionDescriptorSnapshot(
-                $"operation:{name}",
-                name,
+                new ExecutionOperationId($"op_{name}"),
                 new ExecutionPoint("Mediator.Handler"),
                 Type("Example.Component"),
                 Type("Example.Contract"),
-                $"Example.Component.{name}()",
+                new ExecutionMethodSnapshot(
+                    name,
+                    $"Example.Component.{name}() → Example.Result",
+                    new ExecutionMethodDiagnosticsSnapshot($"Example.Component, Example.Assembly.{name}()")),
                 Type("Example.Input"),
                 Type("Example.Result"),
                 isBusinessOperation,
-                ExecutionTransactionMode.Automatic),
+                ExecutionTransactionMode.Automatic,
+                new ExecutionOperationDiagnosticsSnapshot(operationKey)),
             behaviors?.ToImmutableArray() ?? [],
-            error);
+            error,
+            new ExecutionPlanDiagnosticsSnapshot(planKey));
     }
 
     internal static ExecutionPipelineAppliedBehaviorSnapshot CreateBehavior(
@@ -98,7 +104,12 @@ internal sealed class ExecutionPipelineUiTestContext : BunitContext
             HasDescriptorFilter: true);
     }
 
-    private static ExecutionTypeSnapshot Type(string name) => new($"{name}, Example.Assembly", name);
+    private static ExecutionTypeSnapshot Type(string name) => new(
+        name,
+        name,
+        "Example.Assembly",
+        new ExecutionTypeDiagnosticsSnapshot(
+            $"{name}, Example.Assembly, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null"));
 
     private sealed class StubExecutionPipelineCatalog(ExecutionPipelineCatalogSnapshot snapshot)
         : IExecutionPipelineCatalog

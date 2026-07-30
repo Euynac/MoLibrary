@@ -29,9 +29,14 @@
     background: color-mix(in srgb, var(--mud-palette-secondary) 5%, var(--mud-palette-surface));
 }
 
-.execution-pipeline-summary__card--faults ::deep .mud-paper {
-    border-top-color: var(--mud-palette-warning);
-    background: color-mix(in srgb, var(--mud-palette-warning) 5%, var(--mud-palette-surface));
+.execution-pipeline-summary__card--faults-clear ::deep .mud-paper {
+    border-top-color: var(--mud-palette-success);
+    background: color-mix(in srgb, var(--mud-palette-success) 5%, var(--mud-palette-surface));
+}
+
+.execution-pipeline-summary__card--faults-found ::deep .mud-paper {
+    border-top-color: var(--mud-palette-error);
+    background: color-mix(in srgb, var(--mud-palette-error) 5%, var(--mud-palette-surface));
 }
 
 .execution-pipeline-summary__card span {

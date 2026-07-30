@@ -42,8 +42,8 @@ internal sealed class ExecutionBehaviorPlanCache : IExecutionPipelineCatalog
         var plans = _plans.Values
             .Select(static plan => plan.CreateSnapshot())
             .OrderBy(static plan => plan.Descriptor.Point.Value, StringComparer.Ordinal)
-            .ThenBy(static plan => plan.Descriptor.DisplayName, StringComparer.Ordinal)
-            .ThenBy(static plan => plan.PlanKey, StringComparer.Ordinal)
+            .ThenBy(static plan => plan.Descriptor.FullName, StringComparer.Ordinal)
+            .ThenBy(static plan => plan.Id.Value, StringComparer.Ordinal)
             .ToImmutableArray();
 
         return new ExecutionPipelineCatalogSnapshot(

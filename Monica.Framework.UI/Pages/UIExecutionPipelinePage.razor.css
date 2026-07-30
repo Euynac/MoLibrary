@@ -27,6 +27,8 @@
 
 .execution-pipeline-page__catalog ::deep .mud-tabs {
     min-width: 0;
+    /* Keep rounded-panel clipping without turning the tabs into the sticky list's scroll container. */
+    overflow: clip;
 }
 
 .execution-pipeline-page__catalog ::deep .mud-tabs-panels,

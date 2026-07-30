@@ -8,7 +8,7 @@
     "PageTitle": "执行管线",
     "Header": {
       "Title": "执行管线",
-      "Description": "查看已注册行为，以及观测到的操作实际应用的精确行为链。",
+      "Description": "查看已观测操作最终应用的行为链，并对照宿主中全部候选行为注册项。",
       "Refresh": "刷新",
       "CapturedAt": "快照采集于 {0}"
     },
@@ -30,7 +30,11 @@
       "NoRegistrations": "当前没有注册执行行为。",
       "SelectPlan": "请选择一个已观测计划以查看其应用的行为链。",
       "NoAppliedBehaviors": "此操作没有应用任何行为，会直接调用终端处理程序。",
-      "NotAvailable": "暂无",
+      "NotAvailable": "暂无"
+    },
+    "Common": {
+      "Yes": "是",
+      "No": "否",
       "ApplicationHost": "应用 / 宿主"
     },
     "Messages": {
@@ -53,12 +57,13 @@
       "Title": "已观测操作计划",
       "Component": "组件",
       "Behaviors": "行为数",
+      "OverviewTitle": "操作概览",
+      "OverviewDescription": "用便于阅读的执行元数据说明什么内容进入管线，以及会应用哪些策略。",
       "DetailTitle": "应用行为链",
-      "DetailDescription": "行为按照最外层到最内层的实际执行顺序排列。",
+      "DetailDescription": "最终位置按最外层到最内层执行；配置顺序是对匹配注册项进行排序时使用的值。",
       "Order": "顺序 {0}",
+      "ResolvedType": "解析行为",
       "RegisteredType": "注册类型",
-      "PlanKey": "计划键",
-      "OperationKey": "操作键",
       "Contract": "契约",
       "Method": "入口方法",
       "Input": "输入",
@@ -68,19 +73,73 @@
       "Business": "业务操作",
       "Transaction": "事务模式",
       "Fault": "计划构建失败",
-      "ExceptionType": "异常类型",
-      "Yes": "是",
-      "No": "否"
+      "ExceptionType": "异常类型"
     },
     "Registrations": {
       "Title": "已注册行为",
-      "Description": "以下注册项按确定性的全局顺序排列，此时尚未应用描述符筛选器。",
+      "Description": "这里列出宿主中的全部候选行为，并按执行顺序排列。行为只有在类型匹配且通过描述符筛选后，才会进入具体操作的计划。",
       "Behavior": "行为",
       "Order": "顺序",
       "Lifetime": "生命周期",
       "Source": "来源",
       "OpenGeneric": "开放泛型",
       "DescriptorFilter": "描述符筛选器"
+    },
+    "Diagnostics": {
+      "Title": "开发者诊断",
+      "Description": "这里保留用于支持和关联分析的精确机器标识，并特意从日常阅读流程中隐藏。",
+      "Copy": "复制诊断信息",
+      "CopySucceeded": "执行诊断信息已复制。",
+      "CopyFailed": "无法复制执行诊断信息。",
+      "PlanId": "计划 ID",
+      "OperationId": "操作 ID",
+      "PlanKey": "规范计划键",
+      "OperationKey": "规范操作键",
+      "ExactTypeHelp": "用于在高级诊断中精确区分类型的程序集限定 CLR 标识。",
+      "ExactMethodHelp": "与程序集范围声明类型配对的精确方法签名。"
+    },
+    "Help": {
+      "Summary": {
+        "Registrations": "当前宿主中的行为注册总数；同一注册项可应用于多个操作。",
+        "Plans": "已执行或被显式检查，并已在当前宿主中缓存的不同执行计划数。",
+        "ExecutionPoints": "已观测计划涉及的不同执行入口类别数，例如事件处理或托管服务启动。",
+        "Faults": "行为链构建失败的计划数；失败结果会在当前宿主生命周期内缓存。"
+      },
+      "Concepts": {
+        "ExecutionPoint": "操作进入执行管线的稳定子系统边界，例如 eventbus.distributed-handler。",
+        "BusinessOperation": "适配器是否将此执行标记为应用业务工作；行为可据此决定是否应用。",
+        "TransactionMode": "此边界是否允许已注册的工作单元行为自动包裹整个执行；“无”仍可显式开启事务。",
+        "PlanStatus": "行为链状态：构建中表示正在匹配，就绪表示链已可用，失败表示构建错误已缓存。",
+        "BehaviorOrder": "注册时配置的排序值；值越小越靠外、越先执行，同值按类型标识稳定排序。",
+        "Lifetime": "行为实例的依赖注入生命周期：单例、作用域或瞬时。",
+        "Source": "提供该注册的 Monica 模块；“应用 / 宿主”表示由宿主直接注册。"
+      },
+      "Plans": {
+        "OperationName": "由被调用组件和入口方法生成的可读操作名称。",
+        "BehaviorCount": "此操作经过类型匹配和描述符筛选后实际应用的行为数量。",
+        "PlanId": "此策略特定执行计划的紧凑确定性标识。",
+        "OperationId": "底层执行操作的紧凑确定性标识。",
+        "PlanKey": "由操作键、业务标记和事务模式组成的规范缓存标识，主要用于诊断。",
+        "OperationKey": "由执行点、程序集范围类型和方法签名组成的规范机器标识。",
+        "Component": "当前执行边界调用的具体组件类型或契约组件类型。",
+        "Contract": "适配器用来定位入口方法的接口；直接按方法接入时可能为空。",
+        "Method": "此执行边界最终调用的具体方法。",
+        "Input": "传入执行管线和各行为的输入类型。",
+        "Result": "行为链返回的结果类型；无返回值操作使用内部占位类型。",
+        "StartedAt": "行为链计划开始构建的时间，不是业务操作开始执行的时间。",
+        "CompletedAt": "行为链计划构建完成或失败的时间，不是业务操作完成时间。",
+        "AppliedChain": "此操作实际执行的行为链，按最外层到最内层排列，最后进入终端处理程序。",
+        "BehaviorPosition": "行为在最终应用链中的从 1 开始的位置。",
+        "ResolvedType": "为此操作解析出的具体行为类型；开放泛型会显示闭合后的类型。",
+        "RegisteredType": "宿主最初注册的行为类型；可能是开放泛型。",
+        "Fault": "构建此操作的行为链时发生的确定性错误；该失败会在宿主生命周期内缓存。",
+        "ExceptionType": "导致计划构建失败的 .NET 异常类型。"
+      },
+      "Registrations": {
+        "Behavior": "候选行为实现；输入、结果类型和描述符筛选均匹配后才会进入具体计划。",
+        "OpenGeneric": "是否以泛型类型定义注册，并按操作的输入和结果类型闭合。",
+        "DescriptorFilter": "是否配置了基于执行点、业务标记等描述符元数据的额外适用条件。"
+      }
     },
     "Statuses": {
       "Building": "构建中",

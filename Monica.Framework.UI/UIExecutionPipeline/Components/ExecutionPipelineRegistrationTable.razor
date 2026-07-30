@@ -22,31 +22,60 @@
                       Hover="true"
                       Outlined="true">
                 <HeaderContent>
-                    <MudTh>@L["Page:Registrations:Behavior"]</MudTh>
-                    <MudTh>@L["Page:Registrations:Order"]</MudTh>
-                    <MudTh>@L["Page:Registrations:Lifetime"]</MudTh>
-                    <MudTh>@L["Page:Registrations:Source"]</MudTh>
-                    <MudTh>@L["Page:Registrations:OpenGeneric"]</MudTh>
-                    <MudTh>@L["Page:Registrations:DescriptorFilter"]</MudTh>
+                    <MudTh>
+                        <ExecutionPipelineHelpLabel Text="@L["Page:Registrations:Behavior"]"
+                                                    HelpText="@L["Page:Help:Registrations:Behavior"]" />
+                    </MudTh>
+                    <MudTh>
+                        <ExecutionPipelineHelpLabel Text="@L["Page:Registrations:Order"]"
+                                                    HelpText="@L["Page:Help:Concepts:BehaviorOrder"]" />
+                    </MudTh>
+                    <MudTh>
+                        <ExecutionPipelineHelpLabel Text="@L["Page:Registrations:Lifetime"]"
+                                                    HelpText="@L["Page:Help:Concepts:Lifetime"]" />
+                    </MudTh>
+                    <MudTh>
+                        <ExecutionPipelineHelpLabel Text="@L["Page:Registrations:Source"]"
+                                                    HelpText="@L["Page:Help:Concepts:Source"]" />
+                    </MudTh>
+                    <MudTh>
+                        <ExecutionPipelineHelpLabel Text="@L["Page:Registrations:OpenGeneric"]"
+                                                    HelpText="@L["Page:Help:Registrations:OpenGeneric"]" />
+                    </MudTh>
+                    <MudTh>
+                        <ExecutionPipelineHelpLabel Text="@L["Page:Registrations:DescriptorFilter"]"
+                                                    HelpText="@L["Page:Help:Registrations:DescriptorFilter"]" />
+                    </MudTh>
                 </HeaderContent>
                 <RowTemplate>
-                    <MudTd DataLabel="@L["Page:Registrations:Behavior"]" data-testid="execution-pipeline-registration-row">
-                        <MudText Typo="Typo.body2"><strong>@context.BehaviorType.DisplayName</strong></MudText>
-                        <MudText Typo="Typo.caption" Color="Color.Secondary">@context.BehaviorType.Identity</MudText>
+                    <MudTd DataLabel="@L["Page:Registrations:Behavior"]"
+                           Class="execution-pipeline-registrations__behavior"
+                           data-testid="execution-pipeline-registration-row">
+                        <MudTooltip Text="@context.BehaviorType.FullName" Arrow="true" Placement="Placement.Top">
+                            <div class="execution-pipeline-registrations__behavior-name">
+                                <strong>@context.BehaviorType.Name</strong>
+                                <small>@context.BehaviorType.FullName</small>
+                                <MudChip T="string" Size="Size.Small" Variant="Variant.Text">
+                                    @context.BehaviorType.AssemblyName
+                                </MudChip>
+                            </div>
+                        </MudTooltip>
                     </MudTd>
                     <MudTd DataLabel="@L["Page:Registrations:Order"]">@context.Order</MudTd>
                     <MudTd DataLabel="@L["Page:Registrations:Lifetime"]">
                         <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">@L[$"Page:Lifetimes:{context.Lifetime}"]</MudChip>
                     </MudTd>
-                    <MudTd DataLabel="@L["Page:Registrations:Source"]">@SourceText(context.SourceModuleKey)</MudTd>
+                    <MudTd DataLabel="@L["Page:Registrations:Source"]">
+                        <ExecutionPipelineSourceBadge SourceModuleKey="@context.SourceModuleKey" />
+                    </MudTd>
                     <MudTd DataLabel="@L["Page:Registrations:OpenGeneric"]">
                         <MudChip T="bool" Value="@context.IsOpenGeneric" Size="Size.Small" Color="@(context.IsOpenGeneric ? Color.Primary : Color.Default)">
-                            @(context.IsOpenGeneric ? L["Page:Plans:Yes"] : L["Page:Plans:No"])
+                            @(context.IsOpenGeneric ? L["Page:Common:Yes"] : L["Page:Common:No"])
                         </MudChip>
                     </MudTd>
                     <MudTd DataLabel="@L["Page:Registrations:DescriptorFilter"]">
                         <MudChip T="bool" Value="@context.HasDescriptorFilter" Size="Size.Small" Color="@(context.HasDescriptorFilter ? Color.Info : Color.Default)">
-                            @(context.HasDescriptorFilter ? L["Page:Plans:Yes"] : L["Page:Plans:No"])
+                            @(context.HasDescriptorFilter ? L["Page:Common:Yes"] : L["Page:Common:No"])
                         </MudChip>
                     </MudTd>
                 </RowTemplate>
@@ -59,6 +88,4 @@
     [Parameter, EditorRequired]
     public IReadOnlyList<ExecutionBehaviorRegistrationSnapshot> Registrations { get; set; } = [];
 
-    private string SourceText(Monica.Core.Modularity.Models.ModuleKey? moduleKey) =>
-        moduleKey?.Value ?? L["Page:States:ApplicationHost"];
 }
