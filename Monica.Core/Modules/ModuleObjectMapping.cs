@@ -89,7 +89,7 @@ public class ModuleObjectMapping(ModuleObjectMappingOption option)
         _profileCatalog.ApplyProfiles(_mapsterConfig, option.ProfileTypes, Application.TypeDependencyOrderer);
         ScheduleCompositionWork(
             "compile-mapster-configuration",
-            () => _mapsterConfig.Compile(failFast: false));
+            () => _mapsterConfig.Compile(failFast: option.CompileFailFast));
     }
 
     public override void ConfigureEndpoints(IApplicationBuilder app)
@@ -169,6 +169,22 @@ public class ModuleObjectMappingOption : MinimalApiModuleOptions<ModuleObjectMap
 {
     private readonly HashSet<string> _profileKeys = new(StringComparer.Ordinal);
     private readonly List<Type> _profileTypes = [];
+
+    /// <summary>
+    /// Gets or sets whether Mapster's <see cref="TypeAdapterConfig.Compile(bool)"/> should throw immediately on the
+    /// first invalid mapping pair instead of collecting all errors.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// When <see langword="true"/> (the default), compilation aborts on the first invalid pair and the offending
+    /// mapping is surfaced directly in the exception. This gives the fastest feedback during development and CI.
+    /// </para>
+    /// <para>
+    /// When <see langword="false"/>, Mapster collects every invalid pair and throws a single aggregate exception.
+    /// Use this to review all mapping problems in one pass.
+    /// </para>
+    /// </remarks>
+    public bool CompileFailFast { get; set; } = true;
 
     /// <summary>
     /// Gets the explicitly registered mapping profiles in deterministic composition order.
