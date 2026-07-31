@@ -211,11 +211,11 @@ public sealed class ModuleConfiguration
         }
 
         var typesToAnalyze = configurationTypes.ToArray();
-        ScheduleCompositionWork(
+        ScheduleStartupWork(
             "build-configuration-definitions",
             () => BuildDefinitions(typesToAnalyze),
             CommitDefinitions,
-            ModuleCompositionWorkDeadline.BeforePostConfigureServices);
+            ModuleStartupWorkBarrier.BeforePostConfigureServices);
     }
 
     private void BuildDefinitions(IReadOnlyList<Type> optionsTypes)

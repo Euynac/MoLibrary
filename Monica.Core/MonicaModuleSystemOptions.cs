@@ -9,9 +9,9 @@ namespace Monica.Core;
 public interface IMonicaModuleSystemOptions
 {
     /// <summary>
-    /// Gets the maximum number of scheduled module composition work items that may run concurrently.
+    /// Gets the maximum number of scheduled module startup work items that may run concurrently.
     /// </summary>
-    int MaxConcurrentCompositionWorkItems { get; }
+    int MaxConcurrentStartupWorkItems { get; }
 
     /// <summary>
     /// Gets the default log level used by module registration loggers.
@@ -60,17 +60,19 @@ public interface IMonicaModuleSystemOptions
 /// </summary>
 public sealed class MonicaModuleSystemOptions : IMonicaModuleSystemOptions
 {
-    private const int MIN_CONCURRENT_COMPOSITION_WORK_ITEMS = 1;
+    private const int MIN_CONCURRENT_STARTUP_WORK_ITEMS = 1;
     private const int MIN_PORT = 1;
     private const int MAX_PORT = 65535;
 
     /// <summary>
-    /// Gets or sets the maximum number of scheduled module composition work items that may run concurrently.
-    /// Defaults to the current processor count. Set this to <c>1</c> to serialize composition work while preserving
-    /// its checkpoint contracts. This limit does not change the serial ordering of module phase callbacks.
+    /// Gets or sets the maximum number of scheduled module startup work items that may run concurrently.
+    /// Defaults to the current processor count. Set this to <c>1</c> to serialize startup work while preserving its
+    /// barrier contracts. While modules can still submit required work, non-blocking work uses at most one fewer lane
+    /// than this limit so required work always has execution capacity. Consequently, a value of <c>1</c> defers
+    /// non-blocking work until submissions close. This limit does not change the serial ordering of module callbacks.
     /// </summary>
-    public int MaxConcurrentCompositionWorkItems { get; set; } = Math.Max(
-        MIN_CONCURRENT_COMPOSITION_WORK_ITEMS,
+    public int MaxConcurrentStartupWorkItems { get; set; } = Math.Max(
+        MIN_CONCURRENT_STARTUP_WORK_ITEMS,
         Environment.ProcessorCount);
 
     /// <summary>
@@ -133,12 +135,12 @@ public sealed class MonicaModuleSystemOptions : IMonicaModuleSystemOptions
 
     internal void Validate()
     {
-        if (MaxConcurrentCompositionWorkItems < MIN_CONCURRENT_COMPOSITION_WORK_ITEMS)
+        if (MaxConcurrentStartupWorkItems < MIN_CONCURRENT_STARTUP_WORK_ITEMS)
         {
             throw new ArgumentOutOfRangeException(
-                nameof(MaxConcurrentCompositionWorkItems),
-                MaxConcurrentCompositionWorkItems,
-                $"At least {MIN_CONCURRENT_COMPOSITION_WORK_ITEMS} composition work item must be allowed to run.");
+                nameof(MaxConcurrentStartupWorkItems),
+                MaxConcurrentStartupWorkItems,
+                $"At least {MIN_CONCURRENT_STARTUP_WORK_ITEMS} startup work item must be allowed to run.");
         }
 
         if (MonicaEndpointPort is null)

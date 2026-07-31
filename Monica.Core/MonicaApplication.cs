@@ -153,6 +153,8 @@ public sealed class MonicaApplication : IDisposable
             return;
         }
 
+        // Startup workers may still use the host's composition logger while non-blocking work drains.
+        Modules.DisposeStartupWork();
         _disposed = true;
         for (var index = _ownedCompositionLoggerFactories.Count - 1; index >= 0; index--)
         {

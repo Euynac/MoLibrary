@@ -1,5 +1,4 @@
 using Mapster;
-using MapsterMapper;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
@@ -51,7 +50,7 @@ public class ModuleObjectMapping(ModuleObjectMappingOption option)
     : WebModuleBase<ModuleObjectMapping, ModuleObjectMappingOption, ModuleObjectMappingGuide>(option),
         IBusinessTypeIterator
 {
-    private readonly TypeAdapterConfig _mapsterConfig = new();
+    private readonly MapsterConfigurationRuntime _mappingRuntime = new();
     private readonly MapsterProfileCatalog _profileCatalog = new();
 
     /// <inheritdoc />
@@ -63,8 +62,7 @@ public class ModuleObjectMapping(ModuleObjectMappingOption option)
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddSingleton(_profileCatalog);
-        services.AddSingleton(_mapsterConfig);
-        services.AddScoped<IMapper, ServiceMapper>();
+        services.AddSingleton(_mappingRuntime);
         services.AddScoped<IObjectMapper, MapsterObjectMapper>();
         services.AddSingleton<MapsterMappingInspector>();
         services.AddScoped<ObjectMappingStatusService>();
@@ -86,10 +84,19 @@ public class ModuleObjectMapping(ModuleObjectMappingOption option)
     /// <inheritdoc />
     public override void PostConfigureServices(IServiceCollection _)
     {
-        _profileCatalog.ApplyProfiles(_mapsterConfig, option.ProfileTypes, Application.TypeDependencyOrderer);
-        ScheduleCompositionWork(
+        var compilationBarrier = option.GetCompilationBarrier();
+        _mappingRuntime.Configure(config =>
+            _profileCatalog.ApplyProfiles(config, option.ProfileTypes, Application.TypeDependencyOrderer));
+        var compilationCandidate = _mappingRuntime.FreezeAndCreateCompilationCandidate();
+
+        ScheduleStartupWork(
             "compile-mapster-configuration",
-            () => _mapsterConfig.Compile(failFast: option.CompileFailFast));
+            () =>
+            {
+                compilationCandidate.Compile(failFast: option.CompileFailFast);
+                _mappingRuntime.PublishCompiled(compilationCandidate);
+            },
+            compilationBarrier);
     }
 
     public override void ConfigureEndpoints(IApplicationBuilder app)
@@ -187,9 +194,43 @@ public class ModuleObjectMappingOption : MinimalApiModuleOptions<ModuleObjectMap
     public bool CompileFailFast { get; set; } = true;
 
     /// <summary>
+    /// Gets or sets the startup barrier that governs eager Mapster compilation.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// The default is <see cref="ModuleStartupWorkBarrier.NoBarrier"/>. The host can become ready immediately and
+    /// use the uncompiled host-owned configuration lazily while Monica compiles an isolated clone in the background.
+    /// A compilation failure remains observable through module diagnostics and leaves lazy mapping available.
+    /// </para>
+    /// <para>
+    /// Select <see cref="ModuleStartupWorkBarrier.BeforeHostLifecycle"/> in CI or strict hosts when every mapping must
+    /// pass eager validation before any hosted lifecycle participant starts. ObjectMapping intentionally exposes only
+    /// these readiness-critical and non-blocking strategies; composition-phase barriers are not supported.
+    /// </para>
+    /// </remarks>
+    public ModuleStartupWorkBarrier CompilationBarrier { get; set; } = ModuleStartupWorkBarrier.NoBarrier;
+
+    /// <summary>
     /// Gets the explicitly registered mapping profiles in deterministic composition order.
     /// </summary>
     internal IReadOnlyList<Type> ProfileTypes => _profileTypes;
+
+    /// <summary>
+    /// Validates and returns the ObjectMapping compilation strategy.
+    /// </summary>
+    /// <returns>The configured non-blocking or host-lifecycle barrier.</returns>
+    internal ModuleStartupWorkBarrier GetCompilationBarrier()
+    {
+        if (CompilationBarrier is ModuleStartupWorkBarrier.NoBarrier
+            or ModuleStartupWorkBarrier.BeforeHostLifecycle)
+        {
+            return CompilationBarrier;
+        }
+
+        throw new InvalidOperationException(
+            $"{nameof(CompilationBarrier)} only supports {ModuleStartupWorkBarrier.NoBarrier} or " +
+            $"{ModuleStartupWorkBarrier.BeforeHostLifecycle}, but '{CompilationBarrier}' was configured.");
+    }
 
     /// <summary>
     /// Records one mapping profile while preserving first-registration order.

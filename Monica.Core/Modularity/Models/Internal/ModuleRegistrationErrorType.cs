@@ -41,7 +41,7 @@ public enum ModuleRegistrationErrorType
     HostCompatibility = 6,
 
     /// <summary>
-    /// Error raised by required scheduled module composition work.
+    /// Error raised by required scheduled module startup work.
     /// </summary>
-    CompositionWorkError = 7
+    StartupWorkError = 7
 }

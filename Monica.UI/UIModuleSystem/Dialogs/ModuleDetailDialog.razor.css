@@ -21,6 +21,48 @@
     background: color-mix(in srgb, var(--mud-palette-primary) 4%, var(--mud-palette-surface));
 }
 
+.tab-content ::deep .detail-card .mud-typography {
+    overflow-wrap: anywhere;
+}
+
+.module-detail__chip-list {
+    min-width: 0;
+}
+
+.module-detail__chip-list ::deep .mud-chip {
+    max-width: 100%;
+    height: auto;
+    min-height: 32px;
+}
+
+.module-detail__identifier {
+    min-width: 0;
+    overflow-wrap: anywhere;
+    white-space: normal;
+}
+
+.module-detail__message-row,
+.module-detail__error-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+}
+
+.module-detail__message-row > div,
+.module-detail__error-row > div {
+    min-width: 0;
+}
+
+.module-detail__message-row ::deep .mud-typography,
+.module-detail__error-row ::deep .mud-typography {
+    overflow-wrap: anywhere;
+}
+
+.module-detail__error-row {
+    justify-content: space-between;
+}
+
 .tab-content ::deep .dependency-stat-card {
     background: color-mix(in srgb, var(--mud-palette-info) 5%, var(--mud-palette-surface));
 }
@@ -94,5 +136,10 @@
 
     .module-performance-detail__summary {
         grid-template-columns: 1fr;
+    }
+
+    .module-detail__error-row {
+        align-items: flex-start;
+        flex-direction: column;
     }
 }

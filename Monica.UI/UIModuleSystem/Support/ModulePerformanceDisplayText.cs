@@ -13,47 +13,77 @@ internal static class ModulePerformanceDisplayText
     /// <summary>
     /// Gets the localized display name of a composition milestone.
     /// </summary>
-    public static string Milestone(IStringLocalizer<SharedResource> localizer, string name) => name switch
+    public static string Milestone(
+        IStringLocalizer<SharedResource> localizer,
+        ModuleCompositionMilestone milestone) => milestone switch
     {
-        nameof(ModuleCompositionMilestone.CompositionStarted) =>
+        ModuleCompositionMilestone.CompositionStarted =>
             localizer["ModuleSystem:PerformanceMonitoring:Milestones:CompositionStarted"],
-        nameof(ModuleCompositionMilestone.ServiceRegistrationCompleted) =>
+        ModuleCompositionMilestone.ServiceRegistrationCompleted =>
             localizer["ModuleSystem:PerformanceMonitoring:Milestones:ServiceRegistrationCompleted"],
-        nameof(ModuleCompositionMilestone.ApplicationPipelineStarted) =>
+        ModuleCompositionMilestone.ApplicationPipelineStarted =>
             localizer["ModuleSystem:PerformanceMonitoring:Milestones:ApplicationPipelineStarted"],
-        nameof(ModuleCompositionMilestone.ApplicationPipelineCompleted) =>
+        ModuleCompositionMilestone.ApplicationPipelineCompleted =>
             localizer["ModuleSystem:PerformanceMonitoring:Milestones:ApplicationPipelineCompleted"],
-        nameof(ModuleCompositionMilestone.EndpointMappingStarted) =>
+        ModuleCompositionMilestone.EndpointMappingStarted =>
             localizer["ModuleSystem:PerformanceMonitoring:Milestones:EndpointMappingStarted"],
-        nameof(ModuleCompositionMilestone.CompositionCompleted) =>
+        ModuleCompositionMilestone.CompositionCompleted =>
             localizer["ModuleSystem:PerformanceMonitoring:Milestones:CompositionCompleted"],
-        _ => name
+        _ => milestone.ToString()
     };
 
     /// <summary>
-    /// Gets the localized display name of a parallel-work deadline.
+    /// Gets the localized display name of a startup-work barrier.
     /// </summary>
-    public static string Deadline(IStringLocalizer<SharedResource> localizer, string name) => name switch
+    public static string Barrier(
+        IStringLocalizer<SharedResource> localizer,
+        ModuleStartupWorkBarrier barrier) => barrier switch
     {
-        nameof(ModuleCompositionWorkDeadline.BeforeBusinessTypeIteration) =>
-            localizer["ModuleSystem:CompositionWork:Deadlines:BeforeBusinessTypeIteration"],
-        nameof(ModuleCompositionWorkDeadline.BeforePostConfigureServices) =>
-            localizer["ModuleSystem:CompositionWork:Deadlines:BeforePostConfigureServices"],
-        nameof(ModuleCompositionWorkDeadline.BeforeServiceRegistrationCompletion) =>
-            localizer["ModuleSystem:CompositionWork:Deadlines:BeforeServiceRegistrationCompletion"],
-        _ => name
+        ModuleStartupWorkBarrier.BeforeBusinessTypeIteration =>
+            localizer["ModuleSystem:StartupWork:Barriers:BeforeBusinessTypeIteration"],
+        ModuleStartupWorkBarrier.BeforePostConfigureServices =>
+            localizer["ModuleSystem:StartupWork:Barriers:BeforePostConfigureServices"],
+        ModuleStartupWorkBarrier.BeforeServiceRegistrationCompletion =>
+            localizer["ModuleSystem:StartupWork:Barriers:BeforeServiceRegistrationCompletion"],
+        ModuleStartupWorkBarrier.BeforeHostLifecycle =>
+            localizer["ModuleSystem:StartupWork:Barriers:BeforeHostLifecycle"],
+        ModuleStartupWorkBarrier.NoBarrier =>
+            localizer["ModuleSystem:StartupWork:Barriers:NoBarrier"],
+        _ => barrier.ToString()
     };
 
     /// <summary>
-    /// Gets the localized display name of a parallel-work status.
+    /// Gets the localized display name of a startup-work status.
     /// </summary>
-    public static string WorkStatus(IStringLocalizer<SharedResource> localizer, string name)
+    public static string WorkStatus(
+        IStringLocalizer<SharedResource> localizer,
+        ModuleStartupWorkStatus status)
     {
-        return name switch
+        return status switch
         {
-            nameof(ModuleCompositionWorkStatus.Succeeded) => localizer["ModuleSystem:CompositionWork:States:Succeeded"],
-            nameof(ModuleCompositionWorkStatus.Failed) => localizer["ModuleSystem:CompositionWork:States:Failed"],
-            _ => name
+            ModuleStartupWorkStatus.Queued => localizer["ModuleSystem:StartupWork:States:Queued"],
+            ModuleStartupWorkStatus.Running => localizer["ModuleSystem:StartupWork:States:Running"],
+            ModuleStartupWorkStatus.Succeeded => localizer["ModuleSystem:StartupWork:States:Succeeded"],
+            ModuleStartupWorkStatus.Failed => localizer["ModuleSystem:StartupWork:States:Failed"],
+            _ => status.ToString()
         };
     }
+
+    /// <summary>
+    /// Formats one duration with the module-system resource's culture-aware unit.
+    /// </summary>
+    public static string Duration(IStringLocalizer<SharedResource> localizer, double durationMs)
+        => localizer["ModuleSystem:PerformanceMonitoring:Formats:Duration", durationMs];
+
+    /// <summary>
+    /// Formats one monotonic offset from module-composition origin.
+    /// </summary>
+    public static string Offset(IStringLocalizer<SharedResource> localizer, double offsetMs)
+        => localizer["ModuleSystem:PerformanceMonitoring:Formats:Offset", offsetMs];
+
+    /// <summary>
+    /// Formats one diagnostic percentage.
+    /// </summary>
+    public static string Percentage(IStringLocalizer<SharedResource> localizer, double percentage)
+        => localizer["ModuleSystem:PerformanceMonitoring:Formats:Percentage", percentage];
 }

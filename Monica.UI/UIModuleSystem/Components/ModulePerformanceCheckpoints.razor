@@ -10,59 +10,59 @@
         <MudIcon Icon="@Icons.Material.Filled.Lock" Color="Color.Warning" />
     </header>
 
-    @if (Checkpoints.Count == 0)
+    @if (Barriers.Count == 0)
     {
         <div class="performance-checkpoints__empty">
             <MudIcon Icon="@Icons.Material.Filled.LockOpen" Color="Color.Secondary" Size="Size.Large" />
-            <MudText Typo="Typo.body2" Color="Color.Secondary">@L["ModuleSystem:PerformanceMonitoring:Messages:NoCheckpoints"]</MudText>
+            <MudText Typo="Typo.body2" Color="Color.Secondary">@L["ModuleSystem:PerformanceMonitoring:Messages:NoBarriers"]</MudText>
         </div>
     }
     else
     {
         <div class="performance-checkpoints__grid">
-            @foreach (var checkpoint in Checkpoints.OrderBy(static checkpoint => checkpoint.Sequence))
+            @foreach (var barrier in Barriers)
             {
-                <article class="performance-checkpoints__item @GetCheckpointClass(checkpoint)">
+                <article class="performance-checkpoints__item @GetBarrierClass(barrier)">
                     <div class="performance-checkpoints__item-header">
-                        <strong>@ModulePerformanceDisplayText.Deadline(L, checkpoint.Deadline)</strong>
+                        <strong>@ModulePerformanceDisplayText.Barrier(L, barrier.Barrier)</strong>
                         <MudChip T="string"
                                  Size="Size.Small"
-                                 Color="@(checkpoint.PendingWorkItems.Count > 0 ? Color.Warning : Color.Success)"
+                                 Color="@(barrier.PendingWorkItems.Count > 0 ? Color.Warning : Color.Success)"
                                  Variant="Variant.Outlined">
-                            @FormatDuration(checkpoint.WaitDurationMs)
+                            @ModulePerformanceDisplayText.Duration(L, barrier.WaitDurationMs)
                         </MudChip>
                     </div>
 
                     <dl class="performance-checkpoints__facts">
                         <div>
                             <dt>@L["ModuleSystem:PerformanceMonitoring:Labels:DueWorkItems"]</dt>
-                            <dd>@checkpoint.DueWorkItemNames.Count</dd>
+                            <dd>@barrier.DueWorkItemNames.Count</dd>
                         </div>
                         <div>
                             <dt>@L["ModuleSystem:PerformanceMonitoring:Labels:PendingAtEntry"]</dt>
-                            <dd>@checkpoint.PendingWorkItems.Count</dd>
+                            <dd>@barrier.PendingWorkItems.Count</dd>
                         </div>
                         <div>
-                            <dt>@L["ModuleSystem:PerformanceMonitoring:Labels:CheckpointEntered"]</dt>
-                            <dd>@FormatOffset(checkpoint.EnteredOffsetMs)</dd>
+                            <dt>@L["ModuleSystem:PerformanceMonitoring:Labels:BarrierEntered"]</dt>
+                            <dd>@ModulePerformanceDisplayText.Offset(L, barrier.EnteredOffsetMs)</dd>
                         </div>
                         <div>
-                            <dt>@L["ModuleSystem:PerformanceMonitoring:Labels:CheckpointReleased"]</dt>
-                            <dd>@FormatOffset(checkpoint.ReleasedOffsetMs)</dd>
+                            <dt>@L["ModuleSystem:PerformanceMonitoring:Labels:BarrierReleased"]</dt>
+                            <dd>@ModulePerformanceDisplayText.Offset(L, barrier.ReleasedOffsetMs)</dd>
                         </div>
                     </dl>
 
                     <div class="performance-checkpoints__releaser">
                         <small>@L["ModuleSystem:PerformanceMonitoring:Labels:BarrierReleaser"]</small>
-                        <strong>@(checkpoint.ReleasingWorkItemName ?? L["ModuleSystem:PerformanceMonitoring:States:None"])</strong>
+                        <strong>@(barrier.ReleasingWorkItemName ?? L["ModuleSystem:PerformanceMonitoring:States:None"])</strong>
                     </div>
 
-                    @if (checkpoint.DueWorkItemNames.Count > 0)
+                    @if (barrier.DueWorkItemNames.Count > 0)
                     {
                         <div class="performance-checkpoints__due">
                             <small>@L["ModuleSystem:PerformanceMonitoring:Labels:DueWorkItems"]</small>
                             <div>
-                                @foreach (var workName in checkpoint.DueWorkItemNames)
+                                @foreach (var workName in barrier.DueWorkItemNames)
                                 {
                                     <MudChip T="string" Size="Size.Small" Color="Color.Info" Variant="Variant.Text">@workName</MudChip>
                                 }
@@ -70,12 +70,12 @@
                         </div>
                     }
 
-                    @if (checkpoint.PendingWorkItems.Count > 0)
+                    @if (barrier.PendingWorkItems.Count > 0)
                     {
                         <div class="performance-checkpoints__pending">
                             <small>@L["ModuleSystem:PerformanceMonitoring:Labels:PendingWorkItems"]</small>
                             <div>
-                                @foreach (var pending in checkpoint.PendingWorkItems)
+                                @foreach (var pending in barrier.PendingWorkItems)
                                 {
                                     <MudChip T="string" Size="Size.Small" Color="Color.Warning" Variant="Variant.Text">
                                         @L[
@@ -95,16 +95,11 @@
 
 @code {
     [Parameter, EditorRequired]
-    public IReadOnlyList<ModuleCompositionCheckpointView> Checkpoints { get; set; } = [];
+    public IReadOnlyList<ModuleStartupWorkBarrierView> Barriers { get; set; } = [];
 
-    private static string GetCheckpointClass(ModuleCompositionCheckpointView checkpoint)
-        => checkpoint.PendingWorkItems.Count > 0
+    private static string GetBarrierClass(ModuleStartupWorkBarrierView barrier)
+        => barrier.PendingWorkItems.Count > 0
             ? "performance-checkpoints__item--blocked"
             : "performance-checkpoints__item--clear";
 
-    private string FormatDuration(double durationMs)
-        => L["ModuleSystem:PerformanceMonitoring:Formats:Duration", durationMs];
-
-    private string FormatOffset(double offsetMs)
-        => L["ModuleSystem:PerformanceMonitoring:Formats:Offset", offsetMs];
 }

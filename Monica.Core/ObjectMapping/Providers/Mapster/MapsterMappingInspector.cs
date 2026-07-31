@@ -7,11 +7,11 @@ using Monica.Tool.Extensions;
 
 namespace Monica.Core.ObjectMapping.Providers.Mapster;
 
-internal sealed class MapsterMappingInspector(TypeAdapterConfig config)
+internal sealed class MapsterMappingInspector(MapsterConfigurationRuntime runtime)
 {
     public IReadOnlyList<ObjectMapperInfo> GetMappings()
     {
-        var inspectionConfig = config.Clone();
+        var inspectionConfig = runtime.CurrentConfiguration.Clone();
         inspectionConfig.SelfContainedCodeGeneration = true;
 
         var buildAdapterMethod = GetBuildAdapterMethod();

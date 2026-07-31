@@ -17,10 +17,10 @@ public sealed class ModuleServiceRegistrationPerformance
     /// <summary>Gets time spent in the application callback passed to <c>AddMonica(...)</c>.</summary>
     public double ApplicationConfigurationDurationMs { get; init; }
 
-    /// <summary>Gets the union of serial module callback intervals outside blocking checkpoint waits.</summary>
+    /// <summary>Gets the union of serial module callback intervals outside blocking startup barriers.</summary>
     public double SerialModuleCallbackDurationMs { get; init; }
 
-    /// <summary>Gets the union of startup-blocking checkpoint intervals.</summary>
+    /// <summary>Gets the union of startup-blocking barrier intervals.</summary>
     public double BlockingWaitDurationMs { get; init; }
 
     /// <summary>
@@ -45,11 +45,11 @@ public sealed class ModuleServiceRegistrationPerformance
                 phase.StartedOffsetMs,
                 phase.CompletedOffsetMs))
             .ToArray();
-        var blockingIntervals = performance.Checkpoints
-            .Where(static checkpoint => checkpoint.PendingWorkItemCount > 0)
-            .Select(static checkpoint => new ModuleCompositionTimingInterval(
-                checkpoint.EnteredOffsetMs,
-                checkpoint.ReleasedOffsetMs))
+        var blockingIntervals = performance.StartupWorkBarriers
+            .Where(static barrier => barrier.PendingWorkItemCount > 0)
+            .Select(static barrier => new ModuleCompositionTimingInterval(
+                barrier.EnteredOffsetMs,
+                barrier.ReleasedOffsetMs))
             .ToArray();
         var callbackIntervals = performance.ModulePhaseExecutions
             .Select(static execution => new ModuleCompositionTimingInterval(

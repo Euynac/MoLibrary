@@ -603,7 +603,7 @@ public sealed class ModuleSystemInspectionService(MonicaApplication application)
                 Title = "Slow Monica Service Registration",
                 Description = $"Monica service registration took {serviceRegistrationDuration:F1}ms, which exceeds the recommended threshold",
                 IssueType = IssueType.Performance,
-                RecommendedAction = "Review serial module callbacks, composition work, and blocking checkpoints"
+                RecommendedAction = "Review serial module callbacks, startup work, and blocking barriers"
             });
         }
 

@@ -13,7 +13,7 @@ public sealed class ModulePerformanceDashboardViewFactoryTests
     {
         var objectMappingKey = (ModuleKey)BuiltInModuleKey.ObjectMapping;
         var configurationKey = (ModuleKey)BuiltInModuleKey.Configuration;
-        var mapsterWork = new ModuleCompositionWorkPerformanceInfo
+        var mapsterWork = new ModuleStartupWorkPerformanceInfo
         {
             WorkItemId = "ObjectMapping:0:compile-mapster-configuration",
             Sequence = 0,
@@ -23,14 +23,16 @@ public sealed class ModulePerformanceDashboardViewFactoryTests
             ModuleRegistrationOrder = 17,
             Name = "compile-mapster-configuration",
             OriginPhase = ModulePhase.PostConfigureServices,
-            Deadline = ModuleCompositionWorkDeadline.BeforeServiceRegistrationCompletion,
-            Status = ModuleCompositionWorkStatus.Succeeded,
+            Barrier = ModuleStartupWorkBarrier.BeforeServiceRegistrationCompletion,
+            Status = ModuleStartupWorkStatus.Succeeded,
             SubmittedOffsetMs = 4_000,
             StartedOffsetMs = 4_002,
             CompletedOffsetMs = 13_714,
-            WasPendingAtDeadline = true,
-            RemainingAtDeadlineMs = 9_668,
-            IsDeadlineReleaser = true
+            WasPendingAtBarrier = true,
+            RemainingAtBarrierMs = 9_668,
+            IsBarrierReleaser = true,
+            QueueDurationMs = 2,
+            ExecutionDurationMs = 9_712
         };
         var objectMappingCallback = Callback(
             sequence: 1,
@@ -78,19 +80,19 @@ public sealed class ModulePerformanceDashboardViewFactoryTests
                     SystemPhase(3, "ConfigureEndpoints", 13_900, 17)
                 ],
                 ModulePhaseExecutions = [configurationCallback, objectMappingCallback, remainingCallback],
-                WorkItems = [mapsterWork],
-                Checkpoints =
+                StartupWorkItems = [mapsterWork],
+                StartupWorkBarriers =
                 [
-                    new ModuleCompositionCheckpointPerformanceInfo
+                    new ModuleStartupWorkBarrierPerformanceInfo
                     {
                         Sequence = 0,
-                        Deadline = ModuleCompositionWorkDeadline.BeforeServiceRegistrationCompletion,
+                        Barrier = ModuleStartupWorkBarrier.BeforeServiceRegistrationCompletion,
                         EnteredOffsetMs = 4_046,
                         ReleasedOffsetMs = 13_714,
                         DueWorkItemIds = [mapsterWork.WorkItemId],
                         PendingWorkItems =
                         [
-                            new ModuleCompositionCheckpointPendingWorkInfo
+                            new ModuleStartupWorkBarrierPendingWorkInfo
                             {
                                 WorkItemId = mapsterWork.WorkItemId,
                                 RemainingDurationMs = 9_668
@@ -137,35 +139,35 @@ public sealed class ModulePerformanceDashboardViewFactoryTests
             AggregateQueueMs: 2));
 
         dashboard.CriticalPath.Should().BeEquivalentTo(new ModuleCriticalPathView(
-            ModuleCompositionWorkDeadline.BeforeServiceRegistrationCompletion.ToString(),
+            ModuleStartupWorkBarrier.BeforeServiceRegistrationCompletion,
             "ModuleObjectMapping",
             objectMappingKey,
             "compile-mapster-configuration",
             9_668));
-        dashboard.WorkItems.Should().ContainSingle(item =>
+        dashboard.StartupWorkItems.Should().ContainSingle(item =>
             item.ModuleTypeName == "ModuleObjectMapping"
             && item.Name == "compile-mapster-configuration"
             && item.ExecutionDurationMs == 9_712
-            && item.WasPendingAtDeadline);
+            && item.WasPendingAtBarrier);
         dashboard.SerialModules.Should().ContainSingle(module =>
             module.ModuleTypeName == "ModuleObjectMapping"
             && module.AggregateDurationMs == 85
             && module.WorkItemCount == 1);
-        dashboard.Checkpoints.Should().ContainSingle(checkpoint =>
-            checkpoint.WaitDurationMs == 9_668
-            && checkpoint.DueWorkItemNames.Contains("ModuleObjectMapping / compile-mapster-configuration")
-            && checkpoint.PendingWorkItems.Single().RemainingDurationMs == 9_668
-            && checkpoint.ReleasingWorkItemName == "ModuleObjectMapping / compile-mapster-configuration");
+        dashboard.StartupWorkBarriers.Should().ContainSingle(barrier =>
+            barrier.WaitDurationMs == 9_668
+            && barrier.DueWorkItemNames.Contains("ModuleObjectMapping / compile-mapster-configuration")
+            && barrier.PendingWorkItems.Single().RemainingDurationMs == 9_668
+            && barrier.ReleasingWorkItemName == "ModuleObjectMapping / compile-mapster-configuration");
         dashboard.Milestones.Should().Contain(milestone =>
-            milestone.Name == ModuleCompositionMilestone.ApplicationPipelineStarted.ToString()
+            milestone.Name == ModuleCompositionMilestone.ApplicationPipelineStarted
             && milestone.ElapsedSincePreviousMs == 36
             && milestone.IsHostOwnedGap);
         dashboard.Milestones.Should().Contain(milestone =>
-            milestone.Name == ModuleCompositionMilestone.EndpointMappingStarted.ToString()
+            milestone.Name == ModuleCompositionMilestone.EndpointMappingStarted
             && milestone.ElapsedSincePreviousMs == 50
             && milestone.IsHostOwnedGap);
         dashboard.Milestones.Should().Contain(milestone =>
-            milestone.Name == ModuleCompositionMilestone.CompositionCompleted.ToString()
+            milestone.Name == ModuleCompositionMilestone.CompositionCompleted
             && milestone.ElapsedSincePreviousMs == 17
             && !milestone.IsHostOwnedGap);
         dashboard.Milestones.Select(static milestone => milestone.Sequence).Should().Equal(1, 2, 3, 4, 5, 6);
@@ -214,7 +216,7 @@ public sealed class ModulePerformanceDashboardViewFactoryTests
         dashboard.CriticalPath.Should().BeNull();
         dashboard.SerialModules.Should().ContainSingle(module =>
             module.CallbackCount == 2
-            && module.SlowestPhase == ModulePhase.ConfigureServices.ToString()
+            && module.SlowestPhase == ModulePhase.ConfigureServices
             && module.SlowestPhaseDurationMs == 55);
         dashboard.Milestones.Select(static milestone => milestone.ElapsedSincePreviousMs)
             .Should().Equal(0, 100);
@@ -228,36 +230,36 @@ public sealed class ModulePerformanceDashboardViewFactoryTests
             name: "first-work",
             startedOffsetMs: 10,
             completedOffsetMs: 110,
-            status: ModuleCompositionWorkStatus.Succeeded);
+            status: ModuleStartupWorkStatus.Succeeded);
         var failed = Work(
             sequence: 1,
             name: "failed-work",
             startedOffsetMs: 20,
             completedOffsetMs: 70,
-            status: ModuleCompositionWorkStatus.Failed,
+            status: ModuleStartupWorkStatus.Failed,
             errorMessage: "mapping failure");
         var performance = new ModuleSystemPerformance
         {
             Composition = new ModuleCompositionPerformance
             {
                 ElapsedDurationMs = 120,
-                WorkItems = [first, failed],
-                Checkpoints =
+                StartupWorkItems = [first, failed],
+                StartupWorkBarriers =
                 [
-                    new ModuleCompositionCheckpointPerformanceInfo
+                    new ModuleStartupWorkBarrierPerformanceInfo
                     {
-                        Deadline = ModuleCompositionWorkDeadline.BeforeServiceRegistrationCompletion,
+                        Barrier = ModuleStartupWorkBarrier.BeforeServiceRegistrationCompletion,
                         EnteredOffsetMs = 30,
                         ReleasedOffsetMs = 110,
                         DueWorkItemIds = [first.WorkItemId, failed.WorkItemId],
                         PendingWorkItems =
                         [
-                            new ModuleCompositionCheckpointPendingWorkInfo
+                            new ModuleStartupWorkBarrierPendingWorkInfo
                             {
                                 WorkItemId = first.WorkItemId,
                                 RemainingDurationMs = 80
                             },
-                            new ModuleCompositionCheckpointPendingWorkInfo
+                            new ModuleStartupWorkBarrierPendingWorkInfo
                             {
                                 WorkItemId = failed.WorkItemId,
                                 RemainingDurationMs = 40
@@ -271,17 +273,74 @@ public sealed class ModulePerformanceDashboardViewFactoryTests
 
         var dashboard = ModulePerformanceDashboardViewFactory.Create(performance);
 
-        dashboard.WorkItems.Should().HaveCount(2);
-        dashboard.WorkItems.Should().Contain(item =>
+        dashboard.StartupWorkItems.Should().HaveCount(2);
+        dashboard.StartupWorkItems.Should().Contain(item =>
             item.Name == "failed-work"
-            && item.Status == ModuleCompositionWorkStatus.Failed.ToString()
+            && item.Status == ModuleStartupWorkStatus.Failed
             && item.ErrorMessage == "mapping failure");
         dashboard.Summary.ParallelActivity.ActiveSpanMs.Should().Be(100);
         dashboard.Summary.ParallelActivity.AggregateExecutionMs.Should().Be(150);
         dashboard.Summary.ServiceRegistration.BlockingWaitDurationMs.Should().Be(80);
         dashboard.Summary.ServiceRegistration.OrchestrationDurationMs.Should().Be(40);
         dashboard.CriticalPath?.ReleasingWorkName.Should().Be("first-work");
-        dashboard.Checkpoints.Single().PendingWorkItems.Should().HaveCount(2);
+        dashboard.StartupWorkBarriers.Single().PendingWorkItems.Should().HaveCount(2);
+    }
+
+    [Fact]
+    public void Create_distinguishes_live_non_blocking_work_from_live_work_awaiting_a_future_barrier()
+    {
+        var work = new ModuleStartupWorkPerformanceInfo
+        {
+            WorkItemId = "ObjectMapping:0:compile-mapster-configuration",
+            Sequence = 0,
+            ModuleKey = (ModuleKey)BuiltInModuleKey.ObjectMapping,
+            ModuleTypeName = "ModuleObjectMapping",
+            ModuleRegistrationOrder = 17,
+            Name = "compile-mapster-configuration",
+            OriginPhase = ModulePhase.PostConfigureServices,
+            Barrier = ModuleStartupWorkBarrier.NoBarrier,
+            Status = ModuleStartupWorkStatus.Running,
+            SubmittedOffsetMs = 40,
+            StartedOffsetMs = 42,
+            QueueDurationMs = 2
+        };
+        var requiredWork = new ModuleStartupWorkPerformanceInfo
+        {
+            WorkItemId = "Configuration:1:build-configuration-definitions",
+            Sequence = 1,
+            ModuleKey = (ModuleKey)BuiltInModuleKey.Configuration,
+            ModuleTypeName = "ModuleConfiguration",
+            ModuleRegistrationOrder = 3,
+            Name = "build-configuration-definitions",
+            OriginPhase = ModulePhase.IterateBusinessTypes,
+            Barrier = ModuleStartupWorkBarrier.BeforeHostLifecycle,
+            Status = ModuleStartupWorkStatus.Queued,
+            SubmittedOffsetMs = 45
+        };
+        var performance = new ModuleSystemPerformance
+        {
+            Composition = new ModuleCompositionPerformance
+            {
+                ElapsedDurationMs = 100,
+                StartupWorkItems = [work, requiredWork]
+            }
+        };
+
+        var dashboard = ModulePerformanceDashboardViewFactory.Create(performance);
+
+        dashboard.StartupWorkItems.Should().ContainSingle(item =>
+            item.Barrier == ModuleStartupWorkBarrier.NoBarrier
+            && item.Status == ModuleStartupWorkStatus.Running
+            && item.Impact == ModuleStartupWorkImpact.DoesNotBlockStartup
+            && !item.WasPendingAtBarrier
+            && !item.RemainingAtBarrierMs.HasValue);
+        dashboard.StartupWorkItems.Should().ContainSingle(item =>
+            item.Barrier == ModuleStartupWorkBarrier.BeforeHostLifecycle
+            && item.Status == ModuleStartupWorkStatus.Queued
+            && item.Impact == ModuleStartupWorkImpact.PendingBeforeBarrier
+            && !item.WasPendingAtBarrier);
+        dashboard.StartupWorkBarriers.Should().BeEmpty();
+        dashboard.CriticalPath.Should().BeNull();
     }
 
     private static ModuleCompositionMilestonePerformanceInfo Milestone(
@@ -327,22 +386,22 @@ public sealed class ModulePerformanceDashboardViewFactoryTests
 
     private static ModulePerformanceInfo Module(
         ModulePhaseExecutionPerformanceInfo callback,
-        params ModuleCompositionWorkPerformanceInfo[] workItems) => new()
+        params ModuleStartupWorkPerformanceInfo[] workItems) => new()
     {
         ModuleKey = callback.ModuleKey,
         ModuleTypeName = callback.ModuleTypeName,
         RegistrationOrder = callback.ModuleRegistrationOrder,
         IsRuntimeAvailable = true,
         PhaseExecutions = [callback],
-        CompositionWorkItems = workItems
+        StartupWorkItems = workItems
     };
 
-    private static ModuleCompositionWorkPerformanceInfo Work(
+    private static ModuleStartupWorkPerformanceInfo Work(
         long sequence,
         string name,
         double startedOffsetMs,
         double completedOffsetMs,
-        ModuleCompositionWorkStatus status,
+        ModuleStartupWorkStatus status,
         string? errorMessage = null) => new()
     {
         WorkItemId = $"work-{sequence}",
@@ -352,13 +411,14 @@ public sealed class ModulePerformanceDashboardViewFactoryTests
         ModuleRegistrationOrder = 17,
         Name = name,
         OriginPhase = ModulePhase.PostConfigureServices,
-        Deadline = ModuleCompositionWorkDeadline.BeforeServiceRegistrationCompletion,
+        Barrier = ModuleStartupWorkBarrier.BeforeServiceRegistrationCompletion,
         Status = status,
         SubmittedOffsetMs = startedOffsetMs,
         StartedOffsetMs = startedOffsetMs,
         CompletedOffsetMs = completedOffsetMs,
-        WasPendingAtDeadline = true,
-        RemainingAtDeadlineMs = completedOffsetMs - 30,
+        WasPendingAtBarrier = true,
+        RemainingAtBarrierMs = completedOffsetMs - 30,
+        ExecutionDurationMs = completedOffsetMs - startedOffsetMs,
         ErrorMessage = errorMessage
     };
 }

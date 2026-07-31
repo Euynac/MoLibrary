@@ -32,7 +32,7 @@
                                 <MudPaper Class="pa-4 detail-card" Elevation="2">
                                     <div class="d-flex align-center mb-2">
                                         <MudIcon Icon="@Icons.Material.Filled.Category" Color="Color.Primary" Size="Size.Small" Class="mr-2" />
-                                        <MudText Typo="Typo.subtitle1" Style="font-weight: 500;">@L["ModuleSystem:ModuleDetail:Labels:ModuleKey"]</MudText>
+                                        <MudText Typo="Typo.subtitle2">@L["ModuleSystem:ModuleDetail:Labels:ModuleKey"]</MudText>
                                     </div>
                                     <MudText Typo="Typo.body1" Color="Color.Secondary">
                                         @(SelectedModuleDetail.BasicInfo.ModuleKey?.ToString() ?? L["ModuleSystem:ModuleDetail:States:Unknown"])
@@ -43,7 +43,7 @@
                                 <MudPaper Class="pa-4 detail-card" Elevation="2">
                                     <div class="d-flex align-center mb-2">
                                         <MudIcon Icon="@Icons.Material.Filled.Numbers" Color="Color.Info" Size="Size.Small" Class="mr-2" />
-                                        <MudText Typo="Typo.subtitle1" Style="font-weight: 500;">@L["ModuleSystem:ModuleDetail:Labels:RegistrationOrder"]</MudText>
+                                        <MudText Typo="Typo.subtitle2">@L["ModuleSystem:ModuleDetail:Labels:RegistrationOrder"]</MudText>
                                     </div>
                                     <MudText Typo="Typo.body1" Color="Color.Secondary">
                                         @SelectedModuleDetail.BasicInfo.Order.ToString()
@@ -54,10 +54,10 @@
                                 <MudPaper Class="pa-4 detail-card" Elevation="2">
                                     <div class="d-flex align-center mb-2">
                                         <MudIcon Icon="@Icons.Material.Filled.Timer" Color="Color.Warning" Size="Size.Small" Class="mr-2" />
-                                        <MudText Typo="Typo.subtitle1" Style="font-weight: 500;">@L["ModuleSystem:ModuleDetail:Labels:SerialPhaseDuration"]</MudText>
+                                        <MudText Typo="Typo.subtitle2">@L["ModuleSystem:ModuleDetail:Labels:SerialPhaseDuration"]</MudText>
                                     </div>
                                     <MudText Typo="Typo.body1" Color="Color.Secondary">
-                                        @($"{SelectedModuleDetail.BasicInfo.SerialPhaseDurationMs}ms")
+                                        @ModulePerformanceDisplayText.Duration(L, SelectedModuleDetail.BasicInfo.SerialPhaseDurationMs)
                                     </MudText>
                                 </MudPaper>
                             </MudItem>
@@ -67,7 +67,7 @@
                                         <MudIcon Icon="@(SelectedModuleDetail.BasicInfo.IsDisabled ? Icons.Material.Filled.Block : Icons.Material.Filled.CheckCircle)"
                                                Color="@(SelectedModuleDetail.BasicInfo.IsDisabled ? Color.Warning : Color.Success)"
                                                Size="Size.Small" Class="mr-2" />
-                                        <MudText Typo="Typo.subtitle1" Style="font-weight: 500;">@L["ModuleSystem:ModuleDetail:Labels:ModuleStatus"]</MudText>
+                                        <MudText Typo="Typo.subtitle2">@L["ModuleSystem:ModuleDetail:Labels:ModuleStatus"]</MudText>
                                     </div>
                                     <MudChip T="string" Color="@(SelectedModuleDetail.BasicInfo.IsDisabled ? Color.Warning : Color.Success)" Size="Size.Small">
                                         @(SelectedModuleDetail.BasicInfo.IsDisabled ? L["ModuleSystem:ModuleDetail:States:Disabled"] : L["ModuleSystem:ModuleDetail:States:Enabled"])
@@ -81,7 +81,7 @@
                                                  Color="@GetCapabilityColor(SelectedModuleDetail.ConfigInfo)"
                                                  Size="Size.Small"
                                                  Class="mr-2" />
-                                        <MudText Typo="Typo.subtitle1" Style="font-weight: 500;">@L["ModuleSystem:ModuleDetail:Labels:ModuleCapability"]</MudText>
+                                        <MudText Typo="Typo.subtitle2">@L["ModuleSystem:ModuleDetail:Labels:ModuleCapability"]</MudText>
                                     </div>
                                     <MudChip T="string"
                                              Color="@GetCapabilityColor(SelectedModuleDetail.ConfigInfo)"
@@ -99,7 +99,7 @@
                                                  Color="@GetRuntimeModeColor(SelectedModuleDetail.ConfigInfo)"
                                                  Size="Size.Small"
                                                  Class="mr-2" />
-                                        <MudText Typo="Typo.subtitle1" Style="font-weight: 500;">@L["ModuleSystem:ModuleDetail:Labels:RuntimeMode"]</MudText>
+                                        <MudText Typo="Typo.subtitle2">@L["ModuleSystem:ModuleDetail:Labels:RuntimeMode"]</MudText>
                                     </div>
                                     <MudChip T="string"
                                              Color="@GetRuntimeModeColor(SelectedModuleDetail.ConfigInfo)"
@@ -123,24 +123,24 @@
                             <div class="module-performance-detail__summary">
                                 <article>
                                     <small>@L["ModuleSystem:ModuleDetail:Labels:SerialPhaseDuration"]</small>
-                                    <strong>@FormatDuration(SelectedModuleDetail.PerformanceInfo.SerialDurationMs)</strong>
+                                    <strong>@ModulePerformanceDisplayText.Duration(L, SelectedModuleDetail.PerformanceInfo.SerialDurationMs)</strong>
                                 </article>
                                 <article>
-                                    <small>@L["ModuleSystem:CompositionWork:Labels:WorkItemCount"]</small>
-                                    <strong>@SelectedModuleDetail.PerformanceInfo.CompositionWorkItems.Count</strong>
+                                    <small>@L["ModuleSystem:StartupWork:Labels:WorkItemCount"]</small>
+                                    <strong>@SelectedModuleDetail.PerformanceInfo.StartupWorkItems.Count</strong>
                                 </article>
                                 <article>
-                                    <small>@L["ModuleSystem:CompositionWork:Labels:AggregateExecutionDuration"]</small>
-                                    <strong>@FormatDuration(GetTotalExecutionDuration(SelectedModuleDetail.PerformanceInfo.CompositionWorkItems))</strong>
+                                    <small>@L["ModuleSystem:StartupWork:Labels:AggregateExecutionDuration"]</small>
+                                    <strong>@ModulePerformanceDisplayText.Duration(L, GetTotalExecutionDuration(SelectedModuleDetail.PerformanceInfo.StartupWorkItems))</strong>
                                 </article>
                                 <article>
-                                    <small>@L["ModuleSystem:CompositionWork:Labels:AggregateQueueDuration"]</small>
-                                    <strong>@FormatDuration(GetTotalQueueDuration(SelectedModuleDetail.PerformanceInfo.CompositionWorkItems))</strong>
+                                    <small>@L["ModuleSystem:StartupWork:Labels:AggregateQueueDuration"]</small>
+                                    <strong>@ModulePerformanceDisplayText.Duration(L, GetTotalQueueDuration(SelectedModuleDetail.PerformanceInfo.StartupWorkItems))</strong>
                                 </article>
                             </div>
 
                             <ModulePerformanceWorkTable
-                                WorkItems="@ModulePerformanceDashboardViewFactory.CreateWorkItems(SelectedModuleDetail.PerformanceInfo.CompositionWorkItems)"
+                                WorkItems="@ModulePerformanceDashboardViewFactory.CreateWorkItems(SelectedModuleDetail.PerformanceInfo.StartupWorkItems)"
                                 ShowModuleColumn="false" />
                             <ModulePerformanceCallbackTable Executions="SelectedModuleDetail.PerformanceInfo.PhaseExecutions" />
                         </div>
@@ -185,11 +185,11 @@
                                         <MudIcon Icon="@Icons.Material.Filled.DirectionsRun" Class="mr-2" />
                                         @L["ModuleSystem:ModuleDetail:Labels:DirectDependencyList"]
                                     </MudText>
-                                    <MudStack Row="true" Spacing="1" Wrap="Wrap.Wrap">
+                                    <MudStack Row="true" Spacing="1" Wrap="Wrap.Wrap" Class="module-detail__chip-list">
                                         @foreach (var dep in SelectedModuleDetail.DependencyInfo.DirectDependencies)
                                         {
                                             <MudChip T="string" Color="Color.Primary" Size="Size.Small">
-                                                @dep.ToString()
+                                                <span class="module-detail__identifier">@dep.ToString()</span>
                                             </MudChip>
                                         }
                                     </MudStack>
@@ -203,11 +203,11 @@
                                         <MudIcon Icon="@Icons.Material.Filled.Timeline" Class="mr-2" />
                                         @L["ModuleSystem:ModuleDetail:Labels:TransitiveDependencyList"]
                                     </MudText>
-                                    <MudStack Row="true" Spacing="1" Wrap="Wrap.Wrap">
+                                    <MudStack Row="true" Spacing="1" Wrap="Wrap.Wrap" Class="module-detail__chip-list">
                                         @foreach (var dep in GetTransitiveDependencies())
                                         {
                                             <MudChip T="string" Color="Color.Info" Size="Size.Small" Variant="Variant.Outlined">
-                                                @dep.ToString()
+                                                <span class="module-detail__identifier">@dep.ToString()</span>
                                             </MudChip>
                                         }
                                     </MudStack>
@@ -221,11 +221,11 @@
                                         <MudIcon Icon="@Icons.Material.Filled.CallMade" Class="mr-2" />
                                         @L["ModuleSystem:ModuleDetail:Labels:DependedByModuleList"]
                                     </MudText>
-                                    <MudStack Row="true" Spacing="1" Wrap="Wrap.Wrap">
+                                    <MudStack Row="true" Spacing="1" Wrap="Wrap.Wrap" Class="module-detail__chip-list">
                                         @foreach (var dep in SelectedModuleDetail.DependencyInfo.DependedByModules)
                                         {
                                             <MudChip T="string" Color="Color.Success" Size="Size.Small" Variant="Variant.Outlined">
-                                                @dep.ToString()
+                                                <span class="module-detail__identifier">@dep.ToString()</span>
                                             </MudChip>
                                         }
                                     </MudStack>
@@ -236,7 +236,7 @@
                             {
                                 <MudItem xs="12">
                                     <MudAlert Severity="Severity.Warning" Class="mb-3">
-                                        <div class="d-flex align-center">
+                                        <div class="module-detail__message-row">
                                             <MudIcon Icon="@Icons.Material.Filled.Warning" Size="Size.Medium" Class="mr-2" />
                                             <div>
                                                 <MudText Typo="Typo.subtitle1">@L["ModuleSystem:ModuleDetail:Messages:CircularDependencyDetected"]</MudText>
@@ -281,9 +281,9 @@
                                 @foreach (var error in SelectedModuleDetail.Errors)
                                 {
                                     <MudAlert Severity="Severity.Error">
-                                        <div class="d-flex align-center justify-space-between">
+                                        <div class="module-detail__error-row">
                                             <div>
-                                                <MudText Typo="Typo.subtitle1" Style="font-weight: 500;">@error.ErrorType</MudText>
+                                                <MudText Typo="Typo.subtitle2">@error.ErrorType</MudText>
                                                 <MudText Typo="Typo.body2">@error.ErrorMessage</MudText>
                                             </div>
                                             <MudText Typo="Typo.caption" Color="Color.Secondary">
@@ -393,14 +393,11 @@
         return transitive;
     }
 
-    private static double GetTotalExecutionDuration(IEnumerable<ModuleCompositionWorkPerformanceInfo> workItems)
+    private static double GetTotalExecutionDuration(IEnumerable<ModuleStartupWorkPerformanceInfo> workItems)
         => workItems.Sum(static item => item.ExecutionDurationMs);
 
-    private static double GetTotalQueueDuration(IEnumerable<ModuleCompositionWorkPerformanceInfo> workItems)
+    private static double GetTotalQueueDuration(IEnumerable<ModuleStartupWorkPerformanceInfo> workItems)
         => workItems.Sum(static item => item.QueueDurationMs);
-
-    private string FormatDuration(double durationMs)
-        => L["ModuleSystem:PerformanceMonitoring:Formats:Duration", durationMs];
 
     /// <summary>
     /// Gets the localized capability label for the selected module.

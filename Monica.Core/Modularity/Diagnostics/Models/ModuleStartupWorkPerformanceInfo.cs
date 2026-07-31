@@ -3,11 +3,11 @@ using Monica.Core.Modularity.Models;
 namespace Monica.Core.Modularity.Diagnostics.Models;
 
 /// <summary>
-/// Describes one isolated composition work item scheduled by a module.
+/// Describes one isolated startup work item scheduled by a module.
 /// </summary>
-public sealed class ModuleCompositionWorkPerformanceInfo
+public sealed class ModuleStartupWorkPerformanceInfo
 {
-    /// <summary>Gets the stable work identity used by checkpoint references within this snapshot.</summary>
+    /// <summary>Gets the stable work identity used by barrier references within this snapshot.</summary>
     public string WorkItemId { get; init; } = string.Empty;
 
     /// <summary>Gets the global submission sequence.</summary>
@@ -31,57 +31,63 @@ public sealed class ModuleCompositionWorkPerformanceInfo
     /// <summary>Gets the serial module phase that scheduled the work.</summary>
     public ModulePhase OriginPhase { get; init; }
 
-    /// <summary>Gets the latest composition checkpoint by which the work had to complete.</summary>
-    public ModuleCompositionWorkDeadline Deadline { get; init; }
+    /// <summary>Gets the startup barrier governing the work.</summary>
+    public ModuleStartupWorkBarrier Barrier { get; init; }
 
-    /// <summary>Gets the terminal work status.</summary>
-    public ModuleCompositionWorkStatus Status { get; init; }
+    /// <summary>Gets the live or terminal work status.</summary>
+    public ModuleStartupWorkStatus Status { get; init; }
 
     /// <summary>Gets when the module submitted the work.</summary>
     public DateTimeOffset SubmittedAtUtc { get; init; }
 
-    /// <summary>Gets when a composition worker began executing the work.</summary>
-    public DateTimeOffset StartedAtUtc { get; init; }
+    /// <summary>Gets when a startup worker began executing the work, when it has started.</summary>
+    public DateTimeOffset? StartedAtUtc { get; init; }
 
-    /// <summary>Gets when execution stopped.</summary>
-    public DateTimeOffset CompletedAtUtc { get; init; }
+    /// <summary>Gets when execution stopped, when it has completed.</summary>
+    public DateTimeOffset? CompletedAtUtc { get; init; }
 
     /// <summary>Gets the monotonic submission offset from composition origin, in milliseconds.</summary>
     public double SubmittedOffsetMs { get; init; }
 
     /// <summary>Gets the monotonic worker-start offset from composition origin, in milliseconds.</summary>
-    public double StartedOffsetMs { get; init; }
+    public double? StartedOffsetMs { get; init; }
 
     /// <summary>Gets the monotonic completion offset from composition origin, in milliseconds.</summary>
-    public double CompletedOffsetMs { get; init; }
+    public double? CompletedOffsetMs { get; init; }
 
-    /// <summary>Gets whether this work was still pending when its deadline checkpoint was entered.</summary>
-    public bool WasPendingAtDeadline { get; init; }
+    /// <summary>Gets whether this work was still pending when its barrier was entered.</summary>
+    public bool WasPendingAtBarrier { get; init; }
 
-    /// <summary>Gets how long this work remained after its deadline checkpoint was entered, in milliseconds.</summary>
-    public double RemainingAtDeadlineMs { get; init; }
+    /// <summary>Gets how long this work remained after its barrier was entered, in milliseconds.</summary>
+    public double RemainingAtBarrierMs { get; init; }
 
-    /// <summary>Gets whether this work was the last pending item whose completion released its deadline checkpoint.</summary>
-    public bool IsDeadlineReleaser { get; init; }
+    /// <summary>Gets whether this work was the last pending item whose completion released its barrier.</summary>
+    public bool IsBarrierReleaser { get; init; }
 
-    /// <summary>Gets how long the work waited for a composition worker, in milliseconds.</summary>
-    public double QueueDurationMs => Math.Max(0, StartedOffsetMs - SubmittedOffsetMs);
+    /// <summary>Gets how long the work waited for a startup worker, in milliseconds.</summary>
+    public double QueueDurationMs { get; init; }
 
     /// <summary>Gets active worker execution time, in milliseconds.</summary>
-    public double ExecutionDurationMs => Math.Max(0, CompletedOffsetMs - StartedOffsetMs);
+    public double ExecutionDurationMs { get; init; }
 
     /// <summary>Gets the recursive exception message when execution failed.</summary>
     public string? ErrorMessage { get; init; }
 }
 
 /// <summary>
-/// Defines terminal states for required module composition work.
+/// Defines live and terminal states for module startup work.
 /// </summary>
-public enum ModuleCompositionWorkStatus
+public enum ModuleStartupWorkStatus
 {
+    /// <summary>The work is waiting for a bounded worker.</summary>
+    Queued,
+
+    /// <summary>The work is currently executing.</summary>
+    Running,
+
     /// <summary>The work completed successfully.</summary>
     Succeeded,
 
-    /// <summary>The work failed and Monica aborted composition at its checkpoint.</summary>
+    /// <summary>The work failed. Required barriers fail startup; non-blocking work remains diagnostic-only.</summary>
     Failed
 }

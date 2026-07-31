@@ -210,7 +210,7 @@
         "ApplicationConfigurationElapsed": "应用模块配置耗时",
         "HostOwnedElapsed": "宿主侧间隔耗时",
         "ServiceRegistrationElapsed": "服务注册耗时",
-        "BlockingCheckpointWait": "检查点阻塞等待",
+        "BlockingBarrierWait": "启动屏障等待",
         "MonicaOrchestration": "Monica 编排与发现",
         "ParallelActivity": "重叠的并行活动",
         "ParallelWorkActiveSpan": "并行工作活动跨度",
@@ -220,18 +220,18 @@
         "ParallelWorkBarriers": "并行工作等待点",
         "DueWorkItems": "到期工作",
         "PendingAtEntry": "进入时待完成",
-        "CheckpointEntered": "进入时间",
-        "CheckpointReleased": "释放时间",
+        "BarrierEntered": "进入时间",
+        "BarrierReleased": "释放时间",
         "BarrierReleaser": "屏障释放者",
         "PendingWorkItems": "待完成工作项",
-        "ParallelCompositionWork": "并行组合工作",
+        "ParallelStartupWork": "并行启动工作",
         "Module": "模块",
         "WorkItem": "工作项",
         "ScheduledIn": "调度阶段",
-        "MustFinishBefore": "最迟完成点",
+        "StartupBarrier": "启动屏障",
         "Queue": "排队",
         "Execution": "执行",
-        "CheckpointImpact": "检查点影响",
+        "StartupImpact": "启动影响",
         "Details": "详情",
         "SerialModuleCallbacks": "串行模块回调",
         "SortBy": "排序方式",
@@ -252,7 +252,7 @@
         "DiagnosticsDescription": "使用可相加的耗时分解解释模块系统初始化，并将会发生重叠的并行工作单独展示。",
         "WorkItemCount": "共 {0} 个并行工作项",
         "InitializationBreakdownDescription": "精确分解：Monica 框架实际耗时、应用模块配置耗时和宿主侧间隔耗时，等于模块系统初始化总耗时。",
-        "ServiceRegistrationBreakdownDescription": "精确分解：应用模块配置、串行模块回调、检查点阻塞等待和 Monica 编排耗时，等于服务注册耗时。",
+        "ServiceRegistrationBreakdownDescription": "精确分解：应用模块配置、串行模块回调、屏障阻塞等待和 Monica 编排耗时，等于服务注册耗时。",
         "SerialCallbackCount": "共执行 {0} 次回调",
         "ParallelActivityDescription": "初始化期间观测到的工作线程活动，与可相加的耗时分解保持分离。",
         "ParallelMetricsOverlap": "并行活动跨度、累计执行和累计排队会彼此重叠，也会与精确耗时分解重叠，不能直接相加。",
@@ -260,10 +260,10 @@
         "CriticalPath": "{0} 等待了 {3}；由 {1} / {2} 释放屏障。",
         "NoBlockingCriticalPath": "没有并行工作阻塞组合等待点。",
         "NoMilestones": "未记录组合里程碑。",
-        "ParallelWorkBarriersDescription": "展示到达各启动检查点时已经到期并仍未完成的工作。",
-        "NoCheckpoints": "未记录并行工作等待点。",
-        "ParallelCompositionWorkDescription": "按实际执行耗时展示模块工作，并标明调度阶段和启动影响。",
-        "RemainingAtDeadline": "到达期限时仍剩余 {0:N0} 毫秒。",
+        "ParallelWorkBarriersDescription": "展示到达各启动屏障时已经到期并仍未完成的工作。",
+        "NoBarriers": "未记录启动工作屏障。",
+        "ParallelStartupWorkDescription": "按实际执行耗时展示模块启动工作，并标明调度阶段、启动屏障和启动影响。",
+        "RemainingAtBarrier": "到达屏障时仍剩余 {0:N0} 毫秒。",
         "SerialModuleCallbacksDescription": "仅排行同步模块回调；并行工作在独立表格中展示。",
         "CompositionPhaseElapsedDescription": "展示每次系统阶段的实际标识与耗时，并与观测到的最长阶段比较。",
         "NoPerformanceData": "暂无性能数据",
@@ -271,8 +271,10 @@
       },
       "States": {
         "None": "无",
-        "BlockedCheckpoint": "阻塞了检查点",
-        "CompletedBeforeCheckpoint": "检查点前已完成",
+        "BlockedBarrier": "阻塞了启动",
+        "CompletedBeforeBarrier": "屏障前已完成",
+        "DoesNotBlockStartup": "不阻塞启动",
+        "PendingBeforeBarrier": "将在屏障处检查",
         "HostOwnedGap": "主机侧间隔",
         "MonicaCompositionInterval": "Monica 组合"
       },
@@ -300,24 +302,28 @@
         "Diagnostics": "正在加载启动性能诊断..."
       }
     },
-    "CompositionWork": {
+    "StartupWork": {
       "Labels": {
         "WorkItemCount": "工作项数",
         "AggregateExecutionDuration": "累计执行耗时",
         "AggregateQueueDuration": "累计排队耗时"
       },
       "Messages": {
-        "NoWorkTitle": "没有组合工作",
-        "NoWorkDescription": "当前应用没有模块调度并发组合工作。"
+        "NoWorkTitle": "没有启动工作",
+        "NoWorkDescription": "当前应用没有模块调度并发启动工作。"
       },
       "States": {
+        "Queued": "排队中",
+        "Running": "执行中",
         "Succeeded": "成功",
         "Failed": "失败"
       },
-      "Deadlines": {
+      "Barriers": {
         "BeforeBusinessTypeIteration": "业务类型迭代前",
         "BeforePostConfigureServices": "服务后配置前",
-        "BeforeServiceRegistrationCompletion": "服务注册完成前"
+        "BeforeServiceRegistrationCompletion": "服务注册完成前",
+        "BeforeHostLifecycle": "宿主生命周期开始前",
+        "NoBarrier": "不阻塞启动"
       }
     },
     "DependencyGraph": {

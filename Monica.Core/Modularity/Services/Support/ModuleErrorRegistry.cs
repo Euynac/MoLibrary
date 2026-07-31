@@ -139,31 +139,31 @@ internal sealed class ModuleErrorRegistry(MonicaApplication application)
     }
 
     /// <summary>
-    /// Records a required composition-work failure without applying registration-error downgrade policy.
+    /// Records a required startup-work failure without applying registration-error downgrade policy.
     /// </summary>
     /// <param name="result">The failed worker result.</param>
-    internal void RecordCompositionWorkError(ModuleCompositionWorkResult result)
+    internal void RecordStartupWorkError(ModuleStartupWorkResult result)
     {
         if (result.Failure is null)
         {
-            throw new ArgumentException("A successful composition work result cannot be recorded as an error.", nameof(result));
+            throw new ArgumentException("A successful startup work result cannot be recorded as an error.", nameof(result));
         }
 
         application.Modules.AddRegistrationError(new ModuleRegistrationError
         {
             ModuleType = result.ModuleType,
-            ErrorMessage = $"Error in composition work '{result.Name}' ({result.Deadline}): {result.Failure.GetMessageRecursively()}",
-            ErrorType = ModuleRegistrationErrorType.CompositionWorkError,
+            ErrorMessage = $"Error in startup work '{result.Name}' ({result.Barrier}): {result.Failure.GetMessageRecursively()}",
+            ErrorType = ModuleRegistrationErrorType.StartupWorkError,
             Phase = result.OriginPhase,
             StackTrace = result.Failure.StackTrace
         });
     }
 
     /// <summary>
-    /// Records a failure raised while the serial composition thread publishes completed worker state.
+    /// Records a failure raised while the serial composition thread publishes completed startup-work state.
     /// </summary>
-    internal void RecordCompositionWorkCommitError(
-        ModuleCompositionWorkResult result,
+    internal void RecordStartupWorkCommitError(
+        ModuleStartupWorkResult result,
         Exception exception)
     {
         ArgumentNullException.ThrowIfNull(exception);
@@ -172,9 +172,9 @@ internal sealed class ModuleErrorRegistry(MonicaApplication application)
         {
             ModuleType = result.ModuleType,
             ErrorMessage =
-                $"Error committing composition work '{result.Name}' ({result.Deadline}): " +
+                $"Error committing startup work '{result.Name}' ({result.Barrier}): " +
                 exception.GetMessageRecursively(),
-            ErrorType = ModuleRegistrationErrorType.CompositionWorkError,
+            ErrorType = ModuleRegistrationErrorType.StartupWorkError,
             Phase = result.OriginPhase,
             StackTrace = exception.StackTrace
         });
@@ -266,9 +266,9 @@ internal sealed class ModuleErrorRegistry(MonicaApplication application)
             return;
         }
 
-        // Required composition work always aborts startup; ordinary registration errors may be absorbed by disabling.
+        // Required startup work always aborts startup; ordinary registration errors may be absorbed by disabling.
         var errorsToThrow = application.Modules.RegistrationErrors
-            .Where(e => e.ErrorType == ModuleRegistrationErrorType.CompositionWorkError
+            .Where(e => e.ErrorType == ModuleRegistrationErrorType.StartupWorkError
                         || !application.ModuleStates.IsModuleDisabled(e.ModuleType))
             .ToList();
         

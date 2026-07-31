@@ -35,62 +35,64 @@ public abstract class ModuleBase : IModule
     }
 
     /// <summary>
-    /// Schedules isolated module-owned CPU work that may overlap later serial composition callbacks.
+    /// Schedules isolated module-owned CPU work that may overlap serial composition and host startup.
     /// </summary>
     /// <param name="name">A stable name that is unique within the module.</param>
-    /// <param name="work">The synchronous work Monica should execute on a bounded composition worker.</param>
-    /// <param name="deadline">
-    /// The latest composition checkpoint by which the work must complete. The default blocks service-registration
-    /// completion, while allowing the greatest safe overlap with later composition callbacks.
+    /// <param name="work">The synchronous work Monica should execute on a bounded startup worker.</param>
+    /// <param name="barrier">
+    /// The host-startup barrier that waits for the work. The default blocks service-registration completion while
+    /// allowing the greatest safe overlap with later composition callbacks.
     /// </param>
     /// <remarks>
     /// Schedule only CPU-bound work over immutable or module-owned state that no other callback consumes before the
-    /// selected deadline. Scheduling is valid from the synchronous <c>ConfigureBuilder</c>, <c>ConfigureServices</c>,
+    /// selected barrier. Scheduling is valid from the synchronous <c>ConfigureBuilder</c>, <c>ConfigureServices</c>,
     /// <c>IterateBusinessTypes</c>, and <c>PostConfigureServices</c> callbacks. Work scheduled during business-type
-    /// iteration must use <see cref="ModuleCompositionWorkDeadline.BeforePostConfigureServices"/> or
-    /// <see cref="ModuleCompositionWorkDeadline.BeforeServiceRegistrationCompletion"/> because the earlier checkpoint
-    /// has already passed. The callback must not mutate the host builder, service collection, module graph, provider,
-    /// or shared static state. Runtime, I/O, optional, or fire-and-forget work belongs in the Generic Host lifecycle.
+    /// iteration cannot use <see cref="ModuleStartupWorkBarrier.BeforeBusinessTypeIteration"/> because that barrier
+    /// has already passed; every later barrier remains valid. The callback must not mutate the host builder, service
+    /// collection, module graph, provider, or shared static state. Work targeting
+    /// <see cref="ModuleStartupWorkBarrier.BeforeHostLifecycle"/> or
+    /// <see cref="ModuleStartupWorkBarrier.NoBarrier"/> cannot have a serial commit because the service collection is
+    /// sealed before those barriers. Runtime or I/O work belongs in the Generic Host lifecycle.
     /// Monica rejects asynchronous delegates and does not flow the caller's ambient execution context into workers.
-    /// Capture required module-owned values explicitly. Monica owns execution and propagates every failure at the
-    /// declared checkpoint.
+    /// Capture required module-owned values explicitly. Monica propagates failures at required barriers;
+    /// <see cref="ModuleStartupWorkBarrier.NoBarrier"/> failures remain diagnostic-only.
     /// </remarks>
     /// <exception cref="ArgumentException">
     /// Thrown when <paramref name="name"/> is empty or <paramref name="work"/> is an asynchronous delegate.
     /// </exception>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="work"/> is <see langword="null"/>.</exception>
     /// <exception cref="ArgumentOutOfRangeException">
-    /// Thrown when <paramref name="deadline"/> is not a defined <see cref="ModuleCompositionWorkDeadline"/> value.
+    /// Thrown when <paramref name="barrier"/> is not a defined <see cref="ModuleStartupWorkBarrier"/> value.
     /// </exception>
     /// <exception cref="InvalidOperationException">
     /// Thrown when the module is not the materialized host-owned instance; scheduling does not occur synchronously
     /// on the same thread as that instance's <c>ConfigureBuilder</c>, <c>ConfigureServices</c>,
     /// <c>IterateBusinessTypes</c>, or <c>PostConfigureServices</c> callback; the name is duplicated; the selected
-    /// deadline is unavailable from the active callback; or scheduling is nested from a composition worker.
+    /// barrier is unavailable from the active callback; or scheduling is nested from a startup worker.
     /// </exception>
-    protected void ScheduleCompositionWork(
+    protected void ScheduleStartupWork(
         string name,
         Action work,
-        ModuleCompositionWorkDeadline deadline =
-            ModuleCompositionWorkDeadline.BeforeServiceRegistrationCompletion)
+        ModuleStartupWorkBarrier barrier =
+            ModuleStartupWorkBarrier.BeforeServiceRegistrationCompletion)
     {
-        Application.Modules.ScheduleCompositionWork(this, name, work, commit: null, deadline: deadline);
+        Application.Modules.ScheduleStartupWork(this, name, work, commit: null, barrier);
     }
 
     /// <summary>
     /// Schedules isolated CPU work and a deterministic serial commit that publishes its completed result.
     /// </summary>
     /// <param name="name">A stable name that is unique within the module.</param>
-    /// <param name="work">The synchronous work Monica should execute on a bounded composition worker.</param>
+    /// <param name="work">The synchronous work Monica should execute on a bounded startup worker.</param>
     /// <param name="commit">
     /// The synchronous, lightweight action Monica executes on the serial composition thread after every work item due
-    /// at the checkpoint succeeds. The action may publish module-owned state or mutate the host service collection.
+    /// at the barrier succeeds. The action may publish module-owned state or mutate the host service collection.
     /// </param>
-    /// <param name="deadline">The checkpoint that waits for the worker and owns the serial commit.</param>
+    /// <param name="barrier">The composition barrier that waits for the worker and owns the serial commit.</param>
     /// <remarks>
     /// Monica executes successful commits in module registration and work submission order before the next serial
-    /// composition phase begins. If any worker due at the checkpoint fails, no commit at that checkpoint runs. Commit
-    /// actions must not perform I/O, launch asynchronous work, or schedule additional composition work.
+    /// composition phase begins. If any worker due at the barrier fails, no commit at that barrier runs. Commit
+    /// actions must not perform I/O, launch asynchronous work, or schedule additional startup work.
     /// </remarks>
     /// <exception cref="ArgumentException">
     /// Thrown when <paramref name="name"/> is empty or either delegate is asynchronous.
@@ -99,20 +101,21 @@ public abstract class ModuleBase : IModule
     /// Thrown when <paramref name="work"/> or <paramref name="commit"/> is <see langword="null"/>.
     /// </exception>
     /// <exception cref="ArgumentOutOfRangeException">
-    /// Thrown when <paramref name="deadline"/> is not a defined <see cref="ModuleCompositionWorkDeadline"/> value.
+    /// Thrown when <paramref name="barrier"/> is not a defined <see cref="ModuleStartupWorkBarrier"/> value.
     /// </exception>
     /// <exception cref="InvalidOperationException">
-    /// Thrown for the same ownership, callback, duplicate-name, and deadline violations as the worker-only overload.
+    /// Thrown for the same ownership, callback, duplicate-name, and barrier violations as the worker-only overload,
+    /// or when a serial commit targets a barrier after service registration.
     /// </exception>
-    protected void ScheduleCompositionWork(
+    protected void ScheduleStartupWork(
         string name,
         Action work,
         Action commit,
-        ModuleCompositionWorkDeadline deadline =
-            ModuleCompositionWorkDeadline.BeforeServiceRegistrationCompletion)
+        ModuleStartupWorkBarrier barrier =
+            ModuleStartupWorkBarrier.BeforeServiceRegistrationCompletion)
     {
         ArgumentNullException.ThrowIfNull(commit);
-        Application.Modules.ScheduleCompositionWork(this, name, work, commit, deadline);
+        Application.Modules.ScheduleStartupWork(this, name, work, commit, barrier);
     }
 
     /// <summary>
