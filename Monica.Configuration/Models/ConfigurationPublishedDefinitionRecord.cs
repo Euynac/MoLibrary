@@ -63,6 +63,11 @@ public sealed record ConfigurationPublishedDefinitionRecord
     public int DefinitionRevision { get; init; }
 
     /// <summary>
+    /// Gets the lifecycle derived from current logical-publisher state.
+    /// </summary>
+    public ConfigurationDefinitionLifecycleState LifecycleState { get; init; }
+
+    /// <summary>
     /// Gets the persisted schema hash.
     /// </summary>
     public required string SchemaHash { get; init; }
@@ -83,7 +88,7 @@ public sealed record ConfigurationPublishedDefinitionRecord
     {
         return $"{nameof(ConfigurationPublishedDefinitionRecord)} {{ StoreKey = {StoreKey}, "
                + $"DefinitionKey = {DefinitionKey}, FromProject = {FromProject}, SchemaVersion = {SchemaVersion}, "
-               + $"DefinitionRevision = {DefinitionRevision}, "
+               + $"DefinitionRevision = {DefinitionRevision}, LifecycleState = {LifecycleState}, "
                + $"SchemaHash = {SchemaHash}, SchemaJson = <redacted> }}";
     }
 }

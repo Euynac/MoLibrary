@@ -35,15 +35,24 @@
 }
 
 .configuration-definition-list-toolbar {
-    display: flex;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
     align-items: flex-start;
     gap: 0.5rem;
     min-width: 0;
 }
 
 .configuration-definition-list-search {
-    flex: 1 1 auto;
+    grid-column: 1 / -1;
     min-width: 0;
+}
+
+.configuration-definition-list-lifecycle-filter {
+    min-width: 0;
+}
+
+.configuration-definition-list-lifecycle-filter ::deep .mud-input-control {
+    width: 100%;
 }
 
 .configuration-definition-list-group-toggle {
@@ -186,10 +195,12 @@
 
 @media (max-width: 599.98px) {
     .configuration-definition-list-toolbar {
-        flex-direction: column;
+        grid-template-columns: minmax(0, 1fr);
         align-items: stretch;
     }
 
+    .configuration-definition-list-search,
+    .configuration-definition-list-lifecycle-filter,
     .configuration-definition-list-group-toggle,
     .configuration-definition-list-group-toggle ::deep .mud-tooltip-root,
     .configuration-definition-list-group-toggle ::deep .mud-button-root {

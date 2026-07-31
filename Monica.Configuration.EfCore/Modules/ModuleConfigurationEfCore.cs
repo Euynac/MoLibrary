@@ -99,6 +99,8 @@ public static class ModuleConfigurationEfCoreBuilderExtensions
             serviceProvider.GetRequiredService<DatabaseConfigurationHistoryStore>()));
         services.Replace(ServiceDescriptor.Singleton<IConfigurationMetadataStore>(serviceProvider =>
             serviceProvider.GetRequiredService<DatabaseConfigurationMetadataStore>()));
+        services.Replace(ServiceDescriptor.Singleton<IConfigurationDefinitionMaintenanceStore>(serviceProvider =>
+            serviceProvider.GetRequiredService<DatabaseConfigurationMetadataStore>()));
         services.Replace(ServiceDescriptor.Singleton<IConfigurationUnifiedVersionStore>(serviceProvider =>
             serviceProvider.GetRequiredService<DatabaseConfigurationUnifiedVersionStore>()));
         services.Replace(ServiceDescriptor.Singleton<IConfigurationMutationBatchStore>(serviceProvider =>

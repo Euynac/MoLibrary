@@ -1,0 +1,160 @@
+@inject IStringLocalizer<ConfigurationUIResource> L
+
+<MudDialog>
+    <DialogContent>
+        <div class="configuration-definition-purge-content">
+            <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined">
+                @L["DefinitionPurge:Warning"]
+            </MudAlert>
+
+            <div class="configuration-definition-purge-identity">
+                <div>
+                    <MudText Typo="Typo.subtitle1">@Preview.DisplayName</MudText>
+                    <MudText Typo="Typo.caption" Color="Color.Secondary">@Preview.DefinitionKey</MudText>
+                </div>
+                <MudStack Row="true" Wrap="Wrap.Wrap" AlignItems="AlignItems.Center" Spacing="1">
+                    <MudChip T="string"
+                             Size="Size.Small"
+                             Color="Color.Warning"
+                             Variant="Variant.Filled"
+                             Icon="@Icons.Material.Filled.Inventory2">
+                        @L["State:Definitions:Retired"]
+                    </MudChip>
+                    <MudChip T="int" Size="Size.Small" Color="Color.Primary" Variant="Variant.Outlined">
+                        @L["DefinitionPurge:Revision", Preview.DefinitionRevision]
+                    </MudChip>
+                </MudStack>
+            </div>
+
+            @if (!Preview.CanPurge)
+            {
+                <MudAlert Severity="Severity.Error">
+                    @PurgeBlockedMessage
+                </MudAlert>
+            }
+
+            <div class="configuration-definition-purge-impact-grid">
+                <MudPaper Outlined="true" Class="pa-3 configuration-definition-purge-impact-panel">
+                    <div class="configuration-definition-purge-section-title">
+                        <MudIcon Icon="@Icons.Material.Filled.DeleteForever" Color="Color.Error" />
+                        <MudText Typo="Typo.subtitle2">@L["DefinitionPurge:Deleted:Title"]</MudText>
+                    </div>
+                    <div class="configuration-definition-purge-impact-list">
+                        <div class="configuration-definition-purge-impact-row">
+                            <MudText Typo="Typo.body2">@L["DefinitionPurge:Deleted:DefinitionMetadata"]</MudText>
+                            <MudChip T="int" Size="Size.Small" Color="Color.Error" Variant="Variant.Outlined">1</MudChip>
+                        </div>
+                        <div class="configuration-definition-purge-impact-row">
+                            <MudText Typo="Typo.body2">@L["DefinitionPurge:Deleted:PublicationHistory"]</MudText>
+                            <MudChip T="int" Size="Size.Small" Color="Color.Error" Variant="Variant.Outlined">
+                                @Preview.PublicationHistoryCount
+                            </MudChip>
+                        </div>
+                        <div class="configuration-definition-purge-impact-row">
+                            <MudText Typo="Typo.body2">@EffectiveValueLabel</MudText>
+                            <MudChip T="int" Size="Size.Small" Color="Color.Error" Variant="Variant.Outlined">
+                                @(Preview.HasEffectiveValue ? 1 : 0)
+                            </MudChip>
+                        </div>
+                    </div>
+                </MudPaper>
+
+                <MudPaper Outlined="true" Class="pa-3 configuration-definition-purge-impact-panel">
+                    <div class="configuration-definition-purge-section-title">
+                        <MudIcon Icon="@Icons.Material.Filled.VerifiedUser" Color="Color.Info" />
+                        <MudText Typo="Typo.subtitle2">@L["DefinitionPurge:Retained:Title"]</MudText>
+                    </div>
+                    <div class="configuration-definition-purge-impact-list">
+                        <div class="configuration-definition-purge-impact-row">
+                            <MudText Typo="Typo.body2">@L["DefinitionPurge:Retained:ValueHistory"]</MudText>
+                            <MudChip T="int" Size="Size.Small" Color="Color.Info" Variant="Variant.Outlined">
+                                @Preview.RetainedValueHistoryCount
+                            </MudChip>
+                        </div>
+                        <div class="configuration-definition-purge-impact-row">
+                            <MudText Typo="Typo.body2">@L["DefinitionPurge:Retained:MutationGroups"]</MudText>
+                            <MudChip T="int" Size="Size.Small" Color="Color.Info" Variant="Variant.Outlined">
+                                @Preview.RetainedMutationGroupCount
+                            </MudChip>
+                        </div>
+                        <div class="configuration-definition-purge-impact-row">
+                            <MudText Typo="Typo.body2">@L["DefinitionPurge:Retained:UnifiedVersions"]</MudText>
+                            <MudChip T="int" Size="Size.Small" Color="Color.Info" Variant="Variant.Outlined">
+                                @Preview.RetainedUnifiedVersionCount
+                            </MudChip>
+                        </div>
+                    </div>
+                </MudPaper>
+            </div>
+
+            <MudAlert Severity="Severity.Info" Dense="true">
+                @L["DefinitionPurge:AuditNotice"]
+            </MudAlert>
+
+            <MudCheckBox T="bool"
+                         @bind-Value="_confirmed"
+                         Color="Color.Error"
+                         Disabled="@(!Preview.CanPurge)"
+                         Label="@L["DefinitionPurge:Confirmation"]" />
+        </div>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel">@L["Common:Actions:Cancel"]</MudButton>
+        <MudButton Color="Color.Error"
+                   Variant="Variant.Filled"
+                   StartIcon="@Icons.Material.Filled.DeleteForever"
+                   Disabled="@(!Preview.CanPurge || !_confirmed)"
+                   OnClick="Confirm">
+            @L["DefinitionPurge:Actions:Purge"]
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] private IMudDialogInstance MudDialog { get; set; } = null!;
+
+    [Parameter, EditorRequired] public ConfigurationDefinitionPurgePreview Preview { get; set; } = null!;
+
+    private bool _confirmed;
+
+    private string EffectiveValueLabel => Preview.EffectiveValueVersion is { } version
+        ? L["DefinitionPurge:Deleted:EffectiveValueVersion", version]
+        : L["DefinitionPurge:Deleted:EffectiveValue"];
+
+    private string PurgeBlockedMessage
+    {
+        get
+        {
+            if (Preview.IsLocallyRegistered)
+            {
+                return L["DefinitionPurge:Blocked:LocalRegistration"];
+            }
+
+            if (Preview.ActivePublisherKeys.Count > 0)
+            {
+                return L["DefinitionPurge:Blocked:ActivePublishers", string.Join(", ", Preview.ActivePublisherKeys)];
+            }
+
+            return L["DefinitionPurge:Blocked:NotRetired"];
+        }
+    }
+
+    private void Cancel()
+    {
+        MudDialog.Cancel();
+    }
+
+    private void Confirm()
+    {
+        if (!Preview.CanPurge || !_confirmed)
+        {
+            return;
+        }
+
+        MudDialog.Close(DialogResult.Ok(new ConfigurationDefinitionPurgeRequest
+        {
+            DefinitionKey = Preview.DefinitionKey,
+            ExpectedDefinitionRevision = Preview.DefinitionRevision
+        }));
+    }
+}

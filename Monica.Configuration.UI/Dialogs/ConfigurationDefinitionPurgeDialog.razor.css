@@ -1,0 +1,62 @@
+.configuration-definition-purge-content {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    min-width: 0;
+    width: 100%;
+}
+
+.configuration-definition-purge-identity,
+.configuration-definition-purge-section-title,
+.configuration-definition-purge-impact-row {
+    align-items: center;
+    display: flex;
+    gap: 0.75rem;
+    min-width: 0;
+}
+
+.configuration-definition-purge-identity,
+.configuration-definition-purge-impact-row {
+    justify-content: space-between;
+}
+
+.configuration-definition-purge-identity > div:first-child,
+.configuration-definition-purge-impact-row ::deep .mud-typography {
+    min-width: 0;
+    overflow-wrap: anywhere;
+}
+
+.configuration-definition-purge-impact-grid {
+    display: grid;
+    gap: 1rem;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    min-width: 0;
+}
+
+.configuration-definition-purge-impact-grid ::deep .configuration-definition-purge-impact-panel {
+    min-width: 0;
+    width: 100%;
+}
+
+.configuration-definition-purge-impact-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    margin-top: 1rem;
+    min-width: 0;
+}
+
+.configuration-definition-purge-impact-row ::deep .mud-chip {
+    flex: 0 0 auto;
+}
+
+@media (max-width: 599.98px) {
+    .configuration-definition-purge-identity {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+
+    .configuration-definition-purge-impact-grid {
+        grid-template-columns: minmax(0, 1fr);
+    }
+}

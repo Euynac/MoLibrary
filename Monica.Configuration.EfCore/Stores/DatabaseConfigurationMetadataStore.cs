@@ -3,6 +3,7 @@ using Monica.Configuration.Abstractions;
 using Monica.Configuration.EfCore.DbContext;
 using Monica.Configuration.EfCore.Entities;
 using Monica.Configuration.EfCore.Stores.Support;
+using Monica.Configuration.Exceptions;
 using Monica.Configuration.Models;
 
 namespace Monica.Configuration.EfCore.Stores;
@@ -11,7 +12,7 @@ namespace Monica.Configuration.EfCore.Stores;
 /// Persists and reads published configuration definition metadata.
 /// </summary>
 internal sealed class DatabaseConfigurationMetadataStore(ConfigurationDatabase database)
-    : IConfigurationMetadataStore
+    : IConfigurationMetadataStore, IConfigurationDefinitionMaintenanceStore
 {
     private const int MAX_PUBLISH_RETRY_COUNT = 5;
     private const int PUBLISH_RETRY_BASE_DELAY_MS = 25;
@@ -74,7 +75,13 @@ internal sealed class DatabaseConfigurationMetadataStore(ConfigurationDatabase d
                 .OrderBy(definition => definition.DisplayName)
                 .ThenBy(definition => definition.DefinitionKey)
                 .ToArrayAsync(token);
-            return ToPublishedDefinitionEntries(entities, token);
+            var activeDefinitionIdentities = (await dbContext.ConfigurationDefinitionPublisherStates
+                    .AsNoTracking()
+                    .Select(static state => state.DefinitionIdentity)
+                    .Distinct()
+                    .ToArrayAsync(token))
+                .ToHashSet(StringComparer.Ordinal);
+            return ToPublishedDefinitionEntries(entities, activeDefinitionIdentities, token);
         }, cancellationToken);
     }
 
@@ -92,7 +99,13 @@ internal sealed class DatabaseConfigurationMetadataStore(ConfigurationDatabase d
                 .OrderBy(definition => definition.DefinitionKey)
                 .Take(2)
                 .ToArrayAsync(token);
-            return ToPublishedDefinitionEntries(entities, token).FirstOrDefault();
+            var isActive = await dbContext.ConfigurationDefinitionPublisherStates
+                .AsNoTracking()
+                .AnyAsync(state => state.DefinitionIdentity == definitionIdentity, token);
+            var activeDefinitionIdentities = isActive
+                ? new HashSet<string>(StringComparer.Ordinal) { definitionIdentity }
+                : new HashSet<string>(StringComparer.Ordinal);
+            return ToPublishedDefinitionEntries(entities, activeDefinitionIdentities, token).FirstOrDefault();
         }, cancellationToken);
     }
 
@@ -139,6 +152,9 @@ internal sealed class DatabaseConfigurationMetadataStore(ConfigurationDatabase d
             return new ConfigurationDefinitionPublicationOverview
             {
                 DefinitionKey = definition.DefinitionKey,
+                LifecycleState = publisherStates.Length == 0
+                    ? ConfigurationDefinitionLifecycleState.Retired
+                    : ConfigurationDefinitionLifecycleState.Active,
                 DefinitionRevision = definition.DefinitionRevision,
                 SchemaVersion = definition.SchemaVersion,
                 ReloadBehavior = reloadBehavior,
@@ -149,6 +165,98 @@ internal sealed class DatabaseConfigurationMetadataStore(ConfigurationDatabase d
                     .Select(ConfigurationHistoryMapper.ToPublishHistory)
                     .ToArray()
             };
+        }, cancellationToken);
+    }
+
+    /// <inheritdoc />
+    public Task<ConfigurationDefinitionPurgePreview> PreviewDefinitionPurgeAsync(
+        string definitionKey,
+        CancellationToken cancellationToken)
+    {
+        var definitionIdentity = ConfigurationDefinitionIdentity.Compute(definitionKey);
+        return database.ExecuteAsync(
+            (dbContext, token) => BuildPurgePreviewAsync(dbContext, definitionIdentity, definitionKey, token),
+            cancellationToken);
+    }
+
+    /// <inheritdoc />
+    public async Task PurgeDefinitionAsync(
+        ConfigurationDefinitionPurgeRequest request,
+        CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+        var definitionIdentity = ConfigurationDefinitionIdentity.Compute(request.DefinitionKey);
+        var definitionWasObserved = false;
+
+        _ = await database.ExecuteResilientAsync(async (dbContext, token) =>
+        {
+            await using var transaction = await dbContext.Database.BeginTransactionAsync(token);
+
+            // Publication, mutation, and unified-version operations each own one lock. Taking them in stable order
+            // makes the lifecycle recheck and current-value deletion one indivisible maintenance operation.
+            await ConfigurationDatabaseLock.AcquireAsync(
+                dbContext,
+                ConfigurationStoreLockEntity.DefinitionPublicationLockKey,
+                token);
+            await ConfigurationDatabaseLock.AcquireAsync(
+                dbContext,
+                ConfigurationStoreLockEntity.MutationGroupsLockKey,
+                token);
+            await ConfigurationDatabaseLock.AcquireAsync(
+                dbContext,
+                ConfigurationStoreLockEntity.UnifiedVersionsLockKey,
+                token);
+
+            var definition = await dbContext.ConfigurationDefinitions
+                .SingleOrDefaultAsync(candidate => candidate.DefinitionIdentity == definitionIdentity, token);
+            if (definition is null)
+            {
+                if (!definitionWasObserved)
+                {
+                    throw new KeyNotFoundException(
+                        $"Published configuration definition '{request.DefinitionKey}' was not found.");
+                }
+
+                // A retry after an ambiguous commit observes the already-completed purge as success.
+                await transaction.RollbackAsync(token);
+                return true;
+            }
+
+            definitionWasObserved = true;
+            var activePublisherKeys = await dbContext.ConfigurationDefinitionPublisherStates
+                .AsNoTracking()
+                .Where(state => state.DefinitionIdentity == definitionIdentity)
+                .Select(static state => state.PublisherKey)
+                .Distinct()
+                .OrderBy(static publisherKey => publisherKey)
+                .ToArrayAsync(token);
+            if (activePublisherKeys.Length != 0)
+            {
+                throw new ConfigurationConcurrencyConflictException(
+                    $"Configuration definition '{definition.DefinitionKey}' is active and cannot be purged. "
+                    + $"Current publishers: {string.Join(", ", activePublisherKeys)}.");
+            }
+
+            if (definition.DefinitionRevision != request.ExpectedDefinitionRevision)
+            {
+                throw new ConfigurationConcurrencyConflictException(
+                    $"Expected definition revision {request.ExpectedDefinitionRevision} for "
+                    + $"'{definition.DefinitionKey}', but current revision is {definition.DefinitionRevision}.");
+            }
+
+            var publicationHistories = await dbContext.ConfigurationDefinitionPublishHistories
+                .Where(history => history.DefinitionIdentity == definitionIdentity)
+                .ToArrayAsync(token);
+            var effectiveValues = await dbContext.ConfigurationEffectiveValues
+                .Where(value => value.DefinitionIdentity == definitionIdentity)
+                .ToArrayAsync(token);
+
+            dbContext.ConfigurationDefinitionPublishHistories.RemoveRange(publicationHistories);
+            dbContext.ConfigurationEffectiveValues.RemoveRange(effectiveValues);
+            dbContext.ConfigurationDefinitions.Remove(definition);
+            await dbContext.SaveChangesAsync(token);
+            await transaction.CommitAsync(token);
+            return true;
         }, cancellationToken);
     }
 
@@ -344,13 +452,76 @@ internal sealed class DatabaseConfigurationMetadataStore(ConfigurationDatabase d
         }
     }
 
+    private static async Task<ConfigurationDefinitionPurgePreview> BuildPurgePreviewAsync(
+        ConfigurationDbContext dbContext,
+        string definitionIdentity,
+        string requestedDefinitionKey,
+        CancellationToken cancellationToken)
+    {
+        var definition = await dbContext.ConfigurationDefinitions
+            .AsNoTracking()
+            .SingleOrDefaultAsync(candidate => candidate.DefinitionIdentity == definitionIdentity, cancellationToken)
+            ?? throw new KeyNotFoundException(
+                $"Published configuration definition '{requestedDefinitionKey}' was not found.");
+        var activePublisherKeys = await dbContext.ConfigurationDefinitionPublisherStates
+            .AsNoTracking()
+            .Where(state => state.DefinitionIdentity == definitionIdentity)
+            .Select(static state => state.PublisherKey)
+            .Distinct()
+            .OrderBy(static publisherKey => publisherKey)
+            .ToArrayAsync(cancellationToken);
+        var effectiveValueVersion = await dbContext.ConfigurationEffectiveValues
+            .AsNoTracking()
+            .Where(value => value.DefinitionIdentity == definitionIdentity)
+            .Select(static value => (long?)value.Version)
+            .SingleOrDefaultAsync(cancellationToken);
+        var publicationHistoryCount = await dbContext.ConfigurationDefinitionPublishHistories
+            .AsNoTracking()
+            .CountAsync(history => history.DefinitionIdentity == definitionIdentity, cancellationToken);
+        var retainedValueHistoryCount = await dbContext.ConfigurationValueHistories
+            .AsNoTracking()
+            .CountAsync(history => history.DefinitionIdentity == definitionIdentity, cancellationToken);
+        var retainedMutationGroupCount = await dbContext.ConfigurationValueHistories
+            .AsNoTracking()
+            .Where(history => history.DefinitionIdentity == definitionIdentity && history.MutationGroupId != null)
+            .Select(static history => history.MutationGroupId)
+            .Distinct()
+            .CountAsync(cancellationToken);
+        var retainedUnifiedVersionCount = await dbContext.ConfigurationUnifiedVersionDocuments
+            .AsNoTracking()
+            .Where(document => document.DefinitionIdentity == definitionIdentity)
+            .Select(static document => document.Version)
+            .Distinct()
+            .CountAsync(cancellationToken);
+
+        return new ConfigurationDefinitionPurgePreview
+        {
+            DefinitionKey = definition.DefinitionKey,
+            DisplayName = definition.DisplayName,
+            LifecycleState = activePublisherKeys.Length == 0
+                ? ConfigurationDefinitionLifecycleState.Retired
+                : ConfigurationDefinitionLifecycleState.Active,
+            DefinitionRevision = definition.DefinitionRevision,
+            ActivePublisherKeys = activePublisherKeys,
+            IsLocallyRegistered = false,
+            HasEffectiveValue = effectiveValueVersion is not null,
+            EffectiveValueVersion = effectiveValueVersion,
+            PublicationHistoryCount = publicationHistoryCount,
+            RetainedValueHistoryCount = retainedValueHistoryCount,
+            RetainedMutationGroupCount = retainedMutationGroupCount,
+            RetainedUnifiedVersionCount = retainedUnifiedVersionCount
+        };
+    }
+
     private static ConfigurationPublishedDefinitionEntry ToPublishedDefinitionEntry(
-        ConfigurationDefinitionEntity entity)
+        ConfigurationDefinitionEntity entity,
+        ConfigurationDefinitionLifecycleState lifecycleState)
     {
         return ConfigurationPublishedDefinitionEntry.Materialize(new ConfigurationPublishedDefinitionRecord
         {
             StoreKey = ConfigurationDatabase.Descriptor.StoreKey,
             DefinitionKey = entity.DefinitionKey,
+            LifecycleState = lifecycleState,
             SectionPath = entity.SectionPath,
             DisplayName = entity.DisplayName,
             Description = entity.Description,
@@ -367,13 +538,18 @@ internal sealed class DatabaseConfigurationMetadataStore(ConfigurationDatabase d
 
     private static IReadOnlyList<ConfigurationPublishedDefinitionEntry> ToPublishedDefinitionEntries(
         IReadOnlyList<ConfigurationDefinitionEntity> entities,
+        IReadOnlySet<string> activeDefinitionIdentities,
         CancellationToken cancellationToken)
     {
         var entries = new List<ConfigurationPublishedDefinitionEntry>(entities.Count);
         foreach (var entity in entities)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            entries.Add(ToPublishedDefinitionEntry(entity));
+            entries.Add(ToPublishedDefinitionEntry(
+                entity,
+                activeDefinitionIdentities.Contains(entity.DefinitionIdentity)
+                    ? ConfigurationDefinitionLifecycleState.Active
+                    : ConfigurationDefinitionLifecycleState.Retired));
         }
 
         var duplicateKeys = entries

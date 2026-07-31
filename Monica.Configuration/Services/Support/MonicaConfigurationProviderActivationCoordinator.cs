@@ -1,4 +1,3 @@
-using System.Runtime.ExceptionServices;
 using Monica.Configuration.Abstractions;
 using Monica.Configuration.Abstractions.Internal;
 using Monica.Configuration.Metrics;
@@ -26,7 +25,7 @@ internal sealed class MonicaConfigurationProviderActivationCoordinator(
     private bool _activated;
 
     /// <summary>
-    /// Activates the projection provider and publishes local configuration metadata.
+    /// Publishes local configuration metadata and then activates the projection provider.
     /// </summary>
     /// <param name="cancellationToken">Cancellation token.</param>
     public async Task ActivateAsync(CancellationToken cancellationToken)
@@ -39,7 +38,6 @@ internal sealed class MonicaConfigurationProviderActivationCoordinator(
                 return;
             }
 
-            accessor.ServiceProvider = serviceProvider;
             await metricsRecorder.MeasureStartupStageAsync(
                 ConfigurationStartupStage.ProviderActivation,
                 () => ActivateProviderAsync(cancellationToken));
@@ -53,45 +51,38 @@ internal sealed class MonicaConfigurationProviderActivationCoordinator(
 
     private async Task ActivateProviderAsync(CancellationToken cancellationToken)
     {
-        var publicationTask = CaptureStageFailureAsync(
-            ConfigurationStartupStage.MetadataPublication,
-            () => PublishMetadataAsync(cancellationToken));
-        var projectionTask = CaptureStageFailureAsync(
-            ConfigurationStartupStage.ProjectionReload,
-            () => reloadCoordinator.ReloadMonicaProjectionAsync(cancellationToken));
-        var failures = await Task.WhenAll(publicationTask, projectionTask);
-        var publicationFailure = failures[0];
-        var projectionFailure = failures[1];
-
-        if (publicationFailure is not null)
-        {
-            stateTracker.RecordFailure(metadataStore.Descriptor.StoreKey, publicationFailure);
-        }
-        else if (projectionFailure is null
-                 || !string.Equals(
-                     metadataStore.Descriptor.StoreKey,
-                     effectiveValueStore.Descriptor.StoreKey,
-                     StringComparison.Ordinal))
-        {
-            // A shared store key must retain a projection failure. Independent stores can publish their own health.
-            stateTracker.RecordSuccess(metadataStore.Descriptor.StoreKey);
-        }
-
-        ThrowIfFailed(failures);
-    }
-
-    private async Task<Exception?> CaptureStageFailureAsync(
-        ConfigurationStartupStage stage,
-        Func<Task> operation)
-    {
         try
         {
-            await metricsRecorder.MeasureStartupStageAsync(stage, operation);
-            return null;
+            await metricsRecorder.MeasureStartupStageAsync(
+                ConfigurationStartupStage.MetadataPublication,
+                () => PublishMetadataAsync(cancellationToken));
         }
         catch (Exception exception)
         {
-            return exception;
+            stateTracker.RecordFailure(metadataStore.Descriptor.StoreKey, exception);
+            throw;
+        }
+
+        var storesShareHealth = string.Equals(
+            metadataStore.Descriptor.StoreKey,
+            effectiveValueStore.Descriptor.StoreKey,
+            StringComparison.Ordinal);
+        if (!storesShareHealth)
+        {
+            stateTracker.RecordSuccess(metadataStore.Descriptor.StoreKey);
+        }
+
+        // Publication establishes the publisher-state guard before the provider can seed an effective-value document.
+        // Exposing the service provider earlier would allow a concurrent projection reload to recreate a retired key
+        // while another process is still permitted to purge it.
+        accessor.ServiceProvider = serviceProvider;
+        await metricsRecorder.MeasureStartupStageAsync(
+            ConfigurationStartupStage.ProjectionReload,
+            () => reloadCoordinator.ReloadMonicaProjectionAsync(cancellationToken));
+
+        if (storesShareHealth)
+        {
+            stateTracker.RecordSuccess(metadataStore.Descriptor.StoreKey);
         }
     }
 
@@ -104,27 +95,4 @@ internal sealed class MonicaConfigurationProviderActivationCoordinator(
         definitionResolver.InvalidateReadSnapshot();
     }
 
-    private static void ThrowIfFailed(IReadOnlyList<Exception?> stageFailures)
-    {
-        var failures = stageFailures.OfType<Exception>().ToArray();
-        if (failures.Length == 0)
-        {
-            return;
-        }
-
-        var faults = failures
-            .Where(static exception => exception is not OperationCanceledException)
-            .ToArray();
-        if (faults.Length == 1)
-        {
-            ExceptionDispatchInfo.Capture(faults[0]).Throw();
-        }
-
-        if (faults.Length > 1)
-        {
-            throw new AggregateException("Configuration provider activation failed in multiple concurrent stages.", faults);
-        }
-
-        ExceptionDispatchInfo.Capture(failures[0]).Throw();
-    }
 }

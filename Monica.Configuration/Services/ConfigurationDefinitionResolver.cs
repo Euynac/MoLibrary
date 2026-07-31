@@ -22,7 +22,8 @@ public sealed class ConfigurationDefinitionResolver(
     private long _readSnapshotGeneration;
 
     /// <summary>
-    /// Gets a fault-isolated catalog for diagnostic UI scenarios without weakening authoritative resolution.
+    /// Gets a fault-isolated catalog of active and retired definitions for diagnostic UI scenarios without weakening
+    /// authoritative resolution.
     /// </summary>
     internal async Task<ConfigurationDefinitionCatalogSnapshot> GetDiagnosticCatalogAsync(
         CancellationToken cancellationToken)
@@ -36,7 +37,8 @@ public sealed class ConfigurationDefinitionResolver(
             entriesByKey[definition.DefinitionKey] = new ConfigurationDefinitionCatalogEntry
             {
                 Definition = definition,
-                Availability = ConfigurationDefinitionAvailability.Available
+                Availability = ConfigurationDefinitionAvailability.Available,
+                LifecycleState = ConfigurationDefinitionLifecycleState.Active
             };
         }
 
@@ -83,7 +85,8 @@ public sealed class ConfigurationDefinitionResolver(
                     {
                         PublishedMetadata = publishedEntry.Metadata,
                         Diagnostic = publishedEntry.Diagnostic,
-                        Availability = ConfigurationDefinitionAvailability.AvailableWithMetadataFault
+                        Availability = ConfigurationDefinitionAvailability.AvailableWithMetadataFault,
+                        LifecycleState = ConfigurationDefinitionLifecycleState.Active
                     };
                 }
                 else
@@ -92,7 +95,8 @@ public sealed class ConfigurationDefinitionResolver(
                     {
                         PublishedMetadata = publishedEntry.Metadata,
                         Diagnostic = publishedEntry.Diagnostic,
-                        Availability = ConfigurationDefinitionAvailability.Unavailable
+                        Availability = ConfigurationDefinitionAvailability.Unavailable,
+                        LifecycleState = publishedEntry.Metadata.LifecycleState
                     };
                 }
 
@@ -105,9 +109,13 @@ public sealed class ConfigurationDefinitionResolver(
             {
                 entriesByKey[definitionKey] = new ConfigurationDefinitionCatalogEntry
                 {
-                    Definition = MergePublishedMetadata(localDefinition, publishedDefinition),
+                    Definition = MergePublishedMetadata(
+                        localDefinition,
+                        publishedDefinition,
+                        publishedEntry.Metadata.LifecycleState),
                     PublishedMetadata = publishedEntry.Metadata,
-                    Availability = ConfigurationDefinitionAvailability.Available
+                    Availability = ConfigurationDefinitionAvailability.Available,
+                    LifecycleState = ConfigurationDefinitionLifecycleState.Active
                 };
                 continue;
             }
@@ -116,7 +124,8 @@ public sealed class ConfigurationDefinitionResolver(
             {
                 Definition = publishedDefinition with { Origin = ConfigurationDefinitionOrigin.PublishedMetadata },
                 PublishedMetadata = publishedEntry.Metadata,
-                Availability = ConfigurationDefinitionAvailability.Available
+                Availability = ConfigurationDefinitionAvailability.Available,
+                LifecycleState = publishedEntry.Metadata.LifecycleState
             };
         }
 
@@ -129,20 +138,11 @@ public sealed class ConfigurationDefinitionResolver(
     }
 
     /// <summary>
-    /// Gets all locally scanned and published definitions, preferring local metadata on key collisions.
+    /// Gets all operational definitions, preferring local metadata on key collisions and excluding publisherless
+    /// retired definitions.
     /// </summary>
     public async Task<IReadOnlyList<ConfigurationDefinition>> GetMergedDefinitionsAsync(CancellationToken cancellationToken)
     {
-        IReadOnlyList<ConfigurationPublishedDefinitionEntry> publishedEntries = metadataStore is null
-            ? []
-            : await metadataStore.ListPublishedDefinitionEntriesAsync(cancellationToken);
-        var publishedDefinitions = new List<ConfigurationDefinition>(publishedEntries.Count);
-        foreach (var entry in publishedEntries)
-        {
-            cancellationToken.ThrowIfCancellationRequested();
-            publishedDefinitions.Add(entry.RequireDefinition());
-        }
-
         var localDefinitions = definitionRegistry.GetAll()
             .ToArray();
         var definitionsByKey = new Dictionary<string, ConfigurationDefinition>(StringComparer.OrdinalIgnoreCase);
@@ -152,12 +152,25 @@ public sealed class ConfigurationDefinitionResolver(
             definitionsByKey[definition.DefinitionKey] = definition with { Origin = ConfigurationDefinitionOrigin.LocalScan };
         }
 
-        foreach (var published in publishedDefinitions)
+        IReadOnlyList<ConfigurationPublishedDefinitionEntry> publishedEntries = metadataStore is null
+            ? []
+            : await metadataStore.ListPublishedDefinitionEntriesAsync(cancellationToken);
+        foreach (var entry in publishedEntries)
         {
             cancellationToken.ThrowIfCancellationRequested();
+            if (entry.Metadata.LifecycleState == ConfigurationDefinitionLifecycleState.Retired
+                && !definitionsByKey.ContainsKey(entry.Metadata.DefinitionKey))
+            {
+                continue;
+            }
+
+            var published = entry.RequireDefinition();
             if (definitionsByKey.TryGetValue(published.DefinitionKey, out var localDefinition))
             {
-                definitionsByKey[published.DefinitionKey] = MergePublishedMetadata(localDefinition, published);
+                definitionsByKey[published.DefinitionKey] = MergePublishedMetadata(
+                    localDefinition,
+                    published,
+                    entry.Metadata.LifecycleState);
                 continue;
             }
 
@@ -171,7 +184,7 @@ public sealed class ConfigurationDefinitionResolver(
     }
 
     /// <summary>
-    /// Gets one local or published definition, preferring local metadata.
+    /// Gets one active local or published definition, preferring local metadata.
     /// </summary>
     public async Task<ConfigurationDefinition> GetRequiredAsync(string definitionKey, CancellationToken cancellationToken)
     {
@@ -182,7 +195,8 @@ public sealed class ConfigurationDefinitionResolver(
             {
                 return MergePublishedMetadata(
                     local with { Origin = ConfigurationDefinitionOrigin.LocalScan },
-                    publishedDefinition: null);
+                    publishedDefinition: null,
+                    publishedLifecycleState: null);
             }
 
             var localPublishedEntry = await metadataStore.GetPublishedDefinitionEntryAsync(
@@ -190,7 +204,8 @@ public sealed class ConfigurationDefinitionResolver(
                 cancellationToken);
             return MergePublishedMetadata(
                 local with { Origin = ConfigurationDefinitionOrigin.LocalScan },
-                localPublishedEntry?.RequireDefinition());
+                localPublishedEntry?.RequireDefinition(),
+                localPublishedEntry?.Metadata.LifecycleState);
         }
 
         if (metadataStore is null)
@@ -200,6 +215,7 @@ public sealed class ConfigurationDefinitionResolver(
 
         var publishedEntry = await metadataStore.GetPublishedDefinitionEntryAsync(definitionKey, cancellationToken);
         return publishedEntry is null
+               || publishedEntry.Metadata.LifecycleState == ConfigurationDefinitionLifecycleState.Retired
             ? throw new ConfigurationDefinitionNotFoundException(definitionKey)
             : publishedEntry.RequireDefinition() with { Origin = ConfigurationDefinitionOrigin.PublishedMetadata };
     }
@@ -209,7 +225,8 @@ public sealed class ConfigurationDefinitionResolver(
     /// </summary>
     /// <remarks>
     /// This read-optimized path is intended for display and inspection only. Mutation and rollback workflows must use
-    /// <see cref="GetRequiredAsync"/> so schema concurrency validation always starts from authoritative metadata.
+    /// <see cref="GetRequiredAsync"/> so schema concurrency validation always starts from authoritative active metadata.
+    /// Unlike the operational path, this method can return a retired persisted definition for diagnostics.
     /// </remarks>
     internal async Task<ConfigurationDefinition> GetRequiredForReadAsync(
         string definitionKey,
@@ -221,9 +238,13 @@ public sealed class ConfigurationDefinitionResolver(
             snapshot = _readSnapshot;
         }
 
-        return snapshot?.IsFresh is true
-            ? snapshot.GetRequired(definitionKey)
-            : await GetRequiredAsync(definitionKey, cancellationToken);
+        if (snapshot?.IsFresh is true)
+        {
+            return snapshot.GetRequired(definitionKey);
+        }
+
+        var catalog = await GetDiagnosticCatalogAsync(cancellationToken);
+        return ConfigurationDefinitionReadSnapshot.Create(catalog.Entries).GetRequired(definitionKey);
     }
 
     /// <summary>
@@ -240,7 +261,8 @@ public sealed class ConfigurationDefinitionResolver(
 
     private static ConfigurationDefinition MergePublishedMetadata(
         ConfigurationDefinition localDefinition,
-        ConfigurationDefinition? publishedDefinition)
+        ConfigurationDefinition? publishedDefinition,
+        ConfigurationDefinitionLifecycleState? publishedLifecycleState)
     {
         if (publishedDefinition is null)
         {
@@ -255,7 +277,9 @@ public sealed class ConfigurationDefinitionResolver(
         {
             SchemaVersion = ResolveLocalSchemaVersion(localDefinition, publishedDefinition),
             DefinitionRevision = publishedDefinition.DefinitionRevision,
-            ReloadBehavior = ResolveMergedReloadBehavior(localDefinition, publishedDefinition)
+            ReloadBehavior = publishedLifecycleState == ConfigurationDefinitionLifecycleState.Retired
+                ? localDefinition.ReloadBehavior
+                : ResolveMergedReloadBehavior(localDefinition, publishedDefinition)
         };
     }
 

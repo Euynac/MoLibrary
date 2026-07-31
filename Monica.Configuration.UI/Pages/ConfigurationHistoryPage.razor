@@ -757,6 +757,11 @@
         return ResolveDefinitionSummary(definitionKey)?.CanManage is true;
     }
 
+    private bool CanMutateDefinition(string definitionKey)
+    {
+        return ResolveDefinitionSummary(definitionKey)?.CanMutate is true;
+    }
+
     private bool CanRollbackHistory(ConfigurationHistoryDisplayRow history)
     {
         return history.Rows.All(CanRollbackRow);
@@ -765,13 +770,13 @@
     private bool CanRollbackGroup(ConfigurationMutationGroup group)
     {
         return group.Status != ConfigurationMutationGroupStatus.RolledBack
-               && group.DefinitionKeys.All(CanManageDefinition);
+               && group.DefinitionKeys.All(CanMutateDefinition);
     }
 
     private bool CanRollbackRow(ConfigurationValueHistory row)
     {
         var definition = ResolveDefinitionSummary(row.DefinitionKey);
-        return definition is { CanManage: true }
+        return definition is { CanMutate: true }
                && definition.SchemaVersion == row.SchemaVersion
                && !string.IsNullOrWhiteSpace(row.SchemaHash)
                && string.Equals(definition.SchemaHash, row.SchemaHash, StringComparison.Ordinal);
@@ -786,9 +791,14 @@
 
     private string DefinitionFilterLabel(ConfigurationDefinitionSummary definition)
     {
-        return definition.CanManage
-            ? definition.DisplayName
-            : L["History:Filters:UnavailableDefinition", definition.DisplayName].Value;
+        if (!definition.CanManage)
+        {
+            return L["History:Filters:UnavailableDefinition", definition.DisplayName];
+        }
+
+        return definition.LifecycleState == ConfigurationDefinitionLifecycleState.Retired
+            ? L["History:Filters:RetiredDefinition", definition.DisplayName]
+            : definition.DisplayName;
     }
 
     private static ConfigurationNodeDefinition? ResolveNodeByPath(ConfigurationNodeDefinition root, LogicalPath path)

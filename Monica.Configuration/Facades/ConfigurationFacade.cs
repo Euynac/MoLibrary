@@ -16,6 +16,8 @@ namespace Monica.Configuration.Facades;
 /// </summary>
 public sealed class ConfigurationFacade(
     ConfigurationDefinitionResolver definitionResolver,
+    IConfigurationDefinitionRegistry definitionRegistry,
+    IConfigurationDefinitionMaintenanceStore definitionMaintenanceStore,
     IConfigurationMutationGroupApplyService mutationGroupApplyService,
     IConfigurationHistoryService historyService,
     IConfigurationMutationGroupService mutationGroupService,
@@ -35,8 +37,13 @@ public sealed class ConfigurationFacade(
     IConfigurationRuntimeReloadService runtimeReloadService,
     IConfigurationReloadBroadcastService reloadBroadcastService)
 {
+    private readonly ConfigurationDefinitionLifecycleService _definitionLifecycleService = new(
+        definitionRegistry,
+        definitionMaintenanceStore,
+        definitionResolver);
+
     /// <summary>
-    /// Gets all configuration definition summaries.
+    /// Gets active configuration definition summaries for operational consumers.
     /// </summary>
     /// <returns>Definition summaries.</returns>
     public async Task<Res<IReadOnlyList<ConfigurationDefinitionSummary>>> GetDefinitionsAsync()
@@ -56,7 +63,7 @@ public sealed class ConfigurationFacade(
     }
 
     /// <summary>
-    /// Gets a fault-isolated definition catalog for management UI diagnostics.
+    /// Gets a fault-isolated active and retired definition catalog for management UI diagnostics.
     /// </summary>
     /// <remarks>
     /// This method is intentionally separate from <see cref="GetDefinitionsAsync"/>. Authoritative consumers such
@@ -266,7 +273,8 @@ public sealed class ConfigurationFacade(
             SchemaVersion = definition.SchemaVersion,
             DefinitionRevision = definition.DefinitionRevision,
             SchemaHash = definition.SchemaHash,
-            Origin = definition.Origin
+            Origin = definition.Origin,
+            LifecycleState = ConfigurationDefinitionLifecycleState.Active
         };
     }
 
@@ -282,7 +290,8 @@ public sealed class ConfigurationFacade(
             return ToSummary(definition) with
             {
                 Availability = entry.Availability,
-                MetadataDiagnostic = entry.Diagnostic
+                MetadataDiagnostic = entry.Diagnostic,
+                LifecycleState = entry.LifecycleState
             };
         }
 
@@ -304,7 +313,8 @@ public sealed class ConfigurationFacade(
             SchemaHash = metadata.SchemaHash,
             Origin = ConfigurationDefinitionOrigin.PublishedMetadata,
             Availability = entry.Availability,
-            MetadataDiagnostic = entry.Diagnostic
+            MetadataDiagnostic = entry.Diagnostic,
+            LifecycleState = entry.LifecycleState
         };
     }
 
@@ -327,7 +337,8 @@ public sealed class ConfigurationFacade(
             SchemaHash = metadata.SchemaHash,
             Origin = ConfigurationDefinitionOrigin.PublishedMetadata,
             Availability = entry.Availability,
-            MetadataDiagnostic = entry.Diagnostic
+            MetadataDiagnostic = entry.Diagnostic,
+            LifecycleState = entry.LifecycleState
         };
     }
 
@@ -371,14 +382,74 @@ public sealed class ConfigurationFacade(
     {
         try
         {
-            return Res.Ok(await metadataStore.GetDefinitionPublicationOverviewAsync(
+            var overview = await metadataStore.GetDefinitionPublicationOverviewAsync(
                 definitionKey,
                 limit,
-                CancellationToken.None));
+                CancellationToken.None);
+            return Res.Ok(_definitionLifecycleService.EnrichWithLocalRegistration(overview));
         }
         catch (Exception ex)
         {
             return Res.Fail($"Failed to get configuration definition publication overview: {ex.GetMessageRecursively()}");
+        }
+    }
+
+    /// <summary>
+    /// Previews the records deleted and retained when permanently purging one retired definition.
+    /// </summary>
+    /// <param name="definitionKey">The stable definition key.</param>
+    /// <returns>The purge impact and current concurrency revision.</returns>
+    public async Task<Res<ConfigurationDefinitionPurgePreview>> PreviewDefinitionPurgeAsync(string definitionKey)
+    {
+        try
+        {
+            return Res.Ok(await _definitionLifecycleService.PreviewPurgeAsync(
+                definitionKey,
+                CancellationToken.None));
+        }
+        catch (KeyNotFoundException ex)
+        {
+            return Res.Fail(
+                $"Failed to preview configuration definition purge: {ex.GetMessageRecursively()}",
+                ResStatus.NotFound);
+        }
+        catch (Exception ex)
+        {
+            return Res.Fail($"Failed to preview configuration definition purge: {ex.GetMessageRecursively()}");
+        }
+    }
+
+    /// <summary>
+    /// Permanently purges one retired definition after rechecking its publisher state and reviewed revision.
+    /// </summary>
+    /// <remarks>
+    /// The canonical definition, definition-publication history, and current Monica effective value are deleted.
+    /// Immutable value history, mutation groups, and unified-version snapshots remain available for audit.
+    /// </remarks>
+    /// <param name="request">The definition key and revision returned by the purge preview.</param>
+    /// <returns>A successful result when the retired definition was purged.</returns>
+    public async Task<Res> PurgeDefinitionAsync(ConfigurationDefinitionPurgeRequest request)
+    {
+        try
+        {
+            await _definitionLifecycleService.PurgeAsync(request, CancellationToken.None);
+            return Res.Ok();
+        }
+        catch (ConfigurationConcurrencyConflictException ex)
+        {
+            return Res.Fail(
+                $"Failed to purge configuration definition: {ex.GetMessageRecursively()}",
+                ResStatus.Conflict);
+        }
+        catch (KeyNotFoundException ex)
+        {
+            return Res.Fail(
+                $"Failed to purge configuration definition: {ex.GetMessageRecursively()}",
+                ResStatus.NotFound);
+        }
+        catch (Exception ex)
+        {
+            return Res.Fail($"Failed to purge configuration definition: {ex.GetMessageRecursively()}");
         }
     }
 

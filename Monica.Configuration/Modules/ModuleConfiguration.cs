@@ -587,6 +587,8 @@ public sealed class ModuleConfigurationGuide
             context.Services.TryAddSingleton<IConfigurationEffectiveValueStore>(provider => provider.GetRequiredService<FileConfigurationStore>());
             context.Services.TryAddSingleton<IConfigurationHistoryStore>(provider => provider.GetRequiredService<FileConfigurationStore>());
             context.Services.TryAddSingleton<IConfigurationMetadataStore>(provider => provider.GetRequiredService<FileConfigurationStore>());
+            context.Services.TryAddSingleton<IConfigurationDefinitionMaintenanceStore>(provider =>
+                provider.GetRequiredService<FileConfigurationStore>());
             context.Services.TryAddSingleton<IConfigurationUnifiedVersionStore>(provider => provider.GetRequiredService<FileConfigurationStore>());
         });
         return this;

@@ -20,7 +20,7 @@ namespace Test.Monica.Configuration.Services.Support;
 public sealed class MonicaConfigurationProviderActivationCoordinatorTests
 {
     [Fact]
-    public async Task ActivateAsync_WhenStagesOverlap_ShouldAwaitBothAndActivateOnce()
+    public async Task ActivateAsync_ShouldPublishBeforeExposingProviderOrStartingProjection_AndActivateOnce()
     {
         var publicationStarted = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         var projectionStarted = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -39,18 +39,23 @@ public sealed class MonicaConfigurationProviderActivationCoordinatorTests
             });
 
         var activation = fixture.Coordinator.ActivateAsync(TestContext.Current.CancellationToken);
-        await Task.WhenAll(publicationStarted.Task, projectionStarted.Task)
-            .WaitAsync(TestContext.Current.CancellationToken);
+        await publicationStarted.Task.WaitAsync(TestContext.Current.CancellationToken);
 
         activation.IsCompleted.Should().BeFalse();
+        fixture.Accessor.ServiceProvider.Should().BeNull();
+        fixture.ReloadCoordinator.InvocationCount.Should().Be(0);
+
         releasePublication.TrySetResult();
-        await publicationStarted.Task;
+        await projectionStarted.Task.WaitAsync(TestContext.Current.CancellationToken);
+
         activation.IsCompleted.Should().BeFalse();
+        fixture.Accessor.ServiceProvider.Should().BeSameAs(fixture.ServiceProvider);
+        fixture.ReloadCoordinator.InvocationCount.Should().Be(1);
+
         releaseProjection.TrySetResult();
         await activation;
         await fixture.Coordinator.ActivateAsync(TestContext.Current.CancellationToken);
 
-        fixture.Accessor.ServiceProvider.Should().BeSameAs(fixture.ServiceProvider);
         await fixture.MetadataStore.Received(1).PublishAsync(
             Arg.Any<ConfigurationDefinitionPublicationBatch>(),
             Arg.Any<CancellationToken>());
@@ -59,32 +64,65 @@ public sealed class MonicaConfigurationProviderActivationCoordinatorTests
     }
 
     [Fact]
-    public async Task ActivateAsync_WhenBothStagesFail_ShouldAggregateFailuresAndRemainRetryable()
+    public async Task ActivateAsync_WhenPrePublicationDocumentWasDeleted_ShouldReactivateBeforeRecreatingDocument()
+    {
+        var definition = TestConfigurationFactory.Definition();
+        var publisherStateIsActive = false;
+        var effectiveDocumentExists = false;
+        var operations = new List<string>();
+        using var fixture = CreateFixture(
+            _ =>
+            {
+                operations.Add("publish-active-state");
+                publisherStateIsActive = true;
+                return Task.CompletedTask;
+            },
+            _ =>
+            {
+                publisherStateIsActive.Should().BeTrue();
+                operations.Add("ensure-effective-document");
+                effectiveDocumentExists = true;
+                return Task.CompletedTask;
+            },
+            definitions: [definition]);
+
+        await fixture.Coordinator.ActivateAsync(TestContext.Current.CancellationToken);
+
+        operations.Should().Equal("publish-active-state", "ensure-effective-document");
+        publisherStateIsActive.Should().BeTrue();
+        effectiveDocumentExists.Should().BeTrue();
+        await fixture.MetadataStore.Received(1).PublishAsync(
+            Arg.Is<ConfigurationDefinitionPublicationBatch>(batch =>
+                batch.Publications.Count == 1
+                && batch.Publications[0].Definition.DefinitionKey == definition.DefinitionKey),
+            Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task ActivateAsync_WhenPublicationFails_ShouldNotExposeOrReloadProviderAndRemainRetryable()
     {
         var publicationFailure = new InvalidOperationException("Publication failed.");
-        var projectionFailure = new ApplicationException("Projection failed.");
         var publicationAttempt = 0;
-        var projectionAttempt = 0;
         using var fixture = CreateFixture(
             _ => Interlocked.Increment(ref publicationAttempt) == 1
                 ? Task.FromException(publicationFailure)
                 : Task.CompletedTask,
-            _ => Interlocked.Increment(ref projectionAttempt) == 1
-                ? Task.FromException(projectionFailure)
-                : Task.CompletedTask);
+            _ => Task.CompletedTask);
 
         Func<Task> firstActivation = () => fixture.Coordinator.ActivateAsync(TestContext.Current.CancellationToken);
-        var assertion = await firstActivation.Should().ThrowAsync<AggregateException>();
+        (await firstActivation.Should().ThrowAsync<InvalidOperationException>())
+            .Which.Should().BeSameAs(publicationFailure);
 
-        assertion.Which.InnerExceptions.Should().Contain(exception => ReferenceEquals(exception, publicationFailure));
-        assertion.Which.InnerExceptions.Should().Contain(exception => ReferenceEquals(exception, projectionFailure));
+        fixture.Accessor.ServiceProvider.Should().BeNull();
+        fixture.ReloadCoordinator.InvocationCount.Should().Be(0);
         fixture.StateTracker.Operations.Should().Equal((METADATA_STORE_KEY, false, publicationFailure.Message));
 
         await fixture.Coordinator.ActivateAsync(TestContext.Current.CancellationToken);
         await fixture.Coordinator.ActivateAsync(TestContext.Current.CancellationToken);
 
         publicationAttempt.Should().Be(2);
-        projectionAttempt.Should().Be(2);
+        fixture.ReloadCoordinator.InvocationCount.Should().Be(1);
+        fixture.Accessor.ServiceProvider.Should().BeSameAs(fixture.ServiceProvider);
         fixture.StateTracker.Operations.Should().Equal(
             (METADATA_STORE_KEY, false, publicationFailure.Message),
             (METADATA_STORE_KEY, true, (string?)null));
@@ -109,6 +147,9 @@ public sealed class MonicaConfigurationProviderActivationCoordinatorTests
 
         await fixture.Coordinator.ActivateAsync(TestContext.Current.CancellationToken);
 
+        await fixture.MetadataStore.Received(2).PublishAsync(
+            Arg.Any<ConfigurationDefinitionPublicationBatch>(),
+            Arg.Any<CancellationToken>());
         fixture.StateTracker.Operations.Should().Equal((METADATA_STORE_KEY, true, (string?)null));
     }
 
@@ -127,12 +168,10 @@ public sealed class MonicaConfigurationProviderActivationCoordinatorTests
     }
 
     [Fact]
-    public async Task ActivateAsync_WhenCancelled_ShouldObserveBothStagesAndRemainRetryable()
+    public async Task ActivateAsync_WhenPublicationIsCancelled_ShouldNotStartProjectionAndRemainRetryable()
     {
         var publicationAttempt = 0;
-        var projectionAttempt = 0;
         var publicationStarted = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-        var projectionStarted = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         using var fixture = CreateFixture(
             async cancellationToken =>
             {
@@ -144,21 +183,13 @@ public sealed class MonicaConfigurationProviderActivationCoordinatorTests
                 publicationStarted.TrySetResult();
                 await Task.Delay(Timeout.InfiniteTimeSpan, cancellationToken);
             },
-            async cancellationToken =>
-            {
-                if (Interlocked.Increment(ref projectionAttempt) > 1)
-                {
-                    return;
-                }
-
-                projectionStarted.TrySetResult();
-                await Task.Delay(Timeout.InfiniteTimeSpan, cancellationToken);
-            });
+            _ => Task.CompletedTask);
         using var cancellation = CancellationTokenSource.CreateLinkedTokenSource(TestContext.Current.CancellationToken);
 
         var activation = fixture.Coordinator.ActivateAsync(cancellation.Token);
-        await Task.WhenAll(publicationStarted.Task, projectionStarted.Task)
-            .WaitAsync(TestContext.Current.CancellationToken);
+        await publicationStarted.Task.WaitAsync(TestContext.Current.CancellationToken);
+        fixture.Accessor.ServiceProvider.Should().BeNull();
+        fixture.ReloadCoordinator.InvocationCount.Should().Be(0);
         await cancellation.CancelAsync();
 
         Func<Task> observeCancellation = () => activation;
@@ -166,7 +197,7 @@ public sealed class MonicaConfigurationProviderActivationCoordinatorTests
         await fixture.Coordinator.ActivateAsync(TestContext.Current.CancellationToken);
 
         publicationAttempt.Should().Be(2);
-        projectionAttempt.Should().Be(2);
+        fixture.ReloadCoordinator.InvocationCount.Should().Be(1);
         fixture.StateTracker.Operations.Should().HaveCount(2);
         fixture.StateTracker.Operations[0].StoreKey.Should().Be(METADATA_STORE_KEY);
         fixture.StateTracker.Operations[0].Succeeded.Should().BeFalse();
@@ -241,14 +272,15 @@ public sealed class MonicaConfigurationProviderActivationCoordinatorTests
     private static ActivationFixture CreateFixture(
         Func<CancellationToken, Task> publish,
         Func<CancellationToken, Task> reload,
-        string effectiveStoreKey = METADATA_STORE_KEY)
+        string effectiveStoreKey = METADATA_STORE_KEY,
+        IReadOnlyList<ConfigurationDefinition>? definitions = null)
     {
         var services = new ServiceCollection()
             .AddMetrics()
             .BuildServiceProvider();
         var accessor = new MonicaConfigurationProviderAccessor();
         var definitionRegistry = Substitute.For<IConfigurationDefinitionRegistry>();
-        definitionRegistry.GetAll().Returns([]);
+        definitionRegistry.GetAll().Returns(definitions ?? []);
         var metadataStore = Substitute.For<IConfigurationMetadataStore>();
         metadataStore.Descriptor.Returns(new ConfigurationStoreDescriptor
         {

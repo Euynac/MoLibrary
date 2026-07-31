@@ -14,7 +14,11 @@ namespace Monica.Configuration.Stores.File;
 /// File-backed store bundle for monolith and local Monica.Configuration deployments.
 /// </summary>
 public sealed class FileConfigurationStore(IOptions<ConfigurationFileStoreOptions> options)
-    : IConfigurationEffectiveValueStore, IConfigurationHistoryStore, IConfigurationMetadataStore, IConfigurationUnifiedVersionStore
+    : IConfigurationEffectiveValueStore,
+        IConfigurationHistoryStore,
+        IConfigurationMetadataStore,
+        IConfigurationUnifiedVersionStore,
+        IConfigurationDefinitionMaintenanceStore
 {
     private static readonly JsonSerializerOptions JSON_OPTIONS = new()
     {
@@ -814,6 +818,9 @@ public sealed class FileConfigurationStore(IOptions<ConfigurationFileStoreOption
             return new ConfigurationDefinitionPublicationOverview
             {
                 DefinitionKey = dto.DefinitionKey,
+                LifecycleState = dto.PublisherState is null
+                    ? ConfigurationDefinitionLifecycleState.Retired
+                    : ConfigurationDefinitionLifecycleState.Active,
                 DefinitionRevision = dto.DefinitionRevision,
                 SchemaVersion = dto.SchemaVersion,
                 ReloadBehavior = reloadBehavior,
@@ -822,6 +829,102 @@ public sealed class FileConfigurationStore(IOptions<ConfigurationFileStoreOption
                     : [dto.PublisherState.ToModel()],
                 RevisionHistories = []
             };
+        }
+        finally
+        {
+            _lock.Release();
+        }
+    }
+
+    /// <inheritdoc />
+    public async Task<ConfigurationDefinitionPurgePreview> PreviewDefinitionPurgeAsync(
+        string definitionKey,
+        CancellationToken cancellationToken)
+    {
+        await _lock.WaitAsync(cancellationToken);
+        try
+        {
+            EnsureDirectories();
+            var (_, storedDefinitionKey, definition) =
+                await LoadDefinitionForMaintenanceAsync(definitionKey, cancellationToken);
+            var effectiveValue = await ReadDocumentAsync(storedDefinitionKey, cancellationToken);
+            var (retainedValueHistoryCount, retainedMutationGroupCount) =
+                await CountRetainedHistoryAsync(storedDefinitionKey, cancellationToken);
+            var retainedUnifiedVersionCount = (await ReadUnifiedVersionIndexAsync(cancellationToken))
+                .Count(summary => summary.DefinitionKeys.Contains(
+                    storedDefinitionKey,
+                    StringComparer.OrdinalIgnoreCase));
+            IReadOnlyList<string> activePublisherKeys = definition.PublisherState is null
+                ? []
+                : new[] { definition.PublisherState.PublisherKey };
+
+            return new ConfigurationDefinitionPurgePreview
+            {
+                DefinitionKey = storedDefinitionKey,
+                DisplayName = definition.DisplayName,
+                LifecycleState = definition.PublisherState is null
+                    ? ConfigurationDefinitionLifecycleState.Retired
+                    : ConfigurationDefinitionLifecycleState.Active,
+                DefinitionRevision = definition.DefinitionRevision,
+                ActivePublisherKeys = activePublisherKeys,
+                IsLocallyRegistered = false,
+                HasEffectiveValue = effectiveValue is not null,
+                EffectiveValueVersion = effectiveValue?.Version,
+                PublicationHistoryCount = 0,
+                RetainedValueHistoryCount = retainedValueHistoryCount,
+                RetainedMutationGroupCount = retainedMutationGroupCount,
+                RetainedUnifiedVersionCount = retainedUnifiedVersionCount
+            };
+        }
+        finally
+        {
+            _lock.Release();
+        }
+    }
+
+    /// <inheritdoc />
+    public async Task PurgeDefinitionAsync(
+        ConfigurationDefinitionPurgeRequest request,
+        CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+        await _lock.WaitAsync(cancellationToken);
+        try
+        {
+            EnsureDirectories();
+            var (definitionPath, storedDefinitionKey, definition) = await LoadDefinitionForMaintenanceAsync(
+                request.DefinitionKey,
+                cancellationToken);
+            if (definition.PublisherState is not null)
+            {
+                throw new ConfigurationConcurrencyConflictException(
+                    $"Configuration definition '{definition.DefinitionKey}' is active and cannot be purged. "
+                    + $"Current publisher: {definition.PublisherState.PublisherKey}.");
+            }
+
+            if (definition.DefinitionRevision != request.ExpectedDefinitionRevision)
+            {
+                throw new ConfigurationConcurrencyConflictException(
+                    $"Expected definition revision {request.ExpectedDefinitionRevision} for "
+                    + $"'{definition.DefinitionKey}', but current revision is {definition.DefinitionRevision}.");
+            }
+
+            var effectiveValuePath = ResolveEffectiveValuePath(storedDefinitionKey);
+            var effectiveMetadataPath = ResolveEffectiveMetadataPath(storedDefinitionKey);
+
+            // The definition file is the maintenance record's commit point. A crash while removing value files leaves
+            // a retryable retired definition; removing the definition last never hides a partially completed purge.
+            if (effectiveValuePath is not null)
+            {
+                IoFile.Delete(effectiveValuePath);
+            }
+
+            if (effectiveMetadataPath is not null)
+            {
+                IoFile.Delete(effectiveMetadataPath);
+            }
+
+            IoFile.Delete(definitionPath);
         }
         finally
         {
@@ -886,6 +989,78 @@ public sealed class FileConfigurationStore(IOptions<ConfigurationFileStoreOption
             LastModifierId = metadata?.LastModifierId,
             LastModifierName = metadata?.LastModifierName
         };
+    }
+
+    private async Task<(string Path, string StoredDefinitionKey, PublishedDefinitionDto Definition)> LoadDefinitionForMaintenanceAsync(
+        string definitionKey,
+        CancellationToken cancellationToken)
+    {
+        var paths = FindDefinitionPaths(definitionKey, cancellationToken);
+        if (paths.Length == 0)
+        {
+            throw new KeyNotFoundException(
+                $"Published configuration definition '{definitionKey}' was not found.");
+        }
+
+        if (paths.Length > 1)
+        {
+            throw new InvalidDataException(
+                $"Multiple persisted definition metadata files claim key '{definitionKey}'.");
+        }
+
+        // Maintenance uses the filename as the physical identity. The envelope must agree before its key can
+        // influence any effective-value lookup or deletion.
+        var definitionPath = paths[0];
+        var storedDefinitionKey = Path.GetFileNameWithoutExtension(definitionPath);
+        if (!string.Equals(definitionKey, storedDefinitionKey, StringComparison.OrdinalIgnoreCase))
+        {
+            throw new InvalidDataException(
+                $"Persisted definition metadata file '{Path.GetFileName(definitionPath)}' does not match requested "
+                + $"definition key '{definitionKey}'.");
+        }
+
+        var definition = await TryReadPublishedDefinitionDtoForRepairAsync(definitionPath, cancellationToken)
+                         ?? throw new InvalidDataException(
+                             $"Published configuration definition '{definitionKey}' could not be read.");
+        if (!string.Equals(storedDefinitionKey, definition.DefinitionKey, StringComparison.OrdinalIgnoreCase))
+        {
+            throw new InvalidDataException(
+                $"Persisted definition metadata file '{Path.GetFileName(definitionPath)}' claims definition key "
+                + $"'{definition.DefinitionKey}' instead of '{storedDefinitionKey}'.");
+        }
+
+        return (definitionPath, storedDefinitionKey, definition);
+    }
+
+    private async Task<(int ValueHistoryCount, int MutationGroupCount)> CountRetainedHistoryAsync(
+        string definitionKey,
+        CancellationToken cancellationToken)
+    {
+        var historyPath = GetHistoryPath();
+        if (!IoFile.Exists(historyPath))
+        {
+            return (0, 0);
+        }
+
+        var valueHistoryCount = 0;
+        var mutationGroupIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        await foreach (var line in IoFile.ReadLinesAsync(historyPath, cancellationToken))
+        {
+            var history = DeserializeHistory(line);
+            if (history is null
+                || !string.Equals(history.DefinitionKey, definitionKey, StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            valueHistoryCount++;
+            if (!string.IsNullOrWhiteSpace(history.MutationGroupId))
+            {
+                mutationGroupIds.Add(history.MutationGroupId);
+            }
+        }
+
+        return (valueHistoryCount, mutationGroupIds.Count);
     }
 
     private async Task WriteDocumentAsync(ConfigurationEffectiveValueDocument document, CancellationToken cancellationToken)
@@ -1487,6 +1662,7 @@ public sealed class FileConfigurationStore(IOptions<ConfigurationFileStoreOption
         {
             StoreKey = Descriptor.StoreKey,
             DefinitionKey = definitionKey,
+            LifecycleState = ConfigurationDefinitionLifecycleState.Retired,
             SectionPath = "",
             DisplayName = definitionKey,
             ClrTypeName = "",
@@ -1704,6 +1880,9 @@ public sealed class FileConfigurationStore(IOptions<ConfigurationFileStoreOption
             {
                 StoreKey = storeKey,
                 DefinitionKey = DefinitionKey,
+                LifecycleState = PublisherState is null
+                    ? ConfigurationDefinitionLifecycleState.Retired
+                    : ConfigurationDefinitionLifecycleState.Active,
                 SectionPath = SectionPath,
                 DisplayName = DisplayName,
                 Description = Description,

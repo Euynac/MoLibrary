@@ -18,6 +18,16 @@
                          Variant="Variant.Outlined">
                     @StatusText
                 </MudChip>
+                @if (Definition.LifecycleState == ConfigurationDefinitionLifecycleState.Retired)
+                {
+                    <MudChip T="string"
+                             Size="Size.Small"
+                             Color="Color.Warning"
+                             Variant="Variant.Filled"
+                             Icon="@Icons.Material.Filled.Inventory2">
+                        @L["State:Definitions:Retired"]
+                    </MudChip>
+                }
             </div>
             <MudText Typo="Typo.caption" Color="Color.Secondary">
                 <MudHighlighter Text="@Definition.DefinitionKey" HighlightedTexts="@SearchTerms" />
@@ -29,17 +39,32 @@
                 <MudHighlighter Text="@ProblemText" HighlightedTexts="@SearchTerms" />
             </div>
         </div>
-        @if (Definition.MetadataDiagnostic is not null)
+        @if (Definition.MetadataDiagnostic is not null
+             || Definition.LifecycleState == ConfigurationDefinitionLifecycleState.Retired)
         {
             <div class="configuration-definition-unavailable-action">
-                <MudButton Variant="Variant.Text"
-                           Size="Size.Small"
-                           Color="Color.Warning"
-                           StartIcon="@Icons.Material.Filled.Troubleshoot"
-                           OnClick="ShowProblemDetailsAsync"
-                           aria-label="@L["State:Definitions:ViewProblemDetailsAria", Definition.DisplayName]">
-                    @L["State:Definitions:ViewProblemDetails"]
-                </MudButton>
+                @if (Definition.MetadataDiagnostic is not null)
+                {
+                    <MudButton Variant="Variant.Text"
+                               Size="Size.Small"
+                               Color="Color.Warning"
+                               StartIcon="@Icons.Material.Filled.Troubleshoot"
+                               OnClick="ShowProblemDetailsAsync"
+                               aria-label="@L["State:Definitions:ViewProblemDetailsAria", Definition.DisplayName]">
+                        @L["State:Definitions:ViewProblemDetails"]
+                    </MudButton>
+                }
+                @if (Definition.LifecycleState == ConfigurationDefinitionLifecycleState.Retired)
+                {
+                    <MudButton Variant="Variant.Text"
+                               Size="Size.Small"
+                               Color="Color.Error"
+                               StartIcon="@Icons.Material.Filled.DeleteForever"
+                               OnClick="RequestPurgeAsync"
+                               aria-label="@L["DefinitionPurge:Actions:PreviewAria", Definition.DisplayName]">
+                        @L["DefinitionPurge:Actions:Preview"]
+                    </MudButton>
+                }
             </div>
         }
     </div>
@@ -49,6 +74,8 @@
     [Parameter, EditorRequired] public ConfigurationDefinitionSummary Definition { get; set; } = null!;
 
     [Parameter] public IReadOnlyList<string> SearchTerms { get; set; } = [];
+
+    [Parameter] public EventCallback<ConfigurationDefinitionSummary> PurgeRequested { get; set; }
 
     private string StatusText =>
         ConfigurationDefinitionMetadataDiagnosticFormatter.AvailabilityLabel(Definition.Availability, L);
@@ -79,5 +106,10 @@
                 FullWidth = true,
                 CloseButton = true
             });
+    }
+
+    private Task RequestPurgeAsync()
+    {
+        return PurgeRequested.InvokeAsync(Definition);
     }
 }
