@@ -166,8 +166,11 @@ public sealed class ModuleObjectMappingTests
             var runtime = host.Services.GetRequiredService<MapsterConfigurationRuntime>();
             using var scope = host.Services.CreateScope();
             var mapper = scope.ServiceProvider.GetRequiredService<IObjectMapper>();
+            var mapsterMapper = mapper.Should().BeOfType<MapsterObjectMapper>().Which;
 
             runtime.HasPublishedCompiledConfiguration.Should().BeFalse();
+            var fallbackMapper = mapsterMapper.GetCurrentMapper();
+            mapsterMapper.GetCurrentMapper().Should().BeSameAs(fallbackMapper);
             var lazyMappings = Enumerable.Range(0, 32)
                 .Select(index => Task.Run(
                     () => mapper.Map<ConcurrentCompilationDestination>(
@@ -184,6 +187,16 @@ public sealed class ModuleObjectMappingTests
                 () => runtime.HasPublishedCompiledConfiguration,
                 TestContext.Current.CancellationToken);
 
+            var publishedMappers = await Task.WhenAll(Enumerable.Range(0, 32)
+                .Select(_ => Task.Run(
+                    mapsterMapper.GetCurrentMapper,
+                    TestContext.Current.CancellationToken)));
+            publishedMappers.Should().AllSatisfy(publishedMapper =>
+            {
+                publishedMapper.Should().NotBeSameAs(fallbackMapper);
+                publishedMapper.Should().BeSameAs(publishedMappers[0]);
+                publishedMapper.Config.Should().BeSameAs(runtime.CurrentConfiguration);
+            });
             mapper.Map<ConcurrentCompilationDestination>(new ConcurrentCompilationSource { Value = "compiled" })
                 .Value.Should().Be("compiled");
         }
