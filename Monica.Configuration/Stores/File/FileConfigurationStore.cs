@@ -45,7 +45,7 @@ public sealed class FileConfigurationStore(IOptions<ConfigurationFileStoreOption
         CancellationToken cancellationToken)
     {
         var documents = await EnsureCreatedAsync(
-            [new ConfigurationEffectiveValueSeed { Definition = definition, SeedJson = seedJson }],
+            [new ConfigurationEffectiveValueSeed(definition, seedJson)],
             cancellationToken);
         return documents[0];
     }
@@ -84,7 +84,7 @@ public sealed class FileConfigurationStore(IOptions<ConfigurationFileStoreOption
                 var document = new ConfigurationEffectiveValueDocument
                 {
                     DefinitionKey = seed.Definition.DefinitionKey,
-                    Json = FormatJson(seed.SeedJson),
+                    Json = FormatJson(seed.MaterializeSeedJson()),
                     Version = 1,
                     SchemaVersion = seed.Definition.SchemaVersion,
                     LastModifiedTime = DateTimeOffset.UtcNow

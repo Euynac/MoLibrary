@@ -27,6 +27,8 @@ public sealed class MonicaConfigurationProviderPartialReloadTests : IDisposable
         await store.EnsureCreatedAsync(definitionB, """{"Value":"b1","Extra":"keep"}""", CancellationToken.None);
         var provider = CreateProvider(store, definitionA, definitionB);
         await provider.ReloadAsync(CancellationToken.None);
+        await provider.ReloadDefinitionAsync(definitionA.DefinitionKey, minimumVersion: 1, CancellationToken.None);
+        provider.SuccessfulProjectionRevision.Should().Be(1);
         await store.SaveAsync(new ConfigurationEffectiveValueSaveRequest
         {
             Definition = definitionA,
@@ -43,6 +45,7 @@ public sealed class MonicaConfigurationProviderPartialReloadTests : IDisposable
         unchangedValue.Should().Be("b1");
         provider.GetLoadedVersion(definitionA.DefinitionKey).Should().Be(2);
         provider.GetLoadedVersion(definitionB.DefinitionKey).Should().Be(1);
+        provider.SuccessfulProjectionRevision.Should().Be(2);
     }
 
     public void Dispose()

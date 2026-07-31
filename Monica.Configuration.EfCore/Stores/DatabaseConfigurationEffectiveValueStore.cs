@@ -22,7 +22,7 @@ internal sealed class DatabaseConfigurationEffectiveValueStore(ConfigurationData
         CancellationToken cancellationToken)
     {
         var documents = await EnsureCreatedAsync(
-            [new ConfigurationEffectiveValueSeed { Definition = definition, SeedJson = seedJson }],
+            [new ConfigurationEffectiveValueSeed(definition, seedJson)],
             cancellationToken);
         return documents[0];
     }
@@ -68,7 +68,7 @@ internal sealed class DatabaseConfigurationEffectiveValueStore(ConfigurationData
 
                         var entity = ConfigurationEffectiveValueEntity.Create(seed.Definition.DefinitionKey);
                         entity.Apply(
-                            ConfigurationPersistenceValueConverter.NormalizeJson(seed.SeedJson),
+                            ConfigurationPersistenceValueConverter.NormalizeJson(seed.MaterializeSeedJson()),
                             seed.Definition.SchemaVersion,
                             DateTime.UtcNow,
                             modifierId: null,

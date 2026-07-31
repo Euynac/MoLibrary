@@ -22,6 +22,7 @@ internal sealed class MonicaConfigurationProvider(MonicaConfigurationProviderAcc
     private DateTimeOffset? _lastFailedAt;
     private TimeSpan? _lastReloadDuration;
     private string? _lastFailureMessage;
+    private long _successfulProjectionRevision;
 
     /// <inheritdoc />
     public override void Load()
@@ -54,11 +55,9 @@ internal sealed class MonicaConfigurationProvider(MonicaConfigurationProviderAcc
             var projected = new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase);
             var definitions = definitionRegistry.GetAll();
             var seeds = definitions
-                .Select(definition => new ConfigurationEffectiveValueSeed
-                {
-                    Definition = definition,
-                    SeedJson = seedFactory.CreateSeedJson(definition)
-                })
+                .Select(definition => new ConfigurationEffectiveValueSeed(
+                    definition,
+                    () => seedFactory.CreateSeedJson(definition)))
                 .ToArray();
             var documents = await effectiveValueStore.EnsureCreatedAsync(seeds, cancellationToken);
 
@@ -91,6 +90,8 @@ internal sealed class MonicaConfigurationProvider(MonicaConfigurationProviderAcc
                 {
                     _loadedVersionsByDefinitionKey[definitionKey] = version;
                 }
+
+                _successfulProjectionRevision++;
             }
 
             stateTracker.RecordSuccess(effectiveValueStore.Descriptor.StoreKey);
@@ -141,8 +142,11 @@ internal sealed class MonicaConfigurationProvider(MonicaConfigurationProviderAcc
         try
         {
             var resolvedDefinition = definition!;
-            var seedJson = seedFactory.CreateSeedJson(resolvedDefinition);
-            var document = await effectiveValueStore.EnsureCreatedAsync(resolvedDefinition, seedJson, cancellationToken);
+            var document = (await effectiveValueStore.EnsureCreatedAsync(
+                [new ConfigurationEffectiveValueSeed(
+                    resolvedDefinition,
+                    () => seedFactory.CreateSeedJson(resolvedDefinition))],
+                cancellationToken))[0];
             var loadedVersion = GetLoadedVersion(definitionKey);
             if (loadedVersion is not null && document.Version <= loadedVersion)
             {
@@ -169,6 +173,7 @@ internal sealed class MonicaConfigurationProvider(MonicaConfigurationProviderAcc
                 Data = nextData;
                 _projectedKeysByDefinitionKey[resolvedDefinition.DefinitionKey] = projected.Keys.ToArray();
                 _loadedVersionsByDefinitionKey[resolvedDefinition.DefinitionKey] = document.Version;
+                _successfulProjectionRevision++;
             }
 
             stateTracker.RecordSuccess(effectiveValueStore.Descriptor.StoreKey);
@@ -195,6 +200,20 @@ internal sealed class MonicaConfigurationProvider(MonicaConfigurationProviderAcc
         lock (_projectionLock)
         {
             return _loadedVersionsByDefinitionKey.GetValueOrDefault(definitionKey);
+        }
+    }
+
+    /// <summary>
+    /// Gets the monotonic revision of the last successfully committed runtime projection.
+    /// </summary>
+    internal long SuccessfulProjectionRevision
+    {
+        get
+        {
+            lock (_projectionLock)
+            {
+                return _successfulProjectionRevision;
+            }
         }
     }
 

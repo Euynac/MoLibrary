@@ -18,12 +18,14 @@ internal sealed record PublishedDefinitionPublisherStateCandidate
 
     internal static PublishedDefinitionPublisherStateCandidate FromPublication(
         ConfigurationPublisherIdentity publisher,
+        string publisherIdentity,
+        string definitionIdentity,
         ConfigurationDefinitionPublication publication)
     {
         return new PublishedDefinitionPublisherStateCandidate
         {
-            DefinitionIdentity = ConfigurationDefinitionIdentity.Compute(publication.Definition.DefinitionKey),
-            PublisherIdentity = PublishedDefinitionPublisherIdentity.Compute(publisher.PublisherKey),
+            DefinitionIdentity = definitionIdentity,
+            PublisherIdentity = publisherIdentity,
             PublisherKey = publisher.PublisherKey,
             Observation = publication.ReloadBehaviorObservation
         };
@@ -45,6 +47,15 @@ internal sealed record PublishedDefinitionPublisherStateCandidate
         entity.PublisherKey = PublisherKey;
         entity.ObservationKind = Observation.Kind.ToString();
         entity.ReloadBehavior = Observation.Behavior.ToString();
+    }
+
+    internal bool Matches(ConfigurationDefinitionPublisherStateEntity entity)
+    {
+        return string.Equals(DefinitionIdentity, entity.DefinitionIdentity, StringComparison.Ordinal)
+               && string.Equals(PublisherIdentity, entity.PublisherIdentity, StringComparison.Ordinal)
+               && string.Equals(PublisherKey, entity.PublisherKey, StringComparison.Ordinal)
+               && string.Equals(Observation.Kind.ToString(), entity.ObservationKind, StringComparison.Ordinal)
+               && string.Equals(Observation.Behavior.ToString(), entity.ReloadBehavior, StringComparison.Ordinal);
     }
 
     internal static ConfigurationReloadBehaviorObservation MaterializeObservation(
