@@ -6,10 +6,10 @@ using Monica.Configuration.Models;
 namespace Monica.Configuration.Services.Support;
 
 /// <summary>
-/// Binds a unified-version rollback request to the exact values, schema, destinations, and concurrency tokens
+/// Binds a unified-version rollback request to the exact values, schema, destinations, and concurrency revisions
 /// shown in its preview.
 /// </summary>
-internal static class ConfigurationUnifiedVersionRollbackPlanToken
+internal static class ConfigurationUnifiedVersionRollbackPreviewFingerprint
 {
     public static string Compute(
         long version,

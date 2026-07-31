@@ -53,7 +53,34 @@ public class ChangeChain<TTargetEntity, TAlterItem, TChangeItemData, TEnumAlterS
     /// <summary>
     /// change chain
     /// </summary>
-    public IReadOnlyList<TAlterItem> ChangingList => _changingList.Values.ToList();
+    public IReadOnlyList<TAlterItem> ChangingList => GetChangingListSnapshot();
+
+    /// <summary>
+    /// Determines whether the change chain already contains an item with the specified ID.
+    /// </summary>
+    /// <param name="id">Change item ID.</param>
+    /// <returns><see langword="true"/> when the ID exists; otherwise <see langword="false"/>.</returns>
+    public bool ContainsChangingItemId(string id)
+    {
+        for (var index = 0; index < _changingList.Count; index++)
+        {
+            if (string.Equals(_changingList.Values[index].Id, id, StringComparison.Ordinal))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /// <summary>
+    /// Creates one ordered snapshot of the current change items.
+    /// </summary>
+    /// <returns>A mutable list that is independent of the chain's internal collection.</returns>
+    public List<TAlterItem> GetChangingListSnapshot()
+    {
+        return _changingList.Values.ToList();
+    }
     /// <summary>
     /// Get the change history of the specified change attribute (returned in the order of initial -> last value) (rolled-back AlterItem has been eliminated)
     /// </summary>

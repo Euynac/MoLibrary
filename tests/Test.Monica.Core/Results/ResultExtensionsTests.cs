@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Net;
 using AwesomeAssertions;
 using Monica.Core.Results;
 using Monica.Core.Results.Abstractions;
@@ -8,6 +9,14 @@ namespace Test.Monica.Core.Results;
 
 public class ResultExtensionsTests
 {
+    [Fact]
+    public void ToHttpStatusCode_WhenResultIsAConflict_ShouldReturnHttp409()
+    {
+        var result = Res.Fail("stale preview", ResStatus.Conflict);
+
+        result.ToHttpStatusCode().Should().Be(HttpStatusCode.Conflict);
+    }
+
     [Fact]
     public void WithDetail_WhenCalledOnFailure_ShouldPreserveMessageAndStatus()
     {

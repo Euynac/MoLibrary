@@ -197,6 +197,29 @@ public class DaprStateStoreProvider(DaprClient dapr, ILogger<DaprStateStoreProvi
         }
     }
 
+    /// <inheritdoc />
+    public override async Task<bool> TrySaveStateWithETagWithoutReadBackAsync<T>(string key, T value, string expectedETag,
+        CancellationToken cancellationToken = default, TimeSpan? ttl = null)
+    {
+        try
+        {
+            var metadata = BuildTtlMetadata(ttl);
+            var success = await dapr.TrySaveStateAsync(StateStoreName, key, value, expectedETag,
+                metadata: metadata, cancellationToken: cancellationToken);
+
+            if (!success)
+            {
+                Logger.LogDebug("ETag mismatch for key: {Key}. Expected: {Expected}", key, expectedETag);
+            }
+
+            return success;
+        }
+        catch (Exception e)
+        {
+            throw e.CreateException(Logger, "ERROR TrySaveStateWithETagWithoutReadBack to {0} with key: {1}", StateStoreName, key);
+        }
+    }
+
     public override async Task<bool> TrySaveStateIfNotExistsAsync<T>(string key, T value,
         CancellationToken cancellationToken = default, TimeSpan? ttl = null)
     {

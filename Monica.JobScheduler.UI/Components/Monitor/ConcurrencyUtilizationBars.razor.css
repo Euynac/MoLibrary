@@ -80,8 +80,9 @@
 
 /* Jobs Container */
 .concurrency-card-wrapper ::deep .jobs-container {
-    display: flex;
-    flex-direction: column;
+    /* MudExpansionPanel uses a 100% flex basis, so this list must not be a column flex container. */
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
     gap: 8px;
 }
 

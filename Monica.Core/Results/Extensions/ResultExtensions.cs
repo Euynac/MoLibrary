@@ -28,6 +28,9 @@ public static class ResultExtensions
             case ResStatus.NotFound:
                 return HttpStatusCode.NotFound;
 
+            case ResStatus.Conflict:
+                return HttpStatusCode.Conflict;
+
             case ResStatus.Unauthorized:
             case ResStatus.RefreshTokenExpired:
             case ResStatus.AccessTokenExpired:
