@@ -57,7 +57,14 @@
                             @context.State
                         </MudChip>
                     </MudTd>
-                    <MudTd DataLabel="@L["ConsumerGroups:Columns:Members"]">@context.MemberCount</MudTd>
+                    <MudTd DataLabel="@L["ConsumerGroups:Columns:Members"]">
+                        <MudButton Variant="Variant.Text"
+                                   Size="Size.Small"
+                                   StartIcon="@Icons.Material.Filled.Groups"
+                                   OnClick="@(() => OnViewMembers.InvokeAsync(context))">
+                            @context.MemberCount
+                        </MudButton>
+                    </MudTd>
                     <MudTd DataLabel="@L["ConsumerGroups:Columns:Lag"]">
                         <span class="consumer-group-lag">
                             @KafkaMetricDisplayFormatter.FormatOptionalInt64(context.TotalLag, L["ConsumerGroups:Values:LagUnknown"])
@@ -80,6 +87,9 @@
 
     [Parameter]
     public EventCallback OnRefresh { get; set; }
+
+    [Parameter]
+    public EventCallback<KafkaConsumerGroupSummary> OnViewMembers { get; set; }
 
     private static Color GetStateColor(string state) => state.ToUpperInvariant() switch
     {

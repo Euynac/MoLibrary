@@ -106,4 +106,58 @@ public interface IKafkaAdminProvider
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>Consumer group summaries.</returns>
     Task<IReadOnlyList<KafkaConsumerGroupSummary>> ListConsumerGroupsAsync(KafkaClusterConfig cluster, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Describes one consumer group, including its live member identities and partition assignments.
+    /// </summary>
+    /// <param name="cluster">Target Kafka cluster.</param>
+    /// <param name="groupId">Consumer group identifier.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>Provider-neutral group description.</returns>
+    Task<KafkaConsumerGroupDescription> DescribeConsumerGroupAsync(
+        KafkaClusterConfig cluster,
+        string groupId,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Describes multiple consumer groups in one provider operation when supported.
+    /// </summary>
+    /// <remarks>
+    /// The default implementation composes the single-group contract. Providers backed by a batch
+    /// admin API should override this method to avoid one broker round trip per group.
+    /// </remarks>
+    /// <param name="cluster">Target Kafka cluster.</param>
+    /// <param name="groupIds">Consumer group identifiers.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>Descriptions in the requested order. Failed rows carry an error message.</returns>
+    async Task<IReadOnlyList<KafkaConsumerGroupDescription>> DescribeConsumerGroupsAsync(
+        KafkaClusterConfig cluster,
+        IReadOnlyList<string> groupIds,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(groupIds);
+        var descriptions = new List<KafkaConsumerGroupDescription>(groupIds.Count);
+        foreach (var groupId in groupIds)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            try
+            {
+                descriptions.Add(await DescribeConsumerGroupAsync(cluster, groupId, cancellationToken));
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                throw;
+            }
+            catch (Exception ex)
+            {
+                descriptions.Add(new KafkaConsumerGroupDescription
+                {
+                    GroupId = groupId,
+                    ErrorMessage = ex.Message
+                });
+            }
+        }
+
+        return descriptions;
+    }
 }

@@ -270,6 +270,118 @@ internal sealed class ConfluentKafkaAdminProvider(IOptions<ModuleEventBusKafkaOp
             .ToList();
     }
 
+    /// <summary>
+    /// Describes one consumer group and maps Kafka's member assignment payload to the provider-neutral
+    /// console model.
+    /// </summary>
+    public async Task<KafkaConsumerGroupDescription> DescribeConsumerGroupAsync(
+        KafkaClusterConfig cluster,
+        string groupId,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(groupId);
+        var normalizedGroupId = groupId.Trim();
+        var description = (await DescribeConsumerGroupsAsync(
+                cluster,
+                [normalizedGroupId],
+                cancellationToken))
+            .FirstOrDefault(item => string.Equals(item.GroupId, normalizedGroupId, StringComparison.Ordinal));
+        if (description is null)
+        {
+            throw new InvalidOperationException($"Kafka consumer group '{normalizedGroupId}' was not returned by the broker.");
+        }
+
+        if (!string.IsNullOrWhiteSpace(description.ErrorMessage))
+        {
+            throw new InvalidOperationException(
+                $"Kafka consumer group '{normalizedGroupId}' could not be described: {description.ErrorMessage}");
+        }
+
+        return description;
+    }
+
+    /// <summary>
+    /// Describes consumer groups in one Kafka admin request and preserves per-group diagnostics.
+    /// </summary>
+    public async Task<IReadOnlyList<KafkaConsumerGroupDescription>> DescribeConsumerGroupsAsync(
+        KafkaClusterConfig cluster,
+        IReadOnlyList<string> groupIds,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(groupIds);
+        cancellationToken.ThrowIfCancellationRequested();
+        var normalizedGroupIds = groupIds
+            .Where(groupId => !string.IsNullOrWhiteSpace(groupId))
+            .Select(groupId => groupId.Trim())
+            .Distinct(StringComparer.Ordinal)
+            .ToList();
+        if (normalizedGroupIds.Count == 0)
+        {
+            return [];
+        }
+
+        using var admin = CreateAdminClient(cluster);
+        var result = await KafkaNativeRequestAwaiter.AwaitAsync(
+            admin.DescribeConsumerGroupsAsync(
+                normalizedGroupIds,
+                new DescribeConsumerGroupsOptions
+                {
+                    RequestTimeout = Option.AdminRequestTimeout,
+                    IncludeAuthorizedOperations = false
+                }),
+            cancellationToken);
+
+        var returnedByGroupId = result.ConsumerGroupDescriptions
+            .Where(description => !string.IsNullOrWhiteSpace(description.GroupId))
+            .GroupBy(description => description.GroupId, StringComparer.Ordinal)
+            .ToDictionary(group => group.Key, group => group.First(), StringComparer.Ordinal);
+        return normalizedGroupIds
+            .Select(groupId => returnedByGroupId.TryGetValue(groupId, out var description)
+                ? MapConsumerGroupDescription(description)
+                : new KafkaConsumerGroupDescription
+                {
+                    GroupId = groupId,
+                    ErrorMessage = "The broker did not return a description for this consumer group."
+                })
+            .ToList();
+    }
+
+    private static KafkaConsumerGroupDescription MapConsumerGroupDescription(
+        ConsumerGroupDescription description)
+    {
+        var errorMessage = description.Error.Code == ErrorCode.NoError
+            ? null
+            : string.IsNullOrWhiteSpace(description.Error.Reason)
+                ? description.Error.Code.ToString()
+                : $"{description.Error.Code}: {description.Error.Reason}";
+        return new KafkaConsumerGroupDescription
+        {
+            GroupId = description.GroupId,
+            State = description.State.ToString(),
+            ErrorMessage = errorMessage,
+            Members = errorMessage is not null
+                ? []
+                : description.Members
+                    .Select(member => new KafkaConsumerGroupMemberAssignment
+                    {
+                        ConsumerId = member.ConsumerId ?? string.Empty,
+                        Host = member.Host ?? string.Empty,
+                        ClientId = member.ClientId ?? string.Empty,
+                        Partitions = member.Assignment?.TopicPartitions
+                            ?.Select(partition => new KafkaConsumerPartitionAssignment
+                            {
+                                TopicName = partition.Topic,
+                                Partition = partition.Partition.Value
+                            })
+                            .OrderBy(partition => partition.TopicName, StringComparer.OrdinalIgnoreCase)
+                            .ThenBy(partition => partition.Partition)
+                            .ToList() ?? []
+                    })
+                    .OrderBy(member => member.ConsumerId, StringComparer.OrdinalIgnoreCase)
+                    .ToList()
+        };
+    }
+
     private IAdminClient CreateAdminClient(KafkaClusterConfig cluster)
     {
         if (!cluster.HasDirectKafkaAccess)

@@ -67,6 +67,7 @@ public sealed class ModuleEventBusKafkaUI(ModuleEventBusKafkaUIOption option)
     {
         services.AddScoped<EventBusKafkaPageState>();
         services.AddScoped<KafkaPerformancePollingState>();
+        services.AddTransient<KafkaConsumerMetricsPollingState>();
     }
 }
 

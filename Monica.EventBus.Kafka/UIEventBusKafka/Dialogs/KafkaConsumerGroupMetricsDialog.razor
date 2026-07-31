@@ -1,0 +1,310 @@
+@inject KafkaConsumerMetricsPollingState PollingState
+@inject IStringLocalizer<EventBusKafkaResource> L
+@implements IAsyncDisposable
+
+<MudDialog>
+    <DialogContent>
+        <div class="consumer-metrics-dialog">
+            <div class="consumer-metrics-toolbar">
+                <div class="consumer-metrics-heading">
+                    <MudText Typo="Typo.h6" Class="consumer-metrics-group-id">@GroupId</MudText>
+                    <MudText Typo="Typo.body2" Color="Color.Secondary">@CaptureStatus</MudText>
+                </div>
+                <div class="consumer-metrics-controls">
+                    <MudSwitch T="bool"
+                               Value="@PollingState.IsAutomaticRefreshEnabled"
+                               ValueChanged="SetAutoRefreshAsync"
+                               Color="Color.Primary"
+                               Label="@L["Performance:Live:AutoRefresh"]" />
+                    <div class="consumer-metrics-interval">
+                        <MudNumericField T="int"
+                                         Value="@PollingState.RefreshIntervalSeconds"
+                                         ValueChanged="SetIntervalAsync"
+                                         Label="@L["Performance:Live:IntervalSeconds"]"
+                                         Min="@KafkaPerformancePollingState.MinimumRefreshIntervalSeconds"
+                                         Max="@KafkaPerformancePollingState.MaximumRefreshIntervalSeconds"
+                                         Variant="Variant.Outlined"
+                                         Margin="Margin.Dense"
+                                         Disabled="@(!PollingState.IsAutomaticRefreshEnabled)" />
+                    </div>
+                    <MudButton Variant="Variant.Outlined"
+                               StartIcon="@Icons.Material.Filled.Refresh"
+                               Disabled="@PollingState.IsSampling"
+                               OnClick="CaptureAsync">
+                        @L["Common:Actions:Refresh"]
+                    </MudButton>
+                </div>
+            </div>
+
+            @if (!string.IsNullOrWhiteSpace(PollingState.LastError))
+            {
+                <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined" Dense="true">
+                    @PollingState.LastError
+                </MudAlert>
+            }
+
+            <section class="consumer-members-section" aria-labelledby="consumer-members-heading">
+                <div class="consumer-section-title">
+                    <MudIcon Icon="@Icons.Material.Filled.Groups" Color="Color.Secondary" />
+                    <MudText Typo="Typo.subtitle1" id="consumer-members-heading">
+                        @L["ConsumerGroups:MetricsDialog:MembersTitle", Members.Count]
+                    </MudText>
+                </div>
+
+                @if (PollingState.Snapshot is null && PollingState.IsSampling)
+                {
+                    <MudProgressLinear Color="Color.Primary" Indeterminate="true" />
+                }
+                else if (Members.Count == 0)
+                {
+                    <MudAlert Severity="Severity.Info" Variant="Variant.Outlined" Dense="true">
+                        @L["ConsumerGroups:MetricsDialog:NoMembers"]
+                    </MudAlert>
+                }
+                else
+                {
+                    <div class="consumer-members-table">
+                        <MudTable T="KafkaConsumerGroupMemberAssignment"
+                                  Items="@Members"
+                                  Dense="true"
+                                  Hover="true"
+                                  Breakpoint="Breakpoint.None">
+                            <HeaderContent>
+                                <MudTh>@L["ConsumerGroups:MetricsDialog:Columns:ConsumerId"]</MudTh>
+                                <MudTh>@L["ConsumerGroups:MetricsDialog:Columns:Host"]</MudTh>
+                                <MudTh>@L["ConsumerGroups:MetricsDialog:Columns:ClientId"]</MudTh>
+                                <MudTh>@L["ConsumerGroups:MetricsDialog:Columns:Assignments"]</MudTh>
+                            </HeaderContent>
+                            <RowTemplate>
+                                <MudTd DataLabel="@L["ConsumerGroups:MetricsDialog:Columns:ConsumerId"]">
+                                    <span class="consumer-identifier">@FormatIdentity(context.ConsumerId)</span>
+                                </MudTd>
+                                <MudTd DataLabel="@L["ConsumerGroups:MetricsDialog:Columns:Host"]">
+                                    <span class="consumer-identifier">@FormatIdentity(context.Host)</span>
+                                </MudTd>
+                                <MudTd DataLabel="@L["ConsumerGroups:MetricsDialog:Columns:ClientId"]">
+                                    <span class="consumer-identifier">@FormatIdentity(context.ClientId)</span>
+                                </MudTd>
+                                <MudTd DataLabel="@L["ConsumerGroups:MetricsDialog:Columns:Assignments"]">
+                                    @GetAssignmentCount(context)
+                                </MudTd>
+                            </RowTemplate>
+                        </MudTable>
+                    </div>
+                }
+            </section>
+
+            <section class="consumer-partitions-section" aria-labelledby="consumer-partitions-heading">
+                <div class="consumer-section-title">
+                    <MudIcon Icon="@Icons.Material.Filled.TableRows" Color="Color.Primary" />
+                    <MudText Typo="Typo.subtitle1" id="consumer-partitions-heading">
+                        @L["ConsumerGroups:MetricsDialog:PartitionsTitle"]
+                    </MudText>
+                </div>
+
+                @if (PollingState.Snapshot is null && PollingState.IsSampling)
+                {
+                    <div class="consumer-metrics-state">
+                        <MudProgressCircular Color="Color.Primary" Indeterminate="true" />
+                        <MudText Typo="Typo.body2">@L["ConsumerGroups:MetricsDialog:Loading"]</MudText>
+                    </div>
+                }
+                else if (MetricRows.Count == 0)
+                {
+                    <MudAlert Severity="Severity.Info" Variant="Variant.Outlined">
+                        @L["ConsumerGroups:MetricsDialog:NoPartitions"]
+                    </MudAlert>
+                }
+                else
+                {
+                    <div class="consumer-partitions-table">
+                        <MudTable T="ConsumerPartitionRow"
+                                  Items="@MetricRows"
+                                  Dense="true"
+                                  Hover="true"
+                                  Striped="true"
+                                  Breakpoint="Breakpoint.None"
+                                  @bind-RowsPerPage="_partitionRowsPerPage">
+                            <HeaderContent>
+                                <MudTh>@L["Performance:Columns:Topic"]</MudTh>
+                                <MudTh>@L["ConsumerGroups:MetricsDialog:Columns:Partition"]</MudTh>
+                                <MudTh>@L["ConsumerGroups:MetricsDialog:Columns:ConsumerId"]</MudTh>
+                                <MudTh>@L["ConsumerGroups:MetricsDialog:Columns:Host"]</MudTh>
+                                <MudTh>@L["ConsumerGroups:MetricsDialog:Columns:ClientId"]</MudTh>
+                                <MudTh>@L["Performance:Columns:ConsumeRate"]</MudTh>
+                                <MudTh>@L["Performance:Columns:Lag"]</MudTh>
+                                <MudTh>@L["ConsumerGroups:MetricsDialog:Columns:CurrentOffset"]</MudTh>
+                                <MudTh>@L["ConsumerGroups:MetricsDialog:Columns:LogEndOffset"]</MudTh>
+                                <MudTh>@L["Performance:Columns:WriteRate"]</MudTh>
+                            </HeaderContent>
+                            <RowTemplate>
+                                <MudTd DataLabel="@L["Performance:Columns:Topic"]">
+                                    <span class="consumer-identifier">@context.TopicName</span>
+                                </MudTd>
+                                <MudTd DataLabel="@L["ConsumerGroups:MetricsDialog:Columns:Partition"]">@context.Partition.Partition</MudTd>
+                                <MudTd DataLabel="@L["ConsumerGroups:MetricsDialog:Columns:ConsumerId"]">
+                                    <span class="consumer-identifier">@FormatIdentity(context.Member.ConsumerId)</span>
+                                </MudTd>
+                                <MudTd DataLabel="@L["ConsumerGroups:MetricsDialog:Columns:Host"]">
+                                    <span class="consumer-identifier">@FormatIdentity(context.Member.Host)</span>
+                                </MudTd>
+                                <MudTd DataLabel="@L["ConsumerGroups:MetricsDialog:Columns:ClientId"]">
+                                    <span class="consumer-identifier">@FormatIdentity(context.Member.ClientId)</span>
+                                </MudTd>
+                                <MudTd DataLabel="@L["Performance:Columns:ConsumeRate"]">
+                                    @KafkaMetricDisplayFormatter.FormatRate(context.Partition.ConsumeRatePerSecond, L)
+                                </MudTd>
+                                <MudTd DataLabel="@L["Performance:Columns:Lag"]">
+                                    @KafkaMetricDisplayFormatter.FormatOptionalInt64(
+                                        context.Partition.Lag,
+                                        L["Performance:Values:LagUnknown"])
+                                </MudTd>
+                                <MudTd DataLabel="@L["ConsumerGroups:MetricsDialog:Columns:CurrentOffset"]">
+                                    @KafkaMetricDisplayFormatter.FormatOptionalInt64(
+                                        context.Partition.CurrentOffset,
+                                        L["ConsumerGroups:MetricsDialog:Values:OffsetUnknown"])
+                                </MudTd>
+                                <MudTd DataLabel="@L["ConsumerGroups:MetricsDialog:Columns:LogEndOffset"]">
+                                    @KafkaMetricDisplayFormatter.FormatOptionalInt64(
+                                        context.Partition.LogEndOffset,
+                                        L["ConsumerGroups:MetricsDialog:Values:OffsetUnknown"])
+                                </MudTd>
+                                <MudTd DataLabel="@L["Performance:Columns:WriteRate"]">
+                                    @KafkaMetricDisplayFormatter.FormatRate(context.Partition.WriteRatePerSecond, L)
+                                </MudTd>
+                            </RowTemplate>
+                            <PagerContent>
+                                <MudTablePager PageSizeOptions="@PageSizeOptions" />
+                            </PagerContent>
+                        </MudTable>
+                    </div>
+                }
+            </section>
+        </div>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Close">@L["Common:Actions:Close"]</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    private static readonly int[] PageSizeOptions = [10, 25, 50, 100];
+    private int _partitionRowsPerPage = 25;
+    private bool _isDisposed;
+
+    [CascadingParameter]
+    private IMudDialogInstance MudDialog { get; set; } = default!;
+
+    [Parameter, EditorRequired]
+    public string ClusterId { get; set; } = string.Empty;
+
+    [Parameter, EditorRequired]
+    public string GroupId { get; set; } = string.Empty;
+
+    [Parameter]
+    public string? TopicName { get; set; }
+
+    private IReadOnlyList<KafkaConsumerGroupMemberAssignment> Members
+    {
+        get
+        {
+            var members = PollingState.Snapshot?.ConsumerGroups
+                .FirstOrDefault(group => string.Equals(group.GroupId, GroupId, StringComparison.Ordinal))
+                ?.Members ?? [];
+            return TopicName is null
+                ? members
+                : members
+                    .Where(member => member.Partitions.Any(partition =>
+                        string.Equals(partition.TopicName, TopicName, StringComparison.Ordinal)))
+                    .ToList();
+        }
+    }
+
+    private IReadOnlyList<ConsumerPartitionRow> MetricRows =>
+        PollingState.Snapshot?.GroupMetrics
+            .SelectMany(metric => metric.Members.SelectMany(member => member.Partitions.Select(partition =>
+                new ConsumerPartitionRow(metric.TopicName, member, partition))))
+            .OrderBy(row => row.TopicName, StringComparer.OrdinalIgnoreCase)
+            .ThenBy(row => row.Partition.Partition)
+            .ToList() ?? [];
+
+    private string CaptureStatus => PollingState.IsSampling
+        ? L["Performance:Live:Sampling"]
+        : PollingState.Snapshot is { } snapshot
+            ? L["Performance:Live:LastCapturedAt", snapshot.CapturedAt.LocalDateTime.ToString("yyyy-MM-dd HH:mm:ss")]
+            : L["Performance:Live:WaitingForFirstSample"];
+
+    protected override void OnInitialized()
+    {
+        PollingState.StateChanged += HandleStateChanged;
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender)
+        {
+            return;
+        }
+
+        await PollingState.ActivateAsync(ClusterId, GroupId, TopicName);
+        if (!_isDisposed)
+        {
+            StateHasChanged();
+        }
+    }
+
+    private Task CaptureAsync()
+    {
+        return PollingState.CaptureNowAsync();
+    }
+
+    private Task SetAutoRefreshAsync(bool enabled)
+    {
+        return PollingState.SetAutomaticRefreshAsync(enabled);
+    }
+
+    private Task SetIntervalAsync(int seconds)
+    {
+        return PollingState.SetRefreshIntervalAsync(seconds);
+    }
+
+    private string FormatIdentity(string value)
+    {
+        return string.IsNullOrWhiteSpace(value)
+            ? L["ConsumerGroups:MetricsDialog:Values:Unassigned"]
+            : value;
+    }
+
+    private int GetAssignmentCount(KafkaConsumerGroupMemberAssignment member)
+    {
+        return TopicName is null
+            ? member.Partitions.Count
+            : member.Partitions.Count(partition =>
+                string.Equals(partition.TopicName, TopicName, StringComparison.Ordinal));
+    }
+
+    private void HandleStateChanged()
+    {
+        if (!_isDisposed)
+        {
+            _ = InvokeAsync(StateHasChanged);
+        }
+    }
+
+    private void Close()
+    {
+        MudDialog.Close();
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        _isDisposed = true;
+        PollingState.StateChanged -= HandleStateChanged;
+        await PollingState.DisposeAsync();
+    }
+
+    private sealed record ConsumerPartitionRow(
+        string TopicName,
+        KafkaConsumerMemberMetrics Member,
+        KafkaConsumerPartitionMetrics Partition);
+}

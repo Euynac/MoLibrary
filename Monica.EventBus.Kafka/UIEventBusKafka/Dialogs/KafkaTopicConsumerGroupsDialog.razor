@@ -1,0 +1,162 @@
+@inject KafkaConsoleFacade Facade
+@inject IDialogService DialogService
+@inject IStringLocalizer<EventBusKafkaResource> L
+
+<MudDialog>
+    <DialogContent>
+        <MudStack Spacing="3">
+            <div class="topic-groups-heading">
+                <div>
+                    <MudText Typo="Typo.h6">@TopicName</MudText>
+                    <MudText Typo="Typo.body2" Color="Color.Secondary">
+                        @L["Topics:ConsumerGroupsDialog:Summary", _groups.Count]
+                    </MudText>
+                </div>
+                <MudButton Variant="Variant.Outlined"
+                           StartIcon="@Icons.Material.Filled.Refresh"
+                           Disabled="@_isLoading"
+                           OnClick="LoadAsync">
+                    @L["Common:Actions:Refresh"]
+                </MudButton>
+            </div>
+
+            @if (!string.IsNullOrWhiteSpace(_errorMessage))
+            {
+                <MudAlert Severity="Severity.Error" Variant="Variant.Outlined" Dense="true">
+                    @_errorMessage
+                </MudAlert>
+            }
+
+            @if (_isLoading)
+            {
+                <div class="topic-groups-state">
+                    <MudProgressCircular Color="Color.Primary" Indeterminate="true" />
+                    <MudText Typo="Typo.body2">@L["Topics:ConsumerGroupsDialog:Loading"]</MudText>
+                </div>
+            }
+            else if (_groups.Count == 0)
+            {
+                <MudAlert Severity="Severity.Info" Variant="Variant.Outlined">
+                    @L["Topics:ConsumerGroupsDialog:Empty"]
+                </MudAlert>
+            }
+            else
+            {
+                <div class="topic-groups-table">
+                    <MudTable T="KafkaConsumerGroupSummary"
+                              Items="@_groups"
+                              Dense="true"
+                              Hover="true"
+                              Striped="true"
+                              Breakpoint="Breakpoint.None">
+                        <HeaderContent>
+                            <MudTh>@L["ConsumerGroups:Columns:GroupId"]</MudTh>
+                            <MudTh>@L["ConsumerGroups:Columns:State"]</MudTh>
+                            <MudTh>@L["ConsumerGroups:Columns:Members"]</MudTh>
+                            <MudTh>@L["ConsumerGroups:Columns:Lag"]</MudTh>
+                            <MudTh>@L["Common:Columns:Actions"]</MudTh>
+                        </HeaderContent>
+                        <RowTemplate>
+                            <MudTd DataLabel="@L["ConsumerGroups:Columns:GroupId"]">
+                                <span class="topic-group-id">@context.GroupId</span>
+                            </MudTd>
+                            <MudTd DataLabel="@L["ConsumerGroups:Columns:State"]">@context.State</MudTd>
+                            <MudTd DataLabel="@L["ConsumerGroups:Columns:Members"]">@context.MemberCount</MudTd>
+                            <MudTd DataLabel="@L["ConsumerGroups:Columns:Lag"]">
+                                @KafkaMetricDisplayFormatter.FormatOptionalInt64(
+                                    context.TotalLag,
+                                    L["ConsumerGroups:Values:LagUnknown"])
+                            </MudTd>
+                            <MudTd DataLabel="@L["Common:Columns:Actions"]">
+                                <MudButton Variant="Variant.Text"
+                                           Size="Size.Small"
+                                           StartIcon="@Icons.Material.Filled.Analytics"
+                                           OnClick="@(() => OpenDetailsAsync(context))">
+                                    @L["Common:Actions:Details"]
+                                </MudButton>
+                            </MudTd>
+                        </RowTemplate>
+                    </MudTable>
+                </div>
+            }
+        </MudStack>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Close">@L["Common:Actions:Close"]</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    private readonly List<KafkaConsumerGroupSummary> _groups = [];
+    private bool _isLoading = true;
+    private string? _errorMessage;
+
+    [CascadingParameter]
+    private IMudDialogInstance MudDialog { get; set; } = default!;
+
+    [Parameter, EditorRequired]
+    public string ClusterId { get; set; } = string.Empty;
+
+    [Parameter, EditorRequired]
+    public string TopicName { get; set; } = string.Empty;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender)
+        {
+            return;
+        }
+
+        await LoadAsync();
+        StateHasChanged();
+    }
+
+    private async Task LoadAsync()
+    {
+        _isLoading = true;
+        _errorMessage = null;
+        try
+        {
+            var result = await Facade.ListTopicConsumerGroupsAsync(ClusterId, TopicName);
+            if (result.IsFailed(out var error))
+            {
+                _errorMessage = error.Message;
+                return;
+            }
+
+            _groups.Clear();
+            _groups.AddRange(result.Data!);
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+
+    private async Task OpenDetailsAsync(KafkaConsumerGroupSummary group)
+    {
+        var parameters = new DialogParameters<KafkaConsumerGroupMetricsDialog>
+        {
+            { dialog => dialog.ClusterId, ClusterId },
+            { dialog => dialog.TopicName, TopicName },
+            { dialog => dialog.GroupId, group.GroupId }
+        };
+        var dialog = await DialogService.ShowAsync<KafkaConsumerGroupMetricsDialog>(
+            L["ConsumerGroups:MetricsDialog:TopicTitle", group.GroupId, TopicName],
+            parameters,
+            DetailDialogOptions);
+        await dialog.Result;
+    }
+
+    private void Close()
+    {
+        MudDialog.Close();
+    }
+
+    private static DialogOptions DetailDialogOptions => new()
+    {
+        CloseOnEscapeKey = true,
+        FullWidth = true,
+        MaxWidth = MaxWidth.ExtraExtraLarge
+    };
+}

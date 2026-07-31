@@ -50,10 +50,10 @@ public sealed class EventBusKafkaPageState(
     /// <summary>
     /// Current retained-message inventory from the latest live sample or topic enrichment.
     /// </summary>
-    public long? TotalAvailableMessageCount =>
+    public long? TotalRetainedMessageCount =>
         LatestPerformance is { TopicMetrics.Count: > 0 } latest
-            ? latest.TotalAvailableMessageCount
-            : Dashboard.TotalAvailableMessageCount;
+            ? latest.TotalRetainedMessageCount
+            : Dashboard.TotalRetainedMessageCount;
 
     /// <summary>
     /// Current topic count from the latest live metadata sample or dashboard snapshot.
@@ -555,7 +555,7 @@ public sealed class EventBusKafkaPageState(
         _topicsClusterId = null;
         _consumerGroupsClusterId = null;
         _performanceClusterId = null;
-        Dashboard.TotalAvailableMessageCount = null;
+        Dashboard.TotalRetainedMessageCount = null;
         Dashboard.LatestPerformance = null;
     }
 
@@ -709,10 +709,10 @@ public sealed class EventBusKafkaPageState(
             .Where(topic => !topic.IsInternal)
             .ToList();
         Dashboard.TopicCount = Topics.Count;
-        Dashboard.TotalAvailableMessageCount = applicationTopics.Count == 0
+        Dashboard.TotalRetainedMessageCount = applicationTopics.Count == 0
             ? 0
-            : applicationTopics.All(topic => topic.AvailableMessageCount.HasValue)
-                ? applicationTopics.Sum(topic => topic.AvailableMessageCount.GetValueOrDefault())
+            : applicationTopics.All(topic => topic.RetainedMessageCount.HasValue)
+                ? applicationTopics.Sum(topic => topic.RetainedMessageCount.GetValueOrDefault())
                 : null;
     }
 

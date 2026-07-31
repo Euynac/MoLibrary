@@ -1,0 +1,111 @@
+.consumer-metrics-dialog {
+    width: 100%;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.consumer-metrics-toolbar {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 20px;
+    min-width: 0;
+}
+
+.consumer-metrics-heading,
+.consumer-metrics-group-id {
+    min-width: 0;
+    max-width: 100%;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+}
+
+.consumer-metrics-controls {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 12px;
+}
+
+.consumer-metrics-interval {
+    width: 150px;
+    min-width: 132px;
+}
+
+.consumer-members-section,
+.consumer-partitions-section {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.consumer-section-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.consumer-members-table,
+.consumer-partitions-table {
+    width: 100%;
+    min-width: 0;
+    overflow: hidden;
+    border: 1px solid var(--mud-palette-lines-default);
+    border-radius: 9px;
+}
+
+.consumer-members-table ::deep .mud-table-container,
+.consumer-partitions-table ::deep .mud-table-container {
+    overflow-x: auto;
+}
+
+.consumer-members-table ::deep .mud-table-root {
+    min-width: 720px;
+}
+
+.consumer-partitions-table ::deep .mud-table-root {
+    min-width: 1440px;
+}
+
+.consumer-identifier {
+    display: inline-block;
+    min-width: 0;
+    max-width: 360px;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+}
+
+.consumer-metrics-state {
+    min-height: 180px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+}
+
+@media (max-width: 900px) {
+    .consumer-metrics-toolbar {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .consumer-metrics-controls {
+        justify-content: flex-start;
+    }
+}
+
+@media (max-width: 600px) {
+    .consumer-metrics-controls {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .consumer-metrics-interval {
+        width: 100%;
+    }
+}

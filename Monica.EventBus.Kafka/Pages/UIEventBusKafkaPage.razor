@@ -90,17 +90,21 @@
                                     OnDelete="DeleteTopicAsync"
                                     OnViewMessages="OpenMessagesDialogAsync"
                                     OnViewBacklog="OpenTopicBacklogDialogAsync"
+                                    OnViewConsumerGroups="OpenTopicConsumerGroupsDialogAsync"
                                     OnIncreasePartitions="OpenIncreasePartitionsDialogAsync"
                                     OnUpdateRetention="OpenRetentionDialogAsync"
                                     OnClearMessages="ClearTopicMessagesAsync" />
                 </MudTabPanel>
                 <MudTabPanel Text="@L["Tabs:ConsumerGroups"]" Icon="@Icons.Material.Filled.Group">
-                    <KafkaConsumerGroupsTab State="PageState" OnRefresh="RefreshAsync" />
+                    <KafkaConsumerGroupsTab State="PageState"
+                                            OnRefresh="RefreshAsync"
+                                            OnViewMembers="OpenConsumerGroupMembersDialogAsync" />
                 </MudTabPanel>
                 <MudTabPanel Text="@L["Tabs:Performance"]" Icon="@Icons.Material.Filled.MonitorHeart">
                     <KafkaPerformanceTab State="PageState"
                                          OnRefresh="RefreshAsync"
-                                         OnCapture="CapturePerformanceAsync" />
+                                         OnCapture="CapturePerformanceAsync"
+                                         OnViewDetails="OpenPerformanceDetailsDialogAsync" />
                 </MudTabPanel>
             </MudTabs>
         </div>
@@ -414,6 +418,58 @@
         StateHasChanged();
     }
 
+    private async Task OpenTopicConsumerGroupsDialogAsync(KafkaTopicSummary topic)
+    {
+        if (PageState.SelectedClusterId is null)
+        {
+            return;
+        }
+
+        var parameters = new DialogParameters<KafkaTopicConsumerGroupsDialog>
+        {
+            { dialog => dialog.ClusterId, PageState.SelectedClusterId },
+            { dialog => dialog.TopicName, topic.TopicName }
+        };
+        var dialog = await DialogService.ShowAsync<KafkaTopicConsumerGroupsDialog>(
+            L["Topics:ConsumerGroupsDialog:Title", topic.TopicName],
+            parameters,
+            DetailDialogOptions);
+        await dialog.Result;
+    }
+
+    private Task OpenConsumerGroupMembersDialogAsync(KafkaConsumerGroupSummary group)
+    {
+        return OpenConsumerGroupMetricsDialogAsync(group.GroupId, null);
+    }
+
+    private Task OpenPerformanceDetailsDialogAsync(KafkaConsumerGroupTopicMetrics metric)
+    {
+        return OpenConsumerGroupMetricsDialogAsync(metric.GroupId, metric.TopicName);
+    }
+
+    private async Task OpenConsumerGroupMetricsDialogAsync(string groupId, string? topicName)
+    {
+        if (PageState.SelectedClusterId is null)
+        {
+            return;
+        }
+
+        var parameters = new DialogParameters<KafkaConsumerGroupMetricsDialog>
+        {
+            { dialog => dialog.ClusterId, PageState.SelectedClusterId },
+            { dialog => dialog.GroupId, groupId },
+            { dialog => dialog.TopicName, topicName }
+        };
+        var title = topicName is null
+            ? L["ConsumerGroups:MetricsDialog:Title", groupId]
+            : L["ConsumerGroups:MetricsDialog:TopicTitle", groupId, topicName];
+        var dialog = await DialogService.ShowAsync<KafkaConsumerGroupMetricsDialog>(
+            title,
+            parameters,
+            DetailDialogOptions);
+        await dialog.Result;
+    }
+
     private async Task CapturePerformanceAsync()
     {
         if (await PageState.CapturePerformanceAsync())
@@ -459,6 +515,13 @@
     {
         CloseOnEscapeKey = true,
         MaxWidth = MaxWidth.Large,
+        FullWidth = true
+    };
+
+    private static DialogOptions DetailDialogOptions => new()
+    {
+        CloseOnEscapeKey = true,
+        MaxWidth = MaxWidth.ExtraExtraLarge,
         FullWidth = true
     };
 }

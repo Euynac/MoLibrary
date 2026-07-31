@@ -48,4 +48,22 @@ public interface IKafkaOffsetMetricsProvider
         IReadOnlyList<KafkaTopicSummary> topics,
         IReadOnlyList<KafkaConsumerGroupSummary> consumerGroups,
         CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Captures topic/group/member/partition offset metrics for the supplied group descriptions.
+    /// </summary>
+    /// <remarks>
+    /// Providers that cannot expose member assignments may return an empty capture. The aggregate
+    /// performance contract above remains available for those providers.
+    /// </remarks>
+    /// <param name="cluster">Target Kafka cluster.</param>
+    /// <param name="topics">Topic metadata from the current sampling cycle.</param>
+    /// <param name="consumerGroups">Consumer group descriptions with live assignments.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>Detailed consumer metrics captured from read-only Kafka APIs.</returns>
+    Task<KafkaConsumerMetricsSnapshot> CaptureConsumerMetricsAsync(
+        KafkaClusterConfig cluster,
+        IReadOnlyList<KafkaTopicSummary> topics,
+        IReadOnlyList<KafkaConsumerGroupDescription> consumerGroups,
+        CancellationToken cancellationToken = default);
 }

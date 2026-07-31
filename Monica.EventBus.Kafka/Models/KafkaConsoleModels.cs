@@ -171,9 +171,9 @@ public sealed class KafkaTopicSummary
     /// </summary>
     /// <remarks>
     /// This value is calculated from each partition's latest offset minus earliest offset. It is
-    /// independent of consumer groups and can be available even when no consumer group exists.
+    /// independent of consumer groups and can be calculated even when no consumer group exists.
     /// </remarks>
-    public long? AvailableMessageCount { get; set; }
+    public long? RetainedMessageCount { get; set; }
 }
 
 /// <summary>
@@ -198,7 +198,7 @@ public sealed class KafkaTopicBacklogSnapshot
     /// Kafka offset ranges can contain holes on compacted topics, so this is a lightweight
     /// offset-range inventory rather than a full message scan.
     /// </remarks>
-    public long TotalAvailableMessageCount { get; set; }
+    public long TotalRetainedMessageCount { get; set; }
 
     /// <summary>
     /// Time when the snapshot was captured.
@@ -234,7 +234,7 @@ public sealed class KafkaTopicPartitionBacklog
     /// <summary>
     /// Number of retained messages estimated from <see cref="LatestOffset"/> minus <see cref="EarliestOffset"/>.
     /// </summary>
-    public long AvailableMessageCount { get; set; }
+    public long RetainedMessageCount { get; set; }
 }
 
 /// <summary>
@@ -447,6 +447,12 @@ public sealed class KafkaConsumerGroupSummary
     /// Total lag when it can be calculated; otherwise null.
     /// </summary>
     public long? TotalLag { get; set; }
+
+    /// <summary>
+    /// Gets or sets the topic associated with this summary when it is returned by a topic-scoped
+    /// query. Cluster-wide consumer-group listings leave this value <see langword="null"/>.
+    /// </summary>
+    public string? TopicName { get; set; }
 }
 
 /// <summary>
@@ -499,7 +505,7 @@ public sealed class KafkaPerformanceSnapshot
     /// <remarks>
     /// This is independent of consumer groups and can be calculated when no consumer group exists.
     /// </remarks>
-    public long? TotalAvailableMessageCount { get; set; }
+    public long? TotalRetainedMessageCount { get; set; }
 
     /// <summary>
     /// Sum of committed offsets across sampled consumer groups and non-internal topic partitions.
@@ -534,6 +540,15 @@ public sealed class KafkaPerformanceSnapshot
     /// callers can render a stable list without applying another ordering pass.
     /// </remarks>
     public IReadOnlyList<KafkaTopicPerformanceSnapshot> TopicMetrics { get; set; } = [];
+
+    /// <summary>
+    /// Per-topic and per-consumer-group metrics captured during this sampling cycle.
+    /// </summary>
+    /// <remarks>
+    /// The collection is intentionally provider-neutral so the performance list can distinguish
+    /// groups that consume the same topic and open the member/partition detail view.
+    /// </remarks>
+    public IReadOnlyList<KafkaConsumerGroupTopicMetrics> ConsumerGroupMetrics { get; set; } = [];
 }
 
 /// <summary>
@@ -554,7 +569,7 @@ public sealed class KafkaTopicPerformanceSnapshot
     /// <summary>
     /// Number of retained messages estimated from the topic's partition watermarks.
     /// </summary>
-    public long? TotalAvailableMessageCount { get; set; }
+    public long? TotalRetainedMessageCount { get; set; }
 
     /// <summary>
     /// Sum of committed offsets across sampled consumer groups for this topic.
@@ -586,7 +601,7 @@ public sealed class KafkaPerformanceOffsetTotals
     /// Sum of latest offsets across sampled non-internal topic partitions.
     /// </summary>
     /// <remarks>
-    /// Check <see cref="IsComplete"/> before using the value; partial totals are not used for rate
+    /// Check <see cref="AreTopicOffsetsComplete"/> before using the value; partial totals are not used for rate
     /// calculation.
     /// </remarks>
     public long TotalLogEndOffset { get; set; }
@@ -598,7 +613,16 @@ public sealed class KafkaPerformanceOffsetTotals
     /// Consumers should not derive rates from a partial total. The default is <see langword="true"/>
     /// for providers that return a complete total without setting this flag explicitly.
     /// </remarks>
-    public bool IsComplete { get; set; } = true;
+    public bool AreTopicOffsetsComplete { get; set; } = true;
+
+    /// <summary>
+    /// Whether committed offsets were captured for every sampled consumer group.
+    /// </summary>
+    /// <remarks>
+    /// Topic watermark totals can remain complete when an individual consumer-group query fails.
+    /// Consumers should not derive aggregate consumption rates or lag from partial group offsets.
+    /// </remarks>
+    public bool AreConsumerOffsetsComplete { get; set; } = true;
 
     /// <summary>
     /// Sum of committed offsets across sampled consumer groups and non-internal topic partitions.
@@ -613,7 +637,7 @@ public sealed class KafkaPerformanceOffsetTotals
     /// <summary>
     /// Total retained messages across all sampled non-internal topic partitions.
     /// </summary>
-    public long? TotalAvailableMessageCount { get; set; }
+    public long? TotalRetainedMessageCount { get; set; }
 
     /// <summary>
     /// Raw offset totals grouped by application topic.
@@ -639,7 +663,7 @@ public sealed class KafkaTopicPerformanceOffsetTotals
     /// <summary>
     /// Number of retained messages estimated from partition watermarks.
     /// </summary>
-    public long? TotalAvailableMessageCount { get; set; }
+    public long? TotalRetainedMessageCount { get; set; }
 
     /// <summary>
     /// Sum of committed offsets across sampled consumer groups for this topic.
@@ -695,5 +719,5 @@ public sealed class KafkaDashboardSnapshot
     /// <summary>
     /// Total retained messages shown by the dashboard for the selected cluster.
     /// </summary>
-    public long? TotalAvailableMessageCount { get; set; }
+    public long? TotalRetainedMessageCount { get; set; }
 }
