@@ -1,3 +1,4 @@
+@using Monica.Core.Modularity.Diagnostics.Models
 @using Monica.Core.Modularity.Models
 @using Monica.UI.UIModuleSystem.Support
 @inject IStringLocalizer<SharedResource> L
@@ -5,8 +6,8 @@
 <section class="performance-work" aria-labelledby="@_titleId">
     <header class="performance-work__header">
         <div>
-            <MudText id="@_titleId" Typo="Typo.h6">@L["ModuleSystem:PerformanceMonitoring:Labels:ParallelCompositionWork"]</MudText>
-            <MudText Typo="Typo.body2" Color="Color.Secondary">@L["ModuleSystem:PerformanceMonitoring:Messages:ParallelCompositionWorkDescription"]</MudText>
+            <MudText id="@_titleId" Typo="Typo.h6">@L["ModuleSystem:PerformanceMonitoring:Labels:ParallelStartupWork"]</MudText>
+            <MudText Typo="Typo.body2" Color="Color.Secondary">@L["ModuleSystem:PerformanceMonitoring:Messages:ParallelStartupWorkDescription"]</MudText>
         </div>
         <MudIcon Icon="@Icons.Material.Filled.AccountTree" Color="Color.Success" />
     </header>
@@ -16,17 +17,17 @@
         <div class="performance-work__empty">
             <MudIcon Icon="@Icons.Material.Filled.Info" Color="Color.Secondary" Size="Size.Large" />
             <div>
-                <MudText Typo="Typo.subtitle2">@L["ModuleSystem:CompositionWork:Messages:NoWorkTitle"]</MudText>
-                <MudText Typo="Typo.body2" Color="Color.Secondary">@L["ModuleSystem:CompositionWork:Messages:NoWorkDescription"]</MudText>
+                <MudText Typo="Typo.subtitle2">@L["ModuleSystem:StartupWork:Messages:NoWorkTitle"]</MudText>
+                <MudText Typo="Typo.body2" Color="Color.Secondary">@L["ModuleSystem:StartupWork:Messages:NoWorkDescription"]</MudText>
             </div>
         </div>
     }
     else
     {
-        <div class="performance-work__table-scroll" role="region" aria-label="@L["ModuleSystem:PerformanceMonitoring:Labels:ParallelCompositionWork"]" tabindex="0">
+        <div class="performance-work__table-scroll" role="region" aria-label="@L["ModuleSystem:PerformanceMonitoring:Labels:ParallelStartupWork"]" tabindex="0">
             <div class="performance-work__table-content">
-                <MudTable T="ModuleCompositionWorkItemView"
-                          Items="@WorkItems.OrderByDescending(static item => item.ExecutionDurationMs).ThenBy(static item => item.Sequence)"
+                <MudTable T="ModuleStartupWorkItemView"
+                          Items="@WorkItems"
                           Dense="true"
                           Hover="true"
                           Breakpoint="Breakpoint.None">
@@ -37,10 +38,10 @@
                         }
                         <MudTh>@L["ModuleSystem:PerformanceMonitoring:Labels:WorkItem"]</MudTh>
                         <MudTh>@L["ModuleSystem:PerformanceMonitoring:Labels:ScheduledIn"]</MudTh>
-                        <MudTh>@L["ModuleSystem:PerformanceMonitoring:Labels:MustFinishBefore"]</MudTh>
+                        <MudTh>@L["ModuleSystem:PerformanceMonitoring:Labels:StartupBarrier"]</MudTh>
                         <MudTh>@L["ModuleSystem:PerformanceMonitoring:Labels:Queue"]</MudTh>
                         <MudTh>@L["ModuleSystem:PerformanceMonitoring:Labels:Execution"]</MudTh>
-                        <MudTh>@L["ModuleSystem:PerformanceMonitoring:Labels:CheckpointImpact"]</MudTh>
+                        <MudTh>@L["ModuleSystem:PerformanceMonitoring:Labels:StartupImpact"]</MudTh>
                         <MudTh>@L["ModuleSystem:PerformanceMonitoring:Labels:Status"]</MudTh>
                         <MudTh>@L["ModuleSystem:PerformanceMonitoring:Labels:Details"]</MudTh>
                     </HeaderContent>
@@ -69,23 +70,21 @@
                         <MudTd DataLabel="@L["ModuleSystem:PerformanceMonitoring:Labels:ScheduledIn"]">
                             <span class="performance-work__identifier">@context.OriginPhase</span>
                         </MudTd>
-                        <MudTd DataLabel="@L["ModuleSystem:PerformanceMonitoring:Labels:MustFinishBefore"]">
-                            @ModulePerformanceDisplayText.Deadline(L, context.Deadline)
+                        <MudTd DataLabel="@L["ModuleSystem:PerformanceMonitoring:Labels:StartupBarrier"]">
+                            @ModulePerformanceDisplayText.Barrier(L, context.Barrier)
                         </MudTd>
                         <MudTd DataLabel="@L["ModuleSystem:PerformanceMonitoring:Labels:Queue"]">
-                            @FormatDuration(context.QueueDurationMs)
+                            @ModulePerformanceDisplayText.Duration(L, context.QueueDurationMs)
                         </MudTd>
                         <MudTd DataLabel="@L["ModuleSystem:PerformanceMonitoring:Labels:Execution"]">
-                            <strong>@FormatDuration(context.ExecutionDurationMs)</strong>
+                            <strong>@ModulePerformanceDisplayText.Duration(L, context.ExecutionDurationMs)</strong>
                         </MudTd>
-                        <MudTd DataLabel="@L["ModuleSystem:PerformanceMonitoring:Labels:CheckpointImpact"]">
+                        <MudTd DataLabel="@L["ModuleSystem:PerformanceMonitoring:Labels:StartupImpact"]">
                             <MudChip T="string"
-                                     Color="@(context.WasPendingAtDeadline ? Color.Warning : Color.Success)"
+                                     Color="@GetImpactColor(context)"
                                      Variant="Variant.Outlined"
                                      Size="Size.Small">
-                                @(context.WasPendingAtDeadline
-                                    ? L["ModuleSystem:PerformanceMonitoring:States:BlockedCheckpoint"]
-                                    : L["ModuleSystem:PerformanceMonitoring:States:CompletedBeforeCheckpoint"])
+                                @GetImpactText(context)
                             </MudChip>
                         </MudTd>
                         <MudTd DataLabel="@L["ModuleSystem:PerformanceMonitoring:Labels:Status"]">
@@ -110,7 +109,7 @@
     private readonly string _titleId = $"performance-work-{Guid.NewGuid():N}";
 
     [Parameter, EditorRequired]
-    public IReadOnlyList<ModuleCompositionWorkItemView> WorkItems { get; set; } = [];
+    public IReadOnlyList<ModuleStartupWorkItemView> WorkItems { get; set; } = [];
 
     [Parameter]
     public bool ShowModuleColumn { get; set; } = true;
@@ -120,39 +119,61 @@
 
     private Task OpenModuleAsync(ModuleKey moduleKey) => ModuleSelected.InvokeAsync(moduleKey);
 
-    private string FormatDuration(double durationMs)
-        => L["ModuleSystem:PerformanceMonitoring:Formats:Duration", durationMs];
-
-    private string GetDetails(ModuleCompositionWorkItemView item)
+    private string GetDetails(ModuleStartupWorkItemView item)
     {
         if (!string.IsNullOrWhiteSpace(item.ErrorMessage))
         {
             return item.ErrorMessage;
         }
 
-        if (item.RemainingAtDeadlineMs is { } remaining)
+        if (item.RemainingAtBarrierMs is { } remaining)
         {
-            return L["ModuleSystem:PerformanceMonitoring:Messages:RemainingAtDeadline", remaining];
+            return L["ModuleSystem:PerformanceMonitoring:Messages:RemainingAtBarrier", remaining];
         }
 
         return L["ModuleSystem:PerformanceMonitoring:States:None"];
     }
 
-    private static Color GetStatusColor(string status) => status switch
+    private string GetImpactText(ModuleStartupWorkItemView item)
     {
-        "Succeeded" => Color.Success,
-        "Failed" => Color.Error,
-        "Running" => Color.Info,
-        "Canceled" or "Cancelled" => Color.Warning,
+        return item.Impact switch
+        {
+            ModuleStartupWorkImpact.DoesNotBlockStartup =>
+                L["ModuleSystem:PerformanceMonitoring:States:DoesNotBlockStartup"],
+            ModuleStartupWorkImpact.PendingBeforeBarrier =>
+                L["ModuleSystem:PerformanceMonitoring:States:PendingBeforeBarrier"],
+            ModuleStartupWorkImpact.BlockedBarrier =>
+                L["ModuleSystem:PerformanceMonitoring:States:BlockedBarrier"],
+            ModuleStartupWorkImpact.CompletedBeforeBarrier =>
+                L["ModuleSystem:PerformanceMonitoring:States:CompletedBeforeBarrier"],
+            _ => L["ModuleSystem:PerformanceMonitoring:States:None"]
+        };
+    }
+
+    private static Color GetImpactColor(ModuleStartupWorkItemView item) => item.Impact switch
+    {
+        ModuleStartupWorkImpact.DoesNotBlockStartup => Color.Info,
+        ModuleStartupWorkImpact.PendingBeforeBarrier => Color.Info,
+        ModuleStartupWorkImpact.BlockedBarrier => Color.Warning,
+        ModuleStartupWorkImpact.CompletedBeforeBarrier => Color.Success,
         _ => Color.Default
     };
 
-    private static string GetStatusIcon(string status) => status switch
+    private static Color GetStatusColor(ModuleStartupWorkStatus status) => status switch
     {
-        "Succeeded" => Icons.Material.Filled.CheckCircle,
-        "Failed" => Icons.Material.Filled.Error,
-        "Running" => Icons.Material.Filled.Sync,
-        "Canceled" or "Cancelled" => Icons.Material.Filled.Cancel,
+        ModuleStartupWorkStatus.Queued => Color.Default,
+        ModuleStartupWorkStatus.Running => Color.Info,
+        ModuleStartupWorkStatus.Succeeded => Color.Success,
+        ModuleStartupWorkStatus.Failed => Color.Error,
+        _ => Color.Default
+    };
+
+    private static string GetStatusIcon(ModuleStartupWorkStatus status) => status switch
+    {
+        ModuleStartupWorkStatus.Queued => Icons.Material.Filled.HourglassEmpty,
+        ModuleStartupWorkStatus.Running => Icons.Material.Filled.Sync,
+        ModuleStartupWorkStatus.Succeeded => Icons.Material.Filled.CheckCircle,
+        ModuleStartupWorkStatus.Failed => Icons.Material.Filled.Error,
         _ => Icons.Material.Filled.HelpOutline
     };
 }

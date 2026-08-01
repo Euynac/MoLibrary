@@ -14,6 +14,7 @@ namespace Monica.Core.Modularity.Services.Support;
 internal sealed class ModuleInitializationProfiler
 {
     private readonly ModuleProfilingState _state = new();
+    private Func<ModuleStartupWorkSnapshot>? _startupWorkSnapshotProvider;
 
     /// <summary>
     /// Gets whether the full module-composition stopwatch is currently running.
@@ -25,6 +26,7 @@ internal sealed class ModuleInitializationProfiler
     /// </summary>
     internal void Clear()
     {
+        _startupWorkSnapshotProvider = null;
         _state.Clear();
     }
 
@@ -165,70 +167,15 @@ internal sealed class ModuleInitializationProfiler
     }
 
     /// <summary>
-    /// Merges one immutable scheduler snapshot into the host composition timeline.
+    /// Attaches the host-owned live startup-work diagnostic source.
     /// </summary>
-    internal void RecordCompositionWork(ModuleCompositionWorkSnapshot snapshot)
+    internal void AttachStartupWorkDiagnostics(Func<ModuleStartupWorkSnapshot> snapshotProvider)
     {
-        ArgumentNullException.ThrowIfNull(snapshot);
-
-        var checkpoints = snapshot.Checkpoints.Select(checkpoint =>
-            new ModuleCompositionCheckpointPerformanceInfo
-            {
-                Sequence = checkpoint.Sequence,
-                Deadline = checkpoint.Deadline,
-                EnteredAtUtc = checkpoint.EnteredAtUtc,
-                ReleasedAtUtc = checkpoint.ReleasedAtUtc,
-                EnteredOffsetMs = GetOffsetMs(checkpoint.EnteredTimestamp),
-                ReleasedOffsetMs = GetOffsetMs(checkpoint.ReleasedTimestamp),
-                DueWorkItemIds = checkpoint.WorkItems.Select(static work => work.WorkItemId).ToArray(),
-                PendingWorkItems = checkpoint.PendingWorkItems.Select(static pending =>
-                    new ModuleCompositionCheckpointPendingWorkInfo
-                    {
-                        WorkItemId = pending.WorkItemId,
-                        RemainingDurationMs = pending.RemainingDuration.TotalMilliseconds
-                    }).ToArray(),
-                ReleasingWorkItemId = checkpoint.ReleasingWorkItemId
-            }).ToArray();
-        var checkpointByWorkItemId = checkpoints
-            .SelectMany(checkpoint => checkpoint.DueWorkItemIds.Select(workItemId => (workItemId, checkpoint)))
-            .ToDictionary(static pair => pair.workItemId, static pair => pair.checkpoint, StringComparer.Ordinal);
-
-        foreach (var result in snapshot.WorkItems)
+        ArgumentNullException.ThrowIfNull(snapshotProvider);
+        if (Interlocked.CompareExchange(ref _startupWorkSnapshotProvider, snapshotProvider, null) is not null)
         {
-            checkpointByWorkItemId.TryGetValue(result.WorkItemId, out var checkpoint);
-            var pending = checkpoint?.PendingWorkItems.FirstOrDefault(item =>
-                string.Equals(item.WorkItemId, result.WorkItemId, StringComparison.Ordinal));
-            _state.CompositionWorkItems.Add(new ModuleCompositionWorkPerformanceInfo
-            {
-                WorkItemId = result.WorkItemId,
-                Sequence = result.Sequence,
-                ModuleKey = result.ModuleKey,
-                ModuleTypeName = result.ModuleType.Name,
-                ModuleFullTypeName = result.ModuleType.FullName ?? result.ModuleType.Name,
-                ModuleRegistrationOrder = result.RegistrationOrder,
-                Name = result.Name,
-                OriginPhase = result.OriginPhase,
-                Deadline = result.Deadline,
-                Status = result.IsSucceeded
-                    ? ModuleCompositionWorkStatus.Succeeded
-                    : ModuleCompositionWorkStatus.Failed,
-                SubmittedAtUtc = result.SubmittedAtUtc,
-                StartedAtUtc = result.StartedAtUtc,
-                CompletedAtUtc = result.CompletedAtUtc,
-                SubmittedOffsetMs = GetOffsetMs(result.SubmittedTimestamp),
-                StartedOffsetMs = GetOffsetMs(result.StartedTimestamp),
-                CompletedOffsetMs = GetOffsetMs(result.CompletedTimestamp),
-                WasPendingAtDeadline = pending is not null,
-                RemainingAtDeadlineMs = pending?.RemainingDurationMs ?? 0,
-                IsDeadlineReleaser = string.Equals(
-                    checkpoint?.ReleasingWorkItemId,
-                    result.WorkItemId,
-                    StringComparison.Ordinal),
-                ErrorMessage = result.Failure?.GetMessageRecursively()
-            });
+            throw new InvalidOperationException("Startup-work diagnostics are already attached to this host.");
         }
-
-        _state.CompositionCheckpoints.AddRange(checkpoints);
     }
 
     /// <summary>
@@ -240,16 +187,21 @@ internal sealed class ModuleInitializationProfiler
             .SelectMany(profile => profile.CreateExecutions(GetOffsetMs))
             .OrderBy(static execution => execution.Sequence)
             .ToArray();
+        var startupWork = CreateStartupWorkDiagnostics();
+        var observedTimestamp = Stopwatch.GetTimestamp();
+        var observedAtUtc = DateTimeOffset.UtcNow;
 
         return new ModuleCompositionPerformance
         {
             StartedAtUtc = _state.OriginUtc,
-            ElapsedDurationMs = GetElapsedDurationMs(),
+            ElapsedDurationMs = GetElapsedDurationMs(observedTimestamp),
+            ObservedAtUtc = observedAtUtc,
+            ObservedDurationMs = GetOffsetMs(observedTimestamp),
             Milestones = _state.Milestones.OrderBy(static milestone => milestone.Sequence).ToArray(),
             SystemPhases = _state.SystemPhases.OrderBy(static phase => phase.Sequence).ToArray(),
             ModulePhaseExecutions = moduleExecutions,
-            WorkItems = _state.CompositionWorkItems.OrderBy(static work => work.Sequence).ToArray(),
-            Checkpoints = _state.CompositionCheckpoints.OrderBy(static checkpoint => checkpoint.Sequence).ToArray()
+            StartupWorkItems = startupWork.WorkItems,
+            StartupWorkBarriers = startupWork.Barriers
         };
     }
 
@@ -259,6 +211,7 @@ internal sealed class ModuleInitializationProfiler
     internal ModulePerformanceInfo GetModulePerformance(ModuleRuntimeSnapshot snapshot)
     {
         ArgumentNullException.ThrowIfNull(snapshot);
+        var startupWorkItems = CreateStartupWorkDiagnostics().WorkItems;
         var phaseExecutions = _state.ModuleProfiles.TryGetValue(snapshot.ModuleType, out var profile)
             ? profile.CreateExecutions(GetOffsetMs)
             : [];
@@ -270,7 +223,7 @@ internal sealed class ModuleInitializationProfiler
             RegistrationOrder = snapshot.RegisterInfo.Order,
             IsRuntimeAvailable = true,
             PhaseExecutions = phaseExecutions,
-            CompositionWorkItems = _state.CompositionWorkItems
+            StartupWorkItems = startupWorkItems
                 .Where(work => work.ModuleKey == snapshot.ModuleKey)
                 .OrderBy(static work => work.Sequence)
                 .ToArray()
@@ -284,6 +237,7 @@ internal sealed class ModuleInitializationProfiler
         IReadOnlySet<ModuleKey> runtimeModuleKeys)
     {
         ArgumentNullException.ThrowIfNull(runtimeModuleKeys);
+        var startupWorkItems = CreateStartupWorkDiagnostics().WorkItems;
         return _state.ModuleProfiles.Values
             .OrderBy(static profile => profile.RegistrationOrder)
             .ThenBy(static profile => profile.ModuleType.FullName, StringComparer.Ordinal)
@@ -295,7 +249,7 @@ internal sealed class ModuleInitializationProfiler
                 RegistrationOrder = profile.RegistrationOrder,
                 IsRuntimeAvailable = runtimeModuleKeys.Contains(profile.ModuleKey),
                 PhaseExecutions = profile.CreateExecutions(GetOffsetMs),
-                CompositionWorkItems = _state.CompositionWorkItems
+                StartupWorkItems = startupWorkItems
                     .Where(work => work.ModuleKey == profile.ModuleKey)
                     .OrderBy(static work => work.Sequence)
                     .ToArray()
@@ -330,11 +284,11 @@ internal sealed class ModuleInitializationProfiler
         builder.AppendLine($"Service registration elapsed: {serviceRegistration.TotalDurationMs:F1}ms");
         builder.AppendLine($"  Application module configuration: {serviceRegistration.ApplicationConfigurationDurationMs:F1}ms");
         builder.AppendLine($"  Serial module callbacks: {serviceRegistration.SerialModuleCallbackDurationMs:F1}ms");
-        builder.AppendLine($"  Blocking checkpoint waits: {serviceRegistration.BlockingWaitDurationMs:F1}ms");
+        builder.AppendLine($"  Blocking startup barriers: {serviceRegistration.BlockingWaitDurationMs:F1}ms");
         builder.AppendLine($"  Monica orchestration: {serviceRegistration.OrchestrationDurationMs:F1}ms");
         builder.AppendLine($"Aggregate system phases (overlapping diagnostic dimension): {composition.AggregateSystemPhaseDurationMs:F1}ms");
 
-        if (composition.WorkItems.Count > 0)
+        if (composition.StartupWorkItems.Count > 0)
         {
             builder.AppendLine("Parallel work (overlaps the exact elapsed partitions above):");
             builder.AppendLine($"  Active span: {composition.ParallelWorkActiveSpanMs:F1}ms");
@@ -359,6 +313,84 @@ internal sealed class ModuleInitializationProfiler
         return _state.ModuleProfiles.TryGetValue(moduleType, out var profile)
             ? ToWholeMilliseconds(profile.GetSerialPhaseDurationMs())
             : 0;
+    }
+
+    private StartupWorkDiagnostics CreateStartupWorkDiagnostics()
+    {
+        var snapshot = Volatile.Read(ref _startupWorkSnapshotProvider)?.Invoke();
+        if (snapshot is null)
+        {
+            return new StartupWorkDiagnostics([], []);
+        }
+
+        var barriers = snapshot.Barriers.Select(barrier =>
+            new ModuleStartupWorkBarrierPerformanceInfo
+            {
+                Sequence = barrier.Sequence,
+                Barrier = barrier.Barrier,
+                EnteredAtUtc = barrier.EnteredAtUtc,
+                ReleasedAtUtc = barrier.ReleasedAtUtc,
+                EnteredOffsetMs = GetOffsetMs(barrier.EnteredTimestamp),
+                ReleasedOffsetMs = GetOffsetMs(barrier.ReleasedTimestamp),
+                DueWorkItemIds = barrier.WorkItems.Select(static work => work.WorkItemId).ToArray(),
+                PendingWorkItems = barrier.PendingWorkItems.Select(static pending =>
+                    new ModuleStartupWorkBarrierPendingWorkInfo
+                    {
+                        WorkItemId = pending.WorkItemId,
+                        RemainingDurationMs = pending.RemainingDuration.TotalMilliseconds
+                    }).ToArray(),
+                ReleasingWorkItemId = barrier.ReleasingWorkItemId
+            }).ToArray();
+        var barrierByWorkItemId = barriers
+            .SelectMany(barrier => barrier.DueWorkItemIds.Select(workItemId => (workItemId, barrier)))
+            .ToDictionary(static pair => pair.workItemId, static pair => pair.barrier, StringComparer.Ordinal);
+        var workItems = snapshot.WorkItems.Select(result =>
+        {
+            barrierByWorkItemId.TryGetValue(result.WorkItemId, out var barrier);
+            var pending = barrier?.PendingWorkItems.FirstOrDefault(item =>
+                string.Equals(item.WorkItemId, result.WorkItemId, StringComparison.Ordinal));
+            return new ModuleStartupWorkPerformanceInfo
+            {
+                WorkItemId = result.WorkItemId,
+                Sequence = result.Sequence,
+                ModuleKey = result.ModuleKey,
+                ModuleTypeName = result.ModuleType.Name,
+                ModuleFullTypeName = result.ModuleType.FullName ?? result.ModuleType.Name,
+                ModuleRegistrationOrder = result.RegistrationOrder,
+                Name = result.Name,
+                OriginPhase = result.OriginPhase,
+                Barrier = result.Barrier,
+                Status = result.Status switch
+                {
+                    ModuleStartupWorkExecutionStatus.Queued => ModuleStartupWorkStatus.Queued,
+                    ModuleStartupWorkExecutionStatus.Running => ModuleStartupWorkStatus.Running,
+                    ModuleStartupWorkExecutionStatus.Succeeded => ModuleStartupWorkStatus.Succeeded,
+                    ModuleStartupWorkExecutionStatus.Failed => ModuleStartupWorkStatus.Failed,
+                    _ => throw new ArgumentOutOfRangeException(nameof(result.Status), result.Status, null)
+                },
+                SubmittedAtUtc = result.SubmittedAtUtc,
+                StartedAtUtc = result.StartedAtUtc,
+                CompletedAtUtc = result.CompletedAtUtc,
+                SubmittedOffsetMs = GetOffsetMs(result.SubmittedTimestamp),
+                StartedOffsetMs = result.StartedTimestamp is { } startedTimestamp
+                    ? GetOffsetMs(startedTimestamp)
+                    : null,
+                CompletedOffsetMs = result.CompletedTimestamp is { } completedTimestamp
+                    ? GetOffsetMs(completedTimestamp)
+                    : null,
+                WasPendingAtBarrier = pending is not null,
+                RemainingAtBarrierMs = pending?.RemainingDurationMs ?? 0,
+                IsBarrierReleaser = string.Equals(
+                    barrier?.ReleasingWorkItemId,
+                    result.WorkItemId,
+                    StringComparison.Ordinal),
+                QueueDurationMs = result.QueueDuration.TotalMilliseconds,
+                ExecutionDurationMs = result.ExecutionDuration.TotalMilliseconds,
+                ErrorMessage = result.Failure?.GetMessageRecursively()
+            };
+        }).ToArray();
+
+        return new StartupWorkDiagnostics(workItems, barriers);
     }
 
     private ModuleProfileState GetOrCreateModuleProfile(
@@ -392,14 +424,14 @@ internal sealed class ModuleInitializationProfiler
         return Stopwatch.GetElapsedTime(originTimestamp, timestamp).TotalMilliseconds;
     }
 
-    private double GetElapsedDurationMs()
+    private double GetElapsedDurationMs(long? observedTimestamp = null)
     {
         if (_state.OriginTimestamp is not { } originTimestamp)
         {
             return 0;
         }
 
-        var terminalTimestamp = _state.TerminalTimestamp ?? Stopwatch.GetTimestamp();
+        var terminalTimestamp = _state.TerminalTimestamp ?? observedTimestamp ?? Stopwatch.GetTimestamp();
         return Stopwatch.GetElapsedTime(originTimestamp, terminalTimestamp).TotalMilliseconds;
     }
 
@@ -413,4 +445,7 @@ internal sealed class ModuleInitializationProfiler
         return (long)Math.Floor(Math.Max(0, milliseconds));
     }
 
+    private sealed record StartupWorkDiagnostics(
+        IReadOnlyList<ModuleStartupWorkPerformanceInfo> WorkItems,
+        IReadOnlyList<ModuleStartupWorkBarrierPerformanceInfo> Barriers);
 }

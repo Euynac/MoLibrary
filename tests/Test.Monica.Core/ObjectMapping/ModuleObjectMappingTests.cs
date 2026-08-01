@@ -3,16 +3,18 @@ using Mapster;
 using MapsterMapper;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Options;
 using Monica.Core.Modularity.Annotations;
+using Monica.Core.Modularity.Diagnostics.Models;
 using Monica.Core.Modularity.Exceptions;
 using Monica.Core.Modularity.Extensions;
+using Monica.Core.Modularity.Models;
 using Monica.Core.ObjectMapping.Abstractions;
 using Monica.Core.ObjectMapping.Facades;
 using Monica.Core.ObjectMapping.Providers.Mapster;
 using Monica.Core.Results;
 using Monica.Core.TypeDiscovery.Services;
 using Monica.Modules;
-using Test.Monica.Core.Modularity;
 using Xunit;
 using TestContext = Xunit.TestContext;
 
@@ -35,7 +37,7 @@ public sealed class ModuleObjectMappingTests
     }
 
     [Fact]
-    public void Build_ShouldEagerlyCompileAndProvideObjectMapping()
+    public void Build_ShouldProvideObjectMappingFromTheHostOwnedRuntime()
     {
         using var host = BuildHost();
         using var scope = host.Services.CreateScope();
@@ -125,61 +127,83 @@ public sealed class ModuleObjectMappingTests
     }
 
     [Fact]
-    public void AddMonica_WhenMultipleMappingsAreInvalid_ShouldReportEveryCompilationError()
+    public async Task StartAsync_WithStrictCompilationBarrier_ShouldReportEveryCompilationError()
     {
-        var builder = Host.CreateApplicationBuilder();
+        using var host = BuildHost(
+            mapping => mapping.AddProfile<InvalidMappingProfile>(),
+            options =>
+            {
+                options.CompilationBarrier = ModuleStartupWorkBarrier.BeforeHostLifecycle;
+                options.CompileFailFast = false;
+            });
 
-        Action compose = () => builder.AddMonica(monica =>
-            monica.AddObjectMapping()
-                .AddProfile<InvalidMappingProfile>());
+        Func<Task> start = () => host.StartAsync(TestContext.Current.CancellationToken);
 
-        compose.Should().Throw<ModuleRegistrationException>()
+        await start.Should().ThrowAsync<OptionsValidationException>()
             .WithMessage($"*{nameof(InvalidDestinationOne)}*")
             .WithMessage($"*{nameof(InvalidDestinationTwo)}*");
     }
 
     [Fact]
-    public async Task AddMonica_WhenObjectMappingCompilationRuns_ShouldOverlapCompanionWorkAndRemainABarrier()
+    public async Task Build_WithDefaultCompilationBarrier_ShouldServeConcurrentLazyMappingsAndPublishAtomically()
     {
-        using var overlap = new CompositionOverlapProbe();
-        BlockingCompilerProfile.SetProbe(overlap);
+        using var compilation = new CompilationProbe();
+        BlockingCompilerProfile.SetProbe(compilation);
         var builder = Host.CreateApplicationBuilder();
-        var composition = Task.Run(
-            () => builder.AddMonica(monica =>
+        var composition = Task.Run(() => builder.AddMonica(monica =>
             {
-                monica.ConfigureModuleSystem(options => options.MaxConcurrentCompositionWorkItems = 2);
                 monica.ConfigureTypeDiscovery(static options => options.ExcludeDefault());
                 monica.AddObjectMapping().AddProfile<BlockingCompilerProfile>();
-                monica.AddModule<
-                    CompositionWorkProbeModuleOne,
-                    CompositionWorkProbeModuleOneOption,
-                    CompositionWorkProbeModuleOneGuide>(
-                    options => options.AddConfigureServicesWork(
-                        "object-mapping-companion-work",
-                        overlap.EnterCompanionWork));
             }),
             TestContext.Current.CancellationToken);
+        IHost? host = null;
 
         try
         {
-            await overlap.BothWorkItemsEntered.WaitAsync(HANG_GUARD, TestContext.Current.CancellationToken);
-
-            composition.IsCompleted.Should().BeFalse();
-            overlap.CompilerEntrances.Should().Be(1);
-            overlap.CompanionEntrances.Should().Be(1);
-
-            overlap.Release();
+            await compilation.CompilerEntered.WaitAsync(HANG_GUARD, TestContext.Current.CancellationToken);
             await composition.WaitAsync(HANG_GUARD, TestContext.Current.CancellationToken);
-
-            using var host = builder.Build();
+            host = builder.Build();
+            var runtime = host.Services.GetRequiredService<MapsterConfigurationRuntime>();
             using var scope = host.Services.CreateScope();
             var mapper = scope.ServiceProvider.GetRequiredService<IObjectMapper>();
+            var mapsterMapper = mapper.Should().BeOfType<MapsterObjectMapper>().Which;
+
+            runtime.HasPublishedCompiledConfiguration.Should().BeFalse();
+            var fallbackMapper = mapsterMapper.GetCurrentMapper();
+            mapsterMapper.GetCurrentMapper().Should().BeSameAs(fallbackMapper);
+            var lazyMappings = Enumerable.Range(0, 32)
+                .Select(index => Task.Run(
+                    () => mapper.Map<ConcurrentCompilationDestination>(
+                            new ConcurrentCompilationSource { Value = $"lazy-{index}" })
+                        .Value,
+                    TestContext.Current.CancellationToken));
+            var lazyResults = await Task.WhenAll(lazyMappings);
+
+            lazyResults.Should().Equal(Enumerable.Range(0, 32).Select(index => $"lazy-{index}"));
+            runtime.HasPublishedCompiledConfiguration.Should().BeFalse();
+
+            compilation.Release();
+            await WaitUntilAsync(
+                () => runtime.HasPublishedCompiledConfiguration,
+                TestContext.Current.CancellationToken);
+
+            var publishedMappers = await Task.WhenAll(Enumerable.Range(0, 32)
+                .Select(_ => Task.Run(
+                    mapsterMapper.GetCurrentMapper,
+                    TestContext.Current.CancellationToken)));
+            publishedMappers.Should().AllSatisfy(publishedMapper =>
+            {
+                publishedMapper.Should().NotBeSameAs(fallbackMapper);
+                publishedMapper.Should().BeSameAs(publishedMappers[0]);
+                publishedMapper.Config.Should().BeSameAs(runtime.CurrentConfiguration);
+            });
             mapper.Map<ConcurrentCompilationDestination>(new ConcurrentCompilationSource { Value = "compiled" })
                 .Value.Should().Be("compiled");
         }
         finally
         {
-            overlap.Release();
+            compilation.Release();
+            host?.Dispose();
             BlockingCompilerProfile.ClearProbe();
             try
             {
@@ -187,9 +211,106 @@ public sealed class ModuleObjectMappingTests
             }
             catch (Exception)
             {
-                // The assertion path owns composition failures; cleanup only waits for both workers to exit.
+                // The assertion path owns composition failures; cleanup only waits for the composition thread to exit.
             }
         }
+    }
+
+    [Fact]
+    public async Task StartAsync_WhenNonBlockingCompilationFails_ShouldKeepLazyMappingsAvailable()
+    {
+        using var host = BuildHost(
+            mapping => mapping.AddProfile<InvalidMappingProfile>(),
+            options => options.CompileFailFast = false);
+        var application = host.Services.GetRequiredService<global::Monica.Core.MonicaApplication>();
+
+        await WaitUntilAsync(
+            () => GetCompilationWork(application)?.Status == ModuleStartupWorkStatus.Failed,
+            TestContext.Current.CancellationToken);
+
+        await host.StartAsync(TestContext.Current.CancellationToken);
+        try
+        {
+            using var scope = host.Services.CreateScope();
+            var mapper = scope.ServiceProvider.GetRequiredService<IObjectMapper>();
+
+            mapper.Map<MappingDestination>(new MappingSource { Value = "fallback" })
+                .Value.Should().Be("fallback-profile");
+            Action invalidMap = () => mapper.Map<InvalidSourceOne, InvalidDestinationOne>(new InvalidSourceOne());
+            invalidMap.Should().Throw<Exception>()
+                .Which.ToString().Should().Contain(nameof(InvalidDestinationOne));
+
+            GetCompilationWork(application)!.ErrorMessage.Should()
+                .Contain(nameof(InvalidDestinationOne))
+                .And.Contain(nameof(InvalidDestinationTwo));
+        }
+        finally
+        {
+            await host.StopAsync(TestContext.Current.CancellationToken);
+        }
+    }
+
+    [Fact]
+    public void Build_ShouldNotExposeRawMapsterRuntimeServices()
+    {
+        using var host = BuildHost();
+        using var scope = host.Services.CreateScope();
+
+        host.Services.GetService<TypeAdapterConfig>().Should().BeNull();
+        scope.ServiceProvider.GetService<IMapper>().Should().BeNull();
+        scope.ServiceProvider.GetRequiredService<IObjectMapper>().Should().BeOfType<MapsterObjectMapper>();
+    }
+
+    [Fact]
+    public void Map_WithDependencyInjectedMapping_ShouldUseTheCurrentScope()
+    {
+        var builder = Host.CreateApplicationBuilder();
+        builder.Services.AddScoped(_ => new MappingSuffix("-from-scope"));
+        builder.AddMonica(monica =>
+        {
+            monica.ConfigureTypeDiscovery(static options => options.ExcludeDefault());
+            monica.AddObjectMapping().AddProfile<DependencyInjectedMappingProfile>();
+        });
+        using var host = builder.Build();
+        using var scope = host.Services.CreateScope();
+
+        var mapper = scope.ServiceProvider.GetRequiredService<IObjectMapper>();
+
+        mapper.Map<DependencyInjectedDestination>(new DependencyInjectedSource { Value = "mapped" })
+            .Value.Should().Be("mapped-from-scope");
+    }
+
+    [Fact]
+    public async Task ProjectToType_ShouldUseThePublishedRuntimeConfiguration()
+    {
+        using var host = BuildHost();
+        var runtime = host.Services.GetRequiredService<MapsterConfigurationRuntime>();
+        await WaitUntilAsync(
+            () => runtime.HasPublishedCompiledConfiguration,
+            TestContext.Current.CancellationToken);
+        using var scope = host.Services.CreateScope();
+        var mapper = scope.ServiceProvider.GetRequiredService<IObjectMapper>();
+
+        var projected = mapper.ProjectToType<MappingDestination>(
+                new[] { new MappingSource { Value = "projected" } }.AsQueryable())
+            .Single();
+
+        projected.Value.Should().Be("projected-profile");
+    }
+
+    [Fact]
+    public void Configure_WithCompositionPhaseCompilationBarrier_ShouldFailClearly()
+    {
+        Action compose = () => BuildHost(
+            configureOption: options =>
+            {
+                options.CompilationBarrier = ModuleStartupWorkBarrier.BeforeServiceRegistrationCompletion;
+            });
+
+        compose.Should().Throw<ModuleRegistrationException>()
+            .WithMessage($"*{nameof(ModuleObjectMappingOption.CompilationBarrier)} only supports*")
+            .WithMessage($"*{ModuleStartupWorkBarrier.NoBarrier}*")
+            .WithMessage($"*{ModuleStartupWorkBarrier.BeforeHostLifecycle}*");
     }
 
     [Fact]
@@ -231,11 +352,12 @@ public sealed class ModuleObjectMappingTests
             using var secondScope = hosts[1].Services.CreateScope();
             var firstMapper = firstScope.ServiceProvider.GetRequiredService<IObjectMapper>();
             var secondMapper = secondScope.ServiceProvider.GetRequiredService<IObjectMapper>();
+            var firstRuntime = hosts[0].Services.GetRequiredService<MapsterConfigurationRuntime>();
+            var secondRuntime = hosts[1].Services.GetRequiredService<MapsterConfigurationRuntime>();
 
             firstMapper.Map<HostMappingDestination>(new HostMappingSource()).Value.Should().Be("first-host");
             secondMapper.Map<HostMappingDestination>(new HostMappingSource()).Value.Should().Be("second-host");
-            hosts[0].Services.GetRequiredService<TypeAdapterConfig>()
-                .Should().NotBeSameAs(hosts[1].Services.GetRequiredService<TypeAdapterConfig>());
+            firstRuntime.CurrentConfiguration.Should().NotBeSameAs(secondRuntime.CurrentConfiguration);
             GlobalSettingsContains<HostMappingSource, HostMappingDestination>().Should().BeFalse();
         }
         finally
@@ -252,12 +374,11 @@ public sealed class ModuleObjectMappingTests
     {
         using var host = BuildHost();
         using var scope = host.Services.CreateScope();
-        var config = host.Services.GetRequiredService<TypeAdapterConfig>();
-        var serviceMapper = scope.ServiceProvider.GetRequiredService<IMapper>();
+        var runtime = host.Services.GetRequiredService<MapsterConfigurationRuntime>();
+        var config = runtime.CurrentConfiguration;
         var facade = scope.ServiceProvider.GetRequiredService<ObjectMappingFacade>();
 
         config.SelfContainedCodeGeneration.Should().BeFalse();
-        serviceMapper.Config.Should().BeSameAs(config);
 
         var result = await facade.GetStatusAsync();
 
@@ -270,7 +391,8 @@ public sealed class ModuleObjectMappingTests
     }
 
     private static IHost BuildHost(
-        Action<ModuleObjectMappingGuide>? configureMapping = null)
+        Action<ModuleObjectMappingGuide>? configureMapping = null,
+        Action<ModuleObjectMappingOption>? configureOption = null)
     {
         var builder = Host.CreateApplicationBuilder();
         builder.AddMonica(monica =>
@@ -278,10 +400,35 @@ public sealed class ModuleObjectMappingTests
             monica.ConfigureTypeDiscovery(options => options
                 .ExcludeDefault()
                 .Add(typeof(ModuleObjectMappingTests).Assembly));
-            var mapping = monica.AddObjectMapping();
+            var mapping = monica.AddObjectMapping(configureOption);
             configureMapping?.Invoke(mapping);
         });
         return builder.Build();
+    }
+
+    private static ModuleStartupWorkPerformanceInfo? GetCompilationWork(
+        global::Monica.Core.MonicaApplication application)
+    {
+        return application.Profiling.GetCompositionPerformance().StartupWorkItems.SingleOrDefault(work =>
+            work.ModuleTypeName == nameof(ModuleObjectMapping)
+            && work.Name == "compile-mapster-configuration");
+    }
+
+    private static async Task WaitUntilAsync(Func<bool> predicate, CancellationToken cancellationToken)
+    {
+        using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        timeout.CancelAfter(HANG_GUARD);
+        try
+        {
+            while (!predicate())
+            {
+                await Task.Delay(TimeSpan.FromMilliseconds(10), timeout.Token);
+            }
+        }
+        catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
+        {
+            throw new TimeoutException($"The condition was not satisfied within {HANG_GUARD}.");
+        }
     }
 
     private static bool GlobalSettingsContains<TSource, TDestination>()
@@ -446,9 +593,9 @@ public sealed class ModuleObjectMappingTests
     [ExcludeFromBusinessTypeDiscovery]
     private sealed class BlockingCompilerProfile : IRegister
     {
-        private static readonly AsyncLocal<CompositionOverlapProbe?> _probe = new();
+        private static readonly AsyncLocal<CompilationProbe?> _probe = new();
 
-        public static void SetProbe(CompositionOverlapProbe probe)
+        public static void SetProbe(CompilationProbe probe)
         {
             _probe.Value = probe;
         }
@@ -473,6 +620,18 @@ public sealed class ModuleObjectMappingTests
                 return expression.Compile();
             };
             config.NewConfig<ConcurrentCompilationSource, ConcurrentCompilationDestination>();
+        }
+    }
+
+    [ExcludeFromBusinessTypeDiscovery]
+    private sealed class DependencyInjectedMappingProfile : IRegister
+    {
+        public void Register(TypeAdapterConfig config)
+        {
+            config.NewConfig<DependencyInjectedSource, DependencyInjectedDestination>()
+                .Map(
+                    destination => destination.Value,
+                    source => MapContext.Current.GetService<MappingSuffix>().Apply(source.Value));
         }
     }
 
@@ -576,31 +735,39 @@ public sealed class ModuleObjectMappingTests
         public string Value { get; set; } = string.Empty;
     }
 
-    private sealed class CompositionOverlapProbe : IDisposable
+    private sealed class DependencyInjectedSource
+    {
+        public string Value { get; init; } = string.Empty;
+    }
+
+    private sealed class DependencyInjectedDestination
+    {
+        public string Value { get; set; } = string.Empty;
+    }
+
+    private sealed class MappingSuffix(string suffix)
+    {
+        public string Apply(string value)
+        {
+            return value + suffix;
+        }
+    }
+
+    private sealed class CompilationProbe : IDisposable
     {
         private readonly ManualResetEventSlim _release = new(initialState: false);
-        private readonly TaskCompletionSource _bothWorkItemsEntered = new(
+        private readonly TaskCompletionSource _compilerEntered = new(
             TaskCreationOptions.RunContinuationsAsynchronously);
-        private int _compilerEntrances;
-        private int _companionEntrances;
-        private int _totalEntrances;
 
-        public Task BothWorkItemsEntered => _bothWorkItemsEntered.Task;
-
-        public int CompilerEntrances => Volatile.Read(ref _compilerEntrances);
-
-        public int CompanionEntrances => Volatile.Read(ref _companionEntrances);
+        public Task CompilerEntered => _compilerEntered.Task;
 
         public void EnterCompiler()
         {
-            Interlocked.Increment(ref _compilerEntrances);
-            EnterAndWait();
-        }
-
-        public void EnterCompanionWork()
-        {
-            Interlocked.Increment(ref _companionEntrances);
-            EnterAndWait();
+            _compilerEntered.TrySetResult();
+            if (!_release.Wait(HANG_GUARD))
+            {
+                throw new TimeoutException("The object-mapping compilation gate was not released in time.");
+            }
         }
 
         public void Release()
@@ -612,19 +779,6 @@ public sealed class ModuleObjectMappingTests
         {
             _release.Set();
             _release.Dispose();
-        }
-
-        private void EnterAndWait()
-        {
-            if (Interlocked.Increment(ref _totalEntrances) == 2)
-            {
-                _bothWorkItemsEntered.TrySetResult();
-            }
-
-            if (!_release.Wait(HANG_GUARD))
-            {
-                throw new TimeoutException("The object-mapping composition-work gate was not released in time.");
-            }
         }
     }
 

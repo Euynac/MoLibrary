@@ -29,16 +29,6 @@ internal sealed class ModuleProfilingState
     internal List<ModuleCompositionMilestonePerformanceInfo> Milestones { get; } = [];
 
     /// <summary>
-    /// Gets scheduled composition work in stable submission order.
-    /// </summary>
-    internal List<ModuleCompositionWorkPerformanceInfo> CompositionWorkItems { get; } = [];
-
-    /// <summary>
-    /// Gets composition-work checkpoint observations in lifecycle order.
-    /// </summary>
-    internal List<ModuleCompositionCheckpointPerformanceInfo> CompositionCheckpoints { get; } = [];
-
-    /// <summary>
     /// Gets the UTC timestamp paired with <see cref="OriginTimestamp"/>.
     /// </summary>
     internal DateTimeOffset OriginUtc { get; set; }
@@ -72,8 +62,6 @@ internal sealed class ModuleProfilingState
         SystemPhases.Clear();
         ModuleProfiles.Clear();
         Milestones.Clear();
-        CompositionWorkItems.Clear();
-        CompositionCheckpoints.Clear();
         OriginUtc = default;
         OriginTimestamp = null;
         TerminalTimestamp = null;

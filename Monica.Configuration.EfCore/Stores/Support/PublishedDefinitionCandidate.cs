@@ -35,12 +35,13 @@ internal sealed record PublishedDefinitionCandidate
 
     public static PublishedDefinitionCandidate FromPublication(
         ConfigurationDefinitionPublication publication,
+        string definitionIdentity,
         ConfigurationReloadBehavior effectiveReloadBehavior)
     {
         var definition = publication.Definition;
         return new PublishedDefinitionCandidate
         {
-            DefinitionIdentity = ConfigurationDefinitionIdentity.Compute(definition.DefinitionKey),
+            DefinitionIdentity = definitionIdentity,
             DefinitionKey = definition.DefinitionKey,
             SectionPath = definition.SectionPath,
             DisplayName = definition.DisplayName,
@@ -78,14 +79,21 @@ internal sealed record PublishedDefinitionCandidate
 
     public bool Matches(ConfigurationDefinitionEntity current)
     {
-        return HasSameSchema(current)
+        return MatchesEnvelopeIgnoringReloadBehavior(current)
+               && string.Equals(ReloadBehavior, current.ReloadBehavior, StringComparison.Ordinal);
+    }
+
+    public bool MatchesEnvelopeIgnoringReloadBehavior(ConfigurationDefinitionEntity current)
+    {
+        return string.Equals(DefinitionIdentity, current.DefinitionIdentity, StringComparison.Ordinal)
+               && string.Equals(DefinitionKey, current.DefinitionKey, StringComparison.Ordinal)
+               && HasSameSchema(current)
                && string.Equals(SectionPath, current.SectionPath, StringComparison.Ordinal)
                && string.Equals(DisplayName, current.DisplayName, StringComparison.Ordinal)
                && string.Equals(Description, NullIfWhiteSpace(current.Description), StringComparison.Ordinal)
                && string.Equals(ClrTypeName, current.ClrTypeName, StringComparison.Ordinal)
                && string.Equals(FromProject, current.FromProject, StringComparison.Ordinal)
                && string.Equals(Category, NullIfWhiteSpace(current.Category), StringComparison.Ordinal)
-               && string.Equals(ReloadBehavior, current.ReloadBehavior, StringComparison.Ordinal)
                && string.Equals(SchemaJson, current.SchemaJson, StringComparison.Ordinal);
     }
 

@@ -18,10 +18,10 @@
                 <span>
                     @L[
                         "ModuleSystem:PerformanceMonitoring:Messages:CriticalPath",
-                        ModulePerformanceDisplayText.Deadline(L, CriticalPath.Checkpoint),
+                        ModulePerformanceDisplayText.Barrier(L, CriticalPath.Barrier),
                         CriticalPath.ReleasingModuleTypeName,
                         CriticalPath.ReleasingWorkName,
-                        FormatDuration(CriticalPath.WaitDurationMs)]
+                        ModulePerformanceDisplayText.Duration(L, CriticalPath.WaitDurationMs)]
                 </span>
                 @if (CriticalPath.ReleasingModuleKey is { } moduleKey)
                 {
@@ -53,14 +53,14 @@
     else
     {
         <ol class="performance-timeline__milestones">
-            @foreach (var milestone in Milestones.OrderBy(static milestone => milestone.Sequence))
+            @foreach (var milestone in Milestones)
             {
                 <li>
                     <span class="performance-timeline__marker" aria-hidden="true">@milestone.Sequence</span>
                     <div class="performance-timeline__milestone-content">
                         <div>
                             <strong>@ModulePerformanceDisplayText.Milestone(L, milestone.Name)</strong>
-                            <span>@L["ModuleSystem:PerformanceMonitoring:Formats:Offset", milestone.OffsetMs]</span>
+                            <span>@ModulePerformanceDisplayText.Offset(L, milestone.OffsetMs)</span>
                         </div>
                         @if (milestone.HasPreviousMilestone)
                         {
@@ -94,7 +94,4 @@
     public EventCallback<ModuleKey> ModuleSelected { get; set; }
 
     private Task OpenModuleAsync(ModuleKey moduleKey) => ModuleSelected.InvokeAsync(moduleKey);
-
-    private string FormatDuration(double durationMs)
-        => L["ModuleSystem:PerformanceMonitoring:Formats:Duration", durationMs];
 }

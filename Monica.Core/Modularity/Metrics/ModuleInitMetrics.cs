@@ -9,12 +9,12 @@ namespace Monica.Core.Modularity.Metrics;
 /// </summary>
 internal sealed class ModuleInitMetrics(IMeterFactory meterFactory, MonicaApplication application)
 {
-    private const string COMPOSITION_WORK_PHASE = "composition_work";
+    private const string STARTUP_WORK_PHASE = "startup_work";
     private const string DURATION_KIND_TAG_NAME = "kind";
     private const string EXECUTION_DURATION_KIND = "execution";
     private const string QUEUE_DURATION_KIND = "queue";
     private const string ACTIVE_SPAN_DURATION_KIND = "active_span";
-    private const string CHECKPOINT_WAIT_DURATION_KIND = "checkpoint_wait";
+    private const string BARRIER_WAIT_DURATION_KIND = "barrier_wait";
     private const string PHASE_TAG_NAME = "phase";
     private Meter Meter { get; } = CreateMeter(meterFactory, application);
 
@@ -29,10 +29,10 @@ internal sealed class ModuleInitMetrics(IMeterFactory meterFactory, MonicaApplic
             description: "Monica module initialization duration by phase.");
 
         meter.CreateObservableGauge(
-            ModuleInitMetricNames.CompositionWorkDuration,
-            () => ObserveCompositionWorkDurations(application),
+            ModuleInitMetricNames.StartupWorkDuration,
+            () => ObserveStartupWorkDurations(application),
             unit: "s",
-            description: "Monica scheduled composition-work duration by measurement kind.");
+            description: "Monica scheduled startup-work duration by measurement kind.");
 
         meter.CreateObservableGauge(
             ModuleInitMetricNames.Errors,
@@ -55,32 +55,32 @@ internal sealed class ModuleInitMetrics(IMeterFactory meterFactory, MonicaApplic
         return [.. phases];
     }
 
-    private static Measurement<double>[] ObserveCompositionWorkDurations(MonicaApplication application)
+    private static Measurement<double>[] ObserveStartupWorkDurations(MonicaApplication application)
     {
         var composition = application.Profiling.GetCompositionPerformance();
-        if (composition.WorkItems.Count == 0)
+        if (composition.StartupWorkItems.Count == 0)
         {
             return [];
         }
 
         return
         [
-            CreateCompositionWorkDurationMeasurement(
+            CreateStartupWorkDurationMeasurement(
                 ACTIVE_SPAN_DURATION_KIND,
                 composition.ParallelWorkActiveSpanMs),
-            CreateCompositionWorkDurationMeasurement(EXECUTION_DURATION_KIND, composition.AggregateWorkExecutionDurationMs),
-            CreateCompositionWorkDurationMeasurement(QUEUE_DURATION_KIND, composition.AggregateWorkQueueDurationMs),
-            CreateCompositionWorkDurationMeasurement(
-                CHECKPOINT_WAIT_DURATION_KIND,
-                composition.AggregateCheckpointWaitDurationMs)
+            CreateStartupWorkDurationMeasurement(EXECUTION_DURATION_KIND, composition.AggregateWorkExecutionDurationMs),
+            CreateStartupWorkDurationMeasurement(QUEUE_DURATION_KIND, composition.AggregateWorkQueueDurationMs),
+            CreateStartupWorkDurationMeasurement(
+                BARRIER_WAIT_DURATION_KIND,
+                composition.AggregateBarrierWaitDurationMs)
         ];
     }
 
     private static Measurement<long>[] ObserveModuleInitErrors(MonicaApplication application)
     {
         return application.Modules.RegistrationErrors
-            .GroupBy(static error => error.ErrorType == ModuleRegistrationErrorType.CompositionWorkError
-                ? COMPOSITION_WORK_PHASE
+            .GroupBy(static error => error.ErrorType == ModuleRegistrationErrorType.StartupWorkError
+                ? STARTUP_WORK_PHASE
                 : FormatPhase(error.Phase))
             .Select(group => new Measurement<long>(
                 group.Count(),
@@ -95,7 +95,7 @@ internal sealed class ModuleInitMetrics(IMeterFactory meterFactory, MonicaApplic
             new KeyValuePair<string, object?>(PHASE_TAG_NAME, phase));
     }
 
-    private static Measurement<double> CreateCompositionWorkDurationMeasurement(string kind, double milliseconds)
+    private static Measurement<double> CreateStartupWorkDurationMeasurement(string kind, double milliseconds)
     {
         return new Measurement<double>(
             milliseconds / 1000d,

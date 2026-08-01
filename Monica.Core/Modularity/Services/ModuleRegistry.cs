@@ -33,8 +33,8 @@ public sealed class ModuleRegistry(MonicaApplication application)
     private readonly ModuleRegistryState _state = new();
     private ModuleRegistrationState? _activeCompositionCallback;
     private int _activeCompositionCallbackThreadId;
-    private ModuleCompositionWorkScheduler? _compositionWork;
-    private bool _compositionWorkRecorded;
+    private ModuleStartupWorkScheduler? _startupWork;
+    private TaskCompletionSource<string?>? _startupValidation;
     private bool _hasStarted;
     private bool _isSealed;
 
@@ -136,8 +136,10 @@ public sealed class ModuleRegistry(MonicaApplication application)
 
         _hasStarted = true;
         _composition.Initialize(builder);
-        _compositionWork = new ModuleCompositionWorkScheduler(
-            application.ModuleSystem.MaxConcurrentCompositionWorkItems);
+        _startupWork = new ModuleStartupWorkScheduler(
+            application.ModuleSystem.MaxConcurrentStartupWorkItems,
+            OnStartupWorkCompleted);
+        application.Profiling.AttachStartupWorkDiagnostics(_startupWork.GetSnapshot);
         var services = builder.Services;
 
         try
@@ -150,14 +152,14 @@ public sealed class ModuleRegistry(MonicaApplication application)
             var registrations = MaterializeModules(builder);
             RegisterCoreServices(services);
             var snapshots = ExecuteBuilderAndServiceConfiguration(builder, services, registrations);
-            ReachCompositionWorkCheckpoint(ModuleCompositionWorkDeadline.BeforeBusinessTypeIteration);
+            ReachStartupWorkBarrier(ModuleStartupWorkBarrier.BeforeBusinessTypeIteration);
 
             IterateBusinessTypes(snapshots);
-            ReachCompositionWorkCheckpoint(ModuleCompositionWorkDeadline.BeforePostConfigureServices);
+            ReachStartupWorkBarrier(ModuleStartupWorkBarrier.BeforePostConfigureServices);
 
             ExecutePostConfigureServices(builder, services, snapshots);
-            ReachCompositionWorkCheckpoint(ModuleCompositionWorkDeadline.BeforeServiceRegistrationCompletion);
-            _ = FinalizeCompositionWork(abort: false);
+            _startupWork.CloseSubmissions();
+            ReachStartupWorkBarrier(ModuleStartupWorkBarrier.BeforeServiceRegistrationCompletion);
 
             _state.AddRuntimeSnapshots(snapshots);
             application.Errors.RaiseModuleErrors();
@@ -263,7 +265,7 @@ public sealed class ModuleRegistry(MonicaApplication application)
         services.AddSingleton<MonicaApplication>(_ => application);
         services.AddSingleton<IMonicaApplicationOptions>(application.Application);
         services.AddSingleton<IMonicaModuleSystemOptions>(application.ModuleSystem);
-        RegisterCompositionStartupValidation(services);
+        RegisterStartupValidation(services);
 
         foreach (var optionType in Registrations.Values
                      .Select(static info => info.ModuleOptionType)
@@ -415,9 +417,8 @@ public sealed class ModuleRegistry(MonicaApplication application)
     /// </summary>
     internal void Clear()
     {
-        _compositionWork?.Dispose();
-        _compositionWork = null;
-        _compositionWorkRecorded = false;
+        DisposeStartupWork();
+        _startupValidation = null;
         lock (_compositionCallbackGate)
         {
             _activeCompositionCallback = null;
@@ -444,12 +445,12 @@ public sealed class ModuleRegistry(MonicaApplication application)
     /// <summary>
     /// Validates module ownership and phase rules before handing isolated work to the scheduler.
     /// </summary>
-    internal void ScheduleCompositionWork(
+    internal void ScheduleStartupWork(
         ModuleBase owner,
         string name,
         Action work,
         Action? commit,
-        ModuleCompositionWorkDeadline deadline)
+        ModuleStartupWorkBarrier barrier)
     {
         ArgumentNullException.ThrowIfNull(owner);
         ArgumentException.ThrowIfNullOrWhiteSpace(name);
@@ -458,18 +459,26 @@ public sealed class ModuleRegistry(MonicaApplication application)
         ValidateSynchronousCompositionDelegate(
             work,
             nameof(work),
-            "Module composition work must be synchronous. Use the Generic Host lifecycle for asynchronous work.");
+            "Module startup work must be synchronous. Use the Generic Host lifecycle for asynchronous work.");
         if (commit is not null)
         {
             ValidateSynchronousCompositionDelegate(
                 commit,
                 nameof(commit),
-                "Module composition work commits must be synchronous and cannot launch asynchronous work.");
+                "Module startup work commits must be synchronous and cannot launch asynchronous work.");
         }
 
-        if (!Enum.IsDefined(deadline))
+        if (!Enum.IsDefined(barrier))
         {
-            throw new ArgumentOutOfRangeException(nameof(deadline), deadline, "Unknown composition work deadline.");
+            throw new ArgumentOutOfRangeException(nameof(barrier), barrier, "Unknown startup work barrier.");
+        }
+
+        if (commit is not null
+            && barrier is ModuleStartupWorkBarrier.BeforeHostLifecycle or ModuleStartupWorkBarrier.NoBarrier)
+        {
+            throw new InvalidOperationException(
+                $"Startup work targeting {barrier} cannot have a serial commit because service registration " +
+                "is sealed before that barrier.");
         }
 
         var moduleType = owner.GetType();
@@ -477,7 +486,7 @@ public sealed class ModuleRegistry(MonicaApplication application)
             || !ReferenceEquals(info.ModuleSingleton, owner))
         {
             throw new InvalidOperationException(
-                $"Only the materialized host-owned {moduleType.Name} instance can schedule composition work.");
+                $"Only the materialized host-owned {moduleType.Name} instance can schedule startup work.");
         }
 
         lock (_compositionCallbackGate)
@@ -490,31 +499,32 @@ public sealed class ModuleRegistry(MonicaApplication application)
                     or ModulePhase.PostConfigureServices))
             {
                 throw new InvalidOperationException(
-                    $"Module {moduleType.Name} can schedule composition work only while its synchronous " +
+                    $"Module {moduleType.Name} can schedule startup work only while its synchronous " +
                     "ConfigureBuilder, ConfigureServices, IterateBusinessTypes, or PostConfigureServices " +
                     "callback is executing.");
             }
 
             if (info.ModulePhase == ModulePhase.IterateBusinessTypes
-                && deadline == ModuleCompositionWorkDeadline.BeforeBusinessTypeIteration)
+                && barrier == ModuleStartupWorkBarrier.BeforeBusinessTypeIteration)
             {
                 throw new InvalidOperationException(
-                    $"Module {moduleType.Name} cannot schedule composition work for " +
-                    $"{ModuleCompositionWorkDeadline.BeforeBusinessTypeIteration} during business-type iteration. " +
-                    $"Use {ModuleCompositionWorkDeadline.BeforePostConfigureServices} or " +
-                    $"{ModuleCompositionWorkDeadline.BeforeServiceRegistrationCompletion}.");
+                    $"Module {moduleType.Name} cannot schedule startup work for " +
+                    $"{ModuleStartupWorkBarrier.BeforeBusinessTypeIteration} during business-type iteration. " +
+                    $"Use any later barrier: {ModuleStartupWorkBarrier.BeforePostConfigureServices}, " +
+                    $"{ModuleStartupWorkBarrier.BeforeServiceRegistrationCompletion}, " +
+                    $"{ModuleStartupWorkBarrier.BeforeHostLifecycle}, or {ModuleStartupWorkBarrier.NoBarrier}.");
             }
         }
 
-        var scheduler = _compositionWork
-            ?? throw new InvalidOperationException("Module composition work is no longer available for this host.");
+        var scheduler = _startupWork
+            ?? throw new InvalidOperationException("Module startup work is no longer available for this host.");
         scheduler.Schedule(
             moduleType,
             application.Dependencies.ResolveModuleKey(moduleType),
             info.Order,
             name,
             info.ModulePhase,
-            deadline,
+            barrier,
             work,
             commit);
     }
@@ -541,11 +551,12 @@ public sealed class ModuleRegistry(MonicaApplication application)
         services.AddSingleton(postConfigureType, implementation);
     }
 
-    private void RegisterCompositionStartupValidation(IServiceCollection services)
+    private void RegisterStartupValidation(IServiceCollection services)
     {
-        services.AddSingleton<IValidateOptions<ModuleCompositionStartupOptions>>(
-            new ModuleCompositionStartupValidator(application));
-        services.AddOptions<ModuleCompositionStartupOptions>().ValidateOnStart();
+        services.AddSingleton<IValidateOptions<ModuleStartupValidationOptions>>(
+            new ModuleStartupValidator(application));
+        services.AddOptions<ModuleStartupValidationOptions>().ValidateOnStart();
+        services.AddHostedService<ModuleStartupWorkLifecycle>();
     }
 
     private void ExecutePostConfigureServices(
@@ -571,20 +582,26 @@ public sealed class ModuleRegistry(MonicaApplication application)
         }
     }
 
-    private void ReachCompositionWorkCheckpoint(ModuleCompositionWorkDeadline deadline)
+    private void ReachStartupWorkBarrier(ModuleStartupWorkBarrier barrier)
     {
-        var scheduler = _compositionWork
-            ?? throw new InvalidOperationException("Module composition work has already completed.");
-        var checkpoint = scheduler.ReachCheckpoint(deadline);
-        if (checkpoint.HasFailures)
+        var scheduler = _startupWork
+            ?? throw new InvalidOperationException("Module startup work is unavailable for this host.");
+        var release = scheduler.ReachBarrier(barrier);
+        if (release.HasFailures)
         {
-            throw new ModuleCompositionWorkFailureException(deadline);
+            var failures = release.WorkItems.Where(static result => !result.IsSucceeded).ToArray();
+            foreach (var failure in failures)
+            {
+                application.Errors.RecordStartupWorkError(failure);
+            }
+
+            throw new ModuleStartupWorkFailureException(barrier, failures);
         }
 
-        CommitCompositionWork(checkpoint.WorkItems);
+        CommitStartupWork(release.WorkItems);
     }
 
-    private void CommitCompositionWork(IReadOnlyList<ModuleCompositionWorkResult> workItems)
+    private void CommitStartupWork(IReadOnlyList<ModuleStartupWorkResult> workItems)
     {
         foreach (var result in workItems)
         {
@@ -596,20 +613,20 @@ public sealed class ModuleRegistry(MonicaApplication application)
             if (!TryGetModuleRequestInfo(result.ModuleType, out var registration))
             {
                 throw new InvalidOperationException(
-                    $"Composition work '{result.Name}' cannot commit because module {result.ModuleType.FullName} " +
+                    $"Startup work '{result.Name}' cannot commit because module {result.ModuleType.FullName} " +
                     "is no longer registered.");
             }
 
             registration.StartModulePhase(result.OriginPhase);
             try
             {
-                // The worker checkpoint is already released. This serial publication is intentionally profiled as a
+                // The worker barrier is already released. This serial publication is intentionally profiled as a
                 // repeated callback of the phase that scheduled the work rather than as worker wait time.
                 commit();
             }
             catch (Exception exception)
             {
-                application.Errors.RecordCompositionWorkCommitError(result, exception);
+                application.Errors.RecordStartupWorkCommitError(result, exception);
                 application.Errors.RaiseModuleErrors();
                 throw;
             }
@@ -620,54 +637,30 @@ public sealed class ModuleRegistry(MonicaApplication application)
         }
     }
 
-    private ModuleCompositionWorkSnapshot FinalizeCompositionWork(bool abort)
-    {
-        if (_compositionWorkRecorded)
-        {
-            return new ModuleCompositionWorkSnapshot([], []);
-        }
-
-        var scheduler = _compositionWork
-            ?? throw new InvalidOperationException("Module composition work scheduler is unavailable.");
-        if (abort)
-        {
-            scheduler.AbortAndDrain();
-        }
-
-        var snapshot = scheduler.GetSnapshot();
-        application.Profiling.RecordCompositionWork(snapshot);
-        foreach (var failure in snapshot.WorkItems.Where(static result => !result.IsSucceeded))
-        {
-            application.Errors.RecordCompositionWorkError(failure);
-        }
-
-        _compositionWorkRecorded = true;
-        scheduler.Dispose();
-        _compositionWork = null;
-        return snapshot;
-    }
-
     private void HandleRegistrationFailure(Exception primaryFailure)
     {
-        ModuleCompositionWorkSnapshot snapshot;
+        var scheduler = _startupWork;
+        ModuleStartupWorkSnapshot snapshot = new([], []);
         try
         {
-            snapshot = _compositionWorkRecorded || _compositionWork is null
-                ? new ModuleCompositionWorkSnapshot([], [])
-                : FinalizeCompositionWork(abort: true);
+            if (scheduler is not null)
+            {
+                scheduler.Drain();
+                snapshot = scheduler.GetSnapshot();
+            }
         }
         catch (Exception drainFailure)
         {
             application.Profiling.StopModuleSystem();
             throw new AggregateException(
-                "Monica composition failed and scheduled composition work could not be drained cleanly.",
+                "Monica composition failed and scheduled startup work could not be drained cleanly.",
                 primaryFailure,
                 drainFailure);
         }
 
         application.Profiling.StopModuleSystem();
         var workFailures = snapshot.WorkItems
-            .Where(static result => !result.IsSucceeded)
+            .Where(static result => result.Barrier != ModuleStartupWorkBarrier.NoBarrier && !result.IsSucceeded)
             .Select(static result => result.Failure!)
             .ToArray();
         if (workFailures.Length == 0)
@@ -675,13 +668,13 @@ public sealed class ModuleRegistry(MonicaApplication application)
             return;
         }
 
-        if (primaryFailure is ModuleCompositionWorkFailureException or ModuleRegistrationException)
+        if (primaryFailure is ModuleStartupWorkFailureException or ModuleRegistrationException)
         {
             application.Errors.RaiseModuleErrors();
         }
 
         throw new AggregateException(
-            "Monica composition and required scheduled composition work both failed.",
+            "Monica composition and required scheduled startup work both failed.",
             [primaryFailure, .. workFailures]);
     }
 
@@ -750,7 +743,59 @@ public sealed class ModuleRegistry(MonicaApplication application)
     /// </summary>
     internal string? GetStartupValidationFailure()
     {
-        return _composition.GetStartupValidationFailure();
+        if (_composition.GetStartupValidationFailure() is { } compositionFailure)
+        {
+            return compositionFailure;
+        }
+
+        var candidate = new TaskCompletionSource<string?>(TaskCreationOptions.RunContinuationsAsynchronously);
+        var validation = Interlocked.CompareExchange(ref _startupValidation, candidate, null);
+        if (validation is not null)
+        {
+            return validation.Task.GetAwaiter().GetResult();
+        }
+
+        try
+        {
+            ReachStartupWorkBarrier(ModuleStartupWorkBarrier.BeforeHostLifecycle);
+            candidate.TrySetResult(null);
+        }
+        catch (Exception exception)
+        {
+            candidate.TrySetResult(exception.GetMessageRecursively());
+        }
+
+        return candidate.Task.GetAwaiter().GetResult();
+    }
+
+    /// <summary>
+    /// Drains host-owned non-blocking work after the Generic Host has stopped.
+    /// </summary>
+    internal void DrainStartupWork()
+    {
+        _startupWork?.Drain();
+    }
+
+    /// <summary>
+    /// Drains and releases the startup-work scheduler during application disposal.
+    /// </summary>
+    internal void DisposeStartupWork()
+    {
+        var scheduler = Interlocked.Exchange(ref _startupWork, null);
+        scheduler?.Dispose();
+    }
+
+    private void OnStartupWorkCompleted(ModuleStartupWorkResult result)
+    {
+        if (result.Barrier == ModuleStartupWorkBarrier.NoBarrier && !result.IsSucceeded)
+        {
+            Logger.LogError(
+                result.Failure,
+                "Non-blocking startup work {WorkName} owned by module {ModuleType} failed. " +
+                "Host startup is unaffected; inspect module-system diagnostics for details.",
+                result.Name,
+                result.ModuleType.FullName);
+        }
     }
 
     /// <summary>

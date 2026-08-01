@@ -1,7 +1,6 @@
 
 .tab-content-panel {
     padding: 24px;
-    min-height: 500px;
 }
 
 @media (max-width: 960px) {

@@ -69,13 +69,13 @@
                             }
                         </MudTd>
                         <MudTd DataLabel="@L["ModuleSystem:PerformanceMonitoring:Labels:SerialTotal"]">
-                            <strong>@FormatDuration(context.AggregateDurationMs)</strong>
+                            <strong>@ModulePerformanceDisplayText.Duration(L, context.AggregateDurationMs)</strong>
                         </MudTd>
                         <MudTd DataLabel="@L["ModuleSystem:PerformanceMonitoring:Labels:SlowestPhase"]">
-                            @(context.SlowestPhase ?? L["ModuleSystem:PerformanceMonitoring:States:None"])
+                            @(context.SlowestPhase?.ToString() ?? L["ModuleSystem:PerformanceMonitoring:States:None"])
                         </MudTd>
                         <MudTd DataLabel="@L["ModuleSystem:PerformanceMonitoring:Labels:SlowestPhaseDuration"]">
-                            @FormatDuration(context.SlowestPhaseDurationMs)
+                            @ModulePerformanceDisplayText.Duration(L, context.SlowestPhaseDurationMs)
                         </MudTd>
                         <MudTd DataLabel="@L["ModuleSystem:PerformanceMonitoring:Labels:CallbackCount"]">@context.CallbackCount</MudTd>
                         <MudTd DataLabel="@L["ModuleSystem:PerformanceMonitoring:Labels:ScheduledWorkCount"]">@context.WorkItemCount</MudTd>
@@ -126,7 +126,4 @@
     private void ToggleSortDirection() => _descending = !_descending;
 
     private Task OpenModuleAsync(ModuleKey moduleKey) => ModuleSelected.InvokeAsync(moduleKey);
-
-    private string FormatDuration(double durationMs)
-        => L["ModuleSystem:PerformanceMonitoring:Formats:Duration", durationMs];
 }

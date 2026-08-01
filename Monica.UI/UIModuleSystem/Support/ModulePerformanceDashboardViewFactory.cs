@@ -16,12 +16,12 @@ internal static class ModulePerformanceDashboardViewFactory
         ArgumentNullException.ThrowIfNull(performance);
 
         var composition = performance.Composition;
-        var workItemsById = composition.WorkItems.ToDictionary(
+        var workItemsById = composition.StartupWorkItems.ToDictionary(
             static item => item.WorkItemId,
             StringComparer.Ordinal);
         var milestones = CreateMilestones(composition);
-        var checkpoints = CreateCheckpoints(composition, workItemsById);
-        var workItems = CreateWorkItems(composition.WorkItems);
+        var barriers = CreateBarriers(composition, workItemsById);
+        var workItems = CreateWorkItems(composition.StartupWorkItems);
         var serialModules = performance.Modules
             .Select(CreateSerialModule)
             .OrderByDescending(static module => module.AggregateDurationMs)
@@ -39,7 +39,7 @@ internal static class ModulePerformanceDashboardViewFactory
                 phase.PhaseName,
                 phase.StartedOffsetMs,
                 phase.DurationMs,
-                PercentageOf(phase.DurationMs, longestSystemPhaseDurationMs)))
+                ModulePerformanceMath.PercentageOf(phase.DurationMs, longestSystemPhaseDurationMs)))
             .ToArray();
 
         var initialization = composition.Initialization;
@@ -64,10 +64,10 @@ internal static class ModulePerformanceDashboardViewFactory
                     composition.AggregateWorkQueueDurationMs),
                 composition.ModulePhaseExecutions.Count(execution =>
                     execution.StartedOffsetMs < serviceRegistration.TotalDurationMs),
-                composition.WorkItems.Count),
+                composition.StartupWorkItems.Count),
             CreateCriticalPath(composition),
             milestones,
-            checkpoints,
+            barriers,
             workItems,
             serialModules,
             systemPhases);
@@ -76,8 +76,8 @@ internal static class ModulePerformanceDashboardViewFactory
     /// <summary>
     /// Creates ordered display rows for a module-owned subset of parallel work items.
     /// </summary>
-    public static IReadOnlyList<ModuleCompositionWorkItemView> CreateWorkItems(
-        IEnumerable<ModuleCompositionWorkPerformanceInfo> workItems)
+    public static IReadOnlyList<ModuleStartupWorkItemView> CreateWorkItems(
+        IEnumerable<ModuleStartupWorkPerformanceInfo> workItems)
     {
         ArgumentNullException.ThrowIfNull(workItems);
 
@@ -100,7 +100,7 @@ internal static class ModulePerformanceDashboardViewFactory
             var previousOffset = index == 0 ? 0 : ordered[index - 1].OffsetMs;
             result[index] = new ModuleCompositionMilestoneView(
                 index + 1,
-                milestone.Milestone.ToString(),
+                milestone.Milestone,
                 milestone.OffsetMs,
                 Math.Max(0, milestone.OffsetMs - previousOffset),
                 index > 0,
@@ -111,48 +111,48 @@ internal static class ModulePerformanceDashboardViewFactory
         return result;
     }
 
-    private static IReadOnlyList<ModuleCompositionCheckpointView> CreateCheckpoints(
+    private static IReadOnlyList<ModuleStartupWorkBarrierView> CreateBarriers(
         ModuleCompositionPerformance composition,
-        IReadOnlyDictionary<string, ModuleCompositionWorkPerformanceInfo> workItemsById)
+        IReadOnlyDictionary<string, ModuleStartupWorkPerformanceInfo> workItemsById)
     {
-        return composition.Checkpoints
-            .OrderBy(static checkpoint => checkpoint.Sequence)
-            .Select(checkpoint => new ModuleCompositionCheckpointView(
-                checkpoint.Sequence + 1,
-                checkpoint.Deadline.ToString(),
-                checkpoint.EnteredOffsetMs,
-                checkpoint.ReleasedOffsetMs,
-                checkpoint.WaitDurationMs,
-                checkpoint.DueWorkItemIds
+        return composition.StartupWorkBarriers
+            .OrderBy(static barrier => barrier.Sequence)
+            .Select(barrier => new ModuleStartupWorkBarrierView(
+                barrier.Sequence + 1,
+                barrier.Barrier,
+                barrier.EnteredOffsetMs,
+                barrier.ReleasedOffsetMs,
+                barrier.WaitDurationMs,
+                barrier.DueWorkItemIds
                     .Select(workItemId => ResolveWorkName(workItemId, workItemsById))
                     .ToArray(),
-                checkpoint.PendingWorkItems
-                    .Select(pending => new ModuleCompositionCheckpointPendingWorkView(
+                barrier.PendingWorkItems
+                    .Select(pending => new ModuleStartupWorkBarrierPendingView(
                         ResolveWorkName(pending.WorkItemId, workItemsById),
                         pending.RemainingDurationMs))
                     .ToArray(),
-                checkpoint.ReleasingWorkItemId is null
+                barrier.ReleasingWorkItemId is null
                     ? null
-                    : ResolveWorkName(checkpoint.ReleasingWorkItemId, workItemsById)))
+                    : ResolveWorkName(barrier.ReleasingWorkItemId, workItemsById)))
             .ToArray();
     }
 
-    private static ModuleCompositionWorkItemView CreateWorkItem(ModuleCompositionWorkPerformanceInfo item)
+    private static ModuleStartupWorkItemView CreateWorkItem(ModuleStartupWorkPerformanceInfo item)
     {
-        return new ModuleCompositionWorkItemView(
+        return new ModuleStartupWorkItemView(
             item.Sequence,
             item.ModuleRegistrationOrder,
             item.ModuleTypeName,
             item.ModuleKey,
             item.Name,
-            item.OriginPhase.ToString(),
-            item.Deadline.ToString(),
-            item.Status.ToString(),
+            item.OriginPhase,
+            item.Barrier,
+            item.Status,
             item.SubmittedOffsetMs,
             item.QueueDurationMs,
             item.ExecutionDurationMs,
-            item.WasPendingAtDeadline,
-            item.WasPendingAtDeadline ? item.RemainingAtDeadlineMs : null,
+            item.WasPendingAtBarrier,
+            item.WasPendingAtBarrier ? item.RemainingAtBarrierMs : null,
             item.ErrorMessage);
     }
 
@@ -175,38 +175,36 @@ internal static class ModulePerformanceDashboardViewFactory
             module.ModuleTypeName,
             module.IsRuntimeAvailable ? module.ModuleKey : (ModuleKey?)null,
             module.SerialDurationMs,
-            slowest?.Phase.ToString(),
+            slowest?.Phase,
             slowest?.DurationMs ?? 0,
             module.PhaseExecutions.Count,
-            module.CompositionWorkItems.Count);
+            module.StartupWorkItems.Count);
     }
 
     private static ModuleCriticalPathView? CreateCriticalPath(ModuleCompositionPerformance composition)
     {
-        var checkpoint = composition.CriticalCheckpoint;
+        var barrier = composition.CriticalBarrier;
         var workItem = composition.CriticalWorkItem;
-        if (checkpoint is null || workItem is null)
+        if (barrier is null || workItem is null)
         {
             return null;
         }
 
         return new ModuleCriticalPathView(
-            checkpoint.Deadline.ToString(),
+            barrier.Barrier,
             workItem.ModuleTypeName,
             workItem.ModuleKey,
             workItem.Name,
-            checkpoint.BlockingWaitDurationMs);
+            barrier.BlockingWaitDurationMs);
     }
 
     private static string ResolveWorkName(
         string workItemId,
-        IReadOnlyDictionary<string, ModuleCompositionWorkPerformanceInfo> workItemsById)
+        IReadOnlyDictionary<string, ModuleStartupWorkPerformanceInfo> workItemsById)
     {
         return workItemsById.TryGetValue(workItemId, out var workItem)
             ? $"{workItem.ModuleTypeName} / {workItem.Name}"
             : workItemId;
     }
 
-    private static double PercentageOf(double durationMs, double totalMs)
-        => totalMs <= 0 ? 0 : durationMs / totalMs * 100;
 }

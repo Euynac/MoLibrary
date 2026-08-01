@@ -166,11 +166,9 @@ internal sealed class MonicaEffectiveOptionsReader : IMonicaEffectiveOptionsRead
             .ToArray();
 
         var seeds = definitions
-            .Select(definition => new ConfigurationEffectiveValueSeed
-            {
-                Definition = definition,
-                SeedJson = _seedFactory.CreateSeedJson(definition)
-            })
+            .Select(definition => new ConfigurationEffectiveValueSeed(
+                definition,
+                () => _seedFactory.CreateSeedJson(definition)))
             .ToArray();
 
         if (_options.Debugging)

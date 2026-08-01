@@ -99,7 +99,7 @@ public sealed class ModuleCompositionPerformanceTests
                 ModuleCallback(0, 100, 2_000),
                 ModuleCallback(1, 2_500, 3_525)
             ],
-            Checkpoints = [BlockingCheckpoint(2, 4_000, 8_532)]
+            StartupWorkBarriers = [BlockingBarrier(2, 4_000, 8_532)]
         };
 
         var serviceRegistration = performance.ServiceRegistration;
@@ -132,10 +132,10 @@ public sealed class ModuleCompositionPerformanceTests
                 ModuleCallback(0, 1_000, 4_000),
                 ModuleCallback(1, 3_500, 4_500)
             ],
-            Checkpoints =
+            StartupWorkBarriers =
             [
-                BlockingCheckpoint(2, 3_000, 5_000),
-                BlockingCheckpoint(3, 4_500, 5_500)
+                BlockingBarrier(2, 3_000, 5_000),
+                BlockingBarrier(3, 4_500, 5_500)
             ]
         };
 
@@ -204,6 +204,39 @@ public sealed class ModuleCompositionPerformanceTests
         });
     }
 
+    [Fact]
+    public void ParallelWorkActiveSpan_WhenWorkIsRunning_ShouldEndAtTheObservationBoundaryAndIgnoreQueuedWork()
+    {
+        var performance = new ModuleCompositionPerformance
+        {
+            ObservedDurationMs = 250,
+            StartupWorkItems =
+            [
+                new ModuleStartupWorkPerformanceInfo
+                {
+                    Name = "completed-work",
+                    StartedOffsetMs = 20,
+                    CompletedOffsetMs = 80,
+                    Status = ModuleStartupWorkStatus.Succeeded
+                },
+                new ModuleStartupWorkPerformanceInfo
+                {
+                    Name = "running-work",
+                    StartedOffsetMs = 100,
+                    Status = ModuleStartupWorkStatus.Running
+                },
+                new ModuleStartupWorkPerformanceInfo
+                {
+                    Name = "queued-work",
+                    SubmittedOffsetMs = 5,
+                    Status = ModuleStartupWorkStatus.Queued
+                }
+            ]
+        };
+
+        performance.ParallelWorkActiveSpanMs.Should().Be(230);
+    }
+
     private static ModuleCompositionMilestonePerformanceInfo Milestone(
         long sequence,
         ModuleCompositionMilestone milestone,
@@ -247,20 +280,20 @@ public sealed class ModuleCompositionPerformanceTests
         };
     }
 
-    private static ModuleCompositionCheckpointPerformanceInfo BlockingCheckpoint(
+    private static ModuleStartupWorkBarrierPerformanceInfo BlockingBarrier(
         long sequence,
         double enteredOffsetMs,
         double releasedOffsetMs)
     {
-        return new ModuleCompositionCheckpointPerformanceInfo
+        return new ModuleStartupWorkBarrierPerformanceInfo
         {
             Sequence = sequence,
-            Deadline = ModuleCompositionWorkDeadline.BeforeServiceRegistrationCompletion,
+            Barrier = ModuleStartupWorkBarrier.BeforeServiceRegistrationCompletion,
             EnteredOffsetMs = enteredOffsetMs,
             ReleasedOffsetMs = releasedOffsetMs,
             PendingWorkItems =
             [
-                new ModuleCompositionCheckpointPendingWorkInfo
+                new ModuleStartupWorkBarrierPendingWorkInfo
                 {
                     WorkItemId = $"work-{sequence}",
                     RemainingDurationMs = Math.Max(0, releasedOffsetMs - enteredOffsetMs)

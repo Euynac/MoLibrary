@@ -165,7 +165,10 @@ public sealed class ModuleConfiguration
         activationCoordinator.ActivateAsync(CancellationToken.None).GetAwaiter().GetResult();
 
         var validationService = app.ApplicationServices.GetRequiredService<IConfigurationRuntimeValidationService>();
-        var report = validationService.GetReport();
+        var metricsRecorder = app.ApplicationServices.GetRequiredService<ConfigurationMetricsRecorder>();
+        var report = metricsRecorder.MeasureStartupStage(
+            ConfigurationStartupStage.RuntimeValidation,
+            () => validationService.GetReport());
         if (report.IsValid)
         {
             return;
@@ -208,11 +211,11 @@ public sealed class ModuleConfiguration
         }
 
         var typesToAnalyze = configurationTypes.ToArray();
-        ScheduleCompositionWork(
+        ScheduleStartupWork(
             "build-configuration-definitions",
             () => BuildDefinitions(typesToAnalyze),
             CommitDefinitions,
-            ModuleCompositionWorkDeadline.BeforePostConfigureServices);
+            ModuleStartupWorkBarrier.BeforePostConfigureServices);
     }
 
     private void BuildDefinitions(IReadOnlyList<Type> optionsTypes)

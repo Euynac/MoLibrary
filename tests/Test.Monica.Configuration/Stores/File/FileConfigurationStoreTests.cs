@@ -25,6 +25,28 @@ public class FileConfigurationStoreTests : IDisposable
     }
 
     [Fact]
+    public async Task EnsureCreatedAsync_WhenDocumentExists_ShouldNotGenerateItsSeedAgain()
+    {
+        var store = CreateStore();
+        var definition = TestConfigurationFactory.Definition();
+        await store.EnsureCreatedAsync(definition, """{"WorkerId":1}""", CancellationToken.None);
+        var seedFactoryCalls = 0;
+        var seed = new ConfigurationEffectiveValueSeed(
+            definition,
+            () =>
+            {
+                seedFactoryCalls++;
+                return """{"WorkerId":2}""";
+            });
+
+        var documents = await store.EnsureCreatedAsync([seed], CancellationToken.None);
+
+        seedFactoryCalls.Should().Be(0);
+        documents.Should().ContainSingle();
+        documents[0].Json.Should().Contain("\"WorkerId\": 1");
+    }
+
+    [Fact]
     public async Task SaveAsync_WhenExpectedVersionIsStale_ShouldThrowConcurrencyConflict()
     {
         var store = CreateStore();

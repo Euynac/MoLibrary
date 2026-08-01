@@ -14,4 +14,9 @@ internal sealed class MonicaConfigurationProviderAccessor
     /// Gets or sets the active provider.
     /// </summary>
     public MonicaConfigurationProvider? Provider { get; set; }
+
+    /// <summary>
+    /// Gets the monotonic revision of the active provider's last successful projection.
+    /// </summary>
+    public long SuccessfulProjectionRevision => Provider?.SuccessfulProjectionRevision ?? 0;
 }

@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Runtime.ExceptionServices;
 using AwesomeAssertions;
 using Microsoft.AspNetCore.Builder;
@@ -5,6 +6,7 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Options;
 using Monica.Core.Modularity.Diagnostics.Models;
 using Monica.Core.Modularity.Diagnostics.Services;
 using Monica.Core.Modularity.Abstractions;
@@ -18,21 +20,23 @@ using Xunit;
 
 namespace Test.Monica.Core.Modularity;
 
-public sealed class ModuleCompositionWorkTests
+public sealed class ModuleStartupWorkTests
 {
     private static readonly TimeSpan HANG_GUARD = TimeSpan.FromSeconds(10);
 
     [Fact]
-    public void DeadlineContract_ShouldContainOnlyDeterministicCompositionBarriers()
+    public void BarrierContract_ShouldContainRequiredAndNonBlockingStartupPolicies()
     {
-        Enum.GetNames<ModuleCompositionWorkDeadline>().Should().Equal(
-            nameof(ModuleCompositionWorkDeadline.BeforeBusinessTypeIteration),
-            nameof(ModuleCompositionWorkDeadline.BeforePostConfigureServices),
-            nameof(ModuleCompositionWorkDeadline.BeforeServiceRegistrationCompletion));
+        Enum.GetNames<ModuleStartupWorkBarrier>().Should().Equal(
+            nameof(ModuleStartupWorkBarrier.BeforeBusinessTypeIteration),
+            nameof(ModuleStartupWorkBarrier.BeforePostConfigureServices),
+            nameof(ModuleStartupWorkBarrier.BeforeServiceRegistrationCompletion),
+            nameof(ModuleStartupWorkBarrier.BeforeHostLifecycle),
+            nameof(ModuleStartupWorkBarrier.NoBarrier));
     }
 
     [Fact]
-    public void Diagnostics_AfterCompositionWorkCompletes_ShouldKeepSerialAndWorkerDurationsSeparate()
+    public void Diagnostics_AfterStartupWorkCompletes_ShouldKeepSerialAndWorkerDurationsSeparate()
     {
         var builder = Host.CreateApplicationBuilder();
         builder.AddMonica(monica =>
@@ -48,15 +52,15 @@ public sealed class ModuleCompositionWorkTests
         var performance = host.Services.GetRequiredService<IModuleSystemInspectionService>()
             .GetSystemPerformance();
         var module = performance.Modules.Single(item =>
-            item.ModuleTypeName == nameof(CompositionWorkProbeModuleOne));
-        var work = module.CompositionWorkItems.Should().ContainSingle().Subject;
+            item.ModuleTypeName == nameof(StartupWorkProbeModuleOne));
+        var work = module.StartupWorkItems.Should().ContainSingle().Subject;
         var composition = performance.Composition;
 
-        composition.WorkItems.Should().ContainSingle();
-        composition.Checkpoints.Select(static checkpoint => checkpoint.Deadline).Should().Equal(
-            ModuleCompositionWorkDeadline.BeforeBusinessTypeIteration,
-            ModuleCompositionWorkDeadline.BeforePostConfigureServices,
-            ModuleCompositionWorkDeadline.BeforeServiceRegistrationCompletion);
+        composition.StartupWorkItems.Should().ContainSingle();
+        composition.StartupWorkBarriers.Select(static checkpoint => checkpoint.Barrier).Should().Equal(
+            ModuleStartupWorkBarrier.BeforeBusinessTypeIteration,
+            ModuleStartupWorkBarrier.BeforePostConfigureServices,
+            ModuleStartupWorkBarrier.BeforeServiceRegistrationCompletion);
         module.SerialDurationMs.Should().Be(module.PhaseExecutions.Sum(static execution => execution.DurationMs));
         module.PhaseExecutions.Should().Contain(static execution =>
             execution.Phase == ModulePhase.IterateBusinessTypes);
@@ -67,12 +71,16 @@ public sealed class ModuleCompositionWorkTests
         work.ModuleTypeName.Should().Be(module.ModuleTypeName);
         work.ModuleRegistrationOrder.Should().Be(module.RegistrationOrder);
         work.OriginPhase.Should().Be(ModulePhase.ConfigureServices);
-        work.Deadline.Should().Be(ModuleCompositionWorkDeadline.BeforeServiceRegistrationCompletion);
-        work.Status.Should().Be(ModuleCompositionWorkStatus.Succeeded);
-        work.SubmittedOffsetMs.Should().BeLessThanOrEqualTo(work.StartedOffsetMs);
-        work.StartedOffsetMs.Should().BeLessThanOrEqualTo(work.CompletedOffsetMs);
-        work.SubmittedAtUtc.Should().BeOnOrBefore(work.StartedAtUtc);
-        work.StartedAtUtc.Should().BeOnOrBefore(work.CompletedAtUtc);
+        work.Barrier.Should().Be(ModuleStartupWorkBarrier.BeforeServiceRegistrationCompletion);
+        work.Status.Should().Be(ModuleStartupWorkStatus.Succeeded);
+        work.StartedOffsetMs.Should().NotBeNull();
+        work.CompletedOffsetMs.Should().NotBeNull();
+        work.StartedAtUtc.Should().NotBeNull();
+        work.CompletedAtUtc.Should().NotBeNull();
+        work.SubmittedOffsetMs.Should().BeLessThanOrEqualTo(work.StartedOffsetMs!.Value);
+        work.StartedOffsetMs.Value.Should().BeLessThanOrEqualTo(work.CompletedOffsetMs!.Value);
+        work.SubmittedAtUtc.Should().BeOnOrBefore(work.StartedAtUtc!.Value);
+        work.StartedAtUtc.Value.Should().BeOnOrBefore(work.CompletedAtUtc!.Value);
         composition.SystemPhases.Should().OnlyContain(phase =>
             phase.StartedOffsetMs >= 0
             && phase.StartedOffsetMs <= phase.CompletedOffsetMs
@@ -81,83 +89,87 @@ public sealed class ModuleCompositionWorkTests
             execution.StartedOffsetMs >= 0
             && execution.StartedOffsetMs <= execution.CompletedOffsetMs
             && execution.CompletedOffsetMs <= composition.ElapsedDurationMs);
-        composition.WorkItems.Should().OnlyContain(item =>
+        composition.StartupWorkItems.Should().OnlyContain(item =>
             item.SubmittedOffsetMs >= 0
-            && item.SubmittedOffsetMs <= item.StartedOffsetMs
-            && item.StartedOffsetMs <= item.CompletedOffsetMs
-            && item.CompletedOffsetMs <= composition.ElapsedDurationMs);
-        composition.Checkpoints.Should().OnlyContain(checkpoint =>
+            && item.StartedOffsetMs.HasValue
+            && item.CompletedOffsetMs.HasValue
+            && item.SubmittedOffsetMs <= item.StartedOffsetMs.Value
+            && item.StartedOffsetMs.Value <= item.CompletedOffsetMs.Value
+            && item.CompletedOffsetMs.Value <= composition.ElapsedDurationMs);
+        composition.StartupWorkBarriers.Should().OnlyContain(checkpoint =>
             checkpoint.EnteredOffsetMs >= 0
             && checkpoint.EnteredOffsetMs <= checkpoint.ReleasedOffsetMs
             && checkpoint.ReleasedOffsetMs <= composition.ElapsedDurationMs);
     }
 
     [Fact]
-    public void Diagnostics_WhenCompositionWorkFails_ShouldPreserveTheTerminalFailureWithinTheTimeline()
+    public void Diagnostics_WhenStartupWorkFails_ShouldPreserveTheTerminalFailureWithinTheTimeline()
     {
         var profiler = new ModuleInitializationProfiler();
         profiler.StartModuleSystem();
-        using var scheduler = new ModuleCompositionWorkScheduler(maxConcurrency: 1);
+        using var scheduler = new ModuleStartupWorkScheduler(maxConcurrency: 1);
         scheduler.Schedule(
-            typeof(CompositionWorkProbeModuleOne),
-            ModuleKey.Create("Test.Monica.FailedCompositionWork"),
+            typeof(StartupWorkProbeModuleOne),
+            ModuleKey.Create("Test.Monica.FailedStartupWork"),
             registrationOrder: 1,
             "failed-work",
             ModulePhase.ConfigureServices,
-            ModuleCompositionWorkDeadline.BeforeBusinessTypeIteration,
+            ModuleStartupWorkBarrier.BeforeBusinessTypeIteration,
             static () => throw new InvalidOperationException("diagnostic-work-failure"));
 
-        var checkpoint = scheduler.ReachCheckpoint(
-            ModuleCompositionWorkDeadline.BeforeBusinessTypeIteration);
+        var checkpoint = scheduler.ReachBarrier(
+            ModuleStartupWorkBarrier.BeforeBusinessTypeIteration);
         checkpoint.HasFailures.Should().BeTrue();
-        scheduler.AbortAndDrain();
-        profiler.RecordCompositionWork(scheduler.GetSnapshot());
+        scheduler.Drain();
+        profiler.AttachStartupWorkDiagnostics(scheduler.GetSnapshot);
         profiler.StopModuleSystem();
 
         var composition = profiler.GetCompositionPerformance();
-        var failed = composition.WorkItems.Should().ContainSingle().Subject;
-        failed.Status.Should().Be(ModuleCompositionWorkStatus.Failed);
+        var failed = composition.StartupWorkItems.Should().ContainSingle().Subject;
+        failed.Status.Should().Be(ModuleStartupWorkStatus.Failed);
         failed.ErrorMessage.Should().Contain("diagnostic-work-failure");
         failed.SubmittedOffsetMs.Should().BeGreaterThanOrEqualTo(0);
-        failed.SubmittedOffsetMs.Should().BeLessThanOrEqualTo(failed.StartedOffsetMs);
-        failed.StartedOffsetMs.Should().BeLessThanOrEqualTo(failed.CompletedOffsetMs);
-        failed.CompletedOffsetMs.Should().BeLessThanOrEqualTo(composition.ElapsedDurationMs);
+        failed.StartedOffsetMs.Should().NotBeNull();
+        failed.CompletedOffsetMs.Should().NotBeNull();
+        failed.SubmittedOffsetMs.Should().BeLessThanOrEqualTo(failed.StartedOffsetMs!.Value);
+        failed.StartedOffsetMs.Value.Should().BeLessThanOrEqualTo(failed.CompletedOffsetMs!.Value);
+        failed.CompletedOffsetMs.Value.Should().BeLessThanOrEqualTo(composition.ElapsedDurationMs);
     }
 
     [Fact]
-    public async Task Diagnostics_WhenCheckpointHasCompletedAndPendingWork_ShouldIdentifyExactBarrierReleaser()
+    public async Task Diagnostics_WhenBarrierHasCompletedAndPendingWork_ShouldIdentifyExactBarrierReleaser()
     {
         var completedBeforeCheckpoint = NewSignal();
         var checkpointEntered = NewSignal();
         using var blocker = new WorkGate(expectedEntrants: 1);
         var profiler = new ModuleInitializationProfiler();
         profiler.StartModuleSystem();
-        using var scheduler = new ModuleCompositionWorkScheduler(maxConcurrency: 1);
-        var moduleKey = ModuleKey.Create("Test.Monica.CompositionWork");
+        using var scheduler = new ModuleStartupWorkScheduler(maxConcurrency: 1);
+        var moduleKey = ModuleKey.Create("Test.Monica.StartupWork");
         scheduler.Schedule(
-            typeof(CompositionWorkProbeModuleOne),
+            typeof(StartupWorkProbeModuleOne),
             moduleKey,
             1,
             "completed-before-checkpoint",
             ModulePhase.ConfigureServices,
-            ModuleCompositionWorkDeadline.BeforeBusinessTypeIteration,
+            ModuleStartupWorkBarrier.BeforeBusinessTypeIteration,
             () => completedBeforeCheckpoint.TrySetResult());
         scheduler.Schedule(
-            typeof(CompositionWorkProbeModuleOne),
+            typeof(StartupWorkProbeModuleOne),
             moduleKey,
             1,
             "checkpoint-releaser",
             ModulePhase.ConfigureServices,
-            ModuleCompositionWorkDeadline.BeforeBusinessTypeIteration,
+            ModuleStartupWorkBarrier.BeforeBusinessTypeIteration,
             blocker.Run);
-        Task<ModuleCompositionWorkCheckpointResult>? checkpoint = null;
+        Task<ModuleStartupWorkBarrierResult>? checkpoint = null;
 
         try
         {
             await blocker.ExpectedEntrantsReached.WaitAsync(HANG_GUARD, TestContext.Current.CancellationToken);
             checkpoint = Task.Run(
-                () => scheduler.ReachCheckpoint(
-                    ModuleCompositionWorkDeadline.BeforeBusinessTypeIteration,
+                () => scheduler.ReachBarrier(
+                    ModuleStartupWorkBarrier.BeforeBusinessTypeIteration,
                     _ => checkpointEntered.TrySetResult()),
                 TestContext.Current.CancellationToken);
             await checkpointEntered.Task.WaitAsync(HANG_GUARD, TestContext.Current.CancellationToken);
@@ -175,20 +187,20 @@ public sealed class ModuleCompositionWorkTests
             result.ReleasingWorkItemId.Should().Be(releaser.WorkItemId);
             result.PendingWorkItems[0].RemainingDuration.Should().BeGreaterThan(TimeSpan.Zero);
 
-            profiler.RecordCompositionWork(scheduler.GetSnapshot());
+            profiler.AttachStartupWorkDiagnostics(scheduler.GetSnapshot);
             profiler.StopModuleSystem();
             var composition = profiler.GetCompositionPerformance();
-            var completedPerformance = composition.WorkItems.Single(item =>
+            var completedPerformance = composition.StartupWorkItems.Single(item =>
                 item.Name == "completed-before-checkpoint");
-            var releaserPerformance = composition.WorkItems.Single(item =>
+            var releaserPerformance = composition.StartupWorkItems.Single(item =>
                 item.Name == "checkpoint-releaser");
 
-            completedPerformance.WasPendingAtDeadline.Should().BeFalse();
-            completedPerformance.IsDeadlineReleaser.Should().BeFalse();
-            releaserPerformance.WasPendingAtDeadline.Should().BeTrue();
-            releaserPerformance.IsDeadlineReleaser.Should().BeTrue();
-            releaserPerformance.RemainingAtDeadlineMs.Should().BeGreaterThan(0);
-            composition.CriticalCheckpoint?.ReleasingWorkItemId.Should().Be(releaser.WorkItemId);
+            completedPerformance.WasPendingAtBarrier.Should().BeFalse();
+            completedPerformance.IsBarrierReleaser.Should().BeFalse();
+            releaserPerformance.WasPendingAtBarrier.Should().BeTrue();
+            releaserPerformance.IsBarrierReleaser.Should().BeTrue();
+            releaserPerformance.RemainingAtBarrierMs.Should().BeGreaterThan(0);
+            composition.CriticalBarrier?.ReleasingWorkItemId.Should().Be(releaser.WorkItemId);
             composition.CriticalWorkItem?.WorkItemId.Should().Be(releaser.WorkItemId);
         }
         finally
@@ -202,17 +214,97 @@ public sealed class ModuleCompositionWorkTests
     }
 
     [Fact]
+    public async Task Diagnostics_WhenCompletionObserversReorderSignals_ShouldIdentifyTheActualBarrierReleaser()
+    {
+        using var firstObserverGate = new WorkGate(expectedEntrants: 1);
+        using var secondWorkGate = new WorkGate(expectedEntrants: 1);
+        var barrierEntered = NewSignal();
+        using var scheduler = new ModuleStartupWorkScheduler(
+            maxConcurrency: 2,
+            itemCompleted: result =>
+            {
+                if (result.Name == "first-work")
+                {
+                    firstObserverGate.Run();
+                }
+            });
+        var moduleKey = ModuleKey.Create("Test.Monica.SignalOrderedStartupWork");
+        scheduler.Schedule(
+            typeof(StartupWorkProbeModuleOne),
+            moduleKey,
+            1,
+            "first-work",
+            ModulePhase.ConfigureServices,
+            ModuleStartupWorkBarrier.BeforeBusinessTypeIteration,
+            static () => { });
+        scheduler.Schedule(
+            typeof(StartupWorkProbeModuleOne),
+            moduleKey,
+            1,
+            "second-work",
+            ModulePhase.ConfigureServices,
+            ModuleStartupWorkBarrier.BeforeBusinessTypeIteration,
+            secondWorkGate.Run);
+        Task<ModuleStartupWorkBarrierResult>? barrier = null;
+
+        try
+        {
+            await firstObserverGate.ExpectedEntrantsReached.WaitAsync(
+                HANG_GUARD,
+                TestContext.Current.CancellationToken);
+            await secondWorkGate.ExpectedEntrantsReached.WaitAsync(
+                HANG_GUARD,
+                TestContext.Current.CancellationToken);
+            barrier = Task.Run(
+                () => scheduler.ReachBarrier(
+                    ModuleStartupWorkBarrier.BeforeBusinessTypeIteration,
+                    _ => barrierEntered.TrySetResult()),
+                TestContext.Current.CancellationToken);
+            await barrierEntered.Task.WaitAsync(HANG_GUARD, TestContext.Current.CancellationToken);
+
+            secondWorkGate.Release();
+            SpinWait.SpinUntil(
+                    () => scheduler.GetSnapshot().WorkItems.Single(item => item.Name == "second-work")
+                        .CompletionSignalSequence.HasValue,
+                    HANG_GUARD)
+                .Should().BeTrue();
+            firstObserverGate.Release();
+
+            var result = await barrier.WaitAsync(HANG_GUARD, TestContext.Current.CancellationToken);
+            var first = result.WorkItems.Single(item => item.Name == "first-work");
+            var second = result.WorkItems.Single(item => item.Name == "second-work");
+
+            first.CompletedTimestamp.Should().NotBeNull();
+            second.CompletedTimestamp.Should().NotBeNull();
+            first.CompletionSignalSequence.Should().NotBeNull();
+            second.CompletionSignalSequence.Should().NotBeNull();
+            first.CompletedTimestamp!.Value.Should().BeLessThan(second.CompletedTimestamp!.Value);
+            first.CompletionSignalSequence!.Value.Should().BeGreaterThan(second.CompletionSignalSequence!.Value);
+            result.ReleasingWorkItemId.Should().Be(first.WorkItemId);
+        }
+        finally
+        {
+            secondWorkGate.Release();
+            firstObserverGate.Release();
+            if (barrier is not null)
+            {
+                await ObserveCompositionCompletionAsync(barrier);
+            }
+        }
+    }
+
+    [Fact]
     public void Diagnostics_WhenRegistrationHasNoRuntimeSnapshot_ShouldPreserveItsCallbackSpans()
     {
         var profiler = new ModuleInitializationProfiler();
         var moduleKey = ModuleKey.Create("Test.Monica.DisabledComposition");
         profiler.StartModuleSystem();
         profiler.StartModulePhase(
-            typeof(CompositionWorkProbeModuleOne),
+            typeof(StartupWorkProbeModuleOne),
             moduleKey,
             registrationOrder: 42,
             phase: ModulePhase.ClaimDependencies);
-        profiler.StopModulePhase(typeof(CompositionWorkProbeModuleOne), ModulePhase.ClaimDependencies);
+        profiler.StopModulePhase(typeof(StartupWorkProbeModuleOne), ModulePhase.ClaimDependencies);
         profiler.StopModuleSystem();
 
         var composition = profiler.GetCompositionPerformance();
@@ -227,8 +319,420 @@ public sealed class ModuleCompositionWorkTests
         module.PhaseExecutions.Should().ContainSingle();
     }
 
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task StartAsync_WhenWorkTargetsHostLifecycleBarrier_ShouldWaitBeforeLifecycleParticipants(
+        bool useWebHost)
+    {
+        using var gate = new WorkGate(expectedEntrants: 1);
+        var lifecycle = new StartupTrackingLifecycleService();
+        var builder = CreateBuilder(useWebHost);
+        builder.Services.Configure<HostOptions>(static options => options.ServicesStartConcurrently = true);
+        builder.Services.AddSingleton<IHostedService>(lifecycle);
+        builder.AddMonica(monica =>
+        {
+            monica.ConfigureTypeDiscovery(static options => options.ExcludeDefault());
+            AddProbeOne(monica, options => options.AddConfigureServicesWork(
+                "host-lifecycle-work",
+                gate.Run,
+                ModuleStartupWorkBarrier.BeforeHostLifecycle));
+        });
+        using var host = BuildHost(builder, useWebHost);
+        Task? start = null;
+
+        try
+        {
+            await gate.ExpectedEntrantsReached.WaitAsync(HANG_GUARD, TestContext.Current.CancellationToken);
+            start = Task.Run(
+                () => host.StartAsync(TestContext.Current.CancellationToken),
+                TestContext.Current.CancellationToken);
+            start.IsCompleted.Should().BeFalse();
+            lifecycle.StartingCount.Should().Be(0);
+            lifecycle.StartCount.Should().Be(0);
+
+            gate.Release();
+            await start.WaitAsync(HANG_GUARD, TestContext.Current.CancellationToken);
+            lifecycle.StartingCount.Should().Be(1);
+            lifecycle.StartCount.Should().Be(1);
+            await host.StopAsync(TestContext.Current.CancellationToken);
+        }
+        finally
+        {
+            gate.Release();
+            if (start is not null)
+            {
+                await ObserveCompositionCompletionAsync(start);
+            }
+        }
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task StartAsync_WhenHostLifecycleWorkFails_ShouldExposeWorkNameAndUnderlyingFailure(
+        bool useWebHost)
+    {
+        var lifecycle = new StartupTrackingLifecycleService();
+        var builder = CreateBuilder(useWebHost);
+        builder.Services.Configure<HostOptions>(static options => options.ServicesStartConcurrently = true);
+        builder.Services.AddSingleton<IHostedService>(lifecycle);
+        builder.AddMonica(monica =>
+        {
+            monica.ConfigureTypeDiscovery(static options => options.ExcludeDefault());
+            AddProbeOne(monica, options => options.AddConfigureServicesWork(
+                "strict-host-work",
+                static () => throw new InvalidOperationException("strict-host-work-failure"),
+                ModuleStartupWorkBarrier.BeforeHostLifecycle));
+        });
+        using var host = BuildHost(builder, useWebHost);
+
+        Func<Task> start = () => host.StartAsync(TestContext.Current.CancellationToken);
+
+        await start.Should().ThrowAsync<OptionsValidationException>()
+            .WithMessage("*strict-host-work*strict-host-work-failure*");
+        lifecycle.StartingCount.Should().Be(0);
+        lifecycle.StartCount.Should().Be(0);
+    }
+
     [Fact]
-    public void AddMonica_WhenCompositionWorkersStart_ShouldNotFlowTheCallersExecutionContext()
+    public async Task StartupValidation_WhenCalledConcurrently_ShouldReleaseHostBarrierOnce()
+    {
+        using var gate = new WorkGate(expectedEntrants: 1);
+        var builder = Host.CreateApplicationBuilder();
+        builder.AddMonica(monica =>
+        {
+            monica.ConfigureTypeDiscovery(static options => options.ExcludeDefault());
+            AddProbeOne(monica, options => options.AddConfigureServicesWork(
+                "coalesced-host-work",
+                gate.Run,
+                ModuleStartupWorkBarrier.BeforeHostLifecycle));
+        });
+        using var host = builder.Build();
+        var application = host.Services.GetRequiredService<global::Monica.Core.MonicaApplication>();
+        var firstValidator = new ModuleStartupValidator(application);
+        var secondValidator = new ModuleStartupValidator(application);
+        var options = new ModuleStartupValidationOptions();
+        Task<ValidateOptionsResult>? first = null;
+        Task<ValidateOptionsResult>? second = null;
+
+        try
+        {
+            await gate.ExpectedEntrantsReached.WaitAsync(HANG_GUARD, TestContext.Current.CancellationToken);
+            first = Task.Run(() => firstValidator.Validate(null, options), TestContext.Current.CancellationToken);
+            second = Task.Run(() => secondValidator.Validate(null, options), TestContext.Current.CancellationToken);
+            first.IsCompleted.Should().BeFalse();
+            second.IsCompleted.Should().BeFalse();
+
+            gate.Release();
+            (await first.WaitAsync(HANG_GUARD, TestContext.Current.CancellationToken)).Succeeded.Should().BeTrue();
+            (await second.WaitAsync(HANG_GUARD, TestContext.Current.CancellationToken)).Succeeded.Should().BeTrue();
+            application.Profiling.GetCompositionPerformance().StartupWorkBarriers
+                .Should().ContainSingle(barrier => barrier.Barrier == ModuleStartupWorkBarrier.BeforeHostLifecycle);
+            gate.InvocationCount.Should().Be(1);
+        }
+        finally
+        {
+            gate.Release();
+            if (first is not null)
+            {
+                await ObserveCompositionCompletionAsync(first);
+            }
+
+            if (second is not null)
+            {
+                await ObserveCompositionCompletionAsync(second);
+            }
+        }
+    }
+
+    [Fact]
+    public async Task NoBarrierWork_WhenStillRunning_ShouldNotDelayCompositionBuildOrHostStart()
+    {
+        using var gate = new WorkGate(expectedEntrants: 1);
+        var builder = Host.CreateApplicationBuilder();
+        var composition = Task.Run(() => builder.AddMonica(monica =>
+        {
+            monica.ConfigureModuleSystem(options => options.MaxConcurrentStartupWorkItems = 2);
+            monica.ConfigureTypeDiscovery(static options => options.ExcludeDefault());
+            AddProbeOne(monica, options => options.AddConfigureServicesWork(
+                "non-blocking-work",
+                gate.Run,
+                ModuleStartupWorkBarrier.NoBarrier));
+        }), TestContext.Current.CancellationToken);
+        IHost? host = null;
+
+        try
+        {
+            await gate.ExpectedEntrantsReached.WaitAsync(HANG_GUARD, TestContext.Current.CancellationToken);
+            await composition.WaitAsync(HANG_GUARD, TestContext.Current.CancellationToken);
+            host = builder.Build();
+            await host.StartAsync(TestContext.Current.CancellationToken)
+                .WaitAsync(HANG_GUARD, TestContext.Current.CancellationToken);
+
+            var application = host.Services.GetRequiredService<global::Monica.Core.MonicaApplication>();
+            var performance = application.Profiling.GetCompositionPerformance();
+            performance.StartupWorkItems
+                .Should().ContainSingle(work =>
+                    work.Name == "non-blocking-work" && work.Status == ModuleStartupWorkStatus.Running);
+            performance.StartupWorkBarriers.Should().NotContain(barrier =>
+                barrier.Barrier == ModuleStartupWorkBarrier.NoBarrier);
+            performance.AggregateBarrierWaitDurationMs.Should().Be(0);
+        }
+        finally
+        {
+            gate.Release();
+            await ObserveCompositionCompletionAsync(composition);
+            if (host is not null)
+            {
+                await host.StopAsync(TestContext.Current.CancellationToken);
+                host.Dispose();
+            }
+        }
+    }
+
+    [Fact]
+    public async Task AddMonica_WithOneLane_ShouldReserveItForRequiredWorkSubmittedAfterNoBarrierWork()
+    {
+        using var noBarrierGate = new WorkGate(expectedEntrants: 1);
+        var requiredCompleted = NewSignal();
+        var builder = Host.CreateApplicationBuilder();
+        var composition = Task.Run(() => builder.AddMonica(monica =>
+        {
+            monica.ConfigureModuleSystem(options => options.MaxConcurrentStartupWorkItems = 1);
+            monica.ConfigureTypeDiscovery(static options => options.ExcludeDefault());
+            AddProbeOne(monica, options =>
+            {
+                options.AddConfigureServicesWork(
+                    "submitted-first-non-blocking-work",
+                    noBarrierGate.Run,
+                    ModuleStartupWorkBarrier.NoBarrier);
+                options.AddConfigureServicesWork(
+                    "submitted-later-required-work",
+                    () => requiredCompleted.TrySetResult(),
+                    ModuleStartupWorkBarrier.BeforeServiceRegistrationCompletion);
+            });
+        }), TestContext.Current.CancellationToken);
+
+        try
+        {
+            await requiredCompleted.Task.WaitAsync(HANG_GUARD, TestContext.Current.CancellationToken);
+            await noBarrierGate.ExpectedEntrantsReached.WaitAsync(HANG_GUARD, TestContext.Current.CancellationToken);
+            await composition.WaitAsync(HANG_GUARD, TestContext.Current.CancellationToken);
+
+            var host = builder.Build();
+            try
+            {
+                var performance = host.Services
+                    .GetRequiredService<global::Monica.Core.MonicaApplication>()
+                    .Profiling.GetCompositionPerformance();
+                performance.StartupWorkItems.Single(work => work.Name == "submitted-later-required-work")
+                    .Status.Should().Be(ModuleStartupWorkStatus.Succeeded);
+                performance.StartupWorkItems.Single(work => work.Name == "submitted-first-non-blocking-work")
+                    .Status.Should().Be(ModuleStartupWorkStatus.Running);
+            }
+            finally
+            {
+                noBarrierGate.Release();
+                host.Dispose();
+            }
+        }
+        finally
+        {
+            noBarrierGate.Release();
+            await ObserveCompositionCompletionAsync(composition);
+        }
+    }
+
+    [Fact]
+    public async Task Diagnostics_WhenWorkIsRunningAndQueued_ShouldPublishLiveThenTerminalStates()
+    {
+        using var gate = new WorkGate(expectedEntrants: 1);
+        var profiler = new ModuleInitializationProfiler();
+        profiler.StartModuleSystem();
+        using var scheduler = new ModuleStartupWorkScheduler(maxConcurrency: 2);
+        profiler.AttachStartupWorkDiagnostics(scheduler.GetSnapshot);
+        var moduleKey = ModuleKey.Create("Test.Monica.LiveStartupWork");
+        scheduler.Schedule(
+            typeof(StartupWorkProbeModuleOne),
+            moduleKey,
+            1,
+            "running-work",
+            ModulePhase.ConfigureServices,
+            ModuleStartupWorkBarrier.NoBarrier,
+            gate.Run);
+        scheduler.Schedule(
+            typeof(StartupWorkProbeModuleOne),
+            moduleKey,
+            1,
+            "queued-work",
+            ModulePhase.ConfigureServices,
+            ModuleStartupWorkBarrier.NoBarrier,
+            static () => throw new InvalidOperationException("queued-work-failure"));
+
+        await gate.ExpectedEntrantsReached.WaitAsync(HANG_GUARD, TestContext.Current.CancellationToken);
+        var live = profiler.GetCompositionPerformance().StartupWorkItems;
+        live.Single(work => work.Name == "running-work").Status.Should().Be(ModuleStartupWorkStatus.Running);
+        live.Single(work => work.Name == "queued-work").Status.Should().Be(ModuleStartupWorkStatus.Queued);
+        live.Single(work => work.Name == "queued-work").StartedAtUtc.Should().BeNull();
+        live.Single(work => work.Name == "queued-work").CompletedAtUtc.Should().BeNull();
+
+        gate.Release();
+        scheduler.Drain();
+        profiler.StopModuleSystem();
+        var terminal = profiler.GetCompositionPerformance().StartupWorkItems;
+        terminal.Single(work => work.Name == "running-work").Status.Should().Be(ModuleStartupWorkStatus.Succeeded);
+        terminal.Single(work => work.Name == "queued-work").Status.Should().Be(ModuleStartupWorkStatus.Failed);
+        terminal.Single(work => work.Name == "queued-work").ErrorMessage.Should().Contain("queued-work-failure");
+    }
+
+    [Fact]
+    public async Task Diagnostics_WhenNoBarrierWorkCompletesAfterComposition_ShouldUseObservationBoundary()
+    {
+        using var gate = new WorkGate(expectedEntrants: 1);
+        var builder = Host.CreateApplicationBuilder();
+        builder.AddMonica(monica =>
+        {
+            monica.ConfigureModuleSystem(options => options.MaxConcurrentStartupWorkItems = 2);
+            monica.ConfigureTypeDiscovery(static options => options.ExcludeDefault());
+            AddProbeOne(monica, options => options.AddConfigureServicesWork(
+                "late-diagnostic-work",
+                gate.Run,
+                ModuleStartupWorkBarrier.NoBarrier));
+        });
+        using var host = builder.Build();
+        var application = host.Services.GetRequiredService<global::Monica.Core.MonicaApplication>();
+
+        await gate.ExpectedEntrantsReached.WaitAsync(HANG_GUARD, TestContext.Current.CancellationToken);
+        var duringComposition = application.Profiling.GetCompositionPerformance();
+        duringComposition.StartupWorkItems.Should().ContainSingle(work =>
+            work.Name == "late-diagnostic-work" && work.Status == ModuleStartupWorkStatus.Running);
+
+        gate.Release();
+        var completed = await WaitForStartupWorkStatusAsync(
+            application,
+            "late-diagnostic-work",
+            ModuleStartupWorkStatus.Succeeded);
+        var observed = application.Profiling.GetCompositionPerformance();
+
+        completed.CompletedOffsetMs.Should().NotBeNull();
+        completed.CompletedOffsetMs!.Value.Should().BeGreaterThan(observed.ElapsedDurationMs);
+        completed.CompletedOffsetMs.Value.Should().BeLessThanOrEqualTo(observed.ObservedDurationMs);
+        completed.CompletedAtUtc.Should().NotBeNull();
+        completed.CompletedAtUtc!.Value.Should().BeOnOrBefore(observed.ObservedAtUtc);
+        observed.ObservedDurationMs.Should().BeGreaterThanOrEqualTo(observed.ElapsedDurationMs);
+    }
+
+    [Fact]
+    public async Task NoBarrierFailure_WhenHostStarts_ShouldRemainDiagnosticOnly()
+    {
+        var attempted = NewSignal();
+        var builder = Host.CreateApplicationBuilder();
+        builder.AddMonica(monica =>
+        {
+            monica.ConfigureTypeDiscovery(static options => options.ExcludeDefault());
+            AddProbeOne(monica, options => options.AddConfigureServicesWork(
+                "nonfatal-work",
+                () =>
+                {
+                    attempted.TrySetResult();
+                    throw new InvalidOperationException("nonfatal-work-failure");
+                },
+                ModuleStartupWorkBarrier.NoBarrier));
+        });
+        using var host = builder.Build();
+
+        await host.StartAsync(TestContext.Current.CancellationToken);
+        await attempted.Task.WaitAsync(HANG_GUARD, TestContext.Current.CancellationToken);
+        var application = host.Services.GetRequiredService<global::Monica.Core.MonicaApplication>();
+        var failed = await WaitForStartupWorkStatusAsync(
+            application,
+            "nonfatal-work",
+            ModuleStartupWorkStatus.Failed);
+        failed.ErrorMessage.Should().Contain("nonfatal-work-failure");
+        application.Modules.RegistrationErrors.Should().NotContain(error =>
+            error.ErrorType == global::Monica.Core.Modularity.Models.Internal.ModuleRegistrationErrorType.StartupWorkError);
+        await host.StopAsync(TestContext.Current.CancellationToken);
+    }
+
+    [Fact]
+    public async Task StopAsync_WhenNoBarrierWorkIsRunning_ShouldDrainItExactlyOnce()
+    {
+        using var gate = new WorkGate(expectedEntrants: 1);
+        var builder = Host.CreateApplicationBuilder();
+        builder.AddMonica(monica =>
+        {
+            monica.ConfigureTypeDiscovery(static options => options.ExcludeDefault());
+            AddProbeOne(monica, options => options.AddConfigureServicesWork(
+                "stop-drain-work",
+                gate.Run,
+                ModuleStartupWorkBarrier.NoBarrier));
+        });
+        using var host = builder.Build();
+        await host.StartAsync(TestContext.Current.CancellationToken);
+        await gate.ExpectedEntrantsReached.WaitAsync(HANG_GUARD, TestContext.Current.CancellationToken);
+
+        var stop = Task.Run(
+            () => host.StopAsync(TestContext.Current.CancellationToken),
+            TestContext.Current.CancellationToken);
+        stop.IsCompleted.Should().BeFalse();
+        gate.Release();
+        await stop.WaitAsync(HANG_GUARD, TestContext.Current.CancellationToken);
+        gate.InvocationCount.Should().Be(1);
+        gate.CompletedCount.Should().Be(1);
+    }
+
+    [Fact]
+    public async Task Dispose_WhenHostNeverStarted_ShouldDrainNoBarrierWorkExactlyOnce()
+    {
+        using var gate = new WorkGate(expectedEntrants: 1);
+        var builder = Host.CreateApplicationBuilder();
+        builder.AddMonica(monica =>
+        {
+            monica.ConfigureTypeDiscovery(static options => options.ExcludeDefault());
+            AddProbeOne(monica, options => options.AddConfigureServicesWork(
+                "dispose-drain-work",
+                gate.Run,
+                ModuleStartupWorkBarrier.NoBarrier));
+        });
+        var host = builder.Build();
+        await gate.ExpectedEntrantsReached.WaitAsync(HANG_GUARD, TestContext.Current.CancellationToken);
+
+        var dispose = Task.Run(host.Dispose, TestContext.Current.CancellationToken);
+        dispose.IsCompleted.Should().BeFalse();
+        gate.Release();
+        await dispose.WaitAsync(HANG_GUARD, TestContext.Current.CancellationToken);
+        gate.InvocationCount.Should().Be(1);
+        gate.CompletedCount.Should().Be(1);
+    }
+
+    [Theory]
+    [InlineData(ModuleStartupWorkBarrier.BeforeHostLifecycle)]
+    [InlineData(ModuleStartupWorkBarrier.NoBarrier)]
+    public void AddMonica_WhenLateBarrierHasSerialCommit_ShouldRejectIt(ModuleStartupWorkBarrier barrier)
+    {
+        var builder = Host.CreateApplicationBuilder();
+
+        Action add = () => builder.AddMonica(monica =>
+        {
+            monica.ConfigureTypeDiscovery(static options => options.ExcludeDefault());
+            AddProbeOne(monica, options => options.AddBusinessTypeIterationWork(
+                "invalid-late-commit",
+                static () => { },
+                static () => { },
+                barrier));
+        });
+
+        var failure = add.Should().Throw<Exception>()
+            .WithMessage("*Business-type iteration failed during Monica module registration*")
+            .Which;
+        failure.InnerException.Should().BeOfType<InvalidOperationException>()
+            .Which.Message.Should().Match(
+                $"*{barrier}*cannot have a serial commit*service registration is sealed*");
+    }
+
+    [Fact]
+    public void AddMonica_WhenStartupWorkersStart_ShouldNotFlowTheCallersExecutionContext()
     {
         var ambient = new AsyncLocal<string?> { Value = "composition-caller" };
         string? observedAmbient = "work-not-run";
@@ -252,7 +756,7 @@ public sealed class ModuleCompositionWorkTests
     }
 
     [Fact]
-    public void AddMonica_WhenExecutionContextFlowIsAlreadySuppressed_ShouldStillRunCompositionWork()
+    public void AddMonica_WhenExecutionContextFlowIsAlreadySuppressed_ShouldStillRunStartupWork()
     {
         var workRan = false;
         var builder = Host.CreateApplicationBuilder();
@@ -329,7 +833,7 @@ public sealed class ModuleCompositionWorkTests
                     options.AddConfigureServicesWork(
                         "before-business-types",
                         gate.Run,
-                        ModuleCompositionWorkDeadline.BeforeBusinessTypeIteration);
+                        ModuleStartupWorkBarrier.BeforeBusinessTypeIteration);
                     options.BusinessTypeIterationReached = () => iterationReached.TrySetResult();
                 });
             }),
@@ -369,7 +873,7 @@ public sealed class ModuleCompositionWorkTests
                     options.AddConfigureServicesWork(
                         "before-post-configure",
                         gate.Run,
-                        ModuleCompositionWorkDeadline.BeforePostConfigureServices);
+                        ModuleStartupWorkBarrier.BeforePostConfigureServices);
                     options.BusinessTypeIterationReached = () => iterationReached.TrySetResult();
                     options.PostConfigureReached = () => postConfigureReached.TrySetResult();
                 });
@@ -403,7 +907,7 @@ public sealed class ModuleCompositionWorkTests
         var composition = Task.Run(
             () => builder.AddMonica(monica =>
             {
-                monica.ConfigureModuleSystem(options => options.MaxConcurrentCompositionWorkItems = 2);
+                monica.ConfigureModuleSystem(options => options.MaxConcurrentStartupWorkItems = 2);
                 monica.ConfigureTypeDiscovery(static options => options.ExcludeDefault());
                 AddProbeOne(monica, options =>
                 {
@@ -447,7 +951,7 @@ public sealed class ModuleCompositionWorkTests
             {
                 monica.ConfigureModuleSystem(options =>
                 {
-                    options.MaxConcurrentCompositionWorkItems = 2;
+                    options.MaxConcurrentStartupWorkItems = 2;
                     options.DisableOnRegistrationError = true;
                 });
                 monica.ConfigureTypeDiscovery(static options => options.ExcludeDefault());
@@ -499,7 +1003,7 @@ public sealed class ModuleCompositionWorkTests
     }
 
     [Fact]
-    public async Task AddMonica_WhenEarlyDeadlineWorkFails_ShouldDrainLaterWorkWithoutCrossingTheCheckpoint()
+    public async Task AddMonica_WhenEarlyBarrierWorkFails_ShouldDrainLaterWorkWithoutCrossingTheBarrier()
     {
         using var gate = new WorkGate(expectedEntrants: 2);
         var iterationReached = NewSignal();
@@ -507,14 +1011,14 @@ public sealed class ModuleCompositionWorkTests
         var composition = Task.Run(
             () => builder.AddMonica(monica =>
             {
-                monica.ConfigureModuleSystem(options => options.MaxConcurrentCompositionWorkItems = 2);
+                monica.ConfigureModuleSystem(options => options.MaxConcurrentStartupWorkItems = 2);
                 monica.ConfigureTypeDiscovery(static options => options.ExcludeDefault());
                 AddProbeOne(monica, options =>
                 {
                     options.AddConfigureServicesWork(
                         "early-failure",
-                        () => gate.Run(new InvalidOperationException("early-deadline-failure")),
-                        ModuleCompositionWorkDeadline.BeforeBusinessTypeIteration);
+                        () => gate.Run(new InvalidOperationException("early-barrier-failure")),
+                        ModuleStartupWorkBarrier.BeforeBusinessTypeIteration);
                     options.AddConfigureServicesWork("later-success", gate.Run);
                     options.BusinessTypeIterationReached = () => iterationReached.TrySetResult();
                 });
@@ -531,7 +1035,7 @@ public sealed class ModuleCompositionWorkTests
                 await composition.WaitAsync(HANG_GUARD, TestContext.Current.CancellationToken);
             });
 
-            exception.Message.Should().Contain("early-deadline-failure");
+            exception.Message.Should().Contain("early-barrier-failure");
             gate.InvocationCount.Should().Be(2);
             gate.CompletedCount.Should().Be(2);
             iterationReached.Task.IsCompleted.Should().BeFalse();
@@ -559,7 +1063,7 @@ public sealed class ModuleCompositionWorkTests
         });
 
         compose.Should().Throw<ModuleRegistrationException>()
-            .WithMessage("*already scheduled composition work named 'duplicate-work'*");
+            .WithMessage("*already scheduled startup work named 'duplicate-work'*");
     }
 
     [Fact]
@@ -574,7 +1078,7 @@ public sealed class ModuleCompositionWorkTests
         });
 
         compose.Should().Throw<ModuleRegistrationException>()
-            .WithMessage("*can schedule composition work only while its synchronous ConfigureBuilder, " +
+            .WithMessage("*can schedule startup work only while its synchronous ConfigureBuilder, " +
                          "ConfigureServices, IterateBusinessTypes, or PostConfigureServices callback is executing*");
     }
 
@@ -595,7 +1099,7 @@ public sealed class ModuleCompositionWorkTests
                     options.AddBusinessTypeIterationWork(
                         "iteration-work",
                         gate.Run,
-                        ModuleCompositionWorkDeadline.BeforePostConfigureServices);
+                        ModuleStartupWorkBarrier.BeforePostConfigureServices);
                     options.BusinessTypeIterationReached = () => iterationReached.TrySetResult();
                     options.PostConfigureReached = () => postConfigureReached.TrySetResult();
                 });
@@ -617,9 +1121,9 @@ public sealed class ModuleCompositionWorkTests
             using var host = builder.Build();
             var work = host.Services.GetRequiredService<IModuleSystemInspectionService>()
                 .GetSystemPerformance()
-                .Composition.WorkItems.Should().ContainSingle(item => item.Name == "iteration-work").Subject;
+                .Composition.StartupWorkItems.Should().ContainSingle(item => item.Name == "iteration-work").Subject;
             work.OriginPhase.Should().Be(ModulePhase.IterateBusinessTypes);
-            work.Deadline.Should().Be(ModuleCompositionWorkDeadline.BeforePostConfigureServices);
+            work.Barrier.Should().Be(ModuleStartupWorkBarrier.BeforePostConfigureServices);
         }
         finally
         {
@@ -640,7 +1144,7 @@ public sealed class ModuleCompositionWorkTests
 
         builder.AddMonica(monica =>
         {
-            monica.ConfigureModuleSystem(options => options.MaxConcurrentCompositionWorkItems = 2);
+            monica.ConfigureModuleSystem(options => options.MaxConcurrentStartupWorkItems = 2);
             monica.ConfigureTypeDiscovery(static options => options.ExcludeDefault());
             monica.AddModuleSystem();
             AddProbeOne(monica, options =>
@@ -659,7 +1163,7 @@ public sealed class ModuleCompositionWorkTests
                         commits.Add("first");
                         commitThreadIds.Add(Environment.CurrentManagedThreadId);
                     },
-                    ModuleCompositionWorkDeadline.BeforePostConfigureServices);
+                    ModuleStartupWorkBarrier.BeforePostConfigureServices);
                 options.PostConfigureReached = () => observedAtPostConfigure = commits.ToArray();
             });
             AddProbeTwo(monica, options => options.AddBusinessTypeIterationWork(
@@ -670,7 +1174,7 @@ public sealed class ModuleCompositionWorkTests
                     commits.Add("second");
                     commitThreadIds.Add(Environment.CurrentManagedThreadId);
                 },
-                ModuleCompositionWorkDeadline.BeforePostConfigureServices));
+                ModuleStartupWorkBarrier.BeforePostConfigureServices));
         });
 
         commits.Should().Equal("first", "second");
@@ -681,13 +1185,13 @@ public sealed class ModuleCompositionWorkTests
         var performance = host.Services.GetRequiredService<IModuleSystemInspectionService>()
             .GetSystemPerformance();
         var module = performance.Modules.Single(item =>
-            item.ModuleTypeName == nameof(CompositionWorkProbeModuleOne));
+            item.ModuleTypeName == nameof(StartupWorkProbeModuleOne));
         var iterationExecutions = module.PhaseExecutions
             .Where(static execution => execution.Phase == ModulePhase.IterateBusinessTypes)
             .OrderBy(static execution => execution.StartedOffsetMs)
             .ToArray();
-        var checkpoint = performance.Composition.Checkpoints.Single(item =>
-            item.Deadline == ModuleCompositionWorkDeadline.BeforePostConfigureServices);
+        var checkpoint = performance.Composition.StartupWorkBarriers.Single(item =>
+            item.Barrier == ModuleStartupWorkBarrier.BeforePostConfigureServices);
 
         iterationExecutions.Should().HaveCount(2);
         checkpoint.ReleasedOffsetMs.Should().BeLessThanOrEqualTo(iterationExecutions[^1].StartedOffsetMs);
@@ -707,16 +1211,16 @@ public sealed class ModuleCompositionWorkTests
                 "successful-worker",
                 static () => { },
                 () => successfulCommitRan = true,
-                ModuleCompositionWorkDeadline.BeforePostConfigureServices));
+                ModuleStartupWorkBarrier.BeforePostConfigureServices));
             AddProbeTwo(monica, options => options.AddBusinessTypeIterationWork(
                 "failed-worker",
-                static () => throw new InvalidOperationException("checkpoint-worker-failure"),
+                static () => throw new InvalidOperationException("barrier-worker-failure"),
                 () => failedWorkerCommitRan = true,
-                ModuleCompositionWorkDeadline.BeforePostConfigureServices));
+                ModuleStartupWorkBarrier.BeforePostConfigureServices));
         });
 
         compose.Should().Throw<ModuleRegistrationException>()
-            .WithMessage("*checkpoint-worker-failure*");
+            .WithMessage("*barrier-worker-failure*");
         successfulCommitRan.Should().BeFalse();
         failedWorkerCommitRan.Should().BeFalse();
     }
@@ -734,16 +1238,16 @@ public sealed class ModuleCompositionWorkTests
                 "failed-commit",
                 static () => { },
                 static () => throw new InvalidOperationException("serial-commit-failure"),
-                ModuleCompositionWorkDeadline.BeforePostConfigureServices));
+                ModuleStartupWorkBarrier.BeforePostConfigureServices));
             AddProbeTwo(monica, options => options.AddBusinessTypeIterationWork(
                 "later-commit",
                 static () => { },
                 () => laterCommitRan = true,
-                ModuleCompositionWorkDeadline.BeforePostConfigureServices));
+                ModuleStartupWorkBarrier.BeforePostConfigureServices));
         });
 
         compose.Should().Throw<ModuleRegistrationException>()
-            .WithMessage("*Error committing composition work 'failed-commit'*serial-commit-failure*");
+            .WithMessage("*Error committing startup work 'failed-commit'*serial-commit-failure*");
         laterCommitRan.Should().BeFalse();
     }
 
@@ -759,12 +1263,12 @@ public sealed class ModuleCompositionWorkTests
         });
 
         compose.Should().Throw<ModuleRegistrationException>()
-            .WithMessage("*Error committing composition work 'outer-commit-work'*" +
-                         "can schedule composition work only while its synchronous*callback is executing*");
+            .WithMessage("*Error committing startup work 'outer-commit-work'*" +
+                         "can schedule startup work only while its synchronous*callback is executing*");
     }
 
     [Fact]
-    public void AddMonica_WhenIterationWorkTargetsThePassedDeadline_ShouldRejectTheDeadline()
+    public void AddMonica_WhenIterationWorkTargetsThePassedBarrier_ShouldRejectTheBarrier()
     {
         var builder = Host.CreateApplicationBuilder();
 
@@ -774,13 +1278,14 @@ public sealed class ModuleCompositionWorkTests
             AddProbeOne(monica, options => options.AddBusinessTypeIterationWork(
                 "late-iteration-work",
                 static () => { },
-                ModuleCompositionWorkDeadline.BeforeBusinessTypeIteration));
+                ModuleStartupWorkBarrier.BeforeBusinessTypeIteration));
         });
 
         var exception = compose.Should().Throw<Exception>().Which;
         exception.ToString().Should()
-            .Contain("cannot schedule composition work for BeforeBusinessTypeIteration during business-type iteration")
-            .And.Contain("Use BeforePostConfigureServices or BeforeServiceRegistrationCompletion");
+            .Contain("cannot schedule startup work for BeforeBusinessTypeIteration during business-type iteration")
+            .And.Contain("Use any later barrier: BeforePostConfigureServices, " +
+                         "BeforeServiceRegistrationCompletion, BeforeHostLifecycle, or NoBarrier");
     }
 
     [Fact]
@@ -797,7 +1302,7 @@ public sealed class ModuleCompositionWorkTests
                 options.AddBusinessTypeIterationWork(
                     "failed-iteration-work",
                     static () => throw new InvalidOperationException("iteration-work-failure"),
-                    ModuleCompositionWorkDeadline.BeforePostConfigureServices);
+                    ModuleStartupWorkBarrier.BeforePostConfigureServices);
                 options.PostConfigureReached = () => postConfigureReached = true;
             });
         });
@@ -819,7 +1324,7 @@ public sealed class ModuleCompositionWorkTests
         });
 
         compose.Should().Throw<ModuleRegistrationException>()
-            .WithMessage("*can schedule composition work only while its synchronous ConfigureBuilder, " +
+            .WithMessage("*can schedule startup work only while its synchronous ConfigureBuilder, " +
                          "ConfigureServices, IterateBusinessTypes, or PostConfigureServices callback is executing*");
     }
 
@@ -843,7 +1348,7 @@ public sealed class ModuleCompositionWorkTests
         var exception = compose.Should().Throw<ModuleRegistrationException>().Which;
         exception.Message.ToLowerInvariant().Should()
             .Contain("async")
-            .And.Contain("composition work");
+            .And.Contain("startup work");
         invocationCount.Should().Be(0);
     }
 
@@ -866,19 +1371,19 @@ public sealed class ModuleCompositionWorkTests
                 "async-void-commit",
                 () => Interlocked.Increment(ref workerInvocationCount),
                 asyncCommit,
-                ModuleCompositionWorkDeadline.BeforePostConfigureServices));
+                ModuleStartupWorkBarrier.BeforePostConfigureServices));
         });
 
         var exception = compose.Should().Throw<Exception>().Which;
         exception.ToString().ToLowerInvariant().Should()
             .Contain("async")
-            .And.Contain("composition work commits");
+            .And.Contain("startup work commits");
         workerInvocationCount.Should().Be(0);
         commitInvocationCount.Should().Be(0);
     }
 
     [Fact]
-    public void AddMonica_WhenPostConfigureSchedulesWorkForAPassedDeadline_ShouldRejectTheDeadline()
+    public void AddMonica_WhenPostConfigureSchedulesWorkForAPassedBarrier_ShouldRejectTheBarrier()
     {
         var builder = Host.CreateApplicationBuilder();
 
@@ -888,11 +1393,11 @@ public sealed class ModuleCompositionWorkTests
             AddProbeOne(monica, options => options.AddPostConfigureWork(
                 "late-early-work",
                 static () => { },
-                ModuleCompositionWorkDeadline.BeforePostConfigureServices));
+                ModuleStartupWorkBarrier.BeforePostConfigureServices));
         });
 
         compose.Should().Throw<ModuleRegistrationException>()
-            .WithMessage("*deadline BeforePostConfigureServices has already passed*");
+            .WithMessage("*startup work barrier BeforePostConfigureServices has already passed*");
     }
 
     [Fact]
@@ -903,7 +1408,7 @@ public sealed class ModuleCompositionWorkTests
 
         Action compose = () => builder.AddMonica(monica =>
         {
-            monica.ConfigureModuleSystem(options => options.MaxConcurrentCompositionWorkItems = 0);
+            monica.ConfigureModuleSystem(options => options.MaxConcurrentStartupWorkItems = 0);
             monica.ConfigureTypeDiscovery(static options => options.ExcludeDefault());
             AddProbeOne(monica, options => options.AddConfigureServicesWork(
                 "should-not-run",
@@ -911,7 +1416,7 @@ public sealed class ModuleCompositionWorkTests
         });
 
         compose.Should().Throw<ArgumentOutOfRangeException>()
-            .WithParameterName("MaxConcurrentCompositionWorkItems");
+            .WithParameterName("MaxConcurrentStartupWorkItems");
         invocationCount.Should().Be(0);
     }
 
@@ -925,6 +1430,19 @@ public sealed class ModuleCompositionWorkTests
         var builder = WebApplication.CreateBuilder();
         builder.WebHost.UseTestServer();
         return builder;
+    }
+
+    private static IHost BuildHost(IHostApplicationBuilder builder, bool useWebHost)
+    {
+        if (!useWebHost)
+        {
+            return ((HostApplicationBuilder)builder).Build();
+        }
+
+        var app = ((WebApplicationBuilder)builder).Build();
+        app.UseMonica();
+        app.MapMonica();
+        return app;
     }
 
     private static async Task ExerciseHostBoundaryAsync(IHostApplicationBuilder builder, bool useWebHost)
@@ -961,6 +1479,27 @@ public sealed class ModuleCompositionWorkTests
         return new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
     }
 
+    private static async Task<ModuleStartupWorkPerformanceInfo> WaitForStartupWorkStatusAsync(
+        global::Monica.Core.MonicaApplication application,
+        string name,
+        ModuleStartupWorkStatus status)
+    {
+        var started = Stopwatch.StartNew();
+        while (started.Elapsed < HANG_GUARD)
+        {
+            var work = application.Profiling.GetCompositionPerformance().StartupWorkItems
+                .Single(item => item.Name == name);
+            if (work.Status == status)
+            {
+                return work;
+            }
+
+            await Task.Yield();
+        }
+
+        throw new TimeoutException($"Startup work '{name}' did not reach {status} within the test guard.");
+    }
+
     private static int IndexOf(string value, string expected)
     {
         var index = value.IndexOf(expected, StringComparison.Ordinal);
@@ -970,22 +1509,22 @@ public sealed class ModuleCompositionWorkTests
 
     private static void AddProbeOne(
         IMonicaBuilder builder,
-        Action<CompositionWorkProbeModuleOneOption> configure)
+        Action<StartupWorkProbeModuleOneOption> configure)
     {
         builder.AddModule<
-            CompositionWorkProbeModuleOne,
-            CompositionWorkProbeModuleOneOption,
-            CompositionWorkProbeModuleOneGuide>(configure);
+            StartupWorkProbeModuleOne,
+            StartupWorkProbeModuleOneOption,
+            StartupWorkProbeModuleOneGuide>(configure);
     }
 
     private static void AddProbeTwo(
         IMonicaBuilder builder,
-        Action<CompositionWorkProbeModuleTwoOption> configure)
+        Action<StartupWorkProbeModuleTwoOption> configure)
     {
         builder.AddModule<
-            CompositionWorkProbeModuleTwo,
-            CompositionWorkProbeModuleTwoOption,
-            CompositionWorkProbeModuleTwoGuide>(configure);
+            StartupWorkProbeModuleTwo,
+            StartupWorkProbeModuleTwoOption,
+            StartupWorkProbeModuleTwoGuide>(configure);
     }
 
     private sealed class WorkGate(int expectedEntrants) : IDisposable
@@ -1025,7 +1564,7 @@ public sealed class ModuleCompositionWorkTests
             {
                 if (!_release.Wait(HANG_GUARD))
                 {
-                    throw new TimeoutException("The composition-work test gate was not released in time.");
+                    throw new TimeoutException("The startup-work test gate was not released in time.");
                 }
             }
             finally
@@ -1064,24 +1603,54 @@ public sealed class ModuleCompositionWorkTests
             }
         }
     }
+
+    private sealed class StartupTrackingLifecycleService : IHostedLifecycleService
+    {
+        private int _startCount;
+        private int _startingCount;
+
+        internal int StartingCount => Volatile.Read(ref _startingCount);
+
+        internal int StartCount => Volatile.Read(ref _startCount);
+
+        public Task StartingAsync(CancellationToken cancellationToken)
+        {
+            Interlocked.Increment(ref _startingCount);
+            return Task.CompletedTask;
+        }
+
+        public Task StartAsync(CancellationToken cancellationToken)
+        {
+            Interlocked.Increment(ref _startCount);
+            return Task.CompletedTask;
+        }
+
+        public Task StartedAsync(CancellationToken cancellationToken) => Task.CompletedTask;
+
+        public Task StoppingAsync(CancellationToken cancellationToken) => Task.CompletedTask;
+
+        public Task StopAsync(CancellationToken cancellationToken) => Task.CompletedTask;
+
+        public Task StoppedAsync(CancellationToken cancellationToken) => Task.CompletedTask;
+    }
 }
 
-internal sealed record CompositionWorkTestPlan(
+internal sealed record StartupWorkTestPlan(
     string Name,
     Action Work,
-    ModuleCompositionWorkDeadline Deadline,
+    ModuleStartupWorkBarrier Barrier,
     Action? Commit = null);
 
-internal abstract class CompositionWorkProbeOption<TModule> : ModuleOptions<TModule>
+internal abstract class StartupWorkProbeOption<TModule> : ModuleOptions<TModule>
     where TModule : IModule
 {
-    internal List<CompositionWorkTestPlan> ConfigureBuilderWork { get; } = [];
+    internal List<StartupWorkTestPlan> ConfigureBuilderWork { get; } = [];
 
-    internal List<CompositionWorkTestPlan> ConfigureServicesWork { get; } = [];
+    internal List<StartupWorkTestPlan> ConfigureServicesWork { get; } = [];
 
-    internal List<CompositionWorkTestPlan> BusinessTypeIterationWork { get; } = [];
+    internal List<StartupWorkTestPlan> BusinessTypeIterationWork { get; } = [];
 
-    internal List<CompositionWorkTestPlan> PostConfigureWork { get; } = [];
+    internal List<StartupWorkTestPlan> PostConfigureWork { get; } = [];
 
     internal Action? BusinessTypeIterationReached { get; set; }
 
@@ -1096,54 +1665,54 @@ internal abstract class CompositionWorkProbeOption<TModule> : ModuleOptions<TMod
     internal void AddConfigureBuilderWork(
         string name,
         Action work,
-        ModuleCompositionWorkDeadline deadline =
-            ModuleCompositionWorkDeadline.BeforeServiceRegistrationCompletion)
+        ModuleStartupWorkBarrier barrier =
+            ModuleStartupWorkBarrier.BeforeServiceRegistrationCompletion)
     {
-        ConfigureBuilderWork.Add(new CompositionWorkTestPlan(name, work, deadline));
+        ConfigureBuilderWork.Add(new StartupWorkTestPlan(name, work, barrier));
     }
 
     internal void AddConfigureServicesWork(
         string name,
         Action work,
-        ModuleCompositionWorkDeadline deadline =
-            ModuleCompositionWorkDeadline.BeforeServiceRegistrationCompletion)
+        ModuleStartupWorkBarrier barrier =
+            ModuleStartupWorkBarrier.BeforeServiceRegistrationCompletion)
     {
-        ConfigureServicesWork.Add(new CompositionWorkTestPlan(name, work, deadline));
+        ConfigureServicesWork.Add(new StartupWorkTestPlan(name, work, barrier));
     }
 
     internal void AddPostConfigureWork(
         string name,
         Action work,
-        ModuleCompositionWorkDeadline deadline =
-            ModuleCompositionWorkDeadline.BeforeServiceRegistrationCompletion)
+        ModuleStartupWorkBarrier barrier =
+            ModuleStartupWorkBarrier.BeforeServiceRegistrationCompletion)
     {
-        PostConfigureWork.Add(new CompositionWorkTestPlan(name, work, deadline));
+        PostConfigureWork.Add(new StartupWorkTestPlan(name, work, barrier));
     }
 
     internal void AddBusinessTypeIterationWork(
         string name,
         Action work,
-        ModuleCompositionWorkDeadline deadline =
-            ModuleCompositionWorkDeadline.BeforeServiceRegistrationCompletion)
+        ModuleStartupWorkBarrier barrier =
+            ModuleStartupWorkBarrier.BeforeServiceRegistrationCompletion)
     {
-        BusinessTypeIterationWork.Add(new CompositionWorkTestPlan(name, work, deadline));
+        BusinessTypeIterationWork.Add(new StartupWorkTestPlan(name, work, barrier));
     }
 
     internal void AddBusinessTypeIterationWork(
         string name,
         Action work,
         Action commit,
-        ModuleCompositionWorkDeadline deadline =
-            ModuleCompositionWorkDeadline.BeforeServiceRegistrationCompletion)
+        ModuleStartupWorkBarrier barrier =
+            ModuleStartupWorkBarrier.BeforeServiceRegistrationCompletion)
     {
-        BusinessTypeIterationWork.Add(new CompositionWorkTestPlan(name, work, deadline, commit));
+        BusinessTypeIterationWork.Add(new StartupWorkTestPlan(name, work, barrier, commit));
     }
 }
 
-internal abstract class CompositionWorkProbeModule<TModule, TOption, TGuide>(TOption option)
+internal abstract class StartupWorkProbeModule<TModule, TOption, TGuide>(TOption option)
     : ModuleBase<TModule, TOption, TGuide>(option), IBusinessTypeIterator
     where TModule : ModuleBase<TModule, TOption, TGuide>
-    where TOption : CompositionWorkProbeOption<TModule>, new()
+    where TOption : StartupWorkProbeOption<TModule>, new()
     where TGuide : ModuleGuide<TModule, TOption, TGuide>, new()
 {
     public override void ConfigureBuilder(IHostApplicationBuilder builder)
@@ -1156,18 +1725,18 @@ internal abstract class CompositionWorkProbeModule<TModule, TOption, TGuide>(TOp
         Schedule(Option.ConfigureServicesWork);
         if (Option.ScheduleNestedWork)
         {
-            ScheduleCompositionWork(
+            ScheduleStartupWork(
                 "outer-work",
-                () => ScheduleCompositionWork("nested-work", static () => { }));
+                () => ScheduleStartupWork("nested-work", static () => { }));
         }
 
         if (Option.ScheduleNestedWorkFromCommit)
         {
-            ScheduleCompositionWork(
+            ScheduleStartupWork(
                 "outer-commit-work",
                 static () => { },
-                () => ScheduleCompositionWork("nested-commit-work", static () => { }),
-                ModuleCompositionWorkDeadline.BeforeBusinessTypeIteration);
+                () => ScheduleStartupWork("nested-commit-work", static () => { }),
+                ModuleStartupWorkBarrier.BeforeBusinessTypeIteration);
         }
 
         if (Option.ScheduleFromCapturedThread)
@@ -1177,7 +1746,7 @@ internal abstract class CompositionWorkProbeModule<TModule, TOption, TGuide>(TOp
             {
                 try
                 {
-                    ScheduleCompositionWork("captured-work", static () => { });
+                    ScheduleStartupWork("captured-work", static () => { });
                 }
                 catch (Exception exception)
                 {
@@ -1210,49 +1779,49 @@ internal abstract class CompositionWorkProbeModule<TModule, TOption, TGuide>(TOp
         Schedule(Option.PostConfigureWork);
     }
 
-    private void Schedule(IEnumerable<CompositionWorkTestPlan> plans)
+    private void Schedule(IEnumerable<StartupWorkTestPlan> plans)
     {
         foreach (var plan in plans)
         {
             if (plan.Commit is null)
             {
-                ScheduleCompositionWork(plan.Name, plan.Work, plan.Deadline);
+                ScheduleStartupWork(plan.Name, plan.Work, plan.Barrier);
                 continue;
             }
 
-            ScheduleCompositionWork(plan.Name, plan.Work, plan.Commit, plan.Deadline);
+            ScheduleStartupWork(plan.Name, plan.Work, plan.Commit, plan.Barrier);
         }
     }
 }
 
-[ModuleKey("Test.Monica.Core.CompositionWork.One")]
-internal sealed class CompositionWorkProbeModuleOne(CompositionWorkProbeModuleOneOption option)
-    : CompositionWorkProbeModule<
-        CompositionWorkProbeModuleOne,
-        CompositionWorkProbeModuleOneOption,
-        CompositionWorkProbeModuleOneGuide>(option);
+[ModuleKey("Test.Monica.Core.StartupWork.One")]
+internal sealed class StartupWorkProbeModuleOne(StartupWorkProbeModuleOneOption option)
+    : StartupWorkProbeModule<
+        StartupWorkProbeModuleOne,
+        StartupWorkProbeModuleOneOption,
+        StartupWorkProbeModuleOneGuide>(option);
 
-internal sealed class CompositionWorkProbeModuleOneOption
-    : CompositionWorkProbeOption<CompositionWorkProbeModuleOne>;
+internal sealed class StartupWorkProbeModuleOneOption
+    : StartupWorkProbeOption<StartupWorkProbeModuleOne>;
 
-internal sealed class CompositionWorkProbeModuleOneGuide
+internal sealed class StartupWorkProbeModuleOneGuide
     : ModuleGuide<
-        CompositionWorkProbeModuleOne,
-        CompositionWorkProbeModuleOneOption,
-        CompositionWorkProbeModuleOneGuide>;
+        StartupWorkProbeModuleOne,
+        StartupWorkProbeModuleOneOption,
+        StartupWorkProbeModuleOneGuide>;
 
-[ModuleKey("Test.Monica.Core.CompositionWork.Two")]
-internal sealed class CompositionWorkProbeModuleTwo(CompositionWorkProbeModuleTwoOption option)
-    : CompositionWorkProbeModule<
-        CompositionWorkProbeModuleTwo,
-        CompositionWorkProbeModuleTwoOption,
-        CompositionWorkProbeModuleTwoGuide>(option);
+[ModuleKey("Test.Monica.Core.StartupWork.Two")]
+internal sealed class StartupWorkProbeModuleTwo(StartupWorkProbeModuleTwoOption option)
+    : StartupWorkProbeModule<
+        StartupWorkProbeModuleTwo,
+        StartupWorkProbeModuleTwoOption,
+        StartupWorkProbeModuleTwoGuide>(option);
 
-internal sealed class CompositionWorkProbeModuleTwoOption
-    : CompositionWorkProbeOption<CompositionWorkProbeModuleTwo>;
+internal sealed class StartupWorkProbeModuleTwoOption
+    : StartupWorkProbeOption<StartupWorkProbeModuleTwo>;
 
-internal sealed class CompositionWorkProbeModuleTwoGuide
+internal sealed class StartupWorkProbeModuleTwoGuide
     : ModuleGuide<
-        CompositionWorkProbeModuleTwo,
-        CompositionWorkProbeModuleTwoOption,
-        CompositionWorkProbeModuleTwoGuide>;
+        StartupWorkProbeModuleTwo,
+        StartupWorkProbeModuleTwoOption,
+        StartupWorkProbeModuleTwoGuide>;

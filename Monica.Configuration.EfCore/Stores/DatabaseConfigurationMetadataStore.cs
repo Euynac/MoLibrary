@@ -25,18 +25,14 @@ internal sealed class DatabaseConfigurationMetadataStore(ConfigurationDatabase d
         CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(batch);
-        var diagnosticCandidates = batch.Publications
-            .Select(static publication => PublishedDefinitionCandidate.FromPublication(
-                publication,
-                ConfigurationReloadBehaviorObservation.Aggregate([publication.ReloadBehaviorObservation])))
-            .ToArray();
+        var candidate = PublishedDefinitionBatchCandidate.Create(batch);
 
         Exception? lastException = null;
         for (var attempt = 1; attempt <= MAX_PUBLISH_RETRY_COUNT; attempt++)
         {
             try
             {
-                await PublishBatchWithLockAsync(batch, cancellationToken);
+                await PublishBatchWithLockAsync(candidate, cancellationToken);
                 return;
             }
             catch (Exception ex) when (IsPublishRetryableException(ex))
@@ -51,7 +47,7 @@ internal sealed class DatabaseConfigurationMetadataStore(ConfigurationDatabase d
             }
         }
 
-        var diagnostics = await BuildPublishFailureDiagnosticsAsync(diagnosticCandidates, cancellationToken);
+        var diagnostics = await BuildPublishFailureDiagnosticsAsync(candidate.Definitions, cancellationToken);
         throw new InvalidOperationException(
             $"Failed to publish {batch.Publications.Count} configuration definition(s) after {MAX_PUBLISH_RETRY_COUNT} attempts. {diagnostics}",
             lastException);
@@ -157,7 +153,7 @@ internal sealed class DatabaseConfigurationMetadataStore(ConfigurationDatabase d
     }
 
     private async Task PublishBatchWithLockAsync(
-        ConfigurationDefinitionPublicationBatch batch,
+        PublishedDefinitionBatchCandidate candidate,
         CancellationToken cancellationToken)
     {
         await database.ExecuteResilientAsync(async (dbContext, token) =>
@@ -167,7 +163,7 @@ internal sealed class DatabaseConfigurationMetadataStore(ConfigurationDatabase d
                 dbContext,
                 ConfigurationStoreLockEntity.DefinitionPublicationLockKey,
                 token);
-            await PublishBatchAsync(dbContext, batch, token);
+            await PublishBatchAsync(dbContext, candidate, token);
             if (dbContext.ChangeTracker.HasChanges())
             {
                 await dbContext.SaveChangesAsync(token);
@@ -180,27 +176,26 @@ internal sealed class DatabaseConfigurationMetadataStore(ConfigurationDatabase d
 
     private static async Task PublishBatchAsync(
         ConfigurationDbContext dbContext,
-        ConfigurationDefinitionPublicationBatch batch,
+        PublishedDefinitionBatchCandidate candidate,
         CancellationToken cancellationToken)
     {
-        var stateCandidates = batch.Publications
-            .Select(publication => PublishedDefinitionPublisherStateCandidate.FromPublication(
-                batch.Publisher,
-                publication))
-            .ToArray();
-        var incomingIdentities = stateCandidates
-            .Select(static candidate => candidate.DefinitionIdentity)
-            .ToHashSet(StringComparer.Ordinal);
-        var publisherIdentity = PublishedDefinitionPublisherIdentity.Compute(batch.Publisher.PublisherKey);
         var currentPublisherStates = await dbContext.ConfigurationDefinitionPublisherStates
-            .Where(state => state.PublisherIdentity == publisherIdentity)
+            .Where(state => state.PublisherIdentity == candidate.PublisherIdentity)
             .ToArrayAsync(cancellationToken);
         var affectedIdentities = currentPublisherStates
             .Select(static state => state.DefinitionIdentity)
-            .Concat(incomingIdentities)
+            .Concat(candidate.DefinitionIdentities)
             .Distinct(StringComparer.Ordinal)
             .ToArray();
         if (affectedIdentities.Length == 0)
+        {
+            return;
+        }
+
+        var currentDefinitions = await dbContext.ConfigurationDefinitions
+            .Where(definition => affectedIdentities.Contains(definition.DefinitionIdentity))
+            .ToArrayAsync(cancellationToken);
+        if (candidate.MatchesCurrentPublisherAndCanonicalEnvelope(currentPublisherStates, currentDefinitions))
         {
             return;
         }
@@ -214,34 +209,28 @@ internal sealed class DatabaseConfigurationMetadataStore(ConfigurationDatabase d
         // A publication is a complete logical-service snapshot. Missing rows therefore withdraw that publisher's
         // earlier evidence, while observations from other services remain active until explicitly retired.
         foreach (var staleState in currentPublisherStates
-                     .Where(state => !incomingIdentities.Contains(state.DefinitionIdentity)))
+                     .Where(state => !candidate.ContainsDefinition(state.DefinitionIdentity)))
         {
             dbContext.ConfigurationDefinitionPublisherStates.Remove(staleState);
         }
 
-        foreach (var candidate in stateCandidates)
+        foreach (var stateCandidate in candidate.PublisherStates)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            var key = (candidate.DefinitionIdentity, candidate.PublisherIdentity);
+            var key = (stateCandidate.DefinitionIdentity, stateCandidate.PublisherIdentity);
             if (statesByPublisher.TryGetValue(key, out var currentState))
             {
-                candidate.ApplyTo(currentState);
+                stateCandidate.ApplyTo(currentState);
                 continue;
             }
 
-            var createdState = candidate.CreateEntity();
+            var createdState = stateCandidate.CreateEntity();
             dbContext.ConfigurationDefinitionPublisherStates.Add(createdState);
             statesByPublisher[key] = createdState;
         }
 
-        var currentDefinitions = await dbContext.ConfigurationDefinitions
-            .Where(definition => affectedIdentities.Contains(definition.DefinitionIdentity))
-            .ToArrayAsync(cancellationToken);
         var definitionsByIdentity = currentDefinitions.ToDictionary(
             static definition => definition.DefinitionIdentity,
-            StringComparer.Ordinal);
-        var publicationsByIdentity = batch.Publications.ToDictionary(
-            publication => ConfigurationDefinitionIdentity.Compute(publication.Definition.DefinitionKey),
             StringComparer.Ordinal);
 
         // Aggregate after tracked additions and removals so the canonical definition changes only when the
@@ -259,14 +248,14 @@ internal sealed class DatabaseConfigurationMetadataStore(ConfigurationDatabase d
                     .Select(PublishedDefinitionPublisherStateCandidate.MaterializeObservation));
 
             definitionsByIdentity.TryGetValue(definitionIdentity, out var current);
-            PublishedDefinitionCandidate candidate;
-            if (publicationsByIdentity.TryGetValue(definitionIdentity, out var publication))
+            PublishedDefinitionCandidate definitionCandidate;
+            if (candidate.ContainsDefinition(definitionIdentity))
             {
-                candidate = PublishedDefinitionCandidate.FromPublication(publication, effectiveReloadBehavior);
+                definitionCandidate = candidate.GetDefinition(definitionIdentity, effectiveReloadBehavior);
             }
             else if (current is not null)
             {
-                candidate = PublishedDefinitionCandidate.FromCurrent(current, effectiveReloadBehavior);
+                definitionCandidate = PublishedDefinitionCandidate.FromCurrent(current, effectiveReloadBehavior);
             }
             else
             {
@@ -277,39 +266,39 @@ internal sealed class DatabaseConfigurationMetadataStore(ConfigurationDatabase d
             if (current is null)
             {
                 const int initialDefinitionRevision = 1;
-                var initialSchemaVersion = candidate.ResolveNewSchemaVersion(
+                var initialSchemaVersion = definitionCandidate.ResolveNewSchemaVersion(
                     null,
                     ConfigurationDefinitionPublishChangeKind.Created);
-                var created = candidate.CreateEntity(initialSchemaVersion, initialDefinitionRevision);
+                var created = definitionCandidate.CreateEntity(initialSchemaVersion, initialDefinitionRevision);
                 dbContext.ConfigurationDefinitions.Add(created);
                 dbContext.ConfigurationDefinitionPublishHistories.Add(
-                    candidate.CreateHistory(
+                    definitionCandidate.CreateHistory(
                         null,
                         ConfigurationDefinitionPublishChangeKind.Created,
-                        batch.Publisher,
+                        candidate.Publisher,
                         initialSchemaVersion,
                         initialDefinitionRevision));
                 definitionsByIdentity[created.DefinitionIdentity] = created;
                 continue;
             }
 
-            if (candidate.Matches(current))
+            if (definitionCandidate.Matches(current))
             {
                 continue;
             }
 
-            var changeKind = candidate.HasSameSchema(current)
+            var changeKind = definitionCandidate.HasSameSchema(current)
                 ? ConfigurationDefinitionPublishChangeKind.MetadataChanged
                 : ConfigurationDefinitionPublishChangeKind.SchemaChanged;
-            var schemaVersion = candidate.ResolveNewSchemaVersion(current, changeKind);
+            var schemaVersion = definitionCandidate.ResolveNewSchemaVersion(current, changeKind);
             var definitionRevision = checked(Math.Max(current.DefinitionRevision, 0) + 1);
-            var history = candidate.CreateHistory(
+            var history = definitionCandidate.CreateHistory(
                 current,
                 changeKind,
-                batch.Publisher,
+                candidate.Publisher,
                 schemaVersion,
                 definitionRevision);
-            candidate.ApplyTo(current, schemaVersion, definitionRevision);
+            definitionCandidate.ApplyTo(current, schemaVersion, definitionRevision);
             dbContext.ConfigurationDefinitionPublishHistories.Add(history);
         }
     }

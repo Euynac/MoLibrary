@@ -1,5 +1,6 @@
 using AwesomeAssertions;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.DependencyInjection;
 using Monica.Configuration.Abstractions;
 using Monica.Configuration.EfCore.DbContext;
@@ -291,7 +292,9 @@ public sealed partial class DatabaseConfigurationStorePublishTests
             providers.Select(provider => provider.GetRequiredService<IConfigurationMetadataStore>()).ToArray());
     }
 
-    private static ServiceProvider CreateProvider(string databasePath)
+    private static ServiceProvider CreateProvider(
+        string databasePath,
+        IInterceptor? interceptor = null)
     {
         var services = new ServiceCollection();
         services.AddLogging();
@@ -307,6 +310,10 @@ public sealed partial class DatabaseConfigurationStorePublishTests
             ConfigurationStoreTestContextFactory.ConfigureOptions(
                 options,
                 $"Data Source={databasePath}");
+            if (interceptor is not null)
+            {
+                options.AddInterceptors(interceptor);
+            }
         });
         new ModuleConfigurationEfCore(new ModuleConfigurationEfCoreOption()).ConfigureServices(services);
         return services.BuildServiceProvider();

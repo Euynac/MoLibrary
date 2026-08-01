@@ -3,7 +3,7 @@ using Monica.Core.Modularity.Models;
 namespace Monica.Core.Modularity.Diagnostics.Models;
 
 /// <summary>
-/// Groups the serial callback executions and scheduled composition work owned by one module.
+/// Groups serial callback executions and scheduled startup work owned by one module.
 /// </summary>
 public sealed class ModulePerformanceInfo
 {
@@ -25,8 +25,8 @@ public sealed class ModulePerformanceInfo
     /// <summary>Gets every serial callback execution, including repeated executions of the same phase.</summary>
     public IReadOnlyList<ModulePhaseExecutionPerformanceInfo> PhaseExecutions { get; init; } = [];
 
-    /// <summary>Gets the composition work scheduled by this module in stable submission order.</summary>
-    public IReadOnlyList<ModuleCompositionWorkPerformanceInfo> CompositionWorkItems { get; init; } = [];
+    /// <summary>Gets startup work scheduled by this module in stable submission order.</summary>
+    public IReadOnlyList<ModuleStartupWorkPerformanceInfo> StartupWorkItems { get; init; } = [];
 
     /// <summary>Gets the aggregate duration of this module's serial callbacks.</summary>
     public double SerialDurationMs => PhaseExecutions.Sum(static execution => execution.DurationMs);

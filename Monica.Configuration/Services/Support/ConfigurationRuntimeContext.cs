@@ -27,6 +27,7 @@ public sealed class ConfigurationRuntimeContext
     /// <param name="configuration">The host configuration instance.</param>
     internal void Capture(IConfiguration configuration)
     {
+        ArgumentNullException.ThrowIfNull(configuration);
         _configuration = configuration;
     }
 }

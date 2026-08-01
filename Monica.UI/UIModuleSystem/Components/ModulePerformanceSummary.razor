@@ -67,7 +67,7 @@
                     L["ModuleSystem:PerformanceMonitoring:Messages:SerialCallbackCount", Summary.ServiceRegistrationCallbackCount])
                 @BreakdownRow(
                     "performance-summary__breakdown-row--warning",
-                    L["ModuleSystem:PerformanceMonitoring:Labels:BlockingCheckpointWait"],
+                    L["ModuleSystem:PerformanceMonitoring:Labels:BlockingBarrierWait"],
                     Summary.ServiceRegistration.BlockingWaitDurationMs,
                     Summary.ServiceRegistration.BlockingWaitPercentage,
                     Color.Warning)
@@ -121,7 +121,7 @@
         </span>
         <span>
             <small>@label</small>
-            <strong>@FormatDuration(durationMs)</strong>
+            <strong>@ModulePerformanceDisplayText.Duration(L, durationMs)</strong>
         </span>
     </header>;
 
@@ -134,11 +134,11 @@
         string? detail = null) => @<div class="performance-summary__breakdown-row @modifier">
         <div class="performance-summary__breakdown-label">
             <span>@label</span>
-            <strong>@FormatDuration(durationMs)</strong>
+            <strong>@ModulePerformanceDisplayText.Duration(L, durationMs)</strong>
         </div>
         <div class="performance-summary__bar">
             <MudProgressLinear Value="@percentage" Color="@color" Size="Size.Medium" />
-            <span>@FormatPercentage(percentage)</span>
+            <span>@ModulePerformanceDisplayText.Percentage(L, percentage)</span>
         </div>
         @if (!string.IsNullOrWhiteSpace(detail))
         {
@@ -148,12 +148,6 @@
 
     private RenderFragment ParallelMetric(string modifier, string label, double durationMs) => @<article class="performance-summary__parallel-metric @modifier">
         <small>@label</small>
-        <strong>@FormatDuration(durationMs)</strong>
+        <strong>@ModulePerformanceDisplayText.Duration(L, durationMs)</strong>
     </article>;
-
-    private string FormatDuration(double durationMs)
-        => L["ModuleSystem:PerformanceMonitoring:Formats:Duration", durationMs];
-
-    private string FormatPercentage(double percentage)
-        => L["ModuleSystem:PerformanceMonitoring:Formats:Percentage", percentage];
 }

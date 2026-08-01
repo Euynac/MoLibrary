@@ -16,13 +16,13 @@ public static class ModuleInitMetricNames
     public const string Duration = "monica.module.init.duration";
 
     /// <summary>
-    /// Observable gauge instrument that reports composition-work active-span, execution, queue, and checkpoint-wait
+    /// Observable gauge instrument that reports startup-work active-span, execution, queue, and barrier-wait
     /// durations in seconds.
     /// </summary>
-    public const string CompositionWorkDuration = "monica.module.composition.work.duration";
+    public const string StartupWorkDuration = "monica.module.startup.work.duration";
 
     /// <summary>
-    /// Observable gauge instrument that reports module initialization error count by phase or composition boundary.
+    /// Observable gauge instrument that reports module initialization error count by phase or startup boundary.
     /// </summary>
     public const string Errors = "monica.module.init.errors";
 }

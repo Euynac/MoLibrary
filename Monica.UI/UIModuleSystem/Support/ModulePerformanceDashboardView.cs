@@ -1,3 +1,4 @@
+using Monica.Core.Modularity.Diagnostics.Models;
 using Monica.Core.Modularity.Models;
 
 namespace Monica.UI.UIModuleSystem.Support;
@@ -9,8 +10,8 @@ public sealed record ModulePerformanceDashboardView(
     ModulePerformanceSummaryView Summary,
     ModuleCriticalPathView? CriticalPath,
     IReadOnlyList<ModuleCompositionMilestoneView> Milestones,
-    IReadOnlyList<ModuleCompositionCheckpointView> Checkpoints,
-    IReadOnlyList<ModuleCompositionWorkItemView> WorkItems,
+    IReadOnlyList<ModuleStartupWorkBarrierView> StartupWorkBarriers,
+    IReadOnlyList<ModuleStartupWorkItemView> StartupWorkItems,
     IReadOnlyList<ModuleSerialCallbackView> SerialModules,
     IReadOnlyList<ModuleSystemPhaseView> SystemPhases);
 
@@ -36,22 +37,21 @@ public sealed record ModuleInitializationBreakdownView(
     /// <summary>
     /// Gets Monica framework time as a percentage of total module-system initialization.
     /// </summary>
-    public double MonicaFrameworkPercentage => PercentageOf(MonicaFrameworkDurationMs, TotalDurationMs);
+    public double MonicaFrameworkPercentage => ModulePerformanceMath.PercentageOf(
+        MonicaFrameworkDurationMs,
+        TotalDurationMs);
 
     /// <summary>
     /// Gets application configuration time as a percentage of total module-system initialization.
     /// </summary>
-    public double ApplicationConfigurationPercentage => PercentageOf(
+    public double ApplicationConfigurationPercentage => ModulePerformanceMath.PercentageOf(
         ApplicationConfigurationDurationMs,
         TotalDurationMs);
 
     /// <summary>
     /// Gets host-owned gaps as a percentage of total module-system initialization.
     /// </summary>
-    public double HostOwnedPercentage => PercentageOf(HostOwnedDurationMs, TotalDurationMs);
-
-    private static double PercentageOf(double durationMs, double totalMs)
-        => totalMs <= 0 ? 0 : durationMs / totalMs * 100;
+    public double HostOwnedPercentage => ModulePerformanceMath.PercentageOf(HostOwnedDurationMs, TotalDurationMs);
 }
 
 /// <summary>
@@ -67,27 +67,30 @@ public sealed record ModuleServiceRegistrationBreakdownView(
     /// <summary>
     /// Gets application configuration time as a percentage of service registration.
     /// </summary>
-    public double ApplicationConfigurationPercentage => PercentageOf(
+    public double ApplicationConfigurationPercentage => ModulePerformanceMath.PercentageOf(
         ApplicationConfigurationDurationMs,
         TotalDurationMs);
 
     /// <summary>
     /// Gets serial callback time as a percentage of service registration.
     /// </summary>
-    public double SerialModuleCallbackPercentage => PercentageOf(SerialModuleCallbackDurationMs, TotalDurationMs);
+    public double SerialModuleCallbackPercentage => ModulePerformanceMath.PercentageOf(
+        SerialModuleCallbackDurationMs,
+        TotalDurationMs);
 
     /// <summary>
-    /// Gets checkpoint blocking time as a percentage of service registration.
+    /// Gets startup-barrier blocking time as a percentage of service registration.
     /// </summary>
-    public double BlockingWaitPercentage => PercentageOf(BlockingWaitDurationMs, TotalDurationMs);
+    public double BlockingWaitPercentage => ModulePerformanceMath.PercentageOf(
+        BlockingWaitDurationMs,
+        TotalDurationMs);
 
     /// <summary>
     /// Gets Monica orchestration time as a percentage of service registration.
     /// </summary>
-    public double OrchestrationPercentage => PercentageOf(OrchestrationDurationMs, TotalDurationMs);
-
-    private static double PercentageOf(double durationMs, double totalMs)
-        => totalMs <= 0 ? 0 : durationMs / totalMs * 100;
+    public double OrchestrationPercentage => ModulePerformanceMath.PercentageOf(
+        OrchestrationDurationMs,
+        TotalDurationMs);
 }
 
 /// <summary>
@@ -99,10 +102,10 @@ public sealed record ModuleParallelActivityView(
     double AggregateQueueMs);
 
 /// <summary>
-/// Identifies the parallel work item that released the longest startup-blocking checkpoint.
+/// Identifies the parallel work item that released the longest-blocking startup barrier.
 /// </summary>
 public sealed record ModuleCriticalPathView(
-    string Checkpoint,
+    ModuleStartupWorkBarrier Barrier,
     string ReleasingModuleTypeName,
     ModuleKey? ReleasingModuleKey,
     string ReleasingWorkName,
@@ -113,50 +116,81 @@ public sealed record ModuleCriticalPathView(
 /// </summary>
 public sealed record ModuleCompositionMilestoneView(
     long Sequence,
-    string Name,
+    ModuleCompositionMilestone Name,
     double OffsetMs,
     double ElapsedSincePreviousMs,
     bool HasPreviousMilestone,
     bool IsHostOwnedGap);
 
 /// <summary>
-/// Represents one parallel-work deadline reached by the serial composition pipeline.
+/// Represents one startup-work barrier reached by the serial composition pipeline.
 /// </summary>
-public sealed record ModuleCompositionCheckpointView(
+public sealed record ModuleStartupWorkBarrierView(
     long Sequence,
-    string Deadline,
+    ModuleStartupWorkBarrier Barrier,
     double EnteredOffsetMs,
     double ReleasedOffsetMs,
     double WaitDurationMs,
     IReadOnlyList<string> DueWorkItemNames,
-    IReadOnlyList<ModuleCompositionCheckpointPendingWorkView> PendingWorkItems,
+    IReadOnlyList<ModuleStartupWorkBarrierPendingView> PendingWorkItems,
     string? ReleasingWorkItemName);
 
 /// <summary>
-/// Represents work that was still running when a composition barrier was reached.
+/// Represents work that was still running when a startup barrier was reached.
 /// </summary>
-public sealed record ModuleCompositionCheckpointPendingWorkView(
+public sealed record ModuleStartupWorkBarrierPendingView(
     string WorkItemName,
     double RemainingDurationMs);
 
 /// <summary>
-/// Represents one module-owned parallel composition work item.
+/// Represents one module-owned parallel startup work item.
 /// </summary>
-public sealed record ModuleCompositionWorkItemView(
+public sealed record ModuleStartupWorkItemView(
     long Sequence,
     int ModuleOrder,
     string ModuleTypeName,
     ModuleKey? ModuleKey,
     string Name,
-    string OriginPhase,
-    string Deadline,
-    string Status,
+    ModulePhase OriginPhase,
+    ModuleStartupWorkBarrier Barrier,
+    ModuleStartupWorkStatus Status,
     double SubmittedOffsetMs,
     double QueueDurationMs,
     double ExecutionDurationMs,
-    bool WasPendingAtDeadline,
-    double? RemainingAtDeadlineMs,
-    string? ErrorMessage);
+    bool WasPendingAtBarrier,
+    double? RemainingAtBarrierMs,
+    string? ErrorMessage)
+{
+    /// <summary>
+    /// Gets how this work item affects host startup at the time represented by the snapshot.
+    /// </summary>
+    public ModuleStartupWorkImpact Impact => Barrier switch
+    {
+        ModuleStartupWorkBarrier.NoBarrier => ModuleStartupWorkImpact.DoesNotBlockStartup,
+        _ when Status is ModuleStartupWorkStatus.Queued or ModuleStartupWorkStatus.Running =>
+            ModuleStartupWorkImpact.PendingBeforeBarrier,
+        _ when WasPendingAtBarrier => ModuleStartupWorkImpact.BlockedBarrier,
+        _ => ModuleStartupWorkImpact.CompletedBeforeBarrier
+    };
+}
+
+/// <summary>
+/// Describes a startup work item's current or observed effect on host readiness.
+/// </summary>
+public enum ModuleStartupWorkImpact
+{
+    /// <summary>The work is independent from host readiness.</summary>
+    DoesNotBlockStartup,
+
+    /// <summary>The required work is live and will be checked when its barrier is reached.</summary>
+    PendingBeforeBarrier,
+
+    /// <summary>The work was incomplete at barrier entry and delayed host readiness.</summary>
+    BlockedBarrier,
+
+    /// <summary>The work reached a terminal state before barrier entry.</summary>
+    CompletedBeforeBarrier
+}
 
 /// <summary>
 /// Summarizes serial callbacks for one module without mixing in parallel work duration.
@@ -166,7 +200,7 @@ public sealed record ModuleSerialCallbackView(
     string ModuleTypeName,
     ModuleKey? ModuleKey,
     double AggregateDurationMs,
-    string? SlowestPhase,
+    ModulePhase? SlowestPhase,
     double SlowestPhaseDurationMs,
     int CallbackCount,
     int WorkItemCount);
@@ -180,3 +214,15 @@ public sealed record ModuleSystemPhaseView(
     double StartedOffsetMs,
     double DurationMs,
     double RelativeToLongestPercentage);
+
+/// <summary>
+/// Provides shared calculations for immutable performance views.
+/// </summary>
+internal static class ModulePerformanceMath
+{
+    /// <summary>
+    /// Calculates a duration's bounded percentage of a total duration.
+    /// </summary>
+    public static double PercentageOf(double durationMs, double totalMs)
+        => totalMs <= 0 ? 0 : Math.Clamp(durationMs / totalMs * 100, 0, 100);
+}

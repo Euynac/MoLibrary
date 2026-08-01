@@ -87,10 +87,10 @@ public sealed class ModuleCompositionLifecycleTests
             .Should().BeApproximately(composition.ServiceRegistration.TotalDurationMs, 0.001);
         composition.SystemPhases.Should().Contain(phase =>
             phase.PhaseName == $"{nameof(ModulePhase.ConfigureBuilder)} / {nameof(ModulePhase.ConfigureServices)}");
-        composition.WorkItems.Should().BeEmpty();
-        composition.Checkpoints.Should().OnlyContain(static checkpoint => checkpoint.PendingWorkItemCount == 0);
-        composition.AggregateCheckpointWaitDurationMs.Should().Be(0);
-        composition.CriticalCheckpoint.Should().BeNull();
+        composition.StartupWorkItems.Should().BeEmpty();
+        composition.StartupWorkBarriers.Should().OnlyContain(static checkpoint => checkpoint.PendingWorkItemCount == 0);
+        composition.AggregateBarrierWaitDurationMs.Should().Be(0);
+        composition.CriticalBarrier.Should().BeNull();
         composition.CriticalWorkItem.Should().BeNull();
         application.Profiling.GetPerformanceSummary().Should()
             .Contain("Module system initialization elapsed:")

@@ -29,4 +29,13 @@ public static class ConfigurationMetrics
     /// Gets the reload notification failure counter name.
     /// </summary>
     public const string ReloadNotificationFailureCount = "monica.configuration.reload.notification.failure.count";
+
+    /// <summary>
+    /// Gets the configuration startup stage duration histogram name.
+    /// </summary>
+    /// <remarks>
+    /// Measurements use the low-cardinality <c>stage</c> and <c>result</c> tags so operators can distinguish metadata
+    /// publication, effective-value projection, provider activation, and runtime validation.
+    /// </remarks>
+    public const string StartupStageDuration = "monica.configuration.startup.stage.duration";
 }

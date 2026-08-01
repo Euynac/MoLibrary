@@ -19,8 +19,8 @@
         <ModulePerformanceTimeline Milestones="dashboard.Milestones"
                                    CriticalPath="dashboard.CriticalPath"
                                    ModuleSelected="ModuleSelected" />
-        <ModulePerformanceCheckpoints Checkpoints="dashboard.Checkpoints" />
-        <ModulePerformanceWorkTable WorkItems="dashboard.WorkItems" ModuleSelected="ModuleSelected" />
+        <ModulePerformanceCheckpoints Barriers="dashboard.StartupWorkBarriers" />
+        <ModulePerformanceWorkTable WorkItems="dashboard.StartupWorkItems" ModuleSelected="ModuleSelected" />
         <ModulePerformanceSerialTable Modules="dashboard.SerialModules" ModuleSelected="ModuleSelected" />
         <ModulePerformancePhaseTable Phases="dashboard.SystemPhases" />
     }

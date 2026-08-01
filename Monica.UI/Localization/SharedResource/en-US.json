@@ -210,7 +210,7 @@
         "ApplicationConfigurationElapsed": "Application module configuration",
         "HostOwnedElapsed": "Host-owned gaps",
         "ServiceRegistrationElapsed": "Service registration elapsed",
-        "BlockingCheckpointWait": "Blocking checkpoint wait",
+        "BlockingBarrierWait": "Startup barrier wait",
         "MonicaOrchestration": "Monica orchestration and discovery",
         "ParallelActivity": "Overlapping parallel activity",
         "ParallelWorkActiveSpan": "Parallel work active span",
@@ -220,18 +220,18 @@
         "ParallelWorkBarriers": "Parallel-work barriers",
         "DueWorkItems": "Due work",
         "PendingAtEntry": "Pending at entry",
-        "CheckpointEntered": "Entered",
-        "CheckpointReleased": "Released",
+        "BarrierEntered": "Entered",
+        "BarrierReleased": "Released",
         "BarrierReleaser": "Barrier releaser",
         "PendingWorkItems": "Pending work items",
-        "ParallelCompositionWork": "Parallel composition work",
+        "ParallelStartupWork": "Parallel startup work",
         "Module": "Module",
         "WorkItem": "Work item",
         "ScheduledIn": "Scheduled in",
-        "MustFinishBefore": "Must finish before",
+        "StartupBarrier": "Startup barrier",
         "Queue": "Queue",
         "Execution": "Execution",
-        "CheckpointImpact": "Checkpoint impact",
+        "StartupImpact": "Startup impact",
         "Details": "Details",
         "SerialModuleCallbacks": "Serial module callbacks",
         "SortBy": "Sort by",
@@ -260,10 +260,10 @@
         "CriticalPath": "{0} waited {3}; {1} / {2} released the barrier.",
         "NoBlockingCriticalPath": "No parallel work item blocked a composition barrier.",
         "NoMilestones": "No composition milestones were recorded.",
-        "ParallelWorkBarriersDescription": "Shows which work was due and still pending when each startup checkpoint was reached.",
-        "NoCheckpoints": "No parallel-work checkpoints were recorded.",
-        "ParallelCompositionWorkDescription": "Module-owned work ordered by active execution time, with scheduling phase and startup impact.",
-        "RemainingAtDeadline": "{0:N0} ms remained when the deadline was reached.",
+        "ParallelWorkBarriersDescription": "Shows which work was due and still pending when each startup barrier was reached.",
+        "NoBarriers": "No startup-work barriers were recorded.",
+        "ParallelStartupWorkDescription": "Module-owned startup work ordered by active execution time, with scheduling phase, barrier, and startup impact.",
+        "RemainingAtBarrier": "{0:N0} ms remained when the barrier was reached.",
         "SerialModuleCallbacksDescription": "Ranks only synchronous module callbacks; parallel work remains visible in its own table.",
         "CompositionPhaseElapsedDescription": "Every actual system phase identifier and duration, compared with the longest observed phase.",
         "NoPerformanceData": "No performance data",
@@ -271,8 +271,10 @@
       },
       "States": {
         "None": "None",
-        "BlockedCheckpoint": "Blocked checkpoint",
-        "CompletedBeforeCheckpoint": "Completed before checkpoint",
+        "BlockedBarrier": "Blocked startup",
+        "CompletedBeforeBarrier": "Completed before barrier",
+        "DoesNotBlockStartup": "Does not block startup",
+        "PendingBeforeBarrier": "Will be checked at barrier",
         "HostOwnedGap": "Host-owned gap",
         "MonicaCompositionInterval": "Monica composition"
       },
@@ -300,24 +302,28 @@
         "Diagnostics": "Loading startup performance diagnostics..."
       }
     },
-    "CompositionWork": {
+    "StartupWork": {
       "Labels": {
         "WorkItemCount": "Work Items",
         "AggregateExecutionDuration": "Aggregate Execution",
         "AggregateQueueDuration": "Aggregate Queue Time"
       },
       "Messages": {
-        "NoWorkTitle": "No composition work",
-        "NoWorkDescription": "No module scheduled concurrent composition work for this application."
+        "NoWorkTitle": "No startup work",
+        "NoWorkDescription": "No module scheduled concurrent startup work for this application."
       },
       "States": {
+        "Queued": "Queued",
+        "Running": "Running",
         "Succeeded": "Succeeded",
         "Failed": "Failed"
       },
-      "Deadlines": {
+      "Barriers": {
         "BeforeBusinessTypeIteration": "Before business-type iteration",
         "BeforePostConfigureServices": "Before post-service configuration",
-        "BeforeServiceRegistrationCompletion": "Before service registration completes"
+        "BeforeServiceRegistrationCompletion": "Before service registration completes",
+        "BeforeHostLifecycle": "Before host lifecycle begins",
+        "NoBarrier": "Does not block startup"
       }
     },
     "DependencyGraph": {

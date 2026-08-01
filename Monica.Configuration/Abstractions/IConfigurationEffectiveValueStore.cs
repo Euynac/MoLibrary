@@ -27,7 +27,10 @@ public interface IConfigurationEffectiveValueStore
     /// <summary>
     /// Ensures that multiple definitions have effective value documents.
     /// </summary>
-    /// <param name="seeds">Definitions and their seed JSON documents.</param>
+    /// <param name="seeds">
+    /// Definitions and lazy seed requests. Implementations must materialize a seed only after determining that the
+    /// corresponding document is missing, while preserving the input order in the result.
+    /// </param>
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>Effective value documents in the same order as the input seeds.</returns>
     Task<IReadOnlyList<ConfigurationEffectiveValueDocument>> EnsureCreatedAsync(
