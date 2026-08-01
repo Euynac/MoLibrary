@@ -1,4 +1,3 @@
-using System.Collections.Concurrent;
 using System.Text.Json;
 using Confluent.Kafka;
 using Microsoft.Extensions.DependencyInjection;
@@ -39,7 +38,7 @@ internal sealed class KafkaEventBusSubscriptionHostedService(
         logger,
         serviceKey)
 {
-    private readonly ConcurrentDictionary<string, TopicConsumer> _consumers = new(StringComparer.Ordinal);
+    private readonly TopicConsumerRegistry _consumers = new();
 
     /// <inheritdoc />
     public override string ServiceName => $"KafkaEventBus{(ServiceKey is null ? string.Empty : $"_{ServiceKey}")}";
@@ -49,61 +48,37 @@ internal sealed class KafkaEventBusSubscriptionHostedService(
 
     protected override Task CreateExternalSubscriptionForTopicAsync(string topicName, Type eventType, CancellationToken cancellationToken)
     {
-        var consumer = new TopicConsumer(topicName, eventType, CancellationTokenSource.CreateLinkedTokenSource(cancellationToken));
-        if (!_consumers.TryAdd(topicName, consumer))
+        var consumer = new TopicConsumer(topicName, eventType, cancellationToken, ConsumeAsync);
+        if (!_consumers.TryAddAndStart(consumer))
         {
-            consumer.CancellationTokenSource.Dispose();
-            return Task.CompletedTask;
+            return consumer.StopAsync();
         }
 
-        consumer.Task = Task.Factory.StartNew(
-            () => ConsumeAsync(consumer),
-            CancellationToken.None,
-            TaskCreationOptions.LongRunning,
-            TaskScheduler.Default).Unwrap();
         RecordState($"Started Kafka consumer for topic {topicName}", HostedServiceState.Running);
         return Task.CompletedTask;
     }
 
     protected override async Task RemoveExternalSubscriptionForTopicAsync(string topicName, CancellationToken cancellationToken)
     {
-        if (!_consumers.TryRemove(topicName, out var consumer))
+        var consumer = _consumers.Remove(topicName);
+        if (consumer is null)
         {
             return;
         }
 
-        await StopConsumerAsync(consumer);
+        await consumer.StopAsync();
     }
 
-    protected override async Task DisposeExternalSubscriptionsAsync(CancellationToken cancellationToken)
+    protected override Task DisposeExternalSubscriptionsAsync(CancellationToken cancellationToken)
     {
-        var consumers = _consumers.Values.ToList();
-        _consumers.Clear();
-
-        foreach (var consumer in consumers)
-        {
-            await StopConsumerAsync(consumer);
-        }
+        var stopTasks = _consumers.Drain().Select(consumer => consumer.StopAsync());
+        return Task.WhenAll(stopTasks);
     }
 
-    private async Task StopConsumerAsync(TopicConsumer consumer)
+    protected override Task OnStoppingAsync(CancellationToken cancellationToken)
     {
-        await consumer.CancellationTokenSource.CancelAsync();
-        try
-        {
-            if (consumer.Task is not null)
-            {
-                await consumer.Task;
-            }
-        }
-        catch (OperationCanceledException)
-        {
-            // Expected during unsubscribe and shutdown.
-        }
-        finally
-        {
-            consumer.CancellationTokenSource.Dispose();
-        }
+        _consumers.StopAccepting();
+        return base.OnStoppingAsync(cancellationToken);
     }
 
     private async Task ConsumeAsync(TopicConsumer topicConsumer)
@@ -124,16 +99,17 @@ internal sealed class KafkaEventBusSubscriptionHostedService(
 
     private async Task ConsumeTopicAsync(TopicConsumer topicConsumer)
     {
+        var cancellationToken = topicConsumer.CancellationToken;
         var cluster = clusterConfigProvider.GetDirectEventBusCluster();
         var consumerConfig = KafkaClientConfigFactory.BuildConsumerConfig(cluster, options.Value, ServiceKey);
         using var consumer = new ConsumerBuilder<string, string>(consumerConfig).Build();
         consumer.Subscribe(topicConsumer.TopicName);
 
-        while (!topicConsumer.CancellationTokenSource.IsCancellationRequested)
+        while (!cancellationToken.IsCancellationRequested)
         {
             try
             {
-                var result = consumer.Consume(topicConsumer.CancellationTokenSource.Token);
+                var result = consumer.Consume(cancellationToken);
                 if (result?.Message?.Value is null)
                 {
                     continue;
@@ -152,7 +128,7 @@ internal sealed class KafkaEventBusSubscriptionHostedService(
                 await HandleExternalMessageAsync(
                     topicConsumer.TopicName,
                     eventData,
-                    topicConsumer.CancellationTokenSource.Token);
+                    cancellationToken);
             }
             catch (OperationCanceledException)
             {
@@ -163,7 +139,7 @@ internal sealed class KafkaEventBusSubscriptionHostedService(
                 RecordState($"Kafka consumer failed for topic {topicConsumer.TopicName}", HostedServiceState.Degraded, ex);
                 try
                 {
-                    await Task.Delay(options.Value.ConsumerErrorBackoff, topicConsumer.CancellationTokenSource.Token);
+                    await Task.Delay(options.Value.ConsumerErrorBackoff, cancellationToken);
                 }
                 catch (OperationCanceledException)
                 {
@@ -172,17 +148,160 @@ internal sealed class KafkaEventBusSubscriptionHostedService(
             }
         }
 
-        consumer.Close();
+        try
+        {
+            consumer.Commit();
+        }
+        catch (KafkaException ex)
+        {
+            RecordState(
+                $"Kafka consumer final offset commit failed for topic {topicConsumer.TopicName}",
+                HostedServiceState.Degraded,
+                ex);
+        }
+
+        // Confluent.Kafka 2.13.0 Consumer.Close enters a librdkafka LeaveGroup path that can
+        // dereference a missing coordinator. Consumer.Dispose uses NO_CONSUMER_CLOSE instead.
     }
 
-    private sealed class TopicConsumer(string topicName, Type eventType, CancellationTokenSource cancellationTokenSource)
+    /// <summary>
+    /// Owns publication and draining of topic consumers across service lifecycle transitions.
+    /// </summary>
+    internal sealed class TopicConsumerRegistry
     {
-        public string TopicName { get; } = topicName;
+        private readonly object _lifecycleLock = new();
+        private readonly Dictionary<string, TopicConsumer> _consumers = new(StringComparer.Ordinal);
+        private bool _isAccepting = true;
 
-        public Type EventType { get; } = eventType;
+        internal bool TryAddAndStart(TopicConsumer consumer)
+        {
+            lock (_lifecycleLock)
+            {
+                if (!_isAccepting || !_consumers.TryAdd(consumer.TopicName, consumer))
+                {
+                    return false;
+                }
 
-        public CancellationTokenSource CancellationTokenSource { get; } = cancellationTokenSource;
+                if (consumer.TryStart())
+                {
+                    return true;
+                }
 
-        public Task? Task { get; set; }
+                _consumers.Remove(consumer.TopicName);
+                return false;
+            }
+        }
+
+        internal TopicConsumer? Remove(string topicName)
+        {
+            lock (_lifecycleLock)
+            {
+                return _consumers.Remove(topicName, out var consumer)
+                    ? consumer
+                    : null;
+            }
+        }
+
+        internal IReadOnlyList<TopicConsumer> Drain()
+        {
+            lock (_lifecycleLock)
+            {
+                var consumers = _consumers.Values.ToList();
+                _consumers.Clear();
+                return consumers;
+            }
+        }
+
+        internal void StopAccepting()
+        {
+            lock (_lifecycleLock)
+            {
+                _isAccepting = false;
+            }
+        }
+    }
+
+    /// <summary>
+    /// Owns the execution and cancellation lifetime of one topic consumer.
+    /// </summary>
+    internal sealed class TopicConsumer
+    {
+        private readonly object _lifecycleLock = new();
+        private readonly CancellationTokenSource _cancellationTokenSource;
+        private readonly Func<TopicConsumer, Task> _consumeAsync;
+        private Task? _consumerTask;
+        private Task? _stopTask;
+
+        internal TopicConsumer(
+            string topicName,
+            Type eventType,
+            CancellationToken cancellationToken,
+            Func<TopicConsumer, Task> consumeAsync)
+        {
+            TopicName = topicName;
+            EventType = eventType;
+            _consumeAsync = consumeAsync;
+            _cancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+            CancellationToken = _cancellationTokenSource.Token;
+        }
+
+        public string TopicName { get; }
+
+        public Type EventType { get; }
+
+        public CancellationToken CancellationToken { get; }
+
+        internal bool TryStart()
+        {
+            lock (_lifecycleLock)
+            {
+                if (_consumerTask is not null || _stopTask is not null)
+                {
+                    return false;
+                }
+
+                _consumerTask = Task.Factory.StartNew(
+                    () => _consumeAsync(this),
+                    CancellationToken.None,
+                    TaskCreationOptions.LongRunning,
+                    TaskScheduler.Default).Unwrap();
+                return true;
+            }
+        }
+
+        internal Task StopAsync()
+        {
+            lock (_lifecycleLock)
+            {
+                // Registry publication can race with removal, so shutdown must capture startup atomically.
+                return _stopTask ??= StopCoreAsync(_consumerTask);
+            }
+        }
+
+        private async Task StopCoreAsync(Task? consumerTask)
+        {
+            try
+            {
+                await _cancellationTokenSource.CancelAsync();
+            }
+            finally
+            {
+                try
+                {
+                    if (consumerTask is not null)
+                    {
+                        await consumerTask;
+                    }
+                }
+                catch (OperationCanceledException)
+                {
+                    // Expected during unsubscribe and shutdown.
+                }
+                finally
+                {
+                    _cancellationTokenSource.Dispose();
+                }
+            }
+        }
     }
 }

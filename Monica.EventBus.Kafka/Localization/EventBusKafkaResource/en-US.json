@@ -196,7 +196,25 @@
     },
     "Dialog": {
       "CreateTitle": "New Kafka cluster",
-      "EditTitle": "Edit Kafka cluster"
+      "EditTitle": "Edit Kafka cluster",
+      "Sections": {
+        "Identity": {
+          "Title": "Identity",
+          "Description": "Define how this Kafka cluster and its client are identified in the console."
+        },
+        "ConnectionOwnership": {
+          "Title": "Connection ownership",
+          "Description": "Configure broker access, monitoring, and whether Monica or an external system manages credentials."
+        },
+        "Security": {
+          "Title": "Security",
+          "Description": "Set the transport protocol, SASL credentials, and trusted CA location."
+        },
+        "Integration": {
+          "Title": "Integration",
+          "Description": "Connect this cluster to Dapr pub/sub when the integration is enabled."
+        }
+      }
     },
     "Confirm": {
       "DeleteTitle": "Delete Kafka cluster",
@@ -205,7 +223,8 @@
     "Messages": {
       "Saved": "Kafka cluster saved.",
       "Deleted": "Kafka cluster deleted.",
-      "TestSucceeded": "Kafka cluster is reachable."
+      "TestSucceeded": "Kafka cluster is reachable.",
+      "Unreachable": "Kafka cluster '{0}' is not reachable."
     },
     "Fields": {
       "DisplayName": "Display name",

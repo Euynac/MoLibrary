@@ -121,12 +121,16 @@
                             <MudMenuItem Icon="@Icons.Material.Filled.Schedule" OnClick="@(() => OnUpdateRetention.InvokeAsync(context))">
                                 @L["Topics:Actions:Retention"]
                             </MudMenuItem>
+                            <MudDivider />
                             <MudMenuItem Icon="@Icons.Material.Filled.DeleteSweep"
+                                         IconColor="Color.Error"
                                          Disabled="@(!context.IsMetadataAvailable || context.IsInternal)"
                                          OnClick="@(() => OnClearMessages.InvokeAsync(context))">
                                 @L["Topics:Actions:ClearMessages"]
                             </MudMenuItem>
-                            <MudMenuItem Icon="@Icons.Material.Filled.Delete" OnClick="@(() => OnDelete.InvokeAsync(context))">
+                            <MudMenuItem Icon="@Icons.Material.Filled.Delete"
+                                         IconColor="Color.Error"
+                                         OnClick="@(() => OnDelete.InvokeAsync(context))">
                                 @L["Common:Actions:Delete"]
                             </MudMenuItem>
                         </MudMenu>

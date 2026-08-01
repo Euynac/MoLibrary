@@ -487,6 +487,10 @@ public sealed class ModuleEventBusKafkaOption : MinimalApiModuleOptions<ModuleEv
     /// <summary>
     /// Gets or sets the request timeout used by Kafka admin operations.
     /// </summary>
+    /// <remarks>
+    /// Values below one second are normalized to one second before they reach librdkafka so a
+    /// non-positive duration cannot become an unbounded native wait.
+    /// </remarks>
     public TimeSpan AdminRequestTimeout { get; set; } = TimeSpan.FromSeconds(10);
 
     /// <summary>

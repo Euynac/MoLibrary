@@ -53,12 +53,14 @@
     white-space: nowrap;
 }
 
-@media (max-width: 720px) {
+@media (max-width: 1100px) {
     .clusters-actions {
         width: 100%;
         justify-content: flex-start;
     }
+}
 
+@media (max-width: 720px) {
     .clusters-actions ::deep .mud-button-root {
         flex: 1 1 auto;
     }

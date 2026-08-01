@@ -1,6 +1,8 @@
+using Microsoft.Extensions.Localization;
 using Monica.Core.Extensions;
 using Monica.Core.Results;
 using Monica.EventBus.Kafka.Facades;
+using Monica.EventBus.Kafka.Localization;
 using Monica.EventBus.Kafka.Models;
 
 namespace Monica.EventBus.Kafka.UIEventBusKafka.State;
@@ -10,7 +12,8 @@ namespace Monica.EventBus.Kafka.UIEventBusKafka.State;
 /// </summary>
 public sealed class EventBusKafkaPageState(
     KafkaConsoleFacade facade,
-    KafkaPerformancePollingState performancePollingState)
+    KafkaPerformancePollingState performancePollingState,
+    IStringLocalizer<EventBusKafkaResource> localizer)
 {
     private string? _topicsClusterId;
     private string? _consumerGroupsClusterId;
@@ -275,7 +278,8 @@ public sealed class EventBusKafkaPageState(
 
             ApplyClusterSummary(summary);
             ClearSelectedClusterDetailsIfSelected(summary.Config.ClusterId);
-            ErrorMessage = summary.ErrorMessage ?? $"Kafka cluster '{summary.Config.DisplayName}' is not reachable.";
+            ErrorMessage = summary.ErrorMessage
+                           ?? localizer["Clusters:Messages:Unreachable", summary.Config.DisplayName];
             return false;
         });
 

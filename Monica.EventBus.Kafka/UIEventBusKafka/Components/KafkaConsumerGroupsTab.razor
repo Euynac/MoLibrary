@@ -1,3 +1,4 @@
+@using Monica.EventBus.Kafka.UIEventBusKafka.Support
 @using Monica.EventBus.Kafka.UIEventBusKafka.State
 @inject IStringLocalizer<EventBusKafkaResource> L
 
@@ -53,7 +54,7 @@
                         <MudChip T="string"
                                  Size="Size.Small"
                                  Variant="Variant.Outlined"
-                                 Color="@GetStateColor(context.State)">
+                                 Color="@KafkaConsumerGroupStateDisplay.GetColor(context.State)">
                             @context.State
                         </MudChip>
                     </MudTd>
@@ -90,14 +91,5 @@
 
     [Parameter]
     public EventCallback<KafkaConsumerGroupSummary> OnViewMembers { get; set; }
-
-    private static Color GetStateColor(string state) => state.ToUpperInvariant() switch
-    {
-        "STABLE" => Color.Success,
-        "PREPARINGREBALANCE" or "COMPLETINGREBALANCE" => Color.Warning,
-        "DEAD" => Color.Error,
-        "EMPTY" => Color.Secondary,
-        _ => Color.Info
-    };
 
 }

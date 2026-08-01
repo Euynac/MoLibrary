@@ -35,12 +35,18 @@
     border-radius: 9px;
 }
 
+.topics-table ::deep .mud-table {
+    max-width: 100%;
+    min-width: 0;
+}
+
 .topics-table ::deep .mud-table-root {
     min-width: 780px;
 }
 
 /* Keep horizontal scrolling on the data surface while the pager remains full width. */
 .topics-table ::deep .mud-table-container {
+    max-width: 100%;
     overflow-x: auto;
 }
 
@@ -77,12 +83,14 @@
     color: inherit;
 }
 
-@media (max-width: 720px) {
+@media (max-width: 1100px) {
     .topics-actions {
         width: 100%;
         justify-content: flex-start;
     }
+}
 
+@media (max-width: 720px) {
     .topics-actions ::deep .mud-input-control {
         flex: 1 1 100%;
         width: 100%;

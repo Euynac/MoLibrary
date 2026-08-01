@@ -6,6 +6,23 @@
     min-width: 0;
 }
 
+.topic-groups-heading__copy {
+    flex: 1 1 auto;
+    max-width: 100%;
+    min-width: 0;
+}
+
+.topic-groups-heading__copy ::deep .topic-groups-topic-name {
+    max-width: 100%;
+    min-width: 0;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+}
+
+.topic-groups-heading ::deep .mud-button-root {
+    flex: 0 0 auto;
+}
+
 .topic-groups-state {
     min-height: 160px;
     display: flex;
@@ -42,5 +59,9 @@
     .topic-groups-heading {
         align-items: stretch;
         flex-direction: column;
+    }
+
+    .topic-groups-heading ::deep .mud-button-root {
+        width: 100%;
     }
 }

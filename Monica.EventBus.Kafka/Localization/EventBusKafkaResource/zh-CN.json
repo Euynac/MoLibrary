@@ -196,7 +196,25 @@
     },
     "Dialog": {
       "CreateTitle": "新建 Kafka 集群",
-      "EditTitle": "编辑 Kafka 集群"
+      "EditTitle": "编辑 Kafka 集群",
+      "Sections": {
+        "Identity": {
+          "Title": "标识",
+          "Description": "定义控制台中用于识别此 Kafka 集群及其客户端的名称与标识。"
+        },
+        "ConnectionOwnership": {
+          "Title": "连接所有权",
+          "Description": "配置 Broker 入口、监控端点，以及连接凭据由 Monica 还是外部系统管理。"
+        },
+        "Security": {
+          "Title": "安全",
+          "Description": "设置传输协议、SASL 凭据与可信 CA 位置。"
+        },
+        "Integration": {
+          "Title": "集成",
+          "Description": "启用集成时，将此集群连接到 Dapr pub/sub。"
+        }
+      }
     },
     "Confirm": {
       "DeleteTitle": "删除 Kafka 集群",
@@ -205,7 +223,8 @@
     "Messages": {
       "Saved": "Kafka 集群已保存。",
       "Deleted": "Kafka 集群已删除。",
-      "TestSucceeded": "Kafka 集群可连接。"
+      "TestSucceeded": "Kafka 集群可连接。",
+      "Unreachable": "Kafka 集群“{0}”无法连接。"
     },
     "Fields": {
       "DisplayName": "显示名称",

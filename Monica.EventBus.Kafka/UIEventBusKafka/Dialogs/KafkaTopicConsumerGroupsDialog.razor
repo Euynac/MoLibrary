@@ -1,3 +1,4 @@
+@using Monica.EventBus.Kafka.UIEventBusKafka.Support
 @inject KafkaConsoleFacade Facade
 @inject IDialogService DialogService
 @inject IStringLocalizer<EventBusKafkaResource> L
@@ -6,8 +7,8 @@
     <DialogContent>
         <MudStack Spacing="3">
             <div class="topic-groups-heading">
-                <div>
-                    <MudText Typo="Typo.h6">@TopicName</MudText>
+                <div class="topic-groups-heading__copy">
+                    <MudText Typo="Typo.h6" Class="topic-groups-topic-name">@TopicName</MudText>
                     <MudText Typo="Typo.body2" Color="Color.Secondary">
                         @L["Topics:ConsumerGroupsDialog:Summary", _groups.Count]
                     </MudText>
@@ -60,7 +61,14 @@
                             <MudTd DataLabel="@L["ConsumerGroups:Columns:GroupId"]">
                                 <span class="topic-group-id">@context.GroupId</span>
                             </MudTd>
-                            <MudTd DataLabel="@L["ConsumerGroups:Columns:State"]">@context.State</MudTd>
+                            <MudTd DataLabel="@L["ConsumerGroups:Columns:State"]">
+                                <MudChip T="string"
+                                         Size="Size.Small"
+                                         Variant="Variant.Outlined"
+                                         Color="@KafkaConsumerGroupStateDisplay.GetColor(context.State)">
+                                    @context.State
+                                </MudChip>
+                            </MudTd>
                             <MudTd DataLabel="@L["ConsumerGroups:Columns:Members"]">@context.MemberCount</MudTd>
                             <MudTd DataLabel="@L["ConsumerGroups:Columns:Lag"]">
                                 @KafkaMetricDisplayFormatter.FormatOptionalInt64(
