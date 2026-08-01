@@ -361,8 +361,8 @@
       "LagUnknown": "Unknown"
     },
     "MetricsDialog": {
-      "Title": "Members and partition metrics for {0}",
-      "TopicTitle": "{0} on {1}",
+      "Title": "Consumer group consumption details",
+      "TopicTitle": "Topic consumer group consumption details",
       "MembersTitle": "Members ({0})",
       "NoMembers": "This consumer group currently has no registered members.",
       "PartitionsTitle": "Partition metrics",

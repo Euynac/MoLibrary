@@ -49,22 +49,29 @@
                                    Label="@L["Performance:Live:AutoRefresh"]" />
                     </div>
                     <div class="consumer-metrics-interval">
-                        <MudTooltip Text="@L["Performance:Live:IntervalHint", KafkaPerformancePollingState.MinimumRefreshIntervalSeconds, KafkaPerformancePollingState.MaximumRefreshIntervalSeconds]">
-                            <MudNumericField T="int"
-                                             Value="@PollingState.RefreshIntervalSeconds"
-                                             ValueChanged="SetIntervalAsync"
-                                             Label="@L["Performance:Live:IntervalSeconds"]"
-                                             Min="@KafkaPerformancePollingState.MinimumRefreshIntervalSeconds"
-                                             Max="@KafkaPerformancePollingState.MaximumRefreshIntervalSeconds"
-                                             Variant="Variant.Outlined"
-                                             Margin="Margin.Dense"
-                                             Disabled="@(!PollingState.IsAutomaticRefreshEnabled)" />
-                        </MudTooltip>
+                        <span id="consumer-metrics-interval-label"
+                              class="consumer-metrics-interval__label">
+                            @L["Performance:Live:IntervalSeconds"]
+                        </span>
+                        <div class="consumer-metrics-interval__field">
+                            <MudTooltip Text="@L["Performance:Live:IntervalHint", KafkaPerformancePollingState.MinimumRefreshIntervalSeconds, KafkaPerformancePollingState.MaximumRefreshIntervalSeconds]">
+                                <MudNumericField T="int"
+                                                 Value="@PollingState.RefreshIntervalSeconds"
+                                                 ValueChanged="SetIntervalAsync"
+                                                 Min="@KafkaPerformancePollingState.MinimumRefreshIntervalSeconds"
+                                                 Max="@KafkaPerformancePollingState.MaximumRefreshIntervalSeconds"
+                                                 Variant="Variant.Outlined"
+                                                 Margin="Margin.Dense"
+                                                 Disabled="@(!PollingState.IsAutomaticRefreshEnabled)"
+                                                 aria-labelledby="consumer-metrics-interval-label" />
+                            </MudTooltip>
+                        </div>
                     </div>
                     <MudButton Variant="Variant.Outlined"
                                StartIcon="@Icons.Material.Filled.Refresh"
                                Disabled="@PollingState.IsSampling"
-                               OnClick="CaptureAsync">
+                               OnClick="CaptureAsync"
+                               aria-label="@L["Common:Actions:Refresh"]">
                         @L["Common:Actions:Refresh"]
                     </MudButton>
                 </div>

@@ -150,7 +150,7 @@
             { dialog => dialog.GroupId, group.GroupId }
         };
         var dialog = await DialogService.ShowAsync<KafkaConsumerGroupMetricsDialog>(
-            L["ConsumerGroups:MetricsDialog:TopicTitle", group.GroupId, TopicName],
+            L["ConsumerGroups:MetricsDialog:TopicTitle"],
             parameters,
             DetailDialogOptions);
         await dialog.Result;

@@ -461,8 +461,8 @@
             { dialog => dialog.TopicName, topicName }
         };
         var title = topicName is null
-            ? L["ConsumerGroups:MetricsDialog:Title", groupId]
-            : L["ConsumerGroups:MetricsDialog:TopicTitle", groupId, topicName];
+            ? L["ConsumerGroups:MetricsDialog:Title"]
+            : L["ConsumerGroups:MetricsDialog:TopicTitle"];
         var dialog = await DialogService.ShowAsync<KafkaConsumerGroupMetricsDialog>(
             title,
             parameters,

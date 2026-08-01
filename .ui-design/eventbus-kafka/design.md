@@ -46,7 +46,8 @@ The console is used by platform engineers who need to answer three questions qui
 - Tabs preserve their existing actions and data behavior.
 - Long topic, cluster, bootstrap, and consumer identifiers remain fully available through wrapping or a local table scroller. The first line stays visually dominant while metadata and copy affordances remain adjacent.
 - Routine topic actions are grouped into Inspect and Configure sections. Clear messages and Delete topic sit in a separately labeled danger group after a divider, while retaining the existing confirmation flows.
-- Consumer detail opens from the existing members/details actions. Refresh and live polling retain their behavior while the controls move into a bounded capture panel.
+- Consumer detail opens from the existing members/details actions. Refresh and live polling retain their behavior while the controls form one 40px capture rail centered against the Group ID identity block.
+- The dialog title stays concise. The complete Group ID and optional topic remain in the identity surface, so long operational identifiers are visible once instead of consuming both the title and body.
 - Short workspaces use content-driven height. Long inventories cap at the remaining viewport and keep scrolling on the smallest data-owning surface.
 - On mobile, dialogs become near-full-height sheets with fixed identity/header and action/footer regions around one vertical content scroller. Evidence tables remain independent horizontal scroll owners.
 - The prototype demonstrates the consumer metrics drill-down, sectioned cluster editor, long-topic behavior, danger grouping, and light/dark presentation without adding production-only behavior.
@@ -62,9 +63,9 @@ The console is used by platform engineers who need to answer three questions qui
 
 | Breakpoint | Layout Change |
 |------------|---------------|
-| Desktop (lg+) | Header content and actions share a row. Paired provider/cluster identity surfaces lead into a six-item summary rail and a two-column evidence/operations layer. Consumer detail uses a four-item summary rail above locally scrollable tables. |
-| Tablet (md) | Identity surfaces and evidence/operations stack while metrics use two or three columns. Dialog controls wrap below identity, cluster form sections use two columns where useful, and summary metrics use two columns. |
-| Mobile (sm) | Header actions use a full-width action grid; metrics remain a compact two-column rail; tabs and data tables own local horizontal scrolling. Dialogs become near-full-height sheets with stacked controls and sticky actions around one vertical scroller. |
+| Desktop (lg+) | Header content and actions share a row. Paired provider/cluster identity surfaces lead into a six-item summary rail and a two-column evidence/operations layer. Consumer detail centers its Group ID block and 40px capture rail on one horizontal axis above a four-item summary rail. |
+| Tablet (md) | Identity surfaces and evidence/operations stack while metrics use two or three columns. Consumer identity and capture controls remain on one centered row while space permits, cluster form sections use two columns where useful, and summary metrics use two columns. |
+| Mobile (sm) | Header actions use a full-width action grid; metrics remain a compact two-column rail; tabs and data tables own local horizontal scrolling. Dialogs become near-full-height sheets, capture controls stack in one readable column, and sticky actions surround one vertical content scroller. |
 
 ## Design Decisions
 
@@ -80,4 +81,6 @@ The console is used by platform engineers who need to answer three questions qui
 | Overflow | Tables and dialog evidence remain the smallest local scroll owners | Prevents page-level horizontal scrolling and keeps actions reachable. |
 | Vertical sizing | Content-driven workspace plus a useful lower evidence/operations layer | Removes unexplained blank panel height while using desktop space for real evidence; long tables still receive a viewport-aware cap. |
 | Drill-down hierarchy | Context banner, four summary metrics, members, then partitions | Operators can assess health before scanning identifiers and offsets, while all original evidence remains available. |
+| Capture rail alignment | Shared 40px control height and one centered desktop/tablet axis; single-column mobile fallback | Removes mixed Switch/Input/Button baselines without squeezing labels at 390px. |
+| Dialog title | Short task title with full Group ID owned by the identity surface | Avoids duplicate long identifiers and preserves more mobile space for diagnostic evidence. |
 | Dialog scroll contract | One vertical body scroller; identity and actions stay reachable; each wide table scrolls locally | Prevents nested page scrolling and protects close/save access on 390px-wide screens. |
