@@ -2,96 +2,164 @@ export function shouldShowSidebarByDefault() {
     return window.matchMedia("(min-width: 961px)").matches;
 }
 
-let activeHeadingTracker = null;
-let activeSearchHit = null;
-
-export function observeActiveHeading(headingIds, currentAnchorId, dotNetReference) {
-    disposeActiveHeadingTracker();
-
-    const tracker = createActiveHeadingTracker(headingIds, currentAnchorId, dotNetReference);
-    if (!tracker) {
-        return;
-    }
-
-    activeHeadingTracker = tracker;
-    tracker.sync(true);
-    tracker.scrollRoot.addEventListener("scroll", tracker.handleScroll, { passive: true });
-    window.addEventListener("resize", tracker.handleResize);
+export function createMarkdownViewerSession(viewerRoot, dotNetReference) {
+    return new MarkdownViewerSession(viewerRoot, dotNetReference);
 }
 
-export function disposeActiveHeadingTracker() {
-    if (!activeHeadingTracker) {
-        return;
+class MarkdownViewerSession {
+    constructor(viewerRoot, dotNetReference) {
+        this.viewerRoot = viewerRoot;
+        this.dotNetReference = dotNetReference;
+        this.window = viewerRoot?.ownerDocument?.defaultView ?? window;
+        this.activeHeadingTracker = null;
+        this.activeSearchHit = null;
+        this.pendingCallbacks = new Set();
+        this.disposed = false;
+        this.shutdownPromise = null;
+        this.removalObserver = new MutationObserver(() => {
+            if (!this.viewerRoot?.isConnected) {
+                void this.shutdown();
+            }
+        });
+
+        const observerRoot = viewerRoot?.ownerDocument?.body;
+        if (observerRoot) {
+            this.removalObserver.observe(observerRoot, { childList: true, subtree: true });
+        }
     }
 
-    activeHeadingTracker.scrollRoot.removeEventListener("scroll", activeHeadingTracker.handleScroll);
-    window.removeEventListener("resize", activeHeadingTracker.handleResize);
-    activeHeadingTracker = null;
+    observeActiveHeading(headingIds, currentAnchorId) {
+        if (this.disposed) {
+            return;
+        }
+
+        this.disposeActiveHeadingTracker();
+
+        const tracker = createActiveHeadingTracker(this, headingIds, currentAnchorId);
+        if (!tracker) {
+            return;
+        }
+
+        this.activeHeadingTracker = tracker;
+        tracker.sync(true);
+        tracker.scrollRoot.addEventListener("scroll", tracker.handleScroll, { passive: true });
+        this.window.addEventListener("resize", tracker.handleResize);
+    }
+
+    disposeActiveHeadingTracker() {
+        const tracker = this.activeHeadingTracker;
+        if (!tracker) {
+            return;
+        }
+
+        tracker.scrollRoot.removeEventListener("scroll", tracker.handleScroll);
+        this.window.removeEventListener("resize", tracker.handleResize);
+
+        if (tracker.animationFrameId !== null) {
+            this.window.cancelAnimationFrame(tracker.animationFrameId);
+        }
+
+        this.activeHeadingTracker = null;
+    }
+
+    clearSearchHit() {
+        const searchHit = this.activeSearchHit;
+        if (!searchHit?.parentNode) {
+            this.activeSearchHit = null;
+            return;
+        }
+
+        const parent = searchHit.parentNode;
+        while (searchHit.firstChild) {
+            parent.insertBefore(searchHit.firstChild, searchHit);
+        }
+
+        parent.removeChild(searchHit);
+        parent.normalize();
+        this.activeSearchHit = null;
+    }
+
+    highlightSearchHit(anchorId, headingLevel, matchedText, prefixContext, suffixContext) {
+        if (this.disposed) {
+            return false;
+        }
+
+        this.clearSearchHit();
+
+        if (!matchedText) {
+            return false;
+        }
+
+        const scrollRoot = this.viewerRoot.querySelector("[data-markdown-scroll-root='true']");
+        const contentRoot = this.viewerRoot.querySelector("[data-markdown-content-root='true']");
+        if (!scrollRoot || !contentRoot) {
+            return false;
+        }
+
+        const textMap = buildNormalizedTextMap(contentRoot);
+        if (!textMap.text) {
+            return false;
+        }
+
+        const searchWindow = resolveSearchWindow(contentRoot, textMap, anchorId, headingLevel);
+        const match = locateSearchMatch(
+            textMap.text,
+            searchWindow,
+            matchedText,
+            prefixContext ?? "",
+            suffixContext ?? "");
+
+        if (!match) {
+            return false;
+        }
+
+        const mark = wrapMatchRange(textMap, match.start, match.end);
+        if (!mark) {
+            return false;
+        }
+
+        this.activeSearchHit = mark;
+        scrollElementIntoView(scrollRoot, mark);
+        return true;
+    }
+
+    notifyActiveHeadingChanged(anchorId) {
+        const callbackReference = this.dotNetReference;
+        if (this.disposed || !callbackReference) {
+            return;
+        }
+
+        const callback = callbackReference.invokeMethodAsync("OnHashChangedAsync", anchorId);
+        this.pendingCallbacks.add(callback);
+        callback
+            .catch(() => {
+            })
+            .finally(() => this.pendingCallbacks.delete(callback));
+    }
+
+    shutdown() {
+        if (this.shutdownPromise) {
+            return this.shutdownPromise;
+        }
+
+        this.disposed = true;
+        this.removalObserver.disconnect();
+        this.disposeActiveHeadingTracker();
+        this.dotNetReference = null;
+        this.activeSearchHit = null;
+        this.viewerRoot = null;
+        this.shutdownPromise = Promise.allSettled(Array.from(this.pendingCallbacks));
+        return this.shutdownPromise;
+    }
 }
 
-export function clearSearchHit() {
-    if (!activeSearchHit || !activeSearchHit.parentNode) {
-        activeSearchHit = null;
-        return;
-    }
-
-    const parent = activeSearchHit.parentNode;
-    while (activeSearchHit.firstChild) {
-        parent.insertBefore(activeSearchHit.firstChild, activeSearchHit);
-    }
-
-    parent.removeChild(activeSearchHit);
-    parent.normalize();
-    activeSearchHit = null;
-}
-
-export function highlightSearchHit(anchorId, headingLevel, matchedText, prefixContext, suffixContext) {
-    clearSearchHit();
-
-    if (!matchedText) {
-        return false;
-    }
-
-    const scrollRoot = document.querySelector("[data-markdown-scroll-root='true']");
-    const contentRoot = document.querySelector("[data-markdown-content-root='true']");
-    if (!scrollRoot || !contentRoot) {
-        return false;
-    }
-
-    const textMap = buildNormalizedTextMap(contentRoot);
-    if (!textMap.text) {
-        return false;
-    }
-
-    const searchWindow = resolveSearchWindow(contentRoot, textMap, anchorId, headingLevel);
-    const match = locateSearchMatch(
-        textMap.text,
-        searchWindow,
-        matchedText,
-        prefixContext ?? "",
-        suffixContext ?? "");
-
-    if (!match) {
-        return false;
-    }
-
-    const mark = wrapMatchRange(textMap, match.start, match.end);
-    if (!mark) {
-        return false;
-    }
-
-    activeSearchHit = mark;
-    scrollElementIntoView(scrollRoot, mark);
-    return true;
-}
-
-function createActiveHeadingTracker(headingIds, currentAnchorId, dotNetReference) {
+function createActiveHeadingTracker(session, headingIds, currentAnchorId) {
     if (!Array.isArray(headingIds) || headingIds.length === 0) {
         return null;
     }
 
-    const scrollRoot = document.querySelector("[data-markdown-scroll-root='true']");
-    const markdownBody = document.querySelector("[data-markdown-body='true']");
+    const scrollRoot = session.viewerRoot.querySelector("[data-markdown-scroll-root='true']");
+    const markdownBody = session.viewerRoot.querySelector("[data-markdown-body='true']");
     if (!scrollRoot || !markdownBody) {
         return null;
     }
@@ -115,11 +183,11 @@ function createActiveHeadingTracker(headingIds, currentAnchorId, dotNetReference
     }
 
     const tracker = {
+        animationFrameId: null,
         currentAnchorId: null,
-        dotNetReference,
         headings,
+        session,
         scrollRoot,
-        syncScheduled: false,
         handleResize: () => scheduleSync(tracker, false),
         handleScroll: () => scheduleSync(tracker, false),
         sync: alignCurrentAnchor => syncActiveHeading(tracker, alignCurrentAnchor)
@@ -130,18 +198,21 @@ function createActiveHeadingTracker(headingIds, currentAnchorId, dotNetReference
 }
 
 function scheduleSync(tracker, alignCurrentAnchor) {
-    if (tracker.syncScheduled) {
+    if (tracker.animationFrameId !== null || tracker.session.disposed) {
         return;
     }
 
-    tracker.syncScheduled = true;
-    window.requestAnimationFrame(() => {
-        tracker.syncScheduled = false;
+    tracker.animationFrameId = tracker.session.window.requestAnimationFrame(() => {
+        tracker.animationFrameId = null;
         tracker.sync(alignCurrentAnchor);
     });
 }
 
 function syncActiveHeading(tracker, alignCurrentAnchor) {
+    if (tracker.session.disposed) {
+        return;
+    }
+
     const activeHeading = resolveActiveHeading(tracker, alignCurrentAnchor);
     const nextAnchorId = activeHeading?.anchorId ?? null;
 
@@ -150,8 +221,8 @@ function syncActiveHeading(tracker, alignCurrentAnchor) {
     }
 
     tracker.currentAnchorId = nextAnchorId;
-    replaceLocationHash(nextAnchorId);
-    notifyActiveHeadingChanged(tracker, nextAnchorId);
+    replaceLocationHash(tracker.session.window, nextAnchorId);
+    tracker.session.notifyActiveHeadingChanged(nextAnchorId);
 }
 
 function resolveActiveHeading(tracker, alignCurrentAnchor) {
@@ -207,26 +278,16 @@ function scrollElementIntoView(scrollRoot, element) {
     });
 }
 
-function replaceLocationHash(anchorId) {
+function replaceLocationHash(targetWindow, anchorId) {
     const encodedAnchorId = normalizeAnchorId(anchorId);
-    const url = new URL(window.location.href);
-    const currentHash = normalizeAnchorId(window.location.hash);
+    const url = new URL(targetWindow.location.href);
+    const currentHash = normalizeAnchorId(targetWindow.location.hash);
     if (currentHash === encodedAnchorId) {
         return;
     }
 
     url.hash = encodedAnchorId ? `#${encodedAnchorId}` : "";
-    history.replaceState(history.state, "", url);
-}
-
-function notifyActiveHeadingChanged(tracker, anchorId) {
-    if (!tracker.dotNetReference) {
-        return;
-    }
-
-    tracker.dotNetReference.invokeMethodAsync("OnHashChangedAsync", anchorId)
-        .catch(() => {
-        });
+    targetWindow.history.replaceState(targetWindow.history.state, "", url);
 }
 
 function normalizeAnchorId(anchorId) {

@@ -25,6 +25,15 @@
         rgba(var(--mud-palette-primary-rgb), 0.02);
 }
 
+.doc-center-state ::deep .empty-state-icon {
+    font-size: 4rem;
+    opacity: 0.3;
+}
+
+.doc-center-state ::deep .empty-state-copy {
+    opacity: 0.5;
+}
+
 .doc-workspace {
     flex: 1;
     display: grid;

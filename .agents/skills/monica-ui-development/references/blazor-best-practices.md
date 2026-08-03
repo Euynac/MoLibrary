@@ -26,47 +26,47 @@ This document defines best practices for developing Blazor UI in the Monica fram
 
 ## 2. Lifecycle Best Practices
 
-### 2.1 Avoid Time-Consuming Operations in OnInitializedAsync
+### 2.1 Separate Data Initialization from DOM-Dependent JS Interop
 
 ```csharp
-// Wrong
+private IReadOnlyList<Item> _items = [];
+
 protected override async Task OnInitializedAsync()
 {
-    // Never perform time-consuming data loading here
-    await LoadLargeDataSetAsync();
-    // Never perform JavaScript interop here
-    await JSRuntime.InvokeVoidAsync("initializeChart");
+    _items = await DataService.GetItemsAsync();
 }
 
-// Correct
 protected override async Task OnAfterRenderAsync(bool firstRender)
 {
-    if (firstRender)
+    if (!firstRender)
     {
-        // Load data after first render
-        await LoadLargeDataSetAsync();
-        // JavaScript interop belongs here
-        await JSRuntime.InvokeVoidAsync("initializeChart");
-        StateHasChanged();
+        return;
     }
+
+    // This call belongs here because it requires the rendered element.
+    await JSRuntime.InvokeVoidAsync("initializeKeyboardNavigation");
 }
 ```
 
-### 2.2 Use CancellationToken for Async Operations
+Use initialization and parameter lifecycle methods for data work. Keep the component renderable before an incomplete await so loading UI can be displayed safely. Reserve `OnAfterRenderAsync` for DOM-dependent coordination; it is re-entrant and does not automatically rerender the component when its returned task completes.
+
+### 2.2 Bound Async Work to the Component Lifetime
 
 ```csharp
 @implements IAsyncDisposable
 
 @code {
-    private CancellationTokenSource? _cts;
+    private readonly CancellationTokenSource _componentLifetime = new();
+    private bool _disposed;
 
-    protected override async Task OnAfterRenderAsync(bool firstRender)
+    protected override async Task OnInitializedAsync()
     {
-        if (firstRender)
+        if (_disposed)
         {
-            _cts = new CancellationTokenSource();
-            await LoadDataAsync(_cts.Token);
+            return;
         }
+
+        await LoadDataAsync(_componentLifetime.Token);
     }
 
     private async Task LoadDataAsync(CancellationToken cancellationToken)
@@ -74,21 +74,99 @@ protected override async Task OnAfterRenderAsync(bool firstRender)
         try
         {
             var data = await DataService.GetDataAsync(cancellationToken);
+            cancellationToken.ThrowIfCancellationRequested();
+
+            if (_disposed)
+            {
+                return;
+            }
+
             ProcessData(data);
         }
-        catch (OperationCanceledException)
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
-            // Handle cancellation
         }
+    }
+
+    public ValueTask DisposeAsync()
+    {
+        if (_disposed)
+        {
+            return ValueTask.CompletedTask;
+        }
+
+        _disposed = true;
+        _componentLifetime.Cancel();
+        _componentLifetime.Dispose();
+        return ValueTask.CompletedTask;
+    }
+}
+```
+
+Blazor component code is re-entrant at every incomplete `await`. Disposal can run before an awaited lifecycle or event continuation resumes, so cancellation alone is insufficient: pass the lifetime token where possible and recheck cancellation/disposal after awaits that can outlive the component. Track and observe any work that is not returned directly to the renderer.
+
+### 2.3 Keep Single Ownership of JS Interop References
+
+```csharp
+@implements IAsyncDisposable
+@inject IJSRuntime JSRuntime
+
+@code {
+    private IJSObjectReference? _module;
+    private bool _disposed;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender || _disposed)
+        {
+            return;
+        }
+
+        // Always observe resource-producing imports so a late result can be disposed.
+        var module = await JSRuntime.InvokeAsync<IJSObjectReference>(
+            "import",
+            "./component.js");
+
+        if (_disposed)
+        {
+            await DisposeModuleAsync(module);
+            return;
+        }
+
+        _module = module;
     }
 
     public async ValueTask DisposeAsync()
     {
-        _cts?.Cancel();
-        _cts?.Dispose();
+        if (_disposed)
+        {
+            return;
+        }
+
+        _disposed = true;
+
+        var module = Interlocked.Exchange(ref _module, null);
+        if (module is not null)
+        {
+            await DisposeModuleAsync(module);
+        }
+    }
+
+    private static async ValueTask DisposeModuleAsync(IJSObjectReference module)
+    {
+        try
+        {
+            await module.DisposeAsync();
+        }
+        catch (JSDisconnectedException)
+        {
+            // Expected when a Blazor Server circuit is already disconnected.
+        }
     }
 }
 ```
+
+Do not leave a disposed module published in a field, and do not assign a module whose import completed after component disposal. Avoid canceling resource-producing imports when cancellation can abandon their late result. Atomically detaching a field prevents new acquisitions but does not protect callers that already captured the reference; serialize with or drain those callers before disposal. Stop JavaScript callback producers before disposing any retained `DotNetObjectReference`. Use a client-side `MutationObserver` for DOM cleanup instead of invoking DOM-cleanup JavaScript from `DisposeAsync`. Do not catch `ObjectDisposedException` from a locally owned interop reference; it identifies an ownership or teardown-order race.
 
 ## 3. Performance Optimization
 

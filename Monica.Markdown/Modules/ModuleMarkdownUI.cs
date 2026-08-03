@@ -33,8 +33,8 @@ public class ModuleMarkdownUI(ModuleMarkdownUIOption option)
     /// </summary>
     public override void ConfigureServices(IServiceCollection services)
     {
-        services.AddTransient<MarkdownViewerPageState>();
-        services.AddTransient<MarkdownDocumentSearchState>();
+        services.AddTransient<MarkdownViewerPageStateFactory>();
+        services.AddTransient<MarkdownDocumentSearchStateFactory>();
         services.AddTransient<MarkdownLocalAssetService>();
         services.Replace(ServiceDescriptor.Scoped<IMoMarkdownAssetResolver, MarkdownAssetUrlResolver>());
     }
