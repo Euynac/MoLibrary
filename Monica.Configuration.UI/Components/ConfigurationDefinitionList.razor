@@ -16,6 +16,25 @@
                                   Adornment="Adornment.Start"
                                   AdornmentIcon="@Icons.Material.Filled.Search" />
                 </div>
+                <div class="configuration-definition-list-lifecycle-filter">
+                    <MudSelect T="ConfigurationDefinitionLifecycleFilter"
+                               Value="@LifecycleFilter"
+                               ValueChanged="OnLifecycleFilterChanged"
+                               ToStringFunc="LifecycleFilterText"
+                               Label="@L["State:Definitions:LifecycleFilter:Label"]"
+                               Variant="Variant.Outlined"
+                               Margin="Margin.Dense">
+                        <MudSelectItem T="ConfigurationDefinitionLifecycleFilter" Value="@ConfigurationDefinitionLifecycleFilter.Active">
+                            @L["State:Definitions:LifecycleFilter:Active"]
+                        </MudSelectItem>
+                        <MudSelectItem T="ConfigurationDefinitionLifecycleFilter" Value="@ConfigurationDefinitionLifecycleFilter.Retired">
+                            @L["State:Definitions:LifecycleFilter:Retired"]
+                        </MudSelectItem>
+                        <MudSelectItem T="ConfigurationDefinitionLifecycleFilter" Value="@ConfigurationDefinitionLifecycleFilter.All">
+                            @L["State:Definitions:LifecycleFilter:All"]
+                        </MudSelectItem>
+                    </MudSelect>
+                </div>
                 <div class="configuration-definition-list-group-toggle">
                     <MudTooltip Text="@GroupModeTooltip">
                         <MudButton Variant="Variant.Outlined"
@@ -48,7 +67,8 @@
                                 @if (!definition.CanManage)
                                 {
                                     <ConfigurationDefinitionUnavailableItem Definition="@definition"
-                                                                            SearchTerms="@SearchTerms" />
+                                                                            SearchTerms="@SearchTerms"
+                                                                            PurgeRequested="@PurgeRequested" />
                                 }
                                 else
                                 {
@@ -57,7 +77,7 @@
                                     var runtimeIssueCount = GetRuntimeValidationCount(definition);
                                     <MudListItem T="ConfigurationDefinitionSummary"
                                                  Value="@definition"
-                                                 Icon="@Icons.Material.Filled.Settings"
+                                                 Icon="@DefinitionIcon(definition)"
                                                  Class="@(IsSelected(definition) ? "selected-definition" : null)"
                                                  OnClick="() => SelectedDefinitionChanged.InvokeAsync(definition)">
                                         <MudStack Spacing="0">
@@ -83,6 +103,18 @@
                                                                  Color="Color.Info"
                                                                  Variant="Variant.Outlined">
                                                             @L["State:Definitions:PublishedMetadata"]
+                                                        </MudChip>
+                                                    </MudTooltip>
+                                                }
+                                                @if (definition.LifecycleState == ConfigurationDefinitionLifecycleState.Retired)
+                                                {
+                                                    <MudTooltip Text="@L["State:Definitions:RetiredTooltip"]">
+                                                        <MudChip T="string"
+                                                                 Size="Size.Small"
+                                                                 Color="Color.Warning"
+                                                                 Variant="Variant.Filled"
+                                                                 Icon="@Icons.Material.Filled.Inventory2">
+                                                            @L["State:Definitions:Retired"]
                                                         </MudChip>
                                                     </MudTooltip>
                                                 }
@@ -209,10 +241,13 @@
     private const int MAX_VISIBLE_NODE_MATCHES = 4;
 
     private ConfigurationDefinitionGroupMode _groupMode = ConfigurationDefinitionGroupMode.FromProject;
-
     [Parameter] public IReadOnlyList<ConfigurationDefinitionSummary> Definitions { get; set; } = [];
     [Parameter] public ConfigurationDefinitionSummary? SelectedDefinition { get; set; }
     [Parameter] public EventCallback<ConfigurationDefinitionSummary> SelectedDefinitionChanged { get; set; }
+    [Parameter] public EventCallback<ConfigurationDefinitionSummary> PurgeRequested { get; set; }
+    [Parameter] public ConfigurationDefinitionLifecycleFilter LifecycleFilter { get; set; } =
+        ConfigurationDefinitionLifecycleFilter.Active;
+    [Parameter] public EventCallback<ConfigurationDefinitionLifecycleFilter> LifecycleFilterChanged { get; set; }
     [Parameter] public IReadOnlyDictionary<string, IReadOnlyList<ConfigurationNodeSearchMatch>> NodeSearchMatches { get; set; } =
         new Dictionary<string, IReadOnlyList<ConfigurationNodeSearchMatch>>(StringComparer.OrdinalIgnoreCase);
     [Parameter] public EventCallback<ConfigurationNodeSearchMatch> NodeSearchMatchSelected { get; set; }
@@ -230,10 +265,11 @@
     [Parameter] public EventCallback UndoAll { get; set; }
 
     private IEnumerable<ConfigurationDefinitionSummary> FilteredDefinitions =>
-        string.IsNullOrWhiteSpace(SearchText)
-            ? Definitions
-            : Definitions.Where(definition =>
-                IsDefinitionMatch(definition)
+        Definitions
+            .Where(MatchesLifecycleFilter)
+            .Where(definition =>
+                string.IsNullOrWhiteSpace(SearchText)
+                || IsDefinitionMatch(definition)
                 || GetNodeMatches(definition).Count > 0);
 
     private IEnumerable<IGrouping<string, ConfigurationDefinitionSummary>> GroupedDefinitions =>
@@ -269,6 +305,34 @@
         _ => Icons.Material.Filled.Folder
     };
 
+    private string LifecycleFilterText(ConfigurationDefinitionLifecycleFilter filter)
+    {
+        return filter switch
+        {
+            ConfigurationDefinitionLifecycleFilter.Active => L["State:Definitions:LifecycleFilter:Active"],
+            ConfigurationDefinitionLifecycleFilter.Retired => L["State:Definitions:LifecycleFilter:Retired"],
+            ConfigurationDefinitionLifecycleFilter.All => L["State:Definitions:LifecycleFilter:All"],
+            _ => L["State:Definitions:LifecycleFilter:Active"]
+        };
+    }
+
+    private bool MatchesLifecycleFilter(ConfigurationDefinitionSummary definition)
+    {
+        return LifecycleFilter.Includes(definition.LifecycleState);
+    }
+
+    private Task OnLifecycleFilterChanged(ConfigurationDefinitionLifecycleFilter filter)
+    {
+        return LifecycleFilterChanged.InvokeAsync(filter);
+    }
+
+    private static string DefinitionIcon(ConfigurationDefinitionSummary definition)
+    {
+        return definition.LifecycleState == ConfigurationDefinitionLifecycleState.Retired
+            ? Icons.Material.Filled.Inventory2
+            : Icons.Material.Filled.Settings;
+    }
+
     private bool IsSelected(ConfigurationDefinitionSummary definition)
     {
         return string.Equals(definition.DefinitionKey, SelectedDefinition?.DefinitionKey, StringComparison.OrdinalIgnoreCase);
@@ -298,6 +362,7 @@
                || ContainsAny(definition.SchemaHash)
                || ContainsAny(definition.FromProject)
                || ContainsAny(definition.Category)
+               || ContainsAny(LifecycleStateText(definition.LifecycleState))
                || ContainsAny(ConfigurationDefinitionMetadataDiagnosticFormatter.AvailabilityLabel(definition.Availability, L))
                || (definition.MetadataDiagnostic is { } diagnostic
                    && ContainsAny(ConfigurationDefinitionMetadataDiagnosticFormatter.IssueLabel(diagnostic.Kind, L)))
@@ -306,6 +371,13 @@
                    && ContainsAny(L["State:Definitions:MetadataStoreUnavailableForDefinition"].Value))
                || ContainsAny(definition.MetadataDiagnostic?.Message)
                || ContainsAny(definition.MetadataDiagnostic?.ErrorType);
+    }
+
+    private string LifecycleStateText(ConfigurationDefinitionLifecycleState lifecycleState)
+    {
+        return lifecycleState == ConfigurationDefinitionLifecycleState.Retired
+            ? L["State:Definitions:Retired"]
+            : L["State:Definitions:Active"];
     }
 
     private string GetGroupName(ConfigurationDefinitionSummary definition)
@@ -352,4 +424,5 @@
         FromProject,
         Category
     }
+
 }

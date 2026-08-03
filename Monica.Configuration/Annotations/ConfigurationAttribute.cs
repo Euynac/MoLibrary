@@ -41,8 +41,12 @@ public sealed class ConfigurationAttribute : Attribute
     }
 
     /// <summary>
-    /// Gets or sets the stable definition key. When omitted, the scanner derives one from the CLR type.
+    /// Gets or sets the stable definition key.
     /// </summary>
+    /// <remarks>
+    /// When omitted, Monica uses the CLR full type name. An explicit key is recommended when persisted metadata,
+    /// effective values, or history must retain the same identity across namespace or type-name refactoring.
+    /// </remarks>
     public string? DefinitionKey { get; set; }
 
     /// <summary>

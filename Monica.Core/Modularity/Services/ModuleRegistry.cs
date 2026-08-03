@@ -263,6 +263,10 @@ public sealed class ModuleRegistry(MonicaApplication application)
     {
         _isSealed = true;
         services.AddSingleton<MonicaApplication>(_ => application);
+        // Generic Host resolves HostOptions while it builds IHost. Make the host-owned Monica application an options
+        // dependency so the container materializes and owns it even when the host is disposed without being started.
+        services.AddOptions<HostOptions>()
+            .Configure<MonicaApplication>(static (_, _) => { });
         services.AddSingleton<IMonicaApplicationOptions>(application.Application);
         services.AddSingleton<IMonicaModuleSystemOptions>(application.ModuleSystem);
         RegisterStartupValidation(services);

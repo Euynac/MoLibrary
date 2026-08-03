@@ -4,9 +4,9 @@
 @using Monica.Markdown.UIMarkdown.Models
 @using Monica.Markdown.UIMarkdown.State
 @using Monica.Markdown.UIMarkdown.Support
-@implements IDisposable
+@implements IAsyncDisposable
 
-@inject MarkdownDocumentSearchState SearchState
+@inject MarkdownDocumentSearchStateFactory SearchStateFactory
 @inject IStringLocalizer<MarkdownResource> L
 
 <MudDialog>
@@ -89,7 +89,7 @@
                             <MudIcon Icon="@Icons.Material.Filled.TravelExplore"
                                      Size="Size.Large"
                                      Color="Color.Default"
-                                     Style="opacity: 0.35;" />
+                                     Class="document-search-empty-icon" />
                             <MudText Typo="Typo.body1">@L["MarkdownViewer:Dialogs:Search:Hint"]</MudText>
                         </MudStack>
                     </div>
@@ -109,7 +109,7 @@
                             <MudIcon Icon="@Icons.Material.Filled.SearchOff"
                                      Size="Size.Large"
                                      Color="Color.Default"
-                                     Style="opacity: 0.35;" />
+                                     Class="document-search-empty-icon" />
                             <MudText Typo="Typo.body1">@L["MarkdownViewer:Dialogs:Search:NoResults"]</MudText>
                         </MudStack>
                     </div>
@@ -163,9 +163,16 @@
     [Parameter]
     public string? CurrentCulture { get; set; }
 
+    private MarkdownDocumentSearchState SearchState { get; set; } = null!;
+
+    protected override void OnInitialized()
+    {
+        SearchState = SearchStateFactory.Create(CurrentGroup, CurrentCulture);
+    }
+
     protected override void OnParametersSet()
     {
-        SearchState.Attach(CurrentGroup, CurrentCulture, () => InvokeAsync(StateHasChanged));
+        SearchState.UpdateContext(CurrentGroup, CurrentCulture);
     }
 
     private void SelectResult(MarkdownDocumentSearchResult result)
@@ -197,8 +204,8 @@
         return parts.Count == 0 ? null : string.Join(" / ", parts);
     }
 
-    public void Dispose()
+    public async ValueTask DisposeAsync()
     {
-        SearchState.Dispose();
+        await SearchState.DisposeAsync();
     }
 }

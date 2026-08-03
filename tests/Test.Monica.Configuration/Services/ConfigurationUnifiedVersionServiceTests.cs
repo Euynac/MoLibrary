@@ -77,11 +77,13 @@ public sealed class ConfigurationUnifiedVersionServiceTests
     {
         return new ConfigurationFacade(
             definitionResolver: null!,
+            definitionRegistry: null!,
+            definitionMaintenanceStore: null!,
             mutationGroupApplyService: null!,
             historyService: null!,
             mutationGroupService: null!,
             rollbackService: null!,
-            unifiedVersionService,
+            unifiedVersionService: unifiedVersionService,
             effectiveValueStore: null!,
             historyStore: null!,
             metadataStore: null!,

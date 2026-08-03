@@ -149,6 +149,7 @@
     [Parameter] public ConfigurationEffectiveValue? EffectiveValue { get; set; }
     [Parameter] public ConfigurationSourceDescriptor? ExternalEffectiveSource { get; set; }
     [Parameter] public LogicalPath? HighlightedPath { get; set; }
+    [Parameter] public bool ReadOnly { get; set; }
     [Parameter] public EventCallback Changed { get; set; }
     [Parameter] public EventCallback CommittedChanged { get; set; }
 
@@ -190,7 +191,8 @@
 
     private bool IsExternalEffectiveSource => EffectiveSourceForDisplay is { Kind: not ConfigurationSourceKind.MonicaEffectiveStore };
 
-    private bool IsCurrentSourceReadOnly => EffectiveSource is { Kind: not ConfigurationSourceKind.MonicaEffectiveStore, IsWritable: false };
+    private bool IsCurrentSourceReadOnly =>
+        ReadOnly || EffectiveSource is { Kind: not ConfigurationSourceKind.MonicaEffectiveStore, IsWritable: false };
 
     private bool CanInspectSourceChain => Definition.Origin == ConfigurationDefinitionOrigin.LocalScan;
 
@@ -421,6 +423,11 @@
 
     private async Task EditComplexValue()
     {
+        if (IsCurrentSourceReadOnly)
+        {
+            return;
+        }
+
         var effectiveValue = await LoadComplexEffectiveValueAsync();
         if (effectiveValue is null)
         {
@@ -465,7 +472,7 @@
         parameters.Add(dialog => dialog.Node, Node);
         parameters.Add(dialog => dialog.EffectiveValue, effectiveValue);
         parameters.Add(dialog => dialog.PendingChanges, StateStore.GetPending());
-        parameters.Add(dialog => dialog.AllowJsonEdit, true);
+        parameters.Add(dialog => dialog.AllowJsonEdit, !IsCurrentSourceReadOnly);
         var dialog = await DialogService.ShowAsync<ConfigurationCurrentValuePreviewDialog>(L["Dialogs:CurrentValue:Title"], parameters, new DialogOptions
         {
             MaxWidth = MaxWidth.ExtraLarge,
@@ -480,6 +487,11 @@
 
     private async Task EditComplexJsonAsync()
     {
+        if (IsCurrentSourceReadOnly)
+        {
+            return;
+        }
+
         var effectiveValue = await LoadComplexEffectiveValueAsync();
         if (effectiveValue is null)
         {
@@ -542,6 +554,7 @@
         parameters.Add(dialog => dialog.HistoryRequest, request);
         parameters.Add(dialog => dialog.InitialPage, page);
         parameters.Add(dialog => dialog.Definition, Definition);
+        parameters.Add(dialog => dialog.AllowRollback, !ReadOnly);
         parameters.Add(dialog => dialog.FocusPath, Node.RelativePath);
         parameters.Add(dialog => dialog.Title, L["History:Dialog:MutationTitle", Definition.DisplayName]);
         var dialog = await DialogService.ShowAsync<ConfigurationHistoryDiffDialog>(L["History:Dialog:Title"], parameters, new DialogOptions

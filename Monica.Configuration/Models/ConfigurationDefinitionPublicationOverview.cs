@@ -21,6 +21,11 @@ public sealed record ConfigurationDefinitionPublicationOverview
     public int SchemaVersion { get; init; }
 
     /// <summary>
+    /// Gets whether the definition still has a current logical publisher.
+    /// </summary>
+    public ConfigurationDefinitionLifecycleState LifecycleState { get; init; }
+
+    /// <summary>
     /// Gets the conservative reload behavior aggregated from current publisher states.
     /// </summary>
     public ConfigurationReloadBehavior ReloadBehavior { get; init; }

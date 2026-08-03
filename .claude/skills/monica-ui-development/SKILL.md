@@ -1,7 +1,6 @@
 ---
 name: monica-ui-development
-description: This skill should be used when the user asks to create or modify Blazor UI components, build MudBlazor pages, style MudBlazor components, fix CSS isolation, customize themes, migrate to MudBlazor v9, validate MudBlazor CSS variables, or implement browser storage with IBrowserStorage.
-version: 2.13.0
+description: This skill should be used when the user asks to create or modify Blazor UI components, build MudBlazor pages, style MudBlazor components, fix CSS isolation, customize themes, add offline WOFF2 font assets, migrate to MudBlazor v9, validate MudBlazor CSS variables, or implement browser storage with IBrowserStorage.
 ---
 
 # Monica UI Development Guide
@@ -18,9 +17,9 @@ Project-local temporary state for this skill is stored under:
 
 When creating or modifying Monica UI components or pages, also use `monica-ui-audit` as a companion guardrail.
 
-- For focused component/page edits, run a targeted P0-P3 audit before changing files and let the findings shape the fix.
+- For focused component/page edits, run a targeted P0-P4 audit before changing files and let the findings shape the fix.
 - For broad UI scopes, report the audit findings first, then fix the agreed items in priority order.
-- Treat Rule #9 layout issues as audit-relevant even when there is no P0/P1 violation: missing local spacing, overflow control, centering, or shell structure belongs in the owning component `.razor.css`.
+- Treat Rule #9 page-local layout issues as audit-relevant even when they do not rise to a P2 containment violation: missing local spacing, overflow control, centering, or shell structure belongs in the owning component `.razor.css`.
 - Do not move component-specific layout into theme CSS just to make the audit pass; theme files own global MudBlazor visuals, not page-local layout.
 
 ## MudBlazor Source Access (Use Only When Needed)
@@ -43,7 +42,7 @@ This check invokes the user-level `$inspect-dependency-source` skill with `resol
 The resolver CLI is discovered in this order:
 
 1. `INSPECT_DEPENDENCY_SOURCE_CLI`
-2. `$HOME/.agents/skills/inspect-dependency-source/scripts/inspect_dependency_source.py`
+2. `$HOME/.claude/skills/inspect-dependency-source/scripts/inspect_dependency_source.py`
 3. `$HOME/.claude/skills/inspect-dependency-source/scripts/inspect_dependency_source.py`
 
 If the current task is source-dependent and the check fails, you must **stop that work immediately**. Do not continue by guessing from memory, migration notes, or outdated examples.
@@ -57,7 +56,7 @@ Required recovery flow for source-dependent work:
 Typical registration commands:
 
 ```bash
-python3 "${INSPECT_DEPENDENCY_SOURCE_CLI:-$HOME/.agents/skills/inspect-dependency-source/scripts/inspect_dependency_source.py}" repo add-local <mudblazor-source-root> --alias MudBlazor
+python3 "${INSPECT_DEPENDENCY_SOURCE_CLI:-$HOME/.claude/skills/inspect-dependency-source/scripts/inspect_dependency_source.py}" repo add-local <mudblazor-source-root> --alias MudBlazor
 ```
 
 If the task is not source-dependent and the existing references are enough, continue without source inspection.
@@ -148,8 +147,19 @@ Always specify `T` for generic MudBlazor components:
 ### 4. Lifecycle and JS Interop
 
 - Do not run JS interop in `OnInitializedAsync`.
-- Use `OnAfterRenderAsync(firstRender)` for JS interop and heavy first-load tasks.
-- Use `CancellationToken` for async loading tasks.
+- Use `OnInitializedAsync` or `OnParametersSetAsync` for data initialization and leave the component in a valid renderable state before each await. Reserve `OnAfterRenderAsync` for DOM-dependent work that genuinely requires rendered elements; do not turn it into a general first-load orchestrator.
+- Treat every incomplete `await` as a re-entrancy boundary. Component disposal or another lifecycle/event callback may run before the continuation resumes, including inside `OnAfterRenderAsync`.
+- Give long-lived component/page-state work a component-lifetime `CancellationTokenSource`. Cancel it at the start of disposal, pass its token to calls whose cancellation semantics cannot orphan an owned resource, and check cancellation/disposal after awaited operations that cannot accept the token. Always observe resource-producing operations such as JS module imports so a late-created result can be disposed instead of leaked.
+- A non-null `IJSObjectReference` is not proof that the reference is usable. Before teardown, prevent new acquisitions and serialize with or drain operations that already captured the reference; only then atomically detach and dispose it. Do not leave disposed references published to render/event continuations.
+- If an async module import or initialization completes after the owner is disposed, dispose the newly created reference instead of assigning it to component state.
+- Track and observe every background task. Navigation callbacks, timers, and event handlers must not start unbounded fire-and-forget work that can render, mutate state, or use JS after disposal.
+- Do not register a component-consumed disposable service as transient. DI retains disposable transients for the app/circuit scope, and manual component disposal adds conflicting ownership. Prefer a non-disposable factory that creates a component-owned session. Use an explicit component-owned scope such as `OwningComponentBase` only after inspecting the service's dependency graph: a separate scope does not automatically preserve access to services bound to the existing Blazor circuit scope.
+- Retain every `DotNetObjectReference.Create(...)` result in its .NET owner and dispose it deterministically. Passing an inline reference to JavaScript does not transfer ownership by itself.
+- Stop all JavaScript observers, listeners, animation callbacks, and other callback producers before disposing their `DotNetObjectReference`.
+- Keep per-component JavaScript state in a page/session instance rooted by concrete `ElementReference`s. Avoid module-global active state and document-global selectors that allow an old component's teardown to affect a replacement instance, and cancel queued animation frames/timers during JS-side cleanup.
+- Do not invoke JavaScript from `DisposeAsync` to clean up DOM. Use a client-side `MutationObserver`; disposing an owned `IJSObjectReference` in `DisposeAsync` is still appropriate.
+- On Blazor Server, catch expected `JSDisconnectedException` around interop/module disposal when the circuit can already be gone. Do not catch `ObjectDisposedException` from a locally owned interop reference; it signals incorrect ownership or teardown ordering.
+- Make disposal idempotent and fast. When initialization, invocation, and disposal can overlap, cover the interleaving with a deterministic test that blocks the async operation, starts disposal, and then releases the continuation.
 - For page-owned auto-refresh, prefer the `PeriodicTimer` pattern in `references/auto-refresh-page-pattern.md` over `System.Timers.Timer`.
 
 ### 5. MudBlazor v9 Async APIs
@@ -165,7 +175,11 @@ Always specify `T` for generic MudBlazor components:
 ### 7. Offline/Intranet Requirements
 
 - No online font/CDN dependencies for runtime UI assets.
-- Keep static resources local (`wwwroot/fonts`, local CSS/JS assets).
+- Runtime font assets must be local WOFF2 files under `wwwroot/fonts`; never keep source TTF/OTF files under Monica UI package projects.
+- Keep source TTF/OTF files in ignored tooling/cache paths such as `.tmp/monica-ui-font-sources/`, or pass them explicitly to tooling with `--source-font`.
+- When mirroring a third-party theme, vendor the exact source font when possible, generate WOFF2 runtime files, and reference them through local `@font-face` rules.
+- For CJK or other large display fonts, prefer checked WOFF2 subsets generated from localization resources over full-font runtime bundles.
+- Keep all other static resources local (`wwwroot/fonts`, local CSS/JS assets).
 
 ### 8. Layout-Owned AppBar and Viewport Height
 
@@ -176,13 +190,14 @@ Always specify `T` for generic MudBlazor components:
 - Loading, empty, and placeholder states should consume available space with flex/grid alignment when the parent height is available, instead of using large fixed top/bottom padding for visual centering.
 - Keep scrolling in `.mo-body-content` or the page's own scroll containers; do not move scrolling back to `body`.
 
-### 9. Theme-First Visual Simplicity and Component Responsibility
+### 9. Theme-First Visual Richness and Component Responsibility
 
-- Prefer simple, quiet layouts that mostly rely on the active MudBlazor theme.
-- Do not introduce gradients, glow effects, decorative shadows, or custom multi-color surfaces unless the user explicitly asks for a branded visual treatment.
-- Favor `var(--mud-palette-surface)`, `var(--mud-palette-background-gray)`, `var(--mud-palette-lines-default)`, and `var(--mud-palette-text-secondary)` over inventing new color systems.
-- Use CSS isolation primarily for layout, spacing, centering, sizing, and overflow control. Do not use it to repaint large parts of MudBlazor unless there is a clear product requirement.
-- When list or card UIs become dense, remove redundant metadata first. Prefer a minimal primary view and move secondary details into dialogs, drawers, or detail panes.
+- Do not default to a monotonous layout made almost entirely of neutral surfaces plus one accent color. Use clear hierarchy and enough visual variation to make sections and states easy to scan.
+- Use `var(--mud-palette-*)`, approved `var(--mo-color-*)` tokens, and MudBlazor `Color`, `Variant`, and `Elevation` parameters. Give statuses, severities, categories, progress, and selection purposeful semantic colors when differentiation helps the user.
+- Tinted surfaces, subtle gradients, borders, elevation, and restrained shadows or glow are allowed when they improve hierarchy, depth, or focus. Build them from approved tokens or theme-owned styles and preserve contrast, focus visibility, and readability.
+- Theme-first means coherent with the active theme, not colorless. Avoid both timid one-accent styling and arbitrary rainbow decoration; every visual treatment should communicate hierarchy, state, grouping, or atmosphere.
+- Component CSS may own component-specific, token-based presentation as well as layout. Keep global MudBlazor visual language in theme CSS, and do not create a raw, page-private color system.
+- When list or card UIs become dense, prioritize scanability and task flow. Remove genuinely redundant metadata or use progressive disclosure, but retain information needed for comparison, diagnosis, and decisions.
 - If centered alignment looks wrong, fix the container layout first (`display`, `align-items`, `justify-content`, `min-height`, `min-width`) before adding margin or padding hacks.
 - Cards that visually belong to the same row should generally align to the same height. Prefer row-level grid/flex stretch plus wrapper-owned `height: 100%` over fixed pixel heights.
 
@@ -314,7 +329,8 @@ For `Res/Res<T>` usage, `IResultEnvelope`, and the `IsFailed` pattern in UI serv
 - `scripts/check_mudblazor_source.py` - Invoke `inspect-dependency-source resolve MudBlazor --json`, validate the returned path, and verify that the required source marker exists.
 - `scripts/sync_mud_css_variables.py` - Initialize/update real MudBlazor CSS variable JSON into `.tmp/monica-ui-development/mudblazor-css-variables.json`.
 - `scripts/validate_mud_css_variables.py` - Validate MudBlazor variable usage in CSS/Razor files and apply safe auto-fixes using the generated `.tmp` variable list by default.
-- `scripts/font_downloader.py` - Download fonts for offline usage.
+- `scripts/font_downloader.py` - Download fonts for offline WOFF2 usage.
+- `scripts/subset_ui_font.py` - Generate or check localization-driven WOFF2 subsets from source fonts stored outside Monica UI packages.
 
 ## Quick Checklist
 
@@ -326,9 +342,12 @@ For `Res/Res<T>` usage, `IResultEnvelope`, and the `IsFailed` pattern in UI serv
 - [ ] Use MudBlazor v9 async APIs
 - [ ] Use valid MudBlazor CSS variables only
 - [ ] Run CSS variable validation when styling changes
+- [ ] Keep runtime fonts local, WOFF2-only, and referenced through local `@font-face`
+- [ ] Keep source TTF/OTF files outside package projects and regenerate/check subsets after localization text changes
 - [ ] Use `IBrowserStorage` for browser persistence
 - [ ] Keep AppBar height and viewport compensation in the shell layout, not in page CSS
 - [ ] Use `$monica-ui-localization` for any user-facing text or i18n resource changes
+- [ ] Check that the page does not collapse into neutral surfaces plus one accent color
 
 ## Page Complexity Checklist
 

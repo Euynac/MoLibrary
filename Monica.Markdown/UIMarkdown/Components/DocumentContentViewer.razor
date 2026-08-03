@@ -303,11 +303,16 @@
     private string? _lastDocumentRelativePath;
     private string? _lastStrippedContent;
 
-    protected override void OnParametersSet()
+    protected override async Task OnParametersSetAsync()
     {
         _strippedContent = RewriteHtmlDocumentLinks(StripFrontMatterAndLeadingTitle(Content));
-        ResetHeadingsIfDocumentChanged();
+        var headingsChanged = ResetHeadingsIfDocumentChanged();
         BuildBreadcrumbs();
+
+        if (headingsChanged)
+        {
+            await HeadingsChanged.InvokeAsync(_headings);
+        }
     }
 
     private void BuildBreadcrumbs()
@@ -469,33 +474,32 @@
             Document?.Culture);
     }
 
-    private Task OnHeadingsChanged(IReadOnlyList<MoMarkdownHeading> headings)
+    private async Task OnHeadingsChanged(IReadOnlyList<MoMarkdownHeading> headings)
     {
         if (_headings.SequenceEqual(headings))
         {
-            return Task.CompletedTask;
+            return;
         }
 
         _headings = headings.ToArray();
         BuildBreadcrumbs();
-        _ = HeadingsChanged.InvokeAsync(_headings);
-        return InvokeAsync(StateHasChanged);
+        await HeadingsChanged.InvokeAsync(_headings);
     }
 
-    private void ResetHeadingsIfDocumentChanged()
+    private bool ResetHeadingsIfDocumentChanged()
     {
         var currentRelativePath = Document?.RelativePath;
 
         if (string.Equals(_lastDocumentRelativePath, currentRelativePath, StringComparison.OrdinalIgnoreCase)
             && string.Equals(_lastStrippedContent, _strippedContent, StringComparison.Ordinal))
         {
-            return;
+            return false;
         }
 
         _lastDocumentRelativePath = currentRelativePath;
         _lastStrippedContent = _strippedContent;
         _headings = [];
-        _ = HeadingsChanged.InvokeAsync(_headings);
+        return true;
     }
 
     private List<MoMarkdownHeading> ResolveHeadingTrail()

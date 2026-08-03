@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import argparse
 import json
 import sys
 import xml.etree.ElementTree as ET
@@ -22,6 +23,18 @@ EXPECTED_DEPENDENCY_POLICY = {
 def fail(message: str) -> None:
     print(f"package tier validation failed: {message}", file=sys.stderr)
     raise SystemExit(1)
+
+
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(
+        description="Validate Monica's public package maturity catalog."
+    )
+    parser.add_argument(
+        "--list-public-projects",
+        action="store_true",
+        help="Print validated public package project paths instead of the summary.",
+    )
+    return parser.parse_args()
 
 
 def read_project(project_path: Path) -> tuple[str, bool]:
@@ -48,6 +61,7 @@ def read_project_references(project_path: Path) -> list[Path]:
 
 
 def main() -> None:
+    args = parse_args()
     catalog = json.loads(CATALOG_PATH.read_text(encoding="utf-8"))
     if catalog.get("schemaVersion") != 1:
         fail("schemaVersion must be 1")
@@ -135,6 +149,11 @@ def main() -> None:
             "package dependency maturity flows in the wrong direction: "
             + "; ".join(sorted(invalid_edges))
         )
+
+    if args.list_public_projects:
+        for _, project_path in sorted(project_packages.items()):
+            print(project_path.relative_to(ROOT).as_posix())
+        return
 
     print(
         "package tier validation passed: "

@@ -11,6 +11,7 @@ using Monica.Markdown.Facades;
 using Monica.Markdown.Localization;
 using Monica.Markdown.Models;
 using Monica.Markdown.UIMarkdown.Dialogs;
+using Monica.Markdown.UIMarkdown.Interop;
 using Monica.Markdown.UIMarkdown.Models;
 using Monica.Modules;
 using Monica.UI.Shared.Components.Markdown;
@@ -19,9 +20,40 @@ using Monica.Tool.Algorithms.Trees;
 namespace Monica.Markdown.UIMarkdown.State;
 
 /// <summary>
+/// Creates markdown viewer state whose asynchronous lifetime is owned by the rendering page.
+/// </summary>
+internal sealed class MarkdownViewerPageStateFactory(
+    MarkdownFacade markdownFacade,
+    IDialogService dialogService,
+    NavigationManager navigationManager,
+    ISnackbar snackbar,
+    IJSRuntime jsRuntime,
+    IStringLocalizer<MarkdownResource> localizer,
+    IOptions<ModuleLocalizationOption> localizationOptions)
+{
+    /// <summary>
+    /// Creates and attaches a state instance to its owning component.
+    /// </summary>
+    internal MarkdownViewerPageState Create(Func<Task> renderRequestedAsync)
+    {
+        var state = new MarkdownViewerPageState(
+            markdownFacade,
+            dialogService,
+            navigationManager,
+            snackbar,
+            jsRuntime,
+            localizer,
+            localizationOptions);
+
+        state.Attach(renderRequestedAsync);
+        return state;
+    }
+}
+
+/// <summary>
 /// Owns the transient UI state and page orchestration for the markdown viewer route.
 /// </summary>
-public sealed class MarkdownViewerPageState(
+internal sealed class MarkdownViewerPageState(
     MarkdownFacade markdownFacade,
     IDialogService dialogService,
     NavigationManager navigationManager,
@@ -31,6 +63,13 @@ public sealed class MarkdownViewerPageState(
     IOptions<ModuleLocalizationOption> localizationOptions)
     : IAsyncDisposable
 {
+    private readonly CancellationTokenSource _lifetimeCancellation = new();
+    private readonly TaskCompletionSource _groupsReady =
+        new(TaskCreationOptions.RunContinuationsAsynchronously);
+    private readonly Lock _locationOperationsLock = new();
+    private readonly List<Task> _locationOperations = [];
+    private readonly TaskCompletionSource _disposedCompletion =
+        new(TaskCreationOptions.RunContinuationsAsynchronously);
     private readonly ModuleLocalizationOption _localizationOption = localizationOptions.Value;
     private readonly DialogOptions _groupSwitcherDialogOptions = new()
     {
@@ -50,13 +89,14 @@ public sealed class MarkdownViewerPageState(
 
     private Func<Task>? _renderRequestedAsync;
     private bool _isAttached;
-    private IJSObjectReference? _hashObserverModule;
-    private IJSObjectReference? _layoutModule;
-    private DotNetObjectReference<MarkdownViewerPageState>? _hashObserverReference;
+    private MarkdownViewerInteropSession? _interopSession;
+    private CancellationTokenSource? _activeLocationCancellation;
+    private Task? _initializationTask;
     private bool _pendingHeadingTrackerRefresh;
     private PendingSearchNavigation? _pendingSearchNavigation;
     private bool _pendingSearchHighlightClear;
     private string? _currentTreeCulture;
+    private int _disposeRequested;
 
     /// <summary>
     /// Whether the page is loading its document groups.
@@ -164,6 +204,8 @@ public sealed class MarkdownViewerPageState(
     /// </summary>
     public void Attach(Func<Task> renderRequestedAsync)
     {
+        ObjectDisposedException.ThrowIf(IsDisposeRequested, this);
+
         _renderRequestedAsync = renderRequestedAsync;
 
         if (_isAttached)
@@ -172,26 +214,41 @@ public sealed class MarkdownViewerPageState(
         }
 
         navigationManager.LocationChanged += OnLocationChanged;
+        _interopSession = new MarkdownViewerInteropSession(jsRuntime, OnHashChangedAsync);
         _isAttached = true;
     }
 
     /// <summary>
-    /// Runs page initialization and post-render coordination.
+    /// Loads non-DOM page data and queues the current route through the navigation coordinator.
     /// </summary>
-    public async Task HandleAfterRenderAsync(bool firstRender)
+    public Task InitializeAsync()
     {
+        if (IsDisposeRequested)
+        {
+            return Task.CompletedTask;
+        }
+
+        return _initializationTask ??= InitializeCoreAsync();
+    }
+
+    /// <summary>
+    /// Initializes and synchronizes DOM-bound behavior after the viewer has rendered.
+    /// </summary>
+    public async Task HandleAfterRenderAsync(ElementReference viewerRoot, bool firstRender)
+    {
+        if (IsDisposeRequested || _interopSession is null)
+        {
+            return;
+        }
+
         if (firstRender)
         {
-            _layoutModule = await jsRuntime.InvokeAsync<IJSObjectReference>(
-                "import", "./_content/Monica.Markdown/js/markdown-layout.js");
-            ShowSidebar = await _layoutModule.InvokeAsync<bool>("shouldShowSidebarByDefault");
-
-            await LoadGroupsAsync();
-
-            _hashObserverModule = await jsRuntime.InvokeAsync<IJSObjectReference>(
-                "import", "./_content/Monica.UI/js/mo-url-hash-observer.js");
-            _hashObserverReference = DotNetObjectReference.Create(this);
-            await _hashObserverModule.InvokeVoidAsync("observeHash", _hashObserverReference);
+            var showSidebar = await _interopSession.InitializeAsync(viewerRoot);
+            if (!IsDisposeRequested && showSidebar is not null)
+            {
+                ShowSidebar = showSidebar.Value;
+                await NotifyStateChangedAsync();
+            }
         }
 
         if (_pendingHeadingTrackerRefresh)
@@ -215,7 +272,7 @@ public sealed class MarkdownViewerPageState(
     /// </summary>
     public async Task OpenGroupSwitcherAsync()
     {
-        if (Groups is not { Count: > 0 } groups)
+        if (IsDisposeRequested || Groups is not { Count: > 0 } groups)
         {
             return;
         }
@@ -231,8 +288,14 @@ public sealed class MarkdownViewerPageState(
             parameters,
             _groupSwitcherDialogOptions);
 
+        if (IsDisposeRequested)
+        {
+            return;
+        }
+
         var result = await dialog.Result;
-        if (result is not { Canceled: false, Data: string selectedGroupKey }
+        if (IsDisposeRequested
+            || result is not { Canceled: false, Data: string selectedGroupKey }
             || string.Equals(selectedGroupKey, SelectedGroupKey, StringComparison.Ordinal))
         {
             return;
@@ -246,7 +309,7 @@ public sealed class MarkdownViewerPageState(
     /// </summary>
     public async Task OpenDocumentSearchAsync()
     {
-        if (Groups is not { Count: > 0 })
+        if (IsDisposeRequested || Groups is not { Count: > 0 })
         {
             return;
         }
@@ -262,8 +325,14 @@ public sealed class MarkdownViewerPageState(
             parameters,
             _documentSearchDialogOptions);
 
+        if (IsDisposeRequested)
+        {
+            return;
+        }
+
         var result = await dialog.Result;
-        if (result is not { Canceled: false, Data: MarkdownDocumentSearchResult searchResult })
+        if (IsDisposeRequested
+            || result is not { Canceled: false, Data: MarkdownDocumentSearchResult searchResult })
         {
             return;
         }
@@ -274,8 +343,13 @@ public sealed class MarkdownViewerPageState(
     /// <summary>
     /// Handles a new group selection from the sidebar or switcher dialog.
     /// </summary>
-    public async Task OnGroupSelectedAsync(string groupKey)
+    public Task OnGroupSelectedAsync(string groupKey)
     {
+        if (IsDisposeRequested)
+        {
+            return Task.CompletedTask;
+        }
+
         ResetSearchHighlight();
         ClearMissingTranslation();
         CurrentAnchorId = null;
@@ -288,25 +362,30 @@ public sealed class MarkdownViewerPageState(
             SelectedCulture = targetCulture;
         }
 
-        await LoadGroupTreeAsync(groupKey, targetCulture);
         NavigateToLocation(new MarkdownViewerLocation(groupKey, Culture: SelectedCulture));
+        return Task.CompletedTask;
     }
 
     /// <summary>
     /// Handles a document selection from the document tree.
     /// </summary>
-    public async Task OnDocumentSelectedAsync(MarkdownDocument? document)
+    public Task OnDocumentSelectedAsync(MarkdownDocument? document)
     {
+        if (IsDisposeRequested)
+        {
+            return Task.CompletedTask;
+        }
+
         ResetSearchHighlight();
         ClearMissingTranslation();
         CurrentAnchorId = null;
         DocumentHeadings = [];
         _pendingHeadingTrackerRefresh = true;
-        await LoadDocumentAsync(document);
         NavigateToLocation(new MarkdownViewerLocation(
             SelectedGroupKey,
             document?.NavigationRelativePath,
             Culture: SelectedCulture));
+        return Task.CompletedTask;
     }
 
     /// <summary>
@@ -314,7 +393,8 @@ public sealed class MarkdownViewerPageState(
     /// </summary>
     public Task OnLanguageSelectedAsync(string culture)
     {
-        if (CurrentGroup is not { IsMultilingual: true }
+        if (IsDisposeRequested
+            || CurrentGroup is not { IsMultilingual: true }
             || string.IsNullOrWhiteSpace(culture)
             || string.Equals(SelectedCulture, culture, StringComparison.OrdinalIgnoreCase))
         {
@@ -345,6 +425,11 @@ public sealed class MarkdownViewerPageState(
     /// </summary>
     public void ToggleSidebar()
     {
+        if (IsDisposeRequested)
+        {
+            return;
+        }
+
         ShowSidebar = !ShowSidebar;
     }
 
@@ -353,6 +438,11 @@ public sealed class MarkdownViewerPageState(
     /// </summary>
     public void ToggleTableOfContents()
     {
+        if (IsDisposeRequested)
+        {
+            return;
+        }
+
         ShowTableOfContents = !ShowTableOfContents;
     }
 
@@ -361,6 +451,11 @@ public sealed class MarkdownViewerPageState(
     /// </summary>
     public Task OnDocumentHeadingsChangedAsync(IReadOnlyList<MoMarkdownHeading> headings)
     {
+        if (IsDisposeRequested)
+        {
+            return Task.CompletedTask;
+        }
+
         var normalizedHeadings = headings
             .Where(static heading => heading.Level <= 3)
             .ToArray();
@@ -381,7 +476,9 @@ public sealed class MarkdownViewerPageState(
     /// </summary>
     public Task OnHeadingSelectedAsync(string anchorId)
     {
-        if (SelectedDocument is null || string.IsNullOrWhiteSpace(anchorId))
+        if (IsDisposeRequested
+            || SelectedDocument is null
+            || string.IsNullOrWhiteSpace(anchorId))
         {
             return Task.CompletedTask;
         }
@@ -396,11 +493,15 @@ public sealed class MarkdownViewerPageState(
     }
 
     /// <summary>
-    /// Receives hash updates from the shared hash observer JavaScript module.
+    /// Receives hash updates from this viewer's instance-scoped JavaScript session.
     /// </summary>
-    [JSInvokable]
     public Task OnHashChangedAsync(string? anchorId)
     {
+        if (IsDisposeRequested)
+        {
+            return Task.CompletedTask;
+        }
+
         var normalizedAnchorId = ResolveCurrentAnchorId(anchorId);
         if (string.Equals(CurrentAnchorId, normalizedAnchorId, StringComparison.Ordinal))
         {
@@ -414,95 +515,121 @@ public sealed class MarkdownViewerPageState(
     /// <inheritdoc />
     public async ValueTask DisposeAsync()
     {
-        if (_isAttached)
+        if (Interlocked.Exchange(ref _disposeRequested, 1) != 0)
         {
-            navigationManager.LocationChanged -= OnLocationChanged;
-            _isAttached = false;
+            await _disposedCompletion.Task;
+            return;
         }
 
-        if (_hashObserverModule is not null && _hashObserverReference is not null)
+        try
         {
+            _lifetimeCancellation.Cancel();
+            _renderRequestedAsync = null;
+
+            if (_isAttached)
+            {
+                navigationManager.LocationChanged -= OnLocationChanged;
+                _isAttached = false;
+            }
+
+            Task[] locationOperations;
+            lock (_locationOperationsLock)
+            {
+                _activeLocationCancellation?.Cancel();
+                locationOperations = _locationOperations.ToArray();
+            }
+
+            _groupsReady.TrySetCanceled(_lifetimeCancellation.Token);
+
+            var pendingOperations = _initializationTask is null
+                ? locationOperations
+                : [.. locationOperations, _initializationTask];
+
+            var interopSession = _interopSession;
+            _interopSession = null;
+
             try
             {
-                await _hashObserverModule.InvokeVoidAsync("unobserveHash", _hashObserverReference);
+                if (pendingOperations.Length > 0)
+                {
+                    await Task.WhenAll(pendingOperations);
+                }
             }
-            catch (JSDisconnectedException)
+            finally
             {
+                if (interopSession is not null)
+                {
+                    await interopSession.DisposeAsync();
+                }
             }
         }
-
-        _hashObserverReference?.Dispose();
-
-        if (_hashObserverModule is not null)
+        finally
         {
-            try
-            {
-                await _hashObserverModule.DisposeAsync();
-            }
-            catch (JSDisconnectedException)
-            {
-            }
-        }
-
-        if (_layoutModule is not null)
-        {
-            try
-            {
-                await _layoutModule.InvokeVoidAsync("clearSearchHit");
-            }
-            catch (JSDisconnectedException)
-            {
-            }
-
-            try
-            {
-                await _layoutModule.InvokeVoidAsync("disposeActiveHeadingTracker");
-            }
-            catch (JSDisconnectedException)
-            {
-            }
-
-            try
-            {
-                await _layoutModule.DisposeAsync();
-            }
-            catch (JSDisconnectedException)
-            {
-            }
+            _lifetimeCancellation.Dispose();
+            _disposedCompletion.TrySetResult();
         }
     }
 
-    private async Task LoadGroupsAsync()
+    private async Task InitializeCoreAsync()
+    {
+        try
+        {
+            await LoadGroupsAsync(_lifetimeCancellation.Token);
+            _lifetimeCancellation.Token.ThrowIfCancellationRequested();
+            _groupsReady.TrySetResult();
+            QueueLocation(MarkdownViewerLocation.FromAbsoluteUri(navigationManager.Uri));
+        }
+        catch (OperationCanceledException) when (_lifetimeCancellation.IsCancellationRequested)
+        {
+        }
+    }
+
+    private async Task LoadGroupsAsync(CancellationToken cancellationToken)
     {
         IsLoading = true;
         await NotifyStateChangedAsync();
 
         try
         {
-            if ((await markdownFacade.GetAllDocumentGroupsAsync())
-                .IsFailed(out var error, out var groups))
+            var response = await markdownFacade.GetAllDocumentGroupsAsync();
+            cancellationToken.ThrowIfCancellationRequested();
+
+            if (response.IsFailed(out var error, out var groups))
             {
                 snackbar.Add(error, Severity.Error);
                 return;
             }
 
             Groups = groups;
-            await ApplyLocationAsync(MarkdownViewerLocation.FromAbsoluteUri(navigationManager.Uri));
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
         }
         catch (Exception ex)
         {
-            snackbar.Add(localizer["MarkdownViewer:Messages:LoadDataFailed", ex.Message], Severity.Error);
+            if (!IsDisposeRequested)
+            {
+                snackbar.Add(localizer["MarkdownViewer:Messages:LoadDataFailed", ex.Message], Severity.Error);
+            }
         }
         finally
         {
-            IsLoading = false;
-            await NotifyStateChangedAsync();
+            if (!IsDisposeRequested)
+            {
+                IsLoading = false;
+                await NotifyStateChangedAsync();
+            }
         }
     }
 
-    private async Task OpenSearchResultAsync(MarkdownDocumentSearchResult result)
+    private Task OpenSearchResultAsync(MarkdownDocumentSearchResult result)
     {
-        var navigation = new PendingSearchNavigation(Guid.NewGuid().ToString("N"), result);
+        if (IsDisposeRequested)
+        {
+            return Task.CompletedTask;
+        }
+
+        var navigation = new PendingSearchNavigation(result);
         _pendingSearchNavigation = navigation;
         _pendingSearchHighlightClear = false;
 
@@ -516,15 +643,19 @@ public sealed class MarkdownViewerPageState(
 
         if (string.Equals(targetUri, currentUri, StringComparison.Ordinal))
         {
-            await ApplyLocationAsync(location);
-            return;
+            QueueLocation(location);
+            return Task.CompletedTask;
         }
 
         NavigateToLocation(location);
+        return Task.CompletedTask;
     }
 
-    private async Task ApplyLocationAsync(MarkdownViewerLocation location)
+    private async Task ApplyLocationAsync(
+        MarkdownViewerLocation location,
+        CancellationToken cancellationToken)
     {
+        cancellationToken.ThrowIfCancellationRequested();
         var requestedAnchorId = ResolveCurrentAnchorId(location.AnchorId);
         CurrentAnchorId = requestedAnchorId;
         SelectedCulture = ResolveGlobalCulturePreference(location.Culture);
@@ -541,6 +672,7 @@ public sealed class MarkdownViewerPageState(
             ClearMissingTranslation();
             ClearDocumentSelection();
             await NotifyStateChangedAsync();
+            cancellationToken.ThrowIfCancellationRequested();
             return;
         }
 
@@ -554,7 +686,12 @@ public sealed class MarkdownViewerPageState(
             || CurrentTree is null
             || !string.Equals(_currentTreeCulture, activeCulture, StringComparison.OrdinalIgnoreCase))
         {
-            await LoadGroupTreeAsync(targetGroup.Key, activeCulture, requestedAnchorId);
+            await LoadGroupTreeAsync(
+                targetGroup.Key,
+                activeCulture,
+                requestedAnchorId,
+                cancellationToken);
+            cancellationToken.ThrowIfCancellationRequested();
         }
 
         if (targetGroup.HasConfigurationError)
@@ -562,6 +699,7 @@ public sealed class MarkdownViewerPageState(
             ClearMissingTranslation();
             ClearDocumentSelection();
             await NotifyStateChangedAsync();
+            cancellationToken.ThrowIfCancellationRequested();
             return;
         }
 
@@ -571,6 +709,7 @@ public sealed class MarkdownViewerPageState(
             ClearMissingTranslation();
             ClearDocumentSelection();
             await NotifyStateChangedAsync();
+            cancellationToken.ThrowIfCancellationRequested();
             return;
         }
 
@@ -590,6 +729,7 @@ public sealed class MarkdownViewerPageState(
             }
 
             await NotifyStateChangedAsync();
+            cancellationToken.ThrowIfCancellationRequested();
             return;
         }
 
@@ -604,19 +744,23 @@ public sealed class MarkdownViewerPageState(
         if (!isCurrentDocument || DocumentContent is null)
         {
             DocumentHeadings = [];
-            await LoadDocumentAsync(targetDocument, requestedAnchorId);
+            await LoadDocumentAsync(targetDocument, requestedAnchorId, cancellationToken);
+            cancellationToken.ThrowIfCancellationRequested();
             return;
         }
 
         CurrentAnchorId = requestedAnchorId;
         await NotifyStateChangedAsync();
+        cancellationToken.ThrowIfCancellationRequested();
     }
 
     private async Task LoadGroupTreeAsync(
         string groupKey,
         string? culture,
-        string? requestedAnchorId = null)
+        string? requestedAnchorId,
+        CancellationToken cancellationToken)
     {
+        cancellationToken.ThrowIfCancellationRequested();
         SelectedGroupKey = groupKey;
         ClearDocumentSelection();
         ClearMissingTranslation();
@@ -628,11 +772,14 @@ public sealed class MarkdownViewerPageState(
         if (group is null || group.HasConfigurationError)
         {
             await NotifyStateChangedAsync();
+            cancellationToken.ThrowIfCancellationRequested();
             return;
         }
 
-        if ((await markdownFacade.GetDocumentTreeAsync(groupKey, culture))
-            .IsFailed(out var error, out var tree))
+        var response = await markdownFacade.GetDocumentTreeAsync(groupKey, culture);
+        cancellationToken.ThrowIfCancellationRequested();
+
+        if (response.IsFailed(out var error, out var tree))
         {
             snackbar.Add(error, Severity.Error);
             return;
@@ -641,10 +788,15 @@ public sealed class MarkdownViewerPageState(
         CurrentTree = tree;
         _currentTreeCulture = group.IsMultilingual ? culture : null;
         await NotifyStateChangedAsync();
+        cancellationToken.ThrowIfCancellationRequested();
     }
 
-    private async Task LoadDocumentAsync(MarkdownDocument? document, string? requestedAnchorId = null)
+    private async Task LoadDocumentAsync(
+        MarkdownDocument? document,
+        string? requestedAnchorId,
+        CancellationToken cancellationToken)
     {
+        cancellationToken.ThrowIfCancellationRequested();
         SelectedDocument = document;
         DocumentContent = null;
         CurrentAnchorId = requestedAnchorId;
@@ -653,16 +805,20 @@ public sealed class MarkdownViewerPageState(
         {
             IsContentLoading = false;
             await NotifyStateChangedAsync();
+            cancellationToken.ThrowIfCancellationRequested();
             return;
         }
 
         IsContentLoading = true;
         await NotifyStateChangedAsync();
+        cancellationToken.ThrowIfCancellationRequested();
 
         try
         {
-            if ((await markdownFacade.GetDocumentContentAsync(document))
-                .IsFailed(out var error, out var content))
+            var response = await markdownFacade.GetDocumentContentAsync(document);
+            cancellationToken.ThrowIfCancellationRequested();
+
+            if (response.IsFailed(out var error, out var content))
             {
                 snackbar.Add(error, Severity.Error);
                 return;
@@ -672,8 +828,11 @@ public sealed class MarkdownViewerPageState(
         }
         finally
         {
-            IsContentLoading = false;
-            await NotifyStateChangedAsync();
+            if (!cancellationToken.IsCancellationRequested && !IsDisposeRequested)
+            {
+                IsContentLoading = false;
+                await NotifyStateChangedAsync();
+            }
         }
     }
 
@@ -773,24 +932,17 @@ public sealed class MarkdownViewerPageState(
 
     private async Task RefreshHeadingTrackerAsync()
     {
-        if (_layoutModule is null)
+        if (IsDisposeRequested || _interopSession is null)
         {
             return;
         }
 
         _pendingHeadingTrackerRefresh = false;
+        var headingIds = SelectedDocument is null
+            ? Array.Empty<string>()
+            : DocumentHeadings.Select(static heading => heading.Id).ToArray();
 
-        if (SelectedDocument is null || DocumentHeadings.Count == 0)
-        {
-            await _layoutModule.InvokeVoidAsync("disposeActiveHeadingTracker");
-            return;
-        }
-
-        await _layoutModule.InvokeVoidAsync(
-            "observeActiveHeading",
-            DocumentHeadings.Select(static heading => heading.Id).ToArray(),
-            CurrentAnchorId,
-            _hashObserverReference);
+        await _interopSession.RefreshHeadingTrackerAsync(headingIds, CurrentAnchorId);
     }
 
     private void ResetSearchHighlight()
@@ -801,7 +953,8 @@ public sealed class MarkdownViewerPageState(
 
     private bool CanApplySearchNavigation(PendingSearchNavigation navigation)
     {
-        return _layoutModule is not null
+        return !IsDisposeRequested
+               && _interopSession is not null
                && !IsContentLoading
                && SelectedDocument is not null
                && DocumentContent is not null
@@ -814,44 +967,24 @@ public sealed class MarkdownViewerPageState(
 
     private async Task ApplySearchHitAsync(PendingSearchNavigation navigation)
     {
-        if (_layoutModule is null)
+        if (IsDisposeRequested || _interopSession is null)
         {
             return;
         }
 
         _pendingSearchNavigation = null;
-
-        try
-        {
-            await _layoutModule.InvokeAsync<bool>(
-                "highlightSearchHit",
-                navigation.Result.Locator.AnchorId,
-                navigation.Result.Locator.HeadingLevel,
-                navigation.Result.Locator.MatchedText,
-                navigation.Result.Locator.PrefixContext,
-                navigation.Result.Locator.SuffixContext);
-        }
-        catch (JSDisconnectedException)
-        {
-        }
+        await _interopSession.HighlightSearchHitAsync(navigation.Result.Locator);
     }
 
     private async Task ClearSearchHitAsync()
     {
-        if (_layoutModule is null)
+        if (IsDisposeRequested || _interopSession is null)
         {
             return;
         }
 
         _pendingSearchHighlightClear = false;
-
-        try
-        {
-            await _layoutModule.InvokeVoidAsync("clearSearchHit");
-        }
-        catch (JSDisconnectedException)
-        {
-        }
+        await _interopSession.ClearSearchHitAsync();
     }
 
     private string? ResolveCurrentAnchorId(string? anchorId)
@@ -919,6 +1052,11 @@ public sealed class MarkdownViewerPageState(
 
     private void NavigateToLocation(MarkdownViewerLocation location)
     {
+        if (IsDisposeRequested)
+        {
+            return;
+        }
+
         var targetUri = location.ToRelativeUri();
         var currentUri = "/" + navigationManager.ToBaseRelativePath(navigationManager.Uri);
 
@@ -932,13 +1070,74 @@ public sealed class MarkdownViewerPageState(
 
     private void OnLocationChanged(object? sender, LocationChangedEventArgs e)
     {
-        _ = ApplyLocationAsync(MarkdownViewerLocation.FromAbsoluteUri(e.Location));
+        QueueLocation(MarkdownViewerLocation.FromAbsoluteUri(e.Location));
+    }
+
+    private void QueueLocation(MarkdownViewerLocation location)
+    {
+        if (IsDisposeRequested)
+        {
+            return;
+        }
+
+        lock (_locationOperationsLock)
+        {
+            if (IsDisposeRequested)
+            {
+                return;
+            }
+
+            _activeLocationCancellation?.Cancel();
+            var operationCancellation = CancellationTokenSource.CreateLinkedTokenSource(
+                _lifetimeCancellation.Token);
+            _activeLocationCancellation = operationCancellation;
+
+            _locationOperations.RemoveAll(static task => task.IsCompleted);
+            _locationOperations.Add(ProcessLocationAsync(location, operationCancellation));
+        }
+    }
+
+    private async Task ProcessLocationAsync(
+        MarkdownViewerLocation location,
+        CancellationTokenSource operationCancellation)
+    {
+        try
+        {
+            await _groupsReady.Task.WaitAsync(operationCancellation.Token);
+            await ApplyLocationAsync(location, operationCancellation.Token);
+        }
+        catch (OperationCanceledException) when (operationCancellation.IsCancellationRequested)
+        {
+        }
+        catch (Exception ex)
+        {
+            if (!IsDisposeRequested)
+            {
+                snackbar.Add(localizer["MarkdownViewer:Messages:LoadDataFailed", ex.Message], Severity.Error);
+            }
+        }
+        finally
+        {
+            lock (_locationOperationsLock)
+            {
+                if (ReferenceEquals(_activeLocationCancellation, operationCancellation))
+                {
+                    _activeLocationCancellation = null;
+                }
+            }
+
+            operationCancellation.Dispose();
+        }
     }
 
     private Task NotifyStateChangedAsync()
     {
-        return _renderRequestedAsync?.Invoke() ?? Task.CompletedTask;
+        return IsDisposeRequested
+            ? Task.CompletedTask
+            : _renderRequestedAsync?.Invoke() ?? Task.CompletedTask;
     }
 
-    private sealed record PendingSearchNavigation(string RequestKey, MarkdownDocumentSearchResult Result);
+    private bool IsDisposeRequested => Volatile.Read(ref _disposeRequested) != 0;
+
+    private sealed record PendingSearchNavigation(MarkdownDocumentSearchResult Result);
 }

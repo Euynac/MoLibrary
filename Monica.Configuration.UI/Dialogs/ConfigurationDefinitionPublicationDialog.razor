@@ -26,6 +26,13 @@
                 @if (Overview is not null)
                 {
                     <MudStack Row="true" Wrap="Wrap.Wrap" AlignItems="AlignItems.Center" Spacing="1">
+                        <MudChip T="string"
+                                 Size="Size.Small"
+                                 Color="@LifecycleColor(Overview.LifecycleState)"
+                                 Variant="Variant.Filled"
+                                 Icon="@LifecycleIcon(Overview.LifecycleState)">
+                            @LifecycleText(Overview.LifecycleState)
+                        </MudChip>
                         <MudChip T="string" Size="Size.Small" Color="Color.Primary" Variant="Variant.Outlined">
                             @L["DefinitionPublication:CurrentVersions", Overview.SchemaVersion, Overview.DefinitionRevision]
                         </MudChip>
@@ -45,6 +52,12 @@
             }
             else
             {
+                @if (Overview.LifecycleState == ConfigurationDefinitionLifecycleState.Retired)
+                {
+                    <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined">
+                        @L["DefinitionPublication:RetiredNotice"]
+                    </MudAlert>
+                }
                 <div class="configuration-definition-publication-tabs">
                     <MudTabs @bind-ActivePanelIndex="_activeTabIndex"
                              Rounded="true"
@@ -426,6 +439,27 @@
     private static Color ReloadBehaviorColor(ConfigurationReloadBehavior behavior)
     {
         return behavior.RequiresProcessRestart() ? Color.Warning : Color.Info;
+    }
+
+    private string LifecycleText(ConfigurationDefinitionLifecycleState lifecycleState)
+    {
+        return lifecycleState == ConfigurationDefinitionLifecycleState.Retired
+            ? L["State:Definitions:Retired"]
+            : L["State:Definitions:Active"];
+    }
+
+    private static Color LifecycleColor(ConfigurationDefinitionLifecycleState lifecycleState)
+    {
+        return lifecycleState == ConfigurationDefinitionLifecycleState.Retired
+            ? Color.Warning
+            : Color.Success;
+    }
+
+    private static string LifecycleIcon(ConfigurationDefinitionLifecycleState lifecycleState)
+    {
+        return lifecycleState == ConfigurationDefinitionLifecycleState.Retired
+            ? Icons.Material.Filled.Inventory2
+            : Icons.Material.Filled.CheckCircle;
     }
 
     private string ReportedBehaviorText(ConfigurationDefinitionPublisherState state)

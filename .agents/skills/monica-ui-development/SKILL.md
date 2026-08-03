@@ -17,9 +17,9 @@ Project-local temporary state for this skill is stored under:
 
 When creating or modifying Monica UI components or pages, also use `monica-ui-audit` as a companion guardrail.
 
-- For focused component/page edits, run a targeted P0-P3 audit before changing files and let the findings shape the fix.
+- For focused component/page edits, run a targeted P0-P4 audit before changing files and let the findings shape the fix.
 - For broad UI scopes, report the audit findings first, then fix the agreed items in priority order.
-- Treat Rule #9 layout issues as audit-relevant even when there is no P0/P1 violation: missing local spacing, overflow control, centering, or shell structure belongs in the owning component `.razor.css`.
+- Treat Rule #9 page-local layout issues as audit-relevant even when they do not rise to a P2 containment violation: missing local spacing, overflow control, centering, or shell structure belongs in the owning component `.razor.css`.
 - Do not move component-specific layout into theme CSS just to make the audit pass; theme files own global MudBlazor visuals, not page-local layout.
 
 ## MudBlazor Source Access (Use Only When Needed)
@@ -147,8 +147,19 @@ Always specify `T` for generic MudBlazor components:
 ### 4. Lifecycle and JS Interop
 
 - Do not run JS interop in `OnInitializedAsync`.
-- Use `OnAfterRenderAsync(firstRender)` for JS interop and heavy first-load tasks.
-- Use `CancellationToken` for async loading tasks.
+- Use `OnInitializedAsync` or `OnParametersSetAsync` for data initialization and leave the component in a valid renderable state before each await. Reserve `OnAfterRenderAsync` for DOM-dependent work that genuinely requires rendered elements; do not turn it into a general first-load orchestrator.
+- Treat every incomplete `await` as a re-entrancy boundary. Component disposal or another lifecycle/event callback may run before the continuation resumes, including inside `OnAfterRenderAsync`.
+- Give long-lived component/page-state work a component-lifetime `CancellationTokenSource`. Cancel it at the start of disposal, pass its token to calls whose cancellation semantics cannot orphan an owned resource, and check cancellation/disposal after awaited operations that cannot accept the token. Always observe resource-producing operations such as JS module imports so a late-created result can be disposed instead of leaked.
+- A non-null `IJSObjectReference` is not proof that the reference is usable. Before teardown, prevent new acquisitions and serialize with or drain operations that already captured the reference; only then atomically detach and dispose it. Do not leave disposed references published to render/event continuations.
+- If an async module import or initialization completes after the owner is disposed, dispose the newly created reference instead of assigning it to component state.
+- Track and observe every background task. Navigation callbacks, timers, and event handlers must not start unbounded fire-and-forget work that can render, mutate state, or use JS after disposal.
+- Do not register a component-consumed disposable service as transient. DI retains disposable transients for the app/circuit scope, and manual component disposal adds conflicting ownership. Prefer a non-disposable factory that creates a component-owned session. Use an explicit component-owned scope such as `OwningComponentBase` only after inspecting the service's dependency graph: a separate scope does not automatically preserve access to services bound to the existing Blazor circuit scope.
+- Retain every `DotNetObjectReference.Create(...)` result in its .NET owner and dispose it deterministically. Passing an inline reference to JavaScript does not transfer ownership by itself.
+- Stop all JavaScript observers, listeners, animation callbacks, and other callback producers before disposing their `DotNetObjectReference`.
+- Keep per-component JavaScript state in a page/session instance rooted by concrete `ElementReference`s. Avoid module-global active state and document-global selectors that allow an old component's teardown to affect a replacement instance, and cancel queued animation frames/timers during JS-side cleanup.
+- Do not invoke JavaScript from `DisposeAsync` to clean up DOM. Use a client-side `MutationObserver`; disposing an owned `IJSObjectReference` in `DisposeAsync` is still appropriate.
+- On Blazor Server, catch expected `JSDisconnectedException` around interop/module disposal when the circuit can already be gone. Do not catch `ObjectDisposedException` from a locally owned interop reference; it signals incorrect ownership or teardown ordering.
+- Make disposal idempotent and fast. When initialization, invocation, and disposal can overlap, cover the interleaving with a deterministic test that blocks the async operation, starts disposal, and then releases the continuation.
 - For page-owned auto-refresh, prefer the `PeriodicTimer` pattern in `references/auto-refresh-page-pattern.md` over `System.Timers.Timer`.
 
 ### 5. MudBlazor v9 Async APIs

@@ -24,7 +24,7 @@ def ensure_state_dir() -> Path:
 def default_dependency_source_cli() -> Path:
     """Return the canonical Codex user-level CLI location."""
 
-    return Path.home() / ".agents" / INSPECT_DEPENDENCY_SOURCE_RELATIVE_CLI
+    return Path.home() / ".claude" / INSPECT_DEPENDENCY_SOURCE_RELATIVE_CLI
 
 
 def dependency_source_cli_candidates() -> tuple[Path, ...]:

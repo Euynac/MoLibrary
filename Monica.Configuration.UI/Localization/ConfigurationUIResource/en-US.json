@@ -28,6 +28,16 @@
       "GroupModeCategory": "Category",
       "GroupModeProjectTooltip": "Grouped by project. Click to group by category.",
       "GroupModeCategoryTooltip": "Grouped by category. Click to group by project.",
+      "Active": "Active",
+      "Retired": "Retired",
+      "RetiredTooltip": "No service currently publishes this definition. It remains available only for diagnostics and audit inspection.",
+      "RetiredReadOnly": "This definition has no current publisher and is read-only. Republishing the same definition key reactivates it; permanently purge it only after confirming that it is no longer needed.",
+      "LifecycleFilter": {
+        "Label": "Lifecycle",
+        "Active": "Active",
+        "Retired": "Retired",
+        "All": "All"
+      },
       "PublishedMetadata": "DB",
       "PublishedMetadataTooltip": "This definition was loaded from published database metadata. Monica database values can be edited here, but runtime source-chain inspection is available only in the service that scanned the CLR type.",
       "SchemaVersionCompactChip": "v{0}",
@@ -261,6 +271,7 @@
   "DefinitionPublication": {
     "Title": "Definition Publication - {0}",
     "Unavailable": "Publication details are unavailable for this definition.",
+    "RetiredNotice": "No logical service currently publishes this definition. Its last canonical metadata and revision history remain available for diagnosis.",
     "CurrentVersions": "Schema v{0} · r{1}",
     "Tabs": {
       "RevisionHistory": "Revision history",
@@ -321,6 +332,41 @@
       }
     }
   },
+  "DefinitionPurge": {
+    "Title": "Purge retired definition - {0}",
+    "Warning": "This operation permanently removes the retired definition's current records. It cannot be undone by Monica.",
+    "Revision": "Definition revision r{0}",
+    "Deleted": {
+      "Title": "Permanently deleted",
+      "DefinitionMetadata": "Canonical definition metadata",
+      "PublicationHistory": "Definition publication history",
+      "EffectiveValue": "Current Monica effective-value document",
+      "EffectiveValueVersion": "Current Monica effective-value document (version {0})"
+    },
+    "Retained": {
+      "Title": "Retained for audit",
+      "ValueHistory": "Immutable value-history records",
+      "MutationGroups": "Mutation groups referencing retained history",
+      "UnifiedVersions": "Unified-version snapshots referencing this definition"
+    },
+    "AuditNotice": "Retained audit records may continue to reference the purged definition key. They remain immutable and are not restored if the definition is later republished.",
+    "Confirmation": "I understand which current records will be deleted and which audit records will be retained.",
+    "Blocked": {
+      "LocalRegistration": "This definition is registered by the current process and cannot be purged.",
+      "ActivePublishers": "This definition is still published by: {0}",
+      "NotRetired": "Only retired definitions with no current publisher can be purged."
+    },
+    "Actions": {
+      "Preview": "Review permanent purge",
+      "PreviewAria": "Review permanent purge for {0}",
+      "Purge": "Purge permanently"
+    },
+    "Messages": {
+      "PreviewFailed": "Failed to load the purge preview: {0}",
+      "PurgeFailed": "Failed to purge the retired definition: {0}",
+      "Succeeded": "Retired definition '{0}' was purged. Immutable audit records were retained."
+    }
+  },
   "History": {
     "Title": "History",
     "Subtitle": "Audit individual mutations and persisted mutation groups.",
@@ -329,7 +375,8 @@
       "ViewChange": "View change",
       "ViewDefinitionHistory": "View definition history",
       "LoadMore": "Load more",
-      "RollbackBlockedMetadata": "Rollback is unavailable because one or more affected definitions do not have complete authoritative metadata. Repair and refresh them first."
+      "RollbackBlockedMetadata": "Rollback requires active definitions with complete matching metadata. Repair, reactivate, or refresh the affected definitions first.",
+      "RollbackBlockedRetired": "Rollback is unavailable because this definition is retired and read-only."
     },
     "Tabs": {
       "Mutations": "By mutation",
@@ -342,7 +389,8 @@
       "TargetAll": "All targets",
       "TargetMonica": "Monica store",
       "TargetExternal": "External sources",
-      "UnavailableDefinition": "{0} (metadata unavailable)"
+      "UnavailableDefinition": "{0} (metadata unavailable)",
+      "RetiredDefinition": "{0} (retired)"
     },
     "States": {
       "Empty": "No history records were found."

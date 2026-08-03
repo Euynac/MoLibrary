@@ -115,6 +115,10 @@
     border-radius: 24px;
 }
 
+.document-search-state ::deep .document-search-empty-icon {
+    opacity: 0.35;
+}
+
 .document-search-result {
     width: 100%;
     display: flex;

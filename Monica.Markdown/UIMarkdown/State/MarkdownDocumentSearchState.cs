@@ -8,28 +8,60 @@ using Monica.Modules;
 namespace Monica.Markdown.UIMarkdown.State;
 
 /// <summary>
-/// Owns the transient state for the markdown document search dialog.
+/// Creates search state whose asynchronous lifetime is owned by the rendering dialog.
 /// </summary>
-public sealed class MarkdownDocumentSearchState(
+internal sealed class MarkdownDocumentSearchStateFactory(
     MarkdownFacade markdownFacade,
     IOptions<ModuleMarkdownOption> markdownOptions,
     IOptions<ModuleMarkdownUIOption> markdownUiOptions)
-    : IDisposable
 {
+    /// <summary>
+    /// Creates state for one document search dialog.
+    /// </summary>
+    internal MarkdownDocumentSearchState Create(
+        MarkdownDocumentGroup? currentGroup,
+        string? currentCulture)
+    {
+        return new MarkdownDocumentSearchState(
+            markdownFacade,
+            markdownOptions,
+            markdownUiOptions,
+            currentGroup,
+            currentCulture);
+    }
+}
+
+/// <summary>
+/// Owns the cancellable search work for one markdown document search dialog.
+/// </summary>
+internal sealed class MarkdownDocumentSearchState(
+    MarkdownFacade markdownFacade,
+    IOptions<ModuleMarkdownOption> markdownOptions,
+    IOptions<ModuleMarkdownUIOption> markdownUiOptions,
+    MarkdownDocumentGroup? currentGroup,
+    string? currentCulture)
+    : IAsyncDisposable
+{
+    private readonly CancellationTokenSource _lifetimeCancellation = new();
+    private readonly Lock _searchLock = new();
+    private readonly List<Task> _searchOperations = [];
+    private readonly TaskCompletionSource _disposedCompletion =
+        new(TaskCreationOptions.RunContinuationsAsynchronously);
     private readonly ModuleMarkdownOption _markdownOption = markdownOptions.Value;
     private readonly ModuleMarkdownUIOption _markdownUiOption = markdownUiOptions.Value;
-    private CancellationTokenSource? _searchCts;
-    private Func<Task>? _notifyChangedAsync;
+
+    private CancellationTokenSource? _activeSearchCancellation;
+    private int _disposeRequested;
 
     /// <summary>
     /// The knowledge base currently selected when the dialog opens.
     /// </summary>
-    public MarkdownDocumentGroup? CurrentGroup { get; private set; }
+    public MarkdownDocumentGroup? CurrentGroup { get; private set; } = currentGroup;
 
     /// <summary>
     /// The active document culture when the dialog opens.
     /// </summary>
-    public string? CurrentCulture { get; private set; }
+    public string? CurrentCulture { get; private set; } = currentCulture;
 
     /// <summary>
     /// The current raw query text.
@@ -78,16 +110,17 @@ public sealed class MarkdownDocumentSearchState(
     public bool HasEnoughQueryLength => Query.Trim().Length >= MinimumQueryLength;
 
     /// <summary>
-    /// Attaches the current dialog context and UI refresh callback.
+    /// Updates dialog context when the owning component receives new parameters.
     /// </summary>
-    public void Attach(
-        MarkdownDocumentGroup? currentGroup,
-        string? currentCulture,
-        Func<Task> notifyChangedAsync)
+    public void UpdateContext(MarkdownDocumentGroup? group, string? culture)
     {
-        CurrentGroup = currentGroup;
-        CurrentCulture = currentCulture;
-        _notifyChangedAsync = notifyChangedAsync;
+        if (IsDisposeRequested)
+        {
+            return;
+        }
+
+        CurrentGroup = group;
+        CurrentCulture = culture;
     }
 
     /// <summary>
@@ -95,118 +128,199 @@ public sealed class MarkdownDocumentSearchState(
     /// </summary>
     public void OnQueryChanged(string? value)
     {
+        if (IsDisposeRequested)
+        {
+            return;
+        }
+
         Query = value ?? string.Empty;
+        CancelActiveSearch();
+        IsSearching = false;
 
         if (HasEnoughQueryLength)
         {
             return;
         }
 
-        CancelSearch();
         ErrorMessage = null;
         Results = [];
         IsSearching = false;
-        _ = NotifyChangedAsync();
     }
 
     /// <summary>
     /// Executes a debounced search when the input settles.
     /// </summary>
-    public async Task OnQueryDebouncedAsync(string value)
+    public Task OnQueryDebouncedAsync(string value)
     {
+        if (IsDisposeRequested)
+        {
+            return Task.CompletedTask;
+        }
+
         Query = value ?? string.Empty;
-        await ExecuteSearchAsync();
+        return StartSearch();
     }
 
     /// <summary>
     /// Toggles whether all knowledge bases participate in the search.
     /// </summary>
-    public async Task OnIncludeAllKnowledgeBasesChangedAsync(bool value)
+    public Task OnIncludeAllKnowledgeBasesChangedAsync(bool value)
     {
-        IncludeAllKnowledgeBases = value;
-        await ExecuteSearchAsync();
-    }
-
-    /// <summary>
-    /// Cancels any in-flight search and releases resources.
-    /// </summary>
-    public void Dispose()
-    {
-        CancelSearch();
-    }
-
-    private async Task ExecuteSearchAsync()
-    {
-        CancelSearch();
-        ErrorMessage = null;
-
-        if (!HasEnoughQueryLength)
+        if (IsDisposeRequested)
         {
-            Results = [];
-            IsSearching = false;
-            await NotifyChangedAsync();
+            return Task.CompletedTask;
+        }
+
+        IncludeAllKnowledgeBases = value;
+        return StartSearch();
+    }
+
+    /// <inheritdoc />
+    public async ValueTask DisposeAsync()
+    {
+        if (Interlocked.Exchange(ref _disposeRequested, 1) != 0)
+        {
+            await _disposedCompletion.Task;
             return;
         }
 
-        var searchCts = new CancellationTokenSource();
-        _searchCts = searchCts;
-        IsSearching = true;
-        await NotifyChangedAsync();
+        try
+        {
+            _lifetimeCancellation.Cancel();
+
+            Task[] searchOperations;
+            lock (_searchLock)
+            {
+                _activeSearchCancellation?.Cancel();
+                IsSearching = false;
+                searchOperations = _searchOperations.ToArray();
+            }
+
+            if (searchOperations.Length > 0)
+            {
+                await Task.WhenAll(searchOperations);
+            }
+        }
+        finally
+        {
+            _lifetimeCancellation.Dispose();
+            _disposedCompletion.TrySetResult();
+        }
+    }
+
+    private Task StartSearch()
+    {
+        lock (_searchLock)
+        {
+            if (IsDisposeRequested)
+            {
+                return Task.CompletedTask;
+            }
+
+            _activeSearchCancellation?.Cancel();
+            ErrorMessage = null;
+
+            if (!HasEnoughQueryLength)
+            {
+                Results = [];
+                IsSearching = false;
+                return Task.CompletedTask;
+            }
+
+            var searchCancellation = CancellationTokenSource.CreateLinkedTokenSource(
+                _lifetimeCancellation.Token);
+            var request = new MarkdownDocumentSearchRequest(
+                Query.Trim(),
+                CurrentGroup?.Key,
+                IncludeAllKnowledgeBases,
+                CurrentCulture);
+
+            _activeSearchCancellation = searchCancellation;
+            IsSearching = true;
+            _searchOperations.RemoveAll(static task => task.IsCompleted);
+            var searchTask = ExecuteSearchAsync(request, searchCancellation);
+            _searchOperations.Add(searchTask);
+            return searchTask;
+        }
+    }
+
+    private async Task ExecuteSearchAsync(
+        MarkdownDocumentSearchRequest request,
+        CancellationTokenSource searchCancellation)
+    {
+        // Let StartSearch publish ownership before a synchronously completed provider can finish.
+        await Task.Yield();
 
         try
         {
             var response = await markdownFacade.SearchDocumentsAsync(
-                new MarkdownDocumentSearchRequest(
-                    Query.Trim(),
-                    CurrentGroup?.Key,
-                    IncludeAllKnowledgeBases,
-                    CurrentCulture),
-                searchCts.Token);
+                request,
+                searchCancellation.Token);
 
-            if (searchCts.IsCancellationRequested)
+            lock (_searchLock)
             {
-                return;
-            }
+                if (!IsCurrentSearch(searchCancellation))
+                {
+                    return;
+                }
 
-            if (response.IsFailed(out var error, out var results))
-            {
-                ErrorMessage = error;
-                Results = [];
-                return;
-            }
+                if (response.IsFailed(out var error, out var results))
+                {
+                    ErrorMessage = error;
+                    Results = [];
+                    return;
+                }
 
-            Results = results;
+                Results = results;
+            }
         }
-        catch (OperationCanceledException) when (searchCts.IsCancellationRequested)
+        catch (OperationCanceledException) when (searchCancellation.IsCancellationRequested)
         {
+        }
+        catch (Exception ex)
+        {
+            lock (_searchLock)
+            {
+                if (IsCurrentSearch(searchCancellation))
+                {
+                    ErrorMessage = ex.Message;
+                    Results = [];
+                }
+            }
         }
         finally
         {
-            if (ReferenceEquals(_searchCts, searchCts))
+            lock (_searchLock)
             {
-                IsSearching = false;
-                _searchCts = null;
+                if (ReferenceEquals(_activeSearchCancellation, searchCancellation))
+                {
+                    if (!IsDisposeRequested)
+                    {
+                        IsSearching = false;
+                    }
+
+                    _activeSearchCancellation = null;
+                }
             }
 
-            searchCts.Dispose();
-            await NotifyChangedAsync();
+            searchCancellation.Dispose();
         }
     }
 
-    private void CancelSearch()
+    private void CancelActiveSearch()
     {
-        if (_searchCts is null)
+        lock (_searchLock)
         {
-            return;
+            _activeSearchCancellation?.Cancel();
         }
-
-        _searchCts.Cancel();
-        _searchCts.Dispose();
-        _searchCts = null;
     }
 
-    private Task NotifyChangedAsync()
+    private bool IsCurrentSearch(CancellationTokenSource searchCancellation)
     {
-        return _notifyChangedAsync?.Invoke() ?? Task.CompletedTask;
+        return !IsDisposeRequested
+               && !searchCancellation.IsCancellationRequested
+               && ReferenceEquals(_activeSearchCancellation, searchCancellation);
     }
+
+    private bool IsDisposeRequested => Volatile.Read(ref _disposeRequested) != 0;
 }

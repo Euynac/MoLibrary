@@ -22,4 +22,7 @@ internal sealed record ConfigurationDefinitionCatalogEntry
     public ConfigurationDefinitionMetadataDiagnostic? Diagnostic { get; init; }
 
     public ConfigurationDefinitionAvailability Availability { get; init; }
+
+    public ConfigurationDefinitionLifecycleState LifecycleState { get; init; } =
+        ConfigurationDefinitionLifecycleState.Active;
 }

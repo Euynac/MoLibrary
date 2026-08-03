@@ -173,6 +173,9 @@
                         <ConfigurationDefinitionList Definitions="@_definitions"
                                                      SelectedDefinition="@_selectedSummary"
                                                      SelectedDefinitionChanged="SelectDefinitionAsync"
+                                                     PurgeRequested="OpenDefinitionPurgeAsync"
+                                                     LifecycleFilter="@_lifecycleFilter"
+                                                     LifecycleFilterChanged="OnLifecycleFilterChangedAsync"
                                                      NodeSearchMatches="@NodeSearchMatches"
                                                      NodeSearchMatchSelected="SelectSearchMatchAsync"
                                                      SearchText="@_searchText"
@@ -197,6 +200,11 @@
                             else if (!_definitions.Any(static definition => definition.CanManage))
                             {
                                 <MudAlert Severity="Severity.Warning">@L["State:Definitions:NoAvailableDefinitions"]</MudAlert>
+                            }
+                            else if (!_definitions.Any(definition =>
+                                         definition.CanManage && _lifecycleFilter.Includes(definition.LifecycleState)))
+                            {
+                                <MudAlert Severity="Severity.Info">@L["State:Definitions:NoMatches"]</MudAlert>
                             }
                             else
                             {
@@ -241,6 +249,18 @@
                                                     </MudChip>
                                                 </MudTooltip>
                                             }
+                                            @if (IsSelectedDefinitionRetired)
+                                            {
+                                                <MudTooltip Text="@L["State:Definitions:RetiredTooltip"]">
+                                                    <MudChip T="string"
+                                                             Size="Size.Small"
+                                                             Color="Color.Warning"
+                                                             Variant="Variant.Filled"
+                                                             Icon="@Icons.Material.Filled.Inventory2">
+                                                        @L["State:Definitions:Retired"]
+                                                    </MudChip>
+                                                </MudTooltip>
+                                            }
                                             <ConfigurationSchemaMetadataChip SchemaVersion="@_selectedDefinition.SchemaVersion"
                                                                              DefinitionRevision="@_selectedDefinition.DefinitionRevision"
                                                                              SchemaHash="@_selectedDefinition.SchemaHash"
@@ -254,24 +274,30 @@
                                                     @ReloadBehaviorLabel(_selectedDefinition.ReloadBehavior)
                                                 </MudChip>
                                             </MudTooltip>
-                                            <MudTooltip Text="@L["Common:Actions:EditJson"]">
-                                                <MudIconButton Icon="@Icons.Material.Filled.DataObject"
-                                                               Size="Size.Small"
-                                                               Variant="Variant.Outlined"
-                                                               OnClick="OpenSelectedDefinitionJsonEditAsync" />
-                                            </MudTooltip>
+                                            @if (CanMutateSelectedDefinition)
+                                            {
+                                                <MudTooltip Text="@L["Common:Actions:EditJson"]">
+                                                    <MudIconButton Icon="@Icons.Material.Filled.DataObject"
+                                                                   Size="Size.Small"
+                                                                   Variant="Variant.Outlined"
+                                                                   OnClick="OpenSelectedDefinitionJsonEditAsync" />
+                                                </MudTooltip>
+                                            }
                                             <MudTooltip Text="@L["History:Actions:ViewDefinitionHistory"]">
                                                 <MudIconButton Icon="@Icons.Material.Filled.History"
                                                                Size="Size.Small"
                                                                Variant="Variant.Outlined"
                                                                OnClick="OpenSelectedDefinitionHistoryAsync" />
                                             </MudTooltip>
-                                            <MudTooltip Text="@L["ImportExport:Export:DefinitionAction"]">
-                                                <MudIconButton Icon="@Icons.Material.Filled.Download"
-                                                               Size="Size.Small"
-                                                               Variant="Variant.Outlined"
-                                                               OnClick="() => OpenExportDialog(_selectedDefinition.DefinitionKey, _selectedDefinition.DisplayName)" />
-                                            </MudTooltip>
+                                            @if (CanMutateSelectedDefinition)
+                                            {
+                                                <MudTooltip Text="@L["ImportExport:Export:DefinitionAction"]">
+                                                    <MudIconButton Icon="@Icons.Material.Filled.Download"
+                                                                   Size="Size.Small"
+                                                                   Variant="Variant.Outlined"
+                                                                   OnClick="() => OpenExportDialog(_selectedDefinition.DefinitionKey, _selectedDefinition.DisplayName)" />
+                                                </MudTooltip>
+                                            }
                                             @if (CanInspectSelectedDefinitionSources)
                                             {
                                                 <MudTooltip Text="@L["Sources:Definition:Title"]">
@@ -281,8 +307,26 @@
                                                                    OnClick="OpenDefinitionSourcesAsync" />
                                                 </MudTooltip>
                                             }
+                                            @if (IsSelectedDefinitionRetired)
+                                            {
+                                                <MudTooltip Text="@L["DefinitionPurge:Actions:Preview"]">
+                                                    <MudIconButton Icon="@Icons.Material.Filled.DeleteForever"
+                                                                   Size="Size.Small"
+                                                                   Color="Color.Error"
+                                                                   Variant="Variant.Outlined"
+                                                                   aria-label="@L["DefinitionPurge:Actions:PreviewAria", _selectedDefinition.DisplayName]"
+                                                                   OnClick="OpenSelectedDefinitionPurgeAsync" />
+                                                </MudTooltip>
+                                            }
                                         </MudStack>
                                     </MudStack>
+
+                                    @if (IsSelectedDefinitionRetired)
+                                    {
+                                        <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined">
+                                            @L["State:Definitions:RetiredReadOnly"]
+                                        </MudAlert>
+                                    }
 
                                     @if (_loadingDefinition)
                                     {
@@ -332,6 +376,7 @@
                                                                                EffectiveValue="@GetEffectiveValue(node)"
                                                                                ExternalEffectiveSource="@GetExternalEffectiveSource(node)"
                                                                                HighlightedPath="@_highlightedPath"
+                                                                               ReadOnly="@(!CanMutateSelectedDefinition)"
                                                                                Changed="RefreshPendingCount"
                                                                                CommittedChanged="ReloadSelectedEffectiveValuesAndValidationAsync" />
                                                     }
@@ -360,6 +405,7 @@
     private ConfigurationDefinition? _selectedDefinition;
     private ConfigurationNodeDefinition? _selectedNode;
     private string _searchText = string.Empty;
+    private ConfigurationDefinitionLifecycleFilter _lifecycleFilter = ConfigurationDefinitionLifecycleFilter.Active;
     private bool _loadingDefinitions = true;
     private bool _loadingDefinition;
     private int _pendingCount;
@@ -376,6 +422,11 @@
     private bool CanInspectSelectedDefinitionSources =>
         _selectedDefinition?.Origin == ConfigurationDefinitionOrigin.LocalScan;
 
+    private bool CanMutateSelectedDefinition => _selectedSummary?.CanMutate is true;
+
+    private bool IsSelectedDefinitionRetired =>
+        _selectedSummary?.LifecycleState == ConfigurationDefinitionLifecycleState.Retired;
+
     private bool CanUseCatalogOperations => !_loadingDefinitions && _definitionCatalogHealthy;
 
     private bool CanSavePendingGroup
@@ -387,7 +438,7 @@
                 .Concat(StateStore.GetValidationIssues().Select(static issue => issue.DefinitionKey))
                 .Distinct(StringComparer.OrdinalIgnoreCase);
             return affectedDefinitionKeys.All(definitionKey => _definitions.Any(definition =>
-                definition.CanManage
+                definition.CanMutate
                 && string.Equals(definition.DefinitionKey, definitionKey, StringComparison.OrdinalIgnoreCase)));
         }
     }
@@ -552,11 +603,23 @@
             return;
         }
 
+        if (requestedSummary is not null
+            && !_lifecycleFilter.Includes(requestedSummary.LifecycleState))
+        {
+            _lifecycleFilter = requestedSummary.LifecycleState == ConfigurationDefinitionLifecycleState.Retired
+                ? ConfigurationDefinitionLifecycleFilter.Retired
+                : ConfigurationDefinitionLifecycleFilter.Active;
+        }
+
         var initialSummary = requestedSummary
             ?? _definitions.FirstOrDefault(definition =>
                 definition.CanManage
+                && _lifecycleFilter.Includes(definition.LifecycleState)
                 && string.Equals(definition.DefinitionKey, previouslySelectedKey, StringComparison.OrdinalIgnoreCase))
-              ?? _definitions.FirstOrDefault(static definition => definition.CanManage);
+              ?? _definitions.FirstOrDefault(definition =>
+                  definition.CanMutate && _lifecycleFilter.Includes(definition.LifecycleState))
+              ?? _definitions.FirstOrDefault(definition =>
+                  definition.CanManage && _lifecycleFilter.Includes(definition.LifecycleState));
         if (initialSummary is not null)
         {
             await SelectDefinitionAsync(initialSummary);
@@ -991,11 +1054,37 @@
         }
     }
 
+    private async Task OnLifecycleFilterChangedAsync(ConfigurationDefinitionLifecycleFilter lifecycleFilter)
+    {
+        _lifecycleFilter = lifecycleFilter;
+        if (!string.IsNullOrWhiteSpace(_searchText))
+        {
+            await EnsureDefinitionDetailsAsync();
+        }
+
+        if (_selectedSummary is not null && lifecycleFilter.Includes(_selectedSummary.LifecycleState))
+        {
+            return;
+        }
+
+        var nextDefinition = _definitions.FirstOrDefault(definition =>
+            definition.CanManage && lifecycleFilter.Includes(definition.LifecycleState));
+        if (nextDefinition is null)
+        {
+            ClearSelectedDefinition();
+            return;
+        }
+
+        await SelectDefinitionAsync(nextDefinition);
+    }
+
     private async Task EnsureDefinitionDetailsAsync()
     {
         foreach (var summary in _definitions)
         {
-            if (!summary.CanManage || _definitionDetails.ContainsKey(summary.DefinitionKey))
+            if (!summary.CanManage
+                || !_lifecycleFilter.Includes(summary.LifecycleState)
+                || _definitionDetails.ContainsKey(summary.DefinitionKey))
             {
                 continue;
             }
@@ -1181,7 +1270,7 @@
 
     private async Task OpenSelectedDefinitionJsonEditAsync()
     {
-        if (_selectedDefinition is null)
+        if (_selectedDefinition is null || !CanMutateSelectedDefinition)
         {
             return;
         }
@@ -1241,6 +1330,7 @@
         parameters.Add(dialog => dialog.InitialPage, page);
         parameters.Add(dialog => dialog.Definitions, _definitions);
         parameters.Add(dialog => dialog.Definition, _selectedDefinition);
+        parameters.Add(dialog => dialog.AllowRollback, CanMutateSelectedDefinition);
         parameters.Add(dialog => dialog.Title, L["History:Dialog:MutationTitle", _selectedDefinition.DisplayName]);
         var dialog = await DialogService.ShowAsync<ConfigurationHistoryDiffDialog>(L["History:Dialog:Title"], parameters, new DialogOptions
         {
@@ -1282,6 +1372,63 @@
                 MaxWidth = MaxWidth.ExtraLarge,
                 FullWidth = true
             });
+    }
+
+    private async Task OpenSelectedDefinitionPurgeAsync()
+    {
+        if (_selectedSummary is null)
+        {
+            return;
+        }
+
+        await OpenDefinitionPurgeAsync(_selectedSummary);
+    }
+
+    private async Task OpenDefinitionPurgeAsync(ConfigurationDefinitionSummary summary)
+    {
+        if (summary.LifecycleState != ConfigurationDefinitionLifecycleState.Retired)
+        {
+            return;
+        }
+
+        var previewResult = await Facade.PreviewDefinitionPurgeAsync(summary.DefinitionKey);
+        if (previewResult.IsFailed(out var previewError, out var preview))
+        {
+            Snackbar.Add(
+                L["DefinitionPurge:Messages:PreviewFailed", previewError.Message ?? string.Empty],
+                Severity.Error);
+            return;
+        }
+
+        var parameters = new DialogParameters<ConfigurationDefinitionPurgeDialog>();
+        parameters.Add(dialog => dialog.Preview, preview);
+        var dialog = await DialogService.ShowAsync<ConfigurationDefinitionPurgeDialog>(
+            L["DefinitionPurge:Title", preview.DisplayName],
+            parameters,
+            new DialogOptions
+            {
+                MaxWidth = MaxWidth.Medium,
+                FullWidth = true,
+                CloseButton = true
+            });
+        var dialogResult = await dialog.Result;
+        if (dialogResult is not { Canceled: false, Data: ConfigurationDefinitionPurgeRequest request })
+        {
+            return;
+        }
+
+        var purgeResult = await Facade.PurgeDefinitionAsync(request);
+        if (purgeResult.IsFailed(out var purgeError))
+        {
+            Snackbar.Add(
+                L["DefinitionPurge:Messages:PurgeFailed", purgeError.Message ?? string.Empty],
+                Severity.Error);
+            return;
+        }
+
+        StateStore.UndoScope(request.DefinitionKey, LogicalPath.Root);
+        Snackbar.Add(L["DefinitionPurge:Messages:Succeeded", preview.DisplayName], Severity.Success);
+        await LoadDefinitionsAsync();
     }
 
     private async Task OpenDefinitionSourcesAsync()

@@ -193,6 +193,7 @@
     [Parameter] public IReadOnlyList<ConfigurationValueHistory> Rows { get; set; } = [];
     [Parameter] public IReadOnlyList<ConfigurationDefinitionSummary> Definitions { get; set; } = [];
     [Parameter] public ConfigurationDefinition? Definition { get; set; }
+    [Parameter] public bool AllowRollback { get; set; } = true;
     [Parameter] public ConfigurationMutationGroup? Group { get; set; }
     [Parameter] public string? Title { get; set; }
     [Parameter] public LogicalPath? FocusPath { get; set; }
@@ -216,13 +217,16 @@
     private string? FocusPathText => FocusPath?.ToCanonicalString();
 
     private bool CanRollbackSelectedEntry =>
-        _selectedEntry is { Rows.Count: > 0 } entry
+        AllowRollback
+        && _selectedEntry is { Rows.Count: > 0 } entry
         && (Group is null || Group.Status != ConfigurationMutationGroupStatus.RolledBack)
         && entry.Rows.All(CanRollbackRow);
 
-    private string SelectedRollbackTooltip => CanRollbackSelectedEntry
-        ? L["Rollback:Confirm"].Value
-        : L["History:Actions:RollbackBlockedMetadata"].Value;
+    private string SelectedRollbackTooltip => !AllowRollback
+        ? L["History:Actions:RollbackBlockedRetired"].Value
+        : CanRollbackSelectedEntry
+            ? L["Rollback:Confirm"].Value
+            : L["History:Actions:RollbackBlockedMetadata"].Value;
 
     protected override void OnInitialized()
     {
@@ -342,7 +346,7 @@
 
         var summary = Definitions.FirstOrDefault(definition =>
             string.Equals(definition.DefinitionKey, row.DefinitionKey, StringComparison.OrdinalIgnoreCase));
-        return summary is { CanManage: true }
+        return summary is { CanMutate: true }
                && summary.SchemaVersion == row.SchemaVersion
                && !string.IsNullOrWhiteSpace(row.SchemaHash)
                && string.Equals(summary.SchemaHash, row.SchemaHash, StringComparison.Ordinal);
@@ -478,7 +482,11 @@
     {
         if (_selectedEntry is null || !CanRollbackSelectedEntry)
         {
-            Snackbar.Add(L["History:Actions:RollbackBlockedMetadata"], Severity.Warning);
+            Snackbar.Add(
+                AllowRollback
+                    ? L["History:Actions:RollbackBlockedMetadata"]
+                    : L["History:Actions:RollbackBlockedRetired"],
+                Severity.Warning);
             return;
         }
 

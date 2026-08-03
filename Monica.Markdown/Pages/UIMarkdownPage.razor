@@ -6,12 +6,12 @@
 @using Monica.Markdown.UIMarkdown.State
 @implements IAsyncDisposable
 
-@inject MarkdownViewerPageState PageState
+@inject MarkdownViewerPageStateFactory PageStateFactory
 @inject IStringLocalizer<MarkdownResource> L
 
 <PageTitle>@L["Pages:MarkdownDocuments:Title"]</PageTitle>
 
-<div class="doc-layout">
+<div @ref="_viewerRoot" class="doc-layout">
     @if (PageState.IsLoading)
     {
         <div class="doc-center-state">
@@ -32,8 +32,8 @@
                 <MudIcon Icon="@Icons.Material.Filled.FolderOff"
                          Size="Size.Large"
                          Color="Color.Default"
-                         Style="opacity: 0.3; font-size: 4rem;" />
-                <MudText Typo="Typo.h6" Style="opacity: 0.5;">
+                         Class="empty-state-icon" />
+                <MudText Typo="Typo.h6" Class="empty-state-copy">
                     @L["MarkdownViewer:States:NoKnowledgeBasesRegistered"]
                 </MudText>
             </MudStack>
@@ -101,18 +101,35 @@
 @code {
     public const string PAGE_URL = MarkdownViewerLocation.PAGE_URL;
 
+    private ElementReference _viewerRoot;
+    private MarkdownViewerPageState PageState { get; set; } = null!;
+    private int _disposeRequested;
+
     protected override void OnInitialized()
     {
-        PageState.Attach(() => InvokeAsync(StateHasChanged));
+        PageState = PageStateFactory.Create(RequestRenderAsync);
+    }
+
+    protected override Task OnInitializedAsync()
+    {
+        return PageState.InitializeAsync();
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        await PageState.HandleAfterRenderAsync(firstRender);
+        await PageState.HandleAfterRenderAsync(_viewerRoot, firstRender);
     }
 
     public async ValueTask DisposeAsync()
     {
+        Interlocked.Exchange(ref _disposeRequested, 1);
         await PageState.DisposeAsync();
+    }
+
+    private Task RequestRenderAsync()
+    {
+        return Volatile.Read(ref _disposeRequested) != 0
+            ? Task.CompletedTask
+            : InvokeAsync(StateHasChanged);
     }
 }

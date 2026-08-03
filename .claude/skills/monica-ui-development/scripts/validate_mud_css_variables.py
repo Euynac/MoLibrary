@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import re
 import sys
 from collections import defaultdict
@@ -64,17 +65,27 @@ class Usage:
     column: int
 
 
-def should_skip(path: Path) -> bool:
-    return any(part.lower() in IGNORED_DIRS for part in path.parts)
+def should_skip(path: Path, root: Path) -> bool:
+    """Apply stale/generated directory exclusions only below the requested root."""
+    try:
+        relative_path = path.resolve().relative_to(root.resolve())
+    except ValueError:
+        return True
+    return any(part.lower() in IGNORED_DIRS for part in relative_path.parts)
 
 
 def iter_scan_files(root: Path) -> Iterable[Path]:
-    for glob in SCAN_GLOBS:
-        for file_path in root.rglob(glob):
-            if should_skip(file_path):
-                continue
-            if file_path.is_file():
-                yield file_path
+    suffixes = tuple(glob.removeprefix("*").lower() for glob in SCAN_GLOBS)
+    for current_directory, directory_names, file_names in os.walk(root):
+        current_path = Path(current_directory)
+        directory_names[:] = [
+            directory_name
+            for directory_name in directory_names
+            if not should_skip(current_path / directory_name, root)
+        ]
+        for file_name in file_names:
+            if file_name.lower().endswith(suffixes):
+                yield current_path / file_name
 
 
 def load_valid_variables(path: Path) -> set[str]:
@@ -149,21 +160,30 @@ def build_report(
     total_occurrences = sum(len(items) for items in usages.values())
     css_file_count = scanned_counts.get("css", 0)
     razor_file_count = scanned_counts.get("razor", 0)
+    files_scanned_total = css_file_count + razor_file_count
+    discovery_errors = []
+    if files_scanned_total == 0:
+        discovery_errors.append(
+            "No eligible CSS or Razor files were found under the requested root; "
+            "the validator cannot prove MudBlazor variable correctness."
+        )
 
     return {
         "root": str(root),
         "variables_file": str(variables_file),
+        "discovery_errors": discovery_errors,
         "summary": {
             "css_files_scanned": css_file_count,
             "razor_files_scanned": razor_file_count,
-            "files_scanned_total": css_file_count + razor_file_count,
+            "files_scanned_total": files_scanned_total,
+            "discovery_errors_count": len(discovery_errors),
             "variables_used_distinct": len(usages),
             "variables_used_occurrences": total_occurrences,
             "unknown_variables_distinct": len(unknown_usages),
             "unknown_variables_occurrences": unknown_occurrences,
             "fixed_files": fixed_files,
             "fixed_occurrences": sum(fix_counts.values()),
-            "status": "PASSED" if len(unknown_usages) == 0 else "FAILED",
+            "status": "PASSED" if not unknown_usages and not discovery_errors else "FAILED",
         },
         "unknown_variables": {
             key: [usage.__dict__ for usage in value] for key, value in sorted(unknown_usages.items())
@@ -185,6 +205,11 @@ def print_console_report(report: dict, summary_only: bool) -> None:
     print(f"\n{Colors.BOLD}=== MudBlazor CSS Variable Validation ==={Colors.END}\n")
 
     if not summary_only:
+        for message in report["discovery_errors"]:
+            print(f"{Colors.RED}{Colors.BOLD}[ERROR] Discovery: {message}{Colors.END}")
+        if report["discovery_errors"]:
+            print()
+
         if unknown:
             print(f"{Colors.RED}{Colors.BOLD}[ERROR] Unknown MudBlazor variables:{Colors.END}")
             for variable, locations in unknown.items():
@@ -209,6 +234,7 @@ def print_console_report(report: dict, summary_only: bool) -> None:
     print(f"  CSS files scanned: {summary['css_files_scanned']}")
     print(f"  Razor files scanned: {summary['razor_files_scanned']}")
     print(f"  Total files scanned: {summary['files_scanned_total']}")
+    print(f"  Discovery errors: {summary['discovery_errors_count']}")
     print(f"  Variables used (distinct): {summary['variables_used_distinct']}")
     print(f"  Variables used (occurrences): {summary['variables_used_occurrences']}")
     print(f"  Unknown variables (distinct): {summary['unknown_variables_distinct']}")

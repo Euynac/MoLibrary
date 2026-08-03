@@ -14,6 +14,8 @@ namespace Test.Monica.Core.HostedService;
 
 public sealed class HostedServiceLifecyclePipelineTests
 {
+    private static readonly TimeSpan HANG_GUARD = TimeSpan.FromSeconds(10);
+
     [Fact]
     public async Task MoBackgroundService_ShouldKeepAllLifecycleHooksAndCleanupInsidePipeline()
     {
@@ -25,8 +27,10 @@ public sealed class HostedServiceLifecyclePipelineTests
             Options.Create(new ModuleHostedServiceOption()),
             provider.GetRequiredService<IServiceScopeFactory>());
 
-        await service.StartAsync(TestContext.Current.CancellationToken);
-        await service.StopAsync(TestContext.Current.CancellationToken);
+        await service.StartAsync(CancellationToken.None)
+            .WaitAsync(HANG_GUARD, TestContext.Current.CancellationToken);
+        await service.StopAsync(CancellationToken.None)
+            .WaitAsync(HANG_GUARD, TestContext.Current.CancellationToken);
 
         steps.Should().Equal(
             "Start:pipeline-before",
@@ -52,8 +56,10 @@ public sealed class HostedServiceLifecyclePipelineTests
             Options.Create(new ModuleHostedServiceOption()),
             provider.GetRequiredService<IServiceScopeFactory>());
 
-        await service.StartAsync(TestContext.Current.CancellationToken);
-        await service.StopAsync(TestContext.Current.CancellationToken);
+        await service.StartAsync(CancellationToken.None)
+            .WaitAsync(HANG_GUARD, TestContext.Current.CancellationToken);
+        await service.StopAsync(CancellationToken.None)
+            .WaitAsync(HANG_GUARD, TestContext.Current.CancellationToken);
 
         steps.Should().Equal(
             "Start:pipeline-before",

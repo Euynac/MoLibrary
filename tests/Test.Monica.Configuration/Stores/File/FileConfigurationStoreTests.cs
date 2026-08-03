@@ -1,3 +1,4 @@
+using System.Text.Json.Nodes;
 using AwesomeAssertions;
 using Microsoft.Extensions.Options;
 using Monica.Configuration.Exceptions;
@@ -166,6 +167,266 @@ public class FileConfigurationStoreTests : IDisposable
         overview.RevisionHistories.Should().BeEmpty();
     }
 
+    [Fact]
+    public async Task PublisherLifecycle_WhenLastPublisherWithdrawsAndReturns_ShouldRetireThenReactivateDefinition()
+    {
+        var store = CreateStore();
+        var definition = TestConfigurationFactory.Definition();
+        var publisher = CreatePublisher("Test.FileLifecycle", "instance:1");
+        await store.PublishAsync(
+            ConfigurationDefinitionPublicationBatch.Create(publisher, [definition]),
+            CancellationToken.None);
+
+        await store.RetirePublisherAsync(
+            publisher with { InstanceId = "instance:retire" },
+            CancellationToken.None);
+
+        var retiredEntry = await store.GetPublishedDefinitionEntryAsync(
+            definition.DefinitionKey,
+            CancellationToken.None);
+        var retiredOverview = await store.GetDefinitionPublicationOverviewAsync(
+            definition.DefinitionKey,
+            20,
+            CancellationToken.None);
+        retiredEntry.Should().NotBeNull();
+        retiredEntry!.Metadata.LifecycleState.Should().Be(ConfigurationDefinitionLifecycleState.Retired);
+        retiredOverview.LifecycleState.Should().Be(ConfigurationDefinitionLifecycleState.Retired);
+        retiredOverview.PublisherStates.Should().BeEmpty();
+
+        await store.PublishAsync(
+            ConfigurationDefinitionPublicationBatch.Create(
+                publisher with { InstanceId = "instance:2" },
+                [definition]),
+            CancellationToken.None);
+
+        var reactivatedOverview = await store.GetDefinitionPublicationOverviewAsync(
+            definition.DefinitionKey,
+            20,
+            CancellationToken.None);
+        reactivatedOverview.LifecycleState.Should().Be(ConfigurationDefinitionLifecycleState.Active);
+        reactivatedOverview.PublisherStates.Should().ContainSingle();
+        reactivatedOverview.DefinitionRevision.Should().Be(retiredOverview.DefinitionRevision);
+    }
+
+    [Fact]
+    public async Task PurgeDefinitionAsync_WhenDefinitionIsRetired_ShouldDeleteCurrentRecordsAndRetainAudit()
+    {
+        var store = CreateStore();
+        var definition = TestConfigurationFactory.Definition();
+        var publisher = CreatePublisher("Test.FilePurge", "instance:1");
+        var group = new ConfigurationMutationGroup
+        {
+            GroupId = "group-file-purge",
+            Label = "File purge audit",
+            DefinitionKeys = [definition.DefinitionKey],
+            MutationCount = 1,
+            CreatedTime = DateTimeOffset.UtcNow,
+            Status = ConfigurationMutationGroupStatus.Applied
+        };
+        var history = new ConfigurationValueHistory
+        {
+            HistoryId = "history-file-purge",
+            DefinitionKey = definition.DefinitionKey,
+            LogicalPath = LogicalPath.FromProperties("WorkerId"),
+            MutationKind = ConfigurationMutationKind.Set,
+            Granularity = ConfigurationMutationGranularity.Scalar,
+            State = ConfigurationValueState.Active,
+            NewValue = ConfigurationStoredValue.FromJson("1"),
+            Version = 1,
+            SchemaVersion = definition.SchemaVersion,
+            SchemaHash = definition.SchemaHash,
+            ModifiedTime = DateTimeOffset.UtcNow,
+            MutationGroupId = group.GroupId
+        };
+
+        await store.PublishAsync(
+            ConfigurationDefinitionPublicationBatch.Create(publisher, [definition]),
+            CancellationToken.None);
+        var effectiveValue = await store.EnsureCreatedAsync(
+            definition,
+            """{"WorkerId":1}""",
+            CancellationToken.None);
+        await store.UpsertGroupAsync(group, CancellationToken.None);
+        await store.AppendHistoryAsync(history, CancellationToken.None);
+        var unifiedVersion = await store.AppendVersionAsync(
+            new ConfigurationUnifiedVersionCreateRequest
+            {
+                MutationGroupId = group.GroupId,
+                TriggerDefinitionKeys = [definition.DefinitionKey],
+                Definitions =
+                [
+                    new ConfigurationUnifiedVersionDefinitionSnapshot
+                    {
+                        DefinitionKey = definition.DefinitionKey,
+                        DisplayName = definition.DisplayName,
+                        Category = definition.Category,
+                        FromProject = definition.FromProject,
+                        SchemaVersion = definition.SchemaVersion,
+                        SchemaHash = definition.SchemaHash,
+                        EffectiveValueVersion = effectiveValue.Version,
+                        Json = effectiveValue.Json
+                    }
+                ]
+            },
+            CancellationToken.None);
+        await store.RetirePublisherAsync(
+            publisher with { InstanceId = "instance:retire" },
+            CancellationToken.None);
+
+        var preview = await store.PreviewDefinitionPurgeAsync(
+            definition.DefinitionKey,
+            CancellationToken.None);
+        preview.CanPurge.Should().BeTrue();
+        preview.HasEffectiveValue.Should().BeTrue();
+        preview.PublicationHistoryCount.Should().Be(0);
+        preview.RetainedValueHistoryCount.Should().Be(1);
+        preview.RetainedMutationGroupCount.Should().Be(1);
+        preview.RetainedUnifiedVersionCount.Should().Be(1);
+
+        await store.PurgeDefinitionAsync(
+            new ConfigurationDefinitionPurgeRequest
+            {
+                DefinitionKey = definition.DefinitionKey,
+                ExpectedDefinitionRevision = preview.DefinitionRevision
+            },
+            CancellationToken.None);
+
+        (await store.GetPublishedDefinitionEntryAsync(
+            definition.DefinitionKey,
+            CancellationToken.None)).Should().BeNull();
+        (await store.GetAsync(
+            definition.DefinitionKey,
+            CancellationToken.None)).Should().BeNull();
+        var retainedHistory = await store.GetHistoryByIdAsync(
+            history.HistoryId,
+            CancellationToken.None);
+        retainedHistory.Should().NotBeNull();
+        retainedHistory!.MutationGroupId.Should().Be(group.GroupId);
+        var retainedGroup = await store.GetGroupAsync(
+            group.GroupId,
+            CancellationToken.None);
+        retainedGroup.Should().NotBeNull();
+        retainedGroup!.DefinitionKeys.Should().Contain(definition.DefinitionKey);
+        var retainedSnapshot = await store.GetVersionAsync(
+            unifiedVersion.Summary.Version,
+            CancellationToken.None);
+        retainedSnapshot.Should().NotBeNull();
+        retainedSnapshot!.Definitions.Should().ContainSingle(document =>
+            document.DefinitionKey == definition.DefinitionKey);
+    }
+
+    [Fact]
+    public async Task PurgeDefinitionAsync_WhenDefinitionIsActive_ShouldRejectWithoutDeletingDefinition()
+    {
+        var store = CreateStore();
+        var definition = TestConfigurationFactory.Definition();
+        await store.PublishAsync(
+            ConfigurationDefinitionPublicationBatch.Create(
+                CreatePublisher("Test.FileActivePurge", "instance:1"),
+                [definition]),
+            CancellationToken.None);
+
+        var act = () => store.PurgeDefinitionAsync(
+            new ConfigurationDefinitionPurgeRequest
+            {
+                DefinitionKey = definition.DefinitionKey,
+                ExpectedDefinitionRevision = 1
+            },
+            CancellationToken.None);
+
+        await act.Should().ThrowAsync<ConfigurationConcurrencyConflictException>()
+            .WithMessage("*active and cannot be purged*");
+        (await store.GetPublishedDefinitionEntryAsync(
+            definition.DefinitionKey,
+            CancellationToken.None)).Should().NotBeNull();
+    }
+
+    [Fact]
+    public async Task PurgeDefinitionAsync_WhenReviewedRevisionIsStale_ShouldRejectWithoutDeletingDefinition()
+    {
+        var store = CreateStore();
+        var definition = TestConfigurationFactory.Definition();
+        var publisher = CreatePublisher("Test.FileStalePurge", "instance:1");
+        await store.PublishAsync(
+            ConfigurationDefinitionPublicationBatch.Create(publisher, [definition]),
+            CancellationToken.None);
+        await store.PublishAsync(
+            ConfigurationDefinitionPublicationBatch.Create(
+                publisher with { InstanceId = "instance:2" },
+                [definition with { DisplayName = "Changed after preview" }]),
+            CancellationToken.None);
+        await store.RetirePublisherAsync(
+            publisher with { InstanceId = "instance:retire" },
+            CancellationToken.None);
+
+        var act = () => store.PurgeDefinitionAsync(
+            new ConfigurationDefinitionPurgeRequest
+            {
+                DefinitionKey = definition.DefinitionKey,
+                ExpectedDefinitionRevision = 1
+            },
+            CancellationToken.None);
+
+        await act.Should().ThrowAsync<ConfigurationConcurrencyConflictException>()
+            .WithMessage("*current revision is 2*");
+        (await store.GetPublishedDefinitionEntryAsync(
+            definition.DefinitionKey,
+            CancellationToken.None)).Should().NotBeNull();
+    }
+
+    [Fact]
+    public async Task PurgeMaintenance_WhenDefinitionEnvelopeClaimsAnotherKey_ShouldRejectBeforeResolvingValues()
+    {
+        var cancellationToken = TestContext.Current.CancellationToken;
+        var store = CreateStore();
+        var definition = TestConfigurationFactory.Definition();
+        var otherDefinition = definition with
+        {
+            DefinitionKey = "Test.OtherOptions",
+            SectionPath = "Test:Other",
+            DisplayName = "Test Other"
+        };
+        var publisher = CreatePublisher("Test.FileCorruptPurge", "instance:1");
+        await store.PublishAsync(
+            ConfigurationDefinitionPublicationBatch.Create(publisher, [definition, otherDefinition]),
+            cancellationToken);
+        await store.EnsureCreatedAsync(definition, """{"WorkerId":1}""", cancellationToken);
+        await store.EnsureCreatedAsync(otherDefinition, """{"WorkerId":2}""", cancellationToken);
+        await store.RetirePublisherAsync(
+            publisher with { InstanceId = "instance:retire" },
+            cancellationToken);
+
+        var definitionPath = Path.Combine(
+            _rootDirectory,
+            "metadata",
+            "definitions",
+            $"{definition.DefinitionKey}.json");
+        var envelope = JsonNode.Parse(await System.IO.File.ReadAllTextAsync(definitionPath, cancellationToken))!.AsObject();
+        envelope["DefinitionKey"] = otherDefinition.DefinitionKey;
+        await System.IO.File.WriteAllTextAsync(definitionPath, envelope.ToJsonString(), cancellationToken);
+
+        Func<Task> preview = async () =>
+            _ = await store.PreviewDefinitionPurgeAsync(
+                definition.DefinitionKey,
+                cancellationToken);
+        await preview.Should().ThrowAsync<InvalidDataException>()
+            .WithMessage("*claims definition key*instead of*");
+
+        var purge = () => store.PurgeDefinitionAsync(
+            new ConfigurationDefinitionPurgeRequest
+            {
+                DefinitionKey = definition.DefinitionKey,
+                ExpectedDefinitionRevision = 1
+            },
+            cancellationToken);
+        await purge.Should().ThrowAsync<InvalidDataException>()
+            .WithMessage("*claims definition key*instead of*");
+
+        (await store.GetAsync(definition.DefinitionKey, cancellationToken)).Should().NotBeNull();
+        (await store.GetAsync(otherDefinition.DefinitionKey, cancellationToken)).Should().NotBeNull();
+        System.IO.File.Exists(definitionPath).Should().BeTrue();
+    }
+
     public void Dispose()
     {
         if (Directory.Exists(_rootDirectory))
@@ -180,5 +441,16 @@ public class FileConfigurationStoreTests : IDisposable
         {
             RootDirectory = _rootDirectory
         }));
+    }
+
+    private static ConfigurationPublisherIdentity CreatePublisher(string publisherKey, string instanceId)
+    {
+        return new ConfigurationPublisherIdentity
+        {
+            PublisherKey = publisherKey,
+            InstanceId = instanceId,
+            Name = publisherKey,
+            Version = "1.0.0-test"
+        };
     }
 }

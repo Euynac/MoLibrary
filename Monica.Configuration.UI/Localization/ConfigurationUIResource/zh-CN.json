@@ -28,6 +28,16 @@
       "GroupModeCategory": "分类",
       "GroupModeProjectTooltip": "当前按项目分组。点击切换为按分类分组。",
       "GroupModeCategoryTooltip": "当前按分类分组。点击切换为按项目分组。",
+      "Active": "有效",
+      "Retired": "已退役",
+      "RetiredTooltip": "当前没有服务发布该配置定义。它仅保留用于诊断和审计查看。",
+      "RetiredReadOnly": "该配置定义当前没有发布服务，已转为只读。重新发布相同的 DefinitionKey 可将其恢复为有效；只有确认不再需要后才应永久清理。",
+      "LifecycleFilter": {
+        "Label": "生命周期",
+        "Active": "有效",
+        "Retired": "已退役",
+        "All": "全部"
+      },
       "PublishedMetadata": "DB",
       "PublishedMetadataTooltip": "该配置定义来自数据库中发布的元数据。这里可以编辑 Monica 数据库有效值，但运行时来源链路只能在扫描到该 CLR 类型的服务中查看。",
       "SchemaVersionCompactChip": "v{0}",
@@ -261,6 +271,7 @@
   "DefinitionPublication": {
     "Title": "配置定义发布 - {0}",
     "Unavailable": "当前无法获取该配置定义的发布详情。",
+    "RetiredNotice": "当前没有逻辑服务发布该配置定义。最后一次规范元数据和修订历史仍保留用于诊断。",
     "CurrentVersions": "Schema v{0} · r{1}",
     "Tabs": {
       "RevisionHistory": "修订历史",
@@ -321,6 +332,41 @@
       }
     }
   },
+  "DefinitionPurge": {
+    "Title": "永久清理已退役定义 - {0}",
+    "Warning": "此操作会永久删除已退役定义的当前记录，Monica 无法撤销。",
+    "Revision": "配置定义修订 r{0}",
+    "Deleted": {
+      "Title": "永久删除",
+      "DefinitionMetadata": "规范配置定义元数据",
+      "PublicationHistory": "配置定义发布历史",
+      "EffectiveValue": "当前 Monica 有效值文档",
+      "EffectiveValueVersion": "当前 Monica 有效值文档（版本 {0}）"
+    },
+    "Retained": {
+      "Title": "保留用于审计",
+      "ValueHistory": "不可变的值修改历史记录",
+      "MutationGroups": "引用保留历史的修改组",
+      "UnifiedVersions": "引用该定义的统一版本快照"
+    },
+    "AuditNotice": "保留的审计记录仍可能引用已清理的 DefinitionKey。这些记录保持不可变；以后重新发布该定义时也不会恢复为当前数据。",
+    "Confirmation": "我已确认将永久删除的当前记录，以及仍会保留的审计记录。",
+    "Blocked": {
+      "LocalRegistration": "当前进程已注册该配置定义，不能永久清理。",
+      "ActivePublishers": "以下服务仍在发布该配置定义：{0}",
+      "NotRetired": "只有没有当前发布服务的已退役定义才能永久清理。"
+    },
+    "Actions": {
+      "Preview": "查看永久清理影响",
+      "PreviewAria": "查看永久清理配置定义“{0}”的影响",
+      "Purge": "永久清理"
+    },
+    "Messages": {
+      "PreviewFailed": "加载清理预览失败：{0}",
+      "PurgeFailed": "永久清理已退役定义失败：{0}",
+      "Succeeded": "已永久清理配置定义“{0}”，不可变的审计记录仍然保留。"
+    }
+  },
   "History": {
     "Title": "历史记录",
     "Subtitle": "审计单次修改和持久化修改组。",
@@ -329,7 +375,8 @@
       "ViewChange": "查看变更",
       "ViewDefinitionHistory": "查看配置定义历史",
       "LoadMore": "加载更多",
-      "RollbackBlockedMetadata": "一个或多个受影响的配置定义缺少完整的权威元数据，因此无法回滚。请先修复并刷新这些定义。"
+      "RollbackBlockedMetadata": "回滚要求相关配置定义处于有效状态，并具有完整且匹配的权威元数据。请先修复、重新发布或刷新这些定义。",
+      "RollbackBlockedRetired": "该配置定义已退役并处于只读状态，无法执行回滚。"
     },
     "Tabs": {
       "Mutations": "按修改",
@@ -342,7 +389,8 @@
       "TargetAll": "全部目标",
       "TargetMonica": "Monica 存储",
       "TargetExternal": "外部来源",
-      "UnavailableDefinition": "{0}（元数据不可用）"
+      "UnavailableDefinition": "{0}（元数据不可用）",
+      "RetiredDefinition": "{0}（已退役）"
     },
     "States": {
       "Empty": "未找到历史记录。"

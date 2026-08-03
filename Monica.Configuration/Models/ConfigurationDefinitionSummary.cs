@@ -61,6 +61,12 @@ public sealed record ConfigurationDefinitionSummary
     public ConfigurationDefinitionOrigin Origin { get; init; } = ConfigurationDefinitionOrigin.LocalScan;
 
     /// <summary>
+    /// Gets whether the definition is currently published or retained only for diagnostics and audit.
+    /// </summary>
+    public ConfigurationDefinitionLifecycleState LifecycleState { get; init; } =
+        ConfigurationDefinitionLifecycleState.Active;
+
+    /// <summary>
     /// Gets whether this definition has complete authoritative metadata and can be managed safely.
     /// </summary>
     public ConfigurationDefinitionAvailability Availability { get; init; } = ConfigurationDefinitionAvailability.Available;
@@ -74,4 +80,9 @@ public sealed record ConfigurationDefinitionSummary
     /// Gets whether Configuration UI operations that require a complete schema are allowed.
     /// </summary>
     public bool CanManage => Availability == ConfigurationDefinitionAvailability.Available;
+
+    /// <summary>
+    /// Gets whether operations that change configuration values are allowed.
+    /// </summary>
+    public bool CanMutate => CanManage && LifecycleState == ConfigurationDefinitionLifecycleState.Active;
 }
