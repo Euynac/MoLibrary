@@ -25,6 +25,10 @@ def fail(message: str) -> None:
     raise SystemExit(1)
 
 
+def normalize_package_id(package_id: str) -> str:
+    return package_id.casefold()
+
+
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description="Validate Monica's public package maturity catalog."
@@ -74,7 +78,7 @@ def main() -> None:
     if dependency_policy != EXPECTED_DEPENDENCY_POLICY:
         fail("dependencyPolicy must preserve Stable -> Stable, Integrations -> Stable/Integrations, and Labs -> any tier")
 
-    package_to_tier: dict[str, str] = {}
+    catalog_packages: dict[str, tuple[str, str]] = {}
     for tier in tiers:
         packages = tier.get("packages")
         if not isinstance(packages, list) or not all(isinstance(package, str) for package in packages):
@@ -82,9 +86,14 @@ def main() -> None:
         if packages != sorted(packages):
             fail(f"packages in tier {tier['id']} must be alphabetically sorted")
         for package in packages:
-            previous_tier = package_to_tier.setdefault(package, tier["id"])
-            if previous_tier != tier["id"]:
-                fail(f"{package} appears in both {previous_tier} and {tier['id']}")
+            package_key = normalize_package_id(package)
+            if package_key in catalog_packages:
+                previous_package_id, previous_tier = catalog_packages[package_key]
+                fail(
+                    f"package IDs are case-insensitive: {package} in {tier['id']} conflicts with "
+                    f"{previous_package_id} in {previous_tier}"
+                )
+            catalog_packages[package_key] = (package, tier["id"])
 
     unpublished = catalog.get("unpublishedProjects")
     if not isinstance(unpublished, list):
@@ -96,17 +105,31 @@ def main() -> None:
         fail("every unpublished project must use a known tier")
 
     project_paths = sorted(ROOT.glob("Monica.*/*.csproj"))
-    project_packages: dict[str, Path] = {}
+    project_packages: dict[str, tuple[str, Path]] = {}
     non_packable_projects: set[str] = set()
     for project_path in project_paths:
         package_id, is_packable = read_project(project_path)
         if is_packable:
-            project_packages[package_id] = project_path
+            package_key = normalize_package_id(package_id)
+            if package_key in project_packages:
+                previous_package_id, previous_project_path = project_packages[package_key]
+                fail(
+                    f"package IDs are case-insensitive: {package_id} in "
+                    f"{project_path.relative_to(ROOT).as_posix()} conflicts with {previous_package_id} in "
+                    f"{previous_project_path.relative_to(ROOT).as_posix()}"
+                )
+            project_packages[package_key] = (package_id, project_path)
         else:
             non_packable_projects.add(project_path.stem)
 
-    missing = sorted(set(project_packages) - set(package_to_tier))
-    extra = sorted(set(package_to_tier) - set(project_packages))
+    missing = sorted(
+        project_packages[package_key][0]
+        for package_key in set(project_packages) - set(catalog_packages)
+    )
+    extra = sorted(
+        catalog_packages[package_key][0]
+        for package_key in set(catalog_packages) - set(project_packages)
+    )
     if missing:
         fail(f"packable projects missing from the catalog: {', '.join(missing)}")
     if extra:
@@ -120,8 +143,8 @@ def main() -> None:
         fail(f"unpublishedProjects entries that are packable or absent: {', '.join(extra_unpublished)}")
 
     project_tiers: dict[Path, str] = {
-        path.resolve(): package_to_tier[package_id]
-        for package_id, path in project_packages.items()
+        path.resolve(): catalog_packages[package_key][1]
+        for package_key, (_, path) in project_packages.items()
     }
     project_tiers.update(
         {
@@ -151,7 +174,8 @@ def main() -> None:
         )
 
     if args.list_public_projects:
-        for _, project_path in sorted(project_packages.items()):
+        for package_key in sorted(project_packages):
+            _, project_path = project_packages[package_key]
             print(project_path.relative_to(ROOT).as_posix())
         return
 
