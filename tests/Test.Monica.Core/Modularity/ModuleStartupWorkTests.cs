@@ -706,6 +706,26 @@ public sealed class ModuleStartupWorkTests
         gate.CompletedCount.Should().Be(1);
     }
 
+    [Fact]
+    public void Dispose_WhenHostNeverStarted_ShouldDisposeHostOwnedMonicaApplication()
+    {
+        var builder = Host.CreateApplicationBuilder();
+        builder.AddMonica(monica =>
+        {
+            monica.ConfigureTypeDiscovery(static options => options.ExcludeDefault());
+            AddProbeOne(monica, static _ => { });
+        });
+        var application = ((IHostApplicationBuilder)builder).Properties.Values
+            .OfType<global::Monica.Core.MonicaApplication>()
+            .Should().ContainSingle().Subject;
+        var host = builder.Build();
+
+        host.Dispose();
+
+        Action createLogger = () => application.CreateLogger<ModuleStartupWorkTests>();
+        createLogger.Should().Throw<ObjectDisposedException>();
+    }
+
     [Theory]
     [InlineData(ModuleStartupWorkBarrier.BeforeHostLifecycle)]
     [InlineData(ModuleStartupWorkBarrier.NoBarrier)]
