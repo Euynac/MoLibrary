@@ -169,6 +169,58 @@ internal sealed class DatabaseConfigurationMetadataStore(ConfigurationDatabase d
     }
 
     /// <inheritdoc />
+    public async Task<IReadOnlyDictionary<string, IReadOnlyList<ConfigurationDefinitionPublisherState>>>
+        GetDefinitionPublisherStatesAsync(
+            IReadOnlyCollection<string> definitionKeys,
+            CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(definitionKeys);
+        var normalizedKeysByIdentity = definitionKeys
+            .Where(static key => !string.IsNullOrWhiteSpace(key))
+            .Select(static key => key.Trim())
+            .GroupBy(ConfigurationDefinitionIdentity.Compute, StringComparer.Ordinal)
+            .ToDictionary(
+                static group => group.Key,
+                static group => group.OrderBy(static key => key, StringComparer.Ordinal).First(),
+                StringComparer.Ordinal);
+        if (normalizedKeysByIdentity.Count == 0)
+        {
+            return new Dictionary<string, IReadOnlyList<ConfigurationDefinitionPublisherState>>(
+                StringComparer.OrdinalIgnoreCase);
+        }
+
+        return await database.ExecuteAsync(async (dbContext, token) =>
+        {
+            var requestedIdentities = normalizedKeysByIdentity.Keys.ToArray();
+            var entities = await dbContext.ConfigurationDefinitionPublisherStates
+                .AsNoTracking()
+                .Where(state => requestedIdentities.Contains(state.DefinitionIdentity))
+                .OrderBy(state => state.DefinitionIdentity)
+                .ThenBy(state => state.PublisherKey)
+                .ThenBy(state => state.PublisherIdentity)
+                .ToArrayAsync(token);
+            var result = normalizedKeysByIdentity.Values.ToDictionary(
+                static key => key,
+                static _ => (IReadOnlyList<ConfigurationDefinitionPublisherState>)[],
+                StringComparer.OrdinalIgnoreCase);
+
+            foreach (var group in entities.GroupBy(static entity => entity.DefinitionIdentity, StringComparer.Ordinal))
+            {
+                if (!normalizedKeysByIdentity.TryGetValue(group.Key, out var definitionKey))
+                {
+                    continue;
+                }
+
+                result[definitionKey] = group
+                    .Select(PublishedDefinitionPublisherStateCandidate.Materialize)
+                    .ToArray();
+            }
+
+            return result;
+        }, cancellationToken);
+    }
+
+    /// <inheritdoc />
     public Task<ConfigurationDefinitionPurgePreview> PreviewDefinitionPurgeAsync(
         string definitionKey,
         CancellationToken cancellationToken)

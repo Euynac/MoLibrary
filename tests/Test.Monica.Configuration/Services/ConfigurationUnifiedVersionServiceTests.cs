@@ -60,7 +60,11 @@ public sealed class ConfigurationUnifiedVersionServiceTests
         // An empty snapshot never resolves definition collaborators; it still exercises the production fingerprint
         // computation and stale-preview guard without requiring persistence or configuration-provider integration.
         var previewFactory = new ConfigurationUnifiedVersionRollbackPreviewFactory(null!, null!, null!, null!);
-        var service = new ConfigurationUnifiedVersionService(versionStore, applyService, previewFactory);
+        var service = new ConfigurationUnifiedVersionService(
+            versionStore,
+            applyService,
+            previewFactory,
+            new ConfigurationRuntimeSnapshotLock());
         return (service, applyService);
     }
 
@@ -79,6 +83,7 @@ public sealed class ConfigurationUnifiedVersionServiceTests
             definitionResolver: null!,
             definitionRegistry: null!,
             definitionMaintenanceStore: null!,
+            definitionChangeImpactService: null!,
             mutationGroupApplyService: null!,
             historyService: null!,
             mutationGroupService: null!,

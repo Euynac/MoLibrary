@@ -837,6 +837,62 @@ public sealed class FileConfigurationStore(IOptions<ConfigurationFileStoreOption
     }
 
     /// <inheritdoc />
+    public async Task<IReadOnlyDictionary<string, IReadOnlyList<ConfigurationDefinitionPublisherState>>>
+        GetDefinitionPublisherStatesAsync(
+            IReadOnlyCollection<string> definitionKeys,
+            CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(definitionKeys);
+        var normalizedDefinitionKeys = definitionKeys
+            .Where(static key => !string.IsNullOrWhiteSpace(key))
+            .Select(static key => key.Trim())
+            .GroupBy(static key => key, StringComparer.OrdinalIgnoreCase)
+            .Select(static group => group.OrderBy(static key => key, StringComparer.Ordinal).First())
+            .OrderBy(static key => key, StringComparer.OrdinalIgnoreCase)
+            .ThenBy(static key => key, StringComparer.Ordinal)
+            .ToArray();
+
+        await _lock.WaitAsync(cancellationToken);
+        try
+        {
+            EnsureDirectories();
+            var pathsByIdentity = IndexDefinitionPathsByIdentity(cancellationToken);
+            var result = new Dictionary<string, IReadOnlyList<ConfigurationDefinitionPublisherState>>(
+                StringComparer.OrdinalIgnoreCase);
+            foreach (var definitionKey in normalizedDefinitionKeys)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                var definitionIdentity = ConfigurationDefinitionIdentity.Compute(definitionKey);
+                var paths = pathsByIdentity.GetValueOrDefault(definitionIdentity) ?? [];
+                if (paths.Count == 0)
+                {
+                    result[definitionKey] = [];
+                    continue;
+                }
+
+                if (paths.Count > 1)
+                {
+                    throw new InvalidDataException(
+                        $"Multiple persisted definition metadata files claim key '{definitionKey}'.");
+                }
+
+                var dto = await TryReadPublishedDefinitionDtoForRepairAsync(paths[0], cancellationToken)
+                          ?? throw new InvalidDataException(
+                              $"Published configuration definition '{definitionKey}' could not be read.");
+                result[definitionKey] = dto.PublisherState is null
+                    ? []
+                    : [dto.PublisherState.ToModel()];
+            }
+
+            return result;
+        }
+        finally
+        {
+            _lock.Release();
+        }
+    }
+
+    /// <inheritdoc />
     public async Task<ConfigurationDefinitionPurgePreview> PreviewDefinitionPurgeAsync(
         string definitionKey,
         CancellationToken cancellationToken)
@@ -1454,6 +1510,37 @@ public sealed class FileConfigurationStore(IOptions<ConfigurationFileStoreOption
             StringComparer.OrdinalIgnoreCase);
     }
 
+    private IReadOnlyDictionary<string, IReadOnlyList<string>> IndexDefinitionPathsByIdentity(
+        CancellationToken cancellationToken)
+    {
+        var pathsByIdentity = new Dictionary<string, List<string>>(StringComparer.Ordinal);
+        foreach (var path in IoDirectory.EnumerateFiles(GetDefinitionsDirectory(), "*.json"))
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            var definitionKey = Path.GetFileNameWithoutExtension(path);
+            if (string.IsNullOrWhiteSpace(definitionKey))
+            {
+                continue;
+            }
+
+            var identity = ConfigurationDefinitionIdentity.Compute(definitionKey);
+            if (!pathsByIdentity.TryGetValue(identity, out var paths))
+            {
+                paths = [];
+                pathsByIdentity[identity] = paths;
+            }
+
+            paths.Add(path);
+        }
+
+        return pathsByIdentity.ToDictionary(
+            static pair => pair.Key,
+            static pair => (IReadOnlyList<string>)pair.Value
+                .OrderBy(static path => path, StringComparer.Ordinal)
+                .ToArray(),
+            StringComparer.Ordinal);
+    }
+
     private static async Task WithdrawMissingPublisherStatesAsync(
         IReadOnlyDictionary<string, IReadOnlyList<string>> definitionPaths,
         string publisherKey,
@@ -1489,28 +1576,9 @@ public sealed class FileConfigurationStore(IOptions<ConfigurationFileStoreOption
     {
         _ = GetDefinitionPath(definitionKey);
         var requestedIdentity = ConfigurationDefinitionIdentity.Compute(definitionKey);
-        var matchingPaths = new List<string>(2);
-        foreach (var path in IoDirectory.EnumerateFiles(GetDefinitionsDirectory(), "*.json"))
-        {
-            cancellationToken.ThrowIfCancellationRequested();
-            var candidateKey = Path.GetFileNameWithoutExtension(path);
-            if (string.IsNullOrWhiteSpace(candidateKey)
-                || !string.Equals(
-                    ConfigurationDefinitionIdentity.Compute(candidateKey),
-                    requestedIdentity,
-                    StringComparison.Ordinal))
-            {
-                continue;
-            }
-
-            matchingPaths.Add(path);
-            if (matchingPaths.Count == 2)
-            {
-                break;
-            }
-        }
-
-        return matchingPaths.ToArray();
+        return (IndexDefinitionPathsByIdentity(cancellationToken).GetValueOrDefault(requestedIdentity) ?? [])
+            .Take(2)
+            .ToArray();
     }
 
     private static ConfigurationPublishedDefinitionEntry WithDuplicateIdentityDiagnostic(

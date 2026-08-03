@@ -120,6 +120,9 @@ public sealed class ModuleConfiguration
         services.TryAddSingleton<ConfigurationEffectiveStateReader>();
         services.TryAddSingleton<IConfigurationStoreStateTracker, ConfigurationStoreStateTracker>();
         services.TryAddSingleton<IConfigurationHistoryService, ConfigurationHistoryService>();
+        services.TryAddSingleton<
+            IConfigurationDefinitionChangeImpactService,
+            ConfigurationDefinitionChangeImpactService>();
         services.TryAddSingleton<IConfigurationMutationBatchStore, SequentialConfigurationMutationBatchStore>();
         services.TryAddSingleton<IConfigurationMutationGroupService, ConfigurationMutationGroupService>();
         services.TryAddSingleton<ConfigurationRuntimeSnapshotLock>();

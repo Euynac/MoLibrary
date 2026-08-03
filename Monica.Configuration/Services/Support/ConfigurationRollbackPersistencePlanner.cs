@@ -11,7 +11,6 @@ namespace Monica.Configuration.Services.Support;
 /// Converts effective-value rollback differences into source-bound mutations and rejects runtime/source drift.
 /// </summary>
 internal sealed class ConfigurationRollbackPersistencePlanner(
-    IConfigurationEffectiveValueStore effectiveValueStore,
     IConfigurationSourceInspector sourceInspector,
     IConfigurationJsonFileSourceWriter sourceWriter,
     ConfigurationEffectiveValueDocumentEditor documentEditor,
@@ -23,12 +22,12 @@ internal sealed class ConfigurationRollbackPersistencePlanner(
 
     public async Task<IReadOnlyList<ConfigurationUnifiedVersionApplyMutation>> PlanAsync(
         ConfigurationDefinition definition,
-        string currentJson,
+        ConfigurationResolvedEffectiveSnapshot currentSnapshot,
         string targetJson,
         CancellationToken cancellationToken)
     {
-        var changes = ConfigurationRollbackChangePlanner.Plan(definition.Root, currentJson, targetJson);
-        return await ResolveMutationDestinationsAsync(definition, changes, cancellationToken);
+        var changes = ConfigurationRollbackChangePlanner.Plan(definition.Root, currentSnapshot.Json, targetJson);
+        return await ResolveMutationDestinationsAsync(definition, currentSnapshot, changes, cancellationToken);
     }
 
     /// <summary>
@@ -62,10 +61,10 @@ internal sealed class ConfigurationRollbackPersistencePlanner(
 
     public async Task<IReadOnlyList<ConfigurationUnifiedVersionApplyMutation>> FindRuntimeSourceDriftsAsync(
         ConfigurationDefinition definition,
-        string runtimeJson,
+        ConfigurationResolvedEffectiveSnapshot currentSnapshot,
         CancellationToken cancellationToken)
     {
-        var candidates = ConfigurationRollbackChangePlanner.EnumerateLeaves(definition.Root, runtimeJson)
+        var candidates = ConfigurationRollbackChangePlanner.EnumerateLeaves(definition.Root, currentSnapshot.Json)
             .Select(leaf => CreateDriftCandidate(definition, leaf))
             .Where(static candidate => candidate is not null)
             .Select(static candidate => candidate!)
@@ -73,7 +72,12 @@ internal sealed class ConfigurationRollbackPersistencePlanner(
         var drifts = new List<ConfigurationUnifiedVersionApplyMutation>();
         var sources = sourceInspector.GetSources();
 
-        await FindMonicaDriftsAsync(definition, candidates, sources, drifts, cancellationToken);
+        FindMonicaDrifts(
+            definition,
+            candidates,
+            sources,
+            drifts,
+            currentSnapshot.PersistedDocument);
         await FindJsonSourceDriftsAsync(definition, candidates, sources, drifts, cancellationToken);
         return drifts;
     }
@@ -92,14 +96,13 @@ internal sealed class ConfigurationRollbackPersistencePlanner(
             : null;
     }
 
-    private async Task FindMonicaDriftsAsync(
+    private void FindMonicaDrifts(
         ConfigurationDefinition definition,
         IReadOnlyList<PersistenceDriftCandidate> candidates,
         IReadOnlyList<ConfigurationSourceDescriptor> sources,
         ICollection<ConfigurationUnifiedVersionApplyMutation> drifts,
-        CancellationToken cancellationToken)
+        ConfigurationEffectiveValueDocument? document)
     {
-        var document = await effectiveValueStore.GetAsync(definition.DefinitionKey, cancellationToken);
         var loadedVersion = providerAccessor.Provider?.GetLoadedVersion(definition.DefinitionKey);
         if (loadedVersion is not null && (document is null || document.Version < loadedVersion))
         {
@@ -193,6 +196,7 @@ internal sealed class ConfigurationRollbackPersistencePlanner(
 
     private async Task<IReadOnlyList<ConfigurationUnifiedVersionApplyMutation>> ResolveMutationDestinationsAsync(
         ConfigurationDefinition definition,
+        ConfigurationResolvedEffectiveSnapshot currentSnapshot,
         IReadOnlyList<ConfigurationRollbackValueChange> changes,
         CancellationToken cancellationToken)
     {
@@ -204,16 +208,16 @@ internal sealed class ConfigurationRollbackPersistencePlanner(
             .Select(change => ResolveMutationDestination(definition, change, monicaSource))
             .ToArray();
 
-        await BindMonicaConcurrencyAsync(definition, changes, mutations, cancellationToken);
+        BindMonicaConcurrency(definition, currentSnapshot, changes, mutations);
         await BindJsonSourceConcurrencyAsync(definition, changes, mutations, sourceByKey, cancellationToken);
         return mutations;
     }
 
-    private async Task BindMonicaConcurrencyAsync(
+    private void BindMonicaConcurrency(
         ConfigurationDefinition definition,
+        ConfigurationResolvedEffectiveSnapshot currentSnapshot,
         IReadOnlyList<ConfigurationRollbackValueChange> changes,
-        ConfigurationUnifiedVersionApplyMutation[] mutations,
-        CancellationToken cancellationToken)
+        ConfigurationUnifiedVersionApplyMutation[] mutations)
     {
         if (!mutations.Any(static mutation =>
                 mutation.Status == ConfigurationUnifiedVersionApplyMutationStatus.Ready
@@ -222,7 +226,9 @@ internal sealed class ConfigurationRollbackPersistencePlanner(
             return;
         }
 
-        var document = await effectiveValueStore.GetAsync(definition.DefinitionKey, cancellationToken);
+        // Use the document captured with the reviewed runtime JSON. Re-reading here could mix generations inside one
+        // preview and would turn rollback planning back into a per-definition store query.
+        var document = currentSnapshot.PersistedDocument;
         var expectedVersion = document?.Version ?? 0;
         var loadedVersion = providerAccessor.Provider?.GetLoadedVersion(definition.DefinitionKey);
         var generationDrift = loadedVersion is not null

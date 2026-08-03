@@ -168,6 +168,25 @@ public class FileConfigurationStoreTests : IDisposable
     }
 
     [Fact]
+    public async Task GetDefinitionPublisherStatesAsync_WhenDefinitionIsMissing_ShouldReturnCompleteCurrentSnapshot()
+    {
+        var store = CreateStore();
+        var definition = TestConfigurationFactory.Definition();
+        var publisher = CreatePublisher("Test.FileImpact", "impact:1");
+        await store.PublishAsync(
+            ConfigurationDefinitionPublicationBatch.Create(publisher, [definition]),
+            CancellationToken.None);
+
+        var states = await store.GetDefinitionPublisherStatesAsync(
+            [definition.DefinitionKey, "Test.FileImpact.Missing"],
+            CancellationToken.None);
+
+        states[definition.DefinitionKey].Should().ContainSingle(state =>
+            state.PublisherKey == publisher.PublisherKey);
+        states["Test.FileImpact.Missing"].Should().BeEmpty();
+    }
+
+    [Fact]
     public async Task PublisherLifecycle_WhenLastPublisherWithdrawsAndReturns_ShouldRetireThenReactivateDefinition()
     {
         var store = CreateStore();

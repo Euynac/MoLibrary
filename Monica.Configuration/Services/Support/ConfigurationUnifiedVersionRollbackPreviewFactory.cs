@@ -15,44 +15,93 @@ internal sealed class ConfigurationUnifiedVersionRollbackPreviewFactory(
         ConfigurationUnifiedVersionSnapshot snapshot,
         CancellationToken cancellationToken)
     {
-        var targets = new List<ConfigurationUnifiedVersionApplyTarget>(snapshot.Definitions.Count);
-        foreach (var document in snapshot.Definitions)
+        if (snapshot.Definitions.Count == 0)
         {
-            targets.Add(await ResolveTargetAsync(document, cancellationToken));
+            return CreatePreview(snapshot.Summary.Version, []);
         }
 
+        var targetDefinitions = await ResolveTargetDefinitionsAsync(snapshot.Definitions, cancellationToken);
+        var effectiveSnapshots = await effectiveSnapshotReader.ReadManyAsync(
+            targetDefinitions.OfType<ConfigurationDefinition>().ToArray(),
+            cancellationToken);
+        var targets = new List<ConfigurationUnifiedVersionApplyTarget>(snapshot.Definitions.Count);
+        var effectiveSnapshotIndex = 0;
+        for (var index = 0; index < snapshot.Definitions.Count; index++)
+        {
+            var document = snapshot.Definitions[index];
+            var definition = targetDefinitions[index];
+            if (definition is null)
+            {
+                targets.Add(CreateMissingTarget(document));
+                continue;
+            }
+
+            // Missing historical definitions are excluded from the batch, so only resolved targets advance this index.
+            targets.Add(await ResolveTargetAsync(
+                document,
+                definition,
+                effectiveSnapshots[effectiveSnapshotIndex++],
+                cancellationToken));
+        }
+
+        return CreatePreview(snapshot.Summary.Version, targets);
+    }
+
+    private async Task<IReadOnlyList<ConfigurationDefinition?>> ResolveTargetDefinitionsAsync(
+        IReadOnlyList<ConfigurationUnifiedVersionDefinitionSnapshot> documents,
+        CancellationToken cancellationToken)
+    {
+        var definitions = new ConfigurationDefinition?[documents.Count];
+        for (var index = 0; index < documents.Count; index++)
+        {
+            try
+            {
+                definitions[index] = await definitionResolver.GetRequiredAsync(
+                    documents[index].DefinitionKey,
+                    cancellationToken);
+            }
+            catch (KeyNotFoundException)
+            {
+                definitions[index] = null;
+            }
+        }
+
+        return definitions;
+    }
+
+    private static ConfigurationUnifiedVersionApplyPreview CreatePreview(
+        long version,
+        IReadOnlyList<ConfigurationUnifiedVersionApplyTarget> targets)
+    {
         return new ConfigurationUnifiedVersionApplyPreview
         {
-            Version = snapshot.Summary.Version,
+            Version = version,
             PreviewFingerprint = ConfigurationUnifiedVersionRollbackPreviewFingerprint.Compute(
-                snapshot.Summary.Version,
+                version,
                 targets),
             Targets = targets
         };
     }
 
+    private static ConfigurationUnifiedVersionApplyTarget CreateMissingTarget(
+        ConfigurationUnifiedVersionDefinitionSnapshot document)
+    {
+        return new ConfigurationUnifiedVersionApplyTarget
+        {
+            DefinitionKey = document.DefinitionKey,
+            DisplayName = document.DisplayName,
+            TargetJson = document.Json,
+            CapturedSchemaHash = document.SchemaHash,
+            Status = ConfigurationUnifiedVersionApplyTargetStatus.MissingDefinition
+        };
+    }
+
     private async Task<ConfigurationUnifiedVersionApplyTarget> ResolveTargetAsync(
         ConfigurationUnifiedVersionDefinitionSnapshot document,
+        ConfigurationDefinition definition,
+        ConfigurationResolvedEffectiveSnapshot currentSnapshot,
         CancellationToken cancellationToken)
     {
-        ConfigurationDefinition definition;
-        try
-        {
-            definition = await definitionResolver.GetRequiredAsync(document.DefinitionKey, cancellationToken);
-        }
-        catch (KeyNotFoundException)
-        {
-            return new ConfigurationUnifiedVersionApplyTarget
-            {
-                DefinitionKey = document.DefinitionKey,
-                DisplayName = document.DisplayName,
-                TargetJson = document.Json,
-                CapturedSchemaHash = document.SchemaHash,
-                Status = ConfigurationUnifiedVersionApplyTargetStatus.MissingDefinition
-            };
-        }
-
-        var currentSnapshot = await effectiveSnapshotReader.ReadAsync(definition, cancellationToken);
         var currentJson = currentSnapshot.Json;
         var target = new ConfigurationUnifiedVersionApplyTarget
         {
@@ -83,7 +132,7 @@ internal sealed class ConfigurationUnifiedVersionRollbackPreviewFactory(
         var persistenceDrifts = definition.Origin == ConfigurationDefinitionOrigin.LocalScan
             ? await persistencePlanner.FindRuntimeSourceDriftsAsync(
                 definition,
-                currentJson,
+                currentSnapshot,
                 cancellationToken)
             : [];
         if (persistenceDrifts.Count > 0)
@@ -108,7 +157,7 @@ internal sealed class ConfigurationUnifiedVersionRollbackPreviewFactory(
                 currentSnapshot.RequireVersion(definition))
             : await persistencePlanner.PlanAsync(
                 definition,
-                currentJson,
+                currentSnapshot,
                 document.Json,
                 cancellationToken);
         var blockedMutation = mutations.FirstOrDefault(static mutation =>

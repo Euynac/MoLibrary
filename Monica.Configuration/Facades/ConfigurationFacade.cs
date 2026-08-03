@@ -18,6 +18,7 @@ public sealed class ConfigurationFacade(
     ConfigurationDefinitionResolver definitionResolver,
     IConfigurationDefinitionRegistry definitionRegistry,
     IConfigurationDefinitionMaintenanceStore definitionMaintenanceStore,
+    IConfigurationDefinitionChangeImpactService definitionChangeImpactService,
     IConfigurationMutationGroupApplyService mutationGroupApplyService,
     IConfigurationHistoryService historyService,
     IConfigurationMutationGroupService mutationGroupService,
@@ -391,6 +392,27 @@ public sealed class ConfigurationFacade(
         catch (Exception ex)
         {
             return Res.Fail($"Failed to get configuration definition publication overview: {ex.GetMessageRecursively()}");
+        }
+    }
+
+    /// <summary>
+    /// Gets current logical-service impact for prospective changes to configuration definitions.
+    /// </summary>
+    /// <param name="definitionKeys">Definition keys whose prospective changes are being reviewed.</param>
+    /// <returns>Participating logical publishers and definitions without known consumers.</returns>
+    public async Task<Res<ConfigurationDefinitionChangeImpact>> GetDefinitionChangeImpactAsync(
+        IReadOnlyCollection<string> definitionKeys)
+    {
+        try
+        {
+            return Res.Ok(await definitionChangeImpactService.GetImpactAsync(
+                definitionKeys,
+                CancellationToken.None));
+        }
+        catch (Exception ex)
+        {
+            return Res.Fail(
+                $"Failed to get configuration definition change impact: {ex.GetMessageRecursively()}");
         }
     }
 

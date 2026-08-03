@@ -63,4 +63,19 @@ public interface IConfigurationMetadataStore
         string definitionKey,
         int limit,
         CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Gets current logical-publisher state for a set of definition keys without loading publication history.
+    /// </summary>
+    /// <param name="definitionKeys">Definition keys whose current publisher state is required.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>
+    /// Publisher states keyed by definition key. Definitions without current publisher state are returned with an
+    /// empty state list. The result contains current state only and never loads definition-publication history.
+    /// </returns>
+    /// <exception cref="OperationCanceledException">The operation was canceled.</exception>
+    Task<IReadOnlyDictionary<string, IReadOnlyList<ConfigurationDefinitionPublisherState>>>
+        GetDefinitionPublisherStatesAsync(
+            IReadOnlyCollection<string> definitionKeys,
+            CancellationToken cancellationToken);
 }

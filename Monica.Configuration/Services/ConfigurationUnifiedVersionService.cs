@@ -8,7 +8,8 @@ namespace Monica.Configuration.Services;
 internal sealed class ConfigurationUnifiedVersionService(
     IConfigurationUnifiedVersionStore versionStore,
     IConfigurationMutationGroupApplyService mutationGroupApplyService,
-    ConfigurationUnifiedVersionRollbackPreviewFactory rollbackPreviewFactory)
+    ConfigurationUnifiedVersionRollbackPreviewFactory rollbackPreviewFactory,
+    ConfigurationRuntimeSnapshotLock runtimeSnapshotLock)
     : IConfigurationUnifiedVersionService
 {
     public Task<IReadOnlyList<ConfigurationUnifiedVersionSummary>> ListVersionsAsync(
@@ -87,7 +88,9 @@ internal sealed class ConfigurationUnifiedVersionService(
         CancellationToken cancellationToken)
     {
         var snapshot = await GetRequiredVersionAsync(version, cancellationToken);
-        return await rollbackPreviewFactory.CreateAsync(snapshot, cancellationToken);
+        return await runtimeSnapshotLock.ExecuteAsync(
+            token => rollbackPreviewFactory.CreateAsync(snapshot, token),
+            cancellationToken);
     }
 
     public async Task<ConfigurationUnifiedVersionRollbackResult> RollbackToVersionAsync(
@@ -95,7 +98,9 @@ internal sealed class ConfigurationUnifiedVersionService(
         CancellationToken cancellationToken)
     {
         var snapshot = await GetRequiredVersionAsync(request.Version, cancellationToken);
-        var preview = await rollbackPreviewFactory.CreateAsync(snapshot, cancellationToken);
+        var preview = await runtimeSnapshotLock.ExecuteAsync(
+            token => rollbackPreviewFactory.CreateAsync(snapshot, token),
+            cancellationToken);
         if (!string.Equals(preview.PreviewFingerprint, request.PreviewFingerprint, StringComparison.Ordinal))
         {
             throw new ConfigurationConcurrencyConflictException(
