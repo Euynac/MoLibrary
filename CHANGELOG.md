@@ -6,21 +6,7 @@ This project follows semantic versioning for public NuGet packages. Release cand
 
 ## [Unreleased]
 
-### Added
-
-- Generic Host lifecycle support for hosted-service observability, EventBus auto-discovery, and execution-timing aggregation.
-
-### Changed
-
-- Monica composition now completes at service registration for Generic Hosts and at endpoint mapping for Web hosts, with startup validation for incomplete Web pipelines.
-- Hosted-service diagnostics and checkpoints now identify runtime instances explicitly, including multiple keyed services of the same concrete type.
-- EventBus batch mutations are cancellable and transactional, and auto-discovered subscriptions are owned and cleaned up by the Host lifecycle.
-
-### Removed
-
-- `ModuleExecutionTimingOption.ExposeExecutionTimingEndpoints`; use the shared `EnableMinimalApi` option instead.
-
-## [1.0.0-rc.6] - 2026-07-23
+## [1.0.0-rc.6] - 2026-08-03
 
 ### Added
 
@@ -31,6 +17,11 @@ This project follows semantic versioning for public NuGet packages. Release cand
 - Stable, Integrations, and Labs package tiers with CI-enforced dependency direction.
 - A dedicated `Monica.ProjectUnits` package, official `Monica.Templates`, and the Ordering reference application.
 - Host-scoped Object Mapping and ProjectUnits facades for Minimal API and UI consumers.
+- Generic Host lifecycle support for hosted-service observability, EventBus auto-discovery, and execution-timing aggregation.
+- Checkpointed concurrent module startup work with host-lifecycle barriers and critical-path composition diagnostics.
+- Typed ProjectUnit runtime catalogs, status dashboards, and source analysis.
+- A unified ProjectUnit execution pipeline and runtime catalog.
+- Kafka consumer-group partition metrics and topic throughput snapshots.
 
 ### Changed
 
@@ -44,6 +35,20 @@ This project follows semantic versioning for public NuGet packages. Release cand
 - Configuration persistence and Entity Framework integration now use deterministic, warning-free schemas and read-only serializer options.
 - Unhandled-exception responses are safe by default; stack traces and request snapshots now require an explicit trusted-development opt-in.
 - Template and reference hosts expose ASP.NET Core health checks instead of hardcoded health payloads.
+- Monica composition now completes at service registration for Generic Hosts and at endpoint mapping for Web hosts, with startup validation for incomplete Web pipelines.
+- Hosted-service diagnostics and checkpoints identify runtime instances explicitly, including multiple keyed services of the same concrete type.
+- EventBus batch mutations are cancellable and transactional, and auto-discovered subscriptions are owned and cleaned up by the Host lifecycle.
+- Configuration activation batches schema analysis and state reads, supports fingerprint-bound rollback, and manages retired definitions.
+- Object Mapping uses the current Mapster compiler, supports fail-fast compilation, and caches runtime mappers per scope.
+- Kafka administration and consumer diagnostics provide safer native-client handling and responsive operational views.
+
+### Fixed
+
+- Generic Hosts now own and dispose Monica composition state even when they are built but never started.
+- Mediator handler activation is preserved after dependency-injection simplification.
+- Dapr subscriptions retry transient delivery failures and isolate dead-letter topics per source.
+- Markdown viewer resources, AppBar menus, and UI icon geometry follow component and interaction lifecycles correctly.
+- Kafka performance sampling avoids native crashes while retaining current per-topic observations.
 
 ### Removed
 
@@ -52,6 +57,8 @@ This project follows semantic versioning for public NuGet packages. Release cand
 - Global mutable clock, DataChannel, principal, localization, JSON, mapping, and runtime-environment state.
 - AutoController's source-scanning RPC metadata bootstrap; producer assemblies are now the only metadata authority.
 - Unused process-wide debug helpers and the unbounded delayed-task scheduler.
+- DynamicProxy-based dependency-injection interception.
+- `ModuleExecutionTimingOption.ExposeExecutionTimingEndpoints`; use the shared `EnableMinimalApi` option instead.
 
 ## [1.0.0-rc.2] - 2026-05-09
 

@@ -34,7 +34,7 @@
     <PackageTags>monica;dotnet;aspnetcore;blazor;mudblazor;ddd;ai-agent;jobscheduler;modular;recurringjob</PackageTags>
 
     <!-- Package Release Notes -->
-    <PackageReleaseNotes>Monica 1.0 release candidate 6 introduces the third-party module ecosystem contract, publisher-owned module identities, collision-safe module registration, module-owned UI localization, and compatibility guidance for independent packages.</PackageReleaseNotes>
+    <PackageReleaseNotes>Monica 1.0 release candidate 6 introduces Generic Host lifecycle integration, checkpointed concurrent module startup work and critical-path diagnostics, typed ProjectUnit catalogs and source analysis, configuration rollback and retirement workflows, modernized object mapping, publisher-owned third-party module identities, module-owned UI localization, and expanded Kafka, Dapr, StateStore, and execution-pipeline reliability.</PackageReleaseNotes>
 
     <!-- Symbol Packages -->
     <IncludeSymbols>true</IncludeSymbols>
