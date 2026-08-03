@@ -150,6 +150,16 @@ public sealed class KafkaConsumerMemberMetrics
     public string ClientId { get; set; } = string.Empty;
 
     /// <summary>
+    /// Estimated consumer rate for the partitions currently assigned to this member.
+    /// </summary>
+    /// <remarks>
+    /// The value is <see langword="null"/> until a comparable previous capture exists, when the
+    /// member has no assigned partitions, or when any assigned partition lacks a valid
+    /// committed-offset baseline.
+    /// </remarks>
+    public double? ConsumeRatePerSecond { get; set; }
+
+    /// <summary>
     /// Partition-level metrics assigned to this member.
     /// </summary>
     public IReadOnlyList<KafkaConsumerPartitionMetrics> Partitions { get; set; } = [];

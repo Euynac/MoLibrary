@@ -116,6 +116,7 @@ internal sealed class InMemoryKafkaConsoleRepository : IKafkaConsoleRepository
                     ConsumerId = member.ConsumerId,
                     Host = member.Host,
                     ClientId = member.ClientId,
+                    ConsumeRatePerSecond = member.ConsumeRatePerSecond,
                     Partitions = member.Partitions
                         .Select(partition => new KafkaConsumerPartitionMetrics
                         {

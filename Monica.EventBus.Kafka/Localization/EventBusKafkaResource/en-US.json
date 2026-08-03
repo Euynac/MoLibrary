@@ -364,6 +364,8 @@
       "Title": "Consumer group consumption details",
       "TopicTitle": "Topic consumer group consumption details",
       "MembersTitle": "Members ({0})",
+      "MemberMetricsLabel": "Metrics for member {0}",
+      "MemberIdentityHint": "HOST: {0} · CLIENT-ID: {1}",
       "NoMembers": "This consumer group currently has no registered members.",
       "PartitionsTitle": "Partition metrics",
       "Loading": "Capturing consumer-group metrics...",

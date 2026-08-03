@@ -49,7 +49,19 @@
     [Parameter]
     public Color AccentColor { get; set; } = Color.Primary;
 
-    private string RootClass => $"kafka-metric-card kafka-metric-card--{GetAccentName(AccentColor)}";
+    /// <summary>
+    /// Gets or sets whether the hint remains visible on narrow viewports.
+    /// </summary>
+    /// <remarks>
+    /// Enable this when the hint contains identity or diagnostic information that must remain
+    /// available rather than optional explanatory copy.
+    /// </remarks>
+    [Parameter]
+    public bool KeepHintOnNarrow { get; set; }
+
+    private string RootClass => KeepHintOnNarrow
+        ? $"kafka-metric-card kafka-metric-card--{GetAccentName(AccentColor)} kafka-metric-card--keep-hint"
+        : $"kafka-metric-card kafka-metric-card--{GetAccentName(AccentColor)}";
 
     private static string GetAccentName(Color color) => color switch
     {

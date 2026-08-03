@@ -163,13 +163,6 @@
     border-radius: 999px;
 }
 
-.consumer-metrics-summary {
-    display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-    gap: 12px;
-    min-width: 0;
-}
-
 .consumer-detail-section {
     min-width: 0;
     display: flex;
@@ -212,7 +205,29 @@
     color: inherit;
 }
 
-.consumer-members-table,
+.consumer-member-metrics-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    min-width: 0;
+}
+
+.consumer-member-metrics {
+    min-width: 0;
+    padding: 10px;
+    border: 1px solid color-mix(in srgb, var(--mud-palette-secondary) 18%, var(--mud-palette-lines-default));
+    border-radius: 9px;
+    background: color-mix(in srgb, var(--mud-palette-secondary) 3%, var(--mud-palette-surface));
+}
+
+.consumer-member-metrics__cards {
+    min-width: 0;
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    align-items: stretch;
+    gap: 12px;
+}
+
 .consumer-partitions-table {
     width: 100%;
     min-width: 0;
@@ -221,21 +236,12 @@
     border-radius: 9px;
 }
 
-.consumer-members-table ::deep .mud-table-container,
 .consumer-partitions-table ::deep .mud-table-container {
     overflow-x: auto;
 }
 
-.consumer-members-table ::deep .mud-table-root {
-    min-width: 720px;
-}
-
 .consumer-partitions-table ::deep .mud-table-root {
     min-width: 1080px;
-}
-
-.consumer-members-table ::deep .mud-table-head {
-    background: color-mix(in srgb, var(--mud-palette-secondary) 5%, var(--mud-palette-surface));
 }
 
 .consumer-partitions-table ::deep .mud-table-head {
@@ -295,7 +301,7 @@
         justify-content: flex-start;
     }
 
-    .consumer-metrics-summary {
+    .consumer-member-metrics__cards {
         grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 }
@@ -341,10 +347,12 @@
     .consumer-detail-section {
         padding: 11px;
     }
-}
 
-@media (max-width: 340px) {
-    .consumer-metrics-summary {
+    .consumer-member-metrics {
+        padding: 8px;
+    }
+
+    .consumer-member-metrics__cards {
         grid-template-columns: minmax(0, 1fr);
     }
 }

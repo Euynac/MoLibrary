@@ -5,7 +5,7 @@
 <MudDialog>
     <DialogContent>
         @{
-            var metrics = ConsumerMetricsView.Create(PollingState.Snapshot, GroupId, TopicName);
+            var metrics = KafkaConsumerGroupMetricsView.Create(PollingState.Snapshot, GroupId, TopicName);
         }
         <div class="consumer-metrics-dialog">
             <section class="consumer-metrics-overview" aria-labelledby="consumer-metrics-group-heading">
@@ -98,28 +98,6 @@
             }
             else
             {
-                @if (PollingState.Snapshot is not null)
-                {
-                    <section class="consumer-metrics-summary" aria-label="@L["ConsumerGroups:MetricsDialog:PartitionsTitle"]">
-                        <KafkaMetricCard Icon="@Icons.Material.Filled.Groups"
-                                         Label="@L["ConsumerGroups:Columns:Members"]"
-                                         Value="@metrics.MemberCount.ToString()"
-                                         AccentColor="@metrics.MemberAccentColor" />
-                        <KafkaMetricCard Icon="@Icons.Material.Filled.AccountTree"
-                                         Label="@L["ConsumerGroups:MetricsDialog:Columns:Assignments"]"
-                                         Value="@metrics.AssignmentCount.ToString()"
-                                         AccentColor="@metrics.AssignmentAccentColor" />
-                        <KafkaMetricCard Icon="@Icons.Material.Filled.HourglassBottom"
-                                         Label="@L["Performance:Columns:Lag"]"
-                                         Value="@KafkaMetricDisplayFormatter.FormatOptionalInt64(metrics.TotalLag, L["Performance:Values:LagUnknown"])"
-                                         AccentColor="@metrics.LagAccentColor" />
-                        <KafkaMetricCard Icon="@Icons.Material.Filled.SouthWest"
-                                         Label="@L["Performance:Columns:ConsumeRate"]"
-                                         Value="@KafkaMetricDisplayFormatter.FormatRate(metrics.TotalConsumeRate, L)"
-                                         AccentColor="@metrics.ConsumeRateAccentColor" />
-                    </section>
-                }
-
                 <section class="consumer-detail-section consumer-members-section"
                          aria-labelledby="consumer-members-heading">
                     <div class="consumer-section-title">
@@ -139,39 +117,33 @@
                     }
                     else
                     {
-                        <div class="consumer-members-table">
-                            <MudTable T="KafkaConsumerGroupMemberAssignment"
-                                      Items="@metrics.Members"
-                                      Dense="true"
-                                      Hover="true"
-                                      Striped="true"
-                                      Breakpoint="Breakpoint.None">
-                                <HeaderContent>
-                                    <MudTh>@L["ConsumerGroups:MetricsDialog:Columns:ConsumerId"]</MudTh>
-                                    <MudTh>@L["ConsumerGroups:MetricsDialog:Columns:Host"]</MudTh>
-                                    <MudTh>@L["ConsumerGroups:MetricsDialog:Columns:ClientId"]</MudTh>
-                                    <MudTh>@L["ConsumerGroups:MetricsDialog:Columns:Assignments"]</MudTh>
-                                </HeaderContent>
-                                <RowTemplate>
-                                    <MudTd DataLabel="@L["ConsumerGroups:MetricsDialog:Columns:ConsumerId"]">
-                                        <span class="consumer-identifier">@FormatIdentity(context.ConsumerId)</span>
-                                    </MudTd>
-                                    <MudTd DataLabel="@L["ConsumerGroups:MetricsDialog:Columns:Host"]">
-                                        <span class="consumer-identifier">@FormatIdentity(context.Host)</span>
-                                    </MudTd>
-                                    <MudTd DataLabel="@L["ConsumerGroups:MetricsDialog:Columns:ClientId"]">
-                                        <span class="consumer-identifier">@FormatIdentity(context.ClientId)</span>
-                                    </MudTd>
-                                    <MudTd DataLabel="@L["ConsumerGroups:MetricsDialog:Columns:Assignments"]">
-                                        <MudChip T="string"
-                                                 Size="Size.Small"
-                                                 Variant="Variant.Outlined"
-                                                 Color="Color.Info">
-                                            @metrics.GetAssignmentCount(context)
-                                        </MudChip>
-                                    </MudTd>
-                                </RowTemplate>
-                            </MudTable>
+                        <div class="consumer-member-metrics-list">
+                            @foreach (var member in metrics.Members)
+                            {
+                                <article class="consumer-member-metrics"
+                                         aria-label="@L["ConsumerGroups:MetricsDialog:MemberMetricsLabel", FormatIdentity(member.Member.ConsumerId)]">
+                                    <div class="consumer-member-metrics__cards">
+                                        <KafkaMetricCard Icon="@Icons.Material.Filled.Person"
+                                                         Label="@L["ConsumerGroups:Columns:Members"]"
+                                                         Value="@FormatIdentity(member.Member.ConsumerId)"
+                                                         Hint="@L["ConsumerGroups:MetricsDialog:MemberIdentityHint", FormatIdentity(member.Member.Host), FormatIdentity(member.Member.ClientId)]"
+                                                         KeepHintOnNarrow="true"
+                                                         AccentColor="@member.MemberAccentColor" />
+                                        <KafkaMetricCard Icon="@Icons.Material.Filled.AccountTree"
+                                                         Label="@L["ConsumerGroups:MetricsDialog:Columns:Assignments"]"
+                                                         Value="@member.AssignmentCount.ToString()"
+                                                         AccentColor="@member.AssignmentAccentColor" />
+                                        <KafkaMetricCard Icon="@Icons.Material.Filled.HourglassBottom"
+                                                         Label="@L["Performance:Columns:Lag"]"
+                                                         Value="@KafkaMetricDisplayFormatter.FormatOptionalInt64(member.TotalLag, L["Performance:Values:LagUnknown"])"
+                                                         AccentColor="@member.LagAccentColor" />
+                                        <KafkaMetricCard Icon="@Icons.Material.Filled.SouthWest"
+                                                         Label="@L["Performance:Columns:ConsumeRate"]"
+                                                         Value="@KafkaMetricDisplayFormatter.FormatRate(member.ConsumeRatePerSecond, L)"
+                                                         AccentColor="@member.ConsumeRateAccentColor" />
+                                    </div>
+                                </article>
+                            }
                         </div>
                     }
                 </section>
@@ -199,7 +171,7 @@
                     else
                     {
                         <div class="consumer-partitions-table">
-                            <MudTable T="ConsumerPartitionRow"
+                            <MudTable T="KafkaConsumerPartitionMetricsRow"
                                       Items="@metrics.PartitionRows"
                                       Dense="true"
                                       Hover="true"
@@ -343,16 +315,6 @@
             : value;
     }
 
-    private static Color GetLagColor(long? lag)
-    {
-        return lag switch
-        {
-            0 => Color.Success,
-            > 0 => Color.Warning,
-            _ => Color.Secondary
-        };
-    }
-
     private void HandleStateChanged()
     {
         if (!_isDisposed)
@@ -373,113 +335,4 @@
         await PollingState.DisposeAsync();
     }
 
-    private sealed class ConsumerMetricsView
-    {
-        private readonly string? _topicName;
-
-        private ConsumerMetricsView(
-            IReadOnlyList<KafkaConsumerGroupMemberAssignment> members,
-            IReadOnlyList<ConsumerPartitionRow> partitionRows,
-            string? topicName,
-            int assignmentCount,
-            long? totalLag,
-            double? totalConsumeRate)
-        {
-            Members = members;
-            PartitionRows = partitionRows;
-            _topicName = topicName;
-            AssignmentCount = assignmentCount;
-            TotalLag = totalLag;
-            TotalConsumeRate = totalConsumeRate;
-        }
-
-        public IReadOnlyList<KafkaConsumerGroupMemberAssignment> Members { get; }
-
-        public int MemberCount => Members.Count;
-
-        public bool HasMembers => MemberCount > 0;
-
-        public IReadOnlyList<ConsumerPartitionRow> PartitionRows { get; }
-
-        public int PartitionCount => PartitionRows.Count;
-
-        public bool HasPartitions => PartitionCount > 0;
-
-        public int AssignmentCount { get; }
-
-        public long? TotalLag { get; }
-
-        public double? TotalConsumeRate { get; }
-
-        public Color MemberAccentColor => HasMembers ? Color.Secondary : Color.Warning;
-
-        public Color AssignmentAccentColor => AssignmentCount > 0 ? Color.Info : Color.Warning;
-
-        public Color LagAccentColor => GetLagColor(TotalLag);
-
-        public Color ConsumeRateAccentColor => TotalConsumeRate.HasValue ? Color.Success : Color.Warning;
-
-        public int GetAssignmentCount(KafkaConsumerGroupMemberAssignment member)
-        {
-            return CountAssignments(member, _topicName);
-        }
-
-        public static ConsumerMetricsView Create(
-            KafkaConsumerMetricsSnapshot? snapshot,
-            string groupId,
-            string? topicName)
-        {
-            var groupMetrics = snapshot?.GroupMetrics ?? [];
-            IReadOnlyList<KafkaConsumerGroupMemberAssignment> members = snapshot?.ConsumerGroups
-                .FirstOrDefault(group => string.Equals(group.GroupId, groupId, StringComparison.Ordinal))
-                ?.Members ?? [];
-
-            if (topicName is not null)
-            {
-                members = members
-                    .Where(member => member.Partitions.Any(partition =>
-                        string.Equals(partition.TopicName, topicName, StringComparison.Ordinal)))
-                    .ToList();
-            }
-
-            var partitionRows = groupMetrics
-                .SelectMany(metric => metric.Members.SelectMany(member => member.Partitions.Select(partition =>
-                    new ConsumerPartitionRow(metric.TopicName, member, partition))))
-                .OrderBy(row => row.TopicName, StringComparer.OrdinalIgnoreCase)
-                .ThenBy(row => row.Partition.Partition)
-                .ToList();
-            var assignmentCount = members.Sum(member => CountAssignments(member, topicName));
-            long? totalLag = groupMetrics.Count > 0 && groupMetrics.All(metric => metric.TotalLag.HasValue)
-                ? groupMetrics.Sum(metric => metric.TotalLag!.Value)
-                : null;
-            double? totalConsumeRate = groupMetrics.Count > 0 &&
-                                       groupMetrics.All(metric => metric.ConsumeRatePerSecond.HasValue)
-                ? groupMetrics.Sum(metric => metric.ConsumeRatePerSecond!.Value)
-                : null;
-
-            return new ConsumerMetricsView(
-                members,
-                partitionRows,
-                topicName,
-                assignmentCount,
-                totalLag,
-                totalConsumeRate);
-        }
-
-        private static int CountAssignments(KafkaConsumerGroupMemberAssignment member, string? topicName)
-        {
-            return topicName is null
-                ? member.Partitions.Count
-                : member.Partitions.Count(partition =>
-                    string.Equals(partition.TopicName, topicName, StringComparison.Ordinal));
-        }
-    }
-
-    private sealed record ConsumerPartitionRow(
-        string TopicName,
-        KafkaConsumerMemberMetrics Member,
-        KafkaConsumerPartitionMetrics Partition)
-    {
-        public Color LagColor => GetLagColor(Partition.Lag);
-    }
 }

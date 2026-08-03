@@ -101,7 +101,7 @@
         flex-basis: 26px;
     }
 
-    .kafka-metric-card ::deep .kafka-metric-card__hint {
+    .kafka-metric-card:not(.kafka-metric-card--keep-hint) ::deep .kafka-metric-card__hint {
         display: none;
     }
 }

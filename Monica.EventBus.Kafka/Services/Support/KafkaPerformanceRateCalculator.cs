@@ -145,7 +145,23 @@ internal static class KafkaPerformanceRateCalculator
                     partition.CurrentOffset,
                     elapsedSeconds);
             }
+
+            // Aggregate only after partition rates are known so an invalid baseline affects its
+            // owning member without hiding rates for other members in the same consumer group.
+            foreach (var member in metric.Members)
+            {
+                member.ConsumeRatePerSecond = SumKnownRates(
+                    member.Partitions.Select(partition => partition.ConsumeRatePerSecond));
+            }
         }
+    }
+
+    private static double? SumKnownRates(IEnumerable<double?> values)
+    {
+        var materialized = values.ToList();
+        return materialized.Count == 0 || materialized.Any(value => !value.HasValue)
+            ? null
+            : materialized.Sum(value => value!.Value);
     }
 
     private static double? CalculateRate(long? previous, long? current, double elapsedSeconds)

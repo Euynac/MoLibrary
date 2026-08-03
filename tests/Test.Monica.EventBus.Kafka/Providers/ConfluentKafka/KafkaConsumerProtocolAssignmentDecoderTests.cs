@@ -56,6 +56,27 @@ public class KafkaConsumerProtocolAssignmentDecoderTests
             .Which.Should().BeEquivalentTo(new { TopicName = "orders", Partition = 0 });
     }
 
+    [Theory]
+    [InlineData(0)]
+    [InlineData(1)]
+    [InlineData(2)]
+    [InlineData(3)]
+    public void Decode_WhenAssignmentUsesKnownVersion_ShouldDecodePartitions(int version)
+    {
+        var payload = BuildAssignmentWithVersion(
+            checked((short)version),
+            ("orders", [0, 2]));
+
+        var result = KafkaConsumerProtocolAssignmentDecoder.Decode(payload);
+
+        result.Should().BeEquivalentTo(
+            [
+                new { TopicName = "orders", Partition = 0 },
+                new { TopicName = "orders", Partition = 2 }
+            ],
+            options => options.WithStrictOrdering());
+    }
+
     [Fact]
     public void Decode_WhenUserDataIsTruncated_ShouldThrowInvalidDataException()
     {
@@ -154,12 +175,12 @@ public class KafkaConsumerProtocolAssignmentDecoderTests
     [Fact]
     public void Decode_WhenVersionIsUnsupported_ShouldThrowInvalidDataException()
     {
-        var payload = new byte[] { 0, 1 };
+        var payload = new byte[] { 0, 4 };
 
         var act = () => KafkaConsumerProtocolAssignmentDecoder.Decode(payload);
 
         act.Should().Throw<InvalidDataException>()
-            .WithMessage("*version 1 is not supported*");
+            .WithMessage("*version 4 is not supported*");
     }
 
     [Fact]
@@ -175,15 +196,30 @@ public class KafkaConsumerProtocolAssignmentDecoderTests
 
     private static byte[] BuildAssignment(params (string TopicName, int[] Partitions)[] topics)
     {
-        return BuildAssignmentWithUserData(null, topics);
+        return BuildAssignmentWithVersion(0, topics);
     }
 
     private static byte[] BuildAssignmentWithUserData(
         byte[]? userData,
         params (string TopicName, int[] Partitions)[] topics)
     {
+        return BuildAssignmentWithVersion(0, userData, topics);
+    }
+
+    private static byte[] BuildAssignmentWithVersion(
+        short version,
+        params (string TopicName, int[] Partitions)[] topics)
+    {
+        return BuildAssignmentWithVersion(version, null, topics);
+    }
+
+    private static byte[] BuildAssignmentWithVersion(
+        short version,
+        byte[]? userData,
+        params (string TopicName, int[] Partitions)[] topics)
+    {
         var payload = new List<byte>();
-        WriteInt16(payload, 0);
+        WriteInt16(payload, version);
         WriteInt32(payload, topics.Length);
         foreach (var topic in topics)
         {

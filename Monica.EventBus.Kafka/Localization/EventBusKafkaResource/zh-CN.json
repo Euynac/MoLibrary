@@ -364,6 +364,8 @@
       "Title": "消费者组消费详情",
       "TopicTitle": "主题消费者组消费详情",
       "MembersTitle": "成员（{0}）",
+      "MemberMetricsLabel": "成员 {0} 的指标",
+      "MemberIdentityHint": "HOST：{0} · CLIENT-ID：{1}",
       "NoMembers": "此消费者组当前没有已注册成员。",
       "PartitionsTitle": "分区指标",
       "Loading": "正在采集消费者组指标……",
