@@ -1,43 +1,4 @@
-.clusters-actions {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    justify-content: flex-end;
-    gap: 8px;
-}
-
-.clusters-table {
-    width: 100%;
-    min-width: 0;
-    overflow: hidden;
-    border: 1px solid var(--mud-palette-lines-default);
-    border-radius: 9px;
-}
-
-.clusters-table ::deep .mud-table-root {
-    min-width: 780px;
-}
-
-.clusters-table ::deep .mud-table-container {
-    overflow-x: auto;
-}
-
-.clusters-table ::deep .mud-table-head {
-    background: color-mix(in srgb, var(--mud-palette-primary) 5%, var(--mud-palette-surface));
-}
-
-.clusters-table ::deep .cluster-row--selected > td {
-    background: color-mix(in srgb, var(--mud-palette-primary) 10%, var(--mud-palette-surface));
-    border-bottom-color: color-mix(in srgb, var(--mud-palette-primary) 24%, var(--mud-palette-lines-default));
-}
-
-.clusters-table ::deep .cluster-row--selected > td:first-child {
-    box-shadow: inset 3px 0 0 var(--mud-palette-primary);
-}
-
-.clusters-table ::deep .cluster-identity,
-.clusters-table ::deep .cluster-display-name,
-.clusters-table ::deep .cluster-id,
+.cluster-identity,
 .cluster-bootstrap {
     min-width: 0;
     max-width: 100%;
@@ -45,23 +6,26 @@
     word-break: break-word;
 }
 
-.clusters-table ::deep .cluster-display-name {
+.cluster-identity {
+    display: flex;
+    flex-direction: column;
+}
+
+.cluster-identity ::deep .cluster-display-name,
+.cluster-identity ::deep .cluster-id {
+    min-width: 0;
+    max-width: 100%;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+}
+
+.cluster-identity ::deep .cluster-display-name {
     font-weight: 600;
 }
 
-.clusters-table ::deep .cluster-row-actions {
+.cluster-row-actions {
+    display: flex;
+    align-items: center;
+    gap: 4px;
     white-space: nowrap;
-}
-
-@media (max-width: 1100px) {
-    .clusters-actions {
-        width: 100%;
-        justify-content: flex-start;
-    }
-}
-
-@media (max-width: 720px) {
-    .clusters-actions ::deep .mud-button-root {
-        flex: 1 1 auto;
-    }
 }

@@ -135,6 +135,29 @@
     "Performance": "性能"
   },
   "Dashboard": {
+    "Sections": {
+      "ContextEyebrow": "身份上下文",
+      "ContextTitle": "Provider 与当前集群",
+      "ContextDescription": "确认当前控制台上下文由哪个 EventBus Provider 和 Kafka 集群承载。",
+      "SummaryEyebrow": "运行摘要",
+      "SummaryTitle": "运行信号",
+      "SummaryDescription": "集中查看最新 Broker、清单、保留消息和吞吐证据。",
+      "EvidenceEyebrow": "证据与下一步",
+      "EvidenceTitle": "访问与采样就绪度",
+      "EvidenceDescription": "检查当前集群可用能力，并直接进入下一项有价值的工作区。"
+    },
+    "Evidence": {
+      "AdminAccess": "Broker 管理访问",
+      "AdminAccessReady": "可直接访问 Kafka，能够查看清单并执行管理操作。",
+      "AdminAccessLimited": "无法直接访问 Kafka，Broker 管理能力受限。",
+      "LiveSampling": "性能采样"
+    },
+    "NextActions": {
+      "Title": "继续排查",
+      "Description": "无需重复全局操作，直接检查集群配置或性能证据。",
+      "Clusters": "打开集群",
+      "Performance": "打开性能"
+    },
     "Cards": {
       "Provider": "当前 Provider",
       "Brokers": "Broker",
@@ -258,6 +281,7 @@
     "Empty": "选中集群未返回主题。",
     "Actions": {
       "Create": "创建主题",
+      "OpenMenu": "打开主题 {0} 的操作菜单",
       "Messages": "查看消息",
       "Backlog": "分区积压",
       "ConsumerGroups": "消费者组",
@@ -351,6 +375,18 @@
     "Summary": "当前可见 {0} 个消费者组",
     "Unavailable": "消费者组查看需要直接 Kafka Broker 访问。",
     "Empty": "选中集群未返回消费者组。",
+    "Actions": {
+      "ViewMembers": "查看消费者组 {0} 的成员",
+      "ViewDetails": "查看消费者组 {0} 的消费详情"
+    },
+    "States": {
+      "Stable": "稳定",
+      "PreparingRebalance": "准备再平衡",
+      "CompletingRebalance": "完成再平衡",
+      "Dead": "失效",
+      "Empty": "空闲",
+      "Unknown": "未知"
+    },
     "Columns": {
       "GroupId": "Group ID",
       "State": "状态",
@@ -363,9 +399,8 @@
     "MetricsDialog": {
       "Title": "消费者组消费详情",
       "TopicTitle": "主题消费者组消费详情",
+      "SummaryTitle": "消费者组摘要",
       "MembersTitle": "成员（{0}）",
-      "MemberMetricsLabel": "成员 {0} 的指标",
-      "MemberIdentityHint": "HOST：{0} · CLIENT-ID：{1}",
       "NoMembers": "此消费者组当前没有已注册成员。",
       "PartitionsTitle": "分区指标",
       "Loading": "正在采集消费者组指标……",
@@ -406,7 +441,8 @@
     },
     "Actions": {
       "Capture": "采集",
-      "Details": "详情"
+      "Details": "详情",
+      "ViewDetails": "查看消费者组 {0} 在主题 {1} 上的性能详情"
     },
     "Columns": {
       "CapturedAt": "采集时间",

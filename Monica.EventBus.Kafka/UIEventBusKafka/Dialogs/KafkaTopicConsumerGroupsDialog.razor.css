@@ -32,22 +32,6 @@
     gap: 12px;
 }
 
-.topic-groups-table {
-    width: 100%;
-    min-width: 0;
-    overflow: hidden;
-    border: 1px solid var(--mud-palette-lines-default);
-    border-radius: 9px;
-}
-
-.topic-groups-table ::deep .mud-table-container {
-    overflow-x: auto;
-}
-
-.topic-groups-table ::deep .mud-table-root {
-    min-width: 720px;
-}
-
 .topic-group-id {
     display: inline-block;
     max-width: 100%;

@@ -1,0 +1,50 @@
+<div class="@RootClass" role="region" aria-label="@AriaLabel">
+    @ChildContent
+</div>
+
+@code {
+    /// <summary>
+    /// Gets or sets the table rendered inside the bounded evidence surface.
+    /// </summary>
+    [Parameter, EditorRequired]
+    public RenderFragment ChildContent { get; set; } = default!;
+
+    /// <summary>
+    /// Gets or sets the accessible name used for the locally scrollable evidence region.
+    /// </summary>
+    [Parameter, EditorRequired]
+    public string AriaLabel { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the semantic color used to distinguish the table header.
+    /// </summary>
+    [Parameter]
+    public Color AccentColor { get; set; } = Color.Primary;
+
+    /// <summary>
+    /// Gets or sets the minimum table width required to preserve column alignment.
+    /// </summary>
+    [Parameter]
+    public KafkaTableSurfaceSize Size { get; set; } = KafkaTableSurfaceSize.Standard;
+
+    private string RootClass =>
+        $"kafka-table-surface kafka-table-surface--{GetSizeName(Size)} kafka-table-surface--{GetAccentName(AccentColor)}";
+
+    private static string GetSizeName(KafkaTableSurfaceSize size) => size switch
+    {
+        KafkaTableSurfaceSize.Compact => "compact",
+        KafkaTableSurfaceSize.Wide => "wide",
+        KafkaTableSurfaceSize.ExtraWide => "extra-wide",
+        _ => "standard"
+    };
+
+    private static string GetAccentName(Color color) => color switch
+    {
+        Color.Secondary => "secondary",
+        Color.Info => "info",
+        Color.Success => "success",
+        Color.Warning => "warning",
+        Color.Error => "error",
+        _ => "primary"
+    };
+}

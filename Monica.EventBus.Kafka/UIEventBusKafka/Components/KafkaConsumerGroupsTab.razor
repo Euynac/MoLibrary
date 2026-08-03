@@ -5,34 +5,27 @@
 <MudStack Spacing="3">
     <KafkaWorkspaceHeader Icon="@Icons.Material.Filled.Groups"
                           Title="@L["ConsumerGroups:Title"]"
-                          Subtitle="@L["ConsumerGroups:Summary", State.ConsumerGroups.Count]">
-        <Actions>
-            <div class="consumer-groups-actions">
-                <MudButton Variant="Variant.Outlined"
-                           StartIcon="@Icons.Material.Filled.Refresh"
-                           Disabled="@State.IsBusy"
-                           OnClick="OnRefresh">
-                    @L["Common:Actions:Refresh"]
-                </MudButton>
-            </div>
-        </Actions>
-    </KafkaWorkspaceHeader>
+                          Subtitle="@L["ConsumerGroups:Summary", State.ConsumerGroups.Count]" />
 
     @if (!State.CanAdminSelectedCluster)
     {
-        <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined">
-            @L["ConsumerGroups:Unavailable"]
-        </MudAlert>
+        <KafkaWorkspaceState Icon="@Icons.Material.Filled.Lock"
+                             Title="@L["ConsumerGroups:Title"]"
+                             Description="@L["ConsumerGroups:Unavailable"]"
+                             AccentColor="Color.Warning" />
     }
     else if (State.ConsumerGroups.Count == 0)
     {
-        <MudAlert Severity="Severity.Info" Variant="Variant.Outlined">
-            @L["ConsumerGroups:Empty"]
-        </MudAlert>
+        <KafkaWorkspaceState Icon="@Icons.Material.Filled.GroupOff"
+                             Title="@L["ConsumerGroups:Title"]"
+                             Description="@L["ConsumerGroups:Empty"]"
+                             AccentColor="Color.Info" />
     }
     else
     {
-        <div class="consumer-groups-table">
+        <KafkaTableSurface AriaLabel="@L["ConsumerGroups:Title"]"
+                           AccentColor="Color.Secondary"
+                           Size="KafkaTableSurfaceSize.Compact">
             <MudTable T="KafkaConsumerGroupSummary"
                       Items="@State.ConsumerGroups"
                       RowsPerPage="25"
@@ -55,13 +48,14 @@
                                  Size="Size.Small"
                                  Variant="Variant.Outlined"
                                  Color="@KafkaConsumerGroupStateDisplay.GetColor(context.State)">
-                            @context.State
+                            @KafkaConsumerGroupStateDisplay.GetText(context.State, L)
                         </MudChip>
                     </MudTd>
                     <MudTd DataLabel="@L["ConsumerGroups:Columns:Members"]">
                         <MudButton Variant="Variant.Text"
                                    Size="Size.Small"
                                    StartIcon="@Icons.Material.Filled.Groups"
+                                   aria-label="@L["ConsumerGroups:Actions:ViewMembers", context.GroupId]"
                                    OnClick="@(() => OnViewMembers.InvokeAsync(context))">
                             @context.MemberCount
                         </MudButton>
@@ -73,16 +67,14 @@
                     </MudTd>
                 </RowTemplate>
                 <PagerContent>
-                    <MudTablePager PageSizeOptions="@PageSizeOptions" />
+                    <MudTablePager PageSizeOptions="@KafkaTablePageSizes.Standard" />
                 </PagerContent>
             </MudTable>
-        </div>
+        </KafkaTableSurface>
     }
 </MudStack>
 
 @code {
-    private static readonly int[] PageSizeOptions = [10, 25, 50, 100];
-
     [Parameter, EditorRequired]
     public EventBusKafkaPageState State { get; set; } = default!;
 

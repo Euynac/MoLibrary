@@ -43,6 +43,13 @@ public class KafkaConsumerGroupMetricsViewTests
         var view = KafkaConsumerGroupMetricsView.Create(snapshot, "billing", "orders");
 
         view.MemberCount.Should().Be(2);
+        view.AssignmentCount.Should().Be(2);
+        view.TotalLag.Should().BeNull();
+        view.ConsumeRatePerSecond.Should().BeNull();
+        view.MemberCountAccentColor.Should().Be(Color.Secondary);
+        view.AssignmentCountAccentColor.Should().Be(Color.Info);
+        view.LagAccentColor.Should().Be(Color.Secondary);
+        view.ConsumeRateAccentColor.Should().Be(Color.Warning);
         var members = view.Members.ToDictionary(member => member.Member.ConsumerId);
         members["member-unknown"].AssignmentCount.Should().Be(1);
         members["member-unknown"].TotalLag.Should().BeNull();

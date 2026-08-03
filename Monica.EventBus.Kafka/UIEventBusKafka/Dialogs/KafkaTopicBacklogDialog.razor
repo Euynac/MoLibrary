@@ -9,26 +9,36 @@
 
             @if (Snapshot.Partitions.Count == 0)
             {
-                <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined">
-                    @L["Topics:BacklogDialog:Empty"]
-                </MudAlert>
+                <KafkaWorkspaceState Icon="@Icons.Material.Filled.TableRows"
+                                     Title="@L["Topics:Actions:Backlog"]"
+                                     Description="@L["Topics:BacklogDialog:Empty"]"
+                                     AccentColor="Color.Warning" />
             }
             else
             {
-                <MudTable T="KafkaTopicPartitionBacklog" Items="Snapshot.Partitions" Dense="true" Hover="true">
-                    <HeaderContent>
-                        <MudTh>@L["Topics:BacklogDialog:Columns:Partition"]</MudTh>
-                        <MudTh>@L["Topics:BacklogDialog:Columns:EarliestOffset"]</MudTh>
-                        <MudTh>@L["Topics:BacklogDialog:Columns:LatestOffset"]</MudTh>
-                        <MudTh>@L["Topics:BacklogDialog:Columns:RetainedMessages"]</MudTh>
-                    </HeaderContent>
-                    <RowTemplate>
-                        <MudTd DataLabel="@L["Topics:BacklogDialog:Columns:Partition"]">@context.Partition</MudTd>
-                        <MudTd DataLabel="@L["Topics:BacklogDialog:Columns:EarliestOffset"]">@context.EarliestOffset</MudTd>
-                        <MudTd DataLabel="@L["Topics:BacklogDialog:Columns:LatestOffset"]">@context.LatestOffset</MudTd>
-                        <MudTd DataLabel="@L["Topics:BacklogDialog:Columns:RetainedMessages"]">@context.RetainedMessageCount</MudTd>
-                    </RowTemplate>
-                </MudTable>
+                <KafkaTableSurface AriaLabel="@L["Topics:Actions:Backlog"]"
+                                   AccentColor="Color.Info"
+                                   Size="KafkaTableSurfaceSize.Compact">
+                    <MudTable T="KafkaTopicPartitionBacklog"
+                              Items="Snapshot.Partitions"
+                              Dense="true"
+                              Hover="true"
+                              Striped="true"
+                              Breakpoint="Breakpoint.None">
+                        <HeaderContent>
+                            <MudTh>@L["Topics:BacklogDialog:Columns:Partition"]</MudTh>
+                            <MudTh>@L["Topics:BacklogDialog:Columns:EarliestOffset"]</MudTh>
+                            <MudTh>@L["Topics:BacklogDialog:Columns:LatestOffset"]</MudTh>
+                            <MudTh>@L["Topics:BacklogDialog:Columns:RetainedMessages"]</MudTh>
+                        </HeaderContent>
+                        <RowTemplate>
+                            <MudTd DataLabel="@L["Topics:BacklogDialog:Columns:Partition"]">@context.Partition</MudTd>
+                            <MudTd DataLabel="@L["Topics:BacklogDialog:Columns:EarliestOffset"]">@context.EarliestOffset</MudTd>
+                            <MudTd DataLabel="@L["Topics:BacklogDialog:Columns:LatestOffset"]">@context.LatestOffset</MudTd>
+                            <MudTd DataLabel="@L["Topics:BacklogDialog:Columns:RetainedMessages"]">@context.RetainedMessageCount</MudTd>
+                        </RowTemplate>
+                    </MudTable>
+                </KafkaTableSurface>
             }
         </MudStack>
     </DialogContent>

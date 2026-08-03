@@ -98,6 +98,37 @@
             }
             else
             {
+                <section class="consumer-detail-section consumer-summary-section"
+                         aria-labelledby="consumer-summary-heading">
+                    <div class="consumer-section-title">
+                        <span class="consumer-section-title__icon consumer-section-title__icon--summary" aria-hidden="true">
+                            <MudIcon Icon="@Icons.Material.Filled.QueryStats" Size="Size.Small" />
+                        </span>
+                        <MudText Typo="Typo.subtitle1" id="consumer-summary-heading">
+                            @L["ConsumerGroups:MetricsDialog:SummaryTitle"]
+                        </MudText>
+                    </div>
+
+                    <div class="consumer-group-summary">
+                        <KafkaMetricCard Icon="@Icons.Material.Filled.Groups"
+                                         Label="@L["ConsumerGroups:Columns:Members"]"
+                                         Value="@metrics.MemberCount.ToString()"
+                                         AccentColor="@metrics.MemberCountAccentColor" />
+                        <KafkaMetricCard Icon="@Icons.Material.Filled.AccountTree"
+                                         Label="@L["ConsumerGroups:MetricsDialog:Columns:Assignments"]"
+                                         Value="@metrics.AssignmentCount.ToString()"
+                                         AccentColor="@metrics.AssignmentCountAccentColor" />
+                        <KafkaMetricCard Icon="@Icons.Material.Filled.HourglassBottom"
+                                         Label="@L["Performance:Columns:Lag"]"
+                                         Value="@KafkaMetricDisplayFormatter.FormatOptionalInt64(metrics.TotalLag, L["Performance:Values:LagUnknown"])"
+                                         AccentColor="@metrics.LagAccentColor" />
+                        <KafkaMetricCard Icon="@Icons.Material.Filled.SouthWest"
+                                         Label="@L["Performance:Columns:ConsumeRate"]"
+                                         Value="@KafkaMetricDisplayFormatter.FormatRate(metrics.ConsumeRatePerSecond, L)"
+                                         AccentColor="@metrics.ConsumeRateAccentColor" />
+                    </div>
+                </section>
+
                 <section class="consumer-detail-section consumer-members-section"
                          aria-labelledby="consumer-members-heading">
                     <div class="consumer-section-title">
@@ -111,40 +142,63 @@
 
                     @if (!metrics.HasMembers)
                     {
-                        <MudAlert Severity="Severity.Info" Variant="Variant.Outlined" Dense="true">
-                            @L["ConsumerGroups:MetricsDialog:NoMembers"]
-                        </MudAlert>
+                        <KafkaWorkspaceState Icon="@Icons.Material.Filled.GroupOff"
+                                             Title="@L["ConsumerGroups:MetricsDialog:MembersTitle", metrics.MemberCount]"
+                                             Description="@L["ConsumerGroups:MetricsDialog:NoMembers"]"
+                                             AccentColor="Color.Info" />
                     }
                     else
                     {
-                        <div class="consumer-member-metrics-list">
-                            @foreach (var member in metrics.Members)
-                            {
-                                <article class="consumer-member-metrics"
-                                         aria-label="@L["ConsumerGroups:MetricsDialog:MemberMetricsLabel", FormatIdentity(member.Member.ConsumerId)]">
-                                    <div class="consumer-member-metrics__cards">
-                                        <KafkaMetricCard Icon="@Icons.Material.Filled.Person"
-                                                         Label="@L["ConsumerGroups:Columns:Members"]"
-                                                         Value="@FormatIdentity(member.Member.ConsumerId)"
-                                                         Hint="@L["ConsumerGroups:MetricsDialog:MemberIdentityHint", FormatIdentity(member.Member.Host), FormatIdentity(member.Member.ClientId)]"
-                                                         KeepHintOnNarrow="true"
-                                                         AccentColor="@member.MemberAccentColor" />
-                                        <KafkaMetricCard Icon="@Icons.Material.Filled.AccountTree"
-                                                         Label="@L["ConsumerGroups:MetricsDialog:Columns:Assignments"]"
-                                                         Value="@member.AssignmentCount.ToString()"
-                                                         AccentColor="@member.AssignmentAccentColor" />
-                                        <KafkaMetricCard Icon="@Icons.Material.Filled.HourglassBottom"
-                                                         Label="@L["Performance:Columns:Lag"]"
-                                                         Value="@KafkaMetricDisplayFormatter.FormatOptionalInt64(member.TotalLag, L["Performance:Values:LagUnknown"])"
-                                                         AccentColor="@member.LagAccentColor" />
-                                        <KafkaMetricCard Icon="@Icons.Material.Filled.SouthWest"
-                                                         Label="@L["Performance:Columns:ConsumeRate"]"
-                                                         Value="@KafkaMetricDisplayFormatter.FormatRate(member.ConsumeRatePerSecond, L)"
-                                                         AccentColor="@member.ConsumeRateAccentColor" />
-                                    </div>
-                                </article>
-                            }
-                        </div>
+                        <KafkaTableSurface AriaLabel="@L["ConsumerGroups:MetricsDialog:MembersTitle", metrics.MemberCount]"
+                                           AccentColor="Color.Secondary"
+                                           Size="KafkaTableSurfaceSize.Wide">
+                            <MudTable T="KafkaConsumerMemberMetricsView"
+                                      Items="@metrics.Members"
+                                      Dense="true"
+                                      Hover="true"
+                                      Striped="true"
+                                      Breakpoint="Breakpoint.None"
+                                      @bind-RowsPerPage="_memberRowsPerPage">
+                                <HeaderContent>
+                                    <MudTh>@L["ConsumerGroups:MetricsDialog:Columns:ConsumerId"]</MudTh>
+                                    <MudTh>@L["ConsumerGroups:MetricsDialog:Columns:Host"]</MudTh>
+                                    <MudTh>@L["ConsumerGroups:MetricsDialog:Columns:ClientId"]</MudTh>
+                                    <MudTh>@L["ConsumerGroups:MetricsDialog:Columns:Assignments"]</MudTh>
+                                    <MudTh>@L["Performance:Columns:Lag"]</MudTh>
+                                    <MudTh>@L["Performance:Columns:ConsumeRate"]</MudTh>
+                                </HeaderContent>
+                                <RowTemplate>
+                                    <MudTd DataLabel="@L["ConsumerGroups:MetricsDialog:Columns:ConsumerId"]">
+                                        <span class="consumer-identifier">@FormatIdentity(context.Member.ConsumerId)</span>
+                                    </MudTd>
+                                    <MudTd DataLabel="@L["ConsumerGroups:MetricsDialog:Columns:Host"]">
+                                        <span class="consumer-identifier">@FormatIdentity(context.Member.Host)</span>
+                                    </MudTd>
+                                    <MudTd DataLabel="@L["ConsumerGroups:MetricsDialog:Columns:ClientId"]">
+                                        <span class="consumer-identifier">@FormatIdentity(context.Member.ClientId)</span>
+                                    </MudTd>
+                                    <MudTd DataLabel="@L["ConsumerGroups:MetricsDialog:Columns:Assignments"]">
+                                        @context.AssignmentCount
+                                    </MudTd>
+                                    <MudTd DataLabel="@L["Performance:Columns:Lag"]">
+                                        <MudChip T="string"
+                                                 Size="Size.Small"
+                                                 Variant="Variant.Outlined"
+                                                 Color="@context.LagAccentColor">
+                                            @KafkaMetricDisplayFormatter.FormatOptionalInt64(
+                                                context.TotalLag,
+                                                L["Performance:Values:LagUnknown"])
+                                        </MudChip>
+                                    </MudTd>
+                                    <MudTd DataLabel="@L["Performance:Columns:ConsumeRate"]">
+                                        @KafkaMetricDisplayFormatter.FormatRate(context.ConsumeRatePerSecond, L)
+                                    </MudTd>
+                                </RowTemplate>
+                                <PagerContent>
+                                    <MudTablePager PageSizeOptions="@KafkaTablePageSizes.Standard" />
+                                </PagerContent>
+                            </MudTable>
+                        </KafkaTableSurface>
                     }
                 </section>
 
@@ -164,13 +218,16 @@
 
                     @if (!metrics.HasPartitions)
                     {
-                        <MudAlert Severity="Severity.Info" Variant="Variant.Outlined">
-                            @L["ConsumerGroups:MetricsDialog:NoPartitions"]
-                        </MudAlert>
+                        <KafkaWorkspaceState Icon="@Icons.Material.Filled.TableRows"
+                                             Title="@L["ConsumerGroups:MetricsDialog:PartitionsTitle"]"
+                                             Description="@L["ConsumerGroups:MetricsDialog:NoPartitions"]"
+                                             AccentColor="Color.Info" />
                     }
                     else
                     {
-                        <div class="consumer-partitions-table">
+                        <KafkaTableSurface AriaLabel="@L["ConsumerGroups:MetricsDialog:PartitionsTitle"]"
+                                           AccentColor="Color.Primary"
+                                           Size="KafkaTableSurfaceSize.Wide">
                             <MudTable T="KafkaConsumerPartitionMetricsRow"
                                       Items="@metrics.PartitionRows"
                                       Dense="true"
@@ -235,10 +292,10 @@
                                     </MudTd>
                                 </RowTemplate>
                                 <PagerContent>
-                                    <MudTablePager PageSizeOptions="@PageSizeOptions" />
+                                    <MudTablePager PageSizeOptions="@KafkaTablePageSizes.Standard" />
                                 </PagerContent>
                             </MudTable>
-                        </div>
+                        </KafkaTableSurface>
                     }
                 </section>
             }
@@ -252,7 +309,7 @@
 </MudDialog>
 
 @code {
-    private static readonly int[] PageSizeOptions = [10, 25, 50, 100];
+    private int _memberRowsPerPage = 10;
     private int _partitionRowsPerPage = 25;
     private bool _isDisposed;
 

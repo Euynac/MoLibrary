@@ -1,3 +1,5 @@
+using Microsoft.Extensions.Localization;
+using Monica.EventBus.Kafka.Localization;
 using MudBlazor;
 
 namespace Monica.EventBus.Kafka.UIEventBusKafka.Support;
@@ -19,5 +21,25 @@ internal static class KafkaConsumerGroupStateDisplay
         "DEAD" => Color.Error,
         "EMPTY" => Color.Secondary,
         _ => Color.Info
+    };
+
+    /// <summary>
+    /// Gets the localized display text for the supplied consumer group state.
+    /// </summary>
+    /// <param name="state">The Kafka consumer group lifecycle state.</param>
+    /// <param name="localizer">The Kafka console localization source.</param>
+    /// <returns>A localized lifecycle label, or the provider value when the state is unknown.</returns>
+    public static string GetText(
+        string state,
+        IStringLocalizer<EventBusKafkaResource> localizer) => state.ToUpperInvariant() switch
+    {
+        "STABLE" => localizer["ConsumerGroups:States:Stable"],
+        "PREPARINGREBALANCE" => localizer["ConsumerGroups:States:PreparingRebalance"],
+        "COMPLETINGREBALANCE" => localizer["ConsumerGroups:States:CompletingRebalance"],
+        "DEAD" => localizer["ConsumerGroups:States:Dead"],
+        "EMPTY" => localizer["ConsumerGroups:States:Empty"],
+        _ => string.IsNullOrWhiteSpace(state)
+            ? localizer["ConsumerGroups:States:Unknown"]
+            : state
     };
 }

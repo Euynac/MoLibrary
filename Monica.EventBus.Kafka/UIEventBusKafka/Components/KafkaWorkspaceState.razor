@@ -1,0 +1,83 @@
+<section class="@RootClass" role="@Role" aria-live="polite">
+    <span class="kafka-workspace-state__icon" aria-hidden="true">
+        <MudIcon Icon="@Icon" />
+    </span>
+    <div class="kafka-workspace-state__copy">
+        <MudText Typo="Typo.subtitle1">@Title</MudText>
+        <MudText Typo="Typo.body2" Color="Color.Secondary">@Description</MudText>
+    </div>
+    @if (!string.IsNullOrWhiteSpace(ActionLabel) && OnAction.HasDelegate)
+    {
+        <MudButton Variant="Variant.Outlined"
+                   Color="@AccentColor"
+                   StartIcon="@ActionIcon"
+                   Disabled="@ActionDisabled"
+                   aria-label="@ActionLabel"
+                   OnClick="OnAction">
+            @ActionLabel
+        </MudButton>
+    }
+</section>
+
+@code {
+    /// <summary>
+    /// Gets or sets the Material icon that identifies the state.
+    /// </summary>
+    [Parameter, EditorRequired]
+    public string Icon { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the localized state heading.
+    /// </summary>
+    [Parameter, EditorRequired]
+    public string Title { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the localized state explanation.
+    /// </summary>
+    [Parameter, EditorRequired]
+    public string Description { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the semantic MudBlazor color used for state emphasis.
+    /// </summary>
+    [Parameter]
+    public Color AccentColor { get; set; } = Color.Info;
+
+    /// <summary>
+    /// Gets or sets the optional localized action label.
+    /// </summary>
+    [Parameter]
+    public string? ActionLabel { get; set; }
+
+    /// <summary>
+    /// Gets or sets the optional action icon.
+    /// </summary>
+    [Parameter]
+    public string? ActionIcon { get; set; }
+
+    /// <summary>
+    /// Gets or sets the optional action invoked from the state surface.
+    /// </summary>
+    [Parameter]
+    public EventCallback OnAction { get; set; }
+
+    /// <summary>
+    /// Gets or sets whether the optional action is disabled.
+    /// </summary>
+    [Parameter]
+    public bool ActionDisabled { get; set; }
+
+    private string Role => AccentColor == Color.Error ? "alert" : "status";
+
+    private string RootClass => $"kafka-workspace-state kafka-workspace-state--{GetAccentName(AccentColor)}";
+
+    private static string GetAccentName(Color color) => color switch
+    {
+        Color.Secondary => "secondary",
+        Color.Success => "success",
+        Color.Warning => "warning",
+        Color.Error => "error",
+        _ => "info"
+    };
+}

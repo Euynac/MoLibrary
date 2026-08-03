@@ -13,6 +13,9 @@ internal sealed class KafkaConsumerGroupMetricsView
         IReadOnlyList<KafkaConsumerPartitionMetricsRow> partitionRows)
     {
         Members = members;
+        AssignmentCount = members.Sum(member => member.AssignmentCount);
+        TotalLag = SumKnown(members.Select(member => member.TotalLag));
+        ConsumeRatePerSecond = SumKnown(members.Select(member => member.ConsumeRatePerSecond));
         PartitionRows = partitionRows;
     }
 
@@ -30,6 +33,41 @@ internal sealed class KafkaConsumerGroupMetricsView
     /// Gets whether the selected scope contains live members.
     /// </summary>
     public bool HasMembers => MemberCount > 0;
+
+    /// <summary>
+    /// Gets the total number of topic-partition assignments owned by live members in the selected scope.
+    /// </summary>
+    public int AssignmentCount { get; }
+
+    /// <summary>
+    /// Gets the aggregate lag for the selected scope, or null when any member lag is unknown.
+    /// </summary>
+    public long? TotalLag { get; }
+
+    /// <summary>
+    /// Gets the aggregate consume rate for the selected scope, or null when any member rate is unknown.
+    /// </summary>
+    public double? ConsumeRatePerSecond { get; }
+
+    /// <summary>
+    /// Gets the semantic color used by the group member-count summary.
+    /// </summary>
+    public Color MemberCountAccentColor => HasMembers ? Color.Secondary : Color.Warning;
+
+    /// <summary>
+    /// Gets the semantic color used by the group assignment-count summary.
+    /// </summary>
+    public Color AssignmentCountAccentColor => AssignmentCount > 0 ? Color.Info : Color.Warning;
+
+    /// <summary>
+    /// Gets the semantic color used by the group lag summary.
+    /// </summary>
+    public Color LagAccentColor => KafkaConsumerPartitionMetricsRow.GetLagColor(TotalLag);
+
+    /// <summary>
+    /// Gets the semantic color used by the group consume-rate summary.
+    /// </summary>
+    public Color ConsumeRateAccentColor => ConsumeRatePerSecond.HasValue ? Color.Success : Color.Warning;
 
     /// <summary>
     /// Gets the partition rows in topic and partition order.

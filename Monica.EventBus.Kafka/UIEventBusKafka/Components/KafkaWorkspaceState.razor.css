@@ -1,0 +1,72 @@
+.kafka-workspace-state {
+    --kafka-state-accent: var(--mud-palette-info);
+    min-height: 148px;
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 14px;
+    padding: 20px;
+    border: 1px dashed color-mix(in srgb, var(--kafka-state-accent) 38%, var(--mud-palette-lines-default));
+    border-radius: var(--mud-default-borderradius);
+    background: linear-gradient(
+        135deg,
+        color-mix(in srgb, var(--kafka-state-accent) 7%, var(--mud-palette-surface)),
+        var(--mud-palette-surface) 58%);
+}
+
+.kafka-workspace-state--secondary {
+    --kafka-state-accent: var(--mud-palette-secondary);
+}
+
+.kafka-workspace-state--success {
+    --kafka-state-accent: var(--mud-palette-success);
+}
+
+.kafka-workspace-state--warning {
+    --kafka-state-accent: var(--mud-palette-warning);
+}
+
+.kafka-workspace-state--error {
+    --kafka-state-accent: var(--mud-palette-error);
+}
+
+.kafka-workspace-state__icon {
+    width: 46px;
+    height: 46px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--mud-default-borderradius);
+    color: var(--kafka-state-accent);
+    background: color-mix(in srgb, var(--kafka-state-accent) 13%, var(--mud-palette-surface));
+    border: 1px solid color-mix(in srgb, var(--kafka-state-accent) 28%, var(--mud-palette-lines-default));
+}
+
+.kafka-workspace-state__icon ::deep .mud-icon-root {
+    color: inherit;
+}
+
+.kafka-workspace-state__copy {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    min-width: 0;
+}
+
+.kafka-workspace-state__copy ::deep .mud-typography-root {
+    overflow-wrap: anywhere;
+}
+
+@media (max-width: 720px) {
+    .kafka-workspace-state {
+        min-height: 0;
+        grid-template-columns: auto minmax(0, 1fr);
+        align-items: start;
+        padding: 16px;
+    }
+
+    .kafka-workspace-state ::deep .mud-button-root {
+        grid-column: 1 / -1;
+        width: 100%;
+    }
+}
