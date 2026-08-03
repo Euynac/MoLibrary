@@ -1,0 +1,83 @@
+.configuration-affected-service-confirmation-body {
+    display: flex;
+    flex-direction: column;
+    max-height: min(70vh, 42rem);
+    min-height: 0;
+    min-width: 0;
+    overflow: hidden;
+    width: 100%;
+}
+
+.configuration-affected-service-confirmation-scroll {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    min-height: 0;
+    min-width: 0;
+    overflow-y: auto;
+    padding-inline-end: 0.25rem;
+    width: 100%;
+}
+
+.configuration-affected-service-confirmation-detail,
+.configuration-affected-service-confirmation-publisher {
+    min-width: 0;
+    overflow-wrap: anywhere;
+    width: 100%;
+}
+
+.configuration-affected-service-confirmation-detail ::deep .mud-paper,
+.configuration-affected-service-confirmation-publisher ::deep .mud-paper {
+    min-width: 0;
+    width: 100%;
+}
+
+.configuration-affected-service-confirmation-heading,
+.configuration-affected-service-confirmation-publisher-key {
+    align-items: center;
+    display: flex;
+    gap: 0.75rem;
+    min-width: 0;
+}
+
+.configuration-affected-service-confirmation-heading {
+    justify-content: space-between;
+}
+
+.configuration-affected-service-confirmation-publisher-key {
+    flex: 1 1 auto;
+}
+
+.configuration-affected-service-confirmation-publisher-key ::deep .mud-typography,
+.configuration-affected-service-confirmation-definition ::deep .mud-typography {
+    min-width: 0;
+    overflow-wrap: anywhere;
+}
+
+.configuration-affected-service-confirmation-definitions,
+.configuration-affected-service-confirmation-unknown-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    margin-top: 1rem;
+    min-width: 0;
+}
+
+.configuration-affected-service-confirmation-definition {
+    border-inline-start: 2px solid var(--mud-palette-lines-default);
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    padding-inline-start: 0.75rem;
+}
+
+@media (max-width: 599.98px) {
+    .configuration-affected-service-confirmation-body {
+        max-height: min(72vh, 36rem);
+    }
+
+    .configuration-affected-service-confirmation-heading {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+}

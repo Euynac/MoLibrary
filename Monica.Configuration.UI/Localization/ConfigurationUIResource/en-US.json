@@ -710,6 +710,22 @@
       "Title": "Save Configuration Group",
       "ExternalTargetSummary": "{0} staged changes will write the currently effective external configuration source.",
       "MissingSourceTarget": "The staged change is missing external source target metadata.",
+      "Impact": {
+        "Title": "Confirm Affected Services",
+        "Summary": "{0} staged changes may affect {1} logical services.",
+        "Advisory": "This is a point-in-time view of configuration publisher metadata. It does not prove that a service is currently running or that reload delivery will succeed.",
+        "DefinitionCount": "{0} definitions",
+        "UnknownConsumersTitle": "{0} definitions have no known consumers",
+        "UnknownConsumersSummary": "No current publisher reports consuming these definitions. Review them before saving because the affected services cannot be determined.",
+        "UnavailableTitle": "Affected-service analysis is unavailable",
+        "UnavailableSummary": "The service impact could not be determined. No configuration has been saved.",
+        "TechnicalDetails": "Technical details",
+        "SaveAnywayNotice": "Saving anyway bypasses only this advisory check. Configuration validation and concurrency checks still apply.",
+        "Actions": {
+          "ConfirmSave": "Confirm and save",
+          "SaveAnyway": "Save anyway"
+        }
+      },
       "Actions": {
         "JumpFailed": "Failed to jump to the staged change."
       },

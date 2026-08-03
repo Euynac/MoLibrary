@@ -710,6 +710,22 @@
       "Title": "保存配置修改组",
       "ExternalTargetSummary": "{0} 个暂存修改会写入当前生效的外部配置来源。",
       "MissingSourceTarget": "暂存修改缺少外部配置来源信息。",
+      "Impact": {
+        "Title": "确认受影响的服务",
+        "Summary": "{0} 个暂存修改可能影响 {1} 个逻辑服务。",
+        "Advisory": "这是配置发布元数据在当前时刻的快照，不能证明服务当前在线，也不能保证 Reload 通知一定送达。",
+        "DefinitionCount": "{0} 个配置定义",
+        "UnknownConsumersTitle": "{0} 个配置定义没有已知消费者",
+        "UnknownConsumersSummary": "当前没有发布方报告正在使用这些配置定义，因此无法确定受影响的服务。保存前请确认这些配置定义。",
+        "UnavailableTitle": "无法分析受影响的服务",
+        "UnavailableSummary": "暂时无法确定服务影响范围，尚未保存任何配置。",
+        "TechnicalDetails": "技术详情",
+        "SaveAnywayNotice": "“仍然保存”只会跳过本次影响范围提示；配置验证和并发校验仍会正常执行。",
+        "Actions": {
+          "ConfirmSave": "确认并保存",
+          "SaveAnyway": "仍然保存"
+        }
+      },
       "Actions": {
         "JumpFailed": "无法跳转到暂存修改配置项。"
       },

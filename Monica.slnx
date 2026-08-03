@@ -17,6 +17,7 @@
   <Folder Name="/tests/">
     <Project Path="tests/Test.Monica.Configuration.EventBus/Test.Monica.Configuration.EventBus.csproj" />
     <Project Path="tests/Test.Monica.Configuration.EfCore/Test.Monica.Configuration.EfCore.csproj" />
+    <Project Path="tests/Test.Monica.Configuration.UI/Test.Monica.Configuration.UI.csproj" />
     <Project Path="tests/Test.Monica.Configuration/Test.Monica.Configuration.csproj" />
     <Project Path="tests/Test.Monica.Core/Test.Monica.Core.csproj" />
     <Project Path="tests/Test.Monica.Dapr/Test.Monica.Dapr.csproj" />

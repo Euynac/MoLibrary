@@ -1,6 +1,8 @@
 @using Monica.Configuration.UI.Localization
 @inject ConfigurationFacade Facade
+@inject IDialogService DialogService
 @inject IStringLocalizer<ConfigurationUIResource> L
+@inject Microsoft.Extensions.Options.IOptions<Monica.Modules.ModuleConfigurationUIOption> UIOptions
 
 <MudDialog Class="configuration-save-group-dialog">
     <DialogContent>
@@ -100,6 +102,13 @@
         _saving = true;
         _error = null;
 
+        if (UIOptions.Value.EnableAffectedServiceConfirmation
+            && !await ConfirmAffectedServicesAsync(changes))
+        {
+            _saving = false;
+            return;
+        }
+
         var commandResult = await BuildCommandsAsync(changes);
         if (commandResult.IsFailed(out var commandError, out var commands))
         {
@@ -129,6 +138,49 @@
         }
 
         MudDialog.Close(DialogResult.Ok(SaveMutationGroupDialogResult.Saved(result)));
+    }
+
+    private async Task<bool> ConfirmAffectedServicesAsync(IReadOnlyList<PendingChange> changes)
+    {
+        var definitionKeys = changes
+            .Select(static change => change.DefinitionKey)
+            .Where(static key => !string.IsNullOrWhiteSpace(key))
+            .Select(static key => key.Trim())
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+        var displayNames = changes
+            .GroupBy(static change => change.DefinitionKey.Trim(), StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(
+                static group => group.Key,
+                static group => group
+                    .Select(static change => change.DefinitionDisplayName)
+                    .FirstOrDefault(static displayName => !string.IsNullOrWhiteSpace(displayName))
+                    ?? group.Key,
+                StringComparer.OrdinalIgnoreCase);
+
+        ConfigurationDefinitionChangeImpact? impact = null;
+        string? analysisError = null;
+        var impactResult = await Facade.GetDefinitionChangeImpactAsync(definitionKeys);
+        if (impactResult.IsFailed(out var impactError, out impact))
+        {
+            analysisError = impactError.Message;
+        }
+
+        var parameters = new DialogParameters<ConfigurationAffectedServiceConfirmationDialog>();
+        parameters.Add(dialog => dialog.ChangeCount, changes.Count);
+        parameters.Add(dialog => dialog.Impact, impact);
+        parameters.Add(dialog => dialog.AnalysisError, analysisError);
+        parameters.Add(dialog => dialog.DefinitionDisplayNames, displayNames);
+        var dialog = await DialogService.ShowAsync<ConfigurationAffectedServiceConfirmationDialog>(
+            L["Dialogs:SaveGroup:Impact:Title"],
+            parameters,
+            new DialogOptions
+            {
+                MaxWidth = MaxWidth.Medium,
+                FullWidth = true
+            });
+        var result = await dialog.Result;
+        return result is { Canceled: false } && result.Data is true;
     }
 
     private async Task<Res<IReadOnlyList<ConfigurationMutationCommand>>> BuildCommandsAsync(

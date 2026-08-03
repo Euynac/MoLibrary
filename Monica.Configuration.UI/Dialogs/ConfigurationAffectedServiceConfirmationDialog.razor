@@ -1,0 +1,149 @@
+@inject IStringLocalizer<ConfigurationUIResource> L
+
+<MudDialog Class="configuration-affected-service-confirmation-dialog">
+    <DialogContent>
+        <div class="configuration-affected-service-confirmation-body">
+            <div class="configuration-affected-service-confirmation-scroll">
+                @if (Impact is null)
+                {
+                    <MudAlert Severity="Severity.Warning"
+                              Variant="Variant.Outlined"
+                              Icon="@Icons.Material.Filled.WarningAmber">
+                        <MudText Typo="Typo.subtitle2">@L["Dialogs:SaveGroup:Impact:UnavailableTitle"]</MudText>
+                        <MudText Typo="Typo.body2">@L["Dialogs:SaveGroup:Impact:UnavailableSummary"]</MudText>
+                    </MudAlert>
+
+                    <div class="configuration-affected-service-confirmation-detail">
+                        <MudPaper Outlined="true" Class="pa-3">
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                @L["Dialogs:SaveGroup:Impact:TechnicalDetails"]
+                            </MudText>
+                            <MudText Typo="Typo.body2">@AnalysisError</MudText>
+                        </MudPaper>
+                    </div>
+
+                    <MudAlert Severity="Severity.Warning" Dense="true">
+                        @L["Dialogs:SaveGroup:Impact:SaveAnywayNotice"]
+                    </MudAlert>
+                }
+                else
+                {
+                    <MudAlert Severity="Severity.Warning"
+                              Variant="Variant.Outlined"
+                              Icon="@Icons.Material.Filled.Hub">
+                        @L["Dialogs:SaveGroup:Impact:Summary", ChangeCount, Impact.AffectedPublishers.Count]
+                    </MudAlert>
+
+                    <MudAlert Severity="Severity.Info" Dense="true">
+                        @L["Dialogs:SaveGroup:Impact:Advisory"]
+                    </MudAlert>
+
+                    @foreach (var publisher in Impact.AffectedPublishers)
+                    {
+                        <div class="configuration-affected-service-confirmation-publisher" @key="publisher.PublisherKey">
+                            <MudPaper Outlined="true" Class="pa-3">
+                                <div class="configuration-affected-service-confirmation-heading">
+                                    <div class="configuration-affected-service-confirmation-publisher-key">
+                                        <MudIcon Icon="@Icons.Material.Filled.Dns" Color="Color.Warning" />
+                                        <MudText Typo="Typo.subtitle2">@publisher.PublisherKey</MudText>
+                                    </div>
+                                    <MudChip T="int" Size="Size.Small" Color="Color.Warning" Variant="Variant.Outlined">
+                                        @L["Dialogs:SaveGroup:Impact:DefinitionCount", publisher.DefinitionKeys.Count]
+                                    </MudChip>
+                                </div>
+
+                                <div class="configuration-affected-service-confirmation-definitions">
+                                    @foreach (var definitionKey in publisher.DefinitionKeys)
+                                    {
+                                        var displayName = GetDefinitionDisplayName(definitionKey);
+                                        <div class="configuration-affected-service-confirmation-definition" @key="definitionKey">
+                                            <MudText Typo="Typo.body2">@displayName</MudText>
+                                            @if (!string.Equals(displayName, definitionKey, StringComparison.Ordinal))
+                                            {
+                                                <MudText Typo="Typo.caption" Color="Color.Secondary">@definitionKey</MudText>
+                                            }
+                                        </div>
+                                    }
+                                </div>
+                            </MudPaper>
+                        </div>
+                    }
+
+                    @if (Impact.DefinitionsWithoutKnownConsumers.Count > 0)
+                    {
+                        <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined">
+                            <MudText Typo="Typo.subtitle2">
+                                @L["Dialogs:SaveGroup:Impact:UnknownConsumersTitle", Impact.DefinitionsWithoutKnownConsumers.Count]
+                            </MudText>
+                            <MudText Typo="Typo.body2">
+                                @L["Dialogs:SaveGroup:Impact:UnknownConsumersSummary"]
+                            </MudText>
+                            <div class="configuration-affected-service-confirmation-unknown-list">
+                                @foreach (var definitionKey in Impact.DefinitionsWithoutKnownConsumers)
+                                {
+                                    var displayName = GetDefinitionDisplayName(definitionKey);
+                                    <div class="configuration-affected-service-confirmation-definition" @key="definitionKey">
+                                        <MudText Typo="Typo.body2">@displayName</MudText>
+                                        @if (!string.Equals(displayName, definitionKey, StringComparison.Ordinal))
+                                        {
+                                            <MudText Typo="Typo.caption" Color="Color.Secondary">@definitionKey</MudText>
+                                        }
+                                    </div>
+                                }
+                            </div>
+                        </MudAlert>
+                    }
+                }
+            </div>
+        </div>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel">@L["Common:Actions:Cancel"]</MudButton>
+        @if (Impact is null)
+        {
+            <MudButton Color="Color.Warning"
+                       Variant="Variant.Filled"
+                       StartIcon="@Icons.Material.Filled.Save"
+                       OnClick="Confirm">
+                @L["Dialogs:SaveGroup:Impact:Actions:SaveAnyway"]
+            </MudButton>
+        }
+        else
+        {
+            <MudButton Color="Color.Warning"
+                       Variant="Variant.Filled"
+                       StartIcon="@Icons.Material.Filled.Save"
+                       OnClick="Confirm">
+                @L["Dialogs:SaveGroup:Impact:Actions:ConfirmSave"]
+            </MudButton>
+        }
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] private IMudDialogInstance MudDialog { get; set; } = null!;
+
+    [Parameter, EditorRequired] public int ChangeCount { get; set; }
+    [Parameter] public ConfigurationDefinitionChangeImpact? Impact { get; set; }
+    [Parameter] public string? AnalysisError { get; set; }
+    [Parameter] public IReadOnlyDictionary<string, string> DefinitionDisplayNames { get; set; }
+        = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+
+    private string GetDefinitionDisplayName(string definitionKey)
+    {
+        return DefinitionDisplayNames.TryGetValue(definitionKey, out var displayName)
+            && !string.IsNullOrWhiteSpace(displayName)
+                ? displayName
+                : definitionKey;
+    }
+
+    private void Cancel()
+    {
+        MudDialog.Cancel();
+    }
+
+    private void Confirm()
+    {
+        MudDialog.Close(DialogResult.Ok(true));
+    }
+}

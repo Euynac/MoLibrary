@@ -120,4 +120,16 @@ public class ModuleConfigurationUIGuide
 /// </summary>
 public class ModuleConfigurationUIOption : ModuleOptions<ModuleConfigurationUI>
 {
+    /// <summary>
+    /// Gets or sets whether saving a configuration mutation group requires an additional confirmation that lists
+    /// the logical services affected by the changed definitions.
+    /// </summary>
+    /// <remarks>
+    /// This option is intended for microservice architectures in which multiple logical services share a Monica
+    /// configuration store. It is disabled by default because a single-process or modular-monolith host normally
+    /// does not need a cross-service impact prompt. The displayed impact is a point-in-time view of publisher
+    /// metadata, not proof of service liveness or reload delivery. If impact analysis is unavailable, the operator
+    /// may explicitly choose to save anyway; normal validation and optimistic-concurrency checks still apply.
+    /// </remarks>
+    public bool EnableAffectedServiceConfirmation { get; set; }
 }
