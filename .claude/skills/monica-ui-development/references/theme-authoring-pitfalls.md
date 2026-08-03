@@ -181,8 +181,13 @@ Substituting a different monospace font can change:
 When the source repo clearly declares a runtime font dependency:
 
 1. vendor the same font locally into `Monica.UI/wwwroot/fonts`
-2. add explicit `@font-face` declarations in the theme CSS
-3. keep runtime assets local and avoid CDN font dependencies
+2. store committed runtime web fonts as WOFF2, converting TTF/OTF source files when needed
+3. add explicit local `@font-face` declarations in the theme CSS
+4. keep runtime assets local and avoid CDN font dependencies
+
+Do not leave TTF/OTF source files in Monica UI runtime packages just because the upstream project uses them. They are source material for conversion; WOFF2 is the Monica UI web delivery format.
+
+For large CJK display fonts, do not commit the full source font or a full runtime web font just to preserve theme flavor. Keep the original TTF/OTF in an ignored local source cache such as `.tmp/monica-ui-font-sources/`, generate a WOFF2 subset with `scripts/subset_ui_font.py`, and run the same script in `--mode check` after localization resource changes. The subset generator scans localization JSON recursively and accepts `--extra-text-file` for generated or not-yet-localized copy.
 
 If the exact font cannot be vendored, call out the fallback because visual fidelity will be lower.
 

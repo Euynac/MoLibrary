@@ -1,7 +1,6 @@
 ---
 name: monica-ui-localization
 description: This skill should be used when creating, modifying, validating, or reviewing Monica UI localization/i18n resources, replacing hardcoded user-facing text, adding IStringLocalizer usage, registering localized pages or navigation categories, synchronizing zh-CN/en-US JSON files, or running the Monica localization validator.
-version: 1.0.0
 ---
 
 # Monica UI Localization
@@ -18,7 +17,7 @@ All script paths in this document are relative to the `monica-ui-localization` s
 4. Finish every i18n change by running the strict validator from the repository root:
 
 ```bash
-python .agents/skills/monica-ui-localization/scripts/validate_localization.py --strict
+python .claude/skills/monica-ui-localization/scripts/validate_localization.py --strict
 ```
 
 The strict result must have zero JSON integrity errors, missing keys, invalid navigation resource keys, unused keys, and language sync issues. A non-strict `PASSED` result with unused-key warnings is not acceptable for completed i18n work.
@@ -31,9 +30,11 @@ The strict result must have zero JSON integrity errors, missing keys, invalid na
 - Never use ambient or static localization access. When DI is unavailable inside a helper or view model, accept an `IStringLocalizer` parameter or move the display behavior into a cohesive formatter that receives one.
 - Inject `ILocalizationCatalog` only for scenarios that genuinely need generic resource lookup. At application-composition boundaries such as endpoint metadata configuration, resolve the localizer or catalog from the current host's service provider so localization state never crosses host boundaries.
 - For page content, use the module-local resource marker and JSON files.
-- Every localized page must use `RegisterLocalizedPage<TPage, TResource>(...)`; its title key belongs to the owning module resource and that resource must be registered through `AddResource<TResource>()`.
-- Use `BuiltInNavigationCategoryIds` for the shell taxonomy, or register a publisher-qualified module category with `RegisterLocalizedCategory<TResource>(stableId, displayNameKey, order)` and pass the returned ID to its pages.
-- `RegisterLocalizedComponent` and `UIRegistryResource` are obsolete and must not be reintroduced.
+- Every localized page must use `RegisterLocalizedPage<TPage, TResource>(...)`. The page-title key lives in the owning module's `TResource`; no implicit or central page resource exists.
+- The owning module must register every navigation resource through `DependsOnModule<ModuleLocalizationGuide>().Register().AddResource<TResource>()`.
+- Treat category identity and category text as separate contracts. Use `BuiltInNavigationCategoryIds` for the small shell-owned taxonomy, or call `RegisterLocalizedCategory<TResource>(stableId, displayNameKey, order)` once for a module-owned category and pass the returned ID to its pages.
+- Never group by translated category labels. Stable category IDs are case-insensitive, publisher-qualified for independent packages, and category order is explicit rather than culture-dependent.
+- `RegisterLocalizedComponent` and `UIRegistryResource` are obsolete architecture and must not appear in new or migrated code.
 - Resource marker classes and JSON folders stay under the project root `Localization/` directory, not feature folders.
 
 ## Validation Commands

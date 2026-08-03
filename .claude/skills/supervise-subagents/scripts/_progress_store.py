@@ -13,7 +13,7 @@ from pathlib import Path
 from typing import Any
 
 SCHEMA_VERSION = 1
-PROJECT_MARKERS = (".git", ".agents", ".claude", "AGENTS.md", "CLAUDE.md")
+PROJECT_MARKERS = (".git", ".claude", ".claude", "CLAUDE.md", "CLAUDE.md")
 SESSION_PATTERN = re.compile(
     r"^(?P<timestamp>\d{8}-\d{6})-(?P<nonce>[0-9a-f]{8})-agent-session$"
 )

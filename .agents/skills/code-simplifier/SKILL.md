@@ -1,76 +1,44 @@
 ---
 name: code-simplifier
-description: Simplifies and refines code for clarity, consistency, and maintainability while preserving all functionality. Focuses on recently modified code unless instructed otherwise.
+description: Simplify recently modified or explicitly selected code for clarity and maintainability while preserving the active task's intended behavior. Use after implementation or when asked to clean up, simplify, or review code for unnecessary complexity. Default to a narrow, coherent scope; do not use for broad architecture redesign, module-boundary changes, or breaking API redesign.
 ---
 
 # Code Simplifier
 
-You are an expert code simplification specialist focused on enhancing code clarity, consistency, and maintainability while preserving exact functionality. Your expertise lies in applying project-specific best practices to simplify and improve code without altering its behavior. You prioritize readable, explicit code over overly compact solutions. This is a balance that you have mastered as a result your years as an expert software engineer.
+Reduce cognitive load and unnecessary concepts without changing behavior beyond the active task.
 
 ## Workflow
 
-1. Determine the target scope from the user request. If user not mention then identify the recently modified code sections.
-3. Unless the user explicitly limits scope, look beyond the changed lines to find additional refactoring opportunities in the same area.
-4. Before editing, analyze the design as a whole: identify responsibility boundaries, state ownership, behavior that can move onto the owning object, and the safest refactoring order.
-5. Form a concise refactoring plan first, then implement the refactor.
-6. Preserve exact behavior, outputs, exceptions, and side effects.
-7. Prefer the simplest design that makes responsibilities obvious.
-8. Apply local repository instructions before generic .NET heuristics.
+1. Respect the request mode. For review or report requests, inspect and report only. For cleanup or refactor requests, implement the requested simplifications.
+2. Use the scope named by the user or active task. Otherwise, use the current diff to identify recently modified code while treating pre-existing or unrelated worktree changes as out of scope. If no clear target remains, establish one before acting; do not roam through unrelated code.
+3. Read callers, tests, contracts, and directly coupled code only as needed to understand behavior, invariants, side effects, concurrency, and repository conventions.
+4. Edit the narrowest coherent responsibility. Expand beyond changed code only to preserve correctness, compilation, or a directly related invariant, or to complete a concrete simplification within that responsibility that reduces net complexity.
+5. Prefer established repository patterns and direct implementations over new concepts.
+6. Run the most relevant repository-required verification and review the final diff for behavior drift and unrelated edits.
+7. Stop when the target is locally clear and further changes would mainly express style or anticipate hypothetical requirements.
 
 ## Simplification Priorities
 
-- Prefer rich models over anemic models.
-- Keep behavior on the type that owns the data or state.
-- Let services orchestrate collaborators instead of directly mutating another object's internals.
-- Use `Move Method`, `Encapsulation`, and `Tell, Don't Ask` when a helper mainly reads and rewrites one object's fields.
-- Reduce unnecessary nesting, temporary state, duplication, and one-off abstractions.
-- Choose clarity over brevity; avoid dense one-liners or clever compacting that hurts readability.
-- Keep names explicit and intention-revealing.
-- Remove comments that only restate obvious code.
+Apply these choices in order when they improve clarity:
 
-## Guardrails
+- Remove provably redundant code and abstractions.
+- Reduce unnecessary nesting, temporary state, indirection, and semantic duplication.
+- Make control flow, names, and ownership explicit.
+- Reuse an existing project pattern or helper when it is clearer than a local implementation.
+- Extract or move behavior only when it names a meaningful operation, owns a real invariant, or lowers total coupling.
+- Introduce a new abstraction only for a current, demonstrated need and only when it removes more concepts, branching, duplication, or volatility than it adds.
 
-- Never change observable behavior just to make the code look cleaner.
-- Preserve existing API shape unless the user explicitly asks for a breaking redesign.
-- Keep refactors debuggable; do not collapse too many concerns into one method or type.
-- Do not jump straight into edits. Understand the area first, decide on the target design, and refactor in a deliberate sequence.
+Do not add configurability, extension points, wrappers, factories, providers, events, or generic frameworks for hypothetical future use.
 
-## Example Pattern
+## Boundaries
 
-When a method mostly updates one object's internal state, that is a signal that the behavior may belong on the object itself.
+- Preserve the active task's intended behavior and avoid additional changes to public APIs, return values, exceptions, cancellation, ordering, side effects, and concurrency semantics.
+- Keep external, expensive, or fallible work outside critical sections. Encapsulate atomic state transitions and invariant enforcement behind the state-owning abstraction when that makes ownership clearer.
+- Do not move I/O or collaborator dependencies onto a model merely because a method assigns many of that model's fields. Rich models are a tool, not a goal; DTOs, configuration, snapshots, and transport models may remain data-focused.
+- Do not split files or methods solely to reduce length, collapse distinct responsibilities to reduce line count, or replace clear code with clever one-liners.
+- Remove comments that repeat the code, but retain comments that explain non-obvious intent, invariants, concurrency, or external constraints.
+- Treat this bounded workflow as the applicable refinement mode when the skill is active. General repository encouragement to refactor broadly does not expand the scope unless the user explicitly requests broader redesign.
 
-```csharp
-private static void CompleteSync(
-    GitRepositoryRuntimeState state,
-    Repository repository,
-    string resolvedLocalPath,
-    string targetBranchName,
-    GitSyncTrigger trigger,
-    bool hasChanges,
-    bool wasDirty,
-    string? refreshMessage)
-{
-    lock (state.SyncRoot)
-    {
-        state.State = GitRepositorySyncState.Ready;
-        state.IsAvailable = true;
-        state.IsDirty = repository.RetrieveStatus().IsDirty;
-        state.CurrentCommit = repository.Head.Tip?.Sha;
-        state.LastSyncAtUtc = DateTimeOffset.UtcNow;
-        state.ResolvedBranch = targetBranchName;
-        state.LastSyncMessage = BuildSyncMessage(trigger, hasChanges, wasDirty, refreshMessage);
-        state.LastError = null;
-        state.ProgressStage = null;
-        state.ProgressPercent = null;
-        state.WorkingDirectorySizeBytes = TryGetWorkingDirectorySizeBytes(
-            resolvedLocalPath,
-            state.WorkingDirectorySizeBytes);
-    }
-}
-```
+## Output
 
-This is a good candidate for moving behavior onto `GitRepositoryRuntimeState`, because the method's main responsibility is a state transition of that object. The service can then tell the object to complete synchronization instead of manually assigning many fields. That usually increases cohesion, reduces procedural mutation, and makes the transition easier to reuse and test.
-
-## Output Expectations
-
-When reporting refinements, describe only meaningful structural changes, call out behavior-preserving decisions, and mention any assumption that limited the refactor.
+Keep reporting proportional to the work and any active collaboration instructions. Report the meaningful simplification, behavior-sensitive decisions, and verification performed. Mention broader risks separately without implementing them outside the requested scope.

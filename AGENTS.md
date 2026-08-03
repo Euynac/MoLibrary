@@ -17,14 +17,6 @@ Invoke when:
 - Implementing hosted services (MoBackgroundService, RecordState)
 - Structuring module folders (Abstractions, Models, Facades, Services, Providers)
 
-### /monica-third-party-module-development
-
-Invoke when:
-- Creating or modernizing an independently published Monica NuGet package
-- Choosing publisher-first package IDs or third-party `ModuleKey` values
-- Packaging multiple coherent Monica modules in one NuGet package
-- Applying Monica ecosystem branding, licensing, validation, or NuGet publishing guidance
-
 ### /monica-ui-development
 
 Invoke when:
@@ -51,13 +43,14 @@ Invoke when:
 ### /code-simplifier
 
 Invoke when:
-- Improving code quality or readability
-- Reviewing current git changes, AI-generated code, or a user-specified code area
-- Using git diff as an entry point to discover broader related refactoring opportunities unless the user explicitly limits scope
-- Planning a refactor before editing, especially when moving behavior into the object that owns the state
-- Simplifying/refactoring code while preserving exact behavior
-- Making code more object-oriented or moving behavior closer to data/state
-- Increasing cohesion and reducing procedural mutation
+- Cleaning up code changed in the current task or a user-specified area
+- Reviewing current changes or AI-generated code for unnecessary complexity, nesting, duplication, or unclear naming
+- Simplifying or refactoring code while preserving the active task's intended behavior
+- Identifying speculative abstractions introduced by the current change
+
+When this skill is active, its bounded, behavior-preserving scope takes precedence over Monica's general preference for broad refactoring. Review requests report findings without editing; cleanup or refactor requests may change the selected code and directly coupled code required for one coherent simplification.
+
+Do not invoke it for broad architecture review, breaking API redesign, module-boundary restructuring, or speculative refactoring outside the current task. Route Monica module architecture work to `$monica-architecture`.
 
 ### Microsoft Documentation Skill
 
@@ -119,7 +112,6 @@ their own `AGENTS.md` files and local documentation conventions.
 ## Dependency Injection Guidelines
 
 - Always use primary constructor when creating a class with single constructor using dependency injection
-  - More details can be read in @rules\primary-constructor.mdc
 - After defining `Module{Name}Option`, to use the module options, simply inject `IOptions<TModuleOption>` or `IOptionsSnapshot<TModuleOption>` for usage.
 
 ## Development Phase & Optimization Policy
@@ -150,12 +142,6 @@ dotnet build /mnt/d/Code/MoLibrary/Monica.AI.UI/Monica.AI.UI.csproj
 # ❌ WRONG - Relative paths may fail if current directory is incorrect
 dotnet build Monica.AI.UI/Monica.AI.UI.csproj
 ```
-
-**Why This Happens**:
-
-- dotnet CLI in WSL is a Windows program running through interoperability
-- MSBuild (invoked by dotnet) cannot understand `/mnt/d/...` Linux-style paths
-- It expects native Windows paths like `D:\...`
 
 **Path Conversion** (if needed):
 ```bash

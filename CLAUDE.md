@@ -43,13 +43,14 @@ Invoke when:
 ### /code-simplifier
 
 Invoke when:
-- Improving code quality or readability
-- Reviewing current git changes, AI-generated code, or a user-specified code area
-- Using git diff as an entry point to discover broader related refactoring opportunities unless the user explicitly limits scope
-- Planning a refactor before editing, especially when moving behavior into the object that owns the state
-- Simplifying/refactoring code while preserving exact behavior
-- Making code more object-oriented or moving behavior closer to data/state
-- Increasing cohesion and reducing procedural mutation
+- Cleaning up code changed in the current task or a user-specified area
+- Reviewing current changes or AI-generated code for unnecessary complexity, nesting, duplication, or unclear naming
+- Simplifying or refactoring code while preserving the active task's intended behavior
+- Identifying speculative abstractions introduced by the current change
+
+When this skill is active, its bounded, behavior-preserving scope takes precedence over Monica's general preference for broad refactoring. Review requests report findings without editing; cleanup or refactor requests may change the selected code and directly coupled code required for one coherent simplification.
+
+Do not invoke it for broad architecture review, breaking API redesign, module-boundary restructuring, or speculative refactoring outside the current task. Route Monica module architecture work to `$monica-architecture`.
 
 ### Microsoft Documentation Skill
 
@@ -57,11 +58,24 @@ You have access to MCP tools called `microsoft_docs_search`, `microsoft_docs_fet
 
 When handling questions around how to work with native Microsoft technologies, such as C#, ASP.NET Core, Microsoft.Extensions, NuGet, Entity Framework, the `dotnet` runtime - please use these tools for research purposes when dealing with specific / narrowly defined questions that may occur.
 
+### $inspect-dependency-source
+
+Invoke when:
+- Debugging behavior that crosses a NuGet or third-party dependency boundary
+- Exact SDK or package-version semantics affect the diagnosis
+- Third-party source code is needed to validate behavior that public API documentation does not make explicit
+
+Resolve, fetch, and reuse exact dependency source through the user-level shared catalog before relying on a repository's latest branch or ad hoc raw source downloads. Consume the stable `resolve --json` CLI contract; do not read the catalog's internal storage directly.
+
 ## Git Commit Requests
 
 When the user asks you to commit changes, read the repository's current commit message guidance first, especially the Conventional Commit rules in `CONTRIBUTING.md`, and use a commit message that follows that policy.
 
-## Coding Annotations
+## Monica Repository Coding Annotations
+
+The rules in this section apply only to source files in this Monica repository. Do not carry this
+language policy into sibling or consumer repositories; those repositories follow
+their own `CLAUDE.md` files and local documentation conventions.
 
 - All code annotations (comments, XML doc comments, `<summary>`, `<param>`, `<returns>`, etc.) must be written in English.
 - Add necessary developer-facing documentation, not just code that compiles.
@@ -98,14 +112,12 @@ When the user asks you to commit changes, read the repository's current commit m
 ## Dependency Injection Guidelines
 
 - Always use primary constructor when creating a class with single constructor using dependency injection
-  - More details can be read in @rules\primary-constructor.mdc
 - After defining `Module{Name}Option`, to use the module options, simply inject `IOptions<TModuleOption>` or `IOptionsSnapshot<TModuleOption>` for usage.
 
 ## Development Phase & Optimization Policy
 
 - **Development Stage**: This project is in internal development and has not been released. Backward compatibility is not a concern unless explicitly instructed otherwise.
 - **Optimization First**: Always prioritize the most optimal design and implementation approaches. Proactively identify and propose refactoring or redesign opportunities when improvements are possible.
-- **Testing Policy**: Unit testing is not required during this phase. Do not include testing-related tasks in planning or implementation unless explicitly requested.
 
 ## Build Warning Policy
 
@@ -130,12 +142,6 @@ dotnet build /mnt/d/Code/MoLibrary/Monica.AI.UI/Monica.AI.UI.csproj
 # ❌ WRONG - Relative paths may fail if current directory is incorrect
 dotnet build Monica.AI.UI/Monica.AI.UI.csproj
 ```
-
-**Why This Happens**:
-
-- dotnet CLI in WSL is a Windows program running through interoperability
-- MSBuild (invoked by dotnet) cannot understand `/mnt/d/...` Linux-style paths
-- It expects native Windows paths like `D:\...`
 
 **Path Conversion** (if needed):
 ```bash
