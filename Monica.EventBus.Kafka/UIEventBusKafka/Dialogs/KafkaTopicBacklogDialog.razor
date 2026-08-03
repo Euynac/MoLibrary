@@ -4,7 +4,7 @@
     <DialogContent>
         <MudStack Spacing="3">
             <MudAlert Severity="Severity.Info" Variant="Variant.Outlined">
-                @L["Topics:BacklogDialog:Summary", Snapshot.TotalAvailableMessageCount, FormatCapturedAt()]
+                @L["Topics:BacklogDialog:Summary", Snapshot.TotalRetainedMessageCount, FormatCapturedAt()]
             </MudAlert>
 
             @if (Snapshot.Partitions.Count == 0)
@@ -20,13 +20,13 @@
                         <MudTh>@L["Topics:BacklogDialog:Columns:Partition"]</MudTh>
                         <MudTh>@L["Topics:BacklogDialog:Columns:EarliestOffset"]</MudTh>
                         <MudTh>@L["Topics:BacklogDialog:Columns:LatestOffset"]</MudTh>
-                        <MudTh>@L["Topics:BacklogDialog:Columns:AvailableMessages"]</MudTh>
+                        <MudTh>@L["Topics:BacklogDialog:Columns:RetainedMessages"]</MudTh>
                     </HeaderContent>
                     <RowTemplate>
                         <MudTd DataLabel="@L["Topics:BacklogDialog:Columns:Partition"]">@context.Partition</MudTd>
                         <MudTd DataLabel="@L["Topics:BacklogDialog:Columns:EarliestOffset"]">@context.EarliestOffset</MudTd>
                         <MudTd DataLabel="@L["Topics:BacklogDialog:Columns:LatestOffset"]">@context.LatestOffset</MudTd>
-                        <MudTd DataLabel="@L["Topics:BacklogDialog:Columns:AvailableMessages"]">@context.AvailableMessageCount</MudTd>
+                        <MudTd DataLabel="@L["Topics:BacklogDialog:Columns:RetainedMessages"]">@context.RetainedMessageCount</MudTd>
                     </RowTemplate>
                 </MudTable>
             }

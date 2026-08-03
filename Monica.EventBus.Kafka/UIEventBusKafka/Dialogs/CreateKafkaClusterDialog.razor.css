@@ -1,0 +1,106 @@
+.cluster-editor,
+.cluster-editor-section,
+.cluster-section-copy,
+.cluster-section-content {
+    min-width: 0;
+}
+
+.cluster-editor-section {
+    --cluster-section-accent: var(--mud-palette-primary);
+}
+
+.cluster-connection-section {
+    --cluster-section-accent: var(--mud-palette-info);
+}
+
+.cluster-security-section {
+    --cluster-section-accent: var(--mud-palette-warning);
+}
+
+.cluster-integration-section {
+    --cluster-section-accent: var(--mud-palette-secondary);
+}
+
+.cluster-editor-section ::deep .cluster-section-surface {
+    width: 100%;
+    min-width: 0;
+    padding: 1.25rem;
+    border-color: color-mix(in srgb, var(--cluster-section-accent) 28%, var(--mud-palette-lines-default));
+    border-inline-start: 0.25rem solid var(--cluster-section-accent);
+    background:
+        linear-gradient(
+            135deg,
+            color-mix(in srgb, var(--cluster-section-accent) 7%, var(--mud-palette-surface)),
+            var(--mud-palette-surface) 42%);
+}
+
+.cluster-section-header {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.875rem;
+    min-width: 0;
+}
+
+.cluster-section-marker {
+    display: inline-flex;
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: center;
+    min-width: 2.25rem;
+    min-height: 2.25rem;
+    padding-inline: 0.5rem;
+    border: 1px solid color-mix(in srgb, var(--cluster-section-accent) 38%, var(--mud-palette-lines-default));
+    border-radius: var(--mud-default-borderradius);
+    color: var(--cluster-section-accent);
+    background: color-mix(in srgb, var(--cluster-section-accent) 12%, var(--mud-palette-surface));
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+}
+
+.cluster-section-title {
+    margin: 0;
+    color: var(--mud-palette-text-primary);
+    font-size: 1rem;
+    font-weight: 700;
+    line-height: 1.4;
+    overflow-wrap: anywhere;
+}
+
+.cluster-section-description {
+    margin: 0.25rem 0 0;
+    color: var(--mud-palette-text-secondary);
+    font-size: 0.875rem;
+    line-height: 1.5;
+    overflow-wrap: anywhere;
+}
+
+.cluster-section-content {
+    margin-top: 1rem;
+}
+
+.cluster-section-content ::deep .mud-grid,
+.cluster-section-content ::deep .mud-input-control,
+.cluster-toggle-field {
+    min-width: 0;
+}
+
+.cluster-toggle-field {
+    display: flex;
+    align-items: center;
+    min-height: 3.5rem;
+}
+
+@media (max-width: 599.98px) {
+    .cluster-editor-section ::deep .cluster-section-surface {
+        padding: 1rem;
+    }
+
+    .cluster-section-header {
+        gap: 0.75rem;
+    }
+
+    .cluster-toggle-field {
+        min-height: auto;
+    }
+}

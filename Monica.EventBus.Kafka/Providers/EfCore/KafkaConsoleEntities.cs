@@ -140,7 +140,7 @@ public sealed class KafkaClusterEntity
 /// </summary>
 public sealed class KafkaPerformanceSnapshotEntity
 {
-    private static readonly JsonSerializerOptions TOPIC_METRICS_JSON_OPTIONS = new(JsonSerializerDefaults.Web);
+    private static readonly JsonSerializerOptions METRICS_JSON_OPTIONS = new(JsonSerializerDefaults.Web);
 
     /// <summary>
     /// Cluster identifier and primary key.
@@ -180,7 +180,7 @@ public sealed class KafkaPerformanceSnapshotEntity
     /// <summary>
     /// Total retained messages across all sampled non-internal topic partitions.
     /// </summary>
-    public long? TotalAvailableMessageCount { get; set; }
+    public long? TotalRetainedMessageCount { get; set; }
 
     /// <summary>
     /// Sum of committed offsets across sampled consumer groups and non-internal topic partitions.
@@ -217,6 +217,11 @@ public sealed class KafkaPerformanceSnapshotEntity
     public string? TopicMetricsJson { get; set; }
 
     /// <summary>
+    /// Serialized per-topic and per-consumer-group member metrics captured with this snapshot.
+    /// </summary>
+    public string? ConsumerGroupMetricsJson { get; set; }
+
+    /// <summary>
     /// Converts the entity to a public model.
     /// </summary>
     public KafkaPerformanceSnapshot ToModel()
@@ -230,13 +235,14 @@ public sealed class KafkaPerformanceSnapshotEntity
             ConsumerGroupCount = ConsumerGroupCount,
             TotalLag = TotalLag,
             TotalLogEndOffset = TotalLogEndOffset,
-            TotalAvailableMessageCount = TotalAvailableMessageCount,
+            TotalRetainedMessageCount = TotalRetainedMessageCount,
             TotalConsumerCommittedOffset = TotalConsumerCommittedOffset,
             MessageWriteRatePerSecond = MessageWriteRatePerSecond,
             MessageConsumeRatePerSecond = MessageConsumeRatePerSecond,
             IncludesJmxMetrics = IncludesJmxMetrics,
             Message = Message,
-            TopicMetrics = DeserializeTopicMetrics(TopicMetricsJson)
+            TopicMetrics = DeserializeMetrics<KafkaTopicPerformanceSnapshot>(TopicMetricsJson),
+            ConsumerGroupMetrics = DeserializeMetrics<KafkaConsumerGroupTopicMetrics>(ConsumerGroupMetricsJson)
         };
     }
 
@@ -254,17 +260,18 @@ public sealed class KafkaPerformanceSnapshotEntity
             ConsumerGroupCount = model.ConsumerGroupCount,
             TotalLag = model.TotalLag,
             TotalLogEndOffset = model.TotalLogEndOffset,
-            TotalAvailableMessageCount = model.TotalAvailableMessageCount,
+            TotalRetainedMessageCount = model.TotalRetainedMessageCount,
             TotalConsumerCommittedOffset = model.TotalConsumerCommittedOffset,
             MessageWriteRatePerSecond = model.MessageWriteRatePerSecond,
             MessageConsumeRatePerSecond = model.MessageConsumeRatePerSecond,
             IncludesJmxMetrics = model.IncludesJmxMetrics,
             Message = model.Message,
-            TopicMetricsJson = SerializeTopicMetrics(model.TopicMetrics)
+            TopicMetricsJson = SerializeMetrics(model.TopicMetrics),
+            ConsumerGroupMetricsJson = SerializeMetrics(model.ConsumerGroupMetrics)
         };
     }
 
-    private static IReadOnlyList<KafkaTopicPerformanceSnapshot> DeserializeTopicMetrics(string? json)
+    private static IReadOnlyList<T> DeserializeMetrics<T>(string? json)
     {
         if (string.IsNullOrWhiteSpace(json))
         {
@@ -273,9 +280,9 @@ public sealed class KafkaPerformanceSnapshotEntity
 
         try
         {
-            return JsonSerializer.Deserialize<List<KafkaTopicPerformanceSnapshot>>(
+            return JsonSerializer.Deserialize<List<T>>(
                        json,
-                       TOPIC_METRICS_JSON_OPTIONS)
+                       METRICS_JSON_OPTIONS)
                    ?? [];
         }
         catch (JsonException)
@@ -285,10 +292,10 @@ public sealed class KafkaPerformanceSnapshotEntity
         }
     }
 
-    private static string? SerializeTopicMetrics(IReadOnlyList<KafkaTopicPerformanceSnapshot> metrics)
+    private static string? SerializeMetrics<T>(IReadOnlyList<T> metrics)
     {
         return metrics.Count == 0
             ? null
-            : JsonSerializer.Serialize(metrics, TOPIC_METRICS_JSON_OPTIONS);
+            : JsonSerializer.Serialize(metrics, METRICS_JSON_OPTIONS);
     }
 }

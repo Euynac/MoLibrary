@@ -11,6 +11,7 @@ public sealed class KafkaPerformanceService(
     KafkaClusterService clusterService,
     IKafkaAdminProvider adminProvider,
     IKafkaOffsetMetricsProvider offsetMetricsProvider,
+    KafkaConsumerMetricsService consumerMetricsService,
     IKafkaConsoleRepository repository)
 {
     public async Task<KafkaPerformanceSnapshot?> GetLatestAsync(string clusterId, CancellationToken cancellationToken = default)
@@ -52,13 +53,23 @@ public sealed class KafkaPerformanceService(
             snapshot.TopicCount = topics.Count;
             snapshot.ConsumerGroupCount = groups.Count;
 
-            var offsetTotals = await offsetMetricsProvider.CapturePerformanceOffsetTotalsAsync(cluster, topics, groups, cancellationToken);
-            snapshot.TotalLag = offsetTotals.IsComplete ? offsetTotals.TotalLag : null;
-            snapshot.TotalLogEndOffset = offsetTotals.IsComplete ? offsetTotals.TotalLogEndOffset : null;
-            snapshot.TotalAvailableMessageCount = offsetTotals.IsComplete
-                ? offsetTotals.TotalAvailableMessageCount
+            var consumerMetrics = await consumerMetricsService.CaptureForPerformanceAsync(
+                cluster,
+                topics,
+                groups,
+                cancellationToken);
+            var offsetTotals = consumerMetrics.PerformanceOffsetTotals ??
+                               await offsetMetricsProvider.CapturePerformanceOffsetTotalsAsync(
+                                   cluster,
+                                   topics,
+                                   groups,
+                                   cancellationToken);
+            snapshot.TotalLag = offsetTotals.AreConsumerOffsetsComplete ? offsetTotals.TotalLag : null;
+            snapshot.TotalLogEndOffset = offsetTotals.AreTopicOffsetsComplete ? offsetTotals.TotalLogEndOffset : null;
+            snapshot.TotalRetainedMessageCount = offsetTotals.AreTopicOffsetsComplete
+                ? offsetTotals.TotalRetainedMessageCount
                 : null;
-            snapshot.TotalConsumerCommittedOffset = offsetTotals.IsComplete
+            snapshot.TotalConsumerCommittedOffset = offsetTotals.AreConsumerOffsetsComplete
                 ? offsetTotals.TotalConsumerCommittedOffset
                 : null;
             snapshot.TopicMetrics = offsetTotals.TopicTotals
@@ -66,11 +77,17 @@ public sealed class KafkaPerformanceService(
                 {
                     TopicName = total.TopicName,
                     TotalLogEndOffset = total.TotalLogEndOffset,
-                    TotalAvailableMessageCount = total.TotalAvailableMessageCount,
+                    TotalRetainedMessageCount = total.TotalRetainedMessageCount,
                     TotalConsumerCommittedOffset = total.TotalConsumerCommittedOffset,
                     TotalLag = total.TotalLag
                 })
                 .ToList();
+            snapshot.ConsumerGroupMetrics = consumerMetrics.GroupMetrics;
+            if (!string.IsNullOrWhiteSpace(consumerMetrics.Message))
+            {
+                snapshot.Message = consumerMetrics.Message;
+            }
+
             KafkaPerformanceRateCalculator.ApplyRates(snapshot, previous);
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)

@@ -245,11 +245,10 @@ internal sealed class ConfluentKafkaAdminProvider(IOptions<ModuleEventBusKafkaOp
     {
         cancellationToken.ThrowIfCancellationRequested();
         using var admin = CreateAdminClient(cluster);
-        // librdkafka 2.13.0 has a native use-after-free in coordinator-targeted Admin requests
-        // when connection setup fails (confluentinc/librdkafka#5397). The legacy group-list API
-        // uses a different native path and still provides every field needed by this summary.
-        var groups = await KafkaNativeRequestAwaiter.RunBlockingAsync(
-            () => admin.ListGroups(Option.AdminRequestTimeout),
+        var groups = await ListLegacyGroupsAsync(
+            admin,
+            includedGroupIds: null,
+            includeMemberPayloads: false,
             cancellationToken);
 
         return groups
@@ -268,6 +267,99 @@ internal sealed class ConfluentKafkaAdminProvider(IOptions<ModuleEventBusKafkaOp
                 TotalLag = null
             })
             .ToList();
+    }
+
+    /// <summary>
+    /// Describes one consumer group and maps Kafka's member assignment payload to the provider-neutral
+    /// console model.
+    /// </summary>
+    public async Task<KafkaConsumerGroupDescription> DescribeConsumerGroupAsync(
+        KafkaClusterConfig cluster,
+        string groupId,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(groupId);
+        var normalizedGroupId = groupId.Trim();
+        var description = (await DescribeConsumerGroupsAsync(
+                cluster,
+                [normalizedGroupId],
+                cancellationToken))
+            .FirstOrDefault(item => string.Equals(item.GroupId, normalizedGroupId, StringComparison.Ordinal));
+        if (description is null)
+        {
+            throw new InvalidOperationException($"Kafka consumer group '{normalizedGroupId}' was not returned by the broker.");
+        }
+
+        if (!string.IsNullOrWhiteSpace(description.ErrorMessage))
+        {
+            throw new InvalidOperationException(
+                $"Kafka consumer group '{normalizedGroupId}' could not be described: {description.ErrorMessage}");
+        }
+
+        return description;
+    }
+
+    /// <summary>
+    /// Describes consumer groups from one legacy group snapshot and preserves per-group diagnostics.
+    /// </summary>
+    public async Task<IReadOnlyList<KafkaConsumerGroupDescription>> DescribeConsumerGroupsAsync(
+        KafkaClusterConfig cluster,
+        IReadOnlyList<string> groupIds,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(groupIds);
+        cancellationToken.ThrowIfCancellationRequested();
+        var normalizedGroupIds = groupIds
+            .Where(groupId => !string.IsNullOrWhiteSpace(groupId))
+            .Select(groupId => groupId.Trim())
+            .Distinct(StringComparer.Ordinal)
+            .ToList();
+        if (normalizedGroupIds.Count == 0)
+        {
+            return [];
+        }
+
+        using var admin = CreateAdminClient(cluster);
+        var requestedGroupIds = normalizedGroupIds.ToHashSet(StringComparer.Ordinal);
+        var groups = await ListLegacyGroupsAsync(
+            admin,
+            requestedGroupIds,
+            includeMemberPayloads: true,
+            cancellationToken);
+
+        var returnedByGroupId = groups
+            .Where(group => !string.IsNullOrWhiteSpace(group.Group))
+            .GroupBy(group => group.Group, StringComparer.Ordinal)
+            .ToDictionary(
+                group => group.Key,
+                group => group
+                    .OrderBy(item => item.Error.Code == ErrorCode.NoError ? 0 : 1)
+                    .ThenBy(item => string.Equals(item.ProtocolType, "consumer", StringComparison.OrdinalIgnoreCase) ? 0 : 1)
+                    .First(),
+                StringComparer.Ordinal);
+        return normalizedGroupIds
+            .Select(groupId => returnedByGroupId.TryGetValue(groupId, out var group)
+                ? KafkaLegacyConsumerGroupMapper.Map(group)
+                : KafkaLegacyConsumerGroupMapper.CreateMissing(groupId))
+            .ToList();
+    }
+
+    private Task<List<GroupInfo>> ListLegacyGroupsAsync(
+        IAdminClient admin,
+        IReadOnlySet<string>? includedGroupIds,
+        bool includeMemberPayloads,
+        CancellationToken cancellationToken)
+    {
+        // Coordinator-targeted Admin requests in librdkafka 2.13.0 can violate the
+        // rd_kafka_enq_once reference count before managed exception handling can run.
+        // This compatibility reader uses the legacy path and also releases partial native results.
+        return KafkaNativeRequestAwaiter.RunBlockingAsync(
+            () => ConfluentKafkaLegacyGroupReader.ListGroups(
+                admin,
+                KafkaClientConfigFactory.NormalizeTimeoutMilliseconds(Option.AdminRequestTimeout),
+                includedGroupIds,
+                includeMemberPayloads),
+            cancellationToken);
     }
 
     private IAdminClient CreateAdminClient(KafkaClusterConfig cluster)

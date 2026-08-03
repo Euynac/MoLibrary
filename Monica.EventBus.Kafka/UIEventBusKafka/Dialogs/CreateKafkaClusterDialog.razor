@@ -2,66 +2,180 @@
 
 <MudDialog>
     <DialogContent>
-        <MudStack Spacing="3">
-            @if (!string.IsNullOrWhiteSpace(_errorMessage))
-            {
-                <MudAlert Severity="Severity.Error" Variant="Variant.Outlined">
-                    @_errorMessage
-                </MudAlert>
-            }
-
-            <MudGrid Spacing="3">
-                <MudItem xs="12" md="6">
-                    <MudTextField T="string" @bind-Value="_model.DisplayName" Label="@L["Clusters:Fields:DisplayName"]" Required="true" />
-                </MudItem>
-                <MudItem xs="12" md="6">
-                    <MudTextField T="string" @bind-Value="_model.ClusterId" Label="@L["Clusters:Fields:ClusterId"]" />
-                </MudItem>
-                <MudItem xs="12">
-                    <MudTextField T="string" @bind-Value="_model.BootstrapServers" Label="@L["Clusters:Fields:BootstrapServers"]" />
-                </MudItem>
-                <MudItem xs="12" md="6">
-                    <MudTextField T="string" @bind-Value="_model.ClientId" Label="@L["Clusters:Fields:ClientId"]" />
-                </MudItem>
-                <MudItem xs="12" md="6">
-                    <MudTextField T="string" @bind-Value="_model.JmxEndpoint" Label="@L["Clusters:Fields:JmxEndpoint"]" />
-                </MudItem>
-                <MudItem xs="12" md="6">
-                    <MudTextField T="string" @bind-Value="_model.SecurityProtocol" Label="@L["Clusters:Fields:SecurityProtocol"]" />
-                </MudItem>
-                <MudItem xs="12" md="6">
-                    <MudTextField T="string" @bind-Value="_model.SaslMechanism" Label="@L["Clusters:Fields:SaslMechanism"]" />
-                </MudItem>
-                <MudItem xs="12" md="6">
-                    <MudTextField T="string" @bind-Value="_model.SaslUsername" Label="@L["Clusters:Fields:SaslUsername"]" />
-                </MudItem>
-                <MudItem xs="12" md="6">
-                    <MudTextField T="string"
-                                  @bind-Value="_model.SaslPassword"
-                                  Label="@L["Clusters:Fields:SaslPassword"]"
-                                  InputType="InputType.Password" />
-                </MudItem>
-                <MudItem xs="12">
-                    <MudTextField T="string" @bind-Value="_model.SslCaLocation" Label="@L["Clusters:Fields:SslCaLocation"]" />
-                </MudItem>
-                <MudItem xs="12" md="6">
-                    <MudSwitch T="bool" @bind-Value="_model.IsDaprBacked" Color="Color.Primary">
-                        @L["Clusters:Fields:IsDaprBacked"]
-                    </MudSwitch>
-                </MudItem>
-                <MudItem xs="12" md="6">
-                    <MudSwitch T="bool" @bind-Value="_model.CredentialsManagedExternally" Color="Color.Primary">
-                        @L["Clusters:Fields:CredentialsManagedExternally"]
-                    </MudSwitch>
-                </MudItem>
-                @if (_model.IsDaprBacked)
+        <div class="cluster-editor">
+            <MudStack Spacing="3">
+                @if (!string.IsNullOrWhiteSpace(_errorMessage))
                 {
-                    <MudItem xs="12">
-                        <MudTextField T="string" @bind-Value="_model.DaprPubSubName" Label="@L["Clusters:Fields:DaprPubSubName"]" />
-                    </MudItem>
+                    <MudAlert Severity="Severity.Error" Variant="Variant.Outlined">
+                        @_errorMessage
+                    </MudAlert>
                 }
-            </MudGrid>
-        </MudStack>
+
+                <section class="cluster-editor-section cluster-identity-section"
+                         aria-labelledby="cluster-identity-heading">
+                    <MudPaper Outlined="true" Elevation="0" Class="cluster-section-surface">
+                        <div class="cluster-section-header">
+                            <span class="cluster-section-marker" aria-hidden="true">01</span>
+                            <div class="cluster-section-copy">
+                                <h2 id="cluster-identity-heading" class="cluster-section-title">
+                                    @L["Clusters:Dialog:Sections:Identity:Title"]
+                                </h2>
+                                <p class="cluster-section-description">
+                                    @L["Clusters:Dialog:Sections:Identity:Description"]
+                                </p>
+                            </div>
+                        </div>
+
+                        <div class="cluster-section-content">
+                            <MudGrid Spacing="2">
+                                <MudItem xs="12" md="6">
+                                    <MudTextField T="string"
+                                                  @bind-Value="_model.DisplayName"
+                                                  Label="@L["Clusters:Fields:DisplayName"]"
+                                                  Required="true" />
+                                </MudItem>
+                                <MudItem xs="12" md="6">
+                                    <MudTextField T="string"
+                                                  @bind-Value="_model.ClusterId"
+                                                  Label="@L["Clusters:Fields:ClusterId"]" />
+                                </MudItem>
+                                <MudItem xs="12">
+                                    <MudTextField T="string"
+                                                  @bind-Value="_model.ClientId"
+                                                  Label="@L["Clusters:Fields:ClientId"]" />
+                                </MudItem>
+                            </MudGrid>
+                        </div>
+                    </MudPaper>
+                </section>
+
+                <section class="cluster-editor-section cluster-connection-section"
+                         aria-labelledby="cluster-connection-heading">
+                    <MudPaper Outlined="true" Elevation="0" Class="cluster-section-surface">
+                        <div class="cluster-section-header">
+                            <span class="cluster-section-marker" aria-hidden="true">02</span>
+                            <div class="cluster-section-copy">
+                                <h2 id="cluster-connection-heading" class="cluster-section-title">
+                                    @L["Clusters:Dialog:Sections:ConnectionOwnership:Title"]
+                                </h2>
+                                <p class="cluster-section-description">
+                                    @L["Clusters:Dialog:Sections:ConnectionOwnership:Description"]
+                                </p>
+                            </div>
+                        </div>
+
+                        <div class="cluster-section-content">
+                            <MudGrid Spacing="2">
+                                <MudItem xs="12">
+                                    <MudTextField T="string"
+                                                  @bind-Value="_model.BootstrapServers"
+                                                  Label="@L["Clusters:Fields:BootstrapServers"]" />
+                                </MudItem>
+                                <MudItem xs="12" md="6">
+                                    <MudTextField T="string"
+                                                  @bind-Value="_model.JmxEndpoint"
+                                                  Label="@L["Clusters:Fields:JmxEndpoint"]" />
+                                </MudItem>
+                                <MudItem xs="12" md="6">
+                                    <div class="cluster-toggle-field">
+                                        <MudSwitch T="bool"
+                                                   @bind-Value="_model.CredentialsManagedExternally"
+                                                   Color="Color.Info">
+                                            @L["Clusters:Fields:CredentialsManagedExternally"]
+                                        </MudSwitch>
+                                    </div>
+                                </MudItem>
+                            </MudGrid>
+                        </div>
+                    </MudPaper>
+                </section>
+
+                <section class="cluster-editor-section cluster-security-section"
+                         aria-labelledby="cluster-security-heading">
+                    <MudPaper Outlined="true" Elevation="0" Class="cluster-section-surface">
+                        <div class="cluster-section-header">
+                            <span class="cluster-section-marker" aria-hidden="true">03</span>
+                            <div class="cluster-section-copy">
+                                <h2 id="cluster-security-heading" class="cluster-section-title">
+                                    @L["Clusters:Dialog:Sections:Security:Title"]
+                                </h2>
+                                <p class="cluster-section-description">
+                                    @L["Clusters:Dialog:Sections:Security:Description"]
+                                </p>
+                            </div>
+                        </div>
+
+                        <div class="cluster-section-content">
+                            <MudGrid Spacing="2">
+                                <MudItem xs="12" md="6">
+                                    <MudTextField T="string"
+                                                  @bind-Value="_model.SecurityProtocol"
+                                                  Label="@L["Clusters:Fields:SecurityProtocol"]" />
+                                </MudItem>
+                                <MudItem xs="12" md="6">
+                                    <MudTextField T="string"
+                                                  @bind-Value="_model.SaslMechanism"
+                                                  Label="@L["Clusters:Fields:SaslMechanism"]" />
+                                </MudItem>
+                                <MudItem xs="12" md="6">
+                                    <MudTextField T="string"
+                                                  @bind-Value="_model.SaslUsername"
+                                                  Label="@L["Clusters:Fields:SaslUsername"]" />
+                                </MudItem>
+                                <MudItem xs="12" md="6">
+                                    <MudTextField T="string"
+                                                  @bind-Value="_model.SaslPassword"
+                                                  Label="@L["Clusters:Fields:SaslPassword"]"
+                                                  InputType="InputType.Password" />
+                                </MudItem>
+                                <MudItem xs="12">
+                                    <MudTextField T="string"
+                                                  @bind-Value="_model.SslCaLocation"
+                                                  Label="@L["Clusters:Fields:SslCaLocation"]" />
+                                </MudItem>
+                            </MudGrid>
+                        </div>
+                    </MudPaper>
+                </section>
+
+                <section class="cluster-editor-section cluster-integration-section"
+                         aria-labelledby="cluster-integration-heading">
+                    <MudPaper Outlined="true" Elevation="0" Class="cluster-section-surface">
+                        <div class="cluster-section-header">
+                            <span class="cluster-section-marker" aria-hidden="true">04</span>
+                            <div class="cluster-section-copy">
+                                <h2 id="cluster-integration-heading" class="cluster-section-title">
+                                    @L["Clusters:Dialog:Sections:Integration:Title"]
+                                </h2>
+                                <p class="cluster-section-description">
+                                    @L["Clusters:Dialog:Sections:Integration:Description"]
+                                </p>
+                            </div>
+                        </div>
+
+                        <div class="cluster-section-content">
+                            <MudGrid Spacing="2">
+                                <MudItem xs="12" md="6">
+                                    <div class="cluster-toggle-field">
+                                        <MudSwitch T="bool" @bind-Value="_model.IsDaprBacked" Color="Color.Secondary">
+                                            @L["Clusters:Fields:IsDaprBacked"]
+                                        </MudSwitch>
+                                    </div>
+                                </MudItem>
+                                @if (_model.IsDaprBacked)
+                                {
+                                    <MudItem xs="12" md="6">
+                                        <MudTextField T="string"
+                                                      @bind-Value="_model.DaprPubSubName"
+                                                      Label="@L["Clusters:Fields:DaprPubSubName"]" />
+                                    </MudItem>
+                                }
+                            </MudGrid>
+                        </div>
+                    </MudPaper>
+                </section>
+            </MudStack>
+        </div>
     </DialogContent>
     <DialogActions>
         <MudButton Variant="Variant.Text" OnClick="Cancel">@L["Common:Actions:Cancel"]</MudButton>

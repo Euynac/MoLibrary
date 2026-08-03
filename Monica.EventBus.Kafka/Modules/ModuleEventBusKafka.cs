@@ -94,6 +94,7 @@ public sealed class ModuleEventBusKafka(ModuleEventBusKafkaOption option)
         services.TryAddScoped<KafkaClusterService>();
         services.TryAddScoped<KafkaTopicService>();
         services.TryAddScoped<KafkaConsumerGroupService>();
+        services.TryAddScoped<KafkaConsumerMetricsService>();
         services.TryAddScoped<KafkaPerformanceService>();
         services.TryAddScoped<KafkaDashboardService>();
         services.TryAddScoped<KafkaConsoleFacade>();
@@ -256,6 +257,40 @@ public sealed class ModuleEventBusKafka(ModuleEventBusKafkaOption option)
                 .WithTags(tagName)
                 .WithSummary(localizer["Api:ConsumerGroups:List:Summary"].Value)
                 .WithDescription(localizer["Api:ConsumerGroups:List:Description"].Value);
+
+            endpoints.MapGet("/eventbus-kafka/clusters/{clusterId}/topics/{topicName}/consumer-groups",
+                    async ([FromRoute] string clusterId,
+                        [FromRoute] string topicName,
+                        [FromServices] KafkaConsoleFacade facade,
+                        CancellationToken cancellationToken) =>
+                        (await facade.ListTopicConsumerGroupsAsync(clusterId, topicName, cancellationToken)).GetResponse())
+                .WithName("ListEventBusKafkaTopicConsumerGroups")
+                .WithTags(tagName)
+                .WithSummary(localizer["Api:ConsumerGroups:TopicList:Summary"].Value)
+                .WithDescription(localizer["Api:ConsumerGroups:TopicList:Description"].Value);
+
+            endpoints.MapGet("/eventbus-kafka/clusters/{clusterId}/consumer-groups/{groupId}/members",
+                    async ([FromRoute] string clusterId,
+                        [FromRoute] string groupId,
+                        [FromServices] KafkaConsoleFacade facade,
+                        CancellationToken cancellationToken) =>
+                        (await facade.GetConsumerGroupMembersAsync(clusterId, groupId, cancellationToken)).GetResponse())
+                .WithName("GetEventBusKafkaConsumerGroupMembers")
+                .WithTags(tagName)
+                .WithSummary(localizer["Api:ConsumerGroups:Members:Summary"].Value)
+                .WithDescription(localizer["Api:ConsumerGroups:Members:Description"].Value);
+
+            endpoints.MapPost("/eventbus-kafka/clusters/{clusterId}/consumer-groups/{groupId}/metrics/capture",
+                    async ([FromRoute] string clusterId,
+                        [FromRoute] string groupId,
+                        [FromQuery] string? topicName,
+                        [FromServices] KafkaConsoleFacade facade,
+                        CancellationToken cancellationToken) =>
+                        (await facade.CaptureConsumerMetricsAsync(clusterId, topicName, groupId, cancellationToken)).GetResponse())
+                .WithName("CaptureEventBusKafkaConsumerGroupMetrics")
+                .WithTags(tagName)
+                .WithSummary(localizer["Api:ConsumerGroups:Metrics:Summary"].Value)
+                .WithDescription(localizer["Api:ConsumerGroups:Metrics:Description"].Value);
 
             endpoints.MapGet("/eventbus-kafka/clusters/{clusterId}/performance",
                     async ([FromRoute] string clusterId,
@@ -452,6 +487,10 @@ public sealed class ModuleEventBusKafkaOption : MinimalApiModuleOptions<ModuleEv
     /// <summary>
     /// Gets or sets the request timeout used by Kafka admin operations.
     /// </summary>
+    /// <remarks>
+    /// Values below one second are normalized to one second before they reach librdkafka so a
+    /// non-positive duration cannot become an unbounded native wait.
+    /// </remarks>
     public TimeSpan AdminRequestTimeout { get; set; } = TimeSpan.FromSeconds(10);
 
     /// <summary>

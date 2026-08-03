@@ -73,6 +73,18 @@
       "List": {
         "Summary": "列出 Kafka 消费者组",
         "Description": "列出直接 Kafka 管理访问可见的消费者组。"
+      },
+      "TopicList": {
+        "Summary": "列出 Kafka 主题的消费者组",
+        "Description": "列出在指定主题中有当前分配或已提交 offset 的消费者组。"
+      },
+      "Members": {
+        "Summary": "获取 Kafka 消费者组成员",
+        "Description": "返回 Kafka 消费者组当前的成员标识及主题分区分配。"
+      },
+      "Metrics": {
+        "Summary": "采集 Kafka 消费者组指标",
+        "Description": "采集消费者组的成员与分区 offset、Lag、消费速率和主题写入速率。"
       }
     },
     "Performance": {
@@ -94,7 +106,11 @@
       "Edit": "编辑",
       "Refresh": "刷新",
       "Save": "保存",
-      "Select": "选择"
+      "Select": "选择",
+      "Details": "详情"
+    },
+    "Columns": {
+      "Actions": "操作"
     }
   },
   "Page": {
@@ -127,15 +143,15 @@
       "TopicsHint": "通过 Kafka 元数据可见",
       "ConsumerGroups": "消费者组",
       "ConsumerGroupsHint": "来自 Kafka 管理 API 描述",
-      "AvailableMessages": "可消费消息",
-      "AvailableMessagesHint": "所有非内部主题可消费消息总和",
+      "RetainedMessages": "现保留消息数",
+      "RetainedMessagesHint": "所有非内部主题当前保留消息数之和，按 latest offset 减 earliest offset 估算",
       "WriteRate": "写入速率",
       "WriteRateHint": "来自最新 offset 增长",
       "ConsumeRate": "消费速率",
       "ConsumeRateHint": "来自最新提交 offset 增长"
     },
     "Values": {
-      "AvailableMessagesUnknown": "未知"
+      "RetainedMessagesUnknown": "未知"
     },
     "Modes": {
       "DirectKafka": "直接 Kafka",
@@ -180,7 +196,25 @@
     },
     "Dialog": {
       "CreateTitle": "新建 Kafka 集群",
-      "EditTitle": "编辑 Kafka 集群"
+      "EditTitle": "编辑 Kafka 集群",
+      "Sections": {
+        "Identity": {
+          "Title": "标识",
+          "Description": "定义控制台中用于识别此 Kafka 集群及其客户端的名称与标识。"
+        },
+        "ConnectionOwnership": {
+          "Title": "连接所有权",
+          "Description": "配置 Broker 入口、监控端点，以及连接凭据由 Monica 还是外部系统管理。"
+        },
+        "Security": {
+          "Title": "安全",
+          "Description": "设置传输协议、SASL 凭据与可信 CA 位置。"
+        },
+        "Integration": {
+          "Title": "集成",
+          "Description": "启用集成时，将此集群连接到 Dapr pub/sub。"
+        }
+      }
     },
     "Confirm": {
       "DeleteTitle": "删除 Kafka 集群",
@@ -189,7 +223,8 @@
     "Messages": {
       "Saved": "Kafka 集群已保存。",
       "Deleted": "Kafka 集群已删除。",
-      "TestSucceeded": "Kafka 集群可连接。"
+      "TestSucceeded": "Kafka 集群可连接。",
+      "Unreachable": "Kafka 集群“{0}”无法连接。"
     },
     "Fields": {
       "DisplayName": "显示名称",
@@ -225,6 +260,7 @@
       "Create": "创建主题",
       "Messages": "查看消息",
       "Backlog": "分区积压",
+      "ConsumerGroups": "消费者组",
       "Partitions": "增加分区",
       "Retention": "设置保留时间",
       "ClearMessages": "清空消息"
@@ -233,7 +269,7 @@
       "Name": "名称",
       "Partitions": "分区",
       "Replication": "副本",
-      "AvailableMessages": "可消费消息",
+      "RetainedMessages": "现保留消息数",
       "Retention": "保留时间",
       "Actions": "操作"
     },
@@ -246,7 +282,7 @@
       "TombstoneEncoding": "Null 值",
       "TimestampUnknown": "时间戳不可用",
       "RetentionUnknown": "未知",
-      "AvailableMessagesUnknown": "未知",
+      "RetainedMessagesUnknown": "未知",
       "RetentionMs": "{0} ms"
     },
     "Dialog": {
@@ -265,8 +301,14 @@
         "Partition": "分区",
         "EarliestOffset": "Earliest offset",
         "LatestOffset": "Latest offset",
-        "AvailableMessages": "可消费消息"
+        "RetainedMessages": "现保留消息数"
       }
+    },
+    "ConsumerGroupsDialog": {
+      "Title": "{0} 的消费者组",
+      "Summary": "此主题有 {0} 个消费者组存在当前分配或已提交 offset。",
+      "Loading": "正在加载此主题的消费者组……",
+      "Empty": "此主题没有存在当前分配或已提交 offset 的消费者组。"
     },
     "MessagesDialog": {
       "ReadHint": "显示最多 {0} 条最近消息，采样时间 {1}。此预览不会提交消费者 offset。",
@@ -317,6 +359,28 @@
     },
     "Values": {
       "LagUnknown": "未知"
+    },
+    "MetricsDialog": {
+      "Title": "消费者组消费详情",
+      "TopicTitle": "主题消费者组消费详情",
+      "MembersTitle": "成员（{0}）",
+      "NoMembers": "此消费者组当前没有已注册成员。",
+      "PartitionsTitle": "分区指标",
+      "Loading": "正在采集消费者组指标……",
+      "NoPartitions": "此消费者组和主题筛选范围内没有可用的分区指标。",
+      "Columns": {
+        "ConsumerId": "CONSUMER-ID",
+        "Host": "HOST",
+        "ClientId": "CLIENT-ID",
+        "Assignments": "分配分区数",
+        "Partition": "分区",
+        "CurrentOffset": "CURRENT-OFFSET",
+        "LogEndOffset": "LOG-END-OFFSET"
+      },
+      "Values": {
+        "OffsetUnknown": "未知",
+        "Unassigned": "未分配"
+      }
     }
   },
   "Performance": {
@@ -332,26 +396,28 @@
     "Title": "性能快照",
     "Unavailable": "性能采样需要直接 Kafka Broker 访问。",
     "Empty": "尚未采集性能快照。",
-    "NoTopicMetrics": "最新性能快照中没有可显示的主题指标。",
-    "TopicFilter": {
-      "Label": "筛选主题",
-      "Placeholder": "输入主题名称",
-      "NoMatches": "没有符合当前筛选条件的主题性能指标。"
+    "NoConsumerGroupMetrics": "最新性能快照中没有可显示的主题与消费者组指标。",
+    "MetricsFilter": {
+      "Label": "筛选主题或消费者组",
+      "Placeholder": "输入主题或消费者组名称",
+      "NoMatches": "没有符合当前筛选条件的主题与消费者组指标。"
     },
     "Actions": {
-      "Capture": "采集"
+      "Capture": "采集",
+      "Details": "详情"
     },
     "Columns": {
       "CapturedAt": "采集时间",
       "Topic": "主题",
-      "AvailableMessages": "可消费消息",
+      "ConsumerGroup": "消费者组",
+      "RetainedMessages": "现保留消息数",
       "WriteRate": "写入速率",
       "ConsumeRate": "消费速率",
       "Lag": "Lag"
     },
     "Values": {
       "LagUnknown": "未知",
-      "AvailableMessagesUnknown": "未知",
+      "RetainedMessagesUnknown": "未知",
       "RateUnknown": "未知",
       "RatePerSecond": "{0} msg/s"
     },

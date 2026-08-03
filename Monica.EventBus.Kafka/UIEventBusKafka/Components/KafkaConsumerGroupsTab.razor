@@ -1,3 +1,4 @@
+@using Monica.EventBus.Kafka.UIEventBusKafka.Support
 @using Monica.EventBus.Kafka.UIEventBusKafka.State
 @inject IStringLocalizer<EventBusKafkaResource> L
 
@@ -53,11 +54,18 @@
                         <MudChip T="string"
                                  Size="Size.Small"
                                  Variant="Variant.Outlined"
-                                 Color="@GetStateColor(context.State)">
+                                 Color="@KafkaConsumerGroupStateDisplay.GetColor(context.State)">
                             @context.State
                         </MudChip>
                     </MudTd>
-                    <MudTd DataLabel="@L["ConsumerGroups:Columns:Members"]">@context.MemberCount</MudTd>
+                    <MudTd DataLabel="@L["ConsumerGroups:Columns:Members"]">
+                        <MudButton Variant="Variant.Text"
+                                   Size="Size.Small"
+                                   StartIcon="@Icons.Material.Filled.Groups"
+                                   OnClick="@(() => OnViewMembers.InvokeAsync(context))">
+                            @context.MemberCount
+                        </MudButton>
+                    </MudTd>
                     <MudTd DataLabel="@L["ConsumerGroups:Columns:Lag"]">
                         <span class="consumer-group-lag">
                             @KafkaMetricDisplayFormatter.FormatOptionalInt64(context.TotalLag, L["ConsumerGroups:Values:LagUnknown"])
@@ -81,13 +89,7 @@
     [Parameter]
     public EventCallback OnRefresh { get; set; }
 
-    private static Color GetStateColor(string state) => state.ToUpperInvariant() switch
-    {
-        "STABLE" => Color.Success,
-        "PREPARINGREBALANCE" or "COMPLETINGREBALANCE" => Color.Warning,
-        "DEAD" => Color.Error,
-        "EMPTY" => Color.Secondary,
-        _ => Color.Info
-    };
+    [Parameter]
+    public EventCallback<KafkaConsumerGroupSummary> OnViewMembers { get; set; }
 
 }

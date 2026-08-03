@@ -1,6 +1,8 @@
+using Microsoft.Extensions.Localization;
 using Monica.Core.Extensions;
 using Monica.Core.Results;
 using Monica.EventBus.Kafka.Facades;
+using Monica.EventBus.Kafka.Localization;
 using Monica.EventBus.Kafka.Models;
 
 namespace Monica.EventBus.Kafka.UIEventBusKafka.State;
@@ -10,7 +12,8 @@ namespace Monica.EventBus.Kafka.UIEventBusKafka.State;
 /// </summary>
 public sealed class EventBusKafkaPageState(
     KafkaConsoleFacade facade,
-    KafkaPerformancePollingState performancePollingState)
+    KafkaPerformancePollingState performancePollingState,
+    IStringLocalizer<EventBusKafkaResource> localizer)
 {
     private string? _topicsClusterId;
     private string? _consumerGroupsClusterId;
@@ -50,10 +53,10 @@ public sealed class EventBusKafkaPageState(
     /// <summary>
     /// Current retained-message inventory from the latest live sample or topic enrichment.
     /// </summary>
-    public long? TotalAvailableMessageCount =>
+    public long? TotalRetainedMessageCount =>
         LatestPerformance is { TopicMetrics.Count: > 0 } latest
-            ? latest.TotalAvailableMessageCount
-            : Dashboard.TotalAvailableMessageCount;
+            ? latest.TotalRetainedMessageCount
+            : Dashboard.TotalRetainedMessageCount;
 
     /// <summary>
     /// Current topic count from the latest live metadata sample or dashboard snapshot.
@@ -275,7 +278,8 @@ public sealed class EventBusKafkaPageState(
 
             ApplyClusterSummary(summary);
             ClearSelectedClusterDetailsIfSelected(summary.Config.ClusterId);
-            ErrorMessage = summary.ErrorMessage ?? $"Kafka cluster '{summary.Config.DisplayName}' is not reachable.";
+            ErrorMessage = summary.ErrorMessage
+                           ?? localizer["Clusters:Messages:Unreachable", summary.Config.DisplayName];
             return false;
         });
 
@@ -555,7 +559,7 @@ public sealed class EventBusKafkaPageState(
         _topicsClusterId = null;
         _consumerGroupsClusterId = null;
         _performanceClusterId = null;
-        Dashboard.TotalAvailableMessageCount = null;
+        Dashboard.TotalRetainedMessageCount = null;
         Dashboard.LatestPerformance = null;
     }
 
@@ -709,10 +713,10 @@ public sealed class EventBusKafkaPageState(
             .Where(topic => !topic.IsInternal)
             .ToList();
         Dashboard.TopicCount = Topics.Count;
-        Dashboard.TotalAvailableMessageCount = applicationTopics.Count == 0
+        Dashboard.TotalRetainedMessageCount = applicationTopics.Count == 0
             ? 0
-            : applicationTopics.All(topic => topic.AvailableMessageCount.HasValue)
-                ? applicationTopics.Sum(topic => topic.AvailableMessageCount.GetValueOrDefault())
+            : applicationTopics.All(topic => topic.RetainedMessageCount.HasValue)
+                ? applicationTopics.Sum(topic => topic.RetainedMessageCount.GetValueOrDefault())
                 : null;
     }
 

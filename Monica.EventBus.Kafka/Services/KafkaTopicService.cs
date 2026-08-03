@@ -43,7 +43,7 @@ public sealed class KafkaTopicService(
         {
             if (backlogsByTopic.TryGetValue(topic.TopicName, out var backlog))
             {
-                topic.AvailableMessageCount = backlog.TotalAvailableMessageCount;
+                topic.RetainedMessageCount = backlog.TotalRetainedMessageCount;
             }
         }
 

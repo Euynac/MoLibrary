@@ -73,6 +73,18 @@
       "List": {
         "Summary": "Lists Kafka consumer groups",
         "Description": "Lists consumer groups visible to direct Kafka admin access."
+      },
+      "TopicList": {
+        "Summary": "Lists consumer groups for a Kafka topic",
+        "Description": "Lists consumer groups that have live assignments or committed offsets for the requested topic."
+      },
+      "Members": {
+        "Summary": "Gets Kafka consumer-group members",
+        "Description": "Returns the current member identities and topic-partition assignments for a Kafka consumer group."
+      },
+      "Metrics": {
+        "Summary": "Captures Kafka consumer-group metrics",
+        "Description": "Captures member and partition offsets, lag, consume rates, and topic write rates for a consumer group."
       }
     },
     "Performance": {
@@ -94,7 +106,11 @@
       "Edit": "Edit",
       "Refresh": "Refresh",
       "Save": "Save",
-      "Select": "Select"
+      "Select": "Select",
+      "Details": "Details"
+    },
+    "Columns": {
+      "Actions": "Actions"
     }
   },
   "Page": {
@@ -127,15 +143,15 @@
       "TopicsHint": "Visible through Kafka metadata",
       "ConsumerGroups": "Consumer groups",
       "ConsumerGroupsHint": "Described from Kafka admin APIs",
-      "AvailableMessages": "Available messages",
-      "AvailableMessagesHint": "Sum of available messages across non-internal topics",
+      "RetainedMessages": "Retained messages",
+      "RetainedMessagesHint": "Current retained-message count across non-internal topics, estimated from latest offset minus earliest offset",
       "WriteRate": "Write rate",
       "WriteRateHint": "Latest offset growth",
       "ConsumeRate": "Consume rate",
       "ConsumeRateHint": "Latest committed offset growth"
     },
     "Values": {
-      "AvailableMessagesUnknown": "Unknown"
+      "RetainedMessagesUnknown": "Unknown"
     },
     "Modes": {
       "DirectKafka": "Direct Kafka",
@@ -180,7 +196,25 @@
     },
     "Dialog": {
       "CreateTitle": "New Kafka cluster",
-      "EditTitle": "Edit Kafka cluster"
+      "EditTitle": "Edit Kafka cluster",
+      "Sections": {
+        "Identity": {
+          "Title": "Identity",
+          "Description": "Define how this Kafka cluster and its client are identified in the console."
+        },
+        "ConnectionOwnership": {
+          "Title": "Connection ownership",
+          "Description": "Configure broker access, monitoring, and whether Monica or an external system manages credentials."
+        },
+        "Security": {
+          "Title": "Security",
+          "Description": "Set the transport protocol, SASL credentials, and trusted CA location."
+        },
+        "Integration": {
+          "Title": "Integration",
+          "Description": "Connect this cluster to Dapr pub/sub when the integration is enabled."
+        }
+      }
     },
     "Confirm": {
       "DeleteTitle": "Delete Kafka cluster",
@@ -189,7 +223,8 @@
     "Messages": {
       "Saved": "Kafka cluster saved.",
       "Deleted": "Kafka cluster deleted.",
-      "TestSucceeded": "Kafka cluster is reachable."
+      "TestSucceeded": "Kafka cluster is reachable.",
+      "Unreachable": "Kafka cluster '{0}' is not reachable."
     },
     "Fields": {
       "DisplayName": "Display name",
@@ -225,6 +260,7 @@
       "Create": "Create topic",
       "Messages": "View messages",
       "Backlog": "Partition backlog",
+      "ConsumerGroups": "Consumer groups",
       "Partitions": "Increase partitions",
       "Retention": "Set retention",
       "ClearMessages": "Clear messages"
@@ -233,7 +269,7 @@
       "Name": "Name",
       "Partitions": "Partitions",
       "Replication": "Replication",
-      "AvailableMessages": "Available messages",
+      "RetainedMessages": "Retained messages",
       "Retention": "Retention",
       "Actions": "Actions"
     },
@@ -246,7 +282,7 @@
       "TombstoneEncoding": "Null value",
       "TimestampUnknown": "Timestamp unavailable",
       "RetentionUnknown": "Unknown",
-      "AvailableMessagesUnknown": "Unknown",
+      "RetainedMessagesUnknown": "Unknown",
       "RetentionMs": "{0} ms"
     },
     "Dialog": {
@@ -265,8 +301,14 @@
         "Partition": "Partition",
         "EarliestOffset": "Earliest offset",
         "LatestOffset": "Latest offset",
-        "AvailableMessages": "Available messages"
+        "RetainedMessages": "Retained messages"
       }
+    },
+    "ConsumerGroupsDialog": {
+      "Title": "Consumer groups for {0}",
+      "Summary": "{0} consumer groups have assignments or committed offsets for this topic.",
+      "Loading": "Loading consumer groups for this topic...",
+      "Empty": "No consumer group has an assignment or committed offset for this topic."
     },
     "MessagesDialog": {
       "ReadHint": "Showing up to {0} recent messages sampled at {1}. This preview does not commit consumer offsets.",
@@ -317,17 +359,39 @@
     },
     "Values": {
       "LagUnknown": "Unknown"
+    },
+    "MetricsDialog": {
+      "Title": "Consumer group consumption details",
+      "TopicTitle": "Topic consumer group consumption details",
+      "MembersTitle": "Members ({0})",
+      "NoMembers": "This consumer group currently has no registered members.",
+      "PartitionsTitle": "Partition metrics",
+      "Loading": "Capturing consumer-group metrics...",
+      "NoPartitions": "No partition metrics are available for this consumer group and topic selection.",
+      "Columns": {
+        "ConsumerId": "CONSUMER-ID",
+        "Host": "HOST",
+        "ClientId": "CLIENT-ID",
+        "Assignments": "Assigned partitions",
+        "Partition": "Partition",
+        "CurrentOffset": "CURRENT-OFFSET",
+        "LogEndOffset": "LOG-END-OFFSET"
+      },
+      "Values": {
+        "OffsetUnknown": "Unknown",
+        "Unassigned": "Unassigned"
+      }
     }
   },
   "Performance": {
     "Title": "Performance snapshots",
     "Unavailable": "Performance sampling requires direct Kafka broker access.",
     "Empty": "No performance snapshot has been captured.",
-    "NoTopicMetrics": "The latest performance snapshot has no topic metrics to display.",
-    "TopicFilter": {
-      "Label": "Filter topics",
-      "Placeholder": "Enter a topic name",
-      "NoMatches": "No topic performance metrics match the current filter."
+    "NoConsumerGroupMetrics": "The latest performance snapshot has no topic and consumer-group metrics to display.",
+    "MetricsFilter": {
+      "Label": "Filter topic or group",
+      "Placeholder": "Enter a topic or consumer-group name",
+      "NoMatches": "No topic and consumer-group metrics match the current filter."
     },
     "Live": {
       "AutoRefresh": "Live refresh",
@@ -339,19 +403,21 @@
       "Paused": "Live refresh is paused"
     },
     "Actions": {
-      "Capture": "Capture"
+      "Capture": "Capture",
+      "Details": "Details"
     },
     "Columns": {
       "CapturedAt": "Captured at",
       "Topic": "Topic",
-      "AvailableMessages": "Available messages",
+      "ConsumerGroup": "Consumer group",
+      "RetainedMessages": "Retained messages",
       "WriteRate": "Write rate",
       "ConsumeRate": "Consume rate",
       "Lag": "Lag"
     },
     "Values": {
       "LagUnknown": "Unknown",
-      "AvailableMessagesUnknown": "Unknown",
+      "RetainedMessagesUnknown": "Unknown",
       "RateUnknown": "Unknown",
       "RatePerSecond": "{0} msg/s"
     },

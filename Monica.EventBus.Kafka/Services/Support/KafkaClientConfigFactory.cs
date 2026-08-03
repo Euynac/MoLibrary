@@ -121,7 +121,7 @@ internal static class KafkaClientConfigFactory
             : $"{option.ConsumerGroupId}-{serviceKey}";
     }
 
-    private static int NormalizeTimeoutMilliseconds(TimeSpan timeout)
+    internal static int NormalizeTimeoutMilliseconds(TimeSpan timeout)
     {
         return (int)Math.Clamp(
             timeout.TotalMilliseconds,

@@ -168,6 +168,59 @@ public sealed class KafkaConsoleFacade(
     }
 
     /// <summary>
+    /// Lists consumer groups associated with one topic.
+    /// </summary>
+    /// <param name="clusterId">Target cluster identifier.</param>
+    /// <param name="topicName">Target topic name.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>A result containing consumer groups associated with the topic.</returns>
+    public Task<Res<IReadOnlyList<KafkaConsumerGroupSummary>>> ListTopicConsumerGroupsAsync(
+        string clusterId,
+        string topicName,
+        CancellationToken cancellationToken = default)
+    {
+        return ExecuteAsync(
+            () => consumerGroupService.ListTopicConsumerGroupsAsync(clusterId, topicName, cancellationToken),
+            "Failed to load Kafka topic consumer groups");
+    }
+
+    /// <summary>
+    /// Gets live member identities and assignments for one consumer group.
+    /// </summary>
+    /// <param name="clusterId">Target cluster identifier.</param>
+    /// <param name="groupId">Consumer group identifier.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>A result containing live member identities and assignments.</returns>
+    public Task<Res<IReadOnlyList<KafkaConsumerGroupMemberAssignment>>> GetConsumerGroupMembersAsync(
+        string clusterId,
+        string groupId,
+        CancellationToken cancellationToken = default)
+    {
+        return ExecuteAsync(
+            () => consumerGroupService.GetConsumerGroupMembersAsync(clusterId, groupId, cancellationToken),
+            "Failed to load Kafka consumer group members");
+    }
+
+    /// <summary>
+    /// Captures topic/group/member/partition consumer metrics.
+    /// </summary>
+    /// <param name="clusterId">Target cluster identifier.</param>
+    /// <param name="topicName">Optional topic filter.</param>
+    /// <param name="groupId">Optional consumer-group filter.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>A result containing the detailed consumer metrics snapshot.</returns>
+    public Task<Res<KafkaConsumerMetricsSnapshot>> CaptureConsumerMetricsAsync(
+        string clusterId,
+        string? topicName = null,
+        string? groupId = null,
+        CancellationToken cancellationToken = default)
+    {
+        return ExecuteAsync(
+            () => consumerGroupService.CaptureMetricsAsync(clusterId, topicName, groupId, cancellationToken),
+            "Failed to capture Kafka consumer metrics");
+    }
+
+    /// <summary>
     /// Gets the latest performance snapshot for a cluster.
     /// </summary>
     public Task<Res<KafkaPerformanceSnapshot?>> GetLatestPerformanceAsync(

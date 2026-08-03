@@ -50,6 +50,7 @@ public sealed class KafkaConsoleDbContext(
             entity.Property(snapshot => snapshot.ClusterId).HasMaxLength(128);
             entity.Property(snapshot => snapshot.Message).HasMaxLength(2048);
             entity.Property(snapshot => snapshot.TopicMetricsJson);
+            entity.Property(snapshot => snapshot.ConsumerGroupMetricsJson);
         });
     }
 }

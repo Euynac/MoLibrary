@@ -72,7 +72,7 @@ internal sealed class InMemoryKafkaConsoleRepository : IKafkaConsoleRepository
             ConsumerGroupCount = snapshot.ConsumerGroupCount,
             TotalLag = snapshot.TotalLag,
             TotalLogEndOffset = snapshot.TotalLogEndOffset,
-            TotalAvailableMessageCount = snapshot.TotalAvailableMessageCount,
+            TotalRetainedMessageCount = snapshot.TotalRetainedMessageCount,
             TotalConsumerCommittedOffset = snapshot.TotalConsumerCommittedOffset,
             MessageWriteRatePerSecond = snapshot.MessageWriteRatePerSecond,
             MessageConsumeRatePerSecond = snapshot.MessageConsumeRatePerSecond,
@@ -83,11 +83,50 @@ internal sealed class InMemoryKafkaConsoleRepository : IKafkaConsoleRepository
                 {
                     TopicName = metric.TopicName,
                     TotalLogEndOffset = metric.TotalLogEndOffset,
-                    TotalAvailableMessageCount = metric.TotalAvailableMessageCount,
+                    TotalRetainedMessageCount = metric.TotalRetainedMessageCount,
                     TotalConsumerCommittedOffset = metric.TotalConsumerCommittedOffset,
                     TotalLag = metric.TotalLag,
                     MessageWriteRatePerSecond = metric.MessageWriteRatePerSecond,
                     MessageConsumeRatePerSecond = metric.MessageConsumeRatePerSecond
+                })
+                .ToList(),
+            ConsumerGroupMetrics = snapshot.ConsumerGroupMetrics
+                .Select(CloneConsumerGroupMetric)
+                .ToList()
+        };
+    }
+
+    private static KafkaConsumerGroupTopicMetrics CloneConsumerGroupMetric(KafkaConsumerGroupTopicMetrics metric)
+    {
+        return new KafkaConsumerGroupTopicMetrics
+        {
+            TopicName = metric.TopicName,
+            GroupId = metric.GroupId,
+            State = metric.State,
+            CapturedAt = metric.CapturedAt,
+            TotalCurrentOffset = metric.TotalCurrentOffset,
+            TotalLogEndOffset = metric.TotalLogEndOffset,
+            TotalRetainedMessageCount = metric.TotalRetainedMessageCount,
+            TotalLag = metric.TotalLag,
+            ConsumeRatePerSecond = metric.ConsumeRatePerSecond,
+            WriteRatePerSecond = metric.WriteRatePerSecond,
+            Members = metric.Members
+                .Select(member => new KafkaConsumerMemberMetrics
+                {
+                    ConsumerId = member.ConsumerId,
+                    Host = member.Host,
+                    ClientId = member.ClientId,
+                    Partitions = member.Partitions
+                        .Select(partition => new KafkaConsumerPartitionMetrics
+                        {
+                            Partition = partition.Partition,
+                            CurrentOffset = partition.CurrentOffset,
+                            LogEndOffset = partition.LogEndOffset,
+                            Lag = partition.Lag,
+                            ConsumeRatePerSecond = partition.ConsumeRatePerSecond,
+                            WriteRatePerSecond = partition.WriteRatePerSecond
+                        })
+                        .ToList()
                 })
                 .ToList()
         };

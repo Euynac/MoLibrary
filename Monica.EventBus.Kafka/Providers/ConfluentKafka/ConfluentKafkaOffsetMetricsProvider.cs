@@ -11,7 +11,7 @@ namespace Monica.EventBus.Kafka.Providers.ConfluentKafka;
 /// <summary>
 /// Confluent Kafka implementation of read-only offset metric sampling.
 /// </summary>
-internal sealed class ConfluentKafkaOffsetMetricsProvider(IOptions<ModuleEventBusKafkaOption> options)
+internal sealed partial class ConfluentKafkaOffsetMetricsProvider(IOptions<ModuleEventBusKafkaOption> options)
     : IKafkaOffsetMetricsProvider
 {
     private ModuleEventBusKafkaOption Option => options.Value;
@@ -74,35 +74,21 @@ internal sealed class ConfluentKafkaOffsetMetricsProvider(IOptions<ModuleEventBu
         var applicationTopics = topics
             .Where(topic => !topic.IsInternal)
             .ToList();
-        var hasUnavailableTopicMetadata = applicationTopics.Any(topic => !topic.IsMetadataAvailable);
         var applicationPartitions = BuildTopicPartitions(applicationTopics);
+        Dictionary<TopicPartition, PartitionWatermark> watermarks;
         if (applicationPartitions.Count == 0)
         {
-            return new KafkaPerformanceOffsetTotals
-            {
-                IsComplete = !hasUnavailableTopicMetadata,
-                TotalLogEndOffset = 0,
-                TotalAvailableMessageCount = hasUnavailableTopicMetadata ? null : 0,
-                TopicTotals = BuildTopicTotals(
-                    applicationTopics,
-                    new Dictionary<TopicPartition, PartitionWatermark>())
-            };
+            watermarks = [];
         }
-
-        Dictionary<TopicPartition, PartitionWatermark> watermarks;
-        using (var admin = CreateAdminClient(cluster))
+        else
         {
+            using var admin = CreateAdminClient(cluster);
             watermarks = await ReadWatermarksAsync(admin, applicationPartitions, cancellationToken);
         }
 
-        var applicationWatermarks = applicationPartitions
-            .Where(watermarks.ContainsKey)
-            .ToDictionary(partition => partition, partition => watermarks[partition]);
-        var latestOffsets = applicationWatermarks.ToDictionary(
+        var latestOffsets = watermarks.ToDictionary(
             item => item.Key,
             item => item.Value.LatestOffset);
-        var hasCompleteApplicationOffsets = !hasUnavailableTopicMetadata &&
-                                            applicationWatermarks.Count == applicationPartitions.Count;
         var consumerOffsets = latestOffsets.Count == 0
             ? ConsumerOffsetTotals.Empty
             : await ReadConsumerOffsetsAsync(
@@ -111,15 +97,35 @@ internal sealed class ConfluentKafkaOffsetMetricsProvider(IOptions<ModuleEventBu
                 latestOffsets,
                 consumerGroups,
                 cancellationToken);
-        var topicTotals = BuildTopicTotals(applicationTopics, applicationWatermarks);
+        return CreatePerformanceOffsetTotals(
+            applicationTopics,
+            applicationPartitions,
+            watermarks,
+            consumerOffsets,
+            areConsumerOffsetsComplete: true);
+    }
+
+    private static KafkaPerformanceOffsetTotals CreatePerformanceOffsetTotals(
+        IReadOnlyList<KafkaTopicSummary> applicationTopics,
+        IReadOnlyList<TopicPartition> applicationPartitions,
+        IReadOnlyDictionary<TopicPartition, PartitionWatermark> watermarks,
+        ConsumerOffsetTotals consumerOffsets,
+        bool areConsumerOffsetsComplete)
+    {
+        var hasCompleteOffsets = applicationTopics.All(topic => topic.IsMetadataAvailable) &&
+                                 watermarks.Count == applicationPartitions.Count;
+        var topicTotals = BuildTopicTotals(applicationTopics, watermarks);
         ApplyConsumerOffsets(topicTotals, consumerOffsets);
 
         return new KafkaPerformanceOffsetTotals
         {
-            IsComplete = hasCompleteApplicationOffsets,
-            TotalLogEndOffset = hasCompleteApplicationOffsets ? latestOffsets.Values.Sum() : 0,
-            TotalAvailableMessageCount = hasCompleteApplicationOffsets
-                ? applicationWatermarks.Values.Sum(watermark => watermark.AvailableMessageCount)
+            AreTopicOffsetsComplete = hasCompleteOffsets,
+            AreConsumerOffsetsComplete = areConsumerOffsetsComplete,
+            TotalLogEndOffset = hasCompleteOffsets
+                ? watermarks.Values.Sum(watermark => watermark.LatestOffset)
+                : 0,
+            TotalRetainedMessageCount = hasCompleteOffsets
+                ? watermarks.Values.Sum(watermark => watermark.RetainedMessageCount)
                 : null,
             TotalConsumerCommittedOffset = consumerOffsets.TotalCommittedOffset,
             TotalLag = consumerOffsets.TotalLag,
@@ -202,8 +208,8 @@ internal sealed class ConfluentKafkaOffsetMetricsProvider(IOptions<ModuleEventBu
                     TotalLogEndOffset = isComplete
                         ? capturedPartitions.Sum(partition => watermarks[partition].LatestOffset)
                         : null,
-                    TotalAvailableMessageCount = isComplete
-                        ? capturedPartitions.Sum(partition => watermarks[partition].AvailableMessageCount)
+                    TotalRetainedMessageCount = isComplete
+                        ? capturedPartitions.Sum(partition => watermarks[partition].RetainedMessageCount)
                         : null,
                     IsComplete = isComplete
                 };
@@ -255,7 +261,7 @@ internal sealed class ConfluentKafkaOffsetMetricsProvider(IOptions<ModuleEventBu
                     ClusterId = clusterId,
                     TopicName = group.Key,
                     CapturedAt = capturedAt,
-                    TotalAvailableMessageCount = partitionBacklogs.Sum(partition => partition.AvailableMessageCount),
+                    TotalRetainedMessageCount = partitionBacklogs.Sum(partition => partition.RetainedMessageCount),
                     Partitions = partitionBacklogs
                 };
             })
@@ -342,7 +348,7 @@ internal sealed class ConfluentKafkaOffsetMetricsProvider(IOptions<ModuleEventBu
                 Partition = topicPartition.Partition.Value,
                 EarliestOffset = watermark.EarliestOffset,
                 LatestOffset = watermark.LatestOffset,
-                AvailableMessageCount = watermark.AvailableMessageCount
+                RetainedMessageCount = watermark.RetainedMessageCount
             });
     }
 
@@ -352,7 +358,7 @@ internal sealed class ConfluentKafkaOffsetMetricsProvider(IOptions<ModuleEventBu
         {
             ClusterId = clusterId,
             TopicName = topicName,
-            TotalAvailableMessageCount = 0,
+            TotalRetainedMessageCount = 0,
             CapturedAt = DateTimeOffset.UtcNow,
             Partitions = []
         };
@@ -542,6 +548,6 @@ internal sealed class ConfluentKafkaOffsetMetricsProvider(IOptions<ModuleEventBu
 
     private sealed record PartitionWatermark(long EarliestOffset, long LatestOffset)
     {
-        public long AvailableMessageCount => Math.Max(0, LatestOffset - EarliestOffset);
+        public long RetainedMessageCount => Math.Max(0, LatestOffset - EarliestOffset);
     }
 }

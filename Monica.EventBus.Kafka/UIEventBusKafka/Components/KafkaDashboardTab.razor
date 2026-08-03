@@ -65,10 +65,10 @@
                              Hint="@L["Dashboard:Cards:TopicsHint"]"
                              AccentColor="Color.Info" />
             <KafkaMetricCard Icon="@Icons.Material.Filled.MarkEmailUnread"
-                             Label="@L["Dashboard:Cards:AvailableMessages"]"
-                             Value="@KafkaMetricDisplayFormatter.FormatOptionalInt64(State.TotalAvailableMessageCount, L["Dashboard:Values:AvailableMessagesUnknown"])"
-                             Hint="@L["Dashboard:Cards:AvailableMessagesHint"]"
-                             AccentColor="@AvailableMessagesAccentColor" />
+                             Label="@L["Dashboard:Cards:RetainedMessages"]"
+                             Value="@KafkaMetricDisplayFormatter.FormatOptionalInt64(State.TotalRetainedMessageCount, L["Dashboard:Values:RetainedMessagesUnknown"])"
+                             Hint="@L["Dashboard:Cards:RetainedMessagesHint"]"
+                             AccentColor="@RetainedMessagesAccentColor" />
             <KafkaMetricCard Icon="@Icons.Material.Filled.Groups"
                              Label="@L["Dashboard:Cards:ConsumerGroups"]"
                              Value="@State.CurrentConsumerGroupCount.ToString()"
@@ -126,7 +126,7 @@
 
     private Color BrokerAccentColor => State.CurrentBrokerCount > 0 ? Color.Success : Color.Warning;
 
-    private Color AvailableMessagesAccentColor => State.TotalAvailableMessageCount.HasValue ? Color.Info : Color.Warning;
+    private Color RetainedMessagesAccentColor => State.TotalRetainedMessageCount.HasValue ? Color.Info : Color.Warning;
 
     private Color WriteRateAccentColor => State.LatestPerformance?.MessageWriteRatePerSecond is not null
         ? Color.Success
