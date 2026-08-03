@@ -13,10 +13,6 @@ This project follows semantic versioning for public NuGet packages. Release cand
 - A first-class third-party module ecosystem standard, compatibility mark, package validator, and scaffolding skill.
 - Publisher-owned module keys in the form `<Publisher>.Monica.<Module>[.<Feature>...]`, including case-insensitive collision detection.
 - Module-owned UI navigation localization so independent packages can resolve labels from their own resource catalogs.
-- Host-bound `builder.AddMonica(monica => ...)` composition with deterministic module-graph validation.
-- Stable, Integrations, and Labs package tiers with CI-enforced dependency direction.
-- A dedicated `Monica.ProjectUnits` package, official `Monica.Templates`, and the Ordering reference application.
-- Host-scoped Object Mapping and ProjectUnits facades for Minimal API and UI consumers.
 - Generic Host lifecycle support for hosted-service observability, EventBus auto-discovery, and execution-timing aggregation.
 - Checkpointed concurrent module startup work with host-lifecycle barriers and critical-path composition diagnostics.
 - Typed ProjectUnit runtime catalogs, status dashboards, and source analysis.
@@ -26,15 +22,6 @@ This project follows semantic versioning for public NuGet packages. Release cand
 ### Changed
 
 - `ModuleKey.Create(...)` now validates the publisher-first ecosystem grammar and reserves official `Monica.*` identities for built-in module keys.
-- Logging, localization, JSON serialization, mapping, ProjectUnits, AutoController configuration, DataChannel pipelines, scheduler time zones, and runtime catalogs are owned by each host.
-- `Monica.Framework` is a focused application package instead of an all-dependencies bundle.
-- RPC client helpers now live in `Monica.WebApi`, alongside the transport feature they configure.
-- AutoController exports RPC metadata from the exact compiled producer assembly, skips IDE design-time builds, and writes deterministic producer-specific output.
-- `Microsoft.OpenApi`, `System.Security.Cryptography.Xml`, and the SQLite native bundle were upgraded to supported releases with published security fixes.
-- Authentication accepts access tokens from the `Authorization` header by default; query-string tokens require an explicit, path-scoped opt-in.
-- Configuration persistence and Entity Framework integration now use deterministic, warning-free schemas and read-only serializer options.
-- Unhandled-exception responses are safe by default; stack traces and request snapshots now require an explicit trusted-development opt-in.
-- Template and reference hosts expose ASP.NET Core health checks instead of hardcoded health payloads.
 - Monica composition now completes at service registration for Generic Hosts and at endpoint mapping for Web hosts, with startup validation for incomplete Web pipelines.
 - Hosted-service diagnostics and checkpoints identify runtime instances explicitly, including multiple keyed services of the same concrete type.
 - EventBus batch mutations are cancellable and transactional, and auto-discovered subscriptions are owned and cleaned up by the Host lifecycle.
@@ -52,13 +39,37 @@ This project follows semantic versioning for public NuGet packages. Release cand
 
 ### Removed
 
+- DynamicProxy-based dependency-injection interception.
+- `ModuleExecutionTimingOption.ExposeExecutionTimingEndpoints`; use the shared `EnableMinimalApi` option instead.
+
+## [1.0.0-rc.5] - 2026-07-22
+
+### Added
+
+- Host-bound `builder.AddMonica(monica => ...)` composition with deterministic module-graph validation.
+- Stable, Integrations, and Labs package tiers with CI-enforced dependency direction.
+- A dedicated `Monica.ProjectUnits` package, official `Monica.Templates`, and the Ordering reference application.
+- Host-scoped Object Mapping and ProjectUnits facades for Minimal API and UI consumers.
+
+### Changed
+
+- Logging, localization, JSON serialization, mapping, ProjectUnits, AutoController configuration, DataChannel pipelines, scheduler time zones, and runtime catalogs are owned by each host.
+- `Monica.Framework` is a focused application package instead of an all-dependencies bundle.
+- RPC client helpers now live in `Monica.WebApi`, alongside the transport feature they configure.
+- AutoController exports RPC metadata from the exact compiled producer assembly, skips IDE design-time builds, and writes deterministic producer-specific output.
+- `Microsoft.OpenApi`, `System.Security.Cryptography.Xml`, and the SQLite native bundle were upgraded to supported releases with published security fixes.
+- Authentication accepts access tokens from the `Authorization` header by default; query-string tokens require an explicit, path-scoped opt-in.
+- Configuration persistence and Entity Framework integration now use deterministic, warning-free schemas and read-only serializer options.
+- Unhandled-exception responses are safe by default; stack traces and request snapshots now require an explicit trusted-development opt-in.
+- Template and reference hosts expose ASP.NET Core health checks instead of hardcoded health payloads.
+
+### Removed
+
 - Ambient `Mo` registration, `builder.UseMonica()`, `Mo.RegisterInstantly(...)`, and process-wide `LogManager` state.
 - The unauthenticated JWT decode endpoint and global query-string token extraction.
 - Global mutable clock, DataChannel, principal, localization, JSON, mapping, and runtime-environment state.
 - AutoController's source-scanning RPC metadata bootstrap; producer assemblies are now the only metadata authority.
 - Unused process-wide debug helpers and the unbounded delayed-task scheduler.
-- DynamicProxy-based dependency-injection interception.
-- `ModuleExecutionTimingOption.ExposeExecutionTimingEndpoints`; use the shared `EnableMinimalApi` option instead.
 
 ## [1.0.0-rc.2] - 2026-05-09
 
