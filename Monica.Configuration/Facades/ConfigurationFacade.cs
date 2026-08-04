@@ -396,17 +396,19 @@ public sealed class ConfigurationFacade(
     }
 
     /// <summary>
-    /// Gets current logical-service impact for prospective changes to configuration definitions.
+    /// Gets current logical-service and reload impact for prospective parameter changes.
     /// </summary>
-    /// <param name="definitionKeys">Definition keys whose prospective changes are being reviewed.</param>
-    /// <returns>Participating logical publishers and definitions without known consumers.</returns>
+    /// <param name="targets">Configuration parameters whose prospective changes are being reviewed.</param>
+    /// <returns>
+    /// Participating logical publishers, parameter reload behavior, and parameters without known consumers.
+    /// </returns>
     public async Task<Res<ConfigurationDefinitionChangeImpact>> GetDefinitionChangeImpactAsync(
-        IReadOnlyCollection<string> definitionKeys)
+        IReadOnlyCollection<ConfigurationParameterChangeTarget> targets)
     {
         try
         {
             return Res.Ok(await definitionChangeImpactService.GetImpactAsync(
-                definitionKeys,
+                targets,
                 CancellationToken.None));
         }
         catch (Exception ex)

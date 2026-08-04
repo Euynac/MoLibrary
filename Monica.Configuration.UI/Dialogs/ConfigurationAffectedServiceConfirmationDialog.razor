@@ -28,11 +28,65 @@
                 }
                 else
                 {
-                    <MudAlert Severity="Severity.Warning"
+                    <MudAlert Severity="Severity.Info"
                               Variant="Variant.Outlined"
                               Icon="@Icons.Material.Filled.Hub">
-                        @L["Dialogs:SaveGroup:Impact:Summary", ChangeCount, Impact.AffectedPublishers.Count]
+                        <MudText Typo="Typo.subtitle2">
+                            @L["Dialogs:SaveGroup:Impact:Summary", ChangeCount, Impact.AffectedPublishers.Count]
+                        </MudText>
+                        <div class="configuration-affected-service-confirmation-summary-chips">
+                            <MudChip T="int" Size="Size.Small" Color="Color.Success" Variant="Variant.Outlined">
+                                @L["Dialogs:SaveGroup:Impact:Counts:Online", OnlineImpactCount]
+                            </MudChip>
+                            <MudChip T="int" Size="Size.Small" Color="Color.Warning" Variant="Variant.Outlined">
+                                @L["Dialogs:SaveGroup:Impact:Counts:Restart", RestartImpactCount]
+                            </MudChip>
+                            @if (UncertainImpactCount > 0)
+                            {
+                                <MudChip T="int" Size="Size.Small" Color="Color.Warning" Variant="Variant.Outlined">
+                                    @L["Dialogs:SaveGroup:Impact:Counts:Uncertain", UncertainImpactCount]
+                                </MudChip>
+                            }
+                        </div>
                     </MudAlert>
+
+                    @if (ConfirmedRestartServiceCount > 0)
+                    {
+                        <MudAlert Severity="Severity.Warning"
+                                  Variant="Variant.Filled"
+                                  Icon="@Icons.Material.Filled.RestartAlt">
+                            <MudText Typo="Typo.subtitle2">
+                                @L["Dialogs:SaveGroup:Impact:RestartRequiredTitle", ConfirmedRestartServiceCount]
+                            </MudText>
+                            <MudText Typo="Typo.body2">
+                                @L["Dialogs:SaveGroup:Impact:RestartRequiredSummary"]
+                            </MudText>
+                        </MudAlert>
+                    }
+
+                    @if (UncertainImpactCount > 0)
+                    {
+                        <MudAlert Severity="Severity.Warning"
+                                  Variant="Variant.Filled"
+                                  Icon="@Icons.Material.Filled.HelpOutline">
+                            <MudText Typo="Typo.subtitle2">
+                                @L["Dialogs:SaveGroup:Impact:UncertainImpactTitle"]
+                            </MudText>
+                            <MudText Typo="Typo.body2">
+                                @L["Dialogs:SaveGroup:Impact:UncertainImpactSummary"]
+                            </MudText>
+                        </MudAlert>
+                    }
+
+                    @if (ConfirmedRestartServiceCount == 0 && UncertainImpactCount == 0)
+                    {
+                        <MudAlert Severity="Severity.Success"
+                                  Variant="Variant.Outlined"
+                                  Icon="@Icons.Material.Filled.CheckCircle">
+                            <MudText Typo="Typo.subtitle2">@L["Dialogs:SaveGroup:Impact:AllOnlineTitle"]</MudText>
+                            <MudText Typo="Typo.body2">@L["Dialogs:SaveGroup:Impact:AllOnlineSummary"]</MudText>
+                        </MudAlert>
+                    }
 
                     <MudAlert Severity="Severity.Info" Dense="true">
                         @L["Dialogs:SaveGroup:Impact:Advisory"]
@@ -44,51 +98,147 @@
                             <MudPaper Outlined="true" Class="pa-3">
                                 <div class="configuration-affected-service-confirmation-heading">
                                     <div class="configuration-affected-service-confirmation-publisher-key">
-                                        <MudIcon Icon="@Icons.Material.Filled.Dns" Color="Color.Warning" />
+                                        <MudIcon Icon="@PublisherIcon(publisher)" Color="@PublisherColor(publisher)" />
                                         <MudText Typo="Typo.subtitle2">@publisher.PublisherKey</MudText>
                                     </div>
-                                    <MudChip T="int" Size="Size.Small" Color="Color.Warning" Variant="Variant.Outlined">
-                                        @L["Dialogs:SaveGroup:Impact:DefinitionCount", publisher.DefinitionKeys.Count]
-                                    </MudChip>
+                                    <div class="configuration-affected-service-confirmation-heading-chips">
+                                        <MudChip T="int" Size="Size.Small" Variant="Variant.Outlined">
+                                            @L["Dialogs:SaveGroup:Impact:ParameterCount", publisher.Parameters.Count]
+                                        </MudChip>
+                                        <MudChip T="string"
+                                                 Size="Size.Small"
+                                                 Color="@PublisherColor(publisher)"
+                                                 Variant="Variant.Filled">
+                                            @PublisherImpactLabel(publisher)
+                                        </MudChip>
+                                    </div>
                                 </div>
 
                                 <div class="configuration-affected-service-confirmation-definitions">
-                                    @foreach (var definitionKey in publisher.DefinitionKeys)
+                                    @foreach (var definitionGroup in publisher.Parameters.GroupBy(
+                                        static parameter => parameter.DefinitionKey,
+                                        StringComparer.OrdinalIgnoreCase))
                                     {
-                                        var displayName = GetDefinitionDisplayName(definitionKey);
-                                        <div class="configuration-affected-service-confirmation-definition" @key="definitionKey">
-                                            <MudText Typo="Typo.body2">@displayName</MudText>
-                                            @if (!string.Equals(displayName, definitionKey, StringComparison.Ordinal))
-                                            {
-                                                <MudText Typo="Typo.caption" Color="Color.Secondary">@definitionKey</MudText>
-                                            }
-                                        </div>
+                                        var definition = definitionGroup.First();
+                                        <section class="configuration-affected-service-confirmation-definition"
+                                                 @key="definition.DefinitionKey">
+                                            <div class="configuration-affected-service-confirmation-definition-heading">
+                                                <div class="configuration-affected-service-confirmation-definition-identity">
+                                                    <MudText Typo="Typo.body2">@definition.DefinitionDisplayName</MudText>
+                                                    @if (!string.Equals(
+                                                        definition.DefinitionDisplayName,
+                                                        definition.DefinitionKey,
+                                                        StringComparison.Ordinal))
+                                                    {
+                                                        <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                                            @definition.DefinitionKey
+                                                        </MudText>
+                                                    }
+                                                </div>
+                                                <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                                    @L["Dialogs:SaveGroup:Impact:DefinitionParameterCount", definitionGroup.Count()]
+                                                </MudText>
+                                            </div>
+
+                                            <div class="configuration-affected-service-confirmation-parameters">
+                                                @foreach (var parameter in definitionGroup)
+                                                {
+                                                    <div class="configuration-affected-service-confirmation-parameter"
+                                                         @key="parameter.LogicalPath.ToCanonicalString()">
+                                                        <div class="configuration-affected-service-confirmation-parameter-identity">
+                                                            <MudText Typo="Typo.body2">@parameter.ParameterDisplayName</MudText>
+                                                            <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                                                @parameter.LogicalPath.ToCanonicalString()
+                                                            </MudText>
+                                                        </div>
+                                                        <div class="configuration-affected-service-confirmation-parameter-metadata">
+                                                            <div class="configuration-affected-service-confirmation-parameter-metadata-item">
+                                                                <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                                                    @L["Dialogs:SaveGroup:Impact:ConsumptionEvidence"]
+                                                                </MudText>
+                                                                <MudTooltip Text="@ConfigurationReloadBehaviorObservationFormatter.Description(parameter.ObservationKind, L)">
+                                                                    <MudChip T="string"
+                                                                             Size="Size.Small"
+                                                                             Color="@ConfigurationReloadBehaviorObservationFormatter.Color(parameter.ObservationKind)"
+                                                                             Variant="Variant.Outlined">
+                                                                        @ConfigurationReloadBehaviorObservationFormatter.Label(parameter.ObservationKind, L)
+                                                                    </MudChip>
+                                                                </MudTooltip>
+                                                            </div>
+                                                            <div class="configuration-affected-service-confirmation-parameter-metadata-item">
+                                                                <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                                                    @L["Dialogs:SaveGroup:Impact:EffectiveBehavior"]
+                                                                </MudText>
+                                                                <MudTooltip Text="@ConfigurationReloadBehaviorFormatter.Description(parameter.ReloadBehavior, L)">
+                                                                    <MudChip T="string"
+                                                                             Size="Size.Small"
+                                                                             Color="@ParameterImpactColor(parameter)"
+                                                                             Variant="Variant.Outlined">
+                                                                        @ConfigurationReloadBehaviorFormatter.Label(parameter.ReloadBehavior, L)
+                                                                    </MudChip>
+                                                                </MudTooltip>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                }
+                                            </div>
+                                        </section>
                                     }
                                 </div>
                             </MudPaper>
                         </div>
                     }
 
-                    @if (Impact.DefinitionsWithoutKnownConsumers.Count > 0)
+                    @if (Impact.ParametersWithoutKnownConsumers.Count > 0)
                     {
                         <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined">
                             <MudText Typo="Typo.subtitle2">
-                                @L["Dialogs:SaveGroup:Impact:UnknownConsumersTitle", Impact.DefinitionsWithoutKnownConsumers.Count]
+                                @L[
+                                    "Dialogs:SaveGroup:Impact:UnknownConsumersTitle",
+                                    Impact.ParametersWithoutKnownConsumers.Count]
                             </MudText>
                             <MudText Typo="Typo.body2">
                                 @L["Dialogs:SaveGroup:Impact:UnknownConsumersSummary"]
                             </MudText>
                             <div class="configuration-affected-service-confirmation-unknown-list">
-                                @foreach (var definitionKey in Impact.DefinitionsWithoutKnownConsumers)
+                                @foreach (var definitionGroup in Impact.ParametersWithoutKnownConsumers.GroupBy(
+                                    static parameter => parameter.DefinitionKey,
+                                    StringComparer.OrdinalIgnoreCase))
                                 {
-                                    var displayName = GetDefinitionDisplayName(definitionKey);
-                                    <div class="configuration-affected-service-confirmation-definition" @key="definitionKey">
-                                        <MudText Typo="Typo.body2">@displayName</MudText>
-                                        @if (!string.Equals(displayName, definitionKey, StringComparison.Ordinal))
+                                    var definition = definitionGroup.First();
+                                    <section class="configuration-affected-service-confirmation-unknown-definition"
+                                             @key="definition.DefinitionKey">
+                                        <MudText Typo="Typo.body2">@definition.DefinitionDisplayName</MudText>
+                                        @if (!string.Equals(
+                                            definition.DefinitionDisplayName,
+                                            definition.DefinitionKey,
+                                            StringComparison.Ordinal))
                                         {
-                                            <MudText Typo="Typo.caption" Color="Color.Secondary">@definitionKey</MudText>
+                                            <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                                @definition.DefinitionKey
+                                            </MudText>
                                         }
-                                    </div>
+                                        <div class="configuration-affected-service-confirmation-unknown-parameters">
+                                            @foreach (var parameter in definitionGroup)
+                                            {
+                                                <div class="configuration-affected-service-confirmation-unknown-parameter"
+                                                     @key="parameter.LogicalPath.ToCanonicalString()">
+                                                    <div class="configuration-affected-service-confirmation-parameter-identity">
+                                                        <MudText Typo="Typo.body2">@parameter.ParameterDisplayName</MudText>
+                                                        <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                                            @parameter.LogicalPath.ToCanonicalString()
+                                                        </MudText>
+                                                    </div>
+                                                    <MudChip T="string"
+                                                             Size="Size.Small"
+                                                             Color="Color.Warning"
+                                                             Variant="Variant.Outlined">
+                                                        @L["Dialogs:SaveGroup:Impact:UnknownConsumer"]
+                                                    </MudChip>
+                                                </div>
+                                            }
+                                        </div>
+                                    </section>
                                 }
                             </div>
                         </MudAlert>
@@ -110,7 +260,7 @@
         }
         else
         {
-            <MudButton Color="Color.Warning"
+            <MudButton Color="@ConfirmColor"
                        Variant="Variant.Filled"
                        StartIcon="@Icons.Material.Filled.Save"
                        OnClick="Confirm">
@@ -126,15 +276,58 @@
     [Parameter, EditorRequired] public int ChangeCount { get; set; }
     [Parameter] public ConfigurationDefinitionChangeImpact? Impact { get; set; }
     [Parameter] public string? AnalysisError { get; set; }
-    [Parameter] public IReadOnlyDictionary<string, string> DefinitionDisplayNames { get; set; }
-        = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
 
-    private string GetDefinitionDisplayName(string definitionKey)
+    private IEnumerable<ConfigurationAffectedParameter> AffectedParameters =>
+        Impact?.AffectedPublishers.SelectMany(static publisher => publisher.Parameters) ?? [];
+
+    private int OnlineImpactCount => AffectedParameters.Count(static parameter =>
+        !parameter.RequiresRestart && !IsUncertain(parameter));
+
+    private int RestartImpactCount => AffectedParameters.Count(static parameter =>
+        parameter.RequiresRestart && !IsUncertain(parameter));
+
+    private int UncertainImpactCount => AffectedParameters.Count(IsUncertain)
+        + (Impact?.ParametersWithoutKnownConsumers.Count ?? 0);
+
+    private int ConfirmedRestartServiceCount => Impact?.AffectedPublishers.Count(static publisher =>
+        publisher.Parameters.Any(static parameter => parameter.RequiresRestart && !IsUncertain(parameter))) ?? 0;
+
+    private Color ConfirmColor => Impact?.RequiresRestart is true ? Color.Warning : Color.Primary;
+
+    private static bool IsUncertain(ConfigurationAffectedParameter parameter)
     {
-        return DefinitionDisplayNames.TryGetValue(definitionKey, out var displayName)
-            && !string.IsNullOrWhiteSpace(displayName)
-                ? displayName
-                : definitionKey;
+        return parameter.ObservationKind == ConfigurationReloadBehaviorObservationKind.Unresolved
+            || parameter.ReloadBehavior is ConfigurationReloadBehavior.Inherit or ConfigurationReloadBehavior.Unknown;
+    }
+
+    private string PublisherImpactLabel(ConfigurationAffectedPublisher publisher)
+    {
+        return publisher.Parameters.Any(IsUncertain)
+            ? L["Dialogs:SaveGroup:Impact:ServiceStatus:Uncertain"]
+            : publisher.RequiresRestart
+                ? L["Dialogs:SaveGroup:Impact:ServiceStatus:Restart"]
+                : L["Dialogs:SaveGroup:Impact:ServiceStatus:Online"];
+    }
+
+    private static Color PublisherColor(ConfigurationAffectedPublisher publisher)
+    {
+        return publisher.RequiresRestart || publisher.Parameters.Any(IsUncertain)
+            ? Color.Warning
+            : Color.Success;
+    }
+
+    private static string PublisherIcon(ConfigurationAffectedPublisher publisher)
+    {
+        return publisher.RequiresRestart || publisher.Parameters.Any(IsUncertain)
+            ? Icons.Material.Filled.RestartAlt
+            : Icons.Material.Filled.Sync;
+    }
+
+    private static Color ParameterImpactColor(ConfigurationAffectedParameter parameter)
+    {
+        return parameter.RequiresRestart || IsUncertain(parameter)
+            ? Color.Warning
+            : Color.Success;
     }
 
     private void Cancel()

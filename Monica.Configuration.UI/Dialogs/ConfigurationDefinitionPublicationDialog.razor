@@ -309,12 +309,12 @@
                             <MudStack Spacing="0">
                                 <MudChip T="string"
                                          Size="Size.Small"
-                                         Color="@ObservationKindColor(context.ObservationKind)"
+                                         Color="@ConfigurationReloadBehaviorObservationFormatter.Color(context.ObservationKind)"
                                          Variant="Variant.Outlined">
-                                    @ObservationKindText(context.ObservationKind)
+                                    @ConfigurationReloadBehaviorObservationFormatter.Label(context.ObservationKind, L)
                                 </MudChip>
                                 <MudText Typo="Typo.caption" Color="Color.Secondary">
-                                    @ObservationKindDescription(context.ObservationKind)
+                                    @ConfigurationReloadBehaviorObservationFormatter.Description(context.ObservationKind, L)
                                 </MudText>
                             </MudStack>
                         </MudTd>
@@ -398,42 +398,6 @@
                 "DefinitionPublication:RevisionHistory:RevisionMetadataChanged",
                 history.DefinitionRevision,
                 history.NewSchemaVersion];
-    }
-
-    private string ObservationKindText(ConfigurationReloadBehaviorObservationKind kind)
-    {
-        return kind switch
-        {
-            ConfigurationReloadBehaviorObservationKind.Declared => L["DefinitionPublication:ReloadContributors:Evidence:Declared:Label"],
-            ConfigurationReloadBehaviorObservationKind.Inferred => L["DefinitionPublication:ReloadContributors:Evidence:Inferred:Label"],
-            ConfigurationReloadBehaviorObservationKind.Unresolved => L["DefinitionPublication:ReloadContributors:Evidence:Unresolved:Label"],
-            ConfigurationReloadBehaviorObservationKind.NotConsumed => L["DefinitionPublication:ReloadContributors:Evidence:NotConsumed:Label"],
-            _ => kind.ToString()
-        };
-    }
-
-    private string ObservationKindDescription(ConfigurationReloadBehaviorObservationKind kind)
-    {
-        return kind switch
-        {
-            ConfigurationReloadBehaviorObservationKind.Declared => L["DefinitionPublication:ReloadContributors:Evidence:Declared:Description"],
-            ConfigurationReloadBehaviorObservationKind.Inferred => L["DefinitionPublication:ReloadContributors:Evidence:Inferred:Description"],
-            ConfigurationReloadBehaviorObservationKind.Unresolved => L["DefinitionPublication:ReloadContributors:Evidence:Unresolved:Description"],
-            ConfigurationReloadBehaviorObservationKind.NotConsumed => L["DefinitionPublication:ReloadContributors:Evidence:NotConsumed:Description"],
-            _ => kind.ToString()
-        };
-    }
-
-    private static Color ObservationKindColor(ConfigurationReloadBehaviorObservationKind kind)
-    {
-        return kind switch
-        {
-            ConfigurationReloadBehaviorObservationKind.Declared => Color.Primary,
-            ConfigurationReloadBehaviorObservationKind.Inferred => Color.Info,
-            ConfigurationReloadBehaviorObservationKind.Unresolved => Color.Warning,
-            ConfigurationReloadBehaviorObservationKind.NotConsumed => Color.Default,
-            _ => Color.Default
-        };
     }
 
     private static Color ReloadBehaviorColor(ConfigurationReloadBehavior behavior)

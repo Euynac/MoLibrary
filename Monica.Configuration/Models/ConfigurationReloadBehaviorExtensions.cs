@@ -10,19 +10,23 @@ public static class ConfigurationReloadBehaviorExtensions
     /// </summary>
     /// <param name="node">The schema node being evaluated.</param>
     /// <param name="definition">The owning configuration definition.</param>
-    /// <returns>The node override when present; otherwise the definition behavior.</returns>
+    /// <returns>
+    /// The nearest explicit override on the node or one of its ancestors; otherwise the definition behavior.
+    /// </returns>
     public static ConfigurationReloadBehavior ResolveEffectiveReloadBehavior(
         this ConfigurationNodeDefinition node,
         ConfigurationDefinition definition)
     {
-        if (node.ReloadBehavior is { } behavior and not ConfigurationReloadBehavior.Inherit)
-        {
-            return behavior;
-        }
+        var behavior = ConfigurationSchemaNavigator.ResolvePath(definition.Root, node.RelativePath)
+                           ?.ReloadBehaviorOverride
+                       ?? (node.ReloadBehavior is { } nodeBehavior and not ConfigurationReloadBehavior.Inherit
+                           ? nodeBehavior
+                           : null);
 
-        return definition.ReloadBehavior == ConfigurationReloadBehavior.Inherit
-            ? ConfigurationReloadBehavior.Unknown
-            : definition.ReloadBehavior;
+        return behavior
+            ?? (definition.ReloadBehavior == ConfigurationReloadBehavior.Inherit
+                ? ConfigurationReloadBehavior.Unknown
+                : definition.ReloadBehavior);
     }
 
     /// <summary>

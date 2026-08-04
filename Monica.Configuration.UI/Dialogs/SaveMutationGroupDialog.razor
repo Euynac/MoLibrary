@@ -142,25 +142,17 @@
 
     private async Task<bool> ConfirmAffectedServicesAsync(IReadOnlyList<PendingChange> changes)
     {
-        var definitionKeys = changes
-            .Select(static change => change.DefinitionKey)
-            .Where(static key => !string.IsNullOrWhiteSpace(key))
-            .Select(static key => key.Trim())
-            .Distinct(StringComparer.OrdinalIgnoreCase)
+        var targets = changes
+            .Select(static change => new ConfigurationParameterChangeTarget
+            {
+                DefinitionKey = change.DefinitionKey,
+                LogicalPath = change.LogicalPath
+            })
             .ToArray();
-        var displayNames = changes
-            .GroupBy(static change => change.DefinitionKey.Trim(), StringComparer.OrdinalIgnoreCase)
-            .ToDictionary(
-                static group => group.Key,
-                static group => group
-                    .Select(static change => change.DefinitionDisplayName)
-                    .FirstOrDefault(static displayName => !string.IsNullOrWhiteSpace(displayName))
-                    ?? group.Key,
-                StringComparer.OrdinalIgnoreCase);
 
         ConfigurationDefinitionChangeImpact? impact = null;
         string? analysisError = null;
-        var impactResult = await Facade.GetDefinitionChangeImpactAsync(definitionKeys);
+        var impactResult = await Facade.GetDefinitionChangeImpactAsync(targets);
         if (impactResult.IsFailed(out var impactError, out impact))
         {
             analysisError = impactError.Message;
@@ -170,13 +162,12 @@
         parameters.Add(dialog => dialog.ChangeCount, changes.Count);
         parameters.Add(dialog => dialog.Impact, impact);
         parameters.Add(dialog => dialog.AnalysisError, analysisError);
-        parameters.Add(dialog => dialog.DefinitionDisplayNames, displayNames);
         var dialog = await DialogService.ShowAsync<ConfigurationAffectedServiceConfirmationDialog>(
             L["Dialogs:SaveGroup:Impact:Title"],
             parameters,
             new DialogOptions
             {
-                MaxWidth = MaxWidth.Medium,
+                MaxWidth = MaxWidth.Large,
                 FullWidth = true
             });
         var result = await dialog.Result;

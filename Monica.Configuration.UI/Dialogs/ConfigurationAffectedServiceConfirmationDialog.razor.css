@@ -1,7 +1,7 @@
 .configuration-affected-service-confirmation-body {
     display: flex;
     flex-direction: column;
-    max-height: min(70vh, 42rem);
+    max-height: min(72vh, 46rem);
     min-height: 0;
     min-width: 0;
     overflow: hidden;
@@ -19,6 +19,35 @@
     width: 100%;
 }
 
+.configuration-affected-service-confirmation-summary-chips,
+.configuration-affected-service-confirmation-heading-chips {
+    align-items: center;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    min-width: 0;
+}
+
+.configuration-affected-service-confirmation-parameter-metadata {
+    align-items: start;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    min-width: 0;
+}
+
+.configuration-affected-service-confirmation-parameter-metadata-item {
+    align-items: flex-start;
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    min-width: 0;
+}
+
+.configuration-affected-service-confirmation-summary-chips {
+    margin-top: 0.75rem;
+}
+
 .configuration-affected-service-confirmation-detail,
 .configuration-affected-service-confirmation-publisher {
     min-width: 0;
@@ -32,7 +61,14 @@
     width: 100%;
 }
 
-.configuration-affected-service-confirmation-heading,
+.configuration-affected-service-confirmation-heading {
+    align-items: center;
+    display: grid;
+    gap: 0.75rem;
+    grid-template-columns: minmax(0, 1fr) auto;
+    min-width: 0;
+}
+
 .configuration-affected-service-confirmation-publisher-key {
     align-items: center;
     display: flex;
@@ -40,16 +76,10 @@
     min-width: 0;
 }
 
-.configuration-affected-service-confirmation-heading {
-    justify-content: space-between;
-}
-
-.configuration-affected-service-confirmation-publisher-key {
-    flex: 1 1 auto;
-}
-
 .configuration-affected-service-confirmation-publisher-key ::deep .mud-typography,
-.configuration-affected-service-confirmation-definition ::deep .mud-typography {
+.configuration-affected-service-confirmation-definition-identity ::deep .mud-typography,
+.configuration-affected-service-confirmation-parameter-identity ::deep .mud-typography,
+.configuration-affected-service-confirmation-unknown-definition ::deep .mud-typography {
     min-width: 0;
     overflow-wrap: anywhere;
 }
@@ -58,12 +88,13 @@
 .configuration-affected-service-confirmation-unknown-list {
     display: flex;
     flex-direction: column;
-    gap: 0.75rem;
+    gap: 1rem;
     margin-top: 1rem;
     min-width: 0;
 }
 
-.configuration-affected-service-confirmation-definition {
+.configuration-affected-service-confirmation-definition,
+.configuration-affected-service-confirmation-unknown-definition {
     border-inline-start: 2px solid var(--mud-palette-lines-default);
     display: flex;
     flex-direction: column;
@@ -71,13 +102,55 @@
     padding-inline-start: 0.75rem;
 }
 
+.configuration-affected-service-confirmation-definition-heading {
+    align-items: start;
+    display: grid;
+    gap: 0.75rem;
+    grid-template-columns: minmax(0, 1fr) auto;
+    min-width: 0;
+}
+
+.configuration-affected-service-confirmation-definition-identity,
+.configuration-affected-service-confirmation-parameter-identity {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+
+.configuration-affected-service-confirmation-parameters,
+.configuration-affected-service-confirmation-unknown-parameters {
+    display: flex;
+    flex-direction: column;
+    margin-top: 0.75rem;
+    min-width: 0;
+}
+
+.configuration-affected-service-confirmation-parameter,
+.configuration-affected-service-confirmation-unknown-parameter {
+    align-items: center;
+    border-top: 1px solid var(--mud-palette-lines-default);
+    display: grid;
+    gap: 0.75rem;
+    grid-template-columns: minmax(0, 1fr) auto;
+    min-width: 0;
+    padding-block: 0.75rem;
+}
+
+.configuration-affected-service-confirmation-unknown-parameter:last-child,
+.configuration-affected-service-confirmation-parameter:last-child {
+    padding-block-end: 0;
+}
+
 @media (max-width: 599.98px) {
     .configuration-affected-service-confirmation-body {
-        max-height: min(72vh, 36rem);
+        max-height: min(74vh, 40rem);
     }
 
-    .configuration-affected-service-confirmation-heading {
-        align-items: flex-start;
-        flex-direction: column;
+    .configuration-affected-service-confirmation-heading,
+    .configuration-affected-service-confirmation-definition-heading,
+    .configuration-affected-service-confirmation-parameter,
+    .configuration-affected-service-confirmation-unknown-parameter {
+        align-items: start;
+        grid-template-columns: minmax(0, 1fr);
     }
 }

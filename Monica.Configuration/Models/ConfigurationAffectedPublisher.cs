@@ -1,7 +1,7 @@
 namespace Monica.Configuration.Models;
 
 /// <summary>
-/// Describes one logical publishing service affected by a set of configuration definition changes.
+/// Describes one logical publishing service associated with a set of changed configuration parameters.
 /// </summary>
 /// <remarks>Replicas that share a publisher key are represented by one logical publisher.</remarks>
 public sealed record ConfigurationAffectedPublisher
@@ -12,7 +12,12 @@ public sealed record ConfigurationAffectedPublisher
     public required string PublisherKey { get; init; }
 
     /// <summary>
-    /// Gets the changed definition keys currently consumed or possibly consumed by the service.
+    /// Gets changed parameters attributed to definitions currently consumed or possibly consumed by the service.
     /// </summary>
-    public required IReadOnlyList<string> DefinitionKeys { get; init; }
+    public required IReadOnlyList<ConfigurationAffectedParameter> Parameters { get; init; }
+
+    /// <summary>
+    /// Gets whether at least one changed parameter requires a process restart for this service.
+    /// </summary>
+    public bool RequiresRestart => Parameters.Any(static parameter => parameter.RequiresRestart);
 }

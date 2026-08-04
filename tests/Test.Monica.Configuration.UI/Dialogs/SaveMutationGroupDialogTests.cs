@@ -54,8 +54,10 @@ public sealed class SaveMutationGroupDialogTests
             surface.Markup.Should().NotContain("Dialogs:SaveGroup:Impact:Actions:ConfirmSave"));
         applyService.ReceivedCalls().Should().BeEmpty();
         var impactCall = impactService.ReceivedCalls().Single();
-        var definitionKeys = (IReadOnlyCollection<string>)impactCall.GetArguments()[0]!;
-        definitionKeys.Should().Equal("Sample.Options");
+        var targets = (IReadOnlyCollection<ConfigurationParameterChangeTarget>)impactCall.GetArguments()[0]!;
+        targets.Should().ContainSingle();
+        targets.Single().DefinitionKey.Should().Be("Sample.Options");
+        targets.Single().LogicalPath.ToCanonicalString().Should().Be("Name");
 
         FindButton(surface, "Common:Actions:Cancel").Click();
         var result = await dialog.Result;
@@ -87,7 +89,7 @@ public sealed class SaveMutationGroupDialogTests
     }
 
     [Fact]
-    public async Task Save_WhenReviewWasUndone_ShouldAnalyzeOnlyRemainingDefinitions()
+    public async Task Save_WhenReviewWasUndone_ShouldAnalyzeOnlyExactRemainingParameterTargets()
     {
         var impactService = CreateSuccessfulImpactService();
         var applyService = CreateSuccessfulApplyService();
@@ -97,8 +99,8 @@ public sealed class SaveMutationGroupDialogTests
         var (surface, dialog) = await ShowSaveDialogAsync(
             context,
             [
-                CreatePendingChange("Alpha.Options", "Alpha options"),
-                CreatePendingChange("Zulu.Options", "Zulu options")
+                CreatePendingChange("Alpha.Options", "Alpha options", "AlphaName"),
+                CreatePendingChange("Zulu.Options", "Zulu options", "ZuluName")
             ],
             enableUndo: true);
 
@@ -117,8 +119,10 @@ public sealed class SaveMutationGroupDialogTests
             FindButton(surface, "Dialogs:SaveGroup:Impact:Actions:ConfirmSave").Should().NotBeNull());
 
         var impactCall = impactService.ReceivedCalls().Single();
-        var definitionKeys = (IReadOnlyCollection<string>)impactCall.GetArguments()[0]!;
-        definitionKeys.Should().Equal("Zulu.Options");
+        var targets = (IReadOnlyCollection<ConfigurationParameterChangeTarget>)impactCall.GetArguments()[0]!;
+        targets.Should().ContainSingle();
+        targets.Single().DefinitionKey.Should().Be("Zulu.Options");
+        targets.Single().LogicalPath.ToCanonicalString().Should().Be("ZuluName");
 
         FindLastDialogButton(surface, "Common:Actions:Cancel").Click();
         surface.WaitForAssertion(() =>
@@ -132,7 +136,7 @@ public sealed class SaveMutationGroupDialogTests
     {
         var impactService = Substitute.For<IConfigurationDefinitionChangeImpactService>();
         impactService.GetImpactAsync(
-                Arg.Any<IReadOnlyCollection<string>>(),
+                Arg.Any<IReadOnlyCollection<ConfigurationParameterChangeTarget>>(),
                 Arg.Any<CancellationToken>())
             .Returns(_ => Task.FromException<ConfigurationDefinitionChangeImpact>(
                 new InvalidOperationException("publisher metadata failed")));
@@ -160,20 +164,30 @@ public sealed class SaveMutationGroupDialogTests
     {
         var impactService = Substitute.For<IConfigurationDefinitionChangeImpactService>();
         impactService.GetImpactAsync(
-                Arg.Any<IReadOnlyCollection<string>>(),
+                Arg.Any<IReadOnlyCollection<ConfigurationParameterChangeTarget>>(),
                 Arg.Any<CancellationToken>())
             .Returns(new ConfigurationDefinitionChangeImpact
             {
-                DefinitionKeys = ["Sample.Options"],
                 AffectedPublishers =
                 [
                     new ConfigurationAffectedPublisher
                     {
                         PublisherKey = "sample-service",
-                        DefinitionKeys = ["Sample.Options"]
+                        Parameters =
+                        [
+                            new ConfigurationAffectedParameter
+                            {
+                                DefinitionKey = "Sample.Options",
+                                DefinitionDisplayName = "Sample options",
+                                LogicalPath = LogicalPath.FromProperties("Name"),
+                                ParameterDisplayName = "Name",
+                                ObservationKind = ConfigurationReloadBehaviorObservationKind.Inferred,
+                                ReloadBehavior = ConfigurationReloadBehavior.OnlineReloadable
+                            }
+                        ]
                     }
                 ],
-                DefinitionsWithoutKnownConsumers = []
+                ParametersWithoutKnownConsumers = []
             });
         return impactService;
     }
@@ -253,14 +267,15 @@ public sealed class SaveMutationGroupDialogTests
 
     private static PendingChange CreatePendingChange(
         string definitionKey = "Sample.Options",
-        string definitionDisplayName = "Sample options")
+        string definitionDisplayName = "Sample options",
+        string propertyName = "Name")
     {
         return new PendingChange
         {
             DefinitionKey = definitionKey,
             DefinitionDisplayName = definitionDisplayName,
-            LogicalPath = LogicalPath.FromProperties("Name"),
-            NodeDisplayName = "Name",
+            LogicalPath = LogicalPath.FromProperties(propertyName),
+            NodeDisplayName = propertyName,
             MutationKind = ConfigurationMutationKind.Set,
             NewValue = ConfigurationStoredValue.FromJson("\"new value\""),
             OriginalValue = ConfigurationStoredValue.FromJson("\"old value\""),
