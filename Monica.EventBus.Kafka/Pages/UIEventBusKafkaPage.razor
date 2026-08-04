@@ -36,6 +36,7 @@
                        Color="Color.Primary"
                        StartIcon="@Icons.Material.Filled.Add"
                        Disabled="@PageState.IsBusy"
+                       aria-label="@L["Clusters:Actions:New"]"
                        OnClick="OpenCreateClusterDialogAsync">
                 @L["Clusters:Actions:New"]
             </MudButton>
@@ -66,13 +67,18 @@
     {
         <div class="workspace-shell">
             <MudTabs Class="eventbus-kafka-tabs"
+                     @bind-ActivePanelIndex="_activeTabIndex"
                      Rounded="true"
                      Outlined="true"
                      Elevation="0"
+                     MinimumTabWidth="112px"
                      ApplyEffectsToContainer="true"
                      TabPanelsClass="eventbus-kafka-tab-panels">
                 <MudTabPanel Text="@L["Tabs:Dashboard"]" Icon="@Icons.Material.Filled.Dashboard">
-                    <KafkaDashboardTab State="PageState" OnRefresh="RefreshAsync" />
+                    <KafkaDashboardTab State="PageState"
+                                       OnRefresh="RefreshAsync"
+                                       OnOpenClusters="@(() => _activeTabIndex = CLUSTERS_TAB_INDEX)"
+                                       OnOpenPerformance="@(() => _activeTabIndex = PERFORMANCE_TAB_INDEX)" />
                 </MudTabPanel>
                 <MudTabPanel Text="@L["Tabs:Clusters"]" Icon="@Icons.Material.Filled.Storage">
                     <KafkaClustersTab State="PageState"
@@ -114,7 +120,11 @@
 @code {
     public const string PAGE_URL = "/eventbus-kafka";
 
+    private const int CLUSTERS_TAB_INDEX = 1;
+    private const int PERFORMANCE_TAB_INDEX = 4;
+
     private bool _isDisposed;
+    private int _activeTabIndex;
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -169,7 +179,7 @@
         var dialog = await DialogService.ShowAsync<CreateKafkaClusterDialog>(
             cluster is null ? L["Clusters:Dialog:CreateTitle"] : L["Clusters:Dialog:EditTitle"],
             parameters,
-            DefaultDialogOptions);
+            KafkaDialogPresets.Standard);
 
         var result = await dialog.Result;
         if (result is null || result.Canceled || result.Data is not KafkaClusterConfig savedCluster)
@@ -242,7 +252,7 @@
         var dialog = await DialogService.ShowAsync<CreateKafkaTopicDialog>(
             L["Topics:Dialog:CreateTitle"],
             parameters,
-            DefaultDialogOptions);
+            KafkaDialogPresets.Standard);
 
         var result = await dialog.Result;
         if (result is null || result.Canceled || result.Data is not KafkaTopicCreateRequest request)
@@ -321,7 +331,7 @@
         var dialog = await DialogService.ShowAsync<KafkaPartitionDialog>(
             L["Topics:Dialog:PartitionsTitle"],
             parameters,
-            DefaultDialogOptions);
+            KafkaDialogPresets.Standard);
 
         var result = await dialog.Result;
         if (result is null || result.Canceled || result.Data is not int increaseTo)
@@ -350,7 +360,7 @@
         var dialog = await DialogService.ShowAsync<KafkaRetentionDialog>(
             L["Topics:Dialog:RetentionTitle"],
             parameters,
-            DefaultDialogOptions);
+            KafkaDialogPresets.Standard);
 
         var result = await dialog.Result;
         if (result is null || result.Canceled || result.Data is not long retentionMs)
@@ -388,7 +398,7 @@
         var dialog = await DialogService.ShowAsync<KafkaMessagesDialog>(
             L["Topics:Dialog:MessagesTitle", topic.TopicName],
             parameters,
-            MessageDialogOptions);
+            KafkaDialogPresets.Message);
 
         await dialog.Result;
         StateHasChanged();
@@ -412,7 +422,7 @@
         var dialog = await DialogService.ShowAsync<KafkaTopicBacklogDialog>(
             L["Topics:Dialog:BacklogTitle", topic.TopicName],
             parameters,
-            MessageDialogOptions);
+            KafkaDialogPresets.Message);
 
         await dialog.Result;
         StateHasChanged();
@@ -433,7 +443,7 @@
         var dialog = await DialogService.ShowAsync<KafkaTopicConsumerGroupsDialog>(
             L["Topics:ConsumerGroupsDialog:Title", topic.TopicName],
             parameters,
-            DetailDialogOptions);
+            KafkaDialogPresets.Detail);
         await dialog.Result;
     }
 
@@ -466,7 +476,7 @@
         var dialog = await DialogService.ShowAsync<KafkaConsumerGroupMetricsDialog>(
             title,
             parameters,
-            DetailDialogOptions);
+            KafkaDialogPresets.Detail);
         await dialog.Result;
     }
 
@@ -504,24 +514,4 @@
         await PageState.DeactivateAsync();
     }
 
-    private static DialogOptions DefaultDialogOptions => new()
-    {
-        CloseOnEscapeKey = true,
-        MaxWidth = MaxWidth.Medium,
-        FullWidth = true
-    };
-
-    private static DialogOptions MessageDialogOptions => new()
-    {
-        CloseOnEscapeKey = true,
-        MaxWidth = MaxWidth.Large,
-        FullWidth = true
-    };
-
-    private static DialogOptions DetailDialogOptions => new()
-    {
-        CloseOnEscapeKey = true,
-        MaxWidth = MaxWidth.ExtraExtraLarge,
-        FullWidth = true
-    };
 }

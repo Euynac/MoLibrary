@@ -58,7 +58,9 @@ public class KafkaPerformanceRateCalculatorTests
         current.TopicMetrics.Single().MessageConsumeRatePerSecond.Should().Be(2d);
         current.ConsumerGroupMetrics.Single().WriteRatePerSecond.Should().Be(4d);
         current.ConsumerGroupMetrics.Single().ConsumeRatePerSecond.Should().Be(2d);
-        var partition = current.ConsumerGroupMetrics.Single().Members.Single().Partitions.Single();
+        var member = current.ConsumerGroupMetrics.Single().Members.Single();
+        member.ConsumeRatePerSecond.Should().Be(2d);
+        var partition = member.Partitions.Single();
         partition.WriteRatePerSecond.Should().Be(4d);
         partition.ConsumeRatePerSecond.Should().Be(2d);
     }
@@ -90,7 +92,9 @@ public class KafkaPerformanceRateCalculatorTests
         var metric = current.GroupMetrics.Single();
         metric.WriteRatePerSecond.Should().Be(5d);
         metric.ConsumeRatePerSecond.Should().Be(2d);
-        var partition = metric.Members.Single().Partitions.Single();
+        var member = metric.Members.Single();
+        member.ConsumeRatePerSecond.Should().Be(2d);
+        var partition = member.Partitions.Single();
         partition.WriteRatePerSecond.Should().Be(5d);
         partition.ConsumeRatePerSecond.Should().Be(2d);
     }
@@ -121,9 +125,47 @@ public class KafkaPerformanceRateCalculatorTests
         var metric = current.GroupMetrics.Single();
         metric.WriteRatePerSecond.Should().BeNull();
         metric.ConsumeRatePerSecond.Should().BeNull();
-        var partition = metric.Members.Single().Partitions.Single();
+        var member = metric.Members.Single();
+        member.ConsumeRatePerSecond.Should().BeNull();
+        var partition = member.Partitions.Single();
         partition.WriteRatePerSecond.Should().BeNull();
         partition.ConsumeRatePerSecond.Should().BeNull();
+    }
+
+    [Fact]
+    public void ApplyRates_WhenOneMemberOffsetIsUnknown_ShouldKeepOtherMemberRateAvailable()
+    {
+        var capturedAt = new DateTimeOffset(2026, 8, 3, 1, 0, 0, TimeSpan.Zero);
+        var previous = new KafkaConsumerMetricsSnapshot
+        {
+            CapturedAt = capturedAt,
+            GroupMetrics =
+            [
+                CreateGroupMetricWithMembers(
+                    capturedAt,
+                    ("member-unknown", 0, null),
+                    ("member-active", 1, 100))
+            ]
+        };
+        var current = new KafkaConsumerMetricsSnapshot
+        {
+            CapturedAt = capturedAt.AddSeconds(10),
+            GroupMetrics =
+            [
+                CreateGroupMetricWithMembers(
+                    capturedAt.AddSeconds(10),
+                    ("member-unknown", 0, null),
+                    ("member-active", 1, 125))
+            ]
+        };
+
+        KafkaPerformanceRateCalculator.ApplyRates(current, previous);
+
+        var members = current.GroupMetrics.Single().Members.ToDictionary(member => member.ConsumerId);
+        members["member-unknown"].ConsumeRatePerSecond.Should().BeNull();
+        members["member-active"].ConsumeRatePerSecond.Should().Be(2.5d);
+        members["member-active"].Partitions.Single().ConsumeRatePerSecond.Should().Be(2.5d);
+        current.GroupMetrics.Single().ConsumeRatePerSecond.Should().BeNull();
     }
 
     private static KafkaConsumerGroupTopicMetrics CreateGroupMetric(
@@ -157,6 +199,34 @@ public class KafkaPerformanceRateCalculatorTests
                     ]
                 }
             ]
+        };
+    }
+
+    private static KafkaConsumerGroupTopicMetrics CreateGroupMetricWithMembers(
+        DateTimeOffset capturedAt,
+        params (string ConsumerId, int Partition, long? CurrentOffset)[] members)
+    {
+        return new KafkaConsumerGroupTopicMetrics
+        {
+            TopicName = "orders",
+            GroupId = "billing",
+            CapturedAt = capturedAt,
+            TotalCurrentOffset = null,
+            Members = members
+                .Select(member => new KafkaConsumerMemberMetrics
+                {
+                    ConsumerId = member.ConsumerId,
+                    Partitions =
+                    [
+                        new KafkaConsumerPartitionMetrics
+                        {
+                            Partition = member.Partition,
+                            CurrentOffset = member.CurrentOffset,
+                            LogEndOffset = 200 + member.Partition
+                        }
+                    ]
+                })
+                .ToList()
         };
     }
 }

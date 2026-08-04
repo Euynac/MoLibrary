@@ -1,0 +1,93 @@
+.kafka-table-surface {
+    --kafka-table-accent: var(--mud-palette-primary);
+    width: 100%;
+    min-width: 0;
+    overflow: hidden;
+    border: 1px solid var(--mud-palette-lines-default);
+    border-radius: var(--mud-default-borderradius);
+    background: var(--mud-palette-surface);
+}
+
+.kafka-table-surface--secondary {
+    --kafka-table-accent: var(--mud-palette-secondary);
+}
+
+.kafka-table-surface--info {
+    --kafka-table-accent: var(--mud-palette-info);
+}
+
+.kafka-table-surface--success {
+    --kafka-table-accent: var(--mud-palette-success);
+}
+
+.kafka-table-surface--warning {
+    --kafka-table-accent: var(--mud-palette-warning);
+}
+
+.kafka-table-surface--error {
+    --kafka-table-accent: var(--mud-palette-error);
+}
+
+.kafka-table-surface ::deep .mud-table {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    background: transparent;
+}
+
+.kafka-table-surface--compact ::deep .mud-table-root {
+    min-width: 660px;
+}
+
+.kafka-table-surface--standard ::deep .mud-table-root {
+    min-width: 780px;
+}
+
+.kafka-table-surface--wide ::deep .mud-table-root {
+    min-width: 1080px;
+}
+
+.kafka-table-surface--extra-wide ::deep .mud-table-root {
+    min-width: 1320px;
+}
+
+.kafka-table-surface ::deep .mud-table-container {
+    width: 100%;
+    max-width: 100%;
+    max-height: min(56vh, 640px);
+    overflow: auto;
+    scrollbar-gutter: stable;
+}
+
+.kafka-table-surface ::deep .mud-table-head {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    background: color-mix(in srgb, var(--kafka-table-accent) 6%, var(--mud-palette-surface));
+}
+
+.kafka-table-surface ::deep .mud-table-pagination {
+    min-width: 0;
+    overflow-x: auto;
+    border-top: 1px solid var(--mud-palette-lines-default);
+    background: var(--mud-palette-surface);
+}
+
+.kafka-table-surface ::deep .mud-table-cell {
+    overflow-wrap: anywhere;
+}
+
+.kafka-table-surface ::deep .cluster-row--selected > td {
+    background: color-mix(in srgb, var(--mud-palette-primary) 10%, var(--mud-palette-surface));
+    border-bottom-color: color-mix(in srgb, var(--mud-palette-primary) 24%, var(--mud-palette-lines-default));
+}
+
+.kafka-table-surface ::deep .cluster-row--selected > td:first-child {
+    box-shadow: inset 3px 0 0 var(--mud-palette-primary);
+}
+
+@media (max-width: 720px) {
+    .kafka-table-surface ::deep .mud-table-container {
+        max-height: min(52vh, 520px);
+    }
+}

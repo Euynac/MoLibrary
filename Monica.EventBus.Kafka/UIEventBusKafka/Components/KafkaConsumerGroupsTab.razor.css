@@ -1,29 +1,3 @@
-.consumer-groups-actions {
-    display: flex;
-    align-items: center;
-    justify-content: flex-end;
-}
-
-.consumer-groups-table {
-    width: 100%;
-    min-width: 0;
-    overflow: hidden;
-    border: 1px solid var(--mud-palette-lines-default);
-    border-radius: 9px;
-}
-
-.consumer-groups-table ::deep .mud-table-root {
-    min-width: 660px;
-}
-
-.consumer-groups-table ::deep .mud-table-container {
-    overflow-x: auto;
-}
-
-.consumer-groups-table ::deep .mud-table-head {
-    background: color-mix(in srgb, var(--mud-palette-secondary) 5%, var(--mud-palette-surface));
-}
-
 .consumer-group-id {
     display: inline-block;
     min-width: 0;
@@ -35,17 +9,4 @@
 
 .consumer-group-lag {
     font-variant-numeric: tabular-nums;
-}
-
-@media (max-width: 1100px) {
-    .consumer-groups-actions {
-        width: 100%;
-        justify-content: flex-start;
-    }
-}
-
-@media (max-width: 720px) {
-    .consumer-groups-actions ::deep .mud-button-root {
-        flex: 1 1 auto;
-    }
 }

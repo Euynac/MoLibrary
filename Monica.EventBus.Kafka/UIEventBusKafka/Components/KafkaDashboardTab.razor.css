@@ -1,123 +1,140 @@
 .kafka-dashboard {
     display: flex;
     flex-direction: column;
-    gap: 16px;
+    gap: 22px;
     min-width: 0;
 }
 
-.dashboard-layout {
+.dashboard-layer {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    min-width: 0;
+}
+
+.dashboard-layer + .dashboard-layer {
+    padding-top: 20px;
+    border-top: 1px solid var(--mud-palette-lines-default);
+}
+
+.dashboard-layer__header {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    min-width: 0;
+}
+
+.dashboard-layer__number {
+    flex: 0 0 auto;
+    color: var(--mud-palette-primary);
+    font-size: 1.45rem;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    line-height: 1.1;
+}
+
+.dashboard-layer__copy {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+}
+
+.dashboard-layer__copy ::deep .mud-typography-root {
+    overflow-wrap: anywhere;
+}
+
+.dashboard-context-grid {
     display: grid;
-    grid-template-columns: minmax(280px, 0.95fr) minmax(0, 2fr);
-    gap: 16px;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px;
     min-width: 0;
 }
 
-.integration-context {
+.dashboard-context-card {
     min-width: 0;
 }
 
-.integration-context ::deep .mud-paper {
+.dashboard-context-card ::deep .mud-paper {
     height: 100%;
     min-width: 0;
     display: flex;
     flex-direction: column;
-    align-items: flex-start;
+    justify-content: space-between;
     gap: 14px;
     padding: 18px;
     overflow: hidden;
-    border-color: color-mix(in srgb, var(--mud-palette-primary) 28%, var(--mud-palette-lines-default));
-    background: linear-gradient(
-        145deg,
-        color-mix(in srgb, var(--mud-palette-primary) 9%, var(--mud-palette-surface)),
-        var(--mud-palette-surface) 54%);
+    border-radius: var(--mud-default-borderradius);
 }
 
-.integration-context__provider {
-    display: flex;
+.dashboard-context-card--provider ::deep .mud-paper {
+    border-color: color-mix(in srgb, var(--mud-palette-primary) 28%, var(--mud-palette-lines-default));
+    background: linear-gradient(
+        135deg,
+        color-mix(in srgb, var(--mud-palette-primary) 9%, var(--mud-palette-surface)),
+        var(--mud-palette-surface) 58%);
+}
+
+.dashboard-context-card--cluster ::deep .mud-paper {
+    border-color: color-mix(in srgb, var(--mud-palette-success) 24%, var(--mud-palette-lines-default));
+    background: linear-gradient(
+        135deg,
+        color-mix(in srgb, var(--mud-palette-success) 6%, var(--mud-palette-surface)),
+        var(--mud-palette-surface) 58%);
+}
+
+.dashboard-context-card__header {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
     align-items: flex-start;
     gap: 12px;
-    width: 100%;
     min-width: 0;
 }
 
-.integration-context__icon {
+.dashboard-context-card__icon {
     width: 42px;
     height: 42px;
-    flex: 0 0 42px;
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    border-radius: 10px;
+    border-radius: var(--mud-default-borderradius);
     color: var(--mud-palette-primary);
     background: color-mix(in srgb, var(--mud-palette-primary) 13%, var(--mud-palette-surface));
     border: 1px solid color-mix(in srgb, var(--mud-palette-primary) 24%, var(--mud-palette-lines-default));
 }
 
-.integration-context__icon ::deep .mud-icon-root {
+.dashboard-context-card--cluster .dashboard-context-card__icon {
+    color: var(--mud-palette-success);
+    background: color-mix(in srgb, var(--mud-palette-success) 12%, var(--mud-palette-surface));
+    border-color: color-mix(in srgb, var(--mud-palette-success) 24%, var(--mud-palette-lines-default));
+}
+
+.dashboard-context-card__icon ::deep .mud-icon-root {
     color: inherit;
 }
 
-.integration-context__provider-copy,
-.integration-context__cluster-copy {
+.dashboard-context-card__identity {
     display: flex;
     flex-direction: column;
-    gap: 3px;
+    gap: 2px;
     min-width: 0;
 }
 
-.integration-context ::deep .integration-context__provider-name,
-.integration-context ::deep .integration-context__cluster-name,
-.integration-context ::deep .integration-context__cluster-description {
+.dashboard-context-card ::deep .dashboard-context-card__name,
+.dashboard-context-card ::deep .dashboard-context-card__description {
     max-width: 100%;
     overflow-wrap: anywhere;
     word-break: break-word;
 }
 
-.integration-context ::deep .mud-chip {
+.dashboard-context-card ::deep .mud-chip {
     max-width: 100%;
 }
 
-.integration-context ::deep .mud-chip-content {
+.dashboard-context-card ::deep .mud-chip-content {
     min-width: 0;
     white-space: normal;
     overflow-wrap: anywhere;
-}
-
-.integration-context ::deep .mud-divider {
-    width: 100%;
-}
-
-.integration-context__cluster {
-    display: flex;
-    align-items: flex-start;
-    gap: 10px;
-    width: 100%;
-    min-width: 0;
-}
-
-.integration-context__cluster-marker {
-    width: 9px;
-    height: 9px;
-    flex: 0 0 9px;
-    margin-top: 7px;
-    border-radius: 50%;
-    background: var(--mud-palette-text-disabled);
-    box-shadow: 0 0 0 4px color-mix(in srgb, var(--mud-palette-text-disabled) 12%, var(--mud-palette-surface));
-}
-
-.integration-context__cluster-marker--ready {
-    background: var(--mud-palette-success);
-    box-shadow: 0 0 0 4px color-mix(in srgb, var(--mud-palette-success) 13%, var(--mud-palette-surface));
-}
-
-.integration-context__cluster-marker--limited {
-    background: var(--mud-palette-warning);
-    box-shadow: 0 0 0 4px color-mix(in srgb, var(--mud-palette-warning) 13%, var(--mud-palette-surface));
-}
-
-.integration-context ::deep .mud-button-root {
-    margin-top: auto;
-    margin-inline-start: -8px;
 }
 
 .dashboard-signals {
@@ -127,56 +144,156 @@
     min-width: 0;
 }
 
-@media (max-width: 1199px) {
-    .dashboard-layout {
+.dashboard-evidence-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1.45fr) minmax(260px, 0.55fr);
+    align-items: stretch;
+    gap: 14px;
+    min-width: 0;
+}
+
+.dashboard-evidence-card,
+.dashboard-next-actions {
+    min-width: 0;
+}
+
+.dashboard-evidence-card ::deep .mud-paper,
+.dashboard-next-actions ::deep .mud-paper {
+    height: 100%;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding: 16px;
+    border-radius: var(--mud-default-borderradius);
+}
+
+.dashboard-evidence-card ::deep .mud-paper {
+    background: color-mix(in srgb, var(--mud-palette-info) 4%, var(--mud-palette-surface));
+}
+
+.dashboard-evidence-card ::deep .mud-divider {
+    width: 100%;
+}
+
+.dashboard-evidence-row {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 10px;
+    min-width: 0;
+}
+
+.dashboard-evidence-row__icon {
+    width: 34px;
+    height: 34px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--mud-default-borderradius);
+    color: var(--mud-palette-primary);
+    background: color-mix(in srgb, var(--mud-palette-primary) 12%, var(--mud-palette-surface));
+}
+
+.dashboard-evidence-row__icon--success {
+    color: var(--mud-palette-success);
+    background: color-mix(in srgb, var(--mud-palette-success) 12%, var(--mud-palette-surface));
+}
+
+.dashboard-evidence-row__icon--warning {
+    color: var(--mud-palette-warning);
+    background: color-mix(in srgb, var(--mud-palette-warning) 13%, var(--mud-palette-surface));
+}
+
+.dashboard-evidence-row__icon--info {
+    color: var(--mud-palette-info);
+    background: color-mix(in srgb, var(--mud-palette-info) 12%, var(--mud-palette-surface));
+}
+
+.dashboard-evidence-row__icon--secondary {
+    color: var(--mud-palette-secondary);
+    background: color-mix(in srgb, var(--mud-palette-secondary) 12%, var(--mud-palette-surface));
+}
+
+.dashboard-evidence-row__icon ::deep .mud-icon-root {
+    color: inherit;
+}
+
+.dashboard-evidence-row__copy {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+}
+
+.dashboard-evidence-row__copy ::deep .mud-typography-root {
+    overflow-wrap: anywhere;
+}
+
+.dashboard-next-actions__buttons {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 8px;
+    margin-top: auto;
+}
+
+.dashboard-next-actions__buttons ::deep .mud-button-root {
+    width: 100%;
+}
+
+@media (max-width: 1000px) {
+    .dashboard-evidence-grid {
         grid-template-columns: minmax(0, 1fr);
     }
 
-    .integration-context ::deep .mud-paper {
-        display: grid;
-        grid-template-columns: minmax(0, 1fr) auto;
-        align-items: center;
-    }
-
-    .integration-context__provider,
-    .integration-context__cluster,
-    .integration-context ::deep .mud-divider {
-        grid-column: 1;
-    }
-
-    .integration-context ::deep .mud-chip {
-        grid-column: 2;
-        grid-row: 1;
-    }
-
-    .integration-context ::deep .mud-button-root {
-        grid-column: 2;
-        grid-row: 3;
-        margin: 0;
+    .dashboard-next-actions__buttons {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 }
 
 @media (max-width: 720px) {
-    .kafka-dashboard,
-    .dashboard-layout {
-        gap: 12px;
+    .kafka-dashboard {
+        gap: 18px;
     }
 
-    .integration-context ::deep .mud-paper {
-        display: flex;
-        align-items: flex-start;
-        gap: 12px;
+    .dashboard-layer + .dashboard-layer {
+        padding-top: 16px;
+    }
+
+    .dashboard-context-grid {
+        grid-template-columns: minmax(0, 1fr);
+        gap: 10px;
+    }
+
+    .dashboard-context-card ::deep .mud-paper {
         padding: 15px;
     }
 
-    .integration-context ::deep .mud-button-root {
-        margin-top: 0;
-        margin-inline-start: -8px;
+    .dashboard-context-card__header {
+        grid-template-columns: auto minmax(0, 1fr);
+    }
+
+    .dashboard-context-card__header ::deep .mud-chip {
+        grid-column: 1 / -1;
+        justify-self: flex-start;
     }
 
     .dashboard-signals {
         grid-template-columns: repeat(2, minmax(0, 1fr));
         gap: 10px;
+    }
+
+    .dashboard-evidence-row {
+        grid-template-columns: auto minmax(0, 1fr);
+    }
+
+    .dashboard-evidence-row ::deep .mud-chip {
+        grid-column: 2;
+        justify-self: flex-start;
+    }
+
+    .dashboard-next-actions__buttons {
+        grid-template-columns: minmax(0, 1fr);
     }
 }
 

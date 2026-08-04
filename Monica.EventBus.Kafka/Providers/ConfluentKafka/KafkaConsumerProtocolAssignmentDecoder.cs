@@ -7,9 +7,14 @@ namespace Monica.EventBus.Kafka.Providers.ConfluentKafka;
 /// <summary>
 /// Decodes the classic Kafka consumer protocol member-assignment payload returned by ListGroups.
 /// </summary>
+/// <remarks>
+/// Assignment versions 0 through 3 share the same topic-partition and user-data layout. Later
+/// versions remain rejected until their wire format is explicitly verified.
+/// </remarks>
 internal static class KafkaConsumerProtocolAssignmentDecoder
 {
-    private const short SUPPORTED_VERSION = 0;
+    private const short MIN_SUPPORTED_VERSION = 0;
+    private const short MAX_SUPPORTED_VERSION = 3;
     private const int MAX_TOPIC_COUNT = 100_000;
     private const int MAX_PARTITION_ASSIGNMENT_COUNT = 1_000_000;
     private static readonly UTF8Encoding STRICT_UTF8 = new(false, true);
@@ -26,7 +31,7 @@ internal static class KafkaConsumerProtocolAssignmentDecoder
 
         var reader = new AssignmentReader(payload);
         var version = reader.ReadInt16("assignment version");
-        if (version != SUPPORTED_VERSION)
+        if (version is < MIN_SUPPORTED_VERSION or > MAX_SUPPORTED_VERSION)
         {
             throw new InvalidDataException($"Kafka consumer assignment version {version} is not supported.");
         }

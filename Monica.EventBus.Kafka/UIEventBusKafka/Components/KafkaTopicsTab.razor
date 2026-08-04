@@ -1,10 +1,14 @@
 @using Monica.EventBus.Kafka.UIEventBusKafka.State
 @inject IStringLocalizer<EventBusKafkaResource> L
 
+@{
+    var filteredTopicCount = State.Topics.Count(FilterTopic);
+}
+
 <MudStack Spacing="3">
     <KafkaWorkspaceHeader Icon="@Icons.Material.Filled.Topic"
                           Title="@L["Topics:Title"]"
-                          Subtitle="@L["Topics:Summary", FilteredTopicCount, State.Topics.Count]">
+                          Subtitle="@L["Topics:Summary", filteredTopicCount, State.Topics.Count]">
         <Actions>
             <div class="topics-actions">
                 <MudTextField T="string"
@@ -18,16 +22,11 @@
                               Variant="Variant.Outlined"
                               Margin="Margin.Dense"
                               Clearable="true" />
-                <MudButton Variant="Variant.Outlined"
-                           StartIcon="@Icons.Material.Filled.Refresh"
-                           Disabled="@State.IsBusy"
-                           OnClick="OnRefresh">
-                    @L["Common:Actions:Refresh"]
-                </MudButton>
                 <MudButton Variant="Variant.Filled"
                            Color="Color.Primary"
                            StartIcon="@Icons.Material.Filled.Add"
                            Disabled="@(State.IsBusy || !State.CanAdminSelectedCluster)"
+                           aria-label="@L["Topics:Actions:Create"]"
                            OnClick="OnCreate">
                     @L["Topics:Actions:Create"]
                 </MudButton>
@@ -37,30 +36,34 @@
 
     @if (!State.CanAdminSelectedCluster)
     {
-        <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined">
-            @L["Topics:Unavailable"]
-        </MudAlert>
+        <KafkaWorkspaceState Icon="@Icons.Material.Filled.Lock"
+                             Title="@L["Topics:Title"]"
+                             Description="@L["Topics:Unavailable"]"
+                             AccentColor="Color.Warning" />
     }
     else if (State.Topics.Count == 0)
     {
-        <MudAlert Severity="Severity.Info" Variant="Variant.Outlined">
-            @L["Topics:Empty"]
-        </MudAlert>
+        <KafkaWorkspaceState Icon="@Icons.Material.Filled.Topic"
+                             Title="@L["Topics:Title"]"
+                             Description="@L["Topics:Empty"]"
+                             AccentColor="Color.Info"
+                             ActionLabel="@L["Topics:Actions:Create"]"
+                             ActionIcon="@Icons.Material.Filled.Add"
+                             ActionDisabled="@State.IsBusy"
+                             OnAction="OnCreate" />
     }
-    else if (FilteredTopicCount == 0)
+    else if (filteredTopicCount == 0)
     {
-        <div class="topics-empty-filter">
-            <span class="topics-empty-filter__icon" aria-hidden="true">
-                <MudIcon Icon="@Icons.Material.Filled.SearchOff" />
-            </span>
-            <MudText Typo="Typo.body2" Color="Color.Secondary">
-                @L["Topics:Search:NoMatches"]
-            </MudText>
-        </div>
+        <KafkaWorkspaceState Icon="@Icons.Material.Filled.SearchOff"
+                             Title="@L["Topics:Search:NoMatches"]"
+                             Description="@L["Topics:Search:Placeholder"]"
+                             AccentColor="Color.Info" />
     }
     else
     {
-        <div class="topics-table">
+        <KafkaTableSurface AriaLabel="@L["Topics:Title"]"
+                           AccentColor="Color.Info"
+                           Size="KafkaTableSurfaceSize.Standard">
             <MudTable T="KafkaTopicSummary"
                       Items="@State.Topics"
                       Filter="FilterTopic"
@@ -79,7 +82,7 @@
                 </HeaderContent>
                 <RowTemplate>
                     <MudTd DataLabel="@L["Topics:Columns:Name"]">
-                        <MudStack Spacing="0">
+                        <div class="topic-identity">
                             <div class="topic-name">
                                 <MudText Typo="Typo.body2">@context.TopicName</MudText>
                                 @if (!context.IsMetadataAvailable)
@@ -93,7 +96,7 @@
                             {
                                 <MudText Typo="Typo.caption" Color="Color.Secondary">@L["Topics:Values:Internal"]</MudText>
                             }
-                        </MudStack>
+                        </div>
                     </MudTd>
                     <MudTd DataLabel="@L["Topics:Columns:Partitions"]">@context.Partitions</MudTd>
                     <MudTd DataLabel="@L["Topics:Columns:Replication"]">@context.ReplicationFactor</MudTd>
@@ -105,7 +108,8 @@
                         <MudMenu Icon="@Icons.Material.Filled.MoreVert"
                                  Size="Size.Small"
                                  Dense="true"
-                                 Disabled="@State.IsBusy">
+                                 Disabled="@State.IsBusy"
+                                 AriaLabel="@L["Topics:Actions:OpenMenu", context.TopicName]">
                             <MudMenuItem Icon="@Icons.Material.Filled.Visibility" OnClick="@(() => OnViewMessages.InvokeAsync(context))">
                                 @L["Topics:Actions:Messages"]
                             </MudMenuItem>
@@ -137,16 +141,14 @@
                     </MudTd>
                 </RowTemplate>
                 <PagerContent>
-                    <MudTablePager PageSizeOptions="@PageSizeOptions" />
+                    <MudTablePager PageSizeOptions="@KafkaTablePageSizes.Standard" />
                 </PagerContent>
             </MudTable>
-        </div>
+        </KafkaTableSurface>
     }
 </MudStack>
 
 @code {
-    private static readonly int[] PageSizeOptions = [10, 25, 50, 100];
-
     private string _searchText = string.Empty;
     private int _rowsPerPage = 25;
 
@@ -180,8 +182,6 @@
     [Parameter]
     public EventCallback<KafkaTopicSummary> OnClearMessages { get; set; }
 
-    private int FilteredTopicCount => State.Topics.Count(FilterTopic);
-
     private bool FilterTopic(KafkaTopicSummary topic)
     {
         var searchText = _searchText.Trim();
@@ -195,5 +195,4 @@
             ? L["Topics:Values:RetentionUnknown"]
             : L["Topics:Values:RetentionMs", retentionMs.Value];
     }
-
 }

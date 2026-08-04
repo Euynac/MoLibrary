@@ -135,6 +135,29 @@
     "Performance": "Performance"
   },
   "Dashboard": {
+    "Sections": {
+      "ContextEyebrow": "Identity context",
+      "ContextTitle": "Provider and active cluster",
+      "ContextDescription": "Confirm which EventBus provider and Kafka cluster own the current console context.",
+      "SummaryEyebrow": "Runtime summary",
+      "SummaryTitle": "Operational signals",
+      "SummaryDescription": "Read the latest broker, inventory, retention, and throughput evidence at a glance.",
+      "EvidenceEyebrow": "Evidence and next steps",
+      "EvidenceTitle": "Access and sampling readiness",
+      "EvidenceDescription": "Review the capabilities available for this cluster and move directly to the next useful workspace."
+    },
+    "Evidence": {
+      "AdminAccess": "Broker administration",
+      "AdminAccessReady": "Direct Kafka access is available for inventory and administration.",
+      "AdminAccessLimited": "Direct Kafka access is unavailable; broker administration is limited.",
+      "LiveSampling": "Performance sampling"
+    },
+    "NextActions": {
+      "Title": "Continue investigation",
+      "Description": "Inspect cluster configuration or open performance evidence without repeating global actions.",
+      "Clusters": "Open clusters",
+      "Performance": "Open performance"
+    },
     "Cards": {
       "Provider": "Active provider",
       "Brokers": "Brokers",
@@ -258,6 +281,7 @@
     },
     "Actions": {
       "Create": "Create topic",
+      "OpenMenu": "Open actions for topic {0}",
       "Messages": "View messages",
       "Backlog": "Partition backlog",
       "ConsumerGroups": "Consumer groups",
@@ -351,6 +375,18 @@
     "Summary": "{0} visible consumer groups",
     "Unavailable": "Consumer group inspection requires direct Kafka broker access.",
     "Empty": "No consumer groups were returned for the selected cluster.",
+    "Actions": {
+      "ViewMembers": "View members for consumer group {0}",
+      "ViewDetails": "View consumption details for consumer group {0}"
+    },
+    "States": {
+      "Stable": "Stable",
+      "PreparingRebalance": "Preparing rebalance",
+      "CompletingRebalance": "Completing rebalance",
+      "Dead": "Dead",
+      "Empty": "Empty",
+      "Unknown": "Unknown"
+    },
     "Columns": {
       "GroupId": "Group id",
       "State": "State",
@@ -363,6 +399,7 @@
     "MetricsDialog": {
       "Title": "Consumer group consumption details",
       "TopicTitle": "Topic consumer group consumption details",
+      "SummaryTitle": "Group summary",
       "MembersTitle": "Members ({0})",
       "NoMembers": "This consumer group currently has no registered members.",
       "PartitionsTitle": "Partition metrics",
@@ -404,7 +441,8 @@
     },
     "Actions": {
       "Capture": "Capture",
-      "Details": "Details"
+      "Details": "Details",
+      "ViewDetails": "View performance details for consumer group {0} on topic {1}"
     },
     "Columns": {
       "CapturedAt": "Captured at",

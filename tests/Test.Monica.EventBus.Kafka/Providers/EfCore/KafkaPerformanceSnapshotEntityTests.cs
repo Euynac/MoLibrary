@@ -35,6 +35,7 @@ public class KafkaPerformanceSnapshotEntityTests
                             ConsumerId = "consumer-a",
                             Host = "/10.0.0.12",
                             ClientId = "billing-worker",
+                            ConsumeRatePerSecond = 3.5,
                             Partitions =
                             [
                                 new KafkaConsumerPartitionMetrics

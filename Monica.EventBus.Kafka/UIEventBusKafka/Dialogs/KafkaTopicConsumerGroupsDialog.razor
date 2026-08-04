@@ -16,6 +16,7 @@
                 <MudButton Variant="Variant.Outlined"
                            StartIcon="@Icons.Material.Filled.Refresh"
                            Disabled="@_isLoading"
+                           aria-label="@L["Common:Actions:Refresh"]"
                            OnClick="LoadAsync">
                     @L["Common:Actions:Refresh"]
                 </MudButton>
@@ -37,13 +38,16 @@
             }
             else if (_groups.Count == 0)
             {
-                <MudAlert Severity="Severity.Info" Variant="Variant.Outlined">
-                    @L["Topics:ConsumerGroupsDialog:Empty"]
-                </MudAlert>
+                <KafkaWorkspaceState Icon="@Icons.Material.Filled.GroupOff"
+                                     Title="@L["Topics:ConsumerGroupsDialog:Title", TopicName]"
+                                     Description="@L["Topics:ConsumerGroupsDialog:Empty"]"
+                                     AccentColor="Color.Info" />
             }
             else
             {
-                <div class="topic-groups-table">
+                <KafkaTableSurface AriaLabel="@L["Topics:ConsumerGroupsDialog:Title", TopicName]"
+                                   AccentColor="Color.Secondary"
+                                   Size="KafkaTableSurfaceSize.Standard">
                     <MudTable T="KafkaConsumerGroupSummary"
                               Items="@_groups"
                               Dense="true"
@@ -66,7 +70,7 @@
                                          Size="Size.Small"
                                          Variant="Variant.Outlined"
                                          Color="@KafkaConsumerGroupStateDisplay.GetColor(context.State)">
-                                    @context.State
+                                    @KafkaConsumerGroupStateDisplay.GetText(context.State, L)
                                 </MudChip>
                             </MudTd>
                             <MudTd DataLabel="@L["ConsumerGroups:Columns:Members"]">@context.MemberCount</MudTd>
@@ -79,13 +83,14 @@
                                 <MudButton Variant="Variant.Text"
                                            Size="Size.Small"
                                            StartIcon="@Icons.Material.Filled.Analytics"
+                                           aria-label="@L["ConsumerGroups:Actions:ViewDetails", context.GroupId]"
                                            OnClick="@(() => OpenDetailsAsync(context))">
                                     @L["Common:Actions:Details"]
                                 </MudButton>
                             </MudTd>
                         </RowTemplate>
                     </MudTable>
-                </div>
+                </KafkaTableSurface>
             }
         </MudStack>
     </DialogContent>
@@ -152,7 +157,7 @@
         var dialog = await DialogService.ShowAsync<KafkaConsumerGroupMetricsDialog>(
             L["ConsumerGroups:MetricsDialog:TopicTitle"],
             parameters,
-            DetailDialogOptions);
+            KafkaDialogPresets.Detail);
         await dialog.Result;
     }
 
@@ -161,10 +166,4 @@
         MudDialog.Close();
     }
 
-    private static DialogOptions DetailDialogOptions => new()
-    {
-        CloseOnEscapeKey = true,
-        FullWidth = true,
-        MaxWidth = MaxWidth.ExtraExtraLarge
-    };
 }
