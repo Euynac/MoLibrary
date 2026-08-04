@@ -61,6 +61,20 @@ Navigation category identity follows a different rule from routes: derive it fro
 
 Every UI module registers its category and localized pages in one `RegisterUIComponents` block. Register `Navigation:Category` through `RegisterLocalizedCategory<TResource>` with an explicit deterministic order, assign the returned ID, and pass it to `RegisterLocalizedPage<TPage, TResource>` through `categoryId`. The scaffold's primary page uses `Navigation:Title`; additional pages use distinct module-owned `Navigation:*` keys. Every navigation page sets `addToNav: true` and an explicit navigation order, and the category and pages use the UI module's own resource marker. `RegisterLocalizedComponent` is a legacy API and is not ecosystem-v1 compliant.
 
+## 3.1 Multiple packages in one repository
+
+Repository manifest schema v2 may describe several independently consumable packages without changing this v1 package-identity standard.
+
+- Keep one packable project per declared package.
+- Use full package IDs for repository-internal NuGet dependencies.
+- Use full module keys for runtime dependencies, including dependencies within the same package.
+- Back each cross-package module dependency with a NuGet package dependency.
+- Implement provider modules with `IModuleProvider`, declare their `providerFor` target, and include that target in the runtime dependency graph.
+- Keep package and runtime graphs acyclic.
+- Do not embed a sibling package assembly in place of a package dependency.
+
+One aligned repository release may also publish a provider-service OCI repository. Its `companionPackageId` names a package that owns a provider module. CPU and GPU variants use separate immutable tags under the same OCI repository and expose the same connector-facing API. OCI distribution does not alter NuGet ownership, module identity, or v1 compatibility status. Automated publication remains disabled until provider-specific CPU and applicable NVIDIA inference gates are declared.
+
 ## 4. Public API naming
 
 For each module named `{Name}`:

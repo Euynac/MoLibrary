@@ -18,6 +18,7 @@ from mudblazor_skill_state import (
 )
 
 DEPENDENCY_QUERY = "MudBlazor"
+DEPENDENCY_VERSION = "9.0.0"
 REQUIRED_RELATIVE_FILE = Path(
     "src/MudBlazor/Components/ThemeProvider/MudThemeProvider.razor.cs"
 )
@@ -52,6 +53,7 @@ class MudBlazorResolution:
         return {
             "ok": self.is_available,
             "query": DEPENDENCY_QUERY,
+            "version": DEPENDENCY_VERSION,
             "source_path": str(self.source_root) if self.source_root else None,
             "marker_relative_path": REQUIRED_RELATIVE_FILE.as_posix(),
             "marker_path": str(self.marker_path) if self.marker_path else None,
@@ -142,7 +144,15 @@ def resolve_mudblazor_source() -> MudBlazorResolution:
             ),
         )
 
-    command = [sys.executable, str(cli_path), "resolve", DEPENDENCY_QUERY, "--json"]
+    command = [
+        sys.executable,
+        str(cli_path),
+        "resolve",
+        DEPENDENCY_QUERY,
+        "--ref",
+        DEPENDENCY_VERSION,
+        "--json",
+    ]
     try:
         completed = subprocess.run(
             command,

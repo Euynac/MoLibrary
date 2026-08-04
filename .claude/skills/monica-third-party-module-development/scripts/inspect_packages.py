@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Inspect packed Monica ecosystem artifacts without restoring or executing them."""
+"""Inspect a declared set of packed Monica ecosystem artifacts without executing them."""
 
 from __future__ import annotations
 
@@ -30,7 +30,7 @@ class Finding:
 
 
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Inspect generated .nupkg and .snupkg artifacts.")
+    parser = argparse.ArgumentParser(description="Inspect the exact manifest-declared .nupkg and .snupkg set.")
     parser.add_argument("--root", required=True, type=Path, help="Repository root.")
     parser.add_argument("--artifacts", required=True, type=Path, help="Artifact directory relative to root.")
     parser.add_argument("--package-version", help="Expected effective package version.")
@@ -49,7 +49,13 @@ def child_text(element: ET.Element, name: str) -> str:
     return ""
 
 
-def inspect_archive(path: Path, expected_version: str | None) -> list[Finding]:
+def inspect_archive(
+    path: Path,
+    expected_version: str | None,
+    expected_id: str | None = None,
+    expected_internal_dependencies: set[str] | None = None,
+    repository_package_ids: set[str] | None = None,
+) -> list[Finding]:
     findings: list[Finding] = []
 
     def add(code: str, message: str) -> None:
@@ -85,6 +91,22 @@ def inspect_archive(path: Path, expected_version: str | None) -> list[Finding]:
             add("MTPA005", "Nuspec id and version metadata are required.")
         if expected_version and version != expected_version:
             add("MTPA005", f"Nuspec version '{version}' does not match expected '{expected_version}'.")
+        if expected_id and package_id != expected_id:
+            add("MTPA005", f"Nuspec id '{package_id}' does not match expected '{expected_id}'.")
+
+        if expected_internal_dependencies is not None and repository_package_ids is not None:
+            actual_internal_dependencies = {
+                (item.get("id") or "").casefold()
+                for item in metadata.iter()
+                if local_name(item.tag) == "dependency"
+                and (item.get("id") or "").casefold() in repository_package_ids
+            }
+            if actual_internal_dependencies != expected_internal_dependencies:
+                add(
+                    "MTPA022",
+                    "Internal package dependencies do not match monica.manifest.json: "
+                    f"expected {sorted(expected_internal_dependencies)}, found {sorted(actual_internal_dependencies)}.",
+                )
 
         expected_name = f"{package_id}.{version}.nupkg".casefold()
         if path.name.casefold() != expected_name:
@@ -136,6 +158,11 @@ def inspect_archive(path: Path, expected_version: str | None) -> list[Finding]:
                 continue
             if len(payload) <= 2_000_000 and ABSOLUTE_PATH_PATTERN.search(payload):
                 add("MTPA014", f"Machine-specific absolute path found in packed file: {name}.")
+            if repository_package_ids is not None and normalized.casefold().endswith(".dll"):
+                assembly_name = Path(normalized).stem.casefold()
+                sibling_ids = repository_package_ids - {package_id.casefold()}
+                if assembly_name in sibling_ids:
+                    add("MTPA023", f"Sibling package assembly is embedded instead of declared as a dependency: {name}.")
 
     return findings
 
@@ -175,14 +202,75 @@ def main() -> int:
         print(f"Artifact directory does not exist: {artifacts}", file=sys.stderr)
         return 2
 
-    packages = sorted(path for path in artifacts.glob("*.nupkg") if not path.name.endswith(".snupkg"))
-    if not packages:
-        print(f"No .nupkg files found in: {artifacts}", file=sys.stderr)
+    manifest_path = root / "monica.manifest.json"
+    try:
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8-sig"))
+    except (OSError, json.JSONDecodeError) as exc:
+        print(f"Could not read monica.manifest.json: {exc}", file=sys.stderr)
+        return 2
+    if not isinstance(manifest, dict) or manifest.get("schemaVersion") != 2:
+        print("monica.manifest.json must use schemaVersion 2.", file=sys.stderr)
+        return 2
+    raw_packages = manifest.get("packages")
+    if not isinstance(raw_packages, list) or not raw_packages:
+        print("monica.manifest.json packages must contain at least one package.", file=sys.stderr)
+        return 2
+    declared: dict[str, set[str]] = {}
+    for raw in raw_packages:
+        if not isinstance(raw, dict) or not isinstance(raw.get("packageId"), str):
+            print("Every manifest package requires packageId.", file=sys.stderr)
+            return 2
+        package_id = raw["packageId"]
+        dependencies = raw.get("packageDependencies", [])
+        if not isinstance(dependencies, list) or not all(isinstance(item, str) for item in dependencies):
+            print(f"Invalid packageDependencies for {package_id}.", file=sys.stderr)
+            return 2
+        declared[package_id] = {item.casefold() for item in dependencies}
+
+    expected_version = args.package_version or manifest.get("version")
+    if not isinstance(expected_version, str) or not expected_version:
+        print("An expected package version is required.", file=sys.stderr)
         return 2
 
+    packages = sorted(path for path in artifacts.glob("*.nupkg") if not path.name.endswith(".snupkg"))
+
     findings: list[Finding] = []
-    for package in packages:
-        findings.extend(inspect_archive(package, args.package_version))
+    expected_names = {
+        f"{package_id}.{expected_version}.nupkg".casefold(): package_id
+        for package_id in declared
+    }
+    actual_names = {package.name.casefold(): package for package in packages}
+    expected_symbol_names = {
+        f"{package_id}.{expected_version}.snupkg".casefold()
+        for package_id in declared
+    }
+    actual_symbol_names = {
+        package.name.casefold()
+        for package in artifacts.glob("*.snupkg")
+    }
+    for missing in sorted(set(expected_names) - set(actual_names)):
+        findings.append(Finding("MTPA024", "Declared package artifact is missing.", missing))
+    for extra in sorted(set(actual_names) - set(expected_names)):
+        findings.append(Finding("MTPA025", "Undeclared package artifact was produced.", actual_names[extra].name))
+    for extra in sorted(actual_symbol_names - expected_symbol_names):
+        findings.append(Finding("MTPA026", "Undeclared symbol artifact was produced.", extra))
+
+    repository_ids = {package_id.casefold() for package_id in declared}
+    inspected_count = 0
+    for expected_name, expected_id in expected_names.items():
+        package = actual_names.get(expected_name)
+        if package is None:
+            continue
+        inspected_count += 1
+        findings.extend(
+            inspect_archive(
+                package,
+                expected_version,
+                expected_id,
+                declared[expected_id],
+                repository_ids,
+            )
+        )
         symbol_package = package.with_suffix(".snupkg")
         if not symbol_package.is_file():
             findings.append(Finding("MTPA015", "Matching .snupkg is missing.", package.name))
@@ -194,9 +282,9 @@ def main() -> int:
     elif findings:
         for finding in findings:
             print(f"[ERROR] {finding.code} {finding.artifact}: {finding.message}")
-        print(f"\nInspected {len(packages)} package(s): {len(findings)} error(s).")
+        print(f"\nInspected {inspected_count} declared package(s): {len(findings)} error(s).")
     else:
-        print(f"[PASS] Inspected {len(packages)} package(s) and matching symbol artifacts.")
+        print(f"[PASS] Inspected {inspected_count} declared package(s) and matching symbol artifacts.")
 
     return 1 if findings else 0
 

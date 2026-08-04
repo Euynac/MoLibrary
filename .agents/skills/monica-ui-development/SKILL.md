@@ -37,7 +37,7 @@ Before a source-dependent task, run:
 python scripts/check_mudblazor_source.py
 ```
 
-This check invokes the user-level `$inspect-dependency-source` skill with `resolve MudBlazor --json`. The global catalog is shared across projects and agent CLIs; Monica does not read its storage directly or maintain a project-local source-path config.
+This check invokes the user-level `$inspect-dependency-source` skill with `resolve MudBlazor --ref 9.0.0 --json`. The exact ref matches Monica.UI's MudBlazor dependency and prevents another cached MudBlazor checkout from being selected. The global catalog is shared across projects and agent CLIs; Monica does not read its storage directly or maintain a project-local source-path config.
 
 The resolver CLI is discovered in this order:
 
@@ -326,7 +326,7 @@ For `Res/Res<T>` usage, `IResultEnvelope`, and the `IsFailed` pattern in UI serv
 
 ## Scripts
 
-- `scripts/check_mudblazor_source.py` - Invoke `inspect-dependency-source resolve MudBlazor --json`, validate the returned path, and verify that the required source marker exists.
+- `scripts/check_mudblazor_source.py` - Invoke `inspect-dependency-source resolve MudBlazor --ref 9.0.0 --json`, validate the returned path, and verify that the required source marker exists.
 - `scripts/sync_mud_css_variables.py` - Initialize/update real MudBlazor CSS variable JSON into `.tmp/monica-ui-development/mudblazor-css-variables.json`.
 - `scripts/validate_mud_css_variables.py` - Validate MudBlazor variable usage in CSS/Razor files and apply safe auto-fixes using the generated `.tmp` variable list by default.
 - `scripts/font_downloader.py` - Download fonts for offline WOFF2 usage.

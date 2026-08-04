@@ -1,118 +1,118 @@
 ---
 name: monica-third-party-module-development
-description: Create, modernize, validate, package, or publish independent Monica module libraries. Use when building a third-party Monica NuGet package, choosing a publisher-first package ID, placing multiple Monica modules in one package, assigning string ModuleKey values, creating infrastructure/web/UI/mixed modules, applying the Monica compatibility mark, selecting an open-source or commercial license, preparing NuGet metadata and CI, or migrating an older library into the Monica ecosystem.
+description: Create, modernize, validate, package, containerize, or publish independent Monica extension repositories. Use when building one or several publisher-owned Monica NuGet packages, separating capability/provider/UI packages, assigning module keys and cross-package dependencies, pairing a provider connector with CPU or NVIDIA OCI images, applying ecosystem branding, preparing CI/release automation, or migrating an older third-party module repository.
 ---
 
 # Monica Third-Party Module Development
 
-Build independent Monica packages against one versioned ecosystem contract. Treat a NuGet package as a distribution boundary and a Monica module as a runtime capability: one package may contain one or many coherent modules.
+Build independent packages and companion images from one explicit repository contract. Treat a NuGet package as a distribution boundary, a Monica module as a runtime capability, and an OCI repository as an independently runnable provider-service boundary.
 
 ## Required companion skills
 
-- Use `$monica-architecture` for project layout and module boundaries.
-- Use `$monica-development` for module registration, Guide methods, Facades, and services.
-- Use `$monica-ui-development`, `$monica-ui-audit`, and `$monica-ui-localization` for UI modules.
+- Use `$monica-architecture` for package and module boundaries.
+- Use `$monica-development` for registration, Guide methods, providers, Facades, and services.
+- Use `$monica-ui-development`, `$monica-ui-audit`, and `$monica-ui-localization` for UI packages.
 - Use `$monica-unit-testing` for tests.
-- Use `$monica-docs-authoring` only when changing Monica.Docs itself.
-- Use `$monica-ui-bridge-debug` and `$playwright-cli` when a UI package needs a runnable verification host.
+- Use `$monica-docs-authoring` only when changing Monica.Docs.
+- Use `$monica-ui-bridge-debug` and `$playwright-cli` for runnable UI verification.
 
-`$monica-unit-testing` describes Monica's first-party `tests/Test.Monica.*` layout. Independently published packages intentionally override that one naming rule: use `tests/Test.<PackageId>` and make the generated `tests/README.md` the repository-local test authority. The host lifecycle, isolation, assertion, and WSL execution rules still apply.
+Independently published packages override Monica's first-party test naming rule: use one `tests/Test.<PackageId>` project per package. The host lifecycle, isolation, assertion, and WSL execution rules from `$monica-unit-testing` still apply.
 
 ## Workflow
 
-1. Inspect repository instructions, current status, license, project files, public APIs, and tests. Preserve unrelated user work.
-2. Collect the package contract before generating files:
-   - publisher ID and package family name
-   - display authors and NuGet owner, description, project and support/security URLs, plus a repository URL when a source provider is configured
-   - target framework and minimum Monica version
-   - every module name, runtime kind, registration method, key, and dependency
-   - explicit source availability and provider
-   - license, open-source declaration, and public/private distribution model
-   - package icon choice, open-source badge choice, and publishing target
-3. Read [ecosystem-standard.md](references/ecosystem-standard.md). Reject IDs and module keys that do not comply.
-4. Select the architecture from [project-patterns.md](references/project-patterns.md). A package may contain multiple modules; keep each module registration unit in its own `Modules/Module{Name}.cs` file.
-5. For a new repository, write a manifest following [manifest-schema.md](references/manifest-schema.md), then run:
+1. Inspect repository instructions, status, license, projects, APIs, tests, and existing release automation. Preserve unrelated work.
+2. Collect the repository contract:
+   - durable publisher/repository identity and aligned release version
+   - every NuGet package ID, project path, description, tags, and package dependency
+   - every module name, kind, key, full-key dependency, and provider target
+   - optional OCI repository, companion connector package, build context, Dockerfile, bake targets, stages, platforms, accelerators, tag suffixes, provider-specific smoke commands, and managed NVIDIA runner labels
+   - Monica version, target framework, source visibility, license, branding, contacts, and publishing target
+3. Read [ecosystem-standard.md](references/ecosystem-standard.md) and reject invalid package/module identity.
+4. Read [project-patterns.md](references/project-patterns.md). Split packages only for real install, dependency, support, or release boundaries.
+5. Write schema-v2 `monica.manifest.json` from [manifest-schema.md](references/manifest-schema.md), then run:
 
    ```bash
-   python scripts/scaffold_package.py --manifest <manifest.json> --output <repository-directory>
+   python scripts/scaffold_repository.py --manifest <manifest.json> --output <repository-directory>
    ```
 
-6. Implement the real capability. Do not publish a no-op module, placeholder behavior, TODO comments, fake providers, or sample secrets.
-7. Add sociable tests at the smallest honest boundary. Prove module composition with a Monica host when registration, options, dependencies, or UI integration matter.
-8. Validate source and package metadata:
+6. Implement the real capability. Do not publish scaffold shells, fake providers, placeholder services, TODO behavior, or sample secrets. OCI declarations generate the deterministic Bake contract and directory only; implement every declared Dockerfile before validation.
+7. Add sociable tests at the smallest honest boundary. Prove package references, module composition, provider selection, localization, and UI integration through real host composition.
+8. Validate source, package metadata, and optional OCI targets:
 
    ```bash
-   python scripts/validate_package.py --root <repository-directory>
+   python scripts/validate_repository.py --root <repository-directory>
+   python scripts/validate_localization.py --root <repository-directory> --strict  # UI only
+   python scripts/validate_oci.py --root <repository-directory>                   # OCI only
    ```
 
-   Generated repositories carry their own validator and packed-artifact inspector under `scripts/`. A release workflow that derives `PackageVersion` from a tag must pass that effective version through `--package-version`; this prevents a stable tag from bypassing prerelease Monica dependency rules.
+9. Restore the exact declared Monica NuGet version, then build, test, and pack one .NET process at a time under WSL using Windows paths. Do not replace Monica package references with local source-project switches. The repository validator rejects any `Monica.*` `PackageReference` whose resolved version differs from `monicaVersion`.
+10. Inspect the exact release artifact set and consume every package entry point from a clean local feed:
 
-9. Restore, build, test, pack, inspect the `.nupkg`, and consume it from a clean local feed. Use one `dotnet` build/test process at a time under WSL and pass Windows paths.
-10. Read [publishing.md](references/publishing.md), configure Trusted Publishing when available, and release an immutable SemVer version.
+   ```bash
+   python scripts/inspect_packages.py --root . --artifacts artifacts
+   python scripts/inspect_images.py --root .  # after local image builds
+   ```
 
-## Non-negotiable identity rules
+11. For NVIDIA targets, run an actual `docker run --gpus ...` recognition smoke test. Building a CUDA-tagged image or running `nvidia-smi` alone does not prove provider execution.
+12. Read [publishing.md](references/publishing.md), validate an immutable effective version, and publish only after all NuGet and OCI artifacts pass together.
 
-- Reserve `Monica.*` package IDs and the purple Monica logo for first-party packages.
-- Name a third-party package `<Publisher>.Monica.<Package>[.<Variant>]`.
-- Use only dot-separated ASCII letter-or-digit segments, begin every segment with a letter, and keep the ID at or below 100 characters.
-- Make `PackageId`, project name, assembly name, and root namespace identical.
-- Put third-party module types and `Add*` extensions in `<PackageId>.Modules`. Keep official Monica dependency guides in `Monica.Modules`.
-- Assign every module a unique string key that equals the package ID or starts with `<PackageId>.`.
-- Use a final `.UI` key segment for a third-party UI module.
-- End UI module type names with one exact `UI` suffix and give them a non-empty base name. Non-UI module names must not end in `UI`.
-- Give every UI module its own stable navigation category ID by removing only the final `.UI` segment from that module's key. Keep publisher identity in the category ID even though public routes omit it.
-- Register each UI module's category and pages together in one `RegisterUIComponents` block. Use the module-owned resource marker with `Navigation:Category`; the scaffold's primary page uses `Navigation:Title`, while additional pages use their own `Navigation:*` keys. Do not use the legacy `RegisterLocalizedComponent` API.
-- Keep module keys unique under ordinal case-insensitive comparison.
-- Do not encode license, maturity, or “community” status in the package ID.
+## Repository and dependency rules
 
-Examples:
+- Use manifest `schemaVersion: 2`; keep package ecosystem tags at `monica-ecosystem-v1`.
+- Give every package exactly one packable project at `src/<PackageId>/<PackageId>.csproj`.
+- Keep `PackageId`, project name, assembly name, and root namespace identical.
+- Declare the NuGet graph through package `packageDependencies` using full package IDs.
+- Preserve declared package/module casing in the repository contract. The scaffold resolves
+  case-insensitive dependency input to the owning declaration before emitting Linux-sensitive paths.
+- Declare the Monica runtime graph through module `dependsOn` using full module keys. Do not use repository-local module names as identities.
+- Back every cross-package module dependency with a package dependency.
+- Use `kind: provider` plus `providerFor` for a module implementing `IModuleProvider`; include the target key in `dependsOn`.
+- Never embed a sibling package assembly to avoid a dependency. The packed-artifact inspector rejects this.
+- Keep one aligned manifest version for all NuGet and OCI artifacts in a repository release.
 
-```text
-PackageId: Acme.Monica.Observability
-Module keys:
-  Acme.Monica.Observability.Logging
-  Acme.Monica.Observability.Tracing
-  Acme.Monica.Observability.UI
+## Identity and navigation
 
-PackageId: Tairitsua.Monica.GachaPool
-Module keys:
-  Tairitsua.Monica.GachaPool
-  Tairitsua.Monica.GachaPool.UI
-```
+- Reserve `Monica.*` and the purple Monica logo for first-party packages.
+- Name third-party packages `<Publisher>.Monica.<Package>[.<Variant>]` with dot-separated ASCII letter-or-digit segments and at most 100 characters.
+- Keep all packages in one repository under the same publisher segment.
+- Put package-owned module types and registration extensions in `<PackageId>.Modules`; official Monica dependency Guides remain in `Monica.Modules`.
+- Make every module key equal its owning package ID or start with `<PackageId>.`.
+- Use a final `.UI` package/key segment for a separately distributed UI package.
+- Derive a UI category ID by removing only the module key's final `.UI` segment.
+- Register each UI category and its pages in one `RegisterUIComponents` block with the module-owned resource marker.
+- Derive public routes from the package family without `<Publisher>.Monica.` or a distribution-only final `.UI`: `Tairitsua.Monica.GachaPool` uses `/gacha-pool`; `Tairitsua.Monica.AI.OCR.UI` uses `/ai-ocr`.
+- Keep public routes under the package-family prefix; the host route namespace is shared and duplicate normalized routes fail fast.
 
-## Branding
+## OCI contract
 
-- Copy [monica-compatibility-mark.svg](assets/monica-compatibility-mark.svg) or [monica-compatibility-mark.png](assets/monica-compatibility-mark.png) when the publisher wants the Monica Compatibility Mark.
-- An open-source publisher may explicitly request the README-only [monica-open-source-badge.svg](assets/monica-open-source-badge.svg) when the manifest declares `license.openSource=true` and a NuGet-accepted SPDX `PackageLicenseExpression`. Never infer open-source status merely from the presence of an expression. The badge is not a package icon and does not change package identity.
-- A publisher-owned icon is equally valid.
-- Keep Monica's official purple `#512BD4` package mark first-party only. The supplied emerald mark is the one approved compatibility colorway: use that asset unchanged instead of recoloring the official file or creating another color or geometry variant.
-- Include this notice when using the compatibility mark:
+- Model one OCI repository once and list its CPU/GPU variants as bake targets; do not create a second repository merely for acceleration.
+- Make every OCI image name one connector package that owns a `kind: provider` module through `companionPackageId`.
+- Keep context, Dockerfile, runtime stage, platform, accelerator, and tag suffix explicit.
+- Derive immutable tags as `<manifest-version>-<tag-suffix>`.
+- Use one Dockerfile DAG so targets share base, dependency, application, and model layers before diverging into CPU/NVIDIA runtime stages.
+- Pin base images and dependency/model inputs. Run as non-root, declare a health check, and emit OCI version/source/revision plus Monica companion-package/accelerator labels.
+- Make NVIDIA images fail fast when GPU execution is requested but unavailable unless the product explicitly documents CPU fallback.
+- Add `releaseGates` only after provider-specific CPU/NVIDIA smoke scripts exist. Every CPU target requires `cpuSmokeCommand`; every NVIDIA target requires `nvidiaSmokeCommand` plus shared `managedNvidiaRunnerLabels` containing `self-hosted` and `nvidia`.
+- Treat missing release gates as fail-closed: the scaffold omits the entire publish workflow for a release unit containing OCI images. With complete gates, it loads and inspects every image and runs meaningful CPU/NVIDIA provider inference before registry login or any artifact push.
 
-  > Monica compatibility is self-attested by the publisher. This community package is independently maintained and is not affiliated with, endorsed by, or supported by the Monica project.
+## Branding and licensing
 
-- Do not claim “official”, “certified”, or “verified”. The v1 mark is self-attested compatibility, not Monica approval.
-
-## Licensing and commercial use
-
-Read [licensing-and-commercial-use.md](references/licensing-and-commercial-use.md) whenever the package is proprietary, source-available, dual-licensed, paid, or distributed outside NuGet.org.
-
-- Let the publisher choose an open-source or proprietary license.
-- Configure exactly one of `PackageLicenseExpression` or `PackageLicenseFile`.
-- Do not silently choose a license for the developer.
-- Keep Monica's MIT copyright and permission notice with copied Monica source.
-- Treat NuGet.org as a public download feed, not a payment or entitlement system. Use a private feed for restricted paid binaries.
-- Do not generate or retain a NuGet.org publishing workflow for `private-feed` or `none` targets. CI automation follows the hosting provider, while Source Link and consumer-visible repository metadata additionally require `source.available=true`.
+- Copy the canonical emerald compatibility assets unchanged or use a publisher-owned icon.
+- Add the open-source badge only when `license.openSource=true` and a NuGet SPDX expression is declared.
+- Include the compatibility self-attestation and independence notice when using the mark.
+- Never claim official, certified, verified, endorsed, or supported status.
+- Let the publisher choose open-source, proprietary, dual, free, or paid distribution. Read [licensing-and-commercial-use.md](references/licensing-and-commercial-use.md) for nonstandard licensing or restricted feeds.
 
 ## Completion gate
 
-Do not describe a package as ready until all applicable checks pass:
+Do not describe a repository as ready until all applicable checks pass:
 
-- package, assembly, namespace, module-key, and module-dependency alignment
-- XML documentation for public/developer-facing APIs
-- no warnings in restore/build/test/pack
-- synchronized `zh-CN` and `en-US` resources for UI packages
-- theme-token and responsive UI validation
-- package icon, README, license, symbols, and ecosystem tags, plus repository metadata and Source Link when source is consumer-accessible
-- local-feed restore and a clean consumer host registration test
-- prerelease package version when any Monica dependency is prerelease
-- no secrets, local absolute paths, or unpublished project references in the packed artifact
+- manifest-to-project and project-to-package bijection
+- package, assembly, namespace, module-key, module/provider, and dependency-graph alignment
+- exact manifest-declared Monica NuGet restore with no version drift or local source override
+- XML documentation and zero warnings for restore/build/test/pack
+- synchronized `zh-CN`/`en-US`, theme-token, responsive, bridge, and browser checks for UI packages
+- exact `.nupkg`/`.snupkg` set, internal nuspec dependencies, README/icon/license/symbol metadata, and clean consumers
+- no sibling assemblies, secrets, machine paths, or source-project references in packages
+- exact Bake targets and `group.default`, image platform/labels, non-root user, health check, CPU smoke, and real GPU OCR smoke for OCI releases
+- prerelease extension version whenever any Monica dependency is prerelease

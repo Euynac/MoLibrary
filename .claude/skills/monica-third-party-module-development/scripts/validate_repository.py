@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Validate a repository against Monica Ecosystem Standard v1."""
+"""Validate a multi-package repository against Monica Ecosystem Standard v1."""
 
 from __future__ import annotations
 
@@ -19,6 +19,9 @@ PACKAGE_ID_PATTERN = re.compile(
     rf"^(?P<publisher>{ID_SEGMENT})\.Monica\.{ID_SEGMENT}(?:\.{ID_SEGMENT})*$"
 )
 MODULE_KEY_PATTERN = PACKAGE_ID_PATTERN
+MODULE_NAME_PATTERN = re.compile(r"^[A-Za-z][A-Za-z0-9]*$")
+MODULE_KINDS = {"infrastructure", "web", "ui", "provider"}
+RUNNER_LABEL_PATTERN = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]*$")
 MODULE_ATTRIBUTE_PATTERN = re.compile(
     r'\[ModuleKey\(\s*"(?P<key>[^"]+)"\s*\)\]\s*'
     r'(?:public\s+|internal\s+|sealed\s+|abstract\s+|partial\s+)*'
@@ -75,6 +78,9 @@ class ModuleDeclaration:
     class_name: str
     namespace: str
     path: Path
+    implements_provider: bool
+    provides_for: str | None
+    dependency_guides: tuple[str, ...]
 
 
 @dataclass(frozen=True)
@@ -88,15 +94,9 @@ class Invocation:
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Validate third-party Monica package identity, metadata, and module keys."
+        description="Validate a complete third-party Monica repository and every declared package."
     )
     parser.add_argument("--root", required=True, type=Path, help="Repository root.")
-    parser.add_argument(
-        "--project",
-        action="append",
-        type=Path,
-        help="Packable project path relative to root. Repeat for multiple projects.",
-    )
     parser.add_argument(
         "--package-version",
         help="Effective package version, such as a release-tag-derived PackageVersion override.",
@@ -183,29 +183,44 @@ def package_references(root: Path, project: Path) -> dict[str, PackageReference]
     if central:
         xml_root = read_xml(central)
         if xml_root is not None:
+            central_properties = dict(properties)
+            for group in xml_root.findall("PropertyGroup"):
+                if group.get("Condition"):
+                    continue
+                for element in group:
+                    if element.get("Condition") or element.text is None:
+                        continue
+                    central_properties[element.tag] = expand(element.text, central_properties)
+            for key, value in list(central_properties.items()):
+                central_properties[key] = expand(value, central_properties)
             for item in xml_root.findall(".//PackageVersion"):
                 package = item.get("Include") or item.get("Update")
                 version = item.get("Version")
                 if package and version:
-                    central_versions[package] = expand(version, properties)
+                    central_versions[package.casefold()] = expand(version, central_properties)
 
     references: dict[str, PackageReference] = {}
     xml_root = read_xml(project)
     if xml_root is not None:
         for item in xml_root.findall(".//PackageReference"):
             package = item.get("Include") or item.get("Update")
-            version = item.get("Version") or (item.findtext("Version") or "")
+            version = (
+                item.get("VersionOverride")
+                or (item.findtext("VersionOverride") or "")
+                or item.get("Version")
+                or (item.findtext("Version") or "")
+            )
             private_assets = item.get("PrivateAssets") or (item.findtext("PrivateAssets") or "")
             if package:
                 references[package] = PackageReference(
-                    version=expand(version or central_versions.get(package, ""), properties),
+                    version=expand(version or central_versions.get(package.casefold(), ""), properties),
                     private_assets=private_assets,
                 )
     return references
 
 
-def load_package_contract(root: Path) -> dict[str, object] | None:
-    path = root / "package.manifest.json"
+def load_repository_contract(root: Path) -> dict[str, object] | None:
+    path = root / "monica.manifest.json"
     if not path.is_file():
         return None
     try:
@@ -278,11 +293,69 @@ def find_module_declarations(project: Path) -> list[ModuleDeclaration]:
         if any(part in {"bin", "obj"} for part in source.parts):
             continue
         text = source.read_text(encoding="utf-8-sig")
+        masked_text = mask_csharp_comments(text)
         namespace_match = NAMESPACE_PATTERN.search(text)
         namespace = namespace_match.group("namespace") if namespace_match else ""
         for match in MODULE_ATTRIBUTE_PATTERN.finditer(text):
+            opening_brace = masked_text.find("{", match.end())
+            closing_brace = (
+                find_matching_delimiter(masked_text, opening_brace, "{", "}")
+                if opening_brace >= 0
+                else None
+            )
+            header_end = opening_brace if opening_brace >= 0 else match.end()
+            header = text[match.end():header_end]
+            body = (
+                text[opening_brace + 1:closing_brace]
+                if opening_brace >= 0 and closing_brace is not None
+                else ""
+            )
+            provides_for_match = re.search(
+                r'\bProvidesFor\s*=>\s*"(?P<key>[^"]+)"\s*;',
+                mask_csharp_comments(body),
+            )
+            claim_body = ""
+            searchable_body = mask_csharp_non_code(body)
+            claim_match = re.search(r"\bClaimDependencies\s*\(", searchable_body)
+            if claim_match:
+                opening_parenthesis = searchable_body.find(
+                    "(", claim_match.start(), claim_match.end()
+                )
+                closing_parenthesis = find_matching_delimiter(
+                    mask_csharp_comments(body),
+                    opening_parenthesis,
+                    "(",
+                    ")",
+                )
+                if closing_parenthesis is not None:
+                    opening_method_brace = searchable_body.find("{", closing_parenthesis)
+                    closing_method_brace = (
+                        find_matching_delimiter(
+                            mask_csharp_comments(body),
+                            opening_method_brace,
+                            "{",
+                            "}",
+                        )
+                        if opening_method_brace >= 0
+                        else None
+                    )
+                    if opening_method_brace >= 0 and closing_method_brace is not None:
+                        claim_body = body[opening_method_brace + 1:closing_method_brace]
+            dependency_guides = tuple(
+                normalize_csharp_type(invocation.type_arguments[0])
+                for invocation in find_generic_invocations(claim_body, "DependsOnModule")
+                if len(invocation.type_arguments) == 1
+            )
             declarations.append(
-                ModuleDeclaration(match.group("key"), match.group("class"), namespace, source)
+                ModuleDeclaration(
+                    match.group("key"),
+                    match.group("class"),
+                    namespace,
+                    source,
+                    bool(re.search(r"\bIModuleProvider\b", header)),
+                    provides_for_match.group("key") if provides_for_match else None,
+                    dependency_guides,
+                )
             )
     return declarations
 
@@ -588,12 +661,10 @@ def localized_navigation_contract_errors(
     return list(dict.fromkeys(errors))
 
 
-def resolve_registered_route(project: Path, module_source: Path) -> tuple[str | None, str | None]:
-    module_text = module_source.read_text(encoding="utf-8-sig")
-    invocations = find_generic_invocations(module_text, "RegisterLocalizedPage")
-    if not invocations:
-        return None, "localized route registration was not found"
-    argument = invocation_argument(invocations[0], 0, "route")
+def resolve_route_argument(
+    project: Path,
+    argument: str | None,
+) -> tuple[str | None, str | None]:
     literal = csharp_string_value(argument)
     if literal is not None:
         return literal, None
@@ -626,6 +697,23 @@ def resolve_registered_route(project: Path, module_source: Path) -> tuple[str | 
     if not routes:
         return None, f"could not resolve constant route argument '{argument}' to a literal const string"
     return None, f"constant route argument '{argument}' resolves to multiple values: {', '.join(sorted(routes))}"
+
+
+def resolve_registered_routes(
+    project: Path,
+    module_source: Path,
+) -> list[tuple[str | None, str | None]]:
+    module_text = module_source.read_text(encoding="utf-8-sig")
+    invocations = find_generic_invocations(module_text, "RegisterLocalizedPage")
+    return [
+        resolve_route_argument(project, invocation_argument(invocation, 0, "route"))
+        for invocation in invocations
+    ]
+
+
+def resolve_registered_route(project: Path, module_source: Path) -> tuple[str | None, str | None]:
+    routes = resolve_registered_routes(project, module_source)
+    return routes[0] if routes else (None, "localized route registration was not found")
 
 
 def is_valid_semver(value: str) -> bool:
@@ -702,10 +790,11 @@ def validate_project(
     if project_url and not project_url.startswith("https://"):
         add("MTP006", "PackageProjectUrl must use HTTPS.")
 
-    contract = load_package_contract(root)
+    contract = load_repository_contract(root)
     source_available: bool | None = None
     source_provider: str | None = None
     contract_repository_url: str | None = None
+    contract_monica_version: str | None = None
     if contract is not None:
         source = contract.get("source")
         if isinstance(source, dict):
@@ -715,12 +804,14 @@ def validate_project(
             source_provider = provider.casefold() if isinstance(provider, str) else None
         repository = contract.get("repositoryUrl")
         contract_repository_url = repository if isinstance(repository, str) else None
+        monica_version = contract.get("monicaVersion")
+        contract_monica_version = monica_version if isinstance(monica_version, str) else None
 
     if source_available is True:
         if not repository_url:
             add("MTP029", "Source-available packages must emit RepositoryUrl package metadata.")
         elif contract_repository_url and repository_url != contract_repository_url:
-            add("MTP029", "RepositoryUrl package metadata must match package.manifest.json.")
+            add("MTP029", "RepositoryUrl package metadata must match monica.manifest.json.")
     elif source_available is False and (repository_url or repository_type):
         add(
             "MTP029",
@@ -810,7 +901,7 @@ def validate_project(
     if source_available is True:
         expected_source_link = SOURCE_LINK_PROVIDERS.get(source_provider or "")
         if expected_source_link is None:
-            add("MTP029", "A source-available package must declare a supported source provider in package.manifest.json.")
+            add("MTP029", "A source-available package must declare a supported source provider in monica.manifest.json.")
         elif expected_source_link not in source_link_references:
             add("MTP016", f"Source provider '{source_provider}' requires {expected_source_link}.")
     elif source_available is False:
@@ -826,6 +917,15 @@ def validate_project(
     for package, reference in references.items():
         if package.casefold().startswith("monica.") and not is_valid_semver(reference.version):
             add("MTP023", f"Monica dependency version '{package} {reference.version}' is not valid three-part SemVer.")
+        if (
+            package.casefold().startswith("monica.")
+            and contract_monica_version is not None
+            and reference.version != contract_monica_version
+        ):
+            add(
+                "MTP033",
+                f"Monica dependency '{package}' must use manifest monicaVersion '{contract_monica_version}', found '{reference.version}'.",
+            )
     prerelease_monica = [
         (package, reference.version)
         for package, reference in references.items()
@@ -907,19 +1007,22 @@ def validate_project(
                     + ".",
                     source,
                 )
-            registered_route, route_error = resolve_registered_route(project, source)
             route_prefix = package_route_prefix(package_id)
-            if registered_route is None:
-                add("MTP028", f"Could not verify {class_name} UI route: {route_error}.", source)
-            elif not (
-                registered_route == route_prefix
-                or registered_route.startswith(route_prefix + "-")
-            ):
-                add(
-                    "MTP027",
-                    f"UI route '{registered_route}' must equal '{route_prefix}' or start with '{route_prefix}-'.",
-                    source,
-                )
+            registered_routes = resolve_registered_routes(project, source)
+            if not registered_routes:
+                add("MTP028", f"Could not verify {class_name} UI route: localized route registration was not found.", source)
+            for registered_route, route_error in registered_routes:
+                if registered_route is None:
+                    add("MTP028", f"Could not verify {class_name} UI route: {route_error}.", source)
+                elif not (
+                    registered_route == route_prefix
+                    or registered_route.startswith(route_prefix + "-")
+                ):
+                    add(
+                        "MTP027",
+                        f"UI route '{registered_route}' must equal '{route_prefix}' or start with '{route_prefix}-'.",
+                        source,
+                    )
         elif class_suffix.casefold().endswith("ui"):
             add("MTP022", f"UI identity mismatch: {class_name} must use a final '.UI' key segment, and non-UI modules must not.", source)
 
@@ -934,6 +1037,541 @@ def validate_project(
     return [Finding("OK", f"{package_id} complies with Monica Ecosystem Standard v1.", relative_project)]
 
 
+def project_reference_ids(
+    root: Path,
+    project: Path,
+    package_by_project: dict[str, str],
+) -> set[str]:
+    xml_root = read_xml(project)
+    if xml_root is None:
+        return set()
+    result: set[str] = set()
+    for item in xml_root.findall(".//ProjectReference"):
+        include = item.get("Include")
+        if not include:
+            continue
+        candidate = (project.parent / include.replace("\\", "/")).resolve()
+        try:
+            relative = candidate.relative_to(root).as_posix().casefold()
+        except ValueError:
+            continue
+        package_id = package_by_project.get(relative)
+        if package_id:
+            result.add(package_id.casefold())
+    return result
+
+
+def graph_cycle(nodes: dict[str, set[str]]) -> list[str] | None:
+    visiting: list[str] = []
+    visited: set[str] = set()
+
+    def visit(node: str) -> list[str] | None:
+        if node in visited:
+            return None
+        if node in visiting:
+            return visiting[visiting.index(node):] + [node]
+        visiting.append(node)
+        for dependency in nodes.get(node, set()):
+            cycle = visit(dependency)
+            if cycle:
+                return cycle
+        visiting.pop()
+        visited.add(node)
+        return None
+
+    for node in nodes:
+        cycle = visit(node)
+        if cycle:
+            return cycle
+    return None
+
+
+def validate_repository_contract(
+    root: Path,
+    contract: dict[str, object] | None,
+    effective_package_version: str | None,
+) -> list[Finding]:
+    path = root / "monica.manifest.json"
+    findings: list[Finding] = []
+
+    def add(code: str, message: str, finding_path: Path = path) -> None:
+        findings.append(Finding(code, message, str(finding_path.relative_to(root))))
+
+    def reject_unknown(value: dict[str, object], allowed: set[str], context: str) -> None:
+        unknown = sorted(set(value) - allowed)
+        if unknown:
+            add("MTR032", f"{context} contains unsupported fields: {', '.join(unknown)}.")
+
+    if contract is None:
+        add("MTR001", "monica.manifest.json must contain a valid JSON object.")
+        return findings
+    if contract.get("schemaVersion") != 2:
+        add("MTR002", "Only repository manifest schemaVersion 2 is supported.")
+        return findings
+    reject_unknown(
+        contract,
+        {
+            "schemaVersion", "repositoryId", "solutionPath", "version", "authors", "nugetOwner",
+            "repositoryUrl", "projectUrl", "supportUrl", "securityUrl", "source", "distribution",
+            "publishing", "targetFramework", "monicaVersion", "license", "branding", "packages", "ociImages",
+        },
+        "Manifest",
+    )
+    nested_contracts = {
+        "source": {"available", "provider", "sourceLinkVersion"},
+        "publishing": {"target", "feedUrl"},
+        "license": {"openSource", "expression", "file"},
+        "branding": {"icon", "showOpenSourceBadge"},
+    }
+    for field, allowed in nested_contracts.items():
+        value = contract.get(field)
+        if not isinstance(value, dict):
+            add("MTR033", f"Manifest field '{field}' must be an object.")
+        else:
+            reject_unknown(value, allowed, field)
+    branding = contract.get("branding")
+    if isinstance(branding, dict):
+        icon = branding.get("icon")
+        if not isinstance(icon, dict):
+            add("MTR033", "branding.icon must be an object.")
+        else:
+            reject_unknown(icon, {"kind", "file"}, "branding.icon")
+
+    repository_id = contract.get("repositoryId")
+    solution_path = contract.get("solutionPath")
+    declared_version = contract.get("version")
+    if not isinstance(repository_id, str) or PACKAGE_ID_PATTERN.fullmatch(repository_id) is None:
+        add("MTR003", "repositoryId must follow <Publisher>.Monica.<Family>[.<Variant>].")
+    if not isinstance(solution_path, str) or not solution_path.endswith(".slnx"):
+        add("MTR004", "solutionPath must be a repository-relative .slnx path.")
+    elif not (root / solution_path).is_file():
+        add("MTR004", f"Declared solutionPath does not exist: {solution_path}.")
+    if not isinstance(declared_version, str) or not is_valid_semver(declared_version):
+        add("MTR005", "Manifest version must be valid three-part SemVer.")
+    monica_version = contract.get("monicaVersion")
+    if not isinstance(monica_version, str) or not is_valid_semver(monica_version):
+        add("MTR037", "Manifest monicaVersion must be valid three-part SemVer.")
+    package_version = effective_package_version or (declared_version if isinstance(declared_version, str) else "")
+
+    raw_packages = contract.get("packages")
+    if not isinstance(raw_packages, list) or not raw_packages:
+        add("MTR006", "packages must contain at least one package declaration.")
+        return findings
+
+    package_entries: dict[str, tuple[dict[str, object], Path]] = {}
+    package_by_project: dict[str, str] = {}
+    package_graph: dict[str, set[str]] = {}
+    module_entries: dict[str, tuple[str, dict[str, object]]] = {}
+    repository_publisher = (
+        repository_id.split(".", 1)[0].casefold()
+        if isinstance(repository_id, str) and "." in repository_id
+        else None
+    )
+    for raw in raw_packages:
+        if not isinstance(raw, dict):
+            add("MTR006", "Every package declaration must be an object.")
+            continue
+        reject_unknown(
+            raw,
+            {"packageId", "projectPath", "description", "capabilityTags", "packageDependencies", "modules"},
+            "Package declaration",
+        )
+        package_id = raw.get("packageId")
+        project_value = raw.get("projectPath")
+        if not isinstance(package_id, str) or PACKAGE_ID_PATTERN.fullmatch(package_id) is None:
+            add("MTR007", f"Invalid packageId in manifest: {package_id!r}.")
+            continue
+        folded_package = package_id.casefold()
+        if repository_publisher and package_id.split(".", 1)[0].casefold() != repository_publisher:
+            add("MTR007", f"Package '{package_id}' does not use repository publisher '{repository_publisher}'.")
+        if folded_package in package_entries:
+            add("MTR008", f"Duplicate packageId in manifest: {package_id}.")
+            continue
+        if not isinstance(project_value, str):
+            add("MTR009", f"Package '{package_id}' requires projectPath.")
+            continue
+        normalized_project = project_value.replace("\\", "/")
+        expected_project = f"src/{package_id}/{package_id}.csproj"
+        if normalized_project != expected_project:
+            add("MTR009", f"Package '{package_id}' projectPath must be '{expected_project}'.")
+        project = (root / normalized_project).resolve()
+        if not project.is_file():
+            add("MTR009", f"Declared package project does not exist: {normalized_project}.")
+        package_entries[folded_package] = (raw, project)
+        package_by_project[normalized_project.casefold()] = package_id
+
+        raw_dependencies = raw.get("packageDependencies", [])
+        if not isinstance(raw_dependencies, list) or not all(isinstance(item, str) for item in raw_dependencies):
+            add("MTR010", f"Package '{package_id}' packageDependencies must be a string array.")
+            dependencies: set[str] = set()
+        else:
+            dependencies = {item.casefold() for item in raw_dependencies}
+            if len(dependencies) != len(raw_dependencies):
+                add("MTR010", f"Package '{package_id}' contains duplicate packageDependencies.")
+        if folded_package in dependencies:
+            add("MTR010", f"Package '{package_id}' cannot depend on itself.")
+        package_graph[folded_package] = dependencies
+
+        raw_modules = raw.get("modules")
+        if not isinstance(raw_modules, list) or not raw_modules:
+            add("MTR011", f"Package '{package_id}' must declare at least one module.")
+            continue
+        for module in raw_modules:
+            if not isinstance(module, dict):
+                add("MTR011", f"Package '{package_id}' contains a non-object module declaration.")
+                continue
+            reject_unknown(module, {"name", "kind", "key", "dependsOn", "providerFor"}, "Module declaration")
+            key = module.get("key")
+            name = module.get("name")
+            kind = module.get("kind")
+            if not isinstance(name, str) or MODULE_NAME_PATTERN.fullmatch(name) is None:
+                add("MTR011", f"Module name {name!r} must begin with an ASCII letter and contain only letters or digits.")
+            if not isinstance(kind, str) or kind not in MODULE_KINDS:
+                add("MTR011", f"Module '{key}' kind must be one of: {', '.join(sorted(MODULE_KINDS))}.")
+            if not isinstance(key, str) or MODULE_KEY_PATTERN.fullmatch(key) is None:
+                add("MTR012", f"Package '{package_id}' contains invalid module key {key!r}.")
+                continue
+            folded_key = key.casefold()
+            if folded_key != folded_package and not folded_key.startswith(folded_package + "."):
+                add("MTR012", f"Module key '{key}' is not owned by package '{package_id}'.")
+            if folded_key in module_entries:
+                add("MTR013", f"Duplicate module key in repository manifest: {key}.")
+            module_entries[folded_key] = (folded_package, module)
+            is_ui_name = isinstance(name, str) and name.endswith("UI") and not name[:-2].casefold().endswith("ui")
+            is_ui_key = folded_key.endswith(".ui")
+            if kind == "ui" and (not is_ui_name or not is_ui_key):
+                add("MTR011", f"UI module '{key}' must use one exact UI name suffix and a final .UI key segment.")
+            elif kind != "ui" and (is_ui_name or is_ui_key):
+                add("MTR011", f"Non-UI module '{key}' must not use UI identity suffixes.")
+
+    declared_projects = set(package_by_project)
+    actual_projects = {
+        project.relative_to(root).as_posix().casefold()
+        for project in find_packable_projects(root)
+    }
+    for missing in sorted(declared_projects - actual_projects):
+        add("MTR014", f"Declared packable project was not discovered: {missing}.")
+    for extra in sorted(actual_projects - declared_projects):
+        add("MTR014", f"Undeclared packable project was discovered: {extra}.")
+
+    for package_id, dependencies in package_graph.items():
+        unknown = sorted(dependencies - set(package_entries))
+        if unknown:
+            add("MTR015", f"Package '{package_id}' depends on undeclared packages: {', '.join(unknown)}.")
+        raw_entry = package_entries.get(package_id)
+        if raw_entry is not None:
+            for dependency in raw_entry[0].get("packageDependencies", []):
+                canonical_entry = package_entries.get(str(dependency).casefold())
+                canonical_id = canonical_entry[0].get("packageId") if canonical_entry else None
+                if isinstance(canonical_id, str) and dependency != canonical_id:
+                    add(
+                        "MTR010",
+                        f"Package dependency '{dependency}' must preserve canonical casing '{canonical_id}'.",
+                    )
+    cycle = graph_cycle(package_graph)
+    if cycle:
+        add("MTR016", "Package dependency cycle: " + " -> ".join(cycle) + ".")
+
+    module_graph: dict[str, set[str]] = {}
+    for module_key, (owner_id, module) in module_entries.items():
+        raw_dependencies = module.get("dependsOn", [])
+        if not isinstance(raw_dependencies, list) or not all(isinstance(item, str) for item in raw_dependencies):
+            add("MTR017", f"Module '{module_key}' dependsOn must contain full module keys.")
+            dependencies = set()
+        else:
+            dependencies = {item.casefold() for item in raw_dependencies}
+            if len(dependencies) != len(raw_dependencies):
+                add("MTR017", f"Module '{module_key}' contains duplicate dependencies.")
+        unknown = sorted(dependencies - set(module_entries))
+        if unknown:
+            add("MTR017", f"Module '{module_key}' depends on undeclared keys: {', '.join(unknown)}.")
+        if isinstance(raw_dependencies, list):
+            for dependency in raw_dependencies:
+                canonical_entry = module_entries.get(str(dependency).casefold())
+                canonical_key = canonical_entry[1].get("key") if canonical_entry else None
+                if isinstance(canonical_key, str) and dependency != canonical_key:
+                    add(
+                        "MTR017",
+                        f"Module dependency '{dependency}' must preserve canonical casing '{canonical_key}'.",
+                    )
+        for dependency in dependencies & set(module_entries):
+            dependency_owner, _ = module_entries[dependency]
+            if dependency_owner != owner_id and dependency_owner not in package_graph.get(owner_id, set()):
+                add("MTR018", f"Module '{module_key}' crosses into '{dependency_owner}' without a package dependency.")
+        kind = module.get("kind")
+        provider_for = module.get("providerFor")
+        if kind == "provider":
+            if not isinstance(provider_for, str) or provider_for.casefold() not in dependencies:
+                add("MTR019", f"Provider module '{module_key}' must declare providerFor and include it in dependsOn.")
+            elif provider_for.casefold() not in module_entries:
+                add("MTR019", f"Provider module '{module_key}' targets an undeclared module.")
+            else:
+                canonical_provider_key = module_entries[provider_for.casefold()][1].get("key")
+                if provider_for != canonical_provider_key:
+                    add(
+                        "MTR019",
+                        f"Provider module '{module_key}' providerFor must preserve canonical casing '{canonical_provider_key}'.",
+                    )
+        elif provider_for is not None:
+            add("MTR019", f"Non-provider module '{module_key}' must not declare providerFor.")
+        module_graph[module_key] = dependencies
+    module_cycle = graph_cycle(module_graph)
+    if module_cycle:
+        add("MTR020", "Module dependency cycle: " + " -> ".join(module_cycle) + ".")
+
+    full_guide_to_key: dict[str, str] = {}
+    simple_guide_to_keys: dict[str, set[str]] = {}
+    for module_key, (owner_id, module) in module_entries.items():
+        module_name = module.get("name")
+        owner_entry = package_entries.get(owner_id)
+        if not isinstance(module_name, str) or owner_entry is None:
+            continue
+        owner_package_id = owner_entry[0].get("packageId")
+        if not isinstance(owner_package_id, str):
+            continue
+        simple_guide = f"Module{module_name}Guide"
+        full_guide = f"{owner_package_id}.Modules.{simple_guide}"
+        full_guide_to_key[full_guide.casefold()] = module_key
+        simple_guide_to_keys.setdefault(simple_guide.casefold(), set()).add(module_key)
+
+    def resolve_repository_guide(owner_id: str, guide_type: str) -> tuple[str | None, bool]:
+        normalized = normalize_csharp_type(guide_type).removeprefix("global::")
+        if "." in normalized:
+            return full_guide_to_key.get(normalized.casefold()), False
+        owner_entry = package_entries.get(owner_id)
+        owner_package_id = owner_entry[0].get("packageId") if owner_entry else None
+        if isinstance(owner_package_id, str):
+            local = full_guide_to_key.get(
+                f"{owner_package_id}.Modules.{normalized}".casefold()
+            )
+            if local is not None:
+                return local, False
+        candidates = simple_guide_to_keys.get(normalized.casefold(), set())
+        if len(candidates) == 1:
+            return next(iter(candidates)), False
+        return None, len(candidates) > 1
+
+    for package_id, (raw, project) in package_entries.items():
+        if not project.is_file():
+            continue
+        actual_dependencies = project_reference_ids(root, project, package_by_project)
+        expected_dependencies = package_graph.get(package_id, set())
+        if actual_dependencies != expected_dependencies:
+            add(
+                "MTR021",
+                f"Project references for '{package_id}' must match packageDependencies; "
+                f"expected {sorted(expected_dependencies)}, found {sorted(actual_dependencies)}.",
+                project,
+            )
+        manifest_modules = {
+            str(module.get("key")).casefold(): f"Module{module.get('name')}"
+            for module in raw.get("modules", [])
+            if isinstance(module, dict) and isinstance(module.get("key"), str)
+        }
+        declarations = find_module_declarations(project)
+        source_modules = {
+            declaration.key.casefold(): declaration.class_name
+            for declaration in declarations
+        }
+        if manifest_modules != source_modules:
+            add(
+                "MTR022",
+                f"Source module declarations for '{package_id}' do not match monica.manifest.json.",
+                project,
+            )
+        manifest_modules_by_key = {
+            str(module.get("key")).casefold(): module
+            for module in raw.get("modules", [])
+            if isinstance(module, dict) and isinstance(module.get("key"), str)
+        }
+        for declaration in declarations:
+            module_key = declaration.key.casefold()
+            manifest_module = manifest_modules_by_key.get(module_key)
+            if manifest_module is None:
+                continue
+            expected_dependencies = {
+                dependency.casefold()
+                for dependency in manifest_module.get("dependsOn", [])
+                if isinstance(dependency, str)
+            }
+            actual_dependencies: set[str] = set()
+            ambiguous_guides: list[str] = []
+            for guide_type in declaration.dependency_guides:
+                dependency_key, ambiguous = resolve_repository_guide(package_id, guide_type)
+                if dependency_key is not None:
+                    actual_dependencies.add(dependency_key)
+                elif ambiguous:
+                    ambiguous_guides.append(guide_type)
+            if actual_dependencies != expected_dependencies or ambiguous_guides:
+                detail = (
+                    f"expected {sorted(expected_dependencies)}, found {sorted(actual_dependencies)}"
+                )
+                if ambiguous_guides:
+                    detail += f"; ambiguous guide types: {sorted(ambiguous_guides)}"
+                add(
+                    "MTR034",
+                    f"Source module dependencies for '{declaration.key}' do not match monica.manifest.json: {detail}.",
+                    declaration.path,
+                )
+
+            kind = manifest_module.get("kind")
+            provider_for = manifest_module.get("providerFor")
+            if kind == "provider":
+                if not declaration.implements_provider:
+                    add(
+                        "MTR035",
+                        f"Provider module '{declaration.key}' must implement IModuleProvider.",
+                        declaration.path,
+                    )
+                if not isinstance(provider_for, str) or declaration.provides_for != provider_for:
+                    add(
+                        "MTR035",
+                        f"Provider module '{declaration.key}' ProvidesFor must be the canonical key {provider_for!r}.",
+                        declaration.path,
+                    )
+            elif declaration.implements_provider or declaration.provides_for is not None:
+                add(
+                    "MTR035",
+                    f"Non-provider module '{declaration.key}' must not implement the provider contract.",
+                    declaration.path,
+                )
+        properties = load_properties(root, project)
+        if properties.get("Version") != declared_version:
+            add("MTR023", f"Project Version for '{package_id}' must match repository version '{declared_version}'.", project)
+        if properties.get("PackageDescription") != raw.get("description"):
+            add("MTR024", f"PackageDescription for '{package_id}' must match its manifest description.", project)
+
+    for candidate in [root / "Directory.Build.props", *root.rglob("*.csproj")]:
+        if candidate.is_file() and "MonicaSourceRoot" in candidate.read_text(encoding="utf-8-sig"):
+            add("MTR025", "Repository builds must consume versioned Monica NuGet packages, not MonicaSourceRoot project switches.", candidate)
+
+    raw_images = contract.get("ociImages", [])
+    if not isinstance(raw_images, list):
+        add("MTR026", "ociImages must be an array.")
+    else:
+        image_ids: set[str] = set()
+        repositories: set[str] = set()
+        bake_targets: set[str] = set()
+        resulting_tags: set[str] = set()
+        nvidia_runner_sets: set[frozenset[str]] = set()
+        for raw_image in raw_images:
+            if not isinstance(raw_image, dict):
+                add("MTR026", "Every OCI image declaration must be an object.")
+                continue
+            reject_unknown(
+                raw_image,
+                {
+                    "id", "repository", "companionPackageId", "contextPath", "dockerfilePath",
+                    "bakeFilePath", "targets", "releaseGates",
+                },
+                "OCI image declaration",
+            )
+            image_id = raw_image.get("id")
+            repository = raw_image.get("repository")
+            companion = raw_image.get("companionPackageId")
+            if not isinstance(image_id, str) or not isinstance(repository, str):
+                add("MTR026", "Every OCI image requires id and repository.")
+                continue
+            if image_id.casefold() in image_ids or repository.casefold() in repositories:
+                add("MTR027", f"Duplicate OCI image identity or repository: {image_id} / {repository}.")
+            image_ids.add(image_id.casefold())
+            repositories.add(repository.casefold())
+            companion_entry = package_entries.get(companion.casefold()) if isinstance(companion, str) else None
+            if companion_entry is None:
+                add("MTR028", f"OCI image '{image_id}' companionPackageId is undeclared.")
+            elif not any(
+                isinstance(module, dict) and module.get("kind") == "provider"
+                for module in companion_entry[0].get("modules", [])
+            ):
+                add(
+                    "MTR028",
+                    f"OCI image '{image_id}' companionPackageId must name a package that owns a provider module.",
+                )
+            for field in ("contextPath", "dockerfilePath", "bakeFilePath"):
+                value = raw_image.get(field)
+                if not isinstance(value, str) or not (root / value).exists():
+                    add("MTR029", f"OCI image '{image_id}' declared {field} does not exist: {value!r}.")
+                elif field == "bakeFilePath" and Path(value).parent != Path("."):
+                    add("MTR029", f"OCI image '{image_id}' bakeFilePath must be at the repository root.")
+            raw_targets = raw_image.get("targets")
+            if not isinstance(raw_targets, list) or not raw_targets:
+                add("MTR030", f"OCI image '{image_id}' requires at least one target.")
+                continue
+            target_accelerators: set[str] = set()
+            for target in raw_targets:
+                if not isinstance(target, dict):
+                    add("MTR030", f"OCI image '{image_id}' contains a non-object target.")
+                    continue
+                reject_unknown(target, {"bakeTarget", "stage", "platform", "accelerator", "tagSuffix"}, "OCI target")
+                bake_target = target.get("bakeTarget")
+                tag_suffix = target.get("tagSuffix")
+                stage = target.get("stage")
+                platform = target.get("platform")
+                accelerator = target.get("accelerator")
+                if not all(isinstance(value, str) and value for value in (bake_target, tag_suffix, stage, platform, accelerator)):
+                    add("MTR030", f"OCI image '{image_id}' target requires bakeTarget, stage, platform, accelerator, and tagSuffix.")
+                    continue
+                if platform not in {"linux/amd64", "linux/arm64"} or accelerator not in {"cpu", "nvidia"}:
+                    add("MTR030", f"OCI target '{bake_target}' has unsupported platform or accelerator.")
+                if accelerator == "nvidia" and platform != "linux/amd64":
+                    add("MTR030", f"NVIDIA OCI target '{bake_target}' must use linux/amd64.")
+                target_accelerators.add(accelerator)
+                resulting_tag = f"{repository}:{package_version}-{tag_suffix}".casefold()
+                if bake_target.casefold() in bake_targets or resulting_tag in resulting_tags:
+                    add("MTR031", f"Duplicate OCI bake target or resulting tag: {bake_target}.")
+                bake_targets.add(bake_target.casefold())
+                resulting_tags.add(resulting_tag)
+
+            release_gates = raw_image.get("releaseGates")
+            if release_gates is None:
+                continue
+            if not isinstance(release_gates, dict):
+                add("MTR036", f"OCI image '{image_id}' releaseGates must be an object.")
+                continue
+            reject_unknown(
+                release_gates,
+                {"cpuSmokeCommand", "nvidiaSmokeCommand", "managedNvidiaRunnerLabels"},
+                "OCI release gates",
+            )
+            cpu_command = release_gates.get("cpuSmokeCommand")
+            nvidia_command = release_gates.get("nvidiaSmokeCommand")
+            labels = release_gates.get("managedNvidiaRunnerLabels", [])
+            if "cpu" in target_accelerators:
+                if not isinstance(cpu_command, str) or not cpu_command.strip() or any(
+                    marker in cpu_command for marker in ("\n", "\r", "\0")
+                ):
+                    add("MTR036", f"OCI image '{image_id}' CPU targets require a single-line cpuSmokeCommand.")
+            elif cpu_command is not None:
+                add("MTR036", f"OCI image '{image_id}' has a CPU smoke command but no CPU target.")
+            if "nvidia" in target_accelerators:
+                if not isinstance(nvidia_command, str) or not nvidia_command.strip() or any(
+                    marker in nvidia_command for marker in ("\n", "\r", "\0")
+                ):
+                    add("MTR036", f"OCI image '{image_id}' NVIDIA targets require a single-line nvidiaSmokeCommand.")
+                labels_are_valid = isinstance(labels, list) and all(
+                    isinstance(label, str) and RUNNER_LABEL_PATTERN.fullmatch(label)
+                    for label in labels
+                )
+                folded_labels = [label.casefold() for label in labels] if labels_are_valid else []
+                if not labels_are_valid:
+                    add("MTR036", f"OCI image '{image_id}' managedNvidiaRunnerLabels are invalid.")
+                elif "self-hosted" not in folded_labels or "nvidia" not in folded_labels:
+                    add(
+                        "MTR036",
+                        f"OCI image '{image_id}' NVIDIA gates require self-hosted and nvidia runner labels.",
+                    )
+                elif len(set(folded_labels)) != len(folded_labels):
+                    add("MTR036", f"OCI image '{image_id}' managedNvidiaRunnerLabels contain duplicates.")
+                else:
+                    nvidia_runner_sets.add(frozenset(folded_labels))
+            elif nvidia_command is not None or "managedNvidiaRunnerLabels" in release_gates:
+                add("MTR036", f"OCI image '{image_id}' has NVIDIA release gates but no NVIDIA target.")
+        if len(nvidia_runner_sets) > 1:
+            add("MTR036", "All NVIDIA OCI release gates must use the same managed runner labels.")
+
+    return findings
+
+
 def main() -> int:
     args = parse_args()
     root = args.root.resolve()
@@ -944,10 +1582,7 @@ def main() -> int:
         print(f"Invalid --package-version: {args.package_version}", file=sys.stderr)
         return 2
 
-    if args.project:
-        projects = [(root / project).resolve() if not project.is_absolute() else project.resolve() for project in args.project]
-    else:
-        projects = find_packable_projects(root)
+    projects = find_packable_projects(root)
 
     missing = [project for project in projects if not project.is_file()]
     if missing:
@@ -958,11 +1593,13 @@ def main() -> int:
         print("No packable third-party Monica project was found.", file=sys.stderr)
         return 2
 
-    results = [
+    contract = load_repository_contract(root)
+    results = validate_repository_contract(root, contract, args.package_version)
+    results.extend(
         finding
         for project in projects
         for finding in validate_project(root, project, args.package_version)
-    ]
+    )
     failures = [finding for finding in results if finding.code != "OK"]
 
     if args.json:
