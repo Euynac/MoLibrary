@@ -551,6 +551,19 @@ class AgentSkillInfrastructureTests(unittest.TestCase):
     def test_release_catalog_and_index_bytes_match_archive_and_digests(self) -> None:
         with tempfile.TemporaryDirectory() as temporary_directory:
             staging = Path(temporary_directory)
+            empty_index = staging / "empty-index.json"
+            empty_index.write_text(
+                json.dumps(
+                    {
+                        "$schema": "./schemas/agent-skill-index.schema.json",
+                        "schemaVersion": 2,
+                        "channels": {"stable": None, "preview": None},
+                        "versions": {},
+                        "releases": {},
+                    }
+                ),
+                encoding="utf-8",
+            )
             args = SimpleNamespace(
                 version="9.9.9-rc.1",
                 tag="v9.9.9-rc.1",
@@ -560,11 +573,12 @@ class AgentSkillInfrastructureTests(unittest.TestCase):
                 previous_index=None,
                 previous_tag=None,
             )
-            release.build_payload(
-                staging,
-                args,
-                datetime(2026, 8, 5, tzinfo=timezone.utc),
-            )
+            with mock.patch.object(release, "INDEX_PATH", empty_index):
+                release.build_payload(
+                    staging,
+                    args,
+                    datetime(2026, 8, 5, tzinfo=timezone.utc),
+                )
             index = json.loads((staging / "agent-skill-index.json").read_text(encoding="utf-8"))
             manifest = json.loads((staging / "agent-skill-manifest.json").read_text(encoding="utf-8"))
             self.assertEqual(2, index["schemaVersion"])
