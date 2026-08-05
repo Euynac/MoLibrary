@@ -3,10 +3,11 @@
   "schemaVersion": 2,
   "channels": {
     "stable": null,
-    "preview": "v1.0.0-rc.7"
+    "preview": "v1.0.0-rc.8"
   },
   "versions": {
-    "1.0.0-rc.7": "v1.0.0-rc.7"
+    "1.0.0-rc.7": "v1.0.0-rc.7",
+    "1.0.0-rc.8": "v1.0.0-rc.8"
   },
   "releases": {
     "v1.0.0-rc.7": {
@@ -87,6 +88,85 @@
       "assetBaseUrl": "https://github.com/Tairitsua/Monica/releases/download/v1.0.0-rc.7",
       "catalogUrl": "https://github.com/Tairitsua/Monica/releases/download/v1.0.0-rc.7/agent-skill-catalog.json",
       "manifestUrl": "https://github.com/Tairitsua/Monica/releases/download/v1.0.0-rc.7/agent-skill-manifest.json"
+    },
+    "v1.0.0-rc.8": {
+      "monicaVersion": "1.0.0-rc.8",
+      "tag": "v1.0.0-rc.8",
+      "commit": "1325ee48269c12389807c27462009e7848145abb",
+      "catalogDigest": "sha256:93c8530d91e227f596c10c8f85a6dcf7fc1e0aec27bc33e6d23dbb7241f4066f",
+      "skillTreeDigest": "sha256:0d0c3462acb026c17ec668b518115c68fd191a4b6c2587327bce0f9505396422",
+      "skillDigestAlgorithm": "sha256-file-manifest-v1",
+      "skillDigests": {
+        "monica-application": "sha256:89ad613838bf7511f2b9f667bddc5aab786b3eb1895ad4e80a3230b84109df67",
+        "monica-application-microservice": "sha256:ef3c32461857ed42e6b9c825c50ca2a39b2af297caf4f1cdd682090b874d5643",
+        "monica-application-modular-monolith": "sha256:2d611a8ae64a3aba3f8a01580cdd6e4c96e1914047e1d2540fb32da57e6b172b",
+        "monica-application-project-unit-development": "sha256:ccdfea8022d66f0998c5a814a59258c305bc2b77e752e949839cf75f502e9c8f",
+        "monica-application-unit-testing": "sha256:b4d73b7ea6c5c77b74cfee681c6c712a05558ba5021e6a83643fbb7851af8637",
+        "monica-architecture": "sha256:712566085f4a0c0b7a99ebd79f553f79bb78ac7a8c7907de31be30bab425050d",
+        "monica-contribution": "sha256:cfd93a70527b33394a415751a4b97d294d51474ac3a6e74c68fbe1ab2a56c76e",
+        "monica-development": "sha256:441cb993d99b7d1629b9349173ad33f1c592d8d92d7071aa4f0acfecb8ea9f56",
+        "monica-docs-authoring": "sha256:c7cb8058cf23db55cc1336414f0369b71ab2513789893bb44231fc93ee58d85f",
+        "monica-framework": "sha256:2193ebf4f0c7021e69fd6ee1d0ced5251dcb2ca63bd0fca6ef034eb4c379d4c7",
+        "monica-guide": "sha256:e544cb4ac649c8e03f7743669c30f0f68994033de42e150b8cf3538fd17ad753",
+        "monica-opentelemetry": "sha256:55e88151ec544f2e297691e0d9f8bff531563330fee0da7f2b271756505002ae",
+        "monica-requirement-design": "sha256:87f25d9b2d524c4c29b8b991c4591c94301d4add8a5d5629b36e54ea086c3094",
+        "monica-third-party-module-development": "sha256:597f9c850c145d117c8f04501f5cac24b12331b063d478a18fd5059330a2ca10",
+        "monica-ui-audit": "sha256:fa9f9c7eba7afa4c4639cf2aaef41e56e5a1efed7fc87e8a18303297ab27a4f4",
+        "monica-ui-bridge-debug": "sha256:5c4fb3ef7822c190a1bf95e2ed4ac8360137bb747e3b3bc8e998f85c529ec61c",
+        "monica-ui-design": "sha256:122fdce70e79a03eab69e4a869785f1b69ba3ea78b52353527ca6579d8f93f08",
+        "monica-ui-development": "sha256:6fd6a482eb39bf4b3801368c69d91941bb4425a8b83a78d63ddb8a5651592b5c",
+        "monica-ui-localization": "sha256:ef3a38e126fc1cdeae7ca726db586803e4059af3dd3db6233d6c18b8912ce322",
+        "monica-unit-testing": "sha256:6dc951f247db7003a65d9629f24da9d63fb74a1d20683bf4edf537ca0c2752c5"
+      },
+      "skillRevisions": {
+        "monica-application": 1,
+        "monica-application-microservice": 1,
+        "monica-application-modular-monolith": 1,
+        "monica-application-project-unit-development": 1,
+        "monica-application-unit-testing": 1,
+        "monica-architecture": 1,
+        "monica-contribution": 1,
+        "monica-development": 1,
+        "monica-docs-authoring": 1,
+        "monica-framework": 1,
+        "monica-guide": 2,
+        "monica-opentelemetry": 1,
+        "monica-requirement-design": 1,
+        "monica-third-party-module-development": 2,
+        "monica-ui-audit": 1,
+        "monica-ui-bridge-debug": 1,
+        "monica-ui-design": 1,
+        "monica-ui-development": 1,
+        "monica-ui-localization": 1,
+        "monica-unit-testing": 1
+      },
+      "skillLastChangedIn": {
+        "monica-application": "v1.0.0-rc.7",
+        "monica-application-microservice": "v1.0.0-rc.7",
+        "monica-application-modular-monolith": "v1.0.0-rc.7",
+        "monica-application-project-unit-development": "v1.0.0-rc.7",
+        "monica-application-unit-testing": "v1.0.0-rc.7",
+        "monica-architecture": "v1.0.0-rc.7",
+        "monica-contribution": "v1.0.0-rc.7",
+        "monica-development": "v1.0.0-rc.7",
+        "monica-docs-authoring": "v1.0.0-rc.7",
+        "monica-framework": "v1.0.0-rc.7",
+        "monica-guide": "v1.0.0-rc.8",
+        "monica-opentelemetry": "v1.0.0-rc.7",
+        "monica-requirement-design": "v1.0.0-rc.7",
+        "monica-third-party-module-development": "v1.0.0-rc.8",
+        "monica-ui-audit": "v1.0.0-rc.7",
+        "monica-ui-bridge-debug": "v1.0.0-rc.7",
+        "monica-ui-design": "v1.0.0-rc.7",
+        "monica-ui-development": "v1.0.0-rc.7",
+        "monica-ui-localization": "v1.0.0-rc.7",
+        "monica-unit-testing": "v1.0.0-rc.7"
+      },
+      "manifestDigest": "sha256:e0446ccef900020295ce2c6bb8a627400b1a99479ebdccc48b8d9807ea5e0a25",
+      "publishedAt": "2026-08-05T16:37:45+08:00",
+      "assetBaseUrl": "https://github.com/Tairitsua/Monica/releases/download/v1.0.0-rc.8",
+      "catalogUrl": "https://github.com/Tairitsua/Monica/releases/download/v1.0.0-rc.8/agent-skill-catalog.json",
+      "manifestUrl": "https://github.com/Tairitsua/Monica/releases/download/v1.0.0-rc.8/agent-skill-manifest.json"
     }
   }
 }
