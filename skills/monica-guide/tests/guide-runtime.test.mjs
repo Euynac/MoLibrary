@@ -930,13 +930,25 @@ test('Guide verification consumes the Python release builder manifest without di
   fs.rmSync(output, { recursive: true });
   t.after(() => fs.rmSync(output, { recursive: true, force: true }));
   const version = '9.8.7-guide.1';
+  const releaseIndex = JSON.parse(fs.readFileSync(INDEX_PATH, 'utf8'));
+  const latestRelease = Object.entries(releaseIndex.releases)
+    .map(([tag, release]) => ({ tag, publishedAt: Date.parse(release.publishedAt) }))
+    .sort((left, right) => left.publishedAt - right.publishedAt)
+    .at(-1);
+  const previousReleaseArguments = latestRelease
+    ? ['--previous-index', INDEX_PATH, '--previous-tag', latestRelease.tag]
+    : [];
+  const publishedAt = latestRelease
+    ? new Date(latestRelease.publishedAt + 1_000).toISOString()
+    : '2026-08-05T00:00:00Z';
   execFileSync(process.env.MONICA_GUIDE_PYTHON || 'python3', [
     path.join(REPOSITORY_ROOT, 'scripts', 'build_agent_skill_release.py'),
     '--version', version,
     '--tag', `v${version}`,
     '--commit', COMMIT,
     '--channel', 'preview',
-    '--published-at', '2026-08-05T00:00:00Z',
+    '--published-at', publishedAt,
+    ...previousReleaseArguments,
     '--output', output,
   ], { cwd: REPOSITORY_ROOT, stdio: 'pipe' });
   const catalog = JSON.parse(fs.readFileSync(path.join(output, 'agent-skill-catalog.json'), 'utf8'));
