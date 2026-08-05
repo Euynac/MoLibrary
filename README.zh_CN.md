@@ -135,7 +135,7 @@ Monica 自有 Skill 的唯一源码位于 `skills/`；`.claude/skills/` 与 `.ag
 - 框架入口：`monica-framework`、`monica-development`、`monica-architecture`、`monica-ui-development`、`monica-ui-design`、`monica-ui-audit`、`monica-docs-authoring`、`monica-requirement-design`、`monica-unit-testing`、`monica-ui-bridge-debug`
 - 第三方生态入口：`monica-third-party-module-development`，用于创建、校验、测试、打包和发布 `<Publisher>.Monica.<Package>` 包；一个 NuGet 包可以包含多个内聚模块
 - 基于 Monica 的应用系统入口：`monica-application`、`monica-application-microservice`、`monica-application-modular-monolith`、`monica-application-project-unit-development`
-- 外部配套 Skill（例如 `inspect-dependency-source`、`playwright-cli` 与 `supervise-subagents`）由各 Agent 环境单独安装和管理，Monica 的投影与更新流程不会改写它们
+- 外部配套 Skill（例如 `inspect-dependency-source` 与 `playwright-cli`）由各 Agent 环境单独安装和管理，Monica 的投影与更新流程不会改写它们
 
 第三方包不得使用官方 `Monica.*` 前缀与紫色 Logo。兼容标识、包命名和独立维护声明见 [BRANDING.md](BRANDING.md)，完整中英文规范见 [Monica.Docs](https://monica.dpdns.org/)。
 

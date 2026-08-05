@@ -1,4 +1,0 @@
-interface:
-  display_name: "Supervise Subagents"
-  short_description: "Make delegated agents visible and recoverable."
-  default_prompt: "Use $supervise-subagents to make delegated work visible, persist authoritative lifecycle and factual checkpoints, and expose the local supervision dashboard."

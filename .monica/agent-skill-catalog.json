@@ -254,7 +254,7 @@
         "required": ["monica-ui-development", "monica-ui-localization"],
         "recommended": ["monica-ui-audit"],
         "conditional": [],
-        "external": ["playwright-cli", "supervise-subagents"]
+        "external": ["playwright-cli"]
       }
     },
     "monica-ui-design": {
@@ -336,11 +336,6 @@
       "ownership": "external",
       "managed": false,
       "purpose": "Required for browser inspection and end-to-end UI verification."
-    },
-    "supervise-subagents": {
-      "ownership": "external",
-      "managed": false,
-      "purpose": "Optional lifecycle reporting for delegated workflows."
     }
   },
   "profiles": {
