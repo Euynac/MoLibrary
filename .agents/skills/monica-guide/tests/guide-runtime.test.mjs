@@ -20,6 +20,7 @@ const SKILLS_ROOT = path.dirname(SKILL_ROOT);
 const REPOSITORY_ROOT = path.dirname(SKILLS_ROOT);
 const CATALOG_PATH = path.join(SKILL_ROOT, 'assets', 'default-catalog.json');
 const INDEX_PATH = path.join(SKILL_ROOT, 'assets', 'default-index.json');
+const RELEASE_INDEX_PATH = path.join(REPOSITORY_ROOT, '.monica', 'agent-skill-index.json');
 const CATALOG_DIGEST = digest(fs.readFileSync(CATALOG_PATH));
 const COMMIT = 'a'.repeat(40);
 const TAG = 'v1.2.3';
@@ -929,14 +930,20 @@ test('Guide verification consumes the Python release builder manifest without di
   const output = fs.mkdtempSync(path.join(outputParent, 'guide-release-test-'));
   fs.rmSync(output, { recursive: true });
   t.after(() => fs.rmSync(output, { recursive: true, force: true }));
-  const version = '9.8.7-guide.1';
-  const releaseIndex = JSON.parse(fs.readFileSync(INDEX_PATH, 'utf8'));
+  const releaseIndex = JSON.parse(fs.readFileSync(RELEASE_INDEX_PATH, 'utf8'));
+  validateIndex(releaseIndex);
+  let sequence = 1;
+  let version;
+  do {
+    version = `9.8.7-guide.${sequence}`;
+    sequence += 1;
+  } while (Object.hasOwn(releaseIndex.versions, version));
   const latestRelease = Object.entries(releaseIndex.releases)
     .map(([tag, release]) => ({ tag, publishedAt: Date.parse(release.publishedAt) }))
     .sort((left, right) => left.publishedAt - right.publishedAt)
     .at(-1);
   const previousReleaseArguments = latestRelease
-    ? ['--previous-index', INDEX_PATH, '--previous-tag', latestRelease.tag]
+    ? ['--previous-index', RELEASE_INDEX_PATH, '--previous-tag', latestRelease.tag]
     : [];
   const publishedAt = latestRelease
     ? new Date(latestRelease.publishedAt + 1_000).toISOString()
