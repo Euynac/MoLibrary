@@ -117,13 +117,13 @@ public sealed class CommandHandlerApproveOrder : ApplicationService<CommandAppro
 
 `Monica.Framework.UI` exposes a first-tab status dashboard for the current host with unit distribution, dependency health, alerts, and independent metadata, description, ownership, and requirement coverage. The typed `/framework/units`, `/framework/units/dashboard`, and `/framework/units/{key}` APIs expose the same catalog without leaking reflection objects.
 
-The repository also ships agent skills under `.agents/skills/` and `.claude/skills/`. They encode the same module boundaries, ProjectUnit roles, UI rules, and testing conventions used by the framework itself.
+The canonical Monica-owned Agent Skills live under [`skills/`](skills/). Release tooling projects that tree byte-for-byte into `.agents/skills/` and `.claude/skills/` for repository-local discovery; those generated directories are not authoring sources. Start with `monica-guide` for setup and diagnostics, then continue through the profile-selected `monica-application`, `monica-framework`, and granular skills.
 
 ## Third-party ecosystem
 
 Independent packages use the publisher-first ID `<Publisher>.Monica.<Package>[.<Variant>]`; one NuGet package may contain any coherent number of infrastructure, provider, web, and UI modules. The official `Monica.*` prefix and purple logo remain reserved for first-party packages.
 
-Start with the [`monica-third-party-module-development`](.agents/skills/monica-third-party-module-development) skill to scaffold, validate, test, pack, and publish an independent package. The compatibility identity and usage rules are summarized in [BRANDING.md](BRANDING.md), with the complete bilingual guide in [Monica.Docs](https://monica.dpdns.org/).
+Start with the [`monica-third-party-module-development`](skills/monica-third-party-module-development) skill to scaffold, validate, test, pack, and publish an independent package. The compatibility identity and usage rules are summarized in [BRANDING.md](BRANDING.md), with the complete bilingual guide in [Monica.Docs](https://monica.dpdns.org/).
 
 ## Package maturity
 

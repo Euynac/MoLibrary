@@ -18,6 +18,7 @@ Use this skill as the entry point for work on Monica itself: infrastructure modu
 - Theme-first component compliance and hardcoded-style audits: use `$monica-ui-audit`.
 - Monica user documentation, module docs, guides, and zh-CN documentation: use `$monica-docs-authoring`.
 - Requirement gathering and architecture planning for Monica modules: use `$monica-requirement-design`.
+- OpenTelemetry-compatible meters, counters, histograms, gauges, diagnostic snapshots, or telemetry ownership: use `$monica-opentelemetry`.
 - Monica unit-test layout, shared test infrastructure, xUnit, or bUnit conventions: use `$monica-unit-testing`.
 - Bridge-based UI inspection through a runnable host: use `$monica-ui-bridge-debug`.
 

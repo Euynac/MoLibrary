@@ -1,0 +1,4 @@
+interface:
+  display_name: "Monica Application ProjectUnit Development"
+  short_description: "ProjectUnits and request-owned API contracts"
+  default_prompt: "Use $monica-application-project-unit-development to create or refine Monica-native DDD ProjectUnits and request-owned HTTP or RPC contracts."

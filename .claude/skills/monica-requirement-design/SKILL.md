@@ -1,7 +1,6 @@
 ---
 name: monica-requirement-design
 description: This skill should be used when the user asks to "brainstorm requirement", "refine requirement", "new requirement", "design requirement", "enter design phase", "create design", "design module", "requirement analysis", "需求分析", "需求完善", "进入设计阶段", "设计阶段", or needs guidance on requirement gathering, iterative requirement refinement, or architectural design planning for Monica modules.
-version: 1.0.0
 ---
 
 # Monica Requirement & Design Workflow

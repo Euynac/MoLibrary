@@ -1,0 +1,624 @@
+{
+  "$schema": "./schemas/agent-skill-catalog.schema.json",
+  "schemaVersion": 1,
+  "catalogVersion": "1.0.0",
+  "skills": {
+    "monica-guide": {
+      "path": "skills/monica-guide",
+      "role": "router",
+      "ownership": "monica",
+      "managed": true,
+      "routes": ["monica-application", "monica-framework", "monica-contribution"],
+      "dependencies": {
+        "required": [],
+        "recommended": ["monica-contribution"],
+        "conditional": [],
+        "external": ["inspect-dependency-source"]
+      }
+    },
+    "monica-contribution": {
+      "path": "skills/monica-contribution",
+      "role": "capability",
+      "ownership": "monica",
+      "managed": true,
+      "dependencies": {
+        "required": [],
+        "recommended": [],
+        "conditional": [],
+        "external": ["github", "microsoft-code-reference", "microsoft-docs"]
+      }
+    },
+    "monica-application": {
+      "path": "skills/monica-application",
+      "role": "router",
+      "ownership": "monica",
+      "managed": true,
+      "routes": [
+        "monica-application-microservice",
+        "monica-application-modular-monolith",
+        "monica-application-project-unit-development",
+        "monica-application-unit-testing"
+      ],
+      "dependencies": {
+        "required": [
+          "monica-application-microservice",
+          "monica-application-modular-monolith",
+          "monica-application-project-unit-development"
+        ],
+        "recommended": ["monica-application-unit-testing"],
+        "conditional": [
+          {
+            "capability": "ui",
+            "skills": ["monica-ui-development", "monica-ui-localization", "monica-ui-audit"]
+          }
+        ],
+        "external": []
+      }
+    },
+    "monica-application-microservice": {
+      "path": "skills/monica-application-microservice",
+      "role": "capability",
+      "ownership": "monica",
+      "managed": true,
+      "dependencies": {
+        "required": ["monica-application-project-unit-development"],
+        "recommended": ["monica-application-unit-testing"],
+        "conditional": [],
+        "external": []
+      }
+    },
+    "monica-application-modular-monolith": {
+      "path": "skills/monica-application-modular-monolith",
+      "role": "capability",
+      "ownership": "monica",
+      "managed": true,
+      "dependencies": {
+        "required": ["monica-application-project-unit-development"],
+        "recommended": ["monica-application-unit-testing"],
+        "conditional": [],
+        "external": []
+      }
+    },
+    "monica-application-project-unit-development": {
+      "path": "skills/monica-application-project-unit-development",
+      "role": "capability",
+      "ownership": "monica",
+      "managed": true,
+      "dependencies": {
+        "required": [],
+        "recommended": ["monica-application-unit-testing"],
+        "conditional": [],
+        "external": []
+      }
+    },
+    "monica-application-unit-testing": {
+      "path": "skills/monica-application-unit-testing",
+      "role": "capability",
+      "ownership": "monica",
+      "managed": true,
+      "dependencies": {
+        "required": [],
+        "recommended": [],
+        "conditional": [],
+        "external": ["microsoft-code-reference", "microsoft-docs"]
+      }
+    },
+    "monica-framework": {
+      "path": "skills/monica-framework",
+      "role": "router",
+      "ownership": "monica",
+      "managed": true,
+      "routes": [
+        "monica-architecture",
+        "monica-development",
+        "monica-docs-authoring",
+        "monica-opentelemetry",
+        "monica-requirement-design",
+        "monica-third-party-module-development",
+        "monica-ui-audit",
+        "monica-ui-bridge-debug",
+        "monica-ui-design",
+        "monica-ui-development",
+        "monica-ui-localization",
+        "monica-unit-testing"
+      ],
+      "dependencies": {
+        "required": ["monica-architecture", "monica-development", "monica-unit-testing"],
+        "recommended": ["monica-opentelemetry", "monica-requirement-design"],
+        "conditional": [
+          {
+            "capability": "ui",
+            "skills": [
+              "monica-ui-development",
+              "monica-ui-localization",
+              "monica-ui-audit",
+              "monica-ui-bridge-debug"
+            ]
+          },
+          {
+            "capability": "docs",
+            "skills": ["monica-docs-authoring"]
+          },
+          {
+            "capability": "design",
+            "skills": ["monica-ui-design"]
+          },
+          {
+            "capability": "extension",
+            "skills": ["monica-third-party-module-development"]
+          }
+        ],
+        "external": []
+      }
+    },
+    "monica-architecture": {
+      "path": "skills/monica-architecture",
+      "role": "capability",
+      "ownership": "monica",
+      "managed": true,
+      "dependencies": {
+        "required": [],
+        "recommended": ["monica-development"],
+        "conditional": [],
+        "external": []
+      }
+    },
+    "monica-development": {
+      "path": "skills/monica-development",
+      "role": "capability",
+      "ownership": "monica",
+      "managed": true,
+      "dependencies": {
+        "required": ["monica-architecture"],
+        "recommended": ["monica-unit-testing"],
+        "conditional": [],
+        "external": ["microsoft-code-reference", "microsoft-docs"]
+      }
+    },
+    "monica-docs-authoring": {
+      "path": "skills/monica-docs-authoring",
+      "role": "capability",
+      "ownership": "monica",
+      "managed": true,
+      "dependencies": {
+        "required": ["monica-architecture"],
+        "recommended": ["monica-application"],
+        "conditional": [],
+        "external": []
+      }
+    },
+    "monica-opentelemetry": {
+      "path": "skills/monica-opentelemetry",
+      "role": "capability",
+      "ownership": "monica",
+      "managed": true,
+      "dependencies": {
+        "required": ["monica-architecture", "monica-development"],
+        "recommended": ["monica-unit-testing"],
+        "conditional": [],
+        "external": ["microsoft-code-reference", "microsoft-docs"]
+      }
+    },
+    "monica-requirement-design": {
+      "path": "skills/monica-requirement-design",
+      "role": "capability",
+      "ownership": "monica",
+      "managed": true,
+      "dependencies": {
+        "required": [],
+        "recommended": ["monica-architecture"],
+        "conditional": [],
+        "external": []
+      }
+    },
+    "monica-third-party-module-development": {
+      "path": "skills/monica-third-party-module-development",
+      "role": "capability",
+      "ownership": "monica",
+      "managed": true,
+      "dependencies": {
+        "required": ["monica-architecture", "monica-development", "monica-unit-testing"],
+        "recommended": ["monica-docs-authoring"],
+        "conditional": [
+          {
+            "capability": "ui",
+            "skills": [
+              "monica-ui-development",
+              "monica-ui-localization",
+              "monica-ui-audit",
+              "monica-ui-bridge-debug"
+            ]
+          }
+        ],
+        "external": ["playwright-cli"]
+      }
+    },
+    "monica-ui-audit": {
+      "path": "skills/monica-ui-audit",
+      "role": "capability",
+      "ownership": "monica",
+      "managed": true,
+      "dependencies": {
+        "required": ["monica-ui-development"],
+        "recommended": ["monica-ui-localization"],
+        "conditional": [],
+        "external": []
+      }
+    },
+    "monica-ui-bridge-debug": {
+      "path": "skills/monica-ui-bridge-debug",
+      "role": "capability",
+      "ownership": "monica",
+      "managed": true,
+      "dependencies": {
+        "required": ["monica-ui-development", "monica-ui-localization"],
+        "recommended": ["monica-ui-audit"],
+        "conditional": [],
+        "external": ["playwright-cli", "supervise-subagents"]
+      }
+    },
+    "monica-ui-design": {
+      "path": "skills/monica-ui-design",
+      "role": "capability",
+      "ownership": "monica",
+      "managed": true,
+      "dependencies": {
+        "required": [],
+        "recommended": ["monica-ui-development"],
+        "conditional": [],
+        "external": []
+      }
+    },
+    "monica-ui-development": {
+      "path": "skills/monica-ui-development",
+      "role": "capability",
+      "ownership": "monica",
+      "managed": true,
+      "dependencies": {
+        "required": ["monica-architecture", "monica-development"],
+        "recommended": ["monica-ui-localization", "monica-ui-audit"],
+        "conditional": [],
+        "external": ["inspect-dependency-source", "microsoft-code-reference", "microsoft-docs"]
+      }
+    },
+    "monica-ui-localization": {
+      "path": "skills/monica-ui-localization",
+      "role": "capability",
+      "ownership": "monica",
+      "managed": true,
+      "dependencies": {
+        "required": ["monica-ui-development"],
+        "recommended": ["monica-ui-audit"],
+        "conditional": [],
+        "external": []
+      }
+    },
+    "monica-unit-testing": {
+      "path": "skills/monica-unit-testing",
+      "role": "capability",
+      "ownership": "monica",
+      "managed": true,
+      "dependencies": {
+        "required": [],
+        "recommended": [],
+        "conditional": [],
+        "external": ["microsoft-code-reference", "microsoft-docs"]
+      }
+    }
+  },
+  "externalSkills": {
+    "code-simplifier": {
+      "ownership": "external",
+      "managed": false,
+      "purpose": "Optional behavior-preserving cleanup after implementation."
+    },
+    "github": {
+      "ownership": "external",
+      "managed": false,
+      "purpose": "Optional GitHub issue, discussion, pull request, and duplicate-search integration."
+    },
+    "inspect-dependency-source": {
+      "ownership": "external",
+      "managed": false,
+      "purpose": "Required for verified immutable source resolution through resolve --json."
+    },
+    "microsoft-code-reference": {
+      "ownership": "external",
+      "managed": false,
+      "purpose": "Optional official Microsoft API and code-sample verification."
+    },
+    "microsoft-docs": {
+      "ownership": "external",
+      "managed": false,
+      "purpose": "Optional official Microsoft concept and platform documentation lookup."
+    },
+    "playwright-cli": {
+      "ownership": "external",
+      "managed": false,
+      "purpose": "Required for browser inspection and end-to-end UI verification."
+    },
+    "supervise-subagents": {
+      "ownership": "external",
+      "managed": false,
+      "purpose": "Optional lifecycle reporting for delegated workflows."
+    }
+  },
+  "profiles": {
+    "application": {
+      "description": "Build a Monica-based application without modifying the framework.",
+      "skills": {
+        "required": [
+          "monica-guide",
+          "monica-application",
+          "monica-application-microservice",
+          "monica-application-modular-monolith",
+          "monica-application-project-unit-development"
+        ],
+        "recommended": ["monica-application-unit-testing", "monica-contribution"],
+        "conditional": [
+          {
+            "capability": "ui",
+            "skills": ["monica-ui-development", "monica-ui-localization", "monica-ui-audit"]
+          }
+        ]
+      },
+      "source": {
+        "required": false,
+        "recommended": true,
+        "access": "read-only",
+        "repository": "Monica"
+      },
+      "repositories": [],
+      "inference": {
+        "repositoryIdentities": [],
+        "characteristicPaths": ["Directory.Packages.props", "AppHost", "Domains", "Services"]
+      }
+    },
+    "extension-author": {
+      "description": "Build independently released Monica extension packages that continue consuming Monica through NuGet.",
+      "skills": {
+        "required": [
+          "monica-guide",
+          "monica-framework",
+          "monica-architecture",
+          "monica-development",
+          "monica-third-party-module-development",
+          "monica-unit-testing"
+        ],
+        "recommended": ["monica-opentelemetry", "monica-docs-authoring", "monica-contribution"],
+        "conditional": [
+          {
+            "capability": "ui",
+            "skills": [
+              "monica-ui-development",
+              "monica-ui-localization",
+              "monica-ui-audit",
+              "monica-ui-bridge-debug"
+            ]
+          },
+          {
+            "capability": "design",
+            "skills": ["monica-requirement-design", "monica-ui-design"]
+          }
+        ]
+      },
+      "source": {
+        "required": true,
+        "recommended": true,
+        "access": "read-only",
+        "repository": "Monica"
+      },
+      "repositories": [],
+      "inference": {
+        "repositoryIdentities": [],
+        "characteristicPaths": ["monica.manifest.json", "src", "tests"]
+      }
+    },
+    "framework-contributor": {
+      "description": "Develop and test Monica framework source in a writable canonical checkout.",
+      "skills": {
+        "required": [
+          "monica-guide",
+          "monica-framework",
+          "monica-architecture",
+          "monica-development",
+          "monica-opentelemetry",
+          "monica-requirement-design",
+          "monica-unit-testing"
+        ],
+        "recommended": ["monica-docs-authoring", "monica-contribution"],
+        "conditional": [
+          {
+            "capability": "ui",
+            "skills": [
+              "monica-ui-development",
+              "monica-ui-localization",
+              "monica-ui-audit",
+              "monica-ui-bridge-debug",
+              "monica-ui-design"
+            ]
+          }
+        ]
+      },
+      "source": {
+        "required": true,
+        "recommended": true,
+        "access": "read-write",
+        "repository": "Monica"
+      },
+      "repositories": [
+        {
+          "repository": "Tairitsua/Monica",
+          "access": "read-write",
+          "purpose": "Framework implementation and tests."
+        }
+      ],
+      "inference": {
+        "repositoryIdentities": ["Tairitsua/Monica"],
+        "characteristicPaths": ["Monica.slnx", "Directory.Build.props", "eng", "skills"]
+      }
+    },
+    "docs-contributor": {
+      "description": "Author bilingual Monica documentation with a writable Monica.Docs checkout and exact read-only Monica source.",
+      "skills": {
+        "required": [
+          "monica-guide",
+          "monica-docs-authoring",
+          "monica-architecture",
+          "monica-application",
+          "monica-application-microservice",
+          "monica-application-modular-monolith",
+          "monica-application-project-unit-development"
+        ],
+        "recommended": ["monica-application-unit-testing", "monica-contribution"],
+        "conditional": [
+          {
+            "capability": "ui",
+            "skills": ["monica-ui-development", "monica-ui-localization", "monica-ui-audit"]
+          }
+        ]
+      },
+      "source": {
+        "required": true,
+        "recommended": true,
+        "access": "read-only",
+        "repository": "Monica"
+      },
+      "repositories": [
+        {
+          "repository": "Tairitsua/Monica.Docs",
+          "access": "read-write",
+          "purpose": "Bilingual website and documentation projection."
+        }
+      ],
+      "inference": {
+        "repositoryIdentities": ["Tairitsua/Monica.Docs"],
+        "characteristicPaths": ["docs/en-US", "docs/zh-CN", "frontend/monica-docs-web"]
+      }
+    }
+  },
+  "profileClosurePolicy": {
+    "traverseSkillDependencies": ["required"],
+    "recommendations": "profile-explicit",
+    "conditional": "selected-capabilities-only"
+  },
+  "sourcePolicies": {
+    "channels": ["stable", "preview", "source"],
+    "versionResolutionOrder": [
+      "ProjectReference",
+      "project.assets.json",
+      "packages.lock.json",
+      "Directory.Packages.props",
+      "PackageReference"
+    ],
+    "immutableBinding": {
+      "resolverSkill": "inspect-dependency-source",
+      "command": "resolve Tairitsua/Monica --ref <immutable-ref> --json",
+      "storedFields": ["ref", "commit", "provenance", "access", "sourcePath"]
+    },
+    "failClosedOn": [
+      "mixed versions",
+      "unresolved version ranges",
+      "missing immutable releases",
+      "unidentifiable dirty local source",
+      "unverified cached artifacts"
+    ],
+    "offline": "Use only verified cached catalogs and exact cached sources; never substitute another release or a default branch."
+  },
+  "aliases": {
+    "mo-architecture": {
+      "canonical": "monica-architecture",
+      "diagnostic": "Retired skill name; install or invoke $monica-architecture."
+    },
+    "mo-development": {
+      "canonical": "monica-development",
+      "diagnostic": "Retired skill name; install or invoke $monica-development."
+    },
+    "mo-docs-authoring": {
+      "canonical": "monica-docs-authoring",
+      "diagnostic": "Retired skill name; install or invoke $monica-docs-authoring."
+    },
+    "mo-requirement-design": {
+      "canonical": "monica-requirement-design",
+      "diagnostic": "Retired skill name; install or invoke $monica-requirement-design."
+    },
+    "mo-ui-audit": {
+      "canonical": "monica-ui-audit",
+      "diagnostic": "Retired skill name; install or invoke $monica-ui-audit."
+    },
+    "mo-ui-design": {
+      "canonical": "monica-ui-design",
+      "diagnostic": "Retired skill name; install or invoke $monica-ui-design."
+    },
+    "mo-ui-development": {
+      "canonical": "monica-ui-development",
+      "diagnostic": "Retired skill name; install or invoke $monica-ui-development."
+    },
+    "mo-unit-testing": {
+      "canonical": "monica-unit-testing",
+      "diagnostic": "Retired skill name; install or invoke $monica-unit-testing."
+    },
+    "monica-business-microservice": {
+      "canonical": "monica-application-microservice",
+      "diagnostic": "Retired skill name; install or invoke $monica-application-microservice."
+    },
+    "monica-business-modular-monolith": {
+      "canonical": "monica-application-modular-monolith",
+      "diagnostic": "Retired skill name; install or invoke $monica-application-modular-monolith."
+    },
+    "monica-project-unit-development": {
+      "canonical": "monica-application-project-unit-development",
+      "diagnostic": "Retired skill name; install or invoke $monica-application-project-unit-development."
+    }
+  },
+  "managedInstructions": {
+    "version": 1,
+    "markers": {
+      "start": "<!-- monica-guide:managed:start -->",
+      "end": "<!-- monica-guide:managed:end -->"
+    },
+    "templates": {
+      "application": {
+        "skills": ["monica-guide", "monica-application"],
+        "rules": [
+          "Use $monica-guide for Monica setup, configuration, source binding, updates, and diagnostics.",
+          "Use $monica-application to route ordinary Monica application development work."
+        ]
+      },
+      "extension-author": {
+        "skills": ["monica-guide", "monica-framework", "monica-third-party-module-development"],
+        "rules": [
+          "Use $monica-guide for Monica setup, configuration, source binding, updates, and diagnostics.",
+          "Use $monica-framework and $monica-third-party-module-development for extension implementation.",
+          "Keep generated extension projects on immutable Monica NuGet packages; never replace them with local Monica project references."
+        ]
+      },
+      "framework-contributor": {
+        "skills": ["monica-guide", "monica-framework", "monica-unit-testing"],
+        "rules": [
+          "Use $monica-guide for Monica setup, configuration, source binding, updates, and diagnostics.",
+          "Use $monica-framework to route framework implementation and $monica-unit-testing for framework tests."
+        ]
+      },
+      "docs-contributor": {
+        "skills": ["monica-guide", "monica-docs-authoring", "monica-application"],
+        "rules": [
+          "Use $monica-guide for Monica setup, configuration, source binding, updates, and diagnostics.",
+          "Use $monica-docs-authoring for bilingual documentation and $monica-application for Monica.Docs application code.",
+          "Treat Monica source as read-only unless the current session separately grants write access for a cross-repository fix."
+        ]
+      }
+    }
+  },
+  "prompts": {
+    "bootstrapAsset": "skills/monica-guide/assets/bootstrap-prompts.json"
+  },
+  "distribution": {
+    "repository": "Tairitsua/Monica",
+    "skillsCli": {
+      "package": "skills",
+      "version": "1.5.21"
+    },
+    "immutableSkillUrlTemplate": "https://github.com/Tairitsua/Monica/tree/{tag}/skills/{skill}"
+  }
+}

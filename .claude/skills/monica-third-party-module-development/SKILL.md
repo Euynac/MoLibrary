@@ -7,6 +7,8 @@ description: Create, modernize, validate, package, containerize, or publish inde
 
 Build independent packages and companion images from one explicit repository contract. Treat a NuGet package as a distribution boundary, a Monica module as a runtime capability, and an OCI repository as an independently runnable provider-service boundary.
 
+Resolve every bundled `scripts/`, `references/`, and `assets/` path from this skill's own directory. Do not assume an `.agents` or `.claude` projection path.
+
 ## Required companion skills
 
 - Use `$monica-architecture` for package and module boundaries.

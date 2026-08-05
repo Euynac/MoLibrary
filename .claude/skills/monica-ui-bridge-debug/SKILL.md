@@ -7,6 +7,8 @@ description: Orchestrate Monica UI inspection, debugging, and refinement through
 
 Use this skill when Monica UI work must be verified through a separate runnable application.
 
+Resolve every bundled script and reference from this skill's own directory. Do not assume an `.agents` or `.claude` projection path.
+
 ## Required UI and browser skills
 
 - Use `$monica-ui-development` for every Monica Blazor UI implementation or style change.

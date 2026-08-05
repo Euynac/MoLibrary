@@ -1,0 +1,277 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Tairitsua/Monica/blob/dev/.monica/schemas/agent-skill-catalog.schema.json",
+  "title": "Monica Agent Skill Catalog",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "$schema",
+    "schemaVersion",
+    "catalogVersion",
+    "skills",
+    "externalSkills",
+    "profiles",
+    "profileClosurePolicy",
+    "sourcePolicies",
+    "aliases",
+    "managedInstructions",
+    "prompts",
+    "distribution"
+  ],
+  "properties": {
+    "$schema": { "type": "string", "const": "./schemas/agent-skill-catalog.schema.json" },
+    "schemaVersion": { "type": "integer", "const": 1 },
+    "catalogVersion": { "type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$" },
+    "skills": {
+      "type": "object",
+      "minProperties": 1,
+      "additionalProperties": { "$ref": "#/$defs/skill" }
+    },
+    "externalSkills": {
+      "type": "object",
+      "additionalProperties": { "$ref": "#/$defs/externalSkill" }
+    },
+    "profiles": {
+      "type": "object",
+      "required": ["application", "extension-author", "framework-contributor", "docs-contributor"],
+      "additionalProperties": { "$ref": "#/$defs/profile" }
+    },
+    "profileClosurePolicy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["traverseSkillDependencies", "recommendations", "conditional"],
+      "properties": {
+        "traverseSkillDependencies": {
+          "type": "array",
+          "items": { "type": "string", "const": "required" },
+          "minItems": 1,
+          "maxItems": 1
+        },
+        "recommendations": { "type": "string", "const": "profile-explicit" },
+        "conditional": { "type": "string", "const": "selected-capabilities-only" }
+      }
+    },
+    "sourcePolicies": { "$ref": "#/$defs/sourcePolicies" },
+    "aliases": {
+      "type": "object",
+      "additionalProperties": { "$ref": "#/$defs/alias" }
+    },
+    "managedInstructions": { "$ref": "#/$defs/managedInstructions" },
+    "prompts": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["bootstrapAsset"],
+      "properties": {
+        "bootstrapAsset": { "$ref": "#/$defs/relativePath" }
+      }
+    },
+    "distribution": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["repository", "skillsCli", "immutableSkillUrlTemplate"],
+      "properties": {
+        "repository": { "type": "string", "const": "Tairitsua/Monica" },
+        "skillsCli": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["package", "version"],
+          "properties": {
+            "package": { "type": "string", "const": "skills" },
+            "version": { "type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$" }
+          }
+        },
+        "immutableSkillUrlTemplate": {
+          "type": "string",
+          "const": "https://github.com/Tairitsua/Monica/tree/{tag}/skills/{skill}"
+        }
+      }
+    }
+  },
+  "$defs": {
+    "skillName": { "type": "string", "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$" },
+    "relativePath": {
+      "type": "string",
+      "pattern": "^(?!/)(?![A-Za-z]:)(?!.*(?:^|/)\\.\\.(?:/|$)).+$"
+    },
+    "skillNameList": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/skillName" },
+      "uniqueItems": true
+    },
+    "conditionalDependency": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["capability", "skills"],
+      "properties": {
+        "capability": { "$ref": "#/$defs/skillName" },
+        "skills": { "$ref": "#/$defs/skillNameList" }
+      }
+    },
+    "dependencies": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["required", "recommended", "conditional", "external"],
+      "properties": {
+        "required": { "$ref": "#/$defs/skillNameList" },
+        "recommended": { "$ref": "#/$defs/skillNameList" },
+        "conditional": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/conditionalDependency" }
+        },
+        "external": { "$ref": "#/$defs/skillNameList" }
+      }
+    },
+    "skill": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "role", "ownership", "managed", "dependencies"],
+      "properties": {
+        "path": { "$ref": "#/$defs/relativePath" },
+        "role": { "type": "string", "enum": ["router", "capability"] },
+        "ownership": { "type": "string", "const": "monica" },
+        "managed": { "type": "boolean", "const": true },
+        "routes": { "$ref": "#/$defs/skillNameList" },
+        "dependencies": { "$ref": "#/$defs/dependencies" }
+      }
+    },
+    "externalSkill": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["ownership", "managed", "purpose"],
+      "properties": {
+        "ownership": { "type": "string", "const": "external" },
+        "managed": { "type": "boolean", "const": false },
+        "purpose": { "type": "string", "minLength": 1 }
+      }
+    },
+    "profileSkills": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["required", "recommended", "conditional"],
+      "properties": {
+        "required": { "$ref": "#/$defs/skillNameList" },
+        "recommended": { "$ref": "#/$defs/skillNameList" },
+        "conditional": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/conditionalDependency" }
+        }
+      }
+    },
+    "profileSource": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["required", "recommended", "access", "repository"],
+      "properties": {
+        "required": { "type": "boolean" },
+        "recommended": { "type": "boolean" },
+        "access": { "type": "string", "enum": ["none", "read-only", "read-write"] },
+        "repository": { "type": "string", "enum": ["Monica", "Monica.Docs"] }
+      }
+    },
+    "repositoryRequirement": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["repository", "access"],
+      "properties": {
+        "repository": { "type": "string", "minLength": 1 },
+        "access": { "type": "string", "enum": ["read-only", "read-write"] },
+        "purpose": { "type": "string", "minLength": 1 }
+      }
+    },
+    "profile": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["description", "skills", "source", "repositories", "inference"],
+      "properties": {
+        "description": { "type": "string", "minLength": 1 },
+        "skills": { "$ref": "#/$defs/profileSkills" },
+        "source": { "$ref": "#/$defs/profileSource" },
+        "repositories": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/repositoryRequirement" }
+        },
+        "inference": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["repositoryIdentities", "characteristicPaths"],
+          "properties": {
+            "repositoryIdentities": { "type": "array", "items": { "type": "string" }, "uniqueItems": true },
+            "characteristicPaths": { "type": "array", "items": { "$ref": "#/$defs/relativePath" }, "uniqueItems": true }
+          }
+        }
+      }
+    },
+    "sourcePolicies": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["channels", "versionResolutionOrder", "immutableBinding", "failClosedOn", "offline"],
+      "properties": {
+        "channels": {
+          "type": "array",
+          "items": { "type": "string", "enum": ["stable", "preview", "source"] },
+          "uniqueItems": true,
+          "minItems": 3,
+          "maxItems": 3
+        },
+        "versionResolutionOrder": {
+          "type": "array",
+          "items": { "type": "string" },
+          "minItems": 1,
+          "uniqueItems": true
+        },
+        "immutableBinding": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["resolverSkill", "command", "storedFields"],
+          "properties": {
+            "resolverSkill": { "$ref": "#/$defs/skillName" },
+            "command": { "type": "string", "minLength": 1 },
+            "storedFields": { "type": "array", "items": { "type": "string" }, "uniqueItems": true }
+          }
+        },
+        "failClosedOn": { "type": "array", "items": { "type": "string" }, "uniqueItems": true },
+        "offline": { "type": "string", "minLength": 1 }
+      }
+    },
+    "alias": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["canonical", "diagnostic"],
+      "properties": {
+        "canonical": { "$ref": "#/$defs/skillName" },
+        "diagnostic": { "type": "string", "minLength": 1 }
+      }
+    },
+    "instructionTemplate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["skills", "rules"],
+      "properties": {
+        "skills": { "$ref": "#/$defs/skillNameList" },
+        "rules": { "type": "array", "items": { "type": "string", "minLength": 1 }, "minItems": 1 }
+      }
+    },
+    "managedInstructions": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["version", "markers", "templates"],
+      "properties": {
+        "version": { "type": "integer", "minimum": 1 },
+        "markers": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["start", "end"],
+          "properties": {
+            "start": { "type": "string", "minLength": 1 },
+            "end": { "type": "string", "minLength": 1 }
+          }
+        },
+        "templates": {
+          "type": "object",
+          "required": ["application", "extension-author", "framework-contributor", "docs-contributor"],
+          "additionalProperties": { "$ref": "#/$defs/instructionTemplate" }
+        }
+      }
+    }
+  }
+}

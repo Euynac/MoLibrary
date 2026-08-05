@@ -1,0 +1,57 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Tairitsua/Monica/blob/dev/.monica/schemas/agent-skill-release-manifest.schema.json",
+  "title": "Monica Agent Skill Release Manifest",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "monicaVersion",
+    "tag",
+    "resolvedCommit",
+    "catalogDigest",
+    "skillTreeDigest",
+    "skillDigestAlgorithm",
+    "skillDigests",
+    "publishedAt",
+    "indexUrl",
+    "catalogUrl",
+    "archiveUrl",
+    "fileManifestScope",
+    "files"
+  ],
+  "properties": {
+    "schemaVersion": { "type": "integer", "const": 1 },
+    "monicaVersion": {
+      "type": "string",
+      "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)(-((0|[1-9][0-9]*|[0-9A-Za-z-]*[A-Za-z-][0-9A-Za-z-]*)(\\.(0|[1-9][0-9]*|[0-9A-Za-z-]*[A-Za-z-][0-9A-Za-z-]*))*))?(\\+[0-9A-Za-z-]+(\\.[0-9A-Za-z-]+)*)?$"
+    },
+    "tag": {
+      "type": "string",
+      "pattern": "^v(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)(-((0|[1-9][0-9]*|[0-9A-Za-z-]*[A-Za-z-][0-9A-Za-z-]*)(\\.(0|[1-9][0-9]*|[0-9A-Za-z-]*[A-Za-z-][0-9A-Za-z-]*))*))?(\\+[0-9A-Za-z-]+(\\.[0-9A-Za-z-]+)*)?$"
+    },
+    "resolvedCommit": { "type": "string", "pattern": "^[0-9a-f]{40}$" },
+    "catalogDigest": { "$ref": "#/$defs/digest" },
+    "skillTreeDigest": { "$ref": "#/$defs/digest" },
+    "skillDigestAlgorithm": { "type": "string", "const": "sha256-file-manifest-v1" },
+    "skillDigests": {
+      "type": "object",
+      "minProperties": 1,
+      "propertyNames": { "type": "string", "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$" },
+      "additionalProperties": { "$ref": "#/$defs/digest" }
+    },
+    "publishedAt": { "type": "string", "format": "date-time" },
+    "indexUrl": { "type": "string", "format": "uri" },
+    "catalogUrl": { "type": "string", "format": "uri" },
+    "archiveUrl": { "type": "string", "format": "uri" },
+    "fileManifestScope": { "type": "string", "const": "release-payload-except-index-v1" },
+    "files": {
+      "type": "object",
+      "propertyNames": { "type": "string", "minLength": 1 },
+      "additionalProperties": { "$ref": "#/$defs/digest" }
+    }
+  },
+  "$defs": {
+    "digest": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" }
+  }
+}

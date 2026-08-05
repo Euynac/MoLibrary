@@ -1,0 +1,10 @@
+{
+  "$schema": "./schemas/agent-skill-index.schema.json",
+  "schemaVersion": 1,
+  "channels": {
+    "stable": null,
+    "preview": null
+  },
+  "versions": {},
+  "releases": {}
+}

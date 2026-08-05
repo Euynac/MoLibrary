@@ -365,8 +365,8 @@ Summary:
 
 ### Fixing Issues
 
-**Missing keys:** Add to both JSON files  
-**Unused keys:** Remove from both JSON files (verify not used dynamically)  
+**Missing keys:** Add to both JSON files
+**Unused keys:** Remove from both JSON files (verify not used dynamically)
 **Sync issues:** Add missing translations to ensure both files match
 
 ### CI/CD Integration

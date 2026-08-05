@@ -90,7 +90,7 @@ Test source generators with raw Roslyn inputs under a dedicated `tests/Test.Moni
 
 - Read `references/standards.md` for stable boundary and isolation rules.
 - Read `references/samples.md` when selecting an existing framework sample.
-- Use `../monica-application-unit-testing/SKILL.md` for Monica-based business-service tests.
+- Use `$monica-application-unit-testing` for Monica-based business-service tests.
 
 ## Validation
 

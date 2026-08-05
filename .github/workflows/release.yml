@@ -21,6 +21,7 @@ permissions:
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+  PYTHONDONTWRITEBYTECODE: 1
 
 jobs:
   release:
@@ -36,6 +37,13 @@ jobs:
         uses: actions/checkout@v6
         with:
           fetch-depth: 0
+
+      - name: Checkout Codex skill validator
+        uses: actions/checkout@v6
+        with:
+          repository: openai/skills
+          ref: 49f948faa9258a0c61caceaf225e179651397431
+          path: .tmp/validators/openai-skills
 
       - name: Setup .NET SDK
         uses: actions/setup-dotnet@v5.2.0
@@ -66,30 +74,101 @@ jobs:
             exit 1
           fi
 
-          if [[ "${VERSION}" == *"-"* ]]; then
+          VERSION_WITHOUT_BUILD="${VERSION%%+*}"
+          if [[ "${VERSION_WITHOUT_BUILD}" == *"-"* ]]; then
             PRERELEASE=true
+            SKILL_CHANNEL=preview
           else
             PRERELEASE=false
+            SKILL_CHANNEL=stable
           fi
+
+          PUBLISHED_AT="$(git show -s --format=%cI "${CURRENT_REF}")"
 
           echo "version=${VERSION}" >> "${GITHUB_OUTPUT}"
           echo "prerelease=${PRERELEASE}" >> "${GITHUB_OUTPUT}"
           echo "tag_name=v${VERSION}" >> "${GITHUB_OUTPUT}"
           echo "target_commitish=${CURRENT_REF}" >> "${GITHUB_OUTPUT}"
+          echo "skill_channel=${SKILL_CHANNEL}" >> "${GITHUB_OUTPUT}"
+          echo "published_at=${PUBLISHED_AT}" >> "${GITHUB_OUTPUT}"
 
           if PREVIOUS_TAG="$(git describe --tags --abbrev=0 "${CURRENT_REF}^" 2>/dev/null)"; then
             RELEASE_NOTES_RANGE="${PREVIOUS_TAG}..${CURRENT_REF}"
           else
+            PREVIOUS_TAG=""
             RELEASE_NOTES_RANGE="${CURRENT_REF}"
           fi
 
           echo "release_notes_args=${RELEASE_NOTES_RANGE} --tag v${VERSION} --strip header" >> "${GITHUB_OUTPUT}"
+          echo "previous_tag=${PREVIOUS_TAG}" >> "${GITHUB_OUTPUT}"
 
       - name: Synchronize template package version
         run: python3 eng/sync-template-version.py --version "${{ steps.version.outputs.version }}"
 
       - name: Validate package maturity catalog
         run: python3 eng/validate-package-tiers.py
+
+      - name: Require the immutable release tag
+        shell: bash
+        run: |
+          git ls-remote --exit-code origin "refs/tags/${{ steps.version.outputs.tag_name }}" >/dev/null || {
+            echo "Push the immutable tag before running release packaging and smoke tests." >&2
+            exit 1
+          }
+          TAG_COMMIT="$(git rev-list -n 1 "${{ steps.version.outputs.tag_name }}")"
+          if [[ "${TAG_COMMIT}" != "${{ steps.version.outputs.target_commitish }}" ]]; then
+            echo "The release tag does not resolve to the selected commit." >&2
+            exit 1
+          fi
+
+      - name: Install Agent Skill validation dependencies
+        run: python3 -m pip install -r scripts/requirements-agent-skills.txt
+
+      - name: Validate Monica Agent Skill contracts
+        run: |
+          python3 scripts/validate_agent_skills.py
+          python3 scripts/sync_agent_skills.py --check
+          python3 -m unittest discover -s scripts/tests -p "test*.py"
+
+      - name: Validate portable Agent Skills
+        shell: bash
+        run: |
+          command -v skills-ref >/dev/null
+          for skill in skills/*; do
+            skills-ref validate "${skill}"
+          done
+
+      - name: Validate Agent Skills for Codex
+        shell: bash
+        run: |
+          VALIDATOR=".tmp/validators/openai-skills/skills/.system/skill-creator/scripts/quick_validate.py"
+          test -f "${VALIDATOR}"
+          for skill in skills/*; do
+            python3 "${VALIDATOR}" "${skill}"
+          done
+
+      - name: Run skill-owned tests
+        run: python3 scripts/test_agent_skills.py
+
+      - name: Resolve verified Agent Skill index history
+        id: previous_skill_index
+        shell: bash
+        run: |
+          PREVIOUS_TAG="${{ steps.version.outputs.previous_tag }}"
+          if [[ -z "${PREVIOUS_TAG}" ]] || ! git cat-file -e "${PREVIOUS_TAG}:.monica/agent-skill-catalog.json" 2>/dev/null; then
+            echo "No prior Agent Skill release contract exists; this is the first catalog release."
+            echo "path=" >> "${GITHUB_OUTPUT}"
+            echo "tag=" >> "${GITHUB_OUTPUT}"
+            exit 0
+          fi
+
+          mkdir -p artifacts/release-inputs
+          PREVIOUS_INDEX="artifacts/release-inputs/${PREVIOUS_TAG}-agent-skill-index.json"
+          curl --fail --location --silent --show-error \
+            "https://github.com/Tairitsua/Monica/releases/download/${PREVIOUS_TAG}/agent-skill-index.json" \
+            --output "${PREVIOUS_INDEX}"
+          echo "path=${PREVIOUS_INDEX}" >> "${GITHUB_OUTPUT}"
+          echo "tag=${PREVIOUS_TAG}" >> "${GITHUB_OUTPUT}"
 
       - name: Generate release notes
         id: release_notes
@@ -126,6 +205,62 @@ jobs:
               < /dev/null
           done <<< "${PACKAGE_PROJECTS}"
 
+      - name: Build immutable Agent Skill release artifacts
+        shell: bash
+        run: |
+          HISTORY_ARGS=()
+          if [[ -n "${{ steps.previous_skill_index.outputs.path }}" ]]; then
+            HISTORY_ARGS+=(
+              --previous-index "${{ steps.previous_skill_index.outputs.path }}"
+              --previous-tag "${{ steps.previous_skill_index.outputs.tag }}"
+            )
+          fi
+          python3 scripts/build_agent_skill_release.py \
+            --version "${{ steps.version.outputs.version }}" \
+            --tag "${{ steps.version.outputs.tag_name }}" \
+            --commit "${{ steps.version.outputs.target_commitish }}" \
+            --channel "${{ steps.version.outputs.skill_channel }}" \
+            --published-at "${{ steps.version.outputs.published_at }}" \
+            --output artifacts/agent-skills \
+            "${HISTORY_ARGS[@]}"
+
+      - name: Smoke test tag-based Agent Skill discovery and installation
+        shell: bash
+        run: |
+          SKILLS_CLI_VERSION="$(node -p 'require("./.monica/agent-skill-catalog.json").distribution.skillsCli.version')"
+          SOURCE_ROOT_URL="https://github.com/Tairitsua/Monica/tree/${{ steps.version.outputs.tag_name }}"
+          DIRECT_SKILL_URL="${SOURCE_ROOT_URL}/skills/monica-guide"
+          npx --yes "skills@${SKILLS_CLI_VERSION}" add "${SOURCE_ROOT_URL}" --list | grep -F "monica-guide"
+          npx --yes "skills@${SKILLS_CLI_VERSION}" add "${DIRECT_SKILL_URL}" -g -a codex -a claude-code -s monica-guide -y
+          npx --yes "skills@${SKILLS_CLI_VERSION}" ls -g -a codex --json > artifacts/agent-skills/codex-discovery.json
+          npx --yes "skills@${SKILLS_CLI_VERSION}" ls -g -a claude-code --json > artifacts/agent-skills/claude-discovery.json
+          for agent_name in codex claude; do
+            INSTALLED_SKILL_PATH="$(node -e '
+              const fs = require("fs");
+              const name = process.argv[1];
+              const entries = JSON.parse(fs.readFileSync(`artifacts/agent-skills/${name}-discovery.json`, "utf8"));
+              if (!Array.isArray(entries)) process.exit(1);
+              const installed = entries.find((entry) => entry.name === "monica-guide" && entry.scope === "global");
+              if (!installed || typeof installed.path !== "string") process.exit(1);
+              process.stdout.write(installed.path);
+            ' "${agent_name}")"
+            python3 scripts/verify_installed_agent_skill.py \
+              --index artifacts/agent-skills/agent-skill-index.json \
+              --manifest artifacts/agent-skills/agent-skill-manifest.json \
+              --catalog artifacts/agent-skills/agent-skill-catalog.json \
+              --tag "${{ steps.version.outputs.tag_name }}" \
+              --skill monica-guide \
+              --path "${INSTALLED_SKILL_PATH}"
+          done
+
+      - name: Remove smoke-test installation
+        if: always()
+        continue-on-error: true
+        run: |
+          SKILLS_CLI_VERSION="$(node -p 'require("./.monica/agent-skill-catalog.json").distribution.skillsCli.version')"
+          npx --yes "skills@${SKILLS_CLI_VERSION}" remove -g -a codex -a claude-code -s monica-guide -y || \
+            echo "Smoke-test cleanup was incomplete; the hosted runner is ephemeral."
+
       - name: Upload package artifacts
         uses: actions/upload-artifact@v7
         with:
@@ -133,6 +268,13 @@ jobs:
           path: |
             artifacts/packages/*.nupkg
             artifacts/packages/*.snupkg
+          if-no-files-found: error
+
+      - name: Upload Agent Skill artifacts
+        uses: actions/upload-artifact@v7
+        with:
+          name: monica-agent-skills-${{ steps.version.outputs.version }}
+          path: artifacts/agent-skills/*
           if-no-files-found: error
 
       - name: Publish to NuGet
@@ -150,3 +292,19 @@ jobs:
           files: |
             artifacts/packages/*.nupkg
             artifacts/packages/*.snupkg
+            artifacts/agent-skills/agent-skill-catalog.json
+            artifacts/agent-skills/agent-skill-index.json
+            artifacts/agent-skills/agent-skill-manifest.json
+            artifacts/agent-skills/monica-agent-skills-${{ steps.version.outputs.tag_name }}.zip
+
+      - name: Record source-index roll-forward gate
+        shell: bash
+        run: |
+          cat >> "${GITHUB_STEP_SUMMARY}" <<'EOF'
+          ## Agent Skill index roll-forward required
+
+          The published release index is an immutable release asset. Before creating the next Monica tag,
+          download `agent-skill-index.json`, run `scripts/roll_forward_agent_skill_index.py --write`,
+          run `scripts/sync_agent_skills.py --write`, validate, and commit the source/index snapshot update.
+          The next release fails closed if the previous verified release asset is unavailable or rewrites history.
+          EOF

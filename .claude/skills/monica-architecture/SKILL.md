@@ -1,7 +1,6 @@
 ---
 name: monica-architecture
 description: This skill should be used when the user asks to "design module structure", "plan module architecture", "review module layout", "create new module", "refactor module structure", "module folder structure", "module boundaries", "facade pattern", "internal vs public", "feature-first", "annotations folder", "developer-facing attributes", "where to put attributes", "page decomposition", "page too large", "extract page state", "IWebModule", "web module", "downgrade to non-web", "模块架构", "架构设计", "模块结构", "文件夹结构", or needs guidance on Monica module directory layout, layer responsibilities, dependency direction, public/internal boundaries, Facade placement, Provider separation, Annotations placement, page decomposition rules, module runtime kind selection, Features pattern for bundled sub-modules, or Mixed/Standalone/Composite UI module patterns.
-version: 1.1.4
 ---
 
 # Monica Unified Module Architecture

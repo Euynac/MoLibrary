@@ -20,9 +20,9 @@ Do not use “official”, “certified”, or “verified” in connection with
 
 Canonical assets:
 
-- `.agents/skills/monica-third-party-module-development/assets/monica-compatibility-mark.svg`
-- `.agents/skills/monica-third-party-module-development/assets/monica-compatibility-mark.png`
-- `.agents/skills/monica-third-party-module-development/assets/monica-open-source-badge.svg` (optional README-only badge)
+- `skills/monica-third-party-module-development/assets/monica-compatibility-mark.svg`
+- `skills/monica-third-party-module-development/assets/monica-compatibility-mark.png`
+- `skills/monica-third-party-module-development/assets/monica-open-source-badge.svg` (optional README-only badge)
 
 The compatibility mark preserves the Monica silhouette in emerald `#10B981`. This fixed colorway distinguishes self-attested ecosystem compatibility from the purple first-party identity; publishers must keep the supplied artwork unchanged.
 

@@ -169,13 +169,13 @@ Monica.UI/
 Generate or refresh the committed WOFF2 subset:
 
 ```bash
-python .claude/skills/monica-ui-development/scripts/subset_ui_font.py --mode generate
+python scripts/subset_ui_font.py --mode generate
 ```
 
 Check that the committed subset is current after localization changes:
 
 ```bash
-python .claude/skills/monica-ui-development/scripts/subset_ui_font.py --mode check
+python scripts/subset_ui_font.py --mode check
 ```
 
 The script defaults to `.tmp/monica-ui-font-sources/zcool_qingke_huangyou.ttf` and scans top-level `Monica*/Localization/**/*.json` resource files, excluding test projects. For non-default source storage, pass `--source-font <path>`. For text that is not in resource JSON yet, pass `--extra-text` or `--extra-text-file`.

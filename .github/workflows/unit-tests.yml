@@ -7,6 +7,7 @@ on:
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+  PYTHONDONTWRITEBYTECODE: 1
 
 jobs:
   test:
@@ -16,6 +17,13 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v6
+
+      - name: Checkout Codex skill validator
+        uses: actions/checkout@v6
+        with:
+          repository: openai/skills
+          ref: 49f948faa9258a0c61caceaf225e179651397431
+          path: .tmp/validators/openai-skills
 
       - name: Setup .NET SDK
         uses: actions/setup-dotnet@v5.2.0
@@ -34,6 +42,35 @@ jobs:
 
       - name: Validate package maturity catalog
         run: python3 eng/validate-package-tiers.py
+
+      - name: Install Agent Skill validation dependencies
+        run: python3 -m pip install -r scripts/requirements-agent-skills.txt
+
+      - name: Validate Monica Agent Skill contracts
+        run: |
+          python3 scripts/validate_agent_skills.py
+          python3 scripts/sync_agent_skills.py --check
+          python3 -m unittest discover -s scripts/tests -p "test*.py"
+
+      - name: Validate portable Agent Skills
+        shell: bash
+        run: |
+          command -v skills-ref >/dev/null
+          for skill in skills/*; do
+            skills-ref validate "${skill}"
+          done
+
+      - name: Validate Agent Skills for Codex
+        shell: bash
+        run: |
+          VALIDATOR=".tmp/validators/openai-skills/skills/.system/skill-creator/scripts/quick_validate.py"
+          test -f "${VALIDATOR}"
+          for skill in skills/*; do
+            python3 "${VALIDATOR}" "${skill}"
+          done
+
+      - name: Run skill-owned tests
+        run: python3 scripts/test_agent_skills.py
 
       - name: Restore solution
         run: dotnet restore Monica.slnx

@@ -1,7 +1,6 @@
 ---
 name: monica-ui-design
 description: This skill should be used when the user asks to "design UI", "prototype UI", "UI mockup", "create UI design", "interactive MVP", "UI prototype", "design page layout", "wireframe", "rapid prototype", "ui-design", "design module UI", "preview UI", "UI设计", "设计UI", "原型设计", "UI原型", "界面设计", "模块设计", or needs to create an interactive HTML prototype before implementing a MudBlazor/Blazor UI module.
-version: 2.2.0
 ---
 
 # Monica UI Design Prototyping
@@ -16,7 +15,7 @@ When this skill is active, the session is in **design mode**. Focus exclusively 
 - Do NOT create `.razor`, `.razor.cs`, `.razor.css`, or any `.cs` files
 - Do NOT discuss implementation details, service layers, or backend concerns
 - Only produce design artifacts inside `.ui-design/{feature-name}/`, such as `design.md`, `index.html`, optional prototype CSS/JS/data files, and design-related conversation
-- If the user asks to start coding, remind them to begin a new session with `/monica-ui-development`
+- If the user asks to start coding, remind them to begin a new session with `$monica-ui-development`.
 
 Design first, code later.
 

@@ -36,7 +36,7 @@ Monica 是面向可观测 .NET 后端的 agent-governed application architecture
 - AI 可以很快产出代码，但如果没有统一规格，代码会在规模增长后变得脆弱且难以观测。
 - Monica 把基础设施本身变成规格：`AddMonica(...)` 先记录一个宿主的完整模块图，验证依赖与循环，再按确定性阶段应用注册。
 - 每个组合都属于具体宿主；同一进程中的多个宿主不共享模块注册表、选项或 ProjectUnit 目录。
-- 仓库里的 `.claude/skills/` 和 `.agents/skills/` 会在 AI 写代码之前先教它 Monica 的写法。
+- 仓库以 `skills/` 作为 Monica Agent Skills 的唯一源码，并生成字节一致的 `.claude/skills/` 与 `.agents/skills/` 投影，让 AI 在写代码前先理解 Monica 的约定。
 
 ## 演示视频
 
@@ -129,13 +129,13 @@ Monica.UI 之上还提供多个运维型 Blazor UI：JobScheduler、Configuratio
 
 ## 随仓库交付的 Agent Skills
 
-仓库已经内置了可直接使用的 skill pack，位于 `.claude/skills/` 和 `.agents/skills/`。
+Monica 自有 Skill 的唯一源码位于 `skills/`；`.claude/skills/` 与 `.agents/skills/` 是面向仓库内发现的生成投影，不应直接编辑。
 
+- 初始化、配置与诊断入口：`monica-guide`；上游问题分类与草稿准备：`monica-contribution`
 - 框架入口：`monica-framework`、`monica-development`、`monica-architecture`、`monica-ui-development`、`monica-ui-design`、`monica-ui-audit`、`monica-docs-authoring`、`monica-requirement-design`、`monica-unit-testing`、`monica-ui-bridge-debug`
 - 第三方生态入口：`monica-third-party-module-development`，用于创建、校验、测试、打包和发布 `<Publisher>.Monica.<Package>` 包；一个 NuGet 包可以包含多个内聚模块
 - 基于 Monica 的应用系统入口：`monica-application`、`monica-application-microservice`、`monica-application-modular-monolith`、`monica-application-project-unit-development`
-- 随仓库提供的辅助工作流：`code-simplifier`、`playwright-cli`、`supervise-subagents`
-- 需要单独安装的用户级配套 Skill：`inspect-dependency-source`（共享依赖源码目录）
+- 外部配套 Skill（例如 `inspect-dependency-source`、`playwright-cli` 与 `supervise-subagents`）由各 Agent 环境单独安装和管理，Monica 的投影与更新流程不会改写它们
 
 第三方包不得使用官方 `Monica.*` 前缀与紫色 Logo。兼容标识、包命名和独立维护声明见 [BRANDING.md](BRANDING.md)，完整中英文规范见 [Monica.Docs](https://monica.dpdns.org/)。
 

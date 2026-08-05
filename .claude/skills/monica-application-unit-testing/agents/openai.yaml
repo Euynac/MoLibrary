@@ -1,0 +1,4 @@
+interface:
+  display_name: "Monica Application Unit Testing"
+  short_description: "Test Monica applications with sociable host scenarios"
+  default_prompt: "Use $monica-application-unit-testing to design sociable tests for this Monica application behavior."

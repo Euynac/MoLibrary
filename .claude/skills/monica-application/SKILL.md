@@ -12,6 +12,7 @@ Use this skill as the entry point for products and application systems built on 
 - Microservice solution layout, service boundaries, `Platform.Protocol`, published language, migrations, or cross-service collaboration: use `$monica-application-microservice`.
 - Modular monolith layout, bounded contexts under `Domains/`, AppHost composition, cross-domain collaboration, or persistence ownership: use `$monica-application-modular-monolith`.
 - Feature implementation with `ApplicationService`, `RequestDto`, `DomainService`, `Entity`, `Repository`, events, configuration, recurring jobs, or triggered jobs: use `$monica-application-project-unit-development`.
+- Sociable application tests, `MonicaTestApplicationFactory`, handler or repository scenarios, database isolation, and migration away from mock-heavy tests: use `$monica-application-unit-testing`.
 
 ## Working Rule
 

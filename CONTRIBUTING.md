@@ -20,6 +20,17 @@ dotnet build Monica.slnx -c Release -m
 dotnet test Monica.slnx -c Release --no-build -m
 ```
 
+When changing canonical Agent Skills, also run:
+
+```bash
+python3 scripts/validate_agent_skills.py
+python3 scripts/sync_agent_skills.py --write
+python3 scripts/sync_agent_skills.py --check
+python3 scripts/test_agent_skills.py
+```
+
+Edit Monica-owned skills only under `skills/<name>/`. Their matching `.agents/skills/<name>` and `.claude/skills/<name>` directories are generated projections and must not be edited directly. The generator owns only catalog-managed Monica directories: unrelated external skills, files, and caches in either projection root are preserved and ignored by projection checks. Monica-owned skills use portable `SKILL.md` frontmatter containing only `name` and `description`. Skill release versions live in `.monica/agent-skill-catalog.json` and `.monica/agent-skill-index.json`, not in skill frontmatter.
+
 When running `dotnet` from WSL with a Windows `dotnet` executable, use Windows paths for project or solution arguments.
 
 ## Pull Requests
@@ -75,7 +86,23 @@ git tag v1.0.0-rc.6
 git push origin v1.0.0-rc.6
 ```
 
-The release workflow builds, tests, packs, uploads package artifacts, publishes to NuGet when configured, generates release notes from commit prefixes with `git-cliff`, and creates a GitHub pre-release for `*-rc.*` tags.
+The release workflow builds, tests, packs, uploads package artifacts, publishes to NuGet when configured, generates release notes from commit prefixes with `git-cliff`, and creates a GitHub pre-release for `*-rc.*` tags. It also validates the canonical Agent Skills with both the portable Agent Skills validator and Codex validator, installs `monica-guide` from the pushed immutable tag for Codex and Claude Code, verifies the discovered installed directory against the release's exact per-file and per-skill digests, and publishes the catalog, resolved commit, release index, manifest, and skill-tree archive only after discovery succeeds.
+
+The checked-in index cannot contain the commit of the tag that contains it. After the release assets are published, roll the verified index forward in a follow-up commit before advertising the tag or preparing the next release:
+
+```bash
+curl --fail --location \
+  "https://github.com/Tairitsua/Monica/releases/download/<tag>/agent-skill-index.json" \
+  --output .tmp/<tag>-agent-skill-index.json
+python3 scripts/roll_forward_agent_skill_index.py \
+  --released-index .tmp/<tag>-agent-skill-index.json \
+  --expected-tag <tag> \
+  --write
+python3 scripts/sync_agent_skills.py --write
+python3 scripts/validate_agent_skills.py
+```
+
+The roll-forward command accepts only additive history from the expected immutable release asset. A later release also downloads the previous tag's verified index and fails if the asset is unavailable, omits history, or rewrites an existing version mapping.
 
 ## Security Issues
 

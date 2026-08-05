@@ -1,0 +1,483 @@
+from __future__ import annotations
+
+import errno
+import importlib.util
+import json
+import sys
+import tempfile
+import unittest
+import zipfile
+from datetime import datetime, timezone
+from pathlib import Path
+from types import SimpleNamespace
+from unittest import mock
+
+
+REPOSITORY_ROOT = Path(__file__).resolve().parents[2]
+
+
+def load_script(name: str):
+    script_path = REPOSITORY_ROOT / "scripts" / f"{name}.py"
+    spec = importlib.util.spec_from_file_location(name, script_path)
+    assert spec and spec.loader
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[name] = module
+    spec.loader.exec_module(module)
+    return module
+
+
+sync = load_script("sync_agent_skills")
+validator = load_script("validate_agent_skills")
+release = load_script("build_agent_skill_release")
+installed_verifier = load_script("verify_installed_agent_skill")
+
+
+class AgentSkillInfrastructureTests(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls) -> None:
+        cls.catalog = json.loads(
+            (REPOSITORY_ROOT / ".monica" / "agent-skill-catalog.json").read_text(
+                encoding="utf-8"
+            )
+        )
+
+    def test_catalog_manages_every_canonical_directory(self) -> None:
+        directories = {
+            path.name
+            for path in (REPOSITORY_ROOT / "skills").iterdir()
+            if path.is_dir()
+        }
+        self.assertEqual(directories, set(self.catalog["skills"]))
+        self.assertTrue(all(name.startswith("monica-") for name in directories))
+
+    def test_required_profile_lists_are_closed(self) -> None:
+        for profile_name, profile in self.catalog["profiles"].items():
+            declared = set(profile["skills"]["required"])
+            closure = validator.required_closure(self.catalog["skills"], declared)
+            self.assertEqual(
+                declared,
+                closure,
+                f"{profile_name} omits {sorted(closure - declared)}",
+            )
+
+    def test_profile_closure_uses_explicit_buckets_and_required_edges_only(self) -> None:
+        framework = self.catalog["profiles"]["framework-contributor"]
+        framework_default = validator.profile_selection_closure(
+            self.catalog["skills"], framework
+        )
+        self.assertNotIn("monica-docs-authoring", framework_default)
+        framework_recommended = validator.profile_selection_closure(
+            self.catalog["skills"], framework, include_recommended=True
+        )
+        self.assertIn("monica-docs-authoring", framework_recommended)
+        self.assertNotIn(
+            "monica-application",
+            framework_recommended,
+            "skill-level recommendations must not recursively widen a profile",
+        )
+
+        application = self.catalog["profiles"]["application"]
+        application_ui = validator.profile_selection_closure(
+            self.catalog["skills"], application, capabilities=["ui"]
+        )
+        self.assertIn("monica-ui-development", application_ui)
+        self.assertIn("monica-development", application_ui)
+        self.assertNotIn("monica-framework", application_ui)
+
+    def test_router_skill_references_exactly_match_catalog_routes(self) -> None:
+        for skill_name, entry in self.catalog["skills"].items():
+            if entry["role"] != "router":
+                continue
+            skill_file = REPOSITORY_ROOT / entry["path"] / "SKILL.md"
+            references = {
+                match.group(1)
+                for match in validator.SKILL_REFERENCE_PATTERN.finditer(
+                    skill_file.read_text(encoding="utf-8")
+                )
+                if match.group(1) in self.catalog["skills"]
+                and match.group(1) != skill_name
+            }
+            self.assertEqual(
+                set(entry["routes"]),
+                references,
+                f"{skill_name} router documentation and catalog routes differ",
+            )
+
+    def test_retired_alias_scan_allows_only_explicit_diagnostic_locations(self) -> None:
+        alias = next(iter(self.catalog["aliases"]))
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            source = root / "AGENTS.md"
+            source.write_text(f"Use `{alias}`.\n", encoding="utf-8")
+            self.assertEqual(
+                [f"AGENTS.md:1:{alias}"],
+                validator.find_retired_alias_occurrences(root, [alias]),
+            )
+            self.assertEqual(
+                [],
+                validator.find_retired_alias_occurrences(
+                    root,
+                    [alias],
+                    allowed_files=(source,),
+                ),
+            )
+
+    def test_required_dependency_graph_is_acyclic(self) -> None:
+        self.assertEqual([], validator.find_required_cycles(self.catalog["skills"]))
+
+    def test_release_and_validator_skill_tree_digests_match(self) -> None:
+        self.assertEqual(
+            validator.tree_digest(self.catalog),
+            release.skill_tree_digest(release.skill_files(self.catalog)),
+        )
+
+    def test_projection_diff_reports_missing_unexpected_and_changed(self) -> None:
+        expected = {"a": "1", "b": "2"}
+        actual = {"b": "3", "c": "4"}
+        self.assertEqual(
+            ["missing a", "unexpected c", "changed b"],
+            sync._describe_diff(expected, actual),
+        )
+
+    def test_projection_write_preserves_external_content_and_removes_exact_aliases(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            canonical = root / "canonical" / "monica-alpha"
+            canonical.mkdir(parents=True)
+            (canonical / "SKILL.md").write_text("canonical\n", encoding="utf-8")
+            skill_roots = {"monica-alpha": canonical}
+            expected = sync.build_manifest(skill_roots)
+
+            projection = root / "projection"
+            (projection / "monica-alpha").mkdir(parents=True)
+            (projection / "monica-alpha" / "SKILL.md").write_text(
+                "stale\n", encoding="utf-8"
+            )
+            external_cache = projection / "external-skill" / "__pycache__" / "cache.pyc"
+            external_cache.parent.mkdir(parents=True)
+            external_cache.write_bytes(b"external-cache")
+            external_file = projection / "external-settings.json"
+            external_file.write_text("external\n", encoding="utf-8")
+            reserved_file = projection / "monica-notes.txt"
+            reserved_file.write_text("not a skill directory\n", encoding="utf-8")
+            (projection / "mo-alpha").mkdir()
+            personal_skill = projection / "monica-personal" / "state.json"
+            personal_skill.parent.mkdir()
+            personal_skill.write_text("user-owned\n", encoding="utf-8")
+
+            sync.write_projections(
+                skill_roots,
+                expected,
+                {"mo-alpha"},
+                projection_paths=(projection,),
+            )
+
+            self.assertEqual("canonical\n", (projection / "monica-alpha" / "SKILL.md").read_text())
+            self.assertEqual(b"external-cache", external_cache.read_bytes())
+            self.assertEqual("external\n", external_file.read_text())
+            self.assertEqual("not a skill directory\n", reserved_file.read_text())
+            self.assertEqual("user-owned\n", personal_skill.read_text())
+            self.assertFalse((projection / "mo-alpha").exists())
+
+    def test_projection_check_ignores_external_trees_but_diagnoses_owned_drift(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            canonical = root / "canonical" / "monica-alpha"
+            canonical.mkdir(parents=True)
+            (canonical / "SKILL.md").write_text("canonical\n", encoding="utf-8")
+            skill_roots = {"monica-alpha": canonical}
+            expected = sync.build_manifest(skill_roots)
+            projection = root / "projection"
+            sync.write_projections(
+                skill_roots,
+                expected,
+                {"mo-alpha"},
+                projection_paths=(projection,),
+            )
+
+            external_cache = projection / "external-skill" / "__pycache__" / "cache.pyc"
+            external_cache.parent.mkdir(parents=True)
+            external_cache.write_bytes(b"ignored")
+            (projection / "external-file").write_text("ignored\n", encoding="utf-8")
+            self.assertTrue(
+                sync.check_projections(
+                    expected,
+                    set(skill_roots),
+                    {"mo-alpha"},
+                    projection_paths=(projection,),
+                )
+            )
+
+            (projection / "mo-alpha").mkdir()
+            personal_cache = projection / "monica-personal" / "__pycache__" / "cache.pyc"
+            personal_cache.parent.mkdir(parents=True)
+            personal_cache.write_bytes(b"ignored")
+            differences = sync._projection_differences(
+                projection, expected, set(skill_roots), {"mo-alpha"}
+            )
+            self.assertIn("retired alias directory mo-alpha", differences)
+            self.assertFalse(any("monica-personal" in item for item in differences))
+
+            managed_cache = projection / "monica-alpha" / "__pycache__" / "cache.pyc"
+            managed_cache.parent.mkdir()
+            managed_cache.write_bytes(b"invalid")
+            managed_differences = sync._projection_differences(
+                projection, expected, set(skill_roots), {"mo-alpha"}
+            )
+            self.assertTrue(
+                any("invalid managed skill directory monica-alpha" in item for item in managed_differences)
+            )
+
+    def test_projection_write_rolls_back_all_owned_directories_on_failure(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            skill_roots: dict[str, Path] = {}
+            projection = root / "projection"
+            projection.mkdir()
+            for name in ("monica-alpha", "monica-beta"):
+                canonical = root / "canonical" / name
+                canonical.mkdir(parents=True)
+                (canonical / "SKILL.md").write_text(f"new-{name}\n", encoding="utf-8")
+                skill_roots[name] = canonical
+                projected = projection / name
+                projected.mkdir()
+                (projected / "SKILL.md").write_text(f"old-{name}\n", encoding="utf-8")
+            (projection / "mo-alpha").mkdir()
+            external = projection / "external-skill" / "state.json"
+            external.parent.mkdir()
+            external.write_text("preserved\n", encoding="utf-8")
+
+            real_replace = sync.os.replace
+
+            def fail_second_install(source, destination):
+                source_path = Path(source)
+                if source_path.parent.name == "staging" and source_path.name == "monica-beta":
+                    raise OSError("simulated replacement failure")
+                return real_replace(source, destination)
+
+            with mock.patch.object(sync.os, "replace", side_effect=fail_second_install):
+                with self.assertRaises(sync.ProjectionError):
+                    sync._replace_projection(projection, skill_roots, {"mo-alpha"})
+
+            for name in skill_roots:
+                self.assertEqual(
+                    f"old-{name}\n",
+                    (projection / name / "SKILL.md").read_text(encoding="utf-8"),
+                )
+            self.assertTrue((projection / "mo-alpha").is_dir())
+            self.assertEqual("preserved\n", external.read_text(encoding="utf-8"))
+
+    def test_projection_write_retries_transient_windows_sharing_failure(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            canonical = root / "canonical" / "monica-alpha"
+            canonical.mkdir(parents=True)
+            (canonical / "SKILL.md").write_text("new\n", encoding="utf-8")
+            projection = root / "projection"
+            (projection / "monica-alpha").mkdir(parents=True)
+            (projection / "monica-alpha" / "SKILL.md").write_text("old\n", encoding="utf-8")
+            real_replace = sync.os.replace
+            attempts = 0
+
+            def fail_once(source, destination):
+                nonlocal attempts
+                source_path = Path(source)
+                if source_path.parent.name == "staging" and attempts == 0:
+                    attempts += 1
+                    raise PermissionError(errno.EACCES, "simulated sharing violation")
+                return real_replace(source, destination)
+
+            with mock.patch.object(sync.os, "replace", side_effect=fail_once):
+                with mock.patch.object(sync.time, "sleep"):
+                    sync._replace_projection(projection, {"monica-alpha": canonical}, set())
+
+            self.assertEqual(1, attempts)
+            self.assertEqual("new\n", (projection / "monica-alpha" / "SKILL.md").read_text(encoding="utf-8"))
+
+    def test_release_index_materialization_is_immutable(self) -> None:
+        base = {
+            "$schema": "./schemas/agent-skill-index.schema.json",
+            "schemaVersion": 1,
+            "channels": {"stable": None, "preview": None},
+            "versions": {},
+            "releases": {},
+        }
+        release_index = release.materialized_index(
+            base,
+            version="1.2.3-rc.1",
+            tag="v1.2.3-rc.1",
+            commit="a" * 40,
+            channel="preview",
+            catalog_digest="sha256:" + "b" * 64,
+            tree_digest="sha256:" + "c" * 64,
+            skill_digests={"monica-guide": "sha256:" + "d" * 64},
+            manifest_digest="sha256:" + "e" * 64,
+            published_at="2026-08-05T00:00:00Z",
+        )
+        self.assertEqual("v1.2.3-rc.1", release_index["channels"]["preview"])
+        self.assertIsNone(release_index["channels"]["stable"])
+        self.assertEqual("a" * 40, release_index["releases"]["v1.2.3-rc.1"]["commit"])
+        self.assertEqual(
+            "https://github.com/Tairitsua/Monica/releases/download/v1.2.3-rc.1",
+            release_index["releases"]["v1.2.3-rc.1"]["assetBaseUrl"],
+        )
+        self.assertEqual({}, base["releases"], "the checked-in base index must remain unchanged")
+
+        merged = release.merge_verified_history(
+            base,
+            release_index,
+            expected_previous_tag="v1.2.3-rc.1",
+        )
+        self.assertEqual(release_index, merged)
+
+        rewritten = json.loads(json.dumps(release_index))
+        rewritten["releases"]["v1.2.3-rc.1"]["commit"] = "e" * 40
+        checked_with_history = json.loads(json.dumps(release_index))
+        with self.assertRaises(release.ReleaseError):
+            release.merge_verified_history(
+                checked_with_history,
+                rewritten,
+                expected_previous_tag="v1.2.3-rc.1",
+            )
+
+        with self.assertRaises(release.ReleaseError):
+            release.materialized_index(
+                release_index,
+                version="1.2.3-rc.1",
+                tag="v1.2.3-rc.1",
+                commit="d" * 40,
+                channel="preview",
+                catalog_digest="sha256:" + "b" * 64,
+                tree_digest="sha256:" + "c" * 64,
+                skill_digests={"monica-guide": "sha256:" + "d" * 64},
+                manifest_digest="sha256:" + "e" * 64,
+                published_at="2026-08-05T00:00:00Z",
+            )
+
+    def test_manifest_digest_is_path_sensitive_and_deterministic(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            first = root / "first"
+            second = root / "second"
+            first.write_text("same", encoding="utf-8")
+            second.write_text("same", encoding="utf-8")
+            manifest = sync.build_manifest({"example": root})
+            self.assertEqual(manifest, sync.build_manifest({"example": root}))
+            self.assertNotEqual(manifest["example/first"], "")
+            self.assertEqual(manifest["example/first"], manifest["example/second"])
+
+    def test_release_catalog_and_index_bytes_match_archive_and_digests(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            staging = Path(temporary_directory)
+            args = SimpleNamespace(
+                version="9.9.9-rc.1",
+                tag="v9.9.9-rc.1",
+                commit="a" * 40,
+                channel="preview",
+                published_at="2026-08-05T00:00:00Z",
+                previous_index=None,
+                previous_tag=None,
+            )
+            release.build_payload(
+                staging,
+                args,
+                datetime(2026, 8, 5, tzinfo=timezone.utc),
+            )
+            index = json.loads((staging / "agent-skill-index.json").read_text(encoding="utf-8"))
+            manifest = json.loads((staging / "agent-skill-manifest.json").read_text(encoding="utf-8"))
+            catalog_bytes = (staging / "agent-skill-catalog.json").read_bytes()
+            self.assertEqual(release.sha256_bytes(catalog_bytes), manifest["catalogDigest"])
+            self.assertEqual(
+                manifest["catalogDigest"],
+                index["releases"]["v9.9.9-rc.1"]["catalogDigest"],
+            )
+            manifest_bytes = (staging / "agent-skill-manifest.json").read_bytes()
+            self.assertEqual(
+                release.sha256_bytes(manifest_bytes),
+                index["releases"]["v9.9.9-rc.1"]["manifestDigest"],
+            )
+            self.assertEqual(
+                manifest["skillDigests"],
+                index["releases"]["v9.9.9-rc.1"]["skillDigests"],
+            )
+            self.assertEqual(
+                release.per_skill_digests(self.catalog),
+                manifest["skillDigests"],
+            )
+            with zipfile.ZipFile(staging / "monica-agent-skills-v9.9.9-rc.1.zip") as archive:
+                self.assertEqual(catalog_bytes, archive.read(".monica/agent-skill-catalog.json"))
+                self.assertEqual(
+                    (staging / "agent-skill-index.json").read_bytes(),
+                    archive.read(".monica/agent-skill-index.json"),
+                )
+            verification = installed_verifier.verify(
+                SimpleNamespace(
+                    index=staging / "agent-skill-index.json",
+                    manifest=staging / "agent-skill-manifest.json",
+                    catalog=staging / "agent-skill-catalog.json",
+                    tag="v9.9.9-rc.1",
+                    skill="monica-guide",
+                    path=REPOSITORY_ROOT / "skills" / "monica-guide",
+                )
+            )
+            self.assertTrue(verification["ok"])
+            self.assertEqual(
+                manifest["skillDigests"]["monica-guide"],
+                verification["skillDigest"],
+            )
+
+    def test_release_inputs_support_full_semver_and_prerelease_channels(self) -> None:
+        common = {
+            "commit": "a" * 40,
+            "published_at": "2026-08-05T00:00:00Z",
+            "previous_index": None,
+            "previous_tag": None,
+            "output": REPOSITORY_ROOT / ".tmp" / "semver-contract-test",
+        }
+        stable = SimpleNamespace(
+            **common,
+            version="1.2.3+build-7",
+            tag="v1.2.3+build-7",
+            channel="stable",
+        )
+        release.validate_inputs(stable)
+        stable_index = release.materialized_index(
+            {
+                "$schema": "./schemas/agent-skill-index.schema.json",
+                "schemaVersion": 1,
+                "channels": {"stable": None, "preview": None},
+                "versions": {},
+                "releases": {},
+            },
+            version=stable.version,
+            tag=stable.tag,
+            commit=stable.commit,
+            channel=stable.channel,
+            catalog_digest="sha256:" + "b" * 64,
+            tree_digest="sha256:" + "c" * 64,
+            skill_digests={"monica-guide": "sha256:" + "d" * 64},
+            manifest_digest="sha256:" + "e" * 64,
+            published_at=stable.published_at,
+        )
+        release.validate_index_payload(stable_index, label="build-metadata fixture")
+        preview = SimpleNamespace(
+            **common,
+            version="1.2.3-rc.1+build-7",
+            tag="v1.2.3-rc.1+build-7",
+            channel="preview",
+        )
+        release.validate_inputs(preview)
+        wrong_channel = SimpleNamespace(
+            **common,
+            version="1.2.3+build-7",
+            tag="v1.2.3+build-7",
+            channel="preview",
+        )
+        with self.assertRaises(release.ReleaseError):
+            release.validate_inputs(wrong_channel)
+        with self.assertRaises(release.ReleaseError):
+            release.release_channel_for_version("01.2.3")
+
+
+if __name__ == "__main__":
+    unittest.main()

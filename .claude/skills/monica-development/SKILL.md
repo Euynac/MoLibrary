@@ -1,7 +1,6 @@
 ---
 name: monica-development
 description: This skill should be used when the user asks to "create module", "add module", "module structure", "use Res type", "return Res", "Res.Ok", "Res.Fail", "IsFailed pattern", "module registration", "module dependencies", "module pattern", "Monica architecture", "service layer pattern", "create service", "add service", "create hosted service", "add background service", "MoBackgroundService", "MoHostedService", "RecordState", "hosted service observability", "service state tracking", "CoordinatedLeaderService", "GetRequestedConfigMethodKeys", "required config", "required configuration methods", "IWebModule", "web module", "downgrade to non-web", or needs guidance on Monica module architecture, the unified result model Res, module registration patterns, module runtime kinds, Res usage scope (UI vs infrastructure), required Guide configuration validation, or hosted service development with observability.
-version: 1.1.0
 ---
 
 # Monica Development Guide

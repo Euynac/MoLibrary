@@ -94,4 +94,3 @@ public async ValueTask DisposeAsync()
 - Keep the loop page-local; do not extract a shared base class just for two pages.
 - Use `StopAutoRefresh()` before re-creating the timer on interval changes.
 - Guard `StartAutoRefresh()` with `IsCancellationRequested` so late lifecycle continuations do nothing.
-

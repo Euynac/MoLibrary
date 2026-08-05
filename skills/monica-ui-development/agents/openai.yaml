@@ -1,0 +1,4 @@
+interface:
+  display_name: "Monica UI Development"
+  short_description: "Monica Blazor and MudBlazor implementation rules"
+  default_prompt: "Use $monica-ui-development to build a visually clear, non-monotonous Monica Blazor UI with MudBlazor and theme-token governance; pair it with $monica-ui-audit for component or page changes."
