@@ -102,8 +102,8 @@ jobs:
           echo "release_notes_args=${RELEASE_NOTES_RANGE} --tag v${VERSION} --strip header" >> "${GITHUB_OUTPUT}"
           echo "previous_tag=${PREVIOUS_TAG}" >> "${GITHUB_OUTPUT}"
 
-      - name: Synchronize template package version
-        run: python3 eng/sync-template-version.py --version "${{ steps.version.outputs.version }}"
+      - name: Validate source and template package version
+        run: python3 eng/sync-template-version.py --check --version "${{ steps.version.outputs.version }}"
 
       - name: Validate package maturity catalog
         run: python3 eng/validate-package-tiers.py

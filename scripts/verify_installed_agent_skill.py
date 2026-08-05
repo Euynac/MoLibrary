@@ -16,15 +16,27 @@ try:
         release_skill_metadata,
         validate_revision_history,
     )
+    from agent_skill_file_manifest import (
+        FILE_MANIFEST_DIGEST_ALGORITHM,
+        file_manifest_digest as digest_file_manifest,
+        ordered_relative_files,
+        utf8_path_key,
+    )
 except ModuleNotFoundError:  # pragma: no cover - supports import-by-path test runners
     from scripts.agent_skill_release_contract import (
         ReleaseContractError,
         release_skill_metadata,
         validate_revision_history,
     )
+    from scripts.agent_skill_file_manifest import (
+        FILE_MANIFEST_DIGEST_ALGORITHM,
+        file_manifest_digest as digest_file_manifest,
+        ordered_relative_files,
+        utf8_path_key,
+    )
 
 
-DIGEST_ALGORITHM = "sha256-file-manifest-v1"
+DIGEST_ALGORITHM = FILE_MANIFEST_DIGEST_ALGORITHM
 
 
 class VerificationError(ReleaseContractError):
@@ -50,21 +62,23 @@ def installed_files(root: Path) -> dict[str, bytes]:
     if not resolved_root.is_dir():
         raise VerificationError(f"Installed skill path is not a directory: {resolved_root}")
 
-    files: dict[str, bytes] = {}
-    for candidate in sorted(resolved_root.rglob("*")):
+    candidates: list[Path] = []
+    for candidate in resolved_root.rglob("*"):
         if candidate.is_symlink():
             raise VerificationError(f"Installed skill contains an unexpected symlink: {candidate}")
         if candidate.is_file():
-            files[candidate.relative_to(resolved_root).as_posix()] = candidate.read_bytes()
-    return files
+            candidates.append(candidate)
+    return {
+        relative_path: candidate.read_bytes()
+        for relative_path, candidate in ordered_relative_files(
+            candidates,
+            relative_to=resolved_root,
+        )
+    }
 
 
 def file_manifest_digest(files: dict[str, bytes]) -> str:
-    lines = "".join(
-        f"{hashlib.sha256(content).hexdigest()}  {relative_path}\n"
-        for relative_path, content in sorted(files.items())
-    )
-    return digest(lines.encode("utf-8"))
+    return digest_file_manifest(files.items())
 
 
 def verify(args: argparse.Namespace) -> dict[str, Any]:
@@ -138,8 +152,8 @@ def verify(args: argparse.Namespace) -> dict[str, Any]:
         raise VerificationError(f"Release manifest contains no files for {args.skill}.")
     actual_files = installed_files(args.path)
     if set(actual_files) != set(expected_files):
-        missing = sorted(set(expected_files) - set(actual_files))
-        unexpected = sorted(set(actual_files) - set(expected_files))
+        missing = sorted(set(expected_files) - set(actual_files), key=utf8_path_key)
+        unexpected = sorted(set(actual_files) - set(expected_files), key=utf8_path_key)
         raise VerificationError(
             f"Installed file set differs (missing={missing}, unexpected={unexpected})."
         )

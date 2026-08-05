@@ -23,11 +23,13 @@ try:
         ReleaseContractError,
         validate_revision_history,
     )
+    from agent_skill_file_manifest import digest_files
 except ModuleNotFoundError:  # pragma: no cover - supports import-by-path test runners
     from scripts.agent_skill_release_contract import (
         ReleaseContractError,
         validate_revision_history,
     )
+    from scripts.agent_skill_file_manifest import digest_files
 
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
@@ -564,14 +566,13 @@ def validate_index(validation: Validation, index: dict[str, Any]) -> None:
 
 
 def tree_digest(catalog: dict[str, Any]) -> str:
-    entries: list[str] = []
+    files: list[Path] = []
     for skill_name, entry in sorted(catalog["skills"].items()):
+        if entry.get("ownership") != "monica" or entry.get("managed") is not True:
+            continue
         root = REPOSITORY_ROOT / entry["path"]
-        for file_path in sorted(path for path in root.rglob("*") if path.is_file()):
-            relative = file_path.relative_to(REPOSITORY_ROOT).as_posix()
-            digest = hashlib.sha256(file_path.read_bytes()).hexdigest()
-            entries.append(f"{digest}  {relative}\n")
-    return "sha256:" + hashlib.sha256("".join(entries).encode("utf-8")).hexdigest()
+        files.extend(path for path in root.rglob("*") if path.is_file())
+    return digest_files(files, relative_to=REPOSITORY_ROOT)
 
 
 def parse_args() -> argparse.Namespace:

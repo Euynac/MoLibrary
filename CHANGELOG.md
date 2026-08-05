@@ -6,6 +6,18 @@ This project follows semantic versioning for public NuGet packages. Release cand
 
 ## [Unreleased]
 
+## [1.0.0-rc.8] - 2026-08-05
+
+### Changed
+
+- Agent Skill file manifests now normalize repository-relative POSIX paths before applying unsigned UTF-8 ordinal ordering.
+- Release workflows now require the tag-derived version, `Directory.Build.props`, and template package versions to match before build and publication.
+
+### Fixed
+
+- Immutable Agent Skill archives independently recompute aggregate and per-skill digests from archived bytes, including prefix-colliding skill names.
+- Archive manifests and ZIP entries are emitted and verified in one canonical path order, preventing producer/consumer digest drift.
+
 ## [1.0.0-rc.7] - 2026-08-05
 
 ### Added

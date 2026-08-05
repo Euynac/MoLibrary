@@ -133,6 +133,63 @@ class AgentSkillInfrastructureTests(unittest.TestCase):
             release.skill_tree_digest(release.skill_files(self.catalog)),
         )
 
+    def test_file_manifest_digest_sorts_normalized_relative_paths(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            application = root / "skills" / "monica-application" / "SKILL.md"
+            microservice = (
+                root
+                / "skills"
+                / "monica-application-microservice"
+                / "SKILL.md"
+            )
+            application.parent.mkdir(parents=True)
+            microservice.parent.mkdir(parents=True)
+            application.write_bytes(b"application\n")
+            microservice.write_bytes(b"microservice\n")
+
+            paths = [application, microservice]
+            self.assertEqual(application, sorted(paths)[0])
+            expected_manifest = "".join(
+                (
+                    f"{release.sha256_bytes(path.read_bytes()).removeprefix('sha256:')}  "
+                    f"{path.relative_to(root).as_posix()}\n"
+                )
+                for path in (microservice, application)
+            )
+            expected_digest = release.sha256_bytes(expected_manifest.encode("utf-8"))
+            self.assertEqual(
+                expected_digest,
+                release.file_manifest_digest(paths, relative_to=root),
+            )
+            self.assertEqual(
+                expected_digest,
+                release.file_manifest_digest(list(reversed(paths)), relative_to=root),
+            )
+
+    def test_release_parity_rejects_invalid_aggregate_tree_digest(self) -> None:
+        archived_files = {
+            "skills/monica-application/SKILL.md": b"application\n",
+            "skills/monica-application-microservice/SKILL.md": b"microservice\n",
+        }
+        release_entry = {
+            "skillDigests": {
+                skill_name: release.digest_file_manifest(
+                    [("SKILL.md", archived_files[f"skills/{skill_name}/SKILL.md"])]
+                )
+                for skill_name in (
+                    "monica-application",
+                    "monica-application-microservice",
+                )
+            },
+            "skillTreeDigest": release.digest_file_manifest(archived_files.items()),
+        }
+        release.verify_archived_skill_digests(archived_files, release_entry)
+
+        release_entry["skillTreeDigest"] = "sha256:" + "0" * 64
+        with self.assertRaisesRegex(release.ReleaseError, "Aggregate skill-tree digest"):
+            release.verify_archived_skill_digests(archived_files, release_entry)
+
     def test_projection_diff_reports_missing_unexpected_and_changed(self) -> None:
         expected = {"a": "1", "b": "2"}
         actual = {"b": "3", "c": "4"}
@@ -619,10 +676,32 @@ class AgentSkillInfrastructureTests(unittest.TestCase):
                 manifest["skillDigests"],
             )
             with zipfile.ZipFile(staging / "monica-agent-skills-v9.9.9-rc.1.zip") as archive:
+                archive_paths = [
+                    name for name in archive.namelist() if not name.endswith("/")
+                ]
+                self.assertEqual(
+                    sorted(archive_paths, key=release.utf8_path_key),
+                    archive_paths,
+                )
+                self.assertLess(
+                    archive_paths.index(
+                        "skills/monica-application-microservice/SKILL.md"
+                    ),
+                    archive_paths.index("skills/monica-application/SKILL.md"),
+                )
                 self.assertEqual(catalog_bytes, archive.read(".monica/agent-skill-catalog.json"))
                 self.assertEqual(
                     (staging / "agent-skill-index.json").read_bytes(),
                     archive.read(".monica/agent-skill-index.json"),
+                )
+                managed_tree = [
+                    (path, archive.read(path))
+                    for path in manifest["files"]
+                    if path.startswith("skills/")
+                ]
+                self.assertEqual(
+                    release.digest_file_manifest(managed_tree),
+                    manifest["skillTreeDigest"],
                 )
             verification = installed_verifier.verify(
                 SimpleNamespace(
@@ -641,6 +720,21 @@ class AgentSkillInfrastructureTests(unittest.TestCase):
             )
             self.assertEqual(1, verification["skillRevision"])
             self.assertEqual("v9.9.9-rc.1", verification["skillLastChangedIn"])
+            application_verification = installed_verifier.verify(
+                SimpleNamespace(
+                    index=staging / "agent-skill-index.json",
+                    manifest=staging / "agent-skill-manifest.json",
+                    catalog=staging / "agent-skill-catalog.json",
+                    tag="v9.9.9-rc.1",
+                    skill="monica-application",
+                    path=REPOSITORY_ROOT / "skills" / "monica-application",
+                )
+            )
+            self.assertTrue(application_verification["ok"])
+            self.assertEqual(
+                manifest["skillDigests"]["monica-application"],
+                application_verification["skillDigest"],
+            )
 
     def test_release_inputs_support_full_semver_and_prerelease_channels(self) -> None:
         common = {

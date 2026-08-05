@@ -30,12 +30,26 @@ try:
         release_timestamps,
         validate_revision_history,
     )
+    from agent_skill_file_manifest import (
+        FILE_MANIFEST_DIGEST_ALGORITHM,
+        digest_files,
+        file_manifest_digest as digest_file_manifest,
+        ordered_relative_files,
+        utf8_path_key,
+    )
 except ModuleNotFoundError:  # pragma: no cover - supports import-by-path test runners
     from scripts.agent_skill_release_contract import (
         ReleaseContractError,
         derive_skill_revision_metadata,
         release_timestamps,
         validate_revision_history,
+    )
+    from scripts.agent_skill_file_manifest import (
+        FILE_MANIFEST_DIGEST_ALGORITHM,
+        digest_files,
+        file_manifest_digest as digest_file_manifest,
+        ordered_relative_files,
+        utf8_path_key,
     )
 
 
@@ -44,7 +58,7 @@ CATALOG_PATH = REPOSITORY_ROOT / ".monica" / "agent-skill-catalog.json"
 INDEX_PATH = REPOSITORY_ROOT / ".monica" / "agent-skill-index.json"
 SCHEMAS_ROOT = REPOSITORY_ROOT / ".monica" / "schemas"
 RELEASE_MANIFEST_SCHEMA_PATH = SCHEMAS_ROOT / "agent-skill-release-manifest.schema.json"
-SKILL_DIGEST_ALGORITHM = "sha256-file-manifest-v1"
+SKILL_DIGEST_ALGORITHM = FILE_MANIFEST_DIGEST_ALGORITHM
 SEMVER_IDENTIFIER = r"(?:0|[1-9][0-9]*|[0-9A-Za-z-]*[A-Za-z-][0-9A-Za-z-]*)"
 SEMVER_PATTERN = re.compile(
     rf"^(?P<major>0|[1-9][0-9]*)\."
@@ -135,14 +149,17 @@ def skill_files(catalog: dict[str, Any]) -> list[Path]:
         root = REPOSITORY_ROOT / entry["path"]
         if not (root / "SKILL.md").is_file():
             raise ReleaseError(f"Managed skill {skill_name!r} is missing SKILL.md.")
-        for file_path in sorted(root.rglob("*")):
+        for file_path in root.rglob("*"):
             if file_path.is_symlink():
                 raise ReleaseError(f"Skill release trees must not contain symlinks: {file_path}")
             if file_path.name == "__pycache__" or file_path.suffix in {".pyc", ".pyo"}:
                 raise ReleaseError(f"Generated Python cache is not releasable: {file_path}")
             if file_path.is_file():
                 files.append(file_path)
-    return files
+    return [
+        path
+        for _, path in ordered_relative_files(files, relative_to=REPOSITORY_ROOT)
+    ]
 
 
 def skill_file_groups(catalog: dict[str, Any]) -> dict[str, list[Path]]:
@@ -155,12 +172,7 @@ def skill_file_groups(catalog: dict[str, Any]) -> dict[str, list[Path]]:
 
 
 def file_manifest_digest(files: list[Path], *, relative_to: Path) -> str:
-    manifest = "".join(
-        f"{hashlib.sha256(path.read_bytes()).hexdigest()}  "
-        f"{path.relative_to(relative_to).as_posix()}\n"
-        for path in sorted(files)
-    )
-    return sha256_bytes(manifest.encode("utf-8"))
+    return digest_files(files, relative_to=relative_to)
 
 
 def per_skill_digests(catalog: dict[str, Any]) -> dict[str, str]:
@@ -305,27 +317,66 @@ def verify_release_artifact_parity(
     with zipfile.ZipFile(archive_path) as archive:
         archived_catalog = archive.read(".monica/agent-skill-catalog.json")
         archived_index = archive.read(".monica/agent-skill-index.json")
-        expected_archive_paths = set(manifest["files"]) | {".monica/agent-skill-index.json"}
-        actual_archive_paths = {name for name in archive.namelist() if not name.endswith("/")}
+        manifest_paths = list(manifest["files"])
+        canonical_manifest_paths = sorted(manifest_paths, key=utf8_path_key)
+        if manifest_paths != canonical_manifest_paths:
+            raise ReleaseError("Manifest files are not in canonical UTF-8 path order.")
+        expected_archive_paths = sorted(
+            [*manifest_paths, ".monica/agent-skill-index.json"],
+            key=utf8_path_key,
+        )
+        actual_archive_paths = [
+            name for name in archive.namelist() if not name.endswith("/")
+        ]
         if actual_archive_paths != expected_archive_paths:
-            raise ReleaseError("Archive file set does not match the release manifest scope.")
+            raise ReleaseError(
+                "Archive files do not match the canonical release-manifest order."
+            )
+        archived_files = {
+            relative_path: archive.read(relative_path)
+            for relative_path in manifest_paths
+        }
         for relative_path, expected_digest in manifest["files"].items():
-            if sha256_bytes(archive.read(relative_path)) != expected_digest:
+            if sha256_bytes(archived_files[relative_path]) != expected_digest:
                 raise ReleaseError(f"Archived file digest mismatch: {relative_path}")
     if archived_catalog != top_catalog:
         raise ReleaseError("Top-level and archived catalog assets differ.")
     if archived_index != top_index:
         raise ReleaseError("Top-level and archived index assets differ.")
 
+    verify_archived_skill_digests(archived_files, release)
+
+
+def verify_archived_skill_digests(
+    archived_files: dict[str, bytes], release: dict[str, Any]
+) -> None:
+    """Independently recompute per-skill and aggregate digests from archive bytes."""
+
+    managed_tree: list[tuple[str, bytes]] = []
+    claimed_paths: set[str] = set()
     for skill_name, expected_digest in release["skillDigests"].items():
         prefix = f"skills/{skill_name}/"
-        lines = "".join(
-            f"{digest.removeprefix('sha256:')}  {path.removeprefix(prefix)}\n"
-            for path, digest in sorted(manifest["files"].items())
+        skill_entries = [
+            (path.removeprefix(prefix), content)
+            for path, content in archived_files.items()
             if path.startswith(prefix)
+        ]
+        if not skill_entries:
+            raise ReleaseError(f"Archive contains no files for managed skill {skill_name}.")
+        claimed_paths.update(f"{prefix}{path}" for path, _ in skill_entries)
+        managed_tree.extend(
+            (f"{prefix}{path}", content) for path, content in skill_entries
         )
-        if sha256_bytes(lines.encode("utf-8")) != expected_digest:
+        if digest_file_manifest(skill_entries) != expected_digest:
             raise ReleaseError(f"Per-skill digest mismatch: {skill_name}")
+
+    archived_skill_paths = {
+        path for path in archived_files if path.startswith("skills/")
+    }
+    if claimed_paths != archived_skill_paths:
+        raise ReleaseError("Archive skill files do not match the managed skill digest scope.")
+    if digest_file_manifest(managed_tree) != release["skillTreeDigest"]:
+        raise ReleaseError("Aggregate skill-tree digest mismatch.")
 
 
 def build_payload(staging: Path, args: argparse.Namespace, published_at: datetime) -> None:
@@ -369,10 +420,13 @@ def build_payload(staging: Path, args: argparse.Namespace, published_at: datetim
     shutil.copytree(SCHEMAS_ROOT, payload_root / ".monica" / "schemas")
     shutil.copy2(CATALOG_PATH, payload_root / ".monica" / "agent-skill-catalog.json")
 
+    payload_files = [path for path in payload_root.rglob("*") if path.is_file()]
     file_hashes = {
-        path.relative_to(payload_root).as_posix(): sha256_bytes(path.read_bytes())
-        for path in sorted(payload_root.rglob("*"))
-        if path.is_file()
+        relative_path: sha256_bytes(path.read_bytes())
+        for relative_path, path in ordered_relative_files(
+            payload_files,
+            relative_to=payload_root,
+        )
     }
     asset_base_url = f"https://github.com/Tairitsua/Monica/releases/download/{args.tag}"
     release_manifest = {
@@ -432,8 +486,11 @@ def build_payload(staging: Path, args: argparse.Namespace, published_at: datetim
     # ZIP cannot represent timestamps before 1980.
     zip_timestamp = (max(zip_timestamp[0], 1980), *zip_timestamp[1:])
     with zipfile.ZipFile(archive_path, "w", compression=zipfile.ZIP_DEFLATED, compresslevel=9) as archive:
-        for source in sorted(path for path in payload_root.rglob("*") if path.is_file()):
-            relative = source.relative_to(payload_root).as_posix()
+        archive_files = [path for path in payload_root.rglob("*") if path.is_file()]
+        for relative, source in ordered_relative_files(
+            archive_files,
+            relative_to=payload_root,
+        ):
             info = zipfile.ZipInfo(relative, date_time=zip_timestamp)
             info.compress_type = zipfile.ZIP_DEFLATED
             info.external_attr = 0o100644 << 16

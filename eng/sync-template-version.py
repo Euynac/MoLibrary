@@ -105,6 +105,7 @@ def check_versions(expected_version: str, expected_source: str) -> None:
     _, default_value, replaces = read_template_configuration()
 
     actual_versions = {
+        "Directory.Build.props Version": read_directory_version(),
         "MonicaStarter.csproj MonicaVersion": project_version,
         "Monica.Templates README install version": readme_version,
         "template.json frameworkVersion.defaultValue": default_value,
