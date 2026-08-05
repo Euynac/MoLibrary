@@ -82,8 +82,8 @@ BREAKING CHANGE: replace ambient Mo registration with builder.AddMonica(monica =
 Release tags use the `v` prefix:
 
 ```bash
-git tag v1.0.0-rc.6
-git push origin v1.0.0-rc.6
+git tag v1.0.0-rc.7
+git push origin v1.0.0-rc.7
 ```
 
 The release workflow builds, tests, packs, uploads package artifacts, publishes to NuGet when configured, generates release notes from commit prefixes with `git-cliff`, and creates a GitHub pre-release for `*-rc.*` tags. It also validates the canonical Agent Skills with both the portable Agent Skills validator and Codex validator, installs `monica-guide` from the pushed immutable tag for Codex and Claude Code, verifies the discovered installed directory against the release's exact per-file and per-skill digests, and publishes the catalog, resolved commit, release index, manifest, and skill-tree archive only after discovery succeeds.

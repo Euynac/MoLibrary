@@ -6,6 +6,26 @@ This project follows semantic versioning for public NuGet packages. Release cand
 
 ## [Unreleased]
 
+## [1.0.0-rc.7] - 2026-08-05
+
+### Added
+
+- Canonical Monica Guide distribution with profile selection, diagnostics, transactional installation, and deterministic Codex and Claude Code discovery.
+- Immutable Agent Skill release artifacts with per-file digests, per-skill revisions, change origins, and additive release-history validation.
+- Multi-package third-party module repository scaffolding with optional OCI provider images and CPU/NVIDIA validation gates.
+
+### Changed
+
+- Agent Skills now use the canonical `skills/monica-*` ownership tree and versioned catalog; legacy compatibility folders and destructive synchronization commands are removed.
+- Configuration change-impact analysis now accepts exact definition/path targets, reports parameter-level affected services, and requires UI confirmation before saving.
+- Configuration rollback previews are fingerprint-bound and remain stable across concurrent state changes.
+- The Kafka management workspace now uses responsive operational surfaces and isolates per-member consumer-rate calculations.
+- Release validation treats package IDs case-insensitively and verifies a fresh immutable-tag skill installation before publication.
+
+### Removed
+
+- Superseded repository-owned Monica skill copies and obsolete UI design prototypes.
+
 ## [1.0.0-rc.6] - 2026-08-03
 
 ### Added
