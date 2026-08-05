@@ -40,12 +40,18 @@ import {
   loadReleaseIndex,
   renderManagedInstructions,
   resolveProfileClosure,
+  resolveRequiredSkillClosure,
   resolveRelease,
   skillsCliSpec,
 } from './guide-catalog.mjs';
 import { assertProjectReferenceRelease, profileRepositoryIssues, workspaceDetection } from './guide-detect.mjs';
 import { assertSourceContractClean, sourceBindingForProfile, resolveCachedSource, verifyLocalSource } from './guide-source.mjs';
-import { buildSourceManifest, verifyDiscoveryPayload, verifyLocalSkillSource } from './guide-installation.mjs';
+import {
+  buildSourceManifest,
+  compareManagedSkillRecords,
+  verifyDiscoveryPayload,
+  verifyLocalSkillSource,
+} from './guide-installation.mjs';
 import {
   normalizeSkillsCliAgent,
   retainedGlobalSkillTransactions,
@@ -61,6 +67,25 @@ function normalizeAgents(values) {
   const agents = [...new Set((values || []).map((value) => aliases[value] || value))];
   for (const agent of agents) if (!VALID_AGENTS.has(agent)) throw new GuideError('invalid_agent', `Unsupported agent target: ${agent}.`);
   return agents.sort();
+}
+
+function normalizeTargetSkills(values = []) {
+  const skills = [...new Set(values)];
+  for (const skill of skills) {
+    if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(skill)) throw new GuideError('invalid_skill', `Invalid targeted skill name: ${skill}.`);
+  }
+  return skills.sort(compareOrdinalUtf8);
+}
+
+function sameStringSet(left, right) {
+  return JSON.stringify([...new Set(left || [])].sort(compareOrdinalUtf8))
+    === JSON.stringify([...new Set(right || [])].sort(compareOrdinalUtf8));
+}
+
+function requiresSourceReinstall(context, state, skillChanges) {
+  return context.channel === 'source'
+    && (state.activeRelease?.id !== context.release.id
+      || skillChanges.some((entry) => entry.changeState === 'metadata-changed'));
 }
 
 export function resolveNestedInstructionSelections(workspace, detection, values = []) {
@@ -118,26 +143,17 @@ function validateNestedClaudeSibling(workspace, siblingAgents, detection) {
   return discovered.has(path.resolve(siblingAgents)) ? null : 'undiscovered';
 }
 
-function offlineInstalledSkillNames(agent) {
-  const roots = agent === 'claude-code'
-    ? [path.join(os.homedir(), '.claude', 'skills')]
-    : [path.join(os.homedir(), '.agents', 'skills'), path.join(os.homedir(), '.codex', 'skills')];
-  const names = new Set();
-  for (const root of roots) {
-    if (!exists(root)) continue;
-    for (const entry of fs.readdirSync(root, { withFileTypes: true })) if (entry.isDirectory()) names.add(entry.name);
-  }
-  return names;
-}
-
 function discoverInstalledManagedSkills(agents, catalog, cliSpec, offline) {
   const canonical = new Set(Object.entries(catalog.skills)
     .filter(([, entry]) => entry.ownership === 'monica' && entry.managed !== false)
     .map(([name]) => name));
   const discovered = new Set();
+  const payloads = {};
   for (const agent of agents) {
     if (offline) {
-      for (const name of offlineInstalledSkillNames(agent)) if (canonical.has(name)) discovered.add(name);
+      const payload = offlineDiscoveryPayloadForPlanning(agent);
+      payloads[agent] = payload;
+      for (const { name } of payload) if (canonical.has(name)) discovered.add(name);
       continue;
     }
     const executable = process.env.MONICA_GUIDE_NPX || 'npx';
@@ -146,9 +162,48 @@ function discoverInstalledManagedSkills(agents, catalog, cliSpec, offline) {
     let payload;
     try { payload = JSON.parse(result.stdout); } catch { throw new GuideError('global_skill_discovery_contract_invalid', `${agent} returned invalid skills ls --json output.`); }
     if (!Array.isArray(payload)) throw new GuideError('global_skill_discovery_contract_invalid', `${agent} skills ls --json must return a top-level array.`);
+    payloads[agent] = payload;
     for (const entry of payload) if (canonical.has(entry?.name)) discovered.add(entry.name);
   }
-  return [...discovered].sort();
+  return { skills: [...discovered].sort(compareOrdinalUtf8), payloads };
+}
+
+function offlineDiscoveryPayloadForPlanning(agent) {
+  const roots = agent === 'claude-code'
+    ? [path.join(os.homedir(), '.claude', 'skills')]
+    : [path.join(os.homedir(), '.agents', 'skills'), path.join(os.homedir(), '.codex', 'skills')];
+  const payload = [];
+  const seen = new Set();
+  for (const root of roots) {
+    if (!exists(root)) continue;
+    for (const entry of fs.readdirSync(root, { withFileTypes: true })) {
+      if (!entry.isDirectory() || seen.has(entry.name)) continue;
+      seen.add(entry.name);
+      payload.push({ name: entry.name, path: path.join(root, entry.name), scope: 'global', agents: [agent] });
+    }
+  }
+  return payload;
+}
+
+function installedSkillDrift(skills, agents, payloads, manifest, offline) {
+  const drift = [];
+  for (const skill of skills) {
+    const failures = [];
+    for (const agent of agents) {
+      try {
+        verifyDiscoveryPayload(payloads[agent] || [], [skill], manifest);
+        if (!offline) {
+          const entry = payloads[agent].find((candidate) => candidate?.name === skill);
+          const memberships = new Set((entry?.agents || []).map(normalizeSkillsCliAgent).filter(Boolean));
+          if (!memberships.has(agent)) throw new GuideError('skill_agent_membership_mismatch', `${skill} is not installed for ${agent}.`);
+        }
+      } catch (error) {
+        failures.push({ agent, code: error.code || 'skill_installation_drift', message: error.message });
+      }
+    }
+    if (failures.length) drift.push({ name: skill, failures });
+  }
+  return drift;
 }
 
 function addBlocker(plan, code, message, details = undefined) {
@@ -261,9 +316,11 @@ function installAction(skill, release, agents, cliSpec, { offline = false, local
 function verificationAction(skills, agents, release, cliSpec, manifest, canonicalSkills, rejectUnexpected, offline) {
   const prefixes = skills.map((skill) => `skills/${skill}/`);
   const selectedManifest = {
-    schemaVersion: manifest?.schemaVersion || 1,
+    schemaVersion: manifest?.schemaVersion || 2,
     skillDigestAlgorithm: manifest?.skillDigestAlgorithm,
     skillDigests: Object.fromEntries(skills.map((skill) => [skill, manifest?.skillDigests?.[skill]])),
+    skillRevisions: Object.fromEntries(skills.map((skill) => [skill, manifest?.skillRevisions?.[skill] ?? null])),
+    skillLastChangedIn: Object.fromEntries(skills.map((skill) => [skill, manifest?.skillLastChangedIn?.[skill] ?? null])),
     files: Object.fromEntries(Object.entries(manifest?.files || {}).filter(([filePath]) => prefixes.some((prefix) => filePath.startsWith(prefix)))),
   };
   return {
@@ -386,6 +443,9 @@ async function prepareReleaseContext(context, plan, options) {
       context.installManifest = buildSourceManifest(binding.sourcePath, context.catalog);
       context.sourceBinding = binding;
       context.release.catalogDigest = context.catalogDigest;
+      context.release.skillDigests = context.installManifest.skillDigests;
+      context.release.skillRevisions = context.installManifest.skillRevisions;
+      context.release.skillLastChangedIn = context.installManifest.skillLastChangedIn;
     } catch (error) {
       if (!(error instanceof GuideError)) throw error;
       addBlocker(plan, error.code, error.message, error.details);
@@ -456,6 +516,7 @@ async function prepareReleaseContext(context, plan, options) {
 
 export async function buildPlan(intent, options = {}) {
   if (!MUTATING_INTENTS.has(intent)) throw new GuideError('invalid_intent', `Cannot build a mutating plan for ${intent}.`);
+  if (options.skills?.length && intent !== 'update') throw new GuideError('targeted_skill_intent_invalid', '--skill is supported only by update.');
   if (options.nestedInstructions?.length && !['init', 'configure', 'update'].includes(intent)) {
     throw new GuideError('nested_instruction_intent_invalid', '--nested-instruction is supported only by init, configure, and update.');
   }
@@ -483,6 +544,7 @@ export async function buildPlan(intent, options = {}) {
       candidateConfidence: detection.repository.confidence,
       detectedFrameworkVersion: detection.frameworkVersion.version,
       versionSource: detection.frameworkVersion.tier,
+      activeGlobalRelease: comparableRelease(state.activeRelease),
     },
     actions: [],
     warnings: [],
@@ -512,6 +574,7 @@ export async function buildPlan(intent, options = {}) {
     context.channel = options.channel || project.config?.channel || semverChannel(detection.frameworkVersion.version) || 'stable';
     context.capabilities = [...new Set(options.capabilities?.length ? options.capabilities : (project.config?.capabilities || detection.repository.capabilities || []))].sort();
     context.agents = normalizeAgents(options.agents?.length ? options.agents : (project.config?.agentTargets || ['codex', 'claude-code']));
+    context.targetSkills = normalizeTargetSkills(options.skills || []);
     context.nestedInstructionSelections = resolveNestedInstructionSelections(workspace, detection, options.nestedInstructions || []);
     for (const selection of context.nestedInstructionSelections.filter((entry) => entry.kind === 'claude')) {
       if (!context.agents.includes('claude-code')) {
@@ -535,6 +598,7 @@ export async function buildPlan(intent, options = {}) {
     plan.context.channel = context.channel;
     plan.context.capabilities = context.capabilities;
     plan.context.agentTargets = context.agents;
+    plan.context.requestedSkills = context.targetSkills;
     await prepareReleaseContext(context, plan, options);
     if (context.release) {
       try { assertProjectReferenceRelease(detection.frameworkVersion, context.release); }
@@ -660,30 +724,109 @@ export async function buildPlan(intent, options = {}) {
     if (context.release && context.closure && plan.blockers.length === 0) {
       const cliSpec = skillsCliSpec(catalog);
       const managedAgents = [...new Set([...state.agentTargets, ...context.agents])].sort();
-      let discoveredManagedSkills = [];
+      let installationDiscovery = { skills: [], payloads: {} };
       const enforceGlobalInventory = intent === 'update' || Boolean(state.activeRelease && state.activeRelease.id !== context.release.id);
       if (enforceGlobalInventory) {
         try {
-          discoveredManagedSkills = discoverInstalledManagedSkills(managedAgents, catalog, cliSpec, Boolean(options.offline));
+          installationDiscovery = discoverInstalledManagedSkills(managedAgents, catalog, cliSpec, Boolean(options.offline));
         } catch (error) {
           if (!(error instanceof GuideError)) throw error;
           addBlocker(plan, error.code, error.message, error.details);
         }
       }
-      const retiredManagedSkills = state.managedSkills.filter((skill) => !catalog.skills[skill] || catalog.skills[skill].ownership !== 'monica' || catalog.skills[skill].managed === false);
+      const recordedManagedSkills = Object.keys(state.managedSkills);
+      const retiredManagedSkills = recordedManagedSkills.filter((skill) => !catalog.skills[skill] || catalog.skills[skill].ownership !== 'monica' || catalog.skills[skill].managed === false);
       if (retiredManagedSkills.length) addBlocker(plan, 'managed_skill_missing_from_release', `The target catalog no longer manages recorded Monica skills: ${retiredManagedSkills.join(', ')}. Resolve their diagnostic aliases or remove them explicitly before switching releases.`, retiredManagedSkills);
-      const managedSkills = [...new Set([...state.managedSkills, ...context.closure.selected, ...discoveredManagedSkills])]
-        .filter((skill) => catalog.skills[skill]?.ownership === 'monica' && catalog.skills[skill]?.managed !== false)
-        .sort();
+      let managedSkills = [];
+      let skillChanges = [];
+      let installSkills = [];
+      try {
+        const managedRoots = [...new Set([...recordedManagedSkills, ...context.closure.selected, ...installationDiscovery.skills])]
+          .filter((skill) => catalog.skills[skill]?.ownership === 'monica' && catalog.skills[skill]?.managed !== false);
+        managedSkills = resolveRequiredSkillClosure(catalog, managedRoots);
+        skillChanges = compareManagedSkillRecords(state.managedSkills, managedSkills, context.release, context.installManifest);
+        const drift = enforceGlobalInventory
+          ? installedSkillDrift(managedSkills, managedAgents, installationDiscovery.payloads, context.installManifest, Boolean(options.offline))
+          : [];
+        const driftNames = new Set(drift.map((entry) => entry.name));
+        plan.context.installedSkillDrift = drift;
+        if (context.targetSkills.length) {
+          const unmanagedTargets = context.targetSkills.filter((skill) => !managedSkills.includes(skill));
+          if (unmanagedTargets.length) {
+            addBlocker(
+              plan,
+              'targeted_skill_not_managed',
+              `Targeted update skills are not part of the active global Monica set: ${unmanagedTargets.join(', ')}.`,
+              { skills: unmanagedTargets },
+            );
+          } else {
+            const targetClosure = resolveRequiredSkillClosure(catalog, context.targetSkills);
+            const targetSet = new Set(targetClosure);
+            const agentTargetsChanged = !sameStringSet(state.agentTargets, managedAgents);
+            const sourceInstallRequired = requiresSourceReinstall(context, state, skillChanges);
+            if (agentTargetsChanged) {
+              addBlocker(plan, 'targeted_update_agent_change', 'A targeted update cannot change global agent targets. Run a full update so every managed skill is installed for the new target set.');
+            }
+            if (sourceInstallRequired) {
+              addBlocker(plan, 'targeted_update_source_switch', 'A targeted update cannot establish or change source-channel provenance. Run a full update from the exact bound checkout.');
+            }
+            const outsideChanges = skillChanges.filter((entry) => !targetSet.has(entry.name)
+              && ['new', 'unknown', 'content-changed'].includes(entry.changeState));
+            if (outsideChanges.length) {
+              addBlocker(
+                plan,
+                'targeted_update_would_mix_releases',
+                'The target release changes other managed skills outside the requested required-dependency closure. Run a full update instead.',
+                { requested: context.targetSkills, closure: targetClosure, outsideChanges },
+              );
+            }
+            const outsideDrift = drift.filter((entry) => !targetSet.has(entry.name));
+            if (outsideDrift.length) {
+              addBlocker(
+                plan,
+                'targeted_update_other_skill_drift',
+                'Other managed skills are missing, tampered, or not installed for every target agent. Run a full update so final verification can succeed.',
+                { requested: context.targetSkills, closure: targetClosure, outsideDrift },
+              );
+            }
+            installSkills = skillChanges
+              .filter((entry) => targetSet.has(entry.name)
+                && (driftNames.has(entry.name) || ['new', 'unknown', 'content-changed'].includes(entry.changeState)))
+              .map((entry) => entry.name);
+            plan.context.targetedSkillClosure = targetClosure;
+          }
+        } else if (intent === 'update') {
+          const agentTargetsChanged = !sameStringSet(state.agentTargets, managedAgents);
+          const metadataUnknown = skillChanges.some((entry) => entry.changeState === 'unknown');
+          const sourceInstallRequired = requiresSourceReinstall(context, state, skillChanges);
+          installSkills = agentTargetsChanged || metadataUnknown || sourceInstallRequired
+            ? managedSkills
+            : skillChanges
+              .filter((entry) => driftNames.has(entry.name) || ['new', 'content-changed'].includes(entry.changeState))
+              .map((entry) => entry.name);
+          plan.context.fullReinstallReason = agentTargetsChanged
+            ? 'agent-targets-changed'
+            : metadataUnknown
+              ? 'skill-metadata-unknown'
+              : sourceInstallRequired ? 'source-provenance-change' : null;
+        } else {
+          installSkills = managedSkills;
+        }
+      } catch (error) {
+        if (!(error instanceof GuideError)) throw error;
+        addBlocker(plan, error.code, error.message, error.details);
+      }
+      plan.context.skillChanges = skillChanges;
+      plan.context.installSkills = installSkills;
       if (intent !== 'source' && plan.blockers.length === 0) {
-        const installActions = managedSkills.map((skill) => installAction(skill, context.release, managedAgents, cliSpec, {
+        const installActions = installSkills.map((skill) => installAction(skill, context.release, managedAgents, cliSpec, {
           offline: Boolean(options.offline),
           localSourceRoot: context.localSkillSource?.path || null,
           catalog,
         }));
         const restoreReference = state.activeRelease?.tag || state.activeRelease?.commit || context.release.installRef;
         plan.actions.push(transactionGuardAction(
-          managedSkills,
+          installSkills,
           managedAgents,
           cliSpec,
           Boolean(options.offline),
@@ -700,7 +843,7 @@ export async function buildPlan(intent, options = {}) {
       const nextState = structuredClone(state);
       if (intent !== 'source') {
         nextState.activeRelease = comparableRelease(context.release);
-        nextState.managedSkills = managedSkills;
+        nextState.managedSkills = Object.fromEntries(skillChanges.map((entry) => [entry.name, entry.target]));
         nextState.agentTargets = managedAgents;
       }
       nextState.workspacePreferences[key] = {

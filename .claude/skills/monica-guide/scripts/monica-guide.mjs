@@ -28,6 +28,7 @@ const VALUE_OPTIONS = new Map([
 const REPEAT_OPTIONS = new Map([
   ['--capability', 'capabilities'],
   ['--agent', 'agents'],
+  ['--skill', 'skills'],
   ['--nested-instruction', 'nestedInstructions'],
 ]);
 const BOOLEAN_OPTIONS = new Map([
@@ -40,7 +41,7 @@ const BOOLEAN_OPTIONS = new Map([
 const INTENTS = new Set(['init', 'status', 'doctor', 'update', 'configure', 'source', 'contribute', 'forget']);
 
 export function parseArguments(argv) {
-  const options = { workspace: process.cwd(), capabilities: [], agents: [], nestedInstructions: [] };
+  const options = { workspace: process.cwd(), capabilities: [], agents: [], skills: [], nestedInstructions: [] };
   let intent = null;
   for (let index = 0; index < argv.length; index += 1) {
     const argument = argv[index];
@@ -66,6 +67,7 @@ export function parseArguments(argv) {
   if (!INTENTS.has(intent)) throw new GuideError('invalid_intent', `Intent must be one of: ${[...INTENTS].join(', ')}.`);
   if (options.apply && !options.planDigest) throw new GuideError('plan_digest_required', '--apply requires --plan-digest <digest>.');
   if (options.planDigest && !options.apply) throw new GuideError('apply_required', '--plan-digest is accepted only with --apply.');
+  if (options.skills.length && intent !== 'update') throw new GuideError('targeted_skill_intent_invalid', '--skill is accepted only by update.');
   return { intent, options };
 }
 
@@ -92,18 +94,32 @@ function renderPlan(plan) {
       if (action.diff) lines.push('', action.diff);
     });
   }
+  if (plan.context?.skillChanges?.length) {
+    lines.push('', 'Managed skills:');
+    for (const entry of plan.context.skillChanges) {
+      const installed = entry.installed === null || entry.installed.digest === null
+        ? 'unknown'
+        : entry.installed.revision === null
+          ? `source@${plan.context.activeGlobalRelease?.commit?.slice(0, 12) || 'unknown'}`
+          : `r${entry.installed.revision}`;
+      const target = entry.target.revision === null ? `source@${plan.context.targetRelease?.commit || 'unknown'}` : `r${entry.target.revision}`;
+      const selected = plan.context.installSkills?.includes(entry.name) ? ' (install)' : '';
+      lines.push(`  ${entry.name.padEnd(42)} ${installed.padEnd(12)} -> ${target.padEnd(18)} ${entry.changeState}${selected}`);
+    }
+  }
   if (plan.route) lines.push('', `Route: $${plan.route.skill} (${plan.route.preference}); remote mutation authorized: no.`);
   if (plan.dryRun && !plan.blockers.length) lines.push('', `Apply unchanged plan with --apply --plan-digest ${plan.planDigest}`);
   return `${lines.join('\n')}\n`;
 }
 
-function statusEnvelope(environment) {
+export function statusEnvelope(environment) {
   const selectedPreference = environment.state.workspacePreferences[environment.key] || null;
   const instructionError = environment.instructionState.issues.find((issue) => issue.severity === 'error') || null;
   const error = environment.repositoryIssues[0]
     || environment.releaseError
     || environment.versionError
     || environment.closureError
+    || environment.skillMetadataError
     || (environment.recoveryTransactions.length ? {
       code: 'global_skill_recovery_required',
       message: 'A retained global-skill transaction must be resolved before another mutation.',
@@ -112,7 +128,10 @@ function statusEnvelope(environment) {
     || instructionError;
   return {
     schemaVersion: 1,
-    status: error ? 'error' : environment.projectConfig ? 'configured' : 'unconfigured',
+    status: error
+      ? 'error'
+      : !environment.projectConfig ? 'unconfigured'
+        : environment.skillChanges.some((entry) => entry.changeState !== 'unchanged') ? 'update-required' : 'configured',
     preferences: {
       repository: environment.projectConfig,
       user: {
@@ -138,14 +157,15 @@ function statusEnvelope(environment) {
       managedInstructionState: environment.instructionState.status,
       nestedInstructionFiles: environment.nestedInstructions,
       releaseIndexSource: environment.releaseIndexSource,
+      managedSkills: environment.skillChanges,
     },
     error,
   };
 }
 
-function renderStatus(status) {
+export function renderStatus(status) {
   const observation = status.observation;
-  return [
+  const lines = [
     `Monica Guide status: ${status.status}`,
     `Workspace                 ${observation.workspace}`,
     `Repository identity       ${observation.repositoryIdentity || 'unresolved'}`,
@@ -158,7 +178,22 @@ function renderStatus(status) {
     `Managed instructions      ${observation.managedInstructionState}`,
     `Contribution preference   ${status.preferences.user.contribution}`,
     status.error ? `Error                     ${status.error.code}: ${status.error.message}` : '',
-  ].filter(Boolean).join('\n').concat('\n');
+  ].filter(Boolean);
+  if (observation.managedSkills.length) {
+    lines.push('', 'Managed skills:');
+    for (const entry of observation.managedSkills) {
+      const installed = !entry.installed || entry.installed.digest === null
+        ? 'unknown'
+        : entry.installed.revision === null
+          ? `source@${observation.activeGlobalRelease?.replace(/^source:/, '').slice(0, 12) || 'unknown'}`
+          : `r${entry.installed.revision}`;
+      const target = entry.target.revision === null
+        ? `source@${observation.targetRelease?.replace(/^source:/, '').slice(0, 12) || 'unknown'}`
+        : `r${entry.target.revision}`;
+      lines.push(`  ${entry.name.padEnd(42)} ${installed.padEnd(20)} ${target.padEnd(20)} ${entry.changeState}`);
+    }
+  }
+  return `${lines.join('\n')}\n`;
 }
 
 function renderDoctor(report) {
@@ -174,7 +209,7 @@ function renderDoctor(report) {
 }
 
 function help() {
-  return `Monica Guide\n\nUsage:\n  node monica-guide.mjs <intent> --workspace <path> [options]\n\nIntents:\n  init status doctor update configure source contribute forget\n\nSafety:\n  Mutating intents are previews by default. Apply only with both\n  --apply and --plan-digest <approved digest>. Initial setup should pass\n  --release-tag <immutable-vSemVer-tag> from the advertised Monica release.\n  init, configure, and update may repeat --nested-instruction with an\n  existing repository-relative nested AGENTS.md or CLAUDE.md path.\n`;
+  return `Monica Guide\n\nUsage:\n  node monica-guide.mjs <intent> --workspace <path> [options]\n\nIntents:\n  init status doctor update configure source contribute forget\n\nSafety:\n  Mutating intents are previews by default. Apply only with both\n  --apply and --plan-digest <approved digest>. Initial setup should pass\n  --release-tag <immutable-vSemVer-tag> from the advertised Monica release.\n  update may repeat --skill <name>; its required dependency closure is\n  included, and the preview blocks if other managed skill content changes.\n  init, configure, and update may repeat --nested-instruction with an\n  existing repository-relative nested AGENTS.md or CLAUDE.md path.\n`;
 }
 
 export async function main(argv = process.argv.slice(2)) {

@@ -7,11 +7,12 @@ import { fileURLToPath } from 'node:url';
 import { execFileSync } from 'node:child_process';
 import { buildPlan, applyPlan } from '../scripts/guide-plan.mjs';
 import { inspectEnvironment, doctor } from '../scripts/guide-doctor.mjs';
-import { loadCatalog, loadReleaseArtifacts, loadReleaseIndex, resolveProfileClosure } from '../scripts/guide-catalog.mjs';
+import { loadCatalog, loadReleaseArtifacts, loadReleaseIndex, resolveProfileClosure, validateIndex } from '../scripts/guide-catalog.mjs';
 import { detectFrameworkVersion } from '../scripts/guide-detect.mjs';
-import { verifyInstalledSkill } from '../scripts/guide-installation.mjs';
+import { targetSkillRecord, verifyInstalledSkill } from '../scripts/guide-installation.mjs';
 import { resolveCachedSource } from '../scripts/guide-source.mjs';
 import { GuideError, digest, emptyState, loadState, normalizePath, parseSemVer, semverChannel, stableJson, withFileLock } from '../scripts/guide-shared.mjs';
+import { renderStatus, statusEnvelope } from '../scripts/monica-guide.mjs';
 
 const TEST_ROOT = path.dirname(fileURLToPath(import.meta.url));
 const SKILL_ROOT = path.dirname(TEST_ROOT);
@@ -100,8 +101,15 @@ function skillFileContracts() {
   return cachedSkillContracts;
 }
 
-function releaseIndex({ version = VERSION, tag = TAG, commit = COMMIT } = {}) {
-  const contracts = skillFileContracts();
+function releaseIndex({
+  version = VERSION,
+  tag = TAG,
+  commit = COMMIT,
+  publishedAt = '2026-08-05T00:00:00Z',
+  contracts = skillFileContracts(),
+  skillRevisions = null,
+  skillLastChangedIn = null,
+} = {}) {
   const assetBaseUrl = `https://github.com/Tairitsua/Monica/releases/download/${tag}`;
   const release = {
     monicaVersion: version,
@@ -111,17 +119,19 @@ function releaseIndex({ version = VERSION, tag = TAG, commit = COMMIT } = {}) {
     skillTreeDigest: `sha256:${'b'.repeat(64)}`,
     skillDigestAlgorithm: 'sha256-file-manifest-v1',
     skillDigests: contracts.skillDigests,
+    skillRevisions: skillRevisions || Object.fromEntries(Object.keys(contracts.skillDigests).map((skill) => [skill, 1])),
+    skillLastChangedIn: skillLastChangedIn || Object.fromEntries(Object.keys(contracts.skillDigests).map((skill) => [skill, tag])),
     manifestDigest: null,
     assetBaseUrl,
     catalogUrl: `${assetBaseUrl}/agent-skill-catalog.json`,
     manifestUrl: `${assetBaseUrl}/agent-skill-manifest.json`,
-    publishedAt: '2026-08-05T00:00:00Z',
+    publishedAt,
   };
   const manifest = releaseManifestForRelease(release, contracts.files);
   release.manifestDigest = digest(Buffer.from(`${JSON.stringify(manifest, null, 2)}\n`));
   return {
     $schema: './schemas/agent-skill-index.schema.json',
-    schemaVersion: 1,
+    schemaVersion: 2,
     channels: { stable: tag, preview: null },
     versions: { [version]: tag },
     releases: {
@@ -130,9 +140,54 @@ function releaseIndex({ version = VERSION, tag = TAG, commit = COMMIT } = {}) {
   };
 }
 
+function changedSkillContracts(skillNames) {
+  const contracts = structuredClone(skillFileContracts());
+  for (const skill of skillNames) {
+    const skillFile = `skills/${skill}/SKILL.md`;
+    contracts.files[skillFile] = digest(`changed:${skill}`);
+    const prefix = `skills/${skill}/`;
+    const fileManifest = Object.entries(contracts.files)
+      .filter(([filePath]) => filePath.startsWith(prefix))
+      .map(([filePath, hash]) => [filePath.slice(prefix.length), hash])
+      .sort(([left], [right]) => Buffer.compare(Buffer.from(left, 'utf8'), Buffer.from(right, 'utf8')))
+      .map(([relative, hash]) => `${hash.slice(7)}  ${relative}\n`).join('');
+    contracts.skillDigests[skill] = digest(fileManifest);
+  }
+  return contracts;
+}
+
+function releaseHistory(changedSkills = []) {
+  const previous = releaseIndex();
+  const targetTag = 'v1.2.4';
+  const targetContracts = changedSkillContracts(changedSkills);
+  const targetRevisions = {};
+  const targetLastChangedIn = {};
+  for (const [skill, targetDigest] of Object.entries(targetContracts.skillDigests)) {
+    const changed = previous.releases[TAG].skillDigests[skill] !== targetDigest;
+    targetRevisions[skill] = previous.releases[TAG].skillRevisions[skill] + (changed ? 1 : 0);
+    targetLastChangedIn[skill] = changed ? targetTag : previous.releases[TAG].skillLastChangedIn[skill];
+  }
+  const target = releaseIndex({
+    version: '1.2.4',
+    tag: targetTag,
+    commit: 'd'.repeat(40),
+    publishedAt: '2026-08-06T00:00:00Z',
+    contracts: targetContracts,
+    skillRevisions: targetRevisions,
+    skillLastChangedIn: targetLastChangedIn,
+  });
+  return {
+    $schema: './schemas/agent-skill-index.schema.json',
+    schemaVersion: 2,
+    channels: { stable: targetTag, preview: null },
+    versions: { [VERSION]: TAG, '1.2.4': targetTag },
+    releases: { [TAG]: previous.releases[TAG], [targetTag]: target.releases[targetTag] },
+  };
+}
+
 function releaseManifestForRelease(release, files) {
   return {
-    schemaVersion: 1,
+    schemaVersion: 2,
     monicaVersion: release.monicaVersion,
     tag: release.tag,
     resolvedCommit: release.commit,
@@ -140,6 +195,8 @@ function releaseManifestForRelease(release, files) {
     skillTreeDigest: release.skillTreeDigest,
     skillDigestAlgorithm: release.skillDigestAlgorithm,
     skillDigests: release.skillDigests,
+    skillRevisions: release.skillRevisions,
+    skillLastChangedIn: release.skillLastChangedIn,
     publishedAt: release.publishedAt,
     indexUrl: `${release.assetBaseUrl}/agent-skill-index.json`,
     catalogUrl: `${release.assetBaseUrl}/agent-skill-catalog.json`,
@@ -150,7 +207,14 @@ function releaseManifestForRelease(release, files) {
 }
 
 function releaseManifest(index = releaseIndex()) {
-  return releaseManifestForRelease(index.releases[index.channels.stable || index.channels.preview], skillFileContracts().files);
+  const release = index.releases[index.channels.stable || index.channels.preview];
+  return releaseManifestForRelease(release, fixtureFilesForRelease(release));
+}
+
+function fixtureFilesForRelease(release) {
+  const base = skillFileContracts();
+  const changed = Object.keys(release.skillDigests).filter((skill) => release.skillDigests[skill] !== base.skillDigests[skill]);
+  return changed.length ? changedSkillContracts(changed).files : base.files;
 }
 
 function releaseFetch(index = releaseIndex()) {
@@ -161,7 +225,7 @@ function releaseFetch(index = releaseIndex()) {
     else if (url.endsWith('/agent-skill-manifest.json')) {
       const release = Object.values(index.releases).find((entry) => url.startsWith(`${entry.assetBaseUrl}/`));
       if (!release) throw new Error(`No release fixture matches test URL: ${url}`);
-      text = `${JSON.stringify(releaseManifestForRelease(release, skillFileContracts().files), null, 2)}\n`;
+      text = `${JSON.stringify(releaseManifestForRelease(release, fixtureFilesForRelease(release)), null, 2)}\n`;
     }
     else throw new Error(`Unexpected test URL: ${url}`);
     return { ok: true, status: 200, url, text: async () => text };
@@ -193,6 +257,46 @@ function mockNpx(root, skills, { corrupt = false, agents = ['codex', 'claude-cod
   write(executable, `#!/bin/sh\necho "$*" >> "${path.join(root, 'npx.log')}"\ncase "$*" in\n  *" ls "*) cat <<'JSON'\n${payload}\nJSON\n  ;;\nesac\n`);
   fs.chmodSync(executable, 0o755);
   return executable;
+}
+
+function configuredState(root, workspace, {
+  index = releaseIndex(),
+  releaseTag = TAG,
+  agents = ['codex'],
+  unknownMetadata = false,
+} = {}) {
+  const { catalog } = loadCatalog({ catalogPath: CATALOG_PATH, indexPath: INDEX_PATH });
+  const closure = resolveProfileClosure(catalog, 'application', []);
+  const release = index.releases[releaseTag];
+  const statePath = path.join(root, 'state.json');
+  const state = emptyState();
+  state.activeRelease = {
+    id: releaseTag,
+    monicaVersion: release.monicaVersion,
+    tag: release.tag,
+    commit: release.commit,
+    catalogDigest: release.catalogDigest,
+  };
+  state.managedSkills = Object.fromEntries(closure.selected.map((skill) => [skill, unknownMetadata
+    ? { revision: null, digest: null, lastChangedIn: null }
+    : {
+      revision: release.skillRevisions[skill],
+      digest: release.skillDigests[skill],
+      lastChangedIn: release.skillLastChangedIn[skill],
+    }]));
+  state.agentTargets = agents;
+  write(statePath, stableJson(state, 2));
+  write(path.join(workspace, '.monica', 'guide.json'), stableJson({
+    schemaVersion: 1,
+    profile: 'application',
+    channel: 'stable',
+    capabilities: [],
+    agentTargets: agents,
+    expectedCatalogRelease: { ...state.activeRelease, indexTag: releaseTag },
+    instructionBlockVersion: 1,
+    managedClaudeImport: false,
+  }, 2));
+  return { statePath, state, skills: closure.selected };
 }
 
 test('all four profiles resolve required, recommended, conditional, and external closure', () => {
@@ -247,7 +351,9 @@ test('init applies atomically while offline update/configure require and use an 
   assert.match(fs.readFileSync(path.join(workspace, 'CLAUDE.md'), 'utf8'), /^@AGENTS\.md/m);
   const state = loadState(options.state);
   assert.equal(state.activeRelease.id, TAG);
-  assert.ok(state.managedSkills.includes('monica-guide'));
+  assert.ok(Object.hasOwn(state.managedSkills, 'monica-guide'));
+  assert.equal(state.managedSkills['monica-guide'].revision, 1);
+  assert.equal(state.managedSkills['monica-guide'].lastChangedIn, TAG);
   assert.ok(state.verifiedReleaseIndexes[TAG]);
   if (process.platform !== 'win32') {
     assert.equal(fs.statSync(path.join(workspace, '.monica', 'guide.json')).mode & 0o777, 0o644);
@@ -328,6 +434,218 @@ test('init applies atomically while offline update/configure require and use an 
   const forget = await buildPlan('forget', { workspace, state: options.state, catalog: CATALOG_PATH, index: INDEX_PATH });
   assert.ok(forget.actions.some((action) => action.type === 'delete-file' && action.path.endsWith('.monica/guide.json')));
   assert.ok(forget.actions.some((action) => action.path.endsWith('AGENTS.md') && !action.content.includes('monica-guide:managed:start')));
+});
+
+test('default update installs only changed skills, verifies the full set, and records target revisions', async (t) => {
+  const root = temporaryDirectory(t);
+  const changedSkill = 'monica-application-microservice';
+  const history = releaseHistory([changedSkill]);
+  const workspace = applicationWorkspace(root, '1.2.4');
+  const configured = configuredState(root, workspace, { index: history });
+  const previous = process.env.MONICA_GUIDE_NPX;
+  process.env.MONICA_GUIDE_NPX = mockNpx(root, configured.skills, { agents: ['codex'] });
+  t.after(() => previous === undefined ? delete process.env.MONICA_GUIDE_NPX : process.env.MONICA_GUIDE_NPX = previous);
+  const options = {
+    workspace,
+    state: configured.statePath,
+    catalog: CATALOG_PATH,
+    index: INDEX_PATH,
+    agents: ['codex'],
+    switchGlobal: true,
+    fetchImplementation: releaseDiscoveryFetch(history),
+  };
+  const plan = await buildPlan('update', options);
+  assert.equal(plan.blockers.length, 0, JSON.stringify(plan.blockers));
+  assert.deepEqual(plan.context.installSkills, [changedSkill]);
+  assert.deepEqual(plan.actions.filter((action) => action.type === 'install-skill').map((action) => action.skill), [changedSkill]);
+  assert.deepEqual(plan.actions.find((action) => action.type === 'verify-skills').skills, configured.skills);
+  const nextState = JSON.parse(plan.actions.find((action) => action.path === configured.statePath).content);
+  assert.equal(nextState.activeRelease.id, 'v1.2.4');
+  assert.equal(nextState.managedSkills[changedSkill].revision, 2);
+  assert.equal(nextState.managedSkills[changedSkill].lastChangedIn, 'v1.2.4');
+  assert.equal(nextState.managedSkills['monica-guide'].revision, 1);
+
+  const environment = await inspectEnvironment({
+    ...options,
+    releaseTag: 'v1.2.4',
+    fetchImplementation: releaseFetch(history),
+  });
+  assert.equal(environment.skillChanges.find((entry) => entry.name === changedSkill).changeState, 'content-changed');
+  const report = await doctor({ ...options, releaseTag: 'v1.2.4', fetchImplementation: releaseFetch(history) });
+  assert.equal(report.checks.find((entry) => entry.id === `skill-version:${changedSkill}`).status, 'warning');
+});
+
+test('targeted update expands required dependencies and blocks changed skills outside its closure', async (t) => {
+  const root = temporaryDirectory(t);
+  const changedSkill = 'monica-application-microservice';
+  const history = releaseHistory([changedSkill]);
+  const workspace = applicationWorkspace(root, '1.2.4');
+  const configured = configuredState(root, workspace, { index: history });
+  const previous = process.env.MONICA_GUIDE_NPX;
+  process.env.MONICA_GUIDE_NPX = mockNpx(root, configured.skills, { agents: ['codex'] });
+  t.after(() => previous === undefined ? delete process.env.MONICA_GUIDE_NPX : process.env.MONICA_GUIDE_NPX = previous);
+  const options = {
+    workspace,
+    state: configured.statePath,
+    catalog: CATALOG_PATH,
+    index: INDEX_PATH,
+    agents: ['codex'],
+    switchGlobal: true,
+    fetchImplementation: releaseDiscoveryFetch(history),
+  };
+  const allowed = await buildPlan('update', { ...options, skills: ['monica-application'] });
+  assert.equal(allowed.blockers.length, 0, JSON.stringify(allowed.blockers));
+  assert.ok(allowed.context.targetedSkillClosure.includes(changedSkill));
+  assert.deepEqual(allowed.context.installSkills, [changedSkill]);
+  assert.deepEqual(allowed.actions.find((action) => action.type === 'verify-skills').skills, configured.skills);
+
+  const blocked = await buildPlan('update', { ...options, skills: ['monica-guide'] });
+  assert.ok(blocked.blockers.some((entry) => entry.code === 'targeted_update_would_mix_releases'));
+  assert.equal(blocked.actions.some((action) => action.type === 'install-skill'), false);
+});
+
+test('agent target changes and migrated unknown metadata force a full reinstall', async (t) => {
+  const root = temporaryDirectory(t);
+  const workspace = applicationWorkspace(root);
+  const configured = configuredState(root, workspace);
+  const previous = process.env.MONICA_GUIDE_NPX;
+  process.env.MONICA_GUIDE_NPX = mockNpx(root, configured.skills, { agents: ['codex', 'claude-code'] });
+  t.after(() => previous === undefined ? delete process.env.MONICA_GUIDE_NPX : process.env.MONICA_GUIDE_NPX = previous);
+  const options = {
+    workspace,
+    state: configured.statePath,
+    catalog: CATALOG_PATH,
+    index: INDEX_PATH,
+    releaseTag: TAG,
+    agents: ['codex', 'claude-code'],
+    fetchImplementation: releaseFetch(),
+  };
+  const agentChange = await buildPlan('update', options);
+  assert.equal(agentChange.context.fullReinstallReason, 'agent-targets-changed');
+  assert.deepEqual(agentChange.context.installSkills, configured.skills);
+
+  configured.state.managedSkills = Object.fromEntries(configured.skills.map((skill) => [skill, {
+    revision: null,
+    digest: null,
+    lastChangedIn: null,
+  }]));
+  configured.state.agentTargets = ['codex', 'claude-code'];
+  write(configured.statePath, stableJson(configured.state, 2));
+  const unknown = await buildPlan('update', options);
+  assert.equal(unknown.context.fullReinstallReason, 'skill-metadata-unknown');
+  assert.deepEqual(unknown.context.installSkills, configured.skills);
+});
+
+test('update heals installed drift and targeted update blocks drift outside its selection', async (t) => {
+  const root = temporaryDirectory(t);
+  const workspace = applicationWorkspace(root);
+  const configured = configuredState(root, workspace);
+  const corruptedSkill = configured.skills[0];
+  const previous = process.env.MONICA_GUIDE_NPX;
+  process.env.MONICA_GUIDE_NPX = mockNpx(root, configured.skills, { corrupt: true, agents: ['codex'] });
+  t.after(() => previous === undefined ? delete process.env.MONICA_GUIDE_NPX : process.env.MONICA_GUIDE_NPX = previous);
+  const options = {
+    workspace,
+    state: configured.statePath,
+    catalog: CATALOG_PATH,
+    index: INDEX_PATH,
+    releaseTag: TAG,
+    agents: ['codex'],
+    fetchImplementation: releaseFetch(),
+  };
+  const full = await buildPlan('update', options);
+  assert.deepEqual(full.context.installSkills, [corruptedSkill]);
+  assert.deepEqual(full.actions.find((action) => action.type === 'verify-skills').skills, configured.skills);
+
+  const selected = await buildPlan('update', { ...options, skills: [corruptedSkill] });
+  assert.equal(selected.blockers.length, 0);
+  assert.deepEqual(selected.context.installSkills, [corruptedSkill]);
+  const otherSkill = configured.skills.find((skill) => skill !== corruptedSkill);
+  const blocked = await buildPlan('update', { ...options, skills: [otherSkill] });
+  assert.ok(blocked.blockers.some((entry) => entry.code === 'targeted_update_other_skill_drift'));
+});
+
+test('status and update expand required dependencies for skills owned by another workspace', async (t) => {
+  const root = temporaryDirectory(t);
+  const workspace = applicationWorkspace(root);
+  const index = releaseIndex();
+  const configured = configuredState(root, workspace, { index });
+  const state = loadState(configured.statePath);
+  const extra = 'monica-ui-bridge-debug';
+  const release = index.releases[TAG];
+  state.managedSkills[extra] = {
+    revision: release.skillRevisions[extra],
+    digest: release.skillDigests[extra],
+    lastChangedIn: release.skillLastChangedIn[extra],
+  };
+  write(configured.statePath, stableJson(state, 2));
+  const previous = process.env.MONICA_GUIDE_NPX;
+  process.env.MONICA_GUIDE_NPX = mockNpx(root, [...configured.skills, extra], { agents: ['codex'] });
+  t.after(() => previous === undefined ? delete process.env.MONICA_GUIDE_NPX : process.env.MONICA_GUIDE_NPX = previous);
+  const options = {
+    workspace,
+    state: configured.statePath,
+    catalog: CATALOG_PATH,
+    index: INDEX_PATH,
+    releaseTag: TAG,
+    agents: ['codex'],
+    fetchImplementation: releaseFetch(index),
+  };
+  const environment = await inspectEnvironment(options);
+  const plan = await buildPlan('update', options);
+  const statusNames = environment.skillChanges.map((entry) => entry.name);
+  const planNames = plan.context.skillChanges.map((entry) => entry.name);
+  assert.deepEqual(statusNames, planNames);
+  for (const dependency of ['monica-ui-development', 'monica-ui-localization']) {
+    assert.ok(statusNames.includes(dependency));
+    assert.ok(plan.context.installSkills.includes(dependency));
+  }
+  assert.deepEqual(plan.actions.find((action) => action.type === 'verify-skills').skills, planNames);
+  const report = await doctor(options);
+  const discovery = report.checks.find((entry) => entry.id === 'skill-discovery:codex');
+  assert.equal(discovery.status, 'error');
+  assert.match(discovery.message, /monica-(architecture|development|ui-development|ui-localization)/);
+});
+
+test('status, doctor, and update consistently reject retired managed skill records', async (t) => {
+  const root = temporaryDirectory(t);
+  const workspace = applicationWorkspace(root);
+  const configured = configuredState(root, workspace);
+  configured.state.managedSkills['monica-retired'] = {
+    revision: 1,
+    digest: `sha256:${'f'.repeat(64)}`,
+    lastChangedIn: TAG,
+  };
+  write(configured.statePath, stableJson(configured.state, 2));
+
+  const previous = process.env.MONICA_GUIDE_NPX;
+  process.env.MONICA_GUIDE_NPX = mockNpx(root, configured.skills, { agents: ['codex'] });
+  t.after(() => previous === undefined ? delete process.env.MONICA_GUIDE_NPX : process.env.MONICA_GUIDE_NPX = previous);
+  const options = {
+    workspace,
+    state: configured.statePath,
+    catalog: CATALOG_PATH,
+    index: INDEX_PATH,
+    releaseTag: TAG,
+    agents: ['codex'],
+    fetchImplementation: releaseFetch(),
+  };
+
+  const environment = await inspectEnvironment(options);
+  assert.equal(environment.skillMetadataError.code, 'managed_skill_missing_from_release');
+  assert.deepEqual(environment.skillMetadataError.details.skills, ['monica-retired']);
+
+  const status = statusEnvelope(environment);
+  assert.equal(status.status, 'error');
+  assert.equal(status.error.code, 'managed_skill_missing_from_release');
+
+  const report = await doctor(options);
+  const versionCheck = report.checks.find((entry) => entry.id === 'managed-skill-versions');
+  assert.equal(versionCheck.status, 'error');
+  assert.match(versionCheck.remediation, /obsolete global skill and state record/);
+
+  const plan = await buildPlan('update', options);
+  assert.ok(plan.blockers.some((entry) => entry.code === 'managed_skill_missing_from_release'));
 });
 
 test('apply refuses installed skills whose discovery source is a stale release', async (t) => {
@@ -428,10 +746,14 @@ test('advertised latest index selects the older release mapped to the detected f
   const root = temporaryDirectory(t);
   const workspace = applicationWorkspace(root, '1.2.3');
   const oldIndex = releaseIndex();
-  const newIndex = releaseIndex({ version: '2.0.0', tag: 'v2.0.0', commit: 'd'.repeat(40) });
+  const newIndex = releaseIndex({ version: '2.0.0', tag: 'v2.0.0', commit: 'd'.repeat(40), publishedAt: '2026-08-06T00:00:00Z' });
+  newIndex.releases['v2.0.0'].skillRevisions = structuredClone(oldIndex.releases['v1.2.3'].skillRevisions);
+  newIndex.releases['v2.0.0'].skillLastChangedIn = structuredClone(oldIndex.releases['v1.2.3'].skillLastChangedIn);
+  const newManifest = releaseManifestForRelease(newIndex.releases['v2.0.0'], skillFileContracts().files);
+  newIndex.releases['v2.0.0'].manifestDigest = digest(Buffer.from(`${JSON.stringify(newManifest, null, 2)}\n`));
   const combined = {
     $schema: './schemas/agent-skill-index.schema.json',
-    schemaVersion: 1,
+    schemaVersion: 2,
     channels: { stable: 'v2.0.0', preview: null },
     versions: { '1.2.3': 'v1.2.3', '2.0.0': 'v2.0.0' },
     releases: {
@@ -461,7 +783,9 @@ test('global release conflicts require an explicit switch and update the managed
   const statePath = path.join(root, 'state.json');
   const state = emptyState();
   state.activeRelease = { id: 'old', tag: 'v1.0.0', commit: 'c'.repeat(40) };
-  state.managedSkills = ['monica-ui-design'];
+  state.managedSkills = {
+    'monica-ui-design': { revision: 1, digest: skillFileContracts().skillDigests['monica-ui-design'], lastChangedIn: TAG },
+  };
   state.agentTargets = ['codex'];
   write(statePath, stableJson(state, 2));
   const previous = process.env.MONICA_GUIDE_NPX;
@@ -494,6 +818,88 @@ test('SemVer accepts build metadata, derives channel from prerelease only, and r
   assert.equal(semverChannel('1.2.3-rc.1+build-7'), 'preview');
   assert.equal(parseSemVer('01.2.3'), null);
   assert.equal(parseSemVer('1.2.3-01'), null);
+});
+
+test('release validation enforces one chronological skill revision lineage across channels', () => {
+  const history = releaseHistory(['monica-application-microservice']);
+  assert.doesNotThrow(() => validateIndex(history));
+
+  const duplicateTime = structuredClone(history);
+  duplicateTime.releases['v1.2.4'].publishedAt = duplicateTime.releases[TAG].publishedAt;
+  assert.throws(() => validateIndex(duplicateTime), (error) => error.code === 'release_timestamp_not_sequential');
+
+  const metadataJump = structuredClone(history);
+  metadataJump.releases['v1.2.4'].skillRevisions['monica-guide'] = 2;
+  metadataJump.releases['v1.2.4'].skillLastChangedIn['monica-guide'] = 'v1.2.4';
+  assert.throws(() => validateIndex(metadataJump), (error) => error.code === 'skill_revision_sequence_invalid');
+
+  const fork = structuredClone(history);
+  fork.channels.preview = 'v1.2.5-rc.1';
+  fork.versions['1.2.5-rc.1'] = 'v1.2.5-rc.1';
+  const forkRelease = structuredClone(fork.releases[TAG]);
+  forkRelease.monicaVersion = '1.2.5-rc.1';
+  forkRelease.tag = 'v1.2.5-rc.1';
+  forkRelease.commit = 'e'.repeat(40);
+  forkRelease.publishedAt = '2026-08-07T00:00:00Z';
+  forkRelease.assetBaseUrl = 'https://github.com/Tairitsua/Monica/releases/download/v1.2.5-rc.1';
+  forkRelease.catalogUrl = `${forkRelease.assetBaseUrl}/agent-skill-catalog.json`;
+  forkRelease.manifestUrl = `${forkRelease.assetBaseUrl}/agent-skill-manifest.json`;
+  fork.releases['v1.2.5-rc.1'] = forkRelease;
+  assert.throws(() => validateIndex(fork), (error) => error.code === 'skill_revision_sequence_invalid');
+});
+
+test('tagged release identity cannot be downgraded by an extraneous source manifest field', () => {
+  const index = releaseIndex();
+  const release = { ...index.releases[TAG], channel: 'stable' };
+  const manifest = { ...releaseManifest(index), source: true };
+  assert.deepEqual(targetSkillRecord(release, manifest, 'monica-guide'), {
+    revision: 1,
+    digest: release.skillDigests['monica-guide'],
+    lastChangedIn: TAG,
+  });
+});
+
+test('release validation rejects a skill lineage reintroduced after an absent release', () => {
+  const sha = (character) => `sha256:${character.repeat(64)}`;
+  const makeRelease = (tag, version, publishedAt, skills) => {
+    const assetBaseUrl = `https://github.com/Tairitsua/Monica/releases/download/${tag}`;
+    return {
+      monicaVersion: version,
+      tag,
+      commit: version.replace(/\D/g, '').padEnd(40, 'a').slice(0, 40),
+      catalogDigest: sha('a'),
+      skillTreeDigest: sha('b'),
+      skillDigestAlgorithm: 'sha256-file-manifest-v1',
+      skillDigests: Object.fromEntries(Object.entries(skills).map(([name, record]) => [name, record.digest])),
+      skillRevisions: Object.fromEntries(Object.entries(skills).map(([name, record]) => [name, record.revision])),
+      skillLastChangedIn: Object.fromEntries(Object.entries(skills).map(([name, record]) => [name, record.origin])),
+      manifestDigest: sha('c'),
+      publishedAt,
+      assetBaseUrl,
+      catalogUrl: `${assetBaseUrl}/agent-skill-catalog.json`,
+      manifestUrl: `${assetBaseUrl}/agent-skill-manifest.json`,
+    };
+  };
+  const firstTag = 'v1.0.0';
+  const secondTag = 'v1.1.0';
+  const thirdTag = 'v1.2.0';
+  const shared = { digest: sha('d'), revision: 1, origin: firstTag };
+  const reintroduced = { digest: sha('e'), revision: 1, origin: firstTag };
+  const index = {
+    $schema: './schemas/agent-skill-index.schema.json',
+    schemaVersion: 2,
+    channels: { stable: thirdTag, preview: null },
+    versions: { '1.0.0': firstTag, '1.1.0': secondTag, '1.2.0': thirdTag },
+    releases: {
+      [firstTag]: makeRelease(firstTag, '1.0.0', '2026-08-01T00:00:00Z', { shared, reintroduced }),
+      [secondTag]: makeRelease(secondTag, '1.1.0', '2026-08-02T00:00:00Z', { shared }),
+      [thirdTag]: makeRelease(thirdTag, '1.2.0', '2026-08-03T00:00:00Z', {
+        shared,
+        reintroduced: { ...reintroduced, origin: thirdTag },
+      }),
+    },
+  };
+  assert.throws(() => validateIndex(index), (error) => error.code === 'skill_revision_lineage_reintroduced');
 });
 
 test('skill digests use Python-compatible ordinal UTF-8 path ordering', (t) => {
@@ -683,7 +1089,53 @@ test('source channel binds catalog and skill digests to an exact clean checkout'
   assert.ok(verification.commands.every((command) => command.includes('npx --offline --yes skills@1.5.21')));
   assert.equal(verification.manifest.skillDigestAlgorithm, 'sha256-file-manifest-v1');
   assert.ok(Object.keys(verification.manifest.skillDigests).length > 0);
+  assert.ok(Object.values(verification.manifest.skillRevisions).every((revision) => revision === null));
+  assert.ok(Object.values(verification.manifest.skillLastChangedIn).every((release) => release === null));
+  const plannedState = JSON.parse(plan.actions.find((action) => action.path === path.join(root, 'state.json')).content);
+  assert.ok(Object.values(plannedState.managedSkills).every((record) => record.revision === null
+    && /^sha256:/.test(record.digest)
+    && record.lastChangedIn === null));
   assert.equal(plan.warnings.some((entry) => entry.code === 'source_catalog_parity_unproven'), false);
+
+  const previous = process.env.MONICA_GUIDE_NPX;
+  const installedSkills = plan.actions.filter((action) => action.type === 'install-skill').map((action) => action.skill);
+  process.env.MONICA_GUIDE_NPX = mockNpx(root, installedSkills);
+  t.after(() => previous === undefined ? delete process.env.MONICA_GUIDE_NPX : process.env.MONICA_GUIDE_NPX = previous);
+  await applyPlan('init', { ...{
+    workspace,
+    state: path.join(root, 'state.json'),
+    catalog: CATALOG_PATH,
+    index: INDEX_PATH,
+    profile: 'application',
+    channel: 'source',
+    sourceRef: commit,
+    sourcePath: source,
+    offline: true,
+  }, planDigest: plan.planDigest, precomputedPlan: plan });
+  const environment = await inspectEnvironment({
+    workspace,
+    state: path.join(root, 'state.json'),
+    catalog: CATALOG_PATH,
+    index: INDEX_PATH,
+    channel: 'source',
+    sourceRef: commit,
+    offline: true,
+  });
+  const status = statusEnvelope(environment);
+  assert.ok(status.observation.managedSkills.every((entry) => entry.changeState === 'unchanged'
+    && entry.installed.revision === null
+    && entry.installed.digest !== null));
+  assert.match(renderStatus(status), new RegExp(`source@${commit.slice(0, 12)}`));
+  const report = await doctor({
+    workspace,
+    state: path.join(root, 'state.json'),
+    catalog: CATALOG_PATH,
+    index: INDEX_PATH,
+    channel: 'source',
+    sourceRef: commit,
+    offline: true,
+  });
+  assert.ok(report.checks.some((entry) => entry.id.startsWith('skill-version:') && entry.message.includes(`source@${commit}`)));
 });
 
 test('framework source channel permits ordinary dirt but rejects catalog or skill drift', async (t) => {
@@ -743,15 +1195,64 @@ test('malformed managed markers are refused and doctor emits stable JSON checks'
   assert.ok(report.checks.some((entry) => entry.id === 'stale-alias:mo-development' && entry.status === 'warning'));
 });
 
-test('state v1 migration separates durable preferences and timestamped observations', (t) => {
+test('state v1 migration separates durable preferences and reaches schema v3', (t) => {
   const root = temporaryDirectory(t);
   const statePath = path.join(root, 'state.json');
   write(statePath, stableJson({ schemaVersion: 1, activeRelease: null, agentTargets: [], sourceBindings: {}, workspaces: { abc: { profile: 'application' } }, contributionPreference: 'prepare' }, 2));
   const state = loadState(statePath);
-  assert.equal(state.schemaVersion, 2);
+  assert.equal(state.schemaVersion, 3);
   assert.equal(state.workspacePreferences.abc.profile, 'application');
   assert.equal(state.contributionPreferences.abc, 'prepare');
   assert.deepEqual(state.observations, {});
+});
+
+test('state v2 migration preserves managed names as unknown version records', (t) => {
+  const root = temporaryDirectory(t);
+  const statePath = path.join(root, 'state.json');
+  write(statePath, stableJson({
+    ...emptyState(),
+    schemaVersion: 2,
+    managedSkills: ['monica-guide', 'monica-application'],
+  }, 2));
+  const state = loadState(statePath);
+  assert.equal(state.schemaVersion, 3);
+  assert.deepEqual(state.managedSkills['monica-guide'], { revision: null, digest: null, lastChangedIn: null });
+  assert.deepEqual(state.managedSkills['monica-application'], { revision: null, digest: null, lastChangedIn: null });
+});
+
+test('state v2 migration rejects malformed or duplicate managed skill names', (t) => {
+  const root = temporaryDirectory(t);
+  const statePath = path.join(root, 'state.json');
+  for (const managedSkills of [[null], [123], ['Monica-Guide'], ['monica-guide', 'monica-guide']]) {
+    write(statePath, stableJson({
+      ...emptyState(),
+      schemaVersion: 2,
+      managedSkills,
+    }, 2));
+    assert.throws(() => loadState(statePath), (error) => error.code === 'invalid_state');
+  }
+});
+
+test('state v3 accepts only coherent tagged, source, or migrated skill metadata tuples', (t) => {
+  const root = temporaryDirectory(t);
+  const statePath = path.join(root, 'state.json');
+  const valid = emptyState();
+  valid.managedSkills = {
+    tagged: { revision: 2, digest: `sha256:${'a'.repeat(64)}`, lastChangedIn: 'v1.2.3' },
+    source: { revision: null, digest: `sha256:${'b'.repeat(64)}`, lastChangedIn: null },
+    migrated: { revision: null, digest: null, lastChangedIn: null },
+  };
+  write(statePath, stableJson(valid, 2));
+  assert.deepEqual(Object.keys(loadState(statePath).managedSkills), ['migrated', 'source', 'tagged']);
+  for (const record of [
+    { revision: 1, digest: null, lastChangedIn: 'v1.2.3' },
+    { revision: null, digest: `sha256:${'c'.repeat(64)}`, lastChangedIn: 'v1.2.3' },
+    { revision: 1, digest: `sha256:${'d'.repeat(64)}`, lastChangedIn: null },
+  ]) {
+    valid.managedSkills = { invalid: record };
+    write(statePath, stableJson(valid, 2));
+    assert.throws(() => loadState(statePath), (error) => error.code === 'invalid_state' && /complete tagged/.test(error.message));
+  }
 });
 
 test('offline init fails closed without a verified release index', async (t) => {
@@ -965,7 +1466,11 @@ test('doctor remediation is executable because update adopts discovered catalog-
   const statePath = path.join(root, 'state.json');
   const state = emptyState();
   state.activeRelease = { id: TAG, monicaVersion: VERSION, tag: TAG, commit: COMMIT, catalogDigest: CATALOG_DIGEST };
-  state.managedSkills = closure.selected;
+  state.managedSkills = Object.fromEntries(closure.selected.map((skill) => [skill, {
+    revision: 1,
+    digest: skillFileContracts().skillDigests[skill],
+    lastChangedIn: TAG,
+  }]));
   state.agentTargets = ['codex'];
   write(statePath, stableJson(state, 2));
   write(path.join(workspace, '.monica', 'guide.json'), stableJson({
@@ -990,7 +1495,7 @@ test('doctor remediation is executable because update adopts discovered catalog-
   assert.equal(update.blockers.length, 0);
   assert.ok(update.actions.some((action) => action.type === 'install-skill' && action.skill === extra));
   const nextState = JSON.parse(update.actions.find((action) => action.path === statePath).content);
-  assert.ok(nextState.managedSkills.includes(extra));
+  assert.ok(Object.hasOwn(nextState.managedSkills, extra));
 });
 
 test('release fetches time out with actionable fail-closed diagnostics', async (t) => {

@@ -23,6 +23,21 @@ try:
 except ImportError:  # pragma: no cover - release environments install the pinned requirement
     jsonschema = None
 
+try:
+    from agent_skill_release_contract import (
+        ReleaseContractError,
+        derive_skill_revision_metadata,
+        release_timestamps,
+        validate_revision_history,
+    )
+except ModuleNotFoundError:  # pragma: no cover - supports import-by-path test runners
+    from scripts.agent_skill_release_contract import (
+        ReleaseContractError,
+        derive_skill_revision_metadata,
+        release_timestamps,
+        validate_revision_history,
+    )
+
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
 CATALOG_PATH = REPOSITORY_ROOT / ".monica" / "agent-skill-catalog.json"
@@ -40,8 +55,7 @@ SEMVER_PATTERN = re.compile(
 )
 
 
-class ReleaseError(RuntimeError):
-    """Raised when release inputs or artifacts violate the immutable contract."""
+ReleaseError = ReleaseContractError
 
 
 def release_channel_for_version(version: str) -> str:
@@ -72,6 +86,7 @@ def validate_index_payload(index: dict[str, Any], *, label: str) -> None:
     errors = sorted(validator.iter_errors(index), key=lambda error: list(error.absolute_path))
     if errors:
         raise ReleaseError(f"{label} is invalid: {errors[0].message}")
+    validate_revision_history(index, label=label)
 
 
 def merge_verified_history(
@@ -96,6 +111,13 @@ def merge_verified_history(
     release = previous["releases"].get(expected_previous_tag)
     if release is None:
         raise ReleaseError(f"Previous release index does not contain {expected_previous_tag}.")
+    timestamps = release_timestamps(previous, label="Previous release index")
+    latest_tag = max(timestamps, key=timestamps.__getitem__)
+    if latest_tag != expected_previous_tag:
+        raise ReleaseError(
+            f"Previous release tag {expected_previous_tag} is not the latest published "
+            f"release {latest_tag}."
+        )
     expected_asset_base = (
         "https://github.com/Tairitsua/Monica/releases/download/"
         f"{expected_previous_tag}"
@@ -192,10 +214,18 @@ def materialized_index(
     catalog_digest: str,
     tree_digest: str,
     skill_digests: dict[str, str],
+    previous_tag: str | None,
     manifest_digest: str,
     published_at: str,
 ) -> dict[str, Any]:
     index = json.loads(json.dumps(base_index))
+    skill_revisions, skill_last_changed_in = derive_skill_revision_metadata(
+        index,
+        previous_tag=previous_tag,
+        current_tag=tag,
+        current_published_at=published_at,
+        skill_digests=skill_digests,
+    )
     existing = index["releases"].get(tag)
     asset_base_url = f"https://github.com/Tairitsua/Monica/releases/download/{tag}"
     release = {
@@ -206,6 +236,8 @@ def materialized_index(
         "skillTreeDigest": tree_digest,
         "skillDigestAlgorithm": SKILL_DIGEST_ALGORITHM,
         "skillDigests": skill_digests,
+        "skillRevisions": skill_revisions,
+        "skillLastChangedIn": skill_last_changed_in,
         "manifestDigest": manifest_digest,
         "publishedAt": published_at,
         "assetBaseUrl": asset_base_url,
@@ -256,6 +288,8 @@ def verify_release_artifact_parity(
         "skillTreeDigest",
         "skillDigestAlgorithm",
         "skillDigests",
+        "skillRevisions",
+        "skillLastChangedIn",
     ):
         if manifest.get(field) != release.get(field):
             raise ReleaseError(f"Manifest and index disagree on {field}.")
@@ -317,7 +351,15 @@ def build_payload(staging: Path, args: argparse.Namespace, published_at: datetim
     catalog_digest = sha256_bytes(CATALOG_PATH.read_bytes())
     tree_digest = skill_tree_digest(managed_files)
     skill_digests = per_skill_digests(catalog)
+    previous_tag = args.previous_tag if args.previous_index is not None else None
     published_text = published_at.isoformat().replace("+00:00", "Z")
+    skill_revisions, skill_last_changed_in = derive_skill_revision_metadata(
+        base_index,
+        previous_tag=previous_tag,
+        current_tag=args.tag,
+        current_published_at=published_text,
+        skill_digests=skill_digests,
+    )
 
     payload_root = staging / "payload"
     for source in managed_files:
@@ -334,7 +376,7 @@ def build_payload(staging: Path, args: argparse.Namespace, published_at: datetim
     }
     asset_base_url = f"https://github.com/Tairitsua/Monica/releases/download/{args.tag}"
     release_manifest = {
-        "schemaVersion": 1,
+        "schemaVersion": 2,
         "monicaVersion": args.version,
         "tag": args.tag,
         "resolvedCommit": args.commit,
@@ -342,6 +384,8 @@ def build_payload(staging: Path, args: argparse.Namespace, published_at: datetim
         "skillTreeDigest": tree_digest,
         "skillDigestAlgorithm": SKILL_DIGEST_ALGORITHM,
         "skillDigests": skill_digests,
+        "skillRevisions": skill_revisions,
+        "skillLastChangedIn": skill_last_changed_in,
         "publishedAt": published_text,
         "indexUrl": f"{asset_base_url}/agent-skill-index.json",
         "catalogUrl": f"{asset_base_url}/agent-skill-catalog.json",
@@ -372,6 +416,7 @@ def build_payload(staging: Path, args: argparse.Namespace, published_at: datetim
         catalog_digest=catalog_digest,
         tree_digest=tree_digest,
         skill_digests=skill_digests,
+        previous_tag=previous_tag,
         manifest_digest=manifest_digest,
         published_at=published_text,
     )

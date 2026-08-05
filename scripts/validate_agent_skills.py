@@ -18,6 +18,17 @@ try:
 except ImportError:  # pragma: no cover - exercised by dependency-free environments
     jsonschema = None
 
+try:
+    from agent_skill_release_contract import (
+        ReleaseContractError,
+        validate_revision_history,
+    )
+except ModuleNotFoundError:  # pragma: no cover - supports import-by-path test runners
+    from scripts.agent_skill_release_contract import (
+        ReleaseContractError,
+        validate_revision_history,
+    )
+
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
 CATALOG_PATH = REPOSITORY_ROOT / ".monica" / "agent-skill-catalog.json"
@@ -546,6 +557,10 @@ def validate_index(validation: Validation, index: dict[str, Any]) -> None:
             release.get("manifestUrl") == f"{asset_base_url}/agent-skill-manifest.json",
             f"release {release_id}: manifestUrl must be deterministic",
         )
+    try:
+        validate_revision_history(index, label="index")
+    except ReleaseContractError as exc:
+        validation.errors.append(str(exc))
 
 
 def tree_digest(catalog: dict[str, Any]) -> str:

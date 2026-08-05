@@ -2,12 +2,12 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { GuideError, exists, loadProjectConfig, loadState, normalizePath, run, semverChannel, stateFilePath, workspaceKey } from './guide-shared.mjs';
-import { discoverChannelReleaseTag, loadCatalog, loadReleaseArtifacts, loadReleaseIndex, resolveProfileClosure, resolveRelease, skillsCliSpec } from './guide-catalog.mjs';
+import { discoverChannelReleaseTag, loadCatalog, loadReleaseArtifacts, loadReleaseIndex, resolveProfileClosure, resolveRequiredSkillClosure, resolveRelease, skillsCliSpec } from './guide-catalog.mjs';
 import { assertProjectReferenceRelease, profileRepositoryIssues, workspaceDetection } from './guide-detect.mjs';
 import { instructionDiagnostics } from './guide-plan.mjs';
 import { retainedGlobalSkillTransactions } from './guide-install-transaction.mjs';
 import { findSourceResolver, resolveCachedSource, verifyLocalSource } from './guide-source.mjs';
-import { buildSourceManifest, verifyDiscoveryPayload, verifyLocalSkillSource } from './guide-installation.mjs';
+import { buildSourceManifest, compareManagedSkillRecords, verifyDiscoveryPayload, verifyLocalSkillSource } from './guide-installation.mjs';
 
 function check(id, status, message, details = undefined, remediation = undefined) {
   return { id, status, message, ...(details === undefined ? {} : { details }), ...(remediation ? { remediation } : {}) };
@@ -44,7 +44,7 @@ function discoveryCheck(agent, skills, manifest, cliSpec, offline, canonicalSkil
       if (extras.length) return check(`skill-discovery:${agent}`, 'error', `${agent} has catalog-managed Monica skills outside the recorded global set: ${extras.join(', ')}.`, { extras }, 'Run update to adopt and reinstall them at the active immutable release.');
       return check(`skill-discovery:${agent}`, 'ok', `${agent} installed skill contents match the verified immutable manifest (offline).`);
     } catch (error) {
-      return check(`skill-discovery:${agent}`, 'error', error.message, error.details);
+      return check(`skill-discovery:${agent}`, 'error', error.message, error.details, 'Run a full update to reinstall unhealthy managed skills and verify the complete global set.');
     }
   }
   const executable = process.env.MONICA_GUIDE_NPX || 'npx';
@@ -59,7 +59,7 @@ function discoveryCheck(agent, skills, manifest, cliSpec, offline, canonicalSkil
     if (extras.length) return check(`skill-discovery:${agent}`, 'error', `${agent} has catalog-managed Monica skills outside the recorded global set: ${extras.join(', ')}.`, { extras }, 'Run update to adopt and reinstall them at the active immutable release.');
     return check(`skill-discovery:${agent}`, 'ok', `${agent} reports every selected Monica skill with immutable manifest-matching content.`);
   } catch (error) {
-    return check(`skill-discovery:${agent}`, 'error', error.message, error.details);
+    return check(`skill-discovery:${agent}`, 'error', error.message, error.details, 'Run a full update to reinstall unhealthy managed skills and verify the complete global set.');
   }
 }
 
@@ -136,6 +136,9 @@ export async function inspectEnvironment(options = {}) {
         targetCatalogDigest = sourceCatalogInfo.catalogDigest;
         installManifest = buildSourceManifest(binding.sourcePath, targetCatalog);
         release.catalogDigest = targetCatalogDigest;
+        release.skillDigests = installManifest.skillDigests;
+        release.skillRevisions = installManifest.skillRevisions;
+        release.skillLastChangedIn = installManifest.skillLastChangedIn;
       } else {
         let contractTag = options.releaseTag
           || project.config?.expectedCatalogRelease?.indexTag
@@ -178,6 +181,31 @@ export async function inspectEnvironment(options = {}) {
   let closureError = null;
   try { if (profile) closure = resolveProfileClosure(targetCatalog, profile, capabilities); }
   catch (error) { closureError = error; }
+  let skillChanges = [];
+  let skillMetadataError = null;
+  if (release && installManifest && closure) {
+    const recordedManagedSkills = Object.keys(state.managedSkills);
+    const retiredManagedSkills = recordedManagedSkills.filter((name) => {
+      const entry = targetCatalog.skills[name];
+      return !entry || entry.ownership !== 'monica' || entry.managed === false;
+    });
+    if (retiredManagedSkills.length) {
+      skillMetadataError = {
+        code: 'managed_skill_missing_from_release',
+        message: `The target catalog no longer manages recorded Monica skills: ${retiredManagedSkills.join(', ')}. Resolve their diagnostic aliases or remove them explicitly before switching releases.`,
+        details: { skills: retiredManagedSkills },
+      };
+    }
+    try {
+      const managedRoots = [...new Set([...recordedManagedSkills, ...closure.selected])]
+        .filter((name) => targetCatalog.skills[name]?.ownership === 'monica' && targetCatalog.skills[name]?.managed !== false);
+      const managedSkillNames = resolveRequiredSkillClosure(targetCatalog, managedRoots);
+      skillChanges = compareManagedSkillRecords(state.managedSkills, managedSkillNames, release, installManifest);
+    } catch (error) {
+      if (!(error instanceof GuideError)) throw error;
+      skillMetadataError ||= { code: error.code, message: error.message, details: error.details };
+    }
+  }
   let sourceSkillError = null;
   const sourceBinding = state.sourceBindings[key] || null;
   if (sourceBinding && installManifest) {
@@ -210,6 +238,8 @@ export async function inspectEnvironment(options = {}) {
     installManifest,
     closure,
     closureError: closureError ? { code: closureError.code || 'closure_error', message: closureError.message } : null,
+    skillChanges,
+    skillMetadataError,
     sourceBinding,
     sourceSkillError,
     contributionPreference: state.contributionPreferences[key] || 'ask',
@@ -271,6 +301,42 @@ export async function doctor(options = {}) {
     checks.push(check('global-release', 'error', `Global release ${environment.activeRelease.id} conflicts with repository release ${environment.targetRelease.id}.`, undefined, 'Explicitly switch the one global release or upgrade the project.'));
   } else if (environment.activeRelease) checks.push(check('global-release', 'ok', `Global Monica skills are recorded at ${environment.activeRelease.id}.`));
   else checks.push(check('global-release', 'warning', 'No active global Monica skill release is recorded.'));
+
+  if (environment.skillMetadataError) {
+    checks.push(check(
+      'managed-skill-versions',
+      'error',
+      environment.skillMetadataError.message,
+      environment.skillMetadataError.details,
+      environment.skillMetadataError.code === 'managed_skill_missing_from_release'
+        ? 'Resolve the catalog alias or explicitly remove the obsolete global skill and state record before retrying update.'
+        : 'Run a full verified update after resolving the reported skill metadata contract error.',
+    ));
+  } else {
+    for (const entry of environment.skillChanges) {
+      const target = entry.target.revision === null
+        ? `source@${environment.targetRelease?.commit || 'unknown'}`
+        : `r${entry.target.revision} (${entry.target.lastChangedIn})`;
+      const installed = !entry.installed || entry.installed.digest === null
+        ? 'unknown'
+        : entry.installed.revision === null
+          ? `source@${environment.activeRelease?.commit || 'unknown'}`
+          : `r${entry.installed.revision} (${entry.installed.lastChangedIn})`;
+      const status = entry.changeState === 'unchanged'
+        ? 'ok'
+        : entry.changeState === 'unknown' ? 'error' : 'warning';
+      const remediation = entry.changeState === 'unknown'
+        ? 'Run a full verified update; migrated or incomplete metadata cannot be treated as current.'
+        : entry.changeState === 'unchanged' ? undefined : 'Preview update to verify and reconcile this skill at the target release.';
+      checks.push(check(
+        `skill-version:${entry.name}`,
+        status,
+        `${entry.name}: installed ${installed}; target ${target}; ${entry.changeState}.`,
+        entry,
+        remediation,
+      ));
+    }
+  }
 
   if (environment.recoveryTransactions.length) {
     checks.push(check(
@@ -344,7 +410,7 @@ export async function doctor(options = {}) {
       if (environment.targetRelease && environment.installManifest) {
         checks.push(discoveryCheck(
           agent,
-          environment.state.managedSkills.length ? environment.state.managedSkills : environment.closure.selected,
+          environment.skillChanges.length ? environment.skillChanges.map((entry) => entry.name) : environment.closure.selected,
           environment.installManifest,
           environment.catalog.skillsCliSpec,
           Boolean(options.offline),

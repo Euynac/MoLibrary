@@ -7,7 +7,7 @@
   "required": ["$schema", "schemaVersion", "channels", "versions", "releases"],
   "properties": {
     "$schema": { "type": "string", "const": "./schemas/agent-skill-index.schema.json" },
-    "schemaVersion": { "type": "integer", "const": 1 },
+    "schemaVersion": { "type": "integer", "const": 2 },
     "channels": {
       "type": "object",
       "additionalProperties": false,
@@ -49,6 +49,8 @@
         "skillTreeDigest",
         "skillDigestAlgorithm",
         "skillDigests",
+        "skillRevisions",
+        "skillLastChangedIn",
         "manifestDigest",
         "publishedAt",
         "assetBaseUrl",
@@ -67,6 +69,18 @@
           "minProperties": 1,
           "propertyNames": { "type": "string", "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$" },
           "additionalProperties": { "$ref": "#/$defs/digest" }
+        },
+        "skillRevisions": {
+          "type": "object",
+          "minProperties": 1,
+          "propertyNames": { "type": "string", "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$" },
+          "additionalProperties": { "type": "integer", "minimum": 1 }
+        },
+        "skillLastChangedIn": {
+          "type": "object",
+          "minProperties": 1,
+          "propertyNames": { "type": "string", "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$" },
+          "additionalProperties": { "$ref": "#/$defs/releaseId" }
         },
         "manifestDigest": { "$ref": "#/$defs/digest" },
         "publishedAt": { "type": "string", "format": "date-time" },

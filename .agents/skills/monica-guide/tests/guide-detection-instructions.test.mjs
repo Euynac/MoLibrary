@@ -209,3 +209,12 @@ test('CLI collects repeated nested instruction selections', () => {
   assert.deepEqual(parsed.options.nestedInstructions, ['one/AGENTS.md', 'two/CLAUDE.md']);
   assert.equal(instructionState('plain text').status, 'absent');
 });
+
+test('CLI accepts repeatable targeted skills only for update', () => {
+  const parsed = parseArguments(['update', '--skill', 'monica-guide', '--skill', 'monica-application']);
+  assert.deepEqual(parsed.options.skills, ['monica-guide', 'monica-application']);
+  assert.throws(
+    () => parseArguments(['configure', '--skill', 'monica-guide']),
+    (error) => error.code === 'targeted_skill_intent_invalid',
+  );
+});

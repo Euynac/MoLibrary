@@ -21,6 +21,10 @@ The `source` channel always installs from the exact bound checkout. It never tur
 
 One user-level installation can have only one active Monica release. When project expectation and user state differ, diagnose the conflict and require an explicit global switch or a project upgrade. Never claim simultaneous global multi-version isolation.
 
+The immutable index is the sole skill-version authority. Its per-skill digest is the verification contract; its positive revision and immutable `lastChangedIn` tag are readable release history. Releases form one strict chronological sequence across stable and preview: unchanged digests preserve revision/origin, while new or changed digests use the next revision and the current tag. Reject forks, duplicate timestamps, metadata-only jumps, missing origins, and removed-then-reintroduced lineages before planning.
+
+A targeted update never creates a mixed global release. Expand required dependencies, compare the entire managed union, and block if any skill outside the selection changed digest or cannot pass final discovery/content verification. A full update repairs missing or tampered installations and still verifies every managed skill before committing user or project release state.
+
 ## Global install compensation
 
 Before global mutation, snapshot the planned Monica skills and planned file actions into a private transaction directory beside user state. Mark each skill or file before attempting it. On any protected failure, restore only attempted files and skills; compare canonical paths, discovery memberships, CLI-reported provenance, bytes, and portable file modes with the pre-apply inventory. Do not touch unrelated or unattempted skills.

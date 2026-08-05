@@ -585,7 +585,12 @@ export function withGlobalSkillCompensation({
     runner,
     cleanup,
   };
-  if (!context.skills.length) return { result: mutate({ runSkill: (_skill, callback) => callback(), runFile: (_action, callback) => callback() }), transaction: { status: 'not-required' } };
+  if (!context.skills.length && !context.fileActions.length) {
+    return {
+      result: mutate({ runSkill: (_skill, callback) => callback(), runFile: (_action, callback) => callback() }),
+      transaction: { status: 'not-required' },
+    };
+  }
   const snapshot = captureSnapshot(context);
   const controls = {
     runSkill(skill, callback) {

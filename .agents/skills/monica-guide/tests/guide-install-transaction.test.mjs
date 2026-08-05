@@ -352,6 +352,27 @@ test('post-install file failure compensates both global skills and prior file wr
   assert.equal(fs.readFileSync(path.join(installed, 'monica-guide', 'SKILL.md'), 'utf8'), 'old guide\n');
 });
 
+test('file-only release switches remain inside the compensating transaction', (t) => {
+  const root = temporaryDirectory(t);
+  const installed = path.join(root, 'installed');
+  fs.mkdirSync(installed);
+  const cli = fakeSkillsCli(installed, {});
+  const statePath = path.join(root, 'state', 'state.json');
+  fs.mkdirSync(path.dirname(statePath), { recursive: true });
+  fs.writeFileSync(statePath, 'before\n', 'utf8');
+  const fileActions = [{ path: statePath }];
+  assert.throws(
+    () => withGlobalSkillCompensation(transactionOptions(root, cli, [], ({ runFile }) => {
+      runFile(fileActions[0], () => {
+        fs.writeFileSync(statePath, 'after\n', 'utf8');
+        throw new GuideError('write_failed', 'injected file-only failure');
+      });
+    }, { fileActions })),
+    (error) => error.code === 'write_failed' && error.details?.transaction?.status === 'compensated',
+  );
+  assert.equal(fs.readFileSync(statePath, 'utf8'), 'before\n');
+});
+
 test('cleanup failure never triggers rollback after a committed or compensated mutation', (t) => {
   const root = temporaryDirectory(t);
   const installed = path.join(root, 'installed');

@@ -1,6 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import { GuideError, compareOrdinalUtf8, digest } from './guide-shared.mjs';
+import { GuideError, compareOrdinalUtf8, digest, parseSemVer } from './guide-shared.mjs';
 
 function expectedSkillFiles(manifest, skillName) {
   const prefix = `skills/${skillName}/`;
@@ -66,6 +66,8 @@ export function verifyDiscoveryPayload(payload, skills, manifest) {
 export function buildSourceManifest(sourceRoot, catalog) {
   const files = {};
   const skillDigests = {};
+  const skillRevisions = {};
+  const skillLastChangedIn = {};
   for (const [skillName, entry] of Object.entries(catalog.skills || {})) {
     if (entry.ownership !== 'monica' || entry.managed !== true) continue;
     const skillRoot = path.resolve(sourceRoot, entry.path);
@@ -87,8 +89,51 @@ export function buildSourceManifest(sourceRoot, catalog) {
       .sort(([left], [right]) => compareOrdinalUtf8(left, right))
       .map(([relative, hash]) => `${hash.slice('sha256:'.length)}  ${relative}\n`).join('');
     skillDigests[skillName] = digest(fileManifest);
+    skillRevisions[skillName] = null;
+    skillLastChangedIn[skillName] = null;
   }
-  return { schemaVersion: 1, source: true, skillDigestAlgorithm: 'sha256-file-manifest-v1', skillDigests, files };
+  return {
+    schemaVersion: 2,
+    source: true,
+    skillDigestAlgorithm: 'sha256-file-manifest-v1',
+    skillDigests,
+    skillRevisions,
+    skillLastChangedIn,
+    files,
+  };
+}
+
+export function targetSkillRecord(release, manifest, skillName) {
+  const digestValue = manifest?.skillDigests?.[skillName] ?? release?.skillDigests?.[skillName];
+  if (!/^sha256:[0-9a-f]{64}$/.test(digestValue || '')) {
+    throw new GuideError('target_skill_contract_missing', `Target release has no valid digest for ${skillName}.`);
+  }
+  if (release?.channel === 'source') {
+    return { revision: null, digest: digestValue, lastChangedIn: null };
+  }
+  const revision = manifest?.skillRevisions?.[skillName] ?? release?.skillRevisions?.[skillName];
+  const lastChangedIn = manifest?.skillLastChangedIn?.[skillName] ?? release?.skillLastChangedIn?.[skillName];
+  if (!Number.isInteger(revision) || revision < 1
+    || !String(lastChangedIn || '').startsWith('v')
+    || !parseSemVer(String(lastChangedIn).slice(1))) {
+    throw new GuideError('target_skill_version_missing', `Target release has no valid revision metadata for ${skillName}.`);
+  }
+  return { revision, digest: digestValue, lastChangedIn };
+}
+
+export function compareManagedSkillRecords(installedRecords, skillNames, release, manifest) {
+  return [...new Set(skillNames)].sort(compareOrdinalUtf8).map((name) => {
+    const installed = installedRecords?.[name] ?? null;
+    const target = targetSkillRecord(release, manifest, name);
+    let changeState;
+    if (!installed) changeState = 'new';
+    else if (installed.digest === null
+      || (target.revision !== null && (installed.revision === null || installed.lastChangedIn === null))) changeState = 'unknown';
+    else if (installed.digest !== target.digest) changeState = 'content-changed';
+    else if (installed.revision !== target.revision || installed.lastChangedIn !== target.lastChangedIn) changeState = 'metadata-changed';
+    else changeState = 'unchanged';
+    return { name, installed, target, changeState };
+  });
 }
 
 export function verifyLocalSkillSource(sourceRoot, catalog, releaseManifest) {

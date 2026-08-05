@@ -28,6 +28,35 @@ function validateReleaseTag(tag) {
   }
 }
 
+function validateReleaseSkillContracts(releaseId, release) {
+  if (release.skillDigestAlgorithm !== 'sha256-file-manifest-v1'
+    || !release.skillDigests || typeof release.skillDigests !== 'object' || Array.isArray(release.skillDigests)
+    || !release.skillRevisions || typeof release.skillRevisions !== 'object' || Array.isArray(release.skillRevisions)
+    || !release.skillLastChangedIn || typeof release.skillLastChangedIn !== 'object' || Array.isArray(release.skillLastChangedIn)) {
+    throw new GuideError('release_skill_digest_contract_invalid', `Release ${releaseId} has no supported per-skill version contract.`);
+  }
+  const digestSkills = Object.keys(release.skillDigests).sort(compareOrdinalUtf8);
+  const revisionSkills = Object.keys(release.skillRevisions).sort(compareOrdinalUtf8);
+  const changedSkills = Object.keys(release.skillLastChangedIn).sort(compareOrdinalUtf8);
+  if (!digestSkills.length
+    || JSON.stringify(digestSkills) !== JSON.stringify(revisionSkills)
+    || JSON.stringify(digestSkills) !== JSON.stringify(changedSkills)) {
+    throw new GuideError('release_skill_version_contract_invalid', `Release ${releaseId} per-skill digest, revision, and last-changed maps must have the same non-empty key set.`);
+  }
+  for (const skill of digestSkills) {
+    const skillDigest = release.skillDigests[skill];
+    const revision = release.skillRevisions[skill];
+    const lastChangedIn = release.skillLastChangedIn[skill];
+    if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(skill) || !/^sha256:[0-9a-f]{64}$/.test(skillDigest)) {
+      throw new GuideError('release_skill_digest_contract_invalid', `Release ${releaseId} has invalid digest for ${skill}.`);
+    }
+    if (!Number.isInteger(revision) || revision < 1) {
+      throw new GuideError('release_skill_revision_contract_invalid', `Release ${releaseId} has invalid revision for ${skill}.`);
+    }
+    validateReleaseTag(lastChangedIn);
+  }
+}
+
 export function verifyReleaseIndex(index, tag) {
   validateIndex(index);
   validateReleaseTag(tag);
@@ -45,12 +74,7 @@ export function verifyReleaseIndex(index, tag) {
   for (const field of ['catalogDigest', 'skillTreeDigest', 'manifestDigest']) {
     if (!/^sha256:[0-9a-f]{64}$/.test(release[field] || '')) throw new GuideError('release_digest_invalid', `Release ${releaseId} has invalid ${field}.`);
   }
-  if (release.skillDigestAlgorithm !== 'sha256-file-manifest-v1' || !release.skillDigests || typeof release.skillDigests !== 'object') {
-    throw new GuideError('release_skill_digest_contract_invalid', `Release ${releaseId} has no supported per-skill digest contract.`);
-  }
-  for (const [skill, skillDigest] of Object.entries(release.skillDigests)) {
-    if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(skill) || !/^sha256:[0-9a-f]{64}$/.test(skillDigest)) throw new GuideError('release_skill_digest_contract_invalid', `Release ${releaseId} has invalid digest for ${skill}.`);
-  }
+  validateReleaseSkillContracts(releaseId, release);
   return { releaseId, release: { id: releaseId, ...release } };
 }
 
@@ -177,7 +201,7 @@ function parseAssetJson(text, label) {
 }
 
 export function verifyReleaseManifest(manifest, release, catalogDigest) {
-  if (manifest?.schemaVersion !== 1) throw new GuideError('manifest_schema_mismatch', 'Release manifest must use schemaVersion 1.');
+  if (manifest?.schemaVersion !== 2) throw new GuideError('manifest_schema_mismatch', 'Release manifest must use schemaVersion 2.');
   if (manifest.tag !== release.tag || manifest.resolvedCommit !== release.commit) throw new GuideError('manifest_release_mismatch', `Release manifest does not describe ${release.tag}@${release.commit}.`);
   if (manifest.catalogDigest !== catalogDigest || manifest.catalogDigest !== release.catalogDigest) throw new GuideError('manifest_catalog_mismatch', 'Release manifest catalog digest does not match the selected release.');
   if (manifest.skillTreeDigest !== release.skillTreeDigest) throw new GuideError('manifest_tree_mismatch', 'Release manifest skill-tree digest does not match the selected release.');
@@ -189,6 +213,15 @@ export function verifyReleaseManifest(manifest, release, catalogDigest) {
     || !manifestSkillDigests
     || JSON.stringify(manifestSkillDigests) !== JSON.stringify(releaseSkillDigests)) {
     throw new GuideError('manifest_skill_digest_mismatch', 'Release manifest per-skill digests do not match the selected release.');
+  }
+  for (const field of ['skillRevisions', 'skillLastChangedIn']) {
+    const manifestEntries = manifest[field] && typeof manifest[field] === 'object' && !Array.isArray(manifest[field])
+      ? Object.entries(manifest[field]).sort(([left], [right]) => compareOrdinalUtf8(left, right))
+      : null;
+    const releaseEntries = Object.entries(release[field] || {}).sort(([left], [right]) => compareOrdinalUtf8(left, right));
+    if (!manifestEntries || JSON.stringify(manifestEntries) !== JSON.stringify(releaseEntries)) {
+      throw new GuideError('manifest_skill_version_mismatch', `Release manifest ${field} does not match the selected release.`);
+    }
   }
   if (manifest.fileManifestScope !== 'release-payload-except-index-v1') throw new GuideError('manifest_scope_mismatch', 'Release manifest has an unsupported file-manifest scope.');
   const expectedBase = release.assetBaseUrl;
@@ -258,6 +291,18 @@ export async function loadReleaseArtifacts({
   if (catalogDigest !== release.catalogDigest) throw new GuideError('catalog_digest_mismatch', `Fetched catalog ${catalogDigest} does not match release ${release.catalogDigest}.`);
   const catalog = parseAssetJson(catalogText, 'Release catalog');
   validateCatalog(catalog);
+  const catalogSkills = Object.entries(catalog.skills)
+    .filter(([, entry]) => entry.ownership === 'monica' && entry.managed === true)
+    .map(([name]) => name)
+    .sort(compareOrdinalUtf8);
+  const releaseSkills = Object.keys(release.skillDigests).sort(compareOrdinalUtf8);
+  if (JSON.stringify(catalogSkills) !== JSON.stringify(releaseSkills)) {
+    throw new GuideError(
+      'release_catalog_skill_set_mismatch',
+      'Release per-skill version maps do not exactly match the catalog-managed Monica skill set.',
+      { catalogSkills, releaseSkills },
+    );
+  }
   const manifest = parseAssetJson(manifestText, 'Release manifest');
   if (manifestDigest !== release.manifestDigest) throw new GuideError('manifest_digest_mismatch', `Fetched manifest ${manifestDigest} does not match release ${release.manifestDigest}.`);
   verifyReleaseManifest(manifest, release, catalogDigest);
@@ -407,7 +452,7 @@ export function validateCatalog(catalog) {
 }
 
 export function validateIndex(index) {
-  if (index?.schemaVersion !== 1) throw new GuideError('index_schema_mismatch', `Expected index schema 1, found ${index?.schemaVersion ?? 'missing'}.`);
+  if (index?.schemaVersion !== 2) throw new GuideError('index_schema_mismatch', `Expected index schema 2, found ${index?.schemaVersion ?? 'missing'}.`);
   if (index.$schema !== './schemas/agent-skill-index.schema.json') throw new GuideError('index_schema_reference_mismatch', 'Release index must identify the canonical agent-skill-index schema.');
   for (const field of ['channels', 'versions', 'releases']) {
     if (!index[field] || typeof index[field] !== 'object' || Array.isArray(index[field])) throw new GuideError('invalid_index', `Index ${field} must be an object.`);
@@ -423,7 +468,7 @@ export function validateIndex(index) {
   for (const [releaseId, release] of Object.entries(index.releases)) {
     validateReleaseTag(releaseId);
     if (!release || typeof release !== 'object' || Array.isArray(release)) throw new GuideError('invalid_release', `Index release ${releaseId} must be an object.`);
-    const releaseFields = new Set(['monicaVersion', 'tag', 'commit', 'catalogDigest', 'skillTreeDigest', 'skillDigestAlgorithm', 'skillDigests', 'manifestDigest', 'publishedAt', 'assetBaseUrl', 'catalogUrl', 'manifestUrl']);
+    const releaseFields = new Set(['monicaVersion', 'tag', 'commit', 'catalogDigest', 'skillTreeDigest', 'skillDigestAlgorithm', 'skillDigests', 'skillRevisions', 'skillLastChangedIn', 'manifestDigest', 'publishedAt', 'assetBaseUrl', 'catalogUrl', 'manifestUrl']);
     const unexpectedReleaseFields = Object.keys(release).filter((key) => !releaseFields.has(key));
     const missingReleaseFields = [...releaseFields].filter((key) => !Object.hasOwn(release, key));
     if (unexpectedReleaseFields.length || missingReleaseFields.length) throw new GuideError('invalid_release', `Release ${releaseId} fields do not match the canonical schema.`, { unexpectedReleaseFields, missingReleaseFields });
@@ -435,18 +480,7 @@ export function validateIndex(index) {
     for (const field of ['catalogDigest', 'skillTreeDigest', 'manifestDigest']) {
       if (!/^sha256:[0-9a-f]{64}$/.test(release[field] || '')) throw new GuideError('release_digest_invalid', `Release ${releaseId} has invalid ${field}.`);
     }
-    if (release.skillDigestAlgorithm !== 'sha256-file-manifest-v1'
-      || !release.skillDigests
-      || typeof release.skillDigests !== 'object'
-      || Array.isArray(release.skillDigests)
-      || Object.keys(release.skillDigests).length === 0) {
-      throw new GuideError('release_skill_digest_contract_invalid', `Release ${releaseId} has no supported per-skill digest contract.`);
-    }
-    for (const [skill, skillDigest] of Object.entries(release.skillDigests)) {
-      if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(skill) || !/^sha256:[0-9a-f]{64}$/.test(skillDigest)) {
-        throw new GuideError('release_skill_digest_contract_invalid', `Release ${releaseId} has invalid digest for ${skill}.`);
-      }
-    }
+    validateReleaseSkillContracts(releaseId, release);
     if (!release.publishedAt || Number.isNaN(Date.parse(release.publishedAt))) throw new GuideError('release_timestamp_invalid', `Release ${releaseId} has invalid publishedAt.`);
     const expectedBase = `https://github.com/Tairitsua/Monica/releases/download/${releaseId}`;
     if (release.assetBaseUrl !== expectedBase
@@ -463,6 +497,62 @@ export function validateIndex(index) {
   }
   for (const [releaseId, release] of Object.entries(index.releases)) {
     if (index.versions[release.monicaVersion] !== releaseId) throw new GuideError('index_release_unmapped', `Release ${releaseId} is not exactly mapped by version ${release.monicaVersion}.`);
+    for (const skill of Object.keys(release.skillDigests)) {
+      const changedReleaseId = release.skillLastChangedIn[skill];
+      const changedRelease = index.releases[changedReleaseId];
+      if (!changedRelease) throw new GuideError('skill_last_changed_release_missing', `Release ${releaseId} records ${skill} as last changed in missing release ${changedReleaseId}.`);
+      if (changedRelease.skillDigests?.[skill] !== release.skillDigests[skill]
+        || changedRelease.skillRevisions?.[skill] !== release.skillRevisions[skill]) {
+        throw new GuideError('skill_last_changed_contract_mismatch', `Release ${releaseId} metadata for ${skill} does not match last-changed release ${changedReleaseId}.`);
+      }
+    }
+  }
+  const chronological = Object.entries(index.releases)
+    .map(([releaseId, release]) => ({ releaseId, release, publishedAt: Date.parse(release.publishedAt) }))
+    .sort((left, right) => left.publishedAt - right.publishedAt);
+  for (let indexPosition = 1; indexPosition < chronological.length; indexPosition += 1) {
+    if (chronological[indexPosition - 1].publishedAt === chronological[indexPosition].publishedAt) {
+      throw new GuideError(
+        'release_timestamp_not_sequential',
+        `Releases ${chronological[indexPosition - 1].releaseId} and ${chronological[indexPosition].releaseId} have the same publishedAt instant; global skill revision history requires a strict total order.`,
+      );
+    }
+  }
+  const historicallySeenSkills = new Set();
+  for (let indexPosition = 0; indexPosition < chronological.length; indexPosition += 1) {
+    const { releaseId, release } = chronological[indexPosition];
+    const previous = chronological[indexPosition - 1]?.release || null;
+    for (const skill of Object.keys(release.skillDigests)) {
+      const previousDigest = previous?.skillDigests?.[skill];
+      if (previous && previousDigest === undefined && historicallySeenSkills.has(skill)) {
+        throw new GuideError(
+          'skill_revision_lineage_reintroduced',
+          `Release ${releaseId} reintroduces ${skill} after it was absent from the immediately previous release; revision lineage cannot be restarted.`,
+        );
+      }
+      const expectedRevision = previousDigest === undefined
+        ? 1
+        : previousDigest === release.skillDigests[skill]
+          ? previous.skillRevisions[skill]
+          : previous.skillRevisions[skill] + 1;
+      const expectedOrigin = previousDigest !== undefined && previousDigest === release.skillDigests[skill]
+        ? previous.skillLastChangedIn[skill]
+        : releaseId;
+      if (release.skillRevisions[skill] !== expectedRevision || release.skillLastChangedIn[skill] !== expectedOrigin) {
+        throw new GuideError(
+          'skill_revision_sequence_invalid',
+          `Release ${releaseId} violates the global sequential revision contract for ${skill}.`,
+          {
+            previousRelease: chronological[indexPosition - 1]?.releaseId || null,
+            expectedRevision,
+            actualRevision: release.skillRevisions[skill],
+            expectedLastChangedIn: expectedOrigin,
+            actualLastChangedIn: release.skillLastChangedIn[skill],
+          },
+        );
+      }
+      historicallySeenSkills.add(skill);
+    }
   }
   for (const channel of ['stable', 'preview']) {
     const releaseId = index.channels[channel];
@@ -480,6 +570,21 @@ function dependencySet(value) {
 function conditionalSkills(entries, capabilities) {
   if (!Array.isArray(entries)) return [];
   return entries.flatMap((entry) => capabilities.has(entry.capability) ? dependencySet(entry.skills) : []);
+}
+
+export function resolveRequiredSkillClosure(catalog, roots) {
+  const selected = new Set();
+  const visit = (name) => {
+    if (selected.has(name)) return;
+    const entry = catalog.skills[name];
+    if (!entry || entry.ownership !== 'monica' || entry.managed === false) {
+      throw new GuideError('managed_skill_dependency_invalid', `Monica Guide cannot manage required skill ${name}.`);
+    }
+    selected.add(name);
+    for (const dependency of dependencySet(entry.dependencies?.required)) visit(dependency);
+  };
+  for (const name of roots) visit(name);
+  return [...selected].sort(compareOrdinalUtf8);
 }
 
 export function resolveProfileClosure(catalog, profileName, selectedCapabilities = []) {

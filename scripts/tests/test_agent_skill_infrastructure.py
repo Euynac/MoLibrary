@@ -2,11 +2,13 @@ from __future__ import annotations
 
 import errno
 import importlib.util
+import io
 import json
 import sys
 import tempfile
 import unittest
 import zipfile
+from contextlib import redirect_stdout
 from datetime import datetime, timezone
 from pathlib import Path
 from types import SimpleNamespace
@@ -297,7 +299,7 @@ class AgentSkillInfrastructureTests(unittest.TestCase):
     def test_release_index_materialization_is_immutable(self) -> None:
         base = {
             "$schema": "./schemas/agent-skill-index.schema.json",
-            "schemaVersion": 1,
+            "schemaVersion": 2,
             "channels": {"stable": None, "preview": None},
             "versions": {},
             "releases": {},
@@ -311,12 +313,21 @@ class AgentSkillInfrastructureTests(unittest.TestCase):
             catalog_digest="sha256:" + "b" * 64,
             tree_digest="sha256:" + "c" * 64,
             skill_digests={"monica-guide": "sha256:" + "d" * 64},
+            previous_tag=None,
             manifest_digest="sha256:" + "e" * 64,
             published_at="2026-08-05T00:00:00Z",
         )
         self.assertEqual("v1.2.3-rc.1", release_index["channels"]["preview"])
         self.assertIsNone(release_index["channels"]["stable"])
         self.assertEqual("a" * 40, release_index["releases"]["v1.2.3-rc.1"]["commit"])
+        self.assertEqual(
+            {"monica-guide": 1},
+            release_index["releases"]["v1.2.3-rc.1"]["skillRevisions"],
+        )
+        self.assertEqual(
+            {"monica-guide": "v1.2.3-rc.1"},
+            release_index["releases"]["v1.2.3-rc.1"]["skillLastChangedIn"],
+        )
         self.assertEqual(
             "https://github.com/Tairitsua/Monica/releases/download/v1.2.3-rc.1",
             release_index["releases"]["v1.2.3-rc.1"]["assetBaseUrl"],
@@ -350,9 +361,180 @@ class AgentSkillInfrastructureTests(unittest.TestCase):
                 catalog_digest="sha256:" + "b" * 64,
                 tree_digest="sha256:" + "c" * 64,
                 skill_digests={"monica-guide": "sha256:" + "d" * 64},
+                previous_tag="v1.2.3-rc.1",
                 manifest_digest="sha256:" + "e" * 64,
                 published_at="2026-08-05T00:00:00Z",
             )
+
+    def test_skill_revisions_follow_one_global_sequential_release_lineage(self) -> None:
+        base = {
+            "$schema": "./schemas/agent-skill-index.schema.json",
+            "schemaVersion": 2,
+            "channels": {"stable": None, "preview": None},
+            "versions": {},
+            "releases": {},
+        }
+
+        def materialize(
+            index: dict,
+            *,
+            version: str,
+            digests: dict[str, str],
+            previous_tag: str | None,
+            published_at: str,
+        ) -> dict:
+            return release.materialized_index(
+                index,
+                version=version,
+                tag=f"v{version}",
+                commit=version[-1] * 40,
+                channel=release.release_channel_for_version(version),
+                catalog_digest="sha256:" + "a" * 64,
+                tree_digest="sha256:" + "b" * 64,
+                skill_digests=digests,
+                previous_tag=previous_tag,
+                manifest_digest="sha256:" + "c" * 64,
+                published_at=published_at,
+            )
+
+        first_tag = "v2.0.0-rc.1"
+        first = materialize(
+            base,
+            version="2.0.0-rc.1",
+            digests={"monica-guide": "sha256:" + "1" * 64},
+            previous_tag=None,
+            published_at="2026-08-05T00:00:00Z",
+        )
+        second_tag = "v2.0.0"
+        second = materialize(
+            first,
+            version="2.0.0",
+            digests={
+                "monica-guide": "sha256:" + "1" * 64,
+                "monica-new": "sha256:" + "2" * 64,
+            },
+            previous_tag=first_tag,
+            published_at="2026-08-05T00:01:00Z",
+        )
+        third_tag = "v2.1.0-rc.1"
+        third = materialize(
+            second,
+            version="2.1.0-rc.1",
+            digests={
+                "monica-guide": "sha256:" + "3" * 64,
+                "monica-new": "sha256:" + "2" * 64,
+            },
+            previous_tag=second_tag,
+            published_at="2026-08-05T00:02:00Z",
+        )
+
+        self.assertEqual(
+            {"monica-guide": 1, "monica-new": 1},
+            second["releases"][second_tag]["skillRevisions"],
+        )
+        self.assertEqual(
+            {"monica-guide": first_tag, "monica-new": second_tag},
+            second["releases"][second_tag]["skillLastChangedIn"],
+        )
+        self.assertEqual(
+            {"monica-guide": 2, "monica-new": 1},
+            third["releases"][third_tag]["skillRevisions"],
+        )
+        self.assertEqual(
+            {"monica-guide": third_tag, "monica-new": second_tag},
+            third["releases"][third_tag]["skillLastChangedIn"],
+        )
+        release.validate_index_payload(third, label="sequential fixture")
+
+        skipped_revision = json.loads(json.dumps(third))
+        skipped_revision["releases"][third_tag]["skillRevisions"]["monica-guide"] = 3
+        with self.assertRaises(release.ReleaseError):
+            release.validate_index_payload(skipped_revision, label="skipped revision fixture")
+        with self.assertRaises(installed_verifier.ReleaseContractError):
+            installed_verifier.validate_revision_history(
+                skipped_revision,
+                label="installed verifier fixture",
+            )
+
+        mismatched_keys = json.loads(json.dumps(third))
+        del mismatched_keys["releases"][third_tag]["skillRevisions"]["monica-new"]
+        with self.assertRaises(release.ReleaseError):
+            release.validate_index_payload(mismatched_keys, label="key mismatch fixture")
+
+        with self.assertRaises(release.ReleaseError):
+            materialize(
+                third,
+                version="2.1.0-rc.2",
+                digests={"monica-guide": "sha256:" + "3" * 64},
+                previous_tag=second_tag,
+                published_at="2026-08-05T00:03:00Z",
+            )
+        with self.assertRaises(release.ReleaseError):
+            materialize(
+                third,
+                version="2.1.0-rc.2",
+                digests={"monica-guide": "sha256:" + "3" * 64},
+                previous_tag=third_tag,
+                published_at="2026-08-05T00:02:00Z",
+            )
+        with self.assertRaises(release.ReleaseError):
+            release.merge_verified_history(
+                base,
+                third,
+                expected_previous_tag=second_tag,
+            )
+
+    def test_installed_verifier_reports_malformed_manifest_revision_maps(self) -> None:
+        tag = "v1.0.0"
+        digest = "sha256:" + "d" * 64
+        release_entry = {
+            "publishedAt": "2026-08-05T00:00:00Z",
+            "skillDigestAlgorithm": release.SKILL_DIGEST_ALGORITHM,
+            "skillDigests": {"monica-guide": digest},
+            "skillRevisions": {"monica-guide": 1},
+            "skillLastChangedIn": {"monica-guide": tag},
+        }
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            index_path = root / "index.json"
+            manifest_path = root / "manifest.json"
+            catalog_path = root / "catalog.json"
+            index_path.write_text(
+                json.dumps({"schemaVersion": 2, "releases": {tag: release_entry}}),
+                encoding="utf-8",
+            )
+            manifest_path.write_text(
+                json.dumps(
+                    {
+                        "schemaVersion": 2,
+                        "fileManifestScope": "release-payload-except-index-v1",
+                        "skillDigests": {"monica-guide": digest},
+                        "skillRevisions": [],
+                        "skillLastChangedIn": {"monica-guide": tag},
+                    }
+                ),
+                encoding="utf-8",
+            )
+            catalog_path.write_text("{}", encoding="utf-8")
+            args = SimpleNamespace(
+                index=index_path,
+                manifest=manifest_path,
+                catalog=catalog_path,
+                tag=tag,
+                skill="monica-guide",
+                path=root,
+                json=True,
+            )
+
+            with self.assertRaises(installed_verifier.ReleaseContractError):
+                installed_verifier.verify(args)
+            output = io.StringIO()
+            with mock.patch.object(installed_verifier, "parse_args", return_value=args):
+                with redirect_stdout(output):
+                    self.assertEqual(1, installed_verifier.main())
+            result = json.loads(output.getvalue())
+            self.assertFalse(result["ok"])
+            self.assertIn("invalid skill revision metadata", result["error"])
 
     def test_manifest_digest_is_path_sensitive_and_deterministic(self) -> None:
         with tempfile.TemporaryDirectory() as temporary_directory:
@@ -385,6 +567,8 @@ class AgentSkillInfrastructureTests(unittest.TestCase):
             )
             index = json.loads((staging / "agent-skill-index.json").read_text(encoding="utf-8"))
             manifest = json.loads((staging / "agent-skill-manifest.json").read_text(encoding="utf-8"))
+            self.assertEqual(2, index["schemaVersion"])
+            self.assertEqual(2, manifest["schemaVersion"])
             catalog_bytes = (staging / "agent-skill-catalog.json").read_bytes()
             self.assertEqual(release.sha256_bytes(catalog_bytes), manifest["catalogDigest"])
             self.assertEqual(
@@ -399,6 +583,22 @@ class AgentSkillInfrastructureTests(unittest.TestCase):
             self.assertEqual(
                 manifest["skillDigests"],
                 index["releases"]["v9.9.9-rc.1"]["skillDigests"],
+            )
+            self.assertEqual(
+                manifest["skillRevisions"],
+                index["releases"]["v9.9.9-rc.1"]["skillRevisions"],
+            )
+            self.assertEqual(
+                manifest["skillLastChangedIn"],
+                index["releases"]["v9.9.9-rc.1"]["skillLastChangedIn"],
+            )
+            self.assertEqual(
+                set(manifest["skillDigests"]),
+                set(manifest["skillRevisions"]),
+            )
+            self.assertEqual(
+                set(manifest["skillDigests"]),
+                set(manifest["skillLastChangedIn"]),
             )
             self.assertEqual(
                 release.per_skill_digests(self.catalog),
@@ -425,6 +625,8 @@ class AgentSkillInfrastructureTests(unittest.TestCase):
                 manifest["skillDigests"]["monica-guide"],
                 verification["skillDigest"],
             )
+            self.assertEqual(1, verification["skillRevision"])
+            self.assertEqual("v9.9.9-rc.1", verification["skillLastChangedIn"])
 
     def test_release_inputs_support_full_semver_and_prerelease_channels(self) -> None:
         common = {
@@ -444,7 +646,7 @@ class AgentSkillInfrastructureTests(unittest.TestCase):
         stable_index = release.materialized_index(
             {
                 "$schema": "./schemas/agent-skill-index.schema.json",
-                "schemaVersion": 1,
+                "schemaVersion": 2,
                 "channels": {"stable": None, "preview": None},
                 "versions": {},
                 "releases": {},
@@ -456,6 +658,7 @@ class AgentSkillInfrastructureTests(unittest.TestCase):
             catalog_digest="sha256:" + "b" * 64,
             tree_digest="sha256:" + "c" * 64,
             skill_digests={"monica-guide": "sha256:" + "d" * 64},
+            previous_tag=None,
             manifest_digest="sha256:" + "e" * 64,
             published_at=stable.published_at,
         )

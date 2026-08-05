@@ -4,7 +4,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 
-export const STATE_SCHEMA_VERSION = 2;
+export const STATE_SCHEMA_VERSION = 3;
 export const PROJECT_SCHEMA_VERSION = 1;
 
 const SEMVER_PATTERN = /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-((?:0|[1-9]\d*|\d*[A-Za-z-][0-9A-Za-z-]*)(?:\.(?:0|[1-9]\d*|\d*[A-Za-z-][0-9A-Za-z-]*))*))?(?:\+([0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*))?$/;
@@ -131,7 +131,7 @@ export function emptyState() {
   return {
     schemaVersion: STATE_SCHEMA_VERSION,
     activeRelease: null,
-    managedSkills: [],
+    managedSkills: {},
     agentTargets: [],
     sourceBindings: {},
     workspacePreferences: {},
@@ -175,10 +175,50 @@ export function migrateState(input) {
       observations: input.observations ?? {},
     };
   }
+  if (input.schemaVersion === 2) {
+    if (!Array.isArray(input.managedSkills)) throw new GuideError('invalid_state', 'managedSkills must be an array in user state schema 2.');
+    const managedSkillNames = new Set();
+    for (const skill of input.managedSkills) {
+      if (typeof skill !== 'string' || !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(skill)) {
+        throw new GuideError('invalid_state', 'managedSkills must contain only canonical skill-name strings in user state schema 2.');
+      }
+      if (managedSkillNames.has(skill)) throw new GuideError('invalid_state', `managedSkills contains duplicate skill name ${skill}.`);
+      managedSkillNames.add(skill);
+    }
+    input = {
+      ...input,
+      schemaVersion: 3,
+      managedSkills: Object.fromEntries([...managedSkillNames].map((skill) => [skill, {
+        revision: null,
+        digest: null,
+        lastChangedIn: null,
+      }])),
+    };
+  }
   const state = { ...emptyState(), ...input, schemaVersion: STATE_SCHEMA_VERSION };
-  for (const field of ['agentTargets', 'managedSkills']) if (!Array.isArray(state[field])) throw new GuideError('invalid_state', `${field} must be an array.`);
-  for (const field of ['sourceBindings', 'workspacePreferences', 'contributionPreferences', 'verifiedReleaseIndexes', 'verifiedReleaseArtifacts', 'observations']) {
+  if (!Array.isArray(state.agentTargets)) throw new GuideError('invalid_state', 'agentTargets must be an array.');
+  for (const field of ['managedSkills', 'sourceBindings', 'workspacePreferences', 'contributionPreferences', 'verifiedReleaseIndexes', 'verifiedReleaseArtifacts', 'observations']) {
     if (!state[field] || typeof state[field] !== 'object' || Array.isArray(state[field])) throw new GuideError('invalid_state', `${field} must be an object.`);
+  }
+  for (const [skill, record] of Object.entries(state.managedSkills)) {
+    if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(skill)) throw new GuideError('invalid_state', `managedSkills contains invalid skill name ${skill}.`);
+    if (!record || typeof record !== 'object' || Array.isArray(record)) throw new GuideError('invalid_state', `managedSkills.${skill} must be an object.`);
+    const fields = Object.keys(record).sort();
+    if (fields.join(',') !== 'digest,lastChangedIn,revision') throw new GuideError('invalid_state', `managedSkills.${skill} must contain only revision, digest, and lastChangedIn.`);
+    if (record.revision !== null && (!Number.isInteger(record.revision) || record.revision < 1)) throw new GuideError('invalid_state', `managedSkills.${skill}.revision must be a positive integer or null.`);
+    if (record.digest !== null && !/^sha256:[0-9a-f]{64}$/.test(record.digest)) throw new GuideError('invalid_state', `managedSkills.${skill}.digest must be a SHA-256 digest or null.`);
+    if (record.lastChangedIn !== null && (!String(record.lastChangedIn).startsWith('v') || !parseSemVer(String(record.lastChangedIn).slice(1)))) {
+      throw new GuideError('invalid_state', `managedSkills.${skill}.lastChangedIn must be an immutable vSemVer tag or null.`);
+    }
+    const unknown = record.revision === null && record.digest === null && record.lastChangedIn === null;
+    const source = record.revision === null && record.digest !== null && record.lastChangedIn === null;
+    const tagged = record.revision !== null && record.digest !== null && record.lastChangedIn !== null;
+    if (!unknown && !source && !tagged) {
+      throw new GuideError(
+        'invalid_state',
+        `managedSkills.${skill} must be a complete tagged record, a digest-only source record, or an all-null migrated record.`,
+      );
+    }
   }
   return state;
 }

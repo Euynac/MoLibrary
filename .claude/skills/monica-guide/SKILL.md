@@ -38,6 +38,8 @@ Use the bundled CLI as the source of truth for environment changes. Keep ordinar
 - Install the `source` channel only from its exact bound checkout. Revalidate the source path, commit, cleanliness/provenance, and managed skill manifest at preview and apply time.
 - Require an explicit profile for the first applied initialization, even when detection is confident.
 - Keep only one active global Monica skill release per user. Require `--switch-global` before replacing it.
+- Read per-skill revisions from the immutable release catalog. Treat digests as the machine contract and revisions plus `lastChangedIn` as the human-readable change history; never infer versions from `SKILL.md` frontmatter.
+- A normal `update` reinstalls only new, changed, unknown, missing, or tampered skills, then verifies every managed skill before switching the global release. Use repeatable `--skill` only for an explicitly requested targeted update; include required dependencies and block when another managed skill would change or prevent full verification.
 - Treat the previewed `protect-global-skills` action as mandatory. The Guide snapshots selected Monica skills and planned files, restores only attempted work, and verifies its observable recovery contract if any protected action fails. Stop when private recovery evidence is retained; `doctor` must be clean before another mutation.
 - Store local source paths and contribution preferences only in user state. Never put them in repository configuration.
 - Modify only the marked root `AGENTS.md` block. Refuse malformed or duplicate markers. Do not rewrite nested instruction files implicitly.

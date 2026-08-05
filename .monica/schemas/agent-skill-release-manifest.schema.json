@@ -13,6 +13,8 @@
     "skillTreeDigest",
     "skillDigestAlgorithm",
     "skillDigests",
+    "skillRevisions",
+    "skillLastChangedIn",
     "publishedAt",
     "indexUrl",
     "catalogUrl",
@@ -21,7 +23,7 @@
     "files"
   ],
   "properties": {
-    "schemaVersion": { "type": "integer", "const": 1 },
+    "schemaVersion": { "type": "integer", "const": 2 },
     "monicaVersion": {
       "type": "string",
       "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)(-((0|[1-9][0-9]*|[0-9A-Za-z-]*[A-Za-z-][0-9A-Za-z-]*)(\\.(0|[1-9][0-9]*|[0-9A-Za-z-]*[A-Za-z-][0-9A-Za-z-]*))*))?(\\+[0-9A-Za-z-]+(\\.[0-9A-Za-z-]+)*)?$"
@@ -39,6 +41,21 @@
       "minProperties": 1,
       "propertyNames": { "type": "string", "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$" },
       "additionalProperties": { "$ref": "#/$defs/digest" }
+    },
+    "skillRevisions": {
+      "type": "object",
+      "minProperties": 1,
+      "propertyNames": { "type": "string", "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$" },
+      "additionalProperties": { "type": "integer", "minimum": 1 }
+    },
+    "skillLastChangedIn": {
+      "type": "object",
+      "minProperties": 1,
+      "propertyNames": { "type": "string", "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$" },
+      "additionalProperties": {
+        "type": "string",
+        "pattern": "^v(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)(-((0|[1-9][0-9]*|[0-9A-Za-z-]*[A-Za-z-][0-9A-Za-z-]*)(\\.(0|[1-9][0-9]*|[0-9A-Za-z-]*[A-Za-z-][0-9A-Za-z-]*))*))?(\\+[0-9A-Za-z-]+(\\.[0-9A-Za-z-]+)*)?$"
+      }
     },
     "publishedAt": { "type": "string", "format": "date-time" },
     "indexUrl": { "type": "string", "format": "uri" },

@@ -10,11 +10,24 @@ import sys
 from pathlib import Path
 from typing import Any
 
+try:
+    from agent_skill_release_contract import (
+        ReleaseContractError,
+        release_skill_metadata,
+        validate_revision_history,
+    )
+except ModuleNotFoundError:  # pragma: no cover - supports import-by-path test runners
+    from scripts.agent_skill_release_contract import (
+        ReleaseContractError,
+        release_skill_metadata,
+        validate_revision_history,
+    )
+
 
 DIGEST_ALGORITHM = "sha256-file-manifest-v1"
 
 
-class VerificationError(RuntimeError):
+class VerificationError(ReleaseContractError):
     """Raised when release assets or installed bytes do not match."""
 
 
@@ -62,6 +75,10 @@ def verify(args: argparse.Namespace) -> dict[str, Any]:
     manifest = json.loads(manifest_bytes)
     catalog = json.loads(catalog_bytes)
 
+    if index.get("schemaVersion") != 2 or manifest.get("schemaVersion") != 2:
+        raise VerificationError("Unsupported Agent Skill release contract schema version.")
+    validate_revision_history(index, label="Release index")
+
     release = index.get("releases", {}).get(args.tag)
     if not isinstance(release, dict):
         raise VerificationError(f"Release index does not contain {args.tag}.")
@@ -69,6 +86,8 @@ def verify(args: argparse.Namespace) -> dict[str, Any]:
         raise VerificationError("Unsupported per-skill digest algorithm.")
     if manifest.get("fileManifestScope") != "release-payload-except-index-v1":
         raise VerificationError("Unsupported release file-manifest scope.")
+    for owner, payload in (("release index", release), ("release manifest", manifest)):
+        release_skill_metadata(payload, tag=args.tag, label=owner)
     if digest(manifest_bytes) != release.get("manifestDigest"):
         raise VerificationError("Release manifest bytes do not match manifestDigest.")
     if digest(catalog_bytes) != release.get("catalogDigest"):
@@ -85,6 +104,8 @@ def verify(args: argparse.Namespace) -> dict[str, Any]:
         "skillTreeDigest",
         "skillDigestAlgorithm",
         "skillDigests",
+        "skillRevisions",
+        "skillLastChangedIn",
         "publishedAt",
     ):
         if release.get(field) != manifest.get(field):
@@ -138,6 +159,8 @@ def verify(args: argparse.Namespace) -> dict[str, Any]:
         "path": str(args.path.resolve()),
         "digestAlgorithm": DIGEST_ALGORITHM,
         "skillDigest": installed_digest,
+        "skillRevision": release["skillRevisions"][args.skill],
+        "skillLastChangedIn": release["skillLastChangedIn"][args.skill],
         "fileCount": len(actual_files),
     }
 
@@ -166,7 +189,7 @@ def main() -> int:
                 f"({result['skillDigest']}, {result['fileCount']} files)."
             )
         return 0
-    except (OSError, json.JSONDecodeError, VerificationError) as exc:
+    except (OSError, json.JSONDecodeError, ReleaseContractError) as exc:
         payload = {"ok": False, "error": str(exc)}
         if args.json:
             print(json.dumps(payload, indent=2))
