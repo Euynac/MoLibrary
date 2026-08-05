@@ -100,6 +100,7 @@ Independently published packages override Monica's first-party test naming rule:
 ## Branding and licensing
 
 - Copy the canonical emerald compatibility assets unchanged or use a publisher-owned icon.
+- As optional open-source README presentation guidance, prefer a centered project logo at the top, a centered badge row immediately beneath it, and then a centered language selector before the introduction; keep this ordering consistent across localized READMEs. For UI-bearing packages, also consider representative desktop and narrow-width demo screenshots near the overview.
 - Add the open-source badge only when `license.openSource=true` and a NuGet SPDX expression is declared.
 - Include the compatibility self-attestation and independence notice when using the mark.
 - Never claim official, certified, verified, endorsed, or supported status.
