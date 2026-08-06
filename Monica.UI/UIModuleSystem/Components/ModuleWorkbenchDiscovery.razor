@@ -4,8 +4,6 @@
 @using Monica.UI.UIModuleSystem.State
 @using Monica.UI.UIModuleSystem.Support
 @inject IStringLocalizer<ModuleSystemResource> L
-@inject IJSRuntime JSRuntime
-@inject ISnackbar Snackbar
 
 @if (Session.Snapshot is { } snapshot)
 {
@@ -16,7 +14,7 @@
                 <MudText Typo="Typo.h5" HtmlTag="h2" id="discovery-title">@L["Discovery:Title"]</MudText>
                 <MudText Typo="Typo.body2" Color="Color.Secondary">@L["Discovery:Description"]</MudText>
             </div>
-            <div class="discovery-counts">
+            <div class="discovery-counts" role="region" aria-label="@L["Aria:SummaryMetrics"]" tabindex="0">
                 <article><span>@L["Discovery:Counts:Assemblies"]</span><strong>@snapshot.TypeDiscovery.Statistics.AssemblyCount</strong></article>
                 <article><span>@L["Discovery:Counts:Types"]</span><strong>@snapshot.TypeDiscovery.Statistics.EnumeratedTypeCount</strong></article>
                 <article><span>@L["Discovery:Counts:Plans"]</span><strong>@snapshot.TypeDiscovery.Statistics.PlanCount</strong></article>
@@ -27,14 +25,14 @@
 
         <section class="discovery-panel" aria-labelledby="discovery-stages-title">
             <MudText Typo="Typo.h6" HtmlTag="h2" id="discovery-stages-title">@L["Discovery:Stages:Title"]</MudText>
-            <div class="discovery-stages">
+            <div class="discovery-stages" role="region" aria-labelledby="discovery-stages-title" tabindex="0">
                 @foreach (var stage in snapshot.TypeDiscovery.Stages)
                 {
                     <article>
                         <MudIcon Icon="@StageIcon(stage.Stage)" Color="Color.Primary" />
                         <span>@ModuleDiagnosticsDisplay.Stage(stage.Stage, L)</span>
                         <strong>@ModuleDiagnosticsDisplay.Duration(stage.DurationMs)</strong>
-                        <CopyableIdentifier Value="@stage.SpanId" AccessibleName="@ModuleDiagnosticsDisplay.Stage(stage.Stage, L)" />
+                        <IdentifierValue Value="@stage.SpanId" />
                     </article>
                 }
             </div>
@@ -44,7 +42,7 @@
             <section class="discovery-panel" aria-labelledby="query-title">
                 <MudText Typo="Typo.h6" HtmlTag="h2" id="query-title">@L["Discovery:Queries:Title"]</MudText>
                 <MudText Typo="Typo.body2" Color="Color.Secondary">@L["Discovery:Queries:Description"]</MudText>
-                <div class="query-table-wrapper">
+                <div class="query-table-wrapper" role="region" aria-labelledby="query-title" tabindex="0">
                     <MudTable T="TypeDiscoveryQuerySummary" Items="@snapshot.TypeDiscovery.Queries" Dense="true" Hover="true">
                         <HeaderContent>
                             <MudTh>@L["Discovery:Queries:QueryId"]</MudTh>
@@ -53,7 +51,7 @@
                         </HeaderContent>
                         <RowTemplate Context="query">
                             <MudTd DataLabel="@L["Discovery:Queries:QueryId"]">
-                                <CopyableIdentifier Value="@query.QueryId" AccessibleName="@L["Discovery:Queries:QueryId"]" />
+                                <IdentifierValue Value="@query.QueryId" />
                             </MudTd>
                             <MudTd DataLabel="@L["Discovery:Queries:Consumers"]">
                                 <MudTooltip Text="@ConsumerNames(query)"><span class="query-consumers">@ConsumerNames(query)</span></MudTooltip>
@@ -79,139 +77,11 @@
             </section>
         </div>
 
-        <section class="discovery-panel assembly-inventory" aria-labelledby="assembly-title">
-            <div class="assembly-heading">
-                <div>
-                    <MudText Typo="Typo.h6" HtmlTag="h2" id="assembly-title">@L["Discovery:Inventory:Title"]</MudText>
-                    <MudText Typo="Typo.body2" Color="Color.Secondary">@L["Discovery:Inventory:Description"]</MudText>
-                </div>
-                @if (Session.AssemblyInventoryState == ModuleSystemLazyLoadState.NotRequested)
-                {
-                    <MudButton Variant="Variant.Filled"
-                               Color="Color.Primary"
-                               StartIcon="@Icons.Material.Filled.Inventory2"
-                               OnClick="@Session.EnsureAssemblyInventoryLoadedAsync">
-                        @L["Discovery:Inventory:Load"]
-                    </MudButton>
-                }
-            </div>
-
-            @switch (Session.AssemblyInventoryState)
-            {
-                case ModuleSystemLazyLoadState.NotRequested:
-                    <div class="inventory-placeholder">@L["Discovery:Inventory:NotLoaded"]</div>
-                    break;
-                case ModuleSystemLazyLoadState.Loading:
-                    <div class="inventory-placeholder" role="status">
-                        <MudProgressCircular Indeterminate="true" Color="Color.Primary" />
-                        <span>@L["Discovery:Inventory:Loading"]</span>
-                    </div>
-                    break;
-                case ModuleSystemLazyLoadState.Failed:
-                    <MudAlert Severity="Severity.Error" Variant="Variant.Outlined">
-                        @L["Discovery:Inventory:Failed"]
-                        <MudButton Variant="Variant.Text" OnClick="@Session.EnsureAssemblyInventoryLoadedAsync">
-                            @L["Actions:Retry"]
-                        </MudButton>
-                    </MudAlert>
-                    break;
-                case ModuleSystemLazyLoadState.Ready when Session.AssemblyInventory is { } inventory:
-                    <MudExpansionPanels>
-                        <MudExpansionPanel Text="@L["Discovery:Inventory:PanelTitle"]"
-                                           Expanded="@_isAssemblyInventoryExpanded"
-                                           ExpandedChanged="@SetAssemblyInventoryExpanded">
-                            <div class="inventory-outcomes">
-                                <MudChip T="int" Color="Color.Success" Variant="Variant.Outlined">@L["Discovery:Inventory:Scanned", inventory.ScannedCount]</MudChip>
-                                <MudChip T="int" Color="Color.Info" Variant="Variant.Outlined">@L["Discovery:Inventory:NotScanned", inventory.NotScannedCount]</MudChip>
-                                <MudChip T="int" Color="Color.Default" Variant="Variant.Outlined">@L["Discovery:Inventory:Excluded", inventory.ExcludedCount]</MudChip>
-                                <MudChip T="int" Color="Color.Error" Variant="Variant.Outlined">@L["Discovery:Inventory:FailedCount", inventory.ResolutionFailedCount]</MudChip>
-                                <MudChip T="int" Color="Color.Warning" Variant="Variant.Outlined">@L["Discovery:Inventory:Partial", inventory.PartialTypeLoadCount]</MudChip>
-                            </div>
-                            <div class="scan-configuration">
-                                <MudExpansionPanels>
-                                    <MudExpansionPanel Text="@L["Discovery:Inventory:Configuration:Title"]">
-                                        <div class="scan-configuration-grid">
-                                            <div>
-                                                <span>@L["Discovery:Inventory:Configuration:DefaultAssemblies"]</span>
-                                                <strong>@(inventory.UsesDefaultProjectAssemblies ? L["Common:Yes"] : L["Common:No"])</strong>
-                                            </div>
-                                            <div>
-                                                <span>@L["Discovery:Inventory:Configuration:Includes"]</span>
-                                                <code>@PatternList(inventory.IncludePatterns)</code>
-                                            </div>
-                                            <div>
-                                                <span>@L["Discovery:Inventory:Configuration:Excludes"]</span>
-                                                <code>@PatternList(inventory.ExcludePatterns)</code>
-                                            </div>
-                                        </div>
-                                    </MudExpansionPanel>
-                                </MudExpansionPanels>
-                            </div>
-                            <MudTextField T="string"
-                                          Label="@L["Discovery:Inventory:Search"]"
-                                          Value="@Session.AssemblySearch"
-                                          ValueChanged="@Session.SetAssemblySearch"
-                                          Immediate="true"
-                                          Clearable="true"
-                                          Adornment="Adornment.Start"
-                                          AdornmentIcon="@Icons.Material.Filled.Search" />
-                            <div class="assembly-table-wrapper">
-                                <MudTable T="TypeDiscoveryAssemblyRecord" Items="@Session.PagedAssemblies" Dense="true" Hover="true" Breakpoint="Breakpoint.Sm">
-                                    <HeaderContent>
-                                        <MudTh>@L["Discovery:Inventory:Columns:Outcome"]</MudTh>
-                                        <MudTh>@L["Discovery:Inventory:Columns:Assembly"]</MudTh>
-                                        <MudTh>@L["Discovery:Inventory:Columns:Version"]</MudTh>
-                                        <MudTh>@L["Discovery:Inventory:Columns:Location"]</MudTh>
-                                        <MudTh>@L["Discovery:Inventory:Columns:Actions"]</MudTh>
-                                    </HeaderContent>
-                                    <RowTemplate Context="assembly">
-                                        <MudTd DataLabel="@L["Discovery:Inventory:Columns:Outcome"]">
-                                            <MudChip T="string" Size="Size.Small" Color="@AssemblyOutcomeColor(assembly.Outcome)" Variant="Variant.Outlined">
-                                                @L[$"Enums:AssemblyOutcome:{assembly.Outcome}"]
-                                            </MudChip>
-                                        </MudTd>
-                                        <MudTd DataLabel="@L["Discovery:Inventory:Columns:Assembly"]"><strong>@assembly.Name</strong></MudTd>
-                                        <MudTd DataLabel="@L["Discovery:Inventory:Columns:Version"]">@(assembly.Version ?? L["Common:NotAvailable"])</MudTd>
-                                        <MudTd DataLabel="@L["Discovery:Inventory:Columns:Location"]">
-                                            <MudTooltip Text="@(assembly.Location ?? assembly.Failure ?? L["Common:NotAvailable"])">
-                                                <code class="assembly-location">@(assembly.Location ?? assembly.Failure ?? L["Common:NotAvailable"])</code>
-                                            </MudTooltip>
-                                        </MudTd>
-                                        <MudTd DataLabel="@L["Discovery:Inventory:Columns:Actions"]">
-                                            @if (!string.IsNullOrWhiteSpace(assembly.Location))
-                                            {
-                                                <MudIconButton Icon="@Icons.Material.Filled.ContentCopy"
-                                                               Size="Size.Small"
-                                                               OnClick="@(() => CopyAsync(assembly.Location))"
-                                                               aria-label="@L["Aria:CopyAssemblyPath", assembly.Name]" />
-                                            }
-                                        </MudTd>
-                                    </RowTemplate>
-                                </MudTable>
-                            </div>
-                            <div class="assembly-pagination">
-                                <MudPagination Count="@Session.AssemblyPageCount"
-                                               Selected="@Session.AssemblyPage"
-                                               SelectedChanged="@SetAssemblyPage"
-                                               ShowFirstButton="true"
-                                               ShowLastButton="true" />
-                                <MudSelect T="int" Label="@L["Common:RowsPerPage"]" Value="@Session.AssemblyPageSize" ValueChanged="@SetAssemblyPageSize" Dense="true">
-                                    <MudSelectItem T="int" Value="25">25</MudSelectItem>
-                                    <MudSelectItem T="int" Value="50">50</MudSelectItem>
-                                    <MudSelectItem T="int" Value="100">100</MudSelectItem>
-                                </MudSelect>
-                            </div>
-                        </MudExpansionPanel>
-                    </MudExpansionPanels>
-                    break;
-            }
-        </section>
+        <ModuleWorkbenchAssemblyExplorer Session="@Session" />
     </div>
 }
 
 @code {
-    private bool _isAssemblyInventoryExpanded;
-
     [Parameter, EditorRequired] public ModuleSystemWorkbenchSession Session { get; set; } = default!;
 
     private string ConsumerNames(TypeDiscoveryQuerySummary query) => string.Join(", ", query.ConsumerModules.Select(key =>
@@ -227,34 +97,4 @@
         _ => Icons.Material.Filled.Settings
     };
 
-    private static Color AssemblyOutcomeColor(TypeDiscoveryAssemblyOutcome outcome) => outcome switch
-    {
-        TypeDiscoveryAssemblyOutcome.Scanned => Color.Success,
-        TypeDiscoveryAssemblyOutcome.ResolvedNotScanned => Color.Info,
-        TypeDiscoveryAssemblyOutcome.Excluded => Color.Default,
-        TypeDiscoveryAssemblyOutcome.ResolutionFailed => Color.Error,
-        TypeDiscoveryAssemblyOutcome.PartialTypeLoad => Color.Warning,
-        _ => Color.Default
-    };
-
-    private void SetAssemblyPage(int page) => Session.SetAssemblyPaging(page, Session.AssemblyPageSize);
-    private void SetAssemblyPageSize(int pageSize) => Session.SetAssemblyPaging(1, pageSize);
-    private void SetAssemblyInventoryExpanded(bool expanded) => _isAssemblyInventoryExpanded = expanded;
-
-    private string PatternList(IReadOnlyList<string> patterns) => patterns.Count == 0
-        ? L["Common:None"]
-        : string.Join(", ", patterns);
-
-    private async Task CopyAsync(string value)
-    {
-        try
-        {
-            await JSRuntime.InvokeVoidAsync("navigator.clipboard.writeText", value);
-            Snackbar.Add(L["Actions:Copied"], Severity.Success);
-        }
-        catch (JSException)
-        {
-            Snackbar.Add(L["Actions:CopyFailed"], Severity.Error);
-        }
-    }
 }

@@ -35,6 +35,38 @@ internal static class ModuleDiagnosticsDisplay
     internal static string Callback(ModuleCallbackKind kind, IStringLocalizer<ModuleSystemResource> localizer) =>
         localizer[$"Enums:Callback:{kind}"];
 
+    internal static ModuleDiagnosticsTraceDisplay TraceSpan(
+        ModuleDiagnosticsTraceSpan span,
+        ModuleDiagnosticsSnapshot snapshot,
+        IStringLocalizer<ModuleSystemResource> localizer)
+    {
+        ArgumentNullException.ThrowIfNull(span);
+        ArgumentNullException.ThrowIfNull(snapshot);
+        ArgumentNullException.ThrowIfNull(localizer);
+
+        var moduleName = span.ModuleKey is { } moduleKey
+            ? snapshot.Modules.FirstOrDefault(module => module.ModuleKey == moduleKey)?.TypeName
+            : null;
+        var primary = span.SystemStage is { } stage
+            ? Stage(stage, localizer)
+            : !string.IsNullOrWhiteSpace(moduleName)
+                ? moduleName
+                : span.Kind == ModuleDiagnosticsTraceSpanKind.StartupBarrier && span.Barrier is { } barrier
+                    ? localizer[$"Enums:Barrier:{barrier}"]
+                    : span.Name ?? localizer[$"Enums:TraceKind:{span.Kind}"];
+
+        var activity = span.CallbackKind is { } callback
+            ? Callback(callback, localizer)
+            : span.Kind == ModuleDiagnosticsTraceSpanKind.StartupBarrier && span.Barrier is { } activityBarrier
+                ? localizer[$"Enums:Barrier:{activityBarrier}"]
+                : span.WorkItemId ?? span.Name ?? localizer[$"Enums:TraceKind:{span.Kind}"];
+        var secondary = span.ModulePhase is { } phase
+            ? $"{activity} · {Phase(phase, localizer)}"
+            : activity;
+
+        return new ModuleDiagnosticsTraceDisplay(primary, secondary);
+    }
+
     internal static string Finding(
         ModuleDiagnosticFinding finding,
         IStringLocalizer<ModuleSystemResource> localizer)
@@ -69,3 +101,5 @@ internal static class ModuleDiagnosticsDisplay
         };
     }
 }
+
+internal sealed record ModuleDiagnosticsTraceDisplay(string Primary, string Secondary);

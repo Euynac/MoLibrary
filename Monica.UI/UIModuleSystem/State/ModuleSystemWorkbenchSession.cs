@@ -83,7 +83,7 @@ public sealed class ModuleSystemWorkbenchSession : IAsyncDisposable
     /// <summary>Gets the selected detail-drawer tab index.</summary>
     public int ModuleDrawerTabIndex { get; private set; }
 
-    /// <summary>Gets the trace span selected from the critical-path ribbon.</summary>
+    /// <summary>Gets the diagnostics trace interval selected by an evidence view.</summary>
     public string? SelectedTraceSpanId { get; private set; }
 
     /// <summary>Gets the lazy assembly inventory.</summary>
@@ -134,7 +134,7 @@ public sealed class ModuleSystemWorkbenchSession : IAsyncDisposable
     /// <summary>Gets whether zero-duration contributor rows are hidden.</summary>
     public bool HideZeroDurationContributors { get; private set; } = true;
 
-    /// <summary>Gets whether the dependency view explicitly opted into the full host graph.</summary>
+    /// <summary>Gets whether the dependency view shows the complete compiled host topology.</summary>
     public bool ShowFullDependencyGraph { get; private set; }
 
     /// <summary>Gets the selected-module neighborhood radius.</summary>
@@ -146,11 +146,14 @@ public sealed class ModuleSystemWorkbenchSession : IAsyncDisposable
     /// <summary>Gets the assembly inventory search.</summary>
     public string AssemblySearch { get; private set; } = string.Empty;
 
+    /// <summary>Gets the active assembly explorer facet.</summary>
+    public AssemblyInventoryFacet AssemblyFacet { get; private set; } = AssemblyInventoryFacet.ScanScope;
+
     /// <summary>Gets the one-based assembly inventory page.</summary>
     public int AssemblyPage { get; private set; } = 1;
 
     /// <summary>Gets the assembly inventory page size.</summary>
-    public int AssemblyPageSize { get; private set; } = 25;
+    public int AssemblyPageSize { get; private set; } = 10;
 
     /// <summary>Gets the modules after all catalog filters have been applied.</summary>
     public IReadOnlyList<ModuleDiagnosticsModule> FilteredModules
@@ -261,31 +264,43 @@ public sealed class ModuleSystemWorkbenchSession : IAsyncDisposable
                 .Where(static module => module.IsActive)
                 .Select(static module => module.ModuleKey)
                 .ToHashSet();
+            var activeEdges = Snapshot.Topology.Edges
+                .Where(edge => activeKeys.Contains(edge.SourceModule)
+                               && activeKeys.Contains(edge.TargetModule))
+                .ToArray();
             if (ShowFullDependencyGraph || SelectedModule is null)
             {
-                return Snapshot.Topology.Edges
-                    .Where(edge => activeKeys.Contains(edge.SourceModule)
-                                   && activeKeys.Contains(edge.TargetModule))
-                    .ToArray();
+                return activeEdges;
             }
 
             var visibleKeys = new HashSet<ModuleKey> { SelectedModule.ModuleKey };
+            var frontier = new HashSet<ModuleKey>(visibleKeys);
             for (var depth = 0; depth < DependencyNeighborhoodDepth; depth++)
             {
-                var frontier = visibleKeys.ToHashSet();
-                foreach (var edge in Snapshot.Topology.Edges)
+                var nextFrontier = new HashSet<ModuleKey>();
+                foreach (var edge in activeEdges)
                 {
-                    if (frontier.Contains(edge.SourceModule) || frontier.Contains(edge.TargetModule))
+                    if (frontier.Contains(edge.SourceModule) && !visibleKeys.Contains(edge.TargetModule))
                     {
-                        visibleKeys.Add(edge.SourceModule);
-                        visibleKeys.Add(edge.TargetModule);
+                        nextFrontier.Add(edge.TargetModule);
                     }
+
+                    if (frontier.Contains(edge.TargetModule) && !visibleKeys.Contains(edge.SourceModule))
+                    {
+                        nextFrontier.Add(edge.SourceModule);
+                    }
+                }
+
+                visibleKeys.UnionWith(nextFrontier);
+                frontier = nextFrontier;
+                if (frontier.Count == 0)
+                {
+                    break;
                 }
             }
 
-            return Snapshot.Topology.Edges
+            return activeEdges
                 .Where(edge => visibleKeys.Contains(edge.SourceModule) && visibleKeys.Contains(edge.TargetModule))
-                .Where(edge => activeKeys.Contains(edge.SourceModule) && activeKeys.Contains(edge.TargetModule))
                 .ToArray();
         }
     }
@@ -331,7 +346,19 @@ public sealed class ModuleSystemWorkbenchSession : IAsyncDisposable
             ? entry.Error
             : null;
 
-    /// <summary>Gets assembly records after failure-first ordering and local search.</summary>
+    /// <summary>Gets the number of assemblies that failed resolution or only partially loaded.</summary>
+    public int AssemblyAttentionCount => AssemblyInventory is null
+        ? 0
+        : AssemblyInventory.ResolutionFailedCount + AssemblyInventory.PartialTypeLoadCount;
+
+    /// <summary>Gets the number of assemblies in the resolved type-discovery scan scope.</summary>
+    public int AssemblyScanScopeCount => AssemblyInventory is null
+        ? 0
+        : AssemblyInventory.ScannedCount
+          + AssemblyInventory.NotScannedCount
+          + AssemblyInventory.PartialTypeLoadCount;
+
+    /// <summary>Gets assembly records after the selected facet, local search, and attention-first ordering.</summary>
     public IReadOnlyList<TypeDiscoveryAssemblyRecord> FilteredAssemblies
     {
         get
@@ -342,12 +369,28 @@ public sealed class ModuleSystemWorkbenchSession : IAsyncDisposable
             }
 
             IEnumerable<TypeDiscoveryAssemblyRecord> assemblies = AssemblyInventory.Assemblies;
+            assemblies = AssemblyFacet switch
+            {
+                AssemblyInventoryFacet.Attention => assemblies.Where(static assembly =>
+                    assembly.Outcome is TypeDiscoveryAssemblyOutcome.ResolutionFailed
+                        or TypeDiscoveryAssemblyOutcome.PartialTypeLoad),
+                AssemblyInventoryFacet.ScanScope => assemblies.Where(static assembly =>
+                    assembly.Outcome is TypeDiscoveryAssemblyOutcome.Scanned
+                        or TypeDiscoveryAssemblyOutcome.ResolvedNotScanned
+                        or TypeDiscoveryAssemblyOutcome.PartialTypeLoad),
+                AssemblyInventoryFacet.Excluded => assemblies.Where(static assembly =>
+                    assembly.Outcome == TypeDiscoveryAssemblyOutcome.Excluded),
+                _ => assemblies
+            };
+
             if (!string.IsNullOrWhiteSpace(AssemblySearch))
             {
                 var search = AssemblySearch.Trim();
                 assemblies = assemblies.Where(assembly =>
                     assembly.Name.Contains(search, StringComparison.OrdinalIgnoreCase)
-                    || (assembly.Location?.Contains(search, StringComparison.OrdinalIgnoreCase) ?? false));
+                    || (assembly.Version?.Contains(search, StringComparison.OrdinalIgnoreCase) ?? false)
+                    || (assembly.Location?.Contains(search, StringComparison.OrdinalIgnoreCase) ?? false)
+                    || (assembly.Failure?.Contains(search, StringComparison.OrdinalIgnoreCase) ?? false));
             }
 
             return assemblies
@@ -396,6 +439,16 @@ public sealed class ModuleSystemWorkbenchSession : IAsyncDisposable
     /// <summary>Selects a module and synchronizes every workbench evidence view.</summary>
     public void SelectModule(ModuleDiagnosticsModule? module, bool openDrawer = true, int drawerTabIndex = 0)
     {
+        if (SelectedTraceSpanId is not null)
+        {
+            var selectedSpan = Snapshot?.TraceSpans.FirstOrDefault(span =>
+                string.Equals(span.SpanId, SelectedTraceSpanId, StringComparison.Ordinal));
+            if (module is null || selectedSpan?.ModuleKey != module.ModuleKey)
+            {
+                SelectedTraceSpanId = null;
+            }
+        }
+
         SelectedModule = module;
         IsModuleDrawerOpen = module is not null && openDrawer;
         if (IsModuleDrawerOpen)
@@ -406,7 +459,7 @@ public sealed class ModuleSystemWorkbenchSession : IAsyncDisposable
         NotifyChanged();
     }
 
-    /// <summary>Selects a critical-path span and synchronizes its owning module when present.</summary>
+    /// <summary>Selects a diagnostics trace interval and synchronizes its owning module when present.</summary>
     public void SelectTraceSpan(ModuleDiagnosticsTraceSpan span)
     {
         ArgumentNullException.ThrowIfNull(span);
@@ -469,6 +522,11 @@ public sealed class ModuleSystemWorkbenchSession : IAsyncDisposable
         NotifyChanged();
         if (!await EnsureAuthorizedAsync())
         {
+            if (_disposed)
+            {
+                return;
+            }
+
             AssemblyInventoryState = ModuleSystemLazyLoadState.Failed;
             AssemblyInventoryError = "Module diagnostics access was denied.";
             NotifyChanged();
@@ -507,6 +565,11 @@ public sealed class ModuleSystemWorkbenchSession : IAsyncDisposable
         NotifyChanged();
         if (!await EnsureAuthorizedAsync())
         {
+            if (_disposed)
+            {
+                return;
+            }
+
             _optionLoadsByModule[moduleKey] = new ModuleOptionLoadEntry(
                 ModuleSystemLazyLoadState.Failed,
                 "Module diagnostics access was denied.");
@@ -625,7 +688,7 @@ public sealed class ModuleSystemWorkbenchSession : IAsyncDisposable
         NotifyChanged();
     }
 
-    /// <summary>Switches between the selected one-hop neighborhood and explicit full-host graph.</summary>
+    /// <summary>Switches between the complete host topology and the selected-module neighborhood.</summary>
     public void SetShowFullDependencyGraph(bool showFullGraph)
     {
         ShowFullDependencyGraph = showFullGraph;
@@ -639,7 +702,7 @@ public sealed class ModuleSystemWorkbenchSession : IAsyncDisposable
         NotifyChanged();
     }
 
-    /// <summary>Returns dependency exploration to the readable one-hop default.</summary>
+    /// <summary>Returns dependency exploration to its one-hop selected-module default.</summary>
     public void ResetDependencyNeighborhood()
     {
         DependencyNeighborhoodDepth = 1;
@@ -662,10 +725,18 @@ public sealed class ModuleSystemWorkbenchSession : IAsyncDisposable
         NotifyChanged();
     }
 
+    /// <summary>Changes the assembly explorer facet and returns to its first page.</summary>
+    public void SetAssemblyFacet(AssemblyInventoryFacet facet)
+    {
+        AssemblyFacet = facet;
+        AssemblyPage = 1;
+        NotifyChanged();
+    }
+
     /// <summary>Updates assembly paging.</summary>
     public void SetAssemblyPaging(int page, int pageSize)
     {
-        AssemblyPageSize = pageSize is 25 or 50 or 100 ? pageSize : 25;
+        AssemblyPageSize = pageSize is 10 or 25 or 50 ? pageSize : 10;
         AssemblyPage = Math.Clamp(page, 1, AssemblyPageCount);
         NotifyChanged();
     }
@@ -748,6 +819,10 @@ public sealed class ModuleSystemWorkbenchSession : IAsyncDisposable
             AssemblyInventory = inventory;
             AssemblyInventoryState = ModuleSystemLazyLoadState.Ready;
             AssemblyInventoryError = null;
+            AssemblyFacet = inventory.ResolutionFailedCount + inventory.PartialTypeLoadCount > 0
+                ? AssemblyInventoryFacet.Attention
+                : AssemblyInventoryFacet.ScanScope;
+            AssemblyPage = 1;
         }
 
         NotifyChanged();
@@ -831,6 +906,13 @@ public sealed class ModuleSystemWorkbenchSession : IAsyncDisposable
 
     private void ReconcileSelection(ModuleDiagnosticsSnapshot snapshot)
     {
+        if (SelectedTraceSpanId is not null
+            && !snapshot.TraceSpans.Any(span =>
+                string.Equals(span.SpanId, SelectedTraceSpanId, StringComparison.Ordinal)))
+        {
+            SelectedTraceSpanId = null;
+        }
+
         if (SelectedModule is not null)
         {
             SelectedModule = snapshot.Modules.FirstOrDefault(module =>
@@ -977,13 +1059,29 @@ public sealed class ModuleSystemWorkbenchSession : IAsyncDisposable
     {
         TypeDiscoveryAssemblyOutcome.ResolutionFailed => 0,
         TypeDiscoveryAssemblyOutcome.PartialTypeLoad => 1,
-        TypeDiscoveryAssemblyOutcome.Excluded => 2,
+        TypeDiscoveryAssemblyOutcome.Scanned => 2,
         TypeDiscoveryAssemblyOutcome.ResolvedNotScanned => 3,
-        TypeDiscoveryAssemblyOutcome.Scanned => 4,
+        TypeDiscoveryAssemblyOutcome.Excluded => 4,
         _ => 5
     };
 
     private sealed record ModuleOptionLoadEntry(ModuleSystemLazyLoadState State, string? Error);
+}
+
+/// <summary>Defines the factual lenses available in the assembly inventory explorer.</summary>
+public enum AssemblyInventoryFacet
+{
+    /// <summary>Shows resolution failures and partial type loads.</summary>
+    Attention,
+
+    /// <summary>Shows assemblies that belong to the resolved type-discovery scan scope.</summary>
+    ScanScope,
+
+    /// <summary>Shows assemblies excluded from the scan scope.</summary>
+    Excluded,
+
+    /// <summary>Shows every assembly considered by the inventory.</summary>
+    All
 }
 
 /// <summary>Defines stable baseline import failures whose display text belongs to Monica.UI.</summary>

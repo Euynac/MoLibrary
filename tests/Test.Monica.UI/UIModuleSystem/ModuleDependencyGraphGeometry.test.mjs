@@ -4,7 +4,11 @@ import { readFile } from "node:fs/promises";
 const moduleUrl = new URL("../../../Monica.UI/wwwroot/js/module-dependency-graph.js", import.meta.url);
 const moduleSource = await readFile(moduleUrl, "utf8");
 const moduleDataUrl = `data:text/javascript;base64,${Buffer.from(moduleSource).toString("base64")}`;
-const { calculateDependencyEdgeEndpoints, calculateDependencyGraphLayout } = await import(moduleDataUrl);
+const {
+    calculateDependencyEdgeEndpoints,
+    calculateLayeredDependencyLayout,
+    calculateRadialDependencyLayout
+} = await import(moduleDataUrl);
 
 const forward = calculateDependencyEdgeEndpoints(
     { x: 0, y: 0 },
@@ -33,27 +37,23 @@ assert.equal(calculateDependencyEdgeEndpoints(
     23,
     23), null);
 
-const mobileLayout = calculateDependencyGraphLayout([
-    { id: "selected", selected: true },
-    { id: "top", selected: false },
-    { id: "right", selected: false },
-    { id: "left", selected: false }
-], 330, 352);
-assert.equal(mobileLayout.width, 330);
-assert.equal(mobileLayout.height, 352);
-assert.deepEqual(mobileLayout.positions[0], { id: "selected", x: 165, y: 176 });
-assert.equal(mobileLayout.positions[1].x, 165);
-assert.equal(mobileLayout.positions[1].y, 66);
-assert.ok(mobileLayout.positions.every(position => position.x >= 70 && position.x <= 260));
-assert.ok(mobileLayout.positions.every(position => position.y >= 64 && position.y <= 288));
+const layered = calculateLayeredDependencyLayout([
+    { id: "root", label: "Root", depth: 0 },
+    { id: "first", label: "First", depth: 1 },
+    { id: "second", label: "Second", depth: 1 }
+], 800, 500);
+const layeredById = new Map(layered.positions.map(position => [position.id, position]));
+assert.ok(layeredById.get("root").x < layeredById.get("first").x);
+assert.equal(layeredById.get("first").x, layeredById.get("second").x);
+assert.notEqual(layeredById.get("first").y, layeredById.get("second").y);
 
-const desktopLayout = calculateDependencyGraphLayout([
-    { id: "selected", selected: true },
-    { id: "dependency", selected: false }
-], 960, 560);
-assert.deepEqual(desktopLayout.positions[0], { id: "selected", x: 480, y: 280 });
-assert.deepEqual(desktopLayout.positions[1], { id: "dependency", x: 480, y: 170 });
-
-const clampedLayout = calculateDependencyGraphLayout([], 200, 100);
-assert.equal(clampedLayout.width, 320);
-assert.equal(clampedLayout.height, 320);
+const radial = calculateRadialDependencyLayout([
+    { id: "root", label: "Root", depth: 0 },
+    { id: "outer", label: "Outer", depth: 2 }
+], 720, 480);
+const radialById = new Map(radial.positions.map(position => [position.id, position]));
+const center = { x: radial.width / 2, y: radial.height / 2 };
+assert.deepEqual(radialById.get("root"), { id: "root", ...center });
+assert.ok(Math.hypot(
+    radialById.get("outer").x - center.x,
+    radialById.get("outer").y - center.y) > 200);

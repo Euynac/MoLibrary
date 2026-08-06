@@ -20,8 +20,8 @@ public sealed class ModuleDependencyGraphInteropSessionTests
         await using var first = new ModuleDependencyGraphInteropSession(runtime);
         await using var second = new ModuleDependencyGraphInteropSession(runtime);
 
-        await first.RenderAsync(default(ElementReference), new { nodes = Array.Empty<object>() }, "first");
-        await second.RenderAsync(default(ElementReference), new { nodes = Array.Empty<object>() }, "second");
+        await first.RenderAsync(default(ElementReference), new { nodes = Array.Empty<object>() }, "first", new object());
+        await second.RenderAsync(default(ElementReference), new { nodes = Array.Empty<object>() }, "second", new object());
         await first.DisposeAsync();
 
         firstHandle.InvocationIdentifiers.Should().ContainSingle().Which.Should().Be("dispose");
@@ -48,7 +48,7 @@ public sealed class ModuleDependencyGraphInteropSessionTests
         });
         var session = new ModuleDependencyGraphInteropSession(runtime);
 
-        var render = session.RenderAsync(default, new { }, "late-import");
+        var render = session.RenderAsync(default, new { }, "late-import", new object());
         await importStarted.Task.WaitAsync(TestContext.Current.CancellationToken);
         var dispose = session.DisposeAsync().AsTask();
         importCompletion.SetResult(module);
@@ -74,7 +74,7 @@ public sealed class ModuleDependencyGraphInteropSessionTests
         var runtime = new ControlledJsRuntime(() => ValueTask.FromResult<IJSObjectReference>(module));
         var session = new ModuleDependencyGraphInteropSession(runtime);
 
-        var render = session.RenderAsync(default, new { }, "late-handle");
+        var render = session.RenderAsync(default, new { }, "late-handle", new object());
         await createStarted.Task.WaitAsync(TestContext.Current.CancellationToken);
         var dispose = session.DisposeAsync().AsTask();
         createCompletion.SetResult(handle);
@@ -103,7 +103,7 @@ public sealed class ModuleDependencyGraphInteropSessionTests
             dispose: () => ValueTask.FromException(new JSException("context destroyed")));
         var runtime = new ControlledJsRuntime(() => ValueTask.FromResult<IJSObjectReference>(module));
         var session = new ModuleDependencyGraphInteropSession(runtime);
-        await session.RenderAsync(default, new { }, "circuit-loss");
+        await session.RenderAsync(default, new { }, "circuit-loss", new object());
 
         var disposals = Enumerable.Range(0, 8)
             .Select(_ => session.DisposeAsync().AsTask())
@@ -133,7 +133,7 @@ public sealed class ModuleDependencyGraphInteropSessionTests
                 new JSDisconnectedException("circuit disconnected")));
         var runtime = new ControlledJsRuntime(() => ValueTask.FromResult<IJSObjectReference>(module));
         var session = new ModuleDependencyGraphInteropSession(runtime);
-        await session.RenderAsync(default, new { }, "circuit-disconnected");
+        await session.RenderAsync(default, new { }, "circuit-disconnected", new object());
 
         Func<Task> dispose = async () => await session.DisposeAsync();
 
@@ -153,12 +153,27 @@ public sealed class ModuleDependencyGraphInteropSessionTests
 
         Func<Task> render = async () =>
         {
-            var outcome = await session.RenderAsync(default, new { }, "disconnected-render");
+            var outcome = await session.RenderAsync(default, new { }, "disconnected-render", new object());
             outcome.Should().Be(ModuleDependencyGraphRenderOutcome.Cancelled);
         };
 
         await render.Should().NotThrowAsync();
         runtime.ImportCalls.Should().Be(1);
+    }
+
+    [Fact]
+    public async Task Graph_commands_are_sent_only_to_the_owned_instance_handle()
+    {
+        var handle = new ControlledJsReference();
+        var module = CreateModule(handle);
+        var runtime = new ControlledJsRuntime(() => ValueTask.FromResult<IJSObjectReference>(module));
+        await using var session = new ModuleDependencyGraphInteropSession(runtime);
+
+        await session.RenderAsync(default, new { }, "commands", new object());
+        await session.InvokeAsync("zoomIn");
+        await session.InvokeAsync("focus", "module-id");
+
+        handle.InvocationIdentifiers.Should().Equal("zoomIn", "focus");
     }
 
     [Fact]
@@ -177,8 +192,8 @@ public sealed class ModuleDependencyGraphInteropSessionTests
         var runtime = new ControlledJsRuntime(() => ValueTask.FromResult<IJSObjectReference>(module));
         await using var session = new ModuleDependencyGraphInteropSession(runtime);
 
-        var failed = await session.RenderAsync(default, new { }, "same-graph");
-        var retried = await session.RenderAsync(default, new { }, "same-graph");
+        var failed = await session.RenderAsync(default, new { }, "same-graph", new object());
+        var retried = await session.RenderAsync(default, new { }, "same-graph", new object());
 
         failed.Should().Be(ModuleDependencyGraphRenderOutcome.Failed);
         retried.Should().Be(ModuleDependencyGraphRenderOutcome.Rendered);
@@ -189,9 +204,11 @@ public sealed class ModuleDependencyGraphInteropSessionTests
     private static ControlledJsReference CreateModule(
         IJSObjectReference handle,
         Func<ValueTask>? dispose = null) => new(
-        (identifier, _) =>
+        (identifier, arguments) =>
         {
             identifier.Should().Be("createGraph");
+            arguments.Should().HaveCount(3);
+            arguments![2].Should().NotBeNull();
             return ValueTask.FromResult<object?>(handle);
         },
         dispose);

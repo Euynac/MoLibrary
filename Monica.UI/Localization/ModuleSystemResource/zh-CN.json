@@ -17,9 +17,7 @@
     "Export": "导出",
     "RemoveBaseline": "移除基线",
     "Retry": "重试",
-    "Reset": "重置",
-    "Copied": "已复制",
-    "CopyFailed": "复制失败"
+    "Reset": "重置"
   },
   "Aria": {
     "SectionNavigation": "模块工作台分区",
@@ -33,8 +31,7 @@
     "CloseModuleDrawer": "关闭模块详情",
     "DependencyGraph": "包含 {0} 个模块和 {1} 条直接边的依赖图",
     "DependencyInspector": "选中模块的依赖检查器",
-    "CopyAssemblyPath": "复制程序集 {0} 的路径",
-    "CopyIdentifier": "复制标识符 {0}"
+    "DependencyTable": "直接依赖边表格"
   },
   "Common": {
     "All": "全部",
@@ -75,9 +72,6 @@
     "FileTooLarge": "所选基线超过 10 MB 导入限制。",
     "Eyebrow": "可移植基线",
     "EvidenceTitle": "回归证据",
-    "BaselineOverlay": "导入的基线时间线叠加层",
-    "TimelineLegend": "当前时间线与导入基线图例",
-    "CurrentTimeline": "当前",
     "BaselineTimeline": "基线",
     "ModulesChanged": "模块变化",
     "EdgesChanged": "依赖边变化",
@@ -107,12 +101,16 @@
     "CriticalPath": {
       "Eyebrow": "启动因果链",
       "Title": "关键路径带",
-      "Hint": "选择证据可同步时间线、模块和依赖上下文。"
+      "Hint": "选择证据可同步时间线、模块和依赖上下文。",
+      "Count": "{0} 个因果区间",
+      "Empty": "没有记录因果阻塞路径。",
+      "SpanDescription": "{0}；{1}；耗时 {2}。"
     },
     "Findings": {
       "Eyebrow": "结构化证据",
       "Title": "诊断发现",
-      "Empty": "没有结构问题或已配置预算的告警。"
+      "Empty": "没有结构问题或已配置预算的告警。",
+      "Remaining": "显示其余 {0} 条诊断发现"
     },
     "Hotspots": {
       "Eyebrow": "聚合成本",
@@ -129,7 +127,22 @@
     "Waterfall": {
       "Eyebrow": "启动时间线",
       "Title": "组合瀑布图",
-      "Duration": "总计 {0}"
+      "Duration": "总计 {0}",
+      "Hint": "选择任一区间可查看精确时间，并同步其所属模块。",
+      "VisibleCount": "显示 {0} / {1} 个区间",
+      "Legend": "时间线区间类型",
+      "Zoom": "时间线缩放控件",
+      "ZoomOut": "缩小",
+      "Fit": "适应完整组合过程",
+      "FocusSelected": "聚焦选中区间",
+      "ZoomIn": "放大",
+      "ZoomLevel": "缩放级别 {0}",
+      "Omitted": "可视时间线省略了 {0} 个贡献较低的区间。可展开表格替代视图查看当前投影。",
+      "Empty": "没有记录组合过程区间。",
+      "TimelineRegion": "交互式模块组合时间线",
+      "Selected": "选中区间",
+      "TableAlternative": "区间表格替代视图",
+      "SpanDescription": "{0}；{1}；开始于 {2}；结束于 {3}；耗时 {4}。"
     },
     "Contributors": {
       "Eyebrow": "串行回调 + 启动工作",
@@ -146,7 +159,6 @@
       "Empty": "没有启动工作延迟必需屏障。",
       "BarrierSpan": "屏障区间",
       "WorkSpan": "工作区间",
-      "CommitSpanName": "提交区间",
       "CommitSpan": "提交区间 · {0}"
     },
     "Discovery": {
@@ -178,6 +190,20 @@
     "ResultCount": "显示 {0} / {1} 个模块",
     "Empty": "没有模块匹配当前筛选条件。",
     "DependencyCounts": "依赖 {0} 个 · 被依赖 {1} 次",
+    "Cost": {
+      "Legend": "记录成本构成",
+      "Callbacks": "串行回调",
+      "StartupWork": "启动工作",
+      "ScaleHint": "进度条宽度相对于记录成本最高的模块；颜色区分串行回调与启动工作。",
+      "Breakdown": "{0}：总计 {1}；串行回调 {2}；启动工作 {3}；为最高模块记录成本的 {4}%。"
+    },
+    "Summary": {
+      "Label": "模块目录摘要",
+      "Active": "活动模块",
+      "Ui": "UI 模块",
+      "Web": "Web 模块",
+      "MaximumDepth": "最大深度"
+    },
     "Filters": {
       "Search": "搜索模块",
       "SearchPlaceholder": "类型、命名空间或程序集",
@@ -199,13 +225,47 @@
   },
   "Dependencies": {
     "Eyebrow": "已编译的直接拓扑",
-    "Title": "依赖邻域",
-    "Description": "默认从最大阻塞贡献者的一跳邻域开始，仅在证据需要时展开。",
+    "Title": "模块拓扑",
+    "Description": "浏览完整的宿主编译图，再聚焦任一模块以检查其直接邻域和因果角色。",
     "FocusModule": "焦点模块",
-    "FullHost": "完整宿主图",
     "Expand": "从 {0} 跳继续展开",
+    "Controls": {
+      "Label": "依赖图控件",
+      "Scope": "依赖图范围",
+      "FullHost": "完整宿主",
+      "Neighborhood": "选中模块邻域",
+      "Layout": "布局",
+      "Search": "高亮模块",
+      "SearchPlaceholder": "模块名称",
+      "ZoomIn": "放大",
+      "ZoomOut": "缩小",
+      "Fit": "适应全图",
+      "FocusSelected": "居中选中模块"
+    },
+    "Layouts": {
+      "Force": "力导向布局",
+      "Layered": "依赖分层",
+      "Radial": "径向深度"
+    },
+    "Overview": {
+      "Label": "可见拓扑摘要",
+      "Modules": "模块",
+      "Edges": "直接边",
+      "Depth": "最大深度",
+      "UiModules": "UI 模块",
+      "WebModules": "Web 模块"
+    },
+    "Legend": {
+      "Title": "依赖图图例",
+      "Core": "核心",
+      "Ui": "UI",
+      "Web": "Web",
+      "HostRequired": "需要 Web 宿主",
+      "Requires": "依赖",
+      "RequiredBy": "被依赖"
+    },
     "Graph": {
-      "Rendering": "正在渲染依赖邻域…",
+      "Rendering": "正在渲染模块拓扑…",
       "Failed": "无法渲染依赖图。",
       "Nodes": "{0} 个节点",
       "Edges": "{0} 条边",
@@ -214,6 +274,10 @@
     },
     "Selected": {
       "Eyebrow": "选中模块",
+      "Depth": "深度 {0}",
+      "RequiresCount": "{0} 个直接依赖",
+      "RequiredByCount": "{0} 个直接依赖方",
+      "InspectHint": "选择以检查模块详情。",
       "Requires": "直接依赖",
       "RequiredBy": "直接依赖方",
       "NoDependencies": "没有直接依赖",
@@ -257,10 +321,9 @@
       "Excluded": "排除类型"
     },
     "Inventory": {
+      "Eyebrow": "程序集解析",
       "Title": "程序集清单",
-      "Description": "仅在展开时加载，失败优先，可搜索并在局部区域分页。",
-      "Load": "加载清单",
-      "NotLoaded": "程序集路径和扫描结果尚未跨越诊断边界。",
+      "Description": "进入类型发现视图时按需加载，问题优先，可搜索并在局部区域分页。",
       "Loading": "正在加载缓存的程序集清单…",
       "Failed": "无法加载程序集清单。",
       "PanelTitle": "程序集记录与扫描证据",
@@ -270,18 +333,40 @@
       "FailedCount": "解析失败 {0} 个",
       "Partial": "部分加载 {0} 个",
       "Search": "搜索程序集或路径",
+      "Summary": {
+        "EntryAssembly": "入口程序集",
+        "ScanScope": "扫描范围",
+        "Considered": "已纳入分析",
+        "Attention": "需关注"
+      },
       "Configuration": {
         "Title": "扫描配置",
+        "CapturedAt": "捕获于 {0}",
         "DefaultAssemblies": "使用默认程序集",
         "Includes": "包含模式",
         "Excludes": "排除模式"
+      },
+      "Records": {
+        "Title": "程序集记录",
+        "ResultCount": "显示 {0} / {1} 个程序集",
+        "Empty": "当前搜索和结果范围内没有匹配的程序集。"
+      },
+      "Facets": {
+        "Label": "程序集结果范围",
+        "Attention": "需关注（{0}）",
+        "ScanScope": "扫描范围（{0}）",
+        "Excluded": "已排除（{0}）",
+        "All": "全部（{0}）"
       },
       "Columns": {
         "Outcome": "结果",
         "Assembly": "程序集",
         "Version": "版本",
-        "Location": "位置或证据",
-        "Actions": "操作"
+        "Path": "本地路径",
+        "Failure": "失败证据"
+      },
+      "Markers": {
+        "EntryAssembly": "入口程序集"
       }
     }
   },

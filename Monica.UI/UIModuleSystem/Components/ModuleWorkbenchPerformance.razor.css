@@ -13,10 +13,11 @@
 
 .performance-panel {
     min-width: 0;
-    padding: 1rem;
+    padding: 1.1rem;
     border: 1px solid var(--mud-palette-lines-default);
     border-radius: var(--mud-default-borderradius);
     background: var(--mud-palette-surface);
+    box-shadow: var(--mud-elevation-1);
 }
 
 .budget-grid {
@@ -30,7 +31,10 @@
     gap: .45rem;
     min-width: 0;
     padding: .75rem;
-    background: var(--mud-palette-background);
+    border: 1px solid var(--mud-palette-lines-default);
+    border-inline-start: .2rem solid var(--mud-palette-primary);
+    border-radius: var(--mud-default-borderradius);
+    background: color-mix(in srgb, var(--mud-palette-primary) 5%, var(--mud-palette-surface));
 }
 
 .budget-grid article > div {
@@ -67,53 +71,28 @@
     min-width: min(100%, 30rem);
 }
 
-.timeline-visual {
-    width: 100%;
-    max-height: 24rem;
-    overflow: auto;
-    border: 1px solid var(--mud-palette-lines-default);
-    border-radius: var(--mud-default-borderradius);
-    background: var(--mud-palette-background);
-}
-
-.timeline-legend {
-    display: flex;
-    gap: 1rem;
-    margin-bottom: .5rem;
-    color: var(--mud-palette-text-secondary);
-    font-size: .72rem;
-}
-
-.timeline-legend span::before {
-    display: inline-block;
-    width: 1.25rem;
-    height: .55rem;
-    margin-inline-end: .35rem;
-    border-radius: .15rem;
-    content: "";
-    vertical-align: middle;
-}
-
-.timeline-legend .current-swatch::before {
-    background: var(--mud-palette-primary);
-}
-
-.timeline-legend .baseline-swatch::before {
-    border: 2px dashed var(--mud-palette-text-secondary);
-}
-
-.timeline-visual svg {
-    display: block;
-    width: 100%;
-    min-width: 48rem;
-    min-height: 5rem;
-}
-
-.timeline-table-wrapper,
 .contributors-table-wrapper,
 .startup-work-table-wrapper {
     min-width: 0;
     overflow-x: auto;
+    overscroll-behavior: contain;
+}
+
+.contributors-table-wrapper:focus-visible,
+.startup-work-table-wrapper:focus-visible,
+.stage-strip:focus-visible {
+    outline: 2px solid var(--mud-palette-primary);
+    outline-offset: 2px;
+}
+
+.contributors-table-wrapper ::deep .mud-table-root,
+.startup-work-table-wrapper ::deep .mud-table-root {
+    min-width: 44rem;
+}
+
+.contributors-table-wrapper ::deep .mud-table-head,
+.startup-work-table-wrapper ::deep .mud-table-head {
+    background: color-mix(in srgb, var(--mud-palette-primary) 6%, var(--mud-palette-surface));
 }
 
 .comparison-kpis {
@@ -127,7 +106,9 @@
     gap: .25rem;
     min-width: 0;
     padding: .75rem;
-    background: var(--mud-palette-background);
+    border: 1px solid var(--mud-palette-lines-default);
+    border-radius: var(--mud-default-borderradius);
+    background: color-mix(in srgb, var(--mud-palette-primary) 5%, var(--mud-palette-surface));
 }
 
 .comparison-kpis span {
@@ -143,36 +124,6 @@
     margin-top: .75rem;
 }
 
-.timeline-table-wrapper {
-    max-height: 32rem;
-    margin-top: .75rem;
-    overflow: auto;
-    overscroll-behavior: contain;
-}
-
-.timeline-table-wrapper ::deep .mud-table-root {
-    min-width: 42rem;
-}
-
-.timeline-value {
-    display: block;
-    max-width: 24rem;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-}
-
-.timeline-table-wrapper ::deep .timeline-row-selected {
-    outline: 2px solid var(--mud-palette-primary);
-    outline-offset: -2px;
-    background: var(--mud-palette-primary-hover);
-}
-
-.timeline-value[aria-current="true"] {
-    color: var(--mud-palette-primary);
-    font-weight: 700;
-}
-
 .blocking-list {
     display: grid;
     gap: .4rem;
@@ -180,9 +131,9 @@
 
 .blocking-list article {
     min-width: 0;
-    border: 1px solid transparent;
+    border: 1px solid var(--mud-palette-lines-default);
     border-radius: var(--mud-default-borderradius);
-    background: var(--mud-palette-background);
+    background: color-mix(in srgb, var(--mud-palette-warning) 5%, var(--mud-palette-surface));
 }
 
 .blocking-list button {
@@ -254,8 +205,10 @@
     gap: .35rem;
     min-width: 10rem;
     padding: .75rem;
+    border: 1px solid var(--mud-palette-lines-default);
     border-inline-start: .2rem solid var(--mud-palette-primary);
-    background: var(--mud-palette-background);
+    border-radius: var(--mud-default-borderradius);
+    background: color-mix(in srgb, var(--mud-palette-primary) 5%, var(--mud-palette-surface));
 }
 
 .stage-strip span {

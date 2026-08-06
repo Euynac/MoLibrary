@@ -1,0 +1,77 @@
+@using Microsoft.Extensions.Localization
+@using Monica.UI.Localization
+@using Monica.UI.UIModuleSystem.Support
+@inject IStringLocalizer<ModuleSystemResource> L
+
+<div class="module-cost-breakdown" data-module-cost="@ModuleName">
+    <div class="module-cost-breakdown__value">
+        <strong>@ModuleDiagnosticsDisplay.Duration(TotalDurationMs)</strong>
+        <span>@RelativePercentageText</span>
+    </div>
+    <MudTooltip Text="@AccessibleDescription">
+        <div class="module-cost-breakdown__meter"
+             role="meter"
+             tabindex="0"
+             aria-label="@AccessibleDescription"
+             aria-valuemin="0"
+             aria-valuemax="100"
+             aria-valuenow="@SvgNumber(RelativePercentage)"
+             aria-valuetext="@AccessibleDescription"
+             data-total-width="@SvgNumber(TotalWidth)"
+             data-callback-width="@SvgNumber(CallbackWidth)"
+             data-startup-width="@SvgNumber(StartupWidth)">
+            <svg viewBox="0 0 1000 12" preserveAspectRatio="none" aria-hidden="true" focusable="false">
+                <rect class="module-cost-breakdown__track" x="0" y="0" width="1000" height="12" rx="6" />
+                @if (CallbackWidth > 0)
+                {
+                    <rect class="module-cost-breakdown__callbacks"
+                          x="0"
+                          y="0"
+                          width="@SvgNumber(CallbackWidth)"
+                          height="12" />
+                }
+                @if (StartupWidth > 0)
+                {
+                    <rect class="module-cost-breakdown__startup"
+                          x="@SvgNumber(CallbackWidth)"
+                          y="0"
+                          width="@SvgNumber(StartupWidth)"
+                          height="12" />
+                }
+            </svg>
+        </div>
+    </MudTooltip>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public string ModuleName { get; set; } = string.Empty;
+    [Parameter] public double CallbackDurationMs { get; set; }
+    [Parameter] public double StartupWorkDurationMs { get; set; }
+    [Parameter] public double MaximumDurationMs { get; set; }
+
+    private double CallbackCostMs => Math.Max(0, CallbackDurationMs);
+    private double StartupWorkCostMs => Math.Max(0, StartupWorkDurationMs);
+    private double TotalDurationMs => CallbackCostMs + StartupWorkCostMs;
+    private double RelativePercentage => MaximumDurationMs <= 0
+        ? 0
+        : Math.Clamp(TotalDurationMs / MaximumDurationMs * 100, 0, 100);
+    private string RelativePercentageText => TotalDurationMs > 0 && RelativePercentage < 1
+        ? "<1%"
+        : $"{RelativePercentage.ToString("F0", System.Globalization.CultureInfo.InvariantCulture)}%";
+    private double TotalWidth => TotalDurationMs <= 0 ? 0 : Math.Max(15, RelativePercentage * 10);
+    private double CallbackWidth => TotalDurationMs <= 0
+        ? 0
+        : TotalWidth * CallbackCostMs / TotalDurationMs;
+    private double StartupWidth => Math.Max(0, TotalWidth - CallbackWidth);
+
+    private string AccessibleDescription => L[
+        "Modules:Cost:Breakdown",
+        ModuleName,
+        ModuleDiagnosticsDisplay.Duration(TotalDurationMs),
+        ModuleDiagnosticsDisplay.Duration(CallbackCostMs),
+        ModuleDiagnosticsDisplay.Duration(StartupWorkCostMs),
+        RelativePercentage.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture)];
+
+    private static string SvgNumber(double value) =>
+        value.ToString("0.###", System.Globalization.CultureInfo.InvariantCulture);
+}

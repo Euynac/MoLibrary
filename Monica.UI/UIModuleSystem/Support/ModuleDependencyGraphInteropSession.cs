@@ -22,7 +22,8 @@ internal sealed class ModuleDependencyGraphInteropSession(IJSRuntime jsRuntime) 
     internal async Task<ModuleDependencyGraphRenderOutcome> RenderAsync(
         ElementReference element,
         object model,
-        string renderIdentity)
+        string renderIdentity,
+        object callbackReference)
     {
         if (_disposed)
         {
@@ -58,7 +59,11 @@ internal sealed class ModuleDependencyGraphInteropSession(IJSRuntime jsRuntime) 
 
             if (_handle is null)
             {
-                var createdHandle = await _module.InvokeAsync<IJSObjectReference>("createGraph", element, model);
+                var createdHandle = await _module.InvokeAsync<IJSObjectReference>(
+                    "createGraph",
+                    element,
+                    model,
+                    callbackReference);
                 if (_disposed)
                 {
                     await DisposeHandleAsync(createdHandle);
@@ -99,6 +104,56 @@ internal sealed class ModuleDependencyGraphInteropSession(IJSRuntime jsRuntime) 
         }
     }
 
+    /// <summary>Invokes one command on this graph instance when its browser handle is ready.</summary>
+    internal Task InvokeAsync(string command, object? argument = null) => InvokeCoreAsync(command, argument);
+
+    private async Task InvokeCoreAsync(string command, object? argument)
+    {
+        if (_disposed)
+        {
+            return;
+        }
+
+        var acquired = false;
+        try
+        {
+            await _gate.WaitAsync(_lifetimeCancellation.Token);
+            acquired = true;
+            if (_disposed || _handle is null)
+            {
+                return;
+            }
+
+            if (argument is null)
+            {
+                await _handle.InvokeVoidAsync(command);
+            }
+            else
+            {
+                await _handle.InvokeVoidAsync(command, argument);
+            }
+        }
+        catch (OperationCanceledException) when (_lifetimeCancellation.IsCancellationRequested)
+        {
+            // The graph owner ended while the command waited for the serialized handle.
+        }
+        catch (JSDisconnectedException)
+        {
+            // The Blazor circuit disconnected before the command completed.
+        }
+        catch (JSException)
+        {
+            // A destroyed browser context cannot execute graph commands.
+        }
+        finally
+        {
+            if (acquired)
+            {
+                _gate.Release();
+            }
+        }
+    }
+
     /// <inheritdoc />
     public ValueTask DisposeAsync()
     {
@@ -129,8 +184,8 @@ internal sealed class ModuleDependencyGraphInteropSession(IJSRuntime jsRuntime) 
 
         await DisposeHandleAsync(handle);
         await DisposeReferenceAsync(module);
-        _lifetimeCancellation.Dispose();
-        _gate.Dispose();
+        // Calls that observed the pre-disposal state may still be about to enter the gate. Keeping these lightweight
+        // coordination primitives alive lets cancellation settle those races without ObjectDisposedException.
     }
 
     private static async ValueTask DisposeReferenceAsync(IJSObjectReference? reference)

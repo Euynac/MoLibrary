@@ -1,0 +1,57 @@
+.module-cost-breakdown {
+    display: grid;
+    gap: .3rem;
+    min-width: 8.5rem;
+}
+
+.module-cost-breakdown__value {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: .75rem;
+    min-width: 0;
+}
+
+.module-cost-breakdown__value strong {
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+}
+
+.module-cost-breakdown__value span {
+    color: var(--mud-palette-text-secondary);
+    font-size: .68rem;
+    font-variant-numeric: tabular-nums;
+}
+
+.module-cost-breakdown__meter,
+.module-cost-breakdown__meter svg {
+    display: block;
+    width: 100%;
+    height: .65rem;
+}
+
+.module-cost-breakdown__meter svg {
+    overflow: hidden;
+    border-radius: 999px;
+}
+
+.module-cost-breakdown__meter {
+    border-radius: 999px;
+}
+
+.module-cost-breakdown__meter:focus-visible {
+    outline: 2px solid var(--mud-palette-primary);
+    outline-offset: 2px;
+}
+
+.module-cost-breakdown__track {
+    fill: var(--mud-palette-lines-default);
+}
+
+.module-cost-breakdown__callbacks {
+    fill: var(--mud-palette-primary);
+}
+
+.module-cost-breakdown__startup {
+    fill: var(--mud-palette-info);
+}

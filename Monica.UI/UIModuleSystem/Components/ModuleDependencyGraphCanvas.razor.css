@@ -3,29 +3,65 @@
     display: grid;
     width: 100%;
     min-width: 0;
-    min-height: 28rem;
+    min-height: 42rem;
     overflow: hidden;
     border: 1px solid var(--mud-palette-lines-default);
     border-radius: var(--mud-default-borderradius);
-    background: var(--mud-palette-background);
+    background:
+        radial-gradient(circle at 15% 12%, var(--mud-palette-primary-hover), transparent 30%),
+        radial-gradient(circle at 85% 88%, var(--mud-palette-secondary-hover), transparent 32%),
+        var(--mud-palette-background);
 }
 
 .graph-surface {
     grid-area: 1 / 1;
     width: 100%;
     min-width: 0;
-    min-height: 28rem;
+    min-height: 42rem;
+    cursor: grab;
+}
+
+.graph-surface:active {
+    cursor: grabbing;
 }
 
 .graph-surface ::deep svg {
     display: block;
     width: 100%;
     height: 100%;
-    min-height: 28rem;
+    min-height: 42rem;
+}
+
+.graph-surface ::deep .graph-link,
+.graph-surface ::deep .graph-node,
+.graph-surface ::deep .graph-node-core,
+.graph-surface ::deep .graph-node-halo {
+    transition: opacity .16s ease, stroke .16s ease, stroke-width .16s ease, filter .16s ease;
+}
+
+.graph-surface ::deep .graph-node-label {
+    font-size: .7rem;
+    font-weight: 650;
+    paint-order: stroke;
+    stroke: var(--mud-palette-background);
+    stroke-width: .2rem;
+    stroke-linejoin: round;
+    pointer-events: none;
+}
+
+.graph-surface ::deep .graph-node-glyph {
+    font-size: .58rem;
+    font-weight: 800;
+    letter-spacing: -.02em;
+    pointer-events: none;
+}
+
+.graph-surface ::deep .graph-node-match .graph-node-core {
+    filter: drop-shadow(0 0 .55rem var(--mud-palette-warning));
 }
 
 .graph-placeholder {
-    z-index: 1;
+    z-index: 2;
     grid-area: 1 / 1;
     display: flex;
     align-items: center;
@@ -42,10 +78,23 @@
     flex-direction: column;
 }
 
-@media (max-width: 600px) {
+@media (prefers-reduced-motion: reduce) {
+    .graph-surface ::deep .graph-link,
+    .graph-surface ::deep .graph-node,
+    .graph-surface ::deep .graph-node-core,
+    .graph-surface ::deep .graph-node-halo {
+        transition: none;
+    }
+}
+
+@media (max-width: 700px) {
     .dependency-graph-canvas,
     .graph-surface,
     .graph-surface ::deep svg {
-        min-height: 22rem;
+        min-height: 30rem;
+    }
+
+    .graph-surface ::deep .graph-node-label {
+        font-size: .64rem;
     }
 }

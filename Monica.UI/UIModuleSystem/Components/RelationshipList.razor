@@ -7,16 +7,26 @@
     <MudText Typo="Typo.subtitle2">@Title</MudText>
     @if (Modules.Count == 0)
     {
-        <span>@L["ModuleDrawer:Dependencies:Empty"]</span>
+        <span>@(string.IsNullOrWhiteSpace(EmptyText) ? L["ModuleDrawer:Dependencies:Empty"] : EmptyText)</span>
     }
     else
     {
         @foreach (var module in Modules)
         {
-            <div>
-                <strong>@module.TypeName</strong>
-                <code title="@module.FullTypeName">@module.FullTypeName</code>
-            </div>
+            @if (ModuleSelected.HasDelegate)
+            {
+                <button type="button" class="relationship-button" @onclick="@(() => ModuleSelected.InvokeAsync(module))">
+                    <strong>@module.TypeName</strong>
+                    <code title="@module.FullTypeName">@module.FullTypeName</code>
+                </button>
+            }
+            else
+            {
+                <div>
+                    <strong>@module.TypeName</strong>
+                    <code title="@module.FullTypeName">@module.FullTypeName</code>
+                </div>
+            }
         }
     }
 </section>
@@ -24,4 +34,6 @@
 @code {
     [Parameter, EditorRequired] public string Title { get; set; } = string.Empty;
     [Parameter, EditorRequired] public IReadOnlyList<ModuleDiagnosticsModule> Modules { get; set; } = [];
+    [Parameter] public string? EmptyText { get; set; }
+    [Parameter] public EventCallback<ModuleDiagnosticsModule> ModuleSelected { get; set; }
 }

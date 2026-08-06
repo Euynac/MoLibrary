@@ -8,92 +8,191 @@
 @if (Session.Snapshot is { } snapshot)
 {
     <div class="dependencies-layout">
-        <section class="dependency-toolbar" aria-labelledby="dependencies-title">
-            <div>
+        <section class="topology-hero" aria-labelledby="dependencies-title">
+            <div class="topology-hero-copy">
                 <MudText Typo="Typo.overline">@L["Dependencies:Eyebrow"]</MudText>
-                <MudText Typo="Typo.h5" HtmlTag="h2" id="dependencies-title">@L["Dependencies:Title"]</MudText>
-                <MudText Typo="Typo.body2" Color="Color.Secondary">@L["Dependencies:Description"]</MudText>
+                <MudText Typo="Typo.h4" HtmlTag="h2" id="dependencies-title">@L["Dependencies:Title"]</MudText>
+                <MudText Typo="Typo.body1" Color="Color.Secondary">@L["Dependencies:Description"]</MudText>
             </div>
-            <div class="dependency-controls">
-                <MudAutocomplete T="string"
-                                 Label="@L["Dependencies:FocusModule"]"
-                                 Value="@Session.SelectedModule?.ModuleKey.Id"
-                                 ValueChanged="@SelectModuleById"
-                                 SearchFunc="@SearchModules"
-                                 ToStringFunc="@ModuleDisplayName"
-                                 Clearable="false"
-                                 CoerceValue="false"
-                                 SelectValueOnTab="true" />
-                <MudSwitch T="bool"
-                           Label="@L["Dependencies:FullHost"]"
-                           Value="@Session.ShowFullDependencyGraph"
-                           ValueChanged="@Session.SetShowFullDependencyGraph"
-                           Color="Color.Warning" />
-                <MudButton Variant="Variant.Outlined"
-                           StartIcon="@Icons.Material.Filled.ZoomOutMap"
-                           Disabled="@(Session.ShowFullDependencyGraph || Session.DependencyNeighborhoodDepth >= 3)"
-                           OnClick="@Session.ExpandDependencyNeighborhood">
-                    @L["Dependencies:Expand", Session.DependencyNeighborhoodDepth]
+            <div class="graph-scope-actions" aria-label="@L["Dependencies:Controls:Scope"]">
+                <MudButton Variant="@(Session.ShowFullDependencyGraph ? Variant.Filled : Variant.Outlined)"
+                           Color="Color.Primary"
+                           StartIcon="@Icons.Material.Filled.Public"
+                           aria-pressed="@Session.ShowFullDependencyGraph"
+                           OnClick="@(() => SetGraphScope(true))">
+                    @L["Dependencies:Controls:FullHost"]
                 </MudButton>
-                <MudButton Variant="Variant.Text" OnClick="@Session.ResetDependencyNeighborhood">
-                    @L["Actions:Reset"]
+                <MudButton Variant="@(!Session.ShowFullDependencyGraph ? Variant.Filled : Variant.Outlined)"
+                           Color="Color.Info"
+                           StartIcon="@Icons.Material.Filled.CenterFocusStrong"
+                           aria-pressed="@(!Session.ShowFullDependencyGraph)"
+                           OnClick="@(() => SetGraphScope(false))">
+                    @L["Dependencies:Controls:Neighborhood"]
                 </MudButton>
             </div>
         </section>
 
-        <div class="dependency-evidence-grid">
-            <section class="dependency-graph-panel">
+        <section class="topology-overview" aria-label="@L["Dependencies:Overview:Label"]">
+            <article class="overview-nodes">
+                <MudIcon Icon="@Icons.Material.Filled.Hub" />
+                <span>@L["Dependencies:Overview:Modules"]</span>
+                <strong>@Session.VisibleDependencyModules.Count</strong>
+            </article>
+            <article class="overview-edges">
+                <MudIcon Icon="@Icons.Material.Filled.Link" />
+                <span>@L["Dependencies:Overview:Edges"]</span>
+                <strong>@Session.VisibleDependencyEdges.Count</strong>
+            </article>
+            <article class="overview-depth">
+                <MudIcon Icon="@Icons.Material.Filled.Layers" />
+                <span>@L["Dependencies:Overview:Depth"]</span>
+                <strong>@Session.VisibleDependencyModules.Select(static module => module.DependencyDepth).DefaultIfEmpty().Max()</strong>
+            </article>
+            <article class="overview-ui">
+                <MudIcon Icon="@Icons.Material.Filled.DashboardCustomize" />
+                <span>@L["Dependencies:Overview:UiModules"]</span>
+                <strong>@Session.VisibleDependencyModules.Count(static module => module.IsUiModule)</strong>
+            </article>
+            <article class="overview-web">
+                <MudIcon Icon="@Icons.Material.Filled.Language" />
+                <span>@L["Dependencies:Overview:WebModules"]</span>
+                <strong>@Session.VisibleDependencyModules.Count(static module => module.IsWebModule)</strong>
+            </article>
+        </section>
+
+        <section class="graph-command-deck" aria-label="@L["Dependencies:Controls:Label"]">
+            <MudSelect T="string"
+                       Label="@L["Dependencies:Controls:Layout"]"
+                       Value="@_layout"
+                       ValueChanged="@SetLayout"
+                       Dense="true">
+                <MudSelectItem T="string" Value="@("force")">@L["Dependencies:Layouts:Force"]</MudSelectItem>
+                <MudSelectItem T="string" Value="@("layered")">@L["Dependencies:Layouts:Layered"]</MudSelectItem>
+                <MudSelectItem T="string" Value="@("radial")">@L["Dependencies:Layouts:Radial"]</MudSelectItem>
+            </MudSelect>
+            <MudTextField T="string"
+                          Label="@L["Dependencies:Controls:Search"]"
+                          Placeholder="@L["Dependencies:Controls:SearchPlaceholder"]"
+                          Value="@_searchText"
+                          ValueChanged="@SetSearchText"
+                          Immediate="true"
+                          Clearable="true"
+                          Adornment="Adornment.Start"
+                          AdornmentIcon="@Icons.Material.Filled.Search" />
+            <MudAutocomplete T="string"
+                             Label="@L["Dependencies:FocusModule"]"
+                             Value="@Session.SelectedModule?.ModuleKey.Id"
+                             ValueChanged="@SelectModuleById"
+                             SearchFunc="@SearchModules"
+                             ToStringFunc="@ModuleDisplayName"
+                             Clearable="false"
+                             CoerceValue="false"
+                             SelectValueOnTab="true" />
+            <div class="graph-viewport-actions">
+                <MudTooltip Text="@L["Dependencies:Controls:ZoomIn"]">
+                    <MudIconButton Icon="@Icons.Material.Filled.ZoomIn"
+                                   Color="Color.Primary"
+                                   OnClick="@ZoomInAsync"
+                                   aria-label="@L["Dependencies:Controls:ZoomIn"]" />
+                </MudTooltip>
+                <MudTooltip Text="@L["Dependencies:Controls:ZoomOut"]">
+                    <MudIconButton Icon="@Icons.Material.Filled.ZoomOut"
+                                   Color="Color.Primary"
+                                   OnClick="@ZoomOutAsync"
+                                   aria-label="@L["Dependencies:Controls:ZoomOut"]" />
+                </MudTooltip>
+                <MudTooltip Text="@L["Dependencies:Controls:Fit"]">
+                    <MudIconButton Icon="@Icons.Material.Filled.FitScreen"
+                                   Color="Color.Info"
+                                   OnClick="@FitAsync"
+                                   aria-label="@L["Dependencies:Controls:Fit"]" />
+                </MudTooltip>
+                <MudTooltip Text="@L["Dependencies:Controls:FocusSelected"]">
+                    <MudIconButton Icon="@Icons.Material.Filled.MyLocation"
+                                   Color="Color.Secondary"
+                                   Disabled="@(Session.SelectedModule is null)"
+                                   OnClick="@FocusSelectedAsync"
+                                   aria-label="@L["Dependencies:Controls:FocusSelected"]" />
+                </MudTooltip>
+            </div>
+            @if (!Session.ShowFullDependencyGraph)
+            {
+                <MudButton Variant="Variant.Outlined"
+                           StartIcon="@Icons.Material.Filled.ZoomOutMap"
+                           Disabled="@(Session.DependencyNeighborhoodDepth >= 3)"
+                           OnClick="@Session.ExpandDependencyNeighborhood">
+                    @L["Dependencies:Expand", Session.DependencyNeighborhoodDepth]
+                </MudButton>
+            }
+        </section>
+
+        <section class="dependency-graph-panel" aria-label="@L["Aria:DependencyGraph", Session.VisibleDependencyModules.Count, Session.VisibleDependencyEdges.Count]">
+            <header class="graph-panel-header">
                 <div class="graph-summary">
-                    <span>@L["Dependencies:Graph:Nodes", Session.VisibleDependencyModules.Count]</span>
-                    <span>@L["Dependencies:Graph:Edges", Session.VisibleDependencyEdges.Count]</span>
-                    <span>@(Session.ShowFullDependencyGraph
-                        ? L["Dependencies:Graph:FullHostMode"]
-                        : L["Dependencies:Graph:NeighborhoodMode", Session.DependencyNeighborhoodDepth])</span>
+                    <MudChip T="string" Size="Size.Small" Color="Color.Primary" Variant="Variant.Outlined">
+                        @L["Dependencies:Graph:Nodes", Session.VisibleDependencyModules.Count]
+                    </MudChip>
+                    <MudChip T="string" Size="Size.Small" Color="Color.Info" Variant="Variant.Outlined">
+                        @L["Dependencies:Graph:Edges", Session.VisibleDependencyEdges.Count]
+                    </MudChip>
+                    <MudChip T="string" Size="Size.Small" Color="Color.Secondary" Variant="Variant.Filled">
+                        @(Session.ShowFullDependencyGraph
+                            ? L["Dependencies:Graph:FullHostMode"]
+                            : L["Dependencies:Graph:NeighborhoodMode", Session.DependencyNeighborhoodDepth])
+                    </MudChip>
                 </div>
-                <ModuleDependencyGraphCanvas Session="@Session" />
-            </section>
+                <div class="graph-legend" aria-label="@L["Dependencies:Legend:Title"]">
+                    <span class="legend-core">@L["Dependencies:Legend:Core"]</span>
+                    <span class="legend-ui">@L["Dependencies:Legend:Ui"]</span>
+                    <span class="legend-web">@L["Dependencies:Legend:Web"]</span>
+                    <span class="legend-host">@L["Dependencies:Legend:HostRequired"]</span>
+                    <span class="legend-outgoing">@L["Dependencies:Legend:Requires"]</span>
+                    <span class="legend-incoming">@L["Dependencies:Legend:RequiredBy"]</span>
+                </div>
+            </header>
+            <ModuleDependencyGraphCanvas @ref="_graphCanvas"
+                                         Session="@Session"
+                                         Layout="@_layout"
+                                         SearchText="@_searchText"
+                                         ModuleSelected="@ModuleSelected" />
+        </section>
 
-            <aside class="dependency-inspector" aria-label="@L["Aria:DependencyInspector"]">
-                @if (Session.SelectedModule is { } selected)
-                {
+        @if (Session.SelectedModule is { } selected)
+        {
+            <section class="dependency-inspector" aria-label="@L["Aria:DependencyInspector"]">
+                <div class="selected-module-identity">
                     <MudText Typo="Typo.overline">@L["Dependencies:Selected:Eyebrow"]</MudText>
-                    <MudText Typo="Typo.h6">@selected.TypeName</MudText>
-                    <MudTooltip Text="@selected.FullTypeName"><code>@selected.FullTypeName</code></MudTooltip>
-
-                    <div class="relationship-section">
-                        <strong>@L["Dependencies:Selected:Requires"]</strong>
-                        @foreach (var edge in snapshot.Topology.Edges.Where(edge => edge.SourceModule == selected.ModuleKey))
+                    <MudText Typo="Typo.h5">@selected.TypeName</MudText>
+                    <IdentifierValue Value="@selected.FullTypeName" />
+                    <div class="selected-capabilities">
+                        <MudChip T="string" Size="Size.Small" Color="Color.Primary" Variant="Variant.Outlined">
+                            @L["Dependencies:Selected:Depth", selected.DependencyDepth]
+                        </MudChip>
+                        @if (selected.IsUiModule)
                         {
-                            var module = snapshot.Modules.FirstOrDefault(candidate => candidate.ModuleKey == edge.TargetModule);
-                            if (module is not null)
-                            {
-                                <button type="button" @onclick="@(() => ModuleSelected.InvokeAsync(module))">@module.TypeName</button>
-                            }
+                            <MudChip T="string" Size="Size.Small" Color="Color.Info">@L["ModuleDrawer:Capabilities:UI"]</MudChip>
                         }
-                        @if (!snapshot.Topology.Edges.Any(edge => edge.SourceModule == selected.ModuleKey))
+                        @if (selected.IsWebModule)
                         {
-                            <span>@L["Dependencies:Selected:NoDependencies"]</span>
+                            <MudChip T="string" Size="Size.Small" Color="Color.Secondary">@L["ModuleDrawer:Capabilities:Web"]</MudChip>
                         }
-                    </div>
-
-                    <div class="relationship-section">
-                        <strong>@L["Dependencies:Selected:RequiredBy"]</strong>
-                        @foreach (var edge in snapshot.Topology.Edges.Where(edge => edge.TargetModule == selected.ModuleKey))
+                        @if (selected.RequiresWebHost)
                         {
-                            var module = snapshot.Modules.FirstOrDefault(candidate => candidate.ModuleKey == edge.SourceModule);
-                            if (module is not null)
-                            {
-                                <button type="button" @onclick="@(() => ModuleSelected.InvokeAsync(module))">@module.TypeName</button>
-                            }
-                        }
-                        @if (!snapshot.Topology.Edges.Any(edge => edge.TargetModule == selected.ModuleKey))
-                        {
-                            <span>@L["Dependencies:Selected:NoDependents"]</span>
+                            <MudChip T="string" Size="Size.Small" Color="Color.Warning">@L["ModuleDrawer:Capabilities:WebHost"]</MudChip>
                         }
                     </div>
-                }
-            </aside>
-        </div>
+                </div>
+
+                <RelationshipList Title="@L["Dependencies:Selected:Requires"]"
+                                  EmptyText="@L["Dependencies:Selected:NoDependencies"]"
+                                  Modules="@RequiredModules(selected)"
+                                  ModuleSelected="@ModuleSelected" />
+                <RelationshipList Title="@L["Dependencies:Selected:RequiredBy"]"
+                                  EmptyText="@L["Dependencies:Selected:NoDependents"]"
+                                  Modules="@DependentModules(selected)"
+                                  ModuleSelected="@ModuleSelected" />
+            </section>
+        }
 
         <section class="dependency-table-section">
             <MudButton Variant="Variant.Text"
@@ -103,7 +202,10 @@
                 @(Session.ShowDependencyTable ? L["Dependencies:Table:Hide"] : L["Dependencies:Table:Show"])
             </MudButton>
             <MudCollapse Expanded="@Session.ShowDependencyTable">
-                <div class="dependency-table-wrapper">
+                <div class="dependency-table-wrapper"
+                     role="region"
+                     aria-label="@L["Aria:DependencyTable"]"
+                     tabindex="0">
                     <MudTable T="ModuleDiagnosticsDependencyEdge" Items="@Session.VisibleDependencyEdges" Dense="true" Hover="true">
                         <HeaderContent>
                             <MudTh>@L["Dependencies:Table:Source"]</MudTh>
@@ -121,8 +223,20 @@
 }
 
 @code {
+    private ModuleDependencyGraphCanvas? _graphCanvas;
+    private string _layout = "force";
+    private string _searchText = string.Empty;
+
     [Parameter, EditorRequired] public ModuleSystemWorkbenchSession Session { get; set; } = default!;
     [Parameter] public EventCallback<ModuleDiagnosticsModule> ModuleSelected { get; set; }
+
+    private void SetGraphScope(bool fullHost) => Session.SetShowFullDependencyGraph(fullHost);
+    private void SetLayout(string value) => _layout = value;
+    private void SetSearchText(string? value) => _searchText = value ?? string.Empty;
+    private Task ZoomInAsync() => _graphCanvas?.ZoomInAsync() ?? Task.CompletedTask;
+    private Task ZoomOutAsync() => _graphCanvas?.ZoomOutAsync() ?? Task.CompletedTask;
+    private Task FitAsync() => _graphCanvas?.FitAsync() ?? Task.CompletedTask;
+    private Task FocusSelectedAsync() => _graphCanvas?.FocusSelectedAsync() ?? Task.CompletedTask;
 
     private async Task SelectModuleById(string moduleId)
     {
@@ -151,6 +265,25 @@
         .FirstOrDefault(module => string.Equals(module.ModuleKey.Id, moduleId, StringComparison.Ordinal))?.TypeName
         ?? moduleId
         ?? string.Empty;
+
+    private IReadOnlyList<ModuleDiagnosticsModule> RequiredModules(ModuleDiagnosticsModule module) =>
+        RelatedModules(snapshotEdge => snapshotEdge.SourceModule == module.ModuleKey, static edge => edge.TargetModule);
+
+    private IReadOnlyList<ModuleDiagnosticsModule> DependentModules(ModuleDiagnosticsModule module) =>
+        RelatedModules(snapshotEdge => snapshotEdge.TargetModule == module.ModuleKey, static edge => edge.SourceModule);
+
+    private IReadOnlyList<ModuleDiagnosticsModule> RelatedModules(
+        Func<ModuleDiagnosticsDependencyEdge, bool> predicate,
+        Func<ModuleDiagnosticsDependencyEdge, Monica.Core.Modularity.Models.ModuleKey> keySelector)
+    {
+        if (Session.Snapshot is not { } snapshot)
+        {
+            return [];
+        }
+
+        var keys = snapshot.Topology.Edges.Where(predicate).Select(keySelector).ToHashSet();
+        return snapshot.Modules.Where(module => keys.Contains(module.ModuleKey)).ToArray();
+    }
 
     private string ModuleName(Monica.Core.Modularity.Models.ModuleKey key) =>
         Session.Snapshot?.Modules.FirstOrDefault(module => module.ModuleKey == key)?.TypeName ?? key.Value;

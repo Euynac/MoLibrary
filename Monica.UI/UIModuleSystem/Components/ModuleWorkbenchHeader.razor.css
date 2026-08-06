@@ -37,13 +37,10 @@
     text-transform: uppercase;
 }
 
-.workbench-identity code {
+.workbench-identity ::deep .identifier-value {
     grid-column: 1 / -1;
+    width: 15rem;
     max-width: 15rem;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    color: var(--mud-palette-text-secondary);
 }
 
 .workbench-actions {
@@ -89,7 +86,7 @@
     }
 
     .workbench-identity {
-        display: none;
+        grid-column: 1 / -1;
     }
 }
 

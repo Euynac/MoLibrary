@@ -1,0 +1,308 @@
+.assembly-explorer {
+    display: grid;
+    gap: 1rem;
+    min-width: 0;
+    padding: 1rem;
+    overflow: clip;
+    border: 1px solid var(--mud-palette-lines-default);
+    border-radius: var(--mud-default-borderradius);
+    background: linear-gradient(
+        145deg,
+        color-mix(in srgb, var(--mud-palette-primary) 5%, var(--mud-palette-surface)),
+        var(--mud-palette-surface) 24rem);
+}
+
+.assembly-explorer-header,
+.assembly-records-heading,
+.assembly-pagination {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    min-width: 0;
+}
+
+.assembly-loading {
+    display: flex;
+    min-height: 14rem;
+    align-items: center;
+    justify-content: center;
+    gap: .75rem;
+    color: var(--mud-palette-text-secondary);
+}
+
+.assembly-kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: .75rem;
+    min-width: 0;
+}
+
+.assembly-kpi {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    gap: .2rem .6rem;
+    min-width: 0;
+    padding: .85rem;
+    overflow: hidden;
+    border: 1px solid var(--mud-palette-lines-default);
+    border-radius: var(--mud-default-borderradius);
+    background: var(--mud-palette-surface);
+}
+
+.assembly-kpi--entry {
+    background: linear-gradient(135deg, color-mix(in srgb, var(--mud-palette-primary) 13%, var(--mud-palette-surface)), var(--mud-palette-surface));
+}
+
+.assembly-kpi--scan,
+.assembly-kpi--healthy {
+    background: linear-gradient(135deg, color-mix(in srgb, var(--mud-palette-success) 12%, var(--mud-palette-surface)), var(--mud-palette-surface));
+}
+
+.assembly-kpi--considered {
+    background: linear-gradient(135deg, color-mix(in srgb, var(--mud-palette-info) 12%, var(--mud-palette-surface)), var(--mud-palette-surface));
+}
+
+.assembly-kpi--attention {
+    border-color: var(--mud-palette-error);
+    background: linear-gradient(135deg, color-mix(in srgb, var(--mud-palette-error) 14%, var(--mud-palette-surface)), var(--mud-palette-surface));
+}
+
+.assembly-kpi > span,
+.assembly-kpi > strong,
+.assembly-kpi > small {
+    grid-column: 2;
+    min-width: 0;
+}
+
+.assembly-kpi > span,
+.assembly-kpi > small {
+    color: var(--mud-palette-text-secondary);
+}
+
+.assembly-kpi > span {
+    font-size: .72rem;
+    letter-spacing: .03em;
+    text-transform: uppercase;
+}
+
+.assembly-kpi > strong {
+    overflow: hidden;
+    font-size: 1.25rem;
+    font-variant-numeric: tabular-nums;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.assembly-analysis-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1.2fr) minmax(18rem, .8fr);
+    gap: .75rem;
+    min-width: 0;
+}
+
+.assembly-configuration,
+.assembly-outcomes,
+.assembly-records {
+    min-width: 0;
+    padding: .9rem;
+    border: 1px solid var(--mud-palette-lines-default);
+    border-radius: var(--mud-default-borderradius);
+    background: color-mix(in srgb, var(--mud-palette-background) 70%, var(--mud-palette-surface));
+}
+
+.assembly-section-heading {
+    display: flex;
+    align-items: center;
+    gap: .65rem;
+    min-width: 0;
+}
+
+.assembly-configuration-facts {
+    display: grid;
+    gap: .65rem;
+    min-width: 0;
+    margin-top: .8rem;
+}
+
+.assembly-configuration-facts > div {
+    display: grid;
+    grid-template-columns: minmax(9rem, .35fr) minmax(0, 1fr);
+    align-items: start;
+    gap: .75rem;
+    min-width: 0;
+}
+
+.assembly-configuration-facts > div > span {
+    color: var(--mud-palette-text-secondary);
+}
+
+.assembly-patterns,
+.assembly-facets {
+    display: flex;
+    align-items: center;
+    gap: .45rem;
+    min-width: 0;
+    flex-wrap: wrap;
+}
+
+.assembly-patterns em {
+    color: var(--mud-palette-text-secondary);
+}
+
+.assembly-outcome-list {
+    display: grid;
+    gap: .35rem;
+    margin-top: .8rem;
+}
+
+.assembly-outcome-fact {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    align-items: center;
+    gap: .55rem;
+    min-width: 0;
+    padding: .5rem .6rem;
+    border-radius: var(--mud-default-borderradius);
+    background: var(--mud-palette-surface);
+}
+
+.assembly-outcome-fact strong {
+    font-variant-numeric: tabular-nums;
+}
+
+.assembly-records {
+    display: grid;
+    gap: .75rem;
+}
+
+.assembly-records-heading > div {
+    min-width: 0;
+}
+
+.assembly-records-heading ::deep .mud-input-control {
+    flex: 0 1 24rem;
+    min-width: min(100%, 16rem);
+}
+
+.assembly-table-wrapper {
+    min-width: 0;
+    max-block-size: min(58vh, 40rem);
+    overflow: auto;
+    border: 1px solid var(--mud-palette-lines-default);
+    border-radius: var(--mud-default-borderradius);
+}
+
+.assembly-table-wrapper:focus-visible {
+    outline: 2px solid var(--mud-palette-primary);
+    outline-offset: 2px;
+}
+
+.assembly-table-wrapper ::deep .mud-table {
+    min-width: 54rem;
+    background: var(--mud-palette-surface);
+}
+
+.assembly-table-wrapper ::deep .mud-table-head {
+    background: color-mix(in srgb, var(--mud-palette-primary) 8%, var(--mud-palette-surface));
+}
+
+.assembly-name-cell {
+    display: flex;
+    align-items: center;
+    gap: .4rem;
+    min-width: 0;
+    max-width: 18rem;
+}
+
+.assembly-name-cell strong {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.assembly-marker {
+    display: inline-flex;
+    flex: 0 0 auto;
+}
+
+.assembly-path,
+.assembly-failure {
+    display: block;
+    min-width: 0;
+    max-width: 24rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.assembly-failure {
+    color: var(--mud-palette-error);
+}
+
+.assembly-unavailable {
+    color: var(--mud-palette-text-disabled);
+}
+
+.assembly-empty {
+    display: flex;
+    min-height: 10rem;
+    align-items: center;
+    justify-content: center;
+    gap: .5rem;
+    color: var(--mud-palette-text-secondary);
+}
+
+.assembly-pagination {
+    flex-wrap: wrap;
+}
+
+.assembly-pagination ::deep .mud-input-control {
+    width: 8rem;
+}
+
+@media (max-width: 960px) {
+    .assembly-kpi-grid,
+    .assembly-analysis-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .assembly-analysis-grid {
+        grid-template-columns: minmax(0, 1fr);
+    }
+}
+
+@media (max-width: 600px) {
+    .assembly-explorer,
+    .assembly-configuration,
+    .assembly-outcomes,
+    .assembly-records {
+        padding: .75rem;
+    }
+
+    .assembly-explorer-header,
+    .assembly-records-heading,
+    .assembly-pagination {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .assembly-kpi-grid {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .assembly-configuration-facts > div {
+        grid-template-columns: minmax(0, 1fr);
+        gap: .35rem;
+    }
+
+    .assembly-records-heading ::deep .mud-input-control,
+    .assembly-pagination ::deep .mud-input-control {
+        width: 100%;
+        min-width: 0;
+    }
+
+    .assembly-table-wrapper ::deep .mud-table {
+        min-width: 0;
+    }
+}

@@ -22,7 +22,7 @@
                     <div>
                         <MudText Typo="Typo.overline">@L["ModuleDrawer:Eyebrow"]</MudText>
                         <MudText Typo="Typo.h5">@module.TypeName</MudText>
-                        <CopyableIdentifier Value="@module.FullTypeName" AccessibleName="@module.TypeName" />
+                        <IdentifierValue Value="@module.FullTypeName" />
                     </div>
                     <MudIconButton Icon="@Icons.Material.Filled.Close"
                                    OnClick="@(() => OpenChanged.InvokeAsync(false))"
@@ -74,7 +74,7 @@
                             <div class="drawer-fact-row">
                                 <span>
                                     @SpanName(span)
-                                    <CopyableIdentifier Value="@span.SpanId" AccessibleName="@SpanName(span)" />
+                                    <IdentifierValue Value="@span.SpanId" />
                                 </span>
                                 <code>@ModuleDiagnosticsDisplay.Duration(span.DurationMs)</code>
                             </div>

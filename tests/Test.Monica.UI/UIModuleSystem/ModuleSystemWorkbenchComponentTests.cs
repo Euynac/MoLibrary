@@ -166,28 +166,66 @@ public sealed class ModuleSystemWorkbenchComponentTests
     }
 
     [Fact]
-    public async Task Loaded_assembly_inventory_defaults_to_collapsed_and_can_be_reopened_and_recollapsed()
+    public async Task Module_catalog_cost_meter_preserves_total_and_work_kind_proportions()
     {
         await using var context = new ModuleSystemWorkbenchUiTestContext();
         await using var session = new ModuleSystemWorkbenchSession(ModuleSystemWorkbenchTestData.Calls());
         await session.InitializeAsync();
-        await session.EnsureAssemblyInventoryLoadedAsync();
+
+        var cut = context.Render<ModuleWorkbenchModules>(parameters => parameters
+            .Add(component => component.Session, session));
+
+        var betaMeter = cut.Find("[data-module-cost='BetaModule'] [role='meter']");
+        ParseSvgNumber(betaMeter.GetAttribute("data-total-width")).Should().BeApproximately(1000, .001);
+        ParseSvgNumber(betaMeter.GetAttribute("data-callback-width")).Should().BeApproximately(142.857, .001);
+        ParseSvgNumber(betaMeter.GetAttribute("data-startup-width")).Should().BeApproximately(857.143, .001);
+
+        var alphaMeter = cut.Find("[data-module-cost='AlphaModule'] [role='meter']");
+        ParseSvgNumber(alphaMeter.GetAttribute("data-total-width")).Should().BeApproximately(428.571, .001);
+    }
+
+    [Fact]
+    public async Task Module_catalog_renders_truncated_identifiers_without_clipboard_actions()
+    {
+        await using var context = new ModuleSystemWorkbenchUiTestContext();
+        await using var session = new ModuleSystemWorkbenchSession(ModuleSystemWorkbenchTestData.Calls());
+        await session.InitializeAsync();
+
+        var cut = context.Render<ModuleWorkbenchModules>(parameters => parameters
+            .Add(component => component.Session, session));
+
+        cut.FindAll(".identifier-value").Should().HaveCount(session.PagedModules.Count);
+        cut.FindAll(".copyable-identifier").Should().BeEmpty();
+        cut.FindAll("button[aria-label^='Aria:Copy']").Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task Discovery_loads_the_assembly_explorer_and_defaults_to_attention_when_issues_exist()
+    {
+        await using var context = new ModuleSystemWorkbenchUiTestContext();
+        var inventoryCalls = 0;
+        await using var session = new ModuleSystemWorkbenchSession(ModuleSystemWorkbenchTestData.Calls(
+            inventory: () =>
+            {
+                inventoryCalls++;
+                return Res.Ok(ModuleSystemWorkbenchTestData.Inventory());
+            }));
+        await session.InitializeAsync();
 
         var cut = context.Render<ModuleWorkbenchDiscovery>(parameters => parameters
             .Add(component => component.Session, session));
-        var inventoryPanel = FindInventoryPanel(cut);
-
-        inventoryPanel.Instance.Expanded.Should().BeFalse();
-
-        await cut.InvokeAsync(inventoryPanel.Instance.ToggleExpansionAsync);
         cut.WaitForAssertion(() =>
         {
-            FindInventoryPanel(cut).Instance.Expanded.Should().BeTrue();
+            session.AssemblyInventoryState.Should().Be(ModuleSystemLazyLoadState.Ready);
+            session.AssemblyFacet.Should().Be(AssemblyInventoryFacet.Attention);
             cut.Markup.Should().Contain("Failed.Assembly");
+            cut.Markup.Should().Contain("Scanned.Assembly");
+            cut.Markup.Should().Contain("Test.*");
         });
 
-        await cut.InvokeAsync(FindInventoryPanel(cut).Instance.ToggleExpansionAsync);
-        cut.WaitForAssertion(() => FindInventoryPanel(cut).Instance.Expanded.Should().BeFalse());
+        inventoryCalls.Should().Be(1);
+        session.FilteredAssemblies.Should().ContainSingle(record =>
+            record.Outcome == TypeDiscoveryAssemblyOutcome.ResolutionFailed);
     }
 
     [Fact]
@@ -321,10 +359,33 @@ public sealed class ModuleSystemWorkbenchComponentTests
         performance.FindAll("tr.timeline-row-selected").Should().ContainSingle();
     }
 
-    private static IRenderedComponent<MudExpansionPanel> FindInventoryPanel(
-        IRenderedComponent<ModuleWorkbenchDiscovery> component) =>
-        component.FindComponents<MudExpansionPanel>()
-            .Single(panel => panel.Instance.Text == "Discovery:Inventory:PanelTitle");
+    [Fact]
+    public async Task Waterfall_interval_can_drive_selection_and_focus_without_losing_exact_timing()
+    {
+        await using var context = new ModuleSystemWorkbenchUiTestContext();
+        await using var session = new ModuleSystemWorkbenchSession(ModuleSystemWorkbenchTestData.Calls());
+        await session.InitializeAsync();
+        var cut = context.Render<ModuleCompositionWaterfall>(parameters => parameters
+            .Add(component => component.Session, session));
+
+        cut.Find("button.timeline-waterfall__track-button[data-span-id='span-alpha']").Click();
+
+        session.SelectedTraceSpanId.Should().Be("span-alpha");
+        session.SelectedModule!.TypeName.Should().Be("AlphaModule");
+        cut.Find(".timeline-waterfall__selection").TextContent.Should().Contain("AlphaModule");
+
+        var waterfall = cut.Find("section.timeline-waterfall");
+        ParseSvgNumber(waterfall.GetAttribute("data-axis-width")).Should().BeApproximately(24, .001);
+        cut.Find("button[aria-label='Performance:Waterfall:FocusSelected']").Click();
+
+        cut.Find("section.timeline-waterfall").GetAttribute("data-zoom-level").Should().Be("2");
+        ParseSvgNumber(cut.Find("section.timeline-waterfall").GetAttribute("data-axis-width"))
+            .Should().BeApproximately(12, .001);
+        cut.Find("rect.timeline-bar-selected[data-span-id='span-alpha']").Should().NotBeNull();
+    }
+
+    private static double ParseSvgNumber(string? value) =>
+        double.Parse(value!, NumberStyles.Float, CultureInfo.InvariantCulture);
 
     private sealed class CultureScope : IDisposable
     {

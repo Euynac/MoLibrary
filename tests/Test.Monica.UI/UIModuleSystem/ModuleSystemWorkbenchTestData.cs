@@ -97,12 +97,18 @@ internal static class ModuleSystemWorkbenchTestData
     internal static TypeDiscoveryAssemblyInventory Inventory() => new()
     {
         CompositionId = "test-composition",
+        CapturedAtUtc = new DateTimeOffset(2026, 8, 6, 1, 2, 3, TimeSpan.Zero),
         UsesDefaultProjectAssemblies = true,
+        IncludePatterns = ["Test.*"],
+        ExcludePatterns = ["Test.Legacy.*"],
         Assemblies =
         [
             new TypeDiscoveryAssemblyRecord
             {
                 Name = "Scanned.Assembly",
+                Version = "1.2.3",
+                Location = @"D:\app\Scanned.Assembly.dll",
+                IsEntryAssembly = true,
                 Outcome = TypeDiscoveryAssemblyOutcome.Scanned
             },
             new TypeDiscoveryAssemblyRecord
@@ -111,7 +117,9 @@ internal static class ModuleSystemWorkbenchTestData
                 Outcome = TypeDiscoveryAssemblyOutcome.ResolutionFailed,
                 Failure = "unavailable"
             }
-        ]
+        ],
+        ScannedCount = 1,
+        ResolutionFailedCount = 1
     };
 
     internal static ModuleOptionDiagnostics Options(ModuleKey key) => new()

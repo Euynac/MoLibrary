@@ -3,6 +3,7 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using AwesomeAssertions;
 using Monica.Core.Modularity.Diagnostics.Models;
+using Monica.Core.Modularity.Models;
 using Monica.Core.Results;
 using Monica.UI.UIModuleSystem.State;
 using Monica.UI.UIModuleSystem.Support;
@@ -139,6 +140,82 @@ public sealed class ModuleSystemWorkbenchSessionTests
     }
 
     [Fact]
+    public async Task Dependency_exploration_defaults_to_one_hop_and_full_host_remains_explicit()
+    {
+        var firstKey = ModuleKey.FromModuleType(typeof(FirstGraphModule));
+        var disabledBridgeKey = ModuleKey.FromModuleType(typeof(DisabledBridgeModule));
+        var isolatedKey = ModuleKey.FromModuleType(typeof(IsolatedGraphModule));
+        var first = ModuleSystemWorkbenchTestData.Module(firstKey, nameof(FirstGraphModule), "Test.Graph", 0, 10);
+        var disabledBridge = ModuleSystemWorkbenchTestData.Module(
+            disabledBridgeKey,
+            nameof(DisabledBridgeModule),
+            "Test.Graph",
+            1,
+            0) with { IsActive = false };
+        var isolated = ModuleSystemWorkbenchTestData.Module(
+            isolatedKey,
+            nameof(IsolatedGraphModule),
+            "Test.Graph",
+            2,
+            1);
+        var snapshot = ModuleSystemWorkbenchTestData.Snapshot() with
+        {
+            Modules = [first, disabledBridge, isolated],
+            BlockingChain = [],
+            Topology = new ModuleDiagnosticsTopology
+            {
+                Edges =
+                [
+                    new ModuleDiagnosticsDependencyEdge
+                    {
+                        SourceModule = firstKey,
+                        TargetModule = disabledBridgeKey
+                    },
+                    new ModuleDiagnosticsDependencyEdge
+                    {
+                        SourceModule = disabledBridgeKey,
+                        TargetModule = isolatedKey
+                    }
+                ],
+                TopologicalOrder = [firstKey, disabledBridgeKey, isolatedKey],
+                MaximumDepth = 2
+            }
+        };
+        await using var session = new ModuleSystemWorkbenchSession(ModuleSystemWorkbenchTestData.Calls(
+            snapshot: () => Res.Ok(snapshot)));
+
+        await session.InitializeAsync();
+
+        session.ShowFullDependencyGraph.Should().BeFalse();
+        session.VisibleDependencyModules.Should().ContainSingle().Which.ModuleKey.Should().Be(firstKey);
+        session.VisibleDependencyEdges.Should().BeEmpty();
+
+        session.SetShowFullDependencyGraph(true);
+        session.VisibleDependencyModules.Select(static module => module.ModuleKey)
+            .Should().BeEquivalentTo(new[] { firstKey, isolatedKey });
+        session.VisibleDependencyEdges.Should().BeEmpty();
+
+        session.ResetDependencyNeighborhood();
+        session.ShowFullDependencyGraph.Should().BeFalse();
+        session.DependencyNeighborhoodDepth.Should().Be(1);
+    }
+
+    [Fact]
+    public async Task Selecting_another_module_clears_trace_evidence_owned_by_the_previous_module()
+    {
+        await using var session = new ModuleSystemWorkbenchSession(ModuleSystemWorkbenchTestData.Calls());
+        await session.InitializeAsync();
+        var alphaSpan = session.Snapshot!.TraceSpans.Single();
+        var beta = session.Snapshot.Modules.Single(module => module.ModuleKey == ModuleSystemWorkbenchTestData.BetaKey);
+
+        session.SelectTraceSpan(alphaSpan);
+        session.SelectModule(beta, openDrawer: false);
+
+        session.SelectedModule.Should().BeSameAs(beta);
+        session.SelectedTraceSpanId.Should().BeNull();
+    }
+
+    [Fact]
     public async Task Authorization_is_rechecked_before_every_facade_boundary()
     {
         var authorized = true;
@@ -206,4 +283,8 @@ public sealed class ModuleSystemWorkbenchSessionTests
 
         condition().Should().BeTrue();
     }
+
+    private sealed class FirstGraphModule;
+    private sealed class DisabledBridgeModule;
+    private sealed class IsolatedGraphModule;
 }

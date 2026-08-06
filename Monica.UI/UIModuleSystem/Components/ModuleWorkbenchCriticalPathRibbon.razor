@@ -5,32 +5,71 @@
 @using Monica.UI.UIModuleSystem.Support
 @inject IStringLocalizer<ModuleSystemResource> L
 
-<section class="critical-ribbon" aria-labelledby="critical-ribbon-title">
+<section class="critical-ribbon @(CriticalSpans.Count == 0 ? "critical-ribbon--empty" : null)" aria-labelledby="critical-ribbon-title">
     <div class="ribbon-heading">
         <div>
             <MudText Typo="Typo.overline">@L["Overview:CriticalPath:Eyebrow"]</MudText>
             <MudText Typo="Typo.h6" HtmlTag="h2" id="critical-ribbon-title">@L["Overview:CriticalPath:Title"]</MudText>
         </div>
-        <MudText Typo="Typo.caption" Color="Color.Secondary">@L["Overview:CriticalPath:Hint"]</MudText>
+        <div class="ribbon-heading__context">
+            <MudChip T="string"
+                     Size="Size.Small"
+                     Color="@(CriticalSpans.Count == 0 ? Color.Success : Color.Warning)"
+                     Variant="Variant.Outlined">
+                @L["Overview:CriticalPath:Count", CriticalSpans.Count]
+            </MudChip>
+            <MudText Typo="Typo.caption" Color="Color.Secondary">@L["Overview:CriticalPath:Hint"]</MudText>
+        </div>
     </div>
 
-    <div class="ribbon-segments" role="list">
-        @foreach (var span in CriticalSpans)
-        {
-            var isSelected = IsSelected(span);
-            <div role="listitem">
-                <button type="button"
-                        class="ribbon-segment @(isSelected ? "selected" : null)"
-                        data-span-id="@span.SpanId"
-                        aria-current="@(isSelected ? "step" : null)"
-                        aria-pressed="@isSelected"
-                        @onclick="@(() => SelectSpanAsync(span))">
-                    <span>@SpanLabel(span)</span>
-                    <strong>@ModuleDiagnosticsDisplay.Duration(span.DurationMs)</strong>
-                </button>
+    @if (CriticalSpans.Count == 0)
+    {
+        <div class="ribbon-empty">
+            <div class="ribbon-empty__content">
+                <span class="ribbon-empty__icon" aria-hidden="true">
+                    <MudIcon Icon="@Icons.Material.Filled.Route" Color="Color.Success" Size="Size.Large" />
+                </span>
+                <MudText Typo="Typo.body2" Color="Color.Secondary">@L["Overview:CriticalPath:Empty"]</MudText>
             </div>
-        }
-    </div>
+        </div>
+    }
+    else
+    {
+        <div class="ribbon-segments" role="list">
+            @foreach (var item in CriticalSpans.Select((span, index) => (span, index)))
+            {
+                var isSelected = IsSelected(item.span);
+                var display = TraceDisplay(item.span);
+                <div role="listitem" class="ribbon-segment-shell">
+                    <MudTooltip Text="@SpanTooltip(item.span, display)">
+                        <button type="button"
+                                class="ribbon-segment @SpanKindClass(item.span.Kind) @(isSelected ? "selected" : null)"
+                                data-span-id="@item.span.SpanId"
+                                aria-label="@SpanTooltip(item.span, display)"
+                                aria-current="@(isSelected ? "step" : null)"
+                                aria-pressed="@isSelected"
+                                @onclick="@(() => SelectSpanAsync(item.span))">
+                            <span class="ribbon-segment__sequence" aria-hidden="true">@(item.index + 1)</span>
+                            <span class="ribbon-segment__identity">
+                                <strong>@display.Primary</strong>
+                                <small>@display.Secondary</small>
+                            </span>
+                            <code>@ModuleDiagnosticsDisplay.Duration(item.span.DurationMs)</code>
+                            <svg viewBox="0 0 1000 7" preserveAspectRatio="none" aria-hidden="true" focusable="false">
+                                <rect class="ribbon-segment__meter-track" x="0" y="0" width="1000" height="7" rx="3.5" />
+                                <rect class="ribbon-segment__meter-value"
+                                      x="0"
+                                      y="0"
+                                      width="@SvgNumber(CriticalWidth(item.span))"
+                                      height="7"
+                                      rx="3.5" />
+                            </svg>
+                        </button>
+                    </MudTooltip>
+                </div>
+            }
+        </div>
+    }
 </section>
 
 @code {
@@ -93,23 +132,34 @@
         }
     }
 
-    private string SpanLabel(ModuleDiagnosticsTraceSpan span)
+    private ModuleDiagnosticsTraceDisplay TraceDisplay(ModuleDiagnosticsTraceSpan span) => Session.Snapshot is { } snapshot
+        ? ModuleDiagnosticsDisplay.TraceSpan(span, snapshot, L)
+        : new ModuleDiagnosticsTraceDisplay(span.Name ?? L["Common:Unknown"], L[$"Enums:TraceKind:{span.Kind}"]);
+
+    private string SpanTooltip(ModuleDiagnosticsTraceSpan span, ModuleDiagnosticsTraceDisplay display) => L[
+        "Overview:CriticalPath:SpanDescription",
+        display.Primary,
+        display.Secondary,
+        ModuleDiagnosticsDisplay.Duration(span.DurationMs)];
+
+    private double CriticalWidth(ModuleDiagnosticsTraceSpan span) => MaxCriticalDuration <= 0
+        ? 0
+        : Math.Clamp(span.DurationMs / MaxCriticalDuration * 1000, 3, 1000);
+
+    private double MaxCriticalDuration => CriticalSpans
+        .Select(static span => span.DurationMs)
+        .DefaultIfEmpty(0)
+        .Max();
+
+    private static string SpanKindClass(ModuleDiagnosticsTraceSpanKind kind) => kind switch
     {
-        if (span.SystemStage is { } stage)
-        {
-            return ModuleDiagnosticsDisplay.Stage(stage, L);
-        }
+        ModuleDiagnosticsTraceSpanKind.SystemStage => "ribbon-kind--system",
+        ModuleDiagnosticsTraceSpanKind.ModuleCallback => "ribbon-kind--callback",
+        ModuleDiagnosticsTraceSpanKind.StartupWork => "ribbon-kind--work",
+        ModuleDiagnosticsTraceSpanKind.StartupBarrier => "ribbon-kind--barrier",
+        _ => "ribbon-kind--system"
+    };
 
-        if (span.Kind == ModuleDiagnosticsTraceSpanKind.StartupBarrier && span.Barrier is { } barrier)
-        {
-            return L[$"Enums:Barrier:{barrier}"];
-        }
-
-        if (span.CallbackKind is { } callback)
-        {
-            return ModuleDiagnosticsDisplay.Callback(callback, L);
-        }
-
-        return span.Name ?? L["Common:Unknown"];
-    }
+    private static string SvgNumber(double value) =>
+        value.ToString("0.###", System.Globalization.CultureInfo.InvariantCulture);
 }

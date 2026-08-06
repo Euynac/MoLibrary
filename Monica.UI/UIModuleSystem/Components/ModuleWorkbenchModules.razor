@@ -11,10 +11,40 @@
             <div>
                 <MudText Typo="Typo.overline">@L["Modules:Eyebrow"]</MudText>
                 <MudText Typo="Typo.h5" HtmlTag="h2" id="module-catalog-title">@L["Modules:Title"]</MudText>
-                <MudText Typo="Typo.body2" Color="Color.Secondary">
+                <MudText Typo="Typo.body2" Color="Color.Secondary" Class="module-catalog-result">
                     @L["Modules:ResultCount", Session.FilteredModules.Count, Session.Snapshot?.Modules.Length ?? 0]
                 </MudText>
             </div>
+            <div class="module-cost-legend" aria-label="@L["Modules:Cost:Legend"]">
+                <span class="module-cost-legend__callbacks">@L["Modules:Cost:Callbacks"]</span>
+                <span class="module-cost-legend__startup">@L["Modules:Cost:StartupWork"]</span>
+                <MudTooltip Text="@L["Modules:Cost:ScaleHint"]">
+                    <MudIcon Icon="@Icons.Material.Filled.Info" Size="Size.Small" Color="Color.Secondary" />
+                </MudTooltip>
+            </div>
+        </div>
+
+        <div class="module-summary" aria-label="@L["Modules:Summary:Label"]">
+            <article class="module-summary__active">
+                <MudIcon Icon="@Icons.Material.Filled.CheckCircle" />
+                <span>@L["Modules:Summary:Active"]</span>
+                <strong>@ActiveModuleCount</strong>
+            </article>
+            <article class="module-summary__ui">
+                <MudIcon Icon="@Icons.Material.Filled.DashboardCustomize" />
+                <span>@L["Modules:Summary:Ui"]</span>
+                <strong>@UiModuleCount</strong>
+            </article>
+            <article class="module-summary__web">
+                <MudIcon Icon="@Icons.Material.Filled.Language" />
+                <span>@L["Modules:Summary:Web"]</span>
+                <strong>@WebModuleCount</strong>
+            </article>
+            <article class="module-summary__depth">
+                <MudIcon Icon="@Icons.Material.Filled.Layers" />
+                <span>@L["Modules:Summary:MaximumDepth"]</span>
+                <strong>@MaximumDependencyDepth</strong>
+            </article>
         </div>
 
         <div class="module-filters">
@@ -26,11 +56,13 @@
                           Immediate="true"
                           Clearable="true"
                           Adornment="Adornment.Start"
-                          AdornmentIcon="@Icons.Material.Filled.Search" />
+                          AdornmentIcon="@Icons.Material.Filled.Search"
+                          Margin="Margin.Dense" />
             <MudSelect T="ModuleCatalogStateFilter"
                        Label="@L["Modules:Filters:State"]"
                        Value="@Session.ModuleStateFilter"
-                       ValueChanged="@SetStateFilter">
+                       ValueChanged="@SetStateFilter"
+                       Margin="Margin.Dense">
                 @foreach (var state in Enum.GetValues<ModuleCatalogStateFilter>())
                 {
                     <MudSelectItem T="ModuleCatalogStateFilter" Value="@state">
@@ -41,7 +73,8 @@
             <MudSelect T="ModuleCatalogCapabilityFilter"
                        Label="@L["Modules:Filters:Capability"]"
                        Value="@Session.ModuleCapabilityFilter"
-                       ValueChanged="@SetCapabilityFilter">
+                       ValueChanged="@SetCapabilityFilter"
+                       Margin="Margin.Dense">
                 @foreach (var capability in Enum.GetValues<ModuleCatalogCapabilityFilter>())
                 {
                     <MudSelectItem T="ModuleCatalogCapabilityFilter" Value="@capability">
@@ -53,7 +86,8 @@
                        Label="@L["Modules:Filters:Assembly"]"
                        Value="@Session.ModuleAssemblyFilter"
                        ValueChanged="@SetAssemblyFilter"
-                       Clearable="true">
+                       Clearable="true"
+                       Margin="Margin.Dense">
                 @foreach (var assembly in Session.ModuleAssemblies)
                 {
                     <MudSelectItem T="string" Value="@assembly">@assembly</MudSelectItem>
@@ -63,23 +97,35 @@
                              Label="@L["Modules:Filters:MinimumCost"]"
                              Value="@Session.MinimumModuleCostMs"
                              ValueChanged="@SetMinimumCost"
-                             Min="0" />
+                             Min="0"
+                             Margin="Margin.Dense" />
             <MudSwitch T="bool"
                        Label="@L["Modules:Filters:HasDependencies"]"
                        Value="@Session.OnlyModulesWithDependencies"
                        ValueChanged="@SetDependencyFilter"
                        Color="Color.Primary" />
         </div>
+        @if (HasActiveFilters)
+        {
+            <div class="module-filter-actions">
+                <MudButton Variant="Variant.Text"
+                           Size="Size.Small"
+                           StartIcon="@Icons.Material.Filled.FilterAltOff"
+                           OnClick="ResetFilters">
+                    @L["Actions:Reset"]
+                </MudButton>
+            </div>
+        }
     </section>
 
     <section class="module-table-panel" aria-label="@L["Aria:ModuleCatalog"]">
-        <div class="module-table-wrapper">
+        <div class="module-table-wrapper" role="region" aria-label="@L["Aria:ModuleCatalog"]" tabindex="0">
             <MudTable T="ModuleDiagnosticsModule"
                       Items="@Session.PagedModules"
                       Dense="true"
                       Hover="true"
-                      Striped="true"
-                      Breakpoint="Breakpoint.Sm">
+                      Breakpoint="Breakpoint.Sm"
+                      RowClassFunc="@ModuleRowClass">
                 <HeaderContent>
                     <MudTh>@L["Modules:Columns:Module"]</MudTh>
                     <MudTh>@L["Modules:Columns:State"]</MudTh>
@@ -92,14 +138,40 @@
                 <RowTemplate Context="module">
                     <MudTd DataLabel="@L["Modules:Columns:Module"]">
                         <div class="module-name-cell">
-                            <strong>@module.TypeName</strong>
-                            <CopyableIdentifier Value="@module.FullTypeName" AccessibleName="@module.TypeName" />
+                            <span class="module-avatar @ModuleAvatarClass(module)">
+                                <MudIcon Icon="@ModuleIcon(module)" Size="Size.Small" />
+                            </span>
+                            <span class="module-name-cell__identity">
+                                <strong>@module.TypeName</strong>
+                                <IdentifierValue Value="@module.FullTypeName" />
+                                <span class="module-capabilities">
+                                    @if (module.IsUiModule)
+                                    {
+                                        <MudChip T="string" Size="Size.Small" Color="Color.Secondary" Variant="Variant.Outlined">
+                                            @L["Enums:CatalogCapability:Ui"]
+                                        </MudChip>
+                                    }
+                                    @if (module.IsWebModule)
+                                    {
+                                        <MudChip T="string" Size="Size.Small" Color="Color.Info" Variant="Variant.Outlined">
+                                            @L["Enums:CatalogCapability:Web"]
+                                        </MudChip>
+                                    }
+                                    @if (module.RequiresWebHost)
+                                    {
+                                        <MudChip T="string" Size="Size.Small" Color="Color.Primary" Variant="Variant.Outlined">
+                                            @L["Enums:CatalogCapability:WebHostRequired"]
+                                        </MudChip>
+                                    }
+                                </span>
+                            </span>
                         </div>
                     </MudTd>
                     <MudTd DataLabel="@L["Modules:Columns:State"]">
                         <MudChip T="string"
                                  Size="Size.Small"
                                  Variant="Variant.Outlined"
+                                 Icon="@(module.IsActive ? Icons.Material.Filled.CheckCircle : Icons.Material.Filled.Block)"
                                  Color="@(module.IsActive ? Color.Success : Color.Default)">
                             @(module.IsActive ? L["Enums:ModuleState:Active"] : L["Enums:ModuleState:Disabled"])
                         </MudChip>
@@ -107,11 +179,23 @@
                     <MudTd DataLabel="@L["Modules:Columns:Assembly"]">
                         <MudTooltip Text="@module.AssemblyName"><span class="ellipsis-value">@module.AssemblyName</span></MudTooltip>
                     </MudTd>
-                    <MudTd DataLabel="@L["Modules:Columns:Depth"]">@module.DependencyDepth</MudTd>
-                    <MudTd DataLabel="@L["Modules:Columns:Dependencies"]">
-                        @L["Modules:DependencyCounts", module.DirectDependencyCount, module.DirectDependentCount]
+                    <MudTd DataLabel="@L["Modules:Columns:Depth"]">
+                        <MudChip T="int" Size="Size.Small" Variant="Variant.Outlined" Color="Color.Primary">
+                            @module.DependencyDepth
+                        </MudChip>
                     </MudTd>
-                    <MudTd DataLabel="@L["Modules:Columns:Cost"]">@ModuleDiagnosticsDisplay.Duration(ModuleCost(module))</MudTd>
+                    <MudTd DataLabel="@L["Modules:Columns:Dependencies"]">
+                        <span class="module-relationships">
+                            <MudIcon Icon="@Icons.Material.Filled.AccountTree" Size="Size.Small" Color="Color.Info" />
+                            @L["Modules:DependencyCounts", module.DirectDependencyCount, module.DirectDependentCount]
+                        </span>
+                    </MudTd>
+                    <MudTd DataLabel="@L["Modules:Columns:Cost"]">
+                        <ModuleCostBreakdownBar ModuleName="@module.TypeName"
+                                                CallbackDurationMs="@module.SerialCallbackDurationMs"
+                                                StartupWorkDurationMs="@module.StartupWorkDurationMs"
+                                                MaximumDurationMs="@MaximumModuleCost" />
+                    </MudTd>
                     <MudTd DataLabel="@L["Modules:Columns:Actions"]">
                         <MudIconButton Icon="@Icons.Material.Filled.ChevronRight"
                                        Color="Color.Primary"
@@ -179,6 +263,49 @@
 
     private void SetPage(int page) => Session.SetModulePaging(page, Session.ModulePageSize);
     private void SetPageSize(int pageSize) => Session.SetModulePaging(1, pageSize);
+
+    private int ActiveModuleCount => Session.Snapshot?.Modules.Count(static module => module.IsActive) ?? 0;
+    private int UiModuleCount => Session.Snapshot?.Modules.Count(static module => module.IsUiModule) ?? 0;
+    private int WebModuleCount => Session.Snapshot?.Modules.Count(static module => module.IsWebModule) ?? 0;
+    private int MaximumDependencyDepth => Session.Snapshot?.Modules
+        .Select(static module => module.DependencyDepth)
+        .DefaultIfEmpty(0)
+        .Max() ?? 0;
+    private double MaximumModuleCost => Session.Snapshot?.Modules
+        .Select(ModuleCost)
+        .DefaultIfEmpty(0)
+        .Max() ?? 0;
+    private bool HasActiveFilters => !string.IsNullOrWhiteSpace(Session.ModuleSearch)
+                                     || Session.ModuleStateFilter != ModuleCatalogStateFilter.All
+                                     || Session.ModuleCapabilityFilter != ModuleCatalogCapabilityFilter.All
+                                     || !string.IsNullOrWhiteSpace(Session.ModuleAssemblyFilter)
+                                     || Session.OnlyModulesWithDependencies
+                                     || Session.MinimumModuleCostMs > 0;
+
+    private void ResetFilters() => Session.SetModuleFilters(
+        string.Empty,
+        ModuleCatalogStateFilter.All,
+        ModuleCatalogCapabilityFilter.All,
+        assembly: null,
+        onlyWithDependencies: false,
+        minimumCostMs: 0);
+
+    private string ModuleRowClass(ModuleDiagnosticsModule module, int _) =>
+        Session.SelectedModule?.ModuleKey == module.ModuleKey ? "module-row-selected" : string.Empty;
+
+    private static string ModuleAvatarClass(ModuleDiagnosticsModule module) => module switch
+    {
+        { IsUiModule: true } => "module-avatar--ui",
+        { IsWebModule: true } => "module-avatar--web",
+        _ => "module-avatar--core"
+    };
+
+    private static string ModuleIcon(ModuleDiagnosticsModule module) => module switch
+    {
+        { IsUiModule: true } => Icons.Material.Filled.DashboardCustomize,
+        { IsWebModule: true } => Icons.Material.Filled.Language,
+        _ => Icons.Material.Filled.Extension
+    };
 
     private static double ModuleCost(ModuleDiagnosticsModule module) =>
         module.SerialCallbackDurationMs + module.StartupWorkDurationMs;
