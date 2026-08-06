@@ -4,15 +4,14 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Monica.Authority.Authorization.Abstractions;
 using Monica.Authority.Authorization.Exceptions;
-using Monica.Authority.Authorization.Services.Behaviors;
 using Monica.Authority.Authorization.Services;
+using Monica.Authority.Authorization.Services.Behaviors;
 using Monica.Authority.Authorization.Services.Support;
 using Monica.Authority.Localization;
 using Monica.Core;
 using Monica.Core.Execution;
 using Monica.Core.Modularity;
 using Monica.Core.Modularity.Abstractions;
-using Monica.Core.Modularity.Annotations;
 using Monica.Core.Modularity.Models;
 
 // ReSharper disable once CheckNamespace
@@ -23,119 +22,112 @@ public static class ModuleAuthorizationBuilderExtensions
     extension(IMonicaBuilder builder)
     {
         /// <summary>
-        /// Configure the Authorization module
+        /// Registers authorization with the host's primary permission-bit definition.
         /// </summary>
-        public ModuleAuthorizationGuide AddAuthorization<TEnum>(string claimTypeDefinition) where TEnum : struct, Enum
+        public ModuleRegistration<ModuleAuthorization, ModuleAuthorizationOption> AddAuthorization<TEnum>(
+            string claimTypeDefinition)
+            where TEnum : struct, Enum
         {
-            return builder.AddModule<ModuleAuthorization, ModuleAuthorizationOption, ModuleAuthorizationGuide>()
+            return builder.AddModule<ModuleAuthorization, ModuleAuthorizationOption>()
                 .AddDefaultPermissionBit<TEnum>(claimTypeDefinition);
+        }
+    }
+
+    extension(ModuleRegistration<ModuleAuthorization, ModuleAuthorizationOption> registration)
+    {
+        internal ModuleRegistration<ModuleAuthorization, ModuleAuthorizationOption> AddDefaultPermissionBit<TEnum>(
+            string claimTypeDefinition)
+            where TEnum : struct, Enum
+        {
+            return registration
+                .AddPermissionBit<TEnum>(claimTypeDefinition)
+                .ConfigureServices(context =>
+                    context.Services.AddSingleton<IPermissionChecker, PermissionChecker<TEnum>>())
+                .SatisfyFeature(ModuleAuthorization.DEFAULT_PERMISSION_FEATURE);
+        }
+
+        /// <summary>
+        /// Adds another permission-bit definition to authorization checks.
+        /// </summary>
+        public ModuleRegistration<ModuleAuthorization, ModuleAuthorizationOption> AddPermissionBit<TEnum>(
+            string claimTypeDefinition)
+            where TEnum : struct, Enum
+        {
+            ArgumentException.ThrowIfNullOrWhiteSpace(claimTypeDefinition);
+            return registration.ConfigureServices(context =>
+            {
+                var checker = new PermissionBitChecker<TEnum>(claimTypeDefinition);
+                context.Services.AddSingleton<IPermissionBitChecker<TEnum>>(_ => checker);
+            });
+        }
+
+        /// <summary>
+        /// Replaces authorization with permissive implementations for explicitly trusted hosts.
+        /// </summary>
+        public ModuleRegistration<ModuleAuthorization, ModuleAuthorizationOption> ConfigAsAlwaysAllow()
+        {
+            return registration.ConfigureServices(context =>
+            {
+                context.Services.Replace(ServiceDescriptor.Singleton<IAuthorizationService, AlwaysAllowAuthorizationService>());
+                context.Services.Replace(ServiceDescriptor.Singleton<IAuthorityAuthorizationService, AlwaysAllowAuthorizationService>());
+                context.Services.Replace(ServiceDescriptor
+                    .Singleton<IExecutionAuthorizationService, AlwaysAllowExecutionAuthorizationService>());
+                context.Services.Replace(ServiceDescriptor.Singleton<IPermissionChecker, AlwaysAllowPermissionChecker>());
+            }, ModuleRegistrationOrder.Late);
         }
     }
 }
 
-[ModuleKey(BuiltInModuleKey.Authority)]
-public class ModuleAuthorization(ModuleAuthorizationOption option) : WebModuleBase<ModuleAuthorization, ModuleAuthorizationOption, ModuleAuthorizationGuide>(option)
+/// <summary>
+/// Composes authorization middleware, services, localization, exception mapping, and execution behavior.
+/// </summary>
+public class ModuleAuthorization : MonicaModule<ModuleAuthorizationOption>, IWebHostRequiredModule
 {
-    public override void ConfigureApplicationBuilder(IApplicationBuilder app)
+    internal const string DEFAULT_PERMISSION_FEATURE = "default-permission-bit";
+
+    public override void Describe(ModuleDescriptor module)
     {
-        app.UseAuthorization();
+        module.RequireFeature(DEFAULT_PERMISSION_FEATURE);
+        module.Require<ModuleLocalization, ModuleLocalizationOption>(localization =>
+        {
+            if (!localization.ResourceMarkerTypes.Contains(typeof(AuthorityResource)))
+            {
+                localization.ResourceMarkerTypes.Add(typeof(AuthorityResource));
+            }
+        });
+        module.Require<ModuleExceptionHandling, ModuleExceptionHandlingOption>(
+            options => options.AddExceptionMapper<AuthorizationExceptionMapper>());
+        module.Require<ModuleAuthentication, ModuleAuthenticationOption>();
+        module.Require<ModuleExecutionPipeline, ModuleExecutionPipelineOption>(options =>
+            options.AddBehavior(
+                typeof(ExecutionAuthorizationBehavior<,>),
+                ExecutionBehaviorOrder.Authorization,
+                static descriptor => descriptor.IsBusinessOperation
+                                     && ExecutionAuthorizationMetadata.RequiresAuthorization(descriptor)));
     }
 
-    protected override int GetConfigureApplicationBuilderOrder()
+    public override void ConfigureApplicationBuilder(WebModuleContext<ModuleAuthorizationOption> context)
     {
-        return (int)ModuleApplicationMiddlewareOrder.AfterUseRouting;
+        context.ApplicationBuilder.UseAuthorization();
     }
 
-    public override void ConfigureServices(IServiceCollection services)
+    protected override ModuleWebStage GetApplicationBuilderStage() => ModuleWebStage.AfterRouting;
+
+    public override void ConfigureServices(ModuleContext<ModuleAuthorizationOption> context)
     {
+        var services = context.Services;
         services.TryAddSingleton<AuthorityMessageLocalizer>();
         services.AddAuthorization();
         services.AddSingleton<IAuthorizationHandler, PolicyEnumPermissionRequirementHandler>();
         services.AddTransient<DefaultAuthorizationPolicyProvider>();
-
         services.AddSingleton<IAuthorizationService, AuthorityAuthorizationService>();
         services.AddSingleton<IAuthorityAuthorizationService, AuthorityAuthorizationService>();
         services.AddSingleton<IExecutionAuthorizationService, ExecutionAuthorizationService>();
-
         services.AddTransient<IAuthorityAuthorizationPolicyProvider, PolicyEnumAuthorizationProvider>();
-
-    }
-
-    public override void ClaimDependencies()
-    {
-        DependsOnModule<ModuleLocalizationGuide>().Register()
-            .AddResource<AuthorityResource>();
-
-        if (!Option.DisableExceptionHandling)
-        {
-            DependsOnModule<ModuleExceptionHandlingGuide>().Register()
-                .AddExceptionMapper<AuthorizationExceptionMapper>();
-        }
-        DependsOnModule<ModuleAuthenticationGuide>().Register();
-        DependsOnModule<ModuleExecutionPipelineGuide>().Register()
-            .AddBehavior(
-                typeof(ExecutionAuthorizationBehavior<,>),
-                ExecutionBehaviorOrder.Authorization,
-                static descriptor => descriptor.IsBusinessOperation
-                                     && ExecutionAuthorizationMetadata.RequiresAuthorization(descriptor));
     }
 }
 
-public class ModuleAuthorizationGuide : WebModuleGuide<ModuleAuthorization, ModuleAuthorizationOption, ModuleAuthorizationGuide>
-{
-    protected override string[] GetRequestedConfigMethodKeys()
-    {
-        return [nameof(AddDefaultPermissionBit)];
-    }
-
-    /// <summary>
-    /// Register the PermissionBit definition used for authorization checks
-    /// </summary>
-    /// <typeparam name="TEnum"></typeparam>
-    /// <param name="claimTypeDefinition"></param>
-    /// <returns></returns>
-    internal ModuleAuthorizationGuide AddDefaultPermissionBit<TEnum>(string claimTypeDefinition) where TEnum : struct, Enum
-    {
-        ConfigureServices(context =>
-        {
-            var checker = new PermissionBitChecker<TEnum>(claimTypeDefinition);
-            context.Services.AddSingleton<IPermissionBitChecker<TEnum>, PermissionBitChecker<TEnum>>(_ => checker);
-            context.Services.AddSingleton<IPermissionChecker, PermissionChecker<TEnum>>();
-        });
-        return this;
-    }
-    /// <summary>
-    /// Register an additional PermissionBit definition
-    /// </summary>
-    /// <typeparam name="TEnum"></typeparam>
-    /// <param name="claimTypeDefinition"></param>
-    /// <returns></returns>
-    public ModuleAuthorizationGuide AddPermissionBit<TEnum>(string claimTypeDefinition) where TEnum : struct, Enum
-    {
-        ConfigureServices(context =>
-        {
-            var checker = new PermissionBitChecker<TEnum>(claimTypeDefinition);
-            context.Services.AddSingleton<IPermissionBitChecker<TEnum>, PermissionBitChecker<TEnum>>(_ => checker);
-        }, secondKey: typeof(TEnum).Name);
-        return this;
-    }
-
-    public ModuleAuthorizationGuide ConfigAsAlwaysAllow()
-    {
-        ConfigureServices(context =>
-        {
-            context.Services.Replace(ServiceDescriptor.Singleton<IAuthorizationService, AlwaysAllowAuthorizationService>());
-            context.Services.Replace(ServiceDescriptor.Singleton<IAuthorityAuthorizationService, AlwaysAllowAuthorizationService>());
-            context.Services.Replace(ServiceDescriptor
-                .Singleton<IExecutionAuthorizationService, AlwaysAllowExecutionAuthorizationService>());
-            context.Services.Replace(ServiceDescriptor.Singleton<IPermissionChecker, AlwaysAllowPermissionChecker>());
-        }, ModuleRegistrationOrder.PostConfig);
-        return this;
-    }
-
-}
-
-public class ModuleAuthorizationOption : ModuleOptions<ModuleAuthorization>
-{
-    public bool DisableExceptionHandling { get; set; }
-}
+/// <summary>
+/// Provides the host-owned authorization configuration object.
+/// </summary>
+public class ModuleAuthorizationOption : ModuleOptions<ModuleAuthorization>;

@@ -4,7 +4,6 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
 using Monica.Core;
 using Monica.Core.Modularity.Abstractions;
-using Monica.Core.Modularity.Annotations;
 using Monica.Core.Modularity.Extensions;
 using Xunit;
 
@@ -36,9 +35,11 @@ public sealed class MonicaHostOwnershipTests
         secondApplication.ModuleSystem.DefaultApiGroupName.Should().Be("second-host-api");
 
         firstModule.Should().NotBeSameAs(secondModule);
-        firstModule.Option.HostName.Should().Be("first-host");
-        secondModule.Option.HostName.Should().Be("second-host");
+        firstModule.HostName.Should().Be("first-host");
+        secondModule.HostName.Should().Be("second-host");
         firstOptions.Should().NotBeSameAs(secondOptions);
+        firstOptions.Should().BeSameAs(firstModule.ConfiguredOptions);
+        secondOptions.Should().BeSameAs(secondModule.ConfiguredOptions);
         firstOptions.HostName.Should().Be("first-host");
         secondOptions.HostName.Should().Be("second-host");
 
@@ -71,7 +72,7 @@ public sealed class MonicaHostOwnershipTests
 
             secondApplication.Modules.Logger.Should().NotBeNull();
             secondApplication.Application.ProjectName.Should().Be("second-host");
-            GetOwnershipModule(secondApplication).Option.HostName.Should().Be("second-host");
+            GetOwnershipModule(secondApplication).HostName.Should().Be("second-host");
         }
         finally
         {
@@ -112,7 +113,7 @@ public sealed class MonicaHostOwnershipTests
 
                 application.Application.ProjectName.Should().Be(expectedHostName);
                 application.ModuleSystem.DefaultApiGroupName.Should().Be($"{expectedHostName}-api");
-                GetOwnershipModule(application).Option.HostName.Should().Be(expectedHostName);
+                GetOwnershipModule(application).HostName.Should().Be(expectedHostName);
                 options.HostName.Should().Be(expectedHostName);
             }
         }
@@ -135,7 +136,7 @@ public sealed class MonicaHostOwnershipTests
             monica.ConfigureTypeDiscovery(options => options
                 .ExcludeDefault()
                 .Add(typeof(MonicaHostOwnershipTests).Assembly));
-            monica.AddModule<HostOwnershipModule, HostOwnershipModuleOption, HostOwnershipModuleGuide>(
+            monica.AddModule<HostOwnershipModule, HostOwnershipModuleOption>(
                 options => options.HostName = hostName);
         });
 
@@ -151,25 +152,24 @@ public sealed class MonicaHostOwnershipTests
     }
 }
 
-[ModuleKey("Test.Monica.Core.HostOwnership")]
-public sealed class HostOwnershipModule(HostOwnershipModuleOption option)
-    : ModuleBase<HostOwnershipModule, HostOwnershipModuleOption, HostOwnershipModuleGuide>(option)
+internal sealed class HostOwnershipModule : MonicaModule<HostOwnershipModuleOption>
 {
-    public override void ConfigureServices(IServiceCollection services)
+    public HostOwnershipModuleOption ConfiguredOptions => Option;
+
+    public string HostName => Option.HostName;
+
+    public override void ConfigureServices(ModuleContext<HostOwnershipModuleOption> context)
     {
-        services.AddSingleton<HostOwnedResource>();
+        context.Services.AddSingleton<HostOwnedResource>();
     }
 }
 
-public sealed class HostOwnershipModuleGuide
-    : ModuleGuide<HostOwnershipModule, HostOwnershipModuleOption, HostOwnershipModuleGuide>;
-
-public sealed class HostOwnershipModuleOption : ModuleOptions<HostOwnershipModule>
+internal sealed class HostOwnershipModuleOption : ModuleOptions<HostOwnershipModule>
 {
     public string HostName { get; set; } = string.Empty;
 }
 
-public sealed class HostOwnedResource : IDisposable
+internal sealed class HostOwnedResource : IDisposable
 {
     public bool IsDisposed { get; private set; }
 

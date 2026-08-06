@@ -2,8 +2,6 @@ using Microsoft.Extensions.DependencyInjection;
 using Monica.Core;
 using Monica.Core.Modularity;
 using Monica.Core.Modularity.Abstractions;
-using Monica.Core.Modularity.Annotations;
-using Monica.Core.Modularity.Models;
 using Monica.JobScheduler.UI.Localization;
 using Monica.JobScheduler.UI.Pages;
 using Monica.JobScheduler.UI.UIJobScheduler.Shared.Support;
@@ -20,9 +18,53 @@ public static class ModuleJobSchedulerUIBuilderExtensions
         /// <summary>
         /// Configure the JobSchedulerUI module
         /// </summary>
-        public ModuleJobSchedulerUIGuide AddJobSchedulerUI(Action<ModuleJobSchedulerUIOption>? action = null)
+        public ModuleRegistration<ModuleJobSchedulerUI, ModuleJobSchedulerUIOption> AddJobSchedulerUI(
+            Action<ModuleJobSchedulerUIOption>? action = null)
         {
-            return builder.AddModule<ModuleJobSchedulerUI, ModuleJobSchedulerUIOption, ModuleJobSchedulerUIGuide>(action);
+            var registration = builder.AddModule<ModuleJobSchedulerUI, ModuleJobSchedulerUIOption>(action);
+            registration.Require<ModuleStackTraceUI, ModuleStackTraceUIOption>();
+            registration.Require<ModuleLocalization, ModuleLocalizationOption>()
+                .AddResource<JobSchedulerResource>();
+            registration.Require<ModuleShellUI, ModuleShellUIOption>()
+                .RegisterUIComponents(registry =>
+                {
+                    registry.RegisterLocalizedPage<DashboardPage, JobSchedulerResource>(
+                        DashboardPage.PAGE_URL,
+                        "Pages:JobSchedulerDashboard:Title",
+                        Icons.Material.Filled.Dashboard,
+                        BuiltInNavigationCategoryIds.TaskScheduling,
+                        addToNav: true,
+                        navOrder: 99);
+                    registry.RegisterLocalizedPage<MonitorPage, JobSchedulerResource>(
+                        MonitorPage.PAGE_URL,
+                        "Pages:JobSchedulerMonitor:Title",
+                        Icons.Material.Filled.Monitor,
+                        BuiltInNavigationCategoryIds.TaskScheduling,
+                        addToNav: true,
+                        navOrder: 100);
+                    registry.RegisterLocalizedPage<JobDefinitionsPage, JobSchedulerResource>(
+                        JobDefinitionsPage.PAGE_URL,
+                        "Pages:JobDefinitions:Title",
+                        Icons.Material.Filled.WorkOutline,
+                        BuiltInNavigationCategoryIds.TaskScheduling,
+                        addToNav: true,
+                        navOrder: 101);
+                    registry.RegisterLocalizedPage<JobInstancesPage, JobSchedulerResource>(
+                        JobInstancesPage.PAGE_URL,
+                        "Pages:JobInstances:Title",
+                        Icons.Material.Filled.PlaylistPlay,
+                        BuiltInNavigationCategoryIds.TaskScheduling,
+                        addToNav: true,
+                        navOrder: 102);
+                    registry.RegisterLocalizedPage<StatisticsPage, JobSchedulerResource>(
+                        StatisticsPage.PAGE_URL,
+                        "Pages:JobStatistics:Title",
+                        Icons.Material.Filled.Analytics,
+                        BuiltInNavigationCategoryIds.TaskScheduling,
+                        addToNav: true,
+                        navOrder: 103);
+                });
+            return registration;
         }
     }
 }
@@ -31,13 +73,18 @@ public static class ModuleJobSchedulerUIBuilderExtensions
 /// JobScheduler UI module implementation
 /// Provides a job scheduling management interface based on Blazor
 /// </summary>
-[ModuleKey(BuiltInModuleKey.JobSchedulerUI)]
-public class ModuleJobSchedulerUI(ModuleJobSchedulerUIOption option)
-    : ModuleBase<ModuleJobSchedulerUI, ModuleJobSchedulerUIOption, ModuleJobSchedulerUIGuide>(option)
+public class ModuleJobSchedulerUI : MonicaModule<ModuleJobSchedulerUIOption>, IUIModule
 {
-
-    public override void ConfigureServices(IServiceCollection services)
+    /// <inheritdoc />
+    public override void Describe(ModuleDescriptor module)
     {
+        module.Require<ModuleJobScheduler, ModuleJobSchedulerOption>();
+        module.Require<ModuleShellUI, ModuleShellUIOption>();
+    }
+
+    public override void ConfigureServices(ModuleContext<ModuleJobSchedulerUIOption> context)
+    {
+        var services = context.Services;
         // Register UI-only support helpers.
         services.AddScoped<JobStateColorResolver>();
         services.AddSingleton<JobArgsJsonSchemaSupport>();
@@ -45,78 +92,6 @@ public class ModuleJobSchedulerUI(ModuleJobSchedulerUIOption option)
         // StackTraceParser is now registered by ModuleStackTraceUI.
     }
 
-    public override void ClaimDependencies()
-    {
-        DependsOnModule<ModuleLocalizationGuide>().Register()
-            .AddResource<JobSchedulerResource>();
-
-        // Depends on the backend JobScheduler module
-        DependsOnModule<ModuleJobSchedulerGuide>().Register();
-
-        // Depends on UIStackTrace module (for stack trace visualization)
-        DependsOnModule<ModuleStackTraceUIGuide>().Register();
-
-        // Depend on the UI core module and register the page
-        if (!Option.DisableJobSchedulerPages)
-        {
-            DependsOnModule<ModuleShellUIGuide>().Register()
-                .RegisterUIComponents(p =>
-                {
-                    // Overview dashboard
-                    p.RegisterLocalizedPage<DashboardPage, JobSchedulerResource>(
-                        DashboardPage.PAGE_URL,
-                        "Pages:JobSchedulerDashboard:Title",
-                        Icons.Material.Filled.Dashboard,
-                        BuiltInNavigationCategoryIds.TaskScheduling,
-                        addToNav: true,
-                        navOrder: 99);
-
-                    // Real-time monitoring
-                    p.RegisterLocalizedPage<MonitorPage, JobSchedulerResource>(
-                        MonitorPage.PAGE_URL,
-                        "Pages:JobSchedulerMonitor:Title",
-                        Icons.Material.Filled.Monitor,
-                        BuiltInNavigationCategoryIds.TaskScheduling,
-                        addToNav: true,
-                        navOrder: 100);
-
-                    p.RegisterLocalizedPage<JobDefinitionsPage, JobSchedulerResource>(
-                        JobDefinitionsPage.PAGE_URL,
-                        "Pages:JobDefinitions:Title",
-                        Icons.Material.Filled.WorkOutline,
-                        BuiltInNavigationCategoryIds.TaskScheduling,
-                        addToNav: true,
-                        navOrder: 101);
-
-                    p.RegisterLocalizedPage<JobInstancesPage, JobSchedulerResource>(
-                        JobInstancesPage.PAGE_URL,
-                        "Pages:JobInstances:Title",
-                        Icons.Material.Filled.PlaylistPlay,
-                        BuiltInNavigationCategoryIds.TaskScheduling,
-                        addToNav: true,
-                        navOrder: 102);
-
-                    // Statistical analysis
-                    p.RegisterLocalizedPage<StatisticsPage, JobSchedulerResource>(
-                        StatisticsPage.PAGE_URL,
-                        "Pages:JobStatistics:Title",
-                        Icons.Material.Filled.Analytics,
-                        BuiltInNavigationCategoryIds.TaskScheduling,
-                        addToNav: true,
-                        navOrder: 103);
-                });
-        }
-    }
-}
-
-/// <summary>
-/// JobScheduler UI module configuration guide
-/// </summary>
-public class ModuleJobSchedulerUIGuide
-    : ModuleGuide<ModuleJobSchedulerUI, ModuleJobSchedulerUIOption, ModuleJobSchedulerUIGuide>
-{
-    // Configuration methods can be added later if needed
-    // Configure this through IMonicaBuilder.AddJobSchedulerUI(options => { ... }).
 }
 
 /// <summary>
@@ -124,11 +99,6 @@ public class ModuleJobSchedulerUIGuide
 /// </summary>
 public class ModuleJobSchedulerUIOption : ModuleOptions<ModuleJobSchedulerUI>
 {
-    /// <summary>
-    /// Disable the JobScheduler UI page
-    /// </summary>
-    public bool DisableJobSchedulerPages { get; set; } = false;
-
     /// <summary>
     /// Health indicator time window (default 30 days)
     /// Configure statistics for health in the past x time

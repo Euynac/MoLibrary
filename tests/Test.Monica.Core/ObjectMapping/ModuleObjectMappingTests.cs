@@ -4,9 +4,9 @@ using MapsterMapper;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
+using Monica.Core.Modularity.Abstractions;
 using Monica.Core.Modularity.Annotations;
 using Monica.Core.Modularity.Diagnostics.Models;
-using Monica.Core.Modularity.Exceptions;
 using Monica.Core.Modularity.Extensions;
 using Monica.Core.Modularity.Models;
 using Monica.Core.ObjectMapping.Abstractions;
@@ -307,7 +307,7 @@ public sealed class ModuleObjectMappingTests
                 options.CompilationBarrier = ModuleStartupWorkBarrier.BeforeServiceRegistrationCompletion;
             });
 
-        compose.Should().Throw<ModuleRegistrationException>()
+        compose.Should().Throw<InvalidOperationException>()
             .WithMessage($"*{nameof(ModuleObjectMappingOption.CompilationBarrier)} only supports*")
             .WithMessage($"*{ModuleStartupWorkBarrier.NoBarrier}*")
             .WithMessage($"*{ModuleStartupWorkBarrier.BeforeHostLifecycle}*");
@@ -318,9 +318,8 @@ public sealed class ModuleObjectMappingTests
     {
         Action compose = () => BuildHost(mapping => mapping.AddProfile<ThrowingConstructorProfile>());
 
-        compose.Should().Throw<ModuleRegistrationException>()
-            .WithMessage("*Module registration errors:*")
-            .WithMessage("*constructor-profile-failure*");
+        var exception = compose.Should().Throw<InvalidOperationException>().Which;
+        exception.ToString().Should().Contain("constructor-profile-failure");
     }
 
     [Fact]
@@ -328,8 +327,7 @@ public sealed class ModuleObjectMappingTests
     {
         Action compose = () => BuildHost(mapping => mapping.AddProfile<ThrowingRegisterProfile>());
 
-        compose.Should().Throw<ModuleRegistrationException>()
-            .WithMessage("*Module registration errors:*")
+        compose.Should().Throw<InvalidOperationException>()
             .WithMessage("*register-profile-failure*");
     }
 
@@ -391,7 +389,7 @@ public sealed class ModuleObjectMappingTests
     }
 
     private static IHost BuildHost(
-        Action<ModuleObjectMappingGuide>? configureMapping = null,
+        Action<ModuleRegistration<ModuleObjectMapping, ModuleObjectMappingOption>>? configureMapping = null,
         Action<ModuleObjectMappingOption>? configureOption = null)
     {
         var builder = Host.CreateApplicationBuilder();

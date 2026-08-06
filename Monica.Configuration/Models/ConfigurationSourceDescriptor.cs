@@ -31,7 +31,7 @@ public sealed record ConfigurationSourceDescriptor
     public ConfigurationSourceKind Kind { get; init; }
 
     /// <summary>
-    /// Gets whether this source was registered through Monica.Configuration guide APIs.
+    /// Gets whether this source was registered through Monica.Configuration registration APIs.
     /// </summary>
     public bool IsManagedByMonica { get; init; }
 

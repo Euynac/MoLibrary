@@ -7,7 +7,6 @@ using Monica.AI.KnowledgeBase.Providers;
 using Monica.AI.KnowledgeBase.Services;
 using Monica.Core;
 using Monica.Core.Modularity.Abstractions;
-using Monica.Core.Modularity.Annotations;
 using Monica.Core.Modularity.Models;
 using Monica.Markdown.Abstractions;
 
@@ -25,10 +24,10 @@ public static class ModuleKnowledgeBaseBuilderExtensions
         /// Configures knowledge-base inventory and lookup services.
         /// </summary>
         /// <param name="action">Optional configuration action.</param>
-        /// <returns>The knowledge-base module guide.</returns>
-        public ModuleKnowledgeBaseGuide AddKnowledgeBase(Action<ModuleKnowledgeBaseOption>? action = null)
+        /// <returns>The knowledge-base module registration.</returns>
+        public ModuleRegistration<ModuleKnowledgeBase, ModuleKnowledgeBaseOption> AddKnowledgeBase(Action<ModuleKnowledgeBaseOption>? action = null)
         {
-            return builder.AddModule<ModuleKnowledgeBase, ModuleKnowledgeBaseOption, ModuleKnowledgeBaseGuide>(action);
+            return builder.AddModule<ModuleKnowledgeBase, ModuleKnowledgeBaseOption>(action);
         }
     }
 }
@@ -36,20 +35,19 @@ public static class ModuleKnowledgeBaseBuilderExtensions
 /// <summary>
 /// Knowledge-base inventory and lookup module.
 /// </summary>
-[ModuleKey(BuiltInModuleKey.KnowledgeBase)]
-public sealed class ModuleKnowledgeBase(ModuleKnowledgeBaseOption option)
-    : ModuleBase<ModuleKnowledgeBase, ModuleKnowledgeBaseOption, ModuleKnowledgeBaseGuide>(option)
+public sealed class ModuleKnowledgeBase : MonicaModule<ModuleKnowledgeBaseOption>
 {
     /// <inheritdoc />
-    public override void ClaimDependencies()
+    public override void Describe(ModuleDescriptor module)
     {
-        DependsOnModule<ModuleSkillSystemGuide>().Register();
-        DependsOnModule<ModuleMarkdownGuide>().Register();
+        module.Require<ModuleSkillSystem, ModuleSkillSystemOption>();
+        module.Require<ModuleMarkdown, ModuleMarkdownOption>();
     }
 
     /// <inheritdoc />
-    public override void ConfigureServices(IServiceCollection services)
+    public override void ConfigureServices(ModuleContext<ModuleKnowledgeBaseOption> context)
     {
+        var services = context.Services;
         services.TryAddSingleton<IDocumentIndexStateStore, FileDocumentIndexStateStore>();
         services.TryAddSingleton<IKnowledgeDocumentSourceStore, FileKnowledgeDocumentSourceStore>();
         services.TryAddSingleton<IKnowledgeBaseStore, DocumentIndexStateKnowledgeBaseStore>();
@@ -84,64 +82,64 @@ public sealed class ModuleKnowledgeBaseOption : ModuleOptions<ModuleKnowledgeBas
 }
 
 /// <summary>
-/// Knowledge-base module guide.
+/// Registration extensions for the knowledge-base module.
 /// </summary>
-public sealed class ModuleKnowledgeBaseGuide
-    : ModuleGuide<ModuleKnowledgeBase, ModuleKnowledgeBaseOption, ModuleKnowledgeBaseGuide>
+public static class ModuleKnowledgeBaseRegistrationExtensions
 {
     /// <summary>
     /// Uses a custom unified state store implementation.
     /// </summary>
     /// <typeparam name="TStore">Custom document index state store type.</typeparam>
-    /// <returns>The current guide.</returns>
-    public ModuleKnowledgeBaseGuide UseDocumentIndexStateStore<TStore>()
+    /// <returns>The current module registration.</returns>
+    public static ModuleRegistration<ModuleKnowledgeBase, ModuleKnowledgeBaseOption> UseDocumentIndexStateStore<TStore>(this ModuleRegistration<ModuleKnowledgeBase, ModuleKnowledgeBaseOption> module)
         where TStore : class, IDocumentIndexStateStore
     {
-        ConfigureServices(ctx =>
+        module.ConfigureServices(ctx =>
         {
             ctx.Services.AddSingleton<IDocumentIndexStateStore, TStore>();
         });
-        return this;
+        return module;
     }
 
     /// <summary>
     /// Uses the built-in file-based unified state store.
     /// </summary>
-    /// <returns>The current guide.</returns>
-    public ModuleKnowledgeBaseGuide UseDocumentIndexStateFileProvider()
+    /// <returns>The current module registration.</returns>
+    public static ModuleRegistration<ModuleKnowledgeBase, ModuleKnowledgeBaseOption> UseDocumentIndexStateFileProvider(this ModuleRegistration<ModuleKnowledgeBase, ModuleKnowledgeBaseOption> module)
     {
-        ConfigureServices(ctx =>
+        module.ConfigureServices(ctx =>
         {
             ctx.Services.AddSingleton<IDocumentIndexStateStore, FileDocumentIndexStateStore>();
         });
-        return this;
+        return module;
     }
 
     /// <summary>
     /// Uses a custom source content store implementation.
     /// </summary>
     /// <typeparam name="TStore">Custom source document store type.</typeparam>
-    /// <returns>The current guide.</returns>
-    public ModuleKnowledgeBaseGuide UseKnowledgeDocumentSourceStore<TStore>()
+    /// <returns>The current module registration.</returns>
+    public static ModuleRegistration<ModuleKnowledgeBase, ModuleKnowledgeBaseOption> UseKnowledgeDocumentSourceStore<TStore>(this ModuleRegistration<ModuleKnowledgeBase, ModuleKnowledgeBaseOption> module)
         where TStore : class, IKnowledgeDocumentSourceStore
     {
-        ConfigureServices(ctx =>
+        module.ConfigureServices(ctx =>
         {
             ctx.Services.AddSingleton<IKnowledgeDocumentSourceStore, TStore>();
         });
-        return this;
+        return module;
     }
 
     /// <summary>
     /// Uses the built-in file-based source content store.
     /// </summary>
-    /// <returns>The current guide.</returns>
-    public ModuleKnowledgeBaseGuide UseKnowledgeDocumentSourceFileProvider()
+    /// <returns>The current module registration.</returns>
+    public static ModuleRegistration<ModuleKnowledgeBase, ModuleKnowledgeBaseOption> UseKnowledgeDocumentSourceFileProvider(this ModuleRegistration<ModuleKnowledgeBase, ModuleKnowledgeBaseOption> module)
     {
-        ConfigureServices(ctx =>
+        module.ConfigureServices(ctx =>
         {
             ctx.Services.AddSingleton<IKnowledgeDocumentSourceStore, FileKnowledgeDocumentSourceStore>();
         });
-        return this;
+        return module;
     }
+
 }

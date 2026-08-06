@@ -1,6 +1,5 @@
 using Monica.Core.Modularity;
 using Monica.Core.Modularity.Abstractions;
-using Monica.Core.Modularity.Annotations;
 using Monica.Core.Modularity.Models;
 using Monica.Dapr.Services;
 
@@ -9,32 +8,26 @@ namespace Monica.Modules;
 
 public static class ModuleDaprRpcClientBuilderExtensions
 {
-    public static ModuleDaprRpcClientGuide UseDaprProvider(this ModuleRpcClientGuide guide,
+    public static ModuleRegistration<ModuleDaprRpcClient, ModuleDaprRpcClientOption> UseDaprProvider(
+        this ModuleRegistration<ModuleRpcClient, ModuleRpcClientOption> module,
         Action<ModuleDaprRpcClientOption>? action = null)
     {
-        return guide.AddModule<ModuleDaprRpcClient, ModuleDaprRpcClientOption, ModuleDaprRpcClientGuide>(action);
+        module.ConfigHttpClientRegisterProvider<DaprRpcClientProvider>();
+        return module.Include<ModuleDaprRpcClient, ModuleDaprRpcClientOption>(action);
     }
 }
 
-[ModuleKey(BuiltInModuleKey.DaprRpcClient)]
-public class ModuleDaprRpcClient(ModuleDaprRpcClientOption option)
-    : ModuleBase<ModuleDaprRpcClient, ModuleDaprRpcClientOption, ModuleDaprRpcClientGuide>(option)
+public class ModuleDaprRpcClient : MonicaModule<ModuleDaprRpcClientOption>
 {
 
-    public override void ClaimDependencies()
+    public override void Describe(ModuleDescriptor module)
     {
-        DependsOnModule<ModuleDaprClientGuide>().Register();
-        DependsOnModule<ModuleRpcClientGuide>().Register()
-            .ConfigHttpClientRegisterProvider<DaprRpcClientProvider>();
-       
+        module.Require<ModuleDaprClient, ModuleDaprClientOption>();
+        module.Require<ModuleRpcClient, ModuleRpcClientOption>();
     }
 }
 
-public class ModuleDaprRpcClientGuide : ModuleGuide<ModuleDaprRpcClient,
-    ModuleDaprRpcClientOption, ModuleDaprRpcClientGuide>
-{
 
-}
 
 public class ModuleDaprRpcClientOption : ModuleOptions<ModuleDaprRpcClient>
 {

@@ -3,8 +3,6 @@ using Microsoft.Extensions.Logging;
 using Monica.Core;
 using Monica.Core.Modularity;
 using Monica.Core.Modularity.Abstractions;
-using Monica.Core.Modularity.Annotations;
-using Monica.Core.Modularity.Models;
 using Monica.Profiling.MemoryDiagnostics.Facades;
 using Monica.Profiling.MemoryDiagnostics.Providers.DotNetTools;
 using Monica.Profiling.MemoryDiagnostics.Services;
@@ -22,9 +20,10 @@ public static class ModuleMemoryDiagnosticsBuilderExtensions
         /// <summary>
         /// Configures the memory diagnostics module.
         /// </summary>
-        public ModuleMemoryDiagnosticsGuide AddMemoryDiagnostics(Action<ModuleMemoryDiagnosticsOption>? action = null)
+        public ModuleRegistration<ModuleMemoryDiagnostics, ModuleMemoryDiagnosticsOption> AddMemoryDiagnostics(
+            Action<ModuleMemoryDiagnosticsOption>? action = null)
         {
-            return builder.AddModule<ModuleMemoryDiagnostics, ModuleMemoryDiagnosticsOption, ModuleMemoryDiagnosticsGuide>(action);
+            return builder.AddModule<ModuleMemoryDiagnostics, ModuleMemoryDiagnosticsOption>(action);
         }
     }
 }
@@ -32,27 +31,18 @@ public static class ModuleMemoryDiagnosticsBuilderExtensions
 /// <summary>
 /// Memory diagnostics module.
 /// </summary>
-[ModuleKey(BuiltInModuleKey.MemoryDiagnostics)]
-public class ModuleMemoryDiagnostics(ModuleMemoryDiagnosticsOption option)
-    : ModuleBase<ModuleMemoryDiagnostics, ModuleMemoryDiagnosticsOption, ModuleMemoryDiagnosticsGuide>(option)
+public class ModuleMemoryDiagnostics : MonicaModule<ModuleMemoryDiagnosticsOption>
 {
     /// <inheritdoc />
-    public override void ConfigureServices(IServiceCollection services)
+    public override void ConfigureServices(ModuleContext<ModuleMemoryDiagnosticsOption> context)
     {
+        var services = context.Services;
         services.AddSingleton<DotNetGcDumpProvider>();
         services.AddSingleton<MemoryDiagnosticsService>();
         services.AddScoped(sp => new MemoryDiagnosticsFacade(
             sp.GetRequiredService<MemoryDiagnosticsService>(),
             sp.GetRequiredService<ILogger<MemoryDiagnosticsFacade>>()));
     }
-}
-
-/// <summary>
-/// Fluent guide for the memory diagnostics module.
-/// </summary>
-public class ModuleMemoryDiagnosticsGuide
-    : ModuleGuide<ModuleMemoryDiagnostics, ModuleMemoryDiagnosticsOption, ModuleMemoryDiagnosticsGuide>
-{
 }
 
 /// <summary>

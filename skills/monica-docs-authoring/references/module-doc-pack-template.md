@@ -9,7 +9,7 @@ This is the default output shape for a Monica module.
 ├── index.md
 ├── quick-start.md
 ├── configuration.md
-├── guide-and-providers.md
+├── registration-and-providers.md
 └── scenarios.md
 ```
 
@@ -49,7 +49,7 @@ sidebar_position: 1
 
 - [Quick Start](./quick-start.md)
 - [Configuration](./configuration.md)
-- [Guide and Providers](./guide-and-providers.md)
+- [Registration and Providers](./registration-and-providers.md)
 - [Scenarios](./scenarios.md)
 ````
 
@@ -117,24 +117,24 @@ Add this section only when the module exposes extra options types.
 
 ## Required setup
 
-Add this section when `GetRequestedConfigMethodKeys()` or equivalent public requirements exist.
+Add this section when the module declares required features through `RequireFeature(...)` or exposes another explicit public requirement.
 
 | Requirement | Satisfied by | Notes |
 |---|---|---|
 ````
 
-## 4. `guide-and-providers.md`
+## 4. `registration-and-providers.md`
 
 ````md
 ---
-title: Guide and Providers
-description: Guide methods, provider choices, and dependency notes for {Module Display Name}.
+title: Registration and Providers
+description: Registration extensions, provider choices, and dependency notes for {Module Display Name}.
 sidebar_position: 4
 ---
 
-# Guide and Providers
+# Registration and Providers
 
-## Guide methods
+## Registration extensions
 
 | Method | What it enables | Required | Typical use |
 |---|---|---|---|

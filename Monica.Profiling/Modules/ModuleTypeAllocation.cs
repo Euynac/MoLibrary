@@ -3,8 +3,6 @@ using Microsoft.Extensions.Logging;
 using Monica.Core;
 using Monica.Core.Modularity;
 using Monica.Core.Modularity.Abstractions;
-using Monica.Core.Modularity.Annotations;
-using Monica.Core.Modularity.Models;
 using Monica.Profiling.TypeAllocation.Facades;
 using Monica.Profiling.TypeAllocation.Models;
 using Monica.Profiling.TypeAllocation.Providers.ClrMd;
@@ -25,9 +23,29 @@ public static class ModuleTypeAllocationBuilderExtensions
         /// <summary>
         /// Configures the type allocation module.
         /// </summary>
-        public ModuleTypeAllocationGuide AddTypeAllocation(Action<ModuleTypeAllocationOption>? action = null)
+        public ModuleRegistration<ModuleTypeAllocation, ModuleTypeAllocationOption> AddTypeAllocation(
+            Action<ModuleTypeAllocationOption>? action = null)
         {
-            return builder.AddModule<ModuleTypeAllocation, ModuleTypeAllocationOption, ModuleTypeAllocationGuide>(action);
+            return builder.AddModule<ModuleTypeAllocation, ModuleTypeAllocationOption>(action);
+        }
+    }
+
+    extension(ModuleRegistration<ModuleTypeAllocation, ModuleTypeAllocationOption> registration)
+    {
+        /// <summary>
+        /// Starts allocation collection with the host and registers the hosted-service dependency required for it.
+        /// </summary>
+        /// <param name="samplingMode">The sampling mode used when automatic collection starts.</param>
+        /// <returns>The same host-bound registration.</returns>
+        public ModuleRegistration<ModuleTypeAllocation, ModuleTypeAllocationOption> StartAutomatically(
+            AllocationSamplingMode samplingMode = AllocationSamplingMode.High)
+        {
+            registration.Require<ModuleHostedService, ModuleHostedServiceOption>();
+            return registration.Configure(options =>
+            {
+                options.AutoStartCollection = true;
+                options.DefaultSamplingMode = samplingMode;
+            });
         }
     }
 }
@@ -35,22 +53,13 @@ public static class ModuleTypeAllocationBuilderExtensions
 /// <summary>
 /// Type allocation tracking module.
 /// </summary>
-[ModuleKey(BuiltInModuleKey.TypeAllocation)]
-public class ModuleTypeAllocation(ModuleTypeAllocationOption option)
-    : ModuleBase<ModuleTypeAllocation, ModuleTypeAllocationOption, ModuleTypeAllocationGuide>(option)
+public class ModuleTypeAllocation : MonicaModule<ModuleTypeAllocationOption>
 {
     /// <inheritdoc />
-    public override void ClaimDependencies()
-    {
-        if (Option.AutoStartCollection)
-        {
-            DependsOnModule<ModuleHostedServiceGuide>().Register();
-        }
-    }
-
     /// <inheritdoc />
-    public override void ConfigureServices(IServiceCollection services)
+    public override void ConfigureServices(ModuleContext<ModuleTypeAllocationOption> context)
     {
+        var services = context.Services;
         services.AddSingleton(sp =>
         {
             var logger = sp.GetRequiredService<ILogger<TraceEventTypeAllocationProvider>>();
@@ -73,14 +82,6 @@ public class ModuleTypeAllocation(ModuleTypeAllocationOption option)
 }
 
 /// <summary>
-/// Fluent guide for the type allocation module.
-/// </summary>
-public class ModuleTypeAllocationGuide
-    : ModuleGuide<ModuleTypeAllocation, ModuleTypeAllocationOption, ModuleTypeAllocationGuide>
-{
-}
-
-/// <summary>
 /// Configuration options for the type allocation module.
 /// </summary>
 public class ModuleTypeAllocationOption : ModuleOptions<ModuleTypeAllocation>
@@ -89,7 +90,7 @@ public class ModuleTypeAllocationOption : ModuleOptions<ModuleTypeAllocation>
     /// Automatically starts type allocation collection when the module initializes.
     /// This is useful for unattended diagnostics, but it can increase startup overhead.
     /// </summary>
-    public bool AutoStartCollection { get; set; }
+    public bool AutoStartCollection { get; internal set; }
 
     /// <summary>
     /// Selects the allocation sampling mode used when automatic collection starts.

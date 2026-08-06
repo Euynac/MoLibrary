@@ -2,18 +2,19 @@ using AwesomeAssertions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Hosting;
 using Monica.Configuration.Abstractions;
 using Monica.Configuration.EfCore.DbContext;
 using Monica.Configuration.EfCore.Stores;
 using Monica.Configuration.Exceptions;
 using Monica.Configuration.Models;
 using Monica.Configuration.Serialization;
+using Monica.Core.Modularity.Extensions;
 using Monica.DependencyInjection.Abstractions;
 using Monica.DependencyInjection.Services;
 using Monica.Modules;
 using Monica.Repository.Entity.Abstractions;
-using Monica.Repository.Persistence.Abstractions;
-using Monica.Repository.Persistence.Services.Support;
 using Xunit;
 
 namespace Test.Monica.Configuration.EfCore;
@@ -296,27 +297,24 @@ public sealed partial class DatabaseConfigurationStorePublishTests
         string databasePath,
         IInterceptor? interceptor = null)
     {
-        var services = new ServiceCollection();
-        services.AddLogging();
-        services.AddOptions();
-        services.Configure<ModuleRepositoryOption>(static _ => { });
-        services.AddScoped<ICachedServiceProvider, CachedServiceProvider>();
-        services.AddSingleton<IAuditPropertySetter, NoOpAuditPropertySetter>();
-        services.AddSingleton(
-            typeof(IDbContextOperation<ConfigurationDbContext>),
-            typeof(ScopedDbContextOperation<ConfigurationDbContext>));
-        services.AddDbContext<ConfigurationDbContext>((_, options) =>
+        var builder = Host.CreateApplicationBuilder();
+        builder.AddMonica(monica =>
         {
-            ConfigurationStoreTestContextFactory.ConfigureOptions(
-                options,
-                $"Data Source={databasePath}");
-            if (interceptor is not null)
+            monica.ConfigureTypeDiscovery(static options => options.ExcludeDefault());
+            monica.AddConfiguration().UseDbConfigurationStore((_, options) =>
             {
-                options.AddInterceptors(interceptor);
-            }
+                ConfigurationStoreTestContextFactory.ConfigureOptions(
+                    options,
+                    $"Data Source={databasePath}");
+                if (interceptor is not null)
+                {
+                    options.AddInterceptors(interceptor);
+                }
+            });
         });
-        new ModuleConfigurationEfCore(new ModuleConfigurationEfCoreOption()).ConfigureServices(services);
-        return services.BuildServiceProvider();
+        builder.Services.AddScoped<ICachedServiceProvider, CachedServiceProvider>();
+        builder.Services.Replace(ServiceDescriptor.Singleton<IAuditPropertySetter, NoOpAuditPropertySetter>());
+        return builder.Services.BuildServiceProvider();
     }
 
     private static ConfigurationDefinition CreateDefinition(string definitionKey)

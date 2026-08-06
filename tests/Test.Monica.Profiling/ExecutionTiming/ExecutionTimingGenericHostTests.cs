@@ -21,11 +21,17 @@ public sealed class ExecutionTimingGenericHostTests
         ExecutionTimingAggregationMode aggregationMode)
     {
         var builder = Host.CreateApplicationBuilder();
-        builder.AddMonica(monica => monica.AddExecutionTiming(options =>
+        builder.AddMonica(monica =>
         {
-            options.AggregationMode = aggregationMode;
-            options.BackgroundFlushInterval = TimeSpan.FromMilliseconds(10);
-        }));
+            var timing = monica.AddExecutionTiming();
+            _ = aggregationMode switch
+            {
+                ExecutionTimingAggregationMode.Inline => timing.UseInlineAggregation(),
+                ExecutionTimingAggregationMode.BackgroundBatch =>
+                    timing.UseBackgroundBatchAggregation(TimeSpan.FromMilliseconds(10)),
+                _ => throw new ArgumentOutOfRangeException(nameof(aggregationMode), aggregationMode, null)
+            };
+        });
 
         using var host = builder.Build();
         await host.StartAsync(TestContext.Current.CancellationToken);
@@ -41,7 +47,9 @@ public sealed class ExecutionTimingGenericHostTests
         query.GetStatistics("test.generic-host").Should().Match<ExecutionTimingStatistics>(statistics =>
             statistics.ExecutionCount == 1 && statistics.DisplayName == "test.generic-host");
         application.Modules.RuntimeSnapshots.Should().ContainSingle(snapshot =>
-            snapshot.ModuleType == typeof(ModuleExecutionTiming) && snapshot.IsDowngradedFromWebModule);
+            snapshot.ModuleType == typeof(ModuleExecutionTiming)
+            && snapshot.IsWebModule
+            && !snapshot.RequiresWebHost);
 
         await host.StopAsync(TestContext.Current.CancellationToken);
     }

@@ -2,8 +2,8 @@ using Microsoft.Extensions.DependencyInjection;
 using Monica.Core;
 using Monica.Core.Modularity;
 using Monica.Core.Modularity.Abstractions;
-using Monica.Core.Modularity.Annotations;
 using Monica.Core.Modularity.Models;
+using Monica.Core.TypeDiscovery.Models;
 using Monica.Framework.Seeder.Abstractions;
 using Monica.Framework.Seeder.Models;
 using Monica.Framework.Seeder.Services;
@@ -18,9 +18,9 @@ public static class ModuleSeederBuilderExtensions
         /// <summary>
         /// Registers startup seeders and their awaited execution runner.
         /// </summary>
-        public ModuleSeederGuide AddSeeder(Action<ModuleSeederOption>? action = null)
+        public ModuleRegistration<ModuleSeeder, ModuleSeederOption> AddSeeder(Action<ModuleSeederOption>? action = null)
         {
-            return builder.AddModule<ModuleSeeder, ModuleSeederOption, ModuleSeederGuide>(action);
+            return builder.AddModule<ModuleSeeder, ModuleSeederOption>(action);
         }
     }
 }
@@ -28,56 +28,48 @@ public static class ModuleSeederBuilderExtensions
 /// <summary>
 /// Discovers startup seeders and runs each one in an isolated dependency-injection scope.
 /// </summary>
-[ModuleKey(BuiltInModuleKey.Seeder)]
-public sealed class ModuleSeeder(ModuleSeederOption option)
-    : ModuleBase<ModuleSeeder, ModuleSeederOption, ModuleSeederGuide>(option), IBusinessTypeIterator
+public sealed class ModuleSeeder : MonicaModule<ModuleSeederOption>
 {
-    private readonly List<Type> _seedTypes = [];
+    private IReadOnlyList<Type> _seedTypes = [];
 
-    public override void ClaimDependencies()
+    public override void Describe(ModuleDescriptor module)
     {
-        DependsOnModule<ModuleExecutionPipelineGuide>().Register();
+        module.Require<ModuleExecutionPipeline, ModuleExecutionPipelineOption>();
     }
 
-    public IEnumerable<Type> IterateBusinessTypes(IEnumerable<Type> types)
+    /// <inheritdoc />
+    public override void DiscoverTypes(TypeDiscoveryPlan<ModuleSeederOption> discovery)
     {
-        foreach (var type in types)
-        {
-            if (type is { IsClass: true, IsAbstract: false }
-                && typeof(ISeeder).IsAssignableFrom(type))
+        discovery.Match(
+            TypeQuery.ConcreteClass.AssignableTo<ISeeder>(),
+            (context, matches) =>
             {
-                _seedTypes.Add(type);
-            }
+                _seedTypes = matches
+                    .Select(static match => match.Type)
+                    .OrderBy(static type => type.FullName, StringComparer.Ordinal)
+                    .ToArray();
 
-            yield return type;
-        }
+                foreach (var seedType in _seedTypes)
+                {
+                    context.Registrations.Add(ServiceDescriptor.Transient(seedType, seedType));
+                }
+            });
     }
 
-    public override void PostConfigureServices(IServiceCollection services)
+    public override void PostConfigureServices(ModuleContext<ModuleSeederOption> context)
     {
-        var seedTypes = _seedTypes
-            .Distinct()
-            .OrderBy(static type => type.FullName, StringComparer.Ordinal)
-            .ToArray();
-
-        foreach (var seedType in seedTypes)
-        {
-            services.AddTransient(seedType);
-        }
-
-        services.AddHostedService(serviceProvider =>
+        context.Services.AddHostedService(serviceProvider =>
             ActivatorUtilities.CreateInstance<SeederStartupHostedService>(
                 serviceProvider,
-                seedTypes,
-                option.FailureBehavior));
+                _seedTypes,
+                Option.FailureBehavior));
     }
 }
 
 /// <summary>
 /// Provides fluent configuration for startup seeding.
 /// </summary>
-public sealed class ModuleSeederGuide
-    : ModuleGuide<ModuleSeeder, ModuleSeederOption, ModuleSeederGuide>;
+
 
 /// <summary>
 /// Configures startup seeder execution for one Monica host.

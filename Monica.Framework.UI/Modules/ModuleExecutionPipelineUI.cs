@@ -2,8 +2,6 @@ using Microsoft.Extensions.DependencyInjection;
 using Monica.Core;
 using Monica.Core.Modularity;
 using Monica.Core.Modularity.Abstractions;
-using Monica.Core.Modularity.Annotations;
-using Monica.Core.Modularity.Models;
 using Monica.Framework.UI.Localization;
 using Monica.Framework.UI.Pages;
 using Monica.Framework.UI.UIExecutionPipeline.State;
@@ -24,14 +22,22 @@ public static class ModuleExecutionPipelineUIBuilderExtensions
         /// Registers the localized execution-pipeline catalog page for the current Monica host.
         /// </summary>
         /// <param name="configure">Optional page configuration.</param>
-        /// <returns>The module guide for further host composition.</returns>
-        public ModuleExecutionPipelineUIGuide AddExecutionPipelineUI(
+        /// <returns>The host-bound module registration.</returns>
+        public ModuleRegistration<ModuleExecutionPipelineUI, ModuleExecutionPipelineUIOption> AddExecutionPipelineUI(
             Action<ModuleExecutionPipelineUIOption>? configure = null)
         {
-            return builder.AddModule<
-                ModuleExecutionPipelineUI,
-                ModuleExecutionPipelineUIOption,
-                ModuleExecutionPipelineUIGuide>(configure);
+            var registration = builder.AddModule<ModuleExecutionPipelineUI, ModuleExecutionPipelineUIOption>(configure);
+            registration.Require<ModuleLocalization, ModuleLocalizationOption>()
+                .AddResource<ExecutionPipelineResource>();
+            registration.Require<ModuleShellUI, ModuleShellUIOption>()
+                .RegisterUIComponents(registry => registry.RegisterLocalizedPage<UIExecutionPipelinePage, ExecutionPipelineResource>(
+                    UIExecutionPipelinePage.PAGE_URL,
+                    "Pages:ExecutionPipeline:Title",
+                    Icons.Material.Filled.Schema,
+                    BuiltInNavigationCategoryIds.Infrastructure,
+                    addToNav: true,
+                    navOrder: 20));
+            return registration;
         }
     }
 }
@@ -39,47 +45,19 @@ public static class ModuleExecutionPipelineUIBuilderExtensions
 /// <summary>
 /// Registers the execution-pipeline runtime catalog presentation layer.
 /// </summary>
-[ModuleKey(BuiltInModuleKey.ExecutionPipelineUI)]
-public sealed class ModuleExecutionPipelineUI(ModuleExecutionPipelineUIOption option)
-    : ModuleBase<ModuleExecutionPipelineUI, ModuleExecutionPipelineUIOption, ModuleExecutionPipelineUIGuide>(option)
+public sealed class ModuleExecutionPipelineUI : MonicaModule<ModuleExecutionPipelineUIOption>, IUIModule
 {
     /// <inheritdoc />
-    public override void ConfigureServices(IServiceCollection services)
+    public override void Describe(ModuleDescriptor module)
     {
-        if (!Option.DisablePage)
-        {
-            services.AddScoped<ExecutionPipelinePageState>();
-        }
+        module.Require<ModuleExecutionPipeline, ModuleExecutionPipelineOption>();
     }
 
     /// <inheritdoc />
-    public override void ClaimDependencies()
+    public override void ConfigureServices(ModuleContext<ModuleExecutionPipelineUIOption> context)
     {
-        if (Option.DisablePage)
-        {
-            return;
-        }
-
-        DependsOnModule<ModuleExecutionPipelineGuide>().Register();
-        DependsOnModule<ModuleLocalizationGuide>().Register()
-            .AddResource<ExecutionPipelineResource>();
-        DependsOnModule<ModuleShellUIGuide>().Register()
-            .RegisterUIComponents(registry => registry.RegisterLocalizedPage<UIExecutionPipelinePage, ExecutionPipelineResource>(
-                UIExecutionPipelinePage.PAGE_URL,
-                "Pages:ExecutionPipeline:Title",
-                Icons.Material.Filled.Schema,
-                BuiltInNavigationCategoryIds.Infrastructure,
-                addToNav: true,
-                navOrder: 20));
+        context.Services.AddScoped<ExecutionPipelinePageState>();
     }
-}
-
-/// <summary>
-/// Fluent guide for the execution-pipeline catalog UI module.
-/// </summary>
-public sealed class ModuleExecutionPipelineUIGuide
-    : ModuleGuide<ModuleExecutionPipelineUI, ModuleExecutionPipelineUIOption, ModuleExecutionPipelineUIGuide>
-{
 }
 
 /// <summary>
@@ -87,9 +65,4 @@ public sealed class ModuleExecutionPipelineUIGuide
 /// </summary>
 public sealed class ModuleExecutionPipelineUIOption : ModuleOptions<ModuleExecutionPipelineUI>
 {
-    /// <summary>
-    /// Gets or sets whether the execution-pipeline catalog page, its scoped page state, navigation entry, and UI
-    /// dependencies are disabled. This does not disable a Core execution pipeline registered independently.
-    /// </summary>
-    public bool DisablePage { get; set; }
 }

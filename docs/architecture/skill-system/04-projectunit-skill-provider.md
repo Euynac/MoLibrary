@@ -3,7 +3,7 @@
 > **Status.** Design proposal. Phase D of the implementation roadmap.
 > **Audience.** Business-domain teams writing `ApplicationService` / `CrudApplicationService` subclasses — readable without framework expertise.
 > **Depends on.** Doc 02 (`MoSkill<TSelf>`, `[MoAITool]`, description-priority chain), Doc 03 (Facade auto-projection mechanism, `Res<T>` unwrap rule).
-> **Last revised.** 2026-04-29.
+> **Last revised.** 2026-08-06.
 
 ## 0. Why this doc exists
 
@@ -11,7 +11,7 @@ Monica's business layer expresses use cases through `ApplicationService` subclas
 
 Today, none of them are visible to the chat agent. A domain team that wants to expose `OrderApplicationService.Handle(PlaceOrderRequestDto, ...)` as an agent capability has the same boilerplate problem the Facade Provider (Doc 03) solves for framework Facades: hand-roll an `IAIChatToolProvider`, marshal the method through `AIFunctionFactory.Create`, register manually.
 
-This doc specifies a generalized mechanism: a new module `ModuleAIProjectUnitProvider` in `Monica.Framework` that auto-projects every business `ApplicationService` and `CrudApplicationService` discovered by the existing `ModuleProjectUnits` `IBusinessTypeIterator` into one *Skill per ProjectUnit*. The script set inside that Skill mixes `Handle` methods (one per Command/Query application service in the unit) with CRUD methods (one per `CrudApplicationService` exposing read / opt-in mutating ops).
+This doc specifies a generalized mechanism: a new module `ModuleAIProjectUnitProvider` in `Monica.Framework` that auto-projects every business `ApplicationService` and `CrudApplicationService` discovered by `ModuleProjectUnits` into one *Skill per ProjectUnit*. The script set inside that Skill mixes `Handle` methods (one per Command/Query application service in the unit) with CRUD methods (one per `CrudApplicationService` exposing read / opt-in mutating ops).
 
 The most important business-safety call in the entire refactor lives in this doc: **mutating CRUD methods (Create / Update / Delete / BulkDelete) are opt-in.** An agent must not delete a row by default.
 
@@ -22,7 +22,7 @@ The most important business-safety call in the entire refactor lives in this doc
 | Type | File | Role |
 |---|---|---|
 | `ProjectUnit` | `Monica.ProjectUnits/Models/ProjectUnit.cs` | Abstract base for every business unit; carries `Type`, `Title`, `Description`, `Methods`, `Group`. |
-| `ModuleProjectUnits` | `Monica.ProjectUnits/Modules/ModuleProjectUnits.cs` | Implements `IBusinessTypeIterator`; iterates business types and populates the host-owned `IProjectUnitCatalog`. |
+| `ModuleProjectUnits` | `Monica.ProjectUnits/Modules/ModuleProjectUnits.cs` | Declares a compiled `TypeDiscoveryPlan`; its serial commit populates the host-owned `IProjectUnitCatalog` from cached `BusinessTypeShape` values. |
 | `ApplicationService` | `Monica.WebApi/Abstractions/ApplicationService.cs` | Base for business application services (Command / Query). |
 | `CustomApplicationService<TRequest, TResponse>` | same file | Parent of all single-Handle services. |
 | `ApplicationService<TRequest, TResponse>` | same file | Returns `Res<TResponse>`; the typical Query / Command shape. |
@@ -31,7 +31,7 @@ The most important business-safety call in the entire refactor lives in this doc
 
 ### 1.2 The discovery hook is already there
 
-`ModuleProjectUnits.IterateBusinessTypes` already walks every business assembly and populates an `IProjectUnitCatalog` owned by the current host. The Provider in this doc consumes that catalog — it does not re-iterate. New work is purely the projection of each registered `ProjectUnit` into an `AgentSkill`.
+`ModuleProjectUnits.DiscoverTypes` already declares the broad structural query that populates an `IProjectUnitCatalog` owned by the current host. The Provider in this doc consumes that catalog through an ordinary runtime capability source — it does not declare another type query. New work is purely the projection of each registered `ProjectUnit` into an `AgentSkill`.
 
 This makes Phase D the cheapest of the four phases: no new iteration pass, no new marker interface, no parallel registry.
 
@@ -41,31 +41,32 @@ This makes Phase D the cheapest of the four phases: no new iteration pass, no ne
 
 ```
 Monica.Framework/
+  Modules/
+    ModuleAIProjectUnitProvider.cs       // module, options, registration extensions
   AISkillProviders/
     ProjectUnit/
-      Modules/
-        ModuleAIProjectUnitProvider.cs
-        ModuleAIProjectUnitProviderGuide.cs
-        ModuleAIProjectUnitProviderOption.cs
       Internal/
         ProjectUnitSkill.cs              // AgentClassSkill subclass per ProjectUnit
         ProjectUnitMethodScanner.cs      // walks ApplicationService + CrudApplicationService surfaces
         ProjectUnitScriptFactory.cs      // builds AgentSkillScript via CreateScript
 ```
 
-Module key: add `BuiltInModuleKey.AIProjectUnitProvider` (next to `AIFacadeProvider` from Doc 03) in `BuiltInModuleKey.cs`.
+`ModuleAIProjectUnitProvider` is identified by `typeof(ModuleAIProjectUnitProvider)`. No key enum, identifier attribute, or extra configuration class is introduced.
 
-### 1.4 Dependency claims
+### 1.4 Module graph declaration
 
 ```csharp
-public override void ClaimDependencies()
+public override void Describe(ModuleDescriptor module)
 {
-    DependsOnModule<ModuleAIGuide>().Register();
-    DependsOnModule<ModuleSkillSystemGuide>().Register();
-    DependsOnModule<ModuleProjectUnitsGuide>().Register();    // for the registry
-    DependsOnModule<ModuleXmlDocumentationGuide>().Register();
+    module.Require<ModuleAI, ModuleAIOption>();
+    module.Require<ModuleSkillSystem, ModuleSkillSystemOption>();
+    module.Require<ModuleProjectUnits, ModuleProjectUnitsOption>();
+    module.Require<ModuleXmlDocumentation, ModuleXmlDocumentationOption>();
+    module.RequireFeature(REGISTRATION_FEATURE);
 }
 ```
+
+The provider is an ordinary `MonicaModule<ModuleAIProjectUnitProviderOption>`. It implements neither `IWebModule` nor `IUIModule`: `ModuleProjectUnits` owns optional middleware and endpoint contributions, while this provider only contributes an AI capability source. The current `ModuleProjectUnits` implements `IWebModule`, not `IWebHostRequiredModule`; generic hosts therefore still execute its discovery and service-registration lifecycle while omitting web callbacks. The ProjectUnit Skill provider remains valid in both generic and ASP.NET Core hosts.
 
 ## 2. Skill granularity — one Skill per ProjectUnit
 
@@ -286,43 +287,42 @@ For now, projects that need permission gating implement it inside individual `Ha
 
 ## 6. Discovery integration
 
-The Provider's iterator step:
+The Provider does not declare a discovery plan of its own. `ModuleProjectUnits` owns discovery and publishes `IProjectUnitCatalog`; the AI provider registers a runtime capability source that consumes the completed catalog after the service provider exists:
 
 ```csharp
-public sealed class ModuleAIProjectUnitProvider(ModuleAIProjectUnitProviderOption option, IProjectUnitCatalog units)
-    : ModuleBase<ModuleAIProjectUnitProvider, ModuleAIProjectUnitProviderOption, ModuleAIProjectUnitProviderGuide>(option),
-      IBusinessTypeIterator
+public sealed class ModuleAIProjectUnitProvider
+    : MonicaModule<ModuleAIProjectUnitProviderOption>
 {
-    private readonly List<ProjectUnit> _selectedUnits = [];
+    internal const string REGISTRATION_FEATURE = "project-unit-selection";
 
-    // No new type filtering is needed; ModuleProjectUnits already populated the registry.
-    // This iterator pass is a no-op for type discovery and just yields all types through.
-    public IEnumerable<Type> IterateBusinessTypes(IEnumerable<Type> types)
+    public override void Describe(ModuleDescriptor module)
     {
-        foreach (var type in types) yield return type;
+        module.Require<ModuleAI, ModuleAIOption>();
+        module.Require<ModuleSkillSystem, ModuleSkillSystemOption>();
+        module.Require<ModuleProjectUnits, ModuleProjectUnitsOption>();
+        module.Require<ModuleXmlDocumentation, ModuleXmlDocumentationOption>();
+        module.RequireFeature(REGISTRATION_FEATURE);
     }
 
-    public override void PostConfigureServices(IServiceCollection services)
+    public override void ConfigureServices(ModuleContext<ModuleAIProjectUnitProviderOption> context)
     {
-        // Read the ProjectUnits the Guide selected.
-        var allUnits = units.GetAllUnits();
-        _selectedUnits.AddRange(option.RegistrationMode switch
-        {
-            ProjectUnitRegistrationMode.All       => allUnits,
-            ProjectUnitRegistrationMode.Selective => allUnits.Where(u => option.AllowedUnitTypes!.Contains(u.Type)),
-            _ /* None */                          => Enumerable.Empty<ProjectUnit>()
-        });
-
-        foreach (var unit in _selectedUnits)
-        {
-            var skill = ProjectUnitScriptFactory.BuildSkill(unit, option, services.BuildServiceProvider());
-            services.AddSingleton<AgentSkill>(_ => skill);
-        }
+        context.Services.TryAddEnumerable(
+            ServiceDescriptor.Singleton<IAgentCapabilitySource,
+                ProjectUnitSkillAgentCapabilitySource>());
     }
+}
+
+internal sealed class ProjectUnitSkillAgentCapabilitySource(
+    IProjectUnitCatalog units,
+    IOptions<ModuleAIProjectUnitProviderOption> options)
+    : IAgentCapabilitySource
+{
+    // GetSnapshotAsync reads units.GetAllUnits(), applies the frozen selection,
+    // and projects the surviving units without constructing a nested provider.
 }
 ```
 
-Key design point: the Provider does **not** re-implement type discovery. It consults the host-owned `IProjectUnitCatalog` populated by `ModuleProjectUnits` during its own iteration phase. This honors Monica's "one source of truth per concern" rule and avoids duplicate scanning or cross-host state.
+Key design point: the provider does **not** re-implement type discovery and never calls `BuildServiceProvider()` during composition. It consumes the host-owned catalog through ordinary DI at runtime, after `ModuleProjectUnits` has committed its shared-scan results and connected the units. This preserves one source of truth and host isolation.
 
 ## 7. RequestDto validation propagation
 
@@ -365,40 +365,70 @@ Recursion depth defaults to 3 (same as the Facade Provider's `MaxParameterSchema
 
 The doc-writer of Phase D documents this gap explicitly so projects don't expect FluentValidation rules to be visible to the agent.
 
-## 8. Selective registration — guide methods
+## 8. Selective registration — `ModuleRegistration` extensions
 
 Mirror Doc 03's pattern:
 
 ```csharp
-public sealed class ModuleAIProjectUnitProviderGuide
-    : ModuleGuide<ModuleAIProjectUnitProvider, ModuleAIProjectUnitProviderOption, ModuleAIProjectUnitProviderGuide>
+public static class ModuleAIProjectUnitProviderRegistrationExtensions
 {
-    private const string CONFIG_REGISTRATION = nameof(CONFIG_REGISTRATION);
-    protected override string[] GetRequestedConfigMethodKeys() => [CONFIG_REGISTRATION];
-
     /// <summary>Register every discovered ProjectUnit as a ProjectUnit Skill.</summary>
-    public ModuleAIProjectUnitProviderGuide UseAllUnits()
+    public static ModuleRegistration<ModuleAIProjectUnitProvider, ModuleAIProjectUnitProviderOption>
+        UseAllUnits(
+            this ModuleRegistration<ModuleAIProjectUnitProvider, ModuleAIProjectUnitProviderOption> module)
     {
-        ConfigureModuleOption(opt =>
-        {
-            opt.RegistrationMode = ProjectUnitRegistrationMode.All;
-            opt.AllowedUnitTypes = null;
-        });
-        ConfigureEmpty(CONFIG_REGISTRATION);
-        return this;
+        return module
+            .Configure(static option => option.SelectAllUnits())
+            .SatisfyFeature(ModuleAIProjectUnitProvider.REGISTRATION_FEATURE);
     }
 
     /// <summary>Register only the listed ProjectUnit types.</summary>
-    public ModuleAIProjectUnitProviderGuide UseUnits(params Type[] projectUnitTypes)
+    public static ModuleRegistration<ModuleAIProjectUnitProvider, ModuleAIProjectUnitProviderOption>
+        UseUnits(
+            this ModuleRegistration<ModuleAIProjectUnitProvider, ModuleAIProjectUnitProviderOption> module,
+            params Type[] projectUnitTypes)
     {
         ArgumentNullException.ThrowIfNull(projectUnitTypes);
-        ConfigureModuleOption(opt =>
+        var selectedUnits = projectUnitTypes.ToFrozenSet();
+        return module
+            .Configure(option => option.SelectUnits(selectedUnits))
+            .SatisfyFeature(ModuleAIProjectUnitProvider.REGISTRATION_FEATURE);
+    }
+}
+```
+
+`ModuleAIProjectUnitProviderOption.SelectAllUnits()` and `SelectUnits(...)` are internal state transitions that reject a second selection when option contributions are finalized. `Describe` requires `REGISTRATION_FEATURE`, so omitting both methods fails before host or service mutation.
+
+```csharp
+public sealed class ModuleAIProjectUnitProviderOption
+    : ModuleOptions<ModuleAIProjectUnitProvider>
+{
+    internal ProjectUnitRegistrationMode RegistrationMode { get; private set; }
+    internal IReadOnlySet<Type>? AllowedUnitTypes { get; private set; }
+
+    public int MaxScriptsPerSkillSoftCap { get; set; } = 30;
+    public int MaxParameterSchemaDepth { get; set; } = 3;
+
+    internal void SelectAllUnits()
+    {
+        EnsureRegistrationNotSelected();
+        RegistrationMode = ProjectUnitRegistrationMode.All;
+    }
+
+    internal void SelectUnits(IReadOnlySet<Type> projectUnitTypes)
+    {
+        EnsureRegistrationNotSelected();
+        RegistrationMode = ProjectUnitRegistrationMode.Selective;
+        AllowedUnitTypes = projectUnitTypes;
+    }
+
+    private void EnsureRegistrationNotSelected()
+    {
+        if (RegistrationMode != ProjectUnitRegistrationMode.None)
         {
-            opt.RegistrationMode = ProjectUnitRegistrationMode.Selective;
-            opt.AllowedUnitTypes = projectUnitTypes.ToHashSet();
-        });
-        ConfigureEmpty(CONFIG_REGISTRATION);
-        return this;
+            throw new InvalidOperationException(
+                "Select either all ProjectUnits or a ProjectUnit allowlist exactly once.");
+        }
     }
 }
 ```
@@ -410,10 +440,11 @@ public static class ModuleAIProjectUnitProviderBuilderExtensions
 {
     extension(IMonicaBuilder builder)
     {
-        public ModuleAIProjectUnitProviderGuide AddAIProjectUnitSkills(
+        public ModuleRegistration<ModuleAIProjectUnitProvider, ModuleAIProjectUnitProviderOption>
+            AddAIProjectUnitSkills(
             Action<ModuleAIProjectUnitProviderOption>? action = null)
         {
-            return builder.AddModule<ModuleAIProjectUnitProvider, ModuleAIProjectUnitProviderOption, ModuleAIProjectUnitProviderGuide>(action);
+            return builder.AddModule<ModuleAIProjectUnitProvider, ModuleAIProjectUnitProviderOption>(action);
         }
     }
 }
@@ -440,7 +471,7 @@ Identical to Doc 03 §8. Reproduced here for clarity:
 |---|---|---|
 | (a) | Should Command vs Query services produce visually distinct tool groupings? | **No, naming convention only.** This rev does not add a Command/Query sub-Skill nesting. Authors who want grouping use prefix conventions in script names (e.g., `query-list-orders` vs `command-place-order`); that's a project-level choice. Adding sub-Skill nesting is a future iteration. |
 | (b) | Should the doc specify a soft cap on per-Skill script count? | **Soft cap of 30, log-warn beyond.** Set in `ModuleAIProjectUnitProviderOption.MaxScriptsPerSkillSoftCap = 30`. When a unit produces more than 30 scripts, the Provider logs `"ProjectUnit '{name}' produced {n} scripts; consider splitting the bounded context"`. The cap is *not* a hard limit — agents can still consume the skill — but the warning surfaces design pressure. |
-| (c) | Async vs sync activation predicate. | **Sync iterator-phase only**, same as Doc 02 §11(a). |
+| (c) | When is activation evaluated? | **Startup catalog only**, same as Doc 02 §11(a). The runtime capability source may expose an async snapshot API, but module presence and the selected unit set are startup-frozen. |
 | (d) | What about ProjectUnits whose ApplicationServices live in multiple namespaces? | **Longest-prefix wins** (§3.1). Boundary cases warn at registration. The doc-writer of Phase D documents this rule in onboarding so domain teams structure their namespaces deliberately. |
 | (e) | What about `BulkDeleteAsync` when `TBulkDeleteInput == CrudDisableDto`? | **Auto-skipped.** The `CrudDisableDto` sentinel signals "this CRUD service has bulk delete disabled" — `BulkDeleteAsync` is not in the projection set even with `[MoAITool]`. |
 | (f) | What about `CustomApplicationService` that returns a non-`Res` envelope (e.g., a raw `int`)? | **Auto-exposed and serialized as JSON.** §9 handles this row. The unwrap rule kicks in only when `Res` / `Res<T>` / `ResPaged<T>` is the declared return type. |
@@ -451,8 +482,8 @@ Identical to Doc 03 §8. Reproduced here for clarity:
 
 When Phase D is implemented:
 
-1. `Monica.Framework/AISkillProviders/ProjectUnit/` folder exists with all files listed in §1.3.
-2. `BuiltInModuleKey.AIProjectUnitProvider` exists.
+1. `Monica.Framework/Modules/ModuleAIProjectUnitProvider.cs` and `Monica.Framework/AISkillProviders/ProjectUnit/Internal/` exist with the files listed in §1.3.
+2. `ModuleAIProjectUnitProvider` derives from `MonicaModule<ModuleAIProjectUnitProviderOption>`, declares its dependencies and required registration feature in `Describe`, and consumes `IProjectUnitCatalog` only through an ordinary runtime service.
 3. `monica.AddAIProjectUnitSkills().UseAllUnits()` and `monica.AddAIProjectUnitSkills().UseUnits(...)` are callable from a host `Program.cs`.
 4. End-to-end smoke test: a sample business app with one Custom ApplicationService (PlaceOrderApplicationService) and one CrudApplicationService (CustomerCrudAppService) registers `monica.AddAIProjectUnitSkills().UseAllUnits()`. The agent's system prompt contains `unit-orders` and `unit-customer` skills (or whatever the unit titles are). The order skill has `place-order` script. The customer skill has `get` and `list` scripts but **NOT** `create`, `update`, `delete`, `bulk-delete`.
 5. Adding `[MoAITool(Description = "...")]` to `CustomerCrudAppService.CreateAsync` makes `create` appear in the smoke test's customer skill.
@@ -465,9 +496,9 @@ When Phase D is implemented:
 
 | Concern | Doc 03 (Facade Provider) | Doc 04 (ProjectUnit Provider) |
 |---|---|---|
-| Module home | `Monica.Framework/AISkillProviders/Facade/` | `Monica.Framework/AISkillProviders/ProjectUnit/` |
-| Discovery hook | New `IBusinessTypeIterator` filter on `IMonicaFacade` | Reuses `ModuleProjectUnits` registry — no new filter |
-| Marker | `IMonicaFacade` interface | None — `ProjectUnit` registration is the marker |
+| Module home | `Monica.Framework/Modules/ModuleAIFacadeProvider.cs` | `Monica.Framework/Modules/ModuleAIProjectUnitProvider.cs` |
+| Discovery hook | Compiled open-generic query on `IMonicaFacade<TModule>` | Reuses `ModuleProjectUnits` registry through DI — no new query |
+| Marker | `IMonicaFacade<TModule>` owner interface | None — `ProjectUnit` registration is the marker |
 | Skill granularity | One module-level Skill per Monica module, with scripts grouped by Facade in loaded content | One Skill per ProjectUnit |
 | Aggregation level | Module Skill is itself the executable skill; there are no nested per-Facade Skills | ProjectUnit is itself the aggregation level |
 | Default exposure | All public methods (deny-list applied) | Custom Handle: all; CRUD: read auto, mutating opt-in |

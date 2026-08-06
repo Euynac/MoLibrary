@@ -5,7 +5,6 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
 using Monica.Core.Modularity;
 using Monica.Core.Modularity.Abstractions;
-using Monica.Core.Modularity.Annotations;
 using Monica.Core.Modularity.Models;
 using Monica.Dapr.Services;
 using Monica.EventBus.Abstractions;
@@ -18,24 +17,23 @@ public static class ModuleDaprEventBusBuilderExtensions
     /// <summary>
     /// Registers Dapr as the distributed event bus provider.
     /// </summary>
-    public static ModuleDaprEventBusGuide UseDaprProvider(this ModuleEventBusGuide guide,
+    public static ModuleRegistration<ModuleDaprEventBus, ModuleDaprEventBusOption> UseDaprProvider(
+        this ModuleRegistration<ModuleEventBus, ModuleEventBusOption> module,
         Action<ModuleDaprEventBusOption>? action = null)
     {
-        guide.UseDistributedEventBus<DaprEventBusProvider>();
-        return guide.AddModule<ModuleDaprEventBus, ModuleDaprEventBusOption, ModuleDaprEventBusGuide>(action);
+        module.UseDistributedEventBus<DaprEventBusProvider>();
+        return module.Include<ModuleDaprEventBus, ModuleDaprEventBusOption>(action);
     }
 }
 
-[ModuleKey(BuiltInModuleKey.DaprEventBus)]
-public class ModuleDaprEventBus(ModuleDaprEventBusOption option)
-    : ModuleBase<ModuleDaprEventBus, ModuleDaprEventBusOption, ModuleDaprEventBusGuide>(option),
+public class ModuleDaprEventBus : MonicaModule<ModuleDaprEventBusOption>,
       IEventBusProviderModule
 {
 
     #region IEventBusProviderModule
 
     /// <inheritdoc />
-    public ModuleKey ProvidesFor => BuiltInModuleKey.EventBus;
+    public Type ProvidesFor => typeof(ModuleEventBus);
 
     /// <inheritdoc />
     public EventBusProviderKind ProviderType => EventBusProviderKind.Dapr;
@@ -51,8 +49,9 @@ public class ModuleDaprEventBus(ModuleDaprEventBusOption option)
 
     #endregion
 
-    public override void ConfigureServices(IServiceCollection services)
+    public override void ConfigureServices(ModuleContext<ModuleDaprEventBusOption> context)
     {
+        var services = context.Services;
         // Register DaprPublishSubscribeClient for streaming subscriptions
         services.AddDaprPubSubClient();
 
@@ -60,48 +59,48 @@ public class ModuleDaprEventBus(ModuleDaprEventBusOption option)
         services.AddHostedService<DaprEventBusSubscriptionHostedService>();
     }
 
-    public override void ClaimDependencies()
+    public override void Describe(ModuleDescriptor module)
     {
-        DependsOnModule<ModuleEventBusGuide>().Register();
-        DependsOnModule<ModuleHostedServiceGuide>().Register();
+        module.Require<ModuleEventBus, ModuleEventBusOption>();
+        module.Require<ModuleHostedService, ModuleHostedServiceOption>();
     }
 }
 
-public class ModuleDaprEventBusGuide : ModuleGuide<ModuleDaprEventBus, ModuleDaprEventBusOption, ModuleDaprEventBusGuide>
+public static class ModuleDaprEventBusRegistrationExtensions
 {
     /// <summary>
     /// Registers a keyed Dapr distributed event bus together with its corresponding hosted
     /// subscription service.
     /// </summary>
+    /// <param name="module">The Dapr EventBus registration being configured.</param>
     /// <param name="key">Service key.</param>
     /// <param name="configureOptions">
     /// Optional Dapr event bus configuration, for example to use a different pub/sub component.
     /// </param>
     [RequiresPreviewFeatures]
-    public ModuleDaprEventBusGuide AddKeyedDaprEventBus(string key, Action<ModuleDaprEventBusOption> configureOptions)
+    public static ModuleRegistration<ModuleDaprEventBus, ModuleDaprEventBusOption> AddKeyedDaprEventBus(this ModuleRegistration<ModuleDaprEventBus, ModuleDaprEventBusOption> module, string key, Action<ModuleDaprEventBusOption> configureOptions)
     {
-        ConfigureServices(context =>
+        module.ConfigureProfile(key, configureOptions);
+        module.ConfigureServices(context =>
         {
-            // Configure options for this keyed instance
-            context.Services.Configure(key, configureOptions);
+            var options = Options.Create(module.GetProfile(key));
             // Register keyed DaprEventBus with the specified serviceKey
             context.Services.AddKeyedSingleton<IDistributedEventBus>(key, (sp, _) =>
             {
-                var options = Options.Create(sp.GetRequiredService<IOptionsMonitor<ModuleDaprEventBusOption>>().Get(key));
                 return ActivatorUtilities.CreateInstance<DaprEventBusProvider>(sp, options, key);
             });
 
             // Register HostedService for this keyed EventBus
             context.Services.AddSingleton<IHostedService>(sp =>
             {
-                var options = Options.Create(sp.GetRequiredService<IOptionsMonitor<ModuleDaprEventBusOption>>().Get(key));
                 return ActivatorUtilities.CreateInstance<DaprEventBusSubscriptionHostedService>(sp, options, key);
             });
-        }, secondKey: key);
+        });
 
-        RecordKeyedServiceKey(key);
-        return this;
+        module.RecordKeyedServiceKey(key);
+        return module;
     }
+
 }
 
 public class ModuleDaprEventBusOption : ModuleOptions<ModuleDaprEventBus>

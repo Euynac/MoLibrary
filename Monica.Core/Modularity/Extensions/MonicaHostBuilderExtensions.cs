@@ -21,7 +21,7 @@ public static class MonicaHostBuilderExtensions
     /// <returns>The same host builder instance.</returns>
     /// <remarks>
     /// Call this exactly once before <c>Build()</c>. The module graph is sealed when the callback returns;
-    /// retained module guides reject later mutation.
+    /// retained module registrations reject later mutation.
     /// </remarks>
     /// <exception cref="InvalidOperationException">Thrown when Monica was already added to this host builder.</exception>
     public static TBuilder AddMonica<TBuilder>(
@@ -59,7 +59,11 @@ public static class MonicaHostBuilderExtensions
         }
         catch
         {
-            builder.Properties.Remove(MONICA_APPLICATION_KEY);
+            if (!application.Modules.HasMutatedHost)
+            {
+                builder.Properties.Remove(MONICA_APPLICATION_KEY);
+            }
+
             application.Dispose();
             throw;
         }

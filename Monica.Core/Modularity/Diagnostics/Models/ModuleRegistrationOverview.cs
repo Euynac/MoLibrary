@@ -79,9 +79,14 @@ public class ModuleBasicInfo
     public bool IsWebModule { get; set; }
 
     /// <summary>
-    /// Indicates whether the module is currently running in downgraded non-web mode.
+    /// Indicates whether the module requires an ASP.NET Core host adapter.
     /// </summary>
-    public bool IsDowngradedFromWebModule { get; set; }
+    public bool RequiresWebHost { get; set; }
+
+    /// <summary>
+    /// Explains the intrinsic or feature-selected ASP.NET Core host requirement.
+    /// </summary>
+    public string? WebHostRequirementReason { get; set; }
 
     /// <summary>
     /// Indicates whether registration errors exist.

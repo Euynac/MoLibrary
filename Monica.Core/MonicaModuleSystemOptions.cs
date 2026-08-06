@@ -19,11 +19,6 @@ public interface IMonicaModuleSystemOptions
     LogLevel DefaultLogLevel { get; }
 
     /// <summary>
-    /// Gets whether module registration failures disable the module instead of aborting startup.
-    /// </summary>
-    bool DisableOnRegistrationError { get; }
-
-    /// <summary>
     /// Gets whether module execution summary logs are emitted after module system initialization.
     /// </summary>
     bool EnableSummaryLog { get; }
@@ -77,18 +72,9 @@ public sealed class MonicaModuleSystemOptions : IMonicaModuleSystemOptions
 
     /// <summary>
     /// Gets or sets the default log level used by module registration loggers.
-    /// Individual modules can still override their own logger through module options.
     /// Defaults to <see cref="LogLevel.Information"/>.
     /// </summary>
     public LogLevel DefaultLogLevel { get; set; } = LogLevel.Information;
-
-    /// <summary>
-    /// Gets or sets whether module registration failures disable the module instead of aborting startup.
-    /// When enabled, the module system records the failure, logs it, and skips the module for the rest of the
-    /// application lifetime. Individual module options can override this value.
-    /// Defaults to <see langword="false"/>.
-    /// </summary>
-    public bool DisableOnRegistrationError { get; set; }
 
     /// <summary>
     /// Gets or sets whether module execution summary logs are emitted after module system initialization.

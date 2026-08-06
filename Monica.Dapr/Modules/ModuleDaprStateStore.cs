@@ -3,7 +3,6 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using Monica.Core.Modularity;
 using Monica.Core.Modularity.Abstractions;
-using Monica.Core.Modularity.Annotations;
 using Monica.Core.Modularity.Models;
 using Monica.Dapr.Services;
 using Monica.StateStore.Abstractions;
@@ -13,62 +12,57 @@ namespace Monica.Modules;
 
 public static class ModuleDaprStateStoreBuilderExtensions
 {
-    public static ModuleDaprStateStoreGuide UseDaprStateStoreProvider(this ModuleStateStoreGuide guide,
+    public static ModuleRegistration<ModuleDaprStateStore, ModuleDaprStateStoreOption> UseDaprStateStoreProvider(
+        this ModuleRegistration<ModuleStateStore, ModuleStateStoreOption> module,
         Action<ModuleDaprStateStoreOption>? action = null)
     {
-        guide.SetCommonDistributedStateStoreProvider<DaprStateStoreProvider>();
-        return guide.AddModule<ModuleDaprStateStore, ModuleDaprStateStoreOption, ModuleDaprStateStoreGuide>(action);
+        module.SetCommonDistributedStateStoreProvider<DaprStateStoreProvider>();
+        return module.Include<ModuleDaprStateStore, ModuleDaprStateStoreOption>(action);
     }
     
     /// <summary>
     /// Registers Dapr state store as a keyed state store provider.
     /// </summary>
-    /// <param name="guide">The StateStore module guide.</param>
+    /// <param name="module">The StateStore registration being configured.</param>
     /// <param name="serviceKey">The service key that identifies this state store instance.</param>
     /// <param name="configureOptions">Delegate that configures the Dapr state store.</param>
-    /// <returns>The same StateStore module guide to support chaining.</returns>
-    public static ModuleStateStoreGuide AddKeyedDaprStateStore(
-        this ModuleStateStoreGuide guide,
+    /// <returns>The same StateStore module registration for chaining.</returns>
+    public static ModuleRegistration<ModuleStateStore, ModuleStateStoreOption> AddKeyedDaprStateStore(
+        this ModuleRegistration<ModuleStateStore, ModuleStateStoreOption> module,
         string serviceKey,
         Action<ModuleDaprStateStoreOption> configureOptions)
     {
         ArgumentNullException.ThrowIfNull(serviceKey);
         ArgumentNullException.ThrowIfNull(configureOptions);
-        guide.AddModule<ModuleDaprStateStore, ModuleDaprStateStoreOption, ModuleDaprStateStoreGuide>();
-        guide.ConfigureStateStoreServices(services =>
+        var providerModule = module.Include<ModuleDaprStateStore, ModuleDaprStateStoreOption>()
+            .ConfigureProfile(serviceKey, configureOptions);
+        providerModule.ConfigureServices(context =>
         {
-            // Register keyed options
-            services.Configure(serviceKey, configureOptions);
-
-            // Register keyed DaprStateStoreProvider
-            services.AddKeyedSingleton<IStateStore>(serviceKey, (sp, _) =>
+            var options = Options.Create(providerModule.GetProfile(serviceKey));
+            context.Services.AddKeyedSingleton<IStateStore>(serviceKey, (sp, _) =>
             {
-                var optionsMonitor = sp.GetRequiredService<IOptionsMonitor<ModuleDaprStateStoreOption>>();
-                var keyedOptions = Options.Create(optionsMonitor.Get(serviceKey));
-                return ActivatorUtilities.CreateInstance<DaprStateStoreProvider>(sp, keyedOptions);
+                return ActivatorUtilities.CreateInstance<DaprStateStoreProvider>(sp, options);
             });
-        }, serviceKey);
+        });
 
-        guide.RecordKeyedServiceKey(serviceKey);
-        return guide;
+        module.RecordKeyedServiceKey(serviceKey);
+        return module;
     }
 }
 
-[ModuleKey(BuiltInModuleKey.DaprStateStore)]
-public class ModuleDaprStateStore(ModuleDaprStateStoreOption option)
-    : ModuleBase<ModuleDaprStateStore, ModuleDaprStateStoreOption, ModuleDaprStateStoreGuide>(option),
+public class ModuleDaprStateStore : MonicaModule<ModuleDaprStateStoreOption>,
       IStateStoreModuleProvider
 {
 
-    public override void ClaimDependencies()
+    public override void Describe(ModuleDescriptor module)
     {
-        DependsOnModule<ModuleDaprClientGuide>().Register();
-        DependsOnModule<ModuleStateStoreGuide>().Register();
+        module.Require<ModuleDaprClient, ModuleDaprClientOption>();
+        module.Require<ModuleStateStore, ModuleStateStoreOption>();
     }
 
     #region IStateStoreModuleProvider Implementation
 
-    public ModuleKey ProvidesFor => BuiltInModuleKey.StateStore;
+    public Type ProvidesFor => typeof(ModuleStateStore);
 
     public EStateStoreProviderType ProviderType => EStateStoreProviderType.Dapr;
 
@@ -82,12 +76,7 @@ public class ModuleDaprStateStore(ModuleDaprStateStoreOption option)
     #endregion
 }
 
-public class
-    ModuleDaprStateStoreGuide : ModuleGuide<ModuleDaprStateStore, ModuleDaprStateStoreOption,
-    ModuleDaprStateStoreGuide>
-{
 
-}
 
 public class ModuleDaprStateStoreOption : ModuleOptions<ModuleDaprStateStore>
 {

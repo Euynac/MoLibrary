@@ -1,9 +1,8 @@
+using Microsoft.AspNetCore.Http.Json;
 using Microsoft.Extensions.DependencyInjection;
 using Monica.Core;
 using Monica.Core.Modularity;
 using Monica.Core.Modularity.Abstractions;
-using Monica.Core.Modularity.Annotations;
-using Monica.Core.Modularity.Models;
 using Monica.Core.Results;
 using Monica.Core.Results.Abstractions;
 using Monica.Core.Results.Services;
@@ -18,56 +17,53 @@ public static class ModuleResultEnvelopeBuilderExtensions
         /// <summary>
         /// Configures the ResultEnvelope module.
         /// </summary>
-        public ModuleResultEnvelopeGuide AddResultEnvelope(Action<ModuleResultEnvelopeOption>? action = null)
+        public ModuleRegistration<ModuleResultEnvelope, ModuleResultEnvelopeOption> AddResultEnvelope(
+            Action<ModuleResultEnvelopeOption>? action = null)
         {
-            return builder.AddModule<ModuleResultEnvelope, ModuleResultEnvelopeOption, ModuleResultEnvelopeGuide>(action);
+            return builder.AddModule<ModuleResultEnvelope, ModuleResultEnvelopeOption>(action);
+        }
+    }
+
+    extension(ModuleRegistration<ModuleResultEnvelope, ModuleResultEnvelopeOption> registration)
+    {
+        /// <summary>
+        /// Configures top-level JSON field names for Monica result envelopes.
+        /// </summary>
+        public ModuleRegistration<ModuleResultEnvelope, ModuleResultEnvelopeOption> UseResultFieldNames(
+            Action<ResultEnvelopeFieldNames> configure)
+        {
+            ArgumentNullException.ThrowIfNull(configure);
+            return registration.Configure(option => configure(option.FieldNames));
+        }
+
+        /// <summary>
+        /// Limits how much remote request or response content is kept for diagnostics.
+        /// </summary>
+        public ModuleRegistration<ModuleResultEnvelope, ModuleResultEnvelopeOption> SetMaxRemoteDiagnosticBodyBytes(
+            int maxBodyBytes)
+        {
+            ArgumentOutOfRangeException.ThrowIfNegative(maxBodyBytes);
+            return registration.Configure(option => option.MaxRemoteDiagnosticBodyBytes = maxBodyBytes);
         }
     }
 }
 
-[ModuleKey(BuiltInModuleKey.ResultEnvelope)]
-public class ModuleResultEnvelope(ModuleResultEnvelopeOption option)
-    : ModuleBase<ModuleResultEnvelope, ModuleResultEnvelopeOption, ModuleResultEnvelopeGuide>(option)
+public class ModuleResultEnvelope : MonicaModule<ModuleResultEnvelopeOption>
 {
-    public override void ClaimDependencies()
+    public override void Describe(ModuleDescriptor module)
     {
-        DependsOnModule<ModuleJsonSerializationGuide>().Register();
+        module.Require<ModuleJsonSerialization, ModuleJsonSerializationOption>();
     }
 
-    public override void ConfigureServices(IServiceCollection services)
+    public override void ConfigureServices(ModuleContext<ModuleResultEnvelopeOption> context)
     {
+        var services = context.Services;
         services.AddSingleton<IResultEnvelopeReader, ResultEnvelopeProvider>();
-    }
-}
 
-public class ModuleResultEnvelopeGuide : ModuleGuide<ModuleResultEnvelope, ModuleResultEnvelopeOption, ModuleResultEnvelopeGuide>
-{
-    /// <summary>
-    /// Configures top-level JSON field names for Monica result envelopes.
-    /// Configured names are treated like property identifiers and are normalized by the current JSON <see cref="System.Text.Json.JsonSerializerOptions.PropertyNamingPolicy" />.
-    /// For example, under camel-case naming, configuring <c>StatusCode</c> produces <c>statusCode</c>.
-    /// </summary>
-    /// <param name="configure">The field-name configuration action.</param>
-    /// <returns>The current guide instance.</returns>
-    public ModuleResultEnvelopeGuide UseResultFieldNames(Action<ResultEnvelopeFieldNames> configure)
-    {
-        ArgumentNullException.ThrowIfNull(configure);
-
-        ConfigureModuleOption(option => configure(option.FieldNames));
-        return this;
-    }
-
-    /// <summary>
-    /// Limits how much remote request or response content is kept for diagnostics.
-    /// </summary>
-    /// <param name="maxBodyBytes">The maximum number of bytes to capture.</param>
-    /// <returns>The current guide instance.</returns>
-    public ModuleResultEnvelopeGuide SetMaxRemoteDiagnosticBodyBytes(int maxBodyBytes)
-    {
-        ArgumentOutOfRangeException.ThrowIfNegative(maxBodyBytes);
-
-        ConfigureModuleOption(option => option.MaxRemoteDiagnosticBodyBytes = maxBodyBytes);
-        return this;
+        // ResultEnvelope owns these names and composes after JsonSerialization, avoiding a reverse module-option read.
+        services.Configure<JsonOptions>(options => Option.FieldNames.ApplyTo(options.SerializerOptions));
+        services.Configure<Microsoft.AspNetCore.Mvc.JsonOptions>(
+            options => Option.FieldNames.ApplyTo(options.JsonSerializerOptions));
     }
 }
 

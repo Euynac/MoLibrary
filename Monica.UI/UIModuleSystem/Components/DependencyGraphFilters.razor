@@ -151,12 +151,12 @@
                                 @L["ModuleSystem:DependencyGraph:Types:Web"]
                             </MudChip>
                             <MudChip T="string"
-                                     Value="@("downgraded-web")"
+                                     Value="@("web-required")"
                                      Size="Size.Small"
-                                     Variant="@GetFilterChipVariant(SelectedTypeFilters, "downgraded-web")"
-                                     Color="@GetTypeFilterColor("downgraded-web")"
-                                     Icon="@Icons.Material.Filled.ArrowDownward">
-                                @L["ModuleSystem:DependencyGraph:Types:DowngradedWeb"]
+                                     Variant="@GetFilterChipVariant(SelectedTypeFilters, "web-required")"
+                                     Color="@GetTypeFilterColor("web-required")"
+                                     Icon="@Icons.Material.Filled.WebAsset">
+                                @L["ModuleSystem:DependencyGraph:Types:WebHostRequired"]
                             </MudChip>
                             <MudChip T="string"
                                      Value="@("disabled")"
@@ -279,7 +279,7 @@
         "ui" => Color.Info,
         "third-party" => Color.Success,
         "web" => Color.Secondary,
-        "downgraded-web" => Color.Warning,
+        "web-required" => Color.Warning,
         "disabled" => Color.Default,
         "cycle" => Color.Error,
         _ => Color.Default

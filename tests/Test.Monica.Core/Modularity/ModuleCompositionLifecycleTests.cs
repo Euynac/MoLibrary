@@ -10,9 +10,9 @@ using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Monica.Core;
 using Monica.Core.Modularity.Abstractions;
-using Monica.Core.Modularity.Annotations;
 using Monica.Core.Modularity.Diagnostics.Models;
 using Monica.Core.Modularity.Diagnostics.Services;
+using Monica.Core.Modularity.Exceptions;
 using Monica.Core.Modularity.Extensions;
 using Monica.Core.Modularity.Models;
 using Monica.Core.Modularity.State;
@@ -22,6 +22,9 @@ namespace Test.Monica.Core.Modularity;
 
 public sealed class ModuleCompositionLifecycleTests
 {
+    private const string SELECTED_WEB_FEATURE_REQUIREMENT =
+        "The selected probe middleware requires an ASP.NET Core request pipeline.";
+
     [Fact]
     public void AddMonica_WhenNoModulesAreRegistered_ShouldStillCompleteOneCompositionTimeline()
     {
@@ -60,7 +63,7 @@ public sealed class ModuleCompositionLifecycleTests
         {
             monica.ConfigureModuleSystem(options => options.EnableSummaryLog = true);
             monica.ConfigureTypeDiscovery(static options => options.ExcludeDefault());
-            monica.AddModule<CompositionProbeModule, CompositionProbeModuleOption, CompositionProbeModuleGuide>(
+            monica.AddModule<CompositionProbeModule, CompositionProbeModuleOption>(
                 options => options.LoggerFactory = logFactory);
         });
 
@@ -114,6 +117,109 @@ public sealed class ModuleCompositionLifecycleTests
     }
 
     [Fact]
+    public void AddMonica_WhenOptionalWebCapabilityUsesGenericHost_ShouldKeepNonWebRegistrations()
+    {
+        var builder = Host.CreateApplicationBuilder();
+        builder.AddMonica(monica =>
+        {
+            monica.ConfigureTypeDiscovery(static options => options.ExcludeDefault());
+            monica.AddModule<OptionalWebProbeModule, OptionalWebProbeModuleOption>();
+        });
+
+        using var host = builder.Build();
+        var application = host.Services.GetRequiredService<MonicaApplication>();
+
+        host.Services.GetRequiredService<OptionalWebProbeService>().Should().NotBeNull();
+        application.Modules.RuntimeSnapshots.Should().ContainSingle(snapshot =>
+            snapshot.ModuleType == typeof(OptionalWebProbeModule)
+            && snapshot.IsWebModule
+            && !snapshot.RequiresWebHost);
+    }
+
+    [Fact]
+    public void AddMonica_WhenModuleRequiresWebHost_ShouldFailBeforeServiceCollectionMutation()
+    {
+        var builder = Host.CreateApplicationBuilder();
+        var servicesBeforeComposition = builder.Services.ToArray();
+
+        Action compose = () => builder.AddMonica(monica =>
+        {
+            monica.ConfigureTypeDiscovery(static options => options.ExcludeDefault());
+            monica.AddModule<HostRequiredWebProbeModule, HostRequiredWebProbeModuleOption>();
+        });
+
+        compose.Should().Throw<ModuleRegistrationException>()
+            .WithMessage($"*WebApplicationBuilder*{nameof(HostRequiredWebProbeModule)}*");
+        builder.Services.Should().Equal(servicesBeforeComposition);
+    }
+
+    [Fact]
+    public void AddMonica_WhenSelectedWebFeatureRequiresHost_ShouldFailWithReasonBeforeMutation()
+    {
+        var builder = Host.CreateApplicationBuilder();
+        var servicesBeforeComposition = builder.Services.ToArray();
+
+        Action compose = () => builder.AddMonica(monica =>
+        {
+            monica.ConfigureTypeDiscovery(static options => options.ExcludeDefault());
+            monica.AddModule<OptionalWebProbeModule, OptionalWebProbeModuleOption>()
+                .RequireWebHost(SELECTED_WEB_FEATURE_REQUIREMENT)
+                .ConfigureApplicationBuilder(static _ => { });
+        });
+
+        compose.Should().Throw<ModuleRegistrationException>()
+            .WithMessage($"*{nameof(OptionalWebProbeModule)}*{SELECTED_WEB_FEATURE_REQUIREMENT}*");
+        builder.Services.Should().Equal(servicesBeforeComposition);
+    }
+
+    [Fact]
+    public async Task AddMonica_WhenSelectedWebFeatureUsesWebHost_ShouldExposeRequirementDiagnostics()
+    {
+        var builder = CreateWebBuilder();
+        builder.AddMonica(monica =>
+        {
+            monica.ConfigureTypeDiscovery(static options => options.ExcludeDefault());
+            monica.AddModule<OptionalWebProbeModule, OptionalWebProbeModuleOption>()
+                .RequireWebHost(SELECTED_WEB_FEATURE_REQUIREMENT)
+                .ConfigureApplicationBuilder(static _ => { });
+        });
+        await using var app = builder.Build();
+        var application = app.Services.GetRequiredService<MonicaApplication>();
+
+        var snapshot = application.Modules.RuntimeSnapshots.Should().ContainSingle(snapshot =>
+            snapshot.ModuleType == typeof(OptionalWebProbeModule)).Subject;
+        var detail = new ModuleSystemInspectionService(application)
+            .GetModuleDetail(typeof(OptionalWebProbeModule));
+
+        snapshot.RequiresWebHost.Should().BeTrue();
+        snapshot.WebHostRequirementReason.Should().Be(SELECTED_WEB_FEATURE_REQUIREMENT);
+        detail.Should().NotBeNull();
+        detail!.ConfigInfo.RequiresWebHost.Should().BeTrue();
+        detail.ConfigInfo.WebHostRequirementReason.Should().Be(SELECTED_WEB_FEATURE_REQUIREMENT);
+    }
+
+    [Fact]
+    public void GetDependencyGraph_WhenUIIdentityIsExplicit_ShouldIgnoreTypeNameSuffixes()
+    {
+        var builder = Host.CreateApplicationBuilder();
+        builder.AddMonica(monica =>
+        {
+            monica.ConfigureTypeDiscovery(static options => options.ExcludeDefault());
+            monica.AddModule<ExplicitPresentationProbeModule, ExplicitPresentationProbeModuleOption>();
+            monica.AddModule<NonUiSuffixProbeModuleUI, NonUiSuffixProbeModuleUIOption>();
+        });
+        using var host = builder.Build();
+        var application = host.Services.GetRequiredService<MonicaApplication>();
+
+        var nodes = new ModuleSystemInspectionService(application).GetDependencyGraph().Nodes;
+
+        nodes.Should().ContainSingle(node =>
+            node.ModuleTypeName == nameof(ExplicitPresentationProbeModule) && node.IsUIModule);
+        nodes.Should().ContainSingle(node =>
+            node.ModuleTypeName == nameof(NonUiSuffixProbeModuleUI) && !node.IsUIModule);
+    }
+
+    [Fact]
     public async Task MapMonica_WhenUsingWebHost_ShouldCompleteAtEndpointMapping()
     {
         await using var app = BuildWebApplication();
@@ -161,6 +267,31 @@ public sealed class ModuleCompositionLifecycleTests
         webModule.Should().HaveCount(2);
         webModule.Select(static execution => execution.Sequence).Should().BeInAscendingOrder();
         webModule.Select(static execution => execution.ExecutionId).Should().OnlyHaveUniqueItems();
+    }
+
+    [Fact]
+    public async Task UseMonica_WhenWebContributionsAreDeclaredOutOfStageOrder_ShouldHonorNamedRoutingStages()
+    {
+        var stages = new List<string>();
+        var builder = CreateWebBuilder();
+        builder.AddMonica(monica =>
+        {
+            monica.ConfigureTypeDiscovery(static options => options.ExcludeDefault());
+            var registration = monica.AddModule<WebStageProbeModule, WebStageProbeModuleOption>(
+                options => options.Stages = stages);
+            registration.ConfigureApplicationBuilder(
+                _ => stages.Add("after-routing"),
+                ModuleWebStage.AfterRouting);
+            registration.ConfigureApplicationBuilder(
+                _ => stages.Add("before-routing"),
+                ModuleWebStage.BeforeRouting);
+        });
+        await using var app = builder.Build();
+
+        app.UseMonica();
+        app.MapMonica();
+
+        stages.Should().Equal("module-before-routing", "before-routing", "after-routing");
     }
 
     [Fact]
@@ -249,7 +380,7 @@ public sealed class ModuleCompositionLifecycleTests
         builder.AddMonica(monica =>
         {
             monica.ConfigureTypeDiscovery(static options => options.ExcludeDefault());
-            monica.AddModule<CompositionProbeModule, CompositionProbeModuleOption, CompositionProbeModuleGuide>();
+            monica.AddModule<CompositionProbeModule, CompositionProbeModuleOption>();
         });
         using var host = builder.Build();
         var application = host.Services.GetRequiredService<MonicaApplication>();
@@ -265,11 +396,11 @@ public sealed class ModuleCompositionLifecycleTests
     {
         Enum.GetNames<ModulePhase>().Should().Equal(
             nameof(ModulePhase.None),
-            nameof(ModulePhase.ClaimDependencies),
-            nameof(ModulePhase.InitFinalConfigures),
+            nameof(ModulePhase.Describe),
+            nameof(ModulePhase.FinalizeOptions),
             nameof(ModulePhase.ConfigureBuilder),
             nameof(ModulePhase.ConfigureServices),
-            nameof(ModulePhase.IterateBusinessTypes),
+            nameof(ModulePhase.DiscoverTypes),
             nameof(ModulePhase.PostConfigureServices),
             nameof(ModulePhase.ConfigureApplicationBuilder),
             nameof(ModulePhase.ConfigureEndpoints),
@@ -316,11 +447,10 @@ public sealed class ModuleCompositionLifecycleTests
         builder.AddMonica(monica =>
         {
             monica.ConfigureTypeDiscovery(static options => options.ExcludeDefault());
-            monica.AddModule<CompositionProbeModule, CompositionProbeModuleOption, CompositionProbeModuleGuide>();
+            monica.AddModule<CompositionProbeModule, CompositionProbeModuleOption>();
             monica.AddModule<
                 CompositionWebProbeModule,
-                CompositionWebProbeModuleOption,
-                CompositionWebProbeModuleGuide>(options => options.FailEndpointMapping = failEndpointMapping);
+                CompositionWebProbeModuleOption>(options => options.FailEndpointMapping = failEndpointMapping);
         });
     }
 
@@ -389,32 +519,23 @@ public sealed class ModuleCompositionLifecycleTests
     }
 }
 
-[ModuleKey("Test.Monica.Core.CompositionProbe")]
-public sealed class CompositionProbeModule(CompositionProbeModuleOption option)
-    : ModuleBase<CompositionProbeModule, CompositionProbeModuleOption, CompositionProbeModuleGuide>(option)
+internal sealed class CompositionProbeModule : MonicaModule<CompositionProbeModuleOption>
 {
-    public override void ConfigureBuilder(IHostApplicationBuilder builder)
+    public override void ConfigureBuilder(ModuleBuilderContext<CompositionProbeModuleOption> context)
     {
         UseCompositionLoggerFactory(Option.LoggerFactory);
     }
 }
 
-public sealed class CompositionProbeModuleGuide
-    : ModuleGuide<CompositionProbeModule, CompositionProbeModuleOption, CompositionProbeModuleGuide>;
-
-public sealed class CompositionProbeModuleOption : ModuleOptions<CompositionProbeModule>
+internal sealed class CompositionProbeModuleOption : ModuleOptions<CompositionProbeModule>
 {
     public ILoggerFactory LoggerFactory { get; set; } = NullLoggerFactory.Instance;
 }
 
-[ModuleKey("Test.Monica.Core.CompositionWebProbe")]
-public sealed class CompositionWebProbeModule(CompositionWebProbeModuleOption option)
-    : WebModuleBase<
-        CompositionWebProbeModule,
-        CompositionWebProbeModuleOption,
-        CompositionWebProbeModuleGuide>(option)
+internal sealed class CompositionWebProbeModule
+    : MonicaModule<CompositionWebProbeModuleOption>, IWebHostRequiredModule
 {
-    public override void ConfigureEndpoints(IApplicationBuilder app)
+    public override void ConfigureEndpoints(WebModuleContext<CompositionWebProbeModuleOption> context)
     {
         if (Option.FailEndpointMapping)
         {
@@ -423,13 +544,60 @@ public sealed class CompositionWebProbeModule(CompositionWebProbeModuleOption op
     }
 }
 
-public sealed class CompositionWebProbeModuleGuide
-    : WebModuleGuide<
-        CompositionWebProbeModule,
-        CompositionWebProbeModuleOption,
-        CompositionWebProbeModuleGuide>;
-
-public sealed class CompositionWebProbeModuleOption : ModuleOptions<CompositionWebProbeModule>
+internal sealed class CompositionWebProbeModuleOption : ModuleOptions<CompositionWebProbeModule>
 {
     public bool FailEndpointMapping { get; set; }
 }
+
+internal sealed class OptionalWebProbeModule : MonicaModule<OptionalWebProbeModuleOption>, IWebModule
+{
+    public override void ConfigureServices(ModuleContext<OptionalWebProbeModuleOption> context)
+    {
+        context.Services.AddSingleton<OptionalWebProbeService>();
+    }
+
+    public override void ConfigureApplicationBuilder(WebModuleContext<OptionalWebProbeModuleOption> context)
+    {
+        throw new InvalidOperationException("A generic host must omit optional web contributions.");
+    }
+}
+
+internal sealed class OptionalWebProbeModuleOption : ModuleOptions<OptionalWebProbeModule>;
+
+internal sealed class OptionalWebProbeService;
+
+internal sealed class HostRequiredWebProbeModule
+    : MonicaModule<HostRequiredWebProbeModuleOption>, IWebHostRequiredModule
+{
+    public override void ConfigureServices(ModuleContext<HostRequiredWebProbeModuleOption> context)
+    {
+        context.Services.AddSingleton<HostRequiredWebProbeService>();
+    }
+}
+
+internal sealed class HostRequiredWebProbeModuleOption : ModuleOptions<HostRequiredWebProbeModule>;
+
+internal sealed class HostRequiredWebProbeService;
+
+internal sealed class WebStageProbeModule
+    : MonicaModule<WebStageProbeModuleOption>, IWebHostRequiredModule
+{
+    public override void ConfigureApplicationBuilder(WebModuleContext<WebStageProbeModuleOption> context)
+    {
+        Option.Stages?.Add("module-before-routing");
+    }
+}
+
+internal sealed class WebStageProbeModuleOption : ModuleOptions<WebStageProbeModule>
+{
+    public List<string>? Stages { get; set; }
+}
+
+internal sealed class ExplicitPresentationProbeModule
+    : MonicaModule<ExplicitPresentationProbeModuleOption>, IUIModule;
+
+internal sealed class ExplicitPresentationProbeModuleOption : ModuleOptions<ExplicitPresentationProbeModule>;
+
+internal sealed class NonUiSuffixProbeModuleUI : MonicaModule<NonUiSuffixProbeModuleUIOption>;
+
+internal sealed class NonUiSuffixProbeModuleUIOption : ModuleOptions<NonUiSuffixProbeModuleUI>;

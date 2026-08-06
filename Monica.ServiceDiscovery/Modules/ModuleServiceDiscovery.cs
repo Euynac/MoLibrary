@@ -8,8 +8,6 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 using Monica.Core;
 using Monica.Core.Modularity;
 using Monica.Core.Modularity.Abstractions;
-using Monica.Core.Modularity.Annotations;
-using Monica.Core.Modularity.Models;
 using Monica.Core.Results;
 using Monica.ServiceDiscovery.Abstractions;
 using Monica.ServiceDiscovery.Facades;
@@ -25,22 +23,23 @@ using Polly.Retry;
 // ReSharper disable once CheckNamespace
 namespace Monica.Modules;
 
-[ModuleKey(BuiltInModuleKey.ServiceDiscovery)]
-public class ModuleServiceDiscovery(ModuleServiceDiscoveryOption option) : WebModuleBase<ModuleServiceDiscovery, ModuleServiceDiscoveryOption, ModuleServiceDiscoveryGuide>(option)
+public class ModuleServiceDiscovery : MonicaModule<ModuleServiceDiscoveryOption>, IWebModule
 {
+    internal const string STATE_STORE_FEATURE = "service-discovery-state-store";
 
-    public override void ClaimDependencies()
+    public override void Describe(ModuleDescriptor module)
     {
-        DependsOnModule<ModuleLocalizationGuide>().Register()
-            .AddResource<ServiceDiscoveryResource>();
-
-        // Depend on HostedService module for MoBackgroundService base class
-        DependsOnModule<ModuleHostedServiceGuide>().Register();
-
-        // Depend on Resilience module for heartbeat retry pipelines
-        DependsOnModule<ModuleResilienceGuide>()
-            .Register()
-            .AddResiliencePipeline(ResiliencePipelineNames.ServiceDiscovery, builder =>
+        module.RequireFeature(STATE_STORE_FEATURE);
+        module.Require<ModuleLocalization, ModuleLocalizationOption>(localization =>
+        {
+            if (!localization.ResourceMarkerTypes.Contains(typeof(ServiceDiscoveryResource)))
+            {
+                localization.ResourceMarkerTypes.Add(typeof(ServiceDiscoveryResource));
+            }
+        });
+        module.Require<ModuleHostedService, ModuleHostedServiceOption>();
+        module.Require<ModuleResilience, ModuleResilienceOption>(resilience =>
+            resilience.PipelineConfigurations[ResiliencePipelineNames.ServiceDiscovery] = builder =>
                 builder.AddRetry(new RetryStrategyOptions
                 {
                     MaxRetryAttempts = 5,
@@ -48,34 +47,28 @@ public class ModuleServiceDiscovery(ModuleServiceDiscoveryOption option) : WebMo
                     BackoffType = DelayBackoffType.Exponential,
                     UseJitter = true
                 }));
+        module.Require<ModuleStateStore, ModuleStateStoreOption>();
+    }
 
-        // Depend on StateStore module for state management
-        // Only register common state store if not using custom keyed provider
-        if (!option.UseCustomKeyedStateStore)
+    public override void ConfigureServices(ModuleContext<ModuleServiceDiscoveryOption> context)
+    {
+        var services = context.Services;
+        // If a custom keyed state store is used, proxy it to the ServiceDiscovery service key.
+        if (Option.UseCustomKeyedStateStore && !string.IsNullOrEmpty(Option.CustomStateStoreServiceKey))
         {
-            DependsOnModule<ModuleStateStoreGuide>()
-                .Register()
-                .AddKeyedCommonStateStore(nameof(ModuleServiceDiscovery), !option.IsStandaloneMode);
+            if (Option.CustomStateStoreServiceKey != nameof(ModuleServiceDiscovery))
+            {
+                services.AddKeyedSingleton<IStateStore>(nameof(ModuleServiceDiscovery), (provider, _) =>
+                    provider.GetRequiredKeyedService<IStateStore>(Option.CustomStateStoreServiceKey));
+            }
         }
         else
         {
-            // Just register the StateStore module dependency without adding keyed store
-            DependsOnModule<ModuleStateStoreGuide>().Register();
-        }
-    }
-
-    public override void ConfigureServices(IServiceCollection services)
-    {
-        // If a custom keyed state store is used, proxy it to the ServiceDiscovery service key.
-        if (option.UseCustomKeyedStateStore && !string.IsNullOrEmpty(option.CustomStateStoreServiceKey))
-        {
-            if (option.CustomStateStoreServiceKey != nameof(ModuleServiceDiscovery))
-            {
-                services.AddKeyedSingleton<IStateStore>(nameof(ModuleServiceDiscovery), (sp, _) => sp.GetRequiredKeyedService<IStateStore>(option.CustomStateStoreServiceKey));
-            }
+            services.AddKeyedSingleton<IStateStore>(nameof(ModuleServiceDiscovery), (provider, _) =>
+                provider.GetRequiredService<IStateStore>());
         }
 
-        if (option is { IncludeListeningAddresses: true})
+        if (Option.IncludeListeningAddresses)
         {
             // Register IServerAddressesFeature to retrieve listening addresses.
             services.TryAddSingleton(provider =>
@@ -107,11 +100,11 @@ public class ModuleServiceDiscovery(ModuleServiceDiscoveryOption option) : WebMo
         services.TryAddSingleton<IServiceDiscoveryCatalogProvider, DefaultServiceDiscoveryCatalogProvider>();
     }
 
-    public override void ConfigureEndpoints(IApplicationBuilder app)
+    public override void ConfigureEndpoints(WebModuleContext<ModuleServiceDiscoveryOption> context)
     {
-        UseEndpoints(app, endpoints =>
+        UseEndpoints(context, endpoints =>
         {
-            var tagName = option.GetApiGroupName();
+            var tagName = Option.GetApiGroupName();
 
             endpoints.MapGet(ServiceDiscoveryConventions.RegistryLeaderStatus,
                 async ([FromServices] ServiceDiscoveryFacade facade) =>
@@ -148,126 +141,6 @@ public class ModuleServiceDiscovery(ModuleServiceDiscoveryOption option) : WebMo
     }
 }
 
-public class ModuleServiceDiscoveryGuide : WebModuleGuide<ModuleServiceDiscovery, ModuleServiceDiscoveryOption, ModuleServiceDiscoveryGuide>
-{
-    private const string SET_STATE_STORE = nameof(SET_STATE_STORE);
-
-    protected override string[] GetRequestedConfigMethodKeys()
-    {
-        return [SET_STATE_STORE];
-    }
-
-    /// <summary>
-    /// Uses in-memory state storage (single-instance mode).
-    /// </summary>
-    /// <remarks>
-    /// Suitable for single-instance deployments or development environments.
-    /// </remarks>
-    public ModuleServiceDiscoveryGuide UseInMemoryStateStore()
-    {
-        ConfigureEmpty(SET_STATE_STORE);
-        ConfigureModuleOption(o =>
-        {
-            o.IsStandaloneMode = true;
-            o.IsRegistryServer = true;
-        });
-        return this;
-    }
-
-    /// <summary>
-    /// Uses distributed state storage (multi-instance mode).
-    /// </summary>
-    /// <remarks>
-    /// Suitable for multi-instance deployments and requires a common distributed StateStore (for example, Redis).
-    /// </remarks>
-    public ModuleServiceDiscoveryGuide UseDistributedStateStore()
-    {
-        ConfigureEmpty(SET_STATE_STORE);
-        ConfigureModuleOption(o =>
-        {
-            o.IsStandaloneMode = false;
-        });
-        return this;
-    }
-
-    /// <summary>
-    /// Marks the current service as the registry server.
-    /// </summary>
-    public ModuleServiceDiscoveryGuide SetAsRegistryServer()
-    {
-        ConfigureModuleOption(o => o.IsRegistryServer = true);
-        return this;
-    }
-
-    /// <summary>
-    /// Configures the catalog provider service used by the registry server.
-    /// </summary>
-    /// <typeparam name="TInfoProvider">Implementation type of the catalog provider service.</typeparam>
-    public ModuleServiceDiscoveryGuide ConfigureRegistryCatalog<TInfoProvider>()
-        where TInfoProvider : class, IServiceDiscoveryCatalogProvider
-    {
-        ConfigureServices(context =>
-        {
-            context.Services.AddSingleton<IServiceDiscoveryCatalogProvider, TInfoProvider>();
-        });
-        return this;
-    }
-
-    /// <summary>
-    /// Sets the dependent subdomain list from a Flags enum value.
-    /// </summary>
-    /// <typeparam name="TEnum">Enum type decorated with the Flags attribute.</typeparam>
-    /// <param name="domainFlags">Enum value that may include multiple domain flags.</param>
-    public ModuleServiceDiscoveryGuide SetDependentSubDomains<TEnum>(TEnum domainFlags)
-        where TEnum : struct, Enum
-    {
-        if (!typeof(TEnum).IsDefined(typeof(FlagsAttribute), false))
-        {
-            throw new ArgumentException("枚举类型必须标记为Flags", nameof(domainFlags));
-        }
-
-        var domains = new List<string>();
-        var flagValues = Enum.GetValues<TEnum>();
-
-        foreach (var flagValue in flagValues)
-        {
-            // Skip the None value (typically 0).
-            if (Convert.ToInt32(flagValue) == 0) continue;
-
-            // Check whether this flag is included.
-            if (domainFlags.HasFlag(flagValue))
-            {
-                domains.Add(flagValue.ToString());
-            }
-        }
-
-        ConfigureModuleOption(o => o.DependentSubDomains = domains);
-        return this;
-    }
-    
-    /// <summary>
-    /// Uses a pre-registered keyed StateStore via the specified serviceKey.
-    /// </summary>
-    /// <param name="serviceKey">Service key of the StateStore used to resolve the corresponding instance from the DI container.</param>
-    /// <returns>The module guide instance for fluent chaining.</returns>
-    /// <remarks>
-    /// Before calling this method, register the StateStore for the target serviceKey in ModuleStateStoreGuide,
-    /// for example via AddKeyedRedisStateStore or AddKeyedDaprStateStore.
-    /// By default, nameof(ModuleServiceDiscovery) can be used as the serviceKey.
-    /// </remarks>
-    public ModuleServiceDiscoveryGuide UseCustomKeyedStateStore(string serviceKey = nameof(ModuleServiceDiscovery))
-    {
-        ArgumentNullException.ThrowIfNull(serviceKey);
-
-        ConfigureEmpty(SET_STATE_STORE);
-        ConfigureModuleOption(o =>
-        {
-            o.IsStandaloneMode = false;
-            o.CustomStateStoreServiceKey = serviceKey;
-        });
-        return this;
-    }
-}
 public static class ModuleServiceDiscoveryBuilderExtensions
 {
     extension(IMonicaBuilder builder)
@@ -275,9 +148,88 @@ public static class ModuleServiceDiscoveryBuilderExtensions
         /// <summary>
         /// Configures the ServiceDiscovery module.
         /// </summary>
-        public ModuleServiceDiscoveryGuide AddServiceDiscovery(Action<ModuleServiceDiscoveryOption>? action = null)
+        public ModuleRegistration<ModuleServiceDiscovery, ModuleServiceDiscoveryOption> AddServiceDiscovery(
+            Action<ModuleServiceDiscoveryOption>? action = null)
         {
-            return builder.AddModule<ModuleServiceDiscovery, ModuleServiceDiscoveryOption, ModuleServiceDiscoveryGuide>(action);
+            return builder.AddModule<ModuleServiceDiscovery, ModuleServiceDiscoveryOption>(action);
+        }
+    }
+
+    extension(ModuleRegistration<ModuleServiceDiscovery, ModuleServiceDiscoveryOption> registration)
+    {
+        /// <summary>
+        /// Uses the process-local state store and makes this instance the registry server.
+        /// </summary>
+        public ModuleRegistration<ModuleServiceDiscovery, ModuleServiceDiscoveryOption> UseInMemoryStateStore()
+        {
+            return registration
+                .Configure(options =>
+                {
+                    options.IsStandaloneMode = true;
+                    options.IsRegistryServer = true;
+                    options.CustomStateStoreServiceKey = null;
+                })
+                .SatisfyFeature(ModuleServiceDiscovery.STATE_STORE_FEATURE);
+        }
+
+        /// <summary>
+        /// Uses the StateStore module's configured distributed provider.
+        /// </summary>
+        public ModuleRegistration<ModuleServiceDiscovery, ModuleServiceDiscoveryOption> UseDistributedStateStore()
+        {
+            registration.Require<ModuleStateStore, ModuleStateStoreOption>()
+                .RequireFeature(ModuleStateStore.DISTRIBUTED_PROVIDER_FEATURE);
+            return registration
+                .Configure(options =>
+                {
+                    options.IsStandaloneMode = false;
+                    options.CustomStateStoreServiceKey = null;
+                })
+                .SatisfyFeature(ModuleServiceDiscovery.STATE_STORE_FEATURE);
+        }
+
+        public ModuleRegistration<ModuleServiceDiscovery, ModuleServiceDiscoveryOption> SetAsRegistryServer()
+        {
+            return registration.Configure(options => options.IsRegistryServer = true);
+        }
+
+        public ModuleRegistration<ModuleServiceDiscovery, ModuleServiceDiscoveryOption> ConfigureRegistryCatalog<TProvider>()
+            where TProvider : class, IServiceDiscoveryCatalogProvider
+        {
+            return registration.ConfigureServices(context =>
+                context.Services.AddSingleton<IServiceDiscoveryCatalogProvider, TProvider>());
+        }
+
+        public ModuleRegistration<ModuleServiceDiscovery, ModuleServiceDiscoveryOption> SetDependentSubDomains<TEnum>(
+            TEnum domainFlags)
+            where TEnum : struct, Enum
+        {
+            if (!typeof(TEnum).IsDefined(typeof(FlagsAttribute), false))
+            {
+                throw new ArgumentException("The enum type must be marked with FlagsAttribute.", nameof(domainFlags));
+            }
+
+            var domains = Enum.GetValues<TEnum>()
+                .Where(flag => Convert.ToInt32(flag) != 0 && domainFlags.HasFlag(flag))
+                .Select(static flag => flag.ToString())
+                .ToList();
+            return registration.Configure(options => options.DependentSubDomains = domains);
+        }
+
+        /// <summary>
+        /// Uses a keyed state store that the host has registered explicitly.
+        /// </summary>
+        public ModuleRegistration<ModuleServiceDiscovery, ModuleServiceDiscoveryOption> UseCustomKeyedStateStore(
+            string serviceKey = nameof(ModuleServiceDiscovery))
+        {
+            ArgumentException.ThrowIfNullOrWhiteSpace(serviceKey);
+            return registration
+                .Configure(options =>
+                {
+                    options.IsStandaloneMode = false;
+                    options.CustomStateStoreServiceKey = serviceKey;
+                })
+                .SatisfyFeature(ModuleServiceDiscovery.STATE_STORE_FEATURE);
         }
     }
 }
@@ -379,7 +331,7 @@ public class ModuleServiceDiscoveryOption : MinimalApiModuleOptions<ModuleServic
 
     /// <summary>
     /// Indicates whether a custom keyed StateStore provider is used.
-    /// When true, ClaimDependencies does not auto-register a keyed StateStore.
+    /// When true, the host supplies an explicitly keyed StateStore instead of using the module default.
     /// </summary>
     public bool UseCustomKeyedStateStore => CustomStateStoreServiceKey != null;
 

@@ -95,21 +95,21 @@
                             <MudItem xs="12" sm="6">
                                 <MudPaper Class="pa-4 detail-card" Elevation="2">
                                     <div class="d-flex align-center mb-2">
-                                        <MudIcon Icon="@GetRuntimeModeIcon(SelectedModuleDetail.ConfigInfo)"
-                                                 Color="@GetRuntimeModeColor(SelectedModuleDetail.ConfigInfo)"
+                                        <MudIcon Icon="@GetHostRequirementIcon(SelectedModuleDetail.ConfigInfo)"
+                                                 Color="@GetHostRequirementColor(SelectedModuleDetail.ConfigInfo)"
                                                  Size="Size.Small"
                                                  Class="mr-2" />
-                                        <MudText Typo="Typo.subtitle2">@L["ModuleSystem:ModuleDetail:Labels:RuntimeMode"]</MudText>
+                                        <MudText Typo="Typo.subtitle2">@L["ModuleSystem:ModuleDetail:Labels:HostRequirement"]</MudText>
                                     </div>
                                     <MudChip T="string"
-                                             Color="@GetRuntimeModeColor(SelectedModuleDetail.ConfigInfo)"
-                                             Variant="@(SelectedModuleDetail.ConfigInfo.IsDowngradedFromWebModule ? Variant.Filled : Variant.Outlined)"
+                                             Color="@GetHostRequirementColor(SelectedModuleDetail.ConfigInfo)"
+                                             Variant="@(SelectedModuleDetail.ConfigInfo.RequiresWebHost ? Variant.Filled : Variant.Outlined)"
                                              Size="Size.Small"
-                                             Icon="@GetRuntimeModeIcon(SelectedModuleDetail.ConfigInfo)">
-                                        @GetRuntimeModeLabel(SelectedModuleDetail.ConfigInfo)
+                                             Icon="@GetHostRequirementIcon(SelectedModuleDetail.ConfigInfo)">
+                                        @GetHostRequirementLabel(SelectedModuleDetail.ConfigInfo)
                                     </MudChip>
                                     <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mt-2">
-                                        @GetRuntimeModeDescription(SelectedModuleDetail.ConfigInfo)
+                                        @GetHostRequirementDescription(SelectedModuleDetail.ConfigInfo)
                                     </MudText>
                                 </MudPaper>
                             </MudItem>
@@ -261,8 +261,8 @@
                                 {
                                     <ModuleOptionDisplay OptionType="@configuredOption.OptionType"
                                                        OptionInstance="@configuredOption.OptionInstance"
-                                                       OptionKindText="@(configuredOption.IsExtraOption ? L["ModuleSystem:ModuleDetail:Labels:ExtraOption"] : L["ModuleSystem:ModuleDetail:Labels:ModuleOption"])"
-                                                       OptionKindColor="@(configuredOption.IsExtraOption ? Color.Tertiary : Color.Primary)" />
+                                                       OptionKindText="@L["ModuleSystem:ModuleDetail:Labels:ModuleOption"]"
+                                                       OptionKindColor="Color.Primary" />
                                 }
                             </MudStack>
                         }
@@ -410,33 +410,38 @@
     }
 
     /// <summary>
-    /// Gets the localized runtime mode label for the selected module.
+    /// Gets the localized host requirement label for the selected module.
     /// </summary>
-    private string GetRuntimeModeLabel(ModuleConfigInfo configInfo)
+    private string GetHostRequirementLabel(ModuleConfigInfo configInfo)
     {
-        if (configInfo.IsDowngradedFromWebModule)
+        if (!configInfo.IsWebModule)
         {
-            return L["ModuleSystem:ModuleDetail:States:Downgraded"];
+            return L["ModuleSystem:ModuleDetail:States:NoWebHostRequirement"];
         }
 
-        return configInfo.IsWebModule
-            ? L["ModuleSystem:ModuleDetail:States:WebRuntime"]
-            : L["ModuleSystem:ModuleDetail:States:NonWebRuntime"];
+        return configInfo.RequiresWebHost
+            ? L["ModuleSystem:ModuleDetail:States:WebHostRequired"]
+            : L["ModuleSystem:ModuleDetail:States:WebHostOptional"];
     }
 
     /// <summary>
-    /// Gets a short runtime description for the selected module.
+    /// Gets a short host requirement description for the selected module.
     /// </summary>
-    private string GetRuntimeModeDescription(ModuleConfigInfo configInfo)
+    private string GetHostRequirementDescription(ModuleConfigInfo configInfo)
     {
-        if (configInfo.IsDowngradedFromWebModule)
+        if (!configInfo.IsWebModule)
         {
-            return L["ModuleSystem:ModuleDetail:Messages:DowngradedRuntimeDescription"];
+            return L["ModuleSystem:ModuleDetail:Messages:NoWebHostRequirementDescription"];
         }
 
-        return configInfo.IsWebModule
-            ? L["ModuleSystem:ModuleDetail:Messages:WebRuntimeDescription"]
-            : L["ModuleSystem:ModuleDetail:Messages:NonWebRuntimeDescription"];
+        if (!configInfo.RequiresWebHost)
+        {
+            return L["ModuleSystem:ModuleDetail:Messages:WebHostOptionalDescription"];
+        }
+
+        return string.IsNullOrWhiteSpace(configInfo.WebHostRequirementReason)
+            ? L["ModuleSystem:ModuleDetail:Messages:WebHostRequiredDescription"]
+            : configInfo.WebHostRequirementReason;
     }
 
     /// <summary>
@@ -447,18 +452,18 @@
         : Icons.Material.Filled.Memory;
 
     /// <summary>
-    /// Gets the runtime mode icon for the selected module.
+    /// Gets the host requirement icon for the selected module.
     /// </summary>
-    private static string GetRuntimeModeIcon(ModuleConfigInfo configInfo)
+    private static string GetHostRequirementIcon(ModuleConfigInfo configInfo)
     {
-        if (configInfo.IsDowngradedFromWebModule)
+        if (!configInfo.IsWebModule)
         {
-            return Icons.Material.Filled.ArrowDownward;
+            return Icons.Material.Filled.Storage;
         }
 
-        return configInfo.IsWebModule
-            ? Icons.Material.Filled.CloudDone
-            : Icons.Material.Filled.Storage;
+        return configInfo.RequiresWebHost
+            ? Icons.Material.Filled.WebAsset
+            : Icons.Material.Filled.CloudDone;
     }
 
     /// <summary>
@@ -467,15 +472,15 @@
     private static Color GetCapabilityColor(ModuleConfigInfo configInfo) => configInfo.IsWebModule ? Color.Info : Color.Default;
 
     /// <summary>
-    /// Gets the runtime mode chip color for the selected module.
+    /// Gets the host requirement chip color for the selected module.
     /// </summary>
-    private static Color GetRuntimeModeColor(ModuleConfigInfo configInfo)
+    private static Color GetHostRequirementColor(ModuleConfigInfo configInfo)
     {
-        if (configInfo.IsDowngradedFromWebModule)
+        if (!configInfo.IsWebModule)
         {
-            return Color.Warning;
+            return Color.Secondary;
         }
 
-        return configInfo.IsWebModule ? Color.Success : Color.Secondary;
+        return configInfo.RequiresWebHost ? Color.Warning : Color.Success;
     }
 }

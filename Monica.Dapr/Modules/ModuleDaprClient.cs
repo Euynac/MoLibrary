@@ -6,7 +6,6 @@ using Monica.Core;
 using Monica.Core.JsonSerialization.Extensions;
 using Monica.Core.Modularity;
 using Monica.Core.Modularity.Abstractions;
-using Monica.Core.Modularity.Annotations;
 using Monica.Core.Modularity.Models;
 using Monica.Dapr.Abstractions;
 using Monica.Dapr.Services;
@@ -21,28 +20,28 @@ public static class ModuleDaprClientBuilderExtensions
         /// <summary>
         /// Registers and configures the Dapr client module.
         /// </summary>
-        public ModuleDaprClientGuide AddDaprClient(Action<ModuleDaprClientOption>? action = null)
+        public ModuleRegistration<ModuleDaprClient, ModuleDaprClientOption> AddDaprClient(Action<ModuleDaprClientOption>? action = null)
         {
-            return builder.AddModule<ModuleDaprClient, ModuleDaprClientOption, ModuleDaprClientGuide>(action);
+            return builder.AddModule<ModuleDaprClient, ModuleDaprClientOption>(action);
         }
     }
 }
 
-[ModuleKey(BuiltInModuleKey.DaprClient)]
-public class ModuleDaprClient(ModuleDaprClientOption option)
-    : ModuleBase<ModuleDaprClient, ModuleDaprClientOption, ModuleDaprClientGuide>(option)
+public class ModuleDaprClient : MonicaModule<ModuleDaprClientOption>
 {
 
-    public override void ConfigureBuilder(IHostApplicationBuilder builder)
+    public override void ConfigureBuilder(ModuleBuilderContext<ModuleDaprClientOption> context)
     {
+        var builder = context.HostApplicationBuilder;
         builder.Services.Configure<KestrelServerOptions>(options =>
         {
             options.Limits.MaxRequestBodySize = Option.MaxReceiveMessageSize;
         });
     }
 
-    public override void ConfigureServices(IServiceCollection services)
+    public override void ConfigureServices(ModuleContext<ModuleDaprClientOption> context)
     {
+        var services = context.Services;
         services.AddDaprClient(builder => builder.UseGrpcChannelOptions(new GrpcChannelOptions()
         {
             MaxReceiveMessageSize = Option.MaxReceiveMessageSize,
@@ -58,18 +57,15 @@ public class ModuleDaprClient(ModuleDaprClientOption option)
             sp.GetRequiredService<DaprSidecarHealthCoordinator>());
     }
 
-    public override void ClaimDependencies()
+    public override void Describe(ModuleDescriptor module)
     {
-        DependsOnModule<ModuleDaprGuide>().Register();
-        DependsOnModule<ModuleHostedServiceGuide>().Register();
-        DependsOnModule<ModuleJsonSerializationGuide>().Register();
+        module.Require<ModuleDapr, ModuleDaprOption>();
+        module.Require<ModuleHostedService, ModuleHostedServiceOption>();
+        module.Require<ModuleJsonSerialization, ModuleJsonSerializationOption>();
     }
 }
 
-public class ModuleDaprClientGuide : ModuleGuide<ModuleDaprClient, ModuleDaprClientOption, ModuleDaprClientGuide>
-{
 
-}
 
 public class ModuleDaprClientOption : ModuleOptions<ModuleDaprClient>
 {

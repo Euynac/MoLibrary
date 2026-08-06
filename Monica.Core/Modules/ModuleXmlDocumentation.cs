@@ -5,8 +5,6 @@ using Microsoft.Extensions.DependencyInjection;
 using Monica.Core;
 using Monica.Core.Modularity;
 using Monica.Core.Modularity.Abstractions;
-using Monica.Core.Modularity.Annotations;
-using Monica.Core.Modularity.Models;
 using Monica.Core.Results;
 using Monica.Core.XmlDocumentation.Abstractions;
 using Monica.Core.XmlDocumentation.Services;
@@ -21,9 +19,10 @@ public static class ModuleXmlDocumentationBuilderExtensions
         /// <summary>
         /// Registers the XML documentation module.
         /// </summary>
-        public ModuleXmlDocumentationGuide AddXmlDocumentation(Action<ModuleXmlDocumentationOption>? action = null)
+        public ModuleRegistration<ModuleXmlDocumentation, ModuleXmlDocumentationOption> AddXmlDocumentation(
+            Action<ModuleXmlDocumentationOption>? action = null)
         {
-            return builder.AddModule<ModuleXmlDocumentation, ModuleXmlDocumentationOption, ModuleXmlDocumentationGuide>(action);
+            return builder.AddModule<ModuleXmlDocumentation, ModuleXmlDocumentationOption>(action);
         }
     }
 }
@@ -31,31 +30,29 @@ public static class ModuleXmlDocumentationBuilderExtensions
 /// <summary>
 /// Provides XML documentation lookup and cache inspection endpoints.
 /// </summary>
-[ModuleKey(BuiltInModuleKey.XmlDocumentation)]
-public class ModuleXmlDocumentation(ModuleXmlDocumentationOption option)
-    : WebModuleBase<ModuleXmlDocumentation, ModuleXmlDocumentationOption, ModuleXmlDocumentationGuide>(option)
+public class ModuleXmlDocumentation : MonicaModule<ModuleXmlDocumentationOption>, IWebModule
 {
     /// <summary>
     /// Configures services.
     /// </summary>
-    /// <param name="services">The service collection.</param>
-    public override void ConfigureServices(IServiceCollection services)
+    /// <param name="context">The module-owned service registration context.</param>
+    public override void ConfigureServices(ModuleContext<ModuleXmlDocumentationOption> context)
     {
-        services.AddSingleton<IXmlDocumentationService, XmlDocumentationService>();
+        context.Services.AddSingleton<IXmlDocumentationService, XmlDocumentationService>();
     }
 
     /// <summary>
     /// Configures endpoints.
     /// </summary>
-    /// <param name="app">The application builder.</param>
-    public override void ConfigureEndpoints(IApplicationBuilder app)
+    /// <param name="context">The module-owned Web application context.</param>
+    public override void ConfigureEndpoints(WebModuleContext<ModuleXmlDocumentationOption> context)
     {
-        if (!option.EnableEndpoints)
+        if (!Option.EnableEndpoints)
         {
             return;
         }
 
-        UseEndpoints(app, endpoints =>
+        UseEndpoints(context, endpoints =>
         {
             var tagName = Option.GetApiGroupName();
 
@@ -102,13 +99,6 @@ public class ModuleXmlDocumentation(ModuleXmlDocumentationOption option)
             .WithDescription("Evicts all cached XML documentation files from this Monica host.");
         });
     }
-}
-
-/// <summary>
-/// Provides fluent configuration for the XML documentation module.
-/// </summary>
-public class ModuleXmlDocumentationGuide : WebModuleGuide<ModuleXmlDocumentation, ModuleXmlDocumentationOption, ModuleXmlDocumentationGuide>
-{
 }
 
 /// <summary>

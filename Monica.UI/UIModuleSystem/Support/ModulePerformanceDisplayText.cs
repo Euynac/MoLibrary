@@ -39,8 +39,8 @@ internal static class ModulePerformanceDisplayText
         IStringLocalizer<SharedResource> localizer,
         ModuleStartupWorkBarrier barrier) => barrier switch
     {
-        ModuleStartupWorkBarrier.BeforeBusinessTypeIteration =>
-            localizer["ModuleSystem:StartupWork:Barriers:BeforeBusinessTypeIteration"],
+        ModuleStartupWorkBarrier.BeforeTypeDiscovery =>
+            localizer["ModuleSystem:StartupWork:Barriers:BeforeTypeDiscovery"],
         ModuleStartupWorkBarrier.BeforePostConfigureServices =>
             localizer["ModuleSystem:StartupWork:Barriers:BeforePostConfigureServices"],
         ModuleStartupWorkBarrier.BeforeServiceRegistrationCompletion =>

@@ -10,6 +10,7 @@ using Monica.Core.Execution.Models;
 using Monica.Core.Modularity.Models;
 using Monica.Framework.UI.Localization;
 using Monica.Framework.UI.UIExecutionPipeline.State;
+using Monica.Modules;
 using Monica.Testing.Localization;
 using MudBlazor;
 using MudBlazor.Services;
@@ -88,7 +89,7 @@ internal sealed class ExecutionPipelineUiTestContext : BunitContext
             Type($"Example.{name}<Example.Input, Example.Result>"),
             order,
             ServiceLifetime.Scoped,
-            BuiltInModuleKey.Mediator);
+            ModuleKey.FromModuleType(typeof(ModuleMediator)));
     }
 
     internal static ExecutionBehaviorRegistrationSnapshot CreateRegistration(
@@ -99,7 +100,7 @@ internal sealed class ExecutionPipelineUiTestContext : BunitContext
             Type($"Example.{name}<,>"),
             order,
             ServiceLifetime.Scoped,
-            BuiltInModuleKey.Mediator,
+            ModuleKey.FromModuleType(typeof(ModuleMediator)),
             IsOpenGeneric: true,
             HasDescriptorFilter: true);
     }

@@ -6,7 +6,6 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 using Monica.Core;
 using Monica.Core.Modularity;
 using Monica.Core.Modularity.Abstractions;
-using Monica.Core.Modularity.Annotations;
 using Monica.Core.Modularity.Extensions;
 using Monica.Core.Modularity.Models;
 using Monica.Core.Results;
@@ -31,10 +30,13 @@ public static class ModuleOpenTelemetryBuilderExtensions
         /// Registers Monica's out-of-the-box OpenTelemetry SDK wiring for metrics exporters and instrumentations.
         /// </summary>
         /// <param name="action">Optional module option configuration delegate.</param>
-        /// <returns>The module guide used to continue OpenTelemetry registration.</returns>
-        public ModuleOpenTelemetryGuide AddOpenTelemetry(Action<ModuleOpenTelemetryOption>? action = null)
+        /// <returns>The host-bound OpenTelemetry module registration.</returns>
+        public ModuleRegistration<ModuleOpenTelemetry, ModuleOpenTelemetryOption> AddOpenTelemetry(Action<ModuleOpenTelemetryOption>? action = null)
         {
-            return builder.AddModule<ModuleOpenTelemetry, ModuleOpenTelemetryOption, ModuleOpenTelemetryGuide>(action);
+            var module = builder.AddModule<ModuleOpenTelemetry, ModuleOpenTelemetryOption>(action);
+            module.Require<ModuleLocalization, ModuleLocalizationOption>()
+                .AddResource<OpenTelemetryResource>();
+            return module;
         }
     }
 }
@@ -42,27 +44,18 @@ public static class ModuleOpenTelemetryBuilderExtensions
 /// <summary>
 /// OpenTelemetry integration module that wires metrics exporters, instrumentations, and optional in-process snapshots.
 /// </summary>
-/// <param name="option">The module configuration options.</param>
-[ModuleKey(BuiltInModuleKey.OpenTelemetry)]
-public class ModuleOpenTelemetry(ModuleOpenTelemetryOption option)
-    : WebModuleBase<ModuleOpenTelemetry, ModuleOpenTelemetryOption, ModuleOpenTelemetryGuide>(option)
+public class ModuleOpenTelemetry : MonicaModule<ModuleOpenTelemetryOption>, IWebModule
 {
     /// <inheritdoc />
-    public override bool CanDowngradeToNonWebModule()
+    public override void Describe(ModuleDescriptor module)
     {
-        return true;
+        module.Require<ModuleLocalization, ModuleLocalizationOption>();
     }
 
     /// <inheritdoc />
-    public override void ClaimDependencies()
+    public override void ConfigureServices(ModuleContext<ModuleOpenTelemetryOption> context)
     {
-        DependsOnModule<ModuleLocalizationGuide>().Register()
-            .AddResource<OpenTelemetryResource>();
-    }
-
-    /// <inheritdoc />
-    public override void ConfigureServices(IServiceCollection services)
-    {
+        var services = context.Services;
         services.AddOpenTelemetry()
             .ConfigureResource(resource => ConfigureResource(resource, Option))
             .WithMetrics(metrics => ConfigureMetrics(metrics, Option));
@@ -78,9 +71,10 @@ public class ModuleOpenTelemetry(ModuleOpenTelemetryOption option)
     }
 
     /// <inheritdoc />
-    public override void ConfigureEndpoints(IApplicationBuilder app)
+    public override void ConfigureEndpoints(WebModuleContext<ModuleOpenTelemetryOption> context)
     {
-        UseEndpoints(app, endpoints =>
+        var app = context.ApplicationBuilder;
+        UseEndpoints(context, endpoints =>
         {
             if (Option.UsePrometheusEndpoint)
             {
@@ -165,98 +159,103 @@ public class ModuleOpenTelemetry(ModuleOpenTelemetryOption option)
 }
 
 /// <summary>
-/// Fluent registration guide for the Monica OpenTelemetry integration module.
+/// Registration extensions for the Monica OpenTelemetry integration module.
 /// </summary>
-public class ModuleOpenTelemetryGuide
-    : WebModuleGuide<ModuleOpenTelemetry, ModuleOpenTelemetryOption, ModuleOpenTelemetryGuide>
+public static class ModuleOpenTelemetryRegistrationExtensions
 {
     /// <summary>
     /// Enables the OTLP metrics exporter. Environment variables are honored by the OpenTelemetry SDK when no endpoint is supplied.
     /// </summary>
+    /// <param name="module">The OpenTelemetry registration being configured.</param>
     /// <param name="endpoint">Optional absolute OTLP endpoint URI.</param>
     /// <param name="protocol">OTLP transport protocol.</param>
-    /// <returns>The current guide for fluent chaining.</returns>
-    public ModuleOpenTelemetryGuide UseOtlpExporter(string? endpoint = null, OtlpExportProtocol protocol = OtlpExportProtocol.Grpc)
+    /// <returns>The current registration.</returns>
+    public static ModuleRegistration<ModuleOpenTelemetry, ModuleOpenTelemetryOption> UseOtlpExporter(this ModuleRegistration<ModuleOpenTelemetry, ModuleOpenTelemetryOption> module, string? endpoint = null, OtlpExportProtocol protocol = OtlpExportProtocol.Grpc)
     {
-        ConfigureModuleOption(option =>
+        module.Configure(options =>
         {
-            option.UseOtlpExporter = true;
-            option.OtlpEndpoint = endpoint;
-            option.OtlpProtocol = protocol;
+            options.UseOtlpExporter = true;
+            options.OtlpEndpoint = endpoint;
+            options.OtlpProtocol = protocol;
         });
-        return this;
+        return module;
     }
 
     /// <summary>
     /// Exposes a Prometheus scraping endpoint for metrics.
     /// </summary>
+    /// <param name="module">The OpenTelemetry registration being configured.</param>
     /// <param name="path">Endpoint path used by Prometheus scrapers. Defaults to <c>/metrics</c>.</param>
-    /// <returns>The current guide for fluent chaining.</returns>
-    public ModuleOpenTelemetryGuide UsePrometheusEndpoint(string path = "/metrics")
+    /// <returns>The current registration.</returns>
+    public static ModuleRegistration<ModuleOpenTelemetry, ModuleOpenTelemetryOption> UsePrometheusEndpoint(this ModuleRegistration<ModuleOpenTelemetry, ModuleOpenTelemetryOption> module, string path = "/metrics")
     {
-        ConfigureModuleOption(option =>
+        module.Configure(options =>
         {
-            option.UsePrometheusEndpoint = true;
-            option.PrometheusEndpointPath = path;
+            options.UsePrometheusEndpoint = true;
+            options.PrometheusEndpointPath = path;
         });
-        return this;
+        return module;
     }
 
     /// <summary>
     /// Adds the console metrics exporter for local debugging.
     /// </summary>
-    /// <returns>The current guide for fluent chaining.</returns>
-    public ModuleOpenTelemetryGuide UseConsoleExporter()
+    /// <returns>The current registration.</returns>
+    public static ModuleRegistration<ModuleOpenTelemetry, ModuleOpenTelemetryOption> UseConsoleExporter(this ModuleRegistration<ModuleOpenTelemetry, ModuleOpenTelemetryOption> module)
     {
-        ConfigureModuleOption(option => option.UseConsoleExporter = true);
-        return this;
+        module.Configure(options => options.UseConsoleExporter = true);
+        return module;
     }
 
     /// <summary>
     /// Enables Monica's bounded in-process metrics collector used by the snapshot endpoint and dashboard UI.
     /// </summary>
+    /// <param name="module">The OpenTelemetry registration being configured.</param>
     /// <param name="configure">Optional additional collector configuration.</param>
-    /// <returns>The current guide for fluent chaining.</returns>
-    public ModuleOpenTelemetryGuide UseInProcessCollector(Action<ModuleOpenTelemetryOption>? configure = null)
+    /// <returns>The current registration.</returns>
+    public static ModuleRegistration<ModuleOpenTelemetry, ModuleOpenTelemetryOption> UseInProcessCollector(this ModuleRegistration<ModuleOpenTelemetry, ModuleOpenTelemetryOption> module, Action<ModuleOpenTelemetryOption>? configure = null)
     {
-        ConfigureModuleOption(option =>
+        module.Configure(options =>
         {
-            option.EnableInProcessCollector = true;
-            configure?.Invoke(option);
+            options.EnableInProcessCollector = true;
+            configure?.Invoke(options);
         });
-        return this;
+        return module;
     }
 
     /// <summary>
     /// Controls whether Monica's in-process collector subscribes to meters implied by enabled built-in SDK instrumentations.
     /// </summary>
+    /// <param name="module">The OpenTelemetry registration being configured.</param>
     /// <param name="enabled">
     /// <see langword="true"/> to include the ASP.NET Core, HttpClient, and runtime meters selected by the instrumentation flags;
     /// <see langword="false"/> to collect only <see cref="ModuleOpenTelemetryOption.MeterPatterns"/>.
     /// </param>
-    /// <returns>The current guide for fluent chaining.</returns>
-    public ModuleOpenTelemetryGuide UseInstrumentationMetersInProcessCollector(bool enabled = true)
+    /// <returns>The current registration.</returns>
+    public static ModuleRegistration<ModuleOpenTelemetry, ModuleOpenTelemetryOption> UseInstrumentationMetersInProcessCollector(this ModuleRegistration<ModuleOpenTelemetry, ModuleOpenTelemetryOption> module, bool enabled = true)
     {
-        ConfigureModuleOption(option => option.IncludeInstrumentationMetersInProcessCollector = enabled);
-        return this;
+        module.Configure(options => options.IncludeInstrumentationMetersInProcessCollector = enabled);
+        return module;
     }
 
     /// <summary>
     /// Adds another meter name or wildcard pattern to the OpenTelemetry subscription list.
     /// </summary>
+    /// <param name="module">The OpenTelemetry registration being configured.</param>
     /// <param name="pattern">Meter name or wildcard pattern such as <c>System.*</c>.</param>
-    /// <returns>The current guide for fluent chaining.</returns>
-    public ModuleOpenTelemetryGuide AddMeter(string pattern)
+    /// <returns>The current registration.</returns>
+    public static ModuleRegistration<ModuleOpenTelemetry, ModuleOpenTelemetryOption> AddMeter(this ModuleRegistration<ModuleOpenTelemetry, ModuleOpenTelemetryOption> module, string pattern)
     {
-        ConfigureModuleOption(option =>
+        module.Configure(options =>
         {
-            if (!option.MeterPatterns.Contains(pattern, StringComparer.Ordinal))
+            if (!options.MeterPatterns.Contains(pattern, StringComparer.Ordinal))
             {
-                option.MeterPatterns.Add(pattern);
+                options.MeterPatterns.Add(pattern);
             }
-        }, secondKey: pattern);
-        return this;
+        });
+        return module;
     }
+
 }
 
 /// <summary>

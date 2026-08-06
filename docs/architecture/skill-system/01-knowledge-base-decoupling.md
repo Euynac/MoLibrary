@@ -3,7 +3,7 @@
 > **Status.** Design proposal. Phase A of the implementation roadmap.
 > **Audience.** UI module owner of `Monica.AI.UI/UIRAG`; `Monica.AI` module owner.
 > **Self-contained.** Implementer of this phase does not need to read Docs 02–04.
-> **Last revised.** 2026-04-29.
+> **Last revised.** 2026-08-06.
 
 ## 0. Why this doc exists
 
@@ -25,7 +25,7 @@ Cited by file path with line context:
 | `Monica.AI.UI/UIRAG/Components/KnowledgeBaseSelector.razor` | KB selection chip — lives in UIRAG but consumed by `Monica.AI.UI/UIChat/Components/ChatInputArea.razor` (cross-module dep). |
 | `Monica.AI.UI/UIRAG/State/RAGManagePageState.KnowledgeBase.cs` | KB CRUD orchestration; injects `RAGFacade` and `EmbeddingModelFacade`. |
 | `Monica.AI.UI/UIChat/State/ChatPageState.cs` | Chat state injects `RAGFacade` only to load the KB list — premature coupling. |
-| `Monica.AI.UI/UIRAG/Modules/ModuleRAGUI.cs` | Hard `DependsOnModule<ModuleRAGGuide>` makes KB management transitively force RAG. |
+| `Monica.AI.UI/Modules/ModuleRAGUI.cs` | Its module graph makes KB management transitively force RAG instead of expressing KB UI as its own `IUIModule`. |
 | `Monica.AI/RAG/Facades/RAGFacade.cs` | Carries KB CRUD methods that should not live there: `CreateKnowledgeBaseAsync`, `UpdateKnowledgeBaseAsync`, `DeleteKnowledgeBaseAsync`, `GetKnowledgeBasesAsync`. |
 | `Monica.AI/RAG/Models/KnowledgeBase.cs` | Peer concept currently nested under the RAG namespace. |
 | `Monica.AI/RAG/Tools/KnowledgeSearchToolProvider.cs` | The agent-facing KB tool is fused with RAG semantic search. There is no lookup-only path. |
@@ -53,11 +53,11 @@ Monica.AI/
       KnowledgeBaseLookupService.cs       // implements IKnowledgeBaseLookupService
     Skills/
       KnowledgeBaseLookupSkill.cs         // MoSkill<KnowledgeBaseLookupSkill>
-    Modules/
-      ModuleKnowledgeBase.cs              // module + Guide + Option
+  Modules/
+    ModuleKnowledgeBase.cs                // module + options + registration extensions
 ```
 
-Module key: `Monica.AI` already owns the existing `BuiltInModuleKey.AI` and `BuiltInModuleKey.RAG`. Add `BuiltInModuleKey.KnowledgeBase` (next to `RAG` in `BuiltInModuleKey.cs`). The module is registered via `monica.AddKnowledgeBase(...)` in the standard Monica fluent style.
+`ModuleKnowledgeBase` is identified by its CLR type and derives from `MonicaModule<ModuleKnowledgeBaseOption>`. Its intrinsic graph is declared in `Describe(ModuleDescriptor)`, and `monica.AddKnowledgeBase(...)` returns `ModuleRegistration<ModuleKnowledgeBase, ModuleKnowledgeBaseOption>` for host contributions. No key enum or identifier attribute is required.
 
 Rationale for keeping it inside `Monica.AI` rather than carving out `Monica.AI.KnowledgeBase` as a separate project: KB is conceptually part of the AI surface, has no consumers outside `Monica.AI`, and a separate project would invert the dependency arrow (RAG would have to reference KB) — which is correct, but the project graph already handles that internally without requiring a new `.csproj` file. See open question (a).
 
@@ -80,14 +80,31 @@ Monica.AI.UI/
       KnowledgeBaseManagePageState.cs     // KB CRUD orchestration extracted
       KnowledgeBaseManagePageState.Documents.cs   // KB document inventory (read-only)
     Modules/
-      ModuleKnowledgeBaseUI.cs            // UI module
+      ModuleKnowledgeBaseUI.cs            // IUIModule registration strategy
 ```
 
-Module key: add `BuiltInModuleKey.KnowledgeBaseUI` next to `RAGUI` in `BuiltInModuleKey.cs`. The new UI module depends on:
+`ModuleKnowledgeBaseUI` is identified by `typeof(ModuleKnowledgeBaseUI)`, derives from `MonicaModule<ModuleKnowledgeBaseUIOption>`, and implements `IUIModule`. It does not implement `IWebModule`: registering pages, dialogs, navigation, and UI state is UI composition, not middleware or endpoint contribution. The new UI module requires:
 
-- `ModuleAIUIGuide` (for the chat-host integration that consumes `KnowledgeBaseSelector`).
-- `ModuleKnowledgeBaseGuide` (backend Facade).
-- *Not* `ModuleRAGUIGuide` — explicit goal of the decoupling.
+- `ModuleKnowledgeBase` (backend Facade).
+- *Not* `ModuleRAGUI` — explicit goal of the decoupling.
+
+Intrinsic dependencies belong in `Describe`. Host-selected page, localization, and shell registrations are expressed through the returned `ModuleRegistration` with `Require(...)` and registration extensions.
+
+```csharp
+public sealed class ModuleKnowledgeBaseUI
+    : MonicaModule<ModuleKnowledgeBaseUIOption>, IUIModule
+{
+    public override void Describe(ModuleDescriptor module)
+    {
+        module.Require<ModuleKnowledgeBase, ModuleKnowledgeBaseOption>();
+    }
+
+    public override void ConfigureServices(ModuleContext<ModuleKnowledgeBaseUIOption> context)
+    {
+        context.Services.AddScoped<KnowledgeBaseManagePageState>();
+    }
+}
+```
 
 `ModuleRAGUI` no longer carries the KB management page or its panel/dialog; `ModuleRAGUI` keeps the RAG-specific pages (`RAGDebugPage`, `RAGChunkersPage`, and a slimmer `RAGManagePage` focused on indexing + queue + chunking).
 
@@ -310,7 +327,8 @@ public sealed class KnowledgeBaseLookupSkill(
         "— for that, look for the 'rag-knowledge' skill (only available when RAG " +
         "is configured). Cite sources by document title and source link.";
 
-    public override IEnumerable<ModuleKey> RequiredModules => [BuiltInModuleKey.KnowledgeBase];
+    public override IReadOnlySet<Type> RequiredModules { get; } =
+        new[] { typeof(ModuleKnowledgeBase) }.ToFrozenSet();
 
     [MoAITool(
         Name = "list-knowledge-bases",
@@ -388,7 +406,7 @@ Note that the Skill takes its dependencies through the primary constructor (Moni
 
 ### 4.3 Coexistence with the existing RAG-search Skill
 
-After Phase B (Doc 02) lands, `Monica.AI/RAG/Skills/RAGKnowledgeSkill.cs` is the migrated successor of `KnowledgeSearchToolProvider`. It carries `RequiredModules => [BuiltInModuleKey.RAG]` so it surfaces only when RAG is loaded. Its scripts include `search-knowledge-base` (the semantic search). When both the lookup-only Skill and the RAG-search Skill are active in the same session, the agent sees two distinct entries in the system prompt — `knowledge-base-lookup` and `rag-knowledge` — and chooses based on the user's intent.
+After Phase B (Doc 02) lands, `Monica.AI/RAG/Skills/RAGKnowledgeSkill.cs` is the migrated successor of `KnowledgeSearchToolProvider`. Its `RequiredModules` set contains `typeof(ModuleRAG)`, so it surfaces only when RAG is loaded. Its scripts include `search-knowledge-base` (the semantic search). When both the lookup-only Skill and the RAG-search Skill are active in the same session, the agent sees two distinct entries in the system prompt — `knowledge-base-lookup` and `rag-knowledge` — and chooses based on the user's intent.
 
 The agent-facing instructions on each Skill explicitly cross-reference the other so the agent knows when to switch:
 
@@ -421,16 +439,12 @@ Monica.AI/KnowledgeBase/Models/KnowledgeDocumentContent.cs
 Monica.AI/KnowledgeBase/Services/KnowledgeBaseService.cs
 Monica.AI/KnowledgeBase/Services/KnowledgeBaseLookupService.cs
 Monica.AI/KnowledgeBase/Skills/KnowledgeBaseLookupSkill.cs
-Monica.AI/KnowledgeBase/Modules/ModuleKnowledgeBase.cs
-Monica.AI/KnowledgeBase/Modules/ModuleKnowledgeBaseGuide.cs
-Monica.AI/KnowledgeBase/Modules/ModuleKnowledgeBaseOption.cs
+Monica.AI/Modules/ModuleKnowledgeBase.cs   (module, options, and registration extensions)
 ```
-
-`Monica.Core/Modularity/Models/BuiltInModuleKey.cs` adds two enum entries: `KnowledgeBase`, `KnowledgeBaseUI` (next to `RAG`, `RAGUI`).
 
 ### 5.3 Backend edits to existing files
 
-- `Monica.AI/RAG/Modules/ModuleRAG.cs` — `ClaimDependencies` adds `DependsOnModule<ModuleKnowledgeBaseGuide>().Register()`. The seven `MOVE_TO_KB_FACADE` methods are removed from `RAGFacade` outright; in-tree callers are migrated to `KnowledgeBaseFacade` in the same PR.
+- `Monica.AI/Modules/ModuleRAG.cs` — `Describe` calls `module.Require<ModuleKnowledgeBase, ModuleKnowledgeBaseOption>()`. The seven `MOVE_TO_KB_FACADE` methods are removed from `RAGFacade` outright; in-tree callers are migrated to `KnowledgeBaseFacade` in the same PR.
 - `Monica.AI/RAG/Services/RAGService.cs` — KB inventory state previously co-managed inside `RAGService` is moved to `KnowledgeBaseService`. `RAGService` becomes a consumer of `IKnowledgeBaseStore` for inventory reads/writes during indexing.
 - `Monica.AI/RAG/Tools/KnowledgeSearchToolProvider.cs` — gets `IKnowledgeBaseLookupService` injected for KB metadata reads (replacing `RAGService.GetKnowledgeBaseByIdAsync`). This is incremental decoupling; the full migration to `RAGKnowledgeSkill` happens in Phase B.
 
@@ -449,8 +463,7 @@ Monica.AI/KnowledgeBase/Modules/ModuleKnowledgeBaseOption.cs
 ```
 Monica.AI.UI/UIKnowledgeBase/Pages/KnowledgeBaseManagePage.razor
 Monica.AI.UI/UIKnowledgeBase/Modules/ModuleKnowledgeBaseUI.cs
-Monica.AI.UI/UIKnowledgeBase/Modules/ModuleKnowledgeBaseUIGuide.cs
-Monica.AI.UI/UIKnowledgeBase/Modules/ModuleKnowledgeBaseUIOption.cs
+    (IUIModule strategy, options, and registration extensions)
 Monica.AI.UI/UIKnowledgeBase/_Imports.razor
 Monica.AI.UI/UIKnowledgeBase/Localization/   (mirror UIRAG localization layout)
 ```
@@ -459,10 +472,10 @@ Monica.AI.UI/UIKnowledgeBase/Localization/   (mirror UIRAG localization layout)
 
 - `Monica.AI.UI/UIRAG/Pages/RAGManagePage.razor` — KB-related markup removed. Page slimmed to RAG-pipeline concerns: indexing controls, queue display, embedding model selector, chunker config. The KB selector inside the page is replaced with a `<MudLink>` to the new `KnowledgeBaseManagePage`.
 - `Monica.AI.UI/UIRAG/State/RAGManagePageState.cs` — removes injection of KB CRUD methods; keeps RAG-pipeline state. The `_kbFacade` field is deleted.
-- `Monica.AI.UI/UIRAG/Modules/ModuleRAGUI.cs` — `ClaimDependencies` adds `DependsOnModule<ModuleKnowledgeBaseUIGuide>().Register()`. Page registrations remove KB-management entries; navOrder of remaining pages is renumbered.
+- `Monica.AI.UI/Modules/ModuleRAGUI.cs` — `Describe` requires `ModuleRAG`; the host-facing `AddRAGUI()` registration explicitly requires `ModuleKnowledgeBaseUI`. Page registrations remove KB-management entries; navOrder of remaining pages is renumbered.
 - `Monica.AI.UI/UIChat/State/ChatPageState.cs` — replaces `RAGFacade _ragFacade` with `KnowledgeBaseFacade _kbFacade`. The single use site (KB list load on page enter) flips to `await _kbFacade.GetAllAsync()`. `ChatPageState` no longer depends on RAG at all.
 - `Monica.AI.UI/UIChat/Components/ChatInputArea.razor` — `<KnowledgeBaseSelector />` import path updates from `Monica.AI.UI.UIRAG.Components` to `Monica.AI.UI.UIKnowledgeBase.Components`.
-- `Monica.AI.UI/UIChat/Modules/ModuleAIUI.cs` — `ClaimDependencies` adds `DependsOnModule<ModuleKnowledgeBaseUIGuide>().Register()`; removes `DependsOnModule<ModuleRAGUIGuide>` if it existed transitively only for the KB selector.
+- `Monica.AI.UI/Modules/ModuleAIUI.cs` — `AddAIUI()` explicitly requires `ModuleKnowledgeBaseUI` for the selector and no longer requires `ModuleRAGUI` merely for that component.
 
 ## 6. Open questions and resolutions
 
@@ -479,11 +492,11 @@ When Phase A is implemented and PR merged:
 
 1. `Monica.AI/KnowledgeBase/` feature folder exists with all directories listed in §2.1 and §5.2 populated.
 2. `Monica.AI.UI/UIKnowledgeBase/` feature folder exists with all directories listed in §2.2 and §5.5 populated.
-3. `BuiltInModuleKey.cs` has `KnowledgeBase` and `KnowledgeBaseUI` entries.
+3. Module and skill gates use `typeof(ModuleKnowledgeBase)` and `typeof(ModuleKnowledgeBaseUI)`; no parallel key registry is introduced.
 4. `monica.AddKnowledgeBase()` and `monica.AddKnowledgeBaseUI()` extension methods are callable from a host that does not register `monica.AddRAG()`. The KB Manage page renders, KB CRUD works, KB Selector works in the chat page — all without RAG.
 5. `KnowledgeSearchToolProvider` continues to work unchanged in this phase (its full Skill migration is Phase B). KB list load in `ChatPageState` uses `KnowledgeBaseFacade`, not `RAGFacade`.
 6. `RAGFacade` no longer carries any KB-CRUD methods. In-tree callers were migrated to `KnowledgeBaseFacade` in the same PR.
-7. `ModuleRAG` declares `DependsOnModule<ModuleKnowledgeBaseGuide>()`. `ModuleRAGUI` declares `DependsOnModule<ModuleKnowledgeBaseUIGuide>()` and no longer registers KB management pages.
+7. `ModuleRAG.Describe` requires `ModuleKnowledgeBase`. `AddRAGUI()` requires `ModuleKnowledgeBaseUI`, and `ModuleRAGUI` no longer registers KB management pages.
 8. Solution builds with **zero new warnings** (per `CLAUDE.md` build-warning policy).
 9. UI smoke test: load chat page with `monica.AddRAG()` not configured → KB selector still renders → user can select a KB → chat starts normally (with no RAG-search Skill available, only the lookup-only Skill from Phase B; in Phase A pre-merge, no Skill at all is fine).
 

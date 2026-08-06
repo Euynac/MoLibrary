@@ -21,7 +21,7 @@ public sealed class ModuleSystemInspectionService(MonicaApplication application)
     public ModuleSystemStatus GetSystemStatus()
     {
         var enabledModules = application.Modules.RuntimeSnapshots.Count;
-        var disabledModules = application.ModuleStates.GetDisabledModuleTypes().Count;
+        var disabledModules = application.Modules.DisabledRegistrations.Count;
         var totalModules = enabledModules + disabledModules;
         var errorModules = application.Modules.RegistrationErrors.Count;
 
@@ -81,29 +81,10 @@ public sealed class ModuleSystemInspectionService(MonicaApplication application)
             modulesByOrder[basicInfo.Order] = basicInfo;
         }
 
-        // Build the disabled-module list from the module manager.
-        var disabledModuleTypes = application.ModuleStates.GetDisabledModuleTypes();
-        foreach (var moduleType in disabledModuleTypes)
+        // Disabled declarations remain graph diagnostics but never become runtime snapshots.
+        foreach (var registration in application.Modules.DisabledRegistrations)
         {
-            var moduleKey = application.Dependencies.ResolveModuleKey(moduleType);
-
-            var basicInfo = new ModuleBasicInfo
-            {
-                ModuleTypeName = moduleType.Name,
-                ModuleFullTypeName = moduleType.FullName ?? moduleType.Name,
-                ModuleKey = moduleKey,
-                Order = int.MaxValue, // Disabled modules do not participate in registration ordering.
-                Status = ModulePhase.Disabled,
-                Dependencies = application.Dependencies.DependenciesByModule.TryGetValue(moduleKey, out var deps)
-                    ? [.. deps]
-                    : [],
-                SerialPhaseDurationMs = 0,
-                IsDisabled = true,
-                IsWebModule = typeof(IWebModule).IsAssignableFrom(moduleType),
-                IsDowngradedFromWebModule = false,
-                HasErrors = false
-            };
-            disabledModules.Add(basicInfo);
+            disabledModules.Add(CreateDisabledModuleBasicInfo(registration));
         }
 
         var totalSerialPhaseDuration = enabledModules.Sum(m => m.SerialPhaseDurationMs);
@@ -132,12 +113,15 @@ public sealed class ModuleSystemInspectionService(MonicaApplication application)
     public ModuleDetailInfo? GetModuleDetail(Type moduleType)
     {
         var snapshot = application.Modules.RuntimeSnapshots.FirstOrDefault(s => s.ModuleType == moduleType);
-        if (snapshot == null)
+        if (snapshot is not null)
         {
-            return null;
+            return CreateModuleDetailInfo(snapshot);
         }
 
-        return CreateModuleDetailInfo(snapshot);
+        return application.Modules.Registrations.TryGetValue(moduleType, out var registration)
+               && registration.DisabledReason is not null
+            ? CreateDisabledModuleDetailInfo(registration)
+            : null;
     }
 
     /// <summary>
@@ -147,13 +131,9 @@ public sealed class ModuleSystemInspectionService(MonicaApplication application)
     /// <returns>The module details, or `null` if the module does not exist.</returns>
     public ModuleDetailInfo? GetModuleDetail(ModuleKey moduleKey)
     {
-        var snapshot = application.Modules.RuntimeSnapshots.FirstOrDefault(s => s.ModuleKey == moduleKey);
-        if (snapshot == null)
-        {
-            return null;
-        }
-
-        return CreateModuleDetailInfo(snapshot);
+        return application.Dependencies.ModuleTypesByKey.TryGetValue(moduleKey, out var moduleType)
+            ? GetModuleDetail(moduleType)
+            : null;
     }
 
     /// <summary>
@@ -174,11 +154,19 @@ public sealed class ModuleSystemInspectionService(MonicaApplication application)
             var moduleType = application.Dependencies.ModuleTypesByKey.GetValueOrDefault(moduleKey);
             moduleSnapshotsByKey.TryGetValue(moduleKey, out var snapshot);
 
-            var isEnabled = moduleType != null && !application.ModuleStates.IsModuleDisabled(moduleType);
+            var registration = moduleType is not null
+                               && application.Modules.Registrations.TryGetValue(moduleType, out var declaredRegistration)
+                ? declaredRegistration
+                : null;
+            var isEnabled = moduleType != null && application.Modules.IsRegistered(moduleType);
             var status = GetModuleStatus(moduleKey, moduleType);
             var isWebModule = snapshot?.IsWebModule
                 ?? (moduleType != null && typeof(IWebModule).IsAssignableFrom(moduleType));
-            var isDowngradedFromWebModule = snapshot?.IsDowngradedFromWebModule ?? false;
+            var requiresWebHost = snapshot?.RequiresWebHost
+                ?? registration?.RequiresWebHost
+                ?? (moduleType != null && typeof(IWebHostRequiredModule).IsAssignableFrom(moduleType));
+            var webHostRequirementReason = snapshot?.WebHostRequirementReason
+                ?? registration?.WebHostRequirementReason;
 
             var dependencies = application.Dependencies.CalculateModuleDependencies(moduleKey);
             var directDeps = application.Dependencies.DependenciesByModule.TryGetValue(moduleKey, out var directDependencies)
@@ -194,10 +182,13 @@ public sealed class ModuleSystemInspectionService(MonicaApplication application)
                 ModuleName = moduleKey.ToString(),
                 ModuleTypeName = moduleType?.Name ?? "Unknown",
                 IsEnabled = isEnabled,
-                IsUIModule = moduleKey.IsUIModule,
+                IsUIModule = moduleType is not null && typeof(IUIModule).IsAssignableFrom(moduleType),
                 IsWebModule = isWebModule,
-                IsDowngradedFromWebModule = isDowngradedFromWebModule,
-                IsThirdPartyModule = !moduleKey.IsBuiltIn,
+                RequiresWebHost = requiresWebHost,
+                WebHostRequirementReason = webHostRequirementReason,
+                IsThirdPartyModule = moduleType?.Assembly.GetName().Name?.StartsWith(
+                    "Monica.",
+                    StringComparison.Ordinal) != true,
                 DirectDependencyCount = directDeps,
                 TotalDependencyCount = dependencies.Count,
                 DependentModuleCount = dependentCount,
@@ -356,8 +347,34 @@ public sealed class ModuleSystemInspectionService(MonicaApplication application)
             SerialPhaseDurationMs = snapshot.SerialPhaseDurationMs,
             IsDisabled = false,
             IsWebModule = snapshot.IsWebModule,
-            IsDowngradedFromWebModule = snapshot.IsDowngradedFromWebModule,
+            RequiresWebHost = snapshot.RequiresWebHost,
+            WebHostRequirementReason = snapshot.WebHostRequirementReason,
             HasErrors = hasErrors
+        };
+    }
+
+    private ModuleBasicInfo CreateDisabledModuleBasicInfo(ModuleRegistrationState registration)
+    {
+        var moduleType = registration.ModuleType;
+        var moduleKey = application.Dependencies.ResolveModuleKey(moduleType);
+        var dependencies = application.Dependencies.DependenciesByModule.TryGetValue(moduleKey, out var directDependencies)
+            ? directDependencies.ToList()
+            : [];
+
+        return new ModuleBasicInfo
+        {
+            ModuleTypeName = moduleType.Name,
+            ModuleFullTypeName = moduleType.FullName ?? moduleType.Name,
+            ModuleKey = moduleKey,
+            Order = int.MaxValue,
+            Status = ModulePhase.Disabled,
+            Dependencies = dependencies,
+            SerialPhaseDurationMs = 0,
+            IsDisabled = true,
+            IsWebModule = registration.ModuleSingleton.IsWebModule,
+            RequiresWebHost = registration.RequiresWebHost,
+            WebHostRequirementReason = registration.WebHostRequirementReason,
+            HasErrors = application.Modules.RegistrationErrors.Any(error => error.ModuleType == moduleType)
         };
     }
 
@@ -374,10 +391,11 @@ public sealed class ModuleSystemInspectionService(MonicaApplication application)
         {
             IsDisabled = false,
             IsWebModule = snapshot.IsWebModule,
-            IsDowngradedFromWebModule = snapshot.IsDowngradedFromWebModule,
+            RequiresWebHost = snapshot.RequiresWebHost,
+            WebHostRequirementReason = snapshot.WebHostRequirementReason,
             ConfigurationItems = [], // This may later be populated from concrete module configuration data.
             ConfiguredOptions = CreateConfiguredOptions(snapshot.RegisterInfo),
-            RegisterRequestCount = snapshot.RegisterInfo.RegisterRequests.Count,
+            RegisterRequestCount = snapshot.RegisterInfo.ConfigurationRequests.Count,
             HasCircularDependency = dependencyInfo.IsPartOfCycle
         };
 
@@ -405,24 +423,65 @@ public sealed class ModuleSystemInspectionService(MonicaApplication application)
         };
     }
 
+    private ModuleDetailInfo CreateDisabledModuleDetailInfo(ModuleRegistrationState registration)
+    {
+        var moduleType = registration.ModuleType;
+        var moduleKey = application.Dependencies.ResolveModuleKey(moduleType);
+        return new ModuleDetailInfo
+        {
+            BasicInfo = CreateDisabledModuleBasicInfo(registration),
+            PerformanceInfo = new ModulePerformanceInfo
+            {
+                ModuleKey = moduleKey,
+                ModuleTypeName = moduleType.Name,
+                ModuleFullTypeName = moduleType.FullName ?? moduleType.Name,
+                RegistrationOrder = int.MaxValue,
+                IsRuntimeAvailable = false
+            },
+            DependencyInfo = application.Dependencies.GetModuleDependencyInfo(moduleKey),
+            ConfigInfo = new ModuleConfigInfo
+            {
+                IsDisabled = true,
+                IsWebModule = registration.ModuleSingleton.IsWebModule,
+                RequiresWebHost = registration.RequiresWebHost,
+                WebHostRequirementReason = registration.WebHostRequirementReason,
+                DisabledReason = registration.DisabledReason,
+                RegisterRequestCount = registration.ConfigurationRequests.Count,
+                HasCircularDependency = application.Dependencies.FindCycleInvolvingModule(moduleKey).Count != 0
+            },
+            Errors = application.Modules.RegistrationErrors
+                .Where(error => error.ModuleType == moduleType)
+                .Select(error => new ModuleErrorInfo
+                {
+                    ErrorType = error.ErrorType.ToString(),
+                    ErrorMessage = error.ErrorMessage,
+                    Phase = error.Phase,
+                    StackTrace = error.StackTrace
+                })
+                .ToList()
+        };
+    }
+
     private List<ModuleConfiguredOption> CreateConfiguredOptions(ModuleRegistrationState registerInfo)
     {
-        return registerInfo.FinalConfigures
-            .Where(static entry => typeof(IModuleOptionsBase).IsAssignableFrom(entry.Key))
-            .Select(entry => new ModuleConfiguredOption
+        return
+        [
+            new ModuleConfiguredOption
             {
-                OptionType = entry.Key,
-                OptionInstance = entry.Value,
-                IsExtraOption = entry.Key != registerInfo.ModuleOptionType
-            })
-            .OrderBy(option => option.IsExtraOption ? 1 : 0)
-            .ThenBy(option => option.OptionType.Name)
-            .ToList();
+                OptionType = registerInfo.ModuleOptionType,
+                OptionInstance = registerInfo.ModuleOption
+            }
+        ];
     }
 
     private ModulePhase GetModuleStatus(ModuleKey moduleKey, Type? moduleType)
     {
-        if (moduleType == null || application.ModuleStates.IsModuleDisabled(moduleType))
+        if (moduleType == null)
+        {
+            return ModulePhase.None;
+        }
+
+        if (application.Modules.IsDisabled(moduleType))
         {
             return ModulePhase.Disabled;
         }
@@ -501,10 +560,11 @@ public sealed class ModuleSystemInspectionService(MonicaApplication application)
 
     private HealthCheckItem CheckSystemInitialization()
     {
-        var isInitialized = application.Modules.RuntimeSnapshots.Count > 0;
+        var isInitialized = application.Profiling.GetCompositionPerformance().Milestones.Any(static milestone =>
+            milestone.Milestone == ModuleCompositionMilestone.CompositionCompleted);
         var status = isInitialized ? HealthStatus.Healthy : HealthStatus.Critical;
         var details = isInitialized 
-            ? $"System initialized with {application.Modules.RuntimeSnapshots.Count} modules"
+            ? $"System initialized with {application.Modules.RuntimeSnapshots.Count} active modules"
             : "System not initialized";
 
         return new HealthCheckItem
@@ -632,7 +692,7 @@ public sealed class ModuleSystemInspectionService(MonicaApplication application)
 
     private HealthCheckItem CheckDisabledModules(List<HealthIssue> issues)
     {
-        var disabledModules = application.ModuleStates.GetDisabledModuleTypes();
+        var disabledModules = application.Modules.DisabledRegistrations;
         var status = disabledModules.Count == 0 ? HealthStatus.Healthy : HealthStatus.Warning;
         var details = disabledModules.Count == 0 
             ? "No disabled modules found"
@@ -644,7 +704,10 @@ public sealed class ModuleSystemInspectionService(MonicaApplication application)
             {
                 Severity = IssueSeverity.Information,
                 Title = "Disabled Modules",
-                Description = $"{disabledModules.Count} modules are disabled",
+                Description = string.Join(
+                    "; ",
+                    disabledModules.Select(registration =>
+                        $"{registration.ModuleType.Name}: {registration.DisabledReason}")),
                 IssueType = IssueType.Configuration,
                 RecommendedAction = "Review disabled modules to ensure they are intentionally disabled"
             });

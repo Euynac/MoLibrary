@@ -1,5 +1,3 @@
-using Monica.Core.Modularity.Models;
-
 namespace Monica.AI.Services.Support.ModuleCatalog;
 
 /// <summary>
@@ -8,7 +6,7 @@ namespace Monica.AI.Services.Support.ModuleCatalog;
 public interface ILoadedModuleCatalog
 {
     /// <summary>
-    /// Gets all loaded module keys.
+    /// Gets all loaded module strategy types.
     /// </summary>
-    IReadOnlySet<ModuleKey> GetLoadedModuleKeys();
+    IReadOnlySet<Type> GetLoadedModuleTypes();
 }

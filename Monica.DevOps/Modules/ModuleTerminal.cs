@@ -1,7 +1,6 @@
 using Microsoft.Extensions.DependencyInjection;
 using Monica.Core;
 using Monica.Core.Modularity.Abstractions;
-using Monica.Core.Modularity.Annotations;
 using Monica.Core.Modularity.Models;
 using Monica.DevOps.Terminal.Facades;
 using Monica.DevOps.Terminal.Services;
@@ -21,10 +20,10 @@ public static class ModuleTerminalBuilderExtensions
         /// Registers the local terminal module and applies optional configuration.
         /// </summary>
         /// <param name="action">Optional module option configuration delegate.</param>
-        /// <returns>The terminal module guide.</returns>
-        public ModuleTerminalGuide AddTerminal(Action<ModuleTerminalOption>? action = null)
+        /// <returns>The terminal module registration.</returns>
+        public ModuleRegistration<ModuleTerminal, ModuleTerminalOption> AddTerminal(Action<ModuleTerminalOption>? action = null)
         {
-            return builder.AddModule<ModuleTerminal, ModuleTerminalOption, ModuleTerminalGuide>(action);
+            return builder.AddModule<ModuleTerminal, ModuleTerminalOption>(action);
         }
     }
 }
@@ -32,26 +31,17 @@ public static class ModuleTerminalBuilderExtensions
 /// <summary>
 /// Local process-backed terminal module.
 /// </summary>
-/// <param name="option">The terminal module options.</param>
-[ModuleKey(BuiltInModuleKey.Terminal)]
-public sealed class ModuleTerminal(ModuleTerminalOption option)
-    : ModuleBase<ModuleTerminal, ModuleTerminalOption, ModuleTerminalGuide>(option)
+public sealed class ModuleTerminal : MonicaModule<ModuleTerminalOption>
 {
     /// <inheritdoc />
-    public override void ConfigureServices(IServiceCollection services)
+    public override void ConfigureServices(ModuleContext<ModuleTerminalOption> context)
     {
+        var services = context.Services;
         services.AddSingleton<TerminalEnvironmentDetector>();
         services.AddSingleton<TerminalCommandRunner>();
         services.AddSingleton<TerminalSessionService>();
         services.AddScoped<TerminalFacade>();
     }
-}
-
-/// <summary>
-/// Fluent guide for the local terminal module.
-/// </summary>
-public sealed class ModuleTerminalGuide : ModuleGuide<ModuleTerminal, ModuleTerminalOption, ModuleTerminalGuide>
-{
 }
 
 /// <summary>

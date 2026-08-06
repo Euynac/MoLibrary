@@ -1,7 +1,6 @@
 using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using Monica.Core.Modularity.Abstractions;
 using Monica.Core.Modularity.Models;
 
 namespace Monica.Core.Modularity.Models.Internal;
@@ -12,139 +11,40 @@ namespace Monica.Core.Modularity.Models.Internal;
 /// <param name="services">The service collection.</param>
 /// <param name="applicationBuilder">The application builder.</param>
 /// <param name="hostApplicationBuilder">The host application builder.</param>
-/// <param name="moduleRegisterInfo">The module registration information.</param>
-public class ModuleConfigurationContext(IServiceCollection? services, IApplicationBuilder? applicationBuilder, IHostApplicationBuilder? hostApplicationBuilder, ModuleRegistrationState moduleRegisterInfo)
+/// <param name="registration">The current module registration.</param>
+internal sealed class ModuleConfigurationContext(
+    IServiceCollection? services,
+    IApplicationBuilder? applicationBuilder,
+    IHostApplicationBuilder? hostApplicationBuilder,
+    ModuleRegistrationState registration)
 {
     /// <summary>
     /// The service collection.
     /// </summary>
-    public IServiceCollection? Services { get; init; } = services;
+    internal IServiceCollection? Services { get; } = services;
 
     /// <summary>
     /// The application builder.
     /// </summary>
-    public IApplicationBuilder? ApplicationBuilder { get; init; } = applicationBuilder;
+    internal IApplicationBuilder? ApplicationBuilder { get; } = applicationBuilder;
 
     /// <summary>
     /// The host application builder.
     /// </summary>
-    public IHostApplicationBuilder? HostApplicationBuilder { get; init; } = hostApplicationBuilder;
-    
-    /// <summary>
-    /// The module registration information.
-    /// </summary>
-    public ModuleRegistrationState ModuleRegisterInfo { get; init; } = moduleRegisterInfo;
+    internal IHostApplicationBuilder? HostApplicationBuilder { get; } = hostApplicationBuilder;
 
     /// <summary>
-    /// Finalized option objects for the current module.
+    /// Gets the current module registration.
     /// </summary>
-    internal Dictionary<Type, object> Option  => ModuleRegisterInfo.FinalConfigures;
+    internal ModuleRegistrationState Registration { get; } = registration;
 }
 
 /// <summary>
-/// Generic module registration context that exposes strongly typed module options.
+/// One ordered lifecycle callback in a compiled module registration.
 /// </summary>
-/// <typeparam name="TModuleOption">The module option type.</typeparam>
-public class ModuleConfigurationContext<TModuleOption>(ModuleConfigurationContext context)  where TModuleOption : IModuleOptions
-{
-    protected ModuleConfigurationContext Context { get; init; } = context;
-    /// <summary>
-    /// Gets the current module option.
-    /// </summary>
-    public TModuleOption ModuleOption => (TModuleOption) Context.Option[typeof(TModuleOption)];
-    
-    /// <summary>
-    /// Gets an extra module option, creating a new instance when one is not configured.
-    /// </summary>
-    /// <typeparam name="TModuleExtraOption">The extra option type.</typeparam>
-    /// <returns>The extra option instance.</returns>
-    public TModuleExtraOption GetModuleExtraOption<TModuleExtraOption>() where TModuleExtraOption : IModuleOptionsBase, new()
-    {
-        return GetModuleExtraOptionOrDefault<TModuleExtraOption>() ?? new TModuleExtraOption();
-    }
-    
-    /// <summary>
-    /// Gets an extra module option or returns the default value when it is not configured.
-    /// </summary>
-    /// <typeparam name="TModuleExtraOption">The extra option type.</typeparam>
-    /// <returns>The configured extra option, or the default value.</returns>
-    public TModuleExtraOption? GetModuleExtraOptionOrDefault<TModuleExtraOption>() where TModuleExtraOption : IModuleOptionsBase, new()
-    {
-        if (Context.Option.TryGetValue(typeof(TModuleExtraOption), out var option))
-        {
-            return (TModuleExtraOption) option;
-        }
-
-        return default;
-    }
-}
-
-public class ModuleServiceConfigurationContext<TModuleOption>(ModuleConfigurationContext context) : ModuleConfigurationContext<TModuleOption>(context) where TModuleOption : IModuleOptions
-{
-    public IServiceCollection Services => Context.Services!;
-}
-
-public class ModuleApplicationConfigurationContext<TModuleOption>(ModuleConfigurationContext context) : ModuleConfigurationContext<TModuleOption>(context) where TModuleOption : IModuleOptions
-{
-    public IApplicationBuilder ApplicationBuilder => Context.ApplicationBuilder!;
-
-    /// <summary>
-    /// Gets the current application builder as a <see cref="WebApplication"/>.
-    /// </summary>
-    /// <returns>The current <see cref="WebApplication"/> instance.</returns>
-    /// <exception cref="InvalidOperationException">Thrown when the current application builder is not a <see cref="WebApplication"/>.</exception>
-    public WebApplication RequireWebApplication()
-    {
-        return ApplicationBuilder as WebApplication
-               ?? throw new InvalidOperationException(
-                   $"{Context.ModuleRegisterInfo.ModuleType.Name} requires {nameof(WebApplication)} during {Context.ModuleRegisterInfo.ModulePhase}.");
-    }
-}
-
-public class ModuleBuilderConfigurationContext<TModuleOption>(ModuleConfigurationContext context) : ModuleConfigurationContext<TModuleOption>(context) where TModuleOption : IModuleOptions
-{
-    public IHostApplicationBuilder HostApplicationBuilder => Context.HostApplicationBuilder!;
-}
-
-public class ModuleConfigurationRequest(string key)
-{
-    public Action<ModuleConfigurationContext>? ConfigureContext { get; set; }
-
-    /// <summary>
-    /// Logical configuration method key. Required-configuration validation uses this value.
-    /// </summary>
-    public string Key { get; set; } = key;
-
-    /// <summary>
-    /// Execution slot used when deduplicating requests.
-    /// Requests with the same logical key but different slots can both execute.
-    /// </summary>
-    public ModuleConfigurationRequestSlot Slot { get; set; } = ModuleConfigurationRequestSlot.Execution;
-
-    /// <summary>
-    /// Duplicate handling behavior for requests with the same execution identity.
-    /// </summary>
-    public ModuleConfigurationDuplicateBehavior DuplicateBehavior { get; set; } =
-        ModuleConfigurationDuplicateBehavior.Warn;
-
-    /// <summary>
-    /// Effective key used by execution-phase deduplication.
-    /// </summary>
-    public string ExecutionKey => $"{Slot}:{Key}";
-
-    /// <summary>
-    /// Source module that issued the request. `null` means direct developer configuration.
-    /// </summary>
-    public ModuleKey? RequestFrom { get; set; }
-    public ModulePhase? RequestMethod { get; set; }
-    public int Order { get; set; }
-    /// <summary>
-    /// Additional description of the request source.
-    /// </summary>
-    public string? SourceDesc { get; set; }
-
-    public override string ToString()
-    {
-        return Key;
-    }
-}
+internal sealed record ModuleConfigurationRequest(
+    ModulePhase Phase,
+    int Order,
+    long Ordinal,
+    Action<ModuleConfigurationContext> Configure,
+    ModuleWebStage? WebStage = null);

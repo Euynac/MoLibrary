@@ -17,7 +17,6 @@ using Monica.AI.Services.Support;
 using Monica.Core;
 using Monica.Core.Extensions;
 using Monica.Core.Modularity.Abstractions;
-using Monica.Core.Modularity.Annotations;
 using Monica.Core.Modularity.Extensions;
 using Monica.Core.Modularity.Models;
 
@@ -36,9 +35,9 @@ public static class ModuleAIBuilderExtensions
         /// </summary>
         /// <param name="action">The module configuration action.</param>
         /// <returns>An AI module configuration builder.</returns>
-        public ModuleAIGuide AddAI(Action<ModuleAIOption>? action = null)
+        public ModuleRegistration<ModuleAI, ModuleAIOption> AddAI(Action<ModuleAIOption>? action = null)
         {
-            return builder.AddModule<ModuleAI, ModuleAIOption, ModuleAIGuide>(action);
+            return builder.AddModule<ModuleAI, ModuleAIOption>(action);
         }
     }
 }
@@ -46,13 +45,12 @@ public static class ModuleAIBuilderExtensions
 /// <summary>
 /// AI module.
 /// </summary>
-[ModuleKey(BuiltInModuleKey.AI)]
-public class ModuleAI(ModuleAIOption option)
-    : ModuleBase<ModuleAI, ModuleAIOption, ModuleAIGuide>(option)
+public class ModuleAI : MonicaModule<ModuleAIOption>
 {
     /// <inheritdoc />
-    public override void ConfigureServices(IServiceCollection services)
+    public override void ConfigureServices(ModuleContext<ModuleAIOption> context)
     {
+        var services = context.Services;
         // Register model directory
         services.AddSingleton(sp =>
         {
@@ -101,7 +99,7 @@ public class ModuleAI(ModuleAIOption option)
 /// <summary>
 /// Builder for AI module configuration.
 /// </summary>
-public class ModuleAIGuide : ModuleGuide<ModuleAI, ModuleAIOption, ModuleAIGuide>
+public static class ModuleAIRegistrationExtensions
 {
     private const string CHAT_HISTORY_PROVIDER_KEY = nameof(CHAT_HISTORY_PROVIDER_KEY);
 
@@ -112,34 +110,35 @@ public class ModuleAIGuide : ModuleGuide<ModuleAI, ModuleAIOption, ModuleAIGuide
     /// <typeparam name="TPartitionResolver">
     /// Scoped resolver that derives the current caller's isolated partition.
     /// </typeparam>
-    /// <returns>The current guide instance.</returns>
+    /// <returns>The current module registration.</returns>
     /// <remarks>
     /// This method is optional. Without it, chat remains fully functional in memory and history writes
     /// report <c>NotPersisted</c>. Server implementations should resolve partitions from authenticated
     /// identity and secure the sensitive Agent Framework state stored in each snapshot.
     /// </remarks>
-    public ModuleAIGuide UseChatHistoryProvider<TProvider, TPartitionResolver>()
+    public static ModuleRegistration<ModuleAI, ModuleAIOption> UseChatHistoryProvider<TProvider, TPartitionResolver>(this ModuleRegistration<ModuleAI, ModuleAIOption> module)
         where TProvider : class, IChatHistoryProvider
         where TPartitionResolver : class, IChatHistoryPartitionResolver
     {
-        ConfigureServices(context =>
+        module.ConfigureServices(context =>
         {
             context.Services.RemoveAll<IChatHistoryProvider>();
             context.Services.RemoveAll<IChatHistoryPartitionResolver>();
             context.Services.AddScoped<IChatHistoryProvider, TProvider>();
             context.Services.AddScoped<IChatHistoryPartitionResolver, TPartitionResolver>();
-        }, key: CHAT_HISTORY_PROVIDER_KEY);
+        });
 
-        return this;
+        return module;
     }
 
     /// <summary>
     /// Adds an OpenAI provider.
     /// </summary>
+    /// <param name="module">The AI module registration to configure.</param>
     /// <param name="configure">The configuration delegate.</param>
     /// <param name="providerId">Optional provider identifier. Defaults to provider type.</param>
     /// <returns>The current builder instance.</returns>
-    public ModuleAIGuide AddOpenAIProvider(
+    public static ModuleRegistration<ModuleAI, ModuleAIOption> AddOpenAIProvider(this ModuleRegistration<ModuleAI, ModuleAIOption> module,
         Action<OpenAIProviderOptions> configure,
         string? providerId = null)
     {
@@ -147,7 +146,7 @@ public class ModuleAIGuide : ModuleGuide<ModuleAI, ModuleAIOption, ModuleAIGuide
         configure(options);
         options.ProviderId = providerId ?? options.ProviderId ?? nameof(EAIProviderType.OpenAI);
 
-        ConfigureServices(context =>
+        module.ConfigureServices(context =>
         {
             context.Services.AddSingleton<IAIProvider>(serviceProvider => CreateProvider(
                 serviceProvider,
@@ -161,27 +160,28 @@ public class ModuleAIGuide : ModuleGuide<ModuleAI, ModuleAIOption, ModuleAIGuide
                     EnsureApiKeyConfigured(options);
                     return new OpenAIProvider(options, modelCatalog);
                 }));
-        }, secondKey: options.ProviderId);
+        });
 
-        return this;
+        return module;
     }
 
     /// <summary>
     /// Adds an Anthropic provider.
     /// </summary>
+    /// <param name="module">The AI module registration to configure.</param>
     /// <param name="configure">The configuration delegate.</param>
     /// <param name="providerId">Optional provider identifier. Defaults to provider type.</param>
     /// <returns>The current builder instance.</returns>
-    public ModuleAIGuide AddAnthropicProvider(
+    public static ModuleRegistration<ModuleAI, ModuleAIOption> AddAnthropicProvider(this ModuleRegistration<ModuleAI, ModuleAIOption> module,
         Action<AnthropicProviderOptions> configure,
         string? providerId = null)
     {
         var options = new AnthropicProviderOptions { ApiKey = "", SupportedModels = [] };
         configure(options);
-       
+
         options.ProviderId = providerId ?? options.ProviderId ?? nameof(EAIProviderType.Anthropic);
 
-        ConfigureServices(context =>
+        module.ConfigureServices(context =>
         {
             context.Services.AddSingleton<IAIProvider>(serviceProvider => CreateProvider(
                 serviceProvider,
@@ -195,18 +195,19 @@ public class ModuleAIGuide : ModuleGuide<ModuleAI, ModuleAIOption, ModuleAIGuide
                     EnsureApiKeyConfigured(options);
                     return new AnthropicProvider(options, modelCatalog);
                 }));
-        }, secondKey: options.ProviderId);
+        });
 
-        return this;
+        return module;
     }
 
     /// <summary>
     /// Add fake embedding provider.
     /// </summary>
+    /// <param name="module">The AI module registration to configure.</param>
     /// <param name="configure">Options configure delegate.</param>
     /// <param name="providerId">Optional provider identifier. Defaults to provider type.</param>
-    /// <returns>Current guide instance.</returns>
-    public ModuleAIGuide AddFakeProvider(
+    /// <returns>The current module registration.</returns>
+    public static ModuleRegistration<ModuleAI, ModuleAIOption> AddFakeProvider(this ModuleRegistration<ModuleAI, ModuleAIOption> module,
         Action<FakeProviderOptions> configure,
         string? providerId = null)
     {
@@ -214,41 +215,43 @@ public class ModuleAIGuide : ModuleGuide<ModuleAI, ModuleAIOption, ModuleAIGuide
         configure(options);
         options.ProviderId = providerId ?? options.ProviderId ?? nameof(EAIProviderType.Fake);
 
-        ConfigureServices(context =>
+        module.ConfigureServices(context =>
         {
             context.Services.AddSingleton<IAIProvider>(serviceProvider =>
                 new FakeProvider(options, serviceProvider.GetRequiredService<AIModelCatalog>()));
-        }, secondKey: options.ProviderId);
+        });
 
-        return this;
+        return module;
     }
 
     /// <summary>
     /// Adds model information to the catalog.
     /// </summary>
+    /// <param name="module">The AI module registration to configure.</param>
     /// <param name="model">The model information to add.</param>
     /// <returns>The current builder instance.</returns>
-    public ModuleAIGuide AddModel(AIModelInfo model)
+    public static ModuleRegistration<ModuleAI, ModuleAIOption> AddModel(this ModuleRegistration<ModuleAI, ModuleAIOption> module, AIModelInfo model)
     {
-        ConfigureModuleOption(option => option.AddModel(model), secondKey: model.ModelName);
-        return this;
+        module.Configure(options => options.AddModel(model));
+        return module;
     }
 
     /// <summary>
     /// Adds a custom provider.
     /// </summary>
     /// <typeparam name="TProvider">Provider type</typeparam>
+    /// <param name="module">The AI module registration to configure.</param>
     /// <param name="providerFactory">Provider factory method</param>
     /// <returns>The current builder instance.</returns>
-    public ModuleAIGuide AddProvider<TProvider>(Func<IServiceProvider, TProvider> providerFactory)
+    public static ModuleRegistration<ModuleAI, ModuleAIOption> AddProvider<TProvider>(this ModuleRegistration<ModuleAI, ModuleAIOption> module, Func<IServiceProvider, TProvider> providerFactory)
         where TProvider : class, IAIProvider
     {
-        ConfigureServices(context =>
+        module.ConfigureServices(context =>
         {
             context.Services.AddSingleton<IAIProvider>(serviceProvider => providerFactory(serviceProvider));
-        }, secondKey: $"custom-{typeof(TProvider).Name}");
+        });
 
-        return this;
+        return module;
     }
 
     private static IAIProvider CreateProvider<TOptions>(
@@ -306,6 +309,7 @@ public class ModuleAIGuide : ModuleGuide<ModuleAI, ModuleAIOption, ModuleAIGuide
 
         return errors;
     }
+
 
 }
 

@@ -5,7 +5,6 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Monica.Core.HostedService.Models;
 using Monica.Core.JsonSerialization.Abstractions;
-using Monica.Core.Modularity.Models;
 using Monica.Core.ObservableInstance.Abstractions;
 using Monica.EventBus.Abstractions;
 using Monica.EventBus.Kafka.Abstractions;
@@ -44,7 +43,7 @@ internal sealed class KafkaEventBusSubscriptionHostedService(
     public override string ServiceName => $"KafkaEventBus{(ServiceKey is null ? string.Empty : $"_{ServiceKey}")}";
 
     /// <inheritdoc />
-    public override string? ServiceGroupId => nameof(BuiltInModuleKey.EventBus);
+    public override string? ServiceGroupId => nameof(ModuleEventBus);
 
     protected override Task CreateExternalSubscriptionForTopicAsync(string topicName, Type eventType, CancellationToken cancellationToken)
     {

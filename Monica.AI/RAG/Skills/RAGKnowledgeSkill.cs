@@ -1,3 +1,4 @@
+using System.Collections.Frozen;
 using System.Text.Encodings.Web;
 using System.Text.Json;
 using Microsoft.Extensions.DependencyInjection;
@@ -8,7 +9,6 @@ using Monica.AI.KnowledgeBase.Models;
 using Monica.AI.RAG.Models;
 using Monica.AI.RAG.Services;
 using Monica.AI.Services.Support;
-using Monica.Core.Modularity.Models;
 using Monica.Core.Skills;
 using Monica.Core.Skills.Annotations;
 using Monica.Core.Skills.Models;
@@ -46,7 +46,8 @@ internal sealed class RAGKnowledgeSkill(
         "Always cite source name and source link from the returned results.");
 
     /// <inheritdoc />
-    public override IEnumerable<ModuleKey> RequiredModules => [BuiltInModuleKey.RAG];
+    public override IReadOnlySet<Type> RequiredModules { get; } =
+        new[] { typeof(ModuleRAG) }.ToFrozenSet();
 
     /// <inheritdoc />
     public override SkillMcpServerDefinition McpServerDefinition { get; } = new(

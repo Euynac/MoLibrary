@@ -1,3 +1,4 @@
+using Monica.Core.TypeDiscovery.Models;
 using Monica.DependencyInjection.Abstractions.Internal;
 using Monica.DependencyInjection.Annotations;
 using Monica.DependencyInjection.Models.Internal;
@@ -14,15 +15,16 @@ internal static class ExposedServiceExplorer
             IncludeSelf = true
         };
 
-    public static List<Type> GetExposedServices(Type type)
+    public static List<Type> GetExposedServices(
+        BusinessTypeShape shape,
+        IReadOnlyList<Attribute> inheritedAttributes)
     {
-        var exposedServiceTypesProviders = type
-            .GetCustomAttributes(true)
+        var exposedServiceTypesProviders = inheritedAttributes
             .OfType<IExposedServiceTypesProvider>()
             .ToList();
 
         if (exposedServiceTypesProviders.IsNullOrEmptySet() &&
-            type.GetCustomAttributes(true).OfType<IExposedKeyedServiceTypesProvider>().Any())
+            inheritedAttributes.OfType<IExposedKeyedServiceTypesProvider>().Any())
         {
             // If there is any keyed-service exposure but no regular exposure, suppress the default service set.
             return [];
@@ -30,17 +32,17 @@ internal static class ExposedServiceExplorer
 
         return exposedServiceTypesProviders
             .DefaultIfEmpty(DefaultExposeServicesAttribute)
-            .SelectMany(provider => provider.GetExposedServiceTypes(type))
+            .SelectMany(provider => provider.GetExposedServiceTypes(shape))
             .Distinct()
             .ToList();
     }
 
-    public static List<ServiceIdentifier> GetExposedKeyedServices(Type type)
+    public static List<ServiceIdentifier> GetExposedKeyedServices(
+        IReadOnlyList<Attribute> inheritedAttributes)
     {
-        return type
-            .GetCustomAttributes(true)
+        return inheritedAttributes
             .OfType<IExposedKeyedServiceTypesProvider>()
-            .SelectMany(provider => provider.GetExposedServiceTypes(type))
+            .SelectMany(provider => provider.GetExposedServiceTypes())
             .Distinct()
             .ToList();
     }

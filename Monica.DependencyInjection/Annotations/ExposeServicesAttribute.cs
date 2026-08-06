@@ -1,4 +1,4 @@
-using System.Reflection;
+using Monica.Core.TypeDiscovery.Models;
 using Monica.DependencyInjection.Abstractions.Internal;
 using Monica.Tool.Extensions;
 
@@ -25,13 +25,13 @@ public class ExposeServicesAttribute(params Type[] serviceTypes) : Attribute, IE
     /// </summary>
     public bool IncludeSelf { get; set; }
 
-    public Type[] GetExposedServiceTypes(Type targetType)
+    Type[] IExposedServiceTypesProvider.GetExposedServiceTypes(BusinessTypeShape targetShape)
     {
         var serviceList = ServiceTypes.ToList();
 
         if (IncludeDefaults)
         {
-            foreach (var type in GetDefaultServices(targetType))
+            foreach (var type in GetDefaultServices(targetShape))
             {
                 serviceList.AddIfNotContains(type);
             }
@@ -40,17 +40,18 @@ public class ExposeServicesAttribute(params Type[] serviceTypes) : Attribute, IE
 
         if (IncludeSelf)
         {
-            serviceList.AddIfNotContains(targetType);
+            serviceList.AddIfNotContains(targetShape.Type);
         }
 
         return [..serviceList];
     }
 
-    private static List<Type> GetDefaultServices(Type type)
+    private static List<Type> GetDefaultServices(BusinessTypeShape shape)
     {
         var serviceTypes = new List<Type>();
+        var type = shape.Type;
 
-        foreach (var interfaceType in type.GetTypeInfo().GetInterfaces())
+        foreach (var interfaceType in shape.Interfaces)
         {
             var interfaceName = interfaceType.Name;
             var typeName = type.Name;

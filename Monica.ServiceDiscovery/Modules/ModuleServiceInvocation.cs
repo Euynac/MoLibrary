@@ -1,97 +1,93 @@
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Monica.Core;
 using Monica.Core.Modularity;
 using Monica.Core.Modularity.Abstractions;
-using Monica.Core.Modularity.Annotations;
-using Monica.Core.Modularity.Models;
 using Monica.ServiceDiscovery.ServiceInvocation.Abstractions;
 using Monica.ServiceDiscovery.ServiceInvocation.Providers;
 
 // ReSharper disable once CheckNamespace
 namespace Monica.Modules;
 
-/// <summary>
-/// Service call module
-/// </summary>
-[ModuleKey(BuiltInModuleKey.ServiceInvocation)]
-public class ModuleServiceInvocation(ModuleServiceInvocationOption option)
-    : ModuleBase<ModuleServiceInvocation, ModuleServiceInvocationOption, ModuleServiceInvocationGuide>(option)
-{
-
-    public override void ClaimDependencies()
-    {
-        // Service calling module has no dependencies
-    }
-}
-
-/// <summary>
-/// Service call module configuration options
-/// </summary>
-public class ModuleServiceInvocationOption : ModuleOptions<ModuleServiceInvocation>
-{
-    /// <summary>
-    /// Whether to use a distributed call provider
-    /// </summary>
-    public bool UseDistributedProvider { get; internal set; }
-}
-
-/// <summary>
-/// Service Call Module Configuration Guide
-/// </summary>
-public class ModuleServiceInvocationGuide : ModuleGuide<ModuleServiceInvocation, ModuleServiceInvocationOption, ModuleServiceInvocationGuide>
-{
-    private const string SET_PROVIDER = nameof(SET_PROVIDER);
-
-    protected override string[] GetRequestedConfigMethodKeys()
-    {
-        return [SET_PROVIDER];
-    }
-
-    /// <summary>
-    /// Use independent mode (service calling is not supported and an exception will be thrown when calling)
-    /// </summary>
-    public ModuleServiceInvocationGuide UseStandaloneProvider()
-    {
-        ConfigureModuleOption(o => o.UseDistributedProvider = false,
-            key: SET_PROVIDER,
-            duplicateBehavior: ModuleConfigurationDuplicateBehavior.ExclusiveLastWins);
-        ConfigureServices(context =>
-        {
-            context.Services.TryAddSingleton<IServiceInvocationConnector, StandaloneServiceInvocationProvider>();
-        }, key: SET_PROVIDER,
-            duplicateBehavior: ModuleConfigurationDuplicateBehavior.ExclusiveLastWins);
-        return this;
-    }
-
-    /// <summary>
-    /// Using a distributed call provider
-    /// </summary>
-    /// <typeparam name="TProvider">provider type</typeparam>
-    public ModuleServiceInvocationGuide UseDistributedProvider<TProvider>()
-        where TProvider : class, IServiceInvocationConnector
-    {
-        ConfigureModuleOption(o => o.UseDistributedProvider = true,
-            key: SET_PROVIDER,
-            duplicateBehavior: ModuleConfigurationDuplicateBehavior.ExclusiveLastWins);
-        ConfigureServices(context =>
-        {
-            context.Services.TryAddSingleton<IServiceInvocationConnector, TProvider>();
-        }, key: SET_PROVIDER,
-            duplicateBehavior: ModuleConfigurationDuplicateBehavior.ExclusiveLastWins);
-        return this;
-    }
-}
-
 public static class ModuleServiceInvocationBuilderExtensions
 {
     extension(IMonicaBuilder builder)
     {
         /// <summary>
-        /// Configure the ServiceInvocation module
+        /// Registers the service-invocation abstraction for the current host.
         /// </summary>
-        public ModuleServiceInvocationGuide AddServiceInvocation(Action<ModuleServiceInvocationOption>? action = null)
+        public ModuleRegistration<ModuleServiceInvocation, ModuleServiceInvocationOption> AddServiceInvocation(
+            Action<ModuleServiceInvocationOption>? configure = null)
         {
-            return builder.AddModule<ModuleServiceInvocation, ModuleServiceInvocationOption, ModuleServiceInvocationGuide>(action);
+            return builder.AddModule<ModuleServiceInvocation, ModuleServiceInvocationOption>(configure);
         }
+    }
+
+    extension(ModuleRegistration<ModuleServiceInvocation, ModuleServiceInvocationOption> registration)
+    {
+        /// <summary>
+        /// Selects standalone mode, in which remote invocation is rejected explicitly.
+        /// </summary>
+        public ModuleRegistration<ModuleServiceInvocation, ModuleServiceInvocationOption> UseStandaloneProvider()
+        {
+            return registration
+                .Configure(options =>
+                    options.SetProvider<StandaloneServiceInvocationProvider>(useDistributedProvider: false))
+                .SatisfyFeature(ModuleServiceInvocation.PROVIDER_FEATURE);
+        }
+
+        /// <summary>
+        /// Selects a distributed service-invocation connector.
+        /// </summary>
+        public ModuleRegistration<ModuleServiceInvocation, ModuleServiceInvocationOption> UseDistributedProvider<TProvider>()
+            where TProvider : class, IServiceInvocationConnector
+        {
+            return registration
+                .Configure(options => options.SetProvider<TProvider>(useDistributedProvider: true))
+                .SatisfyFeature(ModuleServiceInvocation.PROVIDER_FEATURE);
+        }
+    }
+}
+
+/// <summary>
+/// Registers one explicitly selected service-invocation connector.
+/// </summary>
+public class ModuleServiceInvocation : MonicaModule<ModuleServiceInvocationOption>
+{
+    internal const string PROVIDER_FEATURE = "service-invocation-provider";
+
+    public override void Describe(ModuleDescriptor module)
+    {
+        module.RequireFeature(PROVIDER_FEATURE);
+    }
+
+    public override void ConfigureServices(ModuleContext<ModuleServiceInvocationOption> context)
+    {
+        context.Services.TryAdd(ServiceDescriptor.Singleton(
+            typeof(IServiceInvocationConnector),
+            Option.ProviderType));
+    }
+}
+
+/// <summary>
+/// Configures the selected service-invocation strategy.
+/// </summary>
+public class ModuleServiceInvocationOption : ModuleOptions<ModuleServiceInvocation>
+{
+    private Type? _providerType;
+
+    /// <summary>
+    /// Gets whether the selected connector performs distributed calls.
+    /// </summary>
+    public bool UseDistributedProvider { get; private set; }
+
+    internal Type ProviderType => _providerType
+        ?? throw new InvalidOperationException("A service-invocation provider was not selected.");
+
+    internal void SetProvider<TProvider>(bool useDistributedProvider)
+        where TProvider : class, IServiceInvocationConnector
+    {
+        _providerType = typeof(TProvider);
+        UseDistributedProvider = useDistributedProvider;
     }
 }

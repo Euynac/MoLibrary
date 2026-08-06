@@ -4,7 +4,6 @@ using Monica.Configuration.Abstractions;
 using Monica.Configuration.EventBus.Services;
 using Monica.Core.Modularity;
 using Monica.Core.Modularity.Abstractions;
-using Monica.Core.Modularity.Annotations;
 using Monica.Core.Modularity.Models;
 using Monica.EventBus.Abstractions;
 using Monica.Modules;
@@ -14,30 +13,23 @@ namespace Monica.Configuration.EventBus.Modules;
 /// <summary>
 /// Bridges Monica.Configuration change notifications to the distributed EventBus.
 /// </summary>
-[ModuleKey(BuiltInModuleKey.ConfigurationEventBus)]
-public sealed class ModuleConfigurationEventBus(ModuleConfigurationEventBusOption option)
-    : ModuleBase<ModuleConfigurationEventBus, ModuleConfigurationEventBusOption, ModuleConfigurationEventBusGuide>(option)
+public sealed class ModuleConfigurationEventBus : MonicaModule<ModuleConfigurationEventBusOption>
 {
     /// <inheritdoc />
-    public override void ConfigureServices(IServiceCollection services)
+    public override void ConfigureServices(ModuleContext<ModuleConfigurationEventBusOption> context)
     {
+        var services = context.Services;
         services.TryAddEnumerable(ServiceDescriptor.Singleton<IConfigurationChangeNotifier, ConfigurationEventBusChangeNotifier>());
         services.AddHostedService<ConfigurationEventBusSubscriptionHostedService>();
     }
 
     /// <inheritdoc />
-    public override void ClaimDependencies()
+    public override void Describe(ModuleDescriptor module)
     {
-        DependsOnModule<ModuleConfigurationGuide>().Register();
-        DependsOnModule<ModuleEventBusGuide>().Register();
+        module.Require<ModuleConfiguration, ModuleConfigurationOption>();
+        module.Require<ModuleEventBus, ModuleEventBusOption>();
     }
 }
-
-/// <summary>
-/// Configuration guide for the Monica.Configuration EventBus bridge module.
-/// </summary>
-public sealed class ModuleConfigurationEventBusGuide
-    : ModuleGuide<ModuleConfigurationEventBus, ModuleConfigurationEventBusOption, ModuleConfigurationEventBusGuide>;
 
 /// <summary>
 /// Options for the Monica.Configuration EventBus bridge module.

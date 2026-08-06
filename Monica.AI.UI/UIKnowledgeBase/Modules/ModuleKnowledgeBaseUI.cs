@@ -5,8 +5,6 @@ using Monica.AI.UI.UIKnowledgeBase.State;
 using Monica.Core;
 using Monica.Core.Modularity;
 using Monica.Core.Modularity.Abstractions;
-using Monica.Core.Modularity.Annotations;
-using Monica.Core.Modularity.Models;
 using Monica.UI.Shell.Models;
 using MudBlazor;
 
@@ -24,10 +22,22 @@ public static class ModuleKnowledgeBaseUIBuilderExtensions
         /// Configures knowledge-base UI components.
         /// </summary>
         /// <param name="action">Optional configuration action.</param>
-        /// <returns>The knowledge-base UI module guide.</returns>
-        public ModuleKnowledgeBaseUIGuide AddKnowledgeBaseUI(Action<ModuleKnowledgeBaseUIOption>? action = null)
+        /// <returns>The host-bound knowledge-base UI registration.</returns>
+        public ModuleRegistration<ModuleKnowledgeBaseUI, ModuleKnowledgeBaseUIOption> AddKnowledgeBaseUI(
+            Action<ModuleKnowledgeBaseUIOption>? action = null)
         {
-            return builder.AddModule<ModuleKnowledgeBaseUI, ModuleKnowledgeBaseUIOption, ModuleKnowledgeBaseUIGuide>(action);
+            var registration = builder.AddModule<ModuleKnowledgeBaseUI, ModuleKnowledgeBaseUIOption>(action);
+            registration.Require<ModuleLocalization, ModuleLocalizationOption>()
+                .AddResource<AIResource>();
+            registration.Require<ModuleShellUI, ModuleShellUIOption>()
+                .RegisterUIComponents(registry => registry.RegisterLocalizedPage<KnowledgeBaseManagePage, AIResource>(
+                    KnowledgeBaseManagePage.PAGE_URL,
+                    "Pages:KnowledgeBaseManage:Title",
+                    Icons.Material.Filled.Storage,
+                    BuiltInNavigationCategoryIds.KnowledgeRetrieval,
+                    addToNav: true,
+                    navOrder: 3));
+            return registration;
         }
     }
 }
@@ -35,41 +45,19 @@ public static class ModuleKnowledgeBaseUIBuilderExtensions
 /// <summary>
 /// UI module for knowledge-base selection and management surfaces.
 /// </summary>
-[ModuleKey(BuiltInModuleKey.KnowledgeBaseUI)]
-public sealed class ModuleKnowledgeBaseUI(ModuleKnowledgeBaseUIOption option)
-    : ModuleBase<ModuleKnowledgeBaseUI, ModuleKnowledgeBaseUIOption, ModuleKnowledgeBaseUIGuide>(option)
+public sealed class ModuleKnowledgeBaseUI : MonicaModule<ModuleKnowledgeBaseUIOption>, IUIModule
 {
     /// <inheritdoc />
-    public override void ClaimDependencies()
+    public override void Describe(ModuleDescriptor module)
     {
-        DependsOnModule<ModuleKnowledgeBaseGuide>().Register();
-
-        if (!Option.DisableKnowledgeBaseManagePage)
-        {
-            DependsOnModule<ModuleRAGGuide>().Register();
-            DependsOnModule<ModuleLocalizationGuide>().Register()
-                .AddResource<AIResource>();
-            DependsOnModule<ModuleShellUIGuide>().Register()
-                .RegisterUIComponents(p =>
-                {
-                    p.RegisterLocalizedPage<KnowledgeBaseManagePage, AIResource>(
-                        KnowledgeBaseManagePage.PAGE_URL,
-                        "Pages:KnowledgeBaseManage:Title",
-                        Icons.Material.Filled.Storage,
-                        BuiltInNavigationCategoryIds.KnowledgeRetrieval,
-                        addToNav: true,
-                        navOrder: 3);
-                });
-        }
+        module.Require<ModuleKnowledgeBase, ModuleKnowledgeBaseOption>();
+        module.Require<ModuleRAG, ModuleRAGOption>();
     }
 
     /// <inheritdoc />
-    public override void ConfigureServices(IServiceCollection services)
+    public override void ConfigureServices(ModuleContext<ModuleKnowledgeBaseUIOption> context)
     {
-        if (!Option.DisableKnowledgeBaseManagePage)
-        {
-            services.AddScoped<KnowledgeBaseManagePageState>();
-        }
+        context.Services.AddScoped<KnowledgeBaseManagePageState>();
     }
 }
 
@@ -77,17 +65,5 @@ public sealed class ModuleKnowledgeBaseUI(ModuleKnowledgeBaseUIOption option)
 /// Configuration options for the knowledge-base UI module.
 /// </summary>
 public sealed class ModuleKnowledgeBaseUIOption : ModuleOptions<ModuleKnowledgeBaseUI>
-{
-    /// <summary>
-    /// Disables the knowledge-base management page while keeping reusable selector components available.
-    /// </summary>
-    public bool DisableKnowledgeBaseManagePage { get; set; }
-}
-
-/// <summary>
-/// Configuration guide for the knowledge-base UI module.
-/// </summary>
-public sealed class ModuleKnowledgeBaseUIGuide
-    : ModuleGuide<ModuleKnowledgeBaseUI, ModuleKnowledgeBaseUIOption, ModuleKnowledgeBaseUIGuide>
 {
 }

@@ -1,8 +1,8 @@
 using Microsoft.Extensions.Logging;
-using Monica.ProjectUnits.Services.Support;
+using Monica.Core.TypeDiscovery.Models;
 using Monica.Modules;
+using Monica.ProjectUnits.Services.Support;
 using Monica.Repository.Entity.Abstractions;
-using Monica.Repository.Persistence.Abstractions;
 using Monica.Tool.Extensions;
 
 namespace Monica.ProjectUnits.Models;
@@ -12,8 +12,8 @@ namespace Monica.ProjectUnits.Models;
 /// </summary>
 public class UnitRepository : ProjectUnit
 {
-    internal UnitRepository(Type type, ProjectUnitCatalog catalog)
-        : base(type, EProjectUnitType.Repository, catalog)
+    internal UnitRepository(BusinessTypeShape shape, ProjectUnitCatalog catalog)
+        : base(shape, EProjectUnitType.Repository, catalog)
     {
     }
 
@@ -41,26 +41,17 @@ public class UnitRepository : ProjectUnit
         };
     }
 
-    internal static ProjectUnit? Create(Type type, ProjectUnitCatalog catalog)
+    internal static ProjectUnit Create(
+        BusinessTypeShape shape,
+        ProjectUnitCatalog catalog,
+        Type entityType,
+        Type repositoryInterface)
     {
-        var unit = new UnitRepository(type, catalog);
-        if (!type.IsImplementInterfaceGeneric(typeof(IRepository<>), out var exactGenericType)) return null;
+        var unit = new UnitRepository(shape, catalog);
         unit.CheckNameConventionMode();
-        var repoInterface = type.GetInterface($"I{type.Name}");
-        if (repoInterface == null)
-        {
-            unit.Logger.LogError(
-                "Repository {RepositoryType} was discovered, but its expected interface I{RepositoryType} was not found.",
-                type.Name,
-                type.Name);
-            return null;
-        }
-
-     
-
-        unit.EntityType = exactGenericType.GetGenericArguments().First();
-        unit.RepoInterface = repoInterface;
-        unit.IsHistoryRepo = type.Name.EndsWith("History");
+        unit.EntityType = entityType;
+        unit.RepoInterface = repositoryInterface;
+        unit.IsHistoryRepo = shape.Type.Name.EndsWith("History", StringComparison.Ordinal);
 
         return unit;
     }

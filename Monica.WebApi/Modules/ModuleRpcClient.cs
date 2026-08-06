@@ -1,5 +1,4 @@
-﻿using System.Reflection;
-using Microsoft.Extensions.DependencyInjection;
+﻿using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Http;
 using Microsoft.Extensions.Logging;
@@ -7,8 +6,7 @@ using Microsoft.Extensions.Options;
 using Monica.Core;
 using Monica.Core.Modularity;
 using Monica.Core.Modularity.Abstractions;
-using Monica.Core.Modularity.Annotations;
-using Monica.Core.Modularity.Models;
+using Monica.Core.TypeDiscovery.Models;
 using Monica.Tool.Extensions;
 using Monica.WebApi.RpcClient.Abstractions;
 using Monica.WebApi.RpcClient.Annotations;
@@ -19,29 +17,95 @@ namespace Monica.Modules;
 
 public static class ModuleRpcClientBuilderExtensions
 {
+    internal const string DOMAIN_PROVIDER_FEATURE = "rpc-domain-provider";
+
     extension(IMonicaBuilder builder)
     {
         /// <summary>
         /// Registers and configures the RPC client module.
         /// </summary>
-        public ModuleRpcClientGuide AddRpcClient(Action<ModuleRpcClientOption>? action = null)
+        public ModuleRegistration<ModuleRpcClient, ModuleRpcClientOption> AddRpcClient(
+            Action<ModuleRpcClientOption>? action = null)
         {
-            return builder.AddModule<ModuleRpcClient, ModuleRpcClientOption, ModuleRpcClientGuide>(action);
+            return builder.AddModule<ModuleRpcClient, ModuleRpcClientOption>(action);
+        }
+    }
+
+    extension(ModuleRegistration<ModuleRpcClient, ModuleRpcClientOption> registration)
+    {
+        /// <summary>
+        /// Selects HTTP transport implementations for RPC contracts.
+        /// </summary>
+        public ModuleRegistration<ModuleRpcClient, ModuleRpcClientOption> UseHttpTransport()
+        {
+            return registration.Configure(options => options.Transport = RpcTransportKind.Http);
+        }
+
+        /// <summary>
+        /// Selects in-process transport implementations for RPC contracts.
+        /// </summary>
+        public ModuleRegistration<ModuleRpcClient, ModuleRpcClientOption> UseLocalTransport()
+        {
+            return registration.Configure(options => options.Transport = RpcTransportKind.Local);
+        }
+
+        /// <summary>
+        /// Selects the reserved gRPC transport, which currently fails validation at composition time.
+        /// </summary>
+        public ModuleRegistration<ModuleRpcClient, ModuleRpcClientOption> UseGrpcTransport()
+        {
+            return registration.Configure(options => options.Transport = RpcTransportKind.Grpc);
+        }
+
+        /// <summary>
+        /// Selects the provider responsible for named HTTP-client registration.
+        /// </summary>
+        public ModuleRegistration<ModuleRpcClient, ModuleRpcClientOption> ConfigHttpClientRegisterProvider<TProvider>()
+            where TProvider : class, IRpcHttpClientRegisterProvider
+        {
+            return registration.Configure(options => options.HttpClientRegisterProviderType = typeof(TProvider));
+        }
+
+        /// <summary>
+        /// Configures the dependency-domain resolver used to select generated clients.
+        /// </summary>
+        public ModuleRegistration<ModuleRpcClient, ModuleRpcClientOption> ConfigDomainInfoProvider(
+            IRpcClientDomainInfoProvider domainInfoProvider)
+        {
+            ArgumentNullException.ThrowIfNull(domainInfoProvider);
+            return registration
+                .Configure(options => options.DomainInfoProvider = domainInfoProvider)
+                .SatisfyFeature(DOMAIN_PROVIDER_FEATURE);
+        }
+
+        /// <summary>
+        /// Applies additional HTTP-client customization to every HTTP RPC registration.
+        /// </summary>
+        public ModuleRegistration<ModuleRpcClient, ModuleRpcClientOption> ConfigHttpClientBuilder(
+            Action<IHttpClientBuilder> configure)
+        {
+            ArgumentNullException.ThrowIfNull(configure);
+            return registration.Configure(options => options.CustomHttpClientBuilder = configure);
         }
     }
 }
 
-[ModuleKey(BuiltInModuleKey.RpcClient)]
-public class ModuleRpcClient(ModuleRpcClientOption option) :
-    ModuleBase<ModuleRpcClient, ModuleRpcClientOption, ModuleRpcClientGuide>(option),
-    IBusinessTypeIterator
+public class ModuleRpcClient : MonicaModule<ModuleRpcClientOption>
 {
-    private const string NoneDomainName = "None";
+    private const string NONE_DOMAIN_NAME = "None";
 
-    public List<Type> RelatedTypes { get; set; } = [];
+    private readonly List<BusinessTypeMatch> _relatedTypes = [];
 
-    public override void ConfigureServices(IServiceCollection services)
+    public override void Describe(ModuleDescriptor module)
     {
+        module.RequireFeature(ModuleRpcClientBuilderExtensions.DOMAIN_PROVIDER_FEATURE);
+        module.Require<ModuleAuthentication, ModuleAuthenticationOption>();
+        module.Require<ModuleResultEnvelope, ModuleResultEnvelopeOption>();
+    }
+
+    public override void ConfigureServices(ModuleContext<ModuleRpcClientOption> context)
+    {
+        var services = context.Services;
         services.AddHttpContextAccessor();
         services.AddTransient<AuthenticationDelegatingHandler>();
         if (Option.HttpClientRegisterProviderType is { } providerType)
@@ -50,21 +114,20 @@ public class ModuleRpcClient(ModuleRpcClientOption option) :
         }
     }
 
-    public IEnumerable<Type> IterateBusinessTypes(IEnumerable<Type> types)
+    public override void DiscoverTypes(TypeDiscoveryPlan<ModuleRpcClientOption> discovery)
     {
-        foreach (var type in types)
-        {
-            if (type is { IsClass: true, IsAbstract: false} && type.IsSubclassOf(typeof(RpcApi)))
+        discovery.Match(
+            TypeQuery.ClosedClass.SubclassOf<RpcApi>(),
+            (_, matches) =>
             {
-                RelatedTypes.Add(type);
-            }
-
-            yield return type;
-        }
+                _relatedTypes.Clear();
+                _relatedTypes.AddRange(matches);
+            });
     }
 
-    public override void PostConfigureServices(IServiceCollection services)
+    public override void PostConfigureServices(ModuleContext<ModuleRpcClientOption> context)
     {
+        var services = context.Services;
         var infoProvider = GetRequiredDomainInfoProvider();
         var selectedTransport = Option.Transport;
 
@@ -88,12 +151,6 @@ public class ModuleRpcClient(ModuleRpcClientOption option) :
                 RegisterRpcClient(services, infoProvider, domain, rpcClient, registeredInterfaces, registeredAppIds);
             }
         }
-    }
-
-    public override void ClaimDependencies()
-    {
-        DependsOnModule<ModuleAuthenticationGuide>().Register().ConfigDefaultSystemUser();
-        DependsOnModule<ModuleResultEnvelopeGuide>().Register();
     }
 
     private IRpcClientDomainInfoProvider GetRequiredDomainInfoProvider()
@@ -125,7 +182,7 @@ public class ModuleRpcClient(ModuleRpcClientOption option) :
     {
         return Enum.GetValues(domainEnumType)
             .OfType<Enum>()
-            .Where(domain => !string.Equals(domain.ToString(), NoneDomainName, StringComparison.Ordinal))
+            .Where(domain => !string.Equals(domain.ToString(), NONE_DOMAIN_NAME, StringComparison.Ordinal))
             .ToList();
     }
 
@@ -138,9 +195,9 @@ public class ModuleRpcClient(ModuleRpcClientOption option) :
             .ToHashSet(StringComparer.Ordinal);
         var rpcClientsByDomain = new Dictionary<string, List<RpcClientRegistration>>(StringComparer.Ordinal);
 
-        foreach (var type in RelatedTypes)
+        foreach (var match in _relatedTypes)
         {
-            var registration = CreateRpcClientRegistration(type, validDomainNames, domainEnumType);
+            var registration = CreateRpcClientRegistration(match, validDomainNames, domainEnumType);
             if (!rpcClientsByDomain.TryGetValue(registration.DomainName, out var registrations))
             {
                 registrations = [];
@@ -154,11 +211,12 @@ public class ModuleRpcClient(ModuleRpcClientOption option) :
     }
 
     private static RpcClientRegistration CreateRpcClientRegistration(
-        Type type,
+        BusinessTypeMatch match,
         HashSet<string> validDomainNames,
         Type domainEnumType)
     {
-        var domainAttribute = type.GetCustomAttribute<RpcClientDomainAttribute>(inherit: true)
+        var type = match.Type;
+        var domainAttribute = match.Shape.GetAttribute<RpcClientDomainAttribute>(inherit: true)
                               ?? throw new InvalidOperationException(
                                   $"RPC client type {type.GetCleanFullName()} must declare [{nameof(RpcClientDomainAttribute)}] to participate in automatic registration.");
         if (!validDomainNames.Contains(domainAttribute.DomainName))
@@ -170,13 +228,13 @@ public class ModuleRpcClient(ModuleRpcClientOption option) :
         return new RpcClientRegistration(
             domainAttribute.DomainName,
             type,
-            ResolveRpcInterface(type),
-            ResolveTransportKind(type));
+            ResolveRpcInterface(match.Shape),
+            ResolveTransportKind(match.Shape));
     }
 
-    private static Type ResolveRpcInterface(Type type)
+    private static Type ResolveRpcInterface(BusinessTypeShape shape)
     {
-        var interfaces = type.GetInterfaces()
+        var interfaces = shape.Interfaces
             .Where(p => p != typeof(IRpcApi) && p.IsImplementInterface<IRpcApi>())
             .ToList();
 
@@ -184,9 +242,9 @@ public class ModuleRpcClient(ModuleRpcClientOption option) :
         {
             1 => interfaces[0],
             0 => throw new InvalidOperationException(
-                $"RPC client type {type.GetCleanFullName()} must implement exactly one interface extending {nameof(IRpcApi)}."),
+                $"RPC client type {shape.Type.GetCleanFullName()} must implement exactly one interface extending {nameof(IRpcApi)}."),
             _ => throw new InvalidOperationException(
-                $"There are multiple interfaces ({interfaces.Select(p => p.GetCleanFullName()).StringJoin(",")}) extend {nameof(IRpcApi)} for type {type.GetCleanFullName()}")
+                $"There are multiple interfaces ({interfaces.Select(p => p.GetCleanFullName()).StringJoin(",")}) extend {nameof(IRpcApi)} for type {shape.Type.GetCleanFullName()}")
         };
     }
 
@@ -266,14 +324,14 @@ public class ModuleRpcClient(ModuleRpcClientOption option) :
             rpcClient.InterfaceType.Name);
     }
 
-    private static RpcTransportKind? ResolveTransportKind(Type type)
+    private static RpcTransportKind? ResolveTransportKind(BusinessTypeShape shape)
     {
-        if (type.IsSubclassOf(typeof(HttpRpcApi)))
+        if (shape.IsSubclassOf(typeof(HttpRpcApi)))
         {
             return RpcTransportKind.Http;
         }
 
-        if (type.IsSubclassOf(typeof(LocalRpcApi)))
+        if (shape.IsSubclassOf(typeof(LocalRpcApi)))
         {
             return RpcTransportKind.Local;
         }
@@ -341,88 +399,6 @@ public class ModuleRpcClient(ModuleRpcClientOption option) :
         RpcTransportKind? TransportKind);
 }
 
-public class ModuleRpcClientGuide : ModuleGuide<ModuleRpcClient, ModuleRpcClientOption, ModuleRpcClientGuide>
-{
-    protected override string[] GetRequestedConfigMethodKeys()
-    {
-        return [nameof(ConfigDomainInfoProvider)];
-    }
-
-    /// <summary>
-    /// Registers HTTP transport implementations for RPC contracts.
-    /// </summary>
-    public ModuleRpcClientGuide UseHttpTransport()
-    {
-        ConfigureModuleOption(option =>
-        {
-            option.Transport = RpcTransportKind.Http;
-        });
-        return this;
-    }
-
-    /// <summary>
-    /// Registers in-process local transport implementations for RPC contracts.
-    /// </summary>
-    public ModuleRpcClientGuide UseLocalTransport()
-    {
-        ConfigureModuleOption(option =>
-        {
-            option.Transport = RpcTransportKind.Local;
-        });
-        return this;
-    }
-
-    /// <summary>
-    /// Registers gRPC transport implementations for RPC contracts.
-    /// </summary>
-    public ModuleRpcClientGuide UseGrpcTransport()
-    {
-        ConfigureModuleOption(option =>
-        {
-            option.Transport = RpcTransportKind.Grpc;
-        });
-        return this;
-    }
-
-    /// <summary>
-    /// Configures the provider responsible for named <see cref="HttpClient"/> registration.
-    /// This is required when <see cref="UseHttpTransport"/> is used.
-    /// </summary>
-    public ModuleRpcClientGuide ConfigHttpClientRegisterProvider<THttpClientRegisterProvider>()
-        where THttpClientRegisterProvider : class, IRpcHttpClientRegisterProvider
-    {
-        ConfigureModuleOption(option =>
-        {
-            option.HttpClientRegisterProviderType = typeof(THttpClientRegisterProvider);
-        });
-        return this;
-    }
-
-    /// <summary>
-    /// Configures the dependency-domain resolver used to match generated RPC clients to the current service.
-    /// </summary>
-    public ModuleRpcClientGuide ConfigDomainInfoProvider(IRpcClientDomainInfoProvider domainInfoProvider)
-    {
-        ConfigureModuleOption(option =>
-        {
-            option.DomainInfoProvider = domainInfoProvider;
-        });
-        return this;
-    }
-
-    /// <summary>
-    /// Applies additional HTTP client customization for HTTP RPC registrations.
-    /// </summary>
-    public ModuleRpcClientGuide ConfigHttpClientBuilder(Action<IHttpClientBuilder> builderFunc)
-    {
-        ConfigureModuleOption(option =>
-        {
-            option.CustomHttpClientBuilder = builderFunc;
-        });
-        return this;
-    }
-}
-
 public class ModuleRpcClientOption : ModuleOptions<ModuleRpcClient>
 {
     /// <summary>
@@ -430,26 +406,6 @@ public class ModuleRpcClientOption : ModuleOptions<ModuleRpcClient>
     /// Defaults to <see cref="RpcTransportKind.Http"/> for distributed service-to-service calls.
     /// </summary>
     public RpcTransportKind Transport { get; set; } = RpcTransportKind.Http;
-
-    /// <summary>
-    /// Backward-compatible switch for gRPC transport selection.
-    /// New code should configure <see cref="Transport"/> or the guide transport methods directly.
-    /// </summary>
-    public bool UseGrpc
-    {
-        get => Transport == RpcTransportKind.Grpc;
-        set
-        {
-            if (value)
-            {
-                Transport = RpcTransportKind.Grpc;
-            }
-            else if (Transport == RpcTransportKind.Grpc)
-            {
-                Transport = RpcTransportKind.Http;
-            }
-        }
-    }
 
     /// <summary>
     /// Applies additional customization to HTTP client registrations when <see cref="Transport"/> is <see cref="RpcTransportKind.Http"/>.

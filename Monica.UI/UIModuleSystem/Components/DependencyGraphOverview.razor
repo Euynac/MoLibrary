@@ -52,10 +52,10 @@
                     <MudPaper Class="pa-4 overview-stat-card" Elevation="2">
                         <div class="d-flex justify-space-between align-center">
                             <div>
-                                <MudText Typo="Typo.subtitle1" Color="Color.Warning">@L["ModuleSystem:DependencyGraph:Labels:DowngradedWebModules"]</MudText>
-                                <MudText Typo="Typo.h5" Color="Color.Warning">@GetDowngradedWebModuleCount().ToString()</MudText>
+                                <MudText Typo="Typo.subtitle1" Color="Color.Warning">@L["ModuleSystem:DependencyGraph:Labels:WebHostRequiredModules"]</MudText>
+                                <MudText Typo="Typo.h5" Color="Color.Warning">@GetWebHostRequiredModuleCount().ToString()</MudText>
                             </div>
-                            <MudIcon Icon="@Icons.Material.Filled.ArrowDownward" Color="Color.Warning" Size="Size.Large" />
+                            <MudIcon Icon="@Icons.Material.Filled.WebAsset" Color="Color.Warning" Size="Size.Large" />
                         </div>
                     </MudPaper>
                 </MudItem>
@@ -99,5 +99,5 @@
 
     private int GetWebModuleCount() => DependencyGraphData.Nodes.Count(node => node.IsWebModule);
 
-    private int GetDowngradedWebModuleCount() => DependencyGraphData.Nodes.Count(node => node.IsDowngradedFromWebModule);
+    private int GetWebHostRequiredModuleCount() => DependencyGraphData.Nodes.Count(node => node.RequiresWebHost);
 }

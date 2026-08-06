@@ -4,12 +4,12 @@ using Microsoft.AspNetCore.Mvc.ApiExplorer;
 using Microsoft.AspNetCore.Mvc.Controllers;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Monica.Core;
 using Monica.Core.Modularity;
 using Monica.Core.Modularity.Abstractions;
-using Monica.Core.Modularity.Annotations;
-using Monica.Core.Modularity.Models;
+using Monica.Core.TypeDiscovery.Models;
 using Monica.WebApi.AutoControllers.Abstractions;
 using Monica.WebApi.AutoControllers.Abstractions.Internal;
 using Monica.WebApi.AutoControllers.Extensions;
@@ -24,97 +24,103 @@ public static class ModuleAutoControllersBuilderExtensions
     extension(IMonicaBuilder builder)
     {
         /// <summary>
-        /// Registers and configures the AutoControllers module.
+        /// Registers generated MVC controllers and configures both module and CRUD conventions.
         /// </summary>
-        public ModuleAutoControllersGuide AddAutoControllers(Action<ModuleAutoControllersOption>? action = null, Action<CrudControllerOption>? crudOptionAction = null)
+        public ModuleRegistration<ModuleAutoControllers, ModuleAutoControllersOption> AddAutoControllers(
+            Action<ModuleAutoControllersOption>? configure = null,
+            Action<CrudControllerOption>? configureCrud = null)
         {
-            return builder.AddModule<ModuleAutoControllers, ModuleAutoControllersOption, ModuleAutoControllersGuide>(action)
-                .ConfigureExtraOption(crudOptionAction);
+            return builder.AddModule<ModuleAutoControllers, ModuleAutoControllersOption>(configure)
+                .Configure(options => configureCrud?.Invoke(options.Crud));
         }
     }
 }
 
-[ModuleKey(BuiltInModuleKey.AutoControllers)]
-public class ModuleAutoControllers(ModuleAutoControllersOption option)
-    : WebModuleBase<ModuleAutoControllers, ModuleAutoControllersOption, ModuleAutoControllersGuide>(option), IBusinessTypeIterator
+/// <summary>
+/// Discovers host controllers and CRUD services, then composes MVC without building a temporary service provider.
+/// </summary>
+public class ModuleAutoControllers : MonicaModule<ModuleAutoControllersOption>, IWebHostRequiredModule
 {
     private readonly AutoControllerApplicationPartCatalog _applicationPartCatalog = new();
 
-    public override void ConfigureServices(IServiceCollection services)
+    public override void Describe(ModuleDescriptor module)
     {
-        // Keep discovery state on a module-owned singleton so direct and transitive registration paths share it.
-        services.AddSingleton(_applicationPartCatalog);
-        services.TryAddSingleton<IConventionalHttpMethodResolver, ConventionalHttpMethodResolver>();
-        services.TryAddEnumerable(
-            ServiceDescriptor.Singleton<IValidateOptions<CrudControllerOption>, CrudControllerOptionValidator>());
-        services.AddOptions<CrudControllerOption>().ValidateOnStart();
+        module.Require<ModuleAutoModel, ModuleAutoModelOption>();
+        module.Require<ModuleControllers, ModuleControllersOption>();
     }
 
-    public override void ConfigureEndpoints(IApplicationBuilder app)
+    public override void ConfigureServices(ModuleContext<ModuleAutoControllersOption> context)
     {
-        app.UseEndpoints(endpoints =>
+        var services = context.Services;
+        var validation = new CrudControllerOptionValidator().Validate(name: null, Option.Crud);
+        if (validation.Failed)
         {
-            // AutoControllers exposes host/business MVC controllers, so it must stay unmarked and therefore defaults to the business Swagger document.
-            endpoints.MapControllers();
-        });
-    }
-
-    public override void ClaimDependencies()
-    {
-        DependsOnModule<ModuleAutoModelGuide>().Register();
-        DependsOnModule<ModuleControllersGuide>().Register().ConfigMvcBuilder((builder, provider) =>
-        {
-            var catalog = provider.GetRequiredService<AutoControllerApplicationPartCatalog>();
-            var applicationPartTypes = catalog.GetApplicationPartTypes();
-
-            builder.PartManager.ApplicationParts.Clear();
-            builder.PartManager.ApplicationParts.Add(new TypeCollectionApplicationPart(applicationPartTypes));
-
-            // Used to identify generated CRUD controllers from the registered types.
-            builder.PartManager.FeatureProviders.Add(
-                ActivatorUtilities
-                    .CreateInstance<CrudControllerFeatureProvider>(provider));
-            builder.Services.Replace(ServiceDescriptor.Transient<IControllerActivator, ServiceBasedControllerActivator>());
-        }).ConfigMvcOption((o, provider) =>
-        {
-            o.ConfigAutoController(provider);
-        }).ConfigDependentServices(services =>
-        {
-            services.AddTransient<IServiceConvention, CrudControllerServiceConvention>();
-            services.AddTransient<IApiDescriptionProvider, CrudApiDescriptionProvider>();
-            services.AddTransient<IApiDescriptionProvider, RequestEndpointApiDescriptionProvider>();
-            services.AddTransient<IConventionalRouteBuilder, ConventionalRouteBuilder>();
-            services.AddSingleton<ResultEnvelopeMvcFilter>();
-            services.AddEndpointsApiExplorer();
-        });
-    }
-
-    public IEnumerable<Type> IterateBusinessTypes(IEnumerable<Type> types)
-    {
-        foreach (var type in types)
-        {
-            if (type is { IsClass: true, IsAbstract: false, IsGenericType: false } &&
-                (typeof(ControllerBase).IsAssignableFrom(type) || typeof(ICrudApplicationService).IsAssignableFrom(type)))
-            {
-                _applicationPartCatalog.Add(type);
-            }
-
-            yield return type;
+            throw new OptionsValidationException(
+                nameof(ModuleAutoControllersOption.Crud),
+                typeof(CrudControllerOption),
+                validation.Failures);
         }
+
+        services.AddSingleton(_applicationPartCatalog);
+        services.AddSingleton<IOptions<CrudControllerOption>>(
+            Microsoft.Extensions.Options.Options.Create(Option.Crud));
+        services.TryAddSingleton<IConventionalHttpMethodResolver, ConventionalHttpMethodResolver>();
+        services.AddTransient<IServiceConvention, CrudControllerServiceConvention>();
+        services.AddTransient<IApiDescriptionProvider, CrudApiDescriptionProvider>();
+        services.AddTransient<IApiDescriptionProvider, RequestEndpointApiDescriptionProvider>();
+        services.AddTransient<IConventionalRouteBuilder, ConventionalRouteBuilder>();
+        services.AddSingleton<ResultEnvelopeMvcFilter>();
+        services.AddEndpointsApiExplorer();
+
+        // MVC option configuration is created by DI after the final provider exists, avoiding a temporary container.
+        services.AddSingleton<IConfigureOptions<MvcOptions>>(provider =>
+            new ConfigureNamedOptions<MvcOptions>(
+                Microsoft.Extensions.Options.Options.DefaultName,
+                options => options.ConfigAutoController(provider)));
+    }
+
+    public override void DiscoverTypes(TypeDiscoveryPlan<ModuleAutoControllersOption> discovery)
+    {
+        discovery.Match(
+            TypeQuery.AnyOf(
+                TypeQuery.ClosedClass.AssignableTo<ControllerBase>(),
+                TypeQuery.ClosedClass.AssignableTo<ICrudApplicationService>()),
+            (_, matches) =>
+            {
+                foreach (var match in matches)
+                {
+                    _applicationPartCatalog.Add(match.Type);
+                }
+            });
+    }
+
+    public override void PostConfigureServices(ModuleContext<ModuleAutoControllersOption> context)
+    {
+        var mvcBuilder = context.Services.AddControllers();
+        var applicationPartTypes = _applicationPartCatalog.GetApplicationPartTypes();
+
+        mvcBuilder.PartManager.ApplicationParts.Clear();
+        mvcBuilder.PartManager.ApplicationParts.Add(new TypeCollectionApplicationPart(applicationPartTypes));
+        mvcBuilder.PartManager.FeatureProviders.Add(new CrudControllerFeatureProvider(
+            NullLogger<CrudControllerFeatureProvider>.Instance,
+            Microsoft.Extensions.Options.Options.Create(Option.Crud)));
+        mvcBuilder.Services.Replace(
+            ServiceDescriptor.Transient<IControllerActivator, ServiceBasedControllerActivator>());
+    }
+
+    public override void ConfigureEndpoints(WebModuleContext<ModuleAutoControllersOption> context)
+    {
+        context.ApplicationBuilder.UseEndpoints(endpoints => endpoints.MapControllers());
     }
 }
 
 /// <summary>
-/// Provides fluent configuration for generated AutoControllers.
+/// Owns module composition settings and the primary generated-CRUD convention object.
 /// </summary>
-public class ModuleAutoControllersGuide : WebModuleGuide<ModuleAutoControllers, ModuleAutoControllersOption,
-    ModuleAutoControllersGuide>;
-
-/// <summary>
-/// Configures the AutoControllers module lifecycle.
-/// </summary>
-/// <remarks>
-/// Generated CRUD routes, paging, and HTTP method conventions are configured through
-/// <see cref="CrudControllerOption" /> in the second <c>AddAutoControllers</c> callback.
-/// </remarks>
-public class ModuleAutoControllersOption : ModuleOptions<ModuleAutoControllers>;
+public class ModuleAutoControllersOption : ModuleOptions<ModuleAutoControllers>
+{
+    /// <summary>
+    /// Gets the generated CRUD route, naming, paging, and HTTP-method conventions for this host.
+    /// </summary>
+    public CrudControllerOption Crud { get; } = new();
+}

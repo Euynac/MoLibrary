@@ -8,8 +8,6 @@ using Monica.AutoModel.Services;
 using Monica.Core;
 using Monica.Core.Modularity;
 using Monica.Core.Modularity.Abstractions;
-using Monica.Core.Modularity.Annotations;
-using Monica.Core.Modularity.Models;
 using Monica.Tool.Extensions;
 using TokenExpressionGenDynamicLinqProvider = Monica.AutoModel.Providers.TokenExpressionGenDynamicLinqProvider;
 
@@ -23,18 +21,19 @@ public static class ModuleAutoModelBuilderExtensions
         /// <summary>
         /// Adds and configures the AutoModel module.
         /// </summary>
-        public ModuleAutoModelGuide AddAutoModel(Action<ModuleAutoModelOption>? action = null)
+        public ModuleRegistration<ModuleAutoModel, ModuleAutoModelOption> AddAutoModel(
+            Action<ModuleAutoModelOption>? action = null)
         {
-            return builder.AddModule<ModuleAutoModel, ModuleAutoModelOption, ModuleAutoModelGuide>(action);
+            return builder.AddModule<ModuleAutoModel, ModuleAutoModelOption>(action);
         }
     }
 }
 
-[ModuleKey(BuiltInModuleKey.AutoModel)]
-public class ModuleAutoModel(ModuleAutoModelOption option) : WebModuleBase<ModuleAutoModel, ModuleAutoModelOption, ModuleAutoModelGuide>(option)
+public class ModuleAutoModel : MonicaModule<ModuleAutoModelOption>, IWebModule
 {
-    public override void ConfigureServices(IServiceCollection services)
+    public override void ConfigureServices(ModuleContext<ModuleAutoModelOption> context)
     {
+        var services = context.Services;
         services.AddSingleton<SnapshotFactoryMemoryProvider>();
         services.AddSingleton<IAutoModelSnapshotFactory>(provider =>
             provider.GetRequiredService<SnapshotFactoryMemoryProvider>());
@@ -48,15 +47,17 @@ public class ModuleAutoModel(ModuleAutoModelOption option) : WebModuleBase<Modul
         services.AddTransient<IAutoModelTypeConverter, TypeConverter>();
     }
 
-    public override void ConfigureEndpoints(IApplicationBuilder app)
+    public override void ConfigureEndpoints(WebModuleContext<ModuleAutoModelOption> context)
     {
-        UseEndpoints(app, endpoints =>
+        UseEndpoints(context, endpoints =>
         {
-            var tagName = option.GetApiGroupName();
+            var tagName = Option.GetApiGroupName();
 
-            endpoints.MapGet("/auto-model/status", async (HttpResponse response, HttpContext context, [FromQuery] string? specificEntity = null) =>
+            endpoints.MapGet("/auto-model/status", async (
+                HttpResponse response,
+                [FromServices] IAutoModelSnapshotFactory factory,
+                [FromQuery] string? specificEntity = null) =>
             {
-                var factory = app.ApplicationServices.GetRequiredService<IAutoModelSnapshotFactory>();
                 var snapshots = factory.GetSnapshots().WhereIf(specificEntity != null,
                     p => p.Table.Name?.Equals(specificEntity?.Trim(), StringComparison.OrdinalIgnoreCase) == true).ToList();
                 var res = new
@@ -77,21 +78,6 @@ public class ModuleAutoModel(ModuleAutoModelOption option) : WebModuleBase<Modul
             .WithDescription("Returns the model snapshots owned by this Monica host.");
         });
     }
-
-    public override void ClaimDependencies()
-    {
-        if (!Option.DisableExceptionHandling)
-        {
-            DependsOnModule<ModuleExceptionHandlingGuide>().Register();
-        }
-    }
-}
-
-/// <summary>
-/// Provides fluent configuration for the AutoModel module.
-/// </summary>
-public class ModuleAutoModelGuide : WebModuleGuide<ModuleAutoModel, ModuleAutoModelOption, ModuleAutoModelGuide>
-{
 
 }
 
@@ -141,9 +127,4 @@ public class ModuleAutoModelOption : MinimalApiModuleOptions<ModuleAutoModel>
     /// </summary>
     public bool EnableErrorForUnsupportedFieldTypes { get; set; }
 
-    /// <summary>
-    /// Prevents AutoModel from adding Monica's exception-handling module as a dependency.
-    /// Configure equivalent host exception handling when this option is enabled.
-    /// </summary>
-    public bool DisableExceptionHandling { get; set; }
 }

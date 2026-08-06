@@ -2,7 +2,7 @@
 
 > **Status.** Index for the five-doc Monica AI skill-system design set.
 > **Audience.** Architecture reviewer; module owners across UI, Framework, and business domains.
-> **Last revised.** 2026-04-29.
+> **Last revised.** 2026-08-06.
 
 ## 0. What this design set covers
 
@@ -11,7 +11,7 @@ Monica's chat agent capability surface is built on the Microsoft Agent Framework
 | Doc | File | Concern |
 |---|---|---|
 | 01 | `01-knowledge-base-decoupling.md` | Split Knowledge Base management out of RAG. New `KnowledgeBaseFacade`, new `UIKnowledgeBase` UI module, lookup-only Skill that works without RAG. |
-| 02 | `02-skill-tool-mcp-base.md` (**spine**) | Three new base classes (`MoSkill<TSelf>`, `MoTool`, `MoMcp`) + `[MoAITool]` attribute + description-priority chain + `IBusinessTypeIterator` discovery. |
+| 02 | `02-skill-tool-mcp-base.md` (**spine**) | Three new base classes (`MoSkill<TSelf>`, `MoTool`, `MoMcp`) + `[MoAITool]` attribute + description-priority chain + compiled `TypeDiscoveryPlan` discovery. |
 | 03 | `03-monica-facade-skill-provider.md` | Auto-project every Monica module's Facade methods into one module Skill, with scripts grouped by Facade in the loaded skill content. |
 | 04 | `04-projectunit-skill-provider.md` | Same idea as Doc 03 but for business `ApplicationService` and `CrudApplicationService` types — one Skill per ProjectUnit. CRUD mutating ops are opt-in. |
 
@@ -89,7 +89,7 @@ Every term used in any of the five docs has exactly one definition here. Sub-doc
 | `[MoAITool]` attribute | Method-or-parameter additive metadata. Three properties: `Name` (script/tool name override), `Description` (description override), `Disabled` (gate). On methods of a `MoSkill<TSelf>` subclass `[MoAITool]` is the **discovery marker** — without it the method is not exposed as a script (Microsoft's `[AgentSkillScript]` is not used on Monica skill methods). On Facade and ApplicationService methods (Docs 03 / 04) it is purely additive metadata since exposure is opt-out. If `Name` is omitted, the script name is auto-derived (kebab-case, drop trailing `Async`). On parameters, only `Description` is meaningful. Class-level usage forbidden by `AttributeUsage`. (Doc 02 §5.1) |
 | **Description priority chain** | Resolution order for any tool / parameter description: (1) `[MoAITool(Description = ...)]`, (2) `[System.ComponentModel.Description(...)]`, (3) `IXmlDocumentationService.GetMethodDocumentation(...)`, (4) fallback `"{TypeName}.{MemberName}"` with a logged warning. (Doc 02 §5.2) |
 | **`Res<T>` unwrap** | Rule for projecting Facade or ApplicationService methods returning `Res` / `Res<T>` / `ResPaged<T>` into agent scripts: success path is unwrapped (the script returns the inner `T`); failure throws `MoAIToolFailureException(res.Message)` so the framework reports it as a tool error. (Doc 03 §8, Doc 04 §9) |
-| **`ModuleKey`** | Monica's typed module identifier. `readonly record struct` at `Monica.Core/Modularity/Models/ModuleKey.cs` with implicit conversions from `BuiltInModuleKey` (enum) and `string`. Use this — not `string` — for `RequiredModules` collections on `MoSkill<TSelf>`. |
+| **Module identity** | The module strategy CLR `Type` (for example, `typeof(ModuleRAG)`). Composition, dependencies, and capability gates use type identity. `ModuleKey` is derived diagnostic metadata only and must not become a second identity system. Use `IReadOnlySet<Type>` for `RequiredModules`. |
 
 ## 4. Module dependency map
 
@@ -110,22 +110,28 @@ The fourth line is intentionally absent. `Monica.AI` does not depend on `Monica.
 
 | Module | Project | Doc | Purpose |
 |---|---|---|---|
-| `ModuleKnowledgeBase` | `Monica.AI` | Doc 01 | KB CRUD, inventory, lookup-only Skill. New BuiltInModuleKey: `KnowledgeBase`. |
-| `ModuleKnowledgeBaseUI` | `Monica.AI.UI` | Doc 01 | UIKnowledgeBase manage page, KB selector. New BuiltInModuleKey: `KnowledgeBaseUI`. |
+| `ModuleKnowledgeBase` | `Monica.AI` | Doc 01 | KB CRUD, inventory, lookup-only Skill. Identity: `typeof(ModuleKnowledgeBase)`. |
+| `ModuleKnowledgeBaseUI` | `Monica.AI.UI` | Doc 01 | UIKnowledgeBase manage page, KB selector. Identity: `typeof(ModuleKnowledgeBaseUI)`; implements `IUIModule`. |
 | `ModuleSkillSystem` | `Monica.AI` | Doc 02 | Discovery host for `MoSkill<TSelf>` / `MoTool` / `MoMcp` subclasses; builds `AgentSkillsProvider`. |
-| `ModuleAIFacadeProvider` | `Monica.Framework` | Doc 03 | Auto-project `IMonicaFacade`-marked Facades into one module-level Skill per Monica module. New BuiltInModuleKey: `AIFacadeProvider`. |
-| `ModuleAIProjectUnitProvider` | `Monica.Framework` | Doc 04 | Auto-project ProjectUnits into per-ProjectUnit Skills. New BuiltInModuleKey: `AIProjectUnitProvider`. |
+| `ModuleAIFacadeProvider` | `Monica.Framework` | Doc 03 | Auto-project module-owned Facades into one module-level Skill per Monica module. Identity: `typeof(ModuleAIFacadeProvider)`. |
+| `ModuleAIProjectUnitProvider` | `Monica.Framework` | Doc 04 | Auto-project ProjectUnits into per-ProjectUnit Skills. Identity: `typeof(ModuleAIProjectUnitProvider)`. |
 
-### 4.3 BuiltInModuleKey additions
+### 4.3 Module identity
 
-`Monica.Core/Modularity/Models/BuiltInModuleKey.cs` adds:
+No identifier enum, string key, or identifier annotation is added. Each module is identified by its concrete strategy type. `ModuleKey.FromModuleType(...)` may be used only when a diagnostic or UI display model needs a projected label; dependency analysis and skill availability continue to compare CLR types.
 
-- `KnowledgeBase` (next to `RAG`)
-- `KnowledgeBaseUI` (next to `RAGUI`)
-- `AIFacadeProvider`
-- `AIProjectUnitProvider`
+### 4.4 Module composition contract used by all four phases
 
-`AISkillSystem` is *not* added as a built-in — Doc 02 §6.1 declares `ModuleSkillSystem` with a string `ModuleKey` (`(ModuleKey)"AISkillSystem"`) for the v1 cut. Promotion to `BuiltInModuleKey` is a follow-up if the module proves stable.
+| Concern | Current contract |
+|---|---|
+| Module strategy | Derive from `MonicaModule<TOptions>`; module instances are host-owned strategies, not DI services. |
+| Intrinsic graph | Override `Describe(ModuleDescriptor)` and call `Require<TModule, TOptions>()`, `AfterIfPresent<TModule, TOptions>()`, or `RequireFeature(...)`. `Describe` is option-free. |
+| Host registration | `monica.Add*()` returns `ModuleRegistration<TModule, TOptions>`. Fluent extensions use `Configure`, `Require`, `ConfigureServices`, `SatisfyFeature`, and related typed methods. |
+| Own options | Use the protected finalized `Option` inside the module, or `context.Options` inside a lifecycle contribution. |
+| Cross-module options | Read only declared relationships: `context.Modules.Get<TModule, TOptions>()` for a hard requirement, or `TryGet(...)` for an `AfterIfPresent` relationship. |
+| Type discovery | Override `DiscoverTypes(TypeDiscoveryPlan<TOptions>)`; declare `TypeQuery` values and consume immutable `BusinessTypeMatch` results in serial commits. |
+| UI capability | Implement `IUIModule` for pages/navigation/dialog/state composition. This does not imply web middleware capability. |
+| Web capability | Implement `IWebModule` only for middleware/endpoints, and `IWebHostRequiredModule` only when omitting those web contributions would make the module unusable. |
 
 ## 5. Architecture: before vs after
 
@@ -155,16 +161,17 @@ No Skill hierarchy. No XML-doc bridge. KB management UI lives inside RAG.
 ```
 Startup phase (once)
     │
-    ├── ModuleSkillSystem.IterateBusinessTypes:
-    │       discovers MoSkill<TSelf> / MoTool / MoMcp subclasses
+    ├── ModuleSkillSystem.DiscoverTypes:
+    │       declares structural queries for MoSkill<TSelf> / MoTool / MoMcp subclasses
+    │       and consumes immutable BusinessTypeMatch results after one shared scan
     │
-    ├── ModuleAIFacadeProvider.PostConfigureServices:
-    │       groups selected IMonicaFacade types by owning module,
-    │       builds one ModuleFacadeSkill per module with scripts grouped by Facade
+    ├── ModuleAIFacadeProvider.DiscoverTypes:
+    │       consumes IMonicaFacade<TModule> matches from the shared scan,
+    │       preserving explicit owner-module type identity for later projection
     │
-    ├── ModuleAIProjectUnitProvider.PostConfigureServices:
-    │       projects every ProjectUnit into a ProjectUnitSkill
-    │       (CRUD mutating ops opt-in)
+    ├── ModuleAIProjectUnitProvider.ConfigureServices:
+    │       registers a capability source that consumes IProjectUnitCatalog
+    │       after DI construction (CRUD mutating ops remain opt-in)
     │
     └── MonicaSkillsProviderHostedService:
             collects all AgentSkill services,
@@ -239,7 +246,7 @@ The following are intentionally not addressed by Docs 00–04. Each has a forwar
 | Permission gating on Facade and ProjectUnit Skills | Doc 02 §5.1 documents `[MoAITool(RequiredPermissions = ...)]` as a future property; not shipped in this rev. | A future security doc. |
 | MCP package selection and the concrete `MoMcp` API | Doc 02 §4 (verify-before-implement) | Phase E. Implementer pins the MCP package, decompiles its public surface, finalizes `MoMcp`. |
 | Dynamic / hot-reload skill registration | Doc 02 §7 — `AgentSkillsProvider` is built once at startup; the skill set is immutable per process. | Future iteration. |
-| Per-session permission-based skill activation | Doc 02 §11(a) — gates evaluate at iterator phase only. | Tied to permission gating. |
+| Per-session permission-based skill activation | Doc 02 §11(a) — gates evaluate while the startup capability catalog is built. | Tied to permission gating. |
 | Hand-written module-specific Skills under a module-level umbrella | Doc 03 §3 — slot reserved for future child-skill references in `ModuleFacadeSkill` content. | Future iteration when concrete use cases emerge. |
 | Command-vs-Query sub-Skill nesting in ProjectUnit projection | Doc 04 §10(a) — naming convention only in this rev. | Future iteration if domain teams demand it. |
 | FluentValidation / `IValidatableObject` propagation into JSON schema | Doc 04 §7.3 — only `DataAnnotations` are mapped. | Future iteration. |
@@ -257,7 +264,7 @@ For the doc-writer of each phase to produce alongside the design doc, ahead of i
 |---|---|
 | 00 | Mermaid cross-doc graph (§2 of this doc — done). Terminology table (§3 — done). Before / after architecture diagrams (§5 — done). |
 | 01 | Before / after dependency graph for the UI side (file paths). API classification table (every `RAGFacade` method tagged). Module dependency Mermaid. |
-| 02 | Class diagram (Mermaid) `MoSkill<TSelf>` → `AgentClassSkill<TSelf>` → `AgentSkill`; sibling diagrams for `MoTool` and `MoMcp`. Lifecycle sequence diagram (iterator → singleton → script invocation). Side-by-side migration listing (`KnowledgeSearchToolProvider` → `RAGKnowledgeSkill`). Description-priority decision table with three example methods. |
+| 02 | Class diagram (Mermaid) `MoSkill<TSelf>` → `AgentClassSkill<TSelf>` → `AgentSkill`; sibling diagrams for `MoTool` and `MoMcp`. Lifecycle sequence diagram (compiled discovery → singleton → script invocation). Side-by-side migration listing (`KnowledgeSearchToolProvider` → `RAGKnowledgeSkill`). Description-priority decision table with three example methods. |
 | 03 | Three end-to-end example tables (XML source → module Skill script → `run_skill_script` call). Facade-grouped skill-content template. Discovery sequence diagram. Method default deny-list table. |
 | 04 | Single end-to-end example (`PlaceOrderApplicationService` → script schema). CrudApplicationService default-exposure decision matrix. Cross-reference table with Doc 03. |
 
@@ -285,13 +292,13 @@ Every cross-reference asserted in this design set, in one table:
 | 00 §3 | 02 §5.2 | Description priority chain |
 | 00 §3 | 03 §8 / 04 §9 | `Res<T>` unwrap rule |
 | 01 §4.2 | 02 §0 | `MoSkill<TSelf>` base class for `KnowledgeBaseLookupSkill` |
-| 02 §1.4 | `Monica.Core/Modularity/Models/ModuleKey.cs` | `ModuleKey` typed identifier |
+| 02 §1.4 | `Monica.Core/Modularity/Abstractions/MonicaModule.cs` | CLR module strategy types are the authoritative identities |
 | 02 §6.1 | 03 §1.2 / 04 §1.4 | `ModuleSkillSystem` is the discovery host both Providers depend on |
 | 03 §1.1 | `Monica.Framework.csproj` line 26 | Existing `Monica.Framework → Monica.AI` reference |
 | 03 §4.1 | 02 §11(c) | `IMonicaFacade` lives in `Monica.AI/Skills/Abstractions/` (Doc 02 reserves the home; Doc 03 names the interface) |
 | 03 §6 | `Monica.WebApi/Abstractions/ApplicationService.cs` | ApplicationService base used by Doc 04 |
 | 03 §8 | 04 §9 | `Res<T>` unwrap rule shared across both Providers |
-| 04 §6 | 03 §6 | Discovery hook contract (each Provider has its own iterator step) |
+| 04 §6 | 03 §4.3 | Discovery ownership contrast (Facade Provider declares a query; ProjectUnit Provider consumes the existing catalog) |
 | 04 §12 | 03 (table) | Cross-reference table comparing the two Providers |
 | All | `Microsoft.Agents.AI.xml` at `/mnt/c/Users/mo/.nuget/packages/microsoft.agents.ai/1.3.0/lib/net10.0/Microsoft.Agents.AI.xml` | Source-of-truth for `AgentSkill`, `AgentClassSkill<TSelf>`, `[AgentSkillScript]`, etc. |
 

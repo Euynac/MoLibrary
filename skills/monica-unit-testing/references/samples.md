@@ -9,7 +9,7 @@ Use these projects as structural references:
 - `tests/Test.Monica.Core`
   - Pure module-system and result tests
 - `tests/Test.Monica.JobScheduler`
-  - Module guide, provider, facade, validator, and full-host scenario tests
+  - Module composition, provider, facade, validator, and full-host scenario tests
 - `tests/Test.Monica.UI`
   - UI foundation tests
 - `tests/Test.Monica.JobScheduler.UI`
@@ -22,7 +22,7 @@ Use these projects as structural references:
 
 For infrastructure modules:
 
-- module guide or runtime registration behavior
+- module composition or runtime registration behavior
 - public facade behavior
 - one stable provider, validator, or support type
 - one full-host ownership scenario when the module participates in host lifecycle

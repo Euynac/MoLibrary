@@ -1,6 +1,8 @@
 using AwesomeAssertions;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using Monica.AI.UI.UIChat.State;
+using Monica.Core.Modularity.Extensions;
 using Monica.Modules;
 
 namespace Test.Monica.AI.UI.Modules;
@@ -8,13 +10,17 @@ namespace Test.Monica.AI.UI.Modules;
 public sealed class ModuleAIUITests
 {
     [Fact]
-    public void ConfigureServices_ShouldRegisterScopedChatWorkspace()
+    public void Composition_ShouldRegisterScopedChatWorkspace()
     {
-        var services = new ServiceCollection();
+        var builder = Host.CreateApplicationBuilder();
 
-        new ModuleAIUI(new ModuleAIUIOption()).ConfigureServices(services);
+        builder.AddMonica(monica =>
+        {
+            monica.ConfigureTypeDiscovery(options => options.ExcludeDefault());
+            monica.AddModule<ModuleAIUI, ModuleAIUIOption>();
+        });
 
-        services.Should().ContainSingle(descriptor =>
+        builder.Services.Should().ContainSingle(descriptor =>
             descriptor.ServiceType == typeof(ChatSessionWorkspace)
             && descriptor.Lifetime == ServiceLifetime.Scoped);
     }
@@ -22,7 +28,11 @@ public sealed class ModuleAIUITests
     [Fact]
     public void UseBrowserChatHistory_WhenRetentionIsInvalid_ShouldRejectConfiguration()
     {
-        var configure = () => new ModuleAIUIGuide().UseBrowserChatHistory(options => options.MaxSessions = 0);
+        var builder = Host.CreateApplicationBuilder();
+
+        var configure = () => builder.AddMonica(monica =>
+            monica.AddModule<ModuleAIUI, ModuleAIUIOption>()
+                .UseBrowserChatHistory(options => options.MaxSessions = 0));
 
         configure.Should().Throw<ArgumentOutOfRangeException>();
     }

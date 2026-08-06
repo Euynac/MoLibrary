@@ -3,7 +3,6 @@ using Monica.Core;
 using Monica.Core.Execution;
 using Monica.Core.Modularity;
 using Monica.Core.Modularity.Abstractions;
-using Monica.Core.Modularity.Annotations;
 using Monica.Core.Modularity.Models;
 using Monica.Repository;
 using Monica.Repository.Persistence.Abstractions;
@@ -23,19 +22,24 @@ public static class ModuleUnitOfWorkBuilderExtensions
         /// <summary>
         /// Configuring the UnitOfWork module
         /// </summary>
-        public ModuleUnitOfWorkGuide AddUnitOfWork(Action<ModuleUnitOfWorkOption>? action = null)
+        public ModuleRegistration<ModuleUnitOfWork, ModuleUnitOfWorkOption> AddUnitOfWork(Action<ModuleUnitOfWorkOption>? action = null)
         {
-            return builder.AddModule<ModuleUnitOfWork, ModuleUnitOfWorkOption, ModuleUnitOfWorkGuide>(action);
+            var module = builder.AddModule<ModuleUnitOfWork, ModuleUnitOfWorkOption>(action);
+            module.Require<ModuleExecutionPipeline, ModuleExecutionPipelineOption>()
+                .AddBehavior(
+                    typeof(UnitOfWorkExecutionBehavior<,>),
+                    ExecutionBehaviorOrder.UnitOfWork,
+                    static descriptor => descriptor.TransactionMode == ExecutionTransactionMode.Automatic);
+            return module;
         }
     }
 }
 
-[ModuleKey(BuiltInModuleKey.UnitOfWork)]
-public class ModuleUnitOfWork(ModuleUnitOfWorkOption option)
-    : ModuleBase<ModuleUnitOfWork, ModuleUnitOfWorkOption, ModuleUnitOfWorkGuide>(option)
+public class ModuleUnitOfWork : MonicaModule<ModuleUnitOfWorkOption>
 {
-    public override void ConfigureServices(IServiceCollection services)
+    public override void ConfigureServices(ModuleContext<ModuleUnitOfWorkOption> context)
     {
+        var services = context.Services;
         services.AddSingleton<IUnitOfWorkManager, UnitOfWorkManager>();
 
         if (Option.EnableEntityEvent)
@@ -49,29 +53,26 @@ public class ModuleUnitOfWork(ModuleUnitOfWorkOption option)
         }
     }
 
-    public override void ClaimDependencies()
+    public override void Describe(ModuleDescriptor module)
     {
-        DependsOnModule<ModuleDependencyInjectionGuide>().Register();
-        DependsOnModule<ModuleExecutionPipelineGuide>().Register()
-            .AddBehavior(
-                typeof(UnitOfWorkExecutionBehavior<,>),
-                ExecutionBehaviorOrder.UnitOfWork,
-                static descriptor => descriptor.TransactionMode == ExecutionTransactionMode.Automatic);
+        module.Require<ModuleDependencyInjection, ModuleDependencyInjectionOption>();
+        module.Require<ModuleExecutionPipeline, ModuleExecutionPipelineOption>();
     }
 }
 
-public class ModuleUnitOfWorkGuide : ModuleGuide<ModuleUnitOfWork, ModuleUnitOfWorkOption, ModuleUnitOfWorkGuide>
+public static class ModuleUnitOfWorkRegistrationExtensions
 {
-    public ModuleUnitOfWorkGuide AddDbContextProvider<TDbContext>() where TDbContext : RepositoryDbContext<TDbContext>
+    public static ModuleRegistration<ModuleUnitOfWork, ModuleUnitOfWorkOption> AddDbContextProvider<TDbContext>(this ModuleRegistration<ModuleUnitOfWork, ModuleUnitOfWorkOption> module) where TDbContext : RepositoryDbContext<TDbContext>
     {
-        ConfigureServices(context =>
+        module.ConfigureServices(context =>
         {
             context.Services.AddTransient(
                 typeof(IDbContextProvider<TDbContext>),
                 typeof(AdaptiveDbContextProvider<TDbContext>));
-        }, secondKey: typeof(TDbContext).FullName);
-        return this;
+        });
+        return module;
     }
+
 }
 
 public class ModuleUnitOfWorkOption : ModuleOptions<ModuleUnitOfWork>

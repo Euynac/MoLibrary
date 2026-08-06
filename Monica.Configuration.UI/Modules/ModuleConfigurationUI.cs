@@ -6,8 +6,6 @@ using Monica.Configuration.UI.Support;
 using Monica.Core;
 using Monica.Core.Modularity;
 using Monica.Core.Modularity.Abstractions;
-using Monica.Core.Modularity.Annotations;
-using Monica.Core.Modularity.Models;
 using Monica.UI.Shell.Models;
 using MudBlazor;
 
@@ -25,10 +23,54 @@ public static class ModuleConfigurationUIBuilderExtensions
         /// Registers the configuration operator console UI module.
         /// </summary>
         /// <param name="action">Optional module option configuration.</param>
-        /// <returns>The module guide used to continue configuration.</returns>
-        public ModuleConfigurationUIGuide AddConfigurationUI(Action<ModuleConfigurationUIOption>? action = null)
+        /// <returns>The host-bound module registration.</returns>
+        public ModuleRegistration<ModuleConfigurationUI, ModuleConfigurationUIOption> AddConfigurationUI(
+            Action<ModuleConfigurationUIOption>? action = null)
         {
-            return builder.AddModule<ModuleConfigurationUI, ModuleConfigurationUIOption, ModuleConfigurationUIGuide>(action);
+            var registration = builder.AddModule<ModuleConfigurationUI, ModuleConfigurationUIOption>(action);
+            registration.Require<ModuleDiffHighlight, ModuleDiffHighlightOption>();
+            registration.Require<ModuleLocalization, ModuleLocalizationOption>()
+                .AddResource<ConfigurationUIResource>();
+            registration.Require<ModuleShellUI, ModuleShellUIOption>()
+                .RegisterUIComponents(registry =>
+                {
+                    registry.RegisterLocalizedPage<ConfigurationStatePage, ConfigurationUIResource>(
+                        ConfigurationUiRoutes.STATE_ROUTE,
+                        "Pages:ConfigurationState:Title",
+                        Icons.Material.Filled.Tune,
+                        BuiltInNavigationCategoryIds.Configuration,
+                        addToNav: true,
+                        navOrder: 10);
+                    registry.RegisterLocalizedPage<ConfigurationHistoryPage, ConfigurationUIResource>(
+                        ConfigurationUiRoutes.HISTORY_ROUTE,
+                        "Pages:ConfigurationHistory:Title",
+                        Icons.Material.Filled.History,
+                        BuiltInNavigationCategoryIds.Configuration,
+                        addToNav: true,
+                        navOrder: 20);
+                    registry.RegisterLocalizedPage<ConfigurationVersionsPage, ConfigurationUIResource>(
+                        ConfigurationUiRoutes.VERSIONS_ROUTE,
+                        "Pages:ConfigurationVersions:Title",
+                        Icons.Material.Filled.SettingsBackupRestore,
+                        BuiltInNavigationCategoryIds.Configuration,
+                        addToNav: true,
+                        navOrder: 25);
+                    registry.RegisterLocalizedPage<ConfigurationDebugPage, ConfigurationUIResource>(
+                        ConfigurationUiRoutes.DEBUG_ROUTE,
+                        "Pages:ConfigurationDebug:Title",
+                        Icons.Material.Filled.BugReport,
+                        BuiltInNavigationCategoryIds.Configuration,
+                        addToNav: true,
+                        navOrder: 30);
+                    registry.RegisterLocalizedPage<ConfigurationStoragePage, ConfigurationUIResource>(
+                        ConfigurationUiRoutes.STORAGE_ROUTE,
+                        "Pages:ConfigurationStorage:Title",
+                        Icons.Material.Filled.Storage,
+                        BuiltInNavigationCategoryIds.Configuration,
+                        addToNav: true,
+                        navOrder: 40);
+                });
+            return registration;
         }
     }
 }
@@ -36,83 +78,24 @@ public static class ModuleConfigurationUIBuilderExtensions
 /// <summary>
 /// Operator console UI for Monica.Configuration.
 /// </summary>
-/// <param name="option">The module options.</param>
-[ModuleKey(BuiltInModuleKey.ConfigurationUI)]
-public sealed class ModuleConfigurationUI(ModuleConfigurationUIOption option)
-    : ModuleBase<ModuleConfigurationUI, ModuleConfigurationUIOption, ModuleConfigurationUIGuide>(option)
+public sealed class ModuleConfigurationUI : MonicaModule<ModuleConfigurationUIOption>, IUIModule
 {
     /// <inheritdoc />
-    public override void ClaimDependencies()
+    public override void Describe(ModuleDescriptor module)
     {
-        DependsOnModule<ModuleLocalizationGuide>().Register()
-            .AddResource<ConfigurationUIResource>();
-
-        DependsOnModule<ModuleConfigurationGuide>().Register();
-
-        DependsOnModule<ModuleDiffHighlightGuide>().Register();
-
-        DependsOnModule<ModuleShellUIGuide>().Register()
-            .RegisterUIComponents(registry =>
-            {
-                registry.RegisterLocalizedPage<ConfigurationStatePage, ConfigurationUIResource>(
-                    ConfigurationUiRoutes.STATE_ROUTE,
-                    "Pages:ConfigurationState:Title",
-                    Icons.Material.Filled.Tune,
-                    BuiltInNavigationCategoryIds.Configuration,
-                    addToNav: true,
-                    navOrder: 10);
-
-                registry.RegisterLocalizedPage<ConfigurationHistoryPage, ConfigurationUIResource>(
-                    ConfigurationUiRoutes.HISTORY_ROUTE,
-                    "Pages:ConfigurationHistory:Title",
-                    Icons.Material.Filled.History,
-                    BuiltInNavigationCategoryIds.Configuration,
-                    addToNav: true,
-                    navOrder: 20);
-
-                registry.RegisterLocalizedPage<ConfigurationVersionsPage, ConfigurationUIResource>(
-                    ConfigurationUiRoutes.VERSIONS_ROUTE,
-                    "Pages:ConfigurationVersions:Title",
-                    Icons.Material.Filled.SettingsBackupRestore,
-                    BuiltInNavigationCategoryIds.Configuration,
-                    addToNav: true,
-                    navOrder: 25);
-
-                registry.RegisterLocalizedPage<ConfigurationDebugPage, ConfigurationUIResource>(
-                    ConfigurationUiRoutes.DEBUG_ROUTE,
-                    "Pages:ConfigurationDebug:Title",
-                    Icons.Material.Filled.BugReport,
-                    BuiltInNavigationCategoryIds.Configuration,
-                    addToNav: true,
-                    navOrder: 30);
-
-                registry.RegisterLocalizedPage<ConfigurationStoragePage, ConfigurationUIResource>(
-                    ConfigurationUiRoutes.STORAGE_ROUTE,
-                    "Pages:ConfigurationStorage:Title",
-                    Icons.Material.Filled.Storage,
-                    BuiltInNavigationCategoryIds.Configuration,
-                    addToNav: true,
-                    navOrder: 40);
-            });
+        module.Require<ModuleConfiguration, ModuleConfigurationOption>();
     }
 
     /// <inheritdoc />
-    public override void ConfigureServices(IServiceCollection services)
+    public override void ConfigureServices(ModuleContext<ModuleConfigurationUIOption> context)
     {
+        var services = context.Services;
         services.AddScoped<ConfigurationStateStore>();
         services.AddScoped<ConfigurationPendingChangeCompactor>();
         services.AddScoped<ConfigurationJsonDraftService>();
         services.AddScoped<ConfigurationParameterPackageService>();
         services.AddScoped<ConfigurationVersionsPageState>();
     }
-}
-
-/// <summary>
-/// Fluent guide for Monica.Configuration.UI.
-/// </summary>
-public class ModuleConfigurationUIGuide
-    : ModuleGuide<ModuleConfigurationUI, ModuleConfigurationUIOption, ModuleConfigurationUIGuide>
-{
 }
 
 /// <summary>

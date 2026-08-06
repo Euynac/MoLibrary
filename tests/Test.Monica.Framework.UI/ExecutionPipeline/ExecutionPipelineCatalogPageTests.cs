@@ -6,6 +6,7 @@ using Monica.Core.Modularity.Models;
 using Monica.Framework.UI.Pages;
 using Monica.Framework.UI.UIExecutionPipeline.Components;
 using Monica.Framework.UI.UIExecutionPipeline.State;
+using Monica.Modules;
 using Xunit;
 
 namespace Test.Monica.Framework.UI.ExecutionPipeline;
@@ -105,7 +106,7 @@ public sealed class ExecutionPipelineCatalogPageTests
         cut.FindAll("[data-testid='execution-pipeline-help-label']").Should().HaveCountGreaterThanOrEqualTo(6);
         cut.Markup.Should().Contain("-1000");
         cut.Markup.Should().Contain("Page:Lifetimes:Scoped");
-        cut.Markup.Should().Contain(BuiltInModuleKey.Mediator.ToString());
+        cut.Markup.Should().Contain(ModuleKey.FromModuleType(typeof(ModuleMediator)).ToString());
         cut.Markup.Should().Contain("Page:Common:Yes");
     }
 

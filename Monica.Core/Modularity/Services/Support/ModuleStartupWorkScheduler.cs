@@ -409,7 +409,7 @@ internal sealed class ModuleStartupWorkScheduler(
         }
 
         var expected = _passedBarrier is null
-            ? ModuleStartupWorkBarrier.BeforeBusinessTypeIteration
+            ? ModuleStartupWorkBarrier.BeforeTypeDiscovery
             : (ModuleStartupWorkBarrier)((int)_passedBarrier.Value + 1);
         if (barrier != expected)
         {

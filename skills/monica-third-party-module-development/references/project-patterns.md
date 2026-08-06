@@ -21,11 +21,11 @@ One schema-v2 repository may release several aligned packages:
 └── containers/                 # optional provider services
 ```
 
-Keep NuGet dependencies (`packageDependencies`) separate from Monica runtime dependencies (`modules[].dependsOn`). Both use full identities, and every cross-package module edge requires a package edge.
+Keep NuGet dependencies (`packageDependencies`) separate from manifest module declarations (`modules[].dependsOn`). Both use full distribution identifiers, while the scaffold compiles the latter into CLR-type runtime edges. Every cross-package module edge requires a package edge.
 
 Local module names need be unique only inside their owning package. Package-owned namespaces keep
-same-named modules in different packages distinct, and generated cross-package Guide references are
-fully qualified.
+same-named modules in different packages distinct, and generated cross-package module and option
+type references are fully qualified.
 
 ## Single infrastructure module
 
@@ -39,7 +39,8 @@ fully qualified.
 └── Providers/
 ```
 
-Use `ModuleBase` unless the module actually configures middleware or endpoints.
+Derive the strategy from `MonicaModule<Module{Name}Option>`. Manifest ecosystem keys describe
+distribution and repository edges; Monica uses the concrete strategy `Type` as runtime identity.
 
 ## Multiple modules in one package
 
@@ -63,7 +64,7 @@ Use `ModuleBase` unless the module actually configures middleware or endpoints.
 
 Each feature follows the normal Monica layer rules. Do not let one feature consume another feature's internal services; use public abstractions and models.
 
-All independently published module registration units and `Add*` extensions use `<PackageId>.Modules`. References to official Monica dependency guides continue to import `Monica.Modules`.
+All independently published module registration units and `Add*` extensions use `<PackageId>.Modules`. References to Monica-owned module types continue to import `Monica.Modules`.
 
 ## Mixed infrastructure and UI package
 
@@ -93,18 +94,23 @@ Use this when UI is tightly coupled to the capability and does not need independ
 
 Rules:
 
-- The UI module normally remains `ModuleBase`; use `WebModuleBase` only for middleware or endpoints.
-- The UI module depends on the infrastructure module and `ModuleShellUI`.
+- The UI strategy derives from `MonicaModule<Module{Name}Option>` and implements `IUIModule`.
+- A UI strategy adds `IWebModule` only if it contributes middleware or endpoints, and adds `IWebHostRequiredModule` only when those contributions are essential. UI identity itself does not imply web capability.
+- The UI module declares concrete hard dependencies on the infrastructure module, `ModuleLocalization`, and `ModuleShellUI` in `Describe`.
 - Register navigation with the UI module's own localization resource type. Derive its category ID from that UI module's key by removing only the final `.UI`; do not derive it from the package ID when a package contains multiple UI modules.
 - Derive every public UI route from the package family after removing `<Publisher>.Monica.` and a distribution-only final `.UI` segment. Convert the remaining PascalCase segments to readable kebab-case words: `Tairitsua.Monica.GachaPool` owns `/gacha-pool` and subroutes such as `/gacha-pool-history`. The host route namespace is shared, and Monica rejects duplicate normalized routes, so use distinct package families or package-family subroutes for extensions that must coexist. Never claim an unrelated generic route such as `/dashboard`.
 - Pages inject Facades directly. Do not add a UI service wrapper around a Facade.
 - Keep page code thin and move state/orchestration to `UI{Name}/State` or `Support`.
 - Use isolated `.razor.css`, MudBlazor primitives, and Monica/MudBlazor theme tokens.
 
-Use one startup contribution block per UI module:
+Configure localization and shell contributions from the UI module's host-bound registration, using the concrete Monica registrations and their rich extensions:
 
 ```csharp
-shellGuide.RegisterUIComponents(registry =>
+var registration = builder.AddModule<ModuleAuditUI, ModuleAuditUIOption>(configure);
+registration.Require<ModuleLocalization, ModuleLocalizationOption>()
+    .AddResource<AuditResource>();
+registration.Require<ModuleShellUI, ModuleShellUIOption>()
+    .RegisterUIComponents(registry =>
 {
     var category = registry.RegisterLocalizedCategory<AuditResource>(
         "Acme.Monica.Toolkit.Audit",
@@ -118,32 +124,40 @@ shellGuide.RegisterUIComponents(registry =>
         addToNav: true,
         navOrder: 80);
 });
+return registration;
 ```
 
 Use deterministic explicit values. The scaffold assigns category order `450 + UI module index`, after the shell's Configuration category, and page navigation order `80 + UI module index`. Keep category identity stable when labels, cultures, or page titles change.
 
 ## Provider packages
 
-Use `<Publisher>.Monica.<Capability>.<Provider>` when the provider has a genuinely independent dependency/release boundary. A provider module should implement public abstractions from the capability package and expose explicit Guide registration such as `UseNatsProvider()`.
+Use `<Publisher>.Monica.<Capability>.<Provider>` when the provider has a genuinely independent dependency/release boundary. A provider module should implement public abstractions from the capability package and expose an extension such as `UseNatsProvider()` on the target capability's `ModuleRegistration`.
 
-Represent the module as `kind: provider`, set `providerFor` to the capability module's full key, and repeat that key in `dependsOn`. The provider project references the capability project; its packed NuGet package depends on the capability package and must not embed the capability assembly.
+Represent the module as `kind: provider`, set `providerFor` to the capability module's full manifest key, and repeat that key in `dependsOn`. The provider project references the capability project; its packed NuGet package depends on the capability package and must not embed the capability assembly.
 
 ```csharp
-public static ModulePaddleOCRGuide UsePaddleOCRProvider(
-    this ModuleOcrGuide guide,
+public static ModuleRegistration<ModulePaddleOCR, ModulePaddleOCROption> UsePaddleOCRProvider(
+    this ModuleRegistration<global::Acme.Monica.AI.OCR.Modules.ModuleOcr,
+        global::Acme.Monica.AI.OCR.Modules.ModuleOcrOption> target,
     Action<ModulePaddleOCROption>? configure = null)
 {
-    return guide.AddModule<ModulePaddleOCR, ModulePaddleOCROption, ModulePaddleOCRGuide>(configure);
+    return target.Include<ModulePaddleOCR, ModulePaddleOCROption>(configure);
 }
 
-[ModuleKey("Acme.Monica.AI.OCR.PaddleOCR")]
-public sealed class ModulePaddleOCR(ModulePaddleOCROption option)
-    : ModuleBase<ModulePaddleOCR, ModulePaddleOCROption, ModulePaddleOCRGuide>(option),
-      IModuleProvider
+public sealed class ModulePaddleOCR
+    : MonicaModule<ModulePaddleOCROption>, IModuleProvider
 {
-    public ModuleKey ProvidesFor => "Acme.Monica.AI.OCR";
+    public Type ProvidesFor => typeof(global::Acme.Monica.AI.OCR.Modules.ModuleOcr);
+
+    public override void Describe(ModuleDescriptor module)
+    {
+        module.Require<global::Acme.Monica.AI.OCR.Modules.ModuleOcr,
+            global::Acme.Monica.AI.OCR.Modules.ModuleOcrOption>();
+    }
 }
 ```
+
+`Include` selects the optional provider without reversing ownership. The provider's `Describe` method supplies the runtime hard edge back to the capability. The manifest `providerFor` and `dependsOn` keys let packaging tools resolve and verify those concrete types; they are not runtime module identities.
 
 ## Provider connector plus OCI service
 

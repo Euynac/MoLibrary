@@ -3,11 +3,9 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 using Monica.Core;
 using Monica.Core.Modularity;
 using Monica.Core.Modularity.Abstractions;
-using Monica.Core.Modularity.Annotations;
 using Monica.Core.Modularity.Diagnostics.Facades;
 using Monica.Core.Modularity.Diagnostics.Services;
 using Monica.Core.Modularity.Metrics;
-using Monica.Core.Modularity.Models;
 
 // ReSharper disable once CheckNamespace
 namespace Monica.Modules;
@@ -19,9 +17,10 @@ public static class ModuleSystemBuilderExtensions
         /// <summary>
         /// Configures the module system diagnostics module.
         /// </summary>
-        public ModuleSystemGuide AddModuleSystem(Action<ModuleSystemOption>? action = null)
+        public ModuleRegistration<ModuleSystem, ModuleSystemOption> AddModuleSystem(
+            Action<ModuleSystemOption>? action = null)
         {
-            return builder.AddModule<ModuleSystem, ModuleSystemOption, ModuleSystemGuide>(action);
+            return builder.AddModule<ModuleSystem, ModuleSystemOption>(action);
         }
     }
 }
@@ -30,27 +29,19 @@ public static class ModuleSystemBuilderExtensions
 /// Module system diagnostics module.
 /// Registers inspection services and the host-facing diagnostics facade.
 /// </summary>
-[ModuleKey(BuiltInModuleKey.ModuleSystem)]
-public class ModuleSystem(ModuleSystemOption option)
-    : ModuleBase<ModuleSystem, ModuleSystemOption, ModuleSystemGuide>(option)
+public class ModuleSystem : MonicaModule<ModuleSystemOption>
 {
     /// <summary>
     /// Registers diagnostics services for the module system.
     /// </summary>
-    public override void ConfigureServices(IServiceCollection services)
+    public override void ConfigureServices(ModuleContext<ModuleSystemOption> context)
     {
+        var services = context.Services;
         services.AddSingleton<IModuleSystemInspectionService, ModuleSystemInspectionService>();
         services.AddSingleton<ModuleDiagnosticsFacade>();
         services.TryAddSingleton<ModuleInitMetrics>();
         services.AddHostedService<ModuleInitMetricsActivationService>();
     }
-}
-
-/// <summary>
-/// Fluent guide for the module system diagnostics module.
-/// </summary>
-public class ModuleSystemGuide : ModuleGuide<ModuleSystem, ModuleSystemOption, ModuleSystemGuide>
-{
 }
 
 /// <summary>

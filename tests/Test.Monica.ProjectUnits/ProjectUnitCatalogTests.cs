@@ -1,12 +1,16 @@
 using System.Text.Json;
+using System.Reflection;
 using AwesomeAssertions;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging.Abstractions;
 using Monica.Core;
 using Monica.Core.JsonSerialization.Abstractions;
 using Monica.Core.Results;
+using Monica.Core.TypeDiscovery.Models;
 using Monica.Core.XmlDocumentation.Abstractions;
 using Monica.EventBus.Abstractions;
+using Monica.Framework.Seeder.Abstractions;
 using Monica.Modules;
 using Monica.ProjectUnits.Abstractions;
 using Monica.ProjectUnits.Annotations;
@@ -15,6 +19,7 @@ using Monica.ProjectUnits.Models;
 using Monica.ProjectUnits.Services;
 using Monica.ProjectUnits.Services.Support;
 using Monica.WebApi.Abstractions;
+using Monica.WebApi.AutoControllers.Abstractions;
 using NSubstitute;
 using Xunit;
 
@@ -61,6 +66,20 @@ public sealed class ProjectUnitCatalogTests
             "ProjectUnit.Metadata.Title.Empty",
             "ProjectUnit.Metadata.Tag.Empty",
             "ProjectUnit.Requirement.Id.Empty");
+    }
+
+    [Fact]
+    public void Discovery_preserves_specific_category_priority_for_multi_role_types()
+    {
+        var catalog = CreateCatalog(
+            typeof(PriorityCrudApplicationService),
+            typeof(PrioritySeederHostedService));
+
+        catalog.GetAllUnits().Should().HaveCount(2);
+        catalog.FindByFullName(typeof(PriorityCrudApplicationService).FullName)
+            .Should().BeOfType<UnitCrudApplicationService>();
+        catalog.FindByFullName(typeof(PrioritySeederHostedService).FullName)
+            .Should().BeOfType<UnitSeeder>();
     }
 
     [Fact]
@@ -183,11 +202,26 @@ public sealed class ProjectUnitCatalogTests
         IXmlDocumentationService? documentation,
         params Type[] types)
     {
-        var catalog = new ProjectUnitCatalog(new ModuleProjectUnitsOption());
+        var options = new ModuleProjectUnitsOption();
+        var catalog = new ProjectUnitCatalog(
+            options,
+            options.ConventionOptions,
+            NullLogger<ProjectUnitCatalog>.Instance);
         catalog.SetDocumentationService(documentation);
-        _ = catalog.Discover(types).ToList();
+        catalog.Discover(types.Select(CreateShape));
         catalog.ConnectUnits();
         return catalog;
+    }
+
+    private static BusinessTypeShape CreateShape(Type type)
+    {
+        return (BusinessTypeShape)(Activator.CreateInstance(
+            typeof(BusinessTypeShape),
+            BindingFlags.Instance | BindingFlags.NonPublic,
+            binder: null,
+            args: [type],
+            culture: null)
+            ?? throw new InvalidOperationException("Could not create a business-type shape for the catalog test."));
     }
 
     private static ProjectUnitCatalogService CreateService(
@@ -262,6 +296,17 @@ public sealed class ProjectUnitCatalogTests
     [ProjectUnitRequirement("REQ-FAILED")]
     public sealed class ResolverRequest : IResultRequest
     {
+    }
+
+    public sealed class PriorityCrudApplicationService : ApplicationService, ICrudApplicationService;
+
+    public sealed class PrioritySeederHostedService : ISeeder, IHostedService
+    {
+        public Task SeedAsync(CancellationToken cancellationToken) => Task.CompletedTask;
+
+        public Task StartAsync(CancellationToken cancellationToken) => Task.CompletedTask;
+
+        public Task StopAsync(CancellationToken cancellationToken) => Task.CompletedTask;
     }
 
     private sealed class TestRequirementLinkResolver(

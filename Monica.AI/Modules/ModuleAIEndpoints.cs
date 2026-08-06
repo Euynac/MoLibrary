@@ -4,7 +4,6 @@ using Microsoft.Extensions.DependencyInjection;
 using Monica.AI.Abstractions;
 using Monica.Core;
 using Monica.Core.Modularity.Abstractions;
-using Monica.Core.Modularity.Annotations;
 using Monica.Core.Modularity.Extensions;
 using Monica.Core.Modularity.Models;
 
@@ -22,29 +21,28 @@ public static class ModuleAIEndpointsBuilderExtensions
         /// Registers stateless HTTP endpoints for AI provider discovery.
         /// </summary>
         /// <param name="action">Optional endpoint configuration.</param>
-        /// <returns>The AI endpoints module guide.</returns>
-        public ModuleAIEndpointsGuide AddAIEndpoints(Action<ModuleAIEndpointsOption>? action = null)
-            => builder.AddModule<ModuleAIEndpoints, ModuleAIEndpointsOption, ModuleAIEndpointsGuide>(action);
+        /// <returns>The host-bound AI endpoints module registration.</returns>
+        public ModuleRegistration<ModuleAIEndpoints, ModuleAIEndpointsOption> AddAIEndpoints(Action<ModuleAIEndpointsOption>? action = null)
+            => builder.AddModule<ModuleAIEndpoints, ModuleAIEndpointsOption>(action);
     }
 }
 
 /// <summary>
 /// Hosts the optional stateless HTTP surface for Monica AI.
 /// </summary>
-[ModuleKey(BuiltInModuleKey.AIEndpoints)]
-public sealed class ModuleAIEndpoints(ModuleAIEndpointsOption option)
-    : WebModuleBase<ModuleAIEndpoints, ModuleAIEndpointsOption, ModuleAIEndpointsGuide>(option)
+public sealed class ModuleAIEndpoints : MonicaModule<ModuleAIEndpointsOption>, IWebHostRequiredModule
 {
     /// <inheritdoc />
-    public override void ClaimDependencies()
+    public override void Describe(ModuleDescriptor module)
     {
-        DependsOnModule<ModuleAIGuide>().Register();
+        module.Require<ModuleAI, ModuleAIOption>();
     }
 
     /// <inheritdoc />
-    public override void ConfigureEndpoints(IApplicationBuilder app)
+    public override void ConfigureEndpoints(WebModuleContext<ModuleAIEndpointsOption> context)
     {
-        UseEndpoints(app, endpoints =>
+        var app = context.ApplicationBuilder;
+        UseEndpoints(context, endpoints =>
         {
             endpoints.MapGet($"{Option.RoutePrefix}/providers", (IAIProviderFactory providers) =>
                     TypedResults.Ok(providers.GetAllProviderInfos()))
@@ -75,19 +73,20 @@ public sealed class ModuleAIEndpointsOption : ModuleOptions<ModuleAIEndpoints>
 }
 
 /// <summary>
-/// Configuration guide for Monica AI HTTP endpoints.
+/// Registration extensions for Monica AI HTTP endpoints.
 /// </summary>
-public sealed class ModuleAIEndpointsGuide
-    : WebModuleGuide<ModuleAIEndpoints, ModuleAIEndpointsOption, ModuleAIEndpointsGuide>
+public static class ModuleAIEndpointsRegistrationExtensions
 {
     /// <summary>
     /// Configures the common AI endpoint route prefix.
     /// </summary>
+    /// <param name="module">The AI endpoints module registration to configure.</param>
     /// <param name="routePrefix">Route prefix such as <c>/ai</c>.</param>
-    /// <returns>The current guide.</returns>
-    public ModuleAIEndpointsGuide MapAIEndpoints(string routePrefix = "/ai")
+    /// <returns>The current registration.</returns>
+    public static ModuleRegistration<ModuleAIEndpoints, ModuleAIEndpointsOption> MapAIEndpoints(this ModuleRegistration<ModuleAIEndpoints, ModuleAIEndpointsOption> module, string routePrefix = "/ai")
     {
-        ConfigureModuleOption(option => option.RoutePrefix = routePrefix);
-        return this;
+        module.Configure(options => options.RoutePrefix = routePrefix);
+        return module;
     }
+
 }

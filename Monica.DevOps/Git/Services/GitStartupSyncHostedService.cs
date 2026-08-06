@@ -3,7 +3,6 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Monica.Core.HostedService.Abstractions;
 using Monica.Core.HostedService.Models;
-using Monica.Core.Modularity.Models;
 using Monica.Core.ObservableInstance.Abstractions;
 using Monica.Modules;
 using Monica.DevOps.Git.Abstractions;
@@ -24,7 +23,7 @@ public sealed class GitStartupSyncHostedService(
 {
     /// <inheritdoc />
     public override string ServiceName => "GitStartupSyncHostedService";
-    public override string? ServiceGroupId => nameof(BuiltInModuleKey.Git);
+    public override string? ServiceGroupId => nameof(ModuleGit);
 
     /// <inheritdoc />
     protected override async Task ExecuteBackgroundAsync(CancellationToken stoppingToken)

@@ -5,7 +5,6 @@ using Microsoft.Extensions.DependencyInjection;
 using Monica.Core;
 using Monica.Core.Modularity;
 using Monica.Core.Modularity.Abstractions;
-using Monica.Core.Modularity.Annotations;
 using Monica.Core.Modularity.Models;
 
 // ReSharper disable once CheckNamespace
@@ -18,30 +17,31 @@ public static class ModuleDaprBuilderExtensions
         /// <summary>
         /// Registers and configures the Dapr module.
         /// </summary>
-        public ModuleDaprGuide AddDapr(Action<ModuleDaprOption>? action = null)
+        public ModuleRegistration<ModuleDapr, ModuleDaprOption> AddDapr(Action<ModuleDaprOption>? action = null)
         {
-            return builder.AddModule<ModuleDapr, ModuleDaprOption, ModuleDaprGuide>(action);
+            return builder.AddModule<ModuleDapr, ModuleDaprOption>(action);
         }
     }
 }
 
-[ModuleKey(BuiltInModuleKey.Dapr)]
-public class ModuleDapr(ModuleDaprOption option) : WebModuleBase<ModuleDapr, ModuleDaprOption, ModuleDaprGuide>(option)
+public class ModuleDapr : MonicaModule<ModuleDaprOption>, IWebModule
 {
 
-    public override void ConfigureServices(IServiceCollection services)
+    public override void ConfigureServices(ModuleContext<ModuleDaprOption> context)
     {
+        var services = context.Services;
         // Disabled temporarily until https://github.com/dapr/dotnet-sdk/issues/779 is resolved.
         //builder.Configuration.AddDaprSecretStore(
         //    "secretstore",
         //    new DaprClientBuilder().Build());
     }
 
-    public override void ConfigureEndpoints(IApplicationBuilder app)
+    public override void ConfigureEndpoints(WebModuleContext<ModuleDaprOption> context)
     {
-        UseEndpoints(app, endpoints =>
+        var app = context.ApplicationBuilder;
+        UseEndpoints(context, endpoints =>
         {
-            var tagName = option.GetApiGroupName();
+            var tagName = Option.GetApiGroupName();
             endpoints.MapGet("/dapr/metadata", async (HttpResponse response, HttpContext context) =>
             {
                 var daprClient = context.RequestServices.GetRequiredService<DaprClient>();
@@ -56,10 +56,7 @@ public class ModuleDapr(ModuleDaprOption option) : WebModuleBase<ModuleDapr, Mod
     }
 }
 
-public class ModuleDaprGuide : WebModuleGuide<ModuleDapr, ModuleDaprOption, ModuleDaprGuide>
-{
 
-}
 
 public class ModuleDaprOption : MinimalApiModuleOptions<ModuleDapr>
 {

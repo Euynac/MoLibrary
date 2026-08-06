@@ -9,7 +9,7 @@ Test business behavior through a complete Monica host when composition matters. 
 
 ## Workflow
 
-1. Inspect the production startup path, module guides, discovery assemblies, DbContexts, and external adapters.
+1. Inspect the production startup path, module registrations, discovery assemblies, DbContexts, and external adapters.
 2. Create one runnable project named `Test.{ProductionProjectName}` for the exact production project stem.
 3. Add a project-level factory derived from `MonicaTestApplicationFactory<TDiscoveryAnchor>`:
    - Override `ConfigureMonica(IMonicaBuilder)` with the production module graph required by the service.

@@ -1,19 +1,19 @@
 using AwesomeAssertions;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 using Monica.Core;
 using Monica.Core.Modularity.Exceptions;
 using Monica.Core.Modularity.Extensions;
-using Monica.Core.Modularity.Models;
 using Monica.Modules;
 using Xunit;
 
 namespace Test.Monica.JobScheduler.Modules;
 
-public class ModuleJobSchedulerGuideTests
+public class ModuleJobSchedulerCompositionTests
 {
     [Fact]
-    public void Register_WhenRequiredMethodsAreMissing_ShouldReportAllMissingConfigurationKeys()
+    public void AddJobScheduler_WhenRequiredFeaturesAreMissing_ShouldReportAllFeatures()
     {
         var builder = WebApplication.CreateBuilder();
 
@@ -28,11 +28,11 @@ public class ModuleJobSchedulerGuideTests
         });
 
         act.Should().Throw<ModuleRegistrationException>()
-            .WithMessage("*CONFIG_PROVIDER*CONFIG_METADATA_STORE*CONFIG_SCOPE*");
+            .WithMessage("*metadata-store*provider*scope*");
     }
 
     [Fact]
-    public async Task Register_WhenAllRequiredMethodsAreConfigured_ShouldRecordRequestsAndDependencies()
+    public async Task AddJobScheduler_WhenAllRequiredFeaturesAreSelected_ShouldComposeProviderGraph()
     {
         var builder = WebApplication.CreateBuilder();
         builder.AddMonica(monica =>
@@ -50,11 +50,13 @@ public class ModuleJobSchedulerGuideTests
 
         await using var host = builder.Build();
         var application = host.Services.GetRequiredService<MonicaApplication>();
+        var options = host.Services.GetRequiredService<IOptions<ModuleJobSchedulerOption>>().Value;
 
-        var dependencies = application.Dependencies.CalculateModuleDependencies(BuiltInModuleKey.JobScheduler);
-        dependencies.Should().Contain(BuiltInModuleKey.EventBus);
-        dependencies.Should().Contain(BuiltInModuleKey.CancellationManager);
-        dependencies.Should().Contain(BuiltInModuleKey.ServiceDiscovery);
-        dependencies.Should().Contain(BuiltInModuleKey.HostedService);
+        application.Modules.IsRegistered(typeof(ModuleEventBus)).Should().BeTrue();
+        application.Modules.IsRegistered(typeof(ModuleCancellationManager)).Should().BeTrue();
+        application.Modules.IsRegistered(typeof(ModuleServiceDiscovery)).Should().BeTrue();
+        application.Modules.IsRegistered(typeof(ModuleHostedService)).Should().BeTrue();
+        options.SchedulerScopeKey.Should().Be("job-tests");
+        options.RunControlPlane.Should().BeTrue();
     }
 }

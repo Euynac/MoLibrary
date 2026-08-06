@@ -3,7 +3,6 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Monica.Core.HostedService.Abstractions;
-using Monica.Core.Modularity.Models;
 using Monica.Core.ObservableInstance.Abstractions;
 using Monica.Modules;
 using Monica.Profiling.ExecutionTiming.Abstractions.Internal;
@@ -30,7 +29,7 @@ internal sealed class BackgroundExecutionTimingCoordinator(
     private readonly ModuleExecutionTimingOption _options = executionTimingOptions.Value;
 
     public override string ServiceName => "ExecutionTimingBatchAggregator";
-    public override string? ServiceGroupId => nameof(BuiltInModuleKey.ExecutionTiming);
+    public override string? ServiceGroupId => nameof(ModuleExecutionTiming);
 
     public override TimeSpan? HeartbeatInterval => null;
 

@@ -7,8 +7,6 @@ using Monica.Core.Execution.Models.Internal;
 using Monica.Core.Execution.Services;
 using Monica.Core.Modularity;
 using Monica.Core.Modularity.Abstractions;
-using Monica.Core.Modularity.Annotations;
-using Monica.Core.Modularity.Models;
 
 // ReSharper disable once CheckNamespace
 namespace Monica.Modules;
@@ -24,14 +22,39 @@ public static class ModuleExecutionPipelineBuilderExtensions
         /// Registers the shared execution-pipeline kernel for the current Monica host.
         /// </summary>
         /// <param name="configure">Optional module configuration.</param>
-        /// <returns>A guide used to register ordered execution behaviors.</returns>
-        public ModuleExecutionPipelineGuide AddExecutionPipeline(
+        /// <returns>The host-bound module registration.</returns>
+        public ModuleRegistration<ModuleExecutionPipeline, ModuleExecutionPipelineOption> AddExecutionPipeline(
             Action<ModuleExecutionPipelineOption>? configure = null)
         {
-            return builder.AddModule<
-                ModuleExecutionPipeline,
-                ModuleExecutionPipelineOption,
-                ModuleExecutionPipelineGuide>(configure);
+            return builder.AddModule<ModuleExecutionPipeline, ModuleExecutionPipelineOption>(configure);
+        }
+    }
+
+    extension(ModuleRegistration<ModuleExecutionPipeline, ModuleExecutionPipelineOption> module)
+    {
+        /// <summary>
+        /// Adds an execution behavior to the current host.
+        /// </summary>
+        public ModuleRegistration<ModuleExecutionPipeline, ModuleExecutionPipelineOption> AddBehavior(
+            Type behaviorType,
+            int order = ExecutionBehaviorOrder.Application,
+            Func<ExecutionDescriptor, bool>? descriptorFilter = null,
+            ServiceLifetime lifetime = ServiceLifetime.Transient)
+        {
+            return module.Configure(options =>
+                options.AddBehavior(behaviorType, order, descriptorFilter, lifetime));
+        }
+
+        /// <summary>
+        /// Adds a closed execution behavior to the current host.
+        /// </summary>
+        public ModuleRegistration<ModuleExecutionPipeline, ModuleExecutionPipelineOption> AddBehavior<TBehavior>(
+            int order = ExecutionBehaviorOrder.Application,
+            Func<ExecutionDescriptor, bool>? descriptorFilter = null,
+            ServiceLifetime lifetime = ServiceLifetime.Transient)
+            where TBehavior : class
+        {
+            return module.AddBehavior(typeof(TBehavior), order, descriptorFilter, lifetime);
         }
     }
 }
@@ -39,14 +62,13 @@ public static class ModuleExecutionPipelineBuilderExtensions
 /// <summary>
 /// Registers the shared typed execution pipeline and its host-owned behavior catalog.
 /// </summary>
-[ModuleKey(BuiltInModuleKey.ExecutionPipeline)]
-public sealed class ModuleExecutionPipeline(ModuleExecutionPipelineOption option)
-    : ModuleBase<ModuleExecutionPipeline, ModuleExecutionPipelineOption, ModuleExecutionPipelineGuide>(option)
+public sealed class ModuleExecutionPipeline : MonicaModule<ModuleExecutionPipelineOption>
 {
     /// <inheritdoc />
-    public override void ConfigureServices(IServiceCollection services)
+    public override void ConfigureServices(ModuleContext<ModuleExecutionPipelineOption> context)
     {
-        var registrations = option.BehaviorRegistrations.ToArray();
+        var services = context.Services;
+        var registrations = Option.BehaviorRegistrations.ToArray();
 
         foreach (var registration in registrations)
         {
@@ -64,88 +86,12 @@ public sealed class ModuleExecutionPipeline(ModuleExecutionPipelineOption option
     }
 
     /// <inheritdoc />
-    public override void PostConfigureServices(IServiceCollection services)
+    public override void PostConfigureServices(ModuleContext<ModuleExecutionPipelineOption> context)
     {
-        foreach (var registration in option.BehaviorRegistrations)
+        foreach (var registration in Option.BehaviorRegistrations)
         {
-            registration.ValidateExclusiveServiceRegistration(services);
+            registration.ValidateExclusiveServiceRegistration(context.Services);
         }
-    }
-}
-
-/// <summary>
-/// Configures ordered, descriptor-filtered behaviors for the shared execution pipeline.
-/// </summary>
-public sealed class ModuleExecutionPipelineGuide
-    : ModuleGuide<ModuleExecutionPipeline, ModuleExecutionPipelineOption, ModuleExecutionPipelineGuide>
-{
-    /// <summary>
-    /// Adds an execution behavior to the current host.
-    /// </summary>
-    /// <param name="behaviorType">
-    /// A closed class implementing one or more <see cref="IExecutionBehavior{TInput,TResult}"/> contracts, or a
-    /// two-parameter generic type definition implementing the matching open contract.
-    /// </param>
-    /// <param name="order">
-    /// The behavior order. Lower values wrap higher values. Equal-order behaviors are sorted by implementation
-    /// type only for reproducibility and must remain semantically independent; use distinct orders when relative
-    /// nesting matters.
-    /// </param>
-    /// <param name="descriptorFilter">
-    /// An optional descriptor-only predicate. It is evaluated when an immutable execution plan is first cached and
-    /// must not depend on invocation-specific state.
-    /// </param>
-    /// <param name="lifetime">
-    /// The dependency-injection lifetime used for behavior instances. Transient is the default. Scoped behaviors are
-    /// resolved from the same scope as <see cref="IExecutionPipeline"/>.
-    /// </param>
-    /// <returns>The current guide for fluent configuration.</returns>
-    /// <exception cref="ArgumentException">Thrown when the behavior type is invalid.</exception>
-    /// <remarks>
-    /// This registration owns the behavior's dependency-injection service descriptor. Do not register the same
-    /// implementation type separately in the host service collection.
-    /// </remarks>
-    public ModuleExecutionPipelineGuide AddBehavior(
-        Type behaviorType,
-        int order = ExecutionBehaviorOrder.Application,
-        Func<ExecutionDescriptor, bool>? descriptorFilter = null,
-        ServiceLifetime lifetime = ServiceLifetime.Transient)
-    {
-        var registration = ExecutionBehaviorRegistration.Create(
-            behaviorType,
-            order,
-            descriptorFilter,
-            lifetime,
-            GuideFrom);
-
-        ConfigureModuleOption(
-            moduleOption => moduleOption.AddBehavior(registration),
-            secondKey: Guid.NewGuid().ToString("N"),
-            duplicateBehavior: ModuleConfigurationDuplicateBehavior.SilentIdempotent);
-        return this;
-    }
-
-    /// <summary>
-    /// Adds an execution behavior to the current host.
-    /// </summary>
-    /// <typeparam name="TBehavior">
-    /// A closed behavior class. Use the <see cref="AddBehavior(Type,int,Func{ExecutionDescriptor,bool}?,ServiceLifetime)"/>
-    /// overload for an open generic type definition.
-    /// </typeparam>
-    /// <param name="order">
-    /// The behavior order. Lower values wrap higher values. Equal-order behaviors must not depend on their relative
-    /// nesting because the implementation type is used only as a deterministic tie-breaker.
-    /// </param>
-    /// <param name="descriptorFilter">An optional descriptor-only predicate.</param>
-    /// <param name="lifetime">The dependency-injection lifetime used for behavior instances.</param>
-    /// <returns>The current guide for fluent configuration.</returns>
-    public ModuleExecutionPipelineGuide AddBehavior<TBehavior>(
-        int order = ExecutionBehaviorOrder.Application,
-        Func<ExecutionDescriptor, bool>? descriptorFilter = null,
-        ServiceLifetime lifetime = ServiceLifetime.Transient)
-        where TBehavior : class
-    {
-        return AddBehavior(typeof(TBehavior), order, descriptorFilter, lifetime);
     }
 }
 
@@ -159,8 +105,22 @@ public sealed class ModuleExecutionPipelineOption : ModuleOptions<ModuleExecutio
     internal IReadOnlyCollection<ExecutionBehaviorRegistration> BehaviorRegistrations =>
         _behaviorRegistrations.Values;
 
-    internal void AddBehavior(ExecutionBehaviorRegistration registration)
+    /// <summary>
+    /// Adds one ordered behavior implementation to the host-owned execution pipeline.
+    /// </summary>
+    public void AddBehavior(
+        Type behaviorType,
+        int order = ExecutionBehaviorOrder.Application,
+        Func<ExecutionDescriptor, bool>? descriptorFilter = null,
+        ServiceLifetime lifetime = ServiceLifetime.Transient)
     {
+        var registration = ExecutionBehaviorRegistration.Create(
+            behaviorType,
+            order,
+            descriptorFilter,
+            lifetime,
+            sourceModuleKey: null);
+
         if (!_behaviorRegistrations.TryAdd(registration.ImplementationType, registration))
         {
             throw new InvalidOperationException(

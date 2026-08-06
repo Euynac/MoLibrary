@@ -9,13 +9,13 @@ using Microsoft.Extensions.Options;
 using Monica.Core;
 using Monica.Core.Extensions;
 using Monica.Core.Modularity.Abstractions;
-using Monica.Core.Modularity.Annotations;
 using Monica.Core.Modularity.Diagnostics.Models;
 using Monica.Core.Modularity.Exceptions;
 using Monica.Core.Modularity.Models;
 using Monica.Core.Modularity.Models.Internal;
 using Monica.Core.Modularity.Services.Support;
 using Monica.Core.Modularity.State;
+using Monica.Core.TypeDiscovery.Services;
 using Monica.Tool.Extensions;
 
 namespace Monica.Core.Modularity.Services;
@@ -31,12 +31,21 @@ public sealed class ModuleRegistry(MonicaApplication application)
     private readonly ModuleCompositionState _composition = new();
     private readonly object _compositionCallbackGate = new();
     private readonly ModuleRegistryState _state = new();
+    private readonly Dictionary<Type, HashSet<Type>> _hardDependencies = [];
+    private readonly Dictionary<Type, HashSet<Type>> _optionalOrderings = [];
+    private readonly Dictionary<Type, int> _registrationOrdinals = [];
+    private int _nextRegistrationOrdinal;
+    private Type? _activeDescriptorModuleType;
     private ModuleRegistrationState? _activeCompositionCallback;
     private int _activeCompositionCallbackThreadId;
     private ModuleStartupWorkScheduler? _startupWork;
     private TaskCompletionSource<string?>? _startupValidation;
     private bool _hasStarted;
+    private bool _hasMutatedHost;
     private bool _isSealed;
+    private CompiledModuleGraph? _compiledGraph;
+    private CompiledModulePlan? _compiledPlan;
+    private ModuleServiceRegistrationWriter? _registrationWriter;
 
     /// <summary>
     /// Gets a read-only view of registration errors owned by this Monica host.
@@ -62,25 +71,210 @@ public sealed class ModuleRegistry(MonicaApplication application)
     internal IReadOnlyDictionary<Type, ModuleRegistrationState> Registrations => _state.Registrations;
 
     /// <summary>
-    /// Attempts to retrieve the ModuleRequestInfo for a specified module type.
+    /// Gets the immutable graph compiled for this host.
     /// </summary>
-    /// <param name="type">The type of the module to retrieve information for.</param>
-    /// <param name="requestInfo"></param>
-    /// <returns>The ModuleRequestInfo if found; otherwise, null.</returns>
-    internal bool TryGetModuleRequestInfo(Type type, [NotNullWhen(true)] out ModuleRegistrationState? requestInfo)
+    internal CompiledModuleGraph CompiledGraph => _compiledPlan?.Graph ?? _compiledGraph
+        ?? throw new InvalidOperationException("The Monica module graph has not been compiled yet.");
+
+    /// <summary>
+    /// Gets whether composition crossed the boundary after which the host builder cannot be reused safely.
+    /// </summary>
+    internal bool HasMutatedHost => _hasMutatedHost;
+
+    /// <summary>
+    /// Gets registration drafts omitted from the executable graph by an explicit disable declaration or propagation.
+    /// </summary>
+    internal IReadOnlyList<ModuleRegistrationState> DisabledRegistrations => Registrations.Values
+        .Where(static registration => registration.DisabledReason is not null)
+        .OrderBy(registration => _registrationOrdinals[registration.ModuleType])
+        .ToArray();
+
+    internal bool TryGetRegistration(
+        Type moduleType,
+        [NotNullWhen(true)] out ModuleRegistrationState? registration)
     {
-        return _state.TryGetRegistration(type, out requestInfo);
+        return _state.TryGetRegistration(moduleType, out registration);
+    }
+
+    internal ModuleRegistrationState GetOrAddRegistration<TModule, TOptions>()
+        where TModule : MonicaModule<TOptions>, new()
+        where TOptions : ModuleOptions<TModule>, new()
+    {
+        EnsureCompositionIsOpen();
+        return GetOrAddRegistrationCore<TModule, TOptions>();
+    }
+
+    private ModuleRegistrationState GetOrAddRegistrationCore<TModule, TOptions>()
+        where TModule : MonicaModule<TOptions>, new()
+        where TOptions : ModuleOptions<TModule>, new()
+    {
+        if (_state.TryGetRegistration(typeof(TModule), out var existing))
+        {
+            existing.Initialize<TModule, TOptions>();
+            return existing;
+        }
+
+        var registration = new ModuleRegistrationState(application, typeof(TModule));
+        registration.Initialize<TModule, TOptions>();
+        if (!_state.TryAddRegistration(typeof(TModule), registration))
+        {
+            throw new ModuleRegistrationException($"Module type {typeof(TModule).FullName} is already registered.");
+        }
+
+        _registrationOrdinals.Add(typeof(TModule), _nextRegistrationOrdinal++);
+        return registration;
+    }
+
+    internal void AddOptionContribution<TModule, TOptions>(Type? configuredBy, Action<TOptions> configure)
+        where TModule : MonicaModule<TOptions>, new()
+        where TOptions : ModuleOptions<TModule>, new()
+    {
+        GetOrAddRegistration<TModule, TOptions>().AddOptionContribution(configuredBy, configure);
+    }
+
+    internal ModuleRegistration<TModule, TOptions> Require<TModule, TOptions>(
+        Type ownerModuleType,
+        Action<TOptions>? configure)
+        where TModule : MonicaModule<TOptions>, new()
+        where TOptions : ModuleOptions<TModule>, new()
+    {
+        EnsureCompositionIsOpen();
+        var dependency = GetOrAddRegistrationCore<TModule, TOptions>();
+        AddEdge(_hardDependencies, ownerModuleType, typeof(TModule));
+        if (configure is not null)
+        {
+            dependency.AddOptionContribution(ownerModuleType, configure);
+        }
+
+        return new ModuleRegistration<TModule, TOptions>(application, ownerModuleType);
+    }
+
+    internal void DescribeRequire<TModule, TOptions>(
+        Type ownerModuleType,
+        Action<TOptions>? configure)
+        where TModule : MonicaModule<TOptions>, new()
+        where TOptions : ModuleOptions<TModule>, new()
+    {
+        EnsureActiveDescriptor(ownerModuleType);
+        var dependency = GetOrAddRegistrationCore<TModule, TOptions>();
+        AddEdge(_hardDependencies, ownerModuleType, typeof(TModule));
+        if (configure is not null)
+        {
+            dependency.AddOptionContribution(ownerModuleType, configure);
+        }
+    }
+
+    internal void AfterIfPresent(Type ownerModuleType, Type dependencyModuleType)
+    {
+        EnsureCompositionIsOpen();
+        AddEdge(_optionalOrderings, ownerModuleType, dependencyModuleType);
+    }
+
+    internal void DescribeAfterIfPresent(Type ownerModuleType, Type dependencyModuleType)
+    {
+        EnsureActiveDescriptor(ownerModuleType);
+        AddEdge(_optionalOrderings, ownerModuleType, dependencyModuleType);
+    }
+
+    internal void RequireFeature(Type moduleType, string featureName)
+    {
+        EnsureCompositionIsOpen();
+        GetRegistration(moduleType).RequireFeature(featureName);
+    }
+
+    internal void SatisfyFeature(Type moduleType, string featureName)
+    {
+        EnsureCompositionIsOpen();
+        GetRegistration(moduleType).SatisfyFeature(featureName);
+    }
+
+    internal void DescribeRequireFeature(Type moduleType, string featureName)
+    {
+        EnsureActiveDescriptor(moduleType);
+        GetRegistration(moduleType).RequireFeature(featureName);
+    }
+
+    internal void Disable(Type moduleType, string reason)
+    {
+        EnsureCompositionIsOpen();
+        GetRegistration(moduleType).MarkDisabled(reason);
+    }
+
+    internal void AddProfileContribution<TModule, TOptions>(string name, Action<TOptions> configure)
+        where TModule : MonicaModule<TOptions>, new()
+        where TOptions : ModuleOptions<TModule>, new()
+    {
+        GetOrAddRegistration<TModule, TOptions>().AddProfileContribution(name, configure);
+    }
+
+    internal TOptions GetProfile<TModule, TOptions>(string name)
+        where TModule : MonicaModule<TOptions>, new()
+        where TOptions : ModuleOptions<TModule>, new()
+    {
+        return GetRegistration(typeof(TModule)).GetProfile<TOptions>(name);
+    }
+
+    internal TOptions GetRequiredOptions<TModule, TOptions>(Type sourceModuleType)
+        where TModule : MonicaModule<TOptions>, new()
+        where TOptions : ModuleOptions<TModule>, new()
+    {
+        if (!CompiledGraph.HardDependencies.TryGetValue(sourceModuleType, out var dependencies)
+            || !dependencies.Contains(typeof(TModule)))
+        {
+            throw new InvalidOperationException(
+                $"{sourceModuleType.Name} cannot read {typeof(TOptions).Name} without a direct Require<{typeof(TModule).Name}> edge.");
+        }
+
+        return (TOptions)GetRegistration(typeof(TModule)).ModuleOption;
+    }
+
+    internal bool TryGetOrderedOptions<TModule, TOptions>(Type sourceModuleType, out TOptions? options)
+        where TModule : MonicaModule<TOptions>, new()
+        where TOptions : ModuleOptions<TModule>, new()
+    {
+        var targetType = typeof(TModule);
+        var isDeclared = CompiledGraph.HardDependencies.TryGetValue(sourceModuleType, out var required)
+                         && required.Contains(targetType)
+                         || CompiledGraph.OptionalOrderings.TryGetValue(sourceModuleType, out var ordered)
+                         && ordered.Contains(targetType);
+        if (!isDeclared)
+        {
+            throw new InvalidOperationException(
+                $"{sourceModuleType.Name} cannot probe {typeof(TOptions).Name} without a direct Require or AfterIfPresent edge.");
+        }
+
+        if (!_state.TryGetRegistration(targetType, out var registration)
+            || registration.DisabledReason is not null)
+        {
+            options = null;
+            return false;
+        }
+
+        options = (TOptions)registration.ModuleOption;
+        return true;
+    }
+
+    internal ModuleServiceRegistrationWriter GetRegistrationWriter(IServiceCollection services)
+    {
+        return _registrationWriter ??= new ModuleServiceRegistrationWriter(services);
     }
 
     /// <summary>
     /// Determines whether the current Monica host registered the specified module type.
     /// </summary>
     /// <param name="moduleType">The module type to inspect.</param>
-    /// <returns><see langword="true"/> when the module belongs to this host; otherwise, <see langword="false"/>.</returns>
+    /// <returns><see langword="true"/> when the module belongs to the active compiled graph; otherwise, <see langword="false"/>.</returns>
     public bool IsRegistered(Type moduleType)
     {
         ArgumentNullException.ThrowIfNull(moduleType);
-        return _state.TryGetRegistration(moduleType, out _);
+        return _compiledGraph?.IsActive(moduleType) == true;
+    }
+
+    internal bool IsDisabled(Type moduleType)
+    {
+        ArgumentNullException.ThrowIfNull(moduleType);
+        return _state.TryGetRegistration(moduleType, out var registration)
+               && registration.DisabledReason is not null;
     }
 
     /// <summary>
@@ -90,24 +284,9 @@ public sealed class ModuleRegistry(MonicaApplication application)
     /// <returns>The keyed service keys for the module, or an empty set if the module is unknown.</returns>
     public IReadOnlySet<string> GetKeyedServiceKeys(Type moduleType)
     {
-        return TryGetModuleRequestInfo(moduleType, out var info)
+        return TryGetRegistration(moduleType, out var info)
             ? info.KeyedServiceKeys.ToFrozenSet()
             : FrozenSet<string>.Empty;
-    }
-
-    /// <summary>
-    /// Adds module registration information for a module type.
-    /// </summary>
-    /// <param name="moduleType">The module type.</param>
-    /// <param name="registerInfo">The registration information.</param>
-    internal void AddModuleRegisterContext(Type moduleType, ModuleRegistrationState registerInfo)
-    {
-        EnsureCompositionIsOpen();
-
-        if (!_state.TryAddRegistration(moduleType, registerInfo))
-        {
-            throw new ModuleRegistrationException($"Module type {moduleType.FullName} is already registered.");
-        }
     }
 
     /// <summary>
@@ -145,16 +324,20 @@ public sealed class ModuleRegistry(MonicaApplication application)
         try
         {
             _state.ClearRegistrationErrors();
-            DeclareDependencies();
-            application.Errors.ValidateDependencyGraph();
-            application.Dependencies.RefreshAllModuleOrders();
-
-            var registrations = MaterializeModules(builder);
+            _isSealed = true;
+            DescribeModules();
+            CompileGraph();
+            ValidateFeatures();
+            ValidateWebModuleCompatibility(builder);
+            var registrations = MaterializeModules();
+            _compiledPlan = CompileModulePlan(registrations);
+            _hasMutatedHost = true;
             RegisterCoreServices(services);
             var snapshots = ExecuteBuilderAndServiceConfiguration(builder, services, registrations);
-            ReachStartupWorkBarrier(ModuleStartupWorkBarrier.BeforeBusinessTypeIteration);
+            ReachStartupWorkBarrier(ModuleStartupWorkBarrier.BeforeTypeDiscovery);
 
-            IterateBusinessTypes(snapshots);
+            _registrationWriter = new ModuleServiceRegistrationWriter(services);
+            CommitBusinessTypeDiscovery(builder, services, _compiledPlan);
             ReachStartupWorkBarrier(ModuleStartupWorkBarrier.BeforePostConfigureServices);
 
             ExecutePostConfigureServices(builder, services, snapshots);
@@ -176,92 +359,168 @@ public sealed class ModuleRegistry(MonicaApplication application)
         }
     }
 
-    private void DeclareDependencies()
+    private void DescribeModules()
     {
-        application.Profiling.StartPhase(nameof(ModulePhase.ClaimDependencies));
+        application.Profiling.StartPhase(nameof(ModulePhase.Describe));
         try
         {
-            while (Registrations.Where(static entry => entry.Value.ModulePhase == ModulePhase.None).ToList()
-                   is { Count: > 0 } pending)
+            while (Registrations.Values
+                       .Where(static registration => registration.ModulePhase == ModulePhase.None
+                                                     && registration.DisabledReason is null)
+                       .OrderBy(registration => _registrationOrdinals[registration.ModuleType])
+                       .ToArray()
+                   is { Length: > 0 } pending)
             {
-                foreach (var (moduleType, info) in pending.OrderBy(static entry => entry.Value.Order))
+                foreach (var info in pending)
                 {
-                    info.StartModulePhase(ModulePhase.ClaimDependencies);
+                    info.StartModulePhase(ModulePhase.Describe);
                     try
                     {
-                        var option = info.CreateCurrentModuleOption();
-                        if (Activator.CreateInstance(moduleType, option) is ModuleBase moduleInstance)
-                        {
-                            moduleInstance.Bind(application);
-                            ((IModuleDependencyDeclarer)moduleInstance).ClaimDependencies();
-                        }
-                    }
-                    catch (Exception exception)
-                    {
-                        application.Errors.RecordModuleError(
-                            moduleType,
-                            exception,
-                            ModulePhase.ClaimDependencies,
-                            ModuleRegistrationErrorType.InitializationError);
+                        _activeDescriptorModuleType = info.ModuleType;
+                        info.ModuleSingleton.Describe(new ModuleDescriptor(application, info.ModuleType));
                     }
                     finally
                     {
-                        info.EndModulePhase(ModulePhase.ClaimDependencies);
+                        _activeDescriptorModuleType = null;
+                        info.EndModulePhase(ModulePhase.Describe);
                     }
                 }
             }
         }
         finally
         {
-            application.Profiling.StopPhase(nameof(ModulePhase.ClaimDependencies));
+            application.Profiling.StopPhase(nameof(ModulePhase.Describe));
         }
     }
 
-    private IReadOnlyList<ModuleRegistrationState> MaterializeModules(IHostApplicationBuilder builder)
+    private void CompileGraph()
+    {
+        PropagateDisabledModules();
+
+        _compiledGraph = ModuleGraphCompiler.Compile(
+            Registrations,
+            _hardDependencies,
+            _optionalOrderings,
+            _registrationOrdinals);
+        for (var index = 0; index < _compiledGraph.ActiveModules.Count; index++)
+        {
+            GetRegistration(_compiledGraph.ActiveModules[index]).Order = 100 + index * 10;
+        }
+    }
+
+    private void PropagateDisabledModules()
+    {
+        var reverseHardDependencies = Registrations.Keys.ToDictionary(
+            static type => type,
+            static _ => new List<Type>());
+        foreach (var (owner, dependencies) in _hardDependencies)
+        {
+            foreach (var dependency in dependencies)
+            {
+                reverseHardDependencies[dependency].Add(owner);
+            }
+        }
+
+        var queue = new Queue<Type>(Registrations.Values
+            .Where(static registration => registration.DisabledReason is not null)
+            .Select(static registration => registration.ModuleType));
+        while (queue.TryDequeue(out var disabledType))
+        {
+            foreach (var dependentType in reverseHardDependencies[disabledType])
+            {
+                var dependent = GetRegistration(dependentType);
+                if (dependent.DisabledReason is not null)
+                {
+                    continue;
+                }
+
+                dependent.MarkDisabled($"Required module {disabledType.Name} was disabled.");
+                queue.Enqueue(dependentType);
+            }
+        }
+    }
+
+    private void ValidateFeatures()
+    {
+        var problems = Registrations.Values
+            .Where(static registration => registration.DisabledReason is null)
+            .OrderBy(static registration => registration.Order)
+            .Select(registration => new
+            {
+                registration.ModuleType,
+                Missing = registration.GetMissingRequiredFeatures(),
+                Unexpected = registration.GetUnexpectedSatisfiedFeatures()
+            })
+            .Where(static result => result.Missing.Count != 0 || result.Unexpected.Count != 0)
+            .ToArray();
+        if (problems.Length == 0)
+        {
+            return;
+        }
+
+        var lines = new List<string>
+        {
+            "Module feature validation failed before option finalization:"
+        };
+        foreach (var problem in problems)
+        {
+            if (problem.Missing.Count != 0)
+            {
+                lines.Add(
+                    $"- {problem.ModuleType.Name} is missing required features: " +
+                    string.Join(", ", problem.Missing));
+            }
+
+            if (problem.Unexpected.Count != 0)
+            {
+                lines.Add(
+                    $"- {problem.ModuleType.Name} satisfied undeclared features: " +
+                    string.Join(", ", problem.Unexpected));
+            }
+        }
+
+        throw new ModuleRegistrationException(string.Join(Environment.NewLine, lines));
+    }
+
+    private IReadOnlyList<ModuleRegistrationState> MaterializeModules()
     {
         var registrations = Registrations.Values
-            .Where(static info => info.ModulePhase == ModulePhase.ClaimDependencies)
+            .Where(static info => info.ModulePhase == ModulePhase.Describe
+                                  && info.DisabledReason is null)
             .OrderBy(static info => info.Order)
             .ToArray();
 
-        application.Profiling.StartPhase(nameof(ModulePhase.InitFinalConfigures));
+        application.Profiling.StartPhase(nameof(ModulePhase.FinalizeOptions));
         try
         {
             foreach (var info in registrations)
             {
-                info.StartModulePhase(ModulePhase.InitFinalConfigures);
+                info.StartModulePhase(ModulePhase.FinalizeOptions);
                 try
                 {
-                    info.InitFinalConfigures();
+                    info.FinalizeOptions();
                 }
                 catch (Exception exception)
                 {
                     throw exception.CreateException(
                         Logger,
-                        $"Module {info.ModuleType.GetCleanFullName()} failed during {nameof(ModuleRegistrationState.InitFinalConfigures)}.");
+                        $"Module {info.ModuleType.GetCleanFullName()} failed during option finalization.");
                 }
                 finally
                 {
-                    info.EndModulePhase(ModulePhase.InitFinalConfigures);
+                    info.EndModulePhase(ModulePhase.FinalizeOptions);
                 }
             }
-
-            application.ModuleStates.Init();
-            ValidateWebModuleCompatibility(builder);
-            application.Errors.ValidateModuleRequirements(registrations.ToDictionary(static info => info.ModuleType));
-            return registrations
-                .Where(static info => info.ModulePhase == ModulePhase.InitFinalConfigures)
-                .ToArray();
+            return registrations;
         }
         finally
         {
-            application.Profiling.StopPhase(nameof(ModulePhase.InitFinalConfigures));
+            application.Profiling.StopPhase(nameof(ModulePhase.FinalizeOptions));
         }
     }
 
     private void RegisterCoreServices(IServiceCollection services)
     {
-        _isSealed = true;
         services.AddSingleton<MonicaApplication>(_ => application);
         // Generic Host resolves HostOptions while it builds IHost. Make the host-owned Monica application an options
         // dependency so the container materializes and owns it even when the host is disposed without being started.
@@ -271,11 +530,11 @@ public sealed class ModuleRegistry(MonicaApplication application)
         services.AddSingleton<IMonicaModuleSystemOptions>(application.ModuleSystem);
         RegisterStartupValidation(services);
 
-        foreach (var optionType in Registrations.Values
-                     .Select(static info => info.ModuleOptionType)
-                     .Distinct())
+        foreach (var registration in Registrations.Values
+                     .Where(static info => info.DisabledReason is null)
+                     .OrderBy(static info => info.Order))
         {
-            RegisterModuleOptionContext(services, optionType);
+            RegisterFrozenModuleOption(services, registration);
         }
     }
 
@@ -291,6 +550,10 @@ public sealed class ModuleRegistry(MonicaApplication application)
             foreach (var info in registrations)
             {
                 ExecuteConfigurationRequests(builder, services, info, ModulePhase.ConfigureBuilder);
+            }
+
+            foreach (var info in registrations)
+            {
                 ExecuteConfigurationRequests(builder, services, info, ModulePhase.ConfigureServices);
                 snapshots.Add(new ModuleRuntimeSnapshot(application, info.ModuleSingleton!, info));
             }
@@ -312,20 +575,14 @@ public sealed class ModuleRegistry(MonicaApplication application)
         registration.StartModulePhase(phase);
         try
         {
-            foreach (var request in registration.DeduplicateRequests(
-                         registration.RegisterRequests
-                             .Where(request => request.RequestMethod == phase)
-                             .OrderBy(static request => request.Order)))
+            foreach (var request in registration.GetOrderedRequests(
+                         registration.ConfigurationRequests.Where(request => request.Phase == phase)))
             {
+                BeginCompositionCallback(registration);
                 try
                 {
-                    BeginCompositionCallback(registration);
-                    request.ConfigureContext?.Invoke(
+                    request.Configure(
                         new ModuleConfigurationContext(services, null, builder, registration));
-                }
-                catch (Exception exception)
-                {
-                    application.Errors.RecordRequestError(registration.ModuleType, request, exception);
                 }
                 finally
                 {
@@ -365,54 +622,95 @@ public sealed class ModuleRegistry(MonicaApplication application)
         }
     }
 
-    private void IterateBusinessTypes(IReadOnlyList<ModuleRuntimeSnapshot> snapshots)
+    private CompiledModulePlan CompileModulePlan(IReadOnlyList<ModuleRegistrationState> registrations)
     {
-        application.Profiling.StartPhase(nameof(ModulePhase.IterateBusinessTypes));
+        application.Profiling.StartPhase(nameof(ModulePhase.DiscoverTypes));
         try
         {
-            var iterators = snapshots
-                .Where(static snapshot => snapshot.ModuleInstance is IBusinessTypeIterator)
-                .ToArray();
-            if (iterators.Length == 0)
+            var plans = new List<CompiledTypeDiscoveryPlan>(registrations.Count);
+            foreach (var registration in registrations)
             {
-                return;
-            }
-
-            IReadOnlyList<Type> businessTypes = application.TypeFinder.GetTypes()
-                .Where(static type => !type.IsDefined(
-                    typeof(ExcludeFromBusinessTypeDiscoveryAttribute),
-                    inherit: false))
-                .ToArray();
-            foreach (var snapshot in iterators)
-            {
-                var iterator = (IBusinessTypeIterator)snapshot.ModuleInstance;
-                snapshot.RegisterInfo.StartModulePhase(ModulePhase.IterateBusinessTypes);
+                registration.StartModulePhase(ModulePhase.DiscoverTypes);
                 try
                 {
-                    BeginCompositionCallback(snapshot.RegisterInfo);
+                    plans.Add(new CompiledTypeDiscoveryPlan(
+                        registration,
+                        registration.ModuleSingleton.CreateTypeDiscoveryPlan()));
+                }
+                finally
+                {
+                    registration.EndModulePhase(ModulePhase.DiscoverTypes);
+                }
+            }
+
+            IReadOnlyList<Type> businessTypes = plans.Any(static item => item.Plan.Registrations.Count != 0)
+                ? application.TypeFinder.GetTypes().ToArray()
+                : Array.Empty<Type>();
+            var compilation = TypeDiscoveryCompiler.Compile(
+                businessTypes,
+                plans.Select(static item => item.Plan).ToArray());
+
+            return new CompiledModulePlan(
+                CompiledGraph,
+                Array.AsReadOnly(registrations.ToArray()),
+                Array.AsReadOnly(plans.ToArray()),
+                compilation);
+        }
+        catch (Exception exception)
+        {
+            throw exception.CreateException(
+                Logger,
+                "Type-discovery plan compilation failed before host mutation.");
+        }
+        finally
+        {
+            application.Profiling.StopPhase(nameof(ModulePhase.DiscoverTypes));
+        }
+    }
+
+    private void CommitBusinessTypeDiscovery(
+        IHostApplicationBuilder builder,
+        IServiceCollection services,
+        CompiledModulePlan plan)
+    {
+        application.Profiling.StartPhase(nameof(ModulePhase.DiscoverTypes));
+        try
+        {
+            foreach (var discoveryPlan in plan.TypeDiscoveryPlans)
+            {
+                var registration = discoveryPlan.Registration;
+                registration.StartModulePhase(ModulePhase.DiscoverTypes);
+                try
+                {
+                    BeginCompositionCallback(registration);
                     try
                     {
-                        // Keep the callback active through enumeration because iterator bodies execute lazily.
-                        businessTypes = iterator.IterateBusinessTypes(businessTypes).ToArray();
+                        discoveryPlan.Plan.Commit(
+                            plan.TypeDiscoveryCompilation,
+                            new ModuleConfigurationContext(
+                                services,
+                                applicationBuilder: null,
+                                builder,
+                                registration));
                     }
                     finally
                     {
-                        EndCompositionCallback(snapshot.RegisterInfo);
+                        EndCompositionCallback(registration);
                     }
                 }
                 finally
                 {
-                    snapshot.RegisterInfo.EndModulePhase(ModulePhase.IterateBusinessTypes);
+                    registration.EndModulePhase(ModulePhase.DiscoverTypes);
                 }
             }
         }
         catch (Exception exception)
         {
-            throw exception.CreateException(Logger, "Business-type iteration failed during Monica module registration.");
+            throw exception.CreateException(Logger, "Type-discovery commit failed during Monica module registration.");
         }
         finally
         {
-            application.Profiling.StopPhase(nameof(ModulePhase.IterateBusinessTypes));
+            application.Profiling.StopPhase(nameof(ModulePhase.DiscoverTypes));
         }
     }
 
@@ -428,14 +726,23 @@ public sealed class ModuleRegistry(MonicaApplication application)
             _activeCompositionCallback = null;
             _activeCompositionCallbackThreadId = 0;
         }
+        _activeDescriptorModuleType = null;
         _state.Clear();
+        _hardDependencies.Clear();
+        _optionalOrderings.Clear();
+        _registrationOrdinals.Clear();
+        _nextRegistrationOrdinal = 0;
+        _compiledGraph = null;
+        _compiledPlan = null;
+        _registrationWriter = null;
         _composition.Clear();
         _hasStarted = false;
+        _hasMutatedHost = false;
         _isSealed = false;
     }
 
     /// <summary>
-    /// Rejects guide mutations after the module graph has been validated and sealed.
+    /// Rejects registration mutations after the application composition callback has returned.
     /// </summary>
     internal void EnsureCompositionIsOpen()
     {
@@ -446,11 +753,20 @@ public sealed class ModuleRegistry(MonicaApplication application)
         }
     }
 
+    private void EnsureActiveDescriptor(Type ownerModuleType)
+    {
+        if (_activeDescriptorModuleType != ownerModuleType)
+        {
+            throw new InvalidOperationException(
+                $"The descriptor for {ownerModuleType.Name} is valid only while that module's Describe callback is executing.");
+        }
+    }
+
     /// <summary>
     /// Validates module ownership and phase rules before handing isolated work to the scheduler.
     /// </summary>
     internal void ScheduleStartupWork(
-        ModuleBase owner,
+        MonicaModule owner,
         string name,
         Action work,
         Action? commit,
@@ -486,7 +802,7 @@ public sealed class ModuleRegistry(MonicaApplication application)
         }
 
         var moduleType = owner.GetType();
-        if (!TryGetModuleRequestInfo(moduleType, out var info)
+        if (!TryGetRegistration(moduleType, out var info)
             || !ReferenceEquals(info.ModuleSingleton, owner))
         {
             throw new InvalidOperationException(
@@ -499,21 +815,21 @@ public sealed class ModuleRegistry(MonicaApplication application)
                 || _activeCompositionCallbackThreadId != Environment.CurrentManagedThreadId
                 || info.ModulePhase is not (ModulePhase.ConfigureBuilder
                     or ModulePhase.ConfigureServices
-                    or ModulePhase.IterateBusinessTypes
+                    or ModulePhase.DiscoverTypes
                     or ModulePhase.PostConfigureServices))
             {
                 throw new InvalidOperationException(
                     $"Module {moduleType.Name} can schedule startup work only while its synchronous " +
-                    "ConfigureBuilder, ConfigureServices, IterateBusinessTypes, or PostConfigureServices " +
+                    "ConfigureBuilder, ConfigureServices, DiscoverTypes, or PostConfigureServices " +
                     "callback is executing.");
             }
 
-            if (info.ModulePhase == ModulePhase.IterateBusinessTypes
-                && barrier == ModuleStartupWorkBarrier.BeforeBusinessTypeIteration)
+            if (info.ModulePhase == ModulePhase.DiscoverTypes
+                && barrier == ModuleStartupWorkBarrier.BeforeTypeDiscovery)
             {
                 throw new InvalidOperationException(
                     $"Module {moduleType.Name} cannot schedule startup work for " +
-                    $"{ModuleStartupWorkBarrier.BeforeBusinessTypeIteration} during business-type iteration. " +
+                    $"{ModuleStartupWorkBarrier.BeforeTypeDiscovery} during type discovery. " +
                     $"Use any later barrier: {ModuleStartupWorkBarrier.BeforePostConfigureServices}, " +
                     $"{ModuleStartupWorkBarrier.BeforeServiceRegistrationCompletion}, " +
                     $"{ModuleStartupWorkBarrier.BeforeHostLifecycle}, or {ModuleStartupWorkBarrier.NoBarrier}.");
@@ -545,14 +861,19 @@ public sealed class ModuleRegistry(MonicaApplication application)
         }
     }
 
-    private void RegisterModuleOptionContext(IServiceCollection services, Type optionType)
+    private static void RegisterFrozenModuleOption(
+        IServiceCollection services,
+        ModuleRegistrationState registration)
     {
-        var postConfigureType = typeof(IPostConfigureOptions<>).MakeGenericType(optionType);
-        var implementationType = typeof(ModuleOptionsContextPostConfigure<>).MakeGenericType(optionType);
-        var implementation = Activator.CreateInstance(implementationType, application)
+        var optionType = registration.ModuleOptionType;
+        var option = registration.ModuleOption;
+        var wrapperType = typeof(OptionsWrapper<>).MakeGenericType(optionType);
+        var wrapper = Activator.CreateInstance(wrapperType, option)
             ?? throw new InvalidOperationException(
-                $"Could not create the Monica option context binder for {optionType.GetCleanFullName()}.");
-        services.AddSingleton(postConfigureType, implementation);
+                $"Could not create the frozen options wrapper for {optionType.GetCleanFullName()}.");
+
+        services.AddSingleton(optionType, option);
+        services.AddSingleton(typeof(IOptions<>).MakeGenericType(optionType), wrapper);
     }
 
     private void RegisterStartupValidation(IServiceCollection services)
@@ -614,7 +935,7 @@ public sealed class ModuleRegistry(MonicaApplication application)
                 continue;
             }
 
-            if (!TryGetModuleRequestInfo(result.ModuleType, out var registration))
+            if (!TryGetRegistration(result.ModuleType, out var registration))
             {
                 throw new InvalidOperationException(
                     $"Startup work '{result.Name}' cannot commit because module {result.ModuleType.FullName} " +
@@ -802,47 +1123,89 @@ public sealed class ModuleRegistry(MonicaApplication application)
         }
     }
 
+    private ModuleRegistrationState GetRegistration(Type moduleType)
+    {
+        return _state.TryGetRegistration(moduleType, out var registration)
+            ? registration
+            : throw new KeyNotFoundException($"Module {moduleType.FullName} is not registered in this host.");
+    }
+
+    private static void AddEdge(
+        IDictionary<Type, HashSet<Type>> graph,
+        Type ownerModuleType,
+        Type dependencyModuleType)
+    {
+        if (ownerModuleType == dependencyModuleType)
+        {
+            throw new ModuleRegistrationException(
+                $"Module {ownerModuleType.Name} cannot depend on itself.");
+        }
+
+        if (!graph.TryGetValue(ownerModuleType, out var dependencies))
+        {
+            dependencies = [];
+            graph.Add(ownerModuleType, dependencies);
+        }
+
+        dependencies.Add(dependencyModuleType);
+    }
+
     /// <summary>
     /// Configures the application pipeline for the registered modules.
     /// </summary>
     /// <param name="app">The application builder.</param>
-    /// <param name="order">The ordering split point.</param>
-    /// <param name="afterGivenOrder">Whether to configure items after the given order instead of before it.</param>
-    internal void ConfigApplicationPipeline(IApplicationBuilder app, int order, bool afterGivenOrder)
+    /// <param name="stage">The named routing boundary being configured.</param>
+    internal void ConfigApplicationPipeline(IApplicationBuilder app, ModuleWebStage stage)
     {
-        var phaseName = afterGivenOrder ? $"{nameof(ConfigApplicationPipeline)}_After_{order}" : $"{nameof(ConfigApplicationPipeline)}_Before_{order}";
-        application.Profiling.StartPhase(phaseName);
-
-        Func<ModuleConfigurationRequest, bool> filter = afterGivenOrder ? request => request.Order > order : request => request.Order <= order;
-        // Execute application builder requests in priority order.
-        foreach (var module in RuntimeSnapshots.Where(p =>
-                     p.ModuleInstance is IWebModule &&
-                     !p.RegisterInfo.IsDowngradedFromWebModule &&
-                     p.RegisterInfo.ModulePhase is (ModulePhase.PostConfigureServices or ModulePhase.ConfigureApplicationBuilder)))
+        if (!Enum.IsDefined(stage))
         {
-            module.RegisterInfo.StartModulePhase(ModulePhase.ConfigureApplicationBuilder);
-
-            foreach (var request in module.RegisterInfo.DeduplicateRequests(
-                module.RegisterInfo.RegisterRequests
-                    .Where(p => p.RequestMethod == ModulePhase.ConfigureApplicationBuilder)
-                    .Where(filter)
-                    .OrderBy(r => r.Order)))
-            {
-                try
-                {
-                    request.ConfigureContext?.Invoke(new ModuleConfigurationContext(null, app, null, module.RegisterInfo));
-                }
-                catch (Exception ex)
-                {
-                    application.Errors.RecordRequestError(module.ModuleType, request, ex);
-                }
-            }
-            
-            module.RegisterInfo.EndModulePhase(ModulePhase.ConfigureApplicationBuilder);
-
+            throw new ArgumentOutOfRangeException(nameof(stage), stage, "Unknown web lifecycle stage.");
         }
 
-        application.Profiling.StopPhase(phaseName);
+        var phaseName = $"{nameof(ConfigApplicationPipeline)}_{stage}";
+        application.Profiling.StartPhase(phaseName);
+
+        try
+        {
+            foreach (var module in RuntimeSnapshots.Where(p =>
+                         p.RegisterInfo.ModuleSingleton.IsWebModule &&
+                         p.RegisterInfo.ModulePhase is (ModulePhase.PostConfigureServices or ModulePhase.ConfigureApplicationBuilder)))
+            {
+                module.RegisterInfo.StartModulePhase(ModulePhase.ConfigureApplicationBuilder);
+                try
+                {
+                    foreach (var request in module.RegisterInfo.GetOrderedRequests(
+                                 module.RegisterInfo.ConfigurationRequests
+                                     .Where(p => p.Phase == ModulePhase.ConfigureApplicationBuilder)
+                                     .Where(request => request.WebStage == stage)))
+                    {
+                        BeginCompositionCallback(module.RegisterInfo);
+                        try
+                        {
+                            request.Configure(
+                                new ModuleConfigurationContext(null, app, null, module.RegisterInfo));
+                        }
+                        finally
+                        {
+                            EndCompositionCallback(module.RegisterInfo);
+                        }
+                    }
+                }
+                finally
+                {
+                    module.RegisterInfo.EndModulePhase(ModulePhase.ConfigureApplicationBuilder);
+                }
+            }
+        }
+        catch (Exception exception)
+        {
+            FailWebComposition(exception);
+            throw;
+        }
+        finally
+        {
+            application.Profiling.StopPhase(phaseName);
+        }
     }
 
     /// <summary>
@@ -853,46 +1216,66 @@ public sealed class ModuleRegistry(MonicaApplication application)
     {
         application.Profiling.StartPhase(nameof(ModulePhase.ConfigureEndpoints));
 
-        // Execute endpoint configuration requests in priority order.
-        foreach (var module in RuntimeSnapshots.Where(p =>
-                     p.ModuleInstance is IWebModule &&
-                     !p.RegisterInfo.IsDowngradedFromWebModule &&
-                     p.RegisterInfo.ModulePhase == ModulePhase.ConfigureApplicationBuilder))
+        try
         {
-            module.RegisterInfo.StartModulePhase(ModulePhase.ConfigureEndpoints);
-
-            foreach (var request in module.RegisterInfo.DeduplicateRequests(
-                module.RegisterInfo.RegisterRequests
-                    .Where(p => p.RequestMethod == ModulePhase.ConfigureEndpoints)
-                    .OrderBy(r => r.Order)))
+            foreach (var module in RuntimeSnapshots.Where(p =>
+                         p.RegisterInfo.ModuleSingleton.IsWebModule &&
+                         p.RegisterInfo.ModulePhase == ModulePhase.ConfigureApplicationBuilder))
             {
+                module.RegisterInfo.StartModulePhase(ModulePhase.ConfigureEndpoints);
                 try
                 {
-                    request.ConfigureContext?.Invoke(new ModuleConfigurationContext(null, app, null, module.RegisterInfo));
+                    foreach (var request in module.RegisterInfo.GetOrderedRequests(
+                                 module.RegisterInfo.ConfigurationRequests
+                                     .Where(p => p.Phase == ModulePhase.ConfigureEndpoints)))
+                    {
+                        BeginCompositionCallback(module.RegisterInfo);
+                        try
+                        {
+                            request.Configure(
+                                new ModuleConfigurationContext(null, app, null, module.RegisterInfo));
+                        }
+                        finally
+                        {
+                            EndCompositionCallback(module.RegisterInfo);
+                        }
+                    }
                 }
-                catch (Exception ex)
+                finally
                 {
-                    application.Errors.RecordRequestError(module.ModuleType, request, ex);
+                    module.RegisterInfo.EndModulePhase(ModulePhase.ConfigureEndpoints);
                 }
             }
-
-            module.RegisterInfo.EndModulePhase(ModulePhase.ConfigureEndpoints);
+        }
+        catch (Exception exception)
+        {
+            FailWebComposition(exception);
+            throw;
+        }
+        finally
+        {
+            application.Profiling.StopPhase(nameof(ModulePhase.ConfigureEndpoints));
         }
 
-        application.Profiling.StopPhase(nameof(ModulePhase.ConfigureEndpoints));
         CompleteComposition(ModuleCompositionCompletionPoint.EndpointMapping);
+    }
+
+    private void FailWebComposition(Exception exception)
+    {
+        _composition.FailCompletion(exception);
+        application.Profiling.StopModuleSystem();
     }
 
     /// <summary>
     /// Gets all module snapshots that are providers for a specific target module.
     /// </summary>
-    /// <param name="targetModuleKey">The ModuleKey of the target module to find providers for</param>
+    /// <param name="targetModuleType">The target module strategy type.</param>
     /// <returns>A detached list of runtime snapshots for modules that provide the target module.</returns>
-    public IReadOnlyList<ModuleRuntimeSnapshot> GetModuleProviders(ModuleKey targetModuleKey)
+    public IReadOnlyList<ModuleRuntimeSnapshot> GetModuleProviders(Type targetModuleType)
     {
         return Array.AsReadOnly(RuntimeSnapshots
             .Where(snapshot => snapshot.ModuleInstance is IModuleProvider provider
-                               && provider.ProvidesFor == targetModuleKey)
+                               && provider.ProvidesFor == targetModuleType)
             .ToArray());
     }
 
@@ -900,15 +1283,15 @@ public sealed class ModuleRegistry(MonicaApplication application)
     /// Gets all module providers of a specific type for a target module.
     /// </summary>
     /// <typeparam name="TProvider">The provider interface type</typeparam>
-    /// <param name="targetModuleKey">The ModuleKey of the target module to find providers for</param>
+    /// <param name="targetModuleType">The target module strategy type.</param>
     /// <returns>A detached, read-only list of provider instances.</returns>
-    public IReadOnlyList<TProvider> GetModuleProviders<TProvider>(ModuleKey targetModuleKey)
-        where TProvider : IModuleProvider
+    public IReadOnlyList<TProvider> GetModuleProviders<TProvider>(Type targetModuleType)
+        where TProvider : class, IModuleProvider
     {
         return Array.AsReadOnly(RuntimeSnapshots
-            .Where(snapshot => snapshot.ModuleInstance is TProvider provider
-                        && provider.ProvidesFor == targetModuleKey)
-            .Select(snapshot => (TProvider)snapshot.ModuleInstance)
+            .Select(static snapshot => snapshot.ModuleInstance)
+            .OfType<TProvider>()
+            .Where(provider => provider.ProvidesFor == targetModuleType)
             .ToArray());
     }
 
@@ -919,31 +1302,21 @@ public sealed class ModuleRegistry(MonicaApplication application)
             return;
         }
 
-        foreach (var (moduleType, info) in Registrations
-                     .Where(entry => entry.Value.ModulePhase == ModulePhase.InitFinalConfigures)
-                     .OrderBy(entry => entry.Value.Order))
+        var requiredModules = Registrations.Values
+            .Where(static registration => registration.DisabledReason is null
+                                          && registration.RequiresWebHost)
+            .OrderBy(static registration => registration.Order)
+            .Select(static registration =>
+                $"{registration.ModuleType.FullName ?? registration.ModuleType.Name}: " +
+                registration.WebHostRequirementReason)
+            .ToArray();
+        if (requiredModules.Length == 0)
         {
-            if (info.ModuleSingleton is not IWebModule webModule)
-            {
-                continue;
-            }
-
-            if (webModule.CanDowngradeToNonWebModule())
-            {
-                info.IsDowngradedFromWebModule = true;
-                Logger.LogInformation(
-                    "Module {ModuleName} is running in downgraded non-web mode because the current host is {HostBuilderType}.",
-                    moduleType.Name,
-                    builder.GetType().FullName);
-                continue;
-            }
-
-            var moduleKey = application.Dependencies.ResolveModuleKey(moduleType);
-            application.Errors.RecordHostCompatibilityError(
-                moduleType,
-                $"Module {moduleType.Name} ({moduleKey}) requires an ASP.NET Core host and cannot downgrade to a non-web module.");
+            return;
         }
 
-        application.Errors.RaiseModuleErrors();
+        throw new ModuleRegistrationException(
+            $"The generic host adapter {builder.GetType().FullName} cannot compose modules that require an " +
+            $"ASP.NET Core WebApplicationBuilder: {string.Join(", ", requiredModules)}.");
     }
 }

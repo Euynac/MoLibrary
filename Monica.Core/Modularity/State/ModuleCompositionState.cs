@@ -178,11 +178,10 @@ internal sealed class ModuleCompositionState
 
         lock (_gate)
         {
-            if (!_completionAttempted || _pendingCompletionPoint is null)
-            {
-                throw new InvalidOperationException("Monica composition completion has not started.");
-            }
-
+            _completionAttempted = true;
+            _pendingCompletionPoint ??= _requiresEndpointMapping
+                ? ModuleCompositionCompletionPoint.EndpointMapping
+                : ModuleCompositionCompletionPoint.ServiceRegistration;
             _completionFailure = exception;
         }
     }

@@ -10,7 +10,7 @@ import { ForceLayoutManager } from './d3js/d3-force-layout.js';
 import { NodeInteractionHandler } from './d3js/d3-node-interaction.js';
 import { createLayoutAlgorithms } from './d3js/d3-layout-algorithms.js';
 
-const ALL_TYPE_FILTERS = Object.freeze(['built-in', 'ui', 'third-party', 'web', 'downgraded-web', 'disabled', 'cycle']);
+const ALL_TYPE_FILTERS = Object.freeze(['built-in', 'ui', 'third-party', 'web', 'web-required', 'disabled', 'cycle']);
 
 const DEFAULT_FILTERS = Object.freeze({
     edgeFilter: 'all',
@@ -73,7 +73,7 @@ class ModuleDependencyGraph {
                 moduleStatus: 'Status',
                 moduleCategory: 'Module Category',
                 moduleCapability: 'Module Capability',
-                runtimeMode: 'Runtime Mode'
+                hostRequirement: 'Host Requirement'
             },
             states: {
                 yes: 'Yes',
@@ -199,7 +199,7 @@ class ModuleDependencyGraph {
             return 'var(--mud-palette-error)';
         }
 
-        if (node.isDowngradedFromWebModule) {
+        if (node.requiresWebHost) {
             return 'var(--mud-palette-warning)';
         }
 
@@ -219,10 +219,6 @@ class ModuleDependencyGraph {
             return 'var(--mud-palette-error)';
         }
 
-        if (node.isDowngradedFromWebModule) {
-            return 'var(--mud-palette-warning)';
-        }
-
         if (node.isDisabled) {
             return 'var(--mud-palette-text-disabled)';
         }
@@ -231,7 +227,7 @@ class ModuleDependencyGraph {
     }
 
     getNodeStrokeWidth(node) {
-        if (node.isPartOfCycle || node.isDowngradedFromWebModule) {
+        if (node.isPartOfCycle || node.requiresWebHost) {
             return 4;
         }
 
@@ -243,7 +239,7 @@ class ModuleDependencyGraph {
     }
 
     getNodeStrokeDasharray(node) {
-        return node.isDowngradedFromWebModule ? '6,4' : '';
+        return node.requiresWebHost ? '6,4' : '';
     }
 
     getEdgeColorByType(type) {
@@ -260,16 +256,12 @@ class ModuleDependencyGraph {
     }
 
     hasPulseState(node) {
-        return node.isPartOfCycle || node.isDisabled || node.isDowngradedFromWebModule;
+        return node.isPartOfCycle || node.isDisabled;
     }
 
     getPulseConfig(node) {
         if (node.isPartOfCycle) {
             return { duration: 820, minRadius: 30, maxRadius: 40, minOpacity: 0.18, maxOpacity: 0.48 };
-        }
-
-        if (node.isDowngradedFromWebModule) {
-            return { duration: 980, minRadius: 30, maxRadius: 39, minOpacity: 0.14, maxOpacity: 0.36 };
         }
 
         return { duration: 1200, minRadius: 29, maxRadius: 37, minOpacity: 0.12, maxOpacity: 0.28 };
@@ -532,8 +524,8 @@ class ModuleDependencyGraph {
                 return node.categoryKey === typeFilter;
             case 'web':
                 return !!node.isWebModule;
-            case 'downgraded-web':
-                return !!node.isDowngradedFromWebModule;
+            case 'web-required':
+                return !!node.requiresWebHost;
             case 'disabled':
                 return !!node.isDisabled;
             case 'cycle':
@@ -550,7 +542,7 @@ class ModuleDependencyGraph {
             node.moduleTypeName,
             node.moduleCategory,
             node.capabilityText,
-            node.runtimeModeText,
+            node.hostRequirementText,
             node.statusText
         ]
             .filter(Boolean)

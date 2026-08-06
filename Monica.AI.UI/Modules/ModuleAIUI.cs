@@ -11,8 +11,6 @@ using Monica.AI.UI.UIChat.Support;
 using Monica.Core;
 using Monica.Core.Modularity;
 using Monica.Core.Modularity.Abstractions;
-using Monica.Core.Modularity.Annotations;
-using Monica.Core.Modularity.Models;
 using Monica.UI.Shell.Models;
 using MudBlazor;
 
@@ -29,9 +27,67 @@ public static class ModuleAIUIBuilderExtensions
         /// <summary>
         /// Configure AI UI module
         /// </summary>
-        public ModuleAIUIGuide AddAIUI(Action<ModuleAIUIOption>? action = null)
+        public ModuleRegistration<ModuleAIUI, ModuleAIUIOption> AddAIUI(
+            Action<ModuleAIUIOption>? action = null)
         {
-            return builder.AddModule<ModuleAIUI, ModuleAIUIOption, ModuleAIUIGuide>(action);
+            var registration = builder.AddModule<ModuleAIUI, ModuleAIUIOption>(action);
+            registration.Require<ModuleKnowledgeBase, ModuleKnowledgeBaseOption>();
+            registration.Require<ModuleSkillSystem, ModuleSkillSystemOption>();
+            registration.Require<ModuleMcp, ModuleMcpOption>();
+            registration.Require<ModuleLocalization, ModuleLocalizationOption>()
+                .AddResource<AIResource>();
+            registration.Require<ModuleShellUI, ModuleShellUIOption>(option => option.EnableMarkdown = true)
+                .RegisterUIComponents(registry =>
+                {
+                    registry.RegisterLocalizedPage<ChatPage, AIResource>(
+                        ChatPage.PAGE_URL,
+                        "Pages:AIChat:Title",
+                        Icons.Material.Filled.SmartToy,
+                        BuiltInNavigationCategoryIds.AI,
+                        addToNav: true,
+                        navOrder: 1);
+                    registry.RegisterLocalizedPage<ProviderManagePage, AIResource>(
+                        ProviderManagePage.PAGE_URL,
+                        "Pages:AIProviderManage:Title",
+                        Icons.Material.Filled.Hub,
+                        BuiltInNavigationCategoryIds.AI,
+                        addToNav: true,
+                        navOrder: 2);
+                    registry.RegisterLocalizedPage<AgentCapabilityManagePage, AIResource>(
+                        AgentCapabilityManagePage.PAGE_URL,
+                        "Pages:AICapabilities:Title",
+                        Icons.Material.Filled.Extension,
+                        BuiltInNavigationCategoryIds.AI,
+                        addToNav: true,
+                        navOrder: 3);
+                });
+            return registration;
+        }
+    }
+
+    extension(ModuleRegistration<ModuleAIUI, ModuleAIUIOption> registration)
+    {
+        /// <summary>
+        /// Enables durable chat history in the current browser profile.
+        /// </summary>
+        /// <param name="configure">Optional browser retention configuration.</param>
+        /// <returns>The same host-bound registration.</returns>
+        public ModuleRegistration<ModuleAIUI, ModuleAIUIOption> UseBrowserChatHistory(
+            Action<BrowserChatHistoryOptions>? configure = null)
+        {
+            var options = new BrowserChatHistoryOptions();
+            configure?.Invoke(options);
+            ArgumentOutOfRangeException.ThrowIfNegativeOrZero(options.MaxSessions);
+
+            return registration.ConfigureServices(context =>
+            {
+                context.Services.RemoveAll<IChatHistoryProvider>();
+                context.Services.RemoveAll<IChatHistoryPartitionResolver>();
+                context.Services.AddScoped<IBrowserChatHistoryLock, BrowserChatHistoryWebLock>();
+                context.Services.AddScoped<IChatHistoryProvider, BrowserChatHistoryProvider>();
+                context.Services.AddScoped<IChatHistoryPartitionResolver, BrowserChatHistoryPartitionResolver>();
+                context.Services.AddSingleton<IOptions<BrowserChatHistoryOptions>>(Options.Create(options));
+            });
         }
     }
 }
@@ -40,119 +96,18 @@ public static class ModuleAIUIBuilderExtensions
 /// AI UI module implementation
 /// Provides an AI chat interface based on Blazor
 /// </summary>
-[ModuleKey(BuiltInModuleKey.AIUI)]
-public class ModuleAIUI(ModuleAIUIOption option)
-    : ModuleBase<ModuleAIUI, ModuleAIUIOption, ModuleAIUIGuide>(option)
+public class ModuleAIUI : MonicaModule<ModuleAIUIOption>, IUIModule
 {
+    public override void Describe(ModuleDescriptor module)
+    {
+        module.Require<ModuleAI, ModuleAIOption>();
+    }
 
-    public override void ConfigureServices(IServiceCollection services)
+    public override void ConfigureServices(ModuleContext<ModuleAIUIOption> context)
     {
         // Register UI services
-        services.AddScoped<ChatPageState>();
-        services.AddScoped<ChatSessionWorkspace>();
-    }
-
-    public override void ClaimDependencies()
-    {
-        // Depends on backend AI modules
-        DependsOnModule<ModuleAIGuide>().Register();
-
-        if (!Option.DisableAIChatPage)
-        {
-            DependsOnModule<ModuleKnowledgeBaseGuide>().Register();
-        }
-
-        if (!Option.DisableAIChatPage || !Option.DisableAIProviderPage || !Option.DisableAICapabilityPage)
-        {
-            DependsOnModule<ModuleLocalizationGuide>().Register()
-                .AddResource<AIResource>();
-        }
-
-        // Depend on the UI core module and register the page
-        if (!Option.DisableAIChatPage)
-        {
-            DependsOnModule<ModuleShellUIGuide>().Register(o => o.EnableMarkdown = true)
-                .RegisterUIComponents(p =>
-                {
-                    p.RegisterLocalizedPage<ChatPage, AIResource>(
-                        ChatPage.PAGE_URL,
-                        "Pages:AIChat:Title",
-                        Icons.Material.Filled.SmartToy,
-                        BuiltInNavigationCategoryIds.AI,
-                        addToNav: true,
-                        navOrder: 1);
-                });
-        }
-
-        if (!Option.DisableAIProviderPage)
-        {
-            DependsOnModule<ModuleShellUIGuide>().Register()
-                .RegisterUIComponents(p =>
-                {
-                    p.RegisterLocalizedPage<ProviderManagePage, AIResource>(
-                        ProviderManagePage.PAGE_URL,
-                        "Pages:AIProviderManage:Title",
-                        Icons.Material.Filled.Hub,
-                        BuiltInNavigationCategoryIds.AI,
-                        addToNav: true,
-                        navOrder: 2);
-                });
-        }
-
-        if (!Option.DisableAICapabilityPage)
-        {
-            DependsOnModule<ModuleSkillSystemGuide>().Register();
-            DependsOnModule<ModuleMcpGuide>().Register();
-            DependsOnModule<ModuleShellUIGuide>().Register()
-                .RegisterUIComponents(p =>
-                {
-                    p.RegisterLocalizedPage<AgentCapabilityManagePage, AIResource>(
-                        AgentCapabilityManagePage.PAGE_URL,
-                        "Pages:AICapabilities:Title",
-                        Icons.Material.Filled.Extension,
-                        BuiltInNavigationCategoryIds.AI,
-                        addToNav: true,
-                        navOrder: 3);
-                });
-        }
-    }
-}
-
-/// <summary>
-/// AI UI module configuration guide
-/// </summary>
-public class ModuleAIUIGuide
-    : ModuleGuide<ModuleAIUI, ModuleAIUIOption, ModuleAIUIGuide>
-{
-    private const string BROWSER_CHAT_HISTORY_KEY = nameof(BROWSER_CHAT_HISTORY_KEY);
-
-    /// <summary>
-    /// Enables durable chat history in the current browser profile.
-    /// </summary>
-    /// <param name="configure">Optional browser retention configuration.</param>
-    /// <returns>The current guide instance.</returns>
-    /// <remarks>
-    /// This is an explicit opt-in because snapshots contain full transcripts and opaque Agent
-    /// Framework state. Data remains local to the browser profile and is not suitable for
-    /// authenticated multi-user or cross-device storage.
-    /// </remarks>
-    public ModuleAIUIGuide UseBrowserChatHistory(Action<BrowserChatHistoryOptions>? configure = null)
-    {
-        var options = new BrowserChatHistoryOptions();
-        configure?.Invoke(options);
-        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(options.MaxSessions);
-
-        ConfigureServices(context =>
-        {
-            context.Services.RemoveAll<IChatHistoryProvider>();
-            context.Services.RemoveAll<IChatHistoryPartitionResolver>();
-            context.Services.AddScoped<IBrowserChatHistoryLock, BrowserChatHistoryWebLock>();
-            context.Services.AddScoped<IChatHistoryProvider, BrowserChatHistoryProvider>();
-            context.Services.AddScoped<IChatHistoryPartitionResolver, BrowserChatHistoryPartitionResolver>();
-            context.Services.AddSingleton<IOptions<BrowserChatHistoryOptions>>(Options.Create(options));
-        }, key: BROWSER_CHAT_HISTORY_KEY);
-
-        return this;
+        context.Services.AddScoped<ChatPageState>();
+        context.Services.AddScoped<ChatSessionWorkspace>();
     }
 }
 
@@ -161,21 +116,6 @@ public class ModuleAIUIGuide
 /// </summary>
 public class ModuleAIUIOption : ModuleOptions<ModuleAIUI>
 {
-    /// <summary>
-    /// Disable the AI chat page
-    /// </summary>
-    public bool DisableAIChatPage { get; set; }
-
-    /// <summary>
-    /// Disable the AI provider manage page
-    /// </summary>
-    public bool DisableAIProviderPage { get; set; }
-
-    /// <summary>
-    /// Disable the AI Skill and MCP capability management page.
-    /// </summary>
-    public bool DisableAICapabilityPage { get; set; }
-
     /// <summary>
     /// Enable Markdown rendering
     /// </summary>

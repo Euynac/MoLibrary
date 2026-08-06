@@ -8,7 +8,6 @@ using Monica.Core;
 using Monica.Core.Extensions;
 using Monica.Core.Modularity;
 using Monica.Core.Modularity.Models;
-using Monica.Core.Modularity.Models.Internal;
 using Monica.Core.Modularity.Services;
 using Monica.Modules;
 using Monica.StateStore.UI.Models;
@@ -28,13 +27,6 @@ public class StateStoreUIService(
     IEnumerable<IStateStoreBrowserApi> browserApis,
     ILogger<StateStoreUIService> logger)
 {
-    private static readonly HashSet<string> IgnoredOptionProperties =
-    [
-        "Logger",
-        "DisableModuleIfHasException",
-        "IsDisabled"
-    ];
-
     private static readonly string[] SensitiveOptionFragments =
     [
         "password",
@@ -49,7 +41,7 @@ public class StateStoreUIService(
     private IReadOnlyList<ModuleRuntimeSnapshot>? _providerSnapshots;
 
     private IReadOnlyList<ModuleRuntimeSnapshot> ProviderSnapshots =>
-        _providerSnapshots ??= application.Modules.GetModuleProviders(BuiltInModuleKey.StateStore);
+        _providerSnapshots ??= application.Modules.GetModuleProviders(typeof(ModuleStateStore));
 
     #region Provider Discovery
 
@@ -192,7 +184,7 @@ public class StateStoreUIService(
 
                 if (providerTypeName.Contains(moduleProvider.DisplayName, StringComparison.OrdinalIgnoreCase))
                 {
-                    return snapshot.GetKeyedOption(serviceProvider, serviceKey);
+                    return snapshot.GetOption(serviceKey);
                 }
             }
 
@@ -238,7 +230,7 @@ public class StateStoreUIService(
 
         foreach (var property in source.GetType().GetProperties(BindingFlags.Instance | BindingFlags.Public))
         {
-            if (!property.CanRead || property.GetIndexParameters().Length > 0 || IgnoredOptionProperties.Contains(property.Name))
+            if (!property.CanRead || property.GetIndexParameters().Length > 0)
             {
                 continue;
             }

@@ -15,6 +15,7 @@ using Monica.Core.HostedService;
 using Monica.Core.HostedService.Abstractions;
 using Monica.Core.Mediator;
 using Monica.Core.ObservableInstance.Abstractions;
+using Monica.Core.TypeDiscovery.Models;
 using Monica.DependencyInjection.Abstractions;
 using Monica.EventBus;
 using Monica.EventBus.Abstractions.Handlers;
@@ -53,10 +54,14 @@ public sealed class ProjectUnitSymbolClassifierParityTests
                 static candidate => candidate.Symbol.GetRuntimeName(),
                 static candidate => new Classification(candidate.UnitType, candidate.ExecutionPoints),
                 StringComparer.Ordinal);
-        var runtimeCatalog = new ProjectUnitCatalog(new ModuleProjectUnitsOption());
+        var options = new ModuleProjectUnitsOption();
+        var runtimeCatalog = new ProjectUnitCatalog(
+            options,
+            options.ConventionOptions,
+            NullLogger<ProjectUnitCatalog>.Instance);
         var assembly = EmitAndLoad(compilation);
 
-        _ = runtimeCatalog.Discover(assembly.GetTypes()).ToArray();
+        runtimeCatalog.Discover(assembly.GetTypes().Select(CreateShape));
         var runtimeUnits = runtimeCatalog.GetAllUnits().ToDictionary(
             static unit => unit.Key,
             static unit => new Classification(ToSourceType(unit.UnitType), unit.ExecutionPoints),
@@ -165,6 +170,17 @@ public sealed class ProjectUnitSymbolClassifierParityTests
             .Should().BeEmpty();
         stream.Position = 0;
         return Assembly.Load(stream.ToArray());
+    }
+
+    private static BusinessTypeShape CreateShape(Type type)
+    {
+        return (BusinessTypeShape)(Activator.CreateInstance(
+            typeof(BusinessTypeShape),
+            BindingFlags.Instance | BindingFlags.NonPublic,
+            binder: null,
+            args: [type],
+            culture: null)
+            ?? throw new InvalidOperationException($"Could not create a business-type shape for {type.FullName}."));
     }
 
     private static IEnumerable<INamedTypeSymbol> GetDeclaredTypes(INamespaceSymbol namespaceSymbol)

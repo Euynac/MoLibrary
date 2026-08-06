@@ -2,7 +2,6 @@ using Microsoft.Extensions.DependencyInjection;
 using Monica.Core;
 using Monica.Core.Modularity;
 using Monica.Core.Modularity.Abstractions;
-using Monica.Core.Modularity.Annotations;
 using Monica.Core.Modularity.Models;
 using Monica.EventBus.Kafka.Localization;
 using Monica.EventBus.Kafka.Pages;
@@ -24,10 +23,22 @@ public static class ModuleEventBusKafkaUIBuilderExtensions
         /// Registers the Kafka EventBus console UI.
         /// </summary>
         /// <param name="action">Optional UI module option configuration.</param>
-        /// <returns>The Kafka EventBus UI guide used for chained configuration.</returns>
-        public ModuleEventBusKafkaUIGuide AddEventBusKafkaUI(Action<ModuleEventBusKafkaUIOption>? action = null)
+        /// <returns>The host-bound Kafka EventBus UI registration.</returns>
+        public ModuleRegistration<ModuleEventBusKafkaUI, ModuleEventBusKafkaUIOption> AddEventBusKafkaUI(
+            Action<ModuleEventBusKafkaUIOption>? action = null)
         {
-            return builder.AddModule<ModuleEventBusKafkaUI, ModuleEventBusKafkaUIOption, ModuleEventBusKafkaUIGuide>(action);
+            var registration = builder.AddModule<ModuleEventBusKafkaUI, ModuleEventBusKafkaUIOption>(action);
+            registration.Require<ModuleLocalization, ModuleLocalizationOption>()
+                .AddResource<EventBusKafkaResource>();
+            registration.Require<ModuleShellUI, ModuleShellUIOption>()
+                .RegisterUIComponents(registry => registry.RegisterLocalizedPage<UIEventBusKafkaPage, EventBusKafkaResource>(
+                    UIEventBusKafkaPage.PAGE_URL,
+                    "Pages:EventBusKafka:Title",
+                    Icons.Material.Filled.Storage,
+                    BuiltInNavigationCategoryIds.Infrastructure,
+                    addToNav: true,
+                    navOrder: 38));
+            return registration;
         }
     }
 }
@@ -35,36 +46,18 @@ public static class ModuleEventBusKafkaUIBuilderExtensions
 /// <summary>
 /// Kafka EventBus management console UI module.
 /// </summary>
-/// <param name="option">Module options.</param>
-[ModuleKey(BuiltInModuleKey.EventBusKafkaUI)]
-public sealed class ModuleEventBusKafkaUI(ModuleEventBusKafkaUIOption option)
-    : ModuleBase<ModuleEventBusKafkaUI, ModuleEventBusKafkaUIOption, ModuleEventBusKafkaUIGuide>(option)
+public sealed class ModuleEventBusKafkaUI : MonicaModule<ModuleEventBusKafkaUIOption>, IUIModule
 {
     /// <inheritdoc />
-    public override void ClaimDependencies()
+    public override void Describe(ModuleDescriptor module)
     {
-        DependsOnModule<ModuleEventBusKafkaGuide>().Register();
-        DependsOnModule<ModuleLocalizationGuide>().Register()
-            .AddResource<EventBusKafkaResource>();
-
-        if (Option.DisableKafkaConsolePage)
-        {
-            return;
-        }
-
-        DependsOnModule<ModuleShellUIGuide>().Register()
-            .RegisterUIComponents(registry => registry.RegisterLocalizedPage<UIEventBusKafkaPage, EventBusKafkaResource>(
-                UIEventBusKafkaPage.PAGE_URL,
-                "Pages:EventBusKafka:Title",
-                Icons.Material.Filled.Storage,
-                BuiltInNavigationCategoryIds.Infrastructure,
-                addToNav: true,
-                navOrder: 38));
+        module.Require<ModuleEventBusKafka, ModuleEventBusKafkaOption>();
     }
 
     /// <inheritdoc />
-    public override void ConfigureServices(IServiceCollection services)
+    public override void ConfigureServices(ModuleContext<ModuleEventBusKafkaUIOption> context)
     {
+        var services = context.Services;
         services.AddScoped<EventBusKafkaPageState>();
         services.AddScoped<KafkaPerformancePollingState>();
         services.AddTransient<KafkaConsumerMetricsPollingState>();
@@ -72,23 +65,10 @@ public sealed class ModuleEventBusKafkaUI(ModuleEventBusKafkaUIOption option)
 }
 
 /// <summary>
-/// Fluent guide for the Kafka EventBus console UI module.
-/// </summary>
-public sealed class ModuleEventBusKafkaUIGuide
-    : ModuleGuide<ModuleEventBusKafkaUI, ModuleEventBusKafkaUIOption, ModuleEventBusKafkaUIGuide>
-{
-}
-
-/// <summary>
 /// Configuration options for the Kafka EventBus console UI module.
 /// </summary>
 public sealed class ModuleEventBusKafkaUIOption : ModuleOptions<ModuleEventBusKafkaUI>
 {
-    /// <summary>
-    /// Gets or sets a value indicating whether the Kafka console page should be hidden from navigation.
-    /// </summary>
-    public bool DisableKafkaConsolePage { get; set; }
-
     /// <summary>
     /// Gets or sets whether the Kafka performance tab starts live sampling automatically.
     /// </summary>

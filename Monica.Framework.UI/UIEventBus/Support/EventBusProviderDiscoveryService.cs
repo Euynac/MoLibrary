@@ -5,7 +5,6 @@ using Monica.Core;
 using Monica.Core.Extensions;
 using Monica.Core.Modularity;
 using Monica.Core.Modularity.Models;
-using Monica.Core.Modularity.Models.Internal;
 using Monica.Core.Modularity.Services;
 using Monica.Core.Results;
 using Monica.EventBus.Abstractions;
@@ -37,7 +36,7 @@ public class EventBusProviderDiscoveryService(
     /// Gets or initializes the cached provider snapshots
     /// </summary>
     private IReadOnlyList<ModuleRuntimeSnapshot> ProviderSnapshots =>
-        _providerSnapshots ??= application.Modules.GetModuleProviders(BuiltInModuleKey.EventBus);
+        _providerSnapshots ??= application.Modules.GetModuleProviders(typeof(ModuleEventBus));
 
     #region Provider Discovery
 
@@ -256,7 +255,7 @@ public class EventBusProviderDiscoveryService(
 
             if (eventBusSnapshot == null) return null;
 
-            var (_, optionInstance) = eventBusSnapshot.GetKeyedOption(serviceProvider, serviceKey);
+            var (_, optionInstance) = eventBusSnapshot.GetOption(serviceKey);
             return optionInstance;
         }
         catch (Exception ex)
@@ -267,7 +266,7 @@ public class EventBusProviderDiscoveryService(
     }
 
     /// <summary>
-    /// Gets distributed provider option information using ModuleRuntimeSnapshot's generic option retrieval
+    /// Gets the distributed provider's frozen option snapshot.
     /// </summary>
     private (Type? optionType, object? optionInstance) GetDistributedProviderOptionInfo(string? serviceKey, IDistributedEventBus provider)
     {
@@ -283,8 +282,7 @@ public class EventBusProviderDiscoveryService(
                 // Match by checking if the provider type name contains the module's display name
                 if (providerTypeName.Contains(moduleProvider.DisplayName, StringComparison.OrdinalIgnoreCase))
                 {
-                    // Use ModuleRuntimeSnapshot's generic GetKeyedOption method
-                    var (optionType, optionInstance) = snapshot.GetKeyedOption(serviceProvider, serviceKey);
+                    var (optionType, optionInstance) = snapshot.GetOption(serviceKey);
                     return (optionType, optionInstance);
                 }
             }

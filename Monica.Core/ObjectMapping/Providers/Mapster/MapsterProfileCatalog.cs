@@ -30,7 +30,7 @@ internal sealed class MapsterProfileCatalog
     /// Applies explicit profiles first, followed by automatically discovered profiles in dependency-first order.
     /// </summary>
     /// <param name="config">The host-owned Mapster configuration.</param>
-    /// <param name="explicitProfileTypes">Profiles explicitly registered through the module guide.</param>
+    /// <param name="explicitProfileTypes">Profiles explicitly registered through module registration extensions.</param>
     /// <param name="typeDependencyOrderer">The host-bound orderer for discovered business types.</param>
     public void ApplyProfiles(
         TypeAdapterConfig config,

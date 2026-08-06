@@ -7,7 +7,6 @@ using Monica.Core;
 using Monica.Core.Execution;
 using Monica.Core.Modularity;
 using Monica.Core.Modularity.Abstractions;
-using Monica.Core.Modularity.Annotations;
 using Monica.Core.Modularity.Models;
 using Monica.Core.Results;
 using Monica.Profiling.ExecutionTiming.Abstractions;
@@ -27,9 +26,44 @@ public static class ModuleExecutionTimingBuilderExtensions
         /// <summary>
         /// Configures the execution-timing diagnostics module.
         /// </summary>
-        public ModuleExecutionTimingGuide AddExecutionTiming(Action<ModuleExecutionTimingOption>? action = null)
+        public ModuleRegistration<ModuleExecutionTiming, ModuleExecutionTimingOption> AddExecutionTiming(
+            Action<ModuleExecutionTimingOption>? action = null)
         {
-            return builder.AddModule<ModuleExecutionTiming, ModuleExecutionTimingOption, ModuleExecutionTimingGuide>(action);
+            return builder.AddModule<ModuleExecutionTiming, ModuleExecutionTimingOption>(action);
+        }
+    }
+
+    extension(ModuleRegistration<ModuleExecutionTiming, ModuleExecutionTimingOption> registration)
+    {
+        /// <summary>
+        /// Aggregates timing samples immediately on the caller thread.
+        /// Use this mode when deterministic immediate statistics visibility matters more than write-path cost.
+        /// </summary>
+        public ModuleRegistration<ModuleExecutionTiming, ModuleExecutionTimingOption> UseInlineAggregation()
+        {
+            return registration.Configure(option => option.AggregationMode = ExecutionTimingAggregationMode.Inline);
+        }
+
+        /// <summary>
+        /// Aggregates timing samples on a dedicated background service.
+        /// This reduces hot-path write overhead and is closer to the historical MoTimekeeper behavior.
+        /// </summary>
+        /// <param name="flushInterval">
+        /// Optional flush interval for draining the background queue into aggregated statistics.
+        /// When omitted, the module option value is used.
+        /// </param>
+        public ModuleRegistration<ModuleExecutionTiming, ModuleExecutionTimingOption> UseBackgroundBatchAggregation(
+            TimeSpan? flushInterval = null)
+        {
+            registration.Require<ModuleHostedService, ModuleHostedServiceOption>();
+            return registration.Configure(option =>
+            {
+                option.AggregationMode = ExecutionTimingAggregationMode.BackgroundBatch;
+                if (flushInterval.HasValue)
+                {
+                    option.BackgroundFlushInterval = flushInterval.Value;
+                }
+            });
         }
     }
 }
@@ -37,32 +71,20 @@ public static class ModuleExecutionTimingBuilderExtensions
 /// <summary>
 /// Execution-timing module.
 /// </summary>
-[ModuleKey(BuiltInModuleKey.ExecutionTiming)]
-public class ModuleExecutionTiming(ModuleExecutionTimingOption option)
-    : WebModuleBase<ModuleExecutionTiming, ModuleExecutionTimingOption, ModuleExecutionTimingGuide>(option)
+public class ModuleExecutionTiming : MonicaModule<ModuleExecutionTimingOption>, IWebModule
 {
-    /// <inheritdoc />
-    public override bool CanDowngradeToNonWebModule()
+    public override void Describe(ModuleDescriptor module)
     {
-        return true;
-    }
-
-    public override void ClaimDependencies()
-    {
-        DependsOnModule<ModuleExecutionPipelineGuide>().Register()
-            .AddBehavior(
+        module.Require<ModuleExecutionPipeline, ModuleExecutionPipelineOption>(option =>
+            option.AddBehavior(
                 typeof(ExecutionTimingBehavior<,>),
                 ExecutionBehaviorOrder.Diagnostics + 100,
-                static descriptor => descriptor.IsBusinessOperation);
-
-        if (Option.AggregationMode == ExecutionTimingAggregationMode.BackgroundBatch)
-        {
-            DependsOnModule<ModuleHostedServiceGuide>().Register();
-        }
+                static descriptor => descriptor.IsBusinessOperation));
     }
 
-    public override void ConfigureServices(IServiceCollection services)
+    public override void ConfigureServices(ModuleContext<ModuleExecutionTimingOption> context)
     {
+        var services = context.Services;
         services.AddSingleton<ExecutionTimingCollector>();
 
         if (Option.AggregationMode == ExecutionTimingAggregationMode.BackgroundBatch)
@@ -86,9 +108,9 @@ public class ModuleExecutionTiming(ModuleExecutionTimingOption option)
             sp.GetRequiredService<ILogger<ExecutionTimingFacade>>()));
     }
 
-    public override void ConfigureEndpoints(IApplicationBuilder app)
+    public override void ConfigureEndpoints(WebModuleContext<ModuleExecutionTimingOption> context)
     {
-        UseEndpoints(app, endpoints =>
+        UseEndpoints(context, endpoints =>
         {
             var tagName = Option.GetApiGroupName();
 
@@ -112,45 +134,6 @@ public class ModuleExecutionTiming(ModuleExecutionTimingOption option)
 }
 
 /// <summary>
-/// Configuration guide for the execution-timing module.
-/// </summary>
-public class ModuleExecutionTimingGuide
-    : WebModuleGuide<ModuleExecutionTiming, ModuleExecutionTimingOption, ModuleExecutionTimingGuide>
-{
-    /// <summary>
-    /// Aggregates timing samples immediately on the caller thread.
-    /// Use this mode when deterministic immediate statistics visibility matters more than write-path cost.
-    /// </summary>
-    public ModuleExecutionTimingGuide UseInlineAggregation()
-    {
-        ConfigureModuleOption(option => option.AggregationMode = ExecutionTimingAggregationMode.Inline);
-        return this;
-    }
-
-    /// <summary>
-    /// Aggregates timing samples on a dedicated background service.
-    /// This reduces hot-path write overhead and is closer to the historical MoTimekeeper behavior.
-    /// </summary>
-    /// <param name="flushInterval">
-    /// Optional flush interval for draining the background queue into aggregated statistics.
-    /// When omitted, the module option value is used.
-    /// </param>
-    public ModuleExecutionTimingGuide UseBackgroundBatchAggregation(TimeSpan? flushInterval = null)
-    {
-        ConfigureModuleOption(option =>
-        {
-            option.AggregationMode = ExecutionTimingAggregationMode.BackgroundBatch;
-            if (flushInterval.HasValue)
-            {
-                option.BackgroundFlushInterval = flushInterval.Value;
-            }
-        });
-
-        return this;
-    }
-}
-
-/// <summary>
 /// Configuration options for the execution-timing module.
 /// </summary>
 /// <remarks>
@@ -161,9 +144,11 @@ public class ModuleExecutionTimingOption : MinimalApiModuleOptions<ModuleExecuti
 {
     /// <summary>
     /// Controls whether execution-timing samples are aggregated inline or by a background batching service.
-    /// Use <see cref="ExecutionTimingAggregationMode.BackgroundBatch" /> to reduce hot-path overhead when sampling is frequent.
+    /// Inline aggregation is the default. Select background batching through
+    /// <see cref="ModuleExecutionTimingBuilderExtensions.UseBackgroundBatchAggregation"/> so Monica also declares the
+    /// hosted-service dependency required by that mode.
     /// </summary>
-    public ExecutionTimingAggregationMode AggregationMode { get; set; } = ExecutionTimingAggregationMode.BackgroundBatch;
+    public ExecutionTimingAggregationMode AggregationMode { get; internal set; } = ExecutionTimingAggregationMode.Inline;
 
     /// <summary>
     /// Controls how often the background aggregation service drains queued timing samples.

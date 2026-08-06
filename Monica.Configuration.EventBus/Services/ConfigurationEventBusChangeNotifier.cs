@@ -46,6 +46,6 @@ public sealed class ConfigurationEventBusChangeNotifier(
 
         return new InvalidOperationException(
             $"{nameof(ModuleConfigurationEventBus)} requires an {nameof(IDistributedEventBus)} for {serviceKeyHint}. " +
-            $"Configure a distributed EventBus provider, for example with {nameof(ModuleEventBusGuide.UseDistributedEventBus)}.");
+            "Select a distributed EventBus provider with UseDistributedEventBus before composing the host.");
     }
 }

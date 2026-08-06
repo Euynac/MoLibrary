@@ -148,10 +148,13 @@ To use the StackTraceViewer in another module:
    @using Monica.UI.UIStackTrace.Components
    ```
 
-3. **Add Module Dependency** (in your module's `ClaimDependencies` method):
+3. **Add Module Dependency** (in your module's `Describe` callback):
 
    ```csharp
-   DependsOnModule<ModuleUIStackTraceGuide>().Register();
+   public override void Describe(ModuleDescriptor module)
+   {
+       module.Require<ModuleStackTraceUI, ModuleStackTraceUIOption>();
+   }
    ```
 
 4. **Use the Component**:

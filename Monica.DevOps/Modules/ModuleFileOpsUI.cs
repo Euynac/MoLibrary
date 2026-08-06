@@ -1,7 +1,6 @@
 using Monica.Core;
 using Monica.Core.Modularity;
 using Monica.Core.Modularity.Abstractions;
-using Monica.Core.Modularity.Annotations;
 using Monica.Core.Modularity.Models;
 using Monica.DevOps.FileOps.Pages;
 using Monica.DevOps.Localization;
@@ -11,26 +10,13 @@ using MudBlazor;
 // ReSharper disable once CheckNamespace
 namespace Monica.Modules;
 
-[ModuleKey(BuiltInModuleKey.FileOpsUI)]
-public class ModuleFileOpsUI(ModuleFileOpsUIOption option)
-    : ModuleBase<ModuleFileOpsUI, ModuleFileOpsUIOption, ModuleFileOpsUIGuide>(option)
+public class ModuleFileOpsUI : MonicaModule<ModuleFileOpsUIOption>, IUIModule
 {
-    public override void ClaimDependencies()
+    public override void Describe(ModuleDescriptor module)
     {
-        if (Option.DisableFileOpsPage)
-        {
-            return;
-        }
-
-        DependsOnModule<ModuleFileOpsGuide>().Register();
-        DependsOnModule<ModuleShellUIGuide>().Register()
-            .RegisterUIComponents(registry => registry.RegisterLocalizedPage<UIFileOpsPage, FileOpsResource>(
-                UIFileOpsPage.PAGE_URL,
-                "Pages:FileOps:Title",
-                Icons.Material.Filled.Folder,
-                BuiltInNavigationCategoryIds.Infrastructure,
-                addToNav: true,
-                navOrder: 36));
+        module.Require<ModuleFileOps, ModuleFileOpsOption>();
+        module.Require<ModuleLocalization, ModuleLocalizationOption>();
+        module.Require<ModuleShellUI, ModuleShellUIOption>();
     }
 }
 
@@ -38,18 +24,23 @@ public static class ModuleFileOpsUIBuilderExtensions
 {
     extension(IMonicaBuilder builder)
     {
-        public ModuleFileOpsUIGuide AddFileOpsUI(Action<ModuleFileOpsUIOption>? action = null)
+        public ModuleRegistration<ModuleFileOpsUI, ModuleFileOpsUIOption> AddFileOpsUI(Action<ModuleFileOpsUIOption>? action = null)
         {
-            return builder.AddModule<ModuleFileOpsUI, ModuleFileOpsUIOption, ModuleFileOpsUIGuide>(action);
+            var module = builder.AddModule<ModuleFileOpsUI, ModuleFileOpsUIOption>(action);
+            module.Require<ModuleLocalization, ModuleLocalizationOption>().AddResource<FileOpsResource>();
+            module.Require<ModuleShellUI, ModuleShellUIOption>()
+                .RegisterUIComponents(registry => registry.RegisterLocalizedPage<UIFileOpsPage, FileOpsResource>(
+                    UIFileOpsPage.PAGE_URL,
+                    "Pages:FileOps:Title",
+                    Icons.Material.Filled.Folder,
+                    BuiltInNavigationCategoryIds.Infrastructure,
+                    addToNav: true,
+                    navOrder: 36));
+            return module;
         }
     }
 }
 
-public class ModuleFileOpsUIGuide : ModuleGuide<ModuleFileOpsUI, ModuleFileOpsUIOption, ModuleFileOpsUIGuide>
-{
-}
 
-public class ModuleFileOpsUIOption : ModuleOptions<ModuleFileOpsUI>
-{
-    public bool DisableFileOpsPage { get; set; }
-}
+
+public class ModuleFileOpsUIOption : ModuleOptions<ModuleFileOpsUI>;

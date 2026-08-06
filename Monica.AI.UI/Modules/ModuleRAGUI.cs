@@ -5,8 +5,6 @@ using Monica.AI.UI.UIRAG.State;
 using Monica.Core;
 using Monica.Core.Modularity;
 using Monica.Core.Modularity.Abstractions;
-using Monica.Core.Modularity.Annotations;
-using Monica.Core.Modularity.Models;
 using Monica.UI.Shell.Models;
 using MudBlazor;
 
@@ -23,9 +21,39 @@ public static class ModuleRAGUIBuilderExtensions
         /// <summary>
         /// Configures the RAG UI module.
         /// </summary>
-        public ModuleRAGUIGuide AddRAGUI(Action<ModuleRAGUIOption>? action = null)
+        public ModuleRegistration<ModuleRAGUI, ModuleRAGUIOption> AddRAGUI(
+            Action<ModuleRAGUIOption>? action = null)
         {
-            return builder.AddModule<ModuleRAGUI, ModuleRAGUIOption, ModuleRAGUIGuide>(action);
+            var registration = builder.AddModule<ModuleRAGUI, ModuleRAGUIOption>(action);
+            registration.Require<ModuleKnowledgeBaseUI, ModuleKnowledgeBaseUIOption>();
+            registration.Require<ModuleLocalization, ModuleLocalizationOption>()
+                .AddResource<AIResource>();
+            registration.Require<ModuleShellUI, ModuleShellUIOption>()
+                .RegisterUIComponents(registry =>
+                {
+                    registry.RegisterLocalizedPage<RAGManagePage, AIResource>(
+                        RAGManagePage.PAGE_URL,
+                        "Pages:RAGManage:Title",
+                        Icons.Material.Filled.PlaylistPlay,
+                        BuiltInNavigationCategoryIds.KnowledgeRetrieval,
+                        addToNav: true,
+                        navOrder: 4);
+                    registry.RegisterLocalizedPage<RAGDebugPage, AIResource>(
+                        RAGDebugPage.PAGE_URL,
+                        "Pages:RAGDebug:Title",
+                        Icons.Material.Filled.ManageSearch,
+                        BuiltInNavigationCategoryIds.KnowledgeRetrieval,
+                        addToNav: true,
+                        navOrder: 5);
+                    registry.RegisterLocalizedPage<RAGChunkersPage, AIResource>(
+                        RAGChunkersPage.PAGE_URL,
+                        "Pages:RAGChunkers:Title",
+                        Icons.Material.Filled.AccountTree,
+                        BuiltInNavigationCategoryIds.KnowledgeRetrieval,
+                        addToNav: true,
+                        navOrder: 6);
+                });
+            return registration;
         }
     }
 }
@@ -34,82 +62,18 @@ public static class ModuleRAGUIBuilderExtensions
 /// RAG UI module.
 /// Provides Blazor-based RAG debug and management interface.
 /// </summary>
-[ModuleKey(BuiltInModuleKey.RAGUI)]
-public class ModuleRAGUI(ModuleRAGUIOption option)
-    : ModuleBase<ModuleRAGUI, ModuleRAGUIOption, ModuleRAGUIGuide>(option)
+public class ModuleRAGUI : MonicaModule<ModuleRAGUIOption>, IUIModule
 {
-    public override void ConfigureServices(IServiceCollection services)
+    public override void Describe(ModuleDescriptor module)
     {
-        services.AddScoped<RAGQueuePollingState>();
-        services.AddScoped<RAGManagePageState>();
+        module.Require<ModuleRAG, ModuleRAGOption>();
     }
 
-    public override void ClaimDependencies()
+    public override void ConfigureServices(ModuleContext<ModuleRAGUIOption> context)
     {
-        // Depends on RAG backend module
-        DependsOnModule<ModuleRAGGuide>().Register();
-        DependsOnModule<ModuleKnowledgeBaseUIGuide>().Register();
-
-        if (!Option.DisableRAGManagePage || !Option.DisableRAGDebugPage || !Option.DisableRAGChunkersPage)
-        {
-            DependsOnModule<ModuleLocalizationGuide>().Register()
-                .AddResource<AIResource>();
-        }
-
-        // Depends on UI core module and register RAG pages
-        if (!Option.DisableRAGManagePage)
-        {
-            DependsOnModule<ModuleShellUIGuide>().Register()
-                .RegisterUIComponents(p =>
-                {
-                    p.RegisterLocalizedPage<RAGManagePage, AIResource>(
-                        RAGManagePage.PAGE_URL,
-                        "Pages:RAGManage:Title",
-                        Icons.Material.Filled.PlaylistPlay,
-                        BuiltInNavigationCategoryIds.KnowledgeRetrieval,
-                        addToNav: true,
-                        navOrder: 4);
-                });
-        }
-
-        if (!Option.DisableRAGDebugPage)
-        {
-            DependsOnModule<ModuleShellUIGuide>().Register()
-                .RegisterUIComponents(p =>
-                {
-                    p.RegisterLocalizedPage<RAGDebugPage, AIResource>(
-                        RAGDebugPage.PAGE_URL,
-                        "Pages:RAGDebug:Title",
-                        Icons.Material.Filled.ManageSearch,
-                        BuiltInNavigationCategoryIds.KnowledgeRetrieval,
-                        addToNav: true,
-                        navOrder: 5);
-                });
-        }
-
-        if (!Option.DisableRAGChunkersPage)
-        {
-            DependsOnModule<ModuleShellUIGuide>().Register()
-                .RegisterUIComponents(p =>
-                {
-                    p.RegisterLocalizedPage<RAGChunkersPage, AIResource>(
-                        RAGChunkersPage.PAGE_URL,
-                        "Pages:RAGChunkers:Title",
-                        Icons.Material.Filled.AccountTree,
-                        BuiltInNavigationCategoryIds.KnowledgeRetrieval,
-                        addToNav: true,
-                        navOrder: 6);
-                });
-        }
+        context.Services.AddScoped<RAGQueuePollingState>();
+        context.Services.AddScoped<RAGManagePageState>();
     }
-}
-
-/// <summary>
-/// RAG UI module configuration guide.
-/// </summary>
-public class ModuleRAGUIGuide
-    : ModuleGuide<ModuleRAGUI, ModuleRAGUIOption, ModuleRAGUIGuide>
-{
 }
 
 /// <summary>
@@ -117,18 +81,4 @@ public class ModuleRAGUIGuide
 /// </summary>
 public class ModuleRAGUIOption : ModuleOptions<ModuleRAGUI>
 {
-    /// <summary>
-    /// Disable the RAG management page.
-    /// </summary>
-    public bool DisableRAGManagePage { get; set; }
-
-    /// <summary>
-    /// Disable the RAG debug page.
-    /// </summary>
-    public bool DisableRAGDebugPage { get; set; }
-
-    /// <summary>
-    /// Disable the RAG chunkers page.
-    /// </summary>
-    public bool DisableRAGChunkersPage { get; set; }
 }

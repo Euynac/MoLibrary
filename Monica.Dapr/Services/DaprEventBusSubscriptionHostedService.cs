@@ -7,7 +7,6 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
 using Monica.Core.HostedService.Models;
-using Monica.Core.Modularity.Models;
 using Monica.Core.JsonSerialization.Abstractions;
 using Monica.Core.ObservableInstance.Abstractions;
 using Monica.Dapr.Abstractions;
@@ -56,7 +55,7 @@ internal class DaprEventBusSubscriptionHostedService(
     /// Gets the name of this service for identification and monitoring
     /// </summary>
     public override string ServiceName => $"DaprEventBus{(ServiceKey != null ? $"_{ServiceKey}" : "")}";
-    public override string? ServiceGroupId => nameof(BuiltInModuleKey.EventBus);
+    public override string? ServiceGroupId => nameof(ModuleEventBus);
 
     private readonly ConcurrentDictionary<string, DaprTopicSubscription> _daprSubscriptionsByTopic = new();
     private readonly ConcurrentDictionary<string, byte> _recoveringTopics = new();

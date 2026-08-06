@@ -1,9 +1,6 @@
-using Microsoft.Extensions.DependencyInjection;
 using Monica.Core;
 using Monica.Core.Modularity;
 using Monica.Core.Modularity.Abstractions;
-using Monica.Core.Modularity.Annotations;
-using Monica.Core.Modularity.Models;
 using Monica.UI.Localization;
 using Monica.UI.Pages;
 using Monica.UI.Shell.Models;
@@ -19,9 +16,22 @@ public static class ModuleDiffHighlightUIBuilderExtensions
         /// <summary>
         /// Configure the DiffHighlightUI module
         /// </summary>
-        public ModuleDiffHighlightUIGuide AddDiffHighlightUI(Action<ModuleDiffHighlightUIOption>? action = null)
+        public ModuleRegistration<ModuleDiffHighlightUI, ModuleDiffHighlightUIOption> AddDiffHighlightUI(
+            Action<ModuleDiffHighlightUIOption>? action = null)
         {
-            return builder.AddModule<ModuleDiffHighlightUI, ModuleDiffHighlightUIOption, ModuleDiffHighlightUIGuide>(action);
+            var registration = builder.AddModule<ModuleDiffHighlightUI, ModuleDiffHighlightUIOption>(action);
+            registration.Require<ModuleDiffHighlight, ModuleDiffHighlightOption>();
+            registration.Require<ModuleLocalization, ModuleLocalizationOption>()
+                .AddResource<SharedResource>();
+            registration.Require<ModuleShellUI, ModuleShellUIOption>()
+                .RegisterUIComponents(registry => registry.RegisterLocalizedPage<DiffHighlightPage, SharedResource>(
+                    DiffHighlightPage.DIFF_HIGHLIGHT_URL,
+                    "Pages:DiffHighlight:Title",
+                    Icons.Material.Filled.Compare,
+                    BuiltInNavigationCategoryIds.Debug,
+                    addToNav: true,
+                    navOrder: 60));
+            return registration;
         }
     }
 }
@@ -29,47 +39,17 @@ public static class ModuleDiffHighlightUIBuilderExtensions
 /// <summary>
 /// Text difference contrast highlighting UI module
 /// </summary>
-[ModuleKey(BuiltInModuleKey.DiffHighlightUI)]
-public class ModuleDiffHighlightUI(ModuleDiffHighlightUIOption option)
-    : ModuleBase<ModuleDiffHighlightUI, ModuleDiffHighlightUIOption, ModuleDiffHighlightUIGuide>(option)
+public class ModuleDiffHighlightUI : MonicaModule<ModuleDiffHighlightUIOption>, IUIModule
 {
-
-    public override void ConfigureServices(IServiceCollection services)
+    public override void ConfigureServices(ModuleContext<ModuleDiffHighlightUIOption> context)
     {
         // The mixed module already registers the diff facade and infrastructure services.
     }
-
-    public override void ClaimDependencies()
-    {
-        if (!Option.DisableDiffHighlightPage)
-        {
-            DependsOnModule<ModuleDiffHighlightGuide>().Register();
-            DependsOnModule<ModuleShellUIGuide>().Register()
-                .RegisterUIComponents(p => p.RegisterLocalizedPage<DiffHighlightPage, SharedResource>(
-                    DiffHighlightPage.DIFF_HIGHLIGHT_URL,
-                    "Pages:DiffHighlight:Title",
-                    Icons.Material.Filled.Compare,
-                    BuiltInNavigationCategoryIds.Debug,
-                    addToNav: true,
-                    navOrder: 60));
-        }
-    }
-}
-
-/// <summary>
-/// DiffHighlightUI Module Wizard
-/// </summary>
-public class ModuleDiffHighlightUIGuide : ModuleGuide<ModuleDiffHighlightUI, ModuleDiffHighlightUIOption, ModuleDiffHighlightUIGuide>
-{
 }
 
 /// <summary>
 /// DiffHighlightUI module options
 /// </summary>
 public class ModuleDiffHighlightUIOption : ModuleOptions<ModuleDiffHighlightUI>
-{ 
-    /// <summary>
-    /// Whether to disable the difference comparison page
-    /// </summary>
-    public bool DisableDiffHighlightPage { get; set; }
+{
 }

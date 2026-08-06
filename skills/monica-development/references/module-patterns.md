@@ -11,9 +11,8 @@ This guide defines the standardized patterns and conventions for creating module
 |-----------|---------------|---------|
 | Module class | `Module{Name}` | `ModuleSignalR`, `ModuleJobScheduler` |
 | Options class | `Module{Name}Option` | `ModuleSignalROption` |
-| Guide class | `Module{Name}Guide` | `ModuleSignalRGuide` |
-| Builder extensions | `extension(IMonicaBuilder)` with `Add{Name}()` | `monica.AddSignalR()` inside `builder.AddMonica(...)` |
-| Module key entry | `BuiltInModuleKey.{Name}` | `BuiltInModuleKey.SignalR` |
+| Registration extensions | `Module{Name}RegistrationExtensions` | `ModuleSignalRRegistrationExtensions` |
+| Builder entry | `extension(IMonicaBuilder)` with `Add{Name}()` | `monica.AddSignalR()` inside `builder.AddMonica(...)` |
 
 This table describes first-party Monica modules. Independent packages use string keys governed by `$monica-third-party-module-development`; one NuGet package may contain multiple module registration files and keys. Their registration namespace is `<PackageId>.Modules`, while official dependency guides remain in `Monica.Modules`.
 
@@ -21,16 +20,17 @@ This table describes first-party Monica modules. Independent packages use string
 
 Choose the runtime kind before filling in the registration logic.
 
-| Kind | Base types | Use when |
-|------|------------|----------|
-| Non-web module | `ModuleBase` + `ModuleGuide` + `ModuleOptions` | The module only needs builder, services, post-services, and dependency phases |
-| Web module | `WebModuleBase` + `WebModuleGuide` + `ModuleOptions` or `MinimalApiModuleOptions` | The module configures ASP.NET Core middleware or endpoint phases |
+| Kind | Strategy | Use when |
+|------|----------|----------|
+| Non-web module | `MonicaModule<TOptions>` | The module only needs builder, services, post-services, and dependency phases |
+| Web-capable module | `MonicaModule<TOptions>, IWebModule` | The module configures ASP.NET Core middleware or endpoint phases |
+| Web-host-required module | `MonicaModule<TOptions>, IWebHostRequiredModule` | Omitting web contributions would make the module invalid |
 
 Rules:
 
-- A UI module is not automatically a web module. If it only registers pages, components, dialogs, or shell entries, prefer `ModuleBase`.
-- If a web module can still provide useful non-web behavior in a generic host, override `CanDowngradeToNonWebModule()` and return `true`.
-- Keep module capability and current runtime mode separate in diagnostics. `IsWebModule` and `IsDowngradedFromWebModule` are different facts.
+- Every UI module implements `IUIModule`; never infer UI identity from a type or project name. If it only registers pages, components, dialogs, or shell entries, do not add a web marker.
+- `IWebModule` is optional on generic hosts. Add `IWebHostRequiredModule` only for an intrinsic type-level requirement; feature-selected middleware or endpoints call `registration.RequireWebHost(reason)`.
+- Keep web capability and the independent host requirement separate in diagnostics.
 
 ## Standard Infrastructure Module Structure
 
@@ -131,16 +131,14 @@ internal class {Feature}Service(
 ### Basic Module
 
 ```csharp
-[ModuleKey(BuiltInModuleKey.{Name})]
-public class Module{Name}(Module{Name}Option option)
-    : ModuleBase<Module{Name}, Module{Name}Option, Module{Name}Guide>(option)
+public class Module{Name} : MonicaModule<Module{Name}Option>
 {
-    public override void ConfigureServices(IServiceCollection services)
+    public override void ConfigureServices(ModuleContext<Module{Name}Option> context)
     {
         // Register facade (public)
-        services.AddScoped<{Name}Facade>();
+        context.Services.AddScoped<{Name}Facade>();
         // Register services (internal)
-        services.AddScoped<{Feature}Service>();
+        context.Services.AddScoped<{Feature}Service>();
     }
 }
 ```
@@ -148,20 +146,18 @@ public class Module{Name}(Module{Name}Option option)
 ### Module That Declares Dependencies
 
 ```csharp
-[ModuleKey(BuiltInModuleKey.{Name})]
-public class Module{Name}(Module{Name}Option option)
-    : ModuleBase<Module{Name}, Module{Name}Option, Module{Name}Guide>(option)
+public class Module{Name} : MonicaModule<Module{Name}Option>
 {
-    public override void ConfigureServices(IServiceCollection services)
+    public override void ConfigureServices(ModuleContext<Module{Name}Option> context)
     {
-        services.AddScoped<{Name}Facade>();
-        services.AddScoped<{Feature}Service>();
+        context.Services.AddScoped<{Name}Facade>();
+        context.Services.AddScoped<{Feature}Service>();
     }
 
-    public override void ClaimDependencies()
+    public override void Describe(ModuleDescriptor module)
     {
-        DependsOnModule<ModuleOtherGuide>().Register();
-        DependsOnModule<ModuleAnotherGuide>().Register();
+        module.Require<ModuleOther, ModuleOtherOption>();
+        module.Require<ModuleAnother, ModuleAnotherOption>();
     }
 }
 ```
@@ -169,24 +165,17 @@ public class Module{Name}(Module{Name}Option option)
 ### Web Module
 
 ```csharp
-[ModuleKey(BuiltInModuleKey.{Name})]
-public class Module{Name}(Module{Name}Option option)
-    : WebModuleBase<Module{Name}, Module{Name}Option, Module{Name}Guide>(option)
+public class Module{Name} : MonicaModule<Module{Name}Option>, IWebModule
 {
-    public override bool CanDowngradeToNonWebModule()
+    public override void ConfigureServices(ModuleContext<Module{Name}Option> context)
     {
-        return true;
+        context.Services.AddScoped<{Name}Facade>();
+        context.Services.AddScoped<{Feature}Service>();
     }
 
-    public override void ConfigureServices(IServiceCollection services)
+    public override void ConfigureEndpoints(WebModuleContext<Module{Name}Option> context)
     {
-        services.AddScoped<{Name}Facade>();
-        services.AddScoped<{Feature}Service>();
-    }
-
-    public override void ConfigureEndpoints(IApplicationBuilder app)
-    {
-        UseEndpoints(app, endpoints =>
+        UseEndpoints(context, endpoints =>
         {
             // Map endpoints here
         });
@@ -211,20 +200,21 @@ public class Module{Name}Option : MinimalApiModuleOptions<Module{Name}>
 }
 ```
 
-## Guide Class (Fluent Configuration)
+## Registration Extensions (Fluent Configuration)
 
 ```csharp
-public class Module{Name}Guide : ModuleGuide<Module{Name}, Module{Name}Option, Module{Name}Guide>
+public static class Module{Name}RegistrationExtensions
 {
-    public Module{Name}Guide EnableFeature(bool enable = true)
+    public static ModuleRegistration<Module{Name}, Module{Name}Option> EnableFeature(
+        this ModuleRegistration<Module{Name}, Module{Name}Option> registration,
+        bool enable = true)
     {
-        Option.EnableFeature = enable;
-        return this;
+        return registration.Configure(options => options.EnableFeature = enable);
     }
 }
 ```
 
-For web modules, switch the guide base type to `WebModuleGuide<Module{Name}, Module{Name}Option, Module{Name}Guide>` so the guide can record application-builder and endpoint phases.
+Web registration extensions use the same `ModuleRegistration<TModule, TOptions>` surface to record named middleware stages or endpoint contributions.
 
 ## Builder Extensions
 
@@ -233,9 +223,10 @@ public static class Module{Name}BuilderExtensions
 {
     extension(IMonicaBuilder builder)
     {
-        public Module{Name}Guide Add{Name}(Action<Module{Name}Option>? action = null)
+        public ModuleRegistration<Module{Name}, Module{Name}Option> Add{Name}(
+            Action<Module{Name}Option>? action = null)
         {
-            return builder.AddModule<Module{Name}, Module{Name}Option, Module{Name}Guide>(action);
+            return builder.AddModule<Module{Name}, Module{Name}Option>(action);
         }
     }
 }
@@ -353,7 +344,7 @@ Forbidden:
 
 1. **Use primary constructors** for dependency injection
 2. **Keep modules focused** — one module, one responsibility
-3. **Declare dependencies explicitly** in `ClaimDependencies()`
+3. **Declare dependencies explicitly** in `Describe(ModuleDescriptor)`
 4. **Use options for configuration** — inject `IOptions<TOption>`
 5. **Follow naming conventions** — consistent naming makes code discoverable
 6. **Facades return Res<T>** — internal services use standard returns + exceptions

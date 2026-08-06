@@ -2,6 +2,7 @@ using Microsoft.Extensions.Hosting;
 using Monica.Core.Execution;
 using Monica.Core.HostedService;
 using Monica.Core.HostedService.Abstractions;
+using Monica.Core.TypeDiscovery.Models;
 using Monica.ProjectUnits.Services.Support;
 
 namespace Monica.ProjectUnits.Models;
@@ -11,34 +12,25 @@ namespace Monica.ProjectUnits.Models;
 /// </summary>
 public sealed class UnitHostedService : ProjectUnit
 {
-    private UnitHostedService(Type type, ProjectUnitCatalog catalog)
-        : base(type, EProjectUnitType.HostedService, catalog, GetExecutionPoints(type))
+    private UnitHostedService(BusinessTypeShape shape, ProjectUnitCatalog catalog)
+        : base(shape, EProjectUnitType.HostedService, catalog, GetExecutionPoints(shape))
     {
     }
 
     protected override bool ShouldAnalyzeConstructorDependencies => true;
 
-    protected override bool VerifyTypeConstrain()
+    internal static ProjectUnit Create(BusinessTypeShape shape, ProjectUnitCatalog catalog)
     {
-        return typeof(IHostedService).IsAssignableFrom(Type);
-    }
-
-    internal static ProjectUnit? Create(Type type, ProjectUnitCatalog catalog)
-    {
-        var unit = new UnitHostedService(type, catalog);
-        if (!unit.VerifyType())
-        {
-            return null;
-        }
-
+        var unit = new UnitHostedService(shape, catalog);
+        unit.CheckNameConventionMode();
         unit.InitializeMethods<IHostedService>();
         return unit;
     }
 
-    private static ExecutionPoint[] GetExecutionPoints(Type type)
+    private static ExecutionPoint[] GetExecutionPoints(BusinessTypeShape shape)
     {
-        if (!typeof(MoHostedService).IsAssignableFrom(type)
-            && !typeof(MoBackgroundService).IsAssignableFrom(type))
+        if (!shape.IsAssignableTo(typeof(MoHostedService))
+            && !shape.IsAssignableTo(typeof(MoBackgroundService)))
         {
             return [];
         }

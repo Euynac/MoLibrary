@@ -5,7 +5,6 @@ using Microsoft.Extensions.DependencyInjection;
 using Monica.Core;
 using Monica.Core.Modularity;
 using Monica.Core.Modularity.Abstractions;
-using Monica.Core.Modularity.Annotations;
 using Monica.Core.Modularity.Models;
 using Monica.Core.Results;
 using Monica.Framework.UI.Localization;
@@ -24,9 +23,21 @@ public static class ModuleObservableInstanceUIBuilderExtensions
         /// <summary>
         /// Configure the ObservableInstanceUI module
         /// </summary>
-        public ModuleObservableInstanceUIGuide AddObservableInstanceUI(Action<ModuleObservableInstanceUIOption>? action = null)
+        public ModuleRegistration<ModuleObservableInstanceUI, ModuleObservableInstanceUIOption> AddObservableInstanceUI(
+            Action<ModuleObservableInstanceUIOption>? action = null)
         {
-            return builder.AddModule<ModuleObservableInstanceUI, ModuleObservableInstanceUIOption, ModuleObservableInstanceUIGuide>(action);
+            var registration = builder.AddModule<ModuleObservableInstanceUI, ModuleObservableInstanceUIOption>(action);
+            registration.Require<ModuleLocalization, ModuleLocalizationOption>()
+                .AddResource<ObservableInstanceResource>();
+            registration.Require<ModuleShellUI, ModuleShellUIOption>()
+                .RegisterUIComponents(registry => registry.RegisterLocalizedPage<UIObservableInstanceMonitorPage, ObservableInstanceResource>(
+                    UIObservableInstanceMonitorPage.PAGE_URL,
+                    "Pages:ObservableInstance:Title",
+                    Icons.Material.Filled.Inventory,
+                    BuiltInNavigationCategoryIds.Debug,
+                    addToNav: true,
+                    navOrder: 50));
+            return registration;
         }
     }
 }
@@ -34,42 +45,22 @@ public static class ModuleObservableInstanceUIBuilderExtensions
 /// <summary>
 /// ObservableInstance UI module
 /// </summary>
-[ModuleKey(BuiltInModuleKey.ObservableInstanceUI)]
-public class ModuleObservableInstanceUI(ModuleObservableInstanceUIOption option)
-    : WebModuleBase<ModuleObservableInstanceUI, ModuleObservableInstanceUIOption, ModuleObservableInstanceUIGuide>(option)
+public class ModuleObservableInstanceUI : MonicaModule<ModuleObservableInstanceUIOption>, IWebHostRequiredModule, IUIModule
 {
+    public override void Describe(ModuleDescriptor module)
+    {
+        module.Require<ModuleObservableInstance, ModuleObservableInstanceOption>();
+    }
 
-    public override void ConfigureServices(IServiceCollection services)
+    public override void ConfigureServices(ModuleContext<ModuleObservableInstanceUIOption> context)
     {
         // Register as Singleton to maintain consistent state
-        services.AddSingleton<ObservableInstanceMonitorService>();
+        context.Services.AddSingleton<ObservableInstanceMonitorService>();
     }
 
-    public override void ClaimDependencies()
+    public override void ConfigureEndpoints(WebModuleContext<ModuleObservableInstanceUIOption> context)
     {
-        // Depend on ObservableInstance module
-        DependsOnModule<ModuleObservableInstanceGuide>().Register();
-
-        // Register UI page
-        if (!Option.DisablePage)
-        {
-            DependsOnModule<ModuleLocalizationGuide>().Register()
-                .AddResource<ObservableInstanceResource>();
-
-            DependsOnModule<ModuleShellUIGuide>().Register()
-                .RegisterUIComponents(p => p.RegisterLocalizedPage<UIObservableInstanceMonitorPage, ObservableInstanceResource>(
-                    UIObservableInstanceMonitorPage.PAGE_URL,
-                    "Pages:ObservableInstance:Title",
-                    Icons.Material.Filled.Inventory,
-                    BuiltInNavigationCategoryIds.Debug,
-                    addToNav: true,
-                    navOrder: 50));
-        }
-    }
-
-    public override void ConfigureEndpoints(IApplicationBuilder app)
-    {
-        UseEndpoints(app, endpoints =>
+        UseEndpoints(context, endpoints =>
         {
             var tagName = Option.GetApiGroupName();
 
@@ -166,19 +157,8 @@ public class ModuleObservableInstanceUI(ModuleObservableInstanceUIOption option)
 }
 
 /// <summary>
-/// ObservableInstanceUI module guide
-/// </summary>
-public class ModuleObservableInstanceUIGuide : WebModuleGuide<ModuleObservableInstanceUI, ModuleObservableInstanceUIOption, ModuleObservableInstanceUIGuide>
-{
-}
-
-/// <summary>
 /// ObservableInstanceUI module options
 /// </summary>
 public class ModuleObservableInstanceUIOption : MinimalApiModuleOptions<ModuleObservableInstanceUI>
 {
-    /// <summary>
-    /// Whether to disable Observable Instance monitoring page
-    /// </summary>
-    public bool DisablePage { get; set; }
 }

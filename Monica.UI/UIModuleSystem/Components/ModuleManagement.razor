@@ -60,10 +60,10 @@
                             <MudPaper Class="pa-4 modern-stat-card" Elevation="2">
                                 <div class="d-flex justify-space-between align-center">
                                     <div>
-                                        <MudText Typo="Typo.subtitle1" Color="Color.Secondary">@L["ModuleSystem:ModuleManagement:Labels:DowngradedModules"]</MudText>
-                                        <MudText Typo="Typo.h4" Color="Color.Secondary">@GetDowngradedWebModuleCount().ToString()</MudText>
+                                        <MudText Typo="Typo.subtitle1" Color="Color.Secondary">@L["ModuleSystem:ModuleManagement:Labels:WebHostRequiredModules"]</MudText>
+                                        <MudText Typo="Typo.h4" Color="Color.Secondary">@GetWebHostRequiredModuleCount().ToString()</MudText>
                                     </div>
-                                    <MudIcon Icon="@Icons.Material.Filled.ArrowDownward" Color="Color.Secondary" Size="Size.Large" />
+                                    <MudIcon Icon="@Icons.Material.Filled.WebAsset" Color="Color.Secondary" Size="Size.Large" />
                                 </div>
                             </MudPaper>
                             <MudPaper Class="pa-4 modern-stat-card" Elevation="2">
@@ -137,7 +137,7 @@
                                         </MudChip>
                                     </CellTemplate>
                                 </TemplateColumn>
-                                <TemplateColumn Title="@L["ModuleSystem:ModuleManagement:Labels:RuntimeMode"]">
+                                <TemplateColumn Title="@L["ModuleSystem:ModuleManagement:Labels:HostRequirement"]">
                                     <CellTemplate>
                                         <MudStack Row="true" Spacing="1" Wrap="Wrap.Wrap">
                                             <MudChip T="string"
@@ -148,11 +148,11 @@
                                                 @GetCapabilityLabel(context.Item)
                                             </MudChip>
                                             <MudChip T="string"
-                                                     Color="@GetRuntimeModeColor(context.Item)"
+                                                     Color="@GetHostRequirementColor(context.Item)"
                                                      Size="Size.Small"
-                                                     Variant="@(context.Item.IsDowngradedFromWebModule ? Variant.Filled : Variant.Outlined)"
-                                                     Icon="@GetRuntimeModeIcon(context.Item)">
-                                                @GetRuntimeModeLabel(context.Item)
+                                                     Variant="@(context.Item.RequiresWebHost ? Variant.Filled : Variant.Outlined)"
+                                                     Icon="@GetHostRequirementIcon(context.Item)">
+                                                @GetHostRequirementLabel(context.Item)
                                             </MudChip>
                                         </MudStack>
                                     </CellTemplate>
@@ -288,9 +288,9 @@
     private int GetWebModuleCount() => GetAllModules().Count(module => module.IsWebModule);
 
     /// <summary>
-    /// Gets the count of modules currently downgraded to non-web runtime.
+    /// Gets the count of modules that require an ASP.NET Core host adapter.
     /// </summary>
-    private int GetDowngradedWebModuleCount() => GetAllModules().Count(module => module.IsDowngradedFromWebModule);
+    private int GetWebHostRequiredModuleCount() => GetAllModules().Count(module => module.RequiresWebHost);
 
     /// <summary>
     /// Gets the color for a serial module phase duration.
@@ -331,18 +331,18 @@
     }
 
     /// <summary>
-    /// Gets the runtime mode label for a module.
+    /// Gets the host requirement label for a module.
     /// </summary>
-    private string GetRuntimeModeLabel(ModuleBasicInfo module)
+    private string GetHostRequirementLabel(ModuleBasicInfo module)
     {
-        if (module.IsDowngradedFromWebModule)
+        if (!module.IsWebModule)
         {
-            return L["ModuleSystem:ModuleManagement:States:Downgraded"];
+            return L["ModuleSystem:ModuleManagement:States:NoWebHostRequirement"];
         }
 
-        return module.IsWebModule
-            ? L["ModuleSystem:ModuleManagement:States:WebRuntime"]
-            : L["ModuleSystem:ModuleManagement:States:NonWebRuntime"];
+        return module.RequiresWebHost
+            ? L["ModuleSystem:ModuleManagement:States:WebHostRequired"]
+            : L["ModuleSystem:ModuleManagement:States:WebHostOptional"];
     }
 
     /// <summary>
@@ -351,16 +351,16 @@
     private static Color GetCapabilityColor(ModuleBasicInfo module) => module.IsWebModule ? Color.Info : Color.Default;
 
     /// <summary>
-    /// Gets the runtime mode chip color.
+    /// Gets the host requirement chip color.
     /// </summary>
-    private static Color GetRuntimeModeColor(ModuleBasicInfo module)
+    private static Color GetHostRequirementColor(ModuleBasicInfo module)
     {
-        if (module.IsDowngradedFromWebModule)
+        if (!module.IsWebModule)
         {
-            return Color.Warning;
+            return Color.Secondary;
         }
 
-        return module.IsWebModule ? Color.Success : Color.Secondary;
+        return module.RequiresWebHost ? Color.Warning : Color.Success;
     }
 
     /// <summary>
@@ -371,17 +371,17 @@
         : Icons.Material.Filled.Memory;
 
     /// <summary>
-    /// Gets the runtime mode chip icon.
+    /// Gets the host requirement chip icon.
     /// </summary>
-    private static string GetRuntimeModeIcon(ModuleBasicInfo module)
+    private static string GetHostRequirementIcon(ModuleBasicInfo module)
     {
-        if (module.IsDowngradedFromWebModule)
+        if (!module.IsWebModule)
         {
-            return Icons.Material.Filled.ArrowDownward;
+            return Icons.Material.Filled.Storage;
         }
 
-        return module.IsWebModule
-            ? Icons.Material.Filled.CloudDone
-            : Icons.Material.Filled.Storage;
+        return module.RequiresWebHost
+            ? Icons.Material.Filled.WebAsset
+            : Icons.Material.Filled.CloudDone;
     }
 }

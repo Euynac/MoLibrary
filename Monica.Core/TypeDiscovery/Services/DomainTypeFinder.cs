@@ -1,4 +1,5 @@
 using System.Reflection;
+using System.Runtime.ExceptionServices;
 using Microsoft.Extensions.Logging;
 using Monica.Core.TypeDiscovery.Abstractions;
 using Monica.Core.TypeDiscovery.Models;
@@ -16,16 +17,13 @@ namespace Monica.Core.TypeDiscovery.Services;
 /// <param name="logger">The host-owned logger used for discovery diagnostics.</param>
 public class DomainTypeFinder(TypeFinderOptions options, ILogger<DomainTypeFinder> logger) : ITypeFinder
 {
-    #region Fields
-
-    private bool _assemblyListLoaded;
-    private readonly List<Assembly> _assemblies = [];
+    private readonly object _discoveryGate = new();
+    private volatile bool _assemblyListLoaded;
     private readonly Dictionary<string, TypeFinderAssemblyLoadFailure> _assemblyLoadFailures =
         new(StringComparer.OrdinalIgnoreCase);
-
-    #endregion
-  
-    #region Utilities
+    private IReadOnlyList<Assembly> _assemblySnapshot = Array.Empty<Assembly>();
+    private ExceptionDispatchInfo? _typeLoadException;
+    private IReadOnlyList<Type>? _typeSnapshot;
 
     /// <summary>
     /// Loads the assembly list once.
@@ -33,21 +31,32 @@ public class DomainTypeFinder(TypeFinderOptions options, ILogger<DomainTypeFinde
     protected virtual void LoadAssemblies()
     {
         if (_assemblyListLoaded)
+        {
             return;
+        }
 
-        var scan = new TypeFinderAssemblyResolver(options, logger).Resolve();
-        MergeAssemblyLoadFailures(scan.FailedLoads.Values);
-        _assemblies.AddRange(scan.Assemblies);
+        lock (_discoveryGate)
+        {
+            if (_assemblyListLoaded)
+            {
+                return;
+            }
 
-        logger.LogInformation(
-            "Module system will scan the following assemblies:{Assemblies}",
-            Environment.NewLine + string.Join(Environment.NewLine, _assemblies.Select(static assembly => assembly.GetName().Name).OrderBy(static name => name)));
+            var scan = new TypeFinderAssemblyResolver(options, logger).Resolve();
+            MergeAssemblyLoadFailures(scan.FailedLoads.Values);
+            _assemblySnapshot = Array.AsReadOnly(scan.Assemblies.ToArray());
 
-        _assemblyListLoaded = true;
+            logger.LogInformation(
+                "Module system will scan the following assemblies:{Assemblies}",
+                Environment.NewLine + string.Join(
+                    Environment.NewLine,
+                    _assemblySnapshot
+                        .Select(static assembly => assembly.GetName().Name)
+                        .OrderBy(static name => name)));
+
+            _assemblyListLoaded = true;
+        }
     }
-    #endregion
-
-    #region Methods
 
     /// <summary>
     /// Gets all related assemblies.
@@ -56,40 +65,87 @@ public class DomainTypeFinder(TypeFinderOptions options, ILogger<DomainTypeFinde
     public virtual IEnumerable<Assembly> GetAssemblies()
     {
         LoadAssemblies();
-        return _assemblies;
+        return _assemblySnapshot;
     }
 
     /// <inheritdoc />
     public TypeFinderAssemblyAnalysis GetAssemblyAnalysis()
     {
         LoadAssemblies();
-        return new TypeFinderAssemblyAnalysisBuilder(options, _assemblies, _assemblyLoadFailures).Build();
+        lock (_discoveryGate)
+        {
+            return new TypeFinderAssemblyAnalysisBuilder(options, _assemblySnapshot, _assemblyLoadFailures).Build();
+        }
     }
 
     public TypeFinderOptions Options => options;
 
     /// <summary>
-    /// Gets all types from the related assemblies.
+    /// Gets the host's cached type snapshot from the related assemblies.
     /// </summary>
-    /// <returns>The discovered types.</returns>
+    /// <returns>
+    /// A stable snapshot that can be enumerated repeatedly without invoking <see cref="Assembly.GetTypes"/> again.
+    /// </returns>
+    /// <remarks>
+    /// Both successful partial loads and terminal scan exceptions are cached. This guarantees that an assembly is
+    /// never repeatedly reflected because multiple module-system consumers request the host's business types.
+    /// </remarks>
     public virtual IEnumerable<Type> GetTypes()
     {
         LoadAssemblies();
 
-        foreach (var assembly in _assemblies)
+        if (Volatile.Read(ref _typeSnapshot) is { } snapshot)
+        {
+            return snapshot;
+        }
+
+        lock (_discoveryGate)
+        {
+            if (_typeSnapshot is not null)
+            {
+                return _typeSnapshot;
+            }
+
+            _typeLoadException?.Throw();
+
+            try
+            {
+                _typeSnapshot = LoadTypeSnapshot();
+                return _typeSnapshot;
+            }
+            catch (Exception exception)
+            {
+                _typeLoadException = ExceptionDispatchInfo.Capture(exception);
+                throw;
+            }
+        }
+    }
+
+    private void MergeAssemblyLoadFailures(IEnumerable<TypeFinderAssemblyLoadFailure> failures)
+    {
+        foreach (var failure in failures)
+        {
+            _assemblyLoadFailures[failure.Name] = failure;
+        }
+    }
+
+    private IReadOnlyList<Type> LoadTypeSnapshot()
+    {
+        var discoveredTypes = new List<Type>();
+        foreach (var assembly in _assemblySnapshot)
         {
             Type[] types;
             try
             {
                 types = assembly.GetTypes();
             }
-            catch (ReflectionTypeLoadException ex)
+            catch (ReflectionTypeLoadException exception)
             {
-                // Still return the types that were loaded successfully when referenced assemblies are missing.
-                types = ex.Types.Where(t => t != null).ToArray()!;
+                // Preserve successfully loaded types while recording the incomplete assembly for host diagnostics.
+                types = exception.Types.OfType<Type>().ToArray();
 
-                var loadFailure = TypeFinderAssemblyLoadFailure.CreateTypeScanFailure(assembly, ex);
-                if (loadFailure != null)
+                var loadFailure = TypeFinderAssemblyLoadFailure.CreateTypeScanFailure(assembly, exception);
+                if (loadFailure is not null)
                 {
                     _assemblyLoadFailures[loadFailure.Name] = loadFailure;
 
@@ -100,20 +156,9 @@ public class DomainTypeFinder(TypeFinderOptions options, ILogger<DomainTypeFinde
                 }
             }
 
-            foreach (var type in types)
-            {
-                yield return type;
-            }
+            discoveredTypes.AddRange(types);
         }
-    }
 
-    #endregion
-
-    private void MergeAssemblyLoadFailures(IEnumerable<TypeFinderAssemblyLoadFailure> failures)
-    {
-        foreach (var failure in failures)
-        {
-            _assemblyLoadFailures[failure.Name] = failure;
-        }
+        return Array.AsReadOnly(discoveredTypes.ToArray());
     }
-} 
+}

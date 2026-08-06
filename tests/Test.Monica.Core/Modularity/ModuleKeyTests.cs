@@ -1,4 +1,6 @@
 using AwesomeAssertions;
+using System.Reflection;
+using System.Reflection.Emit;
 using Monica.Core.Modularity.Models;
 using Xunit;
 
@@ -7,79 +9,54 @@ namespace Test.Monica.Core.Modularity;
 public sealed class ModuleKeyTests
 {
     [Fact]
-    public void Create_WhenKeyFollowsEcosystemFormat_ShouldPreservePublishedIdentity()
+    public void FromType_WhenModuleTypeIsProvided_ShouldUseItsStableFullName()
     {
-        var key = ModuleKey.Create("Acme.Monica.GachaPool.DrawHistory");
+        var key = ModuleKey.FromModuleType(typeof(DiagnosticModule));
 
-        key.Value.Should().Be("Acme.Monica.GachaPool.DrawHistory");
-        key.IsBuiltIn.Should().BeFalse();
-        key.IsUIModule.Should().BeFalse();
-    }
-
-    [Theory]
-    [InlineData("Acme.Monica.GachaPool.UI", true)]
-    [InlineData("Acme.Monica.GachaPool.ui", true)]
-    [InlineData("Acme.Monica.GachaPoolUI", false)]
-    [InlineData("Acme.Monica.UI.GachaPool", false)]
-    public void Create_WhenKeyVariesUIPlacement_ShouldRecognizeOnlyFinalUISegment(string value, bool expected)
-    {
-        var key = ModuleKey.Create(value);
-
-        key.IsUIModule.Should().Be(expected);
-    }
-
-    [Theory]
-    [InlineData("")]
-    [InlineData("   ")]
-    [InlineData("Monica.Configuration.EfCore")]
-    [InlineData("Acme.Monica")]
-    [InlineData("Acme.Other.GachaPool")]
-    [InlineData("Acme.monica.GachaPool")]
-    [InlineData("Acme.Monica.Gacha-Pool")]
-    [InlineData("Acme_Monica_GachaPool")]
-    [InlineData("Acme.Monica.1GachaPool")]
-    [InlineData("Acme..Monica.GachaPool")]
-    public void Create_WhenKeyViolatesEcosystemFormat_ShouldThrow(string value)
-    {
-        var act = () => ModuleKey.Create(value);
-
-        act.Should().Throw<ArgumentException>();
+        key.Value.Should().Be(typeof(DiagnosticModule).FullName);
     }
 
     [Fact]
-    public void Create_WhenKeyExceedsNuGetIdentifierLimit_ShouldThrow()
+    public void Equality_WhenDerivedFromTheSameType_ShouldRemainStableForDiagnosticLookups()
     {
-        var value = $"Acme.Monica.{new string('A', 89)}";
-
-        var act = () => ModuleKey.Create(value);
-
-        act.Should().Throw<ArgumentException>();
-    }
-
-    [Fact]
-    public void Equality_WhenCasingDiffers_ShouldUseOrdinalIgnoreCaseIdentity()
-    {
-        var canonical = ModuleKey.Create("Acme.Monica.GachaPool.UI");
-        var differentlyCased = ModuleKey.Create("acme.Monica.gachapool.ui");
+        var first = ModuleKey.FromModuleType(typeof(DiagnosticModule));
+        var second = ModuleKey.FromModuleType(typeof(DiagnosticModule));
         var modules = new Dictionary<ModuleKey, string>
         {
-            [canonical] = "registered"
+            [first] = "registered"
         };
 
-        differentlyCased.Should().Be(canonical);
-        (differentlyCased == canonical).Should().BeTrue();
-        differentlyCased.GetHashCode().Should().Be(canonical.GetHashCode());
-        modules.Should().ContainKey(differentlyCased);
+        second.Should().Be(first);
+        (second == first).Should().BeTrue();
+        second.GetHashCode().Should().Be(first.GetHashCode());
+        modules.Should().ContainKey(second);
     }
 
     [Fact]
-    public void BuiltInConversion_WhenConfigurationEfCoreIsUsed_ShouldCreateOfficialIdentity()
+    public void Equality_WhenDerivedFromDifferentTypes_ShouldRemainDistinct()
     {
-        ModuleKey key = BuiltInModuleKey.ConfigurationEfCore;
+        var first = ModuleKey.FromModuleType(typeof(DiagnosticModule));
+        var second = ModuleKey.FromModuleType(typeof(AnotherDiagnosticModule));
 
-        key.Value.Should().Be(nameof(BuiltInModuleKey.ConfigurationEfCore));
-        key.IsBuiltIn.Should().BeTrue();
-        key.IsUIModule.Should().BeFalse();
+        second.Should().NotBe(first);
+        (second != first).Should().BeTrue();
+    }
+
+    [Fact]
+    public void Equality_WhenTypesShareAFullNameAcrossAssemblies_ShouldRemainDistinct()
+    {
+        var firstType = CreateDynamicType("ModuleKeyCollisionAssemblyA");
+        var secondType = CreateDynamicType("ModuleKeyCollisionAssemblyB");
+        var first = ModuleKey.FromModuleType(firstType);
+        var second = ModuleKey.FromModuleType(secondType);
+
+        first.Value.Should().Be(second.Value);
+        first.Should().NotBe(second);
+        new Dictionary<ModuleKey, Type>
+        {
+            [first] = firstType,
+            [second] = secondType
+        }.Should().HaveCount(2);
     }
 
     [Fact]
@@ -89,6 +66,19 @@ public sealed class ModuleKeyTests
 
         key.Value.Should().BeEmpty();
         key.ToString().Should().BeEmpty();
-        ((string)key).Should().BeEmpty();
+    }
+
+    private sealed class DiagnosticModule;
+
+    private sealed class AnotherDiagnosticModule;
+
+    private static Type CreateDynamicType(string assemblyName)
+    {
+        var assembly = AssemblyBuilder.DefineDynamicAssembly(
+            new AssemblyName(assemblyName),
+            AssemblyBuilderAccess.Run);
+        return assembly.DefineDynamicModule(assemblyName)
+            .DefineType("Shared.Namespace.Module", TypeAttributes.Public)
+            .CreateType()!;
     }
 }

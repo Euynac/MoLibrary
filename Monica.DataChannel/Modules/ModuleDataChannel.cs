@@ -6,7 +6,6 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 using Monica.Core;
 using Monica.Core.Modularity;
 using Monica.Core.Modularity.Abstractions;
-using Monica.Core.Modularity.Annotations;
 using Monica.Core.Modularity.Models;
 using Monica.Core.Results;
 using Monica.DataChannel;
@@ -22,20 +21,26 @@ namespace Monica.Modules;
 /// <summary>
 /// Registers host-scoped data-channel composition, management, initialization, and endpoints.
 /// </summary>
-[ModuleKey(BuiltInModuleKey.DataChannel)]
-public class ModuleDataChannel(ModuleDataChannelOption option)
-    : WebModuleBase<ModuleDataChannel, ModuleDataChannelOption, ModuleDataChannelGuide>(option)
+public class ModuleDataChannel : MonicaModule<ModuleDataChannelOption>, IWebHostRequiredModule
 {
-    public override void ConfigureServices(IServiceCollection services)
+    internal const string CHANNEL_SETUP_FEATURE = "channel-setup";
+
+    public override void Describe(ModuleDescriptor module)
     {
-        services.AddOptions<ModuleDataChannelOption>()
-            .Validate(
-                static options => options.RecentExceptionToKeep > 0,
-                $"{nameof(ModuleDataChannelOption.RecentExceptionToKeep)} must be greater than zero.")
-            .Validate(
-                static options => options.InitThreadCount > 0,
-                $"{nameof(ModuleDataChannelOption.InitThreadCount)} must be greater than zero.")
-            .ValidateOnStart();
+        module.Require<ModuleHostedService, ModuleHostedServiceOption>();
+        module.RequireFeature(CHANNEL_SETUP_FEATURE);
+    }
+
+    /// <inheritdoc />
+    public override void ValidateOptions(ModuleDataChannelOption options, string? profileName)
+    {
+        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(options.RecentExceptionToKeep);
+        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(options.InitThreadCount);
+    }
+
+    public override void ConfigureServices(ModuleContext<ModuleDataChannelOption> context)
+    {
+        var services = context.Services;
         services.TryAddSingleton<DataChannelRuntime>();
         services.TryAddSingleton<IDataChannelRegistrar>(provider => provider.GetRequiredService<DataChannelRuntime>());
         services.TryAddSingleton<IDataChannelManager>(provider => provider.GetRequiredService<DataChannelRuntime>());
@@ -45,8 +50,9 @@ public class ModuleDataChannel(ModuleDataChannelOption option)
         services.AddHostedService<DataChannelInitializerService>();
     }
 
-    public override void ConfigureApplicationBuilder(IApplicationBuilder app)
+    public override void ConfigureApplicationBuilder(WebModuleContext<ModuleDataChannelOption> context)
     {
+        var app = context.ApplicationBuilder;
         var setup = app.ApplicationServices.GetRequiredService<IDataChannelSetup>();
         var registrar = app.ApplicationServices.GetRequiredService<IDataChannelRegistrar>();
         var runtime = app.ApplicationServices.GetRequiredService<DataChannelRuntime>();
@@ -55,11 +61,12 @@ public class ModuleDataChannel(ModuleDataChannelOption option)
         runtime.Materialize(app);
     }
 
-    public override void ConfigureEndpoints(IApplicationBuilder app)
+    public override void ConfigureEndpoints(WebModuleContext<ModuleDataChannelOption> context)
     {
+        var app = context.ApplicationBuilder;
         app.ApplicationServices.GetRequiredService<DataChannelRuntime>().ConfigureEndpoints(app);
 
-        UseEndpoints(app, endpoints =>
+        UseEndpoints(context, endpoints =>
         {
             var tagName = Option.GetApiGroupName();
 
@@ -125,10 +132,6 @@ public class ModuleDataChannel(ModuleDataChannelOption option)
         });
     }
 
-    public override void ClaimDependencies()
-    {
-        DependsOnModule<ModuleHostedServiceGuide>().Register();
-    }
 }
 
 public static class ModuleDataChannelBuilderExtensions
@@ -139,42 +142,28 @@ public static class ModuleDataChannelBuilderExtensions
         /// Adds the DataChannel module to the current Monica host.
         /// </summary>
         /// <param name="action">An optional callback that configures retention, initialization, and Minimal API options.</param>
-        /// <returns>A guide used to register the host's required channel setup.</returns>
-        public ModuleDataChannelGuide AddDataChannel(Action<ModuleDataChannelOption>? action = null)
+        /// <returns>The host-bound DataChannel registration.</returns>
+        public ModuleRegistration<ModuleDataChannel, ModuleDataChannelOption> AddDataChannel(
+            Action<ModuleDataChannelOption>? action = null)
         {
-            return builder.AddModule<ModuleDataChannel, ModuleDataChannelOption, ModuleDataChannelGuide>(action);
+            return builder.AddModule<ModuleDataChannel, ModuleDataChannelOption>(action);
         }
     }
-}
 
-/// <summary>
-/// Configures host-specific DataChannel pipeline declarations.
-/// </summary>
-public class ModuleDataChannelGuide : WebModuleGuide<ModuleDataChannel, ModuleDataChannelOption, ModuleDataChannelGuide>
-{
-    private const string CHANNEL_SETUP = nameof(CHANNEL_SETUP);
-
-    protected override string[] GetRequestedConfigMethodKeys()
+    extension(ModuleRegistration<ModuleDataChannel, ModuleDataChannelOption> registration)
     {
-        return [CHANNEL_SETUP];
-    }
-
-    /// <summary>
-    /// Registers the setup that declares all pipelines owned by the current host.
-    /// </summary>
-    /// <typeparam name="TSetup">
-    /// A singleton setup implementation. Its dependencies are resolved from the current host,
-    /// and the framework invokes it once before materializing channel pipelines.
-    /// </typeparam>
-    /// <returns>The current guide.</returns>
-    public ModuleDataChannelGuide UseSetup<TSetup>()
-        where TSetup : class, IDataChannelSetup
-    {
-        ConfigureServices(context =>
+        /// <summary>
+        /// Registers the singleton setup that declares all pipelines owned by the current host.
+        /// </summary>
+        /// <typeparam name="TSetup">The host-owned pipeline setup.</typeparam>
+        /// <returns>The same host-bound registration.</returns>
+        public ModuleRegistration<ModuleDataChannel, ModuleDataChannelOption> UseSetup<TSetup>()
+            where TSetup : class, IDataChannelSetup
         {
-            context.Services.AddSingleton<IDataChannelSetup, TSetup>();
-        }, key: CHANNEL_SETUP);
-        return this;
+            return registration
+                .ConfigureServices(context => context.Services.AddSingleton<IDataChannelSetup, TSetup>())
+                .SatisfyFeature(ModuleDataChannel.CHANNEL_SETUP_FEATURE);
+        }
     }
 }
 

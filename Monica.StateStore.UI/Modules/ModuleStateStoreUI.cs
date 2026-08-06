@@ -2,8 +2,6 @@ using Microsoft.Extensions.DependencyInjection;
 using Monica.Core;
 using Monica.Core.Modularity;
 using Monica.Core.Modularity.Abstractions;
-using Monica.Core.Modularity.Annotations;
-using Monica.Core.Modularity.Models;
 using Monica.StateStore.UI.Pages;
 using Monica.StateStore.UI.Localization;
 using Monica.StateStore.UI.Services;
@@ -21,9 +19,21 @@ public static class ModuleStateStoreUIBuilderExtensions
         /// <summary>
         /// Configure the StateStoreUI module
         /// </summary>
-        public ModuleStateStoreUIGuide AddStateStoreUI(Action<ModuleStateStoreUIOption>? action = null)
+        public ModuleRegistration<ModuleStateStoreUI, ModuleStateStoreUIOption> AddStateStoreUI(
+            Action<ModuleStateStoreUIOption>? action = null)
         {
-            return builder.AddModule<ModuleStateStoreUI, ModuleStateStoreUIOption, ModuleStateStoreUIGuide>(action);
+            var registration = builder.AddModule<ModuleStateStoreUI, ModuleStateStoreUIOption>(action);
+            registration.Require<ModuleLocalization, ModuleLocalizationOption>()
+                .AddResource<StateStoreResource>();
+            registration.Require<ModuleShellUI, ModuleShellUIOption>()
+                .RegisterUIComponents(registry => registry.RegisterLocalizedPage<UIStateStoreDashboardPage, StateStoreResource>(
+                    UIStateStoreDashboardPage.PAGE_URL,
+                    "Pages:StateStoreManage:Title",
+                    Icons.Material.Filled.Storage,
+                    BuiltInNavigationCategoryIds.Debug,
+                    addToNav: true,
+                    navOrder: 20));
+            return registration;
         }
     }
 }
@@ -31,38 +41,17 @@ public static class ModuleStateStoreUIBuilderExtensions
 /// <summary>
 /// StateStore UI module - provides state storage management interface
 /// </summary>
-[ModuleKey(BuiltInModuleKey.StateStoreUI)]
-public class ModuleStateStoreUI(ModuleStateStoreUIOption option)
-    : ModuleBase<ModuleStateStoreUI, ModuleStateStoreUIOption, ModuleStateStoreUIGuide>(option)
+public class ModuleStateStoreUI : MonicaModule<ModuleStateStoreUIOption>, IUIModule
 {
-
-    public override void ClaimDependencies()
+    /// <inheritdoc />
+    public override void Describe(ModuleDescriptor module)
     {
-        if (!Option.DisableStateStorePage)
-        {
-            DependsOnModule<ModuleLocalizationGuide>().Register()
-                .AddResource<StateStoreResource>();
-
-            // Depends on StateStore module
-            DependsOnModule<ModuleStateStoreGuide>().Register();
-
-            // Depend on the UI core module and register UI components
-            DependsOnModule<ModuleShellUIGuide>().Register()
-                .RegisterUIComponents(registry =>
-                {
-                    registry.RegisterLocalizedPage<UIStateStoreDashboardPage, StateStoreResource>(
-                        UIStateStoreDashboardPage.PAGE_URL,
-                        "Pages:StateStoreManage:Title",
-                        Icons.Material.Filled.Storage,
-                        BuiltInNavigationCategoryIds.Debug,
-                        addToNav: true,
-                        navOrder: 20);
-                });
-        }
+        module.Require<ModuleStateStore, ModuleStateStoreOption>();
     }
 
-    public override void ConfigureServices(IServiceCollection services)
+    public override void ConfigureServices(ModuleContext<ModuleStateStoreUIOption> context)
     {
+        var services = context.Services;
         services.AddScoped<StateStoreUIService>();
         services.AddSingleton<IStateStoreBrowserApi, RedisStateStoreBrowserApi>();
         services.AddSingleton<IStateStoreBrowserApi, MemoryStateStoreBrowserApi>();
@@ -72,23 +61,10 @@ public class ModuleStateStoreUI(ModuleStateStoreUIOption option)
 }
 
 /// <summary>
-/// StateStore UI module configuration guide
-/// </summary>
-public class ModuleStateStoreUIGuide
-    : ModuleGuide<ModuleStateStoreUI, ModuleStateStoreUIOption, ModuleStateStoreUIGuide>
-{
-}
-
-/// <summary>
 /// StateStore UI module options
 /// </summary>
 public class ModuleStateStoreUIOption : ModuleOptions<ModuleStateStoreUI>
 {
-    /// <summary>
-    /// Disable StateStore admin page
-    /// </summary>
-    public bool DisableStateStorePage { get; set; } = false;
-
     /// <summary>
     /// Default Key scan mode
     /// </summary>

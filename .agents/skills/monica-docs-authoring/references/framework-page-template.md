@@ -55,13 +55,13 @@ app.Run();
 ````md
 ---
 title: Monica Module Pattern
-description: Understand how Monica modules expose registration, options, and Guide methods.
+description: Understand how Monica modules expose registration, options, and fluent feature extensions.
 sidebar_position: 2
 ---
 
 # Monica Module Pattern
 
-Monica modules follow a consistent public pattern built around `builder.AddMonica(...)`, `monica.Add*()`, `ModuleOption`, and `ModuleGuide`.
+Monica modules follow a consistent public pattern built around `builder.AddMonica(...)`, `monica.Add*()`, `ModuleOptions<TModule>`, and `ModuleRegistration<TModule, TOptions>`.
 
 ## Why this pattern exists
 
@@ -72,7 +72,7 @@ Explain the Monica-specific reason for the abstraction.
 - `builder.AddMonica(...)` host boundary
 - `monica.Add*()` registration entry
 - `ModuleOption`
-- `ModuleGuide`
+- Fluent `ModuleRegistration<TModule, TOptions>` extensions
 - Public Facades / Abstractions / Models when relevant
 
 ## Example

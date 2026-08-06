@@ -15,7 +15,7 @@ public class ExposeKeyedServiceAttribute<TServiceType>(object serviceKey) : Attr
     /// </summary>
     public object ServiceKey { get; } = serviceKey ?? throw new ArgumentNullException(nameof(serviceKey));
 
-    ServiceIdentifier[] IExposedKeyedServiceTypesProvider.GetExposedServiceTypes(Type targetType)
+    ServiceIdentifier[] IExposedKeyedServiceTypesProvider.GetExposedServiceTypes()
     {
         return [new ServiceIdentifier(ServiceKey, typeof(TServiceType))];
     }

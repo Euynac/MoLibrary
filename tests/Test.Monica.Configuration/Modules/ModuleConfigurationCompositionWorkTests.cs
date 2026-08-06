@@ -8,7 +8,6 @@ using Monica.Configuration.Abstractions;
 using Monica.Configuration.Annotations;
 using Monica.Configuration.Models;
 using Monica.Core.Modularity.Abstractions;
-using Monica.Core.Modularity.Annotations;
 using Monica.Core.Modularity.Exceptions;
 using Monica.Core.Modularity.Extensions;
 using Monica.Modules;
@@ -60,8 +59,7 @@ public sealed class ModuleConfigurationCompositionWorkTests
             monica.ConfigureTypeDiscovery(options => options.ExcludeDefault().Add(assembly));
             monica.AddModule<
                 DefinitionVisibilityProbeModule,
-                DefinitionVisibilityProbeOption,
-                DefinitionVisibilityProbeGuide>(options =>
+                DefinitionVisibilityProbeOption>(options =>
                     options.Observe = services =>
                     {
                         observedDefinitionCount = GetRegisteredDefinitionRegistry(services).GetAll().Count;
@@ -189,23 +187,19 @@ public sealed class ModuleConfigurationCompositionWorkTests
             string definitionKey) => new(typeName, sectionPath, definitionKey, HasInvalidList: true);
     }
 
-    [ModuleKey("Test.Monica.Configuration.DefinitionVisibilityProbe")]
-    private sealed class DefinitionVisibilityProbeModule(DefinitionVisibilityProbeOption option)
-        : ModuleBase<DefinitionVisibilityProbeModule, DefinitionVisibilityProbeOption, DefinitionVisibilityProbeGuide>(option)
+    public sealed class DefinitionVisibilityProbeModule
+        : MonicaModule<DefinitionVisibilityProbeOption>
     {
-        public override void PostConfigureServices(IServiceCollection services)
+        public override void PostConfigureServices(ModuleContext<DefinitionVisibilityProbeOption> context)
         {
-            Option.Observe?.Invoke(services);
+            Option.Observe?.Invoke(context.Services);
         }
     }
 
-    private sealed class DefinitionVisibilityProbeOption : ModuleOptions<DefinitionVisibilityProbeModule>
+    public sealed class DefinitionVisibilityProbeOption : ModuleOptions<DefinitionVisibilityProbeModule>
     {
         public Action<IServiceCollection>? Observe { get; set; }
     }
-
-    private sealed class DefinitionVisibilityProbeGuide
-        : ModuleGuide<DefinitionVisibilityProbeModule, DefinitionVisibilityProbeOption, DefinitionVisibilityProbeGuide>;
 
     private static class DynamicConfigurationAssembly
     {

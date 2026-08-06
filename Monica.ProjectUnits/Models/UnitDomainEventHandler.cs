@@ -2,6 +2,7 @@ using Microsoft.Extensions.Logging;
 using Monica.EventBus;
 using Monica.EventBus.Abstractions.Handlers;
 using Monica.EventBus.Events;
+using Monica.Core.TypeDiscovery.Models;
 using Monica.ProjectUnits.Services.Support;
 using Monica.Modules;
 using Monica.Tool.Extensions;
@@ -13,8 +14,8 @@ namespace Monica.ProjectUnits.Models;
 /// </summary>
 public class UnitDomainEventHandler : ProjectUnit
 {
-    internal UnitDomainEventHandler(Type type, ProjectUnitCatalog catalog)
-        : base(type, EProjectUnitType.DomainEventHandler, catalog, EventBusExecutionPoints.DistributedHandler)
+    internal UnitDomainEventHandler(BusinessTypeShape shape, ProjectUnitCatalog catalog)
+        : base(shape, EProjectUnitType.DomainEventHandler, catalog, EventBusExecutionPoints.DistributedHandler)
     {
     }
 
@@ -33,13 +34,14 @@ public class UnitDomainEventHandler : ProjectUnit
         };
     }
 
-    internal static ProjectUnit? Create(Type type, ProjectUnitCatalog catalog)
+    internal static ProjectUnit Create(
+        BusinessTypeShape shape,
+        ProjectUnitCatalog catalog,
+        Type eventType)
     {
-        var unit = new UnitDomainEventHandler(type, catalog);
-        if (!type.IsClass ||
-            !type.IsImplementInterfaceGeneric(typeof(IDistributedEventHandler<>), out var genericType) || genericType?.FullName is null) return null;
+        var unit = new UnitDomainEventHandler(shape, catalog);
         unit.CheckNameConventionMode();
-        unit.EventType = genericType.GetGenericArguments().First();
+        unit.EventType = eventType;
         return unit;
     }
 

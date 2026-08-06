@@ -1,5 +1,5 @@
+using System.Collections.Frozen;
 using System.Text.Json;
-using Monica.Core.Modularity.Models;
 using Monica.Core.Skills.Models;
 
 namespace Monica.Core.Skills;
@@ -27,9 +27,9 @@ public abstract class Skill
     public abstract SkillDefinition Definition { get; }
 
     /// <summary>
-    /// Module keys that must be loaded for this skill to be available.
+    /// Module strategy types that must be loaded for this skill to be available.
     /// </summary>
-    public virtual IEnumerable<ModuleKey> RequiredModules => [];
+    public virtual IReadOnlySet<Type> RequiredModules => FrozenSet<Type>.Empty;
 
     /// <summary>
     /// Determines whether this skill should be included in the startup skill catalog.

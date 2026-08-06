@@ -6,7 +6,6 @@ using Microsoft.Extensions.Localization;
 using Monica.Core;
 using Monica.Core.Modularity;
 using Monica.Core.Modularity.Abstractions;
-using Monica.Core.Modularity.Annotations;
 using Monica.Core.Modularity.Models;
 using Monica.Core.Results;
 using Monica.Framework.UI.Localization;
@@ -26,9 +25,21 @@ public static class ModuleEventBusUIBuilderExtensions
         /// <summary>
         /// Configure the EventBusUI module
         /// </summary>
-        public ModuleEventBusUIGuide AddEventBusUI(Action<ModuleEventBusUIOption>? action = null)
+        public ModuleRegistration<ModuleEventBusUI, ModuleEventBusUIOption> AddEventBusUI(
+            Action<ModuleEventBusUIOption>? action = null)
         {
-            return builder.AddModule<ModuleEventBusUI, ModuleEventBusUIOption, ModuleEventBusUIGuide>(action);
+            var registration = builder.AddModule<ModuleEventBusUI, ModuleEventBusUIOption>(action);
+            registration.Require<ModuleLocalization, ModuleLocalizationOption>()
+                .AddResource<EventBusResource>();
+            registration.Require<ModuleShellUI, ModuleShellUIOption>()
+                .RegisterUIComponents(registry => registry.RegisterLocalizedPage<UIEventBusMonitorPage, EventBusResource>(
+                    UIEventBusMonitorPage.PAGE_URL,
+                    "Pages:EventBusMonitor:Title",
+                    Icons.Material.Filled.Hub,
+                    BuiltInNavigationCategoryIds.Monitor,
+                    addToNav: true,
+                    navOrder: 40));
+            return registration;
         }
     }
 }
@@ -36,13 +47,16 @@ public static class ModuleEventBusUIBuilderExtensions
 /// <summary>
 /// Event bus UI module
 /// </summary>
-[ModuleKey(BuiltInModuleKey.EventBusUI)]
-public class ModuleEventBusUI(ModuleEventBusUIOption option)
-    : WebModuleBase<ModuleEventBusUI, ModuleEventBusUIOption, ModuleEventBusUIGuide>(option)
+public class ModuleEventBusUI : MonicaModule<ModuleEventBusUIOption>, IWebHostRequiredModule, IUIModule
 {
-
-    public override void ConfigureServices(IServiceCollection services)
+    public override void Describe(ModuleDescriptor module)
     {
+        module.Require<ModuleEventBus, ModuleEventBusOption>();
+    }
+
+    public override void ConfigureServices(ModuleContext<ModuleEventBusUIOption> context)
+    {
+        var services = context.Services;
         // Register as Singleton to maintain real-time subscription status
         services.AddSingleton<EventBusMonitorService>();
 
@@ -53,33 +67,12 @@ public class ModuleEventBusUI(ModuleEventBusUIOption option)
         services.AddSingleton<EventBusProviderDiscoveryService>();
     }
 
-    public override void ClaimDependencies()
+    public override void ConfigureEndpoints(WebModuleContext<ModuleEventBusUIOption> context)
     {
-        // Depends on EventBus module
-        DependsOnModule<ModuleEventBusGuide>().Register();
-
-        DependsOnModule<ModuleLocalizationGuide>().Register()
-            .AddResource<EventBusResource>();
-
-        // Registration UI page
-        if (!Option.DisablePage)
-        {
-            DependsOnModule<ModuleShellUIGuide>().Register()
-                .RegisterUIComponents(p => p.RegisterLocalizedPage<UIEventBusMonitorPage, EventBusResource>(
-                    UIEventBusMonitorPage.PAGE_URL,
-                    "Pages:EventBusMonitor:Title",
-                    Icons.Material.Filled.Hub,
-                    BuiltInNavigationCategoryIds.Monitor,
-                    addToNav: true,
-                    navOrder: 40));
-        }
-    }
-
-    public override void ConfigureEndpoints(IApplicationBuilder app)
-    {
+        var app = context.ApplicationBuilder;
         var localizer = app.ApplicationServices.GetRequiredService<IStringLocalizer<EventBusResource>>();
 
-        UseEndpoints(app, endpoints =>
+        UseEndpoints(context, endpoints =>
         {
             var tagName = Option.GetApiGroupName();
 
@@ -167,22 +160,10 @@ public class ModuleEventBusUI(ModuleEventBusUIOption option)
 }
 
 /// <summary>
-/// EventBusUI Module Wizard
-/// </summary>
-public class ModuleEventBusUIGuide : WebModuleGuide<ModuleEventBusUI, ModuleEventBusUIOption, ModuleEventBusUIGuide>
-{
-}
-
-/// <summary>
 /// EventBusUI module options
 /// </summary>
 public class ModuleEventBusUIOption : MinimalApiModuleOptions<ModuleEventBusUI>
 {
-    /// <summary>
-    /// Whether to disable the event bus monitoring page.
-    /// </summary>
-    public bool DisablePage { get; set; }
-
     /// <summary>
     /// Maximum number of recent messages retained by each active row-level test listener.
     /// The default is 20. Increase this when developers need a longer listener history during

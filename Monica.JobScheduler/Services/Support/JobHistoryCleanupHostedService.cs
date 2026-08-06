@@ -1,7 +1,6 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using Monica.Core.Modularity.Models;
 using Monica.Core.ObservableInstance.Abstractions;
 using Monica.Modules;
 using Monica.ServiceDiscovery.Abstractions;
@@ -30,7 +29,7 @@ public class JobHistoryCleanupHostedService(
     private readonly ModuleJobSchedulerOption _jobSchedulerOptions = options.Value;
 
     public override string ServiceName => nameof(JobHistoryCleanupHostedService);
-    public override string? ServiceGroupId => nameof(BuiltInModuleKey.JobScheduler);
+    public override string? ServiceGroupId => nameof(ModuleJobScheduler);
 
     protected override Task OnBecameLeaderAsync(CancellationToken cancellationToken)
     {

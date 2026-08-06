@@ -1,8 +1,6 @@
 using Monica.Core;
 using Monica.Core.Modularity;
 using Monica.Core.Modularity.Abstractions;
-using Monica.Core.Modularity.Annotations;
-using Monica.Core.Modularity.Models;
 using Monica.UI.Localization;
 using Monica.UI.Pages;
 using Monica.UI.Shell.Models;
@@ -18,9 +16,22 @@ public static class ModuleSystemUIBuilderExtensions
         /// <summary>
         /// Configures the module system dashboard UI module.
         /// </summary>
-        public ModuleSystemUIGuide AddModuleSystemUI(Action<ModuleSystemUIOption>? action = null)
+        public ModuleRegistration<ModuleSystemUI, ModuleSystemUIOption> AddModuleSystemUI(
+            Action<ModuleSystemUIOption>? action = null)
         {
-            return builder.AddModule<ModuleSystemUI, ModuleSystemUIOption, ModuleSystemUIGuide>(action);
+            var registration = builder.AddModule<ModuleSystemUI, ModuleSystemUIOption>(action);
+            registration.Require<ModuleSystem, ModuleSystemOption>();
+            registration.Require<ModuleLocalization, ModuleLocalizationOption>()
+                .AddResource<SharedResource>();
+            registration.Require<ModuleShellUI, ModuleShellUIOption>()
+                .RegisterUIComponents(registry => registry.RegisterLocalizedPage<ModuleSystemPage, SharedResource>(
+                    ModuleSystemPage.MODULE_SYSTEM_DASHBOARD_URL,
+                    "Pages:ModuleSystemDashboard:Title",
+                    Icons.Material.Filled.Dashboard,
+                    BuiltInNavigationCategoryIds.Module,
+                    addToNav: true,
+                    navOrder: 10));
+            return registration;
         }
     }
 }
@@ -28,37 +39,7 @@ public static class ModuleSystemUIBuilderExtensions
 /// <summary>
 /// Module system dashboard UI module.
 /// </summary>
-[ModuleKey(BuiltInModuleKey.ModuleSystemUI)]
-public class ModuleSystemUI(ModuleSystemUIOption option)
-    : ModuleBase<ModuleSystemUI, ModuleSystemUIOption, ModuleSystemUIGuide>(option)
-{
-    /// <summary>
-    /// Declares the shell dependency and page registration.
-    /// </summary>
-    public override void ClaimDependencies()
-    {
-        if (Option.DisableDashboardPage)
-        {
-            return;
-        }
-
-        DependsOnModule<ModuleSystemGuide>().Register();
-        DependsOnModule<ModuleShellUIGuide>().Register()
-            .RegisterUIComponents(registry => registry.RegisterLocalizedPage<ModuleSystemPage, SharedResource>(
-                ModuleSystemPage.MODULE_SYSTEM_DASHBOARD_URL,
-                "Pages:ModuleSystemDashboard:Title",
-                Icons.Material.Filled.Dashboard,
-                BuiltInNavigationCategoryIds.Module,
-                addToNav: true,
-                navOrder: 10));
-    }
-}
-
-/// <summary>
-/// Fluent guide for the module system dashboard UI module.
-/// </summary>
-public class ModuleSystemUIGuide
-    : ModuleGuide<ModuleSystemUI, ModuleSystemUIOption, ModuleSystemUIGuide>
+public class ModuleSystemUI : MonicaModule<ModuleSystemUIOption>, IUIModule
 {
 }
 
@@ -67,8 +48,4 @@ public class ModuleSystemUIGuide
 /// </summary>
 public class ModuleSystemUIOption : ModuleOptions<ModuleSystemUI>
 {
-    /// <summary>
-    /// Gets or sets whether the dashboard page should be disabled.
-    /// </summary>
-    public bool DisableDashboardPage { get; set; }
 }

@@ -2,8 +2,6 @@ using Microsoft.Extensions.DependencyInjection;
 using Monica.Core;
 using Monica.Core.Modularity;
 using Monica.Core.Modularity.Abstractions;
-using Monica.Core.Modularity.Annotations;
-using Monica.Core.Modularity.Models;
 using Monica.UI.UIStackTrace.Support;
 
 
@@ -17,9 +15,10 @@ public static class ModuleStackTraceUIBuilderExtensions
         /// <summary>
         /// Configures the stack trace UI module.
         /// </summary>
-        public ModuleStackTraceUIGuide AddStackTraceUI(Action<ModuleStackTraceUIOption>? action = null)
+        public ModuleRegistration<ModuleStackTraceUI, ModuleStackTraceUIOption> AddStackTraceUI(
+            Action<ModuleStackTraceUIOption>? action = null)
         {
-            return builder.AddModule<ModuleStackTraceUI, ModuleStackTraceUIOption, ModuleStackTraceUIGuide>(action);
+            return builder.AddModule<ModuleStackTraceUI, ModuleStackTraceUIOption>(action);
         }
     }
 }
@@ -27,24 +26,13 @@ public static class ModuleStackTraceUIBuilderExtensions
 /// <summary>
 /// UIStackTrace module - provides stack trace visualization components
 /// </summary>
-[ModuleKey(BuiltInModuleKey.UIStackTrace)]
-public class ModuleStackTraceUI(ModuleStackTraceUIOption option)
-    : ModuleBase<ModuleStackTraceUI, ModuleStackTraceUIOption, ModuleStackTraceUIGuide>(option)
+public class ModuleStackTraceUI : MonicaModule<ModuleStackTraceUIOption>, IUIModule
 {
-
-    public override void ConfigureServices(IServiceCollection services)
+    public override void ConfigureServices(ModuleContext<ModuleStackTraceUIOption> context)
     {
         // Register StackTraceParserService as Singleton (stateless parser)
-        services.AddSingleton<StackTraceParser>();
+        context.Services.AddSingleton<StackTraceParser>();
     }
-}
-
-/// <summary>
-/// UIStackTrace module configuration guide
-/// </summary>
-public class ModuleStackTraceUIGuide
-    : ModuleGuide<ModuleStackTraceUI, ModuleStackTraceUIOption, ModuleStackTraceUIGuide>
-{
 }
 
 /// <summary>

@@ -3,7 +3,6 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Monica.Core.HostedService.Abstractions;
 using Monica.Core.HostedService.Models;
-using Monica.Core.Modularity.Models;
 using Monica.Core.ObservableInstance.Abstractions;
 using Monica.DataChannel.Abstractions;
 using Monica.Modules;
@@ -41,7 +40,7 @@ public class DataChannelInitializerService(
     /// <summary>
     /// Gets the observable group for data-channel hosted services.
     /// </summary>
-    public override string? ServiceGroupId => nameof(BuiltInModuleKey.DataChannel);
+    public override string? ServiceGroupId => nameof(ModuleDataChannel);
 
     /// <inheritdoc />
     protected override async Task OnStartingAsync(CancellationToken cancellationToken)

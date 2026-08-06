@@ -30,9 +30,8 @@ Open `Modules/Module{Name}.cs` and extract:
 - builder extension name: `monica.Add{Name}()` on `IMonicaBuilder`
 - `Module{Name}` summary and responsibilities
 - `Module{Name}Option` properties and real default values
-- extra option types
-- `Module{Name}Guide` methods
-- required Guide config keys via `GetRequestedConfigMethodKeys()`
+- registration extensions exposed on `IMonicaBuilder` or `ModuleRegistration<TModule, TOptions>`
+- required features declared with `RequireFeature(...)` and the registration extensions that call `SatisfyFeature(...)`
 - declared dependencies and notable provider registration paths
 
 ## 4. Read the public surface only
@@ -94,7 +93,7 @@ Confirm all of the following:
 
 - registration API names match source exactly
 - option names and defaults are real
-- Guide methods are real
+- registration extension methods are real
 - required setup is called out when applicable
 - package name is correct
 - public / private boundary is respected
@@ -108,11 +107,11 @@ Confirm all of the following:
 # Find module registration files
 find . -path '*/Modules/Module*.cs' | sort
 
-# Find builder extension names
-rg -n "public static Module.*Guide Add" -g '*/Modules/*.cs' .
+# Find registration extension names
+rg -n "extension\(IMonicaBuilder builder\)|extension\(ModuleRegistration<" -g '*/Modules/*.cs' .
 
-# Find required Guide configuration keys
-rg -n "GetRequestedConfigMethodKeys|ConfigureServices\(|ConfigureEmpty\(" -g '*/Modules/*.cs' .
+# Find explicitly required and satisfied features
+rg -n "RequireFeature\(|SatisfyFeature\(" -g '*/Modules/*.cs' .
 
 # Find paired UI modules
 find . -path '*/Modules/*UI.cs' | sort

@@ -69,10 +69,7 @@ TEST_PROJECT_PATTERN = re.compile(
     r'<IsTestProject(?:\s+[^>]*)?>\s*true\s*</IsTestProject>',
     re.IGNORECASE,
 )
-LITERAL_UI_MODULE_KEY_PATTERN = re.compile(
-    r'\[\s*ModuleKey\s*\(\s*"[^"]*\.UI"\s*\)\s*\]',
-    re.IGNORECASE,
-)
+UI_MODULE_MARKER_PATTERN = re.compile(r'\bIUIModule\b')
 ADD_RESOURCE_PATTERN = re.compile(
     r'\bAddResource\s*<\s*'
     r'(?P<resource>(?:global::)?[A-Za-z_][A-Za-z0-9_]*(?:(?:::|\.)[A-Za-z_][A-Za-z0-9_]*)*)'
@@ -208,7 +205,7 @@ class LocalizationValidator:
             if (
                 'RegisterLocalizedPage<' in module_text
                 or 'RegisterLocalizedComponent<' in module_text
-                or LITERAL_UI_MODULE_KEY_PATTERN.search(module_text)
+                or UI_MODULE_MARKER_PATTERN.search(module_text)
             ):
                 return True
 

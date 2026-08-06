@@ -1,6 +1,7 @@
 using Monica.EventBus.Events;
-using Monica.ProjectUnits.Services.Support;
+using Monica.Core.TypeDiscovery.Models;
 using Monica.Modules;
+using Monica.ProjectUnits.Services.Support;
 using Monica.Tool.Extensions;
 
 namespace Monica.ProjectUnits.Models;
@@ -10,14 +11,9 @@ namespace Monica.ProjectUnits.Models;
 /// </summary>
 public class UnitDomainEvent : ProjectUnit
 {
-    internal UnitDomainEvent(Type type, ProjectUnitCatalog catalog)
-        : base(type, EProjectUnitType.DomainEvent, catalog)
+    internal UnitDomainEvent(BusinessTypeShape shape, ProjectUnitCatalog catalog)
+        : base(shape, EProjectUnitType.DomainEvent, catalog)
     {
-    }
-
-    protected override bool VerifyTypeConstrain()
-    {
-        return Type.IsClass && Type.IsImplementInterface<IDomainEvent>() && typeof(DomainEvent) != Type;
     }
 
     protected override ProjectUnitNamingRule? DefaultConventionOption()
@@ -28,10 +24,11 @@ public class UnitDomainEvent : ProjectUnit
         };
     }
 
-    internal static ProjectUnit? Create(Type type, ProjectUnitCatalog catalog)
+    internal static ProjectUnit Create(BusinessTypeShape shape, ProjectUnitCatalog catalog)
     {
-        var unit = new UnitDomainEvent(type, catalog);
-        return unit.VerifyType() ? unit : null;
+        var unit = new UnitDomainEvent(shape, catalog);
+        unit.CheckNameConventionMode();
+        return unit;
     }
 
     /// <summary>

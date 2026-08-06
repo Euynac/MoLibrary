@@ -139,12 +139,13 @@
             isDisabled = !n.IsEnabled,
             isUIModule = n.IsUIModule,
             isWebModule = n.IsWebModule,
-            isDowngradedFromWebModule = n.IsDowngradedFromWebModule,
+            requiresWebHost = n.RequiresWebHost,
+            webHostRequirementReason = n.WebHostRequirementReason,
             isThirdPartyModule = n.IsThirdPartyModule,
             categoryKey = GetModuleCategoryKey(n),
             moduleCategory = GetModuleCategoryLabel(n),
             capabilityText = GetModuleCapabilityLabel(n),
-            runtimeModeText = GetRuntimeModeLabel(n),
+            hostRequirementText = GetHostRequirementLabel(n),
             directDependencyCount = n.DirectDependencyCount,
             transitiveDependencyCount = Math.Max(0, n.TotalDependencyCount - n.DirectDependencyCount),
             dependentModuleCount = n.DependentModuleCount,
@@ -172,7 +173,7 @@
                 moduleStatus = Text("ModuleSystem:DependencyGraph:Labels:ModuleStatus"),
                 moduleCategory = Text("ModuleSystem:DependencyGraph:Labels:ModuleCategory"),
                 moduleCapability = Text("ModuleSystem:DependencyGraph:Labels:ModuleCapability"),
-                runtimeMode = Text("ModuleSystem:DependencyGraph:Labels:RuntimeMode")
+                hostRequirement = Text("ModuleSystem:DependencyGraph:Labels:HostRequirement")
             },
             states = new
             {
@@ -328,7 +329,7 @@
         return string.Join(Environment.NewLine, [
             node.ModuleName,
             $"{L["ModuleSystem:DependencyGraph:Labels:ModuleCapability"]}: {GetModuleCapabilityLabel(node)}",
-            $"{L["ModuleSystem:DependencyGraph:Labels:RuntimeMode"]}: {GetRuntimeModeLabel(node)}",
+            $"{L["ModuleSystem:DependencyGraph:Labels:HostRequirement"]}: {GetHostRequirementLabel(node)}",
             $"{L["ModuleSystem:DependencyGraph:Labels:DirectDependency"]}: {node.DirectDependencyCount}",
             $"{L["ModuleSystem:DependencyGraph:Labels:TransitiveDependency"]}: {transitiveDependencyCount}",
             $"{L["ModuleSystem:DependencyGraph:Labels:DependedBy"]}: {node.DependentModuleCount}",
@@ -369,18 +370,18 @@
     }
 
     /// <summary>
-    /// Gets the localized runtime mode label used by the graph.
+    /// Gets the localized host requirement label used by the graph.
     /// </summary>
-    private string GetRuntimeModeLabel(ModuleDependencyNode node)
+    private string GetHostRequirementLabel(ModuleDependencyNode node)
     {
-        if (node.IsDowngradedFromWebModule)
+        if (!node.IsWebModule)
         {
-            return L["ModuleSystem:DependencyGraph:States:Downgraded"].Value;
+            return L["ModuleSystem:DependencyGraph:States:NoWebHostRequirement"].Value;
         }
 
-        return node.IsWebModule
-            ? L["ModuleSystem:DependencyGraph:States:WebRuntime"].Value
-            : L["ModuleSystem:DependencyGraph:States:NonWebRuntime"].Value;
+        return node.RequiresWebHost
+            ? L["ModuleSystem:DependencyGraph:States:WebHostRequired"].Value
+            : L["ModuleSystem:DependencyGraph:States:WebHostOptional"].Value;
     }
 
     /// <summary>

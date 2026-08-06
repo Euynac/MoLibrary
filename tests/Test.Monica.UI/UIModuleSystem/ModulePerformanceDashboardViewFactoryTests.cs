@@ -1,6 +1,7 @@
 using AwesomeAssertions;
 using Monica.Core.Modularity.Diagnostics.Models;
 using Monica.Core.Modularity.Models;
+using Monica.Modules;
 using Monica.UI.UIModuleSystem.Support;
 using Xunit;
 
@@ -11,8 +12,8 @@ public sealed class ModulePerformanceDashboardViewFactoryTests
     [Fact]
     public void Create_exposes_the_blocking_Mapster_work_separately_from_its_serial_module_callback()
     {
-        var objectMappingKey = (ModuleKey)BuiltInModuleKey.ObjectMapping;
-        var configurationKey = (ModuleKey)BuiltInModuleKey.Configuration;
+        var objectMappingKey = ModuleKey.FromModuleType(typeof(ModuleObjectMapping));
+        var mediatorKey = ModuleKey.FromModuleType(typeof(ModuleMediator));
         var mapsterWork = new ModuleStartupWorkPerformanceInfo
         {
             WorkItemId = "ObjectMapping:0:compile-mapster-configuration",
@@ -42,18 +43,18 @@ public sealed class ModulePerformanceDashboardViewFactoryTests
             ModulePhase.PostConfigureServices,
             startedOffsetMs: 3_800,
             durationMs: 85);
-        var configurationCallback = Callback(
+        var mediatorCallback = Callback(
             sequence: 0,
-            configurationKey,
-            "ModuleConfiguration",
+            mediatorKey,
+            "ModuleMediator",
             order: 3,
             ModulePhase.ConfigureServices,
             startedOffsetMs: 900,
             durationMs: 934);
         var remainingCallback = Callback(
             sequence: 2,
-            (ModuleKey)BuiltInModuleKey.Logging,
-            "ModuleLogging",
+            ModuleKey.FromModuleType(typeof(ModuleHostedService)),
+            "ModuleHostedService",
             order: 4,
             ModulePhase.ConfigureServices,
             startedOffsetMs: 1_900,
@@ -79,7 +80,7 @@ public sealed class ModulePerformanceDashboardViewFactoryTests
                     SystemPhase(2, "ConfigureApplicationBuilder", 13_750, 100),
                     SystemPhase(3, "ConfigureEndpoints", 13_900, 17)
                 ],
-                ModulePhaseExecutions = [configurationCallback, objectMappingCallback, remainingCallback],
+                ModulePhaseExecutions = [mediatorCallback, objectMappingCallback, remainingCallback],
                 StartupWorkItems = [mapsterWork],
                 StartupWorkBarriers =
                 [
@@ -104,7 +105,7 @@ public sealed class ModulePerformanceDashboardViewFactoryTests
             },
             Modules =
             [
-                Module(configurationCallback),
+                Module(mediatorCallback),
                 Module(objectMappingCallback, mapsterWork),
                 Module(remainingCallback)
             ]
@@ -182,9 +183,9 @@ public sealed class ModulePerformanceDashboardViewFactoryTests
     [Fact]
     public void Create_preserves_repeated_callbacks_and_reports_zero_parallel_work_without_false_critical_path()
     {
-        var key = (ModuleKey)BuiltInModuleKey.Logging;
-        var first = Callback(0, key, "ModuleLogging", 1, ModulePhase.ConfigureServices, 10, 25);
-        var second = Callback(1, key, "ModuleLogging", 1, ModulePhase.ConfigureServices, 40, 30);
+        var key = ModuleKey.FromModuleType(typeof(ModuleHostedService));
+        var first = Callback(0, key, "ModuleHostedService", 1, ModulePhase.ConfigureServices, 10, 25);
+        var second = Callback(1, key, "ModuleHostedService", 1, ModulePhase.ConfigureServices, 40, 30);
         var performance = new ModuleSystemPerformance
         {
             Composition = new ModuleCompositionPerformance
@@ -200,7 +201,7 @@ public sealed class ModulePerformanceDashboardViewFactoryTests
             Modules = [new ModulePerformanceInfo
             {
                 ModuleKey = key,
-                ModuleTypeName = "ModuleLogging",
+                ModuleTypeName = "ModuleHostedService",
                 RegistrationOrder = 1,
                 PhaseExecutions = [first, second]
             }]
@@ -293,7 +294,7 @@ public sealed class ModulePerformanceDashboardViewFactoryTests
         {
             WorkItemId = "ObjectMapping:0:compile-mapster-configuration",
             Sequence = 0,
-            ModuleKey = (ModuleKey)BuiltInModuleKey.ObjectMapping,
+            ModuleKey = ModuleKey.FromModuleType(typeof(ModuleObjectMapping)),
             ModuleTypeName = "ModuleObjectMapping",
             ModuleRegistrationOrder = 17,
             Name = "compile-mapster-configuration",
@@ -306,13 +307,13 @@ public sealed class ModulePerformanceDashboardViewFactoryTests
         };
         var requiredWork = new ModuleStartupWorkPerformanceInfo
         {
-            WorkItemId = "Configuration:1:build-configuration-definitions",
+            WorkItemId = "Mediator:1:build-mediator-descriptors",
             Sequence = 1,
-            ModuleKey = (ModuleKey)BuiltInModuleKey.Configuration,
-            ModuleTypeName = "ModuleConfiguration",
+            ModuleKey = ModuleKey.FromModuleType(typeof(ModuleMediator)),
+            ModuleTypeName = "ModuleMediator",
             ModuleRegistrationOrder = 3,
-            Name = "build-configuration-definitions",
-            OriginPhase = ModulePhase.IterateBusinessTypes,
+            Name = "build-mediator-descriptors",
+            OriginPhase = ModulePhase.DiscoverTypes,
             Barrier = ModuleStartupWorkBarrier.BeforeHostLifecycle,
             Status = ModuleStartupWorkStatus.Queued,
             SubmittedOffsetMs = 45
@@ -406,7 +407,7 @@ public sealed class ModulePerformanceDashboardViewFactoryTests
     {
         WorkItemId = $"work-{sequence}",
         Sequence = sequence,
-        ModuleKey = (ModuleKey)BuiltInModuleKey.ObjectMapping,
+        ModuleKey = ModuleKey.FromModuleType(typeof(ModuleObjectMapping)),
         ModuleTypeName = "ModuleObjectMapping",
         ModuleRegistrationOrder = 17,
         Name = name,

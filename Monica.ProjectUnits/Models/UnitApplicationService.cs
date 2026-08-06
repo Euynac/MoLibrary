@@ -1,10 +1,10 @@
 using Microsoft.Extensions.Logging;
 using Monica.Core.Mediator;
+using Monica.Core.TypeDiscovery.Models;
 using Monica.ProjectUnits.Services.Support;
 using Monica.Modules;
 using Monica.Tool.Extensions;
 using Monica.WebApi.Abstractions;
-using Monica.WebApi.AutoControllers.Abstractions;
 
 namespace Monica.ProjectUnits.Models;
 
@@ -13,8 +13,8 @@ namespace Monica.ProjectUnits.Models;
 /// </summary>
 public class UnitApplicationService : ProjectUnit
 {
-    internal UnitApplicationService(Type type, ProjectUnitCatalog catalog)
-        : base(type, EProjectUnitType.ApplicationService, catalog, MediatorExecutionPoints.Request)
+    internal UnitApplicationService(BusinessTypeShape shape, ProjectUnitCatalog catalog)
+        : base(shape, EProjectUnitType.ApplicationService, catalog, MediatorExecutionPoints.Request)
     {
     }
 
@@ -46,15 +46,6 @@ public class UnitApplicationService : ProjectUnit
 
     protected override bool ShouldAnalyzeConstructorDependencies => true;
 
-    protected override bool VerifyTypeConstrain()
-    {
-        // CRUD application services are claimed by UnitCrudApplicationService, even though they also derive from
-        // ApplicationService. Exclude them here so each type maps to exactly one project unit.
-        return Type.IsClass
-               && Type.IsSubclassOf(typeof(ApplicationService))
-               && !Type.IsImplementInterface<ICrudApplicationService>();
-    }
-
     protected override ProjectUnitNamingRule? DefaultConventionOption()
     {
         return new ProjectUnitNamingRule
@@ -63,27 +54,24 @@ public class UnitApplicationService : ProjectUnit
         };
     }
 
-    internal static ProjectUnit? Create(Type type, ProjectUnitCatalog catalog)
+    internal static ProjectUnit Create(BusinessTypeShape shape, ProjectUnitCatalog catalog)
     {
-        var unit = new UnitApplicationService(type, catalog)
+        var unit = new UnitApplicationService(shape, catalog)
         {
-            IsCommand = type.Name.StartsWith("Command", StringComparison.Ordinal)
+            IsCommand = shape.Type.Name.StartsWith("Command", StringComparison.Ordinal)
         };
+        unit.CheckNameConventionMode();
 
-        unit = unit.VerifyType() ? unit : null;
-        if (unit != null)
+        var exactGenericType = shape.BaseTypes.FirstOrDefault(type =>
+            type.IsGenericType && type.GetGenericTypeDefinition() == typeof(ApplicationService<,>));
+        if (exactGenericType is not null)
         {
-            if (type.IsSubclassOfRawGeneric(typeof(ApplicationService<,>), out var exactGenericType))
-            {
-                var args = exactGenericType.GetGenericArguments();
-                unit.RequestType = args[0];
-                unit.ResponseType = args[1];
-            }
-
-            unit.InitializeMethods<ApplicationService>();
+            var args = exactGenericType.GetGenericArguments();
+            unit.RequestType = args[0];
+            unit.ResponseType = args[1];
         }
 
-
+        unit.InitializeMethods<ApplicationService>();
         return unit;
     }
 

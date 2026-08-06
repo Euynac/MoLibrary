@@ -36,7 +36,7 @@ public sealed record VectorStoreDiagnosticInfo
     public required string CollectionNamePrefix { get; init; }
 
     /// <summary>
-    /// Display-safe configuration entries captured from the module guide.
+    /// Display-safe configuration entries captured from module registration.
     /// </summary>
     public IReadOnlyList<VectorStoreConfigurationEntry> ConfigurationEntries { get; init; } = [];
 }

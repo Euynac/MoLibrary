@@ -2,8 +2,6 @@ using Microsoft.Extensions.DependencyInjection;
 using Monica.Core;
 using Monica.Core.Modularity;
 using Monica.Core.Modularity.Abstractions;
-using Monica.Core.Modularity.Annotations;
-using Monica.Core.Modularity.Models;
 using Monica.Office.Excel.Abstractions;
 using Monica.Office.Excel.Providers.EpPlus;
 using Monica.Office.Excel.Providers.Npoi;
@@ -18,65 +16,51 @@ public static class ModuleExcelBuilderExtensions
         /// <summary>
         /// Configures the Excel module
         /// </summary>
-        public ModuleExcelGuide AddExcel(Action<ModuleExcelOption>? action = null)
+        public ModuleRegistration<ModuleExcel, ModuleExcelOption> AddExcel(
+            Action<ModuleExcelOption>? action = null)
         {
-            return builder.AddModule<ModuleExcel, ModuleExcelOption, ModuleExcelGuide>(action);
+            return builder.AddModule<ModuleExcel, ModuleExcelOption>(action);
+        }
+    }
+
+    extension(ModuleRegistration<ModuleExcel, ModuleExcelOption> registration)
+    {
+        public ModuleRegistration<ModuleExcel, ModuleExcelOption> UseNpoi()
+        {
+            return registration
+                .ConfigureServices(context =>
+                {
+                    context.Services.AddSingleton<INpoiCellStyleSupport, NpoiCellStyleSupport>();
+                    context.Services.AddSingleton<INpoiWorkbookSupport, NpoiWorkbookSupport>();
+                    context.Services.AddSingleton<IExcelImporter, NpoiExcelImportProvider>();
+                    context.Services.AddSingleton<IExcelExporter, NpoiExcelExportProvider>();
+                })
+                .SatisfyFeature(ModuleExcel.PROVIDER_FEATURE);
+        }
+
+        public ModuleRegistration<ModuleExcel, ModuleExcelOption> UseEpPlus()
+        {
+            return registration
+                .ConfigureServices(context =>
+                {
+                    context.Services.AddSingleton<IEpPlusCellStyleSupport, EpPlusCellStyleSupport>();
+                    context.Services.AddSingleton<IEpPlusWorkbookSupport, EpPlusWorkbookSupport>();
+                    context.Services.AddSingleton<IExcelImporter, EpPlusExcelImportProvider>();
+                    context.Services.AddSingleton<IExcelExporter, EpPlusExcelExportProvider>();
+                })
+                .SatisfyFeature(ModuleExcel.PROVIDER_FEATURE);
         }
     }
 }
 
-[ModuleKey(BuiltInModuleKey.Excel)]
-public class ModuleExcel(ModuleExcelOption option) : ModuleBase<ModuleExcel, ModuleExcelOption, ModuleExcelGuide>(option)
+public class ModuleExcel : MonicaModule<ModuleExcelOption>
 {
+    internal const string PROVIDER_FEATURE = "excel-provider";
 
-    public override void ClaimDependencies()
+    public override void Describe(ModuleDescriptor module)
     {
-        DependsOnModule<ModuleTaskProgressGuide>().Register();
-    }
-}
-
-/// <summary>
-/// Excel module configuration guide
-/// </summary>
-public class ModuleExcelGuide : ModuleGuide<ModuleExcel, ModuleExcelOption, ModuleExcelGuide>
-{
-    private const string SET_EXCEL_PROVIDER = nameof(SET_EXCEL_PROVIDER);
-    protected override string[] GetRequestedConfigMethodKeys()
-    {
-        return [SET_EXCEL_PROVIDER];
-    }
-    /// <summary>
-    /// Uses NPOI for Excel import and export
-    /// </summary>
-    /// <returns></returns>
-    public ModuleExcelGuide UseNpoi()
-    {
-        ConfigureServices(context =>
-        {
-            context.Services.AddSingleton<INpoiCellStyleSupport, NpoiCellStyleSupport>();
-            context.Services.AddSingleton<INpoiWorkbookSupport, NpoiWorkbookSupport>();
-
-            context.Services.AddSingleton<IExcelImporter, NpoiExcelImportProvider>();
-            context.Services.AddSingleton<IExcelExporter, NpoiExcelExportProvider>();
-        }, key: SET_EXCEL_PROVIDER);
-        return this;
-    }
-
-    /// <summary>
-    /// Uses EpPlus for Excel import and export
-    /// </summary>
-    /// <returns></returns>
-    public ModuleExcelGuide UseEpPlus()
-    {
-        ConfigureServices(context =>
-        {
-            context.Services.AddSingleton<IEpPlusCellStyleSupport, EpPlusCellStyleSupport>();
-            context.Services.AddSingleton<IEpPlusWorkbookSupport, EpPlusWorkbookSupport>();
-
-            context.Services.AddSingleton<IExcelImporter, EpPlusExcelImportProvider>();
-            context.Services.AddSingleton<IExcelExporter, EpPlusExcelExportProvider>();
-        }, key: SET_EXCEL_PROVIDER);
-        return this;
+        module.Require<ModuleTaskProgress, ModuleTaskProgressOption>();
+        module.RequireFeature(PROVIDER_FEATURE);
     }
 }
 

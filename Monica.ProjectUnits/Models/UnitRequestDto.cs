@@ -1,6 +1,5 @@
+using Monica.Core.TypeDiscovery.Models;
 using Monica.ProjectUnits.Services.Support;
-using Monica.Tool.Extensions;
-using Monica.WebApi.Abstractions;
 
 namespace Monica.ProjectUnits.Models;
 
@@ -9,15 +8,14 @@ namespace Monica.ProjectUnits.Models;
 /// </summary>
 public class UnitRequestDto : ProjectUnit
 {
-    internal UnitRequestDto(Type type, ProjectUnitCatalog catalog)
-        : base(type, EProjectUnitType.RequestDto, catalog)
+    internal UnitRequestDto(BusinessTypeShape shape, ProjectUnitCatalog catalog)
+        : base(shape, EProjectUnitType.RequestDto, catalog)
     {
     }
 
-    internal static ProjectUnit? Create(Type type, ProjectUnitCatalog catalog)
+    internal static ProjectUnit Create(BusinessTypeShape shape, ProjectUnitCatalog catalog)
     {
-        var unit = new UnitRequestDto(type, catalog);
-        if (!type.IsImplementInterface(typeof(IResultRequestBase))) return null;
+        var unit = new UnitRequestDto(shape, catalog);
         unit.CheckNameConventionMode();
         return unit;
     }

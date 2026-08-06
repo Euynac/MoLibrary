@@ -5,7 +5,6 @@ using Microsoft.Extensions.Logging;
 using Monica.Core;
 using Monica.Core.Modularity;
 using Monica.Core.Modularity.Abstractions;
-using Monica.Core.Modularity.Annotations;
 using Monica.Core.Modularity.Models;
 using Monica.Repository;
 using Monica.Repository.Entity.Abstractions;
@@ -30,59 +29,59 @@ public static class ModuleRepositoryBuilderExtensions
         /// <summary>
         /// Configure the Repository module
         /// </summary>
-        public ModuleRepositoryGuide AddRepository(Action<ModuleRepositoryOption>? action = null)
+        public ModuleRegistration<ModuleRepository, ModuleRepositoryOption> AddRepository(Action<ModuleRepositoryOption>? action = null)
         {
-            return builder.AddModule<ModuleRepository, ModuleRepositoryOption, ModuleRepositoryGuide>(action);
+            return builder.AddModule<ModuleRepository, ModuleRepositoryOption>(action);
         }
     }
 }
 
-[ModuleKey(BuiltInModuleKey.Repository)]
-public class ModuleRepository(ModuleRepositoryOption option)
-    : ModuleBase<ModuleRepository, ModuleRepositoryOption, ModuleRepositoryGuide>(option)
+public class ModuleRepository : MonicaModule<ModuleRepositoryOption>
 {
-    public override void ConfigureServices(IServiceCollection services)
+    public override void ConfigureServices(ModuleContext<ModuleRepositoryOption> context)
     {
+        var services = context.Services;
         services.AddOptions<SequentialGuidGeneratorOptions>();
         services.TryAddTransient<IGuidGenerator, SequentialGuidGenerator>();
         services.TryAddSingleton<IRepositoryDbContextRegistry, RepositoryDbContextRegistry>();
         services.TryAddScoped<IRepositoryDbContextDiagnosticsService, RepositoryDbContextDiagnosticsService>();
         services.TryAddScoped<RepositoryDiagnosticsFacade>();
 
-        if (option.EnableEfCoreConnectionMetrics)
+        if (Option.EnableEfCoreConnectionMetrics)
         {
             services.TryAddSingleton<EfCoreConnectionMetrics>();
             services.TryAddSingleton<EfCoreConnectionMetricsInterceptor>();
         }
     }
 
-    public override void ClaimDependencies()
+    public override void Describe(ModuleDescriptor module)
     {
-        DependsOnModule<ModuleObjectMappingGuide>().Register();
+        module.Require<ModuleObjectMapping, ModuleObjectMappingOption>();
     }
 }
 
-public class ModuleRepositoryGuide : ModuleGuide<ModuleRepository, ModuleRepositoryOption, ModuleRepositoryGuide>
+public static class ModuleRepositoryRegistrationExtensions
 {
     /// <summary>
     /// Registers a repository DbContext and the scoped access services used by repositories and long-lived workers.
     /// </summary>
+    /// <param name="module">The Repository module registration being configured.</param>
     /// <typeparam name="TDbContext">The repository DbContext type to register.</typeparam>
     /// <param name="optionsAction">Configures the EF Core provider and options for the DbContext.</param>
     /// <param name="dbContextProviderType">Selects how scoped repositories obtain the current DbContext.</param>
-    /// <returns>The repository guide for method chaining.</returns>
+    /// <returns>The repository module registration for method chaining.</returns>
     /// <remarks>
     /// Registration also exposes an <see cref="IDbContextFactory{TContext}"/> whose contexts own independent
     /// dependency injection scopes. Factory-created contexts must be disposed by the caller and are safe to create
     /// from long-lived services. This host-owned factory replaces any earlier factory registration for the same
     /// context so the ownership guarantee cannot be bypassed accidentally.
     /// </remarks>
-    public ModuleRepositoryGuide AddRepositoryDbContext<TDbContext>(Action<IServiceProvider, DbContextOptionsBuilder> optionsAction, DbContextProviderType dbContextProviderType = DbContextProviderType.Default)
+    public static ModuleRegistration<ModuleRepository, ModuleRepositoryOption> AddRepositoryDbContext<TDbContext>(this ModuleRegistration<ModuleRepository, ModuleRepositoryOption> module, Action<IServiceProvider, DbContextOptionsBuilder> optionsAction, DbContextProviderType dbContextProviderType = DbContextProviderType.Default)
         where TDbContext : RepositoryDbContext<TDbContext>
     {
         if (dbContextProviderType == DbContextProviderType.UnitOfWork)
         {
-            DependsOnModule<ModuleUnitOfWorkGuide>().Register().AddDbContextProvider<TDbContext>();
+            module.Require<ModuleUnitOfWork, ModuleUnitOfWorkOption>().AddDbContextProvider<TDbContext>();
         }
         else if (dbContextProviderType != DbContextProviderType.Default)
         {
@@ -92,7 +91,7 @@ public class ModuleRepositoryGuide : ModuleGuide<ModuleRepository, ModuleReposit
                 "Unknown repository DbContext provider type.");
         }
 
-        ConfigureServices(context =>
+        module.ConfigureServices(context =>
         {
             if (dbContextProviderType == DbContextProviderType.Default)
             {
@@ -107,7 +106,7 @@ public class ModuleRepositoryGuide : ModuleGuide<ModuleRepository, ModuleReposit
                 typeof(IDbContextOperation<TDbContext>),
                 typeof(ScopedDbContextOperation<TDbContext>));
             context.Services.AddDbContext<TDbContext>(
-                (serviceProvider, builder) => ConfigureDbContextOptions(context.ModuleOption, serviceProvider, builder, optionsAction));
+                (serviceProvider, builder) => ConfigureDbContextOptions(context.Options, serviceProvider, builder, optionsAction));
             context.Services.RemoveAll<IDbContextFactory<TDbContext>>();
             context.Services.AddSingleton<IDbContextFactory<TDbContext>, OwnedScopeDbContextFactory<TDbContext>>();
 
@@ -119,7 +118,7 @@ public class ModuleRepositoryGuide : ModuleGuide<ModuleRepository, ModuleReposit
                 var builder = new DbContextOptionsBuilder<TDbContext>()
                     .UseLoggerFactory(serviceProvider.GetRequiredService<ILoggerFactory>())
                     .UseApplicationServiceProvider(serviceProvider);
-                ConfigureDbContextOptions(context.ModuleOption, serviceProvider, builder, optionsAction);
+                ConfigureDbContextOptions(context.Options, serviceProvider, builder, optionsAction);
                 return builder.Options;
             });
 
@@ -127,8 +126,8 @@ public class ModuleRepositoryGuide : ModuleGuide<ModuleRepository, ModuleReposit
 
             context.Services
                 .AddTransient<IDbContextDatabaseManager<TDbContext>, DbContextDatabaseManager<TDbContext>>();
-        }, secondKey: typeof(TDbContext).FullName ?? typeof(TDbContext).Name);
-        return this;
+        });
+        return module;
     }
 
     private static void ConfigureDbContextOptions(
@@ -144,6 +143,7 @@ public class ModuleRepositoryGuide : ModuleGuide<ModuleRepository, ModuleReposit
             builder.AddInterceptors(serviceProvider.GetRequiredService<EfCoreConnectionMetricsInterceptor>());
         }
     }
+
 }
 
 public class ModuleRepositoryOption : ModuleOptions<ModuleRepository>

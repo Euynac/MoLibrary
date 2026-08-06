@@ -1,13 +1,14 @@
+using System.Collections.Frozen;
 using System.Text.Encodings.Web;
 using System.Text.Json;
 using Microsoft.Extensions.DependencyInjection;
 using Monica.AI.KnowledgeBase.Abstractions;
 using Monica.AI.KnowledgeBase.Models;
 using Monica.AI.Services.Support;
-using Monica.Core.Modularity.Models;
 using Monica.Core.Skills;
 using Monica.Core.Skills.Annotations;
 using Monica.Core.Skills.Models;
+using Monica.Modules;
 
 namespace Monica.AI.KnowledgeBase.Skills;
 
@@ -34,7 +35,8 @@ internal sealed class KnowledgeBaseLookupSkill(IKnowledgeDocumentQueryService qu
         "Prefer search-knowledge-documents before broad browsing when the user gives keywords, filenames, rules, or phrases.");
 
     /// <inheritdoc />
-    public override IEnumerable<ModuleKey> RequiredModules => [BuiltInModuleKey.KnowledgeBase];
+    public override IReadOnlySet<Type> RequiredModules { get; } =
+        new[] { typeof(ModuleKnowledgeBase) }.ToFrozenSet();
 
     /// <summary>
     /// Gets the optional MCP server definition for external knowledge-base lookup clients.

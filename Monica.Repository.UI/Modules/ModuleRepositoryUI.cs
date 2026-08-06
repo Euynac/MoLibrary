@@ -2,8 +2,6 @@ using Microsoft.Extensions.DependencyInjection;
 using Monica.Core;
 using Monica.Core.Modularity;
 using Monica.Core.Modularity.Abstractions;
-using Monica.Core.Modularity.Annotations;
-using Monica.Core.Modularity.Models;
 using Monica.Repository.UI.Localization;
 using Monica.Repository.UI.Pages;
 using Monica.Repository.UI.UIRepository.State;
@@ -24,10 +22,22 @@ public static class ModuleRepositoryUIBuilderExtensions
         /// Registers the Repository diagnostics UI module.
         /// </summary>
         /// <param name="action">Optional module option configuration.</param>
-        /// <returns>The Repository UI guide used for chained configuration.</returns>
-        public ModuleRepositoryUIGuide AddRepositoryUI(Action<ModuleRepositoryUIOption>? action = null)
+        /// <returns>The host-bound Repository UI registration.</returns>
+        public ModuleRegistration<ModuleRepositoryUI, ModuleRepositoryUIOption> AddRepositoryUI(
+            Action<ModuleRepositoryUIOption>? action = null)
         {
-            return builder.AddModule<ModuleRepositoryUI, ModuleRepositoryUIOption, ModuleRepositoryUIGuide>(action);
+            var registration = builder.AddModule<ModuleRepositoryUI, ModuleRepositoryUIOption>(action);
+            registration.Require<ModuleLocalization, ModuleLocalizationOption>()
+                .AddResource<RepositoryUIResource>();
+            registration.Require<ModuleShellUI, ModuleShellUIOption>()
+                .RegisterUIComponents(registry => registry.RegisterLocalizedPage<UIRepositoryDashboardPage, RepositoryUIResource>(
+                    UIRepositoryDashboardPage.PAGE_URL,
+                    "Pages:RepositoryDashboard:Title",
+                    Icons.Material.Filled.Storage,
+                    BuiltInNavigationCategoryIds.Monitor,
+                    addToNav: true,
+                    navOrder: 35));
+            return registration;
         }
     }
 }
@@ -35,48 +45,19 @@ public static class ModuleRepositoryUIBuilderExtensions
 /// <summary>
 /// Repository diagnostics UI module.
 /// </summary>
-/// <param name="option">The module options.</param>
-[ModuleKey(BuiltInModuleKey.RepositoryUI)]
-public sealed class ModuleRepositoryUI(ModuleRepositoryUIOption option)
-    : ModuleBase<ModuleRepositoryUI, ModuleRepositoryUIOption, ModuleRepositoryUIGuide>(option)
+public sealed class ModuleRepositoryUI : MonicaModule<ModuleRepositoryUIOption>, IUIModule
 {
     /// <inheritdoc />
-    public override void ClaimDependencies()
+    public override void Describe(ModuleDescriptor module)
     {
-        DependsOnModule<ModuleLocalizationGuide>().Register()
-            .AddResource<RepositoryUIResource>();
-
-        DependsOnModule<ModuleRepositoryGuide>().Register();
-
-        if (!Option.DisableRepositoryPage)
-        {
-            DependsOnModule<ModuleShellUIGuide>().Register()
-                .RegisterUIComponents(registry =>
-                {
-                    registry.RegisterLocalizedPage<UIRepositoryDashboardPage, RepositoryUIResource>(
-                        UIRepositoryDashboardPage.PAGE_URL,
-                        "Pages:RepositoryDashboard:Title",
-                        Icons.Material.Filled.Storage,
-                        BuiltInNavigationCategoryIds.Monitor,
-                        addToNav: true,
-                        navOrder: 35);
-                });
-        }
+        module.Require<ModuleRepository, ModuleRepositoryOption>();
     }
 
     /// <inheritdoc />
-    public override void ConfigureServices(IServiceCollection services)
+    public override void ConfigureServices(ModuleContext<ModuleRepositoryUIOption> context)
     {
-        services.AddScoped<RepositoryDashboardState>();
+        context.Services.AddScoped<RepositoryDashboardState>();
     }
-}
-
-/// <summary>
-/// Fluent guide for the Repository UI module.
-/// </summary>
-public sealed class ModuleRepositoryUIGuide
-    : ModuleGuide<ModuleRepositoryUI, ModuleRepositoryUIOption, ModuleRepositoryUIGuide>
-{
 }
 
 /// <summary>
@@ -84,11 +65,6 @@ public sealed class ModuleRepositoryUIGuide
 /// </summary>
 public sealed class ModuleRepositoryUIOption : ModuleOptions<ModuleRepositoryUI>
 {
-    /// <summary>
-    /// Gets or sets a value indicating whether the Repository diagnostics dashboard is disabled.
-    /// </summary>
-    public bool DisableRepositoryPage { get; set; }
-
     /// <summary>
     /// Gets or sets a value indicating whether migration update actions are allowed while the host runs in Production.
     /// The default is <c>false</c>, so Production dashboards remain read-only unless the host explicitly opts in.

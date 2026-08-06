@@ -6,7 +6,7 @@ namespace Monica.AI.Mcp.Models;
 public enum ExternalMcpClientProfileOrigin
 {
     /// <summary>
-    /// The profile is registered by application code through the MCP module guide.
+    /// The profile is registered by application code through the MCP module registration.
     /// </summary>
     Code,
 

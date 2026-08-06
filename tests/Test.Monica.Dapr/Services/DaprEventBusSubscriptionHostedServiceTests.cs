@@ -40,7 +40,10 @@ public sealed class DaprEventBusSubscriptionHostedServiceTests
         builder.AddMonica(monica =>
         {
             monica.ConfigureTypeDiscovery(static options => options.ExcludeDefault());
-            var dapr = monica.AddEventBus().UseDaprProvider();
+            var eventBus = monica.AddEventBus()
+                .AddKeyedEventBus("orders", useDistributed: true)
+                .AddKeyedEventBus("payments", useDistributed: true);
+            var dapr = eventBus.UseDaprProvider();
             dapr.AddKeyedDaprEventBus("orders", static _ => { });
             dapr.AddKeyedDaprEventBus("payments", static _ => { });
         });
@@ -86,7 +89,11 @@ public sealed class DaprEventBusSubscriptionHostedServiceTests
             dependencyProvider,
             "payments");
         var builder = Host.CreateApplicationBuilder();
-        new ModuleHostedService(new ModuleHostedServiceOption()).ConfigureServices(builder.Services);
+        builder.AddMonica(monica =>
+        {
+            monica.ConfigureTypeDiscovery(static options => options.ExcludeDefault());
+            monica.AddHostedService();
+        });
         builder.Services.AddSingleton<IHostedService>(first);
         builder.Services.AddSingleton<IHostedService>(second);
 

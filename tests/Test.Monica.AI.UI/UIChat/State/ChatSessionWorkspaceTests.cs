@@ -1,6 +1,7 @@
 using AwesomeAssertions;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
 using Monica.AI.Chat.Abstractions;
 using Monica.AI.Chat.Facades;
@@ -9,6 +10,7 @@ using Monica.AI.Models;
 using Monica.AI.UI.UIChat.Models;
 using Monica.AI.UI.UIChat.Providers.Browser;
 using Monica.AI.UI.UIChat.State;
+using Monica.Core.Modularity.Extensions;
 using Monica.Core.Results;
 using Monica.Modules;
 using Test.Monica.AI.UI.Support;
@@ -138,16 +140,17 @@ public sealed class ChatSessionWorkspaceTests
 
             _ = await provider.SetCurrentSessionAsync(PARTITION, "session-1", saved.Revision, ct);
 
-            var moduleOptions = new ModuleAIOption();
-            var services = new ServiceCollection();
-            services.AddLogging();
-            services.AddSingleton<IOptions<ModuleAIOption>>(Options.Create(moduleOptions));
-            new ModuleAI(moduleOptions).ConfigureServices(services);
-            services.RemoveAll<IChatHistoryProvider>();
-            services.RemoveAll<IChatHistoryPartitionResolver>();
-            services.AddSingleton<IChatHistoryProvider>(provider);
-            services.AddSingleton<IChatHistoryPartitionResolver>(new FixedPartitionResolver());
-            var serviceProvider = services.BuildServiceProvider();
+            var builder = Host.CreateApplicationBuilder();
+            builder.AddMonica(monica =>
+            {
+                monica.ConfigureTypeDiscovery(static options => options.ExcludeDefault());
+                monica.AddAI();
+            });
+            builder.Services.RemoveAll<IChatHistoryProvider>();
+            builder.Services.RemoveAll<IChatHistoryPartitionResolver>();
+            builder.Services.AddSingleton<IChatHistoryProvider>(provider);
+            builder.Services.AddSingleton<IChatHistoryPartitionResolver>(new FixedPartitionResolver());
+            var serviceProvider = builder.Services.BuildServiceProvider();
             var workspace = new ChatSessionWorkspace(serviceProvider.GetRequiredService<ChatHistoryFacade>());
             return new WorkspaceFixture(serviceProvider, provider, workspace);
         }

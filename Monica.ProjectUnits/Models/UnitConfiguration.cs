@@ -1,10 +1,9 @@
-using System.Reflection;
 using Microsoft.Extensions.Options;
 using Monica.Configuration.Annotations;
 using Monica.Configuration.Models;
-using Monica.ProjectUnits.Services.Support;
+using Monica.Core.TypeDiscovery.Models;
 using Monica.Modules;
-using Monica.Tool.Extensions;
+using Monica.ProjectUnits.Services.Support;
 
 namespace Monica.ProjectUnits.Models;
 
@@ -36,10 +35,10 @@ public enum EConfigurationUsageType
 /// </summary>
 public class UnitConfiguration : ProjectUnit
 {
-    internal UnitConfiguration(Type type, ProjectUnitCatalog catalog)
-        : base(type, EProjectUnitType.Configuration, catalog)
+    internal UnitConfiguration(BusinessTypeShape shape, ProjectUnitCatalog catalog)
+        : base(shape, EProjectUnitType.Configuration, catalog)
     {
-        DefinitionKey = type.FullName ?? type.Name;
+        DefinitionKey = shape.Type.FullName ?? shape.Type.Name;
     }
 
     /// <summary>
@@ -73,11 +72,6 @@ public class UnitConfiguration : ProjectUnit
         ConfigurationDependencies[dependentUnit] = usageType;
     }
 
-    protected override bool VerifyTypeConstrain()
-    {
-        return Type.IsClass && Type.GetCustomAttribute<ConfigurationAttribute>() is not null;
-    }
-
     protected override ProjectUnitNamingRule? DefaultConventionOption()
     {
         return new ProjectUnitNamingRule
@@ -86,21 +80,16 @@ public class UnitConfiguration : ProjectUnit
         };
     }
 
-    internal static ProjectUnit? Create(Type type, ProjectUnitCatalog catalog)
+    internal static ProjectUnit Create(
+        BusinessTypeShape shape,
+        ProjectUnitCatalog catalog,
+        ConfigurationAttribute configuration)
     {
-        var unit = new UnitConfiguration(type, catalog);
-
-        unit = unit.VerifyType() ? unit : null;
-        if (unit != null)
-        {
-            if (type.GetCustomAttribute<ConfigurationAttribute>() is {} info)
-            {
-                unit.DefinitionKey = info.DefinitionKey ?? type.FullName ?? type.Name;
-                unit.Title = info.DisplayName ?? unit.Title;
-                unit.Description = info.Description ?? unit.Description;
-            }
-        }
-
+        var unit = new UnitConfiguration(shape, catalog);
+        unit.CheckNameConventionMode();
+        unit.DefinitionKey = configuration.DefinitionKey ?? shape.Type.FullName ?? shape.Type.Name;
+        unit.Title = configuration.DisplayName ?? unit.Title;
+        unit.Description = configuration.Description ?? unit.Description;
 
         return unit;
     }

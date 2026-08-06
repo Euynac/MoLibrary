@@ -7,7 +7,6 @@ using Microsoft.Extensions.Logging;
 using Monica.Core;
 using Monica.Core.Modularity;
 using Monica.Core.Modularity.Abstractions;
-using Monica.Core.Modularity.Annotations;
 using Monica.Core.Modularity.Models;
 using Monica.DevOps.FileOps.Abstractions;
 using Monica.DevOps.FileOps.Facades;
@@ -20,18 +19,16 @@ using Monica.Core.Results;
 // ReSharper disable once CheckNamespace
 namespace Monica.Modules;
 
-[ModuleKey(BuiltInModuleKey.FileOps)]
-public class ModuleFileOps(ModuleFileOpsOption option)
-    : WebModuleBase<ModuleFileOps, ModuleFileOpsOption, ModuleFileOpsGuide>(option)
+public class ModuleFileOps : MonicaModule<ModuleFileOpsOption>, IWebModule
 {
-    public override void ClaimDependencies()
+    public override void Describe(ModuleDescriptor module)
     {
-        DependsOnModule<ModuleLocalizationGuide>().Register()
-            .AddResource<FileOpsResource>();
+        module.Require<ModuleLocalization, ModuleLocalizationOption>();
     }
 
-    public override void ConfigureServices(IServiceCollection services)
+    public override void ConfigureServices(ModuleContext<ModuleFileOpsOption> context)
     {
+        var services = context.Services;
         services.AddSingleton<IFileOpsRuntimeConfigStore, FileOpsRuntimeConfigStore>();
         services.AddSingleton<FileOpsPathPolicy>();
         services.AddSingleton<FileOpsTextInspector>();
@@ -41,9 +38,10 @@ public class ModuleFileOps(ModuleFileOpsOption option)
         services.AddScoped<FileOpsFacade>();
     }
 
-    public override void ConfigureEndpoints(IApplicationBuilder app)
+    public override void ConfigureEndpoints(WebModuleContext<ModuleFileOpsOption> context)
     {
-        UseEndpoints(app, endpoints =>
+        var app = context.ApplicationBuilder;
+        UseEndpoints(context, endpoints =>
         {
             var tagName = Option.GetApiGroupName();
 
@@ -239,16 +237,17 @@ public static class ModuleFileOpsBuilderExtensions
 {
     extension(IMonicaBuilder builder)
     {
-        public ModuleFileOpsGuide AddFileOps(Action<ModuleFileOpsOption>? action = null)
+        public ModuleRegistration<ModuleFileOps, ModuleFileOpsOption> AddFileOps(Action<ModuleFileOpsOption>? action = null)
         {
-            return builder.AddModule<ModuleFileOps, ModuleFileOpsOption, ModuleFileOpsGuide>(action);
+            var module = builder.AddModule<ModuleFileOps, ModuleFileOpsOption>(action);
+            module.Require<ModuleLocalization, ModuleLocalizationOption>()
+                .AddResource<FileOpsResource>();
+            return module;
         }
     }
 }
 
-public class ModuleFileOpsGuide : WebModuleGuide<ModuleFileOps, ModuleFileOpsOption, ModuleFileOpsGuide>
-{
-}
+
 
 public class ModuleFileOpsOption : MinimalApiModuleOptions<ModuleFileOps>
 {
