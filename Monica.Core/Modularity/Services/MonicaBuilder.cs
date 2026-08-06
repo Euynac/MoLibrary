@@ -58,6 +58,7 @@ internal sealed class MonicaBuilder(IHostApplicationBuilder hostBuilder, MonicaA
         _isCompleted = true;
 
         application.ModuleSystemConfiguration.Validate();
+        application.ModuleSystemConfiguration.ValidateEnvironment(hostBuilder.Environment);
         application.Modules.RegisterServices(hostBuilder);
     }
 

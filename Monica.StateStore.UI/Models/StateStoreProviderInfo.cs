@@ -1,4 +1,5 @@
 using Monica.StateStore.Abstractions;
+using Monica.Core.Modularity.Diagnostics.Models;
 
 namespace Monica.StateStore.UI.Models;
 
@@ -11,16 +12,6 @@ public class StateStoreProviderInfo
     /// Service key. Null means the non-keyed default provider.
     /// </summary>
     public string? ServiceKey { get; init; }
-
-    /// <summary>
-    /// Dashboard-facing service label.
-    /// </summary>
-    public string DisplayName => ServiceKey ?? "默认";
-
-    /// <summary>
-    /// Provider family display name such as Redis or Dapr.
-    /// </summary>
-    public string ProviderDisplayName { get; init; } = string.Empty;
 
     /// <summary>
     /// Provider type.
@@ -56,6 +47,18 @@ public class StateStoreProviderInfo
     /// Concrete implementation type name.
     /// </summary>
     public string ImplementationType { get; init; } = "";
+
+    /// <summary>
+    /// Gets the detached module-option diagnostics target associated with this provider, when the provider is owned by
+    /// a known StateStore provider module.
+    /// </summary>
+    public ModuleOptionDiagnosticsTarget? OptionDiagnosticsTarget { get; init; }
+
+    /// <summary>Gets whether this provider has a dedicated module-option diagnostics source.</summary>
+    public bool HasOptionDiagnostics => OptionDiagnosticsTarget is not null;
+
+    /// <summary>Gets the stable identity used to rebind provider-detail state.</summary>
+    public string UniqueId => $"{ProviderType}:{ServiceKey ?? "default"}:{ImplementationType}";
 
     /// <summary>
     /// Whether the provider supports pattern-based key browsing.
@@ -97,14 +100,4 @@ public class StateStoreProviderInfo
     /// </summary>
     public bool SupportsKeyTTL => BrowserFeatures.HasFlag(EStateStoreBrowserFeatures.TimeToLive);
 
-    /// <summary>
-    /// Localized provider type fallback label.
-    /// </summary>
-    public string ProviderTypeName => ProviderType switch
-    {
-        EStateStoreProviderType.Memory => "内存缓存",
-        EStateStoreProviderType.Redis => "Redis",
-        EStateStoreProviderType.Dapr => "Dapr",
-        _ => "未知"
-    };
 }

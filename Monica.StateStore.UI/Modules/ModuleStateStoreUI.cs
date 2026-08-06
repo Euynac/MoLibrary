@@ -1,4 +1,5 @@
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Monica.Core;
 using Monica.Core.Modularity;
 using Monica.Core.Modularity.Abstractions;
@@ -7,6 +8,8 @@ using Monica.StateStore.UI.Localization;
 using Monica.StateStore.UI.Services;
 using Monica.StateStore.UI.Services.Browser;
 using Monica.UI.Shell.Models;
+using Monica.UI.Localization;
+using Monica.UI.UIModuleSystem.Support;
 using MudBlazor;
 
 // ReSharper disable once CheckNamespace
@@ -24,7 +27,8 @@ public static class ModuleStateStoreUIBuilderExtensions
         {
             var registration = builder.AddModule<ModuleStateStoreUI, ModuleStateStoreUIOption>(action);
             registration.Require<ModuleLocalization, ModuleLocalizationOption>()
-                .AddResource<StateStoreResource>();
+                .AddResource<StateStoreResource>()
+                .AddResource<ModuleSystemResource>();
             registration.Require<ModuleShellUI, ModuleShellUIOption>()
                 .RegisterUIComponents(registry => registry.RegisterLocalizedPage<UIStateStoreDashboardPage, StateStoreResource>(
                     UIStateStoreDashboardPage.PAGE_URL,
@@ -57,6 +61,8 @@ public class ModuleStateStoreUI : MonicaModule<ModuleStateStoreUIOption>, IUIMod
         services.AddSingleton<IStateStoreBrowserApi, MemoryStateStoreBrowserApi>();
         services.AddSingleton<IStateStoreBrowserApi, DaprStateStoreBrowserApi>();
         services.AddSingleton<IStateStoreBrowserApi, FallbackStateStoreBrowserApi>();
+        // Provider option diagnostics share the same host authorization boundary as the module workbench.
+        services.TryAddScoped<ModuleSystemWorkbenchAccess>();
     }
 }
 

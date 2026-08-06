@@ -38,13 +38,24 @@
     "Labels": {
       "KeyScanning": "Key Scanning",
       "NoScanningSupport": "No Scanning Support",
-      "Distributed": "Distributed"
+      "Distributed": "Distributed",
+      "HasConfiguration": "Configuration"
     },
     "Actions": {
       "ViewDetails": "View Details"
     }
   },
   "ProviderDetail": {
+    "Tabs": {
+      "Overview": "Overview",
+      "ConfigOptions": "Configuration Options"
+    },
+    "ProviderTypes": {
+      "Memory": "In-memory",
+      "Redis": "Redis",
+      "Dapr": "Dapr",
+      "Unknown": "Unknown"
+    },
     "Labels": {
       "ProviderType": "Provider Type",
       "ServiceKey": "Service Key",
@@ -61,8 +72,16 @@
       "QueryState": "Query State",
       "BulkOperations": "Bulk Operations"
     },
+    "Messages": {
+      "ConfigurationDescription": "Finalized module configuration for this provider and service profile.",
+      "ConfigurationShared": "This provider uses shared infrastructure and has no dedicated module configuration projection.",
+      "ConfigurationAccessDenied": "You are not authorized to inspect this provider's configuration diagnostics.",
+      "ConfigurationLoadFailed": "Configuration diagnostics are unavailable. The ModuleSystem diagnostics facade may not be registered for this host.",
+      "ConfigurationDefaultProfileFallback": "Service key '{0}' does not own a named option profile, so this view shows the provider module's shared default configuration."
+    },
     "Actions": {
-      "Close": "Close"
+      "Close": "Close",
+      "RetryConfiguration": "Retry"
     }
   },
   "KeyExplorer": {

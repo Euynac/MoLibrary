@@ -39,6 +39,12 @@ public sealed class ModuleAIEndpoints : MonicaModule<ModuleAIEndpointsOption>, I
     }
 
     /// <inheritdoc />
+    public override void ValidateOptions(ModuleAIEndpointsOption options, string? profileName)
+    {
+        options.Normalize();
+    }
+
+    /// <inheritdoc />
     public override void ConfigureEndpoints(WebModuleContext<ModuleAIEndpointsOption> context)
     {
         var app = context.ApplicationBuilder;
@@ -56,19 +62,16 @@ public sealed class ModuleAIEndpoints : MonicaModule<ModuleAIEndpointsOption>, I
 /// </summary>
 public sealed class ModuleAIEndpointsOption : ModuleOptions<ModuleAIEndpoints>
 {
-    private string _routePrefix = "/ai";
-
     /// <summary>
     /// Gets or sets the route prefix used by all AI endpoints. The default is <c>/ai</c>.
+    /// The value is normalized to one leading slash when module options are finalized.
     /// </summary>
-    public string RoutePrefix
+    public string RoutePrefix { get; set; } = "/ai";
+
+    internal void Normalize()
     {
-        get => _routePrefix;
-        set
-        {
-            ArgumentException.ThrowIfNullOrWhiteSpace(value);
-            _routePrefix = "/" + value.Trim().Trim('/');
-        }
+        ArgumentException.ThrowIfNullOrWhiteSpace(RoutePrefix);
+        RoutePrefix = "/" + RoutePrefix.Trim().Trim('/');
     }
 }
 

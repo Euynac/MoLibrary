@@ -134,7 +134,7 @@ public sealed class ModuleSystemWorkbenchSessionTests
         await session.EnsureAssemblyInventoryLoadedAsync();
 
         session.SelectedModuleOptionsState.Should().Be(ModuleSystemLazyLoadState.Ready);
-        session.SelectedModuleOptions!.Entries.Should().ContainSingle();
+        session.SelectedModuleOptions!.Entries.Should().NotBeEmpty();
         session.AssemblyInventoryState.Should().Be(ModuleSystemLazyLoadState.Ready);
         session.FilteredAssemblies.First().Outcome.Should().Be(TypeDiscoveryAssemblyOutcome.ResolutionFailed);
     }
@@ -247,6 +247,214 @@ public sealed class ModuleSystemWorkbenchSessionTests
     }
 
     [Fact]
+    public async Task Closing_the_drawer_clears_revealed_configuration_and_requires_fresh_authorization()
+    {
+        var authorizationChecks = 0;
+        var optionCalls = 0;
+        await using var session = new ModuleSystemWorkbenchSession(
+            ModuleSystemWorkbenchTestData.Calls(options: key =>
+            {
+                optionCalls++;
+                return Res.Ok(ModuleSystemWorkbenchTestData.Options(
+                    key,
+                    ModuleOptionDiagnosticsExposureMode.RevealSensitive));
+            }),
+            authorize: () =>
+            {
+                authorizationChecks++;
+                return Task.FromResult(true);
+            });
+        await session.InitializeAsync();
+        session.SelectModule(session.Snapshot!.Modules[0]);
+
+        await session.EnsureSelectedModuleOptionsLoadedAsync();
+        session.SelectedModuleOptions!.ContainsRevealedSensitiveValues.Should().BeTrue();
+        session.CloseModuleDrawer();
+
+        session.SelectedModuleOptions.Should().BeNull();
+        session.SelectedModuleOptionsState.Should().Be(ModuleSystemLazyLoadState.NotRequested);
+
+        session.SelectModule(session.Snapshot.Modules[0]);
+        await session.EnsureSelectedModuleOptionsLoadedAsync();
+
+        optionCalls.Should().Be(2);
+        authorizationChecks.Should().Be(3, "initial snapshot plus both sensitive option disclosures are authorized");
+    }
+
+    [Fact]
+    public async Task Leaving_the_configuration_tab_clears_revealed_configuration_and_requires_fresh_authorization()
+    {
+        var authorizationChecks = 0;
+        var optionCalls = 0;
+        await using var session = new ModuleSystemWorkbenchSession(
+            ModuleSystemWorkbenchTestData.Calls(options: key =>
+            {
+                optionCalls++;
+                return Res.Ok(ModuleSystemWorkbenchTestData.Options(
+                    key,
+                    ModuleOptionDiagnosticsExposureMode.RevealSensitive));
+            }),
+            authorize: () =>
+            {
+                authorizationChecks++;
+                return Task.FromResult(true);
+            });
+        await session.InitializeAsync();
+        session.SelectModule(session.Snapshot!.Modules[0]);
+        session.SetModuleDrawerTab(3);
+
+        await session.EnsureSelectedModuleOptionsLoadedAsync();
+        session.SelectedModuleOptions!.ContainsRevealedSensitiveValues.Should().BeTrue();
+        session.SetModuleDrawerTab(1);
+
+        session.SelectedModuleOptions.Should().BeNull();
+        session.SelectedModuleOptionsState.Should().Be(ModuleSystemLazyLoadState.NotRequested);
+
+        session.SetModuleDrawerTab(3);
+        await session.EnsureSelectedModuleOptionsLoadedAsync();
+
+        optionCalls.Should().Be(2);
+        authorizationChecks.Should().Be(3, "initial snapshot plus both sensitive option disclosures are authorized");
+    }
+
+    [Fact]
+    public async Task Leaving_the_configuration_tab_preserves_the_redacted_projection_cache()
+    {
+        var authorizationChecks = 0;
+        var optionCalls = 0;
+        await using var session = new ModuleSystemWorkbenchSession(
+            ModuleSystemWorkbenchTestData.Calls(options: key =>
+            {
+                optionCalls++;
+                return Res.Ok(ModuleSystemWorkbenchTestData.Options(key));
+            }),
+            authorize: () =>
+            {
+                authorizationChecks++;
+                return Task.FromResult(true);
+            });
+        await session.InitializeAsync();
+        session.SelectModule(session.Snapshot!.Modules[0]);
+        session.SetModuleDrawerTab(3);
+
+        await session.EnsureSelectedModuleOptionsLoadedAsync();
+        session.SetModuleDrawerTab(1);
+
+        session.SelectedModuleOptions!.ExposureMode.Should().Be(ModuleOptionDiagnosticsExposureMode.Redacted);
+        session.SelectedModuleOptionsState.Should().Be(ModuleSystemLazyLoadState.Ready);
+
+        session.SetModuleDrawerTab(3);
+        await session.EnsureSelectedModuleOptionsLoadedAsync();
+
+        optionCalls.Should().Be(1);
+        authorizationChecks.Should().Be(2, "the initial snapshot and first redacted projection require authorization");
+    }
+
+    [Theory]
+    [InlineData(OptionRequestInvalidation.CloseDrawer)]
+    [InlineData(OptionRequestInvalidation.SwitchModule)]
+    [InlineData(OptionRequestInvalidation.Refresh)]
+    [InlineData(OptionRequestInvalidation.OpenHelp)]
+    [InlineData(OptionRequestInvalidation.LeaveConfigurationTab)]
+    [InlineData(OptionRequestInvalidation.SelectSameModuleSummary)]
+    [InlineData(OptionRequestInvalidation.SelectTraceSpan)]
+    [InlineData(OptionRequestInvalidation.ReconcileSnapshot)]
+    [InlineData(OptionRequestInvalidation.Dispose)]
+    public async Task Pending_option_authorization_cannot_restore_configuration_after_lifetime_invalidation(
+        OptionRequestInvalidation invalidation)
+    {
+        var authorizationStarted = new TaskCompletionSource(
+            TaskCreationOptions.RunContinuationsAsynchronously);
+        var authorizationCompletion = new TaskCompletionSource<bool>(
+            TaskCreationOptions.RunContinuationsAsynchronously);
+        var authorizationChecks = 0;
+        var optionCalls = 0;
+        Task<bool> AuthorizeAsync()
+        {
+            var authorizationCheck = Interlocked.Increment(ref authorizationChecks);
+            if (authorizationCheck == 1)
+            {
+                return Task.FromResult(true);
+            }
+
+            if (authorizationCheck == 2)
+            {
+                authorizationStarted.TrySetResult();
+                return authorizationCompletion.Task;
+            }
+
+            return Task.FromResult(true);
+        }
+
+        await using var session = new ModuleSystemWorkbenchSession(
+            ModuleSystemWorkbenchTestData.Calls(options: key =>
+            {
+                Interlocked.Increment(ref optionCalls);
+                return Res.Ok(ModuleSystemWorkbenchTestData.Options(
+                    key,
+                    ModuleOptionDiagnosticsExposureMode.RevealSensitive));
+            }),
+            authorize: AuthorizeAsync);
+        await session.InitializeAsync();
+        var originalModule = session.Snapshot!.Modules[0];
+        session.SelectModule(originalModule);
+        session.SetModuleDrawerTab(3);
+
+        var pendingLoad = session.EnsureSelectedModuleOptionsLoadedAsync();
+        await authorizationStarted.Task.WaitAsync(TestContext.Current.CancellationToken);
+
+        switch (invalidation)
+        {
+            case OptionRequestInvalidation.CloseDrawer:
+                session.CloseModuleDrawer();
+                break;
+            case OptionRequestInvalidation.SwitchModule:
+                session.SelectModule(session.Snapshot.Modules[1]);
+                break;
+            case OptionRequestInvalidation.Refresh:
+                await session.RefreshAsync();
+                break;
+            case OptionRequestInvalidation.OpenHelp:
+                session.SetHelpDrawer(true);
+                break;
+            case OptionRequestInvalidation.LeaveConfigurationTab:
+                session.SetModuleDrawerTab(1);
+                break;
+            case OptionRequestInvalidation.SelectSameModuleSummary:
+                session.SelectModule(originalModule, drawerTabIndex: 0);
+                break;
+            case OptionRequestInvalidation.SelectTraceSpan:
+                session.SelectTraceSpan(session.Snapshot.TraceSpans.Single());
+                break;
+            case OptionRequestInvalidation.ReconcileSnapshot:
+                var requestVersion = session.BeginSnapshotRequest(isInitial: false);
+                session.CompleteSnapshotRequest(
+                        requestVersion,
+                        Res.Ok(ModuleSystemWorkbenchTestData.Snapshot(revision: 2)))
+                    .Should().BeTrue();
+                break;
+            case OptionRequestInvalidation.Dispose:
+                await session.DisposeAsync();
+                break;
+            default:
+                throw new ArgumentOutOfRangeException(nameof(invalidation), invalidation, null);
+        }
+
+        var stateAfterInvalidation = session.SelectedModuleOptionsState;
+        authorizationCompletion.SetResult(true);
+        await pendingLoad;
+
+        stateAfterInvalidation.Should().Be(ModuleSystemLazyLoadState.NotRequested);
+        optionCalls.Should().Be(0);
+        session.SelectedModuleOptions.Should().BeNull();
+        if (invalidation != OptionRequestInvalidation.Dispose)
+        {
+            session.SelectModule(originalModule);
+            session.SelectedModuleOptionsState.Should().Be(ModuleSystemLazyLoadState.NotRequested);
+        }
+    }
+
+    [Fact]
     public async Task Polling_stops_as_soon_as_a_final_snapshot_is_observed()
     {
         var calls = 0;
@@ -287,4 +495,17 @@ public sealed class ModuleSystemWorkbenchSessionTests
     private sealed class FirstGraphModule;
     private sealed class DisabledBridgeModule;
     private sealed class IsolatedGraphModule;
+
+    public enum OptionRequestInvalidation
+    {
+        CloseDrawer,
+        SwitchModule,
+        Refresh,
+        OpenHelp,
+        LeaveConfigurationTab,
+        SelectSameModuleSummary,
+        SelectTraceSpan,
+        ReconcileSnapshot,
+        Dispose
+    }
 }

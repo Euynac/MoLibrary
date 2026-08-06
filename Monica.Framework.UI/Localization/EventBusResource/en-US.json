@@ -169,6 +169,7 @@
     "Detail": {
       "Tabs": {
         "Info": "Provider Info",
+        "Options": "Configuration",
         "Subscriptions": "Subscriptions"
       },
       "Fields": {
@@ -180,12 +181,20 @@
       },
       "States": {
         "NoSubscriptions": "This provider has no related subscriptions."
+      },
+      "Options": {
+        "NoDedicatedConfiguration": "This provider uses shared infrastructure and has no dedicated module configuration projection.",
+        "AccessDenied": "You are not authorized to inspect this provider's configuration diagnostics.",
+        "LoadFailed": "Configuration diagnostics are unavailable. The ModuleSystem diagnostics facade may not be registered for this host.",
+        "DefaultProfileFallback": "Service key '{0}' does not own a named option profile, so this view shows the provider module's shared default configuration.",
+        "Retry": "Retry"
       }
     },
     "Capabilities": {
       "BulkPublish": "Bulk Publish",
       "Streaming": "Streaming",
       "DeadLetterQueue": "Dead Letter Queue",
+      "HasOptions": "Configuration",
       "Basic": "Basic"
     },
     "Columns": {

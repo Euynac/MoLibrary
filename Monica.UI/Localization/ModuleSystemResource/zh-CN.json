@@ -29,6 +29,7 @@
     "ModuleCatalog": "模块目录",
     "InspectModule": "查看模块 {0}",
     "CloseModuleDrawer": "关闭模块详情",
+    "OptionDiagnostics": "模块配置诊断",
     "DependencyGraph": "包含 {0} 个模块和 {1} 条直接边的依赖图",
     "DependencyInspector": "选中模块的依赖检查器",
     "DependencyTable": "直接依赖边表格"
@@ -376,7 +377,7 @@
       "Summary": "摘要",
       "Performance": "性能",
       "Dependencies": "依赖",
-      "Options": "安全配置",
+      "Configuration": "配置",
       "Errors": "错误"
     },
     "Fields": {
@@ -403,13 +404,31 @@
       "Empty": "无"
     },
     "Options": {
-      "Privacy": "仅提供显式批准的有界标量、密钥存在性和集合数量。原始配置对象绝不会跨越此边界。",
-      "Loading": "正在加载安全配置投影…",
-      "Failed": "无法加载安全配置投影。",
-      "Empty": "此模块未选择公开任何安全配置诊断。",
+      "RedactedPolicyTitle": "完整配置视图",
+      "RedactedPolicy": "列出模块配置类型的全部公开属性。敏感值会被脱敏，嵌套值按边界显示；计算属性和仅运行时值仍会显示属性和类型。",
+      "RevealPolicyTitle": "敏感调试披露已启用",
+      "RevealPolicy": "此实时视图仅限开发环境，并会绕过敏感标记的脱敏处理，因此可能显示凭据、令牌和私有端点。请避免截图或共享录屏。",
+      "Projection": "模块配置",
+      "ProjectionSummary": "模块配置摘要",
+      "Profile": "配置档案 · {0}",
+      "VisibleCount": "已显示 {0} 项",
+      "SensitiveCount": "敏感 {0} 项",
+      "ProjectionTruncated": "部分嵌套值或集合项已截断",
+      "EntryTruncated": "部分显示",
+      "Loading": "正在加载模块配置…",
+      "Failed": "无法加载模块配置。",
+      "UnfinalizedTitle": "配置仍在完成中",
+      "Unfinalized": "模块配置完成后即可查看完整配置。",
+      "EmptyTitle": "没有公开配置属性",
+      "Empty": "此配置类型未定义任何公开配置属性。",
       "Present": "已配置（值已脱敏）",
       "NotPresent": "未配置",
-      "Truncated": "{0}…（已截断）"
+      "Truncated": "{0}…（已截断）",
+      "CollectionCount": "{0} 项",
+      "ObjectCount": "{0} 个属性",
+      "Unsupported": "仅显示类型（不读取值）",
+      "SensitiveProtected": "敏感 · 已保护",
+      "SensitiveRevealed": "敏感 · 可见"
     },
     "Errors": {
       "Empty": "没有与此模块关联的结构化诊断发现。"
@@ -432,7 +451,7 @@
     },
     "Privacy": {
       "Title": "安全诊断",
-      "Description": "导出会省略配置、路径、堆栈和原始失败；实时配置必须显式加入安全投影白名单。"
+      "Description": "导出始终省略配置、路径、堆栈和原始失败。实时视图列出全部公开配置属性；除非宿主启用仅限开发环境的敏感调试模式，否则已标记的敏感值会被脱敏。"
     }
   },
   "Enums": {
@@ -512,10 +531,13 @@
       "PartialTypeLoad": "部分类型加载"
     },
     "OptionKind": {
-      "Value": "批准的标量值",
-      "Presence": "仅显示存在性",
+      "Value": "标量值",
+      "Presence": "受保护的存在性",
       "Count": "集合数量",
-      "Unavailable": "不可用"
+      "Object": "配置组",
+      "Collection": "集合",
+      "Unavailable": "不可用",
+      "Unsupported": "仅显示类型（不读取值）"
     },
     "SpanState": {
       "Complete": "已完成",

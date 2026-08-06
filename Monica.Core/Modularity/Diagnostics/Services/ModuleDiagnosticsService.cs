@@ -1,8 +1,10 @@
+using System.Collections.Concurrent;
 using System.Collections.Immutable;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
 using Monica.Core.Modularity.Abstractions;
 using Monica.Core.Modularity.Diagnostics.Models;
+using Monica.Core.Modularity.Diagnostics.Services.Support;
 using Monica.Core.Modularity.Models;
 using Monica.Core.Modularity.Models.Internal;
 using Monica.Core.Modularity.State;
@@ -23,8 +25,13 @@ internal sealed class ModuleDiagnosticsService
     private readonly object _snapshotGate = new();
     private readonly string _compositionId = Guid.NewGuid().ToString("N");
     private readonly Lazy<TypeDiscoveryAssemblyInventory> _assemblyInventory;
+    private readonly ModuleOptionDiagnosticsProjector _optionProjector = new();
+    private readonly ConcurrentDictionary<
+        OptionDiagnosticsCacheKey,
+        Lazy<ModuleOptionDiagnostics>> _redactedOptions = new();
     private ModuleDiagnosticsSnapshot? _cachedSnapshot;
     private long _cachedRevision = -1;
+    private Action? _optionProjectionStarting;
     private Action? _snapshotProjectionStarting;
     private ModuleDiagnosticsSnapshot? _terminalSnapshot;
 
@@ -47,6 +54,13 @@ internal sealed class ModuleDiagnosticsService
     /// </summary>
     internal void SetSnapshotProjectionObserver(Action? observer) =>
         Volatile.Write(ref _snapshotProjectionStarting, observer);
+
+    /// <summary>
+    /// Installs an internal observation hook used to verify that concurrent redacted requests share one projection.
+    /// Production composition leaves this hook unset.
+    /// </summary>
+    internal void SetOptionProjectionObserver(Action? observer) =>
+        Volatile.Write(ref _optionProjectionStarting, observer);
 
     /// <summary>Gets the current observation, retaining one stable reference after startup becomes terminal.</summary>
     internal ModuleDiagnosticsSnapshot GetSnapshot()
@@ -106,13 +120,31 @@ internal sealed class ModuleDiagnosticsService
     /// <summary>Gets the lazily constructed assembly inventory for this host.</summary>
     internal TypeDiscoveryAssemblyInventory GetAssemblyInventory() => _assemblyInventory.Value;
 
-    /// <summary>Gets the explicitly allow-listed option projection for one active module.</summary>
-    internal ModuleOptionDiagnostics GetModuleOptions(ModuleKey moduleKey)
+    /// <summary>Gets the public option-property catalog with bounded values for one active module and profile.</summary>
+    internal ModuleOptionDiagnostics GetModuleOptions(
+        ModuleKey moduleKey,
+        ModuleOptionProfileSelector? selector = null)
     {
+        selector ??= ModuleOptionProfileSelector.Default;
         if (!_application.Dependencies.ModuleTypesByKey.TryGetValue(moduleKey, out var moduleType)
             || !_application.Modules.Registrations.TryGetValue(moduleType, out var registration))
         {
             throw new KeyNotFoundException($"Module '{moduleKey}' is not part of this composition.");
+        }
+
+        var exposureMode = _application.ModuleSystem.OptionDiagnosticsExposureMode;
+        switch (exposureMode)
+        {
+            case ModuleOptionDiagnosticsExposureMode.Redacted:
+                break;
+            case ModuleOptionDiagnosticsExposureMode.RevealSensitive when !_hostEnvironment.IsDevelopment():
+                throw new InvalidOperationException(
+                    "Sensitive module option diagnostics are available only in the Development environment.");
+            case ModuleOptionDiagnosticsExposureMode.RevealSensitive:
+                break;
+            default:
+                throw new InvalidOperationException(
+                    $"Unsupported module option diagnostics exposure mode '{exposureMode}'.");
         }
 
         var optionTypeName = registration.ModuleOptionType.FullName ?? registration.ModuleOptionType.Name;
@@ -121,17 +153,53 @@ internal sealed class ModuleDiagnosticsService
             return new ModuleOptionDiagnostics
             {
                 ModuleKey = moduleKey,
-                OptionTypeName = optionTypeName
+                OptionTypeName = optionTypeName,
+                RequestedProfileName = selector.ProfileName,
+                ExposureMode = exposureMode
             };
         }
 
-        return _options.OptionDiagnostics.TryGetValue(moduleType, out var projection)
-            ? projection.Project(moduleKey, registration.ModuleOption)
-            : new ModuleOptionDiagnostics
+        var resolved = ResolveOption(registration, selector);
+
+        ModuleOptionDiagnostics ProjectOptions()
+        {
+            Volatile.Read(ref _optionProjectionStarting)?.Invoke();
+            return _optionProjector.Project(
+                moduleKey,
+                selector.ProfileName,
+                resolved.ProfileName,
+                resolved.Resolution,
+                registration.ModuleOptionType,
+                resolved.Options,
+                exposureMode,
+                _options.GetOptionDiagnosticsPolicy(moduleType));
+        }
+
+        if (exposureMode == ModuleOptionDiagnosticsExposureMode.RevealSensitive)
+        {
+            return ProjectOptions();
+        }
+
+        var cacheKey = new OptionDiagnosticsCacheKey(moduleKey, selector.Mode, selector.ProfileName);
+        var cached = _redactedOptions.GetOrAdd(
+            cacheKey,
+            _ => new Lazy<ModuleOptionDiagnostics>(
+                ProjectOptions,
+                LazyThreadSafetyMode.ExecutionAndPublication));
+        try
+        {
+            return cached.Value;
+        }
+        catch
+        {
+            if (_redactedOptions.TryGetValue(cacheKey, out var current)
+                && ReferenceEquals(current, cached))
             {
-                ModuleKey = moduleKey,
-                OptionTypeName = optionTypeName
-            };
+                _redactedOptions.TryRemove(cacheKey, out _);
+            }
+
+            throw;
+        }
     }
 
     /// <summary>Creates a portable export with process-local keys and sensitive details removed.</summary>
@@ -202,6 +270,40 @@ internal sealed class ModuleDiagnosticsService
         };
     }
 
+    private static ResolvedModuleOption ResolveOption(
+        ModuleRegistrationState registration,
+        ModuleOptionProfileSelector selector)
+    {
+        if (selector.Mode == ModuleOptionProfileSelectionMode.Default)
+        {
+            return new ResolvedModuleOption(
+                registration.ModuleOption,
+                null,
+                ModuleOptionProfileResolution.Default);
+        }
+
+        var profileName = selector.ProfileName
+            ?? throw new InvalidOperationException("A named module option selector requires a profile name.");
+        if (registration.TryGetProfile(profileName, out var profile))
+        {
+            return new ResolvedModuleOption(
+                profile,
+                profileName,
+                ModuleOptionProfileResolution.Named);
+        }
+
+        if (selector.Mode == ModuleOptionProfileSelectionMode.NamedOrDefault)
+        {
+            return new ResolvedModuleOption(
+                registration.ModuleOption,
+                null,
+                ModuleOptionProfileResolution.DefaultFallback);
+        }
+
+        throw new KeyNotFoundException(
+            $"Named option profile '{profileName}' was not declared for {registration.ModuleType.Name}.");
+    }
+
     private ModuleDiagnosticsSource CaptureSource()
     {
         while (true)
@@ -235,6 +337,16 @@ internal sealed class ModuleDiagnosticsService
                 topologicalOrder);
         }
     }
+
+    private readonly record struct OptionDiagnosticsCacheKey(
+        ModuleKey ModuleKey,
+        ModuleOptionProfileSelectionMode SelectionMode,
+        string? ProfileName);
+
+    private sealed record ResolvedModuleOption(
+        object Options,
+        string? ProfileName,
+        ModuleOptionProfileResolution Resolution);
 
     private ModuleDiagnosticsSnapshot ProjectSnapshot(ModuleDiagnosticsSource source)
     {

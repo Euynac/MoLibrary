@@ -1,4 +1,5 @@
 using Monica.EventBus.Abstractions;
+using Monica.Core.Modularity.Diagnostics.Models;
 
 namespace Monica.Framework.UI.UIEventBus.Models;
 
@@ -31,6 +32,15 @@ public class EventBusProviderInfo
     /// Implementation type name
     /// </summary>
     public string ImplementationType { get; init; } = "";
+
+    /// <summary>
+    /// Gets the detached module-option diagnostics target associated with this provider, when a provider module owns
+    /// its configuration.
+    /// </summary>
+    public ModuleOptionDiagnosticsTarget? OptionDiagnosticsTarget { get; init; }
+
+    /// <summary>Gets whether this provider has a module-option diagnostics source.</summary>
+    public bool HasOptionDiagnostics => OptionDiagnosticsTarget is not null;
 
     /// <summary>
     /// Total number of subscriptions

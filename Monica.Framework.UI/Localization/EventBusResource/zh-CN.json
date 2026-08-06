@@ -169,6 +169,7 @@
     "Detail": {
       "Tabs": {
         "Info": "Provider 信息",
+        "Options": "配置选项",
         "Subscriptions": "订阅列表"
       },
       "Fields": {
@@ -180,12 +181,20 @@
       },
       "States": {
         "NoSubscriptions": "该 Provider 没有关联的订阅"
+      },
+      "Options": {
+        "NoDedicatedConfiguration": "该 Provider 使用共享基础设施，没有独立的模块配置投影。",
+        "AccessDenied": "当前用户无权检查此 Provider 的配置诊断。",
+        "LoadFailed": "无法读取配置诊断；当前 Host 可能未注册 ModuleSystem 诊断门面。",
+        "DefaultProfileFallback": "服务键“{0}”没有独立的命名配置档案，因此这里展示 Provider 模块的共享默认配置。",
+        "Retry": "重试"
       }
     },
     "Capabilities": {
       "BulkPublish": "批量发布",
       "Streaming": "流式订阅",
       "DeadLetterQueue": "死信队列",
+      "HasOptions": "有配置项",
       "Basic": "基础功能"
     },
     "Columns": {

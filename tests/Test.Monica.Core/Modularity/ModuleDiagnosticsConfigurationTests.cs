@@ -1,7 +1,6 @@
 using AwesomeAssertions;
 using Monica.Core;
 using Monica.Core.Modularity.Diagnostics.Models;
-using Monica.Core.Modularity.Models;
 using Xunit;
 
 namespace Test.Monica.Core.Modularity;
@@ -50,56 +49,48 @@ public sealed class ModuleDiagnosticsConfigurationTests
     }
 
     [Fact]
-    public void ExposeValue_WhenGetterReturnsAComplexType_ShouldRejectTheDeclaration()
+    public void OptionDiagnosticsExposureMode_WhenNotConfigured_ShouldDefaultToRedacted()
     {
-        var builder = new ModuleOptionDiagnosticsBuilder<OptionProjectionProbe>();
+        var options = new MonicaModuleSystemOptions();
 
-        Action declare = () => builder.ExposeValue(
-            "ComplexGraph",
-            static options => options.ComplexGraph);
-
-        declare.Should().Throw<ArgumentException>()
-            .WithParameterName("getter")
-            .WithMessage("*not a supported diagnostic scalar*");
-    }
-
-    [Theory]
-    [InlineData(0)]
-    [InlineData(1025)]
-    public void ExposeValue_WhenRepresentationLimitIsOutsideTheBound_ShouldRejectTheDeclaration(
-        int maxLength)
-    {
-        var builder = new ModuleOptionDiagnosticsBuilder<OptionProjectionProbe>();
-
-        Action declare = () => builder.ExposeValue(
-            "BoundedValue",
-            static options => options.Value,
-            maxLength);
-
-        declare.Should().Throw<ArgumentOutOfRangeException>()
-            .WithParameterName(nameof(maxLength));
+        options.OptionDiagnosticsExposureMode.Should().Be(ModuleOptionDiagnosticsExposureMode.Redacted);
     }
 
     [Fact]
-    public void Project_WhenAllowListedGettersFail_ShouldKeepEveryEntryUnavailable()
+    public void Validate_WhenOptionDiagnosticsExposureModeIsUndefined_ShouldRejectTheConfiguration()
     {
-        var builder = new ModuleOptionDiagnosticsBuilder<OptionProjectionProbe>()
-            .ExposeValue<string>("Value", static _ => throw new InvalidOperationException("value failure"))
-            .ExposePresence("Secret", static _ => throw new InvalidOperationException("presence failure"))
-            .ExposeCount("Items", static _ => throw new InvalidOperationException("count failure"));
-        var projection = builder.Build(typeof(DiagnosticsProviderModule));
+        var options = new MonicaModuleSystemOptions
+        {
+            OptionDiagnosticsExposureMode = (ModuleOptionDiagnosticsExposureMode)int.MaxValue
+        };
 
-        var diagnostics = projection.Project(
-            ModuleKey.FromModuleType(typeof(DiagnosticsProviderModule)),
-            new OptionProjectionProbe());
+        Action validate = options.Validate;
 
-        diagnostics.IsConfigured.Should().BeTrue();
-        diagnostics.Entries.Should().HaveCount(3);
-        diagnostics.Entries.Should().OnlyContain(entry =>
-            entry.Kind == ModuleOptionDiagnosticValueKind.Unavailable
-            && entry.Value == null
-            && entry.IsPresent == null
-            && entry.Count == null);
+        validate.Should().Throw<ArgumentOutOfRangeException>()
+            .WithParameterName(nameof(MonicaModuleSystemOptions.OptionDiagnosticsExposureMode));
+    }
+
+    [Fact]
+    public void Build_WhenNestedSensitivityRulesAreConfigured_ShouldRetainExactPaths()
+    {
+        var policy = new ModuleOptionDiagnosticsPolicy<OptionProjectionProbe>()
+            .MarkSensitive(static option => option.Nested.Secret);
+
+        var definition = policy.Build();
+
+        definition.SensitivePaths.Should().Equal("Nested.Secret");
+    }
+
+    [Fact]
+    public void MarkSensitive_WhenExpressionIsNotAPropertyPath_ShouldRejectTheRule()
+    {
+        var policy = new ModuleOptionDiagnosticsPolicy<OptionProjectionProbe>();
+
+        Action configure = () => policy.MarkSensitive(static option => option.Value.ToUpperInvariant());
+
+        configure.Should().Throw<ArgumentException>()
+            .WithParameterName("property")
+            .WithMessage("*property path*");
     }
 
     private static void SetBudget(
@@ -134,8 +125,14 @@ public sealed class ModuleDiagnosticsConfigurationTests
 
     private sealed class OptionProjectionProbe
     {
-        internal string Value { get; init; } = "value";
+        public string Value { get; init; } = "value";
 
-        internal object ComplexGraph { get; } = new();
+        public NestedOptionProjectionProbe Nested { get; init; } = new();
+
+    }
+
+    private sealed class NestedOptionProjectionProbe
+    {
+        public string Secret { get; init; } = "secret";
     }
 }

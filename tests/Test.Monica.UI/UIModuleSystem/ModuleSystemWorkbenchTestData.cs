@@ -122,21 +122,109 @@ internal static class ModuleSystemWorkbenchTestData
         ResolutionFailedCount = 1
     };
 
-    internal static ModuleOptionDiagnostics Options(ModuleKey key) => new()
-    {
-        ModuleKey = key,
-        OptionTypeName = "TestOptions",
-        IsConfigured = true,
-        Entries =
-        [
-            new ModuleOptionDiagnosticEntry
+    internal static ModuleOptionDiagnostics Options(
+        ModuleKey key,
+        ModuleOptionDiagnosticsExposureMode exposureMode = ModuleOptionDiagnosticsExposureMode.Redacted) => new()
+        {
+            ModuleKey = key,
+            OptionTypeName = "TestOptions",
+            ExposureMode = exposureMode,
+            IsFinalized = true,
+            SensitiveEntryCount = 1,
+            ContainsRevealedSensitiveValues = exposureMode == ModuleOptionDiagnosticsExposureMode.RevealSensitive,
+            Entries =
+            [
+                new ModuleOptionDiagnosticEntry
+                {
+                    Name = "Transport",
+                    Path = "Transport",
+                    TypeName = "TestTransportOptions",
+                    Kind = ModuleOptionDiagnosticValueKind.Object,
+                    Children =
+                    [
+                        new ModuleOptionDiagnosticEntry
+                        {
+                            Name = "Endpoint",
+                            Path = "Transport.Endpoint",
+                            TypeName = "Uri",
+                            Kind = ModuleOptionDiagnosticValueKind.Value,
+                            Value = "https://service.test"
+                        },
+                        SensitiveEntry(exposureMode),
+                        new ModuleOptionDiagnosticEntry
+                        {
+                            Name = "RetryDelays",
+                            Path = "Transport.RetryDelays",
+                            TypeName = "TimeSpan[]",
+                            Kind = ModuleOptionDiagnosticValueKind.Collection,
+                            Count = 2,
+                            Children =
+                            [
+                                new ModuleOptionDiagnosticEntry
+                                {
+                                    Name = "[0]",
+                                    Path = "Transport.RetryDelays[0]",
+                                    TypeName = "TimeSpan",
+                                    Kind = ModuleOptionDiagnosticValueKind.Value,
+                                    Value = "00:00:01"
+                                },
+                                new ModuleOptionDiagnosticEntry
+                                {
+                                    Name = "[1]",
+                                    Path = "Transport.RetryDelays[1]",
+                                    TypeName = "TimeSpan",
+                                    Kind = ModuleOptionDiagnosticValueKind.Value,
+                                    Value = "00:00:03"
+                                }
+                            ]
+                        }
+                    ]
+                },
+                new ModuleOptionDiagnosticEntry
+                {
+                    Name = "EndpointCount",
+                    Path = "EndpointCount",
+                    TypeName = "Int32",
+                    Kind = ModuleOptionDiagnosticValueKind.Count,
+                    Count = 2
+                },
+                new ModuleOptionDiagnosticEntry
+                {
+                    Name = "RuntimeClient",
+                    Path = "RuntimeClient",
+                    TypeName = "TestRuntimeClient",
+                    Kind = ModuleOptionDiagnosticValueKind.Unsupported
+                },
+                new ModuleOptionDiagnosticEntry
+                {
+                    Name = "FaultingGetter",
+                    Path = "FaultingGetter",
+                    TypeName = "String",
+                    Kind = ModuleOptionDiagnosticValueKind.Unavailable
+                }
+            ]
+        };
+
+    private static ModuleOptionDiagnosticEntry SensitiveEntry(ModuleOptionDiagnosticsExposureMode exposureMode) =>
+        exposureMode == ModuleOptionDiagnosticsExposureMode.RevealSensitive
+            ? new ModuleOptionDiagnosticEntry
             {
-                Name = "EndpointCount",
-                Kind = ModuleOptionDiagnosticValueKind.Count,
-                Count = 2
+                Name = "ApiToken",
+                Path = "Transport.ApiToken",
+                TypeName = "String",
+                Kind = ModuleOptionDiagnosticValueKind.Value,
+                Value = "debug-secret-value",
+                IsSensitive = true
             }
-        ]
-    };
+            : new ModuleOptionDiagnosticEntry
+            {
+                Name = "ApiToken",
+                Path = "Transport.ApiToken",
+                TypeName = "String",
+                Kind = ModuleOptionDiagnosticValueKind.Presence,
+                IsPresent = true,
+                IsSensitive = true
+            };
 
     internal static ModuleDiagnosticsExport Export(int schemaVersion = ModuleDiagnosticsSnapshot.CURRENT_SCHEMA_VERSION) => new()
     {

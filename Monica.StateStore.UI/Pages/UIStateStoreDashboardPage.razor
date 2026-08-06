@@ -42,7 +42,7 @@
             @if (DefaultProvider is not null)
             {
                 <MudChip T="string" Variant="Variant.Outlined" Icon="@Icons.Material.Filled.Star">
-                    @L["Dashboard:Summary:DefaultProvider", DefaultProvider.DisplayName]
+                    @L["Dashboard:Summary:DefaultProvider", L.GetProviderDisplayName(DefaultProvider)]
                 </MudChip>
             }
         </div>

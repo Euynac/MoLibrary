@@ -48,13 +48,32 @@ public sealed class ModuleDiagnosticsFacade
     }
 
     /// <summary>
-    /// Gets explicitly allow-listed diagnostics for one module's finalized default options.
+    /// Gets a complete public-property catalog with bounded values for one module's finalized default options.
     /// </summary>
     /// <param name="moduleKey">The host-local module diagnostic key.</param>
     public Res<ModuleOptionDiagnostics> GetModuleOptions(ModuleKey moduleKey)
     {
         return Execute(
             () => _diagnostics.GetModuleOptions(moduleKey),
+            "Failed to load the module option diagnostics.");
+    }
+
+    /// <summary>
+    /// Gets a complete public-property catalog with bounded values for a named option profile or an explicitly
+    /// permitted default fallback.
+    /// </summary>
+    /// <param name="moduleKey">The host-local module diagnostic key.</param>
+    /// <param name="selector">The exact profile-selection and fallback behavior.</param>
+    public Res<ModuleOptionDiagnostics> GetModuleOptions(
+        ModuleKey moduleKey,
+        ModuleOptionProfileSelector selector)
+    {
+        return Execute(
+            () =>
+            {
+                ArgumentNullException.ThrowIfNull(selector);
+                return _diagnostics.GetModuleOptions(moduleKey, selector);
+            },
             "Failed to load the module option diagnostics.");
     }
 

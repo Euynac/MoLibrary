@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Localization;
 using Monica.Core;
 using Monica.Core.Modularity;
@@ -11,8 +12,10 @@ using Monica.Core.Results;
 using Monica.Framework.UI.Localization;
 using Monica.Framework.UI.Pages;
 using Monica.UI.Shell.Models;
+using Monica.UI.Localization;
 using Monica.Framework.UI.UIEventBus.State;
 using Monica.Framework.UI.UIEventBus.Support;
+using Monica.UI.UIModuleSystem.Support;
 using MudBlazor;
 
 // ReSharper disable once CheckNamespace
@@ -30,7 +33,8 @@ public static class ModuleEventBusUIBuilderExtensions
         {
             var registration = builder.AddModule<ModuleEventBusUI, ModuleEventBusUIOption>(action);
             registration.Require<ModuleLocalization, ModuleLocalizationOption>()
-                .AddResource<EventBusResource>();
+                .AddResource<EventBusResource>()
+                .AddResource<ModuleSystemResource>();
             registration.Require<ModuleShellUI, ModuleShellUIOption>()
                 .RegisterUIComponents(registry => registry.RegisterLocalizedPage<UIEventBusMonitorPage, EventBusResource>(
                     UIEventBusMonitorPage.PAGE_URL,
@@ -65,6 +69,9 @@ public class ModuleEventBusUI : MonicaModule<ModuleEventBusUIOption>, IWebHostRe
 
         // Register the Provider Discovery Service
         services.AddSingleton<EventBusProviderDiscoveryService>();
+
+        // Provider option diagnostics share the same host authorization boundary as the module workbench.
+        services.TryAddScoped<ModuleSystemWorkbenchAccess>();
     }
 
     public override void ConfigureEndpoints(WebModuleContext<ModuleEventBusUIOption> context)

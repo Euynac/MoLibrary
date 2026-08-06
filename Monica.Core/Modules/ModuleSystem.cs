@@ -53,33 +53,36 @@ public class ModuleSystem : MonicaModule<ModuleSystemOption>
 /// </summary>
 public class ModuleSystemOption : ModuleOptions<ModuleSystem>
 {
-    private readonly Dictionary<Type, IModuleOptionDiagnosticsProjection> _optionDiagnostics = [];
+    private readonly Dictionary<Type, ModuleOptionDiagnosticsPolicyDefinition> _optionDiagnosticsPolicies = [];
 
     /// <summary>
-    /// Explicitly allow-lists a safe diagnostics projection for one module's finalized default options.
+    /// Adds host-owned sensitivity rules to the automatic bounded diagnostics for one module. Every public,
+    /// non-indexed option property is cataloged automatically; registration is needed only when an attribute or the
+    /// built-in sensitive-name classification is insufficient.
     /// </summary>
     /// <typeparam name="TModule">The module that owns the options.</typeparam>
     /// <typeparam name="TOptions">The module's concrete option type.</typeparam>
-    /// <param name="configure">Declares bounded scalar, presence-only, or count-only entries.</param>
+    /// <param name="configure">Marks direct or nested properties as sensitive.</param>
     /// <returns>This option object.</returns>
     /// <exception cref="InvalidOperationException">Thrown when the same module is configured more than once.</exception>
-    public ModuleSystemOption ExposeModuleOptions<TModule, TOptions>(
-        Action<ModuleOptionDiagnosticsBuilder<TOptions>> configure)
+    public ModuleSystemOption ConfigureModuleOptionDiagnostics<TModule, TOptions>(
+        Action<ModuleOptionDiagnosticsPolicy<TOptions>> configure)
         where TModule : MonicaModule<TOptions>, new()
         where TOptions : ModuleOptions<TModule>, new()
     {
         ArgumentNullException.ThrowIfNull(configure);
-        var builder = new ModuleOptionDiagnosticsBuilder<TOptions>();
-        configure(builder);
-        if (!_optionDiagnostics.TryAdd(typeof(TModule), builder.Build(typeof(TModule))))
+        var policy = new ModuleOptionDiagnosticsPolicy<TOptions>();
+        configure(policy);
+        if (!_optionDiagnosticsPolicies.TryAdd(typeof(TModule), policy.Build()))
         {
             throw new InvalidOperationException(
-                $"Safe option diagnostics for {typeof(TModule).Name} were configured more than once.");
+                $"Module option diagnostics policy for {typeof(TModule).Name} was configured more than once.");
         }
 
         return this;
     }
 
-    internal IReadOnlyDictionary<Type, IModuleOptionDiagnosticsProjection> OptionDiagnostics =>
-        _optionDiagnostics;
+    internal ModuleOptionDiagnosticsPolicyDefinition GetOptionDiagnosticsPolicy(Type moduleType) =>
+        _optionDiagnosticsPolicies.GetValueOrDefault(moduleType)
+        ?? ModuleOptionDiagnosticsPolicyDefinition.Empty;
 }

@@ -2,6 +2,7 @@ using Monica.Core;
 using Monica.Core.Modularity;
 using Monica.Core.Modularity.Abstractions;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Monica.UI.Localization;
 using Monica.UI.Pages;
 using Monica.UI.Shell.Models;
@@ -59,7 +60,7 @@ public class ModuleSystemUI : MonicaModule<ModuleSystemUIOption>, IUIModule
     public override void ConfigureServices(ModuleContext<ModuleSystemUIOption> context)
     {
         context.Services.AddSingleton<ModuleSystemWorkbenchSessionFactory>();
-        context.Services.AddScoped<ModuleSystemWorkbenchAccess>();
+        context.Services.TryAddScoped<ModuleSystemWorkbenchAccess>();
     }
 }
 
@@ -76,8 +77,8 @@ public class ModuleSystemUIOption : ModuleOptions<ModuleSystemUI>
     public bool EnableOutsideDevelopment { get; set; }
 
     /// <summary>
-    /// Gets or sets the host authorization policy required for every non-Development workbench circuit.
-    /// The policy is evaluated before Core diagnostics are invoked and before the shell shows navigation.
+    /// Gets or sets the host authorization policy evaluated before Core diagnostics are invoked and before the shell
+    /// shows navigation. When configured, the policy is honored in every environment, including Development.
     /// </summary>
     public string? AuthorizationPolicy { get; set; }
 }

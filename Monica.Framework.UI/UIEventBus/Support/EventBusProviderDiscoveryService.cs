@@ -4,6 +4,7 @@ using Microsoft.Extensions.Logging;
 using Monica.Core;
 using Monica.Core.Extensions;
 using Monica.Core.Modularity;
+using Monica.Core.Modularity.Diagnostics.Models;
 using Monica.Core.Modularity.Models;
 using Monica.Core.Modularity.Services;
 using Monica.Core.Results;
@@ -31,12 +32,17 @@ public class EventBusProviderDiscoveryService(
     /// Cached provider snapshots for efficient lookup
     /// </summary>
     private IReadOnlyList<ModuleRuntimeSnapshot>? _providerSnapshots;
+    private ModuleRuntimeSnapshot? _eventBusSnapshot;
 
     /// <summary>
     /// Gets or initializes the cached provider snapshots
     /// </summary>
     private IReadOnlyList<ModuleRuntimeSnapshot> ProviderSnapshots =>
         _providerSnapshots ??= application.Modules.GetModuleProviders(typeof(ModuleEventBus));
+
+    private ModuleRuntimeSnapshot? EventBusSnapshot =>
+        _eventBusSnapshot ??= application.Modules.RuntimeSnapshots.FirstOrDefault(snapshot =>
+            snapshot.ModuleType == typeof(ModuleEventBus));
 
     #region Provider Discovery
 
@@ -198,13 +204,18 @@ public class EventBusProviderDiscoveryService(
             ProviderType = EventBusProviderKind.Local,
             Capabilities = EventBusProviderCapabilities.None,
             IsDistributed = false,
-            ImplementationType = provider.GetType().Name
+            ImplementationType = provider.GetType().Name,
+            OptionDiagnosticsTarget = EventBusSnapshot is { } snapshot
+                ? new ModuleOptionDiagnosticsTarget(
+                    snapshot.ModuleKey,
+                    ModuleOptionProfileSelector.Default)
+                : null
         };
     }
 
     private EventBusProviderInfo CreateDistributedProviderInfo(string? serviceKey, IDistributedEventBus provider)
     {
-        var (providerType, capabilities) = GetDistributedProviderMetadata(provider);
+        var (providerType, capabilities, providerSnapshot) = GetDistributedProviderMetadata(provider);
 
         return new EventBusProviderInfo
         {
@@ -212,14 +223,24 @@ public class EventBusProviderDiscoveryService(
             ProviderType = providerType,
             Capabilities = capabilities,
             IsDistributed = true,
-            ImplementationType = provider.GetType().Name
+            ImplementationType = provider.GetType().Name,
+            OptionDiagnosticsTarget = providerSnapshot is null
+                ? null
+                : new ModuleOptionDiagnosticsTarget(
+                    providerSnapshot.ModuleKey,
+                    serviceKey is null
+                        ? ModuleOptionProfileSelector.Default
+                        : ModuleOptionProfileSelector.NamedOrDefault(serviceKey))
         };
     }
 
     /// <summary>
     /// Gets provider metadata from the registered IEventBusProviderModule
     /// </summary>
-    private (EventBusProviderKind providerType, EventBusProviderCapabilities capabilities) GetDistributedProviderMetadata(
+    private (
+        EventBusProviderKind ProviderType,
+        EventBusProviderCapabilities Capabilities,
+        ModuleRuntimeSnapshot? ProviderSnapshot) GetDistributedProviderMetadata(
         IDistributedEventBus provider)
     {
         var providerTypeName = provider.GetType().FullName ?? "";
@@ -231,11 +252,11 @@ public class EventBusProviderDiscoveryService(
             // Match by checking if the provider type name contains the module's display name
             if (providerTypeName.Contains(moduleProvider.DisplayName, StringComparison.OrdinalIgnoreCase))
             {
-                return (moduleProvider.ProviderType, moduleProvider.Capabilities);
+                return (moduleProvider.ProviderType, moduleProvider.Capabilities, snapshot);
             }
         }
 
-        return (EventBusProviderKind.Unknown, EventBusProviderCapabilities.None);
+        return (EventBusProviderKind.Unknown, EventBusProviderCapabilities.None, null);
     }
 
     /// <summary>

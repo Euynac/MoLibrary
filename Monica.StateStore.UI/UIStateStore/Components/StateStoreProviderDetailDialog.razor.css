@@ -1,8 +1,19 @@
 .provider-dialog {
+    min-width: 0;
+    padding-top: 4px;
+}
+
+.provider-dialog ::deep .mud-tabs {
+    width: 100%;
+    min-width: 0;
+}
+
+.provider-dialog__tab-content {
     display: flex;
+    min-width: 0;
     flex-direction: column;
     gap: 16px;
-    padding-top: 4px;
+    padding: 16px;
 }
 
 ::deep .mud-secondary-text {
@@ -52,12 +63,19 @@
     align-items: center;
     justify-content: space-between;
     gap: 12px;
+    min-width: 0;
 }
 
 .provider-dialog__chips {
     display: flex;
     flex-wrap: wrap;
     gap: 8px;
+}
+
+.provider-dialog__configuration-loading {
+    display: grid;
+    min-height: 8rem;
+    place-items: center;
 }
 
 @media (max-width: 720px) {

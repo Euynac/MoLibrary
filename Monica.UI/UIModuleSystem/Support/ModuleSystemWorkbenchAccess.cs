@@ -24,8 +24,13 @@ public sealed class ModuleSystemWorkbenchAccess(
         }
 
         var configured = options.Value;
+        if (!configured.EnableOutsideDevelopment)
+        {
+            return false;
+        }
+
         var policyName = configured.AuthorizationPolicy;
-        if (!configured.EnableOutsideDevelopment || string.IsNullOrWhiteSpace(policyName))
+        if (string.IsNullOrWhiteSpace(policyName))
         {
             return false;
         }
@@ -54,11 +59,7 @@ public sealed class ModuleSystemWorkbenchAccess(
                 policy.Requirements);
             return authorization.Succeeded;
         }
-        catch (InvalidOperationException)
-        {
-            return false;
-        }
-        catch (ArgumentException)
+        catch (Exception exception) when (exception is not OperationCanceledException)
         {
             return false;
         }

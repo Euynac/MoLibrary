@@ -38,13 +38,24 @@
     "Labels": {
       "KeyScanning": "Key 扫描",
       "NoScanningSupport": "不支持扫描",
-      "Distributed": "分布式"
+      "Distributed": "分布式",
+      "HasConfiguration": "有配置项"
     },
     "Actions": {
       "ViewDetails": "查看详情"
     }
   },
   "ProviderDetail": {
+    "Tabs": {
+      "Overview": "概览",
+      "ConfigOptions": "配置选项"
+    },
+    "ProviderTypes": {
+      "Memory": "内存缓存",
+      "Redis": "Redis",
+      "Dapr": "Dapr",
+      "Unknown": "未知"
+    },
     "Labels": {
       "ProviderType": "Provider 类型",
       "ServiceKey": "服务键",
@@ -61,8 +72,16 @@
       "QueryState": "查询状态",
       "BulkOperations": "批量操作"
     },
+    "Messages": {
+      "ConfigurationDescription": "展示此 Provider 及其服务配置档案的最终模块配置。",
+      "ConfigurationShared": "该 Provider 使用共享基础设施，没有独立的模块配置投影。",
+      "ConfigurationAccessDenied": "当前用户无权检查此 Provider 的配置诊断。",
+      "ConfigurationLoadFailed": "无法读取配置诊断；当前 Host 可能未注册 ModuleSystem 诊断门面。",
+      "ConfigurationDefaultProfileFallback": "服务键“{0}”没有独立的命名配置档案，因此这里展示 Provider 模块的共享默认配置。"
+    },
     "Actions": {
-      "Close": "关闭"
+      "Close": "关闭",
+      "RetryConfiguration": "重试"
     }
   },
   "KeyExplorer": {

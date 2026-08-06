@@ -1,0 +1,102 @@
+@using Microsoft.Extensions.Localization
+@using Monica.Core.Modularity.Diagnostics.Models
+@using Monica.UI.Localization
+@inject IStringLocalizer<ModuleSystemResource> L
+
+<section class="option-diagnostics" aria-label="@L["Aria:OptionDiagnostics"]">
+    @if (Diagnostics.ExposureMode == ModuleOptionDiagnosticsExposureMode.RevealSensitive)
+    {
+        <MudAlert Severity="Severity.Error" Variant="Variant.Filled" Dense="true">
+            <div class="option-policy-message">
+                <strong>@L["ModuleDrawer:Options:RevealPolicyTitle"]</strong>
+                <span>@L["ModuleDrawer:Options:RevealPolicy"]</span>
+            </div>
+        </MudAlert>
+    }
+    else
+    {
+        <MudAlert Severity="Severity.Info" Variant="Variant.Outlined" Dense="true">
+            <div class="option-policy-message">
+                <strong>@L["ModuleDrawer:Options:RedactedPolicyTitle"]</strong>
+                <span>@L["ModuleDrawer:Options:RedactedPolicy"]</span>
+            </div>
+        </MudAlert>
+    }
+
+    <div class="option-projection-header">
+        <div class="option-projection-identity">
+            <span>@L["ModuleDrawer:Options:Projection"]</span>
+            <strong title="@Diagnostics.OptionTypeName">@Diagnostics.OptionTypeName</strong>
+            @if (!string.IsNullOrWhiteSpace(Diagnostics.ProfileName))
+            {
+                <small>@L["ModuleDrawer:Options:Profile", Diagnostics.ProfileName]</small>
+            }
+        </div>
+        <div class="option-projection-metrics" aria-label="@L["ModuleDrawer:Options:ProjectionSummary"]">
+            <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Color="Color.Primary">
+                @L["ModuleDrawer:Options:VisibleCount", DisplayedEntryCount]
+            </MudChip>
+            @if (Diagnostics.SensitiveEntryCount > 0)
+            {
+                <MudChip T="string"
+                         Size="Size.Small"
+                         Variant="Variant.Outlined"
+                         Color="@(Diagnostics.ContainsRevealedSensitiveValues ? Color.Error : Color.Warning)">
+                    @L["ModuleDrawer:Options:SensitiveCount", Diagnostics.SensitiveEntryCount]
+                </MudChip>
+            }
+            @if (Diagnostics.IsTruncated)
+            {
+                <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Color="Color.Warning">
+                    @L["ModuleDrawer:Options:ProjectionTruncated"]
+                </MudChip>
+            }
+        </div>
+    </div>
+
+    @if (!Diagnostics.IsFinalized)
+    {
+        <div class="option-empty-state option-empty-state--pending" role="status">
+            <span class="option-empty-state__icon">
+                <MudIcon Icon="@Icons.Material.Filled.HourglassTop" Size="Size.Large" />
+            </span>
+            <div>
+                <strong>@L["ModuleDrawer:Options:UnfinalizedTitle"]</strong>
+                <span>@L["ModuleDrawer:Options:Unfinalized"]</span>
+            </div>
+        </div>
+    }
+    else if (Diagnostics.Entries.IsEmpty)
+    {
+        <div class="option-empty-state" role="status">
+            <span class="option-empty-state__icon">
+                <MudIcon Icon="@Icons.Material.Filled.FilterAltOff" Size="Size.Large" />
+            </span>
+            <div>
+                <strong>@L["ModuleDrawer:Options:EmptyTitle"]</strong>
+                <span>@L["ModuleDrawer:Options:Empty"]</span>
+            </div>
+        </div>
+    }
+    else
+    {
+        <div class="option-tree" role="list">
+            @foreach (var entry in Diagnostics.Entries)
+            {
+                <ModuleOptionDiagnosticEntryView Entry="@entry"
+                                                 Level="0"
+                                                 RevealSensitiveMode="@(Diagnostics.ExposureMode == ModuleOptionDiagnosticsExposureMode.RevealSensitive)" />
+            }
+        </div>
+    }
+</section>
+
+@code {
+    [Parameter, EditorRequired]
+    public ModuleOptionDiagnostics Diagnostics { get; set; } = default!;
+
+    private int DisplayedEntryCount => Diagnostics.Entries.Sum(CountDisplayedEntries);
+
+    private static int CountDisplayedEntries(ModuleOptionDiagnosticEntry entry) =>
+        1 + entry.Children.Sum(CountDisplayedEntries);
+}

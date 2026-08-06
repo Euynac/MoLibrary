@@ -84,8 +84,7 @@
     margin-top: .5rem;
 }
 
-.drawer-fact-row,
-.option-row {
+.drawer-fact-row {
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -93,21 +92,6 @@
     min-width: 0;
     padding: .65rem;
     border-bottom: 1px solid var(--mud-palette-lines-default);
-}
-
-.option-row > span {
-    display: grid;
-    min-width: 0;
-}
-
-.option-row small {
-    color: var(--mud-palette-text-secondary);
-}
-
-.option-row code {
-    max-width: 50%;
-    overflow-wrap: anywhere;
-    text-align: end;
 }
 
 .drawer-loading,

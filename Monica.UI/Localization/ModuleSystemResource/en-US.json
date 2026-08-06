@@ -29,6 +29,7 @@
     "ModuleCatalog": "Module catalog",
     "InspectModule": "Inspect module {0}",
     "CloseModuleDrawer": "Close module details",
+    "OptionDiagnostics": "Module configuration diagnostics",
     "DependencyGraph": "Dependency graph with {0} modules and {1} direct edges",
     "DependencyInspector": "Selected module dependency inspector",
     "DependencyTable": "Direct dependency edge table"
@@ -376,7 +377,7 @@
       "Summary": "Summary",
       "Performance": "Performance",
       "Dependencies": "Dependencies",
-      "Options": "Safe options",
+      "Configuration": "Configuration",
       "Errors": "Errors"
     },
     "Fields": {
@@ -403,13 +404,31 @@
       "Empty": "None"
     },
     "Options": {
-      "Privacy": "Only explicitly approved bounded scalars, secret presence, and collection counts are available. Raw option objects never cross this boundary.",
-      "Loading": "Loading the safe option projection…",
-      "Failed": "The safe option projection could not be loaded.",
-      "Empty": "This module has not opted in to safe option diagnostics.",
+      "RedactedPolicyTitle": "Complete configuration view",
+      "RedactedPolicy": "Every public property on the module option type is listed. Sensitive values are redacted and nested values are bounded; computed and runtime-only values remain identified by property and type.",
+      "RevealPolicyTitle": "Sensitive debug disclosure is active",
+      "RevealPolicy": "Sensitive markers are bypassed in this Development-only live view, so credentials, tokens, and private endpoints may be visible. Avoid screenshots or shared recordings.",
+      "Projection": "MODULE CONFIGURATION",
+      "ProjectionSummary": "Module configuration summary",
+      "Profile": "Profile · {0}",
+      "VisibleCount": "{0} entries shown",
+      "SensitiveCount": "{0} sensitive",
+      "ProjectionTruncated": "Some nested values or collection items are truncated",
+      "EntryTruncated": "Partially shown",
+      "Loading": "Loading module configuration…",
+      "Failed": "Module configuration could not be loaded.",
+      "UnfinalizedTitle": "Configuration is still being finalized",
+      "Unfinalized": "Module configuration will be available after option finalization completes.",
+      "EmptyTitle": "No public configuration properties",
+      "Empty": "This option type defines no public configuration properties.",
       "Present": "Configured (value redacted)",
       "NotPresent": "Not configured",
-      "Truncated": "{0}… (truncated)"
+      "Truncated": "{0}… (truncated)",
+      "CollectionCount": "{0} item(s)",
+      "ObjectCount": "{0} properties",
+      "Unsupported": "Value not projected",
+      "SensitiveProtected": "Sensitive · protected",
+      "SensitiveRevealed": "Sensitive · visible"
     },
     "Errors": {
       "Empty": "No structured finding is related to this module."
@@ -432,7 +451,7 @@
     },
     "Privacy": {
       "Title": "Safe diagnostics",
-      "Description": "Exports omit options, paths, stack traces, and raw failures; live options require explicit allow-list projection."
+      "Description": "Exports always omit options, paths, stack traces, and raw failures. The live view lists all public configuration properties; marked sensitive values are redacted unless the host enables Development-only sensitive debugging."
     }
   },
   "Enums": {
@@ -512,10 +531,13 @@
       "PartialTypeLoad": "Partial type load"
     },
     "OptionKind": {
-      "Value": "Approved scalar value",
-      "Presence": "Presence only",
+      "Value": "Scalar value",
+      "Presence": "Protected presence",
       "Count": "Collection count",
-      "Unavailable": "Unavailable"
+      "Object": "Configuration group",
+      "Collection": "Collection",
+      "Unavailable": "Unavailable",
+      "Unsupported": "Value not projected"
     },
     "SpanState": {
       "Complete": "Complete",

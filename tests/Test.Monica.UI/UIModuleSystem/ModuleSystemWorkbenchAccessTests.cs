@@ -27,6 +27,28 @@ public sealed class ModuleSystemWorkbenchAccessTests
     }
 
     [Fact]
+    public async Task Development_remains_available_when_a_production_policy_is_configured()
+    {
+        var services = new ServiceCollection();
+        services.AddLogging();
+        services.AddAuthorizationCore(options => options.AddPolicy(
+            "module-diagnostics",
+            policy => policy.RequireAuthenticatedUser()));
+        services.AddSingleton<AuthenticationStateProvider>(
+            new FixedAuthenticationStateProvider(authenticated: false));
+        await using var provider = services.BuildServiceProvider();
+        var access = new ModuleSystemWorkbenchAccess(
+            new TestHostEnvironment(Environments.Development),
+            Options.Create(new ModuleSystemUIOption
+            {
+                AuthorizationPolicy = "module-diagnostics"
+            }),
+            provider);
+
+        (await access.IsAuthorizedAsync()).Should().BeTrue();
+    }
+
+    [Fact]
     public async Task Production_denies_access_unless_enablement_and_a_policy_are_both_present()
     {
         using var services = new ServiceCollection().BuildServiceProvider();

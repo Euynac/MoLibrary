@@ -1,5 +1,7 @@
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Monica.Core.Modularity.Abstractions;
+using Monica.Core.Modularity.Diagnostics.Models;
 
 namespace Monica.Core;
 
@@ -47,6 +49,11 @@ public interface IMonicaModuleSystemOptions
     /// Gets whether Monica should append an HTTP wildcard listener for <see cref="MonicaEndpointPort"/>.
     /// </summary>
     bool AutoAddMonicaHttpListener { get; }
+
+    /// <summary>
+    /// Gets the disclosure mode used when module configuration is explicitly requested through diagnostics.
+    /// </summary>
+    ModuleOptionDiagnosticsExposureMode OptionDiagnosticsExposureMode { get; }
 
     /// <summary>
     /// Gets the host used when Monica appends an HTTP listener for <see cref="MonicaEndpointPort"/>.
@@ -126,6 +133,18 @@ public sealed class MonicaModuleSystemOptions : IMonicaModuleSystemOptions
     public bool AutoAddMonicaHttpListener { get; set; } = true;
 
     /// <summary>
+    /// Gets or sets the disclosure mode used by module option diagnostics. Every public option property is represented
+    /// by name and type. The default exposes bounded ordinary values while redacting credentials and other sensitive
+    /// values. Set
+    /// <see cref="ModuleOptionDiagnosticsExposureMode.RevealSensitive"/> only for dedicated debugging because the
+    /// resulting local UI may contain passwords, tokens, connection strings, and other secrets. The reveal mode is
+    /// accepted only when the host environment is Development. Computed and runtime-shaped values remain
+    /// metadata-only in every mode, and portable exports never contain options.
+    /// </summary>
+    public ModuleOptionDiagnosticsExposureMode OptionDiagnosticsExposureMode { get; set; } =
+        ModuleOptionDiagnosticsExposureMode.Redacted;
+
+    /// <summary>
     /// Gets or sets the host used when Monica appends an HTTP listener for <see cref="MonicaEndpointPort"/>.
     /// Use values such as <c>localhost</c>, <c>*</c>, <c>+</c>, <c>0.0.0.0</c>, or a concrete IP address.
     /// Leave this unset to derive the host from the application's existing URL bindings, falling back to
@@ -144,6 +163,14 @@ public sealed class MonicaModuleSystemOptions : IMonicaModuleSystemOptions
         }
 
         StartupPerformanceBudgets?.Validate();
+
+        if (!Enum.IsDefined(OptionDiagnosticsExposureMode))
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(OptionDiagnosticsExposureMode),
+                OptionDiagnosticsExposureMode,
+                "Module option diagnostics exposure mode must be a defined value.");
+        }
 
         if (MonicaEndpointPort is null)
         {
@@ -164,6 +191,19 @@ public sealed class MonicaModuleSystemOptions : IMonicaModuleSystemOptions
         {
             throw new InvalidOperationException(
                 $"{nameof(MonicaEndpointHost)} must be a host name or IP address without scheme, port, or path.");
+        }
+    }
+
+    /// <summary>Rejects secret disclosure before host services are registered outside Development.</summary>
+    internal void ValidateEnvironment(IHostEnvironment environment)
+    {
+        ArgumentNullException.ThrowIfNull(environment);
+        if (OptionDiagnosticsExposureMode == ModuleOptionDiagnosticsExposureMode.RevealSensitive
+            && !environment.IsDevelopment())
+        {
+            throw new InvalidOperationException(
+                $"{nameof(ModuleOptionDiagnosticsExposureMode.RevealSensitive)} module option diagnostics " +
+                $"can be enabled only in the {Environments.Development} environment.");
         }
     }
 }

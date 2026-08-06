@@ -32,6 +32,7 @@
 
             <MudTabs ActivePanelIndex="@Session.ModuleDrawerTabIndex"
                      ActivePanelIndexChanged="@OnTabChangedAsync"
+                     MinimumTabWidth="0"
                      Rounded="false">
                 <MudTabPanel Text="@L["ModuleDrawer:Tabs:Summary"]" Icon="@Icons.Material.Filled.Info">
                     <div class="drawer-section-stack">
@@ -101,11 +102,8 @@
                     </div>
                 </MudTabPanel>
 
-                <MudTabPanel Text="@L["ModuleDrawer:Tabs:Options"]" Icon="@Icons.Material.Filled.Security">
+                <MudTabPanel Text="@L["ModuleDrawer:Tabs:Configuration"]" Icon="@Icons.Material.Filled.Settings">
                     <div class="drawer-section-stack">
-                        <MudAlert Severity="Severity.Info" Variant="Variant.Outlined" Dense="true">
-                            @L["ModuleDrawer:Options:Privacy"]
-                        </MudAlert>
                         @switch (Session.SelectedModuleOptionsState)
                         {
                             case ModuleSystemLazyLoadState.NotRequested:
@@ -122,23 +120,7 @@
                                 </MudAlert>
                                 break;
                             case ModuleSystemLazyLoadState.Ready when Session.SelectedModuleOptions is { } options:
-                                @if (!options.IsConfigured || options.Entries.IsEmpty)
-                                {
-                                    <div class="drawer-empty">@L["ModuleDrawer:Options:Empty"]</div>
-                                }
-                                else
-                                {
-                                    @foreach (var entry in options.Entries)
-                                    {
-                                        <div class="option-row">
-                                            <span>
-                                                <strong>@entry.Name</strong>
-                                                <small>@L[$"Enums:OptionKind:{entry.Kind}"]</small>
-                                            </span>
-                                            <code>@OptionValue(entry)</code>
-                                        </div>
-                                    }
-                                }
+                                <ModuleOptionDiagnosticsPanel Diagnostics="@options" />
                                 break;
                         }
                     </div>
@@ -199,18 +181,6 @@
         .Where(edge => edge.TargetModule == module.ModuleKey)
         .Select(edge => snapshot.Modules.First(candidate => candidate.ModuleKey == edge.SourceModule))
         .ToArray();
-
-    private string OptionValue(ModuleOptionDiagnosticEntry entry) => entry.Kind switch
-    {
-        ModuleOptionDiagnosticValueKind.Value when entry.IsNull => L["Common:Null"],
-        ModuleOptionDiagnosticValueKind.Value when entry.IsTruncated => L["ModuleDrawer:Options:Truncated", entry.Value ?? string.Empty],
-        ModuleOptionDiagnosticValueKind.Value => entry.Value ?? L["Common:NotAvailable"],
-        ModuleOptionDiagnosticValueKind.Presence => entry.IsPresent == true
-            ? L["ModuleDrawer:Options:Present"]
-            : L["ModuleDrawer:Options:NotPresent"],
-        ModuleOptionDiagnosticValueKind.Count => entry.Count?.ToString() ?? L["Common:NotAvailable"],
-        _ => L["Common:Unavailable"]
-    };
 
     private static Severity FindingSeverity(ModuleDiagnosticFindingSeverity severity) => severity switch
     {

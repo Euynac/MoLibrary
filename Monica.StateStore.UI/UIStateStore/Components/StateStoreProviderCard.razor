@@ -10,12 +10,12 @@
             </MudAvatar>
         </CardHeaderAvatar>
         <CardHeaderContent>
-            <MudText Typo="Typo.h6">@Provider.DisplayName</MudText>
+            <MudText Typo="Typo.h6">@L.GetProviderDisplayName(Provider)</MudText>
             <MudText Typo="Typo.body2" Color="Color.Secondary">@Provider.ImplementationType</MudText>
         </CardHeaderContent>
         <CardHeaderActions>
             <MudChip T="string" Color="@GetProviderColor()" Size="Size.Small">
-                @Provider.ProviderTypeName
+                @L.GetProviderTypeText(Provider.ProviderType)
             </MudChip>
         </CardHeaderActions>
     </MudCardHeader>
@@ -52,6 +52,14 @@
                     <MudChip T="string" Size="Size.Small" Color="Color.Info" Variant="Variant.Outlined">
                         <MudIcon Icon="@Icons.Material.Filled.Cloud" Size="Size.Small" Class="mr-1" />
                         @L["ProviderCard:Labels:Distributed"]
+                    </MudChip>
+                }
+
+                @if (Provider.HasOptionDiagnostics)
+                {
+                    <MudChip T="string" Size="Size.Small" Color="Color.Secondary" Variant="Variant.Outlined">
+                        <MudIcon Icon="@Icons.Material.Filled.Settings" Size="Size.Small" Class="mr-1" />
+                        @L["ProviderCard:Labels:HasConfiguration"]
                     </MudChip>
                 }
 

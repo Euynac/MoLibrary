@@ -241,7 +241,198 @@ public sealed class ModuleSystemWorkbenchComponentTests
 
         cut.Markup.Should().Contain("BetaModule");
         cut.Markup.Should().Contain("ModuleDrawer:Tabs:Summary");
+        cut.Markup.Should().Contain("ModuleDrawer:Tabs:Configuration");
         session.IsModuleDrawerOpen.Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task Configuration_projection_renders_nested_redacted_values_without_copy_affordances()
+    {
+        await using var context = new ModuleSystemWorkbenchUiTestContext();
+        var diagnostics = ModuleSystemWorkbenchTestData.Options(ModuleSystemWorkbenchTestData.AlphaKey);
+
+        var cut = context.Render<ModuleOptionDiagnosticsPanel>(parameters => parameters
+            .Add(component => component.Diagnostics, diagnostics));
+
+        cut.Markup.Should().Contain("ModuleDrawer:Options:RedactedPolicyTitle");
+        cut.Markup.Should().Contain("Transport");
+        cut.Markup.Should().Contain("RetryDelays");
+        cut.Markup.Should().Contain("ApiToken");
+        cut.Markup.Should().Contain("ModuleDrawer:Options:SensitiveProtected");
+        cut.Markup.Should().NotContain("ModuleDrawer:Options:ExcludedCount");
+        cut.Markup.Should().NotContain("debug-secret-value");
+        cut.FindAll("button").Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task Configuration_projection_in_sensitive_debug_mode_renders_a_strong_warning_and_revealed_value()
+    {
+        await using var context = new ModuleSystemWorkbenchUiTestContext();
+        var diagnostics = ModuleSystemWorkbenchTestData.Options(
+            ModuleSystemWorkbenchTestData.AlphaKey,
+            ModuleOptionDiagnosticsExposureMode.RevealSensitive);
+
+        var cut = context.Render<ModuleOptionDiagnosticsPanel>(parameters => parameters
+            .Add(component => component.Diagnostics, diagnostics));
+
+        cut.Markup.Should().Contain("ModuleDrawer:Options:RevealPolicyTitle");
+        cut.Markup.Should().Contain("ModuleDrawer:Options:SensitiveRevealed");
+        cut.Markup.Should().Contain("debug-secret-value");
+        cut.Find(".option-entry--revealed-sensitive").Should().NotBeNull();
+    }
+
+    [Fact]
+    public async Task Configuration_projection_in_sensitive_debug_mode_does_not_mark_an_empty_secret_as_visible()
+    {
+        await using var context = new ModuleSystemWorkbenchUiTestContext();
+        var diagnostics = ModuleSystemWorkbenchTestData.Options(
+            ModuleSystemWorkbenchTestData.AlphaKey,
+            ModuleOptionDiagnosticsExposureMode.RevealSensitive) with
+        {
+            ContainsRevealedSensitiveValues = false,
+            Entries =
+            [
+                new ModuleOptionDiagnosticEntry
+                {
+                    Name = "ApiToken",
+                    Path = "ApiToken",
+                    TypeName = "System.String",
+                    Kind = ModuleOptionDiagnosticValueKind.Value,
+                    Value = string.Empty,
+                    IsSensitive = true
+                }
+            ]
+        };
+
+        var cut = context.Render<ModuleOptionDiagnosticsPanel>(parameters => parameters
+            .Add(component => component.Diagnostics, diagnostics));
+
+        cut.FindAll(".option-entry--revealed-sensitive").Should().BeEmpty();
+        cut.Markup.Should().Contain("ModuleDrawer:Options:SensitiveProtected");
+    }
+
+    [Fact]
+    public async Task Configuration_projection_in_sensitive_debug_mode_marks_nested_groups_as_visible()
+    {
+        await using var context = new ModuleSystemWorkbenchUiTestContext();
+        var diagnostics = ModuleSystemWorkbenchTestData.Options(
+            ModuleSystemWorkbenchTestData.AlphaKey,
+            ModuleOptionDiagnosticsExposureMode.RevealSensitive) with
+        {
+            Entries =
+            [
+                new ModuleOptionDiagnosticEntry
+                {
+                    Name = "ApiTokens",
+                    Path = "ApiTokens",
+                    TypeName = "List<ApiTokenOptions>",
+                    Kind = ModuleOptionDiagnosticValueKind.Collection,
+                    IsSensitive = true,
+                    Count = 1,
+                    Children =
+                    [
+                        new ModuleOptionDiagnosticEntry
+                        {
+                            Name = "[0]",
+                            Path = "ApiTokens[0]",
+                            TypeName = "ApiTokenOptions",
+                            Kind = ModuleOptionDiagnosticValueKind.Object,
+                            IsSensitive = true,
+                            Children =
+                            [
+                                new ModuleOptionDiagnosticEntry
+                                {
+                                    Name = "Value",
+                                    Path = "ApiTokens[0].Value",
+                                    TypeName = "String",
+                                    Kind = ModuleOptionDiagnosticValueKind.Value,
+                                    Value = "nested-debug-secret",
+                                    IsSensitive = true
+                                }
+                            ]
+                        }
+                    ]
+                }
+            ]
+        };
+
+        var cut = context.Render<ModuleOptionDiagnosticsPanel>(parameters => parameters
+            .Add(component => component.Diagnostics, diagnostics));
+
+        var groups = cut.FindAll("details.option-entry--revealed-sensitive");
+        groups.Should().HaveCount(2);
+        foreach (var group in groups)
+        {
+            group.QuerySelector(":scope > summary")!.TextContent
+                .Should().Contain("ModuleDrawer:Options:SensitiveRevealed")
+                .And.NotContain("ModuleDrawer:Options:SensitiveProtected");
+            group.QuerySelector(":scope > summary .mud-chip")!.ClassList
+                .Should().Contain("mud-chip-color-error");
+        }
+
+        cut.Markup.Should().Contain("nested-debug-secret");
+    }
+
+    [Fact]
+    public async Task Configuration_projection_WhenTheGlobalBoundIsReached_ShouldShowTheTruncationState()
+    {
+        await using var context = new ModuleSystemWorkbenchUiTestContext();
+        var diagnostics = ModuleSystemWorkbenchTestData.Options(ModuleSystemWorkbenchTestData.AlphaKey) with
+        {
+            IsTruncated = true
+        };
+
+        var cut = context.Render<ModuleOptionDiagnosticsPanel>(parameters => parameters
+            .Add(component => component.Diagnostics, diagnostics));
+
+        cut.Markup.Should().Contain("ModuleDrawer:Options:ProjectionTruncated");
+    }
+
+    [Fact]
+    public async Task Configuration_projection_WhenAGroupIsBounded_ShouldMarkTheEntryAsPartial()
+    {
+        await using var context = new ModuleSystemWorkbenchUiTestContext();
+        var diagnostics = ModuleSystemWorkbenchTestData.Options(ModuleSystemWorkbenchTestData.AlphaKey) with
+        {
+            Entries =
+            [
+                new ModuleOptionDiagnosticEntry
+                {
+                    Name = "NestedOptions",
+                    Path = "NestedOptions",
+                    TypeName = "NestedOptions",
+                    Kind = ModuleOptionDiagnosticValueKind.Object,
+                    IsTruncated = true
+                }
+            ]
+        };
+
+        var cut = context.Render<ModuleOptionDiagnosticsPanel>(parameters => parameters
+            .Add(component => component.Diagnostics, diagnostics));
+
+        cut.Markup.Should().Contain("ModuleDrawer:Options:EntryTruncated");
+    }
+
+    [Fact]
+    public async Task Configuration_projection_distinguishes_unfinalized_from_empty_configuration()
+    {
+        await using var context = new ModuleSystemWorkbenchUiTestContext();
+        var unfinalized = ModuleSystemWorkbenchTestData.Options(ModuleSystemWorkbenchTestData.AlphaKey) with
+        {
+            IsFinalized = false,
+            Entries = []
+        };
+        var empty = unfinalized with { IsFinalized = true };
+
+        var pendingCut = context.Render<ModuleOptionDiagnosticsPanel>(parameters => parameters
+            .Add(component => component.Diagnostics, unfinalized));
+        pendingCut.Markup.Should().Contain("ModuleDrawer:Options:UnfinalizedTitle");
+        pendingCut.Markup.Should().NotContain("ModuleDrawer:Options:EmptyTitle");
+
+        var emptyCut = context.Render<ModuleOptionDiagnosticsPanel>(parameters => parameters
+            .Add(component => component.Diagnostics, empty));
+        emptyCut.Markup.Should().Contain("ModuleDrawer:Options:EmptyTitle");
+        emptyCut.Markup.Should().NotContain("ModuleDrawer:Options:UnfinalizedTitle");
     }
 
     [Theory]

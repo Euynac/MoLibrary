@@ -6,6 +6,7 @@ using Monica.Core.Extensions;
 using Monica.Core.Modularity;
 using Monica.Core.Modularity.Models;
 using Monica.Core.Modularity.Services;
+using Monica.Core.Modularity.Diagnostics.Models;
 using Monica.Modules;
 using Monica.StateStore.UI.Models;
 using Monica.StateStore.UI.Services.Browser;
@@ -63,7 +64,7 @@ public class StateStoreUIService(
 
             return Res.Ok(providers
                 .OrderByDescending(provider => provider.IsDefaultStateStore)
-                .ThenBy(provider => provider.DisplayName, StringComparer.OrdinalIgnoreCase)
+                .ThenBy(provider => provider.ServiceKey ?? string.Empty, StringComparer.OrdinalIgnoreCase)
                 .ToList());
         }
         catch (Exception ex)
@@ -97,7 +98,7 @@ public class StateStoreUIService(
 
     private StateStoreProviderInfo CreateProviderInfo(string? serviceKey, IStateStore provider)
     {
-        var (providerType, capabilities, providerDisplayName) = GetProviderMetadata(provider);
+        var (providerType, capabilities, providerSnapshot) = GetProviderMetadata(provider);
         var browserApi = GetBrowserApi(providerType, provider);
         var browserFeatures = browserApi.GetFeatures(provider);
         var defaultSearchMode = browserApi.GetDefaultSearchMode(provider);
@@ -113,18 +114,27 @@ public class StateStoreUIService(
         return new StateStoreProviderInfo
         {
             ServiceKey = serviceKey,
-            ProviderDisplayName = providerDisplayName,
             ProviderType = providerType,
             Capabilities = capabilities,
             BrowserFeatures = browserFeatures,
             DefaultSearchMode = defaultSearchMode,
             IsDistributed = provider is IDistributedStateStore,
             IsDefaultStateStore = isDefaultStateStore,
-            ImplementationType = provider.GetType().Name
+            ImplementationType = provider.GetType().Name,
+            OptionDiagnosticsTarget = providerSnapshot is null
+                ? null
+                : new ModuleOptionDiagnosticsTarget(
+                    providerSnapshot.ModuleKey,
+                    serviceKey is null
+                        ? ModuleOptionProfileSelector.Default
+                        : ModuleOptionProfileSelector.NamedOrDefault(serviceKey))
         };
     }
 
-    private (EStateStoreProviderType providerType, EStateStoreCapabilities capabilities, string displayName) GetProviderMetadata(IStateStore provider)
+    private (
+        EStateStoreProviderType ProviderType,
+        EStateStoreCapabilities Capabilities,
+        ModuleRuntimeSnapshot? ProviderSnapshot) GetProviderMetadata(IStateStore provider)
     {
         var providerTypeName = provider.GetType().FullName ?? string.Empty;
 
@@ -137,7 +147,10 @@ public class StateStoreUIService(
 
             if (providerTypeName.Contains(moduleProvider.DisplayName, StringComparison.OrdinalIgnoreCase))
             {
-                return (moduleProvider.ProviderType, moduleProvider.Capabilities, moduleProvider.DisplayName);
+                return (
+                    moduleProvider.ProviderType,
+                    moduleProvider.Capabilities,
+                    snapshot);
             }
         }
 
@@ -145,10 +158,10 @@ public class StateStoreUIService(
         {
             return (EStateStoreProviderType.Memory,
                 EStateStoreCapabilities.KeyScanning | EStateStoreCapabilities.BulkOperations,
-                "Memory");
+                null);
         }
 
-        return (EStateStoreProviderType.Unknown, EStateStoreCapabilities.BulkOperations, "Unknown");
+        return (EStateStoreProviderType.Unknown, EStateStoreCapabilities.BulkOperations, null);
     }
 
     private IStateStoreBrowserApi GetBrowserApi(EStateStoreProviderType providerType, IStateStore provider)

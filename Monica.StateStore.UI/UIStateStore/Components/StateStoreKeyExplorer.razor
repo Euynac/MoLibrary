@@ -42,7 +42,7 @@
                      @onkeydown="args => OnProviderCardKeyDown(args, provider)">
                     <div class="provider-card__content">
                         <div class="provider-card__copy">
-                            <MudText Typo="Typo.subtitle2">@provider.DisplayName</MudText>
+                            <MudText Typo="Typo.subtitle2">@L.GetProviderDisplayName(provider)</MudText>
                             <MudText Typo="Typo.body2" Color="Color.Secondary">
                                 @GetProviderCardDescription(provider)
                             </MudText>
@@ -372,7 +372,7 @@
 
                     <div class="detail-metadata__item">
                         <span>@L["KeyExplorer:Detail:Labels:Provider"]</span>
-                        <strong>@selectedProvider.DisplayName</strong>
+                        <strong>@L.GetProviderDisplayName(selectedProvider)</strong>
                     </div>
 
                     <div class="detail-metadata__item">
@@ -1037,14 +1037,14 @@
     {
         return selectedProvider is null
             ? L["KeyExplorer:Workspace:NoProviderTitle"]
-            : selectedProvider.DisplayName;
+            : L.GetProviderDisplayName(selectedProvider);
     }
 
     private string GetWorkspaceSubtitle()
     {
         return selectedProvider is null
             ? L["KeyExplorer:Workspace:NoProviderSubtitle"]
-            : L["KeyExplorer:Workspace:ProviderSubtitle", selectedProvider.ProviderDisplayName, GetSearchModeText(searchMode)];
+            : L["KeyExplorer:Workspace:ProviderSubtitle", L.GetProviderTypeText(selectedProvider.ProviderType), GetSearchModeText(searchMode)];
     }
 
     private string GetDetailTitle()
@@ -1069,7 +1069,7 @@
             return L["KeyExplorer:Detail:SelectKeySubtitle"];
         }
 
-        return L["KeyExplorer:Detail:SelectedKeySubtitle", selectedProvider.DisplayName];
+        return L["KeyExplorer:Detail:SelectedKeySubtitle", L.GetProviderDisplayName(selectedProvider)];
     }
 
     private string GetSearchLabel()
@@ -1284,7 +1284,7 @@
             parts.Add(L["KeyExplorer:Labels:DefaultProvider"]);
         }
 
-        parts.Add(provider.ProviderDisplayName);
+        parts.Add(L.GetProviderTypeText(provider.ProviderType));
         parts.Add(provider.IsDistributed
             ? L["ProviderDetail:Labels:Distributed"]
             : L["ProviderDetail:Labels:LocalMemory"]);

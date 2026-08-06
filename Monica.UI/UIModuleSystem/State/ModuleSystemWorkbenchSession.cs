@@ -21,6 +21,7 @@ internal sealed record ModuleDiagnosticsCalls(
 /// </remarks>
 public sealed class ModuleSystemWorkbenchSession : IAsyncDisposable
 {
+    private const int MODULE_DRAWER_CONFIGURATION_TAB_INDEX = 3;
     private static readonly JsonSerializerOptions IMPORT_JSON_OPTIONS = new()
     {
         PropertyNameCaseInsensitive = true
@@ -37,6 +38,7 @@ public sealed class ModuleSystemWorkbenchSession : IAsyncDisposable
     private int _snapshotRequestVersion;
     private int _inventoryRequestVersion;
     private int _baselineRequestVersion;
+    private int _optionRequestVersion;
     private bool _disposed;
 
     internal ModuleSystemWorkbenchSession(
@@ -334,13 +336,13 @@ public sealed class ModuleSystemWorkbenchSession : IAsyncDisposable
             ? options
             : null;
 
-    /// <summary>Gets the selected module's safe-option request state.</summary>
+    /// <summary>Gets the selected module's bounded-configuration request state.</summary>
     public ModuleSystemLazyLoadState SelectedModuleOptionsState =>
         SelectedModule is not null && _optionLoadsByModule.TryGetValue(SelectedModule.ModuleKey, out var entry)
             ? entry.State
             : ModuleSystemLazyLoadState.NotRequested;
 
-    /// <summary>Gets the selected module's safe-option request error.</summary>
+    /// <summary>Gets the selected module's bounded-configuration request error.</summary>
     public string? SelectedModuleOptionsError =>
         SelectedModule is not null && _optionLoadsByModule.TryGetValue(SelectedModule.ModuleKey, out var entry)
             ? entry.Error
@@ -421,6 +423,7 @@ public sealed class ModuleSystemWorkbenchSession : IAsyncDisposable
     public Task RefreshAsync()
     {
         ObjectDisposedException.ThrowIf(_disposed, this);
+        InvalidateOptionDiagnosticsRequests();
         return RequestSnapshotAsync(isInitial: Snapshot is null);
     }
 
@@ -439,6 +442,14 @@ public sealed class ModuleSystemWorkbenchSession : IAsyncDisposable
     /// <summary>Selects a module and synchronizes every workbench evidence view.</summary>
     public void SelectModule(ModuleDiagnosticsModule? module, bool openDrawer = true, int drawerTabIndex = 0)
     {
+        var nextTabIndex = Math.Max(0, drawerTabIndex);
+        if (SelectedModule?.ModuleKey != module?.ModuleKey
+            || (ModuleDrawerTabIndex == MODULE_DRAWER_CONFIGURATION_TAB_INDEX
+                && nextTabIndex != MODULE_DRAWER_CONFIGURATION_TAB_INDEX))
+        {
+            InvalidateOptionDiagnosticsRequests();
+        }
+
         if (SelectedTraceSpanId is not null)
         {
             var selectedSpan = Snapshot?.TraceSpans.FirstOrDefault(span =>
@@ -455,7 +466,7 @@ public sealed class ModuleSystemWorkbenchSession : IAsyncDisposable
         {
             IsHelpDrawerOpen = false;
         }
-        ModuleDrawerTabIndex = Math.Max(0, drawerTabIndex);
+        ModuleDrawerTabIndex = nextTabIndex;
         NotifyChanged();
     }
 
@@ -466,6 +477,12 @@ public sealed class ModuleSystemWorkbenchSession : IAsyncDisposable
         SelectedTraceSpanId = span.SpanId;
         if (span.ModuleKey is { } moduleKey && Snapshot is not null)
         {
+            if (SelectedModule?.ModuleKey != moduleKey
+                || ModuleDrawerTabIndex == MODULE_DRAWER_CONFIGURATION_TAB_INDEX)
+            {
+                InvalidateOptionDiagnosticsRequests();
+            }
+
             SelectedModule = Snapshot.Modules.FirstOrDefault(module => module.ModuleKey == moduleKey);
             IsModuleDrawerOpen = SelectedModule is not null;
             ModuleDrawerTabIndex = 1;
@@ -486,6 +503,7 @@ public sealed class ModuleSystemWorkbenchSession : IAsyncDisposable
     public void CloseModuleDrawer()
     {
         IsModuleDrawerOpen = false;
+        InvalidateOptionDiagnosticsRequests();
         NotifyChanged();
     }
 
@@ -496,14 +514,22 @@ public sealed class ModuleSystemWorkbenchSession : IAsyncDisposable
         if (isOpen)
         {
             IsModuleDrawerOpen = false;
+            InvalidateOptionDiagnosticsRequests();
         }
         NotifyChanged();
     }
 
-    /// <summary>Sets the module drawer tab and lazily loads safe options when that view opens.</summary>
+    /// <summary>Sets the module drawer tab and lazily loads bounded configuration when that view opens.</summary>
     public void SetModuleDrawerTab(int tabIndex)
     {
-        ModuleDrawerTabIndex = Math.Max(0, tabIndex);
+        var nextTabIndex = Math.Max(0, tabIndex);
+        if (ModuleDrawerTabIndex == MODULE_DRAWER_CONFIGURATION_TAB_INDEX
+            && nextTabIndex != MODULE_DRAWER_CONFIGURATION_TAB_INDEX)
+        {
+            InvalidateOptionDiagnosticsRequests();
+        }
+
+        ModuleDrawerTabIndex = nextTabIndex;
         NotifyChanged();
     }
 
@@ -544,7 +570,7 @@ public sealed class ModuleSystemWorkbenchSession : IAsyncDisposable
             : Res.Fail("Module diagnostics access was denied.");
     }
 
-    /// <summary>Loads or retries the selected module's explicitly allow-listed safe option projection.</summary>
+    /// <summary>Loads or retries the selected module's public configuration catalog with bounded values.</summary>
     public async Task EnsureSelectedModuleOptionsLoadedAsync(bool retry = false)
     {
         ObjectDisposedException.ThrowIf(_disposed, this);
@@ -561,15 +587,17 @@ public sealed class ModuleSystemWorkbenchSession : IAsyncDisposable
             return;
         }
 
+        var requestVersion = Interlocked.Increment(ref _optionRequestVersion);
         _optionLoadsByModule[moduleKey] = new ModuleOptionLoadEntry(ModuleSystemLazyLoadState.Loading, null);
         NotifyChanged();
-        if (!await EnsureAuthorizedAsync())
+        var isAuthorized = await EnsureAuthorizedAsync(() => IsCurrentOptionRequest(requestVersion, moduleKey));
+        if (!IsCurrentOptionRequest(requestVersion, moduleKey))
         {
-            if (_disposed)
-            {
-                return;
-            }
+            return;
+        }
 
+        if (!isAuthorized)
+        {
             _optionLoadsByModule[moduleKey] = new ModuleOptionLoadEntry(
                 ModuleSystemLazyLoadState.Failed,
                 "Module diagnostics access was denied.");
@@ -578,6 +606,11 @@ public sealed class ModuleSystemWorkbenchSession : IAsyncDisposable
         }
 
         var result = _calls.GetModuleOptions(moduleKey);
+        if (!IsCurrentOptionRequest(requestVersion, moduleKey))
+        {
+            return;
+        }
+
         if (result.IsFailed(out var error, out var options))
         {
             _optionLoadsByModule[moduleKey] = new ModuleOptionLoadEntry(
@@ -838,6 +871,9 @@ public sealed class ModuleSystemWorkbenchSession : IAsyncDisposable
         }
 
         _disposed = true;
+        InvalidateOptionDiagnosticsRequests();
+        _optionsByModule.Clear();
+        _optionLoadsByModule.Clear();
         await _lifetimeCancellation.CancelAsync();
         StopPolling();
         if (_pollingTask is not null)
@@ -906,6 +942,7 @@ public sealed class ModuleSystemWorkbenchSession : IAsyncDisposable
 
     private void ReconcileSelection(ModuleDiagnosticsSnapshot snapshot)
     {
+        InvalidateOptionDiagnosticsRequests();
         if (SelectedTraceSpanId is not null
             && !snapshot.TraceSpans.Any(span =>
                 string.Equals(span.SpanId, SelectedTraceSpanId, StringComparison.Ordinal)))
@@ -969,15 +1006,44 @@ public sealed class ModuleSystemWorkbenchSession : IAsyncDisposable
         }
     }
 
-    private async Task<bool> EnsureAuthorizedAsync()
+    private void InvalidateOptionDiagnosticsRequests()
     {
-        if (_disposed)
+        Interlocked.Increment(ref _optionRequestVersion);
+        var loadingModuleKeys = _optionLoadsByModule
+            .Where(static pair => pair.Value.State == ModuleSystemLazyLoadState.Loading)
+            .Select(static pair => pair.Key)
+            .ToArray();
+        foreach (var moduleKey in loadingModuleKeys)
+        {
+            _optionLoadsByModule.Remove(moduleKey);
+        }
+
+        var revealedModuleKeys = _optionsByModule
+            .Where(static pair =>
+                pair.Value.ExposureMode == ModuleOptionDiagnosticsExposureMode.RevealSensitive)
+            .Select(static pair => pair.Key)
+            .ToArray();
+        foreach (var moduleKey in revealedModuleKeys)
+        {
+            _optionsByModule.Remove(moduleKey);
+            _optionLoadsByModule.Remove(moduleKey);
+        }
+    }
+
+    private bool IsCurrentOptionRequest(int requestVersion, ModuleKey moduleKey) =>
+        !_disposed
+        && requestVersion == Volatile.Read(ref _optionRequestVersion)
+        && SelectedModule?.ModuleKey == moduleKey;
+
+    private async Task<bool> EnsureAuthorizedAsync(Func<bool>? canAcceptCompletion = null)
+    {
+        if (_disposed || canAcceptCompletion?.Invoke() == false)
         {
             return false;
         }
 
         var isAuthorized = await _authorize();
-        if (_disposed)
+        if (_disposed || canAcceptCompletion?.Invoke() == false)
         {
             return false;
         }

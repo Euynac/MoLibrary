@@ -164,9 +164,33 @@ internal sealed class ModuleRegistrationState
                 $"Module {ModuleType.Name} options have not been finalized.");
         }
 
-        return profileName is not null && _profiles.TryGetValue(profileName, out var profile)
+        if (profileName is null)
+        {
+            return ModuleOption;
+        }
+
+        return _profiles.TryGetValue(profileName, out var profile)
             ? profile
-            : ModuleOption;
+            : throw new KeyNotFoundException(
+                $"Named option profile '{profileName}' was not declared for {ModuleType.Name}.");
+    }
+
+    internal bool TryGetProfile(string profileName, out object profile)
+    {
+        if (!IsFinalized)
+        {
+            throw new InvalidOperationException(
+                $"Named option profile '{profileName}' for {ModuleType.Name} has not been finalized.");
+        }
+
+        if (_profiles.TryGetValue(profileName, out var configuredProfile))
+        {
+            profile = configuredProfile;
+            return true;
+        }
+
+        profile = null!;
+        return false;
     }
 
     internal void RequireFeature(string featureName)
