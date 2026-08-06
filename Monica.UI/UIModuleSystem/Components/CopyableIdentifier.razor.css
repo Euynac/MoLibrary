@@ -1,0 +1,17 @@
+.copyable-identifier {
+    display: flex;
+    align-items: center;
+    gap: .25rem;
+    min-width: 0;
+    max-width: 100%;
+}
+
+.copyable-identifier code {
+    display: block;
+    min-width: 0;
+    max-width: 100%;
+    overflow: hidden;
+    color: var(--mud-palette-text-secondary);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}

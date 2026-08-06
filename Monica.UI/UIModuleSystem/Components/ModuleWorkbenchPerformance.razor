@@ -1,0 +1,570 @@
+@using Microsoft.Extensions.Localization
+@using Monica.Core.Modularity.Diagnostics.Models
+@using Monica.Core.Modularity.Models
+@using Monica.UI.Localization
+@using Monica.UI.UIModuleSystem.State
+@using Monica.UI.UIModuleSystem.Support
+@inject IStringLocalizer<ModuleSystemResource> L
+
+@if (Session.Snapshot is { } snapshot)
+{
+    <div class="performance-layout">
+        @if (snapshot.Summary.PerformanceBudgets.Length > 0)
+        {
+            <section class="performance-panel" aria-labelledby="performance-budgets-title">
+                <div class="performance-heading">
+                    <div>
+                        <MudText Typo="Typo.overline">@L["Performance:Budgets:Eyebrow"]</MudText>
+                        <MudText Typo="Typo.h6" HtmlTag="h2" id="performance-budgets-title">@L["Performance:Budgets:Title"]</MudText>
+                    </div>
+                </div>
+                <div class="budget-grid">
+                    @foreach (var budget in snapshot.Summary.PerformanceBudgets)
+                    {
+                        <article>
+                            <div>
+                                <strong>@L[$"Enums:Budget:{budget.Kind}"]</strong>
+                                <span>@L["Performance:Budgets:Measurement",
+                                    ModuleDiagnosticsDisplay.Duration(budget.ActualDurationMs),
+                                    ModuleDiagnosticsDisplay.Duration(budget.LimitDurationMs)]</span>
+                            </div>
+                            <MudProgressLinear Value="@Math.Min(100, budget.Utilization * 100)"
+                                               Color="@(budget.IsExceeded ? Color.Warning : Color.Success)"
+                                               Rounded="true" />
+                            <small>@L["Performance:Budgets:Utilization", budget.Utilization.ToString("P0")]</small>
+                        </article>
+                    }
+                </div>
+            </section>
+        }
+
+        <section class="performance-panel" aria-labelledby="waterfall-title">
+            <div class="performance-heading">
+                <div>
+                    <MudText Typo="Typo.overline">@L["Performance:Waterfall:Eyebrow"]</MudText>
+                    <MudText Typo="Typo.h6" HtmlTag="h2" id="waterfall-title">@L["Performance:Waterfall:Title"]</MudText>
+                </div>
+                <MudText Typo="Typo.caption" Color="Color.Secondary">
+                    @L["Performance:Waterfall:Duration", ModuleDiagnosticsDisplay.Duration(snapshot.Summary.TotalCompositionDurationMs)]
+                </MudText>
+            </div>
+            @if (Session.Comparison is not null)
+            {
+                <div class="timeline-legend" aria-label="@L["Comparison:TimelineLegend"]">
+                    <span class="current-swatch">@L["Comparison:CurrentTimeline"]</span>
+                    <span class="baseline-swatch">@L["Comparison:BaselineTimeline"]</span>
+                </div>
+            }
+            <div class="timeline-visual" aria-hidden="true">
+                <svg viewBox="0 0 1000 @TimelineHeight" preserveAspectRatio="none">
+                    @foreach (var item in TimelineRows.Select((span, index) => (span, index)))
+                    {
+                        @if (BaselineTimelineRows.TryGetValue(item.span.SpanId, out var baselineSpan))
+                        {
+                            <rect x="@BaselineTimelineX(baselineSpan)"
+                                  y="@(item.index * 30 + 3)"
+                                  width="@BaselineTimelineWidth(baselineSpan)"
+                                  height="24"
+                                  rx="3"
+                                  fill="none"
+                                  stroke="var(--mud-palette-text-secondary)"
+                                  stroke-width="2"
+                                  stroke-dasharray="6 3"
+                                  opacity="0.62">
+                                <title>@L["Comparison:BaselineOverlay"] · @ModuleDiagnosticsDisplay.Duration(baselineSpan.EndedOffsetMs - baselineSpan.StartedOffsetMs)</title>
+                            </rect>
+                        }
+                        <rect x="@TimelineX(item.span)"
+                              y="@(item.index * 30 + 8)"
+                              width="@TimelineWidth(item.span)"
+                              height="14"
+                              rx="3"
+                              class="@(IsSelected(item.span) ? "timeline-bar-selected" : null)"
+                              data-span-id="@item.span.SpanId"
+                              fill="@TimelineColor(item.span)"
+                              stroke="@(IsSelected(item.span) ? "var(--mud-palette-text-primary)" : "none")"
+                              stroke-width="@(IsSelected(item.span) ? 4 : 0)">
+                            <title>@TimelineLabel(item.span) · @ModuleDiagnosticsDisplay.Duration(item.span.DurationMs)</title>
+                        </rect>
+                    }
+                </svg>
+            </div>
+            <div class="timeline-table-wrapper"
+                 role="region"
+                 aria-label="@L["Performance:Waterfall:Title"]"
+                 tabindex="0">
+                <MudTable T="ModuleDiagnosticsTraceSpan"
+                          Items="@TimelineRows"
+                          Dense="true"
+                          Hover="true"
+                          FixedHeader="true"
+                          Breakpoint="Breakpoint.None"
+                          RowClassFunc="@TimelineRowClass">
+                    <HeaderContent>
+                        <MudTh>@L["Performance:Columns:Span"]</MudTh>
+                        <MudTh>@L["Performance:Columns:Start"]</MudTh>
+                        <MudTh>@L["Performance:Columns:Duration"]</MudTh>
+                        <MudTh>@L["Performance:Columns:Kind"]</MudTh>
+                    </HeaderContent>
+                    <RowTemplate Context="span">
+                        <MudTd DataLabel="@L["Performance:Columns:Span"]">
+                            <MudTooltip Text="@TimelineLabel(span)">
+                                <span class="timeline-value"
+                                      data-span-id="@span.SpanId"
+                                      aria-current="@(IsSelected(span) ? "true" : null)">
+                                    @TimelineLabel(span)
+                                </span>
+                            </MudTooltip>
+                        </MudTd>
+                        <MudTd DataLabel="@L["Performance:Columns:Start"]">@ModuleDiagnosticsDisplay.Duration(span.StartedOffsetMs)</MudTd>
+                        <MudTd DataLabel="@L["Performance:Columns:Duration"]">@ModuleDiagnosticsDisplay.Duration(span.DurationMs)</MudTd>
+                        <MudTd DataLabel="@L["Performance:Columns:Kind"]">@L[$"Enums:TraceKind:{span.Kind}"]</MudTd>
+                    </RowTemplate>
+                </MudTable>
+            </div>
+        </section>
+
+        @if (Session.Comparison is { } comparison)
+        {
+            <section class="performance-panel comparison-evidence" aria-labelledby="comparison-evidence-title">
+                <div class="performance-heading">
+                    <div>
+                        <MudText Typo="Typo.overline">@L["Comparison:Eyebrow"]</MudText>
+                        <MudText Typo="Typo.h6" HtmlTag="h2" id="comparison-evidence-title">@L["Comparison:EvidenceTitle"]</MudText>
+                    </div>
+                </div>
+                <div class="comparison-kpis">
+                    <article><span>@L["Overview:Kpis:Composition"]</span><strong>@SignedDuration(comparison.TotalDurationDeltaMs)</strong></article>
+                    <article><span>@L["Overview:Kpis:TypeDiscovery"]</span><strong>@SignedDuration(comparison.TypeDiscoveryDurationDeltaMs)</strong></article>
+                    <article><span>@L["Comparison:ModulesChanged"]</span><strong>+@comparison.AddedModules.Count / -@comparison.RemovedModules.Count</strong></article>
+                    <article><span>@L["Comparison:EdgesChanged"]</span><strong>+@comparison.AddedEdges.Count / -@comparison.RemovedEdges.Count</strong></article>
+                </div>
+                <div class="comparison-changes">
+                    <MudExpansionPanels MultiExpansion="true">
+                        <MudExpansionPanel Text="@L["Comparison:AddedModules", comparison.AddedModules.Count]">
+                            <ChangeList Values="@comparison.AddedModules" EmptyText="@L["Comparison:NoChanges"]" />
+                        </MudExpansionPanel>
+                        <MudExpansionPanel Text="@L["Comparison:RemovedModules", comparison.RemovedModules.Count]">
+                            <ChangeList Values="@comparison.RemovedModules" EmptyText="@L["Comparison:NoChanges"]" />
+                        </MudExpansionPanel>
+                        <MudExpansionPanel Text="@L["Comparison:AddedEdges", comparison.AddedEdges.Count]">
+                            <ChangeList Values="@comparison.AddedEdges" EmptyText="@L["Comparison:NoChanges"]" />
+                        </MudExpansionPanel>
+                        <MudExpansionPanel Text="@L["Comparison:RemovedEdges", comparison.RemovedEdges.Count]">
+                            <ChangeList Values="@comparison.RemovedEdges" EmptyText="@L["Comparison:NoChanges"]" />
+                        </MudExpansionPanel>
+                    </MudExpansionPanels>
+                </div>
+            </section>
+        }
+
+        <div class="performance-grid">
+            <section class="performance-panel" aria-labelledby="contributors-title">
+                <div class="performance-heading contributors-heading">
+                    <div>
+                        <MudText Typo="Typo.overline">@L["Performance:Contributors:Eyebrow"]</MudText>
+                        <MudText Typo="Typo.h6" HtmlTag="h2" id="contributors-title">@L["Performance:Contributors:Title"]</MudText>
+                    </div>
+                    <div class="contributor-filters">
+                        <MudSelect T="int"
+                                   Label="@L["Performance:Filters:Limit"]"
+                                   Value="@Session.PerformanceContributorLimit"
+                                   ValueChanged="@SetContributorLimit"
+                                   Dense="true">
+                            <MudSelectItem T="int" Value="10">10</MudSelectItem>
+                            <MudSelectItem T="int" Value="25">25</MudSelectItem>
+                            <MudSelectItem T="int" Value="50">50</MudSelectItem>
+                            <MudSelectItem T="int" Value="0">@L["Common:All"]</MudSelectItem>
+                        </MudSelect>
+                        <MudNumericField T="double"
+                                         Label="@L["Performance:Filters:MinimumMs"]"
+                                         Value="@Session.PerformanceMinimumDurationMs"
+                                         ValueChanged="@SetMinimumDuration"
+                                         Min="0"
+                                         Margin="Margin.Dense" />
+                        <MudSwitch T="bool"
+                                   Label="@L["Performance:Filters:HideZero"]"
+                                   Value="@Session.HideZeroDurationContributors"
+                                   ValueChanged="@SetHideZero"
+                                   Color="Color.Primary" />
+                    </div>
+                </div>
+                <div class="contributors-table-wrapper">
+                    <MudTable T="ModuleDiagnosticsModule" Items="@Session.PerformanceContributors" Dense="true" Hover="true">
+                        <HeaderContent>
+                            <MudTh>@L["Modules:Columns:Module"]</MudTh>
+                            <MudTh>@L["Performance:Columns:Callbacks"]</MudTh>
+                            <MudTh>@L["Performance:Columns:StartupWork"]</MudTh>
+                            <MudTh>@L["Performance:Columns:Total"]</MudTh>
+                        </HeaderContent>
+                        <RowTemplate Context="module">
+                            <MudTd DataLabel="@L["Modules:Columns:Module"]">
+                                <MudButton Variant="Variant.Text" OnClick="@(() => ModuleSelected.InvokeAsync(module))">
+                                    @module.TypeName
+                                </MudButton>
+                            </MudTd>
+                            <MudTd DataLabel="@L["Performance:Columns:Callbacks"]">@ModuleDiagnosticsDisplay.Duration(module.SerialCallbackDurationMs)</MudTd>
+                            <MudTd DataLabel="@L["Performance:Columns:StartupWork"]">@ModuleDiagnosticsDisplay.Duration(module.StartupWorkDurationMs)</MudTd>
+                            <MudTd DataLabel="@L["Performance:Columns:Total"]"><strong>@ModuleDiagnosticsDisplay.Duration(ModuleCost(module))</strong></MudTd>
+                        </RowTemplate>
+                    </MudTable>
+                </div>
+            </section>
+
+            <section class="performance-panel" aria-labelledby="blocking-title">
+                <div class="performance-heading">
+                    <div>
+                        <MudText Typo="Typo.overline">@L["Performance:Blocking:Eyebrow"]</MudText>
+                        <MudText Typo="Typo.h6" HtmlTag="h2" id="blocking-title">@L["Performance:Blocking:Title"]</MudText>
+                    </div>
+                </div>
+                @if (snapshot.BlockingChain.IsEmpty)
+                {
+                    <div class="performance-empty">@L["Performance:Blocking:Empty"]</div>
+                }
+                else
+                {
+                    <div class="blocking-list">
+                        @foreach (var segment in snapshot.BlockingChain.OrderByDescending(static segment => segment.BlockingDurationMs))
+                        {
+                            var module = snapshot.Modules.FirstOrDefault(candidate => candidate.ModuleKey == segment.ModuleKey);
+                            <article>
+                                <button type="button" disabled="@(module is null)" @onclick="@(() => SelectModuleAsync(module))">
+                                    <span>
+                                        <strong>@(module?.TypeName ?? segment.ModuleKey.Value)</strong>
+                                        <small>@L[$"Enums:Barrier:{segment.Barrier}"] · @segment.WorkItemId</small>
+                                    </span>
+                                    <code>@ModuleDiagnosticsDisplay.Duration(segment.BlockingDurationMs)</code>
+                                </button>
+                                <div class="blocking-linkage">
+                                    <div>
+                                        <span>@L["Performance:Blocking:BarrierSpan"]</span>
+                                        <CopyableIdentifier Value="@segment.BarrierSpanId" AccessibleName="@L["Performance:Blocking:BarrierSpan"]" />
+                                    </div>
+                                    <div>
+                                        <span>@L["Performance:Blocking:WorkSpan"]</span>
+                                        <CopyableIdentifier Value="@segment.WorkSpanId" AccessibleName="@L["Performance:Blocking:WorkSpan"]" />
+                                    </div>
+                                    @if (!string.IsNullOrWhiteSpace(segment.CommitSpanId))
+                                    {
+                                        <div>
+                                            <span>@L["Performance:Blocking:CommitSpan",
+                                                ModuleDiagnosticsDisplay.Duration(segment.CommitDurationMs)]</span>
+                                            <CopyableIdentifier Value="@(segment.CommitSpanId!)" AccessibleName="@L["Performance:Blocking:CommitSpanName"]" />
+                                        </div>
+                                    }
+                                </div>
+                            </article>
+                        }
+                    </div>
+                }
+            </section>
+        </div>
+
+        <section class="performance-panel" aria-labelledby="discovery-stages-title">
+            <div class="performance-heading">
+                <div>
+                    <MudText Typo="Typo.overline">@L["Performance:Discovery:Eyebrow"]</MudText>
+                    <MudText Typo="Typo.h6" HtmlTag="h2" id="discovery-stages-title">@L["Performance:Discovery:Title"]</MudText>
+                </div>
+            </div>
+            <div class="stage-strip">
+                @foreach (var stage in snapshot.TypeDiscovery.Stages)
+                {
+                    <article>
+                        <span>@ModuleDiagnosticsDisplay.Stage(stage.Stage, L)</span>
+                        <strong>@ModuleDiagnosticsDisplay.Duration(stage.DurationMs)</strong>
+                    </article>
+                }
+            </div>
+        </section>
+
+        <section class="performance-panel" aria-labelledby="startup-work-title">
+            <div class="performance-heading">
+                <div>
+                    <MudText Typo="Typo.overline">@L["Performance:StartupWork:Eyebrow"]</MudText>
+                    <MudText Typo="Typo.h6" HtmlTag="h2" id="startup-work-title">@L["Performance:StartupWork:Title"]</MudText>
+                </div>
+            </div>
+            <div class="startup-work-table-wrapper">
+                <MudTable T="ModuleDiagnosticsTraceSpan"
+                          Items="@StartupWorkSpans"
+                          RowsPerPage="10"
+                          Dense="true"
+                          Hover="true"
+                          Breakpoint="Breakpoint.Sm">
+                    <HeaderContent>
+                        <MudTh>@L["Performance:Columns:Module"]</MudTh>
+                        <MudTh>@L["Performance:Columns:WorkItem"]</MudTh>
+                        <MudTh>@L["Performance:Columns:Queue"]</MudTh>
+                        <MudTh>@L["Performance:Columns:Duration"]</MudTh>
+                        <MudTh>@L["Performance:Columns:State"]</MudTh>
+                    </HeaderContent>
+                    <RowTemplate Context="work">
+                        <MudTd DataLabel="@L["Performance:Columns:Module"]">@TimelineLabel(work)</MudTd>
+                        <MudTd DataLabel="@L["Performance:Columns:WorkItem"]"><code>@(work.WorkItemId ?? work.Name ?? L["Common:NotAvailable"])</code></MudTd>
+                        <MudTd DataLabel="@L["Performance:Columns:Queue"]">@ModuleDiagnosticsDisplay.Duration(work.QueueDurationMs ?? 0)</MudTd>
+                        <MudTd DataLabel="@L["Performance:Columns:Duration"]">@ModuleDiagnosticsDisplay.Duration(work.DurationMs)</MudTd>
+                        <MudTd DataLabel="@L["Performance:Columns:State"]">
+                            @(work.IsFailed ? L["Enums:SpanState:Failed"] : work.IsComplete ? L["Enums:SpanState:Complete"] : L["Enums:SpanState:Running"])
+                        </MudTd>
+                    </RowTemplate>
+                    <NoRecordsContent><MudText Typo="Typo.body2">@L["Performance:StartupWork:Empty"]</MudText></NoRecordsContent>
+                    <PagerContent>
+                        <MudTablePager PageSizeOptions="@(new[] { 10, 25, 50 })" />
+                    </PagerContent>
+                </MudTable>
+            </div>
+        </section>
+    </div>
+}
+
+@code {
+    private const int MAX_TIMELINE_ROWS = 80;
+
+    [Parameter, EditorRequired] public ModuleSystemWorkbenchSession Session { get; set; } = default!;
+    [Parameter] public EventCallback<ModuleDiagnosticsModule> ModuleSelected { get; set; }
+
+    private ModuleDiagnosticsSnapshot? _timelineSnapshot;
+    private ModuleDiagnosticsComparison? _timelineComparison;
+    private string? _timelineSelectedSpanId;
+    private TimelineProjection _timeline = TimelineProjection.Empty;
+
+    private IReadOnlyList<ModuleDiagnosticsTraceSpan> TimelineRows => GetTimelineProjection().Current;
+
+    private IReadOnlyList<ModuleDiagnosticsTraceSpan> StartupWorkSpans => Session.Snapshot?.TraceSpans
+        .Where(static span => span.Kind == ModuleDiagnosticsTraceSpanKind.StartupWork)
+        .OrderByDescending(static span => span.DurationMs)
+        .ToArray() ?? [];
+
+    private IReadOnlyDictionary<string, ModuleDiagnosticsExportTraceSpan> BaselineTimelineRows =>
+        GetTimelineProjection().Baseline;
+
+    private TimelineProjection GetTimelineProjection()
+    {
+        var snapshot = Session.Snapshot;
+        var comparison = Session.Comparison;
+        if (ReferenceEquals(snapshot, _timelineSnapshot)
+            && ReferenceEquals(comparison, _timelineComparison)
+            && string.Equals(Session.SelectedTraceSpanId, _timelineSelectedSpanId, StringComparison.Ordinal))
+        {
+            return _timeline;
+        }
+
+        var current = SelectCurrentRows(snapshot, Session.SelectedTraceSpanId);
+        IReadOnlyDictionary<string, ModuleDiagnosticsExportTraceSpan> baseline = comparison is null
+            ? new Dictionary<string, ModuleDiagnosticsExportTraceSpan>(StringComparer.Ordinal)
+            : MatchBaselineRows(current, comparison.Baseline.TraceSpans);
+        var axisMaximum = Math.Max(
+            Math.Max(
+                snapshot?.Summary.TotalCompositionDurationMs ?? 1,
+                current.Select(static span => span.EndedOffsetMs).DefaultIfEmpty(1).Max()),
+            Math.Max(
+                comparison?.Baseline.Summary.TotalCompositionDurationMs ?? 1,
+                baseline.Values.Select(static span => span.EndedOffsetMs).DefaultIfEmpty(1).Max()));
+
+        _timelineSnapshot = snapshot;
+        _timelineComparison = comparison;
+        _timelineSelectedSpanId = Session.SelectedTraceSpanId;
+        _timeline = new TimelineProjection(current, baseline, Math.Max(1, axisMaximum));
+        return _timeline;
+    }
+
+    private static IReadOnlyList<ModuleDiagnosticsTraceSpan> SelectCurrentRows(
+        ModuleDiagnosticsSnapshot? snapshot,
+        string? selectedSpanId)
+    {
+        if (snapshot is null)
+        {
+            return [];
+        }
+
+        var selected = new Dictionary<string, ModuleDiagnosticsTraceSpan>(StringComparer.Ordinal);
+        var essential = snapshot.TraceSpans
+            .Where(span => span.SystemStage is not null
+                           || span.Kind == ModuleDiagnosticsTraceSpanKind.StartupBarrier
+                           || string.Equals(span.SpanId, selectedSpanId, StringComparison.Ordinal))
+            .OrderByDescending(span => string.Equals(span.SpanId, selectedSpanId, StringComparison.Ordinal))
+            .ThenByDescending(static span => span.IsFailed)
+            .ThenByDescending(static span => span.SystemStage is not null)
+            .ThenByDescending(static span => span.DurationMs);
+        AddUntilFull(selected, essential);
+
+        var contributors = snapshot.TraceSpans
+            .Where(static span => span.IsFailed || span.DurationMs > 0)
+            .OrderByDescending(static span => span.IsFailed)
+            .ThenByDescending(static span => span.DurationMs);
+        AddUntilFull(selected, contributors);
+
+        return selected.Values
+            .OrderBy(static span => span.StartedOffsetMs)
+            .ThenBy(static span => span.SpanId, StringComparer.Ordinal)
+            .ToArray();
+
+        static void AddUntilFull(
+            Dictionary<string, ModuleDiagnosticsTraceSpan> destination,
+            IEnumerable<ModuleDiagnosticsTraceSpan> candidates)
+        {
+            foreach (var span in candidates)
+            {
+                destination.TryAdd(span.SpanId, span);
+                if (destination.Count == MAX_TIMELINE_ROWS)
+                {
+                    return;
+                }
+            }
+        }
+    }
+
+    private double TimelineHeight => Math.Max(34, TimelineRows.Count * 30);
+
+    private bool IsSelected(ModuleDiagnosticsTraceSpan span) =>
+        string.Equals(Session.SelectedTraceSpanId, span.SpanId, StringComparison.Ordinal);
+
+    private string TimelineRowClass(ModuleDiagnosticsTraceSpan span, int _) =>
+        IsSelected(span) ? "timeline-row-selected" : string.Empty;
+
+    private double TimelineX(ModuleDiagnosticsTraceSpan span) =>
+        Math.Clamp(span.StartedOffsetMs / GetTimelineProjection().AxisMaximum * 1000, 0, 998);
+
+    private double TimelineWidth(ModuleDiagnosticsTraceSpan span) =>
+        Math.Clamp(span.DurationMs / GetTimelineProjection().AxisMaximum * 1000, 2, 1000 - TimelineX(span));
+
+    private double BaselineTimelineX(ModuleDiagnosticsExportTraceSpan span) => Math.Clamp(
+        span.StartedOffsetMs / GetTimelineProjection().AxisMaximum * 1000,
+        0,
+        998);
+
+    private double BaselineTimelineWidth(ModuleDiagnosticsExportTraceSpan span) => Math.Clamp(
+        (span.EndedOffsetMs - span.StartedOffsetMs) / GetTimelineProjection().AxisMaximum * 1000,
+        2,
+        1000 - BaselineTimelineX(span));
+
+    private static string TimelineIdentity(
+        ModuleDiagnosticsTraceSpanKind kind,
+        string? moduleId,
+        ModuleSystemStage? systemStage,
+        ModulePhase? modulePhase,
+        ModuleCallbackKind? callbackKind) =>
+        $"{kind}|{moduleId}|{systemStage}|{modulePhase}|{callbackKind}";
+
+    private static IReadOnlyDictionary<string, ModuleDiagnosticsExportTraceSpan> MatchBaselineRows(
+        IReadOnlyList<ModuleDiagnosticsTraceSpan> current,
+        IReadOnlyList<ModuleDiagnosticsExportTraceSpan> baseline)
+    {
+        var orderedBaseline = baseline.OrderBy(static span => span.StartedOffsetMs).ToArray();
+        var baselineById = orderedBaseline.ToDictionary(static span => span.SpanId, StringComparer.Ordinal);
+        var usedBaselineIds = new HashSet<string>(StringComparer.Ordinal);
+        var matches = new Dictionary<string, ModuleDiagnosticsExportTraceSpan>(StringComparer.Ordinal);
+        var unmatchedCurrent = new List<ModuleDiagnosticsTraceSpan>();
+        foreach (var span in current)
+        {
+            if (baselineById.TryGetValue(span.SpanId, out var exact))
+            {
+                matches.Add(span.SpanId, exact);
+                usedBaselineIds.Add(exact.SpanId);
+            }
+            else
+            {
+                unmatchedCurrent.Add(span);
+            }
+        }
+
+        var remainingByIdentity = orderedBaseline
+            .Where(span => !usedBaselineIds.Contains(span.SpanId))
+            .GroupBy(static span => TimelineIdentity(
+                span.Kind,
+                span.ModuleId,
+                span.SystemStage,
+                span.ModulePhase,
+                span.CallbackKind),
+                StringComparer.Ordinal)
+            .ToDictionary(
+                static group => group.Key,
+                static group => new Queue<ModuleDiagnosticsExportTraceSpan>(group),
+                StringComparer.Ordinal);
+        foreach (var span in unmatchedCurrent)
+        {
+            var identity = TimelineIdentity(
+                span.Kind,
+                span.ModuleKey?.Id,
+                span.SystemStage,
+                span.ModulePhase,
+                span.CallbackKind);
+            if (remainingByIdentity.TryGetValue(identity, out var candidates) && candidates.TryDequeue(out var match))
+            {
+                matches.Add(span.SpanId, match);
+            }
+        }
+
+        return matches;
+    }
+
+    private sealed record TimelineProjection(
+        IReadOnlyList<ModuleDiagnosticsTraceSpan> Current,
+        IReadOnlyDictionary<string, ModuleDiagnosticsExportTraceSpan> Baseline,
+        double AxisMaximum)
+    {
+        internal static TimelineProjection Empty { get; } = new(
+            [],
+            new Dictionary<string, ModuleDiagnosticsExportTraceSpan>(StringComparer.Ordinal),
+            1);
+    }
+
+    private static string TimelineColor(ModuleDiagnosticsTraceSpan span) => span switch
+    {
+        { IsFailed: true } => "var(--mud-palette-error)",
+        { Kind: ModuleDiagnosticsTraceSpanKind.StartupBarrier } => "var(--mud-palette-warning)",
+        { Kind: ModuleDiagnosticsTraceSpanKind.StartupWork } => "var(--mud-palette-info)",
+        { Kind: ModuleDiagnosticsTraceSpanKind.ModuleCallback } => "var(--mud-palette-secondary)",
+        _ => "var(--mud-palette-primary)"
+    };
+
+    private string TimelineLabel(ModuleDiagnosticsTraceSpan span)
+    {
+        if (span.SystemStage is { } stage)
+        {
+            return ModuleDiagnosticsDisplay.Stage(stage, L);
+        }
+
+        if (span.ModuleKey is { } moduleKey)
+        {
+            var typeName = Session.Snapshot?.Modules.FirstOrDefault(module => module.ModuleKey == moduleKey)?.TypeName;
+            if (!string.IsNullOrWhiteSpace(typeName))
+            {
+                return typeName;
+            }
+        }
+
+        return span.Name ?? L[$"Enums:TraceKind:{span.Kind}"];
+    }
+
+    private void SetContributorLimit(int value) => Session.SetPerformanceFilters(
+        value,
+        Session.PerformanceMinimumDurationMs,
+        Session.HideZeroDurationContributors);
+
+    private void SetMinimumDuration(double value) => Session.SetPerformanceFilters(
+        Session.PerformanceContributorLimit,
+        value,
+        Session.HideZeroDurationContributors);
+
+    private void SetHideZero(bool value) => Session.SetPerformanceFilters(
+        Session.PerformanceContributorLimit,
+        Session.PerformanceMinimumDurationMs,
+        value);
+
+    private async Task SelectModuleAsync(ModuleDiagnosticsModule? module)
+    {
+        if (module is not null)
+        {
+            await ModuleSelected.InvokeAsync(module);
+        }
+    }
+
+    private static double ModuleCost(ModuleDiagnosticsModule module) =>
+        module.SerialCallbackDurationMs + module.StartupWorkDurationMs;
+
+    private static string SignedDuration(double duration) =>
+        $"{(duration > 0 ? "+" : duration < 0 ? "-" : string.Empty)}{ModuleDiagnosticsDisplay.Duration(Math.Abs(duration))}";
+}

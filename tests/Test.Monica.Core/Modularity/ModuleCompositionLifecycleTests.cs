@@ -16,6 +16,7 @@ using Monica.Core.Modularity.Exceptions;
 using Monica.Core.Modularity.Extensions;
 using Monica.Core.Modularity.Models;
 using Monica.Core.Modularity.State;
+using Monica.Modules;
 using Xunit;
 
 namespace Test.Monica.Core.Modularity;
@@ -47,11 +48,11 @@ public sealed class ModuleCompositionLifecycleTests
             && phase.DurationMs >= 20);
         composition.ModulePhaseExecutions.Should().BeEmpty();
 
-        var status = new ModuleSystemInspectionService(application).GetSystemStatus();
-        status.IsInitialized.Should().BeTrue();
-        status.State.Should().Be(ModuleSystemState.Initialized);
-        status.TotalModules.Should().Be(0);
-        status.ServiceRegistrationDurationMs.Should().Be(composition.ServiceRegistrationDurationMs);
+        var diagnostics = CreateDiagnostics(host.Services);
+        diagnostics.IsFinal.Should().BeTrue();
+        diagnostics.Outcome.Should().Be(ModuleCompositionOutcome.Succeeded);
+        diagnostics.Summary.ModuleCount.Should().Be(0);
+        diagnostics.Summary.ServiceRegistrationDurationMs.Should().Be(composition.ServiceRegistrationDurationMs);
     }
 
     [Fact]
@@ -103,12 +104,9 @@ public sealed class ModuleCompositionLifecycleTests
             .And.Contain("Service registration elapsed:")
             .And.NotContain("End-to-end composition elapsed:");
 
-        var inspection = new ModuleSystemInspectionService(application);
-        inspection.GetSystemStatus().ServiceRegistrationDurationMs
-            .Should().Be(composition.ServiceRegistrationDurationMs);
-        var healthMetrics = inspection.GetHealthCheck().PerformanceMetrics;
-        healthMetrics.ServiceRegistrationDurationMs.Should().Be(composition.ServiceRegistrationDurationMs);
-        healthMetrics.ServiceRegistrationEfficiencyScore.Should().BeInRange(0, 100);
+        var diagnostics = CreateDiagnostics(host.Services);
+        diagnostics.Summary.ServiceRegistrationDurationMs.Should().Be(composition.ServiceRegistrationDurationMs);
+        diagnostics.Summary.PerformanceBudgets.Should().BeEmpty();
 
         application.Modules.CompleteComposition(ModuleCompositionCompletionPoint.ServiceRegistration);
 
@@ -188,14 +186,13 @@ public sealed class ModuleCompositionLifecycleTests
 
         var snapshot = application.Modules.RuntimeSnapshots.Should().ContainSingle(snapshot =>
             snapshot.ModuleType == typeof(OptionalWebProbeModule)).Subject;
-        var detail = new ModuleSystemInspectionService(application)
-            .GetModuleDetail(typeof(OptionalWebProbeModule));
+        var detail = CreateDiagnostics(app.Services).Modules.Single(module =>
+            module.TypeName == nameof(OptionalWebProbeModule));
 
         snapshot.RequiresWebHost.Should().BeTrue();
         snapshot.WebHostRequirementReason.Should().Be(SELECTED_WEB_FEATURE_REQUIREMENT);
-        detail.Should().NotBeNull();
-        detail!.ConfigInfo.RequiresWebHost.Should().BeTrue();
-        detail.ConfigInfo.WebHostRequirementReason.Should().Be(SELECTED_WEB_FEATURE_REQUIREMENT);
+        detail.RequiresWebHost.Should().BeTrue();
+        detail.WebHostRequirementReason.Should().Be(SELECTED_WEB_FEATURE_REQUIREMENT);
     }
 
     [Fact]
@@ -211,12 +208,12 @@ public sealed class ModuleCompositionLifecycleTests
         using var host = builder.Build();
         var application = host.Services.GetRequiredService<MonicaApplication>();
 
-        var nodes = new ModuleSystemInspectionService(application).GetDependencyGraph().Nodes;
+        var nodes = CreateDiagnostics(host.Services).Modules;
 
         nodes.Should().ContainSingle(node =>
-            node.ModuleTypeName == nameof(ExplicitPresentationProbeModule) && node.IsUIModule);
+            node.TypeName == nameof(ExplicitPresentationProbeModule) && node.IsUiModule);
         nodes.Should().ContainSingle(node =>
-            node.ModuleTypeName == nameof(NonUiSuffixProbeModuleUI) && !node.IsUIModule);
+            node.TypeName == nameof(NonUiSuffixProbeModuleUI) && !node.IsUiModule);
     }
 
     [Fact]
@@ -264,9 +261,7 @@ public sealed class ModuleCompositionLifecycleTests
             .Where(static execution => execution.ModuleTypeName == nameof(CompositionWebProbeModule))
             .Where(static execution => execution.Phase == ModulePhase.ConfigureApplicationBuilder)
             .ToArray();
-        webModule.Should().HaveCount(2);
-        webModule.Select(static execution => execution.Sequence).Should().BeInAscendingOrder();
-        webModule.Select(static execution => execution.ExecutionId).Should().OnlyHaveUniqueItems();
+        webModule.Should().ContainSingle().Which.Kind.Should().Be(ModuleCallbackKind.Lifecycle);
     }
 
     [Fact]
@@ -400,7 +395,7 @@ public sealed class ModuleCompositionLifecycleTests
             nameof(ModulePhase.FinalizeOptions),
             nameof(ModulePhase.ConfigureBuilder),
             nameof(ModulePhase.ConfigureServices),
-            nameof(ModulePhase.DiscoverTypes),
+            nameof(ModulePhase.DeclareTypeDiscovery),
             nameof(ModulePhase.PostConfigureServices),
             nameof(ModulePhase.ConfigureApplicationBuilder),
             nameof(ModulePhase.ConfigureEndpoints),
@@ -415,7 +410,7 @@ public sealed class ModuleCompositionLifecycleTests
         state.TryBeginCompletion(ModuleCompositionCompletionPoint.ServiceRegistration).Should().BeTrue();
         var failure = new InvalidOperationException("Final module validation failed.");
 
-        state.FailCompletion(failure);
+        state.FailCompletion(failure, ModuleCompositionFailureKind.Completion);
 
         state.GetStartupValidationFailure().Should()
             .Contain("composition failed")
@@ -433,6 +428,15 @@ public sealed class ModuleCompositionLifecycleTests
         var builder = CreateWebBuilder();
         ConfigureMonica(builder);
         return builder.Build();
+    }
+
+    private static ModuleDiagnosticsSnapshot CreateDiagnostics(IServiceProvider services)
+    {
+        return new ModuleDiagnosticsService(
+                services.GetRequiredService<MonicaApplication>(),
+                Options.Create(new ModuleSystemOption()),
+                services.GetRequiredService<IHostEnvironment>())
+            .GetSnapshot();
     }
 
     private static WebApplicationBuilder CreateWebBuilder()

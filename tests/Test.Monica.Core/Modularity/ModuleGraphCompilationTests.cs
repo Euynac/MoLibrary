@@ -4,8 +4,10 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
 using Monica.Core;
 using Monica.Core.Modularity.Abstractions;
+using Monica.Core.Modularity.Diagnostics.Models;
 using Monica.Core.Modularity.Diagnostics.Services;
 using Monica.Core.Modularity.Extensions;
+using Monica.Modules;
 using Xunit;
 
 namespace Test.Monica.Core.Modularity;
@@ -78,15 +80,15 @@ public sealed class ModuleGraphCompilationTests
 
         using var host = builder.Build();
         var application = host.Services.GetRequiredService<MonicaApplication>();
-        var inspection = new ModuleSystemInspectionService(application);
+        var diagnostics = CreateDiagnostics(host.Services);
 
         optionsMaterialized.Should().BeFalse();
         application.Modules.IsRegistered(typeof(DisabledGraphModule)).Should().BeFalse();
         application.Modules.RuntimeSnapshots.Should().NotContain(
             snapshot => snapshot.ModuleType == typeof(DisabledGraphModule));
-        inspection.GetRegistrationInfo().DisabledModules.Should().ContainSingle(module =>
-            module.ModuleTypeName == nameof(DisabledGraphModule));
-        inspection.GetModuleDetail(typeof(DisabledGraphModule))!.ConfigInfo.DisabledReason
+        diagnostics.Modules.Should().ContainSingle(module =>
+            module.TypeName == nameof(DisabledGraphModule) && !module.IsActive);
+        diagnostics.Modules.Single(module => module.TypeName == nameof(DisabledGraphModule)).DisabledReason
             .Should().Be("Disabled for this host");
     }
 
@@ -107,14 +109,14 @@ public sealed class ModuleGraphCompilationTests
         var runtimeTypes = application.Modules.RuntimeSnapshots
             .Select(static snapshot => snapshot.ModuleType)
             .ToArray();
-        var inspection = new ModuleSystemInspectionService(application);
+        var diagnostics = CreateDiagnostics(host.Services);
 
         runtimeTypes.Should().Equal(typeof(IndependentGraphModule));
-        inspection.GetRegistrationInfo().DisabledModules.Select(static module => module.ModuleTypeName)
+        diagnostics.Modules.Where(static module => !module.IsActive).Select(static module => module.TypeName)
             .Should().BeEquivalentTo(
                 nameof(DisabledGraphModule),
                 nameof(DisabledGraphDependentModule));
-        inspection.GetModuleDetail(typeof(DisabledGraphDependentModule))!.ConfigInfo.DisabledReason
+        diagnostics.Modules.Single(module => module.TypeName == nameof(DisabledGraphDependentModule)).DisabledReason
             .Should().Contain(nameof(DisabledGraphModule));
     }
 
@@ -148,6 +150,15 @@ public sealed class ModuleGraphCompilationTests
 
         mutate.Should().Throw<InvalidOperationException>()
             .WithMessage("*graph is sealed*");
+    }
+
+    private static ModuleDiagnosticsSnapshot CreateDiagnostics(IServiceProvider services)
+    {
+        return new ModuleDiagnosticsService(
+                services.GetRequiredService<MonicaApplication>(),
+                Options.Create(new ModuleSystemOption()),
+                services.GetRequiredService<IHostEnvironment>())
+            .GetSnapshot();
     }
 }
 

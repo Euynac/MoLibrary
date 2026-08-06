@@ -4,6 +4,7 @@ using Monica.Core;
 using Monica.Core.Modularity;
 using Monica.Core.Modularity.Abstractions;
 using Monica.Core.Modularity.Diagnostics.Facades;
+using Monica.Core.Modularity.Diagnostics.Models;
 using Monica.Core.Modularity.Diagnostics.Services;
 using Monica.Core.Modularity.Metrics;
 
@@ -37,8 +38,11 @@ public class ModuleSystem : MonicaModule<ModuleSystemOption>
     public override void ConfigureServices(ModuleContext<ModuleSystemOption> context)
     {
         var services = context.Services;
-        services.AddSingleton<IModuleSystemInspectionService, ModuleSystemInspectionService>();
-        services.AddSingleton<ModuleDiagnosticsFacade>();
+        services.AddSingleton<ModuleDiagnosticsService>();
+        services.AddSingleton(static provider => new ModuleDiagnosticsFacade(
+            provider.GetRequiredService<ModuleDiagnosticsService>(),
+            provider.GetRequiredService<ModuleInitMetrics>(),
+            provider.GetRequiredService<Microsoft.Extensions.Logging.ILogger<ModuleDiagnosticsFacade>>()));
         services.TryAddSingleton<ModuleInitMetrics>();
         services.AddHostedService<ModuleInitMetricsActivationService>();
     }
@@ -49,4 +53,33 @@ public class ModuleSystem : MonicaModule<ModuleSystemOption>
 /// </summary>
 public class ModuleSystemOption : ModuleOptions<ModuleSystem>
 {
+    private readonly Dictionary<Type, IModuleOptionDiagnosticsProjection> _optionDiagnostics = [];
+
+    /// <summary>
+    /// Explicitly allow-lists a safe diagnostics projection for one module's finalized default options.
+    /// </summary>
+    /// <typeparam name="TModule">The module that owns the options.</typeparam>
+    /// <typeparam name="TOptions">The module's concrete option type.</typeparam>
+    /// <param name="configure">Declares bounded scalar, presence-only, or count-only entries.</param>
+    /// <returns>This option object.</returns>
+    /// <exception cref="InvalidOperationException">Thrown when the same module is configured more than once.</exception>
+    public ModuleSystemOption ExposeModuleOptions<TModule, TOptions>(
+        Action<ModuleOptionDiagnosticsBuilder<TOptions>> configure)
+        where TModule : MonicaModule<TOptions>, new()
+        where TOptions : ModuleOptions<TModule>, new()
+    {
+        ArgumentNullException.ThrowIfNull(configure);
+        var builder = new ModuleOptionDiagnosticsBuilder<TOptions>();
+        configure(builder);
+        if (!_optionDiagnostics.TryAdd(typeof(TModule), builder.Build(typeof(TModule))))
+        {
+            throw new InvalidOperationException(
+                $"Safe option diagnostics for {typeof(TModule).Name} were configured more than once.");
+        }
+
+        return this;
+    }
+
+    internal IReadOnlyDictionary<Type, IModuleOptionDiagnosticsProjection> OptionDiagnostics =>
+        _optionDiagnostics;
 }

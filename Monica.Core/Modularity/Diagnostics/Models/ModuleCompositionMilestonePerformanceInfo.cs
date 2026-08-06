@@ -3,7 +3,7 @@ namespace Monica.Core.Modularity.Diagnostics.Models;
 /// <summary>
 /// Identifies a host-owned milestone on the Monica composition timeline.
 /// </summary>
-public enum ModuleCompositionMilestone
+internal enum ModuleCompositionMilestone
 {
     /// <summary><c>AddMonica(...)</c> started composition profiling.</summary>
     CompositionStarted,
@@ -27,7 +27,7 @@ public enum ModuleCompositionMilestone
 /// <summary>
 /// Describes one lifecycle milestone relative to composition start.
 /// </summary>
-public sealed class ModuleCompositionMilestonePerformanceInfo
+internal sealed class ModuleCompositionMilestonePerformanceInfo
 {
     /// <summary>Gets the milestone.</summary>
     public ModuleCompositionMilestone Milestone { get; init; }

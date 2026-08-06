@@ -79,7 +79,7 @@ public class ModuleAutoControllers : MonicaModule<ModuleAutoControllersOption>, 
                 options => options.ConfigAutoController(provider)));
     }
 
-    public override void DiscoverTypes(TypeDiscoveryPlan<ModuleAutoControllersOption> discovery)
+    public override void DeclareTypeDiscovery(TypeDiscoveryPlan<ModuleAutoControllersOption> discovery)
     {
         discovery.Match(
             TypeQuery.AnyOf(

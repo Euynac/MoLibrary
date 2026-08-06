@@ -100,7 +100,7 @@ public class ModuleLocalization : MonicaModule<ModuleLocalizationOption>, IWebMo
     /// Built-in Monica modules must not rely on this hook because their assemblies may not be part of that scan.
     /// Monica modules should declare a dependency on <see cref="ModuleLocalization"/> and register reusable resource types through the registration extension.
     /// </summary>
-    public override void DiscoverTypes(TypeDiscoveryPlan<ModuleLocalizationOption> discovery)
+    public override void DeclareTypeDiscovery(TypeDiscoveryPlan<ModuleLocalizationOption> discovery)
     {
         discovery.Match(
             TypeQuery.ConcreteClass.AssignableTo<ILocalizationResource>(),

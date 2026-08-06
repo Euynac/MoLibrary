@@ -1,0 +1,18 @@
+<div class="change-list">
+    @if (Values.Count == 0)
+    {
+        <span>@EmptyText</span>
+    }
+    else
+    {
+        @foreach (var value in Values)
+        {
+            <code title="@value">@value</code>
+        }
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired] public IReadOnlyList<string> Values { get; set; } = [];
+    [Parameter, EditorRequired] public string EmptyText { get; set; } = string.Empty;
+}

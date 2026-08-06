@@ -31,7 +31,7 @@ The most important business-safety call in the entire refactor lives in this doc
 
 ### 1.2 The discovery hook is already there
 
-`ModuleProjectUnits.DiscoverTypes` already declares the broad structural query that populates an `IProjectUnitCatalog` owned by the current host. The Provider in this doc consumes that catalog through an ordinary runtime capability source — it does not declare another type query. New work is purely the projection of each registered `ProjectUnit` into an `AgentSkill`.
+`ModuleProjectUnits.DeclareTypeDiscovery` already declares the broad structural query that populates an `IProjectUnitCatalog` owned by the current host. The Provider in this doc consumes that catalog through an ordinary runtime capability source — it does not declare another type query. New work is purely the projection of each registered `ProjectUnit` into an `AgentSkill`.
 
 This makes Phase D the cheapest of the four phases: no new iteration pass, no new marker interface, no parallel registry.
 

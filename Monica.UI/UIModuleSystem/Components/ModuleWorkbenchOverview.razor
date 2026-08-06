@@ -1,0 +1,135 @@
+@using Microsoft.Extensions.Localization
+@using Monica.Core.Modularity.Diagnostics.Models
+@using Monica.UI.Localization
+@using Monica.UI.UIModuleSystem.State
+@using Monica.UI.UIModuleSystem.Support
+@inject IStringLocalizer<ModuleSystemResource> L
+
+@if (Session.Snapshot is { } snapshot)
+{
+    <div class="overview-layout">
+        <section class="kpi-strip" aria-label="@L["Aria:SummaryMetrics"]">
+            <article>
+                <span>@L["Overview:Kpis:Composition"]</span>
+                <strong>@ModuleDiagnosticsDisplay.Duration(snapshot.Summary.TotalCompositionDurationMs)</strong>
+                @if (Session.Comparison is { } comparison)
+                {
+                    <small>@FormatDelta(comparison.TotalDurationDeltaMs)</small>
+                }
+            </article>
+            <article>
+                <span>@L["Overview:Kpis:ActiveModules"]</span>
+                <strong>@snapshot.Summary.ActiveModuleCount</strong>
+                <small>@L["Overview:Kpis:Declared", snapshot.Summary.ModuleCount]</small>
+            </article>
+            <article>
+                <span>@L["Overview:Kpis:ServiceRegistration"]</span>
+                <strong>@ModuleDiagnosticsDisplay.Duration(snapshot.Summary.ServiceRegistrationDurationMs)</strong>
+                <small>@L["Overview:Kpis:ExactTiming"]</small>
+            </article>
+            <article>
+                <span>@L["Overview:Kpis:TypeDiscovery"]</span>
+                <strong>@ModuleDiagnosticsDisplay.Duration(snapshot.Summary.TypeDiscoveryDurationMs)</strong>
+                <small>@L["Overview:Kpis:Queries", snapshot.TypeDiscovery.Statistics.DistinctQueryCount]</small>
+            </article>
+            <article>
+                <span>@L["Overview:Kpis:Findings"]</span>
+                <strong>@snapshot.Findings.Length</strong>
+                <small>@L["Overview:Kpis:Errors", snapshot.Summary.ErrorCount]</small>
+            </article>
+        </section>
+
+        <ModuleWorkbenchCriticalPathRibbon Session="@Session" ModuleSelected="@ModuleSelected" />
+
+        <div class="overview-evidence-grid">
+            <section class="evidence-panel" aria-labelledby="findings-title">
+                <div class="panel-heading">
+                    <div>
+                        <MudText Typo="Typo.overline">@L["Overview:Findings:Eyebrow"]</MudText>
+                        <MudText Typo="Typo.h6" HtmlTag="h2" id="findings-title">@L["Overview:Findings:Title"]</MudText>
+                    </div>
+                    <MudChip T="int" Size="Size.Small" Color="@FindingsColor(snapshot.Findings)">
+                        @snapshot.Findings.Length
+                    </MudChip>
+                </div>
+                @if (snapshot.Findings.IsEmpty)
+                {
+                    <div class="compact-empty-state">
+                        <MudIcon Icon="@Icons.Material.Filled.Verified" Color="Color.Success" />
+                        <span>@L["Overview:Findings:Empty"]</span>
+                    </div>
+                }
+                else
+                {
+                    <MudList T="ModuleDiagnosticFinding" Dense="true">
+                        @foreach (var finding in snapshot.Findings.Take(6))
+                        {
+                            <MudListItem Value="@finding" Icon="@FindingIcon(finding.Severity)"
+                                         IconColor="@FindingColor(finding.Severity)">
+                                <MudText Typo="Typo.body2">@ModuleDiagnosticsDisplay.Finding(finding, L)</MudText>
+                                <MudText Typo="Typo.caption" Color="Color.Secondary">@finding.Code</MudText>
+                            </MudListItem>
+                        }
+                    </MudList>
+                }
+            </section>
+
+            <section class="evidence-panel" aria-labelledby="hotspots-title">
+                <div class="panel-heading">
+                    <div>
+                        <MudText Typo="Typo.overline">@L["Overview:Hotspots:Eyebrow"]</MudText>
+                        <MudText Typo="Typo.h6" HtmlTag="h2" id="hotspots-title">@L["Overview:Hotspots:Title"]</MudText>
+                    </div>
+                </div>
+                <div class="hotspot-list">
+                    @foreach (var module in snapshot.Modules.OrderByDescending(ModuleCost).Take(5))
+                    {
+                        <button type="button" @onclick="@(() => ModuleSelected.InvokeAsync(module))">
+                            <span>
+                                <strong>@module.TypeName</strong>
+                                <small title="@module.FullTypeName">@module.AssemblyName</small>
+                            </span>
+                            <code>@ModuleDiagnosticsDisplay.Duration(ModuleCost(module))</code>
+                        </button>
+                    }
+                </div>
+            </section>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter, EditorRequired] public ModuleSystemWorkbenchSession Session { get; set; } = default!;
+    [Parameter] public EventCallback<ModuleDiagnosticsModule> ModuleSelected { get; set; }
+
+    private static double ModuleCost(ModuleDiagnosticsModule module) =>
+        module.SerialCallbackDurationMs + module.StartupWorkDurationMs;
+
+    private static Color FindingsColor(IReadOnlyList<ModuleDiagnosticFinding> findings) =>
+        findings.Any(static finding => finding.Severity == ModuleDiagnosticFindingSeverity.Error)
+            ? Color.Error
+            : findings.Any(static finding => finding.Severity == ModuleDiagnosticFindingSeverity.Warning)
+                ? Color.Warning
+                : Color.Success;
+
+    private static Color FindingColor(ModuleDiagnosticFindingSeverity severity) => severity switch
+    {
+        ModuleDiagnosticFindingSeverity.Error => Color.Error,
+        ModuleDiagnosticFindingSeverity.Warning => Color.Warning,
+        _ => Color.Info
+    };
+
+    private static string FindingIcon(ModuleDiagnosticFindingSeverity severity) => severity switch
+    {
+        ModuleDiagnosticFindingSeverity.Error => Icons.Material.Filled.Error,
+        ModuleDiagnosticFindingSeverity.Warning => Icons.Material.Filled.Warning,
+        _ => Icons.Material.Filled.Info
+    };
+
+    private string FormatDelta(double delta) => delta switch
+    {
+        > 0 => L["Comparison:Slower", ModuleDiagnosticsDisplay.Duration(delta)],
+        < 0 => L["Comparison:Faster", ModuleDiagnosticsDisplay.Duration(Math.Abs(delta))],
+        _ => L["Comparison:Unchanged"]
+    };
+}

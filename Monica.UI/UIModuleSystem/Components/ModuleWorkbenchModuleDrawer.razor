@@ -1,0 +1,221 @@
+@using Microsoft.Extensions.Localization
+@using Monica.Core.Modularity.Diagnostics.Models
+@using Monica.UI.Localization
+@using Monica.UI.UIModuleSystem.State
+@using Monica.UI.UIModuleSystem.Support
+@inject IStringLocalizer<ModuleSystemResource> L
+
+<MudDrawer Open="@Session.IsModuleDrawerOpen"
+           OpenChanged="@OpenChanged"
+           Anchor="Anchor.End"
+           Variant="DrawerVariant.Temporary"
+           Overlay="true"
+           OverlayAutoClose="true"
+           Fixed="true"
+           Width="min(34rem, 100vw)"
+           Elevation="8">
+    @if (Session.SelectedModule is { } module && Session.Snapshot is { } snapshot)
+    {
+        <div class="module-drawer-content">
+            <MudDrawerHeader>
+                <div class="drawer-header-content">
+                    <div>
+                        <MudText Typo="Typo.overline">@L["ModuleDrawer:Eyebrow"]</MudText>
+                        <MudText Typo="Typo.h5">@module.TypeName</MudText>
+                        <CopyableIdentifier Value="@module.FullTypeName" AccessibleName="@module.TypeName" />
+                    </div>
+                    <MudIconButton Icon="@Icons.Material.Filled.Close"
+                                   OnClick="@(() => OpenChanged.InvokeAsync(false))"
+                                   aria-label="@L["Aria:CloseModuleDrawer"]" />
+                </div>
+            </MudDrawerHeader>
+
+            <MudTabs ActivePanelIndex="@Session.ModuleDrawerTabIndex"
+                     ActivePanelIndexChanged="@OnTabChangedAsync"
+                     Rounded="false">
+                <MudTabPanel Text="@L["ModuleDrawer:Tabs:Summary"]" Icon="@Icons.Material.Filled.Info">
+                    <div class="drawer-section-stack">
+                        <div class="module-summary-grid">
+                            <article><span>@L["ModuleDrawer:Fields:State"]</span><strong>@(module.IsActive ? L["Enums:ModuleState:Active"] : L["Enums:ModuleState:Disabled"])</strong></article>
+                            <article><span>@L["ModuleDrawer:Fields:Phase"]</span><strong>@ModuleDiagnosticsDisplay.Phase(module.Phase, L)</strong></article>
+                            <article><span>@L["ModuleDrawer:Fields:Order"]</span><strong>@(module.RegistrationOrder?.ToString() ?? L["Common:NotAvailable"])</strong></article>
+                            <article><span>@L["ModuleDrawer:Fields:Depth"]</span><strong>@module.DependencyDepth</strong></article>
+                            <article><span>@L["ModuleDrawer:Fields:Assembly"]</span><strong title="@module.AssemblyName">@module.AssemblyName</strong></article>
+                            <article><span>@L["ModuleDrawer:Fields:Errors"]</span><strong>@module.ErrorCount</strong></article>
+                        </div>
+                        <section>
+                            <MudText Typo="Typo.subtitle2">@L["ModuleDrawer:Capabilities:Title"]</MudText>
+                            <div class="capability-chips">
+                                @if (module.IsUiModule) { <MudChip T="string" Size="Size.Small" Color="Color.Info">@L["ModuleDrawer:Capabilities:UI"]</MudChip> }
+                                @if (module.IsWebModule) { <MudChip T="string" Size="Size.Small" Color="Color.Secondary">@L["ModuleDrawer:Capabilities:Web"]</MudChip> }
+                                @if (module.RequiresWebHost) { <MudChip T="string" Size="Size.Small" Color="Color.Warning">@L["ModuleDrawer:Capabilities:WebHost"]</MudChip> }
+                                @if (!module.IsUiModule && !module.IsWebModule && !module.RequiresWebHost)
+                                {
+                                    <MudChip T="string" Size="Size.Small" Color="Color.Default">@L["ModuleDrawer:Capabilities:Core"]</MudChip>
+                                }
+                            </div>
+                        </section>
+                        @if (!string.IsNullOrWhiteSpace(module.DisabledReason))
+                        {
+                            <MudAlert Severity="Severity.Info" Variant="Variant.Outlined">@module.DisabledReason</MudAlert>
+                        }
+                    </div>
+                </MudTabPanel>
+
+                <MudTabPanel Text="@L["ModuleDrawer:Tabs:Performance"]" Icon="@Icons.Material.Filled.Speed">
+                    <div class="drawer-section-stack">
+                        <div class="module-summary-grid">
+                            <article><span>@L["Performance:Columns:Callbacks"]</span><strong>@ModuleDiagnosticsDisplay.Duration(module.SerialCallbackDurationMs)</strong></article>
+                            <article><span>@L["Performance:Columns:StartupWork"]</span><strong>@ModuleDiagnosticsDisplay.Duration(module.StartupWorkDurationMs)</strong></article>
+                        </div>
+                        <MudText Typo="Typo.subtitle2">@L["ModuleDrawer:Performance:Spans"]</MudText>
+                        @foreach (var span in snapshot.TraceSpans.Where(span => span.ModuleKey == module.ModuleKey))
+                        {
+                            <div class="drawer-fact-row">
+                                <span>
+                                    @SpanName(span)
+                                    <CopyableIdentifier Value="@span.SpanId" AccessibleName="@SpanName(span)" />
+                                </span>
+                                <code>@ModuleDiagnosticsDisplay.Duration(span.DurationMs)</code>
+                            </div>
+                        }
+                        @if (!snapshot.TraceSpans.Any(span => span.ModuleKey == module.ModuleKey))
+                        {
+                            <div class="drawer-empty">@L["ModuleDrawer:Performance:Empty"]</div>
+                        }
+                    </div>
+                </MudTabPanel>
+
+                <MudTabPanel Text="@L["ModuleDrawer:Tabs:Dependencies"]" Icon="@Icons.Material.Filled.AccountTree">
+                    <div class="drawer-section-stack">
+                        <RelationshipList Title="@L["Dependencies:Selected:Requires"]"
+                                          Modules="@RequiredModules(module, snapshot)" />
+                        <RelationshipList Title="@L["Dependencies:Selected:RequiredBy"]"
+                                          Modules="@DependentModules(module, snapshot)" />
+                        <MudButton Variant="Variant.Filled"
+                                   Color="Color.Primary"
+                                   StartIcon="@Icons.Material.Filled.AccountTree"
+                                   OnClick="@NavigateToDependencies">
+                            @L["ModuleDrawer:Dependencies:OpenExplorer"]
+                        </MudButton>
+                    </div>
+                </MudTabPanel>
+
+                <MudTabPanel Text="@L["ModuleDrawer:Tabs:Options"]" Icon="@Icons.Material.Filled.Security">
+                    <div class="drawer-section-stack">
+                        <MudAlert Severity="Severity.Info" Variant="Variant.Outlined" Dense="true">
+                            @L["ModuleDrawer:Options:Privacy"]
+                        </MudAlert>
+                        @switch (Session.SelectedModuleOptionsState)
+                        {
+                            case ModuleSystemLazyLoadState.NotRequested:
+                            case ModuleSystemLazyLoadState.Loading:
+                                <div class="drawer-loading" role="status">
+                                    <MudProgressCircular Indeterminate="true" Color="Color.Primary" />
+                                    <span>@L["ModuleDrawer:Options:Loading"]</span>
+                                </div>
+                                break;
+                            case ModuleSystemLazyLoadState.Failed:
+                                <MudAlert Severity="Severity.Error" Variant="Variant.Outlined">
+                                    @L["ModuleDrawer:Options:Failed"]
+                                    <MudButton Variant="Variant.Text" OnClick="@RetryOptionsAsync">@L["Actions:Retry"]</MudButton>
+                                </MudAlert>
+                                break;
+                            case ModuleSystemLazyLoadState.Ready when Session.SelectedModuleOptions is { } options:
+                                @if (!options.IsConfigured || options.Entries.IsEmpty)
+                                {
+                                    <div class="drawer-empty">@L["ModuleDrawer:Options:Empty"]</div>
+                                }
+                                else
+                                {
+                                    @foreach (var entry in options.Entries)
+                                    {
+                                        <div class="option-row">
+                                            <span>
+                                                <strong>@entry.Name</strong>
+                                                <small>@L[$"Enums:OptionKind:{entry.Kind}"]</small>
+                                            </span>
+                                            <code>@OptionValue(entry)</code>
+                                        </div>
+                                    }
+                                }
+                                break;
+                        }
+                    </div>
+                </MudTabPanel>
+
+                <MudTabPanel Text="@L["ModuleDrawer:Tabs:Errors"]" Icon="@Icons.Material.Filled.ErrorOutline">
+                    <div class="drawer-section-stack">
+                        @foreach (var finding in snapshot.Findings.Where(finding => finding.RelatedModules.Contains(module.ModuleKey)))
+                        {
+                            <MudAlert Severity="@FindingSeverity(finding.Severity)" Variant="Variant.Outlined">
+                                @ModuleDiagnosticsDisplay.Finding(finding, L)
+                                <div class="finding-code">@finding.Code</div>
+                            </MudAlert>
+                        }
+                        @if (!snapshot.Findings.Any(finding => finding.RelatedModules.Contains(module.ModuleKey)))
+                        {
+                            <div class="drawer-empty">@L["ModuleDrawer:Errors:Empty"]</div>
+                        }
+                    </div>
+                </MudTabPanel>
+            </MudTabs>
+        </div>
+    }
+</MudDrawer>
+
+@code {
+    [Parameter, EditorRequired] public ModuleSystemWorkbenchSession Session { get; set; } = default!;
+    [Parameter] public EventCallback<bool> OpenChanged { get; set; }
+    [Parameter] public EventCallback NavigateToDependencies { get; set; }
+
+    private async Task OnTabChangedAsync(int tabIndex)
+    {
+        Session.SetModuleDrawerTab(tabIndex);
+        if (tabIndex == 3)
+        {
+            await Session.EnsureSelectedModuleOptionsLoadedAsync();
+        }
+    }
+
+    private Task RetryOptionsAsync() => Session.EnsureSelectedModuleOptionsLoadedAsync(retry: true);
+
+    private string SpanName(ModuleDiagnosticsTraceSpan span) => span.SystemStage is { } stage
+        ? ModuleDiagnosticsDisplay.Stage(stage, L)
+        : span.CallbackKind is { } callback
+            ? ModuleDiagnosticsDisplay.Callback(callback, L)
+            : span.Name ?? L[$"Enums:TraceKind:{span.Kind}"];
+
+    private static IReadOnlyList<ModuleDiagnosticsModule> RequiredModules(
+        ModuleDiagnosticsModule module,
+        ModuleDiagnosticsSnapshot snapshot) => snapshot.Topology.Edges
+        .Where(edge => edge.SourceModule == module.ModuleKey)
+        .Select(edge => snapshot.Modules.First(candidate => candidate.ModuleKey == edge.TargetModule))
+        .ToArray();
+
+    private static IReadOnlyList<ModuleDiagnosticsModule> DependentModules(
+        ModuleDiagnosticsModule module,
+        ModuleDiagnosticsSnapshot snapshot) => snapshot.Topology.Edges
+        .Where(edge => edge.TargetModule == module.ModuleKey)
+        .Select(edge => snapshot.Modules.First(candidate => candidate.ModuleKey == edge.SourceModule))
+        .ToArray();
+
+    private string OptionValue(ModuleOptionDiagnosticEntry entry) => entry.Kind switch
+    {
+        ModuleOptionDiagnosticValueKind.Value when entry.IsNull => L["Common:Null"],
+        ModuleOptionDiagnosticValueKind.Value when entry.IsTruncated => L["ModuleDrawer:Options:Truncated", entry.Value ?? string.Empty],
+        ModuleOptionDiagnosticValueKind.Value => entry.Value ?? L["Common:NotAvailable"],
+        ModuleOptionDiagnosticValueKind.Presence => entry.IsPresent == true
+            ? L["ModuleDrawer:Options:Present"]
+            : L["ModuleDrawer:Options:NotPresent"],
+        ModuleOptionDiagnosticValueKind.Count => entry.Count?.ToString() ?? L["Common:NotAvailable"],
+        _ => L["Common:Unavailable"]
+    };
+
+    private static Severity FindingSeverity(ModuleDiagnosticFindingSeverity severity) => severity switch
+    {
+        ModuleDiagnosticFindingSeverity.Error => Severity.Error,
+        ModuleDiagnosticFindingSeverity.Warning => Severity.Warning,
+        _ => Severity.Info
+    };
+}

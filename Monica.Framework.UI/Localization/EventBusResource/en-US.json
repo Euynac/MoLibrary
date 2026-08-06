@@ -169,7 +169,6 @@
     "Detail": {
       "Tabs": {
         "Info": "Provider Info",
-        "Options": "Options",
         "Subscriptions": "Subscriptions"
       },
       "Fields": {
@@ -187,7 +186,6 @@
       "BulkPublish": "Bulk Publish",
       "Streaming": "Streaming",
       "DeadLetterQueue": "Dead Letter Queue",
-      "HasOptions": "Has Options",
       "Basic": "Basic"
     },
     "Columns": {

@@ -5,7 +5,7 @@ namespace Monica.Core.Modularity.Diagnostics.Models;
 /// <summary>
 /// Describes one isolated startup work item scheduled by a module.
 /// </summary>
-public sealed class ModuleStartupWorkPerformanceInfo
+internal sealed class ModuleStartupWorkPerformanceInfo
 {
     /// <summary>Gets the stable work identity used by barrier references within this snapshot.</summary>
     public string WorkItemId { get; init; } = string.Empty;
@@ -77,7 +77,7 @@ public sealed class ModuleStartupWorkPerformanceInfo
 /// <summary>
 /// Defines live and terminal states for module startup work.
 /// </summary>
-public enum ModuleStartupWorkStatus
+internal enum ModuleStartupWorkStatus
 {
     /// <summary>The work is waiting for a bounded worker.</summary>
     Queued,

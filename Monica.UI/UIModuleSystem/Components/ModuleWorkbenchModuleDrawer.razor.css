@@ -1,0 +1,135 @@
+.module-drawer-content {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    height: 100%;
+    min-width: 0;
+    min-height: 0;
+    overflow: hidden;
+    background: var(--mud-palette-surface);
+}
+
+.drawer-header-content {
+    display: flex;
+    align-items: start;
+    justify-content: space-between;
+    gap: 1rem;
+    width: 100%;
+    min-width: 0;
+}
+
+.drawer-header-content > div {
+    min-width: 0;
+}
+
+.drawer-header-content code {
+    display: block;
+    max-width: 100%;
+    overflow: hidden;
+    color: var(--mud-palette-text-secondary);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.module-drawer-content ::deep .mud-tabs {
+    flex: 1 1 auto;
+    min-height: 0;
+}
+
+.module-drawer-content ::deep .mud-tabs-panels {
+    height: 100%;
+    min-height: 0;
+    overflow-y: auto;
+}
+
+.module-drawer-content ::deep .mud-tab-panel {
+    padding: 1rem;
+}
+
+.drawer-section-stack {
+    display: grid;
+    gap: 1rem;
+    min-width: 0;
+}
+
+.module-summary-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: .5rem;
+}
+
+.module-summary-grid article {
+    display: grid;
+    gap: .2rem;
+    min-width: 0;
+    padding: .65rem;
+    background: var(--mud-palette-background);
+}
+
+.module-summary-grid span {
+    color: var(--mud-palette-text-secondary);
+    font-size: .72rem;
+}
+
+.module-summary-grid strong {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.capability-chips {
+    display: flex;
+    gap: .4rem;
+    flex-wrap: wrap;
+    margin-top: .5rem;
+}
+
+.drawer-fact-row,
+.option-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: .75rem;
+    min-width: 0;
+    padding: .65rem;
+    border-bottom: 1px solid var(--mud-palette-lines-default);
+}
+
+.option-row > span {
+    display: grid;
+    min-width: 0;
+}
+
+.option-row small {
+    color: var(--mud-palette-text-secondary);
+}
+
+.option-row code {
+    max-width: 50%;
+    overflow-wrap: anywhere;
+    text-align: end;
+}
+
+.drawer-loading,
+.drawer-empty {
+    display: flex;
+    min-height: 9rem;
+    align-items: center;
+    justify-content: center;
+    gap: .75rem;
+    color: var(--mud-palette-text-secondary);
+    text-align: center;
+}
+
+.finding-code {
+    margin-top: .35rem;
+    color: var(--mud-palette-text-secondary);
+    font-family: monospace;
+    font-size: .72rem;
+}
+
+@media (max-width: 520px) {
+    .module-summary-grid {
+        grid-template-columns: minmax(0, 1fr);
+    }
+}

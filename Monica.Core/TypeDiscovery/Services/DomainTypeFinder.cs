@@ -62,7 +62,7 @@ public class DomainTypeFinder(TypeFinderOptions options, ILogger<DomainTypeFinde
     /// Gets all related assemblies.
     /// </summary>
     /// <returns>The related assemblies.</returns>
-    public virtual IEnumerable<Assembly> GetAssemblies()
+    public virtual IReadOnlyList<Assembly> GetAssemblies()
     {
         LoadAssemblies();
         return _assemblySnapshot;
@@ -90,7 +90,7 @@ public class DomainTypeFinder(TypeFinderOptions options, ILogger<DomainTypeFinde
     /// Both successful partial loads and terminal scan exceptions are cached. This guarantees that an assembly is
     /// never repeatedly reflected because multiple module-system consumers request the host's business types.
     /// </remarks>
-    public virtual IEnumerable<Type> GetTypes()
+    public virtual IReadOnlyList<Type> GetTypes()
     {
         LoadAssemblies();
 
@@ -159,6 +159,6 @@ public class DomainTypeFinder(TypeFinderOptions options, ILogger<DomainTypeFinde
             discoveredTypes.AddRange(types);
         }
 
-        return Array.AsReadOnly(discoveredTypes.ToArray());
+        return discoveredTypes.AsReadOnly();
     }
 }

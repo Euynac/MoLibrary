@@ -1,0 +1,143 @@
+@implements IAsyncDisposable
+@using Microsoft.Extensions.Localization
+@using Monica.UI.Localization
+@using Monica.UI.UIModuleSystem.State
+@using Monica.UI.UIModuleSystem.Support
+@inject IJSRuntime JSRuntime
+@inject IStringLocalizer<ModuleSystemResource> L
+
+<div class="dependency-graph-canvas" aria-busy="@(_renderState == GraphRenderState.Loading)">
+    <div class="graph-surface"
+         @ref="_graphRoot"
+         role="img"
+         aria-label="@L["Aria:DependencyGraph", Session.VisibleDependencyModules.Count, Session.VisibleDependencyEdges.Count]">
+    </div>
+    @if (_renderState == GraphRenderState.Loading)
+    {
+        <div class="graph-placeholder">
+            <MudProgressCircular Indeterminate="true" Size="Size.Small" Color="Color.Primary" />
+            <span>@L["Dependencies:Graph:Rendering"]</span>
+        </div>
+    }
+    else if (_renderState == GraphRenderState.Failed)
+    {
+        <div class="graph-placeholder graph-failed" role="alert">
+            <MudIcon Icon="@Icons.Material.Filled.BrokenImage" Color="Color.Error" />
+            <span>@L["Dependencies:Graph:Failed"]</span>
+            <MudButton Variant="Variant.Outlined"
+                       Color="Color.Primary"
+                       StartIcon="@Icons.Material.Filled.Refresh"
+                       OnClick="@RetryAsync">
+                @L["Actions:Retry"]
+            </MudButton>
+        </div>
+    }
+</div>
+
+@code {
+    private ElementReference _graphRoot;
+    private ModuleDependencyGraphInteropSession? _interop;
+    private GraphRenderState _renderState = GraphRenderState.Loading;
+    private string? _failedRenderIdentity;
+    private bool _disposed;
+
+    [Parameter, EditorRequired] public ModuleSystemWorkbenchSession Session { get; set; } = default!;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (_disposed)
+        {
+            return;
+        }
+
+        var renderIdentity = BuildRenderIdentity();
+        if (_renderState == GraphRenderState.Failed
+            && string.Equals(renderIdentity, _failedRenderIdentity, StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        _interop ??= new ModuleDependencyGraphInteropSession(JSRuntime);
+        var outcome = await _interop.RenderAsync(_graphRoot, BuildGraphModel(), renderIdentity);
+        if (_disposed || outcome == ModuleDependencyGraphRenderOutcome.Cancelled)
+        {
+            return;
+        }
+
+        var nextState = outcome == ModuleDependencyGraphRenderOutcome.Rendered
+            ? GraphRenderState.Ready
+            : GraphRenderState.Failed;
+        _failedRenderIdentity = nextState == GraphRenderState.Failed ? renderIdentity : null;
+        if (_renderState != nextState)
+        {
+            _renderState = nextState;
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    private async Task RetryAsync()
+    {
+        if (_disposed)
+        {
+            return;
+        }
+
+        var interop = _interop;
+        _interop = null;
+        _failedRenderIdentity = null;
+        _renderState = GraphRenderState.Loading;
+        if (interop is not null)
+        {
+            await interop.DisposeAsync();
+        }
+    }
+
+    private object BuildGraphModel()
+    {
+        var selectedKey = Session.SelectedModule?.ModuleKey;
+        return new
+        {
+            selectedId = selectedKey?.Id,
+            nodes = Session.VisibleDependencyModules.Select(module => new
+            {
+                id = module.ModuleKey.Id,
+                label = module.TypeName,
+                depth = module.DependencyDepth,
+                selected = module.ModuleKey == selectedKey,
+                failed = module.ErrorCount > 0
+            }).ToArray(),
+            edges = Session.VisibleDependencyEdges.Select(edge => new
+            {
+                source = edge.SourceModule.Id,
+                target = edge.TargetModule.Id
+            }).ToArray()
+        };
+    }
+
+    private string BuildRenderIdentity()
+    {
+        var moduleIds = string.Join('|', Session.VisibleDependencyModules.Select(static module => module.ModuleKey.Id));
+        var edges = string.Join('|', Session.VisibleDependencyEdges.Select(static edge =>
+            $"{edge.SourceModule.Id}>{edge.TargetModule.Id}"));
+        return $"{Session.SelectedModule?.ModuleKey.Id}:{moduleIds}:{edges}";
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        _disposed = true;
+
+        var interop = _interop;
+        _interop = null;
+        if (interop is not null)
+        {
+            await interop.DisposeAsync();
+        }
+    }
+
+    private enum GraphRenderState
+    {
+        Loading,
+        Ready,
+        Failed
+    }
+}

@@ -44,14 +44,14 @@ public static class MonicaHostBuilderExtensions
 
         try
         {
-            application.Profiling.StartPhase(ModuleCompositionSystemPhaseNames.APPLICATION_CONFIGURATION);
+            application.Profiling.StartStage(ModuleSystemStage.ApplicationConfiguration);
             try
             {
                 configure(monicaBuilder);
             }
             finally
             {
-                application.Profiling.StopPhase(ModuleCompositionSystemPhaseNames.APPLICATION_CONFIGURATION);
+                application.Profiling.StopStage(ModuleSystemStage.ApplicationConfiguration);
             }
 
             monicaBuilder.Complete();

@@ -47,7 +47,7 @@ public sealed class ModuleSkillSystem : MonicaModule<ModuleSkillSystemOption>
     }
 
     /// <inheritdoc />
-    public override void DiscoverTypes(TypeDiscoveryPlan<ModuleSkillSystemOption> discovery)
+    public override void DeclareTypeDiscovery(TypeDiscoveryPlan<ModuleSkillSystemOption> discovery)
     {
         discovery.Match(
             TypeQuery.ConcreteClass.AssignableTo<Skill>(),

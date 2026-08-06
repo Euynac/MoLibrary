@@ -40,6 +40,9 @@ public sealed class ModuleServiceRegistrationWriterTests
         writer.Contains(typeof(IWriterContract), "blue", isKeyedService: true).Should().BeTrue();
         writer.Contains(typeof(IWriterContract), "green", isKeyedService: true).Should().BeTrue();
         writer.Contains(typeof(IWriterContract), serviceKey: null, isKeyedService: true).Should().BeFalse();
+        writer.GetStatistics().AddedCount.Should().Be(1);
+        writer.GetStatistics().ReplacedCount.Should().Be(0);
+        writer.GetStatistics().SkippedCount.Should().Be(4);
     }
 
     [Fact]
@@ -65,6 +68,9 @@ public sealed class ModuleServiceRegistrationWriterTests
         services[4].ServiceKey.Should().Be("green");
         services[4].KeyedImplementationType.Should().Be(typeof(GreenWriter));
         writer.TryAdd(KeyedDescriptor("green", typeof(ReplacementWriter), ServiceLifetime.Singleton)).Should().BeFalse();
+        writer.GetStatistics().AddedCount.Should().Be(1);
+        writer.GetStatistics().ReplacedCount.Should().Be(2);
+        writer.GetStatistics().SkippedCount.Should().Be(1);
     }
 
     private static ServiceDescriptor KeyedDescriptor(

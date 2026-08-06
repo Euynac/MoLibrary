@@ -116,7 +116,7 @@ Dependencies are automatically registered when a module is added.
 
 - Keep `Module{Name}Option` focused on developer configuration. Do not use options objects as mutable runtime registries for discovered types, generated endpoints, caches, or other cross-phase state.
 - Do not put required shared runtime state in builder-extension local variables or closures inside `monica.Add{ModuleName}(...)`. A module can be included directly or transitively through `Require<TModule, TOptions>()`, and both paths must behave identically.
-- If a module needs mutable state across registration phases such as `ConfigureServices`, `DiscoverTypes`, `PostConfigureServices`, MVC configuration, or endpoint mapping, create and own that state inside the module and expose the same instance through a module-owned singleton or internal registry service.
+- If a module needs mutable state across registration phases such as `ConfigureServices`, `DeclareTypeDiscovery`, `PostConfigureServices`, MVC configuration, or endpoint mapping, create and own that state inside the module and expose the same instance through a module-owned singleton or internal registry service.
 - Do not hide required default services, middleware, endpoint mapping, or post-configuration in the `monica.Add{ModuleName}()` convenience method. Direct and transitive registration must share the same module-owned baseline behavior.
 - If a module's built-in behavior needs a non-default phase position, model it as module-owned lifecycle behavior or a named web stage instead of relying on registration-call order.
 - When reviewing an existing module, treat builder-entry-only state as a design bug even if the direct registration path currently works.

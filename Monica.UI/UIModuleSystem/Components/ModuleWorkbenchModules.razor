@@ -1,0 +1,185 @@
+@using Microsoft.Extensions.Localization
+@using Monica.Core.Modularity.Diagnostics.Models
+@using Monica.UI.Localization
+@using Monica.UI.UIModuleSystem.State
+@using Monica.UI.UIModuleSystem.Support
+@inject IStringLocalizer<ModuleSystemResource> L
+
+<div class="modules-layout">
+    <section class="module-filter-panel" aria-labelledby="module-catalog-title">
+        <div class="module-catalog-heading">
+            <div>
+                <MudText Typo="Typo.overline">@L["Modules:Eyebrow"]</MudText>
+                <MudText Typo="Typo.h5" HtmlTag="h2" id="module-catalog-title">@L["Modules:Title"]</MudText>
+                <MudText Typo="Typo.body2" Color="Color.Secondary">
+                    @L["Modules:ResultCount", Session.FilteredModules.Count, Session.Snapshot?.Modules.Length ?? 0]
+                </MudText>
+            </div>
+        </div>
+
+        <div class="module-filters">
+            <MudTextField T="string"
+                          Label="@L["Modules:Filters:Search"]"
+                          Placeholder="@L["Modules:Filters:SearchPlaceholder"]"
+                          Value="@Session.ModuleSearch"
+                          ValueChanged="@SetSearch"
+                          Immediate="true"
+                          Clearable="true"
+                          Adornment="Adornment.Start"
+                          AdornmentIcon="@Icons.Material.Filled.Search" />
+            <MudSelect T="ModuleCatalogStateFilter"
+                       Label="@L["Modules:Filters:State"]"
+                       Value="@Session.ModuleStateFilter"
+                       ValueChanged="@SetStateFilter">
+                @foreach (var state in Enum.GetValues<ModuleCatalogStateFilter>())
+                {
+                    <MudSelectItem T="ModuleCatalogStateFilter" Value="@state">
+                        @L[$"Enums:CatalogState:{state}"]
+                    </MudSelectItem>
+                }
+            </MudSelect>
+            <MudSelect T="ModuleCatalogCapabilityFilter"
+                       Label="@L["Modules:Filters:Capability"]"
+                       Value="@Session.ModuleCapabilityFilter"
+                       ValueChanged="@SetCapabilityFilter">
+                @foreach (var capability in Enum.GetValues<ModuleCatalogCapabilityFilter>())
+                {
+                    <MudSelectItem T="ModuleCatalogCapabilityFilter" Value="@capability">
+                        @L[$"Enums:CatalogCapability:{capability}"]
+                    </MudSelectItem>
+                }
+            </MudSelect>
+            <MudSelect T="string"
+                       Label="@L["Modules:Filters:Assembly"]"
+                       Value="@Session.ModuleAssemblyFilter"
+                       ValueChanged="@SetAssemblyFilter"
+                       Clearable="true">
+                @foreach (var assembly in Session.ModuleAssemblies)
+                {
+                    <MudSelectItem T="string" Value="@assembly">@assembly</MudSelectItem>
+                }
+            </MudSelect>
+            <MudNumericField T="double"
+                             Label="@L["Modules:Filters:MinimumCost"]"
+                             Value="@Session.MinimumModuleCostMs"
+                             ValueChanged="@SetMinimumCost"
+                             Min="0" />
+            <MudSwitch T="bool"
+                       Label="@L["Modules:Filters:HasDependencies"]"
+                       Value="@Session.OnlyModulesWithDependencies"
+                       ValueChanged="@SetDependencyFilter"
+                       Color="Color.Primary" />
+        </div>
+    </section>
+
+    <section class="module-table-panel" aria-label="@L["Aria:ModuleCatalog"]">
+        <div class="module-table-wrapper">
+            <MudTable T="ModuleDiagnosticsModule"
+                      Items="@Session.PagedModules"
+                      Dense="true"
+                      Hover="true"
+                      Striped="true"
+                      Breakpoint="Breakpoint.Sm">
+                <HeaderContent>
+                    <MudTh>@L["Modules:Columns:Module"]</MudTh>
+                    <MudTh>@L["Modules:Columns:State"]</MudTh>
+                    <MudTh>@L["Modules:Columns:Assembly"]</MudTh>
+                    <MudTh>@L["Modules:Columns:Depth"]</MudTh>
+                    <MudTh>@L["Modules:Columns:Dependencies"]</MudTh>
+                    <MudTh>@L["Modules:Columns:Cost"]</MudTh>
+                    <MudTh>@L["Modules:Columns:Actions"]</MudTh>
+                </HeaderContent>
+                <RowTemplate Context="module">
+                    <MudTd DataLabel="@L["Modules:Columns:Module"]">
+                        <div class="module-name-cell">
+                            <strong>@module.TypeName</strong>
+                            <CopyableIdentifier Value="@module.FullTypeName" AccessibleName="@module.TypeName" />
+                        </div>
+                    </MudTd>
+                    <MudTd DataLabel="@L["Modules:Columns:State"]">
+                        <MudChip T="string"
+                                 Size="Size.Small"
+                                 Variant="Variant.Outlined"
+                                 Color="@(module.IsActive ? Color.Success : Color.Default)">
+                            @(module.IsActive ? L["Enums:ModuleState:Active"] : L["Enums:ModuleState:Disabled"])
+                        </MudChip>
+                    </MudTd>
+                    <MudTd DataLabel="@L["Modules:Columns:Assembly"]">
+                        <MudTooltip Text="@module.AssemblyName"><span class="ellipsis-value">@module.AssemblyName</span></MudTooltip>
+                    </MudTd>
+                    <MudTd DataLabel="@L["Modules:Columns:Depth"]">@module.DependencyDepth</MudTd>
+                    <MudTd DataLabel="@L["Modules:Columns:Dependencies"]">
+                        @L["Modules:DependencyCounts", module.DirectDependencyCount, module.DirectDependentCount]
+                    </MudTd>
+                    <MudTd DataLabel="@L["Modules:Columns:Cost"]">@ModuleDiagnosticsDisplay.Duration(ModuleCost(module))</MudTd>
+                    <MudTd DataLabel="@L["Modules:Columns:Actions"]">
+                        <MudIconButton Icon="@Icons.Material.Filled.ChevronRight"
+                                       Color="Color.Primary"
+                                       OnClick="@(() => ModuleSelected.InvokeAsync(module))"
+                                       aria-label="@L["Aria:InspectModule", module.TypeName]" />
+                    </MudTd>
+                </RowTemplate>
+                <NoRecordsContent>
+                    <MudText Typo="Typo.body2">@L["Modules:Empty"]</MudText>
+                </NoRecordsContent>
+            </MudTable>
+        </div>
+
+        <div class="module-pagination">
+            <MudPagination Count="@Session.ModulePageCount"
+                           Selected="@Session.ModulePage"
+                           SelectedChanged="@SetPage"
+                           ShowFirstButton="true"
+                           ShowLastButton="true" />
+            <MudSelect T="int"
+                       Label="@L["Common:RowsPerPage"]"
+                       Value="@Session.ModulePageSize"
+                       ValueChanged="@SetPageSize"
+                       Dense="true">
+                <MudSelectItem T="int" Value="25">25</MudSelectItem>
+                <MudSelectItem T="int" Value="50">50</MudSelectItem>
+                <MudSelectItem T="int" Value="100">100</MudSelectItem>
+            </MudSelect>
+        </div>
+    </section>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public ModuleSystemWorkbenchSession Session { get; set; } = default!;
+    [Parameter] public EventCallback<ModuleDiagnosticsModule> ModuleSelected { get; set; }
+
+    private void SetSearch(string? value) => SetFilters(search: value ?? string.Empty);
+    private void SetStateFilter(ModuleCatalogStateFilter value) => SetFilters(state: value);
+    private void SetCapabilityFilter(ModuleCatalogCapabilityFilter value) => SetFilters(capability: value);
+    private void SetAssemblyFilter(string? value) => Session.SetModuleFilters(
+        Session.ModuleSearch,
+        Session.ModuleStateFilter,
+        Session.ModuleCapabilityFilter,
+        value,
+        Session.OnlyModulesWithDependencies,
+        Session.MinimumModuleCostMs);
+    private void SetDependencyFilter(bool value) => SetFilters(onlyWithDependencies: value);
+    private void SetMinimumCost(double value) => SetFilters(minimumCost: value);
+
+    private void SetFilters(
+        string? search = null,
+        ModuleCatalogStateFilter? state = null,
+        ModuleCatalogCapabilityFilter? capability = null,
+        bool? onlyWithDependencies = null,
+        double? minimumCost = null)
+    {
+        Session.SetModuleFilters(
+            search ?? Session.ModuleSearch,
+            state ?? Session.ModuleStateFilter,
+            capability ?? Session.ModuleCapabilityFilter,
+            Session.ModuleAssemblyFilter,
+            onlyWithDependencies ?? Session.OnlyModulesWithDependencies,
+            minimumCost ?? Session.MinimumModuleCostMs);
+    }
+
+    private void SetPage(int page) => Session.SetModulePaging(page, Session.ModulePageSize);
+    private void SetPageSize(int pageSize) => Session.SetModulePaging(1, pageSize);
+
+    private static double ModuleCost(ModuleDiagnosticsModule module) =>
+        module.SerialCallbackDurationMs + module.StartupWorkDurationMs;
+}

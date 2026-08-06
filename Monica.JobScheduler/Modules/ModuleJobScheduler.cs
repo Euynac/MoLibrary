@@ -51,7 +51,7 @@ public class ModuleJobScheduler : MonicaModule<ModuleJobSchedulerOption>
     /// <summary>
     /// Declares structural discovery for recurring and triggered jobs while preserving the business-type order.
     /// </summary>
-    public override void DiscoverTypes(TypeDiscoveryPlan<ModuleJobSchedulerOption> discovery)
+    public override void DeclareTypeDiscovery(TypeDiscoveryPlan<ModuleJobSchedulerOption> discovery)
     {
         var recurringJobs = TypeQuery.ConcreteClass.AssignableTo<IRecurringJob>();
         var triggeredJobs = TypeQuery.ConcreteClass.ImplementsOpenGeneric(typeof(ITriggeredJob<>));

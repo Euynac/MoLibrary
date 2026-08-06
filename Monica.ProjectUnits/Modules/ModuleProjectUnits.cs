@@ -73,7 +73,7 @@ public class ModuleProjectUnits : MonicaModule<ModuleProjectUnitsOption>, IWebMo
     }
 
     /// <inheritdoc />
-    public override void DiscoverTypes(TypeDiscoveryPlan<ModuleProjectUnitsOption> discovery)
+    public override void DeclareTypeDiscovery(TypeDiscoveryPlan<ModuleProjectUnitsOption> discovery)
     {
         discovery.Match(
             TypeQuery.All,

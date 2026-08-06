@@ -48,9 +48,9 @@ public sealed class TypeDiscoveryPlan<TOptions> : ITypeDiscoveryPlan
 
     void ITypeDiscoveryPlan.Freeze()
     {
-        if (_state == TypeDiscoveryPlanState.Committed)
+        if (_state is TypeDiscoveryPlanState.Committed or TypeDiscoveryPlanState.Released)
         {
-            throw new InvalidOperationException("A committed type-discovery plan cannot be compiled again.");
+            throw new InvalidOperationException("A completed type-discovery plan cannot be compiled again.");
         }
 
         _state = TypeDiscoveryPlanState.Frozen;
@@ -58,10 +58,12 @@ public sealed class TypeDiscoveryPlan<TOptions> : ITypeDiscoveryPlan
 
     void ITypeDiscoveryPlan.Commit(
         TypeDiscoveryCompilation compilation,
-        ModuleConfigurationContext context)
+        ModuleConfigurationContext context,
+        Action callbackStarting)
     {
         ArgumentNullException.ThrowIfNull(compilation);
         ArgumentNullException.ThrowIfNull(context);
+        ArgumentNullException.ThrowIfNull(callbackStarting);
         if (_state != TypeDiscoveryPlanState.Frozen)
         {
             throw new InvalidOperationException("A type-discovery plan must be frozen and compiled before it is committed.");
@@ -72,8 +74,15 @@ public sealed class TypeDiscoveryPlan<TOptions> : ITypeDiscoveryPlan
         _state = TypeDiscoveryPlanState.Committed;
         foreach (var registration in _registrations)
         {
+            callbackStarting();
             registration.Commit(context, compilation.GetMatches(registration.Query));
         }
+    }
+
+    void ITypeDiscoveryPlan.Release()
+    {
+        _registrations.Clear();
+        _state = TypeDiscoveryPlanState.Released;
     }
 
     private void EnsureCollecting()
@@ -91,7 +100,12 @@ internal interface ITypeDiscoveryPlan
 
     void Freeze();
 
-    void Commit(TypeDiscoveryCompilation compilation, ModuleConfigurationContext context);
+    void Commit(
+        TypeDiscoveryCompilation compilation,
+        ModuleConfigurationContext context,
+        Action callbackStarting);
+
+    void Release();
 }
 
 internal sealed record TypeDiscoveryRegistration(
@@ -102,5 +116,6 @@ internal enum TypeDiscoveryPlanState
 {
     Collecting,
     Frozen,
-    Committed
+    Committed,
+    Released
 }

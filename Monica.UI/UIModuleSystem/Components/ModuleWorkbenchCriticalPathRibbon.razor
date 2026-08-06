@@ -1,0 +1,115 @@
+@using Microsoft.Extensions.Localization
+@using Monica.Core.Modularity.Diagnostics.Models
+@using Monica.UI.Localization
+@using Monica.UI.UIModuleSystem.State
+@using Monica.UI.UIModuleSystem.Support
+@inject IStringLocalizer<ModuleSystemResource> L
+
+<section class="critical-ribbon" aria-labelledby="critical-ribbon-title">
+    <div class="ribbon-heading">
+        <div>
+            <MudText Typo="Typo.overline">@L["Overview:CriticalPath:Eyebrow"]</MudText>
+            <MudText Typo="Typo.h6" HtmlTag="h2" id="critical-ribbon-title">@L["Overview:CriticalPath:Title"]</MudText>
+        </div>
+        <MudText Typo="Typo.caption" Color="Color.Secondary">@L["Overview:CriticalPath:Hint"]</MudText>
+    </div>
+
+    <div class="ribbon-segments" role="list">
+        @foreach (var span in CriticalSpans)
+        {
+            var isSelected = IsSelected(span);
+            <div role="listitem">
+                <button type="button"
+                        class="ribbon-segment @(isSelected ? "selected" : null)"
+                        data-span-id="@span.SpanId"
+                        aria-current="@(isSelected ? "step" : null)"
+                        aria-pressed="@isSelected"
+                        @onclick="@(() => SelectSpanAsync(span))">
+                    <span>@SpanLabel(span)</span>
+                    <strong>@ModuleDiagnosticsDisplay.Duration(span.DurationMs)</strong>
+                </button>
+            </div>
+        }
+    </div>
+</section>
+
+@code {
+    [Parameter, EditorRequired] public ModuleSystemWorkbenchSession Session { get; set; } = default!;
+    [Parameter] public EventCallback<ModuleDiagnosticsModule> ModuleSelected { get; set; }
+
+    private ModuleDiagnosticsSnapshot? _criticalSnapshot;
+    private IReadOnlyList<ModuleDiagnosticsTraceSpan> _criticalSpans = [];
+
+    private IReadOnlyList<ModuleDiagnosticsTraceSpan> CriticalSpans
+    {
+        get
+        {
+            var snapshot = Session.Snapshot;
+            if (ReferenceEquals(snapshot, _criticalSnapshot))
+            {
+                return _criticalSpans;
+            }
+
+            _criticalSnapshot = snapshot;
+            if (snapshot is null)
+            {
+                return _criticalSpans = [];
+            }
+
+            var causalSpanIds = new HashSet<string>(StringComparer.Ordinal);
+            foreach (var segment in snapshot.BlockingChain)
+            {
+                causalSpanIds.Add(segment.WorkSpanId);
+                causalSpanIds.Add(segment.BarrierSpanId);
+                if (!string.IsNullOrWhiteSpace(segment.CommitSpanId))
+                {
+                    causalSpanIds.Add(segment.CommitSpanId);
+                }
+            }
+
+            // TraceSpans is already the snapshot's immutable occurrence order. Filtering it preserves the
+            // complete causal sequence while de-duplicating barrier spans shared by pending work items.
+            return _criticalSpans = snapshot.TraceSpans
+                .Where(span => causalSpanIds.Contains(span.SpanId))
+                .ToArray();
+        }
+    }
+
+    private bool IsSelected(ModuleDiagnosticsTraceSpan span) =>
+        string.Equals(Session.SelectedTraceSpanId, span.SpanId, StringComparison.Ordinal);
+
+    private async Task SelectSpanAsync(ModuleDiagnosticsTraceSpan span)
+    {
+        Session.SelectTraceSpan(span);
+        if (span.ModuleKey is not { } moduleKey || Session.Snapshot is null)
+        {
+            return;
+        }
+
+        var module = Session.Snapshot.Modules.FirstOrDefault(candidate => candidate.ModuleKey == moduleKey);
+        if (module is not null)
+        {
+            await ModuleSelected.InvokeAsync(module);
+        }
+    }
+
+    private string SpanLabel(ModuleDiagnosticsTraceSpan span)
+    {
+        if (span.SystemStage is { } stage)
+        {
+            return ModuleDiagnosticsDisplay.Stage(stage, L);
+        }
+
+        if (span.Kind == ModuleDiagnosticsTraceSpanKind.StartupBarrier && span.Barrier is { } barrier)
+        {
+            return L[$"Enums:Barrier:{barrier}"];
+        }
+
+        if (span.CallbackKind is { } callback)
+        {
+            return ModuleDiagnosticsDisplay.Callback(callback, L);
+        }
+
+        return span.Name ?? L["Common:Unknown"];
+    }
+}

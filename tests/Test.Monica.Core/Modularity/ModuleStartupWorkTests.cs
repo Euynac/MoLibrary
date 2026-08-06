@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
+using Monica.Core;
 using Monica.Core.Modularity.Diagnostics.Models;
 using Monica.Core.Modularity.Diagnostics.Services;
 using Monica.Core.Modularity.Abstractions;
@@ -49,12 +50,13 @@ public sealed class ModuleStartupWorkTests
         });
 
         using var host = builder.Build();
-        var performance = host.Services.GetRequiredService<IModuleSystemInspectionService>()
-            .GetSystemPerformance();
-        var module = performance.Modules.Single(item =>
+        var application = host.Services.GetRequiredService<MonicaApplication>();
+        var composition = application.Profiling.GetCompositionPerformance();
+        var module = application.Profiling.GetModulePerformances(
+                application.Modules.RuntimeSnapshots.Select(static snapshot => snapshot.ModuleKey).ToHashSet())
+            .Single(item =>
             item.ModuleTypeName == nameof(StartupWorkProbeModuleOne));
         var work = module.StartupWorkItems.Should().ContainSingle().Subject;
-        var composition = performance.Composition;
 
         composition.StartupWorkItems.Should().ContainSingle();
         composition.StartupWorkBarriers.Select(static checkpoint => checkpoint.Barrier).Should().Equal(
@@ -63,7 +65,7 @@ public sealed class ModuleStartupWorkTests
             ModuleStartupWorkBarrier.BeforeServiceRegistrationCompletion);
         module.SerialDurationMs.Should().Be(module.PhaseExecutions.Sum(static execution => execution.DurationMs));
         module.PhaseExecutions.Should().Contain(static execution =>
-            execution.Phase == ModulePhase.DiscoverTypes);
+            execution.Phase == ModulePhase.DeclareTypeDiscovery);
         composition.AggregateSerialModuleDurationMs.Should()
             .Be(composition.ModulePhaseExecutions.Sum(static execution => execution.DurationMs));
         work.Name.Should().Be("diagnostic-work");
@@ -1095,7 +1097,7 @@ public sealed class ModuleStartupWorkTests
 
         compose.Should().Throw<ModuleRegistrationException>()
             .WithMessage("*can schedule startup work only while its synchronous ConfigureBuilder, " +
-                         "ConfigureServices, DiscoverTypes, or PostConfigureServices callback is executing*");
+                         "ConfigureServices, DeclareTypeDiscovery, or PostConfigureServices callback is executing*");
     }
 
     [Fact]
@@ -1135,10 +1137,10 @@ public sealed class ModuleStartupWorkTests
             await composition.WaitAsync(HANG_GUARD, TestContext.Current.CancellationToken);
 
             using var host = builder.Build();
-            var work = host.Services.GetRequiredService<IModuleSystemInspectionService>()
-                .GetSystemPerformance()
-                .Composition.StartupWorkItems.Should().ContainSingle(item => item.Name == "discovery-work").Subject;
-            work.OriginPhase.Should().Be(ModulePhase.DiscoverTypes);
+            var work = host.Services.GetRequiredService<MonicaApplication>()
+                .Profiling.GetCompositionPerformance()
+                .StartupWorkItems.Should().ContainSingle(item => item.Name == "discovery-work").Subject;
+            work.OriginPhase.Should().Be(ModulePhase.DeclareTypeDiscovery);
             work.Barrier.Should().Be(ModuleStartupWorkBarrier.BeforePostConfigureServices);
         }
         finally
@@ -1198,18 +1200,24 @@ public sealed class ModuleStartupWorkTests
         observedAtPostConfigure.Should().Equal("first", "second");
 
         using var host = builder.Build();
-        var performance = host.Services.GetRequiredService<IModuleSystemInspectionService>()
-            .GetSystemPerformance();
-        var module = performance.Modules.Single(item =>
+        var application = host.Services.GetRequiredService<MonicaApplication>();
+        var compositionPerformance = application.Profiling.GetCompositionPerformance();
+        var module = application.Profiling.GetModulePerformances(
+                application.Modules.RuntimeSnapshots.Select(static snapshot => snapshot.ModuleKey).ToHashSet())
+            .Single(item =>
             item.ModuleTypeName == nameof(StartupWorkProbeModuleOne));
         var discoveryExecutions = module.PhaseExecutions
-            .Where(static execution => execution.Phase == ModulePhase.DiscoverTypes)
+            .Where(static execution => execution.Phase == ModulePhase.DeclareTypeDiscovery)
             .OrderBy(static execution => execution.StartedOffsetMs)
             .ToArray();
-        var checkpoint = performance.Composition.StartupWorkBarriers.Single(item =>
+        var checkpoint = compositionPerformance.StartupWorkBarriers.Single(item =>
             item.Barrier == ModuleStartupWorkBarrier.BeforePostConfigureServices);
 
         discoveryExecutions.Should().HaveCount(3);
+        discoveryExecutions.Select(static execution => execution.Kind).Should().Equal(
+            ModuleCallbackKind.Lifecycle,
+            ModuleCallbackKind.TypeDiscoveryCommit,
+            ModuleCallbackKind.StartupWorkCommit);
         checkpoint.ReleasedOffsetMs.Should().BeLessThanOrEqualTo(discoveryExecutions[^1].StartedOffsetMs);
     }
 
@@ -1341,7 +1349,7 @@ public sealed class ModuleStartupWorkTests
 
         compose.Should().Throw<InvalidOperationException>()
             .WithMessage("*can schedule startup work only while its synchronous ConfigureBuilder, " +
-                         "ConfigureServices, DiscoverTypes, or PostConfigureServices callback is executing*");
+                         "ConfigureServices, DeclareTypeDiscovery, or PostConfigureServices callback is executing*");
     }
 
     [Fact]
@@ -1774,7 +1782,7 @@ internal abstract class StartupWorkProbeModule<TModule, TOption> : MonicaModule<
         }
     }
 
-    public override void DiscoverTypes(TypeDiscoveryPlan<TOption> discovery)
+    public override void DeclareTypeDiscovery(TypeDiscoveryPlan<TOption> discovery)
     {
         discovery.Match(TypeQuery.All, (_, _) =>
         {

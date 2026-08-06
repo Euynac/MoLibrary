@@ -17,13 +17,13 @@ public interface ITypeFinder
     /// Implementations must cache assembly reflection. Enumerating the returned sequence more than once must not call
     /// <see cref="Assembly.GetTypes"/> again.
     /// </remarks>
-    IEnumerable<Type> GetTypes();
+    IReadOnlyList<Type> GetTypes();
 
     /// <summary>
     /// Gets the stable assembly snapshot used by this finder.
     /// </summary>
     /// <returns>The related assemblies.</returns>
-    IEnumerable<Assembly> GetAssemblies();
+    IReadOnlyList<Assembly> GetAssemblies();
 
     /// <summary>
     /// Gets the current assembly analysis snapshot for the type finder.

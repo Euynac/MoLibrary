@@ -1,0 +1,20 @@
+.change-list {
+    display: grid;
+    gap: .35rem;
+    min-width: 0;
+}
+
+.change-list code {
+    display: block;
+    min-width: 0;
+    padding: .35rem .5rem;
+    overflow: hidden;
+    background: var(--mud-palette-background);
+    color: var(--mud-palette-text-primary);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.change-list span {
+    color: var(--mud-palette-text-secondary);
+}

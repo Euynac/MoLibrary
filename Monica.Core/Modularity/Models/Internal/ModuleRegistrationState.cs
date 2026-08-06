@@ -1,5 +1,6 @@
 using Microsoft.Extensions.Logging;
 using Monica.Core.Modularity.Abstractions;
+using Monica.Core.Modularity.Diagnostics.Models;
 using Monica.Core.Modularity.Models;
 
 namespace Monica.Core.Modularity.Models.Internal;
@@ -254,7 +255,7 @@ internal sealed class ModuleRegistrationState
         int order,
         Action<ModuleConfigurationContext> configure)
     {
-        AddRequest(phase, order, configure);
+        AddRequest(phase, ModuleCallbackKind.Lifecycle, order, configure);
     }
 
     internal void AddApplicationBuilderLifecycleRequest(
@@ -262,7 +263,7 @@ internal sealed class ModuleRegistrationState
         int order,
         Action<ModuleConfigurationContext> configure)
     {
-        AddApplicationBuilderRequest(stage, order, configure);
+        AddApplicationBuilderRequest(stage, ModuleCallbackKind.Lifecycle, order, configure);
     }
 
     internal void AddContributionRequest(
@@ -270,18 +271,23 @@ internal sealed class ModuleRegistrationState
         int order,
         Action<ModuleConfigurationContext> configure)
     {
-        AddRequest(phase, order, configure);
+        AddRequest(phase, ModuleCallbackKind.RegistrationContribution, order, configure);
     }
 
     internal void AddApplicationBuilderContributionRequest(
         ModuleWebStage stage,
         Action<ModuleConfigurationContext> configure)
     {
-        AddApplicationBuilderRequest(stage, order: 0, configure);
+        AddApplicationBuilderRequest(
+            stage,
+            ModuleCallbackKind.RegistrationContribution,
+            order: 0,
+            configure);
     }
 
     private void AddApplicationBuilderRequest(
         ModuleWebStage stage,
+        ModuleCallbackKind kind,
         int order,
         Action<ModuleConfigurationContext> configure)
     {
@@ -290,11 +296,17 @@ internal sealed class ModuleRegistrationState
             throw new ArgumentOutOfRangeException(nameof(stage), stage, "Unknown web lifecycle stage.");
         }
 
-        AddRequest(ModulePhase.ConfigureApplicationBuilder, order, configure, stage);
+        AddRequest(
+            ModulePhase.ConfigureApplicationBuilder,
+            kind,
+            order,
+            configure,
+            stage);
     }
 
     private void AddRequest(
         ModulePhase phase,
+        ModuleCallbackKind kind,
         int order,
         Action<ModuleConfigurationContext> configure,
         ModuleWebStage? webStage = null)
@@ -303,6 +315,7 @@ internal sealed class ModuleRegistrationState
         var ordinal = _requestOrdinal++;
         _configurationRequests.Add(new ModuleConfigurationRequest(
             phase,
+            kind,
             order,
             ordinal,
             configure,
@@ -335,13 +348,17 @@ internal sealed class ModuleRegistrationState
             .ThenBy(static request => request.Ordinal);
     }
 
-    internal void StartModulePhase(ModulePhase phase)
+    internal void StartModulePhase(
+        ModulePhase phase,
+        ModuleCallbackKind kind = ModuleCallbackKind.Lifecycle,
+        string? workItemId = null)
     {
-        Application.Profiling.StartModulePhase(
-            ModuleType,
-            Application.Dependencies.ResolveModuleKey(ModuleType),
-            Order,
-            phase);
+        Application.Modules.StartModulePhase(this, phase, kind, workItemId);
+    }
+
+    /// <summary>Updates the visible phase while the registry diagnostics lock is held.</summary>
+    internal void SetModulePhase(ModulePhase phase)
+    {
         ModulePhase = phase;
     }
 

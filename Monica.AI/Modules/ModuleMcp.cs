@@ -57,7 +57,7 @@ public sealed class ModuleMcp : MonicaModule<ModuleMcpOption>, IWebModule
 
     /// <inheritdoc />
     /// <inheritdoc />
-    public override void DiscoverTypes(TypeDiscoveryPlan<ModuleMcpOption> discovery)
+    public override void DeclareTypeDiscovery(TypeDiscoveryPlan<ModuleMcpOption> discovery)
     {
         discovery.Match(
             TypeQuery.ConcreteClass.AssignableTo<McpServer>(),

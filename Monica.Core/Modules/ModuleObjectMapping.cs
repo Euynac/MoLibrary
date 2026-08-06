@@ -78,7 +78,7 @@ public class ModuleObjectMapping : MonicaModule<ModuleObjectMappingOption>, IWeb
     }
 
     /// <inheritdoc />
-    public override void DiscoverTypes(TypeDiscoveryPlan<ModuleObjectMappingOption> discovery)
+    public override void DeclareTypeDiscovery(TypeDiscoveryPlan<ModuleObjectMappingOption> discovery)
     {
         discovery.Match(
             TypeQuery.ClosedClass.AssignableTo<IRegister>(),

@@ -38,7 +38,7 @@ public sealed class ModuleSeeder : MonicaModule<ModuleSeederOption>
     }
 
     /// <inheritdoc />
-    public override void DiscoverTypes(TypeDiscoveryPlan<ModuleSeederOption> discovery)
+    public override void DeclareTypeDiscovery(TypeDiscoveryPlan<ModuleSeederOption> discovery)
     {
         discovery.Match(
             TypeQuery.ConcreteClass.AssignableTo<ISeeder>(),

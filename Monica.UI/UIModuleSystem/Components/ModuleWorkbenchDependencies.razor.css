@@ -1,0 +1,111 @@
+.dependencies-layout {
+    display: grid;
+    gap: 1rem;
+    min-width: 0;
+}
+
+.dependency-toolbar,
+.dependency-graph-panel,
+.dependency-inspector,
+.dependency-table-section {
+    min-width: 0;
+    padding: 1rem;
+    border: 1px solid var(--mud-palette-lines-default);
+    border-radius: var(--mud-default-borderradius);
+    background: var(--mud-palette-surface);
+}
+
+.dependency-toolbar {
+    display: flex;
+    align-items: end;
+    justify-content: space-between;
+    gap: 1rem;
+}
+
+.dependency-controls {
+    display: grid;
+    grid-template-columns: minmax(14rem, 1.3fr) minmax(10rem, 1fr) auto auto;
+    gap: .65rem;
+    align-items: center;
+    min-width: min(100%, 48rem);
+}
+
+.dependency-evidence-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(17rem, 22rem);
+    gap: 1rem;
+    min-width: 0;
+}
+
+.graph-summary {
+    display: flex;
+    gap: .75rem;
+    flex-wrap: wrap;
+    margin-bottom: .65rem;
+    color: var(--mud-palette-text-secondary);
+    font-size: .78rem;
+}
+
+.dependency-inspector code {
+    display: block;
+    max-width: 100%;
+    overflow-wrap: anywhere;
+    color: var(--mud-palette-text-secondary);
+}
+
+.relationship-section {
+    display: grid;
+    gap: .4rem;
+    margin-top: 1.25rem;
+}
+
+.relationship-section button {
+    min-width: 0;
+    padding: .5rem .65rem;
+    overflow: hidden;
+    border: 1px solid var(--mud-palette-lines-default);
+    border-radius: var(--mud-default-borderradius);
+    background: var(--mud-palette-background);
+    color: var(--mud-palette-text-primary);
+    text-align: start;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    cursor: pointer;
+}
+
+.relationship-section button:hover,
+.relationship-section button:focus-visible {
+    border-color: var(--mud-palette-primary);
+    outline: none;
+}
+
+.relationship-section span {
+    color: var(--mud-palette-text-secondary);
+}
+
+.dependency-table-wrapper {
+    min-width: 0;
+    overflow-x: auto;
+}
+
+@media (max-width: 1000px) {
+    .dependency-toolbar {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .dependency-controls {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        width: 100%;
+    }
+
+    .dependency-evidence-grid {
+        grid-template-columns: minmax(0, 1fr);
+    }
+}
+
+@media (max-width: 600px) {
+    .dependency-controls {
+        grid-template-columns: minmax(0, 1fr);
+    }
+}

@@ -8,7 +8,7 @@ namespace Monica.Core.Modularity.Diagnostics.Models;
 /// include time between completed service registration, <c>UseMonica()</c>, and <c>MapMonica()</c>. Application
 /// configuration is the caller-owned callback passed to <c>AddMonica(...)</c>.
 /// </remarks>
-public sealed class ModuleCompositionInitializationPerformance
+internal sealed class ModuleCompositionInitializationPerformance
 {
     /// <summary>Gets the complete observed module-system initialization duration.</summary>
     public double TotalDurationMs { get; init; }

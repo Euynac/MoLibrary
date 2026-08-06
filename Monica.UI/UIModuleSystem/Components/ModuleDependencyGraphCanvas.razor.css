@@ -1,0 +1,51 @@
+.dependency-graph-canvas {
+    position: relative;
+    display: grid;
+    width: 100%;
+    min-width: 0;
+    min-height: 28rem;
+    overflow: hidden;
+    border: 1px solid var(--mud-palette-lines-default);
+    border-radius: var(--mud-default-borderradius);
+    background: var(--mud-palette-background);
+}
+
+.graph-surface {
+    grid-area: 1 / 1;
+    width: 100%;
+    min-width: 0;
+    min-height: 28rem;
+}
+
+.graph-surface ::deep svg {
+    display: block;
+    width: 100%;
+    height: 100%;
+    min-height: 28rem;
+}
+
+.graph-placeholder {
+    z-index: 1;
+    grid-area: 1 / 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: .65rem;
+    min-width: 0;
+    padding: 1rem;
+    background: var(--mud-palette-background);
+    color: var(--mud-palette-text-secondary);
+    text-align: center;
+}
+
+.graph-failed {
+    flex-direction: column;
+}
+
+@media (max-width: 600px) {
+    .dependency-graph-canvas,
+    .graph-surface,
+    .graph-surface ::deep svg {
+        min-height: 22rem;
+    }
+}

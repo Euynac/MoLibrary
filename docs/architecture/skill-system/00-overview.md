@@ -129,7 +129,7 @@ No identifier enum, string key, or identifier annotation is added. Each module i
 | Host registration | `monica.Add*()` returns `ModuleRegistration<TModule, TOptions>`. Fluent extensions use `Configure`, `Require`, `ConfigureServices`, `SatisfyFeature`, and related typed methods. |
 | Own options | Use the protected finalized `Option` inside the module, or `context.Options` inside a lifecycle contribution. |
 | Cross-module options | Read only declared relationships: `context.Modules.Get<TModule, TOptions>()` for a hard requirement, or `TryGet(...)` for an `AfterIfPresent` relationship. |
-| Type discovery | Override `DiscoverTypes(TypeDiscoveryPlan<TOptions>)`; declare `TypeQuery` values and consume immutable `BusinessTypeMatch` results in serial commits. |
+| Type discovery | Override `DeclareTypeDiscovery(TypeDiscoveryPlan<TOptions>)`; declare `TypeQuery` values and consume immutable `BusinessTypeMatch` results in serial commits. |
 | UI capability | Implement `IUIModule` for pages/navigation/dialog/state composition. This does not imply web middleware capability. |
 | Web capability | Implement `IWebModule` only for middleware/endpoints, and `IWebHostRequiredModule` only when omitting those web contributions would make the module unusable. |
 
@@ -161,11 +161,11 @@ No Skill hierarchy. No XML-doc bridge. KB management UI lives inside RAG.
 ```
 Startup phase (once)
     │
-    ├── ModuleSkillSystem.DiscoverTypes:
+    ├── ModuleSkillSystem.DeclareTypeDiscovery:
     │       declares structural queries for MoSkill<TSelf> / MoTool / MoMcp subclasses
     │       and consumes immutable BusinessTypeMatch results after one shared scan
     │
-    ├── ModuleAIFacadeProvider.DiscoverTypes:
+    ├── ModuleAIFacadeProvider.DeclareTypeDiscovery:
     │       consumes IMonicaFacade<TModule> matches from the shared scan,
     │       preserving explicit owner-module type identity for later projection
     │

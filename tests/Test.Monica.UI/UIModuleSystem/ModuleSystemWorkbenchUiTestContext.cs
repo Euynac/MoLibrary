@@ -1,0 +1,24 @@
+using Bunit;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Localization;
+using Monica.Testing.Localization;
+using Monica.UI.Localization;
+using MudBlazor;
+using MudBlazor.Services;
+
+namespace Test.Monica.UI.UIModuleSystem;
+
+internal sealed class ModuleSystemWorkbenchUiTestContext : BunitContext
+{
+    internal ModuleSystemWorkbenchUiTestContext(
+        IStringLocalizer<ModuleSystemResource>? moduleSystemLocalizer = null,
+        Action<IServiceCollection>? configureServices = null)
+    {
+        JSInterop.Mode = JSRuntimeMode.Loose;
+        Services.AddMudServices();
+        Services.AddSingleton<IStringLocalizer<ModuleSystemResource>>(
+            moduleSystemLocalizer ?? new EchoStringLocalizer<ModuleSystemResource>());
+        configureServices?.Invoke(Services);
+        _ = Render<MudPopoverProvider>();
+    }
+}

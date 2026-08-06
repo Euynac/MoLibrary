@@ -198,16 +198,13 @@ public class EventBusProviderDiscoveryService(
             ProviderType = EventBusProviderKind.Local,
             Capabilities = EventBusProviderCapabilities.None,
             IsDistributed = false,
-            OptionType = typeof(ModuleEventBusOption),
-            OptionInstance = GetLocalProviderOptionInfo(serviceKey),
             ImplementationType = provider.GetType().Name
         };
     }
 
     private EventBusProviderInfo CreateDistributedProviderInfo(string? serviceKey, IDistributedEventBus provider)
     {
-        var (providerType, capabilities, displayName) = GetDistributedProviderMetadata(provider);
-        var (optionType, optionInstance) = GetDistributedProviderOptionInfo(serviceKey, provider);
+        var (providerType, capabilities) = GetDistributedProviderMetadata(provider);
 
         return new EventBusProviderInfo
         {
@@ -215,8 +212,6 @@ public class EventBusProviderDiscoveryService(
             ProviderType = providerType,
             Capabilities = capabilities,
             IsDistributed = true,
-            OptionType = optionType,
-            OptionInstance = optionInstance,
             ImplementationType = provider.GetType().Name
         };
     }
@@ -224,7 +219,8 @@ public class EventBusProviderDiscoveryService(
     /// <summary>
     /// Gets provider metadata from the registered IEventBusProviderModule
     /// </summary>
-    private (EventBusProviderKind providerType, EventBusProviderCapabilities capabilities, string displayName) GetDistributedProviderMetadata(IDistributedEventBus provider)
+    private (EventBusProviderKind providerType, EventBusProviderCapabilities capabilities) GetDistributedProviderMetadata(
+        IDistributedEventBus provider)
     {
         var providerTypeName = provider.GetType().FullName ?? "";
 
@@ -235,65 +231,11 @@ public class EventBusProviderDiscoveryService(
             // Match by checking if the provider type name contains the module's display name
             if (providerTypeName.Contains(moduleProvider.DisplayName, StringComparison.OrdinalIgnoreCase))
             {
-                return (moduleProvider.ProviderType, moduleProvider.Capabilities, moduleProvider.DisplayName);
+                return (moduleProvider.ProviderType, moduleProvider.Capabilities);
             }
         }
 
-        return (EventBusProviderKind.Unknown, EventBusProviderCapabilities.None, "Unknown");
-    }
-
-    /// <summary>
-    /// Gets local provider option info
-    /// </summary>
-    private object? GetLocalProviderOptionInfo(string? serviceKey)
-    {
-        try
-        {
-            // Find a snapshot of ModuleEventBus
-            var eventBusSnapshot = application.Modules.RuntimeSnapshots
-                .FirstOrDefault(s => s.ModuleType == typeof(ModuleEventBus));
-
-            if (eventBusSnapshot == null) return null;
-
-            var (_, optionInstance) = eventBusSnapshot.GetOption(serviceKey);
-            return optionInstance;
-        }
-        catch (Exception ex)
-        {
-            logger.LogWarning(ex, "获取 Local Provider 配置失败: {ServiceKey}", serviceKey);
-            return null;
-        }
-    }
-
-    /// <summary>
-    /// Gets the distributed provider's frozen option snapshot.
-    /// </summary>
-    private (Type? optionType, object? optionInstance) GetDistributedProviderOptionInfo(string? serviceKey, IDistributedEventBus provider)
-    {
-        try
-        {
-            var providerTypeName = provider.GetType().FullName ?? "";
-
-            // Find the matching provider module snapshot
-            foreach (var snapshot in ProviderSnapshots)
-            {
-                if (snapshot.ModuleInstance is not IEventBusProviderModule moduleProvider) continue;
-
-                // Match by checking if the provider type name contains the module's display name
-                if (providerTypeName.Contains(moduleProvider.DisplayName, StringComparison.OrdinalIgnoreCase))
-                {
-                    var (optionType, optionInstance) = snapshot.GetOption(serviceKey);
-                    return (optionType, optionInstance);
-                }
-            }
-
-            return (null, null);
-        }
-        catch (Exception ex)
-        {
-            logger.LogWarning(ex, "获取 Distributed Provider 配置失败: {ServiceKey}", serviceKey);
-            return (null, null);
-        }
+        return (EventBusProviderKind.Unknown, EventBusProviderCapabilities.None);
     }
 
     /// <summary>

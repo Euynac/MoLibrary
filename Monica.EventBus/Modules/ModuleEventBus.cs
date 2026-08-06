@@ -56,7 +56,7 @@ public class ModuleEventBus : MonicaModule<ModuleEventBusOption>
     }
 
     /// <inheritdoc />
-    public override void DiscoverTypes(TypeDiscoveryPlan<ModuleEventBusOption> discovery)
+    public override void DeclareTypeDiscovery(TypeDiscoveryPlan<ModuleEventBusOption> discovery)
     {
         if (Option.DisableAutoDiscovery)
         {

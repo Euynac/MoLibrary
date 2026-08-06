@@ -169,7 +169,6 @@
     "Detail": {
       "Tabs": {
         "Info": "Provider 信息",
-        "Options": "配置选项",
         "Subscriptions": "订阅列表"
       },
       "Fields": {
@@ -187,7 +186,6 @@
       "BulkPublish": "批量发布",
       "Streaming": "流式订阅",
       "DeadLetterQueue": "死信队列",
-      "HasOptions": "有配置项",
       "Basic": "基础功能"
     },
     "Columns": {

@@ -14,6 +14,8 @@ public sealed class ModuleKeyTests
         var key = ModuleKey.FromModuleType(typeof(DiagnosticModule));
 
         key.Value.Should().Be(typeof(DiagnosticModule).FullName);
+        key.Id.Should().Be(
+            $"{typeof(DiagnosticModule).Assembly.GetName().Name}::{typeof(DiagnosticModule).FullName}");
     }
 
     [Fact]
@@ -51,6 +53,7 @@ public sealed class ModuleKeyTests
         var second = ModuleKey.FromModuleType(secondType);
 
         first.Value.Should().Be(second.Value);
+        first.Id.Should().NotBe(second.Id);
         first.Should().NotBe(second);
         new Dictionary<ModuleKey, Type>
         {
@@ -65,6 +68,7 @@ public sealed class ModuleKeyTests
         var key = default(ModuleKey);
 
         key.Value.Should().BeEmpty();
+        key.Id.Should().BeEmpty();
         key.ToString().Should().BeEmpty();
     }
 

@@ -49,7 +49,7 @@ public abstract class MonicaModule : IModule
 
     internal abstract void AttachLifecycle(ModuleRegistrationState registration);
 
-    internal abstract ITypeDiscoveryPlan CreateTypeDiscoveryPlan();
+    internal abstract ITypeDiscoveryPlan DeclareTypeDiscoveryPlan();
 
     internal abstract bool IsWebModule { get; }
 
@@ -188,7 +188,7 @@ public abstract class MonicaModule<TOptions> : MonicaModule
     /// <summary>
     /// Declares structural business-type queries and their serial registration commits.
     /// </summary>
-    public virtual void DiscoverTypes(TypeDiscoveryPlan<TOptions> discovery)
+    public virtual void DeclareTypeDiscovery(TypeDiscoveryPlan<TOptions> discovery)
     {
     }
 
@@ -267,10 +267,10 @@ public abstract class MonicaModule<TOptions> : MonicaModule
             context => ConfigureEndpoints(new WebModuleContext<TOptions>(context)));
     }
 
-    internal sealed override ITypeDiscoveryPlan CreateTypeDiscoveryPlan()
+    internal sealed override ITypeDiscoveryPlan DeclareTypeDiscoveryPlan()
     {
         var discovery = new TypeDiscoveryPlan<TOptions>();
-        DiscoverTypes(discovery);
+        DeclareTypeDiscovery(discovery);
         return discovery;
     }
 

@@ -29,6 +29,7 @@ internal sealed class ModuleErrorRegistry(MonicaApplication application)
                 result.Failure.GetMessageRecursively(),
             ErrorType = ModuleRegistrationErrorType.StartupWorkError,
             Phase = result.OriginPhase,
+            WorkItemId = result.WorkItemId,
             StackTrace = result.Failure.StackTrace
         });
     }
@@ -48,8 +49,9 @@ internal sealed class ModuleErrorRegistry(MonicaApplication application)
             ErrorMessage =
                 $"Error committing startup work '{result.Name}' ({result.Barrier}): " +
                 exception.GetMessageRecursively(),
-            ErrorType = ModuleRegistrationErrorType.StartupWorkError,
+            ErrorType = ModuleRegistrationErrorType.StartupWorkCommitError,
             Phase = result.OriginPhase,
+            WorkItemId = result.WorkItemId,
             StackTrace = exception.StackTrace
         });
     }

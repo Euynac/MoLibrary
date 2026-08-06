@@ -250,7 +250,7 @@ internal sealed class FailingDiscoveryModule : MonicaModule<FailingDiscoveryModu
         context.Services.AddSingleton<DiscoveryMutationMarker>();
     }
 
-    public override void DiscoverTypes(TypeDiscoveryPlan<FailingDiscoveryModuleOption> discovery)
+    public override void DeclareTypeDiscovery(TypeDiscoveryPlan<FailingDiscoveryModuleOption> discovery)
     {
         throw new InvalidOperationException("discovery-declaration-failure");
     }

@@ -10,7 +10,18 @@ namespace Monica.Core.Modularity.Models;
 public readonly struct ModuleKey : IEquatable<ModuleKey>
 {
     private readonly Type? _moduleType;
+    private readonly string? _id;
     private readonly string? _value;
+
+    /// <summary>
+    /// Gets the stable, assembly-qualified diagnostic identity used by browser state and portable exports.
+    /// </summary>
+    /// <remarks>
+    /// The identity combines the defining assembly's simple name with the full CLR type name. It is stable across
+    /// assembly version changes while avoiding collisions between equal type names published by different assemblies.
+    /// CLR <see cref="Type"/> identity remains authoritative for the live module graph.
+    /// </remarks>
+    public string Id => _id ?? string.Empty;
 
     /// <summary>
     /// Gets the human-readable module type name.
@@ -21,9 +32,10 @@ public readonly struct ModuleKey : IEquatable<ModuleKey>
     /// </remarks>
     public string Value => _value ?? string.Empty;
 
-    private ModuleKey(Type moduleType, string value)
+    private ModuleKey(Type moduleType, string id, string value)
     {
         _moduleType = moduleType;
+        _id = id;
         _value = value;
     }
 
@@ -35,7 +47,10 @@ public readonly struct ModuleKey : IEquatable<ModuleKey>
     {
         ArgumentNullException.ThrowIfNull(moduleType);
         var value = moduleType.FullName ?? moduleType.Name;
-        return new ModuleKey(moduleType, value);
+        var assemblyName = moduleType.Assembly.GetName().Name
+                           ?? moduleType.Assembly.FullName
+                           ?? "unknown-assembly";
+        return new ModuleKey(moduleType, $"{assemblyName}::{value}", value);
     }
 
     /// <inheritdoc />

@@ -37,7 +37,7 @@ public class ModuleMediator : MonicaModule<ModuleMediatorOption>
         module.Require<ModuleExecutionPipeline, ModuleExecutionPipelineOption>();
     }
 
-    public override void DiscoverTypes(TypeDiscoveryPlan<ModuleMediatorOption> discovery)
+    public override void DeclareTypeDiscovery(TypeDiscoveryPlan<ModuleMediatorOption> discovery)
     {
         discovery.Match(
             TypeQuery.ConcreteClass.ImplementsOpenGeneric(typeof(IRequestHandler<,>)),

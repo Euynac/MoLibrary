@@ -5,7 +5,7 @@ namespace Monica.Core.Modularity.Diagnostics.Models;
 /// <summary>
 /// Describes one serial module callback execution.
 /// </summary>
-public sealed class ModulePhaseExecutionPerformanceInfo
+internal sealed class ModulePhaseExecutionPerformanceInfo
 {
     /// <summary>Gets the stable execution identity within this snapshot.</summary>
     public string ExecutionId { get; init; } = string.Empty;
@@ -27,6 +27,12 @@ public sealed class ModulePhaseExecutionPerformanceInfo
 
     /// <summary>Gets the callback phase.</summary>
     public ModulePhase Phase { get; init; }
+
+    /// <summary>Gets the runtime responsibility represented by this callback.</summary>
+    public ModuleCallbackKind Kind { get; init; }
+
+    /// <summary>Gets the causally related startup-work identity for serial commit callbacks.</summary>
+    public string? WorkItemId { get; init; }
 
     /// <summary>Gets the UTC start timestamp.</summary>
     public DateTimeOffset StartedAtUtc { get; init; }

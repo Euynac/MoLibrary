@@ -33,7 +33,11 @@ internal static class TypeDiscoveryCompiler
         var queries = CollectQueries(plans);
         if (queries.Count == 0)
         {
-            return TypeDiscoveryCompilation.Empty;
+            return new TypeDiscoveryCompilation(
+                new Dictionary<TypeQuery, IReadOnlyList<BusinessTypeMatch>>(),
+                [],
+                enumeratedTypeCount: 0,
+                excludedTypeCount: 0);
         }
 
         var requirements = TypeFactRequirements.CustomAttributes;
@@ -57,6 +61,7 @@ internal static class TypeDiscoveryCompiler
         }
 
         var scannedTypes = new HashSet<Type>();
+        var excludedTypeCount = 0;
         foreach (var type in types)
         {
             ArgumentNullException.ThrowIfNull(type);
@@ -70,6 +75,7 @@ internal static class TypeDiscoveryCompiler
             {
                 if (shape.HasAttribute(typeof(ExcludeFromBusinessTypeDiscoveryAttribute), inherit: false))
                 {
+                    excludedTypeCount++;
                     continue;
                 }
             }
@@ -116,7 +122,11 @@ internal static class TypeDiscoveryCompiler
             compiledMatches.Add(queries[queryIndex], matchesByQuery[queryIndex].AsReadOnly());
         }
 
-        return new TypeDiscoveryCompilation(compiledMatches);
+        return new TypeDiscoveryCompilation(
+            compiledMatches,
+            queries,
+            scannedTypes.Count,
+            excludedTypeCount);
     }
 
     private static IReadOnlyList<TypeQuery> CollectQueries(IReadOnlyList<ITypeDiscoveryPlan> plans)
@@ -147,25 +157,44 @@ internal static class TypeDiscoveryCompiler
 /// </summary>
 internal sealed class TypeDiscoveryCompilation
 {
-    private static readonly IReadOnlyDictionary<TypeQuery, IReadOnlyList<BusinessTypeMatch>> NO_MATCHES =
-        new Dictionary<TypeQuery, IReadOnlyList<BusinessTypeMatch>>();
-
-    private readonly IReadOnlyDictionary<TypeQuery, IReadOnlyList<BusinessTypeMatch>> _matchesByQuery;
+    private IReadOnlyDictionary<TypeQuery, IReadOnlyList<BusinessTypeMatch>>? _matchesByQuery;
+    private IReadOnlyList<TypeQuery> _queries;
 
     internal TypeDiscoveryCompilation(
-        IReadOnlyDictionary<TypeQuery, IReadOnlyList<BusinessTypeMatch>> matchesByQuery)
+        IReadOnlyDictionary<TypeQuery, IReadOnlyList<BusinessTypeMatch>> matchesByQuery,
+        IReadOnlyList<TypeQuery> queries,
+        int enumeratedTypeCount,
+        int excludedTypeCount)
     {
         _matchesByQuery = matchesByQuery;
+        _queries = queries;
+        EnumeratedTypeCount = enumeratedTypeCount;
+        ExcludedTypeCount = excludedTypeCount;
+        MatchCount = matchesByQuery.Values.Sum(static matches => matches.Count);
     }
 
-    internal static TypeDiscoveryCompilation Empty { get; } = new(NO_MATCHES);
+    internal IReadOnlyList<TypeQuery> Queries => _queries;
+
+    internal int EnumeratedTypeCount { get; }
+
+    internal int ExcludedTypeCount { get; }
+
+    internal int MatchCount { get; }
 
     internal IReadOnlyList<BusinessTypeMatch> GetMatches(TypeQuery query)
     {
         ArgumentNullException.ThrowIfNull(query);
-        return _matchesByQuery.TryGetValue(query, out var matches)
+        var matchesByQuery = _matchesByQuery
+            ?? throw new InvalidOperationException("The type-discovery compilation has already been released.");
+        return matchesByQuery.TryGetValue(query, out var matches)
             ? matches
             : throw new InvalidOperationException($"The structural query '{query}' was not part of this compilation.");
+    }
+
+    internal void Release()
+    {
+        _matchesByQuery = null;
+        _queries = [];
     }
 }
 

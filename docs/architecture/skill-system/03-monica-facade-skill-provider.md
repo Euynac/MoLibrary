@@ -329,10 +329,10 @@ The marker interface is explicit and lets the compiled query retain its closed g
 
 ### 4.3 Discovery pipeline
 
-`ModuleAIFacadeProvider.DiscoverTypes`:
+`ModuleAIFacadeProvider.DeclareTypeDiscovery`:
 
 ```csharp
-public override void DiscoverTypes(TypeDiscoveryPlan<ModuleAIFacadeProviderOption> discovery)
+public override void DeclareTypeDiscovery(TypeDiscoveryPlan<ModuleAIFacadeProviderOption> discovery)
 {
     discovery.Match(
         TypeQuery.ConcreteClass.ImplementsOpenGeneric(typeof(IMonicaFacade<>)),
@@ -656,7 +656,7 @@ public enum FacadeRegistrationMode
 When Phase C is implemented:
 
 1. `Monica.Framework/Modules/ModuleAIFacadeProvider.cs` and `Monica.Framework/AISkillProviders/Facade/Internal/` exist with the files listed in §1.1.
-2. `ModuleAIFacadeProvider` derives from `MonicaModule<ModuleAIFacadeProviderOption>`, declares its graph and required registration feature in `Describe`, and contributes a compiled Facade query from `DiscoverTypes`.
+2. `ModuleAIFacadeProvider` derives from `MonicaModule<ModuleAIFacadeProviderOption>`, declares its graph and required registration feature in `Describe`, and contributes a compiled Facade query from `DeclareTypeDiscovery`.
 3. `monica.AddAIFacadeSkills().UseAllFacades()` and `monica.AddAIFacadeSkills().UseFacades(...)` are callable from a host `Program.cs`.
 4. Every selected Monica Facade has been marked with exactly one `IMonicaFacade<TModule>` owner. The migration PR includes a comprehensive checklist of Facades touched.
 5. End-to-end smoke test: a host registers `monica.AddAI()`, `monica.AddRAG()`, `monica.AddKnowledgeBase()`, and `monica.AddAIFacadeSkills().UseAllFacades()`. The chat agent's system prompt contains entries for `module-rag`, `module-knowledge-base`, and `module-ai`. Loading each module skill shows Facade-grouped scripts with method-derived names and non-fallback descriptions.

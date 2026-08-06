@@ -1,6 +1,5 @@
 @using Monica.EventBus.Abstractions
 @using Monica.Framework.UI.UIEventBus.Models
-@using Monica.UI.UIModuleSystem.Components
 @inject IStringLocalizer<EventBusResource> L
 
 <MudDialog Visible="IsVisible" VisibleChanged="OnVisibleChanged" Options="DialogOptions">
@@ -110,13 +109,6 @@
                                 </MudPaper>
                             </MudItem>
                         </MudGrid>
-                    </div>
-                </MudTabPanel>
-
-                <MudTabPanel Text="@L["Providers:Detail:Tabs:Options"]" Icon="@Icons.Material.Filled.Settings">
-                    <div class="tab-content pa-4">
-                        <ModuleOptionDisplay OptionType="@Provider.OptionType"
-                                           OptionInstance="@Provider.OptionInstance" />
                     </div>
                 </MudTabPanel>
 

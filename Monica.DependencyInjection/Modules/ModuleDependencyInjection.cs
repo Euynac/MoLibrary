@@ -49,7 +49,7 @@ public class ModuleDependencyInjection : MonicaModule<ModuleDependencyInjectionO
     }
 
     /// <inheritdoc />
-    public override void DiscoverTypes(TypeDiscoveryPlan<ModuleDependencyInjectionOption> discovery)
+    public override void DeclareTypeDiscovery(TypeDiscoveryPlan<ModuleDependencyInjectionOption> discovery)
     {
         var dependencyCandidates = TypeQuery.AnyOf(
             TypeQuery.All.AssignableTo<ITransientDependency>(),

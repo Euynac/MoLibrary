@@ -28,16 +28,6 @@ public class EventBusProviderInfo
     public bool IsDistributed { get; init; }
 
     /// <summary>
-    /// Type of Provider Option
-    /// </summary>
-    public Type? OptionType { get; init; }
-
-    /// <summary>
-    /// Example of Provider Option
-    /// </summary>
-    public object? OptionInstance { get; init; }
-
-    /// <summary>
     /// Implementation type name
     /// </summary>
     public string ImplementationType { get; init; } = "";

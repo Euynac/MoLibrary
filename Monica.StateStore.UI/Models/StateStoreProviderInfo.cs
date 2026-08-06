@@ -53,34 +53,9 @@ public class StateStoreProviderInfo
     public bool IsDefaultStateStore { get; init; }
 
     /// <summary>
-    /// Provider option type.
-    /// </summary>
-    public Type? OptionType { get; init; }
-
-    /// <summary>
-    /// Provider option snapshot.
-    /// </summary>
-    public object? OptionInstance { get; init; }
-
-    /// <summary>
-    /// Flattened configuration entries prepared for UI rendering.
-    /// </summary>
-    public IReadOnlyList<StateStoreProviderConfigEntry> ConfigurationEntries { get; init; } = [];
-
-    /// <summary>
     /// Concrete implementation type name.
     /// </summary>
     public string ImplementationType { get; init; } = "";
-
-    /// <summary>
-    /// Whether an option snapshot exists for the provider.
-    /// </summary>
-    public bool HasConfigurationSnapshot => OptionType is not null || OptionInstance is not null;
-
-    /// <summary>
-    /// Whether the provider exposes visible configuration entries.
-    /// </summary>
-    public bool HasVisibleConfiguration => ConfigurationEntries.Count > 0;
 
     /// <summary>
     /// Whether the provider supports pattern-based key browsing.

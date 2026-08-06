@@ -18,7 +18,7 @@
             {
                 <div class="markdown-loading-state">
                     <MudText Typo="Typo.caption" Color="Color.Secondary">
-                        @Shared["ModuleSystem:SystemOverview:Labels:Loading"]
+                        @Shared["Common:Loading"]
                     </MudText>
                     <MudProgressLinear Indeterminate="true"
                                        Color="Color.Primary"
@@ -83,4 +83,3 @@
     private Task OnFileSelected(IBrowserFile file)
         => PageState.UploadFileAsync(file);
 }
-

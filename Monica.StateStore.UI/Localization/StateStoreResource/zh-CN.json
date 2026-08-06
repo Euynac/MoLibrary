@@ -38,17 +38,13 @@
     "Labels": {
       "KeyScanning": "Key 扫描",
       "NoScanningSupport": "不支持扫描",
-      "Distributed": "分布式",
-      "HasConfiguration": "有配置项"
+      "Distributed": "分布式"
     },
     "Actions": {
       "ViewDetails": "查看详情"
     }
   },
   "ProviderDetail": {
-    "Tabs": {
-      "ConfigOptions": "配置选项"
-    },
     "Labels": {
       "ProviderType": "Provider 类型",
       "ServiceKey": "服务键",
@@ -64,10 +60,6 @@
       "NoScanning": "不支持扫描",
       "QueryState": "查询状态",
       "BulkOperations": "批量操作"
-    },
-    "Messages": {
-      "NoConfigurationDescription": "当前 Provider 有配置快照，但没有适合在工作台中直接展示的简单字段。",
-      "ConfigurationShared": "当前 Provider 使用共享实现，没有独立配置快照。"
     },
     "Actions": {
       "Close": "关闭"

@@ -33,6 +33,10 @@ public sealed class TypeDiscoveryCompilerTests
         matches.Should().ContainSingle().Which.Type.Should().Be(typeof(AttributedGenericCandidate));
         differentMatches.Should().ContainSingle();
         differentMatches[0].Shape.Should().BeSameAs(matches[0].Shape);
+        compilation.EnumeratedTypeCount.Should().Be(1);
+        compilation.ExcludedTypeCount.Should().Be(0);
+        compilation.Queries.Should().HaveCount(2);
+        compilation.MatchCount.Should().Be(2);
     }
 
     [Fact]
@@ -60,6 +64,25 @@ public sealed class TypeDiscoveryCompilerTests
         compilation.GetMatches(TypeQuery.All)
             .Should().ContainSingle()
             .Which.Shape.Should().BeSameAs(match.Shape);
+        compilation.EnumeratedTypeCount.Should().Be(2);
+        compilation.ExcludedTypeCount.Should().Be(1);
+        compilation.MatchCount.Should().Be(2);
+    }
+
+    [Fact]
+    public void Release_AfterCompilation_ShouldRejectMatchAccessAndDropQueryReferences()
+    {
+        var query = TypeQuery.All;
+        var compilation = TypeDiscoveryCompiler.Compile(
+            [typeof(AttributedGenericCandidate)],
+            [(ITypeDiscoveryPlan)CreatePlan(query)]);
+
+        compilation.Release();
+
+        compilation.Queries.Should().BeEmpty();
+        var getMatches = () => compilation.GetMatches(query);
+        getMatches.Should().Throw<InvalidOperationException>()
+            .WithMessage("*already been released*");
     }
 
     private static TypeDiscoveryPlan<DiscoveryOptions> CreatePlan(params TypeQuery[] queries)

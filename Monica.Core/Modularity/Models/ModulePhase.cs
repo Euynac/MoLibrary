@@ -27,9 +27,9 @@ public enum ModulePhase
     ConfigureServices,
     
     /// <summary>
-    /// Collects, compiles, and commits structural business-type queries.
+    /// Declares structural business-type queries for later centralized compilation and commit.
     /// </summary>
-    DiscoverTypes,
+    DeclareTypeDiscovery,
     
     /// <summary>
     /// Performs post-configuration of services after all services have been registered.

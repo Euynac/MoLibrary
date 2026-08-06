@@ -51,33 +51,6 @@
                     </div>
                 </div>
 
-                <div class="provider-dialog__section">
-                    <div class="provider-dialog__section-header">
-                        <div>
-                            <MudText Typo="Typo.subtitle1">@L["ProviderDetail:Tabs:ConfigOptions"]</MudText>
-                            <MudText Typo="Typo.body2" Color="Color.Secondary">@GetConfigurationSource(Provider)</MudText>
-                        </div>
-                    </div>
-
-                    @if (Provider.HasVisibleConfiguration)
-                    {
-                        <div class="provider-dialog__config-grid">
-                            @foreach (var entry in Provider.ConfigurationEntries)
-                            {
-                                <div class="provider-dialog__config-row">
-                                    <span title="@entry.Path">@entry.Label</span>
-                                    <strong title="@entry.Value">@entry.Value</strong>
-                                </div>
-                            }
-                        </div>
-                    }
-                    else
-                    {
-                        <MudAlert Severity="Severity.Info" Variant="Variant.Outlined">
-                            @GetConfigurationEmptyMessage(Provider)
-                        </MudAlert>
-                    }
-                </div>
             </div>
         }
     </DialogContent>
@@ -135,18 +108,6 @@
     private string GetProviderSummary(StateStoreProviderInfo provider)
     {
         return $"{provider.ProviderDisplayName} · {GetStorageModeText(provider)}";
-    }
-
-    private string GetConfigurationSource(StateStoreProviderInfo provider)
-    {
-        return provider.OptionType?.Name ?? L["ProviderDetail:Messages:ConfigurationShared"];
-    }
-
-    private string GetConfigurationEmptyMessage(StateStoreProviderInfo provider)
-    {
-        return provider.HasConfigurationSnapshot
-            ? L["ProviderDetail:Messages:NoConfigurationDescription"]
-            : L["ProviderDetail:Messages:ConfigurationShared"];
     }
 
     private List<string> GetCapabilityLabels(StateStoreProviderInfo provider)

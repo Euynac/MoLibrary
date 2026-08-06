@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Monica.Core.Modularity.Diagnostics.Models;
 using Monica.Core.Modularity.Models;
 
 namespace Monica.Core.Modularity.Models.Internal;
@@ -44,6 +45,7 @@ internal sealed class ModuleConfigurationContext(
 /// </summary>
 internal sealed record ModuleConfigurationRequest(
     ModulePhase Phase,
+    ModuleCallbackKind Kind,
     int Order,
     long Ordinal,
     Action<ModuleConfigurationContext> Configure,

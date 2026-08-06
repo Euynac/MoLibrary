@@ -14,6 +14,11 @@ public interface IMonicaModuleSystemOptions
     int MaxConcurrentStartupWorkItems { get; }
 
     /// <summary>
+    /// Gets optional host-defined startup performance budgets. Unset values do not imply a health threshold.
+    /// </summary>
+    IModuleStartupPerformanceBudgets? StartupPerformanceBudgets { get; }
+
+    /// <summary>
     /// Gets the default log level used by module registration loggers.
     /// </summary>
     LogLevel DefaultLogLevel { get; }
@@ -69,6 +74,15 @@ public sealed class MonicaModuleSystemOptions : IMonicaModuleSystemOptions
     public int MaxConcurrentStartupWorkItems { get; set; } = Math.Max(
         MIN_CONCURRENT_STARTUP_WORK_ITEMS,
         Environment.ProcessorCount);
+
+    /// <summary>
+    /// Gets optional startup performance budgets. Every value is unset by default, so Monica reports factual
+    /// measurements without inventing a performance score or warning threshold.
+    /// </summary>
+    public ModuleStartupPerformanceBudgets? StartupPerformanceBudgets { get; set; }
+
+    IModuleStartupPerformanceBudgets? IMonicaModuleSystemOptions.StartupPerformanceBudgets =>
+        StartupPerformanceBudgets;
 
     /// <summary>
     /// Gets or sets the default log level used by module registration loggers.
@@ -129,6 +143,8 @@ public sealed class MonicaModuleSystemOptions : IMonicaModuleSystemOptions
                 $"At least {MIN_CONCURRENT_STARTUP_WORK_ITEMS} startup work item must be allowed to run.");
         }
 
+        StartupPerformanceBudgets?.Validate();
+
         if (MonicaEndpointPort is null)
         {
             return;
@@ -148,6 +164,73 @@ public sealed class MonicaModuleSystemOptions : IMonicaModuleSystemOptions
         {
             throw new InvalidOperationException(
                 $"{nameof(MonicaEndpointHost)} must be a host name or IP address without scheme, port, or path.");
+        }
+    }
+}
+
+/// <summary>Provides a read-only view of host-defined module startup performance budgets.</summary>
+public interface IModuleStartupPerformanceBudgets
+{
+    /// <summary>Gets the end-to-end composition budget.</summary>
+    TimeSpan? TotalComposition { get; }
+
+    /// <summary>Gets the service-registration budget.</summary>
+    TimeSpan? ServiceRegistration { get; }
+
+    /// <summary>Gets the aggregate typed type-discovery-stage budget.</summary>
+    TimeSpan? TypeDiscovery { get; }
+
+    /// <summary>Gets the aggregate blocking startup-barrier budget.</summary>
+    TimeSpan? AggregateBarrierWait { get; }
+
+    /// <summary>Gets the longest individual serial module-callback budget.</summary>
+    TimeSpan? LongestModuleCallback { get; }
+
+    /// <summary>Gets the longest individual startup-work queue budget.</summary>
+    TimeSpan? LongestStartupQueue { get; }
+}
+
+/// <summary>
+/// Defines optional upper limits for module startup measurements. Every budget is disabled until explicitly set.
+/// </summary>
+public sealed class ModuleStartupPerformanceBudgets : IModuleStartupPerformanceBudgets
+{
+    /// <inheritdoc />
+    public TimeSpan? TotalComposition { get; set; }
+
+    /// <inheritdoc />
+    public TimeSpan? ServiceRegistration { get; set; }
+
+    /// <inheritdoc />
+    public TimeSpan? TypeDiscovery { get; set; }
+
+    /// <inheritdoc />
+    public TimeSpan? AggregateBarrierWait { get; set; }
+
+    /// <inheritdoc />
+    public TimeSpan? LongestModuleCallback { get; set; }
+
+    /// <inheritdoc />
+    public TimeSpan? LongestStartupQueue { get; set; }
+
+    internal void Validate()
+    {
+        ValidateBudget(TotalComposition, nameof(TotalComposition));
+        ValidateBudget(ServiceRegistration, nameof(ServiceRegistration));
+        ValidateBudget(TypeDiscovery, nameof(TypeDiscovery));
+        ValidateBudget(AggregateBarrierWait, nameof(AggregateBarrierWait));
+        ValidateBudget(LongestModuleCallback, nameof(LongestModuleCallback));
+        ValidateBudget(LongestStartupQueue, nameof(LongestStartupQueue));
+    }
+
+    private static void ValidateBudget(TimeSpan? budget, string propertyName)
+    {
+        if (budget is { } value && value <= TimeSpan.Zero)
+        {
+            throw new ArgumentOutOfRangeException(
+                propertyName,
+                value,
+                "A configured module startup performance budget must be greater than zero.");
         }
     }
 }

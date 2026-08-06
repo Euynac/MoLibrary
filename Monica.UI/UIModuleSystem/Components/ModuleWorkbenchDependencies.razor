@@ -1,0 +1,157 @@
+@using Microsoft.Extensions.Localization
+@using Monica.Core.Modularity.Diagnostics.Models
+@using Monica.UI.Localization
+@using Monica.UI.UIModuleSystem.State
+@using Monica.UI.UIModuleSystem.Support
+@inject IStringLocalizer<ModuleSystemResource> L
+
+@if (Session.Snapshot is { } snapshot)
+{
+    <div class="dependencies-layout">
+        <section class="dependency-toolbar" aria-labelledby="dependencies-title">
+            <div>
+                <MudText Typo="Typo.overline">@L["Dependencies:Eyebrow"]</MudText>
+                <MudText Typo="Typo.h5" HtmlTag="h2" id="dependencies-title">@L["Dependencies:Title"]</MudText>
+                <MudText Typo="Typo.body2" Color="Color.Secondary">@L["Dependencies:Description"]</MudText>
+            </div>
+            <div class="dependency-controls">
+                <MudAutocomplete T="string"
+                                 Label="@L["Dependencies:FocusModule"]"
+                                 Value="@Session.SelectedModule?.ModuleKey.Id"
+                                 ValueChanged="@SelectModuleById"
+                                 SearchFunc="@SearchModules"
+                                 ToStringFunc="@ModuleDisplayName"
+                                 Clearable="false"
+                                 CoerceValue="false"
+                                 SelectValueOnTab="true" />
+                <MudSwitch T="bool"
+                           Label="@L["Dependencies:FullHost"]"
+                           Value="@Session.ShowFullDependencyGraph"
+                           ValueChanged="@Session.SetShowFullDependencyGraph"
+                           Color="Color.Warning" />
+                <MudButton Variant="Variant.Outlined"
+                           StartIcon="@Icons.Material.Filled.ZoomOutMap"
+                           Disabled="@(Session.ShowFullDependencyGraph || Session.DependencyNeighborhoodDepth >= 3)"
+                           OnClick="@Session.ExpandDependencyNeighborhood">
+                    @L["Dependencies:Expand", Session.DependencyNeighborhoodDepth]
+                </MudButton>
+                <MudButton Variant="Variant.Text" OnClick="@Session.ResetDependencyNeighborhood">
+                    @L["Actions:Reset"]
+                </MudButton>
+            </div>
+        </section>
+
+        <div class="dependency-evidence-grid">
+            <section class="dependency-graph-panel">
+                <div class="graph-summary">
+                    <span>@L["Dependencies:Graph:Nodes", Session.VisibleDependencyModules.Count]</span>
+                    <span>@L["Dependencies:Graph:Edges", Session.VisibleDependencyEdges.Count]</span>
+                    <span>@(Session.ShowFullDependencyGraph
+                        ? L["Dependencies:Graph:FullHostMode"]
+                        : L["Dependencies:Graph:NeighborhoodMode", Session.DependencyNeighborhoodDepth])</span>
+                </div>
+                <ModuleDependencyGraphCanvas Session="@Session" />
+            </section>
+
+            <aside class="dependency-inspector" aria-label="@L["Aria:DependencyInspector"]">
+                @if (Session.SelectedModule is { } selected)
+                {
+                    <MudText Typo="Typo.overline">@L["Dependencies:Selected:Eyebrow"]</MudText>
+                    <MudText Typo="Typo.h6">@selected.TypeName</MudText>
+                    <MudTooltip Text="@selected.FullTypeName"><code>@selected.FullTypeName</code></MudTooltip>
+
+                    <div class="relationship-section">
+                        <strong>@L["Dependencies:Selected:Requires"]</strong>
+                        @foreach (var edge in snapshot.Topology.Edges.Where(edge => edge.SourceModule == selected.ModuleKey))
+                        {
+                            var module = snapshot.Modules.FirstOrDefault(candidate => candidate.ModuleKey == edge.TargetModule);
+                            if (module is not null)
+                            {
+                                <button type="button" @onclick="@(() => ModuleSelected.InvokeAsync(module))">@module.TypeName</button>
+                            }
+                        }
+                        @if (!snapshot.Topology.Edges.Any(edge => edge.SourceModule == selected.ModuleKey))
+                        {
+                            <span>@L["Dependencies:Selected:NoDependencies"]</span>
+                        }
+                    </div>
+
+                    <div class="relationship-section">
+                        <strong>@L["Dependencies:Selected:RequiredBy"]</strong>
+                        @foreach (var edge in snapshot.Topology.Edges.Where(edge => edge.TargetModule == selected.ModuleKey))
+                        {
+                            var module = snapshot.Modules.FirstOrDefault(candidate => candidate.ModuleKey == edge.SourceModule);
+                            if (module is not null)
+                            {
+                                <button type="button" @onclick="@(() => ModuleSelected.InvokeAsync(module))">@module.TypeName</button>
+                            }
+                        }
+                        @if (!snapshot.Topology.Edges.Any(edge => edge.TargetModule == selected.ModuleKey))
+                        {
+                            <span>@L["Dependencies:Selected:NoDependents"]</span>
+                        }
+                    </div>
+                }
+            </aside>
+        </div>
+
+        <section class="dependency-table-section">
+            <MudButton Variant="Variant.Text"
+                       StartIcon="@Icons.Material.Filled.TableRows"
+                       OnClick="@(() => Session.SetShowDependencyTable(!Session.ShowDependencyTable))"
+                       aria-expanded="@Session.ShowDependencyTable">
+                @(Session.ShowDependencyTable ? L["Dependencies:Table:Hide"] : L["Dependencies:Table:Show"])
+            </MudButton>
+            <MudCollapse Expanded="@Session.ShowDependencyTable">
+                <div class="dependency-table-wrapper">
+                    <MudTable T="ModuleDiagnosticsDependencyEdge" Items="@Session.VisibleDependencyEdges" Dense="true" Hover="true">
+                        <HeaderContent>
+                            <MudTh>@L["Dependencies:Table:Source"]</MudTh>
+                            <MudTh>@L["Dependencies:Table:Target"]</MudTh>
+                        </HeaderContent>
+                        <RowTemplate Context="edge">
+                            <MudTd DataLabel="@L["Dependencies:Table:Source"]">@ModuleName(edge.SourceModule)</MudTd>
+                            <MudTd DataLabel="@L["Dependencies:Table:Target"]">@ModuleName(edge.TargetModule)</MudTd>
+                        </RowTemplate>
+                    </MudTable>
+                </div>
+            </MudCollapse>
+        </section>
+    </div>
+}
+
+@code {
+    [Parameter, EditorRequired] public ModuleSystemWorkbenchSession Session { get; set; } = default!;
+    [Parameter] public EventCallback<ModuleDiagnosticsModule> ModuleSelected { get; set; }
+
+    private async Task SelectModuleById(string moduleId)
+    {
+        var module = Session.Snapshot?.Modules.FirstOrDefault(candidate =>
+            string.Equals(candidate.ModuleKey.Id, moduleId, StringComparison.Ordinal));
+        if (module is not null)
+        {
+            Session.SelectModule(module, openDrawer: false);
+            await ModuleSelected.InvokeAsync(module);
+            Session.CloseModuleDrawer();
+        }
+    }
+
+    private Task<IEnumerable<string>> SearchModules(string? value, CancellationToken cancellationToken)
+    {
+        var modules = Session.Snapshot?.Modules
+            .Where(module => string.IsNullOrWhiteSpace(value)
+                             || module.TypeName.Contains(value, StringComparison.OrdinalIgnoreCase)
+                             || module.FullTypeName.Contains(value, StringComparison.OrdinalIgnoreCase))
+            .Select(static module => module.ModuleKey.Id)
+            ?? [];
+        return Task.FromResult(modules);
+    }
+
+    private string ModuleDisplayName(string? moduleId) => Session.Snapshot?.Modules
+        .FirstOrDefault(module => string.Equals(module.ModuleKey.Id, moduleId, StringComparison.Ordinal))?.TypeName
+        ?? moduleId
+        ?? string.Empty;
+
+    private string ModuleName(Monica.Core.Modularity.Models.ModuleKey key) =>
+        Session.Snapshot?.Modules.FirstOrDefault(module => module.ModuleKey == key)?.TypeName ?? key.Value;
+}

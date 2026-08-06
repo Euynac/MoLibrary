@@ -5,7 +5,7 @@ namespace Monica.Core.Modularity.Models.Internal;
 /// <summary>
 /// Represents an error that occurred during module registration.
 /// </summary>
-public class ModuleRegistrationError
+internal sealed class ModuleRegistrationError
 {
     /// <summary>
     /// The type of the module where the error occurred.
@@ -26,6 +26,11 @@ public class ModuleRegistrationError
     /// The configuration phase where the error occurred.
     /// </summary>
     public ModulePhase? Phase { get; set; }
+
+    /// <summary>
+    /// Gets or sets the stable startup-work identity when the failure belongs to a worker or serial commit.
+    /// </summary>
+    public string? WorkItemId { get; set; }
 
     /// <summary>
     /// The stack trace of the error that occurred during module registration.

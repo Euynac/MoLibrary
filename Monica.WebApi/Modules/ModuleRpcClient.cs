@@ -114,7 +114,7 @@ public class ModuleRpcClient : MonicaModule<ModuleRpcClientOption>
         }
     }
 
-    public override void DiscoverTypes(TypeDiscoveryPlan<ModuleRpcClientOption> discovery)
+    public override void DeclareTypeDiscovery(TypeDiscoveryPlan<ModuleRpcClientOption> discovery)
     {
         discovery.Match(
             TypeQuery.ClosedClass.SubclassOf<RpcApi>(),

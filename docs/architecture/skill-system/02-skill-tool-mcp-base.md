@@ -34,10 +34,10 @@ This is exactly the "lazy discovery" requirement Monica needs. The Monica design
 
 ### 1.2 Monica's compiled type-discovery plan
 
-Modules declare structural queries by overriding `DiscoverTypes(TypeDiscoveryPlan<TOptions>)`:
+Modules declare structural queries by overriding `DeclareTypeDiscovery(TypeDiscoveryPlan<TOptions>)`:
 
 ```csharp
-public override void DiscoverTypes(TypeDiscoveryPlan<ModuleSkillSystemOption> discovery)
+public override void DeclareTypeDiscovery(TypeDiscoveryPlan<ModuleSkillSystemOption> discovery)
 {
     discovery.Match(
         TypeQuery.ConcreteClass.AssignableTo<Skill>(),
@@ -494,7 +494,7 @@ A parameter that has both an `[MoAITool]` and an XML `<param>` doc resolves to t
 A new module `ModuleSkillSystem` lives in `Monica.AI`. The module:
 
 - Derives from `MonicaModule<ModuleSkillSystemOption>`.
-- Declares the discovery + filtering pipeline for `MoSkill<TSelf>`, `MoTool`, and `MoMcp` subclasses through `DiscoverTypes`.
+- Declares the discovery + filtering pipeline for `MoSkill<TSelf>`, `MoTool`, and `MoMcp` subclasses through `DeclareTypeDiscovery`.
 - Builds the `AgentSkillsProvider` at startup via `AgentSkillsProviderBuilder.UseSkills(...)`.
 - Declares hard dependencies on `ModuleAI` and `ModuleXmlDocumentation` in `Describe`, so graph shape is known before options or services are materialized.
 
@@ -515,7 +515,7 @@ public sealed class ModuleSkillSystem : MonicaModule<ModuleSkillSystemOption>
         module.Require<ModuleXmlDocumentation, ModuleXmlDocumentationOption>();
     }
 
-    public override void DiscoverTypes(TypeDiscoveryPlan<ModuleSkillSystemOption> discovery)
+    public override void DeclareTypeDiscovery(TypeDiscoveryPlan<ModuleSkillSystemOption> discovery)
     {
         discovery.Match(
             TypeQuery.ConcreteClass,
@@ -737,7 +737,7 @@ When Phase B (this doc) is implemented, the following must hold:
 1. `Monica.AI/Skills/Abstractions/MoSkill.cs`, `MoTool.cs` exist. `MoMcp.cs` is a placeholder file with a `// TODO: package selection` comment.
 2. `Monica.AI/Skills/Annotations/MoAIToolAttribute.cs` exists with `Name`, `Description`, and `Disabled` properties; `AttributeUsage` constrained to method + parameter.
 3. `Monica.AI/Skills/Internal/MoSkillScriptDiscovery.cs` exists and implements the `[MoAITool]`-marker-based reflection used by `MoSkill<TSelf>.Scripts`. The auto-derived kebab-case name rule is unit-tested.
-4. `Monica.AI/Modules/ModuleSkillSystem.cs` derives from `MonicaModule<ModuleSkillSystemOption>`, declares its `TypeDiscoveryPlan` in `DiscoverTypes`, and registers the services that build `AgentSkillsProvider`.
+4. `Monica.AI/Modules/ModuleSkillSystem.cs` derives from `MonicaModule<ModuleSkillSystemOption>`, declares its `TypeDiscoveryPlan` in `DeclareTypeDiscovery`, and registers the services that build `AgentSkillsProvider`.
 5. `Monica.AI.RAG.Skills.RAGKnowledgeSkill` migrated from `KnowledgeSearchToolProvider`. `Monica.AI/RAG/Tools/KnowledgeSearchToolProvider.cs` deleted. `services.TryAddEnumerable(...)` registration removed.
 6. `Monica.AI/Abstractions/IAIChatToolProvider.cs` **deleted**. No shim, no `[Obsolete]` adapter. `Monica.AI/Services/Support/AIChatAgentBuilder.cs` no longer exposes `AddTool(AITool)`.
 7. The `IXmlDocumentationService.GetMethodDocumentation` path is exercised by at least one method per skill in tests (compile-time verification: every Facade-method-style script has a description in one of the three sources).

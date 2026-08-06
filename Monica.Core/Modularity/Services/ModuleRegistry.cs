@@ -1,4 +1,5 @@
 using System.Collections.Frozen;
+using System.Collections.Immutable;
 using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
 using Microsoft.AspNetCore.Builder;
@@ -30,6 +31,7 @@ public sealed class ModuleRegistry(MonicaApplication application)
 
     private readonly ModuleCompositionState _composition = new();
     private readonly object _compositionCallbackGate = new();
+    private readonly object _diagnosticsGate = new();
     private readonly ModuleRegistryState _state = new();
     private readonly Dictionary<Type, HashSet<Type>> _hardDependencies = [];
     private readonly Dictionary<Type, HashSet<Type>> _optionalOrderings = [];
@@ -44,8 +46,8 @@ public sealed class ModuleRegistry(MonicaApplication application)
     private bool _hasMutatedHost;
     private bool _isSealed;
     private CompiledModuleGraph? _compiledGraph;
-    private CompiledModulePlan? _compiledPlan;
     private ModuleServiceRegistrationWriter? _registrationWriter;
+    private long _diagnosticsRevision;
 
     /// <summary>
     /// Gets a read-only view of registration errors owned by this Monica host.
@@ -53,7 +55,7 @@ public sealed class ModuleRegistry(MonicaApplication application)
     /// <remarks>
     /// The view follows the host lifecycle but cannot be used to mutate registry state.
     /// </remarks>
-    public IReadOnlyList<ModuleRegistrationError> RegistrationErrors => _state.RegistrationErrors;
+    internal IReadOnlyList<ModuleRegistrationError> RegistrationErrors => _state.RegistrationErrors;
 
     public ILogger Logger => application.CreateLogger(typeof(ModuleRegistry));
 
@@ -73,13 +75,102 @@ public sealed class ModuleRegistry(MonicaApplication application)
     /// <summary>
     /// Gets the immutable graph compiled for this host.
     /// </summary>
-    internal CompiledModuleGraph CompiledGraph => _compiledPlan?.Graph ?? _compiledGraph
+    internal CompiledModuleGraph CompiledGraph => _compiledGraph
         ?? throw new InvalidOperationException("The Monica module graph has not been compiled yet.");
 
     /// <summary>
     /// Gets whether composition crossed the boundary after which the host builder cannot be reused safely.
     /// </summary>
     internal bool HasMutatedHost => _hasMutatedHost;
+
+    /// <summary>Gets the concrete host-builder type captured when composition began.</summary>
+    internal Type? HostBuilderType => _composition.CaptureDiagnostics().HostBuilderType;
+
+    /// <summary>
+    /// Copies only registry references under short locks, projects immutable scalar state outside the lock, and
+    /// retries when the registry revision changes before publication.
+    /// </summary>
+    internal ModuleRegistryDiagnosticsCapture CaptureDiagnostics()
+    {
+        while (true)
+        {
+            long revision;
+            ModuleCompositionDiagnosticsState composition;
+            ModuleRegistrationState[] registrations;
+            ModuleRuntimeSnapshot[] runtimeModules;
+            ModuleRegistrationError[] errors;
+            lock (_diagnosticsGate)
+            {
+                revision = _diagnosticsRevision;
+                composition = _composition.CaptureDiagnostics();
+                registrations = _state.Registrations.Values.ToArray();
+                runtimeModules = _state.RuntimeSnapshots.ToArray();
+                errors = _state.RegistrationErrors.ToArray();
+            }
+
+            var detachedRegistrations = registrations.Select(static registration =>
+                new ModuleRegistrationDiagnosticsState(
+                    registration.ModuleType,
+                    registration.ModulePhase,
+                    registration.Order,
+                    registration.ModuleSingleton.IsWebModule,
+                    registration.RequiresWebHost,
+                    registration.WebHostRequirementReason,
+                    registration.DisabledReason)).ToImmutableArray();
+            var detachedRuntimeModules = runtimeModules.Select(static snapshot =>
+                new ModuleRuntimeDiagnosticsState(snapshot.ModuleType, snapshot.Order)).ToImmutableArray();
+            var detachedErrors = errors.Select(static error =>
+                new ModuleRegistrationErrorDiagnosticsState(
+                    error.ModuleType,
+                    error.ErrorType,
+                    error.Phase,
+                    error.WorkItemId)).ToImmutableArray();
+
+            lock (_diagnosticsGate)
+            {
+                if (_diagnosticsRevision == revision)
+                {
+                    return new ModuleRegistryDiagnosticsCapture(
+                        revision,
+                        composition,
+                        detachedRegistrations,
+                        detachedRuntimeModules,
+                        detachedErrors);
+                }
+            }
+        }
+    }
+
+    /// <summary>Checks whether a detached registry observation still represents the latest visible state.</summary>
+    internal bool IsDiagnosticsRevisionCurrent(long revision)
+    {
+        lock (_diagnosticsGate)
+        {
+            return _diagnosticsRevision == revision;
+        }
+    }
+
+    /// <summary>Starts a module callback and updates its visible phase as one diagnostics transition.</summary>
+    internal void StartModulePhase(
+        ModuleRegistrationState registration,
+        ModulePhase phase,
+        ModuleCallbackKind kind,
+        string? workItemId)
+    {
+        ArgumentNullException.ThrowIfNull(registration);
+        lock (_diagnosticsGate)
+        {
+            application.Profiling.StartModulePhase(
+                registration.ModuleType,
+                application.Dependencies.ResolveModuleKey(registration.ModuleType),
+                registration.Order,
+                phase,
+                kind,
+                workItemId);
+            registration.SetModulePhase(phase);
+            RecordDiagnosticsMutationUnderLock();
+        }
+    }
 
     /// <summary>
     /// Gets registration drafts omitted from the executable graph by an explicit disable declaration or propagation.
@@ -296,7 +387,11 @@ public sealed class ModuleRegistry(MonicaApplication application)
     internal void AddRegistrationError(ModuleRegistrationError error)
     {
         ArgumentNullException.ThrowIfNull(error);
-        _state.AddRegistrationError(error);
+        lock (_diagnosticsGate)
+        {
+            _state.AddRegistrationError(error);
+            RecordDiagnosticsMutationUnderLock();
+        }
     }
 
     /// <summary>
@@ -314,37 +409,61 @@ public sealed class ModuleRegistry(MonicaApplication application)
         }
 
         _hasStarted = true;
-        _composition.Initialize(builder);
+        lock (_diagnosticsGate)
+        {
+            _composition.Initialize(builder);
+            RecordDiagnosticsMutationUnderLock();
+        }
         _startupWork = new ModuleStartupWorkScheduler(
             application.ModuleSystem.MaxConcurrentStartupWorkItems,
-            OnStartupWorkCompleted);
+            OnStartupWorkCompleted,
+            application.Profiling.RecordExternalMutation);
         application.Profiling.AttachStartupWorkDiagnostics(_startupWork.GetSnapshot);
         var services = builder.Services;
+        CompiledTypeDiscovery? typeDiscovery = null;
 
         try
         {
-            _state.ClearRegistrationErrors();
+            lock (_diagnosticsGate)
+            {
+                _state.ClearRegistrationErrors();
+                RecordDiagnosticsMutationUnderLock();
+            }
             _isSealed = true;
             DescribeModules();
             CompileGraph();
             ValidateFeatures();
             ValidateWebModuleCompatibility(builder);
             var registrations = MaterializeModules();
-            _compiledPlan = CompileModulePlan(registrations);
+            typeDiscovery = CompileTypeDiscovery(registrations);
             _hasMutatedHost = true;
             RegisterCoreServices(services);
             var snapshots = ExecuteBuilderAndServiceConfiguration(builder, services, registrations);
             ReachStartupWorkBarrier(ModuleStartupWorkBarrier.BeforeTypeDiscovery);
 
             _registrationWriter = new ModuleServiceRegistrationWriter(services);
-            CommitBusinessTypeDiscovery(builder, services, _compiledPlan);
+            try
+            {
+                CommitBusinessTypeDiscovery(builder, services, typeDiscovery);
+            }
+            finally
+            {
+                _registrationWriter = null;
+                typeDiscovery.Release();
+                typeDiscovery = null;
+            }
+
             ReachStartupWorkBarrier(ModuleStartupWorkBarrier.BeforePostConfigureServices);
 
             ExecutePostConfigureServices(builder, services, snapshots);
             _startupWork.CloseSubmissions();
             ReachStartupWorkBarrier(ModuleStartupWorkBarrier.BeforeServiceRegistrationCompletion);
 
-            _state.AddRuntimeSnapshots(snapshots);
+            lock (_diagnosticsGate)
+            {
+                _state.AddRuntimeSnapshots(snapshots);
+                RecordDiagnosticsMutationUnderLock();
+            }
             application.Errors.RaiseModuleErrors();
             application.Profiling.RecordMilestone(ModuleCompositionMilestone.ServiceRegistrationCompleted);
             if (builder is not WebApplicationBuilder)
@@ -356,6 +475,11 @@ public sealed class ModuleRegistry(MonicaApplication application)
         {
             HandleRegistrationFailure(exception);
             throw;
+        }
+        finally
+        {
+            _registrationWriter = null;
+            typeDiscovery?.Release();
         }
     }
 
@@ -572,11 +696,11 @@ public sealed class ModuleRegistry(MonicaApplication application)
         ModuleRegistrationState registration,
         ModulePhase phase)
     {
-        registration.StartModulePhase(phase);
-        try
+        foreach (var request in registration.GetOrderedRequests(
+                     registration.ConfigurationRequests.Where(request => request.Phase == phase)))
         {
-            foreach (var request in registration.GetOrderedRequests(
-                         registration.ConfigurationRequests.Where(request => request.Phase == phase)))
+            registration.StartModulePhase(phase, request.Kind);
+            try
             {
                 BeginCompositionCallback(registration);
                 try
@@ -589,10 +713,10 @@ public sealed class ModuleRegistry(MonicaApplication application)
                     EndCompositionCallback(registration);
                 }
             }
-        }
-        finally
-        {
-            registration.EndModulePhase(phase);
+            finally
+            {
+                registration.EndModulePhase(phase);
+            }
         }
     }
 
@@ -622,76 +746,152 @@ public sealed class ModuleRegistry(MonicaApplication application)
         }
     }
 
-    private CompiledModulePlan CompileModulePlan(IReadOnlyList<ModuleRegistrationState> registrations)
+    private CompiledTypeDiscovery CompileTypeDiscovery(IReadOnlyList<ModuleRegistrationState> registrations)
     {
-        application.Profiling.StartPhase(nameof(ModulePhase.DiscoverTypes));
+        var plans = new List<CompiledTypeDiscoveryPlan>(registrations.Count);
+        TypeDiscoveryCompilation? compilation = null;
         try
         {
-            var plans = new List<CompiledTypeDiscoveryPlan>(registrations.Count);
-            foreach (var registration in registrations)
+            application.Profiling.StartStage(ModuleSystemStage.TypeDiscoveryPlanDeclaration);
+            try
             {
-                registration.StartModulePhase(ModulePhase.DiscoverTypes);
-                try
+                foreach (var registration in registrations)
                 {
-                    plans.Add(new CompiledTypeDiscoveryPlan(
-                        registration,
-                        registration.ModuleSingleton.CreateTypeDiscoveryPlan()));
-                }
-                finally
-                {
-                    registration.EndModulePhase(ModulePhase.DiscoverTypes);
+                    registration.StartModulePhase(
+                        ModulePhase.DeclareTypeDiscovery,
+                        ModuleCallbackKind.Lifecycle);
+                    try
+                    {
+                        var plan = registration.ModuleSingleton.DeclareTypeDiscoveryPlan();
+                        if (plan.Registrations.Count == 0)
+                        {
+                            plan.Release();
+                            continue;
+                        }
+
+                        plans.Add(new CompiledTypeDiscoveryPlan(registration, plan));
+                    }
+                    finally
+                    {
+                        registration.EndModulePhase(ModulePhase.DeclareTypeDiscovery);
+                    }
                 }
             }
+            finally
+            {
+                application.Profiling.StopStage(ModuleSystemStage.TypeDiscoveryPlanDeclaration);
+            }
 
-            IReadOnlyList<Type> businessTypes = plans.Any(static item => item.Plan.Registrations.Count != 0)
-                ? application.TypeFinder.GetTypes().ToArray()
-                : Array.Empty<Type>();
-            var compilation = TypeDiscoveryCompiler.Compile(
-                businessTypes,
-                plans.Select(static item => item.Plan).ToArray());
+            var assemblyCount = 0;
+            application.Profiling.StartStage(ModuleSystemStage.TypeDiscoveryAssemblyResolution);
+            try
+            {
+                if (plans.Count != 0)
+                {
+                    assemblyCount = application.TypeFinder.GetAssemblies().Count;
+                }
+            }
+            finally
+            {
+                application.Profiling.StopStage(ModuleSystemStage.TypeDiscoveryAssemblyResolution);
+            }
 
-            return new CompiledModulePlan(
-                CompiledGraph,
-                Array.AsReadOnly(registrations.ToArray()),
+            IReadOnlyList<Type> businessTypes = [];
+            application.Profiling.StartStage(ModuleSystemStage.TypeDiscoveryTypeEnumeration);
+            try
+            {
+                if (plans.Count != 0)
+                {
+                    businessTypes = application.TypeFinder.GetTypes();
+                }
+            }
+            finally
+            {
+                application.Profiling.StopStage(ModuleSystemStage.TypeDiscoveryTypeEnumeration);
+            }
+
+            application.Profiling.StartStage(ModuleSystemStage.TypeDiscoveryQueryEvaluation);
+            try
+            {
+                compilation = TypeDiscoveryCompiler.Compile(
+                    businessTypes,
+                    plans.Select(static item => item.Plan).ToArray());
+            }
+            finally
+            {
+                application.Profiling.StopStage(ModuleSystemStage.TypeDiscoveryQueryEvaluation);
+            }
+
+            var querySummaries = compilation.Queries
+                .Select((query, index) => new TypeDiscoveryQuerySummary
+                {
+                    QueryId = $"query-{index + 1:D4}",
+                    ConsumerModules = plans
+                        .Where(plan => plan.Plan.Registrations.Any(registration => registration.Query.Equals(query)))
+                        .Select(plan => application.Dependencies.ResolveModuleKey(plan.Registration.ModuleType))
+                        .Distinct()
+                        .ToImmutableArray(),
+                    MatchCount = compilation.GetMatches(query).Count
+                })
+                .ToArray();
+            application.Profiling.RecordTypeDiscoveryCompilation(
+                new TypeDiscoveryStatistics
+                {
+                    AssemblyCount = assemblyCount,
+                    EnumeratedTypeCount = compilation.EnumeratedTypeCount,
+                    ExcludedTypeCount = compilation.ExcludedTypeCount,
+                    PlanCount = plans.Count,
+                    DistinctQueryCount = compilation.Queries.Count,
+                    MatchCount = compilation.MatchCount
+                },
+                querySummaries);
+
+            return new CompiledTypeDiscovery(
                 Array.AsReadOnly(plans.ToArray()),
                 compilation);
         }
         catch (Exception exception)
         {
+            foreach (var plan in plans)
+            {
+                plan.Plan.Release();
+            }
+
+            compilation?.Release();
             throw exception.CreateException(
                 Logger,
                 "Type-discovery plan compilation failed before host mutation.");
-        }
-        finally
-        {
-            application.Profiling.StopPhase(nameof(ModulePhase.DiscoverTypes));
         }
     }
 
     private void CommitBusinessTypeDiscovery(
         IHostApplicationBuilder builder,
         IServiceCollection services,
-        CompiledModulePlan plan)
+        CompiledTypeDiscovery discovery)
     {
-        application.Profiling.StartPhase(nameof(ModulePhase.DiscoverTypes));
+        var commitCallbackCount = 0;
+        application.Profiling.StartStage(ModuleSystemStage.TypeDiscoveryRegistrationCommit);
         try
         {
-            foreach (var discoveryPlan in plan.TypeDiscoveryPlans)
+            foreach (var discoveryPlan in discovery.Plans)
             {
                 var registration = discoveryPlan.Registration;
-                registration.StartModulePhase(ModulePhase.DiscoverTypes);
+                registration.StartModulePhase(
+                    ModulePhase.DeclareTypeDiscovery,
+                    ModuleCallbackKind.TypeDiscoveryCommit);
                 try
                 {
                     BeginCompositionCallback(registration);
                     try
                     {
                         discoveryPlan.Plan.Commit(
-                            plan.TypeDiscoveryCompilation,
+                            discovery.Compilation,
                             new ModuleConfigurationContext(
                                 services,
                                 applicationBuilder: null,
                                 builder,
-                                registration));
+                                registration),
+                            () => commitCallbackCount++);
                     }
                     finally
                     {
@@ -700,7 +900,7 @@ public sealed class ModuleRegistry(MonicaApplication application)
                 }
                 finally
                 {
-                    registration.EndModulePhase(ModulePhase.DiscoverTypes);
+                    registration.EndModulePhase(ModulePhase.DeclareTypeDiscovery);
                 }
             }
         }
@@ -710,7 +910,10 @@ public sealed class ModuleRegistry(MonicaApplication application)
         }
         finally
         {
-            application.Profiling.StopPhase(nameof(ModulePhase.DiscoverTypes));
+            application.Profiling.RecordTypeDiscoveryCommit(
+                commitCallbackCount,
+                _registrationWriter?.GetStatistics() ?? new TypeDiscoveryServiceRegistrationStatistics());
+            application.Profiling.StopStage(ModuleSystemStage.TypeDiscoveryRegistrationCommit);
         }
     }
 
@@ -727,15 +930,18 @@ public sealed class ModuleRegistry(MonicaApplication application)
             _activeCompositionCallbackThreadId = 0;
         }
         _activeDescriptorModuleType = null;
-        _state.Clear();
+        lock (_diagnosticsGate)
+        {
+            _state.Clear();
+            _composition.Clear();
+            RecordDiagnosticsMutationUnderLock();
+        }
         _hardDependencies.Clear();
         _optionalOrderings.Clear();
         _registrationOrdinals.Clear();
         _nextRegistrationOrdinal = 0;
         _compiledGraph = null;
-        _compiledPlan = null;
         _registrationWriter = null;
-        _composition.Clear();
         _hasStarted = false;
         _hasMutatedHost = false;
         _isSealed = false;
@@ -815,16 +1021,16 @@ public sealed class ModuleRegistry(MonicaApplication application)
                 || _activeCompositionCallbackThreadId != Environment.CurrentManagedThreadId
                 || info.ModulePhase is not (ModulePhase.ConfigureBuilder
                     or ModulePhase.ConfigureServices
-                    or ModulePhase.DiscoverTypes
+                    or ModulePhase.DeclareTypeDiscovery
                     or ModulePhase.PostConfigureServices))
             {
                 throw new InvalidOperationException(
                     $"Module {moduleType.Name} can schedule startup work only while its synchronous " +
-                    "ConfigureBuilder, ConfigureServices, DiscoverTypes, or PostConfigureServices " +
+                    "ConfigureBuilder, ConfigureServices, DeclareTypeDiscovery, or PostConfigureServices " +
                     "callback is executing.");
             }
 
-            if (info.ModulePhase == ModulePhase.DiscoverTypes
+            if (info.ModulePhase == ModulePhase.DeclareTypeDiscovery
                 && barrier == ModuleStartupWorkBarrier.BeforeTypeDiscovery)
             {
                 throw new InvalidOperationException(
@@ -930,7 +1136,7 @@ public sealed class ModuleRegistry(MonicaApplication application)
     {
         foreach (var result in workItems)
         {
-            if (result.Commit is not { } commit)
+            if (result.Commit?.Take() is not { } commit)
             {
                 continue;
             }
@@ -942,7 +1148,10 @@ public sealed class ModuleRegistry(MonicaApplication application)
                     "is no longer registered.");
             }
 
-            registration.StartModulePhase(result.OriginPhase);
+            registration.StartModulePhase(
+                result.OriginPhase,
+                ModuleCallbackKind.StartupWorkCommit,
+                result.WorkItemId);
             try
             {
                 // The worker barrier is already released. This serial publication is intentionally profiled as a
@@ -965,25 +1174,27 @@ public sealed class ModuleRegistry(MonicaApplication application)
     private void HandleRegistrationFailure(Exception primaryFailure)
     {
         var scheduler = _startupWork;
-        ModuleStartupWorkSnapshot snapshot = new([], []);
+        ModuleStartupWorkSnapshot snapshot = new(0, [], []);
         try
         {
             if (scheduler is not null)
             {
                 scheduler.Drain();
+                scheduler.ReleaseUncommittedCommits();
                 snapshot = scheduler.GetSnapshot();
             }
         }
         catch (Exception drainFailure)
         {
-            application.Profiling.StopModuleSystem();
+            scheduler?.ReleaseUncommittedCommits();
+            FailComposition(primaryFailure, ModuleCompositionFailureKind.ServiceRegistration);
             throw new AggregateException(
                 "Monica composition failed and scheduled startup work could not be drained cleanly.",
                 primaryFailure,
                 drainFailure);
         }
 
-        application.Profiling.StopModuleSystem();
+        FailComposition(primaryFailure, ModuleCompositionFailureKind.ServiceRegistration);
         var workFailures = snapshot.WorkItems
             .Where(static result => result.Barrier != ModuleStartupWorkBarrier.NoBarrier && !result.IsSucceeded)
             .Select(static result => result.Failure!)
@@ -1008,8 +1219,12 @@ public sealed class ModuleRegistry(MonicaApplication application)
     /// </summary>
     internal void BeginApplicationPipeline(IApplicationBuilder app)
     {
-        _composition.BeginApplicationPipeline(app);
-        application.Profiling.RecordMilestone(ModuleCompositionMilestone.ApplicationPipelineStarted);
+        lock (_diagnosticsGate)
+        {
+            _composition.BeginApplicationPipeline(app);
+            application.Profiling.RecordMilestone(ModuleCompositionMilestone.ApplicationPipelineStarted);
+            RecordDiagnosticsMutationUnderLock();
+        }
     }
 
     /// <summary>
@@ -1017,7 +1232,11 @@ public sealed class ModuleRegistry(MonicaApplication application)
     /// </summary>
     internal void CompleteApplicationPipeline()
     {
-        application.Profiling.RecordMilestone(ModuleCompositionMilestone.ApplicationPipelineCompleted);
+        lock (_diagnosticsGate)
+        {
+            application.Profiling.RecordMilestone(ModuleCompositionMilestone.ApplicationPipelineCompleted);
+            RecordDiagnosticsMutationUnderLock();
+        }
     }
 
     /// <summary>
@@ -1025,8 +1244,12 @@ public sealed class ModuleRegistry(MonicaApplication application)
     /// </summary>
     internal void BeginEndpointMapping(IApplicationBuilder app)
     {
-        _composition.BeginEndpointMapping(app);
-        application.Profiling.RecordMilestone(ModuleCompositionMilestone.EndpointMappingStarted);
+        lock (_diagnosticsGate)
+        {
+            _composition.BeginEndpointMapping(app);
+            application.Profiling.RecordMilestone(ModuleCompositionMilestone.EndpointMappingStarted);
+            RecordDiagnosticsMutationUnderLock();
+        }
     }
 
     /// <summary>
@@ -1034,16 +1257,19 @@ public sealed class ModuleRegistry(MonicaApplication application)
     /// </summary>
     internal void CompleteComposition(ModuleCompositionCompletionPoint completionPoint)
     {
-        if (!_composition.TryBeginCompletion(completionPoint))
+        lock (_diagnosticsGate)
         {
-            return;
+            if (!_composition.TryBeginCompletion(completionPoint))
+            {
+                return;
+            }
+
+            RecordDiagnosticsMutationUnderLock();
         }
 
         try
         {
             application.Errors.RaiseModuleErrors();
-            application.Profiling.RecordMilestone(ModuleCompositionMilestone.CompositionCompleted);
-            application.Profiling.StopModuleSystem();
 
             if (application.ModuleSystem.EnableSummaryLog)
             {
@@ -1053,12 +1279,17 @@ public sealed class ModuleRegistry(MonicaApplication application)
                     application.Dependencies.GetModuleRegistrationSummary());
             }
 
-            _composition.CommitCompletion();
+            lock (_diagnosticsGate)
+            {
+                _composition.CommitCompletion();
+                application.Profiling.RecordMilestone(ModuleCompositionMilestone.CompositionCompleted);
+                application.Profiling.StopModuleSystem();
+                RecordDiagnosticsMutationUnderLock();
+            }
         }
         catch (Exception exception)
         {
-            application.Profiling.StopModuleSystem();
-            _composition.FailCompletion(exception);
+            FailComposition(exception, ModuleCompositionFailureKind.Completion);
             throw;
         }
     }
@@ -1070,6 +1301,9 @@ public sealed class ModuleRegistry(MonicaApplication application)
     {
         if (_composition.GetStartupValidationFailure() is { } compositionFailure)
         {
+            FailComposition(
+                new InvalidOperationException(compositionFailure),
+                ModuleCompositionFailureKind.StartupValidation);
             return compositionFailure;
         }
 
@@ -1130,6 +1364,12 @@ public sealed class ModuleRegistry(MonicaApplication application)
             : throw new KeyNotFoundException($"Module {moduleType.FullName} is not registered in this host.");
     }
 
+    private void RecordDiagnosticsMutationUnderLock()
+    {
+        _diagnosticsRevision++;
+        application.Profiling.RecordExternalMutation();
+    }
+
     private static void AddEdge(
         IDictionary<Type, HashSet<Type>> graph,
         Type ownerModuleType,
@@ -1171,13 +1411,15 @@ public sealed class ModuleRegistry(MonicaApplication application)
                          p.RegisterInfo.ModuleSingleton.IsWebModule &&
                          p.RegisterInfo.ModulePhase is (ModulePhase.PostConfigureServices or ModulePhase.ConfigureApplicationBuilder)))
             {
-                module.RegisterInfo.StartModulePhase(ModulePhase.ConfigureApplicationBuilder);
-                try
+                foreach (var request in module.RegisterInfo.GetOrderedRequests(
+                             module.RegisterInfo.ConfigurationRequests
+                                 .Where(p => p.Phase == ModulePhase.ConfigureApplicationBuilder)
+                                 .Where(request => request.WebStage == stage)))
                 {
-                    foreach (var request in module.RegisterInfo.GetOrderedRequests(
-                                 module.RegisterInfo.ConfigurationRequests
-                                     .Where(p => p.Phase == ModulePhase.ConfigureApplicationBuilder)
-                                     .Where(request => request.WebStage == stage)))
+                    module.RegisterInfo.StartModulePhase(
+                        ModulePhase.ConfigureApplicationBuilder,
+                        request.Kind);
+                    try
                     {
                         BeginCompositionCallback(module.RegisterInfo);
                         try
@@ -1190,16 +1432,16 @@ public sealed class ModuleRegistry(MonicaApplication application)
                             EndCompositionCallback(module.RegisterInfo);
                         }
                     }
-                }
-                finally
-                {
-                    module.RegisterInfo.EndModulePhase(ModulePhase.ConfigureApplicationBuilder);
+                    finally
+                    {
+                        module.RegisterInfo.EndModulePhase(ModulePhase.ConfigureApplicationBuilder);
+                    }
                 }
             }
         }
         catch (Exception exception)
         {
-            FailWebComposition(exception);
+            FailComposition(exception, ModuleCompositionFailureKind.ApplicationPipeline);
             throw;
         }
         finally
@@ -1222,12 +1464,12 @@ public sealed class ModuleRegistry(MonicaApplication application)
                          p.RegisterInfo.ModuleSingleton.IsWebModule &&
                          p.RegisterInfo.ModulePhase == ModulePhase.ConfigureApplicationBuilder))
             {
-                module.RegisterInfo.StartModulePhase(ModulePhase.ConfigureEndpoints);
-                try
+                foreach (var request in module.RegisterInfo.GetOrderedRequests(
+                             module.RegisterInfo.ConfigurationRequests
+                                 .Where(p => p.Phase == ModulePhase.ConfigureEndpoints)))
                 {
-                    foreach (var request in module.RegisterInfo.GetOrderedRequests(
-                                 module.RegisterInfo.ConfigurationRequests
-                                     .Where(p => p.Phase == ModulePhase.ConfigureEndpoints)))
+                    module.RegisterInfo.StartModulePhase(ModulePhase.ConfigureEndpoints, request.Kind);
+                    try
                     {
                         BeginCompositionCallback(module.RegisterInfo);
                         try
@@ -1240,16 +1482,16 @@ public sealed class ModuleRegistry(MonicaApplication application)
                             EndCompositionCallback(module.RegisterInfo);
                         }
                     }
-                }
-                finally
-                {
-                    module.RegisterInfo.EndModulePhase(ModulePhase.ConfigureEndpoints);
+                    finally
+                    {
+                        module.RegisterInfo.EndModulePhase(ModulePhase.ConfigureEndpoints);
+                    }
                 }
             }
         }
         catch (Exception exception)
         {
-            FailWebComposition(exception);
+            FailComposition(exception, ModuleCompositionFailureKind.EndpointMapping);
             throw;
         }
         finally
@@ -1260,10 +1502,14 @@ public sealed class ModuleRegistry(MonicaApplication application)
         CompleteComposition(ModuleCompositionCompletionPoint.EndpointMapping);
     }
 
-    private void FailWebComposition(Exception exception)
+    private void FailComposition(Exception exception, ModuleCompositionFailureKind failureKind)
     {
-        _composition.FailCompletion(exception);
-        application.Profiling.StopModuleSystem();
+        lock (_diagnosticsGate)
+        {
+            _composition.FailCompletion(exception, failureKind);
+            application.Profiling.StopModuleSystem();
+            RecordDiagnosticsMutationUnderLock();
+        }
     }
 
     /// <summary>

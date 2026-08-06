@@ -7,7 +7,7 @@ namespace Monica.Core.Modularity.Diagnostics.Models;
 /// Serial phase, worker execution, and barrier-wait durations are different dimensions and may overlap. The
 /// derived aggregates intentionally remain separate and must not be added to infer end-to-end elapsed time.
 /// </remarks>
-public sealed class ModuleCompositionPerformance
+internal sealed class ModuleCompositionPerformance
 {
     /// <summary>
     /// Gets the UTC timestamp paired with monotonic offset zero.

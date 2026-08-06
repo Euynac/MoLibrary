@@ -67,19 +67,6 @@ public sealed class ModuleRuntimeSnapshot
     public long SerialPhaseDurationMs =>
         _application.Profiling.GetModuleSerialPhaseDuration(ModuleType);
 
-    /// <summary>
-    /// Gets the frozen default option or a matching named profile.
-    /// </summary>
-    /// <param name="profileName">
-    /// A named profile associated with a keyed provider. When the module has no such profile, its default option is
-    /// returned because a keyed service identity does not necessarily imply a distinct option profile.
-    /// </param>
-    /// <returns>The concrete option type and immutable host-owned option instance.</returns>
-    public (Type OptionType, object OptionInstance) GetOption(string? profileName = null)
-    {
-        return (RegisterInfo.ModuleOptionType, RegisterInfo.GetOptionOrDefault(profileName));
-    }
-
     internal ModuleRegistrationState RegisterInfo { get; }
 
     /// <inheritdoc />

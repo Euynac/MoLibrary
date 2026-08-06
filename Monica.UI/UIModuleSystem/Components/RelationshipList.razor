@@ -1,0 +1,27 @@
+@using Microsoft.Extensions.Localization
+@using Monica.Core.Modularity.Diagnostics.Models
+@using Monica.UI.Localization
+@inject IStringLocalizer<ModuleSystemResource> L
+
+<section class="relationship-list">
+    <MudText Typo="Typo.subtitle2">@Title</MudText>
+    @if (Modules.Count == 0)
+    {
+        <span>@L["ModuleDrawer:Dependencies:Empty"]</span>
+    }
+    else
+    {
+        @foreach (var module in Modules)
+        {
+            <div>
+                <strong>@module.TypeName</strong>
+                <code title="@module.FullTypeName">@module.FullTypeName</code>
+            </div>
+        }
+    }
+</section>
+
+@code {
+    [Parameter, EditorRequired] public string Title { get; set; } = string.Empty;
+    [Parameter, EditorRequired] public IReadOnlyList<ModuleDiagnosticsModule> Modules { get; set; } = [];
+}

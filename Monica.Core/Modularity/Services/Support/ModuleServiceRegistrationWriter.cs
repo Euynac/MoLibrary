@@ -1,4 +1,5 @@
 using Microsoft.Extensions.DependencyInjection;
+using Monica.Core.Modularity.Diagnostics.Models;
 
 namespace Monica.Core.Modularity.Services.Support;
 
@@ -9,6 +10,9 @@ public sealed class ModuleServiceRegistrationWriter
 {
     private readonly IServiceCollection _services;
     private readonly Dictionary<ServiceIdentity, int> _lastIndexByIdentity;
+    private int _addedCount;
+    private int _replacedCount;
+    private int _skippedCount;
 
     internal ModuleServiceRegistrationWriter(IServiceCollection services)
     {
@@ -29,10 +33,11 @@ public sealed class ModuleServiceRegistrationWriter
         var identity = ServiceIdentity.From(descriptor);
         if (_lastIndexByIdentity.ContainsKey(identity))
         {
+            _skippedCount++;
             return false;
         }
 
-        Add(descriptor);
+        AddCore(descriptor);
         return true;
     }
 
@@ -54,8 +59,7 @@ public sealed class ModuleServiceRegistrationWriter
     public void Add(ServiceDescriptor descriptor)
     {
         ArgumentNullException.ThrowIfNull(descriptor);
-        _services.Add(descriptor);
-        _lastIndexByIdentity[ServiceIdentity.From(descriptor)] = _services.Count - 1;
+        AddCore(descriptor);
     }
 
     /// <summary>
@@ -68,10 +72,28 @@ public sealed class ModuleServiceRegistrationWriter
         if (_lastIndexByIdentity.TryGetValue(identity, out var index))
         {
             _services[index] = descriptor;
+            _replacedCount++;
             return;
         }
 
-        Add(descriptor);
+        AddCore(descriptor);
+    }
+
+    internal TypeDiscoveryServiceRegistrationStatistics GetStatistics()
+    {
+        return new TypeDiscoveryServiceRegistrationStatistics
+        {
+            AddedCount = _addedCount,
+            ReplacedCount = _replacedCount,
+            SkippedCount = _skippedCount
+        };
+    }
+
+    private void AddCore(ServiceDescriptor descriptor)
+    {
+        _services.Add(descriptor);
+        _lastIndexByIdentity[ServiceIdentity.From(descriptor)] = _services.Count - 1;
+        _addedCount++;
     }
 
     private readonly record struct ServiceIdentity(Type ServiceType, bool IsKeyedService, object? ServiceKey)

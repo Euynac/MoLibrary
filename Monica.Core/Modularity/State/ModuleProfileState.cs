@@ -1,3 +1,4 @@
+using System.Collections.Immutable;
 using System.Diagnostics;
 using Monica.Core.Modularity.Diagnostics.Models;
 using Monica.Core.Modularity.Models;
@@ -40,13 +41,15 @@ internal sealed class ModuleProfileState(Type moduleType, ModuleKey moduleKey, i
     /// </summary>
     internal void StartPhase(
         ModulePhase phase,
+        ModuleCallbackKind kind,
+        string? workItemId,
         long sequence,
         long startedTimestamp,
         DateTimeOffset startedAtUtc)
     {
         if (!_activePhases.TryAdd(
                 phase,
-                new ModulePhaseProfileStart(sequence, startedTimestamp, startedAtUtc)))
+                new ModulePhaseProfileStart(sequence, kind, workItemId, startedTimestamp, startedAtUtc)))
         {
             throw new InvalidOperationException(
                 $"Module {ModuleType.FullName} phase {phase} is already running.");
@@ -69,6 +72,8 @@ internal sealed class ModuleProfileState(Type moduleType, ModuleKey moduleKey, i
         var execution = new ModulePhaseProfileExecution(
             start.Sequence,
             phase,
+            start.Kind,
+            start.WorkItemId,
             start.StartedTimestamp,
             completedTimestamp,
             start.StartedAtUtc,
@@ -90,23 +95,49 @@ internal sealed class ModuleProfileState(Type moduleType, ModuleKey moduleKey, i
     /// </summary>
     internal IReadOnlyList<ModulePhaseExecutionPerformanceInfo> CreateExecutions(Func<long, double> getOffsetMs)
     {
-        return _executions
+        return CreateDiagnosticsCapture().CreateExecutions(getOffsetMs);
+    }
+
+    /// <summary>Copies raw callback boundaries for projection after the profiler lock is released.</summary>
+    internal ModuleProfileDiagnosticsCapture CreateDiagnosticsCapture()
+    {
+        return new ModuleProfileDiagnosticsCapture(
+            ModuleType,
+            ModuleKey,
+            RegistrationOrder,
+            _executions.ToImmutableArray());
+    }
+
+    internal sealed record ModuleProfileDiagnosticsCapture(
+        Type ModuleType,
+        ModuleKey ModuleKey,
+        int RegistrationOrder,
+        ImmutableArray<ModulePhaseProfileExecution> Executions)
+    {
+        /// <summary>Projects copied monotonic boundaries into diagnostic callback records.</summary>
+        internal IReadOnlyList<ModulePhaseExecutionPerformanceInfo> CreateExecutions(
+            Func<long, double> getOffsetMs)
+        {
+            return Executions
             .OrderBy(static execution => execution.Sequence)
             .Select(execution => new ModulePhaseExecutionPerformanceInfo
             {
                 ExecutionId = $"module-phase-{execution.Sequence:D6}",
                 Sequence = execution.Sequence,
-                ModuleKey = ModuleKey,
-                ModuleTypeName = ModuleType.Name,
-                ModuleFullTypeName = ModuleType.FullName ?? ModuleType.Name,
-                ModuleRegistrationOrder = RegistrationOrder,
+                ModuleKey = this.ModuleKey,
+                ModuleTypeName = this.ModuleType.Name,
+                ModuleFullTypeName = this.ModuleType.FullName ?? this.ModuleType.Name,
+                ModuleRegistrationOrder = this.RegistrationOrder,
                 Phase = execution.Phase,
+                Kind = execution.Kind,
+                WorkItemId = execution.WorkItemId,
                 StartedAtUtc = execution.StartedAtUtc,
                 CompletedAtUtc = execution.CompletedAtUtc,
                 StartedOffsetMs = getOffsetMs(execution.StartedTimestamp),
                 CompletedOffsetMs = getOffsetMs(execution.CompletedTimestamp)
             })
             .ToArray();
+        }
     }
 
     private static double GetDurationMs(ModulePhaseProfileExecution execution)
@@ -121,6 +152,8 @@ internal sealed class ModuleProfileState(Type moduleType, ModuleKey moduleKey, i
 /// </summary>
 internal sealed record ModulePhaseProfileStart(
     long Sequence,
+    ModuleCallbackKind Kind,
+    string? WorkItemId,
     long StartedTimestamp,
     DateTimeOffset StartedAtUtc);
 
@@ -130,6 +163,8 @@ internal sealed record ModulePhaseProfileStart(
 internal sealed record ModulePhaseProfileExecution(
     long Sequence,
     ModulePhase Phase,
+    ModuleCallbackKind Kind,
+    string? WorkItemId,
     long StartedTimestamp,
     long CompletedTimestamp,
     DateTimeOffset StartedAtUtc,

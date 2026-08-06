@@ -38,17 +38,13 @@
     "Labels": {
       "KeyScanning": "Key Scanning",
       "NoScanningSupport": "No Scanning Support",
-      "Distributed": "Distributed",
-      "HasConfiguration": "Has Configuration"
+      "Distributed": "Distributed"
     },
     "Actions": {
       "ViewDetails": "View Details"
     }
   },
   "ProviderDetail": {
-    "Tabs": {
-      "ConfigOptions": "Configuration Options"
-    },
     "Labels": {
       "ProviderType": "Provider Type",
       "ServiceKey": "Service Key",
@@ -64,10 +60,6 @@
       "NoScanning": "No Scanning Support",
       "QueryState": "Query State",
       "BulkOperations": "Bulk Operations"
-    },
-    "Messages": {
-      "NoConfigurationDescription": "This provider has an option snapshot, but it does not expose simple fields that fit the dashboard property grid.",
-      "ConfigurationShared": "This provider uses a shared implementation without a dedicated option snapshot."
     },
     "Actions": {
       "Close": "Close"

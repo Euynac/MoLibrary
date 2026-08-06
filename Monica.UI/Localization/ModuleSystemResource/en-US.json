@@ -1,0 +1,449 @@
+{
+  "Navigation": {
+    "Title": "Module diagnostics"
+  },
+  "Page": {
+    "Eyebrow": "MONICA / COMPOSITION FLIGHT RECORDER",
+    "Title": "Module workbench",
+    "Subtitle": "Explain startup health, timing causality, discovery, and topology from one immutable revision."
+  },
+  "Access": {
+    "Checking": "Checking diagnostics access…",
+    "DeniedTitle": "Module diagnostics are unavailable",
+    "DeniedDescription": "This workbench is enabled automatically only in Development. Other environments require explicit enablement and an authorized host policy."
+  },
+  "Actions": {
+    "ImportBaseline": "Compare",
+    "Export": "Export",
+    "RemoveBaseline": "Remove baseline",
+    "Retry": "Retry",
+    "Reset": "Reset",
+    "Copied": "Copied",
+    "CopyFailed": "Copy failed"
+  },
+  "Aria": {
+    "SectionNavigation": "Module workbench sections",
+    "SnapshotIdentity": "Diagnostics snapshot identity",
+    "SummaryMetrics": "Composition summary metrics",
+    "Refresh": "Refresh diagnostics snapshot",
+    "OpenHelp": "Open diagnostics help",
+    "CloseHelp": "Close diagnostics help",
+    "ModuleCatalog": "Module catalog",
+    "InspectModule": "Inspect module {0}",
+    "CloseModuleDrawer": "Close module details",
+    "DependencyGraph": "Dependency graph with {0} modules and {1} direct edges",
+    "DependencyInspector": "Selected module dependency inspector",
+    "CopyAssemblyPath": "Copy path for assembly {0}",
+    "CopyIdentifier": "Copy identifier {0}"
+  },
+  "Common": {
+    "All": "All",
+    "Final": "Final",
+    "Live": "Live",
+    "Revision": "Revision",
+    "Section": "Section",
+    "RowsPerPage": "Rows per page",
+    "Unknown": "Unknown",
+    "NotAvailable": "N/A",
+    "Unavailable": "Unavailable",
+    "Null": "null",
+    "Yes": "Yes",
+    "No": "No",
+    "None": "None"
+  },
+  "Sections": {
+    "Overview": "Overview",
+    "Performance": "Performance",
+    "Modules": "Modules",
+    "Dependencies": "Dependencies",
+    "Discovery": "Discovery"
+  },
+  "Load": {
+    "Loading": "Loading the first immutable snapshot…",
+    "FailedTitle": "The diagnostics snapshot could not be loaded",
+    "FailedDescription": "No partial data is shown. Retry to request another internally consistent revision.",
+    "RefreshFailed": "The refresh failed; the previous revision remains visible."
+  },
+  "Export": {
+    "Failed": "The sanitized diagnostics export could not be created."
+  },
+  "Comparison": {
+    "Active": "Baseline active · total delta {0} · {1} module(s) added · {2} removed",
+    "Faster": "{0} faster",
+    "Slower": "{0} slower",
+    "Unchanged": "Unchanged",
+    "FileTooLarge": "The selected baseline exceeds the 10 MB import limit.",
+    "Eyebrow": "PORTABLE BASELINE",
+    "EvidenceTitle": "Regression evidence",
+    "BaselineOverlay": "Imported baseline timeline overlay",
+    "TimelineLegend": "Current and imported baseline timeline legend",
+    "CurrentTimeline": "Current",
+    "BaselineTimeline": "Baseline",
+    "ModulesChanged": "Module changes",
+    "EdgesChanged": "Edge changes",
+    "AddedModules": "Added modules ({0})",
+    "RemovedModules": "Removed modules ({0})",
+    "AddedEdges": "Added direct edges ({0})",
+    "RemovedEdges": "Removed direct edges ({0})",
+    "NoChanges": "No changes in this category.",
+    "Errors": {
+      "InvalidJson": "The selected file is not a valid module diagnostics export.",
+      "IncompatibleSchema": "This export uses an incompatible diagnostics schema version.",
+      "SnapshotUnavailable": "Load a current snapshot before importing a baseline."
+    }
+  },
+  "Overview": {
+    "Kpis": {
+      "Composition": "Composition",
+      "ActiveModules": "Active modules",
+      "Declared": "{0} declared",
+      "ServiceRegistration": "Service registration",
+      "ExactTiming": "Exact wall-clock interval",
+      "TypeDiscovery": "Type discovery",
+      "Queries": "{0} distinct queries",
+      "Findings": "Findings",
+      "Errors": "{0} errors"
+    },
+    "CriticalPath": {
+      "Eyebrow": "CAUSAL STARTUP CHAIN",
+      "Title": "Critical-path ribbon",
+      "Hint": "Select evidence to synchronize timeline, module, and dependency context."
+    },
+    "Findings": {
+      "Eyebrow": "STRUCTURED EVIDENCE",
+      "Title": "Findings",
+      "Empty": "No structural or configured-budget findings."
+    },
+    "Hotspots": {
+      "Eyebrow": "AGGREGATE COST",
+      "Title": "Module hotspots"
+    }
+  },
+  "Performance": {
+    "Budgets": {
+      "Eyebrow": "CONFIGURED LIMITS",
+      "Title": "Performance budgets",
+      "Measurement": "{0} actual / {1} limit",
+      "Utilization": "{0} utilization"
+    },
+    "Waterfall": {
+      "Eyebrow": "STARTUP TIMELINE",
+      "Title": "Composition waterfall",
+      "Duration": "{0} total"
+    },
+    "Contributors": {
+      "Eyebrow": "SERIAL + STARTUP WORK",
+      "Title": "Top contributors"
+    },
+    "Filters": {
+      "Limit": "Rows",
+      "MinimumMs": "Minimum ms",
+      "HideZero": "Hide zero-duration"
+    },
+    "Blocking": {
+      "Eyebrow": "BARRIER CAUSALITY",
+      "Title": "Blocking chain",
+      "Empty": "No startup-work item delayed a required barrier.",
+      "BarrierSpan": "Barrier span",
+      "WorkSpan": "Work span",
+      "CommitSpanName": "Commit span",
+      "CommitSpan": "Commit span · {0}"
+    },
+    "Discovery": {
+      "Eyebrow": "ONE DISCOVERY COMPILATION",
+      "Title": "Typed discovery stages"
+    },
+    "StartupWork": {
+      "Eyebrow": "SCHEDULED STARTUP WORK",
+      "Title": "Startup-work executions",
+      "Empty": "No startup-work spans were recorded."
+    },
+    "Columns": {
+      "Span": "Span",
+      "Start": "Start",
+      "Duration": "Duration",
+      "Kind": "Kind",
+      "Callbacks": "Callbacks",
+      "StartupWork": "Startup work",
+      "Total": "Total",
+      "Module": "Module",
+      "WorkItem": "Work item",
+      "Queue": "Queue",
+      "State": "State"
+    }
+  },
+  "Modules": {
+    "Eyebrow": "DECLARED MODULE INVENTORY",
+    "Title": "Module catalog",
+    "ResultCount": "{0} of {1} modules",
+    "Empty": "No module matches the current filters.",
+    "DependencyCounts": "{0} requires · {1} dependents",
+    "Filters": {
+      "Search": "Search modules",
+      "SearchPlaceholder": "Type, namespace, or assembly",
+      "State": "State",
+      "Capability": "Capability",
+      "Assembly": "Assembly",
+      "MinimumCost": "Minimum cost (ms)",
+      "HasDependencies": "Has direct dependencies"
+    },
+    "Columns": {
+      "Module": "Module",
+      "State": "State",
+      "Assembly": "Assembly",
+      "Depth": "Depth",
+      "Dependencies": "Direct relationships",
+      "Cost": "Recorded cost",
+      "Actions": "Actions"
+    }
+  },
+  "Dependencies": {
+    "Eyebrow": "DIRECT COMPILED TOPOLOGY",
+    "Title": "Dependency neighborhood",
+    "Description": "Start with one hop around the largest blocking contributor; expand only when the evidence requires it.",
+    "FocusModule": "Focus module",
+    "FullHost": "Full-host graph",
+    "Expand": "Expand past {0} hop(s)",
+    "Graph": {
+      "Rendering": "Rendering dependency neighborhood…",
+      "Failed": "The dependency graph could not be rendered.",
+      "Nodes": "{0} nodes",
+      "Edges": "{0} edges",
+      "FullHostMode": "Full-host mode",
+      "NeighborhoodMode": "{0}-hop neighborhood"
+    },
+    "Selected": {
+      "Eyebrow": "SELECTED MODULE",
+      "Requires": "Direct dependencies",
+      "RequiredBy": "Direct dependents",
+      "NoDependencies": "No direct dependencies",
+      "NoDependents": "No direct dependents"
+    },
+    "Table": {
+      "Show": "Show direct-edge table",
+      "Hide": "Hide direct-edge table",
+      "Source": "Requiring module",
+      "Target": "Required module"
+    }
+  },
+  "Discovery": {
+    "Eyebrow": "TYPE DISCOVERY COMPILER",
+    "Title": "Discovery evidence",
+    "Description": "One plan declaration pass, one centralized compilation, and one registration commit boundary.",
+    "Counts": {
+      "Assemblies": "Assemblies",
+      "Types": "Types enumerated",
+      "Plans": "Non-empty plans",
+      "Queries": "Distinct queries",
+      "Matches": "Matches"
+    },
+    "Stages": {
+      "Title": "Five factual stages"
+    },
+    "Queries": {
+      "Title": "Query contributions",
+      "Description": "Structurally identical queries are evaluated once and shared by their consuming modules.",
+      "QueryId": "Query ID",
+      "Consumers": "Consumers",
+      "Matches": "Matches",
+      "Empty": "No non-empty discovery query was compiled."
+    },
+    "Commit": {
+      "Title": "Registration commit outcomes",
+      "Callbacks": "Commit callbacks",
+      "Added": "Services added",
+      "Replaced": "Services replaced",
+      "Skipped": "Conditional adds skipped",
+      "Excluded": "Types excluded"
+    },
+    "Inventory": {
+      "Title": "Assembly inventory",
+      "Description": "Loaded only on disclosure, failure-first, searchable, and locally paged.",
+      "Load": "Load inventory",
+      "NotLoaded": "Assembly paths and scan outcomes have not crossed the diagnostics boundary yet.",
+      "Loading": "Loading the cached assembly inventory…",
+      "Failed": "The assembly inventory could not be loaded.",
+      "PanelTitle": "Assembly records and scan evidence",
+      "Scanned": "{0} scanned",
+      "NotScanned": "{0} resolved, not scanned",
+      "Excluded": "{0} excluded",
+      "FailedCount": "{0} resolution failed",
+      "Partial": "{0} partial loads",
+      "Search": "Search assemblies or paths",
+      "Configuration": {
+        "Title": "Scan configuration",
+        "DefaultAssemblies": "Use default assemblies",
+        "Includes": "Include patterns",
+        "Excludes": "Exclude patterns"
+      },
+      "Columns": {
+        "Outcome": "Outcome",
+        "Assembly": "Assembly",
+        "Version": "Version",
+        "Location": "Location or evidence",
+        "Actions": "Actions"
+      }
+    }
+  },
+  "ModuleDrawer": {
+    "Eyebrow": "SELECTED MODULE",
+    "Tabs": {
+      "Summary": "Summary",
+      "Performance": "Performance",
+      "Dependencies": "Dependencies",
+      "Options": "Safe options",
+      "Errors": "Errors"
+    },
+    "Fields": {
+      "State": "State",
+      "Phase": "Last phase",
+      "Order": "Registration order",
+      "Depth": "Dependency depth",
+      "Assembly": "Assembly",
+      "Errors": "Errors"
+    },
+    "Capabilities": {
+      "Title": "Capabilities",
+      "UI": "UI",
+      "Web": "Web",
+      "WebHost": "Web host required",
+      "Core": "Core"
+    },
+    "Performance": {
+      "Spans": "Recorded spans",
+      "Empty": "No module-owned spans were recorded."
+    },
+    "Dependencies": {
+      "OpenExplorer": "Open neighborhood explorer",
+      "Empty": "None"
+    },
+    "Options": {
+      "Privacy": "Only explicitly approved bounded scalars, secret presence, and collection counts are available. Raw option objects never cross this boundary.",
+      "Loading": "Loading the safe option projection…",
+      "Failed": "The safe option projection could not be loaded.",
+      "Empty": "This module has not opted in to safe option diagnostics.",
+      "Present": "Configured (value redacted)",
+      "NotPresent": "Not configured",
+      "Truncated": "{0}… (truncated)"
+    },
+    "Errors": {
+      "Empty": "No structured finding is related to this module."
+    }
+  },
+  "Help": {
+    "Eyebrow": "READING THE WORKBENCH",
+    "Title": "Diagnostics glossary",
+    "CriticalPath": {
+      "Title": "Critical path",
+      "Description": "The causal wall-clock chain that determines when the host can accept traffic."
+    },
+    "Outcome": {
+      "Title": "Structural outcome",
+      "Description": "Succeeded, degraded, or failed is separate from optional, host-configured performance budgets."
+    },
+    "Discovery": {
+      "Title": "Discovery compilation",
+      "Description": "Queries compile once against the cached business-type snapshot; commit consumes matches without scanning again."
+    },
+    "Privacy": {
+      "Title": "Safe diagnostics",
+      "Description": "Exports omit options, paths, stack traces, and raw failures; live options require explicit allow-list projection."
+    }
+  },
+  "Enums": {
+    "Outcome": {
+      "Succeeded": "Succeeded",
+      "Degraded": "Degraded",
+      "Failed": "Failed",
+      "Live": "In progress"
+    },
+    "Phase": {
+      "None": "Not started",
+      "Describe": "Describe",
+      "FinalizeOptions": "Finalize options",
+      "ConfigureBuilder": "Configure builder",
+      "ConfigureServices": "Configure services",
+      "DeclareTypeDiscovery": "Declare type discovery",
+      "PostConfigureServices": "Post-configure services",
+      "ConfigureApplicationBuilder": "Configure application builder",
+      "ConfigureEndpoints": "Configure endpoints",
+      "Disabled": "Disabled"
+    },
+    "Stage": {
+      "ApplicationConfiguration": "Application configuration",
+      "TypeDiscoveryPlanDeclaration": "Plan declaration",
+      "TypeDiscoveryAssemblyResolution": "Assembly resolution",
+      "TypeDiscoveryTypeEnumeration": "Type enumeration",
+      "TypeDiscoveryQueryEvaluation": "Query evaluation",
+      "TypeDiscoveryRegistrationCommit": "Registration commit"
+    },
+    "Callback": {
+      "Lifecycle": "Lifecycle callback",
+      "RegistrationContribution": "Registration contribution",
+      "TypeDiscoveryCommit": "Discovery commit",
+      "StartupWorkCommit": "Startup-work commit"
+    },
+    "Budget": {
+      "TotalComposition": "Total composition",
+      "ServiceRegistration": "Service registration",
+      "TypeDiscovery": "Type discovery",
+      "AggregateBarrierWait": "Aggregate barrier wait",
+      "LongestModuleCallback": "Longest module callback",
+      "LongestStartupQueue": "Longest startup queue"
+    },
+    "Barrier": {
+      "BeforeTypeDiscovery": "Before type discovery",
+      "BeforePostConfigureServices": "Before post-configuration",
+      "BeforeServiceRegistrationCompletion": "Before service registration completes",
+      "BeforeHostLifecycle": "Before host lifecycle",
+      "NoBarrier": "Non-blocking"
+    },
+    "TraceKind": {
+      "SystemStage": "System stage",
+      "ModuleCallback": "Module callback",
+      "StartupWork": "Startup work",
+      "StartupBarrier": "Startup barrier"
+    },
+    "CatalogState": {
+      "All": "All states",
+      "Active": "Active",
+      "Disabled": "Disabled"
+    },
+    "CatalogCapability": {
+      "All": "All capabilities",
+      "Ui": "UI",
+      "Web": "Web",
+      "WebHostRequired": "Web host required"
+    },
+    "ModuleState": {
+      "Active": "Active",
+      "Disabled": "Disabled"
+    },
+    "AssemblyOutcome": {
+      "Scanned": "Scanned",
+      "ResolvedNotScanned": "Resolved, not scanned",
+      "Excluded": "Excluded",
+      "ResolutionFailed": "Resolution failed",
+      "PartialTypeLoad": "Partial type load"
+    },
+    "OptionKind": {
+      "Value": "Approved scalar value",
+      "Presence": "Presence only",
+      "Count": "Collection count",
+      "Unavailable": "Unavailable"
+    },
+    "SpanState": {
+      "Complete": "Complete",
+      "Running": "Running",
+      "Failed": "Failed"
+    }
+  },
+  "Findings": {
+    "PerformanceBudgetExceeded": "{0} took {1}, exceeding the configured {2} budget.",
+    "RegistrationFailed": "Module {0} failed during {1}.",
+    "StartupWorkFailed": "Module {0} startup work {1} failed.",
+    "StartupWorkCommitFailed": "Module {0} failed while committing startup work from {1}.",
+    "CompositionFailed": "Module composition failed. Inspect the related modules and trace spans for causal evidence.",
+    "Unknown": "Unrecognized finding code: {0}"
+  }
+}

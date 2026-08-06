@@ -171,7 +171,7 @@ public sealed class ModuleConfiguration : MonicaModule<ModuleConfigurationOption
     }
 
     /// <inheritdoc />
-    public override void DiscoverTypes(TypeDiscoveryPlan<ModuleConfigurationOption> discovery)
+    public override void DeclareTypeDiscovery(TypeDiscoveryPlan<ModuleConfigurationOption> discovery)
     {
         discovery.Match(
             TypeQuery.ConcreteClass.HasAttribute<ConfigurationAttribute>(),
