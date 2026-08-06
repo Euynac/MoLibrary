@@ -60,6 +60,7 @@ public static class ModuleStateStoreRegistrationExtensions
     public static ModuleRegistration<ModuleStateStore, ModuleStateStoreOption> SetCommonDistributedStateStoreProvider<TProvider>(this ModuleRegistration<ModuleStateStore, ModuleStateStoreOption> module)
         where TProvider : class, IDistributedStateStore
     {
+        module.RequireFeature(ModuleStateStore.DISTRIBUTED_PROVIDER_FEATURE);
         return module
             .Configure(options => options.UseDistributedProviderAsDefault = true)
             .ConfigureServices(context => context.Services.AddSingleton<IDistributedStateStore, TProvider>())
