@@ -91,6 +91,7 @@ public static class ModuleEventBusRegistrationExtensions
     /// </summary>
     public static ModuleRegistration<ModuleEventBus, ModuleEventBusOption> UseDistributedEventBus<TProvider>(this ModuleRegistration<ModuleEventBus, ModuleEventBusOption> module) where TProvider : DistributedEventBusBase
     {
+        module.RequireFeature(ModuleEventBus.DISTRIBUTED_PROVIDER_FEATURE);
         return module
             .ConfigureServices(context =>
             {
@@ -106,6 +107,7 @@ public static class ModuleEventBusRegistrationExtensions
     /// </summary>
     public static ModuleRegistration<ModuleEventBus, ModuleEventBusOption> UseNoOpDistributedEventBus(this ModuleRegistration<ModuleEventBus, ModuleEventBusOption> module)
     {
+        module.RequireFeature(ModuleEventBus.DISTRIBUTED_PROVIDER_FEATURE);
         return module
             .ConfigureServices(context =>
                 context.Services.AddSingleton<IDistributedEventBus, NoOpDistributedEventBus>())

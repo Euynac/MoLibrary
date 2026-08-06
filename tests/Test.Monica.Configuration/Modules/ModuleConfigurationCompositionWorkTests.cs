@@ -1,6 +1,8 @@
 using System.Reflection;
 using System.Reflection.Emit;
 using AwesomeAssertions;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Configuration.Json;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
@@ -17,6 +19,30 @@ namespace Test.Monica.Configuration.Modules;
 
 public sealed class ModuleConfigurationCompositionWorkTests
 {
+    [Fact]
+    public void Composition_WhenManagedJsonSourceIsRegistered_ShouldPlaceItAfterEffectiveValues()
+    {
+        var path = $"managed-{Guid.NewGuid():N}.json";
+        var builder = Host.CreateApplicationBuilder();
+
+        builder.AddMonica(monica =>
+        {
+            monica.ConfigureTypeDiscovery(static options => options.ExcludeDefault());
+            monica.AddConfiguration()
+                .AddManagedJsonFile(path, optional: true, reloadOnChange: false);
+        });
+
+        var providers = ((IConfigurationRoot)builder.Configuration).Providers.ToList();
+        var effectiveValueProviderIndex = providers.FindIndex(static provider =>
+            provider.GetType().Name == "MonicaConfigurationProvider");
+        var managedJsonProviderIndex = providers.FindIndex(provider =>
+            provider is JsonConfigurationProvider jsonProvider
+            && string.Equals(jsonProvider.Source.Path, path, StringComparison.Ordinal));
+
+        effectiveValueProviderIndex.Should().BeGreaterThanOrEqualTo(0);
+        managedJsonProviderIndex.Should().BeGreaterThan(effectiveValueProviderIndex);
+    }
+
     [Fact]
     public void Composition_WhenAnalysisSucceeds_ShouldPublishDefinitionsAndBindOptions()
     {

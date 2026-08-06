@@ -357,7 +357,7 @@ public sealed class ModuleConfiguration : MonicaModule<ModuleConfigurationOption
 /// </summary>
 public static class ModuleConfigurationRegistrationExtensions
 {
-    private const ModuleRegistrationOrder MANAGED_JSON_FILE_BUILDER_ORDER = ModuleRegistrationOrder.BeforeModule;
+    private const ModuleRegistrationOrder MANAGED_JSON_FILE_BUILDER_ORDER = ModuleRegistrationOrder.AfterModule;
 
     /// <summary>
     /// Creates a startup options reader from an explicit, caller-owned configuration.
@@ -487,6 +487,40 @@ public static class ModuleConfigurationRegistrationExtensions
     }
 
     /// <summary>
+    /// Adds a prebuilt managed JSON source after Monica's effective-value provider and records its metadata for the UI.
+    /// </summary>
+    /// <param name="module">The Configuration module registration.</param>
+    /// <param name="registration">
+    /// The immutable source definition. The same instance can be shared with a
+    /// <see cref="Monica.Configuration.Bootstrap.MonicaEffectiveOptionsReaderConfiguration"/> so startup and runtime
+    /// configuration use identical paths and precedence.
+    /// </param>
+    /// <returns>The current registration.</returns>
+    public static ModuleRegistration<ModuleConfiguration, ModuleConfigurationOption> AddManagedJsonSource(
+        this ModuleRegistration<ModuleConfiguration, ModuleConfigurationOption> module,
+        ManagedJsonConfigurationSourceRegistration registration)
+    {
+        ArgumentNullException.ThrowIfNull(module);
+        ArgumentNullException.ThrowIfNull(registration);
+        ArgumentException.ThrowIfNullOrWhiteSpace(registration.Path);
+        ArgumentException.ThrowIfNullOrWhiteSpace(registration.DisplayName);
+
+        // Keep managed JSON after the effective-value provider so startup and runtime readers have identical precedence.
+        module.ConfigureBuilder(context =>
+        {
+            context.HostApplicationBuilder.Configuration.AddJsonFile(
+                registration.Path,
+                registration.Optional,
+                registration.ReloadOnChange);
+            ManagedJsonConfigurationSourceRegistry.Add(
+                context.HostApplicationBuilder.Configuration,
+                registration);
+        }, MANAGED_JSON_FILE_BUILDER_ORDER);
+
+        return module;
+    }
+
+    /// <summary>
     /// Adds a JSON configuration file after Monica's effective-value provider and records source metadata for the UI.
     /// </summary>
     /// <param name="module">The Configuration module registration.</param>
@@ -517,20 +551,7 @@ public static class ModuleConfigurationRegistrationExtensions
             Description = options.Description,
             IsWritable = options.IsWritable
         };
-        module.ConfigureBuilder(context =>
-        {
-            context.HostApplicationBuilder.Configuration.AddJsonFile(
-                registration.Path,
-                registration.Optional,
-                registration.ReloadOnChange);
-            ManagedJsonConfigurationSourceRegistry.Add(
-                context.HostApplicationBuilder.Configuration,
-                registration);
-        // Run this contribution before the module-owned callback so Monica's effective-value provider
-        // is appended after the managed JSON source and therefore has higher configuration priority.
-        }, MANAGED_JSON_FILE_BUILDER_ORDER);
-
-        return module;
+        return module.AddManagedJsonSource(registration);
     }
 
     /// <summary>
