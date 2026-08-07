@@ -30,7 +30,7 @@ public class ModuleStackTraceUI : MonicaModule<ModuleStackTraceUIOption>, IUIMod
 {
     public override void ConfigureServices(ModuleContext<ModuleStackTraceUIOption> context)
     {
-        // Register StackTraceParserService as Singleton (stateless parser)
+        // Register the stateless stack-trace parser once per host.
         context.Services.AddSingleton<StackTraceParser>();
     }
 }

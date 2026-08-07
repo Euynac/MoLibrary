@@ -31,7 +31,7 @@ builder.AddMonica(monica =>
 ### 3. 使用DiffViewer组件
 
 ```razor
-@using Monica.Framework.UI.UIDiffHighlight.Components
+@using Monica.UI.UIDiffHighlight.Components
 
 <DiffViewer OriginText="@originText" 
            NewText="@newText" 

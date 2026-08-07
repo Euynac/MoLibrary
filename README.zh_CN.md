@@ -36,7 +36,7 @@ Monica 是面向可观测 .NET 后端的 agent-governed application architecture
 - AI 可以很快产出代码，但如果没有统一规格，代码会在规模增长后变得脆弱且难以观测。
 - Monica 把基础设施本身变成规格：`AddMonica(...)` 先记录一个宿主的完整模块图，验证依赖与循环，再按确定性阶段应用注册。
 - 每个组合都属于具体宿主；同一进程中的多个宿主不共享模块注册表、选项或 ProjectUnit 目录。
-- 仓库以 `skills/` 作为 Monica Agent Skills 的唯一源码，并生成字节一致的 `.claude/skills/` 与 `.agents/skills/` 投影，让 AI 在写代码前先理解 Monica 的约定。
+- 仓库以 `skills/` 作为 Monica Agent Skills 的唯一源码，并把每个受管 Monica Skill 按字节一致地投影到 `.claude/skills/` 与 `.agents/skills/`；不属于 Monica 的外部 Skill 会原样保留。
 
 ## 演示视频
 
@@ -86,7 +86,7 @@ app.Run();
     JobName = "Heartbeat",
     Description = "每五分钟写一次心跳日志。",
     CronSchedule = "0 */5 * * * *")]
-public sealed class HeartbeatJob(ILogger<HeartbeatJob> logger) : RecurringJob
+public sealed class HeartbeatJob(ILogger<HeartbeatJob> logger) : RecurringJob(logger)
 {
     public override Task ExecuteAsync(CancellationToken cancellationToken)
     {
@@ -121,7 +121,7 @@ builder.AddMonica(monica =>
 });
 ```
 
-回调返回后模块图即被封闭，保留下来的 Guide 不能再修改组合。
+回调返回后模块图即被封闭，保留下来的 `ModuleRegistration<,>` 句柄不能再修改组合。
 
 ## 仪表板、主题与国际化
 
@@ -129,7 +129,7 @@ Monica.UI 之上还提供多个运维型 Blazor UI：JobScheduler、Configuratio
 
 ## 随仓库交付的 Agent Skills
 
-Monica 自有 Skill 的唯一源码位于 `skills/`；`.claude/skills/` 与 `.agents/skills/` 是面向仓库内发现的生成投影，不应直接编辑。
+Monica 自有 Skill 的唯一源码位于 `skills/`；`.claude/skills/` 与 `.agents/skills/` 中对应的受管 Monica 子目录是面向仓库内发现的生成投影，不应直接编辑。
 
 - 初始化、配置与诊断入口：`monica-guide`；上游问题分类与草稿准备：`monica-contribution`
 - 框架入口：`monica-framework`、`monica-development`、`monica-architecture`、`monica-ui-development`、`monica-ui-design`、`monica-ui-audit`、`monica-docs-authoring`、`monica-requirement-design`、`monica-unit-testing`、`monica-ui-bridge-debug`
@@ -153,10 +153,12 @@ Stable 不依赖 Labs，Integration 也始终是按需引入的 provider-specifi
 
 ### 模块模式
 
-- `Module{Name}Option`：公开配置入口
-- `Module{Name}Guide`：链式补充配置
-- `Module{Name}`：模块实现本体
-- `Module{Name}BuilderExtensions`：`monica.Add{Name}()` 入口
+- `Module{Name} : MonicaModule<Module{Name}Option>`：宿主拥有的模块生命周期策略
+- `Module{Name}Option : ModuleOptions<Module{Name}>`：启动时冻结的配置与默认值
+- `Module{Name}BuilderExtensions`：返回宿主绑定 `ModuleRegistration<,>` 的 `monica.Add{Name}()` 入口
+- `Module{Name}RegistrationExtensions`：在该注册句柄上补充 provider 与能力选择的可选扩展
+
+模块通过 `Describe(ModuleDescriptor)` 声明硬依赖与可选顺序关系。模块可直接读取自己的最终 `Option`；读取其他模块配置时，只能沿这些已声明关系访问。业务类型工作通过 `DeclareTypeDiscovery(...)` 声明一次；Monica 会把所有非空结构化查询合并到一次类型全集扫描中，再按模块图顺序串行提交匹配结果。
 
 ### ProjectUnit 模式
 
@@ -180,6 +182,12 @@ public sealed class CommandHandlerApproveOrder : ApplicationService<CommandAppro
 `Monica.Framework.UI` 的第一个 Tab 会展示当前宿主的项目单元状态，包括类型分布、依赖健康度、告警，以及彼此独立的元数据、描述、负责人和需求覆盖率。`/framework/units`、`/framework/units/dashboard` 与 `/framework/units/{key}` 提供相同的类型化目录数据，不会把反射对象暴露到 UI 或 API 边界。
 
 ProjectUnit 的详细约定可以在 `monica-application-project-unit-development` 和 Monica.Docs 的概念页里继续查看。
+
+### 模块诊断
+
+宿主通过 `monica.AddModuleSystem()` 显式启用 Core 诊断。它注册的 `ModuleDiagnosticsFacade` 为组合结果、耗时、回调、启动工作、类型发现阶段、诊断发现和直接依赖拓扑提供不可变且带修订号的快照。程序集清单按需加载，模块配置诊断单独获取；可移植导出不会包含配置数据、程序集路径、堆栈或原始异常详情。`monica.AddModuleSystemUI()` 会自动包含 Core 诊断模块。
+
+每个公开模块配置属性都会以清理后的类型名保留在目录中。普通有界值自动展示；`[ModuleOptionDiagnosticsSensitive]` 或宿主策略标记的敏感内容会按类型缩减为非敏感的存在状态、数量或受保护地址。`RevealSensitive` 只会揭示有界敏感标量，并且只能用于 Development 环境中的专用调试。模块系统工作台默认也只在 Development 开放；其他环境必须显式启用并提供宿主授权策略。
 
 ## 技术栈
 

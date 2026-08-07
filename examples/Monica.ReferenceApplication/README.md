@@ -83,6 +83,21 @@ The AppHost records its runtime capabilities in one `AddMonica` callback:
 ```csharp
 builder.AddMonica(monica =>
 {
+    monica.ConfigureApplication(options =>
+    {
+        options.ProjectName = "Monica.Reference.Api";
+        options.AppName = "Monica Ordering Reference";
+        options.AppId = "monica-ordering-reference";
+        options.DomainName = "Ordering";
+    });
+    monica.ConfigureModuleSystem(options =>
+    {
+        options.DefaultApiGroupName = "Ordering";
+        options.EnableMinimalApiByDefault = true;
+    });
+    monica.ConfigureTypeDiscovery(options =>
+        options.Add("Domains.Ordering", "Platform.Protocol"));
+
     monica.AddConfiguration()
         .UseFileConfigurationStore();
     monica.AddEventBus()
@@ -95,8 +110,15 @@ builder.AddMonica(monica =>
         options.ApiVersion = "v1";
     });
     monica.AddUnitOfWork();
-    monica.AddProjectUnits();
-    monica.AddJobScheduler()
+    monica.AddProjectUnits(options =>
+    {
+        options.ConventionOptions.EnableNameConvention = true;
+        options.ConventionOptions.NameConventionMode = ENameConventionMode.Strict;
+    });
+    monica.AddJobScheduler(options =>
+        {
+            options.MaxWorkerExecutionThreads = 1;
+        })
         .UseInMemoryMetadataRepository()
         .UseSchedulerScope("monica-reference-ordering")
         .UseInMemoryProvider();

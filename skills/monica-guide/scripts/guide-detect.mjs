@@ -251,16 +251,17 @@ export function detectRepository(workspace, inventory = null) {
   };
   const relevantFiles = inventory ? inventory.filter((file) => {
     const name = path.basename(file);
-    return name.endsWith('.csproj') || name.endsWith('.razor') || name === 'Directory.Build.props';
+    return name.endsWith('.csproj') || name.endsWith('.cs') || name.endsWith('.razor') || name === 'Directory.Build.props';
   }) : walkFiles(workspace, {
     maxDepth: 6,
     ignoredDirectories: BUNDLED_SKILL_DIRECTORIES,
-    include: (_file, name) => name.endsWith('.csproj') || name.endsWith('.razor') || name === 'Directory.Build.props',
+    include: (_file, name) => name.endsWith('.csproj') || name.endsWith('.cs') || name.endsWith('.razor') || name === 'Directory.Build.props',
   });
   const portablePaths = relevantFiles.map((file) => path.relative(workspace, file).split(path.sep).join('/'));
   const snippets = relevantFiles.slice(0, 250).map((file) => readText(file, '').slice(0, 65536)).join('\n');
   characteristics.ui = relevantFiles.some((file) => file.endsWith('.razor')) || /Monica\.[\w.]*UI|MudBlazor/i.test(snippets);
-  characteristics.extension = /monica-third-party|Module\w+Guide|IMoModule/i.test(snippets) || relevantFiles.some((file) => /Extension|Provider|Connector/i.test(path.basename(file)));
+  characteristics.extension = /monica-third-party|MonicaModule\s*<|ModuleRegistration\s*</i.test(snippets)
+    || relevantFiles.some((file) => /Extension|Provider|Connector/i.test(path.basename(file)));
   characteristics.application = /PackageReference[^>]+Include=["']Monica\.|ProjectReference[^>]+Monica\./i.test(snippets);
   characteristics.projectReference = /ProjectReference[^>]+(?:Include|Update)=["'][^"']*Monica/i.test(snippets);
   characteristics.microservice = portablePaths.some((file) => /^src\/Services\//i.test(file)

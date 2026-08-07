@@ -3,12 +3,19 @@
 Monica.OpenTelemetry wires the OpenTelemetry .NET SDK for Monica hosts without adding exporter dependencies to infrastructure modules.
 
 ```csharp
+var builder = WebApplication.CreateBuilder(args);
+
 builder.AddMonica(monica =>
 {
-    monica.AddOpenTelemetry(options => options.ServiceName = "MyApp")
+    monica.AddOpenTelemetry(options => options.ResourceServiceName = "MyApp")
         .UseOtlpExporter()
         .UsePrometheusEndpoint();
 });
+
+var app = builder.Build();
+app.UseMonica();
+app.MapMonica();
+app.Run();
 ```
 
 The module subscribes to `Monica.*` meters by default and can also expose a bounded in-process metric snapshot through:

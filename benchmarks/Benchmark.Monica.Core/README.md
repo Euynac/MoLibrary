@@ -4,7 +4,7 @@ This project measures module composition, one-pass type discovery, immutable dia
 and discovery-reference collectibility. Run benchmarks from a Release build and filter the scenario being investigated:
 
 ```powershell
-dotnet run -c Release --project D:\Repositories\WorkTree1\MoLibrary\benchmarks\Benchmark.Monica.Core\Benchmark.Monica.Core.csproj -- --filter *TypeDiscovery*
+dotnet run -c Release --project benchmarks/Benchmark.Monica.Core/Benchmark.Monica.Core.csproj -- --filter *TypeDiscovery*
 ```
 
 The benchmark groups cover:

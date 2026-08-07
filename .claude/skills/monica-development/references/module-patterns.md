@@ -11,8 +11,8 @@ This guide defines the standardized patterns and conventions for creating module
 |-----------|---------------|---------|
 | Module class | `Module{Name}` | `ModuleSignalR`, `ModuleJobScheduler` |
 | Options class | `Module{Name}Option` | `ModuleSignalROption` |
-| Registration extensions | `Module{Name}RegistrationExtensions` | `ModuleSignalRRegistrationExtensions` |
-| Builder entry | `extension(IMonicaBuilder)` with `Add{Name}()` | `monica.AddSignalR()` inside `builder.AddMonica(...)` |
+| Builder extensions | `Module{Name}BuilderExtensions` | Owns `extension(IMonicaBuilder)` and `Add{Name}()` |
+| Registration extensions | `Module{Name}RegistrationExtensions` | Optional provider/capability methods on `ModuleRegistration<,>` |
 
 This table describes first-party Monica modules. Independent packages use string keys governed by `$monica-third-party-module-development`; one NuGet package may contain multiple module registration files and keys. Their registration namespace is `<PackageId>.Modules`, while official dependency guides remain in `Monica.Modules`.
 
@@ -22,7 +22,7 @@ Choose the runtime kind before filling in the registration logic.
 
 | Kind | Strategy | Use when |
 |------|----------|----------|
-| Non-web module | `MonicaModule<TOptions>` | The module only needs builder, services, post-services, and dependency phases |
+| Non-web module | `MonicaModule<TOptions>` | The module needs dependency, option, builder, service, type-discovery, or post-service phases without web contributions |
 | Web-capable module | `MonicaModule<TOptions>, IWebModule` | The module configures ASP.NET Core middleware or endpoint phases |
 | Web-host-required module | `MonicaModule<TOptions>, IWebHostRequiredModule` | Omitting web contributions would make the module invalid |
 
@@ -250,6 +250,36 @@ builder.AddMonica(monica =>
         .WithMaxItems(50);
 });
 ```
+
+## Type Discovery and Relationship-Checked Options
+
+Configure the host's assembly scope once inside `AddMonica(...)`:
+
+```csharp
+monica.ConfigureTypeDiscovery(options =>
+    options.Add("MyCompany.MyApplication")
+        .Exclude("MyCompany.MyApplication.Tests"));
+```
+
+Every active module receives one `DeclareTypeDiscovery(...)` callback before host mutation. Empty plans are released before scanning; all non-empty structural queries share one type-universe enumeration. Their commits run serially after ordinary service registration and before `PostConfigureServices`.
+
+```csharp
+public override void DeclareTypeDiscovery(TypeDiscoveryPlan<Module{Name}Option> discovery)
+{
+    discovery.Match(
+        TypeQuery.ClosedClass.AssignableTo<I{Feature}>(),
+        (context, matches) =>
+        {
+            foreach (var match in matches)
+            {
+                context.Registrations.TryAdd(
+                    ServiceDescriptor.Transient(typeof(I{Feature}), match.Type));
+            }
+        });
+}
+```
+
+Use `Option` for the module's own finalized options. Read another module only through a relationship declared by the current module: `GetOptions<TModule, TOptions>()` for a direct hard dependency, or `TryGetOptions<TModule, TOptions>()` for a direct `AfterIfPresent<TModule, TOptions>()` relationship. Never read options from `Describe(...)`, where graph shape must remain option-free.
 
 ## Features Pattern (Bundled Sub-Modules)
 

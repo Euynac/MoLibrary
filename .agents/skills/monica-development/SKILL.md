@@ -1,6 +1,6 @@
 ---
 name: monica-development
-description: This skill should be used when the user asks to "create module", "add module", "module structure", "use Res type", "return Res", "Res.Ok", "Res.Fail", "IsFailed pattern", "module registration", "module dependencies", "module pattern", "Monica architecture", "service layer pattern", "create service", "add service", "create hosted service", "add background service", "MoBackgroundService", "MoHostedService", "RecordState", "hosted service observability", "service state tracking", "CoordinatedLeaderService", "RequireFeature", "SatisfyFeature", "required config", "required configuration methods", "IUIModule", "IWebModule", "IWebHostRequiredModule", "web module", or needs guidance on Monica module architecture, the unified result model Res, module registration patterns, module runtime kinds, Res usage scope (UI vs infrastructure), required feature validation, or hosted service development with observability.
+description: Use when creating or refactoring Monica modules and services; working with MonicaModule, ModuleRegistration, Describe, DeclareTypeDiscovery, TypeDiscoveryPlan, ModuleDiagnosticsFacade, option diagnostics, or startup budgets; using Res/Res<T> and IsFailed; adding Facades or internal services; implementing MoBackgroundService, RecordState, or CoordinatedLeaderService; declaring required or satisfied features and required configuration; or choosing among IUIModule, IWebModule, and IWebHostRequiredModule. Covers current module composition, runtime kinds, one-pass type discovery, diagnostics, Res scope, feature validation, and hosted-service observability.
 ---
 
 # Monica Development Guide
@@ -13,13 +13,16 @@ Monica is a modular .NET infrastructure library designed for flexibility and per
 
 ### Module Pattern
 
-Every module follows a consistent pattern with three components in one `Module{Name}.cs` file, which is located in the `Modules` folder of each project.
+Every module keeps its public registration roles together in one `Modules/Module{Name}.cs` file by default.
 
 | Component | Purpose | Example |
 |-----------|---------|---------|
 | `Module{Name}` | Host-owned module strategy inheriting from `MonicaModule<TOptions>` | `ModuleSignalR` |
 | `Module{Name}Option` | Configuration options for the module | `ModuleSignalROption` |
-| `Module{Name}RegistrationExtensions` | Host registration and fluent feature extensions returning `ModuleRegistration<TModule, TOptions>` | `ModuleSignalRRegistrationExtensions` |
+| `Module{Name}BuilderExtensions` | `IMonicaBuilder` entry returning the host-bound registration | `ModuleSignalRBuilderExtensions` |
+| `Module{Name}RegistrationExtensions` | Optional provider and capability extensions on `ModuleRegistration<TModule, TOptions>` | `ModuleSignalRRegistrationExtensions` |
+
+Do not introduce `Module{Name}Guide` objects. `ModuleRegistration<TModule, TOptions>` is the only fluent composition handle and is valid only inside the enclosing `AddMonica(...)` callback.
 
 ### Module Identity Rules
 
@@ -43,11 +46,22 @@ Choose the module runtime kind before writing registration code:
 
 ### Localization Registration Rules
 
-- If a module uses `IStringLocalizer<TResource>` directly or indirectly, some participating module in that dependency chain must declare:
+- If a module uses `IStringLocalizer<TResource>` directly or indirectly, declare `ModuleLocalization` as an intrinsic dependency in `Describe(...)`. Its public builder entry also registers the resource marker through the localization registration extension:
 
 ```csharp
-module.Require<ModuleLocalization, ModuleLocalizationOption>(options =>
-    options.AddResource(typeof(TResource)));
+public override void Describe(ModuleDescriptor module)
+{
+    module.Require<ModuleLocalization, ModuleLocalizationOption>();
+}
+
+public static ModuleRegistration<ModuleExample, ModuleExampleOption> AddExample(
+    this IMonicaBuilder builder)
+{
+    var registration = builder.AddModule<ModuleExample, ModuleExampleOption>();
+    registration.Require<ModuleLocalization, ModuleLocalizationOption>()
+        .AddResource<ExampleResource>();
+    return registration;
+}
 ```
 
 - For Monica project-local resources, keep the marker class and JSON files under the project root `Localization/` folder so resource namespace, embedded resource path, and validation tooling stay aligned.
@@ -89,12 +103,19 @@ builder.AddMonica(monica =>
         options.Property2 = value2;
     });
 
-    // Feature extensions enrich the same host-bound registration.
+    // Provider and capability extensions enrich the same host-bound registration.
     monica.Add{ModuleName}()
-        .GuideMethod1()
-        .GuideMethod2();
+        .UseProvider()
+        .EnableFeature();
 });
 ```
+
+### Composition and Option Access
+
+- `Describe(ModuleDescriptor)` cannot inspect the owner or host options or make graph shape option-dependent. Declare hard dependencies with `Require<TModule, TOptions>()`, optional ordering with `AfterIfPresent<TModule, TOptions>()`, and baseline feature requirements with `RequireFeature(...)`; `Require(..., configure)` may still contribute defaults to that required dependency.
+- Host and feature option contributions are recorded on `ModuleRegistration<,>`, then finalized and validated dependency-first before Monica mutates the host.
+- Use the module's `Option` for its own finalized defaults. Use `GetOptions<TModule, TOptions>()` only for a direct hard dependency and `TryGetOptions<TModule, TOptions>()` only for a directly declared optional ordering.
+- Module lifecycle callbacks run on a serial control plane. Use `ScheduleStartupWork(...)` only from `ConfigureBuilder`, `ConfigureServices`, a type-discovery commit, or `PostConfigureServices`, and only for isolated synchronous work. Choose `BeforeTypeDiscovery`, `BeforePostConfigureServices`, `BeforeServiceRegistrationCompletion`, `BeforeHostLifecycle`, or `NoBarrier` deliberately. A type-discovery commit is already past `BeforeTypeDiscovery`; work targeting the last two barriers cannot have a serial service-registration commit. Use the Generic Host lifecycle for asynchronous work.
 
 ### Module Dependencies
 
@@ -121,6 +142,39 @@ Dependencies are automatically registered when a module is added.
 - If a module's built-in behavior needs a non-default phase position, model it as module-owned lifecycle behavior or a named web stage instead of relying on registration-call order.
 - When reviewing an existing module, treat builder-entry-only state as a design bug even if the direct registration path currently works.
 - Declare business-type work through `TypeDiscoveryPlan<TOptions>` and structural `TypeQuery` expressions. Monica scans the type universe once and commits each module's matches deterministically.
+
+### Type Discovery Contract
+
+- Configure the host's assembly scope once with `monica.ConfigureTypeDiscovery(options => options.Add(...).Exclude(...))`; call `ExcludeDefault()` only when the host will supply the complete assembly set explicitly.
+- Override `DeclareTypeDiscovery(...)` once and add structural queries with `discovery.Match(query, commit)`; never enumerate application assemblies or types independently. Monica declares and evaluates plans before host mutation, then runs commits after ordinary service registration and before `PostConfigureServices`.
+- Monica discards empty plans before scanning. A non-empty query still receives its serial commit when it matches zero types.
+- Query evaluation is analysis-only. Register high-volume services through the commit context's indexed `Registrations` writer, or publish module-owned discovery state from the commit callback, which runs in graph and declaration order.
+- Discovery matches and compiler-owned references are temporary. Do not retain reflection collections unless the module's runtime behavior explicitly owns those types.
+
+```csharp
+public override void DeclareTypeDiscovery(TypeDiscoveryPlan<ModuleExampleOption> discovery)
+{
+    discovery.Match(
+        TypeQuery.ClosedClass.AssignableTo<IExampleHandler>(),
+        (context, matches) =>
+        {
+            foreach (var match in matches)
+            {
+                context.Registrations.TryAdd(
+                    ServiceDescriptor.Transient(typeof(IExampleHandler), match.Type));
+            }
+        });
+}
+```
+
+### Module-System Diagnostics
+
+- Call `monica.AddModuleSystem()` and inject `ModuleDiagnosticsFacade` at a host or UI boundary. `GetSnapshot()` returns one immutable, revisioned composition view; calls for the same revision reuse the cached projection, and the final revision keeps one stable snapshot instance.
+- Load `GetAssemblyInventory()` and `GetModuleOptions(...)` only when needed. `CreateExport()` deliberately omits options, assembly paths, stack traces, and raw exception details.
+- Every public, non-indexed option property remains cataloged by clean type name. Auto-property values are bounded; computed, runtime-shaped, or unsafe values remain metadata-only. Mark secrets with `[ModuleOptionDiagnosticsSensitive]` or `ConfigureModuleOptionDiagnostics(...MarkSensitive(...))`.
+- Redacted sensitive content becomes a presence, count, or protected-address representation as appropriate. `ModuleOptionDiagnosticsExposureMode.RevealSensitive` reveals only bounded sensitive scalars, is Development-only, and is intended for dedicated local debugging. It is not cached and never changes the sanitized export boundary.
+- Configure `StartupPerformanceBudgets` only when the host owns a real threshold. Unconfigured budgets produce measurements, not a synthetic health or efficiency score.
+- The Module System UI is Development-only by default. Outside Development, require both `EnableOutsideDevelopment = true` and a non-empty host `AuthorizationPolicy`.
 
 ### Required Feature Configuration
 
@@ -193,7 +247,7 @@ if ((await service.GetDataAsync(id)).IsFailed(out var error, out var data))
 2. **Internal services** (in `Services/`) must use standard return types and throw exceptions — do not use `Res`
 3. **Use implicit conversions** for cleaner code when returning success or error from result-envelope entry points
 4. **Handle responses** using the `IsFailed` pattern to extract error and data
-5. **Required using**: Include `using Monica.Tool.Results;` where `Res` is used
+5. **Required using**: Include `using Monica.Core.Results;` where `Res` is used
 6. **Typed error details**: Use `AppendMetadata("error", payload)` rather than introducing a separate `ResError` model
 7. **Caught exceptions to `Res.Fail`**: When a UI service, Facade, or other result-envelope entry point converts a caught exception into `Res.Fail(...)`, return the full recursive message with `ex.GetMessageRecursively()` instead of only `ex.Message`, so nested exception details are preserved for diagnostics. This usually also requires `using Monica.Core.Extensions;`.
 
@@ -222,11 +276,12 @@ RecordState("Error occurred", logLevel: LogLevel.Error, exception: ex);
 
 ```csharp
 public class MyMonitorService(
-    IObservableInstanceManager observableManager,
+    IObservableInstanceRegistry observableRegistry,
     IOptions<ModuleHostedServiceOption> hostedServiceOptions,
+    IServiceScopeFactory serviceScopeFactory,
     ILogger<MyMonitorService> logger,
     IMyDependency dependency
-) : MoBackgroundService(observableManager, hostedServiceOptions, logger)
+) : MoBackgroundService(observableRegistry, hostedServiceOptions, serviceScopeFactory, logger)
 {
     public override string ServiceName => nameof(MyMonitorService);
 
@@ -254,9 +309,10 @@ public class MyMonitorService(
 
 | Dependency | Purpose |
 |------------|---------|
-| `IObservableInstanceManager` | Manages observable state tracking |
+| `IObservableInstanceRegistry` | Registers and queries host-owned observable state trackers |
 | `IOptions<ModuleHostedServiceOption>` | Service configuration options |
-| `ILogger<T>` | Optional, passed to base for internal use |
+| `IServiceScopeFactory` | Creates scopes for lifecycle and finite work-item execution |
+| `ILogger<T>` | Required by the base service for state-aware logging |
 
 For detailed hosted service patterns including `CoordinatedLeaderService` for leader-aware services, see `references/hosted-service-guide.md`.
 
@@ -270,9 +326,9 @@ For detailed hosted service patterns including `CoordinatedLeaderService` for le
 
 ### Source Code Reference
 
-- **Res type definition**: `Monica.Tool/Results/Res.cs`
+- **Res type definition**: `Monica.Core/Results/Models/Res.cs`
 - **Module strategy**: `Monica.Core/Modularity/Abstractions/MonicaModule.cs`
 - **Module registration**: `Monica.Core/Modularity/Abstractions/ModuleRegistration.cs`
 - **Web module contract**: `Monica.Core/Modularity/Abstractions/IWebModule.cs`
-- **MoBackgroundService**: `Monica.Core/Features/HostedServices/MoBackgroundService.cs`
-- **CoordinatedLeaderService**: `Monica.RegisterCentre/Core/CoordinatedLeaderService.cs`
+- **MoBackgroundService**: `Monica.Core/HostedService/Abstractions/MoBackgroundService.cs`
+- **CoordinatedLeaderService**: `Monica.ServiceDiscovery/Services/Support/CoordinatedLeaderService.cs`

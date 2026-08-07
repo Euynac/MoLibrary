@@ -83,7 +83,7 @@ app.MapMonica();
 app.Run();
 ```
 
-The callback is the complete composition boundary. Module guides cannot mutate the graph after it closes, and startup fails early when the graph is incomplete or cyclic.
+The callback is the complete composition boundary. Captured `ModuleRegistration<,>` handles cannot mutate the graph after it closes, and startup fails early when the graph is incomplete or cyclic.
 
 For a runnable DDD application rather than a toy snippet, see [`examples/Monica.ReferenceApplication`](examples/Monica.ReferenceApplication). For the smallest dashboard host, see [`examples/JobSchedulerMinimal`](examples/JobSchedulerMinimal).
 
@@ -91,10 +91,12 @@ For a runnable DDD application rather than a toy snippet, see [`examples/Monica.
 
 Every module follows the same public shape:
 
-- `Module{Name}Option` — host-owned configuration and defaults.
-- `Module{Name}Guide` — fluent provider and capability choices.
-- `Module{Name}` — registration, dependency claims, middleware, and endpoints.
-- `IMonicaBuilder` extension — the discoverable `monica.Add{Name}()` entry point.
+- `Module{Name} : MonicaModule<Module{Name}Option>` — the host-owned lifecycle strategy.
+- `Module{Name}Option : ModuleOptions<Module{Name}>` — startup-frozen configuration and defaults.
+- `Module{Name}BuilderExtensions` — the discoverable `monica.Add{Name}()` entry point, returning a host-bound `ModuleRegistration<,>`.
+- `Module{Name}RegistrationExtensions` — optional provider and capability choices that enrich that registration.
+
+The strategy declares hard dependencies and optional ordering in `Describe(ModuleDescriptor)`. It reads its own finalized `Option` directly and can read another module's options only through one of those declared relationships. Business-type work is declared once through `DeclareTypeDiscovery(...)`; Monica combines non-empty structural queries into one type-universe scan and commits matches serially in graph order.
 
 ProjectUnits add the application vocabulary:
 
@@ -117,7 +119,13 @@ public sealed class CommandHandlerApproveOrder : ApplicationService<CommandAppro
 
 `Monica.Framework.UI` exposes a first-tab status dashboard for the current host with unit distribution, dependency health, alerts, and independent metadata, description, ownership, and requirement coverage. The typed `/framework/units`, `/framework/units/dashboard`, and `/framework/units/{key}` APIs expose the same catalog without leaking reflection objects.
 
-The canonical Monica-owned Agent Skills live under [`skills/`](skills/). Release tooling projects that tree byte-for-byte into `.agents/skills/` and `.claude/skills/` for repository-local discovery; those generated directories are not authoring sources. Start with `monica-guide` for setup and diagnostics, then continue through the profile-selected `monica-application`, `monica-framework`, and granular skills.
+## Module diagnostics
+
+Hosts opt in with `monica.AddModuleSystem()`. Its `ModuleDiagnosticsFacade` exposes one immutable, revisioned snapshot of composition outcome, timings, callbacks, startup work, type-discovery stages, findings, and direct dependency topology. Assembly inventory is lazy, option diagnostics are loaded separately, and portable exports omit option data, assembly paths, stack traces, and raw exception details. `monica.AddModuleSystemUI()` includes the Core diagnostics module automatically.
+
+Every public module-option property remains visible by clean type name. Ordinary bounded values are shown automatically; `[ModuleOptionDiagnosticsSensitive]` or a host policy reduces sensitive content to a non-secret presence, count, or protected-address representation as appropriate. `RevealSensitive` can reveal only bounded sensitive scalars and is restricted to Development-only debugging. The Module System workbench is also Development-only by default; exposing it elsewhere requires both explicit enablement and a host authorization policy.
+
+The canonical Monica-owned Agent Skills live under [`skills/`](skills/). Release tooling projects each managed Monica skill byte-for-byte into `.agents/skills/` and `.claude/skills/` for repository-local discovery while preserving unrelated external skills; those managed projections are not authoring sources. Start with `monica-guide` for setup and diagnostics, then continue through the profile-selected `monica-application`, `monica-framework`, and granular skills.
 
 ## Third-party ecosystem
 

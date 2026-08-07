@@ -48,6 +48,10 @@ app.Run();
 
 `AddMonica(...)` records and validates the complete module graph for this host before applying registrations. The composition is isolated from other hosts in the same process.
 
+Each `monica.Add*()` call returns a host-bound `ModuleRegistration<,>` that provider and capability extensions enrich inside the same callback. Module strategies declare dependencies with `Describe(ModuleDescriptor)` and declare structural business-type queries with `DeclareTypeDiscovery(...)`; Monica evaluates all non-empty plans through one type-universe scan and commits their matches deterministically.
+
+Hosts that call `monica.AddModuleSystem()` receive an immutable, revisioned diagnostics snapshot, lazy assembly inventory, bounded option catalog with sensitive-value redaction, and sanitized portable exports. When `Monica.UI` is installed, `monica.AddModuleSystemUI()` includes that Core diagnostics module automatically.
+
 ## Maturity tiers
 
 - **Stable:** Core, ProjectUnits, WebApi, Configuration, Repository, JobScheduler, OpenTelemetry, and UI runtime inspection.

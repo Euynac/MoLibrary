@@ -58,8 +58,8 @@ public record {ModelName}(
 |-----------|-----------|---------|
 | Module | `Module{Name}` | {Purpose} |
 | Option | `Module{Name}Option` | {Purpose} |
-| Registration Extensions | `Module{Name}RegistrationExtensions` | {Purpose} |
-| Builder Entry | `monica.Add{Name}()` | {Purpose} |
+| Builder Extensions | `Module{Name}BuilderExtensions` | Owns the required `monica.Add{Name}()` entry returning `ModuleRegistration<,>` |
+| Registration Extensions | `Module{Name}RegistrationExtensions` | Optional provider/capability methods on that registration |
 
 ### Module Registration
 
@@ -72,7 +72,7 @@ monica.Add{Name}(options =>
 
 ### Module Dependencies
 
-Modules declare option-free dependencies by overriding `Describe(ModuleDescriptor)` on `MonicaModule<TOptions>`.
+Modules declare graph shape without inspecting owner or host options by overriding `Describe(ModuleDescriptor)` on `MonicaModule<TOptions>`. A `Require(..., configure)` call may contribute defaults to the required dependency.
 
 ```csharp
 public override void Describe(ModuleDescriptor module)
@@ -86,7 +86,7 @@ public override void Describe(ModuleDescriptor module)
 ```
 Monica.{Name}/
 ├── Modules/
-│   └── Module{Name}.cs              # Module, Option, RegistrationExtensions
+│   └── Module{Name}.cs              # Module, Option, BuilderExtensions, optional RegistrationExtensions
 ├── Abstractions/
 │   └── I{Feature}Service.cs         # Public contract
 ├── Facades/
@@ -173,7 +173,7 @@ UI components inject Facades directly. Do not introduce a separate UI service la
 
 1. **Create project and module skeleton**
    - Create `Monica.{Name}/` project
-   - Implement Module, Option, and registration extensions
+   - Implement Module, Option, required BuilderExtensions, and any optional RegistrationExtensions
    - Add to solution
 
 2. **Define interfaces and models**

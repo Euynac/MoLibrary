@@ -12,8 +12,8 @@ Invoke when:
 - Writing Facade methods with `Res` or `Res<T>` return types
 - Uncertain about Res implicit conversions or IsFailed pattern
 - Determining whether code belongs in Facades (Res<T>) or internal Services (exceptions)
-- Creating modules (Module{Name}, Option, Guide, BuilderExtensions)
-- Configuring module registration or dependencies
+- Creating modules (`Module{Name}`, options, builder extensions, registration extensions)
+- Configuring module registration, dependencies, type discovery, startup work, or diagnostics
 - Implementing hosted services (MoBackgroundService, RecordState)
 - Structuring module folders (Abstractions, Models, Facades, Services, Providers)
 
@@ -79,9 +79,9 @@ their own `CLAUDE.md` files and local documentation conventions.
 
 - All code annotations (comments, XML doc comments, `<summary>`, `<param>`, `<returns>`, etc.) must be written in English.
 - Add necessary developer-facing documentation, not just code that compiles.
-- Public and developer-facing types must have appropriate XML doc comments, especially `Abstractions/`, public `Models/`, `Annotations/`, module `Option` classes, module `Guide` classes, and builder extension methods.
+- Public and developer-facing types must have appropriate XML doc comments, especially `Abstractions/`, public `Models/`, `Annotations/`, module `Option` classes, and builder or registration extension methods.
 - `Option` properties must explain purpose, effect, important defaults, and when a developer should configure them.
-- `Guide` methods and builder extensions must explain what they register or enable, required prerequisites, and notable side effects or usage constraints.
+- Registration extensions and builder extensions must explain what they register or enable, required prerequisites, and notable side effects or usage constraints.
 - Public abstractions must explain the contract clearly, including intended usage, lifecycle/ownership expectations, nullability semantics, and exception/timeout behavior when relevant.
 - Internal code should also include brief comments for non-obvious logic, especially complex branching, concurrency, normalization rules, caching, retries, or cross-module coordination.
 - Do not add comments for obvious code; comments must provide real developer guidance.

@@ -19,7 +19,7 @@ DataChannel 用一条双向 pipeline 连接应用内侧与外部通信端点，�
 builder.AddMonica(...)
         │
         ▼
-ModuleDataChannelGuide.UseSetup<TSetup>()
+AddDataChannel().UseSetup<TSetup>()
         │
         ▼
 IDataChannelSetup.Setup(IDataChannelRegistrar)
@@ -104,7 +104,7 @@ transform middleware 按注册顺序执行。任何 middleware 或 endpoint 异�
 ## 4. 宿主生命周期
 
 1. `builder.AddMonica(...)` 记录 `AddDataChannel().UseSetup<TSetup>()`。
-2. Monica 验证 required Guide key；缺少 `UseSetup<TSetup>()` 时启动失败。
+2. Monica 验证 `ModuleDataChannel` 声明的 `channel-setup` 必需能力；缺少 `UseSetup<TSetup>()` 时启动失败。
 3. `app.UseMonica()` 调用 setup，并把注册声明 materialize 为 `DataChannel`。
 4. `app.MapMonica()` 映射 provider 与模块贡献的 endpoint。
 5. `DataChannelInitializerService` 使用 `InitThreadCount` 限制并行度并初始化 endpoint。

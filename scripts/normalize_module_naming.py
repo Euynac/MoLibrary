@@ -54,15 +54,15 @@ def extract_module_name_from_stem(stem: str) -> tuple[Optional[str], str]:
     """
     Extract module name from file stem.
     Returns (module_name, suffix_type) where suffix_type is one of:
-    'BuilderExtensions', 'Guide', 'Option', 'Module', or 'Unknown'
+    'BuilderExtensions', 'RegistrationExtensions', 'Option', 'Module', or 'Unknown'
     """
     if stem.startswith('Module'):
         rest = stem[6:]  # Remove 'Module' prefix
 
         if rest.endswith('BuilderExtensions'):
             return rest[:-17], 'BuilderExtensions'
-        elif rest.endswith('Guide'):
-            return rest[:-5], 'Guide'
+        elif rest.endswith('RegistrationExtensions'):
+            return rest.removesuffix('RegistrationExtensions'), 'RegistrationExtensions'
         elif rest.endswith('Option'):
             return rest[:-6], 'Option'
         else:
@@ -74,15 +74,15 @@ def extract_module_name_from_stem(stem: str) -> tuple[Optional[str], str]:
 def extract_module_name_from_content(content: str) -> Optional[str]:
     """
     Extract module name by scanning file content for class definitions.
-    Looks for patterns like 'class Module{Name}' or 'class Module{Name}Guide'.
+    Looks for patterns like 'class Module{Name}' or 'class Module{Name}RegistrationExtensions'.
     """
     # Match class definitions with Module prefix
-    pattern = r'(?:public|internal)\s+(?:static\s+)?(?:sealed\s+)?(?:abstract\s+)?(?:partial\s+)?class\s+Module(\w+?)(?:BuilderExtensions|Guide|Option)?\s*[:({\n]'
+    pattern = r'(?:public|internal)\s+(?:static\s+)?(?:sealed\s+)?(?:abstract\s+)?(?:partial\s+)?class\s+Module(\w+?)(?:BuilderExtensions|RegistrationExtensions|Option)?\s*[:({\n]'
     match = re.search(pattern, content)
     if match:
         name = match.group(1)
         # Clean up - remove trailing suffixes if captured
-        for suffix in ['BuilderExtensions', 'Guide', 'Option']:
+        for suffix in ['BuilderExtensions', 'RegistrationExtensions', 'Option']:
             if name.endswith(suffix):
                 name = name[:-len(suffix)]
         return name
@@ -231,15 +231,15 @@ def sort_usings(usings: set[str]) -> list[str]:
 
 def classify_type_definition(type_def: str, module_name: str) -> str:
     """
-    Classify a type definition into one of: 'BuilderExtensions', 'Module', 'Guide', 'Option', 'Auxiliary'
+    Classify a type definition into one of: 'BuilderExtensions', 'RegistrationExtensions', 'Module', 'Option', 'Auxiliary'
     """
     # Check for specific class names
     if f'class Module{module_name}BuilderExtensions' in type_def:
         return 'BuilderExtensions'
     if f'static class Module{module_name}BuilderExtensions' in type_def:
         return 'BuilderExtensions'
-    if re.search(rf'class\s+Module{module_name}Guide\s*[:(]', type_def):
-        return 'Guide'
+    if re.search(rf'class\s+Module{module_name}RegistrationExtensions\s*[:({{]', type_def):
+        return 'RegistrationExtensions'
     if re.search(rf'class\s+Module{module_name}Option\s*[:(]', type_def):
         return 'Option'
     if re.search(rf'class\s+Module{module_name}\s*[:(]', type_def):
@@ -251,14 +251,14 @@ def classify_type_definition(type_def: str, module_name: str) -> str:
 def merge_module_files(files: list[Path], module_name: str) -> str:
     """
     Merge multiple module files into a single file.
-    Order: BuilderExtensions -> Module -> Guide -> Option -> Auxiliary
+    Order: BuilderExtensions -> Module -> RegistrationExtensions -> Option -> Auxiliary
     """
     all_usings = set()
     namespace = None
     categorized_types: dict[str, list[str]] = {
         'BuilderExtensions': [],
         'Module': [],
-        'Guide': [],
+        'RegistrationExtensions': [],
         'Option': [],
         'Auxiliary': []
     }
@@ -286,7 +286,7 @@ def merge_module_files(files: list[Path], module_name: str) -> str:
     result_lines.append('')
 
     # Add types in order
-    order = ['BuilderExtensions', 'Module', 'Guide', 'Option', 'Auxiliary']
+    order = ['BuilderExtensions', 'Module', 'RegistrationExtensions', 'Option', 'Auxiliary']
     for category in order:
         for type_def in categorized_types[category]:
             result_lines.append(type_def)

@@ -18,20 +18,21 @@
 
 ```csharp
 public static ModuleRegistration<ModuleSignalRUI, ModuleSignalRUIOption> AddSignalRUI(
-    this IMonicaBuilder builder)
+    this IMonicaBuilder builder,
+    Action<ModuleSignalRUIOption>? action = null)
 {
-    var module = builder.AddModule<ModuleSignalRUI, ModuleSignalRUIOption>();
+    var module = builder.AddModule<ModuleSignalRUI, ModuleSignalRUIOption>(action);
     module.Require<ModuleLocalization, ModuleLocalizationOption>()
         .AddResource<SignalRResource>();
 
     module.Require<ModuleShellUI, ModuleShellUIOption>()
-        .RegisterUIComponents(registry => registry.RegisterLocalizedPage<SignalRDebug, SignalRResource>(
-            "debug",
-            "Navigation:Title",
-            Icons.Material.Filled.ManageAccounts,
+        .RegisterUIComponents(registry => registry.RegisterLocalizedPage<UISignalRDebugPage, SignalRResource>(
+            UISignalRDebugPage.PAGE_URL,
+            "Pages:SignalRDebug:Title",
+            Icons.Material.Filled.Settings,
             BuiltInNavigationCategoryIds.Debug,
             addToNav: true,
-            navOrder: 100));
+            navOrder: 20));
     return module;
 }
 ```
@@ -47,28 +48,21 @@ public static ModuleRegistration<ModuleSignalRUI, ModuleSignalRUIOption> AddSign
 4. **服务注入**：在组件中通过依赖注入获取所需的服务
 5. **错误处理**：在组件中实现适当的错误处理和用户反馈
 
-## 静态资源配置
+## 静态资源生命周期
 
-### Razor类库静态资源访问
+### Razor 类库静态资源访问
 
-由于本项目是Razor类库，静态资源访问需要特殊配置：
+宿主不需要手工调用 `UseStaticWebAssets()` 或 `UseStaticFiles()`。在 `AddMonica(...)` 中注册 `monica.AddUIShell()` 或任意依赖 Shell 的 Monica UI 模块，然后执行完整 Web 生命周期：
 
-#### 项目配置 (Monica.UI.csproj)
-```xml
-<PropertyGroup>
-  <!-- 启用静态Web资源支持 -->
-  <StaticWebAssetProjectMode>Default</StaticWebAssetProjectMode>
-  <!-- 确保生成静态Web资源清单 -->
-  <GenerateStaticWebAssetsManifest>true</GenerateStaticWebAssetsManifest>
-</PropertyGroup>
+```csharp
+builder.AddMonica(monica => monica.AddUIShell());
+
+var app = builder.Build();
+app.UseMonica();
+app.MapMonica();
 ```
 
-#### 在Web应用程序中的配置
-```cs
-// 在Program.cs或Startup.cs中
-builder.WebHost.UseStaticWebAssets();
-app.UseStaticFiles();
-```
+`ModuleShellUI` 会在非 Production 环境的 builder 阶段加载 Razor 类库静态资源，并在 `app.UseMonica()` 阶段通过 `MapStaticAssets()` 映射资源端点。
 
 #### 静态资源访问路径
 - **wwwroot文件夹中的资源**：`/_content/Monica.UI/[相对路径]`

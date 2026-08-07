@@ -133,6 +133,25 @@ test('application architecture is inferred only from characteristic project stru
   assert.deepEqual(detectRepository(modularMonolith).capabilities, ['microservice', 'modular-monolith']);
 });
 
+test('current module declarations are detected as extension characteristics', (t) => {
+  const repository = temporaryDirectory(t);
+  write(
+    path.join(repository, 'Acme.Monica.Example.csproj'),
+    '<Project><ItemGroup><PackageReference Include="Monica.Core" Version="1.2.3" /></ItemGroup></Project>\n',
+  );
+  write(
+    path.join(repository, 'Modules', 'ModuleExample.cs'),
+    'public sealed class ModuleExample : MonicaModule<ModuleExampleOption> { }\n'
+      + 'public static ModuleRegistration<ModuleExample, ModuleExampleOption> AddExample(IMonicaBuilder builder) => default!;\n',
+  );
+
+  const detection = detectRepository(repository);
+  assert.equal(detection.characteristics.extension, true);
+  assert.equal(detection.characteristics.application, true);
+  assert.equal(detection.candidateProfile, null);
+  assert.equal(detection.confidence, 'ambiguous');
+});
+
 test('characteristic-only docs inference requires both locales and the exact frontend path', (t) => {
   const repository = temporaryDirectory(t);
   fs.mkdirSync(path.join(repository, 'docs', 'en-US'), { recursive: true });

@@ -45,11 +45,11 @@ A Blazor component that parses and displays .NET stack traces with rich formatti
 
 ## Services
 
-### StackTraceParserService
+### StackTraceParser
 
 Parses raw .NET exception stack traces into structured data.
 
-**Location**: `Monica.UI/UIStackTrace/Services/StackTraceParserService.cs`
+**Location**: `Monica.UI/UIStackTrace/Support/StackTraceParser.cs`
 
 **Registration**: Automatically registered as Singleton in the DIContainer
 
@@ -228,8 +228,9 @@ To override component styles in your application, use CSS isolation in your pare
 
 ```razor
 @using Monica.UI.UIStackTrace.Components
+@using Monica.UI.UIStackTrace.Support
 
-@inject StackTraceParserService ParserService
+@inject StackTraceParser ParserService
 
 @if (ParserService.IsLikelyStackTrace(message))
 {
@@ -275,9 +276,9 @@ else
 
 ## Dependencies
 
-- **Monica.UI** (UICore module)
+- **Monica.UI** (`ModuleStackTraceUI`)
 - **MudBlazor**: For theme variables and responsive design
-- **.NET 8.0 or higher**
+- **.NET 10**
 
 ## License
 

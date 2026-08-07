@@ -19,10 +19,7 @@ TaskProgress 模块提供了一个完整的进度条管理系统，支持状态�
 ```csharp
 builder.AddMonica(monica =>
 {
-    monica.AddTaskProgress(options =>
-    {
-        options.UseDistributedStateStore = true;
-    });
+    monica.AddTaskProgress();
 });
 ```
 
@@ -390,24 +387,28 @@ public class DataMigrationStatus : TaskProgressStatus
 3. **TTL支持**: 过期任务自动从存储中清理
 4. **异常优化**: 统一的异常处理减少重复代码
 
-## 配置选项
+## 分布式配置
 
 ```csharp
 builder.AddMonica(monica =>
 {
-    monica.AddTaskProgress(options =>
-    {
-        options.UseDistributedStateStore = true;
-    });
+    monica.AddStateStore()
+        .UseRedisStateStoreProvider(options =>
+            options.UseNormalConnection("localhost", 6379));
+
+    monica.AddTaskProgress()
+        .UseDistributedState();
 });
 ```
+
+此示例需要引用 `Monica.StateStore.StackExchange`。也可以选择 Dapr 或实现 `IDistributedStateStore` 的自定义 provider，但必须在调用 `UseDistributedState()` 的同一个组合边界中显式选择一个分布式 provider。
 
 ## 依赖模块
 
 - **StateStore**: 用于状态持久化
 - **CancellationManager**: 用于分布式取消令牌管理
 
-这些依赖模块会自动注册和配置。
+这两个依赖模块会自动包含；分布式 provider 不会被框架擅自选择。启用 `UseDistributedState()` 却未选择 provider 时，模块系统会以缺少 `distributed-provider` 能力拒绝启动。
 
 ## 跨微服务状态检查
 

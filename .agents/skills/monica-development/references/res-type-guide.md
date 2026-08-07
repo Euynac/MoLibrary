@@ -2,15 +2,15 @@
 
 This guide documents Monica's lightweight result-envelope model built around `Res` and `Res<T>`.
 
-**Source location**: `Monica.Tool/Results/Res.cs`
+**Source location**: `Monica.Core/Results/Models/Res.cs`
 
 **Related types**: `IResultEnvelope`, `ResStatus`, `ResPaged<T>`, `ResExtensions`
 
 ## Scope
 
-**`Res`/`Res<T>` is only for UI module-related services** — services directly consumed by Blazor components or UI layers where the `IsFailed` pattern is used for error handling in the view.
+Use `Res`/`Res<T>` for public Facades and other deliberate host/UI result-envelope boundaries where callers consume the `IsFailed` pattern.
 
-**Non-UI / infrastructure modules** must use standard .NET patterns: direct return types and throw exceptions (e.g., `KeyNotFoundException`, `FileNotFoundException`, `InvalidOperationException`) for error cases. Do not use `Res` in these modules.
+Internal infrastructure services use standard .NET patterns: direct return types and exceptions such as `KeyNotFoundException`, `FileNotFoundException`, or `InvalidOperationException`. Do not propagate `Res` through internal service layers merely for uniformity.
 
 ## Overview
 
@@ -219,11 +219,11 @@ public class UserUIService(
 
 ### Important Rules
 
-1. **Only use in UI-facing services** — infrastructure modules use standard returns + exceptions
+1. **Use at intentional result-envelope boundaries** — Facades return `Res`; internal services use standard returns + exceptions
 2. **Never return null** - Always return `Res.Fail()` or `Res.Ok()`
 3. **Catch exceptions** - Return `Res.Fail()` with meaningful error messages
 4. **Use implicit conversions** - Makes code cleaner and more readable
-5. **Include using statement** - `using Monica.Tool.Results;`
+5. **Include using statement** - `using Monica.Core.Results;`
 6. **Attach structured error payloads** - use `AppendMetadata("error", payload)` when extra error detail is needed
 
 ## API Response Integration
