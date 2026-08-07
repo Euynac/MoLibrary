@@ -4,6 +4,7 @@ using Monica.Configuration.Abstractions;
 using Monica.Configuration.EfCore.DbContext;
 using Monica.Configuration.EfCore.Stores;
 using Monica.Configuration.Models;
+using Monica.Core.Modularity.Abstractions;
 using Monica.DependencyInjection.Abstractions;
 using Monica.DependencyInjection.Services;
 using Monica.Modules;
@@ -14,37 +15,58 @@ using Monica.Repository.Persistence.Services.Support;
 namespace Monica.Configuration.Bootstrap;
 
 /// <summary>
-/// Configures EF Core persistence for startup effective-options readers.
+/// Provides EF Core Configuration input-plan declarations.
 /// </summary>
-public static class MonicaEffectiveOptionsReaderConfigurationExtensions
+public static class MonicaConfigurationInputPlanEfCoreBuilderExtensions
 {
     /// <summary>
-    /// Uses the Monica.Configuration EF Core store for a caller-owned startup reader.
+    /// Selects the EF Core store bundle for both startup effective-options loading and runtime configuration.
     /// </summary>
-    /// <param name="configuration">The startup reader configuration.</param>
-    /// <param name="configureDbContext">Configures the database provider and connection used by the reader.</param>
-    /// <returns>The same reader configuration.</returns>
+    /// <param name="builder">The input-plan declaration builder.</param>
+    /// <param name="configureDbContext">Configures the shared database provider and connection.</param>
+    /// <returns>The same declaration builder.</returns>
     /// <remarks>
-    /// The reader owns an isolated service provider and disposes it with the reader. Use the same DbContext callback
-    /// for this configuration and <see cref="ModuleConfigurationEfCoreBuilderExtensions.UseDbConfigurationStore"/>
-    /// so startup reads and the runtime Configuration module target the same store.
+    /// The callback may be invoked independently for startup and runtime contexts. It must be deterministic and
+    /// side-effect-free; captured values must be initialized before the first store operation and remain stable across
+    /// both phases. Startup loading runs in an isolated service provider. The host must apply
+    /// <see cref="ConfigurationDbContext"/> migrations before startup loading; this declaration never creates or upgrades
+    /// database tables.
     /// </remarks>
-    public static MonicaEffectiveOptionsReaderConfiguration UseDbConfigurationStore(
-        this MonicaEffectiveOptionsReaderConfiguration configuration,
-        Action<IServiceProvider, DbContextOptionsBuilder> configureDbContext)
+    public static MonicaConfigurationInputPlanBuilder UseDbConfigurationStore(
+        this MonicaConfigurationInputPlanBuilder builder,
+        Action<DbContextOptionsBuilder> configureDbContext)
     {
-        ArgumentNullException.ThrowIfNull(configuration);
+        ArgumentNullException.ThrowIfNull(builder);
         ArgumentNullException.ThrowIfNull(configureDbContext);
 
-        return configuration.UseEffectiveValueStore(
-            () => DatabaseEffectiveOptionsReaderStoreFactory.Create(configureDbContext));
+        return builder.UseConfigurationStore(
+            new DatabaseConfigurationStoreComposition(configureDbContext));
+    }
+
+    private sealed class DatabaseConfigurationStoreComposition(
+        Action<DbContextOptionsBuilder> configureDbContext)
+        : IMonicaConfigurationStoreComposition
+    {
+        public string Name => "EF Core";
+
+        public void ConfigureRuntime(
+            ModuleRegistration<ModuleConfiguration, ModuleConfigurationOption> module)
+        {
+            module.Include<ModuleConfigurationEfCore, ModuleConfigurationEfCoreOption>()
+                .UseDbContext((_, options) => configureDbContext(options));
+        }
+
+        public IConfigurationEffectiveValueStore CreateStartupStore()
+        {
+            return DatabaseEffectiveOptionsSnapshotStoreFactory.Create(configureDbContext);
+        }
     }
 }
 
-internal static class DatabaseEffectiveOptionsReaderStoreFactory
+internal static class DatabaseEffectiveOptionsSnapshotStoreFactory
 {
     public static IConfigurationEffectiveValueStore Create(
-        Action<IServiceProvider, DbContextOptionsBuilder> configureDbContext)
+        Action<DbContextOptionsBuilder> configureDbContext)
     {
         var services = new ServiceCollection();
         services.AddLogging();
@@ -56,12 +78,20 @@ internal static class DatabaseEffectiveOptionsReaderStoreFactory
             typeof(IDbContextOperation<ConfigurationDbContext>),
             typeof(ScopedDbContextOperation<ConfigurationDbContext>));
         services.AddDbContext<ConfigurationDbContext>(configureDbContext);
-        ModuleConfigurationEfCoreBuilderExtensions.AddDatabaseConfigurationStores(services);
+        ModuleConfigurationEfCore.AddDatabaseConfigurationStores(services);
 
         var serviceProvider = services.BuildServiceProvider();
-        return new OwnedConfigurationEffectiveValueStore(
-            serviceProvider,
-            serviceProvider.GetRequiredService<DatabaseConfigurationEffectiveValueStore>());
+        try
+        {
+            return new OwnedConfigurationEffectiveValueStore(
+                serviceProvider,
+                serviceProvider.GetRequiredService<DatabaseConfigurationEffectiveValueStore>());
+        }
+        catch
+        {
+            serviceProvider.Dispose();
+            throw;
+        }
     }
 
     private sealed class OwnedConfigurationEffectiveValueStore(

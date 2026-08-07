@@ -1,9 +1,13 @@
+using Monica.Configuration.Bootstrap;
 using Monica.Core.Modularity.Extensions;
 using Monica.Modules;
 
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddHealthChecks();
+
+var configurationInputPlan = MonicaConfigurationInputPlan.Create(inputs => inputs
+    .UseFileConfigurationStore());
 
 builder.AddMonica(monica =>
 {
@@ -24,8 +28,7 @@ builder.AddMonica(monica =>
     monica.ConfigureTypeDiscovery(options =>
         options.Add("Domains.Ordering", "Platform.Protocol"));
 
-    monica.AddConfiguration()
-        .UseFileConfigurationStore();
+    monica.AddConfiguration(configurationInputPlan);
     monica.AddEventBus()
         .UseNoOpDistributedEventBus();
     monica.AddResultEnvelope();

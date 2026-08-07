@@ -55,4 +55,31 @@ public sealed record ManagedJsonConfigurationSourceRegistration
     /// Gets whether this source can be modified from the configuration UI.
     /// </summary>
     public bool IsWritable { get; init; }
+
+    internal static ManagedJsonConfigurationSourceRegistration Create(
+        string path,
+        bool optional,
+        bool reloadOnChange,
+        Action<ManagedJsonConfigurationSourceOptions>? configure)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(path);
+
+        var options = new ManagedJsonConfigurationSourceOptions
+        {
+            DisplayName = System.IO.Path.GetFileName(path)
+        };
+        configure?.Invoke(options);
+
+        return new ManagedJsonConfigurationSourceRegistration
+        {
+            Path = path,
+            Optional = optional,
+            ReloadOnChange = reloadOnChange,
+            DisplayName = string.IsNullOrWhiteSpace(options.DisplayName)
+                ? System.IO.Path.GetFileName(path)
+                : options.DisplayName,
+            Description = options.Description,
+            IsWritable = options.IsWritable
+        };
+    }
 }

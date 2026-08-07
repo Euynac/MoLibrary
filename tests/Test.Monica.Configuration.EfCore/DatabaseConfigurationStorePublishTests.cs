@@ -5,6 +5,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
 using Monica.Configuration.Abstractions;
+using Monica.Configuration.Bootstrap;
 using Monica.Configuration.EfCore.DbContext;
 using Monica.Configuration.EfCore.Stores;
 using Monica.Configuration.Exceptions;
@@ -297,11 +298,8 @@ public sealed partial class DatabaseConfigurationStorePublishTests
         string databasePath,
         IInterceptor? interceptor = null)
     {
-        var builder = Host.CreateApplicationBuilder();
-        builder.AddMonica(monica =>
-        {
-            monica.ConfigureTypeDiscovery(static options => options.ExcludeDefault());
-            monica.AddConfiguration().UseDbConfigurationStore((_, options) =>
+        var inputPlan = MonicaConfigurationInputPlan.Create(inputs => inputs
+            .UseDbConfigurationStore(options =>
             {
                 ConfigurationStoreTestContextFactory.ConfigureOptions(
                     options,
@@ -310,7 +308,12 @@ public sealed partial class DatabaseConfigurationStorePublishTests
                 {
                     options.AddInterceptors(interceptor);
                 }
-            });
+            }));
+        var builder = Host.CreateApplicationBuilder();
+        builder.AddMonica(monica =>
+        {
+            monica.ConfigureTypeDiscovery(static options => options.ExcludeDefault());
+            monica.AddConfiguration(inputPlan);
         });
         builder.Services.AddScoped<ICachedServiceProvider, CachedServiceProvider>();
         builder.Services.Replace(ServiceDescriptor.Singleton<IAuditPropertySetter, NoOpAuditPropertySetter>());

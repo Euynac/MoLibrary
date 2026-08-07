@@ -78,9 +78,12 @@ public sealed record CommandCreateOrder(
 
 ## Host-bound module graph
 
-The AppHost records its runtime capabilities in one `AddMonica` callback:
+The AppHost declares its Configuration inputs once, then records its runtime capabilities in one `AddMonica` callback. The immutable plan keeps the selected store, source order, and section-path convention consistent wherever startup configuration and runtime composition need them:
 
 ```csharp
+var configurationInputPlan = MonicaConfigurationInputPlan.Create(inputs => inputs
+    .UseFileConfigurationStore());
+
 builder.AddMonica(monica =>
 {
     monica.ConfigureApplication(options =>
@@ -98,8 +101,7 @@ builder.AddMonica(monica =>
     monica.ConfigureTypeDiscovery(options =>
         options.Add("Domains.Ordering", "Platform.Protocol"));
 
-    monica.AddConfiguration()
-        .UseFileConfigurationStore();
+    monica.AddConfiguration(configurationInputPlan);
     monica.AddEventBus()
         .UseNoOpDistributedEventBus();
     monica.AddResultEnvelope();

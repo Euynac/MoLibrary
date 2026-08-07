@@ -21,30 +21,21 @@ using Monica.Repository.Persistence.Services.Support;
 namespace Monica.Modules;
 
 /// <summary>
-/// Builder extensions for EF Core persistence in Monica.Configuration.
+/// EF Core module for Monica.Configuration.
 /// </summary>
-public static class ModuleConfigurationEfCoreBuilderExtensions
+public sealed class ModuleConfigurationEfCore : MonicaModule<ModuleConfigurationEfCoreOption>
 {
-    /// <summary>
-    /// Registers EF Core as the Monica.Configuration distributed store bundle.
-    /// </summary>
-    /// <remarks>
-    /// The host must apply its <see cref="ConfigurationDbContext"/> migrations before the configuration provider is
-    /// activated. Registration never creates or upgrades database tables.
-    /// </remarks>
-    /// <param name="module">The Configuration registration that will include EF Core persistence.</param>
-    /// <param name="optionsAction">DbContext configuration.</param>
-    /// <returns>The Configuration module registration.</returns>
-    public static ModuleRegistration<ModuleConfiguration, ModuleConfigurationOption> UseDbConfigurationStore(
-        this ModuleRegistration<ModuleConfiguration, ModuleConfigurationOption> module,
-        Action<IServiceProvider, DbContextOptionsBuilder> optionsAction)
+    /// <inheritdoc />
+    public override void Describe(ModuleDescriptor module)
     {
-        ArgumentNullException.ThrowIfNull(module);
-        ArgumentNullException.ThrowIfNull(optionsAction);
+        module.Require<ModuleConfiguration, ModuleConfigurationOption>();
+        module.RequireFeature(nameof(ModuleConfigurationEfCoreRegistrationExtensions.UseDbContext));
+    }
 
-        module.Include<ModuleConfigurationEfCore, ModuleConfigurationEfCoreOption>()
-            .UseDbContext(optionsAction);
-        return module;
+    /// <inheritdoc />
+    public override void ConfigureServices(ModuleContext<ModuleConfigurationEfCoreOption> context)
+    {
+        AddDatabaseConfigurationStores(context.Services);
     }
 
     internal static void AddDatabaseConfigurationStores(IServiceCollection services)
@@ -80,27 +71,6 @@ public static class ModuleConfigurationEfCoreBuilderExtensions
             serviceProvider.GetRequiredService<DatabaseConfigurationUnifiedVersionStore>()));
         services.Replace(ServiceDescriptor.Singleton<IConfigurationMutationBatchStore>(serviceProvider =>
             serviceProvider.GetRequiredService<DatabaseConfigurationMutationBatchStore>()));
-    }
-
-}
-
-/// <summary>
-/// EF Core module for Monica.Configuration.
-/// </summary>
-public sealed class ModuleConfigurationEfCore : MonicaModule<ModuleConfigurationEfCoreOption>
-{
-    /// <inheritdoc />
-    public override void Describe(ModuleDescriptor module)
-    {
-        module.Require<ModuleConfiguration, ModuleConfigurationOption>();
-        module.RequireFeature(nameof(ModuleConfigurationEfCoreRegistrationExtensions.UseDbContext));
-    }
-
-    /// <inheritdoc />
-    public override void ConfigureServices(ModuleContext<ModuleConfigurationEfCoreOption> context)
-    {
-        var services = context.Services;
-        ModuleConfigurationEfCoreBuilderExtensions.AddDatabaseConfigurationStores(services);
     }
 }
 

@@ -1,6 +1,5 @@
 using System.Reflection;
 using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Monica.Configuration.Abstractions;
 using Monica.Configuration.Annotations;
@@ -11,31 +10,27 @@ using Monica.Configuration.Services.Support;
 
 namespace Monica.Configuration.Bootstrap;
 
-internal sealed class MonicaEffectiveOptionsReader : IMonicaEffectiveOptionsReader
+internal sealed class MonicaEffectiveOptionsSnapshotLoader : IDisposable, IAsyncDisposable
 {
     private readonly IConfigurationEffectiveValueStore _store;
-    private readonly IConfiguration _bootstrapConfiguration;
+    private readonly IConfiguration _hostConfiguration;
     private readonly string _contentRootPath;
     private readonly IReadOnlyList<ManagedJsonConfigurationSourceRegistration> _managedJsonSources;
-    private readonly IConfigurationRoot _seedConfiguration;
-    private readonly MonicaEffectiveOptionsReaderOptions _options;
+    private readonly MonicaEffectiveOptionsSnapshotOptions _options;
     private readonly ConfigurationDefinitionScanner _definitionScanner;
     private readonly ConfigurationEffectiveValueSeedFactory _seedFactory;
     private readonly ConfigurationEffectiveValueDocumentEditor _documentEditor;
     private readonly ILogger _logger;
-    private readonly Dictionary<Type, object> _loadedOptions = new();
-    private readonly object _cacheLock = new();
     private bool _disposed;
 
-    public MonicaEffectiveOptionsReader(
-        IHostApplicationBuilder hostBuilder,
-        IConfiguration bootstrapConfiguration,
-        MonicaEffectiveOptionsReaderOptions options,
+    public MonicaEffectiveOptionsSnapshotLoader(
+        MonicaBootstrapConfiguration bootstrapConfiguration,
+        ConfigurationSectionPathConvention sectionPathConvention,
+        MonicaEffectiveOptionsSnapshotOptions options,
         IConfigurationEffectiveValueStore store,
         IReadOnlyList<ManagedJsonConfigurationSourceRegistration> managedJsonSources,
         ILogger logger)
     {
-        ArgumentNullException.ThrowIfNull(hostBuilder);
         ArgumentNullException.ThrowIfNull(bootstrapConfiguration);
         ArgumentNullException.ThrowIfNull(options);
         ArgumentNullException.ThrowIfNull(store);
@@ -43,42 +38,29 @@ internal sealed class MonicaEffectiveOptionsReader : IMonicaEffectiveOptionsRead
         ArgumentNullException.ThrowIfNull(logger);
 
         _store = store;
-        _bootstrapConfiguration = bootstrapConfiguration;
-        _contentRootPath = hostBuilder.Environment.ContentRootPath;
+        _hostConfiguration = bootstrapConfiguration.HostConfiguration;
+        _contentRootPath = bootstrapConfiguration.ContentRootPath;
         _managedJsonSources = managedJsonSources.ToArray();
         _options = options;
         _logger = logger;
         _definitionScanner = new ConfigurationDefinitionScanner(
             new ConfigurationSchemaHasher(),
-            options.SectionPathConvention);
+            sectionPathConvention);
 
-        _seedConfiguration = BuildConfiguration(monicaValues: null);
         var runtimeContext = new ConfigurationRuntimeContext();
-        runtimeContext.Capture(_seedConfiguration);
+        runtimeContext.Capture(bootstrapConfiguration);
         _seedFactory = new ConfigurationEffectiveValueSeedFactory(runtimeContext);
         _documentEditor = new ConfigurationEffectiveValueDocumentEditor(
             new ConfigurationEffectiveValuePatchEngine(),
             new ConfigurationStoredValueCodec());
     }
 
-    public TOptions Get<TOptions>()
-        where TOptions : class, new()
+    public MonicaEffectiveOptionsSnapshot Load(IReadOnlyCollection<Type> optionsTypes)
     {
-        return GetMany(typeof(TOptions)).Get<TOptions>();
+        return LoadAsync(optionsTypes, CancellationToken.None).GetAwaiter().GetResult();
     }
 
-    public async Task<TOptions> GetAsync<TOptions>(CancellationToken cancellationToken = default)
-        where TOptions : class, new()
-    {
-        return (await GetManyAsync([typeof(TOptions)], cancellationToken)).Get<TOptions>();
-    }
-
-    public MonicaEffectiveOptionsSnapshot GetMany(params Type[] optionsTypes)
-    {
-        return GetManyAsync(optionsTypes, CancellationToken.None).GetAwaiter().GetResult();
-    }
-
-    public async Task<MonicaEffectiveOptionsSnapshot> GetManyAsync(
+    public async Task<MonicaEffectiveOptionsSnapshot> LoadAsync(
         IReadOnlyCollection<Type> optionsTypes,
         CancellationToken cancellationToken = default)
     {
@@ -86,13 +68,8 @@ internal sealed class MonicaEffectiveOptionsReader : IMonicaEffectiveOptionsRead
         ArgumentNullException.ThrowIfNull(optionsTypes);
 
         var requestedTypes = NormalizeRequestedTypes(optionsTypes);
-        var missingTypes = FindMissingTypes(requestedTypes);
-        if (missingTypes.Count > 0)
-        {
-            await LoadMissingTypesAsync(missingTypes, cancellationToken);
-        }
-
-        return CreateSnapshot(requestedTypes);
+        var loadedOptions = await LoadOptionsAsync(requestedTypes, cancellationToken);
+        return new MonicaEffectiveOptionsSnapshot(loadedOptions);
     }
 
     public void Dispose()
@@ -103,10 +80,13 @@ internal sealed class MonicaEffectiveOptionsReader : IMonicaEffectiveOptionsRead
         }
 
         _disposed = true;
-        (_seedConfiguration as IDisposable)?.Dispose();
         if (_store is IDisposable disposable)
         {
             disposable.Dispose();
+        }
+        else if (_store is IAsyncDisposable asyncDisposable)
+        {
+            asyncDisposable.DisposeAsync().AsTask().GetAwaiter().GetResult();
         }
     }
 
@@ -118,14 +98,11 @@ internal sealed class MonicaEffectiveOptionsReader : IMonicaEffectiveOptionsRead
         }
 
         _disposed = true;
-        (_seedConfiguration as IDisposable)?.Dispose();
         if (_store is IAsyncDisposable asyncDisposable)
         {
             await asyncDisposable.DisposeAsync();
-            return;
         }
-
-        if (_store is IDisposable disposable)
+        else if (_store is IDisposable disposable)
         {
             disposable.Dispose();
         }
@@ -149,19 +126,11 @@ internal sealed class MonicaEffectiveOptionsReader : IMonicaEffectiveOptionsRead
         return result;
     }
 
-    private IReadOnlyList<Type> FindMissingTypes(IReadOnlyList<Type> requestedTypes)
+    private async Task<IReadOnlyDictionary<Type, object>> LoadOptionsAsync(
+        IReadOnlyList<Type> optionsTypes,
+        CancellationToken cancellationToken)
     {
-        lock (_cacheLock)
-        {
-            return requestedTypes
-                .Where(type => !_loadedOptions.ContainsKey(type))
-                .ToArray();
-        }
-    }
-
-    private async Task LoadMissingTypesAsync(IReadOnlyList<Type> missingTypes, CancellationToken cancellationToken)
-    {
-        var definitions = missingTypes
+        var definitions = optionsTypes
             .Select(ScanOptionsType)
             .ToArray();
 
@@ -190,19 +159,16 @@ internal sealed class MonicaEffectiveOptionsReader : IMonicaEffectiveOptionsRead
         var effectiveConfiguration = BuildConfiguration(monicaValues);
         try
         {
-            var loaded = new Dictionary<Type, object>();
+            var loadedOptions = new Dictionary<Type, object>();
             for (var i = 0; i < definitions.Length; i++)
             {
-                loaded[missingTypes[i]] = BindOptions(missingTypes[i], definitions[i], effectiveConfiguration);
+                loadedOptions[optionsTypes[i]] = BindOptions(
+                    optionsTypes[i],
+                    definitions[i],
+                    effectiveConfiguration);
             }
 
-            lock (_cacheLock)
-            {
-                foreach (var (optionsType, options) in loaded)
-                {
-                    _loadedOptions.TryAdd(optionsType, options);
-                }
-            }
+            return loadedOptions;
         }
         finally
         {
@@ -263,7 +229,7 @@ internal sealed class MonicaEffectiveOptionsReader : IMonicaEffectiveOptionsRead
         return values;
     }
 
-    private IConfigurationRoot BuildConfiguration(IReadOnlyDictionary<string, string?>? monicaValues)
+    private IConfigurationRoot BuildConfiguration(IReadOnlyDictionary<string, string?> monicaValues)
     {
         var builder = new ConfigurationBuilder();
         if (!string.IsNullOrWhiteSpace(_contentRootPath))
@@ -271,11 +237,8 @@ internal sealed class MonicaEffectiveOptionsReader : IMonicaEffectiveOptionsRead
             builder.SetBasePath(_contentRootPath);
         }
 
-        builder.AddConfiguration(_bootstrapConfiguration);
-        if (monicaValues is not null)
-        {
-            builder.AddInMemoryCollection(monicaValues);
-        }
+        builder.AddConfiguration(_hostConfiguration);
+        builder.AddInMemoryCollection(monicaValues);
 
         foreach (var source in _managedJsonSources)
         {
@@ -307,17 +270,4 @@ internal sealed class MonicaEffectiveOptionsReader : IMonicaEffectiveOptionsRead
         }
     }
 
-    private MonicaEffectiveOptionsSnapshot CreateSnapshot(IReadOnlyList<Type> requestedTypes)
-    {
-        var snapshot = new Dictionary<Type, object>();
-        lock (_cacheLock)
-        {
-            foreach (var optionsType in requestedTypes)
-            {
-                snapshot[optionsType] = _loadedOptions[optionsType];
-            }
-        }
-
-        return new MonicaEffectiveOptionsSnapshot(snapshot);
-    }
 }

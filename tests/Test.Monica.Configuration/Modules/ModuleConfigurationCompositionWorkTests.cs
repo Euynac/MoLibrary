@@ -8,7 +8,9 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
 using Monica.Configuration.Abstractions;
 using Monica.Configuration.Annotations;
+using Monica.Configuration.Bootstrap;
 using Monica.Configuration.Models;
+using Monica.Configuration.Services.Support;
 using Monica.Core.Modularity.Abstractions;
 using Monica.Core.Modularity.Exceptions;
 using Monica.Core.Modularity.Extensions;
@@ -20,27 +22,81 @@ namespace Test.Monica.Configuration.Modules;
 public sealed class ModuleConfigurationCompositionWorkTests
 {
     [Fact]
-    public void Composition_WhenManagedJsonSourceIsRegistered_ShouldPlaceItAfterEffectiveValues()
+    public void Composition_WhenInputPlanIsApplied_ShouldPlaceManagedJsonSourcesAfterEffectiveValuesInDeclarationOrder()
     {
-        var path = $"managed-{Guid.NewGuid():N}.json";
+        var firstPath = $"global-{Guid.NewGuid():N}.json";
+        var secondPath = $"app-{Guid.NewGuid():N}.json";
+        var inputPlan = MonicaConfigurationInputPlan.Create(inputs => inputs
+            .UseFileConfigurationStore(options =>
+                options.RootDirectory = Path.Combine(Path.GetTempPath(), $"monica-input-plan-{Guid.NewGuid():N}"))
+            .AddManagedJsonFile(firstPath, optional: true, reloadOnChange: false)
+            .AddManagedJsonFile(secondPath, optional: true, reloadOnChange: false));
         var builder = Host.CreateApplicationBuilder();
 
         builder.AddMonica(monica =>
         {
             monica.ConfigureTypeDiscovery(static options => options.ExcludeDefault());
-            monica.AddConfiguration()
-                .AddManagedJsonFile(path, optional: true, reloadOnChange: false);
+            monica.AddConfiguration(inputPlan);
         });
 
         var providers = ((IConfigurationRoot)builder.Configuration).Providers.ToList();
         var effectiveValueProviderIndex = providers.FindIndex(static provider =>
             provider.GetType().Name == "MonicaConfigurationProvider");
-        var managedJsonProviderIndex = providers.FindIndex(provider =>
+        var firstManagedJsonProviderIndex = providers.FindIndex(provider =>
             provider is JsonConfigurationProvider jsonProvider
-            && string.Equals(jsonProvider.Source.Path, path, StringComparison.Ordinal));
+            && string.Equals(jsonProvider.Source.Path, firstPath, StringComparison.Ordinal));
+        var secondManagedJsonProviderIndex = providers.FindIndex(provider =>
+            provider is JsonConfigurationProvider jsonProvider
+            && string.Equals(jsonProvider.Source.Path, secondPath, StringComparison.Ordinal));
+        var managedSources = ManagedJsonConfigurationSourceRegistry.Get(builder.Configuration);
 
         effectiveValueProviderIndex.Should().BeGreaterThanOrEqualTo(0);
-        managedJsonProviderIndex.Should().BeGreaterThan(effectiveValueProviderIndex);
+        firstManagedJsonProviderIndex.Should().BeGreaterThan(effectiveValueProviderIndex);
+        secondManagedJsonProviderIndex.Should().BeGreaterThan(firstManagedJsonProviderIndex);
+        managedSources.Select(static source => source.Path).Should().Equal(firstPath, secondPath);
+    }
+
+    [Fact]
+    public void Composition_WhenModuleOptionsOverrideInputPlanConvention_ShouldRejectConflict()
+    {
+        var inputPlan = MonicaConfigurationInputPlan.Create(inputs => inputs
+            .UseFileConfigurationStore(options =>
+                options.RootDirectory = Path.Combine(Path.GetTempPath(), $"monica-input-plan-{Guid.NewGuid():N}"))
+            .UseSectionPathConvention(ConfigurationSectionPathConvention.ClrFullName));
+        var builder = Host.CreateApplicationBuilder();
+
+        Action compose = () => builder.AddMonica(monica =>
+        {
+            monica.ConfigureTypeDiscovery(static options => options.ExcludeDefault());
+            monica.AddConfiguration(
+                inputPlan,
+                options => options.DefaultSectionPathConvention = ConfigurationSectionPathConvention.ShortTypeName);
+        });
+
+        compose.Should().Throw<Exception>()
+            .WithInnerException<InvalidOperationException>()
+            .WithMessage("*must remain*ClrFullName*");
+    }
+
+    [Fact]
+    public void Composition_WhenTwoInputPlansAreApplied_ShouldRejectAmbiguousRuntimeTopology()
+    {
+        var firstPlan = MonicaConfigurationInputPlan.Create(inputs => inputs
+            .UseFileConfigurationStore());
+        var secondPlan = MonicaConfigurationInputPlan.Create(inputs => inputs
+            .UseFileConfigurationStore());
+        var builder = Host.CreateApplicationBuilder();
+
+        Action compose = () => builder.AddMonica(monica =>
+        {
+            monica.ConfigureTypeDiscovery(static options => options.ExcludeDefault());
+            monica.AddConfiguration(firstPlan);
+            monica.AddConfiguration(secondPlan);
+        });
+
+        compose.Should().Throw<Exception>()
+            .WithInnerException<InvalidOperationException>()
+            .WithMessage("*Only one*input plan*");
     }
 
     [Fact]

@@ -1,12 +1,10 @@
 using System.Reflection;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.Configuration.Json;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Monica.Configuration.Annotations;
 using Monica.Configuration.Abstractions;
@@ -20,7 +18,6 @@ using Monica.Configuration.Models;
 using Monica.Configuration.Projection;
 using Monica.Configuration.Services;
 using Monica.Configuration.Services.Support;
-using Monica.Configuration.Stores.File;
 using Monica.Core;
 using Monica.Core.Modularity;
 using Monica.Core.Modularity.Abstractions;
@@ -45,6 +42,41 @@ public static class ModuleConfigurationBuilderExtensions
         public ModuleRegistration<ModuleConfiguration, ModuleConfigurationOption> AddConfiguration(Action<ModuleConfigurationOption>? action = null)
         {
             return builder.AddModule<ModuleConfiguration, ModuleConfigurationOption>(action);
+        }
+
+        /// <summary>
+        /// Registers the schema-first Monica configuration module from one immutable input plan.
+        /// </summary>
+        /// <param name="inputPlan">
+        /// The store, section-path convention, and ordered managed JSON sources shared by startup and runtime.
+        /// </param>
+        /// <param name="action">Optional remaining module option configuration.</param>
+        /// <returns>The host-bound configuration module registration.</returns>
+        /// <remarks>
+        /// Applying the plan records runtime composition only; it does not create a store or perform I/O. The plan's
+        /// section-path convention is authoritative and conflicting option configuration fails during finalization.
+        /// </remarks>
+        public ModuleRegistration<ModuleConfiguration, ModuleConfigurationOption> AddConfiguration(
+            MonicaConfigurationInputPlan inputPlan,
+            Action<ModuleConfigurationOption>? action = null)
+        {
+            ArgumentNullException.ThrowIfNull(inputPlan);
+
+            var registration = builder.AddModule<ModuleConfiguration, ModuleConfigurationOption>(options =>
+            {
+                if (options.InputPlanApplied)
+                {
+                    throw new InvalidOperationException(
+                        "Only one Monica Configuration input plan can be applied to a host.");
+                }
+
+                options.InputPlanApplied = true;
+                options.InputPlanSectionPathConvention = inputPlan.SectionPathConvention;
+                options.DefaultSectionPathConvention = inputPlan.SectionPathConvention;
+                action?.Invoke(options);
+            });
+            inputPlan.ConfigureRuntime(registration);
+            return registration;
         }
     }
 }
@@ -71,6 +103,17 @@ public sealed class ModuleConfiguration : MonicaModule<ModuleConfigurationOption
     private readonly MonicaConfigurationProviderAccessor _providerAccessor = new();
     private ConfigurationDefinitionAnalysis _definitionAnalysis = ConfigurationDefinitionAnalysis.Empty;
     private IServiceCollection? _services;
+
+    /// <inheritdoc />
+    public override void ValidateOptions(ModuleConfigurationOption options, string? profileName)
+    {
+        if (options.InputPlanSectionPathConvention is { } inputPlanConvention
+            && options.DefaultSectionPathConvention != inputPlanConvention)
+        {
+            throw new InvalidOperationException(
+                $"{nameof(ModuleConfigurationOption.DefaultSectionPathConvention)} must remain '{inputPlanConvention}' because the Configuration input plan uses that convention for startup loading.");
+        }
+    }
 
     /// <inheritdoc />
     public override void ConfigureBuilder(ModuleBuilderContext<ModuleConfigurationOption> context)
@@ -357,46 +400,6 @@ public sealed class ModuleConfiguration : MonicaModule<ModuleConfigurationOption
 /// </summary>
 public static class ModuleConfigurationRegistrationExtensions
 {
-    private const ModuleRegistrationOrder MANAGED_JSON_FILE_BUILDER_ORDER = ModuleRegistrationOrder.AfterModule;
-
-    /// <summary>
-    /// Creates a startup options reader from an explicit, caller-owned configuration.
-    /// </summary>
-    /// <param name="module">The Configuration module registration.</param>
-    /// <param name="builder">The host builder whose environment and configuration roots define startup context.</param>
-    /// <param name="readerConfiguration">
-    /// The local store factory and managed JSON source list for this reader. The module never stores this object.
-    /// </param>
-    /// <param name="bootstrapConfiguration">
-    /// Optional bootstrap configuration used as the lowest-priority input. When omitted, <paramref name="builder"/> configuration is used.
-    /// </param>
-    /// <param name="configure">Optional reader configuration.</param>
-    /// <param name="logger">Optional diagnostic logger. A no-op logger is used when omitted.</param>
-    /// <returns>The effective options reader. The caller owns and must dispose the reader.</returns>
-    /// <remarks>
-    /// The reader is intended for module-registration code that runs before the application service provider exists.
-    /// It binds values using the same priority shape as the runtime provider chain: bootstrap configuration, Monica
-    /// effective values, and then the JSON files supplied to <paramref name="readerConfiguration"/>. Inputs are
-    /// explicit because frozen module registration cannot safely expose mutable Guide state before options finalize.
-    /// </remarks>
-    public static IMonicaEffectiveOptionsReader CreateEffectiveOptionsReader(this ModuleRegistration<ModuleConfiguration, ModuleConfigurationOption> module,
-        IHostApplicationBuilder builder,
-        MonicaEffectiveOptionsReaderConfiguration readerConfiguration,
-        IConfiguration? bootstrapConfiguration = null,
-        Action<MonicaEffectiveOptionsReaderOptions>? configure = null,
-        ILogger? logger = null)
-    {
-        ArgumentNullException.ThrowIfNull(module);
-        ArgumentNullException.ThrowIfNull(builder);
-        ArgumentNullException.ThrowIfNull(readerConfiguration);
-
-        return readerConfiguration.CreateReader(
-            builder,
-            bootstrapConfiguration ?? builder.Configuration,
-            configure,
-            logger ?? NullLogger.Instance);
-    }
-
     /// <summary>
     /// Enables unified configuration version control.
     /// </summary>
@@ -486,104 +489,6 @@ public static class ModuleConfigurationRegistrationExtensions
         return module;
     }
 
-    /// <summary>
-    /// Adds a prebuilt managed JSON source after Monica's effective-value provider and records its metadata for the UI.
-    /// </summary>
-    /// <param name="module">The Configuration module registration.</param>
-    /// <param name="registration">
-    /// The immutable source definition. The same instance can be shared with a
-    /// <see cref="Monica.Configuration.Bootstrap.MonicaEffectiveOptionsReaderConfiguration"/> so startup and runtime
-    /// configuration use identical paths and precedence.
-    /// </param>
-    /// <returns>The current registration.</returns>
-    public static ModuleRegistration<ModuleConfiguration, ModuleConfigurationOption> AddManagedJsonSource(
-        this ModuleRegistration<ModuleConfiguration, ModuleConfigurationOption> module,
-        ManagedJsonConfigurationSourceRegistration registration)
-    {
-        ArgumentNullException.ThrowIfNull(module);
-        ArgumentNullException.ThrowIfNull(registration);
-        ArgumentException.ThrowIfNullOrWhiteSpace(registration.Path);
-        ArgumentException.ThrowIfNullOrWhiteSpace(registration.DisplayName);
-
-        // Keep managed JSON after the effective-value provider so startup and runtime readers have identical precedence.
-        module.ConfigureBuilder(context =>
-        {
-            context.HostApplicationBuilder.Configuration.AddJsonFile(
-                registration.Path,
-                registration.Optional,
-                registration.ReloadOnChange);
-            ManagedJsonConfigurationSourceRegistry.Add(
-                context.HostApplicationBuilder.Configuration,
-                registration);
-        }, MANAGED_JSON_FILE_BUILDER_ORDER);
-
-        return module;
-    }
-
-    /// <summary>
-    /// Adds a JSON configuration file after Monica's effective-value provider and records source metadata for the UI.
-    /// </summary>
-    /// <param name="module">The Configuration module registration.</param>
-    /// <param name="path">The JSON file path passed to <see cref="JsonConfigurationExtensions.AddJsonFile(IConfigurationBuilder,string,bool,bool)"/>.</param>
-    /// <param name="optional">Whether the file is optional.</param>
-    /// <param name="reloadOnChange">Whether Microsoft configuration reloads when the file changes.</param>
-    /// <param name="configure">Optional Monica source metadata configuration.</param>
-    /// <returns>The current registration.</returns>
-    public static ModuleRegistration<ModuleConfiguration, ModuleConfigurationOption> AddManagedJsonFile(this ModuleRegistration<ModuleConfiguration, ModuleConfigurationOption> module,
-        string path,
-        bool optional = true,
-        bool reloadOnChange = true,
-        Action<ManagedJsonConfigurationSourceOptions>? configure = null)
-    {
-        ArgumentException.ThrowIfNullOrWhiteSpace(path);
-
-        var options = new ManagedJsonConfigurationSourceOptions
-        {
-            DisplayName = Path.GetFileName(path)
-        };
-        configure?.Invoke(options);
-        var registration = new ManagedJsonConfigurationSourceRegistration
-        {
-            Path = path,
-            Optional = optional,
-            ReloadOnChange = reloadOnChange,
-            DisplayName = string.IsNullOrWhiteSpace(options.DisplayName) ? Path.GetFileName(path) : options.DisplayName,
-            Description = options.Description,
-            IsWritable = options.IsWritable
-        };
-        return module.AddManagedJsonSource(registration);
-    }
-
-    /// <summary>
-    /// Uses the file-backed store bundle for effective values, history, and metadata.
-    /// </summary>
-    /// <param name="module">The Configuration module registration.</param>
-    /// <param name="configure">Optional file store configuration.</param>
-    /// <returns>The current registration.</returns>
-    public static ModuleRegistration<ModuleConfiguration, ModuleConfigurationOption> UseFileConfigurationStore(this ModuleRegistration<ModuleConfiguration, ModuleConfigurationOption> module, Action<ConfigurationFileStoreOptions>? configure = null)
-    {
-        var startupOptions = new ConfigurationFileStoreOptions();
-        configure?.Invoke(startupOptions);
-
-        module.ConfigureServices(context =>
-        {
-            context.Services.AddOptions<ConfigurationFileStoreOptions>();
-            context.Services.Configure<ConfigurationFileStoreOptions>(options =>
-            {
-                options.RootDirectory = startupOptions.RootDirectory;
-            });
-
-            context.Services.TryAddSingleton<FileConfigurationStore>();
-            context.Services.TryAddSingleton<IConfigurationEffectiveValueStore>(provider => provider.GetRequiredService<FileConfigurationStore>());
-            context.Services.TryAddSingleton<IConfigurationHistoryStore>(provider => provider.GetRequiredService<FileConfigurationStore>());
-            context.Services.TryAddSingleton<IConfigurationMetadataStore>(provider => provider.GetRequiredService<FileConfigurationStore>());
-            context.Services.TryAddSingleton<IConfigurationDefinitionMaintenanceStore>(provider =>
-                provider.GetRequiredService<FileConfigurationStore>());
-            context.Services.TryAddSingleton<IConfigurationUnifiedVersionStore>(provider => provider.GetRequiredService<FileConfigurationStore>());
-        });
-        return module;
-    }
-
     private static IReadOnlySet<string> NormalizeFilterValues(IReadOnlyList<string> values, string parameterName)
     {
         ArgumentNullException.ThrowIfNull(values);
@@ -608,6 +513,10 @@ public static class ModuleConfigurationRegistrationExtensions
 /// </summary>
 public sealed class ModuleConfigurationOption : ModuleOptions<ModuleConfiguration>
 {
+    internal bool InputPlanApplied { get; set; }
+
+    internal ConfigurationSectionPathConvention? InputPlanSectionPathConvention { get; set; }
+
     /// <summary>
     /// Gets or sets how Monica derives section paths for configuration types that do not set
     /// <see cref="ConfigurationAttribute.SectionPath"/> explicitly.
