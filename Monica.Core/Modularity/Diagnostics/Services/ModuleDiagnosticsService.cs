@@ -9,6 +9,7 @@ using Monica.Core.Modularity.Models;
 using Monica.Core.Modularity.Models.Internal;
 using Monica.Core.Modularity.State;
 using Monica.Core.TypeDiscovery.Models;
+using Monica.Tool.Extensions;
 using Monica.Modules;
 
 namespace Monica.Core.Modularity.Diagnostics.Services;
@@ -147,7 +148,7 @@ internal sealed class ModuleDiagnosticsService
                     $"Unsupported module option diagnostics exposure mode '{exposureMode}'.");
         }
 
-        var optionTypeName = registration.ModuleOptionType.FullName ?? registration.ModuleOptionType.Name;
+        var optionTypeName = registration.ModuleOptionType.GetCleanFullName();
         if (!registration.IsFinalized)
         {
             return new ModuleOptionDiagnostics
@@ -616,7 +617,7 @@ internal sealed class ModuleDiagnosticsService
                 {
                     ModuleKey = key,
                     TypeName = registration.ModuleType.Name,
-                    FullTypeName = registration.ModuleType.FullName ?? registration.ModuleType.Name,
+                    FullTypeName = registration.ModuleType.GetCleanFullName(),
                     AssemblyName = registration.ModuleType.Assembly.GetName().Name ?? string.Empty,
                     RegistrationOrder = runtime?.Order,
                     Phase = registration.ModulePhase,

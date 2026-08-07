@@ -11,7 +11,7 @@ public sealed record ModuleOptionDiagnostics
     /// <summary>Gets the module whose options were projected.</summary>
     public required ModuleKey ModuleKey { get; init; }
 
-    /// <summary>Gets the concrete option type name.</summary>
+    /// <summary>Gets the concrete option type's clean full name.</summary>
     public required string OptionTypeName { get; init; }
 
     /// <summary>Gets the requested named profile, or <see langword="null"/> for an explicit default request.</summary>
@@ -56,7 +56,7 @@ public sealed record ModuleOptionDiagnosticEntry
     /// <summary>Gets the stable path relative to the option root.</summary>
     public required string Path { get; init; }
 
-    /// <summary>Gets the declared or runtime value type name.</summary>
+    /// <summary>Gets the declared or runtime value type's clean full name, including readable generic arguments.</summary>
     public required string TypeName { get; init; }
 
     /// <summary>Gets the projection kind.</summary>

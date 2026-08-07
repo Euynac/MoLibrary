@@ -3,6 +3,7 @@ using AwesomeAssertions;
 using Monica.Core.Modularity.Diagnostics.Models;
 using Monica.Core.Modularity.Diagnostics.Services.Support;
 using Monica.Core.Modularity.Models;
+using Monica.Tool.Extensions;
 using Xunit;
 
 namespace Test.Monica.Core.Modularity;
@@ -149,7 +150,11 @@ public sealed class ModuleOptionDiagnosticsProjectorTests
             && entry.Value == "inherited");
         diagnostics.Entries.Should().Contain(entry =>
             entry.Name == nameof(ProjectionRuntimeBoundaryProbe.OptionalLimit)
-            && entry.TypeName == "System.Int32?");
+            && entry.TypeName == typeof(int?).GetCleanFullName());
+        diagnostics.Entries.Should().Contain(entry =>
+            entry.Name == nameof(ProjectionRuntimeBoundaryProbe.MappingType)
+            && entry.Value == typeof(Dictionary<string, List<int?>>).GetCleanFullName());
+        diagnostics.OptionTypeName.Should().Be(typeof(ProjectionRuntimeBoundaryProbe).GetCleanFullName());
         System.Text.Json.JsonSerializer.Serialize(diagnostics).Should().NotContain("1,2,3");
     }
 
@@ -182,7 +187,10 @@ public sealed class ModuleOptionDiagnosticsProjectorTests
             ModuleOptionDiagnosticsExposureMode.RevealSensitive,
             ModuleOptionDiagnosticsPolicyDefinition.Empty);
 
-        redacted.Entries.Single().Children.Should().ContainSingle(entry => entry.Name == "[0]");
+        var redactedDictionary = redacted.Entries.Single();
+        redactedDictionary.TypeName.Should().Be(typeof(Dictionary<string, string>).GetCleanFullName());
+        redactedDictionary.TypeName.Should().NotContain("`").And.NotContain("[[");
+        redactedDictionary.Children.Should().ContainSingle(entry => entry.Name == "[0]");
         System.Text.Json.JsonSerializer.Serialize(redacted).Should().NotContain(secretKey);
         revealed.Entries.Single().Children.Should().ContainSingle(entry => entry.Name == $"[{secretKey}]");
     }
@@ -275,6 +283,8 @@ internal sealed class ProjectionRuntimeBoundaryProbe : ProjectionRuntimeBoundary
     public byte[] SigningKey { get; set; } = [1, 2, 3];
 
     public int? OptionalLimit { get; set; }
+
+    public Type MappingType { get; set; } = typeof(Dictionary<string, List<int?>>);
 
     public string ComputedValue => throw new InvalidOperationException("Computed getters must not be invoked.");
 

@@ -8,6 +8,7 @@ using System.Runtime.CompilerServices;
 using Monica.Core.Modularity.Diagnostics.Annotations;
 using Monica.Core.Modularity.Diagnostics.Models;
 using Monica.Core.Modularity.Models;
+using Monica.Tool.Extensions;
 
 namespace Monica.Core.Modularity.Diagnostics.Services.Support;
 
@@ -46,7 +47,7 @@ internal sealed class ModuleOptionDiagnosticsProjector
         if (!optionType.IsInstanceOfType(options))
         {
             throw new InvalidOperationException(
-                $"Module option instance is not assignable to {optionType.FullName}.");
+                $"Module option instance is not assignable to {optionType.GetCleanFullName()}.");
         }
 
         var context = new ProjectionContext(optionType.Assembly, exposureMode, policy);
@@ -56,7 +57,7 @@ internal sealed class ModuleOptionDiagnosticsProjector
         return new ModuleOptionDiagnostics
         {
             ModuleKey = moduleKey,
-            OptionTypeName = optionType.FullName ?? optionType.Name,
+            OptionTypeName = optionType.GetCleanFullName(),
             RequestedProfileName = requestedProfileName,
             ProfileName = effectiveProfileName,
             ProfileResolution = profileResolution,
@@ -552,7 +553,7 @@ internal sealed class ModuleOptionDiagnosticsProjector
                 representation = timeZone.Id;
                 return true;
             case Type type:
-                representation = type.FullName ?? type.Name;
+                representation = type.GetCleanFullName();
                 return true;
             case Version version:
                 representation = version.ToString();
@@ -954,7 +955,7 @@ internal sealed class ModuleOptionDiagnosticsProjector
         {
             Name = name,
             Path = path,
-            TypeName = FormatTypeName(type),
+            TypeName = type.GetCleanFullName(),
             Kind = kind,
             Value = value,
             IsPresent = isPresent,
@@ -964,14 +965,6 @@ internal sealed class ModuleOptionDiagnosticsProjector
             IsSensitive = isSensitive,
             Children = children.IsDefault ? [] : children
         };
-
-    private static string FormatTypeName(Type type)
-    {
-        var underlyingType = Nullable.GetUnderlyingType(type);
-        return underlyingType is null
-            ? type.FullName ?? type.Name
-            : $"{underlyingType.FullName ?? underlyingType.Name}?";
-    }
 
     private sealed class ProjectionContext(
         Assembly rootOptionAssembly,
