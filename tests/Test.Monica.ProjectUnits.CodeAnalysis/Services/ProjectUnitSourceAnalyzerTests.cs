@@ -28,7 +28,7 @@ public sealed class ProjectUnitSourceAnalyzerTests
             progress,
             TestContext.Current.CancellationToken);
 
-        result.ContractVersion.Should().Be("monica-project-units-source/v2");
+        result.ContractVersion.Should().Be("monica-project-units-source/v3");
         result.RequestedProjectCount.Should().Be(2);
         result.AnalyzedProjectCount.Should().Be(1);
         result.IsPartial.Should().BeTrue();

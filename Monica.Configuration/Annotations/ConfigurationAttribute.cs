@@ -5,7 +5,10 @@ namespace Monica.Configuration.Annotations;
 /// <summary>
 /// Marks a CLR options type as a Monica-managed configuration definition.
 /// </summary>
-[AttributeUsage(AttributeTargets.Class)]
+/// <remarks>
+/// Configuration identity is declared per options type and is not inherited by derived classes.
+/// </remarks>
+[AttributeUsage(AttributeTargets.Class, Inherited = false)]
 public sealed class ConfigurationAttribute : Attribute
 {
     private string? _sectionPath;

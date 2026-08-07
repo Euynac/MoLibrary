@@ -1,3 +1,4 @@
+using System.Collections.Frozen;
 using System.Text.Json.Serialization;
 
 namespace Monica.ProjectUnits.CodeAnalysis.Models;
@@ -5,8 +6,30 @@ namespace Monica.ProjectUnits.CodeAnalysis.Models;
 /// <summary>Stable semantic-analysis contract version used by persisted consumers.</summary>
 public static class ProjectUnitSourceAnalysisContract
 {
-    /// <summary>Current source catalog contract version.</summary>
-    public const string Version = "monica-project-units-source/v2";
+    /// <summary>
+    /// Current source catalog contract version. Version 3 aligns discovery-control attributes with the runtime catalog.
+    /// </summary>
+    public const string Version = "monica-project-units-source/v3";
+
+    /// <summary>Architectural roles the current source classifier can produce.</summary>
+    public static IReadOnlySet<ProjectUnitSourceType> DiscoverableUnitTypes { get; } = new[]
+    {
+        ProjectUnitSourceType.ApplicationService,
+        ProjectUnitSourceType.CrudApplicationService,
+        ProjectUnitSourceType.DomainService,
+        ProjectUnitSourceType.Repository,
+        ProjectUnitSourceType.DomainEvent,
+        ProjectUnitSourceType.DomainEventHandler,
+        ProjectUnitSourceType.LocalEventHandler,
+        ProjectUnitSourceType.Seeder,
+        ProjectUnitSourceType.RecurringJob,
+        ProjectUnitSourceType.TriggeredJob,
+        ProjectUnitSourceType.HttpApi,
+        ProjectUnitSourceType.Entity,
+        ProjectUnitSourceType.RequestDto,
+        ProjectUnitSourceType.Configuration,
+        ProjectUnitSourceType.HostedService
+    }.ToFrozenSet();
 }
 
 /// <summary>

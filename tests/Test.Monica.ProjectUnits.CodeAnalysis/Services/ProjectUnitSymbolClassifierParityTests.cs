@@ -14,6 +14,7 @@ using Monica.Core.Execution.Mvc;
 using Monica.Core.HostedService;
 using Monica.Core.HostedService.Abstractions;
 using Monica.Core.Mediator;
+using Monica.Core.Modularity.Annotations;
 using Monica.Core.ObservableInstance.Abstractions;
 using Monica.Core.TypeDiscovery.Models;
 using Monica.DependencyInjection.Abstractions;
@@ -61,7 +62,11 @@ public sealed class ProjectUnitSymbolClassifierParityTests
             NullLogger<ProjectUnitCatalog>.Instance);
         var assembly = EmitAndLoad(compilation);
 
-        runtimeCatalog.Discover(assembly.GetTypes().Select(CreateShape));
+        runtimeCatalog.Discover(assembly.GetTypes()
+            .Where(static type => !type.IsDefined(
+                typeof(ExcludeFromBusinessTypeDiscoveryAttribute),
+                inherit: false))
+            .Select(CreateShape));
         var runtimeUnits = runtimeCatalog.GetAllUnits().ToDictionary(
             static unit => unit.Key,
             static unit => new Classification(ToSourceType(unit.UnitType), unit.ExecutionPoints),
@@ -90,6 +95,28 @@ public sealed class ProjectUnitSymbolClassifierParityTests
                 HostedServiceExecutionPoints.Stop.Value,
                 HostedServiceExecutionPoints.WorkItem.Value
             ]));
+        sourceUnits.Should().NotContainKey("Samples.SampleExcludedDomainService");
+        sourceUnits["Samples.SampleIncludedDerivedDomainService"].UnitType.Should()
+            .Be(ProjectUnitSourceType.DomainService);
+        sourceUnits["Samples.SampleConfigurationBase"].UnitType.Should()
+            .Be(ProjectUnitSourceType.Configuration);
+        sourceUnits.Should().NotContainKey("Samples.SampleInheritedConfiguration");
+        sourceUnits.Values.Select(static unit => unit.UnitType).Distinct().Should()
+            .BeEquivalentTo(ProjectUnitSourceAnalysisContract.DiscoverableUnitTypes);
+    }
+
+    [Fact]
+    public void Classify_WhenDiscoveryControlAttributesDifferByInheritance_ShouldMatchRuntimeRules()
+    {
+        var compilation = CreateCompilation(CLASSIFICATION_SOURCE);
+        var classifier = new ProjectUnitSymbolClassifier();
+
+        classifier.Classify(GetType(compilation, "Samples.SampleExcludedDomainService")).Should().BeNull();
+        classifier.Classify(GetType(compilation, "Samples.SampleIncludedDerivedDomainService"))!.UnitType.Should()
+            .Be(ProjectUnitSourceType.DomainService);
+        classifier.Classify(GetType(compilation, "Samples.SampleConfigurationBase"))!.UnitType.Should()
+            .Be(ProjectUnitSourceType.Configuration);
+        classifier.Classify(GetType(compilation, "Samples.SampleInheritedConfiguration")).Should().BeNull();
     }
 
     [Fact]
@@ -141,6 +168,7 @@ public sealed class ProjectUnitSymbolClassifierParityTests
             typeof(ProjectUnitMetadataAttribute).Assembly.Location,
             typeof(ConfigurationAttribute).Assembly.Location,
             typeof(MoHostedService).Assembly.Location,
+            typeof(ExcludeFromBusinessTypeDiscoveryAttribute).Assembly.Location,
             typeof(IObservableInstanceRegistry).Assembly.Location,
             typeof(ICachedServiceProvider).Assembly.Location,
             typeof(IDomainEvent).Assembly.Location,
@@ -214,6 +242,7 @@ public sealed class ProjectUnitSymbolClassifierParityTests
         using Monica.Configuration.Annotations;
         using Monica.Core.Execution.Mvc;
         using Monica.Core.HostedService.Abstractions;
+        using Monica.Core.Modularity.Annotations;
         using Monica.Core.ObservableInstance.Abstractions;
         using Monica.DependencyInjection.Abstractions;
         using Monica.EventBus.Abstractions.Handlers;
@@ -253,6 +282,8 @@ public sealed class ProjectUnitSymbolClassifierParityTests
         public sealed class SampleDirectController : ControllerBase { }
         [MediatedController] public sealed class SampleMediatedController : ControllerBase { }
         [Configuration(DisplayName = "Options")] public sealed class SampleOptions { }
+        [Configuration(DisplayName = "Base options")] public class SampleConfigurationBase { }
+        public sealed class SampleInheritedConfiguration : SampleConfigurationBase { }
         public sealed class SampleEvent : DomainEvent { }
         public sealed class SampleDistributedHandler : IDistributedEventHandler<SampleEvent>
         {
@@ -273,6 +304,11 @@ public sealed class ProjectUnitSymbolClassifierParityTests
         public sealed class RepositorySampleEntity(IDbContextProvider<SampleDbContext> provider)
             : EfRepository<SampleDbContext, SampleEntity>(provider), IRepositorySampleEntity { }
         public sealed class SampleDomainService : DomainService { }
+        [ExcludeFromBusinessTypeDiscovery]
+        public sealed class SampleExcludedDomainService : DomainService { }
+        [ExcludeFromBusinessTypeDiscovery]
+        public abstract class SampleExcludedDomainServiceBase : DomainService { }
+        public sealed class SampleIncludedDerivedDomainService : SampleExcludedDomainServiceBase { }
         public abstract class AbstractDomainService : DomainService { }
         public sealed class GenericDomainService<T> : DomainService { }
         public sealed class SampleRecurringJob : RecurringJob
