@@ -2,9 +2,21 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { GuideError, exists, loadProjectConfig, loadState, normalizePath, run, semverChannel, stateFilePath, workspaceKey } from './guide-shared.mjs';
-import { discoverChannelReleaseTag, loadCatalog, loadReleaseArtifacts, loadReleaseIndex, resolveProfileClosure, resolveRequiredSkillClosure, resolveRelease, skillsCliSpec } from './guide-catalog.mjs';
+import {
+  assertReleaseSelectorCompatibility,
+  assertTaggedReleaseConstraints,
+  discoverChannelReleaseTag,
+  loadCatalog,
+  loadReleaseArtifacts,
+  loadReleaseIndex,
+  resolveProfileClosure,
+  resolveRequiredSkillClosure,
+  resolveRelease,
+  resolveTaggedRelease,
+  skillsCliSpec,
+} from './guide-catalog.mjs';
 import { assertProjectReferenceRelease, profileRepositoryIssues, workspaceDetection } from './guide-detect.mjs';
-import { instructionDiagnostics } from './guide-plan.mjs';
+import { applicationArchitectureSelection, instructionDiagnostics } from './guide-plan.mjs';
 import { retainedGlobalSkillTransactions } from './guide-install-transaction.mjs';
 import { findSourceResolver, resolveCachedSource, verifyLocalSource } from './guide-source.mjs';
 import { buildSourceManifest, compareManagedSkillRecords, verifyDiscoveryPayload, verifyLocalSkillSource } from './guide-installation.mjs';
@@ -110,8 +122,9 @@ export async function inspectEnvironment(options = {}) {
   const profile = options.profile || project.config?.profile || detection.repository.candidateProfile;
   const profileConfirmed = Boolean(options.profile || project.config?.profile);
   const repositoryIssues = profileRepositoryIssues(workspace, profile, detection.repository);
-  const channel = options.channel || project.config?.channel || semverChannel(detection.frameworkVersion.version) || 'stable';
+  let channel = options.channel || project.config?.channel || semverChannel(detection.frameworkVersion.version) || 'stable';
   const capabilities = [...new Set(options.capabilities?.length ? options.capabilities : (project.config?.capabilities || detection.repository.capabilities || []))].sort();
+  const applicationArchitecture = applicationArchitectureSelection(profile, capabilities);
   const key = workspaceKey(workspace, detection.repository.identity);
   let targetCatalog = bootstrapInfo.catalog;
   let targetCatalogDigest = bootstrapInfo.catalogDigest;
@@ -123,6 +136,12 @@ export async function inspectEnvironment(options = {}) {
   let releaseError = detection.versionError ? new GuideError(detection.versionError.code, detection.versionError.message, detection.versionError.details) : null;
   if (!releaseError) {
     try {
+      assertReleaseSelectorCompatibility({
+        releaseTag: options.releaseTag,
+        sourceRef: options.sourceRef,
+        explicitChannel: options.channel,
+        persistedChannel: project.config?.channel,
+      });
       if (channel === 'source') {
         release = resolveRelease(index, {
           channel,
@@ -157,7 +176,19 @@ export async function inspectEnvironment(options = {}) {
           fetchImplementation: options.fetchImplementation,
         });
         if (releaseIndex) index = releaseIndex.index;
-        release = resolveRelease(index, { channel, frameworkVersion: detection.frameworkVersion.version });
+        if (options.releaseTag) {
+          release = resolveTaggedRelease(index, options.releaseTag);
+          channel = release.channel;
+          assertTaggedReleaseConstraints(release, {
+            explicitChannel: options.channel,
+            persistedChannel: project.config?.channel,
+            expectedRelease: project.config?.expectedCatalogRelease,
+            frameworkVersion: detection.frameworkVersion.version,
+          });
+        } else {
+          release = resolveRelease(index, { channel, frameworkVersion: detection.frameworkVersion.version });
+          channel = release.channel;
+        }
         releaseArtifacts = await loadReleaseArtifacts({
           release,
           releaseCatalogPath: options.releaseCatalog,
@@ -227,6 +258,7 @@ export async function inspectEnvironment(options = {}) {
     repositoryIssues,
     channel,
     capabilities,
+    applicationArchitecture,
     frameworkVersion: detection.frameworkVersion,
     versionError: detection.versionError,
     projectConfig: project.config,
@@ -283,6 +315,13 @@ export async function doctor(options = {}) {
   if (!environment.profile) checks.push(check('profile', 'error', 'No Monica profile is selected.'));
   else if (!environment.profileConfirmed) checks.push(check('profile', 'warning', `Candidate profile ${environment.profile} is not confirmed.`, undefined, `Rerun init with --profile ${environment.profile} after confirmation.`));
   else checks.push(check('profile', 'ok', `Profile ${environment.profile} is confirmed.`));
+
+  if (environment.applicationArchitecture.issue) {
+    const issue = environment.applicationArchitecture.issue;
+    checks.push(check('application-architecture', 'error', issue.message, issue.details, issue.message));
+  } else if (environment.profile === 'application') {
+    checks.push(check('application-architecture', 'ok', `Application architecture ${environment.applicationArchitecture.selected} is selected.`));
+  }
 
   if (environment.versionError) checks.push(check('framework-version', 'error', environment.versionError.message, environment.versionError.details));
   else if (environment.frameworkVersion.version) checks.push(check('framework-version', 'ok', `Resolved Monica ${environment.frameworkVersion.version} from ${environment.frameworkVersion.tier}.`));
@@ -456,6 +495,7 @@ export async function doctor(options = {}) {
       workspace: environment.workspace,
       repositoryIdentity: environment.repository.identity,
       profile: environment.profile,
+      applicationArchitecture: environment.applicationArchitecture.selected,
       channel: environment.channel,
       frameworkVersion: environment.frameworkVersion.version,
       targetRelease: environment.targetRelease?.id || null,

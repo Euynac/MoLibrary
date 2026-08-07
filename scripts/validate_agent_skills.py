@@ -39,6 +39,7 @@ CATALOG_SCHEMA_PATH = REPOSITORY_ROOT / ".monica" / "schemas" / "agent-skill-cat
 INDEX_SCHEMA_PATH = REPOSITORY_ROOT / ".monica" / "schemas" / "agent-skill-index.schema.json"
 CATALOG_SNAPSHOT_PATH = REPOSITORY_ROOT / "skills" / "monica-guide" / "assets" / "default-catalog.json"
 INDEX_SNAPSHOT_PATH = REPOSITORY_ROOT / "skills" / "monica-guide" / "assets" / "default-index.json"
+BOOTSTRAP_TOKEN_PATTERN = re.compile(r"\{\{[A-Z0-9_]+\}\}")
 SKILL_NAME_PATTERN = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
 SKILL_REFERENCE_PATTERN = re.compile(r"\$((?:monica|mo)-[a-z0-9-]+)")
 FRONTMATTER_PATTERN = re.compile(r"\A---\r?\n(?P<body>.*?)\r?\n---\r?\n", re.DOTALL)
@@ -303,6 +304,166 @@ def find_required_cycles(skills: dict[str, Any]) -> list[list[str]]:
     return cycles
 
 
+def bootstrap_prompt_entries(
+    bootstrap: dict[str, Any],
+) -> Iterable[tuple[str, str, str, str]]:
+    """Yield locale, host, goal, and prompt from the schema-v2 matrix."""
+
+    for locale, localized in bootstrap.get("locales", {}).items():
+        for host, host_content in localized.get("hosts", {}).items():
+            for goal, goal_content in host_content.get("goals", {}).items():
+                yield locale, host, goal, goal_content.get("prompt", "")
+
+
+def validate_bootstrap_prompts(
+    validation: Validation,
+    catalog: dict[str, Any],
+    bootstrap: dict[str, Any],
+    schema_path: Path,
+) -> None:
+    """Validate executable website prompts against the release catalog contract."""
+
+    validate_schema(validation, bootstrap, schema_path, "bootstrap prompts")
+    cli = catalog["distribution"]["skillsCli"]
+    cli_reference = f"{cli['package']}@{cli['version']}"
+    expected_distribution = {
+        "skillsCli": cli,
+        "immutableSkillUrlTemplate": catalog["distribution"][
+            "immutableSkillUrlTemplate"
+        ],
+    }
+    validation.check(
+        bootstrap.get("distribution") == expected_distribution,
+        "bootstrap prompts: distribution must exactly match the catalog-pinned CLI and URL template",
+    )
+    validation.check(
+        bootstrap.get("immutableRef") == "{{MONICA_IMMUTABLE_REF}}",
+        "bootstrap prompts: immutable release token is missing",
+    )
+    validation.check(
+        bootstrap.get("catalogDigest") == "{{MONICA_CATALOG_DIGEST}}",
+        "bootstrap prompts: catalog digest token is missing",
+    )
+
+    expected_hosts = {
+        "codex": ["codex"],
+        "claude-code": ["claude-code"],
+        "generic": ["codex", "claude-code"],
+    }
+    expected_goals = {
+        "application": "application",
+        "extension": "extension-author",
+    }
+    validation.check(
+        {
+            host: entry.get("agentTargets")
+            for host, entry in bootstrap.get("hosts", {}).items()
+        }
+        == expected_hosts,
+        "bootstrap prompts: host-to-agent mapping is incomplete or unsupported",
+    )
+    validation.check(
+        {
+            goal: entry.get("profile")
+            for goal, entry in bootstrap.get("goals", {}).items()
+        }
+        == expected_goals,
+        "bootstrap prompts: goal-to-profile mapping is incomplete or unsupported",
+    )
+
+    direct_url = (
+        "https://github.com/Tairitsua/Monica/tree/"
+        "{{MONICA_IMMUTABLE_REF}}/skills/monica-guide"
+    )
+    expected_entries = {
+        (locale, host, goal)
+        for locale in ("en-US", "zh-CN")
+        for host in expected_hosts
+        for goal in expected_goals
+    }
+    entries = list(bootstrap_prompt_entries(bootstrap))
+    validation.check(
+        {(locale, host, goal) for locale, host, goal, _ in entries}
+        == expected_entries,
+        "bootstrap prompts: locale × host × goal matrix is incomplete",
+    )
+    for locale, host, goal, prompt in entries:
+        label = f"bootstrap {locale}/{host}/{goal}"
+        agent_targets = expected_hosts.get(host, [])
+        profile = expected_goals.get(goal)
+        validation.check(
+            cli_reference in prompt and "skills@latest" not in prompt,
+            f"{label}: must use catalog-pinned {cli_reference}",
+        )
+        validation.check(
+            direct_url in prompt,
+            f"{label}: must install from the direct immutable skill URL",
+        )
+        required_fragments = [
+            "npx --yes",
+            " add ",
+            "-g",
+            "-s monica-guide",
+            "-y",
+            "$monica-guide",
+            "init --release-tag {{MONICA_IMMUTABLE_REF}}",
+            f"--profile {profile}",
+            "--json",
+            "releaseCatalogDigest",
+            "{{MONICA_CATALOG_DIGEST}}",
+            "planDigest",
+            "dry-run",
+        ]
+        required_fragments.extend(f"--agent {agent}" for agent in agent_targets)
+        required_fragments.extend(f"-a {agent}" for agent in agent_targets)
+        validation.check(
+            all(fragment in prompt for fragment in required_fragments),
+            f"{label}: install, explicit profile, digest, or preview safety contract is incomplete",
+        )
+        expected_tokens = {
+            "{{MONICA_IMMUTABLE_REF}}",
+            "{{MONICA_CATALOG_DIGEST}}",
+        }
+        validation.check(
+            set(BOOTSTRAP_TOKEN_PATTERN.findall(prompt)) == expected_tokens,
+            f"{label}: contains an unknown or missing substitution token",
+        )
+        validation.check(
+            "--apply" not in prompt,
+            f"{label}: advertised bootstrap prompts must remain preview-only and never contain the apply flag",
+        )
+        validation.check(
+            "--channel" not in prompt,
+            f"{label}: immutable release selection must derive its channel from the release",
+        )
+        locale_safety = (
+            (
+                "This global installation changes your user-level skill directory.",
+                "Do not apply the plan",
+                "remote mutations",
+            )
+            if locale == "en-US"
+            else (
+                "这次全局安装会更改你的用户级 Skill 目录。",
+                "不要应用计划",
+                "远程变更",
+            )
+        )
+        restart_guidance = (
+            "restart" in prompt.lower() if locale == "en-US" else "重启" in prompt
+        )
+        validation.check(
+            all(fragment in prompt for fragment in locale_safety) and restart_guidance,
+            f"{label}: localized user-directory, approval, remote-mutation, or restart guidance is missing",
+        )
+        if goal == "extension":
+            source_marker = "exact read-only Monica source" if locale == "en-US" else "精确只读 Monica 源码"
+            validation.check(
+                source_marker in prompt,
+                f"{label}: source-required goal must explain its exact read-only source blocker",
+            )
+
+
 def validate_catalog(validation: Validation, catalog: dict[str, Any]) -> None:
     skills: dict[str, Any] = catalog.get("skills", {})
     external: dict[str, Any] = catalog.get("externalSkills", {})
@@ -470,53 +631,59 @@ def validate_catalog(validation: Validation, catalog: dict[str, Any]) -> None:
                 f"profile {profile_name}: required source must declare access",
             )
 
+    for external_name, external_entry in external.items():
+        distribution = external_entry.get("distribution")
+        if not distribution:
+            continue
+        required_profiles = distribution.get("requiredByProfiles", [])
+        for profile_name in required_profiles:
+            validation.check(
+                profile_name in catalog.get("profiles", {}),
+                f"external skill {external_name}: unknown required profile {profile_name!r}",
+            )
+            validation.check(
+                catalog.get("profiles", {}).get(profile_name, {}).get("source", {}).get("required")
+                is True,
+                f"external skill {external_name}: {profile_name} must require exact source",
+            )
+        commit = distribution.get("commit", "")
+        expected_url = (
+            f"https://github.com/{distribution.get('repository', '')}/tree/{commit}"
+        )
+        validation.check(
+            distribution.get("immutableSkillUrl") == expected_url,
+            f"external skill {external_name}: immutable URL must resolve by exact commit",
+        )
+        validation.check(
+            distribution.get("digestAlgorithm") == "sha256-file-manifest-v1"
+            and bool(SHA256_PATTERN.fullmatch(distribution.get("digest", ""))),
+            f"external skill {external_name}: immutable distribution digest is invalid",
+        )
+
     for template_name, template in catalog.get("managedInstructions", {}).get("templates", {}).items():
         validation.check(template_name in catalog.get("profiles", {}), f"unknown instruction template {template_name}")
         for skill_name in template.get("skills", []):
             validation.check(skill_name in skills, f"instruction template {template_name}: unknown skill {skill_name}")
 
     bootstrap_path = catalog.get("prompts", {}).get("bootstrapAsset")
-    if bootstrap_path:
+    bootstrap_schema_path = catalog.get("prompts", {}).get("bootstrapSchema")
+    if bootstrap_path and bootstrap_schema_path:
         bootstrap_file = REPOSITORY_ROOT / bootstrap_path
+        bootstrap_schema_file = REPOSITORY_ROOT / bootstrap_schema_path
         validation.check(bootstrap_file.is_file(), f"missing bootstrap prompt asset {bootstrap_path}")
-        if bootstrap_file.is_file():
+        validation.check(
+            bootstrap_schema_file.is_file(),
+            f"missing bootstrap prompt schema {bootstrap_schema_path}",
+        )
+        if bootstrap_file.is_file() and bootstrap_schema_file.is_file():
             try:
                 bootstrap = load_json(bootstrap_file)
-                cli = catalog["distribution"]["skillsCli"]
-                cli_reference = f"{cli['package']}@{cli['version']}"
-                direct_url = (
-                    "https://github.com/Tairitsua/Monica/tree/"
-                    "{{MONICA_IMMUTABLE_REF}}/skills/monica-guide"
+                validate_bootstrap_prompts(
+                    validation,
+                    catalog,
+                    bootstrap,
+                    bootstrap_schema_file,
                 )
-                expected_agent_flags = {
-                    "codex": "-a codex",
-                    "claude": "-a claude-code",
-                    "generic": "-a codex -a claude-code",
-                }
-                for locale, prompts in bootstrap.get("locales", {}).items():
-                    for target, agent_flags in expected_agent_flags.items():
-                        prompt = prompts.get(target, "")
-                        validation.check(
-                            cli_reference in prompt and "skills@latest" not in prompt,
-                            f"bootstrap {locale}/{target}: must use catalog-pinned {cli_reference}",
-                        )
-                        validation.check(
-                            direct_url in prompt,
-                            f"bootstrap {locale}/{target}: must install from the direct immutable skill URL",
-                        )
-                        validation.check(
-                            all(
-                                fragment in prompt
-                                for fragment in (
-                                    agent_flags,
-                                    "-s monica-guide",
-                                    "-g",
-                                    "-y",
-                                    "init --release-tag {{MONICA_IMMUTABLE_REF}}",
-                                )
-                            ),
-                            f"bootstrap {locale}/{target}: install flags do not match release smoke contract",
-                        )
             except (OSError, ValueError, json.JSONDecodeError, KeyError) as exc:
                 validation.errors.append(f"invalid bootstrap prompt asset: {exc}")
 

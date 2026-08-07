@@ -1,4 +1,4 @@
 interface:
   display_name: "Monica Guide"
   short_description: "Bootstrap and diagnose Monica development workflows"
-  default_prompt: "Use $monica-guide to preview and initialize this repository for Monica development."
+  default_prompt: "Use $monica-guide to preview this repository's Monica setup and wait for approval before applying it."

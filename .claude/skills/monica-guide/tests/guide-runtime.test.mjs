@@ -53,6 +53,13 @@ function applicationWorkspace(root, version = VERSION) {
   return workspace;
 }
 
+function emptyGitWorkspace(root, name = 'empty-repository') {
+  const workspace = path.join(root, name);
+  fs.mkdirSync(workspace, { recursive: true });
+  execFileSync('git', ['init', '-q', workspace]);
+  return workspace;
+}
+
 function initializeGit(repository, remote = 'https://github.com/Tairitsua/Monica.git') {
   execFileSync('git', ['init', '-q', repository]);
   execFileSync('git', ['-C', repository, 'config', 'user.email', 'guide-test@example.invalid']);
@@ -68,6 +75,12 @@ function releaseDiscoveryFetch(index = releaseIndex()) {
   return async (url) => {
     if (url === 'https://api.github.com/repos/Tairitsua/Monica/releases/latest') {
       const payload = { tag_name: index.channels.stable, draft: false, prerelease: false, assets: [{ name: 'agent-skill-index.json' }] };
+      return { ok: true, status: 200, url, text: async () => JSON.stringify(payload) };
+    }
+    if (url === 'https://api.github.com/repos/Tairitsua/Monica/releases?per_page=30') {
+      const payload = index.channels.preview
+        ? [{ tag_name: index.channels.preview, draft: false, prerelease: true, assets: [{ name: 'agent-skill-index.json' }] }]
+        : [];
       return { ok: true, status: 200, url, text: async () => JSON.stringify(payload) };
     }
     return assets(url);
@@ -133,7 +146,10 @@ function releaseIndex({
   return {
     $schema: './schemas/agent-skill-index.schema.json',
     schemaVersion: 2,
-    channels: { stable: tag, preview: null },
+    channels: {
+      stable: semverChannel(version) === 'stable' ? tag : null,
+      preview: semverChannel(version) === 'preview' ? tag : null,
+    },
     versions: { [version]: tag },
     releases: {
       [tag]: release,
@@ -240,6 +256,7 @@ function baseOptions(root, workspace) {
     catalog: CATALOG_PATH,
     index: INDEX_PATH,
     profile: 'application',
+    capabilities: ['modular-monolith'],
     releaseTag: TAG,
     fetchImplementation: releaseFetch(),
   };
@@ -267,7 +284,7 @@ function configuredState(root, workspace, {
   unknownMetadata = false,
 } = {}) {
   const { catalog } = loadCatalog({ catalogPath: CATALOG_PATH, indexPath: INDEX_PATH });
-  const closure = resolveProfileClosure(catalog, 'application', []);
+  const closure = resolveProfileClosure(catalog, 'application', ['modular-monolith']);
   const release = index.releases[releaseTag];
   const statePath = path.join(root, 'state.json');
   const state = emptyState();
@@ -291,7 +308,7 @@ function configuredState(root, workspace, {
     schemaVersion: 1,
     profile: 'application',
     channel: 'stable',
-    capabilities: [],
+    capabilities: ['modular-monolith'],
     agentTargets: agents,
     expectedCatalogRelease: { ...state.activeRelease, indexTag: releaseTag },
     instructionBlockVersion: 1,
@@ -303,9 +320,11 @@ function configuredState(root, workspace, {
 test('all four profiles resolve required, recommended, conditional, and external closure', () => {
   const { catalog } = loadCatalog({ catalogPath: CATALOG_PATH, indexPath: INDEX_PATH });
   const application = resolveProfileClosure(catalog, 'application', []);
-  assert.deepEqual(application.required, ['monica-application', 'monica-application-microservice', 'monica-application-modular-monolith', 'monica-application-project-unit-development', 'monica-guide']);
+  assert.deepEqual(application.required, ['monica-application', 'monica-application-project-unit-development', 'monica-guide']);
   assert.deepEqual(application.recommended, ['monica-application-unit-testing', 'monica-contribution']);
   assert.deepEqual(application.conditional, []);
+  assert.deepEqual(resolveProfileClosure(catalog, 'application', ['microservice']).conditional, ['monica-application-microservice']);
+  assert.deepEqual(resolveProfileClosure(catalog, 'application', ['modular-monolith']).conditional, ['monica-application-modular-monolith']);
 
   const extension = resolveProfileClosure(catalog, 'extension-author', ['ui']);
   assert.deepEqual(extension.required, ['monica-architecture', 'monica-development', 'monica-framework', 'monica-guide', 'monica-third-party-module-development', 'monica-unit-testing']);
@@ -415,7 +434,7 @@ test('init applies atomically while offline update/configure require and use an 
   assert.equal(fs.existsSync(path.join(root, 'npx.log')), false);
   writeResolver(resolver, localSource);
 
-  const configure = await buildPlan('configure', { ...offlineOptions, capabilities: ['ui'] });
+  const configure = await buildPlan('configure', { ...offlineOptions, capabilities: ['modular-monolith', 'ui'] });
   assert.equal(configure.blockers.length, 0);
   assert.ok(configure.actions.some((action) => action.type === 'install-skill'
     && action.skill === 'monica-ui-development'
@@ -439,7 +458,7 @@ test('init applies atomically while offline update/configure require and use an 
 
 test('default update installs only changed skills, verifies the full set, and records target revisions', async (t) => {
   const root = temporaryDirectory(t);
-  const changedSkill = 'monica-application-microservice';
+  const changedSkill = 'monica-application-project-unit-development';
   const history = releaseHistory([changedSkill]);
   const workspace = applicationWorkspace(root, '1.2.4');
   const configured = configuredState(root, workspace, { index: history });
@@ -471,14 +490,16 @@ test('default update installs only changed skills, verifies the full set, and re
     releaseTag: 'v1.2.4',
     fetchImplementation: releaseFetch(history),
   });
-  assert.equal(environment.skillChanges.find((entry) => entry.name === changedSkill).changeState, 'content-changed');
+  assert.equal(environment.targetRelease.id, 'v1.2.4');
+  assert.equal(environment.releaseError.code, 'project_release_conflict');
   const report = await doctor({ ...options, releaseTag: 'v1.2.4', fetchImplementation: releaseFetch(history) });
-  assert.equal(report.checks.find((entry) => entry.id === `skill-version:${changedSkill}`).status, 'warning');
+  assert.equal(report.context.targetRelease, 'v1.2.4');
+  assert.equal(report.checks.find((entry) => entry.id === 'immutable-release').status, 'error');
 });
 
 test('targeted update expands required dependencies and blocks changed skills outside its closure', async (t) => {
   const root = temporaryDirectory(t);
-  const changedSkill = 'monica-application-microservice';
+  const changedSkill = 'monica-application-project-unit-development';
   const history = releaseHistory([changedSkill]);
   const workspace = applicationWorkspace(root, '1.2.4');
   const configured = configuredState(root, workspace, { index: history });
@@ -743,7 +764,223 @@ test('detected profile requires explicit confirmation before init', async (t) =>
   assert.ok(plan.blockers.some((entry) => entry.code === 'profile_confirmation_required'));
 });
 
-test('advertised latest index selects the older release mapped to the detected framework version', async (t) => {
+test('empty repositories derive stable and preview channels from an explicit immutable release across plan, status, and doctor', async (t) => {
+  const root = temporaryDirectory(t);
+  const fixtures = [
+    { version: VERSION, tag: TAG, commit: COMMIT, channel: 'stable' },
+    { version: '1.3.0-rc.1', tag: 'v1.3.0-rc.1', commit: 'e'.repeat(40), channel: 'preview' },
+  ];
+  const planDigests = [];
+  for (const fixture of fixtures) {
+    const workspace = emptyGitWorkspace(root, fixture.channel);
+    const statePath = path.join(root, `${fixture.channel}-state.json`);
+    const index = releaseIndex(fixture);
+    const options = {
+      workspace,
+      state: statePath,
+      catalog: CATALOG_PATH,
+      index: INDEX_PATH,
+      profile: 'application',
+      releaseTag: fixture.tag,
+      fetchImplementation: releaseFetch(index),
+    };
+    const unresolved = await buildPlan('init', options);
+    assert.equal(unresolved.context.channel, fixture.channel);
+    assert.equal(unresolved.context.targetRelease.id, fixture.tag);
+    assert.ok(unresolved.blockers.some((entry) => entry.code === 'application_architecture_required'));
+    assert.equal(unresolved.actions.some((action) => action.type === 'install-skill'), false);
+    const unresolvedEnvironment = await inspectEnvironment(options);
+    const unresolvedStatus = statusEnvelope(unresolvedEnvironment);
+    assert.equal(unresolvedStatus.status, 'error');
+    assert.equal(unresolvedStatus.error.code, 'application_architecture_required');
+    const unresolvedDoctor = await doctor(options);
+    assert.equal(unresolvedDoctor.checks.find((entry) => entry.id === 'application-architecture').status, 'error');
+
+    const selectedOptions = { ...options, capabilities: ['modular-monolith'] };
+    const plan = await buildPlan('init', selectedOptions);
+    assert.equal(plan.blockers.length, 0, JSON.stringify(plan.blockers));
+    assert.equal(plan.context.channel, fixture.channel);
+    assert.equal(plan.context.targetRelease.id, fixture.tag);
+    assert.equal(plan.context.targetRelease.tag, fixture.tag);
+    assert.equal(plan.context.targetRelease.monicaVersion, fixture.version);
+    planDigests.push(plan.planDigest);
+
+    const plannedState = JSON.parse(plan.actions.find((action) => action.path === statePath).content);
+    assert.equal(plannedState.activeRelease.id, fixture.tag);
+    assert.equal(Object.values(plannedState.workspacePreferences)[0].channel, fixture.channel);
+    const projectAction = plan.actions.find((action) => action.path?.endsWith('.monica/guide.json'));
+    const projectConfig = JSON.parse(projectAction.content);
+    assert.equal(projectConfig.channel, fixture.channel);
+    assert.equal(projectConfig.expectedCatalogRelease.id, fixture.tag);
+    assert.equal(projectConfig.expectedCatalogRelease.indexTag, fixture.tag);
+
+    const environment = await inspectEnvironment(selectedOptions);
+    assert.equal(environment.releaseError, null);
+    assert.equal(environment.channel, fixture.channel);
+    assert.equal(environment.targetRelease.id, fixture.tag);
+    const status = statusEnvelope(environment);
+    assert.equal(status.observation.channel, fixture.channel);
+    assert.equal(status.observation.targetRelease, fixture.tag);
+    const report = await doctor(selectedOptions);
+    assert.equal(report.context.channel, fixture.channel);
+    assert.equal(report.context.targetRelease, fixture.tag);
+    assert.equal(report.context.applicationArchitecture, 'modular-monolith');
+    assert.ok(report.checks.some((entry) => entry.id === 'immutable-release' && entry.status === 'ok'));
+
+    for (const action of plan.actions.filter((entry) => entry.purpose?.startsWith('Cache the verified'))) {
+      write(action.path, action.content);
+    }
+    write(statePath, stableJson(plannedState, 2));
+    const offlineEnvironment = await inspectEnvironment({ ...selectedOptions, offline: true, fetchImplementation: undefined });
+    assert.equal(offlineEnvironment.releaseError, null);
+    assert.equal(offlineEnvironment.channel, fixture.channel);
+    assert.equal(offlineEnvironment.targetRelease.id, fixture.tag);
+    assert.equal(offlineEnvironment.releaseIndexSource, 'verified-cache');
+    assert.equal(offlineEnvironment.releaseArtifactSource, 'verified-cache');
+  }
+  assert.notEqual(planDigests[0], planDigests[1]);
+});
+
+test('explicit release constraints fail consistently without falling back to another release or channel', async (t) => {
+  const root = temporaryDirectory(t);
+  const previewTag = 'v1.3.0-rc.1';
+  const previewIndex = releaseIndex({ version: '1.3.0-rc.1', tag: previewTag, commit: 'e'.repeat(40) });
+  const workspace = emptyGitWorkspace(root, 'explicit-channel-conflict');
+  const options = {
+    workspace,
+    state: path.join(root, 'explicit-channel-state.json'),
+    catalog: CATALOG_PATH,
+    index: INDEX_PATH,
+    profile: 'application',
+    capabilities: ['modular-monolith'],
+    releaseTag: previewTag,
+    channel: 'stable',
+    fetchImplementation: releaseFetch(previewIndex),
+  };
+  const plan = await buildPlan('init', options);
+  assert.equal(plan.context.channel, 'preview');
+  assert.equal(plan.context.targetRelease.id, previewTag);
+  assert.ok(plan.blockers.some((entry) => entry.code === 'release_channel_mismatch'));
+  assert.equal(plan.actions.some((action) => action.type === 'install-skill'), false);
+  const environment = await inspectEnvironment(options);
+  assert.equal(environment.channel, 'preview');
+  assert.equal(environment.targetRelease.id, previewTag);
+  assert.equal(environment.releaseError.code, 'release_channel_mismatch');
+  const status = statusEnvelope(environment);
+  assert.equal(status.status, 'error');
+  assert.equal(status.error.code, 'release_channel_mismatch');
+  assert.equal(status.observation.channel, 'preview');
+  const report = await doctor(options);
+  assert.equal(report.context.channel, 'preview');
+  assert.ok(report.checks.some((entry) => entry.id === 'immutable-release'
+    && entry.status === 'error'
+    && entry.message.includes('explicitly requested channel stable')));
+
+  const persistedWorkspace = emptyGitWorkspace(root, 'persisted-channel-conflict');
+  write(path.join(persistedWorkspace, '.monica', 'guide.json'), stableJson({
+    schemaVersion: 1,
+    profile: 'application',
+    channel: 'stable',
+    capabilities: ['modular-monolith'],
+    agentTargets: [],
+    expectedCatalogRelease: {
+      id: TAG,
+      monicaVersion: VERSION,
+      tag: TAG,
+      commit: COMMIT,
+      catalogDigest: CATALOG_DIGEST,
+      indexTag: TAG,
+    },
+    instructionBlockVersion: 1,
+    managedClaudeImport: false,
+  }, 2));
+  const persistedPlan = await buildPlan('init', {
+    workspace: persistedWorkspace,
+    state: path.join(root, 'persisted-channel-state.json'),
+    catalog: CATALOG_PATH,
+    index: INDEX_PATH,
+    releaseTag: previewTag,
+    fetchImplementation: releaseFetch(previewIndex),
+  });
+  assert.equal(persistedPlan.context.channel, 'preview');
+  assert.ok(persistedPlan.blockers.some((entry) => entry.code === 'project_channel_conflict'));
+
+  const history = releaseHistory([]);
+  const persistedReleasePlan = await buildPlan('init', {
+    workspace: persistedWorkspace,
+    state: path.join(root, 'persisted-release-state.json'),
+    catalog: CATALOG_PATH,
+    index: INDEX_PATH,
+    releaseTag: 'v1.2.4',
+    fetchImplementation: releaseFetch(history),
+  });
+  assert.equal(persistedReleasePlan.context.targetRelease.id, 'v1.2.4');
+  assert.ok(persistedReleasePlan.blockers.some((entry) => entry.code === 'project_release_conflict'));
+});
+
+test('application architecture capabilities are mutually exclusive', async (t) => {
+  const root = temporaryDirectory(t);
+  const workspace = emptyGitWorkspace(root);
+  const options = {
+    ...baseOptions(root, workspace),
+    capabilities: ['microservice', 'modular-monolith'],
+  };
+  const plan = await buildPlan('init', options);
+  assert.ok(plan.blockers.some((entry) => entry.code === 'application_architecture_conflict'));
+  assert.equal(plan.context.applicationArchitecture, null);
+  assert.equal(plan.actions.some((action) => action.type === 'install-skill'), false);
+  const environment = await inspectEnvironment(options);
+  const status = statusEnvelope(environment);
+  assert.equal(status.status, 'error');
+  assert.equal(status.error.code, 'application_architecture_conflict');
+});
+
+test('existing application structure selects exactly one architecture capability', async (t) => {
+  const root = temporaryDirectory(t);
+  const workspace = applicationWorkspace(root);
+  write(
+    path.join(workspace, 'src', 'Domains', 'Ordering', 'Domains.Ordering.csproj'),
+    '<Project Sdk="Microsoft.NET.Sdk" />\n',
+  );
+  const plan = await buildPlan('init', {
+    ...baseOptions(root, workspace),
+    capabilities: [],
+  });
+  assert.equal(plan.blockers.length, 0, JSON.stringify(plan.blockers));
+  assert.equal(plan.context.applicationArchitecture, 'modular-monolith');
+  assert.ok(plan.context.capabilities.includes('modular-monolith'));
+  assert.ok(plan.actions.some((action) => action.type === 'install-skill'
+    && action.skill === 'monica-application-modular-monolith'));
+  assert.equal(plan.actions.some((action) => action.type === 'install-skill'
+    && action.skill === 'monica-application-microservice'), false);
+});
+
+test('immutable and source release selectors reject incompatible combinations before artifact access', async (t) => {
+  const root = temporaryDirectory(t);
+  const workspace = emptyGitWorkspace(root);
+  const common = {
+    workspace,
+    state: path.join(root, 'state.json'),
+    catalog: CATALOG_PATH,
+    index: INDEX_PATH,
+    profile: 'application',
+    capabilities: ['modular-monolith'],
+  };
+  const combinations = [
+    { releaseTag: TAG, sourceRef: COMMIT },
+    { sourceRef: COMMIT, channel: 'stable' },
+    { releaseTag: TAG, channel: 'source' },
+  ];
+  for (const selectors of combinations) {
+    const plan = await buildPlan('init', { ...common, ...selectors });
+    assert.ok(plan.blockers.some((entry) => entry.code === 'release_selector_conflict'));
+    assert.equal(plan.actions.some((action) => action.type === 'install-skill' || action.type === 'verify-skills'), false);
+  }
+  const environment = await inspectEnvironment({ ...common, releaseTag: TAG, sourceRef: COMMIT });
+  assert.equal(environment.releaseError.code, 'release_selector_conflict');
+});
+
+test('an explicit release tag selects that exact release and rejects a detected framework mismatch', async (t) => {
   const root = temporaryDirectory(t);
   const workspace = applicationWorkspace(root, '1.2.3');
   const oldIndex = releaseIndex();
@@ -768,14 +1005,15 @@ test('advertised latest index selects the older release mapped to the detected f
     catalog: CATALOG_PATH,
     index: INDEX_PATH,
     profile: 'application',
+    capabilities: ['modular-monolith'],
     releaseTag: 'v2.0.0',
     fetchImplementation: releaseFetch(combined),
   });
-  assert.equal(plan.blockers.length, 0);
-  assert.equal(plan.context.targetRelease.tag, 'v1.2.3');
-  assert.ok(plan.actions.filter((action) => action.type === 'install-skill').every((action) => action.source.includes('/tree/v1.2.3/')));
-  const projectAction = plan.actions.find((action) => action.path?.endsWith('.monica/guide.json'));
-  assert.equal(JSON.parse(projectAction.content).expectedCatalogRelease.indexTag, 'v2.0.0');
+  assert.equal(plan.context.targetRelease.tag, 'v2.0.0');
+  assert.equal(plan.context.channel, 'stable');
+  assert.ok(plan.blockers.some((entry) => entry.code === 'release_version_mismatch'));
+  assert.equal(plan.actions.some((action) => action.type === 'install-skill'), false);
+  assert.equal(plan.actions.some((action) => action.path?.endsWith('.monica/guide.json')), false);
 });
 
 test('global release conflicts require an explicit switch and update the managed union', async (t) => {
@@ -794,6 +1032,12 @@ test('global release conflicts require an explicit switch and update the managed
   t.after(() => previous === undefined ? delete process.env.MONICA_GUIDE_NPX : process.env.MONICA_GUIDE_NPX = previous);
   const blocked = await buildPlan('init', { ...baseOptions(root, workspace), state: statePath });
   assert.ok(blocked.blockers.some((entry) => entry.code === 'global_release_conflict'));
+  const environment = await inspectEnvironment({ ...baseOptions(root, workspace), state: statePath });
+  const status = statusEnvelope(environment);
+  assert.equal(status.status, 'error');
+  assert.equal(status.error.code, 'global_release_conflict');
+  const report = await doctor({ ...baseOptions(root, workspace), state: statePath });
+  assert.equal(report.checks.find((entry) => entry.id === 'global-release').status, 'error');
   const switched = await buildPlan('init', { ...baseOptions(root, workspace), state: statePath, switchGlobal: true, agents: ['claude-code'] });
   assert.equal(switched.blockers.length, 0);
   assert.ok(switched.actions.some((action) => action.type === 'install-skill' && action.skill === 'monica-ui-design'));
@@ -1093,6 +1337,7 @@ test('source channel binds catalog and skill digests to an exact clean checkout'
     catalog: CATALOG_PATH,
     index: INDEX_PATH,
     profile: 'application',
+    capabilities: ['modular-monolith'],
     channel: 'source',
     sourceRef: commit,
     sourcePath: source,
@@ -1126,6 +1371,7 @@ test('source channel binds catalog and skill digests to an exact clean checkout'
     catalog: CATALOG_PATH,
     index: INDEX_PATH,
     profile: 'application',
+    capabilities: ['modular-monolith'],
     channel: 'source',
     sourceRef: commit,
     sourcePath: source,
@@ -1200,6 +1446,39 @@ test('extension ProjectReference and docs/framework repository prerequisites are
   assert.ok(docsPlan.blockers.some((entry) => entry.code === 'docs_repository_required'));
   const frameworkPlan = await buildPlan('init', { ...baseOptions(root, applicationWorkspace(path.join(root, 'framework-case'))), profile: 'framework-contributor' });
   assert.ok(frameworkPlan.blockers.some((entry) => entry.code === 'framework_repository_required'));
+});
+
+test('source-required profiles expose the pinned external resolver prerequisite without installing it', async (t) => {
+  const root = temporaryDirectory(t);
+  const workspace = applicationWorkspace(root);
+  const isolatedHome = path.join(root, 'isolated-home');
+  fs.mkdirSync(isolatedHome);
+  const previousHome = process.env.HOME;
+  const previousResolver = process.env.MONICA_INSPECT_SOURCE_CLI;
+  process.env.HOME = isolatedHome;
+  delete process.env.MONICA_INSPECT_SOURCE_CLI;
+  t.after(() => {
+    if (previousHome === undefined) delete process.env.HOME;
+    else process.env.HOME = previousHome;
+    if (previousResolver === undefined) delete process.env.MONICA_INSPECT_SOURCE_CLI;
+    else process.env.MONICA_INSPECT_SOURCE_CLI = previousResolver;
+  });
+
+  const plan = await buildPlan('init', {
+    ...baseOptions(root, workspace),
+    profile: 'extension-author',
+    agents: ['codex'],
+  });
+  const blocker = plan.blockers.find((entry) => entry.code === 'source_resolver_prerequisite_missing');
+  assert.ok(blocker, JSON.stringify(plan.blockers));
+  assert.equal(blocker.details.prerequisite.name, 'inspect-dependency-source');
+  assert.match(blocker.details.prerequisite.commit, /^[0-9a-f]{40}$/);
+  assert.ok(blocker.details.prerequisite.immutableSkillUrl.endsWith(blocker.details.prerequisite.commit));
+  assert.match(blocker.details.prerequisite.digest, /^sha256:[0-9a-f]{64}$/);
+  assert.ok(blocker.details.prerequisite.installCommand.includes(`tree/${blocker.details.prerequisite.commit}`));
+  assert.equal(blocker.details.prerequisite.managedByGuide, false);
+  assert.equal(blocker.details.requiresSeparateApproval, true);
+  assert.equal(plan.actions.some((action) => action.type === 'install-skill'), false);
 });
 
 test('malformed managed markers are refused and doctor emits stable JSON checks', async (t) => {
@@ -1359,6 +1638,89 @@ test('immutable tags reject changed index and artifact bytes after first verific
   );
 });
 
+test('an N-to-N+1 release schema instructs an old Guide to reinstall from the selected tag', async (t) => {
+  const root = temporaryDirectory(t);
+  const assertUpgrade = (error, asset, supportedSchemaVersion, selectedSchemaVersion) => {
+    assert.equal(error.code, 'guide_upgrade_required');
+    assert.equal(error.details.asset, asset);
+    assert.equal(error.details.releaseTag, TAG);
+    assert.equal(error.details.supportedSchemaVersion, supportedSchemaVersion);
+    assert.equal(error.details.selectedSchemaVersion, selectedSchemaVersion);
+    assert.equal(
+      error.details.reinstallUrl,
+      `https://github.com/Tairitsua/Monica/tree/${TAG}/skills/monica-guide`,
+    );
+    assert.match(error.message, /Reinstall monica-guide from the requested immutable tag/);
+    assert.match(error.message, /verify skill discovery, then retry/);
+    return true;
+  };
+
+  const nextIndex = releaseIndex();
+  nextIndex.schemaVersion = 3;
+  await assert.rejects(
+    loadReleaseIndex({
+      releaseTag: TAG,
+      state: emptyState(),
+      statePath: path.join(root, 'index-state.json'),
+      fetchImplementation: async (url) => ({
+        ok: true,
+        status: 200,
+        url,
+        text: async () => stableJson(nextIndex, 2),
+      }),
+    }),
+    (error) => assertUpgrade(error, 'agent-skill-index.json', 2, 3),
+  );
+
+  const nextCatalog = JSON.parse(fs.readFileSync(CATALOG_PATH, 'utf8'));
+  nextCatalog.schemaVersion = 2;
+  const nextCatalogText = stableJson(nextCatalog, 2);
+  const catalogRelease = structuredClone(releaseIndex().releases[TAG]);
+  catalogRelease.catalogDigest = digest(Buffer.from(nextCatalogText));
+  const catalogManifestText = stableJson(
+    releaseManifestForRelease(catalogRelease, fixtureFilesForRelease(catalogRelease)),
+    2,
+  );
+  catalogRelease.manifestDigest = digest(Buffer.from(catalogManifestText));
+  await assert.rejects(
+    loadReleaseArtifacts({
+      release: catalogRelease,
+      state: emptyState(),
+      statePath: path.join(root, 'catalog-state.json'),
+      fetchImplementation: async (url) => {
+        const text = url.endsWith('/agent-skill-catalog.json')
+          ? nextCatalogText
+          : catalogManifestText;
+        return { ok: true, status: 200, url, text: async () => text };
+      },
+    }),
+    (error) => assertUpgrade(error, 'agent-skill-catalog.json', 1, 2),
+  );
+
+  const manifestRelease = structuredClone(releaseIndex().releases[TAG]);
+  const nextManifest = releaseManifestForRelease(
+    manifestRelease,
+    fixtureFilesForRelease(manifestRelease),
+  );
+  nextManifest.schemaVersion = 3;
+  const nextManifestText = stableJson(nextManifest, 2);
+  manifestRelease.manifestDigest = digest(Buffer.from(nextManifestText));
+  await assert.rejects(
+    loadReleaseArtifacts({
+      release: manifestRelease,
+      state: emptyState(),
+      statePath: path.join(root, 'manifest-state.json'),
+      fetchImplementation: async (url) => {
+        const text = url.endsWith('/agent-skill-catalog.json')
+          ? fs.readFileSync(CATALOG_PATH, 'utf8')
+          : nextManifestText;
+        return { ok: true, status: 200, url, text: async () => text };
+      },
+    }),
+    (error) => assertUpgrade(error, 'agent-skill-manifest.json', 2, 3),
+  );
+});
+
 test('index and catalog structural validation reject malicious contract shapes', (t) => {
   const root = temporaryDirectory(t);
   const invalidIndex = releaseIndex();
@@ -1480,7 +1842,7 @@ test('doctor remediation is executable because update adopts discovered catalog-
   const root = temporaryDirectory(t);
   const workspace = applicationWorkspace(root);
   const { catalog } = loadCatalog({ catalogPath: CATALOG_PATH, indexPath: INDEX_PATH });
-  const closure = resolveProfileClosure(catalog, 'application', []);
+  const closure = resolveProfileClosure(catalog, 'application', ['modular-monolith']);
   const extra = 'monica-ui-design';
   const statePath = path.join(root, 'state.json');
   const state = emptyState();
@@ -1496,7 +1858,7 @@ test('doctor remediation is executable because update adopts discovered catalog-
     schemaVersion: 1,
     profile: 'application',
     channel: 'stable',
-    capabilities: [],
+    capabilities: ['modular-monolith'],
     agentTargets: ['codex'],
     expectedCatalogRelease: { ...state.activeRelease, indexTag: TAG },
     instructionBlockVersion: 1,
@@ -1509,7 +1871,7 @@ test('doctor remediation is executable because update adopts discovered catalog-
   const report = await doctor(options);
   const discovery = report.checks.find((entry) => entry.id === 'skill-discovery:codex');
   assert.equal(discovery.status, 'error');
-  assert.match(discovery.remediation, /Run update/);
+  assert.match(discovery.remediation, /update/i);
   const update = await buildPlan('update', options);
   assert.equal(update.blockers.length, 0);
   assert.ok(update.actions.some((action) => action.type === 'install-skill' && action.skill === extra));
@@ -1531,22 +1893,40 @@ test('release fetches time out with actionable fail-closed diagnostics', async (
   );
 });
 
-test('bootstrap prompt contract stays bilingual, pinned, immutable, and preview-first', () => {
+test('bootstrap prompt contract stays bilingual, pinned, immutable, profile-explicit, and preview-first', () => {
   const prompts = JSON.parse(fs.readFileSync(path.join(SKILL_ROOT, 'assets', 'bootstrap-prompts.json'), 'utf8'));
+  assert.equal(prompts.schemaVersion, 2);
+  assert.equal(prompts.$schema, './bootstrap-prompts.schema.json');
   assert.equal(prompts.immutableRef, '{{MONICA_IMMUTABLE_REF}}');
+  assert.equal(prompts.catalogDigest, '{{MONICA_CATALOG_DIGEST}}');
+  assert.equal(prompts.distribution.skillsCli.package, 'skills');
+  assert.match(prompts.distribution.skillsCli.version, /^\d+\.\d+\.\d+$/);
   for (const locale of ['en-US', 'zh-CN']) {
-    for (const host of ['codex', 'claude', 'generic']) {
-      const prompt = prompts.locales[locale][host];
-      assert.match(prompt, /skills@1\.5\.21/);
-      assert.match(prompt, /tree\/\{\{MONICA_IMMUTABLE_REF\}\}\/skills\/monica-guide/);
-      assert.match(prompt, /--release-tag \{\{MONICA_IMMUTABLE_REF\}\}/);
-      assert.match(prompt, /planDigest/);
-      const expectedAgents = host === 'codex'
-        ? ['--agent codex']
-        : host === 'claude'
-          ? ['--agent claude-code']
-          : ['--agent codex', '--agent claude-code'];
-      for (const expectedAgent of expectedAgents) assert.ok(prompt.includes(expectedAgent));
+    const userDirectoryDisclosure = locale === 'en-US'
+      ? 'This global installation changes your user-level skill directory.'
+      : '这次全局安装会更改你的用户级 Skill 目录。';
+    for (const host of ['codex', 'claude-code', 'generic']) {
+      const expectedAgents = prompts.hosts[host].agentTargets;
+      for (const goal of ['application', 'extension']) {
+        const prompt = prompts.locales[locale].hosts[host].goals[goal].prompt;
+        const profile = prompts.goals[goal].profile;
+        assert.match(prompt, new RegExp(`skills@${prompts.distribution.skillsCli.version.replaceAll('.', '\\.')}`));
+        assert.match(prompt, /tree\/\{\{MONICA_IMMUTABLE_REF\}\}\/skills\/monica-guide/);
+        assert.match(prompt, /--release-tag \{\{MONICA_IMMUTABLE_REF\}\}/);
+        assert.match(prompt, new RegExp(`--profile ${profile}`));
+        assert.match(prompt, /\{\{MONICA_CATALOG_DIGEST\}\}/);
+        assert.match(prompt, /releaseCatalogDigest/);
+        assert.match(prompt, /planDigest/);
+        assert.ok(prompt.includes(userDirectoryDisclosure));
+        const initCommand = prompt.match(/`(init --release-tag [^`]+)`/)?.[1];
+        assert.ok(initCommand);
+        assert.equal(initCommand.includes('--apply'), false);
+        for (const agent of expectedAgents) assert.ok(initCommand.includes(`--agent ${agent}`));
+        assert.deepEqual(
+          [...new Set(prompt.match(/\{\{[A-Z_]+\}\}/g) || [])].sort(),
+          ['{{MONICA_CATALOG_DIGEST}}', '{{MONICA_IMMUTABLE_REF}}'],
+        );
+      }
     }
   }
 });

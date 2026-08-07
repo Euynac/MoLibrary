@@ -79,12 +79,141 @@ class AgentSkillInfrastructureTests(unittest.TestCase):
         )
 
         application = self.catalog["profiles"]["application"]
+        application_default = validator.profile_selection_closure(
+            self.catalog["skills"], application
+        )
+        self.assertNotIn("monica-application-microservice", application_default)
+        self.assertNotIn("monica-application-modular-monolith", application_default)
+
+        application_microservice = validator.profile_selection_closure(
+            self.catalog["skills"], application, capabilities=["microservice"]
+        )
+        self.assertIn("monica-application-microservice", application_microservice)
+        self.assertNotIn(
+            "monica-application-modular-monolith", application_microservice
+        )
+
+        application_modular = validator.profile_selection_closure(
+            self.catalog["skills"], application, capabilities=["modular-monolith"]
+        )
+        self.assertIn("monica-application-modular-monolith", application_modular)
+        self.assertNotIn("monica-application-microservice", application_modular)
+
         application_ui = validator.profile_selection_closure(
             self.catalog["skills"], application, capabilities=["ui"]
         )
         self.assertIn("monica-ui-development", application_ui)
         self.assertIn("monica-development", application_ui)
         self.assertNotIn("monica-framework", application_ui)
+
+    def test_bootstrap_prompt_manifest_covers_every_locale_host_and_goal(self) -> None:
+        bootstrap = json.loads(
+            (
+                REPOSITORY_ROOT
+                / "skills"
+                / "monica-guide"
+                / "assets"
+                / "bootstrap-prompts.json"
+            ).read_text(encoding="utf-8")
+        )
+        schema_path = (
+            REPOSITORY_ROOT
+            / "skills"
+            / "monica-guide"
+            / "assets"
+            / "bootstrap-prompts.schema.json"
+        )
+        validation = validator.Validation()
+        validator.validate_bootstrap_prompts(
+            validation,
+            self.catalog,
+            bootstrap,
+            schema_path,
+        )
+        self.assertEqual([], validation.errors)
+        self.assertEqual(12, len(list(validator.bootstrap_prompt_entries(bootstrap))))
+
+    def test_bootstrap_prompt_manifest_rejects_apply_in_init_command(self) -> None:
+        bootstrap = json.loads(
+            (
+                REPOSITORY_ROOT
+                / "skills"
+                / "monica-guide"
+                / "assets"
+                / "bootstrap-prompts.json"
+            ).read_text(encoding="utf-8")
+        )
+        prompt = bootstrap["locales"]["en-US"]["hosts"]["codex"]["goals"][
+            "application"
+        ]
+        prompt["prompt"] += " Run `init --apply` immediately."
+        validation = validator.Validation()
+        validator.validate_bootstrap_prompts(
+            validation,
+            self.catalog,
+            bootstrap,
+            REPOSITORY_ROOT
+            / "skills"
+            / "monica-guide"
+            / "assets"
+            / "bootstrap-prompts.schema.json",
+        )
+        self.assertTrue(
+            any("preview-only" in error for error in validation.errors),
+            validation.errors,
+        )
+
+    def test_bootstrap_prompt_manifest_requires_user_skill_directory_disclosure(self) -> None:
+        bootstrap = json.loads(
+            (
+                REPOSITORY_ROOT
+                / "skills"
+                / "monica-guide"
+                / "assets"
+                / "bootstrap-prompts.json"
+            ).read_text(encoding="utf-8")
+        )
+        prompt = bootstrap["locales"]["en-US"]["hosts"]["codex"]["goals"][
+            "application"
+        ]
+        prompt["prompt"] = prompt["prompt"].replace(
+            "This global installation changes your user-level skill directory. ",
+            "",
+        )
+        validation = validator.Validation()
+        validator.validate_bootstrap_prompts(
+            validation,
+            self.catalog,
+            bootstrap,
+            REPOSITORY_ROOT
+            / "skills"
+            / "monica-guide"
+            / "assets"
+            / "bootstrap-prompts.schema.json",
+        )
+        self.assertTrue(
+            any("user-directory" in error for error in validation.errors),
+            validation.errors,
+        )
+
+    def test_source_resolver_distribution_is_exact_and_profile_scoped(self) -> None:
+        distribution = self.catalog["externalSkills"]["inspect-dependency-source"][
+            "distribution"
+        ]
+        self.assertEqual(
+            "bffe59e69be1d3e217783d41a0b84100ac5c3997",
+            distribution["commit"],
+        )
+        self.assertEqual(
+            "https://github.com/Tairitsua/inspect-dependency-source-skill/tree/"
+            + distribution["commit"],
+            distribution["immutableSkillUrl"],
+        )
+        self.assertRegex(distribution["digest"], r"^sha256:[0-9a-f]{64}$")
+        self.assertEqual(
+            {"extension-author", "docs-contributor"},
+            set(distribution["requiredByProfiles"]),
+        )
 
     def test_router_skill_references_exactly_match_catalog_routes(self) -> None:
         for skill_name, entry in self.catalog["skills"].items():

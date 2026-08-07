@@ -1,0 +1,254 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Tairitsua/Monica/blob/dev/skills/monica-guide/assets/bootstrap-prompts.schema.json",
+  "title": "Monica Guide Bootstrap Prompt Manifest",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "$schema",
+    "schemaVersion",
+    "repository",
+    "skill",
+    "immutableRef",
+    "catalogDigest",
+    "distribution",
+    "hosts",
+    "goals",
+    "locales"
+  ],
+  "properties": {
+    "$schema": {
+      "type": "string",
+      "const": "./bootstrap-prompts.schema.json"
+    },
+    "schemaVersion": {
+      "type": "integer",
+      "const": 2
+    },
+    "repository": {
+      "type": "string",
+      "const": "Tairitsua/Monica"
+    },
+    "skill": {
+      "type": "string",
+      "const": "monica-guide"
+    },
+    "immutableRef": {
+      "type": "string",
+      "const": "{{MONICA_IMMUTABLE_REF}}"
+    },
+    "catalogDigest": {
+      "type": "string",
+      "const": "{{MONICA_CATALOG_DIGEST}}"
+    },
+    "distribution": {
+      "$ref": "#/$defs/distribution"
+    },
+    "hosts": {
+      "$ref": "#/$defs/hosts"
+    },
+    "goals": {
+      "$ref": "#/$defs/goals"
+    },
+    "locales": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "en-US",
+        "zh-CN"
+      ],
+      "properties": {
+        "en-US": {
+          "$ref": "#/$defs/locale"
+        },
+        "zh-CN": {
+          "$ref": "#/$defs/locale"
+        }
+      }
+    }
+  },
+  "$defs": {
+    "distribution": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "skillsCli",
+        "immutableSkillUrlTemplate"
+      ],
+      "properties": {
+        "skillsCli": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "package",
+            "version"
+          ],
+          "properties": {
+            "package": {
+              "type": "string",
+              "const": "skills"
+            },
+            "version": {
+              "type": "string",
+              "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"
+            }
+          }
+        },
+        "immutableSkillUrlTemplate": {
+          "type": "string",
+          "const": "https://github.com/Tairitsua/Monica/tree/{tag}/skills/{skill}"
+        }
+      }
+    },
+    "host": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "agentTargets"
+      ],
+      "properties": {
+        "agentTargets": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": [
+              "codex",
+              "claude-code"
+            ]
+          },
+          "minItems": 1,
+          "uniqueItems": true
+        }
+      }
+    },
+    "hosts": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "codex",
+        "claude-code",
+        "generic"
+      ],
+      "properties": {
+        "codex": {
+          "$ref": "#/$defs/host"
+        },
+        "claude-code": {
+          "$ref": "#/$defs/host"
+        },
+        "generic": {
+          "$ref": "#/$defs/host"
+        }
+      }
+    },
+    "goals": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "application",
+        "extension"
+      ],
+      "properties": {
+        "application": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "profile"
+          ],
+          "properties": {
+            "profile": {
+              "type": "string",
+              "const": "application"
+            }
+          }
+        },
+        "extension": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "profile"
+          ],
+          "properties": {
+            "profile": {
+              "type": "string",
+              "const": "extension-author"
+            }
+          }
+        }
+      }
+    },
+    "prompt": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "prompt"
+      ],
+      "properties": {
+        "prompt": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "localizedGoals": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "application",
+        "extension"
+      ],
+      "properties": {
+        "application": {
+          "$ref": "#/$defs/prompt"
+        },
+        "extension": {
+          "$ref": "#/$defs/prompt"
+        }
+      }
+    },
+    "localizedHost": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "goals"
+      ],
+      "properties": {
+        "goals": {
+          "$ref": "#/$defs/localizedGoals"
+        }
+      }
+    },
+    "localizedHosts": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "codex",
+        "claude-code",
+        "generic"
+      ],
+      "properties": {
+        "codex": {
+          "$ref": "#/$defs/localizedHost"
+        },
+        "claude-code": {
+          "$ref": "#/$defs/localizedHost"
+        },
+        "generic": {
+          "$ref": "#/$defs/localizedHost"
+        }
+      }
+    },
+    "locale": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "hosts"
+      ],
+      "properties": {
+        "hosts": {
+          "$ref": "#/$defs/localizedHosts"
+        }
+      }
+    }
+  }
+}

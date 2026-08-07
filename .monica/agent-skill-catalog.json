@@ -1,7 +1,7 @@
 {
   "$schema": "./schemas/agent-skill-catalog.schema.json",
   "schemaVersion": 1,
-  "catalogVersion": "1.0.0",
+  "catalogVersion": "1.1.0",
   "skills": {
     "monica-guide": {
       "path": "skills/monica-guide",
@@ -41,12 +41,22 @@
       ],
       "dependencies": {
         "required": [
-          "monica-application-microservice",
-          "monica-application-modular-monolith",
           "monica-application-project-unit-development"
         ],
         "recommended": ["monica-application-unit-testing"],
         "conditional": [
+          {
+            "capability": "microservice",
+            "skills": [
+              "monica-application-microservice"
+            ]
+          },
+          {
+            "capability": "modular-monolith",
+            "skills": [
+              "monica-application-modular-monolith"
+            ]
+          },
           {
             "capability": "ui",
             "skills": ["monica-ui-development", "monica-ui-localization", "monica-ui-audit"]
@@ -320,7 +330,19 @@
     "inspect-dependency-source": {
       "ownership": "external",
       "managed": false,
-      "purpose": "Required for verified immutable source resolution through resolve --json."
+      "purpose": "Required for verified immutable source resolution through resolve --json.",
+      "distribution": {
+        "repository": "Tairitsua/inspect-dependency-source-skill",
+        "ref": "v1.0.0",
+        "commit": "bffe59e69be1d3e217783d41a0b84100ac5c3997",
+        "immutableSkillUrl": "https://github.com/Tairitsua/inspect-dependency-source-skill/tree/bffe59e69be1d3e217783d41a0b84100ac5c3997",
+        "digest": "sha256:b304ad7ad64e29527cb8b9b01373d242e95fcaa3965da360448c96986cc8666e",
+        "digestAlgorithm": "sha256-file-manifest-v1",
+        "requiredByProfiles": [
+          "extension-author",
+          "docs-contributor"
+        ]
+      }
     },
     "microsoft-code-reference": {
       "ownership": "external",
@@ -345,12 +367,22 @@
         "required": [
           "monica-guide",
           "monica-application",
-          "monica-application-microservice",
-          "monica-application-modular-monolith",
           "monica-application-project-unit-development"
         ],
         "recommended": ["monica-application-unit-testing", "monica-contribution"],
         "conditional": [
+          {
+            "capability": "microservice",
+            "skills": [
+              "monica-application-microservice"
+            ]
+          },
+          {
+            "capability": "modular-monolith",
+            "skills": [
+              "monica-application-modular-monolith"
+            ]
+          },
           {
             "capability": "ui",
             "skills": ["monica-ui-development", "monica-ui-localization", "monica-ui-audit"]
@@ -606,7 +638,8 @@
     }
   },
   "prompts": {
-    "bootstrapAsset": "skills/monica-guide/assets/bootstrap-prompts.json"
+    "bootstrapAsset": "skills/monica-guide/assets/bootstrap-prompts.json",
+    "bootstrapSchema": "skills/monica-guide/assets/bootstrap-prompts.schema.json"
   },
   "distribution": {
     "repository": "Tairitsua/Monica",

@@ -115,9 +115,27 @@ function renderPlan(plan) {
 export function statusEnvelope(environment) {
   const selectedPreference = environment.state.workspacePreferences[environment.key] || null;
   const instructionError = environment.instructionState.issues.find((issue) => issue.severity === 'error') || null;
+  const projectReleaseError = environment.projectConfig?.expectedCatalogRelease && environment.targetRelease
+    && environment.projectConfig.expectedCatalogRelease.id !== environment.targetRelease.id
+    ? {
+      code: 'project_release_conflict',
+      message: `Repository expects ${environment.projectConfig.expectedCatalogRelease.id}, but resolution selected ${environment.targetRelease.id}.`,
+    }
+    : null;
+  const globalReleaseError = environment.activeRelease && environment.targetRelease
+    && environment.activeRelease.id !== environment.targetRelease.id
+    ? {
+      code: 'global_release_conflict',
+      message: `Global release ${environment.activeRelease.id} conflicts with repository release ${environment.targetRelease.id}.`,
+    }
+    : null;
+  const architectureError = environment.applicationArchitecture?.issue || null;
   const error = environment.repositoryIssues[0]
     || environment.releaseError
     || environment.versionError
+    || projectReleaseError
+    || globalReleaseError
+    || architectureError
     || environment.closureError
     || environment.skillMetadataError
     || (environment.recoveryTransactions.length ? {
@@ -147,9 +165,12 @@ export function statusEnvelope(environment) {
       repositoryRoot: environment.repository.git?.root || null,
       repositoryRemote: environment.repository.git?.remoteName || null,
       candidateProfile: environment.candidateProfile,
+      profile: environment.profile,
       profileConfirmed: environment.profileConfirmed,
+      applicationArchitecture: environment.applicationArchitecture?.selected || null,
       detectedFrameworkVersion: environment.frameworkVersion.version,
       versionSource: environment.frameworkVersion.tier,
+      channel: environment.channel,
       targetRelease: environment.targetRelease?.id || null,
       activeGlobalRelease: environment.activeRelease?.id || null,
       sourceBinding: environment.sourceBinding,
@@ -170,8 +191,13 @@ export function renderStatus(status) {
     `Workspace                 ${observation.workspace}`,
     `Repository identity       ${observation.repositoryIdentity || 'unresolved'}`,
     `Candidate profile         ${observation.candidateProfile || 'ambiguous'}`,
+    `Selected profile          ${observation.profile || 'unresolved'}`,
     `Profile confirmed         ${observation.profileConfirmed ? 'yes' : 'no'}`,
+    observation.profile === 'application'
+      ? `Application architecture  ${observation.applicationArchitecture || 'unresolved'}`
+      : '',
     `Framework version         ${observation.detectedFrameworkVersion || 'unresolved'}`,
+    `Release channel           ${observation.channel || 'unresolved'}`,
     `Target release            ${observation.targetRelease || 'unresolved'}`,
     `Active global release     ${observation.activeGlobalRelease || 'none'}`,
     `Recovery transactions     ${observation.recoveryTransactions.length}`,

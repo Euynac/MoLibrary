@@ -2,7 +2,7 @@
 
 ## Application
 
-Install the `monica-application` closure. Exact read-only framework source is optional but recommended whenever behavior depends on internals. Generated and existing applications continue consuming Monica through normal project references or NuGet.
+Install the common `monica-application` and ProjectUnit closure. Select exactly one architecture capability when solution-level guidance is needed: `microservice` installs `$monica-application-microservice`, while `modular-monolith` installs `$monica-application-modular-monolith`. Do not guess for a new, mixed, or ambiguous repository; require the user to choose before applying an architecture-specific plan. Exact read-only framework source is optional but recommended whenever behavior depends on internals. Generated and existing applications continue consuming Monica through normal project references or NuGet.
 
 ## Extension author
 
@@ -28,3 +28,5 @@ Resolve framework versions in this order:
 4. project package declarations.
 
 Fail on mixed versions, ranges, an unavailable immutable release, or source provenance that cannot establish the exact commit/ref. Never select a likely tag or a default branch.
+
+When `extension-author` or `docs-contributor` lacks `inspect-dependency-source`, report the prerequisite as a blocker. The catalog's `externalSkills.inspect-dependency-source.distribution` object is the only approved installation source: it pins a human release ref, resolved commit, immutable URL, and file-manifest digest. Do not install a moving branch or unpinned package, and do not perform the external installation without current-session approval.

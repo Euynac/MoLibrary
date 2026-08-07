@@ -107,6 +107,32 @@ test('framework root Version is the final exact-version fallback and skill proje
   assert.deepEqual(detection.repository.capabilities, []);
 });
 
+test('application architecture is inferred only from characteristic project structure', (t) => {
+  const microservice = temporaryDirectory(t);
+  write(
+    path.join(microservice, 'src', 'Services', 'Ordering', 'OrderingService.API.csproj'),
+    '<Project><ItemGroup><PackageReference Include="Monica.Core" Version="1.2.3" /></ItemGroup></Project>\n',
+  );
+  const microserviceDetection = detectRepository(microservice);
+  assert.equal(microserviceDetection.candidateProfile, 'application');
+  assert.deepEqual(microserviceDetection.capabilities, ['microservice']);
+
+  const modularMonolith = temporaryDirectory(t);
+  write(
+    path.join(modularMonolith, 'src', 'Domains', 'Ordering', 'Domains.Ordering.csproj'),
+    '<Project><ItemGroup><PackageReference Include="Monica.Core" Version="1.2.3" /></ItemGroup></Project>\n',
+  );
+  const modularDetection = detectRepository(modularMonolith);
+  assert.equal(modularDetection.candidateProfile, 'application');
+  assert.deepEqual(modularDetection.capabilities, ['modular-monolith']);
+
+  write(
+    path.join(modularMonolith, 'src', 'Services', 'Billing', 'BillingService.Domain.csproj'),
+    '<Project Sdk="Microsoft.NET.Sdk" />\n',
+  );
+  assert.deepEqual(detectRepository(modularMonolith).capabilities, ['microservice', 'modular-monolith']);
+});
+
 test('characteristic-only docs inference requires both locales and the exact frontend path', (t) => {
   const repository = temporaryDirectory(t);
   fs.mkdirSync(path.join(repository, 'docs', 'en-US'), { recursive: true });

@@ -60,9 +60,10 @@
     "prompts": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["bootstrapAsset"],
+      "required": ["bootstrapAsset", "bootstrapSchema"],
       "properties": {
-        "bootstrapAsset": { "$ref": "#/$defs/relativePath" }
+        "bootstrapAsset": { "$ref": "#/$defs/relativePath" },
+        "bootstrapSchema": { "$ref": "#/$defs/relativePath" }
       }
     },
     "distribution": {
@@ -141,7 +142,44 @@
       "properties": {
         "ownership": { "type": "string", "const": "external" },
         "managed": { "type": "boolean", "const": false },
-        "purpose": { "type": "string", "minLength": 1 }
+        "purpose": { "type": "string", "minLength": 1 },
+        "distribution": { "$ref": "#/$defs/externalDistribution" }
+      }
+    },
+    "externalDistribution": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "repository",
+        "ref",
+        "commit",
+        "immutableSkillUrl",
+        "digest",
+        "digestAlgorithm",
+        "requiredByProfiles"
+      ],
+      "properties": {
+        "repository": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$"
+        },
+        "ref": { "type": "string", "minLength": 1 },
+        "commit": { "type": "string", "pattern": "^[0-9a-f]{40}$" },
+        "immutableSkillUrl": {
+          "type": "string",
+          "format": "uri",
+          "pattern": "^https://github\\.com/"
+        },
+        "digest": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" },
+        "digestAlgorithm": {
+          "type": "string",
+          "const": "sha256-file-manifest-v1"
+        },
+        "requiredByProfiles": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/skillName" },
+          "uniqueItems": true
+        }
       }
     },
     "profileSkills": {

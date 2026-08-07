@@ -257,11 +257,16 @@ export function detectRepository(workspace, inventory = null) {
     ignoredDirectories: BUNDLED_SKILL_DIRECTORIES,
     include: (_file, name) => name.endsWith('.csproj') || name.endsWith('.razor') || name === 'Directory.Build.props',
   });
+  const portablePaths = relevantFiles.map((file) => path.relative(workspace, file).split(path.sep).join('/'));
   const snippets = relevantFiles.slice(0, 250).map((file) => readText(file, '').slice(0, 65536)).join('\n');
   characteristics.ui = relevantFiles.some((file) => file.endsWith('.razor')) || /Monica\.[\w.]*UI|MudBlazor/i.test(snippets);
   characteristics.extension = /monica-third-party|Module\w+Guide|IMoModule/i.test(snippets) || relevantFiles.some((file) => /Extension|Provider|Connector/i.test(path.basename(file)));
   characteristics.application = /PackageReference[^>]+Include=["']Monica\.|ProjectReference[^>]+Monica\./i.test(snippets);
   characteristics.projectReference = /ProjectReference[^>]+(?:Include|Update)=["'][^"']*Monica/i.test(snippets);
+  characteristics.microservice = portablePaths.some((file) => /^src\/Services\//i.test(file)
+    || /(?:^|\/)[^/]+Service\.(?:API|Domain)\.csproj$/i.test(file));
+  characteristics.modularMonolith = portablePaths.some((file) => /^src\/Domains\//i.test(file)
+    || /(?:^|\/)Domains\.[^/]+\.csproj$/i.test(file));
 
   let candidateProfile = null;
   let confidence = 'ambiguous';
@@ -281,7 +286,11 @@ export function detectRepository(workspace, inventory = null) {
   } else if (characteristics.application) {
     candidateProfile = 'application'; confidence = 'characteristic'; reason = 'Monica package or project references detected.';
   }
-  const capabilities = characteristics.ui ? ['ui'] : [];
+  const capabilities = [
+    ...(characteristics.microservice ? ['microservice'] : []),
+    ...(characteristics.modularMonolith ? ['modular-monolith'] : []),
+    ...(characteristics.ui ? ['ui'] : []),
+  ];
   return { git, identity, characteristics, candidateProfile, confidence, reason, capabilities };
 }
 

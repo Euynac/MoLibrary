@@ -33,6 +33,8 @@ import {
 } from './guide-shared.mjs';
 import {
   assertCatalogDigest,
+  assertReleaseSelectorCompatibility,
+  assertTaggedReleaseConstraints,
   canonicalSkillUrl,
   discoverChannelReleaseTag,
   loadCatalog,
@@ -42,6 +44,7 @@ import {
   resolveProfileClosure,
   resolveRequiredSkillClosure,
   resolveRelease,
+  resolveTaggedRelease,
   skillsCliSpec,
 } from './guide-catalog.mjs';
 import { assertProjectReferenceRelease, profileRepositoryIssues, workspaceDetection } from './guide-detect.mjs';
@@ -61,6 +64,31 @@ import {
 const MUTATING_INTENTS = new Set(['init', 'update', 'configure', 'source', 'contribute', 'forget']);
 const VALID_PROFILES = new Set(['application', 'extension-author', 'framework-contributor', 'docs-contributor']);
 const VALID_AGENTS = new Set(['codex', 'claude-code']);
+const APPLICATION_ARCHITECTURES = ['microservice', 'modular-monolith'];
+
+export function applicationArchitectureSelection(profile, capabilities = []) {
+  if (profile !== 'application') return { selected: null, issue: null };
+  const selected = APPLICATION_ARCHITECTURES.filter((architecture) => capabilities.includes(architecture));
+  if (selected.length === 1) return { selected: selected[0], issue: null };
+  if (selected.length === 0) {
+    return {
+      selected: null,
+      issue: {
+        code: 'application_architecture_required',
+        message: 'Choose exactly one application architecture with --capability microservice or --capability modular-monolith.',
+        details: { choices: APPLICATION_ARCHITECTURES },
+      },
+    };
+  }
+  return {
+    selected: null,
+    issue: {
+      code: 'application_architecture_conflict',
+      message: 'Application architecture capabilities are mutually exclusive; select only microservice or modular-monolith.',
+      details: { selected },
+    },
+  };
+}
 
 function normalizeAgents(values) {
   const aliases = { claude: 'claude-code', 'claude_code': 'claude-code' };
@@ -212,6 +240,53 @@ function addBlocker(plan, code, message, details = undefined) {
 
 function addWarning(plan, code, message, details = undefined) {
   plan.warnings.push({ code, message, ...(details === undefined ? {} : { details }) });
+}
+
+function sourceResolverPrerequisite(catalog, agents) {
+  const name = catalog.sourcePolicies?.immutableBinding?.resolverSkill;
+  const external = name ? catalog.externalSkills?.[name] : null;
+  const distribution = external?.distribution;
+  if (!name || !distribution) return null;
+  const cliSpec = skillsCliSpec(catalog);
+  const installArgs = ['--yes', cliSpec, 'add', distribution.immutableSkillUrl, '-g'];
+  for (const agent of agents) installArgs.push('-a', agent);
+  installArgs.push('-s', name, '-y');
+  return {
+    name,
+    purpose: external.purpose,
+    repository: distribution.repository,
+    ref: distribution.ref,
+    commit: distribution.commit,
+    immutableSkillUrl: distribution.immutableSkillUrl,
+    digest: distribution.digest,
+    digestAlgorithm: distribution.digestAlgorithm,
+    installCommand: shellDisplay('npx', installArgs),
+    verificationCommands: agents.map((agent) => shellDisplay('npx', ['--yes', cliSpec, 'ls', '-g', '-a', agent, '--json'])),
+    managedByGuide: false,
+  };
+}
+
+function addSourceResolutionBlocker(plan, error, context, { offline = false } = {}) {
+  const prerequisite = error.code === 'source_resolver_unavailable'
+    ? sourceResolverPrerequisite(context.catalog, context.agents)
+    : null;
+  if (!prerequisite) {
+    addBlocker(plan, error.code, error.message, error.details);
+    return;
+  }
+  addBlocker(
+    plan,
+    offline ? 'offline_local_skill_source_required' : 'source_resolver_prerequisite_missing',
+    offline
+      ? 'Offline operation requires an already installed immutable source resolver and an exact verified local/cached Monica source.'
+      : `Required external skill ${prerequisite.name} is unavailable; install and verify its pinned immutable distribution separately, then rerun this preview.`,
+    {
+      cause: { code: error.code, message: error.message, details: error.details },
+      prerequisite,
+      requiresSeparateApproval: true,
+      networkRequired: !offline,
+    },
+  );
 }
 
 function fileAction(filePath, before, after, purpose, mode = 0o600) {
@@ -417,6 +492,18 @@ async function prepareReleaseContext(context, plan, options) {
     addBlocker(plan, context.detection.versionError.code, context.detection.versionError.message, context.detection.versionError.details);
     return;
   }
+  try {
+    assertReleaseSelectorCompatibility({
+      releaseTag: options.releaseTag,
+      sourceRef: options.sourceRef,
+      explicitChannel: options.channel,
+      persistedChannel: context.project.config?.channel,
+    });
+  } catch (error) {
+    if (!(error instanceof GuideError)) throw error;
+    addBlocker(plan, error.code, error.message, error.details);
+    return;
+  }
   if (context.channel === 'source') {
     try {
       context.release = resolveRelease(context.index, {
@@ -448,7 +535,7 @@ async function prepareReleaseContext(context, plan, options) {
       context.release.skillLastChangedIn = context.installManifest.skillLastChangedIn;
     } catch (error) {
       if (!(error instanceof GuideError)) throw error;
-      addBlocker(plan, error.code, error.message, error.details);
+      addSourceResolutionBlocker(plan, error, context, { offline: Boolean(options.offline) });
     }
     return;
   }
@@ -491,11 +578,23 @@ async function prepareReleaseContext(context, plan, options) {
     context.releaseIndex = releaseIndex;
   }
   try {
-    context.release = resolveRelease(context.index, {
-      channel: context.channel,
-      frameworkVersion: context.detection.frameworkVersion.version,
-      sourceRef: options.sourceRef,
-    });
+    if (options.releaseTag) {
+      context.release = resolveTaggedRelease(context.index, options.releaseTag);
+      context.channel = context.release.channel;
+      assertTaggedReleaseConstraints(context.release, {
+        explicitChannel: options.channel,
+        persistedChannel: context.project.config?.channel,
+        expectedRelease: context.project.config?.expectedCatalogRelease,
+        frameworkVersion: context.detection.frameworkVersion.version,
+      });
+    } else {
+      context.release = resolveRelease(context.index, {
+        channel: context.channel,
+        frameworkVersion: context.detection.frameworkVersion.version,
+        sourceRef: options.sourceRef,
+      });
+      context.channel = context.release.channel;
+    }
     context.releaseArtifacts = await loadReleaseArtifacts({
       release: context.release,
       releaseCatalogPath: options.releaseCatalog,
@@ -573,6 +672,11 @@ export async function buildPlan(intent, options = {}) {
     context.profile = profile;
     context.channel = options.channel || project.config?.channel || semverChannel(detection.frameworkVersion.version) || 'stable';
     context.capabilities = [...new Set(options.capabilities?.length ? options.capabilities : (project.config?.capabilities || detection.repository.capabilities || []))].sort();
+    context.applicationArchitecture = applicationArchitectureSelection(profile, context.capabilities);
+    if (context.applicationArchitecture.issue) {
+      const issue = context.applicationArchitecture.issue;
+      addBlocker(plan, issue.code, issue.message, issue.details);
+    }
     context.agents = normalizeAgents(options.agents?.length ? options.agents : (project.config?.agentTargets || ['codex', 'claude-code']));
     context.targetSkills = normalizeTargetSkills(options.skills || []);
     context.nestedInstructionSelections = resolveNestedInstructionSelections(workspace, detection, options.nestedInstructions || []);
@@ -595,11 +699,12 @@ export async function buildPlan(intent, options = {}) {
     }
     plan.context.profile = profile;
     plan.context.profileConfirmed = profileConfirmed;
-    plan.context.channel = context.channel;
     plan.context.capabilities = context.capabilities;
+    plan.context.applicationArchitecture = context.applicationArchitecture.selected;
     plan.context.agentTargets = context.agents;
     plan.context.requestedSkills = context.targetSkills;
     await prepareReleaseContext(context, plan, options);
+    plan.context.channel = context.channel;
     if (context.release) {
       try { assertProjectReferenceRelease(detection.frameworkVersion, context.release); }
       catch (error) { if (error instanceof GuideError) addBlocker(plan, error.code, error.message, error.details); else throw error; }
@@ -621,7 +726,7 @@ export async function buildPlan(intent, options = {}) {
     }
     let sourceBinding = context.sourceBinding;
     let discardStoredSource = false;
-    if (context.closure && context.release) {
+    if (context.closure && context.release && context.installManifest) {
       const existingBinding = state.sourceBindings[key];
       let refreshedStoredSource = null;
       if (existingBinding && !options.sourcePath && !sourceBinding) {
@@ -664,6 +769,7 @@ export async function buildPlan(intent, options = {}) {
         } catch (error) {
           if (!(error instanceof GuideError)) throw error;
           if (error.code === 'source_access_forbidden') addBlocker(plan, error.code, error.message, error.details);
+          else if (error.code === 'source_resolver_unavailable') addSourceResolutionBlocker(plan, error, context, { offline: true });
           else addBlocker(
             plan,
             'offline_local_skill_source_required',
@@ -686,13 +792,15 @@ export async function buildPlan(intent, options = {}) {
           });
         } catch (error) {
           if (!(error instanceof GuideError)) throw error;
-          addBlocker(plan, error.code, error.message, error.details);
+          addSourceResolutionBlocker(plan, error, context);
         }
       } else if (context.closure.source.recommended) {
         addWarning(plan, 'source_recommended', 'Exact read-only Monica source is recommended for behavior that depends on framework internals.');
       }
     }
-    const requiresLocalSkillSource = intent !== 'source' && (Boolean(options.offline) || context.channel === 'source');
+    const requiresLocalSkillSource = intent !== 'source'
+      && Boolean(context.installManifest)
+      && (Boolean(options.offline) || context.channel === 'source');
     context.localSkillSource = null;
     if (requiresLocalSkillSource) {
       if (!sourceBinding) {
@@ -716,7 +824,7 @@ export async function buildPlan(intent, options = {}) {
           addBlocker(plan, error.code, error.message, error.details);
         }
       }
-    } else if (intent !== 'source') {
+    } else if (intent !== 'source' && context.release && context.installManifest && context.channel !== 'source') {
       plan.context.installationSource = { type: 'immutable-tag', ref: context.release?.installRef || null, offline: false };
     }
     if (context.closure?.external.length) addWarning(plan, 'external_skills_unmanaged', `External skills are diagnosed but never installed or updated by Monica Guide: ${context.closure.external.join(', ')}.`);

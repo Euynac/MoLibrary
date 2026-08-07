@@ -4,6 +4,9 @@ import { fileURLToPath } from 'node:url';
 import { GuideError, compareOrdinalUtf8, digest, parseSemVer, readJson, semverChannel } from './guide-shared.mjs';
 
 const ASSET_ROOT = fileURLToPath(new URL('../assets/', import.meta.url));
+const SUPPORTED_CATALOG_SCHEMA_VERSION = 1;
+const SUPPORTED_RELEASE_INDEX_SCHEMA_VERSION = 2;
+const SUPPORTED_RELEASE_MANIFEST_SCHEMA_VERSION = 2;
 
 export function loadCatalog({ catalogPath, indexPath } = {}) {
   const resolvedCatalogPath = path.resolve(catalogPath || process.env.MONICA_GUIDE_CATALOG || path.join(ASSET_ROOT, 'default-catalog.json'));
@@ -26,6 +29,28 @@ function validateReleaseTag(tag) {
   if (!String(tag || '').startsWith('v') || !parseSemVer(String(tag).slice(1))) {
     throw new GuideError('invalid_release_tag', `Release tag must be an immutable vSemVer tag, found ${tag || 'missing'}.`);
   }
+}
+
+function requireSupportedSelectedSchema(payload, {
+  asset,
+  releaseTag,
+  supportedVersion,
+}) {
+  const selectedVersion = payload?.schemaVersion;
+  if (!Number.isInteger(selectedVersion) || selectedVersion <= supportedVersion) return;
+  validateReleaseTag(releaseTag);
+  const reinstallUrl = `https://github.com/Tairitsua/Monica/tree/${releaseTag}/skills/monica-guide`;
+  throw new GuideError(
+    'guide_upgrade_required',
+    `The installed monica-guide supports ${asset} schemaVersion ${supportedVersion}, but requested immutable release ${releaseTag} uses schemaVersion ${selectedVersion}. Reinstall monica-guide from the requested immutable tag at ${reinstallUrl}, verify skill discovery, then retry the same Guide command.`,
+    {
+      asset,
+      releaseTag,
+      supportedSchemaVersion: supportedVersion,
+      selectedSchemaVersion: selectedVersion,
+      reinstallUrl,
+    },
+  );
 }
 
 function validateReleaseSkillContracts(releaseId, release) {
@@ -58,8 +83,13 @@ function validateReleaseSkillContracts(releaseId, release) {
 }
 
 export function verifyReleaseIndex(index, tag) {
-  validateIndex(index);
   validateReleaseTag(tag);
+  requireSupportedSelectedSchema(index, {
+    asset: 'agent-skill-index.json',
+    releaseTag: tag,
+    supportedVersion: SUPPORTED_RELEASE_INDEX_SCHEMA_VERSION,
+  });
+  validateIndex(index);
   const matches = Object.entries(index.releases).filter(([, release]) => release.tag === tag);
   if (matches.length !== 1) throw new GuideError('release_index_mismatch', `Release index must contain exactly one release for ${tag}.`);
   const [releaseId, release] = matches[0];
@@ -201,7 +231,12 @@ function parseAssetJson(text, label) {
 }
 
 export function verifyReleaseManifest(manifest, release, catalogDigest) {
-  if (manifest?.schemaVersion !== 2) throw new GuideError('manifest_schema_mismatch', 'Release manifest must use schemaVersion 2.');
+  requireSupportedSelectedSchema(manifest, {
+    asset: 'agent-skill-manifest.json',
+    releaseTag: release.tag,
+    supportedVersion: SUPPORTED_RELEASE_MANIFEST_SCHEMA_VERSION,
+  });
+  if (manifest?.schemaVersion !== SUPPORTED_RELEASE_MANIFEST_SCHEMA_VERSION) throw new GuideError('manifest_schema_mismatch', `Release manifest must use schemaVersion ${SUPPORTED_RELEASE_MANIFEST_SCHEMA_VERSION}.`);
   if (manifest.tag !== release.tag || manifest.resolvedCommit !== release.commit) throw new GuideError('manifest_release_mismatch', `Release manifest does not describe ${release.tag}@${release.commit}.`);
   if (manifest.catalogDigest !== catalogDigest || manifest.catalogDigest !== release.catalogDigest) throw new GuideError('manifest_catalog_mismatch', 'Release manifest catalog digest does not match the selected release.');
   if (manifest.skillTreeDigest !== release.skillTreeDigest) throw new GuideError('manifest_tree_mismatch', 'Release manifest skill-tree digest does not match the selected release.');
@@ -290,6 +325,11 @@ export async function loadReleaseArtifacts({
   }
   if (catalogDigest !== release.catalogDigest) throw new GuideError('catalog_digest_mismatch', `Fetched catalog ${catalogDigest} does not match release ${release.catalogDigest}.`);
   const catalog = parseAssetJson(catalogText, 'Release catalog');
+  requireSupportedSelectedSchema(catalog, {
+    asset: 'agent-skill-catalog.json',
+    releaseTag: release.tag,
+    supportedVersion: SUPPORTED_CATALOG_SCHEMA_VERSION,
+  });
   validateCatalog(catalog);
   const catalogSkills = Object.entries(catalog.skills)
     .filter(([, entry]) => entry.ownership === 'monica' && entry.managed === true)
@@ -321,7 +361,7 @@ export async function loadReleaseArtifacts({
 }
 
 export function validateCatalog(catalog) {
-  if (catalog?.schemaVersion !== 1) throw new GuideError('catalog_schema_mismatch', `Expected catalog schema 1, found ${catalog?.schemaVersion ?? 'missing'}.`);
+  if (catalog?.schemaVersion !== SUPPORTED_CATALOG_SCHEMA_VERSION) throw new GuideError('catalog_schema_mismatch', `Expected catalog schema ${SUPPORTED_CATALOG_SCHEMA_VERSION}, found ${catalog?.schemaVersion ?? 'missing'}.`);
   if (catalog.$schema !== './schemas/agent-skill-catalog.schema.json') throw new GuideError('catalog_schema_reference_mismatch', 'Catalog must identify the canonical agent-skill-catalog schema.');
   const requiredTopLevel = ['$schema', 'schemaVersion', 'catalogVersion', 'skills', 'externalSkills', 'profiles', 'profileClosurePolicy', 'sourcePolicies', 'aliases', 'managedInstructions', 'prompts', 'distribution'];
   const unexpectedTopLevel = Object.keys(catalog).filter((key) => !requiredTopLevel.includes(key));
@@ -373,8 +413,23 @@ export function validateCatalog(catalog) {
   }
   for (const [name, external] of Object.entries(catalog.externalSkills)) {
     if (!skillNamePattern.test(name)) throw new GuideError('invalid_catalog', `Invalid external skill name ${name}.`);
-    exactKeys(external, ['ownership', 'managed', 'purpose'], [], `externalSkills.${name}`);
+    exactKeys(external, ['ownership', 'managed', 'purpose'], ['distribution'], `externalSkills.${name}`);
     if (external.ownership !== 'external' || external.managed !== false || typeof external.purpose !== 'string' || !external.purpose.trim()) throw new GuideError('invalid_catalog', `External skill ${name} has an invalid ownership contract.`);
+    if (external.distribution !== undefined) {
+      const distribution = external.distribution;
+      exactKeys(distribution, ['repository', 'ref', 'commit', 'immutableSkillUrl', 'digest', 'digestAlgorithm', 'requiredByProfiles'], [], `externalSkills.${name}.distribution`);
+      nameList(distribution.requiredByProfiles, `externalSkills.${name}.distribution.requiredByProfiles`);
+      const expectedUrl = `https://github.com/${distribution.repository}/tree/${distribution.commit}`;
+      if (!/^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/.test(distribution.repository || '')
+        || typeof distribution.ref !== 'string'
+        || !distribution.ref.trim()
+        || !/^[0-9a-f]{40}$/.test(distribution.commit || '')
+        || distribution.immutableSkillUrl !== expectedUrl
+        || !/^sha256:[0-9a-f]{64}$/.test(distribution.digest || '')
+        || distribution.digestAlgorithm !== 'sha256-file-manifest-v1') {
+        throw new GuideError('invalid_catalog', `External skill ${name} has an invalid immutable distribution contract.`);
+      }
+    }
   }
   const assertSkillReferences = (names, label, collection = catalog.skills) => {
     for (const name of names) if (!Object.hasOwn(collection, name)) throw new GuideError('invalid_catalog_reference', `${label} references missing skill ${name}.`);
@@ -415,6 +470,11 @@ export function validateCatalog(catalog) {
     for (const field of ['repositoryIdentities', 'characteristicPaths']) if (!Array.isArray(profile.inference[field]) || new Set(profile.inference[field]).size !== profile.inference[field].length) throw new GuideError('invalid_catalog', `Profile ${profileName} inference ${field} must be a unique array.`);
     if (profile.inference.characteristicPaths.some((entry) => !safeRelativePath(entry))) throw new GuideError('invalid_catalog', `Profile ${profileName} has an unsafe characteristic path.`);
   }
+  for (const [name, external] of Object.entries(catalog.externalSkills)) {
+    for (const profileName of external.distribution?.requiredByProfiles || []) {
+      if (!Object.hasOwn(catalog.profiles, profileName)) throw new GuideError('invalid_catalog_reference', `External skill ${name} distribution references missing profile ${profileName}.`);
+    }
+  }
   exactKeys(catalog.profileClosurePolicy, ['traverseSkillDependencies', 'recommendations', 'conditional'], [], 'profileClosurePolicy');
   if (JSON.stringify(catalog.profileClosurePolicy.traverseSkillDependencies) !== '["required"]' || catalog.profileClosurePolicy.recommendations !== 'profile-explicit' || catalog.profileClosurePolicy.conditional !== 'selected-capabilities-only') throw new GuideError('invalid_catalog', 'Catalog profile closure policy is unsupported.');
   exactKeys(catalog.sourcePolicies, ['channels', 'versionResolutionOrder', 'immutableBinding', 'failClosedOn', 'offline'], [], 'sourcePolicies');
@@ -439,8 +499,8 @@ export function validateCatalog(catalog) {
     assertSkillReferences(template.skills, `managedInstructions.templates.${profileName}`);
     if (!Array.isArray(template.rules) || !template.rules.length || template.rules.some((rule) => typeof rule !== 'string' || !rule.trim())) throw new GuideError('invalid_catalog', `Managed instruction template ${profileName} has invalid rules.`);
   }
-  exactKeys(catalog.prompts, ['bootstrapAsset'], [], 'prompts');
-  if (!safeRelativePath(catalog.prompts.bootstrapAsset)) throw new GuideError('invalid_catalog', 'Catalog bootstrap prompt path is unsafe.');
+  exactKeys(catalog.prompts, ['bootstrapAsset', 'bootstrapSchema'], [], 'prompts');
+  if (!safeRelativePath(catalog.prompts.bootstrapAsset) || !safeRelativePath(catalog.prompts.bootstrapSchema)) throw new GuideError('invalid_catalog', 'Catalog bootstrap prompt paths are unsafe.');
   exactKeys(catalog.distribution, ['repository', 'skillsCli', 'immutableSkillUrlTemplate'], [], 'distribution');
   exactKeys(catalog.distribution.skillsCli, ['package', 'version'], [], 'distribution.skillsCli');
   if (catalog.distribution.repository !== 'Tairitsua/Monica'
@@ -452,7 +512,7 @@ export function validateCatalog(catalog) {
 }
 
 export function validateIndex(index) {
-  if (index?.schemaVersion !== 2) throw new GuideError('index_schema_mismatch', `Expected index schema 2, found ${index?.schemaVersion ?? 'missing'}.`);
+  if (index?.schemaVersion !== SUPPORTED_RELEASE_INDEX_SCHEMA_VERSION) throw new GuideError('index_schema_mismatch', `Expected index schema ${SUPPORTED_RELEASE_INDEX_SCHEMA_VERSION}, found ${index?.schemaVersion ?? 'missing'}.`);
   if (index.$schema !== './schemas/agent-skill-index.schema.json') throw new GuideError('index_schema_reference_mismatch', 'Release index must identify the canonical agent-skill-index schema.');
   for (const field of ['channels', 'versions', 'releases']) {
     if (!index[field] || typeof index[field] !== 'object' || Array.isArray(index[field])) throw new GuideError('invalid_index', `Index ${field} must be an object.`);
@@ -660,6 +720,79 @@ export function resolveRelease(index, { channel = 'stable', frameworkVersion = n
   if (!releaseChannel) throw new GuideError('release_version_invalid', `Release ${releaseId} has invalid Monica SemVer ${release.monicaVersion}.`);
   if (channel !== releaseChannel) throw new GuideError('release_channel_mismatch', `Release ${releaseId} is ${releaseChannel}, not requested channel ${channel}.`);
   return { id: releaseId, ...release, channel, installRef: release.tag };
+}
+
+export function resolveTaggedRelease(index, releaseTag) {
+  const { release } = verifyReleaseIndex(index, releaseTag);
+  const channel = semverChannel(release.monicaVersion);
+  if (!channel) throw new GuideError('release_version_invalid', `Release ${release.id} has invalid Monica SemVer ${release.monicaVersion}.`);
+  return { ...release, channel, installRef: release.tag };
+}
+
+export function assertReleaseSelectorCompatibility({ releaseTag = null, sourceRef = null, explicitChannel = null, persistedChannel = null } = {}) {
+  const hasExactSelector = Boolean(releaseTag || sourceRef);
+  if (!hasExactSelector) return;
+  if (releaseTag && sourceRef) {
+    throw new GuideError('release_selector_conflict', '--release-tag and --source-ref select different release kinds and cannot be combined.');
+  }
+  if (explicitChannel && persistedChannel && explicitChannel !== persistedChannel) {
+    throw new GuideError(
+      'release_channel_constraint_conflict',
+      `Explicit channel ${explicitChannel} conflicts with repository channel ${persistedChannel}.`,
+      { explicitChannel, persistedChannel },
+    );
+  }
+  const constrainedChannel = explicitChannel || persistedChannel;
+  if (releaseTag && constrainedChannel === 'source') {
+    throw new GuideError('release_selector_conflict', 'An immutable --release-tag cannot be combined with the source channel.');
+  }
+  if (sourceRef && constrainedChannel !== 'source') {
+    throw new GuideError('release_selector_conflict', '--source-ref is accepted only when the selected channel is source.');
+  }
+}
+
+export function assertTaggedReleaseConstraints(release, {
+  explicitChannel = null,
+  persistedChannel = null,
+  expectedRelease = null,
+  frameworkVersion = null,
+} = {}) {
+  if (explicitChannel && explicitChannel !== release.channel) {
+    throw new GuideError(
+      'release_channel_mismatch',
+      `Release ${release.id} is ${release.channel}, not explicitly requested channel ${explicitChannel}.`,
+      { release: release.id, releaseChannel: release.channel, explicitChannel },
+    );
+  }
+  if (persistedChannel && persistedChannel !== release.channel) {
+    throw new GuideError(
+      'project_channel_conflict',
+      `Release ${release.id} is ${release.channel}, but this repository is configured for ${persistedChannel}.`,
+      { release: release.id, releaseChannel: release.channel, persistedChannel },
+    );
+  }
+  if (expectedRelease) {
+    const mismatches = {};
+    for (const field of ['id', 'tag', 'commit', 'catalogDigest']) {
+      if (expectedRelease[field] != null && expectedRelease[field] !== release[field]) {
+        mismatches[field] = { expected: expectedRelease[field], actual: release[field] ?? null };
+      }
+    }
+    if (Object.keys(mismatches).length) {
+      throw new GuideError(
+        'project_release_conflict',
+        `Explicit release ${release.id} conflicts with repository release ${expectedRelease.id || expectedRelease.tag || 'unknown'}.`,
+        { mismatches },
+      );
+    }
+  }
+  if (frameworkVersion && frameworkVersion !== release.monicaVersion) {
+    throw new GuideError(
+      'release_version_mismatch',
+      `Release ${release.id} targets Monica ${release.monicaVersion}, not detected framework ${frameworkVersion}.`,
+      { release: release.id, releaseVersion: release.monicaVersion, frameworkVersion },
+    );
+  }
 }
 
 export function assertCatalogDigest(release, catalogDigest) {
