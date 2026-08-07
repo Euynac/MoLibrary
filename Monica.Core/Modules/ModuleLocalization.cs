@@ -13,8 +13,8 @@ using Monica.Core.Localization.Services;
 using Monica.Core.Localization.Services.Support;
 using Monica.Core.Modularity;
 using Monica.Core.Modularity.Abstractions;
-using Monica.Core.Modularity.Annotations;
 using Monica.Core.Modularity.Models;
+using Monica.Core.TypeDiscovery.Models;
 
 // ReSharper disable once CheckNamespace
 namespace Monica.Modules;
@@ -26,38 +26,39 @@ public static class ModuleLocalizationBuilderExtensions
         /// <summary>
         /// Configure Localization module
         /// </summary>
-        public ModuleLocalizationGuide AddLocalization(Action<ModuleLocalizationOption>? action = null)
+        public ModuleRegistration<ModuleLocalization, ModuleLocalizationOption> AddLocalization(
+            Action<ModuleLocalizationOption>? action = null)
         {
-            return builder.AddModule<ModuleLocalization, ModuleLocalizationOption, ModuleLocalizationGuide>(action);
+            return builder.AddModule<ModuleLocalization, ModuleLocalizationOption>(action);
+        }
+    }
+
+    extension(ModuleRegistration<ModuleLocalization, ModuleLocalizationOption> registration)
+    {
+        /// <summary>
+        /// Registers a localization resource marker that is outside the host's business-type scan.
+        /// </summary>
+        public ModuleRegistration<ModuleLocalization, ModuleLocalizationOption> AddResource<TResource>()
+            where TResource : class, ILocalizationResource
+        {
+            return registration.Configure(option => option.AddResource(typeof(TResource)));
         }
     }
 }
 
-[ModuleKey(BuiltInModuleKey.Localization)]
-public class ModuleLocalization(ModuleLocalizationOption option)
-    : WebModuleBase<ModuleLocalization, ModuleLocalizationOption, ModuleLocalizationGuide>(option), IBusinessTypeIterator
+public class ModuleLocalization : MonicaModule<ModuleLocalizationOption>, IWebModule
 {
     private readonly LocalizationResourceRegistry _resourceRegistry = new();
     private readonly List<Type> _resourceMarkerTypesDiscoveredFromTypeScan = [];
 
-    public override bool CanDowngradeToNonWebModule()
+    public override void ConfigureApplicationBuilder(WebModuleContext<ModuleLocalizationOption> context)
     {
-        return true;
+        context.ApplicationBuilder.UseRequestLocalization();
     }
 
-    public override void ConfigureApplicationBuilder(IApplicationBuilder app)
+    public override void ConfigureServices(ModuleContext<ModuleLocalizationOption> context)
     {
-        app.UseRequestLocalization();
-    }
-
-    protected override int GetConfigureApplicationBuilderOrder()
-    {
-        return (int)ModuleApplicationMiddlewareOrder.BeforeUseRouting;
-    }
-
-
-    public override void ConfigureServices(IServiceCollection services)
-    {
+        var services = context.Services;
         var runtimeOptions = Option.ToRuntimeOptions();
 
         // Add ASP.NET Core localization services
@@ -97,49 +98,24 @@ public class ModuleLocalization(ModuleLocalizationOption option)
     /// Collects localization resource marker types discovered through the global type finder.
     /// This path is intended for resource types that live in host or business assemblies participating in the configured scan.
     /// Built-in Monica modules must not rely on this hook because their assemblies may not be part of that scan.
-    /// Monica modules should declare a dependency on <see cref="ModuleLocalizationGuide"/> and register resource types through <see cref="ModuleLocalizationGuide.AddResource{TResource}"/>.
+    /// Monica modules should declare a dependency on <see cref="ModuleLocalization"/> and register reusable resource types through the registration extension.
     /// </summary>
-    public IEnumerable<Type> IterateBusinessTypes(IEnumerable<Type> types)
+    public override void DeclareTypeDiscovery(TypeDiscoveryPlan<ModuleLocalizationOption> discovery)
     {
-        foreach (var type in types)
-        {
-            if (type is { IsClass: true, IsAbstract: false } &&
-                typeof(ILocalizationResource).IsAssignableFrom(type))
+        discovery.Match(
+            TypeQuery.ConcreteClass.AssignableTo<ILocalizationResource>(),
+            (_, matches) =>
             {
-                _resourceMarkerTypesDiscoveredFromTypeScan.Add(type);
-            }
-
-            yield return type;
-        }
+                _resourceMarkerTypesDiscoveredFromTypeScan.Clear();
+                _resourceMarkerTypesDiscoveredFromTypeScan.AddRange(
+                    matches.Select(static match => match.Type));
+            });
     }
 
-    public override void PostConfigureServices(IServiceCollection _)
+    public override void PostConfigureServices(ModuleContext<ModuleLocalizationOption> context)
     {
         _resourceRegistry.ReplaceFromTypes(Option.ResourceMarkerTypes.Concat(_resourceMarkerTypesDiscoveredFromTypeScan));
         Logger.LogInformation("Registered {Count} localization resource marker types.", _resourceRegistry.GetRegistrations().Count);
-    }
-}
-
-public class ModuleLocalizationGuide : WebModuleGuide<ModuleLocalization, ModuleLocalizationOption, ModuleLocalizationGuide>
-{
-    /// <summary>
-    /// Manually registers a localization resource marker type for Monica modules and other reusable libraries.
-    /// Use this method when a resource type should not depend on the host application's business-type scan.
-    /// Host or business application resource types should continue to rely on automatic discovery through <see cref="IBusinessTypeIterator"/>.
-    /// </summary>
-    public ModuleLocalizationGuide AddResource<TResource>() where TResource : class, ILocalizationResource
-    {
-        ConfigureModuleOption(option =>
-        {
-            var resourceType = typeof(TResource);
-            if (!option.ResourceMarkerTypes.Contains(resourceType))
-            {
-                option.ResourceMarkerTypes.Add(resourceType);
-            }
-        }, secondKey: typeof(TResource).FullName,
-            duplicateBehavior: ModuleConfigurationDuplicateBehavior.SilentIdempotent);
-
-        return this;
     }
 }
 
@@ -171,10 +147,18 @@ public class ModuleLocalizationOption : ModuleOptions<ModuleLocalization>
 
     /// <summary>
     /// Manually registered localization resource marker types.
-    /// Built-in Monica modules should add their resource types through <see cref="ModuleLocalizationGuide.AddResource{TResource}"/>
-    /// instead of relying on <see cref="IBusinessTypeIterator"/>, which is intended for the host application's scanned types.
+    /// Built-in Monica modules should add their resource types through the module registration extension
+    /// instead of relying on host business-type discovery, which is intended for application-owned scanned types.
     /// </summary>
     public List<Type> ResourceMarkerTypes { get; set; } = [];
+
+    internal void AddResource(Type resourceType)
+    {
+        if (!ResourceMarkerTypes.Contains(resourceType))
+        {
+            ResourceMarkerTypes.Add(resourceType);
+        }
+    }
 
     internal LocalizationRuntimeOptions ToRuntimeOptions()
     {

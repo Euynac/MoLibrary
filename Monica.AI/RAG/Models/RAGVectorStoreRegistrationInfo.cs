@@ -1,7 +1,7 @@
 namespace Monica.AI.RAG.Models;
 
 /// <summary>
-/// Describes how the RAG vector store was registered by the module guide.
+/// Describes how the RAG vector store was configured through module registration.
 /// </summary>
 public sealed record RAGVectorStoreRegistrationInfo
 {

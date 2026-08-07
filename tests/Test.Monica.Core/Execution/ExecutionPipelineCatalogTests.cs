@@ -7,9 +7,7 @@ using Monica.Core.Execution.Facades;
 using Monica.Core.Execution.Models;
 using Monica.Core.Modularity;
 using Monica.Core.Modularity.Abstractions;
-using Monica.Core.Modularity.Annotations;
 using Monica.Core.Modularity.Extensions;
-using Monica.Core.Modularity.Models;
 using Monica.Core.Results;
 using Monica.Modules;
 using Monica.Tool.Extensions;
@@ -29,10 +27,7 @@ public sealed class ExecutionPipelineCatalogTests
         {
             monica.AddExecutionPipeline()
                 .AddBehavior<HostCatalogBehavior>(order: 200, lifetime: ServiceLifetime.Scoped);
-            monica.AddModule<
-                CatalogContributorModule,
-                CatalogContributorModuleOption,
-                CatalogContributorModuleGuide>();
+            monica.AddModule<CatalogContributorModule, CatalogContributorModuleOption>();
         });
         using var host = builder.Build();
         using var scope = host.Services.CreateScope();
@@ -47,8 +42,7 @@ public sealed class ExecutionPipelineCatalogTests
             .Should().Equal(
                 typeof(ModuleCatalogBehavior).GetCleanFullName(),
                 typeof(HostCatalogBehavior).GetCleanFullName());
-        snapshot.Registrations[0].SourceModuleKey.Should().Be(
-            ModuleKey.Create(CatalogContributorModule.MODULE_KEY));
+        snapshot.Registrations[0].SourceModuleKey.Should().BeNull();
         snapshot.Registrations[1].SourceModuleKey.Should().BeNull();
         snapshot.Registrations[1].Lifetime.Should().Be(ServiceLifetime.Scoped);
 
@@ -68,7 +62,7 @@ public sealed class ExecutionPipelineCatalogTests
         var filterInvocations = 0;
         var activationCounter = new BehaviorActivationCounter();
         using var host = BuildHost(
-            guide => guide.AddBehavior<CatalogBehavior>(descriptorFilter: _ =>
+            registration => registration.AddBehavior<CatalogBehavior>(descriptorFilter: _ =>
             {
                 Interlocked.Increment(ref filterInvocations);
                 return true;
@@ -101,7 +95,7 @@ public sealed class ExecutionPipelineCatalogTests
     {
         var filterInvocations = 0;
         var expected = new CatalogPlanException("filter failed");
-        using var host = BuildHost(guide => guide.AddBehavior<CatalogBehavior>(descriptorFilter: _ =>
+        using var host = BuildHost(registration => registration.AddBehavior<CatalogBehavior>(descriptorFilter: _ =>
         {
             Interlocked.Increment(ref filterInvocations);
             throw expected;
@@ -155,7 +149,7 @@ public sealed class ExecutionPipelineCatalogTests
         var filterInvocations = 0;
         var filterStarted = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         using var releaseFilter = new ManualResetEventSlim();
-        using var host = BuildHost(guide => guide.AddBehavior<CatalogBehavior>(descriptorFilter: _ =>
+        using var host = BuildHost(registration => registration.AddBehavior<CatalogBehavior>(descriptorFilter: _ =>
         {
             Interlocked.Increment(ref filterInvocations);
             filterStarted.TrySetResult();
@@ -203,8 +197,7 @@ public sealed class ExecutionPipelineCatalogTests
         var builder = Host.CreateApplicationBuilder();
         builder.AddMonica(monica => monica.AddModule<
             OpenCatalogContributorModule,
-            OpenCatalogContributorModuleOption,
-            OpenCatalogContributorModuleGuide>());
+            OpenCatalogContributorModuleOption>());
         using var host = builder.Build();
         var catalog = host.Services.GetRequiredService<IExecutionPipelineCatalog>();
 
@@ -217,7 +210,7 @@ public sealed class ExecutionPipelineCatalogTests
         registration.BehaviorType.FullName.Should().NotContain("Version=");
         registration.Order.Should().Be(321);
         registration.Lifetime.Should().Be(ServiceLifetime.Singleton);
-        registration.SourceModuleKey.Should().Be(ModuleKey.Create(OpenCatalogContributorModule.MODULE_KEY));
+        registration.SourceModuleKey.Should().BeNull();
         registration.IsOpenGeneric.Should().BeTrue();
         registration.HasDescriptorFilter.Should().BeTrue();
 
@@ -235,7 +228,7 @@ public sealed class ExecutionPipelineCatalogTests
     }
 
     private static IHost BuildHost(
-        Action<ModuleExecutionPipelineGuide> configure,
+        Action<ModuleRegistration<ModuleExecutionPipeline, ModuleExecutionPipelineOption>> configure,
         Action<IServiceCollection>? configureServices = null)
     {
         var builder = Host.CreateApplicationBuilder();
@@ -313,42 +306,30 @@ public sealed class ExecutionPipelineCatalogTests
     private sealed class CatalogPlanException(string message) : Exception(message);
 }
 
-[ModuleKey(CatalogContributorModule.MODULE_KEY)]
-public sealed class CatalogContributorModule(CatalogContributorModuleOption option)
-    : ModuleBase<CatalogContributorModule, CatalogContributorModuleOption, CatalogContributorModuleGuide>(option)
+internal sealed class CatalogContributorModule : MonicaModule<CatalogContributorModuleOption>
 {
-    public const string MODULE_KEY = "Test.Monica.Core.ExecutionCatalogContributor";
-
-    public override void ClaimDependencies()
+    public override void Describe(ModuleDescriptor module)
     {
-        DependsOnModule<ModuleExecutionPipelineGuide>().Register()
-            .AddBehavior<ExecutionPipelineCatalogTests.ModuleCatalogBehavior>(order: 100);
+        module.Require<ModuleExecutionPipeline, ModuleExecutionPipelineOption>(options =>
+            options.AddBehavior(
+                typeof(ExecutionPipelineCatalogTests.ModuleCatalogBehavior),
+                order: 100));
     }
 }
 
-public sealed class CatalogContributorModuleGuide
-    : ModuleGuide<CatalogContributorModule, CatalogContributorModuleOption, CatalogContributorModuleGuide>;
+internal sealed class CatalogContributorModuleOption : ModuleOptions<CatalogContributorModule>;
 
-public sealed class CatalogContributorModuleOption : ModuleOptions<CatalogContributorModule>;
-
-[ModuleKey(OpenCatalogContributorModule.MODULE_KEY)]
-public sealed class OpenCatalogContributorModule(OpenCatalogContributorModuleOption option)
-    : ModuleBase<OpenCatalogContributorModule, OpenCatalogContributorModuleOption, OpenCatalogContributorModuleGuide>(option)
+internal sealed class OpenCatalogContributorModule : MonicaModule<OpenCatalogContributorModuleOption>
 {
-    public const string MODULE_KEY = "Test.Monica.Core.OpenExecutionCatalogContributor";
-
-    public override void ClaimDependencies()
+    public override void Describe(ModuleDescriptor module)
     {
-        DependsOnModule<ModuleExecutionPipelineGuide>().Register()
-            .AddBehavior(
+        module.Require<ModuleExecutionPipeline, ModuleExecutionPipelineOption>(options =>
+            options.AddBehavior(
                 typeof(ExecutionPipelineCatalogTests.OpenCatalogBehavior<,>),
                 order: 321,
                 descriptorFilter: static _ => true,
-                lifetime: ServiceLifetime.Singleton);
+                lifetime: ServiceLifetime.Singleton));
     }
 }
 
-public sealed class OpenCatalogContributorModuleGuide
-    : ModuleGuide<OpenCatalogContributorModule, OpenCatalogContributorModuleOption, OpenCatalogContributorModuleGuide>;
-
-public sealed class OpenCatalogContributorModuleOption : ModuleOptions<OpenCatalogContributorModule>;
+internal sealed class OpenCatalogContributorModuleOption : ModuleOptions<OpenCatalogContributorModule>;

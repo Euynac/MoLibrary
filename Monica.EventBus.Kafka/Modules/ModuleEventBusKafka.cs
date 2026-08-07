@@ -9,7 +9,6 @@ using Microsoft.Extensions.Localization;
 using Monica.Core;
 using Monica.Core.Modularity;
 using Monica.Core.Modularity.Abstractions;
-using Monica.Core.Modularity.Annotations;
 using Monica.Core.Modularity.Models;
 using Monica.Core.Results;
 using Monica.EventBus.Abstractions;
@@ -35,10 +34,13 @@ public static class ModuleEventBusKafkaBuilderExtensions
         /// Registers the Kafka EventBus provider and Kafka management console services.
         /// </summary>
         /// <param name="action">Optional module option configuration.</param>
-        /// <returns>The Kafka EventBus guide used for chained configuration.</returns>
-        public ModuleEventBusKafkaGuide AddEventBusKafka(Action<ModuleEventBusKafkaOption>? action = null)
+        /// <returns>The host-bound Kafka EventBus registration.</returns>
+        public ModuleRegistration<ModuleEventBusKafka, ModuleEventBusKafkaOption> AddEventBusKafka(Action<ModuleEventBusKafkaOption>? action = null)
         {
-            return builder.AddModule<ModuleEventBusKafka, ModuleEventBusKafkaOption, ModuleEventBusKafkaGuide>(action);
+            var module = builder.AddModule<ModuleEventBusKafka, ModuleEventBusKafkaOption>(action);
+            module.Require<ModuleLocalization, ModuleLocalizationOption>()
+                .AddResource<EventBusKafkaResource>();
+            return module;
         }
     }
 }
@@ -46,14 +48,11 @@ public static class ModuleEventBusKafkaBuilderExtensions
 /// <summary>
 /// Kafka EventBus provider and management console backend module.
 /// </summary>
-/// <param name="option">Module options.</param>
-[ModuleKey(BuiltInModuleKey.EventBusKafka)]
-public sealed class ModuleEventBusKafka(ModuleEventBusKafkaOption option)
-    : WebModuleBase<ModuleEventBusKafka, ModuleEventBusKafkaOption, ModuleEventBusKafkaGuide>(option),
+public sealed class ModuleEventBusKafka : MonicaModule<ModuleEventBusKafkaOption>, IWebModule,
       IEventBusProviderModule
 {
     /// <inheritdoc />
-    public ModuleKey ProvidesFor => BuiltInModuleKey.EventBus;
+    public Type ProvidesFor => typeof(ModuleEventBus);
 
     /// <inheritdoc />
     public EventBusProviderKind ProviderType => EventBusProviderKind.Kafka;
@@ -67,23 +66,17 @@ public sealed class ModuleEventBusKafka(ModuleEventBusKafkaOption option)
     public string DisplayName => "Kafka";
 
     /// <inheritdoc />
-    public override bool CanDowngradeToNonWebModule()
+    public override void Describe(ModuleDescriptor module)
     {
-        return true;
+        module.Require<ModuleEventBus, ModuleEventBusOption>();
+        module.Require<ModuleJsonSerialization, ModuleJsonSerializationOption>();
+        module.Require<ModuleLocalization, ModuleLocalizationOption>();
     }
 
     /// <inheritdoc />
-    public override void ClaimDependencies()
+    public override void ConfigureServices(ModuleContext<ModuleEventBusKafkaOption> context)
     {
-        DependsOnModule<ModuleEventBusGuide>().Register();
-        DependsOnModule<ModuleJsonSerializationGuide>().Register();
-        DependsOnModule<ModuleLocalizationGuide>().Register()
-            .AddResource<EventBusKafkaResource>();
-    }
-
-    /// <inheritdoc />
-    public override void ConfigureServices(IServiceCollection services)
-    {
+        var services = context.Services;
         services.TryAddSingleton<IKafkaConsoleRepository, InMemoryKafkaConsoleRepository>();
         services.TryAddSingleton<IKafkaClusterConfigProvider, KafkaClusterConfigProvider>();
         services.TryAddSingleton<KafkaBootstrapEndpointProbe>();
@@ -101,11 +94,12 @@ public sealed class ModuleEventBusKafka(ModuleEventBusKafkaOption option)
     }
 
     /// <inheritdoc />
-    public override void ConfigureEndpoints(IApplicationBuilder app)
+    public override void ConfigureEndpoints(WebModuleContext<ModuleEventBusKafkaOption> context)
     {
+        var app = context.ApplicationBuilder;
         var localizer = app.ApplicationServices.GetRequiredService<IStringLocalizer<EventBusKafkaResource>>();
 
-        UseEndpoints(app, endpoints =>
+        UseEndpoints(context, endpoints =>
         {
             var tagName = Option.GetApiGroupName();
 
@@ -316,10 +310,9 @@ public sealed class ModuleEventBusKafka(ModuleEventBusKafkaOption option)
 }
 
 /// <summary>
-/// Fluent guide for configuring Kafka EventBus and console storage.
+/// Registration extensions for configuring Kafka EventBus and console storage.
 /// </summary>
-public sealed class ModuleEventBusKafkaGuide
-    : WebModuleGuide<ModuleEventBusKafka, ModuleEventBusKafkaOption, ModuleEventBusKafkaGuide>
+public static class ModuleEventBusKafkaRegistrationExtensions
 {
     /// <summary>
     /// Uses the in-memory Kafka console repository.
@@ -328,96 +321,101 @@ public sealed class ModuleEventBusKafkaGuide
     /// This is the default store. Calling this method explicitly replaces any previous console
     /// repository registration for hosts that want transient runtime configuration.
     /// </remarks>
-    /// <returns>The current guide.</returns>
-    public ModuleEventBusKafkaGuide UseInMemoryStore()
+    /// <param name="module">The Kafka EventBus registration to configure.</param>
+    /// <returns>The current registration.</returns>
+    public static ModuleRegistration<ModuleEventBusKafka, ModuleEventBusKafkaOption> UseInMemoryStore(this ModuleRegistration<ModuleEventBusKafka, ModuleEventBusKafkaOption> module)
     {
-        ConfigureServices(context =>
+        module.ConfigureServices(context =>
         {
             context.Services.RemoveAll<IKafkaConsoleRepository>();
             context.Services.AddSingleton<IKafkaConsoleRepository, InMemoryKafkaConsoleRepository>();
-        }, ModuleRegistrationOrder.PostConfig);
-        return this;
+        }, ModuleRegistrationOrder.Late);
+        return module;
     }
 
     /// <summary>
     /// Uses an EF Core repository for Kafka console clusters and performance snapshots.
     /// </summary>
+    /// <param name="module">The Kafka EventBus registration to configure.</param>
     /// <param name="optionsAction">Configures the EF Core provider and options for the Kafka console DbContext.</param>
-    /// <returns>The current guide.</returns>
-    public ModuleEventBusKafkaGuide UseEfCoreStore(Action<IServiceProvider, DbContextOptionsBuilder> optionsAction)
+    /// <returns>The current registration.</returns>
+    public static ModuleRegistration<ModuleEventBusKafka, ModuleEventBusKafkaOption> UseEfCoreStore(this ModuleRegistration<ModuleEventBusKafka, ModuleEventBusKafkaOption> module, Action<IServiceProvider, DbContextOptionsBuilder> optionsAction)
     {
         ArgumentNullException.ThrowIfNull(optionsAction);
 
-        DependsOnModule<ModuleRepositoryGuide>().Register()
+        module.Require<ModuleRepository, ModuleRepositoryOption>()
             .AddRepositoryDbContext<KafkaConsoleDbContext>(optionsAction);
 
-        ConfigureServices(context =>
+        module.ConfigureServices(context =>
         {
             context.Services.RemoveAll<IKafkaConsoleRepository>();
             context.Services.AddScoped<IKafkaConsoleRepository, EfCoreKafkaConsoleRepository>();
-        }, ModuleRegistrationOrder.PostConfig);
-        return this;
+        }, ModuleRegistrationOrder.Late);
+        return module;
     }
 
     /// <summary>
     /// Declares a visible Kafka cluster without changing the active EventBus provider.
     /// </summary>
+    /// <param name="module">The Kafka EventBus registration to configure.</param>
     /// <param name="cluster">Cluster configuration.</param>
-    /// <returns>The current guide.</returns>
-    public ModuleEventBusKafkaGuide AddConfiguredCluster(KafkaClusterConfig cluster)
+    /// <returns>The current registration.</returns>
+    public static ModuleRegistration<ModuleEventBusKafka, ModuleEventBusKafkaOption> AddConfiguredCluster(this ModuleRegistration<ModuleEventBusKafka, ModuleEventBusKafkaOption> module, KafkaClusterConfig cluster)
     {
         var normalized = cluster.Clone().Normalize();
-        ConfigureModuleOption(option => option.AddOrReplaceConfiguredCluster(normalized), secondKey: normalized.ClusterId);
-        return this;
+        module.Configure(options => options.AddOrReplaceConfiguredCluster(normalized));
+        return module;
     }
 
     /// <summary>
     /// Enables the native Kafka provider as the default distributed EventBus provider.
     /// </summary>
+    /// <param name="module">The Kafka EventBus registration to configure.</param>
     /// <param name="cluster">Cluster used by the native Kafka producer and subscription consumers.</param>
-    /// <returns>The current guide.</returns>
+    /// <returns>The current registration.</returns>
     /// <remarks>
     /// This method intentionally performs the provider switch. Registering this module or the UI
     /// alone does not replace an existing Dapr EventBus provider.
     /// </remarks>
-    public ModuleEventBusKafkaGuide UseKafkaProvider(KafkaClusterConfig cluster)
+    public static ModuleRegistration<ModuleEventBusKafka, ModuleEventBusKafkaOption> UseKafkaProvider(this ModuleRegistration<ModuleEventBusKafka, ModuleEventBusKafkaOption> module, KafkaClusterConfig cluster)
     {
         var normalized = cluster.Clone().Normalize();
         normalized.CredentialsManagedExternally = false;
 
-        DependsOnModule<ModuleEventBusGuide>().Register()
+        module.Require<ModuleEventBus, ModuleEventBusOption>()
             .UseDistributedEventBus<KafkaEventBusProvider>();
-        DependsOnModule<ModuleHostedServiceGuide>().Register();
+        module.Require<ModuleHostedService, ModuleHostedServiceOption>();
 
-        ConfigureModuleOption(option =>
+        module.Configure(options =>
         {
-            option.DirectEventBusCluster = normalized;
-            option.PrimaryClusterId = normalized.ClusterId;
-            option.AddOrReplaceConfiguredCluster(normalized);
-        }, secondKey: normalized.ClusterId);
+            options.DirectEventBusCluster = normalized;
+            options.PrimaryClusterId = normalized.ClusterId;
+            options.AddOrReplaceConfiguredCluster(normalized);
+        });
 
-        ConfigureServices(context =>
+        module.ConfigureServices(context =>
         {
             context.Services.AddHostedService<KafkaEventBusSubscriptionHostedService>();
-        }, ModuleRegistrationOrder.PostConfig);
+        }, ModuleRegistrationOrder.Late);
 
-        return this;
+        return module;
     }
 
     /// <summary>
     /// Declares that the active Dapr EventBus pub/sub component is backed by Kafka.
     /// </summary>
+    /// <param name="module">The Kafka EventBus registration to configure.</param>
     /// <param name="cluster">Kafka cluster metadata to show in the console.</param>
     /// <param name="pubSubName">Dapr pub/sub component name. When omitted, the cluster value or module default is used.</param>
     /// <param name="credentialsManagedExternally">
     /// Whether Kafka credentials are owned by Dapr or external infrastructure instead of Monica.
     /// </param>
-    /// <returns>The current guide.</returns>
+    /// <returns>The current registration.</returns>
     /// <remarks>
     /// This method is visibility-only. It does not call <c>UseDistributedEventBus</c> and therefore
     /// does not alter an existing Dapr EventBus provider.
     /// </remarks>
-    public ModuleEventBusKafkaGuide UseDaprKafkaIntegration(
+    public static ModuleRegistration<ModuleEventBusKafka, ModuleEventBusKafkaOption> UseDaprKafkaIntegration(this ModuleRegistration<ModuleEventBusKafka, ModuleEventBusKafkaOption> module,
         KafkaClusterConfig cluster,
         string? pubSubName = null,
         bool credentialsManagedExternally = true)
@@ -429,15 +427,16 @@ public sealed class ModuleEventBusKafkaGuide
             ? normalized.DaprPubSubName
             : pubSubName.Trim();
 
-        ConfigureModuleOption(option =>
+        module.Configure(options =>
         {
-            option.PrimaryClusterId = normalized.ClusterId;
-            option.DaprPubSubName = normalized.DaprPubSubName;
-            option.AddOrReplaceConfiguredCluster(normalized);
-        }, secondKey: normalized.ClusterId);
+            options.PrimaryClusterId = normalized.ClusterId;
+            options.DaprPubSubName = normalized.DaprPubSubName;
+            options.AddOrReplaceConfiguredCluster(normalized);
+        });
 
-        return this;
+        return module;
     }
+
 }
 
 /// <summary>
@@ -458,7 +457,7 @@ public sealed class ModuleEventBusKafkaOption : MinimalApiModuleOptions<ModuleEv
     /// Gets or sets the cluster used by the native Kafka EventBus provider.
     /// </summary>
     /// <remarks>
-    /// This value is set by <see cref="ModuleEventBusKafkaGuide.UseKafkaProvider(KafkaClusterConfig)"/>.
+    /// This value is set by the Kafka provider registration extension.
     /// When it is <see langword="null"/>, registering the module will not replace the default
     /// distributed EventBus provider.
     /// </remarks>
@@ -586,7 +585,7 @@ public sealed class ModuleEventBusKafkaOption : MinimalApiModuleOptions<ModuleEv
     /// <summary>
     /// Adds or replaces a configured cluster using its normalized cluster id.
     /// </summary>
-    /// <param name="cluster">Cluster configuration to store in the option.</param>
+    /// <param name="cluster">Cluster configuration to store in the Option.</param>
     public void AddOrReplaceConfiguredCluster(KafkaClusterConfig cluster)
     {
         var normalized = cluster.Clone().Normalize();

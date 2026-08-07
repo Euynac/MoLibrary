@@ -4,8 +4,8 @@ using Microsoft.Extensions.Logging;
 using Monica.Core;
 using Monica.Core.Extensions;
 using Monica.Core.Modularity;
+using Monica.Core.Modularity.Diagnostics.Models;
 using Monica.Core.Modularity.Models;
-using Monica.Core.Modularity.Models.Internal;
 using Monica.Core.Modularity.Services;
 using Monica.Core.Results;
 using Monica.EventBus.Abstractions;
@@ -32,12 +32,17 @@ public class EventBusProviderDiscoveryService(
     /// Cached provider snapshots for efficient lookup
     /// </summary>
     private IReadOnlyList<ModuleRuntimeSnapshot>? _providerSnapshots;
+    private ModuleRuntimeSnapshot? _eventBusSnapshot;
 
     /// <summary>
     /// Gets or initializes the cached provider snapshots
     /// </summary>
     private IReadOnlyList<ModuleRuntimeSnapshot> ProviderSnapshots =>
-        _providerSnapshots ??= application.Modules.GetModuleProviders(BuiltInModuleKey.EventBus);
+        _providerSnapshots ??= application.Modules.GetModuleProviders(typeof(ModuleEventBus));
+
+    private ModuleRuntimeSnapshot? EventBusSnapshot =>
+        _eventBusSnapshot ??= application.Modules.RuntimeSnapshots.FirstOrDefault(snapshot =>
+            snapshot.ModuleType == typeof(ModuleEventBus));
 
     #region Provider Discovery
 
@@ -199,16 +204,18 @@ public class EventBusProviderDiscoveryService(
             ProviderType = EventBusProviderKind.Local,
             Capabilities = EventBusProviderCapabilities.None,
             IsDistributed = false,
-            OptionType = typeof(ModuleEventBusOption),
-            OptionInstance = GetLocalProviderOptionInfo(serviceKey),
-            ImplementationType = provider.GetType().Name
+            ImplementationType = provider.GetType().Name,
+            OptionDiagnosticsTarget = EventBusSnapshot is { } snapshot
+                ? new ModuleOptionDiagnosticsTarget(
+                    snapshot.ModuleKey,
+                    ModuleOptionProfileSelector.Default)
+                : null
         };
     }
 
     private EventBusProviderInfo CreateDistributedProviderInfo(string? serviceKey, IDistributedEventBus provider)
     {
-        var (providerType, capabilities, displayName) = GetDistributedProviderMetadata(provider);
-        var (optionType, optionInstance) = GetDistributedProviderOptionInfo(serviceKey, provider);
+        var (providerType, capabilities, providerSnapshot) = GetDistributedProviderMetadata(provider);
 
         return new EventBusProviderInfo
         {
@@ -216,16 +223,25 @@ public class EventBusProviderDiscoveryService(
             ProviderType = providerType,
             Capabilities = capabilities,
             IsDistributed = true,
-            OptionType = optionType,
-            OptionInstance = optionInstance,
-            ImplementationType = provider.GetType().Name
+            ImplementationType = provider.GetType().Name,
+            OptionDiagnosticsTarget = providerSnapshot is null
+                ? null
+                : new ModuleOptionDiagnosticsTarget(
+                    providerSnapshot.ModuleKey,
+                    serviceKey is null
+                        ? ModuleOptionProfileSelector.Default
+                        : ModuleOptionProfileSelector.NamedOrDefault(serviceKey))
         };
     }
 
     /// <summary>
     /// Gets provider metadata from the registered IEventBusProviderModule
     /// </summary>
-    private (EventBusProviderKind providerType, EventBusProviderCapabilities capabilities, string displayName) GetDistributedProviderMetadata(IDistributedEventBus provider)
+    private (
+        EventBusProviderKind ProviderType,
+        EventBusProviderCapabilities Capabilities,
+        ModuleRuntimeSnapshot? ProviderSnapshot) GetDistributedProviderMetadata(
+        IDistributedEventBus provider)
     {
         var providerTypeName = provider.GetType().FullName ?? "";
 
@@ -236,66 +252,11 @@ public class EventBusProviderDiscoveryService(
             // Match by checking if the provider type name contains the module's display name
             if (providerTypeName.Contains(moduleProvider.DisplayName, StringComparison.OrdinalIgnoreCase))
             {
-                return (moduleProvider.ProviderType, moduleProvider.Capabilities, moduleProvider.DisplayName);
+                return (moduleProvider.ProviderType, moduleProvider.Capabilities, snapshot);
             }
         }
 
-        return (EventBusProviderKind.Unknown, EventBusProviderCapabilities.None, "Unknown");
-    }
-
-    /// <summary>
-    /// Gets local provider option info
-    /// </summary>
-    private object? GetLocalProviderOptionInfo(string? serviceKey)
-    {
-        try
-        {
-            // Find a snapshot of ModuleEventBus
-            var eventBusSnapshot = application.Modules.RuntimeSnapshots
-                .FirstOrDefault(s => s.ModuleType == typeof(ModuleEventBus));
-
-            if (eventBusSnapshot == null) return null;
-
-            var (_, optionInstance) = eventBusSnapshot.GetKeyedOption(serviceProvider, serviceKey);
-            return optionInstance;
-        }
-        catch (Exception ex)
-        {
-            logger.LogWarning(ex, "获取 Local Provider 配置失败: {ServiceKey}", serviceKey);
-            return null;
-        }
-    }
-
-    /// <summary>
-    /// Gets distributed provider option information using ModuleRuntimeSnapshot's generic option retrieval
-    /// </summary>
-    private (Type? optionType, object? optionInstance) GetDistributedProviderOptionInfo(string? serviceKey, IDistributedEventBus provider)
-    {
-        try
-        {
-            var providerTypeName = provider.GetType().FullName ?? "";
-
-            // Find the matching provider module snapshot
-            foreach (var snapshot in ProviderSnapshots)
-            {
-                if (snapshot.ModuleInstance is not IEventBusProviderModule moduleProvider) continue;
-
-                // Match by checking if the provider type name contains the module's display name
-                if (providerTypeName.Contains(moduleProvider.DisplayName, StringComparison.OrdinalIgnoreCase))
-                {
-                    // Use ModuleRuntimeSnapshot's generic GetKeyedOption method
-                    var (optionType, optionInstance) = snapshot.GetKeyedOption(serviceProvider, serviceKey);
-                    return (optionType, optionInstance);
-                }
-            }
-
-            return (null, null);
-        }
-        catch (Exception ex)
-        {
-            logger.LogWarning(ex, "获取 Distributed Provider 配置失败: {ServiceKey}", serviceKey);
-            return (null, null);
-        }
+        return (EventBusProviderKind.Unknown, EventBusProviderCapabilities.None, null);
     }
 
     /// <summary>

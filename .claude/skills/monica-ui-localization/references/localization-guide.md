@@ -18,10 +18,10 @@ Each `*.UI` project has its own localization infrastructure:
 
 ### Resource Registration and Loading
 
-Reusable Monica modules register their resource marker explicitly:
+Reusable Monica modules register their resource marker explicitly from the owning module's registration extension:
 
 ```csharp
-DependsOnModule<ModuleLocalizationGuide>().Register()
+registration.Require<ModuleLocalization, ModuleLocalizationOption>()
     .AddResource<StateStoreResource>();
 ```
 
@@ -138,10 +138,10 @@ Inject the localizer in your components:
 Every localized page declares its owning resource type. Shared shell categories use stable built-in IDs:
 
 ```csharp
-DependsOnModule<ModuleLocalizationGuide>().Register()
+registration.Require<ModuleLocalization, ModuleLocalizationOption>()
     .AddResource<StateStoreResource>();
 
-DependsOnModule<ModuleShellUIGuide>().Register()
+registration.Require<ModuleShellUI, ModuleShellUIOption>()
     .RegisterUIComponents(registry => registry.RegisterLocalizedPage<UIStateStorePage, StateStoreResource>(
         UIStateStorePage.PAGE_URL,
         "Navigation:Title",
@@ -154,7 +154,7 @@ DependsOnModule<ModuleShellUIGuide>().Register()
 A package-owned category registers its stable identity and localized label once, then passes the returned ID to pages:
 
 ```csharp
-DependsOnModule<ModuleShellUIGuide>().Register()
+registration.Require<ModuleShellUI, ModuleShellUIOption>()
     .RegisterUIComponents(registry =>
     {
         var categoryId = registry.RegisterLocalizedCategory<ExampleResource>(

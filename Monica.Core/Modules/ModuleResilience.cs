@@ -2,8 +2,6 @@ using Microsoft.Extensions.DependencyInjection;
 using Monica.Core;
 using Monica.Core.Modularity;
 using Monica.Core.Modularity.Abstractions;
-using Monica.Core.Modularity.Annotations;
-using Monica.Core.Modularity.Models;
 using Polly;
 using Polly.DependencyInjection;
 
@@ -17,74 +15,60 @@ public static class ModuleResilienceBuilderExtensions
         /// <summary>
         /// Registers and configures the Resilience module.
         /// </summary>
-        public ModuleResilienceGuide AddResilience(Action<ModuleResilienceOption>? action = null)
+        public ModuleRegistration<ModuleResilience, ModuleResilienceOption> AddResilience(
+            Action<ModuleResilienceOption>? action = null)
         {
-            return builder.AddModule<ModuleResilience, ModuleResilienceOption, ModuleResilienceGuide>(action);
+            return builder.AddModule<ModuleResilience, ModuleResilienceOption>(action);
+        }
+    }
+
+    extension(ModuleRegistration<ModuleResilience, ModuleResilienceOption> registration)
+    {
+        public ModuleRegistration<ModuleResilience, ModuleResilienceOption> ConfigureDefaultPipeline(
+            Action<ResiliencePipelineBuilder> configure)
+        {
+            return registration.AddResiliencePipeline(ResiliencePipelineNames.Default, configure);
+        }
+
+        public ModuleRegistration<ModuleResilience, ModuleResilienceOption> ConfigureDefaultPipeline(
+            Action<ResiliencePipelineBuilder, AddResiliencePipelineContext<string>> configure)
+        {
+            return registration.AddResiliencePipeline(ResiliencePipelineNames.Default, configure);
+        }
+
+        public ModuleRegistration<ModuleResilience, ModuleResilienceOption> AddResiliencePipeline(
+            string name,
+            Action<ResiliencePipelineBuilder> configure)
+        {
+            ArgumentException.ThrowIfNullOrWhiteSpace(name);
+            ArgumentNullException.ThrowIfNull(configure);
+            return registration.Configure(options => options.PipelineConfigurations[name] = configure);
+        }
+
+        public ModuleRegistration<ModuleResilience, ModuleResilienceOption> AddResiliencePipeline(
+            string name,
+            Action<ResiliencePipelineBuilder, AddResiliencePipelineContext<string>> configure)
+        {
+            ArgumentException.ThrowIfNullOrWhiteSpace(name);
+            ArgumentNullException.ThrowIfNull(configure);
+            return registration.Configure(options => options.PipelineConfigurationsWithContext[name] = configure);
         }
     }
 }
 
-[ModuleKey(BuiltInModuleKey.Resilience)]
-public class ModuleResilience(ModuleResilienceOption option)
-    : ModuleBase<ModuleResilience, ModuleResilienceOption, ModuleResilienceGuide>(option)
+public class ModuleResilience : MonicaModule<ModuleResilienceOption>
 {
-
-    public override void ConfigureServices(IServiceCollection services)
+    public override void ConfigureServices(ModuleContext<ModuleResilienceOption> context)
     {
-        // Register pipelines without context
         foreach (var (name, configure) in Option.PipelineConfigurations)
         {
-            services.AddResiliencePipeline(name, configure);
+            context.Services.AddResiliencePipeline(name, configure);
         }
 
-        // Register pipelines with context (IServiceProvider access)
         foreach (var (name, configure) in Option.PipelineConfigurationsWithContext)
         {
-            services.AddResiliencePipeline(name, configure);
+            context.Services.AddResiliencePipeline(name, configure);
         }
-    }
-}
-
-public class ModuleResilienceGuide : ModuleGuide<ModuleResilience, ModuleResilienceOption, ModuleResilienceGuide>
-{
-    /// <summary>
-    /// Configure the default resilience pipeline using Polly's ResiliencePipelineBuilder directly
-    /// </summary>
-    /// <param name="configure">Pipeline configuration action that receives Polly's ResiliencePipelineBuilder</param>
-    public ModuleResilienceGuide ConfigureDefaultPipeline(Action<ResiliencePipelineBuilder> configure)
-    {
-        return AddResiliencePipeline(ResiliencePipelineNames.Default, configure);
-    }
-
-    /// <summary>
-    /// Configure the default resilience pipeline with context (IServiceProvider access)
-    /// </summary>
-    /// <param name="configure">Pipeline configuration action that receives Polly's ResiliencePipelineBuilder and AddResiliencePipelineContext</param>
-    public ModuleResilienceGuide ConfigureDefaultPipeline(Action<ResiliencePipelineBuilder, AddResiliencePipelineContext<string>> configure)
-    {
-        return AddResiliencePipeline(ResiliencePipelineNames.Default, configure);
-    }
-
-    /// <summary>
-    /// Add a named resilience pipeline using Polly's ResiliencePipelineBuilder directly
-    /// </summary>
-    /// <param name="name">Pipeline name for injection</param>
-    /// <param name="configure">Pipeline configuration action that receives Polly's ResiliencePipelineBuilder</param>
-    public ModuleResilienceGuide AddResiliencePipeline(string name, Action<ResiliencePipelineBuilder> configure)
-    {
-        ConfigureModuleOption(o => o.PipelineConfigurations[name] = configure, secondKey: name);
-        return this;
-    }
-
-    /// <summary>
-    /// Add a named resilience pipeline with context (IServiceProvider access)
-    /// </summary>
-    /// <param name="name">Pipeline name for injection</param>
-    /// <param name="configure">Pipeline configuration action that receives Polly's ResiliencePipelineBuilder and AddResiliencePipelineContext</param>
-    public ModuleResilienceGuide AddResiliencePipeline(string name, Action<ResiliencePipelineBuilder, AddResiliencePipelineContext<string>> configure)
-    {
-        ConfigureModuleOption(o => o.PipelineConfigurationsWithContext[name] = configure, secondKey: name);
-        return this;
     }
 }
 

@@ -1,0 +1,523 @@
+@using Microsoft.Extensions.Localization
+@using Monica.Core.Modularity.Diagnostics.Models
+@using Monica.Core.Modularity.Models
+@using Monica.UI.Localization
+@using Monica.UI.UIModuleSystem.State
+@using Monica.UI.UIModuleSystem.Support
+@inject IStringLocalizer<ModuleSystemResource> L
+
+@if (Session.Snapshot is { } snapshot)
+{
+    <section class="timeline-waterfall"
+             aria-labelledby="waterfall-title"
+             data-zoom-level="@_zoomLevel"
+             data-axis-start="@SvgNumber(AxisRange.StartMs)"
+             data-axis-width="@SvgNumber(AxisRange.WidthMs)">
+        <div class="timeline-waterfall__heading">
+            <div>
+                <MudText Typo="Typo.overline">@L["Performance:Waterfall:Eyebrow"]</MudText>
+                <MudText Typo="Typo.h6" HtmlTag="h2" id="waterfall-title">@L["Performance:Waterfall:Title"]</MudText>
+                <MudText Typo="Typo.body2" Color="Color.Secondary">@L["Performance:Waterfall:Hint"]</MudText>
+            </div>
+            <div class="timeline-waterfall__summary">
+                <MudChip T="string" Size="Size.Small" Color="Color.Primary" Variant="Variant.Outlined">
+                    @L["Performance:Waterfall:Duration", ModuleDiagnosticsDisplay.Duration(snapshot.Summary.TotalCompositionDurationMs)]
+                </MudChip>
+                <MudChip T="string" Size="Size.Small" Color="Color.Default" Variant="Variant.Outlined">
+                    @L["Performance:Waterfall:VisibleCount", VisibleTimelineRows.Count, snapshot.TraceSpans.Length]
+                </MudChip>
+            </div>
+        </div>
+
+        <div class="timeline-waterfall__toolbar">
+            <div class="timeline-waterfall__legend" aria-label="@L["Performance:Waterfall:Legend"]">
+                @foreach (var kind in TimelineKinds)
+                {
+                    <span class="timeline-waterfall__legend-item @SpanKindClass(kind)">
+                        @L[$"Enums:TraceKind:{kind}"]
+                    </span>
+                }
+                @if (Session.Comparison is not null)
+                {
+                    <span class="timeline-waterfall__legend-item timeline-waterfall__legend-item--baseline">
+                        @L["Comparison:BaselineTimeline"]
+                    </span>
+                }
+            </div>
+            <div class="timeline-waterfall__zoom" aria-label="@L["Performance:Waterfall:Zoom"]">
+                <MudTooltip Text="@L["Performance:Waterfall:ZoomOut"]">
+                    <MudIconButton Icon="@Icons.Material.Filled.ZoomOut"
+                                   Size="Size.Small"
+                                   Disabled="@(_zoomLevel == MIN_ZOOM_LEVEL)"
+                                   OnClick="ZoomOut"
+                                   aria-label="@L["Performance:Waterfall:ZoomOut"]" />
+                </MudTooltip>
+                <MudTooltip Text="@L["Performance:Waterfall:Fit"]">
+                    <MudIconButton Icon="@Icons.Material.Filled.FitScreen"
+                                   Size="Size.Small"
+                                   OnClick="FitTimeline"
+                                   aria-label="@L["Performance:Waterfall:Fit"]" />
+                </MudTooltip>
+                <MudTooltip Text="@L["Performance:Waterfall:FocusSelected"]">
+                    <MudIconButton Icon="@Icons.Material.Filled.CenterFocusStrong"
+                                   Size="Size.Small"
+                                   Color="Color.Primary"
+                                   Disabled="@(SelectedSpan is null)"
+                                   OnClick="FocusSelected"
+                                   aria-label="@L["Performance:Waterfall:FocusSelected"]" />
+                </MudTooltip>
+                <MudTooltip Text="@L["Performance:Waterfall:ZoomIn"]">
+                    <MudIconButton Icon="@Icons.Material.Filled.ZoomIn"
+                                   Size="Size.Small"
+                                   Disabled="@(_zoomLevel == MAX_ZOOM_LEVEL)"
+                                   OnClick="ZoomIn"
+                                   aria-label="@L["Performance:Waterfall:ZoomIn"]" />
+                </MudTooltip>
+                <span>@L["Performance:Waterfall:ZoomLevel", _zoomLevel]</span>
+            </div>
+        </div>
+
+        @if (TimelineRows.Count < snapshot.TraceSpans.Length)
+        {
+            <MudAlert Severity="Severity.Info" Variant="Variant.Outlined" Dense="true">
+                @L["Performance:Waterfall:Omitted", snapshot.TraceSpans.Length - TimelineRows.Count]
+            </MudAlert>
+        }
+
+        @if (TimelineRows.Count == 0)
+        {
+            <div class="timeline-waterfall__empty">
+                <MudIcon Icon="@Icons.Material.Filled.Timeline" Color="Color.Secondary" Size="Size.Large" />
+                <MudText Typo="Typo.body2" Color="Color.Secondary">@L["Performance:Waterfall:Empty"]</MudText>
+            </div>
+        }
+        else
+        {
+            <div class="timeline-waterfall__viewport"
+                 role="region"
+                 aria-label="@L["Performance:Waterfall:TimelineRegion"]"
+                 tabindex="0">
+                <div class="timeline-waterfall__canvas">
+                    <div class="timeline-waterfall__axis">
+                        <span>@L["Performance:Columns:Span"]</span>
+                        <div>
+                            @foreach (var tick in AxisTicks)
+                            {
+                                <span>@ModuleDiagnosticsDisplay.Duration(AxisRange.StartMs + AxisRange.WidthMs * tick)</span>
+                            }
+                        </div>
+                    </div>
+
+                    @foreach (var span in VisibleTimelineRows)
+                    {
+                        var display = ModuleDiagnosticsDisplay.TraceSpan(span, snapshot, L);
+                        var isSelected = IsSelected(span);
+                        <article class="timeline-waterfall__row @(isSelected ? "timeline-waterfall__row--selected" : null)"
+                                 data-span-id="@span.SpanId">
+                            <button type="button"
+                                    class="timeline-waterfall__label"
+                                    data-span-id="@span.SpanId"
+                                    aria-pressed="@isSelected"
+                                    @onclick="@(() => SelectSpanAsync(span))">
+                                <span class="timeline-waterfall__kind @SpanKindClass(span.Kind)" aria-hidden="true"></span>
+                                <span>
+                                    <strong>@display.Primary</strong>
+                                    <small>@display.Secondary</small>
+                                </span>
+                                <code>@ModuleDiagnosticsDisplay.Duration(span.DurationMs)</code>
+                            </button>
+                            <MudTooltip Text="@TimelineTooltip(span, display)">
+                                <button type="button"
+                                        class="timeline-waterfall__track-button"
+                                        data-span-id="@span.SpanId"
+                                        aria-label="@TimelineTooltip(span, display)"
+                                        aria-pressed="@isSelected"
+                                        @onclick="@(() => SelectSpanAsync(span))">
+                                    <svg viewBox="0 0 1000 32" preserveAspectRatio="none" aria-hidden="true" focusable="false">
+                                        <line class="timeline-waterfall__grid-line" x1="0" y1="0" x2="0" y2="32" />
+                                        <line class="timeline-waterfall__grid-line" x1="250" y1="0" x2="250" y2="32" />
+                                        <line class="timeline-waterfall__grid-line" x1="500" y1="0" x2="500" y2="32" />
+                                        <line class="timeline-waterfall__grid-line" x1="750" y1="0" x2="750" y2="32" />
+                                        <line class="timeline-waterfall__grid-line" x1="1000" y1="0" x2="1000" y2="32" />
+                                        @if (BaselineTimelineRows.TryGetValue(span.SpanId, out var baselineSpan)
+                                             && BaselineTimelineWidth(baselineSpan) > 0)
+                                        {
+                                            <rect class="timeline-waterfall__baseline"
+                                                  x="@SvgNumber(BaselineTimelineX(baselineSpan))"
+                                                  y="4"
+                                                  width="@SvgNumber(BaselineTimelineWidth(baselineSpan))"
+                                                  height="24"
+                                                  rx="4" />
+                                        }
+                                        <rect class="timeline-waterfall__bar @SpanKindClass(span.Kind) @(span.IsFailed ? "timeline-waterfall__bar--failed" : null) @(isSelected ? "timeline-bar-selected" : null)"
+                                              data-span-id="@span.SpanId"
+                                              x="@SvgNumber(TimelineX(span.StartedOffsetMs))"
+                                              y="9"
+                                              width="@SvgNumber(TimelineWidth(span.StartedOffsetMs, span.EndedOffsetMs))"
+                                              height="14"
+                                              rx="4" />
+                                    </svg>
+                                </button>
+                            </MudTooltip>
+                        </article>
+                    }
+                </div>
+            </div>
+
+            @if (SelectedSpan is { } selectedSpan)
+            {
+                var selectedDisplay = ModuleDiagnosticsDisplay.TraceSpan(selectedSpan, snapshot, L);
+                <aside class="timeline-waterfall__selection" aria-live="polite">
+                    <span class="timeline-waterfall__kind @SpanKindClass(selectedSpan.Kind)" aria-hidden="true"></span>
+                    <div>
+                        <small>@L["Performance:Waterfall:Selected"]</small>
+                        <strong>@selectedDisplay.Primary</strong>
+                        <span>@selectedDisplay.Secondary</span>
+                    </div>
+                    <dl>
+                        <div>
+                            <dt>@L["Performance:Columns:Start"]</dt>
+                            <dd>@ModuleDiagnosticsDisplay.Duration(selectedSpan.StartedOffsetMs)</dd>
+                        </div>
+                        <div>
+                            <dt>@L["Performance:Columns:Duration"]</dt>
+                            <dd>@ModuleDiagnosticsDisplay.Duration(selectedSpan.DurationMs)</dd>
+                        </div>
+                        <div>
+                            <dt>@L["Performance:Columns:Kind"]</dt>
+                            <dd>@L[$"Enums:TraceKind:{selectedSpan.Kind}"]</dd>
+                        </div>
+                    </dl>
+                </aside>
+            }
+
+            <MudExpansionPanels Class="timeline-waterfall__table-alternative">
+                <MudExpansionPanel Text="@L["Performance:Waterfall:TableAlternative"]">
+                    <div class="timeline-waterfall__table-wrapper"
+                         role="region"
+                         aria-label="@L["Performance:Waterfall:TableAlternative"]"
+                         tabindex="0">
+                        <MudTable T="ModuleDiagnosticsTraceSpan"
+                                  Items="@TimelineRows"
+                                  Dense="true"
+                                  Hover="true"
+                                  FixedHeader="true"
+                                  Breakpoint="Breakpoint.None"
+                                  RowClassFunc="@TimelineRowClass">
+                            <HeaderContent>
+                                <MudTh>@L["Performance:Columns:Span"]</MudTh>
+                                <MudTh>@L["Performance:Columns:Start"]</MudTh>
+                                <MudTh>@L["Performance:Columns:Duration"]</MudTh>
+                                <MudTh>@L["Performance:Columns:Kind"]</MudTh>
+                            </HeaderContent>
+                            <RowTemplate Context="span">
+                                <MudTd DataLabel="@L["Performance:Columns:Span"]">
+                                    <button type="button"
+                                            class="timeline-value"
+                                            data-span-id="@span.SpanId"
+                                            aria-current="@(IsSelected(span) ? "true" : null)"
+                                            @onclick="@(() => SelectSpanAsync(span))">
+                                        @ModuleDiagnosticsDisplay.TraceSpan(span, snapshot, L).Primary
+                                    </button>
+                                </MudTd>
+                                <MudTd DataLabel="@L["Performance:Columns:Start"]">@ModuleDiagnosticsDisplay.Duration(span.StartedOffsetMs)</MudTd>
+                                <MudTd DataLabel="@L["Performance:Columns:Duration"]">@ModuleDiagnosticsDisplay.Duration(span.DurationMs)</MudTd>
+                                <MudTd DataLabel="@L["Performance:Columns:Kind"]">@L[$"Enums:TraceKind:{span.Kind}"]</MudTd>
+                            </RowTemplate>
+                        </MudTable>
+                    </div>
+                </MudExpansionPanel>
+            </MudExpansionPanels>
+        }
+    </section>
+}
+
+@code {
+    private const int MAX_TIMELINE_ROWS = 80;
+    private const int MIN_ZOOM_LEVEL = 1;
+    private const int MAX_ZOOM_LEVEL = 4;
+    private static readonly double[] AxisTicks = [0, .25, .5, .75, 1];
+    private static readonly ModuleDiagnosticsTraceSpanKind[] TimelineKinds =
+    [
+        ModuleDiagnosticsTraceSpanKind.SystemStage,
+        ModuleDiagnosticsTraceSpanKind.ModuleCallback,
+        ModuleDiagnosticsTraceSpanKind.StartupWork,
+        ModuleDiagnosticsTraceSpanKind.StartupBarrier
+    ];
+
+    [Parameter, EditorRequired] public ModuleSystemWorkbenchSession Session { get; set; } = default!;
+    [Parameter] public EventCallback<ModuleDiagnosticsModule> ModuleSelected { get; set; }
+
+    private ModuleDiagnosticsSnapshot? _timelineSnapshot;
+    private ModuleDiagnosticsComparison? _timelineComparison;
+    private string? _timelineSelectedSpanId;
+    private TimelineProjection _timeline = TimelineProjection.Empty;
+    private int _zoomLevel = MIN_ZOOM_LEVEL;
+
+    private IReadOnlyList<ModuleDiagnosticsTraceSpan> TimelineRows => GetTimelineProjection().Current;
+    private IReadOnlyDictionary<string, ModuleDiagnosticsExportTraceSpan> BaselineTimelineRows =>
+        GetTimelineProjection().Baseline;
+    private ModuleDiagnosticsTraceSpan? SelectedSpan => Session.Snapshot?.TraceSpans.FirstOrDefault(span =>
+        string.Equals(span.SpanId, Session.SelectedTraceSpanId, StringComparison.Ordinal));
+    private TimelineAxisRange AxisRange => CreateAxisRange();
+    private IReadOnlyList<ModuleDiagnosticsTraceSpan> VisibleTimelineRows
+    {
+        get
+        {
+            var range = AxisRange;
+            return TimelineRows
+                .Where(span => span.EndedOffsetMs >= range.StartMs && span.StartedOffsetMs <= range.EndMs)
+                .ToArray();
+        }
+    }
+
+    private TimelineProjection GetTimelineProjection()
+    {
+        var snapshot = Session.Snapshot;
+        var comparison = Session.Comparison;
+        if (ReferenceEquals(snapshot, _timelineSnapshot)
+            && ReferenceEquals(comparison, _timelineComparison)
+            && string.Equals(Session.SelectedTraceSpanId, _timelineSelectedSpanId, StringComparison.Ordinal))
+        {
+            return _timeline;
+        }
+
+        var current = SelectCurrentRows(snapshot, Session.SelectedTraceSpanId);
+        IReadOnlyDictionary<string, ModuleDiagnosticsExportTraceSpan> baseline = comparison is null
+            ? new Dictionary<string, ModuleDiagnosticsExportTraceSpan>(StringComparer.Ordinal)
+            : MatchBaselineRows(current, comparison.Baseline.TraceSpans);
+        var axisMaximum = Math.Max(
+            Math.Max(
+                snapshot?.Summary.TotalCompositionDurationMs ?? 1,
+                current.Select(static span => span.EndedOffsetMs).DefaultIfEmpty(1).Max()),
+            Math.Max(
+                comparison?.Baseline.Summary.TotalCompositionDurationMs ?? 1,
+                baseline.Values.Select(static span => span.EndedOffsetMs).DefaultIfEmpty(1).Max()));
+
+        _timelineSnapshot = snapshot;
+        _timelineComparison = comparison;
+        _timelineSelectedSpanId = Session.SelectedTraceSpanId;
+        _timeline = new TimelineProjection(current, baseline, Math.Max(1, axisMaximum));
+        return _timeline;
+    }
+
+    private static IReadOnlyList<ModuleDiagnosticsTraceSpan> SelectCurrentRows(
+        ModuleDiagnosticsSnapshot? snapshot,
+        string? selectedSpanId)
+    {
+        if (snapshot is null)
+        {
+            return [];
+        }
+
+        var selected = new Dictionary<string, ModuleDiagnosticsTraceSpan>(StringComparer.Ordinal);
+        var essential = snapshot.TraceSpans
+            .Where(span => span.SystemStage is not null
+                           || span.Kind == ModuleDiagnosticsTraceSpanKind.StartupBarrier
+                           || string.Equals(span.SpanId, selectedSpanId, StringComparison.Ordinal))
+            .OrderByDescending(span => string.Equals(span.SpanId, selectedSpanId, StringComparison.Ordinal))
+            .ThenByDescending(static span => span.IsFailed)
+            .ThenByDescending(static span => span.SystemStage is not null)
+            .ThenByDescending(static span => span.DurationMs);
+        AddUntilFull(selected, essential);
+
+        var contributors = snapshot.TraceSpans
+            .Where(static span => span.IsFailed || span.DurationMs > 0)
+            .OrderByDescending(static span => span.IsFailed)
+            .ThenByDescending(static span => span.DurationMs);
+        AddUntilFull(selected, contributors);
+
+        return selected.Values
+            .OrderBy(static span => span.StartedOffsetMs)
+            .ThenBy(static span => span.SpanId, StringComparer.Ordinal)
+            .ToArray();
+
+        static void AddUntilFull(
+            Dictionary<string, ModuleDiagnosticsTraceSpan> destination,
+            IEnumerable<ModuleDiagnosticsTraceSpan> candidates)
+        {
+            foreach (var span in candidates)
+            {
+                destination.TryAdd(span.SpanId, span);
+                if (destination.Count == MAX_TIMELINE_ROWS)
+                {
+                    return;
+                }
+            }
+        }
+    }
+
+    private TimelineAxisRange CreateAxisRange()
+    {
+        var maximum = GetTimelineProjection().AxisMaximum;
+        var width = maximum / Math.Pow(2, _zoomLevel - MIN_ZOOM_LEVEL);
+        var center = SelectedSpan is { } selected
+            ? (selected.StartedOffsetMs + selected.EndedOffsetMs) / 2
+            : maximum / 2;
+        var start = Math.Clamp(center - width / 2, 0, Math.Max(0, maximum - width));
+        return new TimelineAxisRange(start, width);
+    }
+
+    private bool IsSelected(ModuleDiagnosticsTraceSpan span) =>
+        string.Equals(Session.SelectedTraceSpanId, span.SpanId, StringComparison.Ordinal);
+
+    private string TimelineRowClass(ModuleDiagnosticsTraceSpan span, int _) =>
+        IsSelected(span) ? "timeline-row-selected" : string.Empty;
+
+    private double TimelineX(double startedOffsetMs) => Math.Clamp(
+        (startedOffsetMs - AxisRange.StartMs) / AxisRange.WidthMs * 1000,
+        0,
+        1000);
+
+    private double TimelineWidth(double startedOffsetMs, double endedOffsetMs)
+    {
+        var clippedStart = Math.Max(startedOffsetMs, AxisRange.StartMs);
+        var clippedEnd = Math.Min(endedOffsetMs, AxisRange.EndMs);
+        return clippedEnd <= clippedStart
+            ? 0
+            : Math.Clamp((clippedEnd - clippedStart) / AxisRange.WidthMs * 1000, 2, 1000);
+    }
+
+    private double BaselineTimelineX(ModuleDiagnosticsExportTraceSpan span) => TimelineX(span.StartedOffsetMs);
+
+    private double BaselineTimelineWidth(ModuleDiagnosticsExportTraceSpan span) =>
+        TimelineWidth(span.StartedOffsetMs, span.EndedOffsetMs);
+
+    private async Task SelectSpanAsync(ModuleDiagnosticsTraceSpan span)
+    {
+        Session.SelectTraceSpan(span);
+        if (span.ModuleKey is not { } moduleKey || Session.Snapshot is null)
+        {
+            return;
+        }
+
+        var module = Session.Snapshot.Modules.FirstOrDefault(candidate => candidate.ModuleKey == moduleKey);
+        if (module is not null)
+        {
+            await ModuleSelected.InvokeAsync(module);
+        }
+    }
+
+    private string TimelineTooltip(ModuleDiagnosticsTraceSpan span, ModuleDiagnosticsTraceDisplay display) => L[
+        "Performance:Waterfall:SpanDescription",
+        display.Primary,
+        display.Secondary,
+        ModuleDiagnosticsDisplay.Duration(span.StartedOffsetMs),
+        ModuleDiagnosticsDisplay.Duration(span.EndedOffsetMs),
+        ModuleDiagnosticsDisplay.Duration(span.DurationMs)];
+
+    private void ZoomIn() => _zoomLevel = Math.Min(MAX_ZOOM_LEVEL, _zoomLevel + 1);
+    private void ZoomOut() => _zoomLevel = Math.Max(MIN_ZOOM_LEVEL, _zoomLevel - 1);
+    private void FitTimeline() => _zoomLevel = MIN_ZOOM_LEVEL;
+    private void FocusSelected()
+    {
+        if (SelectedSpan is not { } selected)
+        {
+            return;
+        }
+
+        var maximum = GetTimelineProjection().AxisMaximum;
+        var desiredWidth = selected.DurationMs * 1.15;
+        var level = MIN_ZOOM_LEVEL;
+        for (var candidate = MIN_ZOOM_LEVEL; candidate <= MAX_ZOOM_LEVEL; candidate++)
+        {
+            var candidateWidth = maximum / Math.Pow(2, candidate - MIN_ZOOM_LEVEL);
+            if (candidateWidth < desiredWidth)
+            {
+                break;
+            }
+
+            level = candidate;
+        }
+
+        _zoomLevel = level;
+    }
+
+    private static string SpanKindClass(ModuleDiagnosticsTraceSpanKind kind) => kind switch
+    {
+        ModuleDiagnosticsTraceSpanKind.SystemStage => "timeline-kind--system",
+        ModuleDiagnosticsTraceSpanKind.ModuleCallback => "timeline-kind--callback",
+        ModuleDiagnosticsTraceSpanKind.StartupWork => "timeline-kind--work",
+        ModuleDiagnosticsTraceSpanKind.StartupBarrier => "timeline-kind--barrier",
+        _ => "timeline-kind--system"
+    };
+
+    private static string TimelineIdentity(
+        ModuleDiagnosticsTraceSpanKind kind,
+        string? moduleId,
+        ModuleSystemStage? systemStage,
+        ModulePhase? modulePhase,
+        ModuleCallbackKind? callbackKind) =>
+        $"{kind}|{moduleId}|{systemStage}|{modulePhase}|{callbackKind}";
+
+    private static IReadOnlyDictionary<string, ModuleDiagnosticsExportTraceSpan> MatchBaselineRows(
+        IReadOnlyList<ModuleDiagnosticsTraceSpan> current,
+        IReadOnlyList<ModuleDiagnosticsExportTraceSpan> baseline)
+    {
+        var orderedBaseline = baseline.OrderBy(static span => span.StartedOffsetMs).ToArray();
+        var baselineById = orderedBaseline.ToDictionary(static span => span.SpanId, StringComparer.Ordinal);
+        var usedBaselineIds = new HashSet<string>(StringComparer.Ordinal);
+        var matches = new Dictionary<string, ModuleDiagnosticsExportTraceSpan>(StringComparer.Ordinal);
+        var unmatchedCurrent = new List<ModuleDiagnosticsTraceSpan>();
+        foreach (var span in current)
+        {
+            if (baselineById.TryGetValue(span.SpanId, out var exact))
+            {
+                matches.Add(span.SpanId, exact);
+                usedBaselineIds.Add(exact.SpanId);
+            }
+            else
+            {
+                unmatchedCurrent.Add(span);
+            }
+        }
+
+        var remainingByIdentity = orderedBaseline
+            .Where(span => !usedBaselineIds.Contains(span.SpanId))
+            .GroupBy(static span => TimelineIdentity(
+                    span.Kind,
+                    span.ModuleId,
+                    span.SystemStage,
+                    span.ModulePhase,
+                    span.CallbackKind),
+                StringComparer.Ordinal)
+            .ToDictionary(
+                static group => group.Key,
+                static group => new Queue<ModuleDiagnosticsExportTraceSpan>(group),
+                StringComparer.Ordinal);
+        foreach (var span in unmatchedCurrent)
+        {
+            var identity = TimelineIdentity(
+                span.Kind,
+                span.ModuleKey?.Id,
+                span.SystemStage,
+                span.ModulePhase,
+                span.CallbackKind);
+            if (remainingByIdentity.TryGetValue(identity, out var candidates) && candidates.TryDequeue(out var match))
+            {
+                matches.Add(span.SpanId, match);
+            }
+        }
+
+        return matches;
+    }
+
+    private static string SvgNumber(double value) =>
+        value.ToString("0.###", System.Globalization.CultureInfo.InvariantCulture);
+
+    private sealed record TimelineProjection(
+        IReadOnlyList<ModuleDiagnosticsTraceSpan> Current,
+        IReadOnlyDictionary<string, ModuleDiagnosticsExportTraceSpan> Baseline,
+        double AxisMaximum)
+    {
+        internal static TimelineProjection Empty { get; } = new(
+            [],
+            new Dictionary<string, ModuleDiagnosticsExportTraceSpan>(StringComparer.Ordinal),
+            1);
+    }
+
+    private readonly record struct TimelineAxisRange(double StartMs, double WidthMs)
+    {
+        internal double EndMs => StartMs + WidthMs;
+    }
+}

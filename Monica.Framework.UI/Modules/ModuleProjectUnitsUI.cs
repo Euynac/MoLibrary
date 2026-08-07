@@ -2,8 +2,6 @@ using Microsoft.Extensions.DependencyInjection;
 using Monica.Core;
 using Monica.Core.Modularity;
 using Monica.Core.Modularity.Abstractions;
-using Monica.Core.Modularity.Annotations;
-using Monica.Core.Modularity.Models;
 using Monica.Framework.UI.Localization;
 using Monica.Framework.UI.Pages;
 using Monica.Framework.UI.UIProjectUnits.Services;
@@ -20,9 +18,21 @@ public static class ModuleProjectUnitsUIBuilderExtensions
         /// <summary>
         /// Registers the project-units UI module.
         /// </summary>
-        public ModuleProjectUnitsUIGuide AddProjectUnitsUI(Action<ModuleProjectUnitsUIOption>? action = null)
+        public ModuleRegistration<ModuleProjectUnitsUI, ModuleProjectUnitsUIOption> AddProjectUnitsUI(
+            Action<ModuleProjectUnitsUIOption>? action = null)
         {
-            return builder.AddModule<ModuleProjectUnitsUI, ModuleProjectUnitsUIOption, ModuleProjectUnitsUIGuide>(action);
+            var registration = builder.AddModule<ModuleProjectUnitsUI, ModuleProjectUnitsUIOption>(action);
+            registration.Require<ModuleLocalization, ModuleLocalizationOption>()
+                .AddResource<ProjectUnitsResource>();
+            registration.Require<ModuleShellUI, ModuleShellUIOption>()
+                .RegisterUIComponents(registry => registry.RegisterLocalizedPage<UIProjectUnitsPage, ProjectUnitsResource>(
+                    UIProjectUnitsPage.PAGE_URL,
+                    "Pages:ProjectUnits:Title",
+                    Icons.Material.Filled.Monitor,
+                    BuiltInNavigationCategoryIds.Monitor,
+                    addToNav: true,
+                    navOrder: 20));
+            return registration;
         }
     }
 }
@@ -30,49 +40,23 @@ public static class ModuleProjectUnitsUIBuilderExtensions
 /// <summary>
 /// Project-units UI module.
 /// </summary>
-[ModuleKey(BuiltInModuleKey.ProjectUnitsUI)]
-public class ModuleProjectUnitsUI(ModuleProjectUnitsUIOption option)
-    : ModuleBase<ModuleProjectUnitsUI, ModuleProjectUnitsUIOption, ModuleProjectUnitsUIGuide>(option)
+public class ModuleProjectUnitsUI : MonicaModule<ModuleProjectUnitsUIOption>, IUIModule
 {
-    public override void ConfigureServices(IServiceCollection services)
+    /// <inheritdoc />
+    public override void Describe(ModuleDescriptor module)
     {
-        services.AddScoped<IProjectUnitsUiDataSource, ProjectUnitsUiDataSource>();
+        module.Require<ModuleProjectUnits, ModuleProjectUnitsOption>();
     }
 
-    public override void ClaimDependencies()
+    public override void ConfigureServices(ModuleContext<ModuleProjectUnitsUIOption> context)
     {
-        if (!Option.DisablePage)
-        {
-            DependsOnModule<ModuleLocalizationGuide>().Register()
-                .AddResource<ProjectUnitsResource>();
-
-            DependsOnModule<ModuleProjectUnitsGuide>().Register();
-            DependsOnModule<ModuleShellUIGuide>().Register()
-                .RegisterUIComponents(p => p.RegisterLocalizedPage<UIProjectUnitsPage, ProjectUnitsResource>(
-                    UIProjectUnitsPage.PAGE_URL,
-                    "Pages:ProjectUnits:Title",
-                    Icons.Material.Filled.Monitor,
-                    BuiltInNavigationCategoryIds.Monitor,
-                    addToNav: true,
-                    navOrder: 20));
-        }
+        context.Services.AddScoped<IProjectUnitsUiDataSource, ProjectUnitsUiDataSource>();
     }
-}
-
-/// <summary>
-/// Project-units UI module guide.
-/// </summary>
-public class ModuleProjectUnitsUIGuide : ModuleGuide<ModuleProjectUnitsUI, ModuleProjectUnitsUIOption, ModuleProjectUnitsUIGuide>
-{
 }
 
 /// <summary>
 /// Project-units UI module options.
 /// </summary>
 public class ModuleProjectUnitsUIOption : ModuleOptions<ModuleProjectUnitsUI>
-{ 
-    /// <summary>
-    /// Whether to disable the project-units page.
-    /// </summary>
-    public bool DisablePage { get; set; }
+{
 }

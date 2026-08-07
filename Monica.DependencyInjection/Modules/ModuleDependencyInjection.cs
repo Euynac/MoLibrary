@@ -2,10 +2,10 @@ using Microsoft.Extensions.DependencyInjection;
 using Monica.Core;
 using Monica.Core.Modularity;
 using Monica.Core.Modularity.Abstractions;
-using Monica.Core.Modularity.Annotations;
 using Monica.Core.Modularity.Models;
+using Monica.Core.TypeDiscovery.Models;
 using Monica.DependencyInjection.Abstractions;
-using Monica.DependencyInjection.Abstractions.Internal;
+using Monica.DependencyInjection.Annotations;
 using Monica.DependencyInjection.Facades;
 using Monica.DependencyInjection.Services;
 using Monica.DependencyInjection.Services.Support;
@@ -20,24 +20,20 @@ public static class ModuleDependencyInjectionBuilderExtensions
         /// <summary>
         /// Enables Monica conventional dependency registration and cached service-provider access.
         /// </summary>
-        public ModuleDependencyInjectionGuide AddDependencyInjection(Action<ModuleDependencyInjectionOption>? action = null)
+        public ModuleRegistration<ModuleDependencyInjection, ModuleDependencyInjectionOption> AddDependencyInjection(Action<ModuleDependencyInjectionOption>? action = null)
         {
-            return builder.AddModule<ModuleDependencyInjection, ModuleDependencyInjectionOption, ModuleDependencyInjectionGuide>(action);
+            return builder.AddModule<ModuleDependencyInjection, ModuleDependencyInjectionOption>(action);
         }
     }
 }
 
-[ModuleKey(BuiltInModuleKey.DependencyInjection)]
-public class ModuleDependencyInjection(ModuleDependencyInjectionOption option)
-    : ModuleBase<ModuleDependencyInjection, ModuleDependencyInjectionOption, ModuleDependencyInjectionGuide>(option), IBusinessTypeIterator
+public class ModuleDependencyInjection : MonicaModule<ModuleDependencyInjectionOption>
 {
-    private IConventionalRegistrar? _registrar;
     private DependencyInjectionDiagnosticsRegistry? _diagnosticsRegistry;
-    private IServiceCollection? _services;
 
-    public override void ConfigureServices(IServiceCollection services)
+    public override void ConfigureServices(ModuleContext<ModuleDependencyInjectionOption> context)
     {
-        DependencyInjectionDiagnosticsRegistry? diagnosticsRegistry = null;
+        var services = context.Services;
         if (Option.EnableAutoRegistrationDiagnostics)
         {
             _diagnosticsRegistry ??= new DependencyInjectionDiagnosticsRegistry();
@@ -47,54 +43,38 @@ public class ModuleDependencyInjection(ModuleDependencyInjectionOption option)
             services.AddSingleton<DependencyInjectionDiagnosticsService>();
             services.AddSingleton<DependencyInjectionDiagnosticsFacade>();
             services.AddHostedService<DependencyInjectionDiagnosticsHostedService>();
-
-            diagnosticsRegistry = _diagnosticsRegistry;
         }
 
         services.AddScoped<ICachedServiceProvider, CachedServiceProvider>();
-
-        _registrar = new ConventionalRegistrar(Option, diagnosticsRegistry);
-        _services = services;
     }
 
     /// <inheritdoc />
-    public override void ClaimDependencies()
+    public override void DeclareTypeDiscovery(TypeDiscoveryPlan<ModuleDependencyInjectionOption> discovery)
     {
-        if (Option.EnableAutoRegistrationDiagnostics)
-        {
-            DependsOnModule<ModuleHostedServiceGuide>().Register();
-        }
-    }
+        var dependencyCandidates = TypeQuery.AnyOf(
+            TypeQuery.All.AssignableTo<ITransientDependency>(),
+            TypeQuery.All.AssignableTo<ISingletonDependency>(),
+            TypeQuery.All.AssignableTo<IScopedDependency>(),
+            TypeQuery.All.HasAttribute<DependencyAttribute>(inherit: true));
 
-    /// <summary>
-    /// Iterates through business types and registers them with the dependency injection container.
-    /// </summary>
-    /// <param name="types">The collection of types to iterate through.</param>
-    /// <returns>An enumerable collection of the processed types.</returns>
-    public IEnumerable<Type> IterateBusinessTypes(IEnumerable<Type> types)
-    {
-        if (_registrar == null || _services == null)
-        {
-            foreach (var type in types)
+        discovery.Match(
+            TypeQuery.ConcreteClass.And(dependencyCandidates),
+            (context, matches) =>
             {
-                yield return type;
-            }
-            yield break;
-        }
-        
-        foreach (var type in types)
-        {
-            _registrar.AddType(_services, type);
-            yield return type;
-        }
+                // The serial commit runs after ConfigureServices, when diagnostics has been initialized and bound.
+                var registrar = new ConventionalRegistrar(Option, Logger, _diagnosticsRegistry);
+                foreach (var match in matches)
+                {
+                    registrar.AddType(context.Registrations, match);
+                }
+            });
     }
 }
 
 /// <summary>
 /// Configures the Monica dependency-injection module.
 /// </summary>
-public class ModuleDependencyInjectionGuide : ModuleGuide<ModuleDependencyInjection, ModuleDependencyInjectionOption,
-    ModuleDependencyInjectionGuide>
+public static class ModuleDependencyInjectionRegistrationExtensions
 {
     /// <summary>
     /// Enables or disables Monica automatic-registration diagnostics.
@@ -103,11 +83,17 @@ public class ModuleDependencyInjectionGuide : ModuleGuide<ModuleDependencyInject
     /// <see langword="true"/> to capture the diagnostics snapshot and emit startup logs for automatic registration;
     /// otherwise, <see langword="false"/>.
     /// </param>
-    /// <returns>The current guide instance.</returns>
-    public ModuleDependencyInjectionGuide EnableAutoRegistrationDiagnostics(bool enabled = true)
+    /// <param name="module">The DependencyInjection module registration.</param>
+    /// <returns>The current module registration.</returns>
+    public static ModuleRegistration<ModuleDependencyInjection, ModuleDependencyInjectionOption> EnableAutoRegistrationDiagnostics(this ModuleRegistration<ModuleDependencyInjection, ModuleDependencyInjectionOption> module, bool enabled = true)
     {
-        ConfigureModuleOption(option => option.EnableAutoRegistrationDiagnostics = enabled);
-        return this;
+        module.Configure(options => options.EnableAutoRegistrationDiagnostics = enabled);
+        if (enabled)
+        {
+            module.Require<ModuleHostedService, ModuleHostedServiceOption>();
+        }
+
+        return module;
     }
 
     /// <summary>
@@ -117,12 +103,14 @@ public class ModuleDependencyInjectionGuide : ModuleGuide<ModuleDependencyInject
     /// <see langword="true"/> to emit a log entry for every auto-registered type during startup;
     /// otherwise, <see langword="false"/>. Disabled by default to keep startup output quiet.
     /// </param>
-    /// <returns>The current guide instance.</returns>
-    public ModuleDependencyInjectionGuide EnableAutoRegistrationLogging(bool enabled = true)
+    /// <param name="module">The DependencyInjection module registration.</param>
+    /// <returns>The current module registration.</returns>
+    public static ModuleRegistration<ModuleDependencyInjection, ModuleDependencyInjectionOption> EnableAutoRegistrationLogging(this ModuleRegistration<ModuleDependencyInjection, ModuleDependencyInjectionOption> module, bool enabled = true)
     {
-        ConfigureModuleOption(option => option.EnableAutoRegistrationLogging = enabled);
-        return this;
+        module.Configure(options => options.EnableAutoRegistrationLogging = enabled);
+        return module;
     }
+
 }
 
 /// <summary>
@@ -138,7 +126,7 @@ public class ModuleDependencyInjectionOption : ModuleOptions<ModuleDependencyInj
     /// diagnostics snapshot consumed by the dependency-injection UI module.
     /// Leave this disabled when diagnostics are not needed so startup registration avoids the extra tracking overhead.
     /// </remarks>
-    public bool EnableAutoRegistrationDiagnostics { get; set; }
+    public bool EnableAutoRegistrationDiagnostics { get; internal set; }
 
     /// <summary>
     /// Gets or sets a value indicating whether Monica writes a startup log entry for each auto-registered type.

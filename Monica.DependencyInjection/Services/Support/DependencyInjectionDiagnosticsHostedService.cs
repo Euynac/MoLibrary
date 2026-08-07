@@ -3,7 +3,6 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Monica.Core.HostedService.Abstractions;
 using Monica.Core.HostedService.Models;
-using Monica.Core.Modularity.Models;
 using Monica.Core.ObservableInstance.Abstractions;
 using Monica.Modules;
 
@@ -24,7 +23,7 @@ internal sealed class DependencyInjectionDiagnosticsHostedService(
     public override string ServiceName => nameof(DependencyInjectionDiagnosticsHostedService);
 
     /// <inheritdoc />
-    public override string? ServiceGroupId => nameof(BuiltInModuleKey.DependencyInjection);
+    public override string? ServiceGroupId => nameof(ModuleDependencyInjection);
 
     /// <inheritdoc />
     protected override Task OnStartingAsync(CancellationToken cancellationToken)

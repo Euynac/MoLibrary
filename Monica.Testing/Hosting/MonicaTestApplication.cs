@@ -1,7 +1,7 @@
 using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.DependencyInjection;
 using Monica.Core;
-using Monica.Core.Modularity.Models.Internal;
+using Monica.Core.Modularity.Models;
 
 namespace Monica.Testing.Hosting;
 

@@ -3,7 +3,6 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Monica.Core.HostedService.Abstractions;
 using Monica.Core.HostedService.Models;
-using Monica.Core.Modularity.Models;
 using Monica.Core.ObservableInstance.Abstractions;
 using Monica.Modules;
 using Monica.Profiling.TypeAllocation.Models;
@@ -26,7 +25,7 @@ internal sealed class TypeAllocationAutoStartHostedService(
     public override string ServiceName => nameof(TypeAllocationAutoStartHostedService);
 
     /// <inheritdoc />
-    public override string? ServiceGroupId => nameof(BuiltInModuleKey.TypeAllocation);
+    public override string? ServiceGroupId => nameof(ModuleTypeAllocation);
 
     /// <inheritdoc />
     protected override Task OnStartingAsync(CancellationToken cancellationToken)

@@ -7,7 +7,6 @@ using Microsoft.Extensions.Hosting;
 using Monica.Core;
 using Monica.Core.Modularity;
 using Monica.Core.Modularity.Abstractions;
-using Monica.Core.Modularity.Annotations;
 using Monica.Core.Modularity.Extensions;
 using Monica.Core.Modularity.Models;
 using Monica.UI.Localization;
@@ -30,9 +29,53 @@ public static class ModuleShellUIBuilderExtensions
         /// <summary>
         /// Configures the shell UI module.
         /// </summary>
-        public ModuleShellUIGuide AddUIShell(Action<ModuleShellUIOption>? action = null)
+        public ModuleRegistration<ModuleShellUI, ModuleShellUIOption> AddUIShell(
+            Action<ModuleShellUIOption>? action = null)
         {
-            return builder.AddModule<ModuleShellUI, ModuleShellUIOption, ModuleShellUIGuide>(action);
+            return builder.AddModule<ModuleShellUI, ModuleShellUIOption>(action);
+        }
+    }
+
+    extension(ModuleRegistration<ModuleShellUI, ModuleShellUIOption> registration)
+    {
+        /// <summary>
+        /// Registers a startup-only page or navigation contribution with the shell.
+        /// </summary>
+        /// <param name="registrationAction">The contribution applied before routing begins.</param>
+        /// <returns>The same host-bound shell registration.</returns>
+        public ModuleRegistration<ModuleShellUI, ModuleShellUIOption> RegisterUIComponents(
+            Action<INavigationRegistryBuilder> registrationAction)
+        {
+            ArgumentNullException.ThrowIfNull(registrationAction);
+
+            return registration.ConfigureApplicationBuilder(context =>
+            {
+                var registry = context.ApplicationBuilder.ApplicationServices
+                    .GetRequiredService<INavigationRegistryBuilder>();
+                registrationAction(registry);
+            }, ModuleWebStage.BeforeRouting);
+        }
+
+        /// <summary>
+        /// Adds a route redirect emitted by the shell during endpoint mapping.
+        /// </summary>
+        /// <param name="fromPath">The source route.</param>
+        /// <param name="toPath">The redirect target.</param>
+        /// <returns>The same host-bound shell registration.</returns>
+        public ModuleRegistration<ModuleShellUI, ModuleShellUIOption> AddRouteRedirect(
+            string fromPath,
+            string toPath)
+        {
+            return registration.Configure(option =>
+            {
+                if (option.RouteRedirects.TryGetValue(fromPath, out var existingTarget))
+                {
+                    throw new InvalidOperationException(
+                        $"Route redirect '{fromPath}' is already registered and points to '{existingTarget}'.");
+                }
+
+                option.RouteRedirects[fromPath] = toPath;
+            });
         }
     }
 }
@@ -41,22 +84,26 @@ public static class ModuleShellUIBuilderExtensions
 /// Shell UI module.
 /// Provides the shared Blazor shell infrastructure for Monica UI modules.
 /// </summary>
-[ModuleKey(BuiltInModuleKey.UICore)]
-public class ModuleShellUI(ModuleShellUIOption option)
-    : WebModuleBase<ModuleShellUI, ModuleShellUIOption, ModuleShellUIGuide>(option)
+public class ModuleShellUI : MonicaModule<ModuleShellUIOption>, IWebHostRequiredModule, IUIModule
 {
     /// <summary>
     /// Declare module dependencies
     /// </summary>
-    public override void ClaimDependencies()
+    public override void Describe(ModuleDescriptor module)
     {
-        DependsOnModule<ModuleLocalizationGuide>().Register()
-            .AddResource<SharedResource>();
+        module.Require<ModuleLocalization, ModuleLocalizationOption>(option =>
+        {
+            if (!option.ResourceMarkerTypes.Contains(typeof(SharedResource)))
+            {
+                option.ResourceMarkerTypes.Add(typeof(SharedResource));
+            }
+        });
     }
 
     /// <inheritdoc />
-    public override void ConfigureBuilder(IHostApplicationBuilder builder)
+    public override void ConfigureBuilder(ModuleBuilderContext<ModuleShellUIOption> context)
     {
+        var builder = context.HostApplicationBuilder;
         if (builder is not WebApplicationBuilder webBuilder)
         {
             return;
@@ -76,9 +123,10 @@ public class ModuleShellUI(ModuleShellUIOption option)
     /// <summary>
     /// Configuration service
     /// </summary>
-    /// <param name="services">Service collection</param>
-    public override void ConfigureServices(IServiceCollection services)
+    /// <param name="context">The typed module composition context.</param>
+    public override void ConfigureServices(ModuleContext<ModuleShellUIOption> context)
     {
+        var services = context.Services;
         // Add MudBlazor service
         services.AddMudServices();
         if(Option.EnableMarkdown)
@@ -117,9 +165,10 @@ public class ModuleShellUI(ModuleShellUIOption option)
         services.AddScoped<UserContextState>();
     }
 
-    public override void ConfigureApplicationBuilder(IApplicationBuilder app)
+    public override void ConfigureApplicationBuilder(WebModuleContext<ModuleShellUIOption> context)
     {
-        var webApp = RequireWebApplication(app);
+        var app = context.ApplicationBuilder;
+        var webApp = context.RequireWebApplication();
 
         webApp.MapStaticAssets()
             .WithMonicaEndpoint(MonicaEndpointKind.StaticAsset);  // .NET 9 support
@@ -128,9 +177,10 @@ public class ModuleShellUI(ModuleShellUIOption option)
         app.UseAntiforgery();
     }
 
-    public override void ConfigureEndpoints(IApplicationBuilder app)
+    public override void ConfigureEndpoints(WebModuleContext<ModuleShellUIOption> context)
     {
-        var webApp = RequireWebApplication(app);
+        var app = context.ApplicationBuilder;
+        var webApp = context.RequireWebApplication();
         var registry = app.ApplicationServices.GetRequiredService<PageRegistry>();
         registry.Seal();
 
@@ -150,82 +200,7 @@ public class ModuleShellUI(ModuleShellUIOption option)
         // while navigation through Router may still work.
     }
 
-    protected override int GetConfigureApplicationBuilderOrder()
-    {
-        return (int)ModuleApplicationMiddlewareOrder.AfterUseRouting;
-    }
-
-    protected override int GetConfigureEndpointsOrder()
-    {
-        return (int)ModuleRegistrationOrder.Normal;
-    }
-
-    private static WebApplication RequireWebApplication(IApplicationBuilder app)
-    {
-        return app as WebApplication
-               ?? throw new InvalidOperationException(
-                   $"{nameof(ModuleShellUI)} requires {nameof(WebApplication)} during application configuration.");
-    }
-}
-
-/// <summary>
-/// Shell UI module configuration guide.
-/// </summary>
-public class ModuleShellUIGuide : WebModuleGuide<ModuleShellUI, ModuleShellUIOption, ModuleShellUIGuide>
-{
-
-    /// <summary>
-    /// Registers startup-only page and navigation contributions with the Monica UI shell.
-    /// </summary>
-    /// <param name="registrationAction">
-    /// The callback that receives the host's write-only navigation registry during application startup.
-    /// </param>
-    /// <returns>This guide so additional shell configuration can be chained.</returns>
-    /// <remarks>
-    /// The callback runs before routing is added. Do not capture or retain its registry argument: the shell seals all
-    /// contributions when endpoint configuration begins, after which further writes fail. A module that calls
-    /// <see cref="INavigationRegistryBuilder.RegisterLocalizedPage{TPage,TResource}"/> or
-    /// <see cref="INavigationRegistryBuilder.RegisterLocalizedCategory{TResource}"/> must also register the same
-    /// module-owned resource through <see cref="ModuleLocalizationGuide.AddResource{TResource}"/>.
-    /// </remarks>
-    /// <exception cref="ArgumentNullException">Thrown when <paramref name="registrationAction"/> is null.</exception>
-    public ModuleShellUIGuide RegisterUIComponents(Action<INavigationRegistryBuilder> registrationAction)
-    {
-        ArgumentNullException.ThrowIfNull(registrationAction);
-
-        // Perform component registration at application startup.
-        ConfigureApplicationBuilder(builder =>
-        {
-            var registry = builder.ApplicationBuilder.ApplicationServices
-                .GetRequiredService<INavigationRegistryBuilder>();
-            registrationAction(registry);
-        }, ModuleApplicationMiddlewareOrder.BeforeUseRouting, secondKey: Guid.NewGuid().ToString());
-
-        return this;
-    }
-
-    /// <summary>
-    /// Add route redirection rules
-    /// </summary>
-    /// <param name="fromPath">Source path (such as "/")</param>
-    /// <param name="toPath">Target path (such as "/swagger" or "~/swagger")</param>
-    /// <returns>Configuration Director</returns>
-    /// <exception cref="InvalidOperationException">Thrown when the source path has already been registered.</exception>
-    public ModuleShellUIGuide AddRouteRedirect(string fromPath, string toPath)
-    {
-        ConfigureModuleOption(option =>
-        {
-            if (option.RouteRedirects.TryGetValue(fromPath, out var existingTarget))
-            {
-                throw new InvalidOperationException(
-                    $"Route redirect '{fromPath}' is already registered and points to '{existingTarget}'.");
-            }
-
-            option.RouteRedirects[fromPath] = toPath;
-        }, secondKey: fromPath);
-
-        return this;
-    }
+    protected override ModuleWebStage GetApplicationBuilderStage() => ModuleWebStage.AfterRouting;
 
 }
 

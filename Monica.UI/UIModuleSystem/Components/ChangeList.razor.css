@@ -1,0 +1,15 @@
+.change-list {
+    display: grid;
+    gap: .35rem;
+    min-width: 0;
+}
+
+.change-list ::deep .identifier-value {
+    min-width: 0;
+    padding: .35rem .5rem;
+    background: var(--mud-palette-background);
+}
+
+.change-list span {
+    color: var(--mud-palette-text-secondary);
+}

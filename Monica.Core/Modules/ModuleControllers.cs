@@ -4,8 +4,6 @@ using Monica.Core;
 using Monica.Core.Execution.Mvc;
 using Monica.Core.Modularity;
 using Monica.Core.Modularity.Abstractions;
-using Monica.Core.Modularity.Annotations;
-using Monica.Core.Modularity.Models;
 
 // ReSharper disable once CheckNamespace
 namespace Monica.Modules;
@@ -17,104 +15,79 @@ public static class ModuleControllersBuilderExtensions
         /// <summary>
         /// Configures the Controllers module.
         /// </summary>
-        public ModuleControllersGuide AddControllers(Action<ModuleControllersOption>? action = null)
+        public ModuleRegistration<ModuleControllers, ModuleControllersOption> AddControllers(
+            Action<ModuleControllersOption>? action = null)
         {
-            return builder.AddModule<ModuleControllers, ModuleControllersOption, ModuleControllersGuide>(action);
+            return builder.AddModule<ModuleControllers, ModuleControllersOption>(action);
+        }
+    }
+
+    extension(ModuleRegistration<ModuleControllers, ModuleControllersOption> registration)
+    {
+        public ModuleRegistration<ModuleControllers, ModuleControllersOption> ConfigDependentServices(
+            Action<IServiceCollection> configure)
+        {
+            ArgumentNullException.ThrowIfNull(configure);
+            return registration.ConfigureServices(context => configure(context.Services));
+        }
+
+        public ModuleRegistration<ModuleControllers, ModuleControllersOption> ConfigMvcBuilder(
+            Action<IMvcBuilder> configure)
+        {
+            ArgumentNullException.ThrowIfNull(configure);
+            return registration.Configure(options => options.AddMvcBuilderAction(configure));
+        }
+
+        public ModuleRegistration<ModuleControllers, ModuleControllersOption> ConfigMvcOption(
+            Action<MvcOptions> configure)
+        {
+            ArgumentNullException.ThrowIfNull(configure);
+            return registration.Configure(options => options.AddMvcOptionAction(configure));
         }
     }
 }
 
-[ModuleKey(BuiltInModuleKey.Controllers)]
-public class ModuleControllers(ModuleControllersOption option)
-    : ModuleBase<ModuleControllers, ModuleControllersOption, ModuleControllersGuide>(option)
+public class ModuleControllers : MonicaModule<ModuleControllersOption>
 {
-    public override void ConfigureServices(IServiceCollection services)
+    public override void Describe(ModuleDescriptor module)
     {
-        services.AddScoped<ExecutionPipelineMvcFilter>();
+        module.Require<ModuleExecutionPipeline, ModuleExecutionPipelineOption>();
     }
 
-    public override void PostConfigureServices(IServiceCollection services)
+    public override void ConfigureServices(ModuleContext<ModuleControllersOption> context)
     {
-        var mvcBuilder = services.AddControllers(options =>
+        context.Services.AddScoped<ExecutionPipelineMvcFilter>();
+    }
+
+    public override void PostConfigureServices(ModuleContext<ModuleControllersOption> context)
+    {
+        var mvcBuilder = context.Services.AddControllers(options =>
             options.Filters.AddService(typeof(ExecutionPipelineMvcFilter)));
 
-        if (Option.MvcBuilderActions.Count <= 0
-            && Option.MvcOptionActions.Count <= 0
-            && Option.DependentServicesActions.Count <= 0)
-        {
-            return;
-        }
-
-        foreach (var action in Option.DependentServicesActions)
-        {
-            action(services);
-        }
-
-        var serviceProvider = services.BuildServiceProvider();
         foreach (var action in Option.MvcBuilderActions)
         {
-            action(mvcBuilder, serviceProvider);
+            action(mvcBuilder);
         }
+
         foreach (var action in Option.MvcOptionActions)
         {
-            services.Configure<MvcOptions>(o =>
-            {
-                action(o, serviceProvider);
-            });
+            context.Services.Configure(action);
         }
-    }
-
-    public override void ClaimDependencies()
-    {
-        DependsOnModule<ModuleExecutionPipelineGuide>().Register();
-    }
-
-}
-
-public class ModuleControllersGuide : ModuleGuide<ModuleControllers, ModuleControllersOption, ModuleControllersGuide>
-{
-    public ModuleControllersGuide ConfigDependentServices(Action<IServiceCollection> action)
-    {
-        ConfigureModuleOption(o =>
-        {
-            o.AddDependentServicesAction(action);
-        }, secondKey: Guid.NewGuid().ToString());
-        return this;
-    }
-    public ModuleControllersGuide ConfigMvcBuilder(Action<IMvcBuilder, IServiceProvider> action)
-    {
-        ConfigureModuleOption(o =>
-        {
-            o.AddMvcBuilderAction(action);
-        }, secondKey: Guid.NewGuid().ToString());
-        return this;
-    }
-    public ModuleControllersGuide ConfigMvcOption(Action<MvcOptions, IServiceProvider> action)
-    {
-        ConfigureModuleOption(o =>
-        {
-            o.AddMvcOptionAction(action);
-        }, secondKey: Guid.NewGuid().ToString());
-        return this;
     }
 }
 
 public class ModuleControllersOption : ModuleOptions<ModuleControllers>
 {
-    internal List<Action<IMvcBuilder, IServiceProvider>> MvcBuilderActions { get; set; } = [];
-    internal List<Action<MvcOptions, IServiceProvider>> MvcOptionActions { get; set; } = [];
-    internal List<Action<IServiceCollection>> DependentServicesActions { get; set; } = [];
+    internal List<Action<IMvcBuilder>> MvcBuilderActions { get; } = [];
+    internal List<Action<MvcOptions>> MvcOptionActions { get; } = [];
 
-    public void AddMvcBuilderAction(Action<IMvcBuilder, IServiceProvider> action)
+    internal void AddMvcBuilderAction(Action<IMvcBuilder> action)
     {
         MvcBuilderActions.Add(action);
     }
-    public void AddMvcOptionAction(Action<MvcOptions, IServiceProvider> action)
+
+    internal void AddMvcOptionAction(Action<MvcOptions> action)
     {
         MvcOptionActions.Add(action);
-    }
-    public void AddDependentServicesAction(Action<IServiceCollection> action)
-    {
-        DependentServicesActions.Add(action);
     }
 }

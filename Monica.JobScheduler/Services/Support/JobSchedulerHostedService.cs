@@ -3,7 +3,6 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Monica.Core.HostedService.Abstractions;
 using Monica.Core.HostedService.Models;
-using Monica.Core.Modularity.Models;
 using Monica.Core.ObservableInstance.Abstractions;
 using Monica.EventBus.Abstractions;
 using Monica.JobScheduler.Events;
@@ -43,7 +42,7 @@ public class JobSchedulerHostedService(
     private IAsyncDisposable? _definitionsChangedSubscription;
 
     public override string ServiceName => nameof(JobSchedulerHostedService);
-    public override string? ServiceGroupId => nameof(BuiltInModuleKey.JobScheduler);
+    public override string? ServiceGroupId => nameof(ModuleJobScheduler);
 
     protected override async Task OnBecameLeaderAsync(CancellationToken cancellationToken)
     {

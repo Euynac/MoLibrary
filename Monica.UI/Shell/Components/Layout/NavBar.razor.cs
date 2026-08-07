@@ -1,20 +1,23 @@
 using Microsoft.AspNetCore.Components;
+using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Components.Routing;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
 using Microsoft.JSInterop;
 using Monica.Core.Localization.Abstractions;
 using Monica.Modules;
 using Monica.UI.Localization;
+using Monica.UI.Pages;
 using Monica.UI.Shell.Models;
 using Monica.UI.Shell.Support;
+using Monica.UI.UIModuleSystem.Support;
 
 namespace Monica.UI.Shell.Components.Layout;
 
 public partial class NavBar : IAsyncDisposable
 {
-    private const string LayoutModulePath = "./_content/Monica.UI/js/navbar-layout.js";
-    private const int LayoutSafetyMarginPx = 8;
+    private const int LAYOUT_SAFETY_MARGIN_PX = 8;
 
     [Inject] private IPageCatalog PageCatalog { get; set; } = default!;
     [Inject] private IOptions<ModuleShellUIOption> Options { get; set; } = default!;
@@ -22,15 +25,20 @@ public partial class NavBar : IAsyncDisposable
     [Inject] private ILocalizationCatalog LocalizationCatalog { get; set; } = default!;
     [Inject] private NavigationManager NavigationManager { get; set; } = default!;
     [Inject] private IJSRuntime JSRuntime { get; set; } = default!;
+    [Inject] private IServiceProvider ServiceProvider { get; set; } = default!;
 
     private readonly List<NavigationGroup> _navigationGroups = [];
 
-    private DotNetObjectReference<NavBar>? _selfReference;
     private ElementReference _desktopNavRef;
     private ElementReference _measurementRailRef;
-    private IJSObjectReference? _layoutModule;
-    private IJSObjectReference? _layoutObserver;
+    private readonly object _disposeSync = new();
+    private NavBarLayoutInteropSession? _layoutInterop;
     private int _visibleCategoryCount;
+    private AuthenticationStateProvider? _authenticationStateProvider;
+    private Task _authorizationRefreshTask = Task.CompletedTask;
+    private Task? _disposeTask;
+    private int _navigationRefreshVersion;
+    private bool _disposed;
 
     private int MaxVisibleCategories => Options.Value.MaxVisibleCategories;
 
@@ -53,11 +61,46 @@ public partial class NavBar : IAsyncDisposable
     private int EffectiveVisibleCategoryCount =>
         Math.Clamp(_visibleCategoryCount, 0, Math.Min(MaxVisibleCategories, _navigationGroups.Count));
 
-    protected override void OnInitialized()
+    protected override async Task OnInitializedAsync()
     {
+        _layoutInterop = new NavBarLayoutInteropSession(JSRuntime, this);
         NavigationManager.LocationChanged += HandleLocationChanged;
+        _authenticationStateProvider = ServiceProvider.GetService<AuthenticationStateProvider>();
+        if (_authenticationStateProvider is not null)
+        {
+            _authenticationStateProvider.AuthenticationStateChanged += HandleAuthenticationStateChanged;
+        }
 
-        var itemsByCategory = PageCatalog.GetNavItems()
+        await RebuildNavigationAsync();
+    }
+
+    private async Task<bool> RebuildNavigationAsync()
+    {
+        if (_disposed)
+        {
+            return false;
+        }
+
+        var refreshVersion = Interlocked.Increment(ref _navigationRefreshVersion);
+        var navigationItems = PageCatalog.GetNavItems();
+        var workbenchAccess = ServiceProvider.GetService<ModuleSystemWorkbenchAccess>();
+        if (workbenchAccess is not null && !await workbenchAccess.IsAuthorizedAsync())
+        {
+            navigationItems = navigationItems
+                .Where(static item => !string.Equals(
+                    item.Href,
+                    ModuleSystemPage.MODULE_SYSTEM_DASHBOARD_URL.Trim('/'),
+                    StringComparison.OrdinalIgnoreCase))
+                .ToArray();
+        }
+
+        if (_disposed || refreshVersion != Volatile.Read(ref _navigationRefreshVersion))
+        {
+            return false;
+        }
+
+        _navigationGroups.Clear();
+        var itemsByCategory = navigationItems
             .GroupBy(static item => item.CategoryId)
             .ToDictionary(static group => group.Key, static group => (IReadOnlyList<NavigationItem>)group.ToList());
 
@@ -76,37 +119,57 @@ public partial class NavBar : IAsyncDisposable
         }
 
         _visibleCategoryCount = Math.Min(MaxVisibleCategories, _navigationGroups.Count);
+        return true;
     }
 
-    private void HandleLocationChanged(object? sender, LocationChangedEventArgs args)
+    private void HandleAuthenticationStateChanged(Task<AuthenticationState> authenticationStateTask)
     {
-        _ = InvokeAsync(StateHasChanged);
-    }
-
-    protected override async Task OnAfterRenderAsync(bool firstRender)
-    {
-        if (!firstRender || _navigationGroups.Count == 0)
+        if (_disposed)
         {
             return;
         }
 
-        _layoutModule = await JSRuntime.InvokeAsync<IJSObjectReference>("import", LayoutModulePath);
-        _selfReference = DotNetObjectReference.Create(this);
+        _authorizationRefreshTask = InvokeAsync(async () =>
+        {
+            if (await RebuildNavigationAsync() && !_disposed)
+            {
+                StateHasChanged();
+            }
+        });
+    }
+
+    private void HandleLocationChanged(object? sender, LocationChangedEventArgs args)
+    {
+        if (!_disposed)
+        {
+            _ = InvokeAsync(StateHasChanged);
+        }
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (_disposed || _navigationGroups.Count == 0 || _layoutInterop is not { } layoutInterop)
+        {
+            return;
+        }
 
         // Observe the desktop rail width so localized labels move into "More"
         // before the navigation spills into the action area.
-        _layoutObserver = await _layoutModule.InvokeAsync<IJSObjectReference>(
-            "createNavBarLayoutObserver",
+        await layoutInterop.InitializeAsync(
             _desktopNavRef,
             _measurementRailRef,
             MaxVisibleCategories,
-            LayoutSafetyMarginPx,
-            _selfReference);
+            LAYOUT_SAFETY_MARGIN_PX);
     }
 
     [JSInvokable]
     public Task UpdateVisibleCategoryCountAsync(int visibleCategoryCount)
     {
+        if (_disposed)
+        {
+            return Task.CompletedTask;
+        }
+
         var clampedVisibleCategoryCount = Math.Clamp(
             visibleCategoryCount,
             0,
@@ -121,35 +184,36 @@ public partial class NavBar : IAsyncDisposable
         return InvokeAsync(StateHasChanged);
     }
 
-    public async ValueTask DisposeAsync()
+    public ValueTask DisposeAsync()
     {
+        lock (_disposeSync)
+        {
+            return new ValueTask(_disposeTask ??= DisposeCoreAsync());
+        }
+    }
+
+    private async Task DisposeCoreAsync()
+    {
+        _disposed = true;
+        Interlocked.Increment(ref _navigationRefreshVersion);
         NavigationManager.LocationChanged -= HandleLocationChanged;
-
-        if (_layoutObserver != null)
+        if (_authenticationStateProvider is not null)
         {
-            try
-            {
-                await _layoutObserver.InvokeVoidAsync("dispose");
-                await _layoutObserver.DisposeAsync();
-            }
-            catch (JSDisconnectedException)
-            {
-                // Circuit already disconnected.
-            }
+            _authenticationStateProvider.AuthenticationStateChanged -= HandleAuthenticationStateChanged;
         }
 
-        if (_layoutModule != null)
+        var layoutInterop = _layoutInterop;
+        _layoutInterop = null;
+        try
         {
-            try
+            await _authorizationRefreshTask;
+        }
+        finally
+        {
+            if (layoutInterop is not null)
             {
-                await _layoutModule.DisposeAsync();
-            }
-            catch (JSDisconnectedException)
-            {
-                // Circuit already disconnected.
+                await layoutInterop.DisposeAsync();
             }
         }
-
-        _selfReference?.Dispose();
     }
 }

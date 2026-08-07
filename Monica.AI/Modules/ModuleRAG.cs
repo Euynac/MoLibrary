@@ -19,7 +19,6 @@ using Monica.AI.RAG.Services;
 using Monica.AI.RAG.Services.Support;
 using Monica.Core;
 using Monica.Core.Modularity.Abstractions;
-using Monica.Core.Modularity.Annotations;
 using Monica.Core.Modularity.Models;
 
 // ReSharper disable once CheckNamespace
@@ -35,9 +34,9 @@ public static class ModuleRAGBuilderExtensions
         /// <summary>
         /// Configures the RAG module.
         /// </summary>
-        public ModuleRAGGuide AddRAG(Action<ModuleRAGOption>? action = null)
+        public ModuleRegistration<ModuleRAG, ModuleRAGOption> AddRAG(Action<ModuleRAGOption>? action = null)
         {
-            return builder.AddModule<ModuleRAG, ModuleRAGOption, ModuleRAGGuide>(action);
+            return builder.AddModule<ModuleRAG, ModuleRAGOption>(action);
         }
     }
 }
@@ -45,20 +44,22 @@ public static class ModuleRAGBuilderExtensions
 /// <summary>
 /// RAG (Retrieval-Augmented Generation) module.
 /// </summary>
-[ModuleKey(BuiltInModuleKey.RAG)]
-public class ModuleRAG(ModuleRAGOption option)
-    : ModuleBase<ModuleRAG, ModuleRAGOption, ModuleRAGGuide>(option)
+public class ModuleRAG : MonicaModule<ModuleRAGOption>
 {
+    internal const string VECTOR_STORE_FEATURE = "vector-store";
+
     /// <inheritdoc />
-    public override void ClaimDependencies()
+    public override void Describe(ModuleDescriptor module)
     {
-        DependsOnModule<ModuleKnowledgeBaseGuide>().Register();
-        DependsOnModule<ModuleMarkdownGuide>().Register();
+        module.Require<ModuleKnowledgeBase, ModuleKnowledgeBaseOption>();
+        module.Require<ModuleMarkdown, ModuleMarkdownOption>();
+        module.RequireFeature(VECTOR_STORE_FEATURE);
     }
 
     /// <inheritdoc />
-    public override void ConfigureServices(IServiceCollection services)
+    public override void ConfigureServices(ModuleContext<ModuleRAGOption> context)
     {
+        var services = context.Services;
         services.TryAddSingleton<ITokenCountProvider, EstimatedUtf8TokenCountProvider>();
         services.AddSingleton<RAGIndexingActivity>();
         services.AddSingleton<RAGDocumentService>();
@@ -105,6 +106,11 @@ public class ModuleRAG(ModuleRAGOption option)
 /// </summary>
 public class ModuleRAGOption : ModuleOptions<ModuleRAG>
 {
+    /// <summary>
+    /// Gets the Qdrant provider settings used when Qdrant is selected as the vector store.
+    /// </summary>
+    public ModuleRAGQdrantOption Qdrant { get; } = new();
+
     /// <summary>
     /// Gets or sets the prefix applied to vector collection names owned by Monica RAG.
     /// The default is <c>monica_rag_</c>; change it when multiple applications share one store.
@@ -153,7 +159,7 @@ public class ModuleRAGOption : ModuleOptions<ModuleRAG>
 /// <summary>
 /// Qdrant-specific settings for the RAG vector store provider.
 /// </summary>
-public class ModuleRAGQdrantOption : IModuleExtraOptions<ModuleRAG>
+public class ModuleRAGQdrantOption
 {
     /// <summary>
     /// Qdrant host name.
@@ -177,73 +183,60 @@ public class ModuleRAGQdrantOption : IModuleExtraOptions<ModuleRAG>
 }
 
 /// <summary>
-/// RAG module configuration guide.
+/// Registration extensions for configuring the RAG module.
 /// </summary>
-public class ModuleRAGGuide
-    : ModuleGuide<ModuleRAG, ModuleRAGOption, ModuleRAGGuide>
+public static class ModuleRAGRegistrationExtensions
 {
-    private const string CONFIG_INDEX_STATE_STORE = nameof(CONFIG_INDEX_STATE_STORE);
-    private const string CONFIG_SOURCE_STORE = nameof(CONFIG_SOURCE_STORE);
-    private const string CONFIG_VECTOR_STORE = nameof(CONFIG_VECTOR_STORE);
-
-    protected override string[] GetRequestedConfigMethodKeys()
-    {
-        return [CONFIG_VECTOR_STORE];
-    }
-
     /// <summary>
     /// Uses a custom unified state store implementation.
     /// </summary>
-    public ModuleRAGGuide UseDocumentIndexStateStore<TStore>()
+    public static ModuleRegistration<ModuleRAG, ModuleRAGOption> UseDocumentIndexStateStore<TStore>(this ModuleRegistration<ModuleRAG, ModuleRAGOption> module)
         where TStore : class, IDocumentIndexStateStore
     {
-        DependsOnModule<ModuleKnowledgeBaseGuide>().Register()
+        module.Require<ModuleKnowledgeBase, ModuleKnowledgeBaseOption>()
             .UseDocumentIndexStateStore<TStore>();
-        ConfigureEmpty(CONFIG_INDEX_STATE_STORE);
-        return this;
+        return module;
     }
 
     /// <summary>
     /// Uses the file-based unified state store.
     /// </summary>
-    public ModuleRAGGuide UseDocumentIndexStateFileProvider()
+    public static ModuleRegistration<ModuleRAG, ModuleRAGOption> UseDocumentIndexStateFileProvider(this ModuleRegistration<ModuleRAG, ModuleRAGOption> module)
     {
-        DependsOnModule<ModuleKnowledgeBaseGuide>().Register()
+        module.Require<ModuleKnowledgeBase, ModuleKnowledgeBaseOption>()
             .UseDocumentIndexStateFileProvider();
-        ConfigureEmpty(CONFIG_INDEX_STATE_STORE);
-        return this;
+        return module;
     }
 
     /// <summary>
     /// Uses a custom source content store implementation.
     /// </summary>
-    public ModuleRAGGuide UseKnowledgeDocumentSourceStore<TStore>()
+    public static ModuleRegistration<ModuleRAG, ModuleRAGOption> UseKnowledgeDocumentSourceStore<TStore>(this ModuleRegistration<ModuleRAG, ModuleRAGOption> module)
         where TStore : class, IKnowledgeDocumentSourceStore
     {
-        DependsOnModule<ModuleKnowledgeBaseGuide>().Register()
+        module.Require<ModuleKnowledgeBase, ModuleKnowledgeBaseOption>()
             .UseKnowledgeDocumentSourceStore<TStore>();
-        ConfigureEmpty(CONFIG_SOURCE_STORE);
-        return this;
+        return module;
     }
 
     /// <summary>
     /// Uses file-based source content store.
     /// </summary>
-    public ModuleRAGGuide UseKnowledgeDocumentSourceFileProvider()
+    public static ModuleRegistration<ModuleRAG, ModuleRAGOption> UseKnowledgeDocumentSourceFileProvider(this ModuleRegistration<ModuleRAG, ModuleRAGOption> module)
     {
-        DependsOnModule<ModuleKnowledgeBaseGuide>().Register()
+        module.Require<ModuleKnowledgeBase, ModuleKnowledgeBaseOption>()
             .UseKnowledgeDocumentSourceFileProvider();
-        ConfigureEmpty(CONFIG_SOURCE_STORE);
-        return this;
+        return module;
     }
 
     /// <summary>
     /// Uses the in-memory vector store (for development/testing).
     /// Embedding model selection is resolved per knowledge base by <see cref="RAGEmbeddingBindingResolver"/>.
     /// </summary>
-    public ModuleRAGGuide UseVectorStoreInMemoryProvider()
+    public static ModuleRegistration<ModuleRAG, ModuleRAGOption> UseVectorStoreInMemoryProvider(this ModuleRegistration<ModuleRAG, ModuleRAGOption> module)
     {
-        ConfigureServices(ctx =>
+        module.SatisfyFeature(ModuleRAG.VECTOR_STORE_FEATURE);
+        module.ConfigureServices(ctx =>
         {
             ctx.Services.AddSingleton<VectorStore>(_ => new InMemoryVectorStore());
             ctx.Services.AddSingleton(new RAGVectorStoreRegistrationInfo
@@ -251,15 +244,15 @@ public class ModuleRAGGuide
                 ProviderKind = "InMemory",
                 ProviderDisplayName = "In-Memory"
             });
-        }, key: CONFIG_VECTOR_STORE,
-            duplicateBehavior: ModuleConfigurationDuplicateBehavior.ExclusiveLastWins);
-        return this;
+        });
+        return module;
     }
 
-    public ModuleRAGGuide UseVectorStoreProvider<TVectorStore>()
+    public static ModuleRegistration<ModuleRAG, ModuleRAGOption> UseVectorStoreProvider<TVectorStore>(this ModuleRegistration<ModuleRAG, ModuleRAGOption> module)
         where TVectorStore : VectorStore
     {
-        ConfigureServices(ctx =>
+        module.SatisfyFeature(ModuleRAG.VECTOR_STORE_FEATURE);
+        module.ConfigureServices(ctx =>
         {
             ctx.Services.AddSingleton<VectorStore, TVectorStore>();
             ctx.Services.AddSingleton(new RAGVectorStoreRegistrationInfo
@@ -267,21 +260,21 @@ public class ModuleRAGGuide
                 ProviderKind = "Custom",
                 ProviderDisplayName = typeof(TVectorStore).Name
             });
-        }, key: CONFIG_VECTOR_STORE,
-            duplicateBehavior: ModuleConfigurationDuplicateBehavior.ExclusiveLastWins);
-        return this;
+        });
+        return module;
     }
 
     /// <summary>
     /// Uses Qdrant as the vector store provider.
     /// </summary>
-    public ModuleRAGGuide UseVectorStoreQdrantProvider(
+    public static ModuleRegistration<ModuleRAG, ModuleRAGOption> UseVectorStoreQdrantProvider(this ModuleRegistration<ModuleRAG, ModuleRAGOption> module,
         Action<ModuleRAGQdrantOption>? action = null)
     {
-        ConfigureExtraOption(action);
-        ConfigureServices(ctx =>
+        module.SatisfyFeature(ModuleRAG.VECTOR_STORE_FEATURE);
+        module.Configure(options => action?.Invoke(options.Qdrant));
+        module.ConfigureServices(ctx =>
         {
-            var option = ctx.GetModuleExtraOption<ModuleRAGQdrantOption>();
+            var option = ctx.Options.Qdrant;
             ctx.Services.AddQdrantVectorStore(
                 NormalizeQdrantHost(option.Host, option.Https),
                 option.Port,
@@ -289,10 +282,9 @@ public class ModuleRAGGuide
                 option.ApiKey ?? string.Empty,
                 new QdrantVectorStoreOptions());
             ctx.Services.AddSingleton(CreateQdrantVectorStoreRegistrationInfo(option));
-        }, key: CONFIG_VECTOR_STORE,
-            duplicateBehavior: ModuleConfigurationDuplicateBehavior.ExclusiveLastWins);
+        });
 
-        return this;
+        return module;
     }
 
     private static RAGVectorStoreRegistrationInfo CreateQdrantVectorStoreRegistrationInfo(ModuleRAGQdrantOption option)
@@ -344,35 +336,36 @@ public class ModuleRAGGuide
     /// <summary>
     /// Uses a custom chunker routing store implementation.
     /// </summary>
-    public ModuleRAGGuide UseChunkerRoutingStore<TStore>()
+    public static ModuleRegistration<ModuleRAG, ModuleRAGOption> UseChunkerRoutingStore<TStore>(this ModuleRegistration<ModuleRAG, ModuleRAGOption> module)
         where TStore : class, IChunkerRoutingStore
     {
-        ConfigureServices(ctx =>
+        module.ConfigureServices(ctx =>
         {
             ctx.Services.AddSingleton<IChunkerRoutingStore, TStore>();
         });
-        return this;
+        return module;
     }
 
     /// <summary>
     /// Uses file-based extension routing store.
     /// </summary>
-    public ModuleRAGGuide UseChunkerRoutingFileProvider()
+    public static ModuleRegistration<ModuleRAG, ModuleRAGOption> UseChunkerRoutingFileProvider(this ModuleRegistration<ModuleRAG, ModuleRAGOption> module)
     {
-        ConfigureServices(ctx =>
+        module.ConfigureServices(ctx =>
         {
             ctx.Services.AddSingleton<IChunkerRoutingStore, FileChunkerRoutingStore>();
         });
-        return this;
+        return module;
     }
 
     /// <summary>
     /// Uses fake embeddings for testing and development through the unified AI provider pipeline.
     /// </summary>
+    /// <param name="module">The RAG module registration to configure.</param>
     /// <param name="dimensions">Embedding dimensions.</param>
     /// <param name="providerId">Optional provider ID used for fake embedding provider. Defaults to provider type.</param>
     /// <param name="modelName">Optional model name. If null, uses `Fake-Embeddings-{dimensions}d`.</param>
-    public ModuleRAGGuide AddFakeEmbeddingsModel(
+    public static ModuleRegistration<ModuleRAG, ModuleRAGOption> AddFakeEmbeddingsModel(this ModuleRegistration<ModuleRAG, ModuleRAGOption> module,
         int dimensions = 384,
         string? providerId = null,
         string? modelName = null)
@@ -382,7 +375,7 @@ public class ModuleRAGGuide
             ? $"Fake-Embeddings-{dimensions}d"
             : modelName.Trim();
 
-        DependsOnModule<ModuleAIGuide>().Register()
+        module.Require<ModuleAI, ModuleAIOption>()
             .AddModel(new EmbeddingModelInfo
             {
                 ModelName = resolvedModelName,
@@ -396,51 +389,52 @@ public class ModuleRAGGuide
                 options.SupportedModels = [resolvedModelName];
             }, resolvedProviderId);
 
-        return this;
+        return module;
     }
 
-    public ModuleRAGGuide AddChunker<TChunker>()
+    public static ModuleRegistration<ModuleRAG, ModuleRAGOption> AddChunker<TChunker>(this ModuleRegistration<ModuleRAG, ModuleRAGOption> module)
         where TChunker : class, IDocumentChunker
     {
-        ConfigureServices(ctx =>
+        module.ConfigureServices(ctx =>
         {
             ctx.Services.TryAddEnumerable(
                 ServiceDescriptor.Singleton<IDocumentChunker, TChunker>());
         });
-        return this;
+        return module;
     }
 
     /// <summary>
     /// Registers one built-in chunker.
     /// </summary>
-    public ModuleRAGGuide AddBuiltInChunker(RAGBuiltInChunkerType chunkerType)
+    public static ModuleRegistration<ModuleRAG, ModuleRAGOption> AddBuiltInChunker(this ModuleRegistration<ModuleRAG, ModuleRAGOption> module, RAGBuiltInChunkerType chunkerType)
     {
         return chunkerType switch
         {
-            RAGBuiltInChunkerType.ProductionMarkdown => AddChunker<ProductionMarkdownDocumentChunker>(),
-            RAGBuiltInChunkerType.SimpleMarkdown => AddChunker<SimpleMarkdownDocumentChunker>(),
-            _ => this
+            RAGBuiltInChunkerType.ProductionMarkdown => module.AddChunker<ProductionMarkdownDocumentChunker>(),
+            RAGBuiltInChunkerType.SimpleMarkdown => module.AddChunker<SimpleMarkdownDocumentChunker>(),
+            _ => module
         };
     }
 
     /// <summary>
     /// Registers selected built-in chunkers.
     /// </summary>
-    public ModuleRAGGuide AddBuiltInChunkers(params RAGBuiltInChunkerType[] chunkerTypes)
+    public static ModuleRegistration<ModuleRAG, ModuleRAGOption> AddBuiltInChunkers(this ModuleRegistration<ModuleRAG, ModuleRAGOption> module, params RAGBuiltInChunkerType[] chunkerTypes)
     {
         if (chunkerTypes is null || chunkerTypes.Length == 0)
         {
-            return AddBuiltInChunker(RAGBuiltInChunkerType.ProductionMarkdown)
+            return module.AddBuiltInChunker(RAGBuiltInChunkerType.ProductionMarkdown)
                 .AddBuiltInChunker(RAGBuiltInChunkerType.SimpleMarkdown);
         }
 
         foreach (var chunkerType in chunkerTypes.Distinct())
         {
-            AddBuiltInChunker(chunkerType);
+            module.AddBuiltInChunker(chunkerType);
         }
 
-        return this;
+        return module;
     }
+
 }
 
 /// <summary>

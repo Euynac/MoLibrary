@@ -1,325 +1,424 @@
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Monica.Core.Modularity.Abstractions;
+using Monica.Core.Modularity.Diagnostics.Models;
 using Monica.Core.Modularity.Models;
-using Monica.Core.Modularity.Services.Support;
-using Monica.Tool.Extensions;
 
 namespace Monica.Core.Modularity.Models.Internal;
 
 /// <summary>
-/// Stores module registration requests and configuration data.
+/// Stores the mutable declaration draft for one module until composition is compiled.
 /// </summary>
-public class ModuleRegistrationState(MonicaApplication application, Type moduleType)
+internal sealed class ModuleRegistrationState
 {
-    public Type ModuleType { get; } = moduleType;
+    private readonly List<OptionContribution> _optionContributions = [];
+    private readonly Dictionary<string, List<Action<object>>> _profileContributions =
+        new(StringComparer.Ordinal);
+    private readonly Dictionary<string, object> _profiles = new(StringComparer.Ordinal);
+    private readonly HashSet<string> _requiredFeatures = new(StringComparer.Ordinal);
+    private readonly HashSet<string> _satisfiedFeatures = new(StringComparer.Ordinal);
+    private readonly HashSet<string> _keyedServiceKeys = new(StringComparer.Ordinal);
+    private readonly List<string> _webHostRequirementReasons = [];
+    private readonly List<ModuleConfigurationRequest> _configurationRequests = [];
+    private IModuleOptions? _moduleOption;
+    private long _requestOrdinal;
+    private Func<object>? _optionFactory;
+
+    internal ModuleRegistrationState(MonicaApplication application, Type moduleType)
+    {
+        Application = application;
+        ModuleType = moduleType;
+    }
+
+    internal MonicaApplication Application { get; }
 
     /// <summary>
-    /// The current registration phase for the module.
+    /// Gets the concrete module type.
     /// </summary>
-    public ModulePhase ModulePhase { get; set; }
-    
-    /// <summary>
-    /// Registration order for the module. Lower values are registered first to honor dependencies.
-    /// </summary>
-    public int Order { get; set; } = 1000; // Default to 1000 so dependency-based ordering can move modules earlier.
-    
-    /// <summary>
-    /// The list of registration requests for the module.
-    /// </summary>
-    public List<ModuleConfigurationRequest> RegisterRequests { get; set; } = [];
+    public Type ModuleType { get; }
 
     /// <summary>
-    /// Pending configuration actions grouped by option type and ordered by execution priority.
+    /// Gets the latest composition phase reached by the module.
     /// </summary>
-    private Dictionary<Type, SortedList<int, Action<object>>> PendingConfigActions { get; } = [];
+    public ModulePhase ModulePhase { get; private set; }
 
     /// <summary>
-    /// Option types declared by this module, including extra options that use only their defaults.
+    /// Gets the stable dependency-first execution order.
     /// </summary>
-    private HashSet<Type> DeclaredOptionTypes { get; } = [];
+    public int Order { get; internal set; } = 1000;
 
     /// <summary>
-    /// Finalized configuration objects indexed by option type.
+    /// Gets the ordered lifecycle contributions owned by this module.
     /// </summary>
-    public Dictionary<Type, object> FinalConfigures { get; set; } = [];
+    internal IReadOnlyList<ModuleConfigurationRequest> ConfigurationRequests => _configurationRequests;
 
     /// <summary>
-    /// The primary module option type.
+    /// Gets the primary module option type.
     /// </summary>
-    public Type ModuleOptionType { get; set; } = null!;
+    public Type ModuleOptionType { get; private set; } = null!;
 
     /// <summary>
-    /// The finalized module option instance.
-    /// Available after configuration initialization completes.
+    /// Gets the finalized primary module option.
     /// </summary>
-    public IModuleOptions ModuleOption => (IModuleOptions)FinalConfigures[ModuleOptionType];
-    
-    /// <summary>
-    /// Required configuration method keys that must be provided.
-    /// </summary>
-    public List<string> RequiredConfigMethodKeys { get; set; } = [];
+    public IModuleOptions ModuleOption => _moduleOption
+        ?? throw new InvalidOperationException($"Module {ModuleType.Name} options have not been finalized.");
 
     /// <summary>
-    /// Keyed service keys exposed by the module for later discovery.
+    /// Gets keyed service identities published by this module.
     /// </summary>
-    public HashSet<string> KeyedServiceKeys { get; } = [];
+    internal IReadOnlySet<string> KeyedServiceKeys => _keyedServiceKeys;
 
     /// <summary>
-    /// The module singleton created during final configuration initialization.
+    /// Gets the single host-owned module strategy instance.
     /// </summary>
-    public ModuleBase? ModuleSingleton { get; internal set; }
+    public MonicaModule ModuleSingleton { get; private set; } = null!;
+
+    internal string? DisabledReason { get; private set; }
+
+    internal bool RequiresWebHost =>
+        ModuleSingleton.RequiresWebHost || _webHostRequirementReasons.Count != 0;
+
+    internal string? WebHostRequirementReason
+    {
+        get
+        {
+            var declaredReasons = string.Join("; ", _webHostRequirementReasons);
+            if (!ModuleSingleton.RequiresWebHost)
+            {
+                return declaredReasons.Length == 0 ? null : declaredReasons;
+            }
+
+            const string intrinsicReason =
+                "The module declares an intrinsic ASP.NET Core web lifecycle requirement.";
+            return declaredReasons.Length == 0
+                ? intrinsicReason
+                : $"{intrinsicReason} {declaredReasons}";
+        }
+    }
+
+    internal bool IsFinalized => _moduleOption is not null;
+
+    internal void Initialize<TModule, TOptions>()
+        where TModule : MonicaModule<TOptions>, new()
+        where TOptions : ModuleOptions<TModule>, new()
+    {
+        if (_optionFactory is not null)
+        {
+            if (ModuleOptionType != typeof(TOptions) || ModuleType != typeof(TModule))
+            {
+                throw new InvalidOperationException(
+                    $"Module {ModuleType.Name} was registered with conflicting option metadata.");
+            }
+
+            return;
+        }
+
+        ModuleOptionType = typeof(TOptions);
+        ModuleSingleton = new TModule();
+        _optionFactory = static () => new TOptions();
+    }
+
+    internal void AddOptionContribution<TOptions>(Type? configuredBy, Action<TOptions> configure)
+        where TOptions : class, IModuleOptions, new()
+    {
+        ArgumentNullException.ThrowIfNull(configure);
+        EnsureNotFinalized();
+        _optionContributions.Add(new OptionContribution(
+            IsHostContribution: configuredBy is null,
+            Ordinal: _optionContributions.Count,
+            Apply: option => configure((TOptions)option)));
+    }
+
+    internal void AddProfileContribution<TOptions>(string name, Action<TOptions> configure)
+        where TOptions : class, IModuleOptions, new()
+    {
+        EnsureNotFinalized();
+        if (!_profileContributions.TryGetValue(name, out var contributions))
+        {
+            contributions = [];
+            _profileContributions.Add(name, contributions);
+        }
+
+        contributions.Add(option => configure((TOptions)option));
+    }
+
+    internal TOptions GetProfile<TOptions>(string name)
+        where TOptions : class, IModuleOptions, new()
+    {
+        if (!IsFinalized)
+        {
+            throw new InvalidOperationException(
+                $"Named option profile '{name}' for {ModuleType.Name} has not been finalized.");
+        }
+
+        return _profiles.TryGetValue(name, out var profile)
+            ? (TOptions)profile
+            : throw new KeyNotFoundException(
+                $"Named option profile '{name}' was not declared for {ModuleType.Name}.");
+    }
+
+    internal object GetOptionOrDefault(string? profileName)
+    {
+        if (!IsFinalized)
+        {
+            throw new InvalidOperationException(
+                $"Module {ModuleType.Name} options have not been finalized.");
+        }
+
+        if (profileName is null)
+        {
+            return ModuleOption;
+        }
+
+        return _profiles.TryGetValue(profileName, out var profile)
+            ? profile
+            : throw new KeyNotFoundException(
+                $"Named option profile '{profileName}' was not declared for {ModuleType.Name}.");
+    }
+
+    internal bool TryGetProfile(string profileName, out object profile)
+    {
+        if (!IsFinalized)
+        {
+            throw new InvalidOperationException(
+                $"Named option profile '{profileName}' for {ModuleType.Name} has not been finalized.");
+        }
+
+        if (_profiles.TryGetValue(profileName, out var configuredProfile))
+        {
+            profile = configuredProfile;
+            return true;
+        }
+
+        profile = null!;
+        return false;
+    }
+
+    internal void RequireFeature(string featureName)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(featureName);
+        EnsureNotFinalized();
+        _requiredFeatures.Add(featureName);
+    }
+
+    internal void SatisfyFeature(string featureName)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(featureName);
+        EnsureNotFinalized();
+        _satisfiedFeatures.Add(featureName);
+    }
+
+    internal void AddKeyedServiceKey(string serviceKey)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(serviceKey);
+        EnsureNotFinalized();
+        _keyedServiceKeys.Add(serviceKey);
+    }
+
+    internal void MarkDisabled(string reason)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(reason);
+        EnsureNotFinalized();
+        DisabledReason ??= reason;
+        ModulePhase = ModulePhase.Disabled;
+    }
+
+    internal void RequireWebHost(string reason)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(reason);
+        EnsureNotFinalized();
+        if (!_webHostRequirementReasons.Contains(reason, StringComparer.Ordinal))
+        {
+            _webHostRequirementReasons.Add(reason);
+        }
+    }
+
+    internal void FinalizeOptions()
+    {
+        if (_optionFactory is null)
+        {
+            throw new InvalidOperationException($"Module {ModuleType.Name} has no option factory.");
+        }
+
+        if (IsFinalized)
+        {
+            throw new InvalidOperationException($"Module {ModuleType.Name} was already finalized.");
+        }
+
+        var option = CreateBoundOption();
+        foreach (var contribution in _optionContributions
+                     .OrderBy(static contribution => contribution.IsHostContribution)
+                     .ThenBy(static contribution => contribution.Ordinal))
+        {
+            contribution.Apply(option);
+        }
+
+        _moduleOption = (IModuleOptions)option;
+        foreach (var (name, contributions) in _profileContributions)
+        {
+            var profile = CreateBoundOption();
+            foreach (var contribution in contributions)
+            {
+                contribution(profile);
+            }
+
+            _profiles.Add(name, profile);
+        }
+
+        ModuleSingleton.BindOptions(Application, option);
+        ModuleSingleton.ValidateFinalOptions(option, profileName: null);
+        foreach (var (name, profile) in _profiles)
+        {
+            ModuleSingleton.ValidateFinalOptions(profile, name);
+        }
+
+        ModuleSingleton.AttachLifecycle(this);
+    }
+
+    internal void AddLifecycleRequest(
+        ModulePhase phase,
+        int order,
+        Action<ModuleConfigurationContext> configure)
+    {
+        AddRequest(phase, ModuleCallbackKind.Lifecycle, order, configure);
+    }
+
+    internal void AddApplicationBuilderLifecycleRequest(
+        ModuleWebStage stage,
+        int order,
+        Action<ModuleConfigurationContext> configure)
+    {
+        AddApplicationBuilderRequest(stage, ModuleCallbackKind.Lifecycle, order, configure);
+    }
+
+    internal void AddContributionRequest(
+        ModulePhase phase,
+        int order,
+        Action<ModuleConfigurationContext> configure)
+    {
+        AddRequest(phase, ModuleCallbackKind.RegistrationContribution, order, configure);
+    }
+
+    internal void AddApplicationBuilderContributionRequest(
+        ModuleWebStage stage,
+        Action<ModuleConfigurationContext> configure)
+    {
+        AddApplicationBuilderRequest(
+            stage,
+            ModuleCallbackKind.RegistrationContribution,
+            order: 0,
+            configure);
+    }
+
+    private void AddApplicationBuilderRequest(
+        ModuleWebStage stage,
+        ModuleCallbackKind kind,
+        int order,
+        Action<ModuleConfigurationContext> configure)
+    {
+        if (!Enum.IsDefined(stage))
+        {
+            throw new ArgumentOutOfRangeException(nameof(stage), stage, "Unknown web lifecycle stage.");
+        }
+
+        AddRequest(
+            ModulePhase.ConfigureApplicationBuilder,
+            kind,
+            order,
+            configure,
+            stage);
+    }
+
+    private void AddRequest(
+        ModulePhase phase,
+        ModuleCallbackKind kind,
+        int order,
+        Action<ModuleConfigurationContext> configure,
+        ModuleWebStage? webStage = null)
+    {
+        ArgumentNullException.ThrowIfNull(configure);
+        var ordinal = _requestOrdinal++;
+        _configurationRequests.Add(new ModuleConfigurationRequest(
+            phase,
+            kind,
+            order,
+            ordinal,
+            configure,
+            webStage));
+    }
+
+    internal IReadOnlyList<string> GetMissingRequiredFeatures()
+    {
+        return _requiredFeatures
+            .Where(feature => !_satisfiedFeatures.Contains(feature))
+            .Order(StringComparer.Ordinal)
+            .ToArray();
+    }
+
+    internal IReadOnlyList<string> GetUnexpectedSatisfiedFeatures()
+    {
+        return _satisfiedFeatures
+            .Where(feature => !_requiredFeatures.Contains(feature))
+            .Order(StringComparer.Ordinal)
+            .ToArray();
+    }
 
     /// <summary>
-    /// Indicates whether a web module is currently running in downgraded non-web mode.
+    /// Returns lifecycle callbacks in deterministic order.
     /// </summary>
-    public bool IsDowngradedFromWebModule { get; internal set; }
+    internal IEnumerable<ModuleConfigurationRequest> GetOrderedRequests(
+        IEnumerable<ModuleConfigurationRequest> requests)
+    {
+        return requests.OrderBy(static request => request.Order)
+            .ThenBy(static request => request.Ordinal);
+    }
 
-    public void SetModulePhase(ModulePhase phase)
+    internal void StartModulePhase(
+        ModulePhase phase,
+        ModuleCallbackKind kind = ModuleCallbackKind.Lifecycle,
+        string? workItemId = null)
+    {
+        Application.Modules.StartModulePhase(this, phase, kind, workItemId);
+    }
+
+    /// <summary>Updates the visible phase while the registry diagnostics lock is held.</summary>
+    internal void SetModulePhase(ModulePhase phase)
     {
         ModulePhase = phase;
     }
 
-    public void StartModulePhase(ModulePhase phase)
+    internal void EndModulePhase(ModulePhase phase)
     {
-        application.Profiling.StartModulePhase(
-            ModuleType,
-            application.Dependencies.ResolveModuleKey(ModuleType),
-            Order,
-            phase);
-        SetModulePhase(phase);
+        Application.Profiling.StopModulePhase(ModuleType, phase);
     }
 
-    public void EndModulePhase(ModulePhase phase)
+    private object CreateBoundOption()
     {
-        application.Profiling.StopModulePhase(ModuleType, phase);
-    }
-
-    /// <summary>
-    /// Creates a module option instance based on the configuration actions known so far.
-    /// Intended only for exceptional cases during early registration.
-    /// </summary>
-    /// <returns>The current module option instance.</returns>
-    public object CreateCurrentModuleOption()
-    {
-        var currentModuleOption = CreateOption(ModuleOptionType);
-        
-        if(!PendingConfigActions.TryGetValue(ModuleOptionType, out var value))
-        {
-            return currentModuleOption;
-        }
-
-        foreach (var action in value.Values)
-        {
-            action.Invoke(currentModuleOption);
-        }
-
-        return currentModuleOption;
-    }
-
-    /// <summary>
-    /// Initializes the final configuration instances by applying the sorted configuration actions
-    /// and then clears the pending configuration actions.
-    /// </summary>
-    public void InitFinalConfigures()
-    {
-        foreach (var configType in DeclaredOptionTypes)
-        {
-            // Create an instance for the configuration type.
-            var configInstance = CreateOption(configType);
-
-            if (PendingConfigActions.TryGetValue(configType, out var sortedActions))
-            {
-                // Apply each configuration action in order.
-                foreach (var action in sortedActions.Values)
-                {
-                    action.Invoke(configInstance);
-                }
-            }
-
-            // Persist the finalized configuration instance.
-            FinalConfigures[configType] = configInstance;
-        }
-
-        if (Activator.CreateInstance(ModuleType, ModuleOption) is ModuleBase instance)
-        {
-            instance.Bind(application);
-            instance.ConvertToRegisterRequest();
-            ModuleSingleton = instance;
-        }
-
-        if (ModuleSingleton == null)
-        {
-            throw new Exception(
-                $"Failed to initialize final configuration for module '{ModuleType.GetCleanFullName()}': the module singleton could not be created.");
-        }
-
-
-        // Clear the pending configuration actions once finalization is complete.
-        PendingConfigActions.Clear();
-    }
-
-    private object CreateOption(Type optionType)
-    {
-        var option = Activator.CreateInstance(optionType)
-            ?? throw new InvalidOperationException($"Could not create module option {optionType.GetCleanFullName()}.");
-
+        var option = _optionFactory!();
         if (option is IModuleOptionsContext context)
         {
-            context.Bind(application);
+            context.Bind(Application);
         }
 
         return option;
     }
 
-    /// <summary>
-    /// Gets a finalized option or materializes its default value when the owning module declared no configuration action.
-    /// </summary>
-    /// <typeparam name="TOption">The option type owned by this module.</typeparam>
-    /// <returns>The finalized configured or default option instance.</returns>
-    internal TOption GetOrCreateFinalOption<TOption>() where TOption : IModuleOptionsBase, new()
+    private void EnsureNotFinalized()
     {
-        if (FinalConfigures.TryGetValue(typeof(TOption), out var configuredOption))
-        {
-            return (TOption)configuredOption;
-        }
-
-        if (ModulePhase < ModulePhase.InitFinalConfigures)
+        if (IsFinalized)
         {
             throw new InvalidOperationException(
-                $"Module {ModuleType.Name} has not finalized option {typeof(TOption).Name}.");
-        }
-
-        var defaultOption = (TOption)CreateOption(typeof(TOption));
-        FinalConfigures.Add(typeof(TOption), defaultOption);
-        return defaultOption;
-    }
-
-    /// <summary>
-    /// Binds the primary module option type.
-    /// </summary>
-    /// <typeparam name="TOption">The module option type.</typeparam>
-    public void BindModuleOption<TOption>() where TOption : class, IModuleOptions, new()
-    {
-        ModuleOptionType = typeof(TOption);
-        DeclaredOptionTypes.Add(ModuleOptionType);
-    }
-
-    /// <summary>
-    /// Declares an extra option type so its default instance is finalized even when no configuration callback is supplied.
-    /// </summary>
-    /// <typeparam name="TOption">The extra option type owned by this module.</typeparam>
-    internal void DeclareExtraOption<TOption>() where TOption : class, IModuleOptionsBase, new()
-    {
-        DeclaredOptionTypes.Add(typeof(TOption));
-    }
-
-    /// <summary>
-    /// Adds a configuration action to the pending queue.
-    /// </summary>
-    /// <typeparam name="TOption">The option type being configured.</typeparam>
-    /// <param name="order">The execution order.</param>
-    /// <param name="optionAction">The configuration delegate.</param>
-    /// <param name="guideFrom">The source module for this configuration. `null` means direct developer configuration.</param>
-    /// <param name="key">The primary configuration method key.</param>
-    /// <param name="secondKey">The optional secondary key.</param>
-    /// <param name="duplicateBehavior">How duplicate option configuration requests with the same execution identity should be handled.</param>
-    public void AddConfigureAction<TOption>(
-        int order,
-        Action<TOption> optionAction,
-        ModuleKey? guideFrom,
-        string? secondKey,
-        string key,
-        ModuleConfigurationDuplicateBehavior duplicateBehavior) where TOption : class, IModuleOptionsBase, new()
-    {
-        RegisterRequests.Add(
-            new ModuleConfigurationRequest($"{key}{secondKey?.BeAfter("_")}")
-            {
-                ConfigureContext = context =>
-                {
-                    context.Services!.Configure(optionAction);
-                },
-                RequestMethod = ModulePhase.ConfigureServices,
-                Order = guideFrom != null ? order - 1 : order, // Cascaded module option configuration always runs just before the user-specified order.
-                RequestFrom = guideFrom,
-                Slot = ModuleConfigurationRequestSlot.Option,
-                DuplicateBehavior = duplicateBehavior,
-                SourceDesc = $"ConfigOption<{typeof(TOption).Name}>"
-            });
-
-        var type = typeof(TOption);
-        if (!PendingConfigActions.TryGetValue(type, out var actions))
-        {
-            actions = new SortedList<int, Action<object>>(new DuplicateKeyComparer<int>());
-            PendingConfigActions[type] = actions;
-        }
-        actions.Add(order, p =>
-        {
-            optionAction.Invoke((TOption) p);
-        });
-    }
-
-    /// <summary>
-    /// Checks whether all required configuration method keys have been provided.
-    /// </summary>
-    /// <returns>The missing required method keys, or an empty list if everything is configured.</returns>
-    public List<string> GetMissingRequiredConfigMethodKeys()
-    {
-        if (RequiredConfigMethodKeys.Count == 0)
-            return [];
-
-        var configuredKeys = RegisterRequests
-            .Select(r => r.Key)
-            .Where(key => !string.IsNullOrWhiteSpace(key))
-            .ToHashSet(StringComparer.Ordinal);
-        return RequiredConfigMethodKeys
-            .Where(requiredKey => !configuredKeys.Any(configuredKey => MatchesRequiredConfigKey(requiredKey, configuredKey)))
-            .ToList();
-    }
-
-    private static bool MatchesRequiredConfigKey(string requiredKey, string configuredKey)
-    {
-        return configuredKey.Equals(requiredKey, StringComparison.Ordinal)
-            || configuredKey.StartsWith($"{requiredKey}_", StringComparison.Ordinal);
-    }
-
-    /// <summary>
-    /// Filters register requests to execute only unique configurations.
-    /// Duplicate requests use the request's execution key and duplicate behavior.
-    /// </summary>
-    /// <param name="requests">All register requests to deduplicate</param>
-    /// <returns>Deduplicated requests using the existing last-in registration precedence.</returns>
-    public IEnumerable<ModuleConfigurationRequest> DeduplicateRequests(
-        IEnumerable<ModuleConfigurationRequest> requests)
-    {
-        var logger = application.CreateLogger<ModuleRegistrationState>();
-        var requestList = requests.ToList();
-        var lastRequestIndexByKey = new Dictionary<string, int>(StringComparer.Ordinal);
-
-        for (var index = 0; index < requestList.Count; index++)
-        {
-            lastRequestIndexByKey[requestList[index].ExecutionKey] = index;
-        }
-
-        for (var index = 0; index < requestList.Count; index++)
-        {
-            var request = requestList[index];
-            if (lastRequestIndexByKey[request.ExecutionKey] == index)
-            {
-                yield return request;
-            }
-            else if (request.DuplicateBehavior == ModuleConfigurationDuplicateBehavior.Warn)
-            {
-                logger.LogWarning(
-                    "Skipping duplicate configuration: {Key} (Slot: {Slot}, OwningModule: {OwningModule}, RequestFrom: {RequestFrom}, RequestMethod: {Method}, Order: {Order}, SourceDesc: {SourceDesc})",
-                    request.Key, request.Slot, ModuleType.Name, request.RequestFrom?.ToString() ?? "N/A", request.RequestMethod, request.Order, request.SourceDesc ?? "N/A");
-            }
+                $"Module {ModuleType.Name} is already compiled and cannot be changed.");
         }
     }
 
-
+    /// <inheritdoc />
     public override string ToString()
     {
         return $"{ModulePhase} - {ModuleType.Name}";
     }
+
+    private sealed record OptionContribution(
+        bool IsHostContribution,
+        int Ordinal,
+        Action<object> Apply);
 }

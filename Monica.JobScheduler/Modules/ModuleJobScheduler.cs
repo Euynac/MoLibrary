@@ -7,8 +7,8 @@ using Microsoft.Extensions.Logging;
 using Monica.Core;
 using Monica.Core.Modularity;
 using Monica.Core.Modularity.Abstractions;
-using Monica.Core.Modularity.Annotations;
 using Monica.Core.Modularity.Models;
+using Monica.Core.TypeDiscovery.Models;
 using Monica.JobScheduler.Abstractions;
 using Monica.JobScheduler.Annotations;
 using Monica.JobScheduler.Facades;
@@ -17,7 +17,6 @@ using Monica.JobScheduler.Providers;
 using Monica.JobScheduler.Services;
 using Monica.JobScheduler.Services.Support;
 using Monica.JobScheduler.Utils;
-using Monica.Tool.Extensions;
 
 // ReSharper disable once CheckNamespace
 namespace Monica.Modules;
@@ -29,9 +28,9 @@ public static class ModuleJobSchedulerBuilderExtensions
         /// <summary>
         /// Configure the JobScheduler module
         /// </summary>
-        public ModuleJobSchedulerGuide AddJobScheduler(Action<ModuleJobSchedulerOption>? action = null)
+        public ModuleRegistration<ModuleJobScheduler, ModuleJobSchedulerOption> AddJobScheduler(Action<ModuleJobSchedulerOption>? action = null)
         {
-            return builder.AddModule<ModuleJobScheduler, ModuleJobSchedulerOption, ModuleJobSchedulerGuide>(action);
+            return builder.AddModule<ModuleJobScheduler, ModuleJobSchedulerOption>(action);
         }
     }
 }
@@ -41,53 +40,61 @@ public static class ModuleJobSchedulerBuilderExtensions
 /// Integrates all components including control plane (scheduling), worker plane (execution),
 /// and metadata persistence layer.
 /// </summary>
-[ModuleKey(BuiltInModuleKey.JobScheduler)]
-public class ModuleJobScheduler(ModuleJobSchedulerOption option)
-    : ModuleBase<ModuleJobScheduler, ModuleJobSchedulerOption, ModuleJobSchedulerGuide>(option), IBusinessTypeIterator
+public class ModuleJobScheduler : MonicaModule<ModuleJobSchedulerOption>
 {
+    internal const string PROVIDER_FEATURE = "provider";
+    internal const string METADATA_STORE_FEATURE = "metadata-store";
+    internal const string SCOPE_FEATURE = "scope";
+
     private readonly List<JobDefinition> _jobDefinitions = [];
 
     /// <summary>
-    /// Iterates through business types to discover and collect job types.
-    /// Extracts metadata from JobConfigAttribute and creates JobDefinition objects.
+    /// Declares structural discovery for recurring and triggered jobs while preserving the business-type order.
     /// </summary>
-    public IEnumerable<Type> IterateBusinessTypes(IEnumerable<Type> types)
+    public override void DeclareTypeDiscovery(TypeDiscoveryPlan<ModuleJobSchedulerOption> discovery)
     {
-        foreach (var type in types)
-        {
-            if (type is { IsClass: true, IsAbstract: false })
-            {
-                if (type.IsAssignableTo(typeof(IRecurringJob)))
-                {
-                    var jobDefinition = ExtractJobDefinition(type, JobType.Recurring);
-                    _jobDefinitions.Add(jobDefinition);
-                }
-                else if (type.IsImplementInterfaceGeneric(typeof(ITriggeredJob<>), out var genericTypeDefinition))
-                {
-                    var argsType = genericTypeDefinition.GenericTypeArguments[0];
-                    var jobDefinition = ExtractJobDefinition(type, JobType.Triggered);
-                    jobDefinition.JobArgsClrType = argsType;
-                    jobDefinition.JobArgsKey = argsType.FullName ?? throw new InvalidOperationException($"Job type {type.Name}'s argument type {argsType.Name} must have full name.");
-                    _jobDefinitions.Add(jobDefinition);
-                }
-            }
+        var recurringJobs = TypeQuery.ConcreteClass.AssignableTo<IRecurringJob>();
+        var triggeredJobs = TypeQuery.ConcreteClass.ImplementsOpenGeneric(typeof(ITriggeredJob<>));
 
-            yield return type;
-        }
+        discovery.Match(
+            TypeQuery.AnyOf(recurringJobs, triggeredJobs),
+            (context, matches) =>
+            {
+                foreach (var match in matches)
+                {
+                    var isRecurring = match.Shape.IsAssignableTo(typeof(IRecurringJob));
+                    var jobDefinition = ExtractJobDefinition(
+                        match,
+                        isRecurring ? JobType.Recurring : JobType.Triggered);
+
+                    if (!isRecurring)
+                    {
+                        var triggeredInterface = match.OpenGenericInterfaces[0];
+                        var argsType = triggeredInterface.GenericArguments[0];
+                        jobDefinition.JobArgsClrType = argsType;
+                        jobDefinition.JobArgsKey = argsType.FullName
+                            ?? throw new InvalidOperationException(
+                                $"Job type {match.Type.Name}'s argument type {argsType.Name} must have full name.");
+                    }
+
+                    _jobDefinitions.Add(jobDefinition);
+                    context.Registrations.Add(
+                        ServiceDescriptor.Transient(jobDefinition.JobClrType, jobDefinition.JobClrType));
+                    Logger.LogDebug(
+                        "Discovered {JobType}Job: {JobKey} ({TypeName})",
+                        jobDefinition.JobType,
+                        jobDefinition.JobKey,
+                        jobDefinition.JobName);
+                }
+            });
     }
 
     /// <summary>
     /// Registers all discovered job types to DI and registers job definitions to JobRegistry.
     /// </summary>
-    public override void PostConfigureServices(IServiceCollection services)
+    public override void PostConfigureServices(ModuleContext<ModuleJobSchedulerOption> context)
     {
-        // Register all discovered job types as transient in DI
-        foreach (var job in _jobDefinitions)
-        {
-            services.AddTransient(job.JobClrType);
-            Logger.LogDebug("Discovered {JobType}Job: {JobKey} ({TypeName})", job.JobType, job.JobKey, job.JobName);
-        }
-        
+        var services = context.Services;
         services.AddSingleton<JobSchedulerFacade>();
         services.AddSingleton<JobSchedulerAnalyticsFacade>();
         services.AddSingleton<JobSchedulerDashboardFacade>();
@@ -118,7 +125,7 @@ public class ModuleJobScheduler(ModuleJobSchedulerOption option)
             .AddCheck<JobSchedulerHealthCheck>("JobScheduler", tags: ["ready", "scheduler"]);
 
         
-        if (GetOptions<ModuleServiceDiscoveryOption>().IsRegistryServer)
+        if (Option.RunControlPlane)
         {
             services.AddHostedService<JobSchedulerHostedService>();
             services.AddHostedService(provider => provider.GetRequiredService<IJobConcurrencyGuard>() as JobConcurrencyGuardHostedService
@@ -173,11 +180,10 @@ public class ModuleJobScheduler(ModuleJobSchedulerOption option)
     /// <summary>
     /// Extracts JobDefinition from a job type using reflection and JobConfigAttribute.
     /// </summary>
-    private JobDefinition ExtractJobDefinition(Type jobType, JobType jobTypeEnum)
+    private JobDefinition ExtractJobDefinition(BusinessTypeMatch match, JobType jobTypeEnum)
     {
-        // Extract JobConfigAttribute if present
-        var attribute = jobType.GetCustomAttributes(typeof(JobConfigAttribute), false)
-            .FirstOrDefault() as JobConfigAttribute;
+        var jobType = match.Type;
+        var attribute = match.Shape.GetAttribute<JobConfigAttribute>();
 
         // Create JobDefinition with defaults
         var definition = new JobDefinition
@@ -225,28 +231,22 @@ public class ModuleJobScheduler(ModuleJobSchedulerOption option)
         return definition;
     }
 
-    public override void ClaimDependencies()
+    public override void Describe(ModuleDescriptor module)
     {
         // Depend on HostedService module for observable hosted services
-        DependsOnModule<ModuleHostedServiceGuide>().Register();
-        DependsOnModule<ModuleExecutionPipelineGuide>().Register();
+        module.Require<ModuleHostedService, ModuleHostedServiceOption>();
+        module.Require<ModuleExecutionPipeline, ModuleExecutionPipelineOption>();
+        module.RequireFeature(PROVIDER_FEATURE);
+        module.RequireFeature(METADATA_STORE_FEATURE);
+        module.RequireFeature(SCOPE_FEATURE);
     }
 }
 
 /// <summary>
 /// Fluent configuration builder for the Job Scheduler module.
 /// </summary>
-public class ModuleJobSchedulerGuide
-    : ModuleGuide<ModuleJobScheduler, ModuleJobSchedulerOption, ModuleJobSchedulerGuide>
+public static class ModuleJobSchedulerRegistrationExtensions
 {
-    private const string CONFIG_METADATA_STORE = nameof(CONFIG_METADATA_STORE);
-    private const string CONFIG_PROVIDER = nameof(CONFIG_PROVIDER);
-    private const string CONFIG_SCOPE = nameof(CONFIG_SCOPE);
-    protected override string[] GetRequestedConfigMethodKeys()
-    {
-        return [CONFIG_PROVIDER, CONFIG_METADATA_STORE, CONFIG_SCOPE];
-    }
-
     /// <summary>
     /// Configures a custom metadata repository implementation for job persistence.
     /// </summary>
@@ -254,42 +254,44 @@ public class ModuleJobSchedulerGuide
     /// <remarks>
     /// Custom repositories must be thread-safe and provide atomic state transitions.
     /// </remarks>
-    public ModuleJobSchedulerGuide UseCustomMetadataRepository<TRepository>()
+    public static ModuleRegistration<ModuleJobScheduler, ModuleJobSchedulerOption> UseCustomMetadataRepository<TRepository>(this ModuleRegistration<ModuleJobScheduler, ModuleJobSchedulerOption> module)
         where TRepository : class, IJobMetadataRepository
     {
-        PostConfigureServices(context =>
+        module.PostConfigureServices(context =>
         {
             context.Services.TryAddSingleton<IJobMetadataRepository, TRepository>();
-        }, key: CONFIG_METADATA_STORE);
-        return this;
+        });
+        module.SatisfyFeature(ModuleJobScheduler.METADATA_STORE_FEATURE);
+        return module;
     }
 
     /// <summary>
     /// Configures the module to use the in-memory metadata repository.
     /// </summary>
-    public ModuleJobSchedulerGuide UseInMemoryMetadataRepository()
+    public static ModuleRegistration<ModuleJobScheduler, ModuleJobSchedulerOption> UseInMemoryMetadataRepository(this ModuleRegistration<ModuleJobScheduler, ModuleJobSchedulerOption> module)
     {
-        PostConfigureServices(context =>
+        module.PostConfigureServices(context =>
         {
             context.Services.TryAddSingleton<IJobMetadataRepository, InMemoryJobMetadataRepository>();
-        }, key: CONFIG_METADATA_STORE);
-        return this;
+        });
+        module.SatisfyFeature(ModuleJobScheduler.METADATA_STORE_FEATURE);
+        return module;
     }
 
     /// <summary>
     /// Configures the scheduler scope key used to isolate shared persistence and events across environments.
     /// </summary>
-    public ModuleJobSchedulerGuide UseSchedulerScope(string scopeKey)
+    public static ModuleRegistration<ModuleJobScheduler, ModuleJobSchedulerOption> UseSchedulerScope(this ModuleRegistration<ModuleJobScheduler, ModuleJobSchedulerOption> module, string scopeKey)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(scopeKey);
 
-        ConfigureModuleOption(option =>
+        module.Configure(options =>
         {
-            option.SchedulerScopeKey = scopeKey;
+            options.SchedulerScopeKey = scopeKey;
         });
 
-        ConfigureEmpty(CONFIG_SCOPE);
-        return this;
+        module.SatisfyFeature(ModuleJobScheduler.SCOPE_FEATURE);
+        return module;
     }
     
     
@@ -297,31 +299,34 @@ public class ModuleJobSchedulerGuide
     /// Configures the module to use the distributed event bus and cancellation manager providers.
     /// </summary>
     /// <returns></returns>
-    public ModuleJobSchedulerGuide UseDistributeProvider()
+    public static ModuleRegistration<ModuleJobScheduler, ModuleJobSchedulerOption> UseDistributedProvider(this ModuleRegistration<ModuleJobScheduler, ModuleJobSchedulerOption> module)
     {
-        ConfigureEmpty(CONFIG_PROVIDER);
-        DependsOnModule<ModuleEventBusGuide>().Register()
+        module.SatisfyFeature(ModuleJobScheduler.PROVIDER_FEATURE);
+        module.Configure(options => options.RunControlPlane = true);
+        module.Require<ModuleEventBus, ModuleEventBusOption>()
             .AddKeyedEventBus(nameof(ModuleJobScheduler), useDistributed: true);
-        DependsOnModule<ModuleCancellationManagerGuide>().Register()
+        module.Require<ModuleCancellationManager, ModuleCancellationManagerOption>()
             .AddKeyedCancellationManager(nameof(ModuleJobScheduler), useDistributed: true);
-        DependsOnModule<ModuleServiceDiscoveryGuide>().Register();
-        return this;
+        module.Require<ModuleServiceDiscovery, ModuleServiceDiscoveryOption>();
+        return module;
     }
    
     /// <summary>
     /// Configures the module to use the in-memory metadata store and event bus and cancellation manager providers.
     /// </summary>
     /// <returns></returns>
-    public ModuleJobSchedulerGuide UseInMemoryProvider()
+    public static ModuleRegistration<ModuleJobScheduler, ModuleJobSchedulerOption> UseInMemoryProvider(this ModuleRegistration<ModuleJobScheduler, ModuleJobSchedulerOption> module)
     {
-        ConfigureEmpty(CONFIG_PROVIDER);
-        DependsOnModule<ModuleEventBusGuide>().Register()
+        module.SatisfyFeature(ModuleJobScheduler.PROVIDER_FEATURE);
+        module.Configure(options => options.RunControlPlane = true);
+        module.Require<ModuleEventBus, ModuleEventBusOption>()
             .AddKeyedEventBus(nameof(ModuleJobScheduler), useDistributed: false);
-        DependsOnModule<ModuleCancellationManagerGuide>().Register()
+        module.Require<ModuleCancellationManager, ModuleCancellationManagerOption>()
             .AddKeyedCancellationManager(nameof(ModuleJobScheduler), useDistributed: false);
-        DependsOnModule<ModuleServiceDiscoveryGuide>().Register().UseInMemoryStateStore();
-        return this;
+        module.Require<ModuleServiceDiscovery, ModuleServiceDiscoveryOption>().UseInMemoryStateStore();
+        return module;
     }
+
 }
 
 /// <summary>
@@ -329,6 +334,11 @@ public class ModuleJobSchedulerGuide
 /// </summary>
 public class ModuleJobSchedulerOption : ModuleOptions<ModuleJobScheduler>
 {
+    /// <summary>
+    /// Gets whether this host runs scheduler control-plane services. Provider feature methods set this explicitly.
+    /// </summary>
+    public bool RunControlPlane { get; internal set; }
+
     /// <summary>
     /// Gets or sets the host-owned timezone used to evaluate recurring cron expressions and calculate upcoming runs.
     /// The default is <see cref="TimeZoneInfo.Local"/>. Configure this per Monica host when scheduler semantics must use
@@ -338,9 +348,9 @@ public class ModuleJobSchedulerOption : ModuleOptions<ModuleJobScheduler>
 
     /// <summary>
     /// The scheduler scope key used to isolate persistence and events across environments.
-    /// This value must be explicitly configured through <see cref="ModuleJobSchedulerGuide.UseSchedulerScope"/>.
+    /// This value must be explicitly configured through <see cref="ModuleJobSchedulerRegistrationExtensions.UseSchedulerScope"/>.
     /// </summary>
-    public string SchedulerScopeKey { get; set; } = string.Empty;
+    public string SchedulerScopeKey { get; internal set; } = string.Empty;
 
     /// <summary>
     /// The project name used for job reconciliation and identification.

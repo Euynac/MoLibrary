@@ -4,8 +4,8 @@ using Monica.Core;
 using Monica.Core.Mediator;
 using Monica.Core.Modularity;
 using Monica.Core.Modularity.Abstractions;
-using Monica.Core.Modularity.Annotations;
-using Monica.Core.Modularity.Models;
+using Monica.Core.Modularity.Services.Support;
+using Monica.Core.TypeDiscovery.Models;
 
 // ReSharper disable once CheckNamespace
 namespace Monica.Modules;
@@ -17,71 +17,52 @@ public static class ModuleMediatorBuilderExtensions
         /// <summary>
         /// Configures the Mediator module.
         /// </summary>
-        public ModuleMediatorGuide AddMediator(Action<ModuleMediatorOption>? action = null)
+        public ModuleRegistration<ModuleMediator, ModuleMediatorOption> AddMediator(
+            Action<ModuleMediatorOption>? action = null)
         {
-            return builder.AddModule<ModuleMediator, ModuleMediatorOption, ModuleMediatorGuide>(action);
+            return builder.AddModule<ModuleMediator, ModuleMediatorOption>(action);
         }
     }
 }
 
-[ModuleKey(BuiltInModuleKey.Mediator)]
-public class ModuleMediator(ModuleMediatorOption option)
-    : ModuleBase<ModuleMediator, ModuleMediatorOption, ModuleMediatorGuide>(option), IBusinessTypeIterator
+public class ModuleMediator : MonicaModule<ModuleMediatorOption>
 {
-    private IServiceCollection? _services;
-
-    public override void ConfigureServices(IServiceCollection services)
+    public override void ConfigureServices(ModuleContext<ModuleMediatorOption> context)
     {
-        _services = services;
-        services.TryAddTransient<IMediator, Mediator>();
+        context.Services.TryAddTransient<IMediator, Mediator>();
     }
 
-    public override void ClaimDependencies()
+    public override void Describe(ModuleDescriptor module)
     {
-        DependsOnModule<ModuleExecutionPipelineGuide>().Register();
+        module.Require<ModuleExecutionPipeline, ModuleExecutionPipelineOption>();
     }
 
-    public IEnumerable<Type> IterateBusinessTypes(IEnumerable<Type> types)
+    public override void DeclareTypeDiscovery(TypeDiscoveryPlan<ModuleMediatorOption> discovery)
     {
-        if (_services == null)
-        {
-            foreach (var type in types)
+        discovery.Match(
+            TypeQuery.ConcreteClass.ImplementsOpenGeneric(typeof(IRequestHandler<,>)),
+            (context, matches) =>
             {
-                yield return type;
-            }
-
-            yield break;
-        }
-
-        foreach (var type in types)
-        {
-            RegisterRequestHandlers(_services, type);
-            yield return type;
-        }
+                foreach (var match in matches)
+                {
+                    RegisterRequestHandlers(context.Registrations, match);
+                }
+            });
     }
 
-    private static void RegisterRequestHandlers(IServiceCollection services, Type implementationType)
+    private static void RegisterRequestHandlers(
+        ModuleServiceRegistrationWriter registrations,
+        BusinessTypeMatch match)
     {
-        if (implementationType is not { IsClass: true, IsAbstract: false })
-        {
-            return;
-        }
-
-        var serviceTypes = implementationType
-            .GetInterfaces()
-            .Where(static serviceType => serviceType.IsGenericType &&
-                                         serviceType.GetGenericTypeDefinition() == typeof(IRequestHandler<,>))
-            .ToArray();
-        if (serviceTypes.Length == 0)
-        {
-            return;
-        }
+        var implementationType = match.Type;
 
         if (implementationType.IsGenericTypeDefinition)
         {
-            foreach (var serviceType in serviceTypes)
+            foreach (var serviceType in match.OpenGenericInterfaces)
             {
-                services.TryAddTransient(serviceType.GetGenericTypeDefinition(), implementationType);
+                registrations.TryAdd(ServiceDescriptor.Transient(
+                    serviceType.ClosedInterface.GetGenericTypeDefinition(),
+                    implementationType));
             }
 
             return;
@@ -89,16 +70,14 @@ public class ModuleMediator(ModuleMediatorOption option)
 
         // Keep one canonical activation path for closed handlers. Other modules may enrich or replace the concrete
         // registration, while the mediator contract remains an alias to that final registration.
-        services.TryAddTransient(implementationType);
-        foreach (var serviceType in serviceTypes)
+        registrations.TryAdd(ServiceDescriptor.Transient(implementationType, implementationType));
+        foreach (var serviceType in match.OpenGenericInterfaces)
         {
-            services.TryAddTransient(
-                serviceType,
-                provider => provider.GetRequiredService(implementationType));
+            registrations.TryAdd(ServiceDescriptor.Transient(
+                serviceType.ClosedInterface,
+                provider => provider.GetRequiredService(implementationType)));
         }
     }
 }
-
-public class ModuleMediatorGuide : ModuleGuide<ModuleMediator, ModuleMediatorOption, ModuleMediatorGuide>;
 
 public class ModuleMediatorOption : ModuleOptions<ModuleMediator>;

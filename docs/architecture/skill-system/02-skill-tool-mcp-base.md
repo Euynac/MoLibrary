@@ -2,7 +2,7 @@
 
 > **Status.** Design proposal. Spine of the Monica AI skill-system refactor.
 > **Audience.** Framework team. Foundation that Docs 03 and 04 normatively reference.
-> **Last revised.** 2026-04-29.
+> **Last revised.** 2026-08-06.
 
 ## 0. Why this doc exists
 
@@ -32,20 +32,30 @@ The progressive-disclosure model has two levels:
 
 This is exactly the "lazy discovery" requirement Monica needs. The Monica design therefore inherits from `AgentClassSkill<TSelf>` directly rather than building a parallel binding API.
 
-### 1.2 Monica's `IBusinessTypeIterator`
+### 1.2 Monica's compiled type-discovery plan
 
-`Monica.Core/Modularity/Abstractions/IBusinessTypeIterator.cs`:
+Modules declare structural queries by overriding `DeclareTypeDiscovery(TypeDiscoveryPlan<TOptions>)`:
 
 ```csharp
-public interface IBusinessTypeIterator
+public override void DeclareTypeDiscovery(TypeDiscoveryPlan<ModuleSkillSystemOption> discovery)
 {
-    IEnumerable<Type> IterateBusinessTypes(IEnumerable<Type> types);
+    discovery.Match(
+        TypeQuery.ConcreteClass.AssignableTo<Skill>(),
+        (context, matches) =>
+        {
+            foreach (var match in matches)
+            {
+                var skillType = match.Type;
+                context.Registrations.TryAdd(
+                    ServiceDescriptor.Singleton(skillType, skillType));
+            }
+        });
 }
 ```
 
-Modules opt in by implementing this interface. Monica's `ModuleRegistry` runs the iteration phase **after `ConfigureServices` and before `PostConfigureServices`**, feeding it the type set produced by the current host's `MonicaApplication.TypeFinder`. Each iterator inspects each type, builds its own metadata, and `yield return`s the type so downstream iterators see the same stream.
+`ModuleRegistry` freezes every plan, compiles equivalent `TypeQuery` nodes, scans the host's business types once, and then invokes commit callbacks serially in module-topology and declaration order. Each result is a `BusinessTypeMatch`; its `BusinessTypeShape` lazily caches assignability, interfaces, base types, constructors, and attributes so consumers do not repeat reflection. High-volume commits mutate DI through `context.Registrations`, the indexed `ModuleServiceRegistrationWriter`.
 
-Canonical consumer: `Monica.JobScheduler/Modules/ModuleJobScheduler.cs` (lines 54–77), which filters for `IRecurringJob` / `ITriggeredJob<T>`, reads `[JobConfig]`, builds `JobDefinition`, registers the type as transient, and forwards definitions to `JobRegistrationHostedService`. Doc 02 reuses this exact shape.
+This design uses that declarative plan. It does not add another global or chained per-module pass.
 
 ### 1.3 `IXmlDocumentationService`
 
@@ -61,18 +71,18 @@ public interface IXmlDocumentationService
 }
 ```
 
-`XmlMethodDocumentation` exposes the method `<summary>` plus a per-parameter dictionary keyed on parameter name. Module: `Monica.Core/Modules/ModuleXmlDocumentation.cs`. The skill-system depends on this module being loaded; the Skill discovery host registers a hard dependency on `ModuleXmlDocumentationGuide`.
+`XmlMethodDocumentation` exposes the method `<summary>` plus a per-parameter dictionary keyed on parameter name. Module: `Monica.Core/Modules/ModuleXmlDocumentation.cs`. The skill-system's `Describe` override hard-requires `ModuleXmlDocumentation`, so this service is available when the capability catalog is built.
 
-### 1.4 `ModuleKey`
+### 1.4 CLR module-type identity
 
-`Monica.Core/Modularity/Models/ModuleKey.cs` is a `readonly record struct` with implicit conversions from `BuiltInModuleKey` (the enum at `Monica.Core/Modularity/Models/BuiltInModuleKey.cs`) and from `string`:
+Module composition and capability checks use the concrete module strategy `Type`. `ModuleKey` is derived diagnostic metadata only. A capability gate therefore stores module types directly:
 
 ```csharp
-public override IEnumerable<ModuleKey> RequiredModules =>
-    [BuiltInModuleKey.RAG, (ModuleKey)"Vendor.Custom"];
+public override IReadOnlySet<Type> RequiredModules { get; } =
+    new[] { typeof(ModuleRAG), typeof(ModuleVendorCustom) }.ToFrozenSet();
 ```
 
-The skill-system uses `ModuleKey`, not `string`, for any "this Skill / Tool / MCP needs module X loaded" predicate.
+The loaded-module catalog exposes `IReadOnlySet<Type>`. There is no enum/string registry to synchronize and no fallback equality based on display names.
 
 ## 2. `MoSkill<TSelf>` — the Skill base
 
@@ -90,13 +100,13 @@ public abstract class MoSkill<[DynamicallyAccessedMembers(
     where TSelf : MoSkill<TSelf>
 {
     /// <summary>
-    /// Module keys this skill requires. The skill is silently skipped at registration
+    /// Module strategy types this skill requires. The skill is silently skipped at registration
     /// when any required module is not loaded. Default: empty (no module gate).
     /// </summary>
-    public virtual IEnumerable<ModuleKey> RequiredModules => [];
+    public virtual IReadOnlySet<Type> RequiredModules => FrozenSet<Type>.Empty;
 
     /// <summary>
-    /// Hard-disable switch evaluated at the iterator phase. Default: true.
+    /// Hard-disable switch evaluated while the startup skill catalog is built. Default: true.
     /// Override to disable conditionally (e.g., based on environment).
     /// </summary>
     public virtual bool IsEnabled => true;
@@ -144,7 +154,7 @@ A concrete subclass overrides:
 
 A concrete subclass *may* override:
 
-- `IEnumerable<ModuleKey> RequiredModules` — module gate.
+- `IReadOnlySet<Type> RequiredModules` — module gate.
 - `bool IsEnabled` — hard disable.
 - `int Priority` — ordering hint.
 - `IReadOnlyList<AgentSkillResource>? Resources` and `IReadOnlyList<AgentSkillScript>? Scripts` — only if the attribute-based path doesn't fit (e.g., dynamic per-instance script generation).
@@ -175,7 +185,8 @@ public sealed class RAGKnowledgeSkill(
         "hierarchy, and get-knowledge-document-content to load full source text. " +
         "Always cite the source name and source link.";
 
-    public override IEnumerable<ModuleKey> RequiredModules => [BuiltInModuleKey.RAG];
+    public override IReadOnlySet<Type> RequiredModules { get; } =
+        new[] { typeof(ModuleRAG) }.ToFrozenSet();
 
     [MoAITool(
         Name = "search-knowledge-base",
@@ -221,7 +232,7 @@ Notes on the migration:
 - If `Name` is omitted, Monica derives `search` from `SearchAsync` (kebab-case + drop `Async` suffix). Authors who want a longer name (e.g., `search-knowledge-base`) supply it explicitly.
 - Per-session knowledge-base selection flows through `AIChatRuntimeContext` using the KnowledgeBase-owned `KnowledgeBaseChatRuntimeContextKeys.KnowledgeSelection` key. It does **not** live on `AIChatAgentCreateContext`, in skill frontmatter, or in loaded skill content.
 - Script parameters stay user-facing-clean. Runtime-only parameters such as `IServiceProvider` and `CancellationToken` are hidden from the schema and used only to resolve scoped services and the current runtime context.
-- Hard module gate via `RequiredModules`: the skill is silently skipped when `Monica.AI.RAG` is not loaded. The Knowledge Base lookup-only Skill (Doc 01) requires `[BuiltInModuleKey.KnowledgeBase]`.
+- Hard module gate via `RequiredModules`: the skill is silently skipped when `ModuleRAG` is not loaded. The Knowledge Base lookup-only Skill (Doc 01) requires `typeof(ModuleKnowledgeBase)`.
 
 ### 2.4 Lifecycle
 
@@ -258,10 +269,10 @@ public abstract class MoTool : AITool
     public override string Description => MoAIDescriptionResolver.Resolve(GetType().GetMethod(nameof(InvokeAsync)));
 
     /// <summary>
-    /// Module keys this tool requires. The tool is silently skipped at
+    /// Module strategy types this tool requires. The tool is silently skipped at
     /// registration when any required module is not loaded.
     /// </summary>
-    public virtual IEnumerable<ModuleKey> RequiredModules => [];
+    public virtual IReadOnlySet<Type> RequiredModules => FrozenSet<Type>.Empty;
 
     /// <summary>
     /// Hard disable. Default: true.
@@ -316,7 +327,7 @@ public abstract class MoMcp : /* Microsoft MCP server base, TBD */
 {
     public abstract string ServiceName { get; }
 
-    public virtual IEnumerable<ModuleKey> RequiredModules => [];
+    public virtual IReadOnlySet<Type> RequiredModules => FrozenSet<Type>.Empty;
 
     public virtual bool IsEnabled => true;
 
@@ -324,11 +335,11 @@ public abstract class MoMcp : /* Microsoft MCP server base, TBD */
 }
 ```
 
-Discovery uses the same `IBusinessTypeIterator` flow as `MoSkill<TSelf>` and `MoTool`. The `[MoAITool]` description bridge applies uniformly to whatever method-shaped surfaces the chosen MCP package exposes.
+Discovery uses the same compiled `TypeDiscoveryPlan` as `MoSkill<TSelf>` and `MoTool`. The `[MoAITool]` description bridge applies uniformly to whatever method-shaped surfaces the chosen MCP package exposes.
 
 ### 4.3 Implementation note
 
-Implementation of `MoMcp` is **deferred** until after Phase B of the implementation sequencing (see §11). The `MoSkill<TSelf>` and `MoTool` work is independent and ships first. The discovery host described in §6 reserves an iterator branch for `MoMcp` so the contract is forward-compatible.
+Implementation of `MoMcp` is **deferred** until after Phase B of the implementation sequencing (see §11). The `MoSkill<TSelf>` and `MoTool` work is independent and ships first. The discovery plan described in §6 reserves a classification branch for `MoMcp` so the contract is forward-compatible.
 
 ## 5. `[MoAITool]` attribute and the description priority chain
 
@@ -482,74 +493,86 @@ A parameter that has both an `[MoAITool]` and an XML `<param>` doc resolves to t
 
 A new module `ModuleSkillSystem` lives in `Monica.AI`. The module:
 
-- Implements `IBusinessTypeIterator`.
-- Owns the discovery + filtering pipeline for `MoSkill<TSelf>`, `MoTool`, and `MoMcp` subclasses.
+- Derives from `MonicaModule<ModuleSkillSystemOption>`.
+- Declares the discovery + filtering pipeline for `MoSkill<TSelf>`, `MoTool`, and `MoMcp` subclasses through `DeclareTypeDiscovery`.
 - Builds the `AgentSkillsProvider` at startup via `AgentSkillsProviderBuilder.UseSkills(...)`.
-- Adds a hard dependency on `ModuleXmlDocumentationGuide` (via `ClaimDependencies`) so the description chain has its bottom rung available.
+- Declares hard dependencies on `ModuleAI` and `ModuleXmlDocumentation` in `Describe`, so graph shape is known before options or services are materialized.
+
+`ModuleSkillSystem` implements neither `IWebModule` nor `IUIModule`; it contributes services and discovery only, so the same module can compose in generic and ASP.NET Core hosts.
 
 Provisional declaration:
 
 ```csharp
-[ModuleKey((ModuleKey)"AISkillSystem")]   // not yet a BuiltInModuleKey
-public sealed class ModuleSkillSystem(ModuleSkillSystemOption option)
-    : ModuleBase<ModuleSkillSystem, ModuleSkillSystemOption, ModuleSkillSystemGuide>(option),
-      IBusinessTypeIterator
+public sealed class ModuleSkillSystem : MonicaModule<ModuleSkillSystemOption>
 {
     private readonly List<Type> _skillTypes = [];
     private readonly List<Type> _toolTypes = [];
     private readonly List<Type> _mcpTypes = [];   // forward-compat slot
 
-    public IEnumerable<Type> IterateBusinessTypes(IEnumerable<Type> types)
+    public override void Describe(ModuleDescriptor module)
     {
-        foreach (var type in types)
-        {
-            if (type is { IsClass: true, IsAbstract: false })
-            {
-                if (IsAssignableToOpenGeneric(type, typeof(MoSkill<>)))
-                {
-                    _skillTypes.Add(type);
-                }
-                else if (type.IsAssignableTo(typeof(MoTool)))
-                {
-                    _toolTypes.Add(type);
-                }
-                else if (type.IsAssignableTo(typeof(MoMcp)))
-                {
-                    _mcpTypes.Add(type);
-                }
-            }
-
-            yield return type;
-        }
+        module.Require<ModuleAI, ModuleAIOption>();
+        module.Require<ModuleXmlDocumentation, ModuleXmlDocumentationOption>();
     }
 
-    public override void PostConfigureServices(IServiceCollection services)
+    public override void DeclareTypeDiscovery(TypeDiscoveryPlan<ModuleSkillSystemOption> discovery)
+    {
+        discovery.Match(
+            TypeQuery.ConcreteClass,
+            (_, matches) =>
+            {
+                foreach (var match in matches)
+                {
+                    var shape = match.Shape;
+                    if (shape.BaseTypes.Any(IsClosedMoSkillBase))
+                    {
+                        _skillTypes.Add(match.Type);
+                    }
+                    else if (shape.IsAssignableTo(typeof(MoTool)))
+                    {
+                        _toolTypes.Add(match.Type);
+                    }
+                    else if (shape.IsAssignableTo(typeof(MoMcp)))
+                    {
+                        _mcpTypes.Add(match.Type);
+                    }
+                }
+            });
+    }
+
+    public override void PostConfigureServices(ModuleContext<ModuleSkillSystemOption> context)
     {
         foreach (var skillType in _skillTypes)
         {
-            services.AddSingleton(skillType);
-            services.AddSingleton(typeof(AgentSkill), sp => sp.GetRequiredService(skillType));
+            context.Registrations.TryAdd(ServiceDescriptor.Singleton(skillType, skillType));
+            context.Registrations.Add(ServiceDescriptor.Singleton(
+                typeof(AgentSkill),
+                sp => sp.GetRequiredService(skillType)));
         }
+
         foreach (var toolType in _toolTypes)
         {
-            services.AddSingleton(toolType);
-            services.AddSingleton(typeof(AITool), sp => sp.GetRequiredService(toolType));
+            context.Registrations.TryAdd(ServiceDescriptor.Singleton(toolType, toolType));
+            context.Registrations.Add(ServiceDescriptor.Singleton(
+                typeof(AITool),
+                sp => sp.GetRequiredService(toolType)));
         }
+
         // MCP registration deferred (see §4.3).
 
-        services.AddSingleton<IAgentSkillsProviderFactory, MonicaAgentSkillsProviderFactory>();
-        services.AddHostedService<MonicaSkillsProviderHostedService>();
+        context.Services.AddSingleton<IAgentSkillsProviderFactory, MonicaAgentSkillsProviderFactory>();
+        context.Services.AddHostedService<MonicaSkillsProviderHostedService>();
     }
 
-    public override void ClaimDependencies()
+    private static bool IsClosedMoSkillBase(Type type)
     {
-        DependsOnModule<ModuleAIGuide>().Register();
-        DependsOnModule<ModuleXmlDocumentationGuide>().Register();
+        return type.IsConstructedGenericType
+               && type.GetGenericTypeDefinition() == typeof(MoSkill<>);
     }
 }
 ```
 
-Helper `IsAssignableToOpenGeneric` walks the inheritance chain to detect `MoSkill<>` regardless of `TSelf` parameterization. Implementation reuses `Monica.Tool.Extensions` patterns (already imported by `ModuleJobScheduler`).
+The broad concrete-class query is compiled into Monica's single shared scan. The commit classifies its immutable matches through cached `BusinessTypeShape.BaseTypes` and `IsAssignableTo(...)` facts; it does not call `GetInterfaces()` or repeat assignability reflection per consumer. Registration happens in `PostConfigureServices`, after discovery commits are complete.
 
 ### 6.2 The `MonicaSkillsProviderHostedService`
 
@@ -561,15 +584,9 @@ A hosted service activated at startup:
 
 Same flow for `AITool` (active tools list passed to the agent builder via `AIChatAgentBuilder.AddTool` — see §8).
 
-### 6.3 Registration entrypoint (Guide)
+### 6.3 Registration entrypoint
 
 ```csharp
-public sealed class ModuleSkillSystemGuide
-    : ModuleGuide<ModuleSkillSystem, ModuleSkillSystemOption, ModuleSkillSystemGuide>
-{
-    protected override string[] GetRequestedConfigMethodKeys() => [];
-}
-
 public static class ModuleSkillSystemBuilderExtensions
 {
     extension(IMonicaBuilder builder)
@@ -577,20 +594,20 @@ public static class ModuleSkillSystemBuilderExtensions
         /// <summary>
         /// Enables Monica's class-based AI skill / tool / MCP discovery and registration.
         /// Discovers all <see cref="MoSkill{TSelf}"/>, <see cref="MoTool"/>, and
-        /// <see cref="MoMcp"/> subclasses via <see cref="IBusinessTypeIterator"/>,
+        /// <see cref="MoMcp"/> subclasses through Monica's compiled type-discovery plan,
         /// builds a Microsoft.Agents.AI.AgentSkillsProvider, and exposes the
         /// resulting capability set to the chat agent.
         /// </summary>
-        public ModuleSkillSystemGuide AddAISkillSystem(
+        public ModuleRegistration<ModuleSkillSystem, ModuleSkillSystemOption> AddAISkillSystem(
             Action<ModuleSkillSystemOption>? action = null)
         {
-            return builder.AddModule<ModuleSkillSystem, ModuleSkillSystemOption, ModuleSkillSystemGuide>(action);
+            return builder.AddModule<ModuleSkillSystem, ModuleSkillSystemOption>(action);
         }
     }
 }
 ```
 
-The Facade Provider (Doc 03) and ProjectUnit Provider (Doc 04) modules call `DependsOnModule<ModuleSkillSystemGuide>().Register()` in their `ClaimDependencies` override.
+The Facade Provider (Doc 03) and ProjectUnit Provider (Doc 04) declare `module.Require<ModuleSkillSystem, ModuleSkillSystemOption>()` from their `Describe` overrides.
 
 ## 7. Lifecycle and DI reconciliation
 
@@ -603,7 +620,7 @@ The Facade Provider (Doc 03) and ProjectUnit Provider (Doc 04) modules call `Dep
 | `MoMcp` | TBD when package is finalized | Reserve singleton + per-call scope as the default. |
 | `AgentSkillsProvider` | Singleton, built once at startup | Skill set is immutable per process. Hot-reload is out of scope. |
 
-Module gate evaluation is **iterator-phase only**. Skills whose `RequiredModules` aren't satisfied are dropped before any `AgentSkillsProvider` is built. A skill cannot become enabled mid-process by loading a new module dynamically — Monica modules are loaded at startup and that's the moment the gate fires.
+Module gate evaluation is **startup-only**, after the compiled module graph and skill catalog are available. Skills whose `RequiredModules` aren't satisfied are dropped before any `AgentSkillsProvider` is built. A skill cannot become enabled mid-process by loading a new module dynamically — Monica modules are composed at startup and that is when the gate fires.
 
 ### 7.1 Runtime context contract
 
@@ -705,9 +722,9 @@ The doc-writer of the implementation phase must produce one end-to-end migration
 
 | # | Question | Resolution |
 |---|---|---|
-| (a) | Evaluate `IsEnabled` / `RequiredModules` per session, or only at iterator phase? | **Iterator phase only.** Cheap, predictable, no surprise gating mid-conversation. |
+| (a) | Evaluate `IsEnabled` / `RequiredModules` per session, or only while building the startup catalog? | **Startup only.** Cheap, predictable, no surprise gating mid-conversation. |
 | (b) | Add a Monica-specific class-level marker attribute (`[MoSkill]` parameterless)? | **No.** CRTP via `: MoSkill<TSelf>` already gives the marker. |
-| (c) | Where do the three base classes physically live? | **`Monica.AI/Skills/Abstractions/`** (new `Skills` feature folder under `Monica.AI`). The annotations live in `Monica.AI/Skills/Annotations/`. The discovery module lives in `Monica.AI/Skills/Modules/`. |
+| (c) | Where do the three base classes physically live? | **`Monica.AI/Skills/Abstractions/`** (new `Skills` feature folder under `Monica.AI`). The annotations live in `Monica.AI/Skills/Annotations/`. The consolidated module registration lives at `Monica.AI/Modules/ModuleSkillSystem.cs`. |
 | (d) | Multi-level inheritance (e.g., `SpecialSkill : RAGKnowledgeSkill`) — does discovery still work? | **No.** Microsoft's CRTP discovery reflects only on `TSelf`. Each leaf must re-apply CRTP: `class SpecialSkill : MoSkill<SpecialSkill>`. The doc cites Microsoft's documented limitation. |
 | (e) | MCP package selection. | **Verify-before-implement.** Doc 02 reserves the slot; the implementation phase pins the package after inspecting Microsoft's MCP integration release at that time. |
 | (f) | Forward-compat `[MoAITool(RequiredPermissions = ...)]` slot. | **Not in this rev.** A future security doc owns it. The attribute does not ship the property; adding it later is a non-breaking change because attribute properties are additive. |
@@ -720,7 +737,7 @@ When Phase B (this doc) is implemented, the following must hold:
 1. `Monica.AI/Skills/Abstractions/MoSkill.cs`, `MoTool.cs` exist. `MoMcp.cs` is a placeholder file with a `// TODO: package selection` comment.
 2. `Monica.AI/Skills/Annotations/MoAIToolAttribute.cs` exists with `Name`, `Description`, and `Disabled` properties; `AttributeUsage` constrained to method + parameter.
 3. `Monica.AI/Skills/Internal/MoSkillScriptDiscovery.cs` exists and implements the `[MoAITool]`-marker-based reflection used by `MoSkill<TSelf>.Scripts`. The auto-derived kebab-case name rule is unit-tested.
-4. `Monica.AI/Skills/Modules/ModuleSkillSystem.cs` implements `IBusinessTypeIterator` and registers a hosted service that builds `AgentSkillsProvider`.
+4. `Monica.AI/Modules/ModuleSkillSystem.cs` derives from `MonicaModule<ModuleSkillSystemOption>`, declares its `TypeDiscoveryPlan` in `DeclareTypeDiscovery`, and registers the services that build `AgentSkillsProvider`.
 5. `Monica.AI.RAG.Skills.RAGKnowledgeSkill` migrated from `KnowledgeSearchToolProvider`. `Monica.AI/RAG/Tools/KnowledgeSearchToolProvider.cs` deleted. `services.TryAddEnumerable(...)` registration removed.
 6. `Monica.AI/Abstractions/IAIChatToolProvider.cs` **deleted**. No shim, no `[Obsolete]` adapter. `Monica.AI/Services/Support/AIChatAgentBuilder.cs` no longer exposes `AddTool(AITool)`.
 7. The `IXmlDocumentationService.GetMethodDocumentation` path is exercised by at least one method per skill in tests (compile-time verification: every Facade-method-style script has a description in one of the three sources).

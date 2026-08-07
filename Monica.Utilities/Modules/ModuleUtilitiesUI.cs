@@ -2,8 +2,6 @@ using Microsoft.Extensions.DependencyInjection;
 using Monica.Core;
 using Monica.Core.Modularity;
 using Monica.Core.Modularity.Abstractions;
-using Monica.Core.Modularity.Annotations;
-using Monica.Core.Modularity.Models;
 using Monica.UI.Shell.Models;
 using Monica.Utilities.Localization;
 using Monica.Utilities.Pages;
@@ -16,38 +14,21 @@ namespace Monica.Modules;
 /// <summary>
 /// Registers the utilities toolbox page inside the Monica shell.
 /// </summary>
-[ModuleKey(BuiltInModuleKey.UtilitiesUI)]
-public class ModuleUtilitiesUI(ModuleUtilitiesUIOption option)
-    : ModuleBase<ModuleUtilitiesUI, ModuleUtilitiesUIOption, ModuleUtilitiesUIGuide>(option)
+public class ModuleUtilitiesUI : MonicaModule<ModuleUtilitiesUIOption>, IUIModule
 {
-    /// <summary>
-    /// Registers page-local UI state used by the toolbox panels.
-    /// </summary>
-    public override void ConfigureServices(IServiceCollection services)
+    /// <inheritdoc />
+    public override void Describe(ModuleDescriptor module)
     {
-        services.AddScoped<ConnectivityProbeState>();
-        services.AddScoped<TextTransformState>();
+        module.Require<ModuleUtilities, ModuleUtilitiesOption>();
     }
 
     /// <summary>
-    /// Declares the utilities dependencies and the navigation entry for the toolbox page.
+    /// Registers page-local UI state used by the toolbox panels.
     /// </summary>
-    public override void ClaimDependencies()
+    public override void ConfigureServices(ModuleContext<ModuleUtilitiesUIOption> context)
     {
-        if (Option.DisableUtilitiesPage)
-        {
-            return;
-        }
-
-        DependsOnModule<ModuleUtilitiesGuide>().Register();
-        DependsOnModule<ModuleShellUIGuide>().Register()
-            .RegisterUIComponents(registry => registry.RegisterLocalizedPage<UIUtilitiesPage, UtilitiesResource>(
-                UIUtilitiesPage.PAGE_URL,
-                "Pages:UtilitiesToolbox:Title",
-                Icons.Material.Filled.Build,
-                BuiltInNavigationCategoryIds.Infrastructure,
-                addToNav: true,
-                navOrder: 38));
+        context.Services.AddScoped<ConnectivityProbeState>();
+        context.Services.AddScoped<TextTransformState>();
     }
 }
 
@@ -62,19 +43,24 @@ public static class ModuleUtilitiesUIBuilderExtensions
         /// Registers the utilities toolbox UI module.
         /// </summary>
         /// <param name="action">Optional configuration applied to <see cref="ModuleUtilitiesUIOption" />.</param>
-        /// <returns>The fluent guide used to continue module configuration.</returns>
-        public ModuleUtilitiesUIGuide AddUtilitiesUI(Action<ModuleUtilitiesUIOption>? action = null)
+        /// <returns>The host-bound utilities UI registration.</returns>
+        public ModuleRegistration<ModuleUtilitiesUI, ModuleUtilitiesUIOption> AddUtilitiesUI(
+            Action<ModuleUtilitiesUIOption>? action = null)
         {
-            return builder.AddModule<ModuleUtilitiesUI, ModuleUtilitiesUIOption, ModuleUtilitiesUIGuide>(action);
+            var registration = builder.AddModule<ModuleUtilitiesUI, ModuleUtilitiesUIOption>(action);
+            registration.Require<ModuleLocalization, ModuleLocalizationOption>()
+                .AddResource<UtilitiesResource>();
+            registration.Require<ModuleShellUI, ModuleShellUIOption>()
+                .RegisterUIComponents(registry => registry.RegisterLocalizedPage<UIUtilitiesPage, UtilitiesResource>(
+                    UIUtilitiesPage.PAGE_URL,
+                    "Pages:UtilitiesToolbox:Title",
+                    Icons.Material.Filled.Build,
+                    BuiltInNavigationCategoryIds.Infrastructure,
+                    addToNav: true,
+                    navOrder: 38));
+            return registration;
         }
     }
-}
-
-/// <summary>
-/// Fluent configuration guide for the utilities UI module.
-/// </summary>
-public class ModuleUtilitiesUIGuide : ModuleGuide<ModuleUtilitiesUI, ModuleUtilitiesUIOption, ModuleUtilitiesUIGuide>
-{
 }
 
 /// <summary>
@@ -82,10 +68,4 @@ public class ModuleUtilitiesUIGuide : ModuleGuide<ModuleUtilitiesUI, ModuleUtili
 /// </summary>
 public class ModuleUtilitiesUIOption : ModuleOptions<ModuleUtilitiesUI>
 {
-    /// <summary>
-    /// Disables registration of the utilities toolbox page in the Monica shell.
-    /// Default: <see langword="false" />.
-    /// Set this when the backend utilities should remain available but the interactive page must stay hidden.
-    /// </summary>
-    public bool DisableUtilitiesPage { get; set; }
 }

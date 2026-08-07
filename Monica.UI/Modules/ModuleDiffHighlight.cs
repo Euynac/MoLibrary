@@ -5,8 +5,6 @@ using Microsoft.Extensions.Logging;
 using Monica.Core;
 using Monica.Core.Modularity;
 using Monica.Core.Modularity.Abstractions;
-using Monica.Core.Modularity.Annotations;
-using Monica.Core.Modularity.Models;
 using Monica.Core.Results;
 using Monica.UI.UIDiffHighlight.Abstractions;
 using Monica.UI.UIDiffHighlight.Abstractions.Internal;
@@ -21,15 +19,15 @@ namespace Monica.Modules;
 /// <summary>
 /// Registers the DiffHighlight mixed module.
 /// </summary>
-[ModuleKey(BuiltInModuleKey.DiffHighlight)]
-public class ModuleDiffHighlight(ModuleDiffHighlightOption option) : WebModuleBase<ModuleDiffHighlight, ModuleDiffHighlightOption, ModuleDiffHighlightGuide>(option)
+public class ModuleDiffHighlight : MonicaModule<ModuleDiffHighlightOption>, IWebModule
 {
     /// <summary>
     /// Registers the diff highlighting services, facade, and rendering strategies.
     /// </summary>
-    /// <param name="services">The service collection.</param>
-    public override void ConfigureServices(IServiceCollection services)
+    /// <param name="context">The typed module composition context.</param>
+    public override void ConfigureServices(ModuleContext<ModuleDiffHighlightOption> context)
     {
+        var services = context.Services;
         services.AddScoped<IDiffHighlight, DiffHighlightService>();
         services.AddScoped<DiffHighlightFacade>();
 
@@ -38,9 +36,10 @@ public class ModuleDiffHighlight(ModuleDiffHighlightOption option) : WebModuleBa
         services.AddTransient<MarkdownDiffRenderer>();
         services.AddTransient<PlainTextDiffRenderer>();
 
-        if (option.CustomRendererFactory != null)
+        var customRendererFactory = Option.CustomRendererFactory;
+        if (customRendererFactory is not null)
         {
-            services.AddSingleton<IDiffHighlightRenderer>(provider => option.CustomRendererFactory());
+            services.AddSingleton<IDiffHighlightRenderer>(_ => customRendererFactory());
             Logger.LogDebug("Registered a custom diff highlight renderer.");
         }
     }
@@ -48,12 +47,12 @@ public class ModuleDiffHighlight(ModuleDiffHighlightOption option) : WebModuleBa
     /// <summary>
     /// Registers the diff highlight minimal API endpoints.
     /// </summary>
-    /// <param name="app">The application builder.</param>
-    public override void ConfigureEndpoints(IApplicationBuilder app)
+    /// <param name="context">The typed web composition context.</param>
+    public override void ConfigureEndpoints(WebModuleContext<ModuleDiffHighlightOption> context)
     {
-        UseEndpoints(app, endpoints =>
+        UseEndpoints(context, endpoints =>
         {
-            var tagName = option.GetApiGroupName();
+            var tagName = Option.GetApiGroupName();
 
             endpoints.MapPost("/diff-highlight", async (DiffHighlightRequest request, DiffHighlightFacade service) =>
             {
@@ -95,9 +94,10 @@ public static class ModuleDiffHighlightBuilderExtensions
         /// <summary>
         /// Configures the DiffHighlight module.
         /// </summary>
-        public ModuleDiffHighlightGuide AddDiffHighlight(Action<ModuleDiffHighlightOption>? action = null)
+        public ModuleRegistration<ModuleDiffHighlight, ModuleDiffHighlightOption> AddDiffHighlight(
+            Action<ModuleDiffHighlightOption>? action = null)
         {
-            return builder.AddModule<ModuleDiffHighlight, ModuleDiffHighlightOption, ModuleDiffHighlightGuide>(action);
+            return builder.AddModule<ModuleDiffHighlight, ModuleDiffHighlightOption>(action);
         }
     }
 }
@@ -121,14 +121,6 @@ public class DiffHighlightRequest
     /// Diff options.
     /// </summary>
     public DiffHighlightOptions? Options { get; set; }
-}
-
-/// <summary>
-/// Configuration guide for the diff highlight module.
-/// </summary>
-public class ModuleDiffHighlightGuide : WebModuleGuide<ModuleDiffHighlight, ModuleDiffHighlightOption, ModuleDiffHighlightGuide>
-{
-
 }
 
 /// <summary>

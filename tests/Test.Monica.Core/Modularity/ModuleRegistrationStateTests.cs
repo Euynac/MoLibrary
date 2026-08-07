@@ -1,45 +1,69 @@
 using AwesomeAssertions;
-using Monica.Core;
-using Monica.Core.Modularity.Models.Internal;
-using Monica.Modules;
+using Microsoft.Extensions.Hosting;
+using Monica.Core.Modularity.Abstractions;
+using Monica.Core.Modularity.Exceptions;
+using Monica.Core.Modularity.Extensions;
 using Xunit;
 
 namespace Test.Monica.Core.Modularity;
 
-public class ModuleRegistrationStateTests
+public sealed class ModuleRegistrationStateTests
 {
     [Fact]
-    public void GetMissingRequiredConfigMethodKeys_WhenRequestUsesCascadedSuffix_ShouldTreatRequirementAsSatisfied()
+    public void AddMonica_WhenRequiredFeatureIsMissing_ShouldRejectComposition()
     {
-        using var application = new MonicaApplication();
-        var state = new ModuleRegistrationState(application, typeof(ModuleSystem))
-        {
-            RequiredConfigMethodKeys =
-            [
-                "ConfigDomainInfoProvider",
-                "ConfigHttpClientRegisterProvider"
-            ]
-        };
-        state.RegisterRequests.Add(new ModuleConfigurationRequest("ConfigDomainInfoProvider"));
-        state.RegisterRequests.Add(new ModuleConfigurationRequest("ConfigHttpClientRegisterProvider_BuiltInModuleKey.DaprRpcClient"));
+        var builder = Host.CreateApplicationBuilder();
+        var optionsMaterialized = false;
 
-        state.GetMissingRequiredConfigMethodKeys().Should().BeEmpty();
+        Action compose = () => builder.AddMonica(monica =>
+            monica.AddModule<RequiredFeatureProbeModule, RequiredFeatureProbeModuleOption>(_ =>
+                optionsMaterialized = true));
+
+        compose.Should().Throw<ModuleRegistrationException>()
+            .WithMessage("*RequiredFeatureProbeModule*Provider*");
+        optionsMaterialized.Should().BeFalse(
+            "feature requirements must be validated before option contributions execute");
     }
 
     [Fact]
-    public void GetMissingRequiredConfigMethodKeys_WhenRequiredKeyIsAbsent_ShouldStillReportIt()
+    public void AddMonica_WhenRequiredFeatureIsSatisfied_ShouldCompleteComposition()
     {
-        using var application = new MonicaApplication();
-        var state = new ModuleRegistrationState(application, typeof(ModuleSystem))
-        {
-            RequiredConfigMethodKeys =
-            [
-                "ConfigDomainInfoProvider",
-                "ConfigHttpClientRegisterProvider"
-            ]
-        };
-        state.RegisterRequests.Add(new ModuleConfigurationRequest("ConfigDomainInfoProvider"));
+        var builder = Host.CreateApplicationBuilder();
 
-        state.GetMissingRequiredConfigMethodKeys().Should().BeEquivalentTo("ConfigHttpClientRegisterProvider");
+        builder.AddMonica(monica => monica
+            .AddModule<RequiredFeatureProbeModule, RequiredFeatureProbeModuleOption>()
+            .SatisfyFeature(RequiredFeatureProbeModule.PROVIDER_FEATURE));
+
+        using var host = builder.Build();
+        host.Should().NotBeNull();
+    }
+
+    [Fact]
+    public void AddMonica_WhenSatisfiedFeatureWasNeverRequired_ShouldRejectComposition()
+    {
+        var builder = Host.CreateApplicationBuilder();
+
+        Action compose = () => builder.AddMonica(monica => monica
+            .AddModule<FeaturelessProbeModule, FeaturelessProbeModuleOption>()
+            .SatisfyFeature("TypoProvider"));
+
+        compose.Should().Throw<ModuleRegistrationException>()
+            .WithMessage("*FeaturelessProbeModule*satisfied undeclared features*TypoProvider*");
     }
 }
+
+internal sealed class RequiredFeatureProbeModule : MonicaModule<RequiredFeatureProbeModuleOption>
+{
+    public const string PROVIDER_FEATURE = "Provider";
+
+    public override void Describe(ModuleDescriptor module)
+    {
+        module.RequireFeature(PROVIDER_FEATURE);
+    }
+}
+
+internal sealed class RequiredFeatureProbeModuleOption : ModuleOptions<RequiredFeatureProbeModule>;
+
+internal sealed class FeaturelessProbeModule : MonicaModule<FeaturelessProbeModuleOption>;
+
+internal sealed class FeaturelessProbeModuleOption : ModuleOptions<FeaturelessProbeModule>;

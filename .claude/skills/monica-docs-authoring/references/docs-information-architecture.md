@@ -60,7 +60,7 @@ Use for onboarding pages:
 Use for Monica-wide concepts:
 
 - module pattern
-- Guide and options
+- module options and registration extensions
 - Facade vs Service vs Provider
 - infrastructure vs UI module relationship
 - localization, result model, or similar framework concepts
@@ -107,7 +107,7 @@ Rules:
 ├── index.md
 ├── quick-start.md
 ├── configuration.md
-├── guide-and-providers.md
+├── registration-and-providers.md
 └── scenarios.md
 ```
 

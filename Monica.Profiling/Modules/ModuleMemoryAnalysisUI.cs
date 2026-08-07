@@ -2,8 +2,6 @@ using Microsoft.Extensions.DependencyInjection;
 using Monica.Core;
 using Monica.Core.Modularity;
 using Monica.Core.Modularity.Abstractions;
-using Monica.Core.Modularity.Annotations;
-using Monica.Core.Modularity.Models;
 using Monica.Profiling.Localization;
 using Monica.Profiling.Pages;
 using Monica.Profiling.UIMemoryAnalysis.State;
@@ -23,9 +21,34 @@ public static class ModuleMemoryAnalysisUIBuilderExtensions
         /// <summary>
         /// Configures the memory analysis UI module.
         /// </summary>
-        public ModuleMemoryAnalysisUIGuide AddMemoryAnalysisUI(Action<ModuleMemoryAnalysisUIOption>? action = null)
+        public ModuleRegistration<ModuleMemoryAnalysisUI, ModuleMemoryAnalysisUIOption> AddMemoryAnalysisUI(
+            Action<ModuleMemoryAnalysisUIOption>? action = null)
         {
-            return builder.AddModule<ModuleMemoryAnalysisUI, ModuleMemoryAnalysisUIOption, ModuleMemoryAnalysisUIGuide>(action);
+            var registration = builder.AddModule<ModuleMemoryAnalysisUI, ModuleMemoryAnalysisUIOption>(action);
+            registration.Require<ModuleLocalization, ModuleLocalizationOption>()
+                .AddResource<MemoryAnalysisResource>();
+            registration.Require<ModuleShellUI, ModuleShellUIOption>()
+                .RegisterUIComponents(registry => registry.RegisterLocalizedPage<UIMemoryAnalysisPage, MemoryAnalysisResource>(
+                    UIMemoryAnalysisPage.PAGE_URL,
+                    "Pages:MemoryAnalysis:Title",
+                    Icons.Material.Filled.Memory,
+                    BuiltInNavigationCategoryIds.Monitor,
+                    addToNav: true,
+                    navOrder: 60));
+            return registration;
+        }
+    }
+
+    extension(ModuleRegistration<ModuleMemoryAnalysisUI, ModuleMemoryAnalysisUIOption> registration)
+    {
+        /// <summary>
+        /// Enables allocation tracking and the type-allocation tab for this host.
+        /// </summary>
+        /// <returns>The same host-bound memory-analysis registration.</returns>
+        public ModuleRegistration<ModuleMemoryAnalysisUI, ModuleMemoryAnalysisUIOption> EnableTypeAllocationTab()
+        {
+            registration.Require<ModuleTypeAllocation, ModuleTypeAllocationOption>();
+            return registration.Configure(option => option.EnableTypeAllocationTab = true);
         }
     }
 }
@@ -33,52 +56,21 @@ public static class ModuleMemoryAnalysisUIBuilderExtensions
 /// <summary>
 /// Memory analysis UI module.
 /// </summary>
-[ModuleKey(BuiltInModuleKey.MemoryAnalysisUI)]
-public class ModuleMemoryAnalysisUI(ModuleMemoryAnalysisUIOption option)
-    : ModuleBase<ModuleMemoryAnalysisUI, ModuleMemoryAnalysisUIOption, ModuleMemoryAnalysisUIGuide>(option)
+public class ModuleMemoryAnalysisUI : MonicaModule<ModuleMemoryAnalysisUIOption>, IUIModule
 {
     /// <inheritdoc />
-    public override void ClaimDependencies()
+    public override void Describe(ModuleDescriptor module)
     {
-        if (Option.DisableMemoryAnalysisPage)
-        {
-            return;
-        }
-
-        DependsOnModule<ModuleMemoryDiagnosticsGuide>().Register();
-        DependsOnModule<ModuleRuntimeMetricsGuide>().Register();
-        DependsOnModule<ModuleLocalizationGuide>().Register()
-            .AddResource<MemoryAnalysisResource>();
-
-        if (Option.EnableTypeAllocationTab)
-        {
-            DependsOnModule<ModuleTypeAllocationGuide>().Register();
-        }
-
-        DependsOnModule<ModuleShellUIGuide>().Register()
-            .RegisterUIComponents(registry => registry.RegisterLocalizedPage<UIMemoryAnalysisPage, MemoryAnalysisResource>(
-                UIMemoryAnalysisPage.PAGE_URL,
-                "Pages:MemoryAnalysis:Title",
-                Icons.Material.Filled.Memory,
-                BuiltInNavigationCategoryIds.Monitor,
-                addToNav: true,
-                navOrder: 60));
+        module.Require<ModuleMemoryDiagnostics, ModuleMemoryDiagnosticsOption>();
+        module.Require<ModuleRuntimeMetrics, ModuleRuntimeMetricsOption>();
     }
 
     /// <inheritdoc />
-    public override void ConfigureServices(IServiceCollection services)
+    public override void ConfigureServices(ModuleContext<ModuleMemoryAnalysisUIOption> context)
     {
-        services.AddScoped<MemoryAnalysisPageState>();
-        services.AddScoped<TypeAllocationPanelState>();
+        context.Services.AddScoped<MemoryAnalysisPageState>();
+        context.Services.AddScoped<TypeAllocationPanelState>();
     }
-}
-
-/// <summary>
-/// Fluent guide for the memory analysis UI module.
-/// </summary>
-public class ModuleMemoryAnalysisUIGuide
-    : ModuleGuide<ModuleMemoryAnalysisUI, ModuleMemoryAnalysisUIOption, ModuleMemoryAnalysisUIGuide>
-{
 }
 
 /// <summary>
@@ -86,11 +78,6 @@ public class ModuleMemoryAnalysisUIGuide
 /// </summary>
 public class ModuleMemoryAnalysisUIOption : ModuleOptions<ModuleMemoryAnalysisUI>
 {
-    /// <summary>
-    /// Disables registration of the memory analysis page and removes it from the navigation registry.
-    /// </summary>
-    public bool DisableMemoryAnalysisPage { get; set; }
-
     /// <summary>
     /// Controls the dashboard refresh interval in milliseconds.
     /// Set this to 0 to disable timer-based refresh and require manual refresh only.
@@ -113,5 +100,5 @@ public class ModuleMemoryAnalysisUIOption : ModuleOptions<ModuleMemoryAnalysisUI
     /// Enables the type allocation tab and registers the type allocation backend dependency for the page.
     /// Keep this disabled when the memory analysis view should expose only memory snapshots and GC diagnostics.
     /// </summary>
-    public bool EnableTypeAllocationTab { get; set; }
+    public bool EnableTypeAllocationTab { get; internal set; }
 }

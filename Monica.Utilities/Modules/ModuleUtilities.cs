@@ -2,8 +2,6 @@ using Microsoft.Extensions.DependencyInjection;
 using Monica.Core;
 using Monica.Core.Modularity;
 using Monica.Core.Modularity.Abstractions;
-using Monica.Core.Modularity.Annotations;
-using Monica.Core.Modularity.Models;
 using Monica.Utilities.Connectivity.Facades;
 using Monica.Utilities.Connectivity.Services;
 using Monica.Utilities.Localization;
@@ -16,24 +14,28 @@ namespace Monica.Modules;
 /// <summary>
 /// Registers reusable utility services for connectivity diagnostics and text or JSON transformation.
 /// </summary>
-[ModuleKey(BuiltInModuleKey.Utilities)]
-public class ModuleUtilities(ModuleUtilitiesOption option)
-    : ModuleBase<ModuleUtilities, ModuleUtilitiesOption, ModuleUtilitiesGuide>(option)
+public class ModuleUtilities : MonicaModule<ModuleUtilitiesOption>
 {
     /// <summary>
     /// Declares the localization resource required by the utility services and UI.
     /// </summary>
-    public override void ClaimDependencies()
+    public override void Describe(ModuleDescriptor module)
     {
-        DependsOnModule<ModuleLocalizationGuide>().Register()
-            .AddResource<UtilitiesResource>();
+        module.Require<ModuleLocalization, ModuleLocalizationOption>(option =>
+        {
+            if (!option.ResourceMarkerTypes.Contains(typeof(UtilitiesResource)))
+            {
+                option.ResourceMarkerTypes.Add(typeof(UtilitiesResource));
+            }
+        });
     }
 
     /// <summary>
     /// Registers utility services and result-envelope facades.
     /// </summary>
-    public override void ConfigureServices(IServiceCollection services)
+    public override void ConfigureServices(ModuleContext<ModuleUtilitiesOption> context)
     {
+        var services = context.Services;
         services.AddScoped<ConnectivityProbeService>();
         services.AddScoped<ConnectivityProbeFacade>();
         services.AddScoped<TextTransformService>();
@@ -52,19 +54,13 @@ public static class ModuleUtilitiesBuilderExtensions
         /// Registers the utilities module that provides connectivity and text-processing services.
         /// </summary>
         /// <param name="action">Optional configuration applied to <see cref="ModuleUtilitiesOption" />.</param>
-        /// <returns>The fluent guide used to continue module configuration.</returns>
-        public ModuleUtilitiesGuide AddUtilities(Action<ModuleUtilitiesOption>? action = null)
+        /// <returns>The host-bound utilities registration.</returns>
+        public ModuleRegistration<ModuleUtilities, ModuleUtilitiesOption> AddUtilities(
+            Action<ModuleUtilitiesOption>? action = null)
         {
-            return builder.AddModule<ModuleUtilities, ModuleUtilitiesOption, ModuleUtilitiesGuide>(action);
+            return builder.AddModule<ModuleUtilities, ModuleUtilitiesOption>(action);
         }
     }
-}
-
-/// <summary>
-/// Fluent configuration guide for the utilities module.
-/// </summary>
-public class ModuleUtilitiesGuide : ModuleGuide<ModuleUtilities, ModuleUtilitiesOption, ModuleUtilitiesGuide>
-{
 }
 
 /// <summary>

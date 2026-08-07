@@ -8,7 +8,8 @@ namespace Monica.Core.Modularity.Services.Support;
 /// </summary>
 internal sealed class ModuleStartupWorkScheduler(
     int maxConcurrency,
-    Action<ModuleStartupWorkResult>? itemCompleted = null) : IDisposable
+    Action<ModuleStartupWorkResult>? itemCompleted = null,
+    Action? stateChanged = null) : IDisposable
 {
     private readonly object _gate = new();
     private readonly object _completionSignalGate = new();
@@ -20,11 +21,13 @@ internal sealed class ModuleStartupWorkScheduler(
     private readonly TaskCompletionSource _drained = new(TaskCreationOptions.RunContinuationsAsynchronously);
     private int _activeCount;
     private int _activeNoBarrierCount;
+    private int _activeSnapshotMutations;
     private bool _accepting = true;
     private bool _disposed;
     private bool _drainStarted;
     private long _nextCompletionSignalSequence;
     private long _nextSequence;
+    private long _revision;
     private ModuleStartupWorkBarrier? _passedBarrier;
 
     /// <summary>
@@ -82,8 +85,10 @@ internal sealed class ModuleStartupWorkScheduler(
             _items.Add(identity, item);
             _queue.Enqueue(item, ((int)barrier, sequence));
             dispatch = ReserveAvailableWorkUnderLock();
+            RecordStateChangedUnderLock();
         }
 
+        NotifyStateChanged();
         StartExecutions(dispatch);
     }
 
@@ -102,8 +107,10 @@ internal sealed class ModuleStartupWorkScheduler(
 
             _accepting = false;
             dispatch = ReserveAvailableWorkUnderLock();
+            RecordStateChangedUnderLock();
         }
 
+        NotifyStateChanged();
         StartExecutions(dispatch);
     }
 
@@ -185,8 +192,10 @@ internal sealed class ModuleStartupWorkScheduler(
 
                 _passedBarrier = barrier;
                 _barriers.Add(result);
+                RecordStateChangedUnderLock();
             }
 
+            NotifyStateChanged();
             release.TrySetResult(result);
             return result;
         }
@@ -240,22 +249,71 @@ internal sealed class ModuleStartupWorkScheduler(
         }
     }
 
+    /// <summary>Releases serial commits that cannot run after composition has failed.</summary>
+    internal void ReleaseUncommittedCommits()
+    {
+        ModuleStartupWorkItem[] items;
+        lock (_gate)
+        {
+            items = _items.Values.ToArray();
+        }
+
+        foreach (var item in items)
+        {
+            item.ReleaseCommit();
+        }
+    }
+
     /// <summary>
     /// Returns a thread-safe live snapshot, including queued and running work.
     /// </summary>
     internal ModuleStartupWorkSnapshot GetSnapshot()
     {
-        var observedTimestamp = Stopwatch.GetTimestamp();
-        var observedAtUtc = DateTimeOffset.UtcNow;
-        lock (_gate)
+        while (true)
         {
-            return new ModuleStartupWorkSnapshot(
-                _items.Values
-                    .OrderBy(static item => item.RegistrationOrder)
-                    .ThenBy(static item => item.Sequence)
-                    .Select(item => item.CreateSnapshot(observedTimestamp, observedAtUtc))
-                    .ToArray(),
-                _barriers.ToArray());
+            ModuleStartupWorkItem[] items;
+            ModuleStartupWorkBarrierResult[] barriers;
+            long revision;
+            long observedTimestamp;
+            DateTimeOffset observedAtUtc;
+            lock (_gate)
+            {
+                if (_activeSnapshotMutations != 0)
+                {
+                    items = [];
+                    barriers = [];
+                    revision = -1;
+                    observedTimestamp = 0;
+                    observedAtUtc = default;
+                }
+                else
+                {
+                    items = _items.Values.ToArray();
+                    barriers = _barriers.ToArray();
+                    revision = _revision;
+                    observedTimestamp = Stopwatch.GetTimestamp();
+                    observedAtUtc = DateTimeOffset.UtcNow;
+                }
+            }
+
+            if (revision < 0)
+            {
+                Thread.Yield();
+                continue;
+            }
+
+            var workItems = items
+                .OrderBy(static item => item.RegistrationOrder)
+                .ThenBy(static item => item.Sequence)
+                .Select(item => item.CreateSnapshot(observedTimestamp, observedAtUtc))
+                .ToArray();
+            lock (_gate)
+            {
+                if (_activeSnapshotMutations == 0 && _revision == revision)
+                {
+                    return new ModuleStartupWorkSnapshot(revision, workItems, barriers);
+                }
+            }
         }
     }
 
@@ -271,6 +329,7 @@ internal sealed class ModuleStartupWorkScheduler(
         }
 
         Drain();
+        ReleaseUncommittedCommits();
         lock (_gate)
         {
             if (_disposed)
@@ -279,7 +338,10 @@ internal sealed class ModuleStartupWorkScheduler(
             }
 
             _disposed = true;
+            RecordStateChangedUnderLock();
         }
+
+        NotifyStateChanged();
     }
 
     /// <summary>
@@ -360,8 +422,17 @@ internal sealed class ModuleStartupWorkScheduler(
 
     private void ExecuteItem(ModuleStartupWorkItem item)
     {
-        item.MarkStarted();
-        var result = item.Execute();
+        BeginSnapshotMutation();
+        try
+        {
+            item.MarkStarted();
+        }
+        finally
+        {
+            EndSnapshotMutation();
+        }
+
+        var result = item.Execute(BeginSnapshotMutation, EndSnapshotMutation);
         try
         {
             itemCompleted?.Invoke(result);
@@ -386,7 +457,52 @@ internal sealed class ModuleStartupWorkScheduler(
         StartExecutions(dispatch);
         lock (_completionSignalGate)
         {
-            item.SignalCompletion(_nextCompletionSignalSequence++);
+            BeginSnapshotMutation();
+            try
+            {
+                item.SignalCompletion(_nextCompletionSignalSequence++);
+            }
+            finally
+            {
+                EndSnapshotMutation();
+            }
+        }
+    }
+
+    private void BeginSnapshotMutation()
+    {
+        lock (_gate)
+        {
+            _activeSnapshotMutations++;
+            RecordStateChangedUnderLock();
+        }
+    }
+
+    private void EndSnapshotMutation()
+    {
+        lock (_gate)
+        {
+            _activeSnapshotMutations--;
+            RecordStateChangedUnderLock();
+        }
+
+        NotifyStateChanged();
+    }
+
+    private void RecordStateChangedUnderLock()
+    {
+        _revision++;
+    }
+
+    private void NotifyStateChanged()
+    {
+        try
+        {
+            stateChanged?.Invoke();
+        }
+        catch
+        {
+            // Diagnostic observers cannot affect scheduler correctness or host startup.
         }
     }
 
@@ -409,7 +525,7 @@ internal sealed class ModuleStartupWorkScheduler(
         }
 
         var expected = _passedBarrier is null
-            ? ModuleStartupWorkBarrier.BeforeBusinessTypeIteration
+            ? ModuleStartupWorkBarrier.BeforeTypeDiscovery
             : (ModuleStartupWorkBarrier)((int)_passedBarrier.Value + 1);
         if (barrier != expected)
         {
@@ -442,6 +558,7 @@ internal sealed class ModuleStartupWorkItem(
 {
     private readonly object _gate = new();
     private readonly TaskCompletionSource _completion = new(TaskCreationOptions.RunContinuationsAsynchronously);
+    private readonly ModuleStartupWorkCommit? _commit = commit is null ? null : new ModuleStartupWorkCommit(commit);
     private readonly long _submittedTimestamp = Stopwatch.GetTimestamp();
     private readonly DateTimeOffset _submittedAtUtc = DateTimeOffset.UtcNow;
     private long? _startedTimestamp;
@@ -451,6 +568,7 @@ internal sealed class ModuleStartupWorkItem(
     private long? _completionSignaledTimestamp;
     private long? _completionSignalSequence;
     private Exception? _failure;
+    private Action? _work = work;
     private bool _isReported;
     private ModuleStartupWorkExecutionStatus _status = ModuleStartupWorkExecutionStatus.Queued;
 
@@ -493,31 +611,47 @@ internal sealed class ModuleStartupWorkItem(
         }
     }
 
-    internal ModuleStartupWorkResult Execute()
+    internal ModuleStartupWorkResult Execute(Action beginStateMutation, Action endStateMutation)
     {
+        ArgumentNullException.ThrowIfNull(beginStateMutation);
+        ArgumentNullException.ThrowIfNull(endStateMutation);
+        Action callback;
+        lock (_gate)
+        {
+            callback = _work
+                       ?? throw new InvalidOperationException($"Startup work '{Name}' cannot execute more than once.");
+            _work = null;
+        }
+
         Exception? failure = null;
         try
         {
-            work();
+            callback();
         }
         catch (Exception exception)
         {
             failure = exception;
+            _commit?.Release();
         }
 
-        ModuleStartupWorkResult result;
-        lock (_gate)
+        beginStateMutation();
+        try
         {
-            _completedAtUtc = DateTimeOffset.UtcNow;
-            _completedTimestamp = Stopwatch.GetTimestamp();
-            _failure = failure;
-            _status = failure is null
-                ? ModuleStartupWorkExecutionStatus.Succeeded
-                : ModuleStartupWorkExecutionStatus.Failed;
-            result = CreateSnapshotCore(_completedTimestamp.Value, _completedAtUtc.Value);
+            lock (_gate)
+            {
+                _completedAtUtc = DateTimeOffset.UtcNow;
+                _completedTimestamp = Stopwatch.GetTimestamp();
+                _failure = failure;
+                _status = failure is null
+                    ? ModuleStartupWorkExecutionStatus.Succeeded
+                    : ModuleStartupWorkExecutionStatus.Failed;
+                return CreateSnapshotCore(_completedTimestamp.Value, _completedAtUtc.Value);
+            }
         }
-
-        return result;
+        finally
+        {
+            endStateMutation();
+        }
     }
 
     internal void SignalCompletion(long signalSequence)
@@ -580,8 +714,23 @@ internal sealed class ModuleStartupWorkItem(
                 ? TimeSpan.Zero
                 : Stopwatch.GetElapsedTime(_startedTimestamp.Value, executionEnd),
             _failure,
-            commit);
+            _commit);
     }
+
+    /// <summary>Releases a serial commit that can no longer run after composition failure or disposal.</summary>
+    internal void ReleaseCommit() => _commit?.Release();
+}
+
+/// <summary>Owns a serial startup-work commit as a one-shot delegate.</summary>
+internal sealed class ModuleStartupWorkCommit(Action callback)
+{
+    private Action? _callback = callback;
+
+    /// <summary>Atomically transfers delegate ownership to the serial composition thread.</summary>
+    internal Action? Take() => Interlocked.Exchange(ref _callback, null);
+
+    /// <summary>Releases a delegate that will never be published.</summary>
+    internal void Release() => Interlocked.Exchange(ref _callback, null);
 }
 
 internal enum ModuleStartupWorkExecutionStatus
@@ -618,7 +767,7 @@ internal sealed record ModuleStartupWorkResult(
     TimeSpan QueueDuration,
     TimeSpan ExecutionDuration,
     Exception? Failure,
-    Action? Commit)
+    ModuleStartupWorkCommit? Commit)
 {
     internal bool IsTerminal => Status is ModuleStartupWorkExecutionStatus.Succeeded
         or ModuleStartupWorkExecutionStatus.Failed;
@@ -654,6 +803,7 @@ internal sealed record ModuleStartupWorkBarrierPendingResult(
 /// Immutable live scheduler snapshot used by profiling and error aggregation.
 /// </summary>
 internal sealed record ModuleStartupWorkSnapshot(
+    long Revision,
     IReadOnlyList<ModuleStartupWorkResult> WorkItems,
     IReadOnlyList<ModuleStartupWorkBarrierResult> Barriers);
 

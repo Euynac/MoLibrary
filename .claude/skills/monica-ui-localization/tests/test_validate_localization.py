@@ -118,8 +118,7 @@ class LocalizationValidatorTests(unittest.TestCase):
             },
             sources={
                 'Modules/ModuleDashboard.cs': (
-                    '[ModuleKey("Acme.Monica.MixedPackage.UI")]\n'
-                    'public sealed class ModuleDashboard\n'
+                    'public sealed class ModuleDashboard : IUIModule\n'
                     '{\n'
                     '    void Register(INavigationRegistryBuilder registry)\n'
                     '    {\n'
@@ -132,7 +131,7 @@ class LocalizationValidatorTests(unittest.TestCase):
                     '            "Navigation:Page",\n'
                     '            categoryId: category);\n'
                     '    }\n'
-                    '    ModuleLocalizationGuide localization = default!;\n'
+                    '    ModuleRegistration<ModuleLocalization, ModuleLocalizationOption> localization = default!;\n'
                     '}\n'
                 ),
             },
@@ -162,8 +161,7 @@ class LocalizationValidatorTests(unittest.TestCase):
             },
             sources={
                 'Modules/ModuleDashboard.cs': (
-                    '[ModuleKey("Acme.Monica.MixedPackage.UI")]\n'
-                    'public sealed class ModuleDashboard\n'
+                    'public sealed class ModuleDashboard : IUIModule\n'
                     '{\n'
                     '    void Register(INavigationRegistryBuilder registry)\n'
                     '    {\n'
@@ -193,8 +191,7 @@ class LocalizationValidatorTests(unittest.TestCase):
             },
             sources={
                 'Modules/ModuleDashboard.cs': (
-                    '[ModuleKey("Acme.Monica.MixedPackage.UI")]\n'
-                    'public sealed class ModuleDashboard\n'
+                    'public sealed class ModuleDashboard : IUIModule\n'
                     '{\n'
                     '    void Register(INavigationRegistryBuilder registry)\n'
                     '    {\n'
@@ -225,8 +222,7 @@ class LocalizationValidatorTests(unittest.TestCase):
             },
             sources={
                 'Modules/ModuleDashboard.cs': (
-                    '[ModuleKey("Acme.Monica.MixedPackage.UI")]\n'
-                    'public sealed class ModuleDashboard\n'
+                    'public sealed class ModuleDashboard : IUIModule\n'
                     '{\n'
                     '    void Register(INavigationRegistryBuilder registry)\n'
                     '    {\n'
@@ -257,8 +253,7 @@ class LocalizationValidatorTests(unittest.TestCase):
             },
             sources={
                 'Modules/ModuleDashboard.cs': (
-                    '[ModuleKey("Acme.Monica.MixedPackage.UI")]\n'
-                    'public sealed class ModuleDashboard;\n'
+                    'public sealed class ModuleDashboard : IUIModule;\n'
                 ),
             },
             razor_sdk=False,

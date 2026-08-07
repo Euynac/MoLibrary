@@ -7,7 +7,6 @@ using Monica.Core;
 using Monica.Core.Extensions;
 using Monica.Core.Modularity;
 using Monica.Core.Modularity.Abstractions;
-using Monica.Core.Modularity.Annotations;
 using Monica.Core.Modularity.Models;
 using Monica.Logging.Providers.Serilog;
 using Monica.Logging.Services;
@@ -26,24 +25,48 @@ public static class ModuleLoggingBuilderExtensions
         /// <summary>
         /// Configure Logging module
         /// </summary>
-        public ModuleLoggingGuide AddLogging(Action<ModuleLoggingOption>? action = null)
+        public ModuleRegistration<ModuleLogging, ModuleLoggingOption> AddLogging(
+            Action<ModuleLoggingOption>? action = null)
         {
-            return builder.AddModule<ModuleLogging, ModuleLoggingOption, ModuleLoggingGuide>(action);
+            return builder.AddModule<ModuleLogging, ModuleLoggingOption>(action);
+        }
+    }
+
+    extension(ModuleRegistration<ModuleLogging, ModuleLoggingOption> registration)
+    {
+        public ModuleRegistration<ModuleLogging, ModuleLoggingOption> AddRequestResponseLoggingMiddleware(
+            bool disableResponse = false,
+            bool disableRequest = false)
+        {
+            return registration
+                .RequireWebHost("Request/response logging middleware must run in an ASP.NET Core request pipeline.")
+                .ConfigureServices(context =>
+                {
+                    context.Services.AddTransient<HttpRequestLoggingMiddleware>();
+                    context.Services.AddTransient<HttpResponseLoggingMiddleware>();
+                })
+                .ConfigureApplicationBuilder(context =>
+                {
+                    if (!disableRequest)
+                    {
+                        context.ApplicationBuilder.UseMiddleware<HttpRequestLoggingMiddleware>();
+                    }
+
+                    if (!disableResponse)
+                    {
+                        context.ApplicationBuilder.UseMiddleware<HttpResponseLoggingMiddleware>();
+                    }
+                }, ModuleWebStage.BeforeRouting);
         }
     }
 }
 
-[ModuleKey(BuiltInModuleKey.Logging)]
-public class ModuleLogging(ModuleLoggingOption option) : WebModuleBase<ModuleLogging, ModuleLoggingOption, ModuleLoggingGuide>(option)
+public class ModuleLogging : MonicaModule<ModuleLoggingOption>, IWebModule
 {
-    public override bool CanDowngradeToNonWebModule()
+    public override void ConfigureBuilder(ModuleBuilderContext<ModuleLoggingOption> context)
     {
-        return true;
-    }
-
-    public override void ConfigureBuilder(IHostApplicationBuilder builder)
-    {
-        var serilogLogger = SerilogLoggingBootstrapper.CreateLogger(builder.Configuration, option);
+        var builder = context.HostApplicationBuilder;
+        var serilogLogger = SerilogLoggingBootstrapper.CreateLogger(builder.Configuration, Option);
 
         builder.Logging.ClearProviders();
         builder.Services.AddSerilog(serilogLogger, dispose: true);
@@ -53,32 +76,6 @@ public class ModuleLogging(ModuleLoggingOption option) : WebModuleBase<ModuleLog
         var level =
             builder.Configuration.GetSectionRecursively("Serilog:MinimumLevel").Select(p => new { p.Key, p.Value }).ToList().ToJsonString();
         Logger.LogInformation("Set logging level: {LoggingLevel}", level);
-    }
-}
-
-public class ModuleLoggingGuide : WebModuleGuide<ModuleLogging, ModuleLoggingOption, ModuleLoggingGuide>
-{
-    public ModuleLoggingGuide AddRequestResponseLoggingMiddleware(bool disableResponse = false, bool disableRequest = false)
-    {
-        ConfigureServices(context =>
-        {
-            context.Services.AddTransient<HttpRequestLoggingMiddleware>();
-            context.Services.AddTransient<HttpResponseLoggingMiddleware>();
-        });
-        ConfigureApplicationBuilder(context =>
-        {
-            if (!disableRequest)
-            {
-                context.ApplicationBuilder.UseMiddleware<HttpRequestLoggingMiddleware>();
-            }
-
-            if (!disableResponse)
-            {
-                context.ApplicationBuilder.UseMiddleware<HttpResponseLoggingMiddleware>();
-            }
-
-        }, ModuleApplicationMiddlewareOrder.BeforeUseRouting);
-        return this;
     }
 }
 

@@ -1,0 +1,230 @@
+@implements IAsyncDisposable
+@using Microsoft.Extensions.Localization
+@using Monica.Core.Modularity.Diagnostics.Models
+@using Monica.UI.Localization
+@using Monica.UI.UIModuleSystem.State
+@using Monica.UI.UIModuleSystem.Support
+@inject IJSRuntime JSRuntime
+@inject IStringLocalizer<ModuleSystemResource> L
+
+<div class="dependency-graph-canvas" aria-busy="@(_renderState == GraphRenderState.Loading)">
+    <div class="graph-surface"
+         @ref="_graphRoot"
+         role="img"
+         aria-label="@L["Aria:DependencyGraph", Session.VisibleDependencyModules.Count, Session.VisibleDependencyEdges.Count]">
+    </div>
+    @if (_renderState == GraphRenderState.Loading)
+    {
+        <div class="graph-placeholder">
+            <MudProgressCircular Indeterminate="true" Size="Size.Small" Color="Color.Primary" />
+            <span>@L["Dependencies:Graph:Rendering"]</span>
+        </div>
+    }
+    else if (_renderState == GraphRenderState.Failed)
+    {
+        <div class="graph-placeholder graph-failed" role="alert">
+            <MudIcon Icon="@Icons.Material.Filled.BrokenImage" Color="Color.Error" />
+            <span>@L["Dependencies:Graph:Failed"]</span>
+            <MudButton Variant="Variant.Outlined"
+                       Color="Color.Primary"
+                       StartIcon="@Icons.Material.Filled.Refresh"
+                       OnClick="@RetryAsync">
+                @L["Actions:Retry"]
+            </MudButton>
+        </div>
+    }
+</div>
+
+@code {
+    private ElementReference _graphRoot;
+    private ModuleDependencyGraphInteropSession? _interop;
+    private DotNetObjectReference<ModuleDependencyGraphCanvas>? _callbackReference;
+    private GraphRenderState _renderState = GraphRenderState.Loading;
+    private string? _failedRenderIdentity;
+    private bool _disposed;
+
+    [Parameter, EditorRequired] public ModuleSystemWorkbenchSession Session { get; set; } = default!;
+    [Parameter] public string Layout { get; set; } = "force";
+    [Parameter] public string SearchText { get; set; } = string.Empty;
+    [Parameter] public EventCallback<ModuleDiagnosticsModule> ModuleSelected { get; set; }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (_disposed)
+        {
+            return;
+        }
+
+        var renderIdentity = BuildRenderIdentity();
+        if (_renderState == GraphRenderState.Failed
+            && string.Equals(renderIdentity, _failedRenderIdentity, StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        _interop ??= new ModuleDependencyGraphInteropSession(JSRuntime);
+        _callbackReference ??= DotNetObjectReference.Create(this);
+        var outcome = await _interop.RenderAsync(
+            _graphRoot,
+            BuildGraphModel(),
+            renderIdentity,
+            _callbackReference);
+        if (_disposed || outcome == ModuleDependencyGraphRenderOutcome.Cancelled)
+        {
+            return;
+        }
+
+        var nextState = outcome == ModuleDependencyGraphRenderOutcome.Rendered
+            ? GraphRenderState.Ready
+            : GraphRenderState.Failed;
+        _failedRenderIdentity = nextState == GraphRenderState.Failed ? renderIdentity : null;
+        if (_renderState != nextState)
+        {
+            _renderState = nextState;
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    /// <summary>Zooms this graph instance in around its current viewport center.</summary>
+    public Task ZoomInAsync() => InvokeGraphCommandAsync("zoomIn");
+
+    /// <summary>Zooms this graph instance out around its current viewport center.</summary>
+    public Task ZoomOutAsync() => InvokeGraphCommandAsync("zoomOut");
+
+    /// <summary>Fits every currently visible module into this graph instance.</summary>
+    public Task FitAsync() => InvokeGraphCommandAsync("fit");
+
+    /// <summary>Centers this graph instance on the selected module.</summary>
+    public Task FocusSelectedAsync() => Session.SelectedModule is null
+        ? Task.CompletedTask
+        : InvokeGraphCommandAsync("focus", Session.SelectedModule.ModuleKey.Id);
+
+    /// <summary>Receives a node selection from this graph instance.</summary>
+    [JSInvokable]
+    public async Task OnNodeSelected(string moduleId)
+    {
+        if (_disposed || Session.Snapshot is null)
+        {
+            return;
+        }
+
+        var module = Session.Snapshot.Modules.FirstOrDefault(candidate =>
+            string.Equals(candidate.ModuleKey.Id, moduleId, StringComparison.Ordinal));
+        if (module is null)
+        {
+            return;
+        }
+
+        await ModuleSelected.InvokeAsync(module);
+    }
+
+    /// <summary>Transitions this instance to its retryable failure state after a deferred browser render fails.</summary>
+    [JSInvokable]
+    public async Task OnGraphRenderFailed()
+    {
+        if (_disposed)
+        {
+            return;
+        }
+
+        _failedRenderIdentity = BuildRenderIdentity();
+        _renderState = GraphRenderState.Failed;
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private Task InvokeGraphCommandAsync(string command, object? argument = null) =>
+        _interop?.InvokeAsync(command, argument) ?? Task.CompletedTask;
+
+    private async Task RetryAsync()
+    {
+        if (_disposed)
+        {
+            return;
+        }
+
+        var interop = _interop;
+        _interop = null;
+        _failedRenderIdentity = null;
+        _renderState = GraphRenderState.Loading;
+        if (interop is not null)
+        {
+            await interop.DisposeAsync();
+        }
+
+        if (!_disposed)
+        {
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    private object BuildGraphModel()
+    {
+        var selectedKey = Session.SelectedModule?.ModuleKey;
+        return new
+        {
+            selectedId = selectedKey?.Id,
+            layout = Layout,
+            searchText = SearchText,
+            fullHost = Session.ShowFullDependencyGraph,
+            nodes = Session.VisibleDependencyModules.Select(module => new
+            {
+                id = module.ModuleKey.Id,
+                label = module.TypeName,
+                depth = module.DependencyDepth,
+                selected = module.ModuleKey == selectedKey,
+                failed = module.ErrorCount > 0,
+                module.IsUiModule,
+                module.IsWebModule,
+                module.RequiresWebHost,
+                tooltip = NodeTooltip(module)
+            }).ToArray(),
+            edges = Session.VisibleDependencyEdges.Select(edge => new
+            {
+                source = edge.SourceModule.Id,
+                target = edge.TargetModule.Id
+            }).ToArray()
+        };
+    }
+
+    private string NodeTooltip(ModuleDiagnosticsModule module) => string.Join(Environment.NewLine, [
+        module.TypeName,
+        L["Dependencies:Selected:Depth", module.DependencyDepth],
+        L["Dependencies:Selected:RequiresCount", module.DirectDependencyCount],
+        L["Dependencies:Selected:RequiredByCount", module.DirectDependentCount],
+        L["Dependencies:Selected:InspectHint"]
+    ]);
+
+    private string BuildRenderIdentity()
+    {
+        var moduleIds = string.Join('|', Session.VisibleDependencyModules.Select(static module => module.ModuleKey.Id));
+        var edges = string.Join('|', Session.VisibleDependencyEdges.Select(static edge =>
+            $"{edge.SourceModule.Id}>{edge.TargetModule.Id}"));
+        return $"{Session.SelectedModule?.ModuleKey.Id}:{Layout}:{SearchText}:{Session.ShowFullDependencyGraph}:{moduleIds}:{edges}";
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (_disposed)
+        {
+            return;
+        }
+
+        _disposed = true;
+        var interop = _interop;
+        _interop = null;
+        if (interop is not null)
+        {
+            await interop.DisposeAsync();
+        }
+
+        _callbackReference?.Dispose();
+        _callbackReference = null;
+    }
+
+    private enum GraphRenderState
+    {
+        Loading,
+        Ready,
+        Failed
+    }
+}

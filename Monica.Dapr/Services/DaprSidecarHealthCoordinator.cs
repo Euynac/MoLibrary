@@ -6,7 +6,6 @@ using Microsoft.Extensions.Options;
 
 using Monica.Core.HostedService.Abstractions;
 using Monica.Core.HostedService.Models;
-using Monica.Core.Modularity.Models;
 using Monica.Core.ObservableInstance.Abstractions;
 using Monica.Dapr.Abstractions;
 using Monica.Dapr.Models;
@@ -65,7 +64,7 @@ public class DaprSidecarHealthCoordinator(
     /// Gets the name of this service for identification and monitoring
     /// </summary>
     public override string ServiceName => "DaprSidecarHealthCoordinator";
-    public override string? ServiceGroupId => nameof(BuiltInModuleKey.DaprClient);
+    public override string? ServiceGroupId => nameof(ModuleDaprClient);
 
     /// <summary>
     /// Waits for the Dapr sidecar to become healthy or timeout.

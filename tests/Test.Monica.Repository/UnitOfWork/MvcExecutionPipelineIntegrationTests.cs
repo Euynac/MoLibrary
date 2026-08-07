@@ -146,7 +146,7 @@ public sealed class MvcExecutionPipelineIntegrationTests
             else
             {
                 monica.AddControllers()
-                    .ConfigMvcBuilder((mvc, _) => mvc
+                    .ConfigMvcBuilder(mvc => mvc
                         .AddApplicationPart(typeof(MvcExecutionPipelineIntegrationTests).Assembly)
                         .AddControllersAsServices());
             }

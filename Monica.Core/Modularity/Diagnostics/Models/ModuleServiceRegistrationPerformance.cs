@@ -9,7 +9,7 @@ namespace Monica.Core.Modularity.Diagnostics.Models;
 /// configuration takes precedence over blocking waits, which take precedence over callbacks, so malformed or
 /// synthetic overlapping spans are never counted twice.
 /// </remarks>
-public sealed class ModuleServiceRegistrationPerformance
+internal sealed class ModuleServiceRegistrationPerformance
 {
     /// <summary>Gets the observed service-registration duration.</summary>
     public double TotalDurationMs { get; init; }

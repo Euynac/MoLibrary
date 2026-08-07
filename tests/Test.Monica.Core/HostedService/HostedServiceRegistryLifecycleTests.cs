@@ -7,6 +7,7 @@ using Monica.Core.HostedService.Abstractions;
 using Monica.Core.HostedService.Abstractions.Internal;
 using Monica.Core.HostedService.Models;
 using Monica.Core.HostedService.Services.Support;
+using Monica.Core.Modularity.Extensions;
 using Monica.Core.ObservableInstance.Abstractions;
 using Monica.Core.ObservableInstance.Services;
 using Monica.Modules;
@@ -160,7 +161,11 @@ public sealed class HostedServiceRegistryLifecycleTests
             options.ServicesStartConcurrently = true;
             options.ServicesStopConcurrently = true;
         });
-        new ModuleHostedService(new ModuleHostedServiceOption()).ConfigureServices(builder.Services);
+        builder.AddMonica(monica =>
+        {
+            monica.ConfigureTypeDiscovery(static options => options.ExcludeDefault());
+            monica.AddHostedService();
+        });
         return builder;
     }
 

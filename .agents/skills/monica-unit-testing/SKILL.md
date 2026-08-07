@@ -17,7 +17,7 @@ Use `Monica.Testing` as the shared toolkit and keep runnable framework tests und
    - Blazor component or page shell: use bUnit in the runnable UI test project.
    - Roslyn source-generator semantics: build an in-memory `CSharpCompilation` and run the generator through `GeneratorDriver`.
 3. Put reusable assertions, host helpers, and deterministic boundary doubles in `Monica.Testing`; keep scenario-specific data and doubles in the runnable test project.
-4. Prefer public-surface coverage: module guides, facades, public models and abstractions, stable providers, and observable side effects.
+4. Prefer public-surface coverage: module registrations, facades, public models and abstractions, stable providers, and observable side effects.
 5. Run one `dotnet test` process at a time with Windows paths under WSL.
 
 ## Host-Owned Scenarios
@@ -71,7 +71,7 @@ Test source generators with raw Roslyn inputs under a dedicated `tests/Test.Moni
 ## Monica-Specific Rules
 
 - Assert `Res<T>` explicitly. Facade tests cover `Status`, `Message`, and `Data`; successful `Res<string>` paths always verify `Data`.
-- Test module behavior through guide configuration, dependencies, resulting options, or DI-visible registrations rather than static tables alone.
+- Test module behavior through registration extensions, dependencies, resulting options, or DI-visible registrations rather than static tables alone.
 - Replace external boundaries, not domain logic. Resolve application services, domain services, repositories, mappers, and options from the scenario host.
 - Avoid real network, uncontrolled persistence, sleeps, random inputs, and untracked machine state.
 - Keep `InternalsVisibleTo` exceptional and scoped to the corresponding runnable test project.

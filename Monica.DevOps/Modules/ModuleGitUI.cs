@@ -1,7 +1,6 @@
 using Monica.Core;
 using Monica.Core.Modularity;
 using Monica.Core.Modularity.Abstractions;
-using Monica.Core.Modularity.Annotations;
 using Monica.Core.Modularity.Models;
 using Monica.DevOps.Git.Pages;
 using Monica.DevOps.Localization;
@@ -21,9 +20,19 @@ public static class ModuleGitUIBuilderExtensions
         /// <summary>
         /// Configures the Git dashboard UI module.
         /// </summary>
-        public ModuleGitUIGuide AddGitUI(Action<ModuleGitUIOption>? action = null)
+        public ModuleRegistration<ModuleGitUI, ModuleGitUIOption> AddGitUI(Action<ModuleGitUIOption>? action = null)
         {
-            return builder.AddModule<ModuleGitUI, ModuleGitUIOption, ModuleGitUIGuide>(action);
+            var module = builder.AddModule<ModuleGitUI, ModuleGitUIOption>(action);
+            module.Require<ModuleLocalization, ModuleLocalizationOption>().AddResource<GitResource>();
+            module.Require<ModuleShellUI, ModuleShellUIOption>()
+                .RegisterUIComponents(registry => registry.RegisterLocalizedPage<UIGitRepositoriesPage, GitResource>(
+                    UIGitRepositoriesPage.PAGE_URL,
+                    "Pages:GitRepositories:Title",
+                    Icons.Material.Filled.Source,
+                    BuiltInNavigationCategoryIds.Infrastructure,
+                    addToNav: true,
+                    navOrder: 55));
+            return module;
         }
     }
 }
@@ -31,49 +40,23 @@ public static class ModuleGitUIBuilderExtensions
 /// <summary>
 /// Git dashboard UI module.
 /// </summary>
-[ModuleKey(BuiltInModuleKey.GitUI)]
-public class ModuleGitUI(ModuleGitUIOption option)
-    : ModuleBase<ModuleGitUI, ModuleGitUIOption, ModuleGitUIGuide>(option)
+public class ModuleGitUI : MonicaModule<ModuleGitUIOption>, IUIModule
 {
     /// <inheritdoc />
-    public override void ClaimDependencies()
+    public override void Describe(ModuleDescriptor module)
     {
-        DependsOnModule<ModuleGitGuide>().Register();
-
-        if (!Option.DisableGitDashboardPage)
-        {
-            DependsOnModule<ModuleLocalizationGuide>().Register()
-                .AddResource<GitResource>();
-
-            DependsOnModule<ModuleShellUIGuide>().Register()
-                .RegisterUIComponents(registry =>
-                {
-                    registry.RegisterLocalizedPage<UIGitRepositoriesPage, GitResource>(
-                        UIGitRepositoriesPage.PAGE_URL,
-                        "Pages:GitRepositories:Title",
-                        Icons.Material.Filled.Source,
-                        BuiltInNavigationCategoryIds.Infrastructure,
-                        addToNav: true,
-                        navOrder: 55);
-                });
-        }
+        module.Require<ModuleGit, ModuleGitOption>();
+        module.Require<ModuleLocalization, ModuleLocalizationOption>();
+        module.Require<ModuleShellUI, ModuleShellUIOption>();
     }
 }
 
 /// <summary>
-/// Fluent guide for the Git dashboard UI module.
+/// Registration extensions for the Git dashboard UI module.
 /// </summary>
-public class ModuleGitUIGuide : ModuleGuide<ModuleGitUI, ModuleGitUIOption, ModuleGitUIGuide>
-{
-}
+
 
 /// <summary>
 /// Options for the Git dashboard UI module.
 /// </summary>
-public class ModuleGitUIOption : ModuleOptions<ModuleGitUI>
-{
-    /// <summary>
-    /// Gets or sets whether the dashboard page should be disabled.
-    /// </summary>
-    public bool DisableGitDashboardPage { get; set; }
-}
+public class ModuleGitUIOption : ModuleOptions<ModuleGitUI>;

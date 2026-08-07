@@ -1,76 +1,102 @@
 using Microsoft.Extensions.Logging;
-using Monica.Core.Extensions;
 using Monica.Core.Modularity.Diagnostics.Models;
 using Monica.Core.Modularity.Diagnostics.Services;
 using Monica.Core.Modularity.Models;
+using Monica.Core.Modularity.Metrics;
 using Monica.Core.Results;
-using Monica.Core.TypeDiscovery.Models;
 
 namespace Monica.Core.Modularity.Diagnostics.Facades;
 
 /// <summary>
-/// Query-oriented facade for module system dashboard pages and other UI entry points.
+/// Provides synchronous, read-only module diagnostics for local UI and host integration boundaries.
 /// </summary>
-public sealed class ModuleDiagnosticsFacade(
-    IModuleSystemInspectionService statusService,
-    ILogger<ModuleDiagnosticsFacade> logger)
+public sealed class ModuleDiagnosticsFacade
 {
-    /// <summary>
-    /// Gets the main dashboard snapshot excluding the expensive assembly analysis section.
-    /// </summary>
-    public Task<Res<ModuleDiagnosticsSnapshot>> GetDashboardSnapshotAsync()
+    private readonly ModuleDiagnosticsService _diagnostics;
+    private readonly ModuleInitMetrics _metrics;
+    private readonly ILogger<ModuleDiagnosticsFacade> _logger;
+
+    internal ModuleDiagnosticsFacade(
+        ModuleDiagnosticsService diagnostics,
+        ModuleInitMetrics metrics,
+        ILogger<ModuleDiagnosticsFacade> logger)
     {
-        try
-        {
-            return Task.FromResult<Res<ModuleDiagnosticsSnapshot>>(Res.Ok(new ModuleDiagnosticsSnapshot
+        _diagnostics = diagnostics;
+        _metrics = metrics;
+        _logger = logger;
+    }
+
+    /// <summary>Gets one immutable, revisioned diagnostics snapshot.</summary>
+    public Res<ModuleDiagnosticsSnapshot> GetSnapshot()
+    {
+        return Execute(
+            () =>
             {
-                SystemStatus = statusService.GetSystemStatus(),
-                SystemPerformance = statusService.GetSystemPerformance(),
-                HealthCheck = statusService.GetHealthCheck(),
-                RegistrationInfo = statusService.GetRegistrationInfo(),
-                DependencyGraph = statusService.GetDependencyGraph()
-            }));
-        }
-        catch (Exception ex)
-        {
-            logger.LogError(ex, "Failed to build the module system dashboard snapshot.");
-            return Task.FromResult<Res<ModuleDiagnosticsSnapshot>>(Res.Fail(
-                $"Failed to build the module system dashboard snapshot: {ex.GetMessageRecursively()}"));
-        }
+                var snapshot = _diagnostics.GetSnapshot();
+                _metrics.Observe(snapshot);
+                return snapshot;
+            },
+            "Failed to build the module diagnostics snapshot.");
+    }
+
+    /// <summary>Gets the lazily cached assembly-resolution and type-scan inventory.</summary>
+    public Res<TypeDiscoveryAssemblyInventory> GetAssemblyInventory()
+    {
+        return Execute(
+            _diagnostics.GetAssemblyInventory,
+            "Failed to load the type-discovery assembly inventory.");
     }
 
     /// <summary>
-    /// Gets the module assembly analysis snapshot.
+    /// Gets a complete public-property catalog with bounded values for one module's finalized default options.
     /// </summary>
-    public Task<Res<TypeFinderAssemblyAnalysis>> GetAssemblyAnalysisAsync()
+    /// <param name="moduleKey">The host-local module diagnostic key.</param>
+    public Res<ModuleOptionDiagnostics> GetModuleOptions(ModuleKey moduleKey)
     {
-        try
-        {
-            return Task.FromResult<Res<TypeFinderAssemblyAnalysis>>(Res.Ok(statusService.GetAssemblyAnalysis()));
-        }
-        catch (Exception ex)
-        {
-            logger.LogError(ex, "Failed to load the module assembly analysis snapshot.");
-            return Task.FromResult<Res<TypeFinderAssemblyAnalysis>>(Res.Fail(
-                $"Failed to load the module assembly analysis snapshot: {ex.GetMessageRecursively()}"));
-        }
+        return Execute(
+            () => _diagnostics.GetModuleOptions(moduleKey),
+            "Failed to load the module option diagnostics.");
     }
 
     /// <summary>
-    /// Gets details for a single module.
+    /// Gets a complete public-property catalog with bounded values for a named option profile or an explicitly
+    /// permitted default fallback.
     /// </summary>
-    /// <param name="moduleKey">The module key to query.</param>
-    public Task<Res<ModuleDetailInfo?>> GetModuleDetailAsync(ModuleKey moduleKey)
+    /// <param name="moduleKey">The host-local module diagnostic key.</param>
+    /// <param name="selector">The exact profile-selection and fallback behavior.</param>
+    public Res<ModuleOptionDiagnostics> GetModuleOptions(
+        ModuleKey moduleKey,
+        ModuleOptionProfileSelector selector)
+    {
+        return Execute(
+            () =>
+            {
+                ArgumentNullException.ThrowIfNull(selector);
+                return _diagnostics.GetModuleOptions(moduleKey, selector);
+            },
+            "Failed to load the module option diagnostics.");
+    }
+
+    /// <summary>
+    /// Creates a portable baseline without option values, assembly paths, stack traces, or raw exception details.
+    /// </summary>
+    public Res<ModuleDiagnosticsExport> CreateExport()
+    {
+        return Execute(
+            _diagnostics.CreateExport,
+            "Failed to create the module diagnostics export.");
+    }
+
+    private Res<T> Execute<T>(Func<T> action, string publicFailureMessage)
     {
         try
         {
-            return Task.FromResult<Res<ModuleDetailInfo?>>(Res.Ok(statusService.GetModuleDetail(moduleKey)));
+            return Res.Ok(action());
         }
-        catch (Exception ex)
+        catch (Exception exception)
         {
-            logger.LogError(ex, "Failed to load module details for {ModuleKey}.", moduleKey);
-            return Task.FromResult<Res<ModuleDetailInfo?>>(Res.Fail(
-                $"Failed to load module details: {ex.GetMessageRecursively()}"));
+            _logger.LogError(exception, "{FailureMessage}", publicFailureMessage);
+            return Res.Fail(publicFailureMessage);
         }
     }
 }

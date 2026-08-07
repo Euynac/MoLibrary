@@ -1,3 +1,4 @@
+using System.Collections.Immutable;
 using System.Diagnostics;
 using System.Text;
 using Monica.Core.Extensions;
@@ -13,21 +14,38 @@ namespace Monica.Core.Modularity.Services.Support;
 /// </summary>
 internal sealed class ModuleInitializationProfiler
 {
+    private readonly object _gate = new();
     private readonly ModuleProfilingState _state = new();
     private Func<ModuleStartupWorkSnapshot>? _startupWorkSnapshotProvider;
+    private long _lastStartupWorkRevision = -1;
+    private long _revision;
 
     /// <summary>
     /// Gets whether the full module-composition stopwatch is currently running.
     /// </summary>
-    internal bool IsRunning => _state.IsStarted;
+    internal bool IsRunning
+    {
+        get
+        {
+            lock (_gate)
+            {
+                return _state.IsStarted;
+            }
+        }
+    }
 
     /// <summary>
     /// Clears all profiling data for this host.
     /// </summary>
     internal void Clear()
     {
-        _startupWorkSnapshotProvider = null;
-        _state.Clear();
+        lock (_gate)
+        {
+            _startupWorkSnapshotProvider = null;
+            _lastStartupWorkRevision = -1;
+            _state.Clear();
+            _revision++;
+        }
     }
 
     /// <summary>
@@ -35,16 +53,20 @@ internal sealed class ModuleInitializationProfiler
     /// </summary>
     internal void StartModuleSystem()
     {
-        if (_state.IsStarted)
+        lock (_gate)
         {
-            return;
-        }
+            if (_state.IsStarted)
+            {
+                return;
+            }
 
-        _state.OriginUtc = DateTimeOffset.UtcNow;
-        _state.OriginTimestamp = Stopwatch.GetTimestamp();
-        _state.TerminalTimestamp = null;
-        _state.IsStarted = true;
-        RecordMilestone(ModuleCompositionMilestone.CompositionStarted);
+            _state.OriginUtc = DateTimeOffset.UtcNow;
+            _state.OriginTimestamp = Stopwatch.GetTimestamp();
+            _state.TerminalTimestamp = null;
+            _state.IsStarted = true;
+            _revision++;
+            RecordMilestone(ModuleCompositionMilestone.CompositionStarted);
+        }
     }
 
     /// <summary>
@@ -52,13 +74,17 @@ internal sealed class ModuleInitializationProfiler
     /// </summary>
     internal void StopModuleSystem()
     {
-        if (!_state.IsStarted)
+        lock (_gate)
         {
-            return;
-        }
+            if (!_state.IsStarted)
+            {
+                return;
+            }
 
-        _state.TerminalTimestamp = Stopwatch.GetTimestamp();
-        _state.IsStarted = false;
+            _state.TerminalTimestamp = Stopwatch.GetTimestamp();
+            _state.IsStarted = false;
+            _revision++;
+        }
     }
 
     /// <summary>
@@ -67,29 +93,33 @@ internal sealed class ModuleInitializationProfiler
     /// <param name="milestone">The milestone that just occurred.</param>
     internal void RecordMilestone(ModuleCompositionMilestone milestone)
     {
-        if (_state.OriginTimestamp is not { } originTimestamp)
+        lock (_gate)
         {
-            throw new InvalidOperationException("Module composition profiling has not started.");
-        }
+            if (_state.OriginTimestamp is not { } originTimestamp)
+            {
+                throw new InvalidOperationException("Module composition profiling has not started.");
+            }
 
-        if (_state.Milestones.Any(info => info.Milestone == milestone))
-        {
-            throw new InvalidOperationException($"Composition milestone {milestone} has already been recorded.");
-        }
+            if (_state.Milestones.Any(info => info.Milestone == milestone))
+            {
+                throw new InvalidOperationException($"Composition milestone {milestone} has already been recorded.");
+            }
 
-        var occurredAtUtc = DateTimeOffset.UtcNow;
-        var timestamp = milestone == ModuleCompositionMilestone.CompositionStarted
-            ? originTimestamp
-            : Stopwatch.GetTimestamp();
-        _state.Milestones.Add(new ModuleCompositionMilestonePerformanceInfo
-        {
-            Milestone = milestone,
-            Sequence = NextSequence(),
-            OccurredAtUtc = milestone == ModuleCompositionMilestone.CompositionStarted
-                ? _state.OriginUtc
-                : occurredAtUtc,
-            OffsetMs = GetOffsetMs(timestamp)
-        });
+            var occurredAtUtc = DateTimeOffset.UtcNow;
+            var timestamp = milestone == ModuleCompositionMilestone.CompositionStarted
+                ? originTimestamp
+                : Stopwatch.GetTimestamp();
+            _state.Milestones.Add(new ModuleCompositionMilestonePerformanceInfo
+            {
+                Milestone = milestone,
+                Sequence = NextSequence(),
+                OccurredAtUtc = milestone == ModuleCompositionMilestone.CompositionStarted
+                    ? _state.OriginUtc
+                    : occurredAtUtc,
+                OffsetMs = GetOffsetMs(timestamp)
+            });
+            _revision++;
+        }
     }
 
     /// <summary>
@@ -98,18 +128,36 @@ internal sealed class ModuleInitializationProfiler
     /// <param name="phaseName">The profiler phase name.</param>
     internal void StartPhase(string phaseName)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(phaseName);
-        if (_state.ActiveSystemPhases.ContainsKey(phaseName))
-        {
-            throw new InvalidOperationException($"System composition phase '{phaseName}' is already running.");
-        }
+        StartPhaseCore(phaseName, stage: null);
+    }
 
-        _state.ActiveSystemPhases.Add(
-            phaseName,
-            new ModuleSystemPhaseProfileStart(
-                NextSequence(),
-                Stopwatch.GetTimestamp(),
-                DateTimeOffset.UtcNow));
+    /// <summary>
+    /// Starts one strongly typed framework orchestration stage.
+    /// </summary>
+    internal void StartStage(ModuleSystemStage stage)
+    {
+        StartPhaseCore(stage.ToString(), stage);
+    }
+
+    private void StartPhaseCore(string phaseName, ModuleSystemStage? stage)
+    {
+        lock (_gate)
+        {
+            ArgumentException.ThrowIfNullOrWhiteSpace(phaseName);
+            if (_state.ActiveSystemPhases.ContainsKey(phaseName))
+            {
+                throw new InvalidOperationException($"System composition phase '{phaseName}' is already running.");
+            }
+
+            _state.ActiveSystemPhases.Add(
+                phaseName,
+                new ModuleSystemPhaseProfileStart(
+                    NextSequence(),
+                    Stopwatch.GetTimestamp(),
+                    DateTimeOffset.UtcNow,
+                    stage));
+            _revision++;
+        }
     }
 
     /// <summary>
@@ -119,24 +167,37 @@ internal sealed class ModuleInitializationProfiler
     /// <returns>The completed phase duration in whole milliseconds.</returns>
     internal long StopPhase(string phaseName)
     {
-        if (!_state.ActiveSystemPhases.Remove(phaseName, out var start))
+        lock (_gate)
         {
-            return 0;
-        }
+            if (!_state.ActiveSystemPhases.Remove(phaseName, out var start))
+            {
+                return 0;
+            }
 
-        var completedTimestamp = Stopwatch.GetTimestamp();
-        var execution = new ModuleSystemPhasePerformanceInfo
-        {
-            ExecutionId = FormatExecutionId("system-phase", start.Sequence),
-            Sequence = start.Sequence,
-            PhaseName = phaseName,
-            StartedAtUtc = start.StartedAtUtc,
-            CompletedAtUtc = DateTimeOffset.UtcNow,
-            StartedOffsetMs = GetOffsetMs(start.StartedTimestamp),
-            CompletedOffsetMs = GetOffsetMs(completedTimestamp)
-        };
-        _state.SystemPhases.Add(execution);
-        return ToWholeMilliseconds(execution.DurationMs);
+            var completedTimestamp = Stopwatch.GetTimestamp();
+            var execution = new ModuleSystemPhasePerformanceInfo
+            {
+                ExecutionId = FormatExecutionId("system-phase", start.Sequence),
+                Sequence = start.Sequence,
+                PhaseName = phaseName,
+                Stage = start.Stage,
+                StartedAtUtc = start.StartedAtUtc,
+                CompletedAtUtc = DateTimeOffset.UtcNow,
+                StartedOffsetMs = GetOffsetMs(start.StartedTimestamp),
+                CompletedOffsetMs = GetOffsetMs(completedTimestamp)
+            };
+            _state.SystemPhases.Add(execution);
+            _revision++;
+            return ToWholeMilliseconds(execution.DurationMs);
+        }
+    }
+
+    /// <summary>
+    /// Completes one strongly typed framework orchestration stage.
+    /// </summary>
+    internal long StopStage(ModuleSystemStage stage)
+    {
+        return StopPhase(stage.ToString());
     }
 
     /// <summary>
@@ -146,14 +207,22 @@ internal sealed class ModuleInitializationProfiler
         Type moduleType,
         ModuleKey moduleKey,
         int registrationOrder,
-        ModulePhase phase)
+        ModulePhase phase,
+        ModuleCallbackKind kind = ModuleCallbackKind.Lifecycle,
+        string? workItemId = null)
     {
-        ArgumentNullException.ThrowIfNull(moduleType);
-        GetOrCreateModuleProfile(moduleType, moduleKey, registrationOrder).StartPhase(
-            phase,
-            NextSequence(),
-            Stopwatch.GetTimestamp(),
-            DateTimeOffset.UtcNow);
+        lock (_gate)
+        {
+            ArgumentNullException.ThrowIfNull(moduleType);
+            GetOrCreateModuleProfile(moduleType, moduleKey, registrationOrder).StartPhase(
+                phase,
+                kind,
+                workItemId,
+                NextSequence(),
+                Stopwatch.GetTimestamp(),
+                DateTimeOffset.UtcNow);
+            _revision++;
+        }
     }
 
     /// <summary>
@@ -161,9 +230,76 @@ internal sealed class ModuleInitializationProfiler
     /// </summary>
     internal long StopModulePhase(Type moduleType, ModulePhase phase)
     {
-        return _state.ModuleProfiles.TryGetValue(moduleType, out var profile)
-            ? ToWholeMilliseconds(profile.StopPhase(phase, Stopwatch.GetTimestamp(), DateTimeOffset.UtcNow))
-            : 0;
+        lock (_gate)
+        {
+            if (!_state.ModuleProfiles.TryGetValue(moduleType, out var profile))
+            {
+                return 0;
+            }
+
+            var duration = profile.StopPhase(phase, Stopwatch.GetTimestamp(), DateTimeOffset.UtcNow);
+            _revision++;
+            return ToWholeMilliseconds(duration);
+        }
+    }
+
+    /// <summary>
+    /// Records compiler-owned counters and reflection-free query summaries.
+    /// </summary>
+    internal void RecordTypeDiscoveryCompilation(
+        TypeDiscoveryStatistics statistics,
+        IReadOnlyList<TypeDiscoveryQuerySummary> queries)
+    {
+        lock (_gate)
+        {
+            ArgumentNullException.ThrowIfNull(statistics);
+            ArgumentNullException.ThrowIfNull(queries);
+            _state.TypeDiscoveryStatistics = statistics;
+            _state.TypeDiscoveryQueries = queries.ToImmutableArray();
+            _revision++;
+        }
+    }
+
+    /// <summary>
+    /// Completes type-discovery counters with serial commit and service-writer outcomes.
+    /// </summary>
+    internal void RecordTypeDiscoveryCommit(
+        int commitCallbackCount,
+        TypeDiscoveryServiceRegistrationStatistics serviceRegistrations)
+    {
+        lock (_gate)
+        {
+            ArgumentOutOfRangeException.ThrowIfNegative(commitCallbackCount);
+            ArgumentNullException.ThrowIfNull(serviceRegistrations);
+            _state.TypeDiscoveryStatistics = _state.TypeDiscoveryStatistics with
+            {
+                CommitCallbackCount = commitCallbackCount,
+                ServiceRegistrations = serviceRegistrations
+            };
+            _revision++;
+        }
+    }
+
+    /// <summary>
+    /// Gets the latest immutable type-discovery counter snapshot.
+    /// </summary>
+    internal TypeDiscoveryStatistics GetTypeDiscoveryStatistics()
+    {
+        lock (_gate)
+        {
+            return _state.TypeDiscoveryStatistics;
+        }
+    }
+
+    /// <summary>
+    /// Gets reflection-free discovery query summaries in stable compiler order.
+    /// </summary>
+    internal IReadOnlyList<TypeDiscoveryQuerySummary> GetTypeDiscoveryQueries()
+    {
+        lock (_gate)
+        {
+            return _state.TypeDiscoveryQueries;
+        }
     }
 
     /// <summary>
@@ -171,10 +307,108 @@ internal sealed class ModuleInitializationProfiler
     /// </summary>
     internal void AttachStartupWorkDiagnostics(Func<ModuleStartupWorkSnapshot> snapshotProvider)
     {
-        ArgumentNullException.ThrowIfNull(snapshotProvider);
-        if (Interlocked.CompareExchange(ref _startupWorkSnapshotProvider, snapshotProvider, null) is not null)
+        lock (_gate)
         {
-            throw new InvalidOperationException("Startup-work diagnostics are already attached to this host.");
+            ArgumentNullException.ThrowIfNull(snapshotProvider);
+            if (_startupWorkSnapshotProvider is not null)
+            {
+                throw new InvalidOperationException("Startup-work diagnostics are already attached to this host.");
+            }
+
+            _startupWorkSnapshotProvider = snapshotProvider;
+            _revision++;
+        }
+    }
+
+    /// <summary>
+    /// Advances the diagnostic revision after the attached startup scheduler changes visible state.
+    /// </summary>
+    internal void RecordExternalMutation()
+    {
+        lock (_gate)
+        {
+            _revision++;
+        }
+    }
+
+    /// <summary>
+    /// Captures one revision-consistent profiler snapshot under a short host-local lock.
+    /// </summary>
+    internal ModuleProfilingDiagnosticsCapture CaptureDiagnostics()
+    {
+        while (true)
+        {
+            ModuleProfilerStateCapture state;
+            lock (_gate)
+            {
+                if (_state.IsStarted)
+                {
+                    // Live durations advance between lifecycle mutations, so every live observation gets a revision.
+                    _revision++;
+                }
+
+                state = new ModuleProfilerStateCapture(
+                    _revision,
+                    _state.OriginUtc,
+                    _state.OriginTimestamp,
+                    _state.TerminalTimestamp,
+                    _state.IsStarted,
+                    _state.Milestones.ToImmutableArray(),
+                    _state.SystemPhases.ToImmutableArray(),
+                    _state.ModuleProfiles.Values
+                        .Select(static profile => profile.CreateDiagnosticsCapture())
+                        .ToImmutableArray(),
+                    _state.TypeDiscoveryStatistics,
+                    _state.TypeDiscoveryQueries.ToImmutableArray(),
+                    _startupWorkSnapshotProvider);
+            }
+
+            // Never invoke the scheduler while holding the profiler lock. The scheduler reports mutations back into
+            // the profiler, so keeping this call outside also removes the former lock-order inversion.
+            var startupWork = state.StartupWorkSnapshotProvider?.Invoke()
+                              ?? new ModuleStartupWorkSnapshot(0, [], []);
+            lock (_gate)
+            {
+                if (_revision != state.Revision)
+                {
+                    continue;
+                }
+
+                if (_lastStartupWorkRevision != startupWork.Revision)
+                {
+                    _lastStartupWorkRevision = startupWork.Revision;
+                    _revision++;
+                    state = state with { Revision = _revision };
+                }
+
+                if (!state.IsStarted && startupWork.WorkItems.Any(static work => !work.IsTerminal))
+                {
+                    _revision++;
+                    state = state with { Revision = _revision };
+                }
+            }
+
+            var observedTimestamp = Stopwatch.GetTimestamp();
+            var observedAtUtc = DateTimeOffset.UtcNow;
+            var performance = CreateCompositionPerformance(
+                state,
+                startupWork,
+                observedTimestamp,
+                observedAtUtc);
+            return new ModuleProfilingDiagnosticsCapture(
+                state.Revision,
+                performance,
+                state.TypeDiscoveryStatistics,
+                state.TypeDiscoveryQueries);
+        }
+    }
+
+    /// <summary>Gets the current revision without projecting diagnostic state.</summary>
+    internal long GetRevision()
+    {
+        lock (_gate)
+        {
+            return _revision;
         }
     }
 
@@ -183,22 +417,34 @@ internal sealed class ModuleInitializationProfiler
     /// </summary>
     internal ModuleCompositionPerformance GetCompositionPerformance()
     {
-        var moduleExecutions = _state.ModuleProfiles.Values
-            .SelectMany(profile => profile.CreateExecutions(GetOffsetMs))
+        return CaptureDiagnostics().Performance;
+    }
+
+    private static ModuleCompositionPerformance CreateCompositionPerformance(
+        ModuleProfilerStateCapture state,
+        ModuleStartupWorkSnapshot startupWorkSnapshot,
+        long observedTimestamp,
+        DateTimeOffset observedAtUtc)
+    {
+        double GetCapturedOffsetMs(long timestamp) => GetOffsetMs(state.OriginTimestamp, timestamp);
+
+        var moduleExecutions = state.ModuleProfiles
+            .SelectMany(profile => profile.CreateExecutions(GetCapturedOffsetMs))
             .OrderBy(static execution => execution.Sequence)
             .ToArray();
-        var startupWork = CreateStartupWorkDiagnostics();
-        var observedTimestamp = Stopwatch.GetTimestamp();
-        var observedAtUtc = DateTimeOffset.UtcNow;
+        var startupWork = CreateStartupWorkDiagnostics(startupWorkSnapshot, state.OriginTimestamp);
 
         return new ModuleCompositionPerformance
         {
-            StartedAtUtc = _state.OriginUtc,
-            ElapsedDurationMs = GetElapsedDurationMs(observedTimestamp),
+            StartedAtUtc = state.OriginUtc,
+            ElapsedDurationMs = GetElapsedDurationMs(
+                state.OriginTimestamp,
+                state.TerminalTimestamp,
+                observedTimestamp),
             ObservedAtUtc = observedAtUtc,
-            ObservedDurationMs = GetOffsetMs(observedTimestamp),
-            Milestones = _state.Milestones.OrderBy(static milestone => milestone.Sequence).ToArray(),
-            SystemPhases = _state.SystemPhases.OrderBy(static phase => phase.Sequence).ToArray(),
+            ObservedDurationMs = GetOffsetMs(state.OriginTimestamp, observedTimestamp),
+            Milestones = state.Milestones.OrderBy(static milestone => milestone.Sequence).ToArray(),
+            SystemPhases = state.SystemPhases.OrderBy(static phase => phase.Sequence).ToArray(),
             ModulePhaseExecutions = moduleExecutions,
             StartupWorkItems = startupWork.WorkItems,
             StartupWorkBarriers = startupWork.Barriers
@@ -211,10 +457,7 @@ internal sealed class ModuleInitializationProfiler
     internal ModulePerformanceInfo GetModulePerformance(ModuleRuntimeSnapshot snapshot)
     {
         ArgumentNullException.ThrowIfNull(snapshot);
-        var startupWorkItems = CreateStartupWorkDiagnostics().WorkItems;
-        var phaseExecutions = _state.ModuleProfiles.TryGetValue(snapshot.ModuleType, out var profile)
-            ? profile.CreateExecutions(GetOffsetMs)
-            : [];
+        var performance = CaptureDiagnostics().Performance;
         return new ModulePerformanceInfo
         {
             ModuleKey = snapshot.ModuleKey,
@@ -222,8 +465,10 @@ internal sealed class ModuleInitializationProfiler
             ModuleFullTypeName = snapshot.ModuleType.FullName ?? snapshot.ModuleType.Name,
             RegistrationOrder = snapshot.RegisterInfo.Order,
             IsRuntimeAvailable = true,
-            PhaseExecutions = phaseExecutions,
-            StartupWorkItems = startupWorkItems
+            PhaseExecutions = performance.ModulePhaseExecutions
+                .Where(execution => execution.ModuleKey == snapshot.ModuleKey)
+                .ToArray(),
+            StartupWorkItems = performance.StartupWorkItems
                 .Where(work => work.ModuleKey == snapshot.ModuleKey)
                 .OrderBy(static work => work.Sequence)
                 .ToArray()
@@ -237,22 +482,27 @@ internal sealed class ModuleInitializationProfiler
         IReadOnlySet<ModuleKey> runtimeModuleKeys)
     {
         ArgumentNullException.ThrowIfNull(runtimeModuleKeys);
-        var startupWorkItems = CreateStartupWorkDiagnostics().WorkItems;
-        return _state.ModuleProfiles.Values
-            .OrderBy(static profile => profile.RegistrationOrder)
-            .ThenBy(static profile => profile.ModuleType.FullName, StringComparer.Ordinal)
-            .Select(profile => new ModulePerformanceInfo
+        var performance = CaptureDiagnostics().Performance;
+        return performance.ModulePhaseExecutions
+            .GroupBy(static execution => execution.ModuleKey)
+            .OrderBy(static group => group.Min(execution => execution.ModuleRegistrationOrder))
+            .ThenBy(static group => group.First().ModuleFullTypeName, StringComparer.Ordinal)
+            .Select(group =>
             {
-                ModuleKey = profile.ModuleKey,
-                ModuleTypeName = profile.ModuleType.Name,
-                ModuleFullTypeName = profile.ModuleType.FullName ?? profile.ModuleType.Name,
-                RegistrationOrder = profile.RegistrationOrder,
-                IsRuntimeAvailable = runtimeModuleKeys.Contains(profile.ModuleKey),
-                PhaseExecutions = profile.CreateExecutions(GetOffsetMs),
-                StartupWorkItems = startupWorkItems
-                    .Where(work => work.ModuleKey == profile.ModuleKey)
-                    .OrderBy(static work => work.Sequence)
-                    .ToArray()
+                var first = group.First();
+                return new ModulePerformanceInfo
+                {
+                    ModuleKey = group.Key,
+                    ModuleTypeName = first.ModuleTypeName,
+                    ModuleFullTypeName = first.ModuleFullTypeName,
+                    RegistrationOrder = first.ModuleRegistrationOrder,
+                    IsRuntimeAvailable = runtimeModuleKeys.Contains(group.Key),
+                    PhaseExecutions = group.ToArray(),
+                    StartupWorkItems = performance.StartupWorkItems
+                        .Where(work => work.ModuleKey == group.Key)
+                        .OrderBy(static work => work.Sequence)
+                        .ToArray()
+                };
             })
             .ToArray();
     }
@@ -262,7 +512,13 @@ internal sealed class ModuleInitializationProfiler
     /// </summary>
     internal List<ModuleProfileState> GetModuleProfilesSortedBySerialPhaseDuration()
     {
-        return _state.ModuleProfiles.Values
+        ModuleProfileState[] profiles;
+        lock (_gate)
+        {
+            profiles = _state.ModuleProfiles.Values.ToArray();
+        }
+
+        return profiles
             .OrderByDescending(static profile => profile.GetSerialPhaseDurationMs())
             .ToList();
     }
@@ -272,7 +528,7 @@ internal sealed class ModuleInitializationProfiler
     /// </summary>
     internal string GetPerformanceSummary()
     {
-        var composition = GetCompositionPerformance();
+        var composition = CaptureDiagnostics().Performance;
         var initialization = composition.Initialization;
         var serviceRegistration = composition.ServiceRegistration;
         var builder = new StringBuilder();
@@ -297,9 +553,17 @@ internal sealed class ModuleInitializationProfiler
         }
 
         builder.AppendLine("Slowest serial module callbacks:");
-        foreach (var profile in GetModuleProfilesSortedBySerialPhaseDuration().Take(5))
+        foreach (var module in composition.ModulePhaseExecutions
+                     .GroupBy(static execution => execution.ModuleKey)
+                     .Select(static group => new
+                     {
+                         Name = group.First().ModuleTypeName,
+                         DurationMs = group.Sum(static execution => execution.DurationMs)
+                     })
+                     .OrderByDescending(static module => module.DurationMs)
+                     .Take(5))
         {
-            builder.AppendLine($"  {profile.ModuleType.Name}: {profile.GetSerialPhaseDurationMs():F1}ms");
+            builder.AppendLine($"  {module.Name}: {module.DurationMs:F1}ms");
         }
 
         return builder.ToString();
@@ -310,19 +574,18 @@ internal sealed class ModuleInitializationProfiler
     /// </summary>
     internal long GetModuleSerialPhaseDuration(Type moduleType)
     {
-        return _state.ModuleProfiles.TryGetValue(moduleType, out var profile)
-            ? ToWholeMilliseconds(profile.GetSerialPhaseDurationMs())
-            : 0;
+        lock (_gate)
+        {
+            return _state.ModuleProfiles.TryGetValue(moduleType, out var profile)
+                ? ToWholeMilliseconds(profile.GetSerialPhaseDurationMs())
+                : 0;
+        }
     }
 
-    private StartupWorkDiagnostics CreateStartupWorkDiagnostics()
+    private static StartupWorkDiagnostics CreateStartupWorkDiagnostics(
+        ModuleStartupWorkSnapshot snapshot,
+        long? originTimestamp)
     {
-        var snapshot = Volatile.Read(ref _startupWorkSnapshotProvider)?.Invoke();
-        if (snapshot is null)
-        {
-            return new StartupWorkDiagnostics([], []);
-        }
-
         var barriers = snapshot.Barriers.Select(barrier =>
             new ModuleStartupWorkBarrierPerformanceInfo
             {
@@ -330,8 +593,8 @@ internal sealed class ModuleInitializationProfiler
                 Barrier = barrier.Barrier,
                 EnteredAtUtc = barrier.EnteredAtUtc,
                 ReleasedAtUtc = barrier.ReleasedAtUtc,
-                EnteredOffsetMs = GetOffsetMs(barrier.EnteredTimestamp),
-                ReleasedOffsetMs = GetOffsetMs(barrier.ReleasedTimestamp),
+                EnteredOffsetMs = GetOffsetMs(originTimestamp, barrier.EnteredTimestamp),
+                ReleasedOffsetMs = GetOffsetMs(originTimestamp, barrier.ReleasedTimestamp),
                 DueWorkItemIds = barrier.WorkItems.Select(static work => work.WorkItemId).ToArray(),
                 PendingWorkItems = barrier.PendingWorkItems.Select(static pending =>
                     new ModuleStartupWorkBarrierPendingWorkInfo
@@ -371,12 +634,12 @@ internal sealed class ModuleInitializationProfiler
                 SubmittedAtUtc = result.SubmittedAtUtc,
                 StartedAtUtc = result.StartedAtUtc,
                 CompletedAtUtc = result.CompletedAtUtc,
-                SubmittedOffsetMs = GetOffsetMs(result.SubmittedTimestamp),
+                SubmittedOffsetMs = GetOffsetMs(originTimestamp, result.SubmittedTimestamp),
                 StartedOffsetMs = result.StartedTimestamp is { } startedTimestamp
-                    ? GetOffsetMs(startedTimestamp)
+                    ? GetOffsetMs(originTimestamp, startedTimestamp)
                     : null,
                 CompletedOffsetMs = result.CompletedTimestamp is { } completedTimestamp
-                    ? GetOffsetMs(completedTimestamp)
+                    ? GetOffsetMs(originTimestamp, completedTimestamp)
                     : null,
                 WasPendingAtBarrier = pending is not null,
                 RemainingAtBarrierMs = pending?.RemainingDurationMs ?? 0,
@@ -416,23 +679,38 @@ internal sealed class ModuleInitializationProfiler
 
     private double GetOffsetMs(long timestamp)
     {
-        if (_state.OriginTimestamp is not { } originTimestamp || timestamp <= originTimestamp)
+        return GetOffsetMs(_state.OriginTimestamp, timestamp);
+    }
+
+    private static double GetOffsetMs(long? originTimestamp, long timestamp)
+    {
+        if (originTimestamp is not { } origin || timestamp <= origin)
         {
             return 0;
         }
 
-        return Stopwatch.GetElapsedTime(originTimestamp, timestamp).TotalMilliseconds;
+        return Stopwatch.GetElapsedTime(origin, timestamp).TotalMilliseconds;
     }
 
     private double GetElapsedDurationMs(long? observedTimestamp = null)
     {
-        if (_state.OriginTimestamp is not { } originTimestamp)
+        return GetElapsedDurationMs(
+            _state.OriginTimestamp,
+            _state.TerminalTimestamp,
+            observedTimestamp ?? Stopwatch.GetTimestamp());
+    }
+
+    private static double GetElapsedDurationMs(
+        long? originTimestamp,
+        long? terminalTimestamp,
+        long observedTimestamp)
+    {
+        if (originTimestamp is not { } origin)
         {
             return 0;
         }
 
-        var terminalTimestamp = _state.TerminalTimestamp ?? observedTimestamp ?? Stopwatch.GetTimestamp();
-        return Stopwatch.GetElapsedTime(originTimestamp, terminalTimestamp).TotalMilliseconds;
+        return Stopwatch.GetElapsedTime(origin, terminalTimestamp ?? observedTimestamp).TotalMilliseconds;
     }
 
     private static string FormatExecutionId(string prefix, long sequence)
@@ -448,4 +726,26 @@ internal sealed class ModuleInitializationProfiler
     private sealed record StartupWorkDiagnostics(
         IReadOnlyList<ModuleStartupWorkPerformanceInfo> WorkItems,
         IReadOnlyList<ModuleStartupWorkBarrierPerformanceInfo> Barriers);
+
+    private sealed record ModuleProfilerStateCapture(
+        long Revision,
+        DateTimeOffset OriginUtc,
+        long? OriginTimestamp,
+        long? TerminalTimestamp,
+        bool IsStarted,
+        ImmutableArray<ModuleCompositionMilestonePerformanceInfo> Milestones,
+        ImmutableArray<ModuleSystemPhasePerformanceInfo> SystemPhases,
+        ImmutableArray<ModuleProfileState.ModuleProfileDiagnosticsCapture> ModuleProfiles,
+        TypeDiscoveryStatistics TypeDiscoveryStatistics,
+        ImmutableArray<TypeDiscoveryQuerySummary> TypeDiscoveryQueries,
+        Func<ModuleStartupWorkSnapshot>? StartupWorkSnapshotProvider);
 }
+
+/// <summary>
+/// Carries one revision-consistent profiler observation for diagnostics projection outside the profiler lock.
+/// </summary>
+internal sealed record ModuleProfilingDiagnosticsCapture(
+    long Revision,
+    ModuleCompositionPerformance Performance,
+    TypeDiscoveryStatistics TypeDiscoveryStatistics,
+    ImmutableArray<TypeDiscoveryQuerySummary> TypeDiscoveryQueries);

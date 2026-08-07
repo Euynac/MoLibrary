@@ -14,15 +14,6 @@ public enum EStateStoreBrowserFeatures
     TimeToLive = 1 << 7
 }
 
-public sealed record StateStoreProviderConfigEntry
-{
-    public required string Path { get; init; }
-
-    public required string Label { get; init; }
-
-    public required string Value { get; init; }
-}
-
 public enum EStateStoreKeySearchMode
 {
     Auto,

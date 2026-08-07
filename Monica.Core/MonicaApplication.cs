@@ -19,6 +19,8 @@ namespace Monica.Core;
 /// </remarks>
 public sealed class MonicaApplication : IDisposable
 {
+    private readonly MonicaApplicationOptions _applicationOptions = new();
+    private readonly MonicaModuleSystemOptions _moduleSystemOptions = new();
     private readonly List<ILoggerFactory> _ownedCompositionLoggerFactories = [];
     private ILoggerFactory _compositionLoggerFactory;
     private bool _disposed;
@@ -32,7 +34,6 @@ public sealed class MonicaApplication : IDisposable
         _ownedCompositionLoggerFactories.Add(_compositionLoggerFactory);
         Dependencies = new ModuleDependencyAnalyzer(this);
         Profiling = new ModuleInitializationProfiler();
-        ModuleStates = new ModuleStateRegistry(this);
         Modules = new ModuleRegistry(this);
         Errors = new ModuleErrorRegistry(this);
     }
@@ -40,12 +41,16 @@ public sealed class MonicaApplication : IDisposable
     /// <summary>
     /// Gets application identity defaults for this host.
     /// </summary>
-    public MonicaApplicationOptions Application { get; } = new();
+    public IMonicaApplicationOptions Application => _applicationOptions;
 
     /// <summary>
     /// Gets module-system defaults for this host.
     /// </summary>
-    public MonicaModuleSystemOptions ModuleSystem { get; } = new();
+    public IMonicaModuleSystemOptions ModuleSystem => _moduleSystemOptions;
+
+    internal MonicaApplicationOptions ApplicationConfiguration => _applicationOptions;
+
+    internal MonicaModuleSystemOptions ModuleSystemConfiguration => _moduleSystemOptions;
 
     /// <summary>
     /// Gets the business-type finder configured for this host.
@@ -76,15 +81,13 @@ public sealed class MonicaApplication : IDisposable
 
     internal ModuleInitializationProfiler Profiling { get; }
 
-    internal ModuleStateRegistry ModuleStates { get; }
-
     internal ModuleErrorRegistry Errors { get; }
 
     /// <summary>
-    /// Rebuilds business-type discovery for this host.
+    /// Replaces business-type discovery settings while the host-bound composition is still being declared.
     /// </summary>
     /// <param name="configure">An optional callback that customizes discovery.</param>
-    public void ConfigureTypeDiscovery(Action<TypeFinderOptions>? configure = null)
+    internal void ConfigureTypeDiscovery(Action<TypeFinderOptions>? configure = null)
     {
         var options = new TypeFinderOptions();
         configure?.Invoke(options);
@@ -129,20 +132,11 @@ public sealed class MonicaApplication : IDisposable
         }
     }
 
-    internal TGuide CreateGuide<TGuide>(ModuleKey? configuredBy = null)
-        where TGuide : ModuleGuide, new()
-    {
-        var guide = new TGuide();
-        guide.Bind(this, configuredBy);
-        return guide;
-    }
-
     internal void ResetModuleState()
     {
         Modules.Clear();
         Dependencies.Clear();
         Profiling.Clear();
-        ModuleStates.Clear();
     }
 
     /// <inheritdoc />

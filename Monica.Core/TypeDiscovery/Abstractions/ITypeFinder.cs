@@ -10,16 +10,20 @@ namespace Monica.Core.TypeDiscovery.Abstractions;
 public interface ITypeFinder
 {
     /// <summary>
-    /// Finds all discovered types.
+    /// Gets the stable type snapshot discovered for this host.
     /// </summary>
-    /// <returns>The discovered types.</returns>
-    IEnumerable<Type> GetTypes();
+    /// <returns>A repeatable sequence whose order remains stable for the lifetime of this finder.</returns>
+    /// <remarks>
+    /// Implementations must cache assembly reflection. Enumerating the returned sequence more than once must not call
+    /// <see cref="Assembly.GetTypes"/> again.
+    /// </remarks>
+    IReadOnlyList<Type> GetTypes();
 
     /// <summary>
-    /// Gets all related assemblies.
+    /// Gets the stable assembly snapshot used by this finder.
     /// </summary>
     /// <returns>The related assemblies.</returns>
-    IEnumerable<Assembly> GetAssemblies();
+    IReadOnlyList<Assembly> GetAssemblies();
 
     /// <summary>
     /// Gets the current assembly analysis snapshot for the type finder.

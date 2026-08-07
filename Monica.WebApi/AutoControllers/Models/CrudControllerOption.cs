@@ -1,12 +1,9 @@
-using Monica.Core.Modularity.Abstractions;
-using Monica.Modules;
-
 namespace Monica.WebApi.AutoControllers.Models;
 
 /// <summary>
 /// Configures generated CRUD controllers and their request conventions for one Monica host.
 /// </summary>
-public class CrudControllerOption : IModuleExtraOptions<ModuleAutoControllers>
+public class CrudControllerOption
 {
     /// <summary>
     /// Route prefix used for auto-generated CRUD endpoints.

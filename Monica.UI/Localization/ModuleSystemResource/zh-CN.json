@@ -1,0 +1,556 @@
+{
+  "Navigation": {
+    "Title": "模块诊断"
+  },
+  "Page": {
+    "Eyebrow": "MONICA / 组合过程飞行记录器",
+    "Title": "模块工作台",
+    "Subtitle": "基于一个不可变修订解释启动健康、耗时因果、类型发现和模块拓扑。"
+  },
+  "Access": {
+    "Checking": "正在检查诊断访问权限…",
+    "DeniedTitle": "模块诊断不可用",
+    "DeniedDescription": "工作台仅在开发环境自动启用；其他环境必须显式开启并通过宿主授权策略。"
+  },
+  "Actions": {
+    "ImportBaseline": "对比",
+    "Export": "导出",
+    "RemoveBaseline": "移除基线",
+    "Retry": "重试",
+    "Reset": "重置"
+  },
+  "Aria": {
+    "SectionNavigation": "模块工作台分区",
+    "SnapshotIdentity": "诊断快照标识",
+    "SummaryMetrics": "组合摘要指标",
+    "Refresh": "刷新诊断快照",
+    "OpenHelp": "打开诊断帮助",
+    "CloseHelp": "关闭诊断帮助",
+    "ModuleCatalog": "模块目录",
+    "InspectModule": "查看模块 {0}",
+    "CloseModuleDrawer": "关闭模块详情",
+    "OptionDiagnostics": "模块配置诊断",
+    "DependencyGraph": "包含 {0} 个模块和 {1} 条直接边的依赖图",
+    "DependencyInspector": "选中模块的依赖检查器",
+    "DependencyTable": "直接依赖边表格"
+  },
+  "Common": {
+    "All": "全部",
+    "Final": "已完成",
+    "Live": "进行中",
+    "Revision": "修订",
+    "Section": "分区",
+    "RowsPerPage": "每页行数",
+    "Unknown": "未知",
+    "NotAvailable": "不适用",
+    "Unavailable": "不可用",
+    "Null": "空值",
+    "Yes": "是",
+    "No": "否",
+    "None": "无"
+  },
+  "Sections": {
+    "Overview": "概览",
+    "Performance": "性能",
+    "Modules": "模块",
+    "Dependencies": "依赖",
+    "Discovery": "类型发现"
+  },
+  "Load": {
+    "Loading": "正在加载首个不可变快照…",
+    "FailedTitle": "无法加载诊断快照",
+    "FailedDescription": "不会显示不完整数据。请重试以请求另一个内部一致的修订。",
+    "RefreshFailed": "刷新失败；仍保留显示上一个修订。"
+  },
+  "Export": {
+    "Failed": "无法创建脱敏诊断导出。"
+  },
+  "Comparison": {
+    "Active": "基线已启用 · 总耗时差 {0} · 新增 {1} 个模块 · 移除 {2} 个",
+    "Faster": "快 {0}",
+    "Slower": "慢 {0}",
+    "Unchanged": "无变化",
+    "FileTooLarge": "所选基线超过 10 MB 导入限制。",
+    "Eyebrow": "可移植基线",
+    "EvidenceTitle": "回归证据",
+    "BaselineTimeline": "基线",
+    "ModulesChanged": "模块变化",
+    "EdgesChanged": "依赖边变化",
+    "AddedModules": "新增模块（{0}）",
+    "RemovedModules": "移除模块（{0}）",
+    "AddedEdges": "新增直接边（{0}）",
+    "RemovedEdges": "移除直接边（{0}）",
+    "NoChanges": "此类别没有变化。",
+    "Errors": {
+      "InvalidJson": "所选文件不是有效的模块诊断导出。",
+      "IncompatibleSchema": "此导出使用不兼容的诊断架构版本。",
+      "SnapshotUnavailable": "请先加载当前快照，再导入基线。"
+    }
+  },
+  "Overview": {
+    "Kpis": {
+      "Composition": "组合总耗时",
+      "ActiveModules": "活动模块",
+      "Declared": "共声明 {0} 个",
+      "ServiceRegistration": "服务注册",
+      "ExactTiming": "精确墙钟区间",
+      "TypeDiscovery": "类型发现",
+      "Queries": "{0} 个不同查询",
+      "Findings": "诊断发现",
+      "Errors": "{0} 个错误"
+    },
+    "CriticalPath": {
+      "Eyebrow": "启动因果链",
+      "Title": "关键路径带",
+      "Hint": "选择证据可同步时间线、模块和依赖上下文。",
+      "Count": "{0} 个因果区间",
+      "Empty": "没有记录因果阻塞路径。",
+      "SpanDescription": "{0}；{1}；耗时 {2}。"
+    },
+    "Findings": {
+      "Eyebrow": "结构化证据",
+      "Title": "诊断发现",
+      "Empty": "没有结构问题或已配置预算的告警。",
+      "Remaining": "显示其余 {0} 条诊断发现"
+    },
+    "Hotspots": {
+      "Eyebrow": "聚合成本",
+      "Title": "模块热点"
+    }
+  },
+  "Performance": {
+    "Budgets": {
+      "Eyebrow": "已配置限制",
+      "Title": "性能预算",
+      "Measurement": "实际 {0} / 上限 {1}",
+      "Utilization": "利用率 {0}"
+    },
+    "Waterfall": {
+      "Eyebrow": "启动时间线",
+      "Title": "组合瀑布图",
+      "Duration": "总计 {0}",
+      "Hint": "选择任一区间可查看精确时间，并同步其所属模块。",
+      "VisibleCount": "显示 {0} / {1} 个区间",
+      "Legend": "时间线区间类型",
+      "Zoom": "时间线缩放控件",
+      "ZoomOut": "缩小",
+      "Fit": "适应完整组合过程",
+      "FocusSelected": "聚焦选中区间",
+      "ZoomIn": "放大",
+      "ZoomLevel": "缩放级别 {0}",
+      "Omitted": "可视时间线省略了 {0} 个贡献较低的区间。可展开表格替代视图查看当前投影。",
+      "Empty": "没有记录组合过程区间。",
+      "TimelineRegion": "交互式模块组合时间线",
+      "Selected": "选中区间",
+      "TableAlternative": "区间表格替代视图",
+      "SpanDescription": "{0}；{1}；开始于 {2}；结束于 {3}；耗时 {4}。"
+    },
+    "Contributors": {
+      "Eyebrow": "串行回调 + 启动工作",
+      "Title": "主要贡献者"
+    },
+    "Filters": {
+      "Limit": "行数",
+      "MinimumMs": "最小毫秒数",
+      "HideZero": "隐藏零耗时"
+    },
+    "Blocking": {
+      "Eyebrow": "屏障因果",
+      "Title": "阻塞链",
+      "Empty": "没有启动工作延迟必需屏障。",
+      "BarrierSpan": "屏障区间",
+      "WorkSpan": "工作区间",
+      "CommitSpan": "提交区间 · {0}"
+    },
+    "Discovery": {
+      "Eyebrow": "一次类型发现编译",
+      "Title": "强类型发现阶段"
+    },
+    "StartupWork": {
+      "Eyebrow": "调度的启动工作",
+      "Title": "启动工作执行",
+      "Empty": "没有记录启动工作区间。"
+    },
+    "Columns": {
+      "Span": "区间",
+      "Start": "开始",
+      "Duration": "耗时",
+      "Kind": "类型",
+      "Callbacks": "回调",
+      "StartupWork": "启动工作",
+      "Total": "总计",
+      "Module": "模块",
+      "WorkItem": "工作项",
+      "Queue": "排队",
+      "State": "状态"
+    }
+  },
+  "Modules": {
+    "Eyebrow": "已声明模块清单",
+    "Title": "模块目录",
+    "ResultCount": "显示 {0} / {1} 个模块",
+    "Empty": "没有模块匹配当前筛选条件。",
+    "DependencyCounts": "依赖 {0} 个 · 被依赖 {1} 次",
+    "Cost": {
+      "Legend": "记录成本构成",
+      "Callbacks": "串行回调",
+      "StartupWork": "启动工作",
+      "ScaleHint": "进度条宽度相对于记录成本最高的模块；颜色区分串行回调与启动工作。",
+      "Breakdown": "{0}：总计 {1}；串行回调 {2}；启动工作 {3}；为最高模块记录成本的 {4}%。"
+    },
+    "Summary": {
+      "Label": "模块目录摘要",
+      "Active": "活动模块",
+      "Ui": "UI 模块",
+      "Web": "Web 模块",
+      "MaximumDepth": "最大深度"
+    },
+    "Filters": {
+      "Search": "搜索模块",
+      "SearchPlaceholder": "类型、命名空间或程序集",
+      "State": "状态",
+      "Capability": "能力",
+      "Assembly": "程序集",
+      "MinimumCost": "最小成本（毫秒）",
+      "HasDependencies": "存在直接依赖"
+    },
+    "Columns": {
+      "Module": "模块",
+      "State": "状态",
+      "Assembly": "程序集",
+      "Depth": "深度",
+      "Dependencies": "直接关系",
+      "Cost": "记录成本",
+      "Actions": "操作"
+    }
+  },
+  "Dependencies": {
+    "Eyebrow": "已编译的直接拓扑",
+    "Title": "模块拓扑",
+    "Description": "浏览完整的宿主编译图，再聚焦任一模块以检查其直接邻域和因果角色。",
+    "FocusModule": "焦点模块",
+    "Expand": "从 {0} 跳继续展开",
+    "Controls": {
+      "Label": "依赖图控件",
+      "Scope": "依赖图范围",
+      "FullHost": "完整宿主",
+      "Neighborhood": "选中模块邻域",
+      "Layout": "布局",
+      "Search": "高亮模块",
+      "SearchPlaceholder": "模块名称",
+      "ZoomIn": "放大",
+      "ZoomOut": "缩小",
+      "Fit": "适应全图",
+      "FocusSelected": "居中选中模块"
+    },
+    "Layouts": {
+      "Force": "力导向布局",
+      "Layered": "依赖分层",
+      "Radial": "径向深度"
+    },
+    "Overview": {
+      "Label": "可见拓扑摘要",
+      "Modules": "模块",
+      "Edges": "直接边",
+      "Depth": "最大深度",
+      "UiModules": "UI 模块",
+      "WebModules": "Web 模块"
+    },
+    "Legend": {
+      "Title": "依赖图图例",
+      "Core": "核心",
+      "Ui": "UI",
+      "Web": "Web",
+      "HostRequired": "需要 Web 宿主",
+      "Requires": "依赖",
+      "RequiredBy": "被依赖"
+    },
+    "Graph": {
+      "Rendering": "正在渲染模块拓扑…",
+      "Failed": "无法渲染依赖图。",
+      "Nodes": "{0} 个节点",
+      "Edges": "{0} 条边",
+      "FullHostMode": "完整宿主模式",
+      "NeighborhoodMode": "{0} 跳邻域"
+    },
+    "Selected": {
+      "Eyebrow": "选中模块",
+      "Depth": "深度 {0}",
+      "RequiresCount": "{0} 个直接依赖",
+      "RequiredByCount": "{0} 个直接依赖方",
+      "InspectHint": "选择以检查模块详情。",
+      "Requires": "直接依赖",
+      "RequiredBy": "直接依赖方",
+      "NoDependencies": "没有直接依赖",
+      "NoDependents": "没有直接依赖方"
+    },
+    "Table": {
+      "Show": "显示直接边表格",
+      "Hide": "隐藏直接边表格",
+      "Source": "发起依赖的模块",
+      "Target": "被依赖模块"
+    }
+  },
+  "Discovery": {
+    "Eyebrow": "类型发现编译器",
+    "Title": "类型发现证据",
+    "Description": "一次计划声明、一次集中编译和一次注册提交边界。",
+    "Counts": {
+      "Assemblies": "程序集",
+      "Types": "枚举类型数",
+      "Plans": "非空计划",
+      "Queries": "不同查询",
+      "Matches": "匹配数"
+    },
+    "Stages": {
+      "Title": "五个事实阶段"
+    },
+    "Queries": {
+      "Title": "查询贡献",
+      "Description": "结构相同的查询只求值一次，并由消费模块共享。",
+      "QueryId": "查询 ID",
+      "Consumers": "消费模块",
+      "Matches": "匹配数",
+      "Empty": "没有编译非空类型发现查询。"
+    },
+    "Commit": {
+      "Title": "注册提交结果",
+      "Callbacks": "提交回调",
+      "Added": "新增服务",
+      "Replaced": "替换服务",
+      "Skipped": "跳过条件添加",
+      "Excluded": "排除类型"
+    },
+    "Inventory": {
+      "Eyebrow": "程序集解析",
+      "Title": "程序集清单",
+      "Description": "进入类型发现视图时按需加载，问题优先，可搜索并在局部区域分页。",
+      "Loading": "正在加载缓存的程序集清单…",
+      "Failed": "无法加载程序集清单。",
+      "PanelTitle": "程序集记录与扫描证据",
+      "Scanned": "已扫描 {0} 个",
+      "NotScanned": "已解析但未扫描 {0} 个",
+      "Excluded": "已排除 {0} 个",
+      "FailedCount": "解析失败 {0} 个",
+      "Partial": "部分加载 {0} 个",
+      "Search": "搜索程序集或路径",
+      "Summary": {
+        "EntryAssembly": "入口程序集",
+        "ScanScope": "扫描范围",
+        "Considered": "已纳入分析",
+        "Attention": "需关注"
+      },
+      "Configuration": {
+        "Title": "扫描配置",
+        "CapturedAt": "捕获于 {0}",
+        "DefaultAssemblies": "使用默认程序集",
+        "Includes": "包含模式",
+        "Excludes": "排除模式"
+      },
+      "Records": {
+        "Title": "程序集记录",
+        "ResultCount": "显示 {0} / {1} 个程序集",
+        "Empty": "当前搜索和结果范围内没有匹配的程序集。"
+      },
+      "Facets": {
+        "Label": "程序集结果范围",
+        "Attention": "需关注（{0}）",
+        "ScanScope": "扫描范围（{0}）",
+        "Excluded": "已排除（{0}）",
+        "All": "全部（{0}）"
+      },
+      "Columns": {
+        "Outcome": "结果",
+        "Assembly": "程序集",
+        "Version": "版本",
+        "Path": "本地路径",
+        "Failure": "失败证据"
+      },
+      "Markers": {
+        "EntryAssembly": "入口程序集"
+      }
+    }
+  },
+  "ModuleDrawer": {
+    "Eyebrow": "选中模块",
+    "Tabs": {
+      "Summary": "摘要",
+      "Performance": "性能",
+      "Dependencies": "依赖",
+      "Configuration": "配置",
+      "Errors": "错误"
+    },
+    "Fields": {
+      "State": "状态",
+      "Phase": "最后阶段",
+      "Order": "注册顺序",
+      "Depth": "依赖深度",
+      "Assembly": "程序集",
+      "Errors": "错误"
+    },
+    "Capabilities": {
+      "Title": "能力",
+      "UI": "界面",
+      "Web": "Web",
+      "WebHost": "需要 Web 宿主",
+      "Core": "核心"
+    },
+    "Performance": {
+      "Spans": "记录区间",
+      "Empty": "没有记录模块所属区间。"
+    },
+    "Dependencies": {
+      "OpenExplorer": "打开邻域浏览器",
+      "Empty": "无"
+    },
+    "Options": {
+      "RedactedPolicyTitle": "完整配置视图",
+      "RedactedPolicy": "列出模块配置类型的全部公开属性。敏感值会被脱敏，嵌套值按边界显示；计算属性和仅运行时值仍会显示属性和类型。",
+      "RevealPolicyTitle": "敏感调试披露已启用",
+      "RevealPolicy": "此实时视图仅限开发环境，并会绕过敏感标记的脱敏处理，因此可能显示凭据、令牌和私有端点。请避免截图或共享录屏。",
+      "Projection": "模块配置",
+      "ProjectionSummary": "模块配置摘要",
+      "Profile": "配置档案 · {0}",
+      "VisibleCount": "已显示 {0} 项",
+      "SensitiveCount": "敏感 {0} 项",
+      "ProjectionTruncated": "部分嵌套值或集合项已截断",
+      "EntryTruncated": "部分显示",
+      "Loading": "正在加载模块配置…",
+      "Failed": "无法加载模块配置。",
+      "UnfinalizedTitle": "配置仍在完成中",
+      "Unfinalized": "模块配置完成后即可查看完整配置。",
+      "EmptyTitle": "没有公开配置属性",
+      "Empty": "此配置类型未定义任何公开配置属性。",
+      "Present": "已配置（值已脱敏）",
+      "NotPresent": "未配置",
+      "Truncated": "{0}…（已截断）",
+      "CollectionCount": "{0} 项",
+      "ObjectCount": "{0} 个属性",
+      "Unsupported": "仅显示类型（不读取值）",
+      "SensitiveProtected": "敏感 · 已保护",
+      "SensitiveRevealed": "敏感 · 可见"
+    },
+    "Errors": {
+      "Empty": "没有与此模块关联的结构化诊断发现。"
+    }
+  },
+  "Help": {
+    "Eyebrow": "如何阅读工作台",
+    "Title": "诊断术语",
+    "CriticalPath": {
+      "Title": "关键路径",
+      "Description": "决定宿主何时可接收流量的墙钟因果链。"
+    },
+    "Outcome": {
+      "Title": "结构结果",
+      "Description": "成功、降级或失败与可选的宿主性能预算相互独立。"
+    },
+    "Discovery": {
+      "Title": "类型发现编译",
+      "Description": "查询针对缓存的业务类型快照编译一次；提交直接消费匹配结果，不会再次扫描。"
+    },
+    "Privacy": {
+      "Title": "安全诊断",
+      "Description": "导出始终省略配置、路径、堆栈和原始失败。实时视图列出全部公开配置属性；除非宿主启用仅限开发环境的敏感调试模式，否则已标记的敏感值会被脱敏。"
+    }
+  },
+  "Enums": {
+    "Outcome": {
+      "Succeeded": "成功",
+      "Degraded": "降级",
+      "Failed": "失败",
+      "Live": "进行中"
+    },
+    "Phase": {
+      "None": "尚未开始",
+      "Describe": "描述依赖",
+      "FinalizeOptions": "完成配置",
+      "ConfigureBuilder": "配置构建器",
+      "ConfigureServices": "配置服务",
+      "DeclareTypeDiscovery": "声明类型发现",
+      "PostConfigureServices": "服务后配置",
+      "ConfigureApplicationBuilder": "配置应用管道",
+      "ConfigureEndpoints": "配置端点",
+      "Disabled": "已禁用"
+    },
+    "Stage": {
+      "ApplicationConfiguration": "应用配置",
+      "TypeDiscoveryPlanDeclaration": "计划声明",
+      "TypeDiscoveryAssemblyResolution": "程序集解析",
+      "TypeDiscoveryTypeEnumeration": "类型枚举",
+      "TypeDiscoveryQueryEvaluation": "查询求值",
+      "TypeDiscoveryRegistrationCommit": "注册提交"
+    },
+    "Callback": {
+      "Lifecycle": "生命周期回调",
+      "RegistrationContribution": "注册贡献",
+      "TypeDiscoveryCommit": "类型发现提交",
+      "StartupWorkCommit": "启动工作提交"
+    },
+    "Budget": {
+      "TotalComposition": "组合总耗时",
+      "ServiceRegistration": "服务注册",
+      "TypeDiscovery": "类型发现",
+      "AggregateBarrierWait": "屏障等待总和",
+      "LongestModuleCallback": "最长模块回调",
+      "LongestStartupQueue": "最长启动排队"
+    },
+    "Barrier": {
+      "BeforeTypeDiscovery": "类型发现之前",
+      "BeforePostConfigureServices": "服务后配置之前",
+      "BeforeServiceRegistrationCompletion": "服务注册完成之前",
+      "BeforeHostLifecycle": "宿主生命周期之前",
+      "NoBarrier": "不阻塞"
+    },
+    "TraceKind": {
+      "SystemStage": "系统阶段",
+      "ModuleCallback": "模块回调",
+      "StartupWork": "启动工作",
+      "StartupBarrier": "启动屏障"
+    },
+    "CatalogState": {
+      "All": "全部状态",
+      "Active": "活动",
+      "Disabled": "已禁用"
+    },
+    "CatalogCapability": {
+      "All": "全部能力",
+      "Ui": "界面",
+      "Web": "Web",
+      "WebHostRequired": "需要 Web 宿主"
+    },
+    "ModuleState": {
+      "Active": "活动",
+      "Disabled": "已禁用"
+    },
+    "AssemblyOutcome": {
+      "Scanned": "已扫描",
+      "ResolvedNotScanned": "已解析，未扫描",
+      "Excluded": "已排除",
+      "ResolutionFailed": "解析失败",
+      "PartialTypeLoad": "部分类型加载"
+    },
+    "OptionKind": {
+      "Value": "标量值",
+      "Presence": "受保护的存在性",
+      "Count": "集合数量",
+      "Object": "配置组",
+      "Collection": "集合",
+      "Unavailable": "不可用",
+      "Unsupported": "仅显示类型（不读取值）"
+    },
+    "SpanState": {
+      "Complete": "已完成",
+      "Running": "运行中",
+      "Failed": "失败"
+    }
+  },
+  "Findings": {
+    "PerformanceBudgetExceeded": "{0} 实际耗时 {1}，超过配置的 {2} 预算。",
+    "RegistrationFailed": "模块 {0} 在 {1} 阶段失败。",
+    "StartupWorkFailed": "模块 {0} 的启动工作 {1} 失败。",
+    "StartupWorkCommitFailed": "模块 {0} 在提交源自 {1} 的启动工作时失败。",
+    "CompositionFailed": "模块组合失败。请检查关联模块和跟踪区间中的因果证据。",
+    "Unknown": "无法识别的诊断代码：{0}"
+  }
+}

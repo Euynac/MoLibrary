@@ -1,6 +1,6 @@
 ---
 name: monica-development
-description: This skill should be used when the user asks to "create module", "add module", "module structure", "use Res type", "return Res", "Res.Ok", "Res.Fail", "IsFailed pattern", "module registration", "module dependencies", "module pattern", "Monica architecture", "service layer pattern", "create service", "add service", "create hosted service", "add background service", "MoBackgroundService", "MoHostedService", "RecordState", "hosted service observability", "service state tracking", "CoordinatedLeaderService", "GetRequestedConfigMethodKeys", "required config", "required configuration methods", "IWebModule", "web module", "downgrade to non-web", or needs guidance on Monica module architecture, the unified result model Res, module registration patterns, module runtime kinds, Res usage scope (UI vs infrastructure), required Guide configuration validation, or hosted service development with observability.
+description: This skill should be used when the user asks to "create module", "add module", "module structure", "use Res type", "return Res", "Res.Ok", "Res.Fail", "IsFailed pattern", "module registration", "module dependencies", "module pattern", "Monica architecture", "service layer pattern", "create service", "add service", "create hosted service", "add background service", "MoBackgroundService", "MoHostedService", "RecordState", "hosted service observability", "service state tracking", "CoordinatedLeaderService", "RequireFeature", "SatisfyFeature", "required config", "required configuration methods", "IUIModule", "IWebModule", "IWebHostRequiredModule", "web module", or needs guidance on Monica module architecture, the unified result model Res, module registration patterns, module runtime kinds, Res usage scope (UI vs infrastructure), required feature validation, or hosted service development with observability.
 ---
 
 # Monica Development Guide
@@ -13,39 +13,41 @@ Monica is a modular .NET infrastructure library designed for flexibility and per
 
 ### Module Pattern
 
-Every module follows a consistent pattern with four components in one `Module{Name}.cs` file, which is located in the `Modules` folder of each project.
+Every module follows a consistent pattern with three components in one `Module{Name}.cs` file, which is located in the `Modules` folder of each project.
 
 | Component | Purpose | Example |
 |-----------|---------|---------|
-| `Module{Name}` | Core module implementation inheriting from `ModuleBase` or `WebModuleBase` | `ModuleSignalR` |
+| `Module{Name}` | Host-owned module strategy inheriting from `MonicaModule<TOptions>` | `ModuleSignalR` |
 | `Module{Name}Option` | Configuration options for the module | `ModuleSignalROption` |
-| `Module{Name}Guide` | Configuration guide/builder for fluent API | `ModuleSignalRGuide` |
-| `Module{Name}BuilderExtensions` | Extensions for the host-bound `IMonicaBuilder` entry point | `ModuleSignalRBuilderExtensions` |
+| `Module{Name}RegistrationExtensions` | Host registration and fluent feature extensions returning `ModuleRegistration<TModule, TOptions>` | `ModuleSignalRRegistrationExtensions` |
 
-### ModuleKey Rules
+### Module Identity Rules
 
-- For Monica first-party modules in this repository, add new keys to `Monica.Core/Modularity/Models/BuiltInModuleKey.cs` and use `[ModuleKey(BuiltInModuleKey.YourModule)]`.
-- Do not introduce ad-hoc string keys such as `BuildingBlocksPlatform.*` for Monica-owned modules unless the module is intentionally external to Monica's built-in key set.
-- For independently published modules, use `$monica-third-party-module-development`. String keys must follow `<Publisher>.Monica.<Module>[.<Feature>...]`, and every module key in a package must equal its `PackageId` or begin with `PackageId.`. Put their module types and `Add*` extensions in `<PackageId>.Modules`; only official Monica dependency guides remain in `Monica.Modules`. A package may expose multiple coherent modules.
+- The concrete module `Type` is the only graph and runtime identity. Do not add key attributes, key enums, or string identities to registration logic.
+- `ModuleKey` is a diagnostic projection derived from the module type; never use it to resolve dependencies or determine graph uniqueness.
+- Put first-party module strategies and `Add*` extensions in `Monica.Modules`. Use `$monica-third-party-module-development` for independently published packages.
 
 ### Module Runtime Kinds
 
 Choose the module runtime kind before writing registration code:
 
-- Use `ModuleBase<TModuleSelf, TModuleOption, TModuleGuide>` with `ModuleGuide<TModule, TModuleOption, TGuide>` when the module only participates in host-builder, service-registration, post-service, and dependency phases.
-- Use `WebModuleBase<TModuleSelf, TModuleOption, TModuleGuide>` with `WebModuleGuide<TModule, TModuleOption, TGuide>` only when the module actually configures ASP.NET Core middleware or endpoint phases.
-- Do not equate UI module with web module. A UI module that only registers pages, components, dialogs, or shell contributions should usually remain a non-web `ModuleBase`.
+- Use `MonicaModule<TOptions>` for every module strategy.
+- Implement `IWebModule` only when the module actually configures ASP.NET Core middleware or endpoints.
+- Implement `IUIModule` for every UI module. UI identity is explicit and independent of the type or project name.
+- Do not equate `IUIModule` with `IWebModule`. A UI module that only registers pages, components, dialogs, or shell contributions has no web marker.
 - Use `MinimalApiModuleOptions<TModule>` when the module exposes minimal APIs and needs API-group or API-disable controls.
-- If a web module still provides useful non-web behavior in a generic host, override `CanDowngradeToNonWebModule()` and return `true`. In downgrade mode only the non-web phases execute; `ConfigureApplicationBuilder` and `ConfigureEndpoints` are skipped.
-- If you surface module-system diagnostics or dashboard data, keep module capability and runtime mode separate: `IsWebModule` answers what the module can do, `IsDowngradedFromWebModule` answers how it is currently running.
+- `IWebModule` is a capability marker: generic hosts omit its web contributions and retain its ordinary registrations.
+- Add `IWebHostRequiredModule` only for an intrinsic type-level requirement. An opt-in web feature calls `registration.RequireWebHost(reason)` so the requirement appears only when that feature is selected.
+- Choose middleware placement with `ModuleWebStage.BeforeRouting` or `ModuleWebStage.AfterRouting`; never use integer middleware priorities.
+- Diagnostics keep web capability and the independent host requirement as separate facts.
 
 ### Localization Registration Rules
 
 - If a module uses `IStringLocalizer<TResource>` directly or indirectly, some participating module in that dependency chain must declare:
 
 ```csharp
-DependsOnModule<ModuleLocalizationGuide>().Register()
-    .AddResource<TResource>();
+module.Require<ModuleLocalization, ModuleLocalizationOption>(options =>
+    options.AddResource(typeof(TResource)));
 ```
 
 - For Monica project-local resources, keep the marker class and JSON files under the project root `Localization/` folder so resource namespace, embedded resource path, and validation tooling stay aligned.
@@ -66,7 +68,7 @@ Monica.{Project}/
 ### Core Dependencies
 
 **Monica.Core** is the foundation for all other modules, containing:
-- `ModuleBase` / `WebModuleBase` base classes
+- `MonicaModule<TOptions>` module strategy
 - Module registration system
 - Automatic middleware ordering
 - Core utilities and extensions
@@ -87,7 +89,7 @@ builder.AddMonica(monica =>
         options.Property2 = value2;
     });
 
-    // Guide methods extend the same host-bound registration.
+    // Feature extensions enrich the same host-bound registration.
     monica.Add{ModuleName}()
         .GuideMethod1()
         .GuideMethod2();
@@ -99,81 +101,55 @@ builder.AddMonica(monica =>
 When a module depends on other modules:
 
 ```csharp
-public override void ClaimDependencies()
+public override void Describe(ModuleDescriptor module)
 {
-    DependsOnModule<ModuleOtherGuide>().Register();
-    DependsOnModule<ModuleAnotherGuide>().Register();
+    module.Require<ModuleOther, ModuleOtherOption>();
+    module.Require<ModuleAnother, ModuleAnotherOption>();
 }
 ```
 
-Modules declare dependencies by overriding `ClaimDependencies()` on `ModuleBase<TModuleSelf, TModuleOption, TModuleGuide>` or `WebModuleBase<TModuleSelf, TModuleOption, TModuleGuide>`.
+Modules declare dependencies in `Describe(ModuleDescriptor)` with `Require<TModule, TOptions>()` and optional ordering with `AfterIfPresent<TModule, TOptions>()`.
 
 Dependencies are automatically registered when a module is added.
 
 ### Module State Ownership Rules
 
 - Keep `Module{Name}Option` focused on developer configuration. Do not use options objects as mutable runtime registries for discovered types, generated endpoints, caches, or other cross-phase state.
-- Do not put required shared runtime state in builder-extension local variables or closures inside `monica.Add{ModuleName}(...)`. A module can be registered directly or transitively through `DependsOnModule(...).Register()`, and both paths must behave identically.
-- If a module needs mutable state across registration phases such as `ConfigureServices`, `IterateBusinessTypes`, `PostConfigureServices`, MVC configuration, or endpoint mapping, create and own that state inside the module and expose the same instance through a module-owned singleton or internal registry service.
-- Do not hide required default services, middleware, endpoint mapping, or post-configuration in `monica.Add{ModuleName}()` convenience methods by chaining extra guide calls after `Register(...)`. Direct registration and transitive dependency registration must share the same module-owned baseline behavior.
-- If a module's built-in behavior needs a non-default phase order, model that order as module-owned lifecycle behavior instead of keeping the behavior in builder-entry-only guide methods.
+- Do not put required shared runtime state in builder-extension local variables or closures inside `monica.Add{ModuleName}(...)`. A module can be included directly or transitively through `Require<TModule, TOptions>()`, and both paths must behave identically.
+- If a module needs mutable state across registration phases such as `ConfigureServices`, `DeclareTypeDiscovery`, `PostConfigureServices`, MVC configuration, or endpoint mapping, create and own that state inside the module and expose the same instance through a module-owned singleton or internal registry service.
+- Do not hide required default services, middleware, endpoint mapping, or post-configuration in the `monica.Add{ModuleName}()` convenience method. Direct and transitive registration must share the same module-owned baseline behavior.
+- If a module's built-in behavior needs a non-default phase position, model it as module-owned lifecycle behavior or a named web stage instead of relying on registration-call order.
 - When reviewing an existing module, treat builder-entry-only state as a design bug even if the direct registration path currently works.
-- `IBusinessTypeIterator` should almost always preserve the full incoming type stream. Use it for discovery side effects and enrichment, not for accidentally filtering later modules out of the host's business types. Only drop types when the module is explicitly intended to transform the downstream scan set.
+- Declare business-type work through `TypeDiscoveryPlan<TOptions>` and structural `TypeQuery` expressions. Monica scans the type universe once and commits each module's matches deterministically.
 
-### Required Configuration Methods (GetRequestedConfigMethodKeys)
+### Required Feature Configuration
 
-When a module's services depend on registrations that must come from Guide methods (e.g., choosing a store implementation), the Guide class must override `GetRequestedConfigMethodKeys` to declare those requirements. The module system validates at startup that all required keys have been satisfied, throwing a clear error if any are missing.
-
-**Pattern**: Define `private const string` keys, return them from `GetRequestedConfigMethodKeys`, and pass `key:` to `ConfigureServices`/`ConfigureEmpty` in the guide methods that satisfy each requirement.
+When a module needs an explicitly selected provider or strategy, declare a stable feature in `Describe` and satisfy it from each valid registration extension.
 
 ```csharp
-public class ModuleExampleGuide
-    : ModuleGuide<ModuleExample, ModuleExampleOption, ModuleExampleGuide>
+public sealed class ModuleExample : MonicaModule<ModuleExampleOption>
 {
-    // 1. Define constants for required configuration keys
-    private const string CONFIG_STORE = nameof(CONFIG_STORE);
-    private const string CONFIG_PROVIDER = nameof(CONFIG_PROVIDER);
+    internal const string STORE_FEATURE = "store";
 
-    // 2. Declare which keys are required
-    protected override string[] GetRequestedConfigMethodKeys()
+    public override void Describe(ModuleDescriptor module)
     {
-        return [CONFIG_STORE, CONFIG_PROVIDER];
+        module.RequireFeature(STORE_FEATURE);
     }
+}
 
-    // 3. Guide methods satisfy requirements by passing key:
-    //    Multiple methods can share the same key (alternatives)
-    public ModuleExampleGuide UseInMemoryStore()
+public static class ModuleExampleRegistrationExtensions
+{
+    public static ModuleRegistration<ModuleExample, ModuleExampleOption> UseInMemoryStore(
+        this ModuleRegistration<ModuleExample, ModuleExampleOption> registration)
     {
-        ConfigureServices(ctx =>
-        {
-            ctx.Services.AddSingleton<IStore, InMemoryStore>();
-        }, key: CONFIG_STORE);  // Satisfies CONFIG_STORE
-        return this;
-    }
-
-    public ModuleExampleGuide UseCustomStore<T>() where T : class, IStore
-    {
-        ConfigureServices(ctx =>
-        {
-            ctx.Services.AddSingleton<IStore, T>();
-        }, key: CONFIG_STORE);  // Also satisfies CONFIG_STORE
-        return this;
-    }
-
-    // Use ConfigureEmpty when the method doesn't register services
-    // but still needs to mark the requirement as satisfied
-    public ModuleExampleGuide UseDefaultProvider()
-    {
-        ConfigureEmpty(CONFIG_PROVIDER);
-        return this;
+        return registration
+            .ConfigureServices(context => context.Services.AddSingleton<IStore, InMemoryStore>())
+            .SatisfyFeature(ModuleExample.STORE_FEATURE);
     }
 }
 ```
 
-**Key rules**:
-- If a service registered in `Module.ConfigureServices` depends on a DI registration that only comes from a Guide method, that Guide method's key **must** be in `GetRequestedConfigMethodKeys`
-- Alternative methods (e.g., `UseInMemory` vs `UseCustom`) share the same key constant
-- Use `ConfigureEmpty(KEY)` when a method satisfies a requirement without registering services
+Alternative providers satisfy the same feature. Use `RequireFeature` on a registration when an optional sub-feature introduces a requirement that the baseline module does not own.
 
 ## Key Architectural Decisions
 
@@ -295,8 +271,8 @@ For detailed hosted service patterns including `CoordinatedLeaderService` for le
 ### Source Code Reference
 
 - **Res type definition**: `Monica.Tool/Results/Res.cs`
-- **Module base classes**: `Monica.Core/Modularity/Abstractions/ModuleBase.cs`, `Monica.Core/Modularity/Abstractions/WebModuleBase.cs`
-- **Module guides**: `Monica.Core/Modularity/Abstractions/ModuleGuide.cs`, `Monica.Core/Modularity/Abstractions/WebModuleGuide.cs`
+- **Module strategy**: `Monica.Core/Modularity/Abstractions/MonicaModule.cs`
+- **Module registration**: `Monica.Core/Modularity/Abstractions/ModuleRegistration.cs`
 - **Web module contract**: `Monica.Core/Modularity/Abstractions/IWebModule.cs`
 - **MoBackgroundService**: `Monica.Core/Features/HostedServices/MoBackgroundService.cs`
 - **CoordinatedLeaderService**: `Monica.RegisterCentre/Core/CoordinatedLeaderService.cs`

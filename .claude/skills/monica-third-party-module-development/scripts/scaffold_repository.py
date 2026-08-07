@@ -528,20 +528,24 @@ def load_manifest(path: Path) -> Manifest:
                 raise ValueError(f"Non-UI module '{name}' must not end in UI.")
             key = require_text(raw_module, "key")
             if PACKAGE_PATTERN.fullmatch(key) is None or len(key) > 100:
-                raise ValueError(f"Module key '{key}' does not follow the Monica ecosystem grammar.")
+                raise ValueError(f"Manifest module key '{key}' does not follow the Monica ecosystem grammar.")
             folded_key = key.casefold()
             if folded_key != package_id.casefold() and not folded_key.startswith(package_prefix):
-                raise ValueError(f"Module key '{key}' must equal packageId or begin with '{package_id}.'.")
+                raise ValueError(
+                    f"Manifest module key '{key}' must equal packageId or begin with '{package_id}.'."
+                )
             if (kind == "ui") != folded_key.endswith(".ui"):
                 raise ValueError(f"Module '{name}' and key '{key}' disagree about the final .UI identity segment.")
             if name.casefold() in local_names:
                 raise ValueError(f"Duplicate module name in '{package_id}': {name}")
             if folded_key in module_keys:
-                raise ValueError(f"Duplicate module key: {key}")
+                raise ValueError(f"Duplicate manifest module key: {key}")
 
             raw_dependencies = raw_module.get("dependsOn", [])
             if not isinstance(raw_dependencies, list) or not all(isinstance(item, str) for item in raw_dependencies):
-                raise ValueError(f"Module '{name}' dependsOn must be a string array of full module keys.")
+                raise ValueError(
+                    f"Module '{name}' dependsOn must be a string array of full manifest module keys."
+                )
             folded_dependencies = [item.casefold() for item in raw_dependencies]
             if len(folded_dependencies) != len(set(folded_dependencies)):
                 raise ValueError(f"Module '{name}' contains duplicate dependsOn entries.")
@@ -597,7 +601,10 @@ def load_manifest(path: Path) -> Manifest:
             dependency_keys = tuple(value.casefold() for value in module.depends_on)
             unknown_modules = [value for value in module.depends_on if value.casefold() not in modules_by_key]
             if unknown_modules:
-                raise ValueError(f"Module '{module.name}' depends on undeclared module keys: {', '.join(unknown_modules)}")
+                raise ValueError(
+                    f"Module '{module.name}' depends on undeclared manifest module keys: "
+                    f"{', '.join(unknown_modules)}"
+                )
             if module.key.casefold() in dependency_keys:
                 raise ValueError(f"Module '{module.name}' cannot depend on itself.")
             for dependency_key in dependency_keys:
@@ -1003,6 +1010,17 @@ def create_project(root: Path, manifest: Manifest, package: PackageSpec) -> Path
     return project_dir
 
 
+def module_type_references(
+    owner: PackageSpec,
+    module: ModuleSpec,
+    *,
+    fully_qualified: bool,
+) -> tuple[str, str]:
+    prefix = f"global::{owner.package_id}.Modules." if fully_qualified else ""
+    module_type = f"{prefix}Module{module.name}"
+    return module_type, f"{module_type}Option"
+
+
 def module_dependencies(
     package: PackageSpec,
     module: ModuleSpec,
@@ -1011,10 +1029,14 @@ def module_dependencies(
     dependencies: list[str] = []
     for key in module.depends_on:
         owner, dependency = modules_by_key[key.casefold()]
-        guide_type = f"Module{dependency.name}Guide"
-        if owner.package_id != package.package_id:
-            guide_type = f"global::{owner.package_id}.Modules.{guide_type}"
-        dependencies.append(f"DependsOnModule<{guide_type}>().Register();")
+        module_type, option_type = module_type_references(
+            owner,
+            dependency,
+            fully_qualified=owner.package_id != package.package_id,
+        )
+        dependencies.append(
+            f"module.Require<{module_type}, {option_type}>();"
+        )
     return dependencies
 
 
@@ -1027,29 +1049,33 @@ def create_module(
     modules_by_key: dict[str, tuple[PackageSpec, ModuleSpec]],
 ) -> None:
     dependencies = module_dependencies(package, module, modules_by_key)
-    base_type = "ModuleBase"
-    guide_type = "ModuleGuide"
-    option_type = "ModuleOptions"
     additional_usings: list[str] = []
-    registration = ""
+    registration_configuration = ""
+    module_interfaces: list[str] = []
 
     if module.kind == "web":
-        base_type = "WebModuleBase"
-        guide_type = "WebModuleGuide"
-        option_type = "MinimalApiModuleOptions"
+        module_interfaces.extend(["IWebModule", "IWebHostRequiredModule"])
     elif module.is_ui:
+        module_interfaces.append("IUIModule")
         resource_name = f"{module.base_name}Resource"
         page_name = f"UI{module.base_name}Page"
         route = ui_route(package, module)
         dependencies.extend(
             [
-                f"DependsOnModule<ModuleLocalizationGuide>().Register().AddResource<{resource_name}>();",
-                "var shellGuide = DependsOnModule<ModuleShellUIGuide>().Register();",
+                "module.Require<global::Monica.Modules.ModuleLocalization, "
+                "global::Monica.Modules.ModuleLocalizationOption>();",
+                "module.Require<global::Monica.Modules.ModuleShellUI, "
+                "global::Monica.Modules.ModuleShellUIOption>();",
             ]
         )
-        registration = textwrap.dedent(
+        registration_configuration = textwrap.dedent(
             f"""
-            shellGuide.RegisterUIComponents(registry =>
+            registration.Require<global::Monica.Modules.ModuleLocalization,
+                    global::Monica.Modules.ModuleLocalizationOption>()
+                .AddResource<{resource_name}>();
+            registration.Require<global::Monica.Modules.ModuleShellUI,
+                    global::Monica.Modules.ModuleShellUIOption>()
+                .RegisterUIComponents(registry =>
             {{
                 var category = registry.RegisterLocalizedCategory<{resource_name}>(
                     "{csharp_escape(module.navigation_category_id)}",
@@ -1065,7 +1091,6 @@ def create_module(
             }});
             """
         ).strip()
-        dependencies.append(registration)
         additional_usings.extend(
             [
                 f"using {package.package_id}.Localization;",
@@ -1081,7 +1106,7 @@ def create_module(
         statements = "\n\n".join(textwrap.indent(statement, "        ") for statement in dependencies)
         dependency_method = f"""
     /// <inheritdoc />
-    public override void ClaimDependencies()
+    public override void Describe(ModuleDescriptor module)
     {{
 {statements}
     }}
@@ -1091,33 +1116,41 @@ def create_module(
         "using Monica.Core;",
         "using Monica.Core.Modularity;",
         "using Monica.Core.Modularity.Abstractions;",
-        "using Monica.Core.Modularity.Annotations;",
         "using Monica.Core.Modularity.Models;",
         *additional_usings,
     ]
-    provider_interface = ", IModuleProvider" if module.is_provider else ""
-    provider_property = (
-        f'\n    /// <inheritdoc />\n    public ModuleKey ProvidesFor => "{csharp_escape(module.provider_for or "")}";\n'
-        if module.is_provider
-        else ""
-    )
+    if module.is_provider:
+        module_interfaces.append("IModuleProvider")
+    interface_list = "" if not module_interfaces else ", " + ", ".join(module_interfaces)
+    provider_property = ""
     if module.is_provider:
         assert module.provider_for is not None
         target_package, target_module = modules_by_key[module.provider_for.casefold()]
-        target_guide_type = f"global::{target_package.package_id}.Modules.Module{target_module.name}Guide"
-        target_guide_cref = target_guide_type.removeprefix("global::")
+        target_module_type, target_option_type = module_type_references(
+            target_package,
+            target_module,
+            fully_qualified=True,
+        )
+        provider_property = (
+            "\n    /// <inheritdoc />\n"
+            f"    public Type ProvidesFor => typeof({target_module_type});\n"
+        )
+        target_cref = target_module_type.removeprefix("global::")
         registration_surface = f"""
 public static class Module{module.name}BuilderExtensions
 {{
     /// <summary>
     /// Selects <see cref="Module{module.name}"/> as the provider for
-    /// <see cref="{target_guide_cref}"/>.
+    /// <see cref="{target_cref}"/>.
     /// </summary>
-    public static Module{module.name}Guide Use{module.name}Provider(
-        this {target_guide_type} guide,
+    /// <param name="target">The target capability registration.</param>
+    /// <param name="configure">Optional provider option configuration.</param>
+    /// <returns>The host-bound provider registration.</returns>
+    public static ModuleRegistration<Module{module.name}, Module{module.name}Option> Use{module.name}Provider(
+        this ModuleRegistration<{target_module_type}, {target_option_type}> target,
         Action<Module{module.name}Option>? configure = null)
     {{
-        return guide.AddModule<Module{module.name}, Module{module.name}Option, Module{module.name}Guide>(configure);
+        return target.Include<Module{module.name}, Module{module.name}Option>(configure);
     }}
 }}
 """
@@ -1131,10 +1164,13 @@ public static class Module{module.name}BuilderExtensions
         /// Registers <see cref="Module{module.name}"/> and applies optional configuration.
         /// </summary>
         /// <param name="configure">Optional module-options configuration.</param>
-        /// <returns>The module guide.</returns>
-        public Module{module.name}Guide Add{module.name}(Action<Module{module.name}Option>? configure = null)
+        /// <returns>The host-bound module registration.</returns>
+        public ModuleRegistration<Module{module.name}, Module{module.name}Option> Add{module.name}(
+            Action<Module{module.name}Option>? configure = null)
         {{
-            return builder.AddModule<Module{module.name}, Module{module.name}Option, Module{module.name}Guide>(configure);
+            var registration = builder.AddModule<Module{module.name}, Module{module.name}Option>(configure);
+{textwrap.indent(registration_configuration, '            ') if registration_configuration else ''}
+            return registration;
         }}
     }}
 }}
@@ -1147,24 +1183,15 @@ namespace {package.package_id}.Modules;
 /// <summary>
 /// Registers the independently maintained {module.base_name}{' UI' if module.is_ui else ''} capability.
 /// </summary>
-[ModuleKey("{csharp_escape(module.key)}")]
-public sealed class Module{module.name}(Module{module.name}Option option)
-    : {base_type}<Module{module.name}, Module{module.name}Option, Module{module.name}Guide>(option){provider_interface}
+public sealed class Module{module.name}
+    : MonicaModule<Module{module.name}Option>{interface_list}
 {{{provider_property}{dependency_method}
-}}
-
-/// <summary>
-/// Provides fluent configuration for <see cref="Module{module.name}"/>.
-/// </summary>
-public sealed class Module{module.name}Guide
-    : {guide_type}<Module{module.name}, Module{module.name}Option, Module{module.name}Guide>
-{{
 }}
 
 /// <summary>
 /// Configures <see cref="Module{module.name}"/>.
 /// </summary>
-public sealed class Module{module.name}Option : {option_type}<Module{module.name}>
+public sealed class Module{module.name}Option : ModuleOptions<Module{module.name}>
 {{
 }}
 
@@ -1283,9 +1310,13 @@ def registration_expression(
     if module.is_provider:
         assert module.provider_for is not None
         target_owner, target = modules_by_key[module.provider_for.casefold()]
-        prefix = f"global::{target_owner.package_id}.Modules.Module{target.name}"
+        target_module_type, target_option_type = module_type_references(
+            target_owner,
+            target,
+            fully_qualified=True,
+        )
         return (
-            f"builder.AddModule<{prefix}, {prefix}Option, {prefix}Guide>()"
+            f"builder.AddModule<{target_module_type}, {target_option_type}>()"
             f".Use{module.name}Provider();"
         )
     return f"builder.Add{module.name}();"
@@ -1504,11 +1535,11 @@ def create_readme(root: Path, manifest: Manifest) -> None:
             "",
             "## Modules",
             "",
-            "| Package | Module | Module key | Kind |",
+            "| Package | Module | Manifest ecosystem key | Kind |",
             "|---|---|---|---|",
             module_rows,
             "",
-            "NuGet dependencies and Monica runtime dependencies are separate explicit graphs in `monica.manifest.json`.",
+            "NuGet dependencies and manifest module declarations are separate explicit graphs; Monica compiles manifest edges into concrete CLR-type runtime dependencies.",
             "",
             "## Repository contract",
             "",

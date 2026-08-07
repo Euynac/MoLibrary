@@ -3,7 +3,7 @@
 > **Status.** Design proposal. Phase C of the implementation roadmap.
 > **Audience.** Framework team and every Monica module owner who ships a Facade.
 > **Depends on.** Doc 02 (`MoSkill<TSelf>`, `[MoAITool]`, description-priority chain).
-> **Last revised.** 2026-04-29.
+> **Last revised.** 2026-08-06.
 
 ## 0. Why this doc exists
 
@@ -11,7 +11,7 @@ Every Monica module that exposes capabilities to host code does so through a Fac
 
 This doc specifies a generalized mechanism: a new module `ModuleAIFacadeProvider` in `Monica.Framework` (which already references `Monica.AI`) that auto-projects every Monica module's Facade methods into one module-level Skill. Each selected Facade contributes scripts to that module Skill, and the loaded skill content groups those scripts by Facade. Authors get auto-discovery; descriptions come from XML doc comments by default; opt-out is one attribute on a method.
 
-The rule is opt-out, not opt-in: if your module loads `ModuleAIFacadeProvider`, every public method on every Facade marked `IMonicaFacade` is exposed as a script unless you explicitly disable it. This matches the "default-include" ergonomics the user asked for.
+The rule is opt-out, not opt-in: if your module loads `ModuleAIFacadeProvider`, every public method on every Facade marked `IMonicaFacade<TModule>` is exposed as a script unless you explicitly disable it. This matches the "default-include" ergonomics the user asked for.
 
 ## 1. Premise and module placement
 
@@ -21,12 +21,10 @@ The rule is opt-out, not opt-in: if your module loads `ModuleAIFacadeProvider`, 
 
 ```
 Monica.Framework/
+  Modules/
+    ModuleAIFacadeProvider.cs      // module, options, and registration extensions
   AISkillProviders/
     Facade/
-      Modules/
-        ModuleAIFacadeProvider.cs
-        ModuleAIFacadeProviderGuide.cs
-        ModuleAIFacadeProviderOption.cs
       Internal/
         ModuleFacadeSkill.cs        // AgentClassSkill subclass per Monica module
         FacadeScriptGroup.cs        // groups generated scripts by Facade for skill content
@@ -34,7 +32,7 @@ Monica.Framework/
         FacadeScriptFactory.cs      // builds AgentSkillScript via CreateScript
 ```
 
-Module key: add `BuiltInModuleKey.AIFacadeProvider` (next to `AI`) in `Monica.Core/Modularity/Models/BuiltInModuleKey.cs`.
+`ModuleAIFacadeProvider` is identified by `typeof(ModuleAIFacadeProvider)`. Its module strategy, options, builder entrypoint, and `ModuleRegistration` extensions stay consolidated in `ModuleAIFacadeProvider.cs`; no identifier registry or extra configuration class is added.
 
 The naming convention for the module class is `ModuleAIFacadeProvider` — chosen over `ModuleMonicaFacadeAIProvider` and `ModuleFacadeAISkillProvider` because:
 
@@ -42,18 +40,23 @@ The naming convention for the module class is `ModuleAIFacadeProvider` — chose
 - `AI` first means "this serves the AI surface" (matches `ModuleAI`, `ModuleAIUI`).
 - `FacadeProvider` describes function: it provides Skills derived from Facades.
 
-### 1.2 Dependency claims
+### 1.2 Module graph declaration
 
 ```csharp
-public override void ClaimDependencies()
+internal const string REGISTRATION_FEATURE = "facade-selection";
+
+public override void Describe(ModuleDescriptor module)
 {
-    DependsOnModule<ModuleAIGuide>().Register();
-    DependsOnModule<ModuleSkillSystemGuide>().Register();
-    DependsOnModule<ModuleXmlDocumentationGuide>().Register();
+    module.Require<ModuleAI, ModuleAIOption>();
+    module.Require<ModuleSkillSystem, ModuleSkillSystemOption>();
+    module.Require<ModuleXmlDocumentation, ModuleXmlDocumentationOption>();
+    module.RequireFeature(REGISTRATION_FEATURE);
 }
 ```
 
-The Skill System (Doc 02) hosts the discovery pipeline; the Facade Provider piggybacks on it. XML documentation is required so the description-priority chain has its bottom rung.
+The Skill System (Doc 02) adapts the resulting capabilities, while the Facade Provider contributes its own structural query to the same compiled discovery plan. XML documentation is required so the description-priority chain has its bottom rung. `REGISTRATION_FEATURE` makes selection of all or specific Facades an explicit, pre-option-finalization invariant.
+
+The provider is an ordinary `MonicaModule<ModuleAIFacadeProviderOption>`. It implements neither `IWebModule` nor `IUIModule` because it contributes no middleware, endpoints, or UI composition.
 
 ## 2. Module Facade Skill — one per Monica module
 
@@ -69,7 +72,7 @@ A single internal skill class:
 namespace Monica.Framework.AISkillProviders.Facade.Internal;
 
 internal sealed class ModuleFacadeSkill(
-    ModuleKey moduleKey,
+    Type moduleType,
     AgentSkillFrontmatter frontmatter,
     string instructions,
     IReadOnlyList<FacadeScriptGroup> facadeGroups,
@@ -86,7 +89,7 @@ internal sealed class ModuleFacadeSkill(
     /// </summary>
     public override IReadOnlyList<AgentSkillScript>? Scripts { get; } = scripts;
 
-    public ModuleKey ModuleKey { get; } = moduleKey;
+    public Type ModuleType { get; } = moduleType;
     public IReadOnlyList<FacadeScriptGroup> FacadeGroups { get; } = facadeGroups;
 }
 
@@ -105,10 +108,10 @@ internal sealed record FacadeScriptGroup(
 
 The generated skill frontmatter represents the owning Monica module, not an individual Facade.
 
-- **Name.** `module-{moduleKey-kebab}`. Examples: `module-rag`, `module-knowledge-base`, `module-job-scheduler`.
+- **Name.** `module-{module-name-kebab}`, derived from the owning module strategy type after stripping its `Module` prefix. Examples: `module-rag`, `module-knowledge-base`, `module-job-scheduler`.
 - **Description.** Resolved through:
   1. Module class XML `<summary>`.
-  2. Fallback: `"The {ModuleKey} module."`
+  2. Fallback: `"The {ModuleType.Name} module."`
 
 The kebab-case conversion is straightforward but specific:
 
@@ -142,7 +145,7 @@ Facade descriptions are resolved through:
 
 1. `[Description("...")]` on the Facade type.
 2. `IXmlDocumentationService.GetTypeDocumentation(facadeType)` — the type's XML `<summary>`.
-3. Fallback: `"{ModuleKey}.{FacadeName}"`, e.g., `"Monica.AI.RAG.RAGFacade"`.
+3. Fallback: `"{ModuleType.Name}.{FacadeName}"`, e.g., `"ModuleRAG.RAGFacade"`.
 
 `[MoAITool]` is not allowed on classes by Doc 02 §5.1, so it is not part of type-description resolution.
 
@@ -288,25 +291,32 @@ This is explicitly out of scope. The doc declares the slot so future iterations 
 namespace Monica.AI.Skills.Abstractions;
 
 /// <summary>
-/// Marker interface implemented by every Monica module Facade that should be
-/// auto-projected as an AI Skill by ModuleAIFacadeProvider.
+/// Marker interface for Facades that may be projected as AI skills.
 /// </summary>
 public interface IMonicaFacade
 {
 }
+
+/// <summary>
+/// Associates an exposed Facade with its owning Monica module strategy type.
+/// </summary>
+public interface IMonicaFacade<TModule> : IMonicaFacade
+    where TModule : MonicaModule
+{
+}
 ```
 
-The interface is defined in `Monica.AI/Skills/Abstractions/IMonicaFacade.cs` (Doc 02 reserves the home folder; Doc 03 names the interface). Every existing Facade that wants opt-in adds `: IMonicaFacade` to its declaration. This is a one-liner per Facade and an explicit, grep-able opt-in:
+The interfaces are defined in `Monica.AI/Skills/Abstractions/IMonicaFacade.cs` (Doc 02 reserves the home folder; Doc 03 names the contract). Every existing Facade that wants opt-in adds the closed owner marker. This makes ownership explicit and uses the same CLR type identity as the module graph:
 
 ```csharp
 // Before:
 public class RAGFacade(...)
 
 // After:
-public class RAGFacade(...) : IMonicaFacade
+public class RAGFacade(...) : IMonicaFacade<ModuleRAG>
 ```
 
-The doc-writer in Phase C is responsible for adding the marker to every existing Facade across `Monica.AI`, `Monica.Framework`, `Monica.JobScheduler`, etc. — a mechanical pass.
+The Phase C implementation adds the owner marker to every selected Facade across `Monica.AI`, `Monica.Framework`, `Monica.JobScheduler`, and other participating modules. A Facade must implement exactly one closed `IMonicaFacade<TModule>`; ambiguous ownership is rejected during the discovery commit.
 
 ### 4.2 Why a marker, not a naming convention
 
@@ -315,66 +325,63 @@ Two alternatives were considered and rejected:
 - **Filter on type name `*Facade`.** Brittle: catches helper classes named `*Facade` that aren't really Facades. Doesn't survive renames.
 - **Filter on namespace `*Facades`.** Same problem; depends on developer convention.
 
-The marker interface is cheap to test (`type.IsAssignableTo(typeof(IMonicaFacade))`), invisible at runtime cost, and explicit. It also gives module owners a clear "I don't want this exposed" path: just don't add the marker.
+The marker interface is explicit and lets the compiled query retain its closed generic match. It also gives module owners a clear "I don't want this exposed" path: do not add the marker. The generic owner avoids assembly/name heuristics, which fail when one assembly contains multiple module strategies.
 
 ### 4.3 Discovery pipeline
 
-`ModuleAIFacadeProvider.IterateBusinessTypes`:
+`ModuleAIFacadeProvider.DeclareTypeDiscovery`:
 
 ```csharp
-public IEnumerable<Type> IterateBusinessTypes(IEnumerable<Type> types)
+public override void DeclareTypeDiscovery(TypeDiscoveryPlan<ModuleAIFacadeProviderOption> discovery)
 {
-    foreach (var type in types)
-    {
-        if (type is { IsClass: true, IsAbstract: false }
-            && type.IsAssignableTo(typeof(IMonicaFacade)))
+    discovery.Match(
+        TypeQuery.ConcreteClass.ImplementsOpenGeneric(typeof(IMonicaFacade<>)),
+        (_, matches) =>
         {
-            _discoveredFacades.Add(type);
-        }
-        yield return type;
-    }
+            foreach (var match in matches)
+            {
+                _facades.Collect(match);
+            }
+        });
 }
 ```
 
-Collected types are processed in `PostConfigureServices`:
+`BusinessTypeMatch.OpenGenericInterfaces` carries the closed `IMonicaFacade<TModule>` match, so `_facades.Collect(...)` obtains both the Facade type and its authoritative owner module type without another `GetInterfaces()` call. Collected types are processed after the serial discovery commit:
 
 1. Filter by `Option.RegistrationMode` (§5).
-2. Group by owning module (the module that has the Facade in its assembly's `ModuleBase`-rooted graph). The grouping uses `[ModuleKey]`-attributed types in the same assembly as the heuristic.
+2. Group by the owner `TModule` declared by `IMonicaFacade<TModule>` and reject Facades whose owner is not in the compiled host graph.
 3. For each surviving Facade, scan eligible public methods and build `AgentSkillScript`s (§2.4).
 4. For each module that contributed at least one script, build one `ModuleFacadeSkill` (§2) with its scripts grouped by Facade in `FacadeScriptGroup` entries.
 5. Register each `ModuleFacadeSkill` as a singleton `AgentSkill` service. The Skill System hosted service from Doc 02 §6.2 picks them up and adds them to the `AgentSkillsProvider`.
 
-## 5. Selective registration — guide methods
+## 5. Selective registration — `ModuleRegistration` extensions
 
-### 5.1 The two guide methods
+### 5.1 The two registration methods
 
-`ModuleAIFacadeProviderGuide` exposes:
+The host configures the typed registration returned by `AddAIFacadeSkills()`:
 
 ```csharp
-public sealed class ModuleAIFacadeProviderGuide
-    : ModuleGuide<ModuleAIFacadeProvider, ModuleAIFacadeProviderOption, ModuleAIFacadeProviderGuide>
+public static class ModuleAIFacadeProviderRegistrationExtensions
 {
-    private const string CONFIG_REGISTRATION = nameof(CONFIG_REGISTRATION);
-    protected override string[] GetRequestedConfigMethodKeys() => [CONFIG_REGISTRATION];
-
     /// <summary>
-    /// Register every IMonicaFacade-marked type discovered in loaded assemblies.
+    /// Register every IMonicaFacade<TModule>-marked type discovered in loaded assemblies.
     /// </summary>
-    public ModuleAIFacadeProviderGuide UseAllFacades()
+    public static ModuleRegistration<ModuleAIFacadeProvider, ModuleAIFacadeProviderOption>
+        UseAllFacades(
+            this ModuleRegistration<ModuleAIFacadeProvider, ModuleAIFacadeProviderOption> module)
     {
-        ConfigureModuleOption(option =>
-        {
-            option.RegistrationMode = FacadeRegistrationMode.All;
-            option.AllowedFacadeTypes = null;
-        });
-        ConfigureEmpty(CONFIG_REGISTRATION);
-        return this;
+        return module
+            .Configure(static option => option.SelectAllFacades())
+            .SatisfyFeature(ModuleAIFacadeProvider.REGISTRATION_FEATURE);
     }
 
     /// <summary>
-    /// Register only the listed Facade types. Each type must implement IMonicaFacade.
+    /// Register only the listed Facade types. Each type must implement IMonicaFacade<TModule>.
     /// </summary>
-    public ModuleAIFacadeProviderGuide UseFacades(params Type[] facadeTypes)
+    public static ModuleRegistration<ModuleAIFacadeProvider, ModuleAIFacadeProviderOption>
+        UseFacades(
+            this ModuleRegistration<ModuleAIFacadeProvider, ModuleAIFacadeProviderOption> module,
+            params Type[] facadeTypes)
     {
         ArgumentNullException.ThrowIfNull(facadeTypes);
         foreach (var type in facadeTypes)
@@ -386,13 +393,11 @@ public sealed class ModuleAIFacadeProviderGuide
                     nameof(facadeTypes));
             }
         }
-        ConfigureModuleOption(option =>
-        {
-            option.RegistrationMode = FacadeRegistrationMode.Selective;
-            option.AllowedFacadeTypes = facadeTypes.ToHashSet();
-        });
-        ConfigureEmpty(CONFIG_REGISTRATION);
-        return this;
+
+        var selectedFacades = facadeTypes.ToFrozenSet();
+        return module
+            .Configure(option => option.SelectFacades(selectedFacades))
+            .SatisfyFeature(ModuleAIFacadeProvider.REGISTRATION_FEATURE);
     }
 }
 ```
@@ -404,10 +409,11 @@ public static class ModuleAIFacadeProviderBuilderExtensions
 {
     extension(IMonicaBuilder builder)
     {
-        public ModuleAIFacadeProviderGuide AddAIFacadeSkills(
+        public ModuleRegistration<ModuleAIFacadeProvider, ModuleAIFacadeProviderOption>
+            AddAIFacadeSkills(
             Action<ModuleAIFacadeProviderOption>? action = null)
         {
-            return builder.AddModule<ModuleAIFacadeProvider, ModuleAIFacadeProviderOption, ModuleAIFacadeProviderGuide>(action);
+            return builder.AddModule<ModuleAIFacadeProvider, ModuleAIFacadeProviderOption>(action);
         }
     }
 }
@@ -425,14 +431,14 @@ monica.AddAIFacadeSkills().UseFacades(
     typeof(KnowledgeBaseFacade));
 ```
 
-`UseAllFacades()` and `UseFacades(...)` are mutually exclusive — calling both throws because `CONFIG_REGISTRATION` is asserted twice. This is Monica's standard "exactly one configuration must be picked" pattern.
+`ModuleAIFacadeProvider.Describe` requires `REGISTRATION_FEATURE`, and both registration methods satisfy it. The option's `SelectAllFacades` / `SelectFacades` transition rejects a second selection when contributions are finalized, preserving mutual exclusivity without a parallel config-key subsystem.
 
 ### 5.2 Per-method exclusion
 
-There is no guide-level allowlist or filter delegate. Per-method exclusion lives entirely in code via `[MoAITool(Disabled = true)]`. Confirmed by user during plan refinement.
+There is no additional registration-level filter delegate. Per-method exclusion lives entirely in code via `[MoAITool(Disabled = true)]`. Confirmed by user during plan refinement.
 
 ```csharp
-public class RAGFacade : IMonicaFacade
+public class RAGFacade : IMonicaFacade<ModuleRAG>
 {
     public Task<Res<List<KnowledgeBase>>> GetAllAsync()  // exposed
     { /* ... */ }
@@ -471,7 +477,7 @@ Doc 02 §5 defines the attribute. Doc 03's role is to specify how it interacts w
 ### 6.1 Worked example combining all rungs
 
 ```csharp
-public class HypotheticalFacade : IMonicaFacade
+public class HypotheticalFacade : IMonicaFacade<ModuleHypothetical>
 {
     /// <summary>List items.</summary>
     public Task<Res<List<Item>>> ListAsync() => /* ... */;
@@ -520,13 +526,13 @@ The `IServiceProvider` parameter is treated specially by `AIFunctionFactory.Crea
 
 ### 7.2 Module gating
 
-A `ModuleFacadeSkill`'s `RequiredModules`-equivalent gate is implicit: the discovery scan only sees Facade types whose owning assemblies are loaded. There is no per-Skill `RequiredModules` because `IMonicaFacade` types aren't `MoSkill<TSelf>` subclasses. If a Facade lives in an assembly that isn't loaded, the type isn't discovered, and no script is created for it.
+A `ModuleFacadeSkill`'s owner gate is explicit: the discovery result supplies `TModule` from `IMonicaFacade<TModule>`, and the commit retains the Facade only when that exact module strategy type belongs to the compiled host graph. There is no string/display-name comparison and no per-Skill `RequiredModules` duplication.
 
 The `ModuleFacadeSkill` is built only for modules with at least one surviving Facade script. If `monica.AddRAG()` is not called, no `RAGFacade` is registered (today, RAG facades are registered conditionally inside `ModuleRAG`), and `module-rag` doesn't appear.
 
 ### 7.3 Async vs sync
 
-`IBusinessTypeIterator.IterateBusinessTypes` is synchronous. Facade discovery happens synchronously at iteration phase. The hosted service that builds the `AgentSkillsProvider` (Doc 02 §6.2) runs at startup; it iterates the registered `AgentSkill` services synchronously and builds the provider in one go. There is no per-session work — match Doc 02's lifecycle rule.
+Facade selection is declared before scanning. Monica performs an analysis-only shared scan and invokes the Facade Provider's commit serially in module-topology order. The hosted service that builds the `AgentSkillsProvider` (Doc 02 §6.2) runs at startup and builds the provider in one go. There is no per-session discovery work — match Doc 02's lifecycle rule.
 
 ## 8. `Res` and `Res<T>` unwrap semantics
 
@@ -579,16 +585,16 @@ public sealed class ModuleAIFacadeProviderOption
 {
     /// <summary>
     /// Whether to register all discovered Facades (UseAllFacades) or only the
-    /// allowlisted set (UseFacades). Set by the Guide; not user-set directly.
+    /// allowlisted set (UseFacades). Set by registration extensions; not user-set directly.
     /// </summary>
-    public FacadeRegistrationMode RegistrationMode { get; set; }
+    internal FacadeRegistrationMode RegistrationMode { get; private set; }
         = FacadeRegistrationMode.None;
 
     /// <summary>
     /// When RegistrationMode == Selective, only Facade types in this set are
     /// registered. Null when RegistrationMode == All.
     /// </summary>
-    public IReadOnlySet<Type>? AllowedFacadeTypes { get; set; }
+    internal IReadOnlySet<Type>? AllowedFacadeTypes { get; private set; }
 
     /// <summary>
     /// Maximum DTO recursion depth for parameter-schema generation. Default: 3.
@@ -601,6 +607,29 @@ public sealed class ModuleAIFacadeProviderOption
     /// "{TypeName}.{MethodName}" placeholder. Default: true.
     /// </summary>
     public bool WarnOnMissingDescription { get; set; } = true;
+
+    internal void SelectAllFacades()
+    {
+        EnsureRegistrationNotSelected();
+        RegistrationMode = FacadeRegistrationMode.All;
+        AllowedFacadeTypes = null;
+    }
+
+    internal void SelectFacades(IReadOnlySet<Type> facadeTypes)
+    {
+        EnsureRegistrationNotSelected();
+        RegistrationMode = FacadeRegistrationMode.Selective;
+        AllowedFacadeTypes = facadeTypes;
+    }
+
+    private void EnsureRegistrationNotSelected()
+    {
+        if (RegistrationMode != FacadeRegistrationMode.None)
+        {
+            throw new InvalidOperationException(
+                "Select either all Facades or a Facade allowlist exactly once.");
+        }
+    }
 }
 
 public enum FacadeRegistrationMode
@@ -618,18 +647,18 @@ public enum FacadeRegistrationMode
 | (a) | Default deny-list completeness. | **Defined in §2.5.** The set is exhaustive for v1: `IDisposable` plumbing, `Object` overrides, `ref`/`out` params, `IQueryable` returns, generics, operators, special-name members. Future additions are non-breaking. |
 | (b) | Complex DTO parameter handling — recursion depth. | **Recursive XML-doc descent with depth limit 3.** Implemented via `ModuleAIFacadeProviderOption.MaxParameterSchemaDepth`. Beyond depth 3, the parameter is described as `{TypeName}` with no nested doc — agents see the JSON schema name only. Cycles are detected and pruned. |
 | (c) | Per-method permission gates. | **Out of scope this rev.** `[MoAITool]` reserves `RequiredPermissions` as a documented forward-compat slot per Doc 02 §5.1; the property is not shipped until a future security doc owns it. |
-| (d) | What about Facades that aren't yet `IMonicaFacade`-marked? | **Mechanical migration.** Phase C's PR adds the marker to every existing Facade. No Facade is silently exposed without the marker. The PR is reviewable as a checklist (one line per Facade). |
+| (d) | What about Facades that aren't yet `IMonicaFacade<TModule>`-marked? | **Mechanical migration.** Phase C's PR adds the owner marker to every selected Facade. No Facade is silently exposed without it. The PR is reviewable as a checklist (one line per Facade). |
 | (e) | Method-name collisions inside a module Skill (e.g., overloads or explicit name overrides). | **Forbidden.** Two methods that produce the same script name inside one `ModuleFacadeSkill` are rejected at startup with a clear message. Authors fix the collision by renaming one method or by setting `[MoAITool(Name = "...")]` explicitly on one of them per Doc 02 §5.1. |
-| (f) | What if the Facade's owning module key isn't on `BuiltInModuleKey`? | **Use `(ModuleKey)moduleKeyString`.** Third-party modules with custom `ModuleKey`s work transparently — the kebab-case and frontmatter generation use the `ModuleKey.Value` string. |
+| (f) | How are first-party and third-party Facade owners identified consistently? | **By the closed `IMonicaFacade<TModule>` interface.** Both use CLR module strategy types; display names are derived from `TModule` and never participate in equality. |
 
 ## 11. Acceptance criteria for Phase C
 
 When Phase C is implemented:
 
-1. `Monica.Framework/AISkillProviders/Facade/` folder exists with all files listed in §1.1.
-2. `BuiltInModuleKey.AIFacadeProvider` exists.
+1. `Monica.Framework/Modules/ModuleAIFacadeProvider.cs` and `Monica.Framework/AISkillProviders/Facade/Internal/` exist with the files listed in §1.1.
+2. `ModuleAIFacadeProvider` derives from `MonicaModule<ModuleAIFacadeProviderOption>`, declares its graph and required registration feature in `Describe`, and contributes a compiled Facade query from `DeclareTypeDiscovery`.
 3. `monica.AddAIFacadeSkills().UseAllFacades()` and `monica.AddAIFacadeSkills().UseFacades(...)` are callable from a host `Program.cs`.
-4. Every existing Monica Facade has been marked `: IMonicaFacade`. The migration PR includes a comprehensive checklist of Facades touched.
+4. Every selected Monica Facade has been marked with exactly one `IMonicaFacade<TModule>` owner. The migration PR includes a comprehensive checklist of Facades touched.
 5. End-to-end smoke test: a host registers `monica.AddAI()`, `monica.AddRAG()`, `monica.AddKnowledgeBase()`, and `monica.AddAIFacadeSkills().UseAllFacades()`. The chat agent's system prompt contains entries for `module-rag`, `module-knowledge-base`, and `module-ai`. Loading each module skill shows Facade-grouped scripts with method-derived names and non-fallback descriptions.
 6. The smoke test verifies the Agent Framework call shape: Facade methods are invoked through `run_skill_script` using `skillName`, `scriptName`, and `arguments`; individual scripts are not top-level tools.
 7. The `Res<T>` unwrap rule is verified in the smoke test: a script that calls `RAGFacade.SearchAsync` returns the unwrapped `IReadOnlyList<TextSearchResult>` JSON. A script that calls a method that returns `Res.Fail("...")` results in a tool error with the failure message visible to the agent.

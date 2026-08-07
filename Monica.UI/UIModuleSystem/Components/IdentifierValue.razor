@@ -1,0 +1,9 @@
+<div class="identifier-value">
+    <MudTooltip Text="@Value">
+        <code tabindex="0">@Value</code>
+    </MudTooltip>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public string Value { get; set; } = string.Empty;
+}

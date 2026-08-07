@@ -3,8 +3,6 @@ using Monica.Core;
 using Monica.Locker.Abstractions;
 using Monica.Core.Modularity;
 using Monica.Core.Modularity.Abstractions;
-using Monica.Core.Modularity.Annotations;
-using Monica.Core.Modularity.Models;
 using Monica.Locker.Models;
 using Monica.Locker.Providers.InProcess;
 using Monica.Locker.Providers.Medallion;
@@ -19,13 +17,39 @@ public static class ModuleLockerBuilderExtensions
     extension(IMonicaBuilder builder)
     {
         /// <summary>
-        /// Registers the Locker module and returns its guide for provider configuration.
+        /// Registers the Locker module and returns its host-bound provider configuration.
         /// </summary>
         /// <param name="action">Optional module option configuration.</param>
-        /// <returns>The locker guide used to select a concrete lock provider.</returns>
-        public ModuleLockerGuide AddLocker(Action<ModuleLockerOption>? action = null)
+        /// <returns>The locker registration used to select a concrete lock provider.</returns>
+        public ModuleRegistration<ModuleLocker, ModuleLockerOption> AddLocker(
+            Action<ModuleLockerOption>? action = null)
         {
-            return builder.AddModule<ModuleLocker, ModuleLockerOption, ModuleLockerGuide>(action);
+            return builder.AddModule<ModuleLocker, ModuleLockerOption>(action);
+        }
+    }
+
+    extension(ModuleRegistration<ModuleLocker, ModuleLockerOption> registration)
+    {
+        public ModuleRegistration<ModuleLocker, ModuleLockerOption> UseProvider<TProvider>()
+            where TProvider : class, ILockProvider
+        {
+            return registration
+                .ConfigureServices(context => context.Services.AddSingleton<ILockProvider, TProvider>())
+                .SatisfyFeature(ModuleLocker.PROVIDER_FEATURE);
+        }
+
+        public ModuleRegistration<ModuleLocker, ModuleLockerOption> UseMedallionProvider(
+            MedallionDistributedLockProvider distributedLockProvider)
+        {
+            ArgumentNullException.ThrowIfNull(distributedLockProvider);
+            return registration
+                .UseProvider<MedallionLockProvider>()
+                .ConfigureServices(context => context.Services.AddSingleton(distributedLockProvider));
+        }
+
+        public ModuleRegistration<ModuleLocker, ModuleLockerOption> UseInProcessProvider()
+        {
+            return registration.UseProvider<InProcessLockProvider>();
         }
     }
 }
@@ -33,67 +57,19 @@ public static class ModuleLockerBuilderExtensions
 /// <summary>
 /// Registers the shared locker services and exposes <see cref="IDistributedLock"/> to application code.
 /// </summary>
-[ModuleKey(BuiltInModuleKey.Locker)]
-public class ModuleLocker(ModuleLockerOption option) : ModuleBase<ModuleLocker, ModuleLockerOption, ModuleLockerGuide>(option)
+public class ModuleLocker : MonicaModule<ModuleLockerOption>
 {
-    public override void ConfigureServices(IServiceCollection services)
-    {
-        services.AddSingleton<LockKeyNormalizer>();
-        services.AddSingleton<IDistributedLock, DistributedLockService>();
-    }
-}
+    internal const string PROVIDER_FEATURE = "lock-provider";
 
-/// <summary>
-/// Configures which lock provider backs the Locker module.
-/// </summary>
-public class ModuleLockerGuide : ModuleGuide<ModuleLocker, ModuleLockerOption, ModuleLockerGuide>
-{
-    protected override string[] GetRequestedConfigMethodKeys()
+    public override void Describe(ModuleDescriptor module)
     {
-        return [nameof(UseProvider)];
+        module.RequireFeature(PROVIDER_FEATURE);
     }
 
-    /// <summary>
-    /// Registers a custom <see cref="ILockProvider"/> implementation.
-    /// </summary>
-    /// <typeparam name="TProvider">The provider type used to acquire and release locks.</typeparam>
-    /// <returns>The current guide instance.</returns>
-    public ModuleLockerGuide UseProvider<TProvider>() where TProvider : class, ILockProvider
+    public override void ConfigureServices(ModuleContext<ModuleLockerOption> context)
     {
-        ConfigureServices(context =>
-        {
-            context.Services.AddSingleton<ILockProvider, TProvider>();
-        });
-
-        return this;
-    }
-
-    /// <summary>
-    /// Registers the Medallion-based distributed lock provider.
-    /// </summary>
-    /// <param name="distributedLockProvider">The Medallion distributed lock provider to use.</param>
-    /// <returns>The current guide instance.</returns>
-    public ModuleLockerGuide UseMedallionProvider(
-        MedallionDistributedLockProvider distributedLockProvider)
-    {
-        ArgumentNullException.ThrowIfNull(distributedLockProvider);
-
-        UseProvider<MedallionLockProvider>();
-        ConfigureServices(context =>
-        {
-            context.Services.AddSingleton(distributedLockProvider);
-        });
-
-        return this;
-    }
-
-    /// <summary>
-    /// Registers the in-process lock provider for single-process scenarios and local development.
-    /// </summary>
-    /// <returns>The current guide instance.</returns>
-    public ModuleLockerGuide UseInProcessProvider()
-    {
-        return UseProvider<InProcessLockProvider>();
+        context.Services.AddSingleton<LockKeyNormalizer>();
+        context.Services.AddSingleton<IDistributedLock, DistributedLockService>();
     }
 }
 

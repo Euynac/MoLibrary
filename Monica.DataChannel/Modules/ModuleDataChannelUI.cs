@@ -1,8 +1,6 @@
 using Monica.Core;
 using Monica.Core.Modularity;
 using Monica.Core.Modularity.Abstractions;
-using Monica.Core.Modularity.Annotations;
-using Monica.Core.Modularity.Models;
 using Monica.DataChannel.Localization;
 using Monica.DataChannel.Pages;
 using Monica.UI.Shell.Models;
@@ -15,37 +13,8 @@ namespace Monica.Modules;
 /// UI module for DataChannel.
 /// Provides the management interface for DataChannel.
 /// </summary>
-[ModuleKey(BuiltInModuleKey.DataChannelUI)]
-public class ModuleDataChannelUI(ModuleDataChannelUIOption option)
-    : ModuleBase<ModuleDataChannelUI, ModuleDataChannelUIOption, ModuleDataChannelUIGuide>(option)
+public class ModuleDataChannelUI : MonicaModule<ModuleDataChannelUIOption>, IUIModule
 {
-    /// <summary>
-    /// Declares module dependencies.
-    /// </summary>
-    public override void ClaimDependencies()
-    {
-        if (!Option.DisableDataChannelPage)
-        {
-            // Depend on the core DataChannel module.
-            DependsOnModule<ModuleDataChannelGuide>().Register();
-
-            // Depend on the UIStackTrace module for exception stack visualization.
-            DependsOnModule<ModuleStackTraceUIGuide>().Register();
-
-            DependsOnModule<ModuleLocalizationGuide>().Register()
-                .AddResource<DataChannelResource>();
-
-            // Depend on the UI core module and register the DataChannel page.
-            DependsOnModule<ModuleShellUIGuide>().Register()
-                .RegisterUIComponents(p => p.RegisterLocalizedPage<UIDataChannelPage, DataChannelResource>(
-                    UIDataChannelPage.PAGE_URL,
-                    "Pages:DataChannelManage:Title",
-                    Icons.Material.Filled.DataObject,
-                    BuiltInNavigationCategoryIds.Monitor,
-                    addToNav: true,
-                    navOrder: 30));
-        }
-    }
 }
 
 public static class ModuleDataChannelUIBuilderExtensions
@@ -55,25 +24,24 @@ public static class ModuleDataChannelUIBuilderExtensions
         /// <summary>
         /// Configures the DataChannelUI module.
         /// </summary>
-        public ModuleDataChannelUIGuide AddDataChannelUI(Action<ModuleDataChannelUIOption>? action = null)
+        public ModuleRegistration<ModuleDataChannelUI, ModuleDataChannelUIOption> AddDataChannelUI(
+            Action<ModuleDataChannelUIOption>? action = null)
         {
-            return builder.AddModule<ModuleDataChannelUI, ModuleDataChannelUIOption, ModuleDataChannelUIGuide>(action);
+            var registration = builder.AddModule<ModuleDataChannelUI, ModuleDataChannelUIOption>(action);
+            registration.Require<ModuleDataChannel, ModuleDataChannelOption>();
+            registration.Require<ModuleStackTraceUI, ModuleStackTraceUIOption>();
+            registration.Require<ModuleLocalization, ModuleLocalizationOption>()
+                .AddResource<DataChannelResource>();
+            registration.Require<ModuleShellUI, ModuleShellUIOption>()
+                .RegisterUIComponents(registry => registry.RegisterLocalizedPage<UIDataChannelPage, DataChannelResource>(
+                    UIDataChannelPage.PAGE_URL,
+                    "Pages:DataChannelManage:Title",
+                    Icons.Material.Filled.DataObject,
+                    BuiltInNavigationCategoryIds.Monitor,
+                    addToNav: true,
+                    navOrder: 30));
+            return registration;
         }
-    }
-}
-
-/// <summary>
-/// Guide for the DataChannel UI module.
-/// </summary>
-public class ModuleDataChannelUIGuide : ModuleGuide<ModuleDataChannelUI, ModuleDataChannelUIOption, ModuleDataChannelUIGuide>
-{
-    /// <summary>
-    /// Gets the requested configuration method keys.
-    /// </summary>
-    /// <returns>An array of configuration method keys.</returns>
-    protected override string[] GetRequestedConfigMethodKeys()
-    {
-        return [];
     }
 }
 
@@ -82,8 +50,4 @@ public class ModuleDataChannelUIGuide : ModuleGuide<ModuleDataChannelUI, ModuleD
 /// </summary>
 public class ModuleDataChannelUIOption : ModuleOptions<ModuleDataChannelUI>
 {
-    /// <summary>
-    /// Gets or sets a value indicating whether the DataChannel page is disabled.
-    /// </summary>
-    public bool DisableDataChannelPage { get; set; } = false;
 }

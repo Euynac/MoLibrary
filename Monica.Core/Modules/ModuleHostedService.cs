@@ -9,8 +9,6 @@ using Monica.Core.HostedService.Services;
 using Monica.Core.HostedService.Services.Support;
 using Monica.Core.Modularity;
 using Monica.Core.Modularity.Abstractions;
-using Monica.Core.Modularity.Annotations;
-using Monica.Core.Modularity.Models;
 
 // ReSharper disable once CheckNamespace
 namespace Monica.Modules;
@@ -22,9 +20,10 @@ public static class ModuleHostedServiceBuilderExtensions
         /// <summary>
         /// Configures the HostedService module.
         /// </summary>
-        public ModuleHostedServiceGuide AddHostedService(Action<ModuleHostedServiceOption>? action = null)
+        public ModuleRegistration<ModuleHostedService, ModuleHostedServiceOption> AddHostedService(
+            Action<ModuleHostedServiceOption>? action = null)
         {
-            return builder.AddModule<ModuleHostedService, ModuleHostedServiceOption, ModuleHostedServiceGuide>(action);
+            return builder.AddModule<ModuleHostedService, ModuleHostedServiceOption>(action);
         }
     }
 }
@@ -33,18 +32,17 @@ public static class ModuleHostedServiceBuilderExtensions
 /// HostedService observability module.
 /// Provides centralized HostedService state management, heartbeat monitoring, and coordination support.
 /// </summary>
-[ModuleKey(BuiltInModuleKey.HostedService)]
-public class ModuleHostedService(ModuleHostedServiceOption option)
-    : ModuleBase<ModuleHostedService, ModuleHostedServiceOption, ModuleHostedServiceGuide>(option)
+public class ModuleHostedService : MonicaModule<ModuleHostedServiceOption>
 {
-    public override void ClaimDependencies()
+    public override void Describe(ModuleDescriptor module)
     {
-        DependsOnModule<ModuleObservableInstanceGuide>().Register();
-        DependsOnModule<ModuleExecutionPipelineGuide>().Register();
+        module.Require<ModuleObservableInstance, ModuleObservableInstanceOption>();
+        module.Require<ModuleExecutionPipeline, ModuleExecutionPipelineOption>();
     }
 
-    public override void ConfigureServices(IServiceCollection services)
+    public override void ConfigureServices(ModuleContext<ModuleHostedServiceOption> context)
     {
+        var services = context.Services;
         services.AddSingleton(new HostedServiceDescriptorCatalog(services));
         services.AddSingleton<IValidateOptions<HostedServiceRegistrationValidationOptions>, HostedServiceRegistrationValidator>();
         services.AddOptions<HostedServiceRegistrationValidationOptions>().ValidateOnStart();
@@ -60,12 +58,6 @@ public class ModuleHostedService(ModuleHostedServiceOption option)
         services.AddHostedService<HostedServiceRegistryLifecycle>();
     }
 }
-
-/// <summary>
-/// Fluent configuration guide for the HostedService observability module
-/// </summary>
-public class ModuleHostedServiceGuide
-    : ModuleGuide<ModuleHostedService, ModuleHostedServiceOption, ModuleHostedServiceGuide>;
 
 /// <summary>
 /// Configuration options for the HostedService observability module

@@ -51,7 +51,7 @@
 - Prefer public-surface assertions.
 - Assert `Res` and `Res<T>` status, message, and data explicitly.
 - Assert successful `Res<string>.Data` to catch the string-overload trap.
-- Test module guides through dependencies, options, registrations, or runtime snapshots.
+- Test module composition through dependencies, options, registrations, or runtime snapshots.
 - Assert side effects through repositories, DbContexts, recording event buses, state stores, or other public boundaries.
 
 ## Stack

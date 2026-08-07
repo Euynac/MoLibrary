@@ -1,5 +1,6 @@
-using Monica.ProjectUnits.Services.Support;
+using Monica.Core.TypeDiscovery.Models;
 using Monica.Modules;
+using Monica.ProjectUnits.Services.Support;
 using Monica.WebApi.Abstractions;
 
 namespace Monica.ProjectUnits.Models;
@@ -9,17 +10,12 @@ namespace Monica.ProjectUnits.Models;
 /// </summary>
 public class UnitDomainService : ProjectUnit
 {
-    internal UnitDomainService(Type type, ProjectUnitCatalog catalog)
-        : base(type, EProjectUnitType.DomainService, catalog)
+    internal UnitDomainService(BusinessTypeShape shape, ProjectUnitCatalog catalog)
+        : base(shape, EProjectUnitType.DomainService, catalog)
     {
     }
 
     protected override bool ShouldAnalyzeConstructorDependencies => true;
-    protected override bool VerifyTypeConstrain()
-    {
-        return Type.IsClass && Type.IsSubclassOf(typeof(DomainService));
-    }
-
     protected override ProjectUnitNamingRule? DefaultConventionOption()
     {
         return new ProjectUnitNamingRule
@@ -28,12 +24,10 @@ public class UnitDomainService : ProjectUnit
         };
     }
 
-    internal static ProjectUnit? Create(Type type, ProjectUnitCatalog catalog)
+    internal static ProjectUnit Create(BusinessTypeShape shape, ProjectUnitCatalog catalog)
     {
-        var unit = new UnitDomainService(type, catalog);
-        if (!unit.VerifyType()) return null;
-        
-        // Initialization method metadata
+        var unit = new UnitDomainService(shape, catalog);
+        unit.CheckNameConventionMode();
         unit.InitializeMethods<DomainService>();
         return unit;
     }

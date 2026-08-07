@@ -8,9 +8,9 @@ using Monica.AI.Skills.Services;
 using Monica.AI.Services.Support.ModuleCatalog;
 using Monica.Core;
 using Monica.Core.Modularity.Abstractions;
-using Monica.Core.Modularity.Annotations;
 using Monica.Core.Modularity.Models;
 using Monica.Core.Skills;
+using Monica.Core.TypeDiscovery.Models;
 
 // ReSharper disable once CheckNamespace
 namespace Monica.Modules;
@@ -26,10 +26,10 @@ public static class ModuleSkillSystemBuilderExtensions
         /// Enables class-based AI skill discovery and registration.
         /// </summary>
         /// <param name="action">Optional configuration action.</param>
-        /// <returns>The skill-system module guide.</returns>
-        public ModuleSkillSystemGuide AddAISkillSystem(Action<ModuleSkillSystemOption>? action = null)
+        /// <returns>The skill-system module registration.</returns>
+        public ModuleRegistration<ModuleSkillSystem, ModuleSkillSystemOption> AddAISkillSystem(Action<ModuleSkillSystemOption>? action = null)
         {
-            return builder.AddModule<ModuleSkillSystem, ModuleSkillSystemOption, ModuleSkillSystemGuide>(action);
+            return builder.AddModule<ModuleSkillSystem, ModuleSkillSystemOption>(action);
         }
     }
 }
@@ -37,50 +37,38 @@ public static class ModuleSkillSystemBuilderExtensions
 /// <summary>
 /// Discovers Monica skill classes and exposes them through Microsoft Agent Skills.
 /// </summary>
-[ModuleKey(BuiltInModuleKey.AISkillSystem)]
-public sealed class ModuleSkillSystem(ModuleSkillSystemOption option)
-    : ModuleBase<ModuleSkillSystem, ModuleSkillSystemOption, ModuleSkillSystemGuide>(option),
-      IBusinessTypeIterator
+public sealed class ModuleSkillSystem : MonicaModule<ModuleSkillSystemOption>
 {
-    private readonly List<Type> _skillTypes = [];
-
     /// <inheritdoc />
-    public override void ClaimDependencies()
+    public override void Describe(ModuleDescriptor module)
     {
-        DependsOnModule<ModuleAIGuide>().Register();
-        DependsOnModule<ModuleXmlDocumentationGuide>().Register();
+        module.Require<ModuleAI, ModuleAIOption>();
+        module.Require<ModuleXmlDocumentation, ModuleXmlDocumentationOption>();
     }
 
     /// <inheritdoc />
-    public IEnumerable<Type> IterateBusinessTypes(IEnumerable<Type> types)
+    public override void DeclareTypeDiscovery(TypeDiscoveryPlan<ModuleSkillSystemOption> discovery)
     {
-        foreach (var type in types)
-        {
-            if (type is { IsClass: true, IsAbstract: false })
+        discovery.Match(
+            TypeQuery.ConcreteClass.AssignableTo<Skill>(),
+            (context, matches) =>
             {
-                if (type.IsAssignableTo(typeof(Skill)))
+                foreach (var match in matches)
                 {
-                    _skillTypes.Add(type);
+                    var skillType = match.Type;
+                    context.Registrations.TryAdd(ServiceDescriptor.Singleton(skillType, skillType));
+                    context.Registrations.Add(
+                        ServiceDescriptor.Singleton(
+                            typeof(Skill),
+                            serviceProvider => (Skill)serviceProvider.GetRequiredService(skillType)));
                 }
-            }
-
-            yield return type;
-        }
+            });
     }
 
     /// <inheritdoc />
-    public override void PostConfigureServices(IServiceCollection services)
+    public override void PostConfigureServices(ModuleContext<ModuleSkillSystemOption> context)
     {
-        foreach (var skillType in _skillTypes.Distinct())
-        {
-            if (!services.Any(descriptor => descriptor.ServiceType == skillType))
-            {
-                services.AddSingleton(skillType);
-            }
-
-            services.AddSingleton(typeof(Skill), sp => (Skill)sp.GetRequiredService(skillType));
-        }
-
+        var services = context.Services;
         services.TryAddSingleton<ILoadedModuleCatalog, ModuleRegistryLoadedModuleCatalog>();
         services.TryAddSingleton<MonicaSkillCatalog>();
         services.TryAddSingleton<MonicaAgentSkillsProviderFactory>();
@@ -88,10 +76,10 @@ public sealed class ModuleSkillSystem(ModuleSkillSystemOption option)
             ServiceDescriptor.Singleton<IAgentCapabilitySource, SkillAgentCapabilitySource>());
         services.TryAddEnumerable(
             ServiceDescriptor.Singleton<IAIChatAgentContributor, SkillChatAgentContributor>());
-        services.TryAddSingleton(_ => option.CreateReadOnlyFileAccessOptions());
+        services.TryAddSingleton(_ => Option.CreateReadOnlyFileAccessOptions());
         services.TryAddSingleton<ReadOnlyFileAccessService>();
 
-        foreach (var registration in option.ExternalFileSkillRegistrations)
+        foreach (var registration in Option.ExternalFileSkillRegistrations)
         {
             services.AddSingleton(registration);
         }
@@ -232,79 +220,88 @@ public sealed class ModuleSkillSystemOption : ModuleOptions<ModuleSkillSystem>
 }
 
 /// <summary>
-/// Configuration guide for the AI skill system.
+/// Registration extensions for the AI skill system.
 /// </summary>
-public sealed class ModuleSkillSystemGuide
-    : ModuleGuide<ModuleSkillSystem, ModuleSkillSystemOption, ModuleSkillSystemGuide>
+public static class ModuleSkillSystemRegistrationExtensions
 {
     /// <summary>
     /// Registers file-based Agent Framework skills from a single filesystem root.
     /// </summary>
+    /// <param name="module">The AI skill-system module registration.</param>
     /// <param name="skillPath">
     /// Root to scan. It may point directly at one skill directory containing <c>SKILL.md</c> or at a package directory
     /// containing multiple skill directories.
     /// </param>
     /// <param name="scriptRunner">Optional runner for file-based scripts.</param>
     /// <param name="options">Optional discovery options for resource directories, script directories, and allowed extensions.</param>
-    /// <returns>The current guide instance.</returns>
-    public ModuleSkillSystemGuide AddFileSkills(
+    /// <returns>The current module registration.</returns>
+    public static ModuleRegistration<ModuleSkillSystem, ModuleSkillSystemOption> AddFileSkills(this ModuleRegistration<ModuleSkillSystem, ModuleSkillSystemOption> module,
         string skillPath,
         AgentFileSkillScriptRunner? scriptRunner = null,
         AgentFileSkillsSourceOptions? options = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(skillPath);
-        return AddFileSkills([skillPath], scriptRunner, options);
+        return module.AddFileSkills([skillPath], scriptRunner, options);
     }
 
     /// <summary>
     /// Registers file-based Agent Framework skills from one or more filesystem roots.
     /// </summary>
+    /// <param name="module">The AI skill-system module registration.</param>
     /// <param name="skillPaths">
     /// Roots to scan. Each path may point directly at one skill directory containing <c>SKILL.md</c> or at a package
     /// directory containing multiple skill directories. Agent Framework searches recursively up to two levels deep.
     /// </param>
     /// <param name="scriptRunner">Optional runner for file-based scripts.</param>
     /// <param name="options">Optional discovery options for resource directories, script directories, and allowed extensions.</param>
-    /// <returns>The current guide instance.</returns>
-    public ModuleSkillSystemGuide AddFileSkills(
+    /// <returns>The current module registration.</returns>
+    public static ModuleRegistration<ModuleSkillSystem, ModuleSkillSystemOption> AddFileSkills(this ModuleRegistration<ModuleSkillSystem, ModuleSkillSystemOption> module,
         IEnumerable<string> skillPaths,
         AgentFileSkillScriptRunner? scriptRunner = null,
         AgentFileSkillsSourceOptions? options = null)
     {
-        return AddFileSkillsCore(skillPaths, scriptRunner, options, usesSubprocessRunner: false);
+        return AddFileSkillsCore(module, skillPaths, scriptRunner, options, usesSubprocessRunner: false);
     }
 
     /// <summary>
     /// Registers file-based Agent Framework skills and uses Monica's local subprocess runner for skill scripts.
     /// </summary>
+    /// <param name="module">The AI skill-system module registration.</param>
     /// <param name="skillPath">
     /// Root to scan. It may point directly at one skill directory containing <c>SKILL.md</c> or at a package directory
     /// containing multiple skill directories.
     /// </param>
     /// <param name="options">Optional discovery options for resource directories, script directories, and allowed extensions.</param>
-    /// <returns>The current guide instance.</returns>
-    public ModuleSkillSystemGuide AddFileSkillsWithSubprocessRunner(
+    /// <returns>The current module registration.</returns>
+    public static ModuleRegistration<ModuleSkillSystem, ModuleSkillSystemOption> AddFileSkillsWithSubprocessRunner(this ModuleRegistration<ModuleSkillSystem, ModuleSkillSystemOption> module,
         string skillPath,
         AgentFileSkillsSourceOptions? options = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(skillPath);
-        return AddFileSkillsCore([skillPath], MonicaSubprocessSkillScriptRunner.RunAsync, options, usesSubprocessRunner: true);
+        return AddFileSkillsCore(
+            module,
+            [skillPath],
+            MonicaSubprocessSkillScriptRunner.RunAsync,
+            options,
+            usesSubprocessRunner: true);
     }
 
     /// <summary>
     /// Registers file-based Agent Framework skills and uses Monica's local subprocess runner for skill scripts.
     /// </summary>
+    /// <param name="module">The AI skill-system module registration.</param>
     /// <param name="skillPaths">
     /// Roots to scan. Each path may point directly at one skill directory containing <c>SKILL.md</c> or at a package
     /// directory containing multiple skill directories. Agent Framework searches recursively up to two levels deep.
     /// </param>
     /// <param name="options">Optional discovery options for resource directories, script directories, and allowed extensions.</param>
-    /// <returns>The current guide instance.</returns>
-    public ModuleSkillSystemGuide AddFileSkillsWithSubprocessRunner(
+    /// <returns>The current module registration.</returns>
+    public static ModuleRegistration<ModuleSkillSystem, ModuleSkillSystemOption> AddFileSkillsWithSubprocessRunner(this ModuleRegistration<ModuleSkillSystem, ModuleSkillSystemOption> module,
         IEnumerable<string> skillPaths,
         AgentFileSkillsSourceOptions? options = null)
     {
         return AddFileSkillsCore(
+            module,
             skillPaths,
             MonicaSubprocessSkillScriptRunner.RunAsync,
             options,
@@ -314,11 +311,12 @@ public sealed class ModuleSkillSystemGuide
     /// <summary>
     /// Registers a filesystem root that Monica agents may inspect with the built-in read-only file access skill.
     /// </summary>
+    /// <param name="module">The AI skill-system module registration.</param>
     /// <param name="name">Stable root identifier used by skill tools. Root names are compared case-insensitively.</param>
     /// <param name="path">Absolute path, or path relative to the running application directory, that agents may inspect.</param>
     /// <param name="description">Optional human-readable purpose shown to agents when roots are listed.</param>
-    /// <returns>The current guide instance.</returns>
-    public ModuleSkillSystemGuide AddReadOnlyFileAccessRoot(
+    /// <returns>The current module registration.</returns>
+    public static ModuleRegistration<ModuleSkillSystem, ModuleSkillSystemOption> AddReadOnlyFileAccessRoot(this ModuleRegistration<ModuleSkillSystem, ModuleSkillSystemOption> module,
         string name,
         string path,
         string? description = null)
@@ -326,25 +324,26 @@ public sealed class ModuleSkillSystemGuide
         ArgumentException.ThrowIfNullOrWhiteSpace(name);
         ArgumentException.ThrowIfNullOrWhiteSpace(path);
 
-        ConfigureModuleOption(
-            option => option.AddReadOnlyFileAccessRoot(name, path, description),
-            secondKey: name.Trim());
-        return this;
+        module.Configure(
+            option => option.AddReadOnlyFileAccessRoot(name, path, description));
+        return module;
     }
 
     /// <summary>
     /// Configures limits and ripgrep execution settings for the built-in read-only file access skill.
     /// </summary>
+    /// <param name="module">The AI skill-system module registration.</param>
     /// <param name="configure">Configuration delegate for read-only file access options.</param>
-    /// <returns>The current guide instance.</returns>
-    public ModuleSkillSystemGuide ConfigureReadOnlyFileAccess(Action<ModuleSkillSystemOption> configure)
+    /// <returns>The current module registration.</returns>
+    public static ModuleRegistration<ModuleSkillSystem, ModuleSkillSystemOption> ConfigureReadOnlyFileAccess(this ModuleRegistration<ModuleSkillSystem, ModuleSkillSystemOption> module, Action<ModuleSkillSystemOption> configure)
     {
         ArgumentNullException.ThrowIfNull(configure);
-        ConfigureModuleOption(configure);
-        return this;
+        module.Configure(configure);
+        return module;
     }
 
-    private ModuleSkillSystemGuide AddFileSkillsCore(
+    private static ModuleRegistration<ModuleSkillSystem, ModuleSkillSystemOption> AddFileSkillsCore(
+        ModuleRegistration<ModuleSkillSystem, ModuleSkillSystemOption> module,
         IEnumerable<string> skillPaths,
         AgentFileSkillScriptRunner? scriptRunner,
         AgentFileSkillsSourceOptions? options,
@@ -361,9 +360,9 @@ public sealed class ModuleSkillSystemGuide
             throw new ArgumentException("At least one skill path is required.", nameof(skillPaths));
         }
 
-        ConfigureModuleOption(
-            option => option.AddFileSkills(normalizedPaths, scriptRunner, options, usesSubprocessRunner),
-            secondKey: string.Join("|", normalizedPaths));
-        return this;
+        module.Configure(
+            option => option.AddFileSkills(normalizedPaths, scriptRunner, options, usesSubprocessRunner));
+        return module;
     }
+
 }

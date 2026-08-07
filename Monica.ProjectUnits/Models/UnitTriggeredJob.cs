@@ -1,8 +1,8 @@
+using Monica.Core.TypeDiscovery.Models;
+using Monica.Modules;
 using Monica.ProjectUnits.Services.Support;
 using Monica.JobScheduler;
 using Monica.JobScheduler.Abstractions;
-using Monica.Modules;
-using Monica.Tool.Extensions;
 
 namespace Monica.ProjectUnits.Models;
 
@@ -11,8 +11,8 @@ namespace Monica.ProjectUnits.Models;
 /// </summary>
 public class UnitTriggeredJob : ProjectUnit
 {
-    internal UnitTriggeredJob(Type type, ProjectUnitCatalog catalog)
-        : base(type, EProjectUnitType.TriggeredJob, catalog, JobSchedulerExecutionPoints.TriggeredAttempt)
+    internal UnitTriggeredJob(BusinessTypeShape shape, ProjectUnitCatalog catalog)
+        : base(shape, EProjectUnitType.TriggeredJob, catalog, JobSchedulerExecutionPoints.TriggeredAttempt)
     {
     }
 
@@ -23,11 +23,6 @@ public class UnitTriggeredJob : ProjectUnit
     /// </summary>
     public Type? JobArgsType { get; set; }
 
-    protected override bool VerifyTypeConstrain()
-    {
-        return Type.IsClass && Type.IsSubclassOfRawGeneric(typeof(TriggeredJob<>));
-    }
-
     protected override ProjectUnitNamingRule? DefaultConventionOption()
     {
         return new ProjectUnitNamingRule
@@ -36,12 +31,14 @@ public class UnitTriggeredJob : ProjectUnit
         };
     }
 
-    internal static ProjectUnit? Create(Type type, ProjectUnitCatalog catalog)
+    internal static ProjectUnit Create(
+        BusinessTypeShape shape,
+        ProjectUnitCatalog catalog,
+        Type jobArgsType)
     {
-        var unit = new UnitTriggeredJob(type, catalog);
-        if (!type.IsClass || !type.IsSubclassOfRawGeneric(typeof(TriggeredJob<>), out var genericType) || genericType?.FullName is null) return null;
+        var unit = new UnitTriggeredJob(shape, catalog);
         unit.CheckNameConventionMode();
-        unit.JobArgsType = genericType.GetGenericArguments().First();
+        unit.JobArgsType = jobArgsType;
         return unit;
     }
 }

@@ -6,7 +6,6 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 using Monica.Core;
 using Monica.Core.Modularity;
 using Monica.Core.Modularity.Abstractions;
-using Monica.Core.Modularity.Annotations;
 using Monica.Core.Modularity.Models;
 using Monica.DevOps.Git.Abstractions;
 using Monica.DevOps.Git.Facades;
@@ -27,9 +26,9 @@ public static class ModuleGitBuilderExtensions
         /// <summary>
         /// Configures the Git synchronization module.
         /// </summary>
-        public ModuleGitGuide AddGit(Action<ModuleGitOption>? action = null)
+        public ModuleRegistration<ModuleGit, ModuleGitOption> AddGit(Action<ModuleGitOption>? action = null)
         {
-            return builder.AddModule<ModuleGit, ModuleGitOption, ModuleGitGuide>(action);
+            return builder.AddModule<ModuleGit, ModuleGitOption>(action);
         }
     }
 }
@@ -37,20 +36,19 @@ public static class ModuleGitBuilderExtensions
 /// <summary>
 /// Git synchronization module.
 /// </summary>
-[ModuleKey(BuiltInModuleKey.Git)]
-public class ModuleGit(ModuleGitOption option)
-    : WebModuleBase<ModuleGit, ModuleGitOption, ModuleGitGuide>(option)
+public class ModuleGit : MonicaModule<ModuleGitOption>, IWebModule
 {
     /// <inheritdoc />
-    public override void ClaimDependencies()
+    public override void Describe(ModuleDescriptor module)
     {
-        DependsOnModule<ModuleEventBusGuide>().Register();
-        DependsOnModule<ModuleHostedServiceGuide>().Register();
+        module.Require<ModuleEventBus, ModuleEventBusOption>();
+        module.Require<ModuleHostedService, ModuleHostedServiceOption>();
     }
 
     /// <inheritdoc />
-    public override void ConfigureServices(IServiceCollection services)
+    public override void ConfigureServices(ModuleContext<ModuleGitOption> context)
     {
+        var services = context.Services;
         services.TryAddSingleton<GitCredentialManager>();
         services.TryAddSingleton<IGitRepositoryService, GitRepositoryService>();
         services.TryAddSingleton<GitWebhookEndpointService>();
@@ -64,9 +62,10 @@ public class ModuleGit(ModuleGitOption option)
     }
 
     /// <inheritdoc />
-    public override void ConfigureEndpoints(IApplicationBuilder app)
+    public override void ConfigureEndpoints(WebModuleContext<ModuleGitOption> context)
     {
-        UseEndpoints(app, endpoints =>
+        var app = context.ApplicationBuilder;
+        UseEndpoints(context, endpoints =>
         {
             var tagName = Option.GetApiGroupName();
 
@@ -87,23 +86,23 @@ public class ModuleGit(ModuleGitOption option)
 }
 
 /// <summary>
-/// Fluent guide for the Git synchronization module.
+/// Registration extensions for the Git synchronization module.
 /// </summary>
-public class ModuleGitGuide : WebModuleGuide<ModuleGit, ModuleGitOption, ModuleGitGuide>
+public static class ModuleGitRegistrationExtensions
 {
     /// <summary>
     /// Sets which synchronization triggers are enabled.
     /// </summary>
-    public ModuleGitGuide UseSyncTriggers(params GitSyncTrigger[] triggers)
+    public static ModuleRegistration<ModuleGit, ModuleGitOption> UseSyncTriggers(this ModuleRegistration<ModuleGit, ModuleGitOption> module, params GitSyncTrigger[] triggers)
     {
-        ConfigureModuleOption(option => option.SetEnabledSyncTriggers(triggers));
-        return this;
+        module.Configure(options => options.SetEnabledSyncTriggers(triggers));
+        return module;
     }
 
     /// <summary>
     /// Adds a Git repository.
     /// </summary>
-    public ModuleGitGuide AddRepository(
+    public static ModuleRegistration<ModuleGit, ModuleGitOption> AddRepository(this ModuleRegistration<ModuleGit, ModuleGitOption> module,
         string id,
         string remoteUrl,
         string localPath,
@@ -111,9 +110,9 @@ public class ModuleGitGuide : WebModuleGuide<ModuleGit, ModuleGitOption, ModuleG
         string? provider = null,
         string? branch = null)
     {
-        ConfigureModuleOption(option =>
+        module.Configure(options =>
         {
-            option.RepositoryRegistrations.Add(new GitRepositoryRegistration
+            options.RepositoryRegistrations.Add(new GitRepositoryRegistration
             {
                 Id = id,
                 RemoteUrl = remoteUrl,
@@ -122,111 +121,112 @@ public class ModuleGitGuide : WebModuleGuide<ModuleGit, ModuleGitOption, ModuleG
                 Provider = provider,
                 Branch = branch
             });
-        }, secondKey: $"repository:{id}");
+        });
 
-        return this;
+        return module;
     }
 
     /// <summary>
     /// Adds a token credential.
     /// </summary>
-    public ModuleGitGuide AddTokenCredential(string id, string token, string? userName = null)
+    public static ModuleRegistration<ModuleGit, ModuleGitOption> AddTokenCredential(this ModuleRegistration<ModuleGit, ModuleGitOption> module, string id, string token, string? userName = null)
     {
-        ConfigureModuleOption(option =>
+        module.Configure(options =>
         {
-            option.CredentialRegistrations.Add(new GitCredentialRegistration
+            options.CredentialRegistrations.Add(new GitCredentialRegistration
             {
                 Id = id,
                 AuthenticationType = GitAuthenticationType.Token,
                 Token = token,
                 UserName = userName
             });
-        }, secondKey: $"credential-token:{id}");
+        });
 
-        return this;
+        return module;
     }
 
     /// <summary>
     /// Adds a user name and password credential.
     /// </summary>
-    public ModuleGitGuide AddUserPasswordCredential(string id, string userName, string password)
+    public static ModuleRegistration<ModuleGit, ModuleGitOption> AddUserPasswordCredential(this ModuleRegistration<ModuleGit, ModuleGitOption> module, string id, string userName, string password)
     {
-        ConfigureModuleOption(option =>
+        module.Configure(options =>
         {
-            option.CredentialRegistrations.Add(new GitCredentialRegistration
+            options.CredentialRegistrations.Add(new GitCredentialRegistration
             {
                 Id = id,
                 AuthenticationType = GitAuthenticationType.UserPassword,
                 UserName = userName,
                 Password = password
             });
-        }, secondKey: $"credential-userpass:{id}");
+        });
 
-        return this;
+        return module;
     }
 
     /// <summary>
     /// Adds a custom credential resolver.
     /// </summary>
-    public ModuleGitGuide AddCredentialResolver<TResolver>() where TResolver : class, IGitCredentialResolver
+    public static ModuleRegistration<ModuleGit, ModuleGitOption> AddCredentialResolver<TResolver>(this ModuleRegistration<ModuleGit, ModuleGitOption> module) where TResolver : class, IGitCredentialResolver
     {
-        ConfigureServices(context =>
+        module.ConfigureServices(context =>
         {
             context.Services.TryAddEnumerable(ServiceDescriptor.Singleton<IGitCredentialResolver, TResolver>());
-        }, secondKey: typeof(TResolver).FullName);
+        });
 
-        return this;
+        return module;
     }
 
     /// <summary>
     /// Enables the built-in GitHub webhook provider.
     /// </summary>
-    public ModuleGitGuide UseGitHubWebhookProvider(Action<GitHubWebhookOption>? configure = null)
+    public static ModuleRegistration<ModuleGit, ModuleGitOption> UseGitHubWebhookProvider(this ModuleRegistration<ModuleGit, ModuleGitOption> module, Action<GitHubWebhookOption>? configure = null)
     {
-        ConfigureModuleOption(option =>
+        module.Configure(options =>
         {
-            configure?.Invoke(option.GitHubWebhook);
-        }, secondKey: nameof(GitHubWebhookProvider));
+            configure?.Invoke(options.GitHubWebhook);
+        });
 
-        ConfigureServices(context =>
+        module.ConfigureServices(context =>
         {
             context.Services.TryAddEnumerable(ServiceDescriptor.Singleton<IGitWebhookProvider, GitHubWebhookProvider>());
-        }, secondKey: nameof(GitHubWebhookProvider));
+        });
 
-        return this;
+        return module;
     }
 
     /// <summary>
     /// Enables the built-in GitLab webhook provider.
     /// </summary>
-    public ModuleGitGuide UseGitLabWebhookProvider(Action<GitLabWebhookOption>? configure = null)
+    public static ModuleRegistration<ModuleGit, ModuleGitOption> UseGitLabWebhookProvider(this ModuleRegistration<ModuleGit, ModuleGitOption> module, Action<GitLabWebhookOption>? configure = null)
     {
-        ConfigureModuleOption(option =>
+        module.Configure(options =>
         {
-            configure?.Invoke(option.GitLabWebhook);
-        }, secondKey: nameof(GitLabWebhookProvider));
+            configure?.Invoke(options.GitLabWebhook);
+        });
 
-        ConfigureServices(context =>
+        module.ConfigureServices(context =>
         {
             context.Services.TryAddEnumerable(ServiceDescriptor.Singleton<IGitWebhookProvider, GitLabWebhookProvider>());
-        }, secondKey: nameof(GitLabWebhookProvider));
+        });
 
-        return this;
+        return module;
     }
 
     /// <summary>
     /// Registers a custom webhook provider.
     /// </summary>
-    public ModuleGitGuide AddWebhookProvider<TProvider>(string? registrationKey = null)
+    public static ModuleRegistration<ModuleGit, ModuleGitOption> AddWebhookProvider<TProvider>(this ModuleRegistration<ModuleGit, ModuleGitOption> module, string? registrationKey = null)
         where TProvider : class, IGitWebhookProvider
     {
-        ConfigureServices(context =>
+        module.ConfigureServices(context =>
         {
             context.Services.TryAddEnumerable(ServiceDescriptor.Singleton<IGitWebhookProvider, TProvider>());
-        }, secondKey: registrationKey ?? typeof(TProvider).FullName);
+        });
 
-        return this;
+        return module;
     }
+
 }
 
 /// <summary>

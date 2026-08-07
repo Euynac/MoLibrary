@@ -198,6 +198,17 @@ class RepositorySkillTests(unittest.TestCase):
             self.assertEqual(["Acme.Monica.Example"], [item["packageId"] for item in contract["packages"]])
             self.assertTrue(project.is_file())
             self.assertNotIn("MonicaSourceRoot", project.read_text(encoding="utf-8"))
+            module_text = (
+                output / "src/Acme.Monica.Example/Modules/ModuleExample.cs"
+            ).read_text(encoding="utf-8")
+            test_text = (
+                output
+                / "tests/Test.Acme.Monica.Example/Modules/ModuleRegistrationTests.cs"
+            ).read_text(encoding="utf-8")
+            self.assertIn("MonicaModule<ModuleExampleOption>", module_text)
+            self.assertIn("ModuleRegistration<ModuleExample, ModuleExampleOption>", module_text)
+            self.assertIn("builder.AddModule<ModuleExample, ModuleExampleOption>", module_text)
+            self.assertIn("builder.AddExample();", test_text)
             self.assertEqual(
                 {"inspect_packages.py", "validate_repository.py"},
                 {path.name for path in (output / "scripts").glob("*.py")},
@@ -205,6 +216,45 @@ class RepositorySkillTests(unittest.TestCase):
             findings = validator.validate_repository_contract(output, contract, None)
             findings.extend(validator.validate_project(output, project, None))
             self.assertEqual(["OK"], [item.code for item in findings])
+
+    def test_web_scaffold_declares_capability_and_explicit_host_requirement(self) -> None:
+        payload = one_package_manifest()
+        payload["packages"][0]["modules"][0]["kind"] = "web"
+
+        with tempfile.TemporaryDirectory() as temporary:
+            output = self.scaffold(Path(temporary), payload)
+            contract = json.loads(
+                (output / "monica.manifest.json").read_text(encoding="utf-8")
+            )
+            project = output / "src/Acme.Monica.Example/Acme.Monica.Example.csproj"
+            source = (
+                output / "src/Acme.Monica.Example/Modules/ModuleExample.cs"
+            ).read_text(encoding="utf-8")
+
+            self.assertIn(
+                "MonicaModule<ModuleExampleOption>, IWebModule, IWebHostRequiredModule",
+                source,
+            )
+            findings = validator.validate_repository_contract(output, contract, None)
+            findings.extend(validator.validate_project(output, project, None))
+            self.assertEqual(["OK"], [item.code for item in findings])
+
+            module_path = output / "src/Acme.Monica.Example/Modules/ModuleExample.cs"
+            module_path.write_text(
+                source.replace(", IWebHostRequiredModule", ""),
+                encoding="utf-8",
+            )
+            self.assertIn(
+                "MTR036",
+                {
+                    finding.code
+                    for finding in validator.validate_repository_contract(
+                        output,
+                        contract,
+                        None,
+                    )
+                },
+            )
 
     def test_three_package_provider_ui_and_oci_scaffold_is_coherent(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
@@ -221,9 +271,22 @@ class RepositorySkillTests(unittest.TestCase):
             self.assertIn("<ProjectReference Include=\"..\\Acme.Monica.AI.OCR\\Acme.Monica.AI.OCR.csproj\" />", provider_project.read_text(encoding="utf-8"))
             provider_text = provider_module.read_text(encoding="utf-8")
             self.assertIn("IModuleProvider", provider_text)
-            self.assertIn('ProvidesFor => "Acme.Monica.AI.OCR"', provider_text)
+            self.assertIn(
+                "ProvidesFor => typeof(global::Acme.Monica.AI.OCR.Modules.ModuleOcr)",
+                provider_text,
+            )
             self.assertIn("UsePaddleOCRProvider", provider_text)
-            self.assertIn('"/ai-ocr"', ui_module.read_text(encoding="utf-8"))
+            ui_text = ui_module.read_text(encoding="utf-8")
+            self.assertIn("MonicaModule<ModuleOcrUIOption>, IUIModule", ui_text)
+            self.assertIn(
+                "registration.Require<global::Monica.Modules.ModuleLocalization,",
+                ui_text,
+            )
+            self.assertIn(
+                "registration.Require<global::Monica.Modules.ModuleShellUI,",
+                ui_text,
+            )
+            self.assertIn('"/ai-ocr"', ui_text)
             self.assertIn('target "paddleocr-cpu-amd64"', bake)
             self.assertIn('target "paddleocr-nvidia-cu129-amd64"', bake)
             self.assertIn('${RELEASE_VERSION}-nvidia-cu129-amd64', bake)
@@ -248,6 +311,19 @@ class RepositorySkillTests(unittest.TestCase):
             for package in contract["packages"]:
                 findings.extend(validator.validate_project(output, output / package["projectPath"], None))
             self.assertEqual(["OK", "OK", "OK"], [item.code for item in findings])
+
+            ui_module.write_text(ui_text.replace(", IUIModule", ""), encoding="utf-8")
+            self.assertIn(
+                "MTR036",
+                {
+                    finding.code
+                    for finding in validator.validate_repository_contract(
+                        output,
+                        contract,
+                        None,
+                    )
+                },
+            )
 
     def test_oci_publish_is_omitted_without_explicit_release_gates(self) -> None:
         payload = ocr_repository_manifest()
@@ -463,11 +539,12 @@ class RepositorySkillTests(unittest.TestCase):
                 project.read_text(encoding="utf-8"),
             )
             self.assertIn(
-                "this global::Acme.Monica.AI.OCR.Modules.ModuleOcrGuide guide",
+                "this ModuleRegistration<global::Acme.Monica.AI.OCR.Modules.ModuleOcr, "
+                "global::Acme.Monica.AI.OCR.Modules.ModuleOcrOption> target",
                 module.read_text(encoding="utf-8"),
             )
 
-    def test_cross_package_dependencies_use_fully_qualified_guide_types(self) -> None:
+    def test_cross_package_dependencies_use_fully_qualified_module_types(self) -> None:
         payload = shared_manifest("Acme.Monica.Bundle")
         payload["packages"] = [
             {
@@ -510,11 +587,13 @@ class RepositorySkillTests(unittest.TestCase):
             source = module.read_text(encoding="utf-8")
 
             self.assertIn(
-                "DependsOnModule<global::Acme.Monica.One.Modules.ModuleSharedGuide>()",
+                "module.Require<global::Acme.Monica.One.Modules.ModuleShared, "
+                "global::Acme.Monica.One.Modules.ModuleSharedOption>()",
                 source,
             )
             self.assertIn(
-                "DependsOnModule<global::Acme.Monica.Two.Modules.ModuleSharedGuide>()",
+                "module.Require<global::Acme.Monica.Two.Modules.ModuleShared, "
+                "global::Acme.Monica.Two.Modules.ModuleSharedOption>()",
                 source,
             )
             findings = validator.validate_repository_contract(output, contract, None)
@@ -539,11 +618,14 @@ class RepositorySkillTests(unittest.TestCase):
             provider_text = provider_source.read_text(encoding="utf-8")
             provider_text = provider_text.replace(", IModuleProvider", "")
             provider_text = provider_text.replace(
-                '    /// <inheritdoc />\n    public ModuleKey ProvidesFor => "Acme.Monica.AI.OCR";\n',
+                "    /// <inheritdoc />\n"
+                "    public Type ProvidesFor => "
+                "typeof(global::Acme.Monica.AI.OCR.Modules.ModuleOcr);\n",
                 "",
             )
             provider_text = provider_text.replace(
-                "        DependsOnModule<global::Acme.Monica.AI.OCR.Modules.ModuleOcrGuide>().Register();\n",
+                "        module.Require<global::Acme.Monica.AI.OCR.Modules.ModuleOcr, "
+                "global::Acme.Monica.AI.OCR.Modules.ModuleOcrOption>();\n",
                 "",
             )
             provider_source.write_text(provider_text, encoding="utf-8")
@@ -704,7 +786,7 @@ class RepositorySkillTests(unittest.TestCase):
 
         module_text = """
 // RegisterLocalizedComponent<LegacyPage, LegacyResource>("/ignored", "Ignored");
-shellGuide.RegisterUIComponents(registry =>
+shellRegistration.RegisterUIComponents(registry =>
 {
     var category = registry.RegisterLocalizedCategory<AuditResource>(
         categoryId: "Acme.Monica.Toolkit.Audit",

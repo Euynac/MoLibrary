@@ -1,6 +1,6 @@
 ---
 name: monica-architecture
-description: This skill should be used when the user asks to "design module structure", "plan module architecture", "review module layout", "create new module", "refactor module structure", "module folder structure", "module boundaries", "facade pattern", "internal vs public", "feature-first", "annotations folder", "developer-facing attributes", "where to put attributes", "page decomposition", "page too large", "extract page state", "IWebModule", "web module", "downgrade to non-web", "模块架构", "架构设计", "模块结构", "文件夹结构", or needs guidance on Monica module directory layout, layer responsibilities, dependency direction, public/internal boundaries, Facade placement, Provider separation, Annotations placement, page decomposition rules, module runtime kind selection, Features pattern for bundled sub-modules, or Mixed/Standalone/Composite UI module patterns.
+description: This skill should be used when the user asks to "design module structure", "plan module architecture", "review module layout", "create new module", "refactor module structure", "module folder structure", "module boundaries", "facade pattern", "internal vs public", "feature-first", "annotations folder", "developer-facing attributes", "where to put attributes", "page decomposition", "page too large", "extract page state", "IUIModule", "IWebModule", "IWebHostRequiredModule", "web module", "模块架构", "架构设计", "模块结构", "文件夹结构", or needs guidance on Monica module directory layout, layer responsibilities, dependency direction, public/internal boundaries, Facade placement, Provider separation, Annotations placement, page decomposition rules, module runtime kind selection, Features pattern for bundled sub-modules, or Mixed/Standalone/Composite UI module patterns.
 ---
 
 # Monica Unified Module Architecture
@@ -103,30 +103,31 @@ Providers do NOT orchestrate business workflows, manage page state, or return `R
 
 ### 6. Modules/ Is Registration Only
 
-`Modules/` contains only Module, Option, Guide, BuilderExtensions, dependency declarations, and DI registrations. No business logic.
+`Modules/` contains only the module strategy, options, registration extensions, dependency declarations, and DI registrations. No business logic.
 
 For Monica, these registration artifacts are typically **co-located in one file per module**:
 - Infrastructure module: `Modules/Module{Name}.cs`
 - UI module: `Modules/Module{Name}UI.cs`
 
-Keep `Module{Name}`, `Module{Name}Option`, `Module{Name}Guide`, and related builder extension methods together in that single file by default.
+Keep `Module{Name}`, `Module{Name}Option`, and related registration extension methods together in that single file by default.
 
 Do NOT proactively split them into separate files such as:
 - `Module{Name}Option.cs`
-- `Module{Name}Guide.cs`
 - `Module{Name}BuilderExtensions.cs`
 
 Only split a module registration file when the user explicitly asks for that refactor.
 
-### 7. Choose ModuleBase vs WebModuleBase Explicitly
+### 7. Model UI Identity, Web Capability, and Host Requirement Separately
 
 Use the runtime kind that matches the module lifecycle:
 
-- `ModuleBase<T...>` is the default. Use it when the module only needs builder, service-registration, post-service, and dependency phases.
-- `WebModuleBase<T...>` is only for modules that actually participate in `ConfigureApplicationBuilder` or `ConfigureEndpoints`.
-- A UI project does not imply `IWebModule`. If a UI module only registers pages, dialogs, localized components, shell items, or state/support types, keep it on `ModuleBase`.
-- If a web-capable module still has meaningful non-web behavior, implement downgrade explicitly with `CanDowngradeToNonWebModule()`. In downgrade mode the non-web phases still run, while web pipeline and endpoint phases are skipped.
-- When exposing module-system diagnostics or dashboards, surface capability separately from runtime mode. `IsWebModule` and `IsDowngradedFromWebModule` answer different questions and should not be collapsed into one flag.
+- Every module derives from `MonicaModule<TOptions>`.
+- Implement `IUIModule` for every module that owns user-interface composition. UI identity is explicit and must never be inferred from a type-name or project-name suffix.
+- Implement `IWebModule` only when the module contributes middleware or endpoints. The marker describes capability; generic hosts omit those web contributions and keep the ordinary module lifecycle.
+- Implement `IWebHostRequiredModule` only when the module type's intrinsic web lifecycle cannot be omitted. For opt-in middleware or endpoint features on an otherwise generic-host-compatible module, call `registration.RequireWebHost(reason)` from the selecting registration extension.
+- `IUIModule` does not imply `IWebModule`. UI modules that only register pages, dialogs, localized components, shell items, or state/support types implement `IUIModule` without a web marker.
+- Middleware chooses the named `ModuleWebStage.BeforeRouting` or `ModuleWebStage.AfterRouting` boundary. Do not introduce integer middleware priorities.
+- Diagnostics surface web capability and the independent host requirement; there is no mutable host-adaptation state.
 
 ### 8. Utils Is the Unified Utility Folder
 
@@ -327,7 +328,7 @@ UI modules are pure presentation layers:
 - Do NOT have their own service layer for data access
 - Maximize reuse of Models from infrastructure module's public `Models/`
 - Prefer `UI{Name}/` feature directories for mixed or composite UI modules. Standalone single-feature UI modules may use the root-level equivalent layout.
-- Most UI modules stay on `ModuleBase`. Only use `WebModuleBase` for UI modules that truly configure middleware or endpoints.
+- Every UI module implements `IUIModule`. Most remain non-web `MonicaModule<TOptions>` strategies; implement `IWebModule` only for modules that truly configure middleware or endpoints.
 
 ### Standalone UI Module
 
@@ -502,7 +503,6 @@ For a concrete anti-pattern case study, see `references/refactoring-examples.md`
 |-----------|---------|---------|
 | Module class | `Module{Name}` | `ModuleRAG` |
 | Options class | `Module{Name}Option` | `ModuleRAGOption` |
-| Guide class | `Module{Name}Guide` | `ModuleRAGGuide` |
 | Builder extension | `monica.Add{Name}()` | `monica.AddRAG()` |
 
 ### Service Naming

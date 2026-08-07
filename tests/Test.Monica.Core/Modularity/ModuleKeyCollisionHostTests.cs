@@ -1,7 +1,8 @@
 using AwesomeAssertions;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Monica.Core;
 using Monica.Core.Modularity.Abstractions;
-using Monica.Core.Modularity.Annotations;
 using Monica.Core.Modularity.Extensions;
 using Xunit;
 
@@ -10,36 +11,30 @@ namespace Test.Monica.Core.Modularity;
 public sealed class ModuleKeyCollisionHostTests
 {
     [Fact]
-    public void AddMonica_WhenModuleTypesUseCaseEquivalentKeys_ShouldRejectComposition()
+    public void AddMonica_WhenDistinctModuleTypesAreRegistered_ShouldUseTypeIdentity()
     {
         var builder = Host.CreateApplicationBuilder();
-
-        Action compose = () => builder.AddMonica(monica =>
+        builder.AddMonica(monica =>
         {
-            monica.AddModule<CollisionAlphaModule, CollisionAlphaModuleOption, CollisionAlphaModuleGuide>();
-            monica.AddModule<CollisionBetaModule, CollisionBetaModuleOption, CollisionBetaModuleGuide>();
+            monica.AddModule<CollisionAlphaModule, CollisionAlphaModuleOption>();
+            monica.AddModule<CollisionBetaModule, CollisionBetaModuleOption>();
         });
 
-        compose.Should()
-            .Throw<InvalidOperationException>()
-            .WithMessage("*already mapped to type*");
+        using var host = builder.Build();
+        var modules = host.Services.GetRequiredService<MonicaApplication>()
+            .Modules.RuntimeSnapshots
+            .Select(static snapshot => snapshot.ModuleType)
+            .ToArray();
+
+        modules.Should().Contain(typeof(CollisionAlphaModule));
+        modules.Should().Contain(typeof(CollisionBetaModule));
     }
 }
 
-[ModuleKey("Test.Monica.Core.Collision")]
-public sealed class CollisionAlphaModule(CollisionAlphaModuleOption option)
-    : ModuleBase<CollisionAlphaModule, CollisionAlphaModuleOption, CollisionAlphaModuleGuide>(option);
+internal sealed class CollisionAlphaModule : MonicaModule<CollisionAlphaModuleOption>;
 
-public sealed class CollisionAlphaModuleGuide
-    : ModuleGuide<CollisionAlphaModule, CollisionAlphaModuleOption, CollisionAlphaModuleGuide>;
+internal sealed class CollisionAlphaModuleOption : ModuleOptions<CollisionAlphaModule>;
 
-public sealed class CollisionAlphaModuleOption : ModuleOptions<CollisionAlphaModule>;
+internal sealed class CollisionBetaModule : MonicaModule<CollisionBetaModuleOption>;
 
-[ModuleKey("test.Monica.core.collision")]
-public sealed class CollisionBetaModule(CollisionBetaModuleOption option)
-    : ModuleBase<CollisionBetaModule, CollisionBetaModuleOption, CollisionBetaModuleGuide>(option);
-
-public sealed class CollisionBetaModuleGuide
-    : ModuleGuide<CollisionBetaModule, CollisionBetaModuleOption, CollisionBetaModuleGuide>;
-
-public sealed class CollisionBetaModuleOption : ModuleOptions<CollisionBetaModule>;
+internal sealed class CollisionBetaModuleOption : ModuleOptions<CollisionBetaModule>;

@@ -3,7 +3,6 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 using Monica.Core;
 using Monica.Core.Modularity;
 using Monica.Core.Modularity.Abstractions;
-using Monica.Core.Modularity.Annotations;
 using Monica.Core.Modularity.Models;
 using Monica.StateStore.Abstractions;
 using Monica.StateStore.Providers.Memory;
@@ -18,25 +17,28 @@ public static class ModuleStateStoreBuilderExtensions
         /// <summary>
         /// Configure the StateStore module
         /// </summary>
-        public ModuleStateStoreGuide AddStateStore(Action<ModuleStateStoreOption>? action = null)
+        public ModuleRegistration<ModuleStateStore, ModuleStateStoreOption> AddStateStore(Action<ModuleStateStoreOption>? action = null)
         {
-            return builder.AddModule<ModuleStateStore, ModuleStateStoreOption, ModuleStateStoreGuide>(action);
+            return builder.AddModule<ModuleStateStore, ModuleStateStoreOption>(action);
         }
     }
 }
 
-[ModuleKey(BuiltInModuleKey.StateStore)]
-public class ModuleStateStore(ModuleStateStoreOption option)
-    : ModuleBase<ModuleStateStore, ModuleStateStoreOption, ModuleStateStoreGuide>(option)
+public class ModuleStateStore : MonicaModule<ModuleStateStoreOption>
 {
+    /// <summary>
+    /// Identifies the distributed-provider capability required by features that resolve
+    /// <see cref="IDistributedStateStore"/>.
+    /// </summary>
+    public const string DISTRIBUTED_PROVIDER_FEATURE = "distributed-provider";
 
-    public override void ConfigureServices(IServiceCollection services)
+    public override void ConfigureServices(ModuleContext<ModuleStateStoreOption> context)
     {
+        var services = context.Services;
         services.AddMemoryCache();
         services.AddSingleton<IMemoryStateStore, MemoryCacheProvider>();
         if (Option.UseDistributedProviderAsDefault)
         {
-            CheckRequiredMethod(nameof(ModuleStateStoreGuide.SetCommonDistributedStateStoreProvider), "未配置分布式状态存储Provider");
             services.AddSingleton<IStateStore>(serviceProvider =>
                 serviceProvider.GetRequiredService<IDistributedStateStore>());
         }
@@ -47,33 +49,42 @@ public class ModuleStateStore(ModuleStateStoreOption option)
     }
 }
 
-public class ModuleStateStoreGuide : ModuleGuide<ModuleStateStore, ModuleStateStoreOption, ModuleStateStoreGuide>
+public static class ModuleStateStoreRegistrationExtensions
 {
     /// <summary>
     /// Register a common distributed state store provider
     /// </summary>
+    /// <param name="module">The StateStore registration being configured.</param>
     /// <typeparam name="TProvider">Distributed state store provider type</typeparam>
-    /// <returns>Current module guide instance for chaining</returns>
-    public ModuleStateStoreGuide SetCommonDistributedStateStoreProvider<TProvider>()
+    /// <returns>The current StateStore module registration for chaining.</returns>
+    public static ModuleRegistration<ModuleStateStore, ModuleStateStoreOption> SetCommonDistributedStateStoreProvider<TProvider>(this ModuleRegistration<ModuleStateStore, ModuleStateStoreOption> module)
         where TProvider : class, IDistributedStateStore
     {
-        ConfigureServices(context => { context.Services.AddSingleton<IDistributedStateStore, TProvider>(); });
-        return this;
+        module.RequireFeature(ModuleStateStore.DISTRIBUTED_PROVIDER_FEATURE);
+        return module
+            .Configure(options => options.UseDistributedProviderAsDefault = true)
+            .ConfigureServices(context => context.Services.AddSingleton<IDistributedStateStore, TProvider>())
+            .SatisfyFeature(ModuleStateStore.DISTRIBUTED_PROVIDER_FEATURE);
     }
 
     /// <summary>
     /// Add a keyed state store using the common provider
     /// </summary>
+    /// <param name="module">The StateStore registration being configured.</param>
     /// <param name="key">Service key</param>
     /// <param name="useDistributed">Whether to use distributed storage, false uses memory storage</param>
-    /// <returns>Current module guide instance for chaining</returns>
-    public ModuleStateStoreGuide AddKeyedCommonStateStore(string key, bool useDistributed = false)
+    /// <returns>The current StateStore module registration for chaining.</returns>
+    public static ModuleRegistration<ModuleStateStore, ModuleStateStoreOption> AddKeyedCommonStateStore(this ModuleRegistration<ModuleStateStore, ModuleStateStoreOption> module, string key, bool useDistributed = false)
     {
-        ConfigureServices(context =>
+        if (useDistributed)
+        {
+            module.RequireFeature(ModuleStateStore.DISTRIBUTED_PROVIDER_FEATURE);
+        }
+
+        module.ConfigureServices(context =>
         {
             if (useDistributed)
             {
-                CheckRequiredMethod(nameof(SetCommonDistributedStateStoreProvider));
                 context.Services.TryAddKeyedSingleton<IStateStore>(key, (serviceProvider, _) =>
                     serviceProvider.GetRequiredService<IDistributedStateStore>());
             }
@@ -82,39 +93,42 @@ public class ModuleStateStoreGuide : ModuleGuide<ModuleStateStore, ModuleStateSt
                 context.Services.TryAddKeyedSingleton<IStateStore>(key, (serviceProvider, _) =>
                     serviceProvider.GetRequiredService<IMemoryStateStore>());
             }
-        }, secondKey: key);
+        });
 
-        RecordKeyedServiceKey(key);
-        return this;
+        module.RecordKeyedServiceKey(key);
+        return module;
     }
 
     /// <summary>
     /// Add a keyed abstract state store provider
     /// </summary>
+    /// <param name="module">The StateStore registration being configured.</param>
     /// <typeparam name="TProvider">State store provider type</typeparam>
     /// <param name="key">Service key</param>
-    /// <returns>Current module guide instance for chaining</returns>
-    public ModuleStateStoreGuide AddKeyedStateStore<TProvider>(string key) where TProvider : class, IStateStore
+    /// <returns>The current StateStore module registration for chaining.</returns>
+    public static ModuleRegistration<ModuleStateStore, ModuleStateStoreOption> AddKeyedStateStore<TProvider>(this ModuleRegistration<ModuleStateStore, ModuleStateStoreOption> module, string key) where TProvider : class, IStateStore
     {
-        ConfigureServices(services => { services.Services.AddKeyedSingleton<IStateStore, TProvider>(key); }, secondKey: key);
-        RecordKeyedServiceKey(key);
-        return this;
+        module.ConfigureServices(context => context.Services.AddKeyedSingleton<IStateStore, TProvider>(key));
+        module.RecordKeyedServiceKey(key);
+        return module;
     }
 
     /// <summary>
     /// Configure custom StateStore service registration
     /// </summary>
+    /// <param name="module">The StateStore registration being configured.</param>
     /// <param name="configureServices">Service configuration delegate</param>
     /// <param name="key">Optional key to differentiate multiple calls (used as secondKey in module system)</param>
-    /// <returns>Current module guide instance for chaining</returns>
-    public ModuleStateStoreGuide ConfigureStateStoreServices(Action<IServiceCollection> configureServices, string? key = null)
+    /// <returns>The current StateStore module registration for chaining.</returns>
+    public static ModuleRegistration<ModuleStateStore, ModuleStateStoreOption> ConfigureStateStoreServices(this ModuleRegistration<ModuleStateStore, ModuleStateStoreOption> module, Action<IServiceCollection> configureServices, string? key = null)
     {
-        ConfigureServices(context =>
+        module.ConfigureServices(context =>
         {
             configureServices(context.Services);
-        }, secondKey: key);
-        return this;
+        });
+        return module;
     }
+
 }
 
 public class ModuleStateStoreOption : ModuleOptions<ModuleStateStore>
@@ -122,5 +136,5 @@ public class ModuleStateStoreOption : ModuleOptions<ModuleStateStore>
     /// <summary>
     /// Use distributed state storage as the default (non-Keyed service) <see cref="IStateStore"/> implementation
     /// </summary>
-    public bool UseDistributedProviderAsDefault { get; set; }
+    public bool UseDistributedProviderAsDefault { get; internal set; }
 }

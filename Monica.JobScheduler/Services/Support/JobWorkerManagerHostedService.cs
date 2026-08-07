@@ -3,7 +3,6 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Monica.Core.HostedService.Abstractions;
 using Monica.Core.HostedService.Models;
-using Monica.Core.Modularity.Models;
 using Monica.Core.ObservableInstance.Abstractions;
 using Monica.EventBus.Abstractions;
 using Monica.JobScheduler.Abstractions;
@@ -38,7 +37,7 @@ public class JobWorkerManagerHostedService(
     private CancellationToken _workerStoppingToken;
 
     public override string ServiceName => "JobWorkerManager";
-    public override string? ServiceGroupId => nameof(BuiltInModuleKey.JobScheduler);
+    public override string? ServiceGroupId => nameof(ModuleJobScheduler);
 
     /// <summary>
     /// Unsubscribes from events and releases worker resources before the background operation stops.

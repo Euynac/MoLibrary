@@ -5,7 +5,6 @@ using Microsoft.Extensions.DependencyInjection;
 using Monica.Core;
 using Monica.Core.Modularity;
 using Monica.Core.Modularity.Abstractions;
-using Monica.Core.Modularity.Annotations;
 using Monica.Core.Modularity.Models;
 using Monica.Core.Results;
 using Monica.DevOps.K8S.Abstractions;
@@ -19,18 +18,16 @@ using Monica.DevOps.Localization;
 // ReSharper disable once CheckNamespace
 namespace Monica.Modules;
 
-[ModuleKey(BuiltInModuleKey.K8S)]
-public class ModuleK8S(ModuleK8SOption option)
-    : WebModuleBase<ModuleK8S, ModuleK8SOption, ModuleK8SGuide>(option)
+public class ModuleK8S : MonicaModule<ModuleK8SOption>, IWebModule
 {
-    public override void ClaimDependencies()
+    public override void Describe(ModuleDescriptor module)
     {
-        DependsOnModule<ModuleLocalizationGuide>().Register()
-            .AddResource<K8SResource>();
+        module.Require<ModuleLocalization, ModuleLocalizationOption>();
     }
 
-    public override void ConfigureServices(IServiceCollection services)
+    public override void ConfigureServices(ModuleContext<ModuleK8SOption> context)
     {
+        var services = context.Services;
         services.AddSingleton<IK8SRuntimeConfigStore, K8SRuntimeConfigStore>();
         services.AddScoped<IK8SProvider, SshRemoteKubectlProvider>();
         services.AddScoped<K8SMessageLocalizer>();
@@ -41,9 +38,10 @@ public class ModuleK8S(ModuleK8SOption option)
         services.AddScoped<K8SFacade>();
     }
 
-    public override void ConfigureEndpoints(IApplicationBuilder app)
+    public override void ConfigureEndpoints(WebModuleContext<ModuleK8SOption> context)
     {
-        UseEndpoints(app, endpoints =>
+        var app = context.ApplicationBuilder;
+        UseEndpoints(context, endpoints =>
         {
             var tagName = Option.GetApiGroupName();
 
@@ -289,16 +287,17 @@ public static class ModuleK8SBuilderExtensions
 {
     extension(IMonicaBuilder builder)
     {
-        public ModuleK8SGuide AddK8S(Action<ModuleK8SOption>? action = null)
+        public ModuleRegistration<ModuleK8S, ModuleK8SOption> AddK8S(Action<ModuleK8SOption>? action = null)
         {
-            return builder.AddModule<ModuleK8S, ModuleK8SOption, ModuleK8SGuide>(action);
+            var module = builder.AddModule<ModuleK8S, ModuleK8SOption>(action);
+            module.Require<ModuleLocalization, ModuleLocalizationOption>()
+                .AddResource<K8SResource>();
+            return module;
         }
     }
 }
 
-public class ModuleK8SGuide : WebModuleGuide<ModuleK8S, ModuleK8SOption, ModuleK8SGuide>
-{
-}
+
 
 public class ModuleK8SOption : MinimalApiModuleOptions<ModuleK8S>
 {

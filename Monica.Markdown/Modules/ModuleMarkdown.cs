@@ -3,7 +3,6 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 using Monica.Core;
 using Monica.Core.Modularity;
 using Monica.Core.Modularity.Abstractions;
-using Monica.Core.Modularity.Annotations;
 using Monica.Core.Modularity.Models;
 using Monica.Markdown.Abstractions;
 using Monica.Markdown.Facades;
@@ -21,30 +20,25 @@ public static class ModuleMarkdownBuilderExtensions
         /// <summary>
         /// Configures the Markdown document management module.
         /// </summary>
-        public ModuleMarkdownGuide AddMarkdown(
+        public ModuleRegistration<ModuleMarkdown, ModuleMarkdownOption> AddMarkdown(
             Action<ModuleMarkdownOption>? action = null)
         {
-            return builder.AddModule<ModuleMarkdown, ModuleMarkdownOption, ModuleMarkdownGuide>(action);
+            return builder.AddModule<ModuleMarkdown, ModuleMarkdownOption>(action);
         }
     }
 }
 
-[ModuleKey(BuiltInModuleKey.Markdown)]
-public class ModuleMarkdown(ModuleMarkdownOption option)
-    : ModuleBase<ModuleMarkdown, ModuleMarkdownOption, ModuleMarkdownGuide>(option)
+public class ModuleMarkdown : MonicaModule<ModuleMarkdownOption>
 {
     /// <inheritdoc />
-    public override void ClaimDependencies()
+    public override void Describe(ModuleDescriptor module)
     {
-        if (Option.EnableMultilingualDocuments)
-        {
-            DependsOnModule<ModuleLocalizationGuide>().Register();
-        }
     }
 
     /// <inheritdoc />
-    public override void ConfigureServices(IServiceCollection services)
+    public override void ConfigureServices(ModuleContext<ModuleMarkdownOption> context)
     {
+        var services = context.Services;
         services.TryAddSingleton<IMarkdownDocumentTitleResolver,
             FileNameMarkdownDocumentTitleResolver>();
         services.TryAddSingleton<IMarkdownDocumentProvider,
@@ -55,27 +49,27 @@ public class ModuleMarkdown(ModuleMarkdownOption option)
     }
 }
 
-public class ModuleMarkdownGuide
-    : ModuleGuide<ModuleMarkdown, ModuleMarkdownOption, ModuleMarkdownGuide>
+public static class ModuleMarkdownRegistrationExtensions
 {
     /// <summary>
     /// Registers a markdown document group for scanning.
     /// </summary>
+    /// <param name="module">The Markdown registration being configured.</param>
     /// <param name="key">Unique identifier for this group.</param>
     /// <param name="title">Display title for this group.</param>
     /// <param name="basePath">Folder path containing markdown files.</param>
     /// <param name="description">Optional description.</param>
     /// <param name="excludedFolders">Additional folders to exclude for this group only.</param>
-    public ModuleMarkdownGuide AddDocumentGroup(
+    public static ModuleRegistration<ModuleMarkdown, ModuleMarkdownOption> AddDocumentGroup(this ModuleRegistration<ModuleMarkdown, ModuleMarkdownOption> module,
         string key,
         string title,
         string basePath,
         string? description = null,
         string[]? excludedFolders = null)
     {
-        ConfigureModuleOption(option =>
+        module.Configure(options =>
         {
-            option.DocumentGroupRegistrations.Add(new MarkdownDocumentGroupRegistration
+            options.DocumentGroupRegistrations.Add(new MarkdownDocumentGroupRegistration
             {
                 Key = key,
                 Title = title,
@@ -83,39 +77,41 @@ public class ModuleMarkdownGuide
                 Description = description,
                 ExcludedFolders = excludedFolders
             });
-        }, secondKey: key);
+        });
 
-        return this;
+        return module;
     }
 
     /// <summary>
     /// Configures global folder exclusions that apply to all document groups.
     /// </summary>
+    /// <param name="module">The Markdown registration being configured.</param>
     /// <param name="folderNames">Array of folder names to exclude (case-insensitive).</param>
-    public ModuleMarkdownGuide WithExcludedFolders(params string[] folderNames)
+    public static ModuleRegistration<ModuleMarkdown, ModuleMarkdownOption> WithExcludedFolders(this ModuleRegistration<ModuleMarkdown, ModuleMarkdownOption> module, params string[] folderNames)
     {
-        ConfigureModuleOption(option =>
+        module.Configure(options =>
         {
-            option.ExcludedFolders = folderNames;
+            options.ExcludedFolders = folderNames;
         });
 
-        return this;
+        return module;
     }
 
     /// <summary>
     /// Adds additional folders to the global exclusion list without replacing defaults.
     /// </summary>
+    /// <param name="module">The Markdown registration being configured.</param>
     /// <param name="folderNames">Additional folder names to exclude.</param>
-    public ModuleMarkdownGuide AddExcludedFolders(params string[] folderNames)
+    public static ModuleRegistration<ModuleMarkdown, ModuleMarkdownOption> AddExcludedFolders(this ModuleRegistration<ModuleMarkdown, ModuleMarkdownOption> module, params string[] folderNames)
     {
-        ConfigureModuleOption(option =>
+        module.Configure(options =>
         {
-            var existing = option.ExcludedFolders ?? Array.Empty<string>();
-            option.ExcludedFolders = existing.Concat(folderNames).Distinct(
+            var existing = options.ExcludedFolders ?? Array.Empty<string>();
+            options.ExcludedFolders = existing.Concat(folderNames).Distinct(
                 StringComparer.OrdinalIgnoreCase).ToArray();
         });
 
-        return this;
+        return module;
     }
 
     /// <summary>
@@ -124,66 +120,68 @@ public class ModuleMarkdownGuide
     /// names match supported culture keys such as <c>zh-CN</c> or <c>en-US</c>
     /// become language roots for the built-in viewer.
     /// </summary>
-    public ModuleMarkdownGuide EnableMultilingualDocuments()
+    public static ModuleRegistration<ModuleMarkdown, ModuleMarkdownOption> EnableMultilingualDocuments(this ModuleRegistration<ModuleMarkdown, ModuleMarkdownOption> module)
     {
-        ConfigureModuleOption(option =>
+        module.Require<ModuleLocalization, ModuleLocalizationOption>();
+        module.Configure(options =>
         {
-            option.EnableMultilingualDocuments = true;
+            options.EnableMultilingualDocuments = true;
         });
 
-        return this;
+        return module;
     }
 
     /// <summary>
     /// Clears all global folder exclusions (including defaults).
     /// </summary>
-    public ModuleMarkdownGuide ClearExcludedFolders()
+    public static ModuleRegistration<ModuleMarkdown, ModuleMarkdownOption> ClearExcludedFolders(this ModuleRegistration<ModuleMarkdown, ModuleMarkdownOption> module)
     {
-        ConfigureModuleOption(option =>
+        module.Configure(options =>
         {
-            option.ExcludedFolders = Array.Empty<string>();
+            options.ExcludedFolders = Array.Empty<string>();
         });
 
-        return this;
+        return module;
     }
 
     /// <summary>
     /// Replaces the default document title provider with a custom implementation.
     /// </summary>
     /// <typeparam name="TProvider">Custom title provider type.</typeparam>
-    public ModuleMarkdownGuide UseDocumentTitleProvider<TProvider>()
+    public static ModuleRegistration<ModuleMarkdown, ModuleMarkdownOption> UseDocumentTitleProvider<TProvider>(this ModuleRegistration<ModuleMarkdown, ModuleMarkdownOption> module)
         where TProvider : class, IMarkdownDocumentTitleResolver
     {
-        ConfigureServices(ctx =>
+        module.ConfigureServices(ctx =>
         {
             ctx.Services.RemoveAll<IMarkdownDocumentTitleResolver>();
             ctx.Services.AddSingleton<IMarkdownDocumentTitleResolver, TProvider>();
         }, order: 0);
 
-        return this;
+        return module;
     }
 
     /// <summary>
     /// Replaces the default document provider with a custom implementation.
     /// </summary>
     /// <typeparam name="TProvider">Custom document provider type.</typeparam>
-    public ModuleMarkdownGuide UseDocumentProvider<TProvider>()
+    public static ModuleRegistration<ModuleMarkdown, ModuleMarkdownOption> UseDocumentProvider<TProvider>(this ModuleRegistration<ModuleMarkdown, ModuleMarkdownOption> module)
         where TProvider : class, IMarkdownDocumentProvider
     {
-        ConfigureServices(ctx =>
+        module.ConfigureServices(ctx =>
         {
             ctx.Services.RemoveAll<IMarkdownDocumentProvider>();
             ctx.Services.AddSingleton<IMarkdownDocumentProvider, TProvider>();
         }, order: 0);
 
-        return this;
+        return module;
     }
+
 }
 
 public class ModuleMarkdownOption : ModuleOptions<ModuleMarkdown>
 {
     /// <summary>
-    /// Registered document group descriptors, populated by Guide.
+    /// Registered document group descriptors populated by module registration extensions.
     /// </summary>
     public List<MarkdownDocumentGroupRegistration> DocumentGroupRegistrations { get; set; } = [];
 
@@ -222,7 +220,7 @@ public class ModuleMarkdownOption : ModuleOptions<ModuleMarkdown>
     /// hidden language roots and expects every markdown file to live under a
     /// supported culture root.
     /// </summary>
-    public bool EnableMultilingualDocuments { get; set; }
+    public bool EnableMultilingualDocuments { get; internal set; }
 
     /// <summary>
     /// Minimum normalized query length required before a search executes.

@@ -1,7 +1,7 @@
-using Monica.ProjectUnits.Services.Support;
+using Monica.Core.TypeDiscovery.Models;
 using Monica.Modules;
+using Monica.ProjectUnits.Services.Support;
 using Monica.Repository.Entity.Abstractions;
-using Monica.Tool.Extensions;
 
 namespace Monica.ProjectUnits.Models;
 
@@ -10,8 +10,8 @@ namespace Monica.ProjectUnits.Models;
 /// </summary>
 public class UnitEntity : ProjectUnit
 {
-    internal UnitEntity(Type type, ProjectUnitCatalog catalog)
-        : base(type, EProjectUnitType.Entity, catalog)
+    internal UnitEntity(BusinessTypeShape shape, ProjectUnitCatalog catalog)
+        : base(shape, EProjectUnitType.Entity, catalog)
     {
     }
 
@@ -25,11 +25,6 @@ public class UnitEntity : ProjectUnit
     /// </summary>
     public UnitRepository? RepoUnit { get; set; }
 
-    protected override bool VerifyTypeConstrain()
-    {
-        return Type.IsClass && Type.IsImplementInterface<IEntity>();
-    }
-
     protected override ProjectUnitNamingRule? DefaultConventionOption()
     {
         return new ProjectUnitNamingRule
@@ -38,10 +33,11 @@ public class UnitEntity : ProjectUnit
         };
     }
 
-    internal static ProjectUnit? Create(Type type, ProjectUnitCatalog catalog)
+    internal static ProjectUnit Create(BusinessTypeShape shape, ProjectUnitCatalog catalog)
     {
-        var unit = new UnitEntity(type, catalog);
-        return unit.VerifyType() ? unit : null;
+        var unit = new UnitEntity(shape, catalog);
+        unit.CheckNameConventionMode();
+        return unit;
     }
     public override void DeclareRelevance(ProjectUnit unit, bool isDependent = false)
     {

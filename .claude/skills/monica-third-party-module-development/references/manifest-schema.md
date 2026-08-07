@@ -133,12 +133,13 @@ Create a UTF-8 JSON manifest and pass it to `scripts/scaffold_repository.py`. Un
 ## Monica modules
 
 - Module kind is `infrastructure`, `web`, `ui`, or `provider`.
-- Module keys are globally unique and owned by the containing package.
-- `dependsOn` contains full module keys from the repository, not local module names.
-- Generated cross-package Guide references are namespace-qualified, so different packages may safely use the same local module name.
+- Module keys are globally unique ecosystem/distribution identifiers owned by the containing package. They are not Monica runtime identities; the runtime graph is keyed by concrete module `Type`.
+- `dependsOn` contains full manifest module keys from the repository, not local module names. The scaffold resolves each entry to a concrete `module.Require<TModule, TOptions>()` call in `Describe(ModuleDescriptor)`.
+- Generated cross-package module and option type references are namespace-qualified, so different packages may safely use the same local module name.
 - Every cross-package runtime dependency must be backed by `packageDependencies`.
-- Provider modules require `providerFor`, include that key in `dependsOn`, and implement `IModuleProvider`.
-- UI names end with one exact `UI` suffix, UI keys end in `.UI`, and navigation category identity removes only that final segment.
+- Provider modules require `providerFor`, include that manifest key in `dependsOn`, implement `IModuleProvider`, and return `typeof(TargetModule)` from `ProvidesFor`.
+- UI names end with one exact `UI` suffix, UI manifest keys end in `.UI`, navigation category identity removes only that final segment, and the generated strategy implements `IUIModule` explicitly.
+- A `web` strategy implements `IWebModule` and `IWebHostRequiredModule`; web capability and host requirement are expressed by CLR markers rather than key conventions.
 - Package and module graphs must be acyclic.
 
 ## OCI images and targets

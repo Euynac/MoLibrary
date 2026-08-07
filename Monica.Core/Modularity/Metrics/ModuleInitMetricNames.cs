@@ -1,28 +1,29 @@
 namespace Monica.Core.Modularity.Metrics;
 
-/// <summary>
-/// Defines meter and instrument names emitted by the Monica module system.
-/// </summary>
+/// <summary>Defines meter and instrument names emitted by the Monica module system.</summary>
 public static class ModuleInitMetricNames
 {
-    /// <summary>
-    /// Meter name used for Monica module initialization metrics.
-    /// </summary>
+    /// <summary>Gets the meter name hosts subscribe to.</summary>
     public const string MeterName = "Monica.Core.Modularity";
 
-    /// <summary>
-    /// Observable gauge instrument that reports the latest known module initialization duration in seconds.
-    /// </summary>
-    public const string Duration = "monica.module.init.duration";
+    /// <summary>Histogram for terminal end-to-end composition duration.</summary>
+    public const string CompositionDuration = "monica.module.composition.duration";
 
-    /// <summary>
-    /// Observable gauge instrument that reports startup-work active-span, execution, queue, and barrier-wait
-    /// durations in seconds.
-    /// </summary>
-    public const string StartupWorkDuration = "monica.module.startup.work.duration";
+    /// <summary>Histogram for terminal service-registration duration.</summary>
+    public const string ServiceRegistrationDuration = "monica.module.service_registration.duration";
 
-    /// <summary>
-    /// Observable gauge instrument that reports module initialization error count by phase or startup boundary.
-    /// </summary>
-    public const string Errors = "monica.module.init.errors";
+    /// <summary>Histogram for terminal aggregate type-discovery duration.</summary>
+    public const string TypeDiscoveryDuration = "monica.module.type_discovery.duration";
+
+    /// <summary>Histogram for terminal aggregate startup barrier-wait duration.</summary>
+    public const string BarrierWaitDuration = "monica.module.barrier_wait.duration";
+
+    /// <summary>Histogram for terminal serial module callback durations.</summary>
+    public const string CallbackDuration = "monica.module.callback.duration";
+
+    /// <summary>Histogram for terminal startup-work execution durations.</summary>
+    public const string StartupWorkDuration = "monica.module.startup_work.duration";
+
+    /// <summary>Observable gauge for live bounded module-system counts.</summary>
+    public const string LiveCount = "monica.module.live.count";
 }

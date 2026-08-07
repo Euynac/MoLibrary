@@ -5,7 +5,7 @@ namespace Monica.Core.Modularity.Diagnostics.Models;
 /// <summary>
 /// Describes the remaining time for one work item that was pending at barrier entry.
 /// </summary>
-public sealed class ModuleStartupWorkBarrierPendingWorkInfo
+internal sealed class ModuleStartupWorkBarrierPendingWorkInfo
 {
     /// <summary>Gets the referenced startup work identity.</summary>
     public string WorkItemId { get; init; } = string.Empty;
@@ -17,7 +17,7 @@ public sealed class ModuleStartupWorkBarrierPendingWorkInfo
 /// <summary>
 /// Describes one startup-work barrier reached by Monica's serial control plane.
 /// </summary>
-public sealed class ModuleStartupWorkBarrierPerformanceInfo
+internal sealed class ModuleStartupWorkBarrierPerformanceInfo
 {
     /// <summary>Gets the barrier occurrence sequence.</summary>
     public long Sequence { get; init; }

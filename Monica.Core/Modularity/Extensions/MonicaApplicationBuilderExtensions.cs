@@ -22,10 +22,10 @@ public static class MonicaApplicationBuilderExtensions
         var application = app.ApplicationServices.GetRequiredService<MonicaApplication>();
         application.Modules.BeginApplicationPipeline(app);
         ConfigureMonicaHttpListener(app, application.ModuleSystem);
-        application.Modules.ConfigApplicationPipeline(app, ModuleOrder.MIDDLEWARE_USE_ROUTING, afterGivenOrder: false);
+        application.Modules.ConfigApplicationPipeline(app, ModuleWebStage.BeforeRouting);
         app.UseRouting();
         app.UseMonicaEndpointPortGuard(application.ModuleSystem);
-        application.Modules.ConfigApplicationPipeline(app, ModuleOrder.MIDDLEWARE_USE_ROUTING, afterGivenOrder: true);
+        application.Modules.ConfigApplicationPipeline(app, ModuleWebStage.AfterRouting);
         application.Modules.CompleteApplicationPipeline();
         return app;
     }

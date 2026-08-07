@@ -1,5 +1,7 @@
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Monica.Core.Modularity.Abstractions;
+using Monica.Core.Modularity.Diagnostics.Models;
 
 namespace Monica.Core;
 
@@ -14,14 +16,14 @@ public interface IMonicaModuleSystemOptions
     int MaxConcurrentStartupWorkItems { get; }
 
     /// <summary>
+    /// Gets optional host-defined startup performance budgets. Unset values do not imply a health threshold.
+    /// </summary>
+    IModuleStartupPerformanceBudgets? StartupPerformanceBudgets { get; }
+
+    /// <summary>
     /// Gets the default log level used by module registration loggers.
     /// </summary>
     LogLevel DefaultLogLevel { get; }
-
-    /// <summary>
-    /// Gets whether module registration failures disable the module instead of aborting startup.
-    /// </summary>
-    bool DisableOnRegistrationError { get; }
 
     /// <summary>
     /// Gets whether module execution summary logs are emitted after module system initialization.
@@ -47,6 +49,11 @@ public interface IMonicaModuleSystemOptions
     /// Gets whether Monica should append an HTTP wildcard listener for <see cref="MonicaEndpointPort"/>.
     /// </summary>
     bool AutoAddMonicaHttpListener { get; }
+
+    /// <summary>
+    /// Gets the disclosure mode used when module configuration is explicitly requested through diagnostics.
+    /// </summary>
+    ModuleOptionDiagnosticsExposureMode OptionDiagnosticsExposureMode { get; }
 
     /// <summary>
     /// Gets the host used when Monica appends an HTTP listener for <see cref="MonicaEndpointPort"/>.
@@ -76,19 +83,19 @@ public sealed class MonicaModuleSystemOptions : IMonicaModuleSystemOptions
         Environment.ProcessorCount);
 
     /// <summary>
+    /// Gets optional startup performance budgets. Every value is unset by default, so Monica reports factual
+    /// measurements without inventing a performance score or warning threshold.
+    /// </summary>
+    public ModuleStartupPerformanceBudgets? StartupPerformanceBudgets { get; set; }
+
+    IModuleStartupPerformanceBudgets? IMonicaModuleSystemOptions.StartupPerformanceBudgets =>
+        StartupPerformanceBudgets;
+
+    /// <summary>
     /// Gets or sets the default log level used by module registration loggers.
-    /// Individual modules can still override their own logger through module options.
     /// Defaults to <see cref="LogLevel.Information"/>.
     /// </summary>
     public LogLevel DefaultLogLevel { get; set; } = LogLevel.Information;
-
-    /// <summary>
-    /// Gets or sets whether module registration failures disable the module instead of aborting startup.
-    /// When enabled, the module system records the failure, logs it, and skips the module for the rest of the
-    /// application lifetime. Individual module options can override this value.
-    /// Defaults to <see langword="false"/>.
-    /// </summary>
-    public bool DisableOnRegistrationError { get; set; }
 
     /// <summary>
     /// Gets or sets whether module execution summary logs are emitted after module system initialization.
@@ -126,6 +133,18 @@ public sealed class MonicaModuleSystemOptions : IMonicaModuleSystemOptions
     public bool AutoAddMonicaHttpListener { get; set; } = true;
 
     /// <summary>
+    /// Gets or sets the disclosure mode used by module option diagnostics. Every public option property is represented
+    /// by name and type. The default exposes bounded ordinary values while redacting credentials and other sensitive
+    /// values. Set
+    /// <see cref="ModuleOptionDiagnosticsExposureMode.RevealSensitive"/> only for dedicated debugging because the
+    /// resulting local UI may contain passwords, tokens, connection strings, and other secrets. The reveal mode is
+    /// accepted only when the host environment is Development. Computed and runtime-shaped values remain
+    /// metadata-only in every mode, and portable exports never contain options.
+    /// </summary>
+    public ModuleOptionDiagnosticsExposureMode OptionDiagnosticsExposureMode { get; set; } =
+        ModuleOptionDiagnosticsExposureMode.Redacted;
+
+    /// <summary>
     /// Gets or sets the host used when Monica appends an HTTP listener for <see cref="MonicaEndpointPort"/>.
     /// Use values such as <c>localhost</c>, <c>*</c>, <c>+</c>, <c>0.0.0.0</c>, or a concrete IP address.
     /// Leave this unset to derive the host from the application's existing URL bindings, falling back to
@@ -141,6 +160,16 @@ public sealed class MonicaModuleSystemOptions : IMonicaModuleSystemOptions
                 nameof(MaxConcurrentStartupWorkItems),
                 MaxConcurrentStartupWorkItems,
                 $"At least {MIN_CONCURRENT_STARTUP_WORK_ITEMS} startup work item must be allowed to run.");
+        }
+
+        StartupPerformanceBudgets?.Validate();
+
+        if (!Enum.IsDefined(OptionDiagnosticsExposureMode))
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(OptionDiagnosticsExposureMode),
+                OptionDiagnosticsExposureMode,
+                "Module option diagnostics exposure mode must be a defined value.");
         }
 
         if (MonicaEndpointPort is null)
@@ -162,6 +191,86 @@ public sealed class MonicaModuleSystemOptions : IMonicaModuleSystemOptions
         {
             throw new InvalidOperationException(
                 $"{nameof(MonicaEndpointHost)} must be a host name or IP address without scheme, port, or path.");
+        }
+    }
+
+    /// <summary>Rejects secret disclosure before host services are registered outside Development.</summary>
+    internal void ValidateEnvironment(IHostEnvironment environment)
+    {
+        ArgumentNullException.ThrowIfNull(environment);
+        if (OptionDiagnosticsExposureMode == ModuleOptionDiagnosticsExposureMode.RevealSensitive
+            && !environment.IsDevelopment())
+        {
+            throw new InvalidOperationException(
+                $"{nameof(ModuleOptionDiagnosticsExposureMode.RevealSensitive)} module option diagnostics " +
+                $"can be enabled only in the {Environments.Development} environment.");
+        }
+    }
+}
+
+/// <summary>Provides a read-only view of host-defined module startup performance budgets.</summary>
+public interface IModuleStartupPerformanceBudgets
+{
+    /// <summary>Gets the end-to-end composition budget.</summary>
+    TimeSpan? TotalComposition { get; }
+
+    /// <summary>Gets the service-registration budget.</summary>
+    TimeSpan? ServiceRegistration { get; }
+
+    /// <summary>Gets the aggregate typed type-discovery-stage budget.</summary>
+    TimeSpan? TypeDiscovery { get; }
+
+    /// <summary>Gets the aggregate blocking startup-barrier budget.</summary>
+    TimeSpan? AggregateBarrierWait { get; }
+
+    /// <summary>Gets the longest individual serial module-callback budget.</summary>
+    TimeSpan? LongestModuleCallback { get; }
+
+    /// <summary>Gets the longest individual startup-work queue budget.</summary>
+    TimeSpan? LongestStartupQueue { get; }
+}
+
+/// <summary>
+/// Defines optional upper limits for module startup measurements. Every budget is disabled until explicitly set.
+/// </summary>
+public sealed class ModuleStartupPerformanceBudgets : IModuleStartupPerformanceBudgets
+{
+    /// <inheritdoc />
+    public TimeSpan? TotalComposition { get; set; }
+
+    /// <inheritdoc />
+    public TimeSpan? ServiceRegistration { get; set; }
+
+    /// <inheritdoc />
+    public TimeSpan? TypeDiscovery { get; set; }
+
+    /// <inheritdoc />
+    public TimeSpan? AggregateBarrierWait { get; set; }
+
+    /// <inheritdoc />
+    public TimeSpan? LongestModuleCallback { get; set; }
+
+    /// <inheritdoc />
+    public TimeSpan? LongestStartupQueue { get; set; }
+
+    internal void Validate()
+    {
+        ValidateBudget(TotalComposition, nameof(TotalComposition));
+        ValidateBudget(ServiceRegistration, nameof(ServiceRegistration));
+        ValidateBudget(TypeDiscovery, nameof(TypeDiscovery));
+        ValidateBudget(AggregateBarrierWait, nameof(AggregateBarrierWait));
+        ValidateBudget(LongestModuleCallback, nameof(LongestModuleCallback));
+        ValidateBudget(LongestStartupQueue, nameof(LongestStartupQueue));
+    }
+
+    private static void ValidateBudget(TimeSpan? budget, string propertyName)
+    {
+        if (budget is { } value && value <= TimeSpan.Zero)
+        {
+            throw new ArgumentOutOfRangeException(
+                propertyName,
+                value,
+                "A configured module startup performance budget must be greater than zero.");
         }
     }
 }

@@ -1,9 +1,8 @@
-using System.Reflection;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
+using Monica.Core.Modularity.Services.Support;
+using Monica.Core.TypeDiscovery.Models;
 using Monica.DependencyInjection.Abstractions;
-using Monica.DependencyInjection.Abstractions.Internal;
 using Monica.DependencyInjection.Annotations;
 using Monica.DependencyInjection.Models;
 using Monica.DependencyInjection.Models.Internal;
@@ -15,58 +14,74 @@ namespace Monica.DependencyInjection.Services;
 /// <summary>
 /// Registers discovered Monica services using lifetime markers and exposure attributes.
 /// </summary>
-internal class ConventionalRegistrar(ModuleDependencyInjectionOption option, DependencyInjectionDiagnosticsRegistry? diagnosticsRegistry = null) : IConventionalRegistrar
+internal sealed class ConventionalRegistrar(
+    ModuleDependencyInjectionOption option,
+    ILogger logger,
+    DependencyInjectionDiagnosticsRegistry? diagnosticsRegistry = null)
 {
-    private ILogger Logger => option.Logger;
-    
     /// <summary>
     /// Registers a single type into the service collection based on its attributes and lifetime.
     /// </summary>
-    /// <param name="services">The service collection to which the dependency will be added.</param>
-    /// <param name="type">The type to be registered.</param>
-    public virtual void AddType(IServiceCollection services, Type type)
+    /// <param name="registrations">The indexed writer that owns discovery-phase mutations.</param>
+    /// <param name="match">The discovered type and its host-scoped cached structural facts.</param>
+    internal void AddType(
+        ModuleServiceRegistrationWriter registrations,
+        BusinessTypeMatch match)
     {
-        // TODO: Support automatic registration of generic types through configuration.
-        if(type is not { IsClass: true, IsAbstract: false, IsGenericType: false }) return;
+        ArgumentNullException.ThrowIfNull(registrations);
+        ArgumentNullException.ThrowIfNull(match);
 
-        var dependencyAttribute = GetDependencyAttributeOrNull(type);
-        var lifeTime = GetLifeTimeOrNull(type, dependencyAttribute);
-        if (lifeTime == null)
+        var shape = match.Shape;
+        var type = match.Type;
+
+        // TODO: Support automatic registration of generic types through configuration.
+        // Conventional registration deliberately excludes every generic type, including closed constructions.
+        if (type.IsGenericType)
+        {
+            return;
+        }
+
+        var inheritedAttributes = shape.GetAttributes(typeof(Attribute), inherit: true);
+        var dependencyAttribute = inheritedAttributes.OfType<DependencyAttribute>().FirstOrDefault();
+        var (lifetime, lifetimeSource) = ResolveLifetime(shape, dependencyAttribute);
+        if (lifetime == null)
         {
             return;
         }
 
         var typeName = type.Name;
-        var lifetimeSource = ResolveLifetimeSource(type, dependencyAttribute);
         var registrationMode = ResolveRegistrationMode(dependencyAttribute);
         var shouldLog = option.EnableAutoRegistrationLogging;
         var shouldEmitDiagnostics = option.EnableAutoRegistrationDiagnostics;
         var shouldCaptureDiagnostics = shouldEmitDiagnostics && diagnosticsRegistry != null;
 
-        var exposedServiceAndKeyedServiceTypes = GetExposedKeyedServiceTypes(type)
-            .Concat(GetExposedServiceTypes(type).Select(t => new ServiceIdentifier(t)))
+        var exposedServiceAndKeyedServiceTypes = ExposedServiceExplorer
+            .GetExposedKeyedServices(inheritedAttributes)
+            .Concat(ExposedServiceExplorer
+                .GetExposedServices(shape, inheritedAttributes)
+                .Select(serviceType => new ServiceIdentifier(serviceType)))
             .ToList();
         var exposedServicesByKey = exposedServiceAndKeyedServiceTypes.ToLookup(item => item.ServiceKey);
         var autoRegistrationIssues = shouldLog || shouldEmitDiagnostics
-            ? CreateAutoRegistrationIssues(type, lifeTime.Value, lifetimeSource, exposedServiceAndKeyedServiceTypes)
+            ? CreateAutoRegistrationIssues(type, lifetime.Value, lifetimeSource, exposedServiceAndKeyedServiceTypes)
             : [];
 
         if (shouldLog)
         {
             if (exposedServiceAndKeyedServiceTypes.Count == 0)
             {
-                Logger.LogError("Failed to auto-register type: {TypeName} {Lifetime}", typeName, lifeTime);
+                logger.LogError("Failed to auto-register type: {TypeName} {Lifetime}", typeName, lifetime);
             }
             else if (autoRegistrationIssues.Any(item => item.Kind == DependencyInjectionAutoRegistrationIssueKind.ConcreteTypeOnlyExposure))
             {
-                Logger.LogWarning("Only the concrete type was registered: {TypeName} {Lifetime}", typeName, lifeTime);
+                logger.LogWarning("Only the concrete type was registered: {TypeName} {Lifetime}", typeName, lifetime);
             }
             else
             {
-                Logger.LogInformation("Auto-registered: {TypeName}->{ServiceTypes} {Lifetime}",
+                logger.LogInformation("Auto-registered: {TypeName}->{ServiceTypes} {Lifetime}",
                     typeName,
                     $"[{exposedServiceAndKeyedServiceTypes.Select(p => p.ServiceType.Name).StringJoin(", ")}]",
-                    lifeTime);
+                    lifetime);
             }
         }
 
@@ -78,24 +93,28 @@ internal class ConventionalRegistrar(ModuleDependencyInjectionOption option, Dep
         foreach (var exposedServiceType in exposedServiceAndKeyedServiceTypes)
         {
             var allExposingServiceTypes = exposedServicesByKey[exposedServiceType.ServiceKey].ToList();
-            var hadExistingDescriptor = shouldCaptureDiagnostics &&
-                services.Any(existing =>
-                    existing.MatchesServiceIdentity(exposedServiceType.ServiceType, exposedServiceType.ServiceKey));
+            var hadExistingDescriptor = shouldCaptureDiagnostics && registrations.Contains(
+                exposedServiceType.ServiceType,
+                exposedServiceType.ServiceKey,
+                isKeyedService: exposedServiceType.ServiceKey is not null);
             var serviceDescriptor = CreateServiceDescriptor(
-                type,
+                shape,
                 exposedServiceType.ServiceKey,
                 exposedServiceType.ServiceType,
                 allExposingServiceTypes,
-                lifeTime.Value
+                lifetime.Value
             );
-            var descriptorWasAdded = ApplyRegistrationMode(services, serviceDescriptor, registrationMode, hadExistingDescriptor);
+            var descriptorWasAdded = ApplyRegistrationMode(
+                registrations,
+                serviceDescriptor,
+                registrationMode);
 
             if (shouldCaptureDiagnostics && descriptorWasAdded)
             {
                 diagnosticsRegistry!.RecordConventionalRegistration(
                     serviceDescriptor,
                     type,
-                    lifeTime.Value,
+                    lifetime.Value,
                     lifetimeSource,
                     registrationMode,
                     hadExistingDescriptor && registrationMode == DependencyInjectionAutoRegistrationMode.Replace
@@ -106,75 +125,43 @@ internal class ConventionalRegistrar(ModuleDependencyInjectionOption option, Dep
             }
         }
     }
-    /// <summary>
-    /// Retrieves the <see cref="DependencyAttribute"/> from the specified type, if available.
-    /// </summary>
-    /// <param name="type">The type to inspect for the attribute.</param>
-    /// <returns>The <see cref="DependencyAttribute"/> if found; otherwise, null.</returns>
-    protected virtual DependencyAttribute? GetDependencyAttributeOrNull(Type type)
-    {
-        return type.GetCustomAttribute<DependencyAttribute>(true);
-    }
-    /// <summary>
-    /// Determines the service lifetime for the specified type based on its attributes or class hierarchy.
-    /// </summary>
-    /// <param name="type">The type to inspect.</param>
-    /// <param name="dependencyAttribute">The dependency attribute associated with the type.</param>
-    /// <returns>The determined <see cref="ServiceLifetime"/> if available; otherwise, null.</returns>
-    protected virtual ServiceLifetime? GetLifeTimeOrNull(Type type, DependencyAttribute? dependencyAttribute)
-    {
-        return dependencyAttribute?.Lifetime ?? GetServiceLifetimeFromClassHierarchy(type);
-    }
-    /// <summary>
-    /// Determines the service lifetime based on the class hierarchy of the specified type.
-    /// </summary>
-    /// <param name="type">The type to inspect.</param>
-    /// <returns>The determined <see cref="ServiceLifetime"/> if available; otherwise, null.</returns>
-    protected virtual ServiceLifetime? GetServiceLifetimeFromClassHierarchy(Type type)
-    {
-        if (typeof(ITransientDependency).IsAssignableFrom(type))
-        {
-            return ServiceLifetime.Transient;
-        }
-        if (typeof(ISingletonDependency).IsAssignableFrom(type))
-        {
-            return ServiceLifetime.Singleton;
-        }
-        if (typeof(IScopedDependency).IsAssignableFrom(type))
-        {
-            return ServiceLifetime.Scoped;
-        }
-        return null;
-    }
-
-    protected virtual DependencyInjectionLifetimeSource ResolveLifetimeSource(
-        Type type,
+    private static (
+        ServiceLifetime? Lifetime,
+        DependencyInjectionLifetimeSource Source) ResolveLifetime(
+        BusinessTypeShape shape,
         DependencyAttribute? dependencyAttribute)
     {
-        if (dependencyAttribute?.Lifetime != null)
+        if (dependencyAttribute?.Lifetime is { } attributeLifetime)
         {
-            return DependencyInjectionLifetimeSource.DependencyAttribute;
+            return (attributeLifetime, DependencyInjectionLifetimeSource.DependencyAttribute);
         }
 
-        if (typeof(ITransientDependency).IsAssignableFrom(type))
+        if (shape.IsAssignableTo(typeof(ITransientDependency)))
         {
-            return DependencyInjectionLifetimeSource.TransientMarkerInterface;
+            return (
+                ServiceLifetime.Transient,
+                DependencyInjectionLifetimeSource.TransientMarkerInterface);
         }
 
-        if (typeof(ISingletonDependency).IsAssignableFrom(type))
+        if (shape.IsAssignableTo(typeof(ISingletonDependency)))
         {
-            return DependencyInjectionLifetimeSource.SingletonMarkerInterface;
+            return (
+                ServiceLifetime.Singleton,
+                DependencyInjectionLifetimeSource.SingletonMarkerInterface);
         }
 
-        if (typeof(IScopedDependency).IsAssignableFrom(type))
+        if (shape.IsAssignableTo(typeof(IScopedDependency)))
         {
-            return DependencyInjectionLifetimeSource.ScopedMarkerInterface;
+            return (
+                ServiceLifetime.Scoped,
+                DependencyInjectionLifetimeSource.ScopedMarkerInterface);
         }
 
-        return DependencyInjectionLifetimeSource.Unknown;
+        return (null, DependencyInjectionLifetimeSource.Unknown);
     }
 
-    protected virtual DependencyInjectionAutoRegistrationMode ResolveRegistrationMode(DependencyAttribute? dependencyAttribute)
+    private static DependencyInjectionAutoRegistrationMode ResolveRegistrationMode(
+        DependencyAttribute? dependencyAttribute)
     {
         if (dependencyAttribute?.ReplaceServices == true)
         {
@@ -189,27 +176,25 @@ internal class ConventionalRegistrar(ModuleDependencyInjectionOption option, Dep
         return DependencyInjectionAutoRegistrationMode.Add;
     }
 
-    private bool ApplyRegistrationMode(
-        IServiceCollection services,
+    private static bool ApplyRegistrationMode(
+        ModuleServiceRegistrationWriter registrations,
         ServiceDescriptor descriptor,
-        DependencyInjectionAutoRegistrationMode registrationMode,
-        bool hadExistingDescriptor)
+        DependencyInjectionAutoRegistrationMode registrationMode)
     {
         switch (registrationMode)
         {
             case DependencyInjectionAutoRegistrationMode.Replace:
-                services.Replace(descriptor);
+                registrations.Replace(descriptor);
                 return true;
             case DependencyInjectionAutoRegistrationMode.TryAdd:
-                services.TryAdd(descriptor);
-                return !hadExistingDescriptor;
+                return registrations.TryAdd(descriptor);
             default:
-                services.Add(descriptor);
+                registrations.Add(descriptor);
                 return true;
         }
     }
 
-    private IReadOnlyList<DependencyInjectionAutoRegistrationIssueInfo> CreateAutoRegistrationIssues(
+    private static IReadOnlyList<DependencyInjectionAutoRegistrationIssueInfo> CreateAutoRegistrationIssues(
         Type sourceImplementationType,
         ServiceLifetime lifetime,
         DependencyInjectionLifetimeSource lifetimeSource,
@@ -238,7 +223,7 @@ internal class ConventionalRegistrar(ModuleDependencyInjectionOption option, Dep
         return [];
     }
 
-    private DependencyInjectionAutoRegistrationIssueInfo CreateAutoRegistrationIssue(
+    private static DependencyInjectionAutoRegistrationIssueInfo CreateAutoRegistrationIssue(
         Type sourceImplementationType,
         ServiceLifetime lifetime,
         DependencyInjectionLifetimeSource lifetimeSource,
@@ -267,62 +252,34 @@ internal class ConventionalRegistrar(ModuleDependencyInjectionOption option, Dep
                 .ToArray()
         };
     }
-  
-    /// <summary>
-    /// Retrieves the list of exposed service types for the specified type.
-    /// </summary>
-    /// <param name="type">The type to inspect.</param>
-    /// <returns>A list of exposed service types.</returns>
-    protected virtual List<Type> GetExposedServiceTypes(Type type)
-    {
-        return ExposedServiceExplorer.GetExposedServices(type);
-    }
-    /// <summary>
-    /// Retrieves the list of exposed keyed service types for the specified type.
-    /// </summary>
-    /// <param name="type">The type to inspect.</param>
-    /// <returns>A list of exposed keyed service types.</returns>
-    protected virtual List<ServiceIdentifier> GetExposedKeyedServiceTypes(Type type)
-    {
-        return ExposedServiceExplorer.GetExposedKeyedServices(type);
-    }
+
     /// <summary>
     /// Creates a <see cref="ServiceDescriptor"/> for the specified implementation and service type.
     /// </summary>
-    /// <param name="implementationType">The type implementing the service.</param>
+    /// <param name="implementationShape">The cached structural facts for the implementation type.</param>
     /// <param name="serviceKey">The key associated with the service, if any.</param>
     /// <param name="exposingServiceType">The type of the service being exposed.</param>
     /// <param name="allExposingServiceTypes">All service types being exposed.</param>
-    /// <param name="lifeTime">The lifetime of the service.</param>
+    /// <param name="lifetime">The lifetime of the service.</param>
     /// <returns>A <see cref="ServiceDescriptor"/> for the service.</returns>
-    protected virtual ServiceDescriptor CreateServiceDescriptor(
-        Type implementationType,
+    private static ServiceDescriptor CreateServiceDescriptor(
+        BusinessTypeShape implementationShape,
         object? serviceKey,
         Type exposingServiceType,
         List<ServiceIdentifier> allExposingServiceTypes,
-        ServiceLifetime lifeTime)
+        ServiceLifetime lifetime)
     {
-        var requiresCachedServiceProviderAccess = RequiresCachedServiceProviderAccess(implementationType);
+        var implementationType = implementationShape.Type;
+        var requiresCachedServiceProviderAccess = RequiresCachedServiceProviderAccess(implementationShape);
 
-        if (requiresCachedServiceProviderAccess && lifeTime == ServiceLifetime.Singleton)
+        if (requiresCachedServiceProviderAccess && lifetime == ServiceLifetime.Singleton)
         {
             throw new InvalidOperationException(
                 $"{implementationType.FullName} can not be registered as Singleton because it requires {nameof(ICachedServiceProvider)}.");
         }
 
-        // TODO: Support automatic registration of generic types.
-        //if (implementationType.IsGenericType)
-        //{
-        //    implementationType = implementationType.GetGenericTypeDefinition();
-        //}
-
-        //if (exposingServiceType.IsGenericType)
-        //{
-        //    exposingServiceType = exposingServiceType.GetGenericTypeDefinition();
-        //}
-
         // TODO: Revisit whether this redirection block is still necessary.
-        if (lifeTime.EqualsAny(ServiceLifetime.Singleton, ServiceLifetime.Scoped))
+        if (lifetime.EqualsAny(ServiceLifetime.Singleton, ServiceLifetime.Scoped))
         {
             var redirectedType = GetRedirectedTypeOrNull(
                 implementationType,
@@ -335,7 +292,7 @@ internal class ConventionalRegistrar(ModuleDependencyInjectionOption option, Dep
                     ? ServiceDescriptor.Describe(
                         exposingServiceType,
                         provider => provider.GetService(redirectedType)!,
-                        lifeTime
+                        lifetime
                     )
                     : ServiceDescriptor.DescribeKeyed(
                         exposingServiceType,
@@ -349,7 +306,7 @@ internal class ConventionalRegistrar(ModuleDependencyInjectionOption option, Dep
 
                             throw new InvalidOperationException("This service provider doesn't support keyed services.");
                         },
-                        lifeTime
+                        lifetime
                     );
             }
         }
@@ -357,20 +314,20 @@ internal class ConventionalRegistrar(ModuleDependencyInjectionOption option, Dep
             implementationType,
             serviceKey,
             exposingServiceType,
-            lifeTime,
+            lifetime,
             requiresCachedServiceProviderAccess);
     }
 
-    protected virtual bool RequiresCachedServiceProviderAccess(Type implementationType)
+    private static bool RequiresCachedServiceProviderAccess(BusinessTypeShape implementationShape)
     {
-        return typeof(ICachedServiceProviderAccessor).IsAssignableFrom(implementationType);
+        return implementationShape.IsAssignableTo(typeof(ICachedServiceProviderAccessor));
     }
 
-    protected virtual ServiceDescriptor CreateDirectServiceDescriptor(
+    private static ServiceDescriptor CreateDirectServiceDescriptor(
         Type implementationType,
         object? serviceKey,
         Type exposingServiceType,
-        ServiceLifetime lifeTime,
+        ServiceLifetime lifetime,
         bool requiresCachedServiceProviderAccess)
     {
         if (!requiresCachedServiceProviderAccess)
@@ -379,13 +336,13 @@ internal class ConventionalRegistrar(ModuleDependencyInjectionOption option, Dep
                 ? ServiceDescriptor.Describe(
                     exposingServiceType,
                     implementationType,
-                    lifeTime
+                    lifetime
                 )
                 : ServiceDescriptor.DescribeKeyed(
                     exposingServiceType,
                     serviceKey,
                     implementationType,
-                    lifeTime
+                    lifetime
                 );
         }
 
@@ -393,17 +350,17 @@ internal class ConventionalRegistrar(ModuleDependencyInjectionOption option, Dep
             ? ServiceDescriptor.Describe(
                 exposingServiceType,
                 provider => CreateImplementationInstance(provider, implementationType),
-                lifeTime
+                lifetime
             )
             : ServiceDescriptor.DescribeKeyed(
                 exposingServiceType,
                 serviceKey,
                 (provider, _) => CreateImplementationInstance(provider, implementationType),
-                lifeTime
+                lifetime
             );
     }
 
-    protected virtual object CreateImplementationInstance(IServiceProvider provider, Type implementationType)
+    private static object CreateImplementationInstance(IServiceProvider provider, Type implementationType)
     {
         var instance = ActivatorUtilities.CreateInstance(provider, implementationType);
 
@@ -421,7 +378,7 @@ internal class ConventionalRegistrar(ModuleDependencyInjectionOption option, Dep
     /// <param name="exposingServiceType">The type of the service being exposed.</param>
     /// <param name="allExposingKeyedServiceTypes">All keyed service types being exposed.</param>
     /// <returns>The redirected type, if applicable; otherwise, null.</returns>
-    protected virtual Type? GetRedirectedTypeOrNull(
+    private static Type? GetRedirectedTypeOrNull(
         Type implementationType,
         Type exposingServiceType,
         List<ServiceIdentifier> allExposingKeyedServiceTypes)

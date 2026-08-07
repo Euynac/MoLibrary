@@ -1,0 +1,103 @@
+.workbench-header {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto auto;
+    gap: 1.25rem;
+    align-items: center;
+    width: 100%;
+    min-width: 0;
+    padding: 1.25rem clamp(.75rem, 2vw, 2rem);
+    border-bottom: 1px solid var(--mud-palette-lines-default);
+    background: linear-gradient(120deg, var(--mud-palette-surface), var(--mud-palette-background));
+}
+
+.workbench-title-block,
+.workbench-title-line {
+    min-width: 0;
+}
+
+.workbench-title-line {
+    display: flex;
+    gap: .75rem;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.workbench-identity {
+    display: grid;
+    grid-template-columns: auto auto;
+    align-items: baseline;
+    gap: .1rem .45rem;
+    min-width: 0;
+}
+
+.workbench-identity span {
+    color: var(--mud-palette-text-secondary);
+    font-size: .72rem;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+}
+
+.workbench-identity ::deep .identifier-value {
+    grid-column: 1 / -1;
+    width: 15rem;
+    max-width: 15rem;
+}
+
+.workbench-actions {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: .5rem;
+    min-width: 0;
+}
+
+.baseline-file-button {
+    display: inline-flex;
+    align-items: center;
+    gap: .45rem;
+    min-height: 2.25rem;
+    padding: .35rem .8rem;
+    border: 1px solid var(--mud-palette-lines-inputs);
+    border-radius: var(--mud-default-borderradius);
+    color: var(--mud-palette-text-primary);
+    cursor: pointer;
+}
+
+.baseline-file-button:focus-within {
+    outline: 2px solid var(--mud-palette-primary);
+    outline-offset: 2px;
+}
+
+.baseline-file-button ::deep input {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+}
+
+.comparison-banner {
+    margin: .75rem clamp(.75rem, 2vw, 2rem) 0;
+}
+
+@media (max-width: 900px) {
+    .workbench-header {
+        grid-template-columns: minmax(0, 1fr) auto;
+    }
+
+    .workbench-identity {
+        grid-column: 1 / -1;
+    }
+}
+
+@media (max-width: 620px) {
+    .workbench-header {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .workbench-actions {
+        justify-content: flex-start;
+        overflow-x: auto;
+        padding-bottom: .15rem;
+    }
+}

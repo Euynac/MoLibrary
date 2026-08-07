@@ -1,166 +1,375 @@
 @attribute [Route(MODULE_SYSTEM_DASHBOARD_URL)]
+@attribute [Route(MODULE_SYSTEM_SECTION_URL)]
+@implements IAsyncDisposable
+@using System.Text.Json
+@using Microsoft.AspNetCore.Components.Forms
 @using Microsoft.Extensions.Localization
-@using Monica.Core.Modularity.Diagnostics.Facades
-@using Monica.Core.Modularity.Models
+@using Monica.Core.Modularity.Diagnostics.Models
 @using Monica.Core.Results
 @using Monica.UI.Localization
 @using Monica.UI.UIModuleSystem.State
 @using Monica.UI.UIModuleSystem.Support
-@inject ModuleDiagnosticsFacade ModuleDiagnostics
-@inject ISnackbar SnackBar
-@inject IStringLocalizer<SharedResource> L
+@inject ModuleSystemWorkbenchSessionFactory SessionFactory
+@inject ModuleSystemWorkbenchAccess Access
+@inject NavigationManager Navigation
+@inject IJSRuntime JSRuntime
+@inject ISnackbar Snackbar
+@inject IStringLocalizer<ModuleSystemResource> L
 
-<PageTitle>@L["ModuleSystem:Dashboard:Title"]</PageTitle>
+<PageTitle>@L["Page:Title"]</PageTitle>
 
-<div class="dashboard-page-shell">
-    <MudContainer MaxWidth="MaxWidth.False">
-        <MudPaper Class="pa-6 mb-6" Elevation="2">
-            <MudText Typo="Typo.h3" Class="mb-2">
-                <MudIcon Icon="@Icons.Material.Filled.Dashboard" Class="mr-3" />
-                @L["ModuleSystem:Dashboard:Title"]
-            </MudText>
-            <MudText Typo="Typo.body1" Color="Color.Secondary">
-                @L["ModuleSystem:Dashboard:Description"]
-            </MudText>
-        </MudPaper>
+<div class="module-workbench-page">
+    @if (!_accessChecked)
+    {
+        <div class="workbench-centered-state" role="status">
+            <MudProgressCircular Indeterminate="true" Color="Color.Primary" />
+            <MudText Typo="Typo.body1">@L["Access:Checking"]</MudText>
+        </div>
+    }
+    else if (!_isAuthorized || _session?.IsAccessDenied == true)
+    {
+        <div class="workbench-centered-state" role="alert">
+            <MudIcon Icon="@Icons.Material.Filled.Lock" Color="Color.Warning" Size="Size.Large" />
+            <MudText Typo="Typo.h5">@L["Access:DeniedTitle"]</MudText>
+            <MudText Typo="Typo.body1">@L["Access:DeniedDescription"]</MudText>
+        </div>
+    }
+    else if (_session is not null)
+    {
+        <MudDrawerContainer Class="workbench-drawer-container">
+            <ModuleWorkbenchHeader Session="@_session"
+                                   RefreshRequested="@Refresh"
+                                   ExportRequested="@ExportAsync"
+                                   BaselineSelected="@ImportBaselineAsync"
+                                   HelpRequested="@OpenHelp" />
 
-        <MudTabs ActivePanelIndex="@_state.ActiveTabIndex"
-                 ActivePanelIndexChanged="@OnActivePanelIndexChanged"
-                 Elevation="4"
-                 Rounded="true"
-                 ApplyEffectsToContainer="true"
-                 MinimumTabWidth="180px"
-                 Class="mb-6">
-            <MudTabPanel Text="@L["ModuleSystem:Dashboard:Tabs:SystemOverview"]" Icon="@Icons.Material.Filled.Assessment">
-                <div class="tab-content-panel">
-                    <SystemOverview SystemStatus="_state.SystemStatus" HealthCheckData="_state.HealthCheck" />
+            <nav class="workbench-section-navigation" aria-label="@L["Aria:SectionNavigation"]">
+                <div class="workbench-desktop-sections">
+                    @foreach (var workbenchSection in Sections)
+                    {
+                        <MudButton Variant="@(workbenchSection == _session.Section ? Variant.Filled : Variant.Text)"
+                                   Color="@(workbenchSection == _session.Section ? Color.Primary : Color.Default)"
+                                   StartIcon="@SectionIcon(workbenchSection)"
+                                   aria-current="@(workbenchSection == _session.Section ? "page" : null)"
+                                   OnClick="@(() => NavigateToSection(workbenchSection))">
+                            @SectionText(workbenchSection)
+                        </MudButton>
+                    }
                 </div>
-            </MudTabPanel>
-
-            <MudTabPanel Text="@L["ModuleSystem:Dashboard:Tabs:PerformanceMonitoring"]" Icon="@Icons.Material.Filled.Speed">
-                <div class="tab-content-panel">
-                    <PerformanceMonitoring SystemPerformance="_state.SystemPerformance"
-                                           ModuleSelected="ViewModulePerformance" />
+                <div class="workbench-mobile-section">
+                    <MudSelect T="ModuleSystemWorkbenchSection"
+                               Label="@L["Common:Section"]"
+                               Value="@_session.Section"
+                               ValueChanged="@NavigateToSection"
+                               FullWidth="true">
+                        @foreach (var workbenchSection in Sections)
+                        {
+                            <MudSelectItem T="ModuleSystemWorkbenchSection" Value="@workbenchSection">
+                                @SectionText(workbenchSection)
+                            </MudSelectItem>
+                        }
+                    </MudSelect>
                 </div>
-            </MudTabPanel>
+            </nav>
 
-            <MudTabPanel Text="@L["ModuleSystem:Dashboard:Tabs:ModuleManagement"]" Icon="@Icons.Material.Filled.ViewModule">
-                <div class="tab-content-panel">
-                    <ModuleManagement RegistrationInfo="_state.RegistrationInfo"
-                                      OnRefresh="RefreshDataAsync"
-                                      OnModuleDetailClicked="ViewModuleDetail" />
-                </div>
-            </MudTabPanel>
+            <main class="workbench-main" id="module-workbench-content">
+                @if (_session.Snapshot is null)
+                {
+                    <ModuleWorkbenchLoadState Session="@_session" RetryRequested="@Refresh" />
+                }
+                else
+                {
+                    @switch (_session.Section)
+                    {
+                        case ModuleSystemWorkbenchSection.Overview:
+                            <ModuleWorkbenchOverview Session="@_session"
+                                                     ModuleSelected="@SelectModule" />
+                            break;
+                        case ModuleSystemWorkbenchSection.Performance:
+                            <ModuleWorkbenchPerformance Session="@_session"
+                                                        ModuleSelected="@SelectModule" />
+                            break;
+                        case ModuleSystemWorkbenchSection.Modules:
+                            <ModuleWorkbenchModules Session="@_session"
+                                                    ModuleSelected="@SelectModule" />
+                            break;
+                        case ModuleSystemWorkbenchSection.Dependencies:
+                            <ModuleWorkbenchDependencies Session="@_session"
+                                                         ModuleSelected="@SelectModule" />
+                            break;
+                        case ModuleSystemWorkbenchSection.Discovery:
+                            <ModuleWorkbenchDiscovery Session="@_session" />
+                            break;
+                    }
+                }
+            </main>
 
-            <MudTabPanel Text="@L["ModuleSystem:Dashboard:Tabs:AssemblyAnalysis"]" Icon="@Icons.Material.Filled.Hub">
-                <div class="tab-content-panel">
-                    <AssemblyAnalysis AssemblyAnalysisData="_state.AssemblyAnalysis" />
-                </div>
-            </MudTabPanel>
-
-            <MudTabPanel Text="@L["ModuleSystem:Dashboard:Tabs:Dependencies"]" Icon="@Icons.Material.Filled.AccountTree">
-                <div class="tab-content-panel">
-                    <DependencyGraph DependencyGraphData="_state.DependencyGraph"
-                                     OnModuleDetailClicked="ViewModuleDetail" />
-                </div>
-            </MudTabPanel>
-        </MudTabs>
-    </MudContainer>
+            <ModuleWorkbenchModuleDrawer Session="@_session"
+                                         OpenChanged="@OnModuleDrawerOpenChanged"
+                                         NavigateToDependencies="@OpenSelectedDependencies" />
+            <ModuleWorkbenchHelpDrawer Session="@_session" OpenChanged="@OnHelpOpenChanged" />
+        </MudDrawerContainer>
+    }
 </div>
-
-<!-- Module Details Dialog --><ModuleDetailDialog IsVisible="_state.ShowModuleDetail"
-                   IsVisibleChanged="OnModuleDetailVisibilityChanged"
-                   SelectedModuleDetail="_state.SelectedModuleDetail"
-                   InitialTab="_state.SelectedModuleDetailTab" />
-
 
 @code {
     public const string MODULE_SYSTEM_DASHBOARD_URL = "/module-system-dashboard";
-    private readonly ModuleSystemPageState _state = new();
+    public const string MODULE_SYSTEM_SECTION_URL = "/module-system-dashboard/{Section}";
+    private const string FILE_TRANSFER_MODULE_PATH = "./_content/Monica.UI/js/module-workbench-file.js";
+    private const long MAX_BASELINE_SIZE_BYTES = 10 * 1024 * 1024;
+    private static readonly ModuleSystemWorkbenchSection[] Sections = Enum.GetValues<ModuleSystemWorkbenchSection>();
 
-    protected override async Task OnAfterRenderAsync(bool firstRender)
+    [Parameter] public string? Section { get; set; }
+    [SupplyParameterFromQuery(Name = "module")] public string? SelectedModuleId { get; set; }
+
+    private ModuleSystemWorkbenchSession? _session;
+    private Task _pendingRender = Task.CompletedTask;
+    private bool _accessChecked;
+    private bool _isAuthorized;
+    private bool _disposed;
+
+    protected override async Task OnInitializedAsync()
     {
-        if (firstRender)
-        {
-            await RefreshDataAsync();
-        }
-    }
-
-    private async Task RefreshDataAsync()
-    {
-        var result = await ModuleDiagnostics.GetDashboardSnapshotAsync();
-        if (result.IsFailed(out var error, out var snapshot))
-        {
-            SnackBar.Add($"{L["ModuleSystem:Dashboard:Messages:RefreshFailed"]}: {error}", Severity.Error);
-            return;
-        }
-
-        _state.ApplyDashboardSnapshot(snapshot);
-        SnackBar.Add(L["ModuleSystem:Dashboard:Messages:DataRefreshed"], Severity.Success);
-
-        if (_state.ShouldLoadAssemblyAnalysis)
-        {
-            await LoadAssemblyAnalysisAsync();
-        }
-    }
-
-    private Task OnActivePanelIndexChanged(int tabIndex)
-    {
-        _state.SetActiveTab(tabIndex);
-        return _state.ShouldLoadAssemblyAnalysis
-            ? LoadAssemblyAnalysisAsync()
-            : Task.CompletedTask;
-    }
-
-    private async Task LoadAssemblyAnalysisAsync()
-    {
-        if (!_state.ShouldLoadAssemblyAnalysis)
+        _isAuthorized = await Access.IsAuthorizedAsync();
+        _accessChecked = true;
+        if (!_isAuthorized || _disposed)
         {
             return;
         }
 
-        var result = await ModuleDiagnostics.GetAssemblyAnalysisAsync();
-        if (result.IsFailed(out var error, out var analysis))
+        _session = SessionFactory.Create(Access.IsAuthorizedAsync);
+        _session.Changed += HandleSessionChanged;
+        _session.SetSection(ModuleSystemWorkbenchSectionExtensions.Parse(Section));
+        await _session.InitializeAsync();
+        if (_disposed)
         {
-            SnackBar.Add($"{L["ModuleSystem:Dashboard:Messages:RefreshFailed"]}: {error}", Severity.Error);
             return;
         }
 
-        _state.SetAssemblyAnalysis(analysis);
+        if (!string.IsNullOrWhiteSpace(SelectedModuleId))
+        {
+            _session.SelectModule(SelectedModuleId, openDrawer: true);
+        }
+        else if (_session.SelectedModule is { } automaticallySelected)
+        {
+            var uri = Navigation.GetUriWithQueryParameter("module", automaticallySelected.ModuleKey.Id);
+            Navigation.NavigateTo(uri, replace: true);
+        }
     }
 
-    /// <summary>
-    /// View module details
-    /// </summary>
-    /// <param name="moduleKey">Module key</param>
-    /// <returns></returns>
-    private Task ViewModuleDetail(ModuleKey moduleKey)
-        => ViewModuleDetail(moduleKey, ModuleDetailTab.Basic);
-
-    private Task ViewModulePerformance(ModuleKey moduleKey)
-        => ViewModuleDetail(moduleKey, ModuleDetailTab.Performance);
-
-    private async Task ViewModuleDetail(ModuleKey moduleKey, ModuleDetailTab initialTab)
+    protected override void OnParametersSet()
     {
-        var result = await ModuleDiagnostics.GetModuleDetailAsync(moduleKey);
-        if (result.IsFailed(out var error, out var moduleDetail))
+        if (_session is null)
         {
-            SnackBar.Add($"{L["ModuleSystem:Dashboard:Messages:GetModuleDetailFailed"]}: {error}", Severity.Error);
             return;
         }
 
-        if (moduleDetail == null)
+        _session.SetSection(ModuleSystemWorkbenchSectionExtensions.Parse(Section));
+        if (string.IsNullOrWhiteSpace(SelectedModuleId))
         {
-            SnackBar.Add(L["ModuleSystem:Dashboard:Messages:ModuleDetailNotFound"], Severity.Warning);
+            if (_session.IsModuleDrawerOpen)
+            {
+                _session.CloseModuleDrawer();
+            }
+
             return;
         }
 
-        _state.ShowModuleDetailDialog(moduleDetail, initialTab);
+        if (!string.Equals(_session.SelectedModule?.ModuleKey.Id, SelectedModuleId, StringComparison.Ordinal))
+        {
+            _session.SelectModule(SelectedModuleId, openDrawer: true);
+        }
     }
 
-    private Task OnModuleDetailVisibilityChanged(bool isVisible)
+    private void HandleSessionChanged()
     {
-        _state.SetModuleDetailVisibility(isVisible);
+        _pendingRender = InvokeAsync(StateHasChanged);
+    }
+
+    private async Task Refresh()
+    {
+        if (_session is not null)
+        {
+            await _session.RefreshAsync();
+        }
+    }
+
+    private void NavigateToSection(ModuleSystemWorkbenchSection section)
+    {
+        if (_session is null)
+        {
+            return;
+        }
+
+        _session.SetSection(section);
+        var uri = $"{MODULE_SYSTEM_DASHBOARD_URL}/{section.ToRouteSegment()}";
+        if (_session.SelectedModule is not null)
+        {
+            uri = $"{uri}?module={Uri.EscapeDataString(_session.SelectedModule.ModuleKey.Id)}";
+        }
+
+        Navigation.NavigateTo(uri, replace: true);
+    }
+
+    private void SelectModule(ModuleDiagnosticsModule module)
+    {
+        if (_session is null)
+        {
+            return;
+        }
+
+        var preserveCriticalSelection = _session.SelectedTraceSpanId is not null
+                                        && _session.SelectedModule?.ModuleKey == module.ModuleKey;
+        _session.SelectModule(
+            module,
+            drawerTabIndex: preserveCriticalSelection ? _session.ModuleDrawerTabIndex : 0);
+        var uri = Navigation.GetUriWithQueryParameter("module", module.ModuleKey.Id);
+        Navigation.NavigateTo(uri, replace: true);
+    }
+
+    private Task OnModuleDrawerOpenChanged(bool isOpen)
+    {
+        if (_session is null)
+        {
+            return Task.CompletedTask;
+        }
+
+        if (!isOpen)
+        {
+            _session.CloseModuleDrawer();
+        }
+
         return Task.CompletedTask;
     }
-} 
+
+    private void OpenSelectedDependencies()
+    {
+        _session?.CloseModuleDrawer();
+        NavigateToSection(ModuleSystemWorkbenchSection.Dependencies);
+    }
+
+    private void OpenHelp() => _session?.SetHelpDrawer(true);
+
+    private Task OnHelpOpenChanged(bool isOpen)
+    {
+        _session?.SetHelpDrawer(isOpen);
+        return Task.CompletedTask;
+    }
+
+    private async Task ExportAsync()
+    {
+        var session = _session;
+        if (session is null)
+        {
+            return;
+        }
+
+        var result = await session.CreateExportAsync();
+        if (_disposed || !ReferenceEquals(session, _session))
+        {
+            return;
+        }
+
+        if (result.IsFailed(out _, out var export))
+        {
+            Snackbar.Add(L["Export:Failed"], Severity.Error);
+            return;
+        }
+
+        IJSObjectReference? module = null;
+        try
+        {
+            module = await JSRuntime.InvokeAsync<IJSObjectReference>("import", FILE_TRANSFER_MODULE_PATH);
+            if (_disposed)
+            {
+                return;
+            }
+
+            var json = JsonSerializer.Serialize(export, new JsonSerializerOptions { WriteIndented = true });
+            await module.InvokeVoidAsync(
+                "downloadJson",
+                $"monica-module-diagnostics-{export.Revision}.json",
+                json);
+        }
+        catch (JSDisconnectedException)
+        {
+            // The browser circuit disconnected during an explicit export action.
+        }
+        catch (JSException)
+        {
+            if (!_disposed)
+            {
+                Snackbar.Add(L["Export:Failed"], Severity.Error);
+            }
+        }
+        finally
+        {
+            if (module is not null)
+            {
+                try
+                {
+                    await module.DisposeAsync();
+                }
+                catch (JSDisconnectedException)
+                {
+                    // The circuit disconnected before the late-created module reference could be released.
+                }
+                catch (JSException)
+                {
+                    // A failed browser context cannot retain a usable module reference.
+                }
+            }
+        }
+    }
+
+    private async Task ImportBaselineAsync(InputFileChangeEventArgs args)
+    {
+        var session = _session;
+        if (session is null)
+        {
+            return;
+        }
+
+        try
+        {
+            await using var stream = args.File.OpenReadStream(MAX_BASELINE_SIZE_BYTES);
+            await session.ImportBaselineAsync(stream);
+        }
+        catch (IOException)
+        {
+            if (!_disposed && ReferenceEquals(session, _session))
+            {
+                Snackbar.Add(L["Comparison:FileTooLarge"], Severity.Error);
+            }
+        }
+    }
+
+    private string SectionText(ModuleSystemWorkbenchSection section) => L[$"Sections:{section}"];
+
+    private static string SectionIcon(ModuleSystemWorkbenchSection section) => section switch
+    {
+        ModuleSystemWorkbenchSection.Overview => Icons.Material.Filled.Dashboard,
+        ModuleSystemWorkbenchSection.Performance => Icons.Material.Filled.Timeline,
+        ModuleSystemWorkbenchSection.Modules => Icons.Material.Filled.ViewModule,
+        ModuleSystemWorkbenchSection.Dependencies => Icons.Material.Filled.AccountTree,
+        ModuleSystemWorkbenchSection.Discovery => Icons.Material.Filled.FindInPage,
+        _ => Icons.Material.Filled.Dashboard
+    };
+
+    public async ValueTask DisposeAsync()
+    {
+        if (_disposed)
+        {
+            return;
+        }
+
+        _disposed = true;
+        if (_session is not null)
+        {
+            _session.Changed -= HandleSessionChanged;
+            await _session.DisposeAsync();
+        }
+
+        await _pendingRender;
+    }
+}

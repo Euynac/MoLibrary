@@ -4,8 +4,6 @@ using Microsoft.Extensions.DependencyInjection;
 using Monica.Core;
 using Monica.Core.Modularity;
 using Monica.Core.Modularity.Abstractions;
-using Monica.Core.Modularity.Annotations;
-using Monica.Core.Modularity.Models;
 using Monica.WebApi.Swagger.Models;
 using Monica.WebApi.Swagger.Services.Support;
 using Swashbuckle.AspNetCore.SwaggerGen;
@@ -14,15 +12,14 @@ using Swashbuckle.AspNetCore.SwaggerUI;
 // ReSharper disable once CheckNamespace
 namespace Monica.Modules;
 
-[ModuleKey(BuiltInModuleKey.Swagger)]
-public class ModuleSwagger(ModuleSwaggerOption option) : WebModuleBase<ModuleSwagger, ModuleSwaggerOption, ModuleSwaggerGuide>(option)
+public class ModuleSwagger : MonicaModule<ModuleSwaggerOption>, IWebHostRequiredModule
 {
     private SwaggerDocumentCatalog? _documentCatalog;
 
-    public override void ConfigureApplicationBuilder(IApplicationBuilder app)
+    public override void ConfigureApplicationBuilder(WebModuleContext<ModuleSwaggerOption> context)
     {
-        app.UseSwagger();
-        app.UseSwaggerUI(swaggerUiOptions =>
+        context.ApplicationBuilder.UseSwagger();
+        context.ApplicationBuilder.UseSwaggerUI(swaggerUiOptions =>
         {
             SwaggerUIOptionConfigurator.Configure(
                 swaggerUiOptions,
@@ -32,9 +29,9 @@ public class ModuleSwagger(ModuleSwaggerOption option) : WebModuleBase<ModuleSwa
         });
     }
 
-    public override void ConfigureServices(IServiceCollection services)
+    public override void ConfigureServices(ModuleContext<ModuleSwaggerOption> context)
     {
-        services.AddSwaggerGen(swaggerGenOptions =>
+        context.Services.AddSwaggerGen(swaggerGenOptions =>
         {
             SwaggerGenOptionConfigurator.Configure(
                 swaggerGenOptions,
@@ -58,15 +55,12 @@ public static class ModuleSwaggerBuilderExtensions
         /// <summary>
         /// Registers and configures the Swagger module.
         /// </summary>
-        public ModuleSwaggerGuide AddSwagger(Action<ModuleSwaggerOption>? action = null)
+        public ModuleRegistration<ModuleSwagger, ModuleSwaggerOption> AddSwagger(
+            Action<ModuleSwaggerOption>? action = null)
         {
-            return builder.AddModule<ModuleSwagger, ModuleSwaggerOption, ModuleSwaggerGuide>(action);
+            return builder.AddModule<ModuleSwagger, ModuleSwaggerOption>(action);
         }
     }
-}
-
-public class ModuleSwaggerGuide : WebModuleGuide<ModuleSwagger, ModuleSwaggerOption, ModuleSwaggerGuide>
-{
 }
 
 public class ModuleSwaggerOption : ModuleOptions<ModuleSwagger>

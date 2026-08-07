@@ -1,5 +1,3 @@
-using Monica.Core.Modularity.Diagnostics.Models;
-
 namespace Monica.Core.Modularity.Exceptions;
 
 /// <summary>
@@ -11,9 +9,4 @@ public class ModuleException(string message) : Exception(message)
     /// Module type where the exception occurred.
     /// </summary>
     public Type? ModuleType { get; set; }
-    
-    /// <summary>
-    /// Module dependencies information when the exception occurred.
-    /// </summary>
-    public ModuleDependencyInfo? DependencyInfo { get; set; }
-} 
+}

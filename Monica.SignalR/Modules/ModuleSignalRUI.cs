@@ -2,7 +2,6 @@ using Microsoft.Extensions.DependencyInjection;
 using Monica.Core;
 using Monica.Core.Modularity;
 using Monica.Core.Modularity.Abstractions;
-using Monica.Core.Modularity.Annotations;
 using Monica.Core.Modularity.Models;
 using Monica.SignalR.Localization;
 using Monica.SignalR.Pages;
@@ -25,38 +24,12 @@ public static class ModuleSignalRUIBuilderExtensions
         /// Registers the SignalR debug UI module and applies optional module configuration.
         /// </summary>
         /// <param name="action">Optional module option configuration delegate.</param>
-        /// <returns>Returns the module guide used to continue SignalR UI registration.</returns>
-        public ModuleSignalRUIGuide AddSignalRUI(Action<ModuleSignalRUIOption>? action = null)
+        /// <returns>The host-bound SignalR UI module registration.</returns>
+        public ModuleRegistration<ModuleSignalRUI, ModuleSignalRUIOption> AddSignalRUI(Action<ModuleSignalRUIOption>? action = null)
         {
-            return builder.AddModule<ModuleSignalRUI, ModuleSignalRUIOption, ModuleSignalRUIGuide>(action);
-        }
-    }
-}
-
-/// <summary>
-/// UI module that contributes the SignalR debug page and its supporting client-side state services.
-/// </summary>
-/// <param name="option">The module configuration options.</param>
-[ModuleKey(BuiltInModuleKey.SignalRUI)]
-public class ModuleSignalRUI(ModuleSignalRUIOption option)
-    : ModuleBase<ModuleSignalRUI, ModuleSignalRUIOption, ModuleSignalRUIGuide>(option)
-{
-    public override void ConfigureServices(IServiceCollection services)
-    {
-        services.AddScoped<SignalRDebugPageState>();
-        services.AddScoped<SignalRDebugJsClient>();
-        services.AddScoped<SignalRInvocationArgumentParser>();
-    }
-
-    public override void ClaimDependencies()
-    {
-        DependsOnModule<ModuleLocalizationGuide>().Register()
-            .AddResource<SignalRResource>();
-
-        if (!Option.DisableDebugPage)
-        {
-            DependsOnModule<ModuleSignalRGuide>().Register();
-            DependsOnModule<ModuleShellUIGuide>().Register()
+            var module = builder.AddModule<ModuleSignalRUI, ModuleSignalRUIOption>(action);
+            module.Require<ModuleLocalization, ModuleLocalizationOption>().AddResource<SignalRResource>();
+            module.Require<ModuleShellUI, ModuleShellUIOption>()
                 .RegisterUIComponents(registry => registry.RegisterLocalizedPage<UISignalRDebugPage, SignalRResource>(
                     UISignalRDebugPage.PAGE_URL,
                     "Pages:SignalRDebug:Title",
@@ -64,27 +37,42 @@ public class ModuleSignalRUI(ModuleSignalRUIOption option)
                     BuiltInNavigationCategoryIds.Debug,
                     addToNav: true,
                     navOrder: 20));
+            return module;
         }
     }
 }
 
 /// <summary>
-/// Fluent registration guide for the SignalR debug UI module.
+/// UI module that contributes the SignalR debug page and its supporting client-side state services.
 /// </summary>
-public class ModuleSignalRUIGuide : ModuleGuide<ModuleSignalRUI, ModuleSignalRUIOption, ModuleSignalRUIGuide>
+public class ModuleSignalRUI : MonicaModule<ModuleSignalRUIOption>, IUIModule
 {
+    public override void ConfigureServices(ModuleContext<ModuleSignalRUIOption> context)
+    {
+        var services = context.Services;
+        services.AddScoped<SignalRDebugPageState>();
+        services.AddScoped<SignalRDebugJsClient>();
+        services.AddScoped<SignalRInvocationArgumentParser>();
+    }
+
+    public override void Describe(ModuleDescriptor module)
+    {
+        module.Require<ModuleLocalization, ModuleLocalizationOption>();
+        module.Require<ModuleSignalR, ModuleSignalROption>();
+        module.Require<ModuleShellUI, ModuleShellUIOption>();
+    }
 }
+
+/// <summary>
+/// Registration extensions for the SignalR debug UI module.
+/// </summary>
+
 
 /// <summary>
 /// Configuration options for the SignalR debug UI module.
 /// </summary>
 public class ModuleSignalRUIOption : ModuleOptions<ModuleSignalRUI>
 {
-    /// <summary>
-    /// Gets or sets a value indicating whether the SignalR debug page should be excluded from UI registration.
-    /// </summary>
-    public bool DisableDebugPage { get; set; }
-
     /// <summary>
     /// Gets or sets the default bearer token prefilled on the SignalR debug page before a browser connection is opened.
     /// </summary>

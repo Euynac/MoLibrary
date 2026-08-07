@@ -1,5 +1,3 @@
-using Monica.Core.Modularity.Models;
-
 namespace Monica.AI.AgentCapabilities.Models;
 
 /// <summary>
@@ -38,16 +36,16 @@ public static class SkillCapabilityMessageCode
         public const string EntryDisabled = "SkillDisabledReason:" + nameof(EntryDisabled);
 
         /// <summary>
-        /// Creates a disabled-reason code that includes the missing module keys for display.
+        /// Creates a disabled-reason code that includes the missing module type names for display.
         /// </summary>
-        /// <param name="missingModules">Missing module keys required by the Skill.</param>
+        /// <param name="missingModules">Missing module strategy types required by the Skill.</param>
         /// <returns>A stable disabled-reason code with a comma-separated module list suffix.</returns>
-        public static string RequiredModulesMissing(IEnumerable<ModuleKey> missingModules)
+        public static string RequiredModulesMissing(IEnumerable<Type> missingModules)
         {
             ArgumentNullException.ThrowIfNull(missingModules);
 
             return RequiredModulesMissingPrefix
-                   + string.Join(", ", missingModules.Select(static module => module.Value));
+                   + string.Join(", ", missingModules.Select(static module => module.Name));
         }
 
         /// <summary>

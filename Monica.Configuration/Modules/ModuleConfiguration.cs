@@ -6,6 +6,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Monica.Configuration.Annotations;
 using Monica.Configuration.Abstractions;
@@ -23,8 +24,8 @@ using Monica.Configuration.Stores.File;
 using Monica.Core;
 using Monica.Core.Modularity;
 using Monica.Core.Modularity.Abstractions;
-using Monica.Core.Modularity.Annotations;
 using Monica.Core.Modularity.Models;
+using Monica.Core.TypeDiscovery.Models;
 
 // ReSharper disable once CheckNamespace
 namespace Monica.Modules;
@@ -40,10 +41,10 @@ public static class ModuleConfigurationBuilderExtensions
         /// Registers the schema-first Monica configuration module.
         /// </summary>
         /// <param name="action">Optional module option configuration.</param>
-        /// <returns>The module guide.</returns>
-        public ModuleConfigurationGuide AddConfiguration(Action<ModuleConfigurationOption>? action = null)
+        /// <returns>The host-bound configuration module registration.</returns>
+        public ModuleRegistration<ModuleConfiguration, ModuleConfigurationOption> AddConfiguration(Action<ModuleConfigurationOption>? action = null)
         {
-            return builder.AddModule<ModuleConfiguration, ModuleConfigurationOption, ModuleConfigurationGuide>(action);
+            return builder.AddModule<ModuleConfiguration, ModuleConfigurationOption>(action);
         }
     }
 }
@@ -51,9 +52,7 @@ public static class ModuleConfigurationBuilderExtensions
 /// <summary>
 /// Monica configuration module.
 /// </summary>
-[ModuleKey(BuiltInModuleKey.Configuration)]
-public sealed class ModuleConfiguration
-    : WebModuleBase<ModuleConfiguration, ModuleConfigurationOption, ModuleConfigurationGuide>, IBusinessTypeIterator
+public sealed class ModuleConfiguration : MonicaModule<ModuleConfigurationOption>, IWebModule
 {
     private static readonly MethodInfo ADD_OPTIONS_METHOD = GetRequiredGenericMethod(
         typeof(OptionsServiceCollectionExtensions),
@@ -67,37 +66,19 @@ public sealed class ModuleConfiguration
 
     private readonly ConfigurationDefinitionRegistry _definitionRegistry = new();
     private readonly ConfigurationRuntimeContext _runtimeContext = new();
-    private readonly ConfigurationSchemaHasher _schemaHasher;
-    private readonly ConfigurationDefinitionScanner _definitionScanner;
+    private readonly ConfigurationSchemaHasher _schemaHasher = new();
+    private ConfigurationDefinitionScanner? _definitionScanner;
     private readonly MonicaConfigurationProviderAccessor _providerAccessor = new();
     private ConfigurationDefinitionAnalysis _definitionAnalysis = ConfigurationDefinitionAnalysis.Empty;
     private IServiceCollection? _services;
 
-    /// <summary>
-    /// Creates a Monica configuration module instance.
-    /// </summary>
-    /// <param name="option">The module options.</param>
-    public ModuleConfiguration(ModuleConfigurationOption option)
-        : this(option, new ConfigurationSchemaHasher())
-    {
-    }
-
-    private ModuleConfiguration(ModuleConfigurationOption option, ConfigurationSchemaHasher schemaHasher)
-        : base(option)
-    {
-        _schemaHasher = schemaHasher;
-        _definitionScanner = new ConfigurationDefinitionScanner(_schemaHasher, Option.DefaultSectionPathConvention);
-    }
-
     /// <inheritdoc />
-    public override bool CanDowngradeToNonWebModule()
+    public override void ConfigureBuilder(ModuleBuilderContext<ModuleConfigurationOption> context)
     {
-        return true;
-    }
-
-    /// <inheritdoc />
-    public override void ConfigureBuilder(IHostApplicationBuilder builder)
-    {
+        var builder = context.HostApplicationBuilder;
+        _definitionScanner = new ConfigurationDefinitionScanner(
+            _schemaHasher,
+            Option.DefaultSectionPathConvention);
         _runtimeContext.Capture(builder.Configuration);
         // This appends Monica's effective-value projection after the host's bootstrap providers.
         // If callers add more Microsoft configuration providers later, their ordering relative to Monica
@@ -106,8 +87,9 @@ public sealed class ModuleConfiguration
     }
 
     /// <inheritdoc />
-    public override void ConfigureServices(IServiceCollection services)
+    public override void ConfigureServices(ModuleContext<ModuleConfigurationOption> context)
     {
+        var services = context.Services;
         if (!Enum.IsDefined(Option.RuntimeValidationBehavior))
         {
             throw new InvalidOperationException(
@@ -162,8 +144,9 @@ public sealed class ModuleConfiguration
     }
 
     /// <inheritdoc />
-    public override void ConfigureApplicationBuilder(IApplicationBuilder app)
+    public override void ConfigureApplicationBuilder(WebModuleContext<ModuleConfigurationOption> context)
     {
+        var app = context.ApplicationBuilder;
         var activationCoordinator = app.ApplicationServices.GetRequiredService<MonicaConfigurationProviderActivationCoordinator>();
         activationCoordinator.ActivateAsync(CancellationToken.None).GetAwaiter().GetResult();
 
@@ -188,42 +171,31 @@ public sealed class ModuleConfiguration
     }
 
     /// <inheritdoc />
-    protected override int GetConfigureApplicationBuilderOrder()
+    public override void DeclareTypeDiscovery(TypeDiscoveryPlan<ModuleConfigurationOption> discovery)
     {
-        return -1000;
-    }
-
-    /// <inheritdoc />
-    public IEnumerable<Type> IterateBusinessTypes(IEnumerable<Type> types)
-    {
-        var configurationTypes = new List<Type>();
-        foreach (var type in types)
-        {
-            if (type is { IsClass: true, IsAbstract: false }
-                && type.GetCustomAttribute<ConfigurationAttribute>(inherit: false) is not null)
+        discovery.Match(
+            TypeQuery.ConcreteClass.HasAttribute<ConfigurationAttribute>(),
+            (_, matches) =>
             {
-                configurationTypes.Add(type);
-            }
+                if (matches.Count == 0)
+                {
+                    return;
+                }
 
-            yield return type;
-        }
-
-        if (configurationTypes.Count == 0)
-        {
-            yield break;
-        }
-
-        var typesToAnalyze = configurationTypes.ToArray();
-        ScheduleStartupWork(
-            "build-configuration-definitions",
-            () => BuildDefinitions(typesToAnalyze),
-            CommitDefinitions,
-            ModuleStartupWorkBarrier.BeforePostConfigureServices);
+                var typesToAnalyze = matches.Select(static match => match.Type).ToArray();
+                ScheduleStartupWork(
+                    "build-configuration-definitions",
+                    () => BuildDefinitions(typesToAnalyze),
+                    CommitDefinitions,
+                    ModuleStartupWorkBarrier.BeforePostConfigureServices);
+            });
     }
 
     private void BuildDefinitions(IReadOnlyList<Type> optionsTypes)
     {
-        var analysis = ConfigurationDefinitionAnalysis.Create(_definitionScanner, optionsTypes);
+        var scanner = _definitionScanner
+            ?? throw new InvalidOperationException("Configuration definition discovery ran before host-builder configuration.");
+        var analysis = ConfigurationDefinitionAnalysis.Create(scanner, optionsTypes);
         var conflicts = ValidateDefinitions(analysis.Registrations);
         Volatile.Write(ref _definitionAnalysis, analysis.WithSectionPathConflicts(conflicts));
     }
@@ -381,153 +353,183 @@ public sealed class ModuleConfiguration
 }
 
 /// <summary>
-/// Fluent guide for Monica.Configuration.
+/// Registration extensions for Monica.Configuration.
 /// </summary>
-public sealed class ModuleConfigurationGuide
-    : WebModuleGuide<ModuleConfiguration, ModuleConfigurationOption, ModuleConfigurationGuide>
+public static class ModuleConfigurationRegistrationExtensions
 {
-    private const int MANAGED_JSON_FILE_BUILDER_ORDER = -2;
-    private readonly MonicaEffectiveOptionsReaderConfiguration _effectiveOptionsReaderConfiguration = new();
+    private const ModuleRegistrationOrder MANAGED_JSON_FILE_BUILDER_ORDER = ModuleRegistrationOrder.AfterModule;
 
     /// <summary>
-    /// Creates a startup options reader that uses this guide's store and managed JSON source configuration.
+    /// Creates a startup options reader from an explicit, caller-owned configuration.
     /// </summary>
+    /// <param name="module">The Configuration module registration.</param>
     /// <param name="builder">The host builder whose environment and configuration roots define startup context.</param>
+    /// <param name="readerConfiguration">
+    /// The local store factory and managed JSON source list for this reader. The module never stores this object.
+    /// </param>
     /// <param name="bootstrapConfiguration">
     /// Optional bootstrap configuration used as the lowest-priority input. When omitted, <paramref name="builder"/> configuration is used.
     /// </param>
     /// <param name="configure">Optional reader configuration.</param>
+    /// <param name="logger">Optional diagnostic logger. A no-op logger is used when omitted.</param>
     /// <returns>The effective options reader. The caller owns and must dispose the reader.</returns>
     /// <remarks>
     /// The reader is intended for module-registration code that runs before the application service provider exists.
     /// It binds values using the same priority shape as the runtime provider chain: bootstrap configuration, Monica
-    /// effective values, and then JSON files registered through <see cref="AddManagedJsonFile"/>.
+    /// effective values, and then the JSON files supplied to <paramref name="readerConfiguration"/>. Inputs are
+    /// explicit because frozen module registration cannot safely expose mutable Guide state before options finalize.
     /// </remarks>
-    public IMonicaEffectiveOptionsReader CreateEffectiveOptionsReader(
+    public static IMonicaEffectiveOptionsReader CreateEffectiveOptionsReader(this ModuleRegistration<ModuleConfiguration, ModuleConfigurationOption> module,
         IHostApplicationBuilder builder,
+        MonicaEffectiveOptionsReaderConfiguration readerConfiguration,
         IConfiguration? bootstrapConfiguration = null,
-        Action<MonicaEffectiveOptionsReaderOptions>? configure = null)
+        Action<MonicaEffectiveOptionsReaderOptions>? configure = null,
+        ILogger? logger = null)
     {
+        ArgumentNullException.ThrowIfNull(module);
         ArgumentNullException.ThrowIfNull(builder);
+        ArgumentNullException.ThrowIfNull(readerConfiguration);
 
-        return _effectiveOptionsReaderConfiguration.CreateReader(
+        return readerConfiguration.CreateReader(
             builder,
             bootstrapConfiguration ?? builder.Configuration,
             configure,
-            Logger);
-    }
-
-    /// <summary>
-    /// Uses an effective-value store factory for readers created before the application service provider exists.
-    /// </summary>
-    /// <param name="factory">The store factory. The reader owns the returned store instance and disposes it when possible.</param>
-    /// <returns>The module guide.</returns>
-    /// <remarks>
-    /// Built-in store guide methods call this automatically. Custom store providers should call it when they need
-    /// <see cref="CreateEffectiveOptionsReader"/> to work before dependency injection is built.
-    /// </remarks>
-    public ModuleConfigurationGuide UseStartupEffectiveValueStore(Func<IConfigurationEffectiveValueStore> factory)
-    {
-        _effectiveOptionsReaderConfiguration.UseEffectiveValueStore(factory);
-        return this;
+            logger ?? NullLogger.Instance);
     }
 
     /// <summary>
     /// Enables unified configuration version control.
     /// </summary>
-    /// <returns>The module guide.</returns>
+    /// <returns>The current registration.</returns>
     /// <remarks>
     /// Unified version control is disabled by default. After enabling it, register at least one inclusion
-    /// filter through <see cref="IncludeUnifiedVersionCategories"/>, <see cref="IncludeUnifiedVersionDefinitions(string[])"/>,
-    /// <see cref="IncludeUnifiedVersionDefinitions(Func{ConfigurationDefinition, bool})"/>, or
-    /// <see cref="UseUnifiedVersionFilter{TFilter}"/>. The module fails fast if enabled without filters.
+    /// filter through <c>IncludeUnifiedVersionCategories</c>, <c>IncludeUnifiedVersionDefinitions</c>, or
+    /// <c>UseUnifiedVersionFilter</c>. The module fails fast if enabled without filters.
     /// </remarks>
-    public ModuleConfigurationGuide UseUnifiedVersionControl()
+    public static ModuleRegistration<ModuleConfiguration, ModuleConfigurationOption> UseUnifiedVersionControl(this ModuleRegistration<ModuleConfiguration, ModuleConfigurationOption> module)
     {
-        ConfigureModuleOption(options =>
+        module.Configure(options =>
         {
             options.UnifiedVersionControl.Enabled = true;
         });
-        return this;
+        return module;
     }
 
     /// <summary>
     /// Includes configuration definitions with one of the specified categories in unified versions.
     /// </summary>
+    /// <param name="module">The Configuration module registration.</param>
     /// <param name="categories">The categories to include.</param>
-    /// <returns>The module guide.</returns>
-    public ModuleConfigurationGuide IncludeUnifiedVersionCategories(params string[] categories)
+    /// <returns>The current registration.</returns>
+    public static ModuleRegistration<ModuleConfiguration, ModuleConfigurationOption> IncludeUnifiedVersionCategories(this ModuleRegistration<ModuleConfiguration, ModuleConfigurationOption> module, params string[] categories)
     {
         var normalizedCategories = NormalizeFilterValues(categories, nameof(categories));
-        UseUnifiedVersionControl();
-        ConfigureServices(context =>
+        module.UseUnifiedVersionControl();
+        module.ConfigureServices(context =>
         {
             context.Services.AddSingleton<IConfigurationUnifiedVersionFilter>(
                 new ConfigurationUnifiedVersionCategoryFilter(normalizedCategories));
-        }, secondKey: string.Join('|', normalizedCategories));
-        return this;
+        });
+        return module;
     }
 
     /// <summary>
     /// Includes configuration definitions with one of the specified definition keys in unified versions.
     /// </summary>
+    /// <param name="module">The Configuration module registration.</param>
     /// <param name="definitionKeys">The definition keys to include.</param>
-    /// <returns>The module guide.</returns>
-    public ModuleConfigurationGuide IncludeUnifiedVersionDefinitions(params string[] definitionKeys)
+    /// <returns>The current registration.</returns>
+    public static ModuleRegistration<ModuleConfiguration, ModuleConfigurationOption> IncludeUnifiedVersionDefinitions(this ModuleRegistration<ModuleConfiguration, ModuleConfigurationOption> module, params string[] definitionKeys)
     {
         var normalizedDefinitionKeys = NormalizeFilterValues(definitionKeys, nameof(definitionKeys));
-        UseUnifiedVersionControl();
-        ConfigureServices(context =>
+        module.UseUnifiedVersionControl();
+        module.ConfigureServices(context =>
         {
             context.Services.AddSingleton<IConfigurationUnifiedVersionFilter>(
                 new ConfigurationUnifiedVersionDefinitionKeyFilter(normalizedDefinitionKeys));
-        }, secondKey: string.Join('|', normalizedDefinitionKeys));
-        return this;
+        });
+        return module;
     }
 
     /// <summary>
     /// Includes configuration definitions accepted by a predicate in unified versions.
     /// </summary>
+    /// <param name="module">The Configuration module registration.</param>
     /// <param name="predicate">The inclusion predicate.</param>
-    /// <returns>The module guide.</returns>
-    public ModuleConfigurationGuide IncludeUnifiedVersionDefinitions(Func<ConfigurationDefinition, bool> predicate)
+    /// <returns>The current registration.</returns>
+    public static ModuleRegistration<ModuleConfiguration, ModuleConfigurationOption> IncludeUnifiedVersionDefinitions(this ModuleRegistration<ModuleConfiguration, ModuleConfigurationOption> module, Func<ConfigurationDefinition, bool> predicate)
     {
         ArgumentNullException.ThrowIfNull(predicate);
 
-        UseUnifiedVersionControl();
-        ConfigureServices(context =>
+        module.UseUnifiedVersionControl();
+        module.ConfigureServices(context =>
         {
             context.Services.AddSingleton<IConfigurationUnifiedVersionFilter>(
                 new ConfigurationUnifiedVersionPredicateFilter(predicate));
-        }, secondKey: Guid.NewGuid().ToString("N"));
-        return this;
+        });
+        return module;
     }
 
     /// <summary>
     /// Registers a custom unified version inclusion filter.
     /// </summary>
     /// <typeparam name="TFilter">The filter implementation type.</typeparam>
-    /// <returns>The module guide.</returns>
-    public ModuleConfigurationGuide UseUnifiedVersionFilter<TFilter>()
+    /// <returns>The current registration.</returns>
+    public static ModuleRegistration<ModuleConfiguration, ModuleConfigurationOption> UseUnifiedVersionFilter<TFilter>(this ModuleRegistration<ModuleConfiguration, ModuleConfigurationOption> module)
         where TFilter : class, IConfigurationUnifiedVersionFilter
     {
-        UseUnifiedVersionControl();
-        ConfigureServices(context =>
+        module.UseUnifiedVersionControl();
+        module.ConfigureServices(context =>
         {
             context.Services.AddSingleton<IConfigurationUnifiedVersionFilter, TFilter>();
-        }, secondKey: typeof(TFilter).FullName);
-        return this;
+        });
+        return module;
+    }
+
+    /// <summary>
+    /// Adds a prebuilt managed JSON source after Monica's effective-value provider and records its metadata for the UI.
+    /// </summary>
+    /// <param name="module">The Configuration module registration.</param>
+    /// <param name="registration">
+    /// The immutable source definition. The same instance can be shared with a
+    /// <see cref="Monica.Configuration.Bootstrap.MonicaEffectiveOptionsReaderConfiguration"/> so startup and runtime
+    /// configuration use identical paths and precedence.
+    /// </param>
+    /// <returns>The current registration.</returns>
+    public static ModuleRegistration<ModuleConfiguration, ModuleConfigurationOption> AddManagedJsonSource(
+        this ModuleRegistration<ModuleConfiguration, ModuleConfigurationOption> module,
+        ManagedJsonConfigurationSourceRegistration registration)
+    {
+        ArgumentNullException.ThrowIfNull(module);
+        ArgumentNullException.ThrowIfNull(registration);
+        ArgumentException.ThrowIfNullOrWhiteSpace(registration.Path);
+        ArgumentException.ThrowIfNullOrWhiteSpace(registration.DisplayName);
+
+        // Keep managed JSON after the effective-value provider so startup and runtime readers have identical precedence.
+        module.ConfigureBuilder(context =>
+        {
+            context.HostApplicationBuilder.Configuration.AddJsonFile(
+                registration.Path,
+                registration.Optional,
+                registration.ReloadOnChange);
+            ManagedJsonConfigurationSourceRegistry.Add(
+                context.HostApplicationBuilder.Configuration,
+                registration);
+        }, MANAGED_JSON_FILE_BUILDER_ORDER);
+
+        return module;
     }
 
     /// <summary>
     /// Adds a JSON configuration file after Monica's effective-value provider and records source metadata for the UI.
     /// </summary>
+    /// <param name="module">The Configuration module registration.</param>
     /// <param name="path">The JSON file path passed to <see cref="JsonConfigurationExtensions.AddJsonFile(IConfigurationBuilder,string,bool,bool)"/>.</param>
     /// <param name="optional">Whether the file is optional.</param>
     /// <param name="reloadOnChange">Whether Microsoft configuration reloads when the file changes.</param>
     /// <param name="configure">Optional Monica source metadata configuration.</param>
-    /// <returns>The module guide.</returns>
-    public ModuleConfigurationGuide AddManagedJsonFile(
+    /// <returns>The current registration.</returns>
+    public static ModuleRegistration<ModuleConfiguration, ModuleConfigurationOption> AddManagedJsonFile(this ModuleRegistration<ModuleConfiguration, ModuleConfigurationOption> module,
         string path,
         bool optional = true,
         bool reloadOnChange = true,
@@ -549,36 +551,21 @@ public sealed class ModuleConfigurationGuide
             Description = options.Description,
             IsWritable = options.IsWritable
         };
-        _effectiveOptionsReaderConfiguration.AddManagedJsonSource(registration);
-
-        ConfigureBuilder(context =>
-        {
-            context.HostApplicationBuilder.Configuration.AddJsonFile(
-                registration.Path,
-                registration.Optional,
-                registration.ReloadOnChange);
-            ManagedJsonConfigurationSourceRegistry.Add(
-                context.HostApplicationBuilder.Configuration,
-                registration);
-        // The module registry reverses sorted requests during de-duplication; using an order below
-        // the module-owned -1 builder request appends this provider after Monica's effective store.
-        }, MANAGED_JSON_FILE_BUILDER_ORDER, secondKey: Guid.NewGuid().ToString("N"));
-
-        return this;
+        return module.AddManagedJsonSource(registration);
     }
 
     /// <summary>
     /// Uses the file-backed store bundle for effective values, history, and metadata.
     /// </summary>
+    /// <param name="module">The Configuration module registration.</param>
     /// <param name="configure">Optional file store configuration.</param>
-    /// <returns>The module guide.</returns>
-    public ModuleConfigurationGuide UseFileConfigurationStore(Action<ConfigurationFileStoreOptions>? configure = null)
+    /// <returns>The current registration.</returns>
+    public static ModuleRegistration<ModuleConfiguration, ModuleConfigurationOption> UseFileConfigurationStore(this ModuleRegistration<ModuleConfiguration, ModuleConfigurationOption> module, Action<ConfigurationFileStoreOptions>? configure = null)
     {
         var startupOptions = new ConfigurationFileStoreOptions();
         configure?.Invoke(startupOptions);
-        UseStartupEffectiveValueStore(() => new FileConfigurationStore(Options.Create(startupOptions)));
 
-        ConfigureServices(context =>
+        module.ConfigureServices(context =>
         {
             context.Services.AddOptions<ConfigurationFileStoreOptions>();
             context.Services.Configure<ConfigurationFileStoreOptions>(options =>
@@ -594,7 +581,7 @@ public sealed class ModuleConfigurationGuide
                 provider.GetRequiredService<FileConfigurationStore>());
             context.Services.TryAddSingleton<IConfigurationUnifiedVersionStore>(provider => provider.GetRequiredService<FileConfigurationStore>());
         });
-        return this;
+        return module;
     }
 
     private static IReadOnlySet<string> NormalizeFilterValues(IReadOnlyList<string> values, string parameterName)
@@ -613,6 +600,7 @@ public sealed class ModuleConfigurationGuide
 
         return normalized.ToHashSet(StringComparer.OrdinalIgnoreCase);
     }
+
 }
 
 /// <summary>

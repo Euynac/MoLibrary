@@ -7,7 +7,6 @@ using Microsoft.Extensions.Logging;
 using Monica.Core;
 using Monica.Core.Modularity;
 using Monica.Core.Modularity.Abstractions;
-using Monica.Core.Modularity.Annotations;
 using Monica.Core.Modularity.Models;
 using Monica.Core.Results;
 using Monica.Profiling.RuntimeMetrics.Facades;
@@ -28,9 +27,10 @@ public static class ModuleRuntimeMetricsBuilderExtensions
         /// <summary>
         /// Configures the runtime metrics module.
         /// </summary>
-        public ModuleRuntimeMetricsGuide AddRuntimeMetrics(Action<ModuleRuntimeMetricsOption>? action = null)
+        public ModuleRegistration<ModuleRuntimeMetrics, ModuleRuntimeMetricsOption> AddRuntimeMetrics(
+            Action<ModuleRuntimeMetricsOption>? action = null)
         {
-            return builder.AddModule<ModuleRuntimeMetrics, ModuleRuntimeMetricsOption, ModuleRuntimeMetricsGuide>(action);
+            return builder.AddModule<ModuleRuntimeMetrics, ModuleRuntimeMetricsOption>(action);
         }
     }
 }
@@ -38,13 +38,12 @@ public static class ModuleRuntimeMetricsBuilderExtensions
 /// <summary>
 /// Runtime metrics module.
 /// </summary>
-[ModuleKey(BuiltInModuleKey.RuntimeMetrics)]
-public class ModuleRuntimeMetrics(ModuleRuntimeMetricsOption option)
-    : WebModuleBase<ModuleRuntimeMetrics, ModuleRuntimeMetricsOption, ModuleRuntimeMetricsGuide>(option)
+public class ModuleRuntimeMetrics : MonicaModule<ModuleRuntimeMetricsOption>, IWebModule
 {
     /// <inheritdoc />
-    public override void ConfigureServices(IServiceCollection services)
+    public override void ConfigureServices(ModuleContext<ModuleRuntimeMetricsOption> context)
     {
+        var services = context.Services;
         services.AddSingleton(_ => new RuntimeMetricsCollector(
             maxHistoryPoints: Option.MaxHistoryPoints,
             sampleIntervalMs: Option.SampleIntervalMs));
@@ -57,9 +56,9 @@ public class ModuleRuntimeMetrics(ModuleRuntimeMetricsOption option)
     }
 
     /// <inheritdoc />
-    public override void ConfigureEndpoints(IApplicationBuilder app)
+    public override void ConfigureEndpoints(WebModuleContext<ModuleRuntimeMetricsOption> context)
     {
-        UseEndpoints(app, endpoints =>
+        UseEndpoints(context, endpoints =>
         {
             var tagName = Option.GetApiGroupName();
 
@@ -72,14 +71,6 @@ public class ModuleRuntimeMetrics(ModuleRuntimeMetricsOption option)
                 .WithDescription("Returns the latest collected CPU, memory, GC, and allocation metrics for the current process.");
         });
     }
-}
-
-/// <summary>
-/// Fluent guide for the runtime metrics module.
-/// </summary>
-public class ModuleRuntimeMetricsGuide
-    : WebModuleGuide<ModuleRuntimeMetrics, ModuleRuntimeMetricsOption, ModuleRuntimeMetricsGuide>
-{
 }
 
 /// <summary>

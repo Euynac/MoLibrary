@@ -1,11 +1,8 @@
 using System.Text.Json;
 using Microsoft.AspNetCore.Builder;
-using Microsoft.Extensions.DependencyInjection;
 using Monica.Core;
 using Monica.Core.Modularity;
 using Monica.Core.Modularity.Abstractions;
-using Monica.Core.Modularity.Annotations;
-using Monica.Core.Modularity.Models;
 using Monica.UI.Pages;
 using Monica.Framework.UI.UISwagger.Models;
 
@@ -19,9 +16,42 @@ public static class ModuleSwaggerUIBuilderExtensions
         /// <summary>
         /// Configure the SwaggerUI module
         /// </summary>
-        public ModuleSwaggerUIGuide AddSwaggerUI(Action<ModuleSwaggerUIOption>? action = null)
+        public ModuleRegistration<ModuleSwaggerUI, ModuleSwaggerUIOption> AddSwaggerUI(
+            Action<ModuleSwaggerUIOption>? action = null)
         {
-            return builder.AddModule<ModuleSwaggerUI, ModuleSwaggerUIOption, ModuleSwaggerUIGuide>(action);
+            return builder.AddModule<ModuleSwaggerUI, ModuleSwaggerUIOption>(action);
+        }
+    }
+
+    extension(ModuleRegistration<ModuleSwaggerUI, ModuleSwaggerUIOption> registration)
+    {
+        /// <summary>
+        /// Redirects the application root route to the Swagger UI page.
+        /// </summary>
+        /// <returns>The same host-bound registration.</returns>
+        public ModuleRegistration<ModuleSwaggerUI, ModuleSwaggerUIOption> SetAsRootRoute()
+        {
+            registration.Require<ModuleShellUI, ModuleShellUIOption>()
+                .AddRouteRedirect("/", "/swagger");
+            return registration;
+        }
+
+        /// <summary>
+        /// Adds a custom navigation button to Swagger UI.
+        /// </summary>
+        public ModuleRegistration<ModuleSwaggerUI, ModuleSwaggerUIOption> AddNavigationButton(
+            string name,
+            string path,
+            string? description = null,
+            int order = 0)
+        {
+            return registration.Configure(option => option.NavigationButtons.Add(new SwaggerNavigationButton
+            {
+                Name = name,
+                Path = path,
+                Description = description,
+                Order = order
+            }));
         }
     }
 }
@@ -29,15 +59,14 @@ public static class ModuleSwaggerUIBuilderExtensions
 /// <summary>
 /// Swagger UI enhancement module - provides UI extension functions such as custom navigation buttons
 /// </summary>
-[ModuleKey(BuiltInModuleKey.SwaggerUI)]
-public class ModuleSwaggerUI(ModuleSwaggerUIOption option)
-    : ModuleBase<ModuleSwaggerUI, ModuleSwaggerUIOption, ModuleSwaggerUIGuide>(option)
+public class ModuleSwaggerUI : MonicaModule<ModuleSwaggerUIOption>, IUIModule
 {
+    private IReadOnlyList<SwaggerNavigationButton> _navigationButtons = [];
 
-    public override void ClaimDependencies()
+    public override void Describe(ModuleDescriptor module)
     {
         // Depend on ModuleSwagger and configure its SwaggerUI extensibility hook
-        DependsOnModule<ModuleSwaggerGuide>().Register(swaggerOption =>
+        module.Require<ModuleSwagger, ModuleSwaggerOption>(swaggerOption =>
         {
             var existingAction = swaggerOption.ExtendSwaggerUIAction;
 
@@ -46,14 +75,14 @@ public class ModuleSwaggerUI(ModuleSwaggerUIOption option)
                 existingAction?.Invoke(c);
 
                 // Only inject if there are navigation buttons configured
-                if (Option.NavigationButtons.Count == 0)
+                if (_navigationButtons.Count == 0)
                 {
                     return;
                 }
 
                 // Serialize enabled buttons and inject configuration
                 var buttonsJson = JsonSerializer.Serialize(
-                    Option.NavigationButtons.Where(b => b.Enabled),
+                    _navigationButtons,
                     new JsonSerializerOptions
                     {
                         PropertyNamingPolicy = JsonNamingPolicy.CamelCase
@@ -77,55 +106,12 @@ public class ModuleSwaggerUI(ModuleSwaggerUIOption option)
         });
     }
 
-    public override void ConfigureServices(IServiceCollection services)
+    public override void ConfigureServices(ModuleContext<ModuleSwaggerUIOption> context)
     {
-        // No additional services needed for SwaggerUI module
-    }
-}
-
-/// <summary>
-/// SwaggerUI module wizard
-/// </summary>
-public class ModuleSwaggerUIGuide : ModuleGuide<ModuleSwaggerUI, ModuleSwaggerUIOption, ModuleSwaggerUIGuide>
-{
-    /// <summary>
-    /// Redirects the application root route to the Swagger UI page.
-    /// This helper assumes Swagger UI is exposed at <c>/swagger</c>.
-    /// </summary>
-    /// <returns>The current module guide.</returns>
-    public ModuleSwaggerUIGuide SetAsRootRoute()
-    {
-        DependsOnModule<ModuleShellUIGuide>().Register()
-            .AddRouteRedirect("/", "/swagger"); //TODO after module system refactor then resolve this hard code problem, replace by Option in swagger module.
-
-        return this;
-    }
-
-    /// <summary>
-    /// Add custom navigation buttons to Swagger UI
-    /// </summary>
-    /// <param name="name">Button display text</param>
-    /// <param name="path">Navigation path (for example, <see cref="UISystemInfoPage.PAGE_URL"/> navigates to "~/system-info").</param>
-    /// <param name="description">Tooltip displayed on mouseover</param>
-    /// <param name="order">Display order (the smaller the number, the higher it is, the default is 0)</param>
-    public ModuleSwaggerUIGuide AddNavigationButton(
-        string name,
-        string path,
-        string? description = null,
-        int order = 0)
-    {
-        ConfigureModuleOption(option =>
-        {
-            option.NavigationButtons.Add(new SwaggerNavigationButton
-            {
-                Name = name,
-                Path = path,
-                Description = description,
-                Order = order
-            });
-        }, secondKey: name);
-
-        return this;
+        _navigationButtons = Option.NavigationButtons
+            .Where(static button => button.Enabled)
+            .OrderBy(static button => button.Order)
+            .ToArray();
     }
 }
 

@@ -7,8 +7,6 @@ using Monica.Core.ExceptionHandling.Abstractions;
 using Monica.Core.ExceptionHandling.Services;
 using Monica.Core.Modularity;
 using Monica.Core.Modularity.Abstractions;
-using Monica.Core.Modularity.Annotations;
-using Monica.Core.Modularity.Models;
 using Monica.Tool.Extensions;
 using Monica.Core.Results;
 
@@ -22,27 +20,35 @@ public static class ModuleExceptionHandlingBuilderExtensions
         /// <summary>
         /// Configures the exception handling module.
         /// </summary>
-        public ModuleExceptionHandlingGuide AddExceptionHandling(Action<ModuleExceptionHandlingOption>? action = null)
+        public ModuleRegistration<ModuleExceptionHandling, ModuleExceptionHandlingOption> AddExceptionHandling(
+            Action<ModuleExceptionHandlingOption>? action = null)
         {
-            return builder.AddModule<ModuleExceptionHandling, ModuleExceptionHandlingOption, ModuleExceptionHandlingGuide>(action);
+            return builder.AddModule<ModuleExceptionHandling, ModuleExceptionHandlingOption>(action);
+        }
+    }
+
+    extension(ModuleRegistration<ModuleExceptionHandling, ModuleExceptionHandlingOption> registration)
+    {
+        public ModuleRegistration<ModuleExceptionHandling, ModuleExceptionHandlingOption> AddExceptionMapper<TMapper>()
+            where TMapper : class, IExceptionResponseMapper
+        {
+            return registration.Configure(options => options.AddExceptionMapper<TMapper>());
         }
     }
 }
 
-[ModuleKey(BuiltInModuleKey.ExceptionHandling)]
-public class ModuleExceptionHandling(ModuleExceptionHandlingOption option)
-    : WebModuleBase<ModuleExceptionHandling, ModuleExceptionHandlingOption, ModuleExceptionHandlingGuide>(option)
+public class ModuleExceptionHandling : MonicaModule<ModuleExceptionHandlingOption>, IWebHostRequiredModule
 {
     /// <summary>
     /// Adds ASP.NET Core exception handling and structured request-rejection responses.
     /// </summary>
-    public override void ConfigureApplicationBuilder(IApplicationBuilder app)
+    public override void ConfigureApplicationBuilder(WebModuleContext<ModuleExceptionHandlingOption> context)
     {
         // Minimal API body binding returns 413 and 415 directly instead of throwing, so translate only those
         // otherwise-empty framework responses into the same result envelope used for thrown binding failures.
-        app.UseStatusCodePages(async context =>
+        context.ApplicationBuilder.UseStatusCodePages(async statusCodeContext =>
         {
-            var response = context.HttpContext.Response;
+            var response = statusCodeContext.HttpContext.Response;
             var rejection = response.StatusCode switch
             {
                 StatusCodes.Status413PayloadTooLarge => Res.Fail(
@@ -56,18 +62,24 @@ public class ModuleExceptionHandling(ModuleExceptionHandlingOption option)
 
             if (rejection is not null)
             {
-                await response.WriteAsJsonAsync(rejection, context.HttpContext.RequestAborted);
+                await response.WriteAsJsonAsync(rejection, statusCodeContext.HttpContext.RequestAborted);
             }
         });
-        app.UseExceptionHandler();
+        context.ApplicationBuilder.UseExceptionHandler();
     }
 
-    public override void ConfigureServices(IServiceCollection services)
+    public override void ConfigureServices(ModuleContext<ModuleExceptionHandlingOption> context)
     {
+        var services = context.Services;
         services.AddHttpContextAccessor();
         services.AddProblemDetails();
         services.AddSingleton<IExceptionHandlerService, ExceptionHandlerService>();
         services.AddTransient<IExceptionResponseMapper, BadHttpRequestExceptionMapper>();
+        foreach (var mapperType in Option.ExceptionMapperTypes)
+        {
+            services.AddTransient(typeof(IExceptionResponseMapper), mapperType);
+        }
+
         services.AddExceptionHandler<AspNetCoreExceptionHandler>();
 
         // Minimal API binding otherwise writes an empty 400 response outside Development before endpoint code runs.
@@ -83,25 +95,24 @@ public class ModuleExceptionHandling(ModuleExceptionHandlingOption option)
     }
 }
 
-public class ModuleExceptionHandlingGuide
-    : WebModuleGuide<ModuleExceptionHandling, ModuleExceptionHandlingOption, ModuleExceptionHandlingGuide>
-{
-    public ModuleExceptionHandlingGuide AddExceptionMapper<TMapper>() where TMapper : class, IExceptionResponseMapper
-    {
-        ConfigureServices(context =>
-        {
-            context.Services.AddTransient<IExceptionResponseMapper, TMapper>();
-        }, secondKey: typeof(TMapper).GetCleanFullName());
-        return this;
-    }
-}
-
 public class ModuleExceptionHandlingOption : ModuleOptions<ModuleExceptionHandling>
 {
+    private readonly HashSet<Type> _exceptionMapperTypes = [];
+
+    internal IReadOnlyCollection<Type> ExceptionMapperTypes => _exceptionMapperTypes;
+
     /// <summary>
     /// Gets or sets whether unhandled-exception responses include request snapshots, stack traces, and technical details.
     /// The default is <see langword="false"/>. Enable this only for trusted development environments because the
     /// diagnostic payload can contain sensitive application and request data.
     /// </summary>
     public bool IncludeExceptionDetails { get; set; }
+
+    /// <summary>
+    /// Adds a response mapper that participates in exception-to-envelope conversion.
+    /// </summary>
+    public void AddExceptionMapper<TMapper>() where TMapper : class, IExceptionResponseMapper
+    {
+        _exceptionMapperTypes.Add(typeof(TMapper));
+    }
 }

@@ -1,5 +1,6 @@
 using Monica.Framework.Seeder.Abstractions;
 using Monica.Framework.Seeder;
+using Monica.Core.TypeDiscovery.Models;
 using Monica.ProjectUnits.Services.Support;
 
 namespace Monica.ProjectUnits.Models;
@@ -9,26 +10,17 @@ namespace Monica.ProjectUnits.Models;
 /// </summary>
 public sealed class UnitSeeder : ProjectUnit
 {
-    private UnitSeeder(Type type, ProjectUnitCatalog catalog)
-        : base(type, EProjectUnitType.Seeder, catalog, SeederExecutionPoints.Run)
+    private UnitSeeder(BusinessTypeShape shape, ProjectUnitCatalog catalog)
+        : base(shape, EProjectUnitType.Seeder, catalog, SeederExecutionPoints.Run)
     {
     }
 
     protected override bool ShouldAnalyzeConstructorDependencies => true;
 
-    protected override bool VerifyTypeConstrain()
+    internal static ProjectUnit Create(BusinessTypeShape shape, ProjectUnitCatalog catalog)
     {
-        return typeof(ISeeder).IsAssignableFrom(Type);
-    }
-
-    internal static ProjectUnit? Create(Type type, ProjectUnitCatalog catalog)
-    {
-        var unit = new UnitSeeder(type, catalog);
-        if (!unit.VerifyType())
-        {
-            return null;
-        }
-
+        var unit = new UnitSeeder(shape, catalog);
+        unit.CheckNameConventionMode();
         unit.InitializeMethods<ISeeder>();
         return unit;
     }

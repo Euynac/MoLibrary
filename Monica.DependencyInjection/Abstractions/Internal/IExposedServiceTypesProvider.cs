@@ -1,6 +1,8 @@
+using Monica.Core.TypeDiscovery.Models;
+
 namespace Monica.DependencyInjection.Abstractions.Internal;
 
 internal interface IExposedServiceTypesProvider
 {
-    Type[] GetExposedServiceTypes(Type targetType);
+    Type[] GetExposedServiceTypes(BusinessTypeShape targetShape);
 }

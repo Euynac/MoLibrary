@@ -4,7 +4,6 @@ using Microsoft.Extensions.DependencyInjection;
 using Monica.Core;
 using Monica.Core.Modularity;
 using Monica.Core.Modularity.Abstractions;
-using Monica.Core.Modularity.Annotations;
 using Monica.Core.Modularity.Models;
 
 // ReSharper disable once CheckNamespace
@@ -17,62 +16,42 @@ public static class ModuleCorsBuilderExtensions
         /// <summary>
         /// Configure the CORS (Cross-Origin Resource Sharing) module
         /// </summary>
-        public ModuleCorsGuide AddCors()
+        public ModuleRegistration<ModuleCors, ModuleCorsOption> AddCors()
         {
-            return builder.AddModule<ModuleCors, ModuleCorsOption, ModuleCorsGuide>();
+            return builder.AddModule<ModuleCors, ModuleCorsOption>();
+        }
+    }
+
+    extension(ModuleRegistration<ModuleCors, ModuleCorsOption> registration)
+    {
+        public ModuleRegistration<ModuleCors, ModuleCorsOption> ConfigureDefaultPolicy(
+            Action<CorsPolicyBuilder> configure)
+        {
+            ArgumentNullException.ThrowIfNull(configure);
+            return registration.ConfigureServices(context =>
+                context.Services.AddCors(options => options.AddDefaultPolicy(configure)));
+        }
+
+        public ModuleRegistration<ModuleCors, ModuleCorsOption> AllowAll()
+        {
+            return registration.ConfigureDefaultPolicy(policy =>
+                policy
+                    .SetIsOriginAllowed(_ => true)
+                    .AllowAnyMethod()
+                    .AllowAnyHeader()
+                    .AllowCredentials());
         }
     }
 }
 
-[ModuleKey(BuiltInModuleKey.Cors)]
-public class ModuleCors(ModuleCorsOption option) : WebModuleBase<ModuleCors, ModuleCorsOption, ModuleCorsGuide>(option)
+public class ModuleCors : MonicaModule<ModuleCorsOption>, IWebHostRequiredModule
 {
-    public override void ConfigureApplicationBuilder(IApplicationBuilder app)
+    public override void ConfigureApplicationBuilder(WebModuleContext<ModuleCorsOption> context)
     {
-        app.UseCors();
+        context.ApplicationBuilder.UseCors();
     }
 
-    protected override int GetConfigureApplicationBuilderOrder()
-    {
-        return ModuleOrder.MIDDLEWARE_USE_ROUTING + 1;
-    }
-}
-
-public class ModuleCorsGuide : WebModuleGuide<ModuleCors, ModuleCorsOption, ModuleCorsGuide>
-{
-    /// <summary>
-    /// Configures the default ASP.NET Core CORS policy used by the Monica pipeline.
-    /// </summary>
-    /// <param name="configure">A callback that defines the complete default policy.</param>
-    /// <returns>The current guide.</returns>
-    public ModuleCorsGuide ConfigureDefaultPolicy(Action<CorsPolicyBuilder> configure)
-    {
-        ArgumentNullException.ThrowIfNull(configure);
-
-        ConfigureServices(context =>
-        {
-            context.Services.AddCors(options => options.AddDefaultPolicy(configure));
-        });
-
-        return this;
-    }
-
-    /// <summary>
-    /// Configure a permissive CORS policy (intended for development/testing).
-    /// <para>Allows any origin, method, and header while supporting credentials (cookies/authorization headers).</para>
-    /// <para>Uses <c>SetIsOriginAllowed(_ => true)</c> instead of <c>AllowAnyOrigin()</c> to enable dynamic
-    /// Access-Control-Allow-Origin headers required by SignalR and similar scenarios.</para>
-    /// <para>Note: restrict allowed origins explicitly in production environments.</para>
-    /// </summary>
-    public ModuleCorsGuide AllowAll()
-    {
-        return ConfigureDefaultPolicy(policy =>
-            policy
-                .SetIsOriginAllowed(_ => true)
-                .AllowAnyMethod()
-                .AllowAnyHeader()
-                .AllowCredentials());
-    }
+    protected override ModuleWebStage GetApplicationBuilderStage() => ModuleWebStage.AfterRouting;
 }
 
 public class ModuleCorsOption : ModuleOptions<ModuleCors>;

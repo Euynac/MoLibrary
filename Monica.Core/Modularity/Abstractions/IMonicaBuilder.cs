@@ -37,12 +37,10 @@ public interface IMonicaBuilder
     /// </summary>
     /// <typeparam name="TModule">The module implementation type.</typeparam>
     /// <typeparam name="TModuleOption">The module option type.</typeparam>
-    /// <typeparam name="TModuleGuide">The module guide type.</typeparam>
     /// <param name="configure">An optional callback that configures the module options.</param>
-    /// <returns>A context-bound guide for additional fluent configuration.</returns>
-    TModuleGuide AddModule<TModule, TModuleOption, TModuleGuide>(
+    /// <returns>A host-bound declaration for additional fluent configuration.</returns>
+    ModuleRegistration<TModule, TModuleOption> AddModule<TModule, TModuleOption>(
         Action<TModuleOption>? configure = null)
         where TModuleOption : ModuleOptions<TModule>, new()
-        where TModuleGuide : ModuleGuide<TModule, TModuleOption, TModuleGuide>, new()
-        where TModule : ModuleBase<TModule, TModuleOption, TModuleGuide>;
+        where TModule : MonicaModule<TModuleOption>, new();
 }

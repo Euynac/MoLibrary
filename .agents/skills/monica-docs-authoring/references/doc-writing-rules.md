@@ -7,7 +7,7 @@
 3. [Required frontmatter](#3-required-frontmatter)
 4. [Page structure and writing style](#4-page-structure-and-writing-style)
 5. [Code sample rules](#5-code-sample-rules)
-6. [Configuration and Guide tables](#6-configuration-and-guide-tables)
+6. [Configuration and registration tables](#6-configuration-and-registration-tables)
 7. [Links and asset rules](#7-links-and-asset-rules)
 8. [Locale scope rules](#8-locale-scope-rules)
 9. [Do not do these things](#9-do-not-do-these-things)
@@ -21,7 +21,7 @@ Focus on:
 - What the module / concept provides
 - When to use it
 - How to register and configure it
-- Which Guide methods and providers matter
+- Which registration extensions and providers matter
 - What the public contract looks like
 
 Do not optimize user docs for internal maintainers. Internal design details belong in architecture or design docs, not in the default user-facing pages.
@@ -89,10 +89,10 @@ Good sample goals:
 
 - Show the correct package
 - Show the correct registration call
-- Show the minimum required Guide or provider method calls
+- Show the minimum required registration-extension or provider method calls
 - Show one realistic option override when it teaches something important
 
-## 6. Configuration and Guide tables
+## 6. Configuration and registration tables
 
 Use a configuration table like this:
 
@@ -103,16 +103,16 @@ Use a configuration table like this:
 Rules:
 
 - Read defaults from the real property initializer
-- Mark a setting as required only when the module truly cannot be used without it, or when Guide validation requires it
+- Mark a setting as required only when the module truly cannot be used without it, or when explicit feature validation requires it
 - Explain the practical impact of changing the option
 
-Use a Guide table like this:
+Use a registration-extension table like this:
 
 | Method | What it enables | Required | Typical use |
 |---|---|---|---|
 | `UseXxxProvider()` | Registers ... | Yes / No | Use when ... |
 
-If the module uses `GetRequestedConfigMethodKeys()`, add a **Required setup** section that maps each requirement key to the public Guide methods that satisfy it.
+If the module uses `RequireFeature(...)`, add a **Required setup** section that maps each feature name to the public registration extensions that call `SatisfyFeature(...)`.
 
 ## 7. Links and asset rules
 
@@ -143,7 +143,7 @@ Rules:
 
 - Do not treat internal `Services/` as the public usage surface
 - Do not copy old docs without re-verifying them against current code
-- Do not invent Guide methods, option properties, or package names
+- Do not invent registration extensions, option properties, or package names
 - Do not leave placeholder headings or TODO text in delivered docs
 - Do not describe private implementation classes as stable user contracts unless the public API exposes them intentionally
 - Do not mix architecture criticism, migration notes, and user onboarding in the same page unless the page is explicitly about migration

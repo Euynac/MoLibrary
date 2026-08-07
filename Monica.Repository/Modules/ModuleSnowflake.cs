@@ -2,7 +2,6 @@ using Microsoft.Extensions.DependencyInjection;
 using Monica.Core;
 using Monica.Core.Modularity;
 using Monica.Core.Modularity.Abstractions;
-using Monica.Core.Modularity.Annotations;
 using Monica.Core.Modularity.Models;
 using Monica.Repository.Snowflake.Abstractions;
 using Monica.Repository.Snowflake.Services;
@@ -17,9 +16,9 @@ public static class ModuleSnowflakeBuilderExtensions
         /// <summary>
         /// Registers the Snowflake ID generation module.
         /// </summary>
-        public ModuleSnowflakeGuide AddSnowflake(Action<ModuleSnowflakeOption>? action = null)
+        public ModuleRegistration<ModuleSnowflake, ModuleSnowflakeOption> AddSnowflake(Action<ModuleSnowflakeOption>? action = null)
         {
-            return builder.AddModule<ModuleSnowflake, ModuleSnowflakeOption, ModuleSnowflakeGuide>(action);
+            return builder.AddModule<ModuleSnowflake, ModuleSnowflakeOption>(action);
         }
     }
 }
@@ -27,20 +26,17 @@ public static class ModuleSnowflakeBuilderExtensions
 /// <summary>
 /// Provides distributed Snowflake-based identifier generation.
 /// </summary>
-[ModuleKey(BuiltInModuleKey.Snowflake)]
-public class ModuleSnowflake(ModuleSnowflakeOption option)
-    : ModuleBase<ModuleSnowflake, ModuleSnowflakeOption, ModuleSnowflakeGuide>(option)
+public class ModuleSnowflake : MonicaModule<ModuleSnowflakeOption>
 {
-    public override void ConfigureServices(IServiceCollection services)
+    public override void ConfigureServices(ModuleContext<ModuleSnowflakeOption> context)
     {
-        var generator = new SnowflakeIdGenerator(option);
+        var services = context.Services;
+        var generator = new SnowflakeIdGenerator(Option);
         services.AddSingleton<ISnowflakeIdGenerator>(generator);
     }
 }
 
-public class ModuleSnowflakeGuide : ModuleGuide<ModuleSnowflake, ModuleSnowflakeOption, ModuleSnowflakeGuide>
-{
-}
+
 
 public class ModuleSnowflakeOption : ModuleOptions<ModuleSnowflake>
 {

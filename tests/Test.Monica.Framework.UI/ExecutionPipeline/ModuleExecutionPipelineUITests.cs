@@ -4,7 +4,6 @@ using Microsoft.Extensions.DependencyInjection;
 using Monica.Core;
 using Monica.Core.Modularity.Abstractions;
 using Monica.Core.Modularity.Extensions;
-using Monica.Core.Modularity.Models;
 using Monica.Framework.UI.UIExecutionPipeline.State;
 using Monica.Modules;
 using Xunit;
@@ -14,68 +13,48 @@ namespace Test.Monica.Framework.UI.ExecutionPipeline;
 public sealed class ModuleExecutionPipelineUITests
 {
     [Fact]
-    public void Catalog_ui_is_a_non_web_module()
+    public void Module_ShouldRemainNonWeb()
     {
-        var module = new ModuleExecutionPipelineUI(new ModuleExecutionPipelineUIOption());
+        var module = new ModuleExecutionPipelineUI();
 
         module.Should().BeAssignableTo<IModule>();
         module.Should().NotBeAssignableTo<IWebModule>();
     }
 
     [Fact]
-    public void Configure_services_registers_scoped_page_state()
+    public async Task Composition_ShouldRegisterScopedPageState()
     {
-        var services = new ServiceCollection();
-        var module = new ModuleExecutionPipelineUI(new ModuleExecutionPipelineUIOption());
+        await using var app = Compose(includePageFeature: false);
+        using var firstScope = app.Services.CreateScope();
+        using var secondScope = app.Services.CreateScope();
 
-        module.ConfigureServices(services);
-
-        services.Should().ContainSingle(descriptor =>
-            descriptor.ServiceType == typeof(ExecutionPipelinePageState) &&
-            descriptor.ImplementationType == typeof(ExecutionPipelinePageState) &&
-            descriptor.Lifetime == ServiceLifetime.Scoped);
+        firstScope.ServiceProvider.GetRequiredService<ExecutionPipelinePageState>().Should()
+            .NotBeSameAs(secondScope.ServiceProvider.GetRequiredService<ExecutionPipelinePageState>());
     }
 
     [Fact]
-    public void Configure_services_skips_page_state_when_page_is_disabled()
+    public async Task AddExecutionPipelineUI_ShouldComposeRuntimeAndPageDependencies()
     {
-        var services = new ServiceCollection();
-        var module = new ModuleExecutionPipelineUI(new ModuleExecutionPipelineUIOption
-        {
-            DisablePage = true
-        });
-
-        module.ConfigureServices(services);
-
-        services.Should().NotContain(descriptor =>
-            descriptor.ServiceType == typeof(ExecutionPipelinePageState));
-    }
-
-    [Fact]
-    public async Task Enabled_page_claims_pipeline_localization_and_shell_dependencies()
-    {
-        await using var app = Compose(disablePage: false);
+        await using var app = Compose(includePageFeature: true);
         var application = app.Services.GetRequiredService<MonicaApplication>();
-        var dependencies = application.Dependencies.CalculateModuleDependencies(BuiltInModuleKey.ExecutionPipelineUI);
+        var dependencies = GetDirectDependencyTypes(application, typeof(ModuleExecutionPipelineUI));
 
-        dependencies.Should().Contain(BuiltInModuleKey.ExecutionPipeline);
-        dependencies.Should().Contain(BuiltInModuleKey.Localization);
-        dependencies.Should().Contain(BuiltInModuleKey.UICore);
+        dependencies.Should().Contain(typeof(ModuleExecutionPipeline));
+        dependencies.Should().Contain(typeof(ModuleLocalization));
+        dependencies.Should().Contain(typeof(ModuleShellUI));
     }
 
     [Fact]
-    public async Task Disabled_page_skips_all_catalog_page_dependencies()
+    public async Task AddModule_WithoutPageFeature_ShouldKeepOnlyIntrinsicDependency()
     {
-        await using var app = Compose(disablePage: true);
+        await using var app = Compose(includePageFeature: false);
         var application = app.Services.GetRequiredService<MonicaApplication>();
-        var dependencies = application.Dependencies.CalculateModuleDependencies(BuiltInModuleKey.ExecutionPipelineUI);
+        var dependencies = GetDirectDependencyTypes(application, typeof(ModuleExecutionPipelineUI));
 
-        dependencies.Should().NotContain(BuiltInModuleKey.ExecutionPipeline);
-        dependencies.Should().NotContain(BuiltInModuleKey.Localization);
-        dependencies.Should().NotContain(BuiltInModuleKey.UICore);
+        dependencies.Should().BeEquivalentTo([typeof(ModuleExecutionPipeline)]);
     }
 
-    private static WebApplication Compose(bool disablePage)
+    private static WebApplication Compose(bool includePageFeature)
     {
         var builder = WebApplication.CreateBuilder();
         builder.AddMonica(monica =>
@@ -88,9 +67,26 @@ public sealed class ModuleExecutionPipelineUITests
                     typeof(ModuleExecutionPipeline).Assembly,
                     typeof(ModuleShellUI).Assembly);
             });
-            monica.AddExecutionPipelineUI(options => options.DisablePage = disablePage);
+            if (includePageFeature)
+            {
+                monica.AddExecutionPipelineUI();
+            }
+            else
+            {
+                monica.AddModule<ModuleExecutionPipelineUI, ModuleExecutionPipelineUIOption>();
+            }
         });
 
         return builder.Build();
+    }
+
+    private static IReadOnlySet<Type> GetDirectDependencyTypes(
+        MonicaApplication application,
+        Type moduleType)
+    {
+        var moduleKey = application.Dependencies.ModuleKeysByType[moduleType];
+        return application.Dependencies.DependenciesByModule[moduleKey]
+            .Select(dependency => application.Dependencies.ModuleTypesByKey[dependency])
+            .ToHashSet();
     }
 }

@@ -5,7 +5,7 @@ namespace Monica.Core.Modularity.Diagnostics.Models;
 /// <summary>
 /// Groups serial callback executions and scheduled startup work owned by one module.
 /// </summary>
-public sealed class ModulePerformanceInfo
+internal sealed class ModulePerformanceInfo
 {
     /// <summary>Gets the stable module key.</summary>
     public ModuleKey ModuleKey { get; init; }

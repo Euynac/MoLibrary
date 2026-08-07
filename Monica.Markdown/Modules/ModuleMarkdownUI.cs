@@ -6,7 +6,6 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 using Monica.Core;
 using Monica.Core.Modularity;
 using Monica.Core.Modularity.Abstractions;
-using Monica.Core.Modularity.Annotations;
 using Monica.Core.Modularity.Models;
 using Monica.Markdown.Pages;
 using Monica.Markdown.Localization;
@@ -24,15 +23,14 @@ namespace Monica.Modules;
 /// Markdown UI module providing a document viewer with group selection,
 /// tree navigation, and markdown rendering.
 /// </summary>
-[ModuleKey(BuiltInModuleKey.MarkdownUI)]
-public class ModuleMarkdownUI(ModuleMarkdownUIOption option)
-    : WebModuleBase<ModuleMarkdownUI, ModuleMarkdownUIOption, ModuleMarkdownUIGuide>(option)
+public class ModuleMarkdownUI : MonicaModule<ModuleMarkdownUIOption>, IWebHostRequiredModule, IUIModule
 {
     /// <summary>
     /// Configures services for the Markdown UI module.
     /// </summary>
-    public override void ConfigureServices(IServiceCollection services)
+    public override void ConfigureServices(ModuleContext<ModuleMarkdownUIOption> context)
     {
+        var services = context.Services;
         services.AddTransient<MarkdownViewerPageStateFactory>();
         services.AddTransient<MarkdownDocumentSearchStateFactory>();
         services.AddTransient<MarkdownLocalAssetService>();
@@ -42,37 +40,25 @@ public class ModuleMarkdownUI(ModuleMarkdownUIOption option)
     /// <summary>
     /// Declares module dependencies.
     /// </summary>
-    public override void ClaimDependencies()
+    public override void Describe(ModuleDescriptor module)
     {
-        DependsOnModule<ModuleMarkdownGuide>().Register();
-
-        var uiCoreGuide = DependsOnModule<ModuleShellUIGuide>().Register(o => o.EnableMarkdown = true);
-        if (!Option.DisableMarkdownPage)
-        {
-            DependsOnModule<ModuleLocalizationGuide>().Register()
-                .AddResource<MarkdownResource>();
-
-            uiCoreGuide.RegisterUIComponents(p => p.RegisterLocalizedPage<UIMarkdownPage, MarkdownResource>(
-                MarkdownViewerLocation.PAGE_URL,
-                "Pages:MarkdownDocuments:Title",
-                Icons.Material.Filled.MenuBook,
-                BuiltInNavigationCategoryIds.Documentation,
-                addToNav: true,
-                navOrder: 50));
-        }
+        module.Require<ModuleMarkdown, ModuleMarkdownOption>();
+        module.Require<ModuleLocalization, ModuleLocalizationOption>();
+        module.Require<ModuleShellUI, ModuleShellUIOption>();
     }
 
     /// <summary>
     /// Configures endpoints for local markdown image assets.
     /// </summary>
-    public override void ConfigureEndpoints(IApplicationBuilder app)
+    public override void ConfigureEndpoints(WebModuleContext<ModuleMarkdownUIOption> context)
     {
+        var app = context.ApplicationBuilder;
         if (!Option.EnableLocalImageAssetEndpoint)
         {
             return;
         }
 
-        UseEndpoints(app, endpoints =>
+        UseEndpoints(context, endpoints =>
         {
             var tagName = Option.GetApiGroupName();
             var routePattern = NormalizeRoutePattern(Option.AssetEndpointBasePath);
@@ -136,37 +122,31 @@ public static class ModuleMarkdownUIBuilderExtensions
         /// <summary>
         /// Configures the Markdown UI module.
         /// </summary>
-        public ModuleMarkdownUIGuide AddMarkdownUI(Action<ModuleMarkdownUIOption>? action = null)
+        public ModuleRegistration<ModuleMarkdownUI, ModuleMarkdownUIOption> AddMarkdownUI(Action<ModuleMarkdownUIOption>? action = null)
         {
-            return builder.AddModule<ModuleMarkdownUI, ModuleMarkdownUIOption, ModuleMarkdownUIGuide>(action);
+            var module = builder.AddModule<ModuleMarkdownUI, ModuleMarkdownUIOption>(action);
+            module.Require<ModuleLocalization, ModuleLocalizationOption>().AddResource<MarkdownResource>();
+            module.Require<ModuleShellUI, ModuleShellUIOption>(options => options.EnableMarkdown = true)
+                .RegisterUIComponents(registry => registry.RegisterLocalizedPage<UIMarkdownPage, MarkdownResource>(
+                    MarkdownViewerLocation.PAGE_URL,
+                    "Pages:MarkdownDocuments:Title",
+                    Icons.Material.Filled.MenuBook,
+                    BuiltInNavigationCategoryIds.Documentation,
+                    addToNav: true,
+                    navOrder: 50));
+            return module;
         }
     }
 }
 
 /// <summary>
-/// Guide for the Markdown UI module.
+/// Registration extensions for the Markdown UI module.
 /// </summary>
-public class ModuleMarkdownUIGuide : WebModuleGuide<ModuleMarkdownUI, ModuleMarkdownUIOption, ModuleMarkdownUIGuide>
-{
-    /// <summary>
-    /// Gets the requested configuration method keys.
-    /// </summary>
-    protected override string[] GetRequestedConfigMethodKeys()
-    {
-        return [];
-    }
-}
-
 /// <summary>
 /// Options for the Markdown UI module.
 /// </summary>
 public class ModuleMarkdownUIOption : MinimalApiModuleOptions<ModuleMarkdownUI>
 {
-    /// <summary>
-    /// Whether to disable the Markdown documents page.
-    /// </summary>
-    public bool DisableMarkdownPage { get; set; } = false;
-
     /// <summary>
     /// Whether the local markdown image asset endpoint is enabled.
     /// </summary>

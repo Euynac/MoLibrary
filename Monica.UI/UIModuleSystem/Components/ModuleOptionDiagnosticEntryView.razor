@@ -1,0 +1,152 @@
+@using Microsoft.Extensions.Localization
+@using Monica.Core.Modularity.Diagnostics.Models
+@using Monica.UI.Localization
+@inject IStringLocalizer<ModuleSystemResource> L
+
+@if (IsGroup)
+{
+    <details class="@EntryClass" open="@(Level == 0)" role="listitem">
+        <summary>
+            <span class="option-entry__identity">
+                <span class="option-entry__icon"><MudIcon Icon="@EntryIcon" Size="Size.Small" /></span>
+                <span class="option-entry__name">
+                    <strong title="@Entry.Path">@Entry.Name</strong>
+                    <small title="@Entry.TypeName">@Entry.TypeName</small>
+                </span>
+            </span>
+            <span class="option-entry__summary">
+                <code>@FormattedValue</code>
+                <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Color="@EntryColor">
+                    @KindText
+                </MudChip>
+                @if (ShowsSeparateTruncationIndicator)
+                {
+                    <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Color="Color.Warning">
+                        @L["ModuleDrawer:Options:EntryTruncated"]
+                    </MudChip>
+                }
+                <MudIcon Class="option-entry__chevron" Icon="@Icons.Material.Filled.ExpandMore" Size="Size.Small" />
+            </span>
+        </summary>
+        @if (!Entry.Children.IsEmpty)
+        {
+            <div class="option-entry__children" role="list">
+                @foreach (var child in Entry.Children)
+                {
+                    <ModuleOptionDiagnosticEntryView Entry="@child"
+                                                     Level="@(Level + 1)"
+                                                     RevealSensitiveMode="@RevealSensitiveMode" />
+                }
+            </div>
+        }
+    </details>
+}
+else
+{
+    <div class="@EntryClass" role="listitem">
+        <span class="option-entry__identity">
+            <span class="option-entry__icon"><MudIcon Icon="@EntryIcon" Size="Size.Small" /></span>
+            <span class="option-entry__name">
+                <strong title="@Entry.Path">@Entry.Name</strong>
+                <small title="@Entry.TypeName">@Entry.TypeName</small>
+            </span>
+        </span>
+        <span class="option-entry__summary">
+            <code class="@(IsRevealedValue ? "option-entry__value--revealed" : null)">@FormattedValue</code>
+            <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Color="@EntryColor">
+                @KindText
+            </MudChip>
+            @if (ShowsSeparateTruncationIndicator)
+            {
+                <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Color="Color.Warning">
+                    @L["ModuleDrawer:Options:EntryTruncated"]
+                </MudChip>
+            }
+        </span>
+    </div>
+}
+
+@code {
+    [Parameter, EditorRequired]
+    public ModuleOptionDiagnosticEntry Entry { get; set; } = default!;
+
+    [Parameter]
+    public int Level { get; set; }
+
+    [Parameter]
+    public bool RevealSensitiveMode { get; set; }
+
+    private bool IsRevealedValue => RevealSensitiveMode
+                                    && Entry.IsSensitive
+                                    && Entry.Kind == ModuleOptionDiagnosticValueKind.Value
+                                    && !Entry.IsNull
+                                    && !string.IsNullOrWhiteSpace(Entry.Value);
+
+    private bool ContainsRevealedSensitiveContent => RevealSensitiveMode
+                                                     && HasRevealedSensitiveContent(Entry);
+
+    private bool ShowsSeparateTruncationIndicator => Entry.IsTruncated
+                                                     && Entry.Kind != ModuleOptionDiagnosticValueKind.Value;
+
+    private bool IsGroup => Entry.Kind is ModuleOptionDiagnosticValueKind.Object
+        or ModuleOptionDiagnosticValueKind.Collection;
+
+    private string EntryClass => $"option-entry option-entry--{Entry.Kind.ToString().ToLowerInvariant()}"
+                                 + (Entry.IsSensitive ? " option-entry--sensitive" : string.Empty)
+                                 + (ContainsRevealedSensitiveContent ? " option-entry--revealed-sensitive" : string.Empty);
+
+    private string EntryIcon => Entry.Kind switch
+    {
+        ModuleOptionDiagnosticValueKind.Value => Icons.Material.Filled.DataObject,
+        ModuleOptionDiagnosticValueKind.Presence => Icons.Material.Filled.Lock,
+        ModuleOptionDiagnosticValueKind.Count => Icons.Material.Filled.Numbers,
+        ModuleOptionDiagnosticValueKind.Object => Icons.Material.Filled.AccountTree,
+        ModuleOptionDiagnosticValueKind.Collection => Icons.Material.Filled.ListAlt,
+        ModuleOptionDiagnosticValueKind.Unavailable => Icons.Material.Filled.WarningAmber,
+        _ => Icons.Material.Filled.Block
+    };
+
+    private Color EntryColor => ContainsRevealedSensitiveContent
+        ? Color.Error
+        : Entry.Kind switch
+        {
+            ModuleOptionDiagnosticValueKind.Presence => Color.Warning,
+            ModuleOptionDiagnosticValueKind.Object => Color.Primary,
+            ModuleOptionDiagnosticValueKind.Collection or ModuleOptionDiagnosticValueKind.Count => Color.Info,
+            ModuleOptionDiagnosticValueKind.Unavailable => Color.Error,
+            ModuleOptionDiagnosticValueKind.Unsupported => Color.Default,
+            _ => Color.Secondary
+        };
+
+    private string KindText => Entry.IsSensitive || ContainsRevealedSensitiveContent
+        ? ContainsRevealedSensitiveContent
+            ? L["ModuleDrawer:Options:SensitiveRevealed"]
+            : L["ModuleDrawer:Options:SensitiveProtected"]
+        : L[$"Enums:OptionKind:{Entry.Kind}"];
+
+    private static bool HasRevealedSensitiveContent(ModuleOptionDiagnosticEntry entry) =>
+        (entry.IsSensitive
+         && entry.Kind == ModuleOptionDiagnosticValueKind.Value
+         && !entry.IsNull
+         && !string.IsNullOrWhiteSpace(entry.Value))
+        || entry.Children.Any(HasRevealedSensitiveContent);
+
+    private string FormattedValue => Entry.Kind switch
+    {
+        ModuleOptionDiagnosticValueKind.Value when Entry.IsNull => L["Common:Null"],
+        ModuleOptionDiagnosticValueKind.Value when Entry.IsTruncated => L["ModuleDrawer:Options:Truncated", Entry.Value ?? string.Empty],
+        ModuleOptionDiagnosticValueKind.Value => Entry.Value ?? L["Common:NotAvailable"],
+        ModuleOptionDiagnosticValueKind.Presence => Entry.IsPresent == true
+            ? L["ModuleDrawer:Options:Present"]
+            : L["ModuleDrawer:Options:NotPresent"],
+        ModuleOptionDiagnosticValueKind.Count => Entry.Count is { } count
+            ? L["ModuleDrawer:Options:CollectionCount", count]
+            : L["Common:NotAvailable"],
+        ModuleOptionDiagnosticValueKind.Object => L["ModuleDrawer:Options:ObjectCount", Entry.Children.Length],
+        ModuleOptionDiagnosticValueKind.Collection => Entry.Count is { } count
+            ? L["ModuleDrawer:Options:CollectionCount", count]
+            : L["ModuleDrawer:Options:CollectionCount", Entry.Children.Length],
+        ModuleOptionDiagnosticValueKind.Unsupported => L["ModuleDrawer:Options:Unsupported"],
+        _ => L["Common:Unavailable"]
+    };
+}

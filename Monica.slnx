@@ -7,6 +7,9 @@
   <Folder Name="/examples/">
     <Project Path="examples/JobSchedulerMinimal/JobSchedulerMinimal.csproj" />
   </Folder>
+  <Folder Name="/benchmarks/">
+    <Project Path="benchmarks/Benchmark.Monica.Core/Benchmark.Monica.Core.csproj" />
+  </Folder>
   <Folder Name="/examples/Monica.ReferenceApplication/">
     <Project Path="examples/Monica.ReferenceApplication/src/AppHost/Monica.Reference.Api/Monica.Reference.Api.csproj" />
     <Project Path="examples/Monica.ReferenceApplication/src/Domains/Ordering/Domains.Ordering.csproj" />

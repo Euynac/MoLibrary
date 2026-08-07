@@ -11,7 +11,6 @@ using Monica.Core.JsonSerialization.Extensions;
 using Monica.Core.JsonSerialization.Services.Support;
 using Monica.Core.Modularity;
 using Monica.Core.Modularity.Abstractions;
-using Monica.Core.Modularity.Annotations;
 using Monica.Core.Modularity.Extensions;
 using Monica.Core.Modularity.Models;
 using Monica.Core.Results;
@@ -36,10 +35,10 @@ public static class ModuleSignalRBuilderExtensions
         /// Registers the SignalR infrastructure module and applies optional module configuration.
         /// </summary>
         /// <param name="action">Optional module option configuration delegate.</param>
-        /// <returns>Returns the module guide used to continue SignalR registration.</returns>
-        public ModuleSignalRGuide AddSignalR(Action<ModuleSignalROption>? action = null)
+        /// <returns>The host-bound SignalR module registration.</returns>
+        public ModuleRegistration<ModuleSignalR, ModuleSignalROption> AddSignalR(Action<ModuleSignalROption>? action = null)
         {
-            return builder.AddModule<ModuleSignalR, ModuleSignalROption, ModuleSignalRGuide>(action);
+            return builder.AddModule<ModuleSignalR, ModuleSignalROption>(action);
         }
     }
 }
@@ -47,18 +46,19 @@ public static class ModuleSignalRBuilderExtensions
 /// <summary>
 /// Infrastructure module that registers SignalR services, inspection endpoints, and hub metadata tracking.
 /// </summary>
-/// <param name="option">The module configuration options.</param>
-[ModuleKey(BuiltInModuleKey.SignalR)]
-public class ModuleSignalR(ModuleSignalROption option)
-    : WebModuleBase<ModuleSignalR, ModuleSignalROption, ModuleSignalRGuide>(option)
+public class ModuleSignalR : MonicaModule<ModuleSignalROption>, IWebHostRequiredModule
 {
-    public override void ClaimDependencies()
+    internal const string SERVICES_FEATURE = "signalr-services";
+
+    public override void Describe(ModuleDescriptor module)
     {
-        DependsOnModule<ModuleJsonSerializationGuide>().Register();
+        module.Require<ModuleJsonSerialization, ModuleJsonSerializationOption>();
+        module.RequireFeature(SERVICES_FEATURE);
     }
 
-    public override void ConfigureServices(IServiceCollection services)
+    public override void ConfigureServices(ModuleContext<ModuleSignalROption> context)
     {
+        var services = context.Services;
         services.AddScoped<SignalRFacade>();
         services.AddScoped<SignalRInspectionService>();
         services.AddSingleton<SignalRHubMetadataReader>();
@@ -66,11 +66,12 @@ public class ModuleSignalR(ModuleSignalROption option)
         services.TryAddSingleton<SignalRSendMetrics>();
     }
 
-    public override void ConfigureEndpoints(IApplicationBuilder app)
+    public override void ConfigureEndpoints(WebModuleContext<ModuleSignalROption> context)
     {
-        UseEndpoints(app, endpoints =>
+        var app = context.ApplicationBuilder;
+        UseEndpoints(context, endpoints =>
         {
-            var tagName = option.GetApiGroupName();
+            var tagName = Option.GetApiGroupName();
 
             endpoints.MapGet("/signalr/hubs",
                 async ([FromServices] SignalRFacade facade) =>
@@ -106,15 +107,10 @@ public class ModuleSignalR(ModuleSignalROption option)
 }
 
 /// <summary>
-/// Fluent registration guide for the SignalR infrastructure module.
+/// Registration extensions for the SignalR infrastructure module.
 /// </summary>
-public class ModuleSignalRGuide : WebModuleGuide<ModuleSignalR, ModuleSignalROption, ModuleSignalRGuide>
+public static class ModuleSignalRRegistrationExtensions
 {
-    protected override string[] GetRequestedConfigMethodKeys()
-    {
-        return [nameof(AddSignalR)];
-    }
-
     /// <summary>
     /// Register SignalR and allow additional configuration of HubOptions and JsonHubProtocolOptions.
     /// </summary>
@@ -124,8 +120,9 @@ public class ModuleSignalRGuide : WebModuleGuide<ModuleSignalR, ModuleSignalROpt
     /// <typeparam name="TUser">Application user type resolved from each connection.</typeparam>
     /// <param name="configure">Optional HubOptions configuration delegate.</param>
     /// <param name="jsonConfigure">Optional JsonHubProtocolOptions configuration delegate.</param>
-    /// <returns>Returns the current <see cref="ModuleSignalRGuide"/> instance for chaining calls.</returns>
-    public ModuleSignalRGuide AddSignalR<TIHubOperator, THubOperator, TContract, TUser>(
+    /// <param name="module">The SignalR registration being configured.</param>
+    /// <returns>The same SignalR registration for fluent chaining.</returns>
+    public static ModuleRegistration<ModuleSignalR, ModuleSignalROption> AddSignalR<TIHubOperator, THubOperator, TContract, TUser>(this ModuleRegistration<ModuleSignalR, ModuleSignalROption> module,
         Action<HubOptions>? configure = null,
         Action<JsonHubProtocolOptions>? jsonConfigure = null)
         where THubOperator : class, ISignalRHubOperator<TContract, TUser>, TIHubOperator
@@ -133,7 +130,8 @@ public class ModuleSignalRGuide : WebModuleGuide<ModuleSignalR, ModuleSignalROpt
         where TContract : class, ISignalRHubContract
         where TUser : ICurrentUser
     {
-        ConfigureServices(context =>
+        module.SatisfyFeature(ModuleSignalR.SERVICES_FEATURE);
+        module.ConfigureServices(context =>
         {
             context.Services.AddSingleton<IUserIdProvider, SignalRUserIdProvider>();
             context.Services.AddTransient<ISignalRHubOperator<TContract, TUser>, THubOperator>();
@@ -152,46 +150,47 @@ public class ModuleSignalRGuide : WebModuleGuide<ModuleSignalR, ModuleSignalROpt
                 jsonConfigure?.Invoke(options);
             });
         });
-        return this;
+        return module;
     }
 
     /// <summary>
     /// Configures SignalR Swagger generation.
     /// </summary>
-    public ModuleSignalRGuide AddSignalRSwagger(Action<SignalRSwaggerGenOptions> signalROption)
+    public static ModuleRegistration<ModuleSignalR, ModuleSignalROption> AddSignalRSwagger(this ModuleRegistration<ModuleSignalR, ModuleSignalROption> module, Action<SignalRSwaggerGenOptions> signalROption)
     {
-        ConfigureServices(context =>
+        module.ConfigureServices(context =>
         {
             context.Services.ConfigureSwaggerGen(o =>
             {
                 o.AddSignalRSwaggerGen(signalROption);
             });
         });
-        return this;
+        return module;
     }
 
     /// <summary>
     /// Maps a SignalR hub and records its metadata for inspection APIs and the debug UI.
     /// </summary>
-    public ModuleSignalRGuide MapSignalRHub<THub>([StringSyntax("Route")] string pattern)
+    public static ModuleRegistration<ModuleSignalR, ModuleSignalROption> MapSignalRHub<THub>(this ModuleRegistration<ModuleSignalR, ModuleSignalROption> module, [StringSyntax("Route")] string pattern)
         where THub : Hub
     {
-        ConfigureModuleOption(option =>
+        module.Configure(options =>
         {
-            option.HubRegistrations.Add(new SignalRHubRegistration(typeof(THub), pattern));
-        }, secondKey: typeof(THub).Name);
+            options.HubRegistrations.Add(new SignalRHubRegistration(typeof(THub), pattern));
+        });
 
-        ConfigureEndpoints(context =>
+        module.ConfigureEndpoints(context =>
         {
             context.ApplicationBuilder.UseEndpoints(endpoints =>
             {
                 endpoints.MapHub<THub>(pattern)
                     .WithMonicaEndpoint(MonicaEndpointKind.Ui);
             });
-        }, secondKey: typeof(THub).Name);
+        });
 
-        return this;
+        return module;
     }
+
 }
 
 /// <summary>

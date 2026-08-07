@@ -1,0 +1,27 @@
+@using Microsoft.Extensions.Localization
+@using Monica.UI.Localization
+@using Monica.UI.UIModuleSystem.State
+@using Monica.UI.UIModuleSystem.Support
+@inject IStringLocalizer<ModuleSystemResource> L
+
+<div class="load-state" role="@(Session.LoadState == ModuleSystemWorkbenchLoadState.Failed ? "alert" : "status")">
+    @if (Session.LoadState == ModuleSystemWorkbenchLoadState.Failed)
+    {
+        <MudIcon Icon="@Icons.Material.Filled.ErrorOutline" Color="Color.Error" Size="Size.Large" />
+        <MudText Typo="Typo.h6">@L["Load:FailedTitle"]</MudText>
+        <MudText Typo="Typo.body2">@L["Load:FailedDescription"]</MudText>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="@RetryRequested">
+            @L["Actions:Retry"]
+        </MudButton>
+    }
+    else
+    {
+        <MudProgressCircular Indeterminate="true" Color="Color.Primary" />
+        <MudText Typo="Typo.body1">@L["Load:Loading"]</MudText>
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired] public ModuleSystemWorkbenchSession Session { get; set; } = default!;
+    [Parameter] public EventCallback RetryRequested { get; set; }
+}

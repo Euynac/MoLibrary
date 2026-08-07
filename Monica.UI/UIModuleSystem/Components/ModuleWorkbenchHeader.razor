@@ -1,0 +1,111 @@
+@using Microsoft.AspNetCore.Components.Forms
+@using Microsoft.Extensions.Localization
+@using Monica.Core.Modularity.Diagnostics.Models
+@using Monica.UI.Localization
+@using Monica.UI.UIModuleSystem.State
+@using Monica.UI.UIModuleSystem.Support
+@inject IStringLocalizer<ModuleSystemResource> L
+
+<header class="workbench-header">
+    <div class="workbench-title-block">
+        <MudText Typo="Typo.overline">@L["Page:Eyebrow"]</MudText>
+        <div class="workbench-title-line">
+            <MudText Typo="Typo.h4" HtmlTag="h1">@L["Page:Title"]</MudText>
+            @if (Session.Snapshot is { } snapshot)
+            {
+                <MudChip T="string"
+                         Size="Size.Small"
+                         Variant="Variant.Filled"
+                         Color="@OutcomeColor(snapshot.Outcome)">
+                    @(snapshot.IsFinal ? L["Common:Final"] : L["Common:Live"])
+                    · @ModuleDiagnosticsDisplay.Outcome(snapshot.Outcome, L)
+                </MudChip>
+            }
+        </div>
+        <MudText Typo="Typo.body2" Color="Color.Secondary">@L["Page:Subtitle"]</MudText>
+    </div>
+
+    @if (Session.Snapshot is { } current)
+    {
+        <div class="workbench-identity" aria-label="@L["Aria:SnapshotIdentity"]">
+            <span>@L["Common:Revision"]</span>
+            <strong>#@current.Revision</strong>
+            <IdentifierValue Value="@current.CompositionId" />
+        </div>
+    }
+
+    <div class="workbench-actions">
+        <label class="baseline-file-button">
+            <MudIcon Icon="@Icons.Material.Filled.CompareArrows" Size="Size.Small" />
+            <span>@L["Actions:ImportBaseline"]</span>
+            <InputFile OnChange="@BaselineSelected" accept="application/json,.json" />
+        </label>
+        <MudButton Variant="Variant.Outlined"
+                   StartIcon="@Icons.Material.Filled.Download"
+                   OnClick="@ExportRequested">
+            @L["Actions:Export"]
+        </MudButton>
+        <MudIconButton Icon="@Icons.Material.Filled.Refresh"
+                       Color="Color.Primary"
+                       OnClick="@RefreshRequested"
+                       Disabled="@(Session.LoadState == ModuleSystemWorkbenchLoadState.Refreshing)"
+                       aria-label="@L["Aria:Refresh"]" />
+        <MudIconButton Icon="@Icons.Material.Outlined.HelpOutline"
+                       OnClick="@HelpRequested"
+                       aria-label="@L["Aria:OpenHelp"]" />
+    </div>
+</header>
+
+@if (Session.Comparison is { } comparison)
+{
+    <div class="comparison-banner">
+        <MudAlert Severity="Severity.Info" Variant="Variant.Outlined" Dense="true">
+            @L["Comparison:Active",
+                SignedDuration(comparison.TotalDurationDeltaMs),
+                comparison.AddedModules.Count,
+                comparison.RemovedModules.Count]
+            <MudButton Variant="Variant.Text" Size="Size.Small" OnClick="@Session.RemoveBaseline">
+                @L["Actions:RemoveBaseline"]
+            </MudButton>
+        </MudAlert>
+    </div>
+}
+else if (Session.BaselineError != ModuleDiagnosticsBaselineError.None)
+{
+    <div class="comparison-banner">
+        <MudAlert Severity="Severity.Error" Variant="Variant.Outlined" Dense="true">
+            @L[$"Comparison:Errors:{Session.BaselineError}"]
+        </MudAlert>
+    </div>
+}
+
+@if (!string.IsNullOrWhiteSpace(Session.RefreshError))
+{
+    <div class="comparison-banner">
+        <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined" Dense="true">
+            @L["Load:RefreshFailed"]
+            <MudButton Variant="Variant.Text" Size="Size.Small" OnClick="@RefreshRequested">
+                @L["Actions:Retry"]
+            </MudButton>
+        </MudAlert>
+    </div>
+}
+
+@code {
+    [Parameter, EditorRequired] public ModuleSystemWorkbenchSession Session { get; set; } = default!;
+    [Parameter] public EventCallback RefreshRequested { get; set; }
+    [Parameter] public EventCallback ExportRequested { get; set; }
+    [Parameter] public EventCallback<InputFileChangeEventArgs> BaselineSelected { get; set; }
+    [Parameter] public EventCallback HelpRequested { get; set; }
+
+    private static Color OutcomeColor(ModuleCompositionOutcome? outcome) => outcome switch
+    {
+        ModuleCompositionOutcome.Succeeded => Color.Success,
+        ModuleCompositionOutcome.Degraded => Color.Warning,
+        ModuleCompositionOutcome.Failed => Color.Error,
+        _ => Color.Info
+    };
+
+    private static string SignedDuration(double duration) =>
+        $"{(duration > 0 ? "+" : duration < 0 ? "-" : string.Empty)}{ModuleDiagnosticsDisplay.Duration(Math.Abs(duration))}";
+}

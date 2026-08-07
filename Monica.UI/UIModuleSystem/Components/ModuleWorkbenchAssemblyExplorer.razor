@@ -1,0 +1,292 @@
+@using Microsoft.Extensions.Localization
+@using Monica.Core.Modularity.Diagnostics.Models
+@using Monica.UI.Localization
+@using Monica.UI.UIModuleSystem.State
+@using Monica.UI.UIModuleSystem.Support
+@inject IStringLocalizer<ModuleSystemResource> L
+
+<section class="assembly-explorer" aria-labelledby="assembly-explorer-title">
+    <header class="assembly-explorer-header">
+        <div>
+            <MudText Typo="Typo.overline">@L["Discovery:Inventory:Eyebrow"]</MudText>
+            <MudText Typo="Typo.h5" HtmlTag="h2" id="assembly-explorer-title">@L["Discovery:Inventory:Title"]</MudText>
+            <MudText Typo="Typo.body2" Color="Color.Secondary">@L["Discovery:Inventory:Description"]</MudText>
+        </div>
+        @if (Session.AssemblyInventoryState == ModuleSystemLazyLoadState.Failed)
+        {
+            <MudButton Variant="Variant.Filled"
+                       Color="Color.Error"
+                       StartIcon="@Icons.Material.Filled.Refresh"
+                       OnClick="@Session.EnsureAssemblyInventoryLoadedAsync">
+                @L["Actions:Retry"]
+            </MudButton>
+        }
+    </header>
+
+    @switch (Session.AssemblyInventoryState)
+    {
+        case ModuleSystemLazyLoadState.NotRequested:
+        case ModuleSystemLazyLoadState.Loading:
+            <div class="assembly-loading" role="status">
+                <MudProgressCircular Indeterminate="true" Color="Color.Primary" />
+                <span>@L["Discovery:Inventory:Loading"]</span>
+            </div>
+            break;
+        case ModuleSystemLazyLoadState.Failed:
+            <MudAlert Severity="Severity.Error" Variant="Variant.Outlined">
+                @L["Discovery:Inventory:Failed"]
+            </MudAlert>
+            break;
+        case ModuleSystemLazyLoadState.Ready when Session.AssemblyInventory is { } inventory:
+            var entryAssembly = inventory.Assemblies.FirstOrDefault(static assembly => assembly.IsEntryAssembly);
+            <div class="assembly-kpi-grid">
+                <article class="assembly-kpi assembly-kpi--entry">
+                    <MudIcon Icon="@Icons.Material.Filled.Adjust" Color="Color.Primary" />
+                    <span>@L["Discovery:Inventory:Summary:EntryAssembly"]</span>
+                    <strong title="@entryAssembly?.Name">@(entryAssembly?.Name ?? L["Common:NotAvailable"])</strong>
+                    <small>@(entryAssembly?.Version ?? L["Common:NotAvailable"])</small>
+                </article>
+                <article class="assembly-kpi assembly-kpi--scan">
+                    <MudIcon Icon="@Icons.Material.Filled.Radar" Color="Color.Success" />
+                    <span>@L["Discovery:Inventory:Summary:ScanScope"]</span>
+                    <strong>@Session.AssemblyScanScopeCount</strong>
+                    <small>@L["Discovery:Inventory:Scanned", inventory.ScannedCount]</small>
+                </article>
+                <article class="assembly-kpi assembly-kpi--considered">
+                    <MudIcon Icon="@Icons.Material.Filled.Inventory2" Color="Color.Info" />
+                    <span>@L["Discovery:Inventory:Summary:Considered"]</span>
+                    <strong>@inventory.Assemblies.Length</strong>
+                    <small>@L["Discovery:Inventory:Excluded", inventory.ExcludedCount]</small>
+                </article>
+                <article class="assembly-kpi @AttentionKpiClass(Session.AssemblyAttentionCount)">
+                    <MudIcon Icon="@AttentionIcon(Session.AssemblyAttentionCount)" Color="@AttentionColor(Session.AssemblyAttentionCount)" />
+                    <span>@L["Discovery:Inventory:Summary:Attention"]</span>
+                    <strong>@Session.AssemblyAttentionCount</strong>
+                    <small>@L["Discovery:Inventory:Partial", inventory.PartialTypeLoadCount]</small>
+                </article>
+            </div>
+
+            <div class="assembly-analysis-grid">
+                <section class="assembly-configuration" aria-labelledby="assembly-configuration-title">
+                    <div class="assembly-section-heading">
+                        <MudIcon Icon="@Icons.Material.Filled.Tune" Color="Color.Primary" />
+                        <div>
+                            <MudText Typo="Typo.h6" HtmlTag="h3" id="assembly-configuration-title">@L["Discovery:Inventory:Configuration:Title"]</MudText>
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                @L["Discovery:Inventory:Configuration:CapturedAt", inventory.CapturedAtUtc.ToLocalTime().ToString("g")]
+                            </MudText>
+                        </div>
+                    </div>
+                    <div class="assembly-configuration-facts">
+                        <div>
+                            <span>@L["Discovery:Inventory:Configuration:DefaultAssemblies"]</span>
+                            <MudChip T="string"
+                                     Size="Size.Small"
+                                     Color="@(inventory.UsesDefaultProjectAssemblies ? Color.Success : Color.Warning)"
+                                     Variant="Variant.Filled">
+                                @(inventory.UsesDefaultProjectAssemblies ? L["Common:Yes"] : L["Common:No"])
+                            </MudChip>
+                        </div>
+                        <div>
+                            <span>@L["Discovery:Inventory:Configuration:Includes"]</span>
+                            <div class="assembly-patterns">
+                                @if (inventory.IncludePatterns.Length == 0)
+                                {
+                                    <em>@L["Common:None"]</em>
+                                }
+                                else
+                                {
+                                    @foreach (var pattern in inventory.IncludePatterns)
+                                    {
+                                        <MudChip T="string" Size="Size.Small" Color="Color.Primary" Variant="Variant.Outlined">@pattern</MudChip>
+                                    }
+                                }
+                            </div>
+                        </div>
+                        <div>
+                            <span>@L["Discovery:Inventory:Configuration:Excludes"]</span>
+                            <div class="assembly-patterns">
+                                @if (inventory.ExcludePatterns.Length == 0)
+                                {
+                                    <em>@L["Common:None"]</em>
+                                }
+                                else
+                                {
+                                    @foreach (var pattern in inventory.ExcludePatterns)
+                                    {
+                                        <MudChip T="string" Size="Size.Small" Color="Color.Warning" Variant="Variant.Outlined">@pattern</MudChip>
+                                    }
+                                }
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <section class="assembly-outcomes" aria-labelledby="assembly-outcomes-title">
+                    <div class="assembly-section-heading">
+                        <MudIcon Icon="@Icons.Material.Filled.Rule" Color="Color.Info" />
+                        <MudText Typo="Typo.h6" HtmlTag="h3" id="assembly-outcomes-title">@L["Discovery:Inventory:PanelTitle"]</MudText>
+                    </div>
+                    <div class="assembly-outcome-list">
+                        @OutcomeFact(L["Discovery:Inventory:FailedCount", inventory.ResolutionFailedCount], inventory.ResolutionFailedCount, Color.Error, Icons.Material.Filled.Error)
+                        @OutcomeFact(L["Discovery:Inventory:Partial", inventory.PartialTypeLoadCount], inventory.PartialTypeLoadCount, Color.Warning, Icons.Material.Filled.WarningAmber)
+                        @OutcomeFact(L["Discovery:Inventory:Scanned", inventory.ScannedCount], inventory.ScannedCount, Color.Success, Icons.Material.Filled.CheckCircle)
+                        @OutcomeFact(L["Discovery:Inventory:NotScanned", inventory.NotScannedCount], inventory.NotScannedCount, Color.Info, Icons.Material.Filled.PauseCircle)
+                        @OutcomeFact(L["Discovery:Inventory:Excluded", inventory.ExcludedCount], inventory.ExcludedCount, Color.Default, Icons.Material.Filled.FilterAltOff)
+                    </div>
+                </section>
+            </div>
+
+            <section class="assembly-records" aria-labelledby="assembly-records-title">
+                <div class="assembly-records-heading">
+                    <div>
+                        <MudText Typo="Typo.h6" HtmlTag="h3" id="assembly-records-title">@L["Discovery:Inventory:Records:Title"]</MudText>
+                        <MudText Typo="Typo.body2" Color="Color.Secondary">
+                            @L["Discovery:Inventory:Records:ResultCount", Session.FilteredAssemblies.Count, inventory.Assemblies.Length]
+                        </MudText>
+                    </div>
+                    <MudTextField T="string"
+                                  Label="@L["Discovery:Inventory:Search"]"
+                                  Value="@Session.AssemblySearch"
+                                  ValueChanged="@Session.SetAssemblySearch"
+                                  Immediate="true"
+                                  Clearable="true"
+                                  Adornment="Adornment.Start"
+                                  AdornmentIcon="@Icons.Material.Filled.Search" />
+                </div>
+
+                <div class="assembly-facets" role="group" aria-label="@L["Discovery:Inventory:Facets:Label"]">
+                    @FacetButton(AssemblyInventoryFacet.Attention, L["Discovery:Inventory:Facets:Attention", Session.AssemblyAttentionCount], Color.Error)
+                    @FacetButton(AssemblyInventoryFacet.ScanScope, L["Discovery:Inventory:Facets:ScanScope", Session.AssemblyScanScopeCount], Color.Success)
+                    @FacetButton(AssemblyInventoryFacet.Excluded, L["Discovery:Inventory:Facets:Excluded", inventory.ExcludedCount], Color.Default)
+                    @FacetButton(AssemblyInventoryFacet.All, L["Discovery:Inventory:Facets:All", inventory.Assemblies.Length], Color.Primary)
+                </div>
+
+                <div class="assembly-table-wrapper" tabindex="0">
+                    <MudTable T="TypeDiscoveryAssemblyRecord"
+                              Items="@Session.PagedAssemblies"
+                              Dense="true"
+                              Hover="true"
+                              Breakpoint="Breakpoint.Sm"
+                              Elevation="0">
+                        <HeaderContent>
+                            <MudTh>@L["Discovery:Inventory:Columns:Outcome"]</MudTh>
+                            <MudTh>@L["Discovery:Inventory:Columns:Assembly"]</MudTh>
+                            <MudTh>@L["Discovery:Inventory:Columns:Version"]</MudTh>
+                            <MudTh>@L["Discovery:Inventory:Columns:Path"]</MudTh>
+                            <MudTh>@L["Discovery:Inventory:Columns:Failure"]</MudTh>
+                        </HeaderContent>
+                        <RowTemplate Context="assembly">
+                            <MudTd DataLabel="@L["Discovery:Inventory:Columns:Outcome"]">
+                                <MudChip T="string" Size="Size.Small" Color="@AssemblyOutcomeColor(assembly.Outcome)" Variant="Variant.Filled">
+                                    @L[$"Enums:AssemblyOutcome:{assembly.Outcome}"]
+                                </MudChip>
+                            </MudTd>
+                            <MudTd DataLabel="@L["Discovery:Inventory:Columns:Assembly"]">
+                                <div class="assembly-name-cell">
+                                    @if (assembly.IsEntryAssembly)
+                                    {
+                                        <MudTooltip Text="@L["Discovery:Inventory:Markers:EntryAssembly"]">
+                                            <span class="assembly-marker" tabindex="0" aria-label="@L["Discovery:Inventory:Markers:EntryAssembly"]">
+                                                <MudIcon Icon="@Icons.Material.Filled.Adjust" Color="Color.Primary" Size="Size.Small" />
+                                            </span>
+                                        </MudTooltip>
+                                    }
+                                    <strong title="@assembly.Name">@assembly.Name</strong>
+                                </div>
+                            </MudTd>
+                            <MudTd DataLabel="@L["Discovery:Inventory:Columns:Version"]">@(assembly.Version ?? L["Common:NotAvailable"])</MudTd>
+                            <MudTd DataLabel="@L["Discovery:Inventory:Columns:Path"]">
+                                @if (string.IsNullOrWhiteSpace(assembly.Location))
+                                {
+                                    <span class="assembly-unavailable">@L["Common:NotAvailable"]</span>
+                                }
+                                else
+                                {
+                                    <MudTooltip Text="@assembly.Location"><code class="assembly-path">@assembly.Location</code></MudTooltip>
+                                }
+                            </MudTd>
+                            <MudTd DataLabel="@L["Discovery:Inventory:Columns:Failure"]">
+                                @if (string.IsNullOrWhiteSpace(assembly.Failure))
+                                {
+                                    <span class="assembly-unavailable">@L["Common:None"]</span>
+                                }
+                                else
+                                {
+                                    <MudTooltip Text="@assembly.Failure"><span class="assembly-failure">@assembly.Failure</span></MudTooltip>
+                                }
+                            </MudTd>
+                        </RowTemplate>
+                        <NoRecordsContent>
+                            <div class="assembly-empty">
+                                <MudIcon Icon="@Icons.Material.Filled.SearchOff" Color="Color.Secondary" />
+                                <MudText Typo="Typo.body2">@L["Discovery:Inventory:Records:Empty"]</MudText>
+                            </div>
+                        </NoRecordsContent>
+                    </MudTable>
+                </div>
+
+                <div class="assembly-pagination">
+                    <MudPagination Count="@Session.AssemblyPageCount"
+                                   Selected="@Session.AssemblyPage"
+                                   SelectedChanged="@SetAssemblyPage"
+                                   ShowFirstButton="true"
+                                   ShowLastButton="true" />
+                    <MudSelect T="int"
+                               Label="@L["Common:RowsPerPage"]"
+                               Value="@Session.AssemblyPageSize"
+                               ValueChanged="@SetAssemblyPageSize"
+                               Dense="true">
+                        <MudSelectItem T="int" Value="10">10</MudSelectItem>
+                        <MudSelectItem T="int" Value="25">25</MudSelectItem>
+                        <MudSelectItem T="int" Value="50">50</MudSelectItem>
+                    </MudSelect>
+                </div>
+            </section>
+            break;
+    }
+</section>
+
+@code {
+    [Parameter, EditorRequired] public ModuleSystemWorkbenchSession Session { get; set; } = default!;
+
+    protected override Task OnInitializedAsync() => Session.EnsureAssemblyInventoryLoadedAsync();
+
+    private static Color AssemblyOutcomeColor(TypeDiscoveryAssemblyOutcome outcome) => outcome switch
+    {
+        TypeDiscoveryAssemblyOutcome.Scanned => Color.Success,
+        TypeDiscoveryAssemblyOutcome.ResolvedNotScanned => Color.Info,
+        TypeDiscoveryAssemblyOutcome.Excluded => Color.Default,
+        TypeDiscoveryAssemblyOutcome.ResolutionFailed => Color.Error,
+        TypeDiscoveryAssemblyOutcome.PartialTypeLoad => Color.Warning,
+        _ => Color.Default
+    };
+
+    private static string AttentionKpiClass(int attentionCount) => attentionCount == 0
+        ? "assembly-kpi--healthy"
+        : "assembly-kpi--attention";
+
+    private static Color AttentionColor(int attentionCount) => attentionCount == 0 ? Color.Success : Color.Error;
+    private static string AttentionIcon(int attentionCount) => attentionCount == 0
+        ? Icons.Material.Filled.Verified
+        : Icons.Material.Filled.ReportProblem;
+
+    private RenderFragment OutcomeFact(string label, int count, Color color, string icon) => @<div class="assembly-outcome-fact">
+        <MudIcon Icon="@icon" Color="@color" Size="Size.Small" />
+        <span>@label</span>
+        <strong>@count</strong>
+    </div>;
+
+    private RenderFragment FacetButton(AssemblyInventoryFacet facet, string label, Color color) => @<MudButton
+        Variant="@(Session.AssemblyFacet == facet ? Variant.Filled : Variant.Outlined)"
+        Color="@(Session.AssemblyFacet == facet ? color : Color.Default)"
+        Size="Size.Small"
+        aria-pressed="@(Session.AssemblyFacet == facet)"
+        OnClick="@(() => Session.SetAssemblyFacet(facet))">
+        @label
+    </MudButton>;
+
+    private void SetAssemblyPage(int page) => Session.SetAssemblyPaging(page, Session.AssemblyPageSize);
+    private void SetAssemblyPageSize(int pageSize) => Session.SetAssemblyPaging(1, pageSize);
+
+}

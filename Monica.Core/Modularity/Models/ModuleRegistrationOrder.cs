@@ -1,19 +1,22 @@
 namespace Monica.Core.Modularity.Models;
 
+/// <summary>
+/// Selects a named ordering band for an explicit lifecycle contribution within one module.
+/// </summary>
 public enum ModuleRegistrationOrder
 {
-    Normal = 0,
-    PostConfig = 100,
-    PreConfig = -100
-}
+    /// <summary>
+    /// Runs before the module strategy's own lifecycle callback.
+    /// </summary>
+    BeforeModule = -100,
 
-public enum ModuleApplicationMiddlewareOrder
-{
-    BeforeUseRouting = -50,
-    AfterUseRouting = 50,
-}
+    /// <summary>
+    /// Runs after the module strategy's own lifecycle callback. This is the normal extension point.
+    /// </summary>
+    AfterModule = 0,
 
-public static class ModuleOrder
-{
-    public const int MIDDLEWARE_USE_ROUTING = -1;
+    /// <summary>
+    /// Runs after normal explicit contributions.
+    /// </summary>
+    Late = 100
 }

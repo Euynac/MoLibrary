@@ -12,6 +12,25 @@ internal enum ModuleCompositionCompletionPoint
     EndpointMapping
 }
 
+/// <summary>Identifies a bounded structural cause for terminal composition failure.</summary>
+internal enum ModuleCompositionFailureKind
+{
+    /// <summary>Service registration or final composition validation failed.</summary>
+    ServiceRegistration,
+
+    /// <summary>Application-pipeline configuration failed.</summary>
+    ApplicationPipeline,
+
+    /// <summary>Endpoint mapping failed.</summary>
+    EndpointMapping,
+
+    /// <summary>Host startup validation found incomplete Web composition.</summary>
+    StartupValidation,
+
+    /// <summary>Final successful-completion publication failed.</summary>
+    Completion
+}
+
 /// <summary>
 /// Owns the composition transitions for one Monica host.
 /// </summary>
@@ -21,11 +40,13 @@ internal sealed class ModuleCompositionState
     private IApplicationBuilder? _applicationBuilder;
     private ModuleCompositionCompletionPoint? _completionPoint;
     private Exception? _completionFailure;
+    private ModuleCompositionFailureKind? _failureKind;
     private bool _completionAttempted;
     private bool _mapMonicaInvoked;
     private ModuleCompositionCompletionPoint? _pendingCompletionPoint;
     private bool _requiresEndpointMapping;
     private bool _useMonicaInvoked;
+    private long _revision;
 
     /// <summary>
     /// Gets the concrete host-builder type used by the composition.
@@ -48,6 +69,7 @@ internal sealed class ModuleCompositionState
 
             HostBuilderType = hostBuilder.GetType();
             _requiresEndpointMapping = hostBuilder is WebApplicationBuilder;
+            _revision++;
         }
     }
 
@@ -77,6 +99,7 @@ internal sealed class ModuleCompositionState
 
             _applicationBuilder = app;
             _useMonicaInvoked = true;
+            _revision++;
         }
     }
 
@@ -110,6 +133,7 @@ internal sealed class ModuleCompositionState
             }
 
             _mapMonicaInvoked = true;
+            _revision++;
         }
     }
 
@@ -149,6 +173,7 @@ internal sealed class ModuleCompositionState
 
             _completionAttempted = true;
             _pendingCompletionPoint = completionPoint;
+            _revision++;
             return true;
         }
     }
@@ -166,24 +191,45 @@ internal sealed class ModuleCompositionState
             }
 
             _completionPoint = _pendingCompletionPoint;
+            _revision++;
         }
     }
 
     /// <summary>
     /// Records a terminal completion failure without presenting the composition as merely incomplete.
     /// </summary>
-    internal void FailCompletion(Exception exception)
+    internal void FailCompletion(Exception exception, ModuleCompositionFailureKind failureKind)
     {
         ArgumentNullException.ThrowIfNull(exception);
 
         lock (_gate)
         {
-            if (!_completionAttempted || _pendingCompletionPoint is null)
+            if (_completionFailure is not null)
             {
-                throw new InvalidOperationException("Monica composition completion has not started.");
+                return;
             }
 
+            _completionAttempted = true;
+            _pendingCompletionPoint ??= _requiresEndpointMapping
+                ? ModuleCompositionCompletionPoint.EndpointMapping
+                : ModuleCompositionCompletionPoint.ServiceRegistration;
             _completionFailure = exception;
+            _failureKind = failureKind;
+            _revision++;
+        }
+    }
+
+    /// <summary>Captures detached terminal state without exposing raw exception details.</summary>
+    internal ModuleCompositionDiagnosticsState CaptureDiagnostics()
+    {
+        lock (_gate)
+        {
+            return new ModuleCompositionDiagnosticsState(
+                _revision,
+                HostBuilderType,
+                _completionPoint,
+                _completionFailure is not null,
+                _failureKind);
         }
     }
 
@@ -224,8 +270,10 @@ internal sealed class ModuleCompositionState
             _requiresEndpointMapping = false;
             _useMonicaInvoked = false;
             _completionFailure = null;
+            _failureKind = null;
             _completionPoint = null;
             HostBuilderType = null;
+            _revision++;
         }
     }
 
@@ -246,4 +294,19 @@ internal sealed class ModuleCompositionState
                 $"Monica composition has already completed at {_completionPoint}.");
         }
     }
+}
+
+/// <summary>Contains detached, sanitized composition lifecycle state for diagnostics projection.</summary>
+internal sealed record ModuleCompositionDiagnosticsState(
+    long Revision,
+    Type? HostBuilderType,
+    ModuleCompositionCompletionPoint? CompletionPoint,
+    bool IsFailed,
+    ModuleCompositionFailureKind? FailureKind)
+{
+    /// <summary>Gets whether composition reached a successful or failed terminal boundary.</summary>
+    internal bool IsTerminal => CompletionPoint is not null || IsFailed;
+
+    /// <summary>Gets whether composition completed successfully.</summary>
+    internal bool IsSucceeded => CompletionPoint is not null && !IsFailed;
 }

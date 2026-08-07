@@ -2,7 +2,6 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using Monica.Core.Modularity;
 using Monica.Core.Modularity.Abstractions;
-using Monica.Core.Modularity.Annotations;
 using Monica.Core.Modularity.Models;
 using Monica.StateStore.StackExchange;
 using Monica.StateStore.StackExchange.Connection;
@@ -17,16 +16,18 @@ public static class ModuleRedisStateStoreBuilderExtensions
     /// <summary>
     /// Use Redis state store as the global distributed state store provider
     /// </summary>
-    /// <param name="guide">StateStore module guide</param>
+    /// <param name="module">The StateStore registration that will use Redis.</param>
     /// <param name="action">Redis state store configuration delegate</param>
-    /// <returns>Redis StateStore module guide instance for chaining</returns>
-    public static ModuleRedisStateStoreGuide UseRedisStateStoreProvider(this ModuleStateStoreGuide guide,
+    /// <returns>The Redis StateStore module registration for chaining.</returns>
+    public static ModuleRegistration<ModuleRedisStateStore, ModuleRedisStateStoreOption> UseRedisStateStoreProvider(
+        this ModuleRegistration<ModuleStateStore, ModuleStateStoreOption> module,
         Action<ModuleRedisStateStoreOption>? action = null)
     {
-        guide.SetCommonDistributedStateStoreProvider<RedisStateStore>();
+        module.SetCommonDistributedStateStoreProvider<RedisStateStore>();
+        var providerModule = module.Include<ModuleRedisStateStore, ModuleRedisStateStoreOption>(action);
 
         // Register global IConnectionMultiplexer for common provider
-        guide.ConfigureStateStoreServices(services =>
+        module.ConfigureStateStoreServices(services =>
         {
             services.AddSingleton<IConnectionMultiplexer>(sp =>
             {
@@ -36,68 +37,66 @@ public static class ModuleRedisStateStoreBuilderExtensions
             });
         });
 
-        return guide.AddModule<ModuleRedisStateStore, ModuleRedisStateStoreOption, ModuleRedisStateStoreGuide>(action);
+        return providerModule;
     }
 
     /// <summary>
     /// Add Redis state store as a keyed StateStore provider
     /// </summary>
-    /// <param name="guide">StateStore module guide</param>
+    /// <param name="module">The StateStore registration being configured.</param>
     /// <param name="serviceKey">Service key to identify this StateStore instance</param>
     /// <param name="configureOptions">Redis state store configuration delegate</param>
-    /// <returns>StateStore module guide instance for chaining</returns>
-    public static ModuleStateStoreGuide AddKeyedRedisStateStore(
-        this ModuleStateStoreGuide guide,
+    /// <returns>The StateStore module registration for chaining.</returns>
+    public static ModuleRegistration<ModuleStateStore, ModuleStateStoreOption> AddKeyedRedisStateStore(
+        this ModuleRegistration<ModuleStateStore, ModuleStateStoreOption> module,
         string serviceKey,
         Action<ModuleRedisStateStoreOption> configureOptions)
     {
         ArgumentNullException.ThrowIfNull(serviceKey);
         ArgumentNullException.ThrowIfNull(configureOptions);
 
-        guide.AddModule<ModuleRedisStateStore, ModuleRedisStateStoreOption, ModuleRedisStateStoreGuide>();
-        guide.ConfigureStateStoreServices(services =>
+        var providerModule = module.Include<ModuleRedisStateStore, ModuleRedisStateStoreOption>()
+            .ConfigureProfile(serviceKey, configureOptions);
+        module.ConfigureStateStoreServices(services =>
         {
-            // Register keyed options
-            services.Configure(serviceKey, configureOptions);
+            var profile = providerModule.GetProfile(serviceKey);
 
             // Register keyed IConnectionMultiplexer using factory
             services.AddKeyedSingleton<IConnectionMultiplexer>(serviceKey, (sp, _) =>
             {
-                var optionsMonitor = sp.GetRequiredService<IOptionsMonitor<ModuleRedisStateStoreOption>>();
-                var keyedOptions = optionsMonitor.Get(serviceKey);
                 var factory = sp.GetRequiredService<IRedisConnectionFactory>();
-                return factory.CreateConnection(keyedOptions);
+                return factory.CreateConnection(profile);
             });
 
             // Register keyed RedisStateStore
             services.AddKeyedSingleton<IStateStore>(serviceKey, (sp, _) =>
             {
-                var optionsMonitor = sp.GetRequiredService<IOptionsMonitor<ModuleRedisStateStoreOption>>();
-                var keyedOptions = Options.Create(optionsMonitor.Get(serviceKey));
                 var keyedConnection = sp.GetRequiredKeyedService<IConnectionMultiplexer>(serviceKey);
-                return ActivatorUtilities.CreateInstance<RedisStateStore>(sp, keyedConnection, keyedOptions);
+                return ActivatorUtilities.CreateInstance<RedisStateStore>(
+                    sp,
+                    keyedConnection,
+                    Options.Create(profile));
             });
-        }, serviceKey);
+        });
 
-        guide.RecordKeyedServiceKey(serviceKey);
-        return guide;
+        module.RecordKeyedServiceKey(serviceKey);
+        return module;
     }
 }
 
-[ModuleKey(BuiltInModuleKey.RedisStateStore)]
-public class ModuleRedisStateStore(ModuleRedisStateStoreOption option)
-    : ModuleBase<ModuleRedisStateStore, ModuleRedisStateStoreOption, ModuleRedisStateStoreGuide>(option),
+public class ModuleRedisStateStore : MonicaModule<ModuleRedisStateStoreOption>,
       IStateStoreModuleProvider
 {
 
-    public override void ClaimDependencies()
+    public override void Describe(ModuleDescriptor module)
     {
         // Depends on StateStore basic module
-        DependsOnModule<ModuleStateStoreGuide>().Register();
+        module.Require<ModuleStateStore, ModuleStateStoreOption>();
     }
 
-    public override void ConfigureServices(IServiceCollection services)
+    public override void ConfigureServices(ModuleContext<ModuleRedisStateStoreOption> context)
     {
+        var services = context.Services;
         // Only register connection factory (infrastructure)
         // IConnectionMultiplexer and IDistributedStateStore are registered in UseRedisStateStoreProvider
         services.AddSingleton<IRedisConnectionFactory, RedisConnectionFactory>();
@@ -105,7 +104,7 @@ public class ModuleRedisStateStore(ModuleRedisStateStoreOption option)
 
     #region IStateStoreModuleProvider Implementation
 
-    public ModuleKey ProvidesFor => BuiltInModuleKey.StateStore;
+    public Type ProvidesFor => typeof(ModuleStateStore);
 
     public EStateStoreProviderType ProviderType => EStateStoreProviderType.Redis;
 
@@ -119,9 +118,7 @@ public class ModuleRedisStateStore(ModuleRedisStateStoreOption option)
     #endregion
 }
 
-public class ModuleRedisStateStoreGuide : ModuleGuide<ModuleRedisStateStore, ModuleRedisStateStoreOption, ModuleRedisStateStoreGuide>
-{
-}
+
 
 /// <summary>
 /// Redis state store module configuration options

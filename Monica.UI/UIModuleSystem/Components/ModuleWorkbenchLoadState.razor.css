@@ -1,0 +1,9 @@
+.load-state {
+    display: flex;
+    min-height: 28rem;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    gap: 1rem;
+    text-align: center;
+}

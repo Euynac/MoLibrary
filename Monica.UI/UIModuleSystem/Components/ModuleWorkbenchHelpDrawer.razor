@@ -1,0 +1,39 @@
+@using Microsoft.Extensions.Localization
+@using Monica.UI.Localization
+@using Monica.UI.UIModuleSystem.State
+@inject IStringLocalizer<ModuleSystemResource> L
+
+<MudDrawer Open="@Session.IsHelpDrawerOpen"
+           OpenChanged="@OpenChanged"
+           Anchor="Anchor.End"
+           Variant="DrawerVariant.Temporary"
+           Overlay="true"
+           OverlayAutoClose="true"
+           Fixed="true"
+           Width="min(28rem, 100vw)"
+           Elevation="8">
+    <div class="help-drawer-content">
+        <MudDrawerHeader>
+            <div class="help-header">
+                <div>
+                    <MudText Typo="Typo.overline">@L["Help:Eyebrow"]</MudText>
+                    <MudText Typo="Typo.h5">@L["Help:Title"]</MudText>
+                </div>
+                <MudIconButton Icon="@Icons.Material.Filled.Close"
+                               OnClick="@(() => OpenChanged.InvokeAsync(false))"
+                               aria-label="@L["Aria:CloseHelp"]" />
+            </div>
+        </MudDrawerHeader>
+        <div class="help-topics">
+            <article><MudIcon Icon="@Icons.Material.Filled.Route" Color="Color.Primary" /><div><strong>@L["Help:CriticalPath:Title"]</strong><p>@L["Help:CriticalPath:Description"]</p></div></article>
+            <article><MudIcon Icon="@Icons.Material.Filled.Verified" Color="Color.Success" /><div><strong>@L["Help:Outcome:Title"]</strong><p>@L["Help:Outcome:Description"]</p></div></article>
+            <article><MudIcon Icon="@Icons.Material.Filled.FindInPage" Color="Color.Info" /><div><strong>@L["Help:Discovery:Title"]</strong><p>@L["Help:Discovery:Description"]</p></div></article>
+            <article><MudIcon Icon="@Icons.Material.Filled.Security" Color="Color.Warning" /><div><strong>@L["Help:Privacy:Title"]</strong><p>@L["Help:Privacy:Description"]</p></div></article>
+        </div>
+    </div>
+</MudDrawer>
+
+@code {
+    [Parameter, EditorRequired] public ModuleSystemWorkbenchSession Session { get; set; } = default!;
+    [Parameter] public EventCallback<bool> OpenChanged { get; set; }
+}

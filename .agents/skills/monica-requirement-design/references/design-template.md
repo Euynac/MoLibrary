@@ -17,7 +17,7 @@
 | Module type | New module / Extension / Cross-cutting | {Why} |
 | Project name | `Monica.{Name}` | {Why} |
 | UI module | Mixed / Standalone / Framework / None | {Why} |
-| Runtime kind | `ModuleBase` / `WebModuleBase` / `WebModuleBase` with downgrade | {Why this lifecycle is needed} |
+| Runtime capability | `MonicaModule<TOptions>` / `IWebModule` / `IWebHostRequiredModule` | {Why this lifecycle and host requirement are needed} |
 
 ### High-Level Architecture
 
@@ -58,8 +58,8 @@ public record {ModelName}(
 |-----------|-----------|---------|
 | Module | `Module{Name}` | {Purpose} |
 | Option | `Module{Name}Option` | {Purpose} |
-| Guide | `Module{Name}Guide` | {Purpose} |
-| Builder Extension | `monica.Add{Name}()` | {Purpose} |
+| Registration Extensions | `Module{Name}RegistrationExtensions` | {Purpose} |
+| Builder Entry | `monica.Add{Name}()` | {Purpose} |
 
 ### Module Registration
 
@@ -72,12 +72,12 @@ monica.Add{Name}(options =>
 
 ### Module Dependencies
 
-Modules declare dependencies by overriding `ClaimDependencies()` on `ModuleBase<TModuleSelf, TModuleOption, TModuleGuide>` or `WebModuleBase<TModuleSelf, TModuleOption, TModuleGuide>`.
+Modules declare option-free dependencies by overriding `Describe(ModuleDescriptor)` on `MonicaModule<TOptions>`.
 
 ```csharp
-public override void ClaimDependencies()
+public override void Describe(ModuleDescriptor module)
 {
-    DependsOnModule<{DependencyGuide}>().Register();
+    module.Require<{DependencyModule}, {DependencyOption}>();
 }
 ```
 
@@ -86,7 +86,7 @@ public override void ClaimDependencies()
 ```
 Monica.{Name}/
 ├── Modules/
-│   └── Module{Name}.cs              # Module, Option, Guide, BuilderExtensions
+│   └── Module{Name}.cs              # Module, Option, RegistrationExtensions
 ├── Abstractions/
 │   └── I{Feature}Service.cs         # Public contract
 ├── Facades/
@@ -173,7 +173,7 @@ UI components inject Facades directly. Do not introduce a separate UI service la
 
 1. **Create project and module skeleton**
    - Create `Monica.{Name}/` project
-   - Implement Module, Option, Guide, BuilderExtensions
+   - Implement Module, Option, and registration extensions
    - Add to solution
 
 2. **Define interfaces and models**

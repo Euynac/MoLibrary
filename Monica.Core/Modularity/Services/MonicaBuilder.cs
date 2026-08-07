@@ -17,7 +17,7 @@ internal sealed class MonicaBuilder(IHostApplicationBuilder hostBuilder, MonicaA
     {
         EnsureCompositionIsOpen();
         ArgumentNullException.ThrowIfNull(configure);
-        configure(application.Application);
+        configure(application.ApplicationConfiguration);
         return this;
     }
 
@@ -26,7 +26,7 @@ internal sealed class MonicaBuilder(IHostApplicationBuilder hostBuilder, MonicaA
     {
         EnsureCompositionIsOpen();
         ArgumentNullException.ThrowIfNull(configure);
-        configure(application.ModuleSystem);
+        configure(application.ModuleSystemConfiguration);
         return this;
     }
 
@@ -39,14 +39,14 @@ internal sealed class MonicaBuilder(IHostApplicationBuilder hostBuilder, MonicaA
     }
 
     /// <inheritdoc />
-    public TModuleGuide AddModule<TModule, TModuleOption, TModuleGuide>(
+    public ModuleRegistration<TModule, TModuleOption> AddModule<TModule, TModuleOption>(
         Action<TModuleOption>? configure = null)
         where TModuleOption : ModuleOptions<TModule>, new()
-        where TModuleGuide : ModuleGuide<TModule, TModuleOption, TModuleGuide>, new()
-        where TModule : ModuleBase<TModule, TModuleOption, TModuleGuide>
+        where TModule : MonicaModule<TModuleOption>, new()
     {
         EnsureCompositionIsOpen();
-        return application.CreateGuide<TModuleGuide>().Register(configure);
+        return new ModuleRegistration<TModule, TModuleOption>(application, configuredBy: null)
+            .Configure(configure);
     }
 
     /// <summary>
@@ -57,7 +57,8 @@ internal sealed class MonicaBuilder(IHostApplicationBuilder hostBuilder, MonicaA
         EnsureCompositionIsOpen();
         _isCompleted = true;
 
-        application.ModuleSystem.Validate();
+        application.ModuleSystemConfiguration.Validate();
+        application.ModuleSystemConfiguration.ValidateEnvironment(hostBuilder.Environment);
         application.Modules.RegisterServices(hostBuilder);
     }
 

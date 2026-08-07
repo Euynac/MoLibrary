@@ -84,7 +84,7 @@ Before writing the design document, perform the following analysis:
 
 1. **Module placement**: Determine whether this requires a new module (`Monica.{Name}/`), an extension to an existing module, or a cross-cutting concern.
 2. **Pattern selection**: Determine which Monica patterns apply:
-   - Standard infrastructure module (Module, Option, Guide, BuilderExtensions)
+   - Standard infrastructure module (Module, Option, registration extensions)
    - UI module (Mixed, Standalone, or Framework pattern)
    - Hosted service (MoBackgroundService or CoordinatedLeaderService)
    - Service layer (UI with `Res<T>` or infrastructure with exceptions)

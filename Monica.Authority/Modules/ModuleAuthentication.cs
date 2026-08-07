@@ -14,7 +14,6 @@ using Monica.Authority.Localization;
 using Monica.Core;
 using Monica.Core.Modularity;
 using Monica.Core.Modularity.Abstractions;
-using Monica.Core.Modularity.Annotations;
 using Monica.Core.Modularity.Models;
 
 // ReSharper disable once CheckNamespace
@@ -27,24 +26,62 @@ public static class ModuleAuthenticationBuilderExtensions
         /// <summary>
         /// Configure the Authentication module
         /// </summary>
-        public ModuleAuthenticationGuide AddAuthentication(Action<ModuleAuthenticationOption>? action = null)
+        public ModuleRegistration<ModuleAuthentication, ModuleAuthenticationOption> AddAuthentication(
+            Action<ModuleAuthenticationOption>? action = null)
         {
-            return builder.AddModule<ModuleAuthentication, ModuleAuthenticationOption, ModuleAuthenticationGuide>(action);
+            return builder.AddModule<ModuleAuthentication, ModuleAuthenticationOption>(action);
+        }
+    }
+
+    extension(ModuleRegistration<ModuleAuthentication, ModuleAuthenticationOption> registration)
+    {
+        public ModuleRegistration<ModuleAuthentication, ModuleAuthenticationOption> ConfigSystemUser<T>(
+            T curSystemEnum,
+            Action<SystemUserOptions>? configure = null)
+            where T : struct, Enum
+        {
+            return registration.ConfigureServices(context =>
+                context.Services.Configure((SystemUserOptions options) =>
+                {
+                    options.SetCurSystemUser(curSystemEnum);
+                    configure?.Invoke(options);
+                }));
+        }
+
+        public ModuleRegistration<ModuleAuthentication, ModuleAuthenticationOption> ConfigDefaultSystemUser(
+            Action<SystemUserOptions>? configure = null)
+        {
+            return registration.ConfigSystemUser(EDefaultSystemUser.System, configure);
+        }
+
+        /// <summary>
+        /// Allows bearer tokens in the query string for narrowly scoped transport paths.
+        /// </summary>
+        public ModuleRegistration<ModuleAuthentication, ModuleAuthenticationOption> AllowQueryStringAccessTokens(
+            params string[] pathPrefixes)
+        {
+            return registration.Configure(options => options.AllowQueryStringAccessTokens(pathPrefixes));
         }
     }
 }
 
-[ModuleKey(BuiltInModuleKey.Authentication)]
-public class ModuleAuthentication(ModuleAuthenticationOption option) : WebModuleBase<ModuleAuthentication, ModuleAuthenticationOption, ModuleAuthenticationGuide>(option)
+public class ModuleAuthentication : MonicaModule<ModuleAuthenticationOption>, IWebHostRequiredModule
 {
-    public override void ClaimDependencies()
+    public override void Describe(ModuleDescriptor module)
     {
-        DependsOnModule<ModuleLocalizationGuide>().Register()
-            .AddResource<AuthorityResource>();
+        module.AfterIfPresent<ModuleCors, ModuleCorsOption>();
+        module.Require<ModuleLocalization, ModuleLocalizationOption>(localization =>
+        {
+            if (!localization.ResourceMarkerTypes.Contains(typeof(AuthorityResource)))
+            {
+                localization.ResourceMarkerTypes.Add(typeof(AuthorityResource));
+            }
+        });
     }
 
-    public override void ConfigureServices(IServiceCollection services)
+    public override void ConfigureServices(ModuleContext<ModuleAuthenticationOption> context)
     {
+        var services = context.Services;
         services.TryAddSingleton<AuthorityMessageLocalizer>();
 
         // Relies on AsyncLocal so the async static singleton keeps a separate HttpContext per request thread
@@ -55,6 +92,8 @@ public class ModuleAuthentication(ModuleAuthenticationOption option) : WebModule
         services.AddSingleton<ICurrentPrincipalAccessor, CurrentPrincipalAccessor>(); // Singleton is sufficient here
 
         services.AddSingleton<IPasswordCrypto, PasswordCrypto>();
+        services.Configure<SystemUserOptions>(options => options.SetCurSystemUser(EDefaultSystemUser.System));
+        services.AddSingleton<ISystemUserManager, SystemUserManager>();
         services.AddAuthentication(x =>
         {
             x.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
@@ -66,10 +105,10 @@ public class ModuleAuthentication(ModuleAuthenticationOption option) : WebModule
             x.TokenValidationParameters = new TokenValidationParameters
             {
                 ValidateIssuer = true,
-                ValidIssuer = option.Issuer,
+                ValidIssuer = Option.Issuer,
                 ValidateIssuerSigningKey = true,
-                IssuerSigningKey = option.SecurityKey,
-                ValidAudience = option.Audience,
+                IssuerSigningKey = Option.SecurityKey,
+                ValidAudience = Option.Audience,
                 ValidateAudience = true,
                 ValidateLifetime = true,
                 ClockSkew = TimeSpan.FromMinutes(1)
@@ -80,7 +119,7 @@ public class ModuleAuthentication(ModuleAuthenticationOption option) : WebModule
                 {
                     var accessToken = context.Request.Query["access_token"].ToString();
                     var requestPath = context.Request.Path;
-                    var isAllowedPath = option.QueryStringAccessTokenPathPrefixes.Any(prefix =>
+                    var isAllowedPath = Option.QueryStringAccessTokenPathPrefixes.Any(prefix =>
                         requestPath.StartsWithSegments(
                             new PathString(prefix),
                             StringComparison.OrdinalIgnoreCase));
@@ -106,89 +145,40 @@ public class ModuleAuthentication(ModuleAuthenticationOption option) : WebModule
     }
 
     // Must be registered after the CORS middleware; otherwise CORS stops working
-    public override void ConfigureApplicationBuilder(IApplicationBuilder app)
+    public override void ConfigureApplicationBuilder(WebModuleContext<ModuleAuthenticationOption> context)
     {
-        app.UseAuthentication();
+        context.ApplicationBuilder.UseAuthentication();
     }
+
+    protected override ModuleWebStage GetApplicationBuilderStage() => ModuleWebStage.AfterRouting;
 }
 
-public class ModuleAuthenticationGuide : WebModuleGuide<ModuleAuthentication, ModuleAuthenticationOption, ModuleAuthenticationGuide>
+/// <summary>
+/// Configures JWT validation and token lifetimes for the current Monica host.
+/// </summary>
+public class ModuleAuthenticationOption : ModuleOptions<ModuleAuthentication>
 {
-    private const string CONFIG_SYSTEM_USER = nameof(CONFIG_SYSTEM_USER);
+    internal List<string> QueryStringAccessTokenPathPrefixes { get; } = [];
 
-    protected override string[] GetRequestedConfigMethodKeys()
-    {
-        return [CONFIG_SYSTEM_USER];
-    }
-
-    public ModuleAuthenticationGuide ConfigSystemUser<T>(T curSystemEnum, Action<SystemUserOptions>? action = null) where T : struct, Enum
-    {
-        return ConfigSystemUserCore(curSystemEnum, ModuleRegistrationOrder.Normal, action);
-    }
-
-    public ModuleAuthenticationGuide ConfigDefaultSystemUser(Action<SystemUserOptions>? action = null)
-    {
-        return ConfigSystemUserCore(EDefaultSystemUser.System, ModuleRegistrationOrder.PreConfig, action);
-    }
-
-    /// <summary>
-    /// Allows JWT bearer tokens to be read from the <c>access_token</c> query parameter only for the
-    /// specified request-path prefixes.
-    /// </summary>
-    /// <remarks>
-    /// Query-string tokens can be exposed by browser history, proxy logs, and server access logs. Use this
-    /// only for transports such as browser WebSockets that cannot set an authorization header, and scope each
-    /// prefix to a mapped hub route. Header-based bearer authentication remains enabled for every route.
-    /// </remarks>
-    /// <param name="pathPrefixes">One or more application-relative path prefixes, such as <c>/hubs/orders</c>.</param>
-    /// <returns>The current authentication guide.</returns>
-    /// <exception cref="ArgumentException">
-    /// Thrown when a prefix is empty or would allow query-string tokens on the entire application.
-    /// </exception>
-    public ModuleAuthenticationGuide AllowQueryStringAccessTokens(params string[] pathPrefixes)
+    internal void AllowQueryStringAccessTokens(IEnumerable<string> pathPrefixes)
     {
         ArgumentNullException.ThrowIfNull(pathPrefixes);
-        if (pathPrefixes.Length == 0)
-        {
-            throw new ArgumentException("At least one query-string access-token path prefix is required.", nameof(pathPrefixes));
-        }
-
         var normalizedPrefixes = pathPrefixes
             .Select(NormalizeQueryStringTokenPathPrefix)
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .ToArray();
-
-        ConfigureModuleOption(option =>
+        if (normalizedPrefixes.Length == 0)
         {
-            foreach (var prefix in normalizedPrefixes)
+            throw new ArgumentException("At least one query-string access-token path prefix is required.", nameof(pathPrefixes));
+        }
+
+        foreach (var prefix in normalizedPrefixes)
+        {
+            if (!QueryStringAccessTokenPathPrefixes.Contains(prefix, StringComparer.OrdinalIgnoreCase))
             {
-                if (!option.QueryStringAccessTokenPathPrefixes.Contains(prefix, StringComparer.OrdinalIgnoreCase))
-                {
-                    option.QueryStringAccessTokenPathPrefixes.Add(prefix);
-                }
+                QueryStringAccessTokenPathPrefixes.Add(prefix);
             }
-        });
-
-        return this;
-    }
-
-    private ModuleAuthenticationGuide ConfigSystemUserCore<T>(
-        T curSystemEnum,
-        ModuleRegistrationOrder order,
-        Action<SystemUserOptions>? action = null) where T : struct, Enum
-    {
-        ConfigureServices(context =>
-        {
-            context.Services.Configure((SystemUserOptions o) =>
-            {
-                o.SetCurSystemUser(curSystemEnum);
-                action?.Invoke(o);
-            });
-            context.Services.AddSingleton<ISystemUserManager, SystemUserManager>();
-        }, order,
-            key: CONFIG_SYSTEM_USER,
-            duplicateBehavior: ModuleConfigurationDuplicateBehavior.ExclusiveLastWins);
-        return this;
+        }
     }
 
     private static string NormalizeQueryStringTokenPathPrefix(string pathPrefix)
@@ -208,14 +198,6 @@ public class ModuleAuthenticationGuide : WebModuleGuide<ModuleAuthentication, Mo
 
         return normalized;
     }
-}
-
-/// <summary>
-/// Configures JWT validation and token lifetimes for the current Monica host.
-/// </summary>
-public class ModuleAuthenticationOption : ModuleOptions<ModuleAuthentication>
-{
-    internal List<string> QueryStringAccessTokenPathPrefixes { get; } = [];
 
     /// <summary>
     /// Gets the signing key derived from <see cref="Secret"/>.

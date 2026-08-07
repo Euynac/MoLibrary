@@ -2,6 +2,7 @@ using System.Collections.Concurrent;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Monica.Core.XmlDocumentation.Abstractions;
+using Monica.Core.TypeDiscovery.Models;
 using Monica.Modules;
 using Monica.ProjectUnits.Abstractions;
 using Monica.ProjectUnits.Models;
@@ -18,37 +19,25 @@ internal sealed class ProjectUnitCatalog : IProjectUnitCatalog, IRequestFilter
     private readonly Dictionary<string, ProjectUnit> _unitsByName = [];
     private readonly Dictionary<string, Type> _enumTypes = [];
     private readonly ConcurrentDictionary<string, byte> _disabledRequestUrls = new(StringComparer.Ordinal);
-    private readonly IReadOnlyList<Func<Type, ProjectUnit?>> _unitFactories;
+    private readonly ProjectUnitFactory _unitFactory;
     private ProjectUnitDocumentationResolver _documentation = new(null);
 
-    internal ProjectUnitCatalog(ModuleProjectUnitsOption options)
+    internal ProjectUnitCatalog(
+        ModuleProjectUnitsOption options,
+        ProjectUnitNamingOptions namingOptions,
+        ILogger logger)
     {
         Options = options;
-
-        // Factory order is explicit and host-owned. More specific unit types precede their broader base categories.
-        _unitFactories =
-        [
-            type => UnitCrudApplicationService.Create(type, this),
-            type => UnitApplicationService.Create(type, this),
-            type => UnitHttpApi.Create(type, this),
-            type => UnitConfiguration.Create(type, this),
-            type => UnitDomainEventHandler.Create(type, this),
-            type => UnitLocalEventHandler.Create(type, this),
-            type => UnitDomainEvent.Create(type, this),
-            type => UnitRepository.Create(type, this),
-            type => UnitEntity.Create(type, this),
-            type => UnitDomainService.Create(type, this),
-            type => UnitRecurringJob.Create(type, this),
-            type => UnitTriggeredJob.Create(type, this),
-            type => UnitSeeder.Create(type, this),
-            type => UnitHostedService.Create(type, this),
-            type => UnitRequestDto.Create(type, this)
-        ];
+        NamingOptions = namingOptions;
+        Logger = logger;
+        _unitFactory = new ProjectUnitFactory(this);
     }
 
     internal ModuleProjectUnitsOption Options { get; }
 
-    internal ILogger Logger => Options.Logger;
+    internal ProjectUnitNamingOptions NamingOptions { get; }
+
+    internal ILogger Logger { get; }
 
     internal ProjectUnitDocumentationResolver Documentation => _documentation;
 
@@ -60,15 +49,14 @@ internal sealed class ProjectUnitCatalog : IProjectUnitCatalog, IRequestFilter
     }
 
     /// <summary>
-    /// Discovers project units while preserving the incoming business-type stream for downstream iterators.
+    /// Discovers project units from the compiler-owned structural shapes.
     /// </summary>
-    internal IEnumerable<Type> Discover(IEnumerable<Type> types)
+    internal void Discover(IEnumerable<BusinessTypeShape> shapes)
     {
-        foreach (var type in types)
+        foreach (var shape in shapes)
         {
-            DiscoverProjectUnit(type);
-            DiscoverEnum(type);
-            yield return type;
+            DiscoverProjectUnit(shape);
+            DiscoverEnum(shape.Type);
         }
     }
 
@@ -155,14 +143,9 @@ internal sealed class ProjectUnitCatalog : IProjectUnitCatalog, IRequestFilter
         return _disabledRequestUrls.ContainsKey(path);
     }
 
-    private void DiscoverProjectUnit(Type type)
+    private void DiscoverProjectUnit(BusinessTypeShape shape)
     {
-        if (type is not { IsClass: true, FullName: not null, IsGenericType: false, IsAbstract: false })
-        {
-            return;
-        }
-
-        var unit = CreateUnit(type);
+        var unit = _unitFactory.Create(shape);
         if (unit is null)
         {
             return;
@@ -187,19 +170,6 @@ internal sealed class ProjectUnitCatalog : IProjectUnitCatalog, IRequestFilter
         {
             _enumTypes.TryAdd(type.Name, type);
         }
-    }
-
-    private ProjectUnit? CreateUnit(Type type)
-    {
-        foreach (var factory in _unitFactories)
-        {
-            if (factory(type) is { } unit)
-            {
-                return unit;
-            }
-        }
-
-        return null;
     }
 
     private static bool TryGetConfigurationUsage(

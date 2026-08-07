@@ -1,6 +1,6 @@
 ---
 name: monica-ui-audit
-description: Audit and fix Monica Blazor UI compliance, including async component lifetime and JS interop ownership, visual hierarchy, theme-token use, MudBlazor primitives, responsive layout containment, overflow ownership, and duplicate utility logic. Use when the user asks to "audit UI components", "check theme compliance", "find CSS violations", "review component styling", "theme-first audit", "UI规约检查", "组件合规", or reports intermittent disposal/JS interop failures, a bland or monotonous UI, clipping, wasted width, or broken responsive sizing.
+description: Audit and fix Monica Blazor UI compliance, including async component lifetime and JS interop ownership, visual hierarchy, theme-token use, MudBlazor primitives, responsive layout containment, overflow ownership, CLR type-name formatting, and duplicate utility logic. Use when the user asks to "audit UI components", "check theme compliance", "find CSS violations", "review component styling", "theme-first audit", "UI规约检查", "组件合规", or reports intermittent disposal/JS interop failures, a bland or monotonous UI, clipping, wasted width, or broken responsive sizing.
 ---
 
 # Blazor UI Compliance Audit
@@ -80,18 +80,20 @@ Indicators:
 
 Fix: remove theme coupling. If the class is only used by the owning component, keep it in the component's `.razor.css`. Promote a hook to shared CSS only when multiple components intentionally share the same layout contract.
 
-### P5 — Duplicate utility logic
+### P5 — Duplicate utility or raw CLR type-display logic
 
 Indicators:
 - Text-resolution helpers like `GetItemText(NavigationItem)` duplicated across components instead of using `NavigationItem.ResolveDisplayText(localizer)`
 - Manual route-matching wrappers instead of `NavigationRouteMatcher.GetActiveClass()`
 - Repeated localization key lookup patterns that could use shared model methods
+- Ordinary UI labels, tooltips, table cells, or drawer details receive type names from `Type.FullName`, `Type.AssemblyQualifiedName`, or `Type.ToString()`, exposing CLR generic backticks, `[[...]]` assembly-qualified arguments, version, culture, or public-key-token metadata
+- Razor components format `System.Type` locally instead of receiving one normalized display value from the producing diagnostics, facade, view-model, or state boundary
 
-Fix: use the shared utilities in `Monica.UI/Shell/Support/` and methods on `Monica.UI/Shell/Models/NavigationItem`.
+Fix: use the shared utilities in `Monica.UI/Shell/Support/` and methods on `Monica.UI/Shell/Models/NavigationItem`. Format user-visible CLR type identities with `Monica.Tool.Extensions.GenericTypeExtensions.GetCleanFullName()` at the producing boundary, then pass the clean string to Razor. Do not expose assembly-qualified type identity in ordinary UI. Showing an assembly name or identity remains valid when assembly loading, binding, inventory, or module provenance is the explicit subject of the view.
 
 ## Audit Workflow
 
-1. **Scan**: Read all `.razor`, `.razor.cs`, and `.razor.css` files in the target scope. Follow injected component-state owners, DI lifetimes, owned JS modules, JS-to-.NET callbacks, subscriptions, timers, and background tasks.
+1. **Scan**: Read all `.razor`, `.razor.cs`, and `.razor.css` files in the target scope. Follow injected component-state owners, DI lifetimes, owned JS modules, JS-to-.NET callbacks, subscriptions, timers, and background tasks. Trace user-visible type-name strings back to their producer and search production UI paths for direct `Type.FullName`, `Type.AssemblyQualifiedName`, and `Type.ToString()` formatting.
 2. **Trace lifetime**: Starting from initialization, render callbacks, UI/navigation events, and JS callbacks, mark every incomplete `await` and every fire-and-forget edge. Trace what can run after component disposal begins, who owns each disposable reference, which operation can publish or detach it, and whether teardown is idempotent. Do not infer safety from Blazor's synchronization context: component code is re-entrant at incomplete awaits and disposal timing relative to lifecycle tasks is nondeterministic.
 3. **Trace containment**: For every dialog, drawer, grid, split view, table, or code/diff surface in scope, follow every ancestor from the outer surface to the content. Check width/max-width, flex/grid shrinkability, rendered selector reachability under CSS isolation, long-token behavior, height constraints, and which element owns each scrollbar. When selector reachability is suspect, verify the target's computed style or compare the compiled isolated selector with the rendered DOM; do not infer success from a class name alone.
 4. **Detect**: For each violation, note the file path, line range, category (P0–P5), evidence, and the component that should own the fix.
@@ -101,7 +103,8 @@ Fix: use the shared utilities in `Monica.UI/Shell/Support/` and methods on `Moni
 8. **Build**: Build the affected project with the WSL Windows-path rule, for example `dotnet build '<windows-project-path>' -m` for the specific UI module project. The build must produce 0 warnings.
 9. **Verify lifetime deterministically**: When P0 applies, test the teardown interleaving rather than relying only on manual navigation. Block an initialization or JS invocation, begin disposal, then release the blocked continuation; assert that no disposed reference is invoked, a late-created reference is disposed instead of published, late continuations perform no state mutation, JS invocation, or render request beyond required cleanup of their own late-created resource, and repeated disposal is safe. In browser verification, rapidly navigate away/remount during first render and refresh work. For Blazor Server, also exercise circuit loss where feasible and assert no unhandled `ObjectDisposedException` or `JSDisconnectedException`.
 10. **Verify layout in browser**: Test representative desktop and narrow viewports. For the document, dialog surface, and every element not intentionally designated as a local horizontal scroller, assert `scrollWidth <= clientWidth`. For every surface intended to fill its owner, also compare its rendered width with the owner's available content width; an overflow-free half-width child is still a failure. Record the intended local scroll owner, keep wrapped or truncated identifiers inspectable/copyable, and exercise content-driven panes with both short and long data when feasible so they neither retain unexplained blank height nor grow without a viewport cap.
-11. **Report**: List what changed, lifetime interleavings tested, browser assertions, any intentional local scrolling, theme files that may need a shared selector, and remaining manual verification.
+11. **Verify type display**: Inspect rendered type labels and their tooltips. Outside explicit assembly-diagnostics views, confirm generic types contain no CLR backticks, `[[...]]` arguments, `Version=`, `Culture=`, or `PublicKeyToken=` metadata, and confirm the producing boundary uses `GetCleanFullName()` rather than a Razor-local formatter.
+12. **Report**: List what changed, lifetime interleavings tested, browser assertions, type-display assertions, any intentional local scrolling, theme files that may need a shared selector, and remaining manual verification.
 
 ## Report Template
 
@@ -120,6 +123,7 @@ When P0 is in scope, include the tested initialization/invocation/disposal order
 - Do NOT reject purposeful token-based color, elevation, gradients, borders, or atmosphere merely because a more minimal treatment exists.
 - Do NOT break existing responsive or compact-mode behavior.
 - Do NOT treat `overflow-x: hidden` on the page or dialog as a containment fix; repair the child width contract and keep scrolling on the smallest surface that needs it.
+- Do NOT render `Type.FullName`, `Type.AssemblyQualifiedName`, or `Type.ToString()` directly in ordinary UI. Use `GetCleanFullName()` at the producing boundary; reserve assembly identity for views explicitly about assemblies or binding provenance.
 - Layout-only hooks (sizing, scroll, positioning, truncation) should usually stay in the component's `.razor.css`. Use `mo-*` shared CSS only for truly shared layout utilities used across multiple modules.
 - Active route state: use `.active` class via `NavigationRouteMatcher.GetActiveClass()`, styled by themes on `.mud-menu-item.active`.
 - Follow `monica-ui-development` SKILL.md Rule #1 (CSS Isolation), Rule #4 (Lifecycle and JS Interop), Rule #9 (Theme-First Visual Richness and Component Responsibility), and Rule #10 (Use MudBlazor Primitives for Interactive UI) as the authoritative Monica references.

@@ -62,13 +62,14 @@
                     </MudChip>
                 }
 
-                @if (Provider.OptionType != null)
+                @if (Provider.HasOptionDiagnostics)
                 {
                     <MudChip T="string" Size="Size.Small" Color="Color.Secondary" Variant="Variant.Outlined">
                         <MudIcon Icon="@Icons.Material.Filled.Settings" Size="Size.Small" Class="mr-1" />
                         @L["Providers:Capabilities:HasOptions"]
                     </MudChip>
                 }
+
             </div>
         </MudStack>
     </MudCardContent>

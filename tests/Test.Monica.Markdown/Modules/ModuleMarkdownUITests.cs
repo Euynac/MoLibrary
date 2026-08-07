@@ -1,5 +1,7 @@
 using AwesomeAssertions;
+using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.DependencyInjection;
+using Monica.Core.Modularity.Extensions;
 using Monica.Markdown.UIMarkdown.Interop;
 using Monica.Markdown.UIMarkdown.State;
 using Monica.Modules;
@@ -9,11 +11,15 @@ namespace Test.Monica.Markdown.Modules;
 public sealed class ModuleMarkdownUITests
 {
     [Fact]
-    public void ConfigureServices_ShouldRegisterFactoriesWithoutCapturingDisposablePageState()
+    public void Composition_ShouldRegisterFactoriesWithoutCapturingDisposablePageState()
     {
-        var services = new ServiceCollection();
-
-        new ModuleMarkdownUI(new ModuleMarkdownUIOption()).ConfigureServices(services);
+        var builder = WebApplication.CreateBuilder();
+        builder.AddMonica(monica =>
+        {
+            monica.ConfigureTypeDiscovery(static options => options.ExcludeDefault());
+            monica.AddMarkdownUI();
+        });
+        var services = builder.Services;
 
         services.Should().ContainSingle(descriptor =>
             descriptor.ServiceType == typeof(MarkdownViewerPageStateFactory)

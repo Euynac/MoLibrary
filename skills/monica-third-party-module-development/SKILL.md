@@ -1,6 +1,6 @@
 ---
 name: monica-third-party-module-development
-description: Create, modernize, validate, package, containerize, or publish independent Monica extension repositories. Use when building one or several publisher-owned Monica NuGet packages, separating capability/provider/UI packages, assigning module keys and cross-package dependencies, pairing a provider connector with CPU or NVIDIA OCI images, applying ecosystem branding, preparing CI/release automation, or migrating an older third-party module repository.
+description: Create, modernize, validate, package, containerize, or publish independent Monica extension repositories. Use when building one or several publisher-owned Monica NuGet packages, separating capability/provider/UI packages, assigning manifest ecosystem keys and cross-package dependencies, pairing a provider connector with CPU or NVIDIA OCI images, applying ecosystem branding, preparing CI/release automation, or migrating an older third-party module repository.
 ---
 
 # Monica Third-Party Module Development
@@ -12,7 +12,7 @@ Resolve every bundled `scripts/`, `references/`, and `assets/` path from this sk
 ## Required companion skills
 
 - Use `$monica-architecture` for package and module boundaries.
-- Use `$monica-development` for registration, Guide methods, providers, Facades, and services.
+- Use `$monica-development` for host-bound registrations, providers, Facades, and services.
 - Use `$monica-ui-development`, `$monica-ui-audit`, and `$monica-ui-localization` for UI packages.
 - Use `$monica-unit-testing` for tests.
 - Use `$monica-docs-authoring` only when changing Monica.Docs.
@@ -26,7 +26,7 @@ Independently published packages override Monica's first-party test naming rule:
 2. Collect the repository contract:
    - durable publisher/repository identity and aligned release version
    - every NuGet package ID, project path, description, tags, and package dependency
-   - every module name, kind, key, full-key dependency, and provider target
+   - every module name, kind, manifest ecosystem key, full manifest-key dependency, and provider target
    - optional OCI repository, companion connector package, build context, Dockerfile, bake targets, stages, platforms, accelerators, tag suffixes, provider-specific smoke commands, and managed NVIDIA runner labels
    - Monica version, target framework, source visibility, license, branding, contacts, and publishing target
 3. Read [ecosystem-standard.md](references/ecosystem-standard.md) and reject invalid package/module identity.
@@ -66,9 +66,9 @@ Independently published packages override Monica's first-party test naming rule:
 - Declare the NuGet graph through package `packageDependencies` using full package IDs.
 - Preserve declared package/module casing in the repository contract. The scaffold resolves
   case-insensitive dependency input to the owning declaration before emitting Linux-sensitive paths.
-- Declare the Monica runtime graph through module `dependsOn` using full module keys. Do not use repository-local module names as identities.
+- Declare the repository distribution graph through module `dependsOn` using full manifest ecosystem keys. The scaffold resolves those keys to concrete CLR module and option types in `Describe(ModuleDescriptor)`; runtime identity is always the module `Type`.
 - Back every cross-package module dependency with a package dependency.
-- Use `kind: provider` plus `providerFor` for a module implementing `IModuleProvider`; include the target key in `dependsOn`.
+- Use `kind: provider` plus `providerFor` for a module implementing `IModuleProvider`; include the target manifest key in `dependsOn`, return the target CLR type from `ProvidesFor`, and declare the hard runtime edge in `Describe`.
 - Never embed a sibling package assembly to avoid a dependency. The packed-artifact inspector rejects this.
 - Keep one aligned manifest version for all NuGet and OCI artifacts in a repository release.
 
@@ -77,10 +77,10 @@ Independently published packages override Monica's first-party test naming rule:
 - Reserve `Monica.*` and the purple Monica logo for first-party packages.
 - Name third-party packages `<Publisher>.Monica.<Package>[.<Variant>]` with dot-separated ASCII letter-or-digit segments and at most 100 characters.
 - Keep all packages in one repository under the same publisher segment.
-- Put package-owned module types and registration extensions in `<PackageId>.Modules`; official Monica dependency Guides remain in `Monica.Modules`.
-- Make every module key equal its owning package ID or start with `<PackageId>.`.
+- Put package-owned module types and registration extensions in `<PackageId>.Modules`. Cross-package dependencies use fully qualified concrete module and option types; Monica-owned modules remain in `Monica.Modules`.
+- Make every manifest module key equal its owning package ID or start with `<PackageId>.`.
 - Use a final `.UI` package/key segment for a separately distributed UI package.
-- Derive a UI category ID by removing only the module key's final `.UI` segment.
+- Derive a UI category ID by removing only the UI module's manifest ecosystem key final `.UI` segment. Implement `IUIModule`; do not infer UI runtime identity from the key suffix.
 - Register each UI category and its pages in one `RegisterUIComponents` block with the module-owned resource marker.
 - Derive public routes from the package family without `<Publisher>.Monica.` or a distribution-only final `.UI`: `Tairitsua.Monica.GachaPool` uses `/gacha-pool`; `Tairitsua.Monica.AI.OCR.UI` uses `/ai-ocr`.
 - Keep public routes under the package-family prefix; the host route namespace is shared and duplicate normalized routes fail fast.
@@ -111,7 +111,7 @@ Independently published packages override Monica's first-party test naming rule:
 Do not describe a repository as ready until all applicable checks pass:
 
 - manifest-to-project and project-to-package bijection
-- package, assembly, namespace, module-key, module/provider, and dependency-graph alignment
+- package, assembly, namespace, manifest-key, concrete module `Type`, module/provider, and dependency-graph alignment
 - exact manifest-declared Monica NuGet restore with no version drift or local source override
 - XML documentation and zero warnings for restore/build/test/pack
 - synchronized `zh-CN`/`en-US`, theme-token, responsive, bridge, and browser checks for UI packages

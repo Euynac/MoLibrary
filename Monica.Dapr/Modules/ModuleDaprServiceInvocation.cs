@@ -1,7 +1,6 @@
 using Microsoft.Extensions.DependencyInjection;
 using Monica.Core.Modularity;
 using Monica.Core.Modularity.Abstractions;
-using Monica.Core.Modularity.Annotations;
 using Monica.Core.Modularity.Models;
 using Monica.Dapr.Services;
 using Monica.ServiceDiscovery.ServiceInvocation.Abstractions;
@@ -14,41 +13,37 @@ public static class ModuleDaprServiceInvocationBuilderExtensions
     /// <summary>
     /// Registers Dapr as the service invocation provider.
     /// </summary>
-    public static ModuleDaprServiceInvocationGuide UseDaprInvocationProvider(
-        this ModuleServiceInvocationGuide guide, Action<ModuleDaprServiceInvocationOption>? action = null)
+    public static ModuleRegistration<ModuleDaprServiceInvocation, ModuleDaprServiceInvocationOption> UseDaprInvocationProvider(
+        this ModuleRegistration<ModuleServiceInvocation, ModuleServiceInvocationOption> module,
+        Action<ModuleDaprServiceInvocationOption>? action = null)
     {
-        guide.UseDistributedProvider<DaprServiceInvocationConnector>();
-        return guide.AddModule<ModuleDaprServiceInvocation, ModuleDaprServiceInvocationOption, ModuleDaprServiceInvocationGuide>(action);
+        module.UseDistributedProvider<DaprServiceInvocationConnector>();
+        return module.Include<ModuleDaprServiceInvocation, ModuleDaprServiceInvocationOption>(action);
     }
 }
 
 /// <summary>
 /// Dapr-based service invocation module.
 /// </summary>
-[ModuleKey(BuiltInModuleKey.DaprServiceInvocation)]
-public class ModuleDaprServiceInvocation(ModuleDaprServiceInvocationOption option)
-    : ModuleBase<ModuleDaprServiceInvocation, ModuleDaprServiceInvocationOption,
-        ModuleDaprServiceInvocationGuide>(option)
+public class ModuleDaprServiceInvocation : MonicaModule<ModuleDaprServiceInvocationOption>
 {
 
-    public override void ClaimDependencies()
+    public override void Describe(ModuleDescriptor module)
     {
-        DependsOnModule<ModuleJsonSerializationGuide>().Register();
-        DependsOnModule<ModuleDaprClientGuide>().Register();
-        DependsOnModule<ModuleServiceInvocationGuide>().Register();
+        module.Require<ModuleJsonSerialization, ModuleJsonSerializationOption>();
+        module.Require<ModuleDaprClient, ModuleDaprClientOption>();
+        module.Require<ModuleServiceInvocation, ModuleServiceInvocationOption>();
     }
 
-    public override void ConfigureServices(IServiceCollection services)
+    public override void ConfigureServices(ModuleContext<ModuleDaprServiceInvocationOption> context)
     {
+        var services = context.Services;
         services.AddHttpClient(DaprServiceInvocationConnector.HttpClientName);
         services.AddSingleton<IServiceInvocationConnector, DaprServiceInvocationConnector>();
     }
 }
 
-public class ModuleDaprServiceInvocationGuide : ModuleGuide<ModuleDaprServiceInvocation,
-    ModuleDaprServiceInvocationOption, ModuleDaprServiceInvocationGuide>
-{
-}
+
 
 public class ModuleDaprServiceInvocationOption : ModuleOptions<ModuleDaprServiceInvocation>
 {

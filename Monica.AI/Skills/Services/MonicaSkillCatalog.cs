@@ -6,7 +6,6 @@ using Monica.AI.Services.Support.ModuleCatalog;
 using Monica.AI.Skills.Internal;
 using Monica.AI.Skills.Internal.FileSkill;
 using Monica.AI.Skills.Models;
-using Monica.Core.Modularity.Models;
 using Monica.Core.Skills;
 using Monica.Core.XmlDocumentation.Abstractions;
 
@@ -25,9 +24,9 @@ internal sealed class MonicaSkillCatalog(
 {
     private readonly Lazy<SkillCatalogSnapshot> _snapshot = new(() =>
     {
-        var loadedModuleKeys = loadedModules.GetLoadedModuleKeys();
+        var loadedModuleTypes = loadedModules.GetLoadedModuleTypes();
         var entries = skills
-            .Select(skill => BuildCodeEntry(skill, loadedModuleKeys, xmlDocumentationService, logger))
+            .Select(skill => BuildCodeEntry(skill, loadedModuleTypes, xmlDocumentationService, logger))
             .ToList();
 
         var externalFileSnapshot = BuildExternalFileSnapshot(externalFileSkillRegistrations, loggerFactory, logger);
@@ -99,7 +98,7 @@ internal sealed class MonicaSkillCatalog(
 
     private static SkillEntry BuildCodeEntry(
         Skill skill,
-        IReadOnlySet<ModuleKey> loadedModuleKeys,
+        IReadOnlySet<Type> loadedModuleTypes,
         IXmlDocumentationService xmlDocumentationService,
         ILogger logger)
     {
@@ -115,7 +114,7 @@ internal sealed class MonicaSkillCatalog(
                 skill.Definition.Description,
                 skill.Definition.Instructions,
                 skill.GetType().FullName,
-                skill.RequiredModules.Select(static module => module.Value).ToList(),
+                skill.RequiredModules.Select(static module => module.Name).ToList(),
                 skill.IsEnabled,
                 skill.McpServerDefinition?.Name,
                 skill.McpServerDefinition?.EnabledByDefault ?? false,
@@ -126,7 +125,7 @@ internal sealed class MonicaSkillCatalog(
         }
 
         var missing = skill.RequiredModules
-            .Where(required => !loadedModuleKeys.Contains(required))
+            .Where(required => !loadedModuleTypes.Contains(required))
             .ToList();
 
         if (missing.Count == 0)
@@ -136,7 +135,7 @@ internal sealed class MonicaSkillCatalog(
                 skill.Definition.Description,
                 skill.Definition.Instructions,
                 skill.GetType().FullName,
-                skill.RequiredModules.Select(static module => module.Value).ToList(),
+                skill.RequiredModules.Select(static module => module.Name).ToList(),
                 skill.IsEnabled,
                 skill.McpServerDefinition?.Name,
                 skill.McpServerDefinition?.EnabledByDefault ?? false,
@@ -149,13 +148,13 @@ internal sealed class MonicaSkillCatalog(
         logger.LogDebug(
             "Skipping AI skill '{SkillName}' because required modules are not loaded: {RequiredModules}.",
             skill.Definition.Name,
-            string.Join(", ", missing));
+            string.Join(", ", missing.Select(static module => module.Name)));
         return new SkillEntry(
             skill.Definition.Name,
             skill.Definition.Description,
             skill.Definition.Instructions,
             skill.GetType().FullName,
-            skill.RequiredModules.Select(static module => module.Value).ToList(),
+            skill.RequiredModules.Select(static module => module.Name).ToList(),
             skill.IsEnabled,
             skill.McpServerDefinition?.Name,
             skill.McpServerDefinition?.EnabledByDefault ?? false,

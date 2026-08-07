@@ -17,12 +17,14 @@
 每个 UI 模块必须显式声明页面标题所属的资源类型，并使用稳定的分类 ID。分类文本只用于显示，不能作为分组标识。
 
 ```csharp
-public override void ClaimDependencies()
+public static ModuleRegistration<ModuleSignalRUI, ModuleSignalRUIOption> AddSignalRUI(
+    this IMonicaBuilder builder)
 {
-    DependsOnModule<ModuleLocalizationGuide>().Register()
+    var module = builder.AddModule<ModuleSignalRUI, ModuleSignalRUIOption>();
+    module.Require<ModuleLocalization, ModuleLocalizationOption>()
         .AddResource<SignalRResource>();
 
-    DependsOnModule<ModuleShellUIGuide>().Register()
+    module.Require<ModuleShellUI, ModuleShellUIOption>()
         .RegisterUIComponents(registry => registry.RegisterLocalizedPage<SignalRDebug, SignalRResource>(
             "debug",
             "Navigation:Title",
@@ -30,6 +32,7 @@ public override void ClaimDependencies()
             BuiltInNavigationCategoryIds.Debug,
             addToNav: true,
             navOrder: 100));
+    return module;
 }
 ```
 

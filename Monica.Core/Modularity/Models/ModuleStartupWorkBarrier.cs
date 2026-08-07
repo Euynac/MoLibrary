@@ -12,9 +12,9 @@ namespace Monica.Core.Modularity.Models;
 public enum ModuleStartupWorkBarrier
 {
     /// <summary>
-    /// Work must complete before Monica begins business-type iteration.
+    /// Work must complete before Monica begins structural type discovery.
     /// </summary>
-    BeforeBusinessTypeIteration = 0,
+    BeforeTypeDiscovery = 0,
 
     /// <summary>
     /// Work must complete before post-service configuration begins and may finish earlier.

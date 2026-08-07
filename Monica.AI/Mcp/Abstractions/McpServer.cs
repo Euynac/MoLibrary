@@ -1,7 +1,7 @@
+using System.Collections.Frozen;
 using System.Diagnostics.CodeAnalysis;
 using System.Text.Json;
 using Monica.AI.Mcp.Models;
-using Monica.Core.Modularity.Models;
 
 namespace Monica.AI.Mcp.Abstractions;
 
@@ -29,9 +29,9 @@ public abstract class McpServer
     public abstract McpServerDefinition Definition { get; }
 
     /// <summary>
-    /// Module keys that must be loaded for this MCP server to be available.
+    /// Module strategy types that must be loaded for this MCP server to be available.
     /// </summary>
-    public virtual IEnumerable<ModuleKey> RequiredModules => [];
+    public virtual IReadOnlySet<Type> RequiredModules => FrozenSet<Type>.Empty;
 
     /// <summary>
     /// Determines whether this MCP server should be included in the startup MCP catalog.

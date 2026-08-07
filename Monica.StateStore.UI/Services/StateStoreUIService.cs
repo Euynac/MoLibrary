@@ -1,6 +1,3 @@
-using System.Collections;
-using System.Globalization;
-using System.Reflection;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -8,8 +5,8 @@ using Monica.Core;
 using Monica.Core.Extensions;
 using Monica.Core.Modularity;
 using Monica.Core.Modularity.Models;
-using Monica.Core.Modularity.Models.Internal;
 using Monica.Core.Modularity.Services;
+using Monica.Core.Modularity.Diagnostics.Models;
 using Monica.Modules;
 using Monica.StateStore.UI.Models;
 using Monica.StateStore.UI.Services.Browser;
@@ -28,28 +25,11 @@ public class StateStoreUIService(
     IEnumerable<IStateStoreBrowserApi> browserApis,
     ILogger<StateStoreUIService> logger)
 {
-    private static readonly HashSet<string> IgnoredOptionProperties =
-    [
-        "Logger",
-        "DisableModuleIfHasException",
-        "IsDisabled"
-    ];
-
-    private static readonly string[] SensitiveOptionFragments =
-    [
-        "password",
-        "secret",
-        "token",
-        "connectionstring",
-        "apiKey",
-        "clientSecret"
-    ];
-
     private readonly IReadOnlyList<IStateStoreBrowserApi> _browserApis = browserApis.ToList();
     private IReadOnlyList<ModuleRuntimeSnapshot>? _providerSnapshots;
 
     private IReadOnlyList<ModuleRuntimeSnapshot> ProviderSnapshots =>
-        _providerSnapshots ??= application.Modules.GetModuleProviders(BuiltInModuleKey.StateStore);
+        _providerSnapshots ??= application.Modules.GetModuleProviders(typeof(ModuleStateStore));
 
     #region Provider Discovery
 
@@ -84,7 +64,7 @@ public class StateStoreUIService(
 
             return Res.Ok(providers
                 .OrderByDescending(provider => provider.IsDefaultStateStore)
-                .ThenBy(provider => provider.DisplayName, StringComparer.OrdinalIgnoreCase)
+                .ThenBy(provider => provider.ServiceKey ?? string.Empty, StringComparer.OrdinalIgnoreCase)
                 .ToList());
         }
         catch (Exception ex)
@@ -118,12 +98,10 @@ public class StateStoreUIService(
 
     private StateStoreProviderInfo CreateProviderInfo(string? serviceKey, IStateStore provider)
     {
-        var (providerType, capabilities, providerDisplayName) = GetProviderMetadata(provider);
+        var (providerType, capabilities, providerSnapshot) = GetProviderMetadata(provider);
         var browserApi = GetBrowserApi(providerType, provider);
         var browserFeatures = browserApi.GetFeatures(provider);
         var defaultSearchMode = browserApi.GetDefaultSearchMode(provider);
-        var (optionType, optionInstance) = GetProviderOptionInfo(serviceKey, provider);
-        var configurationEntries = CreateConfigurationEntries(optionType, optionInstance);
 
         var isDefaultStateStore = false;
         if (serviceKey == null)
@@ -136,21 +114,27 @@ public class StateStoreUIService(
         return new StateStoreProviderInfo
         {
             ServiceKey = serviceKey,
-            ProviderDisplayName = providerDisplayName,
             ProviderType = providerType,
             Capabilities = capabilities,
             BrowserFeatures = browserFeatures,
             DefaultSearchMode = defaultSearchMode,
             IsDistributed = provider is IDistributedStateStore,
             IsDefaultStateStore = isDefaultStateStore,
-            OptionType = optionType,
-            OptionInstance = optionInstance,
-            ConfigurationEntries = configurationEntries,
-            ImplementationType = provider.GetType().Name
+            ImplementationType = provider.GetType().Name,
+            OptionDiagnosticsTarget = providerSnapshot is null
+                ? null
+                : new ModuleOptionDiagnosticsTarget(
+                    providerSnapshot.ModuleKey,
+                    serviceKey is null
+                        ? ModuleOptionProfileSelector.Default
+                        : ModuleOptionProfileSelector.NamedOrDefault(serviceKey))
         };
     }
 
-    private (EStateStoreProviderType providerType, EStateStoreCapabilities capabilities, string displayName) GetProviderMetadata(IStateStore provider)
+    private (
+        EStateStoreProviderType ProviderType,
+        EStateStoreCapabilities Capabilities,
+        ModuleRuntimeSnapshot? ProviderSnapshot) GetProviderMetadata(IStateStore provider)
     {
         var providerTypeName = provider.GetType().FullName ?? string.Empty;
 
@@ -163,7 +147,10 @@ public class StateStoreUIService(
 
             if (providerTypeName.Contains(moduleProvider.DisplayName, StringComparison.OrdinalIgnoreCase))
             {
-                return (moduleProvider.ProviderType, moduleProvider.Capabilities, moduleProvider.DisplayName);
+                return (
+                    moduleProvider.ProviderType,
+                    moduleProvider.Capabilities,
+                    snapshot);
             }
         }
 
@@ -171,207 +158,15 @@ public class StateStoreUIService(
         {
             return (EStateStoreProviderType.Memory,
                 EStateStoreCapabilities.KeyScanning | EStateStoreCapabilities.BulkOperations,
-                "Memory");
+                null);
         }
 
-        return (EStateStoreProviderType.Unknown, EStateStoreCapabilities.BulkOperations, "Unknown");
-    }
-
-    private (Type? optionType, object? optionInstance) GetProviderOptionInfo(string? serviceKey, IStateStore provider)
-    {
-        try
-        {
-            var providerTypeName = provider.GetType().FullName ?? string.Empty;
-
-            foreach (var snapshot in ProviderSnapshots)
-            {
-                if (snapshot.ModuleInstance is not IStateStoreModuleProvider moduleProvider)
-                {
-                    continue;
-                }
-
-                if (providerTypeName.Contains(moduleProvider.DisplayName, StringComparison.OrdinalIgnoreCase))
-                {
-                    return snapshot.GetKeyedOption(serviceProvider, serviceKey);
-                }
-            }
-
-            return (null, null);
-        }
-        catch (Exception ex)
-        {
-            logger.LogWarning(ex, "Failed to get provider option snapshot: {ServiceKey}", serviceKey);
-            return (null, null);
-        }
+        return (EStateStoreProviderType.Unknown, EStateStoreCapabilities.BulkOperations, null);
     }
 
     private IStateStoreBrowserApi GetBrowserApi(EStateStoreProviderType providerType, IStateStore provider)
     {
         return _browserApis.First(api => api.CanHandle(providerType, provider));
-    }
-
-    private static IReadOnlyList<StateStoreProviderConfigEntry> CreateConfigurationEntries(Type? optionType, object? optionInstance)
-    {
-        if (optionType is null || optionInstance is null)
-        {
-            return [];
-        }
-
-        var entries = new List<StateStoreProviderConfigEntry>();
-        AppendConfigurationEntries(entries, optionInstance, prefix: string.Empty, depth: 0);
-
-        return entries
-            .OrderBy(entry => entry.Path, StringComparer.OrdinalIgnoreCase)
-            .ToList();
-    }
-
-    private static void AppendConfigurationEntries(
-        List<StateStoreProviderConfigEntry> entries,
-        object source,
-        string prefix,
-        int depth)
-    {
-        if (depth > 2)
-        {
-            return;
-        }
-
-        foreach (var property in source.GetType().GetProperties(BindingFlags.Instance | BindingFlags.Public))
-        {
-            if (!property.CanRead || property.GetIndexParameters().Length > 0 || IgnoredOptionProperties.Contains(property.Name))
-            {
-                continue;
-            }
-
-            object? value;
-            try
-            {
-                value = property.GetValue(source);
-            }
-            catch
-            {
-                continue;
-            }
-
-            if (value is null)
-            {
-                continue;
-            }
-
-            var path = string.IsNullOrWhiteSpace(prefix) ? property.Name : $"{prefix}.{property.Name}";
-
-            if (TryFormatScalarValue(property.Name, value, out var scalarValue))
-            {
-                entries.Add(new StateStoreProviderConfigEntry
-                {
-                    Path = path,
-                    Label = HumanizePropertyName(property.Name),
-                    Value = scalarValue
-                });
-                continue;
-            }
-
-            if (TryFormatSequenceValue(property.Name, value, out var sequenceValue))
-            {
-                entries.Add(new StateStoreProviderConfigEntry
-                {
-                    Path = path,
-                    Label = HumanizePropertyName(property.Name),
-                    Value = sequenceValue
-                });
-                continue;
-            }
-
-            AppendConfigurationEntries(entries, value, path, depth + 1);
-        }
-    }
-
-    private static bool TryFormatScalarValue(string propertyName, object value, out string formattedValue)
-    {
-        switch (value)
-        {
-            case string text when string.IsNullOrWhiteSpace(text):
-                formattedValue = string.Empty;
-                return false;
-            case string text:
-                formattedValue = IsSensitiveOption(propertyName) ? "••••••" : text;
-                return true;
-            case bool flag:
-                formattedValue = flag ? "Enabled" : "Disabled";
-                return true;
-            case TimeSpan timeSpan:
-                formattedValue = timeSpan.ToString("c", CultureInfo.InvariantCulture);
-                return true;
-            case Enum enumValue:
-                formattedValue = enumValue.ToString();
-                return true;
-            case Uri uri:
-                formattedValue = uri.ToString();
-                return true;
-            case DateTime dateTime:
-                formattedValue = dateTime.ToString("u", CultureInfo.InvariantCulture);
-                return true;
-            case DateTimeOffset dateTimeOffset:
-                formattedValue = dateTimeOffset.ToString("u", CultureInfo.InvariantCulture);
-                return true;
-        }
-
-        var valueType = value.GetType();
-        if (valueType.IsPrimitive || value is decimal)
-        {
-            formattedValue = Convert.ToString(value, CultureInfo.InvariantCulture) ?? string.Empty;
-            return !string.IsNullOrWhiteSpace(formattedValue);
-        }
-
-        formattedValue = string.Empty;
-        return false;
-    }
-
-    private static bool TryFormatSequenceValue(string propertyName, object value, out string formattedValue)
-    {
-        if (value is string || value is not IEnumerable enumerable)
-        {
-            formattedValue = string.Empty;
-            return false;
-        }
-
-        var items = enumerable
-            .Cast<object?>()
-            .Where(item => item is not null)
-            .Select(item => TryFormatScalarValue(propertyName, item!, out var itemValue)
-                ? itemValue
-                : item!.ToString())
-            .Where(item => !string.IsNullOrWhiteSpace(item))
-            .Take(6)
-            .ToList();
-
-        if (items.Count == 0)
-        {
-            formattedValue = string.Empty;
-            return false;
-        }
-
-        formattedValue = string.Join(", ", items);
-        return true;
-    }
-
-    private static bool IsSensitiveOption(string propertyName)
-    {
-        return SensitiveOptionFragments.Any(fragment =>
-            propertyName.Contains(fragment, StringComparison.OrdinalIgnoreCase));
-    }
-
-    private static string HumanizePropertyName(string propertyName)
-    {
-        if (string.IsNullOrWhiteSpace(propertyName))
-        {
-            return propertyName;
-        }
-
-        return string.Concat(propertyName.Select((character, index) =>
-            index > 0 && char.IsUpper(character) && !char.IsUpper(propertyName[index - 1])
-                ? $" {character}"
-                : character.ToString()));
     }
 
     #endregion

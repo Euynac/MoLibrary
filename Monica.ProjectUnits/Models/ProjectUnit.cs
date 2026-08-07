@@ -1,6 +1,7 @@
 using System.Reflection;
 using Microsoft.Extensions.Logging;
 using Monica.Core.Execution;
+using Monica.Core.TypeDiscovery.Models;
 using Monica.Modules;
 using Monica.ProjectUnits.Annotations;
 using Monica.ProjectUnits.Services.Support;
@@ -14,19 +15,22 @@ namespace Monica.ProjectUnits.Models;
 public abstract class ProjectUnit
 {
     private protected ProjectUnit(
-        Type type,
+        BusinessTypeShape shape,
         EProjectUnitType unitType,
         ProjectUnitCatalog catalog,
         params ExecutionPoint[] executionPoints)
     {
-        Type = type;
+        Shape = shape;
+        Type = shape.Type;
         UnitType = unitType;
-        Title = type.Name;
+        Title = Type.Name;
         ExecutionPoints = [.. executionPoints.Select(static point => point.Value)];
         Catalog = catalog;
     }
 
     private protected ProjectUnitCatalog Catalog { get; }
+
+    private protected BusinessTypeShape Shape { get; }
 
     private protected ILogger Logger => Catalog.Logger;
 
@@ -34,7 +38,7 @@ public abstract class ProjectUnit
     /// Gets the naming rule configured for this unit type, falling back to the unit's default convention.
     /// </summary>
     internal ProjectUnitNamingRule? ConventionOption =>
-        Catalog.Options.ConventionOptions.Dict.TryGetValue(UnitType, out var option)
+        Catalog.NamingOptions.Dict.TryGetValue(UnitType, out var option)
             ? option
             : DefaultConventionOption();
 
@@ -138,7 +142,7 @@ public abstract class ProjectUnit
     {
         InitializeClassInfo();
 
-        if (Type.GetCustomAttributes<ProjectUnitMetadataAttribute>(inherit: false).SingleOrDefault() is { } metadata)
+        if (Shape.GetAttributes<ProjectUnitMetadataAttribute>(inherit: false).SingleOrDefault() is { } metadata)
         {
             HasExplicitMetadata = true;
             MetadataTitle = Normalize(metadata.Title);
@@ -214,27 +218,12 @@ public abstract class ProjectUnit
     }
 
     /// <summary>
-    /// Validates type constraints and the configured naming convention.
-    /// </summary>
-    /// <returns><see langword="true"/> when the represented type belongs to this unit category.</returns>
-    protected virtual bool VerifyType()
-    {
-        if (!VerifyTypeConstrain())
-        {
-            return false;
-        }
-
-        CheckNameConventionMode();
-        return true;
-    }
-
-    /// <summary>
     /// Validates the configured naming convention.
     /// </summary>
     /// <returns><see langword="true"/> when the name satisfies the convention or convention checking is disabled.</returns>
     protected virtual bool VerifyNameConvention()
     {
-        if (!Catalog.Options.ConventionOptions.EnableNameConvention || ConventionOption is not { } option)
+        if (!Catalog.NamingOptions.EnableNameConvention || ConventionOption is not { } option)
         {
             return true;
         }
@@ -254,15 +243,6 @@ public abstract class ProjectUnit
     }
 
     /// <summary>
-    /// Determines whether the represented CLR type belongs to this unit category.
-    /// </summary>
-    /// <returns><see langword="true"/> when the type belongs to this category.</returns>
-    protected virtual bool VerifyTypeConstrain()
-    {
-        return false;
-    }
-
-    /// <summary>
     /// Applies the configured naming-convention failure mode.
     /// </summary>
     /// <exception cref="InvalidOperationException">Thrown when strict convention validation fails.</exception>
@@ -276,7 +256,7 @@ public abstract class ProjectUnit
 
         var alertMessage = $"{Type.GetCleanFullName()} must satisfy the naming convention: {option}";
 
-        switch (option.NameConventionMode ?? Catalog.Options.ConventionOptions.NameConventionMode)
+        switch (option.NameConventionMode ?? Catalog.NamingOptions.NameConventionMode)
         {
             case ENameConventionMode.Strict:
                 Alerts.Add(new ProjectUnitAlert
@@ -312,7 +292,7 @@ public abstract class ProjectUnit
     {
         Description = Catalog.Documentation.ExtractTypeDescription(Type);
 
-        var mainConstructor = Type.GetConstructors()
+        var mainConstructor = Shape.Constructors
             .OrderByDescending(constructor => constructor.GetParameters().Length)
             .FirstOrDefault();
         if (mainConstructor is not null)
@@ -350,7 +330,7 @@ public abstract class ProjectUnit
         var normalized = new List<string>();
         var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
-        foreach (var requirement in Type.GetCustomAttributes<ProjectUnitRequirementAttribute>(inherit: false))
+        foreach (var requirement in Shape.GetAttributes<ProjectUnitRequirementAttribute>(inherit: false))
         {
             if (Normalize(requirement.RequirementId) is not { } requirementId)
             {

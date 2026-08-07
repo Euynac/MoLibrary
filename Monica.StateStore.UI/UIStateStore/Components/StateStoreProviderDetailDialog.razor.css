@@ -1,8 +1,19 @@
 .provider-dialog {
+    min-width: 0;
+    padding-top: 4px;
+}
+
+.provider-dialog ::deep .mud-tabs {
+    width: 100%;
+    min-width: 0;
+}
+
+.provider-dialog__tab-content {
     display: flex;
+    min-width: 0;
     flex-direction: column;
     gap: 16px;
-    padding-top: 4px;
+    padding: 16px;
 }
 
 ::deep .mud-secondary-text {
@@ -35,8 +46,7 @@
     padding: 14px 16px;
 }
 
-.provider-dialog__stat span,
-.provider-dialog__config-row span {
+.provider-dialog__stat span {
     color: var(--mud-palette-text-secondary);
     font-size: 0.82rem;
 }
@@ -53,6 +63,7 @@
     align-items: center;
     justify-content: space-between;
     gap: 12px;
+    min-width: 0;
 }
 
 .provider-dialog__chips {
@@ -61,32 +72,14 @@
     gap: 8px;
 }
 
-.provider-dialog__config-grid {
+.provider-dialog__configuration-loading {
     display: grid;
-    gap: 10px;
-}
-
-.provider-dialog__config-row {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr);
-    gap: 16px;
-    align-items: start;
-    padding-bottom: 10px;
-    border-bottom: 1px solid color-mix(in srgb, var(--mud-palette-lines-default) 82%, transparent);
-}
-
-.provider-dialog__config-row:last-child {
-    padding-bottom: 0;
-    border-bottom: none;
-}
-
-.provider-dialog__config-row strong {
-    overflow-wrap: anywhere;
+    min-height: 8rem;
+    place-items: center;
 }
 
 @media (max-width: 720px) {
-    .provider-dialog__overview,
-    .provider-dialog__config-row {
+    .provider-dialog__overview {
         grid-template-columns: minmax(0, 1fr);
     }
 }

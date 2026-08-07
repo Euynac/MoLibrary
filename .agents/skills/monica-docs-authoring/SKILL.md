@@ -14,7 +14,7 @@ Standardize how Codex writes Monica user documentation. Treat current source cod
 Start by choosing one of these output types:
 
 - **Framework / getting-started page** — onboarding, installation, first module, overall Monica workflow
-- **Concept page** — module pattern, Guide/options, Facade vs Service vs Provider, localization, UI module usage
+- **Concept page** — module strategy, registration/options, Facade vs Service vs Provider, localization, UI module usage
 - **Module documentation pack** — the default for a specific Monica module
 - **Scenario guide** — cross-module integration or a real-world recipe
 
@@ -35,8 +35,8 @@ Always extract and verify:
 - NuGet package / project name
 - Public `IMonicaBuilder` registration entry used inside `builder.AddMonica(...)`
 - `ModuleOption` and extra option properties with real default values
-- `ModuleGuide` methods and what each one enables
-- `GetRequestedConfigMethodKeys()` requirements when present
+- `ModuleRegistration<TModule, TOptions>` extensions and what each one enables
+- Required and satisfied feature declarations when present
 - Declared module dependencies
 - Host-facing public surface and notable providers
 - For generated Web APIs, request-owned `[ApiEndpoint]` declarations, `WebApiGenerationConfig`, and the namespace boundary that determines RPC publication
@@ -79,9 +79,9 @@ When the user asks for “module docs”, default to the module pack template un
 
 ## Monica-specific documentation rules
 
-- Document **public entry points** first: `builder.AddMonica(...)`, `monica.Add*()`, `ModuleGuide`, public Facades, public Abstractions, public Models
-- Mention internal Services or Providers only to explain behavior or provider choices exposed through public Guide methods
-- If a module has required Guide configuration keys, add a **Required setup** section that maps each requirement to the methods that satisfy it
+- Document **public entry points** first: `builder.AddMonica(...)`, `monica.Add*()`, fluent registration extensions, public Facades, public Abstractions, public Models
+- Mention internal Services or Providers only to explain behavior or provider choices exposed through public registration extensions
+- If a module declares required features, add a **Required setup** section that maps each feature to the methods that satisfy it
 - If a project exposes multiple modules, document them as **separate module packs**
 - If an infra module has a related UI module, cross-link them; do not merge them by default
 - Prefer file-path-based slugs; do not add frontmatter `slug` unless the site explicitly needs an override

@@ -37,11 +37,11 @@ A package may expose any coherent number of Monica modules. Mirror Monica's offi
 
 - place one registration unit per `Modules/Module{Name}.cs`
 - use feature folders when the package contains independent capabilities
-- declare dependencies explicitly with `DependsOnModule<...>().Register()`
+- derive every strategy from `MonicaModule<Module{Name}Option>` and declare dependencies in `Describe(ModuleDescriptor)` with concrete `module.Require<ModuleX, ModuleXOption>()` pairs
 - provide an aggregator module only when registering the full bundle is a meaningful user action
 - do not create a package per module merely to satisfy this standard
 
-The package ID is the ownership prefix for all included module keys. A module key must either equal the package ID or start with `<PackageId>.`.
+The package ID is the ownership prefix for all manifest ecosystem keys. A key must either equal the package ID or start with `<PackageId>.`.
 
 ```text
 Package: Acme.Monica.Observability
@@ -51,13 +51,13 @@ Keys:
   Acme.Monica.Observability.UI
 ```
 
-Keys are compared with ordinal case-insensitive semantics. Preserve canonical casing in source and diagnostics. A third-party UI module uses `.UI` as its final segment.
+Manifest keys are compared with ordinal case-insensitive semantics and preserve canonical casing in the repository contract and diagnostics. They identify distribution metadata and cross-package declarations only; Monica's runtime graph, option access, provider target, and diagnostics use concrete CLR module `Type` identity. A third-party UI manifest entry uses `.UI` as its final key segment, while its module class explicitly implements `IUIModule`.
 
 Third-party UI routes use the package family without the publisher-owned identity prefix. Remove the leading `<Publisher>.Monica.` segments and a distribution-only final `.UI` segment, split the remaining PascalCase segments into lowercase kebab-case words, and join the result with hyphens. For example, `Tairitsua.Monica.GachaPool` uses `/gacha-pool`, while `Acme.Monica.Analytics.UI` uses `/analytics`. A UI capability not already represented by a package-family segment appends its own name, so an Audit UI module in `Acme.Monica.Toolkit` uses `/toolkit-audit`.
 
 The resulting route namespace is shared by the host rather than isolated by publisher. Keep every contributed route at the package-family prefix or a descriptive extension such as `/gacha-pool-history`. Monica rejects duplicate normalized routes during registration; packages that must coexist therefore need distinct package families or distinct package-family subroutes. Do not claim an unrelated generic route such as `/dashboard` or `/settings`.
 
-Navigation category identity follows a different rule from routes: derive it from each UI module's full key by removing only the final `.UI` segment. For example, `Acme.Monica.Toolkit.Audit.UI` owns category ID `Acme.Monica.Toolkit.Audit`. This keeps categories collision-resistant across publishers and gives multiple UI modules in one package independent identities.
+Navigation category identity follows a different rule from routes: derive it from each UI module's full manifest ecosystem key by removing only the final `.UI` segment. For example, `Acme.Monica.Toolkit.Audit.UI` owns category ID `Acme.Monica.Toolkit.Audit`. This keeps categories collision-resistant across publishers and gives multiple UI modules in one package independent identities.
 
 Every UI module registers its category and localized pages in one `RegisterUIComponents` block. Register `Navigation:Category` through `RegisterLocalizedCategory<TResource>` with an explicit deterministic order, assign the returned ID, and pass it to `RegisterLocalizedPage<TPage, TResource>` through `categoryId`. The scaffold's primary page uses `Navigation:Title`; additional pages use distinct module-owned `Navigation:*` keys. Every navigation page sets `addToNav: true` and an explicit navigation order, and the category and pages use the UI module's own resource marker. `RegisterLocalizedComponent` is a legacy API and is not ecosystem-v1 compliant.
 
@@ -67,13 +67,13 @@ Repository manifest schema v2 may describe several independently consumable pack
 
 - Keep one packable project per declared package.
 - Use full package IDs for repository-internal NuGet dependencies.
-- Use full module keys for runtime dependencies, including dependencies within the same package.
+- Use full manifest ecosystem keys for repository dependency declarations, including dependencies within the same package; generated runtime edges use concrete CLR types.
 - Back each cross-package module dependency with a NuGet package dependency.
-- Implement provider modules with `IModuleProvider`, declare their `providerFor` target, and include that target in the runtime dependency graph.
+- Implement provider modules with `IModuleProvider`, declare their `providerFor` manifest target, return `typeof(TargetModule)` from `ProvidesFor`, and include that target through a concrete hard edge in `Describe`.
 - Keep package and runtime graphs acyclic.
 - Do not embed a sibling package assembly in place of a package dependency.
 
-One aligned repository release may also publish a provider-service OCI repository. Its `companionPackageId` names a package that owns a provider module. CPU and GPU variants use separate immutable tags under the same OCI repository and expose the same connector-facing API. OCI distribution does not alter NuGet ownership, module identity, or v1 compatibility status. Automated publication remains disabled until provider-specific CPU and applicable NVIDIA inference gates are declared.
+One aligned repository release may also publish a provider-service OCI repository. Its `companionPackageId` names a package that owns a provider module. CPU and GPU variants use separate immutable tags under the same OCI repository and expose the same connector-facing API. OCI distribution does not alter NuGet ownership, CLR runtime identity, or v1 compatibility status. Automated publication remains disabled until provider-specific CPU and applicable NVIDIA inference gates are declared.
 
 ## 4. Public API naming
 
@@ -83,11 +83,14 @@ For each module named `{Name}`:
 |---|---|
 | Module | `Module{Name}` |
 | Options | `Module{Name}Option` |
-| Guide | `Module{Name}Guide` |
-| Registration | `monica.Add{Name}()` inside `builder.AddMonica(...)` |
+| Strategy | `Module{Name} : MonicaModule<Module{Name}Option>` |
+| Registration | `ModuleRegistration<Module{Name}, Module{Name}Option>` |
+| Host entry point | `monica.Add{Name}()` inside `builder.AddMonica(...)` |
 | Module file | `Modules/Module{Name}.cs` |
 
-Put independently published registration types in `<PackageId>.Modules`, for example `Acme.Monica.Observability.Modules`. Consumers opt into the package with its publisher-owned namespace, while official dependency guides such as `ModuleLocalizationGuide` and `ModuleShellUIGuide` remain in `Monica.Modules`. Keep business APIs in the package root namespace or its feature namespaces.
+Put independently published registration types in `<PackageId>.Modules`, for example `Acme.Monica.Observability.Modules`. Consumers opt into the package with its publisher-owned namespace. Fully qualify cross-package module and option types; Monica-owned module types such as `ModuleLocalization` and `ModuleShellUI` remain in `Monica.Modules`. Keep business APIs in the package root namespace or its feature namespaces.
+
+Implement `IUIModule` on UI strategies. Implement `IWebModule` on web-capable strategies and also implement `IWebHostRequiredModule` when their generated endpoints or middleware are essential; the standard scaffold treats `kind: web` as host-required. These markers describe runtime capabilities independently of manifest keys.
 
 ## 5. Package metadata
 

@@ -22,10 +22,12 @@ MODULE_KEY_PATTERN = PACKAGE_ID_PATTERN
 MODULE_NAME_PATTERN = re.compile(r"^[A-Za-z][A-Za-z0-9]*$")
 MODULE_KINDS = {"infrastructure", "web", "ui", "provider"}
 RUNNER_LABEL_PATTERN = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]*$")
-MODULE_ATTRIBUTE_PATTERN = re.compile(
-    r'\[ModuleKey\(\s*"(?P<key>[^"]+)"\s*\)\]\s*'
-    r'(?:public\s+|internal\s+|sealed\s+|abstract\s+|partial\s+)*'
-    r'class\s+(?P<class>Module[A-Za-z_][A-Za-z0-9_]*)',
+MODULE_CLASS_PATTERN = re.compile(
+    r'(?:\b(?:public|internal|sealed|abstract|partial)\s+)*'
+    r'class\s+(?P<class>Module[A-Za-z_][A-Za-z0-9_]*)'
+    r'(?:\s*\([^;{}]*\))?\s*:\s*'
+    r'(?:(?:global::)?(?:[A-Za-z_][A-Za-z0-9_]*\.)*)?MonicaModule\s*'
+    r'<(?P<option>[^>{}]+)>',
     re.MULTILINE,
 )
 NAMESPACE_PATTERN = re.compile(r"\bnamespace\s+(?P<namespace>[A-Za-z_][A-Za-z0-9_.]*)\s*[;{]")
@@ -74,13 +76,16 @@ class PackageReference:
 
 @dataclass(frozen=True)
 class ModuleDeclaration:
-    key: str
     class_name: str
+    option_type: str
     namespace: str
     path: Path
     implements_provider: bool
-    provides_for: str | None
-    dependency_guides: tuple[str, ...]
+    implements_ui: bool
+    implements_web: bool
+    requires_web_host: bool
+    provides_for_type: str | None
+    dependencies: tuple[tuple[str, str], ...]
 
 
 @dataclass(frozen=True)
@@ -296,7 +301,7 @@ def find_module_declarations(project: Path) -> list[ModuleDeclaration]:
         masked_text = mask_csharp_comments(text)
         namespace_match = NAMESPACE_PATTERN.search(text)
         namespace = namespace_match.group("namespace") if namespace_match else ""
-        for match in MODULE_ATTRIBUTE_PATTERN.finditer(text):
+        for match in MODULE_CLASS_PATTERN.finditer(masked_text):
             opening_brace = masked_text.find("{", match.end())
             closing_brace = (
                 find_matching_delimiter(masked_text, opening_brace, "{", "}")
@@ -311,15 +316,16 @@ def find_module_declarations(project: Path) -> list[ModuleDeclaration]:
                 else ""
             )
             provides_for_match = re.search(
-                r'\bProvidesFor\s*=>\s*"(?P<key>[^"]+)"\s*;',
+                r"\bProvidesFor\s*=>\s*typeof\s*\(\s*"
+                r"(?P<type>(?:global::)?[A-Za-z_][A-Za-z0-9_.:]*)\s*\)\s*;",
                 mask_csharp_comments(body),
             )
-            claim_body = ""
+            describe_body = ""
             searchable_body = mask_csharp_non_code(body)
-            claim_match = re.search(r"\bClaimDependencies\s*\(", searchable_body)
-            if claim_match:
+            describe_match = re.search(r"\bDescribe\s*\(", searchable_body)
+            if describe_match:
                 opening_parenthesis = searchable_body.find(
-                    "(", claim_match.start(), claim_match.end()
+                    "(", describe_match.start(), describe_match.end()
                 )
                 closing_parenthesis = find_matching_delimiter(
                     mask_csharp_comments(body),
@@ -340,21 +346,29 @@ def find_module_declarations(project: Path) -> list[ModuleDeclaration]:
                         else None
                     )
                     if opening_method_brace >= 0 and closing_method_brace is not None:
-                        claim_body = body[opening_method_brace + 1:closing_method_brace]
-            dependency_guides = tuple(
-                normalize_csharp_type(invocation.type_arguments[0])
-                for invocation in find_generic_invocations(claim_body, "DependsOnModule")
-                if len(invocation.type_arguments) == 1
+                        describe_body = body[opening_method_brace + 1:closing_method_brace]
+            dependencies = tuple(
+                (
+                    normalize_csharp_type(invocation.type_arguments[0]),
+                    normalize_csharp_type(invocation.type_arguments[1]),
+                )
+                for invocation in find_generic_invocations(describe_body, "Require")
+                if len(invocation.type_arguments) == 2
             )
             declarations.append(
                 ModuleDeclaration(
-                    match.group("key"),
                     match.group("class"),
+                    normalize_csharp_type(match.group("option")),
                     namespace,
                     source,
                     bool(re.search(r"\bIModuleProvider\b", header)),
-                    provides_for_match.group("key") if provides_for_match else None,
-                    dependency_guides,
+                    bool(re.search(r"\bIUIModule\b", header)),
+                    bool(re.search(r"\bIWebModule\b", header)),
+                    bool(re.search(r"\bIWebHostRequiredModule\b", header)),
+                    normalize_csharp_type(provides_for_match.group("type"))
+                    if provides_for_match
+                    else None,
+                    dependencies,
                 )
             )
     return declarations
@@ -612,7 +626,9 @@ def localized_navigation_contract_errors(
     if category_resource is None:
         errors.append("give RegisterLocalizedCategory exactly one resource type")
     if csharp_string_value(invocation_argument(category, 0, "categoryId")) != expected_category_id:
-        errors.append(f"derive category id '{expected_category_id}' from the UI ModuleKey")
+        errors.append(
+            f"derive category id '{expected_category_id}' from the UI manifest ecosystem key"
+        )
     if csharp_string_value(invocation_argument(category, 1, "displayNameKey")) != "Navigation:Category":
         errors.append("use Navigation:Category as the category resource key")
     if not is_integer_literal(invocation_argument(category, 2, "order")):
@@ -795,6 +811,7 @@ def validate_project(
     source_provider: str | None = None
     contract_repository_url: str | None = None
     contract_monica_version: str | None = None
+    manifest_modules_by_class: dict[str, dict[str, object]] = {}
     if contract is not None:
         source = contract.get("source")
         if isinstance(source, dict):
@@ -806,6 +823,20 @@ def validate_project(
         contract_repository_url = repository if isinstance(repository, str) else None
         monica_version = contract.get("monicaVersion")
         contract_monica_version = monica_version if isinstance(monica_version, str) else None
+        packages = contract.get("packages")
+        if isinstance(packages, list):
+            for package in packages:
+                if not isinstance(package, dict) or package.get("packageId") != package_id:
+                    continue
+                modules = package.get("modules")
+                if not isinstance(modules, list):
+                    break
+                manifest_modules_by_class = {
+                    f"module{module.get('name')}".casefold(): module
+                    for module in modules
+                    if isinstance(module, dict) and isinstance(module.get("name"), str)
+                }
+                break
 
     if source_available is True:
         if not repository_url:
@@ -937,7 +968,7 @@ def validate_project(
 
     declarations = find_module_declarations(project)
     if not declarations:
-        add("MTP018", "No third-party [ModuleKey(\"...\")] module declaration was found.")
+        add("MTP018", "No third-party MonicaModule<TOptions> declaration was found.")
 
     legacy_registration_sources: set[Path] = set()
     for source in project.parent.rglob("*.cs"):
@@ -953,12 +984,10 @@ def validate_project(
                 source,
             )
 
-    seen: dict[str, str] = {}
     package_prefix = package_id.casefold() + "."
     expected_namespace = f"{package_id}.Modules"
     has_ui_module = False
     for declaration in declarations:
-        key = declaration.key
         class_name = declaration.class_name
         source = declaration.path
         if declaration.namespace != expected_namespace:
@@ -967,16 +996,28 @@ def validate_project(
                 f"Third-party module registrations must use namespace '{expected_namespace}', not '{declaration.namespace or '<missing>'}'.",
                 source,
             )
+        manifest_module = manifest_modules_by_class.get(class_name.casefold())
+        if manifest_module is None:
+            add(
+                "MTP021",
+                f"Module class '{class_name}' must have one matching entry in monica.manifest.json.",
+                source,
+            )
+            continue
+        key = manifest_module.get("key")
+        if not isinstance(key, str):
+            add("MTP019", f"Manifest entry for '{class_name}' must declare an ecosystem key.", source)
+            continue
         if not MODULE_KEY_PATTERN.fullmatch(key) or len(key) > 100:
-            add("MTP019", f"Module key '{key}' is not a valid ecosystem key.", source)
+            add("MTP019", f"Manifest module key '{key}' is not a valid ecosystem key.", source)
             continue
         folded = key.casefold()
         if folded != package_id.casefold() and not folded.startswith(package_prefix):
-            add("MTP020", f"Module key '{key}' must equal PackageId or start with '{package_id}.'.", source)
-        previous = seen.get(folded)
-        if previous and previous != class_name:
-            add("MTP021", f"Module key '{key}' is used by both {previous} and {class_name}.", source)
-        seen[folded] = class_name
+            add(
+                "MTP020",
+                f"Manifest module key '{key}' must equal PackageId or start with '{package_id}.'",
+                source,
+            )
         is_ui_key = folded.endswith(".ui")
         class_suffix = class_name.removeprefix("Module")
         is_exact_ui_class = class_suffix.endswith("UI")
@@ -1229,13 +1270,19 @@ def validate_repository_contract(
             if not isinstance(kind, str) or kind not in MODULE_KINDS:
                 add("MTR011", f"Module '{key}' kind must be one of: {', '.join(sorted(MODULE_KINDS))}.")
             if not isinstance(key, str) or MODULE_KEY_PATTERN.fullmatch(key) is None:
-                add("MTR012", f"Package '{package_id}' contains invalid module key {key!r}.")
+                add(
+                    "MTR012",
+                    f"Package '{package_id}' contains invalid manifest module key {key!r}.",
+                )
                 continue
             folded_key = key.casefold()
             if folded_key != folded_package and not folded_key.startswith(folded_package + "."):
-                add("MTR012", f"Module key '{key}' is not owned by package '{package_id}'.")
+                add(
+                    "MTR012",
+                    f"Manifest module key '{key}' is not owned by package '{package_id}'.",
+                )
             if folded_key in module_entries:
-                add("MTR013", f"Duplicate module key in repository manifest: {key}.")
+                add("MTR013", f"Duplicate manifest module key in repository contract: {key}.")
             module_entries[folded_key] = (folded_package, module)
             is_ui_name = isinstance(name, str) and name.endswith("UI") and not name[:-2].casefold().endswith("ui")
             is_ui_key = folded_key.endswith(".ui")
@@ -1276,7 +1323,10 @@ def validate_repository_contract(
     for module_key, (owner_id, module) in module_entries.items():
         raw_dependencies = module.get("dependsOn", [])
         if not isinstance(raw_dependencies, list) or not all(isinstance(item, str) for item in raw_dependencies):
-            add("MTR017", f"Module '{module_key}' dependsOn must contain full module keys.")
+            add(
+                "MTR017",
+                f"Module '{module_key}' dependsOn must contain full manifest module keys.",
+            )
             dependencies = set()
         else:
             dependencies = {item.casefold() for item in raw_dependencies}
@@ -1319,8 +1369,11 @@ def validate_repository_contract(
     if module_cycle:
         add("MTR020", "Module dependency cycle: " + " -> ".join(module_cycle) + ".")
 
-    full_guide_to_key: dict[str, str] = {}
-    simple_guide_to_keys: dict[str, set[str]] = {}
+    full_module_type_to_key: dict[str, str] = {}
+    full_option_type_to_key: dict[str, str] = {}
+    simple_module_type_to_keys: dict[str, set[str]] = {}
+    simple_option_type_to_keys: dict[str, set[str]] = {}
+    repository_module_namespaces: set[str] = set()
     for module_key, (owner_id, module) in module_entries.items():
         module_name = module.get("name")
         owner_entry = package_entries.get(owner_id)
@@ -1329,27 +1382,38 @@ def validate_repository_contract(
         owner_package_id = owner_entry[0].get("packageId")
         if not isinstance(owner_package_id, str):
             continue
-        simple_guide = f"Module{module_name}Guide"
-        full_guide = f"{owner_package_id}.Modules.{simple_guide}"
-        full_guide_to_key[full_guide.casefold()] = module_key
-        simple_guide_to_keys.setdefault(simple_guide.casefold(), set()).add(module_key)
+        simple_module_type = f"Module{module_name}"
+        simple_option_type = f"{simple_module_type}Option"
+        module_namespace = f"{owner_package_id}.Modules"
+        full_module_type = f"{module_namespace}.{simple_module_type}"
+        full_option_type = f"{module_namespace}.{simple_option_type}"
+        repository_module_namespaces.add(module_namespace.casefold())
+        full_module_type_to_key[full_module_type.casefold()] = module_key
+        full_option_type_to_key[full_option_type.casefold()] = module_key
+        simple_module_type_to_keys.setdefault(simple_module_type.casefold(), set()).add(module_key)
+        simple_option_type_to_keys.setdefault(simple_option_type.casefold(), set()).add(module_key)
 
-    def resolve_repository_guide(owner_id: str, guide_type: str) -> tuple[str | None, bool]:
-        normalized = normalize_csharp_type(guide_type).removeprefix("global::")
+    def resolve_repository_type(
+        owner_id: str,
+        type_name: str,
+        full_type_to_key: dict[str, str],
+        simple_type_to_keys: dict[str, set[str]],
+    ) -> tuple[str | None, bool]:
+        normalized = normalize_csharp_type(type_name)
         if "." in normalized:
-            return full_guide_to_key.get(normalized.casefold()), False
+            key = full_type_to_key.get(normalized.casefold())
+            namespace = normalized.rpartition(".")[0].casefold()
+            return key, key is None and namespace in repository_module_namespaces
         owner_entry = package_entries.get(owner_id)
         owner_package_id = owner_entry[0].get("packageId") if owner_entry else None
         if isinstance(owner_package_id, str):
-            local = full_guide_to_key.get(
+            local = full_type_to_key.get(
                 f"{owner_package_id}.Modules.{normalized}".casefold()
             )
             if local is not None:
                 return local, False
-        candidates = simple_guide_to_keys.get(normalized.casefold(), set())
-        if len(candidates) == 1:
-            return next(iter(candidates)), False
-        return None, len(candidates) > 1
+        candidates = simple_type_to_keys.get(normalized.casefold(), set())
+        return None, bool(candidates)
 
     for package_id, (raw, project) in package_entries.items():
         if not project.is_file():
@@ -1363,31 +1427,41 @@ def validate_repository_contract(
                 f"expected {sorted(expected_dependencies)}, found {sorted(actual_dependencies)}.",
                 project,
             )
-        manifest_modules = {
-            str(module.get("key")).casefold(): f"Module{module.get('name')}"
+        manifest_modules_by_class = {
+            f"Module{module.get('name')}": module
             for module in raw.get("modules", [])
             if isinstance(module, dict) and isinstance(module.get("key"), str)
         }
         declarations = find_module_declarations(project)
-        source_modules = {
-            declaration.key.casefold(): declaration.class_name
-            for declaration in declarations
-        }
-        if manifest_modules != source_modules:
+        source_modules = {declaration.class_name for declaration in declarations}
+        if set(manifest_modules_by_class) != source_modules:
             add(
                 "MTR022",
                 f"Source module declarations for '{package_id}' do not match monica.manifest.json.",
                 project,
             )
-        manifest_modules_by_key = {
-            str(module.get("key")).casefold(): module
-            for module in raw.get("modules", [])
-            if isinstance(module, dict) and isinstance(module.get("key"), str)
+        expected_options = {
+            class_name: f"{class_name}Option"
+            for class_name in manifest_modules_by_class
         }
         for declaration in declarations:
-            module_key = declaration.key.casefold()
-            manifest_module = manifest_modules_by_key.get(module_key)
+            expected_option = expected_options.get(declaration.class_name)
+            if expected_option is None:
+                continue
+            normalized_option = declaration.option_type.rpartition(".")[2]
+            if normalized_option != expected_option:
+                add(
+                    "MTR022",
+                    f"Module '{declaration.class_name}' must derive from "
+                    f"MonicaModule<{expected_option}>, found MonicaModule<{declaration.option_type}>.",
+                    declaration.path,
+                )
+        for declaration in declarations:
+            manifest_module = manifest_modules_by_class.get(declaration.class_name)
             if manifest_module is None:
+                continue
+            manifest_key = manifest_module.get("key")
+            if not isinstance(manifest_key, str):
                 continue
             expected_dependencies = {
                 dependency.casefold()
@@ -1395,44 +1469,126 @@ def validate_repository_contract(
                 if isinstance(dependency, str)
             }
             actual_dependencies: set[str] = set()
-            ambiguous_guides: list[str] = []
-            for guide_type in declaration.dependency_guides:
-                dependency_key, ambiguous = resolve_repository_guide(package_id, guide_type)
-                if dependency_key is not None:
+            invalid_dependencies: list[str] = []
+            for module_type, option_type in declaration.dependencies:
+                dependency_key, invalid_module_type = resolve_repository_type(
+                    package_id,
+                    module_type,
+                    full_module_type_to_key,
+                    simple_module_type_to_keys,
+                )
+                option_key, invalid_option_type = resolve_repository_type(
+                    package_id,
+                    option_type,
+                    full_option_type_to_key,
+                    simple_option_type_to_keys,
+                )
+                if dependency_key is not None and dependency_key == option_key:
                     actual_dependencies.add(dependency_key)
-                elif ambiguous:
-                    ambiguous_guides.append(guide_type)
-            if actual_dependencies != expected_dependencies or ambiguous_guides:
+                elif (
+                    dependency_key is not None
+                    or option_key is not None
+                    or invalid_module_type
+                    or invalid_option_type
+                ):
+                    invalid_dependencies.append(f"{module_type}, {option_type}")
+            if actual_dependencies != expected_dependencies or invalid_dependencies:
                 detail = (
                     f"expected {sorted(expected_dependencies)}, found {sorted(actual_dependencies)}"
                 )
-                if ambiguous_guides:
-                    detail += f"; ambiguous guide types: {sorted(ambiguous_guides)}"
+                if invalid_dependencies:
+                    detail += (
+                        "; unresolved or mismatched concrete module/option pairs: "
+                        f"{sorted(invalid_dependencies)}"
+                    )
                 add(
                     "MTR034",
-                    f"Source module dependencies for '{declaration.key}' do not match monica.manifest.json: {detail}.",
+                    f"Source module dependencies for '{manifest_key}' do not match "
+                    f"monica.manifest.json: {detail}.",
                     declaration.path,
                 )
 
             kind = manifest_module.get("kind")
             provider_for = manifest_module.get("providerFor")
+            if kind == "ui":
+                if not declaration.implements_ui:
+                    add(
+                        "MTR036",
+                        f"UI module '{manifest_key}' must implement IUIModule.",
+                        declaration.path,
+                    )
+            elif declaration.implements_ui:
+                add(
+                    "MTR036",
+                    f"Non-UI module '{manifest_key}' must not implement IUIModule.",
+                    declaration.path,
+                )
+            if kind == "web":
+                if not declaration.implements_web or not declaration.requires_web_host:
+                    add(
+                        "MTR036",
+                        f"Web module '{manifest_key}' must implement IWebModule and "
+                        "IWebHostRequiredModule.",
+                        declaration.path,
+                    )
+            elif declaration.implements_web or declaration.requires_web_host:
+                add(
+                    "MTR036",
+                    f"Non-web module '{manifest_key}' must not declare web-host markers.",
+                    declaration.path,
+                )
             if kind == "provider":
                 if not declaration.implements_provider:
                     add(
                         "MTR035",
-                        f"Provider module '{declaration.key}' must implement IModuleProvider.",
+                        f"Provider module '{manifest_key}' must implement IModuleProvider.",
                         declaration.path,
                     )
-                if not isinstance(provider_for, str) or declaration.provides_for != provider_for:
+                provider_entry = (
+                    module_entries.get(provider_for.casefold())
+                    if isinstance(provider_for, str)
+                    else None
+                )
+                expected_provider_type = None
+                if provider_entry is not None:
+                    target_owner_id, target_module = provider_entry
+                    target_owner_entry = package_entries.get(target_owner_id)
+                    target_package_id = (
+                        target_owner_entry[0].get("packageId")
+                        if target_owner_entry is not None
+                        else None
+                    )
+                    target_name = target_module.get("name")
+                    if isinstance(target_package_id, str) and isinstance(target_name, str):
+                        expected_provider_type = (
+                            f"{target_package_id}.Modules.Module{target_name}"
+                        )
+                provider_type_key = None
+                invalid_provider_type = False
+                if declaration.provides_for_type is not None:
+                    provider_type_key, invalid_provider_type = resolve_repository_type(
+                        package_id,
+                        declaration.provides_for_type,
+                        full_module_type_to_key,
+                        simple_module_type_to_keys,
+                    )
+                expected_provider_key = (
+                    provider_for.casefold() if isinstance(provider_for, str) else None
+                )
+                if (
+                    provider_type_key != expected_provider_key
+                    or invalid_provider_type
+                ):
                     add(
                         "MTR035",
-                        f"Provider module '{declaration.key}' ProvidesFor must be the canonical key {provider_for!r}.",
+                        f"Provider module '{manifest_key}' ProvidesFor must return "
+                        f"typeof({expected_provider_type}), found {declaration.provides_for_type!r}.",
                         declaration.path,
                     )
-            elif declaration.implements_provider or declaration.provides_for is not None:
+            elif declaration.implements_provider or declaration.provides_for_type is not None:
                 add(
                     "MTR035",
-                    f"Non-provider module '{declaration.key}' must not implement the provider contract.",
+                    f"Non-provider module '{manifest_key}' must not implement the provider contract.",
                     declaration.path,
                 )
         properties = load_properties(root, project)

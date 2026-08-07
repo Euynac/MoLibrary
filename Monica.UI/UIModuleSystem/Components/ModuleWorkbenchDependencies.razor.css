@@ -1,0 +1,306 @@
+.dependencies-layout {
+    display: grid;
+    gap: 1rem;
+    min-width: 0;
+}
+
+.topology-hero,
+.topology-overview,
+.graph-command-deck,
+.dependency-graph-panel,
+.dependency-inspector,
+.dependency-table-section {
+    min-width: 0;
+    border: 1px solid var(--mud-palette-lines-default);
+    border-radius: var(--mud-default-borderradius);
+}
+
+.topology-hero {
+    display: flex;
+    align-items: end;
+    justify-content: space-between;
+    gap: 1.5rem;
+    padding: 1.3rem;
+    background:
+        radial-gradient(circle at 12% 0%, var(--mud-palette-primary-hover), transparent 42%),
+        linear-gradient(130deg, var(--mud-palette-surface), var(--mud-palette-background-gray));
+}
+
+.topology-hero-copy {
+    max-width: 52rem;
+}
+
+.graph-scope-actions {
+    display: flex;
+    flex: 0 0 auto;
+    gap: .6rem;
+    flex-wrap: wrap;
+}
+
+.topology-overview {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    overflow: hidden;
+    background: var(--mud-palette-surface);
+}
+
+.topology-overview article {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    gap: .2rem .7rem;
+    min-width: 0;
+    padding: 1rem;
+    border-inline-start: .22rem solid var(--mud-palette-primary);
+    background: linear-gradient(145deg, var(--mud-palette-surface), var(--mud-palette-background));
+}
+
+.topology-overview article + article {
+    border-block-start: 0;
+}
+
+.topology-overview article ::deep .mud-icon-root {
+    grid-row: 1 / 3;
+    align-self: center;
+    color: var(--mud-palette-primary);
+}
+
+.topology-overview .overview-edges {
+    border-inline-start-color: var(--mud-palette-info);
+}
+
+.topology-overview .overview-edges ::deep .mud-icon-root,
+.topology-overview .overview-ui ::deep .mud-icon-root {
+    color: var(--mud-palette-info);
+}
+
+.topology-overview .overview-depth {
+    border-inline-start-color: var(--mud-palette-warning);
+}
+
+.topology-overview .overview-depth ::deep .mud-icon-root {
+    color: var(--mud-palette-warning);
+}
+
+.topology-overview .overview-ui {
+    border-inline-start-color: var(--mud-palette-info);
+}
+
+.topology-overview .overview-web {
+    border-inline-start-color: var(--mud-palette-secondary);
+}
+
+.topology-overview .overview-web ::deep .mud-icon-root {
+    color: var(--mud-palette-secondary);
+}
+
+.topology-overview span {
+    min-width: 0;
+    overflow: hidden;
+    color: var(--mud-palette-text-secondary);
+    font-size: .72rem;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.topology-overview strong {
+    font-size: 1.5rem;
+    font-variant-numeric: tabular-nums;
+}
+
+.graph-command-deck {
+    display: grid;
+    grid-template-columns: minmax(9rem, .65fr) minmax(13rem, 1fr) minmax(15rem, 1.2fr) auto auto;
+    gap: .75rem;
+    align-items: center;
+    padding: 1rem;
+    background: var(--mud-palette-surface);
+}
+
+.graph-viewport-actions {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: .15rem;
+    padding: .2rem;
+    border: 1px solid var(--mud-palette-lines-default);
+    border-radius: var(--mud-default-borderradius);
+    background: var(--mud-palette-background);
+}
+
+.dependency-graph-panel {
+    padding: .85rem;
+    background: linear-gradient(155deg, var(--mud-palette-surface), var(--mud-palette-background-gray));
+    box-shadow: var(--mud-elevation-2);
+}
+
+.graph-panel-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: .15rem .15rem .8rem;
+}
+
+.graph-summary,
+.graph-legend,
+.selected-capabilities {
+    display: flex;
+    align-items: center;
+    gap: .5rem;
+    flex-wrap: wrap;
+}
+
+.graph-legend {
+    justify-content: flex-end;
+    color: var(--mud-palette-text-secondary);
+    font-size: .72rem;
+}
+
+.graph-legend span {
+    display: inline-flex;
+    align-items: center;
+    gap: .3rem;
+    white-space: nowrap;
+}
+
+.graph-legend span::before {
+    display: inline-block;
+    width: .65rem;
+    height: .65rem;
+    border-radius: 50%;
+    background: var(--mud-palette-primary);
+    content: "";
+}
+
+.graph-legend .legend-ui::before {
+    background: var(--mud-palette-info);
+}
+
+.graph-legend .legend-web::before {
+    background: var(--mud-palette-secondary);
+}
+
+.graph-legend .legend-host::before {
+    border: .14rem dashed var(--mud-palette-warning);
+    background: transparent;
+}
+
+.graph-legend .legend-outgoing::before,
+.graph-legend .legend-incoming::before {
+    width: 1rem;
+    height: .16rem;
+    border-radius: .2rem;
+}
+
+.graph-legend .legend-outgoing::before {
+    background: var(--mud-palette-info);
+}
+
+.graph-legend .legend-incoming::before {
+    background: var(--mud-palette-success);
+}
+
+.dependency-inspector {
+    display: grid;
+    grid-template-columns: minmax(18rem, .8fr) repeat(2, minmax(0, 1fr));
+    gap: 1rem;
+    padding: 1rem;
+    background:
+        linear-gradient(145deg, var(--mud-palette-primary-hover), transparent 40%),
+        var(--mud-palette-surface);
+}
+
+.selected-module-identity {
+    display: grid;
+    align-content: start;
+    gap: .3rem;
+    min-width: 0;
+}
+
+.selected-module-identity ::deep .identifier-value {
+    min-width: 0;
+}
+
+.selected-capabilities {
+    margin-top: .5rem;
+}
+
+.dependency-table-section {
+    padding: .7rem 1rem;
+    background: var(--mud-palette-surface);
+}
+
+.dependency-table-wrapper {
+    min-width: 0;
+    max-height: 28rem;
+    overflow: auto;
+    overscroll-behavior: contain;
+}
+
+.dependency-table-wrapper:focus-visible {
+    outline: 2px solid var(--mud-palette-primary);
+    outline-offset: 2px;
+}
+
+@media (max-width: 1180px) {
+    .graph-command-deck {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .graph-viewport-actions {
+        justify-self: start;
+    }
+
+    .dependency-inspector {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .selected-module-identity {
+        grid-column: 1 / -1;
+    }
+}
+
+@media (max-width: 900px) {
+    .topology-hero,
+    .graph-panel-header {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .topology-overview {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    .graph-legend {
+        justify-content: flex-start;
+    }
+}
+
+@media (max-width: 650px) {
+    .graph-scope-actions,
+    .graph-command-deck,
+    .dependency-inspector {
+        grid-template-columns: minmax(0, 1fr);
+        width: 100%;
+    }
+
+    .graph-scope-actions {
+        display: grid;
+    }
+
+    .topology-overview {
+        grid-auto-flow: column;
+        grid-auto-columns: 9rem;
+        grid-template-columns: none;
+        overflow-x: auto;
+        overscroll-behavior-inline: contain;
+    }
+
+    .selected-module-identity {
+        grid-column: auto;
+    }
+
+    .graph-viewport-actions {
+        justify-self: stretch;
+    }
+}

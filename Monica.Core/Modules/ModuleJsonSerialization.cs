@@ -9,8 +9,6 @@ using Monica.Core.JsonSerialization.Services;
 using Monica.Core.JsonSerialization.Services.Support;
 using Monica.Core.Modularity;
 using Monica.Core.Modularity.Abstractions;
-using Monica.Core.Modularity.Annotations;
-using Monica.Core.Modularity.Models;
 
 // ReSharper disable once CheckNamespace
 namespace Monica.Modules;
@@ -22,31 +20,22 @@ public static class ModuleJsonSerializationBuilderExtensions
         /// <summary>
         /// Configures the JsonSerialization module.
         /// </summary>
-        public ModuleJsonSerializationGuide AddJsonSerialization(Action<ModuleJsonSerializationOption>? action = null)
+        public ModuleRegistration<ModuleJsonSerialization, ModuleJsonSerializationOption> AddJsonSerialization(
+            Action<ModuleJsonSerializationOption>? action = null)
         {
-            return builder.AddModule<ModuleJsonSerialization, ModuleJsonSerializationOption, ModuleJsonSerializationGuide>(action);
+            return builder.AddModule<ModuleJsonSerialization, ModuleJsonSerializationOption>(action);
         }
     }
 }
 
-[ModuleKey(BuiltInModuleKey.JsonSerialization)]
-public class ModuleJsonSerialization(ModuleJsonSerializationOption option)
-    : ModuleBase<ModuleJsonSerialization, ModuleJsonSerializationOption, ModuleJsonSerializationGuide>(option)
+public class ModuleJsonSerialization : MonicaModule<ModuleJsonSerializationOption>
 {
-    public override void ConfigureServices(IServiceCollection services)
+    public override void ConfigureServices(ModuleContext<ModuleJsonSerializationOption> context)
     {
+        var services = context.Services;
         var jsonSerializerOptions = new JsonSerializerOptions();
         jsonSerializerOptions.ApplyJsonSerializationDefaults(Option);
         Option.ExtendAction?.Invoke(jsonSerializerOptions);
-
-        if (Application.Modules.TryGetModuleRequestInfo(
-                typeof(ModuleResultEnvelope),
-                out var resultEnvelopeRegistration))
-        {
-            ((ModuleResultEnvelopeOption)resultEnvelopeRegistration.ModuleOption)
-                .FieldNames
-                .ApplyTo(jsonSerializerOptions);
-        }
 
         jsonSerializerOptions.TypeInfoResolver = jsonSerializerOptions.GetConfiguredTypeInfoResolver();
         var provider = new JsonSerializerOptionsProvider(jsonSerializerOptions);
@@ -66,10 +55,6 @@ public class ModuleJsonSerialization(ModuleJsonSerializationOption option)
         services.AddSingleton(jsonSerializerOptions);
         services.AddSingleton<IJsonSerializerOptionsProvider>(provider);
     }
-}
-
-public class ModuleJsonSerializationGuide : ModuleGuide<ModuleJsonSerialization, ModuleJsonSerializationOption, ModuleJsonSerializationGuide>
-{
 }
 
 public class ModuleJsonSerializationOption : ModuleOptions<ModuleJsonSerialization>

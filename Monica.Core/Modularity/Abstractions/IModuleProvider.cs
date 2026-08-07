@@ -1,5 +1,3 @@
-using Monica.Core.Modularity.Models;
-
 namespace Monica.Core.Modularity.Abstractions;
 
 /// <summary>
@@ -9,7 +7,7 @@ namespace Monica.Core.Modularity.Abstractions;
 public interface IModuleProvider
 {
     /// <summary>
-    /// Gets the ModuleKey of the module this provider extends.
+    /// Gets the module CLR type whose provider family this module extends.
     /// </summary>
-    ModuleKey ProvidesFor { get; }
+    Type ProvidesFor { get; }
 }

@@ -13,9 +13,10 @@ UI modules are **pure presentation layers**. They:
 - Do NOT have their own service layer for data access
 - Focus on components, page composition, state management, and localization
 - Maximize reuse of Models from the infrastructure module's public `Models/` folder
-- Usually inherit from `ModuleBase`, not `WebModuleBase`
+- Implement `IUIModule` as an explicit presentation capability
+- Usually remain non-web `MonicaModule<TOptions>` strategies without a web marker
 
-Only choose `WebModuleBase` / `WebModuleGuide` when the UI module itself configures ASP.NET Core middleware or endpoints. A UI module that only registers pages, dialogs, shell navigation, or localized components should stay non-web.
+Every UI module implements `IUIModule`; never infer UI identity from a class or project name. Implement `IWebModule` separately only when the UI module itself configures ASP.NET Core middleware or endpoints. A UI module that only registers pages, dialogs, shell navigation, or localized components stays non-web. Add `IWebHostRequiredModule` only for an intrinsic host requirement; an opt-in web feature calls `registration.RequireWebHost(reason)`.
 
 ## UI Module Architecture Patterns
 
@@ -147,48 +148,46 @@ Key characteristics:
 ## UI Module Class Implementation
 
 ```csharp
-[ModuleKey(BuiltInModuleKey.{Name}UI)]
-public class Module{Name}UI(Module{Name}UIOption option)
-    : ModuleBase<Module{Name}UI, Module{Name}UIOption, Module{Name}UIGuide>(option)
+public class Module{Name}UI : MonicaModule<Module{Name}UIOption>, IUIModule
 {
-    public override void ConfigureServices(IServiceCollection services)
+    public override void Describe(ModuleDescriptor module)
     {
-        // No UI service registration needed — components inject Facade directly
-        // Only register UI-specific state/support classes if needed
-        services.AddScoped<{Name}PageState>();
+        module.Require<Module{Name}, Module{Name}Option>();
     }
 
-    public override void ClaimDependencies()
+    public override void ConfigureServices(ModuleContext<Module{Name}UIOption> context)
     {
-        if (!Option.Disable{Name}Page)
+        context.Services.AddScoped<{Name}PageState>();
+    }
+}
+
+public static class Module{Name}UIBuilderExtensions
+{
+    extension(IMonicaBuilder builder)
+    {
+        public ModuleRegistration<Module{Name}UI, Module{Name}UIOption> Add{Name}UI()
         {
-            DependsOnModule<Module{Name}Guide>().Register();
-            DependsOnModule<ModuleLocalizationGuide>().Register()
+            var registration = builder.AddModule<Module{Name}UI, Module{Name}UIOption>();
+            registration.Require<ModuleLocalization, ModuleLocalizationOption>()
                 .AddResource<{Name}Resource>();
-            DependsOnModule<ModuleShellUIGuide>().Register()
-                .RegisterUIComponents(p => p.RegisterLocalizedPage<UI{Name}Page, {Name}Resource>(
-                    UI{Name}Page.{NAME}_URL,
-                    displayNameKey: "Pages:{Name}:Title",
-                    Icons.Material.Filled.Settings,
-                    categoryId: BuiltInNavigationCategoryIds.Infrastructure,
-                    addToNav: true,
-                    navOrder: 100));
+            registration.Require<ModuleShellUI, ModuleShellUIOption>()
+                .RegisterUIComponents(registry =>
+                    registry.RegisterLocalizedPage<UI{Name}Page, {Name}Resource>(
+                        UI{Name}Page.{NAME}_URL,
+                        "Pages:{Name}:Title",
+                        Icons.Material.Filled.Settings,
+                        BuiltInNavigationCategoryIds.Infrastructure,
+                        addToNav: true,
+                        navOrder: 100));
+            return registration;
         }
     }
 }
 
-public class Module{Name}UIGuide
-    : ModuleGuide<Module{Name}UI, Module{Name}UIOption, Module{Name}UIGuide>
-{
-}
-
-public class Module{Name}UIOption : ModuleOptions<Module{Name}UI>
-{
-    public bool Disable{Name}Page { get; set; }
-}
+public class Module{Name}UIOption : ModuleOptions<Module{Name}UI>;
 ```
 
-If the UI module also maps middleware or endpoints, switch the module to `WebModuleBase<...>` and the guide to `WebModuleGuide<...>`. If those web phases can be skipped safely in a generic host, implement `CanDowngradeToNonWebModule()` and document that downgrade behavior.
+`IUIModule` is always present on a UI module. If it also maps middleware or endpoints, implement `IWebModule`; generic hosts omit those contributions by default. Add `IWebHostRequiredModule` only when the module type intrinsically requires the web host, and use `registration.RequireWebHost(reason)` for an opt-in feature requirement.
 
 ## UI Folder Responsibilities
 

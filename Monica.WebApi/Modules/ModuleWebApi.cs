@@ -1,32 +1,28 @@
 using Monica.Core;
 using Monica.Core.Modularity;
 using Monica.Core.Modularity.Abstractions;
-using Monica.Core.Modularity.Annotations;
-using Monica.Core.Modularity.Models;
 using Monica.WebApi.Validation;
 
 // ReSharper disable once CheckNamespace
 namespace Monica.Modules;
 
-[ModuleKey(BuiltInModuleKey.WebApi)]
-public class ModuleWebApi(ModuleWebApiOption option) : ModuleBase<ModuleWebApi, ModuleWebApiOption, ModuleWebApiGuide>(option)
+/// <summary>
+/// Bundles Monica's standard Web API infrastructure graph.
+/// </summary>
+public class ModuleWebApi : MonicaModule<ModuleWebApiOption>
 {
-    public override void ClaimDependencies()
+    public override void Describe(ModuleDescriptor module)
     {
-        DependsOnModule<ModuleAutoControllersGuide>().Register();
-        DependsOnModule<ModuleAutoModelGuide>().Register();
-        DependsOnModule<ModuleDependencyInjectionGuide>().Register();
-        DependsOnModule<ModuleSwaggerGuide>().Register();
-        //DependsOnModule<ModuleAuthorizationGuide>().Register().AddDefaultPermissionBit<>();
-        DependsOnModule<ModuleAuthenticationGuide>().Register().ConfigDefaultSystemUser();
-        DependsOnModule<ModuleMediatorGuide>().Register();
-        DependsOnModule<ModuleObjectMappingGuide>().Register();
-        DependsOnModule<ModuleRepositoryGuide>().Register();
-        if (!Option.DisableExceptionHandling)
-        {
-            DependsOnModule<ModuleExceptionHandlingGuide>().Register()
-                .AddExceptionMapper<ValidationExceptionMapper>();
-        }
+        module.Require<ModuleAutoControllers, ModuleAutoControllersOption>();
+        module.Require<ModuleAutoModel, ModuleAutoModelOption>();
+        module.Require<ModuleDependencyInjection, ModuleDependencyInjectionOption>();
+        module.Require<ModuleSwagger, ModuleSwaggerOption>();
+        module.Require<ModuleAuthentication, ModuleAuthenticationOption>();
+        module.Require<ModuleMediator, ModuleMediatorOption>();
+        module.Require<ModuleObjectMapping, ModuleObjectMappingOption>();
+        module.Require<ModuleRepository, ModuleRepositoryOption>();
+        module.Require<ModuleExceptionHandling, ModuleExceptionHandlingOption>(
+            options => options.AddExceptionMapper<ValidationExceptionMapper>());
     }
 }
 
@@ -35,20 +31,17 @@ public static class ModuleWebApiBuilderExtensions
     extension(IMonicaBuilder builder)
     {
         /// <summary>
-        /// Registers and configures the Web API infrastructure module.
+        /// Registers and configures the standard Web API infrastructure graph.
         /// </summary>
-        public ModuleWebApiGuide AddWebApi(Action<ModuleWebApiOption>? action = null)
+        public ModuleRegistration<ModuleWebApi, ModuleWebApiOption> AddWebApi(
+            Action<ModuleWebApiOption>? configure = null)
         {
-            return builder.AddModule<ModuleWebApi, ModuleWebApiOption, ModuleWebApiGuide>(action);
+            return builder.AddModule<ModuleWebApi, ModuleWebApiOption>(configure);
         }
     }
 }
-public class ModuleWebApiGuide : ModuleGuide<ModuleWebApi, ModuleWebApiOption, ModuleWebApiGuide>
-{
 
-}
-
-public class ModuleWebApiOption : ModuleOptions<ModuleWebApi>
-{
-    public bool DisableExceptionHandling { get; set; }
-}
+/// <summary>
+/// Configures the Web API infrastructure bundle.
+/// </summary>
+public class ModuleWebApiOption : ModuleOptions<ModuleWebApi>;

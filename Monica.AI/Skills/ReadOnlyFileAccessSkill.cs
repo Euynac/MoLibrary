@@ -1,11 +1,12 @@
+using System.Collections.Frozen;
 using System.Text.Encodings.Web;
 using System.Text.Json;
 using Monica.AI.AgentCapabilities.Models;
 using Monica.AI.Skills.Services;
-using Monica.Core.Modularity.Models;
 using Monica.Core.Skills;
 using Monica.Core.Skills.Annotations;
 using Monica.Core.Skills.Models;
+using Monica.Modules;
 
 namespace Monica.AI.Skills;
 
@@ -33,7 +34,8 @@ internal sealed class ReadOnlyFileAccessSkill(ReadOnlyFileAccessService fileAcce
         "object with named arguments; for example pass ignoreCase as a boolean property inside the search-files object.");
 
     /// <inheritdoc />
-    public override IEnumerable<ModuleKey> RequiredModules => [BuiltInModuleKey.AISkillSystem];
+    public override IReadOnlySet<Type> RequiredModules { get; } =
+        new[] { typeof(ModuleSkillSystem) }.ToFrozenSet();
 
     /// <inheritdoc />
     public override bool IsEnabled => fileAccess.HasRoots;

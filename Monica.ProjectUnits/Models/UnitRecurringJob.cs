@@ -1,7 +1,8 @@
+using Monica.Core.TypeDiscovery.Models;
+using Monica.Modules;
 using Monica.ProjectUnits.Services.Support;
 using Monica.JobScheduler;
 using Monica.JobScheduler.Abstractions;
-using Monica.Modules;
 
 namespace Monica.ProjectUnits.Models;
 
@@ -10,17 +11,12 @@ namespace Monica.ProjectUnits.Models;
 /// </summary>
 public class UnitRecurringJob : ProjectUnit
 {
-    internal UnitRecurringJob(Type type, ProjectUnitCatalog catalog)
-        : base(type, EProjectUnitType.RecurringJob, catalog, JobSchedulerExecutionPoints.RecurringAttempt)
+    internal UnitRecurringJob(BusinessTypeShape shape, ProjectUnitCatalog catalog)
+        : base(shape, EProjectUnitType.RecurringJob, catalog, JobSchedulerExecutionPoints.RecurringAttempt)
     {
     }
 
     protected override bool ShouldAnalyzeConstructorDependencies => true;
-    protected override bool VerifyTypeConstrain()
-    {
-        return Type.IsClass && Type.IsSubclassOf(typeof(RecurringJob));
-    }
-
     protected override ProjectUnitNamingRule? DefaultConventionOption()
     {
         return new ProjectUnitNamingRule
@@ -29,9 +25,10 @@ public class UnitRecurringJob : ProjectUnit
         };
     }
 
-    internal static ProjectUnit? Create(Type type, ProjectUnitCatalog catalog)
+    internal static ProjectUnit Create(BusinessTypeShape shape, ProjectUnitCatalog catalog)
     {
-        var unit = new UnitRecurringJob(type, catalog);
-        return unit.VerifyType() ? unit : null;
+        var unit = new UnitRecurringJob(shape, catalog);
+        unit.CheckNameConventionMode();
+        return unit;
     }
 }

@@ -13,10 +13,10 @@ using Monica.AI.Abstractions;
 using Monica.AI.Services.Support.ModuleCatalog;
 using Monica.Core;
 using Monica.Core.Modularity.Abstractions;
-using Monica.Core.Modularity.Annotations;
 using Monica.Core.Modularity.Extensions;
 using Monica.Core.Modularity.Models;
 using Monica.Core.Skills;
+using Monica.Core.TypeDiscovery.Models;
 
 // ReSharper disable once CheckNamespace
 namespace Monica.Modules;
@@ -32,10 +32,10 @@ public static class ModuleMcpBuilderExtensions
         /// Enables Monica MCP server discovery, MCP hosting, and external MCP client cataloging.
         /// </summary>
         /// <param name="action">Optional MCP module configuration action.</param>
-        /// <returns>The MCP module guide.</returns>
-        public ModuleMcpGuide AddMcp(Action<ModuleMcpOption>? action = null)
+        /// <returns>The host-bound MCP module registration.</returns>
+        public ModuleRegistration<ModuleMcp, ModuleMcpOption> AddMcp(Action<ModuleMcpOption>? action = null)
         {
-            return builder.AddModule<ModuleMcp, ModuleMcpOption, ModuleMcpGuide>(action);
+            return builder.AddModule<ModuleMcp, ModuleMcpOption>(action);
         }
     }
 }
@@ -43,61 +43,50 @@ public static class ModuleMcpBuilderExtensions
 /// <summary>
 /// Discovers Monica-defined MCP servers and exposes them through configured MCP transports.
 /// </summary>
-[ModuleKey(BuiltInModuleKey.Mcp)]
-public sealed class ModuleMcp(ModuleMcpOption option)
-    : WebModuleBase<ModuleMcp, ModuleMcpOption, ModuleMcpGuide>(option),
-      IBusinessTypeIterator
+public sealed class ModuleMcp : MonicaModule<ModuleMcpOption>, IWebModule
 {
-    private readonly List<Type> _mcpTypes = [];
-    private readonly List<Type> _skillTypes = [];
+    private bool _hasDiscoveredMcpServers;
+    private bool _hasDiscoveredSkills;
 
     /// <inheritdoc />
-    public override void ClaimDependencies()
+    public override void Describe(ModuleDescriptor module)
     {
-        DependsOnModule<ModuleXmlDocumentationGuide>().Register();
-        DependsOnModule<ModuleAIGuide>().Register();
+        module.Require<ModuleXmlDocumentation, ModuleXmlDocumentationOption>();
+        module.Require<ModuleAI, ModuleAIOption>();
     }
 
     /// <inheritdoc />
-    public override bool CanDowngradeToNonWebModule()
+    /// <inheritdoc />
+    public override void DeclareTypeDiscovery(TypeDiscoveryPlan<ModuleMcpOption> discovery)
     {
-        return true;
+        discovery.Match(
+            TypeQuery.ConcreteClass.AssignableTo<McpServer>(),
+            (context, matches) =>
+            {
+                _hasDiscoveredMcpServers = matches.Count > 0;
+                foreach (var match in matches)
+                {
+                    var mcpType = match.Type;
+                    context.Registrations.TryAdd(ServiceDescriptor.Singleton(mcpType, mcpType));
+                    context.Registrations.Add(
+                        ServiceDescriptor.Singleton(
+                            typeof(McpServer),
+                            serviceProvider => (McpServer)serviceProvider.GetRequiredService(mcpType)));
+                }
+            });
+
+        discovery.Match(
+            TypeQuery.ConcreteClass.AssignableTo<Skill>(),
+            (_, matches) =>
+            {
+                _hasDiscoveredSkills = matches.Count > 0;
+            });
     }
 
     /// <inheritdoc />
-    public IEnumerable<Type> IterateBusinessTypes(IEnumerable<Type> types)
+    public override void PostConfigureServices(ModuleContext<ModuleMcpOption> context)
     {
-        foreach (var type in types)
-        {
-            if (type is { IsClass: true, IsAbstract: false }
-                && type.IsAssignableTo(typeof(McpServer)))
-            {
-                _mcpTypes.Add(type);
-            }
-
-            if (type is { IsClass: true, IsAbstract: false }
-                && type.IsAssignableTo(typeof(Skill)))
-            {
-                _skillTypes.Add(type);
-            }
-
-            yield return type;
-        }
-    }
-
-    /// <inheritdoc />
-    public override void PostConfigureServices(IServiceCollection services)
-    {
-        foreach (var mcpType in _mcpTypes.Distinct())
-        {
-            if (services.All(descriptor => descriptor.ServiceType != mcpType))
-            {
-                services.AddSingleton(mcpType);
-            }
-
-            services.AddSingleton(typeof(McpServer), sp => (McpServer)sp.GetRequiredService(mcpType));
-        }
-
+        var services = context.Services;
         services.TryAddSingleton<ILoadedModuleCatalog, ModuleRegistryLoadedModuleCatalog>();
         services.TryAddSingleton<MonicaMcpCatalog>();
         services.TryAddEnumerable(
@@ -112,11 +101,11 @@ public sealed class ModuleMcp(ModuleMcpOption option)
             ServiceDescriptor.Singleton<IConfigureOptions<ModelContextProtocol.Server.McpServerOptions>, McpServerOptionsConfigurator>());
 
         var mcpBuilder = services.AddMcpServer();
-        if (_mcpTypes.Count > 0 || _skillTypes.Count > 0)
+        if (_hasDiscoveredMcpServers || _hasDiscoveredSkills)
         {
             mcpBuilder.WithHttpTransport(transportOptions =>
             {
-                transportOptions.Stateless = option.McpHttpStateless;
+                transportOptions.Stateless = Option.McpHttpStateless;
                 transportOptions.ConfigureSessionOptions = (httpContext, serverOptions, _) =>
                 {
                     var catalog = httpContext.RequestServices.GetRequiredService<MonicaMcpCatalog>();
@@ -138,22 +127,23 @@ public sealed class ModuleMcp(ModuleMcpOption option)
         services.TryAddSingleton<IExternalMcpClientProfileStore, FileExternalMcpClientProfileStore>();
         services.TryAddSingleton<ExternalMcpClientFactory>();
 
-        foreach (var profile in option.ExternalMcpClientProfiles)
+        foreach (var profile in Option.ExternalMcpClientProfiles)
         {
             services.AddSingleton(profile);
         }
     }
 
     /// <inheritdoc />
-    public override void ConfigureEndpoints(IApplicationBuilder app)
+    public override void ConfigureEndpoints(WebModuleContext<ModuleMcpOption> context)
     {
+        var app = context.ApplicationBuilder;
         var catalog = app.ApplicationServices.GetRequiredService<MonicaMcpCatalog>();
         if (!catalog.HasHttpServers)
         {
             return;
         }
 
-        UseEndpoints(app, endpoints =>
+        UseEndpoints(context, endpoints =>
         {
             var endpoint = endpoints.MapMcp(Option.CreateHttpEndpointRoutePattern())
                 .WithMonicaEndpoint();
@@ -266,53 +256,55 @@ public sealed class ModuleMcpOption : ModuleOptions<ModuleMcp>
 }
 
 /// <summary>
-/// Configuration guide for Monica's MCP module.
+/// Registration extensions for Monica's MCP module.
 /// </summary>
-public sealed class ModuleMcpGuide
-    : WebModuleGuide<ModuleMcp, ModuleMcpOption, ModuleMcpGuide>
+public static class ModuleMcpRegistrationExtensions
 {
     /// <summary>
     /// Configures the HTTP route used by Monica-defined MCP servers that select HTTP transport.
     /// </summary>
+    /// <param name="module">The MCP module registration.</param>
     /// <param name="endpointPath">ASP.NET Core base route pattern for HTTP MCP endpoints. Defaults to <c>"/mcp"</c>. Monica appends <c>/{serverName}</c>.</param>
     /// <param name="displayUrl">Optional externally reachable base URL shown in management UIs. Monica appends each MCP server name.</param>
     /// <param name="stateless">Whether Streamable HTTP should use stateless mode.</param>
-    /// <returns>The current guide instance.</returns>
-    public ModuleMcpGuide ConfigureMcpHttpEndpoint(
+    /// <returns>The current registration.</returns>
+    public static ModuleRegistration<ModuleMcp, ModuleMcpOption> ConfigureMcpHttpEndpoint(this ModuleRegistration<ModuleMcp, ModuleMcpOption> module,
         string endpointPath = "/mcp",
         string? displayUrl = null,
         bool stateless = true)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(endpointPath);
 
-        ConfigureModuleOption(options =>
+        module.Configure(options =>
         {
             options.McpHttpEndpointPath = endpointPath;
             options.McpHttpDisplayUrl = displayUrl;
             options.McpHttpStateless = stateless;
         });
-        return this;
+        return module;
     }
 
     /// <summary>
     /// Requires an ASP.NET Core authorization policy for every Monica-hosted HTTP MCP endpoint.
     /// </summary>
+    /// <param name="module">The MCP module registration.</param>
     /// <param name="policyName">
     /// Name of a policy registered by the host through <c>AddAuthorization</c>. Authentication and authorization
     /// middleware must run before Monica maps its endpoints.
     /// </param>
-    /// <returns>The current guide instance.</returns>
-    public ModuleMcpGuide RequireHttpAuthorization(string policyName)
+    /// <returns>The current registration.</returns>
+    public static ModuleRegistration<ModuleMcp, ModuleMcpOption> RequireHttpAuthorization(this ModuleRegistration<ModuleMcp, ModuleMcpOption> module, string policyName)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(policyName);
 
-        ConfigureModuleOption(options => options.McpHttpAuthorizationPolicy = policyName.Trim());
-        return this;
+        module.Configure(options => options.McpHttpAuthorizationPolicy = policyName.Trim());
+        return module;
     }
 
     /// <summary>
     /// Registers an external HTTP MCP client whose tools may be exposed to Monica agents.
     /// </summary>
+    /// <param name="module">The MCP module registration.</param>
     /// <param name="name">Stable client name shown to management UIs.</param>
     /// <param name="description">Short description of the remote MCP server or client connection.</param>
     /// <param name="endpoint">Absolute HTTP or HTTPS endpoint for the remote MCP server.</param>
@@ -320,8 +312,8 @@ public sealed class ModuleMcpGuide
     /// <param name="transportMode">HTTP transport mode used by the MCP SDK.</param>
     /// <param name="connectionTimeoutSeconds">Connection timeout in seconds.</param>
     /// <param name="isAgentToolEnabled">Whether listed client tools should be exposed to Monica agents.</param>
-    /// <returns>The current guide instance.</returns>
-    public ModuleMcpGuide AddMcpClient(
+    /// <returns>The current registration.</returns>
+    public static ModuleRegistration<ModuleMcp, ModuleMcpOption> AddMcpClient(this ModuleRegistration<ModuleMcp, ModuleMcpOption> module,
         string name,
         string description,
         string endpoint,
@@ -342,7 +334,8 @@ public sealed class ModuleMcpGuide
             Origin = ExternalMcpClientProfileOrigin.Code
         }.Normalize(ExternalMcpClientProfileOrigin.Code);
 
-        ConfigureModuleOption(options => options.AddMcpClient(profile), secondKey: profile.Name);
-        return this;
+        module.Configure(options => options.AddMcpClient(profile));
+        return module;
     }
+
 }

@@ -1,0 +1,40 @@
+.relationship-list {
+    display: grid;
+    gap: .45rem;
+}
+
+.relationship-list > div,
+.relationship-button {
+    display: grid;
+    width: 100%;
+    min-width: 0;
+    padding: .6rem;
+    border: 1px solid var(--mud-palette-lines-default);
+    border-radius: var(--mud-default-borderradius);
+    background: var(--mud-palette-background);
+    color: var(--mud-palette-text-primary);
+    text-align: start;
+}
+
+.relationship-button {
+    cursor: pointer;
+}
+
+.relationship-button:hover,
+.relationship-button:focus-visible {
+    border-color: var(--mud-palette-primary);
+    background: var(--mud-palette-primary-hover);
+    outline: none;
+}
+
+.relationship-list code {
+    min-width: 0;
+    overflow: hidden;
+    color: var(--mud-palette-text-secondary);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.relationship-list > span {
+    color: var(--mud-palette-text-secondary);
+}

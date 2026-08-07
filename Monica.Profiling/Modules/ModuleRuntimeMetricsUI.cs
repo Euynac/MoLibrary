@@ -2,8 +2,6 @@ using Microsoft.Extensions.DependencyInjection;
 using Monica.Core;
 using Monica.Core.Modularity;
 using Monica.Core.Modularity.Abstractions;
-using Monica.Core.Modularity.Annotations;
-using Monica.Core.Modularity.Models;
 using Monica.Profiling.Localization;
 using Monica.Profiling.Pages;
 using Monica.Profiling.UIRuntimeMetrics.State;
@@ -23,9 +21,21 @@ public static class ModuleRuntimeMetricsUIBuilderExtensions
         /// <summary>
         /// Configures the runtime metrics UI module.
         /// </summary>
-        public ModuleRuntimeMetricsUIGuide AddRuntimeMetricsUI(Action<ModuleRuntimeMetricsUIOption>? action = null)
+        public ModuleRegistration<ModuleRuntimeMetricsUI, ModuleRuntimeMetricsUIOption> AddRuntimeMetricsUI(
+            Action<ModuleRuntimeMetricsUIOption>? action = null)
         {
-            return builder.AddModule<ModuleRuntimeMetricsUI, ModuleRuntimeMetricsUIOption, ModuleRuntimeMetricsUIGuide>(action);
+            var registration = builder.AddModule<ModuleRuntimeMetricsUI, ModuleRuntimeMetricsUIOption>(action);
+            registration.Require<ModuleLocalization, ModuleLocalizationOption>()
+                .AddResource<RuntimeMetricsResource>();
+            registration.Require<ModuleShellUI, ModuleShellUIOption>()
+                .RegisterUIComponents(registry => registry.RegisterLocalizedPage<UIRuntimeMetricsPage, RuntimeMetricsResource>(
+                    UIRuntimeMetricsPage.PAGE_URL,
+                    "Pages:RuntimeMetrics:Title",
+                    Icons.Material.Filled.Speed,
+                    BuiltInNavigationCategoryIds.Monitor,
+                    addToNav: true,
+                    navOrder: 10));
+            return registration;
         }
     }
 }
@@ -33,44 +43,19 @@ public static class ModuleRuntimeMetricsUIBuilderExtensions
 /// <summary>
 /// Runtime metrics UI module.
 /// </summary>
-[ModuleKey(BuiltInModuleKey.RuntimeMetricsUI)]
-public class ModuleRuntimeMetricsUI(ModuleRuntimeMetricsUIOption option)
-    : ModuleBase<ModuleRuntimeMetricsUI, ModuleRuntimeMetricsUIOption, ModuleRuntimeMetricsUIGuide>(option)
+public class ModuleRuntimeMetricsUI : MonicaModule<ModuleRuntimeMetricsUIOption>, IUIModule
 {
     /// <inheritdoc />
-    public override void ClaimDependencies()
+    public override void Describe(ModuleDescriptor module)
     {
-        if (Option.DisableRuntimeMetricsPage)
-        {
-            return;
-        }
-
-        DependsOnModule<ModuleRuntimeMetricsGuide>().Register();
-        DependsOnModule<ModuleLocalizationGuide>().Register()
-            .AddResource<RuntimeMetricsResource>();
-        DependsOnModule<ModuleShellUIGuide>().Register()
-            .RegisterUIComponents(registry => registry.RegisterLocalizedPage<UIRuntimeMetricsPage, RuntimeMetricsResource>(
-                UIRuntimeMetricsPage.PAGE_URL,
-                "Pages:RuntimeMetrics:Title",
-                Icons.Material.Filled.Speed,
-                BuiltInNavigationCategoryIds.Monitor,
-                addToNav: true,
-                navOrder: 10));
+        module.Require<ModuleRuntimeMetrics, ModuleRuntimeMetricsOption>();
     }
 
     /// <inheritdoc />
-    public override void ConfigureServices(IServiceCollection services)
+    public override void ConfigureServices(ModuleContext<ModuleRuntimeMetricsUIOption> context)
     {
-        services.AddScoped<RuntimeMetricsPageState>();
+        context.Services.AddScoped<RuntimeMetricsPageState>();
     }
-}
-
-/// <summary>
-/// Fluent guide for the runtime metrics UI module.
-/// </summary>
-public class ModuleRuntimeMetricsUIGuide
-    : ModuleGuide<ModuleRuntimeMetricsUI, ModuleRuntimeMetricsUIOption, ModuleRuntimeMetricsUIGuide>
-{
 }
 
 /// <summary>
@@ -78,11 +63,6 @@ public class ModuleRuntimeMetricsUIGuide
 /// </summary>
 public class ModuleRuntimeMetricsUIOption : ModuleOptions<ModuleRuntimeMetricsUI>
 {
-    /// <summary>
-    /// Disables registration of the runtime metrics page and removes it from the navigation registry.
-    /// </summary>
-    public bool DisableRuntimeMetricsPage { get; set; }
-
     /// <summary>
     /// Controls the automatic refresh interval of the runtime metrics page in milliseconds.
     /// Set this to 0 to disable timer-based refresh and require manual refresh only.

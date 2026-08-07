@@ -1,19 +1,18 @@
+using System.Collections.Frozen;
 using Monica.Core;
-using Monica.Core.Modularity.Models;
-using Monica.Core.Modularity.Services;
 
 namespace Monica.AI.Services.Support.ModuleCatalog;
 
 /// <summary>
-/// Reads loaded module keys from Monica's module registry snapshot.
+/// Reads loaded module strategy types from Monica's module registry snapshot.
 /// </summary>
 internal sealed class ModuleRegistryLoadedModuleCatalog(MonicaApplication application) : ILoadedModuleCatalog
 {
     /// <inheritdoc />
-    public IReadOnlySet<ModuleKey> GetLoadedModuleKeys()
+    public IReadOnlySet<Type> GetLoadedModuleTypes()
     {
         return application.Modules.RuntimeSnapshots
-            .Select(snapshot => snapshot.ModuleKey)
-            .ToHashSet();
+            .Select(static snapshot => snapshot.ModuleType)
+            .ToFrozenSet();
     }
 }

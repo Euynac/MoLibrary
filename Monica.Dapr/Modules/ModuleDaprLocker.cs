@@ -3,7 +3,6 @@ using Grpc.Net.Client;
 using Microsoft.Extensions.DependencyInjection;
 using Monica.Core.Modularity;
 using Monica.Core.Modularity.Abstractions;
-using Monica.Core.Modularity.Annotations;
 using Monica.Core.Modularity.Models;
 using Monica.Dapr.Services;
 using Monica.Locker.Models;
@@ -14,60 +13,58 @@ namespace Monica.Modules;
 public static class ModuleDaprLockerBuilderExtensions
 {
     /// <summary>
-    /// Registers the Dapr lock provider on top of the Locker module and returns the Dapr-specific guide.
+    /// Registers the Dapr lock provider on top of the Locker module and returns its module registration.
     /// </summary>
-    /// <param name="guide">The locker guide that should use the Dapr provider.</param>
+    /// <param name="module">The Locker registration that should use the Dapr provider.</param>
     /// <param name="action">Optional Dapr locker option configuration.</param>
-    /// <returns>The Dapr locker guide.</returns>
-    public static ModuleDaprLockerGuide UseDaprProvider(this ModuleLockerGuide guide,
+    /// <returns>The Dapr locker module registration.</returns>
+    public static ModuleRegistration<ModuleDaprLocker, ModuleDaprLockerOption> UseDaprProvider(
+        this ModuleRegistration<ModuleLocker, ModuleLockerOption> module,
         Action<ModuleDaprLockerOption>? action = null)
     {
-        guide.UseProvider<DaprLockProvider>();
-        return guide.AddModule<ModuleDaprLocker, ModuleDaprLockerOption, ModuleDaprLockerGuide>(action);
+        module.UseProvider<DaprLockProvider>();
+        return module.Include<ModuleDaprLocker, ModuleDaprLockerOption>(action);
     }
 }
 
 /// <summary>
 /// Registers the Dapr distributed lock client integration used by <see cref="DaprLockProvider"/>.
 /// </summary>
-[ModuleKey(BuiltInModuleKey.DaprLocker)]
-public class ModuleDaprLocker(ModuleDaprLockerOption option)
-    : ModuleBase<ModuleDaprLocker, ModuleDaprLockerOption, ModuleDaprLockerGuide>(option)
+public class ModuleDaprLocker : MonicaModule<ModuleDaprLockerOption>
 {
-    public override void ConfigureServices(IServiceCollection services)
+    public override void ConfigureServices(ModuleContext<ModuleDaprLockerOption> context)
     {
+        var services = context.Services;
         // Keep client customization here so provider code only focuses on acquisition semantics.
         services.AddDaprDistributedLock((serviceProvider, clientBuilder) =>
         {
-            if (!string.IsNullOrWhiteSpace(option.DaprHttpEndpoint))
+            if (!string.IsNullOrWhiteSpace(Option.DaprHttpEndpoint))
             {
-                clientBuilder.UseHttpEndpoint(option.DaprHttpEndpoint);
+                clientBuilder.UseHttpEndpoint(Option.DaprHttpEndpoint);
             }
 
-            if (!string.IsNullOrWhiteSpace(option.DaprApiToken))
+            if (!string.IsNullOrWhiteSpace(Option.DaprApiToken))
             {
-                clientBuilder.UseDaprApiToken(option.DaprApiToken);
+                clientBuilder.UseDaprApiToken(Option.DaprApiToken);
             }
 
-            if (option.GrpcChannelOptions != null)
+            if (Option.GrpcChannelOptions != null)
             {
-                clientBuilder.UseGrpcChannelOptions(option.GrpcChannelOptions);
+                clientBuilder.UseGrpcChannelOptions(Option.GrpcChannelOptions);
             }
         });
     }
 
-    public override void ClaimDependencies()
+    public override void Describe(ModuleDescriptor module)
     {
-        DependsOnModule<ModuleLockerGuide>().Register();
+        module.Require<ModuleLocker, ModuleLockerOption>();
     }
 }
 
 /// <summary>
 /// Configures the Dapr-backed locker integration.
 /// </summary>
-public class ModuleDaprLockerGuide : ModuleGuide<ModuleDaprLocker, ModuleDaprLockerOption, ModuleDaprLockerGuide>
-{
-}
+
 
 /// <summary>
 /// Configures how Monica talks to Dapr when acquiring distributed locks.

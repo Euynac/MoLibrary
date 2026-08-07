@@ -1,0 +1,28 @@
+.identifier-value {
+    min-width: 0;
+    max-width: 100%;
+    overflow: hidden;
+}
+
+.identifier-value ::deep .mud-tooltip-root {
+    display: block;
+    min-width: 0;
+    max-width: 100%;
+    overflow: hidden;
+}
+
+.identifier-value code {
+    display: block;
+    min-width: 0;
+    max-width: 100%;
+    overflow: hidden;
+    color: var(--mud-palette-text-secondary);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.identifier-value code:focus-visible {
+    border-radius: var(--mud-default-borderradius);
+    outline: 2px solid var(--mud-palette-primary);
+    outline-offset: 2px;
+}

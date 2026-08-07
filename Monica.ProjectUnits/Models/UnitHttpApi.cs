@@ -1,8 +1,8 @@
 using Microsoft.AspNetCore.Mvc;
 using Monica.Core.Execution;
 using Monica.Core.Execution.Mvc;
+using Monica.Core.TypeDiscovery.Models;
 using Monica.ProjectUnits.Services.Support;
-using Monica.WebApi.AutoControllers.Abstractions;
 
 namespace Monica.ProjectUnits.Models;
 
@@ -12,34 +12,24 @@ namespace Monica.ProjectUnits.Models;
 /// </summary>
 public sealed class UnitHttpApi : ProjectUnit
 {
-    private UnitHttpApi(Type type, ProjectUnitCatalog catalog)
-        : base(type, EProjectUnitType.HttpApi, catalog, GetExecutionPoints(type))
+    private UnitHttpApi(BusinessTypeShape shape, ProjectUnitCatalog catalog)
+        : base(shape, EProjectUnitType.HttpApi, catalog, GetExecutionPoints(shape))
     {
     }
 
     protected override bool ShouldAnalyzeConstructorDependencies => true;
 
-    protected override bool VerifyTypeConstrain()
+    internal static ProjectUnit Create(BusinessTypeShape shape, ProjectUnitCatalog catalog)
     {
-        return typeof(ControllerBase).IsAssignableFrom(Type)
-               && !typeof(ICrudApplicationService).IsAssignableFrom(Type);
-    }
-
-    internal static ProjectUnit? Create(Type type, ProjectUnitCatalog catalog)
-    {
-        var unit = new UnitHttpApi(type, catalog);
-        if (!unit.VerifyType())
-        {
-            return null;
-        }
-
+        var unit = new UnitHttpApi(shape, catalog);
+        unit.CheckNameConventionMode();
         unit.InitializeMethods<ControllerBase>();
         return unit;
     }
 
-    private static ExecutionPoint[] GetExecutionPoints(Type type)
+    private static ExecutionPoint[] GetExecutionPoints(BusinessTypeShape shape)
     {
-        return type.IsDefined(typeof(MediatedControllerAttribute), inherit: false)
+        return shape.HasAttribute(typeof(MediatedControllerAttribute), inherit: false)
             ? []
             : [MvcExecutionPoints.Action];
     }

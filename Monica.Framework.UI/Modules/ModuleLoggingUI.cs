@@ -5,7 +5,6 @@ using Microsoft.Extensions.DependencyInjection;
 using Monica.Core;
 using Monica.Core.Modularity;
 using Monica.Core.Modularity.Abstractions;
-using Monica.Core.Modularity.Annotations;
 using Monica.Core.Modularity.Models;
 using Monica.Framework.UI.UILogging.Models;
 using Monica.Framework.UI.Pages;
@@ -26,9 +25,21 @@ public static class ModuleLoggingUIBuilderExtensions
         /// <summary>
         /// Configure LoggingUI module
         /// </summary>
-        public ModuleLoggingUIGuide AddLoggingUI(Action<ModuleLoggingUIOption>? action = null)
+        public ModuleRegistration<ModuleLoggingUI, ModuleLoggingUIOption> AddLoggingUI(
+            Action<ModuleLoggingUIOption>? action = null)
         {
-            return builder.AddModule<ModuleLoggingUI, ModuleLoggingUIOption, ModuleLoggingUIGuide>(action);
+            var registration = builder.AddModule<ModuleLoggingUI, ModuleLoggingUIOption>(action);
+            registration.Require<ModuleLocalization, ModuleLocalizationOption>()
+                .AddResource<LoggingResource>();
+            registration.Require<ModuleShellUI, ModuleShellUIOption>()
+                .RegisterUIComponents(registry => registry.RegisterLocalizedPage<UILoggingMonitorPage, LoggingResource>(
+                    UILoggingMonitorPage.PAGE_URL,
+                    "Pages:LoggingMonitor:Title",
+                    Icons.Material.Filled.Article,
+                    BuiltInNavigationCategoryIds.Monitor,
+                    addToNav: true,
+                    navOrder: 30));
+            return registration;
         }
     }
 }
@@ -36,41 +47,25 @@ public static class ModuleLoggingUIBuilderExtensions
 /// <summary>
 /// Logging UI module implementation
 /// </summary>
-[ModuleKey(BuiltInModuleKey.LoggingUI)]
-public class ModuleLoggingUI(ModuleLoggingUIOption option)
-    : WebModuleBase<ModuleLoggingUI, ModuleLoggingUIOption, ModuleLoggingUIGuide>(option)
+public class ModuleLoggingUI : MonicaModule<ModuleLoggingUIOption>, IWebHostRequiredModule, IUIModule
 {
-
-    public override void ConfigureServices(IServiceCollection services)
+    public override void Describe(ModuleDescriptor module)
     {
+        module.Require<ModuleLogging, ModuleLoggingOption>();
+    }
+
+    public override void ConfigureServices(ModuleContext<ModuleLoggingUIOption> context)
+    {
+        var services = context.Services;
         services.AddSingleton<ScreenLogBuffer>();
         services.AddSingleton<LogTailService>();
         services.AddSingleton<LogFileQueryService>();
         services.AddSingleton<LoggingService>();
     }
 
-    public override void ClaimDependencies()
+    public override void ConfigureEndpoints(WebModuleContext<ModuleLoggingUIOption> context)
     {
-        DependsOnModule<ModuleLoggingGuide>().Register();
-        DependsOnModule<ModuleLocalizationGuide>().Register()
-            .AddResource<LoggingResource>();
-
-        if (!Option.DisablePage)
-        {
-            DependsOnModule<ModuleShellUIGuide>().Register()
-                .RegisterUIComponents(p => p.RegisterLocalizedPage<UILoggingMonitorPage, LoggingResource>(
-                    UILoggingMonitorPage.PAGE_URL,
-                    "Pages:LoggingMonitor:Title",
-                    Icons.Material.Filled.Article,
-                    BuiltInNavigationCategoryIds.Monitor,
-                    addToNav: true,
-                    navOrder: 30));
-        }
-    }
-
-    public override void ConfigureEndpoints(IApplicationBuilder app)
-    {
-        UseEndpoints(app, endpoints =>
+        UseEndpoints(context, endpoints =>
         {
             var tagName = Option.GetApiGroupName();
 
@@ -125,22 +120,10 @@ public class ModuleLoggingUI(ModuleLoggingUIOption option)
 }
 
 /// <summary>
-/// Logging UI module wizard
-/// </summary>
-public class ModuleLoggingUIGuide : WebModuleGuide<ModuleLoggingUI, ModuleLoggingUIOption, ModuleLoggingUIGuide>
-{
-}
-
-/// <summary>
 /// Logging UI module options
 /// </summary>
 public class ModuleLoggingUIOption : MinimalApiModuleOptions<ModuleLoggingUI>
 {
-    /// <summary>
-    /// Whether to disable the log monitoring page
-    /// </summary>
-    public bool DisablePage { get; set; }
-
     /// <summary>
     /// Number of log lines obtained during initialization
     /// </summary>

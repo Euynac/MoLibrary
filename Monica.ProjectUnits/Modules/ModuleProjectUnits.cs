@@ -7,9 +7,9 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 using Monica.Core;
 using Monica.Core.Modularity;
 using Monica.Core.Modularity.Abstractions;
-using Monica.Core.Modularity.Annotations;
 using Monica.Core.Modularity.Models;
 using Monica.Core.Modularity.Services;
+using Monica.Core.TypeDiscovery.Models;
 using Monica.Core.XmlDocumentation.Abstractions;
 using Monica.ProjectUnits.Abstractions;
 using Monica.ProjectUnits.Facades;
@@ -31,10 +31,10 @@ public static class ModuleProjectUnitsBuilderExtensions
         /// Registers host-scoped project architecture discovery, diagnostics, and optional request filtering.
         /// </summary>
         /// <param name="action">An optional callback that configures discovery and endpoint behavior.</param>
-        /// <returns>The module guide used to register or configure dependencies.</returns>
-        public ModuleProjectUnitsGuide AddProjectUnits(Action<ModuleProjectUnitsOption>? action = null)
+        /// <returns>The host-bound module registration.</returns>
+        public ModuleRegistration<ModuleProjectUnits, ModuleProjectUnitsOption> AddProjectUnits(Action<ModuleProjectUnitsOption>? action = null)
         {
-            return builder.AddModule<ModuleProjectUnits, ModuleProjectUnitsOption, ModuleProjectUnitsGuide>(action);
+            return builder.AddModule<ModuleProjectUnits, ModuleProjectUnitsOption>(action);
         }
     }
 }
@@ -42,87 +42,53 @@ public static class ModuleProjectUnitsBuilderExtensions
 /// <summary>
 /// Discovers application architecture units for the current host and exposes optional inspection endpoints.
 /// </summary>
-[ModuleKey(BuiltInModuleKey.ProjectUnits)]
-public class ModuleProjectUnits(ModuleProjectUnitsOption option)
-    : WebModuleBase<ModuleProjectUnits, ModuleProjectUnitsOption, ModuleProjectUnitsGuide>(option), IBusinessTypeIterator
+public class ModuleProjectUnits : MonicaModule<ModuleProjectUnitsOption>, IWebModule
 {
-    private readonly ProjectUnitCatalog _catalog = new(option);
+    private ProjectUnitCatalog? _catalog;
+
+    private ProjectUnitCatalog Catalog => _catalog
+        ?? throw new InvalidOperationException("ProjectUnits has not completed service configuration.");
 
     /// <inheritdoc />
-    public override void ClaimDependencies()
+    public override void Describe(ModuleDescriptor module)
     {
-        if (Option.ParseUnitDetails)
-        {
-            DependsOnModule<ModuleXmlDocumentationGuide>().Register();
-        }
-
-        DependsOnModule<ModuleJsonSerializationGuide>().Register();
-        DependsOnModule<ModuleEventBusGuide>().Register();
+        module.Require<ModuleJsonSerialization, ModuleJsonSerializationOption>();
+        module.Require<ModuleEventBus, ModuleEventBusOption>();
+        module.AfterIfPresent<ModuleAutoControllers, ModuleAutoControllersOption>();
     }
 
     /// <inheritdoc />
-    public override void ConfigureServices(IServiceCollection services)
+    public override void ConfigureServices(ModuleContext<ModuleProjectUnitsOption> context)
     {
-        DeriveCrudNamingRuleFromAutoControllers();
-        _catalog.SetDocumentationService(option.ParseUnitDetails ? ResolveDocumentationService(services) : null);
+        var services = context.Services;
+        _catalog = new ProjectUnitCatalog(Option, CreateEffectiveNamingOptions(context.Modules), Logger);
+        Catalog.SetDocumentationService(Option.ParseUnitDetails ? ResolveDocumentationService(services) : null);
 
-        services.AddSingleton(_catalog);
-        services.AddSingleton<IProjectUnitCatalog>(_catalog);
+        services.AddSingleton(Catalog);
+        services.AddSingleton<IProjectUnitCatalog>(Catalog);
         services.TryAddScoped<IProjectUnitRequirementLinkResolver, NullProjectUnitRequirementLinkResolver>();
         services.AddScoped<ProjectUnitProjectionService>();
         services.AddScoped<ProjectUnitCatalogService>();
         services.AddScoped<ProjectUnitsFacade>();
     }
 
-    /// <summary>
-    /// Derives the <see cref="EProjectUnitType.CrudApplicationService"/> naming rule from the AutoControllers module's
-    /// configured <c>CrudControllerOption.CrudControllerPostfix</c>, so the suffix is configured in a single place.
-    /// </summary>
-    /// <remarks>
-    /// CRUD application services strip <c>CrudControllerPostfix</c> to derive their route name, so that suffix is the
-    /// natural single source of truth for their naming convention. This module reads the finalized option (available
-    /// because option materialization runs before <see cref="ConfigureServices"/>) and only fills in the rule when the
-    /// host has not configured one explicitly and the postfix is non-empty. When the AutoControllers module is absent,
-    /// nothing is derived.
-    /// </remarks>
-    private void DeriveCrudNamingRuleFromAutoControllers()
+    /// <inheritdoc />
+    public override void DeclareTypeDiscovery(TypeDiscoveryPlan<ModuleProjectUnitsOption> discovery)
     {
-        if (option.ConventionOptions.Dict.ContainsKey(EProjectUnitType.CrudApplicationService))
-        {
-            // Respect an explicit host-provided rule.
-            return;
-        }
-
-        if (!Application.Modules.IsRegistered(typeof(ModuleAutoControllers)))
-        {
-            return;
-        }
-
-        var crudOption = GetOptions<CrudControllerOption>();
-        if (string.IsNullOrEmpty(crudOption.CrudControllerPostfix))
-        {
-            return;
-        }
-
-        option.ConventionOptions.Dict[EProjectUnitType.CrudApplicationService] = new ProjectUnitNamingRule
-        {
-            Postfix = crudOption.CrudControllerPostfix
-        };
-    }
-
-    public IEnumerable<Type> IterateBusinessTypes(IEnumerable<Type> types)
-    {
-        return _catalog.Discover(types);
+        discovery.Match(
+            TypeQuery.All,
+            (context, matches) => Catalog.Discover(matches.Select(static match => match.Shape)));
     }
 
     /// <inheritdoc />
-    public override void PostConfigureServices(IServiceCollection services)
+    public override void PostConfigureServices(ModuleContext<ModuleProjectUnitsOption> context)
     {
-        _catalog.ConnectUnits();
-        ProjectUnitConfigurationReloadBehaviorEnricher.Enrich(services, _catalog, Logger);
-        if (option.EnableRequestFilter)
+        var services = context.Services;
+        Catalog.ConnectUnits();
+        ProjectUnitConfigurationReloadBehaviorEnricher.Enrich(services, Catalog, Logger);
+        if (Option.EnableRequestFilter)
         {
-            services.AddRequestFilter(_catalog);
+            services.AddRequestFilter(Catalog);
         }
     }
 
@@ -133,20 +99,22 @@ public class ModuleProjectUnits(ModuleProjectUnitsOption option)
     }
 
     /// <inheritdoc />
-    public override void ConfigureApplicationBuilder(IApplicationBuilder app)
+    public override void ConfigureApplicationBuilder(WebModuleContext<ModuleProjectUnitsOption> context)
     {
-        if (option.EnableRequestFilter)
+        var app = context.ApplicationBuilder;
+        if (Option.EnableRequestFilter)
         {
             app.UseRequestFilter();
         }
     }
 
     /// <inheritdoc />
-    public override void ConfigureEndpoints(IApplicationBuilder app)
+    public override void ConfigureEndpoints(WebModuleContext<ModuleProjectUnitsOption> context)
     {
-        UseEndpoints(app, endpoints =>
+        var app = context.ApplicationBuilder;
+        UseEndpoints(context, endpoints =>
         {
-            var tagName = option.GetApiGroupName();
+            var tagName = Option.GetApiGroupName();
 
             endpoints.MapPost("/framework/units/domain-event/{eventKey}/publish",
                 async ([FromRoute] string eventKey,
@@ -160,7 +128,7 @@ public class ModuleProjectUnits(ModuleProjectUnitsOption option)
                 .WithSummary("Publish a discovered domain event")
                 .WithDescription("Deserializes and publishes a domain event by its discovered project-unit key.");
 
-            if (option.EnableRequestFilter)
+            if (Option.EnableRequestFilter)
             {
                 endpoints.MapPost("/framework/request-filter",
                     async ([FromBody] RequestFilterDto dto,
@@ -237,33 +205,74 @@ public class ModuleProjectUnits(ModuleProjectUnitsOption option)
                 && descriptor.ServiceType == typeof(IXmlDocumentationService))
             ?.ImplementationInstance as IXmlDocumentationService;
     }
+
+    /// <summary>
+    /// Uses the optional AutoControllers edge as the single source of truth for the derived CRUD service suffix.
+    /// An explicit ProjectUnits convention remains authoritative.
+    /// </summary>
+    private ProjectUnitNamingOptions CreateEffectiveNamingOptions(IModuleOptionReader modules)
+    {
+        var configured = Option.ConventionOptions;
+        var effective = new ProjectUnitNamingOptions
+        {
+            Dict = new Dictionary<EProjectUnitType, ProjectUnitNamingRule>(configured.Dict),
+            EnableNameConvention = configured.EnableNameConvention,
+            NameConventionMode = configured.NameConventionMode
+        };
+
+        if (!effective.Dict.ContainsKey(EProjectUnitType.CrudApplicationService)
+            && modules.TryGet<ModuleAutoControllers, ModuleAutoControllersOption>(out var autoControllersOptions)
+            && autoControllersOptions is { } configuredAutoControllers
+            && !string.IsNullOrEmpty(configuredAutoControllers.Crud.CrudControllerPostfix))
+        {
+            effective.Dict[EProjectUnitType.CrudApplicationService] = new ProjectUnitNamingRule
+            {
+                Postfix = configuredAutoControllers.Crud.CrudControllerPostfix
+            };
+        }
+
+        return effective;
+    }
 }
 
 /// <summary>
 /// Provides fluent registration for the ProjectUnits module.
 /// </summary>
-public class ModuleProjectUnitsGuide : WebModuleGuide<ModuleProjectUnits, ModuleProjectUnitsOption,
-    ModuleProjectUnitsGuide>
+public static class ModuleProjectUnitsRegistrationExtensions
 {
+    /// <summary>
+    /// Enables XML documentation analysis for discovered project units.
+    /// </summary>
+    /// <param name="module">The ProjectUnits module registration.</param>
+    public static ModuleRegistration<ModuleProjectUnits, ModuleProjectUnitsOption> WithDocumentationDetails(
+        this ModuleRegistration<ModuleProjectUnits, ModuleProjectUnitsOption> module)
+    {
+        module.Configure(options => options.ParseUnitDetails = true);
+        module.Require<ModuleXmlDocumentation, ModuleXmlDocumentationOption>();
+        return module;
+    }
+
     /// <summary>
     /// Registers the application-owned resolver used to turn requirement identifiers into optional navigation links.
     /// </summary>
+    /// <param name="module">The ProjectUnits module registration.</param>
     /// <typeparam name="TResolver">A scoped requirement-link resolver implementation.</typeparam>
-    /// <returns>The current guide instance.</returns>
+    /// <returns>The current module registration.</returns>
     /// <remarks>
     /// Resolution occurs only when project-unit detail is requested. Unknown requirements should return
     /// <see langword="null"/> so they remain visible as unresolved references.
     /// </remarks>
-    public ModuleProjectUnitsGuide UseRequirementLinkResolver<TResolver>()
+    public static ModuleRegistration<ModuleProjectUnits, ModuleProjectUnitsOption> UseRequirementLinkResolver<TResolver>(this ModuleRegistration<ModuleProjectUnits, ModuleProjectUnitsOption> module)
         where TResolver : class, IProjectUnitRequirementLinkResolver
     {
-        ConfigureServices(context =>
+        module.ConfigureServices(context =>
         {
             context.Services.Replace(
                 ServiceDescriptor.Scoped<IProjectUnitRequirementLinkResolver, TResolver>());
         });
-        return this;
+        return module;
     }
+
 }
 
 /// <summary>
@@ -284,9 +293,11 @@ public class ModuleProjectUnitsOption : MinimalApiModuleOptions<ModuleProjectUni
 
     /// <summary>
     /// Gets or sets whether ProjectUnits loads XML summaries for discovered types and methods.
-    /// The default is <see langword="true"/> and automatically registers the XML documentation module.
+    /// The default is <see langword="false"/>. Enable it through
+    /// <see cref="ModuleProjectUnitsRegistrationExtensions.WithDocumentationDetails"/> so the required XML
+    /// documentation module is declared explicitly with the feature.
     /// </summary>
-    public bool ParseUnitDetails { get; set; } = true;
+    public bool ParseUnitDetails { get; internal set; }
 }
 
 /// <summary>

@@ -5,7 +5,6 @@ using Monica.Core;
 using Monica.Core.Execution;
 using Monica.Core.Modularity;
 using Monica.Core.Modularity.Abstractions;
-using Monica.Core.Modularity.Annotations;
 using Monica.Core.Modularity.Models;
 using Monica.Core.Results.Abstractions;
 using Monica.Framework.ChainTracing.Abstractions;
@@ -25,9 +24,9 @@ public static class ModuleChainTracingBuilderExtensions
         /// <summary>
         /// Configures the ChainTracing module.
         /// </summary>
-        public ModuleChainTracingGuide AddChainTracing(Action<ModuleChainTracingOption>? action = null)
+        public ModuleRegistration<ModuleChainTracing, ModuleChainTracingOption> AddChainTracing(Action<ModuleChainTracingOption>? action = null)
         {
-            return builder.AddModule<ModuleChainTracing, ModuleChainTracingOption, ModuleChainTracingGuide>(action);
+            return builder.AddModule<ModuleChainTracing, ModuleChainTracingOption>(action);
         }
     }
 }
@@ -35,86 +34,90 @@ public static class ModuleChainTracingBuilderExtensions
 /// <summary>
 /// Chain tracing module.
 /// </summary>
-/// <param name="option">The module options.</param>
-[ModuleKey(BuiltInModuleKey.ChainTracing)]
-public class ModuleChainTracing(ModuleChainTracingOption option)
-    : WebModuleBase<ModuleChainTracing, ModuleChainTracingOption, ModuleChainTracingGuide>(option)
+public class ModuleChainTracing : MonicaModule<ModuleChainTracingOption>, IWebModule
 {
-    public override void ConfigureServices(IServiceCollection services)
+    public override void ConfigureServices(ModuleContext<ModuleChainTracingOption> context)
     {
-        if (!Option.Enabled)
-        {
-            services.AddSingleton<IChainTracing>(_ => EmptyChainTracingService.Instance);
-            return;
-        }
-
+        var services = context.Services;
         services.AddSingleton<IChainTracing, AsyncLocalChainTracingService>();
     }
 
-    public override void ClaimDependencies()
+    public override void Describe(ModuleDescriptor module)
     {
-        if (!Option.Enabled)
-        {
-            return;
-        }
+        module.Require<ModuleJsonSerialization, ModuleJsonSerializationOption>();
+    }
+}
 
-        DependsOnModule<ModuleJsonSerializationGuide>().Register();
-        DependsOnModule<ModuleExecutionPipelineGuide>().Register()
+/// <summary>
+/// Registration extensions for opt-in chain tracing integrations.
+/// </summary>
+public static class ModuleChainTracingRegistrationExtensions
+{
+    /// <summary>
+    /// Traces business operations executed through Monica's execution pipeline.
+    /// </summary>
+    public static ModuleRegistration<ModuleChainTracing, ModuleChainTracingOption> UseExecutionTracing(
+        this ModuleRegistration<ModuleChainTracing, ModuleChainTracingOption> module)
+    {
+        module.Require<ModuleExecutionPipeline, ModuleExecutionPipelineOption>()
             .AddBehavior(
                 typeof(ChainTracingExecutionBehavior<,>),
                 ExecutionBehaviorOrder.Diagnostics,
                 static descriptor =>
                     descriptor.IsBusinessOperation
                     && typeof(IResultEnvelope).IsAssignableFrom(descriptor.ResultType));
-
-        if (Option.EnableControllerTracing || Option.EnableAttachToRes)
-        {
-            DependsOnModule<ModuleControllersGuide>().Register().ConfigMvcOption((options, _) =>
-            {
-                if (Option.EnableControllerTracing)
-                {
-                    options.Filters.Add<ChainTracingControllerActionFilter>();
-                }
-
-                if (Option.EnableAttachToRes)
-                {
-                    options.Filters.Add<ChainTracingResultMetadataActionFilter>();
-                }
-            });
-        }
+        return module;
     }
-}
 
-/// <summary>
-/// Configuration guide for the chain tracing module.
-/// </summary>
-public class ModuleChainTracingGuide : WebModuleGuide<ModuleChainTracing, ModuleChainTracingOption, ModuleChainTracingGuide>
-{
+    /// <summary>
+    /// Traces ASP.NET Core controller actions.
+    /// </summary>
+    public static ModuleRegistration<ModuleChainTracing, ModuleChainTracingOption> UseControllerTracing(
+        this ModuleRegistration<ModuleChainTracing, ModuleChainTracingOption> module)
+    {
+        module.Require<ModuleControllers, ModuleControllersOption>()
+            .ConfigMvcOption(options => options.Filters.Add<ChainTracingControllerActionFilter>());
+        return module;
+    }
+
+    /// <summary>
+    /// Attaches completed chain-trace metadata to controller result envelopes.
+    /// </summary>
+    public static ModuleRegistration<ModuleChainTracing, ModuleChainTracingOption> AttachControllerTraceMetadata(
+        this ModuleRegistration<ModuleChainTracing, ModuleChainTracingOption> module)
+    {
+        module.Require<ModuleControllers, ModuleControllersOption>()
+            .ConfigMvcOption(options => options.Filters.Add<ChainTracingResultMetadataActionFilter>());
+        return module;
+    }
+
     /// <summary>
     /// Enables EF Core command tracing support.
     /// </summary>
-    public ModuleChainTracingGuide UseDatabaseTracing()
+    public static ModuleRegistration<ModuleChainTracing, ModuleChainTracingOption> UseDatabaseTracing(this ModuleRegistration<ModuleChainTracing, ModuleChainTracingOption> module)
     {
-        ConfigureServices(context => { context.Services.TryAddScoped<ChainTracingDbCommandInterceptor>(); });
-        return this;
+        module.ConfigureServices(context => { context.Services.TryAddScoped<ChainTracingDbCommandInterceptor>(); });
+        return module;
     }
 
     /// <summary>
     /// Enables RPC response tracing middleware.
     /// </summary>
-    public ModuleChainTracingGuide UseRpcTracing()
+    public static ModuleRegistration<ModuleChainTracing, ModuleChainTracingOption> UseRpcTracing(this ModuleRegistration<ModuleChainTracing, ModuleChainTracingOption> module)
     {
-        DependsOnModule<ModuleJsonSerializationGuide>().Register();
-        DependsOnModule<ModuleResultEnvelopeGuide>().Register();
-        DependsOnModule<ModuleExceptionHandlingGuide>().Register();
+        module.Require<ModuleJsonSerialization, ModuleJsonSerializationOption>();
+        module.RequireWebHost("RPC chain-tracing middleware must run in an ASP.NET Core request pipeline.");
+        module.Require<ModuleResultEnvelope, ModuleResultEnvelopeOption>();
+        module.Require<ModuleExceptionHandling, ModuleExceptionHandlingOption>();
 
-        ConfigureServices(context => { context.Services.TryAddTransient<RpcChainTracingMiddleware>(); });
-        ConfigureApplicationBuilder(
+        module.ConfigureServices(context => { context.Services.TryAddTransient<RpcChainTracingMiddleware>(); });
+        module.ConfigureApplicationBuilder(
             context => { context.ApplicationBuilder.UseMiddleware<RpcChainTracingMiddleware>(); },
-            ModuleApplicationMiddlewareOrder.AfterUseRouting);
+            ModuleWebStage.AfterRouting);
 
-        return this;
+        return module;
     }
+
 }
 
 /// <summary>
@@ -122,21 +125,6 @@ public class ModuleChainTracingGuide : WebModuleGuide<ModuleChainTracing, Module
 /// </summary>
 public class ModuleChainTracingOption : ModuleOptions<ModuleChainTracing>
 {
-    /// <summary>
-    /// Enables chain tracing.
-    /// </summary>
-    public bool Enabled { get; set; } = true;
-
-    /// <summary>
-    /// Enables controller tracing.
-    /// </summary>
-    public bool EnableControllerTracing { get; set; } = true;
-
-    /// <summary>
-    /// Enables attaching chain tracing information to responses.
-    /// </summary>
-    public bool EnableAttachToRes { get; set; } = true;
-
     /// <summary>
     /// Maximum chain depth to prevent unbounded recursion.
     /// </summary>

@@ -4,7 +4,6 @@ using Microsoft.Extensions.Options;
 using Monica.Core.Extensions;
 using Monica.Core.HostedService.Abstractions;
 using Monica.Core.HostedService.Models;
-using Monica.Core.Modularity.Models;
 using Monica.Core.ObservableInstance.Abstractions;
 using Monica.Modules;
 using Monica.ServiceDiscovery.Abstractions;
@@ -81,7 +80,7 @@ public abstract class CoordinatedLeaderService(
     public bool IsCurrentlyLeader => LeaderService.IsLeader;
 
     /// <inheritdoc />
-    public override string? ServiceGroupId => nameof(BuiltInModuleKey.ServiceDiscovery);
+    public override string? ServiceGroupId => nameof(ModuleServiceDiscovery);
 
     /// <summary>
     /// Gets the initialization error message if initialization failed.

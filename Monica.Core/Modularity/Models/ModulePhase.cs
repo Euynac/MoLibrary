@@ -7,14 +7,14 @@ public enum ModulePhase
 {
     None = 0,
     /// <summary>
-    /// Module declares its dependencies on other modules.
+    /// The module declares its option-free graph contract.
     /// </summary>
-    ClaimDependencies,
+    Describe,
     
     /// <summary>
-    /// Initializes the final configurations for the module.
+    /// Finalizes and validates the module's default options and named profiles.
     /// </summary>
-    InitFinalConfigures,
+    FinalizeOptions,
     
     /// <summary>
     /// Configures the IHostApplicationBuilder for the module.
@@ -27,9 +27,9 @@ public enum ModulePhase
     ConfigureServices,
     
     /// <summary>
-    /// Iterates through business types for the module.
+    /// Declares structural business-type queries for later centralized compilation and commit.
     /// </summary>
-    IterateBusinessTypes,
+    DeclareTypeDiscovery,
     
     /// <summary>
     /// Performs post-configuration of services after all services have been registered.

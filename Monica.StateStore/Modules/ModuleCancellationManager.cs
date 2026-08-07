@@ -2,7 +2,6 @@ using Microsoft.Extensions.DependencyInjection;
 using Monica.Core;
 using Monica.Core.Modularity;
 using Monica.Core.Modularity.Abstractions;
-using Monica.Core.Modularity.Annotations;
 using Monica.Core.Modularity.Models;
 using Monica.StateStore.Abstractions;
 using Monica.StateStore.Cancellation.Abstractions;
@@ -18,9 +17,9 @@ public static class ModuleCancellationManagerBuilderExtensions
         /// <summary>
         /// Configure the CancellationManager module
         /// </summary>
-        public ModuleCancellationManagerGuide AddCancellationManager(Action<ModuleCancellationManagerOption>? action = null)
+        public ModuleRegistration<ModuleCancellationManager, ModuleCancellationManagerOption> AddCancellationManager(Action<ModuleCancellationManagerOption>? action = null)
         {
-            return builder.AddModule<ModuleCancellationManager, ModuleCancellationManagerOption, ModuleCancellationManagerGuide>(action);
+            return builder.AddModule<ModuleCancellationManager, ModuleCancellationManagerOption>(action);
         }
     }
 }
@@ -29,17 +28,15 @@ public static class ModuleCancellationManagerBuilderExtensions
 /// Distributed cancellation token manager module
 /// Provide cancellation token management capabilities across microservice instances
 /// </summary>
-[ModuleKey(BuiltInModuleKey.CancellationManager)]
-public class ModuleCancellationManager(ModuleCancellationManagerOption option)
-    : ModuleBase<ModuleCancellationManager, ModuleCancellationManagerOption, ModuleCancellationManagerGuide>(option)
+public class ModuleCancellationManager : MonicaModule<ModuleCancellationManagerOption>
 {
     /// <summary>
     /// Configure service dependency injection
     /// </summary>
-    /// <param name="services">Service collection</param>
-    /// <returns>Return configuration results</returns>
-    public override void ConfigureServices(IServiceCollection services)
+    /// <param name="context">The module-owned service registration context.</param>
+    public override void ConfigureServices(ModuleContext<ModuleCancellationManagerOption> context)
     {
+        var services = context.Services;
         // Choose the appropriate implementation based on your configuration
         if (!Option.UseDistributed)
         {
@@ -57,36 +54,45 @@ public class ModuleCancellationManager(ModuleCancellationManagerOption option)
         }
     }
 
-    public override void ClaimDependencies()
+    public override void Describe(ModuleDescriptor module)
     {
-        if (Option.UseDistributed)
-        {
-            DependsOnModule<ModuleStateStoreGuide>().Register().AddKeyedCommonStateStore(nameof(ModuleCancellationManager), true);
-        }
     }
 }
 
 /// <summary>
-/// Distributed Cancellation Token Manager Module Guide
+/// Registration extensions for the distributed cancellation-token manager module.
 /// </summary>
-public class ModuleCancellationManagerGuide : ModuleGuide<ModuleCancellationManager, ModuleCancellationManagerOption,
-    ModuleCancellationManagerGuide>
+public static class ModuleCancellationManagerRegistrationExtensions
 {
+    /// <summary>
+    /// Enables the distributed cancellation implementation and its state-store dependency.
+    /// </summary>
+    /// <param name="module">The CancellationManager registration being configured.</param>
+    public static ModuleRegistration<ModuleCancellationManager, ModuleCancellationManagerOption> UseDistributedCancellation(
+        this ModuleRegistration<ModuleCancellationManager, ModuleCancellationManagerOption> module)
+    {
+        module.Configure(options => options.UseDistributed = true);
+        module.Require<ModuleStateStore, ModuleStateStoreOption>()
+            .AddKeyedCommonStateStore(nameof(ModuleCancellationManager), useDistributed: true);
+        return module;
+    }
+
     /// <summary>
     /// Adds a cancellation token manager for the specified key
     /// </summary>
+    /// <param name="module">The CancellationManager registration being configured.</param>
     /// <param name="key">service key</param>
     /// <param name="useDistributed">Whether to use memory implementation, the default is false</param>
-    /// <returns>Returns the current module guide instance to support chained calls</returns>
-    public ModuleCancellationManagerGuide AddKeyedCancellationManager(string key, bool useDistributed = false)
+    /// <returns>The current module registration for chaining.</returns>
+    public static ModuleRegistration<ModuleCancellationManager, ModuleCancellationManagerOption> AddKeyedCancellationManager(this ModuleRegistration<ModuleCancellationManager, ModuleCancellationManagerOption> module, string key, bool useDistributed = false)
     {
         if (useDistributed)
         {
             // Using distributed implementation, you need to rely on StateStore
-            DependsOnModule<ModuleStateStoreGuide>().Register().AddKeyedCommonStateStore(key, true);
+            module.Require<ModuleStateStore, ModuleStateStoreOption>().AddKeyedCommonStateStore(key, true);
         }
 
-        ConfigureServices(context =>
+        module.ConfigureServices(context =>
         {
             context.Services.AddKeyedSingleton<ICancellationManager>(key, (serviceProvider, _) =>
             {
@@ -102,10 +108,11 @@ public class ModuleCancellationManagerGuide : ModuleGuide<ModuleCancellationMana
                     return ActivatorUtilities.CreateInstance<DistributedCancellationManager>(serviceProvider, stateStore);
                 }
             });
-        }, secondKey: key);
-        RecordKeyedServiceKey(key);
-        return this;
+        });
+        module.RecordKeyedServiceKey(key);
+        return module;
     }
+
 
 }
 
@@ -115,9 +122,11 @@ public class ModuleCancellationManagerGuide : ModuleGuide<ModuleCancellationMana
 public class ModuleCancellationManagerOption : ModuleOptions<ModuleCancellationManager>
 {
     /// <summary>
-    /// Whether to use memory implementation, the default is false (use distributed implementation)
+    /// Gets whether the distributed implementation was selected through
+    /// <see cref="ModuleCancellationManagerRegistrationExtensions.UseDistributedCancellation"/>.
+    /// The default uses the in-memory implementation.
     /// </summary>
-    public bool UseDistributed { get; set; } = false;
+    public bool UseDistributed { get; internal set; }
 
     /// <summary>
     /// Polling interval (milliseconds), default is 1000ms

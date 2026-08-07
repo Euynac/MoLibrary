@@ -8,8 +8,7 @@ namespace Monica.UI.Shell.Support;
 /// Collects startup-only Blazor page and navigation contributions from Monica UI modules.
 /// </summary>
 /// <remarks>
-/// The shell passes this write-only contract to
-/// <see cref="Monica.Modules.ModuleShellUIGuide.RegisterUIComponents"/> callbacks during application startup before
+/// The shell passes this write-only contract to module-owned UI registration callbacks during application startup before
 /// routing. Contributors cannot inspect or seal the catalog, so one module cannot accidentally prevent later modules
 /// from registering their contributions. The shell seals the registry when endpoint configuration begins; callers
 /// must not retain this writer or attempt to mutate it after their callback returns.
@@ -42,8 +41,7 @@ public interface INavigationRegistryBuilder
     /// <param name="order">The category order. Lower values render first.</param>
     /// <returns>The validated category identifier for use by page registrations.</returns>
     /// <remarks>
-    /// The contributing module must register <typeparamref name="TResource"/> through
-    /// <see cref="Monica.Modules.ModuleLocalizationGuide.AddResource{TResource}"/>.
+    /// The contributing module must add <typeparamref name="TResource"/> to the Localization module's resource catalog.
     /// </remarks>
     /// <exception cref="ArgumentException">
     /// Thrown when <paramref name="categoryId"/> is not a valid category identifier or
@@ -101,8 +99,8 @@ public interface INavigationRegistryBuilder
     /// <param name="addToNav">Whether to add a navigation entry.</param>
     /// <param name="navOrder">The navigation sort order within its category.</param>
     /// <remarks>
-    /// The contributing module must register <typeparamref name="TResource"/> through
-    /// <see cref="Monica.Modules.ModuleLocalizationGuide.AddResource{TResource}"/>. Text is resolved from the current
+    /// The contributing module must add <typeparamref name="TResource"/> to the Localization module's resource catalog.
+    /// Text is resolved from the current
     /// host's <see cref="ILocalizationCatalog"/> when the navigation UI is rendered. Routes are trimmed and compared
     /// without regard to case. When <paramref name="addToNav"/> is <see langword="true"/>,
     /// <paramref name="categoryId"/> must identify a built-in or registered category before startup registration is

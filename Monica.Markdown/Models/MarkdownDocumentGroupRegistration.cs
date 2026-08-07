@@ -2,7 +2,7 @@ namespace Monica.Markdown.Models;
 
 /// <summary>
 /// Registration-time descriptor for a markdown document group.
-/// Captured during Guide configuration and used to scan documents at runtime.
+/// Captured during module registration and used to scan documents at runtime.
 /// </summary>
 public class MarkdownDocumentGroupRegistration
 {

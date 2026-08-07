@@ -1,3 +1,4 @@
+using System.Collections.Immutable;
 using Monica.Core.Modularity.Diagnostics.Models;
 using Monica.Core.Modularity.Services.Support;
 
@@ -27,6 +28,16 @@ internal sealed class ModuleProfilingState
     /// Gets lifecycle milestones in occurrence order.
     /// </summary>
     internal List<ModuleCompositionMilestonePerformanceInfo> Milestones { get; } = [];
+
+    /// <summary>
+    /// Gets the latest bounded statistics produced by the type-discovery compiler and commit pipeline.
+    /// </summary>
+    internal TypeDiscoveryStatistics TypeDiscoveryStatistics { get; set; } = new();
+
+    /// <summary>
+    /// Gets reflection-free summaries for structurally distinct discovery queries.
+    /// </summary>
+    internal ImmutableArray<TypeDiscoveryQuerySummary> TypeDiscoveryQueries { get; set; } = [];
 
     /// <summary>
     /// Gets the UTC timestamp paired with <see cref="OriginTimestamp"/>.
@@ -62,6 +73,8 @@ internal sealed class ModuleProfilingState
         SystemPhases.Clear();
         ModuleProfiles.Clear();
         Milestones.Clear();
+        TypeDiscoveryStatistics = new TypeDiscoveryStatistics();
+        TypeDiscoveryQueries = [];
         OriginUtc = default;
         OriginTimestamp = null;
         TerminalTimestamp = null;
@@ -76,4 +89,5 @@ internal sealed class ModuleProfilingState
 internal sealed record ModuleSystemPhaseProfileStart(
     long Sequence,
     long StartedTimestamp,
-    DateTimeOffset StartedAtUtc);
+    DateTimeOffset StartedAtUtc,
+    ModuleSystemStage? Stage);

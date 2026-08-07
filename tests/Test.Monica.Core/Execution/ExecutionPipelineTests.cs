@@ -3,7 +3,7 @@ using AwesomeAssertions;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Monica.Core.Execution;
-using Monica.Core.Modularity.Exceptions;
+using Monica.Core.Modularity.Abstractions;
 using Monica.Core.Modularity.Extensions;
 using Monica.Modules;
 using Xunit;
@@ -41,7 +41,7 @@ public sealed class ExecutionPipelineTests
             .AddExecutionPipeline()
             .AddBehavior<OuterBehavior>());
 
-        compose.Should().Throw<ModuleRegistrationException>()
+        compose.Should().Throw<InvalidOperationException>()
             .WithMessage("*must have exactly one service registration, owned by AddBehavior*");
     }
 
@@ -64,7 +64,7 @@ public sealed class ExecutionPipelineTests
     [Fact]
     public async Task ExecuteAsync_ShouldOrderBehaviorsByOrderThenStableTypeName()
     {
-        using var host = BuildHost(guide => guide
+        using var host = BuildHost(registration => registration
             .AddBehavior<OuterBehavior>(order: 0)
             .AddBehavior<BetaBehavior>(order: 100)
             .AddBehavior<AlphaBehavior>(order: 100));
@@ -94,7 +94,7 @@ public sealed class ExecutionPipelineTests
     public async Task ExecuteAsync_ShouldFilterAndCacheApplicableRegistrationPlans()
     {
         var filterInvocations = 0;
-        using var host = BuildHost(guide => guide.AddBehavior<FilteredBehavior>(
+        using var host = BuildHost(registration => registration.AddBehavior<FilteredBehavior>(
             descriptorFilter: descriptor =>
             {
                 Interlocked.Increment(ref filterInvocations);
@@ -159,7 +159,7 @@ public sealed class ExecutionPipelineTests
     public async Task ExecuteAsync_WhenBehaviorDoesNotUseFeatures_ShouldKeepFeaturesLazy()
     {
         using var host = BuildHost(
-            guide => guide.AddBehavior<ContextCaptureBehavior>(),
+            registration => registration.AddBehavior<ContextCaptureBehavior>(),
             services => services.AddScoped<ContextCapture>());
         using var scope = host.Services.CreateScope();
         var pipeline = scope.ServiceProvider.GetRequiredService<IExecutionPipeline>();
@@ -182,7 +182,7 @@ public sealed class ExecutionPipelineTests
     [Fact]
     public async Task ExecuteAsync_WhenBehaviorShortCircuits_ShouldNotInvokeTerminal()
     {
-        using var host = BuildHost(guide => guide.AddBehavior<ShortCircuitBehavior>());
+        using var host = BuildHost(registration => registration.AddBehavior<ShortCircuitBehavior>());
         using var scope = host.Services.CreateScope();
         var pipeline = scope.ServiceProvider.GetRequiredService<IExecutionPipeline>();
         var terminalInvocations = 0;
@@ -200,7 +200,7 @@ public sealed class ExecutionPipelineTests
     [Fact]
     public async Task ExecuteAsync_WhenBehaviorInvokesNextTwice_ShouldRejectSecondInvocation()
     {
-        using var host = BuildHost(guide => guide.AddBehavior<DoubleInvocationBehavior>());
+        using var host = BuildHost(registration => registration.AddBehavior<DoubleInvocationBehavior>());
         using var scope = host.Services.CreateScope();
         var pipeline = scope.ServiceProvider.GetRequiredService<IExecutionPipeline>();
         var terminalInvocations = 0;
@@ -222,7 +222,7 @@ public sealed class ExecutionPipelineTests
     [Fact]
     public async Task ExecuteAsync_WhenBehaviorInvokesNextConcurrently_ShouldAllowOnlyOneInvocation()
     {
-        using var host = BuildHost(guide => guide.AddBehavior<ConcurrentDoubleInvocationBehavior>());
+        using var host = BuildHost(registration => registration.AddBehavior<ConcurrentDoubleInvocationBehavior>());
         using var scope = host.Services.CreateScope();
         var pipeline = scope.ServiceProvider.GetRequiredService<IExecutionPipeline>();
         var terminalInvocations = 0;
@@ -281,7 +281,7 @@ public sealed class ExecutionPipelineTests
     public async Task ExecuteAsync_ShouldResolveScopedBehaviorFromThePipelineScope()
     {
         using var host = BuildHost(
-            guide => guide.AddBehavior<ScopedBehavior>(lifetime: ServiceLifetime.Scoped),
+            registration => registration.AddBehavior<ScopedBehavior>(lifetime: ServiceLifetime.Scoped),
             services => services.AddScoped<ScopeIdentity>());
 
         Guid firstScopeIdentity;
@@ -315,7 +315,7 @@ public sealed class ExecutionPipelineTests
     [Fact]
     public async Task ExecuteAsync_ShouldCloseAndResolveOpenGenericBehavior()
     {
-        using var host = BuildHost(guide => guide.AddBehavior(
+        using var host = BuildHost(registration => registration.AddBehavior(
             typeof(OpenGenericBehavior<,>)));
         using var scope = host.Services.CreateScope();
         var pipeline = scope.ServiceProvider.GetRequiredService<IExecutionPipeline>();
@@ -334,7 +334,7 @@ public sealed class ExecutionPipelineTests
     [Fact]
     public async Task ExecuteAsync_WhenOpenBehaviorConstraintsDoNotMatch_ShouldExcludeBehavior()
     {
-        using var host = BuildHost(guide => guide.AddBehavior(
+        using var host = BuildHost(registration => registration.AddBehavior(
             typeof(SelfTypedBehavior<,>)));
         using var scope = host.Services.CreateScope();
         var pipeline = scope.ServiceProvider.GetRequiredService<IExecutionPipeline>();
@@ -352,7 +352,7 @@ public sealed class ExecutionPipelineTests
     private static readonly ExecutionPoint SelectedPoint = new("test.selected");
 
     private static IHost BuildHost(
-        Action<ModuleExecutionPipelineGuide> configure,
+        Action<ModuleRegistration<ModuleExecutionPipeline, ModuleExecutionPipelineOption>> configure,
         Action<IServiceCollection>? configureServices = null)
     {
         var builder = Host.CreateApplicationBuilder();

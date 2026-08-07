@@ -6,7 +6,6 @@ using Monica.AI.AgentCapabilities.Models;
 using Monica.AI.Mcp.Internal;
 using Monica.AI.Mcp.Models;
 using Monica.AI.Services.Support.ModuleCatalog;
-using Monica.Core.Modularity.Models;
 using Monica.Core.Skills;
 using Monica.Core.XmlDocumentation.Abstractions;
 using Monica.Modules;
@@ -30,7 +29,7 @@ internal sealed class LocalMcpServerCatalog
         _entries = new Lazy<IReadOnlyList<LocalMcpServerEntry>>(() => BuildEntries(
             localServers.ToList(),
             skills.ToList(),
-            loadedModules.GetLoadedModuleKeys(),
+            loadedModules.GetLoadedModuleTypes(),
             options.Value,
             serviceProvider,
             xmlDocumentationService,
@@ -115,18 +114,18 @@ internal sealed class LocalMcpServerCatalog
     private static IReadOnlyList<LocalMcpServerEntry> BuildEntries(
         IReadOnlyList<MonicaMcpServer> servers,
         IReadOnlyList<Skill> skills,
-        IReadOnlySet<ModuleKey> loadedModuleKeys,
+        IReadOnlySet<Type> loadedModuleTypes,
         ModuleMcpOption options,
         IServiceProvider serviceProvider,
         IXmlDocumentationService xmlDocumentationService,
         ILogger logger)
     {
         var activeServers = servers
-            .Where(server => IsActive(server, loadedModuleKeys, logger))
+            .Where(server => IsActive(server, loadedModuleTypes, logger))
             .OrderBy(server => server.Definition.Name, StringComparer.Ordinal)
             .ToList();
         var activeSkills = skills
-            .Where(skill => IsActiveSkillMcpServer(skill, loadedModuleKeys, logger))
+            .Where(skill => IsActiveSkillMcpServer(skill, loadedModuleTypes, logger))
             .OrderBy(skill => skill.McpServerDefinition!.Name, StringComparer.Ordinal)
             .ToList();
 
@@ -152,7 +151,7 @@ internal sealed class LocalMcpServerCatalog
 
     private static bool IsActive(
         MonicaMcpServer server,
-        IReadOnlySet<ModuleKey> loadedModuleKeys,
+        IReadOnlySet<Type> loadedModuleTypes,
         ILogger logger)
     {
         if (!server.IsEnabled)
@@ -165,13 +164,13 @@ internal sealed class LocalMcpServerCatalog
             server.Definition.Name,
             "MCP server",
             server.RequiredModules,
-            loadedModuleKeys,
+            loadedModuleTypes,
             logger);
     }
 
     private static bool IsActiveSkillMcpServer(
         Skill skill,
-        IReadOnlySet<ModuleKey> loadedModuleKeys,
+        IReadOnlySet<Type> loadedModuleTypes,
         ILogger logger)
     {
         if (skill.McpServerDefinition is null)
@@ -189,18 +188,18 @@ internal sealed class LocalMcpServerCatalog
             skill.Definition.Name,
             "AI skill MCP exposure",
             skill.RequiredModules,
-            loadedModuleKeys,
+            loadedModuleTypes,
             logger);
     }
 
     private static bool HasRequiredModules(
         string name,
         string capabilityKind,
-        IEnumerable<ModuleKey> requiredModules,
-        IReadOnlySet<ModuleKey> loadedModuleKeys,
+        IReadOnlySet<Type> requiredModules,
+        IReadOnlySet<Type> loadedModuleTypes,
         ILogger logger)
     {
-        var missing = requiredModules.Where(required => !loadedModuleKeys.Contains(required)).ToList();
+        var missing = requiredModules.Where(required => !loadedModuleTypes.Contains(required)).ToList();
         if (missing.Count == 0)
         {
             return true;
@@ -210,7 +209,7 @@ internal sealed class LocalMcpServerCatalog
             "Skipping {CapabilityKind} '{CapabilityName}' because required modules are not loaded: {RequiredModules}.",
             capabilityKind,
             name,
-            string.Join(", ", missing));
+            string.Join(", ", missing.Select(static module => module.Name)));
         return false;
     }
 

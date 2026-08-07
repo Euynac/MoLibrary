@@ -6,8 +6,8 @@ using Microsoft.Extensions.Logging;
 using Monica.Core;
 using Monica.Core.Modularity;
 using Monica.Core.Modularity.Abstractions;
-using Monica.Core.Modularity.Annotations;
 using Monica.Core.Modularity.Models;
+using Monica.Core.TypeDiscovery.Models;
 using Monica.Core.ObjectMapping.Abstractions;
 using Monica.Core.ObjectMapping.Facades;
 using Monica.Core.ObjectMapping.Providers.Mapster;
@@ -26,14 +26,27 @@ public static class ModuleObjectMappingBuilderExtensions
         /// profiles found by Monica's business-type discovery pipeline.
         /// </summary>
         /// <param name="action">Optional configuration for the object-mapping endpoints.</param>
-        /// <returns>The object-mapping guide for optional explicit registration.</returns>
+        /// <returns>The host-bound object-mapping registration.</returns>
         /// <remarks>
         /// Profiles outside the host's type-discovery scope can be added explicitly through
-        /// <see cref="ModuleObjectMappingGuide.AddProfile{TProfile}"/>.
+        /// <c>AddProfile&lt;TProfile&gt;()</c>.
         /// </remarks>
-        public ModuleObjectMappingGuide AddObjectMapping(Action<ModuleObjectMappingOption>? action = null)
+        public ModuleRegistration<ModuleObjectMapping, ModuleObjectMappingOption> AddObjectMapping(
+            Action<ModuleObjectMappingOption>? action = null)
         {
-            return builder.AddModule<ModuleObjectMapping, ModuleObjectMappingOption, ModuleObjectMappingGuide>(action);
+            return builder.AddModule<ModuleObjectMapping, ModuleObjectMappingOption>(action);
+        }
+    }
+
+    extension(ModuleRegistration<ModuleObjectMapping, ModuleObjectMappingOption> registration)
+    {
+        /// <summary>
+        /// Adds a Mapster profile to the current host's object-mapping configuration.
+        /// </summary>
+        public ModuleRegistration<ModuleObjectMapping, ModuleObjectMappingOption> AddProfile<TProfile>()
+            where TProfile : class, IRegister
+        {
+            return registration.Configure(options => options.AddProfile(typeof(TProfile)));
         }
     }
 }
@@ -45,22 +58,15 @@ public static class ModuleObjectMappingBuilderExtensions
 /// Each Monica host owns an isolated configuration. Concrete, closed <see cref="IRegister"/> profiles discovered as
 /// business types are composed after explicitly registered profiles in dependency-first assembly order.
 /// </remarks>
-[ModuleKey(BuiltInModuleKey.ObjectMapping)]
-public class ModuleObjectMapping(ModuleObjectMappingOption option)
-    : WebModuleBase<ModuleObjectMapping, ModuleObjectMappingOption, ModuleObjectMappingGuide>(option),
-        IBusinessTypeIterator
+public class ModuleObjectMapping : MonicaModule<ModuleObjectMappingOption>, IWebModule
 {
     private readonly MapsterConfigurationRuntime _mappingRuntime = new();
     private readonly MapsterProfileCatalog _profileCatalog = new();
 
     /// <inheritdoc />
-    public override bool CanDowngradeToNonWebModule()
+    public override void ConfigureServices(ModuleContext<ModuleObjectMappingOption> context)
     {
-        return true;
-    }
-
-    public override void ConfigureServices(IServiceCollection services)
-    {
+        var services = context.Services;
         services.AddSingleton(_profileCatalog);
         services.AddSingleton(_mappingRuntime);
         services.AddScoped<IObjectMapper, MapsterObjectMapper>();
@@ -72,38 +78,42 @@ public class ModuleObjectMapping(ModuleObjectMappingOption option)
     }
 
     /// <inheritdoc />
-    public IEnumerable<Type> IterateBusinessTypes(IEnumerable<Type> types)
+    public override void DeclareTypeDiscovery(TypeDiscoveryPlan<ModuleObjectMappingOption> discovery)
     {
-        foreach (var type in types)
-        {
-            _profileCatalog.Discover(type);
-            yield return type;
-        }
+        discovery.Match(
+            TypeQuery.ClosedClass.AssignableTo<IRegister>(),
+            (_, matches) =>
+            {
+                foreach (var match in matches)
+                {
+                    _profileCatalog.Discover(match.Type);
+                }
+            });
     }
 
     /// <inheritdoc />
-    public override void PostConfigureServices(IServiceCollection _)
+    public override void PostConfigureServices(ModuleContext<ModuleObjectMappingOption> context)
     {
-        var compilationBarrier = option.GetCompilationBarrier();
+        var compilationBarrier = Option.GetCompilationBarrier();
         _mappingRuntime.Configure(config =>
-            _profileCatalog.ApplyProfiles(config, option.ProfileTypes, Application.TypeDependencyOrderer));
+            _profileCatalog.ApplyProfiles(config, Option.ProfileTypes, Application.TypeDependencyOrderer));
         var compilationCandidate = _mappingRuntime.FreezeAndCreateCompilationCandidate();
 
         ScheduleStartupWork(
             "compile-mapster-configuration",
             () =>
             {
-                compilationCandidate.Compile(failFast: option.CompileFailFast);
+                compilationCandidate.Compile(failFast: Option.CompileFailFast);
                 _mappingRuntime.PublishCompiled(compilationCandidate);
             },
             compilationBarrier);
     }
 
-    public override void ConfigureEndpoints(IApplicationBuilder app)
+    public override void ConfigureEndpoints(WebModuleContext<ModuleObjectMappingOption> context)
     {
-        UseEndpoints(app, endpoints =>
+        UseEndpoints(context, endpoints =>
         {
-            var tagName = option.GetApiGroupName();
+            var tagName = Option.GetApiGroupName();
 
             endpoints.MapGet("/mapper/status", async (HttpContext context, ObjectMappingFacade facade) =>
             {
@@ -132,40 +142,6 @@ public class ModuleObjectMapping(ModuleObjectMappingOption option)
             .WithSummary("Gets object mapping status")
             .WithDescription("Returns the mapping pairs and generated Mapster expressions owned by this Monica host.");
         });
-    }
-}
-
-/// <summary>
-/// Provides fluent configuration for the object mapping module.
-/// </summary>
-public class ModuleObjectMappingGuide : WebModuleGuide<ModuleObjectMapping, ModuleObjectMappingOption, ModuleObjectMappingGuide>
-{
-    /// <summary>
-    /// Adds a Mapster profile to the current host's object-mapping configuration.
-    /// </summary>
-    /// <typeparam name="TProfile">
-    /// A stateless profile with a parameterless constructor. The profile may be non-public because Monica activates it
-    /// only while composing the owning host.
-    /// </typeparam>
-    /// <returns>The current guide for fluent configuration.</returns>
-    /// <remarks>
-    /// Explicit profiles execute once in registration order before automatically discovered business profiles.
-    /// Use this method for reusable library profiles that are outside the host's business-type scan or for intentional
-    /// refinements that require an explicit position. Repeating the same profile type is idempotent within one host.
-    /// </remarks>
-    public ModuleObjectMappingGuide AddProfile<TProfile>()
-        where TProfile : class, IRegister
-    {
-        var profileType = typeof(TProfile);
-        var profileKey = profileType.AssemblyQualifiedName
-            ?? throw new InvalidOperationException(
-                $"Object-mapping profile '{profileType.FullName}' does not have an assembly-qualified type name.");
-
-        ConfigureModuleOption(
-            moduleOption => moduleOption.AddProfile(profileType, profileKey),
-            secondKey: profileKey,
-            duplicateBehavior: ModuleConfigurationDuplicateBehavior.SilentIdempotent);
-        return this;
     }
 }
 
@@ -236,9 +212,12 @@ public class ModuleObjectMappingOption : MinimalApiModuleOptions<ModuleObjectMap
     /// Records one mapping profile while preserving first-registration order.
     /// </summary>
     /// <param name="profileType">The concrete Mapster profile type.</param>
-    /// <param name="profileKey">The assembly-qualified idempotency key.</param>
-    internal void AddProfile(Type profileType, string profileKey)
+    internal void AddProfile(Type profileType)
     {
+        var profileKey = profileType.AssemblyQualifiedName
+            ?? throw new InvalidOperationException(
+                $"Object-mapping profile '{profileType.FullName}' does not have an assembly-qualified type name.");
+
         if (_profileKeys.Add(profileKey))
         {
             _profileTypes.Add(profileType);
