@@ -9,7 +9,7 @@ namespace Monica.Core.Modularity.Diagnostics.Models;
 public sealed record ModuleDiagnosticsSnapshot
 {
     /// <summary>Gets the current portable diagnostics schema version.</summary>
-    public const int CURRENT_SCHEMA_VERSION = 2;
+    public const int CURRENT_SCHEMA_VERSION = 3;
 
     /// <summary>Gets the schema version used by this snapshot.</summary>
     public int SchemaVersion { get; init; } = CURRENT_SCHEMA_VERSION;
@@ -108,6 +108,12 @@ public sealed record ModuleDiagnosticsSummary
 
     /// <summary>Gets the exact end-to-end composition duration in milliseconds.</summary>
     public double TotalCompositionDurationMs { get; init; }
+
+    /// <summary>
+    /// Gets the explicitly tracked monotonic application startup duration through <c>ApplicationStarted</c>, or
+    /// <see langword="null"/> when tracking is disabled or the application is not yet ready.
+    /// </summary>
+    public double? ApplicationStartupDurationMs { get; init; }
 
     /// <summary>Gets the exact service-registration duration in milliseconds.</summary>
     public double ServiceRegistrationDurationMs { get; init; }

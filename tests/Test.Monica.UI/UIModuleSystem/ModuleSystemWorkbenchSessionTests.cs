@@ -60,9 +60,14 @@ public sealed class ModuleSystemWorkbenchSessionTests
         session.BaselineError.Should().Be(ModuleDiagnosticsBaselineError.None);
         session.Comparison.Should().NotBeNull();
         session.Comparison!.TotalDurationDeltaMs.Should().Be(4);
+        session.Comparison.ApplicationStartupDurationDeltaMs.Should().Be(6.125);
         session.Comparison.AddedModules.Should().ContainSingle().Which.Should().Contain("BetaModule");
         session.Comparison.AddedEdges.Should().ContainSingle().Which.Should().Be(
             $"{ModuleSystemWorkbenchTestData.BetaKey.Id} -> {ModuleSystemWorkbenchTestData.AlphaKey.Id}");
+
+        await ImportAsync(session, ModuleSystemWorkbenchTestData.Export(applicationStartupDurationMs: null));
+        session.Comparison.Should().NotBeNull();
+        session.Comparison!.ApplicationStartupDurationDeltaMs.Should().BeNull();
     }
 
     [Fact]
@@ -75,6 +80,19 @@ public sealed class ModuleSystemWorkbenchSessionTests
         {
             Modules = [module, module]
         };
+
+        await ImportAsync(session, invalid);
+
+        session.BaselineError.Should().Be(ModuleDiagnosticsBaselineError.InvalidJson);
+        session.Comparison.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task Baseline_import_rejects_an_invalid_optional_application_startup_duration()
+    {
+        await using var session = new ModuleSystemWorkbenchSession(ModuleSystemWorkbenchTestData.Calls());
+        await session.InitializeAsync();
+        var invalid = ModuleSystemWorkbenchTestData.Export(applicationStartupDurationMs: -1);
 
         await ImportAsync(session, invalid);
 

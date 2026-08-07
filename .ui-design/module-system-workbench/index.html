@@ -111,7 +111,7 @@
   </main>
 
   <footer class="workbench-footer">
-    <span>Monica Module Diagnostics · Snapshot schema v2</span>
+    <span>Monica Module Diagnostics · Snapshot schema v3</span>
     <span>Read-only · Development access</span>
   </footer>
 
@@ -152,13 +152,13 @@
   <dialog class="comparison-dialog" id="comparison-dialog">
     <form method="dialog" class="dialog-shell">
       <header>
-        <div><p class="panel-kicker">PORTABLE BASELINE</p><h2>Compare composition snapshots</h2><p>Load a sanitized schema-v2 snapshot. No history is stored by the server.</p></div>
+        <div><p class="panel-kicker">PORTABLE BASELINE</p><h2>Compare composition snapshots</h2><p>Load a sanitized schema-v3 snapshot. No history is stored by the server.</p></div>
         <button class="icon-button" value="cancel" aria-label="Close comparison dialog"><i data-lucide="x"></i></button>
       </header>
       <div class="baseline-dropzone" id="baseline-dropzone">
         <i data-lucide="file-json-2"></i>
         <strong>Drop a diagnostics export here</strong>
-        <span>or select a local JSON file · schema v2</span>
+        <span>or select a local JSON file · schema v3</span>
         <button class="secondary-button" id="select-baseline" type="button">Select file</button>
         <input id="baseline-file" type="file" accept="application/json,.json" hidden>
       </div>

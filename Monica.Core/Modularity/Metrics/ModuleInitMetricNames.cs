@@ -9,6 +9,9 @@ public static class ModuleInitMetricNames
     /// <summary>Histogram for terminal end-to-end composition duration.</summary>
     public const string CompositionDuration = "monica.module.composition.duration";
 
+    /// <summary>Histogram for explicitly tracked application startup through <c>ApplicationStarted</c>.</summary>
+    public const string ApplicationStartupDuration = "monica.application.startup.duration";
+
     /// <summary>Histogram for terminal service-registration duration.</summary>
     public const string ServiceRegistrationDuration = "monica.module.service_registration.duration";
 

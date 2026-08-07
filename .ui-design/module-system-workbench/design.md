@@ -1,7 +1,7 @@
 # Module Diagnostics Workbench — UI Design
 
 > Created: 2026-08-06
-> Last Updated: 2026-08-06
+> Last Updated: 2026-08-07
 
 ## Design Thinking
 
@@ -26,7 +26,7 @@ The prototype uses realistic FlightService data from FIPS2022: 93 active modules
 |--------|-------------|----------------|
 | Global Command Bar | Identifies the host and snapshot while keeping comparison and refresh actions available. | Host identity, final-state badge, revision, theme/language controls, import/export, refresh. |
 | Section Navigator | Provides stable, deep-linkable movement between five evidence views. | Sticky desktop rail, labeled mobile select, section status markers. |
-| Overview | Gives a concise composition verdict and directs attention to evidence. | Five KPI cells, structured findings, hotspots, critical-path ribbon, host facts. |
+| Overview | Gives a concise composition verdict and directs attention to evidence. | One combined startup/composition card when opt-in timing exists, four consistent companion cards, structured findings, hotspots, critical-path ribbon, host facts. |
 | Performance | Explains wall-clock time, blocking causality, callback contributors, and startup work. | Waterfall, critical chain, top-10 controls, contributor table, discovery stages. |
 | Modules | Supports rapid module inventory and selected-module inspection. | Faceted search, 25/50/100 paging, dense table, desktop side drawer/mobile sheet. |
 | Dependencies | Explores both the complete compiled topology and a selected-module neighborhood. | Readable full-host graph, force/layer/radial layouts, pan/zoom/fit/drag, search emphasis, focus selector, semantic legend, direct-edge table alternative. |
@@ -59,9 +59,9 @@ The prototype uses realistic FlightService data from FIPS2022: 93 active modules
 
 | Breakpoint | Layout Change |
 |------------|---------------|
-| Desktop (`lg+`) | Sticky horizontal section rail, five-cell KPI strip, asymmetric evidence grids, full table catalog, inline-end module drawer, and graph plus evidence rail. |
-| Tablet (`md`) | KPI strip wraps to 3+2, evidence grids stack selectively, drawer uses 70% width, and dependency evidence moves beneath the graph. |
-| Mobile (`sm`) | Labeled section select replaces the tab rail, KPIs become a horizontally scrollable local strip, tables become cards or intentional local scrollers, and module details become a full-screen sheet. No document-level horizontal overflow. |
+| Desktop (`1440px`) | The startup card spans two of six tracks beside four aligned companions; the rest of the workbench retains the full table, inline-end drawer, and graph evidence rail. |
+| Tablet (`~929px`) | The startup card spans the first row and the four companions form a 2×2 grid; evidence grids stack selectively and dependency evidence moves beneath the graph. |
+| Mobile (`390px`) | Only the KPI strip scrolls horizontally. The combined startup card remains readable as the leading snap point, tables become cards or intentional local scrollers, and module details become a full-screen sheet. No document-level horizontal overflow. |
 
 ## Design Decisions
 
@@ -93,6 +93,15 @@ User review found the first V2 production interpretation too restrained. The upd
 - Overview KPIs are individual semantic cards with icons, category accents, tinted depth, and a visually consistent healthy critical-path empty state.
 - Identifiers and paths remain ellipsized with full-value tooltips, but the repeated clipboard icons and clipboard side effects are removed throughout the workbench.
 - Responsive module cards reserve a stable non-wrapping label column so localized labels never collapse into one-character vertical stacks beside cost meters or long identifiers.
+
+## Review Revision — Opt-in Startup Timing
+
+- Application startup is an optional, host-owned observation. The workbench never invents a value or renders an unavailable placeholder when no start marker was supplied.
+- A tracked snapshot merges exact application startup and module composition into one double-width evidence card. A `Tracked` badge, baseline delta, and two-color proportional bar are strictly factual.
+- The proportional bar divides application startup into module composition and remaining startup time. It is not a health score or an implicit budget.
+- An untracked snapshot replaces the combined card with one normal-width module-composition card, allowing the companion grid to close without an empty track.
+- Active modules, service registration, type discovery, and findings share one card anatomy while retaining semantic token colors for scanability.
+- The prototype overview includes a clearly labeled prototype-only toggle so reviewers can inspect tracked and untracked variants without implying a production runtime control.
 
 ## Prototype File Map
 

@@ -1074,6 +1074,8 @@ public sealed class ModuleSystemWorkbenchSession : IAsyncDisposable
             || baseline.Edges.IsDefault
             || baseline.TraceSpans.IsDefault
             || !IsFiniteNonNegative(baseline.Summary.TotalCompositionDurationMs)
+            || (baseline.Summary.ApplicationStartupDurationMs is { } applicationStartupDurationMs
+                && !IsFiniteNonNegative(applicationStartupDurationMs))
             || !IsFiniteNonNegative(baseline.Summary.TypeDiscoveryDurationMs))
         {
             return false;

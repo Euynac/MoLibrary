@@ -1,4 +1,5 @@
 @using Microsoft.Extensions.Localization
+@using System.Globalization
 @using Monica.Core.Modularity.Diagnostics.Models
 @using Monica.UI.Localization
 @using Monica.UI.UIModuleSystem.State
@@ -8,54 +9,106 @@
 @if (Session.Snapshot is { } snapshot)
 {
     var findingsPresentation = GetFindingsPresentation(snapshot.Findings);
+    var applicationStartupDurationMs = snapshot.Summary.ApplicationStartupDurationMs;
     <div class="overview-layout">
-        <section class="kpi-strip" aria-label="@L["Aria:SummaryMetrics"]">
-            <article class="kpi-card--composition">
-                <span class="kpi-icon" aria-hidden="true">
-                    <MudIcon Icon="@Icons.Material.Filled.Speed" />
-                </span>
-                <span class="kpi-label">@L["Overview:Kpis:Composition"]</span>
-                <strong>@ModuleDiagnosticsDisplay.Duration(snapshot.Summary.TotalCompositionDurationMs)</strong>
-                @if (Session.Comparison is { } comparison)
-                {
-                    <small>@FormatDelta(comparison.TotalDurationDeltaMs)</small>
-                }
-                else
-                {
-                    <small>@L["Overview:Kpis:ExactTiming"]</small>
-                }
-            </article>
-            <article class="kpi-card--modules">
-                <span class="kpi-icon" aria-hidden="true">
-                    <MudIcon Icon="@Icons.Material.Filled.Widgets" />
-                </span>
+        <section class="@KpiStripClass(applicationStartupDurationMs.HasValue)" aria-label="@L["Aria:SummaryMetrics"]">
+            @if (applicationStartupDurationMs is { } startupDurationMs)
+            {
+                var compositionShare = CompositionShare(snapshot.Summary.TotalCompositionDurationMs, startupDurationMs);
+                <article class="startup-kpi-card">
+                    <header class="startup-kpi-card__header">
+                        <span class="kpi-icon" aria-hidden="true">
+                            <MudIcon Icon="@Icons.Material.Filled.RocketLaunch" />
+                        </span>
+                        <span class="startup-kpi-card__title">
+                            <small>@L["Overview:Kpis:StartupTiming"]</small>
+                            <strong>@L["Overview:Kpis:ApplicationStartup"]</strong>
+                        </span>
+                        <span class="kpi-badge kpi-badge--tracked">
+                            <MudIcon Icon="@Icons.Material.Filled.RadioButtonChecked" Size="Size.Small" />
+                            @L["Overview:Kpis:Tracked"]
+                        </span>
+                    </header>
+                    <div class="startup-kpi-card__metrics">
+                        <span class="startup-kpi-card__primary">
+                            <strong>@ModuleDiagnosticsDisplay.ExactMilliseconds(startupDurationMs)</strong>
+                            <small>@L["Overview:Kpis:StartupBoundary"]</small>
+                        </span>
+                        <span class="startup-kpi-card__secondary">
+                            <small>@L["Overview:Kpis:Composition"]</small>
+                            <strong>@ModuleDiagnosticsDisplay.Duration(snapshot.Summary.TotalCompositionDurationMs)</strong>
+                        </span>
+                    </div>
+                    <div class="startup-share">
+                        <span class="startup-share__heading">
+                            <small>@L["Overview:Kpis:CompositionShare"]</small>
+                            <strong class="kpi-badge startup-share__badge">@FormatPercentage(compositionShare)</strong>
+                        </span>
+                        <svg class="startup-share__bar" viewBox="0 0 100 6" preserveAspectRatio="none" role="img"
+                             aria-label="@L["Overview:Kpis:CompositionShareAria", FormatPercentage(compositionShare)]">
+                            <rect class="startup-share__remaining" x="0" y="0" width="100" height="6" rx="3" />
+                            <rect class="startup-share__composition" x="0" y="0" width="@FormatSvgNumber(compositionShare)" height="6" rx="3" />
+                        </svg>
+                        <span class="startup-share__legend" aria-hidden="true">
+                            <span><i></i>@L["Overview:Kpis:Composition"]</span>
+                            <span><i></i>@L["Overview:Kpis:RemainingStartup"]</span>
+                        </span>
+                    </div>
+                    @if (Session.Comparison?.ApplicationStartupDurationDeltaMs is { } startupDelta)
+                    {
+                        <span class="kpi-badge kpi-badge--comparison">@FormatExactDelta(startupDelta)</span>
+                    }
+                </article>
+            }
+            else
+            {
+                <article class="kpi-card kpi-card--composition">
+                    <header class="kpi-card__header">
+                        <span class="kpi-icon" aria-hidden="true">
+                            <MudIcon Icon="@Icons.Material.Filled.Speed" />
+                        </span>
+                        <span class="kpi-badge">@L["Overview:Kpis:Exact"]</span>
+                    </header>
+                    <span class="kpi-label">@L["Overview:Kpis:Composition"]</span>
+                    <strong class="kpi-value">@ModuleDiagnosticsDisplay.ExactMilliseconds(snapshot.Summary.TotalCompositionDurationMs)</strong>
+                    <small class="kpi-detail">@CompositionDetail()</small>
+                </article>
+            }
+            <article class="kpi-card kpi-card--modules">
+                <header class="kpi-card__header">
+                    <span class="kpi-icon" aria-hidden="true"><MudIcon Icon="@Icons.Material.Filled.Widgets" /></span>
+                    <span class="kpi-badge">@L["Overview:Kpis:Declared", snapshot.Summary.ModuleCount]</span>
+                </header>
                 <span class="kpi-label">@L["Overview:Kpis:ActiveModules"]</span>
-                <strong>@snapshot.Summary.ActiveModuleCount</strong>
-                <small>@L["Overview:Kpis:Declared", snapshot.Summary.ModuleCount]</small>
+                <strong class="kpi-value">@snapshot.Summary.ActiveModuleCount</strong>
+                <small class="kpi-detail">@L["Overview:Kpis:DirectEdges", snapshot.Topology.Edges.Length]</small>
             </article>
-            <article class="kpi-card--registration">
-                <span class="kpi-icon" aria-hidden="true">
-                    <MudIcon Icon="@Icons.Material.Filled.AppRegistration" />
-                </span>
+            <article class="kpi-card kpi-card--registration">
+                <header class="kpi-card__header">
+                    <span class="kpi-icon" aria-hidden="true"><MudIcon Icon="@Icons.Material.Filled.AppRegistration" /></span>
+                    <span class="kpi-badge">@L["Overview:Kpis:Exact"]</span>
+                </header>
                 <span class="kpi-label">@L["Overview:Kpis:ServiceRegistration"]</span>
-                <strong>@ModuleDiagnosticsDisplay.Duration(snapshot.Summary.ServiceRegistrationDurationMs)</strong>
-                <small>@L["Overview:Kpis:ExactTiming"]</small>
+                <strong class="kpi-value">@ModuleDiagnosticsDisplay.ExactMilliseconds(snapshot.Summary.ServiceRegistrationDurationMs)</strong>
+                <small class="kpi-detail">@L["Overview:Kpis:CompositionShareValue", FormatPercentage(CompositionShare(snapshot.Summary.ServiceRegistrationDurationMs, snapshot.Summary.TotalCompositionDurationMs))]</small>
             </article>
-            <article class="kpi-card--discovery">
-                <span class="kpi-icon" aria-hidden="true">
-                    <MudIcon Icon="@Icons.Material.Filled.ManageSearch" />
-                </span>
+            <article class="kpi-card kpi-card--discovery">
+                <header class="kpi-card__header">
+                    <span class="kpi-icon" aria-hidden="true"><MudIcon Icon="@Icons.Material.Filled.ManageSearch" /></span>
+                    <span class="kpi-badge">@L["Overview:Kpis:Queries", snapshot.TypeDiscovery.Statistics.DistinctQueryCount]</span>
+                </header>
                 <span class="kpi-label">@L["Overview:Kpis:TypeDiscovery"]</span>
-                <strong>@ModuleDiagnosticsDisplay.Duration(snapshot.Summary.TypeDiscoveryDurationMs)</strong>
-                <small>@L["Overview:Kpis:Queries", snapshot.TypeDiscovery.Statistics.DistinctQueryCount]</small>
+                <strong class="kpi-value">@ModuleDiagnosticsDisplay.Duration(snapshot.Summary.TypeDiscoveryDurationMs)</strong>
+                <small class="kpi-detail">@L["Overview:Kpis:Matches", snapshot.TypeDiscovery.Statistics.MatchCount]</small>
             </article>
-            <article class="@findingsPresentation.KpiClass">
-                <span class="kpi-icon" aria-hidden="true">
-                    <MudIcon Icon="@findingsPresentation.Icon" />
-                </span>
+            <article class="kpi-card @findingsPresentation.KpiClass">
+                <header class="kpi-card__header">
+                    <span class="kpi-icon" aria-hidden="true"><MudIcon Icon="@findingsPresentation.Icon" /></span>
+                    <span class="kpi-badge">@L["Overview:Kpis:Errors", snapshot.Summary.ErrorCount]</span>
+                </header>
                 <span class="kpi-label">@L["Overview:Kpis:Findings"]</span>
-                <strong>@snapshot.Findings.Length</strong>
-                <small>@L["Overview:Kpis:Errors", snapshot.Summary.ErrorCount]</small>
+                <strong class="kpi-value">@snapshot.Findings.Length</strong>
+                <small class="kpi-detail">@L["Overview:Kpis:Warnings", snapshot.Findings.Count(static finding => finding.Severity == ModuleDiagnosticFindingSeverity.Warning)]</small>
             </article>
         </section>
 
@@ -145,6 +198,29 @@
 
     private static double ModuleCost(ModuleDiagnosticsModule module) =>
         module.SerialCallbackDurationMs + module.StartupWorkDurationMs;
+
+    private static string KpiStripClass(bool isStartupTracked) =>
+        isStartupTracked ? "kpi-strip kpi-strip--tracked" : "kpi-strip kpi-strip--untracked";
+
+    private static double CompositionShare(double numeratorMs, double denominatorMs) =>
+        denominatorMs <= 0 ? 0 : Math.Clamp(numeratorMs / denominatorMs * 100, 0, 100);
+
+    private static string FormatPercentage(double value) =>
+        string.Create(CultureInfo.InvariantCulture, $"{value:F1}%");
+
+    private static string FormatSvgNumber(double value) =>
+        value.ToString("0.####", CultureInfo.InvariantCulture);
+
+    private string CompositionDetail() => Session.Comparison is { } comparison
+        ? FormatDelta(comparison.TotalDurationDeltaMs)
+        : L["Overview:Kpis:FinalCompositionInterval"];
+
+    private string FormatExactDelta(double delta) => delta switch
+    {
+        > 0 => L["Comparison:Slower", ModuleDiagnosticsDisplay.ExactMilliseconds(delta)],
+        < 0 => L["Comparison:Faster", ModuleDiagnosticsDisplay.ExactMilliseconds(Math.Abs(delta))],
+        _ => L["Comparison:Unchanged"]
+    };
 
     private static (Color Color, string KpiClass, string Icon) GetFindingsPresentation(
         IReadOnlyList<ModuleDiagnosticFinding> findings)

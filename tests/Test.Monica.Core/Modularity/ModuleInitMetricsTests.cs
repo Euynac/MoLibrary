@@ -1,15 +1,82 @@
+using System.Collections.Concurrent;
 using System.Diagnostics.Metrics;
 using AwesomeAssertions;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
+using Monica.Core;
+using Monica.Core.Modularity.Diagnostics.Facades;
 using Monica.Core.Modularity.Diagnostics.Models;
+using Monica.Core.Modularity.Extensions;
 using Monica.Core.Modularity.Metrics;
 using Monica.Core.Modularity.Models;
+using Monica.Modules;
 using Xunit;
 
 namespace Test.Monica.Core.Modularity;
 
 public sealed class ModuleInitMetricsTests
 {
+    [Fact]
+    public async Task ApplicationStartup_WhenTrackedHostStopsImmediately_ShouldStillPublishTheTerminalDuration()
+    {
+        var builder = Host.CreateApplicationBuilder();
+        builder.AddMonica(MonicaStartup.Start(), monica =>
+        {
+            monica.ConfigureTypeDiscovery(static options => options.ExcludeDefault());
+            monica.AddModuleSystem();
+        });
+        using var host = builder.Build();
+        var measurements = new ConcurrentQueue<double>();
+        using var listener = ListenForApplicationStartup(host, measurements);
+
+        await host.StartAsync(TestContext.Current.CancellationToken);
+        await host.StopAsync(TestContext.Current.CancellationToken);
+
+        measurements.Should().ContainSingle().Which.Should().BeGreaterThan(0);
+    }
+
+    [Fact]
+    public async Task ApplicationStartup_WhenNoBarrierWorkIsStillRunning_ShouldPublishBeforeModuleFinality()
+    {
+        using var gate = new ControlledWorkGate();
+        var builder = Host.CreateApplicationBuilder();
+        builder.AddMonica(MonicaStartup.Start(), monica =>
+        {
+            monica.ConfigureModuleSystem(static options => options.MaxConcurrentStartupWorkItems = 2);
+            monica.ConfigureTypeDiscovery(static options => options.ExcludeDefault());
+            monica.AddModuleSystem();
+            monica.AddModule<StartupWorkProbeModuleOne, StartupWorkProbeModuleOneOption>(options =>
+                options.AddConfigureServicesWork(
+                    "live-application-metric-work",
+                    gate.Run,
+                    ModuleStartupWorkBarrier.NoBarrier));
+        });
+        using var host = builder.Build();
+        var measurements = new ConcurrentQueue<double>();
+        using var listener = ListenForApplicationStartup(host, measurements);
+
+        try
+        {
+            await gate.Entered.Task.WaitAsync(
+                TimeSpan.FromSeconds(10),
+                TestContext.Current.CancellationToken);
+            await host.StartAsync(TestContext.Current.CancellationToken);
+            var snapshot = host.Services.GetRequiredService<ModuleDiagnosticsFacade>().GetSnapshot().Data!;
+
+            snapshot.IsFinal.Should().BeFalse();
+            snapshot.Summary.ApplicationStartupDurationMs.Should().NotBeNull();
+            await WaitUntilAsync(() => measurements.Count == 1);
+            measurements.Should().ContainSingle().Which.Should().BeGreaterThan(0);
+        }
+        finally
+        {
+            gate.Release();
+            await host.StopAsync(TestContext.Current.CancellationToken);
+        }
+
+        measurements.Should().ContainSingle();
+    }
+
     [Fact]
     public void Observe_WhenSnapshotIsLive_ShouldExposeOnlyCachedLowCardinalityGauges()
     {
@@ -41,6 +108,26 @@ public sealed class ModuleInitMetricsTests
     }
 
     [Fact]
+    public void Observe_WhenApplicationStartupCompletesBeforeModuleFinality_ShouldTagReadinessAsSucceeded()
+    {
+        using var probe = new MetricsProbe();
+        var liveSnapshot = CreateLiveSnapshot();
+        liveSnapshot = liveSnapshot with
+        {
+            Summary = liveSnapshot.Summary with { ApplicationStartupDurationMs = 250 }
+        };
+
+        probe.Metrics.Observe(liveSnapshot);
+
+        probe.DoubleMeasurements.Should().ContainSingle(measurement =>
+            measurement.InstrumentName == ModuleInitMetricNames.ApplicationStartupDuration
+            && Math.Abs(measurement.Value - 0.25) < 0.000_001
+            && Equals(measurement.Tags["result"], "succeeded"));
+        probe.DoubleMeasurements.Should().NotContain(measurement =>
+            measurement.InstrumentName == ModuleInitMetricNames.CompositionDuration);
+    }
+
+    [Fact]
     public void Observe_WhenTerminalSnapshotIsRepeated_ShouldEmitEachHistogramOnceWithBoundedTags()
     {
         using var probe = new MetricsProbe();
@@ -49,10 +136,13 @@ public sealed class ModuleInitMetricsTests
         probe.Metrics.Observe(snapshot);
         probe.Metrics.Observe(snapshot);
 
-        probe.DoubleMeasurements.Should().HaveCount(7);
+        probe.DoubleMeasurements.Should().HaveCount(8);
         probe.DoubleMeasurements.Should().ContainSingle(measurement =>
             measurement.InstrumentName == ModuleInitMetricNames.CompositionDuration
             && Math.Abs(measurement.Value - 1.2) < 0.000_001);
+        probe.DoubleMeasurements.Should().ContainSingle(measurement =>
+            measurement.InstrumentName == ModuleInitMetricNames.ApplicationStartupDuration
+            && Math.Abs(measurement.Value - 1.5) < 0.000_001);
         probe.DoubleMeasurements.Should().ContainSingle(measurement =>
             measurement.InstrumentName == ModuleInitMetricNames.ServiceRegistrationDuration
             && Math.Abs(measurement.Value - 0.3) < 0.000_001);
@@ -93,6 +183,36 @@ public sealed class ModuleInitMetricsTests
                 Equals(value, typeof(DiagnosticsProviderModule).FullName)
                 || Equals(value, "diagnostic-work-id")
                 || Equals(value, "terminal-work"));
+    }
+
+    [Fact]
+    public void Observe_WhenApplicationStartupArrivesAfterFinalComposition_ShouldUseIndependentLatches()
+    {
+        using var probe = new MetricsProbe();
+        var ready = CreateTerminalSnapshot();
+        var beforeReady = ready with
+        {
+            Revision = ready.Revision - 1,
+            Summary = ready.Summary with { ApplicationStartupDurationMs = null }
+        };
+
+        probe.Metrics.Observe(beforeReady);
+
+        probe.DoubleMeasurements.Should().HaveCount(7);
+        probe.DoubleMeasurements.Should().NotContain(measurement =>
+            measurement.InstrumentName == ModuleInitMetricNames.ApplicationStartupDuration);
+
+        probe.Metrics.Observe(ready);
+
+        probe.DoubleMeasurements.Should().HaveCount(8);
+        probe.DoubleMeasurements.Should().ContainSingle(measurement =>
+            measurement.InstrumentName == ModuleInitMetricNames.ApplicationStartupDuration);
+        probe.DoubleMeasurements.Count(measurement =>
+                measurement.InstrumentName == ModuleInitMetricNames.CompositionDuration)
+            .Should().Be(1);
+
+        probe.Metrics.Observe(ready);
+        probe.DoubleMeasurements.Should().HaveCount(8);
     }
 
     private static ModuleDiagnosticsSnapshot CreateLiveSnapshot()
@@ -148,6 +268,7 @@ public sealed class ModuleInitMetricsTests
             {
                 ActiveModuleCount = 1,
                 TotalCompositionDurationMs = 1_200,
+                ApplicationStartupDurationMs = 1_500,
                 ServiceRegistrationDurationMs = 300,
                 TypeDiscoveryDurationMs = 200,
                 AggregateBarrierWaitDurationMs = 50
@@ -200,6 +321,57 @@ public sealed class ModuleInitMetricsTests
             static measurement => (string)measurement.Tags["kind"]!,
             static measurement => measurement.Value,
             StringComparer.Ordinal);
+    }
+
+    private static MeterListener ListenForApplicationStartup(
+        IHost host,
+        ConcurrentQueue<double> measurements)
+    {
+        var meterFactory = host.Services.GetRequiredService<IMeterFactory>();
+        var listener = new MeterListener();
+        listener.InstrumentPublished = (instrument, meterListener) =>
+        {
+            if (ReferenceEquals(instrument.Meter.Scope, meterFactory)
+                && instrument.Name == ModuleInitMetricNames.ApplicationStartupDuration)
+            {
+                meterListener.EnableMeasurementEvents(instrument);
+            }
+        };
+        listener.SetMeasurementEventCallback<double>((_, value, _, _) => measurements.Enqueue(value));
+        listener.Start();
+        return listener;
+    }
+
+    private static async Task WaitUntilAsync(Func<bool> condition)
+    {
+        var timeout = DateTime.UtcNow + TimeSpan.FromSeconds(5);
+        while (!condition() && DateTime.UtcNow < timeout)
+        {
+            await Task.Delay(5, TestContext.Current.CancellationToken);
+        }
+
+        condition().Should().BeTrue();
+    }
+
+    private sealed class ControlledWorkGate : IDisposable
+    {
+        private readonly ManualResetEventSlim _release = new(initialState: false);
+
+        internal TaskCompletionSource Entered { get; } =
+            new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        internal void Run()
+        {
+            Entered.TrySetResult();
+            if (!_release.Wait(TimeSpan.FromSeconds(10)))
+            {
+                throw new TimeoutException("The controlled metrics work was not released.");
+            }
+        }
+
+        internal void Release() => _release.Set();
+
+        public void Dispose() => _release.Dispose();
     }
 
     private sealed class MetricsProbe : IDisposable

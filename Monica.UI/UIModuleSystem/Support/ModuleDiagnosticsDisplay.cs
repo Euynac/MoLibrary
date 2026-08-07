@@ -16,6 +16,9 @@ internal static class ModuleDiagnosticsDisplay
         _ => string.Create(CultureInfo.InvariantCulture, $"{milliseconds / 1_000:F2} s")
     };
 
+    internal static string ExactMilliseconds(double milliseconds) =>
+        string.Create(CultureInfo.InvariantCulture, $"{milliseconds:F4} ms");
+
     internal static string Outcome(
         ModuleCompositionOutcome? outcome,
         IStringLocalizer<ModuleSystemResource> localizer) => outcome switch

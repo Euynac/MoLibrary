@@ -61,6 +61,42 @@
                     </MudText>
                 }
 
+                @if (Info.ApplicationStartupDurationMs is { } startupDuration &&
+                     Info.ApplicationReadyAtUtc is { } readyAtUtc)
+                {
+                    <section class="system-info-basic-card__startup">
+                        <div class="system-info-basic-card__startup-header">
+                            <div class="system-info-basic-card__startup-identity">
+                                <div class="system-info-basic-card__startup-icon">
+                                    <MudIcon Icon="@Icons.Material.Filled.RocketLaunch" Size="Size.Medium" Color="Color.Primary" />
+                                </div>
+                                <div class="system-info-basic-card__startup-labels">
+                                    <MudText Typo="Typo.subtitle2" Class="system-info-basic-card__startup-title">
+                                        @L["Page:BasicInfo:ApplicationStartup"]
+                                    </MudText>
+                                    <MudText Typo="Typo.caption" Class="system-info-basic-card__startup-scope">
+                                        @L["Page:BasicInfo:ApplicationStartupScope"]
+                                    </MudText>
+                                </div>
+                            </div>
+                            <MudChip T="string"
+                                     Size="Size.Small"
+                                     Color="Color.Success"
+                                     Variant="Variant.Outlined">
+                                @L["Page:BasicInfo:ApplicationStartupTracked"]
+                            </MudChip>
+                        </div>
+                        <div class="system-info-basic-card__startup-metric">
+                            <MudText Typo="Typo.h4" Class="system-info-basic-card__startup-value">
+                                @L["Page:BasicInfo:ApplicationStartupValue", startupDuration]
+                            </MudText>
+                            <MudText Typo="Typo.caption" Class="system-info-basic-card__startup-ready">
+                                @L["Page:BasicInfo:ApplicationReadyAt", FormatDateTime(readyAtUtc.LocalDateTime)]
+                            </MudText>
+                        </div>
+                    </section>
+                }
+
                 @if (Info.ListeningAddresses.Count > 0)
                 {
                     <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">

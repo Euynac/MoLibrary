@@ -1087,7 +1087,7 @@ public sealed class ModuleRegistry(MonicaApplication application)
         services.AddSingleton<IValidateOptions<ModuleStartupValidationOptions>>(
             new ModuleStartupValidator(application));
         services.AddOptions<ModuleStartupValidationOptions>().ValidateOnStart();
-        services.AddHostedService<ModuleStartupWorkLifecycle>();
+        services.AddHostedService<MonicaApplicationLifecycle>();
     }
 
     private void ExecutePostConfigureServices(

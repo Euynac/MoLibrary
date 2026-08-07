@@ -89,15 +89,27 @@
   },
   "Overview": {
     "Kpis": {
-      "Composition": "组合总耗时",
+      "StartupTiming": "启动耗时",
+      "ApplicationStartup": "应用启动",
+      "Tracked": "已记录",
+      "StartupBoundary": "计时起点 → 就绪",
+      "Composition": "模块组合",
+      "CompositionShare": "组合占比",
+      "CompositionShareAria": "模块组合占应用启动的 {0}。",
+      "RemainingStartup": "其余启动时间",
       "ActiveModules": "活动模块",
       "Declared": "共声明 {0} 个",
+      "DirectEdges": "{0} 条直接依赖边",
       "ServiceRegistration": "服务注册",
-      "ExactTiming": "精确墙钟区间",
+      "Exact": "精确值",
+      "FinalCompositionInterval": "最终组合区间",
+      "CompositionShareValue": "占模块组合的 {0}",
       "TypeDiscovery": "类型发现",
       "Queries": "{0} 个不同查询",
+      "Matches": "{0} 次编译匹配",
       "Findings": "诊断发现",
-      "Errors": "{0} 个错误"
+      "Errors": "{0} 个错误",
+      "Warnings": "{0} 个警告"
     },
     "CriticalPath": {
       "Eyebrow": "启动因果链",

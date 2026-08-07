@@ -38,6 +38,18 @@ public class SystemInfoResponse
     public DateTime? ProcessStartTime { get; set; }
 
     /// <summary>
+    /// Gets or sets the UTC timestamp at which the Generic Host published <c>ApplicationStarted</c>, when application
+    /// startup tracking was requested.
+    /// </summary>
+    public DateTimeOffset? ApplicationReadyAtUtc { get; set; }
+
+    /// <summary>
+    /// Gets or sets the opt-in monotonic duration from the application startup marker until the Generic Host became
+    /// ready, in milliseconds.
+    /// </summary>
+    public double? ApplicationStartupDurationMs { get; set; }
+
+    /// <summary>
     /// Gets or sets the addresses the current ASP.NET Core server is listening on.
     /// </summary>
     public IReadOnlyList<string> ListeningAddresses { get; set; } = [];

@@ -1,3 +1,5 @@
+using Monica.Core.Modularity.Models;
+
 namespace Monica.Core.Modularity.Diagnostics.Models;
 
 /// <summary>
@@ -9,6 +11,12 @@ namespace Monica.Core.Modularity.Diagnostics.Models;
 /// </remarks>
 internal sealed class ModuleCompositionPerformance
 {
+    /// <summary>
+    /// Gets the explicitly tracked application startup interval. Its application-owned origin is independent of the
+    /// module composition timeline represented by this model.
+    /// </summary>
+    public MonicaStartupTiming? ApplicationStartup { get; init; }
+
     /// <summary>
     /// Gets the UTC timestamp paired with monotonic offset zero.
     /// </summary>

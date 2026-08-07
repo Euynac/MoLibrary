@@ -32,6 +32,11 @@
       "ProductVersion": "产品版本",
       "ProcessStartTime": "进程启动时间",
       "RunningFor": "已运行 {0}",
+      "ApplicationStartup": "应用启动",
+      "ApplicationStartupScope": "计时起点 → 就绪",
+      "ApplicationStartupTracked": "已记录",
+      "ApplicationStartupValue": "{0:F4} ms",
+      "ApplicationReadyAt": "就绪于 {0}",
       "ListeningAddresses": "监听地址"
     },
     "EnvironmentInfo": {

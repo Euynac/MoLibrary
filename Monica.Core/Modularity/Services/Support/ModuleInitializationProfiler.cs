@@ -16,9 +16,27 @@ internal sealed class ModuleInitializationProfiler
 {
     private readonly object _gate = new();
     private readonly ModuleProfilingState _state = new();
+    private readonly TaskCompletionSource? _applicationReadySignal;
+    private readonly long? _applicationStartupTimestamp;
+    private MonicaStartupTiming? _applicationStartup;
     private Func<ModuleStartupWorkSnapshot>? _startupWorkSnapshotProvider;
     private long _lastStartupWorkRevision = -1;
     private long _revision;
+
+    internal ModuleInitializationProfiler(MonicaStartupOrigin? startupOrigin = null)
+    {
+        if (startupOrigin is not { } origin)
+        {
+            return;
+        }
+
+        _applicationStartupTimestamp = origin.StartedTimestamp;
+        _applicationStartup = new MonicaStartupTiming
+        {
+            StartedAtUtc = origin.StartedAtUtc
+        };
+        _applicationReadySignal = CreateApplicationReadySignal();
+    }
 
     /// <summary>
     /// Gets whether the full module-composition stopwatch is currently running.
@@ -49,7 +67,7 @@ internal sealed class ModuleInitializationProfiler
     }
 
     /// <summary>
-    /// Starts the module composition timeline at the <c>AddMonica(...)</c> boundary.
+    /// Starts the independent module composition timeline at the <c>AddMonica(...)</c> boundary.
     /// </summary>
     internal void StartModuleSystem()
     {
@@ -66,6 +84,56 @@ internal sealed class ModuleInitializationProfiler
             _state.IsStarted = true;
             _revision++;
             RecordMilestone(ModuleCompositionMilestone.CompositionStarted);
+        }
+    }
+
+    /// <summary>
+    /// Freezes the first Generic Host <c>ApplicationStarted</c> observation when application tracking is enabled.
+    /// </summary>
+    internal void MarkApplicationReady()
+    {
+        lock (_gate)
+        {
+            if (_applicationStartup is not { } startup
+                || _applicationStartupTimestamp is not { } startupTimestamp)
+            {
+                return;
+            }
+
+            if (startup.IsReady)
+            {
+                return;
+            }
+
+            var readyTimestamp = Stopwatch.GetTimestamp();
+            _applicationStartup = startup with
+            {
+                ReadyAtUtc = DateTimeOffset.UtcNow,
+                DurationMs = Stopwatch.GetElapsedTime(startupTimestamp, readyTimestamp).TotalMilliseconds
+            };
+            _revision++;
+            _applicationReadySignal!.TrySetResult();
+        }
+    }
+
+    /// <summary>Gets the current immutable application startup timing, when tracking was enabled.</summary>
+    internal MonicaStartupTiming? GetApplicationStartupTiming()
+    {
+        lock (_gate)
+        {
+            return _applicationStartup;
+        }
+    }
+
+    /// <summary>
+    /// Waits until this application publishes <c>ApplicationStarted</c>. Untracked applications complete immediately.
+    /// </summary>
+    internal Task WaitForApplicationReadyAsync(CancellationToken cancellationToken)
+    {
+        lock (_gate)
+        {
+            return _applicationReadySignal?.Task.WaitAsync(cancellationToken)
+                   ?? Task.CompletedTask;
         }
     }
 
@@ -360,6 +428,7 @@ internal sealed class ModuleInitializationProfiler
                         .ToImmutableArray(),
                     _state.TypeDiscoveryStatistics,
                     _state.TypeDiscoveryQueries.ToImmutableArray(),
+                    _applicationStartup,
                     _startupWorkSnapshotProvider);
             }
 
@@ -436,6 +505,7 @@ internal sealed class ModuleInitializationProfiler
 
         return new ModuleCompositionPerformance
         {
+            ApplicationStartup = state.ApplicationStartup,
             StartedAtUtc = state.OriginUtc,
             ElapsedDurationMs = GetElapsedDurationMs(
                 state.OriginTimestamp,
@@ -723,6 +793,9 @@ internal sealed class ModuleInitializationProfiler
         return (long)Math.Floor(Math.Max(0, milliseconds));
     }
 
+    private static TaskCompletionSource CreateApplicationReadySignal() =>
+        new(TaskCreationOptions.RunContinuationsAsynchronously);
+
     private sealed record StartupWorkDiagnostics(
         IReadOnlyList<ModuleStartupWorkPerformanceInfo> WorkItems,
         IReadOnlyList<ModuleStartupWorkBarrierPerformanceInfo> Barriers);
@@ -738,6 +811,7 @@ internal sealed class ModuleInitializationProfiler
         ImmutableArray<ModuleProfileState.ModuleProfileDiagnosticsCapture> ModuleProfiles,
         TypeDiscoveryStatistics TypeDiscoveryStatistics,
         ImmutableArray<TypeDiscoveryQuerySummary> TypeDiscoveryQueries,
+        MonicaStartupTiming? ApplicationStartup,
         Func<ModuleStartupWorkSnapshot>? StartupWorkSnapshotProvider);
 }
 

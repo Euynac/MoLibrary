@@ -28,12 +28,12 @@ public sealed class MonicaApplication : IDisposable
     private ITypeDependencyOrderer? _typeDependencyOrderer;
     private ITypeFinder? _typeFinder;
 
-    internal MonicaApplication()
+    internal MonicaApplication(MonicaStartupOrigin? startupOrigin = null)
     {
         _compositionLoggerFactory = CreateBootstrapLoggerFactory();
         _ownedCompositionLoggerFactories.Add(_compositionLoggerFactory);
         Dependencies = new ModuleDependencyAnalyzer(this);
-        Profiling = new ModuleInitializationProfiler();
+        Profiling = new ModuleInitializationProfiler(startupOrigin);
         Modules = new ModuleRegistry(this);
         Errors = new ModuleErrorRegistry(this);
     }
@@ -78,6 +78,12 @@ public sealed class MonicaApplication : IDisposable
     /// Gets the host-bound module dependency analyzer.
     /// </summary>
     public ModuleDependencyAnalyzer Dependencies { get; }
+
+    /// <summary>
+    /// Gets the immutable application startup observation, or <see langword="null"/> when the host did not supply a
+    /// <see cref="MonicaStartup"/> marker.
+    /// </summary>
+    public MonicaStartupTiming? StartupTiming => Profiling.GetApplicationStartupTiming();
 
     internal ModuleInitializationProfiler Profiling { get; }
 

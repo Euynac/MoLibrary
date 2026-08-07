@@ -12,6 +12,7 @@ internal sealed class ModuleInitMetrics
     private const string PHASE_TAG_NAME = "phase";
     private const string RESULT_TAG_NAME = "result";
     private readonly Histogram<double> _compositionDuration;
+    private readonly Histogram<double> _applicationStartupDuration;
     private readonly Histogram<double> _serviceRegistrationDuration;
     private readonly Histogram<double> _typeDiscoveryDuration;
     private readonly Histogram<double> _barrierWaitDuration;
@@ -19,7 +20,8 @@ internal sealed class ModuleInitMetrics
     private readonly Histogram<double> _startupWorkDuration;
     private readonly object _recordGate = new();
     private Measurement<long>[] _liveMeasurements = [];
-    private string? _recordedCompositionId;
+    private string? _recordedApplicationStartupCompositionId;
+    private string? _recordedModuleCompositionId;
 
     public ModuleInitMetrics(IMeterFactory meterFactory)
     {
@@ -28,6 +30,10 @@ internal sealed class ModuleInitMetrics
             ModuleInitMetricNames.CompositionDuration,
             unit: "s",
             description: "Terminal Monica module-composition duration.");
+        _applicationStartupDuration = meter.CreateHistogram<double>(
+            ModuleInitMetricNames.ApplicationStartupDuration,
+            unit: "s",
+            description: "Explicitly tracked application startup duration through ApplicationStarted.");
         _serviceRegistrationDuration = meter.CreateHistogram<double>(
             ModuleInitMetricNames.ServiceRegistrationDuration,
             unit: "s",
@@ -59,15 +65,6 @@ internal sealed class ModuleInitMetrics
     internal void Observe(ModuleDiagnosticsSnapshot snapshot)
     {
         ArgumentNullException.ThrowIfNull(snapshot);
-        if (snapshot.IsFinal
-            && string.Equals(
-                Volatile.Read(ref _recordedCompositionId),
-                snapshot.CompositionId,
-                StringComparison.Ordinal))
-        {
-            return;
-        }
-
         Volatile.Write(ref _liveMeasurements,
         [
             CreateCountMeasurement("active_modules", snapshot.Summary.ActiveModuleCount),
@@ -76,49 +73,72 @@ internal sealed class ModuleInitMetrics
             CreateCountMeasurement("findings", snapshot.Findings.Length)
         ]);
 
-        if (!snapshot.IsFinal)
+        var applicationStartupDurationMs = snapshot.Summary.ApplicationStartupDurationMs;
+        var shouldRecordModuleComposition = snapshot.IsFinal
+                                            && !string.Equals(
+                                                Volatile.Read(ref _recordedModuleCompositionId),
+                                                snapshot.CompositionId,
+                                                StringComparison.Ordinal);
+        var shouldRecordApplicationStartup = applicationStartupDurationMs.HasValue
+                                             && !string.Equals(
+                                                 Volatile.Read(ref _recordedApplicationStartupCompositionId),
+                                                 snapshot.CompositionId,
+                                                 StringComparison.Ordinal);
+        if (!shouldRecordModuleComposition && !shouldRecordApplicationStartup)
         {
             return;
         }
 
         lock (_recordGate)
         {
-            if (string.Equals(_recordedCompositionId, snapshot.CompositionId, StringComparison.Ordinal))
-            {
-                return;
-            }
-
             var result = snapshot.Outcome?.ToString().ToLowerInvariant() ?? "unknown";
             var resultTag = new KeyValuePair<string, object?>(RESULT_TAG_NAME, result);
-            _compositionDuration.Record(snapshot.Summary.TotalCompositionDurationMs / 1000d, resultTag);
-            _serviceRegistrationDuration.Record(snapshot.Summary.ServiceRegistrationDurationMs / 1000d, resultTag);
-            _typeDiscoveryDuration.Record(snapshot.Summary.TypeDiscoveryDurationMs / 1000d, resultTag);
-            _barrierWaitDuration.Record(snapshot.Summary.AggregateBarrierWaitDurationMs / 1000d, resultTag);
-
-            foreach (var callback in snapshot.TraceSpans.Where(static span =>
-                         span.Kind == ModuleDiagnosticsTraceSpanKind.ModuleCallback))
+            var applicationResultTag = new KeyValuePair<string, object?>(RESULT_TAG_NAME, "succeeded");
+            if (snapshot.IsFinal
+                && !string.Equals(_recordedModuleCompositionId, snapshot.CompositionId, StringComparison.Ordinal))
             {
-                _callbackDuration.Record(
-                    callback.DurationMs / 1000d,
-                    new KeyValuePair<string, object?>(KIND_TAG_NAME, Format(callback.CallbackKind)),
-                    new KeyValuePair<string, object?>(PHASE_TAG_NAME, Format(callback.ModulePhase)),
-                    resultTag);
+                _compositionDuration.Record(snapshot.Summary.TotalCompositionDurationMs / 1000d, resultTag);
+                _serviceRegistrationDuration.Record(snapshot.Summary.ServiceRegistrationDurationMs / 1000d, resultTag);
+                _typeDiscoveryDuration.Record(snapshot.Summary.TypeDiscoveryDurationMs / 1000d, resultTag);
+                _barrierWaitDuration.Record(snapshot.Summary.AggregateBarrierWaitDurationMs / 1000d, resultTag);
+
+                foreach (var callback in snapshot.TraceSpans.Where(static span =>
+                             span.Kind == ModuleDiagnosticsTraceSpanKind.ModuleCallback))
+                {
+                    _callbackDuration.Record(
+                        callback.DurationMs / 1000d,
+                        new KeyValuePair<string, object?>(KIND_TAG_NAME, Format(callback.CallbackKind)),
+                        new KeyValuePair<string, object?>(PHASE_TAG_NAME, Format(callback.ModulePhase)),
+                        resultTag);
+                }
+
+                foreach (var work in snapshot.TraceSpans.Where(static span =>
+                             span.Kind == ModuleDiagnosticsTraceSpanKind.StartupWork))
+                {
+                    _startupWorkDuration.Record(
+                        work.DurationMs / 1000d,
+                        new KeyValuePair<string, object?>(KIND_TAG_NAME, "execution"),
+                        resultTag);
+                    _startupWorkDuration.Record(
+                        (work.QueueDurationMs ?? 0) / 1000d,
+                        new KeyValuePair<string, object?>(KIND_TAG_NAME, "queue"),
+                        resultTag);
+                }
+
+                Volatile.Write(ref _recordedModuleCompositionId, snapshot.CompositionId);
             }
 
-            foreach (var work in snapshot.TraceSpans.Where(static span =>
-                         span.Kind == ModuleDiagnosticsTraceSpanKind.StartupWork))
+            if (applicationStartupDurationMs is { } durationMs
+                && !string.Equals(
+                    _recordedApplicationStartupCompositionId,
+                    snapshot.CompositionId,
+                    StringComparison.Ordinal))
             {
-                _startupWorkDuration.Record(
-                    work.DurationMs / 1000d,
-                    new KeyValuePair<string, object?>(KIND_TAG_NAME, "execution"),
-                    resultTag);
-                _startupWorkDuration.Record(
-                    (work.QueueDurationMs ?? 0) / 1000d,
-                    new KeyValuePair<string, object?>(KIND_TAG_NAME, "queue"),
-                    resultTag);
+                // ApplicationStarted is emitted only after every hosted-service start callback succeeds. This
+                // result is therefore factual even while non-blocking module work keeps its own outcome live.
+                _applicationStartupDuration.Record(durationMs / 1000d, applicationResultTag);
+                Volatile.Write(ref _recordedApplicationStartupCompositionId, snapshot.CompositionId);
             }
-
-            Volatile.Write(ref _recordedCompositionId, snapshot.CompositionId);
         }
     }
 

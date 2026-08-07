@@ -25,13 +25,15 @@
     inventorySearch: "",
     inventoryOutcome: "all",
     inventoryPage: 1,
-    inventoryPageSize: 8
+    inventoryPageSize: 8,
+    startupTracked: true
   };
 
   const $ = (selector, root = document) => root.querySelector(selector);
   const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
   const fmt = value => new Intl.NumberFormat("en-US").format(value);
   const ms = value => `${fmt(value)} ms`;
+  const exactMs = value => `${Number(value).toFixed(4)} ms`;
   const escapeHtml = value => String(value ?? "")
     .replaceAll("&", "&amp;")
     .replaceAll("<", "&lt;")
@@ -88,20 +90,52 @@
   }
 
   function renderOverview() {
-    const delta = state.baseline ? data.snapshot.totalMs - state.baseline.totalMs : null;
+    const text = data.translations[state.language];
+    const applicationStartupMs = state.startupTracked ? data.snapshot.applicationStartupMs : null;
+    const startupDelta = applicationStartupMs != null && state.baseline?.applicationStartupMs != null
+      ? applicationStartupMs - state.baseline.applicationStartupMs
+      : null;
+    const compositionShare = applicationStartupMs != null && applicationStartupMs > 0
+      ? Math.min(100, (data.snapshot.totalMs / applicationStartupMs) * 100)
+      : null;
     const kpis = [
-      { label: "Structural outcome", icon: "badge-check", value: "Succeeded", detail: "Final · no composition errors", className: "outcome" },
-      { label: "Total composition", icon: "timer", value: fmt(data.snapshot.totalMs), unit: "ms", detail: "3,000 ms development budget", delta },
-      { label: "Service registration", icon: "workflow", value: fmt(data.snapshot.registrationMs), unit: "ms", detail: "74.3% of composition" },
-      { label: "Active modules", icon: "boxes", value: data.snapshot.moduleCount, unit: "modules", detail: "128 direct dependency edges" },
-      { label: "Evidence", icon: "scan-eye", value: data.snapshot.findingCount, unit: "findings", detail: "1 warning · 1 information" }
+      { label: "Active modules", icon: "boxes", value: data.snapshot.moduleCount, badge: "93 declared", detail: "128 direct dependency edges", tone: "success" },
+      { label: "Service registration", icon: "workflow", value: fmt(data.snapshot.registrationMs), unit: "ms", badge: "Exact", detail: "74.3% of module composition", tone: "info" },
+      { label: "Type discovery", icon: "scan-search", value: fmt(data.snapshot.discoveryMs), unit: "ms", badge: "14 queries", detail: "1,137 compiled matches", tone: "secondary" },
+      { label: "Findings", icon: "triangle-alert", value: data.snapshot.findingCount, badge: "1 warning", detail: "0 composition errors", tone: "warning" }
     ];
     const kpiHtml = kpis.map(kpi => `
-      <article class="kpi-cell ${kpi.className ?? ""}">
-        <div class="kpi-label">${icon(kpi.icon)}${kpi.label}</div>
+      <article class="kpi-cell" data-tone="${kpi.tone}">
+        <div class="kpi-card-head"><span class="kpi-icon">${icon(kpi.icon)}</span><span class="kpi-badge">${kpi.badge}</span></div>
+        <div class="kpi-label">${kpi.label}</div>
         <div class="kpi-value"><span>${kpi.value}</span>${kpi.unit ? `<small>${kpi.unit}</small>` : ""}</div>
-        <div class="kpi-detail">${kpi.detail}${kpi.delta != null ? ` · <span class="kpi-delta">${kpi.delta < 0 ? "↓" : "↑"} ${fmt(Math.abs(kpi.delta))} ms vs baseline</span>` : ""}</div>
+        <div class="kpi-detail">${kpi.detail}</div>
       </article>`).join("");
+
+    const startupCard = applicationStartupMs != null
+      ? `<article class="startup-kpi" data-tracked="true">
+          <div class="startup-kpi-head">
+            <span class="kpi-icon">${icon("rocket")}</span>
+            <div><span class="kpi-label">${text.startupTiming}</span><strong>${text.applicationStartup}</strong></div>
+            <span class="tracking-badge">${icon("radio")}${text.tracked}</span>
+          </div>
+          <div class="startup-kpi-metrics">
+            <div class="startup-primary"><strong>${exactMs(applicationStartupMs)}</strong><small>${text.startupBoundary}</small></div>
+            <div class="startup-secondary"><span>${text.moduleComposition}</span><strong>${ms(data.snapshot.totalMs)}</strong></div>
+          </div>
+          <div class="startup-share" aria-label="${text.moduleComposition} ${compositionShare.toFixed(1)}%">
+            <div class="startup-share-labels"><span>${text.compositionShare}</span><strong class="startup-share-badge">${compositionShare.toFixed(1)}%</strong></div>
+            <div class="startup-share-track"><span class="startup-share-composition" style="width:${compositionShare}%"></span><span class="startup-share-remaining"></span></div>
+            <div class="startup-share-legend"><span><i></i>${text.moduleComposition}</span><span><i></i>${text.remainingStartup}</span></div>
+          </div>
+          ${startupDelta != null ? `<span class="startup-delta">${startupDelta < 0 ? "↓" : "↑"} ${exactMs(Math.abs(startupDelta))} ${text.versusBaseline}</span>` : ""}
+        </article>`
+      : `<article class="kpi-cell composition-only" data-tone="primary">
+          <div class="kpi-card-head"><span class="kpi-icon">${icon("timer")}</span><span class="kpi-badge">${text.exact}</span></div>
+          <div class="kpi-label">${text.moduleComposition}</div>
+          <div class="kpi-value"><span>${fmt(data.snapshot.totalMs)}</span><small>ms</small></div>
+          <div class="kpi-detail">${text.finalCompositionInterval}</div>
+        </article>`;
 
     const findings = data.findings.map(finding => `
       <article class="finding-card ${finding.severity}">
@@ -116,9 +150,9 @@
     }).join("");
 
     $("#section-overview").innerHTML = `
-      ${sectionHeading("overview-title", "01 / COMPOSITION VERDICT", "Overview", "One immutable answer to what happened during FlightService module composition.", `<span class="status-badge success"><span class="status-dot"></span>Final snapshot</span>`)}
+      ${sectionHeading("overview-title", "01 / COMPOSITION VERDICT", "Overview", "One immutable answer to what happened during FlightService module composition.", `<button class="small-button" type="button" data-action="toggle-startup-timing">${state.startupTracked ? text.prototypeTrackingOn : text.prototypeTrackingOff}</button><span class="status-badge success"><span class="status-dot"></span>Final snapshot</span>`)}
       ${comparisonBanner()}
-      <div class="kpi-strip">${kpiHtml}</div>
+      <div class="kpi-strip ${applicationStartupMs != null ? "tracked" : "untracked"}">${startupCard}${kpiHtml}</div>
       <div class="overview-grid">
         <article class="panel critical-panel">
           <header class="panel-header"><div><p class="panel-kicker">CAUSAL STARTUP TRACE</p><h3>Critical path · ${ms(data.snapshot.criticalPathMs)}</h3></div><span class="kind-chip">87.4% of composition</span></header>
@@ -452,6 +486,7 @@
       exportedAt: new Date().toISOString(),
       privacy: "Sanitized: option diagnostics, assembly paths, stack traces, and raw exceptions omitted.",
       summary: {
+        applicationStartupMs: state.startupTracked ? data.snapshot.applicationStartupMs : null,
         totalMs: data.snapshot.totalMs,
         registrationMs: data.snapshot.registrationMs,
         discoveryMs: data.snapshot.discoveryMs,
@@ -525,6 +560,11 @@
         $("#baseline-state").textContent = data.translations[state.language].noBaseline;
         renderSection();
       }
+      if (target.dataset.action === "toggle-startup-timing") {
+        state.startupTracked = !state.startupTracked;
+        renderOverview();
+        refreshIcons();
+      }
     });
 
     document.addEventListener("change", event => {
@@ -567,7 +607,11 @@
       $("#theme-button").setAttribute("aria-label", `Use ${state.theme === "light" ? "dark" : "light"} theme`);
       refreshIcons();
     });
-    $("#language-button").addEventListener("click", () => { state.language = state.language === "en" ? "zh" : "en"; renderTranslations(); });
+    $("#language-button").addEventListener("click", () => {
+      state.language = state.language === "en" ? "zh" : "en";
+      renderTranslations();
+      renderSection();
+    });
     $("#refresh-button").addEventListener("click", event => {
       event.currentTarget.classList.add("refreshing");
       setTimeout(() => event.currentTarget.classList.remove("refreshing"), 500);

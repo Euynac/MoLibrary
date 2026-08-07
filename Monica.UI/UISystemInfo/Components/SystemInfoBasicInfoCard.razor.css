@@ -35,3 +35,84 @@
     flex-direction: column;
     gap: 4px;
 }
+
+.system-info-basic-card__startup {
+    display: grid;
+    min-width: 0;
+    gap: 16px;
+    padding: 16px;
+    border: 1px solid var(--mud-palette-lines-default);
+    border-inline-start: 4px solid var(--mud-palette-primary);
+    border-radius: var(--mud-default-borderradius);
+    background: linear-gradient(135deg, var(--mud-palette-primary-hover), var(--mud-palette-surface));
+}
+
+.system-info-basic-card__startup-header,
+.system-info-basic-card__startup-identity,
+.system-info-basic-card__startup-metric {
+    display: flex;
+    min-width: 0;
+}
+
+.system-info-basic-card__startup-header {
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.system-info-basic-card__startup-identity {
+    align-items: center;
+    gap: 12px;
+}
+
+.system-info-basic-card__startup-icon {
+    display: grid;
+    flex: 0 0 40px;
+    width: 40px;
+    height: 40px;
+    place-items: center;
+    border-radius: var(--mud-default-borderradius);
+    background: var(--mud-palette-primary-hover);
+}
+
+.system-info-basic-card__startup-labels {
+    min-width: 0;
+}
+
+.system-info-basic-card-shell ::deep .system-info-basic-card__startup-title,
+.system-info-basic-card-shell ::deep .system-info-basic-card__startup-value {
+    color: var(--mud-palette-primary);
+    font-weight: 700;
+}
+
+.system-info-basic-card-shell ::deep .system-info-basic-card__startup-scope,
+.system-info-basic-card-shell ::deep .system-info-basic-card__startup-ready {
+    color: var(--mud-palette-text-secondary);
+}
+
+.system-info-basic-card__startup-metric {
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.system-info-basic-card-shell ::deep .system-info-basic-card__startup-value {
+    font-variant-numeric: tabular-nums;
+    line-height: 1;
+}
+
+.system-info-basic-card-shell ::deep .system-info-basic-card__startup-ready {
+    text-align: end;
+}
+
+@media (max-width: 600px) {
+    .system-info-basic-card__startup-header,
+    .system-info-basic-card__startup-metric {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+
+    .system-info-basic-card-shell ::deep .system-info-basic-card__startup-ready {
+        text-align: start;
+    }
+}

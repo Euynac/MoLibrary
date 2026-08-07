@@ -1,5 +1,7 @@
 using System.Collections.Immutable;
 using System.Globalization;
+using System.Text;
+using System.Text.Json;
 using AwesomeAssertions;
 using Bunit;
 using Microsoft.AspNetCore.Components;
@@ -478,6 +480,117 @@ public sealed class ModuleSystemWorkbenchComponentTests
         cut.Markup.Should().Contain(ModuleDiagnosticFindingCodes.PERFORMANCE_BUDGET_EXCEEDED);
     }
 
+    [Theory]
+    [InlineData("en-US", "Application startup", "Tracked", "Start marker → ready")]
+    [InlineData("zh-CN", "应用启动", "已记录", "计时起点 → 就绪")]
+    public async Task Overview_ShouldRenderCombinedApplicationStartupTimingFromBilingualResources(
+        string cultureName,
+        string expectedLabel,
+        string expectedTrackedBadge,
+        string expectedBoundary)
+    {
+        var builder = Host.CreateApplicationBuilder();
+        builder.Logging.ClearProviders();
+        builder.AddMonica(monica =>
+        {
+            monica.ConfigureTypeDiscovery(static options => options.ExcludeDefault());
+            monica.AddLocalization().AddResource<ModuleSystemResource>();
+        });
+        using var localizationHost = builder.Build();
+        var localizer = localizationHost.Services
+            .GetRequiredService<IStringLocalizer<ModuleSystemResource>>();
+        using var culture = new CultureScope(cultureName);
+        await using var context = new ModuleSystemWorkbenchUiTestContext(localizer);
+        await using var session = new ModuleSystemWorkbenchSession(ModuleSystemWorkbenchTestData.Calls());
+        await session.InitializeAsync();
+
+        var cut = context.Render<ModuleWorkbenchOverview>(parameters => parameters
+            .Add(component => component.Session, session));
+
+        cut.Markup.Should().Contain(expectedLabel);
+        cut.Markup.Should().Contain(expectedTrackedBadge);
+        cut.Markup.Should().Contain(expectedBoundary);
+        cut.Markup.Should().Contain("36.1250 ms");
+        cut.FindAll(".startup-kpi-card").Should().ContainSingle();
+        cut.FindAll(".kpi-card").Should().HaveCount(4);
+        cut.Find(".startup-share__bar").GetAttribute("aria-label").Should().Contain("66.4%");
+        cut.Find(".startup-share__composition").GetAttribute("width").Should().Be("66.436");
+        cut.FindAll(".startup-share__badge").Should().ContainSingle();
+    }
+
+    [Fact]
+    public async Task Overview_WithoutStartupMarker_ShouldRenderOnlyNormalWidthCompositionCard()
+    {
+        await using var context = new ModuleSystemWorkbenchUiTestContext();
+        var snapshot = ModuleSystemWorkbenchTestData.Snapshot(applicationStartupDurationMs: null);
+        await using var session = new ModuleSystemWorkbenchSession(
+            ModuleSystemWorkbenchTestData.Calls(snapshot: () => Res.Ok(snapshot)));
+        await session.InitializeAsync();
+
+        var cut = context.Render<ModuleWorkbenchOverview>(parameters => parameters
+            .Add(component => component.Session, session));
+
+        cut.FindAll(".startup-kpi-card").Should().BeEmpty();
+        cut.FindAll(".kpi-card--composition").Should().ContainSingle();
+        cut.Find(".kpi-strip").ClassList.Should().Contain("kpi-strip--untracked");
+        cut.Markup.Should().NotContain("Overview:Kpis:ApplicationStartup");
+        cut.Markup.Should().NotContain("Overview:Kpis:Tracked");
+        cut.Find(".kpi-card--composition .kpi-value").TextContent.Should().Be("24.0000 ms");
+        cut.Find(".kpi-card--registration .kpi-value").TextContent.Should().Be("18.0000 ms");
+    }
+
+    [Fact]
+    public async Task Overview_StartupShare_ShouldUseInvariantSvgWidthInCommaDecimalCultures()
+    {
+        using var culture = new CultureScope("fr-FR");
+        await using var context = new ModuleSystemWorkbenchUiTestContext();
+        await using var session = new ModuleSystemWorkbenchSession(ModuleSystemWorkbenchTestData.Calls());
+        await session.InitializeAsync();
+
+        var cut = context.Render<ModuleWorkbenchOverview>(parameters => parameters
+            .Add(component => component.Session, session));
+
+        cut.Find(".startup-share__composition").GetAttribute("width").Should().Be("66.436");
+    }
+
+    [Fact]
+    public async Task Overview_WithTrackedBaseline_ShouldRenderExactApplicationStartupDelta()
+    {
+        await using var context = new ModuleSystemWorkbenchUiTestContext();
+        await using var session = new ModuleSystemWorkbenchSession(ModuleSystemWorkbenchTestData.Calls());
+        await session.InitializeAsync();
+        await ImportBaselineAsync(session, ModuleSystemWorkbenchTestData.Export(applicationStartupDurationMs: 30));
+
+        var cut = context.Render<ModuleWorkbenchOverview>(parameters => parameters
+            .Add(component => component.Session, session));
+
+        cut.Find(".kpi-badge--comparison").TextContent.Should().Contain("6.1250 ms");
+    }
+
+    [Theory]
+    [InlineData(null, 30d)]
+    [InlineData(36.125d, null)]
+    public async Task Overview_WhenEitherSnapshotIsUntracked_ShouldOmitApplicationStartupDelta(
+        double? currentStartupDurationMs,
+        double? baselineStartupDurationMs)
+    {
+        await using var context = new ModuleSystemWorkbenchUiTestContext();
+        var snapshot = ModuleSystemWorkbenchTestData.Snapshot(
+            applicationStartupDurationMs: currentStartupDurationMs);
+        await using var session = new ModuleSystemWorkbenchSession(
+            ModuleSystemWorkbenchTestData.Calls(snapshot: () => Res.Ok(snapshot)));
+        await session.InitializeAsync();
+        await ImportBaselineAsync(
+            session,
+            ModuleSystemWorkbenchTestData.Export(
+                applicationStartupDurationMs: baselineStartupDurationMs));
+
+        var cut = context.Render<ModuleWorkbenchOverview>(parameters => parameters
+            .Add(component => component.Session, session));
+
+        cut.FindAll(".kpi-badge--comparison").Should().BeEmpty();
+    }
+
     [Fact]
     public async Task CriticalPath_WhenChainExceedsTenSpans_ShouldRenderCompleteOrderAndHighlightSelection()
     {
@@ -577,6 +690,15 @@ public sealed class ModuleSystemWorkbenchComponentTests
 
     private static double ParseSvgNumber(string? value) =>
         double.Parse(value!, NumberStyles.Float, CultureInfo.InvariantCulture);
+
+    private static async Task ImportBaselineAsync(
+        ModuleSystemWorkbenchSession session,
+        ModuleDiagnosticsExport export)
+    {
+        var json = JsonSerializer.Serialize(export);
+        await using var stream = new MemoryStream(Encoding.UTF8.GetBytes(json));
+        await session.ImportBaselineAsync(stream, Xunit.TestContext.Current.CancellationToken);
+    }
 
     private sealed class CultureScope : IDisposable
     {

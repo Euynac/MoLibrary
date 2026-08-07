@@ -32,6 +32,11 @@
       "ProductVersion": "Product Version",
       "ProcessStartTime": "Process Start Time",
       "RunningFor": "Uptime {0}",
+      "ApplicationStartup": "Application startup",
+      "ApplicationStartupScope": "Start marker → ready",
+      "ApplicationStartupTracked": "Tracked",
+      "ApplicationStartupValue": "{0:F4} ms",
+      "ApplicationReadyAt": "Ready at {0}",
       "ListeningAddresses": "Listening Addresses"
     },
     "EnvironmentInfo": {

@@ -1,6 +1,6 @@
 window.WORKBENCH_DATA = {
   snapshot: {
-    schemaVersion: 2,
+    schemaVersion: 3,
     compositionId: "f2c6b8d4-5413-4e1d-a78b-7093fc2022aa",
     revision: 17,
     capturedAt: "2026-08-06T07:42:18.643+08:00",
@@ -9,6 +9,7 @@ window.WORKBENCH_DATA = {
     framework: ".NET 10.0 · Monica dev",
     outcome: "Succeeded",
     isFinal: true,
+    applicationStartupMs: 5128.0308,
     totalMs: 3468,
     registrationMs: 2577,
     moduleCount: 93,
@@ -201,8 +202,9 @@ window.WORKBENCH_DATA = {
   ],
 
   baseline: {
-    schemaVersion: 2,
+    schemaVersion: 3,
     name: "FlightService · dev · 2026-08-01",
+    applicationStartupMs: 5470.4421,
     totalMs: 3891,
     registrationMs: 2860,
     discoveryMs: 744,
@@ -218,12 +220,20 @@ window.WORKBENCH_DATA = {
     en: {
       overview: "Overview", performance: "Performance", modules: "Modules", dependencies: "Dependencies", discovery: "Discovery",
       subtitle: "Module composition flight recorder", final: "Final", succeeded: "Succeeded", compare: "Compare", export: "Export", refresh: "Refresh",
-      section: "Section", light: "Light", dark: "Dark", help: "Help", noBaseline: "No baseline", baselineLoaded: "Baseline loaded"
+      section: "Section", light: "Light", dark: "Dark", help: "Help", noBaseline: "No baseline", baselineLoaded: "Baseline loaded",
+      startupTiming: "Startup timing", applicationStartup: "Application startup", tracked: "Tracked", startupBoundary: "Start marker → ready",
+      moduleComposition: "Module composition", compositionShare: "Composition share", remainingStartup: "Remaining startup",
+      exact: "Exact", finalCompositionInterval: "Final composition interval", versusBaseline: "vs baseline",
+      prototypeTrackingOn: "Prototype: tracking on", prototypeTrackingOff: "Prototype: tracking off"
     },
     zh: {
       overview: "总览", performance: "性能", modules: "模块", dependencies: "依赖关系", discovery: "类型发现",
       subtitle: "模块组合飞行记录器", final: "已完成", succeeded: "成功", compare: "对比", export: "导出", refresh: "刷新",
-      section: "视图", light: "浅色", dark: "深色", help: "帮助", noBaseline: "未加载基线", baselineLoaded: "已加载基线"
+      section: "视图", light: "浅色", dark: "深色", help: "帮助", noBaseline: "未加载基线", baselineLoaded: "已加载基线",
+      startupTiming: "启动耗时", applicationStartup: "应用启动", tracked: "已记录", startupBoundary: "计时起点 → 就绪",
+      moduleComposition: "模块组合", compositionShare: "组合占比", remainingStartup: "其余启动耗时",
+      exact: "精确值", finalCompositionInterval: "最终模块组合区间", versusBaseline: "相对基线",
+      prototypeTrackingOn: "原型：已启用计时", prototypeTrackingOff: "原型：未启用计时"
     }
   }
 };

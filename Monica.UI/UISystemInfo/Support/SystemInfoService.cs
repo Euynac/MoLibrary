@@ -6,6 +6,7 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using Monica.Core;
 using Monica.Core.Results;
 using Monica.Modules;
 using Monica.UI.Localization;
@@ -19,12 +20,14 @@ namespace Monica.UI.UISystemInfo.Support;
 /// <param name="logger">The logger.</param>
 /// <param name="localizer">The localizer.</param>
 /// <param name="serverAddressesFeature">The server feature that exposes runtime listening addresses.</param>
+/// <param name="application">The host-owned Monica application that exposes optional startup timing.</param>
 /// <param name="applicationLifetime">The host lifetime controller used to request graceful shutdown.</param>
 /// <param name="options">The system information UI options.</param>
 public class SystemInfoService(
     ILogger<SystemInfoService> logger,
     IStringLocalizer<SystemInfoResource> localizer,
     IServerAddressesFeature serverAddressesFeature,
+    MonicaApplication application,
     IHostApplicationLifetime applicationLifetime,
     IOptions<ModuleSystemInfoUIOption> options)
 {
@@ -57,6 +60,7 @@ public class SystemInfoService(
             var buildTime = File.GetLastWriteTime(fileInfo.FileName);
             var processStartTime = Process.GetCurrentProcess().StartTime;
             var utcNow = DateTimeOffset.UtcNow;
+            var startupTiming = application.StartupTiming;
 
             var response = new SystemInfoResponse
             {
@@ -65,6 +69,8 @@ public class SystemInfoService(
                 UtcTime = utcNow.UtcDateTime,
                 TimeZone = SystemTimeZone.CaptureLocal(utcNow),
                 ProcessStartTime = processStartTime,
+                ApplicationReadyAtUtc = startupTiming?.ReadyAtUtc,
+                ApplicationStartupDurationMs = startupTiming?.DurationMs,
                 ListeningAddresses = GetListeningAddresses()
             };
 

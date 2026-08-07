@@ -89,15 +89,27 @@
   },
   "Overview": {
     "Kpis": {
-      "Composition": "Composition",
+      "StartupTiming": "Startup timing",
+      "ApplicationStartup": "Application startup",
+      "Tracked": "Tracked",
+      "StartupBoundary": "Start marker → ready",
+      "Composition": "Module composition",
+      "CompositionShare": "Composition share",
+      "CompositionShareAria": "Module composition is {0} of application startup.",
+      "RemainingStartup": "Remaining startup",
       "ActiveModules": "Active modules",
       "Declared": "{0} declared",
+      "DirectEdges": "{0} direct edges",
       "ServiceRegistration": "Service registration",
-      "ExactTiming": "Exact wall-clock interval",
+      "Exact": "Exact",
+      "FinalCompositionInterval": "Final composition interval",
+      "CompositionShareValue": "{0} of module composition",
       "TypeDiscovery": "Type discovery",
       "Queries": "{0} distinct queries",
+      "Matches": "{0} compiled matches",
       "Findings": "Findings",
-      "Errors": "{0} errors"
+      "Errors": "{0} errors",
+      "Warnings": "{0} warnings"
     },
     "CriticalPath": {
       "Eyebrow": "CAUSAL STARTUP CHAIN",

@@ -14,7 +14,8 @@ internal static class ModuleSystemWorkbenchTestData
     internal static ModuleDiagnosticsSnapshot Snapshot(
         long revision = 1,
         bool isFinal = true,
-        IReadOnlyList<ModuleDiagnosticFinding>? findings = null)
+        IReadOnlyList<ModuleDiagnosticFinding>? findings = null,
+        double? applicationStartupDurationMs = 36.125)
     {
         var alpha = Module(AlphaKey, nameof(AlphaModule), "Test.Core", 0, callbackMs: 6, dependencyCount: 0);
         var beta = Module(
@@ -38,6 +39,7 @@ internal static class ModuleSystemWorkbenchTestData
                 ModuleCount = 2,
                 ActiveModuleCount = 2,
                 TotalCompositionDurationMs = 24,
+                ApplicationStartupDurationMs = applicationStartupDurationMs,
                 ServiceRegistrationDurationMs = 18,
                 TypeDiscoveryDurationMs = 7
             },
@@ -226,7 +228,9 @@ internal static class ModuleSystemWorkbenchTestData
                 IsSensitive = true
             };
 
-    internal static ModuleDiagnosticsExport Export(int schemaVersion = ModuleDiagnosticsSnapshot.CURRENT_SCHEMA_VERSION) => new()
+    internal static ModuleDiagnosticsExport Export(
+        int schemaVersion = ModuleDiagnosticsSnapshot.CURRENT_SCHEMA_VERSION,
+        double? applicationStartupDurationMs = 30) => new()
     {
         SchemaVersion = schemaVersion,
         CompositionId = "baseline-composition",
@@ -235,6 +239,7 @@ internal static class ModuleSystemWorkbenchTestData
         Summary = new ModuleDiagnosticsSummary
         {
             TotalCompositionDurationMs = 20,
+            ApplicationStartupDurationMs = applicationStartupDurationMs,
             TypeDiscoveryDurationMs = 5
         },
         TypeDiscovery = new ModuleDiagnosticsExportTypeDiscovery(),

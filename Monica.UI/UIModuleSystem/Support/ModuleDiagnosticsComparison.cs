@@ -11,6 +11,11 @@ public sealed record ModuleDiagnosticsComparison
     /// <summary>Gets the total composition timing delta, current minus baseline.</summary>
     public double TotalDurationDeltaMs { get; init; }
 
+    /// <summary>
+    /// Gets the explicitly tracked application-startup delta, current minus baseline, when both observations reached host readiness.
+    /// </summary>
+    public double? ApplicationStartupDurationDeltaMs { get; init; }
+
     /// <summary>Gets the type-discovery timing delta, current minus baseline.</summary>
     public double TypeDiscoveryDurationDeltaMs { get; init; }
 
@@ -51,6 +56,9 @@ public sealed record ModuleDiagnosticsComparison
         {
             Baseline = baseline,
             TotalDurationDeltaMs = current.Summary.TotalCompositionDurationMs - baseline.Summary.TotalCompositionDurationMs,
+            ApplicationStartupDurationDeltaMs = CreateOptionalDelta(
+                current.Summary.ApplicationStartupDurationMs,
+                baseline.Summary.ApplicationStartupDurationMs),
             TypeDiscoveryDurationDeltaMs = current.Summary.TypeDiscoveryDurationMs - baseline.Summary.TypeDiscoveryDurationMs,
             AddedModules = currentModules.Except(baselineModules).Order(StringComparer.Ordinal).ToArray(),
             RemovedModules = baselineModules.Except(currentModules).Order(StringComparer.Ordinal).ToArray(),
@@ -58,6 +66,9 @@ public sealed record ModuleDiagnosticsComparison
             RemovedEdges = baselineEdges.Except(currentEdges).Order(StringComparer.Ordinal).ToArray()
         };
     }
+
+    private static double? CreateOptionalDelta(double? current, double? baseline) =>
+        current.HasValue && baseline.HasValue ? current.Value - baseline.Value : null;
 
     private static string EdgeId(string source, string target) => $"{source} -> {target}";
 }

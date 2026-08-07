@@ -89,6 +89,13 @@ internal sealed class ModuleDiagnosticsService
         // Project only immutable captured data; no profiler, registry, or scheduler lock is held here.
         Volatile.Read(ref _snapshotProjectionStarting)?.Invoke();
         var projected = ProjectSnapshot(source);
+        // Module work can be terminal before the host starts. For an explicitly tracked application, delay successful
+        // reference freezing until readiness so the terminal instance includes the startup duration. Untracked hosts
+        // freeze immediately; composition failures cannot reach ApplicationStarted and are also safe to freeze.
+        var canFreezeTerminalSnapshot = projected.IsFinal
+                                        && (source.Composition.IsFailed
+                                            || source.Performance.ApplicationStartup is null
+                                            || source.Performance.ApplicationStartup.IsReady);
         lock (_snapshotGate)
         {
             if (_terminalSnapshot is not null)
@@ -109,7 +116,7 @@ internal sealed class ModuleDiagnosticsService
             _cachedRevision = source.Revision;
             _cachedSnapshot = projected;
             var snapshot = projected;
-            if (snapshot.IsFinal)
+            if (canFreezeTerminalSnapshot)
             {
                 _terminalSnapshot = snapshot;
             }
@@ -421,6 +428,7 @@ internal sealed class ModuleDiagnosticsService
                 work.Status is ModuleStartupWorkStatus.Queued or ModuleStartupWorkStatus.Running),
             ErrorCount = source.Errors.Length + (source.Composition.IsFailed && source.Errors.Length == 0 ? 1 : 0),
             TotalCompositionDurationMs = source.Performance.Initialization.TotalDurationMs,
+            ApplicationStartupDurationMs = source.Performance.ApplicationStartup?.DurationMs,
             ServiceRegistrationDurationMs = source.Performance.ServiceRegistrationDurationMs,
             TypeDiscoveryDurationMs = typeDiscoveryDurationMs,
             AggregateBarrierWaitDurationMs = source.Performance.AggregateBarrierWaitDurationMs,
