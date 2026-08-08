@@ -22,7 +22,15 @@ public class FileConfigurationStoreTests : IDisposable
 
         document.Version.Should().Be(1);
         document.Json.Should().Contain("\"WorkerId\": 1");
-        System.IO.File.Exists(Path.Combine(_rootDirectory, "effective", $"{definition.DefinitionKey}.json")).Should().BeTrue();
+        var identity = ConfigurationDefinitionIdentity.Compute(definition.DefinitionKey);
+        var effectiveValuePath = Path.Combine(_rootDirectory, "effective", $"{identity}.json");
+        var metadataPath = Path.Combine(_rootDirectory, "effective", ".metadata", $"{identity}.metadata.json");
+        System.IO.File.Exists(effectiveValuePath).Should().BeTrue();
+        System.IO.File.Exists(metadataPath).Should().BeTrue();
+        (await System.IO.File.ReadAllTextAsync(
+                metadataPath,
+                TestContext.Current.CancellationToken))
+            .Should().Contain(definition.DefinitionKey);
     }
 
     [Fact]
@@ -39,12 +47,159 @@ public class FileConfigurationStoreTests : IDisposable
                 seedFactoryCalls++;
                 return """{"WorkerId":2}""";
             });
+        store = CreateStore();
 
         var documents = await store.EnsureCreatedAsync([seed], CancellationToken.None);
 
         seedFactoryCalls.Should().Be(0);
         documents.Should().ContainSingle();
         documents[0].Json.Should().Contain("\"WorkerId\": 1");
+    }
+
+    [Fact]
+    public async Task GetManyAsync_ShouldResolveIdentityAddressedDocumentsInRequestOrder()
+    {
+        var store = CreateStore();
+        var first = TestConfigurationFactory.Definition();
+        var second = first with
+        {
+            DefinitionKey = "Test.SecondOptions",
+            SectionPath = "Test:Second",
+            DisplayName = "Test Second"
+        };
+        await store.EnsureCreatedAsync(first, """{"WorkerId":1}""", CancellationToken.None);
+        await store.EnsureCreatedAsync(second, """{"WorkerId":2}""", CancellationToken.None);
+
+        var documents = await store.GetManyAsync(
+            [second.DefinitionKey.ToLowerInvariant(), "Test.MissingOptions", first.DefinitionKey],
+            CancellationToken.None);
+
+        documents.Should().HaveCount(3);
+        documents[0]!.DefinitionKey.Should().Be(second.DefinitionKey);
+        documents[0]!.Json.Should().Contain("\"WorkerId\": 2");
+        documents[1].Should().BeNull();
+        documents[2]!.DefinitionKey.Should().Be(first.DefinitionKey);
+        documents[2]!.Json.Should().Contain("\"WorkerId\": 1");
+    }
+
+    [Fact]
+    public async Task GetAsync_AfterLayoutValidation_ShouldUseIdentityPathWithoutDirectoryEnumeration()
+    {
+        var store = CreateStore();
+        var definition = TestConfigurationFactory.Definition();
+        await store.EnsureCreatedAsync(definition, """{"WorkerId":1}""", CancellationToken.None);
+        var legacyPath = Path.Combine(
+            _rootDirectory,
+            "effective",
+            $"{definition.DefinitionKey}.json");
+        await System.IO.File.WriteAllTextAsync(
+            legacyPath,
+            """{"WorkerId":999}""",
+            TestContext.Current.CancellationToken);
+
+        var document = await store.GetAsync(definition.DefinitionKey, CancellationToken.None);
+
+        document.Should().NotBeNull();
+        document!.Json.Should().Contain("\"WorkerId\": 1");
+        document.Json.Should().NotContain("999");
+    }
+
+    [Fact]
+    public async Task GetManyAsync_WhenStoreDoesNotExist_ShouldRemainReadOnly()
+    {
+        var store = CreateStore();
+
+        var documents = await store.GetManyAsync(
+            [TestConfigurationFactory.DefinitionKey],
+            CancellationToken.None);
+
+        documents.Should().ContainSingle();
+        documents[0].Should().BeNull();
+        Directory.Exists(_rootDirectory).Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task EnsureCreatedAsync_WhenDefinitionKeyContainsFilenameCharacters_ShouldUseItsIdentity()
+    {
+        var store = CreateStore();
+        var definition = TestConfigurationFactory.Definition() with
+        {
+            DefinitionKey = "Test/Options:Region?Primary",
+            SectionPath = "Test:UnsafeFileName",
+            DisplayName = "Unsafe File Name"
+        };
+
+        var document = await store.EnsureCreatedAsync(
+            definition,
+            """{"WorkerId":1}""",
+            CancellationToken.None);
+
+        document.DefinitionKey.Should().Be(definition.DefinitionKey);
+        var identity = ConfigurationDefinitionIdentity.Compute(definition.DefinitionKey);
+        System.IO.File.Exists(Path.Combine(_rootDirectory, "effective", $"{identity}.json")).Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task GetAsync_WhenEffectiveMetadataClaimsAnotherIdentity_ShouldRejectCorruptedMetadata()
+    {
+        var cancellationToken = TestContext.Current.CancellationToken;
+        var store = CreateStore();
+        var definition = TestConfigurationFactory.Definition();
+        await store.EnsureCreatedAsync(definition, """{"WorkerId":1}""", cancellationToken);
+        var identity = ConfigurationDefinitionIdentity.Compute(definition.DefinitionKey);
+        var metadataPath = Path.Combine(
+            _rootDirectory,
+            "effective",
+            ".metadata",
+            $"{identity}.metadata.json");
+        var metadata = JsonNode.Parse(await System.IO.File.ReadAllTextAsync(metadataPath, cancellationToken))!.AsObject();
+        metadata["DefinitionKey"] = "Test.OtherOptions";
+        await System.IO.File.WriteAllTextAsync(metadataPath, metadata.ToJsonString(), cancellationToken);
+
+        var act = () => store.GetAsync(definition.DefinitionKey, cancellationToken);
+
+        await act.Should().ThrowAsync<InvalidDataException>()
+            .WithMessage("*effective-value metadata*claims definition key*identity*");
+    }
+
+    [Theory]
+    [InlineData("definition")]
+    [InlineData("effective")]
+    [InlineData("metadata")]
+    public async Task GetManyAsync_WhenLegacyKeyNamedFileExists_ShouldFailWithoutWriting(string documentKind)
+    {
+        var definition = TestConfigurationFactory.Definition();
+        var legacyPath = documentKind switch
+        {
+            "definition" => Path.Combine(
+                _rootDirectory,
+                "metadata",
+                "definitions",
+                $"{definition.DefinitionKey}.json"),
+            "effective" => Path.Combine(
+                _rootDirectory,
+                "effective",
+                $"{definition.DefinitionKey}.json"),
+            "metadata" => Path.Combine(
+                _rootDirectory,
+                "effective",
+                ".metadata",
+                $"{definition.DefinitionKey}.metadata.json"),
+            _ => throw new ArgumentOutOfRangeException(nameof(documentKind))
+        };
+        Directory.CreateDirectory(Path.GetDirectoryName(legacyPath)!);
+        await System.IO.File.WriteAllTextAsync(
+            legacyPath,
+            "{}",
+            TestContext.Current.CancellationToken);
+        var store = CreateStore();
+
+        var act = () => store.GetManyAsync([definition.DefinitionKey], CancellationToken.None);
+
+        await act.Should().ThrowAsync<InvalidDataException>()
+            .WithMessage("*legacy definition-key filename*Migrate or recreate*does not migrate*");
+        Directory.EnumerateFiles(_rootDirectory, "*", SearchOption.AllDirectories)
+            .Should().ContainSingle(path => path == legacyPath);
     }
 
     [Fact]
@@ -419,7 +574,7 @@ public class FileConfigurationStoreTests : IDisposable
             _rootDirectory,
             "metadata",
             "definitions",
-            $"{definition.DefinitionKey}.json");
+            $"{ConfigurationDefinitionIdentity.Compute(definition.DefinitionKey)}.json");
         var envelope = JsonNode.Parse(await System.IO.File.ReadAllTextAsync(definitionPath, cancellationToken))!.AsObject();
         envelope["DefinitionKey"] = otherDefinition.DefinitionKey;
         await System.IO.File.WriteAllTextAsync(definitionPath, envelope.ToJsonString(), cancellationToken);
@@ -429,7 +584,7 @@ public class FileConfigurationStoreTests : IDisposable
                 definition.DefinitionKey,
                 cancellationToken);
         await preview.Should().ThrowAsync<InvalidDataException>()
-            .WithMessage("*claims definition key*instead of*");
+            .WithMessage("*claims definition key*identity*");
 
         var purge = () => store.PurgeDefinitionAsync(
             new ConfigurationDefinitionPurgeRequest
@@ -439,7 +594,7 @@ public class FileConfigurationStoreTests : IDisposable
             },
             cancellationToken);
         await purge.Should().ThrowAsync<InvalidDataException>()
-            .WithMessage("*claims definition key*instead of*");
+            .WithMessage("*claims definition key*identity*");
 
         (await store.GetAsync(definition.DefinitionKey, cancellationToken)).Should().NotBeNull();
         (await store.GetAsync(otherDefinition.DefinitionKey, cancellationToken)).Should().NotBeNull();

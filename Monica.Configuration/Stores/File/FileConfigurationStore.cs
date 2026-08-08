@@ -30,6 +30,7 @@ public sealed class FileConfigurationStore(IOptions<ConfigurationFileStoreOption
 
     private readonly SemaphoreSlim _lock = new(1, 1);
     private readonly ConfigurationFileStoreOptions _options = options.Value;
+    private bool _layoutValidated;
 
     /// <inheritdoc />
     public ConfigurationStoreDescriptor Descriptor { get; } = new()
@@ -67,6 +68,7 @@ public sealed class FileConfigurationStore(IOptions<ConfigurationFileStoreOption
         await _lock.WaitAsync(cancellationToken);
         try
         {
+            ValidateStorageLayout(cancellationToken);
             EnsureDirectories();
             var documentsByKey = new Dictionary<string, ConfigurationEffectiveValueDocument>(StringComparer.OrdinalIgnoreCase);
             foreach (var seed in seeds)
@@ -76,8 +78,8 @@ public sealed class FileConfigurationStore(IOptions<ConfigurationFileStoreOption
                     continue;
                 }
 
-                var path = ResolveEffectiveValuePath(seed.Definition.DefinitionKey);
-                if (path is not null)
+                var path = GetEffectiveValuePath(seed.Definition.DefinitionKey);
+                if (IoFile.Exists(path))
                 {
                     documentsByKey[seed.Definition.DefinitionKey] =
                         await ReadDocumentAsync(seed.Definition.DefinitionKey, cancellationToken)
@@ -114,6 +116,7 @@ public sealed class FileConfigurationStore(IOptions<ConfigurationFileStoreOption
         await _lock.WaitAsync(cancellationToken);
         try
         {
+            ValidateStorageLayout(cancellationToken);
             return await ReadDocumentAsync(definitionKey, cancellationToken);
         }
         finally
@@ -135,6 +138,7 @@ public sealed class FileConfigurationStore(IOptions<ConfigurationFileStoreOption
         await _lock.WaitAsync(cancellationToken);
         try
         {
+            ValidateStorageLayout(cancellationToken);
             var documents = new ConfigurationEffectiveValueDocument?[definitionKeys.Count];
             for (var index = 0; index < definitionKeys.Count; index++)
             {
@@ -157,6 +161,7 @@ public sealed class FileConfigurationStore(IOptions<ConfigurationFileStoreOption
         await _lock.WaitAsync(cancellationToken);
         try
         {
+            ValidateStorageLayout(cancellationToken);
             EnsureDirectories();
             var existing = await ReadDocumentAsync(request.Definition.DefinitionKey, cancellationToken);
             var currentVersion = existing?.Version ?? 0;
@@ -193,6 +198,7 @@ public sealed class FileConfigurationStore(IOptions<ConfigurationFileStoreOption
         await _lock.WaitAsync(cancellationToken);
         try
         {
+            ValidateStorageLayout(cancellationToken);
             EnsureDirectories();
             var line = JsonSerializer.Serialize(HistoryDto.FromHistory(history), JSON_LINE_OPTIONS);
             await IoFile.AppendAllTextAsync(GetHistoryPath(), line + Environment.NewLine, cancellationToken);
@@ -215,6 +221,7 @@ public sealed class FileConfigurationStore(IOptions<ConfigurationFileStoreOption
         await _lock.WaitAsync(cancellationToken);
         try
         {
+            ValidateStorageLayout(cancellationToken);
             var path = GetHistoryPath();
             if (!IoFile.Exists(path))
             {
@@ -257,6 +264,7 @@ public sealed class FileConfigurationStore(IOptions<ConfigurationFileStoreOption
         await _lock.WaitAsync(cancellationToken);
         try
         {
+            ValidateStorageLayout(cancellationToken);
             var path = GetHistoryPath();
             if (!IoFile.Exists(path))
             {
@@ -352,6 +360,7 @@ public sealed class FileConfigurationStore(IOptions<ConfigurationFileStoreOption
         await _lock.WaitAsync(cancellationToken);
         try
         {
+            ValidateStorageLayout(cancellationToken);
             var path = GetHistoryPath();
             if (!IoFile.Exists(path))
             {
@@ -388,6 +397,7 @@ public sealed class FileConfigurationStore(IOptions<ConfigurationFileStoreOption
         await _lock.WaitAsync(cancellationToken);
         try
         {
+            ValidateStorageLayout(cancellationToken);
             EnsureDirectories();
             var groups = await ReadGroupsAsync(cancellationToken);
             var index = groups.FindIndex(candidate => string.Equals(candidate.GroupId, group.GroupId, StringComparison.OrdinalIgnoreCase));
@@ -419,6 +429,7 @@ public sealed class FileConfigurationStore(IOptions<ConfigurationFileStoreOption
         await _lock.WaitAsync(cancellationToken);
         try
         {
+            ValidateStorageLayout(cancellationToken);
             return (await ReadGroupsAsync(cancellationToken))
                 .Select(group => group.ToGroup())
                 .Where(group =>
@@ -444,6 +455,7 @@ public sealed class FileConfigurationStore(IOptions<ConfigurationFileStoreOption
         await _lock.WaitAsync(cancellationToken);
         try
         {
+            ValidateStorageLayout(cancellationToken);
             var cursor = request.Cursor;
             var candidates = (await ReadGroupsAsync(cancellationToken))
                 .Select(static group => group.ToGroup())
@@ -485,6 +497,7 @@ public sealed class FileConfigurationStore(IOptions<ConfigurationFileStoreOption
         await _lock.WaitAsync(cancellationToken);
         try
         {
+            ValidateStorageLayout(cancellationToken);
             return (await ReadGroupsAsync(cancellationToken))
                 .Select(group => group.ToGroup())
                 .FirstOrDefault(group => string.Equals(group.GroupId, groupId, StringComparison.OrdinalIgnoreCase));
@@ -503,6 +516,7 @@ public sealed class FileConfigurationStore(IOptions<ConfigurationFileStoreOption
         await _lock.WaitAsync(cancellationToken);
         try
         {
+            ValidateStorageLayout(cancellationToken);
             EnsureDirectories();
             var duplicateDefinition = request.Definitions
                 .GroupBy(static definition => definition.DefinitionKey, StringComparer.OrdinalIgnoreCase)
@@ -562,6 +576,7 @@ public sealed class FileConfigurationStore(IOptions<ConfigurationFileStoreOption
         await _lock.WaitAsync(cancellationToken);
         try
         {
+            ValidateStorageLayout(cancellationToken);
             var normalizedLimit = Math.Clamp(limit, 1, 500);
             return (await ReadUnifiedVersionIndexAsync(cancellationToken))
                 .Where(summary =>
@@ -587,6 +602,7 @@ public sealed class FileConfigurationStore(IOptions<ConfigurationFileStoreOption
         await _lock.WaitAsync(cancellationToken);
         try
         {
+            ValidateStorageLayout(cancellationToken);
             var summaries = await ReadUnifiedVersionIndexAsync(cancellationToken);
             if (summaries.All(summary => summary.Version != version))
             {
@@ -614,6 +630,7 @@ public sealed class FileConfigurationStore(IOptions<ConfigurationFileStoreOption
         await _lock.WaitAsync(cancellationToken);
         try
         {
+            ValidateStorageLayout(cancellationToken);
             var summary = (await ReadUnifiedVersionIndexAsync(cancellationToken))
                 .FirstOrDefault(candidate => string.Equals(candidate.MutationGroupId, mutationGroupId, StringComparison.OrdinalIgnoreCase));
             if (summary is null)
@@ -640,6 +657,7 @@ public sealed class FileConfigurationStore(IOptions<ConfigurationFileStoreOption
         await _lock.WaitAsync(cancellationToken);
         try
         {
+            ValidateStorageLayout(cancellationToken);
             EnsureDirectories();
             var summaries = await ReadUnifiedVersionIndexAsync(cancellationToken);
             var summaryIndex = summaries.FindIndex(candidate => candidate.Version == version);
@@ -695,11 +713,6 @@ public sealed class FileConfigurationStore(IOptions<ConfigurationFileStoreOption
             })
             .ToArray();
 
-        foreach (var publication in publications)
-        {
-            _ = GetSafeFileName(publication.Definition.DefinitionKey);
-        }
-
         var duplicateDefinition = publications
             .GroupBy(
                 static publication => ConfigurationDefinitionIdentity.Compute(publication.Definition.DefinitionKey),
@@ -718,8 +731,9 @@ public sealed class FileConfigurationStore(IOptions<ConfigurationFileStoreOption
         await _lock.WaitAsync(cancellationToken);
         try
         {
+            ValidateStorageLayout(cancellationToken);
             EnsureDirectories();
-            var definitionPaths = IndexDefinitionPaths(cancellationToken);
+            var definitionPaths = EnumerateDefinitionPaths(cancellationToken);
             var incomingIdentities = publications
                 .Select(static publication =>
                     ConfigurationDefinitionIdentity.Compute(publication.Definition.DefinitionKey))
@@ -728,10 +742,15 @@ public sealed class FileConfigurationStore(IOptions<ConfigurationFileStoreOption
             {
                 cancellationToken.ThrowIfCancellationRequested();
                 var definition = publication.Definition;
-                var path = ResolveDefinitionPathForPublish(definition.DefinitionKey, definitionPaths);
+                var path = GetDefinitionPath(definition.DefinitionKey);
                 var existing = IoFile.Exists(path)
                     ? await TryReadPublishedDefinitionDtoForRepairAsync(path, cancellationToken)
                     : null;
+                if (existing is not null)
+                {
+                    ValidatePersistedIdentity(path, existing.DefinitionKey, "definition metadata");
+                }
+
                 var published = PublishedDefinitionDto.FromPublication(
                     definition,
                     batch.Publisher.PublisherKey,
@@ -766,9 +785,10 @@ public sealed class FileConfigurationStore(IOptions<ConfigurationFileStoreOption
         await _lock.WaitAsync(cancellationToken);
         try
         {
+            ValidateStorageLayout(cancellationToken);
             EnsureDirectories();
             await WithdrawMissingPublisherStatesAsync(
-                IndexDefinitionPaths(cancellationToken),
+                EnumerateDefinitionPaths(cancellationToken),
                 retirement.Publisher.PublisherKey,
                 new HashSet<string>(StringComparer.Ordinal),
                 cancellationToken);
@@ -788,23 +808,19 @@ public sealed class FileConfigurationStore(IOptions<ConfigurationFileStoreOption
         await _lock.WaitAsync(cancellationToken);
         try
         {
+            ValidateStorageLayout(cancellationToken);
             EnsureDirectories();
-            var paths = FindDefinitionPaths(definitionKey, cancellationToken);
-            if (paths.Length == 0)
+            var path = GetDefinitionPath(definitionKey);
+            if (!IoFile.Exists(path))
             {
                 throw new KeyNotFoundException(
                     $"Published configuration definition '{definitionKey}' was not found.");
             }
 
-            if (paths.Length > 1)
-            {
-                throw new InvalidDataException(
-                    $"Multiple persisted definition metadata files claim key '{definitionKey}'.");
-            }
-
-            var dto = await TryReadPublishedDefinitionDtoForRepairAsync(paths[0], cancellationToken)
+            var dto = await TryReadPublishedDefinitionDtoForRepairAsync(path, cancellationToken)
                       ?? throw new InvalidDataException(
                           $"Published configuration definition '{definitionKey}' could not be read.");
+            ValidatePersistedIdentity(path, dto.DefinitionKey, "definition metadata");
             if (!Enum.TryParse<ConfigurationReloadBehavior>(
                     dto.ReloadBehavior,
                     ignoreCase: false,
@@ -855,30 +871,24 @@ public sealed class FileConfigurationStore(IOptions<ConfigurationFileStoreOption
         await _lock.WaitAsync(cancellationToken);
         try
         {
+            ValidateStorageLayout(cancellationToken);
             EnsureDirectories();
-            var pathsByIdentity = IndexDefinitionPathsByIdentity(cancellationToken);
             var result = new Dictionary<string, IReadOnlyList<ConfigurationDefinitionPublisherState>>(
                 StringComparer.OrdinalIgnoreCase);
             foreach (var definitionKey in normalizedDefinitionKeys)
             {
                 cancellationToken.ThrowIfCancellationRequested();
-                var definitionIdentity = ConfigurationDefinitionIdentity.Compute(definitionKey);
-                var paths = pathsByIdentity.GetValueOrDefault(definitionIdentity) ?? [];
-                if (paths.Count == 0)
+                var path = GetDefinitionPath(definitionKey);
+                if (!IoFile.Exists(path))
                 {
                     result[definitionKey] = [];
                     continue;
                 }
 
-                if (paths.Count > 1)
-                {
-                    throw new InvalidDataException(
-                        $"Multiple persisted definition metadata files claim key '{definitionKey}'.");
-                }
-
-                var dto = await TryReadPublishedDefinitionDtoForRepairAsync(paths[0], cancellationToken)
+                var dto = await TryReadPublishedDefinitionDtoForRepairAsync(path, cancellationToken)
                           ?? throw new InvalidDataException(
                               $"Published configuration definition '{definitionKey}' could not be read.");
+                ValidatePersistedIdentity(path, dto.DefinitionKey, "definition metadata");
                 result[definitionKey] = dto.PublisherState is null
                     ? []
                     : [dto.PublisherState.ToModel()];
@@ -900,6 +910,7 @@ public sealed class FileConfigurationStore(IOptions<ConfigurationFileStoreOption
         await _lock.WaitAsync(cancellationToken);
         try
         {
+            ValidateStorageLayout(cancellationToken);
             EnsureDirectories();
             var (_, storedDefinitionKey, definition) =
                 await LoadDefinitionForMaintenanceAsync(definitionKey, cancellationToken);
@@ -947,6 +958,7 @@ public sealed class FileConfigurationStore(IOptions<ConfigurationFileStoreOption
         await _lock.WaitAsync(cancellationToken);
         try
         {
+            ValidateStorageLayout(cancellationToken);
             EnsureDirectories();
             var (definitionPath, storedDefinitionKey, definition) = await LoadDefinitionForMaintenanceAsync(
                 request.DefinitionKey,
@@ -965,17 +977,17 @@ public sealed class FileConfigurationStore(IOptions<ConfigurationFileStoreOption
                     + $"'{definition.DefinitionKey}', but current revision is {definition.DefinitionRevision}.");
             }
 
-            var effectiveValuePath = ResolveEffectiveValuePath(storedDefinitionKey);
-            var effectiveMetadataPath = ResolveEffectiveMetadataPath(storedDefinitionKey);
+            var effectiveValuePath = GetEffectiveValuePath(storedDefinitionKey);
+            var effectiveMetadataPath = GetMetadataPath(storedDefinitionKey);
 
             // The definition file is the maintenance record's commit point. A crash while removing value files leaves
             // a retryable retired definition; removing the definition last never hides a partially completed purge.
-            if (effectiveValuePath is not null)
+            if (IoFile.Exists(effectiveValuePath))
             {
                 IoFile.Delete(effectiveValuePath);
             }
 
-            if (effectiveMetadataPath is not null)
+            if (IoFile.Exists(effectiveMetadataPath))
             {
                 IoFile.Delete(effectiveMetadataPath);
             }
@@ -995,6 +1007,7 @@ public sealed class FileConfigurationStore(IOptions<ConfigurationFileStoreOption
         await _lock.WaitAsync(cancellationToken);
         try
         {
+            ValidateStorageLayout(cancellationToken);
             EnsureDirectories();
             return await ReadPublishedDefinitionEntriesAsync(cancellationToken);
         }
@@ -1012,6 +1025,7 @@ public sealed class FileConfigurationStore(IOptions<ConfigurationFileStoreOption
         await _lock.WaitAsync(cancellationToken);
         try
         {
+            ValidateStorageLayout(cancellationToken);
             EnsureDirectories();
             return await FindPublishedDefinitionEntryAsync(definitionKey, cancellationToken);
         }
@@ -1025,14 +1039,14 @@ public sealed class FileConfigurationStore(IOptions<ConfigurationFileStoreOption
         string definitionKey,
         CancellationToken cancellationToken)
     {
-        var path = ResolveEffectiveValuePath(definitionKey);
-        if (path is null)
+        var path = GetEffectiveValuePath(definitionKey);
+        if (!IoFile.Exists(path))
         {
             return null;
         }
 
-        var storedDefinitionKey = Path.GetFileNameWithoutExtension(path);
-        var metadata = await ReadMetadataAsync(storedDefinitionKey, cancellationToken);
+        var metadata = await ReadMetadataAsync(definitionKey, cancellationToken);
+        var storedDefinitionKey = metadata?.DefinitionKey ?? definitionKey;
         var json = await IoFile.ReadAllTextAsync(path, cancellationToken);
         var lastWrite = IoFile.GetLastWriteTimeUtc(path);
         return new ConfigurationEffectiveValueDocument
@@ -1051,41 +1065,19 @@ public sealed class FileConfigurationStore(IOptions<ConfigurationFileStoreOption
         string definitionKey,
         CancellationToken cancellationToken)
     {
-        var paths = FindDefinitionPaths(definitionKey, cancellationToken);
-        if (paths.Length == 0)
+        var definitionPath = GetDefinitionPath(definitionKey);
+        if (!IoFile.Exists(definitionPath))
         {
             throw new KeyNotFoundException(
                 $"Published configuration definition '{definitionKey}' was not found.");
         }
 
-        if (paths.Length > 1)
-        {
-            throw new InvalidDataException(
-                $"Multiple persisted definition metadata files claim key '{definitionKey}'.");
-        }
-
-        // Maintenance uses the filename as the physical identity. The envelope must agree before its key can
-        // influence any effective-value lookup or deletion.
-        var definitionPath = paths[0];
-        var storedDefinitionKey = Path.GetFileNameWithoutExtension(definitionPath);
-        if (!string.Equals(definitionKey, storedDefinitionKey, StringComparison.OrdinalIgnoreCase))
-        {
-            throw new InvalidDataException(
-                $"Persisted definition metadata file '{Path.GetFileName(definitionPath)}' does not match requested "
-                + $"definition key '{definitionKey}'.");
-        }
-
         var definition = await TryReadPublishedDefinitionDtoForRepairAsync(definitionPath, cancellationToken)
                          ?? throw new InvalidDataException(
                              $"Published configuration definition '{definitionKey}' could not be read.");
-        if (!string.Equals(storedDefinitionKey, definition.DefinitionKey, StringComparison.OrdinalIgnoreCase))
-        {
-            throw new InvalidDataException(
-                $"Persisted definition metadata file '{Path.GetFileName(definitionPath)}' claims definition key "
-                + $"'{definition.DefinitionKey}' instead of '{storedDefinitionKey}'.");
-        }
+        ValidatePersistedIdentity(definitionPath, definition.DefinitionKey, "definition metadata");
 
-        return (definitionPath, storedDefinitionKey, definition);
+        return (definitionPath, definition.DefinitionKey, definition);
     }
 
     private async Task<(int ValueHistoryCount, int MutationGroupCount)> CountRetainedHistoryAsync(
@@ -1121,32 +1113,36 @@ public sealed class FileConfigurationStore(IOptions<ConfigurationFileStoreOption
 
     private async Task WriteDocumentAsync(ConfigurationEffectiveValueDocument document, CancellationToken cancellationToken)
     {
-        var effectiveValuePath = ResolveEffectiveValuePath(document.DefinitionKey)
-                                 ?? GetEffectiveValuePath(document.DefinitionKey);
-        var storedDefinitionKey = Path.GetFileNameWithoutExtension(effectiveValuePath);
+        var effectiveValuePath = GetEffectiveValuePath(document.DefinitionKey);
         await IoFile.WriteAllTextAsync(effectiveValuePath, document.Json, cancellationToken);
         var metadata = new DocumentMetadataDto
         {
+            DefinitionKey = document.DefinitionKey,
             Version = document.Version,
             SchemaVersion = document.SchemaVersion,
             LastModifiedTime = document.LastModifiedTime,
             LastModifierId = document.LastModifierId,
             LastModifierName = document.LastModifierName
         };
-        var metadataPath = ResolveEffectiveMetadataPath(storedDefinitionKey)
-                           ?? GetMetadataPath(storedDefinitionKey);
+        var metadataPath = GetMetadataPath(document.DefinitionKey);
         await IoFile.WriteAllTextAsync(metadataPath, JsonSerializer.Serialize(metadata, JSON_OPTIONS), cancellationToken);
     }
 
     private async Task<DocumentMetadataDto?> ReadMetadataAsync(string definitionKey, CancellationToken cancellationToken)
     {
-        var path = ResolveEffectiveMetadataPath(definitionKey);
-        if (path is null)
+        var path = GetMetadataPath(definitionKey);
+        if (!IoFile.Exists(path))
         {
             return null;
         }
 
-        return JsonSerializer.Deserialize<DocumentMetadataDto>(await IoFile.ReadAllTextAsync(path, cancellationToken));
+        var metadata = JsonSerializer.Deserialize<DocumentMetadataDto>(
+                           await IoFile.ReadAllTextAsync(path, cancellationToken),
+                           JSON_OPTIONS)
+                       ?? throw new InvalidDataException(
+                           $"Persisted effective-value metadata file '{Path.GetFileName(path)}' contains no object.");
+        ValidatePersistedIdentity(path, metadata.DefinitionKey, "effective-value metadata", ".metadata.json");
+        return metadata;
     }
 
     private async Task<List<GroupDto>> ReadGroupsAsync(CancellationToken cancellationToken)
@@ -1266,6 +1262,71 @@ public sealed class FileConfigurationStore(IOptions<ConfigurationFileStoreOption
         IoDirectory.CreateDirectory(GetDefinitionsDirectory());
     }
 
+    private void ValidateStorageLayout(CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        if (_layoutValidated)
+        {
+            return;
+        }
+
+        // Validate before creating directories so read-only startup snapshots cannot hide or mutate a legacy store.
+        var legacyPath = FindLegacyLayoutPath(
+                             GetDefinitionsDirectory(),
+                             "*.json",
+                             static path => Path.GetFileNameWithoutExtension(path),
+                             cancellationToken)
+                         ?? FindLegacyLayoutPath(
+                             GetEffectiveDirectory(),
+                             "*.json",
+                             static path => Path.GetFileNameWithoutExtension(path),
+                             cancellationToken)
+                         ?? FindLegacyLayoutPath(
+                             GetEffectiveMetadataDirectory(),
+                             "*.metadata.json",
+                             static path => Path.GetFileName(path)[..^".metadata.json".Length],
+                             cancellationToken);
+        if (legacyPath is not null)
+        {
+            var relativePath = Path.GetRelativePath(_options.RootDirectory, legacyPath);
+            throw new InvalidDataException(
+                $"The file-backed configuration store contains legacy definition-key filename '{relativePath}'. "
+                + "Migrate or recreate the store with identity-addressed filenames before startup; "
+                + "Monica does not migrate file-store data automatically.");
+        }
+
+        _layoutValidated = true;
+    }
+
+    private static string? FindLegacyLayoutPath(
+        string directory,
+        string searchPattern,
+        Func<string, string> getIdentity,
+        CancellationToken cancellationToken)
+    {
+        if (!IoDirectory.Exists(directory))
+        {
+            return null;
+        }
+
+        foreach (var path in IoDirectory.EnumerateFiles(directory, searchPattern, SearchOption.TopDirectoryOnly))
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            if (!IsCanonicalIdentity(getIdentity(path)))
+            {
+                return path;
+            }
+        }
+
+        return null;
+    }
+
+    private static bool IsCanonicalIdentity(string value)
+    {
+        return value.Length == ConfigurationDefinitionIdentity.Length
+               && value.All(static character => character is >= '0' and <= '9' or >= 'A' and <= 'F');
+    }
+
     private string GetEffectiveDirectory()
     {
         return Path.Combine(_options.RootDirectory, "effective");
@@ -1288,79 +1349,53 @@ public sealed class FileConfigurationStore(IOptions<ConfigurationFileStoreOption
 
     private string GetEffectiveValuePath(string definitionKey)
     {
-        return Path.Combine(GetEffectiveDirectory(), $"{GetSafeFileName(definitionKey)}.json");
+        return Path.Combine(
+            GetEffectiveDirectory(),
+            $"{ConfigurationDefinitionIdentity.Compute(definitionKey)}.json");
     }
 
     private string GetMetadataPath(string definitionKey)
     {
-        return Path.Combine(GetEffectiveMetadataDirectory(), $"{GetSafeFileName(definitionKey)}.metadata.json");
-    }
-
-    private string? ResolveEffectiveValuePath(string definitionKey)
-    {
-        _ = GetEffectiveValuePath(definitionKey);
-
-        return ResolveCaseInsensitivePath(
-            GetEffectiveDirectory(),
-            "*.json",
-            path => Path.GetFileNameWithoutExtension(path),
-            definitionKey,
-            "effective-value");
-    }
-
-    private string? ResolveEffectiveMetadataPath(string definitionKey)
-    {
-        _ = GetMetadataPath(definitionKey);
-
-        return ResolveCaseInsensitivePath(
+        return Path.Combine(
             GetEffectiveMetadataDirectory(),
-            "*.metadata.json",
-            path => Path.GetFileName(path)[..^".metadata.json".Length],
-            definitionKey,
-            "effective-value metadata");
-    }
-
-    private static string? ResolveCaseInsensitivePath(
-        string directory,
-        string searchPattern,
-        Func<string, string> getDefinitionKey,
-        string definitionKey,
-        string documentKind)
-    {
-        if (!IoDirectory.Exists(directory))
-        {
-            return null;
-        }
-
-        var requestedIdentity = ConfigurationDefinitionIdentity.Compute(definitionKey);
-        string? matchingPath = null;
-        foreach (var path in IoDirectory.EnumerateFiles(directory, searchPattern, SearchOption.TopDirectoryOnly))
-        {
-            var candidateKey = getDefinitionKey(path);
-            if (string.IsNullOrWhiteSpace(candidateKey)
-                || !string.Equals(
-                    ConfigurationDefinitionIdentity.Compute(candidateKey),
-                    requestedIdentity,
-                    StringComparison.Ordinal))
-            {
-                continue;
-            }
-
-            if (matchingPath is not null)
-            {
-                throw new InvalidOperationException(
-                    $"Multiple file-backed {documentKind} documents claim definition key '{definitionKey}' ignoring casing.");
-            }
-
-            matchingPath = path;
-        }
-
-        return matchingPath;
+            $"{ConfigurationDefinitionIdentity.Compute(definitionKey)}.metadata.json");
     }
 
     private string GetDefinitionPath(string definitionKey)
     {
-        return Path.Combine(GetDefinitionsDirectory(), $"{GetSafeFileName(definitionKey)}.json");
+        return Path.Combine(
+            GetDefinitionsDirectory(),
+            $"{ConfigurationDefinitionIdentity.Compute(definitionKey)}.json");
+    }
+
+    private static void ValidatePersistedIdentity(
+        string path,
+        string definitionKey,
+        string documentKind,
+        string suffix = ".json")
+    {
+        string persistedIdentity;
+        try
+        {
+            persistedIdentity = ConfigurationDefinitionIdentity.Compute(definitionKey);
+        }
+        catch (ArgumentException ex)
+        {
+            throw new InvalidDataException(
+                $"Persisted {documentKind} file '{Path.GetFileName(path)}' has no valid definition key.",
+                ex);
+        }
+
+        var fileName = Path.GetFileName(path);
+        var fileIdentity = fileName.EndsWith(suffix, StringComparison.Ordinal)
+            ? fileName[..^suffix.Length]
+            : fileName;
+        if (!string.Equals(fileIdentity, persistedIdentity, StringComparison.Ordinal))
+        {
+            throw new InvalidDataException(
+                $"Persisted {documentKind} file '{fileName}' claims definition key '{definitionKey}', "
+                + $"whose identity is '{persistedIdentity}' instead of filename identity '{fileIdentity}'.");
+        }
     }
 
     private string GetHistoryPath()
@@ -1393,20 +1428,6 @@ public sealed class FileConfigurationStore(IOptions<ConfigurationFileStoreOption
         return Path.Combine(GetUnifiedVersionDirectory(), $"v{version}.deleting");
     }
 
-    private static string GetSafeFileName(string definitionKey)
-    {
-        if (string.IsNullOrWhiteSpace(definitionKey)
-            || definitionKey.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0
-            || definitionKey.Contains(Path.DirectorySeparatorChar)
-            || definitionKey.Contains(Path.AltDirectorySeparatorChar))
-        {
-            throw new ConfigurationValidationFailedException(
-                $"Configuration definition key '{definitionKey}' cannot be used as a file-backed store name.");
-        }
-
-        return definitionKey;
-    }
-
     private static string FormatJson(string json)
     {
         using var document = JsonDocument.Parse(string.IsNullOrWhiteSpace(json) ? "{}" : json);
@@ -1426,22 +1447,12 @@ public sealed class FileConfigurationStore(IOptions<ConfigurationFileStoreOption
         CancellationToken cancellationToken)
     {
         var entries = new List<ConfigurationPublishedDefinitionEntry>();
-        foreach (var path in IoDirectory.EnumerateFiles(GetDefinitionsDirectory(), "*.json"))
+        foreach (var path in EnumerateDefinitionPaths(cancellationToken))
         {
-            cancellationToken.ThrowIfCancellationRequested();
             entries.Add(await ReadPublishedDefinitionEntryAsync(path, cancellationToken));
         }
 
-        var duplicateKeys = entries
-            .GroupBy(static entry => entry.Metadata.DefinitionKey, StringComparer.OrdinalIgnoreCase)
-            .Where(static group => group.Count() > 1)
-            .Select(static group => group.Key)
-            .ToHashSet(StringComparer.OrdinalIgnoreCase);
-
         return entries
-            .Select(entry => duplicateKeys.Contains(entry.Metadata.DefinitionKey)
-                ? WithDuplicateIdentityDiagnostic(entry)
-                : entry)
             .OrderBy(entry => DisplayNameOrKey(entry.Metadata), StringComparer.OrdinalIgnoreCase)
             .ThenBy(entry => entry.Metadata.DefinitionKey, StringComparer.OrdinalIgnoreCase)
             .ToArray();
@@ -1451,144 +1462,59 @@ public sealed class FileConfigurationStore(IOptions<ConfigurationFileStoreOption
         string definitionKey,
         CancellationToken cancellationToken)
     {
-        var matchingPaths = FindDefinitionPaths(definitionKey, cancellationToken);
-        if (matchingPaths.Length == 0)
+        var path = GetDefinitionPath(definitionKey);
+        if (!IoFile.Exists(path))
         {
             return null;
         }
 
-        var entry = await ReadPublishedDefinitionEntryAsync(matchingPaths[0], cancellationToken);
-        return matchingPaths.Length == 1
-            ? entry
-            : WithDuplicateIdentityDiagnostic(entry);
+        return await ReadPublishedDefinitionEntryAsync(path, cancellationToken);
     }
 
-    private string ResolveDefinitionPathForPublish(
-        string definitionKey,
-        IReadOnlyDictionary<string, IReadOnlyList<string>> definitionPaths)
+    private IReadOnlyList<string> EnumerateDefinitionPaths(CancellationToken cancellationToken)
     {
-        var matchingPaths = definitionPaths.GetValueOrDefault(definitionKey) ?? [];
-        if (matchingPaths.Count <= 1)
-        {
-            return matchingPaths.FirstOrDefault() ?? GetDefinitionPath(definitionKey);
-        }
-
-        throw new ConfigurationDefinitionMetadataUnavailableException(
-            definitionKey,
-            new ConfigurationDefinitionMetadataDiagnostic
-            {
-                Kind = ConfigurationDefinitionMetadataIssueKind.InvalidEnvelope,
-                StoreKey = Descriptor.StoreKey,
-                ErrorType = typeof(InvalidDataException).FullName!,
-                Message = $"Multiple persisted definition metadata files claim key '{definitionKey}'.",
-                RecommendedAction = ConfigurationDefinitionMetadataRepairAction.RepairMetadataStore
-            });
-    }
-
-    private IReadOnlyDictionary<string, IReadOnlyList<string>> IndexDefinitionPaths(
-        CancellationToken cancellationToken)
-    {
-        var pathsByDefinition = new Dictionary<string, List<string>>(StringComparer.OrdinalIgnoreCase);
+        var paths = new List<string>();
         foreach (var path in IoDirectory.EnumerateFiles(GetDefinitionsDirectory(), "*.json"))
         {
             cancellationToken.ThrowIfCancellationRequested();
-            var definitionKey = Path.GetFileNameWithoutExtension(path);
-            if (!pathsByDefinition.TryGetValue(definitionKey, out var paths))
-            {
-                paths = [];
-                pathsByDefinition[definitionKey] = paths;
-            }
-
             paths.Add(path);
         }
 
-        return pathsByDefinition.ToDictionary(
-            static pair => pair.Key,
-            static pair => (IReadOnlyList<string>)pair.Value
-                .OrderBy(static path => path, StringComparer.Ordinal)
-                .ToArray(),
-            StringComparer.OrdinalIgnoreCase);
-    }
-
-    private IReadOnlyDictionary<string, IReadOnlyList<string>> IndexDefinitionPathsByIdentity(
-        CancellationToken cancellationToken)
-    {
-        var pathsByIdentity = new Dictionary<string, List<string>>(StringComparer.Ordinal);
-        foreach (var path in IoDirectory.EnumerateFiles(GetDefinitionsDirectory(), "*.json"))
-        {
-            cancellationToken.ThrowIfCancellationRequested();
-            var definitionKey = Path.GetFileNameWithoutExtension(path);
-            if (string.IsNullOrWhiteSpace(definitionKey))
-            {
-                continue;
-            }
-
-            var identity = ConfigurationDefinitionIdentity.Compute(definitionKey);
-            if (!pathsByIdentity.TryGetValue(identity, out var paths))
-            {
-                paths = [];
-                pathsByIdentity[identity] = paths;
-            }
-
-            paths.Add(path);
-        }
-
-        return pathsByIdentity.ToDictionary(
-            static pair => pair.Key,
-            static pair => (IReadOnlyList<string>)pair.Value
-                .OrderBy(static path => path, StringComparer.Ordinal)
-                .ToArray(),
-            StringComparer.Ordinal);
+        return paths.OrderBy(static path => path, StringComparer.Ordinal).ToArray();
     }
 
     private static async Task WithdrawMissingPublisherStatesAsync(
-        IReadOnlyDictionary<string, IReadOnlyList<string>> definitionPaths,
+        IReadOnlyList<string> definitionPaths,
         string publisherKey,
         IReadOnlySet<string> incomingIdentities,
         CancellationToken cancellationToken)
     {
-        foreach (var (definitionKey, paths) in definitionPaths)
+        foreach (var path in definitionPaths)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            if (incomingIdentities.Contains(ConfigurationDefinitionIdentity.Compute(definitionKey)))
+            var persistedIdentity = Path.GetFileNameWithoutExtension(path);
+            if (incomingIdentities.Contains(persistedIdentity))
             {
                 continue;
             }
 
-            foreach (var path in paths)
+            var existing = await TryReadPublishedDefinitionDtoForRepairAsync(path, cancellationToken);
+            if (existing is not null)
             {
-                var existing = await TryReadPublishedDefinitionDtoForRepairAsync(path, cancellationToken);
-                var withdrawn = existing?.WithdrawPublisher(publisherKey);
-                if (existing is null || withdrawn is null || withdrawn.Matches(existing))
-                {
-                    continue;
-                }
-
-                await IoFile.WriteAllTextAsync(
-                    path,
-                    JsonSerializer.Serialize(withdrawn, JSON_OPTIONS),
-                    cancellationToken);
+                ValidatePersistedIdentity(path, existing.DefinitionKey, "definition metadata");
             }
+
+            var withdrawn = existing?.WithdrawPublisher(publisherKey);
+            if (existing is null || withdrawn is null || withdrawn.Matches(existing))
+            {
+                continue;
+            }
+
+            await IoFile.WriteAllTextAsync(
+                path,
+                JsonSerializer.Serialize(withdrawn, JSON_OPTIONS),
+                cancellationToken);
         }
-    }
-
-    private string[] FindDefinitionPaths(string definitionKey, CancellationToken cancellationToken)
-    {
-        _ = GetDefinitionPath(definitionKey);
-        var requestedIdentity = ConfigurationDefinitionIdentity.Compute(definitionKey);
-        return (IndexDefinitionPathsByIdentity(cancellationToken).GetValueOrDefault(requestedIdentity) ?? [])
-            .Take(2)
-            .ToArray();
-    }
-
-    private static ConfigurationPublishedDefinitionEntry WithDuplicateIdentityDiagnostic(
-        ConfigurationPublishedDefinitionEntry entry)
-    {
-        return ConfigurationPublishedDefinitionEntry.FromEnvelopeFailure(
-            entry.Metadata,
-            new InvalidDataException(
-                $"Multiple persisted definition metadata files claim key '{entry.Metadata.DefinitionKey}'."),
-            ConfigurationDefinitionMetadataRepairAction.RepairMetadataStore);
     }
 
     private async Task<ConfigurationPublishedDefinitionEntry> ReadPublishedDefinitionEntryAsync(
@@ -1602,14 +1528,15 @@ public sealed class FileConfigurationStore(IOptions<ConfigurationFileStoreOption
             if (dto is not null)
             {
                 var record = dto.ToRecord(Descriptor.StoreKey);
-                var fileDefinitionKey = Path.GetFileNameWithoutExtension(path);
-                if (!string.Equals(fileDefinitionKey, record.DefinitionKey, StringComparison.OrdinalIgnoreCase))
+                try
+                {
+                    ValidatePersistedIdentity(path, record.DefinitionKey, "definition metadata");
+                }
+                catch (InvalidDataException ex)
                 {
                     return ConfigurationPublishedDefinitionEntry.FromEnvelopeFailure(
-                        record with { DefinitionKey = fileDefinitionKey },
-                        new InvalidDataException(
-                            $"Persisted definition metadata file '{Path.GetFileName(path)}' claims definition key "
-                            + $"'{record.DefinitionKey}' instead of '{fileDefinitionKey}'."),
+                        record,
+                        ex,
                         ConfigurationDefinitionMetadataRepairAction.RepairMetadataStore);
                 }
 
@@ -1713,10 +1640,13 @@ public sealed class FileConfigurationStore(IOptions<ConfigurationFileStoreOption
         string path,
         PublishedDefinitionDto? partial = null)
     {
-        var definitionKey = Path.GetFileNameWithoutExtension(path);
+        var persistedIdentity = Path.GetFileNameWithoutExtension(path);
         if (partial is not null)
         {
             var metadata = partial.ToRecord(Descriptor.StoreKey);
+            var definitionKey = string.IsNullOrWhiteSpace(metadata.DefinitionKey)
+                ? persistedIdentity
+                : metadata.DefinitionKey;
             return metadata with
             {
                 DefinitionKey = definitionKey,
@@ -1726,13 +1656,14 @@ public sealed class FileConfigurationStore(IOptions<ConfigurationFileStoreOption
             };
         }
 
+        var fallbackDefinitionKey = persistedIdentity;
         return new ConfigurationPublishedDefinitionRecord
         {
             StoreKey = Descriptor.StoreKey,
-            DefinitionKey = definitionKey,
+            DefinitionKey = fallbackDefinitionKey,
             LifecycleState = ConfigurationDefinitionLifecycleState.Retired,
             SectionPath = "",
-            DisplayName = definitionKey,
+            DisplayName = fallbackDefinitionKey,
             ClrTypeName = "",
             FromProject = "",
             SchemaVersion = 0,
@@ -1832,6 +1763,8 @@ public sealed class FileConfigurationStore(IOptions<ConfigurationFileStoreOption
 
     private sealed record DocumentMetadataDto
     {
+        public string DefinitionKey { get; init; } = "";
+
         public long Version { get; init; }
 
         public int SchemaVersion { get; init; }

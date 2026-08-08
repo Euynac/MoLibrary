@@ -20,6 +20,7 @@ This project follows semantic versioning for public NuGet packages. Release cand
 - Module identity, dependency ordering, option access, web capability, host requirements, and diagnostics are derived from the compiled host-owned module graph.
 - Startup effective-options loading now uses `BuildBootstrapConfiguration(...)` and `LoadEffectiveOptionsSnapshot[Async](...)`. Loading performs one read-only batch observation and keeps persistent seeding exclusively in runtime activation, while `AddConfiguration(inputPlan)` applies the same immutable inputs to the runtime module graph.
 - Configuration schema traversal now rejects branch recursion and logical paths deeper than 64; compact persisted schema JSON is bounded at depth 256.
+- File-backed definition, effective-value, and sidecar documents now use identity-addressed filenames. Legacy definition-key filenames must be migrated or the store recreated before startup.
 
 ### Removed
 
