@@ -10,7 +10,7 @@
 
   <PropertyGroup Condition="'$(IsPackable)' != 'false'">
     <!-- Package Metadata -->
-    <Version>1.0.0-rc.9</Version>
+    <Version>1.0.0-rc.10</Version>
     <Authors>MonicaFramework</Authors>
     <Company>MonicaFramework</Company>
     <Product>Monica Framework</Product>
