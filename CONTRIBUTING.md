@@ -17,8 +17,10 @@ Restore, build, and test:
 ```bash
 dotnet restore Monica.slnx
 dotnet build Monica.slnx -c Release -m
-dotnet test Monica.slnx -c Release --no-build -m
+dotnet test Monica.slnx -c Release --no-build -m:1
 ```
+
+The build uses MSBuild parallelism, while solution-wide tests run one project at a time. Individual test assemblies retain their own xUnit parallelism without allowing unrelated test hosts to starve deliberate concurrency probes.
 
 When changing canonical Agent Skills, also run:
 
@@ -82,8 +84,8 @@ BREAKING CHANGE: replace ambient Mo registration with builder.AddMonica(monica =
 Release tags use the `v` prefix:
 
 ```bash
-git tag v1.0.0-rc.10
-git push origin v1.0.0-rc.10
+git tag v1.0.0-rc.11
+git push origin v1.0.0-rc.11
 ```
 
 The release workflow builds, tests, packs, uploads package artifacts, publishes to NuGet when configured, generates release notes from commit prefixes with `git-cliff`, and creates a GitHub pre-release for `*-rc.*` tags. It also validates the canonical Agent Skills with both the portable Agent Skills validator and Codex validator, installs `monica-guide` from the pushed immutable tag for Codex and Claude Code, verifies the discovered installed directory against the release's exact per-file and per-skill digests, and publishes the catalog, resolved commit, release index, manifest, and skill-tree archive only after discovery succeeds.

@@ -19,6 +19,10 @@ on:
 permissions:
   contents: write
 
+concurrency:
+  group: monica-release-publication
+  cancel-in-progress: false
+
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
   PYTHONDONTWRITEBYTECODE: 1
@@ -140,13 +144,34 @@ jobs:
       - name: Require the immutable release tag
         shell: bash
         run: |
-          git ls-remote --exit-code origin "refs/tags/${{ steps.version.outputs.tag_name }}" >/dev/null || {
+          TAG_NAME="${{ steps.version.outputs.tag_name }}"
+          TARGET_COMMIT="${{ steps.version.outputs.target_commitish }}"
+          git check-ref-format "refs/tags/${TAG_NAME}" >/dev/null || {
+            echo "The release tag name is invalid." >&2
+            exit 1
+          }
+          REMOTE_TAG_COMMIT="$(
+            git ls-remote origin "refs/tags/${TAG_NAME}" "refs/tags/${TAG_NAME}^{}" |
+              awk -v direct="refs/tags/${TAG_NAME}" -v peeled="refs/tags/${TAG_NAME}^{}" '
+                $2 == direct { direct_sha = $1 }
+                $2 == peeled { peeled_sha = $1 }
+                END {
+                  if (peeled_sha != "") print peeled_sha
+                  else if (direct_sha != "") print direct_sha
+                  else exit 1
+                }
+              '
+          )" || {
             echo "Push the immutable tag before running release packaging and smoke tests." >&2
             exit 1
           }
-          TAG_COMMIT="$(git rev-list -n 1 "${{ steps.version.outputs.tag_name }}")"
-          if [[ "${TAG_COMMIT}" != "${{ steps.version.outputs.target_commitish }}" ]]; then
+          LOCAL_TAG_COMMIT="$(git rev-parse "${TAG_NAME}^{commit}")"
+          if [[ "${LOCAL_TAG_COMMIT}" != "${TARGET_COMMIT}" ]]; then
             echo "The release tag does not resolve to the selected commit." >&2
+            exit 1
+          fi
+          if [[ "${REMOTE_TAG_COMMIT}" != "${TARGET_COMMIT}" ]]; then
+            echo "The remote release tag does not resolve to the selected commit." >&2
             exit 1
           fi
 
@@ -218,7 +243,7 @@ jobs:
         run: dotnet build Monica.slnx --configuration "${CONFIGURATION}" --no-restore -m -p:Version=${{ steps.version.outputs.version }}
 
       - name: Test solution
-        run: dotnet test Monica.slnx --configuration "${CONFIGURATION}" --no-build --verbosity minimal --logger "trx;LogFilePrefix=release-tests" --results-directory tests/TestResults -m
+        run: dotnet test Monica.slnx --configuration "${CONFIGURATION}" --no-build --verbosity minimal --logger "trx;LogFilePrefix=release-tests" --results-directory tests/TestResults -m:1
 
       - name: Pack packages
         shell: bash
@@ -305,6 +330,31 @@ jobs:
           name: monica-agent-skills-${{ steps.version.outputs.version }}
           path: artifacts/agent-skills/*
           if-no-files-found: error
+
+      - name: Revalidate immutable release tag before publication
+        shell: bash
+        run: |
+          TAG_NAME="${{ steps.version.outputs.tag_name }}"
+          TARGET_COMMIT="${{ steps.version.outputs.target_commitish }}"
+          REMOTE_TAG_COMMIT="$(
+            git ls-remote origin "refs/tags/${TAG_NAME}" "refs/tags/${TAG_NAME}^{}" |
+              awk -v direct="refs/tags/${TAG_NAME}" -v peeled="refs/tags/${TAG_NAME}^{}" '
+                $2 == direct { direct_sha = $1 }
+                $2 == peeled { peeled_sha = $1 }
+                END {
+                  if (peeled_sha != "") print peeled_sha
+                  else if (direct_sha != "") print direct_sha
+                  else exit 1
+                }
+              '
+          )" || {
+            echo "The remote release tag disappeared before publication." >&2
+            exit 1
+          }
+          if [[ "${REMOTE_TAG_COMMIT}" != "${TARGET_COMMIT}" ]]; then
+            echo "The remote release tag moved before publication; refusing to publish." >&2
+            exit 1
+          fi
 
       - name: Publish to NuGet
         if: ${{ env.NUGET_API_KEY != '' && (github.event_name == 'push' || inputs.publish_nuget) }}

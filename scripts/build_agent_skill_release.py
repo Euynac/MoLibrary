@@ -59,6 +59,7 @@ INDEX_PATH = REPOSITORY_ROOT / ".monica" / "agent-skill-index.json"
 SCHEMAS_ROOT = REPOSITORY_ROOT / ".monica" / "schemas"
 RELEASE_MANIFEST_SCHEMA_PATH = SCHEMAS_ROOT / "agent-skill-release-manifest.schema.json"
 SKILL_DIGEST_ALGORITHM = FILE_MANIFEST_DIGEST_ALGORITHM
+RELEASE_INDEX_TRUST_ANCHOR_SECTIONS = ("channels", "versions", "releases")
 SEMVER_IDENTIFIER = r"(?:0|[1-9][0-9]*|[0-9A-Za-z-]*[A-Za-z-][0-9A-Za-z-]*)"
 SEMVER_PATTERN = re.compile(
     rf"^(?P<major>0|[1-9][0-9]*)\."
@@ -139,6 +140,30 @@ def merge_verified_history(
     if release.get("assetBaseUrl") != expected_asset_base:
         raise ReleaseError(f"Previous release {expected_previous_tag} has an unexpected asset URL.")
     return json.loads(json.dumps(previous))
+
+
+def verified_build_history(
+    checked_in: dict[str, Any], previous: dict[str, Any], *, expected_previous_tag: str
+) -> dict[str, Any]:
+    """Require the latest published index to match the source trust anchor."""
+
+    verified = merge_verified_history(
+        checked_in,
+        previous,
+        expected_previous_tag=expected_previous_tag,
+    )
+    mismatched_sections = [
+        section
+        for section in RELEASE_INDEX_TRUST_ANCHOR_SECTIONS
+        if checked_in[section] != verified[section]
+    ]
+    if mismatched_sections:
+        raise ReleaseError(
+            "Latest published Agent Skill index does not semantically match the checked-in "
+            f"trust anchor for {', '.join(mismatched_sections)}. Roll the latest published "
+            "index into source before building another release."
+        )
+    return verified
 
 
 def skill_files(catalog: dict[str, Any]) -> list[Path]:
@@ -393,7 +418,7 @@ def build_payload(staging: Path, args: argparse.Namespace, published_at: datetim
     validate_index_payload(base_index, label="Checked-in index")
     if args.previous_index is not None and args.previous_tag is not None:
         previous_index = load_json(args.previous_index)
-        base_index = merge_verified_history(
+        base_index = verified_build_history(
             base_index,
             previous_index,
             expected_previous_tag=args.previous_tag,

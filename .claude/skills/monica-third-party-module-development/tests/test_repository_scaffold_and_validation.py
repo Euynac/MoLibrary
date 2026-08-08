@@ -52,7 +52,7 @@ def shared_manifest(repository_id: str = "Acme.Monica.Example") -> dict:
         "distribution": "public",
         "publishing": {"target": "nuget.org"},
         "targetFramework": "net10.0",
-        "monicaVersion": "1.0.0-rc.10",
+        "monicaVersion": "1.0.0-rc.11",
         "license": {"openSource": True, "expression": "MIT"},
         "branding": {
             "icon": {"kind": "compatibility-mark"},
@@ -374,7 +374,7 @@ class RepositorySkillTests(unittest.TestCase):
                 "    <MonicaVersion>1.0.0-rc.8</MonicaVersion>",
             )
             central_text = central_text.replace(
-                '<PackageVersion Include="Monica.Core" Version="1.0.0-rc.10" />',
+                '<PackageVersion Include="Monica.Core" Version="1.0.0-rc.11" />',
                 '<PackageVersion Include="Monica.Core" Version="$(MonicaVersion)" />',
             )
             central.write_text(central_text, encoding="utf-8")
@@ -864,20 +864,20 @@ shellRegistration.RegisterUIComponents(registry =>
             build_props.write_text(
                 build_props.read_text(encoding="utf-8").replace(
                     "<TargetFramework>net10.0</TargetFramework>",
-                    "<TargetFramework>net10.0</TargetFramework>\n    <MonicaVersion>1.0.0-rc.10</MonicaVersion>",
+                    "<TargetFramework>net10.0</TargetFramework>\n    <MonicaVersion>1.0.0-rc.11</MonicaVersion>",
                 ),
                 encoding="utf-8",
             )
             packages = output / "Directory.Packages.props"
             packages.write_text(
                 packages.read_text(encoding="utf-8").replace(
-                    'Version="1.0.0-rc.10"',
+                    'Version="1.0.0-rc.11"',
                     'Version="$(MonicaVersion)"',
                 ),
                 encoding="utf-8",
             )
             project = output / "src/Acme.Monica.Example/Acme.Monica.Example.csproj"
-            self.assertEqual("1.0.0-rc.10", validator.package_references(output, project)["Monica.Core"].version)
+            self.assertEqual("1.0.0-rc.11", validator.package_references(output, project)["Monica.Core"].version)
 
             project.write_text(
                 project.read_text(encoding="utf-8").replace(' PrivateAssets="All"', ""),
