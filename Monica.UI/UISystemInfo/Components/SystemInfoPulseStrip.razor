@@ -1,0 +1,61 @@
+@using System.Globalization
+@using Microsoft.Extensions.Localization
+@using Monica.UI.Localization
+@using Monica.UI.UISystemInfo.Models
+@using Monica.UI.UISystemInfo.Support
+@inject IStringLocalizer<SystemInfoResource> L
+
+<section class="system-info-pulse" aria-label="@L["Page:Pulse:AriaLabel"]">
+    <article class="system-info-pulse__item system-info-pulse__item--primary">
+        <span class="system-info-pulse__icon"><MudIcon Icon="@Icons.Material.Filled.Timeline" /></span>
+        <div>
+            <span>@L["Page:Pulse:ProcessUptime"]</span>
+            <strong class="system-info-metric">@SystemInfoDisplayFormatter.FormatDuration(Uptime)</strong>
+        </div>
+        <small>@L["Page:Status:Running"]</small>
+    </article>
+    <article class="system-info-pulse__item system-info-pulse__item--info">
+        <span class="system-info-pulse__icon"><MudIcon Icon="@Icons.Material.Filled.Memory" /></span>
+        <div>
+            <span>@L["Page:Pulse:WorkingSet"]</span>
+            <strong class="system-info-metric">@SystemInfoDisplayFormatter.FormatScaledBytes(Snapshot.Process.WorkingSetBytes, CultureInfo.CurrentCulture)</strong>
+        </div>
+        <small>@L["Page:Status:Snapshot"]</small>
+    </article>
+    <article class="system-info-pulse__item system-info-pulse__item--neutral">
+        <span class="system-info-pulse__icon"><MudIcon Icon="@Icons.Material.Filled.DataObject" /></span>
+        <div>
+            <span>@L["Page:Pulse:ProcessId"]</span>
+            <strong class="system-info-metric">@Snapshot.Process.ProcessId.ToString("N0", CultureInfo.CurrentCulture)</strong>
+        </div>
+        <small>@L["Page:Pulse:ProcessId"]</small>
+    </article>
+    <article class="system-info-pulse__item system-info-pulse__item--success">
+        <span class="system-info-pulse__icon"><MudIcon Icon="@Icons.Material.Filled.CenterFocusStrong" /></span>
+        <div>
+            <span>@L["Page:Pulse:EvidenceAge"]</span>
+            <strong>@EvidenceAge</strong>
+        </div>
+        <small>@L["Page:Pulse:CapturedAt"] @SystemInfoDisplayFormatter.FormatTime(Snapshot.CapturedAtUtc, CultureInfo.CurrentCulture)</small>
+    </article>
+</section>
+
+@code {
+    [Parameter, EditorRequired] public SystemInfoSnapshot Snapshot { get; set; } = null!;
+    [Parameter] public DateTimeOffset NowUtc { get; set; }
+
+    private TimeSpan Uptime => NowUtc > Snapshot.Process.StartedAtUtc
+        ? NowUtc - Snapshot.Process.StartedAtUtc
+        : TimeSpan.Zero;
+
+    private string EvidenceAge
+    {
+        get
+        {
+            var seconds = Math.Max(0, (int)(NowUtc - Snapshot.CapturedAtUtc).TotalSeconds);
+            return seconds == 0
+                ? L["Page:Status:JustNow"].Value
+                : L["Page:Status:SecondsAgo", seconds].Value;
+        }
+    }
+}

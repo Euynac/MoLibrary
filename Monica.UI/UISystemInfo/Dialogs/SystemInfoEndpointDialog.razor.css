@@ -1,0 +1,54 @@
+.system-info-endpoint-dialog {
+    display: grid;
+    gap: 15px;
+    min-width: 0;
+    padding: 8px 4px;
+}
+
+.system-info-endpoint-dialog__signal {
+    width: 54px;
+    height: 54px;
+    display: grid;
+    place-items: center;
+    color: var(--mud-palette-info);
+    border-radius: 18px 7px 18px 7px;
+    background: var(--mud-palette-info-hover);
+}
+
+.system-info-endpoint-dialog h2 {
+    margin: 0;
+    overflow-wrap: anywhere;
+    color: var(--mud-palette-text-primary);
+    font-size: 1.15rem;
+}
+
+.system-info-endpoint-dialog dl {
+    display: grid;
+    gap: 8px;
+    margin: 0;
+}
+
+.system-info-endpoint-dialog dl div {
+    display: grid;
+    min-width: 0;
+    grid-template-columns: 110px minmax(0, 1fr);
+    gap: 12px;
+    padding: 11px 12px;
+    border: 1px solid var(--mud-palette-lines-default);
+    border-radius: calc(var(--mud-default-borderradius) * 1.4);
+    background: var(--mud-palette-background-gray);
+}
+
+.system-info-endpoint-dialog dt {
+    color: var(--mud-palette-text-secondary);
+    font-size: 0.72rem;
+}
+
+.system-info-endpoint-dialog dd {
+    min-width: 0;
+    margin: 0;
+    overflow-wrap: anywhere;
+    color: var(--mud-palette-text-primary);
+    font-size: 0.78rem;
+    font-weight: 700;
+}

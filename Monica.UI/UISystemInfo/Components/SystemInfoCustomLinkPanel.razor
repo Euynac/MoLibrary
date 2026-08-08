@@ -1,5 +1,4 @@
 @using Microsoft.Extensions.Localization
-@using Monica.Tool.Extensions
 @using Monica.UI.Localization
 @using Monica.UI.UISystemInfo.Models
 @inject IJSRuntime JSRuntime
@@ -7,137 +6,154 @@
 @inject IStringLocalizer<SystemInfoResource> L
 
 @{
-    var linkGroups = BuildVisibleGroups();
-    var visibleLinkCount = linkGroups.Sum(group => group.Links.Count);
+    var groups = BuildVisibleGroups();
+    var visibleLinkCount = groups.Sum(static group => group.Links.Count);
 }
 
 @if (visibleLinkCount > 0)
 {
-    <MudCard Class="system-info-custom-links-card" Elevation="2">
-        <MudCardHeader Class="pb-2">
-            <CardHeaderContent>
-                <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Spacing="2">
-                    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
-                        <MudIcon Icon="@Icons.Material.Filled.Link" Color="Color.Primary" />
-                        <MudText Typo="Typo.h6" Style="font-weight: 500;">@L["CustomLinks:Title"]</MudText>
-                    </MudStack>
-                    <MudChip T="string"
-                             Size="Size.Small"
-                             Variant="Variant.Outlined"
-                             Color="Color.Primary">
-                        @visibleLinkCount.ToString()
-                    </MudChip>
-                </MudStack>
-            </CardHeaderContent>
-        </MudCardHeader>
-        <MudCardContent Class="system-info-custom-links-card__content">
-            <div class="system-info-custom-links">
-                @foreach (var group in linkGroups)
-                {
-                    <section class="system-info-custom-links__group @(group.HasTitle ? null : "system-info-custom-links__group--untitled")">
-                        @if (group.HasTitle)
-                        {
-                            <MudText Typo="Typo.subtitle2" Color="Color.Primary" Class="system-info-custom-links__group-title">
-                                <strong>@group.Title</strong>
-                            </MudText>
-                        }
-
-                        <div class="system-info-custom-links__items">
-                            @foreach (var link in group.Links)
-                            {
-                                var description = link.GetDescription(L);
-
-                                <div class="system-info-custom-link-row">
-                                    <div class="system-info-custom-link-row__content">
-                                        <MudLink Href="@link.Url"
-                                                 Target="@(link.Target.GetDescription() ?? "_blank")"
-                                                 Typo="Typo.body2">
-                                            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
-                                                <MudIcon Icon="@link.Icon" Size="Size.Small" Color="Color.Info" />
-                                                <span class="system-info-custom-link-row__name">@link.GetDisplayName(L)</span>
-                                            </MudStack>
-                                        </MudLink>
-
-                                        @if (!string.IsNullOrWhiteSpace(description))
-                                        {
-                                            <MudText Typo="Typo.caption" Class="system-info-custom-link-row__description">@description</MudText>
-                                        }
-                                    </div>
-
-                                    @if (link.HasCredentials)
-                                    {
-                                        <div class="system-info-custom-link-row__credentials">
-                                            @if (link.HasUserName)
-                                            {
-                                                <div class="system-info-custom-link-row__credential">
-                                                    <MudIcon Icon="@Icons.Material.Filled.Person" Size="Size.Small" Color="Color.Primary" />
-                                                    <span class="system-info-custom-link-row__credential-text">@link.UserName</span>
-                                                    <MudIconButton Icon="@Icons.Material.Filled.ContentCopy"
-                                                                   Size="Size.Small"
-                                                                   Color="Color.Primary"
-                                                                   title="@L["CustomLinks:Actions:CopyUserName"]"
-                                                                   aria-label="@L["CustomLinks:Actions:CopyUserName"]"
-                                                                   OnClick="@(() => CopyValueAsync(link.UserName!, L["CustomLinks:Messages:CopyUserNameSucceeded"].Value, L["CustomLinks:Messages:CopyUserNameFailed"].Value))" />
-                                                </div>
-                                            }
-
-                                            @if (link.HasPassword)
-                                            {
-                                                <div class="system-info-custom-link-row__credential">
-                                                    <MudIcon Icon="@Icons.Material.Filled.Lock" Size="Size.Small" Color="Color.Secondary" />
-                                                    <MudIconButton Icon="@Icons.Material.Filled.ContentCopy"
-                                                                   Size="Size.Small"
-                                                                   Color="Color.Secondary"
-                                                                   title="@L["CustomLinks:Actions:CopyPassword"]"
-                                                                   aria-label="@L["CustomLinks:Actions:CopyPassword"]"
-                                                                   OnClick="@(() => CopyValueAsync(link.Password!, L["CustomLinks:Messages:CopyPasswordSucceeded"].Value, L["CustomLinks:Messages:CopyPasswordFailed"].Value))" />
-                                                </div>
-                                            }
-                                        </div>
-                                    }
-                                </div>
-                            }
-                        </div>
-                    </section>
-                }
+    <section class="system-info-links" aria-labelledby="system-info-links-title">
+        <header class="system-info-links__header">
+            <span class="system-info-links__signal"><MudIcon Icon="@Icons.Material.Filled.Route" /></span>
+            <div>
+                <h2 id="system-info-links-title">@L["CustomLinks:Title"]</h2>
+                <p>@L["CustomLinks:Description"]</p>
             </div>
-        </MudCardContent>
-    </MudCard>
+            <span class="system-info-links__count">@visibleLinkCount</span>
+        </header>
+
+        <div class="system-info-links__groups">
+            @foreach (var group in groups)
+            {
+                <section class="system-info-links__group">
+                    @if (group.HasTitle)
+                    {
+                        <div class="system-info-links__group-title">
+                            <span>@group.Title</span>
+                            <b>@group.Links.Count</b>
+                        </div>
+                    }
+
+                    <div class="system-info-links__items">
+                        @foreach (var link in group.Links)
+                        {
+                            <article class="system-info-link">
+                                <a class="system-info-link__anchor"
+                                   href="@link.Url"
+                                   target="@TargetValue(link.Target)"
+                                   rel="@LinkRelationship(link.Target)"
+                                   title="@L["CustomLinks:Actions:Open"]">
+                                    <span class="system-info-link__icon"><MudIcon Icon="@link.Icon" /></span>
+                                    <span class="system-info-link__identity">
+                                        <strong>@link.GetDisplayName(L)</strong>
+                                        @if (link.GetDescription(L) is { Length: > 0 } description)
+                                        {
+                                            <small>@description</small>
+                                        }
+                                    </span>
+                                    <span class="system-info-link__target">@TargetLabel(link.Target)</span>
+                                    <MudIcon Icon="@Icons.Material.Filled.NorthEast" Size="Size.Small" />
+                                </a>
+
+                                @if (link.HasCredentials)
+                                {
+                                    <div class="system-info-link__access">
+                                        <MudMenu AriaLabel="@L["CustomLinks:Actions:ShowAccess"]"
+                                                 AnchorOrigin="Origin.BottomRight"
+                                                 TransformOrigin="Origin.TopRight">
+                                            <ActivatorContent Context="menu">
+                                                <MudButton Variant="Variant.Text"
+                                                           Color="Color.Primary"
+                                                           Size="Size.Small"
+                                                           StartIcon="@Icons.Material.Filled.Key"
+                                                           OnClick="menu.OpenAsync">
+                                                    @L["CustomLinks:Labels:Access"]
+                                                </MudButton>
+                                            </ActivatorContent>
+                                            <ChildContent>
+                                                @if (link.HasUserName)
+                                                {
+                                                    <MudMenuItem title="@L["CustomLinks:Labels:UserName"]"
+                                                                 OnClick="@(() => CopyValueAsync(
+                                                        link.UserName!,
+                                                        L["CustomLinks:Messages:CopyUserNameSucceeded"],
+                                                        L["CustomLinks:Messages:CopyUserNameFailed"]))">
+                                                        @L["CustomLinks:Actions:CopyUserName"]
+                                                    </MudMenuItem>
+                                                }
+                                                @if (link.HasPassword)
+                                                {
+                                                    <MudMenuItem title="@L["CustomLinks:Labels:Password"]"
+                                                                 OnClick="@(() => CopyValueAsync(
+                                                        link.Password!,
+                                                        L["CustomLinks:Messages:CopyPasswordSucceeded"],
+                                                        L["CustomLinks:Messages:CopyPasswordFailed"]))">
+                                                        @L["CustomLinks:Actions:CopyPassword"]
+                                                    </MudMenuItem>
+                                                }
+                                            </ChildContent>
+                                        </MudMenu>
+                                    </div>
+                                }
+                            </article>
+                        }
+                    </div>
+                </section>
+            }
+        </div>
+    </section>
 }
 
 @code {
-    [Parameter]
-    public IReadOnlyCollection<SystemInfoCustomLink>? Links { get; set; }
+    [Parameter] public IReadOnlyCollection<SystemInfoCustomLink>? Links { get; set; }
 
     private IReadOnlyList<SystemInfoCustomLinkGroup> BuildVisibleGroups()
     {
         var visibleLinks = Links?
-            .Where(link => link.Enabled)
-            .OrderBy(link => link.Order)
+            .Where(static link => link.Enabled)
+            .OrderBy(static link => link.Order)
             .ThenBy(link => link.GetDisplayName(L), StringComparer.CurrentCultureIgnoreCase)
             .ToList() ?? [];
 
-        if (visibleLinks.Count == 0)
-        {
-            return [];
-        }
-
         return visibleLinks
             .GroupBy(link => link.GetCategory(L))
-            .Select(group => new SystemInfoCustomLinkGroup(group.Key, group.ToList()))
-            .ToList();
+            .Select(static group => new SystemInfoCustomLinkGroup(group.Key, group.ToList()))
+            .ToArray();
     }
+
+    private string TargetLabel(SystemInfoCustomLinkTarget target) => L[$"CustomLinks:Targets:{target}"].Value;
+
+    private static string TargetValue(SystemInfoCustomLinkTarget target) => target switch
+    {
+        SystemInfoCustomLinkTarget.CurrentTab => "_self",
+        SystemInfoCustomLinkTarget.NewTab => "_blank",
+        SystemInfoCustomLinkTarget.ParentFrame => "_parent",
+        SystemInfoCustomLinkTarget.TopFrame => "_top",
+        _ => throw new ArgumentOutOfRangeException(nameof(target), target, null)
+    };
+
+    private static string? LinkRelationship(SystemInfoCustomLinkTarget target) =>
+        target == SystemInfoCustomLinkTarget.NewTab ? "noopener noreferrer" : null;
 
     private async Task CopyValueAsync(string value, string successMessage, string failureMessage)
     {
         try
         {
-            await JSRuntime.InvokeVoidAsync("navigator.clipboard.writeText", value);
-            Snackbar.Add(successMessage, Severity.Success);
+            if (await JSRuntime.InvokeAsync<bool>("MoClipboard.copyText", value))
+            {
+                Snackbar.Add(successMessage, Severity.Success);
+                return;
+            }
         }
-        catch (Exception ex)
+        catch (JSDisconnectedException)
         {
-            Snackbar.Add(L["CustomLinks:Messages:CopyFailedWithMessage", failureMessage, ex.Message].Value, Severity.Error);
+            return;
         }
+        catch (JSException)
+        {
+            // The localized failure below is sufficient at this explicit browser boundary.
+        }
+
+        Snackbar.Add(failureMessage, Severity.Error);
     }
 }

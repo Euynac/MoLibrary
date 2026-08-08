@@ -237,17 +237,29 @@ public class ModuleShellUIOption : ModuleOptions<ModuleShellUI>
     /// <summary>
     /// Resolves the application name displayed in the shell app bar.
     /// </summary>
-    public string GetAppName() => Application.ResolveAppName(AppName, nameof(Monica));
+    /// <exception cref="InvalidOperationException">
+    /// Thrown when no explicit module value is configured and the option has not been bound to a Monica host.
+    /// </exception>
+    public string GetAppName() => MonicaApplicationOptions.Normalize(AppName)
+                                  ?? Application.ResolveAppName(fallback: nameof(Monica));
 
     /// <summary>
     /// Resolves the application identifier displayed before the version badge.
     /// </summary>
-    public string GetAppId() => Application.ResolveAppId(AppId);
+    /// <exception cref="InvalidOperationException">
+    /// Thrown when no explicit module value is configured and the option has not been bound to a Monica host.
+    /// </exception>
+    public string GetAppId() => MonicaApplicationOptions.Normalize(AppId)
+                                ?? Application.ResolveAppId();
 
     /// <summary>
     /// Resolves the application version displayed in the shell.
     /// </summary>
-    public string GetAppVersion() => Application.ResolveAppVersion(AppVersion, "v1.0")!;
+    /// <exception cref="InvalidOperationException">
+    /// Thrown when no explicit module value is configured and the option has not been bound to a Monica host.
+    /// </exception>
+    public string GetAppVersion() => MonicaApplicationOptions.Normalize(AppVersion)
+                                     ?? Application.ResolveAppVersion(fallback: "v1.0")!;
 
     /// <summary>
     /// Enables UI debug diagnostics, including Blazor circuit detailed errors and SignalR hub detailed errors.

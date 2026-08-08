@@ -5,75 +5,136 @@
     }
   },
   "Page": {
-    "PageTitle": "System Information",
-    "Header": {
-      "Title": "System Information",
-      "Refresh": "Refresh",
-      "Restart": "Restart Service"
+    "Title": "System dossier",
+    "Eyebrow": "MONICA / LIVE SERVICE PROFILE",
+    "Summary": "Identity, readiness, and runtime evidence for this host instance.",
+    "Actions": {
+      "Refresh": "Refresh evidence",
+      "Restart": "Restart service",
+      "Retry": "Try again"
     },
-    "RestartDialog": {
-      "Title": "Restart Service",
-      "Summary": "This action requests a graceful shutdown for the current service.",
-      "DelayNotice": "Shutdown will begin in about {0} seconds after confirmation so the current request can complete.",
-      "SupervisorNote": "This is not an in-process restart. The service only comes back if the host environment has an external restart policy such as Kubernetes, systemd, IIS, or Windows Service.",
-      "Cancel": "Cancel",
-      "Confirm": "Restart Now"
+    "Status": {
+      "Ready": "Ready",
+      "Running": "Running",
+      "Tracked": "Tracked",
+      "Snapshot": "Snapshot",
+      "Bound": "Bound",
+      "Captured": "Captured",
+      "JustNow": "just now",
+      "SecondsAgo": "{0}s ago"
+    },
+    "ServiceIdentity": {
+      "ProductVersion": "Product version",
+      "ProcessStarted": "Process started",
+      "ProcessUptime": "Process uptime"
+    },
+    "Startup": {
+      "AriaLabel": "Application startup timing",
+      "Title": "Application startup",
+      "Scope": "Start marker → ready",
+      "StartMarker": "Start marker",
+      "HostReady": "Host ready",
+      "ReadyAt": "Host ready at",
+      "DurationValue": "{0:F4} ms"
+    },
+    "Pulse": {
+      "AriaLabel": "Service evidence summary",
+      "ProcessUptime": "Process uptime",
+      "WorkingSet": "Working set",
+      "ProcessId": "Process ID",
+      "EvidenceAge": "Evidence age",
+      "CapturedAt": "Captured at"
+    },
+    "Index": {
+      "Title": "Dossier index",
+      "Hint": "Jump to evidence",
+      "AriaLabel": "Dossier index"
+    },
+    "Sections": {
+      "Runtime": {
+        "Title": "Runtime pulse",
+        "Description": "Process and managed runtime evidence.",
+        "EvidenceLabel": "{0} evidence items",
+        "DotNetRuntime": ".NET runtime",
+        "ProcessArchitecture": "Process architecture",
+        "Privilege": "Privilege",
+        "SystemPageSize": "System page size",
+        "UserInteractive": "User interactive",
+        "WorkingSetAtCapture": "Exact process working set at capture",
+        "Values": {
+          "Process64Bit": "64-bit process",
+          "Process32Bit": "32-bit process",
+          "Privileged": "Privileged",
+          "NotPrivileged": "Not privileged",
+          "Interactive": "Interactive",
+          "NonInteractive": "Non-interactive"
+        }
+      },
+      "Environment": {
+        "Title": "Environment fingerprint",
+        "Description": "Host identity and execution context.",
+        "Machine": "Machine",
+        "ProcessUser": "Process user",
+        "OperatingSystem": "Operating system",
+        "TimeZone": "Time zone",
+        "WorkingDirectory": "Working directory",
+        "ProcessPath": "Process path"
+      },
+      "Endpoints": {
+        "Title": "Listening endpoints",
+        "Description": "Addresses currently bound by the host.",
+        "ListeningAddress": "Listening address",
+        "Transport": "Transport",
+        "Inspect": "Inspect",
+        "InspectAria": "Inspect endpoint {0}",
+        "ListeningCount": "{0} listening addresses",
+        "EmptyTitle": "No listening endpoints captured",
+        "EmptyDescription": "The current host snapshot did not report any bound addresses."
+      },
+      "Artifact": {
+        "Title": "Artifact evidence",
+        "Description": "Product and artifact metadata.",
+        "Product": "Product",
+        "ProductVersion": "Product version",
+        "FileVersion": "File version",
+        "ArtifactTimestamp": "Artifact timestamp",
+        "Company": "Company",
+        "Legal": "Legal"
+      }
     },
     "States": {
-      "LoadingTitle": "Loading system information...",
-      "LoadFailedAlert": "Failed to load system information. Please try again later."
+      "LoadingTitle": "Loading system evidence…",
+      "LoadFailedTitle": "System evidence is unavailable",
+      "LoadFailedDescription": "The current host snapshot could not be loaded. Retry when the service is available."
     },
-    "BasicInfo": {
-      "Title": "Basic Information",
-      "BuildTime": "Build Time",
-      "LocalTime": "Local Time",
-      "TimeZone": "Current Time Zone",
-      "UtcTime": "UTC Time",
-      "ProductVersion": "Product Version",
-      "ProcessStartTime": "Process Start Time",
-      "RunningFor": "Uptime {0}",
-      "ApplicationStartup": "Application startup",
-      "ApplicationStartupScope": "Start marker → ready",
-      "ApplicationStartupTracked": "Tracked",
-      "ApplicationStartupValue": "{0:F4} ms",
-      "ApplicationReadyAt": "Ready at {0}",
-      "ListeningAddresses": "Listening Addresses"
-    },
-    "EnvironmentInfo": {
-      "Title": "Environment Information",
-      "MachineName": "Machine Name",
-      "UserName": "User Name",
-      "ProcessId": "Process ID",
-      "Is64BitOperatingSystem": "64-bit Operating System",
-      "WorkingSet": "Working Set"
-    },
-    "FileInfo": {
-      "Title": "File Information",
-      "ProductName": "Product Name",
-      "ProductVersion": "Product Version",
-      "FileVersion": "File Version",
-      "CompanyName": "Company Name",
-      "Copyright": "Copyright"
-    },
-    "SystemDetails": {
-      "Title": "System Details",
-      "DotNetVersion": ".NET Version",
-      "OperatingSystem": "Operating System",
-      "CurrentDirectory": "Current Directory",
-      "SystemPageSize": "System Page Size",
-      "UserInteractive": "User Interactive"
+    "Dialogs": {
+      "Restart": {
+        "Title": "Request graceful shutdown?",
+        "Summary": "A graceful shutdown request will be scheduled after the configured delay.",
+        "DelayNotice": "Shutdown will begin about {0} seconds after confirmation so the current request can complete.",
+        "SupervisorNote": "An external supervisor controls whether this service starts again.",
+        "Fact": "This is not an in-process restart.",
+        "Cancel": "Cancel",
+        "Confirm": "Request shutdown"
+      },
+      "Endpoint": {
+        "Title": "Endpoint evidence",
+        "Captured": "Captured",
+        "Transport": "Transport",
+        "ExactAddress": "Exact address",
+        "Close": "Close"
+      }
     },
     "Messages": {
-      "LoadFailed": "Failed to load system information: {0}",
-      "LoadError": "An error occurred while loading system information: {0}",
-      "RefreshSucceeded": "System information refreshed.",
+      "RefreshSucceeded": "System evidence refreshed.",
+      "RefreshFailed": "Failed to refresh system evidence: {0}",
       "RestartFailed": "Failed to request service restart: {0}",
-      "RestartError": "An error occurred while requesting service restart: {0}",
       "RestartRequestedFallback": "Graceful shutdown has been requested. The host will stop shortly."
     }
   },
   "CustomLinks": {
-    "Title": "Quick Links",
+    "Title": "Configured links",
+    "Description": "Host-provided operational destinations.",
     "Items": {
       "Swagger": {
         "Name": "API Management",
@@ -81,41 +142,28 @@
         "Category": "Monica"
       }
     },
+    "Labels": {
+      "Access": "Access",
+      "UserName": "User name",
+      "Password": "Password"
+    },
     "Actions": {
+      "Open": "Open",
+      "ShowAccess": "Show access",
       "CopyUserName": "Copy user name",
       "CopyPassword": "Copy password"
+    },
+    "Targets": {
+      "CurrentTab": "Current tab",
+      "NewTab": "New tab",
+      "ParentFrame": "Parent frame",
+      "TopFrame": "Top frame"
     },
     "Messages": {
       "CopyUserNameSucceeded": "User name copied.",
       "CopyUserNameFailed": "Failed to copy user name",
       "CopyPasswordSucceeded": "Password copied.",
-      "CopyPasswordFailed": "Failed to copy password",
-      "CopyFailedWithMessage": "{0}: {1}"
-    }
-  },
-  "Shared": {
-    "Common": {
-      "Yes": "Yes",
-      "No": "No"
-    },
-    "Units": {
-      "Bytes": "bytes",
-      "Kilobytes": "KB",
-      "Megabytes": "MB",
-      "Gigabytes": "GB",
-      "Terabytes": "TB"
-    },
-    "Duration": {
-      "Separator": " ",
-      "ZeroSeconds": "0 seconds",
-      "DaySingular": "{0} day",
-      "DayPlural": "{0} days",
-      "HourSingular": "{0} hour",
-      "HourPlural": "{0} hours",
-      "MinuteSingular": "{0} minute",
-      "MinutePlural": "{0} minutes",
-      "SecondSingular": "{0} second",
-      "SecondPlural": "{0} seconds"
+      "CopyPasswordFailed": "Failed to copy password"
     }
   },
   "Service": {
@@ -125,9 +173,10 @@
     "Errors": {
       "BrowserRuntimeUnsupported": "System information is unavailable in a browser runtime.",
       "EntryAssemblyUnavailable": "Unable to resolve the entry assembly information.",
-      "GetSystemInfoFailed": "Failed to get system information: {0}",
+      "GetSystemInfoFailed": "Failed to get system information. See the host logs for details.",
       "SelfRestartDisabled": "Self restart is disabled for this module.",
-      "RestartAlreadyRequested": "A restart request is already pending."
+      "RestartAlreadyRequested": "A restart request is already pending.",
+      "RestartSchedulingFailed": "Failed to schedule the graceful shutdown request. See the host logs for details."
     }
   }
 }

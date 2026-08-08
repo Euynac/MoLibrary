@@ -4,41 +4,36 @@
 
 <MudDialog>
     <DialogContent>
-        <MudStack Spacing="3">
-            <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined">
-                <MudText Typo="Typo.body1">
-                    @L["Page:RestartDialog:Summary"]
-                </MudText>
-            </MudAlert>
-
-            <MudAlert Severity="Severity.Info" Variant="Variant.Outlined">
-                @L["Page:RestartDialog:DelayNotice", DelaySeconds]
-            </MudAlert>
-
-            <MudAlert Severity="Severity.Info" Variant="Variant.Outlined">
-                @L["Page:RestartDialog:SupervisorNote"]
-            </MudAlert>
-        </MudStack>
+        <div class="system-info-restart-dialog">
+            <span class="system-info-restart-dialog__signal"><MudIcon Icon="@Icons.Material.Filled.PowerSettingsNew" Size="Size.Large" /></span>
+            <p class="system-info-restart-dialog__eyebrow">@L["Page:Dialogs:Restart:Fact"]</p>
+            <h2>@L["Page:Dialogs:Restart:Title"]</h2>
+            <p>@L["Page:Dialogs:Restart:Summary"]</p>
+            <div class="system-info-restart-dialog__delay">
+                <MudIcon Icon="@Icons.Material.Filled.Schedule" Size="Size.Small" />
+                @L["Page:Dialogs:Restart:DelayNotice", DelaySeconds]
+            </div>
+            <div class="system-info-restart-dialog__fact">
+                <MudIcon Icon="@Icons.Material.Filled.Info" Size="Size.Small" />
+                @L["Page:Dialogs:Restart:SupervisorNote"]
+            </div>
+        </div>
     </DialogContent>
     <DialogActions>
-        <MudButton OnClick="Cancel" Variant="Variant.Text">
-            @L["Page:RestartDialog:Cancel"]
-        </MudButton>
+        <MudButton OnClick="Cancel" Variant="Variant.Text">@L["Page:Dialogs:Restart:Cancel"]</MudButton>
         <MudButton OnClick="Confirm"
                    Variant="Variant.Filled"
-                   Color="Color.Warning"
-                   StartIcon="@Icons.Material.Filled.RestartAlt">
-            @L["Page:RestartDialog:Confirm"]
+                   Color="Color.Error"
+                   StartIcon="@Icons.Material.Filled.PowerSettingsNew">
+            @L["Page:Dialogs:Restart:Confirm"]
         </MudButton>
     </DialogActions>
 </MudDialog>
 
 @code {
     [CascadingParameter] private IMudDialogInstance? MudDialog { get; set; }
-
     [Parameter] public double DelaySeconds { get; set; }
 
     private void Cancel() => MudDialog?.Cancel();
-
     private void Confirm() => MudDialog?.Close(DialogResult.Ok(true));
 }

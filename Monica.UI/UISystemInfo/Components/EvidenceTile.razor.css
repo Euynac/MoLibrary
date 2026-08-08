@@ -1,0 +1,59 @@
+.system-info-evidence-tile {
+    --tile-accent: var(--mud-palette-text-secondary);
+    --tile-soft: var(--mud-palette-action-default-hover);
+    display: grid;
+    min-width: 0;
+    gap: 10px;
+    padding: 14px;
+    border: 1px solid var(--mud-palette-lines-default);
+    border-radius: calc(var(--mud-default-borderradius) * 1.5);
+    background: var(--mud-palette-background-gray);
+}
+
+.system-info-evidence-tile.tone-primary {
+    --tile-accent: var(--mud-palette-primary);
+    --tile-soft: var(--mud-palette-primary-hover);
+}
+
+.system-info-evidence-tile.tone-info {
+    --tile-accent: var(--mud-palette-info);
+    --tile-soft: var(--mud-palette-info-hover);
+}
+
+.system-info-evidence-tile--wide {
+    grid-column: 1 / -1;
+}
+
+.system-info-evidence-tile dt {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--mud-palette-text-secondary);
+    font-size: 0.72rem;
+}
+
+.system-info-evidence-tile dt span {
+    width: 28px;
+    height: 28px;
+    display: grid;
+    place-items: center;
+    color: var(--tile-accent);
+    border-radius: 8px;
+    background: var(--tile-soft);
+}
+
+.system-info-evidence-tile dd {
+    min-width: 0;
+    margin: 0;
+    overflow: hidden;
+    color: var(--mud-palette-text-primary);
+    font-size: 0.82rem;
+    font-weight: 700;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.system-info-evidence-tile--wide dd {
+    overflow-wrap: anywhere;
+    white-space: normal;
+}

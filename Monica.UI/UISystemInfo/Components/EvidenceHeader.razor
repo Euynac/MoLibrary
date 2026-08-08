@@ -1,0 +1,19 @@
+<header class="system-info-evidence-header">
+    <span class="system-info-evidence-header__number">@Number</span>
+    <div>
+        <h2>@Title</h2>
+        <p>@Description</p>
+    </div>
+    @if (Count.HasValue)
+    {
+        <span class="system-info-evidence-header__count" title="@CountLabel" aria-label="@CountLabel">@Count</span>
+    }
+</header>
+
+@code {
+    [Parameter, EditorRequired] public string Number { get; set; } = string.Empty;
+    [Parameter, EditorRequired] public string Title { get; set; } = string.Empty;
+    [Parameter, EditorRequired] public string Description { get; set; } = string.Empty;
+    [Parameter] public int? Count { get; set; }
+    [Parameter] public string? CountLabel { get; set; }
+}

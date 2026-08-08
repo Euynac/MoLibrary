@@ -1,0 +1,57 @@
+.system-info-load-state {
+    display: grid;
+    min-height: 360px;
+    place-items: center;
+    align-content: center;
+    gap: 12px;
+    padding: 32px;
+    text-align: center;
+    border: 1px solid var(--mud-palette-lines-default);
+    border-radius: calc(var(--mud-default-borderradius) * 3);
+    background: var(--mud-palette-surface);
+}
+
+.system-info-load-state h2,
+.system-info-load-state p {
+    margin: 0;
+}
+
+.system-info-load-state p,
+.system-info-load-state small {
+    max-width: 620px;
+    color: var(--mud-palette-text-secondary);
+}
+
+.system-info-load-state__error-icon {
+    width: 64px;
+    height: 64px;
+    display: grid;
+    place-items: center;
+    color: var(--mud-palette-error);
+    border-radius: 20px;
+    background: var(--mud-palette-error-hover);
+}
+
+.system-info-load-state__skeleton {
+    width: min(680px, 86vw);
+    display: grid;
+    grid-template-columns: 2fr 1fr 1fr;
+    gap: 10px;
+}
+
+.system-info-load-state__skeleton span {
+    height: 90px;
+    border-radius: 16px;
+    background: linear-gradient(90deg, var(--mud-palette-action-default-hover), var(--mud-palette-primary-hover), var(--mud-palette-action-default-hover));
+    background-size: 200% 100%;
+    animation: system-info-skeleton 1.4s ease infinite;
+}
+
+.system-info-load-state ::deep .mud-progress-linear {
+    width: min(680px, 86vw);
+}
+
+@keyframes system-info-skeleton {
+    from { background-position: 100% 0; }
+    to { background-position: -100% 0; }
+}

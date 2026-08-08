@@ -1,0 +1,79 @@
+.system-info-masthead {
+    display: flex;
+    min-width: 0;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 24px;
+}
+
+.system-info-masthead__copy {
+    min-width: 0;
+}
+
+.system-info-masthead__eyebrow {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    margin: 0 0 6px;
+    color: var(--mud-palette-primary);
+    font-size: 0.7rem;
+    font-weight: 800;
+    letter-spacing: 0.12em;
+}
+
+.system-info-masthead__eyebrow span {
+    width: 22px;
+    height: 3px;
+    border-radius: 99px;
+    background: var(--mud-palette-primary);
+}
+
+.system-info-masthead h1 {
+    margin: 0;
+    color: var(--mud-palette-text-primary);
+    font-size: clamp(1.8rem, 3vw, 2.65rem);
+    font-weight: 800;
+    letter-spacing: -0.035em;
+    line-height: 1.05;
+}
+
+.system-info-masthead h1:focus {
+    outline: none;
+}
+
+.system-info-masthead__copy > p:last-child {
+    max-width: 680px;
+    margin: 8px 0 0;
+    color: var(--mud-palette-text-secondary);
+    font-size: 0.93rem;
+}
+
+.system-info-masthead__actions {
+    display: flex;
+    flex: 0 0 auto;
+    gap: 10px;
+}
+
+.system-info-masthead__actions ::deep .mud-button-root {
+    min-height: 40px;
+    border-radius: calc(var(--mud-default-borderradius) * 1.8);
+    font-weight: 700;
+    text-transform: none;
+}
+
+@media (max-width: 700px) {
+    .system-info-masthead {
+        align-items: stretch;
+        flex-direction: column;
+        gap: 14px;
+    }
+
+    .system-info-masthead__actions {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .system-info-masthead__actions ::deep .mud-button-root:only-child {
+        grid-column: 1 / -1;
+    }
+}

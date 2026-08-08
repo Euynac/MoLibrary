@@ -1,6 +1,4 @@
 using Microsoft.AspNetCore.Builder;
-using Microsoft.AspNetCore.Hosting.Server;
-using Microsoft.AspNetCore.Hosting.Server.Features;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
@@ -14,8 +12,9 @@ using Monica.Core.Results;
 using Monica.UI.Localization;
 using Monica.UI.Pages;
 using Monica.UI.Shell.Models;
+using Monica.UI.UISystemInfo.Facades;
 using Monica.UI.UISystemInfo.Models;
-using Monica.UI.UISystemInfo.Support;
+using Monica.UI.UISystemInfo.State;
 using MudBlazor;
 
 // ReSharper disable once CheckNamespace
@@ -163,13 +162,9 @@ public class ModuleSystemInfoUI : MonicaModule<ModuleSystemInfoUIOption>, IWebHo
     public override void ConfigureServices(ModuleContext<ModuleSystemInfoUIOption> context)
     {
         var services = context.Services;
-        services.TryAddSingleton(provider =>
-        {
-            var server = provider.GetService<IServer>();
-            return server?.Features.Get<IServerAddressesFeature>()
-                   ?? new ServerAddressesFeature();
-        });
-        services.AddScoped<SystemInfoService>();
+        // The singleton facade owns the host-wide restart latch and its immutable snapshot provider.
+        services.TryAddSingleton<SystemInfoFacade>();
+        services.TryAddSingleton<SystemInfoPageSessionFactory>();
     }
 
     /// <summary>
@@ -182,12 +177,8 @@ public class ModuleSystemInfoUI : MonicaModule<ModuleSystemInfoUIOption>, IWebHo
             var tagName = Option.GetApiGroupName();
 
             endpoints.MapGet("/system/info",
-                async ([FromQuery] bool? simple,
-                      [FromServices] SystemInfoService systemInfoService) =>
-                {
-                    var result = await systemInfoService.GetSystemInfoAsync(simple);
-                    return result.GetResponse();
-                })
+                ([FromServices] SystemInfoFacade systemInfoFacade) =>
+                    systemInfoFacade.GetSnapshot().GetResponse())
                 .WithName("获取微服务信息")
                 .WithTags(tagName)
                 .WithSummary("获取微服务信息")
@@ -196,11 +187,8 @@ public class ModuleSystemInfoUI : MonicaModule<ModuleSystemInfoUIOption>, IWebHo
             if (Option.EnableSelfRestartAction)
             {
                 endpoints.MapPost("/system/restart",
-                    async ([FromServices] SystemInfoService systemInfoService) =>
-                    {
-                        var result = await systemInfoService.RequestSelfRestartAsync();
-                        return result.GetResponse();
-                    })
+                    ([FromServices] SystemInfoFacade systemInfoFacade) =>
+                        systemInfoFacade.RequestSelfRestart().GetResponse())
                     .WithName("Request service self restart")
                     .WithTags(tagName)
                     .WithSummary("Requests a graceful self restart for the current service.")

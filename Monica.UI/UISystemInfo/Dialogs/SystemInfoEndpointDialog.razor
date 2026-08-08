@@ -1,0 +1,32 @@
+@using System.Globalization
+@using Microsoft.Extensions.Localization
+@using Monica.UI.Localization
+@using Monica.UI.UISystemInfo.Models
+@using Monica.UI.UISystemInfo.Support
+@inject IStringLocalizer<SystemInfoResource> L
+
+<MudDialog>
+    <DialogContent>
+        <div class="system-info-endpoint-dialog">
+            <span class="system-info-endpoint-dialog__signal"><MudIcon Icon="@Icons.Material.Filled.SettingsInputAntenna" Size="Size.Large" /></span>
+            <h2 title="@Endpoint.Address">@Endpoint.Address</h2>
+            <dl>
+                <div><dt>@L["Page:Dialogs:Endpoint:Transport"]</dt><dd>@Transport</dd></div>
+                <div><dt>@L["Page:Dialogs:Endpoint:ExactAddress"]</dt><dd title="@Endpoint.Address">@Endpoint.Address</dd></div>
+                <div><dt>@L["Page:Dialogs:Endpoint:Captured"]</dt><dd>@SystemInfoDisplayFormatter.FormatDateTime(CapturedAtUtc, CultureInfo.CurrentCulture)</dd></div>
+            </dl>
+        </div>
+    </DialogContent>
+    <DialogActions>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="Close">@L["Page:Dialogs:Endpoint:Close"]</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] private IMudDialogInstance? MudDialog { get; set; }
+    [Parameter, EditorRequired] public SystemInfoEndpoint Endpoint { get; set; } = null!;
+    [Parameter] public DateTimeOffset CapturedAtUtc { get; set; }
+
+    private string Transport => string.IsNullOrWhiteSpace(Endpoint.Scheme) ? "—" : Endpoint.Scheme.ToUpperInvariant();
+    private void Close() => MudDialog?.Close();
+}

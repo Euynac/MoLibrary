@@ -1,5 +1,5 @@
 @attribute [Route(PAGE_URL)]
-@using System.Globalization
+@implements IAsyncDisposable
 @using Microsoft.Extensions.Localization
 @using Microsoft.Extensions.Options
 @using Monica.Core.Results
@@ -7,294 +7,82 @@
 @using Monica.UI.Localization
 @using Monica.UI.UISystemInfo.Components
 @using Monica.UI.UISystemInfo.Dialogs
-@using Monica.UI.UISystemInfo.Models
-@using Monica.UI.UISystemInfo.Support
+@using Monica.UI.UISystemInfo.State
 @inject IDialogService DialogService
-@inject SystemInfoService SystemInfoService
+@inject SystemInfoPageSessionFactory SessionFactory
 @inject ISnackbar Snackbar
 @inject IOptions<ModuleSystemInfoUIOption> SystemInfoUIOptions
 @inject IStringLocalizer<SystemInfoResource> L
 
-<PageTitle>@L["Page:PageTitle"]</PageTitle>
+<PageTitle>@L["Page:Title"]</PageTitle>
 
-<MudContainer MaxWidth="MaxWidth.False" Class="pa-4">
-    <!-- Header -->
-    <MudPaper Class="pa-4 mb-4" Style="background: var(--mo-color-page-hero-background); color: var(--mo-color-page-hero-text); overflow: hidden;">
-        <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
-            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="3">
-                <MudIcon Icon="@Icons.Material.Filled.Info" Size="Size.Large" />
-                <MudText Typo="Typo.h4" Style="font-weight: 500; margin: 0;">@L["Page:Header:Title"]</MudText>
-            </MudStack>
-            <MudStack Row="true" Spacing="2">
-                @if (SystemInfoUIOptions.Value.EnableSelfRestartAction)
-                {
-                    <MudButton StartIcon="@Icons.Material.Filled.RestartAlt"
-                               Color="Color.Inherit"
-                               Variant="Variant.Outlined"
-                               OnClick="RequestSelfRestartAsync"
-                               Size="Size.Medium"
-                               Disabled="_restartRequested"
-                               Style="background-color: transparent; border-color: color-mix(in srgb, var(--mo-color-page-hero-action) 72%, transparent); color: var(--mo-color-page-hero-action);">
-                        @L["Page:Header:Restart"]
-                    </MudButton>
-                }
-                <MudButton StartIcon="@Icons.Material.Filled.Refresh"
-                           Color="Color.Inherit"
-                           Variant="Variant.Outlined"
-                           OnClick="RefreshSystemInfo"
-                           Size="Size.Medium"
-                           Style="background-color: transparent; border-color: color-mix(in srgb, var(--mo-color-page-hero-action) 72%, transparent); color: var(--mo-color-page-hero-action);">
-                    @L["Page:Header:Refresh"]
-                </MudButton>
-            </MudStack>
-        </MudStack>
-    </MudPaper>
+<div class="system-info-page">
+    <SystemInfoPageHeader EnableRestart="@SystemInfoUIOptions.Value.EnableSelfRestartAction"
+                          IsRefreshing="@(_session?.IsRefreshing == true)"
+                          RestartRequested="@(_session?.RestartRequested == true)"
+                          RefreshRequested="RefreshAsync"
+                          RestartRequestedCallback="RequestSelfRestartAsync" />
 
-    @if (_loading)
+    @if (_session is null || (_session.Snapshot is null && _session.LoadState == SystemInfoPageLoadState.InitialLoading))
     {
-        <MudStack AlignItems="AlignItems.Center" Spacing="4" Class="pa-8">
-            <MudProgressCircular Color="Color.Primary" Size="Size.Large" Indeterminate="true" />
-            <MudText Typo="Typo.h6" Color="Color.Primary">@L["Page:States:LoadingTitle"]</MudText>
-        </MudStack>
+        <SystemInfoLoadState IsLoading="true" />
     }
-    else if (_systemInfo != null)
+    else if (_session.Snapshot is null)
     {
-        <MudGrid Spacing="3">
-            @if (SystemInfoUIOptions.Value.CustomLinks.Any(link => link.Enabled))
-            {
-                <MudItem xs="12">
-                    <SystemInfoCustomLinkPanel Links="@SystemInfoUIOptions.Value.CustomLinks" />
-                </MudItem>
-            }
-
-            <!-- Basic information card -->
-            <MudItem xs="12" md="6" lg="4">
-                <SystemInfoBasicInfoCard Info="@_systemInfo" />
-            </MudItem>
-
-            <!-- Environment information card -->
-            @if (_systemInfo.EnvironmentInfo != null)
-            {
-                <MudItem xs="12" md="6" lg="4">
-                    <MudCard Style="height: 100%; display: flex; flex-direction: column;" Elevation="2">
-                        <MudCardHeader Class="pb-2">
-                            <CardHeaderContent>
-                                <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
-                                    <MudIcon Icon="@Icons.Material.Filled.Computer" Color="Color.Primary" />
-                                    <MudText Typo="Typo.h6" Style="font-weight: 500;">@L["Page:EnvironmentInfo:Title"]</MudText>
-                                </MudStack>
-                            </CardHeaderContent>
-                        </MudCardHeader>
-                        <MudCardContent Style="flex: 1; padding-top: 8px;">
-                            <MudStack Spacing="3">
-                                <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
-                                    <MudIcon Icon="@Icons.Material.Filled.DeviceHub" Size="Size.Small" Color="Color.Success" />
-                                    <MudText><strong>@L["Page:EnvironmentInfo:MachineName"]:</strong></MudText>
-                                </MudStack>
-                                <MudText Class="ml-6" Style="color: var(--mud-palette-text-secondary);">@_systemInfo.EnvironmentInfo.MachineName</MudText>
-
-                                <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
-                                    <MudIcon Icon="@Icons.Material.Filled.Person" Size="Size.Small" Color="Color.Info" />
-                                    <MudText><strong>@L["Page:EnvironmentInfo:UserName"]:</strong></MudText>
-                                </MudStack>
-                                <MudText Class="ml-6" Style="color: var(--mud-palette-text-secondary);">@_systemInfo.EnvironmentInfo.UserName</MudText>
-
-                                <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
-                                    <MudIcon Icon="@Icons.Material.Filled.AccountTree" Size="Size.Small" Color="Color.Warning" />
-                                    <MudText><strong>@L["Page:EnvironmentInfo:ProcessId"]:</strong></MudText>
-                                </MudStack>
-                                <MudText Class="ml-6" Style="color: var(--mud-palette-text-secondary);">@_systemInfo.EnvironmentInfo.ProcessId</MudText>
-
-                                <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
-                                    <MudIcon Icon="@Icons.Material.Filled.Architecture" Size="Size.Small" Color="Color.Secondary" />
-                                    <MudText><strong>@L["Page:EnvironmentInfo:Is64BitOperatingSystem"]:</strong></MudText>
-                                </MudStack>
-                                <MudText Class="ml-6" Style="color: var(--mud-palette-text-secondary);">@FormatBoolean(_systemInfo.EnvironmentInfo.Is64BitOperatingSystem)</MudText>
-
-                                <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
-                                    <MudIcon Icon="@Icons.Material.Filled.Memory" Size="Size.Small" Color="Color.Tertiary" />
-                                    <MudText><strong>@L["Page:EnvironmentInfo:WorkingSet"]:</strong></MudText>
-                                </MudStack>
-                                <MudText Class="ml-6" Style="color: var(--mud-palette-text-secondary);">@FormatScaledBytes(_systemInfo.EnvironmentInfo.WorkingSet)</MudText>
-                            </MudStack>
-                        </MudCardContent>
-                    </MudCard>
-                </MudItem>
-
-                <!-- File information card -->
-                @if (_systemInfo.FileInfo != null)
-                {
-                    <MudItem xs="12" md="6" lg="4">
-                        <MudCard Style="height: 100%; display: flex; flex-direction: column;" Elevation="2">
-                            <MudCardHeader Class="pb-2">
-                                <CardHeaderContent>
-                                    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
-                                        <MudIcon Icon="@Icons.Material.Filled.InsertDriveFile" Color="Color.Primary" />
-                                        <MudText Typo="Typo.h6" Style="font-weight: 500;">@L["Page:FileInfo:Title"]</MudText>
-                                    </MudStack>
-                                </CardHeaderContent>
-                            </MudCardHeader>
-                            <MudCardContent Style="flex: 1; padding-top: 8px;">
-                                <MudStack Spacing="3">
-                                    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
-                                        <MudIcon Icon="@Icons.Material.Filled.Apps" Size="Size.Small" Color="Color.Success" />
-                                        <MudText><strong>@L["Page:FileInfo:ProductName"]:</strong></MudText>
-                                    </MudStack>
-                                    <MudText Class="ml-6" Style="color: var(--mud-palette-text-secondary);">@_systemInfo.FileInfo.ProductName</MudText>
-
-                                    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
-                                        <MudIcon Icon="@Icons.Material.Filled.Tag" Size="Size.Small" Color="Color.Info" />
-                                        <MudText><strong>@L["Page:FileInfo:ProductVersion"]:</strong></MudText>
-                                    </MudStack>
-                                    <div class="system-info-file-version-value">
-                                        <MudTooltip Text="@_systemInfo.FileInfo.ProductVersion">
-                                            <MudText Class="ml-6" Color="Color.Secondary">
-                                                @_systemInfo.FileInfo.ProductVersion
-                                            </MudText>
-                                        </MudTooltip>
-                                    </div>
-
-                                    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
-                                        <MudIcon Icon="@Icons.Material.Filled.Code" Size="Size.Small" Color="Color.Warning" />
-                                        <MudText><strong>@L["Page:FileInfo:FileVersion"]:</strong></MudText>
-                                    </MudStack>
-                                    <MudText Class="ml-6" Style="color: var(--mud-palette-text-secondary);">@_systemInfo.FileInfo.FileVersion</MudText>
-
-                                    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
-                                        <MudIcon Icon="@Icons.Material.Filled.Business" Size="Size.Small" Color="Color.Secondary" />
-                                        <MudText><strong>@L["Page:FileInfo:CompanyName"]:</strong></MudText>
-                                    </MudStack>
-                                    <MudText Class="ml-6" Style="color: var(--mud-palette-text-secondary);">@_systemInfo.FileInfo.CompanyName</MudText>
-
-                                    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
-                                        <MudIcon Icon="@Icons.Material.Filled.Copyright" Size="Size.Small" Color="Color.Tertiary" />
-                                        <MudText><strong>@L["Page:FileInfo:Copyright"]:</strong></MudText>
-                                    </MudStack>
-                                    <MudText Class="ml-6" Style="color: var(--mud-palette-text-secondary);">@_systemInfo.FileInfo.LegalCopyright</MudText>
-                                </MudStack>
-                            </MudCardContent>
-                        </MudCard>
-                    </MudItem>
-                }
-
-                <!-- System details card -->
-                <MudItem xs="12" md="6" lg="4">
-                    <MudCard Style="height: 100%; display: flex; flex-direction: column;" Elevation="2">
-                        <MudCardHeader Class="pb-2">
-                            <CardHeaderContent>
-                                <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
-                                    <MudIcon Icon="@Icons.Material.Filled.Settings" Color="Color.Primary" />
-                                    <MudText Typo="Typo.h6" Style="font-weight: 500;">@L["Page:SystemDetails:Title"]</MudText>
-                                </MudStack>
-                            </CardHeaderContent>
-                        </MudCardHeader>
-                        <MudCardContent Style="flex: 1; padding-top: 8px;">
-                            <MudStack Spacing="3">
-                                <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
-                                    <MudIcon Icon="@Icons.Material.Filled.DeveloperMode" Size="Size.Small" Color="Color.Success" />
-                                    <MudText><strong>@L["Page:SystemDetails:DotNetVersion"]:</strong></MudText>
-                                </MudStack>
-                                <MudText Class="ml-6" Style="color: var(--mud-palette-text-secondary);">@_systemInfo.EnvironmentInfo.Version?.ToString()</MudText>
-
-                                <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
-                                    <MudIcon Icon="@Icons.Material.Filled.DesktopWindows" Size="Size.Small" Color="Color.Info" />
-                                    <MudText><strong>@L["Page:SystemDetails:OperatingSystem"]:</strong></MudText>
-                                </MudStack>
-                                <MudText Class="ml-6" Style="color: var(--mud-palette-text-secondary);">@_systemInfo.EnvironmentInfo.OSVersion?.ToString()</MudText>
-
-                                <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
-                                    <MudIcon Icon="@Icons.Material.Filled.Folder" Size="Size.Small" Color="Color.Warning" />
-                                    <MudText><strong>@L["Page:SystemDetails:CurrentDirectory"]:</strong></MudText>
-                                </MudStack>
-                                <MudText Class="ml-6" Style="color: var(--mud-palette-text-secondary); word-break: break-all;">@_systemInfo.EnvironmentInfo.CurrentDirectory</MudText>
-
-                                <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
-                                    <MudIcon Icon="@Icons.Material.Filled.Storage" Size="Size.Small" Color="Color.Secondary" />
-                                    <MudText><strong>@L["Page:SystemDetails:SystemPageSize"]:</strong></MudText>
-                                </MudStack>
-                                <MudText Class="ml-6" Style="color: var(--mud-palette-text-secondary);">@FormatByteCount(_systemInfo.EnvironmentInfo.SystemPageSize)</MudText>
-
-                                <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
-                                    <MudIcon Icon="@Icons.Material.Filled.TouchApp" Size="Size.Small" Color="Color.Tertiary" />
-                                    <MudText><strong>@L["Page:SystemDetails:UserInteractive"]:</strong></MudText>
-                                </MudStack>
-                                <MudText Class="ml-6" Style="color: var(--mud-palette-text-secondary);">@FormatBoolean(_systemInfo.EnvironmentInfo.UserInteractive)</MudText>
-                            </MudStack>
-                        </MudCardContent>
-                    </MudCard>
-                </MudItem>
-            }
-        </MudGrid>
+        <SystemInfoLoadState Error="@_session.LoadError" RetryRequested="RefreshAsync" />
     }
     else
     {
-        <MudAlert Severity="Severity.Error" Class="ma-4">
-            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
-                <MudIcon Icon="@Icons.Material.Filled.Error" />
-                <MudText>@L["Page:States:LoadFailedAlert"]</MudText>
-            </MudStack>
-        </MudAlert>
+        var snapshot = _session.Snapshot;
+
+        <SystemInfoServiceHero Snapshot="@snapshot" NowUtc="@_session.NowUtc" />
+        <SystemInfoPulseStrip Snapshot="@snapshot" NowUtc="@_session.NowUtc" />
+
+        @* Operational destinations stay near the top, before the detailed dossier. *@
+        @if (SystemInfoUIOptions.Value.CustomLinks.Any(static link => link.Enabled))
+        {
+            <SystemInfoCustomLinkPanel Links="@SystemInfoUIOptions.Value.CustomLinks" />
+        }
+
+        <SystemInfoDossier Snapshot="@snapshot" />
     }
-</MudContainer>
+</div>
 
 @code {
     public const string PAGE_URL = "/system-info";
 
-    private bool _loading = true;
-    private bool _restartRequested;
-    private SystemInfoResponse? _systemInfo;
+    private SystemInfoPageSession? _session;
+    private bool _disposed;
 
-    protected override async Task OnAfterRenderAsync(bool firstRender)
+    protected override async Task OnInitializedAsync()
     {
-        if (firstRender)
-        {
-            await LoadSystemInfoAsync();
-        }
+        _session = SessionFactory.Create();
+        _session.Changed += HandleSessionChanged;
+        await _session.InitializeAsync();
     }
 
-    private async Task<bool> LoadSystemInfoAsync()
+    private Task HandleSessionChanged() => _disposed
+        ? Task.CompletedTask
+        : InvokeAsync(StateHasChanged);
+
+    private async Task RefreshAsync()
     {
-        _loading = true;
-        StateHasChanged();
-
-        var isSuccess = false;
-
-        try
+        if (_session is null || !await _session.RefreshAsync())
         {
-            if ((await SystemInfoService.GetSystemInfoAsync(simple: false)).IsFailed(out var error, out var data))
+            if (_session?.RefreshError is { Length: > 0 } error)
             {
-                Snackbar.Add(L["Page:Messages:LoadFailed", error.Message ?? string.Empty].Value, Severity.Error);
+                Snackbar.Add(L["Page:Messages:RefreshFailed", error], Severity.Error);
             }
-            else
-            {
-                _systemInfo = data;
-                isSuccess = true;
-            }
-        }
-        catch (Exception ex)
-        {
-            Snackbar.Add(L["Page:Messages:LoadError", ex.Message].Value, Severity.Error);
-        }
-        finally
-        {
-            _loading = false;
-            StateHasChanged();
+
+            return;
         }
 
-        return isSuccess;
-    }
-
-    private async Task RefreshSystemInfo()
-    {
-        if (await LoadSystemInfoAsync())
-        {
-            Snackbar.Add(L["Page:Messages:RefreshSucceeded"].Value, Severity.Success);
-        }
+        Snackbar.Add(L["Page:Messages:RefreshSucceeded"], Severity.Success);
     }
 
     private async Task RequestSelfRestartAsync()
     {
-        if (_restartRequested)
+        if (_session is null || _session.RestartRequested)
         {
             return;
         }
@@ -303,69 +91,46 @@
         {
             { dialog => dialog.DelaySeconds, Math.Max(0d, SystemInfoUIOptions.Value.SelfRestartDelay.TotalSeconds) }
         };
-
-        var options = new DialogOptions
-        {
-            CloseOnEscapeKey = true,
-            MaxWidth = MaxWidth.Small,
-            FullWidth = true
-        };
-
         var dialog = await DialogService.ShowAsync<SystemInfoRestartConfirmDialog>(
-            L["Page:RestartDialog:Title"].Value,
+            L["Page:Dialogs:Restart:Title"],
             parameters,
-            options);
+            new DialogOptions
+            {
+                CloseOnEscapeKey = true,
+                MaxWidth = MaxWidth.Small,
+                FullWidth = true
+            });
 
-        var result = await dialog.Result;
-        if (result is not { Canceled: false })
+        if (await dialog.Result is not { Canceled: false })
         {
             return;
         }
 
-        try
+        var result = _session.RequestSelfRestart();
+        if (result.IsFailed(out var error))
         {
-            var restartResult = await SystemInfoService.RequestSelfRestartAsync();
-            if (restartResult.IsFailed(out var error))
-            {
-                Snackbar.Add(L["Page:Messages:RestartFailed", error.Message ?? string.Empty].Value, Severity.Error);
-                return;
-            }
-
-            _restartRequested = true;
-            Snackbar.Add(
-                restartResult.Message ?? L["Page:Messages:RestartRequestedFallback"].Value,
-                Severity.Warning);
-        }
-        catch (Exception ex)
-        {
-            Snackbar.Add(L["Page:Messages:RestartError", ex.Message].Value, Severity.Error);
-        }
-    }
-
-    private string FormatBoolean(bool value)
-    {
-        return L[value ? "Shared:Common:Yes" : "Shared:Common:No"].Value;
-    }
-
-    private string FormatScaledBytes(long bytes)
-    {
-        const int scale = 1024;
-        string[] unitKeys = ["Bytes", "Kilobytes", "Megabytes", "Gigabytes", "Terabytes"];
-        double value = bytes;
-        var order = 0;
-
-        while (Math.Abs(value) >= scale && order < unitKeys.Length - 1)
-        {
-            order++;
-            value /= scale;
+            Snackbar.Add(L["Page:Messages:RestartFailed", error.Message ?? string.Empty], Severity.Error);
+            return;
         }
 
-        return $"{value.ToString("0.##", CultureInfo.CurrentCulture)} {L[$"Shared:Units:{unitKeys[order]}"].Value}";
+        Snackbar.Add(
+            result.Message ?? L["Page:Messages:RestartRequestedFallback"].Value,
+            Severity.Warning);
     }
 
-    private string FormatByteCount(long bytes)
+    public async ValueTask DisposeAsync()
     {
-        return $"{bytes.ToString("N0", CultureInfo.CurrentCulture)} {L["Shared:Units:Bytes"].Value}";
-    }
+        if (_disposed)
+        {
+            return;
+        }
 
+        _disposed = true;
+        if (_session is not null)
+        {
+            _session.Changed -= HandleSessionChanged;
+            await _session.DisposeAsync();
+        }
+
+    }
 }

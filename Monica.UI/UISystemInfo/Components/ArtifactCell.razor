@@ -1,0 +1,9 @@
+<div class="system-info-artifact-cell">
+    <dt>@Label</dt>
+    <dd title="@Value">@Value</dd>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public string Label { get; set; } = string.Empty;
+    [Parameter, EditorRequired] public string Value { get; set; } = string.Empty;
+}

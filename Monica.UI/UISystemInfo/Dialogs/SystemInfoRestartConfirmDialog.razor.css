@@ -1,0 +1,58 @@
+.system-info-restart-dialog {
+    display: grid;
+    justify-items: start;
+    gap: 10px;
+    padding: 8px 4px;
+}
+
+.system-info-restart-dialog__signal {
+    width: 54px;
+    height: 54px;
+    display: grid;
+    place-items: center;
+    color: var(--mud-palette-error);
+    border-radius: 18px 7px 18px 7px;
+    background: var(--mud-palette-error-hover);
+}
+
+.system-info-restart-dialog h2,
+.system-info-restart-dialog p {
+    margin: 0;
+}
+
+.system-info-restart-dialog h2 {
+    color: var(--mud-palette-text-primary);
+    font-size: 1.35rem;
+}
+
+.system-info-restart-dialog > p:last-of-type {
+    color: var(--mud-palette-text-secondary);
+}
+
+.system-info-restart-dialog__eyebrow {
+    color: var(--mud-palette-error);
+    font-size: 0.68rem;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+.system-info-restart-dialog__delay,
+.system-info-restart-dialog__fact {
+    display: flex;
+    align-items: flex-start;
+    gap: 9px;
+    width: 100%;
+    padding: 11px 12px;
+    color: var(--mud-palette-text-secondary);
+    border: 1px solid var(--mud-palette-lines-default);
+    border-radius: calc(var(--mud-default-borderradius) * 1.4);
+    background: var(--mud-palette-background-gray);
+    font-size: 0.78rem;
+}
+
+.system-info-restart-dialog__delay {
+    color: var(--mud-palette-error);
+    border-color: rgba(var(--mud-palette-error-rgb), 0.28);
+    background: var(--mud-palette-error-hover);
+}

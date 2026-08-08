@@ -5,75 +5,136 @@
     }
   },
   "Page": {
-    "PageTitle": "系统信息",
-    "Header": {
-      "Title": "系统信息",
-      "Refresh": "刷新信息",
-      "Restart": "重启服务"
+    "Title": "系统档案",
+    "Eyebrow": "MONICA / 实时服务档案",
+    "Summary": "集中查看当前宿主实例的身份、就绪状态与运行证据。",
+    "Actions": {
+      "Refresh": "刷新证据",
+      "Restart": "重启服务",
+      "Retry": "重试"
     },
-    "RestartDialog": {
-      "Title": "重启服务",
-      "Summary": "此操作会请求当前服务执行优雅关闭。",
-      "DelayNotice": "确认后大约 {0} 秒开始关闭，以便当前请求有机会完成。",
-      "SupervisorNote": "这不是进程内自重启。只有当宿主环境配置了外部重启策略（例如 Kubernetes、systemd、IIS 或 Windows 服务）时，服务才会重新启动。",
-      "Cancel": "取消",
-      "Confirm": "立即重启"
+    "Status": {
+      "Ready": "已就绪",
+      "Running": "运行中",
+      "Tracked": "已记录",
+      "Snapshot": "快照",
+      "Bound": "已绑定",
+      "Captured": "已采集",
+      "JustNow": "刚刚",
+      "SecondsAgo": "{0} 秒前"
+    },
+    "ServiceIdentity": {
+      "ProductVersion": "产品版本",
+      "ProcessStarted": "进程启动于",
+      "ProcessUptime": "进程运行时长"
+    },
+    "Startup": {
+      "AriaLabel": "应用启动计时",
+      "Title": "应用启动",
+      "Scope": "计时起点 → 就绪",
+      "StartMarker": "计时起点",
+      "HostReady": "宿主就绪",
+      "ReadyAt": "宿主就绪于",
+      "DurationValue": "{0:F4} ms"
+    },
+    "Pulse": {
+      "AriaLabel": "服务证据摘要",
+      "ProcessUptime": "进程运行时长",
+      "WorkingSet": "工作集",
+      "ProcessId": "进程 ID",
+      "EvidenceAge": "证据时效",
+      "CapturedAt": "采集于"
+    },
+    "Index": {
+      "Title": "档案索引",
+      "Hint": "快速定位证据",
+      "AriaLabel": "档案索引"
+    },
+    "Sections": {
+      "Runtime": {
+        "Title": "运行脉搏",
+        "Description": "进程与托管运行时证据。",
+        "EvidenceLabel": "{0} 项证据",
+        "DotNetRuntime": ".NET 运行时",
+        "ProcessArchitecture": "进程架构",
+        "Privilege": "权限级别",
+        "SystemPageSize": "系统页面大小",
+        "UserInteractive": "用户交互式",
+        "WorkingSetAtCapture": "采集时的精确进程工作集",
+        "Values": {
+          "Process64Bit": "64 位进程",
+          "Process32Bit": "32 位进程",
+          "Privileged": "特权进程",
+          "NotPrivileged": "非特权进程",
+          "Interactive": "交互式",
+          "NonInteractive": "非交互式"
+        }
+      },
+      "Environment": {
+        "Title": "环境指纹",
+        "Description": "宿主身份与执行上下文。",
+        "Machine": "机器",
+        "ProcessUser": "进程用户",
+        "OperatingSystem": "操作系统",
+        "TimeZone": "时区",
+        "WorkingDirectory": "工作目录",
+        "ProcessPath": "进程路径"
+      },
+      "Endpoints": {
+        "Title": "监听端点",
+        "Description": "当前宿主已绑定的地址。",
+        "ListeningAddress": "监听地址",
+        "Transport": "传输协议",
+        "Inspect": "查看",
+        "InspectAria": "查看端点 {0}",
+        "ListeningCount": "{0} 个监听地址",
+        "EmptyTitle": "未采集到监听端点",
+        "EmptyDescription": "当前宿主快照未报告任何已绑定地址。"
+      },
+      "Artifact": {
+        "Title": "制品证据",
+        "Description": "产品与制品元数据。",
+        "Product": "产品",
+        "ProductVersion": "产品版本",
+        "FileVersion": "文件版本",
+        "ArtifactTimestamp": "制品时间戳",
+        "Company": "公司",
+        "Legal": "版权"
+      }
     },
     "States": {
-      "LoadingTitle": "正在加载系统信息...",
-      "LoadFailedAlert": "加载系统信息失败，请稍后重试。"
+      "LoadingTitle": "正在加载系统证据…",
+      "LoadFailedTitle": "系统证据暂不可用",
+      "LoadFailedDescription": "无法加载当前宿主快照。请在服务可用后重试。"
     },
-    "BasicInfo": {
-      "Title": "基本信息",
-      "BuildTime": "构建时间",
-      "LocalTime": "本地时间",
-      "TimeZone": "当前时区",
-      "UtcTime": "UTC时间",
-      "ProductVersion": "产品版本",
-      "ProcessStartTime": "进程启动时间",
-      "RunningFor": "已运行 {0}",
-      "ApplicationStartup": "应用启动",
-      "ApplicationStartupScope": "计时起点 → 就绪",
-      "ApplicationStartupTracked": "已记录",
-      "ApplicationStartupValue": "{0:F4} ms",
-      "ApplicationReadyAt": "就绪于 {0}",
-      "ListeningAddresses": "监听地址"
-    },
-    "EnvironmentInfo": {
-      "Title": "环境信息",
-      "MachineName": "机器名",
-      "UserName": "用户名",
-      "ProcessId": "进程ID",
-      "Is64BitOperatingSystem": "64位操作系统",
-      "WorkingSet": "工作集"
-    },
-    "FileInfo": {
-      "Title": "文件信息",
-      "ProductName": "产品名称",
-      "ProductVersion": "产品版本",
-      "FileVersion": "文件版本",
-      "CompanyName": "公司名称",
-      "Copyright": "版权信息"
-    },
-    "SystemDetails": {
-      "Title": "系统详细信息",
-      "DotNetVersion": ".NET版本",
-      "OperatingSystem": "操作系统",
-      "CurrentDirectory": "当前目录",
-      "SystemPageSize": "系统页面大小",
-      "UserInteractive": "用户交互式"
+    "Dialogs": {
+      "Restart": {
+        "Title": "请求优雅关闭？",
+        "Summary": "系统会在配置的延迟后请求宿主优雅关闭。",
+        "DelayNotice": "确认后大约 {0} 秒开始关闭，以便当前请求完成。",
+        "SupervisorNote": "服务是否再次启动由外部托管器决定。",
+        "Fact": "这不是进程内自重启。",
+        "Cancel": "取消",
+        "Confirm": "请求关闭"
+      },
+      "Endpoint": {
+        "Title": "端点证据",
+        "Captured": "采集时间",
+        "Transport": "传输协议",
+        "ExactAddress": "完整地址",
+        "Close": "关闭"
+      }
     },
     "Messages": {
-      "LoadFailed": "加载系统信息失败: {0}",
-      "LoadError": "加载系统信息时发生错误: {0}",
-      "RefreshSucceeded": "系统信息已刷新",
+      "RefreshSucceeded": "系统证据已刷新。",
+      "RefreshFailed": "刷新系统证据失败: {0}",
       "RestartFailed": "请求重启服务失败: {0}",
-      "RestartError": "请求重启服务时发生错误: {0}",
       "RestartRequestedFallback": "已请求优雅关闭，服务很快会停止。"
     }
   },
   "CustomLinks": {
-    "Title": "快捷链接",
+    "Title": "配置链接",
+    "Description": "由宿主配置的运维目的地。",
     "Items": {
       "Swagger": {
         "Name": "接口管理",
@@ -81,41 +142,28 @@
         "Category": "Monica"
       }
     },
+    "Labels": {
+      "Access": "访问凭据",
+      "UserName": "用户名",
+      "Password": "密码"
+    },
     "Actions": {
+      "Open": "打开",
+      "ShowAccess": "显示访问凭据",
       "CopyUserName": "复制用户名",
       "CopyPassword": "复制密码"
+    },
+    "Targets": {
+      "CurrentTab": "当前标签页",
+      "NewTab": "新标签页",
+      "ParentFrame": "父级框架",
+      "TopFrame": "顶层框架"
     },
     "Messages": {
       "CopyUserNameSucceeded": "已复制用户名",
       "CopyUserNameFailed": "复制用户名失败",
       "CopyPasswordSucceeded": "已复制密码",
-      "CopyPasswordFailed": "复制密码失败",
-      "CopyFailedWithMessage": "{0}: {1}"
-    }
-  },
-  "Shared": {
-    "Common": {
-      "Yes": "是",
-      "No": "否"
-    },
-    "Units": {
-      "Bytes": "字节",
-      "Kilobytes": "KB",
-      "Megabytes": "MB",
-      "Gigabytes": "GB",
-      "Terabytes": "TB"
-    },
-    "Duration": {
-      "Separator": "",
-      "ZeroSeconds": "0秒",
-      "DaySingular": "{0}天",
-      "DayPlural": "{0}天",
-      "HourSingular": "{0}小时",
-      "HourPlural": "{0}小时",
-      "MinuteSingular": "{0}分钟",
-      "MinutePlural": "{0}分钟",
-      "SecondSingular": "{0}秒",
-      "SecondPlural": "{0}秒"
+      "CopyPasswordFailed": "复制密码失败"
     }
   },
   "Service": {
@@ -125,9 +173,10 @@
     "Errors": {
       "BrowserRuntimeUnsupported": "浏览器运行时不支持获取系统信息",
       "EntryAssemblyUnavailable": "无法获取入口程序集信息",
-      "GetSystemInfoFailed": "获取系统信息失败: {0}",
+      "GetSystemInfoFailed": "获取系统信息失败，请查看宿主日志了解详情",
       "SelfRestartDisabled": "当前模块未启用自重启功能",
-      "RestartAlreadyRequested": "已有重启请求正在等待执行"
+      "RestartAlreadyRequested": "已有重启请求正在等待执行",
+      "RestartSchedulingFailed": "调度优雅关闭请求失败，请查看宿主日志了解详情"
     }
   }
 }

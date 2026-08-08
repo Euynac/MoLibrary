@@ -1,0 +1,33 @@
+@using Microsoft.Extensions.Localization
+@using Monica.UI.Localization
+@inject IStringLocalizer<SystemInfoResource> L
+
+<section class="system-info-load-state" role="@(IsLoading ? "status" : "alert")">
+    @if (IsLoading)
+    {
+        <div class="system-info-load-state__skeleton" aria-hidden="true">
+            <span></span><span></span><span></span>
+        </div>
+        <MudProgressLinear Indeterminate="true" Color="Color.Primary" />
+        <h2>@L["Page:States:LoadingTitle"]</h2>
+    }
+    else
+    {
+        <span class="system-info-load-state__error-icon"><MudIcon Icon="@Icons.Material.Filled.ErrorOutline" Size="Size.Large" /></span>
+        <h2>@L["Page:States:LoadFailedTitle"]</h2>
+        <p>@L["Page:States:LoadFailedDescription"]</p>
+        @if (!string.IsNullOrWhiteSpace(Error))
+        {
+            <small>@Error</small>
+        }
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Refresh" OnClick="RetryRequested">
+            @L["Page:Actions:Retry"]
+        </MudButton>
+    }
+</section>
+
+@code {
+    [Parameter] public bool IsLoading { get; set; }
+    [Parameter] public string? Error { get; set; }
+    [Parameter] public EventCallback RetryRequested { get; set; }
+}

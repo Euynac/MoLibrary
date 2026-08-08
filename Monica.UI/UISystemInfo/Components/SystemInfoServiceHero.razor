@@ -1,0 +1,83 @@
+@using System.Globalization
+@using Microsoft.Extensions.Localization
+@using Monica.UI.Localization
+@using Monica.UI.UISystemInfo.Models
+@using Monica.UI.UISystemInfo.Support
+@inject IStringLocalizer<SystemInfoResource> L
+
+<section class="system-info-hero @(Snapshot.Startup is null ? "system-info-hero--untracked" : null)" aria-labelledby="system-info-service-name">
+    <div class="system-info-hero__identity">
+        <div class="system-info-hero__heading">
+            <div class="system-info-hero__seal" aria-hidden="true">
+                <span>@Monogram</span>
+                <i></i>
+            </div>
+            <div class="system-info-hero__name">
+                <div class="system-info-hero__badges">
+                    <span class="system-info-badge system-info-badge--ready"><i></i>@L["Page:Status:Ready"]</span>
+                    <span class="system-info-badge">@Snapshot.Application.EnvironmentName</span>
+                    <span class="system-info-badge">@Snapshot.Application.Version</span>
+                </div>
+                <h2 id="system-info-service-name">@Snapshot.Application.Name</h2>
+                <p>@Snapshot.Application.Id</p>
+            </div>
+        </div>
+
+        <dl class="system-info-hero__facts">
+            <div>
+                <dt>@L["Page:ServiceIdentity:ProductVersion"]</dt>
+                <dd title="@Snapshot.Artifact.ProductVersion">@Snapshot.Artifact.ProductVersion</dd>
+            </div>
+            <div>
+                <dt>@L["Page:ServiceIdentity:ProcessStarted"]</dt>
+                <dd>@SystemInfoDisplayFormatter.FormatTime(Snapshot.Process.StartedAtUtc, CultureInfo.CurrentCulture)</dd>
+            </div>
+            <div>
+                <dt>@L["Page:ServiceIdentity:ProcessUptime"]</dt>
+                <dd class="system-info-metric">@SystemInfoDisplayFormatter.FormatDuration(Uptime)</dd>
+            </div>
+        </dl>
+    </div>
+
+    @if (Snapshot.Startup is { } startup)
+    {
+        <div class="system-info-readiness" aria-label="@L["Page:Startup:AriaLabel"]">
+            <div class="system-info-readiness__header">
+                <div>
+                    <span>@L["Page:Startup:Scope"]</span>
+                    <h3>@L["Page:Startup:Title"]</h3>
+                </div>
+                <span class="system-info-tracked-badge">
+                    <MudIcon Icon="@Icons.Material.Filled.Check" Size="Size.Small" />
+                    @L["Page:Status:Tracked"]
+                </span>
+            </div>
+            <div class="system-info-readiness__metric">
+                <strong class="system-info-metric">@L["Page:Startup:DurationValue", startup.DurationMs]</strong>
+                <span>@L["Page:Startup:ReadyAt"] <b>@SystemInfoDisplayFormatter.FormatTime(startup.ReadyAtUtc, CultureInfo.CurrentCulture)</b></span>
+            </div>
+            <div class="system-info-readiness__rail" aria-hidden="true">
+                <span class="system-info-readiness__line"></span>
+                <div class="system-info-readiness__node system-info-readiness__node--start">
+                    <i></i><span>@L["Page:Startup:StartMarker"]</span>
+                </div>
+                <div class="system-info-readiness__node system-info-readiness__node--ready">
+                    <i></i><span>@L["Page:Startup:HostReady"]</span>
+                </div>
+            </div>
+        </div>
+    }
+</section>
+
+@code {
+    [Parameter, EditorRequired] public SystemInfoSnapshot Snapshot { get; set; } = null!;
+    [Parameter] public DateTimeOffset NowUtc { get; set; }
+
+    private string Monogram => string.IsNullOrWhiteSpace(Snapshot.Application.Name)
+        ? "M"
+        : Snapshot.Application.Name.Trim()[0].ToString(CultureInfo.CurrentCulture).ToUpper(CultureInfo.CurrentCulture);
+
+    private TimeSpan Uptime => NowUtc > Snapshot.Process.StartedAtUtc
+        ? NowUtc - Snapshot.Process.StartedAtUtc
+        : TimeSpan.Zero;
+}
