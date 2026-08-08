@@ -8,7 +8,7 @@ namespace Monica.Configuration.Abstractions;
 /// pre-container startup reading.
 /// </summary>
 /// <remarks>
-/// Implementations must configure equivalent logical stores for both phases. The startup store must be independently
+/// Implementations must configure equivalent logical stores for both phases. The startup reader must be independently
 /// owned from the runtime store; the snapshot-loading operation disposes it when it supports disposal.
 /// Composition topology must remain immutable after plan creation, and both methods must deterministically target the
 /// same logical store from captured values that remain stable across both phases.
@@ -28,10 +28,10 @@ public interface IMonicaConfigurationStoreComposition
     void ConfigureRuntime(ModuleRegistration<ModuleConfiguration, ModuleConfigurationOption> module);
 
     /// <summary>
-    /// Creates an isolated effective-value store for startup options loading.
+    /// Creates an isolated, read-only effective-value reader for startup options loading.
     /// </summary>
     /// <returns>
-    /// A new, independently owned store. The caller disposes it when it supports synchronous or asynchronous disposal.
+    /// A new, independently owned reader. The caller disposes it when it supports synchronous or asynchronous disposal.
     /// </returns>
-    IConfigurationEffectiveValueStore CreateStartupStore();
+    IConfigurationEffectiveValueReader CreateStartupReader();
 }

@@ -37,8 +37,9 @@ public sealed record ManagedJsonConfigurationSourceRegistration
     public bool Optional { get; init; }
 
     /// <summary>
-    /// Gets whether the source reloads when the file changes.
+    /// Gets whether the runtime configuration source reloads when the file changes.
     /// </summary>
+    /// <remarks>Short-lived bootstrap and startup-snapshot providers always disable file watching.</remarks>
     public bool ReloadOnChange { get; init; }
 
     /// <summary>

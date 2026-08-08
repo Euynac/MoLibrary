@@ -12,12 +12,13 @@ This project follows semantic versioning for public NuGet packages. Release cand
 - One-pass structural type discovery with typed stage metrics, bounded startup-work scheduling, optional performance budgets, and causal blocking diagnostics.
 - Automatic bounded catalogs for every public module-option property, with attribute or host-policy sensitivity marking and Development-only sensitive-value reveal.
 - Immutable `MonicaConfigurationInputPlan` declarations that share one store composition, section-path convention, and ordered managed JSON sources across bootstrap configuration, startup option loading, and runtime module composition.
+- A read-only `IConfigurationEffectiveValueReader` contract for point-in-time startup access to effective documents.
 
 ### Changed
 
 - Module composition now uses host-bound `ModuleRegistration<TModule, TOptions>` extensions, option-free `Describe(ModuleDescriptor)` graph declarations, startup-frozen options, and `DeclareTypeDiscovery(...)` plans.
 - Module identity, dependency ordering, option access, web capability, host requirements, and diagnostics are derived from the compiled host-owned module graph.
-- Startup effective-options loading now uses `BuildBootstrapConfiguration(...)` and `EnsureEffectiveOptionsSnapshot[Async](...)`, while `AddConfiguration(inputPlan)` applies the same immutable inputs to the runtime module graph.
+- Startup effective-options loading now uses `BuildBootstrapConfiguration(...)` and `LoadEffectiveOptionsSnapshot[Async](...)`. Loading performs one read-only batch observation and keeps persistent seeding exclusively in runtime activation, while `AddConfiguration(inputPlan)` applies the same immutable inputs to the runtime module graph.
 
 ### Removed
 

@@ -20,7 +20,7 @@ namespace Monica.Configuration.Bootstrap;
 public static class MonicaConfigurationInputPlanEfCoreBuilderExtensions
 {
     /// <summary>
-    /// Selects the EF Core store bundle for both startup effective-options loading and runtime configuration.
+    /// Selects the EF Core store bundle for read-only startup effective-options loading and runtime configuration.
     /// </summary>
     /// <param name="builder">The input-plan declaration builder.</param>
     /// <param name="configureDbContext">Configures the shared database provider and connection.</param>
@@ -28,7 +28,7 @@ public static class MonicaConfigurationInputPlanEfCoreBuilderExtensions
     /// <remarks>
     /// The callback may be invoked independently for startup and runtime contexts. It must be deterministic and
     /// side-effect-free; captured values must be initialized before the first store operation and remain stable across
-    /// both phases. Startup loading runs in an isolated service provider. The host must apply
+    /// both phases. Startup loading runs through a read-only reader in an isolated service provider. The host must apply
     /// <see cref="ConfigurationDbContext"/> migrations before startup loading; this declaration never creates or upgrades
     /// database tables.
     /// </remarks>
@@ -56,21 +56,20 @@ public static class MonicaConfigurationInputPlanEfCoreBuilderExtensions
                 .UseDbContext((_, options) => configureDbContext(options));
         }
 
-        public IConfigurationEffectiveValueStore CreateStartupStore()
+        public IConfigurationEffectiveValueReader CreateStartupReader()
         {
-            return DatabaseEffectiveOptionsSnapshotStoreFactory.Create(configureDbContext);
+            return DatabaseEffectiveOptionsSnapshotReaderFactory.Create(configureDbContext);
         }
     }
 }
 
-internal static class DatabaseEffectiveOptionsSnapshotStoreFactory
+internal static class DatabaseEffectiveOptionsSnapshotReaderFactory
 {
-    public static IConfigurationEffectiveValueStore Create(
+    public static IConfigurationEffectiveValueReader Create(
         Action<DbContextOptionsBuilder> configureDbContext)
     {
         var services = new ServiceCollection();
         services.AddLogging();
-        services.AddOptions();
         services.AddOptions<ModuleRepositoryOption>();
         services.AddScoped<ICachedServiceProvider, CachedServiceProvider>();
         services.AddSingleton<IAuditPropertySetter, NoOpAuditPropertySetter>();
@@ -83,7 +82,7 @@ internal static class DatabaseEffectiveOptionsSnapshotStoreFactory
         var serviceProvider = services.BuildServiceProvider();
         try
         {
-            return new OwnedConfigurationEffectiveValueStore(
+            return new OwnedConfigurationEffectiveValueReader(
                 serviceProvider,
                 serviceProvider.GetRequiredService<DatabaseConfigurationEffectiveValueStore>());
         }
@@ -94,23 +93,12 @@ internal static class DatabaseEffectiveOptionsSnapshotStoreFactory
         }
     }
 
-    private sealed class OwnedConfigurationEffectiveValueStore(
+    private sealed class OwnedConfigurationEffectiveValueReader(
         ServiceProvider serviceProvider,
-        IConfigurationEffectiveValueStore inner)
-        : IConfigurationEffectiveValueStore, IDisposable, IAsyncDisposable
+        IConfigurationEffectiveValueReader inner)
+        : IConfigurationEffectiveValueReader, IDisposable, IAsyncDisposable
     {
         public ConfigurationStoreDescriptor Descriptor => inner.Descriptor;
-
-        public Task<ConfigurationEffectiveValueDocument> EnsureCreatedAsync(
-            ConfigurationDefinition definition,
-            string seedJson,
-            CancellationToken cancellationToken) =>
-            inner.EnsureCreatedAsync(definition, seedJson, cancellationToken);
-
-        public Task<IReadOnlyList<ConfigurationEffectiveValueDocument>> EnsureCreatedAsync(
-            IReadOnlyList<ConfigurationEffectiveValueSeed> seeds,
-            CancellationToken cancellationToken) =>
-            inner.EnsureCreatedAsync(seeds, cancellationToken);
 
         public Task<ConfigurationEffectiveValueDocument?> GetAsync(
             string definitionKey,
@@ -121,11 +109,6 @@ internal static class DatabaseEffectiveOptionsSnapshotStoreFactory
             IReadOnlyList<string> definitionKeys,
             CancellationToken cancellationToken) =>
             inner.GetManyAsync(definitionKeys, cancellationToken);
-
-        public Task<ConfigurationEffectiveValueDocument> SaveAsync(
-            ConfigurationEffectiveValueSaveRequest request,
-            CancellationToken cancellationToken) =>
-            inner.SaveAsync(request, cancellationToken);
 
         public void Dispose() => serviceProvider.Dispose();
 

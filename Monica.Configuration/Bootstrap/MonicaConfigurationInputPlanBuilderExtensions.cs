@@ -14,7 +14,7 @@ namespace Monica.Configuration.Bootstrap;
 public static class MonicaConfigurationInputPlanBuilderExtensions
 {
     /// <summary>
-    /// Selects the file-backed store bundle for both startup effective-options loading and runtime configuration.
+    /// Selects the file-backed store bundle for read-only startup effective-options loading and runtime configuration.
     /// </summary>
     /// <param name="builder">The input-plan declaration builder.</param>
     /// <param name="configure">Optional file-store configuration.</param>
@@ -62,7 +62,7 @@ public static class MonicaConfigurationInputPlanBuilderExtensions
             });
         }
 
-        public IConfigurationEffectiveValueStore CreateStartupStore()
+        public IConfigurationEffectiveValueReader CreateStartupReader()
         {
             return CreateStore(rootDirectory);
         }

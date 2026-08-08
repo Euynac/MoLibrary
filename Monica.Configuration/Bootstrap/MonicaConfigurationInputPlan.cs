@@ -62,8 +62,8 @@ public sealed class MonicaConfigurationInputPlan
     /// <param name="hostBuilder">The host builder that supplies the base configuration and content root.</param>
     /// <returns>A caller-owned configuration root.</returns>
     /// <remarks>
-    /// Later managed JSON declarations have higher priority. The returned root owns any reload registrations it creates
-    /// and should be disposed after bootstrap and effective-options loading complete.
+    /// Later managed JSON declarations have higher priority. Managed JSON files are not watched by this short-lived
+    /// bootstrap root. The caller should dispose the returned root after bootstrap and effective-options loading complete.
     /// </remarks>
     public MonicaBootstrapConfiguration BuildBootstrapConfiguration(IHostApplicationBuilder hostBuilder)
     {
@@ -80,18 +80,22 @@ public sealed class MonicaConfigurationInputPlan
     }
 
     /// <summary>
-    /// Ensures and loads several effective options types in one synchronous operation.
+    /// Loads several effective options types as one synchronous point-in-time startup snapshot.
     /// </summary>
     /// <param name="bootstrapConfiguration">The bootstrap configuration created by this plan.</param>
-    /// <param name="optionsTypes">The annotated options types to ensure and load.</param>
+    /// <param name="optionsTypes">The annotated options types to load.</param>
     /// <param name="configure">Optional startup diagnostics configuration.</param>
     /// <param name="logger">Optional startup diagnostic logger.</param>
     /// <returns>The loaded effective-options snapshot.</returns>
     /// <remarks>
-    /// This operation may create missing effective-value documents. It disposes the isolated startup store before
-    /// returning. Use <see cref="EnsureEffectiveOptionsSnapshotAsync"/> when the surrounding startup flow is asynchronous.
+    /// This operation never publishes definitions or writes effective values. Missing documents use transient in-memory
+    /// seeds. The returned values may differ from later runtime configuration if the store changes or runtime activation
+    /// persists a different seed. Topology-driving settings should declare
+    /// <see cref="ConfigurationReloadBehavior.StaticAfterStartup"/> or
+    /// <see cref="ConfigurationReloadBehavior.RequiresRestart"/> as appropriate. The isolated startup reader is disposed
+    /// before returning. Use <see cref="LoadEffectiveOptionsSnapshotAsync"/> when the surrounding startup flow is asynchronous.
     /// </remarks>
-    public MonicaEffectiveOptionsSnapshot EnsureEffectiveOptionsSnapshot(
+    public MonicaEffectiveOptionsSnapshot LoadEffectiveOptionsSnapshot(
         MonicaBootstrapConfiguration bootstrapConfiguration,
         IReadOnlyCollection<Type> optionsTypes,
         Action<MonicaEffectiveOptionsSnapshotOptions>? configure = null,
@@ -107,19 +111,23 @@ public sealed class MonicaConfigurationInputPlan
     }
 
     /// <summary>
-    /// Ensures and loads several effective options types in one asynchronous operation.
+    /// Loads several effective options types as one asynchronous point-in-time startup snapshot.
     /// </summary>
     /// <param name="bootstrapConfiguration">The bootstrap configuration created by this plan.</param>
-    /// <param name="optionsTypes">The annotated options types to ensure and load.</param>
+    /// <param name="optionsTypes">The annotated options types to load.</param>
     /// <param name="configure">Optional startup diagnostics configuration.</param>
     /// <param name="logger">Optional startup diagnostic logger.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>The loaded effective-options snapshot.</returns>
     /// <remarks>
-    /// This operation may create missing effective-value documents. It asynchronously disposes the isolated startup
-    /// store on success, cancellation, or failure.
+    /// This operation never publishes definitions or writes effective values. Missing documents use transient in-memory
+    /// seeds. The returned values may differ from later runtime configuration if the store changes or runtime activation
+    /// persists a different seed. Topology-driving settings should declare
+    /// <see cref="ConfigurationReloadBehavior.StaticAfterStartup"/> or
+    /// <see cref="ConfigurationReloadBehavior.RequiresRestart"/> as appropriate. The isolated startup reader is
+    /// asynchronously disposed on success, cancellation, or failure.
     /// </remarks>
-    public async Task<MonicaEffectiveOptionsSnapshot> EnsureEffectiveOptionsSnapshotAsync(
+    public async Task<MonicaEffectiveOptionsSnapshot> LoadEffectiveOptionsSnapshotAsync(
         MonicaBootstrapConfiguration bootstrapConfiguration,
         IReadOnlyCollection<Type> optionsTypes,
         Action<MonicaEffectiveOptionsSnapshotOptions>? configure = null,
@@ -163,9 +171,9 @@ public sealed class MonicaConfigurationInputPlan
     {
         var options = new MonicaEffectiveOptionsSnapshotOptions();
         configure?.Invoke(options);
-        var store = _storeComposition.CreateStartupStore()
+        var reader = _storeComposition.CreateStartupReader()
             ?? throw new InvalidOperationException(
-                $"Configuration store composition '{_storeComposition.Name}' returned no startup store.");
+                $"Configuration store composition '{_storeComposition.Name}' returned no startup reader.");
 
         try
         {
@@ -173,13 +181,13 @@ public sealed class MonicaConfigurationInputPlan
                 bootstrapConfiguration,
                 SectionPathConvention,
                 options,
-                store,
+                reader,
                 _managedJsonSources,
                 logger ?? NullLogger.Instance);
         }
         catch
         {
-            DisposeStore(store);
+            DisposeReader(reader);
             throw;
         }
     }
@@ -199,7 +207,7 @@ public sealed class MonicaConfigurationInputPlan
     {
         foreach (var source in _managedJsonSources)
         {
-            builder.AddJsonFile(source.Path, source.Optional, source.ReloadOnChange);
+            builder.AddJsonFile(source.Path, source.Optional, reloadOnChange: false);
         }
     }
 
@@ -216,15 +224,15 @@ public sealed class MonicaConfigurationInputPlan
         }
     }
 
-    private static void DisposeStore(IConfigurationEffectiveValueStore store)
+    private static void DisposeReader(IConfigurationEffectiveValueReader reader)
     {
-        if (store is IDisposable disposable)
+        if (reader is IDisposable disposable)
         {
             disposable.Dispose();
             return;
         }
 
-        if (store is IAsyncDisposable asyncDisposable)
+        if (reader is IAsyncDisposable asyncDisposable)
         {
             asyncDisposable.DisposeAsync().AsTask().GetAwaiter().GetResult();
         }

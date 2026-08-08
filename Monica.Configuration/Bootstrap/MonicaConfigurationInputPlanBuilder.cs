@@ -95,7 +95,10 @@ public sealed class MonicaConfigurationInputPlanBuilder
     /// </summary>
     /// <param name="path">The JSON file path resolved from the host content root.</param>
     /// <param name="optional">Whether the file may be absent.</param>
-    /// <param name="reloadOnChange">Whether Microsoft configuration watches the file for changes.</param>
+    /// <param name="reloadOnChange">
+    /// Whether the runtime Microsoft configuration provider watches the file for changes. Short-lived bootstrap and
+    /// startup-snapshot providers never watch managed JSON files.
+    /// </param>
     /// <param name="configure">Optional operator-facing source metadata configuration.</param>
     /// <returns>This declaration builder.</returns>
     public MonicaConfigurationInputPlanBuilder AddManagedJsonFile(

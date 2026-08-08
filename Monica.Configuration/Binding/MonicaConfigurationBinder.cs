@@ -42,7 +42,6 @@ internal static class MonicaConfigurationBinder
 
         var services = optionsBuilder.Services;
         var name = optionsBuilder.Name;
-        services.AddOptions();
         services.AddSingleton<IOptionsChangeTokenSource<TOptions>>(
             new ConfigurationChangeTokenSource<TOptions>(name, configuration));
         services.AddSingleton<IConfigureOptions<TOptions>>(

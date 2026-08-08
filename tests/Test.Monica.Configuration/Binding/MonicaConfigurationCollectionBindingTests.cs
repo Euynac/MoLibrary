@@ -97,6 +97,27 @@ public class MonicaConfigurationCollectionBindingTests
         options.Items.Should().Equal("configured");
     }
 
+    [Fact]
+    public void RuntimeOptionsBinding_WhenConfigurationReloads_ShouldRefreshOptionsMonitor()
+    {
+        var builder = Host.CreateApplicationBuilder();
+        builder.Configuration.AddInMemoryCollection(new Dictionary<string, string?>
+        {
+            ["Runtime:Items:0"] = "initial"
+        });
+        MonicaConfigurationBinder.BindOptions(
+            builder.Services.AddOptions<RuntimeOptions>(),
+            builder.Configuration.GetSection("Runtime"));
+        using var serviceProvider = builder.Services.BuildServiceProvider();
+        var monitor = serviceProvider.GetRequiredService<IOptionsMonitor<RuntimeOptions>>();
+
+        monitor.CurrentValue.Items.Should().Equal("initial");
+        builder.Configuration["Runtime:Items:0"] = "updated";
+        ((IConfigurationRoot)builder.Configuration).Reload();
+
+        monitor.CurrentValue.Items.Should().Equal("updated");
+    }
+
     private static IConfiguration BuildConfiguration(Dictionary<string, string?> values)
     {
         return new ConfigurationBuilder()

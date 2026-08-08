@@ -29,8 +29,8 @@ public sealed class ModuleConfigurationCompositionWorkTests
         var inputPlan = MonicaConfigurationInputPlan.Create(inputs => inputs
             .UseFileConfigurationStore(options =>
                 options.RootDirectory = Path.Combine(Path.GetTempPath(), $"monica-input-plan-{Guid.NewGuid():N}"))
-            .AddManagedJsonFile(firstPath, optional: true, reloadOnChange: false)
-            .AddManagedJsonFile(secondPath, optional: true, reloadOnChange: false));
+            .AddManagedJsonFile(firstPath, optional: true, reloadOnChange: true)
+            .AddManagedJsonFile(secondPath, optional: true, reloadOnChange: true));
         var builder = Host.CreateApplicationBuilder();
 
         builder.AddMonica(monica =>
@@ -38,6 +38,7 @@ public sealed class ModuleConfigurationCompositionWorkTests
             monica.ConfigureTypeDiscovery(static options => options.ExcludeDefault());
             monica.AddConfiguration(inputPlan);
         });
+        using var host = builder.Build();
 
         var providers = ((IConfigurationRoot)builder.Configuration).Providers.ToList();
         var effectiveValueProviderIndex = providers.FindIndex(static provider =>
@@ -54,6 +55,9 @@ public sealed class ModuleConfigurationCompositionWorkTests
         firstManagedJsonProviderIndex.Should().BeGreaterThan(effectiveValueProviderIndex);
         secondManagedJsonProviderIndex.Should().BeGreaterThan(firstManagedJsonProviderIndex);
         managedSources.Select(static source => source.Path).Should().Equal(firstPath, secondPath);
+        providers.OfType<JsonConfigurationProvider>()
+            .Where(provider => provider.Source.Path == firstPath || provider.Source.Path == secondPath)
+            .Should().AllSatisfy(static provider => provider.Source.ReloadOnChange.Should().BeTrue());
     }
 
     [Fact]

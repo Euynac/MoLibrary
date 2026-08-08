@@ -8,7 +8,7 @@ namespace Monica.Configuration.Bootstrap;
 /// <see cref="MonicaConfigurationInputPlan"/>.
 /// </summary>
 /// <remarks>
-/// Dispose this root after startup snapshot loading completes to release file watchers and chained-provider
+/// Dispose this root after startup snapshot loading completes to release its providers and chained-provider
 /// registrations. Disposing it does not dispose the host's configuration root.
 /// </remarks>
 public sealed class MonicaBootstrapConfiguration : IConfigurationRoot, IDisposable

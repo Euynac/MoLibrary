@@ -1,8 +1,12 @@
 namespace Monica.Configuration.Bootstrap;
 
 /// <summary>
-/// Contains a startup snapshot of options loaded from Monica effective values.
+/// Contains a point-in-time startup snapshot of options loaded from Monica effective values.
 /// </summary>
+/// <remarks>
+/// Loading this snapshot does not publish definitions or persist missing effective values. Later runtime configuration
+/// can differ when the store changes or runtime activation persists a seed.
+/// </remarks>
 public sealed class MonicaEffectiveOptionsSnapshot
 {
     private readonly IReadOnlyDictionary<Type, object> _optionsByType;

@@ -12,7 +12,7 @@ namespace Monica.Configuration.Bootstrap;
 
 internal sealed class MonicaEffectiveOptionsSnapshotLoader : IDisposable, IAsyncDisposable
 {
-    private readonly IConfigurationEffectiveValueStore _store;
+    private readonly IConfigurationEffectiveValueReader _reader;
     private readonly IConfiguration _hostConfiguration;
     private readonly string _contentRootPath;
     private readonly IReadOnlyList<ManagedJsonConfigurationSourceRegistration> _managedJsonSources;
@@ -27,17 +27,17 @@ internal sealed class MonicaEffectiveOptionsSnapshotLoader : IDisposable, IAsync
         MonicaBootstrapConfiguration bootstrapConfiguration,
         ConfigurationSectionPathConvention sectionPathConvention,
         MonicaEffectiveOptionsSnapshotOptions options,
-        IConfigurationEffectiveValueStore store,
+        IConfigurationEffectiveValueReader reader,
         IReadOnlyList<ManagedJsonConfigurationSourceRegistration> managedJsonSources,
         ILogger logger)
     {
         ArgumentNullException.ThrowIfNull(bootstrapConfiguration);
         ArgumentNullException.ThrowIfNull(options);
-        ArgumentNullException.ThrowIfNull(store);
+        ArgumentNullException.ThrowIfNull(reader);
         ArgumentNullException.ThrowIfNull(managedJsonSources);
         ArgumentNullException.ThrowIfNull(logger);
 
-        _store = store;
+        _reader = reader;
         _hostConfiguration = bootstrapConfiguration.HostConfiguration;
         _contentRootPath = bootstrapConfiguration.ContentRootPath;
         _managedJsonSources = managedJsonSources.ToArray();
@@ -80,11 +80,11 @@ internal sealed class MonicaEffectiveOptionsSnapshotLoader : IDisposable, IAsync
         }
 
         _disposed = true;
-        if (_store is IDisposable disposable)
+        if (_reader is IDisposable disposable)
         {
             disposable.Dispose();
         }
-        else if (_store is IAsyncDisposable asyncDisposable)
+        else if (_reader is IAsyncDisposable asyncDisposable)
         {
             asyncDisposable.DisposeAsync().AsTask().GetAwaiter().GetResult();
         }
@@ -98,11 +98,11 @@ internal sealed class MonicaEffectiveOptionsSnapshotLoader : IDisposable, IAsync
         }
 
         _disposed = true;
-        if (_store is IAsyncDisposable asyncDisposable)
+        if (_reader is IAsyncDisposable asyncDisposable)
         {
             await asyncDisposable.DisposeAsync();
         }
-        else if (_store is IDisposable disposable)
+        else if (_reader is IDisposable disposable)
         {
             disposable.Dispose();
         }
@@ -134,25 +134,23 @@ internal sealed class MonicaEffectiveOptionsSnapshotLoader : IDisposable, IAsync
             .Select(ScanOptionsType)
             .ToArray();
 
-        var seeds = definitions
-            .Select(definition => new ConfigurationEffectiveValueSeed(
-                definition,
-                () => _seedFactory.CreateSeedJson(definition)))
+        var definitionKeys = definitions
+            .Select(static definition => definition.DefinitionKey)
             .ToArray();
 
         if (_options.Debugging)
         {
             _logger.LogInformation(
                 "Reading {OptionsCount} Monica effective options from store '{StoreKey}'.",
-                seeds.Length,
-                _store.Descriptor.StoreKey);
+                definitionKeys.Length,
+                _reader.Descriptor.StoreKey);
         }
 
-        var documents = await _store.EnsureCreatedAsync(seeds, cancellationToken);
+        var documents = await _reader.GetManyAsync(definitionKeys, cancellationToken);
         if (documents.Count != definitions.Length)
         {
             throw new InvalidOperationException(
-                $"The Monica effective-value store returned {documents.Count} documents for {definitions.Length} requested definitions.");
+                $"The Monica effective-value reader returned {documents.Count} documents for {definitions.Length} requested definitions.");
         }
 
         var monicaValues = ProjectDocuments(definitions, documents);
@@ -198,22 +196,24 @@ internal sealed class MonicaEffectiveOptionsSnapshotLoader : IDisposable, IAsync
 
     private Dictionary<string, string?> ProjectDocuments(
         IReadOnlyList<ConfigurationDefinition> definitions,
-        IReadOnlyList<ConfigurationEffectiveValueDocument> documents)
+        IReadOnlyList<ConfigurationEffectiveValueDocument?> documents)
     {
         var values = new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase);
         for (var i = 0; i < definitions.Count; i++)
         {
             var definition = definitions[i];
             var document = documents[i];
-            if (!string.Equals(definition.DefinitionKey, document.DefinitionKey, StringComparison.OrdinalIgnoreCase))
+            if (document is not null
+                && !string.Equals(definition.DefinitionKey, document.DefinitionKey, StringComparison.OrdinalIgnoreCase))
             {
                 throw new InvalidOperationException(
-                    $"The Monica effective-value store returned document '{document.DefinitionKey}' for requested definition '{definition.DefinitionKey}'.");
+                    $"The Monica effective-value reader returned document '{document.DefinitionKey}' for requested definition '{definition.DefinitionKey}'.");
             }
 
             try
             {
-                foreach (var (key, value) in _documentEditor.Project(definition, document.Json))
+                var json = document?.Json ?? _seedFactory.CreateSeedJson(definition);
+                foreach (var (key, value) in _documentEditor.Project(definition, json))
                 {
                     values[key] = value;
                 }
@@ -242,7 +242,7 @@ internal sealed class MonicaEffectiveOptionsSnapshotLoader : IDisposable, IAsync
 
         foreach (var source in _managedJsonSources)
         {
-            builder.AddJsonFile(source.Path, source.Optional, source.ReloadOnChange);
+            builder.AddJsonFile(source.Path, source.Optional, reloadOnChange: false);
         }
 
         return builder.Build();

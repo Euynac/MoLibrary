@@ -141,6 +141,8 @@ public sealed class ModuleConfiguration : MonicaModule<ModuleConfigurationOption
 
         _services = services;
         services.TryAddSingleton<IConfigurationDefinitionRegistry>(_definitionRegistry);
+        services.TryAddSingleton<IConfigurationEffectiveValueReader>(serviceProvider =>
+            serviceProvider.GetRequiredService<IConfigurationEffectiveValueStore>());
         services.TryAddSingleton<ConfigurationDefinitionResolver>();
         services.TryAddSingleton<ConfigurationEffectiveStateReader>();
         services.TryAddSingleton<IConfigurationStoreStateTracker, ConfigurationStoreStateTracker>();
