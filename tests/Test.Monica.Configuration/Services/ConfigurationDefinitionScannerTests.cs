@@ -108,9 +108,126 @@ public class ConfigurationDefinitionScannerTests
             .WithMessage("*must be a public scalar property*");
     }
 
+    [Fact]
+    public void Scan_WhenTypeDirectlyReferencesItself_ShouldReportTypeChainAndLogicalPath()
+    {
+        var scanner = CreateScanner();
+
+        var act = () => scanner.Scan(typeof(DirectRecursiveOptions));
+
+        var exception = act.Should().Throw<InvalidOperationException>().Which;
+        exception.Message.Should().Contain("Recursive configuration schema detected");
+        exception.Message.Should().Contain("logical path 'Next'");
+        exception.Message.Should().Contain(typeof(DirectRecursiveOptions).FullName!);
+    }
+
+    [Fact]
+    public void Scan_WhenTypesMutuallyReferenceEachOther_ShouldReportCycle()
+    {
+        var scanner = CreateScanner();
+
+        var act = () => scanner.Scan(typeof(MutualRecursiveOptions));
+
+        var exception = act.Should().Throw<InvalidOperationException>().Which;
+        exception.Message.Should().Contain("logical path 'First.Second.First'");
+        exception.Message.Should().Contain(typeof(MutualFirst).FullName!);
+        exception.Message.Should().Contain(typeof(MutualSecond).FullName!);
+    }
+
+    [Fact]
+    public void Scan_WhenListItemReferencesActiveAncestor_ShouldReportCycle()
+    {
+        var scanner = CreateScanner();
+
+        var act = () => scanner.Scan(typeof(ListRecursiveOptions));
+
+        act.Should().Throw<InvalidOperationException>()
+            .WithMessage("*logical path 'Items[#*]'*")
+            .WithMessage($"*{typeof(ListRecursiveOptions).FullName}*");
+    }
+
+    [Fact]
+    public void Scan_WhenDictionaryValueReferencesActiveAncestor_ShouldReportCycle()
+    {
+        var scanner = CreateScanner();
+
+        var act = () => scanner.Scan(typeof(DictionaryRecursiveOptions));
+
+        act.Should().Throw<InvalidOperationException>()
+            .WithMessage("*logical path 'Entries[$*]'*")
+            .WithMessage($"*{typeof(DictionaryRecursiveOptions).FullName}*");
+    }
+
+    [Fact]
+    public void Scan_WhenNullablePropertyReferencesActiveAncestor_ShouldReportCycle()
+    {
+        var scanner = CreateScanner();
+
+        var act = () => scanner.Scan(typeof(NullableRecursiveOptions));
+
+        act.Should().Throw<InvalidOperationException>()
+            .WithMessage("*logical path 'Next'*")
+            .WithMessage($"*{typeof(NullableRecursiveOptions).FullName}*");
+    }
+
+    [Fact]
+    public void Scan_WhenTypeIsReusedBySiblingBranches_ShouldBuildBothBranches()
+    {
+        var scanner = CreateScanner();
+
+        var definition = scanner.Scan(typeof(SiblingReuseOptions));
+
+        definition.Root.Children.Should().HaveCount(2);
+        definition.Root.Children.Should().AllSatisfy(
+            child => child.Children.Should().ContainSingle(node => node.Name == nameof(ReusableBranch.Value)));
+    }
+
+    [Fact]
+    public void Scan_WhenDeepestNodeIsAtLogicalDepthLimit_ShouldSucceed()
+    {
+        var scanner = CreateScanner();
+
+        var definition = scanner.Scan(CreateDepthOptionsType(64));
+
+        GetDeepestSingleChild(definition.Root).RelativePath.Depth.Should().Be(64);
+    }
+
+    [Fact]
+    public void Scan_WhenDeepestNodeExceedsLogicalDepthLimit_ShouldThrowInvalidOperationException()
+    {
+        var scanner = CreateScanner();
+
+        var act = () => scanner.Scan(CreateDepthOptionsType(65));
+
+        act.Should().Throw<InvalidOperationException>()
+            .WithMessage("*maximum logical depth of 64*")
+            .WithMessage("*CLR type chain:*");
+    }
+
     private static ConfigurationDefinitionScanner CreateScanner()
     {
         return new ConfigurationDefinitionScanner(new ConfigurationSchemaHasher());
+    }
+
+    private static Type CreateDepthOptionsType(int deepestLogicalDepth)
+    {
+        var nodeType = typeof(string);
+        for (var depth = 1; depth < deepestLogicalDepth; depth++)
+        {
+            nodeType = typeof(DepthNode<>).MakeGenericType(nodeType);
+        }
+
+        return typeof(DepthOptions<>).MakeGenericType(nodeType);
+    }
+
+    private static ConfigurationNodeDefinition GetDeepestSingleChild(ConfigurationNodeDefinition node)
+    {
+        while (node.Children.Count == 1)
+        {
+            node = node.Children[0];
+        }
+
+        return node;
     }
 
     [Configuration("Sample:App", DefinitionKey = "test.sample", DisplayName = "Sample Options")]
@@ -176,5 +293,69 @@ public class ConfigurationDefinitionScannerTests
     private sealed class NestedKeyOptions
     {
         public string Value { get; set; } = "";
+    }
+
+    [Configuration("Sample:DirectRecursive")]
+    private sealed class DirectRecursiveOptions
+    {
+        public DirectRecursiveOptions Next { get; set; } = null!;
+    }
+
+    [Configuration("Sample:MutualRecursive")]
+    private sealed class MutualRecursiveOptions
+    {
+        public MutualFirst First { get; set; } = null!;
+    }
+
+    private sealed class MutualFirst
+    {
+        public MutualSecond Second { get; set; } = null!;
+    }
+
+    private sealed class MutualSecond
+    {
+        public MutualFirst First { get; set; } = null!;
+    }
+
+    [Configuration("Sample:ListRecursive")]
+    private sealed class ListRecursiveOptions
+    {
+        public List<ListRecursiveOptions> Items { get; set; } = [];
+    }
+
+    [Configuration("Sample:DictionaryRecursive")]
+    private sealed class DictionaryRecursiveOptions
+    {
+        public Dictionary<string, DictionaryRecursiveOptions> Entries { get; set; } = [];
+    }
+
+    [Configuration("Sample:NullableRecursive")]
+    private sealed class NullableRecursiveOptions
+    {
+        public NullableRecursiveOptions? Next { get; set; }
+    }
+
+    [Configuration("Sample:SiblingReuse")]
+    private sealed class SiblingReuseOptions
+    {
+        public ReusableBranch Left { get; set; } = new();
+
+        public ReusableBranch Right { get; set; } = new();
+    }
+
+    private sealed class ReusableBranch
+    {
+        public string Value { get; set; } = "";
+    }
+
+    [Configuration("Sample:Depth")]
+    private sealed class DepthOptions<T>
+    {
+        public T Value { get; set; } = default!;
+    }
+
+    private sealed class DepthNode<T>
+    {
+        public T Value { get; set; } = default!;
     }
 }

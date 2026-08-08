@@ -16,7 +16,8 @@ public static class ConfigurationPersistedJsonOptions
         new JsonSerializerOptions
         {
             Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
-            DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingDefault
+            DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingDefault,
+            MaxDepth = ConfigurationSchemaLimits.MAX_PERSISTED_JSON_DEPTH
         });
 
     /// <summary>

@@ -13,8 +13,6 @@ namespace Monica.Configuration.Serialization;
 /// </summary>
 public static class ConfigurationDefinitionSchemaCodec
 {
-    private const int MAX_SCHEMA_DEPTH = 128;
-
     /// <summary>
     /// Serializes the definition schema with exact scalar and dictionary-key CLR identities while omitting runtime-only paths.
     /// </summary>
@@ -22,7 +20,7 @@ public static class ConfigurationDefinitionSchemaCodec
     /// <returns>The compact schema JSON.</returns>
     public static string SerializeSchema(ConfigurationDefinition definition)
     {
-        return JsonSerializer.Serialize(ToNodeDto(definition.Root), ConfigurationPersistedJsonOptions.CompactSchema);
+        return JsonSerializer.Serialize(ToNodeDto(definition.Root, 0), ConfigurationPersistedJsonOptions.CompactSchema);
     }
 
     /// <summary>
@@ -38,7 +36,7 @@ public static class ConfigurationDefinitionSchemaCodec
         {
             DefinitionKey = definitionKey.ToUpperInvariant(),
             SectionPath = sectionPath,
-            Root = ToNodeDto(root)
+            Root = ToNodeDto(root, 0)
         };
         return JsonSerializer.Serialize(input, ConfigurationPersistedJsonOptions.CompactSchema);
     }
@@ -137,8 +135,9 @@ public static class ConfigurationDefinitionSchemaCodec
         return assemblySeparator >= 0 ? clrTypeName[..assemblySeparator].Trim() : clrTypeName.Trim();
     }
 
-    private static NodeDto ToNodeDto(ConfigurationNodeDefinition node)
+    private static NodeDto ToNodeDto(ConfigurationNodeDefinition node, int depth)
     {
+        EnsureSerializableDepth(node, depth);
         var canonicalPath = node.RelativePath.ToCanonicalString();
         return new NodeDto
         {
@@ -153,9 +152,11 @@ public static class ConfigurationDefinitionSchemaCodec
             IsSensitive = node.IsSensitive,
             TextSemantic = node.IsRegexPatternText ? node.TextSemantic : null,
             ReloadBehavior = node.ReloadBehavior,
-            DictionaryTemplate = node.DictionaryTemplate is null ? null : ToDictionaryDto(node.DictionaryTemplate),
-            ListTemplate = node.ListTemplate is null ? null : ToListDto(node.ListTemplate),
-            Children = node.Children.Count == 0 ? null : node.Children.Select(ToNodeDto).ToArray(),
+            DictionaryTemplate = node.DictionaryTemplate is null ? null : ToDictionaryDto(node.DictionaryTemplate, depth),
+            ListTemplate = node.ListTemplate is null ? null : ToListDto(node.ListTemplate, depth),
+            Children = node.Children.Count == 0
+                ? null
+                : node.Children.Select(child => ToNodeDto(child, depth + 1)).ToArray(),
             ValidationRules = node.ValidationRules.Count == 0 ? null : node.ValidationRules.Select(ToRuleDto).ToArray(),
             EnumValues = node.EnumValues.Count == 0 ? null : node.EnumValues.Select(ToEnumValueDto).ToArray()
         };
@@ -170,7 +171,7 @@ public static class ConfigurationDefinitionSchemaCodec
         };
     }
 
-    private static DictionaryTemplateDto ToDictionaryDto(ConfigurationDictionaryTemplate template)
+    private static DictionaryTemplateDto ToDictionaryDto(ConfigurationDictionaryTemplate template, int depth)
     {
         return new DictionaryTemplateDto
         {
@@ -178,18 +179,31 @@ public static class ConfigurationDefinitionSchemaCodec
             KeyClrTypeName = template.KeyClrTypeName,
             KeyRegexPattern = NormalizeRegexPatternOrNull(template.KeyRegexPattern),
             DisallowColonInKey = template.DisallowColonInKey ? null : false,
-            ValueTemplate = ToNodeDto(template.ValueTemplate)
+            ValueTemplate = ToNodeDto(template.ValueTemplate, depth + 1)
         };
     }
 
-    private static ListTemplateDto ToListDto(ConfigurationListTemplate template)
+    private static ListTemplateDto ToListDto(ConfigurationListTemplate template, int depth)
     {
         return new ListTemplateDto
         {
             AllowDuplicateItems = template.AllowDuplicateItems,
             ItemKeyPropertyName = NullIfWhiteSpace(template.ItemKeyPropertyName),
-            ItemTemplate = ToNodeDto(template.ItemTemplate)
+            ItemTemplate = ToNodeDto(template.ItemTemplate, depth + 1)
         };
+    }
+
+    private static void EnsureSerializableDepth(ConfigurationNodeDefinition node, int depth)
+    {
+        if (depth <= ConfigurationSchemaLimits.MAX_LOGICAL_DEPTH)
+        {
+            return;
+        }
+
+        var schemaPath = node.RelativePath.ToCanonicalString();
+        throw new InvalidOperationException(
+            $"Configuration schema exceeds the maximum logical depth of "
+            + $"{ConfigurationSchemaLimits.MAX_LOGICAL_DEPTH} at schema path '{schemaPath}'.");
     }
 
     private static RuleDto ToRuleDto(ConfigurationValidationRule rule)
@@ -292,9 +306,12 @@ public static class ConfigurationDefinitionSchemaCodec
 
     private static void ValidateNodeDto(NodeDto dto, LogicalPath path, int depth)
     {
-        if (depth > MAX_SCHEMA_DEPTH)
+        if (depth > ConfigurationSchemaLimits.MAX_LOGICAL_DEPTH)
         {
-            ThrowInvalidSchema($"Persisted configuration schema exceeds the maximum depth of {MAX_SCHEMA_DEPTH}.", path);
+            ThrowInvalidSchema(
+                $"Persisted configuration schema exceeds the maximum logical depth of "
+                + $"{ConfigurationSchemaLimits.MAX_LOGICAL_DEPTH}.",
+                path);
         }
 
         if (string.IsNullOrWhiteSpace(dto.Name))

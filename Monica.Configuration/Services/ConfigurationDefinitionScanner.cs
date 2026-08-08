@@ -29,7 +29,13 @@ internal sealed class ConfigurationDefinitionScanner(
 
         var definitionKey = attribute.DefinitionKey ?? optionsType.FullName ?? optionsType.Name;
         var sectionPath = ConfigurationSectionPathResolver.Resolve(optionsType, attribute, sectionPathConvention);
-        var root = ScanNode(optionsType, optionsType.Name, LogicalPath.Root, sectionPath, attribute.ReloadBehavior);
+        var root = ScanNode(
+            optionsType,
+            optionsType.Name,
+            LogicalPath.Root,
+            sectionPath,
+            attribute.ReloadBehavior,
+            new SchemaTraversalContext());
         var reloadBehavior = attribute.ReloadBehavior == ConfigurationReloadBehavior.Inherit
             ? ConfigurationReloadBehavior.Unknown
             : attribute.ReloadBehavior;
@@ -66,48 +72,61 @@ internal sealed class ConfigurationDefinitionScanner(
         string name,
         LogicalPath path,
         string configurationPath,
-        ConfigurationReloadBehavior inheritedReloadBehavior)
+        ConfigurationReloadBehavior inheritedReloadBehavior,
+        SchemaTraversalContext traversal)
     {
-        var option = type.GetCustomAttribute<OptionSettingAttribute>();
         var nodeKind = GetNodeKind(type);
-        var valueKind = nodeKind == ConfigurationNodeKind.Scalar ? GetValueKind(type) : (ConfigurationValueKind?)null;
-        var children = nodeKind == ConfigurationNodeKind.Object
-            ? ScanObjectChildren(type, path, configurationPath, inheritedReloadBehavior)
-            : [];
-        var textSemantic = ResolveTextSemantic(option, nodeKind, valueKind, type.FullName ?? type.Name);
-
-        return new ConfigurationNodeDefinition
+        var entered = traversal.Enter(type, nodeKind, path);
+        try
         {
-            NodeKey = option?.NodeKey ?? path.ToCanonicalString(),
-            Name = name,
-            DisplayName = option?.DisplayName,
-            Description = option?.Description,
-            RelativePath = path,
-            ConfigurationPath = configurationPath,
-            ClrTypeName = type.AssemblyQualifiedName ?? type.FullName ?? type.Name,
-            NodeKind = nodeKind,
-            ValueKind = valueKind,
-            IsNullable = IsNullable(type),
-            IsSensitive = option?.IsSensitive is true,
-            TextSemantic = textSemantic,
-            ReloadBehavior = ResolveReloadBehavior(option),
-            DictionaryTemplate = nodeKind == ConfigurationNodeKind.Dictionary
-                ? BuildDictionaryTemplate(type, path, configurationPath, inheritedReloadBehavior)
-                : null,
-            ListTemplate = nodeKind == ConfigurationNodeKind.List
-                ? BuildListTemplate(type, path, configurationPath, inheritedReloadBehavior, option)
-                : null,
-            Children = children,
-            ValidationRules = GetValidationRules(type, type.GetCustomAttributes<ValidationAttribute>()),
-            EnumValues = GetEnumValues(type)
-        };
+            var option = type.GetCustomAttribute<OptionSettingAttribute>();
+            var valueKind = nodeKind == ConfigurationNodeKind.Scalar ? GetValueKind(type) : (ConfigurationValueKind?)null;
+            var children = nodeKind == ConfigurationNodeKind.Object
+                ? ScanObjectChildren(type, path, configurationPath, inheritedReloadBehavior, traversal)
+                : [];
+            var textSemantic = ResolveTextSemantic(option, nodeKind, valueKind, type.FullName ?? type.Name);
+
+            return new ConfigurationNodeDefinition
+            {
+                NodeKey = option?.NodeKey ?? path.ToCanonicalString(),
+                Name = name,
+                DisplayName = option?.DisplayName,
+                Description = option?.Description,
+                RelativePath = path,
+                ConfigurationPath = configurationPath,
+                ClrTypeName = type.AssemblyQualifiedName ?? type.FullName ?? type.Name,
+                NodeKind = nodeKind,
+                ValueKind = valueKind,
+                IsNullable = IsNullable(type),
+                IsSensitive = option?.IsSensitive is true,
+                TextSemantic = textSemantic,
+                ReloadBehavior = ResolveReloadBehavior(option),
+                DictionaryTemplate = nodeKind == ConfigurationNodeKind.Dictionary
+                    ? BuildDictionaryTemplate(type, path, configurationPath, inheritedReloadBehavior, traversal)
+                    : null,
+                ListTemplate = nodeKind == ConfigurationNodeKind.List
+                    ? BuildListTemplate(type, path, configurationPath, inheritedReloadBehavior, option, traversal)
+                    : null,
+                Children = children,
+                ValidationRules = GetValidationRules(type, type.GetCustomAttributes<ValidationAttribute>()),
+                EnumValues = GetEnumValues(type)
+            };
+        }
+        finally
+        {
+            if (entered)
+            {
+                traversal.Exit(type);
+            }
+        }
     }
 
     private static IReadOnlyList<ConfigurationNodeDefinition> ScanObjectChildren(
         Type type,
         LogicalPath parentPath,
         string parentConfigurationPath,
-        ConfigurationReloadBehavior inheritedReloadBehavior)
+        ConfigurationReloadBehavior inheritedReloadBehavior,
+        SchemaTraversalContext traversal)
     {
         return type.GetProperties(BindingFlags.Instance | BindingFlags.Public)
             .Where(property => property.GetMethod is not null && property.GetIndexParameters().Length == 0)
@@ -120,7 +139,15 @@ internal sealed class ConfigurationDefinitionScanner(
                     : $"{parentConfigurationPath}:{propertyName}";
                 var option = property.GetCustomAttribute<OptionSettingAttribute>();
                 var propertyType = property.PropertyType;
-                return ScanPropertyNode(property, option, propertyType, propertyName, childPath, childConfigurationPath, inheritedReloadBehavior);
+                return ScanPropertyNode(
+                    property,
+                    option,
+                    propertyType,
+                    propertyName,
+                    childPath,
+                    childConfigurationPath,
+                    inheritedReloadBehavior,
+                    traversal);
             })
             .ToArray();
     }
@@ -132,51 +159,64 @@ internal sealed class ConfigurationDefinitionScanner(
         string nodeName,
         LogicalPath path,
         string configurationPath,
-        ConfigurationReloadBehavior inheritedReloadBehavior)
+        ConfigurationReloadBehavior inheritedReloadBehavior,
+        SchemaTraversalContext traversal)
     {
         var nodeKind = GetNodeKind(propertyType);
-        var valueKind = nodeKind == ConfigurationNodeKind.Scalar ? GetValueKind(propertyType) : (ConfigurationValueKind?)null;
-        var children = nodeKind == ConfigurationNodeKind.Object
-            ? ScanObjectChildren(propertyType, path, configurationPath, inheritedReloadBehavior)
-            : [];
-        var textSemantic = ResolveTextSemantic(
-            option,
-            nodeKind,
-            valueKind,
-            $"{property.DeclaringType?.FullName ?? property.DeclaringType?.Name}.{property.Name}");
-
-        return new ConfigurationNodeDefinition
+        var entered = traversal.Enter(propertyType, nodeKind, path);
+        try
         {
-            NodeKey = option?.NodeKey ?? path.ToCanonicalString(),
-            Name = nodeName,
-            DisplayName = option?.DisplayName,
-            Description = option?.Description,
-            RelativePath = path,
-            ConfigurationPath = configurationPath,
-            ClrTypeName = propertyType.AssemblyQualifiedName ?? propertyType.FullName ?? propertyType.Name,
-            NodeKind = nodeKind,
-            ValueKind = valueKind,
-            IsNullable = IsNullable(property),
-            IsSensitive = option?.IsSensitive is true,
-            TextSemantic = textSemantic,
-            ReloadBehavior = ResolveReloadBehavior(option),
-            DictionaryTemplate = nodeKind == ConfigurationNodeKind.Dictionary
-                ? BuildDictionaryTemplate(propertyType, path, configurationPath, inheritedReloadBehavior)
-                : null,
-            ListTemplate = nodeKind == ConfigurationNodeKind.List
-                ? BuildListTemplate(propertyType, path, configurationPath, inheritedReloadBehavior, option)
-                : null,
-            Children = children,
-            ValidationRules = GetValidationRules(propertyType, property.GetCustomAttributes<ValidationAttribute>()),
-            EnumValues = GetEnumValues(propertyType)
-        };
+            var valueKind = nodeKind == ConfigurationNodeKind.Scalar ? GetValueKind(propertyType) : (ConfigurationValueKind?)null;
+            var children = nodeKind == ConfigurationNodeKind.Object
+                ? ScanObjectChildren(propertyType, path, configurationPath, inheritedReloadBehavior, traversal)
+                : [];
+            var textSemantic = ResolveTextSemantic(
+                option,
+                nodeKind,
+                valueKind,
+                $"{property.DeclaringType?.FullName ?? property.DeclaringType?.Name}.{property.Name}");
+
+            return new ConfigurationNodeDefinition
+            {
+                NodeKey = option?.NodeKey ?? path.ToCanonicalString(),
+                Name = nodeName,
+                DisplayName = option?.DisplayName,
+                Description = option?.Description,
+                RelativePath = path,
+                ConfigurationPath = configurationPath,
+                ClrTypeName = propertyType.AssemblyQualifiedName ?? propertyType.FullName ?? propertyType.Name,
+                NodeKind = nodeKind,
+                ValueKind = valueKind,
+                IsNullable = IsNullable(property),
+                IsSensitive = option?.IsSensitive is true,
+                TextSemantic = textSemantic,
+                ReloadBehavior = ResolveReloadBehavior(option),
+                DictionaryTemplate = nodeKind == ConfigurationNodeKind.Dictionary
+                    ? BuildDictionaryTemplate(propertyType, path, configurationPath, inheritedReloadBehavior, traversal)
+                    : null,
+                ListTemplate = nodeKind == ConfigurationNodeKind.List
+                    ? BuildListTemplate(propertyType, path, configurationPath, inheritedReloadBehavior, option, traversal)
+                    : null,
+                Children = children,
+                ValidationRules = GetValidationRules(propertyType, property.GetCustomAttributes<ValidationAttribute>()),
+                EnumValues = GetEnumValues(propertyType)
+            };
+        }
+        finally
+        {
+            if (entered)
+            {
+                traversal.Exit(propertyType);
+            }
+        }
     }
 
     private static ConfigurationDictionaryTemplate BuildDictionaryTemplate(
         Type dictionaryType,
         LogicalPath dictionaryPath,
         string configurationPath,
-        ConfigurationReloadBehavior inheritedReloadBehavior)
+        ConfigurationReloadBehavior inheritedReloadBehavior,
+        SchemaTraversalContext traversal)
     {
         var keyType = typeof(string);
         var valueType = typeof(object);
@@ -197,7 +237,8 @@ internal sealed class ConfigurationDefinitionScanner(
                 "Value",
                 dictionaryPath.Append(new DictionaryKeySegment("*")),
                 string.IsNullOrWhiteSpace(configurationPath) ? "*" : $"{configurationPath}:*",
-                inheritedReloadBehavior)
+                inheritedReloadBehavior,
+                traversal)
         };
     }
 
@@ -206,7 +247,8 @@ internal sealed class ConfigurationDefinitionScanner(
         LogicalPath listPath,
         string configurationPath,
         ConfigurationReloadBehavior inheritedReloadBehavior,
-        OptionSettingAttribute? option)
+        OptionSettingAttribute? option,
+        SchemaTraversalContext traversal)
     {
         var itemType = GetEnumerableItemType(listType) ?? typeof(object);
         return new ConfigurationListTemplate
@@ -218,7 +260,8 @@ internal sealed class ConfigurationDefinitionScanner(
                 "Item",
                 listPath.Append(new ListItemKeySegment("*")),
                 string.IsNullOrWhiteSpace(configurationPath) ? "*" : $"{configurationPath}:*",
-                inheritedReloadBehavior)
+                inheritedReloadBehavior,
+                traversal)
         };
     }
 
@@ -468,4 +511,62 @@ internal sealed class ConfigurationDefinitionScanner(
         throw new InvalidOperationException(
             $"{nameof(OptionSettingAttribute.TextSemantic)}.{textSemantic} can only be used on scalar string configuration nodes. Node '{nodeLabel}' is {nodeKind}/{valueKind?.ToString() ?? "None"}.");
     }
+
+    private sealed class SchemaTraversalContext
+    {
+        private readonly HashSet<Type> _activeTypes = [];
+        private readonly List<SchemaTraversalFrame> _ancestors = [];
+
+        public bool Enter(Type type, ConfigurationNodeKind nodeKind, LogicalPath path)
+        {
+            var actualType = Nullable.GetUnderlyingType(type) ?? type;
+            if (path.Depth > ConfigurationSchemaLimits.MAX_LOGICAL_DEPTH)
+            {
+                throw new InvalidOperationException(
+                    $"Configuration schema exceeds the maximum logical depth of "
+                    + $"{ConfigurationSchemaLimits.MAX_LOGICAL_DEPTH} at path '{FormatPath(path)}'. "
+                    + $"CLR type chain: {FormatTypeChain(_ancestors.Append(new SchemaTraversalFrame(actualType, path)))}.");
+            }
+
+            if (nodeKind == ConfigurationNodeKind.Scalar)
+            {
+                return false;
+            }
+
+            if (!_activeTypes.Add(actualType))
+            {
+                var cycleStart = _ancestors.FindIndex(frame => frame.Type == actualType);
+                var cycle = _ancestors
+                    .Skip(cycleStart)
+                    .Append(new SchemaTraversalFrame(actualType, path));
+                throw new InvalidOperationException(
+                    $"Recursive configuration schema detected at logical path '{FormatPath(path)}'. "
+                    + $"CLR type chain: {FormatTypeChain(cycle)}.");
+            }
+
+            _ancestors.Add(new SchemaTraversalFrame(actualType, path));
+            return true;
+        }
+
+        public void Exit(Type type)
+        {
+            var actualType = Nullable.GetUnderlyingType(type) ?? type;
+            _ancestors.RemoveAt(_ancestors.Count - 1);
+            _activeTypes.Remove(actualType);
+        }
+
+        private static string FormatTypeChain(IEnumerable<SchemaTraversalFrame> frames)
+        {
+            return string.Join(
+                " -> ",
+                frames.Select(frame => $"'{frame.Type.FullName ?? frame.Type.Name}' at '{FormatPath(frame.Path)}'"));
+        }
+
+        private static string FormatPath(LogicalPath path)
+        {
+            return path.Depth == 0 ? "<root>" : path.ToCanonicalString();
+        }
+    }
+
+    private readonly record struct SchemaTraversalFrame(Type Type, LogicalPath Path);
 }
