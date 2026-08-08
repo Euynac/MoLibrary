@@ -19,6 +19,7 @@ using Xunit;
 
 namespace Test.Monica.Core.Modularity;
 
+[Collection(BlockingConcurrencyCollection.Name)]
 public sealed class ModuleDiagnosticsFacadeTests
 {
     [Fact]

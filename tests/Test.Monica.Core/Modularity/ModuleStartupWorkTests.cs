@@ -21,6 +21,7 @@ using Xunit;
 
 namespace Test.Monica.Core.Modularity;
 
+[Collection(BlockingConcurrencyCollection.Name)]
 public sealed class ModuleStartupWorkTests
 {
     private static readonly TimeSpan HANG_GUARD = TimeSpan.FromSeconds(10);

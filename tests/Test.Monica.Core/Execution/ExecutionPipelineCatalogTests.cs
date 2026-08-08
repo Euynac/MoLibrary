@@ -15,6 +15,7 @@ using Xunit;
 
 namespace Test.Monica.Core.Execution;
 
+[Collection(BlockingConcurrencyCollection.Name)]
 public sealed class ExecutionPipelineCatalogTests
 {
     private static readonly ExecutionPoint CATALOG_POINT = new("test.catalog");

@@ -20,6 +20,7 @@ using TestContext = Xunit.TestContext;
 
 namespace Test.Monica.Core.ObjectMapping;
 
+[Collection(BlockingConcurrencyCollection.Name)]
 public sealed class ModuleObjectMappingTests
 {
     private static readonly TimeSpan HANG_GUARD = TimeSpan.FromSeconds(10);
