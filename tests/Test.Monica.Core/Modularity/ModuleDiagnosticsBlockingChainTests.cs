@@ -35,6 +35,8 @@ public sealed class ModuleDiagnosticsBlockingChainTests
         var firstCompletionSignaled = new TaskCompletionSource(
             TaskCreationOptions.RunContinuationsAsynchronously);
         ModuleStartupWorkScheduler? schedulerReference = null;
+        using var firstGate = new BarrierWorkGate();
+        using var secondGate = new BarrierWorkGate();
         using var scheduler = new ModuleStartupWorkScheduler(
             maxConcurrency: 2,
             itemCompleted: result =>
@@ -56,8 +58,6 @@ public sealed class ModuleDiagnosticsBlockingChainTests
             });
         schedulerReference = scheduler;
         profiler.AttachStartupWorkDiagnostics(scheduler.GetSnapshot);
-        using var firstGate = new BarrierWorkGate();
-        using var secondGate = new BarrierWorkGate();
         var barrierEntered = new TaskCompletionSource(
             TaskCreationOptions.RunContinuationsAsynchronously);
         var moduleKey = ModuleKey.FromModuleType(typeof(DiagnosticsProviderModule));
@@ -82,8 +82,8 @@ public sealed class ModuleDiagnosticsBlockingChainTests
 
         try
         {
-            await Task.WhenAll(firstGate.Entered.Task, secondGate.Entered.Task)
-                .WaitAsync(HANG_GUARD, TestContext.Current.CancellationToken);
+            firstGate.WaitUntilEntered(HANG_GUARD, TestContext.Current.CancellationToken);
+            secondGate.WaitUntilEntered(HANG_GUARD, TestContext.Current.CancellationToken);
             barrierTask = Task.Run(
                 () => scheduler.ReachBarrier(
                     ModuleStartupWorkBarrier.BeforeTypeDiscovery,
@@ -179,22 +179,30 @@ public sealed class ModuleDiagnosticsBlockingChainTests
 
     private sealed class BarrierWorkGate : IDisposable
     {
+        private readonly ManualResetEventSlim _entered = new(initialState: false);
         private readonly ManualResetEventSlim _release = new(initialState: false);
 
-        internal TaskCompletionSource Entered { get; } =
-            new(TaskCreationOptions.RunContinuationsAsynchronously);
+        internal void WaitUntilEntered(TimeSpan timeout, CancellationToken cancellationToken)
+        {
+            if (!_entered.Wait(timeout, cancellationToken))
+            {
+                throw new TimeoutException("The blocking-chain work did not start.");
+            }
+        }
 
         internal void Run()
         {
-            Entered.TrySetResult();
-            if (!_release.Wait(HANG_GUARD))
-            {
-                throw new TimeoutException("The blocking-chain work was not released.");
-            }
+            _entered.Set();
+            _release.Wait();
         }
 
         internal void Release() => _release.Set();
 
-        public void Dispose() => _release.Dispose();
+        public void Dispose()
+        {
+            _release.Set();
+            _entered.Dispose();
+            _release.Dispose();
+        }
     }
 }

@@ -192,7 +192,10 @@ public sealed class DaprEventBusSubscriptionHostedServiceTests
     [Fact]
     public async Task Subscription_WhenRapidBackgroundFailures_IncreasesRecoveryDelay()
     {
-        using var fixture = await CreateFixtureAsync((_, _) => Task.CompletedTask);
+        // This scenario drives both failures explicitly; keep the stability reset outside the test's execution window.
+        using var fixture = await CreateFixtureAsync(
+            (_, _) => Task.CompletedTask,
+            configureOptions: options => options.SubscriptionRecoveryStabilityPeriod = TimeSpan.FromDays(1));
 
         await fixture.Client.Options.ErrorHandler!(new DaprException("stream closed"));
         await WaitUntilAsync(

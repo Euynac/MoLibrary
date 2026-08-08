@@ -168,7 +168,7 @@ public sealed class ModuleStartupWorkTests
 
         try
         {
-            await blocker.ExpectedEntrantsReached.WaitAsync(HANG_GUARD, TestContext.Current.CancellationToken);
+            blocker.WaitUntilExpectedEntrantsReached(HANG_GUARD, TestContext.Current.CancellationToken);
             checkpoint = Task.Run(
                 () => scheduler.ReachBarrier(
                     ModuleStartupWorkBarrier.BeforeTypeDiscovery,
@@ -210,7 +210,7 @@ public sealed class ModuleStartupWorkTests
             blocker.Release();
             if (checkpoint is not null)
             {
-                await ObserveCompositionCompletionAsync(checkpoint);
+                await ObserveCleanupCompletionAsync(checkpoint);
             }
         }
     }
@@ -251,10 +251,10 @@ public sealed class ModuleStartupWorkTests
 
         try
         {
-            await firstObserverGate.ExpectedEntrantsReached.WaitAsync(
+            firstObserverGate.WaitUntilExpectedEntrantsReached(
                 HANG_GUARD,
                 TestContext.Current.CancellationToken);
-            await secondWorkGate.ExpectedEntrantsReached.WaitAsync(
+            secondWorkGate.WaitUntilExpectedEntrantsReached(
                 HANG_GUARD,
                 TestContext.Current.CancellationToken);
             barrier = Task.Run(
@@ -290,7 +290,7 @@ public sealed class ModuleStartupWorkTests
             firstObserverGate.Release();
             if (barrier is not null)
             {
-                await ObserveCompositionCompletionAsync(barrier);
+                await ObserveCleanupCompletionAsync(barrier);
             }
         }
     }
@@ -345,7 +345,7 @@ public sealed class ModuleStartupWorkTests
 
         try
         {
-            await gate.ExpectedEntrantsReached.WaitAsync(HANG_GUARD, TestContext.Current.CancellationToken);
+            gate.WaitUntilExpectedEntrantsReached(HANG_GUARD, TestContext.Current.CancellationToken);
             start = Task.Run(
                 () => host.StartAsync(TestContext.Current.CancellationToken),
                 TestContext.Current.CancellationToken);
@@ -364,7 +364,7 @@ public sealed class ModuleStartupWorkTests
             gate.Release();
             if (start is not null)
             {
-                await ObserveCompositionCompletionAsync(start);
+                await ObserveCleanupCompletionAsync(start);
             }
         }
     }
@@ -420,7 +420,7 @@ public sealed class ModuleStartupWorkTests
 
         try
         {
-            await gate.ExpectedEntrantsReached.WaitAsync(HANG_GUARD, TestContext.Current.CancellationToken);
+            gate.WaitUntilExpectedEntrantsReached(HANG_GUARD, TestContext.Current.CancellationToken);
             first = Task.Run(() => firstValidator.Validate(null, options), TestContext.Current.CancellationToken);
             second = Task.Run(() => secondValidator.Validate(null, options), TestContext.Current.CancellationToken);
             first.IsCompleted.Should().BeFalse();
@@ -438,12 +438,12 @@ public sealed class ModuleStartupWorkTests
             gate.Release();
             if (first is not null)
             {
-                await ObserveCompositionCompletionAsync(first);
+                await ObserveCleanupCompletionAsync(first);
             }
 
             if (second is not null)
             {
-                await ObserveCompositionCompletionAsync(second);
+                await ObserveCleanupCompletionAsync(second);
             }
         }
     }
@@ -466,7 +466,7 @@ public sealed class ModuleStartupWorkTests
 
         try
         {
-            await gate.ExpectedEntrantsReached.WaitAsync(HANG_GUARD, TestContext.Current.CancellationToken);
+            gate.WaitUntilExpectedEntrantsReached(HANG_GUARD, TestContext.Current.CancellationToken);
             await composition.WaitAsync(HANG_GUARD, TestContext.Current.CancellationToken);
             host = builder.Build();
             await host.StartAsync(TestContext.Current.CancellationToken)
@@ -484,7 +484,7 @@ public sealed class ModuleStartupWorkTests
         finally
         {
             gate.Release();
-            await ObserveCompositionCompletionAsync(composition);
+            await ObserveCleanupCompletionAsync(composition);
             if (host is not null)
             {
                 await host.StopAsync(TestContext.Current.CancellationToken);
@@ -519,7 +519,7 @@ public sealed class ModuleStartupWorkTests
         try
         {
             await requiredCompleted.Task.WaitAsync(HANG_GUARD, TestContext.Current.CancellationToken);
-            await noBarrierGate.ExpectedEntrantsReached.WaitAsync(HANG_GUARD, TestContext.Current.CancellationToken);
+            noBarrierGate.WaitUntilExpectedEntrantsReached(HANG_GUARD, TestContext.Current.CancellationToken);
             await composition.WaitAsync(HANG_GUARD, TestContext.Current.CancellationToken);
 
             var host = builder.Build();
@@ -542,12 +542,12 @@ public sealed class ModuleStartupWorkTests
         finally
         {
             noBarrierGate.Release();
-            await ObserveCompositionCompletionAsync(composition);
+            await ObserveCleanupCompletionAsync(composition);
         }
     }
 
     [Fact]
-    public async Task Diagnostics_WhenWorkIsRunningAndQueued_ShouldPublishLiveThenTerminalStates()
+    public void Diagnostics_WhenWorkIsRunningAndQueued_ShouldPublishLiveThenTerminalStates()
     {
         using var gate = new WorkGate(expectedEntrants: 1);
         var profiler = new ModuleInitializationProfiler();
@@ -572,20 +572,27 @@ public sealed class ModuleStartupWorkTests
             ModuleStartupWorkBarrier.NoBarrier,
             static () => throw new InvalidOperationException("queued-work-failure"));
 
-        await gate.ExpectedEntrantsReached.WaitAsync(HANG_GUARD, TestContext.Current.CancellationToken);
-        var live = profiler.GetCompositionPerformance().StartupWorkItems;
-        live.Single(work => work.Name == "running-work").Status.Should().Be(ModuleStartupWorkStatus.Running);
-        live.Single(work => work.Name == "queued-work").Status.Should().Be(ModuleStartupWorkStatus.Queued);
-        live.Single(work => work.Name == "queued-work").StartedAtUtc.Should().BeNull();
-        live.Single(work => work.Name == "queued-work").CompletedAtUtc.Should().BeNull();
+        try
+        {
+            gate.WaitUntilExpectedEntrantsReached(HANG_GUARD, TestContext.Current.CancellationToken);
+            var live = profiler.GetCompositionPerformance().StartupWorkItems;
+            live.Single(work => work.Name == "running-work").Status.Should().Be(ModuleStartupWorkStatus.Running);
+            live.Single(work => work.Name == "queued-work").Status.Should().Be(ModuleStartupWorkStatus.Queued);
+            live.Single(work => work.Name == "queued-work").StartedAtUtc.Should().BeNull();
+            live.Single(work => work.Name == "queued-work").CompletedAtUtc.Should().BeNull();
 
-        gate.Release();
-        scheduler.Drain();
-        profiler.StopModuleSystem();
-        var terminal = profiler.GetCompositionPerformance().StartupWorkItems;
-        terminal.Single(work => work.Name == "running-work").Status.Should().Be(ModuleStartupWorkStatus.Succeeded);
-        terminal.Single(work => work.Name == "queued-work").Status.Should().Be(ModuleStartupWorkStatus.Failed);
-        terminal.Single(work => work.Name == "queued-work").ErrorMessage.Should().Contain("queued-work-failure");
+            gate.Release();
+            scheduler.Drain();
+            profiler.StopModuleSystem();
+            var terminal = profiler.GetCompositionPerformance().StartupWorkItems;
+            terminal.Single(work => work.Name == "running-work").Status.Should().Be(ModuleStartupWorkStatus.Succeeded);
+            terminal.Single(work => work.Name == "queued-work").Status.Should().Be(ModuleStartupWorkStatus.Failed);
+            terminal.Single(work => work.Name == "queued-work").ErrorMessage.Should().Contain("queued-work-failure");
+        }
+        finally
+        {
+            gate.Release();
+        }
     }
 
     [Fact]
@@ -605,24 +612,31 @@ public sealed class ModuleStartupWorkTests
         using var host = builder.Build();
         var application = host.Services.GetRequiredService<global::Monica.Core.MonicaApplication>();
 
-        await gate.ExpectedEntrantsReached.WaitAsync(HANG_GUARD, TestContext.Current.CancellationToken);
-        var duringComposition = application.Profiling.GetCompositionPerformance();
-        duringComposition.StartupWorkItems.Should().ContainSingle(work =>
-            work.Name == "late-diagnostic-work" && work.Status == ModuleStartupWorkStatus.Running);
+        try
+        {
+            gate.WaitUntilExpectedEntrantsReached(HANG_GUARD, TestContext.Current.CancellationToken);
+            var duringComposition = application.Profiling.GetCompositionPerformance();
+            duringComposition.StartupWorkItems.Should().ContainSingle(work =>
+                work.Name == "late-diagnostic-work" && work.Status == ModuleStartupWorkStatus.Running);
 
-        gate.Release();
-        var completed = await WaitForStartupWorkStatusAsync(
-            application,
-            "late-diagnostic-work",
-            ModuleStartupWorkStatus.Succeeded);
-        var observed = application.Profiling.GetCompositionPerformance();
+            gate.Release();
+            var completed = await WaitForStartupWorkStatusAsync(
+                application,
+                "late-diagnostic-work",
+                ModuleStartupWorkStatus.Succeeded);
+            var observed = application.Profiling.GetCompositionPerformance();
 
-        completed.CompletedOffsetMs.Should().NotBeNull();
-        completed.CompletedOffsetMs!.Value.Should().BeGreaterThan(observed.ElapsedDurationMs);
-        completed.CompletedOffsetMs.Value.Should().BeLessThanOrEqualTo(observed.ObservedDurationMs);
-        completed.CompletedAtUtc.Should().NotBeNull();
-        completed.CompletedAtUtc!.Value.Should().BeOnOrBefore(observed.ObservedAtUtc);
-        observed.ObservedDurationMs.Should().BeGreaterThanOrEqualTo(observed.ElapsedDurationMs);
+            completed.CompletedOffsetMs.Should().NotBeNull();
+            completed.CompletedOffsetMs!.Value.Should().BeGreaterThan(observed.ElapsedDurationMs);
+            completed.CompletedOffsetMs.Value.Should().BeLessThanOrEqualTo(observed.ObservedDurationMs);
+            completed.CompletedAtUtc.Should().NotBeNull();
+            completed.CompletedAtUtc!.Value.Should().BeOnOrBefore(observed.ObservedAtUtc);
+            observed.ObservedDurationMs.Should().BeGreaterThanOrEqualTo(observed.ElapsedDurationMs);
+        }
+        finally
+        {
+            gate.Release();
+        }
     }
 
     [Fact]
@@ -671,17 +685,33 @@ public sealed class ModuleStartupWorkTests
                 ModuleStartupWorkBarrier.NoBarrier));
         });
         using var host = builder.Build();
-        await host.StartAsync(TestContext.Current.CancellationToken);
-        await gate.ExpectedEntrantsReached.WaitAsync(HANG_GUARD, TestContext.Current.CancellationToken);
+        Task? stop = null;
 
-        var stop = Task.Run(
-            () => host.StopAsync(TestContext.Current.CancellationToken),
-            TestContext.Current.CancellationToken);
-        stop.IsCompleted.Should().BeFalse();
-        gate.Release();
-        await stop.WaitAsync(HANG_GUARD, TestContext.Current.CancellationToken);
-        gate.InvocationCount.Should().Be(1);
-        gate.CompletedCount.Should().Be(1);
+        try
+        {
+            await host.StartAsync(TestContext.Current.CancellationToken);
+            gate.WaitUntilExpectedEntrantsReached(HANG_GUARD, TestContext.Current.CancellationToken);
+
+            stop = Task.Factory.StartNew(
+                    () => host.StopAsync(TestContext.Current.CancellationToken),
+                    CancellationToken.None,
+                    TaskCreationOptions.LongRunning,
+                    TaskScheduler.Default)
+                .Unwrap();
+            stop.IsCompleted.Should().BeFalse();
+            gate.Release();
+            await stop.WaitAsync(HANG_GUARD, TestContext.Current.CancellationToken);
+            gate.InvocationCount.Should().Be(1);
+            gate.CompletedCount.Should().Be(1);
+        }
+        finally
+        {
+            gate.Release();
+            if (stop is not null)
+            {
+                await ObserveCleanupCompletionAsync(stop);
+            }
+        }
     }
 
     [Fact]
@@ -698,14 +728,35 @@ public sealed class ModuleStartupWorkTests
                 ModuleStartupWorkBarrier.NoBarrier));
         });
         var host = builder.Build();
-        await gate.ExpectedEntrantsReached.WaitAsync(HANG_GUARD, TestContext.Current.CancellationToken);
+        Task? dispose = null;
 
-        var dispose = Task.Run(host.Dispose, TestContext.Current.CancellationToken);
-        dispose.IsCompleted.Should().BeFalse();
-        gate.Release();
-        await dispose.WaitAsync(HANG_GUARD, TestContext.Current.CancellationToken);
-        gate.InvocationCount.Should().Be(1);
-        gate.CompletedCount.Should().Be(1);
+        Task StartDisposal() => Task.Factory.StartNew(
+            host.Dispose,
+            CancellationToken.None,
+            TaskCreationOptions.LongRunning,
+            TaskScheduler.Default);
+
+        try
+        {
+            gate.WaitUntilExpectedEntrantsReached(HANG_GUARD, TestContext.Current.CancellationToken);
+
+            dispose = StartDisposal();
+            dispose.IsCompleted.Should().BeFalse();
+            gate.Release();
+            await dispose.WaitAsync(HANG_GUARD, TestContext.Current.CancellationToken);
+            gate.InvocationCount.Should().Be(1);
+            gate.CompletedCount.Should().Be(1);
+        }
+        finally
+        {
+            gate.Release();
+            if (dispose is null)
+            {
+                dispose = StartDisposal();
+            }
+
+            await ObserveCleanupCompletionAsync(dispose);
+        }
     }
 
     [Fact]
@@ -819,7 +870,7 @@ public sealed class ModuleStartupWorkTests
 
         try
         {
-            await gate.ExpectedEntrantsReached.WaitAsync(HANG_GUARD, TestContext.Current.CancellationToken);
+            gate.WaitUntilExpectedEntrantsReached(HANG_GUARD, TestContext.Current.CancellationToken);
             await postConfigureReached.Task.WaitAsync(HANG_GUARD, TestContext.Current.CancellationToken);
 
             composition.IsCompleted.Should().BeFalse();
@@ -836,7 +887,7 @@ public sealed class ModuleStartupWorkTests
         finally
         {
             gate.Release();
-            await ObserveCompositionCompletionAsync(composition);
+            await ObserveCleanupCompletionAsync(composition);
         }
     }
 
@@ -863,7 +914,7 @@ public sealed class ModuleStartupWorkTests
 
         try
         {
-            await gate.ExpectedEntrantsReached.WaitAsync(HANG_GUARD, TestContext.Current.CancellationToken);
+            gate.WaitUntilExpectedEntrantsReached(HANG_GUARD, TestContext.Current.CancellationToken);
 
             discoveryReached.Task.IsCompleted.Should().BeFalse();
             composition.IsCompleted.Should().BeFalse();
@@ -875,7 +926,7 @@ public sealed class ModuleStartupWorkTests
         finally
         {
             gate.Release();
-            await ObserveCompositionCompletionAsync(composition);
+            await ObserveCleanupCompletionAsync(composition);
         }
     }
 
@@ -904,7 +955,7 @@ public sealed class ModuleStartupWorkTests
 
         try
         {
-            await gate.ExpectedEntrantsReached.WaitAsync(HANG_GUARD, TestContext.Current.CancellationToken);
+            gate.WaitUntilExpectedEntrantsReached(HANG_GUARD, TestContext.Current.CancellationToken);
             await discoveryReached.Task.WaitAsync(HANG_GUARD, TestContext.Current.CancellationToken);
 
             postConfigureReached.Task.IsCompleted.Should().BeFalse();
@@ -917,7 +968,7 @@ public sealed class ModuleStartupWorkTests
         finally
         {
             gate.Release();
-            await ObserveCompositionCompletionAsync(composition);
+            await ObserveCleanupCompletionAsync(composition);
         }
     }
 
@@ -943,7 +994,7 @@ public sealed class ModuleStartupWorkTests
 
         try
         {
-            await gate.ExpectedEntrantsReached.WaitAsync(HANG_GUARD, TestContext.Current.CancellationToken);
+            gate.WaitUntilExpectedEntrantsReached(HANG_GUARD, TestContext.Current.CancellationToken);
 
             composition.IsCompleted.Should().BeFalse();
             gate.InvocationCount.Should().Be(2);
@@ -959,7 +1010,7 @@ public sealed class ModuleStartupWorkTests
         finally
         {
             gate.Release();
-            await ObserveCompositionCompletionAsync(composition);
+            await ObserveCleanupCompletionAsync(composition);
         }
     }
 
@@ -994,7 +1045,7 @@ public sealed class ModuleStartupWorkTests
 
         try
         {
-            await gate.ExpectedEntrantsReached.WaitAsync(HANG_GUARD, TestContext.Current.CancellationToken);
+            gate.WaitUntilExpectedEntrantsReached(HANG_GUARD, TestContext.Current.CancellationToken);
             composition.IsCompleted.Should().BeFalse();
 
             gate.Release();
@@ -1016,7 +1067,7 @@ public sealed class ModuleStartupWorkTests
         finally
         {
             gate.Release();
-            await ObserveCompositionCompletionAsync(composition);
+            await ObserveCleanupCompletionAsync(composition);
         }
     }
 
@@ -1045,7 +1096,7 @@ public sealed class ModuleStartupWorkTests
 
         try
         {
-            await gate.ExpectedEntrantsReached.WaitAsync(HANG_GUARD, TestContext.Current.CancellationToken);
+            gate.WaitUntilExpectedEntrantsReached(HANG_GUARD, TestContext.Current.CancellationToken);
             gate.Release();
 
             var exception = await Assert.ThrowsAsync<ModuleRegistrationException>(async () =>
@@ -1061,7 +1112,7 @@ public sealed class ModuleStartupWorkTests
         finally
         {
             gate.Release();
-            await ObserveCompositionCompletionAsync(composition);
+            await ObserveCleanupCompletionAsync(composition);
         }
     }
 
@@ -1126,7 +1177,7 @@ public sealed class ModuleStartupWorkTests
 
         try
         {
-            await gate.ExpectedEntrantsReached.WaitAsync(HANG_GUARD, TestContext.Current.CancellationToken);
+            gate.WaitUntilExpectedEntrantsReached(HANG_GUARD, TestContext.Current.CancellationToken);
             await discoveryReached.Task.WaitAsync(HANG_GUARD, TestContext.Current.CancellationToken);
 
             composition.IsCompleted.Should().BeFalse();
@@ -1146,54 +1197,66 @@ public sealed class ModuleStartupWorkTests
         finally
         {
             gate.Release();
-            await ObserveCompositionCompletionAsync(composition);
+            await ObserveCleanupCompletionAsync(composition);
         }
     }
 
     [Fact]
-    public void AddMonica_WhenTypeDiscoveryWorkHasCommits_ShouldCommitInRegistrationOrderBeforePostConfigure()
+    public async Task AddMonica_WhenTypeDiscoveryWorkHasCommits_ShouldCommitInRegistrationOrderBeforePostConfigure()
     {
         using var secondWorkerCompleted = new ManualResetEventSlim(initialState: false);
         var commits = new List<string>();
         var commitThreadIds = new List<int>();
         IReadOnlyList<string>? observedAtPostConfigure = null;
-        var compositionThreadId = Environment.CurrentManagedThreadId;
+        var compositionThreadId = 0;
         var builder = Host.CreateApplicationBuilder();
-
-        builder.AddMonica(monica =>
+        var composition = Task.Factory.StartNew(() =>
         {
-            monica.ConfigureModuleSystem(options => options.MaxConcurrentStartupWorkItems = 2);
-            monica.ConfigureTypeDiscovery(static options => options.ExcludeDefault());
-            monica.AddModuleSystem();
-            AddProbeOne(monica, options =>
+            compositionThreadId = Environment.CurrentManagedThreadId;
+            builder.AddMonica(monica =>
             {
-                options.AddTypeDiscoveryWork(
-                    "first-commit",
-                    () =>
-                    {
-                        if (!secondWorkerCompleted.Wait(HANG_GUARD))
+                monica.ConfigureModuleSystem(options => options.MaxConcurrentStartupWorkItems = 2);
+                monica.ConfigureTypeDiscovery(static options => options.ExcludeDefault());
+                monica.AddModuleSystem();
+                AddProbeOne(monica, options =>
+                {
+                    options.AddTypeDiscoveryWork(
+                        "first-commit",
+                        secondWorkerCompleted.Wait,
+                        () =>
                         {
-                            throw new TimeoutException("The second worker did not complete.");
-                        }
-                    },
+                            commits.Add("first");
+                            commitThreadIds.Add(Environment.CurrentManagedThreadId);
+                        },
+                        ModuleStartupWorkBarrier.BeforePostConfigureServices);
+                    options.PostConfigureReached = () => observedAtPostConfigure = commits.ToArray();
+                });
+                AddProbeTwo(monica, options => options.AddTypeDiscoveryWork(
+                    "second-commit",
+                    secondWorkerCompleted.Set,
                     () =>
                     {
-                        commits.Add("first");
+                        commits.Add("second");
                         commitThreadIds.Add(Environment.CurrentManagedThreadId);
                     },
-                    ModuleStartupWorkBarrier.BeforePostConfigureServices);
-                options.PostConfigureReached = () => observedAtPostConfigure = commits.ToArray();
+                    ModuleStartupWorkBarrier.BeforePostConfigureServices));
             });
-            AddProbeTwo(monica, options => options.AddTypeDiscoveryWork(
-                "second-commit",
-                secondWorkerCompleted.Set,
-                () =>
-                {
-                    commits.Add("second");
-                    commitThreadIds.Add(Environment.CurrentManagedThreadId);
-                },
-                ModuleStartupWorkBarrier.BeforePostConfigureServices));
-        });
+        }, CancellationToken.None, TaskCreationOptions.LongRunning, TaskScheduler.Default);
+
+        try
+        {
+            if (!secondWorkerCompleted.Wait(HANG_GUARD, TestContext.Current.CancellationToken))
+            {
+                throw new TimeoutException("The second type-discovery worker did not complete.");
+            }
+
+            await composition.WaitAsync(HANG_GUARD, TestContext.Current.CancellationToken);
+        }
+        finally
+        {
+            secondWorkerCompleted.Set();
+            await ObserveCleanupCompletionAsync(composition);
+        }
 
         commits.Should().Equal("first", "second");
         commitThreadIds.Should().OnlyContain(threadId => threadId == compositionThreadId);
@@ -1486,15 +1549,15 @@ public sealed class ModuleStartupWorkTests
         await host.StopAsync(TestContext.Current.CancellationToken);
     }
 
-    private static async Task ObserveCompositionCompletionAsync(Task composition)
+    private static async Task ObserveCleanupCompletionAsync(Task cleanup)
     {
         try
         {
-            await composition.WaitAsync(HANG_GUARD);
+            await cleanup.WaitAsync(HANG_GUARD);
         }
         catch (Exception)
         {
-            // The assertion path owns expected composition errors; cleanup only waits for workers to exit.
+            // Cleanup must neither hang nor replace the scenario's original failure.
         }
     }
 
@@ -1551,21 +1614,26 @@ public sealed class ModuleStartupWorkTests
 
     private sealed class WorkGate(int expectedEntrants) : IDisposable
     {
+        private readonly ManualResetEventSlim _expectedEntrantsReached = new(initialState: false);
         private readonly ManualResetEventSlim _release = new(initialState: false);
-        private readonly TaskCompletionSource _expectedEntrantsReached = new(
-            TaskCreationOptions.RunContinuationsAsynchronously);
         private int _activeCount;
         private int _completedCount;
         private int _invocationCount;
         private int _maximumConcurrency;
-
-        public Task ExpectedEntrantsReached => _expectedEntrantsReached.Task;
 
         public int CompletedCount => Volatile.Read(ref _completedCount);
 
         public int InvocationCount => Volatile.Read(ref _invocationCount);
 
         public int MaximumConcurrency => Volatile.Read(ref _maximumConcurrency);
+
+        public void WaitUntilExpectedEntrantsReached(TimeSpan timeout, CancellationToken cancellationToken)
+        {
+            if (!_expectedEntrantsReached.Wait(timeout, cancellationToken))
+            {
+                throw new TimeoutException("The expected startup-work test gate entrants did not arrive.");
+            }
+        }
 
         public void Run()
         {
@@ -1577,17 +1645,14 @@ public sealed class ModuleStartupWorkTests
             var active = Interlocked.Increment(ref _activeCount);
             UpdateMaximumConcurrency(active);
             var invocation = Interlocked.Increment(ref _invocationCount);
-            if (invocation >= expectedEntrants)
+            if (invocation == expectedEntrants)
             {
-                _expectedEntrantsReached.TrySetResult();
+                _expectedEntrantsReached.Set();
             }
 
             try
             {
-                if (!_release.Wait(HANG_GUARD))
-                {
-                    throw new TimeoutException("The startup-work test gate was not released in time.");
-                }
+                _release.Wait();
             }
             finally
             {
@@ -1609,6 +1674,7 @@ public sealed class ModuleStartupWorkTests
         public void Dispose()
         {
             _release.Set();
+            _expectedEntrantsReached.Dispose();
             _release.Dispose();
         }
 
