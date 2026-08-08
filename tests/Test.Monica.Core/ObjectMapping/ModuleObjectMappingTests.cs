@@ -150,19 +150,18 @@ public sealed class ModuleObjectMappingTests
         using var compilation = new CompilationProbe();
         BlockingCompilerProfile.SetProbe(compilation);
         var builder = Host.CreateApplicationBuilder();
-        var composition = Task.Run(() => builder.AddMonica(monica =>
-            {
-                monica.ConfigureTypeDiscovery(static options => options.ExcludeDefault());
-                monica.AddObjectMapping().AddProfile<BlockingCompilerProfile>();
-            }),
-            TestContext.Current.CancellationToken);
+        builder.AddMonica(monica =>
+        {
+            monica.ConfigureTypeDiscovery(static options => options.ExcludeDefault());
+            monica.AddObjectMapping().AddProfile<BlockingCompilerProfile>();
+        });
         IHost? host = null;
 
         try
         {
-            await compilation.CompilerEntered.WaitAsync(HANG_GUARD, TestContext.Current.CancellationToken);
-            await composition.WaitAsync(HANG_GUARD, TestContext.Current.CancellationToken);
+            compilation.WaitUntilEntered(HANG_GUARD, TestContext.Current.CancellationToken);
             host = builder.Build();
+            var application = host.Services.GetRequiredService<global::Monica.Core.MonicaApplication>();
             var runtime = host.Services.GetRequiredService<MapsterConfigurationRuntime>();
             using var scope = host.Services.CreateScope();
             var mapper = scope.ServiceProvider.GetRequiredService<IObjectMapper>();
@@ -183,9 +182,8 @@ public sealed class ModuleObjectMappingTests
             runtime.HasPublishedCompiledConfiguration.Should().BeFalse();
 
             compilation.Release();
-            await WaitUntilAsync(
-                () => runtime.HasPublishedCompiledConfiguration,
-                TestContext.Current.CancellationToken);
+            application.Modules.DrainStartupWork();
+            runtime.HasPublishedCompiledConfiguration.Should().BeTrue();
 
             var publishedMappers = await Task.WhenAll(Enumerable.Range(0, 32)
                 .Select(_ => Task.Run(
@@ -205,14 +203,6 @@ public sealed class ModuleObjectMappingTests
             compilation.Release();
             host?.Dispose();
             BlockingCompilerProfile.ClearProbe();
-            try
-            {
-                await composition.WaitAsync(HANG_GUARD, TestContext.Current.CancellationToken);
-            }
-            catch (Exception)
-            {
-                // The assertion path owns composition failures; cleanup only waits for the composition thread to exit.
-            }
         }
     }
 
@@ -224,9 +214,8 @@ public sealed class ModuleObjectMappingTests
             options => options.CompileFailFast = false);
         var application = host.Services.GetRequiredService<global::Monica.Core.MonicaApplication>();
 
-        await WaitUntilAsync(
-            () => GetCompilationWork(application)?.Status == ModuleStartupWorkStatus.Failed,
-            TestContext.Current.CancellationToken);
+        application.Modules.DrainStartupWork();
+        GetCompilationWork(application)!.Status.Should().Be(ModuleStartupWorkStatus.Failed);
 
         await host.StartAsync(TestContext.Current.CancellationToken);
         try
@@ -281,13 +270,13 @@ public sealed class ModuleObjectMappingTests
     }
 
     [Fact]
-    public async Task ProjectToType_ShouldUseThePublishedRuntimeConfiguration()
+    public void ProjectToType_ShouldUseThePublishedRuntimeConfiguration()
     {
         using var host = BuildHost();
+        var application = host.Services.GetRequiredService<global::Monica.Core.MonicaApplication>();
         var runtime = host.Services.GetRequiredService<MapsterConfigurationRuntime>();
-        await WaitUntilAsync(
-            () => runtime.HasPublishedCompiledConfiguration,
-            TestContext.Current.CancellationToken);
+        application.Modules.DrainStartupWork();
+        runtime.HasPublishedCompiledConfiguration.Should().BeTrue();
         using var scope = host.Services.CreateScope();
         var mapper = scope.ServiceProvider.GetRequiredService<IObjectMapper>();
 
@@ -410,23 +399,6 @@ public sealed class ModuleObjectMappingTests
         return application.Profiling.GetCompositionPerformance().StartupWorkItems.SingleOrDefault(work =>
             work.ModuleTypeName == nameof(ModuleObjectMapping)
             && work.Name == "compile-mapster-configuration");
-    }
-
-    private static async Task WaitUntilAsync(Func<bool> predicate, CancellationToken cancellationToken)
-    {
-        using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-        timeout.CancelAfter(HANG_GUARD);
-        try
-        {
-            while (!predicate())
-            {
-                await Task.Delay(TimeSpan.FromMilliseconds(10), timeout.Token);
-            }
-        }
-        catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
-        {
-            throw new TimeoutException($"The condition was not satisfied within {HANG_GUARD}.");
-        }
     }
 
     private static bool GlobalSettingsContains<TSource, TDestination>()
@@ -753,19 +725,21 @@ public sealed class ModuleObjectMappingTests
 
     private sealed class CompilationProbe : IDisposable
     {
+        private readonly ManualResetEventSlim _compilerEntered = new(initialState: false);
         private readonly ManualResetEventSlim _release = new(initialState: false);
-        private readonly TaskCompletionSource _compilerEntered = new(
-            TaskCreationOptions.RunContinuationsAsynchronously);
 
-        public Task CompilerEntered => _compilerEntered.Task;
+        public void WaitUntilEntered(TimeSpan timeout, CancellationToken cancellationToken)
+        {
+            if (!_compilerEntered.Wait(timeout, cancellationToken))
+            {
+                throw new TimeoutException("The object-mapping compiler did not start.");
+            }
+        }
 
         public void EnterCompiler()
         {
-            _compilerEntered.TrySetResult();
-            if (!_release.Wait(HANG_GUARD))
-            {
-                throw new TimeoutException("The object-mapping compilation gate was not released in time.");
-            }
+            _compilerEntered.Set();
+            _release.Wait();
         }
 
         public void Release()
@@ -776,6 +750,7 @@ public sealed class ModuleObjectMappingTests
         public void Dispose()
         {
             _release.Set();
+            _compilerEntered.Dispose();
             _release.Dispose();
         }
     }

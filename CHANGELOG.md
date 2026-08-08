@@ -29,7 +29,7 @@ This project follows semantic versioning for public NuGet packages. Release cand
 ### Fixed
 
 - Release history resolution now skips tags that never produced a GitHub release while still requiring the latest published skill index, so a failed candidate cannot truncate release notes or block the next candidate.
-- Diagnostics snapshot concurrency tests no longer turn temporary runner thread-pool starvation into a framework startup-work failure.
+- Concurrency stress tests now use test-owned completion signals instead of worker-side timeouts, preventing runner thread-pool starvation from being reported as framework startup-work failures.
 - Module startup metrics now publish the tracked application duration deterministically during immediate host shutdown on .NET 10.
 - ProjectUnit source analysis contract v3 now matches runtime discovery for direct `ExcludeFromBusinessTypeDiscovery` annotations and non-inherited `Configuration` annotations, preventing excluded or inherited-only source types from leaking into persisted catalogs.
 
