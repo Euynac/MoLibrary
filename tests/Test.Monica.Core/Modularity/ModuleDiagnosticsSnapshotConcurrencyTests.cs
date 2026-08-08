@@ -21,30 +21,39 @@ public sealed class ModuleDiagnosticsSnapshotConcurrencyTests
     [Fact]
     public async Task GetSnapshot_WhenFirstTerminalProjectionIsConcurrent_ShouldPublishOneCachedInstance()
     {
-        using var gate = new SnapshotConcurrencyWorkGate();
-        using var host = CreateHost(gate);
-        var application = host.Services.GetRequiredService<MonicaApplication>();
+        using var projectionGate = new SnapshotProjectionGate();
+        using var host = CreateHost();
         var facade = host.Services.GetRequiredService<ModuleDiagnosticsFacade>();
-        await gate.Entered.Task.WaitAsync(HANG_GUARD, TestContext.Current.CancellationToken);
-        gate.Release();
-        application.Modules.DrainStartupWork();
-        var start = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-        var calls = Enumerable.Range(0, 32).Select(async _ =>
+        var diagnostics = host.Services.GetRequiredService<ModuleDiagnosticsService>();
+        diagnostics.SetSnapshotProjectionObserver(projectionGate.WaitForRelease);
+        try
         {
-            await start.Task.WaitAsync(HANG_GUARD, TestContext.Current.CancellationToken);
-            return facade.GetSnapshot();
-        }).ToArray();
+            var firstProjection = Task.Factory.StartNew(
+                facade.GetSnapshot,
+                CancellationToken.None,
+                TaskCreationOptions.LongRunning,
+                TaskScheduler.Default);
+            projectionGate.WaitUntilEntered(HANG_GUARD, TestContext.Current.CancellationToken);
+            var competingProjection = facade.GetSnapshot();
+            projectionGate.Release();
+            var firstResult = await firstProjection.WaitAsync(
+                HANG_GUARD,
+                TestContext.Current.CancellationToken);
+            var results = new[] { firstResult, competingProjection, facade.GetSnapshot() };
 
-        start.SetResult();
-        var results = await Task.WhenAll(calls);
-
-        results.Should().OnlyContain(result => result.Status == ResStatus.Ok && result.Data != null);
-        var snapshots = results.Select(static result => result.Data!).ToArray();
-        snapshots.Should().OnlyContain(static snapshot =>
-            snapshot.IsFinal && snapshot.Outcome == ModuleCompositionOutcome.Succeeded);
-        snapshots.Should().OnlyContain(snapshot => ReferenceEquals(snapshot, snapshots[0]));
-        snapshots.Select(static snapshot => snapshot.Revision).Should().OnlyContain(revision =>
-            revision == snapshots[0].Revision);
+            results.Should().OnlyContain(result => result.Status == ResStatus.Ok && result.Data != null);
+            var snapshots = results.Select(static result => result.Data!).ToArray();
+            snapshots.Should().OnlyContain(static snapshot =>
+                snapshot.IsFinal && snapshot.Outcome == ModuleCompositionOutcome.Succeeded);
+            snapshots.Should().OnlyContain(snapshot => ReferenceEquals(snapshot, snapshots[0]));
+            snapshots.Select(static snapshot => snapshot.Revision).Should().OnlyContain(revision =>
+                revision == snapshots[0].Revision);
+        }
+        finally
+        {
+            projectionGate.Release();
+            diagnostics.SetSnapshotProjectionObserver(null);
+        }
     }
 
     [Fact]
@@ -56,15 +65,17 @@ public sealed class ModuleDiagnosticsSnapshotConcurrencyTests
         var application = host.Services.GetRequiredService<MonicaApplication>();
         var facade = host.Services.GetRequiredService<ModuleDiagnosticsFacade>();
         var diagnostics = host.Services.GetRequiredService<ModuleDiagnosticsService>();
-        await gate.Entered.Task.WaitAsync(HANG_GUARD, TestContext.Current.CancellationToken);
-        var initial = facade.GetSnapshot().Data!;
-        diagnostics.SetSnapshotProjectionObserver(projectionGate.WaitForRelease);
         try
         {
-            var inFlightLiveProjection = Task.Run(
+            gate.WaitUntilEntered(HANG_GUARD, TestContext.Current.CancellationToken);
+            var initial = facade.GetSnapshot().Data!;
+            diagnostics.SetSnapshotProjectionObserver(projectionGate.WaitForRelease);
+            var inFlightLiveProjection = Task.Factory.StartNew(
                 () => facade.GetSnapshot().Data!,
-                TestContext.Current.CancellationToken);
-            await projectionGate.Entered.Task.WaitAsync(HANG_GUARD, TestContext.Current.CancellationToken);
+                CancellationToken.None,
+                TaskCreationOptions.LongRunning,
+                TaskScheduler.Default);
+            projectionGate.WaitUntilEntered(HANG_GUARD, TestContext.Current.CancellationToken);
 
             gate.Release();
             application.Modules.DrainStartupWork();
@@ -94,12 +105,13 @@ public sealed class ModuleDiagnosticsSnapshotConcurrencyTests
         }
         finally
         {
+            gate.Release();
             projectionGate.Release();
             diagnostics.SetSnapshotProjectionObserver(null);
         }
     }
 
-    private static IHost CreateHost(SnapshotConcurrencyWorkGate gate)
+    private static IHost CreateHost(SnapshotConcurrencyWorkGate? gate = null)
     {
         var builder = Host.CreateApplicationBuilder();
         builder.AddMonica(monica =>
@@ -107,8 +119,11 @@ public sealed class ModuleDiagnosticsSnapshotConcurrencyTests
             monica.ConfigureModuleSystem(static options => options.MaxConcurrentStartupWorkItems = 2);
             monica.ConfigureTypeDiscovery(static options => options.ExcludeDefault());
             monica.AddModuleSystem();
-            monica.AddModule<SnapshotConcurrencyProbeModule, SnapshotConcurrencyProbeOption>(options =>
-                options.Gate = gate);
+            if (gate is not null)
+            {
+                monica.AddModule<SnapshotConcurrencyProbeModule, SnapshotConcurrencyProbeOption>(options =>
+                    options.Gate = gate);
+            }
         });
         return builder.Build();
     }
@@ -116,11 +131,17 @@ public sealed class ModuleDiagnosticsSnapshotConcurrencyTests
 
 internal sealed class SnapshotProjectionGate : IDisposable
 {
+    private readonly ManualResetEventSlim _entered = new(initialState: false);
     private readonly ManualResetEventSlim _release = new(initialState: false);
     private int _claimed;
 
-    internal TaskCompletionSource Entered { get; } =
-        new(TaskCreationOptions.RunContinuationsAsynchronously);
+    internal void WaitUntilEntered(TimeSpan timeout, CancellationToken cancellationToken)
+    {
+        if (!_entered.Wait(timeout, cancellationToken))
+        {
+            throw new TimeoutException("The controlled diagnostics projection did not start.");
+        }
+    }
 
     internal void WaitForRelease()
     {
@@ -129,16 +150,17 @@ internal sealed class SnapshotProjectionGate : IDisposable
             return;
         }
 
-        Entered.TrySetResult();
-        if (!_release.Wait(TimeSpan.FromSeconds(10)))
-        {
-            throw new TimeoutException("The controlled diagnostics projection was not released.");
-        }
+        _entered.Set();
+        _release.Wait();
     }
 
     internal void Release() => _release.Set();
 
-    public void Dispose() => _release.Dispose();
+    public void Dispose()
+    {
+        _entered.Dispose();
+        _release.Dispose();
+    }
 }
 
 internal sealed class SnapshotConcurrencyProbeModule : MonicaModule<SnapshotConcurrencyProbeOption>
@@ -159,21 +181,28 @@ internal sealed class SnapshotConcurrencyProbeOption : ModuleOptions<SnapshotCon
 
 internal sealed class SnapshotConcurrencyWorkGate : IDisposable
 {
+    private readonly ManualResetEventSlim _entered = new(initialState: false);
     private readonly ManualResetEventSlim _release = new(initialState: false);
 
-    internal TaskCompletionSource Entered { get; } =
-        new(TaskCreationOptions.RunContinuationsAsynchronously);
+    internal void WaitUntilEntered(TimeSpan timeout, CancellationToken cancellationToken)
+    {
+        if (!_entered.Wait(timeout, cancellationToken))
+        {
+            throw new TimeoutException("The controlled snapshot-concurrency work did not start.");
+        }
+    }
 
     internal void Run()
     {
-        Entered.TrySetResult();
-        if (!_release.Wait(TimeSpan.FromSeconds(10)))
-        {
-            throw new TimeoutException("The controlled snapshot-concurrency work was not released.");
-        }
+        _entered.Set();
+        _release.Wait();
     }
 
     internal void Release() => _release.Set();
 
-    public void Dispose() => _release.Dispose();
+    public void Dispose()
+    {
+        _entered.Dispose();
+        _release.Dispose();
+    }
 }
