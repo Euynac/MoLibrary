@@ -11,6 +11,22 @@ internal sealed class ModuleInitMetricsActivationService(
     MonicaApplication application) : BackgroundService
 {
     /// <inheritdoc />
+    public override async Task StopAsync(CancellationToken cancellationToken)
+    {
+        try
+        {
+            await base.StopAsync(cancellationToken);
+        }
+        finally
+        {
+            // .NET 10 schedules all of ExecuteAsync on the thread pool, so an immediate shutdown can begin before
+            // the worker's first observation. StopAsync is the host-owned synchronization point that guarantees the
+            // readiness revision is published; ModuleInitMetrics suppresses a duplicate if the worker won the race.
+            metrics.Observe(diagnostics.GetSnapshot());
+        }
+    }
+
+    /// <inheritdoc />
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         try

@@ -36,6 +36,31 @@ public sealed class ModuleInitMetricsTests
     }
 
     [Fact]
+    public async Task ApplicationStartup_WhenMetricsWorkerIsCancelledBeforeStarting_ShouldPublishDuringStop()
+    {
+        var builder = Host.CreateApplicationBuilder();
+        builder.AddMonica(MonicaStartup.Start(), monica =>
+        {
+            monica.ConfigureTypeDiscovery(static options => options.ExcludeDefault());
+            monica.AddModuleSystem();
+        });
+        using var host = builder.Build();
+        var measurements = new ConcurrentQueue<double>();
+        using var listener = ListenForApplicationStartup(host, measurements);
+        var application = host.Services.GetRequiredService<MonicaApplication>();
+        var activationService = host.Services.GetServices<IHostedService>()
+            .OfType<ModuleInitMetricsActivationService>()
+            .Single();
+        application.Profiling.MarkApplicationReady();
+
+        await activationService.StartAsync(new CancellationToken(canceled: true));
+        measurements.Should().BeEmpty();
+        await activationService.StopAsync(TestContext.Current.CancellationToken);
+
+        measurements.Should().ContainSingle().Which.Should().BeGreaterThan(0);
+    }
+
+    [Fact]
     public async Task ApplicationStartup_WhenNoBarrierWorkIsStillRunning_ShouldPublishBeforeModuleFinality()
     {
         using var gate = new ControlledWorkGate();

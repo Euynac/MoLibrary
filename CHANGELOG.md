@@ -28,6 +28,7 @@ This project follows semantic versioning for public NuGet packages. Release cand
 
 ### Fixed
 
+- Module startup metrics now publish the tracked application duration deterministically during immediate host shutdown on .NET 10.
 - ProjectUnit source analysis contract v3 now matches runtime discovery for direct `ExcludeFromBusinessTypeDiscovery` annotations and non-inherited `Configuration` annotations, preventing excluded or inherited-only source types from leaking into persisted catalogs.
 
 ### Removed
