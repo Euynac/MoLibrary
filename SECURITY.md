@@ -2,11 +2,11 @@
 
 ## Supported Versions
 
-Monica is in the `1.0.0-rc.8` release-candidate phase. Security fixes target the latest public release candidate and the main development branch.
+Monica is in the `1.0.0-rc.9` release-candidate phase. Security fixes target the latest public release candidate and the main development branch.
 
 | Version | Supported |
 | --- | --- |
-| `1.0.0-rc.8` | Yes |
+| `1.0.0-rc.9` | Yes |
 | Earlier release candidates | No |
 | Older preview versions | No |
 

@@ -6,8 +6,11 @@ This project follows semantic versioning for public NuGet packages. Release cand
 
 ## [Unreleased]
 
+## [1.0.0-rc.9] - 2026-08-08
+
 ### Added
 
+- A schema-validated bilingual Monica Guide bootstrap contract for Codex and Claude Code, with explicit application and extension-author goals.
 - Immutable, revisioned module diagnostics snapshots, sanitized baseline exports, lazy assembly inventories, and a five-section Module System observability workbench.
 - One-pass structural type discovery with typed stage metrics, bounded startup-work scheduling, optional performance budgets, and causal blocking diagnostics.
 - Automatic bounded catalogs for every public module-option property, with attribute or host-policy sensitivity marking and Development-only sensitive-value reveal.
@@ -17,6 +20,8 @@ This project follows semantic versioning for public NuGet packages. Release cand
 
 ### Changed
 
+- Monica Guide now treats an explicit immutable tag as authoritative, derives its channel consistently, validates repository and global-release constraints before apply, and diagnoses newer release schemas with an exact reinstall path.
+- Agent Skill release metadata now records human-readable per-skill revisions alongside immutable digests; ordinary CI validates revision accounting while only the release workflow publishes revisions and channel pointers.
 - Module composition now uses host-bound `ModuleRegistration<TModule, TOptions>` extensions, option-free `Describe(ModuleDescriptor)` graph declarations, startup-frozen options, and `DeclareTypeDiscovery(...)` plans.
 - Module identity, dependency ordering, option access, web capability, host requirements, and diagnostics are derived from the compiled host-owned module graph.
 - Startup effective-options loading now uses `BuildBootstrapConfiguration(...)` and `EnsureEffectiveOptionsSnapshot[Async](...)`, while `AddConfiguration(inputPlan)` applies the same immutable inputs to the runtime module graph.
@@ -27,6 +32,7 @@ This project follows semantic versioning for public NuGet packages. Release cand
 
 ### Removed
 
+- The repository-specific `supervise-subagents` skill; use the host's native collaboration primitives instead of a Monica-owned orchestration wrapper.
 - Legacy `Module*Guide` composition objects, the `DiscoverTypes(...)` callback, and fragmented mutable module-inspection contracts.
 - Low-level `IMonicaEffectiveOptionsReader`, `MonicaEffectiveOptionsReaderConfiguration`, and `CreateEffectiveOptionsReader(...)` APIs, plus direct module registration for configuration stores or managed JSON sources; declare those inputs through `MonicaConfigurationInputPlan` instead.
 
