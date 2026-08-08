@@ -6,7 +6,7 @@ This project follows semantic versioning for public NuGet packages. Release cand
 
 ## [Unreleased]
 
-## [1.0.0-rc.11] - 2026-08-08
+## [1.0.0-rc.12] - 2026-08-08
 
 ### Added
 
@@ -28,7 +28,7 @@ This project follows semantic versioning for public NuGet packages. Release cand
 
 ### Fixed
 
-- CI now separates parallel compilation from project-serial test execution, preventing unrelated test hosts from starving deliberate concurrency probes.
+- CI now separates parallel compilation from project-serial test execution, while deliberate blocking probes share one exclusive xUnit collection so unrelated tests cannot starve their workers.
 - Release history resolution now skips tags that never produced a GitHub release while still requiring the latest published skill index, so a failed candidate cannot truncate release notes or block the next candidate.
 - Concurrency stress tests now use test-owned completion signals instead of worker-side timeouts, preventing runner thread-pool starvation from being reported as framework startup-work failures.
 - Module startup metrics now publish the tracked application duration deterministically during immediate host shutdown on .NET 10.

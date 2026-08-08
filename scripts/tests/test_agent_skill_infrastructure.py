@@ -585,11 +585,11 @@ class AgentSkillInfrastructureTests(unittest.TestCase):
             published_rc8_index,
             expected_previous_tag=rc8_tag,
         )
-        rc11_tag = "v1.0.0-rc.11"
-        rc11_index = release.materialized_index(
+        rc12_tag = "v1.0.0-rc.12"
+        rc12_index = release.materialized_index(
             verified_rc8_index,
-            version="1.0.0-rc.11",
-            tag=rc11_tag,
+            version="1.0.0-rc.12",
+            tag=rc12_tag,
             commit="b" * 40,
             channel="preview",
             catalog_digest="sha256:" + "a" * 64,
@@ -599,7 +599,7 @@ class AgentSkillInfrastructureTests(unittest.TestCase):
             manifest_digest="sha256:" + "e" * 64,
             published_at="2026-08-05T00:01:00Z",
         )
-        release.validate_index_payload(rc11_index, label="rc11 release fixture")
+        release.validate_index_payload(rc12_index, label="rc12 release fixture")
 
         with self.assertRaisesRegex(
             release.ReleaseError,
@@ -607,8 +607,8 @@ class AgentSkillInfrastructureTests(unittest.TestCase):
         ):
             release.verified_build_history(
                 rc8_index,
-                rc11_index,
-                expected_previous_tag=rc11_tag,
+                rc12_index,
+                expected_previous_tag=rc12_tag,
             )
 
     def test_skill_revisions_follow_one_global_sequential_release_lineage(self) -> None:
