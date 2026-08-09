@@ -185,6 +185,16 @@ public sealed class ModuleMcpOption : ModuleOptions<ModuleMcp>
     public bool McpHttpStateless { get; set; } = true;
 
     /// <summary>
+    /// Creates the finalized local HTTP endpoint path for one logical MCP server from the current base route.
+    /// </summary>
+    /// <param name="serverName">Logical MCP server name appended as one escaped route segment.</param>
+    /// <returns>The normalized endpoint path used by Monica's HTTP MCP endpoint.</returns>
+    public string CreateHttpEndpointPath(string serverName)
+    {
+        return CreateHttpEndpointPath(McpHttpEndpointPath, serverName);
+    }
+
+    /// <summary>
     /// Optional ASP.NET Core authorization policy required by every Monica-hosted HTTP MCP endpoint.
     /// Leave this unset only for endpoints that are intentionally anonymous or protected by another host-level boundary.
     /// </summary>

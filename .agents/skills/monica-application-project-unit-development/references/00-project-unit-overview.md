@@ -52,6 +52,9 @@ An empty catalog reports no data, not 100% coverage. Use [03-project-unit-contex
 
 ## Selection Rules
 
+- Declare `[Configuration]` directly on every configuration ProjectUnit; configuration identity is not inherited by derived options types.
+- Apply `[ExcludeFromBusinessTypeDiscovery]` directly to a runtime-only type that must be absent from both runtime and source ProjectUnit catalogs. The exclusion does not flow to derived types.
+- Use `ProjectUnitSourceAnalysisContract.DiscoverableUnitTypes` when validating a source-level create role; not every reserved `ProjectUnitSourceType` value is implemented by the current analyzer.
 - Create a new `ApplicationService` when you need a new externally visible use case.
 - Create a `DomainService` when the business rule must be reused by multiple handlers, jobs, or event handlers.
 - Create or extend an `Entity` when the rule belongs to the state owner itself.

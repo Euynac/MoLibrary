@@ -11,12 +11,13 @@ using Xunit;
 
 namespace Test.Monica.Core.Modularity;
 
+[Collection(BlockingConcurrencyCollection.Name)]
 public sealed class ModuleDiagnosticsSnapshotLifecycleTests
 {
     private static readonly TimeSpan HANG_GUARD = TimeSpan.FromSeconds(10);
 
     [Fact]
-    public async Task GetSnapshot_WhenNoBarrierWorkTransitions_ShouldAdvanceUntilOneFinalReferenceRemains()
+    public void GetSnapshot_WhenNoBarrierWorkTransitions_ShouldAdvanceUntilOneFinalReferenceRemains()
     {
         using var gate = new ControlledWorkGate();
         var builder = Host.CreateApplicationBuilder();
@@ -35,7 +36,7 @@ public sealed class ModuleDiagnosticsSnapshotLifecycleTests
 
         try
         {
-            await gate.Entered.Task.WaitAsync(HANG_GUARD, TestContext.Current.CancellationToken);
+            gate.WaitUntilEntered(HANG_GUARD, TestContext.Current.CancellationToken);
             host = builder.Build();
             var application = host.Services.GetRequiredService<global::Monica.Core.MonicaApplication>();
             var facade = host.Services.GetRequiredService<ModuleDiagnosticsFacade>();
@@ -87,22 +88,30 @@ public sealed class ModuleDiagnosticsSnapshotLifecycleTests
 
     private sealed class ControlledWorkGate : IDisposable
     {
+        private readonly ManualResetEventSlim _entered = new(initialState: false);
         private readonly ManualResetEventSlim _release = new(initialState: false);
 
-        internal TaskCompletionSource Entered { get; } =
-            new(TaskCreationOptions.RunContinuationsAsynchronously);
+        internal void WaitUntilEntered(TimeSpan timeout, CancellationToken cancellationToken)
+        {
+            if (!_entered.Wait(timeout, cancellationToken))
+            {
+                throw new TimeoutException("The controlled diagnostics work did not start.");
+            }
+        }
 
         internal void Run()
         {
-            Entered.TrySetResult();
-            if (!_release.Wait(HANG_GUARD))
-            {
-                throw new TimeoutException("The controlled diagnostics work was not released.");
-            }
+            _entered.Set();
+            _release.Wait();
         }
 
         internal void Release() => _release.Set();
 
-        public void Dispose() => _release.Dispose();
+        public void Dispose()
+        {
+            _release.Set();
+            _entered.Dispose();
+            _release.Dispose();
+        }
     }
 }

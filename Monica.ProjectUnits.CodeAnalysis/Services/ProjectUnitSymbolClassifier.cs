@@ -17,6 +17,8 @@ internal sealed class ProjectUnitSymbolClassifier
     private const string DOMAIN_EVENT_BASE = "Monica.EventBus.Events.DomainEvent";
     private const string DOMAIN_SERVICE = "Monica.WebApi.Abstractions.DomainService";
     private const string ENTITY = "Monica.Repository.Entity.Abstractions.IEntity";
+    private const string EXCLUDE_FROM_BUSINESS_TYPE_DISCOVERY_ATTRIBUTE =
+        "Monica.Core.Modularity.Annotations.ExcludeFromBusinessTypeDiscoveryAttribute";
     private const string HOSTED_SERVICE = "Microsoft.Extensions.Hosting.IHostedService";
     private const string HOSTED_SERVICE_START_EXECUTION_POINT = "hosted-service.start";
     private const string HOSTED_SERVICE_STOP_EXECUTION_POINT = "hosted-service.stop";
@@ -49,17 +51,28 @@ internal sealed class ProjectUnitSymbolClassifier
             return null;
         }
 
+        if (symbol.FindAttribute(EXCLUDE_FROM_BUSINESS_TYPE_DISCOVERY_ATTRIBUTE, inherit: false) is not null)
+        {
+            return null;
+        }
+
         var classification = ClassifyType(symbol);
         if (classification is null)
         {
             return null;
         }
 
+        if (!ProjectUnitSourceAnalysisContract.DiscoverableUnitTypes.Contains(classification.UnitType))
+        {
+            throw new InvalidOperationException(
+                $"Source classifier returned an undeclared ProjectUnit role: {classification.UnitType}.");
+        }
+
         var diagnostics = new List<ProjectUnitSourceDiagnostic>();
         var description = ReadDocumentationSummary(symbol);
         var title = symbol.Name;
 
-        if (symbol.FindAttribute(CONFIGURATION_ATTRIBUTE, inherit: true) is { } configuration)
+        if (symbol.FindAttribute(CONFIGURATION_ATTRIBUTE, inherit: false) is { } configuration)
         {
             title = configuration.ReadNamedString("DisplayName") ?? title;
             description = configuration.ReadNamedString("Description") ?? description;
@@ -157,7 +170,7 @@ internal sealed class ProjectUnitSymbolClassifier
             return new(ProjectUnitSourceType.HttpApi, executionPoints, AnalyzeConstructorDependencies: true);
         }
 
-        if (symbol.FindAttribute(CONFIGURATION_ATTRIBUTE, inherit: true) is not null)
+        if (symbol.FindAttribute(CONFIGURATION_ATTRIBUTE, inherit: false) is not null)
         {
             return new(ProjectUnitSourceType.Configuration, [], AnalyzeConstructorDependencies: false);
         }

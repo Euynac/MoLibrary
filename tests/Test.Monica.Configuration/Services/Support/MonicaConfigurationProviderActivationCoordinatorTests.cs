@@ -209,11 +209,16 @@ public sealed class MonicaConfigurationProviderActivationCoordinatorTests
     public void RecordStartupStageDuration_ShouldEmitOnlyBoundedStageAndResultDimensions()
     {
         var measurements = new ConcurrentBag<MetricMeasurement>();
+        using var services = new ServiceCollection()
+            .AddMetrics()
+            .BuildServiceProvider();
+        var meterFactory = services.GetRequiredService<IMeterFactory>();
         using var listener = new MeterListener
         {
             InstrumentPublished = (instrument, meterListener) =>
             {
-                if (instrument.Meter.Name == ConfigurationMetrics.MeterName
+                if (ReferenceEquals(instrument.Meter.Scope, meterFactory)
+                    && instrument.Meter.Name == ConfigurationMetrics.MeterName
                     && instrument.Name == ConfigurationMetrics.StartupStageDuration)
                 {
                     meterListener.EnableMeasurementEvents(instrument);
@@ -225,10 +230,7 @@ public sealed class MonicaConfigurationProviderActivationCoordinatorTests
             measurements.Add(new MetricMeasurement(value, tags.ToArray()));
         });
         listener.Start();
-        using var services = new ServiceCollection()
-            .AddMetrics()
-            .BuildServiceProvider();
-        var recorder = new ConfigurationMetricsRecorder(services.GetRequiredService<IMeterFactory>());
+        var recorder = new ConfigurationMetricsRecorder(meterFactory);
 
         recorder.RecordStartupStageDuration(
             ConfigurationStartupStage.MetadataPublication,

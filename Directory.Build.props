@@ -10,7 +10,7 @@
 
   <PropertyGroup Condition="'$(IsPackable)' != 'false'">
     <!-- Package Metadata -->
-    <Version>1.0.0-rc.8</Version>
+    <Version>1.0.0-rc.12</Version>
     <Authors>MonicaFramework</Authors>
     <Company>MonicaFramework</Company>
     <Product>Monica Framework</Product>
@@ -34,7 +34,7 @@
     <PackageTags>monica;dotnet;aspnetcore;blazor;mudblazor;ddd;ai-agent;jobscheduler;modular;recurringjob</PackageTags>
 
     <!-- Package Release Notes -->
-    <PackageReleaseNotes>Monica 1.0 release candidate 8 corrects canonical Agent Skill archive digest ordering, independently verifies aggregate and per-skill release payloads, and enforces exact release-tag alignment with source and template versions.</PackageReleaseNotes>
+    <PackageReleaseNotes>Monica 1.0 release candidate 9 introduces frozen host-owned module composition, bounded startup diagnostics, comprehensive module observability, exact ProjectUnit source contracts, and a hardened Agent-first Guide bootstrap.</PackageReleaseNotes>
 
     <!-- Symbol Packages -->
     <IncludeSymbols>true</IncludeSymbols>

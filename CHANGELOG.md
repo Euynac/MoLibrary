@@ -6,24 +6,37 @@ This project follows semantic versioning for public NuGet packages. Release cand
 
 ## [Unreleased]
 
+## [1.0.0-rc.12] - 2026-08-08
+
 ### Added
 
+- A schema-validated bilingual Monica Guide bootstrap contract for Codex and Claude Code, with explicit application and extension-author goals.
 - Immutable, revisioned module diagnostics snapshots, sanitized baseline exports, lazy assembly inventories, and a five-section Module System observability workbench.
 - One-pass structural type discovery with typed stage metrics, bounded startup-work scheduling, optional performance budgets, and causal blocking diagnostics.
 - Automatic bounded catalogs for every public module-option property, with attribute or host-policy sensitivity marking and Development-only sensitive-value reveal.
 - Immutable `MonicaConfigurationInputPlan` declarations that share one store composition, section-path convention, and ordered managed JSON sources across bootstrap configuration, startup option loading, and runtime module composition.
-- A read-only `IConfigurationEffectiveValueReader` contract for point-in-time startup access to effective documents.
+- `ModuleMcpOption.CreateHttpEndpointPath` as the canonical projection from a configured MCP base route to one logical server endpoint.
+- `ProjectUnitSourceAnalysisContract.DiscoverableUnitTypes` as the canonical set of roles the source analyzer can emit.
 
 ### Changed
 
+- Monica Guide now treats an explicit immutable tag as authoritative, derives its channel consistently, validates repository and global-release constraints before apply, and diagnoses newer release schemas with an exact reinstall path.
+- Agent Skill release metadata now records human-readable per-skill revisions alongside immutable digests; ordinary CI validates revision accounting while only the release workflow publishes revisions and channel pointers.
 - Module composition now uses host-bound `ModuleRegistration<TModule, TOptions>` extensions, option-free `Describe(ModuleDescriptor)` graph declarations, startup-frozen options, and `DeclareTypeDiscovery(...)` plans.
 - Module identity, dependency ordering, option access, web capability, host requirements, and diagnostics are derived from the compiled host-owned module graph.
-- Startup effective-options loading now uses `BuildBootstrapConfiguration(...)` and `LoadEffectiveOptionsSnapshot[Async](...)`. Loading performs one read-only batch observation and keeps persistent seeding exclusively in runtime activation, while `AddConfiguration(inputPlan)` applies the same immutable inputs to the runtime module graph.
-- Configuration schema traversal now rejects branch recursion and logical paths deeper than 64; compact persisted schema JSON is bounded at depth 256.
-- File-backed definition, effective-value, and sidecar documents now use identity-addressed filenames. Legacy definition-key filenames must be migrated or the store recreated before startup.
+- Startup effective-options loading now uses `BuildBootstrapConfiguration(...)` and `EnsureEffectiveOptionsSnapshot[Async](...)`, while `AddConfiguration(inputPlan)` applies the same immutable inputs to the runtime module graph.
+
+### Fixed
+
+- CI now separates parallel compilation from project-serial test execution, while deliberate blocking probes share one exclusive xUnit collection so unrelated tests cannot starve their workers.
+- Release history resolution now skips tags that never produced a GitHub release while still requiring the latest published skill index, so a failed candidate cannot truncate release notes or block the next candidate.
+- Concurrency stress tests now use test-owned completion signals instead of worker-side timeouts, preventing runner thread-pool starvation from being reported as framework startup-work failures.
+- Module startup metrics now publish the tracked application duration deterministically during immediate host shutdown on .NET 10.
+- ProjectUnit source analysis contract v3 now matches runtime discovery for direct `ExcludeFromBusinessTypeDiscovery` annotations and non-inherited `Configuration` annotations, preventing excluded or inherited-only source types from leaking into persisted catalogs.
 
 ### Removed
 
+- The repository-specific `supervise-subagents` skill; use the host's native collaboration primitives instead of a Monica-owned orchestration wrapper.
 - Legacy `Module*Guide` composition objects, the `DiscoverTypes(...)` callback, and fragmented mutable module-inspection contracts.
 - Low-level `IMonicaEffectiveOptionsReader`, `MonicaEffectiveOptionsReaderConfiguration`, and `CreateEffectiveOptionsReader(...)` APIs, plus direct module registration for configuration stores or managed JSON sources; declare those inputs through `MonicaConfigurationInputPlan` instead.
 

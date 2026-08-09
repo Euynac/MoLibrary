@@ -52,7 +52,7 @@ def shared_manifest(repository_id: str = "Acme.Monica.Example") -> dict:
         "distribution": "public",
         "publishing": {"target": "nuget.org"},
         "targetFramework": "net10.0",
-        "monicaVersion": "1.0.0-rc.8",
+        "monicaVersion": "1.0.0-rc.12",
         "license": {"openSource": True, "expression": "MIT"},
         "branding": {
             "icon": {"kind": "compatibility-mark"},
@@ -371,10 +371,10 @@ class RepositorySkillTests(unittest.TestCase):
             central_text = central_text.replace(
                 "    <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>",
                 "    <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>\n"
-                "    <MonicaVersion>1.0.0-rc.9</MonicaVersion>",
+                "    <MonicaVersion>1.0.0-rc.8</MonicaVersion>",
             )
             central_text = central_text.replace(
-                '<PackageVersion Include="Monica.Core" Version="1.0.0-rc.8" />',
+                '<PackageVersion Include="Monica.Core" Version="1.0.0-rc.12" />',
                 '<PackageVersion Include="Monica.Core" Version="$(MonicaVersion)" />',
             )
             central.write_text(central_text, encoding="utf-8")
@@ -382,7 +382,7 @@ class RepositorySkillTests(unittest.TestCase):
             findings = validator.validate_project(output, project, None)
             mismatch = [item for item in findings if item.code == "MTP033"]
             self.assertEqual(1, len(mismatch))
-            self.assertIn("found '1.0.0-rc.9'", mismatch[0].message)
+            self.assertIn("found '1.0.0-rc.8'", mismatch[0].message)
 
     def test_manifest_rejects_cross_package_graph_and_provider_drift(self) -> None:
         cases = []
@@ -864,20 +864,20 @@ shellRegistration.RegisterUIComponents(registry =>
             build_props.write_text(
                 build_props.read_text(encoding="utf-8").replace(
                     "<TargetFramework>net10.0</TargetFramework>",
-                    "<TargetFramework>net10.0</TargetFramework>\n    <MonicaVersion>1.0.0-rc.8</MonicaVersion>",
+                    "<TargetFramework>net10.0</TargetFramework>\n    <MonicaVersion>1.0.0-rc.12</MonicaVersion>",
                 ),
                 encoding="utf-8",
             )
             packages = output / "Directory.Packages.props"
             packages.write_text(
                 packages.read_text(encoding="utf-8").replace(
-                    'Version="1.0.0-rc.8"',
+                    'Version="1.0.0-rc.12"',
                     'Version="$(MonicaVersion)"',
                 ),
                 encoding="utf-8",
             )
             project = output / "src/Acme.Monica.Example/Acme.Monica.Example.csproj"
-            self.assertEqual("1.0.0-rc.8", validator.package_references(output, project)["Monica.Core"].version)
+            self.assertEqual("1.0.0-rc.12", validator.package_references(output, project)["Monica.Core"].version)
 
             project.write_text(
                 project.read_text(encoding="utf-8").replace(' PrivateAssets="All"', ""),

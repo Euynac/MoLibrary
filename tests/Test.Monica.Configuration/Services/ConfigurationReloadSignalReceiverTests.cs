@@ -12,6 +12,8 @@ namespace Test.Monica.Configuration.Services;
 
 public sealed class ConfigurationReloadSignalReceiverTests
 {
+    private static readonly TimeSpan HANG_GUARD = TimeSpan.FromSeconds(2);
+
     [Fact]
     public async Task ReceiveAsync_WhenNotificationIsRelevant_ShouldDebounceAndReloadDefinitionOnce()
     {
@@ -26,8 +28,11 @@ public sealed class ConfigurationReloadSignalReceiverTests
         await receiver.ReceiveAsync(first, CancellationToken.None);
         await receiver.ReceiveAsync(duplicateDefinition, CancellationToken.None);
 
-        await coordinator.WaitForReloadAsync(definition.DefinitionKey);
-        coordinator.ReloadedDefinitions.Should().Equal(definition.DefinitionKey);
+        await coordinator.WaitForReloadAsync(definition.DefinitionKey, minimumVersion: 3)
+            .WaitAsync(HANG_GUARD, TestContext.Current.CancellationToken);
+        var reload = coordinator.Reloads.Should().ContainSingle().Subject;
+        reload.DefinitionKey.Should().Be(definition.DefinitionKey);
+        reload.MinimumVersion.Should().Be(3);
     }
 
     [Fact]
@@ -52,7 +57,7 @@ public sealed class ConfigurationReloadSignalReceiverTests
         }, CancellationToken.None);
         await Task.Delay(80, TestContext.Current.CancellationToken);
 
-        coordinator.ReloadedDefinitions.Should().BeEmpty();
+        coordinator.Reloads.Should().BeEmpty();
     }
 
     private static ConfigurationReloadSignalReceiver CreateReceiver(
@@ -96,18 +101,19 @@ public sealed class ConfigurationReloadSignalReceiverTests
 
     private sealed class RecordingReloadCoordinator : IConfigurationReloadCoordinator
     {
-        private readonly Dictionary<string, TaskCompletionSource> _reloadSignals = new(StringComparer.OrdinalIgnoreCase);
+        private readonly Dictionary<(string DefinitionKey, long? MinimumVersion), TaskCompletionSource>
+            _reloadSignals = [];
         private readonly Dictionary<string, long?> _loadedVersions = new(StringComparer.OrdinalIgnoreCase);
-        private readonly List<string> _reloadedDefinitions = [];
+        private readonly List<(string DefinitionKey, long? MinimumVersion)> _reloads = [];
         private readonly object _lock = new();
 
-        public IReadOnlyList<string> ReloadedDefinitions
+        public IReadOnlyList<(string DefinitionKey, long? MinimumVersion)> Reloads
         {
             get
             {
                 lock (_lock)
                 {
-                    return [.. _reloadedDefinitions];
+                    return [.. _reloads];
                 }
             }
         }
@@ -121,9 +127,10 @@ public sealed class ConfigurationReloadSignalReceiverTests
         {
             lock (_lock)
             {
-                _reloadedDefinitions.Add(definitionKey);
+                var reload = (DefinitionKey: definitionKey, MinimumVersion: minimumVersion);
+                _reloads.Add(reload);
                 _loadedVersions[definitionKey] = minimumVersion;
-                if (_reloadSignals.TryGetValue(definitionKey, out var signal))
+                if (_reloadSignals.TryGetValue(reload, out var signal))
                 {
                     signal.TrySetResult();
                 }
@@ -153,16 +160,24 @@ public sealed class ConfigurationReloadSignalReceiverTests
             }
         }
 
-        public async Task WaitForReloadAsync(string definitionKey)
+        public Task WaitForReloadAsync(string definitionKey, long? minimumVersion)
         {
-            TaskCompletionSource signal;
             lock (_lock)
             {
-                signal = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-                _reloadSignals[definitionKey] = signal;
-            }
+                var expected = (DefinitionKey: definitionKey, MinimumVersion: minimumVersion);
+                if (_reloads.Contains(expected))
+                {
+                    return Task.CompletedTask;
+                }
 
-            await signal.Task.WaitAsync(TimeSpan.FromSeconds(2));
+                if (!_reloadSignals.TryGetValue(expected, out var signal))
+                {
+                    signal = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+                    _reloadSignals.Add(expected, signal);
+                }
+
+                return signal.Task;
+            }
         }
     }
 }

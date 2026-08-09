@@ -75,8 +75,11 @@ jobs:
       - name: Restore solution
         run: dotnet restore Monica.slnx
 
+      - name: Build solution
+        run: dotnet build Monica.slnx --no-restore --configuration Release -m
+
       - name: Run unit tests
-        run: dotnet test Monica.slnx --no-restore --configuration Release --verbosity minimal --logger "trx;LogFilePrefix=unit-tests" --results-directory tests/TestResults -m
+        run: dotnet test Monica.slnx --no-restore --no-build --configuration Release --verbosity minimal --logger "trx;LogFilePrefix=unit-tests" --results-directory tests/TestResults -m:1
 
       - name: Upload test results
         if: always()

@@ -14,8 +14,11 @@ using Xunit;
 
 namespace Test.Monica.Core.Modularity;
 
+[Collection(BlockingConcurrencyCollection.Name)]
 public sealed class ModuleInitMetricsTests
 {
+    private static readonly TimeSpan HANG_GUARD = TimeSpan.FromSeconds(10);
+
     [Fact]
     public async Task ApplicationStartup_WhenTrackedHostStopsImmediately_ShouldStillPublishTheTerminalDuration()
     {
@@ -31,6 +34,31 @@ public sealed class ModuleInitMetricsTests
 
         await host.StartAsync(TestContext.Current.CancellationToken);
         await host.StopAsync(TestContext.Current.CancellationToken);
+
+        measurements.Should().ContainSingle().Which.Should().BeGreaterThan(0);
+    }
+
+    [Fact]
+    public async Task ApplicationStartup_WhenMetricsWorkerIsCancelledBeforeStarting_ShouldPublishDuringStop()
+    {
+        var builder = Host.CreateApplicationBuilder();
+        builder.AddMonica(MonicaStartup.Start(), monica =>
+        {
+            monica.ConfigureTypeDiscovery(static options => options.ExcludeDefault());
+            monica.AddModuleSystem();
+        });
+        using var host = builder.Build();
+        var measurements = new ConcurrentQueue<double>();
+        using var listener = ListenForApplicationStartup(host, measurements);
+        var application = host.Services.GetRequiredService<MonicaApplication>();
+        var activationService = host.Services.GetServices<IHostedService>()
+            .OfType<ModuleInitMetricsActivationService>()
+            .Single();
+        application.Profiling.MarkApplicationReady();
+
+        await activationService.StartAsync(new CancellationToken(canceled: true));
+        measurements.Should().BeEmpty();
+        await activationService.StopAsync(TestContext.Current.CancellationToken);
 
         measurements.Should().ContainSingle().Which.Should().BeGreaterThan(0);
     }
@@ -57,9 +85,7 @@ public sealed class ModuleInitMetricsTests
 
         try
         {
-            await gate.Entered.Task.WaitAsync(
-                TimeSpan.FromSeconds(10),
-                TestContext.Current.CancellationToken);
+            gate.WaitUntilEntered(HANG_GUARD, TestContext.Current.CancellationToken);
             await host.StartAsync(TestContext.Current.CancellationToken);
             var snapshot = host.Services.GetRequiredService<ModuleDiagnosticsFacade>().GetSnapshot().Data!;
 
@@ -215,6 +241,29 @@ public sealed class ModuleInitMetricsTests
         probe.DoubleMeasurements.Should().HaveCount(8);
     }
 
+    [Fact]
+    public void MetricsProbe_WhenCompetingFactoryPublishesDuringSetup_ShouldIgnoreForeignMeasurements()
+    {
+        using var competingServices = new ServiceCollection()
+            .AddMetrics()
+            .BuildServiceProvider();
+        var snapshot = CreateTerminalSnapshot();
+        using var probe = new MetricsProbe(() =>
+        {
+            var competingMetrics = new ModuleInitMetrics(
+                competingServices.GetRequiredService<IMeterFactory>());
+            competingMetrics.Observe(snapshot);
+        });
+
+        probe.DoubleMeasurements.Should().BeEmpty();
+
+        probe.Metrics.Observe(snapshot);
+
+        probe.DoubleMeasurements.Should().HaveCount(8);
+        probe.DoubleMeasurements.Should().ContainSingle(measurement =>
+            measurement.InstrumentName == ModuleInitMetricNames.CompositionDuration);
+    }
+
     private static ModuleDiagnosticsSnapshot CreateLiveSnapshot()
     {
         var startedAtUtc = DateTimeOffset.UtcNow;
@@ -355,39 +404,47 @@ public sealed class ModuleInitMetricsTests
 
     private sealed class ControlledWorkGate : IDisposable
     {
+        private readonly ManualResetEventSlim _entered = new(initialState: false);
         private readonly ManualResetEventSlim _release = new(initialState: false);
 
-        internal TaskCompletionSource Entered { get; } =
-            new(TaskCreationOptions.RunContinuationsAsynchronously);
+        internal void WaitUntilEntered(TimeSpan timeout, CancellationToken cancellationToken)
+        {
+            if (!_entered.Wait(timeout, cancellationToken))
+            {
+                throw new TimeoutException("The controlled metrics work did not start.");
+            }
+        }
 
         internal void Run()
         {
-            Entered.TrySetResult();
-            if (!_release.Wait(TimeSpan.FromSeconds(10)))
-            {
-                throw new TimeoutException("The controlled metrics work was not released.");
-            }
+            _entered.Set();
+            _release.Wait();
         }
 
         internal void Release() => _release.Set();
 
-        public void Dispose() => _release.Dispose();
+        public void Dispose()
+        {
+            _release.Set();
+            _entered.Dispose();
+            _release.Dispose();
+        }
     }
 
     private sealed class MetricsProbe : IDisposable
     {
         private readonly ServiceProvider _services;
         private readonly MeterListener _listener = new();
-        private bool _capturePublications;
 
-        internal MetricsProbe()
+        internal MetricsProbe(Action? publishCompetingMetrics = null)
         {
             var services = new ServiceCollection();
             services.AddMetrics();
             _services = services.BuildServiceProvider();
+            var meterFactory = _services.GetRequiredService<IMeterFactory>();
             _listener.InstrumentPublished = (instrument, listener) =>
             {
-                if (_capturePublications
+                if (ReferenceEquals(instrument.Meter.Scope, meterFactory)
                     && instrument.Meter.Name == ModuleInitMetricNames.MeterName)
                 {
                     listener.EnableMeasurementEvents(instrument);
@@ -404,9 +461,8 @@ public sealed class ModuleInitMetricsTests
                     value,
                     CopyTags(tags))));
             _listener.Start();
-            _capturePublications = true;
-            Metrics = new ModuleInitMetrics(_services.GetRequiredService<IMeterFactory>());
-            _capturePublications = false;
+            publishCompetingMetrics?.Invoke();
+            Metrics = new ModuleInitMetrics(meterFactory);
         }
 
         internal ModuleInitMetrics Metrics { get; }

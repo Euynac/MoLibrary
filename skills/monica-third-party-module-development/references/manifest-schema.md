@@ -24,7 +24,7 @@ Create a UTF-8 JSON manifest and pass it to `scripts/scaffold_repository.py`. Un
   "distribution": "public",
   "publishing": { "target": "nuget.org" },
   "targetFramework": "net10.0",
-  "monicaVersion": "1.0.0-rc.8",
+  "monicaVersion": "1.0.0-rc.12",
   "license": { "openSource": true, "expression": "MIT" },
   "branding": {
     "icon": { "kind": "compatibility-mark" },

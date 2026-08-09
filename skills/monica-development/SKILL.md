@@ -1,6 +1,6 @@
 ---
 name: monica-development
-description: Use when creating or refactoring Monica modules and services; working with MonicaModule, ModuleRegistration, Describe, DeclareTypeDiscovery, TypeDiscoveryPlan, ModuleDiagnosticsFacade, option diagnostics, or startup budgets; using Res/Res<T> and IsFailed; adding Facades or internal services; implementing MoBackgroundService, RecordState, or CoordinatedLeaderService; declaring required or satisfied features and required configuration; or choosing among IUIModule, IWebModule, and IWebHostRequiredModule. Covers current module composition, runtime kinds, one-pass type discovery, diagnostics, Res scope, feature validation, and hosted-service observability.
+description: Use when creating or refactoring Monica modules and services; working with MonicaModule, ModuleRegistration, Describe, DeclareTypeDiscovery, TypeDiscoveryPlan, ModuleDiagnosticsFacade, option diagnostics, or startup budgets; using Res results with or without payloads and IsFailed; adding Facades or internal services; implementing MoBackgroundService, RecordState, or CoordinatedLeaderService; declaring required or satisfied features and required configuration; or choosing among IUIModule, IWebModule, and IWebHostRequiredModule. Covers current module composition, runtime kinds, one-pass type discovery, diagnostics, Res scope, feature validation, and hosted-service observability.
 ---
 
 # Monica Development Guide

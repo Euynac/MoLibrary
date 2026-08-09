@@ -552,6 +552,65 @@ class AgentSkillInfrastructureTests(unittest.TestCase):
                 published_at="2026-08-05T00:00:00Z",
             )
 
+    def test_release_build_requires_published_index_to_match_checked_in_trust_anchor(self) -> None:
+        empty_index = {
+            "$schema": "./schemas/agent-skill-index.schema.json",
+            "schemaVersion": 2,
+            "channels": {"stable": None, "preview": None},
+            "versions": {},
+            "releases": {},
+        }
+        rc8_tag = "v1.0.0-rc.8"
+        rc8_index = release.materialized_index(
+            empty_index,
+            version="1.0.0-rc.8",
+            tag=rc8_tag,
+            commit="8" * 40,
+            channel="preview",
+            catalog_digest="sha256:" + "a" * 64,
+            tree_digest="sha256:" + "b" * 64,
+            skill_digests={"monica-guide": "sha256:" + "c" * 64},
+            previous_tag=None,
+            manifest_digest="sha256:" + "d" * 64,
+            published_at="2026-08-05T00:00:00Z",
+        )
+        published_rc8_index = {
+            key: rc8_index[key]
+            for key in reversed(rc8_index)
+        }
+        self.assertNotEqual(json.dumps(rc8_index), json.dumps(published_rc8_index))
+
+        verified_rc8_index = release.verified_build_history(
+            rc8_index,
+            published_rc8_index,
+            expected_previous_tag=rc8_tag,
+        )
+        rc12_tag = "v1.0.0-rc.12"
+        rc12_index = release.materialized_index(
+            verified_rc8_index,
+            version="1.0.0-rc.12",
+            tag=rc12_tag,
+            commit="b" * 40,
+            channel="preview",
+            catalog_digest="sha256:" + "a" * 64,
+            tree_digest="sha256:" + "b" * 64,
+            skill_digests={"monica-guide": "sha256:" + "c" * 64},
+            previous_tag=rc8_tag,
+            manifest_digest="sha256:" + "e" * 64,
+            published_at="2026-08-05T00:01:00Z",
+        )
+        release.validate_index_payload(rc12_index, label="rc12 release fixture")
+
+        with self.assertRaisesRegex(
+            release.ReleaseError,
+            "trust anchor for channels, versions, releases",
+        ):
+            release.verified_build_history(
+                rc8_index,
+                rc12_index,
+                expected_previous_tag=rc12_tag,
+            )
+
     def test_skill_revisions_follow_one_global_sequential_release_lineage(self) -> None:
         base = {
             "$schema": "./schemas/agent-skill-index.schema.json",
