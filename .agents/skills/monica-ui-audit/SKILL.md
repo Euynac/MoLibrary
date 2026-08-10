@@ -76,6 +76,7 @@ Indicators:
 - Informational surfaces translate, scale, change the cursor, or use strong lift on hover, falsely implying an unavailable action; subtle border, tonal, or low-shadow spatial-focus feedback is valid
 - Motion uses large travel, bouncing, repeated flourishes, continuous ambient effects, or ignores `prefers-reduced-motion`
 - A surface stacks more than two decorative cues, such as top stripe + ring + shadow, or repeats stripes/rings across every card
+- The same accent rail is repeated across unrelated card groups, replaces a clearer page-specific outline/icon/badge treatment, or appears where it encodes no additional status or category meaning
 - Border radii fall outside the 6/8/12 scale, multiply a base radius, or grow across nested surfaces
 - The implementation loses the prototype's typography, density, spacing rhythm, composition, surface roles, width utilization, or responsive reflow
 - Interface, hierarchy, and diagnostic text have no deliberate font-role separation, or monospace is used broadly as decoration

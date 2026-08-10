@@ -16,7 +16,6 @@
             {
                 var compositionShare = CompositionShare(snapshot.Summary.TotalCompositionDurationMs, startupDurationMs);
                 <article class="startup-kpi-card mo-card-surface" data-mo-card-tone="primary">
-                    <span class="mo-card-surface__rail" aria-hidden="true"></span>
                     <header class="startup-kpi-card__header">
                         <span class="kpi-icon" aria-hidden="true">
                             <MudIcon Icon="@Icons.Material.Filled.RocketLaunch" />
@@ -64,7 +63,6 @@
             else
             {
                 <article class="kpi-card kpi-card--composition mo-card-surface" data-mo-card-tone="primary">
-                    <span class="mo-card-surface__rail" aria-hidden="true"></span>
                     <header class="kpi-card__header">
                         <span class="kpi-icon" aria-hidden="true">
                             <MudIcon Icon="@Icons.Material.Filled.Speed" />
@@ -77,7 +75,6 @@
                 </article>
             }
             <article class="kpi-card kpi-card--modules mo-card-surface" data-mo-card-tone="success">
-                <span class="mo-card-surface__rail" aria-hidden="true"></span>
                 <header class="kpi-card__header">
                     <span class="kpi-icon" aria-hidden="true"><MudIcon Icon="@Icons.Material.Filled.Widgets" /></span>
                     <span class="kpi-badge">@L["Overview:Kpis:Declared", snapshot.Summary.ModuleCount]</span>
@@ -87,7 +84,6 @@
                 <small class="kpi-detail">@L["Overview:Kpis:DirectEdges", snapshot.Topology.Edges.Length]</small>
             </article>
             <article class="kpi-card kpi-card--registration mo-card-surface" data-mo-card-tone="info">
-                <span class="mo-card-surface__rail" aria-hidden="true"></span>
                 <header class="kpi-card__header">
                     <span class="kpi-icon" aria-hidden="true"><MudIcon Icon="@Icons.Material.Filled.AppRegistration" /></span>
                     <span class="kpi-badge">@L["Overview:Kpis:Exact"]</span>
@@ -97,7 +93,6 @@
                 <small class="kpi-detail">@L["Overview:Kpis:CompositionShareValue", FormatPercentage(CompositionShare(snapshot.Summary.ServiceRegistrationDurationMs, snapshot.Summary.TotalCompositionDurationMs))]</small>
             </article>
             <article class="kpi-card kpi-card--discovery mo-card-surface" data-mo-card-tone="secondary">
-                <span class="mo-card-surface__rail" aria-hidden="true"></span>
                 <header class="kpi-card__header">
                     <span class="kpi-icon" aria-hidden="true"><MudIcon Icon="@Icons.Material.Filled.ManageSearch" /></span>
                     <span class="kpi-badge">@L["Overview:Kpis:Queries", snapshot.TypeDiscovery.Statistics.DistinctQueryCount]</span>
@@ -108,7 +103,6 @@
             </article>
             <article class="kpi-card @findingsPresentation.KpiClass mo-card-surface"
                      data-mo-card-tone="@findingsPresentation.Tone">
-                <span class="mo-card-surface__rail" aria-hidden="true"></span>
                 <header class="kpi-card__header">
                     <span class="kpi-icon" aria-hidden="true"><MudIcon Icon="@findingsPresentation.Icon" /></span>
                     <span class="kpi-badge">@L["Overview:Kpis:Errors", snapshot.Summary.ErrorCount]</span>

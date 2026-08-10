@@ -65,19 +65,19 @@
     background: color-mix(in srgb, var(--mud-palette-error) 10%, var(--mud-palette-surface));
 }
 
-.assembly-kpi > span,
+.assembly-kpi__label,
 .assembly-kpi > strong,
 .assembly-kpi > small {
     grid-column: 2;
     min-width: 0;
 }
 
-.assembly-kpi > span,
+.assembly-kpi__label,
 .assembly-kpi > small {
     color: var(--mud-palette-text-secondary);
 }
 
-.assembly-kpi > span {
+.assembly-kpi__label {
     font-size: .72rem;
     letter-spacing: .03em;
     text-transform: uppercase;

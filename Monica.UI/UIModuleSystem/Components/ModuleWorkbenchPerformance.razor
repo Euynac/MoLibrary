@@ -22,7 +22,6 @@
                     @foreach (var budget in snapshot.Summary.PerformanceBudgets)
                     {
                         <article class="mo-card-surface" data-mo-card-tone="@BudgetTone(budget.IsExceeded)">
-                            <span class="mo-card-surface__rail" aria-hidden="true"></span>
                             <div>
                                 <strong>@L[$"Enums:Budget:{budget.Kind}"]</strong>
                                 <span>@L["Performance:Budgets:Measurement",
@@ -52,22 +51,18 @@
                 </div>
                 <div class="comparison-kpis">
                     <article class="mo-card-surface" data-mo-card-tone="primary">
-                        <span class="mo-card-surface__rail" aria-hidden="true"></span>
                         <span>@L["Overview:Kpis:Composition"]</span>
                         <strong>@SignedDuration(comparison.TotalDurationDeltaMs)</strong>
                     </article>
                     <article class="mo-card-surface" data-mo-card-tone="info">
-                        <span class="mo-card-surface__rail" aria-hidden="true"></span>
                         <span>@L["Overview:Kpis:TypeDiscovery"]</span>
                         <strong>@SignedDuration(comparison.TypeDiscoveryDurationDeltaMs)</strong>
                     </article>
                     <article class="mo-card-surface" data-mo-card-tone="success">
-                        <span class="mo-card-surface__rail" aria-hidden="true"></span>
                         <span>@L["Comparison:ModulesChanged"]</span>
                         <strong>+@comparison.AddedModules.Count / -@comparison.RemovedModules.Count</strong>
                     </article>
                     <article class="mo-card-surface" data-mo-card-tone="secondary">
-                        <span class="mo-card-surface__rail" aria-hidden="true"></span>
                         <span>@L["Comparison:EdgesChanged"]</span>
                         <strong>+@comparison.AddedEdges.Count / -@comparison.RemovedEdges.Count</strong>
                     </article>
@@ -210,7 +205,6 @@
                 @foreach (var stage in snapshot.TypeDiscovery.Stages)
                 {
                     <article class="mo-card-surface" data-mo-card-tone="primary">
-                        <span class="mo-card-surface__rail" aria-hidden="true"></span>
                         <span>@ModuleDiagnosticsDisplay.Stage(stage.Stage, L)</span>
                         <strong>@ModuleDiagnosticsDisplay.Duration(stage.DurationMs)</strong>
                     </article>

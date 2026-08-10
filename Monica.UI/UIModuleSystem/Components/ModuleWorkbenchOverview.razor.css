@@ -24,7 +24,7 @@
     min-width: 0;
     min-height: 8.75rem;
     padding: .95rem;
-    border: 1px solid var(--mud-palette-lines-default);
+    border: 1px solid color-mix(in srgb, var(--kpi-accent) 26%, var(--mud-palette-lines-default));
     border-radius: var(--mud-default-borderradius);
     background: var(--mud-palette-surface);
 }

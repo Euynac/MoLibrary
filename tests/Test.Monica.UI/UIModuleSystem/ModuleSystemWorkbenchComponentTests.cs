@@ -51,7 +51,7 @@ public sealed class ModuleSystemWorkbenchComponentTests
     }
 
     [Fact]
-    public async Task Module_query_selects_without_reopening_an_explicitly_closed_drawer()
+    public async Task Module_query_exists_only_while_the_explicit_module_drawer_is_open()
     {
         await using var context = new ModuleSystemWorkbenchUiTestContext(configureServices: services =>
         {
@@ -70,25 +70,21 @@ public sealed class ModuleSystemWorkbenchComponentTests
         cut.WaitForAssertion(() => cut.FindComponent<ModuleWorkbenchModuleDrawer>()
             .Instance.Session.IsModuleDrawerOpen.Should().BeTrue());
         var session = cut.FindComponent<ModuleWorkbenchModuleDrawer>().Instance.Session;
-        session.CloseModuleDrawer();
+        cut.Find("button[aria-label='Aria:CloseModuleDrawer']").Click();
 
-        navigation.NavigateTo(
-            $"/module-system-dashboard/performance?module={Uri.EscapeDataString(ModuleSystemWorkbenchTestData.BetaKey.Id)}");
-        cut.Render(parameters => parameters
-            .Add(component => component.Section, "performance"));
+        cut.WaitForAssertion(() =>
+        {
+            session.IsModuleDrawerOpen.Should().BeFalse();
+            new Uri(navigation.Uri).PathAndQuery.Should().Be("/module-system-dashboard/modules");
+        });
 
-        session.IsModuleDrawerOpen.Should().BeFalse();
-        session.SelectModule(session.SelectedModule);
+        cut.FindAll(".workbench-desktop-sections button")[1].Click();
 
-        navigation.NavigateTo("/module-system-dashboard/modules");
-        cut.Render(parameters => parameters
-            .Add(component => component.Section, "modules"));
-
-        session.IsModuleDrawerOpen.Should().BeFalse();
+        new Uri(navigation.Uri).PathAndQuery.Should().Be("/module-system-dashboard/performance");
     }
 
     [Fact]
-    public async Task Automatically_selected_blocking_contributor_is_reflected_in_the_url_without_opening_the_drawer()
+    public async Task Root_route_keeps_the_automatic_workbench_selection_internal_and_the_url_clean()
     {
         await using var context = new ModuleSystemWorkbenchUiTestContext(configureServices: services =>
         {
@@ -99,6 +95,8 @@ public sealed class ModuleSystemWorkbenchComponentTests
                 ModuleSystemWorkbenchTestData.Calls()));
         });
 
+        var navigation = context.Services.GetRequiredService<NavigationManager>();
+        navigation.NavigateTo("/module-system-dashboard");
         var cut = context.Render<ModuleSystemPage>();
 
         cut.WaitForAssertion(() =>
@@ -106,8 +104,7 @@ public sealed class ModuleSystemWorkbenchComponentTests
             var drawer = cut.FindComponent<ModuleWorkbenchModuleDrawer>();
             drawer.Instance.Session.SelectedModule.Should().NotBeNull();
             drawer.Instance.Session.IsModuleDrawerOpen.Should().BeFalse();
-            context.Services.GetRequiredService<NavigationManager>().Uri.Should().Contain(
-                Uri.EscapeDataString(drawer.Instance.Session.SelectedModule!.ModuleKey.Id));
+            new Uri(navigation.Uri).PathAndQuery.Should().Be("/module-system-dashboard");
         });
     }
 
@@ -192,6 +189,26 @@ public sealed class ModuleSystemWorkbenchComponentTests
     }
 
     [Fact]
+    public async Task Overview_metrics_keep_semantic_accents_without_repeating_the_status_rail()
+    {
+        await using var context = new ModuleSystemWorkbenchUiTestContext();
+        await using var session = new ModuleSystemWorkbenchSession(ModuleSystemWorkbenchTestData.Calls());
+        await session.InitializeAsync();
+
+        var cut = context.Render<ModuleWorkbenchOverview>(parameters => parameters
+            .Add(component => component.Session, session));
+
+        var cards = cut.FindAll(".kpi-strip > article.mo-card-surface");
+
+        cards.Should().HaveCount(5);
+        cards.Should().AllSatisfy(card =>
+        {
+            card.GetAttribute("data-mo-card-tone").Should().NotBeNullOrWhiteSpace();
+            card.QuerySelector(".mo-card-surface__rail").Should().BeNull();
+        });
+    }
+
+    [Fact]
     public async Task Module_catalog_cost_meter_preserves_total_and_work_kind_proportions()
     {
         await using var context = new ModuleSystemWorkbenchUiTestContext();
@@ -247,6 +264,14 @@ public sealed class ModuleSystemWorkbenchComponentTests
             cut.Markup.Should().Contain("Failed.Assembly");
             cut.Markup.Should().Contain("Scanned.Assembly");
             cut.Markup.Should().Contain("Test.*");
+
+            var cards = cut.FindAll(".assembly-kpi.mo-card-surface");
+            cards.Should().HaveCount(4);
+            cards.Should().AllSatisfy(card =>
+            {
+                card.QuerySelector(".assembly-kpi__label").Should().NotBeNull();
+                card.QuerySelector(".mo-card-surface__rail").Should().BeNull();
+            });
         });
 
         inventoryCalls.Should().Be(1);
