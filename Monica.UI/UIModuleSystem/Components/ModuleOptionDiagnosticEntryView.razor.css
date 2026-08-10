@@ -40,8 +40,7 @@ details.option-entry {
 
 .option-entry--revealed-sensitive {
     --option-entry-accent: var(--mud-palette-error);
-    background:
-        linear-gradient(135deg, color-mix(in srgb, var(--mud-palette-error) 10%, var(--mud-palette-surface)), var(--mud-palette-surface));
+    background: color-mix(in srgb, var(--mud-palette-error) 8%, var(--mud-palette-surface));
 }
 
 .option-entry summary {

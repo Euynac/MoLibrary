@@ -1,11 +1,11 @@
 ---
 name: monica-ui-audit
-description: Audit and fix Monica Blazor UI compliance, including async component lifetime and JS interop ownership, visual hierarchy, theme-token use, MudBlazor primitives, responsive layout containment, overflow ownership, CLR type-name formatting, and duplicate utility logic. Use when the user asks to "audit UI components", "check theme compliance", "find CSS violations", "review component styling", "theme-first audit", "UI规约检查", "组件合规", or reports intermittent disposal/JS interop failures, a bland or monotonous UI, clipping, wasted width, or broken responsive sizing.
+description: Audit and fix Monica Blazor UI compliance, including async lifetime, JS interop ownership, Precision visual hierarchy, unnecessary gradients or decoration, full-width operational layouts, prototype fidelity, local fonts, theme tokens, MudBlazor primitives, responsive containment, CLR type formatting, and duplicate utilities. Use for UI audits, theme reviews, prototype comparisons, disposal failures, visual-quality regressions, clipping, wasted width, or broken responsive sizing.
 ---
 
 # Blazor UI Compliance Audit
 
-Audit Blazor components for runtime lifecycle safety as well as the Monica UI theme-first rules defined in `monica-ui-development` SKILL.md. Runtime safety takes precedence over visual compliance. Theme-first means coherent and token-governed, not minimal, monochrome, or visually flat.
+Audit Blazor components for runtime lifecycle safety and the Monica UI rules defined in `monica-ui-development`. Runtime safety takes precedence. For default-theme, global visual-language, or prototype-fidelity work, read `../monica-ui-development/references/monica-precision-design-language.md` before auditing.
 
 ## How to Determine Audit Target
 
@@ -49,6 +49,7 @@ Fix: replace with MudBlazor primitives. Reference implementation: `NavBarDropdow
 ### P2 — Broken layout containment, sizing, or scroll ownership
 
 Indicators:
+- An operational dashboard, workbench, administration page, or diagnostics page uses an arbitrary page-shell `width` or `max-width`, leaving usable shell width empty
 - A `FullWidth` dialog, drawer, tab panel, or preview has a descendant `width`, `max-width`, grid track, or intrinsic `inline`/`fit-content` size that leaves usable space empty
 - A flex/grid child that must shrink omits `min-width: 0`, or a grid uses `1fr` where `minmax(0, 1fr)` is required
 - A component-isolated selector targets a MudBlazor render root it cannot reach; use a scoped native wrapper or a reachable `::deep` descendant selector
@@ -56,20 +57,28 @@ Indicators:
 - The page or dialog becomes the horizontal scroll owner when only a table, diff, or code surface should scroll
 - A fixed/minimum height leaves unexplained blank space instead of using content-driven height with a viewport-aware cap
 
-Fix: trace the layout from the dialog/page surface to the failing descendant and assign width, shrink, wrap, and overflow responsibility explicitly. Remove contradictory internal width caps, use `width: 100%`, `min-width: 0`, `minmax(0, 1fr)`, `overflow-wrap`, or a local scroll surface only where each property expresses the intended contract. Keep long identifiers fully accessible for inspection and copying. Justify every retained width cap or fixed/minimum height with a concrete readability, interaction, or viewport requirement.
+Fix: trace the layout from the dialog/page surface to the failing descendant and assign width, shrink, wrap, and overflow responsibility explicitly. Make operational page roots consume the owner's full available width; apply readable line-length limits to local text regions instead of the page shell. Remove contradictory internal width caps, use `width: 100%`, `min-width: 0`, `minmax(0, 1fr)`, `overflow-wrap`, or a local scroll surface only where each property expresses the intended contract. Keep long identifiers fully accessible for inspection and copying. Justify every retained page-level width cap or fixed/minimum height with a concrete editorial, readability, interaction, or viewport requirement.
 
-### P3 — Theme bypass or insufficient visual differentiation
+### P3 — Theme bypass, visual-language drift, or prototype-fidelity loss
 
 Indicators:
 - Inline `Style=` / `style=` attributes for layout or visuals
 - Hardcoded color, shadow, radius, or background values instead of MudBlazor parameters, `var(--mud-palette-*)`, or approved `var(--mo-color-*)` tokens
 - Semantically distinct statuses, severities, categories, or progress states collapse into visually identical neutral surfaces when scanability requires differentiation
 - Multiple hierarchy levels and semantic states rely on the same neutral surface plus one accent, producing a flat or monotonous page
+- Repeated facts, properties, metrics, or records are each wrapped in cards instead of rows, lists, definition groups, or tables
+- A page or component uses a gradient without functional continuous-data encoding or explicit user/prototype direction
+- A page shell, app bar, header, hero or identity surface, KPI card, panel, filter, table, data group, or status surface uses a decorative gradient
+- Ordinary surfaces use elevation or hover lift even though they are neither raised nor interactive
+- A surface stacks more than two decorative cues, such as top stripe + ring + shadow, or repeats stripes/rings across every card
+- Border radii fall outside the 6/8/12 scale, multiply a base radius, or grow across nested surfaces
+- The implementation loses the prototype's typography, density, spacing rhythm, composition, surface roles, width utilization, or responsive reflow
+- A font declared by the prototype/source is missing from local WOFF2 assets, lacks `@font-face`, fails to load, or is silently replaced by a fallback
 - Component CSS repainting global MudBlazor behavior that should be consistent across modules
 - Component CSS painting route `.active`, `:hover`, or `:focus` states for menu items, nav links, or list items that are themed globally
 - Dark-mode overrides inside component CSS (`[data-theme*="dark"]` in `.razor.css`)
 
-Fix: add purposeful hierarchy and semantic variation with MudBlazor parameters and approved theme tokens (`var(--mud-palette-*)`, `var(--mo-color-*)`, `Color`, `Variant`, `Elevation`, `Outlined`). Keep component-owned layout and token-based presentation in the component's `.razor.css` file. Move rules to theme CSS only when the rule intentionally changes global MudBlazor/theme behavior across modules.
+Fix: rebuild hierarchy with typography and spacing first; assign explicit surface roles; flatten ordinary surfaces; convert repeated data cards to rows/lists/tables; enforce the 6/8/12 radius scale; and remove gradients, static hover lift, repeated stripes/rings, and incidental shadows. Use a uniform approved semantic tint when state differentiation is needed. Retain a gradient only for functional continuous-data encoding or explicit user/prototype direction and document that exception. Vendor the declared font locally as WOFF2 and verify it loads. Compare the prototype and browser side by side at widths 1440, 929, and 390 in light and dark modes. Keep component-owned layout and token-based presentation in component CSS; move only shared MudBlazor behavior to theme CSS.
 
 ### P4 — Private component classes that force theme coupling
 
@@ -102,9 +111,9 @@ Fix: use the shared utilities in `Monica.UI/Shell/Support/` and methods on `Moni
 7. **Clean up**: Delete any `.razor.css` file only when the component no longer owns layout or localized presentation rules. Remove unused `@using` directives.
 8. **Build**: Build the affected project with the WSL Windows-path rule, for example `dotnet build '<windows-project-path>' -m` for the specific UI module project. The build must produce 0 warnings.
 9. **Verify lifetime deterministically**: When P0 applies, test the teardown interleaving rather than relying only on manual navigation. Block an initialization or JS invocation, begin disposal, then release the blocked continuation; assert that no disposed reference is invoked, a late-created reference is disposed instead of published, late continuations perform no state mutation, JS invocation, or render request beyond required cleanup of their own late-created resource, and repeated disposal is safe. In browser verification, rapidly navigate away/remount during first render and refresh work. For Blazor Server, also exercise circuit loss where feasible and assert no unhandled `ObjectDisposedException` or `JSDisconnectedException`.
-10. **Verify layout in browser**: Test representative desktop and narrow viewports. For the document, dialog surface, and every element not intentionally designated as a local horizontal scroller, assert `scrollWidth <= clientWidth`. For every surface intended to fill its owner, also compare its rendered width with the owner's available content width; an overflow-free half-width child is still a failure. Record the intended local scroll owner, keep wrapped or truncated identifiers inspectable/copyable, and exercise content-driven panes with both short and long data when feasible so they neither retain unexplained blank height nor grow without a viewport cap.
+10. **Verify layout and fidelity in browser**: Capture side-by-side prototype/browser evidence at viewport widths 1440, 929, and 390 in light and dark modes. Compare hierarchy, typography, density, spacing, surface roles, width utilization, radii, decoration count, and reflow. Verify the expected local font in computed styles and network loading. For the document, dialog surface, and every element not intentionally designated as a local horizontal scroller, assert `scrollWidth <= clientWidth`. For every operational page root and surface intended to fill its owner, compare its rendered width with the owner's available content width. Record the intended local scroll owner and exercise short and long content.
 11. **Verify type display**: Inspect rendered type labels and their tooltips. Outside explicit assembly-diagnostics views, confirm generic types contain no CLR backticks, `[[...]]` arguments, `Version=`, `Culture=`, or `PublicKeyToken=` metadata, and confirm the producing boundary uses `GetCleanFullName()` rather than a Razor-local formatter.
-12. **Report**: List what changed, lifetime interleavings tested, browser assertions, type-display assertions, any intentional local scrolling, theme files that may need a shared selector, and remaining manual verification.
+12. **Report**: List what changed, lifetime interleavings tested, fidelity comparisons, font-loading evidence, browser assertions, type-display assertions, intentional local scrolling, any justified gradient or page-width exceptions, and remaining manual verification.
 
 ## Report Template
 
@@ -112,7 +121,7 @@ Fix: use the shared utilities in `Monica.UI/Shell/Support/` and methods on `Moni
 |---|---|---|---|---|
 | P0–P5 | File and line | Rendered or source-level failure | Component/state/theme/layout owner | Build plus category-appropriate lifetime or browser verification |
 
-When P0 is in scope, include the tested initialization/invocation/disposal ordering and the result of rapid navigation or remount. Also include desktop and narrow results for `scrollWidth <= clientWidth`, rendered-width utilization for intended full-width surfaces, every intentional local horizontal scroller, and the justification for each retained width cap or fixed/minimum height.
+When P0 is in scope, include the tested initialization/invocation/disposal ordering and rapid navigation/remount result. For visual work, include 1440/929/390 light/dark fidelity results, the loaded font, operational-page width utilization, `scrollWidth <= clientWidth`, intentional local horizontal scrollers, and every justified gradient or retained page-width constraint.
 
 ## Constraints
 
@@ -120,13 +129,15 @@ When P0 is in scope, include the tested initialization/invocation/disposal order
 - Do NOT catch `ObjectDisposedException` from a locally owned interop reference. Repair ownership, cancellation, post-await guards, in-flight user coordination, callback shutdown order, and idempotent teardown.
 - Do NOT dispose a `DotNetObjectReference` while JavaScript can still invoke it. Stop every callback producer before releasing the reference.
 - Do NOT use JS interop from component disposal to perform DOM cleanup. Use client-side `MutationObserver` cleanup; reserve disposal for releasing owned interop references and non-DOM resources.
-- Do NOT reject purposeful token-based color, elevation, gradients, borders, or atmosphere merely because a more minimal treatment exists.
+- Do NOT add a gradient to default Monica page or component CSS unless it functionally encodes continuous data or explicit user/prototype direction requires it. A named expressive theme may own an illustrative gradient, but it must not leak into first-party component CSS or the default theme.
+- Do NOT constrain an operational page shell with an arbitrary `max-width`; constrain only the local editorial or text region that needs readable line length.
+- Do NOT add decoration before hierarchy and surface roles are clear. Permit purposeful token-based effects only within the Precision decoration budget.
 - Do NOT break existing responsive or compact-mode behavior.
 - Do NOT treat `overflow-x: hidden` on the page or dialog as a containment fix; repair the child width contract and keep scrolling on the smallest surface that needs it.
 - Do NOT render `Type.FullName`, `Type.AssemblyQualifiedName`, or `Type.ToString()` directly in ordinary UI. Use `GetCleanFullName()` at the producing boundary; reserve assembly identity for views explicitly about assemblies or binding provenance.
 - Layout-only hooks (sizing, scroll, positioning, truncation) should usually stay in the component's `.razor.css`. Use `mo-*` shared CSS only for truly shared layout utilities used across multiple modules.
 - Active route state: use `.active` class via `NavigationRouteMatcher.GetActiveClass()`, styled by themes on `.mud-menu-item.active`.
-- Follow `monica-ui-development` SKILL.md Rule #1 (CSS Isolation), Rule #4 (Lifecycle and JS Interop), Rule #9 (Theme-First Visual Richness and Component Responsibility), and Rule #10 (Use MudBlazor Primitives for Interactive UI) as the authoritative Monica references.
+- Follow `monica-ui-development` Rule #1 (CSS Isolation), Rule #4 (Lifecycle and JS Interop), Rule #9 (Precision Visual Language and Component Responsibility), and Rule #10 (Use MudBlazor Primitives for Interactive UI).
 - For lifecycle semantics, use the current Microsoft guidance on [Blazor synchronization context](https://learn.microsoft.com/aspnet/core/blazor/components/synchronization-context), [component disposal](https://learn.microsoft.com/aspnet/core/blazor/components/component-disposal), [component-owned DI scopes and their circuit-service limitations](https://learn.microsoft.com/aspnet/core/blazor/fundamentals/dependency-injection#access-server-side-blazor-services-from-a-different-di-scope), and [JavaScript interop disposal and DOM cleanup](https://learn.microsoft.com/aspnet/core/blazor/javascript-interoperability) rather than assuming lifecycle/disposal ordering.
 
 ## Component CSS Responsibility Reference

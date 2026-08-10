@@ -8,57 +8,51 @@
 
 <MudDialog>
     <DialogContent>
-        <MudContainer Style="max-width: 600px;">
-            <MudStack Spacing="4" Class="pa-2">
-                <MudText Typo="Typo.h5" Class="mb-2" Align="Align.Center">
-                    <MudIcon Icon="@Icons.Material.Filled.Palette" Class="mr-2" />
-                    @L["Theme:Settings"]
-                </MudText>
-
-                <MudDivider />
-
+        <div class="theme-dialog">
+            <header class="theme-dialog__header">
+                <span class="theme-dialog__mark" aria-hidden="true">
+                    <MudIcon Icon="@Icons.Material.Filled.Palette" />
+                </span>
                 <div>
-                    <MudText Typo="Typo.subtitle1" Class="mb-3">@L["Theme:SelectStyle"]</MudText>
-
-                    <MudStack Spacing="2">
-                        @foreach (var theme in _themeOptions)
-                        {
-                            <MudCard Elevation="@(ThemeService.CurrentThemeKind == theme.Kind ? 4 : 1)"
-                                     Class="@GetThemeCardClass(theme.Kind)"
-                                     Style="cursor: pointer; transition: all 0.3s ease;"
-                                     @onclick="() => OnThemeChanged(theme.Kind)">
-                                <MudCardContent Class="pa-3">
-                                    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="3">
-                                        <MudRadio T="MonicaThemeKind" Value="@theme.Kind" Color="Color.Primary" ReadOnly="true" />
-                                        <MudStack Spacing="0" Class="flex-grow-1">
-                                            <MudText Typo="Typo.body1" Style="font-weight: 500;">@theme.DisplayName</MudText>
-                                            <MudText Typo="Typo.body2" Color="Color.Secondary">@theme.Description</MudText>
-                                        </MudStack>
-                                        @if (ThemeService.CurrentThemeKind == theme.Kind)
-                                        {
-                                            <MudIcon Icon="@Icons.Material.Filled.Check" Color="Color.Success" />
-                                        }
-                                    </MudStack>
-                                </MudCardContent>
-                            </MudCard>
-                        }
-                    </MudStack>
+                    <MudText Typo="Typo.overline">@L["Theme:SelectStyle"]</MudText>
+                    <MudText Typo="Typo.h5" HtmlTag="h2">@L["Theme:Settings"]</MudText>
                 </div>
+            </header>
 
-                <MudDivider />
+            <section class="theme-dialog__section" aria-labelledby="theme-style-heading">
+                <MudText Typo="Typo.subtitle2" HtmlTag="h3" id="theme-style-heading">@L["Theme:SelectStyle"]</MudText>
+                <div class="theme-dialog__options" aria-labelledby="theme-style-heading">
+                    @foreach (var theme in _themeOptions)
+                    {
+                        var isSelected = ThemeService.CurrentThemeKind == theme.Kind;
+                        <button type="button"
+                                class="theme-dialog__option @(isSelected ? "is-selected" : string.Empty)"
+                                aria-pressed="@(isSelected ? "true" : "false")"
+                                @onclick="() => OnThemeChanged(theme.Kind)">
+                            <span class="theme-dialog__radio" aria-hidden="true"><i></i></span>
+                            <span class="theme-dialog__option-copy">
+                                <strong>@theme.DisplayName</strong>
+                                <small>@theme.Description</small>
+                            </span>
+                            @if (isSelected)
+                            {
+                                <MudIcon Icon="@Icons.Material.Filled.Check" Color="Color.Success" Size="Size.Small" />
+                            }
+                        </button>
+                    }
+                </div>
+            </section>
 
-                <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween">
-                    <MudText Typo="Typo.subtitle1">@L["Theme:DarkMode"]</MudText>
-                    <MudSwitch T="bool" @bind-Value="ThemeService.IsDarkMode" Color="Color.Primary" Size="Size.Large" />
-                </MudStack>
-
-                <MudDivider />
-
-                <MudText Typo="Typo.body2" Color="Color.Secondary" Align="Align.Center">
-                    @L["Theme:CurrentTheme"]: @GetCurrentThemeDisplayName()
-                </MudText>
-            </MudStack>
-        </MudContainer>
+            <section class="theme-dialog__mode">
+                <div>
+                    <MudText Typo="Typo.subtitle2">@L["Theme:DarkMode"]</MudText>
+                    <MudText Typo="Typo.caption" Color="Color.Secondary">
+                        @L["Theme:CurrentTheme"]: @GetCurrentThemeDisplayName()
+                    </MudText>
+                </div>
+                <MudSwitch T="bool" @bind-Value="ThemeService.IsDarkMode" Color="Color.Primary" />
+            </section>
+        </div>
     </DialogContent>
     <DialogActions>
         <MudButton OnClick="Close" Color="Color.Primary" Variant="Variant.Filled">
@@ -94,11 +88,7 @@
         MudDialog.Close();
     }
 
-    private void OnThemeChanged(MonicaThemeKind newTheme)
-    {
-        ThemeService.CurrentThemeKind = newTheme;
-        StateHasChanged();
-    }
+    private void OnThemeChanged(MonicaThemeKind newTheme) => ThemeService.CurrentThemeKind = newTheme;
 
     private string GetCurrentThemeDisplayName()
     {
@@ -110,13 +100,4 @@
         _themeOptions = ThemeDisplayTextProvider.GetThemeOptions(L);
     }
 
-    private string GetThemeCardClass(MonicaThemeKind themeKind)
-    {
-        var baseClass = "theme-card";
-        if (ThemeService.CurrentThemeKind == themeKind)
-        {
-            baseClass += " selected";
-        }
-        return baseClass;
-    }
 }

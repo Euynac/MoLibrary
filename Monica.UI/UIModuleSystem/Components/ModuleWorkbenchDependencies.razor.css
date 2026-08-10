@@ -21,9 +21,7 @@
     justify-content: space-between;
     gap: 1.5rem;
     padding: 1.3rem;
-    background:
-        radial-gradient(circle at 12% 0%, var(--mud-palette-primary-hover), transparent 42%),
-        linear-gradient(130deg, var(--mud-palette-surface), var(--mud-palette-background-gray));
+    background: var(--mud-palette-surface);
 }
 
 .topology-hero-copy {
@@ -51,7 +49,7 @@
     min-width: 0;
     padding: 1rem;
     border-inline-start: .22rem solid var(--mud-palette-primary);
-    background: linear-gradient(145deg, var(--mud-palette-surface), var(--mud-palette-background));
+    background: var(--mud-palette-surface);
 }
 
 .topology-overview article + article {
@@ -129,8 +127,7 @@
 
 .dependency-graph-panel {
     padding: .85rem;
-    background: linear-gradient(155deg, var(--mud-palette-surface), var(--mud-palette-background-gray));
-    box-shadow: var(--mud-elevation-2);
+    background: var(--mud-palette-surface);
 }
 
 .graph-panel-header {
@@ -205,9 +202,7 @@
     grid-template-columns: minmax(18rem, .8fr) repeat(2, minmax(0, 1fr));
     gap: 1rem;
     padding: 1rem;
-    background:
-        linear-gradient(145deg, var(--mud-palette-primary-hover), transparent 40%),
-        var(--mud-palette-surface);
+    background: var(--mud-palette-surface);
 }
 
 .selected-module-identity {

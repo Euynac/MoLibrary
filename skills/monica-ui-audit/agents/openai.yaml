@@ -1,4 +1,4 @@
 interface:
   display_name: "Monica UI Audit"
-  short_description: "Audit Monica UI hierarchy, themes, and layout"
-  default_prompt: "Use $monica-ui-audit to inspect Monica Blazor components for visual hierarchy, meaningful color differentiation, theme-token use, responsive containment, and MudBlazor primitive compliance."
+  short_description: "Audit Monica UI precision and runtime safety"
+  default_prompt: "Use $monica-ui-audit to inspect Monica Blazor UI for runtime safety, full-width operational layouts, unnecessary gradients or decoration, prototype fidelity, local fonts, and responsive containment."

@@ -6,8 +6,9 @@
     width: 100%;
     min-width: 0;
     padding: 1.25rem clamp(.75rem, 2vw, 2rem);
+    border-inline: 1px solid var(--mud-palette-lines-default);
     border-bottom: 1px solid var(--mud-palette-lines-default);
-    background: linear-gradient(120deg, var(--mud-palette-surface), var(--mud-palette-background));
+    background: var(--mud-palette-surface);
 }
 
 .workbench-title-block,
@@ -59,6 +60,7 @@
     padding: .35rem .8rem;
     border: 1px solid var(--mud-palette-lines-inputs);
     border-radius: var(--mud-default-borderradius);
+    background: var(--mud-palette-surface);
     color: var(--mud-palette-text-primary);
     cursor: pointer;
 }
@@ -77,7 +79,8 @@
 }
 
 .comparison-banner {
-    margin: .75rem clamp(.75rem, 2vw, 2rem) 0;
+    width: calc(100% - 1.5rem);
+    margin: .75rem auto 0;
 }
 
 @media (max-width: 900px) {
@@ -93,6 +96,7 @@
 @media (max-width: 620px) {
     .workbench-header {
         grid-template-columns: minmax(0, 1fr);
+        border-inline: 0;
     }
 
     .workbench-actions {

@@ -9,9 +9,9 @@
     --kpi-accent: var(--mud-palette-primary);
     display: grid;
     grid-template-columns: repeat(6, minmax(0, 1fr));
-    gap: .7rem;
+    gap: .55rem;
     min-width: 0;
-    padding: .12rem;
+    padding: 0;
 }
 
 .kpi-strip--untracked {
@@ -20,19 +20,12 @@
 
 .kpi-card,
 .startup-kpi-card {
-    position: relative;
     min-width: 0;
-    min-height: 9.25rem;
+    min-height: 8.75rem;
     padding: .95rem;
-    overflow: hidden;
-    border: 1px solid color-mix(in srgb, var(--kpi-accent) 32%, var(--mud-palette-lines-default));
-    border-top: .2rem solid var(--kpi-accent);
+    border: 1px solid color-mix(in srgb, var(--kpi-accent) 26%, var(--mud-palette-lines-default));
     border-radius: var(--mud-default-borderradius);
-    background: linear-gradient(
-        145deg,
-        color-mix(in srgb, var(--kpi-accent) 11%, var(--mud-palette-surface)),
-        var(--mud-palette-surface) 68%);
-    box-shadow: var(--mud-elevation-1);
+    background: var(--mud-palette-surface);
 }
 
 .kpi-card {
@@ -42,19 +35,6 @@
 
 .startup-kpi-card {
     grid-column: span 2;
-}
-
-.kpi-card::after,
-.startup-kpi-card::after {
-    position: absolute;
-    top: -2.7rem;
-    right: -2.7rem;
-    width: 5.75rem;
-    height: 5.75rem;
-    border: 1.2rem solid color-mix(in srgb, var(--kpi-accent) 8%, transparent);
-    border-radius: 50%;
-    content: "";
-    pointer-events: none;
 }
 
 .kpi-card__header,
@@ -331,10 +311,7 @@
     padding: 1.25rem;
     border: 1px dashed color-mix(in srgb, var(--mud-palette-success) 42%, var(--mud-palette-lines-default));
     border-radius: var(--mud-default-borderradius);
-    background: linear-gradient(
-        145deg,
-        color-mix(in srgb, var(--mud-palette-success) 8%, var(--mud-palette-surface)),
-        var(--mud-palette-surface));
+    background: color-mix(in srgb, var(--mud-palette-success) 6%, var(--mud-palette-surface));
     color: var(--mud-palette-text-secondary);
     text-align: center;
 }
@@ -345,7 +322,7 @@
     justify-content: center;
     width: 3.25rem;
     height: 3.25rem;
-    border-radius: 50%;
+    border-radius: var(--mud-default-borderradius);
     background: color-mix(in srgb, var(--mud-palette-success) 14%, var(--mud-palette-surface));
 }
 

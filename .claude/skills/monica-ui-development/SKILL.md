@@ -1,6 +1,6 @@
 ---
 name: monica-ui-development
-description: This skill should be used when the user asks to create or modify Blazor UI components, build MudBlazor pages, style MudBlazor components, fix CSS isolation, customize themes, add offline WOFF2 font assets, migrate to MudBlazor v9, validate MudBlazor CSS variables, or implement browser storage with IBrowserStorage.
+description: Create or modify Monica Blazor UI components and MudBlazor pages, including CSS isolation, global/default themes, prototype handoff, local WOFF2 fonts, MudBlazor v9 migration, CSS-variable validation, and IBrowserStorage. Use for UI implementation, visual-language changes, theme customization, or browser-storage work.
 ---
 
 # Monica UI Development Guide
@@ -190,16 +190,17 @@ Always specify `T` for generic MudBlazor components:
 - Loading, empty, and placeholder states should consume available space with flex/grid alignment when the parent height is available, instead of using large fixed top/bottom padding for visual centering.
 - Keep scrolling in `.mo-body-content` or the page's own scroll containers; do not move scrolling back to `body`.
 
-### 9. Theme-First Visual Richness and Component Responsibility
+### 9. Precision Visual Language and Component Responsibility
 
-- Do not default to a monotonous layout made almost entirely of neutral surfaces plus one accent color. Use clear hierarchy and enough visual variation to make sections and states easy to scan.
-- Use `var(--mud-palette-*)`, approved `var(--mo-color-*)` tokens, and MudBlazor `Color`, `Variant`, and `Elevation` parameters. Give statuses, severities, categories, progress, and selection purposeful semantic colors when differentiation helps the user.
-- Tinted surfaces, subtle gradients, borders, elevation, and restrained shadows or glow are allowed when they improve hierarchy, depth, or focus. Build them from approved tokens or theme-owned styles and preserve contrast, focus visibility, and readability.
-- Theme-first means coherent with the active theme, not colorless. Avoid both timid one-accent styling and arbitrary rainbow decoration; every visual treatment should communicate hierarchy, state, grouping, or atmosphere.
-- Component CSS may own component-specific, token-based presentation as well as layout. Keep global MudBlazor visual language in theme CSS, and do not create a raw, page-private color system.
-- When list or card UIs become dense, prioritize scanability and task flow. Remove genuinely redundant metadata or use progressive disclosure, but retain information needed for comparison, diagnosis, and decisions.
-- If centered alignment looks wrong, fix the container layout first (`display`, `align-items`, `justify-content`, `min-height`, `min-width`) before adding margin or padding hacks.
-- Cards that visually belong to the same row should generally align to the same height. Prefer row-level grid/flex stretch plus wrapper-owned `height: 100%` over fixed pixel heights.
+- Read `references/monica-precision-design-language.md` before default-theme, global visual-language, or prototype-handoff work. Apply it as an acceptance contract.
+- Establish hierarchy through typography, spacing, alignment, density, and explicit surface roles before adding decoration.
+- Keep ordinary surfaces flat, render repeated data as rows/lists/tables instead of cards, and reserve elevation or hover motion for genuinely raised or interactive elements.
+- Default page and component CSS to flat colors. Do not use gradients on operational page shells, headers, hero or identity surfaces, KPI cards, panels, filters, data groups, or semantic states. Permit a gradient only for functional continuous-data encoding or an explicit user/prototype requirement, and document the exception.
+- Let dashboards, workbenches, administration pages, and diagnostics pages consume their owner's full available width. Apply readable line-length limits to text regions, not the page shell; retain a page-level `max-width` only for an explicitly editorial or reading-focused layout.
+- Use the 6/8/12 radius scale without derived radius multiplication. Keep each surface within the decoration budget defined by the Precision contract.
+- Use `var(--mud-palette-*)`, approved `var(--mo-color-*)` tokens, and MudBlazor semantic parameters for meaningful status, selection, severity, or progress—not ambient ornament.
+- Keep component-specific token-based presentation and layout in component CSS. Keep the shared MudBlazor visual language in theme CSS; do not create a page-private color system.
+- Fix container layout (`display`, alignment, `min-height`, `min-width`) before adding margin or padding hacks. Stretch related cards at the row level instead of assigning fixed heights.
 
 **Component CSS responsibility model:**
 
@@ -236,6 +237,7 @@ Key rules:
 - For `MudTabs` with `ApplyEffectsToContainer="true"`, the root `.mud-tabs` element receives the rounded, outlined, and elevation classes. When a theme needs a visible shell, inspect and style the root container, `.mud-tabs-tabbar`, and `.mud-tabs-panels` together.
 - `MudDataGrid` header affordances are hover-hidden by default in MudBlazor. If a custom theme makes headers look blank, inspect and style `.sort-direction-icon`, `.column-options-icon`, `.drag-icon-options`, and `.mud-menu .mud-icon-button-label`.
 - Debug theme regressions with live DOM and computed-style checks before editing CSS. Verify both light and dark modes and inspect MudBlazor source when component behavior is uncertain.
+- For the default theme, global visual language, or a `.ui-design` handoff, read `references/monica-precision-design-language.md` and complete its side-by-side checks at viewport widths 1440, 929, and 390 in light and dark modes.
 - Read `references/theme-authoring-pitfalls.md` when working on shared theme regressions or resuming a theme-debugging thread. That file carries the concrete regression patterns and verification traps.
 - Read `references/adaptive-mudblazor-list-table-pattern.md` when fixing dense MudBlazor list/table overflow, adaptive ellipsis, or CSS-grid table alignment issues.
 
@@ -316,6 +318,7 @@ For `Res/Res<T>` usage, `IResultEnvelope`, and the `IsFailed` pattern in UI serv
 - `references/migration-guide-v9.md`
 - `references/css-isolation-fix-workflow.md`
 - `references/theme-css-guide.md`
+- `references/monica-precision-design-language.md`
 - `references/theme-authoring-pitfalls.md`
 - `references/auto-refresh-page-pattern.md`
 - `references/browser-storage-guide.md`
@@ -347,7 +350,8 @@ For `Res/Res<T>` usage, `IResultEnvelope`, and the `IsFailed` pattern in UI serv
 - [ ] Use `IBrowserStorage` for browser persistence
 - [ ] Keep AppBar height and viewport compensation in the shell layout, not in page CSS
 - [ ] Use `$monica-ui-localization` for any user-facing text or i18n resource changes
-- [ ] Check that the page does not collapse into neutral surfaces plus one accent color
+- [ ] Apply the Precision hierarchy, full-width operational-shell, flat-color, radius, decoration, data-density, and local-font rules
+- [ ] Compare prototype and browser side by side at widths 1440, 929, and 390 in light and dark modes
 
 ## Page Complexity Checklist
 

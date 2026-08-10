@@ -6,7 +6,7 @@
     grid-template-columns: minmax(160px, 0.8fr) minmax(0, 1.2fr);
     align-items: center;
     gap: 14px;
-    padding: 11px 12px;
+    padding: 12px 18px;
     border-bottom: 1px solid var(--mud-palette-lines-default);
 }
 
@@ -34,13 +34,13 @@
 }
 
 .system-info-evidence-row dt span {
-    width: 30px;
-    height: 30px;
+    width: 28px;
+    height: 28px;
     display: grid;
     flex: 0 0 auto;
     place-items: center;
     color: var(--row-accent);
-    border-radius: 9px;
+    border-radius: 6px;
     background: var(--row-soft);
 }
 
@@ -49,16 +49,17 @@
     overflow: hidden;
     color: var(--mud-palette-text-primary);
     font-size: 0.83rem;
-    font-weight: 750;
+    font-weight: 700;
     text-align: end;
     text-overflow: ellipsis;
     white-space: nowrap;
 }
 
-@media (max-width: 520px) {
+@media (max-width: 600px) {
     .system-info-evidence-row {
         grid-template-columns: 1fr;
         gap: 6px;
+        padding-inline: 14px;
     }
 
     .system-info-evidence-row dd {
