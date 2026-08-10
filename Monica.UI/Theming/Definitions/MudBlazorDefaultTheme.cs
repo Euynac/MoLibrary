@@ -3,13 +3,13 @@ using MudBlazor;
 namespace Monica.UI.Theming.Definitions;
 
 /// <summary>
-/// MudBlazor default theme - completely maintains the original MudBlazor style
+/// MudBlazor palette and component theme with Monica's offline typography fallback.
 /// </summary>
 public class MudBlazorDefaultTheme : ThemeDefinitionBase
 {
     public override MonicaThemeKind Kind => MonicaThemeKind.MudBlazor;
     public override string DisplayName => "MudBlazor默认主题";
-    public override string Description => "完全保持MudBlazor原始风格，无自定义样式";
+    public override string Description => "保留MudBlazor视觉结构，并使用Monica离线基础字体";
     
     public override CodeBlockTheme LightCodeBlockTheme => CodeBlockTheme.Default;
     public override CodeBlockTheme DarkCodeBlockTheme => CodeBlockTheme.Dark;
@@ -20,7 +20,8 @@ public class MudBlazorDefaultTheme : ThemeDefinitionBase
         {
             PaletteLight = _lightPalette,
             PaletteDark = _darkPalette,
-            LayoutProperties = new LayoutProperties()
+            LayoutProperties = new LayoutProperties(),
+            Typography = MonicaTypographyDefaults.CreateFallback()
         };
     }
     private readonly PaletteLight _lightPalette = new()

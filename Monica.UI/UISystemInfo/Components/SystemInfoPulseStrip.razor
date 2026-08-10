@@ -6,7 +6,8 @@
 @inject IStringLocalizer<SystemInfoResource> L
 
 <section class="system-info-pulse" aria-label="@L["Page:Pulse:AriaLabel"]">
-    <article class="system-info-pulse__item system-info-pulse__item--primary">
+    <article class="system-info-pulse__item mo-card-surface" data-mo-card-tone="primary">
+        <span class="mo-card-surface__rail" aria-hidden="true"></span>
         <span class="system-info-pulse__icon"><MudIcon Icon="@Icons.Material.Filled.Timeline" /></span>
         <div>
             <span>@L["Page:Pulse:ProcessUptime"]</span>
@@ -14,7 +15,8 @@
         </div>
         <small>@L["Page:Status:Running"]</small>
     </article>
-    <article class="system-info-pulse__item system-info-pulse__item--info">
+    <article class="system-info-pulse__item mo-card-surface" data-mo-card-tone="info">
+        <span class="mo-card-surface__rail" aria-hidden="true"></span>
         <span class="system-info-pulse__icon"><MudIcon Icon="@Icons.Material.Filled.Memory" /></span>
         <div>
             <span>@L["Page:Pulse:WorkingSet"]</span>
@@ -22,7 +24,8 @@
         </div>
         <small>@L["Page:Status:Snapshot"]</small>
     </article>
-    <article class="system-info-pulse__item system-info-pulse__item--neutral">
+    <article class="system-info-pulse__item mo-card-surface" data-mo-card-tone="neutral">
+        <span class="mo-card-surface__rail" aria-hidden="true"></span>
         <span class="system-info-pulse__icon"><MudIcon Icon="@Icons.Material.Filled.DataObject" /></span>
         <div>
             <span>@L["Page:Pulse:ProcessId"]</span>
@@ -30,7 +33,8 @@
         </div>
         <small>@L["Page:Pulse:ProcessId"]</small>
     </article>
-    <article class="system-info-pulse__item system-info-pulse__item--success">
+    <article class="system-info-pulse__item mo-card-surface" data-mo-card-tone="success">
+        <span class="mo-card-surface__rail" aria-hidden="true"></span>
         <span class="system-info-pulse__icon"><MudIcon Icon="@Icons.Material.Filled.CenterFocusStrong" /></span>
         <div>
             <span>@L["Page:Pulse:EvidenceAge"]</span>

@@ -22,8 +22,7 @@
     padding: .85rem 1rem;
     border: 1px solid color-mix(in srgb, var(--mud-palette-primary) 28%, var(--mud-palette-lines-default));
     border-radius: var(--mud-default-borderradius);
-    background:
-        linear-gradient(135deg, color-mix(in srgb, var(--mud-palette-primary) 8%, var(--mud-palette-surface)), var(--mud-palette-surface));
+    background: color-mix(in srgb, var(--mud-palette-primary) 6%, var(--mud-palette-surface));
 }
 
 .option-projection-identity {

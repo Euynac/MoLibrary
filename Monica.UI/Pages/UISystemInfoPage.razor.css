@@ -1,38 +1,29 @@
 .system-info-page {
-    position: relative;
     display: grid;
+    box-sizing: border-box;
+    width: 100%;
     min-width: 0;
-    gap: 20px;
-    padding: 28px clamp(16px, 3vw, 40px) 48px;
-    overflow: clip;
-    background:
-        radial-gradient(circle at 12% 0%, rgba(var(--mud-palette-primary-rgb), 0.08), transparent 30rem),
-        radial-gradient(circle at 100% 24%, rgba(var(--mud-palette-info-rgb), 0.06), transparent 28rem),
-        var(--mud-palette-background);
+    gap: 18px;
+    padding: 32px clamp(20px, 3vw, 44px) 64px;
 }
 
-.system-info-page::before {
-    position: absolute;
-    z-index: 0;
-    inset: 0;
-    background-image:
-        linear-gradient(color-mix(in srgb, var(--mud-palette-lines-default) 20%, transparent) 1px, transparent 1px),
-        linear-gradient(90deg, color-mix(in srgb, var(--mud-palette-lines-default) 20%, transparent) 1px, transparent 1px);
-    background-size: 42px 42px;
-    content: "";
-    mask-image: linear-gradient(to bottom, var(--mud-palette-black), transparent 660px);
-    pointer-events: none;
+@media (max-width: 1200px) {
+    .system-info-page {
+        padding-block-start: 28px;
+    }
 }
 
-.system-info-page > * {
-    position: relative;
-    z-index: 1;
+@media (max-width: 900px) {
+    .system-info-page {
+        gap: 16px;
+        padding: 24px 18px 48px;
+    }
 }
 
 @media (max-width: 600px) {
     .system-info-page {
-        gap: 16px;
-        padding: 20px 12px 36px;
+        gap: 14px;
+        padding: 20px 12px 40px;
     }
 }
 

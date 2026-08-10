@@ -1,0 +1,37 @@
+/* Offline baseline type system shared by Monica themes without their own font identity. */
+
+@font-face {
+    font-family: 'MoDefaultBody';
+    src: url('../fonts/IBMPlexSans-Variable.woff2') format('woff2');
+    font-style: normal;
+    font-weight: 100 700;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: 'MoDefaultDisplay';
+    src: url('../fonts/Oxanium-Variable.woff2') format('woff2');
+    font-style: normal;
+    font-weight: 200 800;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: 'MoDefaultMono';
+    src: url('../fonts/IBMPlexMono-Regular.woff2') format('woff2');
+    font-weight: 400;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: 'MoDefaultMono';
+    src: url('../fonts/IBMPlexMono-Medium.woff2') format('woff2');
+    font-weight: 500;
+    font-display: swap;
+}
+
+:root {
+    --mo-font-family-body: 'MoDefaultBody', 'IBM Plex Sans', 'Noto Sans SC', 'Microsoft YaHei UI', 'PingFang SC', sans-serif;
+    --mo-font-family-display: 'MoDefaultDisplay', 'Oxanium', 'MoDefaultBody', 'IBM Plex Sans', 'Noto Sans SC', 'Microsoft YaHei UI', 'PingFang SC', sans-serif;
+    --mo-font-family-mono: 'MoDefaultMono', 'IBM Plex Mono', 'Cascadia Mono', 'Consolas', ui-monospace, monospace;
+}

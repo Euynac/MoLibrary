@@ -12,6 +12,7 @@ namespace Test.Monica.UI.UISystemInfo;
 internal sealed class SystemInfoUiTestContext : BunitContext
 {
     internal IRenderedComponent<MudPopoverProvider> PopoverProvider { get; }
+    internal IRenderedComponent<MudDialogProvider> DialogProvider { get; }
 
     internal SystemInfoUiTestContext(
         IStringLocalizer<SystemInfoResource>? localizer = null,
@@ -22,6 +23,7 @@ internal sealed class SystemInfoUiTestContext : BunitContext
         Services.AddSingleton(localizer ?? new EchoStringLocalizer<SystemInfoResource>());
         configureServices?.Invoke(Services);
         PopoverProvider = Render<MudPopoverProvider>();
+        DialogProvider = Render<MudDialogProvider>();
     }
 }
 

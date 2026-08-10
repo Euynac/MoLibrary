@@ -7,16 +7,16 @@
     white-space: nowrap;
 }
 
-.action-button {
+.navbar-actions ::deep .action-button {
     display: flex;
     align-items: center;
     justify-content: center;
     color: var(--mud-palette-text-secondary);
-    transition: all 0.2s ease;
+    transition: background-color 140ms ease-out, color 140ms ease-out;
     flex-shrink: 0;
 }
 
-.action-button:hover {
+.navbar-actions ::deep .action-button:hover {
     color: var(--mud-palette-text-primary);
 }
 
@@ -26,7 +26,7 @@
     padding: 0 12px;
     text-transform: none;
     color: var(--mud-palette-text-primary);
-    transition: all 0.2s ease;
+    transition: background-color 140ms ease-out, color 140ms ease-out;
     white-space: nowrap;
     min-width: 0;
 }
@@ -83,6 +83,16 @@
     }
 
     .navbar-actions ::deep .user-name {
+        display: none;
+    }
+}
+
+@media (max-width: 600px) {
+    .navbar-actions {
+        gap: 1px;
+    }
+
+    .navbar-actions ::deep .action-button--secondary {
         display: none;
     }
 }

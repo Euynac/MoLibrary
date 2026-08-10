@@ -11,7 +11,7 @@
     display: grid;
     place-items: center;
     color: var(--mud-palette-error);
-    border-radius: 18px 7px 18px 7px;
+    border-radius: var(--mud-default-borderradius);
     background: var(--mud-palette-error-hover);
 }
 
@@ -46,7 +46,7 @@
     padding: 11px 12px;
     color: var(--mud-palette-text-secondary);
     border: 1px solid var(--mud-palette-lines-default);
-    border-radius: calc(var(--mud-default-borderradius) * 1.4);
+    border-radius: var(--mud-default-borderradius);
     background: var(--mud-palette-background-gray);
     font-size: 0.78rem;
 }

@@ -1,0 +1,88 @@
+/*
+ * Shared card interaction and semantic accent contract.
+ *
+ * Components opt in explicitly so structural papers, tables, visualizations,
+ * dialogs, and overlays do not inherit card behavior accidentally. Themes can
+ * override the public variables while the default values follow MudBlazor's
+ * active palette and elevation tokens.
+ */
+:root {
+    --mo-card-hover-border: var(--mud-palette-lines-inputs);
+    --mo-card-hover-shadow: var(--mud-elevation-6);
+    --mo-card-hover-duration: 180ms;
+    --mo-card-rail-thickness: 3px;
+    --mo-card-rail-inset-block: 12px;
+    --mo-card-rail-radius: 999px;
+}
+
+.mo-card-surface,
+:where(.mud-card:not(.mo-self-painted)) {
+    transition:
+        border-color var(--mo-card-hover-duration) ease,
+        box-shadow var(--mo-card-hover-duration) ease;
+}
+
+.mo-card-surface {
+    --mo-card-accent: var(--mud-palette-text-secondary);
+
+    position: relative;
+}
+
+.mo-card-surface[data-mo-card-tone="neutral"] {
+    --mo-card-accent: var(--mud-palette-text-secondary);
+}
+
+.mo-card-surface[data-mo-card-tone="primary"] {
+    --mo-card-accent: var(--mud-palette-primary);
+}
+
+.mo-card-surface[data-mo-card-tone="secondary"] {
+    --mo-card-accent: var(--mud-palette-secondary);
+}
+
+.mo-card-surface[data-mo-card-tone="info"] {
+    --mo-card-accent: var(--mud-palette-info);
+}
+
+.mo-card-surface[data-mo-card-tone="success"] {
+    --mo-card-accent: var(--mud-palette-success);
+}
+
+.mo-card-surface[data-mo-card-tone="warning"] {
+    --mo-card-accent: var(--mud-palette-warning);
+}
+
+.mo-card-surface[data-mo-card-tone="error"] {
+    --mo-card-accent: var(--mud-palette-error);
+}
+
+.mo-card-surface > .mo-card-surface__rail {
+    position: absolute;
+    z-index: 1;
+    inset-block: var(--mo-card-rail-inset-block);
+    inset-inline-start: 0;
+    inline-size: var(--mo-card-rail-thickness);
+    border-start-end-radius: var(--mo-card-rail-radius);
+    border-end-end-radius: var(--mo-card-rail-radius);
+    background: var(--mo-card-accent);
+    pointer-events: none;
+}
+
+@media (hover: hover) and (pointer: fine) {
+    .mo-card-surface:not(.mo-self-painted):hover {
+        border-color: var(--mo-card-hover-border);
+        box-shadow: var(--mo-card-hover-shadow);
+    }
+
+    :where(.mud-card:not(.mo-self-painted):hover) {
+        border-color: var(--mo-card-hover-border);
+        box-shadow: var(--mo-card-hover-shadow);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .mo-card-surface,
+    :where(.mud-card:not(.mo-self-painted)) {
+        transition-duration: 0.01ms !important;
+    }
+}

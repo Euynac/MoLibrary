@@ -158,11 +158,6 @@
         {
             _session.SelectModule(SelectedModuleId, openDrawer: true);
         }
-        else if (_session.SelectedModule is { } automaticallySelected)
-        {
-            var uri = Navigation.GetUriWithQueryParameter("module", automaticallySelected.ModuleKey.Id);
-            Navigation.NavigateTo(uri, replace: true);
-        }
     }
 
     protected override void OnParametersSet()
@@ -183,7 +178,8 @@
             return;
         }
 
-        if (!string.Equals(_session.SelectedModule?.ModuleKey.Id, SelectedModuleId, StringComparison.Ordinal))
+        if (!_session.IsModuleDrawerOpen
+            || !string.Equals(_session.SelectedModule?.ModuleKey.Id, SelectedModuleId, StringComparison.Ordinal))
         {
             _session.SelectModule(SelectedModuleId, openDrawer: true);
         }
@@ -217,9 +213,9 @@
 
         _session.SetSection(section);
         var uri = $"{MODULE_SYSTEM_DASHBOARD_URL}/{section.ToRouteSegment()}";
-        if (_session.SelectedModule is not null)
+        if (_session is { IsModuleDrawerOpen: true, SelectedModule: { } selectedModule })
         {
-            uri = $"{uri}?module={Uri.EscapeDataString(_session.SelectedModule.ModuleKey.Id)}";
+            uri = $"{uri}?module={Uri.EscapeDataString(selectedModule.ModuleKey.Id)}";
         }
 
         Navigation.NavigateTo(uri, replace: true);
@@ -251,6 +247,7 @@
         if (!isOpen)
         {
             _session.CloseModuleDrawer();
+            ClearSelectedModuleQuery();
         }
 
         return Task.CompletedTask;
@@ -262,7 +259,20 @@
         NavigateToSection(ModuleSystemWorkbenchSection.Dependencies);
     }
 
-    private void OpenHelp() => _session?.SetHelpDrawer(true);
+    private void OpenHelp()
+    {
+        _session?.SetHelpDrawer(true);
+        ClearSelectedModuleQuery();
+    }
+
+    private void ClearSelectedModuleQuery()
+    {
+        var uri = Navigation.GetUriWithQueryParameter("module", (string?)null);
+        if (!string.Equals(uri, Navigation.Uri, StringComparison.Ordinal))
+        {
+            Navigation.NavigateTo(uri, replace: true);
+        }
+    }
 
     private Task OnHelpOpenChanged(bool isOpen)
     {

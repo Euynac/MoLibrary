@@ -22,8 +22,39 @@
 
 .mo-body-content {
     flex: 1;
+    min-width: 0;
     overflow-y: auto;
     min-height: 0;
+}
+
+#blazor-error-ui {
+    position: fixed;
+    z-index: 2000;
+    right: 16px;
+    bottom: 16px;
+    left: 16px;
+    display: none;
+    width: min(560px, calc(100% - 32px));
+    margin-inline: auto;
+    padding: 14px 44px 14px 16px;
+    color: var(--mud-palette-error-text);
+    border: 1px solid var(--mud-palette-error-darken);
+    border-radius: var(--mud-default-borderradius);
+    background: var(--mud-palette-error);
+    box-shadow: var(--mud-elevation-8);
+}
+
+#blazor-error-ui .reload {
+    color: inherit;
+    font-weight: 700;
+}
+
+#blazor-error-ui .dismiss {
+    position: absolute;
+    top: 50%;
+    right: 14px;
+    cursor: pointer;
+    transform: translateY(-50%);
 }
 
 /* Custom scrollbar */

@@ -1,9 +1,16 @@
 .system-info-artifact-cell {
     min-width: 0;
-    padding: 13px 14px;
-    border: 1px solid var(--mud-palette-lines-default);
-    border-radius: calc(var(--mud-default-borderradius) * 1.4);
-    background: var(--mud-palette-background-gray);
+    padding: 14px 18px;
+    border-bottom: 1px solid var(--mud-palette-lines-default);
+    background: var(--mud-palette-surface);
+}
+
+.system-info-artifact-cell:nth-child(odd) {
+    border-inline-end: 1px solid var(--mud-palette-lines-default);
+}
+
+.system-info-artifact-cell:nth-last-child(-n + 2) {
+    border-bottom: 0;
 }
 
 .system-info-artifact-cell dt {
@@ -17,7 +24,21 @@
     overflow: hidden;
     color: var(--mud-palette-text-primary);
     font-size: 0.8rem;
-    font-weight: 750;
+    font-weight: 700;
     text-overflow: ellipsis;
     white-space: nowrap;
+}
+
+@media (max-width: 900px) {
+    .system-info-artifact-cell {
+        padding-inline: 14px;
+    }
+
+    .system-info-artifact-cell:nth-child(odd) {
+        border-inline-end: 0;
+    }
+
+    .system-info-artifact-cell:nth-last-child(2) {
+        border-bottom: 1px solid var(--mud-palette-lines-default);
+    }
 }

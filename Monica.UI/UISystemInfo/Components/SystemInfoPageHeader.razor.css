@@ -1,9 +1,10 @@
 .system-info-masthead {
     display: flex;
     min-width: 0;
-    align-items: flex-end;
+    align-items: end;
     justify-content: space-between;
-    gap: 24px;
+    gap: 32px;
+    padding-block: 2px 4px;
 }
 
 .system-info-masthead__copy {
@@ -13,28 +14,30 @@
 .system-info-masthead__eyebrow {
     display: flex;
     align-items: center;
-    gap: 9px;
-    margin: 0 0 6px;
+    gap: 8px;
+    margin: 0 0 8px;
     color: var(--mud-palette-primary);
-    font-size: 0.7rem;
-    font-weight: 800;
-    letter-spacing: 0.12em;
+    font-family: var(--mud-typography-h6-family, var(--mo-font-family-display));
+    font-size: 0.68rem;
+    font-weight: 750;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
 }
 
 .system-info-masthead__eyebrow span {
-    width: 22px;
-    height: 3px;
-    border-radius: 99px;
+    width: 18px;
+    height: 1px;
     background: var(--mud-palette-primary);
 }
 
 .system-info-masthead h1 {
     margin: 0;
     color: var(--mud-palette-text-primary);
-    font-size: clamp(1.8rem, 3vw, 2.65rem);
-    font-weight: 800;
-    letter-spacing: -0.035em;
-    line-height: 1.05;
+    font-family: var(--mud-typography-h1-family, var(--mo-font-family-display));
+    font-size: clamp(1.85rem, 3vw, 2.55rem);
+    font-weight: 750;
+    letter-spacing: -0.03em;
+    line-height: 1.08;
 }
 
 .system-info-masthead h1:focus {
@@ -43,7 +46,7 @@
 
 .system-info-masthead__copy > p:last-child {
     max-width: 680px;
-    margin: 8px 0 0;
+    margin: 7px 0 0;
     color: var(--mud-palette-text-secondary);
     font-size: 0.93rem;
 }
@@ -56,12 +59,17 @@
 
 .system-info-masthead__actions ::deep .mud-button-root {
     min-height: 40px;
-    border-radius: calc(var(--mud-default-borderradius) * 1.8);
-    font-weight: 700;
+    font-weight: 650;
     text-transform: none;
 }
 
-@media (max-width: 700px) {
+@media (max-width: 900px) {
+    .system-info-masthead {
+        gap: 20px;
+    }
+}
+
+@media (max-width: 600px) {
     .system-info-masthead {
         align-items: stretch;
         flex-direction: column;

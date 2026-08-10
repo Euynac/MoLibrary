@@ -11,7 +11,7 @@
     display: grid;
     place-items: center;
     color: var(--mud-palette-info);
-    border-radius: 18px 7px 18px 7px;
+    border-radius: var(--mud-default-borderradius);
     background: var(--mud-palette-info-hover);
 }
 
@@ -24,8 +24,10 @@
 
 .system-info-endpoint-dialog dl {
     display: grid;
-    gap: 8px;
+    overflow: hidden;
     margin: 0;
+    border: 1px solid var(--mud-palette-lines-default);
+    border-radius: var(--mud-default-borderradius);
 }
 
 .system-info-endpoint-dialog dl div {
@@ -34,9 +36,19 @@
     grid-template-columns: 110px minmax(0, 1fr);
     gap: 12px;
     padding: 11px 12px;
-    border: 1px solid var(--mud-palette-lines-default);
-    border-radius: calc(var(--mud-default-borderradius) * 1.4);
-    background: var(--mud-palette-background-gray);
+    border-bottom: 1px solid var(--mud-palette-lines-default);
+    background: var(--mud-palette-surface);
+}
+
+.system-info-endpoint-dialog dl div:last-child {
+    border-bottom: 0;
+}
+
+@media (max-width: 600px) {
+    .system-info-endpoint-dialog dl div {
+        grid-template-columns: 1fr;
+        gap: 4px;
+    }
 }
 
 .system-info-endpoint-dialog dt {

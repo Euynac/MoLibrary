@@ -36,7 +36,7 @@
 
 .configuration-definition-list-toolbar {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-columns: minmax(0, 1fr) minmax(7rem, 0.6fr);
     align-items: flex-start;
     gap: 0.5rem;
     min-width: 0;
@@ -55,19 +55,12 @@
     width: 100%;
 }
 
-.configuration-definition-list-group-toggle {
-    flex: 0 0 auto;
-    display: inline-flex;
-    padding-top: 0.25rem;
-}
-
-.configuration-definition-list-group-toggle ::deep .mud-tooltip-root {
-    display: inline-flex;
-}
-
-.configuration-definition-list-group-toggle ::deep .mud-button-root {
+.configuration-definition-list-group-filter {
     min-width: 0;
-    white-space: nowrap;
+}
+
+.configuration-definition-list-group-filter ::deep .mud-input-control {
+    width: 100%;
 }
 
 .configuration-definition-list-scroll {
@@ -201,9 +194,7 @@
 
     .configuration-definition-list-search,
     .configuration-definition-list-lifecycle-filter,
-    .configuration-definition-list-group-toggle,
-    .configuration-definition-list-group-toggle ::deep .mud-tooltip-root,
-    .configuration-definition-list-group-toggle ::deep .mud-button-root {
+    .configuration-definition-list-group-filter {
         width: 100%;
     }
 

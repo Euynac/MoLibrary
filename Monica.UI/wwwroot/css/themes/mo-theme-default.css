@@ -1,164 +1,310 @@
-/* ============================================
-   Monica Default Theme - Clean SaaS Style Sheet
-   High contrast, minimal borders, and very soft diffuse shadows.
-   ============================================ */
+/* Monica Precision: a vivid signal system for operational interfaces. */
 
-/* Global and Light Mode */
 :root[data-theme="default-light"],
-.mo-theme-default-light {
-    --mo-transition-fast: 150ms;
-    --mo-transition-normal: 300ms;
-    
-    --mo-button-border-radius: 8px;
-    --mo-button-padding-x: 16px;
-    --mo-button-padding-y: 8px;
-    --mo-button-font-weight: 500;
-    
-    --mo-card-border-radius: 12px;
-    --mo-card-padding: 24px;
-    
-    --mo-input-border-radius: 8px;
-    --mo-input-padding: 10px 14px;
-    --mo-input-border-width: 1px;
-    
-    --mo-dialog-border-radius: 16px;
-    --mo-dialog-padding: 28px;
-    
-    --mo-chip-border-radius: 9999px;
-    --mo-chip-padding: 4px 12px;
-
-    --mo-tooltip-bg: rgba(15, 23, 42, 0.96);
-    --mo-tooltip-text: #f8fafc;
-    --mo-tooltip-border: rgba(148, 163, 184, 0.36);
-    --mo-tooltip-shadow: 0 20px 40px -18px rgba(15, 23, 42, 0.35);
-
-    --mo-appbar-background: var(--mud-palette-surface);
-    --mo-appbar-dark-background: var(--mud-palette-surface);
-    --mo-appbar-border-bottom: 1px solid var(--mud-palette-lines-default);
-    --mo-appbar-box-shadow: none;
-    --mo-appbar-menu-item-border-radius: 8px;
-    --mo-appbar-menu-item-margin-block: 2px;
-    --mo-appbar-menu-item-margin-inline: 8px;
-    --mo-appbar-menu-item-active-background: var(--mud-palette-primary-hover);
-    --mo-appbar-menu-item-active-text: var(--mud-palette-primary);
-    --mo-appbar-menu-item-active-icon: var(--mud-palette-primary);
-    --mo-appbar-menu-item-active-font-weight: 500;
-    --mo-appbar-menu-item-transition: background-color 150ms ease-out, color 150ms ease-out;
-    
-    /* Clean SaaS hover effects */
-    --mo-clean-hover-shadow: 0 10px 30px -4px rgba(0, 0, 0, 0.08);
-}
-
-/* Dark Mode */
 :root[data-theme="default-dark"],
-.mo-theme-default-dark {
-    --mo-transition-fast: 150ms;
-    --mo-transition-normal: 300ms;
-    
-    --mo-button-border-radius: 8px;
-    --mo-button-padding-x: 16px;
-    --mo-button-padding-y: 8px;
-    --mo-button-font-weight: 500;
-    
-    --mo-card-border-radius: 12px;
-    --mo-card-padding: 24px;
-    
-    --mo-input-border-radius: 8px;
-    --mo-input-padding: 10px 14px;
-    --mo-input-border-width: 1px;
-    
-    --mo-dialog-border-radius: 16px;
-    --mo-dialog-padding: 28px;
-    
-    --mo-chip-border-radius: 9999px;
-    --mo-chip-padding: 4px 12px;
-
-    --mo-tooltip-bg: rgba(24, 24, 27, 0.98);
-    --mo-tooltip-text: #f4f4f5;
-    --mo-tooltip-border: rgba(82, 82, 91, 0.82);
-    --mo-tooltip-shadow: 0 22px 44px -18px rgba(0, 0, 0, 0.6);
-
-    --mo-appbar-background: var(--mud-palette-surface);
-    --mo-appbar-dark-background: var(--mud-palette-surface);
-    --mo-appbar-border-bottom: 1px solid var(--mud-palette-lines-default);
-    --mo-appbar-box-shadow: none;
-    --mo-appbar-menu-item-border-radius: 8px;
-    --mo-appbar-menu-item-margin-block: 2px;
-    --mo-appbar-menu-item-margin-inline: 8px;
-    --mo-appbar-menu-item-active-background: var(--mud-palette-primary-hover);
-    --mo-appbar-menu-item-active-text: var(--mud-palette-primary);
-    --mo-appbar-menu-item-active-icon: var(--mud-palette-primary);
-    --mo-appbar-menu-item-active-font-weight: 500;
-    --mo-appbar-menu-item-transition: background-color 150ms ease-out, color 150ms ease-out;
-    
-    /* Clean SaaS hover effects for dark mode */
-    --mo-clean-hover-shadow: 0 10px 30px -4px rgba(0, 0, 0, 0.4);
-}
-
-/* Base resets for the theme */
 .mo-theme-default-light,
 .mo-theme-default-dark {
-    transition: background-color var(--mo-transition-normal) ease,
-                color var(--mo-transition-normal) ease;
+    --mo-default-font-body: var(--mud-typography-default-family, var(--mo-font-family-body));
+    --mo-default-font-display: var(--mud-typography-h1-family, var(--mo-font-family-display));
+    --mo-default-font-mono: var(--mo-font-family-mono);
+    --mo-default-radius-control: 6px;
+    --mo-default-radius-surface: 8px;
+    --mo-default-radius-overlay: 12px;
+    --mo-default-motion-fast: 140ms ease-out;
+    --mo-button-border-radius: var(--mo-default-radius-control);
+    --mo-card-border-radius: var(--mo-default-radius-surface);
+    --mo-card-padding: 20px;
+    --mo-dialog-border-radius: var(--mo-default-radius-overlay);
+    --mo-input-border-radius: var(--mo-default-radius-control);
+    --mo-chip-border-radius: 999px;
+    --mo-nav-menu-border-radius: var(--mo-default-radius-surface);
+
+    --mo-appbar-background: color-mix(in srgb, var(--mud-palette-surface) 94%, transparent);
+    --mo-appbar-dark-background: color-mix(in srgb, var(--mud-palette-background) 94%, transparent);
+    --mo-appbar-border-bottom: 1px solid var(--mud-palette-lines-default);
+    --mo-appbar-box-shadow: none;
+    --mo-appbar-backdrop-filter: blur(18px) saturate(1.08);
+    --mo-appbar-padding-inline: 20px;
+    --mo-appbar-gap: 24px;
+    --mo-appbar-menu-item-border-radius: var(--mo-default-radius-control);
+    --mo-appbar-menu-item-margin-block: 2px;
+    --mo-appbar-menu-item-margin-inline: 6px;
+    --mo-appbar-menu-item-padding-block: 8px;
+    --mo-appbar-menu-item-padding-inline: 12px;
+    --mo-appbar-menu-item-min-height: 36px;
+    --mo-appbar-menu-item-gap: 10px;
+    --mo-appbar-menu-item-font-family: var(--mo-default-font-body);
+    --mo-appbar-menu-item-font-size: 0.875rem;
+    --mo-appbar-menu-item-font-weight: 400;
+    --mo-appbar-menu-item-hover-background: var(--mud-palette-action-default-hover);
+    --mo-appbar-menu-item-hover-text: var(--mud-palette-text-primary);
+    --mo-appbar-menu-item-hover-icon: var(--mud-palette-text-primary);
+    --mo-appbar-menu-item-active-background: var(--mud-palette-primary-hover);
+    --mo-appbar-menu-item-active-text: var(--mud-palette-primary);
+    --mo-appbar-menu-item-active-icon: var(--mud-palette-primary);
+    --mo-appbar-menu-item-active-font-weight: 600;
+    --mo-appbar-menu-item-transition:
+        background-color var(--mo-default-motion-fast),
+        border-color var(--mo-default-motion-fast),
+        color var(--mo-default-motion-fast);
+
+    --mo-color-page-hero-background: #151b2b;
+    --mo-color-page-hero-text: #f4f6fb;
+    --mo-color-page-hero-action: #f4f6fb;
 }
 
-/* Buttons */
+:root[data-theme="default-light"],
+.mo-theme-default-light {
+    --mo-default-focus-ring: rgba(114, 87, 245, 0.22);
+    --mo-default-raised-shadow: 0 8px 24px -14px rgba(18, 25, 39, 0.24);
+    --mo-default-overlay-shadow: 0 22px 56px -22px rgba(18, 25, 39, 0.38);
+    --mo-tooltip-bg: #151b2b;
+    --mo-tooltip-text: #f4f6fb;
+    --mo-tooltip-border: rgba(255, 255, 255, 0.12);
+    --mo-tooltip-shadow: 0 16px 36px -18px rgba(18, 25, 39, 0.45);
+}
+
+:root[data-theme="default-dark"],
+.mo-theme-default-dark {
+    --mo-default-focus-ring: rgba(140, 117, 255, 0.3);
+    --mo-default-raised-shadow: 0 10px 28px -14px rgba(0, 0, 0, 0.58);
+    --mo-default-overlay-shadow: 0 24px 64px -22px rgba(0, 0, 0, 0.78);
+    --mo-tooltip-bg: #edf2fb;
+    --mo-tooltip-text: #141d2c;
+    --mo-tooltip-border: rgba(255, 255, 255, 0.2);
+    --mo-tooltip-shadow: 0 18px 42px -18px rgba(0, 0, 0, 0.72);
+    --mo-color-page-hero-background: #111a29;
+}
+
+.mo-theme-default-light,
+.mo-theme-default-dark {
+    color: var(--mud-palette-text-primary);
+    background: var(--mud-palette-background);
+    font-family: var(--mo-default-font-body);
+}
+
+.mo-theme-default-light :is(h1, h2, h3, h4, h5, h6),
+.mo-theme-default-dark :is(h1, h2, h3, h4, h5, h6) {
+    font-family: var(--mo-default-font-display);
+}
+
+.mo-theme-default-light :is(code, kbd, samp, pre),
+.mo-theme-default-dark :is(code, kbd, samp, pre) {
+    font-family: var(--mo-default-font-mono);
+}
+
+.mo-theme-default-light :is(.mo-layout, .mo-main-content, .mo-body-content),
+.mo-theme-default-dark :is(.mo-layout, .mo-main-content, .mo-body-content) {
+    background: var(--mud-palette-background);
+}
+
+/* Shell */
+.mo-theme-default-light .mo-navbar,
+.mo-theme-default-dark .mo-navbar {
+    color: var(--mud-palette-text-primary);
+}
+
+.mo-theme-default-light .navbar-brand,
+.mo-theme-default-dark .navbar-brand {
+    gap: 10px;
+    padding: 4px 6px 4px 4px;
+    border-radius: var(--mo-default-radius-control);
+    opacity: 1;
+    transition: background-color var(--mo-default-motion-fast);
+}
+
+.mo-theme-default-light .navbar-brand:hover,
+.mo-theme-default-dark .navbar-brand:hover {
+    background: var(--mud-palette-action-default-hover);
+    opacity: 1;
+}
+
+.mo-theme-default-light :is(.brand-logo, .brand-logo-image),
+.mo-theme-default-dark :is(.brand-logo, .brand-logo-image) {
+    width: 32px;
+    height: 32px;
+}
+
+.mo-theme-default-light .brand-text,
+.mo-theme-default-dark .brand-text {
+    gap: 3px;
+    margin-top: 0;
+}
+
+.mo-theme-default-light .brand-name,
+.mo-theme-default-dark .brand-name {
+    font-size: 1rem;
+    font-weight: 600;
+    letter-spacing: -0.012em;
+}
+
+.mo-theme-default-light :is(.brand-appid, .brand-version),
+.mo-theme-default-dark :is(.brand-appid, .brand-version) {
+    font-family: var(--mo-default-font-mono);
+    font-size: 0.625rem;
+    font-weight: 500;
+}
+
+.mo-theme-default-light .brand-version,
+.mo-theme-default-dark .brand-version {
+    padding: 1px 4px;
+    border-color: var(--mud-palette-lines-default);
+    border-radius: var(--mo-default-radius-control);
+    background: var(--mud-palette-background-gray);
+}
+
+.mo-theme-default-light :is(.navbar-link, .navbar-measure-link),
+.mo-theme-default-dark :is(.navbar-link, .navbar-measure-link) {
+    --mo-navbar-link-padding-inline: 12px;
+    height: 34px;
+    align-self: center;
+    padding-inline: 12px;
+    border-radius: var(--mo-default-radius-control);
+    color: var(--mud-palette-text-secondary);
+    font-family: var(--mo-default-font-body);
+    font-size: 0.875rem;
+    font-weight: 600;
+    transition:
+        background-color var(--mo-default-motion-fast),
+        color var(--mo-default-motion-fast);
+}
+
+.mo-theme-default-light :is(.navbar-link, .navbar-measure-link)::before,
+.mo-theme-default-dark :is(.navbar-link, .navbar-measure-link)::before {
+    display: none;
+}
+
+.mo-theme-default-light :is(.navbar-link, .navbar-measure-link):is(:hover, :focus-within),
+.mo-theme-default-dark :is(.navbar-link, .navbar-measure-link):is(:hover, :focus-within) {
+    color: var(--mud-palette-text-primary);
+    background: var(--mud-palette-action-default-hover);
+}
+
+.mo-theme-default-light :is(.navbar-link, .navbar-measure-link).active,
+.mo-theme-default-dark :is(.navbar-link, .navbar-measure-link).active {
+    color: var(--mud-palette-primary);
+    background: var(--mud-palette-primary-hover);
+}
+
+.mo-theme-default-light .navbar-actions :is(.mud-icon-button, .user-button),
+.mo-theme-default-dark .navbar-actions :is(.mud-icon-button, .user-button) {
+    border-radius: var(--mo-default-radius-control);
+}
+
+/* Controls */
 .mo-theme-default-light .mud-button,
 .mo-theme-default-dark .mud-button {
     border-radius: var(--mo-button-border-radius) !important;
-    padding: var(--mo-button-padding-y) var(--mo-button-padding-x) !important;
-    font-weight: var(--mo-button-font-weight) !important;
+    font-family: var(--mo-default-font-body);
+    font-weight: 600 !important;
+    letter-spacing: 0 !important;
     text-transform: none !important;
-    letter-spacing: normal !important;
-    transition: all var(--mo-transition-fast) ease-out !important;
     box-shadow: none !important;
+    transform: none !important;
+    transition:
+        background-color var(--mo-default-motion-fast),
+        border-color var(--mo-default-motion-fast),
+        color var(--mo-default-motion-fast),
+        box-shadow var(--mo-default-motion-fast) !important;
 }
 
-.mo-theme-default-light .mud-button-filled-primary,
-.mo-theme-default-dark .mud-button-filled-primary {
-    box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05) !important;
+.mo-theme-default-light .mud-button-filled:not(.mud-button-filled-error),
+.mo-theme-default-dark .mud-button-filled:not(.mud-button-filled-error) {
+    box-shadow: 0 1px 2px rgba(10, 16, 28, 0.12) !important;
 }
 
-.mo-theme-default-light .mud-button:not(.mud-button-disabled):hover,
-.mo-theme-default-dark .mud-button:not(.mud-button-disabled):hover {
-    transform: translateY(-1px);
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1) !important;
+.mo-theme-default-light .mud-icon-button,
+.mo-theme-default-dark .mud-icon-button {
+    border-radius: var(--mo-default-radius-control);
+    transition:
+        background-color var(--mo-default-motion-fast),
+        color var(--mo-default-motion-fast);
 }
 
-/* Cards */
-.mo-theme-default-light .mud-card,
-.mo-theme-default-dark .mud-card {
-    border-radius: var(--mo-card-border-radius) !important;
-    transition: all var(--mo-transition-normal) ease-out !important;
-    overflow: hidden;
-    /* Soft border logic - handled mostly by mudblazor palette, but we ensure it's 1px */
+.mo-theme-default-light .mud-input-outlined .mud-input-outlined-border,
+.mo-theme-default-dark .mud-input-outlined .mud-input-outlined-border {
+    border-width: 1px !important;
+    border-radius: var(--mo-input-border-radius) !important;
+    transition:
+        border-color var(--mo-default-motion-fast),
+        box-shadow var(--mo-default-motion-fast) !important;
+}
+
+.mo-theme-default-light .mud-input-outlined:focus-within .mud-input-outlined-border,
+.mo-theme-default-dark .mud-input-outlined:focus-within .mud-input-outlined-border {
+    border-width: 1px !important;
+    border-color: var(--mud-palette-primary) !important;
+    box-shadow: 0 0 0 3px var(--mo-default-focus-ring);
+}
+
+/* Structural surfaces stay flat; elevation is reserved for overlays. */
+.mo-theme-default-light .mud-card:not(.mo-self-painted),
+.mo-theme-default-dark .mud-card:not(.mo-self-painted) {
     border: 1px solid var(--mud-palette-lines-default) !important;
+    border-radius: var(--mo-card-border-radius) !important;
+    box-shadow: none !important;
+    transition:
+        border-color var(--mo-card-hover-duration) ease,
+        box-shadow var(--mo-card-hover-duration) ease !important;
 }
 
-.mo-theme-default-light .mud-card:hover,
-.mo-theme-default-dark .mud-card:hover {
-    box-shadow: var(--mo-clean-hover-shadow) !important;
-    border-color: var(--mud-palette-divider) !important;
+@media (hover: hover) and (pointer: fine) {
+    .mo-theme-default-light .mud-card:not(.mo-self-painted):hover,
+    .mo-theme-default-dark .mud-card:not(.mo-self-painted):hover {
+        border-color: var(--mo-card-hover-border) !important;
+        box-shadow: var(--mo-card-hover-shadow) !important;
+    }
 }
 
 .mo-theme-default-light .mud-card-content,
 .mo-theme-default-dark .mud-card-content {
-    padding: var(--mo-card-padding) !important;
+    padding: var(--mo-card-padding);
 }
 
-/* Tab containers using ApplyEffectsToContainer should render as real surfaces. */
+.mo-theme-default-light :is(.mud-table-container, .mud-data-grid),
+.mo-theme-default-dark :is(.mud-table-container, .mud-data-grid) {
+    border: 1px solid var(--mud-palette-lines-default);
+    border-radius: var(--mo-default-radius-surface);
+    background: var(--mud-palette-surface);
+    box-shadow: none;
+}
+
+.mo-theme-default-light :is(.mud-table-head, .mud-data-grid .mud-table-head) .mud-table-cell,
+.mo-theme-default-dark :is(.mud-table-head, .mud-data-grid .mud-table-head) .mud-table-cell {
+    color: var(--mud-palette-text-secondary);
+    background: var(--mud-palette-background-gray);
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.025em;
+}
+
+.mo-theme-default-light .mud-chip,
+.mo-theme-default-dark .mud-chip {
+    border-radius: var(--mo-chip-border-radius);
+    font-family: var(--mo-default-font-body);
+    font-weight: 600;
+}
+
+.mo-theme-default-light .mud-alert,
+.mo-theme-default-dark .mud-alert {
+    border-radius: var(--mo-default-radius-surface);
+    box-shadow: none;
+}
+
+/* Tabs */
 .mo-theme-default-light :is(.mud-tabs.mud-tabs-rounded, .mud-tabs.mud-paper-outlined, .mud-tabs[class*="mud-elevation-"]),
 .mo-theme-default-dark :is(.mud-tabs.mud-tabs-rounded, .mud-tabs.mud-paper-outlined, .mud-tabs[class*="mud-elevation-"]) {
-    background: var(--mud-palette-surface);
-    border: 1px solid var(--mud-palette-lines-default);
-    border-radius: var(--mo-card-border-radius);
     overflow: hidden;
+    border: 1px solid var(--mud-palette-lines-default);
+    border-radius: var(--mo-default-radius-surface);
+    background: var(--mud-palette-surface);
+    box-shadow: none;
 }
 
 .mo-theme-default-light :is(.mud-tabs.mud-tabs-rounded, .mud-tabs.mud-paper-outlined, .mud-tabs[class*="mud-elevation-"]) > .mud-tabs-tabbar,
 .mo-theme-default-dark :is(.mud-tabs.mud-tabs-rounded, .mud-tabs.mud-paper-outlined, .mud-tabs[class*="mud-elevation-"]) > .mud-tabs-tabbar {
-    background: var(--mud-palette-surface);
     border-bottom: 1px solid var(--mud-palette-lines-default);
+    background: var(--mud-palette-surface);
 }
 
 .mo-theme-default-light :is(.mud-tabs.mud-tabs-rounded, .mud-tabs.mud-paper-outlined, .mud-tabs[class*="mud-elevation-"]) > .mud-tabs-panels,
@@ -166,43 +312,36 @@
     background: var(--mud-palette-surface);
 }
 
-/* Inputs */
-.mo-theme-default-light .mud-input-outlined .mud-input-outlined-border,
-.mo-theme-default-dark .mud-input-outlined .mud-input-outlined-border {
-    border-radius: var(--mo-input-border-radius) !important;
-    border-width: var(--mo-input-border-width) !important;
-    transition: border-color var(--mo-transition-fast) ease-out, box-shadow var(--mo-transition-fast) ease-out !important;
-}
-
-.mo-theme-default-light .mud-input-outlined:focus-within .mud-input-outlined-border,
-.mo-theme-default-dark .mud-input-outlined:focus-within .mud-input-outlined-border {
-    border-width: 2px !important;
-    border-color: var(--mud-palette-primary) !important;
-}
-
-/* Dialogs */
+/* Overlays */
 .mo-theme-default-light .mud-dialog,
 .mo-theme-default-dark .mud-dialog {
-    border-radius: var(--mo-dialog-border-radius) !important;
     border: 1px solid var(--mud-palette-lines-default) !important;
-    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25) !important;
+    border-radius: var(--mo-dialog-border-radius) !important;
+    box-shadow: var(--mo-default-overlay-shadow) !important;
 }
 
-/* Tooltips */
+.mo-theme-default-light .mud-popover.mo-navbar-menu-popover,
+.mo-theme-default-dark .mud-popover.mo-navbar-menu-popover {
+    border: 1px solid var(--mud-palette-lines-default);
+    border-radius: var(--mo-default-radius-surface);
+    box-shadow: var(--mo-default-raised-shadow);
+}
+
 :root[data-theme="default-light"] .mud-tooltip,
 :root[data-theme="default-dark"] .mud-tooltip,
 .mo-theme-default-light .mud-tooltip,
 .mo-theme-default-dark .mud-tooltip {
-    background: var(--mo-tooltip-bg);
-    border: 1px solid var(--mo-tooltip-border);
-    border-radius: 10px;
-    color: var(--mo-tooltip-text);
-    box-shadow: var(--mo-tooltip-shadow);
     position: absolute;
     width: fit-content;
     max-width: min(28rem, calc(100vw - 32px));
-    font-size: 0.76rem;
-    font-weight: 500;
+    border: 1px solid var(--mo-tooltip-border);
+    border-radius: var(--mo-default-radius-control);
+    color: var(--mo-tooltip-text);
+    background: var(--mo-tooltip-bg);
+    box-shadow: var(--mo-tooltip-shadow);
+    font-family: var(--mo-default-font-body);
+    font-size: 0.75rem;
+    font-weight: 400;
     line-height: 1.45;
     text-align: start;
     white-space: normal;
@@ -215,31 +354,55 @@
     border-top-color: var(--mo-tooltip-bg);
 }
 
-/* App Bar & Drawer - ensure no harsh shadows */
-.mo-theme-default-light .mud-appbar,
-.mo-theme-default-dark .mud-appbar {
-    border-bottom: 1px solid var(--mud-palette-lines-default) !important;
+.mo-theme-default-light :is(.mud-appbar, .mud-drawer),
+.mo-theme-default-dark :is(.mud-appbar, .mud-drawer) {
+    border-color: var(--mud-palette-lines-default) !important;
     box-shadow: none !important;
 }
 
-.mo-theme-default-light .mud-drawer,
-.mo-theme-default-dark .mud-drawer {
-    border-right: 1px solid var(--mud-palette-lines-default) !important;
-    box-shadow: none !important;
-}
-
-/* Nav Menu Items (Pill style hover) */
+/* Navigation */
 .mo-theme-default-light .mud-nav-item .mud-nav-link,
 .mo-theme-default-dark .mud-nav-item .mud-nav-link {
-    border-radius: 8px !important;
-    margin: 2px 8px !important;
-    padding: 8px 16px !important;
-    transition: background-color 150ms ease-out !important;
+    margin: 2px 6px !important;
+    padding: 8px 12px !important;
+    border-radius: var(--mo-default-radius-control) !important;
+    transition:
+        background-color var(--mo-default-motion-fast),
+        color var(--mo-default-motion-fast) !important;
 }
 
 .mo-theme-default-light .mud-nav-item .mud-nav-link.active,
 .mo-theme-default-dark .mud-nav-item .mud-nav-link.active {
-    background-color: var(--mud-palette-primary-hover) !important;
     color: var(--mud-palette-primary) !important;
-    font-weight: 500 !important;
+    background: var(--mud-palette-primary-hover) !important;
+    font-weight: 600 !important;
+}
+
+.mo-theme-default-light :is(.mud-button-root, .mud-icon-button, .mud-nav-link, .mud-menu-item):focus-visible,
+.mo-theme-default-dark :is(.mud-button-root, .mud-icon-button, .mud-nav-link, .mud-menu-item):focus-visible {
+    outline: 2px solid var(--mud-palette-primary);
+    outline-offset: 2px;
+}
+
+@media (max-width: 600px) {
+    .mo-theme-default-light .brand-version-container,
+    .mo-theme-default-dark .brand-version-container {
+        display: none;
+    }
+
+    .mo-theme-default-light .navbar-brand,
+    .mo-theme-default-dark .navbar-brand {
+        gap: 7px;
+        padding-inline-end: 4px;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .mo-theme-default-light *,
+    .mo-theme-default-dark * {
+        scroll-behavior: auto !important;
+        transition-duration: 0.01ms !important;
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+    }
 }

@@ -1,6 +1,9 @@
 .configuration-versions-page {
     display: flex;
     flex-direction: column;
-    height: 100%;
-    min-height: 0;
+    box-sizing: border-box;
+    width: 100%;
+    min-width: 0;
+    min-height: 100%;
+    padding-block: clamp(1rem, 2vw, 1.5rem);
 }

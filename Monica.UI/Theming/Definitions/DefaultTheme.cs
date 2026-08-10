@@ -3,255 +3,218 @@ using MudBlazor;
 namespace Monica.UI.Theming.Definitions;
 
 /// <summary>
-/// The default Monica theme with a modern SaaS look, soft borders, and a diffuse shadow system.
+/// The default Monica Precision theme for vivid, information-dense operational interfaces.
 /// </summary>
-public class DefaultTheme : ThemeDefinitionBase
+public sealed class DefaultTheme : ThemeDefinitionBase
 {
     public override MonicaThemeKind Kind => MonicaThemeKind.Default;
     public override string DisplayName => "默认主题";
-    public override string Description => "基于白底、极简边框和柔和投影的现代 SaaS 设计风格";
-    
+    public override string Description => "以鲜明信号色、技术字体和清晰信息层次构建的精密运维界面";
+
     public override CodeBlockTheme LightCodeBlockTheme => CodeBlockTheme.Github;
     public override CodeBlockTheme DarkCodeBlockTheme => CodeBlockTheme.GithubDark;
 
-    public override MudTheme CreateTheme()
+    public override MudTheme CreateTheme() => new()
     {
-        return new MudTheme()
+        PaletteLight = CreateLightPalette(),
+        PaletteDark = CreateDarkPalette(),
+        LayoutProperties = new LayoutProperties
         {
-            PaletteLight = new PaletteLight()
-            {
-                Primary = "#8b5cf6", // Violet-500
-                PrimaryLighten = "#a78bfa",
-                PrimaryDarken = "#7c3aed",
-                PrimaryContrastText = "#ffffff",
+            DefaultBorderRadius = "8px",
+            DrawerWidthLeft = "260px",
+            DrawerWidthRight = "260px",
+            DrawerMiniWidthLeft = "64px",
+            DrawerMiniWidthRight = "64px",
+            AppbarHeight = "56px"
+        },
+        Shadows = new Shadow { Elevation = CreateElevationScale() },
+        Typography = MonicaTypographyDefaults.CreatePrecision()
+    };
 
-                Secondary = "#64748b", // Slate-500
-                SecondaryLighten = "#94a3b8",
-                SecondaryDarken = "#475569",
-                SecondaryContrastText = "#ffffff",
+    private static PaletteLight CreateLightPalette() => new()
+    {
+        Primary = "#7257f5",
+        PrimaryLighten = "#8b74ff",
+        PrimaryDarken = "#5841d2",
+        PrimaryContrastText = "#ffffff",
 
-                Tertiary = "#f1f5f9", // Slate-100 (Useful for pill backgrounds)
-                TertiaryContrastText = "#334155", // Slate-700
+        Secondary = "#526f89",
+        SecondaryLighten = "#718ca5",
+        SecondaryDarken = "#3d566d",
+        SecondaryContrastText = "#ffffff",
 
-                Info = "#3b82f6", // Blue-500
-                InfoLighten = "#60a5fa",
-                InfoDarken = "#2563eb",
-                InfoContrastText = "#ffffff",
+        Tertiary = "#eeeafd",
+        TertiaryContrastText = "#4e3cb2",
 
-                Success = "#10b981", // Emerald-500
-                SuccessLighten = "#34d399",
-                SuccessDarken = "#059669",
-                SuccessContrastText = "#ffffff",
+        Info = "#118fc9",
+        InfoLighten = "#3baddb",
+        InfoDarken = "#0b70a0",
+        InfoContrastText = "#ffffff",
 
-                Warning = "#f59e0b", // Amber-500
-                WarningLighten = "#fbbf24",
-                WarningDarken = "#d97706",
-                WarningContrastText = "#ffffff",
+        Success = "#0b9f73",
+        SuccessLighten = "#2db88d",
+        SuccessDarken = "#087d5a",
+        SuccessContrastText = "#ffffff",
 
-                Error = "#ef4444", // Red-500
-                ErrorLighten = "#f87171",
-                ErrorDarken = "#dc2626",
-                ErrorContrastText = "#ffffff",
+        Warning = "#b97806",
+        WarningLighten = "#d89525",
+        WarningDarken = "#925e05",
+        WarningContrastText = "#ffffff",
 
-                Dark = "#0f172a", // Slate-900
-                DarkLighten = "#1e293b",
-                DarkDarken = "#020617",
-                DarkContrastText = "#ffffff",
+        Error = "#d5445e",
+        ErrorLighten = "#e86b82",
+        ErrorDarken = "#b1324b",
+        ErrorContrastText = "#ffffff",
 
-                // Backgrounds
-                Background = "#f8fafc", // Slate-50 (The slightly off-white background)
-                BackgroundGray = "#f1f5f9", // Slate-100
-                Surface = "#ffffff", // Pure white for cards
-                
-                // Drawer
-                DrawerBackground = "#ffffff",
-                DrawerText = "#475569", // Slate-600
-                DrawerIcon = "#64748b", // Slate-500
+        Dark = "#151b2b",
+        DarkLighten = "#293247",
+        DarkDarken = "#0d1220",
+        DarkContrastText = "#f4f6fb",
 
-                // Appbar
-                AppbarBackground = "rgba(255, 255, 255, 0.85)", // Translucent white for backdrop-blur effect
-                AppbarText = "#334155", // Slate-700
+        Background = "#f1f3f7",
+        BackgroundGray = "#eef1f6",
+        Surface = "#ffffff",
 
-                // Text
-                TextPrimary = "#0f172a", // Slate-900
-                TextSecondary = "#64748b", // Slate-500
-                TextDisabled = "#94a3b8", // Slate-400
+        DrawerBackground = "#ffffff",
+        DrawerText = "#516078",
+        DrawerIcon = "#68768c",
 
-                // Action
-                ActionDefault = "#64748b", // Slate-500
-                ActionDisabled = "#cbd5e1", // Slate-300
-                ActionDisabledBackground = "#f1f5f9", // Slate-100
+        AppbarBackground = "rgba(255, 255, 255, 0.94)",
+        AppbarText = "#151b2b",
 
-                // Borders (Extremely soft)
-                Divider = "#e2e8f0", // Slate-200
-                DividerLight = "#f1f5f9", // Slate-100
-                LinesDefault = "#e2e8f0", // Slate-200
-                LinesInputs = "#cbd5e1", // Slate-300
+        TextPrimary = "#151b2b",
+        TextSecondary = "#516078",
+        TextDisabled = "#7f8ca2",
 
-                TableStriped = "#f8fafc", // Slate-50
-                TableHover = "#f1f5f9", // Slate-100
+        ActionDefault = "#68768c",
+        ActionDisabled = "#aeb7c6",
+        ActionDisabledBackground = "#e8ecf2",
 
-                OverlayDark = "rgba(15, 23, 42, 0.5)", // Slate-900 with alpha
-                OverlayLight = "rgba(255, 255, 255, 0.7)",
+        Divider = "#d9deea",
+        DividerLight = "#e8ebf1",
+        LinesDefault = "#d9deea",
+        LinesInputs = "#c3cada",
 
-                HoverOpacity = 0.04,
+        TableStriped = "#f8f9fb",
+        TableHover = "#f5f3ff",
 
-                GrayDefault = "#94a3b8",
-                GrayLight = "#cbd5e1",
-                GrayLighter = "#f1f5f9",
-                GrayDark = "#475569",
-                GrayDarker = "#334155"
-            },
-            PaletteDark = new PaletteDark()
-            {
-                Primary = "#6366f1", // Indigo 500
-                PrimaryLighten = "#818cf8", // Indigo 400
-                PrimaryDarken = "#4f46e5", // Indigo 600
-                PrimaryContrastText = "#ffffff",
+        OverlayDark = "rgba(21, 27, 43, 0.58)",
+        OverlayLight = "rgba(255, 255, 255, 0.78)",
+        HoverOpacity = 0.055,
 
-                Secondary = "#a1a1aa", // Zinc 400
-                SecondaryLighten = "#d4d4d8", // Zinc 300
-                SecondaryDarken = "#71717a", // Zinc 500
-                SecondaryContrastText = "#18181b",
+        GrayDefault = "#7f8ca2",
+        GrayLight = "#c3cada",
+        GrayLighter = "#eef1f6",
+        GrayDark = "#516078",
+        GrayDarker = "#303a4d"
+    };
 
-                Tertiary = "#27272a", // Zinc 800
-                TertiaryContrastText = "#f4f4f5", // Zinc 50
+    private static PaletteDark CreateDarkPalette() => new()
+    {
+        Primary = "#8c75ff",
+        PrimaryLighten = "#a995ff",
+        PrimaryDarken = "#7259eb",
+        PrimaryContrastText = "#17122b",
 
-                Info = "#3b82f6", // Blue 500
-                InfoLighten = "#60a5fa",
-                InfoDarken = "#2563eb",
-                InfoContrastText = "#ffffff",
+        Secondary = "#8fa9c2",
+        SecondaryLighten = "#aec3d6",
+        SecondaryDarken = "#6d8aa4",
+        SecondaryContrastText = "#101720",
 
-                Success = "#10b981", // Emerald 500
-                SuccessLighten = "#34d399",
-                SuccessDarken = "#059669",
-                SuccessContrastText = "#ffffff",
+        Tertiary = "#292348",
+        TertiaryContrastText = "#ddd7ff",
 
-                Warning = "#f59e0b", // Amber 500
-                WarningLighten = "#fbbf24",
-                WarningDarken = "#d97706",
-                WarningContrastText = "#18181b",
+        Info = "#39bdf6",
+        InfoLighten = "#6bcdf9",
+        InfoDarken = "#169bd4",
+        InfoContrastText = "#071820",
 
-                Error = "#ef4444", // Red 500
-                ErrorLighten = "#f87171",
-                ErrorDarken = "#dc2626",
-                ErrorContrastText = "#ffffff",
+        Success = "#34d5a2",
+        SuccessLighten = "#64e2ba",
+        SuccessDarken = "#17b786",
+        SuccessContrastText = "#071b14",
 
-                Dark = "#f4f4f5", // Zinc 50
-                DarkLighten = "#ffffff",
-                DarkDarken = "#d4d4d8",
-                DarkContrastText = "#09090b", // Zinc 950
+        Warning = "#f1b84b",
+        WarningLighten = "#f7cc75",
+        WarningDarken = "#d4972e",
+        WarningContrastText = "#231706",
 
-                Background = "#09090b", // Zinc 950
-                BackgroundGray = "#18181b", // Zinc 900
-                Surface = "#18181b", // Zinc 900
-                
-                DrawerBackground = "#18181b",
-                DrawerText = "#e4e4e7", // Zinc 200
-                DrawerIcon = "#a1a1aa", // Zinc 400
+        Error = "#ff7189",
+        ErrorLighten = "#ff98a9",
+        ErrorDarken = "#df506c",
+        ErrorContrastText = "#26090f",
 
-                AppbarBackground = "rgba(9, 9, 11, 0.85)", // Translucent Zinc 950
-                AppbarText = "#f4f4f5",
+        Dark = "#111a29",
+        DarkLighten = "#202c40",
+        DarkDarken = "#090e18",
+        DarkContrastText = "#edf2fb",
 
-                TextPrimary = "#f4f4f5", // Zinc 50
-                TextSecondary = "#a1a1aa", // Zinc 400
-                TextDisabled = "#52525b", // Zinc 600
+        Background = "#0b101a",
+        BackgroundGray = "#1b2638",
+        Surface = "#141d2c",
 
-                ActionDefault = "#a1a1aa",
-                ActionDisabled = "#3f3f46", // Zinc 700
-                ActionDisabledBackground = "#27272a", // Zinc 800
+        DrawerBackground = "#101724",
+        DrawerText = "#dce4f0",
+        DrawerIcon = "#9eabc0",
 
-                Divider = "#27272a", // Zinc 800
-                DividerLight = "#18181b", // Zinc 900
-                LinesDefault = "#27272a", // Zinc 800
-                LinesInputs = "#3f3f46", // Zinc 700
+        AppbarBackground = "rgba(11, 16, 26, 0.94)",
+        AppbarText = "#edf2fb",
 
-                TableStriped = "#09090b",
-                TableHover = "#27272a",
+        TextPrimary = "#edf2fb",
+        TextSecondary = "#a9b6ca",
+        TextDisabled = "#77859b",
 
-                OverlayDark = "rgba(0, 0, 0, 0.8)",
-                OverlayLight = "rgba(24, 24, 27, 0.5)",
+        ActionDefault = "#9eabc0",
+        ActionDisabled = "#59667a",
+        ActionDisabledBackground = "#202c40",
 
-                HoverOpacity = 0.08,
+        Divider = "#293449",
+        DividerLight = "#222d40",
+        LinesDefault = "#293449",
+        LinesInputs = "#3a4860",
 
-                GrayDefault = "#71717a",
-                GrayLight = "#a1a1aa",
-                GrayLighter = "#d4d4d8",
-                GrayDark = "#52525b",
-                GrayDarker = "#3f3f46"
-            },
-           
-            LayoutProperties = new LayoutProperties()
-            {
-                DefaultBorderRadius = "12px", // Smooth, modern rounding
-                DrawerWidthLeft = "260px",
-                DrawerWidthRight = "260px",
-                DrawerMiniWidthLeft = "72px",
-                DrawerMiniWidthRight = "72px",
-                AppbarHeight = "56px", // Slightly slimmer topbar
-            },
-            
-            // Custom soft diffuse shadows replacing standard Material Elevation
-            Shadows = new Shadow()
-            {
-                Elevation = new[]
-                {
-                    "none",
-                    "0 1px 2px 0 rgba(0, 0, 0, 0.05)", // 1
-                    "0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px -1px rgba(0, 0, 0, 0.1)", // 2
-                    "0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1)", // 3
-                    "0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.1)", // 4
-                    "0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1)", // 5
-                    "0 25px 50px -12px rgba(0, 0, 0, 0.25)", // 6
-                    
-                    // The rest map to the softest large shadow to avoid harsh drops
-                    "0 4px 20px -2px rgba(0, 0, 0, 0.04)", // 7
-                    "0 4px 20px -2px rgba(0, 0, 0, 0.04)", // 8
-                    "0 4px 20px -2px rgba(0, 0, 0, 0.04)", // 9
-                    "0 4px 20px -2px rgba(0, 0, 0, 0.04)", // 10
-                    "0 4px 20px -2px rgba(0, 0, 0, 0.04)", // 11
-                    "0 4px 20px -2px rgba(0, 0, 0, 0.04)", // 12
-                    "0 4px 20px -2px rgba(0, 0, 0, 0.04)", // 13
-                    "0 4px 20px -2px rgba(0, 0, 0, 0.04)", // 14
-                    "0 4px 20px -2px rgba(0, 0, 0, 0.04)", // 15
-                    "0 4px 20px -2px rgba(0, 0, 0, 0.04)", // 16
-                    "0 4px 20px -2px rgba(0, 0, 0, 0.04)", // 17
-                    "0 4px 20px -2px rgba(0, 0, 0, 0.04)", // 18
-                    "0 4px 20px -2px rgba(0, 0, 0, 0.04)", // 19
-                    "0 4px 20px -2px rgba(0, 0, 0, 0.04)", // 20
-                    "0 4px 20px -2px rgba(0, 0, 0, 0.04)", // 21
-                    "0 4px 20px -2px rgba(0, 0, 0, 0.04)", // 22
-                    "0 4px 20px -2px rgba(0, 0, 0, 0.04)", // 23
-                    "0 4px 20px -2px rgba(0, 0, 0, 0.04)", // 24
-                    "0 4px 20px -2px rgba(0, 0, 0, 0.04)"  // 25
-                }
-            },
-            
-            // Custom modern typography mapping
-            Typography = new Typography()
-            {
-                Default = new DefaultTypography()
-                {
-                    FontFamily = new[] { "Inter", "Plus Jakarta Sans", "Helvetica Neue", "Arial", "sans-serif" },
-                    FontSize = "0.875rem",
-                    FontWeight = "400",
-                    LineHeight = "1.5",
-                    LetterSpacing = "0"
-                },
-                H1 = new H1Typography() { FontSize = "3rem", FontWeight = "700", LineHeight = "1", LetterSpacing = "-0.025em" },
-                H2 = new H2Typography() { FontSize = "2.25rem", FontWeight = "700", LineHeight = "2.5rem", LetterSpacing = "-0.025em" },
-                H3 = new H3Typography() { FontSize = "1.875rem", FontWeight = "600", LineHeight = "2.25rem", LetterSpacing = "-0.025em" },
-                H4 = new H4Typography() { FontSize = "1.5rem", FontWeight = "600", LineHeight = "2rem", LetterSpacing = "-0.025em" },
-                H5 = new H5Typography() { FontSize = "1.25rem", FontWeight = "600", LineHeight = "1.75rem", LetterSpacing = "-0.025em" },
-                H6 = new H6Typography() { FontSize = "1.125rem", FontWeight = "600", LineHeight = "1.75rem", LetterSpacing = "-0.025em" },
-                Subtitle1 = new Subtitle1Typography() { FontSize = "1rem", FontWeight = "500", LineHeight = "1.5rem", LetterSpacing = "0" },
-                Subtitle2 = new Subtitle2Typography() { FontSize = "0.875rem", FontWeight = "500", LineHeight = "1.25rem", LetterSpacing = "0" },
-                Body1 = new Body1Typography() { FontSize = "1rem", FontWeight = "400", LineHeight = "1.5rem", LetterSpacing = "0" },
-                Body2 = new Body2Typography() { FontSize = "0.875rem", FontWeight = "400", LineHeight = "1.25rem", LetterSpacing = "0" },
-                Button = new ButtonTypography() { FontSize = "0.875rem", FontWeight = "500", LineHeight = "1.25rem", LetterSpacing = "0", TextTransform = "none" },
-                Caption = new CaptionTypography() { FontSize = "0.75rem", FontWeight = "500", LineHeight = "1rem", LetterSpacing = "0" },
-                Overline = new OverlineTypography() { FontSize = "0.75rem", FontWeight = "600", LineHeight = "1rem", LetterSpacing = "0.05em", TextTransform = "uppercase" }
-            }
-        };
-    }
+        TableStriped = "#101724",
+        TableHover = "#211f42",
+
+        OverlayDark = "rgba(0, 0, 0, 0.78)",
+        OverlayLight = "rgba(20, 29, 44, 0.72)",
+        HoverOpacity = 0.075,
+
+        GrayDefault = "#77859b",
+        GrayLight = "#9eabc0",
+        GrayLighter = "#d0d9e6",
+        GrayDark = "#526078",
+        GrayDarker = "#303d52"
+    };
+
+    private static string[] CreateElevationScale() =>
+    [
+        "none",
+        "0 1px 2px rgba(10, 16, 28, 0.06)",
+        "0 2px 6px -1px rgba(10, 16, 28, 0.08)",
+        "0 4px 10px -2px rgba(10, 16, 28, 0.09)",
+        "0 6px 14px -3px rgba(10, 16, 28, 0.10)",
+        "0 8px 18px -4px rgba(10, 16, 28, 0.11)",
+        "0 10px 22px -5px rgba(10, 16, 28, 0.12)",
+        "0 12px 26px -6px rgba(10, 16, 28, 0.13)",
+        "0 14px 30px -7px rgba(10, 16, 28, 0.14)",
+        "0 16px 34px -8px rgba(10, 16, 28, 0.15)",
+        "0 18px 38px -9px rgba(10, 16, 28, 0.16)",
+        "0 20px 42px -10px rgba(10, 16, 28, 0.17)",
+        "0 22px 46px -11px rgba(10, 16, 28, 0.18)",
+        "0 24px 50px -12px rgba(10, 16, 28, 0.19)",
+        "0 24px 54px -12px rgba(10, 16, 28, 0.20)",
+        "0 26px 58px -13px rgba(10, 16, 28, 0.21)",
+        "0 26px 62px -13px rgba(10, 16, 28, 0.22)",
+        "0 28px 64px -14px rgba(10, 16, 28, 0.23)",
+        "0 28px 68px -14px rgba(10, 16, 28, 0.24)",
+        "0 30px 70px -15px rgba(10, 16, 28, 0.25)",
+        "0 30px 72px -15px rgba(10, 16, 28, 0.26)",
+        "0 30px 74px -15px rgba(10, 16, 28, 0.27)",
+        "0 30px 76px -16px rgba(10, 16, 28, 0.28)",
+        "0 30px 78px -16px rgba(10, 16, 28, 0.29)",
+        "0 30px 80px -16px rgba(10, 16, 28, 0.30)",
+        "0 32px 84px -17px rgba(10, 16, 28, 0.32)"
+    ];
+
 }

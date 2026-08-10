@@ -39,10 +39,7 @@
         <SystemInfoPulseStrip Snapshot="@snapshot" NowUtc="@_session.NowUtc" />
 
         @* Operational destinations stay near the top, before the detailed dossier. *@
-        @if (SystemInfoUIOptions.Value.CustomLinks.Any(static link => link.Enabled))
-        {
-            <SystemInfoCustomLinkPanel Links="@SystemInfoUIOptions.Value.CustomLinks" />
-        }
+        <SystemInfoCustomLinkPanel Links="@SystemInfoUIOptions.Value.CustomLinks" />
 
         <SystemInfoDossier Snapshot="@snapshot" />
     }
@@ -52,24 +49,39 @@
     public const string PAGE_URL = "/system-info";
 
     private SystemInfoPageSession? _session;
-    private bool _disposed;
+    private int _disposed;
 
     protected override async Task OnInitializedAsync()
     {
-        _session = SessionFactory.Create();
-        _session.Changed += HandleSessionChanged;
-        await _session.InitializeAsync();
+        var session = SessionFactory.Create();
+        _session = session;
+        session.Changed += HandleSessionChanged;
+        await session.InitializeAsync();
     }
 
-    private Task HandleSessionChanged() => _disposed
+    private Task HandleSessionChanged() => IsDisposed
         ? Task.CompletedTask
         : InvokeAsync(StateHasChanged);
 
     private async Task RefreshAsync()
     {
-        if (_session is null || !await _session.RefreshAsync())
+        var session = _session;
+        if (IsDisposed || session is null)
         {
-            if (_session?.RefreshError is { Length: > 0 } error)
+            return;
+        }
+
+        var refreshed = await session.RefreshAsync();
+        // Disposal can run while the request is suspended. Feedback belongs only to the page
+        // instance that still owns this session.
+        if (!OwnsSession(session))
+        {
+            return;
+        }
+
+        if (!refreshed)
+        {
+            if (session.RefreshError is { Length: > 0 } error)
             {
                 Snackbar.Add(L["Page:Messages:RefreshFailed", error], Severity.Error);
             }
@@ -82,7 +94,8 @@
 
     private async Task RequestSelfRestartAsync()
     {
-        if (_session is null || _session.RestartRequested)
+        var session = _session;
+        if (IsDisposed || session is null || session.RestartRequested)
         {
             return;
         }
@@ -101,12 +114,18 @@
                 FullWidth = true
             });
 
-        if (await dialog.Result is not { Canceled: false })
+        if (!OwnsSession(session))
         {
             return;
         }
 
-        var result = _session.RequestSelfRestart();
+        var dialogResult = await dialog.Result;
+        if (!OwnsSession(session) || dialogResult is not { Canceled: false })
+        {
+            return;
+        }
+
+        var result = session.RequestSelfRestart();
         if (result.IsFailed(out var error))
         {
             Snackbar.Add(L["Page:Messages:RestartFailed", error.Message ?? string.Empty], Severity.Error);
@@ -120,17 +139,22 @@
 
     public async ValueTask DisposeAsync()
     {
-        if (_disposed)
+        if (Interlocked.Exchange(ref _disposed, 1) != 0)
         {
             return;
         }
 
-        _disposed = true;
-        if (_session is not null)
+        var session = _session;
+        _session = null;
+        if (session is not null)
         {
-            _session.Changed -= HandleSessionChanged;
-            await _session.DisposeAsync();
+            session.Changed -= HandleSessionChanged;
+            await session.DisposeAsync();
         }
-
     }
+
+    private bool IsDisposed => Volatile.Read(ref _disposed) != 0;
+
+    private bool OwnsSession(SystemInfoPageSession session) =>
+        !IsDisposed && ReferenceEquals(_session, session);
 }

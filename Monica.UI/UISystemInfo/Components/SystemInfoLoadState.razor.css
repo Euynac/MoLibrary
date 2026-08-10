@@ -7,7 +7,7 @@
     padding: 32px;
     text-align: center;
     border: 1px solid var(--mud-palette-lines-default);
-    border-radius: calc(var(--mud-default-borderradius) * 3);
+    border-radius: var(--mud-default-borderradius);
     background: var(--mud-palette-surface);
 }
 
@@ -28,7 +28,7 @@
     display: grid;
     place-items: center;
     color: var(--mud-palette-error);
-    border-radius: 20px;
+    border-radius: var(--mud-default-borderradius);
     background: var(--mud-palette-error-hover);
 }
 
@@ -41,10 +41,9 @@
 
 .system-info-load-state__skeleton span {
     height: 90px;
-    border-radius: 16px;
-    background: linear-gradient(90deg, var(--mud-palette-action-default-hover), var(--mud-palette-primary-hover), var(--mud-palette-action-default-hover));
-    background-size: 200% 100%;
-    animation: system-info-skeleton 1.4s ease infinite;
+    border-radius: var(--mud-default-borderradius);
+    background: var(--mud-palette-action-default-hover);
+    animation: system-info-skeleton 1.2s ease-in-out infinite alternate;
 }
 
 .system-info-load-state ::deep .mud-progress-linear {
@@ -52,6 +51,6 @@
 }
 
 @keyframes system-info-skeleton {
-    from { background-position: 100% 0; }
-    to { background-position: -100% 0; }
+    from { opacity: 0.55; }
+    to { opacity: 1; }
 }

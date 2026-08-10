@@ -40,27 +40,27 @@
         case ModuleSystemLazyLoadState.Ready when Session.AssemblyInventory is { } inventory:
             var entryAssembly = inventory.Assemblies.FirstOrDefault(static assembly => assembly.IsEntryAssembly);
             <div class="assembly-kpi-grid">
-                <article class="assembly-kpi assembly-kpi--entry">
+                <article class="assembly-kpi assembly-kpi--entry mo-card-surface">
                     <MudIcon Icon="@Icons.Material.Filled.Adjust" Color="Color.Primary" />
-                    <span>@L["Discovery:Inventory:Summary:EntryAssembly"]</span>
+                    <span class="assembly-kpi__label">@L["Discovery:Inventory:Summary:EntryAssembly"]</span>
                     <strong title="@entryAssembly?.Name">@(entryAssembly?.Name ?? L["Common:NotAvailable"])</strong>
                     <small>@(entryAssembly?.Version ?? L["Common:NotAvailable"])</small>
                 </article>
-                <article class="assembly-kpi assembly-kpi--scan">
+                <article class="assembly-kpi assembly-kpi--scan mo-card-surface">
                     <MudIcon Icon="@Icons.Material.Filled.Radar" Color="Color.Success" />
-                    <span>@L["Discovery:Inventory:Summary:ScanScope"]</span>
+                    <span class="assembly-kpi__label">@L["Discovery:Inventory:Summary:ScanScope"]</span>
                     <strong>@Session.AssemblyScanScopeCount</strong>
                     <small>@L["Discovery:Inventory:Scanned", inventory.ScannedCount]</small>
                 </article>
-                <article class="assembly-kpi assembly-kpi--considered">
+                <article class="assembly-kpi assembly-kpi--considered mo-card-surface">
                     <MudIcon Icon="@Icons.Material.Filled.Inventory2" Color="Color.Info" />
-                    <span>@L["Discovery:Inventory:Summary:Considered"]</span>
+                    <span class="assembly-kpi__label">@L["Discovery:Inventory:Summary:Considered"]</span>
                     <strong>@inventory.Assemblies.Length</strong>
                     <small>@L["Discovery:Inventory:Excluded", inventory.ExcludedCount]</small>
                 </article>
-                <article class="assembly-kpi @AttentionKpiClass(Session.AssemblyAttentionCount)">
+                <article class="assembly-kpi @AttentionKpiClass(Session.AssemblyAttentionCount) mo-card-surface">
                     <MudIcon Icon="@AttentionIcon(Session.AssemblyAttentionCount)" Color="@AttentionColor(Session.AssemblyAttentionCount)" />
-                    <span>@L["Discovery:Inventory:Summary:Attention"]</span>
+                    <span class="assembly-kpi__label">@L["Discovery:Inventory:Summary:Attention"]</span>
                     <strong>@Session.AssemblyAttentionCount</strong>
                     <small>@L["Discovery:Inventory:Partial", inventory.PartialTypeLoadCount]</small>
                 </article>

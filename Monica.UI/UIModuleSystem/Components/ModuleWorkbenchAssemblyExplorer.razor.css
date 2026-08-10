@@ -6,10 +6,7 @@
     overflow: clip;
     border: 1px solid var(--mud-palette-lines-default);
     border-radius: var(--mud-default-borderradius);
-    background: linear-gradient(
-        145deg,
-        color-mix(in srgb, var(--mud-palette-primary) 5%, var(--mud-palette-surface)),
-        var(--mud-palette-surface) 24rem);
+    background: var(--mud-palette-surface);
 }
 
 .assembly-explorer-header,
@@ -51,36 +48,36 @@
 }
 
 .assembly-kpi--entry {
-    background: linear-gradient(135deg, color-mix(in srgb, var(--mud-palette-primary) 13%, var(--mud-palette-surface)), var(--mud-palette-surface));
+    background: color-mix(in srgb, var(--mud-palette-primary) 10%, var(--mud-palette-surface));
 }
 
 .assembly-kpi--scan,
 .assembly-kpi--healthy {
-    background: linear-gradient(135deg, color-mix(in srgb, var(--mud-palette-success) 12%, var(--mud-palette-surface)), var(--mud-palette-surface));
+    background: color-mix(in srgb, var(--mud-palette-success) 8%, var(--mud-palette-surface));
 }
 
 .assembly-kpi--considered {
-    background: linear-gradient(135deg, color-mix(in srgb, var(--mud-palette-info) 12%, var(--mud-palette-surface)), var(--mud-palette-surface));
+    background: color-mix(in srgb, var(--mud-palette-info) 8%, var(--mud-palette-surface));
 }
 
 .assembly-kpi--attention {
     border-color: var(--mud-palette-error);
-    background: linear-gradient(135deg, color-mix(in srgb, var(--mud-palette-error) 14%, var(--mud-palette-surface)), var(--mud-palette-surface));
+    background: color-mix(in srgb, var(--mud-palette-error) 10%, var(--mud-palette-surface));
 }
 
-.assembly-kpi > span,
+.assembly-kpi__label,
 .assembly-kpi > strong,
 .assembly-kpi > small {
     grid-column: 2;
     min-width: 0;
 }
 
-.assembly-kpi > span,
+.assembly-kpi__label,
 .assembly-kpi > small {
     color: var(--mud-palette-text-secondary);
 }
 
-.assembly-kpi > span {
+.assembly-kpi__label {
     font-size: .72rem;
     letter-spacing: .03em;
     text-transform: uppercase;

@@ -21,7 +21,7 @@
                 <div class="budget-grid">
                     @foreach (var budget in snapshot.Summary.PerformanceBudgets)
                     {
-                        <article>
+                        <article class="mo-card-surface" data-mo-card-tone="@BudgetTone(budget.IsExceeded)">
                             <div>
                                 <strong>@L[$"Enums:Budget:{budget.Kind}"]</strong>
                                 <span>@L["Performance:Budgets:Measurement",
@@ -50,10 +50,22 @@
                     </div>
                 </div>
                 <div class="comparison-kpis">
-                    <article><span>@L["Overview:Kpis:Composition"]</span><strong>@SignedDuration(comparison.TotalDurationDeltaMs)</strong></article>
-                    <article><span>@L["Overview:Kpis:TypeDiscovery"]</span><strong>@SignedDuration(comparison.TypeDiscoveryDurationDeltaMs)</strong></article>
-                    <article><span>@L["Comparison:ModulesChanged"]</span><strong>+@comparison.AddedModules.Count / -@comparison.RemovedModules.Count</strong></article>
-                    <article><span>@L["Comparison:EdgesChanged"]</span><strong>+@comparison.AddedEdges.Count / -@comparison.RemovedEdges.Count</strong></article>
+                    <article class="mo-card-surface" data-mo-card-tone="primary">
+                        <span>@L["Overview:Kpis:Composition"]</span>
+                        <strong>@SignedDuration(comparison.TotalDurationDeltaMs)</strong>
+                    </article>
+                    <article class="mo-card-surface" data-mo-card-tone="info">
+                        <span>@L["Overview:Kpis:TypeDiscovery"]</span>
+                        <strong>@SignedDuration(comparison.TypeDiscoveryDurationDeltaMs)</strong>
+                    </article>
+                    <article class="mo-card-surface" data-mo-card-tone="success">
+                        <span>@L["Comparison:ModulesChanged"]</span>
+                        <strong>+@comparison.AddedModules.Count / -@comparison.RemovedModules.Count</strong>
+                    </article>
+                    <article class="mo-card-surface" data-mo-card-tone="secondary">
+                        <span>@L["Comparison:EdgesChanged"]</span>
+                        <strong>+@comparison.AddedEdges.Count / -@comparison.RemovedEdges.Count</strong>
+                    </article>
                 </div>
                 <div class="comparison-changes">
                     <MudExpansionPanels MultiExpansion="true">
@@ -192,7 +204,7 @@
             <div class="stage-strip" role="region" aria-labelledby="discovery-stages-title" tabindex="0">
                 @foreach (var stage in snapshot.TypeDiscovery.Stages)
                 {
-                    <article>
+                    <article class="mo-card-surface" data-mo-card-tone="primary">
                         <span>@ModuleDiagnosticsDisplay.Stage(stage.Stage, L)</span>
                         <strong>@ModuleDiagnosticsDisplay.Duration(stage.DurationMs)</strong>
                     </article>
@@ -243,6 +255,8 @@
 @code {
     [Parameter, EditorRequired] public ModuleSystemWorkbenchSession Session { get; set; } = default!;
     [Parameter] public EventCallback<ModuleDiagnosticsModule> ModuleSelected { get; set; }
+
+    private static string BudgetTone(bool isExceeded) => isExceeded ? "warning" : "success";
 
     private IReadOnlyList<ModuleDiagnosticsTraceSpan> StartupWorkSpans => Session.Snapshot?.TraceSpans
         .Where(static span => span.Kind == ModuleDiagnosticsTraceSpanKind.StartupWork)

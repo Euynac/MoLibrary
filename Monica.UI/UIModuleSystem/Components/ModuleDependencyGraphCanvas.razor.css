@@ -7,10 +7,7 @@
     overflow: hidden;
     border: 1px solid var(--mud-palette-lines-default);
     border-radius: var(--mud-default-borderradius);
-    background:
-        radial-gradient(circle at 15% 12%, var(--mud-palette-primary-hover), transparent 30%),
-        radial-gradient(circle at 85% 88%, var(--mud-palette-secondary-hover), transparent 32%),
-        var(--mud-palette-background);
+    background: var(--mud-palette-background);
 }
 
 .graph-surface {
