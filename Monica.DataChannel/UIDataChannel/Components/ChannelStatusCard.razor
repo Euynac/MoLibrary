@@ -1,4 +1,5 @@
 @using Monica.DataChannel.Facades
+@using Monica.DataChannel.UIDataChannel.Abstractions
 @using Monica.DataChannel.UIDataChannel.Dialogs
 @using Monica.Core.Results;
 @using Monica.DataChannel.Middlewares
@@ -6,6 +7,7 @@
 @inject IDialogService DialogService
 @inject DataChannelFacade DataChannelService
 @inject ISnackbar Snackbar
+@inject IEnumerable<IDataChannelMiddlewareRowAction> MiddlewareRowActions
 
 <MudCard Elevation="2" Class="@GetCardClass()">
     <MudCardHeader Class="pb-2">
@@ -151,6 +153,16 @@
                                                              OnClick="@(() => OpenMessageDebugger(Channel.Id, middleware))"
                                                              title="打开消息调试器" />
                                             }
+                                            @foreach (var action in GetMiddlewareRowActions(middleware))
+                                            {
+                                                <MudTooltip Text="@action.Tooltip">
+                                                    <MudIconButton Icon="@action.Icon"
+                                                                   Color="@action.Color"
+                                                                   Size="Size.Small"
+                                                                   OnClick="@(() => action.ExecuteAsync(Channel.Id, middleware))"
+                                                                   aria-label="@action.Tooltip" />
+                                                </MudTooltip>
+                                            }
                                         </MudStack>
                                     </TitleContent>
                                     <ChildContent>
@@ -246,6 +258,16 @@
     /// Tracks whether reinitialization is currently in progress.
     /// </summary>
     private bool _isReInitializing = false;
+
+    /// <summary>
+    /// Gets host-contributed actions for a middleware row in deterministic display order.
+    /// </summary>
+    private IEnumerable<IDataChannelMiddlewareRowAction> GetMiddlewareRowActions(PipelineComponentInfo middleware)
+    {
+        return MiddlewareRowActions
+            .Where(action => action.IsVisible(Channel.Id, middleware))
+            .OrderBy(action => action.Order);
+    }
 
     /// <summary>
     /// Handles channel reinitialization.
