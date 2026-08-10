@@ -18,5 +18,10 @@ public enum MonicaEndpointKind
     /// <summary>
     /// A Monica static asset endpoint.
     /// </summary>
-    StaticAsset
+    StaticAsset,
+
+    /// <summary>
+    /// A Monica liveness or readiness probe endpoint.
+    /// </summary>
+    HealthProbe
 }

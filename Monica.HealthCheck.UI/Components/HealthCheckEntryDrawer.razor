@@ -1,0 +1,117 @@
+@inject IStringLocalizer<HealthCheckResource> L
+
+<MudDrawer Open="@Session.IsDetailsOpen"
+           OpenChanged="@OnOpenChangedAsync"
+           Anchor="Anchor.End"
+           Variant="DrawerVariant.Temporary"
+           Overlay="true"
+           OverlayAutoClose="true"
+           Fixed="true"
+           Width="min(32rem, 100vw)"
+           Elevation="8">
+    @if (Session.SelectedEntry is { } entry)
+    {
+        <div class="health-detail-drawer">
+            <MudDrawerHeader>
+                <div class="health-detail-header">
+                    <div>
+                        <MudText Typo="Typo.overline">@L["Details:Eyebrow"]</MudText>
+                        <MudText Typo="Typo.h5">@entry.Name</MudText>
+                    </div>
+                    <MudIconButton Icon="@Icons.Material.Filled.Close"
+                                   OnClick="@Session.CloseDetailsAsync"
+                                   aria-label="@L["Actions:Close"]" />
+                </div>
+            </MudDrawerHeader>
+
+            <div class="health-detail-content">
+                <MudChip T="string"
+                         Color="@HealthCheckDisplay.Color(entry.Status)"
+                         Icon="@HealthCheckDisplay.Icon(entry.Status)"
+                         Variant="Variant.Filled">
+                    @L.GetStatusText(entry.Status)
+                </MudChip>
+
+                <section class="health-detail-section">
+                    <MudText Typo="Typo.subtitle2">@L["Details:Description"]</MudText>
+                    <MudText Typo="Typo.body2">
+                        @(string.IsNullOrWhiteSpace(entry.Description)
+                            ? L["Details:NoDescription"]
+                            : entry.Description)
+                    </MudText>
+                </section>
+
+                <dl class="health-detail-facts">
+                    <div>
+                        <dt>@L["Details:Duration"]</dt>
+                        <dd>@L["Common:DurationMilliseconds", entry.Duration.TotalMilliseconds]</dd>
+                    </div>
+                    <div>
+                        <dt>@L["Details:Tags"]</dt>
+                        <dd>
+                            @if (entry.Tags.Count == 0)
+                            {
+                                @L["Details:NoTags"]
+                            }
+                            else
+                            {
+                                <span class="health-detail-tags">
+                                    @foreach (var tag in entry.Tags)
+                                    {
+                                        <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">@tag</MudChip>
+                                    }
+                                </span>
+                            }
+                        </dd>
+                    </div>
+                </dl>
+
+                <section class="health-detail-section">
+                    <MudText Typo="Typo.subtitle2">@L["Details:Data"]</MudText>
+                    @if (entry.Data.Count == 0)
+                    {
+                        <MudText Typo="Typo.body2" Color="Color.Secondary">@L["Details:NoData"]</MudText>
+                    }
+                    else
+                    {
+                        <dl class="health-detail-data">
+                            @foreach (var pair in entry.Data.OrderBy(static pair => pair.Key, StringComparer.OrdinalIgnoreCase))
+                            {
+                                <div>
+                                    <dt>@pair.Key</dt>
+                                    <dd><code>@pair.Value</code></dd>
+                                </div>
+                            }
+                        </dl>
+                    }
+                </section>
+
+                @if (entry.Error is { } error)
+                {
+                    <MudAlert Severity="Severity.Error" Variant="Variant.Outlined" Icon="@Icons.Material.Filled.BugReport">
+                        <MudText Typo="Typo.subtitle2">@L["Details:Error"]</MudText>
+                        <dl class="health-detail-error">
+                            <div>
+                                <dt>@L["Details:ErrorType"]</dt>
+                                <dd><code>@error.Type</code></dd>
+                            </div>
+                            <div>
+                                <dt>@L["Details:ErrorMessage"]</dt>
+                                <dd>@error.Message</dd>
+                            </div>
+                        </dl>
+                    </MudAlert>
+                }
+            </div>
+        </div>
+    }
+</MudDrawer>
+
+@code {
+    [Parameter, EditorRequired] public HealthCheckPageSession Session { get; set; } = default!;
+
+    private Task OnOpenChangedAsync(bool open) => open
+        ? Task.CompletedTask
+        : Session.CloseDetailsAsync();
+
+}

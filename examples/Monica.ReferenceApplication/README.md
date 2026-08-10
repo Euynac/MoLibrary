@@ -53,7 +53,8 @@ Explore the running architecture:
 - Swagger UI: <http://localhost:5275/swagger>
 - Monica ProjectUnit catalog: <http://localhost:5275/framework/units>
 - Prometheus metrics: <http://localhost:5275/metrics>
-- Health response: <http://localhost:5275/healthz>
+- Readiness response: <http://localhost:5275/health>
+- Liveness response: <http://localhost:5275/alive>
 
 `OrderingOptions.MaximumOrdersReturned` limits the collection response. The values in `appsettings.json` seed Monica's local effective-value store on first startup, and the query consumes the resulting configuration through `IOptions<OrderingOptions>`.
 
@@ -101,6 +102,7 @@ builder.AddMonica(monica =>
     monica.ConfigureTypeDiscovery(options =>
         options.Add("Domains.Ordering", "Platform.Protocol"));
 
+    monica.AddHealthCheck();
     monica.AddConfiguration(configurationInputPlan);
     monica.AddEventBus()
         .UseNoOpDistributedEventBus();

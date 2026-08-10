@@ -9,6 +9,7 @@ using Monica.Core.Modularity.Abstractions;
 using Monica.Core.Modularity.Models;
 using Monica.Dapr.Abstractions;
 using Monica.Dapr.Services;
+using Monica.HealthCheck.Extensions;
 
 // ReSharper disable once CheckNamespace
 namespace Monica.Modules;
@@ -55,11 +56,17 @@ public class ModuleDaprClient : MonicaModule<ModuleDaprClientOption>
             sp.GetRequiredService<DaprSidecarHealthCoordinator>());
         services.AddHostedService(sp =>
             sp.GetRequiredService<DaprSidecarHealthCoordinator>());
+
+        services.AddHealthChecks()
+            .AddMonicaReadinessCheck<DaprSidecarHealthCheck>(
+                "monica.dapr-sidecar",
+                tags: ["dapr"]);
     }
 
     public override void Describe(ModuleDescriptor module)
     {
         module.Require<ModuleDapr, ModuleDaprOption>();
+        module.Require<ModuleHealthCheck, ModuleHealthCheckOption>();
         module.Require<ModuleHostedService, ModuleHostedServiceOption>();
         module.Require<ModuleJsonSerialization, ModuleJsonSerializationOption>();
     }

@@ -4,7 +4,7 @@ using Monica.Framework.Seeder.Abstractions;
 namespace Monica.Framework.Seeder.Services;
 
 /// <summary>
-/// Specify that this class is a seed class, which will be automatically executed after starting the service.
+/// Base class for a finite, idempotent seed operation scheduled after application startup.
 /// </summary>
 public abstract class SeederBase : ISeeder
 {
@@ -31,6 +31,6 @@ public abstract class SeederBase : ISeeder
     /// <summary>
     /// Implements the seeder's finite startup work.
     /// </summary>
-    /// <param name="cancellationToken">Signals that host startup is being cancelled.</param>
+    /// <param name="cancellationToken">Signals that the host is stopping.</param>
     public abstract Task SeedingAsync(CancellationToken cancellationToken);
 }

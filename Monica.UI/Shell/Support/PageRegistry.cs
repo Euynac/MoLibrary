@@ -71,7 +71,8 @@ internal sealed class PageRegistry : INavigationRegistryBuilder, IPageCatalog
         string? icon = null,
         NavigationCategoryId? categoryId = null,
         bool addToNav = false,
-        int navOrder = 0)
+        int navOrder = 0,
+        Type? accessPolicyType = null)
         where TPage : ComponentBase
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(displayName);
@@ -80,7 +81,8 @@ internal sealed class PageRegistry : INavigationRegistryBuilder, IPageCatalog
             new PageDefinition(
                 NormalizeRoute(route),
                 typeof(TPage),
-                UIRegistryText.Literal(displayName)),
+                UIRegistryText.Literal(displayName),
+                ValidateAccessPolicyType(accessPolicyType)),
             icon,
             categoryId,
             addToNav,
@@ -94,7 +96,8 @@ internal sealed class PageRegistry : INavigationRegistryBuilder, IPageCatalog
         string? icon = null,
         NavigationCategoryId? categoryId = null,
         bool addToNav = false,
-        int navOrder = 0)
+        int navOrder = 0,
+        Type? accessPolicyType = null)
         where TPage : ComponentBase
         where TResource : class, ILocalizationResource
     {
@@ -104,7 +107,8 @@ internal sealed class PageRegistry : INavigationRegistryBuilder, IPageCatalog
             new PageDefinition(
                 NormalizeRoute(route),
                 typeof(TPage),
-                UIRegistryText.Localized<TResource>(displayNameKey)),
+                UIRegistryText.Localized<TResource>(displayNameKey),
+                ValidateAccessPolicyType(accessPolicyType)),
             icon,
             categoryId,
             addToNav,
@@ -175,6 +179,24 @@ internal sealed class PageRegistry : INavigationRegistryBuilder, IPageCatalog
         return route.Trim().Trim('/');
     }
 
+    private static Type? ValidateAccessPolicyType(Type? accessPolicyType)
+    {
+        if (accessPolicyType is null)
+        {
+            return null;
+        }
+
+        if (!accessPolicyType.IsClass || accessPolicyType.IsAbstract ||
+            !typeof(IPageAccessPolicy).IsAssignableFrom(accessPolicyType))
+        {
+            throw new ArgumentException(
+                $"Page access policy type '{accessPolicyType.FullName}' must be a concrete {nameof(IPageAccessPolicy)} implementation.",
+                nameof(accessPolicyType));
+        }
+
+        return accessPolicyType;
+    }
+
     private void AddBuiltInCategory(NavigationCategoryId id, string displayNameKey, int order)
     {
         _categories.Add(
@@ -228,8 +250,7 @@ internal sealed class PageRegistry : INavigationRegistryBuilder, IPageCatalog
             if (addToNav)
             {
                 _navItems.Add(new NavigationItem(
-                    page.DisplayName,
-                    page.Route,
+                    page,
                     icon,
                     categoryId ?? BuiltInNavigationCategoryIds.Uncategorized,
                     navOrder));

@@ -18,6 +18,7 @@
     <Project Path="examples/Monica.ReferenceApplication/src/Shared/Platform.Protocol/Platform.Protocol.csproj" />
   </Folder>
   <Folder Name="/tests/">
+    <Project Path="tests/Test.Monica.AutoModel/Test.Monica.AutoModel.csproj" />
     <Project Path="tests/Test.Monica.Configuration.EventBus/Test.Monica.Configuration.EventBus.csproj" />
     <Project Path="tests/Test.Monica.Configuration.EfCore/Test.Monica.Configuration.EfCore.csproj" />
     <Project Path="tests/Test.Monica.Configuration.UI/Test.Monica.Configuration.UI.csproj" />
@@ -30,6 +31,8 @@
     <Project Path="tests/Test.Monica.Framework.UI/Test.Monica.Framework.UI.csproj" />
     <Project Path="tests/Test.Monica.Generators.AutoController/Test.Monica.Generators.AutoController.csproj" />
     <Project Path="tests/Test.Monica.Framework/Test.Monica.Framework.csproj" />
+    <Project Path="tests/Test.Monica.HealthCheck.UI/Test.Monica.HealthCheck.UI.csproj" />
+    <Project Path="tests/Test.Monica.HealthCheck/Test.Monica.HealthCheck.csproj" />
     <Project Path="tests/Test.Monica.JobScheduler.UI/Test.Monica.JobScheduler.UI.csproj" />
     <Project Path="tests/Test.Monica.JobScheduler/Test.Monica.JobScheduler.csproj" />
     <Project Path="tests/Test.Monica.Markdown/Test.Monica.Markdown.csproj" />
@@ -64,6 +67,8 @@
   <Project Path="Monica.Framework.UI/Monica.Framework.UI.csproj" />
   <Project Path="Monica.Framework/Monica.Framework.csproj" />
   <Project Path="Monica.Generators.AutoController/Monica.Generators.AutoController.csproj" />
+  <Project Path="Monica.HealthCheck.UI/Monica.HealthCheck.UI.csproj" />
+  <Project Path="Monica.HealthCheck/Monica.HealthCheck.csproj" />
   <Project Path="Monica.JobScheduler.EfCore/Monica.JobScheduler.EfCore.csproj" />
   <Project Path="Monica.JobScheduler.UI/Monica.JobScheduler.UI.csproj" />
   <Project Path="Monica.JobScheduler/Monica.JobScheduler.csproj" />

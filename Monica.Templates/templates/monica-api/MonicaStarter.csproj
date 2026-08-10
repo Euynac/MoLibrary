@@ -9,6 +9,7 @@
 
   <ItemGroup>
     <PackageReference Include="Monica.Core" Version="$(MonicaVersion)" />
+    <PackageReference Include="Monica.HealthCheck" Version="$(MonicaVersion)" />
     <PackageReference Include="Monica.OpenTelemetry" Version="$(MonicaVersion)" />
   </ItemGroup>
 

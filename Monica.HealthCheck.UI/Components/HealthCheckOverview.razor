@@ -1,0 +1,66 @@
+@inject IStringLocalizer<HealthCheckResource> L
+
+@if (Session.Snapshot is { } snapshot)
+{
+    var readinessStatus = Session.ReadinessStatus;
+    <section class="health-overview" aria-labelledby="health-readiness-title">
+        <MudAlert Severity="@HealthCheckDisplay.Severity(readinessStatus)"
+                  Variant="Variant.Filled"
+                  Icon="@HealthCheckDisplay.Icon(readinessStatus)">
+            <div class="readiness-content">
+                <div>
+                    <MudText Typo="Typo.overline">@L["Overview:ReadinessLabel"]</MudText>
+                    <MudText Typo="Typo.h6" id="health-readiness-title">@ReadinessText(readinessStatus)</MudText>
+                </div>
+                <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">
+                    @L["Overview:ReadinessChecks", Session.ReadinessEntryCount]
+                </MudChip>
+            </div>
+        </MudAlert>
+
+        <div class="health-summary-grid">
+            <article class="health-summary health-summary--healthy">
+                <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Color="Color.Success" Size="Size.Large" />
+                <div>
+                    <MudText Typo="Typo.h4">@snapshot.HealthyCount</MudText>
+                    <MudText Typo="Typo.body2" Color="Color.Secondary">@L["Status:Healthy"]</MudText>
+                </div>
+            </article>
+            <article class="health-summary health-summary--degraded">
+                <MudIcon Icon="@Icons.Material.Filled.Warning" Color="Color.Warning" Size="Size.Large" />
+                <div>
+                    <MudText Typo="Typo.h4">@snapshot.DegradedCount</MudText>
+                    <MudText Typo="Typo.body2" Color="Color.Secondary">@L["Status:Degraded"]</MudText>
+                </div>
+            </article>
+            <article class="health-summary health-summary--unhealthy">
+                <MudIcon Icon="@Icons.Material.Filled.Error" Color="Color.Error" Size="Size.Large" />
+                <div>
+                    <MudText Typo="Typo.h4">@snapshot.UnhealthyCount</MudText>
+                    <MudText Typo="Typo.body2" Color="Color.Secondary">@L["Status:Unhealthy"]</MudText>
+                </div>
+            </article>
+            <article class="health-summary health-summary--evidence">
+                <MudIcon Icon="@Icons.Material.Filled.Schedule" Color="Color.Info" Size="Size.Large" />
+                <div>
+                    <MudText Typo="Typo.subtitle1">@snapshot.CheckedAt.ToLocalTime().ToString("G")</MudText>
+                    <MudText Typo="Typo.body2" Color="Color.Secondary">
+                        @L["Overview:DurationMilliseconds", snapshot.Duration.TotalMilliseconds]
+                    </MudText>
+                </div>
+            </article>
+        </div>
+    </section>
+}
+
+@code {
+    [Parameter, EditorRequired] public HealthCheckPageSession Session { get; set; } = default!;
+
+    private string ReadinessText(HealthCheckState status) => status switch
+    {
+        HealthCheckState.Healthy => L["Overview:Ready"],
+        HealthCheckState.Degraded => L["Overview:ReadyDegraded"],
+        HealthCheckState.Unhealthy => L["Overview:NotReady"],
+        _ => L["Overview:NotReady"]
+    };
+}

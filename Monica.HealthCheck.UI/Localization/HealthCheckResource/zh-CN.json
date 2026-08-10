@@ -1,0 +1,83 @@
+{
+  "Navigation": {
+    "Title": "健康检查"
+  },
+  "Page": {
+    "Title": "健康检查",
+    "Eyebrow": "运维监控",
+    "Heading": "主机健康状态",
+    "Subtitle": "查看当前主机的即时就绪状态和经过安全处理的健康检查信息。",
+    "CurrentHost": "当前主机 · {0}"
+  },
+  "Access": {
+    "Checking": "正在检查看板访问权限…",
+    "DeniedTitle": "无权访问健康看板",
+    "DeniedDescription": "该运维页面默认仅在开发环境可用，也可由宿主显式启用并通过授权策略开放。"
+  },
+  "Actions": {
+    "Refresh": "刷新",
+    "Retry": "重试",
+    "Details": "查看详情",
+    "DetailsFor": "查看 {0} 的详情",
+    "Close": "关闭详情"
+  },
+  "State": {
+    "Loading": "正在执行健康检查",
+    "LoadingDescription": "正在从当前主机收集经过安全处理的状态快照。",
+    "LoadFailed": "无法加载健康检查",
+    "RefreshFailed": "最新刷新失败，仍显示上一次快照：{0}"
+  },
+  "Overview": {
+    "ReadinessLabel": "就绪状态",
+    "ReadinessChecks": "{0} 项就绪检查",
+    "Ready": "已就绪，可以接收流量",
+    "ReadyDegraded": "已就绪，但部分依赖已降级",
+    "NotReady": "尚未就绪，不能接收流量",
+    "DurationMilliseconds": "最近检查耗时 {0:0.##} 毫秒"
+  },
+  "Status": {
+    "Healthy": "健康",
+    "Degraded": "降级",
+    "Unhealthy": "不健康"
+  },
+  "Filters": {
+    "AriaLabel": "健康检查筛选条件",
+    "NameLabel": "名称或描述",
+    "NamePlaceholder": "搜索检查项",
+    "StatusLabel": "状态",
+    "AnyStatus": "全部状态",
+    "TagLabel": "标签",
+    "Results": "显示 {0} / {1} 项"
+  },
+  "Table": {
+    "Eyebrow": "当前证据",
+    "Title": "已注册检查项",
+    "Subtitle": "该视图仅展示即时状态，不保存历史记录。",
+    "Columns": {
+      "Name": "名称",
+      "Status": "状态",
+      "Description": "描述",
+      "Duration": "耗时",
+      "Tags": "标签",
+      "Actions": "操作"
+    },
+    "Empty": "没有健康检查符合当前筛选条件。"
+  },
+  "Common": {
+    "NotAvailable": "暂无",
+    "DurationMilliseconds": "{0:0.##} 毫秒"
+  },
+  "Details": {
+    "Eyebrow": "健康检查证据",
+    "Description": "描述",
+    "NoDescription": "该检查未报告描述信息。",
+    "Duration": "耗时",
+    "Tags": "标签",
+    "NoTags": "无标签",
+    "Data": "诊断数据",
+    "NoData": "该检查未报告诊断数据。",
+    "Error": "检查报告的错误",
+    "ErrorType": "类型",
+    "ErrorMessage": "消息"
+  }
+}

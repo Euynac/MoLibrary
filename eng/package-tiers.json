@@ -23,6 +23,8 @@
         "Monica.Framework.Generators",
         "Monica.Framework.UI",
         "Monica.Generators.AutoController",
+        "Monica.HealthCheck",
+        "Monica.HealthCheck.UI",
         "Monica.JobScheduler",
         "Monica.JobScheduler.UI",
         "Monica.Locker",

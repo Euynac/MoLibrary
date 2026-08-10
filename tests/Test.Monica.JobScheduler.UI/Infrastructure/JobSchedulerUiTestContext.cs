@@ -1,6 +1,5 @@
 using Bunit;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
@@ -45,18 +44,10 @@ public sealed class JobSchedulerUiTestContext : BunitContext
             .Returns(_ => Task.FromException<IReadOnlyList<global::Monica.JobScheduler.Models.JobDefinition>>(
                 new InvalidOperationException(exceptionMessage)));
 
-        using var provider = new ServiceCollection()
-            .AddLogging()
-            .AddHealthChecks()
-            .AddCheck("JobScheduler", () => HealthCheckResult.Healthy("ok"))
-            .Services
-            .BuildServiceProvider();
-
         return new JobSchedulerDashboardFacade(
             cacheService,
             Substitute.For<IJobMetadataRepository>(),
             Substitute.For<IJobConcurrencyGuard>(),
-            provider.GetRequiredService<HealthCheckService>(),
             NullLogger<JobSchedulerDashboardFacade>.Instance);
     }
 }

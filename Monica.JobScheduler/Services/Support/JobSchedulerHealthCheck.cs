@@ -1,38 +1,43 @@
 using Microsoft.Extensions.Diagnostics.HealthChecks;
+using Microsoft.Extensions.Options;
 using Monica.Core.HostedService.Abstractions;
+using Monica.Core.HostedService.Models;
+using Monica.Modules;
 
 namespace Monica.JobScheduler.Services.Support;
 
 /// <summary>
 /// Health check for monitoring JobScheduler hosted services initialization status using the hosted service registry.
 /// </summary>
-public class JobSchedulerHealthCheck(IMoHostedServiceRegistry serviceRegistry) : IHealthCheck
+internal sealed class JobSchedulerHealthCheck(
+    IMoHostedServiceRegistry serviceRegistry,
+    IOptions<ModuleJobSchedulerOption> options) : IHealthCheck
 {
     public Task<HealthCheckResult> CheckHealthAsync(
         HealthCheckContext context,
         CancellationToken cancellationToken = default)
     {
-        var serviceTypes = new[]
-        {
-            typeof(JobConcurrencyGuardHostedService),
-            typeof(JobSchedulerHostedService),
-            typeof(JobRegistrationHostedService),
-            typeof(JobWorkerManagerHostedService),
-            typeof(LongIntervalSchedulerService),
-            typeof(JobZombieDetectorHostedService),
-            typeof(JobHistoryCleanupHostedService)
-        };
+        cancellationToken.ThrowIfCancellationRequested();
 
-        var services = serviceTypes
-            .SelectMany(serviceRegistry.GetServices)
-            .ToList();
-
-        if (services.Count == 0)
+        var expectedServices = GetExpectedServiceTypes(options.Value)
+            .Select(serviceType => new ExpectedService(
+                serviceType,
+                serviceRegistry.GetServices(serviceType)))
+            .ToArray();
+        var missingServices = expectedServices
+            .Where(static expected => expected.Instances.Count == 0)
+            .Select(static expected => expected.ServiceType.Name)
+            .ToArray();
+        if (missingServices.Length > 0)
         {
-            // No services are registered, this is unusual but not necessarily unhealthy
-            return Task.FromResult(HealthCheckResult.Healthy(
-                "No JobScheduler services are registered"));
+            return Task.FromResult(HealthCheckResult.Unhealthy(
+                "JobScheduler readiness cannot be established because expected hosted services are not registered: " +
+                $"{string.Join(", ", missingServices)}."));
         }
+
+        var services = expectedServices
+            .SelectMany(static expected => expected.Instances)
+            .ToArray();
 
         // Check if any service is faulted
         var faultedServices = services.Where(static service => service.IsFaulted).ToList();
@@ -74,4 +79,42 @@ public class JobSchedulerHealthCheck(IMoHostedServiceRegistry serviceRegistry) :
         return Task.FromResult(HealthCheckResult.Healthy(
             $"All JobScheduler services healthy: {healthyNames}"));
     }
+
+    private static IReadOnlyList<Type> GetExpectedServiceTypes(ModuleJobSchedulerOption options)
+    {
+        var expectedServices = new List<Type>
+        {
+            typeof(JobRegistrationHostedService),
+            typeof(JobWorkerManagerHostedService)
+        };
+
+        if (!options.RunControlPlane)
+        {
+            return expectedServices;
+        }
+
+        expectedServices.Add(typeof(JobConcurrencyGuardHostedService));
+        expectedServices.Add(typeof(JobSchedulerHostedService));
+
+        if (options.EnableLongIntervalScheduler)
+        {
+            expectedServices.Add(typeof(LongIntervalSchedulerService));
+        }
+
+        if (options.EnableZombieDetection)
+        {
+            expectedServices.Add(typeof(JobZombieDetectorHostedService));
+        }
+
+        if (options.EnableHistoryCleanup)
+        {
+            expectedServices.Add(typeof(JobHistoryCleanupHostedService));
+        }
+
+        return expectedServices;
+    }
+
+    private sealed record ExpectedService(
+        Type ServiceType,
+        IReadOnlyList<HostedServiceRuntimeInfo> Instances);
 }

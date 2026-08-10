@@ -6,6 +6,7 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 using Monica.UI.Localization;
 using Monica.UI.Pages;
 using Monica.UI.Shell.Models;
+using Monica.UI.Shell.Support;
 using Monica.UI.UIModuleSystem.State;
 using Monica.UI.UIModuleSystem.Support;
 using MudBlazor;
@@ -28,13 +29,16 @@ public static class ModuleSystemUIBuilderExtensions
             registration.Require<ModuleLocalization, ModuleLocalizationOption>()
                 .AddResource<ModuleSystemResource>();
             registration.Require<ModuleShellUI, ModuleShellUIOption>()
-                .RegisterUIComponents(registry => registry.RegisterLocalizedPage<ModuleSystemPage, ModuleSystemResource>(
+                .RegisterUIComponents(registry => registry.RegisterLocalizedPage<
+                    ModuleSystemPage,
+                    ModuleSystemResource>(
                     ModuleSystemPage.MODULE_SYSTEM_DASHBOARD_URL,
                     "Navigation:Title",
                     Icons.Material.Filled.AccountTree,
                     BuiltInNavigationCategoryIds.Module,
                     addToNav: true,
-                    navOrder: 10));
+                    navOrder: 10,
+                    accessPolicyType: typeof(ModuleSystemWorkbenchAccess)));
             return registration;
         }
     }
@@ -67,7 +71,7 @@ public class ModuleSystemUI : MonicaModule<ModuleSystemUIOption>, IUIModule
 /// <summary>
 /// Options for the module system dashboard UI module.
 /// </summary>
-public class ModuleSystemUIOption : ModuleOptions<ModuleSystemUI>
+public class ModuleSystemUIOption : ModuleOptions<ModuleSystemUI>, IDevelopmentPageAccessOptions
 {
     /// <summary>
     /// Gets or sets whether the read-only workbench may be exposed outside the Development environment.

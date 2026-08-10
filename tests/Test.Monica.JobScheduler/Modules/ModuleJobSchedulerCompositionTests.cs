@@ -56,6 +56,7 @@ public class ModuleJobSchedulerCompositionTests
         application.Modules.IsRegistered(typeof(ModuleCancellationManager)).Should().BeTrue();
         application.Modules.IsRegistered(typeof(ModuleServiceDiscovery)).Should().BeTrue();
         application.Modules.IsRegistered(typeof(ModuleHostedService)).Should().BeTrue();
+        application.Modules.IsRegistered(typeof(ModuleHealthCheck)).Should().BeTrue();
         options.SchedulerScopeKey.Should().Be("job-tests");
         options.RunControlPlane.Should().BeTrue();
     }
