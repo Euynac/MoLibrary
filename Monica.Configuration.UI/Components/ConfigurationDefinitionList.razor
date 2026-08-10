@@ -35,15 +35,21 @@
                         </MudSelectItem>
                     </MudSelect>
                 </div>
-                <div class="configuration-definition-list-group-toggle">
-                    <MudTooltip Text="@GroupModeTooltip">
-                        <MudButton Variant="Variant.Outlined"
-                                   Size="Size.Small"
-                                   StartIcon="@GroupModeIcon"
-                                   OnClick="ToggleGroupMode">
-                            @GroupModeLabel
-                        </MudButton>
-                    </MudTooltip>
+                <div class="configuration-definition-list-group-filter">
+                    <MudSelect T="ConfigurationDefinitionGroupMode"
+                               Value="@_groupMode"
+                               ValueChanged="OnGroupModeChanged"
+                               ToStringFunc="GroupModeText"
+                               Label="@L["State:Definitions:GroupModeLabel"]"
+                               Variant="Variant.Outlined"
+                               Margin="Margin.Dense">
+                        <MudSelectItem T="ConfigurationDefinitionGroupMode" Value="@ConfigurationDefinitionGroupMode.FromProject">
+                            @L["State:Definitions:GroupModeProject"]
+                        </MudSelectItem>
+                        <MudSelectItem T="ConfigurationDefinitionGroupMode" Value="@ConfigurationDefinitionGroupMode.Category">
+                            @L["State:Definitions:GroupModeCategory"]
+                        </MudSelectItem>
+                    </MudSelect>
                 </div>
             </div>
 
@@ -284,25 +290,11 @@
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .ToArray();
 
-    private string GroupModeLabel => _groupMode switch
+    private string GroupModeText(ConfigurationDefinitionGroupMode groupMode) => groupMode switch
     {
         ConfigurationDefinitionGroupMode.FromProject => L["State:Definitions:GroupModeProject"].Value,
         ConfigurationDefinitionGroupMode.Category => L["State:Definitions:GroupModeCategory"].Value,
         _ => L["State:Definitions:GroupModeProject"].Value
-    };
-
-    private string GroupModeTooltip => _groupMode switch
-    {
-        ConfigurationDefinitionGroupMode.FromProject => L["State:Definitions:GroupModeProjectTooltip"].Value,
-        ConfigurationDefinitionGroupMode.Category => L["State:Definitions:GroupModeCategoryTooltip"].Value,
-        _ => L["State:Definitions:GroupModeProjectTooltip"].Value
-    };
-
-    private string GroupModeIcon => _groupMode switch
-    {
-        ConfigurationDefinitionGroupMode.FromProject => Icons.Material.Filled.Folder,
-        ConfigurationDefinitionGroupMode.Category => Icons.Material.Filled.Category,
-        _ => Icons.Material.Filled.Folder
     };
 
     private string LifecycleFilterText(ConfigurationDefinitionLifecycleFilter filter)
@@ -344,11 +336,9 @@
         return SearchTextChanged.InvokeAsync(value);
     }
 
-    private void ToggleGroupMode()
+    private void OnGroupModeChanged(ConfigurationDefinitionGroupMode groupMode)
     {
-        _groupMode = _groupMode == ConfigurationDefinitionGroupMode.FromProject
-            ? ConfigurationDefinitionGroupMode.Category
-            : ConfigurationDefinitionGroupMode.FromProject;
+        _groupMode = groupMode;
     }
 
     private bool IsDefinitionMatch(ConfigurationDefinitionSummary definition)

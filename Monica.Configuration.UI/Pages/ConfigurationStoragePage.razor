@@ -6,7 +6,8 @@
 
 <PageTitle>@L["Pages:ConfigurationStorage:Title"]</PageTitle>
 
-<MudContainer MaxWidth="MaxWidth.False" Class="configuration-storage-page">
+<div class="configuration-storage-page">
+<MudContainer MaxWidth="MaxWidth.False">
     <MudStack Spacing="3">
         <MudStack Row="true" Wrap="Wrap.Wrap" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Spacing="2">
             <MudStack Spacing="0">
@@ -239,6 +240,7 @@
         }
     </MudStack>
 </MudContainer>
+</div>
 
 @code {
     public const string PAGE_URL = ConfigurationUiRoutes.STORAGE_ROUTE;

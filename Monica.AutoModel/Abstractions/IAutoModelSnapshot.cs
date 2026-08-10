@@ -8,6 +8,17 @@ namespace Monica.AutoModel.Abstractions;
 public interface IAutoModelSnapshotFactory
 {
     /// <summary>
+    /// Builds and registers the snapshot for <typeparamref name="TModel"/> if it has not been activated yet.
+    /// </summary>
+    /// <typeparam name="TModel">The model type whose metadata must be available.</typeparam>
+    /// <returns>The host-owned snapshot for <typeparamref name="TModel"/>.</returns>
+    /// <remarks>
+    /// Use this operation when startup work must validate AutoModel metadata eagerly. Ordinary consumers can
+    /// continue resolving <see cref="IAutoModelSnapshot{TModel}"/> lazily.
+    /// </remarks>
+    AutoModelSnapshot PreloadSnapshot<TModel>();
+
+    /// <summary>
     /// Gets all registered AutoModel snapshots.
     /// </summary>
     /// <returns>All registered snapshots.</returns>

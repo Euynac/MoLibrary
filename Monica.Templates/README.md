@@ -14,7 +14,7 @@ dotnet run
 Open the URL printed by ASP.NET Core, then visit:
 
 - `/` for the starter discovery document
-- `/healthz` for the ASP.NET Core health-check endpoint
+- `/health` for readiness and `/alive` for process liveness
 - `/metrics` for the Prometheus scrape endpoint
 
 Use `--framework-version <VERSION>` when the application must target a Monica version other than the template default.
@@ -47,6 +47,7 @@ dotnet new install Monica.Templates/bin/Release/Monica.Templates.*.nupkg
 The starter intentionally references only Stable-tier packages:
 
 - `Monica.Core` for host-bound composition and module lifecycle
+- `Monica.HealthCheck` for native readiness, liveness, and sanitized host health snapshots
 - `Monica.OpenTelemetry` for production-compatible metrics
 
 Provider integrations are opt-in after the application has a concrete infrastructure choice. Labs packages are excluded from the default template so experimental capabilities never become accidental production dependencies.

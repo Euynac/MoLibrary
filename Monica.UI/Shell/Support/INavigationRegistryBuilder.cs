@@ -67,13 +67,18 @@ public interface INavigationRegistryBuilder
     /// <param name="categoryId">The optional stable navigation category identifier.</param>
     /// <param name="addToNav">Whether to add a navigation entry.</param>
     /// <param name="navOrder">The navigation sort order within its category.</param>
+    /// <param name="accessPolicyType">
+    /// An optional concrete <see cref="IPageAccessPolicy"/> implementation registered in the current host.
+    /// The same policy controls navigation visibility and must be evaluated by the page before protected work begins.
+    /// </param>
     /// <remarks>
     /// Routes are trimmed and compared without regard to case. When <paramref name="addToNav"/> is
     /// <see langword="true"/>, <paramref name="categoryId"/> must identify a built-in or registered category before
     /// startup registration is sealed; otherwise endpoint configuration fails.
     /// </remarks>
     /// <exception cref="ArgumentException">
-    /// Thrown when <paramref name="route"/> or <paramref name="displayName"/> is null, empty, or whitespace.
+    /// Thrown when <paramref name="route"/> or <paramref name="displayName"/> is null, empty, or whitespace, or when
+    /// <paramref name="accessPolicyType"/> is not a concrete <see cref="IPageAccessPolicy"/> implementation.
     /// </exception>
     /// <exception cref="InvalidOperationException">
     /// Thrown when the registry has been sealed or the normalized route is already registered.
@@ -84,7 +89,8 @@ public interface INavigationRegistryBuilder
         string? icon = null,
         NavigationCategoryId? categoryId = null,
         bool addToNav = false,
-        int navOrder = 0)
+        int navOrder = 0,
+        Type? accessPolicyType = null)
         where TPage : ComponentBase;
 
     /// <summary>
@@ -98,6 +104,10 @@ public interface INavigationRegistryBuilder
     /// <param name="categoryId">The optional stable navigation category identifier.</param>
     /// <param name="addToNav">Whether to add a navigation entry.</param>
     /// <param name="navOrder">The navigation sort order within its category.</param>
+    /// <param name="accessPolicyType">
+    /// An optional concrete <see cref="IPageAccessPolicy"/> implementation registered in the current host.
+    /// Missing policy registration denies access.
+    /// </param>
     /// <remarks>
     /// The contributing module must add <typeparamref name="TResource"/> to the Localization module's resource catalog.
     /// Text is resolved from the current
@@ -107,7 +117,8 @@ public interface INavigationRegistryBuilder
     /// sealed; otherwise endpoint configuration fails.
     /// </remarks>
     /// <exception cref="ArgumentException">
-    /// Thrown when <paramref name="route"/> or <paramref name="displayNameKey"/> is null, empty, or whitespace.
+    /// Thrown when <paramref name="route"/> or <paramref name="displayNameKey"/> is null, empty, or whitespace, or when
+    /// <paramref name="accessPolicyType"/> is not a concrete <see cref="IPageAccessPolicy"/> implementation.
     /// </exception>
     /// <exception cref="InvalidOperationException">
     /// Thrown when the registry has been sealed or the normalized route is already registered.
@@ -118,7 +129,8 @@ public interface INavigationRegistryBuilder
         string? icon = null,
         NavigationCategoryId? categoryId = null,
         bool addToNav = false,
-        int navOrder = 0)
+        int navOrder = 0,
+        Type? accessPolicyType = null)
         where TPage : ComponentBase
         where TResource : class, ILocalizationResource;
 }

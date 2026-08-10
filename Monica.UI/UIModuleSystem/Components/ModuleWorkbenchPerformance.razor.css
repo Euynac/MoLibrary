@@ -32,9 +32,8 @@
     min-width: 0;
     padding: .75rem;
     border: 1px solid var(--mud-palette-lines-default);
-    border-inline-start: .2rem solid var(--mud-palette-primary);
     border-radius: var(--mud-default-borderradius);
-    background: color-mix(in srgb, var(--mud-palette-primary) 5%, var(--mud-palette-surface));
+    background: color-mix(in srgb, var(--mo-card-accent) 5%, var(--mud-palette-surface));
 }
 
 .budget-grid article > div {
@@ -108,7 +107,7 @@
     padding: .75rem;
     border: 1px solid var(--mud-palette-lines-default);
     border-radius: var(--mud-default-borderradius);
-    background: color-mix(in srgb, var(--mud-palette-primary) 5%, var(--mud-palette-surface));
+    background: color-mix(in srgb, var(--mo-card-accent) 5%, var(--mud-palette-surface));
 }
 
 .comparison-kpis span {
@@ -206,9 +205,8 @@
     min-width: 10rem;
     padding: .75rem;
     border: 1px solid var(--mud-palette-lines-default);
-    border-inline-start: .2rem solid var(--mud-palette-primary);
     border-radius: var(--mud-default-borderradius);
-    background: color-mix(in srgb, var(--mud-palette-primary) 5%, var(--mud-palette-surface));
+    background: color-mix(in srgb, var(--mo-card-accent) 5%, var(--mud-palette-surface));
 }
 
 .stage-strip span {

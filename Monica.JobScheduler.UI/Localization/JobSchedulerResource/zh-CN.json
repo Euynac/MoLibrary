@@ -66,12 +66,6 @@
   },
   "Dashboard": {
     "Title": "任务调度 - 总览",
-    "SystemHealth": {
-      "Healthy": "系统运行正常",
-      "Degraded": "系统部分降级",
-      "Unhealthy": "系统异常",
-      "Unknown": "未知状态"
-    },
     "Metrics": {
       "TotalJobsLabel": "任务总数",
       "RecurringJobsShort": "周期",

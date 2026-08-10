@@ -6,6 +6,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Monica.Core\Monica.Core.csproj" />
+    <ProjectReference Include="..\Monica.HealthCheck\Monica.HealthCheck.csproj" />
     <ProjectReference Include="..\Monica.Repository\Monica.Repository.csproj" />
     <ProjectReference Include="..\Monica.Tool\Monica.Tool.csproj" />
     <ProjectReference Include="..\Monica.WebApi\Monica.WebApi.csproj" />

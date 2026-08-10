@@ -1,6 +1,4 @@
 using AwesomeAssertions;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Logging.Abstractions;
 using Monica.Core.Results;
 using Monica.JobScheduler.Abstractions;
@@ -50,18 +48,10 @@ public class JobSchedulerDashboardFacadeTests
                 }
             }));
 
-        using var provider = new ServiceCollection()
-            .AddLogging()
-            .AddHealthChecks()
-            .AddCheck("JobScheduler", () => HealthCheckResult.Healthy("Scheduler healthy"))
-            .Services
-            .BuildServiceProvider();
-
         var facade = new JobSchedulerDashboardFacade(
             cacheService,
             repository,
             concurrencyGuard,
-            provider.GetRequiredService<HealthCheckService>(),
             NullLogger<JobSchedulerDashboardFacade>.Instance);
 
         var result = await facade.GetDashboardAsync(TimeSpan.FromHours(24), recentActivityCount: 5, cancellationToken: cancellationToken);
@@ -73,8 +63,6 @@ public class JobSchedulerDashboardFacadeTests
         snapshot.Summary.TriggeredJobCount.Should().Be(2);
         snapshot.Summary.DisabledJobCount.Should().Be(1);
         snapshot.Summary.RunningNow.Should().Be(1);
-        snapshot.Summary.HealthStatus.Should().Be(SystemHealthStatus.Healthy);
-        snapshot.Summary.HealthMessage.Should().Be("Scheduler healthy");
         snapshot.Summary.StateDistribution[JobState.Succeeded].Should().Be(7);
         snapshot.Summary.StateDistribution[JobState.Skipped].Should().Be(3);
         snapshot.Summary.StateDistribution[JobState.Processing].Should().Be(1);
@@ -98,18 +86,10 @@ public class JobSchedulerDashboardFacadeTests
         cacheService.GetAllDefinitionsAsync(Arg.Any<CancellationToken>())
             .Returns(_ => Task.FromException<IReadOnlyList<JobDefinition>>(new InvalidOperationException("cache unavailable")));
 
-        using var provider = new ServiceCollection()
-            .AddLogging()
-            .AddHealthChecks()
-            .AddCheck("JobScheduler", () => HealthCheckResult.Healthy("ok"))
-            .Services
-            .BuildServiceProvider();
-
         var facade = new JobSchedulerDashboardFacade(
             cacheService,
             repository,
             Substitute.For<IJobConcurrencyGuard>(),
-            provider.GetRequiredService<HealthCheckService>(),
             NullLogger<JobSchedulerDashboardFacade>.Instance);
 
         var result = await facade.GetDashboardAsync(TimeSpan.FromHours(24), cancellationToken: cancellationToken);

@@ -9,6 +9,7 @@ using Monica.Core.Modularity;
 using Monica.Core.Modularity.Abstractions;
 using Monica.Core.Modularity.Models;
 using Monica.Core.TypeDiscovery.Models;
+using Monica.HealthCheck.Extensions;
 using Monica.JobScheduler.Abstractions;
 using Monica.JobScheduler.Annotations;
 using Monica.JobScheduler.Facades;
@@ -120,9 +121,11 @@ public class ModuleJobScheduler : MonicaModule<ModuleJobSchedulerOption>
 
         Logger.LogInformation("Discovered {Count} job type(s) for registration", _jobDefinitions.Count);
 
-        // Register health check for monitoring initialization status (always register regardless of job count)
+        // Readiness must reflect initialization even when the host discovers no jobs.
         services.AddHealthChecks()
-            .AddCheck<JobSchedulerHealthCheck>("JobScheduler", tags: ["ready", "scheduler"]);
+            .AddMonicaReadinessCheck<JobSchedulerHealthCheck>(
+                "monica.job-scheduler",
+                tags: ["scheduler"]);
 
         
         if (Option.RunControlPlane)
@@ -236,6 +239,7 @@ public class ModuleJobScheduler : MonicaModule<ModuleJobSchedulerOption>
         // Depend on HostedService module for observable hosted services
         module.Require<ModuleHostedService, ModuleHostedServiceOption>();
         module.Require<ModuleExecutionPipeline, ModuleExecutionPipelineOption>();
+        module.Require<ModuleHealthCheck, ModuleHealthCheckOption>();
         module.RequireFeature(PROVIDER_FEATURE);
         module.RequireFeature(METADATA_STORE_FEATURE);
         module.RequireFeature(SCOPE_FEATURE);

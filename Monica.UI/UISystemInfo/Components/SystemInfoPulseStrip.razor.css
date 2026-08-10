@@ -6,96 +6,92 @@
 }
 
 .system-info-pulse__item {
-    position: relative;
+    --pulse-soft: var(--mud-palette-background-gray);
     display: grid;
     min-width: 0;
-    grid-template-columns: auto minmax(0, 1fr);
+    grid-template-columns: 36px minmax(0, 1fr) auto;
     align-items: center;
     gap: 12px;
     padding: 15px 16px;
     overflow: hidden;
     border: 1px solid var(--mud-palette-lines-default);
-    border-radius: calc(var(--mud-default-borderradius) * 2);
-    background: color-mix(in srgb, var(--mud-palette-surface) 94%, transparent);
-    box-shadow: 0 7px 20px color-mix(in srgb, var(--mud-palette-black) 4.5%, transparent);
+    border-radius: 12px;
+    background: var(--mud-palette-surface);
+    box-shadow: 0 10px 26px -22px color-mix(in srgb, var(--mud-palette-dark) 34%, transparent);
 }
 
-.system-info-pulse__item::before {
-    position: absolute;
-    top: 0;
-    right: 0;
-    left: 0;
-    height: 3px;
-    background: var(--pulse-accent);
-    content: "";
+.system-info-pulse__item[data-mo-card-tone="primary"] {
+    --pulse-soft: color-mix(in srgb, var(--mud-palette-primary) 11%, var(--mud-palette-surface));
 }
 
-.system-info-pulse__item--primary {
-    --pulse-accent: var(--mud-palette-primary);
-    --pulse-soft: var(--mud-palette-primary-hover);
+.system-info-pulse__item[data-mo-card-tone="info"] {
+    --pulse-soft: color-mix(in srgb, var(--mud-palette-info) 10%, var(--mud-palette-surface));
 }
 
-.system-info-pulse__item--info {
-    --pulse-accent: var(--mud-palette-info);
-    --pulse-soft: var(--mud-palette-info-hover);
-}
-
-.system-info-pulse__item--neutral {
-    --pulse-accent: var(--mud-palette-text-secondary);
-    --pulse-soft: var(--mud-palette-action-default-hover);
-}
-
-.system-info-pulse__item--success {
-    --pulse-accent: var(--mud-palette-success);
-    --pulse-soft: var(--mud-palette-success-hover);
+.system-info-pulse__item[data-mo-card-tone="success"] {
+    --pulse-soft: color-mix(in srgb, var(--mud-palette-success) 10%, var(--mud-palette-surface));
 }
 
 .system-info-pulse__icon {
-    width: 42px;
-    height: 42px;
+    width: 36px;
+    height: 36px;
     display: grid;
     place-items: center;
-    color: var(--pulse-accent);
-    border-radius: 13px;
+    color: var(--mo-card-accent);
+    border-radius: 10px;
     background: var(--pulse-soft);
+}
+
+.system-info-pulse__icon ::deep .mud-icon-root {
+    font-size: 1.25rem;
 }
 
 .system-info-pulse__item div {
     display: grid;
     min-width: 0;
-    gap: 3px;
+    gap: 2px;
 }
 
 .system-info-pulse__item div > span {
     color: var(--mud-palette-text-secondary);
-    font-size: 0.73rem;
+    font-size: 0.7rem;
 }
 
 .system-info-pulse__item strong {
     overflow: hidden;
     color: var(--mud-palette-text-primary);
-    font-size: 1.05rem;
-    font-weight: 800;
+    font-family: var(--mud-typography-h6-family, var(--mo-font-family-display));
+    font-size: 1rem;
+    font-weight: 750;
     text-overflow: ellipsis;
     white-space: nowrap;
 }
 
 .system-info-pulse__item small {
-    position: absolute;
-    top: 10px;
-    right: 11px;
-    color: var(--pulse-accent);
-    font-size: 0.55rem;
-    font-weight: 800;
-    letter-spacing: 0.08em;
+    grid-column: 3;
+    grid-row: 1;
+    max-width: 94px;
+    padding: 3px 6px;
+    overflow: hidden;
+    color: var(--mo-card-accent);
+    border: 1px solid color-mix(in srgb, var(--mo-card-accent) 24%, var(--mud-palette-lines-default));
+    border-radius: 999px;
+    background: var(--pulse-soft);
+    font-family: var(--mud-typography-h6-family, var(--mo-font-family-display));
+    font-size: 0.58rem;
+    font-weight: 750;
+    letter-spacing: 0.07em;
+    text-overflow: ellipsis;
     text-transform: uppercase;
+    white-space: nowrap;
 }
 
 .system-info-metric {
+    font-family: var(--mud-typography-h6-family, var(--mo-font-family-display));
     font-variant-numeric: tabular-nums;
 }
 
-@media (max-width: 1000px) {
+@media (max-width: 900px) {
     .system-info-pulse {
         grid-template-columns: repeat(2, minmax(0, 1fr));
     }
@@ -104,8 +100,6 @@
 @media (max-width: 600px) {
     .system-info-pulse {
         grid-template-columns: repeat(4, minmax(230px, 1fr));
-        margin-inline: -12px;
-        padding: 0 12px 5px;
         overflow-x: auto;
         overscroll-behavior-inline: contain;
         scrollbar-width: thin;

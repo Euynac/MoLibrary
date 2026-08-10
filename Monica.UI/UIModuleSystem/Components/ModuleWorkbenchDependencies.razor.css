@@ -21,9 +21,7 @@
     justify-content: space-between;
     gap: 1.5rem;
     padding: 1.3rem;
-    background:
-        radial-gradient(circle at 12% 0%, var(--mud-palette-primary-hover), transparent 42%),
-        linear-gradient(130deg, var(--mud-palette-surface), var(--mud-palette-background-gray));
+    background: var(--mud-palette-surface);
 }
 
 .topology-hero-copy {
@@ -50,8 +48,8 @@
     gap: .2rem .7rem;
     min-width: 0;
     padding: 1rem;
-    border-inline-start: .22rem solid var(--mud-palette-primary);
-    background: linear-gradient(145deg, var(--mud-palette-surface), var(--mud-palette-background));
+    border: 1px solid transparent;
+    background: color-mix(in srgb, var(--mo-card-accent) 4%, var(--mud-palette-surface));
 }
 
 .topology-overview article + article {
@@ -61,36 +59,7 @@
 .topology-overview article ::deep .mud-icon-root {
     grid-row: 1 / 3;
     align-self: center;
-    color: var(--mud-palette-primary);
-}
-
-.topology-overview .overview-edges {
-    border-inline-start-color: var(--mud-palette-info);
-}
-
-.topology-overview .overview-edges ::deep .mud-icon-root,
-.topology-overview .overview-ui ::deep .mud-icon-root {
-    color: var(--mud-palette-info);
-}
-
-.topology-overview .overview-depth {
-    border-inline-start-color: var(--mud-palette-warning);
-}
-
-.topology-overview .overview-depth ::deep .mud-icon-root {
-    color: var(--mud-palette-warning);
-}
-
-.topology-overview .overview-ui {
-    border-inline-start-color: var(--mud-palette-info);
-}
-
-.topology-overview .overview-web {
-    border-inline-start-color: var(--mud-palette-secondary);
-}
-
-.topology-overview .overview-web ::deep .mud-icon-root {
-    color: var(--mud-palette-secondary);
+    color: var(--mo-card-accent);
 }
 
 .topology-overview span {
@@ -129,8 +98,7 @@
 
 .dependency-graph-panel {
     padding: .85rem;
-    background: linear-gradient(155deg, var(--mud-palette-surface), var(--mud-palette-background-gray));
-    box-shadow: var(--mud-elevation-2);
+    background: var(--mud-palette-surface);
 }
 
 .graph-panel-header {
@@ -205,9 +173,7 @@
     grid-template-columns: minmax(18rem, .8fr) repeat(2, minmax(0, 1fr));
     gap: 1rem;
     padding: 1rem;
-    background:
-        linear-gradient(145deg, var(--mud-palette-primary-hover), transparent 40%),
-        var(--mud-palette-surface);
+    background: var(--mud-palette-surface);
 }
 
 .selected-module-identity {

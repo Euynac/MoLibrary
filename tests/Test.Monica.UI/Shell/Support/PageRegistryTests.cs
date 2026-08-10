@@ -47,6 +47,38 @@ public sealed class PageRegistryTests
     }
 
     [Fact]
+    public void RegisterLocalizedPage_WithAccessPolicy_ShouldPublishOnePolicyIdentityForPageAndNavigation()
+    {
+        var registry = new PageRegistry();
+        registry.RegisterLocalizedPage<TestPage, ThirdPartyResource>(
+            "protected",
+            "Navigation:Title",
+            addToNav: true,
+            accessPolicyType: typeof(TestAccessPolicy));
+        registry.Seal();
+
+        var page = registry.GetRegisteredPages().Single();
+        var navigation = registry.GetNavItems().Single();
+
+        page.AccessPolicyType.Should().Be(typeof(TestAccessPolicy));
+        navigation.Page.Should().BeSameAs(page);
+    }
+
+    [Fact]
+    public void RegisterPage_WhenAccessPolicyTypeIsInvalid_ShouldRejectStartupRegistration()
+    {
+        var registry = new PageRegistry();
+
+        var act = () => registry.RegisterPage<TestPage>(
+            "invalid-policy",
+            "Invalid policy",
+            accessPolicyType: typeof(TestPage));
+
+        act.Should().Throw<ArgumentException>()
+            .WithParameterName("accessPolicyType");
+    }
+
+    [Fact]
     public void RegisterLocalizedCategory_WhenDefinitionMatches_ShouldBeIdempotentAcrossCasing()
     {
         var registry = new PageRegistry();
@@ -222,6 +254,11 @@ public sealed class PageRegistryTests
     private sealed class ThirdPartyResource : ILocalizationResource;
 
     private sealed class SecondResource : ILocalizationResource;
+
+    private sealed class TestAccessPolicy : IPageAccessPolicy
+    {
+        public Task<bool> IsAuthorizedAsync(CancellationToken cancellationToken = default) => Task.FromResult(true);
+    }
 
     private sealed class HostLocalizationCatalog(string hostName, bool resourceNotFound = false)
         : ILocalizationCatalog

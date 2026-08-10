@@ -3,8 +3,6 @@ using Monica.Modules;
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Services.AddHealthChecks();
-
 builder.AddMonica(monica =>
 {
     monica.ConfigureApplication(options =>
@@ -19,6 +17,7 @@ builder.AddMonica(monica =>
         options.EnableMinimalApiByDefault = true;
     });
 
+    monica.AddHealthCheck();
     monica.AddOpenTelemetry()
         .UsePrometheusEndpoint();
 });
@@ -33,12 +32,11 @@ app.MapGet("/", () => Results.Ok(new
     message = "Monica is running.",
     endpoints = new
     {
-        health = "/healthz",
+        readiness = "/health",
+        liveness = "/alive",
         metrics = "/metrics"
     }
 }));
-
-app.MapHealthChecks("/healthz");
 
 app.MapMonica();
 app.Run();

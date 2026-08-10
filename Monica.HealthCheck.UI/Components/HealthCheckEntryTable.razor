@@ -1,0 +1,92 @@
+@inject IStringLocalizer<HealthCheckResource> L
+
+<section class="health-table-section" aria-labelledby="health-check-table-title">
+    <div class="health-table-heading">
+        <div>
+            <MudText Typo="Typo.overline">@L["Table:Eyebrow"]</MudText>
+            <MudText Typo="Typo.h6" id="health-check-table-title">@L["Table:Title"]</MudText>
+        </div>
+        <MudText Typo="Typo.body2" Color="Color.Secondary">@L["Table:Subtitle"]</MudText>
+    </div>
+
+    <div class="health-table-scroll">
+        <MudTable T="HealthCheckEntrySnapshot"
+                  Items="@Session.FilteredEntries"
+                  Dense="true"
+                  Hover="true"
+                  Breakpoint="Breakpoint.Sm"
+                  Elevation="0"
+                  Class="health-entry-table">
+            <HeaderContent>
+                <MudTh>@L["Table:Columns:Name"]</MudTh>
+                <MudTh>@L["Table:Columns:Status"]</MudTh>
+                <MudTh>@L["Table:Columns:Description"]</MudTh>
+                <MudTh>@L["Table:Columns:Duration"]</MudTh>
+                <MudTh>@L["Table:Columns:Tags"]</MudTh>
+                <MudTh>@L["Table:Columns:Actions"]</MudTh>
+            </HeaderContent>
+            <RowTemplate>
+                <MudTd DataLabel="@L["Table:Columns:Name"]">
+                    <MudTooltip Text="@context.Name">
+                        <strong class="health-entry-name">@context.Name</strong>
+                    </MudTooltip>
+                </MudTd>
+                <MudTd DataLabel="@L["Table:Columns:Status"]">
+                    <MudChip T="string"
+                             Size="Size.Small"
+                             Variant="Variant.Outlined"
+                             Color="@HealthCheckDisplay.Color(context.Status)"
+                             Icon="@HealthCheckDisplay.Icon(context.Status)">
+                        @L.GetStatusText(context.Status)
+                    </MudChip>
+                </MudTd>
+                <MudTd DataLabel="@L["Table:Columns:Description"]">
+                    @if (string.IsNullOrWhiteSpace(context.Description))
+                    {
+                        <span class="health-entry-muted">@L["Common:NotAvailable"]</span>
+                    }
+                    else
+                    {
+                        <MudTooltip Text="@context.Description">
+                            <span class="health-entry-description">@context.Description</span>
+                        </MudTooltip>
+                    }
+                </MudTd>
+                <MudTd DataLabel="@L["Table:Columns:Duration"]">
+                    @L["Common:DurationMilliseconds", context.Duration.TotalMilliseconds]
+                </MudTd>
+                <MudTd DataLabel="@L["Table:Columns:Tags"]">
+                    <div class="health-entry-tags">
+                        @foreach (var tag in context.Tags)
+                        {
+                            <MudChip T="string" Size="Size.Small" Variant="Variant.Text">@tag</MudChip>
+                        }
+                        @if (context.Tags.Count == 0)
+                        {
+                            <span class="health-entry-muted">@L["Common:NotAvailable"]</span>
+                        }
+                    </div>
+                </MudTd>
+                <MudTd DataLabel="@L["Table:Columns:Actions"]">
+                    <MudTooltip Text="@L["Actions:Details"]">
+                        <MudIconButton Icon="@Icons.Material.Filled.OpenInNew"
+                                       Color="Color.Primary"
+                                       Size="Size.Small"
+                                       OnClick="@(() => Session.OpenDetailsAsync(context))"
+                                       aria-label="@L["Actions:DetailsFor", context.Name]" />
+                    </MudTooltip>
+                </MudTd>
+            </RowTemplate>
+            <NoRecordsContent>
+                <div class="health-table-empty">
+                    <MudIcon Icon="@Icons.Material.Filled.FilterAltOff" Color="Color.Secondary" Size="Size.Large" />
+                    <MudText Typo="Typo.body1">@L["Table:Empty"]</MudText>
+                </div>
+            </NoRecordsContent>
+        </MudTable>
+    </div>
+</section>
+
+@code {
+    [Parameter, EditorRequired] public HealthCheckPageSession Session { get; set; } = default!;
+}

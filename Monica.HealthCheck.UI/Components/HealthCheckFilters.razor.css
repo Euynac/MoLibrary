@@ -1,0 +1,35 @@
+.health-filters {
+    display: grid;
+    grid-template-columns: minmax(14rem, 2fr) minmax(10rem, 1fr) minmax(10rem, 1fr) auto;
+    align-items: center;
+    gap: .75rem;
+    min-width: 0;
+    padding: 1rem;
+    border: 1px solid var(--mud-palette-lines-default);
+    background: var(--mud-palette-surface);
+}
+
+.filter-result-count {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: .35rem;
+    min-width: 0;
+    white-space: nowrap;
+}
+
+@media (max-width: 960px) {
+    .health-filters {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .filter-result-count {
+        justify-content: flex-start;
+    }
+}
+
+@media (max-width: 560px) {
+    .health-filters {
+        grid-template-columns: minmax(0, 1fr);
+    }
+}

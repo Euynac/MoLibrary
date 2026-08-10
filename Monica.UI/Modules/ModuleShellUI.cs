@@ -150,6 +150,7 @@ public class ModuleShellUI : MonicaModule<ModuleShellUIOption>, IWebHostRequired
             static serviceProvider => serviceProvider.GetRequiredService<PageRegistry>());
         services.AddSingleton<IPageCatalog>(
             static serviceProvider => serviceProvider.GetRequiredService<PageRegistry>());
+        services.AddScoped<PageAccessEvaluator>();
 
         // Register for browser storage service
         services.AddScoped<IBrowserStorage, BrowserStorage>();

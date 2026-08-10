@@ -1,6 +1,6 @@
 ---
 name: monica-ui-development
-description: This skill should be used when the user asks to create or modify Blazor UI components, build MudBlazor pages, style MudBlazor components, fix CSS isolation, customize themes, add offline WOFF2 font assets, migrate to MudBlazor v9, validate MudBlazor CSS variables, or implement browser storage with IBrowserStorage.
+description: Create or modify Monica Blazor UI components and MudBlazor pages, including CSS isolation, global/default themes, prototype handoff, local WOFF2 fonts, MudBlazor v9 migration, CSS-variable validation, and IBrowserStorage. Use for UI implementation, visual-language changes, theme customization, or browser-storage work.
 ---
 
 # Monica UI Development Guide
@@ -190,16 +190,23 @@ Always specify `T` for generic MudBlazor components:
 - Loading, empty, and placeholder states should consume available space with flex/grid alignment when the parent height is available, instead of using large fixed top/bottom padding for visual centering.
 - Keep scrolling in `.mo-body-content` or the page's own scroll containers; do not move scrolling back to `body`.
 
-### 9. Theme-First Visual Richness and Component Responsibility
+### 9. Precision Visual Language and Component Responsibility
 
-- Do not default to a monotonous layout made almost entirely of neutral surfaces plus one accent color. Use clear hierarchy and enough visual variation to make sections and states easy to scan.
-- Use `var(--mud-palette-*)`, approved `var(--mo-color-*)` tokens, and MudBlazor `Color`, `Variant`, and `Elevation` parameters. Give statuses, severities, categories, progress, and selection purposeful semantic colors when differentiation helps the user.
-- Tinted surfaces, subtle gradients, borders, elevation, and restrained shadows or glow are allowed when they improve hierarchy, depth, or focus. Build them from approved tokens or theme-owned styles and preserve contrast, focus visibility, and readability.
-- Theme-first means coherent with the active theme, not colorless. Avoid both timid one-accent styling and arbitrary rainbow decoration; every visual treatment should communicate hierarchy, state, grouping, or atmosphere.
-- Component CSS may own component-specific, token-based presentation as well as layout. Keep global MudBlazor visual language in theme CSS, and do not create a raw, page-private color system.
-- When list or card UIs become dense, prioritize scanability and task flow. Remove genuinely redundant metadata or use progressive disclosure, but retain information needed for comparison, diagnosis, and decisions.
-- If centered alignment looks wrong, fix the container layout first (`display`, `align-items`, `justify-content`, `min-height`, `min-width`) before adding margin or padding hacks.
-- Cards that visually belong to the same row should generally align to the same height. Prefer row-level grid/flex stretch plus wrapper-owned `height: 100%` over fixed pixel heights.
+- Read `references/monica-precision-design-language.md` before default-theme, global visual-language, or prototype-handoff work. Apply it as an acceptance contract.
+- Before styling, write a subject-specific design thesis and a compact plan for palette roles, typography roles and fallbacks, layout rhythm, and one signature treatment. The plan must explain how the page's actual Monica task—not a generic admin-dashboard aesthetic—drives those choices.
+- Establish hierarchy through typography, spacing, alignment, density, and explicit surface roles before adding decoration.
+- Keep ordinary surfaces structurally simple and render repeated data as rows/lists/tables instead of cards. Give interactive controls, rows, and cards clear, proportionate hover, focus, pressed, and selected feedback; give noninteractive grouped content only optional token-based border, tonal, or low-shadow spatial-focus feedback that does not imply a click action.
+- Use solid or tonal surfaces as the operational default. One coherent prototype-backed signature system may use a focused token-based glow, gradient, or pattern, concentrated in the identity/readiness region with limited non-competing recurrence when the prototype connects the hierarchy that way; continuous-data visualizations may use gradients that encode their scale. Keep supporting surfaces coherent rather than inert, and document either exception.
+- Use short, purposeful, moderate motion that communicates interaction or state. Avoid large travel, bouncing, repeated flourishes, and continuous ambient animation; honor `prefers-reduced-motion` without removing the visible state change.
+- Let dashboards, workbenches, administration pages, and diagnostics pages consume their owner's full available width. Apply readable line-length limits to text regions, not the page shell; retain a page-level `max-width` only for an explicitly editorial or reading-focused layout.
+- Give light and dark palettes distinct canvas, surface, border, text, brand, and semantic roles. Do not make dark mode uniformly near-black or collapse success, warning, error, information, selection, and runtime states into one accent.
+- Assign fonts by role: interface text, hierarchy/display text when needed, and diagnostics/code. Ship local WOFF2 assets, declare explicit offline-capable fallbacks (including CJK coverage where relevant), and avoid using monospace as general interface typography.
+- Use the 6/8/12 radius scale without derived radius multiplication. Keep each surface within the decoration budget defined by the Precision contract.
+- Let standard `MudCard` instances use the shared baseline hover. Reuse `mo-card-surface` for genuine independent native cards, and use `data-mo-card-tone` when a semantic palette accent should drive an icon, value, badge, border, or tonal fill. The accent does not require a rail.
+- Add the direct-child rail only to a deliberately chosen compact status or KPI group where the repeated edge cue improves scanning, such as the System Info pulse strip. Do not add it merely because a surface is a card, repeat it across unrelated page sections, or replace an established outline/icon/badge composition with it. Preserve page-specific card diversity. Do not apply the shared surface hook to tables, rows, overlays, visualizations, or structural panels, and do not recreate the rail with page-private full-height borders or pseudo-elements.
+- Use `var(--mud-palette-*)`, approved `var(--mo-color-*)` tokens, and MudBlazor semantic parameters for meaningful status, selection, severity, or progress—not ambient ornament.
+- Keep component-specific token-based presentation and layout in component CSS. Keep the shared MudBlazor visual language in theme CSS; do not create a page-private color system.
+- Fix container layout (`display`, alignment, `min-height`, `min-width`) before adding margin or padding hacks. Stretch related cards at the row level instead of assigning fixed heights.
 
 **Component CSS responsibility model:**
 
@@ -236,6 +243,7 @@ Key rules:
 - For `MudTabs` with `ApplyEffectsToContainer="true"`, the root `.mud-tabs` element receives the rounded, outlined, and elevation classes. When a theme needs a visible shell, inspect and style the root container, `.mud-tabs-tabbar`, and `.mud-tabs-panels` together.
 - `MudDataGrid` header affordances are hover-hidden by default in MudBlazor. If a custom theme makes headers look blank, inspect and style `.sort-direction-icon`, `.column-options-icon`, `.drag-icon-options`, and `.mud-menu .mud-icon-button-label`.
 - Debug theme regressions with live DOM and computed-style checks before editing CSS. Verify both light and dark modes and inspect MudBlazor source when component behavior is uncertain.
+- For the default theme, global visual language, or a `.ui-design` handoff, read `references/monica-precision-design-language.md` and complete its side-by-side checks at viewport widths 1440, 929, and 390 in light and dark modes.
 - Read `references/theme-authoring-pitfalls.md` when working on shared theme regressions or resuming a theme-debugging thread. That file carries the concrete regression patterns and verification traps.
 - Read `references/adaptive-mudblazor-list-table-pattern.md` when fixing dense MudBlazor list/table overflow, adaptive ellipsis, or CSS-grid table alignment issues.
 
@@ -316,6 +324,7 @@ For `Res/Res<T>` usage, `IResultEnvelope`, and the `IsFailed` pattern in UI serv
 - `references/migration-guide-v9.md`
 - `references/css-isolation-fix-workflow.md`
 - `references/theme-css-guide.md`
+- `references/monica-precision-design-language.md`
 - `references/theme-authoring-pitfalls.md`
 - `references/auto-refresh-page-pattern.md`
 - `references/browser-storage-guide.md`
@@ -329,7 +338,7 @@ For `Res/Res<T>` usage, `IResultEnvelope`, and the `IsFailed` pattern in UI serv
 - `scripts/check_mudblazor_source.py` - Invoke `inspect-dependency-source resolve MudBlazor --ref 9.0.0 --json`, validate the returned path, and verify that the required source marker exists.
 - `scripts/sync_mud_css_variables.py` - Initialize/update real MudBlazor CSS variable JSON into `.tmp/monica-ui-development/mudblazor-css-variables.json`.
 - `scripts/validate_mud_css_variables.py` - Validate MudBlazor variable usage in CSS/Razor files and apply safe auto-fixes using the generated `.tmp` variable list by default.
-- `scripts/font_downloader.py` - Download fonts for offline WOFF2 usage.
+- `scripts/font_downloader.py` - Download collision-safe unicode-range WOFF2 files and generate a runtime-ready `font-faces.css` manifest. Variable `font-weight` ranges remain intact, and `--weights` selects a variable face when the requested weight falls inside its range. Select and verify required subsets such as `--subsets latin,latin-ext` instead of assuming one Google Fonts URL maps to one file.
 - `scripts/subset_ui_font.py` - Generate or check localization-driven WOFF2 subsets from source fonts stored outside Monica UI packages.
 
 ## Quick Checklist
@@ -347,7 +356,11 @@ For `Res/Res<T>` usage, `IResultEnvelope`, and the `IsFailed` pattern in UI serv
 - [ ] Use `IBrowserStorage` for browser persistence
 - [ ] Keep AppBar height and viewport compensation in the shell layout, not in page CSS
 - [ ] Use `$monica-ui-localization` for any user-facing text or i18n resource changes
-- [ ] Check that the page does not collapse into neutral surfaces plus one accent color
+- [ ] Record the subject-specific design thesis, palette/type/layout plan, and one justified signature treatment
+- [ ] Apply the Precision hierarchy, full-width operational-shell, responsive-surface, radius, decoration, data-density, and offline-font rules
+- [ ] Verify hover, focus, pressed, and selected feedback plus `prefers-reduced-motion` behavior
+- [ ] Self-critique the result for generic AI-dashboard styling before handoff
+- [ ] Compare prototype and browser side by side at widths 1440, 929, and 390 in light and dark modes
 
 ## Page Complexity Checklist
 

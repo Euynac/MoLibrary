@@ -1,0 +1,83 @@
+{
+  "Navigation": {
+    "Title": "Health checks"
+  },
+  "Page": {
+    "Title": "Health checks",
+    "Eyebrow": "Operations",
+    "Heading": "Host health",
+    "Subtitle": "Inspect the current host's point-in-time readiness and sanitized health-check evidence.",
+    "CurrentHost": "Current host · {0}"
+  },
+  "Access": {
+    "Checking": "Checking dashboard access…",
+    "DeniedTitle": "Health dashboard access denied",
+    "DeniedDescription": "This operational page is available in Development, or through an explicitly enabled host authorization policy."
+  },
+  "Actions": {
+    "Refresh": "Refresh",
+    "Retry": "Retry",
+    "Details": "Inspect details",
+    "DetailsFor": "Inspect details for {0}",
+    "Close": "Close details"
+  },
+  "State": {
+    "Loading": "Running health checks",
+    "LoadingDescription": "Collecting a sanitized snapshot from this host.",
+    "LoadFailed": "Health checks could not be loaded",
+    "RefreshFailed": "The latest refresh failed. The previous snapshot remains visible: {0}"
+  },
+  "Overview": {
+    "ReadinessLabel": "Readiness",
+    "ReadinessChecks": "{0} readiness checks",
+    "Ready": "Ready to receive traffic",
+    "ReadyDegraded": "Ready with degraded dependencies",
+    "NotReady": "Not ready to receive traffic",
+    "DurationMilliseconds": "Last checked in {0:0.##} ms"
+  },
+  "Status": {
+    "Healthy": "Healthy",
+    "Degraded": "Degraded",
+    "Unhealthy": "Unhealthy"
+  },
+  "Filters": {
+    "AriaLabel": "Health-check filters",
+    "NameLabel": "Name or description",
+    "NamePlaceholder": "Search checks",
+    "StatusLabel": "Status",
+    "AnyStatus": "Any status",
+    "TagLabel": "Tag",
+    "Results": "Showing {0} of {1}"
+  },
+  "Table": {
+    "Eyebrow": "Current evidence",
+    "Title": "Registered checks",
+    "Subtitle": "This view is point-in-time and stores no history.",
+    "Columns": {
+      "Name": "Name",
+      "Status": "Status",
+      "Description": "Description",
+      "Duration": "Duration",
+      "Tags": "Tags",
+      "Actions": "Actions"
+    },
+    "Empty": "No health checks match the current filters."
+  },
+  "Common": {
+    "NotAvailable": "Not available",
+    "DurationMilliseconds": "{0:0.##} ms"
+  },
+  "Details": {
+    "Eyebrow": "Health-check evidence",
+    "Description": "Description",
+    "NoDescription": "No description was reported.",
+    "Duration": "Duration",
+    "Tags": "Tags",
+    "NoTags": "No tags",
+    "Data": "Diagnostic data",
+    "NoData": "No diagnostic data was reported.",
+    "Error": "Reported error",
+    "ErrorType": "Type",
+    "ErrorMessage": "Message"
+  }
+}

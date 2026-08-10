@@ -2,8 +2,14 @@
 /* This is the main CSS file that pulls in all theme-related CSS */
 /* Color is managed by the MudBlazor theme system, CSS is only responsible for component styles */
 
+/* Offline typography defaults are available to every theme. */
+@import url('./mo-fonts.css');
+
 /* Shared shell layout primitives */
 @import url('./layout/mo-navbar.css');
+
+/* Shared opt-in component primitives */
+@import url('./components/mo-card-surface.css');
 
 /* 0. Introduce the baseline MudBlazor-compatible theme hook */
 @import url('./themes/mo-theme-mud-blazor.css');
@@ -16,7 +22,7 @@
 @import url('./themes/mo-theme-fresh.css');
 @import url('./themes/mo-theme-macaron-sweetheart.css'); /* Macaron Sweetheart theme */
 
-/* 3. Introduce the default Clean SaaS theme */
+/* 3. Introduce the default Monica Precision theme */
 @import url('./themes/mo-theme-default.css');
 @import url('./themes/mo-theme-hermes-teal.css');       /* Hermes Teal theme */
 @import url('./themes/mo-theme-vibe-usage-matrix.css');  /* VibeUsage Matrix theme */
@@ -39,27 +45,15 @@
  * Theme files may override this small contract for their own visual language.
  */
 :root {
-    --mo-appbar-background:
-        linear-gradient(
-            135deg,
-            var(--mud-palette-surface) 0%,
-            var(--mud-palette-background-gray) 100%);
-    --mo-appbar-dark-background:
-        linear-gradient(
-            135deg,
-            var(--mud-palette-surface) 0%,
-            var(--mud-palette-background) 100%);
+    --mo-appbar-background: color-mix(in srgb, var(--mud-palette-surface) 94%, transparent);
+    --mo-appbar-dark-background: color-mix(in srgb, var(--mud-palette-background) 94%, transparent);
     --mo-appbar-border-bottom: 1px solid var(--mud-palette-divider);
     --mo-appbar-box-shadow: none;
     --mo-appbar-backdrop-filter: blur(10px);
     --mo-appbar-padding-inline: 24px;
     --mo-appbar-gap: 32px;
 
-    --mo-color-page-hero-background:
-        linear-gradient(
-            135deg,
-            var(--mud-palette-primary) 0%,
-            color-mix(in srgb, var(--mud-palette-primary) 72%, var(--mud-palette-surface)) 100%);
+    --mo-color-page-hero-background: var(--mud-palette-primary);
     --mo-color-page-hero-text: var(--mud-palette-primary-text);
     --mo-color-page-hero-action: var(--mud-palette-primary-text);
 
@@ -259,12 +253,6 @@ html {
 * {
     scrollbar-width: thin;
     scrollbar-color: var(--mud-palette-action-disabled) transparent;
-}
-
-/* Container global padding */
-.mud-container {
-    padding-top: 24px;
-    padding-bottom: 24px;
 }
 
 /* Print style optimization */

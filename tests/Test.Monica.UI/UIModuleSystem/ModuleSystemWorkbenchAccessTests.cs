@@ -23,7 +23,7 @@ public sealed class ModuleSystemWorkbenchAccessTests
             Options.Create(new ModuleSystemUIOption()),
             services);
 
-        (await access.IsAuthorizedAsync()).Should().BeTrue();
+        (await access.IsAuthorizedAsync(TestContext.Current.CancellationToken)).Should().BeTrue();
     }
 
     [Fact]
@@ -45,7 +45,7 @@ public sealed class ModuleSystemWorkbenchAccessTests
             }),
             provider);
 
-        (await access.IsAuthorizedAsync()).Should().BeTrue();
+        (await access.IsAuthorizedAsync(TestContext.Current.CancellationToken)).Should().BeTrue();
     }
 
     [Fact]
@@ -57,7 +57,7 @@ public sealed class ModuleSystemWorkbenchAccessTests
             Options.Create(new ModuleSystemUIOption()),
             services);
 
-        (await access.IsAuthorizedAsync()).Should().BeFalse();
+        (await access.IsAuthorizedAsync(TestContext.Current.CancellationToken)).Should().BeFalse();
     }
 
     [Fact]
@@ -80,7 +80,7 @@ public sealed class ModuleSystemWorkbenchAccessTests
             }),
             provider);
 
-        (await access.IsAuthorizedAsync()).Should().BeTrue();
+        (await access.IsAuthorizedAsync(TestContext.Current.CancellationToken)).Should().BeTrue();
     }
 
     [Fact]
@@ -103,7 +103,7 @@ public sealed class ModuleSystemWorkbenchAccessTests
             }),
             provider);
 
-        (await access.IsAuthorizedAsync()).Should().BeFalse();
+        (await access.IsAuthorizedAsync(TestContext.Current.CancellationToken)).Should().BeFalse();
     }
 
     [Fact]
@@ -124,7 +124,7 @@ public sealed class ModuleSystemWorkbenchAccessTests
             }),
             provider);
 
-        var isAuthorized = await access.IsAuthorizedAsync();
+        var isAuthorized = await access.IsAuthorizedAsync(TestContext.Current.CancellationToken);
 
         isAuthorized.Should().BeFalse();
     }

@@ -13,6 +13,7 @@
     <ProjectReference Include="../../../../../Monica.Core/Monica.Core.csproj" />
     <ProjectReference Include="../../../../../Monica.DependencyInjection/Monica.DependencyInjection.csproj" />
     <ProjectReference Include="../../../../../Monica.EventBus/Monica.EventBus.csproj" />
+    <ProjectReference Include="../../../../../Monica.HealthCheck/Monica.HealthCheck.csproj" />
     <ProjectReference Include="../../../../../Monica.JobScheduler/Monica.JobScheduler.csproj" />
     <ProjectReference Include="../../../../../Monica.OpenTelemetry/Monica.OpenTelemetry.csproj" />
     <ProjectReference Include="../../../../../Monica.ProjectUnits/Monica.ProjectUnits.csproj" />
