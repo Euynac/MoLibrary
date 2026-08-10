@@ -297,7 +297,7 @@ public class ModuleShellUIOption : ModuleOptions<ModuleShellUI>
     /// <summary>
     /// The maximum number of categories displayed in the top navigation bar (the excess will be placed in the "More" menu)
     /// </summary>
-    public int MaxVisibleCategories { get; set; } = 6;
+    public int MaxVisibleCategories { get; set; } = 10;
 
     /// <summary>
     /// Whether to enable the navigation bar search function

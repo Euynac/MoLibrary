@@ -33,6 +33,12 @@ Invoke when:
 Invoke when:
 - Adding, changing, reviewing, or validating Monica UI localization/i18n, user-facing text, `IStringLocalizer<TResource>` usage, `RegisterLocalizedPage(...)` or `RegisterLocalizedCategory(...)` keys, or `zh-CN`/`en-US` resources
 
+## Agent Skill Authoring and Synchronization
+
+- Edit Monica-owned Agent Skills only under the canonical `skills/<name>/` tree. Do not edit the corresponding `.agents/skills/<name>/` or `.claude/skills/<name>/` projections directly.
+- When implementation feedback changes a skill rule, update the canonical skill first, regenerate both projections with `python3 scripts/sync_agent_skills.py --write`, and commit the canonical and generated changes together.
+- Before committing any Agent Skill change, run `python3 scripts/validate_agent_skills.py`, `python3 scripts/sync_agent_skills.py --check`, and `python3 scripts/test_agent_skills.py`. Follow `CONTRIBUTING.md` for the complete validation and release workflow.
+
 ## UI Theme Color Contract
 
 - First-party Monica UI colors must use `--mud-palette-*` first, or the small supplemental `--mo-color-*` contract defined in `Monica.UI/wwwroot/css/mo-theme-main.css` when MudBlazor palette roles are not expressive enough.
