@@ -5,7 +5,8 @@
 
 <PageTitle>@L["Pages:ConfigurationDebug:Title"]</PageTitle>
 
-<MudContainer MaxWidth="MaxWidth.False" Class="configuration-debug-page">
+<div class="configuration-debug-page">
+<MudContainer MaxWidth="MaxWidth.False">
     <MudStack Spacing="3">
         <MudStack Row="true" Wrap="Wrap.Wrap" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Spacing="2">
             <MudStack Spacing="0">
@@ -50,6 +51,7 @@
         }
     </MudStack>
 </MudContainer>
+</div>
 
 @code {
     public const string PAGE_URL = ConfigurationUiRoutes.DEBUG_ROUTE;

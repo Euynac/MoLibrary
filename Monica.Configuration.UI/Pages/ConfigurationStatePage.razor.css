@@ -1,9 +1,13 @@
 .configuration-state-page {
     display: flex;
     flex-direction: column;
+    box-sizing: border-box;
+    width: 100%;
+    min-width: 0;
     height: 100%;
     max-height: 100%;
     min-height: 0;
+    padding-block: clamp(1rem, 2vw, 1.5rem);
     overflow: hidden;
 }
 
