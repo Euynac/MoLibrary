@@ -1,16 +1,6 @@
 namespace Monica.JobScheduler.Models;
 
 /// <summary>
-/// Describes the high-level health of the scheduler runtime.
-/// </summary>
-public enum SystemHealthStatus
-{
-    Healthy,
-    Degraded,
-    Unhealthy
-}
-
-/// <summary>
 /// Aggregated dashboard payload used by the Job Scheduler UI.
 /// </summary>
 public class JobDashboardSnapshot
@@ -44,8 +34,6 @@ public class DashboardSummary
     public double SuccessRate { get; init; }
     public int ThroughputPerHour { get; init; }
     public Dictionary<JobState, int> StateDistribution { get; init; } = [];
-    public SystemHealthStatus HealthStatus { get; init; }
-    public string? HealthMessage { get; init; }
     public DateTime MetricsStartTime { get; init; }
     public DateTime MetricsEndTime { get; init; }
 }

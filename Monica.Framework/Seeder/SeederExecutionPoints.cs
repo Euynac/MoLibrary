@@ -3,7 +3,7 @@ using Monica.Core.Execution;
 namespace Monica.Framework.Seeder;
 
 /// <summary>
-/// Stable execution points emitted by the startup seeder runner.
+/// Stable execution points emitted by the background seeder scheduler.
 /// </summary>
 public static class SeederExecutionPoints
 {

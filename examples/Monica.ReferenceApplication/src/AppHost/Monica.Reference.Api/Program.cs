@@ -4,8 +4,6 @@ using Monica.Modules;
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Services.AddHealthChecks();
-
 var configurationInputPlan = MonicaConfigurationInputPlan.Create(inputs => inputs
     .UseFileConfigurationStore());
 
@@ -28,6 +26,7 @@ builder.AddMonica(monica =>
     monica.ConfigureTypeDiscovery(options =>
         options.Add("Domains.Ordering", "Platform.Protocol"));
 
+    monica.AddHealthCheck();
     monica.AddConfiguration(configurationInputPlan);
     monica.AddEventBus()
         .UseNoOpDistributedEventBus();
@@ -70,7 +69,8 @@ app.MapGet("/", () => Results.Ok(new
         swagger = "/swagger",
         metrics = "/metrics",
         projectUnits = "/framework/units",
-        health = "/healthz"
+        readiness = "/health",
+        liveness = "/alive"
     },
     runtime = new
     {
@@ -80,8 +80,6 @@ app.MapGet("/", () => Results.Ok(new
         scheduler = "WorkerOrderBacklogReport runs every minute with in-memory scheduler state."
     }
 }));
-
-app.MapHealthChecks("/healthz");
 
 app.MapMonica();
 app.Run();

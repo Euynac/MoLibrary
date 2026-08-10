@@ -8,10 +8,8 @@ using Microsoft.JSInterop;
 using Monica.Core.Localization.Abstractions;
 using Monica.Modules;
 using Monica.UI.Localization;
-using Monica.UI.Pages;
 using Monica.UI.Shell.Models;
 using Monica.UI.Shell.Support;
-using Monica.UI.UIModuleSystem.Support;
 
 namespace Monica.UI.Shell.Components.Layout;
 
@@ -24,10 +22,13 @@ public partial class NavBar : IAsyncDisposable
     [Inject] private IStringLocalizer<SharedResource> L { get; set; } = default!;
     [Inject] private ILocalizationCatalog LocalizationCatalog { get; set; } = default!;
     [Inject] private NavigationManager NavigationManager { get; set; } = default!;
+    [Inject] private PageAccessEvaluator PageAccess { get; set; } = default!;
     [Inject] private IJSRuntime JSRuntime { get; set; } = default!;
     [Inject] private IServiceProvider ServiceProvider { get; set; } = default!;
 
     private readonly List<NavigationGroup> _navigationGroups = [];
+    private readonly List<Task> _pendingCallbacks = [];
+    private readonly CancellationTokenSource _lifetimeCancellation = new();
 
     private ElementReference _desktopNavRef;
     private ElementReference _measurementRailRef;
@@ -35,7 +36,6 @@ public partial class NavBar : IAsyncDisposable
     private NavBarLayoutInteropSession? _layoutInterop;
     private int _visibleCategoryCount;
     private AuthenticationStateProvider? _authenticationStateProvider;
-    private Task _authorizationRefreshTask = Task.CompletedTask;
     private Task? _disposeTask;
     private int _navigationRefreshVersion;
     private bool _disposed;
@@ -71,10 +71,10 @@ public partial class NavBar : IAsyncDisposable
             _authenticationStateProvider.AuthenticationStateChanged += HandleAuthenticationStateChanged;
         }
 
-        await RebuildNavigationAsync();
+        await RebuildNavigationAsync(_lifetimeCancellation.Token);
     }
 
-    private async Task<bool> RebuildNavigationAsync()
+    private async Task<bool> RebuildNavigationAsync(CancellationToken cancellationToken)
     {
         if (_disposed)
         {
@@ -82,16 +82,13 @@ public partial class NavBar : IAsyncDisposable
         }
 
         var refreshVersion = Interlocked.Increment(ref _navigationRefreshVersion);
-        var navigationItems = PageCatalog.GetNavItems();
-        var workbenchAccess = ServiceProvider.GetService<ModuleSystemWorkbenchAccess>();
-        if (workbenchAccess is not null && !await workbenchAccess.IsAuthorizedAsync())
+        var navigationItems = new List<NavigationItem>();
+        foreach (var navigationItem in PageCatalog.GetNavItems())
         {
-            navigationItems = navigationItems
-                .Where(static item => !string.Equals(
-                    item.Href,
-                    ModuleSystemPage.MODULE_SYSTEM_DASHBOARD_URL.Trim('/'),
-                    StringComparison.OrdinalIgnoreCase))
-                .ToArray();
+            if (await PageAccess.IsAuthorizedAsync(navigationItem, cancellationToken))
+            {
+                navigationItems.Add(navigationItem);
+            }
         }
 
         if (_disposed || refreshVersion != Volatile.Read(ref _navigationRefreshVersion))
@@ -124,14 +121,18 @@ public partial class NavBar : IAsyncDisposable
 
     private void HandleAuthenticationStateChanged(Task<AuthenticationState> authenticationStateTask)
     {
-        if (_disposed)
+        QueueCallback(async () =>
         {
-            return;
-        }
+            try
+            {
+                await authenticationStateTask;
+            }
+            catch
+            {
+                // A failed authentication-state transition is treated as denied by the page policies below.
+            }
 
-        _authorizationRefreshTask = InvokeAsync(async () =>
-        {
-            if (await RebuildNavigationAsync() && !_disposed)
+            if (await RebuildNavigationAsync(_lifetimeCancellation.Token) && !_disposed)
             {
                 StateHasChanged();
             }
@@ -140,10 +141,11 @@ public partial class NavBar : IAsyncDisposable
 
     private void HandleLocationChanged(object? sender, LocationChangedEventArgs args)
     {
-        if (!_disposed)
+        QueueCallback(() =>
         {
-            _ = InvokeAsync(StateHasChanged);
-        }
+            StateHasChanged();
+            return Task.CompletedTask;
+        });
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -188,25 +190,40 @@ public partial class NavBar : IAsyncDisposable
     {
         lock (_disposeSync)
         {
-            return new ValueTask(_disposeTask ??= DisposeCoreAsync());
+            return new ValueTask(_disposeTask ??= BeginDispose());
         }
     }
 
-    private async Task DisposeCoreAsync()
+    private Task BeginDispose()
     {
         _disposed = true;
         Interlocked.Increment(ref _navigationRefreshVersion);
+        _lifetimeCancellation.Cancel();
         NavigationManager.LocationChanged -= HandleLocationChanged;
         if (_authenticationStateProvider is not null)
         {
             _authenticationStateProvider.AuthenticationStateChanged -= HandleAuthenticationStateChanged;
         }
 
+        var pendingCallbacks = _pendingCallbacks.ToArray();
         var layoutInterop = _layoutInterop;
         _layoutInterop = null;
+        return DisposeCoreAsync(pendingCallbacks, layoutInterop);
+    }
+
+    private async Task DisposeCoreAsync(
+        IReadOnlyList<Task> pendingCallbacks,
+        NavBarLayoutInteropSession? layoutInterop)
+    {
         try
         {
-            await _authorizationRefreshTask;
+            try
+            {
+                await Task.WhenAll(pendingCallbacks);
+            }
+            catch (OperationCanceledException) when (_lifetimeCancellation.IsCancellationRequested)
+            {
+            }
         }
         finally
         {
@@ -214,6 +231,22 @@ public partial class NavBar : IAsyncDisposable
             {
                 await layoutInterop.DisposeAsync();
             }
+
+            _lifetimeCancellation.Dispose();
+        }
+    }
+
+    private void QueueCallback(Func<Task> callback)
+    {
+        lock (_disposeSync)
+        {
+            if (_disposed)
+            {
+                return;
+            }
+
+            _pendingCallbacks.RemoveAll(static task => task.IsCompleted);
+            _pendingCallbacks.Add(InvokeAsync(callback));
         }
     }
 }

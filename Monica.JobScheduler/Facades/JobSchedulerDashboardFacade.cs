@@ -1,4 +1,3 @@
-using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Logging;
 using Monica.Core.Extensions;
 using Monica.Core.Results;
@@ -14,7 +13,6 @@ public class JobSchedulerDashboardFacade(
     IJobDefinitionCacheService cacheService,
     IJobMetadataRepository metadataRepository,
     IJobConcurrencyGuard concurrencyGuard,
-    HealthCheckService healthCheckService,
     ILogger<JobSchedulerDashboardFacade> logger)
 {
     /// <summary>
@@ -39,23 +37,19 @@ public class JobSchedulerDashboardFacade(
                 cancellationToken);
             var instancesTask = LoadInstancesAsync(metricsStartTime, cancellationToken);
             var executionStatsTask = concurrencyGuard.GetAllExecutionStatisticsAsync(cancellationToken);
-            var healthTask = GetSystemHealthStatusAsync(cancellationToken);
 
-            await Task.WhenAll(stateDistributionTask, instancesTask, executionStatsTask, healthTask);
+            await Task.WhenAll(stateDistributionTask, instancesTask, executionStatsTask);
 
             var stateDistribution = await stateDistributionTask;
             var instances = await instancesTask;
             var executionStats = await executionStatsTask;
-            var (healthStatus, healthMessage) = await healthTask;
 
             var summary = BuildSummary(
                 definitions,
                 stateDistribution,
                 executionStats,
                 metricsStartTime,
-                now,
-                healthStatus,
-                healthMessage);
+                now);
 
             return Res.Ok(new JobDashboardSnapshot
             {
@@ -76,9 +70,7 @@ public class JobSchedulerDashboardFacade(
         IReadOnlyDictionary<JobState, int> stateDistribution,
         IReadOnlyDictionary<string, JobExecutionStatisticSnapshot> executionStats,
         DateTime metricsStartTime,
-        DateTime metricsEndTime,
-        SystemHealthStatus healthStatus,
-        string? healthMessage)
+        DateTime metricsEndTime)
     {
         var recurringCount = definitions.Count(d => d.JobType == JobType.Recurring && !d.IsDeleted);
         var triggeredCount = definitions.Count(d => d.JobType == JobType.Triggered && !d.IsDeleted);
@@ -111,8 +103,6 @@ public class JobSchedulerDashboardFacade(
             SuccessRate = Math.Round(successRate, 1),
             ThroughputPerHour = throughputPerHour,
             StateDistribution = stateDistribution.ToDictionary(kvp => kvp.Key, kvp => kvp.Value),
-            HealthStatus = healthStatus,
-            HealthMessage = healthMessage,
             MetricsStartTime = metricsStartTime,
             MetricsEndTime = metricsEndTime
         };
@@ -262,35 +252,6 @@ public class JobSchedulerDashboardFacade(
         }
 
         return result.OrderByDescending(j => j.SkipRate).Take(10).ToList();
-    }
-
-    private async Task<(SystemHealthStatus Status, string? Message)> GetSystemHealthStatusAsync(
-        CancellationToken cancellationToken)
-    {
-        try
-        {
-            var healthReport = await healthCheckService.CheckHealthAsync(
-                registration => registration.Name == "JobScheduler",
-                cancellationToken);
-            var jobSchedulerEntry = healthReport.Entries.Values.FirstOrDefault();
-
-            if (jobSchedulerEntry.Status == HealthStatus.Healthy)
-            {
-                return (SystemHealthStatus.Healthy, jobSchedulerEntry.Description);
-            }
-
-            if (jobSchedulerEntry.Status == HealthStatus.Degraded)
-            {
-                return (SystemHealthStatus.Degraded, jobSchedulerEntry.Description);
-            }
-
-            return (SystemHealthStatus.Unhealthy, jobSchedulerEntry.Description);
-        }
-        catch (Exception ex)
-        {
-            logger.LogWarning(ex, "Failed to get job scheduler health status");
-            return (SystemHealthStatus.Healthy, null);
-        }
     }
 
     private async Task<List<DashboardInstanceProjection>> LoadInstancesAsync(

@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+	<PropertyGroup>
+		<PackageDescription>Unified ASP.NET Core health checks, probe endpoints, and sanitized runtime snapshots for Monica hosts.</PackageDescription>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<FrameworkReference Include="Microsoft.AspNetCore.App" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<ProjectReference Include="..\Monica.Core\Monica.Core.csproj" />
+	</ItemGroup>
+
+</Project>

@@ -7,11 +7,16 @@ namespace Monica.UI.Shell.Models;
 /// </summary>
 public sealed class PageDefinition
 {
-    internal PageDefinition(string route, Type componentType, UIRegistryText displayName)
+    internal PageDefinition(
+        string route,
+        Type componentType,
+        UIRegistryText displayName,
+        Type? accessPolicyType)
     {
         Route = route;
         ComponentType = componentType;
         DisplayName = displayName;
+        AccessPolicyType = accessPolicyType;
     }
 
     /// <summary>
@@ -28,6 +33,11 @@ public sealed class PageDefinition
     /// Gets the display text and its optional localization metadata.
     /// </summary>
     public UIRegistryText DisplayName { get; }
+
+    /// <summary>
+    /// Gets the optional circuit-scoped policy type that controls both navigation visibility and direct page access.
+    /// </summary>
+    public Type? AccessPolicyType { get; }
 
     /// <summary>
     /// Resolves the page display name through the specified host localization catalog.
@@ -47,18 +57,23 @@ public sealed class PageDefinition
 public sealed class NavigationItem
 {
     internal NavigationItem(
-        UIRegistryText text,
-        string href,
+        PageDefinition page,
         string? icon,
         NavigationCategoryId categoryId,
         int order)
     {
-        Text = text;
-        Href = href;
+        Page = page;
+        Text = page.DisplayName;
+        Href = page.Route;
         Icon = icon;
         CategoryId = categoryId;
         Order = order;
     }
+
+    /// <summary>
+    /// Gets the page represented by this navigation entry, including its access-policy metadata.
+    /// </summary>
+    public PageDefinition Page { get; }
 
     /// <summary>
     /// Gets the label text and its optional localization metadata.

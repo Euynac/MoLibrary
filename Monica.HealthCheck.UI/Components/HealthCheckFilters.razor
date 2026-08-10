@@ -1,0 +1,46 @@
+@inject IStringLocalizer<HealthCheckResource> L
+
+<section class="health-filters" aria-label="@L["Filters:AriaLabel"]">
+    <MudTextField T="string"
+                  Value="@Session.NameFilter"
+                  ValueChanged="@Session.SetNameFilterAsync"
+                  Label="@L["Filters:NameLabel"]"
+                  Placeholder="@L["Filters:NamePlaceholder"]"
+                  Immediate="true"
+                  Clearable="true"
+                  Adornment="Adornment.Start"
+                  AdornmentIcon="@Icons.Material.Filled.Search" />
+
+    <MudSelect T="HealthCheckState?"
+               Value="@Session.StatusFilter"
+               ValueChanged="@Session.SetStatusFilterAsync"
+               Label="@L["Filters:StatusLabel"]"
+               Clearable="true">
+        <MudSelectItem T="HealthCheckState?" Value="@(null)">@L["Filters:AnyStatus"]</MudSelectItem>
+        <MudSelectItem T="HealthCheckState?" Value="@HealthCheckState.Healthy">@L["Status:Healthy"]</MudSelectItem>
+        <MudSelectItem T="HealthCheckState?" Value="@HealthCheckState.Degraded">@L["Status:Degraded"]</MudSelectItem>
+        <MudSelectItem T="HealthCheckState?" Value="@HealthCheckState.Unhealthy">@L["Status:Unhealthy"]</MudSelectItem>
+    </MudSelect>
+
+    <MudSelect T="string"
+               Value="@Session.TagFilter"
+               ValueChanged="@Session.SetTagFilterAsync"
+               Label="@L["Filters:TagLabel"]"
+               Clearable="true">
+        @foreach (var tag in Session.AvailableTags)
+        {
+            <MudSelectItem T="string" Value="@tag">@tag</MudSelectItem>
+        }
+    </MudSelect>
+
+    <div class="filter-result-count" aria-live="polite">
+        <MudIcon Icon="@Icons.Material.Filled.FilterList" Color="Color.Secondary" Size="Size.Small" />
+        <MudText Typo="Typo.body2" Color="Color.Secondary">
+            @L["Filters:Results", Session.FilteredEntries.Count, Session.Snapshot?.Entries.Count ?? 0]
+        </MudText>
+    </div>
+</section>
+
+@code {
+    [Parameter, EditorRequired] public HealthCheckPageSession Session { get; set; } = default!;
+}

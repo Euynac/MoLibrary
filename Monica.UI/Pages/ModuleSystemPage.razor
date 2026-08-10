@@ -7,10 +7,11 @@
 @using Monica.Core.Modularity.Diagnostics.Models
 @using Monica.Core.Results
 @using Monica.UI.Localization
+@using Monica.UI.Shell.Support
 @using Monica.UI.UIModuleSystem.State
 @using Monica.UI.UIModuleSystem.Support
 @inject ModuleSystemWorkbenchSessionFactory SessionFactory
-@inject ModuleSystemWorkbenchAccess Access
+@inject PageAccessEvaluator PageAccess
 @inject NavigationManager Navigation
 @inject IJSRuntime JSRuntime
 @inject ISnackbar Snackbar
@@ -130,14 +131,21 @@
 
     protected override async Task OnInitializedAsync()
     {
-        _isAuthorized = await Access.IsAuthorizedAsync();
-        _accessChecked = true;
-        if (!_isAuthorized || _disposed)
+        var isAuthorized = await PageAccess.IsAuthorizedAsync(MODULE_SYSTEM_DASHBOARD_URL);
+        if (_disposed)
         {
             return;
         }
 
-        _session = SessionFactory.Create(Access.IsAuthorizedAsync);
+        _isAuthorized = isAuthorized;
+        _accessChecked = true;
+        if (!isAuthorized)
+        {
+            return;
+        }
+
+        _session = SessionFactory.Create(
+            () => PageAccess.IsAuthorizedAsync(MODULE_SYSTEM_DASHBOARD_URL));
         _session.Changed += HandleSessionChanged;
         _session.SetSection(ModuleSystemWorkbenchSectionExtensions.Parse(Section));
         await _session.InitializeAsync();
@@ -183,7 +191,13 @@
 
     private void HandleSessionChanged()
     {
-        _pendingRender = InvokeAsync(StateHasChanged);
+        _pendingRender = InvokeAsync(() =>
+        {
+            if (!_disposed)
+            {
+                StateHasChanged();
+            }
+        });
     }
 
     private async Task Refresh()

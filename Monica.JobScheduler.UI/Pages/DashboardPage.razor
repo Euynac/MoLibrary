@@ -30,9 +30,6 @@
     }
     else if (_summary != null)
     {
-        @* System Health Banner *@
-        <SystemHealthBanner Status="_summary.HealthStatus" Message="@_summary.HealthMessage" />
-
         @* Metrics Summary Cards *@
         <MetricsSummaryCards TotalJobs="_summary.TotalJobs"
                               RecurringJobCount="_summary.RecurringJobCount"
